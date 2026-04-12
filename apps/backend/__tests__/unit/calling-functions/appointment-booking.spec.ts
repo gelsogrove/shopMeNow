@@ -291,7 +291,7 @@ describe("Appointment Calling Functions", () => {
     // RULE: Customer must be registered (ACTIVE) to book appointments
     // Without registration we don't have name/email for the calendar entry
     it("should return CUSTOMER_NOT_REGISTERED when customer is not active", async () => {
-      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome", registrationPage: null })
       mockPrisma.customers.findFirst.mockResolvedValue({
         name: "Visitor",
         registrationStatus: "NEW",
@@ -301,6 +301,43 @@ describe("Appointment Calling Functions", () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBe("CUSTOMER_NOT_REGISTERED")
+    })
+
+    // RULE: Registration link must use workspace.registrationPage URL (from Settings) - NEVER invent a URL
+    // WHY: LLM would otherwise hallucinate incorrect registration URLs (e.g. app.echatbot.io/register)
+    it("should include workspace registrationPage URL in error message for WhatsApp", async () => {
+      const registrationPage = "https://www.echatbot.ai/registration/my-workspace"
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome", registrationPage })
+      mockPrisma.customers.findFirst.mockResolvedValue({
+        name: "Mario",
+        registrationStatus: "NEW",
+        isActive: false,
+      })
+
+      const result = await bookAppointment({ ...bookRequest, channel: "whatsapp" })
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe("CUSTOMER_NOT_REGISTERED")
+      // CRITICAL: message must include the configured URL so LLM uses it directly
+      expect(result.message).toContain(registrationPage)
+    })
+
+    // RULE: If registrationPage is not configured, use a generic message (no URL invented)
+    it("should return generic message when workspace has no registrationPage configured", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome", registrationPage: null })
+      mockPrisma.customers.findFirst.mockResolvedValue({
+        name: "Mario",
+        registrationStatus: "NEW",
+        isActive: false,
+      })
+
+      const result = await bookAppointment({ ...bookRequest, channel: "whatsapp" })
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe("CUSTOMER_NOT_REGISTERED")
+      // Must NOT invent any URL
+      expect(result.message).not.toContain("http")
+      expect(result.message).toContain("settings")
     })
 
     // SCENARIO: Customer not found at all

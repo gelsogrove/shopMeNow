@@ -55,10 +55,10 @@ export async function bookAppointment(
       }
     }
 
-    // Check workspace has calendar enabled
+    // Check workspace has calendar enabled + load registrationPage
     const workspace = await prisma.workspace.findUnique({
       where: { id: request.workspaceId },
-      select: { enableCalendarBooking: true, timezone: true },
+      select: { enableCalendarBooking: true, timezone: true, registrationPage: true },
     })
 
     if (!workspace?.enableCalendarBooking) {
@@ -85,11 +85,17 @@ export async function bookAppointment(
       : customer?.registrationStatus === 'ACTIVE' // WhatsApp: explicit registration flow
 
     if (!customer || !isRegistered) {
+      // Use workspace.registrationPage URL (configured in Settings) — NEVER invent a URL
+      const registrationUrl = workspace.registrationPage?.trim() || null
+      const registrationMessage = registrationUrl
+        ? `Customer must register before booking. Registration page: ${registrationUrl}`
+        : "Customer must register before booking. Please provide them with the registration link from your workspace settings."
+
       return {
         success: false,
         message: isWidget
           ? "Customer profile incomplete. Please ensure name and email are provided."
-          : "Customer must be registered before booking an appointment. Please ask them to register first using the registration link.",
+          : registrationMessage,
         error: "CUSTOMER_NOT_REGISTERED",
         timestamp: new Date().toISOString(),
       }
