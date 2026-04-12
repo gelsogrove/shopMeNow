@@ -278,8 +278,8 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            {/* Services standalone - for informational workspaces with calendar booking */}
-            {workspace?.sellsProductsAndServices !== true && workspace?.enableCalendarBooking === true && (
+            {/* Services standalone - for all informational workspaces (need services to set up calendar booking) */}
+            {workspace?.sellsProductsAndServices !== true && (
               <Button
                 variant="ghost"
                 size="sm"

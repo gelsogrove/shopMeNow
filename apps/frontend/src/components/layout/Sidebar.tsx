@@ -141,8 +141,9 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
         },
       ],
     }] : []),
-    // Services standalone - ALWAYS visible when calendar booking is enabled
-    ...(workspace?.enableCalendarBooking === true ? [{
+    // Services standalone - visible when calendar booking is enabled OR for informational workspaces
+    // (informational workspaces need to create services BEFORE they can enable calendar booking)
+    ...((workspace?.enableCalendarBooking === true || workspace?.sellsProductsAndServices !== true) ? [{
       href: "/services",
       label: t('nav.services'),
       icon: Wrench,
