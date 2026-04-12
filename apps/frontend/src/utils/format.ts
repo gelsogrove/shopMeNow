@@ -2,7 +2,6 @@ import { storage } from "@/lib/storage";
 
 export const SUPPORTED_CURRENCIES = [
   { code: "EUR", symbol: "€", label: "Euro ($)" },
-  { code: "EUR", symbol: "€", label: "Euro ($)" },
   { code: "GBP", symbol: "£", label: "British Pound (£)" },
   { code: "CHF", symbol: "CHF", label: "Swiss Franc (CHF)" },
   { code: "CAD", symbol: "CA€", label: "Canadian Dollar (CA$)" },
