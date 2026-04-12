@@ -33,6 +33,8 @@ import {
   Send,
   ShieldX,
   Trash2,
+  MessageCircle,
+  Square,
 } from "lucide-react"
 import { parsePhoneNumberFromString } from "libphonenumber-js"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -1334,6 +1336,16 @@ export function ChatPage() {
                             {chat.lastMessage}
                           </div>
                           <div className="flex items-center gap-1 flex-shrink-0">
+                            {/* 🆕 CHANNEL ICON: Shows if message came from WhatsApp or Widget */}
+                            {chat.channel === "widget" ? (
+                              <span title="Widget channel" className="flex-shrink-0">
+                                <Square className="h-3 w-3 text-blue-500" />
+                              </span>
+                            ) : (
+                              <span title="WhatsApp channel" className="flex-shrink-0">
+                                <MessageCircle className="h-3 w-3 text-green-500" />
+                              </span>
+                            )}
                             <p className="text-[10px] text-gray-400">
                               {formatDate(chat.lastMessageTime)}
                             </p>

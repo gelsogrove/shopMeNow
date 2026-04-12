@@ -1628,7 +1628,11 @@ export class ChatEngineService {
       // STEP 2: Apply Translation Layer (SKIP when customer language matches workspace catalog base language)
       const workspaceConfig = await this.loadWorkspaceConfig(input.workspaceId)
       const catalogBaseLanguage = this.normalizeLanguageCode(workspaceConfig.catalogBaseLanguage || "it")
-      const shouldSkipTranslation = normalizedLanguage === catalogBaseLanguage
+      // 🌍 FIX: If language was changed THIS turn (previous lang ≠ new lang), never skip translation.
+      // The response was generated in the OLD language — we must translate it to the NEW one,
+      // even if the new language matches the catalog base language.
+      const languageChangedThisTurn = rawTargetLanguage !== (input.customerLanguage || "en")
+      const shouldSkipTranslation = !languageChangedThisTurn && normalizedLanguage === catalogBaseLanguage
 
       if (shouldSkipTranslation) {
         logger.info("🌍 [ChatEngine] Skipping translation (customer language matches catalog base language)", {

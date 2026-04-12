@@ -115,7 +115,7 @@ export class SimulateController {
         customerName: customer.name,
         customerDiscount: customer.discount || 0,
         isPlayground: true,
-        channel: "whatsapp",
+        channel: "widget",
         registrationPromptLevel: 0,
       })
 

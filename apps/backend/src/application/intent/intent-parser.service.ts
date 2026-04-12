@@ -306,7 +306,7 @@ SUPPORT:
 - ASK_BUSINESS_INFO - User asks about the TYPE of business/store, the SECTOR, what kind of shop this is. Examples: "che settore?", "che tipo di negozio siete?", "in che settore operate?", "what kind of store?", "che attività è?", "di cosa vi occupate?". NOT for categories/products!
 - VIEW_PROFILE - User asks about their discount, profile, or personal info (READ ONLY)
 - UPDATE_PROFILE - User wants to MODIFY/CHANGE/UPDATE their personal data (email, address, name, shipping address). Examples: "voglio cambiare email", "modifica indirizzo", "aggiorna i miei dati", "cambio indirizzo spedizione"
-- CHANGE_LANGUAGE - User wants to change the conversation language or asks to speak in another language. Examples: "parla in inglese", "speak in english", "hablame en español", "fale português", "cambia lingua", "in english please", "voglio parlare in spagnolo"
+- CHANGE_LANGUAGE - User wants to change the conversation language or asks to speak in another language. Examples: "parla in inglese", "speak in english", "hablame en español", "fale português", "cambia lingua", "in english please", "voglio parlare in spagnolo", "posso parlare italiano?", "posso parlare spagnolo?", "posso parlare inglese?", "posso parlare portoghese?", "puedo hablar italiano?", "can I speak italian?", "quero falar italiano", "posso scrivere in inglese?"
 - REQUEST_HUMAN - User wants to talk to a human OR is frustrated/angry.
   • If the user sounds angry, frustrated, or repeatedly complains about issues (caps lock, "sono stufo", "pessimo servizio", "non funziona mai", damaged goods, etc.) respond with "REQUEST_HUMAN:frustration".
   • If they explicitly ask for a person/operator but are calm, use "REQUEST_HUMAN".
@@ -337,7 +337,7 @@ Examples:
 - "REPEAT_ORDER"
 - "VIEW_PROFILE" (when user asks "che sconto ho?", "il mio sconto", "my discount")
 - "UPDATE_PROFILE" (when user asks "modifica email", "cambia indirizzo", "aggiorna dati", "voglio cambiare i miei dati")
-- "CHANGE_LANGUAGE" (when user asks "parla in inglese", "speak english", "hablame en español", "cambia lingua")
+- "CHANGE_LANGUAGE" (when user asks "parla in inglese", "speak english", "hablame en español", "cambia lingua", "posso parlare italiano?", "posso parlare spagnolo?", "puedo hablar italiano?", "can I speak english?")
 - "ASK_FAQ:shipping policy"
 - "SHOW_AGENT_INFO"
 - "UNKNOWN"

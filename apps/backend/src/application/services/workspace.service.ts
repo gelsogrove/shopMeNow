@@ -867,6 +867,30 @@ For privacy inquiries, please contact our support team.`
       throw new Error(`Workspace not found: ${id}`)
     }
 
+    // 🚨 CALENDAR BOOKING VALIDATION: Cannot enable booking without services
+    // This prevents state inconsistency where reminder job sends reminders for non-existent appointments
+    if (data.enableCalendarBooking === true) {
+      // Check if workspace has at least one service
+      const serviceCount = await this.prisma.services.count({
+        where: {
+          workspaceId: id,
+          deletedAt: null,
+          isActive: true
+        }
+      })
+
+      if (serviceCount === 0) {
+        logger.warn(`❌ Attempted to enable appointment booking without services`)
+        const err: any = new Error(
+          "Cannot enable appointment booking without services. Create at least one service first."
+        )
+        err.statusCode = 400
+        err.code = "VALIDATION_ERROR"
+        err.field = "enableCalendarBooking"
+        throw err
+      }
+    }
+
     // Calculate resulting state
     const willEnableWidget = data.enableWidget ?? currentWorkspace.enableWidget ?? false
     const willSellProducts = data.sellsProductsAndServices ?? currentWorkspace.sellsProductsAndServices ?? false

@@ -83,6 +83,7 @@ export async function sendMessage(params: {
     message: params.message,
     sessionId: params.sessionId,
     customerId: params.customerId,
+    channel: "widget",
   })
 
   const data = response.data as Record<string, unknown>

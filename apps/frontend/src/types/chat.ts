@@ -70,4 +70,5 @@ export interface Chat {
   messages?: Message[]
   activeChatbot?: boolean
   language?: string
+  channel?: "whatsapp" | "widget" // 🆕 Channel source (widget or whatsapp)
 }

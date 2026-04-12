@@ -175,6 +175,7 @@ export async function appointmentReminderJob(): Promise<void> {
     if (appointments24h.length > 0) {
       logger.info(`[APPOINTMENT-REMINDER] Found ${appointments24h.length} appointments needing 24h reminder`)
       for (const appointment of appointments24h) {
+        logger.info(`[APPOINTMENT-REMINDER] 24h reminder: ID=${appointment.id}, Customer=${appointment.customer?.name}, Email=${appointment.customer?.email}, Service=${appointment.service?.name}, Time=${appointment.startTime.toISOString()}, Workspace=${appointment.workspace?.name}`)
         await processReminder(appointment, '24h')
       }
       totalProcessed += appointments24h.length
@@ -225,6 +226,7 @@ export async function appointmentReminderJob(): Promise<void> {
     if (appointments1h.length > 0) {
       logger.info(`[APPOINTMENT-REMINDER] Found ${appointments1h.length} appointments needing 1h reminder`)
       for (const appointment of appointments1h) {
+        logger.info(`[APPOINTMENT-REMINDER] 1h reminder: ID=${appointment.id}, Customer=${appointment.customer?.name}, Email=${appointment.customer?.email}, Service=${appointment.service?.name}, Time=${appointment.startTime.toISOString()}, Workspace=${appointment.workspace?.name}`)
         await processReminder(appointment, '1h')
       }
       totalProcessed += appointments1h.length
@@ -275,6 +277,7 @@ export async function appointmentReminderJob(): Promise<void> {
     if (appointments30m.length > 0) {
       logger.info(`[APPOINTMENT-REMINDER] Found ${appointments30m.length} appointments needing 30m reminder`)
       for (const appointment of appointments30m) {
+        logger.info(`[APPOINTMENT-REMINDER] 30m reminder: ID=${appointment.id}, Customer=${appointment.customer?.name}, Email=${appointment.customer?.email}, Service=${appointment.service?.name}, Time=${appointment.startTime.toISOString()}, Workspace=${appointment.workspace?.name}`)
         await processReminder(appointment, '30m')
       }
       totalProcessed += appointments30m.length

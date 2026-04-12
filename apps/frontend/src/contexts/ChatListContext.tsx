@@ -91,6 +91,7 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
             isFavorite: false,
             activeChatbot: chat.customer?.activeChatbot ?? true,
             isBlacklisted: chat.customer?.isBlacklisted ?? false, // Include blacklist status
+            channel: chat.channel || "whatsapp", // 🆕 Include channel (widget or whatsapp)
           }))
 
           return transformedChats

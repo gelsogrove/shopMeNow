@@ -373,6 +373,27 @@ export class ServicesController {
 
       await this.serviceService.delete(id, workspaceId)
 
+      // 🚨 AUTO-DISABLE BOOKING: If this was the last service and calendar booking is enabled
+      // Auto-disable enableCalendarBooking to prevent reminder job from sending phantom reminders
+      const remainingServices = await prisma.services.count({
+        where: {
+          workspaceId,
+          deletedAt: null,
+          isActive: true,
+          // Exclude the service we just deleted
+          id: { not: id }
+        }
+      })
+
+      if (remainingServices === 0) {
+        // This was the last service - auto-disable booking
+        await prisma.workspace.update({
+          where: { id: workspaceId },
+          data: { enableCalendarBooking: false }
+        })
+        logger.info(`✅ Auto-disabled enableCalendarBooking for workspace ${workspaceId} (last service deleted)`)
+      }
+
       return res.status(204).send()
     } catch (error: any) {
       logger.error(`Error deleting service ${req.params.id}:`, error)

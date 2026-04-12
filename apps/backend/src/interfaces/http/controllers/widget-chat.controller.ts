@@ -14,6 +14,7 @@ import logger from "../../../utils/logger"
 import { VisitorIdService } from "../../../application/services/visitor-id.service"
 import { SecurityCheckService } from "../../../application/services/security-check.service"
 import { LLMRouterService } from "../../../services/llm-router.service"
+import { getChatEngine } from "../../../application/chat-engine"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import { WorkspaceAccessService } from "../../../application/services/workspace-access.service"
 import { detectLanguageFromHeader } from "../../../utils/email-templates"
@@ -1679,18 +1680,28 @@ export class WidgetChatController {
         normalizedExplicitLanguage: explicitLanguage,
       })
 
-      const llmResult = await llmRouterService.routeMessage({
+      // 🔄 Use ChatEngine (not LLMRouterService directly) so the FAST-PATH for numeric
+      // selections (e.g. APPOINTMENT_SLOTS → bookAppointment) works correctly.
+      const chatEngine = getChatEngine(prisma)
+      const engineResult = await chatEngine.routeMessage({
         workspaceId,
         customerId: customer.id,
         conversationId: chatSession.id,
-        messageId: `widget-${visitorId}-${Date.now()}`,
         message,
         customerLanguage,
         customerName: customer.name,
-        isSystemMessage: false,
-        channel: "widget", // 🚫 WIDGET CHANNEL - disables personalized greetings
-        registrationPromptLevel, // 🆕 Progressive registration invitation
+        customerDiscount: customer.discount || 0,
+        isPlayground: isPlayground || false,
+        channel: "widget",
+        registrationPromptLevel,
       })
+      // Normalize to the shape the rest of this handler expects
+      const llmResult = {
+        response: engineResult.message || engineResult.response || "",
+        agentUsed: engineResult.agentUsed || engineResult.agentType,
+        tokensUsed: engineResult.tokensUsed || 0,
+        isBlocked: engineResult.isBlocked || false,
+      }
 
       logger.info("✅ LLM processing completed", {
         agentUsed: llmResult.agentUsed,

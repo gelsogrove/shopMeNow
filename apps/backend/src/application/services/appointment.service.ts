@@ -332,8 +332,13 @@ export class AppointmentService {
             );
 
             if (!hasConflict) {
-              // ISO format - LLM will format in customer's language
-              const displayDate = slotStart.toISOString().split('T')[0];
+              // Format: "13 aprile lunedì" — no year (redundant), with weekday
+              // Translation layer converts month/weekday to customer's language
+              const displayDate = slotStart.toLocaleDateString('it-IT', {
+                day: 'numeric',
+                month: 'long',
+                weekday: 'long',
+              });
               const displayTime = `${String(slotStart.getHours()).padStart(2, '0')}:${String(slotStart.getMinutes()).padStart(2, '0')} - ${String(slotEnd.getHours()).padStart(2, '0')}:${String(slotEnd.getMinutes()).padStart(2, '0')}`;
 
               slots.push({
