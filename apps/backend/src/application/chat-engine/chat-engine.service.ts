@@ -1405,6 +1405,33 @@ export class ChatEngineService {
   }
 
   /**
+   * Resolve a requested language string (from intent parser) to ISO 639-1 code.
+   * Handles both codes ("it") and natural language names ("italiano", "Italian", "inglese").
+   * Returns null if the string cannot be resolved to a supported language.
+   */
+  private resolveLanguageCode(input: string): string | null {
+    if (!input) return null
+    const normalized = input.trim().toLowerCase()
+    
+    const mapping: Record<string, string> = {
+      // ISO codes
+      it: "it", en: "en", es: "es", pt: "pt",
+      // Italian names
+      italiano: "it", inglese: "en", spagnolo: "es", portoghese: "pt",
+      // English names
+      italian: "it", english: "en", spanish: "es", portuguese: "pt",
+      // Spanish names
+      "español": "es", "espanol": "es", "inglés": "en", "portugués": "pt",
+      // Portuguese names
+      "português": "pt", "espanhol": "es", "inglês": "en",
+      // Common variants
+      "ingles": "en", "portugues": "pt",
+    }
+    
+    return mapping[normalized] || null
+  }
+
+  /**
    * ============================================================================
    * MAIN ENTRY POINT (Public API)
    * ============================================================================
@@ -1559,7 +1586,32 @@ export class ChatEngineService {
       const result = await this.processMessageInternal(input)
     
       const debugSteps = result.debugInfo?.steps || []
-      const rawTargetLanguage = input.customerLanguage || "en"
+      let rawTargetLanguage = input.customerLanguage || "en"
+
+      // 🌍 FIX: If changeLanguage was called during processing (via intent intercept or LLM function calling),
+      // reload the customer's language from DB to use the FRESH value for translation.
+      // Without this, the translation layer would use the STALE language from the start of the request.
+      if ((result as any)._languageChanged) {
+        rawTargetLanguage = (result as any)._languageChanged
+        logger.info("🌍 [ChatEngine] Language changed during processing — using fresh language for translation", {
+          previousLanguage: input.customerLanguage,
+          newLanguage: rawTargetLanguage,
+        })
+      } else {
+        // Check if changeLanguage was called via LLM function calling path
+        const freshCustomer = await this.prisma.customers.findFirst({
+          where: { id: input.customerId, workspaceId: input.workspaceId },
+          select: { language: true },
+        })
+        if (freshCustomer?.language && freshCustomer.language !== input.customerLanguage) {
+          rawTargetLanguage = freshCustomer.language
+          logger.info("🌍 [ChatEngine] Detected language change via function calling — reloaded from DB", {
+            previousLanguage: input.customerLanguage,
+            newLanguage: rawTargetLanguage,
+          })
+        }
+      }
+
       const normalizedLanguage = this.normalizeLanguageCode(rawTargetLanguage)
       const isWidgetChannel = input.channel === "widget"
 
@@ -4249,101 +4301,88 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       }
 
       // ========================================================================
-      // STEP: Handle CHANGE_LANGUAGE intent - Redirect to profile for language settings
+      // STEP: Handle CHANGE_LANGUAGE intent - Call changeLanguage() directly
       // ========================================================================
       if (intentResult.intent.type === "CHANGE_LANGUAGE") {
-        logger.info("🌍 [ChatEngine] CHANGE_LANGUAGE detected - generating profile link for language change", {
+        const requestedLang = (intentResult.intent as any).requestedLanguage || ""
+        const resolvedLangCode = this.resolveLanguageCode(requestedLang)
+
+        logger.info("🌍 [ChatEngine] CHANGE_LANGUAGE detected - calling changeLanguage directly", {
           workspaceId: input.workspaceId,
           customerId: input.customerId,
+          requestedLanguage: requestedLang,
+          resolvedLangCode,
         })
 
-        try {
-          // Import CallingFunctionsService to generate profile link
-          const { CallingFunctionsService } = await import("../../services/calling-functions.service")
-          const callingFunctions = new CallingFunctionsService()
-          
-          const profileLinkResult = await callingFunctions.getProfileLink({
-            customerId: input.customerId,
-            workspaceId: input.workspaceId,
-          })
+        if (resolvedLangCode) {
+          try {
+            const { changeLanguage } = await import("../../domain/calling-functions/changeLanguage")
+            const result = await changeLanguage({
+              workspaceId: input.workspaceId,
+              customerId: input.customerId,
+              language: resolvedLangCode,
+            })
 
-          if (!profileLinkResult.success || !profileLinkResult.data?.profileLink) {
-            throw new Error("Failed to generate profile link")
-          }
+            const LANG_LABELS: Record<string, string> = { it: "Italiano", en: "English", es: "Español", pt: "Português" }
+            const langLabel = LANG_LABELS[resolvedLangCode] || resolvedLangCode
+            const customerFirstName = input.customerName?.split(" ")[0] || "!"
 
-          // Format the response with the link and supported languages (use shortLink if available)
-          const customerFirstName = input.customerName?.split(" ")[0] || "!"
-          const profileLink = profileLinkResult.data.shortLink || profileLinkResult.data.profileLink
-          const languageMessage = `Certo ${customerFirstName}! 🌍 Per cambiare la lingua di conversazione, puoi modificarla nel tuo profilo:\n\n👉 Modifica Lingua\n${profileLink}\n\n📌 Lingue supportate:\n• 🇮🇹 Italiano\n• 🇬🇧 English\n• 🇪🇸 Español\n• 🇵🇹 Português\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
+            // Response in the NEW language so no translation is needed
+            const LANG_RESPONSES: Record<string, string> = {
+              it: `Certo ${customerFirstName}! 🌍 Da ora in poi risponderò in Italiano. Come posso aiutarti? 😊`,
+              en: `Sure ${customerFirstName}! 🌍 From now on I will respond in English. How can I help you? 😊`,
+              es: `¡Claro ${customerFirstName}! 🌍 A partir de ahora responderé en Español. ¿Cómo puedo ayudarte? 😊`,
+              pt: `Claro ${customerFirstName}! 🌍 A partir de agora responderei em Português. Como posso ajudar? 😊`,
+            }
+            const languageMessage = LANG_RESPONSES[resolvedLangCode] || LANG_RESPONSES["en"]
 
-          const processingTimeMs = Date.now() - startTime
+            const processingTimeMs = Date.now() - startTime
 
-          // Save messages
-          const savedMessages = await this.messagePersistence.saveMessages(
-            input.workspaceId,
-            input.customerId,
-            conversationId,
-            input.message,
-            languageMessage
-          )
+            const savedMessages = await this.messagePersistence.saveMessages(
+              input.workspaceId,
+              input.customerId,
+              conversationId,
+              input.message,
+              languageMessage
+            )
 
-          // Clear any pending options
-          await this.optionsMappingService.clearMapping(conversationId)
+            await this.optionsMappingService.clearMapping(conversationId)
 
-          logger.info("✅ [ChatEngine] CHANGE_LANGUAGE handled successfully", {
-            workspaceId: input.workspaceId,
-            customerId: input.customerId,
-            linkGenerated: true,
-          })
+            logger.info("✅ [ChatEngine] CHANGE_LANGUAGE completed", {
+              workspaceId: input.workspaceId,
+              customerId: input.customerId,
+              newLanguage: resolvedLangCode,
+            })
 
-          return {
-            message: languageMessage,
-            agentType: AgentType.PROFILE_MANAGEMENT,
-            wasHandled: true,
-            intent: "CHANGE_LANGUAGE",
-            confidence: intentResult.confidence,
-            source: intentResult.source,
-            processingTimeMs,
-            debugInfo: {
-              loadedDataType: "PROFILE_LINK",
-              responseType: "CHANGE_LANGUAGE",
-              llmUsed: false,
-            },
-            response: languageMessage,
-            agentUsed: AgentType.PROFILE_MANAGEMENT,
-            tokensUsed: 0,
-            executionTimeMs: processingTimeMs,
-            wasFAQ: false,
-            isBlocked: false,
-            _assistantMessageId: savedMessages.assistantMessageId,
-          }
-        } catch (error) {
-          logger.error("❌ [ChatEngine] Failed to generate profile link for language change", { error })
-          
-          const errorMessage = "Mi dispiace, non sono riuscito a generare il link per modificare la lingua. Riprova tra qualche istante! 😅"
-          const processingTimeMs = Date.now() - startTime
-
-          return {
-            message: errorMessage,
-            agentType: AgentType.PROFILE_MANAGEMENT,
-            wasHandled: true,
-            intent: "CHANGE_LANGUAGE",
-            confidence: intentResult.confidence,
-            source: intentResult.source,
-            processingTimeMs,
-            debugInfo: {
-              loadedDataType: "ERROR",
-              responseType: "CHANGE_LANGUAGE_ERROR",
-              llmUsed: false,
-            },
-            response: errorMessage,
-            agentUsed: AgentType.PROFILE_MANAGEMENT,
-            tokensUsed: 0,
-            executionTimeMs: processingTimeMs,
-            wasFAQ: false,
-            isBlocked: false,
+            return {
+              message: languageMessage,
+              agentType: AgentType.PROFILE_MANAGEMENT,
+              wasHandled: true,
+              intent: "CHANGE_LANGUAGE",
+              confidence: intentResult.confidence,
+              source: intentResult.source,
+              processingTimeMs,
+              debugInfo: {
+                loadedDataType: "LANGUAGE_CHANGE",
+                responseType: "CHANGE_LANGUAGE",
+                llmUsed: false,
+                newLanguage: resolvedLangCode,
+              },
+              response: languageMessage,
+              agentUsed: AgentType.PROFILE_MANAGEMENT,
+              tokensUsed: 0,
+              executionTimeMs: processingTimeMs,
+              wasFAQ: false,
+              isBlocked: false,
+              _assistantMessageId: savedMessages.assistantMessageId,
+              _languageChanged: resolvedLangCode,
+            } as any
+          } catch (error) {
+            logger.error("❌ [ChatEngine] changeLanguage failed", { error })
+            // Fall through to LLM router
           }
         }
+        // If no valid language detected, fall through to LLM router which can call changeLanguage via function calling
       }
 
       if (intentResult.intent.type === "PRODUCT_CONTEXT") {
@@ -5546,75 +5585,67 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // to UnifiedChatRouter which may fail and leak the system prompt
       // ========================================================================
       if (intentResult.intent.type === "CHANGE_LANGUAGE") {
-        logger.info("🌍 [ChatEngine] CHANGE_LANGUAGE in informational workspace - generating profile link", {
+        const requestedLang = (intentResult.intent as any).requestedLanguage || ""
+        const resolvedLangCode = this.resolveLanguageCode(requestedLang)
+
+        logger.info("🌍 [ChatEngine] CHANGE_LANGUAGE in informational workspace - calling changeLanguage directly", {
           workspaceId: input.workspaceId,
           customerId: input.customerId,
+          requestedLanguage: requestedLang,
+          resolvedLangCode,
         })
 
-        try {
-          const { CallingFunctionsService } = await import("../../services/calling-functions.service")
-          const callingFunctions = new CallingFunctionsService()
-
-          const profileLinkResult = await callingFunctions.getProfileLink({
-            customerId: input.customerId,
-            workspaceId: input.workspaceId,
-          })
-
-          if (!profileLinkResult.success || !profileLinkResult.data?.profileLink) {
-            throw new Error("Failed to generate profile link for language change")
-          }
-
-          const customerFirstName = input.customerName?.split(" ")[0] || "!"
-          const profileLink = profileLinkResult.data.shortLink || profileLinkResult.data.profileLink
-          let languageMessage = `Certo ${customerFirstName}! 🌍 Per cambiare la lingua di conversazione, puoi modificarla nel tuo profilo:\n\n👉 Modifica Lingua\n${profileLink}\n\n📌 Lingue supportate:\n• 🇮🇹 Italiano\n• 🇬🇧 English\n• 🇪🇸 Español\n• 🇵🇹 Português\n\nPer questioni di sicurezza il link sarà abilitato solo per 15 minuti.\n\nTi posso aiutare con qualcos'altro? 😊`
-
-          // Translate to customer language
-          const customerLanguage = input.customerLanguage || "en"
+        if (resolvedLangCode) {
           try {
-            const translationResult = await this.applyTranslation(
-              languageMessage,
-              input.workspaceId,
-              customerLanguage,
-              debugSteps,
-              customerFirstName
-            )
-            languageMessage = translationResult.message
-          } catch (translationError) {
-            logger.warn("⚠️ [ChatEngine] Language change message translation failed, using Italian", {
-              error: (translationError as Error).message,
+            const { changeLanguage } = await import("../../domain/calling-functions/changeLanguage")
+            const result = await changeLanguage({
+              workspaceId: input.workspaceId,
+              customerId: input.customerId,
+              language: resolvedLangCode,
             })
-          }
 
-          const processingTimeMs = Date.now() - startTime
-          const savedMessages = await this.messagePersistence.saveMessages(
-            input.workspaceId,
-            input.customerId,
-            conversationId,
-            input.message,
-            languageMessage
-          )
+            const customerFirstName = input.customerName?.split(" ")[0] || "!"
+            const LANG_RESPONSES: Record<string, string> = {
+              it: `Certo ${customerFirstName}! 🌍 Da ora in poi risponderò in Italiano. Come posso aiutarti? 😊`,
+              en: `Sure ${customerFirstName}! 🌍 From now on I will respond in English. How can I help you? 😊`,
+              es: `¡Claro ${customerFirstName}! 🌍 A partir de ahora responderé en Español. ¿Cómo puedo ayudarte? 😊`,
+              pt: `Claro ${customerFirstName}! 🌍 A partir de agora responderei em Português. Como posso ajudar? 😊`,
+            }
+            const languageMessage = LANG_RESPONSES[resolvedLangCode] || LANG_RESPONSES["en"]
 
-          return {
-            message: languageMessage,
-            agentType: AgentType.PROFILE_MANAGEMENT,
-            wasHandled: true,
-            intent: "CHANGE_LANGUAGE",
-            confidence: intentResult.confidence,
-            source: intentResult.source,
-            processingTimeMs,
-            debugInfo: { steps: debugSteps, totalTokens: 0, executionTimeMs: processingTimeMs },
-            response: languageMessage,
-            agentUsed: AgentType.PROFILE_MANAGEMENT,
-            tokensUsed: 0,
-            executionTimeMs: processingTimeMs,
-            wasFAQ: false,
-            isBlocked: false,
-            _assistantMessageId: savedMessages.assistantMessageId,
+            const processingTimeMs = Date.now() - startTime
+            const savedMessages = await this.messagePersistence.saveMessages(
+              input.workspaceId,
+              input.customerId,
+              conversationId,
+              input.message,
+              languageMessage
+            )
+
+            return {
+              message: languageMessage,
+              agentType: AgentType.PROFILE_MANAGEMENT,
+              wasHandled: true,
+              intent: "CHANGE_LANGUAGE",
+              confidence: intentResult.confidence,
+              source: intentResult.source,
+              processingTimeMs,
+              debugInfo: { steps: debugSteps, totalTokens: 0, executionTimeMs: processingTimeMs, newLanguage: resolvedLangCode },
+              response: languageMessage,
+              agentUsed: AgentType.PROFILE_MANAGEMENT,
+              tokensUsed: 0,
+              executionTimeMs: processingTimeMs,
+              wasFAQ: false,
+              isBlocked: false,
+              _assistantMessageId: savedMessages.assistantMessageId,
+              _languageChanged: resolvedLangCode,
+            } as any
+          } catch (error) {
+            logger.error("❌ [ChatEngine] changeLanguage failed (informational)", { error })
+            // Fall through to INFO_AGENT on error
           }
-        } catch (error) {
-          logger.error("❌ [ChatEngine] Failed to generate profile link for language change (informational)", { error })
-          // Fall through to INFO_AGENT on error
         }
+        // If no valid language detected, fall through to INFO_AGENT which can call changeLanguage via function calling
       }
     } catch (intentError) {
       logger.warn("⚠️ [ChatEngine] Intent parsing failed in informational flow, continuing to INFO_AGENT", {

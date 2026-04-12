@@ -62,6 +62,12 @@ async function startServer() {
     await prisma.$connect()
     logger.info("Connected to database")
 
+    // Sync system functions (create missing, never overwrite)
+    const { syncSystemFunctionsOnStartup } = require("./services/system-functions-sync.service")
+    syncSystemFunctionsOnStartup(prisma).catch((err: Error) => {
+      logger.error("System functions sync failed (non-fatal):", err)
+    })
+
     // Create HTTP server from Express app
     const httpServer = createServer(app)
 

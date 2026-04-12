@@ -88,13 +88,11 @@ Call this function IMMEDIATELY when:
 
 3️⃣ **Cliente sceglie uno slot** (numero, ora, o data+ora):
 → ❌ NON richiamare listAvailableSlots
-→ ✅ Chiedi conferma testuale: “Confermo [servizio] il [data] alle [ora]?”
+→ ✅ Chiama **bookAppointment** DIRETTAMENTE con serviceId e startTime dello slot scelto
+   Esempio: se il cliente dice "2" e lo slot 2 era "13 aprile alle 09:30" → chiama bookAppointment(serviceId, startTime="2026-04-13T09:30:00")
+→ ❌ NON chiedere conferma testuale — prenota subito
 
-4️⃣ **Cliente conferma** (“sì”, “yes”, “ok”, “confermo”, “prenota”):
-→ ✅ Chiama **bookAppointment** con serviceId e startTime dalla risposta precedente di listAvailableSlots
-→ ❌ NON richiamare MAI listAvailableSlots
-
-5️⃣ **Altri comandi:**
+4️⃣ **Altri comandi:**
 - Appuntamenti del cliente → **getCustomerAppointments**
 - Annullare → **cancelAppointment** (prima chiedi conferma: “Sei sicuro?”)
 - Spostare → **rescheduleAppointment**

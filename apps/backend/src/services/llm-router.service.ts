@@ -206,8 +206,6 @@ export interface DebugStep {
 }
 
 export class LLMRouterService {
-  private static verifiedChangeLanguageWorkspaces = new Set<string>()
-  private static verifiedAppointmentWorkspaces = new Set<string>()
   private agentConfigRepo: AgentConfigRepository
   private faqRepo: FAQRepository
   private loggerService: AgentLoggerService
@@ -1252,134 +1250,10 @@ export class LLMRouterService {
       // STEP 5: Function Calling Loop
       logger.info("Step 3: Starting Function Calling loop")
       // 🆕 Feature: Load all active functions from DB (System + Custom)
+      // System functions are synced on startup (system-functions-sync.service.ts)
+      // and created during workspace provisioning (workspace.service.ts).
+      // No runtime lazy-migration needed — DB is the source of truth.
       const dbFunctions = await this.callingFunctionRepo.findActiveByWorkspace(params.workspaceId)
-
-      // Lazy migration: ensure changeLanguage exists for workspaces created before this feature
-      if (!LLMRouterService.verifiedChangeLanguageWorkspaces.has(params.workspaceId)) {
-        const hasChangeLanguage = dbFunctions.some(fn => fn.functionName === "changeLanguage")
-        if (!hasChangeLanguage) {
-          try {
-            const created = await this.prisma.workspaceCallingFunction.upsert({
-              where: { workspaceId_functionName: { workspaceId: params.workspaceId, functionName: "changeLanguage" } },
-              update: { isActive: true },
-              create: {
-                workspaceId: params.workspaceId,
-                functionName: "changeLanguage",
-                description: "Change the customer's preferred language. Supported: Italian (it), English (en), Spanish (es), Portuguese (pt).",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    language: { type: "string", enum: ["it", "en", "es", "pt"], description: "ISO 639-1 language code" }
-                  },
-                  required: ["language"]
-                },
-                isSystemFunction: true,
-                executionType: "INTERNAL",
-                isActive: true
-              }
-            })
-            dbFunctions.push(created)
-            logger.info(`✅ Lazy-migrated changeLanguage for workspace ${params.workspaceId}`)
-          } catch (error) {
-            logger.warn(`⚠️ Failed to lazy-migrate changeLanguage (non-fatal):`, error)
-          }
-        }
-        LLMRouterService.verifiedChangeLanguageWorkspaces.add(params.workspaceId)
-      }
-
-      // Lazy migration: ensure appointment functions exist for workspaces with enableCalendarBooking=true
-      if (workspace.enableCalendarBooking && !LLMRouterService.verifiedAppointmentWorkspaces.has(params.workspaceId)) {
-        const APPOINTMENT_FUNCTION_DEFS = [
-          {
-            name: "listAvailableSlots",
-            description: "📅 Recupera slot disponibili. CHIAMARE SUBITO quando il cliente chiede un appuntamento. La funzione gestisce automaticamente la selezione del servizio: se c'è un solo servizio lo seleziona, se ce ne sono più di uno ritorna la LISTA SERVIZI — mostrala al cliente come menu numerato e quando sceglie richiama con il serviceId. DOPO aver ottenuto gli slot, mostrali come lista numerata (1/2/3 + 'mostra giorno successivo'). NON richiamare se gli slot sono GIÀ stati mostrati nella conversazione.",
-            parameters: {
-              type: "object",
-              properties: {
-                serviceId: { type: "string", description: "ID del servizio (opzionale alla prima chiamata — la funzione gestisce la selezione)" },
-                daysAhead: { type: "number", description: "Giorni in avanti (default 7)" },
-                targetDate: { type: "string", description: "Data specifica YYYY-MM-DD" }
-              },
-              required: []
-            }
-          },
-          {
-            name: "bookAppointment",
-            description: "✅ Prenota un appuntamento. QUANDO USARE: SOLO dopo che il cliente ha CONFERMATO lo slot ('sì','yes','ok','confermo','prenota','book it'). FLUSSO CORRETTO: 1) cliente sceglie slot (es. '2') → TU chiedi conferma testuale ('Confermo X il Y alle Z?'), 2) cliente conferma → ORA chiama bookAppointment. PARAMETRI: serviceId e startTime dalla risposta precedente di listAvailableSlots — usali ESATTAMENTE. NON richiamare listAvailableSlots.",
-            parameters: {
-              type: "object",
-              properties: {
-                serviceId: { type: "string", description: "ID del servizio — dalla risposta precedente di listAvailableSlots" },
-                startTime: { type: "string", description: "Orario ISO 8601 — dalla risposta precedente di listAvailableSlots (slots[n].startTime)" },
-                customerNotes: { type: "string", description: "Note aggiuntive (opzionale)" }
-              },
-              required: ["serviceId", "startTime"]
-            }
-          },
-          {
-            name: "cancelAppointment",
-            description: "❌ Annulla un appuntamento esistente. Prima usa getCustomerAppointments per trovare l'ID.",
-            parameters: {
-              type: "object",
-              properties: {
-                appointmentId: { type: "string", description: "ID dell'appuntamento da annullare" },
-                reason: { type: "string", description: "Motivo della cancellazione (opzionale)" }
-              },
-              required: ["appointmentId"]
-            }
-          },
-          {
-            name: "rescheduleAppointment",
-            description: "🔄 Sposta un appuntamento a un nuovo orario. Prima usa getCustomerAppointments, poi listAvailableSlots, poi conferma.",
-            parameters: {
-              type: "object",
-              properties: {
-                appointmentId: { type: "string", description: "ID appuntamento esistente" },
-                newStartTime: { type: "string", description: "Nuovo orario ISO 8601" },
-                reason: { type: "string", description: "Motivo del cambio (opzionale)" }
-              },
-              required: ["appointmentId", "newStartTime"]
-            }
-          },
-          {
-            name: "getCustomerAppointments",
-            description: "📋 Mostra gli appuntamenti futuri del cliente. QUANDO: cliente chiede i suoi appuntamenti, prima di annullare o spostare.",
-            parameters: { type: "object", properties: {}, required: [] }
-          }
-        ]
-
-        for (const fnDef of APPOINTMENT_FUNCTION_DEFS) {
-          const exists = dbFunctions.some(fn => fn.functionName === fnDef.name)
-          if (!exists) {
-            try {
-              const created = await this.prisma.workspaceCallingFunction.upsert({
-                where: { workspaceId_functionName: { workspaceId: params.workspaceId, functionName: fnDef.name } },
-                update: { isActive: true, description: fnDef.description },
-                create: {
-                  workspaceId: params.workspaceId,
-                  functionName: fnDef.name,
-                  description: fnDef.description,
-                  parameters: fnDef.parameters as any,
-                  isSystemFunction: true,
-                  executionType: "INTERNAL",
-                  isActive: true
-                }
-              })
-              dbFunctions.push(created)
-              logger.info(`✅ Lazy-migrated appointment function "${fnDef.name}" for workspace ${params.workspaceId}`)
-            } catch (error) {
-              logger.warn(`⚠️ Failed to lazy-migrate ${fnDef.name} (non-fatal):`, error)
-            }
-          }
-        }
-        LLMRouterService.verifiedAppointmentWorkspaces.add(params.workspaceId)
-      }
-
-      // Lazy migration: ensure contactOperator exists for workspaces with hasHumanSupport=true
-      // (so the ROUTER can call it directly when customer requests human support)
-      // Note: contactOperator is also available via CustomerSupportAgentLLM, but having it
-      // in the ROUTER allows immediate escalation without sub-agent delegation
-      // TODO: Add lazy migration for contactOperator here if needed
 
       // 🎯 RUNTIME FILTERING: Filter functions based on workspace capabilities
       // This ensures LLM only sees functions relevant to the workspace's feature set

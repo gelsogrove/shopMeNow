@@ -13,6 +13,12 @@ import { dynamicAgents } from "../../../prisma/data/dynamicAgents"
 import { initialFAQs } from "../../../prisma/data/initialFAQs"
 import { WasenderClientService } from "../../services/wasender-client.service"
 import { invalidateWorkspaceConfig } from "../chat-engine/chat-engine.service"
+import {
+  ALWAYS_AVAILABLE_FUNCTIONS,
+  ECOMMERCE_FUNCTIONS,
+  APPOINTMENT_FUNCTIONS,
+  SystemFunctionDef,
+} from "../../constants/system-functions"
 
 export class WorkspaceService {
   private repository: WorkspaceRepositoryInterface
@@ -105,185 +111,14 @@ For privacy inquiries, please contact our support team.`
     workspaceId: string,
     isEcommerce: boolean
   ) {
-    const functions: any[] = [];
+    const functions: SystemFunctionDef[] = [
+      ...ALWAYS_AVAILABLE_FUNCTIONS,
+      ...APPOINTMENT_FUNCTIONS,
+    ]
 
-    // E-commerce agents (only if selling products/services)
     if (isEcommerce) {
-      functions.push(
-        {
-          functionName: "productSearchAgent",
-          description: "Delegate to Product Search Agent for product catalog browsing, search, filters. Use when customer asks about products, prices, categories, certifications.",
-          parameters: {
-            type: "object",
-            properties: {
-              query: { type: "string", description: "Customer's product search query" }
-            },
-            required: ["query"]
-          },
-          isSystemFunction: true,
-          executionType: "DELEGATE_TO_AGENT",
-          isActive: true
-        },
-        {
-          functionName: "cartManagementAgent",
-          description: "Delegate to Cart Management Agent for add/remove products, view cart, modify quantities. Use when customer wants to add to cart or modify cart contents.",
-          parameters: {
-            type: "object",
-            properties: {
-              query: { type: "string", description: "Cart-related request" }
-            },
-            required: ["query"]
-          },
-          isSystemFunction: true,
-          executionType: "DELEGATE_TO_AGENT",
-          isActive: true
-        },
-        {
-          functionName: "orderTrackingAgent",
-          description: "Delegate to Order Tracking Agent for order history, tracking, checkout confirmation. Use for orders, delivery status, checkout.",
-          parameters: {
-            type: "object",
-            properties: {
-              query: { type: "string", description: "Order-related question" }
-            },
-            required: ["query"]
-          },
-          isSystemFunction: true,
-          executionType: "DELEGATE_TO_AGENT",
-          isActive: true
-        }
-      );
+      functions.push(...ECOMMERCE_FUNCTIONS)
     }
-
-    // Always available (both Info and Ecommerce)
-    functions.push(
-      {
-        functionName: "customerSupportAgent",
-        description: "Delegate to Customer Support Agent for complaints, issues, human operator contact. Use when customer is frustrated or has problems. NOT for notification management.",
-        parameters: {
-          type: "object",
-          properties: {
-            query: { type: "string", description: "Support request" }
-          },
-          required: ["query"]
-        },
-        isSystemFunction: true,
-        executionType: "DELEGATE_TO_AGENT",
-        isActive: true
-      },
-      {
-        functionName: "profileManagementAgent",
-        description: "Delegate to Profile Management Agent for email updates, notification preferences, profile data changes. Use for notification subscribe/unsubscribe, email change.",
-        parameters: {
-          type: "object",
-          properties: {
-            query: { type: "string", description: "Profile-related request" }
-          },
-          required: ["query"]
-        },
-        isSystemFunction: true,
-        executionType: "DELEGATE_TO_AGENT",
-        isActive: true
-      },
-      {
-        functionName: "manageNotifications",
-        description: "Manage push notification preferences (subscribe/unsubscribe).",
-        parameters: {
-          type: "object",
-          properties: {
-            action: {
-              type: "string",
-              enum: ["subscribe", "unsubscribe"],
-              description: "Action to perform"
-            }
-          },
-          required: ["action"]
-        },
-        isSystemFunction: true,
-        executionType: "INTERNAL",
-        isActive: true
-      },
-      {
-        functionName: "changeLanguage",
-        description: "Change the customer's preferred language. Supported: Italian (it), English (en), Spanish (es), Portuguese (pt).",
-        parameters: {
-          type: "object",
-          properties: {
-            language: {
-              type: "string",
-              enum: ["it", "en", "es", "pt"],
-              description: "ISO 639-1 language code"
-            }
-          },
-          required: ["language"]
-        },
-        isSystemFunction: true,
-        executionType: "INTERNAL",
-        isActive: true
-      }
-    );
-
-    // Appointment booking functions (always seeded, filtered at runtime by enableCalendarBooking)
-    functions.push(
-      {
-        functionName: "listAvailableSlots",
-        description: "Show available slots for appointment booking. Use when customer wants to book an appointment, asks about availability.",
-        parameters: {
-          type: "object",
-          properties: {
-            serviceId: { type: "string", description: "ID of bookable service (optional)" },
-            daysAhead: { type: "number", description: "How many days ahead to search (default 7, max 14)" }
-          },
-          required: []
-        },
-        isSystemFunction: true,
-        executionType: "INTERNAL",
-        isActive: true
-      },
-      {
-        functionName: "bookAppointment",
-        description: "Confirm an appointment booking. Use when customer has chosen a slot and confirms. Requires serviceId and startTime.",
-        parameters: {
-          type: "object",
-          properties: {
-            serviceId: { type: "string", description: "ID of bookable service" },
-            startTime: { type: "string", description: "Start time in ISO 8601 format" },
-            customerNotes: { type: "string", description: "Optional customer notes" }
-          },
-          required: ["serviceId", "startTime"]
-        },
-        isSystemFunction: true,
-        executionType: "INTERNAL",
-        isActive: true
-      },
-      {
-        functionName: "cancelAppointment",
-        description: "Cancel an existing appointment. Use when customer wants to cancel a booked appointment.",
-        parameters: {
-          type: "object",
-          properties: {
-            appointmentId: { type: "string", description: "ID of appointment to cancel" },
-            reason: { type: "string", description: "Cancellation reason (optional)" }
-          },
-          required: ["appointmentId"]
-        },
-        isSystemFunction: true,
-        executionType: "INTERNAL",
-        isActive: true
-      },
-      {
-        functionName: "getCustomerAppointments",
-        description: "Show customer's upcoming appointments. Use when customer asks about their bookings.",
-        parameters: {
-          type: "object",
-          properties: {},
-          required: []
-        },
-        isSystemFunction: true,
-        executionType: "INTERNAL",
-        isActive: true
-      }
-    );
 
     await tx.workspaceCallingFunction.createMany({
       data: functions.map(fn => ({ ...fn, workspaceId }))
@@ -301,94 +136,56 @@ For privacy inquiries, please contact our support team.`
    * @private
    */
   private async syncSystemCallingFunctions(workspaceId: string, isEcommerce: boolean): Promise<void> {
-    const ECOMMERCE_ONLY_FUNCTIONS = ['productSearchAgent', 'cartManagementAgent', 'orderTrackingAgent']
-
-    // Always-available functions that must exist for EVERY workspace (ecommerce and info)
-    const ALWAYS_AVAILABLE_FUNCTIONS: Record<string, { description: string; parameters: object; executionType: string }> = {
-      changeLanguage: {
-        description: "Change the customer's preferred language. Supported: Italian (it), English (en), Spanish (es), Portuguese (pt).",
-        parameters: {
-          type: "object",
-          properties: {
-            language: {
-              type: "string",
-              enum: ["it", "en", "es", "pt"],
-              description: "ISO 639-1 language code"
-            }
-          },
-          required: ["language"]
-        },
-        executionType: "INTERNAL"
-      }
-    }
+    const ECOMMERCE_ONLY_FN_NAMES = ['productSearchAgent', 'cartManagementAgent', 'orderTrackingAgent']
 
     // Ensure always-available system functions exist for this workspace
-    for (const [functionName, def] of Object.entries(ALWAYS_AVAILABLE_FUNCTIONS)) {
+    for (const fnDef of ALWAYS_AVAILABLE_FUNCTIONS) {
       try {
         await this.prisma.workspaceCallingFunction.upsert({
-          where: { workspaceId_functionName: { workspaceId, functionName } },
+          where: { workspaceId_functionName: { workspaceId, functionName: fnDef.functionName } },
           update: { isActive: true },
           create: {
             workspaceId,
-            functionName,
-            description: def.description,
-            parameters: def.parameters,
+            functionName: fnDef.functionName,
+            description: fnDef.description,
+            parameters: fnDef.parameters,
             isSystemFunction: true,
-            executionType: def.executionType,
+            executionType: fnDef.executionType,
             isActive: true
           }
         })
-        logger.info(`✅ Ensured always-available system function ${functionName} for workspace ${workspaceId}`)
       } catch (error) {
-        logger.warn(`⚠️ Failed to ensure always-available function ${functionName}:`, error)
+        logger.warn(`⚠️ Failed to ensure always-available function ${fnDef.functionName}:`, error)
       }
     }
 
     if (isEcommerce) {
       // Enable or create the ecommerce-only system functions
-      const definitions: Record<string, { description: string; parameters: object }> = {
-        productSearchAgent: {
-          description: "Delegate to Product Search Agent for product catalog browsing, search, filters. Use when customer asks about products, prices, categories, certifications.",
-          parameters: { type: "object", properties: { query: { type: "string", description: "Customer's product search query" } }, required: ["query"] }
-        },
-        cartManagementAgent: {
-          description: "Delegate to Cart Management Agent for add/remove products, view cart, modify quantities. Use when customer wants to add to cart or modify cart contents.",
-          parameters: { type: "object", properties: { query: { type: "string", description: "Cart-related request" } }, required: ["query"] }
-        },
-        orderTrackingAgent: {
-          description: "Delegate to Order Tracking Agent for order history, tracking, checkout confirmation. Use for orders, delivery status, checkout.",
-          parameters: { type: "object", properties: { query: { type: "string", description: "Order-related question" } }, required: ["query"] }
-        },
-      }
-
-      for (const functionName of ECOMMERCE_ONLY_FUNCTIONS) {
+      for (const fnDef of ECOMMERCE_FUNCTIONS) {
         try {
           const existing = await this.prisma.workspaceCallingFunction.findUnique({
-            where: { workspaceId_functionName: { workspaceId, functionName } }
+            where: { workspaceId_functionName: { workspaceId, functionName: fnDef.functionName } }
           })
           if (existing) {
             await this.prisma.workspaceCallingFunction.update({
-              where: { workspaceId_functionName: { workspaceId, functionName } },
+              where: { workspaceId_functionName: { workspaceId, functionName: fnDef.functionName } },
               data: { isActive: true }
             })
-            logger.info(`✅ Re-enabled system function ${functionName} for workspace ${workspaceId}`)
           } else {
-            const def = definitions[functionName]
             await this.prisma.workspaceCallingFunction.create({
               data: {
                 workspaceId,
-                functionName,
-                description: def.description,
-                parameters: def.parameters,
+                functionName: fnDef.functionName,
+                description: fnDef.description,
+                parameters: fnDef.parameters,
                 isSystemFunction: true,
-                executionType: "DELEGATE_TO_AGENT",
+                executionType: fnDef.executionType,
                 isActive: true
               }
             })
-            logger.info(`✅ Created missing system function ${functionName} for workspace ${workspaceId}`)
           }
         } catch (error) {
-          logger.warn(`⚠️ Failed to enable/create system function ${functionName}:`, error)
+          logger.warn(`⚠️ Failed to enable/create system function ${fnDef.functionName}:`, error)
         }
       }
     } else {
@@ -397,7 +194,7 @@ For privacy inquiries, please contact our support team.`
         const result = await this.prisma.workspaceCallingFunction.updateMany({
           where: {
             workspaceId,
-            functionName: { in: ECOMMERCE_ONLY_FUNCTIONS },
+            functionName: { in: ECOMMERCE_ONLY_FN_NAMES },
             isSystemFunction: true
           },
           data: { isActive: false }

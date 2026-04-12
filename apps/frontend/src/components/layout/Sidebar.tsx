@@ -116,11 +116,13 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
           label: t('nav.products'),
           icon: Package2,
         },
-        {
+        // Services inside E-commerce ONLY when calendar booking is NOT enabled
+        // (when booking is enabled, Services shows as standalone menu item)
+        ...(workspace?.enableCalendarBooking !== true ? [{
           href: "/services",
           label: t('nav.services'),
           icon: Wrench,
-        },
+        }] : []),
         {
           href: "/offers",
           label: t('nav.offers'),
@@ -139,8 +141,8 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
         },
       ],
     }] : []),
-    // Services standalone - for informational workspaces with calendar booking
-    ...(workspace?.sellsProductsAndServices !== true && workspace?.enableCalendarBooking === true ? [{
+    // Services standalone - ALWAYS visible when calendar booking is enabled
+    ...(workspace?.enableCalendarBooking === true ? [{
       href: "/services",
       label: t('nav.services'),
       icon: Wrench,
