@@ -314,6 +314,78 @@ describe("Appointment Calling Functions", () => {
       expect(result.error).toBe("CUSTOMER_NOT_REGISTERED")
     })
 
+    // SCENARIO: Widget-specific registration checks
+    // RULE: Widget customers only need isActive + name + email (no registrationStatus)
+    // WHY: Widget form collects data at entry → customer created with isActive but no registrationStatus
+    it("should ALLOW booking for widget customer with isActive=true + name + email (no registrationStatus)", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
+      mockPrisma.customers.findFirst.mockResolvedValue({
+        name: "Andrea Widget",
+        phone: "+393331234567",
+        email: "andrea@widget.com",
+        isActive: true, // Widget form created customer as active
+        registrationStatus: null, // Widget doesn't set this
+      })
+
+      const mockAppointment = {
+        id: "appt-widget",
+        startTime: new Date("2026-04-15T10:00:00"),
+        endTime: new Date("2026-04-15T11:00:00"),
+        service: { name: "Consulenza" },
+      }
+      mockAppointmentService.createAppointment.mockResolvedValue(mockAppointment)
+
+      const result = await bookAppointment({
+        ...bookRequest,
+        channel: "widget", // Widget channel
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.appointmentId).toBe("appt-widget")
+    })
+
+    // RULE: Widget customer without name/email cannot book
+    it("should BLOCK booking for widget customer missing name/email", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
+      mockPrisma.customers.findFirst.mockResolvedValue({
+        name: null, // Missing name
+        phone: "+393331234567",
+        email: null, // Missing email
+        isActive: true,
+        registrationStatus: null,
+      })
+
+      const result = await bookAppointment({
+        ...bookRequest,
+        channel: "widget",
+      })
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe("CUSTOMER_NOT_REGISTERED")
+      expect(result.message).toContain("profile incomplete")
+    })
+
+    // RULE: Widget customer with isActive=false cannot book
+    it("should BLOCK booking for widget customer with isActive=false", async () => {
+      mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })
+      mockPrisma.customers.findFirst.mockResolvedValue({
+        name: "Andrea Widget",
+        phone: "+393331234567",
+        email: "andrea@widget.com",
+        isActive: false, // Customer deactivated
+        registrationStatus: null,
+      })
+
+      const result = await bookAppointment({
+        ...bookRequest,
+        channel: "widget",
+      })
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe("CUSTOMER_NOT_REGISTERED")
+      expect(result.message).toContain("profile incomplete")
+    })
+
     // SCENARIO: Successful booking
     it("should create appointment and return formatted response", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({ enableCalendarBooking: true, timezone: "Europe/Rome" })

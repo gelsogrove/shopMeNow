@@ -73,15 +73,23 @@ export async function bookAppointment(
     // Get customer info for snapshot
     const customer = await prisma.customers.findFirst({
       where: { id: request.customerId, workspaceId: request.workspaceId },
-      select: { name: true, phone: true, email: true, registrationStatus: true },
+      select: { name: true, phone: true, email: true, registrationStatus: true, isActive: true },
     })
 
-    // Registration guard: customer must be registered (ACTIVE) to book appointments
-    // Without registration we don't have name/email for the calendar entry
-    if (!customer || customer.registrationStatus !== 'ACTIVE') {
+    // Registration guard: customer must have name/email for calendar entry
+    // Widget: Form already collected data → check isActive + name/email exist
+    // WhatsApp: Need explicit registration → check registrationStatus = 'ACTIVE'
+    const isWidget = request.channel === 'widget'
+    const isRegistered = isWidget
+      ? customer?.isActive && customer.name && customer.email // Widget: validated at form entry
+      : customer?.registrationStatus === 'ACTIVE' // WhatsApp: explicit registration flow
+
+    if (!customer || !isRegistered) {
       return {
         success: false,
-        message: "Customer must be registered before booking an appointment. Please ask them to register first using the registration link.",
+        message: isWidget
+          ? "Customer profile incomplete. Please ensure name and email are provided."
+          : "Customer must be registered before booking an appointment. Please ask them to register first using the registration link.",
         error: "CUSTOMER_NOT_REGISTERED",
         timestamp: new Date().toISOString(),
       }
