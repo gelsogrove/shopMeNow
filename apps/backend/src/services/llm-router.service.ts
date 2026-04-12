@@ -1292,11 +1292,11 @@ export class LLMRouterService {
         const APPOINTMENT_FUNCTION_DEFS = [
           {
             name: "listAvailableSlots",
-            description: "📅 Recupera slot disponibili. CHIAMARE SUBITO quando cliente menziona appuntamento/prenotazione/disponibilità — senza chiedere nulla. NON chiamare di nuovo se già mostrati gli slot. Il risultato contiene 'serviceId': usarlo per bookAppointment. OUTPUT OBBLIGATORIO — lista numerata:\n1. [data] alle [ora]\n2. [data] alle [ora]\n3. [data] alle [ora]\n4. Mostra il giorno successivo",
+            description: "📅 Recupera slot disponibili. CHIAMARE SUBITO quando il cliente chiede un appuntamento. La funzione gestisce automaticamente la selezione del servizio: se c'è un solo servizio lo seleziona, se ce ne sono più di uno ritorna la LISTA SERVIZI — mostrala al cliente come menu numerato e quando sceglie richiama con il serviceId. DOPO aver ottenuto gli slot, mostrali come lista numerata (1/2/3 + 'mostra giorno successivo'). NON richiamare se gli slot sono GIÀ stati mostrati nella conversazione.",
             parameters: {
               type: "object",
               properties: {
-                serviceId: { type: "string", description: "ID del servizio (opzionale, usa il primo disponibile)" },
+                serviceId: { type: "string", description: "ID del servizio (opzionale alla prima chiamata — la funzione gestisce la selezione)" },
                 daysAhead: { type: "number", description: "Giorni in avanti (default 7)" },
                 targetDate: { type: "string", description: "Data specifica YYYY-MM-DD" }
               },
@@ -1305,7 +1305,7 @@ export class LLMRouterService {
           },
           {
             name: "bookAppointment",
-            description: "✅ Prenota un appuntamento. QUANDO USARE: Cliente ha scelto uno slot E ha confermato ('sì', 'yes', 'ok', 'confermo', 'prenota'). COME TROVARE I PARAMETRI: serviceId e startTime sono nella risposta precedente di listAvailableSlots — usali ESATTAMENTE. NON chiamare listAvailableSlots di nuovo.",
+            description: "✅ Prenota un appuntamento. QUANDO USARE: SOLO dopo che il cliente ha CONFERMATO lo slot ('sì','yes','ok','confermo','prenota','book it'). FLUSSO CORRETTO: 1) cliente sceglie slot (es. '2') → TU chiedi conferma testuale ('Confermo X il Y alle Z?'), 2) cliente conferma → ORA chiama bookAppointment. PARAMETRI: serviceId e startTime dalla risposta precedente di listAvailableSlots — usali ESATTAMENTE. NON richiamare listAvailableSlots.",
             parameters: {
               type: "object",
               properties: {
@@ -2010,8 +2010,8 @@ export class LLMRouterService {
 
     // 🛡️ Sofia Fix: Ensure the LLM doesn't skip tools when a match exists
     const toolCoachingMsg = sellsProductsAndServices
-      ? "CRITICAL: For business operations (products, cart, orders, profile, support, or appointment booking), YOU MUST call the appropriate specialist function. DO NOT answer with text. For appointments/booking: call listAvailableSlots IMMEDIATELY — do NOT ask what service. For language change requests ('parla in spagnolo', 'speak in English', 'quiero hablar en español', etc.): call changeLanguage IMMEDIATELY with the correct language code."
-      : "CRITICAL: If the user request matches a function (Profile, Support, appointment booking, etc.), YOU MUST call the function immediately. For appointments: call listAvailableSlots IMMEDIATELY — do NOT ask what service or type. For language change requests ('parla in spagnolo', 'speak in English', 'quiero hablar en español', etc.): call changeLanguage IMMEDIATELY with the correct language code."
+      ? "CRITICAL: For business operations (products, cart, orders, profile, support, or appointment booking), YOU MUST call the appropriate specialist function. DO NOT answer with text. For appointments/booking: call listAvailableSlots IMMEDIATELY — it handles service selection automatically. For language change requests ('parla in spagnolo', 'speak in English', 'quiero hablar en español', etc.): call changeLanguage IMMEDIATELY with the correct language code."
+      : "CRITICAL: If the user request matches a function (Profile, Support, appointment booking, etc.), YOU MUST call the function immediately. For appointments/booking: call listAvailableSlots IMMEDIATELY — it handles service selection automatically. For language change requests ('parla in spagnolo', 'speak in English', 'quiero hablar en español', etc.): call changeLanguage IMMEDIATELY with the correct language code."
 
     messages.splice(messages.length - 1, 0, {
       role: "system",

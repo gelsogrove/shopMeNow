@@ -87,7 +87,22 @@ export async function listAvailableSlots(
           timestamp: new Date().toISOString(),
         }
       }
-      serviceId = services[0].id
+      // If only 1 service → auto-pick. If multiple → return list so LLM shows menu
+      if (services.length === 1) {
+        serviceId = services[0].id
+      } else {
+        return {
+          success: false,
+          message: `Multiple bookable services available. Ask the customer which service they want, then call listAvailableSlots again with the chosen serviceId.`,
+          error: "SERVICE_SELECTION_REQUIRED",
+          availableServices: services.map((s, i) => ({
+            index: i + 1,
+            serviceId: s.id,
+            name: s.name,
+          })),
+          timestamp: new Date().toISOString(),
+        } as any
+      }
     }
 
     const service = await appointmentService.getBookableService(

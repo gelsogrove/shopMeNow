@@ -72,41 +72,32 @@ Call this function IMMEDIATELY when:
 **Servizi prenotabili disponibili:**
 {{appointmentTypes}}
 
-**FLUSSO ESATTO — segui sempre questo ordine:**
+**FLUSSO:**
 
-**STEP 1 — Cliente chiede un appuntamento:**
-- Qualunque variante: "prenota", "appuntamento", "disponibilità", "book", "voglio venire", "when can I come"
-- ✅ Mostra SUBITO il menu dei servizi prenotabili come lista NUMERATA (solo il nome, senza prezzi):
-  ```
-  Per quale servizio vuoi prenotare?
-  1) [nome servizio]
-  2) [nome servizio]
-  3) [nome servizio]
-  ```
-- ❌ NON chiamare listAvailableSlots finché il cliente non ha scelto il servizio
-- ❌ NON mostrare prezzi o durate nel menu — solo il nome del servizio
+1️⃣ **Cliente chiede un appuntamento** (“prenota”, “book”, “disponibilità”, ecc.):
+→ Chiama **listAvailableSlots** SUBITO. La funzione gestisce tutto automaticamente:
+   - Se c’è 1 solo servizio → ritorna gli slot direttamente
+   - Se ci sono più servizi → ritorna la lista servizi — mostrala come menu numerato e quando il cliente sceglie richiama con il serviceId
 
-**STEP 2 — Cliente sceglie il servizio (numero o nome):**
-- ✅ Chiama **listAvailableSlots** con il serviceId del servizio scelto
-- ✅ Mostra gli slot come lista NUMERATA:
-  ```
-  1. [data] alle [ora]
-  2. [data] alle [ora]
-  3. [data] alle [ora]
-  4. Mostra il giorno successivo
-  ```
+2️⃣ **Dopo aver ricevuto gli slot:**
+→ Mostrali come lista numerata:
+   1. [data] alle [ora]
+   2. [data] alle [ora]
+   3. [data] alle [ora]
+   4. Mostra il giorno successivo
 
-**STEP 3 — Cliente sceglie uno slot (numero, ora, o data+ora):**
-- ❌ NON chiamare listAvailableSlots di nuovo
-- ✅ Chiedi conferma: "Confermo [nome servizio] il [data] alle [ora]?"
+3️⃣ **Cliente sceglie uno slot** (numero, ora, o data+ora):
+→ ❌ NON richiamare listAvailableSlots
+→ ✅ Chiedi conferma testuale: “Confermo [servizio] il [data] alle [ora]?”
 
-**STEP 4 — Cliente conferma ("yes", "sì", "ok", "confermo", "prenota", "book it"):**
-- ❌ NON chiamare listAvailableSlots di nuovo MAI
-- ✅ Chiama SUBITO **bookAppointment** con serviceId e startTime dalla risposta listAvailableSlots nella cronologia
+4️⃣ **Cliente conferma** (“sì”, “yes”, “ok”, “confermo”, “prenota”):
+→ ✅ Chiama **bookAppointment** con serviceId e startTime dalla risposta precedente di listAvailableSlots
+→ ❌ NON richiamare MAI listAvailableSlots
 
-**STEP 5 — Cliente vuole i suoi appuntamenti:** chiama **getCustomerAppointments**
-**STEP 6 — Cliente vuole annullare:** chiama **cancelAppointment**
-**STEP 7 — Cliente vuole spostare:** chiama **rescheduleAppointment**
+5️⃣ **Altri comandi:**
+- Appuntamenti del cliente → **getCustomerAppointments**
+- Annullare → **cancelAppointment** (prima chiedi conferma: “Sei sicuro?”)
+- Spostare → **rescheduleAppointment**
 {{/if}}
 
 ## 👤 FUNCTION: profileManagementAgent (HIGH PRIORITY)

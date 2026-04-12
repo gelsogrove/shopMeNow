@@ -113,6 +113,8 @@ export class WorkspaceController {
         widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
         widgetAutoSuggestionsEnabled: workspace.widgetAutoSuggestionsEnabled ?? false,
         widgetQuickReplies: workspace.widgetQuickReplies ?? [],
+        // 📅 Calendar & Appointment Settings
+        enableCalendarBooking: workspace.enableCalendarBooking ?? false,
         // 🆕 Multi-Provider WhatsApp Support
         whatsappProvider: workspace.whatsappProvider ?? "meta",
         ultraMsgInstanceId: workspace.ultraMsgInstanceId ?? null,
