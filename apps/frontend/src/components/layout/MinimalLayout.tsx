@@ -306,6 +306,13 @@ export function MinimalLayout() {
                           </DropdownMenuItem>
                         </>
                       )}
+                      {/* Sales standalone - for informational workspaces with sales agents */}
+                      {!workspace?.sellsProductsAndServices && hasSalesAgents && (
+                        <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/sales")}>
+                          <UserCog className="mr-2 h-4 w-4 text-violet-500" />
+                          <span>Sales</span>
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/campaigns")}>
                         <Megaphone className="mr-2 h-4 w-4 text-rose-500" />
