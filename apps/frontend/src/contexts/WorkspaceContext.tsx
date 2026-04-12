@@ -1,5 +1,6 @@
 import { logger } from "@/lib/logger"
 import { storage } from "@/lib/storage"
+import { workspaceApi } from "@/services/workspaceApi"
 import {
   createContext,
   ReactNode,
@@ -186,6 +187,28 @@ export const WorkspaceProvider = ({ children, initialWorkspace }: WorkspaceProvi
 
     window.addEventListener("storage", handleStorageChange)
     return () => window.removeEventListener("storage", handleStorageChange)
+  }, [])
+
+  // 🔄 Refresh workspace from API on startup to avoid stale localStorage data.
+  // Ensures fields like enableCalendarBooking and sellsProductsAndServices are always current.
+  useEffect(() => {
+    if (!currentWorkspace?.id) return
+    const token = storage.getToken()
+    if (!token) return
+
+    workspaceApi.getById(currentWorkspace.id)
+      .then((fresh) => {
+        if (JSON.stringify(fresh) !== JSON.stringify(currentWorkspace)) {
+          logger.info("🔄 WorkspaceContext: refreshed workspace from API", fresh.name)
+          storage.setWorkspace(fresh)
+          setCurrentWorkspace(fresh)
+        }
+      })
+      .catch((err) => {
+        logger.error("WorkspaceContext: failed to refresh workspace from API", err)
+        // Non-fatal — localStorage data used as fallback
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Query per ottenere il workspace corrente - TEMPORANEAMENTE DISABILITATA

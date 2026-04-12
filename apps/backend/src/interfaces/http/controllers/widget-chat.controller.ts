@@ -985,39 +985,59 @@ export class WidgetChatController {
       })
 
       // 10. Process first message through LLM (registrationPromptLevel=0: user is registered)
+      // NOTE: Wrapped in try-catch so a transient LLM failure doesn't fail the whole registration.
+      // Customer + session are already created at this point — registration must succeed regardless.
       logger.info("[WIDGET-REGISTER] 🤖 Processing first message through LLM", {
         customerId: customer.id,
         language: normalizedLanguage,
         workspaceId: resolvedWorkspaceId,
       })
 
-      const llmResult = await llmRouterService.routeMessage({
-        workspaceId: resolvedWorkspaceId,
-        customerId: customer.id,
-        conversationId: chatSession.id,
-        messageId: `widget-reg-${visitorId}-${Date.now()}`,
-        message: firstMessage,
-        customerLanguage: normalizedLanguage,
-        customerName: customer.name,
-        isSystemMessage: false,
-        channel: "widget",
-        registrationPromptLevel: 0, // Registered user - no registration prompts
-      })
+      let llmResponse = "Welcome! How can I help you?"
+      let llmAgentUsed: string = AgentType.ROUTER
+      let llmTokensUsed = 0
+      let suggestions: string[] = []
 
-      logger.info("[WIDGET-REGISTER] ✅ LLM response received", {
-        agentUsed: llmResult.agentUsed,
-        tokensUsed: llmResult.tokensUsed,
-      })
+      try {
+        const llmResult = await llmRouterService.routeMessage({
+          workspaceId: resolvedWorkspaceId,
+          customerId: customer.id,
+          conversationId: chatSession.id,
+          messageId: `widget-reg-${visitorId}-${Date.now()}`,
+          message: firstMessage,
+          customerLanguage: normalizedLanguage,
+          customerName: customer.name,
+          isSystemMessage: false,
+          channel: "widget",
+          registrationPromptLevel: 0, // Registered user - no registration prompts
+        })
 
-      // Generate AI suggestions for first message too (so user sees quick reply buttons)
-      const suggestions = workspace.widgetAutoSuggestionsEnabled === true
-        ? await buildWidgetSuggestionsWithAI(
-            llmResult.response || "",
+        logger.info("[WIDGET-REGISTER] ✅ LLM response received", {
+          agentUsed: llmResult.agentUsed,
+          tokensUsed: llmResult.tokensUsed,
+        })
+
+        llmResponse = llmResult.response || llmResponse
+        llmAgentUsed = llmResult.agentUsed || llmAgentUsed
+        llmTokensUsed = llmResult.tokensUsed || 0
+
+        // Generate AI suggestions for first message too (so user sees quick reply buttons)
+        if (workspace.widgetAutoSuggestionsEnabled === true) {
+          suggestions = await buildWidgetSuggestionsWithAI(
+            llmResponse,
             normalizedLanguage || "en",
             workspace.widgetQuickReplies as any,
             resolvedWorkspaceId
           )
-        : []
+        }
+      } catch (llmError) {
+        logger.error("[WIDGET-REGISTER] ❌ LLM call failed (non-fatal) — returning fallback response", {
+          error: llmError instanceof Error ? llmError.message : String(llmError),
+          customerId: customer.id,
+          workspaceId: resolvedWorkspaceId,
+        })
+        // Registration still succeeds — user can continue chatting normally
+      }
 
       // 11. Save LLM response to conversation history
       await prisma.conversationMessage.create({
@@ -1026,9 +1046,9 @@ export class WidgetChatController {
           customerId: customer.id,
           conversationId: chatSession.id,
           role: "assistant",
-          content: llmResult.response || "Response unavailable",
-          agentType: llmResult.agentUsed || AgentType.ROUTER,
-          tokensUsed: llmResult.tokensUsed || 0,
+          content: llmResponse,
+          agentType: llmAgentUsed,
+          tokensUsed: llmTokensUsed,
         },
       })
 
@@ -1051,7 +1071,7 @@ export class WidgetChatController {
         success: true,
         customerId: customer.id,
         sessionId: chatSession.id,
-        response: llmResult.response || "Welcome! How can I help you?",
+        response: llmResponse,
         isNewCustomer,
         suggestions,
         // 🌍 Return customer language — widget can sync its dropdown
