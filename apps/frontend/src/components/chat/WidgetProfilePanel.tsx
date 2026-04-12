@@ -1,6 +1,7 @@
 import { useState, useEffect, type CSSProperties } from "react"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ArrowLeft, Loader2, Save, User, Mail, Phone, Building, Globe } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { ArrowLeft, Loader2, Save, User, Mail, Phone, Building, Globe, Bell } from "lucide-react"
 
 interface WidgetProfilePanelProps {
   profileData: Record<string, unknown> | null
@@ -26,6 +27,7 @@ export function WidgetProfilePanel({
   const [phone, setPhone] = useState("")
   const [company, setCompany] = useState("")
   const [language, setLanguage] = useState("en")
+  const [pushNotificationsConsent, setPushNotificationsConsent] = useState(false)
 
   useEffect(() => {
     if (profileData) {
@@ -34,11 +36,12 @@ export function WidgetProfilePanel({
       setPhone((profileData.phone as string) || "")
       setCompany((profileData.company as string) || "")
       setLanguage((profileData.language as string) || "en")
+      setPushNotificationsConsent((profileData.pushNotificationsConsent as boolean) || false)
     }
   }, [profileData])
 
   const handleSubmit = () => {
-    onSave({ name, email, company, language })
+    onSave({ name, email, company, language, pushNotificationsConsent })
   }
 
   if (loading) {
@@ -147,6 +150,23 @@ export function WidgetProfilePanel({
               <option value="fr">Français</option>
               <option value="de">Deutsch</option>
             </select>
+          </div>
+
+          {/* Push Notifications */}
+          <div className="border-t border-slate-200 pt-4 mt-4">
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-100 hover:bg-slate-150 transition-colors">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-slate-600" />
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium text-slate-800">WhatsApp Notifications</span>
+                  <span className="text-xs text-slate-500">Receive message updates</span>
+                </div>
+              </div>
+              <Switch
+                checked={pushNotificationsConsent}
+                onCheckedChange={setPushNotificationsConsent}
+              />
+            </div>
           </div>
         </div>
       </ScrollArea>

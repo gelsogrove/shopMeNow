@@ -47,6 +47,23 @@ jest.mock("../../../src/services/llm-router.service", () => ({
   })),
 }))
 
+jest.mock("../../../src/application/chat-engine", () => ({
+  getChatEngine: jest.fn().mockImplementation(() => ({
+    routeMessage: jest.fn().mockImplementation(async (_args) => {
+      // Simulate ChatEngine side-effect: save assistant message (same as LLMRouterService mock above)
+      await prisma.conversationMessage.create({
+        data: { role: "assistant", content: "LLM RESPONSE" },
+      })
+      return {
+        message: "LLM RESPONSE",
+        response: "LLM RESPONSE",
+        agentUsed: "ROUTER",
+        tokensUsed: 1,
+      }
+    }),
+  })),
+}))
+
 jest.mock("../../../src/utils/welcome-message.handler", () => ({
   WelcomeMessageHandler: jest.fn(() => ({
     handleWelcomeMessage: jest.fn(() => Promise.resolve({ isWelcomeMessage: false })),

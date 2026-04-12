@@ -378,7 +378,6 @@ export class ServicesController {
       const remainingServices = await prisma.services.count({
         where: {
           workspaceId,
-          deletedAt: null,
           isActive: true,
           // Exclude the service we just deleted
           id: { not: id }

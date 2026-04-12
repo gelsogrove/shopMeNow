@@ -292,7 +292,16 @@ export const getWidgetProfile = async (input: {
   const query = new URLSearchParams({ customerId })
   const response = await fetch(`${apiUrl}/widget/profile/${workspaceId}?${query.toString()}`)
   if (!response.ok) throw new Error("Failed to fetch profile")
-  return await response.json()
+  const data = await response.json()
+  
+  // Convert snake_case to camelCase for frontend
+  if ("push_notifications_consent" in data) {
+    data.pushNotificationsConsent = data.push_notifications_consent
+    delete data.push_notifications_consent
+    delete data.push_notifications_consent_at // Remove timestamp field (not used in UI)
+  }
+  
+  return data
 }
 
 export const updateWidgetProfile = async (input: {
@@ -302,11 +311,28 @@ export const updateWidgetProfile = async (input: {
   data: Record<string, unknown>
 }) => {
   const { apiUrl, workspaceId, customerId, data } = input
+  
+  // Convert camelCase to snake_case for backend
+  const backendData = { ...data }
+  if ("pushNotificationsConsent" in backendData) {
+    backendData.push_notifications_consent = backendData.pushNotificationsConsent
+    delete backendData.pushNotificationsConsent
+  }
+  
   const response = await fetch(`${apiUrl}/widget/profile/${workspaceId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ customerId, ...data }),
+    body: JSON.stringify({ customerId, ...backendData }),
   })
   if (!response.ok) throw new Error("Failed to update profile")
-  return await response.json()
+  const result = await response.json()
+  
+  // Convert snake_case to camelCase for frontend
+  if ("push_notifications_consent" in result) {
+    result.pushNotificationsConsent = result.push_notifications_consent
+    delete result.push_notifications_consent
+    delete result.push_notifications_consent_at // Remove timestamp field (not used in UI)
+  }
+  
+  return result
 }

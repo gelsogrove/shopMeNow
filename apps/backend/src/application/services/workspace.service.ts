@@ -874,7 +874,6 @@ For privacy inquiries, please contact our support team.`
       const serviceCount = await this.prisma.services.count({
         where: {
           workspaceId: id,
-          deletedAt: null,
           isActive: true
         }
       })

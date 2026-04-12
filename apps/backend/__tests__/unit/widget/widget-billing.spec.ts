@@ -72,6 +72,14 @@ jest.mock("../../../src/services/llm-router.service", () => ({
   LLMRouterService: jest.fn(() => mockLLMRouterService),
 }))
 
+// Mock getChatEngine (controller uses this instead of LLMRouterService directly)
+const mockChatEngine = {
+  routeMessage: jest.fn(),
+}
+jest.mock("../../../src/application/chat-engine", () => ({
+  getChatEngine: jest.fn(() => mockChatEngine),
+}))
+
 // Mock SubscriptionBillingService
 const mockSubscriptionBillingService = {
   deductOwnerWidgetMessageCredit: jest.fn(),
@@ -234,7 +242,16 @@ describe("Widget Billing", () => {
     ;(mockPrisma.customers.findUnique as jest.Mock).mockResolvedValue({ activeChatbot: true })
 
     // Default LLM response
-    mockLLMRouterService.routeMessage.mockResolvedValue({
+    mockChatEngine.routeMessage.mockResolvedValue({
+      response: "Ciao! Come posso aiutarti?",
+      agentUsed: "ROUTER",
+      tokensUsed: 150,
+      isBlocked: false,
+    })
+
+    // Default ChatEngine response (controller uses getChatEngine now)
+    mockChatEngine.routeMessage.mockResolvedValue({
+      message: "Ciao! Come posso aiutarti?",
       response: "Ciao! Come posso aiutarti?",
       agentUsed: "ROUTER",
       tokensUsed: 150,
@@ -361,7 +378,7 @@ describe("Widget Billing", () => {
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
       // Should block before LLM/billing
-      expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
+      expect(mockChatEngine.routeMessage).not.toHaveBeenCalled()
       expect(mockSubscriptionBillingService.deductOwnerWidgetMessageCredit).not.toHaveBeenCalled()
       expect(statusMock).toHaveBeenCalledWith(403)
       expect(jsonMock).toHaveBeenCalledWith(
@@ -402,7 +419,7 @@ describe("Widget Billing", () => {
 
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
-      expect(mockLLMRouterService.routeMessage).toHaveBeenCalled()
+      expect(mockChatEngine.routeMessage).toHaveBeenCalled()
       expect(statusMock).toHaveBeenCalledWith(200)
     })
 
@@ -435,7 +452,7 @@ describe("Widget Billing", () => {
 
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
-      expect(mockLLMRouterService.routeMessage).toHaveBeenCalled()
+      expect(mockChatEngine.routeMessage).toHaveBeenCalled()
       expect(statusMock).toHaveBeenCalledWith(200)
     })
 
@@ -468,7 +485,7 @@ describe("Widget Billing", () => {
 
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
-      expect(mockLLMRouterService.routeMessage).toHaveBeenCalled()
+      expect(mockChatEngine.routeMessage).toHaveBeenCalled()
       expect(statusMock).toHaveBeenCalledWith(200)
     })
 
@@ -514,7 +531,7 @@ describe("Widget Billing", () => {
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
       // Should NOT process message
-      expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
+      expect(mockChatEngine.routeMessage).not.toHaveBeenCalled()
 
       // Should return 402 Payment Required
       expect(statusMock).toHaveBeenCalledWith(402)
@@ -561,7 +578,7 @@ describe("Widget Billing", () => {
 
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
-      expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
+      expect(mockChatEngine.routeMessage).not.toHaveBeenCalled()
       expect(statusMock).toHaveBeenCalledWith(402)
     })
   })
@@ -597,7 +614,7 @@ describe("Widget Billing", () => {
 
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
-      expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
+      expect(mockChatEngine.routeMessage).not.toHaveBeenCalled()
       expect(statusMock).toHaveBeenCalledWith(402)
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -636,7 +653,7 @@ describe("Widget Billing", () => {
 
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
-      expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
+      expect(mockChatEngine.routeMessage).not.toHaveBeenCalled()
       expect(statusMock).toHaveBeenCalledWith(402)
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -676,7 +693,7 @@ describe("Widget Billing", () => {
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
       // Should NOT call LLM
-      expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
+      expect(mockChatEngine.routeMessage).not.toHaveBeenCalled()
 
       // 🎯 CRITICAL: Should NOT call billing when debugMode=true
       expect(mockSubscriptionBillingService.deductOwnerWidgetMessageCredit).not.toHaveBeenCalled()
@@ -729,7 +746,7 @@ describe("Widget Billing", () => {
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
       // 🎯 CRITICAL: LLM must NOT be called (debugMode blocks everyone)
-      expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
+      expect(mockChatEngine.routeMessage).not.toHaveBeenCalled()
 
       // 🎯 CRITICAL: WIP response returned
       expect(statusMock).toHaveBeenCalledWith(200)
@@ -769,7 +786,7 @@ describe("Widget Billing", () => {
 
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
-      expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
+      expect(mockChatEngine.routeMessage).not.toHaveBeenCalled()
       expect(statusMock).toHaveBeenCalledWith(403)
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -802,7 +819,7 @@ describe("Widget Billing", () => {
 
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
-      expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
+      expect(mockChatEngine.routeMessage).not.toHaveBeenCalled()
       expect(statusMock).toHaveBeenCalledWith(403)
       expect(jsonMock).toHaveBeenCalledWith(
         expect.objectContaining({

@@ -70,6 +70,14 @@ jest.mock("../../../src/services/llm-router.service", () => ({
   })),
 }))
 
+// Mock getChatEngine (controller uses this now)
+let mockChatEngineRouteMessage: jest.Mock
+jest.mock("../../../src/application/chat-engine", () => ({
+  getChatEngine: jest.fn().mockImplementation(() => ({
+    routeMessage: (...args: any[]) => mockChatEngineRouteMessage(...args),
+  })),
+}))
+
 jest.mock("../../../src/application/services/subscription-billing.service", () => ({
   SubscriptionBillingService: jest.fn(() => ({
     deductOwnerWidgetMessageCredit: jest.fn().mockResolvedValue({ success: true, newBalance: 50 }),
@@ -156,6 +164,12 @@ describe("Widget sendMessage — Operator Handoff Guard", () => {
     ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ status: "ACTIVE" })
 
     mockRouteMessage = jest.fn()
+    mockChatEngineRouteMessage = jest.fn().mockResolvedValue({
+      message: "Hello! How can I help?",
+      response: "Hello! How can I help?",
+      agentUsed: "ROUTER",
+      tokensUsed: 100,
+    })
     mockCanProcessMessages = jest.fn().mockResolvedValue({ canProcess: true })
     mockRelayCustomerMessageToOperator = jest.fn().mockResolvedValue(undefined)
   })
@@ -178,7 +192,7 @@ describe("Widget sendMessage — Operator Handoff Guard", () => {
     await controller.sendMessage(mockReq as Request, mockRes as Response)
 
     // RULE: LLM must NOT be called
-    expect(mockRouteMessage).not.toHaveBeenCalled()
+    expect(mockChatEngineRouteMessage).not.toHaveBeenCalled()
 
     // RULE: Response must be 200 (not error) with activeChatbot:false + blocked:true
     expect(statusMock).toHaveBeenCalledWith(200)
@@ -212,7 +226,7 @@ describe("Widget sendMessage — Operator Handoff Guard", () => {
     ;(mockPrisma.conversationMessage.create as jest.Mock).mockResolvedValue({})
     ;(mockPrisma.customers.findUnique as jest.Mock).mockResolvedValue({ activeChatbot: true })
 
-    mockRouteMessage.mockResolvedValue({
+    mockChatEngineRouteMessage.mockResolvedValue({
       response: "Hello! How can I help?",
       agentUsed: "ROUTER",
       tokensUsed: 10,
@@ -221,7 +235,7 @@ describe("Widget sendMessage — Operator Handoff Guard", () => {
     await controller.sendMessage(mockReq as Request, mockRes as Response)
 
     // RULE: LLM must be called
-    expect(mockRouteMessage).toHaveBeenCalled()
+    expect(mockChatEngineRouteMessage).toHaveBeenCalled()
     expect(statusMock).toHaveBeenCalledWith(200)
     expect(jsonMock).toHaveBeenCalledWith(
       expect.objectContaining({ success: true, response: "Hello! How can I help?" })
@@ -248,7 +262,7 @@ describe("Widget sendMessage — Operator Handoff Guard", () => {
       statusMock.mockReturnValue({ json: jsonMock })
       await controller.sendMessage(mockReq as Request, mockRes as Response)
 
-      expect(mockRouteMessage).not.toHaveBeenCalled()
+      expect(mockChatEngineRouteMessage).not.toHaveBeenCalled()
       expect(jsonMock).toHaveBeenCalledWith(expect.objectContaining({ activeChatbot: false, blocked: true }))
     }
   })
@@ -281,7 +295,7 @@ describe("Widget sendMessage — Operator Handoff Guard", () => {
     await controller.sendMessage(mockReq as Request, mockRes as Response)
 
     // RULE: LLM must NOT be called
-    expect(mockRouteMessage).not.toHaveBeenCalled()
+    expect(mockChatEngineRouteMessage).not.toHaveBeenCalled()
 
     // RULE: Relay to operator WhatsApp must be called
     expect(mockRelayCustomerMessageToOperator).toHaveBeenCalledWith(

@@ -61,12 +61,20 @@ jest.mock("@echatbot/database", () => {
   }
 })
 
-// Mock LLMRouterService
+// Mock LLMRouter Service
 const mockLLMRouterService = {
   routeMessage: jest.fn(),
 }
 jest.mock("../../../src/services/llm-router.service", () => ({
   LLMRouterService: jest.fn(() => mockLLMRouterService),
+}))
+
+// Mock getChatEngine (controller uses this now)
+const mockChatEngine = {
+  routeMessage: jest.fn(),
+}
+jest.mock("../../../src/application/chat-engine", () => ({
+  getChatEngine: jest.fn(() => mockChatEngine),
 }))
 
 // Mock SubscriptionBillingService
@@ -198,7 +206,7 @@ describe("Widget Debug Mode - NO Billing", () => {
     await controller.sendMessage(mockReq as Request, mockRes as Response)
 
     // 🎯 CRITICAL: Should NOT call LLM (exits early with WIP)
-    expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
+    expect(mockChatEngine.routeMessage).not.toHaveBeenCalled()
 
     // 🎯 CRITICAL: Should NOT call billing service
     expect(mockSubscriptionBillingService.deductOwnerWidgetMessageCredit).not.toHaveBeenCalled()
@@ -243,7 +251,7 @@ describe("Widget Debug Mode - NO Billing", () => {
     await controller.sendMessage(mockReq as Request, mockRes as Response)
 
     // Should NOT call LLM
-    expect(mockLLMRouterService.routeMessage).not.toHaveBeenCalled()
+    expect(mockChatEngine.routeMessage).not.toHaveBeenCalled()
 
     // 🎯 CRITICAL: Should NOT call billing service
     expect(mockSubscriptionBillingService.deductOwnerWidgetMessageCredit).not.toHaveBeenCalled()
@@ -301,7 +309,7 @@ describe("Widget Debug Mode - NO Billing", () => {
       status: "active",
     })
 
-    mockLLMRouterService.routeMessage.mockResolvedValue({
+    mockChatEngine.routeMessage.mockResolvedValue({
       response: "Ciao! Come posso aiutarti?",
       agentUsed: "ROUTER",
       tokensUsed: 150,
@@ -315,7 +323,7 @@ describe("Widget Debug Mode - NO Billing", () => {
     await controller.sendMessage(mockReq as Request, mockRes as Response)
 
     // Should call LLM
-    expect(mockLLMRouterService.routeMessage).toHaveBeenCalled()
+    expect(mockChatEngine.routeMessage).toHaveBeenCalled()
 
     // 🎯 CRITICAL: Should call billing service (deduct $0.005)
     expect(mockSubscriptionBillingService.deductOwnerWidgetMessageCredit).toHaveBeenCalledWith(
