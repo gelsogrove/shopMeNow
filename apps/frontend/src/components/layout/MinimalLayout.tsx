@@ -286,10 +286,13 @@ export function MinimalLayout() {
                             <Package className="mr-2 h-4 w-4 text-orange-500" />
                             <span>Products</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/services")}>
-                            <Briefcase className="mr-2 h-4 w-4 text-cyan-500" />
-                            <span>Services</span>
-                          </DropdownMenuItem>
+                          {/* Services inside E-commerce only when calendar booking is NOT enabled */}
+                          {!workspace?.enableCalendarBooking && (
+                            <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/services")}>
+                              <Briefcase className="mr-2 h-4 w-4 text-cyan-500" />
+                              <span>Services</span>
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/offers")}>
                             <Tag className="mr-2 h-4 w-4 text-pink-500" />
                             <span>Offers</span>
@@ -305,6 +308,13 @@ export function MinimalLayout() {
                             <span>Orders</span>
                           </DropdownMenuItem>
                         </>
+                      )}
+                      {/* Services standalone - visible for informational workspaces OR when calendar booking is enabled */}
+                      {(workspace?.enableCalendarBooking === true || !workspace?.sellsProductsAndServices) && (
+                        <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/services")}>
+                          <Briefcase className="mr-2 h-4 w-4 text-cyan-500" />
+                          <span>Services</span>
+                        </DropdownMenuItem>
                       )}
                       {/* Sales standalone - for informational workspaces with sales agents */}
                       {!workspace?.sellsProductsAndServices && hasSalesAgents && (

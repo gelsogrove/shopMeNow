@@ -30,6 +30,7 @@ import {
   Bell,
   Shield,
   Mail,
+  Globe,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -1364,6 +1365,26 @@ export function ChatWidget({
                         rows={3}
                         className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400 resize-none"
                       />
+                    </div>
+
+                    {/* Language */}
+                    <div className="space-y-1">
+                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                        <Globe className="w-3.5 h-3.5" /> Language
+                      </label>
+                      <select
+                        value={formLanguage}
+                        onChange={(e) => setFormLanguage(e.target.value as LangCode)}
+                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1"
+                        style={{ "--tw-ring-color": resolvedPrimaryColor } as CSSProperties}
+                      >
+                        <option value="en">🇬🇧 English</option>
+                        <option value="it">🇮🇹 Italiano</option>
+                        <option value="es">🇪🇸 Español</option>
+                        <option value="pt">🇧🇷 Português</option>
+                        <option value="fr">🇫🇷 Français</option>
+                        <option value="de">🇩🇪 Deutsch</option>
+                      </select>
                     </div>
 
                     {/* Terms & consent */}
