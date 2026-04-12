@@ -54,7 +54,18 @@ export class CallingFunctionsController {
             }
 
             const functions = await this.repository.findAllByWorkspace(workspaceId)
-            return res.status(200).json({ functions })
+
+            // Hide appointment system functions when calendar booking is disabled
+            const workspace = await this.prisma.workspace.findUnique({
+                where: { id: workspaceId },
+                select: { enableCalendarBooking: true }
+            })
+            const APPOINTMENT_FUNCTIONS = ["bookAppointment", "cancelAppointment", "getCustomerAppointments", "listAvailableSlots"]
+            const filteredFunctions = workspace?.enableCalendarBooking
+                ? functions
+                : functions.filter(f => !(f.isSystemFunction && APPOINTMENT_FUNCTIONS.includes(f.functionName)))
+
+            return res.status(200).json({ functions: filteredFunctions })
         } catch (error) {
             logger.error("❌ Failed to get calling functions:", error)
             return res.status(500).json({ error: "Internal server error" })
