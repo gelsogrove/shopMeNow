@@ -190,16 +190,16 @@ describe('Welcome Message Race Condition Fix', () => {
 
   describe('SCENARIO: Message Save Deduplication', () => {
     it('RULE: ChatEngine.saveMessages() should save user + assistant (NO duplicates)', async () => {
-      // GIVEN: ChatEngine saveMessages method
-      const saveUserSpy = jest.spyOn((chatEngine as any).conversationManager, 'saveUserMessage');
-      const saveAssistantSpy = jest.spyOn((chatEngine as any).conversationManager, 'saveAssistantMessage');
-      
+      // GIVEN: ChatEngine messagePersistence.saveMessages method
+      const messagePersistence = (chatEngine as any).messagePersistence;
+      const saveUserSpy = jest.spyOn(messagePersistence.conversationManager, 'saveUserMessage');
+      const saveAssistantSpy = jest.spyOn(messagePersistence.conversationManager, 'saveAssistantMessage');
+
       saveUserSpy.mockResolvedValue(undefined);
       saveAssistantSpy.mockResolvedValue('assistant-msg-789');
-      
-      // WHEN: ChatEngine saves messages
-      const chatEnginePrivate = chatEngine as any;
-      await chatEnginePrivate.saveMessages(
+
+      // WHEN: ChatEngine saves messages via messagePersistence
+      await messagePersistence.saveMessages(
         mockWorkspaceId,
         mockCustomerId,
         mockConversationId,

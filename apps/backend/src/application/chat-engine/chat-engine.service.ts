@@ -24,7 +24,7 @@ import {
   AskFAQIntent,
 } from "../intent"
 import { DataLoaderService, getDataLoader, LoadedData } from "../data-loader"
-import { ResponseBuilderService, getResponseBuilder, StructuredResponse, ListItem, EnrichmentOptions } from "../response-builder"
+import { ResponseBuilderService, getResponseBuilder, StructuredResponse, ListItem } from "../response-builder"
 import { LLMFormatterService, getLLMFormatter, FormatterResult } from "../llm-formatter"
 import { ConversationManager } from "../../services/conversation-manager.service"
 import { LinkReplacementService, ReplaceLinkWithTokenParams } from "../services/link-replacement.service"
@@ -40,7 +40,6 @@ import {
   messagePreprocessorService,
 } from "../../services/message-preprocessor.service"
 import { CartManagementAgentLLM } from "../agents/CartManagementAgentLLM"
-import { CustomerSupportAgentLLM } from "../agents/CustomerSupportAgentLLM"
 import { ProductContextAgentLLM, ProductContextData } from "../agents/ProductContextAgentLLM"
 import { TranslationAgent } from "../agents/TranslationAgent"
 import { SecurityAgent } from "../agents/SecurityAgent"
@@ -62,31 +61,22 @@ import { getUnifiedChatRouter, UnifiedChatRouter } from "../services/unified-cha
 import { UnifiedRoutingService } from "../services/unified-routing.service"
 import { SimpleIntentHandler, LLMIntentHandler } from "./handlers"
 import { CacheService } from "../services/cache.service"
-import { registrationPromptService } from "../../services/registration-prompt.service"
+import { MessagePersistenceService } from "./message-persistence.service"
+import {
+  WorkspaceConfig,
+  DebugStep,
+  ChatEngineInput,
+  ChatEngineOutput,
+} from "./chat-engine.types"
+
+// Re-export types for external consumers
+export { ChatEngineInput, ChatEngineOutput, DebugStep, WorkspaceConfig } from "./chat-engine.types"
 
 type PipelineLoadedData = LoadedData | CatalogQueryLoadedData
 
 // ================================================================================
 // WORKSPACE CONFIG CACHE
 // ================================================================================
-
-interface WorkspaceConfig {
-  name: string                    // Workspace name (e.g., "BellItalia VIP")
-  sellsProductsAndServices: boolean
-  hasSalesAgents: boolean
-  hasHumanSupport: boolean
-  humanSupportInstructions: string | null
-  operatorContactMethod: string | null
-  welcomeMessage: any
-  botIdentityResponse: string | null  // Bot personality
-  botIdentity: string | null          // Alias for botIdentityResponse
-  customAiRules: string | null  // Custom AI rules that override default behavior
-  adminEmail: string | null
-  workspaceName: string
-  address: string | null
-  chatbotName?: string | null      // 🆕 Custom chatbot name
-  businessType?: string | null     // 🆕 Business sector
-}
 
 const workspaceConfigCache = new Map<string, { config: WorkspaceConfig; timestamp: number }>()
 const CONFIG_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
@@ -108,122 +98,7 @@ const formatCartPrice = (value?: number | null) =>
 // CUSTOMER-LEVEL LOCKS (Concurrency Safety - Principle VI)
 // ================================================================================
 
-/**
- * In-memory lock per customer to prevent race conditions when same customer
- * sends multiple messages simultaneously. Each customer can only have ONE
- * message being processed at a time - subsequent messages wait in queue.
- * 
- * Pattern: Promise-based sequential processing per customer
- * - If lock exists: wait for it to release
- * - Acquire lock before processing
- * - Release lock after processing (success or error)
- */
 const customerProcessingLocks = new Map<string, Promise<void>>()
-
-// ================================================================================
-// DEBUG STEP TYPES (for Message Flow Timeline)
-// ================================================================================
-
-export interface DebugStep {
-  type: "router" | "sub_agent" | "function_call" | "function_result" | "safety" | "link-replacement" | "intent-parser" | "data-loader" | "llm-formatter" | "save-history" | "whatsapp-queue" | "token-replacement"
-  agent: string
-  model?: string
-  temperature?: number
-  timestamp: string | number
-  step?: string  // 🆕 Additional step label
-  details?: Record<string, any>  // 🆕 Arbitrary details
-  tokenUsage?: {
-    promptTokens: number
-    completionTokens: number
-    totalTokens: number
-  }
-  systemPrompt?: string
-  input?: {
-    userMessage?: string
-    conversationHistory?: any[]
-    functionResult?: any
-    textContent?: string
-    textToValidate?: string
-    previousResponse?: string
-    targetLanguage?: string  // 🆕 For Translation Agent
-    customerLanguage?: string  // 🆕 For Info Agent
-  }
-  output?: {
-    decision?: string
-    functionCall?: { name: string; arguments: any } | string
-    functionCalls?: any[]  // 🆕 For Info Agent multiple function calls
-    textResponse?: string
-    translatedText?: string
-    safe?: boolean
-    blockedReason?: string
-    result?: any
-    executionTimeMs?: number
-    textContent?: string
-    skipped?: boolean
-    reason?: string
-    translated?: boolean  // 🆕 For Translation Agent
-  }
-  duration?: number
-  executionTimeMs?: number  // 🆕 Alternative to duration
-}
-
-// ================================================================================
-// INPUT/OUTPUT TYPES
-// ================================================================================
-
-export interface ChatEngineInput {
-  message: string
-  customerId: string
-  workspaceId: string
-  conversationId?: string
-  customerName?: string
-  customerLanguage?: string
-  customerDiscount?: number
-  isPlayground?: boolean // 🧪 Skip billing and real actions in playground mode
-  channel?: string
-  registrationPromptLevel?: number // 🆕 Progressive registration prompt (0=none, 1=gentle, 2=insistent, 3=warning)
-}
-
-export interface ChatEngineOutput {
-  // New fields
-  message: string
-  agentType: AgentType
-  wasHandled: boolean
-  intent: string
-  confidence: "HIGH" | "MEDIUM" | "LOW"
-  source: "PATTERN" | "KEYWORD" | "LLM_FALLBACK" | "LLM_CONTEXT"
-  processingTimeMs: number
-  debugInfo?: {
-    loadedDataType?: string
-    responseType?: string
-    llmUsed?: boolean
-    steps?: DebugStep[]  // 🆕 Timeline steps (optional for early returns)
-    totalTokens?: number
-    totalCost?: number
-    executionTimeMs?: number
-    hybridFallback?: boolean
-    originalLabel?: string
-    invalidOption?: number
-    maxOption?: number
-    listType?: ListType
-    step?: string
-    [key: string]: any
-  }
-  // Widget-specific actions (e.g., open profile modal)
-  action?: {
-    type: "open_profile_modal" | "open_link"
-    customerId?: string
-    link?: string
-  }
-  // Legacy fields for webhook compatibility
-  response?: string  // Same as message (optional)
-  agentUsed?: string // String version of agentType (optional)
-  tokensUsed?: number
-  executionTimeMs?: number // Same as processingTimeMs (optional)
-  wasFAQ?: boolean
-  isBlocked?: boolean
-  _assistantMessageId?: string
-}
 
 // ================================================================================
 // MAIN SERVICE
@@ -260,6 +135,7 @@ export class ChatEngineService {
   private simpleIntentHandler: SimpleIntentHandler
   private llmIntentHandler: LLMIntentHandler
   private cacheService: CacheService
+  private messagePersistence: MessagePersistenceService
 
   constructor(private prisma: PrismaClient) {
     // Initialize core pipeline
@@ -293,6 +169,7 @@ export class ChatEngineService {
     this.unifiedRoutingService = new UnifiedRoutingService(prisma, this.intentParser, this.cacheService)
     this.simpleIntentHandler = new SimpleIntentHandler()
     this.llmIntentHandler = new LLMIntentHandler(this.llmRouterService)
+    this.messagePersistence = new MessagePersistenceService(prisma)
   }
 
   /**
@@ -608,7 +485,7 @@ export class ChatEngineService {
         executionTimeMs: processingTimeMs,
       }
 
-      const savedMessages = await this.saveMessages(
+      const savedMessages = await this.messagePersistence.saveMessages(
         input.workspaceId,
         input.customerId,
         conversationId,
@@ -824,7 +701,7 @@ export class ChatEngineService {
       executionTimeMs: processingTimeMs,
     }
 
-    const savedMessages = await this.saveMessages(
+    const savedMessages = await this.messagePersistence.saveMessages(
       input.workspaceId,
       input.customerId,
       conversationId,
@@ -1321,7 +1198,7 @@ export class ChatEngineService {
       executionTimeMs: processingTimeMs,
     }
 
-    const savedMessages = await this.saveMessages(
+    const savedMessages = await this.messagePersistence.saveMessages(
       input.workspaceId,
       input.customerId,
       conversationId,
@@ -1418,6 +1295,7 @@ export class ChatEngineService {
         customAiRules: true,  // Custom AI rules that override default behavior
         notificationEmail: true,
         address: true,
+        catalogBaseLanguage: true,
       },
     })
 
@@ -1434,7 +1312,8 @@ export class ChatEngineService {
       customAiRules: workspace?.customAiRules ?? null,
       adminEmail: workspace?.notificationEmail || null,
       workspaceName: workspace?.name || "Il nostro shop",
-      address: workspace?.address || null
+      address: workspace?.address || null,
+      catalogBaseLanguage: workspace?.catalogBaseLanguage || null,
     }
 
     workspaceConfigCache.set(workspaceId, { config, timestamp: Date.now() })
@@ -1470,7 +1349,7 @@ export class ChatEngineService {
   }
 
   /**
-   * Check if intent should go to CustomerSupportAgentLLM for informational workspaces
+   * Check if intent should go to UnifiedChatRouter for informational workspaces
    * These intents should ALWAYS use FAQ when available
    */
   private isInformationalIntent(intentType: string): boolean {
@@ -1693,13 +1572,15 @@ export class ChatEngineService {
       let translationTokens = 0
       let safetyTokens = 0
 
-      // STEP 2: Apply Translation Layer (SKIP for Italian to save tokens)
-      // 🚀 IMPROVEMENT: Skip translation if target language is Italian (base language)
-      const shouldSkipTranslation = normalizedLanguage === "it"
+      // STEP 2: Apply Translation Layer (SKIP when customer language matches workspace catalog base language)
+      const workspaceConfig = await this.loadWorkspaceConfig(input.workspaceId)
+      const catalogBaseLanguage = this.normalizeLanguageCode(workspaceConfig.catalogBaseLanguage || "it")
+      const shouldSkipTranslation = normalizedLanguage === catalogBaseLanguage
 
       if (shouldSkipTranslation) {
-        logger.info("🌍 [ChatEngine] Skipping translation (Italian base language)", {
+        logger.info("🌍 [ChatEngine] Skipping translation (customer language matches catalog base language)", {
           normalizedLanguage,
+          catalogBaseLanguage,
           customerLanguage: input.customerLanguage,
         })
       } else {
@@ -1868,7 +1749,9 @@ export class ChatEngineService {
     } finally {
       // 🔓 ALWAYS release lock, even on error
       customerProcessingLocks.delete(lockKey)
-      releaseLock!()
+      if (releaseLock) {
+        releaseLock()
+      }
       logger.info(`🔓 [ChatEngine] Lock released: ${lockKey}`)
     }
   }
@@ -2038,7 +1921,7 @@ export class ChatEngineService {
           await this.optionsMappingService.clearPendingAction(conversationId)
         } else if (!noteContent) {
           const promptMessage = "Scrivi la nota che vuoi aggiungere all'ordine."
-          const savedMessages = await this.saveMessages(
+          const savedMessages = await this.messagePersistence.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,
@@ -2080,7 +1963,7 @@ export class ChatEngineService {
             input.customerName
           )
 
-          const savedMessages = await this.saveMessages(
+          const savedMessages = await this.messagePersistence.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,
@@ -2174,7 +2057,7 @@ export class ChatEngineService {
           
           const processingTimeMs = Date.now() - startTime
           
-          const savedMessages = await this.saveMessages(
+          const savedMessages = await this.messagePersistence.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,  // 🔧 Use conversationId (not input.conversationId) for consistent history
@@ -2245,7 +2128,7 @@ export class ChatEngineService {
           const finalMessage = formatterResult.text
           const processingTimeMs = Date.now() - startTime
           
-          const savedMessages = await this.saveMessages(
+          const savedMessages = await this.messagePersistence.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,
@@ -2478,7 +2361,7 @@ export class ChatEngineService {
               const processingTimeMs = Date.now() - startTime
               
               // Save messages
-              const savedMessages = await this.saveMessages(
+              const savedMessages = await this.messagePersistence.saveMessages(
                 input.workspaceId,
                 input.customerId,
                 conversationId,  // 🔧 Use conversationId for consistent history
@@ -2647,7 +2530,7 @@ export class ChatEngineService {
               )
               
               // Save messages to history
-              const savedMessages = await this.saveMessages(
+              const savedMessages = await this.messagePersistence.saveMessages(
                 input.workspaceId,
                 input.customerId,
                 conversationId,
@@ -2739,7 +2622,7 @@ export class ChatEngineService {
                 }
 
                 // Persist response
-                const savedMessages = await this.saveMessages(
+                const savedMessages = await this.messagePersistence.saveMessages(
                   input.workspaceId,
                   input.customerId,
                   conversationId,
@@ -2820,7 +2703,7 @@ export class ChatEngineService {
                 })
                 
                 // Persist response
-                const savedMessages = await this.saveMessages(
+                const savedMessages = await this.messagePersistence.saveMessages(
                   input.workspaceId,
                   input.customerId,
                   conversationId,
@@ -2982,7 +2865,7 @@ export class ChatEngineService {
                   )
                 }
                 
-                const savedMsgs = await this.saveMessages(
+                const savedMsgs = await this.messagePersistence.saveMessages(
                   input.workspaceId,
                   input.customerId,
                   conversationId,
@@ -3060,7 +2943,7 @@ export class ChatEngineService {
                   )
                 }
                 
-                const savedMsgs = await this.saveMessages(
+                const savedMsgs = await this.messagePersistence.saveMessages(
                   input.workspaceId,
                   input.customerId,
                   conversationId,
@@ -3087,7 +2970,7 @@ export class ChatEngineService {
               
               if (items.length === 0) {
                 const emptyMsg = "Il tuo carrello è vuoto, non c'è nulla da rimuovere."
-                const savedMessages = await this.saveMessages(
+                const savedMessages = await this.messagePersistence.saveMessages(
                   input.workspaceId,
                   input.customerId,
                   conversationId,
@@ -3150,7 +3033,7 @@ export class ChatEngineService {
                 listType: "CART_ITEMS",
               })
               
-              const savedMessages = await this.saveMessages(
+              const savedMessages = await this.messagePersistence.saveMessages(
                 input.workspaceId,
                 input.customerId,
                 conversationId,
@@ -3250,7 +3133,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
               
               const finalMessage = llmResponse.response || "Mi dispiace, non ho capito. Puoi ripetere?"
               
-              const savedMessages = await this.saveMessages(
+              const savedMessages = await this.messagePersistence.saveMessages(
                 input.workspaceId,
                 input.customerId,
                 conversationId,
@@ -3323,7 +3206,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             const agentType = AgentType.PRODUCT_SEARCH
             
             // Save messages to history
-            const savedMessages = await this.saveMessages(
+            const savedMessages = await this.messagePersistence.saveMessages(
               input.workspaceId,
               input.customerId,
               conversationId,  // 🔧 Use conversationId for consistent history
@@ -3584,7 +3467,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             const processingTimeMs = Date.now() - startTime
             
             // Save messages to history
-            const savedMessages = await this.saveMessages(
+            const savedMessages = await this.messagePersistence.saveMessages(
               input.workspaceId,
               input.customerId,
               conversationId,
@@ -3675,7 +3558,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           })
           
           // Save messages
-          const savedMessages = await this.saveMessages(
+          const savedMessages = await this.messagePersistence.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,
@@ -3833,7 +3716,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         const greetingResponse = `Ciao! 👋 Benvenuto su ${workspaceName}. Come posso aiutarti oggi?`
         
         // Save messages
-        const savedMessages = await this.saveMessages(
+        const savedMessages = await this.messagePersistence.saveMessages(
           input.workspaceId,
           input.customerId,
           conversationId,
@@ -3915,7 +3798,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           })
 
           // Save messages
-          const savedMessages = await this.saveMessages(
+          const savedMessages = await this.messagePersistence.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,
@@ -3964,7 +3847,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           const processingTimeMs = Date.now() - startTime
           const unknownResponse = "Mi dispiace, si è verificato un errore. Potresti riprovare? 🤔"
           
-          const savedMessages = await this.saveMessages(
+          const savedMessages = await this.messagePersistence.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,
@@ -4041,7 +3924,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             const processingTimeMs = Date.now() - startTime
             const rejectMessage = "Ok, nessun problema! Posso aiutarti con altro?"
             
-            const savedMessages = await this.saveMessages(
+            const savedMessages = await this.messagePersistence.saveMessages(
               input.workspaceId,
               input.customerId,
               conversationId,  // 🔧 Use conversationId for consistent history
@@ -4120,7 +4003,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
             
             const processingTimeMs = Date.now() - startTime
             
-            const savedMessages = await this.saveMessages(
+            const savedMessages = await this.messagePersistence.saveMessages(
               input.workspaceId,
               input.customerId,
               conversationId,  // 🔧 Use conversationId for consistent history
@@ -4298,7 +4181,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           const processingTimeMs = Date.now() - startTime
 
           // Save messages
-          const savedMessages = await this.saveMessages(
+          const savedMessages = await this.messagePersistence.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,
@@ -4396,7 +4279,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           const processingTimeMs = Date.now() - startTime
 
           // Save messages
-          const savedMessages = await this.saveMessages(
+          const savedMessages = await this.messagePersistence.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,
@@ -4519,7 +4402,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           const processingTimeMs = Date.now() - startTime
           
           // Save messages
-          const savedMessages = await this.saveMessages(
+          const savedMessages = await this.messagePersistence.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,  // 🔧 Use conversationId for consistent history
@@ -4630,7 +4513,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           
           const processingTimeMs = Date.now() - startTime
           
-          const savedMessages = await this.saveMessages(
+          const savedMessages = await this.messagePersistence.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,  // 🔧 Use conversationId for consistent history
@@ -4720,7 +4603,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         const processingTimeMs = Date.now() - startTime
 
         // Save messages
-        const savedMessages = await this.saveMessages(
+        const savedMessages = await this.messagePersistence.saveMessages(
           input.workspaceId,
           input.customerId,
           conversationId,  // 🔧 Use conversationId for consistent history
@@ -4967,7 +4850,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // ========================================================================
       // STEP 4.1: Build enrichment options for contextual responses
       // ========================================================================
-      const enrichmentOptions = await this.buildEnrichmentOptions(
+      const enrichmentOptions = await this.messagePersistence.buildEnrichmentOptions(
         input.workspaceId,
         input.customerId,
         history.map(msg => ({ role: msg.role as "user" | "assistant", content: msg.content }))
@@ -5160,7 +5043,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // ========================================================================
       // STEP 8: Save messages to conversation history (with debugInfo for timeline)
       // ========================================================================
-      const savedMessages = await this.saveMessages(
+      const savedMessages = await this.messagePersistence.saveMessages(
         input.workspaceId,
         input.customerId,
         conversationId,  // 🔧 Use conversationId for consistent history
@@ -5477,11 +5360,11 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       const errorTimeMs = Date.now() - startTime
       
       // STEP: Get base error message in customer language
-      const baseErrorMessage = this.getErrorMessageByLanguage(input.customerLanguage)
+      const baseErrorMessage = this.messagePersistence.getErrorMessageByLanguage(input.customerLanguage)
       
       // 🌍 TRANSLATION LAYER for error messages (async, non-blocking)
       // Even errors should be polished through translation, if customer language is not English
-      const finalErrorMessage = await this.translateErrorMessage(
+      const finalErrorMessage = await this.messagePersistence.translateErrorMessage(
         baseErrorMessage,
         input.workspaceId,
         input.customerLanguage,
@@ -5545,11 +5428,11 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     const conversationId = input.conversationId || `temp-${input.customerId}`
 
     // ========================================================================
-    // STEP 0.2.1: Intercept intents with DEDICATED handlers BEFORE they reach CustomerSupportAgentLLM
-    // Without these checks, intents fall through to CustomerSupportAgentLLM → if agent fails → 
+    // STEP 0.2.1: Intercept intents with DEDICATED handlers BEFORE they reach UnifiedChatRouter
+    // Without these checks, intents fall through to LLMRouterService → if agent fails → 
     // fallback leaks botIdentityResponse (internal admin config) as customer message.
     // ✅ Intercepted: REQUEST_HUMAN, UPDATE_PROFILE, VIEW_PROFILE, CHANGE_LANGUAGE
-    // ⚠️ All other intents go to CustomerSupportAgentLLM (which is OK for ASK_FAQ, ASK_IDENTITY etc.)
+    // ⚠️ All other intents go to UnifiedChatRouter → LLMRouterService (which is OK for ASK_FAQ, ASK_IDENTITY etc.)
     // ========================================================================
     try {
       const intentResult = await this.intentParser.parse(input.message, {
@@ -5560,7 +5443,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // ========================================================================
       // INTERCEPT: REQUEST_HUMAN → reuse existing handleHumanSupportRequest
       // Without this, "voglio parlare con un operatore" falls through to
-      // CustomerSupportAgentLLM which dumps the system prompt
+      // CustomerSupportAgentLLM → now handled by UnifiedChatRouter which dumps the system prompt
       // ========================================================================
       if (intentResult.intent.type === "REQUEST_HUMAN") {
         logger.info("📞 [ChatEngine] REQUEST_HUMAN in informational workspace - routing to human support handler", {
@@ -5626,7 +5509,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           }
 
           const processingTimeMs = Date.now() - startTime
-          const savedMessages = await this.saveMessages(
+          const savedMessages = await this.messagePersistence.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,
@@ -5660,7 +5543,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // ========================================================================
       // INTERCEPT: CHANGE_LANGUAGE → reuse profile link logic for language change
       // Without this, CHANGE_LANGUAGE in informational workspaces falls through
-      // to CustomerSupportAgentLLM which may fail and leak the system prompt
+      // to UnifiedChatRouter which may fail and leak the system prompt
       // ========================================================================
       if (intentResult.intent.type === "CHANGE_LANGUAGE") {
         logger.info("🌍 [ChatEngine] CHANGE_LANGUAGE in informational workspace - generating profile link", {
@@ -5703,7 +5586,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           }
 
           const processingTimeMs = Date.now() - startTime
-          const savedMessages = await this.saveMessages(
+          const savedMessages = await this.messagePersistence.saveMessages(
             input.workspaceId,
             input.customerId,
             conversationId,
@@ -5763,40 +5646,28 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     }
 
     try {
-      const customerSupportAgent = new CustomerSupportAgentLLM(this.prisma)
-
-      // 🆕 REGISTRATION PROMPT: Append prompt text to query for informational workspaces
-      let queryForAgent = input.message
-      if (input.registrationPromptLevel && input.registrationPromptLevel > 0) {
-        const registrationPromptText = registrationPromptService.getPromptText(input.registrationPromptLevel)
-        queryForAgent = input.message + "\n\n[SYSTEM INSTRUCTION]\n" + registrationPromptText
-        logger.info("📝 [ChatEngine] Added registration prompt to informational query", {
-          level: input.registrationPromptLevel,
-          promptLength: registrationPromptText.length,
-        })
-      }
-
-      agentResponse = await customerSupportAgent.handleQuery({
+      // 🔄 Task 1.1: Rewire to UnifiedChatRouter → LLMRouterService
+      // Gains: conversation history (20min), booking functions from DB, multi-function loop (8 iterations)
+      const llmResponse = await this.unifiedChatRouter.routeMessage({
         workspaceId: input.workspaceId,
         customerId: input.customerId,
+        conversationId,
+        messageId: `${conversationId}-info-${Date.now()}`,
+        message: input.message,
         customerName,
         customerLanguage,
-        query: queryForAgent,
-        customerData: {
-          nameUser: customerName,
-          email: customer?.email || "",
-          phone: customer?.phone || "",
-          discountUser: customer?.discount || 0,
-          companyName: workspaceConfig.name || "Shop",
-          lastordercode: "",
-          languageUser: customerLanguage,
-          adminEmail: workspaceConfig.adminEmail || "",
-          botIdentityResponse: workspaceConfig.botIdentityResponse || "",
-          agentName: workspaceConfig.name || "Shop",
-          agentPhone: "",
-          agentEmail: workspaceConfig.adminEmail || "",
-        },
+        customerDiscount: customer?.discount || 0,
+        channel: input.channel,
+        registrationPromptLevel: input.registrationPromptLevel,
       })
+
+      agentResponse = {
+        success: !!llmResponse.response,
+        output: llmResponse.response || "",
+        tokensUsed: llmResponse.tokensUsed || 0,
+        executionTimeMs: llmResponse.executionTimeMs || 0,
+        functionCalls: [],
+      }
     } catch (error) {
       logger.error("❌ [ChatEngine] Informational support agent failed", {
         workspaceId: input.workspaceId,
@@ -5847,72 +5718,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       executionTimeMs: agentResponse.executionTimeMs || 0,
     })
 
-    // Append deterministic registration reminder BEFORE translation
-    finalMessage = this.appendRegistrationReminder(
-      finalMessage,
-      input.registrationPromptLevel,
-      debugSteps,
-      input.customerLanguage
-    )
-
-    try {
-      // 🌍 Apply Translation Layer (ALWAYS)
-      const translationResult = await this.applyTranslation(
-        finalMessage,
-        input.workspaceId,
-        customerLanguage,
-        debugSteps,
-        customerName
-      )
-
-      totalTokens += translationResult.tokensUsed || 0
-      finalMessage = translationResult.message
-
-      // 🛡️ Security Layer
-      if (input.channel === "widget") {
-        const securityResult = await this.securityAgent.process({
-          workspaceId: input.workspaceId,
-          message: finalMessage,
-          customerName,
-          customerId: input.customerId,
-        })
-
-        totalTokens += securityResult.tokensUsed || 0
-
-        debugSteps.push({
-          type: "safety",
-          agent: "Widget Security Layer",
-          timestamp: new Date().toISOString(),
-          input: {
-            textContent: finalMessage,
-          },
-          output: {
-            textResponse: securityResult.message || finalMessage,
-            decision: securityResult.safe ? "approved" : "blocked",
-          },
-          tokenUsage: {
-            promptTokens: 0,
-            completionTokens: securityResult.tokensUsed || 0,
-            totalTokens: securityResult.tokensUsed || 0,
-          },
-          details: {
-            safe: securityResult.safe,
-            blocked: !securityResult.safe,
-            blockedReason: securityResult.blockedReason,
-          },
-        })
-
-        finalMessage = securityResult.message || finalMessage
-      } else {
-        logger.info("⏭️ [ChatEngine] Skipping Widget Security (WhatsApp - scheduler handles it)")
-      }
-    } catch (error) {
-      logger.error("❌ [ChatEngine] Informational translation/security failed", {
-        workspaceId: input.workspaceId,
-        customerId: input.customerId,
-        error: error.message,
-      })
-    }
+    // 🔄 Task 1.1: Registration reminder, translation, and security are handled by
+    // the routeMessage() wrapper (lines ~1690-1782) — removed here to prevent double-processing.
 
     const messageBeforeReplacement = finalMessage
     const replacementResult = await this.linkReplacementService.replaceTokens(
@@ -5940,7 +5747,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
 
     const processingTimeMs = Date.now() - startTime
 
-    const savedMessages = await this.saveMessages(
+    const savedMessages = await this.messagePersistence.saveMessages(
       input.workspaceId,
       input.customerId,
       conversationId,
@@ -6074,7 +5881,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     }
 
     const processingTimeMs = Date.now() - startTime
-    const savedMessages = await this.saveMessages(
+    const savedMessages = await this.messagePersistence.saveMessages(
       input.workspaceId,
       input.customerId,
       conversationId,
@@ -6321,274 +6128,6 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         message: "Sorry, something went wrong. Please try again later or contact support.",
         success: false,
       }
-    }
-  }
-
-  /**
-   * Save messages to conversation history
-   * 🆕 Now includes debugInfo for Message Flow Dialog timeline
-   * 🆕 Returns assistant message ID for potential translation updates
-   */
-  private async saveMessages(
-    workspaceId: string,
-    customerId: string,
-    conversationId: string,
-    userMessage: string,
-    assistantMessage: string,
-    agentType?: string,
-    tokensUsed?: number,
-    debugInfo?: any
-  ): Promise<{ assistantMessageId?: string }> {
-    try {
-      // 🔧 CRITICAL FIX: Save user message FIRST
-      // LLMRouterService does NOT save user messages - ChatEngine must save them
-      // This method is called by ALL chat flows (widget, WhatsApp, informational, etc.)
-      await this.conversationManager.saveUserMessage({
-        workspaceId,
-        customerId,
-        conversationId,
-        content: userMessage,
-      })
-
-      // 🚀 WEBSOCKET: Notify admin dashboard about new customer message (real-time)
-      try {
-        const { websocketService } = await import("../../services/websocket.service")
-        websocketService.notifyNewMessage(workspaceId, {
-          id: `user-${Date.now()}`,
-          sessionId: conversationId,
-          content: userMessage,
-          sender: "customer",
-          timestamp: new Date().toISOString(),
-          workspaceId,
-        })
-      } catch (wsError) {
-        logger.warn("[WebSocket] Failed to notify new customer message from ChatEngine:", wsError)
-      }
-      
-      // 🆕 Create minimal debugInfo if not provided (for FAST-PATH responses)
-      const finalDebugInfo = debugInfo || {
-        loadedDataType: "FAST_PATH",
-        responseType: "FAST_PATH",
-        llmUsed: false,
-        steps: [{
-          type: "router",
-          agent: "⚡ Fast Path",
-          timestamp: new Date().toISOString(),
-          input: { textContent: userMessage.substring(0, 100) },
-          output: { textContent: "Response generated via optimized path" },
-          duration: 0,
-        }],
-        totalTokens: tokensUsed || 0,
-        totalCost: 0,
-        executionTimeMs: 0,
-      }
-      
-      // Save assistant response with debugInfo for timeline
-      const assistantMessageId = await this.conversationManager.saveAssistantMessage({
-        workspaceId,
-        customerId,
-        conversationId,
-        content: assistantMessage,
-        agentType,
-        tokensUsed,
-        debugInfo: finalDebugInfo,  // 🆕 Always have debugInfo for Message Flow Dialog
-      })
-
-      // 🚀 WEBSOCKET: Notify admin dashboard about assistant response (real-time)
-      try {
-        const { websocketService } = await import("../../services/websocket.service")
-        websocketService.notifyNewMessage(workspaceId, {
-          id: assistantMessageId || `assistant-${Date.now()}`,
-          sessionId: conversationId,
-          content: assistantMessage,
-          sender: "assistant",
-          timestamp: new Date().toISOString(),
-          workspaceId,
-        })
-      } catch (wsError) {
-        logger.warn("[WebSocket] Failed to notify new assistant message from ChatEngine:", wsError)
-      }
-      
-      logger.debug("💾 [ChatEngine] Messages saved to history (user + assistant)", { 
-        hasDebugInfo: true,
-        debugStepsCount: finalDebugInfo?.steps?.length || 0,
-        wasFastPath: !debugInfo,
-        assistantMessageId,
-      })
-      
-      // Return the assistant message ID
-      return { assistantMessageId }
-    } catch (error) {
-      // Don't fail the request if saving fails
-      logger.error("❌ [ChatEngine] Failed to save messages", { error })
-      return {}
-    }
-  }
-
-  // ================================================================================
-  // 🆕 CONTEXTUAL ENRICHMENT - Build enrichment options for ResponseBuilder
-  // ================================================================================
-
-  /**
-   * Build enrichment options for contextual responses
-   * 
-   * Loads customer profile data for personalization and prepares
-   * conversation history for contextual suggestions.
-   */
-  private async buildEnrichmentOptions(
-    workspaceId: string,
-    customerId: string,
-    conversationHistory: Array<{ role: "user" | "assistant"; content: string }>
-  ): Promise<EnrichmentOptions> {
-    const enrichmentOptions: EnrichmentOptions = {
-      conversationHistory,
-      enableClarifyingQuestions: true,
-      enableSuggestions: true,
-      enablePersonalization: true,
-    }
-
-    try {
-      // Load customer order statistics for personalization
-      const orderStats = await this.prisma.orders.groupBy({
-        by: ["customerId"],
-        where: {
-          customerId,
-          workspaceId,
-          deletedAt: null,
-        },
-        _count: { id: true },
-        _max: { createdAt: true },
-      })
-
-      const customerOrderCount = orderStats[0]?._count.id || 0
-      const lastOrderDate = orderStats[0]?._max.createdAt
-
-      // Load frequent products (top 5 by order count)
-      let frequentProducts: Array<{ sku: string; name: string; orderCount: number }> = []
-      if (customerOrderCount > 0) {
-        const frequentProductsRaw = await this.prisma.orderItems.groupBy({
-          by: ["productId"],
-          where: {
-            order: {
-              customerId,
-              workspaceId,
-              deletedAt: null,
-            },
-          },
-          _count: { productId: true },
-          orderBy: { _count: { productId: "desc" } },
-          take: 5,
-        })
-
-        if (frequentProductsRaw.length > 0) {
-          const productIds = frequentProductsRaw.map(p => p.productId).filter(Boolean) as string[]
-          const products = await this.prisma.products.findMany({
-            where: { id: { in: productIds }, isActive: true },
-            select: { id: true, sku: true, name: true },
-          })
-
-          frequentProducts = frequentProductsRaw
-            .map(fp => {
-              const product = products.find(p => p.id === fp.productId)
-              return product ? {
-                sku: product.sku,
-                name: product.name,
-                orderCount: fp._count.productId,
-              } : null
-            })
-            .filter(Boolean) as Array<{ sku: string; name: string; orderCount: number }>
-        }
-      }
-
-      // Build customer profile for personalization
-      enrichmentOptions.customerProfile = {
-        isReturningCustomer: customerOrderCount > 0,
-        totalOrders: customerOrderCount,
-        lastOrderDate: lastOrderDate || undefined,
-        frequentProducts: frequentProducts.length > 0 ? frequentProducts : undefined,
-      }
-
-      logger.debug("✨ [ChatEngine] Enrichment options built", {
-        isReturningCustomer: customerOrderCount > 0,
-        totalOrders: customerOrderCount,
-        frequentProductsCount: frequentProducts.length,
-        historyLength: conversationHistory.length,
-      })
-    } catch (error) {
-      // Don't fail if enrichment data can't be loaded
-      logger.warn("⚠️ [ChatEngine] Could not load enrichment data", { error })
-    }
-
-    return enrichmentOptions
-  }
-
-  /**
-   * Get error message in customer's language
-   * @param language - Customer's language code (en, it, es, pt, fr, de)
-   * @returns Error message in the appropriate language
-   */
-  private getErrorMessageByLanguage(language?: string): string {
-    const errorMessages: Record<string, string> = {
-      it: "Mi scusi, si è verificato un errore. Può riprovare?",
-      en: "Sorry, something went wrong. Please try again.",
-      es: "Lo siento, algo salió mal. Por favor, inténtelo de nuevo.",
-      pt: "Desculpe, algo deu errado. Por favor, tente novamente.",
-      fr: "Désolé, quelque chose s'est mal passé. Veuillez réessayer.",
-      de: "Entschuldigung, etwas ist schief gelaufen. Bitte versuchen Sie es erneut.",
-    }
-
-    return errorMessages[language?.toLowerCase() || "en"] || errorMessages.en
-  }
-
-  /**
-   * Translate error message through TranslationAgent (STEP: Error Translation)
-   * RULE: Even error messages must be polished through translation layer
-   * RULE: Fallback to original if translation fails
-   * 
-   * @param errorMessage - Base error message (English by default)
-   * @param workspaceId - Workspace ID for TranslationAgent context
-   * @param targetLanguage - Customer's language
-   * @param customerName - Optional customer name for personalization
-   * @returns Translated error message (or fallback)
-   */
-  private async translateErrorMessage(
-    errorMessage: string,
-    workspaceId: string,
-    targetLanguage: string = "en",
-    customerName?: string
-  ): Promise<string> {
-    try {
-      // Skip translation if already in the same language
-      if (!targetLanguage || targetLanguage.toLowerCase() === "en") {
-        return errorMessage
-      }
-
-      logger.info("[ChatEngine] 🌍 Translating error message", {
-        originalLength: errorMessage.length,
-        targetLanguage,
-      })
-
-      const translated = await this.translationAgent.process({
-        workspaceId,
-        message: errorMessage,
-        targetLanguage: targetLanguage || "en",
-        customerName,
-      })
-
-      if (translated && translated.message) {
-        logger.info("[ChatEngine] ✅ Error message translated successfully")
-        return translated.message
-      }
-
-      logger.warn("[ChatEngine] ⚠️ TranslationAgent returned null/empty, using fallback")
-      return errorMessage
-    } catch (translationError) {
-      // Non-blocking error: Fallback to original message if translation fails
-      logger.warn("[ChatEngine] ⚠️ Error message translation failed, using fallback", {
-        error: translationError instanceof Error ? translationError.message : String(translationError),
-        targetLanguage,
-      })
-      return errorMessage
     }
   }
 
