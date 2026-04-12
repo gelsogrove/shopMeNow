@@ -80,6 +80,7 @@ function TypingIndicator({ primaryColor }: { primaryColor: string }) {
   )
 }
 import { ChatSurface } from "@/components/chat/ChatSurface"
+import { WidgetProfilePanel } from "@/components/chat/WidgetProfilePanel"
 import { useLanguage } from "@/contexts/LanguageContext"
 import {
   getOrCreateVisitorId,
@@ -92,6 +93,8 @@ import {
   sendWidgetMessage,
   registerAndStartChat,
   getWidgetStatus,
+  getWidgetProfile,
+  updateWidgetProfile,
   type WidgetStoredMessage,
 } from "@/components/chat/adapters/widgetAdapter"
 
@@ -399,6 +402,13 @@ export function ChatWidget({
     whatsappPhoneNumber?: string | null
     name?: string | null
   } | null>(null)
+
+  // 👤 Profile Panel State
+  const [showProfilePanel, setShowProfilePanel] = useState(false)
+  const [profileData, setProfileData] = useState<Record<string, unknown> | null>(null)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
 
   // 🐛 Debug Panel State
   const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false)
@@ -873,6 +883,51 @@ export function ChatWidget({
     }
   }
 
+  /**
+   * Load customer profile for inline profile panel
+   */
+  const handleOpenProfile = async () => {
+    if (!customerId || !resolvedWorkspaceId) return
+    setShowProfilePanel(true)
+    setProfileLoading(true)
+    setProfileError(null)
+    try {
+      const data = await getWidgetProfile({
+        apiUrl: resolvedApiUrl,
+        workspaceId: resolvedWorkspaceId,
+        customerId,
+      })
+      setProfileData(data)
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : "Failed to load profile")
+    } finally {
+      setProfileLoading(false)
+    }
+  }
+
+  /**
+   * Save customer profile from inline profile panel
+   */
+  const handleSaveProfile = async (data: Record<string, unknown>) => {
+    if (!customerId || !resolvedWorkspaceId) return
+    setProfileSaving(true)
+    setProfileError(null)
+    try {
+      const updated = await updateWidgetProfile({
+        apiUrl: resolvedApiUrl,
+        workspaceId: resolvedWorkspaceId,
+        customerId,
+        data,
+      })
+      setProfileData(updated)
+      setShowProfilePanel(false)
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : "Failed to save profile")
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
   const handleQuickReply = async (reply: string) => {
     // sendMessage already clears all bot suggestions before adding the user message
     await sendMessage(reply)
@@ -1184,6 +1239,18 @@ export function ChatWidget({
                 )}
               </div>
             <div className="flex items-center gap-2">
+              {/* Profile button - only visible for registered users (not during registration form) */}
+              {customerId && !showRegistrationForm && (
+                <button
+                  onClick={handleOpenProfile}
+                  className="hover:brightness-95 p-2 rounded-lg transition-colors"
+                  style={{ backgroundColor: showProfilePanel ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.15)" }}
+                  title="My Profile"
+                  aria-label="My Profile"
+                >
+                  <User className="w-5 h-5" />
+                </button>
+              )}
               {workspaceConfig?.debugMode === true && (
                 <button
                   onClick={() => setIsDebugPanelOpen(true)}
@@ -1198,6 +1265,7 @@ export function ChatWidget({
               <button
                 onClick={() => {
                   setIsOpen(false)
+                  setShowProfilePanel(false)
                   onOpenChange?.(false)
                 }}
                 className="hover:brightness-95 p-2 rounded-lg transition-colors"
@@ -1340,6 +1408,17 @@ export function ChatWidget({
                 </div>
               </div>
             </>
+          ) : showProfilePanel ? (
+            /* ── Inline Profile Panel ── */
+            <WidgetProfilePanel
+              profileData={profileData}
+              loading={profileLoading}
+              saving={profileSaving}
+              error={profileError}
+              primaryColor={resolvedPrimaryColor}
+              onSave={handleSaveProfile}
+              onBack={() => setShowProfilePanel(false)}
+            />
           ) : (
             /* ── Normal Chat ── */
             <>

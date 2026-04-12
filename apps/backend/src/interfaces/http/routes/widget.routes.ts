@@ -233,4 +233,26 @@ router.get(
   controller.getOperatorMessages.bind(controller)
 )
 
+/**
+ * GET /api/v1/widget/profile/:workspaceId
+ * Get customer profile for inline widget panel
+ * Query: customerId (required)
+ */
+router.get(
+  "/profile/:workspaceId",
+  widgetRateLimiter,
+  controller.getProfile.bind(controller)
+)
+
+/**
+ * PATCH /api/v1/widget/profile/:workspaceId
+ * Update customer profile from inline widget panel
+ * Body: customerId (required) + fields to update
+ */
+router.patch(
+  "/profile/:workspaceId",
+  widgetRateLimiter,
+  controller.updateProfile.bind(controller)
+)
+
 export default router

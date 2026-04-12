@@ -1014,7 +1014,7 @@ export class LLMRouterService {
           workspace.enableCalendarBooking
             ? this.prisma.services.findMany({
                 where: { workspaceId: params.workspaceId, isActive: true, enableForBooking: true },
-                select: { name: true, description: true, duration: true, price: true },
+                select: { id: true, name: true, description: true, duration: true, price: true },
                 orderBy: { name: 'asc' },
               })
             : Promise.resolve([]),
@@ -1036,8 +1036,8 @@ export class LLMRouterService {
 
       // 📅 Format appointment data for prompt variables
       const appointmentTypesForPrompt = appointmentTypesRaw.length > 0
-        ? appointmentTypesRaw.map(t =>
-            `- ${t.name}${t.description ? ` (${t.description})` : ''}: ${t.duration} min${t.price ? `, €${t.price}` : ''}`
+        ? appointmentTypesRaw.map((t, i) =>
+            `${i + 1}) ${t.name} [serviceId:${t.id}]`
           ).join('\n')
         : ''
 

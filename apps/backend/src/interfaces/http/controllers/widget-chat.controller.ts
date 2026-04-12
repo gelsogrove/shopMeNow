@@ -1899,4 +1899,112 @@ export class WidgetChatController {
       return res.status(500).json({ error: "INTERNAL_ERROR" })
     }
   }
+
+  /**
+   * GET /api/v1/widget/profile/:workspaceId
+   * Get customer profile data for inline widget profile panel.
+   * Auth: customerId passed as query param (validated against workspace).
+   */
+  async getProfile(req: Request, res: Response) {
+    try {
+      const { workspaceId } = req.params
+      const customerId = req.query.customerId as string
+
+      if (!workspaceId || !customerId) {
+        return res.status(400).json({ error: "MISSING_PARAMS", message: "workspaceId and customerId are required" })
+      }
+
+      const customer = await prisma.customers.findFirst({
+        where: { id: customerId, workspaceId, deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          company: true,
+          address: true,
+          language: true,
+          currency: true,
+          invoiceAddress: true,
+          push_notifications_consent: true,
+          push_notifications_consent_at: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })
+
+      if (!customer) {
+        return res.status(404).json({ error: "CUSTOMER_NOT_FOUND", message: "Customer not found in this workspace" })
+      }
+
+      return res.json(customer)
+    } catch (error) {
+      logger.error("❌ Error getting widget profile", error)
+      return res.status(500).json({ error: "INTERNAL_ERROR" })
+    }
+  }
+
+  /**
+   * PATCH /api/v1/widget/profile/:workspaceId
+   * Update customer profile data from inline widget profile panel.
+   * Auth: customerId passed in body (validated against workspace).
+   */
+  async updateProfile(req: Request, res: Response) {
+    try {
+      const { workspaceId } = req.params
+      const { customerId, ...updateData } = req.body
+
+      if (!workspaceId || !customerId) {
+        return res.status(400).json({ error: "MISSING_PARAMS", message: "workspaceId and customerId are required" })
+      }
+
+      // Verify customer belongs to workspace
+      const customer = await prisma.customers.findFirst({
+        where: { id: customerId, workspaceId, deletedAt: null },
+      })
+
+      if (!customer) {
+        return res.status(404).json({ error: "CUSTOMER_NOT_FOUND", message: "Customer not found in this workspace" })
+      }
+
+      // Whitelist allowed fields
+      const allowedFields = ["name", "email", "company", "address", "language", "currency", "invoiceAddress", "push_notifications_consent"]
+      const sanitized: Record<string, unknown> = {}
+      for (const key of allowedFields) {
+        if (key in updateData) {
+          sanitized[key] = updateData[key]
+        }
+      }
+
+      // Handle push_notifications_consent timestamp
+      if ("push_notifications_consent" in sanitized) {
+        sanitized.push_notifications_consent_at = sanitized.push_notifications_consent ? new Date() : null
+      }
+
+      const updated = await prisma.customers.update({
+        where: { id: customerId },
+        data: sanitized,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          company: true,
+          address: true,
+          language: true,
+          currency: true,
+          invoiceAddress: true,
+          push_notifications_consent: true,
+          push_notifications_consent_at: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      })
+
+      return res.json(updated)
+    } catch (error) {
+      logger.error("❌ Error updating widget profile", error)
+      return res.status(500).json({ error: "INTERNAL_ERROR" })
+    }
+  }
 }

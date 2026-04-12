@@ -279,6 +279,34 @@ export const getWidgetStatus = async (input: {
 
   const response = await fetch(`${apiUrl}/widget/status/${workspaceId}?${query.toString()}`)
   if (!response.ok) throw new Error("Failed to fetch widget status")
-  
+
+  return await response.json()
+}
+
+export const getWidgetProfile = async (input: {
+  apiUrl: string
+  workspaceId: string
+  customerId: string
+}) => {
+  const { apiUrl, workspaceId, customerId } = input
+  const query = new URLSearchParams({ customerId })
+  const response = await fetch(`${apiUrl}/widget/profile/${workspaceId}?${query.toString()}`)
+  if (!response.ok) throw new Error("Failed to fetch profile")
+  return await response.json()
+}
+
+export const updateWidgetProfile = async (input: {
+  apiUrl: string
+  workspaceId: string
+  customerId: string
+  data: Record<string, unknown>
+}) => {
+  const { apiUrl, workspaceId, customerId, data } = input
+  const response = await fetch(`${apiUrl}/widget/profile/${workspaceId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ customerId, ...data }),
+  })
+  if (!response.ok) throw new Error("Failed to update profile")
   return await response.json()
 }
