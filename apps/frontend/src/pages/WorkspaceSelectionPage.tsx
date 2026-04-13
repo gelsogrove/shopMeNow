@@ -77,12 +77,13 @@ interface WizardFormData {
 }
 
 const WIZARD_STEPS = [
-  { id: 1, title: "Your Business", description: "Industry & goals", icon: Building2 },
-  { id: 2, title: "Channel Setup", description: "Type & name", icon: Smartphone },
-  { id: 3, title: "Support", description: "Human escalation", icon: Headphones },
-  { id: 4, title: "Bot Personality", description: "Tone & identity", icon: Bot },
-  { id: 5, title: "Connect", description: "Link your channel", icon: Link2 },
-  { id: 6, title: "All Done!", description: "Channel ready", icon: CheckCircle2 },
+  { id: 1, title: "Channel Mode", description: "What does it do?", icon: Zap },
+  { id: 2, title: "Your Business", description: "Industry & goals", icon: Building2 },
+  { id: 3, title: "Channel Setup", description: "Type & name", icon: Smartphone },
+  { id: 4, title: "Support", description: "Human escalation", icon: Headphones },
+  { id: 5, title: "Bot Personality", description: "Tone & identity", icon: Bot },
+  { id: 6, title: "Connect", description: "Link your channel", icon: Link2 },
+  { id: 7, title: "All Done!", description: "Channel ready", icon: CheckCircle2 },
 ] as const
 
 const PLAN_LABELS: Record<PlanType, string> = {
@@ -297,9 +298,11 @@ export function WorkspaceSelectionPage() {
 
   const validateCurrentStep = (): boolean => {
     switch (wizardStep) {
-      case 1: // Business Goal — always valid (defaults preset)
+      case 1: // Channel Mode — always valid (defaults preset)
         return true
-      case 2: // Channel Setup: alias required; phone required for WhatsApp
+      case 2: // Business Type — always valid (defaults preset)
+        return true
+      case 3: // Channel Setup: alias required; phone required for WhatsApp
         if (!wizardData.alias.trim()) return false
         if (wizardData.channelType === 'WHATSAPP') {
           return !!(
@@ -308,13 +311,13 @@ export function WorkspaceSelectionPage() {
           )
         }
         return true
-      case 3: // Support — always valid (human support is optional)
+      case 4: // Support — always valid (human support is optional)
         return true
-      case 4: // Bot Personality: require bot identity
+      case 5: // Bot Personality: require bot identity
         return wizardData.botIdentityResponse.trim().length > 0
-      case 5: // Connect — always valid (Wasender handles its own completion)
+      case 6: // Connect — always valid (Wasender handles its own completion)
         return true
-      case 6: // Done — always valid
+      case 7: // Done — always valid
         return true
       default:
         return true
@@ -349,23 +352,23 @@ export function WorkspaceSelectionPage() {
     if (!validateCurrentStep()) return
     const next = getNextStep()
 
-    // Step 4 → 5: create workspace first (silently), then advance
-    if (next === 5 && !newlyCreatedWorkspaceId) {
+    // Step 5 → 6: create workspace first (silently), then advance
+    if (next === 6 && !newlyCreatedWorkspaceId) {
       const success = await handleCreateWorkspace()
       if (success) {
-        setWizardStep(5)
+        setWizardStep(6)
       }
       return
     }
 
-    if (next <= 6) {
+    if (next <= 7) {
       setWizardStep(next)
     }
   }
 
   const handlePrevStep = () => {
-    // Cannot go back once channel is done (Step 6)
-    if (wizardStep >= 6) return
+    // Cannot go back once channel is done (Step 7)
+    if (wizardStep >= 7) return
     const prev = getPrevStep()
     if (prev >= 1) {
       setWizardStep(prev)
@@ -1849,9 +1852,56 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
               <div className="flex-1 p-6 overflow-y-auto">
 
                 {/* ═══════════════════════════════════════════════════════════════ */}
-                {/* STEP 1 — Your Business (questionnaire-style) */}
+                {/* STEP 1 — Channel Mode */}
                 {/* ═══════════════════════════════════════════════════════════════ */}
                 {wizardStep === 1 && (
+                  <div className="space-y-6">
+                    <div className="-mx-6 -mt-6 mb-6">
+                      <img src="/survey-ecommerce.png" alt="" className="w-full h-44 sm:h-52 object-cover" loading="eager" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-4xl">🚀</span>
+                        <h2 className="text-xl font-bold text-slate-900">What does your channel do?</h2>
+                      </div>
+                      <p className="text-slate-500 leading-relaxed" style={{ fontSize: '1.15rem' }}>Choose the mode that best describes your chatbot</p>
+                    </div>
+                    <div className="space-y-3">
+                      {([
+                        { value: 'ECOMMERCE' as const, emoji: '🛍️', label: 'E-commerce', desc: 'Sell products & manage orders' },
+                        { value: 'INFORMATIONAL' as const, emoji: '💬', label: 'Informational', desc: 'FAQ & customer support' },
+                        { value: 'FLOW' as const, emoji: '⚡', label: 'Flow', desc: 'Custom chatbot flow' },
+                      ]).map((mode) => (
+                        <button
+                          key={mode.value}
+                          type="button"
+                          className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
+                            wizardData.channelMode === mode.value
+                              ? 'border-green-500 bg-green-50 text-green-800'
+                              : 'border-slate-200 hover:border-green-300 text-slate-700'
+                          }`}
+                          onClick={() => updateWizardData('channelMode', mode.value)}
+                        >
+                          <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                            wizardData.channelMode === mode.value ? 'bg-green-500 border-green-500' : 'border-slate-300'
+                          }`}>
+                            {wizardData.channelMode === mode.value && <span className="w-2 h-2 rounded-full bg-white" />}
+                          </span>
+                          <span className="text-xl">{mode.emoji}</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium text-sm">{mode.label}</span>
+                            <p className="text-xs text-slate-500">{mode.desc}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {/* STEP 2 — Your Business (questionnaire-style) */}
+                {/* ═══════════════════════════════════════════════════════════════ */}
+                {wizardStep === 2 && (
                   <div className="space-y-6">
                     {/* Full-bleed step image (survey style) */}
                     <div className="-mx-6 -mt-6 mb-6">
@@ -1889,9 +1939,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                             }`}
                             onClick={() => {
                               updateWizardData('businessType', item.value as WizardFormData['businessType'])
-                              // Auto-set channelMode based on business type
-                              const ecommerceTypes = ['retail', 'restaurant']
-                              updateWizardData('channelMode', ecommerceTypes.includes(item.value) ? 'ECOMMERCE' : 'INFORMATIONAL')
                             }}
                           >
                             <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
@@ -1912,9 +1959,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 )}
 
                 {/* ═══════════════════════════════════════════════════════════════ */}
-                {/* STEP 2 — Channel Setup */}
+                {/* STEP 3 — Channel Setup */}
                 {/* ═══════════════════════════════════════════════════════════════ */}
-                {wizardStep === 2 && (
+                {wizardStep === 3 && (
                   <div className="space-y-6">
                     {/* Full-bleed step image (survey style) */}
                     <div className="-mx-6 -mt-6 mb-6">
@@ -1939,10 +1986,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         }`}
                         onClick={() => {
                           updateWizardData('channelType', 'WHATSAPP')
-                          if (wizardData.channelType !== 'WHATSAPP') {
-                            const ecommerceTypes = ['retail', 'restaurant']
-                            updateWizardData('channelMode', ecommerceTypes.includes(wizardData.businessType) ? 'ECOMMERCE' : 'INFORMATIONAL')
-                          }
                         }}
                       >
                         <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
@@ -1966,7 +2009,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         }`}
                         onClick={() => {
                           updateWizardData('channelType', 'WIDGET')
-                          updateWizardData('channelMode', 'INFORMATIONAL')
                         }}
                       >
                         <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
@@ -2037,61 +2079,14 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                       </div>
                     )}
 
-                    {wizardData.channelType === 'WHATSAPP' && (
-                      <div>
-                        <Label className="text-sm font-semibold text-slate-500 uppercase tracking-wider">Do you sell products?</Label>
-                        <div className="space-y-3 mt-3">
-                          <button
-                            type="button"
-                            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
-                              wizardData.channelMode === 'ECOMMERCE'
-                                ? 'border-green-500 bg-green-50 text-green-800'
-                                : 'border-slate-200 hover:border-green-300 text-slate-700'
-                            }`}
-                            onClick={() => updateWizardData('channelMode', 'ECOMMERCE')}
-                          >
-                            <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                              wizardData.channelMode === 'ECOMMERCE' ? 'bg-green-500 border-green-500' : 'border-slate-300'
-                            }`}>
-                              {wizardData.channelMode === 'ECOMMERCE' && <span className="w-2 h-2 rounded-full bg-white" />}
-                            </span>
-                            <span className="text-xl">🛍️</span>
-                            <div className="flex-1 min-w-0">
-                              <span className="font-medium text-sm">Yes</span>
-                              <p className="text-xs text-slate-500">Catalog, cart & orders</p>
-                            </div>
-                          </button>
-                          <button
-                            type="button"
-                            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
-                              wizardData.channelMode !== 'ECOMMERCE'
-                                ? 'border-green-500 bg-green-50 text-green-800'
-                                : 'border-slate-200 hover:border-green-300 text-slate-700'
-                            }`}
-                            onClick={() => updateWizardData('channelMode', 'INFORMATIONAL')}
-                          >
-                            <span className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                              wizardData.channelMode !== 'ECOMMERCE' ? 'bg-green-500 border-green-500' : 'border-slate-300'
-                            }`}>
-                              {wizardData.channelMode !== 'ECOMMERCE' && <span className="w-2 h-2 rounded-full bg-white" />}
-                            </span>
-                            <span className="text-xl">💬</span>
-                            <div className="flex-1 min-w-0">
-                              <span className="font-medium text-sm">No</span>
-                              <p className="text-xs text-slate-500">Support only</p>
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-                    )}
+
                   </div>
                 )}
 
                 {/* ═══════════════════════════════════════════════════════════════ */}
-                {/* STEP 4 — Bot Personality */}
+                {/* STEP 4 — Human Support */}
                 {/* ═══════════════════════════════════════════════════════════════ */}
-                {/* ── Step 3: Human Support ───────────────────────────── */}
-                {wizardStep === 3 && (
+                {wizardStep === 4 && (
                   <div className="space-y-6">
                     {/* Full-bleed step image */}
                     <div className="-mx-6 -mt-6 mb-6">
@@ -2155,7 +2150,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   </div>
                 )}
 
-                {wizardStep === 4 && (
+                {wizardStep === 5 && (
                   <div className="space-y-6">
                     {/* Full-bleed step image (survey style) */}
                     <div className="-mx-6 -mt-6 mb-6">
@@ -2262,9 +2257,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 )}
 
                 {/* ═══════════════════════════════════════════════════════════════ */}
-                {/* STEP 5 — Connect (QR / Embed code / Credentials) */}
+                {/* STEP 6 — Connect (QR / Embed code / Credentials) */}
                 {/* ═══════════════════════════════════════════════════════════════ */}
-                {wizardStep === 5 && (
+                {wizardStep === 6 && (
                   <div className="space-y-6">
                     {/* WasenderAPI — QR scan */}
                     {wizardData.channelType === 'WHATSAPP' && wizardData.whatsappProvider === 'wasender' && (
@@ -2285,7 +2280,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                           <WasenderOnboarding
                             workspaceId={newlyCreatedWorkspaceId}
                             initialPhoneNumber={wizardData.whatsappNumber}
-                            onComplete={() => setWizardStep(6)}
+                            onComplete={() => setWizardStep(7)}
                           />
                         ) : (
                           <div className="flex items-center justify-center py-12 gap-3">
@@ -2373,9 +2368,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 )}
 
                 {/* ═══════════════════════════════════════════════════════════════ */}
-                {/* STEP 6 — Done! */}
+                {/* STEP 7 — Done! */}
                 {/* ═══════════════════════════════════════════════════════════════ */}
-                {wizardStep === 6 && (
+                {wizardStep === 7 && (
                   <div className="space-y-6">
                     {/* Full-bleed step image (survey style) */}
                     <div className="-mx-6 -mt-6 mb-6">
@@ -2480,8 +2475,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
               {/* Footer with navigation (survey style) */}
               <div className="px-6 py-4 border-t border-slate-100 bg-white">
                 <div className="flex gap-3">
-                  {/* Back: visible for steps 2-5 (no back once done) */}
-                  {wizardStep > 1 && wizardStep < 6 && (
+                  {/* Back: visible for steps 2-6 (no back once done) */}
+                  {wizardStep > 1 && wizardStep < 7 && (
                     <Button
                       type="button"
                       variant="outline"
@@ -2492,8 +2487,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     </Button>
                   )}
 
-                  {/* Steps 1-4: Next / Connect Channel */}
-                  {wizardStep >= 1 && wizardStep <= 4 && (
+                  {/* Steps 1-5: Next / Connect Channel */}
+                  {wizardStep >= 1 && wizardStep <= 5 && (
                     <Button
                       onClick={handleNextStep}
                       disabled={!validateCurrentStep() || isLoading}
@@ -2504,7 +2499,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                           <Loader2 className="w-4 h-4 animate-spin mr-2" />
                           Creating channel…
                         </>
-                      ) : wizardStep === 4 ? (
+                      ) : wizardStep === 5 ? (
                         'Connect Channel'
                       ) : (
                         'Next'
@@ -2512,12 +2507,12 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     </Button>
                   )}
 
-                  {/* Step 5 Widget/Meta/UltraMsg: Continue to success screen */}
-                  {wizardStep === 5 && (
+                  {/* Step 6 Widget/Meta/UltraMsg: Continue to success screen */}
+                  {wizardStep === 6 && (
                     wizardData.channelType !== 'WHATSAPP' || wizardData.whatsappProvider !== 'wasender'
                   ) && (
                     <Button
-                      onClick={() => setWizardStep(6)}
+                      onClick={() => setWizardStep(7)}
                       className="flex-[2] bg-green-600 hover:bg-green-700 text-white px-8"
                     >
                       Continue
@@ -2525,8 +2520,8 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                   )}
 
 
-                  {/* Step 6: Go to Dashboard */}
-                  {wizardStep === 6 && (
+                  {/* Step 7: Go to Dashboard */}
+                  {wizardStep === 7 && (
                     <Button
                       onClick={() => {
                         closeWizardDialog()

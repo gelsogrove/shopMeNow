@@ -15,7 +15,6 @@ import {
 import { Store, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SUPPORTED_CURRENCIES } from "@/utils/format"
-import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface BusinessConfigSectionProps {
@@ -239,32 +238,33 @@ export function BusinessConfigSection({
               </p>
             </div>
 
-            {/* E-commerce Toggle */}
+            {/* Channel Mode Selector */}
             <div className="space-y-2 md:col-span-2">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-900">
-                    Sell Products & Services
-                  </Label>
-                  <p className="text-xs text-gray-500">
-                    Enable e-commerce features: product catalog, shopping cart, orders
-                  </p>
-                </div>
-                {/* TODO: Replace Switch with a dropdown/select for 3-way channelMode selection (ECOMMERCE | INFORMATIONAL | FLOW) */}
-                <Switch
-                  checked={formData.channelMode === 'ECOMMERCE'}
-                  onCheckedChange={(checked) => {
-                    onFieldChange("channelMode", checked ? 'ECOMMERCE' : 'INFORMATIONAL')
-                    // Automatically set enableWidget based on channelMode
-                    // ECOMMERCE → widget FALSE
-                    // INFORMATIONAL/FLOW → widget TRUE
-                    onFieldChange("enableWidget", !checked)
-                  }}
-                  disabled={!canEdit}
-                />
-              </div>
-
-
+              <Label className="text-sm font-medium text-gray-900">
+                Channel Mode
+              </Label>
+              <Select
+                value={formData.channelMode}
+                onValueChange={(value) => {
+                  onFieldChange("channelMode", value)
+                  // ECOMMERCE → widget FALSE (product catalog needs WhatsApp)
+                  // INFORMATIONAL / FLOW → widget TRUE
+                  onFieldChange("enableWidget", value !== 'ECOMMERCE')
+                }}
+                disabled={!canEdit}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select channel mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ECOMMERCE">E-commerce — sell products &amp; services</SelectItem>
+                  <SelectItem value="INFORMATIONAL">Informational — FAQ &amp; customer support</SelectItem>
+                  <SelectItem value="FLOW">Flow — custom chatbot flow</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500">
+                Defines what the chatbot can do: e-commerce, info-only, or a custom flow
+              </p>
             </div>
           </div>
         </CardContent>
