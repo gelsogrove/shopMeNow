@@ -40,6 +40,7 @@ export class AgentService {
         select: { channelMode: true },
       })
       const channelMode: ChannelMode = workspace?.channelMode ?? "ECOMMERCE"
+      const isInformational = channelMode !== "ECOMMERCE"
       const validAgentTypes = new Set(getValidAgentTypesForMode(channelMode))
 
       let agents = []

@@ -251,7 +251,7 @@ For privacy inquiries, please contact our support team.`
 
     // BUG-1 FIX: Delete orphaned agents that don't belong to the new channelMode
     // e.g. switching ECOMMERCE→INFORMATIONAL leaves PRODUCT_SEARCH, CART_MANAGEMENT, etc. as orphans
-    const validTypes = getValidAgentTypesForMode(channelMode)
+    const validTypes = getValidAgentTypesForMode(channelMode) as import("@echatbot/database").AgentType[]
     const deleted = await this.prisma.agentConfig.deleteMany({
       where: {
         workspaceId,

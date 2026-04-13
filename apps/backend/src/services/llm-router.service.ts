@@ -865,7 +865,7 @@ export class LLMRouterService {
           conversationId: params.conversationId,
           userContent: params.message,
           assistantContent: limitMessage,
-          agentType: isInformational ? "INFO_AGENT" : "ROUTER",
+          agentType: isInformationalMode ? "INFO_AGENT" : "ROUTER",
           debugInfo: { error: "SESSION_RATE_LIMIT_EXCEEDED", callCount: recentFunctionCallsCount }
         })
 
@@ -941,7 +941,7 @@ export class LLMRouterService {
 
       // STEP 4: Load Router/Info Agent template from files
       // 🛍️ Feature 174: Informational workspaces use INFO_AGENT template instead of ROUTER
-      const mainAgentType = isInformational ? "INFO_AGENT" : "ROUTER"
+      const mainAgentType = isInformationalMode ? "INFO_AGENT" : "ROUTER"
       const routerSystemPrompt = await this.templateLoader.loadAndRenderTemplate(
         mainAgentType,
         params.workspaceId
@@ -949,7 +949,7 @@ export class LLMRouterService {
 
       logger.info(`📋 Loaded ${mainAgentType} template from files`, {
         promptLength: routerSystemPrompt.length,
-        isInformational,
+        isInformational: isInformationalMode,
       })
 
       // STEP 4.5: Load customer data and dynamic content for Router prompt

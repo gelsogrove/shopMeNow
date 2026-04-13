@@ -40,9 +40,8 @@ interface DynamicAgent {
  * Uses centralized helper for path resolution
  */
 function loadTemplate(agentType: string, channelMode: ChannelMode = "ECOMMERCE"): string {
-  const hasEcommerce = channelMode === "ECOMMERCE"
-  const filename = getTemplateFilename(agentType, hasEcommerce)
-  const subDir = getTemplateFolder(hasEcommerce)
+  const filename = getTemplateFilename(agentType, channelMode)
+  const subDir = getTemplateFolder(channelMode)
   
   const templatePath = path.join(__dirname, "../../src/templates", subDir, filename)
   

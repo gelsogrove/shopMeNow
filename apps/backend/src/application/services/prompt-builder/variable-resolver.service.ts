@@ -22,6 +22,7 @@ export interface PromptVariables {
   language: string
   currency: string
   channelMode: import("@echatbot/database").ChannelMode
+  isEcommerce: boolean
   hasHumanSupport: boolean
   hasSalesAgents: boolean
   humanSupportInstructions: string

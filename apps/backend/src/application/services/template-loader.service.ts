@@ -118,7 +118,6 @@ export class TemplateLoaderService {
       const conditionalFlags = {
         // Direct boolean flags
         isEcommerce: settings.channelMode === "ECOMMERCE",
-        channelMode: settings.channelMode,
         hasHumanSupport: settings.hasHumanSupport,
         hasSalesAgents: settings.hasSalesAgents,
         hasAddress: settings.hasAddress,
