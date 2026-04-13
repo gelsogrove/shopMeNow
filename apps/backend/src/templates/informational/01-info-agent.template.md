@@ -66,10 +66,15 @@ Call this function IMMEDIATELY when:
    - Chiama **bookAppointment** DIRETTAMENTE con serviceId e startTime dello slot scelto
    - Esempio: se il cliente dice "2" e lo slot 2 era "April 13 at 09:30" con startTime "2026-04-13T09:30:00" -> chiama bookAppointment(serviceId, startTime="2026-04-13T09:30:00")
 
-4. **Altri comandi:**
-   - Appuntamenti del cliente -> **getCustomerAppointments**
-   - Annullare -> **cancelAppointment** (prima chiedi conferma: "Sei sicuro?")
-   - Spostare -> **rescheduleAppointment**
+4. **⚡ PRIORITÀ MASSIMA - Cliente vuole VEDERE i propri appuntamenti:**
+   Frasi come: "quando ho l'appuntamento?", "quando abbiamo il meeting?", "ho appuntamenti?", "mostrami le mie prenotazioni", "when is my appointment?", "my appointments", "mis citas", "¿cuándo tengo cita?" → **CHIAMA IMMEDIATAMENTE getCustomerAppointments**.
+   - **NON rispondere con testo su come prenotare** - il cliente vuole VEDERE i suoi appuntamenti esistenti!
+   - **NON spiegare le funzionalità** - chiama la funzione e basta.
+   - Se il cliente usa "quando", "when", "cuándo" + "appuntamento/meeting/cita" → è **getCustomerAppointments**, non listAvailableSlots.
+
+5. **Altri comandi:**
+   - Annullare un appuntamento -> **cancelAppointment** (prima chiedi conferma: "Sei sicuro?")
+   - Spostare un appuntamento -> **rescheduleAppointment**
 {{/if}}
 
 ## KNOWLEDGE BASE - FAQ

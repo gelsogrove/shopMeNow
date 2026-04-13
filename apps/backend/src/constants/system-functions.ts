@@ -205,7 +205,7 @@ export const RESCHEDULE_APPOINTMENT: SystemFunctionDef = {
 
 export const GET_CUSTOMER_APPOINTMENTS: SystemFunctionDef = {
   functionName: "getCustomerAppointments",
-  description: "Show customer's upcoming appointments. Use when customer asks about their bookings.",
+  description: "Show customer's existing/upcoming appointments. Use when customer asks ABOUT their appointments (when is my appointment, do I have a booking, show me my reservations, quando ho l'appuntamento, mis citas, quand est mon rendez-vous). DO NOT use to book new appointments — use listAvailableSlots + bookAppointment for that.",
   parameters: {
     type: "object",
     properties: {},

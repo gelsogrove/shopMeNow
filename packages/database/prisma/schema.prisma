@@ -448,6 +448,7 @@ model Customers {
   lastAppointmentDate           DateTime? // Last appointment booked (for analytics/spam)
   appointments                  Appointment[] // Customer's confirmed appointments
 
+  @@unique([workspaceId, phone])
   @@index([workspaceId])
   @@index([phone])
   @@index([deletedAt])

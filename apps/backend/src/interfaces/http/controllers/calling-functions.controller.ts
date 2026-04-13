@@ -55,15 +55,20 @@ export class CallingFunctionsController {
 
             const functions = await this.repository.findAllByWorkspace(workspaceId)
 
-            // Hide appointment system functions when calendar booking is disabled
+            // Hide system functions based on feature flags
             const workspace = await this.prisma.workspace.findUnique({
                 where: { id: workspaceId },
-                select: { enableCalendarBooking: true }
+                select: { enableCalendarBooking: true, hasHumanSupport: true, sellsProductsAndServices: true }
             })
-            const APPOINTMENT_FUNCTIONS = ["bookAppointment", "cancelAppointment", "getCustomerAppointments", "listAvailableSlots"]
-            const filteredFunctions = workspace?.enableCalendarBooking
-                ? functions
-                : functions.filter(f => !(f.isSystemFunction && APPOINTMENT_FUNCTIONS.includes(f.functionName)))
+            const APPOINTMENT_FN_NAMES = ["bookAppointment", "cancelAppointment", "getCustomerAppointments", "listAvailableSlots", "rescheduleAppointment"]
+            const ECOMMERCE_FN_NAMES = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
+            const filteredFunctions = functions.filter(f => {
+                if (!f.isSystemFunction) return true
+                if (APPOINTMENT_FN_NAMES.includes(f.functionName) && !workspace?.enableCalendarBooking) return false
+                if (f.functionName === "customerSupportAgent" && !workspace?.hasHumanSupport) return false
+                if (ECOMMERCE_FN_NAMES.includes(f.functionName) && !workspace?.sellsProductsAndServices) return false
+                return true
+            })
 
             return res.status(200).json({ functions: filteredFunctions })
         } catch (error) {

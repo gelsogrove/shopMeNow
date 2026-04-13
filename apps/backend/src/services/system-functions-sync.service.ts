@@ -15,6 +15,7 @@ import logger from "../utils/logger"
 import {
   ALWAYS_AVAILABLE_FUNCTIONS,
   APPOINTMENT_FUNCTIONS,
+  ECOMMERCE_FUNCTIONS,
   SystemFunctionDef,
 } from "../constants/system-functions"
 
@@ -29,6 +30,7 @@ export async function syncSystemFunctionsOnStartup(prisma: PrismaClient): Promis
         id: true,
         name: true,
         enableCalendarBooking: true,
+        sellsProductsAndServices: true,
       }
     })
 
@@ -37,6 +39,11 @@ export async function syncSystemFunctionsOnStartup(prisma: PrismaClient): Promis
     for (const workspace of workspaces) {
       // Always-available functions (changeLanguage, customerSupportAgent, etc.)
       const functionsToSync: SystemFunctionDef[] = [...ALWAYS_AVAILABLE_FUNCTIONS]
+
+      // E-commerce functions if workspace sells products/services
+      if (workspace.sellsProductsAndServices) {
+        functionsToSync.push(...ECOMMERCE_FUNCTIONS)
+      }
 
       // Appointment functions if calendar is enabled
       if (workspace.enableCalendarBooking) {

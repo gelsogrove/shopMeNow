@@ -784,14 +784,14 @@ export class WidgetChatController {
       // 7. Deduplication: find or create customer by phone within workspace
       let isNewCustomer = false
       let customer = await prisma.customers.findFirst({
-        where: { workspaceId: resolvedWorkspaceId, phone: normalizedPhone },
+        where: { workspaceId: resolvedWorkspaceId, phone: normalizedPhone, deletedAt: null },
       })
 
       // Fallback: look up by customId (visitorId) across ALL workspaces
       // Handles case where customer was created with old slug-based workspaceId
       if (!customer) {
         customer = await prisma.customers.findFirst({
-          where: { customId: visitorId },
+          where: { customId: visitorId, deletedAt: null },
         })
         if (customer) {
           logger.info("[WIDGET-REGISTER] 👤 Found customer by customId (potential slug→UUID migration)", {
@@ -807,6 +807,8 @@ export class WidgetChatController {
         const updateData: Record<string, unknown> = {
           customId: visitorId,
           workspaceId: resolvedWorkspaceId, // migrate slug→UUID if needed
+          isActive: true,     // ensure active on re-registration
+          deletedAt: null,    // reactivate if soft-deleted
         }
         if (name && name !== customer.name) updateData.name = name
         if (email && email.length > 0 && email !== customer.email) updateData.email = email
