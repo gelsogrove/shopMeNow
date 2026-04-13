@@ -45,7 +45,7 @@ export interface Workspace {
   // 🆕 Feature 199: Channel Configuration
   enableWhatsapp?: boolean
   enableWidget?: boolean
-  sellsProductsAndServices?: boolean
+  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
   humanSupportInstructions?: string
@@ -130,7 +130,7 @@ export interface ChecklistItem {
 export interface WorkspaceChecklist {
   workspaceId: string
   channelType: "WHATSAPP" | "WIDGET"
-  sellsProductsAndServices: boolean
+  channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   completedCount: number
   totalCount: number
   percent: number
@@ -144,7 +144,7 @@ export interface CreateWorkspaceData {
   description?: string
   welcomeMessage?: string
   adminEmail?: string
-  sellsProductsAndServices?: boolean
+  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   hasHumanSupport?: boolean
   enableWhatsapp?: boolean
   enableWidget?: boolean
@@ -177,7 +177,7 @@ export interface UpdateWorkspaceData {
   // 🆕 Feature 199: Channel Configuration
   enableWhatsapp?: boolean
   enableWidget?: boolean
-  sellsProductsAndServices?: boolean
+  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
   humanSupportInstructions?: string

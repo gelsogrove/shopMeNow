@@ -1,4 +1,4 @@
-import { prisma, PrismaClient } from "@echatbot/database"
+import { prisma, PrismaClient, ChannelMode } from "@echatbot/database"
 import { randomUUID } from "crypto"
 import fs from "fs"
 import path from "path"
@@ -11,6 +11,7 @@ import { WorkspaceRepository } from "../../repositories/workspace.repository"
 import logger from "../../utils/logger"
 import { dynamicAgents } from "../../../prisma/data/dynamicAgents"
 import { initialFAQs } from "../../../prisma/data/initialFAQs"
+import { getValidAgentTypesForMode } from "../../utils/template-path.helper"
 import { WasenderClientService } from "../../services/wasender-client.service"
 import { invalidateWorkspaceConfig } from "../chat-engine/chat-engine.service"
 import {
@@ -208,12 +209,12 @@ For privacy inquiries, please contact our support team.`
 
   /**
    * Reset all default agent prompts to the correct templates for the workspace type.
-   * Called when workspace type changes (sellsProductsAndServices toggled).
+   * Called when workspace type changes (channelMode toggled).
    * Uses upsert so missing agents are created and existing ones get the fresh default prompt.
    * @private
    */
-  private async resetDefaultAgentPrompts(workspaceId: string, isEcommerce: boolean): Promise<void> {
-    const agents = dynamicAgents(workspaceId, isEcommerce)
+  private async resetDefaultAgentPrompts(workspaceId: string, channelMode: ChannelMode): Promise<void> {
+    const agents = dynamicAgents(workspaceId, channelMode)
     let resetCount = 0
 
     for (const agent of agents) {
@@ -248,13 +249,38 @@ For privacy inquiries, please contact our support team.`
       }
     }
 
-    logger.info(`✅ Reset ${resetCount} default agent prompts for workspace ${workspaceId} (ecommerce: ${isEcommerce})`)
+    // BUG-1 FIX: Delete orphaned agents that don't belong to the new channelMode
+    // e.g. switching ECOMMERCE→INFORMATIONAL leaves PRODUCT_SEARCH, CART_MANAGEMENT, etc. as orphans
+    const validTypes = getValidAgentTypesForMode(channelMode)
+    const deleted = await this.prisma.agentConfig.deleteMany({
+      where: {
+        workspaceId,
+        type: { notIn: validTypes }
+      }
+    })
+    if (deleted.count > 0) {
+      logger.info(`🗑️ Deleted ${deleted.count} orphaned agent configs for workspace ${workspaceId} (channelMode: ${channelMode})`)
+    }
+
+    logger.info(`✅ Reset ${resetCount} default agent prompts for workspace ${workspaceId} (channelMode: ${channelMode})`)
   }
 
   /**
    * Get default agent prompt content from file
    * @private
    */
+  // BUG-7 FIX: Shared widget+ecommerce conflict error — consistent message in create() and update()
+  private widgetEcommerceConflictError(field: string): any {
+    const err: any = new Error(
+      "Widget channel cannot be enabled for e-commerce workspaces. " +
+      "E-commerce requires WhatsApp for persistent customer identification."
+    )
+    err.statusCode = 400
+    err.code = "VALIDATION_ERROR"
+    err.field = field
+    return err
+  }
+
   private async getDefaultAgentContent(): Promise<string> {
     try {
       // Try to read from the default agent prompt file
@@ -374,7 +400,7 @@ For privacy inquiries, please contact our support team.`
       channelType: (w as any).channelType ?? "WHATSAPP",
       enableWhatsapp: (w as any).enableWhatsapp ?? true,
       enableWidget: (w as any).enableWidget ?? false,
-      sellsProductsAndServices: w.sellsProductsAndServices,
+      channelMode: w.channelMode,
       hasSalesAgents: w.hasSalesAgents,
       hasHumanSupport: w.hasHumanSupport,
       humanSupportInstructions: w.humanSupportInstructions ?? undefined,
@@ -463,7 +489,7 @@ For privacy inquiries, please contact our support team.`
     // These can be overridden by wizard input, but provide sensible defaults
     if (data.hasHumanSupport === undefined) data.hasHumanSupport = true
     if (data.hasSalesAgents === undefined) data.hasSalesAgents = false
-    if (data.sellsProductsAndServices === undefined) data.sellsProductsAndServices = true
+    if (data.channelMode === undefined) data.channelMode = "ECOMMERCE"
     if (data.toneOfVoice === undefined) data.toneOfVoice = "friendly"
     if (data.operatorContactMethod === undefined) data.operatorContactMethod = "EMAIL"
     // 🌍 Default languages: force English as baseline for new workspaces
@@ -482,21 +508,14 @@ For privacy inquiries, please contact our support team.`
     const channelType = data.channelType || "WHATSAPP"
     if (channelType === "WIDGET" || data.enableWidget === true) {
       // Widget channel = support/info only, no e-commerce
-      if (data.sellsProductsAndServices === true) {
+      if (data.channelMode === "ECOMMERCE") {
         logger.warn(`❌ Attempted to create widget workspace with e-commerce enabled`)
-        const err: any = new Error(
-          "Widget channel cannot be enabled for e-commerce workspaces. " +
-          "E-commerce requires WhatsApp for persistent customer identification."
-        )
-        err.statusCode = 400
-        err.code = "VALIDATION_ERROR"
-        err.field = "enableWidget"
-        throw err
+        throw this.widgetEcommerceConflictError("enableWidget")
       }
 
       data.enableWidget = true
       data.enableWhatsapp = false
-      data.sellsProductsAndServices = false  // Force false for widget
+      data.channelMode = "INFORMATIONAL"  // Force informational for widget
       data.hasSalesAgents = false            // No sales agents for widget
       data.whatsappPhoneNumber = null
     } else {
@@ -567,9 +586,9 @@ For privacy inquiries, please contact our support team.`
       // 3. 🆕 IMPORT ALL DEFAULT AGENTS (Feature: Import prompts on new workspace)
       // Use dynamicAgents with correct template folder based on workspace type
       try {
-        const hasEcommerce = data.sellsProductsAndServices ?? true
-        const agents = dynamicAgents(createdWorkspace.id, hasEcommerce)
-        logger.info(`Loading ${hasEcommerce ? 'e-commerce' : 'informational'} templates for workspace ${createdWorkspace.id}`)
+        const wsChannelMode = (data.channelMode ?? "ECOMMERCE") as ChannelMode
+        const agents = dynamicAgents(createdWorkspace.id, wsChannelMode)
+        logger.info(`Loading ${wsChannelMode} templates for workspace ${createdWorkspace.id}`)
         for (const agent of agents) {
           await tx.agentConfig.create({
             data: {
@@ -593,7 +612,7 @@ For privacy inquiries, please contact our support team.`
         )
 
         // 3b. 🆕 Seed system functions based on workspace type
-        await this.seedSystemFunctions(tx, createdWorkspace.id, hasEcommerce);
+        await this.seedSystemFunctions(tx, createdWorkspace.id, wsChannelMode === "ECOMMERCE");
       } catch (error) {
         logger.error(
           `Error importing agents for workspace ${createdWorkspace.id}:`,
@@ -826,7 +845,7 @@ For privacy inquiries, please contact our support team.`
       select: {
         enableWidget: true,
         enableWhatsapp: true,
-        sellsProductsAndServices: true,
+        channelMode: true,
         ownerId: true,
         deletedAt: true,
         whatsappProvider: true,
@@ -892,33 +911,27 @@ For privacy inquiries, please contact our support team.`
 
     // Calculate resulting state
     const willEnableWidget = data.enableWidget ?? currentWorkspace.enableWidget ?? false
-    const willSellProducts = data.sellsProductsAndServices ?? currentWorkspace.sellsProductsAndServices ?? false
+    const willSellProducts = (data.channelMode ?? currentWorkspace.channelMode) === "ECOMMERCE"
 
     // Validate: Widget + E-commerce is forbidden
     if (willEnableWidget && willSellProducts) {
       logger.warn(`❌ Attempted to enable widget on e-commerce workspace (or vice versa)`)
-      const err: any = new Error(
-        willEnableWidget && data.enableWidget !== undefined
-          ? "Cannot enable widget for e-commerce workspaces. Disable e-commerce features first."
-          : "Cannot enable e-commerce for widget workspaces. Disable widget first, then switch to WhatsApp."
-      )
-      err.statusCode = 400
-      err.code = "VALIDATION_ERROR"
-      err.field = data.enableWidget !== undefined ? "enableWidget" : "sellsProductsAndServices"
+      const field = data.enableWidget !== undefined ? "enableWidget" : "channelMode"
+      const err = this.widgetEcommerceConflictError(field)
       err.currentState = {
         enableWidget: currentWorkspace.enableWidget,
-        sellsProductsAndServices: currentWorkspace.sellsProductsAndServices
+        channelMode: currentWorkspace.channelMode
       }
       throw err
     }
 
     // When workspace type changes: sync calling functions + reset default prompts
-    if (data.sellsProductsAndServices !== undefined &&
-        data.sellsProductsAndServices !== currentWorkspace.sellsProductsAndServices) {
-      const isEcommerce = data.sellsProductsAndServices
-      logger.info(`🔄 Workspace type changed → ecommerce: ${isEcommerce} — syncing functions & prompts`)
-      await this.syncSystemCallingFunctions(id, isEcommerce)
-      await this.resetDefaultAgentPrompts(id, isEcommerce)
+    if (data.channelMode !== undefined &&
+        data.channelMode !== currentWorkspace.channelMode) {
+      const newChannelMode = data.channelMode as ChannelMode
+      logger.info(`🔄 Workspace type changed → ${newChannelMode} — syncing functions & prompts`)
+      await this.syncSystemCallingFunctions(id, newChannelMode === "ECOMMERCE")
+      await this.resetDefaultAgentPrompts(id, newChannelMode)
     }
 
     // Generate slug if name is updated and slug is not provided

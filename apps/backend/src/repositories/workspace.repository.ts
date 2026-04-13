@@ -72,7 +72,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       channelType: data.channelType ?? "WHATSAPP",
       enableWhatsapp: data.enableWhatsapp ?? true,
       enableWidget: data.enableWidget ?? false,
-      sellsProductsAndServices: data.sellsProductsAndServices ?? true,
+      channelMode: data.channelMode ?? "ECOMMERCE",
       hasSalesAgents: data.hasSalesAgents ?? false,
       hasHumanSupport: data.hasHumanSupport ?? true,
       humanSupportInstructions: data.humanSupportInstructions || null,
@@ -166,7 +166,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       channelType: workspace.channelType,
       enableWhatsapp: workspace.enableWhatsapp,
       enableWidget: workspace.enableWidget,
-      sellsProductsAndServices: workspace.sellsProductsAndServices,
+      channelMode: workspace.channelMode,
       hasSalesAgents: workspace.hasSalesAgents,
       hasHumanSupport: workspace.hasHumanSupport,
       humanSupportInstructions: workspace.humanSupportInstructions,
@@ -242,17 +242,17 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
 
       logger.debug(`Found ${workspaces.length} workspaces`)
 
-      // 🔍 DEBUG: Log raw sellsProductsAndServices values from Prisma
+      // 🔍 DEBUG: Log raw channelMode values from Prisma
       workspaces.forEach((ws) => {
-        logger.info(`🔍 PRISMA RAW - Workspace "${ws.name}": sellsProductsAndServices = ${ws.sellsProductsAndServices} (type: ${typeof ws.sellsProductsAndServices})`)
+        logger.info(`🔍 PRISMA RAW - Workspace "${ws.name}": channelMode = ${ws.channelMode} (type: ${typeof ws.channelMode})`)
       })
 
       // Map workspaces to domain entities
       const mappedWorkspaces = workspaces.map((workspace) => this.mapToDomain(workspace))
 
-      // 🔍 DEBUG: Log mapped sellsProductsAndServices values
+      // 🔍 DEBUG: Log mapped channelMode values
       mappedWorkspaces.forEach((ws) => {
-        logger.info(`🔍 MAPPED - Workspace "${ws.name}": sellsProductsAndServices = ${ws.sellsProductsAndServices} (type: ${typeof ws.sellsProductsAndServices})`)
+        logger.info(`🔍 MAPPED - Workspace "${ws.name}": channelMode = ${ws.channelMode} (type: ${typeof ws.channelMode})`)
       })
 
       return mappedWorkspaces
@@ -447,16 +447,16 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
 
       logger.debug(`Found ${workspaces.length} workspaces for user ${userId}`)
 
-      // 🔍 DEBUG: Log raw sellsProductsAndServices values from Prisma (findByUserId)
+      // 🔍 DEBUG: Log raw channelMode values from Prisma (findByUserId)
       workspaces.forEach((ws) => {
-        logger.info(`🔍 PRISMA RAW (findByUserId) - Workspace "${ws.name}": sellsProductsAndServices = ${ws.sellsProductsAndServices} (type: ${typeof ws.sellsProductsAndServices})`)
+        logger.info(`🔍 PRISMA RAW (findByUserId) - Workspace "${ws.name}": channelMode = ${ws.channelMode} (type: ${typeof ws.channelMode})`)
       })
 
       const mappedWorkspaces = workspaces.map((workspace) => this.mapToDomain(workspace))
 
-      // 🔍 DEBUG: Log mapped sellsProductsAndServices values (findByUserId)
+      // 🔍 DEBUG: Log mapped channelMode values (findByUserId)
       mappedWorkspaces.forEach((ws) => {
-        logger.info(`🔍 MAPPED (findByUserId) - Workspace "${ws.name}": sellsProductsAndServices = ${ws.sellsProductsAndServices} (type: ${typeof ws.sellsProductsAndServices})`)
+        logger.info(`🔍 MAPPED (findByUserId) - Workspace "${ws.name}": channelMode = ${ws.channelMode} (type: ${typeof ws.channelMode})`)
       })
 
       return mappedWorkspaces
@@ -509,7 +509,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
 
     // 🔍 LOG FEATURE 199
     logger.debug("=== FEATURE 199 REPOSITORY DEBUG ===")
-    logger.debug(`sellsProductsAndServices ricevuto: ${data.sellsProductsAndServices} (tipo: ${typeof data.sellsProductsAndServices})`)
+    logger.debug(`channelMode ricevuto: ${data.channelMode} (tipo: ${typeof data.channelMode})`)
     logger.debug(`hasSalesAgents ricevuto: ${data.hasSalesAgents} (tipo: ${typeof data.hasSalesAgents})`)
     logger.debug(`hasHumanSupport ricevuto: ${data.hasHumanSupport} (tipo: ${typeof data.hasHumanSupport})`)
 
@@ -689,7 +689,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
 
       // 🔍 LOG FEATURE 199 AFTER TRANSFORMATION
       logger.debug("=== FEATURE 199 AFTER TRANSFORMATION ===")
-      logger.debug(`sellsProductsAndServices in dbData: ${dbData.sellsProductsAndServices}`)
+      logger.debug(`channelMode in dbData: ${dbData.channelMode}`)
       logger.debug(`hasSalesAgents in dbData: ${dbData.hasSalesAgents}`)
       logger.debug(`hasHumanSupport in dbData: ${dbData.hasHumanSupport}`)
 
@@ -835,7 +835,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           widgetUseChannelLogo: true,
           enableWhatsapp: true,
           enableWidget: true,
-          sellsProductsAndServices: true,
+          channelMode: true,
           hasSalesAgents: true,
           hasHumanSupport: true,
           humanSupportInstructions: true,
@@ -888,7 +888,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             adminEmail: updatedWorkspace.whatsappSettings?.adminEmail,
             channelStatus: updatedWorkspace.channelStatus, // ✅ NOW LOGGED
             debugMode: updatedWorkspace.debugMode,
-            sellsProductsAndServices: updatedWorkspace.sellsProductsAndServices,
+            channelMode: updatedWorkspace.channelMode,
             hasSalesAgents: updatedWorkspace.hasSalesAgents,
             hasHumanSupport: updatedWorkspace.hasHumanSupport,
             updatedAt: updatedWorkspace.updatedAt,
@@ -900,7 +900,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
 
       // 🔍 LOG FEATURE 199 FINAL
       logger.debug("=== FEATURE 199 FINAL DB VALUES ===")
-      logger.debug(`sellsProductsAndServices DB finale: ${updatedWorkspace.sellsProductsAndServices}`)
+      logger.debug(`channelMode DB finale: ${updatedWorkspace.channelMode}`)
       logger.debug(`hasSalesAgents DB finale: ${updatedWorkspace.hasSalesAgents}`)
 
       logger.debug(`hasHumanSupport DB finale: ${updatedWorkspace.hasHumanSupport}`)
@@ -955,7 +955,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
 
   /**
    * Update agent status (enable/disable) for a workspace
-   * Used for Feature 199: Auto-disable e-commerce agents when sellsProductsAndServices = false
+   * Used for Feature 199: Auto-disable e-commerce agents when channelMode != ECOMMERCE
    */
   async updateAgentStatus(
     workspaceId: string,

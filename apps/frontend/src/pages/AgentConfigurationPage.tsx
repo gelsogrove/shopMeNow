@@ -428,7 +428,7 @@ export function AgentConfigurationPage() {
 
         {/* 🎨 Agent Flow Diagram - Visual representation of multi-agent architecture */}
         <AgentFlowDiagram 
-          sellsProductsAndServices={workspace?.sellsProductsAndServices === true}
+          isEcommerce={workspace?.channelMode === 'ECOMMERCE'}
           agents={agents.map(agent => ({
             id: agent.id,
             name: agent.name,
@@ -489,7 +489,7 @@ export function AgentConfigurationPage() {
                 </div>
                 <p className="mt-2 text-xs text-gray-500 ml-6">
                   {useDynamicTemplates 
-                    ? "✅ Templates will adapt based on workspace settings (sellsProductsAndServices, hasHumanSupport, address, etc.)"
+                    ? "✅ Templates will adapt based on workspace settings (channelMode, hasHumanSupport, address, etc.)"
                     : "⚠️ Static templates without conditional logic"
                   }
                 </p>

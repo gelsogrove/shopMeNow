@@ -45,7 +45,7 @@ interface WebsiteWidgetSectionProps {
   errors: Record<string, string>
   canEdit: boolean
   /** 🚨 Widget unavailable for e-commerce workspaces (Andrea's rule) */
-  sellsProductsAndServices?: boolean
+  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   onFieldChange: (field: string, value: any) => void
   onFieldFocus?: (fieldKey: string) => void
 }
@@ -70,12 +70,12 @@ export function WebsiteWidgetSection({
   workspaceId,
   errors,
   canEdit,
-  sellsProductsAndServices = false,
+  channelMode = 'INFORMATIONAL',
   onFieldChange,
   onFieldFocus,
 }: WebsiteWidgetSectionProps) {
   // 🚨 Widget disabled for e-commerce workspaces (Andrea's rule)
-  const isEcommerce = sellsProductsAndServices === true
+  const isEcommerce = channelMode === 'ECOMMERCE'
   const widgetDisabled = !canEdit || isEcommerce
   const maxReplies = 4
   

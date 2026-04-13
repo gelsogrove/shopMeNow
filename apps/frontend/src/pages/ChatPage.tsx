@@ -1202,7 +1202,7 @@ export function ChatPage() {
                 {workspace?.name || 'Channel'}
               </h2>
               <p className="text-xs text-gray-500">
-                {workspace?.sellsProductsAndServices ? 'E-commerce' : 'Info'}
+                {workspace?.channelMode === 'ECOMMERCE' ? 'E-commerce' : workspace?.channelMode === 'FLOW' ? 'Flow' : 'Info'}
               </p>
             </div>
           </div>

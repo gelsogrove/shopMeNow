@@ -278,7 +278,7 @@ export function MinimalLayout() {
                         <Bot className="mr-2 h-4 w-4 text-purple-500" />
                         <span>Agents Configuration</span>
                       </DropdownMenuItem>
-                      {workspace?.sellsProductsAndServices && (
+                      {workspace?.channelMode === 'ECOMMERCE' && (
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuLabel>E-commerce</DropdownMenuLabel>
@@ -310,14 +310,14 @@ export function MinimalLayout() {
                         </>
                       )}
                       {/* Services standalone - visible for informational workspaces OR when calendar booking is enabled */}
-                      {(workspace?.enableCalendarBooking === true || !workspace?.sellsProductsAndServices) && (
+                      {(workspace?.enableCalendarBooking === true || workspace?.channelMode !== 'ECOMMERCE') && (
                         <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/services")}>
                           <Briefcase className="mr-2 h-4 w-4 text-cyan-500" />
                           <span>Services</span>
                         </DropdownMenuItem>
                       )}
                       {/* Sales standalone - for informational workspaces with sales agents */}
-                      {!workspace?.sellsProductsAndServices && hasSalesAgents && (
+                      {workspace?.channelMode !== 'ECOMMERCE' && hasSalesAgents && (
                         <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/sales")}>
                           <UserCog className="mr-2 h-4 w-4 text-violet-500" />
                           <span>Sales</span>
@@ -328,7 +328,7 @@ export function MinimalLayout() {
                         <Megaphone className="mr-2 h-4 w-4 text-rose-500" />
                         <span>Campaigns</span>
                       </DropdownMenuItem>
-                      {workspace?.sellsProductsAndServices && isSuperAdmin && (
+                      {workspace?.channelMode === 'ECOMMERCE' && isSuperAdmin && (
                         <DropdownMenuItem
                           className="p-2 cursor-pointer"
                           onClick={() => navigate("/analytics")}

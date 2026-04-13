@@ -58,7 +58,7 @@ export interface WorkspaceProps {
   channelType?: "WHATSAPP" | "WIDGET" | null
   enableWhatsapp?: boolean
   enableWidget?: boolean
-  sellsProductsAndServices?: boolean
+  channelMode?: import("@echatbot/database").ChannelMode
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
   humanSupportInstructions?: string | null
@@ -331,8 +331,8 @@ export class Workspace extends Entity<WorkspaceProps> {
     return this.props.enableWidget ?? false
   }
 
-  get sellsProductsAndServices(): boolean {
-    return this.props.sellsProductsAndServices ?? true
+  get channelMode(): import("@echatbot/database").ChannelMode {
+    return this.props.channelMode ?? "ECOMMERCE"
   }
 
   get hasSalesAgents(): boolean {

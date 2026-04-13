@@ -1,7 +1,7 @@
 /**
  * Unit Tests: Workspace Type Change — sync calling functions & reset prompts
  *
- * RULE: When sellsProductsAndServices changes (info ↔ ecommerce):
+ * RULE: When channelMode changes (info ↔ ecommerce):
  *   1. Ecommerce-only SYSTEM calling functions are enabled/created or disabled
  *   2. Custom (non-system) calling functions are NEVER touched
  *   3. All default agent prompts are reset to the correct templates for the new type
@@ -14,11 +14,13 @@ import { WorkspaceService } from '../../../src/application/services/workspace.se
 
 // ── Mock dynamicAgents ────────────────────────────────────────────────────────
 jest.mock('../../../prisma/data/dynamicAgents', () => ({
-  dynamicAgents: jest.fn((workspaceId: string, hasEcommerce: boolean) => [
+  dynamicAgents: jest.fn((workspaceId: string, channelMode: string) => {
+    const isEcom = channelMode === 'ECOMMERCE'
+    return [
     {
-      name: hasEcommerce ? 'Router Agent' : 'Info Agent',
-      type: hasEcommerce ? 'ROUTER' : 'INFO_AGENT',
-      systemPrompt: hasEcommerce ? 'ecommerce-router-prompt' : 'info-agent-prompt',
+      name: isEcom ? 'Router Agent' : 'Info Agent',
+      type: isEcom ? 'ROUTER' : 'INFO_AGENT',
+      systemPrompt: isEcom ? 'ecommerce-router-prompt' : 'info-agent-prompt',
       model: 'openai/gpt-4o-mini',
       temperature: 0.7,
       maxTokens: 4096,
@@ -26,7 +28,8 @@ jest.mock('../../../prisma/data/dynamicAgents', () => ({
       isActive: true,
       availableFunctions: null,
     },
-  ]),
+  ]
+  }),
 }))
 
 // ── Mock WasenderClientService ────────────────────────────────────────────────
@@ -61,6 +64,7 @@ const mockCallingFunctionFindUnique = jest.fn()
 const mockCallingFunctionUpdate = jest.fn()
 const mockCallingFunctionCreate = jest.fn()
 const mockAgentConfigUpsert = jest.fn()
+const mockAgentConfigDeleteMany = jest.fn()
 const mockUserFindUnique = jest.fn()
 
 jest.mock('@echatbot/database', () => ({
@@ -72,7 +76,7 @@ jest.mock('@echatbot/database', () => ({
       create: (...args: any[]) => mockCallingFunctionCreate(...args),
       updateMany: (...args: any[]) => mockUpdateMany(...args),
     },
-    agentConfig: { upsert: (...args: any[]) => mockAgentConfigUpsert(...args) },
+    agentConfig: { upsert: (...args: any[]) => mockAgentConfigUpsert(...args), deleteMany: (...args: any[]) => mockAgentConfigDeleteMany(...args) },
     user: { findUnique: (...args: any[]) => mockUserFindUnique(...args) },
   },
   PrismaClient: jest.fn().mockImplementation(() => ({
@@ -83,7 +87,7 @@ jest.mock('@echatbot/database', () => ({
       create: (...args: any[]) => mockCallingFunctionCreate(...args),
       updateMany: (...args: any[]) => mockUpdateMany(...args),
     },
-    agentConfig: { upsert: (...args: any[]) => mockAgentConfigUpsert(...args) },
+    agentConfig: { upsert: (...args: any[]) => mockAgentConfigUpsert(...args), deleteMany: (...args: any[]) => mockAgentConfigDeleteMany(...args) },
     user: { findUnique: (...args: any[]) => mockUserFindUnique(...args) },
   })),
 }))
@@ -94,11 +98,11 @@ const WORKSPACE_ID = 'ws-test-001'
 const ECOMMERCE_ONLY_FUNCTIONS = ['productSearchAgent', 'cartManagementAgent', 'orderTrackingAgent']
 
 // Helper: build a mock currentWorkspace
-function makeCurrentWorkspace(sellsProducts: boolean) {
+function makeCurrentWorkspace(isEcommerce: boolean) {
   return {
     enableWidget: false,
     enableWhatsapp: true,
-    sellsProductsAndServices: sellsProducts,
+    channelMode: isEcommerce ? 'ECOMMERCE' : 'INFORMATIONAL',
     ownerId: 'owner-1',
     deletedAt: null,
     whatsappProvider: 'ultramsg',
@@ -106,7 +110,7 @@ function makeCurrentWorkspace(sellsProducts: boolean) {
   }
 }
 
-describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
+describe('WorkspaceService — type change (channelMode)', () => {
   let service: WorkspaceService
 
   beforeEach(() => {
@@ -116,13 +120,15 @@ describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
     // Default: user is STANDARD plan (bypasses FREE_TRIAL guard)
     mockUserFindUnique.mockResolvedValue({ planType: 'STANDARD' })
     // Default: repo.update returns a minimal workspace
-    mockRepoUpdate.mockResolvedValue({ id: WORKSPACE_ID, sellsProductsAndServices: true })
+    mockRepoUpdate.mockResolvedValue({ id: WORKSPACE_ID, channelMode: 'ECOMMERCE' as any })
     // Default: agentConfig.upsert succeeds
     mockAgentConfigUpsert.mockResolvedValue({})
+    // Default: agentConfig.deleteMany (cleanup of invalid agents after mode change) succeeds
+    mockAgentConfigDeleteMany.mockResolvedValue({ count: 0 })
   })
 
   // ──────────────────────────────────────────────────────────────────────────
-  // SCENARIO: info → ecommerce (sellsProductsAndServices: false → true)
+  // SCENARIO: info → ecommerce (channelMode: 'INFORMATIONAL' as any → true)
   // ──────────────────────────────────────────────────────────────────────────
 
   describe('Switching from info → ecommerce', () => {
@@ -136,7 +142,7 @@ describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
       mockCallingFunctionFindUnique.mockResolvedValue({ id: 'fn-1', isActive: false, isSystemFunction: true })
       mockCallingFunctionUpdate.mockResolvedValue({})
 
-      await service.update(WORKSPACE_ID, { sellsProductsAndServices: true })
+      await service.update(WORKSPACE_ID, { channelMode: 'ECOMMERCE' as any })
 
       // THEN: update is called for each ecommerce function with isActive: true
       for (const fnName of ECOMMERCE_ONLY_FUNCTIONS) {
@@ -154,7 +160,7 @@ describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
       mockCallingFunctionFindUnique.mockResolvedValue(null)
       mockCallingFunctionCreate.mockResolvedValue({})
 
-      await service.update(WORKSPACE_ID, { sellsProductsAndServices: true })
+      await service.update(WORKSPACE_ID, { channelMode: 'ECOMMERCE' as any })
 
       // THEN: create is called for each ecommerce function
       for (const fnName of ECOMMERCE_ONLY_FUNCTIONS) {
@@ -176,7 +182,7 @@ describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
       mockCallingFunctionFindUnique.mockResolvedValue({ id: 'fn-1', isActive: false })
       mockCallingFunctionUpdate.mockResolvedValue({})
 
-      await service.update(WORKSPACE_ID, { sellsProductsAndServices: true })
+      await service.update(WORKSPACE_ID, { channelMode: 'ECOMMERCE' as any })
 
       // RULE: updateMany (bulk-disable) is only used when switching TO info
       expect(mockUpdateMany).not.toHaveBeenCalled()
@@ -186,7 +192,7 @@ describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
       mockCallingFunctionFindUnique.mockResolvedValue({ id: 'fn-1', isActive: false })
       mockCallingFunctionUpdate.mockResolvedValue({})
 
-      await service.update(WORKSPACE_ID, { sellsProductsAndServices: true })
+      await service.update(WORKSPACE_ID, { channelMode: 'ECOMMERCE' as any })
 
       // THEN: agentConfig.upsert is called with ecommerce agent type
       expect(mockAgentConfigUpsert).toHaveBeenCalledWith(
@@ -199,7 +205,7 @@ describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
   })
 
   // ──────────────────────────────────────────────────────────────────────────
-  // SCENARIO: ecommerce → info (sellsProductsAndServices: true → false)
+  // SCENARIO: ecommerce → info (channelMode: 'ECOMMERCE' as any → false)
   // ──────────────────────────────────────────────────────────────────────────
 
   describe('Switching from ecommerce → info', () => {
@@ -210,7 +216,7 @@ describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
     })
 
     it('bulk-disables ecommerce-only SYSTEM functions via updateMany', async () => {
-      await service.update(WORKSPACE_ID, { sellsProductsAndServices: false })
+      await service.update(WORKSPACE_ID, { channelMode: 'INFORMATIONAL' as any })
 
       // THEN: updateMany is called targeting only isSystemFunction: true + ecommerce function names
       expect(mockUpdateMany).toHaveBeenCalledWith(
@@ -226,7 +232,7 @@ describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
     })
 
     it('does NOT try to find/update individual functions (uses bulk updateMany only)', async () => {
-      await service.update(WORKSPACE_ID, { sellsProductsAndServices: false })
+      await service.update(WORKSPACE_ID, { channelMode: 'INFORMATIONAL' as any })
 
       // RULE: no individual findUnique/update when switching TO info (bulk is enough)
       expect(mockCallingFunctionFindUnique).not.toHaveBeenCalled()
@@ -234,7 +240,7 @@ describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
     })
 
     it('resets agent prompts to informational templates', async () => {
-      await service.update(WORKSPACE_ID, { sellsProductsAndServices: false })
+      await service.update(WORKSPACE_ID, { channelMode: 'INFORMATIONAL' as any })
 
       // THEN: agentConfig.upsert is called with info agent type
       expect(mockAgentConfigUpsert).toHaveBeenCalledWith(
@@ -246,7 +252,7 @@ describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
     })
 
     it('creates missing info agents that did not exist before (upsert create path)', async () => {
-      await service.update(WORKSPACE_ID, { sellsProductsAndServices: false })
+      await service.update(WORKSPACE_ID, { channelMode: 'INFORMATIONAL' as any })
 
       // THEN: upsert includes a create block with workspaceId for new agents
       expect(mockAgentConfigUpsert).toHaveBeenCalledWith(
@@ -270,7 +276,7 @@ describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
       // GIVEN: workspace is ecommerce, request sends the same value
       mockFindUnique.mockResolvedValue(makeCurrentWorkspace(true))
 
-      await service.update(WORKSPACE_ID, { sellsProductsAndServices: true })
+      await service.update(WORKSPACE_ID, { channelMode: 'ECOMMERCE' as any })
 
       // THEN: no calling function or agent config operations
       expect(mockUpdateMany).not.toHaveBeenCalled()
@@ -278,7 +284,7 @@ describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
       expect(mockAgentConfigUpsert).not.toHaveBeenCalled()
     })
 
-    it('does NOT sync when sellsProductsAndServices is not in the update payload', async () => {
+    it('does NOT sync when channelMode is not in the update payload', async () => {
       mockFindUnique.mockResolvedValue(makeCurrentWorkspace(true))
 
       // Payload changes only the workspace name
@@ -299,7 +305,7 @@ describe('WorkspaceService — type change (sellsProductsAndServices)', () => {
       mockFindUnique.mockResolvedValue(makeCurrentWorkspace(true))
       mockUpdateMany.mockResolvedValue({ count: 3 })
 
-      await service.update(WORKSPACE_ID, { sellsProductsAndServices: false })
+      await service.update(WORKSPACE_ID, { channelMode: 'INFORMATIONAL' as any })
 
       // THEN: the where clause includes isSystemFunction: true
       // This means any custom function (isSystemFunction: false) is NOT affected

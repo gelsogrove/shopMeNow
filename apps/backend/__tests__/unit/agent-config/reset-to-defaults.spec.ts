@@ -9,8 +9,9 @@ import {
 
 // Helper to load template files directly (without Prisma dependency)
 function loadTemplateFile(agentType: string, isEcommerce: boolean): string {
-  const templateFile = getTemplateFilename(agentType, isEcommerce)
-  const folder = getTemplateFolder(isEcommerce)
+  const mode = isEcommerce ? "ECOMMERCE" : "INFORMATIONAL"
+  const templateFile = getTemplateFilename(agentType, mode as any)
+  const folder = getTemplateFolder(mode as any)
   
   const templatePath = path.join(__dirname, "../../../src/templates", folder, templateFile)
   return fs.readFileSync(templatePath, "utf-8")

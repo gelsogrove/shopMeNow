@@ -45,8 +45,6 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
   // Get workspace from context to check hasSalesAgents
   const { workspace } = useWorkspace()
   const { t } = useLanguage()
-  console.log("🔍 Sidebar workspace:", workspace)
-  console.log("🔍 sellsProductsAndServices:", workspace?.sellsProductsAndServices)
   const totalUnreadMessages = 0
   const location = useLocation()
   const isChatPage = location.pathname.startsWith("/chat")
@@ -105,8 +103,8 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
       label: t('nav.faq'),
       icon: HelpCircle,
     },
-    // E-commerce menu - only if sellsProductsAndServices is true
-    ...(workspace?.sellsProductsAndServices === true ? [{
+    // E-commerce menu - only if channelMode is ECOMMERCE
+    ...(workspace?.channelMode === 'ECOMMERCE' ? [{
       label: t('nav.ecommerce'),
       icon: ShoppingCart,
       key: "ecommerce",
@@ -143,13 +141,13 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
     }] : []),
     // Services standalone - visible when calendar booking is enabled OR for informational workspaces
     // (informational workspaces need to create services BEFORE they can enable calendar booking)
-    ...((workspace?.enableCalendarBooking === true || workspace?.sellsProductsAndServices !== true) ? [{
+    ...((workspace?.enableCalendarBooking === true || workspace?.channelMode !== 'ECOMMERCE') ? [{
       href: "/services",
       label: t('nav.services'),
       icon: Wrench,
     }] : []),
     // Sales Agents standalone - for informational workspaces with sales agents
-    ...(workspace?.sellsProductsAndServices !== true && workspace?.hasSalesAgents === true ? [{
+    ...(workspace?.channelMode !== 'ECOMMERCE' && workspace?.hasSalesAgents === true ? [{
       href: "/sales",
       label: t('nav.sales'),
       icon: UserCircle,
@@ -227,7 +225,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
                 {workspace?.name || 'Channel'}
               </h2>
               <p className="text-xs text-gray-500">
-                {workspace?.sellsProductsAndServices ? 'E-commerce' : 'Info'}
+                {workspace?.channelMode === 'ECOMMERCE' ? 'E-commerce' : workspace?.channelMode === 'FLOW' ? 'Flow' : 'Info'}
               </p>
             </div>
             {/* Mobile close button */}

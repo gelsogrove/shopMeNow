@@ -13,10 +13,10 @@ export interface MenuItem {
  * Menu items visibility hook
  * Filters menu items based on channel type (e-commerce vs informational)
  * 
- * E-COMMERCE (sellsProductsAndServices = true):
+ * E-COMMERCE (channelMode = 'ECOMMERCE'):
  * - Shows: Chat, Products, Categories, Services, Orders, Customers, Offers, Campaigns, FAQ, Settings
- * 
- * INFORMATIONAL (sellsProductsAndServices = false):
+ *
+ * INFORMATIONAL (channelMode = 'INFORMATIONAL'):
  * - Shows: Chat, FAQ, Settings (basic support/info)
  */
 export function useMenuItems(): MenuItem[] {
@@ -88,7 +88,7 @@ export function useMenuItems(): MenuItem[] {
   // Filter based on workspace channel type
   return allItems.filter((item) => {
     // ❌ HIDE items that require e-commerce if workspace is informational
-    if (item.requiresEcommerce && !workspace?.sellsProductsAndServices) {
+    if (item.requiresEcommerce && workspace?.channelMode !== 'ECOMMERCE') {
       return false
     }
     // ✅ SHOW all other items
@@ -100,8 +100,8 @@ export function useMenuItems(): MenuItem[] {
  * Get label for current channel type
  * @returns "E-commerce" or "Informational"
  */
-export function getChannelTypeLabel(sellsProductsAndServices?: boolean): string {
-  if (sellsProductsAndServices === true) return 'E-commerce'
-  if (sellsProductsAndServices === false) return 'Informational'
-  return 'Unknown'
+export function getChannelTypeLabel(channelMode?: string): string {
+  if (channelMode === 'ECOMMERCE') return 'E-commerce'
+  if (channelMode === 'FLOW') return 'Flow'
+  return 'Informational'
 }

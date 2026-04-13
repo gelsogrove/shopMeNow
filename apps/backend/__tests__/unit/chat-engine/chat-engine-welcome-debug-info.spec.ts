@@ -81,7 +81,7 @@ describe("ChatEngine - Welcome DebugInfo", () => {
     workspaceStore.set(testWorkspaceId, {
       id: testWorkspaceId,
       name: "Test Workspace",
-      sellsProductsAndServices: true,
+      channelMode: 'ECOMMERCE' as any,
       welcomeMessage: "Benvenuto!",
       chatbotName: "AI Assistant",
       botIdentityResponse: "I am an AI assistant",

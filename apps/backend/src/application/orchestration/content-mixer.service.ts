@@ -1,3 +1,4 @@
+import { ChannelMode } from "@echatbot/database"
 import { MixerOutput, RecognizedIntent } from "./types"
 import { isGreetingIntent, isSupportIntent } from "../intent/intent.types"
 
@@ -9,7 +10,7 @@ interface MixerParams {
     offers?: any
     services?: any
     customerProfile?: any
-    workspace: { toneOfVoice?: string | null; sellsProductsAndServices: boolean }
+    workspace: { toneOfVoice?: string | null; channelMode: ChannelMode }
   }
   isRegistered?: boolean
 }
@@ -57,7 +58,7 @@ export class ContentMixerService {
   }
 
   private buildProducts(params: MixerParams) {
-    if (!params.context.workspace.sellsProductsAndServices) {
+    if (params.context.workspace.channelMode !== "ECOMMERCE") {
       return []
     }
 

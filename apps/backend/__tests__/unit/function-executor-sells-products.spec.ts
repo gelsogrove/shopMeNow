@@ -1,11 +1,11 @@
 /**
- * Feature 174: Registration Guard + sellsProductsAndServices Tests
+ * Feature 174: Registration Guard + channelMode Tests
  * 
  * Tests for function-level registration check with workspace type filtering
  * 
  * Scenarios:
- * 1. E-commerce channel (sellsProductsAndServices=true) → Show registration link
- * 2. Informational channel (sellsProductsAndServices=false) → Show "feature not available"
+ * 1. E-commerce channel (channelMode=true) → Show registration link
+ * 2. Informational channel (channelMode=false) → Show "feature not available"
  * 3. Registered users → All functions work regardless of channel type
  */
 
@@ -18,7 +18,7 @@ jest.mock("@echatbot/database", () => ({
   })),
 }))
 
-describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
+describe("FunctionExecutor - channelMode Integration", () => {
   let executor: FunctionExecutor
 
   beforeEach(() => {
@@ -28,7 +28,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
     executor = new FunctionExecutor(mockPrisma)
   })
 
-  describe("E-commerce Channel (sellsProductsAndServices=true)", () => {
+  describe("E-commerce Channel (channelMode=true)", () => {
     it("should show registration link for unregistered user trying to add to cart", async () => {
       const context: ExecutionContext = {
         workspaceId: "ws-ecommerce",
@@ -37,7 +37,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
         customerLanguage: "it",
         customerDiscount: 0,
         customerIsActive: false, // ❌ NOT registered
-        sellsProductsAndServices: true, // ✅ E-commerce channel
+        channelMode: 'ECOMMERCE' as any, // ✅ E-commerce channel
       }
 
       const result = await executor.execute("addToCart", { sku: "PROD-001", quantity: 1 }, context)
@@ -53,7 +53,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
         workspaceId: "ws-ecommerce",
         customerId: "cust-unregistered",
         customerIsActive: false,
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
       }
 
       const result = await executor.execute("viewCart", {}, context)
@@ -68,7 +68,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
         workspaceId: "ws-ecommerce",
         customerId: "cust-unregistered",
         customerIsActive: false,
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
       }
 
       const result = await executor.execute("getOrderDetails", { orderCode: "ORD-001" }, context)
@@ -78,7 +78,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
     })
   })
 
-  describe("Informational Channel (sellsProductsAndServices=false)", () => {
+  describe("Informational Channel (channelMode=false)", () => {
     it("should return FEATURE_NOT_AVAILABLE for unregistered user trying to add to cart", async () => {
       const context: ExecutionContext = {
         workspaceId: "ws-informational",
@@ -87,7 +87,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
         customerLanguage: "it",
         customerDiscount: 0,
         customerIsActive: false, // ❌ NOT registered
-        sellsProductsAndServices: false, // ❌ Informational channel (no e-commerce)
+        channelMode: 'INFORMATIONAL' as any, // ❌ Informational channel (no e-commerce)
       }
 
       const result = await executor.execute("addToCart", { sku: "PROD-001", quantity: 1 }, context)
@@ -104,7 +104,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
         workspaceId: "ws-informational",
         customerId: "cust-unregistered",
         customerIsActive: false,
-        sellsProductsAndServices: false,
+        channelMode: 'INFORMATIONAL' as any,
       }
 
       const result = await executor.execute("viewCart", {}, context)
@@ -119,7 +119,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
         workspaceId: "ws-informational",
         customerId: "cust-unregistered",
         customerIsActive: false,
-        sellsProductsAndServices: false,
+        channelMode: 'INFORMATIONAL' as any,
       }
 
       const result = await executor.execute("getLinkOrderByCode", { orderCode: "ORD-001" }, context)
@@ -138,7 +138,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
         customerLanguage: "it",
         customerDiscount: 10,
         customerIsActive: true, // ✅ Registered
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
       }
 
       const result = await executor.execute("viewCart", {}, context)
@@ -153,7 +153,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
         workspaceId: "ws-ecommerce",
         customerId: "cust-registered",
         customerIsActive: true,
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
       }
 
       const result = await executor.execute("showCheckout", {}, context)
@@ -169,7 +169,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
         workspaceId: "ws-informational",
         customerId: "cust-registered",
         customerIsActive: true, // ✅ Registered
-        sellsProductsAndServices: false, // ❌ Informational
+        channelMode: 'INFORMATIONAL' as any, // ❌ Informational
       }
 
       const result = await executor.execute("viewCart", {}, context)
@@ -186,7 +186,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
         workspaceId: "ws-ecommerce",
         customerId: "cust-visitor",
         customerIsActive: false,
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
       }
 
       const result = await executor.execute("contactOperator", { message: "Need help" }, context)
@@ -200,7 +200,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
         workspaceId: "ws-informational",
         customerId: "cust-visitor",
         customerIsActive: false,
-        sellsProductsAndServices: false,
+        channelMode: 'INFORMATIONAL' as any,
       }
 
       const result = await executor.execute("contactOperator", { message: "Question" }, context)
@@ -211,12 +211,12 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
   })
 
   describe("Edge Cases", () => {
-    it("should treat undefined sellsProductsAndServices as false (feature not available)", async () => {
+    it("should treat undefined channelMode as false (feature not available)", async () => {
       const context: ExecutionContext = {
         workspaceId: "ws-legacy",
         customerId: "cust-test",
         customerIsActive: false,
-        // sellsProductsAndServices: undefined (not provided - defaults to false/falsy)
+        // channelMode: undefined (not provided - defaults to false/falsy)
       }
 
       const result = await executor.execute("addToCart", { sku: "TEST" }, context)
@@ -248,7 +248,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
           workspaceId: "ws-info",
           customerId: "cust-test",
           customerIsActive: false,
-          sellsProductsAndServices: false,
+          channelMode: 'INFORMATIONAL' as any,
         }
 
         const resultInfo = await executor.execute(functionName, {}, contextInfo)
@@ -259,7 +259,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
           workspaceId: "ws-ecom",
           customerId: "cust-test",
           customerIsActive: false,
-          sellsProductsAndServices: true,
+          channelMode: 'ECOMMERCE' as any,
         }
 
         const resultEcom = await executor.execute(functionName, {}, contextEcom)
@@ -274,7 +274,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
         workspaceId: "ws-ecommerce",
         customerId: "cust-registered",
         customerIsActive: true,
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         channel: "widget",
       }
 
@@ -290,7 +290,7 @@ describe("FunctionExecutor - sellsProductsAndServices Integration", () => {
         workspaceId: "ws-ecommerce",
         customerId: "cust-registered",
         customerIsActive: true,
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         channel: "widget",
       }
 

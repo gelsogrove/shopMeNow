@@ -1,4 +1,4 @@
-import { prisma, PrismaClient, ChannelType } from "@echatbot/database"
+import { prisma, PrismaClient, ChannelType, ChannelMode } from "@echatbot/database"
 
 export interface ChecklistAction {
   path: string
@@ -17,7 +17,7 @@ export interface ChecklistItem {
 export interface WorkspaceChecklist {
   workspaceId: string
   channelType: ChannelType
-  sellsProductsAndServices: boolean
+  channelMode: ChannelMode
   completedCount: number
   totalCount: number
   percent: number
@@ -44,7 +44,7 @@ export class WorkspaceChecklistService {
       select: {
         id: true,
         channelType: true,
-        sellsProductsAndServices: true,
+        channelMode: true,
         enableWhatsapp: true,
         enableWidget: true,
         defaultLanguage: true,
@@ -127,7 +127,7 @@ export class WorkspaceChecklistService {
     ])
 
     const channelType = workspace.channelType ?? "WHATSAPP"
-    const sellsProductsAndServices = workspace.sellsProductsAndServices ?? false
+    const isEcommerce = workspace.channelMode === "ECOMMERCE"
     const hasWhatsApp = workspace.enableWhatsapp === true
     const hasWidget = workspace.enableWidget === true
 
@@ -289,7 +289,7 @@ export class WorkspaceChecklistService {
       })
     }
 
-    if (sellsProductsAndServices) {
+    if (isEcommerce) {
       this.addItem(items, {
         key: "services",
         label: "Services",
@@ -326,7 +326,7 @@ export class WorkspaceChecklistService {
     return {
       workspaceId: workspace.id,
       channelType,
-      sellsProductsAndServices,
+      channelMode: workspace.channelMode ?? "INFORMATIONAL",
       completedCount,
       totalCount,
       percent,

@@ -128,7 +128,7 @@ describe("Appointment Booking - LLM Orchestration", () => {
     // RULE: CUSTOMER_SUPPORT with enableCalendarBooking=true MUST have appointment functions
     // SCENARIO: Workspace with calendar enabled — functions added dynamically
     it("CUSTOMER_SUPPORT agent should include appointment functions when calendar enabled", () => {
-      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: true } as any
+      const workspace = { enableCalendarBooking: true, channelMode: 'ECOMMERCE' as any } as any
       const functions = getAgentFunctionsForWorkspace("CUSTOMER_SUPPORT", workspace)!
       const names = functions.map((fn) => fn.function.name)
 
@@ -155,7 +155,7 @@ describe("Appointment Booking - LLM Orchestration", () => {
     // RULE: INFO_AGENT with enableCalendarBooking=true MUST have appointment functions
     // SCENARIO: Informational workspace with calendar — info agent handles bookings
     it("INFO_AGENT should include appointment functions when calendar enabled", () => {
-      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: false } as any
+      const workspace = { enableCalendarBooking: true, channelMode: 'INFORMATIONAL' as any } as any
       const functions = getAgentFunctionsForWorkspace("INFO_AGENT", workspace)!
       const names = functions.map((fn) => fn.function.name)
 
@@ -167,7 +167,7 @@ describe("Appointment Booking - LLM Orchestration", () => {
 
     // RULE: INFO_AGENT should have combined functions when calendar enabled
     it("INFO_AGENT should have combined functions (support + profile + appointments) when calendar enabled", () => {
-      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: false } as any
+      const workspace = { enableCalendarBooking: true, channelMode: 'INFORMATIONAL' as any } as any
       const functions = getAgentFunctionsForWorkspace("INFO_AGENT", workspace)!
       const names = functions.map((fn) => fn.function.name)
 
@@ -352,7 +352,7 @@ describe("Appointment Booking - LLM Orchestration", () => {
     // RULE: Workspace-filtered CUSTOMER_SUPPORT total should be support + appointment functions
     // WHY: When enableCalendarBooking=true, appointments are added dynamically
     it("CUSTOMER_SUPPORT with calendar enabled should be support + language + appointment functions", () => {
-      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: true } as any
+      const workspace = { enableCalendarBooking: true, channelMode: 'ECOMMERCE' as any } as any
       const functions = getAgentFunctionsForWorkspace("CUSTOMER_SUPPORT", workspace)!
       const names = functions.map((fn) => fn.function.name)
       // CUSTOMER_SUPPORT_FUNCTIONS (1: contactOperator) + LANGUAGE_FUNCTIONS (1: changeLanguage) + APPOINTMENT_FUNCTIONS (5)
@@ -374,7 +374,7 @@ describe("Appointment Booking - LLM Orchestration", () => {
 
     // RULE: Workspace-filtered INFO_AGENT total should be support + profile + appointment functions
     it("INFO_AGENT with calendar enabled should be support + profile + language + appointment functions", () => {
-      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: false } as any
+      const workspace = { enableCalendarBooking: true, channelMode: 'INFORMATIONAL' as any } as any
       const functions = getAgentFunctionsForWorkspace("INFO_AGENT", workspace)!
       const names = functions.map((fn) => fn.function.name)
       // CUSTOMER_SUPPORT (1) + PROFILE_MANAGEMENT (2) + LANGUAGE (1) + APPOINTMENT (5)

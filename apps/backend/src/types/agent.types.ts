@@ -75,8 +75,8 @@ export interface CustomerData {
  * Used for {{#if}} conditionals and config variables in prompts
  */
 export interface WorkspaceConfig {
-  /** E-commerce mode (products/services) vs informational mode */
-  sellsProductsAndServices: boolean
+  /** Channel mode: ECOMMERCE, INFORMATIONAL, or FLOW */
+  channelMode: import("@echatbot/database").ChannelMode
   /** Human support escalation enabled */
   hasHumanSupport: boolean
   /** Human support escalation instructions */

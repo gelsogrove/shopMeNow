@@ -7,7 +7,7 @@ describe("WorkspaceChecklistService", () => {
         findUnique: jest.fn().mockResolvedValue({
           id: "w1",
           channelType: "WIDGET",
-          sellsProductsAndServices: false,
+          channelMode: 'INFORMATIONAL' as any,
           enableWhatsapp: false,
           enableWidget: true,
           defaultLanguage: "en",
@@ -53,7 +53,7 @@ describe("WorkspaceChecklistService", () => {
 
     expect(result.workspaceId).toBe("w1")
     expect(result.channelType).toBe("WIDGET")
-    expect(result.sellsProductsAndServices).toBe(false)
+    expect(result.channelMode).toBe('INFORMATIONAL')
     expect(result.percent).toBe(100)
       expect(keys).toEqual(
         expect.arrayContaining([

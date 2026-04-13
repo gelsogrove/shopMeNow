@@ -238,7 +238,7 @@ export class PlatformConfigController {
           select: {
             id: true,
             deletedAt: true,
-            sellsProductsAndServices: true,
+            channelMode: true,
             debugMode: true,
           },
         })
@@ -249,9 +249,9 @@ export class PlatformConfigController {
         } else if (workspace.debugMode) {
           isValid = false
           validationError = "Widget disabled for debug workspaces"
-        } else if (workspace.sellsProductsAndServices) {
+        } else if (workspace.channelMode === "ECOMMERCE") {
           isValid = false
-          validationError = "Widget must target an informational workspace"
+          validationError = "Widget must target an informational or flow workspace"
         }
       }
 
@@ -324,7 +324,7 @@ export class PlatformConfigController {
           widgetAutoSuggestionsEnabled: true,
           widgetQuickReplies: true,
           deletedAt: true,
-          sellsProductsAndServices: true,
+          channelMode: true,
           debugMode: true,
           channelStatus: true,
         },
@@ -365,13 +365,13 @@ export class PlatformConfigController {
         })
       }
 
-      if (workspace.sellsProductsAndServices) {
+      if (workspace.channelMode === "ECOMMERCE") {
         return res.status(200).json({
           success: true,
           data: {
             config: null,
             showWidgetChatbot,
-            error: "Widget must target an informational workspace",
+            error: "Widget must target an informational or flow workspace",
           },
         })
       }
@@ -430,7 +430,7 @@ export class PlatformConfigController {
 
         const workspace = await prisma.workspace.findUnique({
           where: { id: workspaceId },
-          select: { id: true, deletedAt: true, sellsProductsAndServices: true },
+          select: { id: true, deletedAt: true, channelMode: true },
         })
 
         if (!workspace || workspace.deletedAt !== null) {
@@ -440,10 +440,10 @@ export class PlatformConfigController {
           })
         }
 
-        if (workspace.sellsProductsAndServices) {
+        if (workspace.channelMode === "ECOMMERCE") {
           return res.status(400).json({
             success: false,
-            error: "Widget must target an informational workspace",
+            error: "Widget must target an informational or flow workspace",
           })
         }
       }

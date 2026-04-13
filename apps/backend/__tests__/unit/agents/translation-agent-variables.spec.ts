@@ -44,7 +44,7 @@ describe("TranslationAgent Prompt Variables Completeness", () => {
     operatorWhatsappNumber: "+39 333 1234567",
     hasSalesAgents: false,
     notificationEmail: "admin@testshop.com",
-    sellsProductsAndServices: true,
+    channelMode: 'ECOMMERCE' as any,
     address: "Via Roma 1, Milano",
     customAiRules: "Always be polite",
     businessType: "ecommerce",

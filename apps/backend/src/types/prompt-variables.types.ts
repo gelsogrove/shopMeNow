@@ -190,11 +190,13 @@ export interface PromptVariables {
    */
   hasSalesAgents: boolean
 
-  /** Vende prodotti/servizi (ecommerce mode)
-   * Template: {{sellsProductsAndServices}} (boolean for {{#if}})
-   * Source: workspace.sellsProductsAndServices
+  /** Channel mode: ECOMMERCE, INFORMATIONAL, or FLOW
+   * Template: {{channelMode}} (string enum)
+   * Also: {{isEcommerce}} (boolean for {{#if}}) derived from channelMode
+   * Source: workspace.channelMode
    */
-  sellsProductsAndServices: boolean
+  channelMode: string
+  isEcommerce: boolean
 
   /** Prenotazione appuntamenti abilitata
    * Template: {{hasCalendarEnabled}} (boolean for {{#if}})
@@ -306,14 +308,14 @@ export interface PromptVariables {
 
   // ══════════════════════════════════════════════════════════════
   // DYNAMIC CONTENT (loaded separately, not from single DB query)
-  // E-COMMERCE ONLY: These variables are filtered when sellsProductsAndServices=false
+  // E-COMMERCE ONLY: These variables are filtered when channelMode !== ECOMMERCE
   // ══════════════════════════════════════════════════════════════
 
   /** Lista prodotti formattata
    * Template: {{products}}
    * Source: MessageRepository.getActiveProducts()
    * WARNING: Can be 50k+ tokens - validate before using
-   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
+   * 🛒 E-COMMERCE ONLY: Empty when channelMode !== ECOMMERCE
    */
   products?: string
   /** 🆕 Lista prodotti raggruppati per categoria
@@ -323,7 +325,7 @@ export interface PromptVariables {
    * Example:
    * 🏷️ **Immobili Residenziali** (12 prodotti):
    *   • Appartamento Via Roma - €180k (42mq, 2loc, centro)
-   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
+   * 🛒 E-COMMERCE ONLY: Empty when channelMode !== ECOMMERCE
    */
   productsByCategory?: string
 
@@ -333,7 +335,7 @@ export interface PromptVariables {
    * Format: Detailed multi-line format per product
    * Example:
    * 📦 **Appartamento** ... 📋 Caratteristiche: ...
-   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
+   * 🛒 E-COMMERCE ONLY: Empty when channelMode !== ECOMMERCE
    */
   productsWithDetails?: string
 
@@ -341,7 +343,7 @@ export interface PromptVariables {
    * Template: {{featuredProducts}}
    * Source: PromptVariableBuilder.buildFeaturedProducts()
    * Format: Starred list of featured items
-   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
+   * 🛒 E-COMMERCE ONLY: Empty when channelMode !== ECOMMERCE
    */
   featuredProducts?: string
 
@@ -352,28 +354,28 @@ export interface PromptVariables {
    * Example:
    * 🔍 superficie: 42mq, 38mq, 120mq (+15 altri)
    * 🔍 locali: 2n., 3n., 4n.
-   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
+   * 🛒 E-COMMERCE ONLY: Empty when channelMode !== ECOMMERCE
    */
   productCharacteristics?: string
   
   /** Lista categorie formattata
    * Template: {{categories}}
    * Source: MessageRepository.getActiveCategories()
-   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
+   * 🛒 E-COMMERCE ONLY: Empty when channelMode !== ECOMMERCE
    */
   categories?: string
 
   /** Lista servizi formattata
    * Template: {{services}}
    * Source: MessageRepository.getActiveServices()
-   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
+   * 🛒 E-COMMERCE ONLY: Empty when channelMode !== ECOMMERCE
    */
   services?: string
 
   /** Offerte attive formattate
    * Template: {{offers}}
    * Source: MessageRepository.getActiveOffers()
-   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
+   * 🛒 E-COMMERCE ONLY: Empty when channelMode !== ECOMMERCE
    */
   offers?: string
 
@@ -385,14 +387,14 @@ export interface PromptVariables {
 
   // ══════════════════════════════════════════════════════════════
   // AGENT-SPECIFIC VARIABLES
-  // E-COMMERCE ONLY: Order/Cart variables filtered when sellsProductsAndServices=false
+  // E-COMMERCE ONLY: Order/Cart variables filtered when channelMode !== ECOMMERCE
   // ══════════════════════════════════════════════════════════════
 
   /** Ultimo codice ordine del cliente
    * Template: {{lastordercode}} or {{lastOrderCode}}
    * Source: orders.findFirst({ orderBy: createdAt: 'desc' })
    * Used by: OrderTrackingAgent
-   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
+   * 🛒 E-COMMERCE ONLY: Empty when channelMode !== ECOMMERCE
    */
   lastOrderCode?: string
 
@@ -400,7 +402,7 @@ export interface PromptVariables {
    * Template: {{cartContents}}
    * Source: CartService.getCartSummary()
    * Used by: CartManagementAgent
-   * 🛒 E-COMMERCE ONLY: Empty when sellsProductsAndServices=false
+   * 🛒 E-COMMERCE ONLY: Empty when channelMode !== ECOMMERCE
    */
   cartContents?: string
 
@@ -508,7 +510,8 @@ export const VARIABLE_DEFAULTS: Partial<PromptVariables> = {
   toneOfVoice: 'friendly',
   hasHumanSupport: true,
   hasSalesAgents: false,
-  sellsProductsAndServices: true,
+  channelMode: 'ECOMMERCE',
+  isEcommerce: true,
   hasCalendarEnabled: false,
   appointmentTypes: '',
   customerUpcomingAppointments: '',

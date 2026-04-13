@@ -18,11 +18,11 @@ export const INDUSTRY_EMOJI: Record<Industry, string> = {
   legal: '⚖️', other: '🏢',
 }
 
-export const WORKSPACE_TYPES = ['ecommerce', 'info'] as const
+export const WORKSPACE_TYPES = ['ecommerce', 'info', 'flow'] as const
 export type WorkspaceType = (typeof WORKSPACE_TYPES)[number]
 
 export const WORKSPACE_TYPE_EMOJI: Record<WorkspaceType, string> = {
-  ecommerce: '🛒', info: '💬',
+  ecommerce: '🛒', info: '💬', flow: '🔄',
 }
 
 export type ChannelTone = 'friendly' | 'professional' | 'formal' | 'casual'
@@ -68,6 +68,7 @@ export const OWT = {
       options: {
         ecommerce: { label: 'Vendo prodotti', desc: 'Catalogo prodotti, carrello e ordini online' },
         info: { label: 'Condivido informazioni', desc: 'Supporto clienti, FAQ e informazioni' },
+        flow: { label: 'Flussi guidati', desc: 'Chatbot a passi guidati: troubleshooting, onboarding, configurazioni' },
       },
     },
     channelType: {
@@ -170,6 +171,7 @@ export const OWT = {
       options: {
         ecommerce: { label: 'Sell products', desc: 'Product catalog, cart and online orders' },
         info: { label: 'Share information', desc: 'Customer support, FAQ and information' },
+        flow: { label: 'Guided flows', desc: 'Step-by-step chatbot: troubleshooting, onboarding, configurations' },
       },
     },
     channelType: {
@@ -272,6 +274,7 @@ export const OWT = {
       options: {
         ecommerce: { label: 'Vendo productos', desc: 'Catálogo, carrito y pedidos online' },
         info: { label: 'Comparto información', desc: 'Soporte al cliente, FAQ e información' },
+        flow: { label: 'Flujos guiados', desc: 'Chatbot paso a paso: troubleshooting, onboarding, configuraciones' },
       },
     },
     channelType: {
@@ -374,6 +377,7 @@ export const OWT = {
       options: {
         ecommerce: { label: 'Vendo produtos', desc: 'Catálogo, carrinho e pedidos online' },
         info: { label: 'Compartilho informações', desc: 'Suporte ao cliente, FAQ e informações' },
+        flow: { label: 'Fluxos guiados', desc: 'Chatbot passo a passo: troubleshooting, onboarding, configurações' },
       },
     },
     channelType: {

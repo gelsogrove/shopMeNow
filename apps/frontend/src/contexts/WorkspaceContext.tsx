@@ -55,7 +55,7 @@ export interface Workspace {
   enableWidget?: boolean
   sellsProducts?: boolean
   sellsServices?: boolean
-  sellsProductsAndServices?: boolean // 🆕 Unified field
+  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
   humanSupportInstructions?: string
@@ -190,7 +190,7 @@ export const WorkspaceProvider = ({ children, initialWorkspace }: WorkspaceProvi
   }, [])
 
   // 🔄 Refresh workspace from API on startup to avoid stale localStorage data.
-  // Ensures fields like enableCalendarBooking and sellsProductsAndServices are always current.
+  // Ensures fields like enableCalendarBooking and channelMode are always current.
   useEffect(() => {
     if (!currentWorkspace?.id) return
     const token = storage.getToken()

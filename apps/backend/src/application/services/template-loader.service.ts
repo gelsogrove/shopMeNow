@@ -20,6 +20,7 @@ import * as path from "path"
 import { PrismaClient } from "@echatbot/database"
 import { TemplateEngineService } from "./prompt-builder/template-engine.service"
 import logger from "../../utils/logger"
+import { ChannelMode } from "@echatbot/database"
 import {
   ECOMMERCE_TEMPLATE_FILES,
   INFORMATIONAL_TEMPLATE_FILES,
@@ -38,7 +39,7 @@ const workspaceCache = new Map<string, { settings: WorkspaceSettings; timestamp:
 const WORKSPACE_CACHE_TTL_MS = 30000 // 30 seconds
 
 interface WorkspaceSettings {
-  sellsProductsAndServices: boolean
+  channelMode: ChannelMode
   hasHumanSupport: boolean
   hasSalesAgents: boolean
   enableCalendarBooking: boolean
@@ -109,14 +110,15 @@ export class TemplateLoaderService {
       const settings = await this.getWorkspaceSettings(workspaceId)
 
       // 2. Load template (cached)
-      const template = this.loadTemplate(agentType, settings.sellsProductsAndServices)
+      const template = this.loadTemplate(agentType, settings.channelMode)
 
       // 3. Process conditionals ONLY - keep {{variables}} intact for later replacement
       // 🔒 CRITICAL: Only pass boolean flags for {{#if}} conditionals
       // Do NOT pass string values like companyName, chatbotName - these must remain as {{variables}}
       const conditionalFlags = {
         // Direct boolean flags
-        sellsProductsAndServices: settings.sellsProductsAndServices,
+        isEcommerce: settings.channelMode === "ECOMMERCE",
+        channelMode: settings.channelMode,
         hasHumanSupport: settings.hasHumanSupport,
         hasSalesAgents: settings.hasSalesAgents,
         hasAddress: settings.hasAddress,
@@ -168,9 +170,9 @@ export class TemplateLoaderService {
   /**
    * Load template from file (cached in memory - DISABLED IN DEVELOPMENT)
    */
-  private loadTemplate(agentType: string, isEcommerce: boolean): string {
-    const templateFile = getTemplateFilename(agentType, isEcommerce)
-    const folder = getTemplateFolder(isEcommerce)
+  private loadTemplate(agentType: string, mode: ChannelMode): string {
+    const templateFile = getTemplateFilename(agentType, mode)
+    const folder = getTemplateFolder(mode)
 
     const cacheKey = `${folder}/${templateFile}`
 
@@ -235,7 +237,7 @@ export class TemplateLoaderService {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: {
-        sellsProductsAndServices: true,
+        channelMode: true,
         hasHumanSupport: true,
         hasSalesAgents: true,
         enableCalendarBooking: true,
@@ -275,7 +277,7 @@ export class TemplateLoaderService {
       : ""
     const address = workspace.address || ""
     const settings: WorkspaceSettings = {
-      sellsProductsAndServices: workspace.sellsProductsAndServices ?? true,
+      channelMode: workspace.channelMode ?? "ECOMMERCE",
       hasHumanSupport: workspace.hasHumanSupport ?? false,
       hasSalesAgents: workspace.hasSalesAgents ?? false,
       enableCalendarBooking: workspace.enableCalendarBooking ?? false,

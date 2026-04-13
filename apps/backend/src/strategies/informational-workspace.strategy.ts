@@ -1,7 +1,7 @@
 /**
  * InformationalWorkspaceStrategy
  * 
- * Routing strategy for informational workspaces (sellsProductsAndServices=false).
+ * Routing strategy for informational workspaces (channelMode=INFORMATIONAL).
  * 
  * Behavior:
  * - ALWAYS routes to INFO_AGENT
@@ -18,7 +18,7 @@
  * @critical FAQ system MUST work with this strategy
  */
 
-import { AgentType, PrismaClient, Workspace } from "@echatbot/database"
+import { AgentType, ChannelMode, PrismaClient, Workspace } from "@echatbot/database"
 import logger from "../utils/logger"
 import { CustomerSupportAgentLLM } from "../application/agents/CustomerSupportAgentLLM"
 import { LinkReplacementService } from "../application/services/link-replacement.service"
@@ -41,7 +41,7 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
    * This strategy handles informational workspaces
    */
   canHandle(workspace: Workspace): boolean {
-    return workspace.sellsProductsAndServices === false
+    return workspace.channelMode === ChannelMode.INFORMATIONAL
   }
 
   /**

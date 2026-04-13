@@ -32,7 +32,7 @@ async function setupTestData() {
             operatorContactMethod: "email",
             operatorEmail: "operator@example.com",
             humanSupportInstructions: "Hello {{nameUser}}, an operator will be with you shortly!",
-            sellsProductsAndServices: true
+            channelMode: "ECOMMERCE"
         }
     });
     console.log(`✅ Workspace created: ${workspace.name} (${workspace.id})`);

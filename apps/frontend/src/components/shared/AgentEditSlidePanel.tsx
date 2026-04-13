@@ -84,7 +84,7 @@ interface AgentEditSlidePanelProps {
   onOpenChange: (open: boolean) => void
   onSave: (agent: Agent) => Promise<void>
   availableFunctions?: string[]
-  sellsProductsAndServices?: boolean // E-commerce toggle state - filters variables
+  isEcommerce?: boolean // E-commerce toggle state - filters variables
 }
 
 export function AgentEditSlidePanel({
@@ -93,7 +93,7 @@ export function AgentEditSlidePanel({
   onOpenChange,
   onSave,
   availableFunctions = [],
-  sellsProductsAndServices = false,
+  isEcommerce = false,
 }: AgentEditSlidePanelProps) {
   const [formData, setFormData] = useState<Agent | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -290,7 +290,7 @@ export function AgentEditSlidePanel({
             title="Available Variables"
             description={`Template variables you can use in ${formData.name} system prompt`}
             showVariables={true}
-            sellsProductsAndServices={sellsProductsAndServices}
+            isEcommerce={isEcommerce}
           />
         </div>
 

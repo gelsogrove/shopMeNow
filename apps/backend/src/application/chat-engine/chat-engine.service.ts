@@ -416,7 +416,7 @@ export class ChatEngineService {
         customerName: input.customerName,
         customerDiscount: input.customerDiscount,
         userMessage: input.message,
-        enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
+        enableCategoryRanking: workspaceConfig.channelMode === "ECOMMERCE",
       })
 
       if (structuredResponse.type !== "FAQ") {
@@ -1144,7 +1144,7 @@ export class ChatEngineService {
         name: workspaceConfig.workspaceName,
         botIdentityResponse: workspaceConfig.botIdentityResponse,
         customAiRules: workspaceConfig.customAiRules,
-        sellsProductsAndServices: workspaceConfig.sellsProductsAndServices,
+        channelMode: workspaceConfig.channelMode,
         address: workspaceConfig.address,
       },
       conversationHistory,
@@ -1286,7 +1286,7 @@ export class ChatEngineService {
       where: { id: workspaceId },
       select: {
         name: true,
-        sellsProductsAndServices: true,
+        channelMode: true,
         hasSalesAgents: true,
         hasHumanSupport: true,
         humanSupportInstructions: true,
@@ -1302,7 +1302,7 @@ export class ChatEngineService {
 
     const config: WorkspaceConfig = {
       name: workspace?.name || "Assistente",
-      sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true,
+      channelMode: workspace?.channelMode ?? "ECOMMERCE",
       hasSalesAgents: workspace?.hasSalesAgents ?? false,
        hasHumanSupport: workspace?.hasHumanSupport ?? false,
        humanSupportInstructions: workspace?.humanSupportInstructions ?? null,
@@ -1322,7 +1322,7 @@ export class ChatEngineService {
   }
 
   /**
-   * Check if intent is e-commerce related (requires sellsProductsAndServices=true)
+   * Check if intent is e-commerce related (requires channelMode=ECOMMERCE)
    */
   private isEcommerceIntent(intentType: string): boolean {
     const ecommerceIntents = [
@@ -1855,7 +1855,7 @@ export class ChatEngineService {
       const workspaceConfig = await this.loadWorkspaceConfig(input.workspaceId)
       
       logger.info("⚙️ [ChatEngine] Workspace config loaded", {
-        sellsProducts: workspaceConfig.sellsProductsAndServices,
+        sellsProducts: workspaceConfig.channelMode === "ECOMMERCE",
         hasSalesAgents: workspaceConfig.hasSalesAgents,
       })
 
@@ -1914,7 +1914,7 @@ export class ChatEngineService {
       // ========================================================================
       // STEP 0.2: Informational Workspace - Force INFO_AGENT prompt flow
       // ========================================================================
-      if (!workspaceConfig.sellsProductsAndServices) {
+      if (workspaceConfig.channelMode !== "ECOMMERCE") {
         return await this.handleInformationalMessage({
           input,
           workspaceConfig,
@@ -2171,7 +2171,7 @@ export class ChatEngineService {
             customerName: input.customerName,
             customerDiscount: input.customerDiscount,
             userMessage: input.message,
-            enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
+            enableCategoryRanking: workspaceConfig.channelMode === "ECOMMERCE",
           })
           
           const formatterResult = await this.formatWithCustomRules(
@@ -2394,7 +2394,7 @@ export class ChatEngineService {
                   workspaceId: input.workspaceId,
                   customerDiscount: input.customerDiscount,
                   userMessage: input.message,
-                  enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
+                  enableCategoryRanking: workspaceConfig.channelMode === "ECOMMERCE",
                 }
               )
               
@@ -2612,7 +2612,7 @@ export class ChatEngineService {
                 customerDiscount: input.customerDiscount,
                 disableGrouping: selectIntent.listType === "ORDER_OPTIMIZATION_ACTIONS",
                 userMessage: input.message,
-                enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
+                enableCategoryRanking: workspaceConfig.channelMode === "ECOMMERCE",
                 customerIsActive, // 🔒 Feature 174: Pass registration status for price visibility
               }
             )
@@ -2961,7 +2961,7 @@ export class ChatEngineService {
                     customerName: input.customerName,
                     customerDiscount: input.customerDiscount,
                     userMessage: input.message,
-                    enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
+                    enableCategoryRanking: workspaceConfig.channelMode === "ECOMMERCE",
                   }
                 )
                 
@@ -3042,7 +3042,7 @@ export class ChatEngineService {
                     customerName: input.customerName,
                     customerDiscount: input.customerDiscount,
                     userMessage: input.message,
-                    enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
+                    enableCategoryRanking: workspaceConfig.channelMode === "ECOMMERCE",
                   }
                 )
                 
@@ -3825,7 +3825,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       // 🔒 Feature 174: If workspace doesn't sell products, force INFO_AGENT (with FAQ)
       // This ensures GREETING, UPDATE_PROFILE, CHANGE_LANGUAGE go through unified Router flow
       // ========================================================================
-      if ((this.isEcommerceIntent(intentResult.intent.type) || this.isInformationalIntent(intentResult.intent.type)) && !workspaceConfig.sellsProductsAndServices) {
+      if ((this.isEcommerceIntent(intentResult.intent.type) || this.isInformationalIntent(intentResult.intent.type)) && workspaceConfig.channelMode !== "ECOMMERCE") {
         logger.info("🔀 [ChatEngine] Informational workspace: forcing Router flow", {
           originalIntent: intentResult.intent.type,
           workspaceId: input.workspaceId
@@ -4987,7 +4987,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
           customerDiscount: input.customerDiscount,
           showOptimizeOption,
           userMessage: input.message,
-          enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
+          enableCategoryRanking: workspaceConfig.channelMode === "ECOMMERCE",
         }, enrichmentOptions)
 
       logger.info("🏗️ [ChatEngine] Response built", { type: structuredResponse.type })
@@ -5931,7 +5931,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       customerName: input.customerName,
       customerDiscount: input.customerDiscount,
       userMessage: input.message,
-      enableCategoryRanking: workspaceConfig.sellsProductsAndServices,
+      enableCategoryRanking: workspaceConfig.channelMode === "ECOMMERCE",
     })
 
     const formatterResult = await this.formatWithCustomRules(
@@ -6038,7 +6038,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     // 🆕 If informational workspace + e-commerce intent → route to INFO_AGENT (has FAQ in template)
     if (
       workspaceConfig &&
-      !workspaceConfig.sellsProductsAndServices &&
+      workspaceConfig.channelMode !== "ECOMMERCE" &&
       this.isEcommerceIntent(intentType)
     ) {
       return AgentType.INFO_AGENT

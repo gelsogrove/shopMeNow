@@ -217,14 +217,14 @@ WHERE id = 'echatbot-hq-support';
 1. **Ecommerce mode:**
    ```sql
    UPDATE workspace 
-   SET sellsProductsAndServices = true 
+   SET "channelMode" = 'ECOMMERCE' 
    WHERE id = 'echatbot-hq-support';
    ```
 
 2. **Informational mode:**
    ```sql
    UPDATE workspace 
-   SET sellsProductsAndServices = false 
+   SET "channelMode" = 'INFORMATIONAL' 
    WHERE id = 'echatbot-hq-support';
    ```
 

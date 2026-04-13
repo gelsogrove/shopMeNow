@@ -3,7 +3,7 @@
  * 
  * Verifies that e-commerce variables ({{products}}, {{offers}}, {{categories}}, 
  * {{services}}, {{lastOrderCode}}, {{cartContents}}) are only replaced when
- * sellsProductsAndServices=true.
+ * channelMode=true.
  * 
  * Constitution Principle: Database-First Architecture
  * Variables must respect workspace configuration.
@@ -51,7 +51,7 @@ describe('E-commerce Variable Filtering', () => {
     id: 'ws_123',
     name: 'Test Workspace',
     slug: 'test-workspace',
-    sellsProductsAndServices: true, // Will be changed per test
+    channelMode: 'ECOMMERCE' as any, // Will be changed per test
     hasSalesAgents: false,
     hasHumanSupport: false,
     createdAt: new Date(),
@@ -74,7 +74,7 @@ describe('E-commerce Variable Filtering', () => {
     channel: 'whatsapp' as const,
   }
 
-  describe('E-commerce ENABLED (sellsProductsAndServices=true)', () => {
+  describe('E-commerce ENABLED (channelMode=true)', () => {
     it('should replace ALL e-commerce variables', () => {
       const template = `
 Products: {{products}}
@@ -88,7 +88,7 @@ FAQs: {{faqs}}
 
       const variables = PromptVariableBuilder.build(
         mockCustomer,
-        { ...mockWorkspace, sellsProductsAndServices: true },
+        { ...mockWorkspace, channelMode: 'ECOMMERCE' as any },
         mockDynamicContent,
         mockContext
       )
@@ -116,7 +116,7 @@ FAQs: {{faqs}}
     })
   })
 
-  describe('E-commerce DISABLED (sellsProductsAndServices=false)', () => {
+  describe('E-commerce DISABLED (channelMode=false)', () => {
     it('should NOT replace e-commerce variables (leave empty)', () => {
       const template = `
 Products: {{products}}
@@ -130,7 +130,7 @@ FAQs: {{faqs}}
 
       const variables = PromptVariableBuilder.build(
         mockCustomer,
-        { ...mockWorkspace, sellsProductsAndServices: false },
+        { ...mockWorkspace, channelMode: 'INFORMATIONAL' as any },
         mockDynamicContent,
         mockContext
       )
@@ -158,9 +158,9 @@ FAQs: {{faqs}}
       expect(result).not.toContain('{{faqs}}')
     })
 
-    it('should work with {{#if sellsProductsAndServices}} conditionals', () => {
+    it('should work with {{#if channelMode}} conditionals', () => {
       const template = `
-{{#if sellsProductsAndServices}}
+{{#if channelMode}}
 ## E-commerce Features
 Products: {{products}}
 Categories: {{categories}}
@@ -172,7 +172,7 @@ FAQs: {{faqs}}
 
       const variables = PromptVariableBuilder.build(
         mockCustomer,
-        { ...mockWorkspace, sellsProductsAndServices: false },
+        { ...mockWorkspace, channelMode: 'INFORMATIONAL' as any },
         mockDynamicContent,
         mockContext
       )
@@ -196,7 +196,7 @@ FAQs: {{faqs}}
 
       const variables = PromptVariableBuilder.build(
         mockCustomer,
-        { ...mockWorkspace, sellsProductsAndServices: false },
+        { ...mockWorkspace, channelMode: 'INFORMATIONAL' as any },
         mockDynamicContent,
         mockContext
       )
@@ -218,7 +218,7 @@ Company: {{companyName}}
 
       const variables = PromptVariableBuilder.build(
         mockCustomer,
-        { ...mockWorkspace, sellsProductsAndServices: false },
+        { ...mockWorkspace, channelMode: 'INFORMATIONAL' as any },
         mockDynamicContent,
         mockContext
       )

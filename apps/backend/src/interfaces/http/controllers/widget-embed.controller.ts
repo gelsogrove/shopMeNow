@@ -76,12 +76,12 @@ export class WidgetEmbedController {
         widgetAutoSuggestionsEnabled: true,
         widgetQuickReplies: true,
         widgetSuggestionsModel: true,
-        sellsProductsAndServices: true,
+        channelMode: true,
       },
     })
 
     // ❌ BLOCK: Widget not for e-commerce channels
-    if (workspace?.sellsProductsAndServices === true) {
+    if (workspace?.channelMode === "ECOMMERCE") {
       throw new Error(
         'Widget is only available for informational channels. Use WhatsApp for e-commerce.'
       )

@@ -240,7 +240,7 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
 
   describe("getAgentFunctionsForWorkspace() - dynamic filtering", () => {
     it("should add APPOINTMENT_FUNCTIONS when enableCalendarBooking=true", () => {
-      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: true }
+      const workspace = { enableCalendarBooking: true, channelMode: 'ECOMMERCE' as any }
 
       const customerSupportFunctions = getAgentFunctionsForWorkspace("CUSTOMER_SUPPORT", workspace)
       const infoAgentFunctions = getAgentFunctionsForWorkspace("INFO_AGENT", workspace)
@@ -258,7 +258,7 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
     })
 
     it("should NOT add APPOINTMENT_FUNCTIONS when enableCalendarBooking=false", () => {
-      const workspace = { enableCalendarBooking: false, sellsProductsAndServices: true }
+      const workspace = { enableCalendarBooking: false, channelMode: 'ECOMMERCE' as any }
 
       const customerSupportFunctions = getAgentFunctionsForWorkspace("CUSTOMER_SUPPORT", workspace)
       const infoAgentFunctions = getAgentFunctionsForWorkspace("INFO_AGENT", workspace)
@@ -274,8 +274,8 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
       ])
     })
 
-    it("should filter out e-commerce agents when sellsProductsAndServices=false", () => {
-      const workspace = { enableCalendarBooking: false, sellsProductsAndServices: false }
+    it("should filter out e-commerce agents when channelMode=false", () => {
+      const workspace = { enableCalendarBooking: false, channelMode: 'INFORMATIONAL' as any }
 
       const routerFunctions = getAgentFunctionsForWorkspace("ROUTER", workspace)
 
@@ -293,7 +293,7 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
     })
 
     it("should include both appointments AND ecommerce when both features enabled", () => {
-      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: true }
+      const workspace = { enableCalendarBooking: true, channelMode: 'ECOMMERCE' as any }
 
       const routerFunctions = getAgentFunctionsForWorkspace("ROUTER", workspace)
       const customerSupportFunctions = getAgentFunctionsForWorkspace("CUSTOMER_SUPPORT", workspace)
@@ -309,7 +309,7 @@ describe("Agent Functions Mapping - Single Source of Truth", () => {
     })
 
     it("should return null for unknown agent type", () => {
-      const workspace = { enableCalendarBooking: true, sellsProductsAndServices: true }
+      const workspace = { enableCalendarBooking: true, channelMode: 'ECOMMERCE' as any }
       expect(getAgentFunctionsForWorkspace("UNKNOWN", workspace)).toBeNull()
     })
   })

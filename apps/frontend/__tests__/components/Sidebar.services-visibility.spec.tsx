@@ -91,7 +91,7 @@ describe("Sidebar - Services visibility: INFORMATIONAL workspace", () => {
     // RULE: Even with booking enabled, Services must be visible (standalone item)
     setWorkspace({
       id: "ws-1",
-      sellsProductsAndServices: false,
+      channelMode: 'INFORMATIONAL' as any,
       enableCalendarBooking: true,
     })
     renderSidebar()
@@ -103,7 +103,7 @@ describe("Sidebar - Services visibility: INFORMATIONAL workspace", () => {
     // so the user can create services (prerequisite for enabling calendar booking)
     setWorkspace({
       id: "ws-2",
-      sellsProductsAndServices: false,
+      channelMode: 'INFORMATIONAL' as any,
       enableCalendarBooking: false,
     })
     renderSidebar()
@@ -114,7 +114,7 @@ describe("Sidebar - Services visibility: INFORMATIONAL workspace", () => {
     // RULE: Missing flag should NOT hide Services for informational workspaces
     setWorkspace({
       id: "ws-3",
-      sellsProductsAndServices: false,
+      channelMode: 'INFORMATIONAL' as any,
       // enableCalendarBooking not set
     })
     renderSidebar()
@@ -125,7 +125,7 @@ describe("Sidebar - Services visibility: INFORMATIONAL workspace", () => {
     // RULE: Appointments submenu only appears if enableCalendarBooking is true
     setWorkspace({
       id: "ws-4",
-      sellsProductsAndServices: false,
+      channelMode: 'INFORMATIONAL' as any,
       enableCalendarBooking: true,
     })
     renderSidebar()
@@ -136,7 +136,7 @@ describe("Sidebar - Services visibility: INFORMATIONAL workspace", () => {
     // RULE: Appointments submenu must not appear if booking is disabled
     setWorkspace({
       id: "ws-5",
-      sellsProductsAndServices: false,
+      channelMode: 'INFORMATIONAL' as any,
       enableCalendarBooking: false,
     })
     renderSidebar()
@@ -157,7 +157,7 @@ describe("Sidebar - Services visibility: ECOMMERCE workspace", () => {
     // The standalone Services link must NOT appear at the top level (no duplicate).
     setWorkspace({
       id: "ws-6",
-      sellsProductsAndServices: true,
+      channelMode: 'ECOMMERCE' as any,
       enableCalendarBooking: false,
     })
     renderSidebar()
@@ -172,7 +172,7 @@ describe("Sidebar - Services visibility: ECOMMERCE workspace", () => {
     // so it's accessible for calendar setup
     setWorkspace({
       id: "ws-7",
-      sellsProductsAndServices: true,
+      channelMode: 'ECOMMERCE' as any,
       enableCalendarBooking: true,
     })
     renderSidebar()
@@ -180,10 +180,10 @@ describe("Sidebar - Services visibility: ECOMMERCE workspace", () => {
   })
 
   it("SCENARIO 8: E-commerce menu is visible for e-commerce workspaces", () => {
-    // RULE: E-commerce label only appears for sellsProductsAndServices=true
+    // RULE: E-commerce label only appears for channelMode=true
     setWorkspace({
       id: "ws-8",
-      sellsProductsAndServices: true,
+      channelMode: 'ECOMMERCE' as any,
       enableCalendarBooking: false,
     })
     renderSidebar()
@@ -194,7 +194,7 @@ describe("Sidebar - Services visibility: ECOMMERCE workspace", () => {
     // RULE: Informational workspaces must not show the E-commerce submenu
     setWorkspace({
       id: "ws-9",
-      sellsProductsAndServices: false,
+      channelMode: 'INFORMATIONAL' as any,
       enableCalendarBooking: false,
     })
     renderSidebar()

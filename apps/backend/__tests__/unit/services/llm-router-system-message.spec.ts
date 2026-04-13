@@ -58,7 +58,7 @@ describe("LLMRouterService - System message fast path", () => {
       workspace: {
         findUnique: jest.fn().mockResolvedValue({
           id: "ws-1",
-          sellsProductsAndServices: true,
+          channelMode: 'ECOMMERCE' as any,
         }),
       },
       customers: {

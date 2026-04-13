@@ -95,7 +95,7 @@ interface AgentConfig {
 }
 
 interface AgentFlowDiagramProps {
-  sellsProductsAndServices: boolean
+  isEcommerce: boolean
   agents: AgentConfig[]
   workspaceId: string
   onSaveAgent: (agentId: string, data: Partial<AgentConfig>) => Promise<void>
@@ -504,7 +504,7 @@ function BranchLine({ className }: { className?: string }) {
 
 // Main Component
 export function AgentFlowDiagram({
-  sellsProductsAndServices,
+  isEcommerce,
   agents,
   workspaceId,
   onSaveAgent,
@@ -525,7 +525,7 @@ export function AgentFlowDiagram({
   const [isResetting, setIsResetting] = useState(false)
 
   const getResolvedMeta = (type: string) => {
-    if (!sellsProductsAndServices && (type === "CUSTOMER_SUPPORT" || type === "INFO_AGENT")) {
+    if (!isEcommerce && (type === "CUSTOMER_SUPPORT" || type === "INFO_AGENT")) {
       return INFO_AGENT_METADATA
     }
     return AGENT_METADATA[type]
@@ -533,7 +533,7 @@ export function AgentFlowDiagram({
 
   // Get display name for agent - "Info Agent" for informational channels
   const getAgentDisplayName = (type: string, meta: typeof AGENT_METADATA[keyof typeof AGENT_METADATA]): string => {
-    if (!sellsProductsAndServices && (type === "CUSTOMER_SUPPORT" || type === "INFO_AGENT")) {
+    if (!isEcommerce && (type === "CUSTOMER_SUPPORT" || type === "INFO_AGENT")) {
       return "Info Agent"
     }
     return meta.name
@@ -575,8 +575,8 @@ export function AgentFlowDiagram({
     
     const meta = getResolvedMeta(type)
     if (!meta) return false
-    if (meta.ecommerceOnly && !sellsProductsAndServices) return false
-    if (!sellsProductsAndServices && (type === "ROUTER" || type === "PROFILE_MANAGEMENT")) return false
+    if (meta.ecommerceOnly && !isEcommerce) return false
+    if (!isEcommerce && (type === "ROUTER" || type === "PROFILE_MANAGEMENT")) return false
     if (type === "SECURITY") return false // Always hidden
     return true
   }
@@ -648,10 +648,10 @@ export function AgentFlowDiagram({
       const exportData = {
         exportedAt: new Date().toISOString(),
         workspaceId,
-        workspaceType: sellsProductsAndServices ? "ecommerce" : "informational",
+        workspaceType: isEcommerce ? "ecommerce" : "informational",
         agents: agents.map(agent => ({
           type: agent.type,
-          name: !sellsProductsAndServices && (agent.type.toUpperCase() === "CUSTOMER_SUPPORT" || agent.type.toUpperCase() === "INFO_AGENT")
+          name: !isEcommerce && (agent.type.toUpperCase() === "CUSTOMER_SUPPORT" || agent.type.toUpperCase() === "INFO_AGENT")
             ? "Info Agent"
             : agent.name,
           systemPrompt: agent.systemPrompt,
@@ -664,7 +664,7 @@ export function AgentFlowDiagram({
       const url = URL.createObjectURL(blob)
       const link = document.createElement("a")
       link.href = url
-      link.download = `agent-prompts-${sellsProductsAndServices ? "ecommerce" : "info"}-${new Date().toISOString().split("T")[0]}.json`
+      link.download = `agent-prompts-${isEcommerce ? "ecommerce" : "info"}-${new Date().toISOString().split("T")[0]}.json`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -693,7 +693,7 @@ export function AgentFlowDiagram({
   const ecommerceFunctions = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
   const getFilteredFunctions = (meta: typeof selectedMeta) => {
     if (!meta?.availableFunctions) return []
-    if (sellsProductsAndServices) return meta.availableFunctions
+    if (isEcommerce) return meta.availableFunctions
     // Informational mode: filter out e-commerce specific functions
     return meta.availableFunctions.filter(fn => !ecommerceFunctions.includes(fn))
   }
@@ -708,10 +708,10 @@ export function AgentFlowDiagram({
             <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl">
               <GitBranch className="h-6 w-6 text-white" />
             </div>
-            {sellsProductsAndServices ? "E-commerce Agent Flow" : "Informational Agent Flow"}
+            {isEcommerce ? "E-commerce Agent Flow" : "Informational Agent Flow"}
           </h2>
           <p className="text-gray-500 mt-1">
-            {sellsProductsAndServices 
+            {isEcommerce 
               ? "Full e-commerce flow with product search, cart, and order management"
               : "Streamlined flow for FAQ and customer support"
             }
@@ -721,11 +721,11 @@ export function AgentFlowDiagram({
         <div className="flex items-center gap-3">
           <span className={cn(
             "text-sm px-3 py-1.5 rounded-full flex items-center gap-2 font-medium",
-            sellsProductsAndServices 
+            isEcommerce 
               ? "bg-green-100 text-green-700"
               : "bg-blue-100 text-blue-700"
           )}>
-            {sellsProductsAndServices ? "🛒 E-commerce Mode" : "ℹ️ Info-only mode"}
+            {isEcommerce ? "🛒 E-commerce Mode" : "ℹ️ Info-only mode"}
           </span>
           <Button
             variant="outline"
@@ -761,26 +761,26 @@ export function AgentFlowDiagram({
         
         {/* Root Agent */}
         <AgentNode
-          agent={getAgent(sellsProductsAndServices ? "ROUTER" : "INFO_AGENT") || getAgent("CUSTOMER_SUPPORT")}
-          metadata={getResolvedMeta(sellsProductsAndServices ? "ROUTER" : "INFO_AGENT")}
+          agent={getAgent(isEcommerce ? "ROUTER" : "INFO_AGENT") || getAgent("CUSTOMER_SUPPORT")}
+          metadata={getResolvedMeta(isEcommerce ? "ROUTER" : "INFO_AGENT")}
           displayName={
-            sellsProductsAndServices
+            isEcommerce
               ? "Router Agent"
               : getAgentDisplayName("INFO_AGENT", INFO_AGENT_METADATA)
           }
           isEditable={true}
           isActive={true}
-          onClick={() => handleAgentClick(sellsProductsAndServices ? "ROUTER" : (getAgent("INFO_AGENT") ? "INFO_AGENT" : "CUSTOMER_SUPPORT"))}
+          onClick={() => handleAgentClick(isEcommerce ? "ROUTER" : (getAgent("INFO_AGENT") ? "INFO_AGENT" : "CUSTOMER_SUPPORT"))}
           size="large"
         />
-        {!sellsProductsAndServices && (
+        {!isEcommerce && (
           <span className="sr-only">Info Agent</span>
         )}
         
         <ConnectorArrow />
         
         {/* Specialists Branch (E-commerce only) */}
-        {sellsProductsAndServices && (
+        {isEcommerce && (
           <>
             <div className="relative w-full max-w-5xl">
               {/* Horizontal line */}
@@ -867,7 +867,7 @@ export function AgentFlowDiagram({
         )}
         
         {/* Conversation History (E-commerce only) */}
-        {sellsProductsAndServices && (
+        {isEcommerce && (
           <>
             <div className="flex flex-col items-center gap-1">
               <AgentNode
@@ -1114,7 +1114,7 @@ export function AgentFlowDiagram({
                   title="Available Variables"
                   description={`Template variables you can use in ${getAgentDisplayName(selectedAgent.type.toUpperCase(), selectedMeta)} system prompt`}
                   showVariables={true}
-                  sellsProductsAndServices={sellsProductsAndServices}
+                  isEcommerce={isEcommerce}
                 />
               </div>
               

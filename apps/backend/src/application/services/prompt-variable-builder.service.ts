@@ -68,7 +68,7 @@ interface WorkspaceInput {
   hasSalesAgents?: boolean | null
   notificationEmail?: string | null
   allowedExternalLinks?: string[] | null
-  sellsProductsAndServices?: boolean | null
+  channelMode?: import("@echatbot/database").ChannelMode | null
   enableCalendarBooking?: boolean | null
   address?: string | null
   customAiRules?: string | null
@@ -204,7 +204,8 @@ export class PromptVariableBuilder {
       humanSupportInstructions: workspace?.humanSupportInstructions || '',
       frustrationEscalationInstructions: workspace?.frustrationEscalationInstructions || '', // 🆕 For custom escalation triggers
       hasSalesAgents: workspace?.hasSalesAgents ?? VARIABLE_DEFAULTS.hasSalesAgents!,
-      sellsProductsAndServices: workspace?.sellsProductsAndServices ?? VARIABLE_DEFAULTS.sellsProductsAndServices!,
+      channelMode: workspace?.channelMode ?? "ECOMMERCE",
+      isEcommerce: (workspace?.channelMode ?? "ECOMMERCE") === "ECOMMERCE",
       hasCalendarEnabled: workspace?.enableCalendarBooking ?? VARIABLE_DEFAULTS.hasCalendarEnabled!,
       appointmentTypes: dynamicContent?.appointmentTypes || '',
       customerUpcomingAppointments: dynamicContent?.customerUpcomingAppointments || '',
@@ -360,7 +361,7 @@ export class PromptVariableBuilder {
         hasSalesAgents: true,
         notificationEmail: true,
         allowedExternalLinks: true,
-        sellsProductsAndServices: true,
+        channelMode: true,
         enableCalendarBooking: true,
         address: true,
         customAiRules: true,

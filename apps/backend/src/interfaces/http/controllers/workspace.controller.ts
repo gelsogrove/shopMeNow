@@ -91,7 +91,7 @@ export class WorkspaceController {
         channelType: workspace.channelType,
         enableWhatsapp: workspace.enableWhatsapp,
         enableWidget: workspace.enableWidget,
-        sellsProductsAndServices: workspace.sellsProductsAndServices,
+        channelMode: workspace.channelMode,
         hasSalesAgents: workspace.hasSalesAgents,
         hasHumanSupport: workspace.hasHumanSupport,
         humanSupportInstructions: workspace.humanSupportInstructions,
@@ -203,7 +203,7 @@ export class WorkspaceController {
           channelType: workspace.channelType,
           enableWhatsapp: workspace.enableWhatsapp,
           enableWidget: workspace.enableWidget,
-          sellsProductsAndServices: workspace.sellsProductsAndServices,
+          channelMode: workspace.channelMode,
           hasSalesAgents: workspace.hasSalesAgents,
           hasHumanSupport: workspace.hasHumanSupport,
           humanSupportInstructions: workspace.humanSupportInstructions,
@@ -474,7 +474,7 @@ export class WorkspaceController {
         channelType: workspace.channelType,
         enableWhatsapp: workspace.enableWhatsapp,
         enableWidget: workspace.enableWidget,
-        sellsProductsAndServices: workspace.sellsProductsAndServices,
+        channelMode: workspace.channelMode,
         hasSalesAgents: workspace.hasSalesAgents,
         hasHumanSupport: workspace.hasHumanSupport,
         humanSupportInstructions: workspace.humanSupportInstructions,
@@ -596,7 +596,7 @@ export class WorkspaceController {
 
       // 🔍 LOG SPECIFICO per Feature 199 fields
       logger.info("=== FEATURE 199 TOGGLE DEBUG ===")
-      logger.info(`sellsProductsAndServices nel body: ${workspaceData.sellsProductsAndServices} (tipo: ${typeof workspaceData.sellsProductsAndServices})`)
+      logger.info(`channelMode nel body: ${workspaceData.channelMode} (tipo: ${typeof workspaceData.channelMode})`)
       logger.info(`hasSalesAgents nel body: ${workspaceData.hasSalesAgents} (tipo: ${typeof workspaceData.hasSalesAgents})`)
       logger.info(`hasHumanSupport nel body: ${workspaceData.hasHumanSupport} (tipo: ${typeof workspaceData.hasHumanSupport})`)
       logger.info("operatorContactMethod nel body:", workspaceData.operatorContactMethod)
@@ -662,7 +662,7 @@ export class WorkspaceController {
         channelType: workspace.channelType,
         enableWhatsapp: workspace.enableWhatsapp,
         enableWidget: workspace.enableWidget,
-        sellsProductsAndServices: workspace.sellsProductsAndServices,
+        channelMode: workspace.channelMode,
         hasSalesAgents: workspace.hasSalesAgents,
         hasHumanSupport: workspace.hasHumanSupport,
         humanSupportInstructions: workspace.humanSupportInstructions,

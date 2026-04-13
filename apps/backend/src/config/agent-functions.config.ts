@@ -575,7 +575,7 @@ export const PROFILE_MANAGEMENT_FUNCTIONS: FunctionDefinition[] = [
  * Get all available functions for a specific agent type
  * 
  * ⚠️ NOTE: This returns ALL functions. For runtime filtering based on workspace
- * properties (enableCalendarBooking, sellsProductsAndServices, etc.), 
+ * properties (enableCalendarBooking, channelMode, etc.),
  * use getAgentFunctionsForWorkspace() instead.
  */
 export function getAgentFunctions(
@@ -615,7 +615,7 @@ export function getAgentFunctions(
  * 
  * Filtering rules:
  * - enableCalendarBooking=false → exclude appointment functions
- * - sellsProductsAndServices=false → exclude e-commerce functions (product, cart, order agents)
+ * - channelMode !== ECOMMERCE → exclude e-commerce functions (product, cart, order agents)
  * - hasSalesAgents, hasHumanSupport, etc. → future filters can be added here
  * 
  * @param agentType - Type of agent (ROUTER, CUSTOMER_SUPPORT, etc.)
@@ -626,7 +626,7 @@ export function getAgentFunctionsForWorkspace(
   agentType: string,
   workspace: {
     enableCalendarBooking?: boolean
-    sellsProductsAndServices?: boolean
+    channelMode?: import("@echatbot/database").ChannelMode
     hasSalesAgents?: boolean
     hasHumanSupport?: boolean
   }
@@ -644,8 +644,8 @@ export function getAgentFunctionsForWorkspace(
     }
   }
 
-  // Filter out e-commerce agents if workspace is informational
-  if (!workspace.sellsProductsAndServices) {
+  // Filter out e-commerce agents if workspace is not ecommerce
+  if (workspace.channelMode !== "ECOMMERCE") {
     const ecommerceAgentNames = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
     functions = functions.filter(
       fn => !ecommerceAgentNames.includes(fn.function?.name || "")

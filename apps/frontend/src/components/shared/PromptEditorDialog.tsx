@@ -40,7 +40,7 @@ const VARIABLE_CATEGORIES = [
       { name: "botIdentityResponse", desc: "Bot identity response" },
       { name: "language", desc: "Primary language" },
       { name: "currency", desc: "Currency (EUR, EUR...)" },
-      { name: "sellsProductsAndServices", desc: "Sells products/services (bool)" },
+      { name: "channelMode", desc: "Channel mode (ECOMMERCE | INFORMATIONAL | FLOW)" },
       { name: "hasHumanSupport", desc: "Has human support (bool)" },
       { name: "hasSalesAgents", desc: "Has sales agents (bool)" },
       { name: "humanSupportInstructions", desc: "Human support instructions" },

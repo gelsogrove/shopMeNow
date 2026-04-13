@@ -2,7 +2,7 @@
  * Chat Engine Types — Shared types for the ChatEngine service and its handlers
  */
 
-import { AgentType } from "@echatbot/database"
+import { AgentType, ChannelMode } from "@echatbot/database"
 import { ListType } from "./options-mapping.service"
 
 // ================================================================================
@@ -11,7 +11,7 @@ import { ListType } from "./options-mapping.service"
 
 export interface WorkspaceConfig {
   name: string                    // Workspace name (e.g., "BellItalia VIP")
-  sellsProductsAndServices: boolean
+  channelMode: ChannelMode
   hasSalesAgents: boolean
   hasHumanSupport: boolean
   humanSupportInstructions: string | null

@@ -89,7 +89,7 @@ Use this before starting a conversation with Andrea where he controls the user r
             properties: {
               humanSupportEnabled: { type: "boolean" },
               hasSalesAgents: { type: "boolean" },
-              sellsProductsAndServices: { type: "boolean" },
+              channelMode: { type: "string", enum: ["ECOMMERCE", "INFORMATIONAL", "FLOW"] },
               toneOfVoice: { type: "string", enum: ["casual", "formal", "professional"] },
               channelStatus: { type: "boolean" },
               debugMode: { type: "boolean" },

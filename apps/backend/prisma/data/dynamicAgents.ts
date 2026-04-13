@@ -1,4 +1,4 @@
-import { AgentType } from "@echatbot/database"
+import { AgentType, ChannelMode } from "@echatbot/database"
 import * as fs from "fs"
 import * as path from "path"
 import { getAgentFunctionNames } from "../../src/config/agent-functions.config"
@@ -39,7 +39,8 @@ interface DynamicAgent {
  * Load template from src/templates/ directory
  * Uses centralized helper for path resolution
  */
-function loadTemplate(agentType: string, hasEcommerce: boolean = true): string {
+function loadTemplate(agentType: string, channelMode: ChannelMode = "ECOMMERCE"): string {
+  const hasEcommerce = channelMode === "ECOMMERCE"
   const filename = getTemplateFilename(agentType, hasEcommerce)
   const subDir = getTemplateFolder(hasEcommerce)
   
@@ -68,17 +69,18 @@ function loadTemplate(agentType: string, hasEcommerce: boolean = true): string {
  *   - shared/     → Common agents (Security, Translation, Summary)
  * 
  * @param workspaceId - Workspace ID
- * @param hasEcommerce - Whether workspace sells products/services (default: true)
+ * @param channelMode - Workspace channel mode (default: ECOMMERCE)
  */
 export const dynamicAgents = (
   workspaceId: string,
-  hasEcommerce: boolean = true
+  channelMode: ChannelMode = "ECOMMERCE"
 ): Array<
   Omit<DynamicAgent, "availableFunctions"> & {
     workspaceId: string
     availableFunctions: any
   }
 > => {
+  const hasEcommerce = channelMode === "ECOMMERCE"
   const isInformational = !hasEcommerce
   const customerSupportFunctions = getAgentFunctionNames("CUSTOMER_SUPPORT") || []
   const profileFunctions = getAgentFunctionNames("PROFILE_MANAGEMENT") || []
@@ -102,7 +104,7 @@ export const dynamicAgents = (
       type: "ROUTER" as AgentType,
       icon: "GitBranch",
       description: "Dynamic routing with conditional logic based on workspace settings",
-      systemPrompt: loadTemplate("ROUTER", hasEcommerce),
+      systemPrompt: loadTemplate("ROUTER", channelMode),
       model: "openai/gpt-4o-mini",
       temperature: 0,
       maxTokens: 500,
@@ -121,7 +123,7 @@ export const dynamicAgents = (
     description: isInformational
       ? "Answers FAQs and informational requests with optional escalation"
       : "Customer support with conditional human escalation",
-    systemPrompt: loadTemplate(isInformational ? "INFO_AGENT" : "CUSTOMER_SUPPORT", hasEcommerce),
+    systemPrompt: loadTemplate(isInformational ? "INFO_AGENT" : "CUSTOMER_SUPPORT", channelMode),
     model: "openai/gpt-4o-mini",
     temperature: 0.3,
     maxTokens: 2048,
@@ -137,7 +139,7 @@ export const dynamicAgents = (
     type: "SUMMARY_AGENT" as AgentType,
     icon: "FileText",
     description: "Conversation summary for operator emails",
-    systemPrompt: loadTemplate("SUMMARY_AGENT", hasEcommerce),
+    systemPrompt: loadTemplate("SUMMARY_AGENT", channelMode),
     model: "openai/gpt-4o-mini",
     temperature: 0.2,
     maxTokens: 500,
@@ -154,7 +156,7 @@ export const dynamicAgents = (
       type: "PROFILE_MANAGEMENT" as AgentType,
       icon: "User",
       description: "Profile and notification management",
-      systemPrompt: loadTemplate("PROFILE_MANAGEMENT", hasEcommerce),
+      systemPrompt: loadTemplate("PROFILE_MANAGEMENT", channelMode),
       model: "openai/gpt-4o-mini",
       temperature: 0.4,
       maxTokens: 500,
@@ -171,7 +173,7 @@ export const dynamicAgents = (
     type: "TRANSLATION" as AgentType,
     icon: "Globe",
     description: "Format for WhatsApp and translate to customer language",
-    systemPrompt: loadTemplate("TRANSLATION", hasEcommerce),
+    systemPrompt: loadTemplate("TRANSLATION", channelMode),
     model: "openai/gpt-4o-mini",
     temperature: 0.1,
     maxTokens: 1024,
@@ -188,7 +190,7 @@ export const dynamicAgents = (
     type: "CONVERSATION_HISTORY" as AgentType,
     icon: "MessageCircle",
     description: "Umanizza risposte con contesto, saluti, offerte",
-    systemPrompt: loadTemplate("CONVERSATION_HISTORY", hasEcommerce),
+    systemPrompt: loadTemplate("CONVERSATION_HISTORY", channelMode),
     model: "openai/gpt-4o-mini",
     temperature: 0.7, // Più creativo per umanizzare
     maxTokens: 500,
@@ -204,7 +206,7 @@ export const dynamicAgents = (
     type: "SECURITY" as AgentType,
     icon: "Shield",
     description: "Security validation with conditional external links",
-    systemPrompt: loadTemplate("SECURITY", hasEcommerce),
+    systemPrompt: loadTemplate("SECURITY", channelMode),
     model: "openai/gpt-4o-mini",
     temperature: 0,
     maxTokens: 500,
@@ -222,7 +224,7 @@ export const dynamicAgents = (
       type: "PRODUCT_SEARCH" as AgentType,
       icon: "Search",
       description: "Product catalog search with dynamic template",
-      systemPrompt: loadTemplate("PRODUCT_SEARCH", hasEcommerce),
+      systemPrompt: loadTemplate("PRODUCT_SEARCH", channelMode),
       model: "openai/gpt-4o-mini",
       temperature: 0,
       maxTokens: 2048,
@@ -238,7 +240,7 @@ export const dynamicAgents = (
       type: "CART_MANAGEMENT" as AgentType,
       icon: "ShoppingCart",
       description: "Cart operations with dynamic template",
-      systemPrompt: loadTemplate("PRODUCT_SEARCH", hasEcommerce), // Cart uses same base
+      systemPrompt: loadTemplate("CART_MANAGEMENT", channelMode),
       model: "openai/gpt-4o-mini",
       temperature: 0.3,
       maxTokens: 2048,
@@ -254,7 +256,7 @@ export const dynamicAgents = (
       type: "ORDER_TRACKING" as AgentType,
       icon: "Package",
       description: "Order tracking with dynamic template",
-      systemPrompt: loadTemplate("ORDER_TRACKING", hasEcommerce),
+      systemPrompt: loadTemplate("ORDER_TRACKING", channelMode),
       model: "openai/gpt-4o-mini",
       temperature: 0.3,
       maxTokens: 2048,

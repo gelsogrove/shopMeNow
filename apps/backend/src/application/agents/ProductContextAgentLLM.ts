@@ -31,7 +31,7 @@ export interface ProductContextWorkspaceInfo {
   name?: string | null
   botIdentityResponse?: string | null
   customAiRules?: string | null
-  sellsProductsAndServices?: boolean
+  channelMode?: import("@echatbot/database").ChannelMode
   address?: string | null
 }
 
@@ -137,7 +137,7 @@ export class ProductContextAgentLLM {
       const workspaceConfig = {
         customAiRules: input.workspaceInfo?.customAiRules || "",
         botIdentityResponse: input.workspaceInfo?.botIdentityResponse || "",
-        sellsProductsAndServices: input.workspaceInfo?.sellsProductsAndServices ?? true,
+        channelMode: input.workspaceInfo?.channelMode ?? "ECOMMERCE",
         address: input.workspaceInfo?.address || "",
       }
 

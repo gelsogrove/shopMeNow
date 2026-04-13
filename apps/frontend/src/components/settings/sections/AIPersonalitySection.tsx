@@ -1,6 +1,6 @@
 /**
  * AIPersonalitySection - AI Personality & Configuration
- * Merged: chatbotName, botIdentityResponse, toneOfVoice, welcomeMessage, customAiRules, wipMessage, sellsProductsAndServices
+ * Merged: chatbotName, botIdentityResponse, toneOfVoice, welcomeMessage, customAiRules, wipMessage, channelMode
  */
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -15,7 +15,7 @@ interface AIPersonalitySectionProps {
     chatbotName: string
     botIdentityResponse: string
     toneOfVoice: "formal" | "friendly" | "professional" | "casual"
-    sellsProductsAndServices: boolean
+    channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
     welcomeMessage: string
     customAiRules: string
     wipMessage: string

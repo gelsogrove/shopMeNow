@@ -38,7 +38,7 @@ describe('Welcome Message Language Selection (Integration)', () => {
         channelStatus: true,
         debugMode: false,
         welcomeMessage: 'Welcome {{customerName}}! I am {{chatbotName}}, your assistant. How can I help you today?',
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE',
         hasHumanSupport: true,
         planType: 'FREE_TRIAL',
       },

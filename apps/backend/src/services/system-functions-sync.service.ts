@@ -30,7 +30,7 @@ export async function syncSystemFunctionsOnStartup(prisma: PrismaClient): Promis
         id: true,
         name: true,
         enableCalendarBooking: true,
-        sellsProductsAndServices: true,
+        channelMode: true,
       }
     })
 
@@ -40,8 +40,8 @@ export async function syncSystemFunctionsOnStartup(prisma: PrismaClient): Promis
       // Always-available functions (changeLanguage, customerSupportAgent, etc.)
       const functionsToSync: SystemFunctionDef[] = [...ALWAYS_AVAILABLE_FUNCTIONS]
 
-      // E-commerce functions if workspace sells products/services
-      if (workspace.sellsProductsAndServices) {
+      // E-commerce functions if workspace is in ecommerce mode
+      if (workspace.channelMode === "ECOMMERCE") {
         functionsToSync.push(...ECOMMERCE_FUNCTIONS)
       }
 

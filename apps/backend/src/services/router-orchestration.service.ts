@@ -11,8 +11,9 @@
  * Replaces direct IntentParser calls in ChatEngine.
  * 
  * Strategy Selection:
- * - Informational workspaces (sellsProductsAndServices=false) → Always INFO_AGENT
- * - E-commerce workspaces (sellsProductsAndServices=true) → Full Router LLM
+ * - Informational workspaces (channelMode=INFORMATIONAL) → Always INFO_AGENT
+ * - E-commerce workspaces (channelMode=ECOMMERCE) → Full Router LLM
+ * - Flow workspaces (channelMode=FLOW) → Flow Agent (placeholder, same as informational)
  * 
  * This service is the entry point for ALL message routing decisions.
  * 
@@ -24,6 +25,7 @@ import { PrismaClient, Workspace } from "@echatbot/database"
 import logger from "../utils/logger"
 import { InformationalWorkspaceStrategy } from "../strategies/informational-workspace.strategy"
 import { EcommerceWorkspaceStrategy } from "../strategies/ecommerce-workspace.strategy"
+import { FlowWorkspaceStrategy } from "../strategies/flow-workspace.strategy"
 import type { RoutingContext, RoutingResult, RoutingStrategy } from "../strategies/routing-strategy.interface"
 
 /**
@@ -37,6 +39,7 @@ export class RouterOrchestrationService {
     this.strategies = [
       new InformationalWorkspaceStrategy(prisma),
       new EcommerceWorkspaceStrategy(prisma),
+      new FlowWorkspaceStrategy(prisma),
     ]
   }
 
@@ -62,7 +65,7 @@ export class RouterOrchestrationService {
 
       logger.info("🎯 RouterOrchestrationService - Strategy selected", {
         workspaceId: context.workspaceId,
-        sellsProductsAndServices: workspace.sellsProductsAndServices,
+        channelMode: workspace.channelMode,
         strategyName: strategy.constructor.name,
       })
 
@@ -135,7 +138,7 @@ export class RouterOrchestrationService {
     // Default fallback: E-commerce strategy
     logger.warn("⚠️ No strategy matched workspace, using E-commerce fallback", {
       workspaceId: workspace.id,
-      sellsProductsAndServices: workspace.sellsProductsAndServices,
+      channelMode: workspace.channelMode,
     })
     return new EcommerceWorkspaceStrategy(this.prisma)
   }

@@ -149,8 +149,8 @@
  * MODE COMPATIBILITY:
  * ====================================================
  * 
- * ✅ Works in ECOMMERCE mode (sellsProductsAndServices = true)
- * ✅ Works in INFORMATIONAL mode (sellsProductsAndServices = false)
+ * ✅ Works in ECOMMERCE mode (channelMode = ECOMMERCE)
+ * ✅ Works in INFORMATIONAL mode (channelMode = INFORMATIONAL)
  * 
  * Pre-check is INDEPENDENT of workspace mode.
  * 

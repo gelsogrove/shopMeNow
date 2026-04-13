@@ -36,7 +36,8 @@
  * @critical ALWAYS pass final response through Translation Layer
  */
 
-import { AgentType, PrismaClient } from "@echatbot/database"
+import { AgentType, ChannelMode, PrismaClient } from "@echatbot/database"
+import { isEcommerce } from "../utils/template-path.helper"
 import axios from "axios"
 import { withOpenRouterRetry } from "../utils/llm-retry"
 import { CartManagementAgentLLM } from "../application/agents/CartManagementAgentLLM"
@@ -369,10 +370,10 @@ export class LLMRouterService {
       workspaceId: params.workspaceId
     })
     let explicitOptionMapping: AgentOptionMapping | null = null
-    let workspace: any = null // 🛍️ Workspace config for sellsProductsAndServices check
+    let workspace: any = null // 🛍️ Workspace config for channelMode check
 
     try {
-      // 🛍️ Load workspace config (for sellsProductsAndServices check)
+      // 🛍️ Load workspace config (for channelMode check)
       workspace = await this.prisma.workspace.findUnique({
         where: { id: params.workspaceId },
       })
@@ -400,7 +401,7 @@ export class LLMRouterService {
         isSystemMessage: params.isSystemMessage || false,
         customerDiscount,
         customerIsActive, // 🔒 Feature 174
-        sellsProductsAndServices: workspace.sellsProductsAndServices, // 🛍️ Feature 174
+        channelMode: workspace.channelMode, // 🛍️ Feature 174
       })
 
       // 🆕 Feature 127: SYSTEM MESSAGE FAST-PATH
@@ -843,7 +844,7 @@ export class LLMRouterService {
 
       // STEP 2: Load conversation history
       logger.info("Step 2: Loading conversation history")
-      const isInformational = workspace?.sellsProductsAndServices === false
+      const isInformationalMode = !isEcommerce(workspace)
       const conversationHistoryRaw = await this.conversationManager.loadHistory(
         params.workspaceId,
         params.conversationId
@@ -985,13 +986,13 @@ export class LLMRouterService {
       // Informational channels: Load only services and FAQs
       const [categories, offers, products, services, faqs, lastOrder, directIntentIndex, appointmentTypesRaw, customerAppointmentsRaw] =
         await Promise.all([
-          workspace.sellsProductsAndServices
+          isEcommerce(workspace)
             ? messageRepo.getActiveCategories(params.workspaceId)
             : Promise.resolve([]),
-          workspace.sellsProductsAndServices
+          isEcommerce(workspace)
             ? messageRepo.getActiveOffers(params.workspaceId)
             : Promise.resolve([]),
-          workspace.sellsProductsAndServices
+          isEcommerce(workspace)
             ? messageRepo.getActiveProducts(
               params.workspaceId,
               customer.discount || 0,
@@ -1052,7 +1053,7 @@ export class LLMRouterService {
         offersCount: offers.length,
         servicesCount: services.length,
         faqsCount: faqs.length,
-        sellsProductsAndServices: workspace.sellsProductsAndServices,
+        channelMode: workspace.channelMode,
       })
 
       // If the user explicitly mentions a known product or category (e.g., "mozzarella" or "salumi"),
@@ -1139,7 +1140,7 @@ export class LLMRouterService {
         )
 
         logger.info(`✅ ${mainAgentType} prompt generated via PromptBuilder`, {
-          sellsProductsAndServices: builtPrompt.variables.sellsProductsAndServices,
+          channelMode: builtPrompt.variables.channelMode,
           promptLength: processedRouterPrompt.length,
         })
       } catch (promptBuilderError) {
@@ -1170,7 +1171,7 @@ export class LLMRouterService {
             workspace?.websiteUrl || workspace?.url,
             // 🆕 Feature 199: Pass workspace config for dynamic prompt variables
             {
-              sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true, // 🆕 E-commerce toggle
+              channelMode: workspace?.channelMode ?? ChannelMode.INFORMATIONAL, // 🆕 Channel mode
               toneOfVoice: workspace?.toneOfVoice || "friendly",
               botIdentityResponse: workspace?.botIdentityResponse || undefined,
               hasHumanSupport: workspace?.hasHumanSupport ?? true,
@@ -1263,7 +1264,7 @@ export class LLMRouterService {
       
       const filteredDbFunctions = dbFunctions.filter(fn => {
         // Rule 1: Exclude e-commerce functions if workspace is informational
-        if (!workspace.sellsProductsAndServices && ecommerceFunctions.includes(fn.functionName)) {
+        if (!isEcommerce(workspace) && ecommerceFunctions.includes(fn.functionName)) {
           return false
         }
         // Rule 2: Exclude appointment functions if calendar not enabled
@@ -1303,7 +1304,7 @@ export class LLMRouterService {
         params,
         customerDiscount,
         customerIsActive,
-        sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true,
+        channelMode: workspace?.channelMode ?? ChannelMode.INFORMATIONAL,
         workspace: workspace!,
         preprocessResult,
         tools
@@ -1858,7 +1859,7 @@ export class LLMRouterService {
     params: RouteMessageParams
     customerDiscount: number
     customerIsActive: boolean // 🔒 Feature 174: Registration status for function-level guard
-    sellsProductsAndServices: boolean
+    channelMode: ChannelMode
     workspace: any // 🛍️ Workspace object for catalog filtering
     preprocessResult?: PreprocessResult // 🆕 FASE 2: Deterministic delegation
     tools?: any[] // 🆕 Dynamic tools from DB
@@ -1878,7 +1879,7 @@ export class LLMRouterService {
       params,
       customerDiscount,
       customerIsActive, // 🔒 Feature 174
-      sellsProductsAndServices,
+      channelMode,
       workspace,
       preprocessResult,
       tools,
@@ -1891,7 +1892,7 @@ export class LLMRouterService {
     ]
 
     // 🛡️ Sofia Fix: Ensure the LLM doesn't skip tools when a match exists
-    const toolCoachingMsg = sellsProductsAndServices
+    const toolCoachingMsg = channelMode === ChannelMode.ECOMMERCE
       ? "CRITICAL: For business operations (products, cart, orders, profile, support, or appointment booking), YOU MUST call the appropriate specialist function. DO NOT answer with text. For appointments/booking: call listAvailableSlots IMMEDIATELY — it handles service selection automatically. For language change requests ('parla in spagnolo', 'speak in English', 'quiero hablar en español', etc.): call changeLanguage IMMEDIATELY with the correct language code."
       : "CRITICAL: If the user request matches a function (Profile, Support, appointment booking, etc.), YOU MUST call the function immediately. For appointments/booking: call listAvailableSlots IMMEDIATELY — it handles service selection automatically. For language change requests ('parla in spagnolo', 'speak in English', 'quiero hablar en español', etc.): call changeLanguage IMMEDIATELY with the correct language code."
 
@@ -1903,7 +1904,7 @@ export class LLMRouterService {
     let totalTokens = 0
     let iterations = 0
     // 🛍️ Feature 174: Default to INFO_AGENT for informational workspaces
-    let agentUsed: AgentType = sellsProductsAndServices ? "ROUTER" : "INFO_AGENT"
+    let agentUsed: AgentType = channelMode === ChannelMode.ECOMMERCE ? "ROUTER" : "INFO_AGENT"
 
     // 🆕 Track selected product from ProductSearchAgentLLM for pendingAction
     let selectedProductFromAgent: { sku: string; name: string; itemType: string } | null = null
@@ -1953,7 +1954,7 @@ export class LLMRouterService {
         messages,
         temperature: routerAgent.temperature,
         maxTokens: routerAgent.maxTokens,
-        sellsProductsAndServices, // 🆕 Dynamic function routing
+        channelMode, // 🆕 Dynamic function routing
         channel: params.channel,
         tools, // 🆕 Pass dynamic tools
       })
@@ -2090,7 +2091,7 @@ export class LLMRouterService {
             customerLanguage: params.customerLanguage,
             customerDiscount: customerDiscount, // 💰 Pass customer discount for cart price calculations
             customerIsActive: customerIsActive, // 🔒 Feature 174: Registration status for function-level guard
-            sellsProductsAndServices: workspace?.sellsProductsAndServices ?? true, // 🛍️ Registration link only if workspace sells products
+            channelMode: workspace?.channelMode ?? ChannelMode.INFORMATIONAL, // 🛍️ Registration link only if workspace is ecommerce
             channel: params.channel, // 🌐 "widget" | "whatsapp" — required for contactOperator routing
           }
         )
@@ -2172,13 +2173,13 @@ export class LLMRouterService {
 
           // 🛍️ Filter catalog data based on workspace type (delegation context)
           const [categories, offers, products, lastOrder] = await Promise.all([
-            workspace!.sellsProductsAndServices
+            isEcommerce(workspace!)
               ? messageRepo.getActiveCategories(params.workspaceId)
               : Promise.resolve([]),
-            workspace!.sellsProductsAndServices
+            isEcommerce(workspace!)
               ? messageRepo.getActiveOffers(params.workspaceId)
               : Promise.resolve([]),
-            workspace!.sellsProductsAndServices
+            isEcommerce(workspace!)
               ? messageRepo.getActiveProducts(
                 params.workspaceId,
                 customerDiscountForCatalog,
@@ -3131,7 +3132,7 @@ export class LLMRouterService {
     messages: any[]
     temperature: number
     maxTokens: number
-    sellsProductsAndServices?: boolean // 🆕 Dynamic function routing
+    channelMode?: ChannelMode // 🆕 Dynamic function routing
     channel?: string // Optional channel for fallback tool filtering
     tools?: any[] // 🆕 Dynamic tools from DB
   }): Promise<{
@@ -3149,14 +3150,14 @@ export class LLMRouterService {
           max_tokens: options.maxTokens,
           // 🔀 Router has ONLY delegation functions (call sub-agents)
           // Router orchestrates, sub-agents execute business functions
-          // 🆕 Dynamic: If sellsProductsAndServices=false, exclude e-commerce agents
+          // 🆕 Dynamic: Filter functions based on channelMode
           // 🔀 Strategy:
           // E-commerce (ROUTER): "required" - Force delegation to specialist agents
-          // Informational (INFO_AGENT): "auto" - Allow direct text response (identity/FAQ) or delegation
+          // Informational/Flow (INFO_AGENT): "auto" - Allow direct text response (identity/FAQ) or delegation
           // 🆕 Use provided tools (from DB) or fallback to hardcoded ones
           // ⚠️ FIX: empty array [] is truthy in JS → must check .length > 0 to use fallback correctly
           tools: (options.tools && options.tools.length > 0) ? options.tools : getFunctionsForRouter({
-            sellsProductsAndServices: options.sellsProductsAndServices ?? true,
+            channelMode: options.channelMode ?? ChannelMode.INFORMATIONAL,
             channel: options.channel,
           }),
           tool_choice: "auto", // 🆕 Allow direct text response (greetings/identity) or delegation for ALL modes

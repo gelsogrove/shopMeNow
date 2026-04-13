@@ -242,7 +242,7 @@ describe("ChatEngine - Welcome Message Logic", () => {
       create: {
         id: testWorkspaceId,
         name: "Test Workspace Welcome",
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         welcomeMessage: "Welcome! I'm your AI assistant.",
         chatbotName: "AI Assistant",
         botIdentityResponse: "I am an AI assistant",
@@ -470,7 +470,7 @@ describe("ChatEngine - Welcome Message Logic", () => {
         data: {
           id: legacyWorkspaceId,
           name: "Legacy Workspace",
-          sellsProductsAndServices: true,
+          channelMode: 'ECOMMERCE' as any,
           welcomeMessage: "Simple welcome message", // String format
         },
       })
@@ -532,7 +532,7 @@ describe("ChatEngine - Welcome Message Logic", () => {
         data: {
           id: noWelcomeWorkspaceId,
           name: "No Welcome Workspace",
-          sellsProductsAndServices: true,
+          channelMode: 'ECOMMERCE' as any,
           welcomeMessage: null, // No welcome message
         },
       })

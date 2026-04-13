@@ -58,7 +58,7 @@ export class CallingFunctionsController {
             // Hide system functions based on feature flags
             const workspace = await this.prisma.workspace.findUnique({
                 where: { id: workspaceId },
-                select: { enableCalendarBooking: true, hasHumanSupport: true, sellsProductsAndServices: true }
+                select: { enableCalendarBooking: true, hasHumanSupport: true, channelMode: true }
             })
             const APPOINTMENT_FN_NAMES = ["bookAppointment", "cancelAppointment", "getCustomerAppointments", "listAvailableSlots", "rescheduleAppointment"]
             const ECOMMERCE_FN_NAMES = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
@@ -66,7 +66,7 @@ export class CallingFunctionsController {
                 if (!f.isSystemFunction) return true
                 if (APPOINTMENT_FN_NAMES.includes(f.functionName) && !workspace?.enableCalendarBooking) return false
                 if (f.functionName === "customerSupportAgent" && !workspace?.hasHumanSupport) return false
-                if (ECOMMERCE_FN_NAMES.includes(f.functionName) && !workspace?.sellsProductsAndServices) return false
+                if (ECOMMERCE_FN_NAMES.includes(f.functionName) && workspace?.channelMode !== "ECOMMERCE") return false
                 return true
             })
 

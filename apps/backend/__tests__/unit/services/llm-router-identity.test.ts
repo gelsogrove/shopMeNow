@@ -81,7 +81,7 @@ describe("LLM Router - Identity Question Pre-Check", () => {
                 chatbotName: "TestBot",
                 botIdentityResponse: "I'm a test bot for identity checks",
                 notificationEmail: "test@identity.com",
-                sellsProductsAndServices: true, // Test ecommerce mode
+                channelMode: 'ECOMMERCE' as any, // Test ecommerce mode
                 debugMode: false,
               },
               update: {
@@ -169,7 +169,7 @@ describe("LLM Router - Identity Question Pre-Check", () => {
           chatbotName: "VariableBot",
           botIdentityResponse: "I assist with product recommendations",
           notificationEmail: "test@variables.com",
-          sellsProductsAndServices: false, // Test informational mode
+          channelMode: 'INFORMATIONAL' as any, // Test informational mode
         },
         update: {
           chatbotName: "VariableBot",
@@ -227,7 +227,7 @@ describe("LLM Router - Identity Question Pre-Check", () => {
   })
 
   describe("Mode Compatibility", () => {
-    it("should work in ECOMMERCE mode (sellsProductsAndServices = true)", async () => {
+    it("should work in ECOMMERCE mode (channelMode = true)", async () => {
       const workspaceId = "test-workspace-ecommerce"
       const customerId = "test-customer-ecommerce"
 
@@ -239,12 +239,12 @@ describe("LLM Router - Identity Question Pre-Check", () => {
           chatbotName: "ShopBot",
           botIdentityResponse: "I help you find and buy products",
           notificationEmail: "test@shop.com",
-          sellsProductsAndServices: true, // ECOMMERCE MODE
+          channelMode: 'ECOMMERCE' as any, // ECOMMERCE MODE
         },
         update: {
           chatbotName: "ShopBot",
           botIdentityResponse: "I help you find and buy products",
-          sellsProductsAndServices: true,
+          channelMode: 'ECOMMERCE' as any,
         },
       })
 
@@ -290,7 +290,7 @@ describe("LLM Router - Identity Question Pre-Check", () => {
       })
     }, 30000)
 
-    it("should work in INFORMATIONAL mode (sellsProductsAndServices = false)", async () => {
+    it("should work in INFORMATIONAL mode (channelMode = false)", async () => {
       const workspaceId = "test-workspace-informational"
       const customerId = "test-customer-informational"
 
@@ -302,12 +302,12 @@ describe("LLM Router - Identity Question Pre-Check", () => {
           chatbotName: "InfoBot",
           botIdentityResponse: "I provide information and support",
           notificationEmail: "test@info.com",
-          sellsProductsAndServices: false, // INFORMATIONAL MODE
+          channelMode: 'INFORMATIONAL' as any, // INFORMATIONAL MODE
         },
         update: {
           chatbotName: "InfoBot",
           botIdentityResponse: "I provide information and support",
-          sellsProductsAndServices: false,
+          channelMode: 'INFORMATIONAL' as any,
         },
       })
 
@@ -367,7 +367,7 @@ describe("LLM Router - Identity Question Pre-Check", () => {
           chatbotName: "NormalBot",
           botIdentityResponse: "I'm a normal bot",
           notificationEmail: "test@normal.com",
-          sellsProductsAndServices: true,
+          channelMode: 'ECOMMERCE' as any,
         },
         update: {},
       })
@@ -427,7 +427,7 @@ describe("LLM Router - Identity Question Pre-Check", () => {
           chatbotName: null, // NO chatbotName configured
           botIdentityResponse: "I'm a bot without a name",
           notificationEmail: "test@noname.com",
-          sellsProductsAndServices: true,
+          channelMode: 'ECOMMERCE' as any,
         },
         update: {
           chatbotName: null,

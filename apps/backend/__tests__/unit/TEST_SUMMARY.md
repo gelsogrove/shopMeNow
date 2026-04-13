@@ -51,7 +51,7 @@ const booleanFields = [
   'widgetAutoSuggestionsEnabled',
   'hasHumanSupport',
   'requireManualApproval',
-  'sellsProductsAndServices',
+  'channelMode',
   'hasSalesAgents',
   'translateProductNames',
   'translateCategoryNames',

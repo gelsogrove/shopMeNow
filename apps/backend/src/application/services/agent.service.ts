@@ -1,6 +1,7 @@
-import { prisma, PrismaClient } from "@echatbot/database"
+import { prisma, PrismaClient, ChannelMode } from "@echatbot/database"
 import { getFunctionsForAgentType } from "../../config/agent-function-mapping"
 import { dynamicAgents } from "../../../prisma/data/dynamicAgents"
+import { getValidAgentTypesForMode } from "../../utils/template-path.helper"
 import logger from "../../utils/logger"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import { PromptValidationError } from "../../utils/PromptValidationError"
@@ -36,17 +37,10 @@ export class AgentService {
 
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { sellsProductsAndServices: true },
+        select: { channelMode: true },
       })
-      const hasEcommerce = workspace?.sellsProductsAndServices ?? true
-      const isInformational = !hasEcommerce
-      const infoHiddenTypes = new Set([
-        "ROUTER",
-        "PROFILE_MANAGEMENT",
-        "PRODUCT_SEARCH",
-        "CART_MANAGEMENT",
-        "ORDER_TRACKING",
-      ])
+      const channelMode: ChannelMode = workspace?.channelMode ?? "ECOMMERCE"
+      const validAgentTypes = new Set(getValidAgentTypesForMode(channelMode))
 
       let agents = []
       try {
@@ -74,9 +68,7 @@ export class AgentService {
       }
       logger.info(`Found ${agents.length} agents for workspace ${workspaceId}`)
 
-      const filteredAgents = isInformational
-        ? agents.filter((agent) => !infoHiddenTypes.has(agent.type))
-        : agents
+      const filteredAgents = agents.filter((agent) => validAgentTypes.has(agent.type))
 
       const hasMissingPrompt = agents.some(
         (agent) => !agent.systemPrompt || agent.systemPrompt.trim() === ""
@@ -85,7 +77,7 @@ export class AgentService {
       let defaultPromptsByType: Record<string, string> | null = null
       if (hasMissingPrompt) {
         defaultPromptsByType = Object.fromEntries(
-          dynamicAgents(workspaceId, hasEcommerce).map((agent) => [
+          dynamicAgents(workspaceId, channelMode).map((agent) => [
             agent.type,
             agent.systemPrompt,
           ])

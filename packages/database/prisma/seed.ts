@@ -281,7 +281,7 @@ Sono qui per aiutarti 😊`,
         trialEndsAt: null, // No trial - paid plan
         planStartedAt: new Date(),
         // ✅ E-COMMERCE workspace
-        sellsProductsAndServices: true,
+        channelMode: "ECOMMERCE",
         hasSalesAgents: true,
         hasHumanSupport: true,
         humanSupportInstructions:
@@ -393,7 +393,7 @@ Need anything else?"`,
         creditBalance: 171.0,
         trialEndsAt: null,
         planStartedAt: new Date(),
-        sellsProductsAndServices: false,
+        channelMode: "INFORMATIONAL",
         hasSalesAgents: false,
         hasHumanSupport: true,
         humanSupportInstructions:
@@ -888,7 +888,7 @@ Would you like details about something specific?"`,
         creditBalance: 500,
         trialEndsAt: null,
         planStartedAt: new Date(),
-        sellsProductsAndServices: false,
+        channelMode: "INFORMATIONAL",
         hasSalesAgents: false,
         hasHumanSupport: true,
         humanSupportInstructions:

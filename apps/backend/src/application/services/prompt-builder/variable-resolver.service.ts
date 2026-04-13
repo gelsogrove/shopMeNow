@@ -21,7 +21,7 @@ export interface PromptVariables {
   wipMessage: string
   language: string
   currency: string
-  sellsProductsAndServices: boolean
+  channelMode: import("@echatbot/database").ChannelMode
   hasHumanSupport: boolean
   hasSalesAgents: boolean
   humanSupportInstructions: string
@@ -136,7 +136,7 @@ export class VariableResolverService {
         botIdentityResponse: true,
         welcomeMessage: true,
         wipMessage: true,
-        sellsProductsAndServices: true,
+        channelMode: true,
         hasHumanSupport: true,
         hasSalesAgents: true,
         enableCalendarBooking: true,
@@ -175,7 +175,8 @@ export class VariableResolverService {
     variables.wipMessage = typeof workspace.wipMessage === 'string'
       ? workspace.wipMessage
       : JSON.stringify(workspace.wipMessage || "")
-    variables.sellsProductsAndServices = workspace.sellsProductsAndServices ?? true
+    variables.isEcommerce = workspace.channelMode === "ECOMMERCE"
+    variables.channelMode = workspace.channelMode
     variables.hasHumanSupport = workspace.hasHumanSupport ?? true
     variables.hasSalesAgents = workspace.hasSalesAgents ?? false
     variables.humanSupportInstructions = workspace.humanSupportInstructions || ""

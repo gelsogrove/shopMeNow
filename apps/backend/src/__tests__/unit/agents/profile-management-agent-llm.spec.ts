@@ -442,13 +442,13 @@ describe("Info-Agent Template - Profile Link Instructions", () => {
 
 describe("Router Functions - Profile Management for Informational Workspaces", () => {
   // SCENARIO: profileManagementAgent must be available for informational workspaces
-  // RULE: getFunctionsForRouter should include profileManagementAgent even when sellsProductsAndServices=false
+  // RULE: getFunctionsForRouter should include profileManagementAgent even when channelMode=false
 
   it("should include profileManagementAgent for informational workspaces", () => {
     // RULE: Profile management is NOT an e-commerce-only feature
     const { getFunctionsForRouter } = require("../../../config/agent-functions")
 
-    const functions = getFunctionsForRouter({ sellsProductsAndServices: false })
+    const functions = getFunctionsForRouter({ channelMode: 'INFORMATIONAL' as any })
     const functionNames = functions.map((fn: any) => fn.function.name)
 
     expect(functionNames).toContain("profileManagementAgent")
@@ -458,7 +458,7 @@ describe("Router Functions - Profile Management for Informational Workspaces", (
     // RULE: productSearchAgent, cartManagementAgent, orderTrackingAgent are e-commerce only
     const { getFunctionsForRouter } = require("../../../config/agent-functions")
 
-    const functions = getFunctionsForRouter({ sellsProductsAndServices: false })
+    const functions = getFunctionsForRouter({ channelMode: 'INFORMATIONAL' as any })
     const functionNames = functions.map((fn: any) => fn.function.name)
 
     expect(functionNames).not.toContain("productSearchAgent")
@@ -470,7 +470,7 @@ describe("Router Functions - Profile Management for Informational Workspaces", (
     // RULE: Customer support is available for all workspace types
     const { getFunctionsForRouter } = require("../../../config/agent-functions")
 
-    const functions = getFunctionsForRouter({ sellsProductsAndServices: false })
+    const functions = getFunctionsForRouter({ channelMode: 'INFORMATIONAL' as any })
     const functionNames = functions.map((fn: any) => fn.function.name)
 
     expect(functionNames).toContain("customerSupportAgent")

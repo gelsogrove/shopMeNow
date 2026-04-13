@@ -19,7 +19,7 @@ const createMockWorkspace = (overrides = {}) => ({
   humanSupportInstructions: "Test support instructions",
   frustrationEscalationInstructions: null, // Default: not configured
   hasHumanSupport: true,
-  sellsProductsAndServices: true,
+  channelMode: 'ECOMMERCE' as any,
   ...overrides,
 })
 

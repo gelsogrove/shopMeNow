@@ -455,7 +455,7 @@ describe('WorkspaceService — WasenderAPI', () => {
       mockPrismaGlobal.workspace.findUnique.mockResolvedValue({
         enableWidget: false,
         enableWhatsapp: true,
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         ownerId: USER_ID,
         deletedAt: null,
         whatsappProvider: currentProvider,

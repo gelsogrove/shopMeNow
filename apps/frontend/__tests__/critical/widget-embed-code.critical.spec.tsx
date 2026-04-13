@@ -23,7 +23,7 @@ vi.mock('../../src/services/workspaceApi', () => ({
     widgetPrimaryColor: '#22c55e',
     widgetIcon: 'chat',
     widgetLanguage: 'it',
-    sellsProductsAndServices: false,
+    channelMode: 'INFORMATIONAL' as any,
     hasHumanSupport: true,
   }),
   updateWorkspace: vi.fn().mockResolvedValue({}),
@@ -59,7 +59,7 @@ const mockWorkspace = {
   widgetPrimaryColor: '#22c55e',
   widgetIcon: 'chat',
   widgetLanguage: 'it',
-  sellsProductsAndServices: false,
+  channelMode: 'INFORMATIONAL' as any,
   hasHumanSupport: true,
   activeChatbot: true,
 }

@@ -554,26 +554,26 @@ export function getFunctionsForAPI() {
  * Get functions for Router Agent
  * Includes: delegation functions (sub-agents) + direct utility functions
  * 
- * @param options.sellsProductsAndServices - If false, exclude e-commerce agents (product, cart, order)
+ * @param options.channelMode - If not ECOMMERCE, exclude e-commerce agents (product, cart, order)
  * @param options.channel - Optional channel ("widget" | "whatsapp")
  */
-export function getFunctionsForRouter(options?: { sellsProductsAndServices?: boolean; channel?: string }) {
-  const sellsProducts = options?.sellsProductsAndServices ?? true
+export function getFunctionsForRouter(options?: { channelMode?: import("@echatbot/database").ChannelMode; channel?: string }) {
+  const isEcommerceMode = options?.channelMode === "ECOMMERCE"
   const channel = (options?.channel || "whatsapp").toLowerCase()
 
   // Router Agent can call:
   // 1. Delegation functions (productSearchAgent, cartManagementAgent, orderTrackingAgent, customerSupportAgent)
   // 2. Direct functions (manageNotifications, RESET_ACTIVE_AGENT)
   const routerFunctions = AGENT_FUNCTIONS.filter((fn) => {
-    // E-commerce agents - only include if sellsProductsAndServices is true
+    // E-commerce agents - only include if channelMode is ECOMMERCE
     const ecommerceAgents = [
       "productSearchAgent",
       "cartManagementAgent",
       "orderTrackingAgent",
     ]
 
-    if (!sellsProducts && ecommerceAgents.includes(fn.name)) {
-      return false // Exclude e-commerce agents for vetrina mode
+    if (!isEcommerceMode && ecommerceAgents.includes(fn.name)) {
+      return false // Exclude e-commerce agents for informational/flow mode
     }
     // Widget channel does not support profile management flows
     if (channel === "widget" && fn.name === "profileManagementAgent") {

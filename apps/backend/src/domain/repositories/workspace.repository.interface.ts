@@ -38,7 +38,7 @@ export interface WorkspaceRepositoryInterface {
 
   /**
    * Update agent status (enable/disable) for a workspace
-   * Used for auto-toggling e-commerce agents based on sellsProductsAndServices
+   * Used for auto-toggling e-commerce agents based on channelMode
    */
   updateAgentStatus(workspaceId: string, agentType: string, isActive: boolean): Promise<boolean>;
 } 

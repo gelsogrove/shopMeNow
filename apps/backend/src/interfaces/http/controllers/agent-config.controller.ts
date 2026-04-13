@@ -1,4 +1,4 @@
-import { PrismaClient, AgentType } from "@echatbot/database"
+import { PrismaClient, AgentType, ChannelMode } from "@echatbot/database"
 import { Request, Response } from "express"
 import archiver from "archiver"
 import logger from "../../../utils/logger"
@@ -103,9 +103,9 @@ export class AgentConfigController {
       // Check if workspace is e-commerce or info-only
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { sellsProductsAndServices: true },
+        select: { channelMode: true },
       })
-      const hasEcommerce = workspace?.sellsProductsAndServices ?? true
+      const hasEcommerce = workspace?.channelMode === "ECOMMERCE"
       const isInformational = !hasEcommerce
 
       // E-commerce only agent types - hide these for info-only workspaces
@@ -326,9 +326,10 @@ export class AgentConfigController {
       // Get workspace to determine if it's e-commerce or info-only
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { sellsProductsAndServices: true },
+        select: { channelMode: true },
       })
-      const hasEcommerce = workspace?.sellsProductsAndServices === true
+      const wsChannelMode = (workspace?.channelMode ?? "ECOMMERCE") as ChannelMode
+      const hasEcommerce = wsChannelMode === "ECOMMERCE"
 
       // Choose which templates to load:
       // - useDynamicTemplates=true: Load from src/templates/ with {{#if}} conditionals
@@ -339,10 +340,10 @@ export class AgentConfigController {
 
       // Load templates directly from files (latest version)
       const templateLoader = TemplateLoaderService.getInstance(this.prisma)
-      
+
       // ✅ 1. IDENTIFY & CREATE MISSING AGENTS
       // Get the full list of expected agents for this workspace type
-      const expectedAgents = dynamicAgents(workspaceId, hasEcommerce)
+      const expectedAgents = dynamicAgents(workspaceId, wsChannelMode)
       
       // Get all existing agent configs
       const existingAgents = await this.prisma.agentConfig.findMany({
@@ -486,9 +487,9 @@ export class AgentConfigController {
 
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { name: true, slug: true, sellsProductsAndServices: true },
+        select: { name: true, slug: true, channelMode: true },
       })
-      const hasEcommerce = workspace?.sellsProductsAndServices ?? true
+      const hasEcommerce = workspace?.channelMode === "ECOMMERCE"
       const isInformational = !hasEcommerce
       const ecommerceOnlyTypes: AgentType[] = ["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"]
       const infoOnlyHiddenTypes: AgentType[] = ["ROUTER", "PROFILE_MANAGEMENT"]

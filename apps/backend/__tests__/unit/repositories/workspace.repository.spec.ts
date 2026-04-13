@@ -28,7 +28,7 @@ const buildWorkspace = (overrides: Partial<any> = {}) => ({
   planType: null,
   trialEndsAt: null,
   allowedExternalLinks: [],
-  sellsProductsAndServices: true,
+  channelMode: 'ECOMMERCE' as any,
   hasSalesAgents: false,
   hasHumanSupport: true,
   humanSupportInstructions: null,

@@ -25,15 +25,15 @@ const ROUTER_ALL_FUNCTIONS = [
 
 const getFilteredFunctions = (
   availableFunctions: string[],
-  sellsProductsAndServices: boolean
+  channelMode: boolean
 ): string[] => {
-  if (sellsProductsAndServices) return availableFunctions
+  if (channelMode) return availableFunctions
   // Informational mode: filter out e-commerce specific functions
   return availableFunctions.filter(fn => !ECOMMERCE_FUNCTIONS.includes(fn))
 }
 
 describe("AgentFlowDiagram - Function Filtering", () => {
-  describe("E-commerce Mode (sellsProductsAndServices=true)", () => {
+  describe("E-commerce Mode (channelMode=true)", () => {
     it("should show ALL Router functions in e-commerce mode", () => {
       // SCENARIO: Workspace is e-commerce enabled
       // RULE: All 6 functions should be available
@@ -47,7 +47,7 @@ describe("AgentFlowDiagram - Function Filtering", () => {
     })
   })
 
-  describe("Informational Mode (sellsProductsAndServices=false)", () => {
+  describe("Informational Mode (channelMode=false)", () => {
     it("should filter OUT e-commerce functions in informational mode", () => {
       // SCENARIO: Workspace is informational only (eChatbot HQ Support)
       // RULE: E-commerce functions should NOT appear

@@ -34,7 +34,7 @@ describe('Workspace Wizard Service - Andrea\'s Simplified Wizard', () => {
         name: 'My Store',
         channelType: 'WHATSAPP',
         whatsappPhoneNumber: '+393331234567',
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         operatorEmail: 'andrea@example.com',
         operatorContactMethod: 'email',
       }
@@ -45,7 +45,7 @@ describe('Workspace Wizard Service - Andrea\'s Simplified Wizard', () => {
         name: 'My Store',
         channelType: 'WHATSAPP',
         whatsappPhoneNumber: '+393331234567',
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         operatorEmail: 'andrea@example.com',
         adminEmail: 'andrea@example.com',
       })
@@ -67,7 +67,7 @@ describe('Workspace Wizard Service - Andrea\'s Simplified Wizard', () => {
     it('should create WhatsApp channel with e-commerce enabled', async () => {
       const mockWorkspace = {
         id: 'workspace-123',
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         hasSalesAgents: false,
       }
 
@@ -77,12 +77,12 @@ describe('Workspace Wizard Service - Andrea\'s Simplified Wizard', () => {
         name: 'E-commerce Store',
         channelType: 'WHATSAPP',
         whatsappPhoneNumber: '+393331234567',
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         hasSalesAgents: false,
         operatorEmail: 'owner@store.com',
       })
 
-      expect(result.sellsProductsAndServices).toBe(true)
+      expect(result.channelMode).toBe('ECOMMERCE')
     })
   })
 
@@ -93,7 +93,7 @@ describe('Workspace Wizard Service - Andrea\'s Simplified Wizard', () => {
         name: 'Support Widget',
         channelType: 'WIDGET',
         whatsappPhoneNumber: null,
-        sellsProductsAndServices: false,
+        channelMode: 'INFORMATIONAL' as any,
         operatorEmail: 'support@company.com',
       }
 
@@ -102,7 +102,7 @@ describe('Workspace Wizard Service - Andrea\'s Simplified Wizard', () => {
       const result = await workspaceService.create({
         name: 'Support Widget',
         channelType: 'WIDGET',
-        sellsProductsAndServices: false,
+        channelMode: 'INFORMATIONAL' as any,
         operatorEmail: 'support@company.com',
         adminEmail: 'support@company.com',
       })
@@ -111,7 +111,7 @@ describe('Workspace Wizard Service - Andrea\'s Simplified Wizard', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             channelType: 'WIDGET',
-            sellsProductsAndServices: false,
+            channelMode: 'INFORMATIONAL' as any,
             enableWidget: true,
             enableWhatsapp: false,
           }),
@@ -121,11 +121,11 @@ describe('Workspace Wizard Service - Andrea\'s Simplified Wizard', () => {
       expect(result.whatsappPhoneNumber).toBeNull()
     })
 
-    it('should force sellsProductsAndServices=false for Widget channels', async () => {
+    it('should force channelMode=false for Widget channels', async () => {
       const mockWorkspace = {
         id: 'workspace-789',
         channelType: 'WIDGET',
-        sellsProductsAndServices: false,
+        channelMode: 'INFORMATIONAL' as any,
       }
 
       ;(prisma.workspace.create as jest.Mock).mockResolvedValue(mockWorkspace)
@@ -134,12 +134,12 @@ describe('Workspace Wizard Service - Andrea\'s Simplified Wizard', () => {
       const result = await workspaceService.create({
         name: 'Widget Test',
         channelType: 'WIDGET',
-        sellsProductsAndServices: true, // ❌ Invalid (Widget can't sell)
+        channelMode: 'ECOMMERCE' as any, // ❌ Invalid (Widget can't sell)
         operatorEmail: 'test@widget.com',
       })
 
       // Backend should handle this (business logic validation)
-      expect(result.sellsProductsAndServices).toBe(false)
+      expect(result.channelMode).toBe('INFORMATIONAL')
     })
   })
 
@@ -209,7 +209,7 @@ describe('Workspace Wizard Service - Andrea\'s Simplified Wizard', () => {
         name: 'Store',
         channelType: 'WHATSAPP',
         whatsappPhoneNumber: '+393331234567',
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         faqs,
         operatorEmail: 'owner@store.com',
       })
@@ -239,7 +239,7 @@ describe('Workspace Wizard Service - Andrea\'s Simplified Wizard', () => {
       await workspaceService.create({
         name: 'Support Widget',
         channelType: 'WIDGET',
-        sellsProductsAndServices: false,
+        channelMode: 'INFORMATIONAL' as any,
         faqs,
         operatorEmail: 'support@company.com',
       })

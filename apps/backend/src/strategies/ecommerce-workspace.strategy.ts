@@ -1,7 +1,7 @@
 /**
  * EcommerceWorkspaceStrategy
  * 
- * Routing strategy for e-commerce workspaces (sellsProductsAndServices=true).
+ * Routing strategy for e-commerce workspaces (channelMode=ECOMMERCE).
  * 
  * Behavior:
  * - Uses FULL Router LLM with all delegation functions
@@ -18,7 +18,7 @@
  * @critical Uses existing LLMRouterService.routeMessage() logic
  */
 
-import { AgentType, PrismaClient, Workspace } from "@echatbot/database"
+import { AgentType, ChannelMode, PrismaClient, Workspace } from "@echatbot/database"
 import logger from "../utils/logger"
 import { LLMRouterService } from "../services/llm-router.service"
 import type { RoutingContext, RoutingResult, RoutingStrategy } from "./routing-strategy.interface"
@@ -34,7 +34,7 @@ export class EcommerceWorkspaceStrategy implements RoutingStrategy {
    * This strategy handles e-commerce workspaces
    */
   canHandle(workspace: Workspace): boolean {
-    return workspace.sellsProductsAndServices === true
+    return workspace.channelMode === ChannelMode.ECOMMERCE
   }
 
   /**

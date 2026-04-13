@@ -44,7 +44,7 @@ describe('LLM Router Registration Reminder (Sistema 2)', () => {
       // GIVEN: Unregistered user (isActive=false) with 5 assistant messages (next = 6th)
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: 'ws-1',
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
       })
 
       mockPrisma.customers.findFirst.mockResolvedValue({

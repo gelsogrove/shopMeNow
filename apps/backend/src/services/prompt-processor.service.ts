@@ -41,7 +41,7 @@ export class PromptProcessorService {
     if (result.includes("{{#if") || result.includes("{{#unless")) {
       const conditionalVars = {
         // Booleans for {{#if}} conditions
-        sellsProductsAndServices: variables.sellsProductsAndServices,
+        isEcommerce: variables.isEcommerce,
         hasHumanSupport: variables.hasHumanSupport,
         hasSalesAgents: variables.hasSalesAgents,
         // Computed booleans
@@ -96,7 +96,7 @@ export class PromptProcessorService {
    * Replace all standard PromptVariables
    */
   private replaceStandardVariables(text: string, vars: PromptVariables): string {
-    const isEcommerceEnabled = vars.sellsProductsAndServices ?? true
+    const isEcommerceEnabled = vars.isEcommerce ?? true
     const v = vars as any // Allow indexing for additionalVars
 
     return text
@@ -169,7 +169,7 @@ export class PromptProcessorService {
    * This ensures the LLM knows when a catalog is empty vs just missing.
    */
   private handleEmptyContent(text: string, vars: PromptVariables): string {
-    const isEcommerceEnabled = vars.sellsProductsAndServices ?? true
+    const isEcommerceEnabled = vars.isEcommerce ?? true
     if (!isEcommerceEnabled) return text
 
     let result = text
@@ -280,7 +280,7 @@ export class PromptProcessorService {
         hasSalesAgents: workspaceConfig?.hasSalesAgents,
         notificationEmail: workspaceConfig?.supportEmail || workspaceConfig?.adminEmail,
         allowedExternalLinks: workspaceConfig?.allowedExternalLinks,
-        sellsProductsAndServices: workspaceConfig?.sellsProductsAndServices,
+        channelMode: workspaceConfig?.channelMode,
         address: workspaceConfig?.address,
         customAiRules: workspaceConfig?.customAiRules,
         chatbotName: workspaceConfig?.chatbotName,
@@ -325,7 +325,7 @@ export class PromptProcessorService {
 
     // FR-13: Last Order
     if (processedPrompt.includes("{{lastOrder}}")) {
-      if (variables.sellsProductsAndServices) {
+      if (variables.isEcommerce) {
         const lastOrderSummary = await this.getLastOrderVariable(customerData.id || customerData.customerId, workspaceId)
         additionalVars["lastOrder"] = lastOrderSummary
       } else {

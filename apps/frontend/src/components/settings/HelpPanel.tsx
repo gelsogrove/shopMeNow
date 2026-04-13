@@ -9,7 +9,7 @@ interface HelpPanelProps {
   examples?: string[]
   tips?: string[]
   showVariables?: boolean // Show available variables reference
-  sellsProductsAndServices?: boolean // E-commerce toggle state - filters e-commerce variables
+  isEcommerce?: boolean // E-commerce toggle state - filters e-commerce variables
 }
 
 // Available template variables for prompts and messages
@@ -29,27 +29,27 @@ const AVAILABLE_VARIABLES = [
   { variable: "{{agentPhone}}", alwaysAvailable: true },
   { variable: "{{agentEmail}}", alwaysAvailable: true },
   
-  // Ecommerce only (sellsProductsAndServices=true)
+  // Ecommerce only (isEcommerce=true)
   { variable: "{{categories}}", ecommerceOnly: true },
   { variable: "{{offers}}", ecommerceOnly: true },
   { variable: "{{cartContents}}", ecommerceOnly: true },
   { variable: "{{lastOrderCode}}", ecommerceOnly: true },
   
-  // Informational only (sellsProductsAndServices=false)
+  // Informational only (isEcommerce=false)
   { variable: "{{faqs}}", informationalOnly: true },
 ]
 
-export function HelpPanel({ title, description, examples, tips, showVariables, sellsProductsAndServices }: HelpPanelProps) {
+export function HelpPanel({ title, description, examples, tips, showVariables, isEcommerce }: HelpPanelProps) {
   // Filter variables based on channel type
   const availableVariables = AVAILABLE_VARIABLES.filter(v => {
     // Always show variables that are always available
     if (v.alwaysAvailable) return true
     
     // Show ecommerce variables only if ecommerce is enabled
-    if (v.ecommerceOnly) return sellsProductsAndServices === true
-    
+    if (v.ecommerceOnly) return isEcommerce === true
+
     // Show informational variables only if ecommerce is disabled
-    if (v.informationalOnly) return sellsProductsAndServices === false
+    if (v.informationalOnly) return isEcommerce === false
     
     return true
   })

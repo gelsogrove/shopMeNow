@@ -1,4 +1,4 @@
-import { PrismaClient } from "@echatbot/database"
+import { PrismaClient, ChannelMode } from "@echatbot/database"
 import logger from "../../utils/logger"
 import { ConversationManager } from "../../services/conversation-manager.service"
 import { DataLoaderService } from "../data-loader"
@@ -13,14 +13,14 @@ interface LoaderParams {
   workspaceId: string
   customerId: string
   conversationId: string
-  sellsProductsAndServices?: boolean
+  channelMode?: ChannelMode
   isRegistered?: boolean
 }
 
 /**
  * Parallel data loader that fans out DB calls based on detected intents.
  * Applies workspace isolation, guest masking, and skips product loads when
- * sellsProductsAndServices is false.
+ * channelMode is not ECOMMERCE.
  */
 export class ParallelLoaderService {
   private dataLoader: DataLoaderService
@@ -35,16 +35,16 @@ export class ParallelLoaderService {
     const workspaceConfig = await this.prisma.workspace.findUnique({
       where: { id: params.workspaceId },
       select: {
-        sellsProductsAndServices: true,
+        channelMode: true,
         toneOfVoice: true,
       },
     })
 
     const workspace = {
-      sellsProductsAndServices:
-        params.sellsProductsAndServices ??
-        workspaceConfig?.sellsProductsAndServices ??
-        false,
+      channelMode:
+        params.channelMode ??
+        workspaceConfig?.channelMode ??
+        "INFORMATIONAL" as ChannelMode,
       toneOfVoice: workspaceConfig?.toneOfVoice as string | null,
     }
 
@@ -53,7 +53,7 @@ export class ParallelLoaderService {
       params.conversationId
     )
 
-    const intentsToLoad = workspace.sellsProductsAndServices
+    const intentsToLoad = workspace.channelMode === "ECOMMERCE"
       ? params.intents
       : params.intents.filter(
           (i) => !isProductSearchIntent(i.intent as Intent)

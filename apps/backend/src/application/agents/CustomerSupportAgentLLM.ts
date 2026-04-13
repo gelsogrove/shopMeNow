@@ -122,7 +122,7 @@ export class CustomerSupportAgentLLM {
           humanSupportInstructions: true,
           frustrationEscalationInstructions: true,
           allowedExternalLinks: true,
-          sellsProductsAndServices: true,
+          channelMode: true,
           hasHumanSupport: true, // ✅ FIX: Include hasHumanSupport flag
           hasSalesAgents: true,
           operatorContactMethod: true,
@@ -147,8 +147,8 @@ export class CustomerSupportAgentLLM {
       // STEP 1.8: Load system prompt from template files (include FAQ presence for conditionals)
       // 🔧 FIX: Use correct agent type based on workspace type
       // Informational workspaces use INFO_AGENT template, ecommerce uses CUSTOMER_SUPPORT
-      const isEcommerce = workspace?.sellsProductsAndServices ?? true
-      const templateAgentType = isEcommerce ? "CUSTOMER_SUPPORT" : "INFO_AGENT"
+      const isEcommerceMode = workspace?.channelMode === "ECOMMERCE"
+      const templateAgentType = isEcommerceMode ? "CUSTOMER_SUPPORT" : "INFO_AGENT"
 
       let systemPrompt = await this.templateLoader.loadAndRenderTemplate(
         templateAgentType,
@@ -234,7 +234,7 @@ export class CustomerSupportAgentLLM {
         },
         workspace?.websiteUrl || workspace?.url, // workspaceUrl
         {
-          sellsProductsAndServices: workspace?.sellsProductsAndServices ?? false, // 🔧 Informational workspace
+          channelMode: workspace?.channelMode ?? "INFORMATIONAL", // 🔧 Informational workspace
           hasHumanSupport: workspace?.hasHumanSupport ?? false, // ✅ FIX: Use actual hasHumanSupport flag
           hasSalesAgents: workspace?.hasSalesAgents ?? false,
           address: workspace?.address || "",
@@ -288,7 +288,7 @@ export class CustomerSupportAgentLLM {
       ]
 
       // STEP 3: Define function calls for customer support
-      const isInformational = workspace?.sellsProductsAndServices === false
+      const isInformational = workspace?.channelMode !== "ECOMMERCE"
       const isWidgetChannel = (context.channel || "").toLowerCase() === "widget"
       const functions = this.getCustomerSupportFunctions({
         includeProfileFunctions: isInformational && !isWidgetChannel,

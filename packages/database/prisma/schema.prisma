@@ -57,7 +57,7 @@ model Workspace {
   channelType                       ChannelType @default(WHATSAPP) // WhatsApp or Widget
   enableWhatsapp                    Boolean     @default(true)
   enableWidget                      Boolean     @default(false)
-  sellsProductsAndServices          Boolean     @default(true) // Does this channel sell products/services? (enables E-commerce menu)
+  channelMode                       ChannelMode @default(INFORMATIONAL) // Workspace mode: ECOMMERCE (products/orders), INFORMATIONAL (info agent), FLOW (guided steps)
   enableCalendarBooking             Boolean     @default(false) // Enables appointment booking via WhatsApp chatbot
   hasSalesAgents                    Boolean     @default(false) // Has sales team for customer assignment?
   hasHumanSupport                   Boolean     @default(true) // Can customers request human support?
@@ -1108,6 +1108,12 @@ enum WorkspaceStatus {
   ACTIVE
   INACTIVE
   SUSPENDED
+}
+
+enum ChannelMode {
+  ECOMMERCE
+  INFORMATIONAL
+  FLOW
 }
 
 enum ProductStatus {

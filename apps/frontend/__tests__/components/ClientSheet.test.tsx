@@ -12,6 +12,7 @@ vi.mock("@/lib/storage", () => ({
   storage: {
     getWorkspace: vi.fn(),
     setWorkspace: vi.fn(),
+    getToken: vi.fn().mockReturnValue(null),
   },
 }))
 
@@ -55,7 +56,7 @@ function renderWithProviders(
   const mockWorkspace = workspace || {
     id: "workspace-1",
     name: "Test Workspace",
-    sellsProductsAndServices: true,
+    channelMode: 'ECOMMERCE' as any,
   }
 
   return render(
@@ -108,17 +109,17 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     vi.clearAllMocks()
     vi.mocked(storage.getWorkspace).mockReturnValue({
       id: "workspace-1",
-      sellsProductsAndServices: true,
+      channelMode: 'ECOMMERCE' as any,
     })
     vi.mocked(api.get).mockResolvedValue({ data: mockClient })
   })
 
-  it("should show Shipping Address section for e-commerce channels (sellsProductsAndServices = true)", async () => {
+  it("should show Shipping Address section for e-commerce channels (channelMode = true)", async () => {
     // Mock workspace as e-commerce channel
     const workspace = {
       id: "workspace-1",
       name: "Test Workspace",
-      sellsProductsAndServices: true,
+      channelMode: 'ECOMMERCE' as any,
     }
 
     renderWithProviders(<ClientSheet {...defaultProps} />, workspace)
@@ -127,12 +128,12 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     expect(await screen.findByRole("heading", { name: /shipping address/i })).toBeInTheDocument()
   })
 
-  it("should NOT show Shipping Address section for info channels (sellsProductsAndServices = false)", async () => {
+  it("should NOT show Shipping Address section for info channels (channelMode = false)", async () => {
     // Mock workspace as info channel
     const workspace = {
       id: "workspace-1",
       name: "Test Workspace",
-      sellsProductsAndServices: false,
+      channelMode: 'INFORMATIONAL' as any,
     }
 
     renderWithProviders(<ClientSheet {...defaultProps} />, workspace)
@@ -143,12 +144,12 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     })
   })
 
-  it("should NOT show Shipping Address when workspace has no sellsProductsAndServices property", async () => {
-    // Mock workspace without sellsProductsAndServices (defaults to false)
+  it("should NOT show Shipping Address when workspace has no channelMode property", async () => {
+    // Mock workspace without channelMode (defaults to false)
     const workspace = {
       id: "workspace-1",
       name: "Test Workspace",
-      // sellsProductsAndServices property omitted - should default to false
+      // channelMode property omitted - should default to false
     }
 
     renderWithProviders(<ClientSheet {...defaultProps} />, workspace)
@@ -164,7 +165,7 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     const workspaceEcommerce = {
       id: "workspace-1",
       name: "Test Workspace",
-      sellsProductsAndServices: true,
+      channelMode: 'ECOMMERCE' as any,
     }
 
     const { unmount } = renderWithProviders(<ClientSheet {...defaultProps} />, workspaceEcommerce)
@@ -178,7 +179,7 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     const workspaceInfo = {
       id: "workspace-1",
       name: "Test Workspace",
-      sellsProductsAndServices: false,
+      channelMode: 'INFORMATIONAL' as any,
     }
 
     renderWithProviders(<ClientSheet {...defaultProps} />, workspaceInfo)
@@ -192,7 +193,7 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     const workspaceEcommerce = {
       id: "workspace-1",
       name: "Test Workspace",
-      sellsProductsAndServices: true,
+      channelMode: 'ECOMMERCE' as any,
     }
 
     const { unmount } = renderWithProviders(<ClientSheet {...defaultProps} />, workspaceEcommerce)
@@ -209,7 +210,7 @@ describe("ClientSheet - Shipping Address Visibility", () => {
     const workspaceInfo = {
       id: "workspace-1",
       name: "Test Workspace",
-      sellsProductsAndServices: false,
+      channelMode: 'INFORMATIONAL' as any,
     }
 
     renderWithProviders(<ClientSheet {...defaultProps} />, workspaceInfo)

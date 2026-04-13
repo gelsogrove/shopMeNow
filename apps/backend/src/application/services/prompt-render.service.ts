@@ -15,6 +15,7 @@ import { PrismaClient } from "@echatbot/database"
 import { TemplateEngineService } from "./prompt-builder/template-engine.service"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import logger from "../../utils/logger"
+import { ChannelMode } from "@echatbot/database"
 import {
   ECOMMERCE_TEMPLATE_FILES,
   INFORMATIONAL_TEMPLATE_FILES,
@@ -65,7 +66,7 @@ export class PromptRenderService {
       }
 
       // 2. Load template from file (cached)
-      const template = await this.loadTemplate(agentType, workspace.sellsProductsAndServices ?? true)
+      const template = await this.loadTemplate(agentType, workspace.channelMode ?? "ECOMMERCE")
 
       // 3. STEP 1: RENDER - Process conditionals
       const conditionalValues = this.buildConditionalValues(workspace)
@@ -87,9 +88,9 @@ export class PromptRenderService {
   /**
    * Load template from file system (with caching)
    */
-  private async loadTemplate(agentType: string, isEcommerce: boolean): Promise<string> {
-    const templateFile = getTemplateFilename(agentType, isEcommerce)
-    const folder = getTemplateFolder(isEcommerce)
+  private async loadTemplate(agentType: string, mode: ChannelMode): Promise<string> {
+    const templateFile = getTemplateFilename(agentType, mode)
+    const folder = getTemplateFolder(mode)
 
     const cacheKey = `${folder}/${templateFile}`
 
@@ -132,7 +133,8 @@ export class PromptRenderService {
       : ""
     const address = workspace.address || ""
     return {
-      sellsProductsAndServices: workspace.sellsProductsAndServices ?? true,
+      isEcommerce: workspace.channelMode === "ECOMMERCE",
+      channelMode: workspace.channelMode,
       hasHumanSupport: workspace.hasHumanSupport ?? false,
       hasSalesAgents: workspace.hasSalesAgents ?? false,
       address,
@@ -177,7 +179,8 @@ export class PromptRenderService {
 
     // Build workspace config for variable replacement
     const workspaceConfig = {
-      sellsProductsAndServices: workspace.sellsProductsAndServices ?? true,
+      isEcommerce: workspace.channelMode === "ECOMMERCE",
+      channelMode: workspace.channelMode,
       toneOfVoice: workspace.toneOfVoice,
       botIdentityResponse: workspace.botIdentityResponse,
       hasHumanSupport: workspace.hasHumanSupport ?? false,

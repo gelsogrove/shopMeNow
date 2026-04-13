@@ -60,7 +60,7 @@ const mockWorkspace = {
   allowedExternalLinks: ['stripe.com', 'paypal.com'],
   enableWhatsapp: true,
   enableWidget: false,
-  sellsProductsAndServices: true,
+  channelMode: 'ECOMMERCE' as any,
   hasSalesAgents: false,
   hasHumanSupport: true,
   humanSupportInstructions: 'Contact our team for help',

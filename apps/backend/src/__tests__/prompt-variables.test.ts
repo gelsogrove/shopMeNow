@@ -52,7 +52,7 @@ describe('PromptVariableBuilder - Variable Replace Test', () => {
     hasSalesAgents: true,
     notificationEmail: 'support@bellitalia.com',
     allowedExternalLinks: ['bellitalia.com', 'instagram.com/bellitalia'],
-    sellsProductsAndServices: true,
+    channelMode: 'ECOMMERCE' as any,
     address: 'Via Roma 123, Firenze',
     customAiRules: 'Sempre menzionare la collezione Chianti',
     chatbotName: 'Sofia',
@@ -107,7 +107,7 @@ Tone: {{toneOfVoice}}
 Human Support: {{hasHumanSupport}}
 Support Instructions: {{humanSupportInstructions}}
 Sales Agents: {{hasSalesAgents}}
-E-commerce: {{sellsProductsAndServices}}
+E-commerce: {{channelMode}}
 External Links: {{allowedExternalLinks}}
 Bot Name: {{chatbotName}}
 Business Type: {{businessType}}

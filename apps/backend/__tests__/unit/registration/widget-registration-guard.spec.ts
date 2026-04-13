@@ -99,7 +99,7 @@ const mockPrisma = {
     findFirst: jest.fn().mockResolvedValue({
       id: "ws-test",
       name: "TestWorkspace",
-      sellsProductsAndServices: true,
+      channelMode: 'ECOMMERCE' as any,
     }),
   },
   customers: { findFirst: jest.fn().mockResolvedValue(null) },
@@ -137,7 +137,7 @@ describe("FunctionExecutor — Registration Guard for Appointments", () => {
         workspaceId: "ws-test",
         customerId: "cust-anon",
         customerIsActive: false,
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         channel: "whatsapp", // WhatsApp: registration guard applies
       }
 
@@ -156,7 +156,7 @@ describe("FunctionExecutor — Registration Guard for Appointments", () => {
         workspaceId: "ws-test",
         customerId: "cust-widget",
         customerIsActive: false, // not "registered" in DB but widget doesn't care
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         channel: "widget", // Widget: registration guard SKIPPED
       }
 
@@ -173,7 +173,7 @@ describe("FunctionExecutor — Registration Guard for Appointments", () => {
       workspaceId: "ws-test",
       customerId: "cust-anon",
       customerIsActive: false,
-      sellsProductsAndServices: true,
+      channelMode: 'ECOMMERCE' as any,
     }
 
     const result = await executor.execute("listAvailableSlots", { serviceId: "svc-1" }, context)

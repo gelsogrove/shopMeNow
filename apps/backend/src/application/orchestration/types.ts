@@ -1,3 +1,4 @@
+import { ChannelMode } from "@echatbot/database"
 import { Intent } from "../intent/intent.types"
 
 export type IntentConfidence = "HIGH" | "MEDIUM" | "LOW"
@@ -17,7 +18,7 @@ export interface OrchestrationInput {
   customerLanguage?: string
   customerName?: string
   isRegistered?: boolean
-  sellsProductsAndServices?: boolean
+  channelMode?: ChannelMode
 }
 
 export interface ConversationSnapshot {
@@ -42,7 +43,7 @@ export interface LoadedContext {
   preferences?: PreferenceEntry[]
   conversation: ConversationSnapshot
   workspace: {
-    sellsProductsAndServices: boolean
+    channelMode: ChannelMode
     toneOfVoice?: string | null
   }
 }

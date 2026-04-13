@@ -93,7 +93,7 @@ export interface ExecutionContext {
   customerLanguage?: string
   customerDiscount?: number // Customer's discount percentage (e.g., 10 for 10%)
   customerIsActive?: boolean // NEW: Customer registration status
-  sellsProductsAndServices?: boolean // NEW: Workspace sells products/services (enables registration)
+  channelMode?: import("@echatbot/database").ChannelMode // Workspace channel mode (ECOMMERCE enables registration)
   channel?: string // "widget" | "whatsapp" — needed for contactOperator routing
 }
 
@@ -185,7 +185,7 @@ export class FunctionExecutor {
       if (FUNCTIONS_PROTECTED_FOR_UNREGISTERED.has(functionName) && context.channel !== "widget") {
         if (!context.customerIsActive) {
           // 🛍️ Registration link only if workspace sells products/services
-          if (context.sellsProductsAndServices) {
+          if (context.channelMode === "ECOMMERCE") {
             logger.warn(`🚫 Registration required for function: ${functionName}`, {
               customerId: context.customerId,
               workspaceId: context.workspaceId,

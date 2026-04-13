@@ -2,7 +2,7 @@
  * OnboardingWizardModal – survey-style multi-step onboarding
  *
  * Flow:
- *   industry → business → channel-personality → workspace-type →
+ *   channel-mode → industry → business → channel-personality →
  *   channel-type → human-support →
  *   auth → creating →
  *   [qr-scan — only if whatsapp or both] →
@@ -26,7 +26,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   Loader2, CheckCircle2, RefreshCw,
-  Eye, EyeOff, Shield, Wifi, PartyPopper,
+  Eye, EyeOff, Wifi, PartyPopper,
 } from 'lucide-react'
 import { toast } from '@/lib/toast'
 import { api } from '@/services/api'
@@ -47,7 +47,7 @@ const QR_EXPIRY = 45
 const POLL_INTERVAL = import.meta.env.MODE === 'test' ? 50 : 3000
 
 type ChannelChoice = 'whatsapp' | 'widget' | 'both'
-type WizardStep = 'industry' | 'business' | 'channel-personality' | 'workspace-type' | 'channel-type' | 'human-support' | 'auth' | 'totp' | 'creating' | 'qr-scan' | 'done'
+type WizardStep = 'channel-mode' | 'industry' | 'business' | 'channel-personality' | 'channel-type' | 'human-support' | 'auth' | 'creating' | 'qr-scan' | 'done'
 
 interface Props {
   open: boolean
@@ -55,21 +55,21 @@ interface Props {
 }
 
 // Data steps (shown in step counter) — 7 steps total
-const DATA_STEPS: WizardStep[] = ['industry', 'business', 'channel-personality', 'workspace-type', 'channel-type', 'human-support', 'auth']
+const DATA_STEPS: WizardStep[] = ['channel-mode', 'industry', 'business', 'channel-personality', 'channel-type', 'human-support', 'auth']
 
 // Progress bar fill (0–100) per step
 const STEP_PROGRESS: Record<WizardStep, number> = {
-  industry: 8, business: 22, 'channel-personality': 36,
-  'workspace-type': 50, 'channel-type': 64, 'human-support': 78, auth: 88,
+  'channel-mode': 8, industry: 22, business: 36,
+  'channel-personality': 50, 'channel-type': 64, 'human-support': 78, auth: 88,
   totp: 92, creating: 96, 'qr-scan': 98, done: 100,
 }
 
 // Full-bleed image per step
 const STEP_IMAGES: Partial<Record<WizardStep, string>> = {
+  'channel-mode': '/survey-ecommerce.png',
   industry: '/survey.png',
   business: '/survey-agent.png',
   'channel-personality': '/survery-crm.png',
-  'workspace-type': '/survey-ecommerce.png',
   'channel-type': '/surver-widget.png',
   'human-support': '/survey-support.png',
   auth: '/survery-secuiry.png',
@@ -77,8 +77,8 @@ const STEP_IMAGES: Partial<Record<WizardStep, string>> = {
 
 // Icon per step (shown below photo)
 const STEP_ICONS: Partial<Record<WizardStep, string>> = {
-  industry: '🏢', business: '✏️', 'channel-personality': '🎭',
-  'workspace-type': '🚀', 'channel-type': '📱', 'human-support': '🤝', auth: '👤',
+  'channel-mode': '🚀', industry: '🏢', business: '✏️', 'channel-personality': '🎭',
+  'channel-type': '📱', 'human-support': '🤝', auth: '👤',
 }
 
 const slideVariants = {
@@ -132,9 +132,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   const [showPassword, setShowPassword] = useState(false)
   const [gdprAccepted, setGdprAccepted] = useState(false)
   const [pendingUserId, setPendingUserId] = useState('')
-  const [totpQrCode, setTotpQrCode] = useState('')
-  const [isNewUser, setIsNewUser] = useState(true)
-  const [totpCode, setTotpCode] = useState('')
+  // TOTP states removed — deferred to profile settings after onboarding
 
   // ── Workspace / wasender ─────────────────────────────────────────────────────
   const [createdWorkspaceId, setCreatedWorkspaceId] = useState('')
@@ -155,13 +153,13 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   // ── Reset on open ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return
-    setStep('industry'); setError(''); setDirection(1)
+    setStep('channel-mode'); setError(''); setDirection(1)
     setIndustry('other'); setBusinessName(''); setBotName(''); setChannelTone('friendly')
     setWorkspaceType('ecommerce'); setChannelChoice('whatsapp'); setHasHumanSupport(true)
     setWhatsappPhoneNumber('')
     setEmail(''); setPassword('')
     setShowPassword(false); setGdprAccepted(false)
-    setPendingUserId(''); setTotpQrCode(''); setTotpCode('')
+    setPendingUserId('')
     setCreatedWorkspaceId(''); setQrString(''); setQrAge(0)
     setWasenderStatus('idle'); setCreatingPhase(0); setIsLoading(false)
     isCreatingRef.current = false
@@ -179,7 +177,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
         const workspace = await createWorkspace({
           name: businessName,
           language: lang,
-          sellsProductsAndServices: workspaceType === 'ecommerce',
+          channelMode: workspaceType === 'ecommerce' ? 'ECOMMERCE' as const : workspaceType === 'flow' ? 'FLOW' as const : 'INFORMATIONAL' as const,
           hasHumanSupport,
           enableWhatsapp: needsWhatsApp,
           enableWidget: needsWidget,
@@ -322,6 +320,11 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   //  Handlers
   // ──────────────────────────────────────────────────────────────────────────────
 
+  const handleSelectChannelMode = (type: WorkspaceType) => {
+    setWorkspaceType(type)
+    setTimeout(() => goTo('industry'), 250)
+  }
+
   const handleSelectIndustry = (ind: Industry) => {
     setIndustry(ind)
     setTimeout(() => goTo('business'), 250)
@@ -337,12 +340,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   }
 
   const handleNextPersonality = () => {
-    goTo('workspace-type')
-  }
-
-  const handleSelectWorkspaceType = (type: WorkspaceType) => {
-    setWorkspaceType(type)
-    setTimeout(() => goTo('channel-type'), 250)
+    goTo('channel-type')
   }
 
   const handleSelectChannelType = (choice: ChannelChoice) => {
@@ -383,7 +381,7 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
     try {
       // Send skipSetup=true during onboarding — 2FA can be configured later from profile settings
       const resp = await api.post('/auth/oauth/google', { credential: credentialResponse.credential, skipSetup: true })
-      const { user, requiresSetup, requires2FA, qrCode, token, sessionId } = resp.data
+      const { user, token, sessionId } = resp.data
 
       if (sessionId && token) {
         // Got full auth — continue onboarding (don't navigate away)
@@ -393,41 +391,10 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
         return
       }
 
-      // Only show TOTP if the user already has 2FA enabled (requires verification)
-      if (requires2FA) {
-        setPendingUserId(user.id)
-        setIsNewUser(false)
-        goTo('totp')
-        return
-      }
-
-      // requiresSetup fallback (shouldn't happen with skipSetup=true)
-      if (requiresSetup) {
-        setPendingUserId(user.id)
-        setTotpQrCode(qrCode); setIsNewUser(true)
-        goTo('totp')
-        return
-      }
+      // Note: TOTP setup is deferred to profile settings after onboarding (skipSetup=true)
+      // If 2FA is required for an existing user, they must complete it on the login page
     } catch {
       setError('Google authentication failed. Please try again.')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleVerifyTotp = async () => {
-    if (totpCode.length !== 6) { setError(t.errors.invalidCode); return }
-    setIsLoading(true); setError('')
-    try {
-      const endpoint = isNewUser ? '/auth/verify-2fa-setup' : '/auth/verify-2fa'
-      const resp = await api.post(endpoint, { userId: pendingUserId, code: totpCode })
-      const { token, sessionId, user } = resp.data
-      storage.clearAppState()
-      storage.setToken(token); storage.setSessionId(sessionId)
-      if (user) storage.setUser(user)
-      goTo('creating')
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid verification code')
     } finally {
       setIsLoading(false)
     }
@@ -457,10 +424,10 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
   // ── Back navigation ───────────────────────────────────────────────────────────
   const getBackStep = (): WizardStep | null => {
     switch (step) {
+      case 'industry': return 'channel-mode'
       case 'business': return 'industry'
       case 'channel-personality': return 'business'
-      case 'workspace-type': return 'channel-personality'
-      case 'channel-type': return 'workspace-type'
+      case 'channel-type': return 'channel-personality'
       case 'human-support': return 'channel-type'
       case 'auth': return 'human-support'
       default: return null
@@ -500,11 +467,10 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
       case 'industry': return t.industry.title
       case 'business': return t.business.title
       case 'channel-personality': return t.channelPersonality.title
-      case 'workspace-type': return t.workspaceType.title
+      case 'channel-mode': return t.workspaceType.title
       case 'channel-type': return t.channelType.title
       case 'human-support': return t.humanSupport.title
       case 'auth': return t.auth.title
-      case 'totp': return t.totp.title
       default: return ''
     }
   }
@@ -628,18 +594,18 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
         )
 
       // ── WORKSPACE TYPE ────────────────────────────────────────────────────────
-      case 'workspace-type':
+      case 'channel-mode':
         return (
           <div className="space-y-4">
             <p className="text-slate-500" style={{ fontSize: '1.05rem' }}>{t.workspaceType.subtitle}</p>
             <div className="space-y-2.5">
-              {(['ecommerce', 'info'] as WorkspaceType[]).map(type => {
+              {(['ecommerce', 'info', 'flow'] as WorkspaceType[]).map(type => {
                 const isSelected = workspaceType === type
                 return (
                   <button
                     key={type}
                     type="button"
-                    onClick={() => handleSelectWorkspaceType(type)}
+                    onClick={() => handleSelectChannelMode(type)}
                     className={[
                       'w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 transition-all text-left',
                       isSelected ? 'bg-green-50 border-green-500 shadow-sm' : 'border-slate-200 hover:border-green-300',
@@ -796,38 +762,6 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                   theme="outline" size="large" text="signup_with" shape="rectangular" logo_alignment="left" />
               </div>
             </GoogleOAuthProvider>
-          </div>
-        )
-
-      // ── TOTP ──────────────────────────────────────────────────────────────────
-      case 'totp':
-        return (
-          <div className="flex flex-col items-center space-y-5 py-4">
-            <div className="h-14 w-14 rounded-full bg-green-100 flex items-center justify-center">
-              <Shield className="h-7 w-7 text-green-600" />
-            </div>
-            {isNewUser && totpQrCode ? (
-              <>
-                <p className="text-sm text-gray-500 text-center">{t.totp.setupSubtitle}</p>
-                <div className="bg-white border-2 border-green-200 rounded-xl p-4 shadow-sm">
-                  <QRCode value={totpQrCode} size={180} level="M" />
-                </div>
-                <p className="text-xs text-gray-400 text-center">{t.totp.setupInstructions}</p>
-              </>
-            ) : (
-              <p className="text-sm text-gray-500 text-center">{t.totp.verifySubtitle}</p>
-            )}
-            <div className="w-full max-w-xs space-y-1.5">
-              <Label htmlFor="ob-totp">{t.totp.code}</Label>
-              <Input id="ob-totp" className="text-center text-xl tracking-[0.5em] font-mono" maxLength={6}
-                value={totpCode} onChange={e => { setTotpCode(e.target.value.replace(/\D/g, '')); setError('') }}
-                onKeyDown={e => e.key === 'Enter' && handleVerifyTotp()} inputMode="numeric" autoFocus />
-            </div>
-            <Button className="w-full max-w-xs bg-green-600 hover:bg-green-700 text-white"
-              onClick={handleVerifyTotp} disabled={isLoading || totpCode.length !== 6}>
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {t.totp.verify}
-            </Button>
           </div>
         )
 

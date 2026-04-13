@@ -42,7 +42,7 @@ interface CustomerProfile {
     id: string
     name: string
     logoUrl?: string | null
-    sellsProductsAndServices?: boolean
+    channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   }
 }
 
@@ -331,7 +331,7 @@ const CustomerProfilePublicPage: React.FC = () => {
         currentPage="profile"
         logoUrl={profileData?.workspace?.logoUrl}
         icon={profileIcon}
-        isEcommerce={profileData?.workspace?.sellsProductsAndServices ?? true}
+        isEcommerce={profileData?.workspace?.channelMode === 'ECOMMERCE'}
       />
 
       <div className="pt-16">
@@ -343,7 +343,7 @@ const CustomerProfilePublicPage: React.FC = () => {
                 profileData={profileData}
                 onSave={handleSaveProfile}
                 saving={saving}
-                isEcommerce={profileData.workspace?.sellsProductsAndServices ?? true}
+                isEcommerce={profileData.workspace?.channelMode === 'ECOMMERCE'}
               />
             </div>
           )}

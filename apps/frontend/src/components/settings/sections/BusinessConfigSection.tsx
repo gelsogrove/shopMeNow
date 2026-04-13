@@ -1,6 +1,6 @@
 /**
  * BusinessConfigSection - Configurazione Business
- * Campi: name, notificationEmail, url, businessType, currency, sellsProductsAndServices
+ * Campi: name, notificationEmail, url, businessType, currency, channelMode
  */
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,7 +26,7 @@ interface BusinessConfigSectionProps {
     businessType: string
     currency: string
     defaultLanguage: string
-    sellsProductsAndServices: boolean
+    channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
     enableWhatsapp: boolean
     enableWidget: boolean
     address: string
@@ -250,13 +250,14 @@ export function BusinessConfigSection({
                     Enable e-commerce features: product catalog, shopping cart, orders
                   </p>
                 </div>
+                {/* TODO: Replace Switch with a dropdown/select for 3-way channelMode selection (ECOMMERCE | INFORMATIONAL | FLOW) */}
                 <Switch
-                  checked={formData.sellsProductsAndServices}
+                  checked={formData.channelMode === 'ECOMMERCE'}
                   onCheckedChange={(checked) => {
-                    onFieldChange("sellsProductsAndServices", checked)
-                    // Automatically set enableWidget based on sellsProductsAndServices
-                    // TRUE (ecommerce) → widget FALSE
-                    // FALSE (info) → widget TRUE
+                    onFieldChange("channelMode", checked ? 'ECOMMERCE' : 'INFORMATIONAL')
+                    // Automatically set enableWidget based on channelMode
+                    // ECOMMERCE → widget FALSE
+                    // INFORMATIONAL/FLOW → widget TRUE
                     onFieldChange("enableWidget", !checked)
                   }}
                   disabled={!canEdit}

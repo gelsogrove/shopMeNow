@@ -67,7 +67,7 @@ interface CreateWorkspaceData {
   url?: string
   welcomeMessage?: string // English only
   // 🆕 Wizard fields (Andrea's simplified wizard)
-  sellsProductsAndServices?: boolean
+  channelMode?: import("@echatbot/database").ChannelMode
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
   humanSupportInstructions?: string
@@ -121,7 +121,7 @@ interface UpdateWorkspaceData {
   // 🆕 Channel Configuration (Feature 199 + Andrea's wizard)
   enableWhatsapp?: boolean
   enableWidget?: boolean
-  sellsProductsAndServices?: boolean
+  channelMode?: import("@echatbot/database").ChannelMode
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
   humanSupportInstructions?: string
@@ -181,7 +181,7 @@ export const workspaceService = {
         // 🆕 Channel Configuration (Feature 199)
         enableWhatsapp: true,
         enableWidget: true,
-        sellsProductsAndServices: true,
+        channelMode: true,
         hasSalesAgents: true,
         hasHumanSupport: true,
         humanSupportInstructions: true,
@@ -279,7 +279,7 @@ export const workspaceService = {
         // 🆕 Channel Configuration (Feature 199)
         enableWhatsapp: true,
         enableWidget: true,
-        sellsProductsAndServices: true,
+        channelMode: true,
         hasSalesAgents: true,
         hasHumanSupport: true,
         humanSupportInstructions: true,
@@ -390,7 +390,7 @@ export const workspaceService = {
     if (channelType === "WIDGET") {
       workspaceData.enableWidget = true
       workspaceData.enableWhatsapp = false
-      workspaceData.sellsProductsAndServices = false
+      workspaceData.channelMode = workspaceData.channelMode || "INFORMATIONAL"
       workspaceData.hasSalesAgents = false
       workspaceData.whatsappPhoneNumber = null
     } else {
@@ -613,7 +613,6 @@ export const workspaceService = {
       'widgetAutoSuggestionsEnabled',
       'hasHumanSupport',
       'requireManualApproval',
-      'sellsProductsAndServices',
       'hasSalesAgents',
       'translateProductNames',
       'translateCategoryNames',
@@ -681,7 +680,7 @@ export const workspaceService = {
         allowedExternalLinks: true, // 🛡️ Security
         // 🆕 Channel Configuration (Feature 199 + Andrea's wizard)
         channelType: true,
-        sellsProductsAndServices: true,
+        channelMode: true,
         hasSalesAgents: true,
         hasHumanSupport: true,
         humanSupportInstructions: true,

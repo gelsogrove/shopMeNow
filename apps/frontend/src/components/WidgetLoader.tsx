@@ -10,8 +10,8 @@ import { useLanguage } from "@/contexts/LanguageContext"
  * Widget visibility rules:
  * - ONLY show on "/" (home/login page)
  * - HIDE on all other routes (workspace-selection, dashboard, etc.)
- * - ✅ ONLY for informational channels (sellsProductsAndServices = false)
- * - ❌ NEVER for e-commerce channels (sellsProductsAndServices = true)
+ * - ✅ ONLY for informational/flow channels (channelMode !== 'ECOMMERCE')
+ * - ❌ NEVER for e-commerce channels (channelMode === 'ECOMMERCE')
  * 
  * Widget script format (injected into page):
  * <script>

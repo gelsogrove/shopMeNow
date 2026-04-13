@@ -45,7 +45,7 @@ export class OrchestrationService {
       workspaceId: input.workspaceId,
       customerId: input.customerId,
       conversationId: input.conversationId,
-      sellsProductsAndServices: input.sellsProductsAndServices,
+      channelMode: input.channelMode,
       isRegistered: input.isRegistered,
     })
 

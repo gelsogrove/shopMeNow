@@ -4,7 +4,7 @@
  * 🎯 THE HEART OF THE PROJECT
  *
  * This service generates prompts DYNAMICALLY at runtime based on:
- * - Workspace configuration (sellsProductsAndServices, hasHumanSupport, etc.)
+ * - Workspace configuration (channelMode, hasHumanSupport, etc.)
  * - Customer context (name, language, discount, etc.)
  * - Dynamic data (products, offers, FAQs, etc.)
  *
@@ -157,7 +157,7 @@ ${content}`
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
       select: {
-        sellsProductsAndServices: true,
+        channelMode: true,
         hasHumanSupport: true,
         hasSalesAgents: true,
       },
@@ -177,7 +177,7 @@ ${content}`
     ]
 
     if (ecommerceAgents.includes(agentType)) {
-      return workspace.sellsProductsAndServices === true
+      return workspace.channelMode === "ECOMMERCE"
     }
 
     if (humanSupportAgents.includes(agentType)) {

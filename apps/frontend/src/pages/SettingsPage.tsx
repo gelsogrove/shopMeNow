@@ -92,7 +92,7 @@ interface FormData {
   businessType: string
   currency: string
   defaultLanguage: string
-  sellsProductsAndServices: boolean
+  channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' // TODO: Switch toggle should become a dropdown for 3-way selection
   // Channels
   channelStatus: boolean
   debugMode: boolean
@@ -207,7 +207,7 @@ export function SettingsPage() {
     businessType: "retail",
     currency: "EUR",
     defaultLanguage: "it",
-    sellsProductsAndServices: true,
+    channelMode: 'ECOMMERCE' as const,
     channelStatus: true,
     debugMode: false,
     enableWhatsapp: true,
@@ -289,7 +289,7 @@ export function SettingsPage() {
         businessType: currentWorkspace.businessType || "retail",
         currency: currentWorkspace.currency || "EUR",
         defaultLanguage: currentWorkspace.defaultLanguage || "it", // ✅ Fix: API now returns defaultLanguage directly
-        sellsProductsAndServices: currentWorkspace.sellsProductsAndServices ?? true,
+        channelMode: currentWorkspace.channelMode ?? 'ECOMMERCE',
         channelStatus: currentWorkspace.channelStatus ?? true,
         debugMode: currentWorkspace.debugMode ?? false,
         enableWhatsapp: currentWorkspace.enableWhatsapp ?? true,
@@ -511,9 +511,9 @@ export function SettingsPage() {
       return
     }
 
-    // Check if workspace type changed (sellsProductsAndServices)
-    const currentValue = currentWorkspace?.sellsProductsAndServices ?? true
-    const newValue = formData.sellsProductsAndServices
+    // Check if workspace type changed (channelMode)
+    const currentValue = currentWorkspace?.channelMode ?? 'ECOMMERCE'
+    const newValue = formData.channelMode
 
     if (currentValue !== newValue) {
       // Store pending data and show confirmation dialog
@@ -679,7 +679,7 @@ export function SettingsPage() {
       await performSave(pendingFormData, { suppressToast: true })
 
       // Then reset agent prompts to new template type
-      const newType = pendingFormData.sellsProductsAndServices ? "e-commerce" : "informational"
+      const newType = pendingFormData.channelMode === 'ECOMMERCE' ? "e-commerce" : "informational"
       await resetAgentPromptsToDefaults(currentWorkspace!.id, true)
       toast.success(`Settings saved and prompts updated to ${newType} templates`)
     } catch (error: any) {
@@ -695,7 +695,7 @@ export function SettingsPage() {
     if (currentWorkspace) {
       setFormData(prev => ({
         ...prev,
-        sellsProductsAndServices: currentWorkspace.sellsProductsAndServices ?? true
+        channelMode: currentWorkspace.channelMode ?? 'ECOMMERCE'
       }))
     }
     setShowWorkspaceTypeChangeDialog(false)
@@ -750,7 +750,7 @@ export function SettingsPage() {
               chatbotName: formData.chatbotName,
               botIdentityResponse: formData.botIdentityResponse,
               toneOfVoice: formData.toneOfVoice,
-              sellsProductsAndServices: formData.sellsProductsAndServices,
+              channelMode: formData.channelMode,
               welcomeMessage: formData.welcomeMessage,
               customAiRules: formData.customAiRules,
               wipMessage: formData.wipMessage,
@@ -771,7 +771,7 @@ export function SettingsPage() {
               businessType: formData.businessType,
               currency: formData.currency,
               defaultLanguage: formData.defaultLanguage,
-              sellsProductsAndServices: formData.sellsProductsAndServices,
+              channelMode: formData.channelMode,
               enableWhatsapp: formData.enableWhatsapp,
               enableWidget: formData.enableWidget,
               address: formData.address,
@@ -827,7 +827,7 @@ export function SettingsPage() {
             workspaceId={currentWorkspace?.id || ""}
             errors={errors}
             canEdit={canEdit}
-            sellsProductsAndServices={formData.sellsProductsAndServices}
+            channelMode={formData.channelMode}
             onFieldChange={handleFieldChange}
             onFieldFocus={handleFieldFocus}
           />
@@ -977,7 +977,7 @@ export function SettingsPage() {
                 activeSection === "ai-personality" ||
                 ["welcomeMessage", "agentSystemPrompt", "botDescription"].includes(activeHelpField)
               }
-              sellsProductsAndServices={formData.sellsProductsAndServices}
+              isEcommerce={formData.channelMode === 'ECOMMERCE'}
             />
           }
         >
@@ -1066,8 +1066,8 @@ export function SettingsPage() {
             <DialogDescription className="space-y-3">
               <p>
                 You are changing the workspace type from{" "}
-                <strong>{currentWorkspace?.sellsProductsAndServices ? "E-commerce" : "Informational"}</strong> to{" "}
-                <strong>{pendingFormData?.sellsProductsAndServices ? "E-commerce" : "Informational"}</strong>.
+                <strong>{currentWorkspace?.channelMode === 'ECOMMERCE' ? "E-commerce" : "Informational"}</strong> to{" "}
+                <strong>{pendingFormData?.channelMode === 'ECOMMERCE' ? "E-commerce" : "Informational"}</strong>.
               </p>
               <p className="text-red-600 font-medium">
                 ⚠️ This will RESET all agent prompts to the new template type!

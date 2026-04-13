@@ -5,8 +5,9 @@
  * Used by RouterOrchestrationService to select appropriate routing logic.
  * 
  * Strategies:
- * - InformationalWorkspaceStrategy: For workspaces with sellsProductsAndServices=false
- * - EcommerceWorkspaceStrategy: For workspaces with sellsProductsAndServices=true
+ * - EcommerceWorkspaceStrategy: For workspaces with channelMode=ECOMMERCE
+ * - InformationalWorkspaceStrategy: For workspaces with channelMode=INFORMATIONAL
+ * - FlowWorkspaceStrategy: For workspaces with channelMode=FLOW
  * 
  * @pattern Strategy Pattern
  * @architecture Clean Architecture with SOLID principles

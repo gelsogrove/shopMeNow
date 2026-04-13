@@ -458,7 +458,7 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
           hasSalesAgents: true,
           notificationEmail: true,
           allowedExternalLinks: true,
-          sellsProductsAndServices: true,
+          channelMode: true,
           address: true,
           customAiRules: true,
           chatbotName: true,

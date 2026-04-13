@@ -1,8 +1,8 @@
 /**
- * Unit Tests for GET /customer-profile/:token - sellsProductsAndServices in workspace
+ * Unit Tests for GET /customer-profile/:token - channelMode in workspace
  *
  * WHAT: Tests that the customer profile GET endpoint returns
- *       sellsProductsAndServices in the workspace object
+ *       channelMode in the workspace object
  *
  * WHY: Frontend needs this flag to conditionally render:
  *   - Shipping Address section (hidden for informational)
@@ -11,16 +11,16 @@
  *   Without this flag, frontend can't distinguish workspace types.
  *
  * SCENARIOS COVERED:
- *   1. E-commerce workspace: Response includes sellsProductsAndServices=true
- *   2. Informational workspace: Response includes sellsProductsAndServices=false
+ *   1. E-commerce workspace: Response includes channelMode=true
+ *   2. Informational workspace: Response includes channelMode=false
  *   3. Workspace data always returned with customer profile
  *   4. Customer not found: Returns 404
- *   5. Workspace includes id, name, logoUrl, sellsProductsAndServices
+ *   5. Workspace includes id, name, logoUrl, channelMode
  *
  * CRITICAL RULES:
  *   - Tests define behavior - code must follow tests
  *   - ALL queries filter by workspaceId (multi-tenant isolation)
- *   - sellsProductsAndServices MUST be in workspace select
+ *   - channelMode MUST be in workspace select
  */
 
 import { Request, Response } from "express"
@@ -116,14 +116,14 @@ const handleGetProfile = async (
       })
     }
 
-    // CRITICAL: workspace select MUST include sellsProductsAndServices
+    // CRITICAL: workspace select MUST include channelMode
     const workspace = await mockPrisma.workspace.findUnique({
       where: { id: workspaceId },
       select: {
         id: true,
         name: true,
         logoUrl: true,
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
       },
     })
 
@@ -180,11 +180,11 @@ const createWorkspaceMock = (overrides: any = {}) => ({
   id: "workspace-123",
   name: "Test Workspace",
   logoUrl: "https://example.com/logo.png",
-  sellsProductsAndServices: true,
+  channelMode: 'ECOMMERCE' as any,
   ...overrides,
 })
 
-describe("GET /customer-profile/:token - sellsProductsAndServices", () => {
+describe("GET /customer-profile/:token - channelMode", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     // Default: parseCustomerAddresses returns empty
@@ -195,10 +195,10 @@ describe("GET /customer-profile/:token - sellsProductsAndServices", () => {
   })
 
   describe("E-commerce workspace", () => {
-    // SCENARIO: E-commerce workspace (sellsProductsAndServices=true) returns flag in response
-    it("should return sellsProductsAndServices=true in workspace object", async () => {
+    // SCENARIO: E-commerce workspace (channelMode=true) returns flag in response
+    it("should return channelMode=true in workspace object", async () => {
       const customer = createCustomerMock()
-      const workspace = createWorkspaceMock({ sellsProductsAndServices: true })
+      const workspace = createWorkspaceMock({ channelMode: 'ECOMMERCE' as any })
 
       mockPrisma.customers.findFirst.mockResolvedValue(customer)
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
@@ -208,13 +208,13 @@ describe("GET /customer-profile/:token - sellsProductsAndServices", () => {
 
       await handleGetProfile(req, res)
 
-      // RULE: Response includes workspace with sellsProductsAndServices
+      // RULE: Response includes workspace with channelMode
       expect((res as any).json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
           data: expect.objectContaining({
             workspace: expect.objectContaining({
-              sellsProductsAndServices: true,
+              channelMode: 'ECOMMERCE' as any,
             }),
           }),
         })
@@ -223,11 +223,11 @@ describe("GET /customer-profile/:token - sellsProductsAndServices", () => {
   })
 
   describe("Informational workspace", () => {
-    // SCENARIO: Informational workspace (sellsProductsAndServices=false) returns flag in response
-    it("should return sellsProductsAndServices=false in workspace object", async () => {
+    // SCENARIO: Informational workspace (channelMode=false) returns flag in response
+    it("should return channelMode=false in workspace object", async () => {
       const customer = createCustomerMock()
       const workspace = createWorkspaceMock({
-        sellsProductsAndServices: false,
+        channelMode: 'INFORMATIONAL' as any,
       })
 
       mockPrisma.customers.findFirst.mockResolvedValue(customer)
@@ -238,13 +238,13 @@ describe("GET /customer-profile/:token - sellsProductsAndServices", () => {
 
       await handleGetProfile(req, res)
 
-      // RULE: Informational workspace returns sellsProductsAndServices=false
+      // RULE: Informational workspace returns channelMode=false
       expect((res as any).json).toHaveBeenCalledWith(
         expect.objectContaining({
           success: true,
           data: expect.objectContaining({
             workspace: expect.objectContaining({
-              sellsProductsAndServices: false,
+              channelMode: 'INFORMATIONAL' as any,
             }),
           }),
         })
@@ -254,13 +254,13 @@ describe("GET /customer-profile/:token - sellsProductsAndServices", () => {
 
   describe("Workspace data completeness", () => {
     // SCENARIO: Workspace object in response must have all 4 fields
-    it("should include id, name, logoUrl, sellsProductsAndServices in workspace", async () => {
+    it("should include id, name, logoUrl, channelMode in workspace", async () => {
       const customer = createCustomerMock()
       const workspace = createWorkspaceMock({
         id: "ws-456",
         name: "My Store",
         logoUrl: "https://cdn.example.com/logo.png",
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
       })
 
       mockPrisma.customers.findFirst.mockResolvedValue(customer)
@@ -280,7 +280,7 @@ describe("GET /customer-profile/:token - sellsProductsAndServices", () => {
         "logoUrl",
         "https://cdn.example.com/logo.png"
       )
-      expect(responseData).toHaveProperty("sellsProductsAndServices", true)
+      expect(responseData).toHaveProperty("channelMode", "ECOMMERCE")
     })
 
     // SCENARIO: Workspace with null logoUrl
@@ -288,7 +288,7 @@ describe("GET /customer-profile/:token - sellsProductsAndServices", () => {
       const customer = createCustomerMock()
       const workspace = createWorkspaceMock({
         logoUrl: null,
-        sellsProductsAndServices: false,
+        channelMode: 'INFORMATIONAL' as any,
       })
 
       mockPrisma.customers.findFirst.mockResolvedValue(customer)
@@ -302,14 +302,14 @@ describe("GET /customer-profile/:token - sellsProductsAndServices", () => {
       const responseData = (res as any).json.mock.calls[0][0].data.workspace
 
       expect(responseData.logoUrl).toBeNull()
-      expect(responseData.sellsProductsAndServices).toBe(false)
+      expect(responseData.channelMode).toBe('INFORMATIONAL')
     })
   })
 
-  describe("Workspace select includes sellsProductsAndServices", () => {
+  describe("Workspace select includes channelMode", () => {
     // SCENARIO: Verify prisma.workspace.findUnique is called with correct select
-    // RULE: This is the core regression test - sellsProductsAndServices MUST be in select
-    it("should query workspace with sellsProductsAndServices in select", async () => {
+    // RULE: This is the core regression test - channelMode MUST be in select
+    it("should query workspace with channelMode in select", async () => {
       const customer = createCustomerMock()
       const workspace = createWorkspaceMock()
 
@@ -321,14 +321,14 @@ describe("GET /customer-profile/:token - sellsProductsAndServices", () => {
 
       await handleGetProfile(req, res)
 
-      // RULE: Prisma select MUST include sellsProductsAndServices
+      // RULE: Prisma select MUST include channelMode
       expect(mockPrisma.workspace.findUnique).toHaveBeenCalledWith({
         where: { id: "workspace-123" },
         select: {
           id: true,
           name: true,
           logoUrl: true,
-          sellsProductsAndServices: true,
+          channelMode: 'ECOMMERCE' as any,
         },
       })
     })

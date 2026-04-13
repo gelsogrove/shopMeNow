@@ -73,7 +73,7 @@ describe("CustomerSupportAgentLLM - temperature/model from DB", () => {
     prisma = db.prisma
 
     prisma.workspace.findUnique.mockResolvedValue({
-      sellsProductsAndServices: true,
+      channelMode: 'ECOMMERCE' as any,
       hasHumanSupport: true,
     })
   })

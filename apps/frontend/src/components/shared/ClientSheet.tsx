@@ -73,14 +73,14 @@ interface ClientSheetProps {
 
 // Helper to get workspaceId from localStorage
 function getWorkspaceId() {
-  const workspace = storage.getWorkspace<{ id?: string; sellsProductsAndServices?: boolean }>()
+  const workspace = storage.getWorkspace<{ id?: string; channelMode?: string }>()
   return workspace?.id || null
 }
 
 // Helper to check if workspace is e-commerce
 function isEcommerceChannel() {
-  const workspace = storage.getWorkspace<{ id?: string; sellsProductsAndServices?: boolean }>()
-  return workspace?.sellsProductsAndServices ?? false
+  const workspace = storage.getWorkspace<{ id?: string; channelMode?: string }>()
+  return workspace?.channelMode === 'ECOMMERCE'
 }
 
 // Fallback languages when workspace has no languages configured

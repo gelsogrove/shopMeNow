@@ -255,7 +255,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
             >
               {t('nav.agents')}
             </Button>
-            {workspace?.sellsProductsAndServices !== false && (
+            {workspace?.channelMode === 'ECOMMERCE' && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -279,7 +279,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
               </DropdownMenu>
             )}
             {/* Services standalone - for all informational workspaces (need services to set up calendar booking) */}
-            {workspace?.sellsProductsAndServices !== true && (
+            {workspace?.channelMode !== 'ECOMMERCE' && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -290,7 +290,7 @@ export function Header({ onMobileMenuToggle }: { onMobileMenuToggle?: () => void
               </Button>
             )}
             {/* Sales Agents standalone - for informational workspaces with sales agents */}
-            {workspace?.sellsProductsAndServices !== true && workspace?.hasSalesAgents === true && (
+            {workspace?.channelMode !== 'ECOMMERCE' && workspace?.hasSalesAgents === true && (
               <Button
                 variant="ghost"
                 size="sm"

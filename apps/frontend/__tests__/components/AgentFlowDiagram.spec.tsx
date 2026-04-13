@@ -159,14 +159,14 @@ describe("AgentFlowDiagram", () => {
 
   describe("E-commerce Agent Filtering", () => {
     /**
-     * RULE: When workspace has sellsProductsAndServices=false,
+     * RULE: When workspace has channelMode=false,
      * e-commerce agents (PRODUCT_SEARCH, CART_MANAGEMENT, ORDER_TRACKING)
      * should be HIDDEN from the flow diagram.
      */
-    it("should hide e-commerce agents when sellsProductsAndServices=false", () => {
+    it("should hide e-commerce agents when channelMode=false", () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={false}
+          isEcommerce={false}
           agents={mockAgents}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}
@@ -187,13 +187,13 @@ describe("AgentFlowDiagram", () => {
     })
 
     /**
-     * RULE: When workspace has sellsProductsAndServices=true,
+     * RULE: When workspace has channelMode=true,
      * ALL agents should be visible in the flow diagram.
      */
-    it("should show e-commerce agents when sellsProductsAndServices=true", () => {
+    it("should show e-commerce agents when channelMode=true", () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={true}
+          isEcommerce={true}
           agents={mockAgents}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}
@@ -213,10 +213,10 @@ describe("AgentFlowDiagram", () => {
     /**
      * RULE: Info-only mode should display a badge indicating e-commerce agents are hidden.
      */
-    it("should show info-only mode badge when sellsProductsAndServices=false", () => {
+    it("should show info-only mode badge when channelMode=false", () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={false}
+          isEcommerce={false}
           agents={mockAgents}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}
@@ -235,7 +235,7 @@ describe("AgentFlowDiagram", () => {
     it("should open edit Sheet when clicking Translation Layer", async () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={true}
+          isEcommerce={true}
           agents={mockAgents}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}
@@ -259,7 +259,7 @@ describe("AgentFlowDiagram", () => {
     it("should open edit Sheet when clicking Widget Security Layer", async () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={true}
+          isEcommerce={true}
           agents={mockAgents}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}
@@ -286,7 +286,7 @@ describe("AgentFlowDiagram", () => {
     it("should open edit Sheet when clicking on editable agent", async () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={true}
+          isEcommerce={true}
           agents={mockAgents}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}
@@ -318,7 +318,7 @@ describe("AgentFlowDiagram", () => {
     it("should call onSaveAgent when saving changes", async () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={true}
+          isEcommerce={true}
           agents={mockAgents}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}
@@ -356,7 +356,7 @@ describe("AgentFlowDiagram", () => {
     it("should open confirmation dialog when clicking reset button", async () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={true}
+          isEcommerce={true}
           agents={mockAgents}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}
@@ -383,7 +383,7 @@ describe("AgentFlowDiagram", () => {
     it("should call onResetToDefaults when confirming reset", async () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={true}
+          isEcommerce={true}
           agents={mockAgents}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}
@@ -421,7 +421,7 @@ describe("AgentFlowDiagram", () => {
     it("should display customer message and response nodes", () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={true}
+          isEcommerce={true}
           agents={mockAgents}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}
@@ -442,7 +442,7 @@ describe("AgentFlowDiagram", () => {
     it("should display Router Agent after customer message", () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={true}
+          isEcommerce={true}
           agents={mockAgents}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}
@@ -459,7 +459,7 @@ describe("AgentFlowDiagram", () => {
     it("should display Conversation History with humanization label", () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={true}
+          isEcommerce={true}
           agents={mockAgents}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}
@@ -479,7 +479,7 @@ describe("AgentFlowDiagram", () => {
     it("should show loading spinner when isLoading=true", () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={true}
+          isEcommerce={true}
           agents={[]}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}
@@ -500,7 +500,7 @@ describe("AgentFlowDiagram", () => {
     it("should display legend with icon explanations", () => {
       render(
         <AgentFlowDiagram
-          sellsProductsAndServices={true}
+          isEcommerce={true}
           agents={mockAgents}
           workspaceId="workspace-1"
           onSaveAgent={mockSaveAgent}

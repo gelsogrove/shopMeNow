@@ -99,11 +99,11 @@ describe("Blocked User Handling - P1 Security", () => {
         workspaceId,
       })
 
-      // Mock workspace (required for sellsProductsAndServices check)
+      // Mock workspace (required for channelMode check)
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
         name: "Test Workspace",
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         activeChatbot: true,
       })
 
@@ -136,7 +136,7 @@ describe("Blocked User Handling - P1 Security", () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
         name: "Test Workspace",
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         activeChatbot: true,
       })
 
@@ -167,7 +167,7 @@ describe("Blocked User Handling - P1 Security", () => {
       mockPrisma.workspace.findUnique.mockResolvedValue({
         id: workspaceId,
         name: "Test Workspace",
-        sellsProductsAndServices: true,
+        channelMode: 'ECOMMERCE' as any,
         activeChatbot: true,
       })
 
