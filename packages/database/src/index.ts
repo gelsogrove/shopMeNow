@@ -58,6 +58,7 @@ export {
   // Enums
   UserStatus,
   WorkspaceStatus,
+  ChannelMode,
   ProductStatus,
   DocumentStatus,
   OrderStatus,
