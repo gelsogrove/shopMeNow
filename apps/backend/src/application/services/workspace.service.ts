@@ -11,7 +11,6 @@ import { WorkspaceRepository } from "../../repositories/workspace.repository"
 import logger from "../../utils/logger"
 import { dynamicAgents } from "../../../prisma/data/dynamicAgents"
 import { initialFAQs } from "../../../prisma/data/initialFAQs"
-import { getValidAgentTypesForMode } from "../../utils/template-path.helper"
 import { WasenderClientService } from "../../services/wasender-client.service"
 import { invalidateWorkspaceConfig } from "../chat-engine/chat-engine.service"
 import {
@@ -126,143 +125,6 @@ For privacy inquiries, please contact our support team.`
     });
 
     logger.info(`✅ Seeded ${functions.length} system functions for workspace ${workspaceId}`);
-  }
-
-  /**
-   * Sync system calling functions when workspace type changes (info ↔ ecommerce).
-   * - ECOMMERCE-ONLY functions: productSearchAgent, cartManagementAgent, orderTrackingAgent
-   *   → enable (or create if missing) when switching TO ecommerce
-   *   → disable (isActive=false) when switching TO info
-   * - CUSTOM (non-system) functions added by the client are NEVER touched.
-   * @private
-   */
-  private async syncSystemCallingFunctions(workspaceId: string, isEcommerce: boolean): Promise<void> {
-    const ECOMMERCE_ONLY_FN_NAMES = ['productSearchAgent', 'cartManagementAgent', 'orderTrackingAgent']
-
-    // Ensure always-available system functions exist for this workspace
-    for (const fnDef of ALWAYS_AVAILABLE_FUNCTIONS) {
-      try {
-        await this.prisma.workspaceCallingFunction.upsert({
-          where: { workspaceId_functionName: { workspaceId, functionName: fnDef.functionName } },
-          update: { isActive: true },
-          create: {
-            workspaceId,
-            functionName: fnDef.functionName,
-            description: fnDef.description,
-            parameters: fnDef.parameters,
-            isSystemFunction: true,
-            executionType: fnDef.executionType,
-            isActive: true
-          }
-        })
-      } catch (error) {
-        logger.warn(`⚠️ Failed to ensure always-available function ${fnDef.functionName}:`, error)
-      }
-    }
-
-    if (isEcommerce) {
-      // Enable or create the ecommerce-only system functions
-      for (const fnDef of ECOMMERCE_FUNCTIONS) {
-        try {
-          const existing = await this.prisma.workspaceCallingFunction.findUnique({
-            where: { workspaceId_functionName: { workspaceId, functionName: fnDef.functionName } }
-          })
-          if (existing) {
-            await this.prisma.workspaceCallingFunction.update({
-              where: { workspaceId_functionName: { workspaceId, functionName: fnDef.functionName } },
-              data: { isActive: true }
-            })
-          } else {
-            await this.prisma.workspaceCallingFunction.create({
-              data: {
-                workspaceId,
-                functionName: fnDef.functionName,
-                description: fnDef.description,
-                parameters: fnDef.parameters,
-                isSystemFunction: true,
-                executionType: fnDef.executionType,
-                isActive: true
-              }
-            })
-          }
-        } catch (error) {
-          logger.warn(`⚠️ Failed to enable/create system function ${fnDef.functionName}:`, error)
-        }
-      }
-    } else {
-      // Disable ONLY ecommerce-only SYSTEM functions — custom client functions are untouched
-      try {
-        const result = await this.prisma.workspaceCallingFunction.updateMany({
-          where: {
-            workspaceId,
-            functionName: { in: ECOMMERCE_ONLY_FN_NAMES },
-            isSystemFunction: true
-          },
-          data: { isActive: false }
-        })
-        logger.info(`✅ Disabled ${result.count} ecommerce system functions for workspace ${workspaceId}`)
-      } catch (error) {
-        logger.warn(`⚠️ Failed to disable ecommerce system functions:`, error)
-      }
-    }
-  }
-
-  /**
-   * Reset all default agent prompts to the correct templates for the workspace type.
-   * Called when workspace type changes (channelMode toggled).
-   * Uses upsert so missing agents are created and existing ones get the fresh default prompt.
-   * @private
-   */
-  private async resetDefaultAgentPrompts(workspaceId: string, channelMode: ChannelMode): Promise<void> {
-    const agents = dynamicAgents(workspaceId, channelMode)
-    let resetCount = 0
-
-    for (const agent of agents) {
-      try {
-        await this.prisma.agentConfig.upsert({
-          where: { workspaceId_type: { workspaceId, type: agent.type } },
-          update: {
-            systemPrompt: agent.systemPrompt,
-            isActive: agent.isActive,
-            availableFunctions: agent.availableFunctions as any,
-            name: agent.name,
-            model: agent.model,
-            temperature: agent.temperature,
-            maxTokens: agent.maxTokens,
-          },
-          create: {
-            workspaceId,
-            name: agent.name,
-            type: agent.type,
-            systemPrompt: agent.systemPrompt,
-            model: agent.model,
-            temperature: agent.temperature,
-            maxTokens: agent.maxTokens,
-            order: agent.order,
-            isActive: agent.isActive,
-            availableFunctions: agent.availableFunctions as any,
-          }
-        })
-        resetCount++
-      } catch (error) {
-        logger.warn(`⚠️ Failed to reset prompt for agent ${agent.type}:`, error)
-      }
-    }
-
-    // BUG-1 FIX: Delete orphaned agents that don't belong to the new channelMode
-    // e.g. switching ECOMMERCE→INFORMATIONAL leaves PRODUCT_SEARCH, CART_MANAGEMENT, etc. as orphans
-    const validTypes = getValidAgentTypesForMode(channelMode) as import("@echatbot/database").AgentType[]
-    const deleted = await this.prisma.agentConfig.deleteMany({
-      where: {
-        workspaceId,
-        type: { notIn: validTypes }
-      }
-    })
-    if (deleted.count > 0) {
-      logger.info(`🗑️ Deleted ${deleted.count} orphaned agent configs for workspace ${workspaceId} (channelMode: ${channelMode})`)
-    }
-
-    logger.info(`✅ Reset ${resetCount} default agent prompts for workspace ${workspaceId} (channelMode: ${channelMode})`)
   }
 
   /**
@@ -925,13 +787,16 @@ For privacy inquiries, please contact our support team.`
       throw err
     }
 
-    // When workspace type changes: sync calling functions + reset default prompts
+    // 🚫 BLOCKED: channelMode is immutable after workspace creation.
+    // Changing it would require syncing calling functions, resetting agent prompts,
+    // and handling many edge cases. Users must delete the workspace and create a new one.
     if (data.channelMode !== undefined &&
         data.channelMode !== currentWorkspace.channelMode) {
-      const newChannelMode = data.channelMode as ChannelMode
-      logger.info(`🔄 Workspace type changed → ${newChannelMode} — syncing functions & prompts`)
-      await this.syncSystemCallingFunctions(id, newChannelMode === "ECOMMERCE")
-      await this.resetDefaultAgentPrompts(id, newChannelMode)
+      logger.warn(`❌ Attempted to change channelMode for workspace ${id} from ${currentWorkspace.channelMode} to ${data.channelMode}`)
+      const err: any = new Error("CHANNEL_MODE_IMMUTABLE")
+      err.statusCode = 400
+      err.message = "Channel mode cannot be changed after creation. Please delete this workspace and create a new one."
+      throw err
     }
 
     // Generate slug if name is updated and slug is not provided

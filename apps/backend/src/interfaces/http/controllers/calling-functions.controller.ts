@@ -3,10 +3,47 @@ import { Request, Response } from "express"
 import logger from "../../../utils/logger"
 import { WorkspaceCallingFunctionRepository } from "../../../repositories/workspace-calling-function.repository"
 import { WebhookDispatchService } from "../../../services/webhook-dispatch.service"
+import { SYSTEM_FUNCTIONS_BY_NAME, SystemFunctionDef } from "../../../constants/system-functions"
+import { getValidAgentTypesForMode } from "../../../utils/template-path.helper"
 
 /**
- * Custom Calling Functions Controller
- * Handles CRUD for custom tools and webhook testing
+ * Agent types that handle infrastructure tasks and are NOT valid targets
+ * for DELEGATE_TO_AGENT calling functions. These agents are never user-facing
+ * tools — they're internal pipeline stages (routing, security, translation).
+ */
+const NON_DISPATCH_AGENTS = new Set(["ROUTER", "SECURITY", "TRANSLATION", "SUMMARY_AGENT", "CONVERSATION_HISTORY"])
+
+/**
+ * Fields that cannot be changed on ANY function (system or custom).
+ * functionName is the primary key within a workspace, isSystemFunction
+ * prevents privilege escalation, and workspaceId/id/createdAt are DB-managed.
+ */
+const IMMUTABLE_KEYS = new Set(["functionName", "isSystemFunction", "workspaceId", "id", "createdAt"])
+
+/**
+ * Calling Functions Controller
+ *
+ * Full CRUD for workspace calling functions (both system and custom).
+ * System functions are pre-defined in SYSTEM_FUNCTIONS_BY_NAME and seeded at workspace creation.
+ * Custom functions are user-created (WEBHOOK, INTERNAL, DELEGATE_TO_AGENT).
+ *
+ * Architecture:
+ *   - System functions: seeded at workspace creation via seedSystemFunctions()
+ *   - channelMode is immutable after creation → no sync logic needed on update
+ *   - All functions (system + custom) support full CRUD
+ *   - Deleted system functions can be restored via /reinstall
+ *   - Immutable fields: functionName, isSystemFunction, workspaceId, id, createdAt
+ *   - attachedLlm: links DELEGATE_TO_AGENT functions to a specialist agent type
+ *
+ * Endpoints:
+ *   GET  /                      → List all functions (filtered by workspace capabilities)
+ *   GET  /agent-types           → Valid agent types for DELEGATE_TO_AGENT dropdown
+ *   GET  /system-missing        → System functions not currently installed
+ *   POST /                      → Create custom function
+ *   POST /test-webhook          → Test webhook connectivity
+ *   PATCH /:functionName        → Update any function (respects immutable fields)
+ *   DELETE /:functionName       → Hard delete any function
+ *   POST /:functionName/reinstall → Restore system function to factory defaults
  */
 export class CallingFunctionsController {
     private repository: WorkspaceCallingFunctionRepository
@@ -28,7 +65,10 @@ export class CallingFunctionsController {
                 return res.status(400).json({ error: "Workspace ID required" })
             }
 
-            // Lazy migration: ensure changeLanguage exists for all workspaces (added 2026)
+            // Lazy migration: ensure changeLanguage exists for workspaces created BEFORE
+            // this function was added to ALWAYS_AVAILABLE_FUNCTIONS in system-functions.ts.
+            // New workspaces get it via seedSystemFunctions(). This can be removed once all
+            // production workspaces have been migrated (i.e. after one full API call cycle).
             try {
                 await this.prisma.workspaceCallingFunction.upsert({
                     where: { workspaceId_functionName: { workspaceId, functionName: "changeLanguage" } },
@@ -83,7 +123,7 @@ export class CallingFunctionsController {
     async createFunction(req: Request, res: Response) {
         try {
             const workspaceId = (req as any).workspaceId
-            const { functionName, description, responseInstructions, parameters, executionType, isActive, webhookUrl, credentialsMapping } = req.body
+            const { functionName, description, responseInstructions, parameters, executionType, isActive, webhookUrl, credentialsMapping, attachedLlm } = req.body
 
             if (!functionName || !description || !executionType) {
                 return res.status(400).json({ error: "Missing required fields" })
@@ -105,7 +145,8 @@ export class CallingFunctionsController {
                 isActive: isActive !== undefined ? isActive : true,
                 isSystemFunction: false, // Custom functions are never system functions
                 webhookUrl: webhookUrl || null,
-                credentialsMapping: credentialsMapping || null
+                credentialsMapping: credentialsMapping || null,
+                attachedLlm: attachedLlm || null,
             })
 
             logger.info(`✅ Custom function created: ${functionName} for workspace ${workspaceId}`)
@@ -117,7 +158,9 @@ export class CallingFunctionsController {
     }
 
     /**
-     * Update a function
+     * Update a function.
+     * `functionName` and `isSystemFunction` are immutable and cannot be changed on any function.
+     * All other fields are editable for both system and custom functions.
      */
     async updateFunction(req: Request, res: Response) {
         try {
@@ -130,18 +173,13 @@ export class CallingFunctionsController {
                 return res.status(404).json({ error: "Function not found" })
             }
 
-            // Prevent system function restriction updates if necessary
-            if (existing.isSystemFunction) {
-                // Limited updates for system functions
-                const allowedKeys = ['isActive', 'description'] // Maybe allow changing description?
-                const restrictedKeys = Object.keys(data).filter(k => !allowedKeys.includes(k))
-
-                if (restrictedKeys.length > 0) {
-                    return res.status(403).json({
-                        error: "System function restriction",
-                        message: `Cannot update these fields on a system function: ${restrictedKeys.join(', ')}`
-                    })
-                }
+            // Reject attempts to change immutable fields on any function
+            const blockedKeys = Object.keys(data).filter(k => IMMUTABLE_KEYS.has(k))
+            if (blockedKeys.length > 0) {
+                return res.status(403).json({
+                    error: "Cannot modify immutable fields",
+                    message: `These fields cannot be changed: ${blockedKeys.join(', ')}`
+                })
             }
 
             const updated = await this.repository.update(workspaceId, functionName, data)
@@ -154,7 +192,8 @@ export class CallingFunctionsController {
     }
 
     /**
-     * Delete a function
+     * Delete a function (system or custom).
+     * Hard delete — no soft delete.
      */
     async deleteFunction(req: Request, res: Response) {
         try {
@@ -166,15 +205,109 @@ export class CallingFunctionsController {
                 return res.status(404).json({ error: "Function not found" })
             }
 
-            if (existing.isSystemFunction) {
-                return res.status(403).json({ error: "Cannot delete system functions" })
-            }
-
             await this.repository.delete(workspaceId, functionName)
             logger.info(`✅ Function deleted: ${functionName} from workspace ${workspaceId}`)
             return res.status(204).send()
         } catch (error) {
             logger.error("❌ Failed to delete calling function:", error)
+            return res.status(500).json({ error: "Internal server error" })
+        }
+    }
+
+    /**
+     * Returns system functions that are valid for this workspace but NOT currently installed.
+     * Used by the UI to show a "Reinstall" section for accidentally-deleted system functions.
+     */
+    async getMissingSystemFunctions(req: Request, res: Response) {
+        try {
+            const workspaceId = (req as any).workspaceId
+
+            const workspace = await this.prisma.workspace.findUnique({
+                where: { id: workspaceId },
+                select: { enableCalendarBooking: true, hasHumanSupport: true, channelMode: true }
+            })
+            if (!workspace) {
+                return res.status(404).json({ error: "Workspace not found" })
+            }
+
+            const installedFunctions = await this.repository.findAllByWorkspace(workspaceId)
+            const installedNames = new Set(installedFunctions.map(f => f.functionName))
+
+            // Same filtering rules as getFunctions — only show functions valid for this workspace
+            const APPOINTMENT_FN_NAMES = ["bookAppointment", "cancelAppointment", "getCustomerAppointments", "listAvailableSlots", "rescheduleAppointment"]
+            const ECOMMERCE_FN_NAMES = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
+
+            const missing: SystemFunctionDef[] = []
+            for (const [name, fnDef] of SYSTEM_FUNCTIONS_BY_NAME) {
+                if (installedNames.has(name)) continue
+                if (APPOINTMENT_FN_NAMES.includes(name) && !workspace.enableCalendarBooking) continue
+                if (name === "customerSupportAgent" && !workspace.hasHumanSupport) continue
+                if (ECOMMERCE_FN_NAMES.includes(name) && workspace.channelMode !== "ECOMMERCE") continue
+                missing.push(fnDef)
+            }
+
+            return res.status(200).json({ missing })
+        } catch (error) {
+            logger.error("❌ Failed to get missing system functions:", error)
+            return res.status(500).json({ error: "Internal server error" })
+        }
+    }
+
+    /**
+     * Returns valid DELEGATE_TO_AGENT types for the workspace's channelMode.
+     * Excludes infrastructure agents (ROUTER, SECURITY, etc.) — only specialist agents capable of handling user requests.
+     */
+    async getAgentTypes(req: Request, res: Response) {
+        try {
+            const workspaceId = (req as any).workspaceId
+
+            const workspace = await this.prisma.workspace.findUnique({
+                where: { id: workspaceId },
+                select: { channelMode: true }
+            })
+            if (!workspace) {
+                return res.status(404).json({ error: "Workspace not found" })
+            }
+
+            const allTypes = getValidAgentTypesForMode(workspace.channelMode as any)
+            const agentTypes = allTypes.filter(t => !NON_DISPATCH_AGENTS.has(t))
+
+            return res.status(200).json({ agentTypes })
+        } catch (error) {
+            logger.error("❌ Failed to get agent types:", error)
+            return res.status(500).json({ error: "Internal server error" })
+        }
+    }
+
+    /**
+     * Reinstall a system function to its factory defaults.
+     * Validates that the functionName is a known system function, then upserts it.
+     * Used to restore accidentally deleted or modified system functions.
+     */
+    async reinstallFunction(req: Request, res: Response) {
+        try {
+            const workspaceId = (req as any).workspaceId
+            const { functionName } = req.params
+
+            const fnDef = SYSTEM_FUNCTIONS_BY_NAME.get(functionName)
+            if (!fnDef) {
+                return res.status(400).json({
+                    error: "Not a valid system function",
+                    message: `"${functionName}" is not a known system function`
+                })
+            }
+
+            // Upsert: create if missing, restore to defaults if modified
+            const result = await this.prisma.workspaceCallingFunction.upsert({
+                where: { workspaceId_functionName: { workspaceId, functionName } },
+                update: { ...fnDef, workspaceId },
+                create: { ...fnDef, workspaceId },
+            })
+
+            logger.info(`✅ Reinstalled system function "${functionName}" for workspace ${workspaceId}`)
+            return res.status(200).json(result)
+        } catch (error) {
+            logger.error("❌ Failed to reinstall function:", error)
             return res.status(500).json({ error: "Internal server error" })
         }
     }

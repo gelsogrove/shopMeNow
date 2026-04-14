@@ -1,5 +1,6 @@
 import { prisma, PrismaClient } from "@echatbot/database"
 import { Request, Response } from "express"
+import PDFDocument from "pdfkit"
 import logger from "../../../utils/logger"
 
 interface JWTPayload {
@@ -270,7 +271,6 @@ export class OrdersController {
       }
 
       // Generate professional PDF invoice
-      const PDFDocument = require('pdfkit')
       res.setHeader('Content-Type', 'application/pdf')
       res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderCode}.pdf`)
       const doc = new PDFDocument({ size: 'A4', margin: 50 })
@@ -454,7 +454,6 @@ export class OrdersController {
         return
       }
 
-      const PDFDocument = require('pdfkit')
       res.setHeader('Content-Type', 'application/pdf')
       res.setHeader('Content-Disposition', `attachment; filename=delivery-note-${order.orderCode}.pdf`)
       const doc = new PDFDocument({ size: 'A4', margin: 50 })

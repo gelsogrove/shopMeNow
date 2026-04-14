@@ -247,7 +247,6 @@ export class SupportTicketService {
           logger.info(`✅ Attachment saved to DB`)
         } catch (error) {
           logger.error("Failed to upload attachment", { error, filename: file.originalname })
-          console.error("ATTACHMENT UPLOAD ERROR:", error)
         }
       }
 

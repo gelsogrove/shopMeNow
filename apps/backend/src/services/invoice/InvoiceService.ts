@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit';
 import { storageService } from '../storage.service';
 import { prisma } from '@echatbot/database';
+import logger from '../../utils/logger';
 
 export interface InvoiceData {
   orderId: string;
@@ -79,7 +80,7 @@ export class InvoiceService {
 
     // 4. Genera e restituisce PDF Buffer (on-demand)
     const pdfBuffer = await this.createPDF(invoiceData);
-    console.log(`✅ Invoice PDF generated on-demand for order: ${order.orderCode}`);
+    logger.info(`✅ Invoice PDF generated on-demand for order: ${order.orderCode}`);
     return pdfBuffer;
   }
 

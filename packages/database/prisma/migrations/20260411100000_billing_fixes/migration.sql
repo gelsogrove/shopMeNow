@@ -22,6 +22,11 @@ ALTER TYPE "SubscriptionStatus" ADD VALUE IF NOT EXISTS 'CANCELLED';
 -- 2. Enum: TEXT config type for free-text platform settings
 ALTER TYPE "ConfigType" ADD VALUE IF NOT EXISTS 'TEXT';
 
+-- PostgreSQL requires new enum values to be committed before use in the same session.
+-- COMMIT the current transaction so 'TEXT' becomes available, then start a new one.
+COMMIT;
+BEGIN;
+
 -- 3. Table: invoice_year_sequences (replaces invoice_number_seq sequence)
 CREATE TABLE IF NOT EXISTS "invoice_year_sequences" (
   "year"       INTEGER NOT NULL,

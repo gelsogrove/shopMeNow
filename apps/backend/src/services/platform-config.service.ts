@@ -423,7 +423,7 @@ class PlatformConfigService {
         isActive: updated.isActive,
       }
     } catch (error) {
-      console.error(`[PlatformConfig] Failed to update ${key}:`, error)
+      logger.error(`[PlatformConfig] Failed to update ${key}:`, error)
       return null
     }
   }

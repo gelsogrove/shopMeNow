@@ -1,15 +1,16 @@
 /**
  * System Function Definitions — SINGLE SOURCE OF TRUTH
  * 
- * These are the default definitions for system calling functions.
- * Used by:
- *   - workspace.service.ts (workspace creation)
- *   - seed.ts (database seeding)
- *   - system-functions-sync.service.ts (startup sync for new functions)
+ * Default definitions for system calling functions seeded at workspace creation.
+ * channelMode is immutable after creation, so these are only used during:
+ *   - workspace.service.ts → seedSystemFunctions() (workspace creation)
+ *   - seed.ts (database seeding for dev/test)
+ *   - calling-functions.controller.ts → reinstallFunction() (restore to factory defaults)
+ *   - calling-functions.controller.ts → getMissingSystemFunctions() (show uninstalled functions)
  * 
  * The DATABASE is the source of truth for descriptions at runtime.
  * These defaults are only used when CREATING new functions.
- * Admin UI edits to descriptions are NEVER overwritten.
+ * Admin UI edits to descriptions are NEVER overwritten (except via reinstall).
  */
 
 export interface SystemFunctionDef {
@@ -18,6 +19,7 @@ export interface SystemFunctionDef {
   parameters: Record<string, any>
   isSystemFunction: true
   executionType: "INTERNAL" | "DELEGATE_TO_AGENT"
+  attachedLlm?: string  // Which agent type handles dispatch (matches getValidAgentTypesForMode() values)
   isActive: true
 }
 
@@ -50,6 +52,7 @@ export const CUSTOMER_SUPPORT_AGENT: SystemFunctionDef = {
   },
   isSystemFunction: true,
   executionType: "DELEGATE_TO_AGENT",
+  attachedLlm: "CUSTOMER_SUPPORT",
   isActive: true
 }
 
@@ -65,6 +68,7 @@ export const PROFILE_MANAGEMENT_AGENT: SystemFunctionDef = {
   },
   isSystemFunction: true,
   executionType: "DELEGATE_TO_AGENT",
+  attachedLlm: "PROFILE_MANAGEMENT",
   isActive: true
 }
 
@@ -101,6 +105,7 @@ export const PRODUCT_SEARCH_AGENT: SystemFunctionDef = {
   },
   isSystemFunction: true,
   executionType: "DELEGATE_TO_AGENT",
+  attachedLlm: "PRODUCT_SEARCH",
   isActive: true
 }
 
@@ -116,6 +121,7 @@ export const CART_MANAGEMENT_AGENT: SystemFunctionDef = {
   },
   isSystemFunction: true,
   executionType: "DELEGATE_TO_AGENT",
+  attachedLlm: "CART_MANAGEMENT",
   isActive: true
 }
 
@@ -131,6 +137,7 @@ export const ORDER_TRACKING_AGENT: SystemFunctionDef = {
   },
   isSystemFunction: true,
   executionType: "DELEGATE_TO_AGENT",
+  attachedLlm: "ORDER_TRACKING",
   isActive: true
 }
 
@@ -251,3 +258,8 @@ export const ALL_INFO_FUNCTIONS: SystemFunctionDef[] = [
   ...ALWAYS_AVAILABLE_FUNCTIONS,
   ...APPOINTMENT_FUNCTIONS,
 ]
+
+/** Map of all known system functions by name — used for reinstall validation */
+export const SYSTEM_FUNCTIONS_BY_NAME: ReadonlyMap<string, SystemFunctionDef> = new Map(
+  [...ALL_ECOMMERCE_FUNCTIONS, ...ALL_INFO_FUNCTIONS].map(fn => [fn.functionName, fn])
+)

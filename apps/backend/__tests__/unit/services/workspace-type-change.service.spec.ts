@@ -1,35 +1,22 @@
 /**
- * Unit Tests: Workspace Type Change — sync calling functions & reset prompts
+ * Unit Tests: Workspace channelMode Immutability
  *
- * RULE: When channelMode changes (info ↔ ecommerce):
- *   1. Ecommerce-only SYSTEM calling functions are enabled/created or disabled
- *   2. Custom (non-system) calling functions are NEVER touched
- *   3. All default agent prompts are reset to the correct templates for the new type
+ * RULE: channelMode is IMMUTABLE after workspace creation.
+ *   - Attempting to change it → 400 CHANNEL_MODE_IMMUTABLE error
+ *   - Sending the SAME value → allowed (no-op, proceeds normally)
+ *   - Omitting channelMode from payload → allowed (no change)
+ *   - No sync/reset operations exist anymore (deleted methods)
  *
- * ECOMMERCE-ONLY system functions: productSearchAgent, cartManagementAgent, orderTrackingAgent
- * ALWAYS-ON system functions: customerSupportAgent, profileManagementAgent, manageNotifications
+ * RATIONALE: Changing channelMode requires syncing calling functions, resetting
+ * agent prompts, and handling many edge cases. Instead, users must delete the
+ * workspace and create a new one with the desired channelMode.
  */
 
 import { WorkspaceService } from '../../../src/application/services/workspace.service'
 
 // ── Mock dynamicAgents ────────────────────────────────────────────────────────
 jest.mock('../../../prisma/data/dynamicAgents', () => ({
-  dynamicAgents: jest.fn((workspaceId: string, channelMode: string) => {
-    const isEcom = channelMode === 'ECOMMERCE'
-    return [
-    {
-      name: isEcom ? 'Router Agent' : 'Info Agent',
-      type: isEcom ? 'ROUTER' : 'INFO_AGENT',
-      systemPrompt: isEcom ? 'ecommerce-router-prompt' : 'info-agent-prompt',
-      model: 'openai/gpt-4o-mini',
-      temperature: 0.7,
-      maxTokens: 4096,
-      order: 0,
-      isActive: true,
-      availableFunctions: null,
-    },
-  ]
-  }),
+  dynamicAgents: jest.fn(() => []),
 }))
 
 // ── Mock WasenderClientService ────────────────────────────────────────────────
@@ -59,35 +46,29 @@ jest.mock('../../../src/utils/logger', () => ({
 
 // ── Prisma mock ───────────────────────────────────────────────────────────────
 const mockFindUnique = jest.fn()
-const mockUpdateMany = jest.fn()
-const mockCallingFunctionFindUnique = jest.fn()
-const mockCallingFunctionUpdate = jest.fn()
-const mockCallingFunctionCreate = jest.fn()
-const mockAgentConfigUpsert = jest.fn()
-const mockAgentConfigDeleteMany = jest.fn()
 const mockUserFindUnique = jest.fn()
 
 jest.mock('@echatbot/database', () => ({
   prisma: {
     workspace: { findUnique: (...args: any[]) => mockFindUnique(...args) },
     workspaceCallingFunction: {
-      findUnique: (...args: any[]) => mockCallingFunctionFindUnique(...args),
-      update: (...args: any[]) => mockCallingFunctionUpdate(...args),
-      create: (...args: any[]) => mockCallingFunctionCreate(...args),
-      updateMany: (...args: any[]) => mockUpdateMany(...args),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      create: jest.fn(),
+      updateMany: jest.fn(),
     },
-    agentConfig: { upsert: (...args: any[]) => mockAgentConfigUpsert(...args), deleteMany: (...args: any[]) => mockAgentConfigDeleteMany(...args) },
+    agentConfig: { upsert: jest.fn(), deleteMany: jest.fn() },
     user: { findUnique: (...args: any[]) => mockUserFindUnique(...args) },
   },
   PrismaClient: jest.fn().mockImplementation(() => ({
     workspace: { findUnique: (...args: any[]) => mockFindUnique(...args) },
     workspaceCallingFunction: {
-      findUnique: (...args: any[]) => mockCallingFunctionFindUnique(...args),
-      update: (...args: any[]) => mockCallingFunctionUpdate(...args),
-      create: (...args: any[]) => mockCallingFunctionCreate(...args),
-      updateMany: (...args: any[]) => mockUpdateMany(...args),
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      create: jest.fn(),
+      updateMany: jest.fn(),
     },
-    agentConfig: { upsert: (...args: any[]) => mockAgentConfigUpsert(...args), deleteMany: (...args: any[]) => mockAgentConfigDeleteMany(...args) },
+    agentConfig: { upsert: jest.fn(), deleteMany: jest.fn() },
     user: { findUnique: (...args: any[]) => mockUserFindUnique(...args) },
   })),
 }))
@@ -95,14 +76,13 @@ jest.mock('@echatbot/database', () => ({
 // ─────────────────────────────────────────────────────────────────────────────
 
 const WORKSPACE_ID = 'ws-test-001'
-const ECOMMERCE_ONLY_FUNCTIONS = ['productSearchAgent', 'cartManagementAgent', 'orderTrackingAgent']
 
-// Helper: build a mock currentWorkspace
-function makeCurrentWorkspace(isEcommerce: boolean) {
+// Helper: build a mock currentWorkspace with a given channelMode
+function makeCurrentWorkspace(channelMode: 'ECOMMERCE' | 'INFORMATIONAL') {
   return {
     enableWidget: false,
     enableWhatsapp: true,
-    channelMode: isEcommerce ? 'ECOMMERCE' : 'INFORMATIONAL',
+    channelMode,
     ownerId: 'owner-1',
     deletedAt: null,
     whatsappProvider: 'ultramsg',
@@ -110,7 +90,7 @@ function makeCurrentWorkspace(isEcommerce: boolean) {
   }
 }
 
-describe('WorkspaceService — type change (channelMode)', () => {
+describe('WorkspaceService — channelMode immutability', () => {
   let service: WorkspaceService
 
   beforeEach(() => {
@@ -121,196 +101,91 @@ describe('WorkspaceService — type change (channelMode)', () => {
     mockUserFindUnique.mockResolvedValue({ planType: 'STANDARD' })
     // Default: repo.update returns a minimal workspace
     mockRepoUpdate.mockResolvedValue({ id: WORKSPACE_ID, channelMode: 'ECOMMERCE' as any })
-    // Default: agentConfig.upsert succeeds
-    mockAgentConfigUpsert.mockResolvedValue({})
-    // Default: agentConfig.deleteMany (cleanup of invalid agents after mode change) succeeds
-    mockAgentConfigDeleteMany.mockResolvedValue({ count: 0 })
   })
 
   // ──────────────────────────────────────────────────────────────────────────
-  // SCENARIO: info → ecommerce (channelMode: 'INFORMATIONAL' as any → true)
+  // SCENARIO: Attempt to change channelMode → BLOCKED with 400
   // ──────────────────────────────────────────────────────────────────────────
 
-  describe('Switching from info → ecommerce', () => {
-    beforeEach(() => {
-      // GIVEN: workspace was in info mode
-      mockFindUnique.mockResolvedValue(makeCurrentWorkspace(false))
+  describe('Changing channelMode is blocked', () => {
+    it('throws CHANNEL_MODE_IMMUTABLE (400) when switching INFORMATIONAL → ECOMMERCE', async () => {
+      // GIVEN: workspace is currently INFORMATIONAL
+      mockFindUnique.mockResolvedValue(makeCurrentWorkspace('INFORMATIONAL'))
+
+      // WHEN: update attempts to change channelMode to ECOMMERCE
+      // THEN: throws error with statusCode 400
+      await expect(
+        service.update(WORKSPACE_ID, { channelMode: 'ECOMMERCE' as any })
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('Channel mode cannot be changed after creation'),
+        statusCode: 400,
+      })
+
+      // AND: repo.update is NEVER called (change blocked before DB write)
+      expect(mockRepoUpdate).not.toHaveBeenCalled()
     })
 
-    it('re-enables existing ecommerce system functions', async () => {
-      // GIVEN: all three ecommerce functions exist but are disabled
-      mockCallingFunctionFindUnique.mockResolvedValue({ id: 'fn-1', isActive: false, isSystemFunction: true })
-      mockCallingFunctionUpdate.mockResolvedValue({})
+    it('throws CHANNEL_MODE_IMMUTABLE (400) when switching ECOMMERCE → INFORMATIONAL', async () => {
+      // GIVEN: workspace is currently ECOMMERCE
+      mockFindUnique.mockResolvedValue(makeCurrentWorkspace('ECOMMERCE'))
 
-      await service.update(WORKSPACE_ID, { channelMode: 'ECOMMERCE' as any })
+      // WHEN: update attempts to change channelMode to INFORMATIONAL
+      // THEN: throws error with statusCode 400
+      await expect(
+        service.update(WORKSPACE_ID, { channelMode: 'INFORMATIONAL' as any })
+      ).rejects.toMatchObject({
+        message: expect.stringContaining('Channel mode cannot be changed after creation'),
+        statusCode: 400,
+      })
 
-      // THEN: update is called for each ecommerce function with isActive: true
-      for (const fnName of ECOMMERCE_ONLY_FUNCTIONS) {
-        expect(mockCallingFunctionUpdate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            where: { workspaceId_functionName: { workspaceId: WORKSPACE_ID, functionName: fnName } },
-            data: { isActive: true },
-          })
-        )
-      }
-    })
-
-    it('creates ecommerce system functions if they are missing', async () => {
-      // GIVEN: ecommerce functions do not exist yet (findUnique returns null)
-      mockCallingFunctionFindUnique.mockResolvedValue(null)
-      mockCallingFunctionCreate.mockResolvedValue({})
-
-      await service.update(WORKSPACE_ID, { channelMode: 'ECOMMERCE' as any })
-
-      // THEN: create is called for each ecommerce function
-      for (const fnName of ECOMMERCE_ONLY_FUNCTIONS) {
-        expect(mockCallingFunctionCreate).toHaveBeenCalledWith(
-          expect.objectContaining({
-            data: expect.objectContaining({
-              workspaceId: WORKSPACE_ID,
-              functionName: fnName,
-              isSystemFunction: true,
-              executionType: 'DELEGATE_TO_AGENT',
-              isActive: true,
-            }),
-          })
-        )
-      }
-    })
-
-    it('does NOT call updateMany (that is for info direction only)', async () => {
-      mockCallingFunctionFindUnique.mockResolvedValue({ id: 'fn-1', isActive: false })
-      mockCallingFunctionUpdate.mockResolvedValue({})
-
-      await service.update(WORKSPACE_ID, { channelMode: 'ECOMMERCE' as any })
-
-      // RULE: updateMany (bulk-disable) is only used when switching TO info
-      expect(mockUpdateMany).not.toHaveBeenCalled()
-    })
-
-    it('resets agent prompts to ecommerce templates', async () => {
-      mockCallingFunctionFindUnique.mockResolvedValue({ id: 'fn-1', isActive: false })
-      mockCallingFunctionUpdate.mockResolvedValue({})
-
-      await service.update(WORKSPACE_ID, { channelMode: 'ECOMMERCE' as any })
-
-      // THEN: agentConfig.upsert is called with ecommerce agent type
-      expect(mockAgentConfigUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { workspaceId_type: { workspaceId: WORKSPACE_ID, type: 'ROUTER' } },
-          update: expect.objectContaining({ systemPrompt: 'ecommerce-router-prompt' }),
-        })
-      )
+      // AND: repo.update is NEVER called (change blocked before DB write)
+      expect(mockRepoUpdate).not.toHaveBeenCalled()
     })
   })
 
   // ──────────────────────────────────────────────────────────────────────────
-  // SCENARIO: ecommerce → info (channelMode: 'ECOMMERCE' as any → false)
+  // SCENARIO: Same channelMode value → allowed (no-op, proceeds normally)
   // ──────────────────────────────────────────────────────────────────────────
 
-  describe('Switching from ecommerce → info', () => {
-    beforeEach(() => {
-      // GIVEN: workspace was in ecommerce mode
-      mockFindUnique.mockResolvedValue(makeCurrentWorkspace(true))
-      mockUpdateMany.mockResolvedValue({ count: 3 })
+  describe('Same channelMode value passes through', () => {
+    it('allows update when channelMode is the same (ECOMMERCE → ECOMMERCE)', async () => {
+      // GIVEN: workspace is ECOMMERCE
+      mockFindUnique.mockResolvedValue(makeCurrentWorkspace('ECOMMERCE'))
+
+      // WHEN: update sends the same channelMode value
+      await service.update(WORKSPACE_ID, { channelMode: 'ECOMMERCE' as any })
+
+      // THEN: repo.update IS called (update proceeds normally)
+      expect(mockRepoUpdate).toHaveBeenCalled()
     })
 
-    it('bulk-disables ecommerce-only SYSTEM functions via updateMany', async () => {
+    it('allows update when channelMode is the same (INFORMATIONAL → INFORMATIONAL)', async () => {
+      // GIVEN: workspace is INFORMATIONAL
+      mockFindUnique.mockResolvedValue(makeCurrentWorkspace('INFORMATIONAL'))
+      mockRepoUpdate.mockResolvedValue({ id: WORKSPACE_ID, channelMode: 'INFORMATIONAL' as any })
+
+      // WHEN: update sends the same channelMode value
       await service.update(WORKSPACE_ID, { channelMode: 'INFORMATIONAL' as any })
 
-      // THEN: updateMany is called targeting only isSystemFunction: true + ecommerce function names
-      expect(mockUpdateMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            workspaceId: WORKSPACE_ID,
-            functionName: { in: ECOMMERCE_ONLY_FUNCTIONS },
-            isSystemFunction: true, // CRITICAL: custom functions are safe
-          }),
-          data: { isActive: false },
-        })
-      )
-    })
-
-    it('does NOT try to find/update individual functions (uses bulk updateMany only)', async () => {
-      await service.update(WORKSPACE_ID, { channelMode: 'INFORMATIONAL' as any })
-
-      // RULE: no individual findUnique/update when switching TO info (bulk is enough)
-      expect(mockCallingFunctionFindUnique).not.toHaveBeenCalled()
-      expect(mockCallingFunctionUpdate).not.toHaveBeenCalled()
-    })
-
-    it('resets agent prompts to informational templates', async () => {
-      await service.update(WORKSPACE_ID, { channelMode: 'INFORMATIONAL' as any })
-
-      // THEN: agentConfig.upsert is called with info agent type
-      expect(mockAgentConfigUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { workspaceId_type: { workspaceId: WORKSPACE_ID, type: 'INFO_AGENT' } },
-          update: expect.objectContaining({ systemPrompt: 'info-agent-prompt' }),
-        })
-      )
-    })
-
-    it('creates missing info agents that did not exist before (upsert create path)', async () => {
-      await service.update(WORKSPACE_ID, { channelMode: 'INFORMATIONAL' as any })
-
-      // THEN: upsert includes a create block with workspaceId for new agents
-      expect(mockAgentConfigUpsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          create: expect.objectContaining({
-            workspaceId: WORKSPACE_ID,
-            type: 'INFO_AGENT',
-            systemPrompt: 'info-agent-prompt',
-          }),
-        })
-      )
+      // THEN: repo.update IS called (update proceeds normally)
+      expect(mockRepoUpdate).toHaveBeenCalled()
     })
   })
 
   // ──────────────────────────────────────────────────────────────────────────
-  // SCENARIO: no actual type change (value unchanged)
+  // SCENARIO: channelMode omitted from payload → allowed (no change)
   // ──────────────────────────────────────────────────────────────────────────
 
-  describe('No type change (same value passed)', () => {
-    it('does NOT sync functions or reset prompts when value is unchanged', async () => {
-      // GIVEN: workspace is ecommerce, request sends the same value
-      mockFindUnique.mockResolvedValue(makeCurrentWorkspace(true))
+  describe('channelMode omitted from payload', () => {
+    it('allows update when channelMode is not in the payload (e.g. name change)', async () => {
+      // GIVEN: workspace is ECOMMERCE
+      mockFindUnique.mockResolvedValue(makeCurrentWorkspace('ECOMMERCE'))
 
-      await service.update(WORKSPACE_ID, { channelMode: 'ECOMMERCE' as any })
-
-      // THEN: no calling function or agent config operations
-      expect(mockUpdateMany).not.toHaveBeenCalled()
-      expect(mockCallingFunctionFindUnique).not.toHaveBeenCalled()
-      expect(mockAgentConfigUpsert).not.toHaveBeenCalled()
-    })
-
-    it('does NOT sync when channelMode is not in the update payload', async () => {
-      mockFindUnique.mockResolvedValue(makeCurrentWorkspace(true))
-
-      // Payload changes only the workspace name
+      // WHEN: payload does NOT include channelMode (only name)
       await service.update(WORKSPACE_ID, { name: 'New Name' } as any)
 
-      expect(mockUpdateMany).not.toHaveBeenCalled()
-      expect(mockAgentConfigUpsert).not.toHaveBeenCalled()
-    })
-  })
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // SCENARIO: custom functions are never touched
-  // ──────────────────────────────────────────────────────────────────────────
-
-  describe('Custom (non-system) calling functions safety', () => {
-    it('updateMany filter includes isSystemFunction: true — ensuring custom functions are safe', async () => {
-      // GIVEN: workspace switches to info
-      mockFindUnique.mockResolvedValue(makeCurrentWorkspace(true))
-      mockUpdateMany.mockResolvedValue({ count: 3 })
-
-      await service.update(WORKSPACE_ID, { channelMode: 'INFORMATIONAL' as any })
-
-      // THEN: the where clause includes isSystemFunction: true
-      // This means any custom function (isSystemFunction: false) is NOT affected
-      const call = mockUpdateMany.mock.calls[0][0]
-      expect(call.where.isSystemFunction).toBe(true)
+      // THEN: repo.update IS called (no channelMode check triggered)
+      expect(mockRepoUpdate).toHaveBeenCalled()
     })
   })
 })

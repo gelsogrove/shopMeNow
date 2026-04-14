@@ -80,3 +80,4 @@ ConversationManager uses a 20-minute window to cover:
 - Keep 4 deterministic intercepts: fast-path avoiding unnecessary LLM calls
 - catalogBaseLanguage for translation skip: dynamic per workspace (schema default "it")
 - Extra LLM call for complex FAQs is acceptable (+1 for delegation, -1 from removing double-translation)
+- **channelMode is IMMUTABLE after creation** (2026-04): No sync/reset needed on update. Users delete + recreate workspace to change mode. Functions seeded once at creation via `seedSystemFunctions()`.

@@ -5,6 +5,7 @@ import { asyncHandler } from '../middlewares/async.middleware';
 import { authMiddleware } from '../middlewares/auth.middleware';
 import { requireSuperAdmin } from '../../../middlewares/workspace-role.middleware';
 import { validateWorkspaceOperation } from '../../../middlewares/workspace-validation.middleware';
+import { uploadImage, handleUploadError } from '../middlewares/uploadMiddleware';
 
 export const workspaceRouter = (): Router => {
   const router = Router();
@@ -31,7 +32,6 @@ export const workspaceRouter = (): Router => {
   router.post('/', asyncHandler(workspaceController.createWorkspace));
 
   // Upload workspace logo - ONLY SUPER_ADMIN (Owner)
-  const { uploadImage, handleUploadError } = require('../middlewares/uploadMiddleware');
   router.post(
     '/:id/logo',
     validateWorkspaceOperation,

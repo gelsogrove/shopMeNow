@@ -62,11 +62,8 @@ async function startServer() {
     await prisma.$connect()
     logger.info("Connected to database")
 
-    // Sync system functions (create missing, never overwrite)
-    const { syncSystemFunctionsOnStartup } = require("./services/system-functions-sync.service")
-    syncSystemFunctionsOnStartup(prisma).catch((err: Error) => {
-      logger.error("System functions sync failed (non-fatal):", err)
-    })
+    // Note: system functions are seeded at workspace creation time (workspace.service.ts seedSystemFunctions)
+    // and can be reinstalled individually via POST /functions/:functionName/reinstall
 
     // Create HTTP server from Express app
     const httpServer = createServer(app)

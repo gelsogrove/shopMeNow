@@ -20,6 +20,7 @@ dump/
 .agent/
 .claude/
 .opencode/
+.zencoder/
 .husky
 
 # Testing

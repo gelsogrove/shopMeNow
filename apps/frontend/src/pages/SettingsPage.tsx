@@ -30,7 +30,7 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { useWebSocket } from "@/hooks/useWebSocket"
 import { storage } from "@/lib/storage"
 import { updateWorkspace, deleteWorkspace, getWorkspaceById } from "@/services/workspaceApi"
-import { resetAgentPromptsToDefaults } from "@/services/agent-config-api"
+
 import { Switch } from "@/components/ui/switch"
 
 // Settings components
@@ -179,8 +179,6 @@ export function SettingsPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState("")
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false)
-  const [showWorkspaceTypeChangeDialog, setShowWorkspaceTypeChangeDialog] = useState(false)
-  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null)
   const isDirtyRef = useRef(false)
   const lastWorkspaceIdRef = useRef<string | null>(null)
   const hydratedWorkspaceIdsRef = useRef<Set<string>>(new Set())
@@ -511,18 +509,7 @@ export function SettingsPage() {
       return
     }
 
-    // Check if workspace type changed (channelMode)
-    const currentValue = currentWorkspace?.channelMode ?? 'ECOMMERCE'
-    const newValue = formData.channelMode
-
-    if (currentValue !== newValue) {
-      // Store pending data and show confirmation dialog
-      setPendingFormData(formData)
-      setShowWorkspaceTypeChangeDialog(true)
-      return
-    }
-
-    // Normal save without workspace type change
+    // Normal save
     try {
       await performSave(formData)
     } catch {
@@ -668,38 +655,6 @@ export function SettingsPage() {
       toast.error(error.message || "Save failed")
       throw error
     }
-  }
-
-  // Handle workspace type change confirmation
-  const handleConfirmWorkspaceTypeChange = async () => {
-    if (!pendingFormData) return
-
-    try {
-      // First save the workspace changes
-      await performSave(pendingFormData, { suppressToast: true })
-
-      // Then reset agent prompts to new template type
-      const newType = pendingFormData.channelMode === 'ECOMMERCE' ? "e-commerce" : "informational"
-      await resetAgentPromptsToDefaults(currentWorkspace!.id, true)
-      toast.success(`Settings saved and prompts updated to ${newType} templates`)
-    } catch (error: any) {
-      toast.error(error.message || "Failed to reset prompts")
-    } finally {
-      setShowWorkspaceTypeChangeDialog(false)
-      setPendingFormData(null)
-    }
-  }
-
-  const handleCancelWorkspaceTypeChange = () => {
-    // Revert the form data change
-    if (currentWorkspace) {
-      setFormData(prev => ({
-        ...prev,
-        channelMode: currentWorkspace.channelMode ?? 'ECOMMERCE'
-      }))
-    }
-    setShowWorkspaceTypeChangeDialog(false)
-    setPendingFormData(null)
   }
 
   // Delete workspace mutation
@@ -1046,58 +1001,6 @@ export function SettingsPage() {
                   Delete Workspace
                 </>
               )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Workspace Type Change Confirmation Dialog */}
-      <Dialog
-        open={showWorkspaceTypeChangeDialog}
-        onOpenChange={(open) => {
-          if (!open) handleCancelWorkspaceTypeChange()
-        }}
-      >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-amber-600 flex items-center gap-2">
-              ⚠️ Workspace Type Change
-            </DialogTitle>
-            <DialogDescription className="space-y-3">
-              <p>
-                You are changing the workspace type from{" "}
-                <strong>{currentWorkspace?.channelMode === 'ECOMMERCE' ? "E-commerce" : "Informational"}</strong> to{" "}
-                <strong>{pendingFormData?.channelMode === 'ECOMMERCE' ? "E-commerce" : "Informational"}</strong>.
-              </p>
-              <p className="text-red-600 font-medium">
-                ⚠️ This will RESET all agent prompts to the new template type!
-              </p>
-              <p>
-                Any custom prompts you have configured will be lost. We recommend backing up your current prompts before proceeding.
-              </p>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
-                <strong>How to backup:</strong>
-                <ol className="list-decimal list-inside mt-1 space-y-1">
-                  <li>Go to Agent Configuration page</li>
-                  <li>Copy each agent's system prompt to a text file</li>
-                  <li>Return here to proceed with the change</li>
-                </ol>
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={handleCancelWorkspaceTypeChange}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmWorkspaceTypeChange}
-            >
-              Reset Prompts & Continue
             </Button>
           </DialogFooter>
         </DialogContent>

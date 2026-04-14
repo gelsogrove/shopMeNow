@@ -238,22 +238,17 @@ export function BusinessConfigSection({
               </p>
             </div>
 
-            {/* Channel Mode Selector */}
+            {/* Channel Mode — immutable after creation (user must delete + recreate workspace to change) */}
             <div className="space-y-2 md:col-span-2">
               <Label className="text-sm font-medium text-gray-900">
                 Channel Mode
               </Label>
               <Select
                 value={formData.channelMode}
-                onValueChange={(value) => {
-                  onFieldChange("channelMode", value)
-                  // ECOMMERCE → widget FALSE (product catalog needs WhatsApp)
-                  // INFORMATIONAL / FLOW → widget TRUE
-                  onFieldChange("enableWidget", value !== 'ECOMMERCE')
-                }}
-                disabled={!canEdit}
+                onValueChange={() => {}}
+                disabled={true}
               >
-                <SelectTrigger>
+                <SelectTrigger className="opacity-70">
                   <SelectValue placeholder="Select channel mode" />
                 </SelectTrigger>
                 <SelectContent>
@@ -262,8 +257,8 @@ export function BusinessConfigSection({
                   <SelectItem value="FLOW">Flow — custom chatbot flow</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">
-                Defines what the chatbot can do: e-commerce, info-only, or a custom flow
+              <p className="text-xs text-amber-600">
+                Channel mode is set at creation and cannot be changed. To switch mode, delete this workspace and create a new one.
               </p>
             </div>
           </div>

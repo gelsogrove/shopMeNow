@@ -1,6 +1,13 @@
 import { PrismaClient, WorkspaceCallingFunction } from "@echatbot/database"
 import logger from "../utils/logger"
 
+/**
+ * Repository for WorkspaceCallingFunction table.
+ *
+ * All queries filter by workspaceId for multi-tenant isolation.
+ * Uses the composite unique key (workspaceId, functionName) for lookups.
+ * Supports both system functions (seeded at creation) and custom functions (user-created).
+ */
 export class WorkspaceCallingFunctionRepository {
     private prisma: PrismaClient
 
@@ -82,6 +89,7 @@ export class WorkspaceCallingFunctionRepository {
         webhookUrl?: string | null
         responseInstructions?: string | null
         credentialsMapping?: any | null
+        attachedLlm?: string | null
     }): Promise<WorkspaceCallingFunction> {
         try {
             return await this.prisma.workspaceCallingFunction.create({
@@ -120,7 +128,8 @@ export class WorkspaceCallingFunctionRepository {
     }
 
     /**
-     * Delete a calling function
+     * Hard delete a calling function (system or custom).
+     * Deleted system functions can be restored via the reinstall endpoint.
      */
     async delete(workspaceId: string, functionName: string): Promise<WorkspaceCallingFunction> {
         try {

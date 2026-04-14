@@ -14,17 +14,28 @@ export const createCallingFunctionsRouter = (prisma: PrismaClient) => {
     // List all functions
     router.get("/", controller.getFunctions.bind(controller))
 
+    // Get valid DELEGATE_TO_AGENT types for this workspace's channelMode
+    // MUST be before /:functionName routes to avoid param capture
+    router.get("/agent-types", controller.getAgentTypes.bind(controller))
+
+    // Get system functions valid for this workspace but NOT installed (for Reinstall UI section)
+    // MUST be before /:functionName routes to avoid param capture
+    router.get("/system-missing", controller.getMissingSystemFunctions.bind(controller))
+
     // Create custom function
     router.post("/", controller.createFunction.bind(controller))
+
+    // Test webhook (MUST be before /:functionName to avoid param capture)
+    router.post("/test-webhook", controller.testWebhook.bind(controller))
 
     // Update function (system or custom)
     router.patch("/:functionName", controller.updateFunction.bind(controller))
 
-    // Delete custom function
+    // Delete a function (system or custom — hard delete)
     router.delete("/:functionName", controller.deleteFunction.bind(controller))
 
-    // Test webhook
-    router.post("/test-webhook", controller.testWebhook.bind(controller))
+    // Reinstall a system function to factory defaults
+    router.post("/:functionName/reinstall", controller.reinstallFunction.bind(controller))
 
     return router
 }

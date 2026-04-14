@@ -1,5 +1,4 @@
 import { prisma, PrismaClient } from "@echatbot/database"
-// import { getAllProducts } from "../../chatbot/calling-functions/getAllProducts" // REMOVED - file no longer exists
 import { MessageRepository } from "../../repositories/message.repository"
 import logger from "../../utils/logger"
 import { linkGeneratorService } from "./link-generator.service"

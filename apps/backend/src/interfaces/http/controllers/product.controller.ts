@@ -1,5 +1,6 @@
 import { ProductStatus } from "@echatbot/database"
 import { Request, Response } from "express"
+import { existsSync } from "fs"
 import { ProductService } from "../../../application/services/product.service"
 import { prisma } from "../../../lib/prisma"
 import { cleanupRemovedImages } from "../../../utils/fileManager"
@@ -569,7 +570,7 @@ export class ProductController {
           size: f.size,
           filename: f.filename,
           path: f.path,
-          pathExists: require('fs').existsSync(f.path)
+          pathExists: existsSync(f.path)
         })))
         
         // Delete old images that are being replaced

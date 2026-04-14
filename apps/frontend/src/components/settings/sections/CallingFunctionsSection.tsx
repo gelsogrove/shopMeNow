@@ -17,13 +17,13 @@ import {
     Zap,
     Code,
     Edit2,
-    Lock,
     Globe,
     Cpu,
     Share2,
     HelpCircle,
     ChevronDown,
     ChevronUp,
+    RefreshCw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Editor from "@monaco-editor/react"
@@ -42,7 +42,7 @@ const EXECUTION_TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNo
         className: "bg-blue-50 text-blue-600 border border-blue-200",
     },
     INTERNAL: {
-        label: "Internal",
+        label: "Calling Function",
         icon: <Cpu className="h-3 w-3" />,
         className: "bg-purple-50 text-purple-600 border border-purple-200",
     },
@@ -51,6 +51,16 @@ const EXECUTION_TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNo
         icon: <Share2 className="h-3 w-3" />,
         className: "bg-amber-50 text-amber-600 border border-amber-200",
     },
+}
+
+// Human-readable labels for agent types returned by getAgentTypes endpoint
+const AGENT_TYPE_LABELS: Record<string, string> = {
+    PRODUCT_SEARCH: "Product Search",
+    CART_MANAGEMENT: "Cart Management",
+    ORDER_TRACKING: "Order Tracking",
+    CUSTOMER_SUPPORT: "Customer Support",
+    PROFILE_MANAGEMENT: "Profile Management",
+    INFO_AGENT: "Info Agent",
 }
 
 interface CallingFunctionsSectionProps {
@@ -65,6 +75,8 @@ export function CallingFunctionsSection({
     canEdit,
 }: CallingFunctionsSectionProps) {
     const [functions, setFunctions] = useState<CallingFunction[]>([])
+    const [agentTypes, setAgentTypes] = useState<string[]>([])
+    const [missingSystemFunctions, setMissingSystemFunctions] = useState<Array<{ functionName: string; description: string; executionType: string; attachedLlm?: string | null }>>([])
     const [loading, setLoading] = useState(true)
     const [testingToolWebhook, setTestingToolWebhook] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -85,13 +97,29 @@ export function CallingFunctionsSection({
     const loadFunctions = async () => {
         try {
             setLoading(true)
-            const data = await callingFunctionsApi.list(workspaceId)
+            const [data, agentTypesData, missingData] = await Promise.all([
+                callingFunctionsApi.list(workspaceId),
+                callingFunctionsApi.getAgentTypes(workspaceId),
+                callingFunctionsApi.getSystemMissing(workspaceId),
+            ])
             setFunctions(data)
+            setAgentTypes(agentTypesData.agentTypes)
+            setMissingSystemFunctions(missingData.missing)
         } catch (error) {
             console.error("Failed to load functions:", error)
             toast.error("Failed to load custom tools")
         } finally {
             setLoading(false)
+        }
+    }
+
+    const handleReinstall = async (functionName: string) => {
+        try {
+            await callingFunctionsApi.reinstall(workspaceId, functionName)
+            toast.success(`"${functionName}" reinstalled to factory defaults`)
+            loadFunctions()
+        } catch (error: any) {
+            toast.error(error.response?.data?.error || "Reinstall failed")
         }
     }
 
@@ -263,7 +291,12 @@ export function CallingFunctionsSection({
                         </div>
                     ) : (
                         <div className="divide-y">
-                            {functions.map((fn) => {
+                            {[...functions]
+                                .sort((a, b) => {
+                                    const order: Record<string, number> = { DELEGATE_TO_AGENT: 0, INTERNAL: 1, WEBHOOK: 2 }
+                                    return (order[a.executionType] ?? 2) - (order[b.executionType] ?? 2)
+                                })
+                                .map((fn) => {
                                 const typeConfig = EXECUTION_TYPE_CONFIG[fn.executionType] || EXECUTION_TYPE_CONFIG.WEBHOOK
                                 return (
                                     <div key={fn.id} className="p-4 hover:bg-slate-50 transition-colors flex items-center justify-between group">
@@ -282,6 +315,12 @@ export function CallingFunctionsSection({
                                                         {typeConfig.icon}
                                                         {typeConfig.label}
                                                     </span>
+                                                    {/* attachedLlm badge for DELEGATE_TO_AGENT */}
+                                                    {fn.attachedLlm && (
+                                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200">
+                                                            {AGENT_TYPE_LABELS[fn.attachedLlm] || fn.attachedLlm}
+                                                        </span>
+                                                    )}
                                                     {fn.isSystemFunction && (
                                                         <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-500">SYSTEM</span>
                                                     )}
@@ -293,37 +332,35 @@ export function CallingFunctionsSection({
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            {canEdit && !fn.isSystemFunction && (
-                                                <>
-                                                    <Switch
-                                                        checked={fn.isActive}
-                                                        onCheckedChange={() => toggleFunctionStatus(fn)}
-                                                        className="scale-75"
-                                                    />
-                                                    <Button variant="ghost" size="icon" onClick={() => handleOpenModal(fn)}>
-                                                        <Edit2 className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteFunction(fn.functionName)} className="text-red-400 hover:text-red-600 hover:bg-red-50">
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </>
-                                            )}
-                                            {fn.isSystemFunction && (
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button variant="ghost" size="icon" onClick={() => handleOpenModal(fn)}>
-                                                                <Lock className="h-4 w-4 text-slate-400" />
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent side="left">
-                                                            <p>System function — read only</p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
-                                            )}
-                                        </div>
+                                        {canEdit && (
+                                            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Switch
+                                                    checked={fn.isActive}
+                                                    onCheckedChange={() => toggleFunctionStatus(fn)}
+                                                    className="scale-75"
+                                                />
+                                                <Button variant="ghost" size="icon" onClick={() => handleOpenModal(fn)}>
+                                                    <Edit2 className="h-4 w-4" />
+                                                </Button>
+                                                {fn.isSystemFunction ? (
+                                                    <TooltipProvider>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <Button variant="ghost" size="icon" onClick={() => handleReinstall(fn.functionName)} className="text-teal-500 hover:text-teal-700 hover:bg-teal-50">
+                                                                    <RefreshCw className="h-4 w-4" />
+                                                                </Button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent side="left">
+                                                                <p>Reinstall to factory defaults</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                ) : null}
+                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteFunction(fn.functionName)} className="text-red-400 hover:text-red-600 hover:bg-red-50">
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        )}
                                     </div>
                                 )
                             })}
@@ -331,6 +368,59 @@ export function CallingFunctionsSection({
                     )}
                 </CardContent>
             </Card>
+
+            {/* Missing System Functions — available for this workspace but not installed */}
+            {canEdit && missingSystemFunctions.length > 0 && (
+                <Card className="border-dashed border-amber-200 bg-amber-50/40">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-semibold flex items-center gap-2 text-amber-800">
+                            <RefreshCw className="h-4 w-4 text-amber-500" />
+                            Available System Functions ({missingSystemFunctions.length} not installed)
+                        </CardTitle>
+                        <CardDescription className="text-amber-700 text-xs">These system functions are available for your workspace but were removed. Click Reinstall to add them back.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <div className="divide-y divide-amber-100">
+                            {missingSystemFunctions.map((fn) => {
+                                const typeConfig = EXECUTION_TYPE_CONFIG[fn.executionType] || EXECUTION_TYPE_CONFIG.WEBHOOK
+                                return (
+                                    <div key={fn.functionName} className="px-4 py-3 flex items-center justify-between">
+                                        <div className="flex items-start gap-3">
+                                            <div className="mt-0.5 p-1.5 rounded-lg bg-amber-100 text-amber-600">
+                                                <Code className="h-3.5 w-3.5" />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-mono font-bold text-sm text-slate-700">{fn.functionName}</span>
+                                                    <span className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold", typeConfig.className)}>
+                                                        {typeConfig.icon}
+                                                        {typeConfig.label}
+                                                    </span>
+                                                    {fn.attachedLlm && (
+                                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200">
+                                                            {AGENT_TYPE_LABELS[fn.attachedLlm] || fn.attachedLlm}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{fn.description}</p>
+                                            </div>
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="gap-1.5 text-teal-700 border-teal-300 hover:bg-teal-50 shrink-0"
+                                            onClick={() => handleReinstall(fn.functionName)}
+                                        >
+                                            <RefreshCw className="h-3.5 w-3.5" />
+                                            Reinstall
+                                        </Button>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Help & Documentation Panel */}
             <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
@@ -594,11 +684,32 @@ Credentials Mapping: {
                                         lineNumbers: "on",
                                         scrollBeyondLastLine: false,
                                         automaticLayout: true,
-                                        readOnly: editingFunction?.isSystemFunction,
                                     }}
                                 />
                             </div>
                         </div>
+
+                        {/* Attached LLM — only for DELEGATE_TO_AGENT type */}
+                        {editingFunction?.executionType === "DELEGATE_TO_AGENT" && (
+                            <div className="space-y-2">
+                                <Label htmlFor="attachedLlm">Specialist Agent</Label>
+                                <Select
+                                    value={editingFunction?.attachedLlm || ""}
+                                    onValueChange={(val) => setEditingFunction(prev => ({ ...prev, attachedLlm: val || null }))}
+                                >
+                                    <SelectTrigger id="attachedLlm">
+                                        <SelectValue placeholder="Select specialist agent..." />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {agentTypes.map(type => (
+                                            <SelectItem key={type} value={type}>
+                                                {AGENT_TYPE_LABELS[type] || type}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
 
                         {/* Webhook URL — only for WEBHOOK type */}
                         {editingFunction?.executionType === "WEBHOOK" && (
@@ -650,7 +761,6 @@ Credentials Mapping: {
                                             lineNumbers: "off",
                                             scrollBeyondLastLine: false,
                                             automaticLayout: true,
-                                            readOnly: editingFunction?.isSystemFunction,
                                         }}
                                     />
                                 </div>
@@ -678,19 +788,16 @@ Credentials Mapping: {
                                     ? "Guide the AI on how to present the sub-agent result"
                                     : "Guide the AI on how to present the function result"}
                                 rows={2}
-                                disabled={editingFunction?.isSystemFunction}
                             />
                         </div>
                     </div>
 
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                        {!editingFunction?.isSystemFunction && (
-                            <Button onClick={handleSaveFunction} disabled={isSaving}>
-                                {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                                Save Tool
-                            </Button>
-                        )}
+                        <Button onClick={handleSaveFunction} disabled={isSaving}>
+                            {isSaving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                            Save Tool
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

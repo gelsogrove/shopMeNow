@@ -5,6 +5,7 @@ import { getAllFunctions } from "../config/agent-functions.config"
 import { getLLMConfig } from "../config/llm.config"
 import { LLMRequest } from "../types/whatsapp.types"
 import logger from "../utils/logger"
+import { detectLanguageFromPhonePrefix, getRegistrationText } from "../utils/language-detector"
 import { CallingFunctionsService } from "./calling-functions.service"
 import { PromptProcessorService } from "./prompt-processor.service"
 import { prisma } from "@echatbot/database"
@@ -555,9 +556,6 @@ export class LLMService {
 
       // 3. Detect customer language
       // 🆕 PRIORITY ORDER: 1) customer.language, 2) phone prefix (only IT/ES/PT), 3) workspace.defaultLanguage
-      const {
-        detectLanguageFromPhonePrefix,
-      } = require("../utils/language-detector")
       const detectedLanguage = 
         customer?.language || 
         detectLanguageFromPhonePrefix(phone) || 
@@ -580,7 +578,6 @@ export class LLMService {
       )
 
       // 6. Build complete message with link
-      const { getRegistrationText } = require("../utils/language-detector")
       const registrationText = getRegistrationText(detectedLanguage)
       const completeMessage = `${welcomeMessageTranslated}\n\n🔗 **${registrationText.link}:**\n${registrationLink}\n\n⏰ ${registrationText.validity}`
 

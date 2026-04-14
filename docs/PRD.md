@@ -300,13 +300,36 @@ Il sistema è organizzato in **4 applicazioni Heroku indipendenti**:
 
 #### **WorkspaceCallingFunction**
 - Registry of functions callable by LLM (system + custom webhooks)
+- **Full CRUD**: Admin can create, read, update, and delete calling functions
+- **attachedLlm**: Links `DELEGATE_TO_AGENT` functions to a specific agent type (e.g., `PRODUCT_SEARCH`, `CART_MANAGEMENT`)
 - Execution types:
-  - `DELEGATE_TO_AGENT`: Routes to specific agent (e.g., `PRODUCT_SEARCH`)
+  - `DELEGATE_TO_AGENT`: Routes to specific agent via `attachedLlm` field (e.g., `PRODUCT_SEARCH`)
   - `WEBHOOK`: Calls external URL with HMAC signature
-  - `INTERNAL`: Executes internal service function
+  - `INTERNAL`: Executes internal service function (e.g., `changeLanguage`)
 - Schema: `parameters` (OpenAI function calling format)
 - Instructions: `description` (quando chiamarla), `responseInstructions` (come presentare risultato)
-- Security: `isSystemFunction` (non cancellabile), `webhookUrl` (per-function override)
+- Security: `isSystemFunction` (restorable via `/reinstall` if deleted), `webhookUrl` (per-function override)
+- **Immutable fields** (cannot be changed after creation): `functionName`, `isSystemFunction`, `workspaceId`, `id`, `createdAt`
+- **channelMode gating**: Ecommerce-only functions (`productSearchAgent`, `cartManagementAgent`, `orderTrackingAgent`) are hidden in non-ECOMMERCE workspaces
+- **Feature flag gating**: Appointment functions hidden when `enableCalendarBooking=false`, `customerSupportAgent` hidden when `hasHumanSupport=false`
+
+##### channelMode Immutability (2026-04)
+- **channelMode is IMMUTABLE after workspace creation**
+- Attempting to change channelMode returns `400 CHANNEL_MODE_IMMUTABLE`
+- Users must delete the workspace and create a new one to switch mode
+- Rationale: Changing mode requires syncing calling functions, resetting agent prompts, and handling many edge cases — blocking is simpler and safer
+- Frontend: channelMode dropdown disabled in Settings page with amber warning text
+- Backend: `workspace.service.ts update()` throws 400 before any DB write if `data.channelMode !== currentWorkspace.channelMode`
+
+##### Calling Functions CRUD API (2026-04)
+- `GET    /workspaces/:workspaceId/functions` — List all (with feature-flag filtering)
+- `POST   /workspaces/:workspaceId/functions` — Create custom function
+- `PATCH  /workspaces/:workspaceId/functions/:functionName` — Update (respects `IMMUTABLE_KEYS`)
+- `DELETE /workspaces/:workspaceId/functions/:functionName` — Hard delete (system functions restorable)
+- `POST   /workspaces/:workspaceId/functions/:functionName/reinstall` — Restore deleted system function from constants
+- `GET    /workspaces/:workspaceId/functions/system-missing` — List deleted system functions available for reinstall
+- `GET    /workspaces/:workspaceId/functions/agent-types` — List valid agent types for current channelMode
+- `POST   /workspaces/:workspaceId/functions/test-webhook` — Test external webhook URL connectivity
 
 #### **FAQ**
 - Knowledge base: `question`, `answer`, `keywords[]`
