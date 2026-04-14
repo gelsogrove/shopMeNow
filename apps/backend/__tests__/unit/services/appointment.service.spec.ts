@@ -257,7 +257,7 @@ describe("AppointmentService", () => {
   // ============================================
 
   describe("isSlotAvailable", () => {
-    const futureDate = new Date("2026-04-15T10:00:00")
+    const futureDate = new Date("2030-06-15T10:00:00")
 
     // SCENARIO: Slot is within the configurable booking buffer window
     // RULE: minBookingBufferHours is configurable per workspace (default 12h)
@@ -319,7 +319,7 @@ describe("AppointmentService", () => {
 
     // SCENARIO: Slot is outside business hours window
     it("should return unavailable when slot extends past closing time", async () => {
-      const lateSlot = new Date("2026-04-15T17:45:00") // 17:45 + 30min = 18:15 > 18:00
+      const lateSlot = new Date("2030-06-15T17:45:00") // 17:45 + 30min = 18:15 > 18:00
       mockBlackoutPeriodRepo.isDateBlocked.mockResolvedValue(false)
       mockBusinessHoursRepo.findByDay.mockResolvedValue({
         dayOfWeek: 3,
@@ -391,7 +391,7 @@ describe("AppointmentService", () => {
     const appointmentData = {
       customerId: "cust-1",
       serviceId: "svc-1",
-      startTime: new Date("2026-04-15T10:00:00"),
+      startTime: new Date("2030-06-15T10:00:00"),
       customerName: "Mario Rossi",
       customerPhone: "+393331234567",
       bookedVia: "whatsapp",
@@ -416,7 +416,7 @@ describe("AppointmentService", () => {
         id: "appt-new",
         ...appointmentData,
         status: "confirmed",
-        endTime: new Date("2026-04-15T11:15:00"), // 60min + 15min buffer
+        endTime: new Date("2030-06-15T11:15:00"), // 60min + 15min buffer
         service: mockService,
       }
       mockPrisma.appointment.create.mockResolvedValue(createdAppointment)
