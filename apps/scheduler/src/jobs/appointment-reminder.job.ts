@@ -59,8 +59,6 @@ async function sendAppointmentReminderEmail(
   try {
     const transporter = createEmailTransporter()
 
-    const reminderLabel = reminderType === '24h' ? '24 Hours' : reminderType === '1h' ? '1 Hour' : '30 Minutes'
-
     const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -71,33 +69,19 @@ async function sendAppointmentReminderEmail(
         .container { background: #f9f9f9; padding: 20px; border-radius: 8px; }
         .header { background: #3b82f6; color: white; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; }
         .content { background: white; padding: 20px; border-radius: 8px; }
-        .appointment-details { background: #f0f4ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 15px 0; }
         .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #666; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h2>⏰ Appointment Reminder</h2>
+            <h2>⏰</h2>
         </div>
         <div class="content">
-            <p>Hello ${customerName},</p>
-            <p>This is a reminder that your appointment is coming up:</p>
-
-            <div class="appointment-details">
-                <p><strong>Type:</strong> ${appointmentType}</p>
-                <p><strong>Date:</strong> ${appointmentDate}</p>
-                <p><strong>Time:</strong> ${appointmentTime}</p>
-            </div>
-
             <p>${message}</p>
-
-            <p>If you need to reschedule or cancel, please let us know as soon as possible.</p>
-
-            <p>See you there!</p>
         </div>
         <div class="footer">
-            <p>This is an automated reminder email. Please do not reply to this message.</p>
+            <p>${appointmentDate} — ${appointmentTime}</p>
         </div>
     </div>
 </body>
@@ -107,7 +91,7 @@ async function sendAppointmentReminderEmail(
     await transporter.sendMail({
       from: process.env.SMTP_FROM || 'noreply@echatbot.ai',
       to,
-      subject: `⏰ ${reminderLabel} Appointment Reminder - ${appointmentType}`,
+      subject: `⏰ ${appointmentType} — ${appointmentDate}`,
       html: htmlContent,
       text: message,
     })

@@ -298,7 +298,7 @@ function createMockAppointment(
     id: 'appt-1',
     workspaceId: 'ws-1',
     customerId: 'cust-1',
-    appointmentTypeId: 'type-1',
+    serviceId: 'svc-1',
     startTime,
     endTime: new Date(startTime.getTime() + 60 * 60 * 1000),
     status: 'confirmed',
@@ -307,12 +307,16 @@ function createMockAppointment(
     workspace: {
       id: 'ws-1',
       name: 'Test Shop',
-      appointmentReminderMessage: null, // Use default template
+      // Template uses DB reminder message fields (null = use default fallback)
+      appointmentReminder24hMessage: null as string | null,
+      appointmentReminder1hMessage: null as string | null,
+      appointmentReminder30mMessage: null as string | null,
       appointmentReminderChannel: workspaceChannel,
       ownerId: 'owner-1',
     },
-    appointmentType: {
-      id: 'type-1',
+    // IMPORTANT: code reads appointment.service?.name (Services relation, NOT AppointmentType)
+    service: {
+      id: 'svc-1',
       name: 'Consulenza',
     },
     customer: {
@@ -320,6 +324,7 @@ function createMockAppointment(
       phone: '+393331234567',
       email: null as string | null,
       name: 'Mario Rossi',
+      language: 'it',
     },
   }
 }
