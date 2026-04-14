@@ -130,7 +130,6 @@ export class PromptProcessorService {
       .replace(/\{\{allowedExternalLinks\}\}/g, vars.allowedExternalLinks || '')
       .replace(/\{\{ALLOWED_EXTERNAL_LINKS\}\}/g, v.ALLOWED_EXTERNAL_LINKS || vars.allowedExternalLinks || '')
       .replace(/\{\{supportEmail\}\}/g, vars.supportEmail || '')
-      .replace(/\{\{frustrationEscalationInstructions\}\}/g, vars.frustrationEscalationInstructions || '')
       .replace(/\{\{operatorContactMethod\}\}/g, vars.operatorContactMethod || 'email')
       .replace(/\{\{operatorWhatsappNumber\}\}/g, vars.operatorWhatsappNumber || '')
 
@@ -274,7 +273,6 @@ export class PromptProcessorService {
         botIdentityResponse: workspaceConfig?.botIdentityResponse,
         hasHumanSupport: workspaceConfig?.hasHumanSupport,
         humanSupportInstructions: workspaceConfig?.humanSupportInstructions,
-        frustrationEscalationInstructions: workspaceConfig?.frustrationEscalationInstructions,
         operatorContactMethod: workspaceConfig?.operatorContactMethod,
         operatorWhatsappNumber: workspaceConfig?.operatorWhatsappNumber,
         hasSalesAgents: workspaceConfig?.hasSalesAgents,

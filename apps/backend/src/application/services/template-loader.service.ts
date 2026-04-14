@@ -56,7 +56,6 @@ interface WorkspaceSettings {
   customAiRules: string
   allowedExternalLinks: string
   humanSupportInstructions: string
-  frustrationEscalationInstructions: string
   operatorContactMethod: string
   operatorWhatsappNumber: string
   supportEmail: string
@@ -134,7 +133,6 @@ export class TemplateLoaderService {
         hasChatbotName: !!settings.chatbotName,
         hasAllowedExternalLinks: !!settings.allowedExternalLinks,
         hasHumanSupportInstructions: !!settings.humanSupportInstructions,
-        hasFrustrationEscalationInstructions: !!settings.frustrationEscalationInstructions,
         // Direct name conditionals (truthy check for {{#if variableName}})
         customAiRules: !!settings.customAiRules,
         botIdentityResponse: !!settings.botIdentityResponse,
@@ -142,7 +140,6 @@ export class TemplateLoaderService {
         address: !!settings.address,
         allowedExternalLinks: !!settings.allowedExternalLinks,
         humanSupportInstructions: !!settings.humanSupportInstructions,
-        frustrationEscalationInstructions: !!settings.frustrationEscalationInstructions,
         operatorContactMethod: !!settings.operatorContactMethod,
         operatorWhatsappNumber: !!settings.operatorWhatsappNumber,
         toneOfVoice: !!settings.toneOfVoice,
@@ -250,7 +247,6 @@ export class TemplateLoaderService {
         customAiRules: true,
         allowedExternalLinks: true,
         humanSupportInstructions: true,
-        frustrationEscalationInstructions: true,
         operatorContactMethod: true,
         operatorWhatsappNumber: true,
         notificationEmail: true,
@@ -293,7 +289,6 @@ export class TemplateLoaderService {
       customAiRules: workspace.customAiRules || "",
       allowedExternalLinks: allowedLinks,
       humanSupportInstructions: workspace.humanSupportInstructions || "",
-      frustrationEscalationInstructions: workspace.frustrationEscalationInstructions || "",
       operatorContactMethod: workspace.operatorContactMethod || "email",
       operatorWhatsappNumber: workspace.operatorWhatsappNumber || "",
       supportEmail: workspace.notificationEmail || "",

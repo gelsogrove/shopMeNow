@@ -120,7 +120,6 @@ export class CustomerSupportAgentLLM {
           botIdentityResponse: true,
           notificationEmail: true,
           humanSupportInstructions: true,
-          frustrationEscalationInstructions: true,
           allowedExternalLinks: true,
           channelMode: true,
           hasHumanSupport: true, // ✅ FIX: Include hasHumanSupport flag
@@ -241,7 +240,6 @@ export class CustomerSupportAgentLLM {
           customAiRules: workspace?.customAiRules || "",
           botIdentityResponse: context.customerData?.botIdentityResponse || workspace?.botIdentityResponse || "",
           humanSupportInstructions: workspace?.humanSupportInstructions || "", // 🔧 Custom escalation instructions
-          frustrationEscalationInstructions: workspace?.frustrationEscalationInstructions || "", // 🔧 Custom frustration triggers
           adminEmail: context.customerData?.adminEmail || workspace?.notificationEmail || "", // 🆕 For support/escalation
           allowedExternalLinks: workspace?.allowedExternalLinks || [], // 🔧 Allowed domains for links
           operatorContactMethod: workspace?.operatorContactMethod || "",

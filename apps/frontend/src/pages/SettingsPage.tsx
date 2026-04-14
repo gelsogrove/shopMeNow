@@ -129,7 +129,6 @@ interface FormData {
   operatorContactMethod: "email" | "whatsapp"
   operatorWhatsappNumber: string
   humanSupportInstructions: string
-  frustrationEscalationInstructions: string
   address: string
   registrationPage: string
   requireManualApproval: boolean
@@ -239,7 +238,6 @@ export function SettingsPage() {
     operatorContactMethod: "email",
     operatorWhatsappNumber: "",
     humanSupportInstructions: "",
-    frustrationEscalationInstructions: "",
     address: "",
     registrationPage: "",
     requireManualApproval: false,
@@ -325,7 +323,6 @@ export function SettingsPage() {
           (currentWorkspace.operatorContactMethod as "email" | "whatsapp") || "email",
         operatorWhatsappNumber: currentWorkspace.operatorWhatsappNumber || "",
         humanSupportInstructions: currentWorkspace.humanSupportInstructions || "",
-        frustrationEscalationInstructions: currentWorkspace.frustrationEscalationInstructions || "",
         address: currentWorkspace.address || "",
         registrationPage: currentWorkspace.registrationPage || "",
         requireManualApproval: currentWorkspace.requireManualApproval || false,
@@ -812,7 +809,6 @@ export function SettingsPage() {
               operatorWhatsappNumber: formData.operatorWhatsappNumber,
               operatorEmail: formData.adminEmail, // Use business email as default
               humanSupportInstructions: formData.humanSupportInstructions,
-              frustrationEscalationInstructions: formData.frustrationEscalationInstructions,
             }}
             errors={errors}
             canEdit={canEdit}

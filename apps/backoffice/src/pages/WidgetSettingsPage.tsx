@@ -75,7 +75,6 @@ export function WidgetSettingsPage() {
   
   // Support Settings
   const [hasHumanSupport, setHasHumanSupport] = useState(false)
-  const [frustrationEscalationInstructions, setFrustrationEscalationInstructions] = useState('')
   const [operatorContactMethod, setOperatorContactMethod] = useState<'email' | 'whatsapp'>('email')
   const [operatorEmail, setOperatorEmail] = useState('')
   const [operatorWhatsappNumber, setOperatorWhatsappNumber] = useState('')
@@ -139,7 +138,6 @@ export function WidgetSettingsPage() {
       const workspace = await workspaceApi.getWorkspace(workspaceId)
       
       setHasHumanSupport(workspace.hasHumanSupport ?? false)
-      setFrustrationEscalationInstructions(workspace.frustrationEscalationInstructions || '')
       setOperatorContactMethod((workspace.operatorContactMethod as 'email' | 'whatsapp') || 'email')
       setOperatorEmail(workspace.operatorEmail || '')
       setOperatorWhatsappNumber(workspace.operatorWhatsappNumber || '')
@@ -187,7 +185,6 @@ export function WidgetSettingsPage() {
       
       const updateData = {
         hasHumanSupport,
-        frustrationEscalationInstructions,
         operatorContactMethod,
         operatorEmail,
         operatorWhatsappNumber,
@@ -546,7 +543,6 @@ export function WidgetSettingsPage() {
                     <Textarea
                       id="escalationInstructions"
                       placeholder="Example:\n- when customer asks to speak with operator\n- when customer expresses frustration\n- when customer says 'nothing works'\n- when customer is angry or upset"
-                      value={frustrationEscalationInstructions}
                       onChange={(e) => setFrustrationEscalationInstructions(e.target.value)}
                       rows={8}
                       className="font-mono text-sm"

@@ -26,7 +26,6 @@ export interface PromptVariables {
   hasHumanSupport: boolean
   hasSalesAgents: boolean
   humanSupportInstructions: string
-  frustrationEscalationInstructions: string
   operatorContactMethod: string
   operatorWhatsappNumber: string
   allowedExternalLinks: string
@@ -142,7 +141,6 @@ export class VariableResolverService {
         hasSalesAgents: true,
         enableCalendarBooking: true,
         humanSupportInstructions: true,
-        frustrationEscalationInstructions: true,
         operatorContactMethod: true,
         operatorWhatsappNumber: true,
         allowedExternalLinks: true,
@@ -181,7 +179,6 @@ export class VariableResolverService {
     variables.hasHumanSupport = workspace.hasHumanSupport ?? true
     variables.hasSalesAgents = workspace.hasSalesAgents ?? false
     variables.humanSupportInstructions = workspace.humanSupportInstructions || ""
-    variables.frustrationEscalationInstructions = workspace.frustrationEscalationInstructions || "" // 🆕 Feature 203
     variables.operatorContactMethod = workspace.operatorContactMethod || "email"
     variables.operatorWhatsappNumber = workspace.operatorWhatsappNumber || ""
     variables.allowedExternalLinks = Array.isArray(workspace.allowedExternalLinks)

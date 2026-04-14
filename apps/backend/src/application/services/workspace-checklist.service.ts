@@ -55,7 +55,6 @@ export class WorkspaceChecklistService {
         botIdentityResponse: true,
         hasHumanSupport: true,
         humanSupportInstructions: true,
-        frustrationEscalationInstructions: true,
         operatorContactMethod: true,
         operatorEmail: true,
         operatorWhatsappNumber: true,
@@ -216,13 +215,6 @@ export class WorkspaceChecklistService {
         label: "Human Support",
         completed: humanSupportComplete,
         action: { path: "/settings", section: "widget-support", focusKey: "humanSupportToggle" },
-      })
-
-      this.addItem(items, {
-        key: "frustration-triggers",
-        label: "Frustration Triggers",
-        completed: this.isFilled(workspace.frustrationEscalationInstructions),
-        action: { path: "/settings", section: "widget-support", focusKey: "frustrationTriggers" },
       })
     }
 

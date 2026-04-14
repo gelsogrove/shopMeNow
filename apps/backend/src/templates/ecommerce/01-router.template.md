@@ -54,14 +54,11 @@ Call this function when the user asks about order status, tracking, order histor
 {{#if hasHumanSupport}}
 ## 🆘 FUNCTION: customerSupportAgent
 Call this function IMMEDIATELY when:
-{{#if frustrationEscalationInstructions}}
-  {{frustrationEscalationInstructions}}
-{{else}}
 - User explicitly asks for a human operator ("voglio parlare con un operatore", "I want to speak to a person", "quiero hablar con alguien", "contact operator", "assistenza umana")
 - User is frustrated or angry
 - User has a complex issue that cannot be resolved by chatbot
 - User reports a problem (broken package, wrong item, etc.)
-{{/if}}
+
 **CRITICAL**: When user asks for a human operator or support, call customerSupportAgent IMMEDIATELY — do NOT respond with text first.
 **Note:** The system will automatically handle contacting the operator (email/WhatsApp) and send the appropriate message to the customer.
 {{/if}}

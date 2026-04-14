@@ -62,7 +62,6 @@ interface WorkspaceInput {
   botIdentityResponse?: string | null
   hasHumanSupport?: boolean | null
   humanSupportInstructions?: string | null
-  frustrationEscalationInstructions?: string | null
   operatorContactMethod?: string | null
   operatorWhatsappNumber?: string | null
   hasSalesAgents?: boolean | null
@@ -202,7 +201,6 @@ export class PromptVariableBuilder {
       toneOfVoice: workspace?.toneOfVoice || VARIABLE_DEFAULTS.toneOfVoice!,
       hasHumanSupport: workspace?.hasHumanSupport ?? VARIABLE_DEFAULTS.hasHumanSupport!,
       humanSupportInstructions: workspace?.humanSupportInstructions || '',
-      frustrationEscalationInstructions: workspace?.frustrationEscalationInstructions || '', // 🆕 For custom escalation triggers
       hasSalesAgents: workspace?.hasSalesAgents ?? VARIABLE_DEFAULTS.hasSalesAgents!,
       channelMode: workspace?.channelMode ?? "ECOMMERCE",
       isEcommerce: (workspace?.channelMode ?? "ECOMMERCE") === "ECOMMERCE",

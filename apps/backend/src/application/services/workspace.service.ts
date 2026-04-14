@@ -266,7 +266,6 @@ For privacy inquiries, please contact our support team.`
       hasSalesAgents: w.hasSalesAgents,
       hasHumanSupport: w.hasHumanSupport,
       humanSupportInstructions: w.humanSupportInstructions ?? undefined,
-      frustrationEscalationInstructions: w.frustrationEscalationInstructions ?? undefined,
       operatorContactMethod: w.operatorContactMethod ?? undefined,
       operatorEmail: (w as any).operatorEmail ?? undefined,
       operatorWhatsappNumber: w.operatorWhatsappNumber ?? undefined,
@@ -679,17 +678,6 @@ For privacy inquiries, please contact our support team.`
     data: Partial<WorkspaceProps>
   ): Promise<Workspace | null> {
     logger.info(`Updating workspace with ID: ${id}`)
-
-    // 🔍 DEBUG: Log frustrationEscalationInstructions EXPLICITLY (Andrea debug)
-    if (data.frustrationEscalationInstructions !== undefined) {
-      logger.warn(`🚨 FRUSTRATION ESCALATION UPDATE:`)
-      logger.warn(`   Value: "${data.frustrationEscalationInstructions}"`)
-      logger.warn(`   Length: ${data.frustrationEscalationInstructions?.length || 0} chars`)
-      logger.warn(`   Is NULL: ${data.frustrationEscalationInstructions === null}`)
-      logger.warn(`   Is EMPTY: ${data.frustrationEscalationInstructions === ''}`)
-    } else {
-      logger.warn(`⚠️ frustrationEscalationInstructions NOT in update payload`)
-    }
 
     // 🔍 DEBUG: Log chatbotName specifically
     if (data.chatbotName !== undefined) {

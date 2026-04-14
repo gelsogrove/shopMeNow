@@ -204,13 +204,25 @@ export function CallingFunctionsSection({
                 parsedCredentialsMapping = null
             }
 
-            const payload = { ...editingFunction, parameters: parsedParams, credentialsMapping: parsedCredentialsMapping }
+            // ✅ CRITICAL: Filter payload to only include MUTABLE fields (no id, workspaceId, functionName, isSystemFunction, createdAt)
+            const payload = {
+                description: editingFunction.description,
+                executionType: editingFunction.executionType,
+                isActive: editingFunction.isActive ?? true,
+                webhookUrl: editingFunction.webhookUrl || null,
+                responseInstructions: editingFunction.responseInstructions || null,
+                parameters: parsedParams,
+                attachedLlm: editingFunction.attachedLlm || null,
+                credentialsMapping: parsedCredentialsMapping
+            }
 
             if (editingFunction.id) {
                 await callingFunctionsApi.update(workspaceId, editingFunction.functionName!, payload)
                 toast.success("Tool updated successfully")
             } else {
-                await callingFunctionsApi.create(workspaceId, payload)
+                // For CREATE, include functionName (required for new tools)
+                const createPayload = { ...payload, functionName: editingFunction.functionName }
+                await callingFunctionsApi.create(workspaceId, createPayload)
                 toast.success("New tool added successfully")
             }
 
@@ -484,27 +496,27 @@ export function CallingFunctionsSection({
                                     <h3 className="font-semibold text-gray-900 mb-3">📋 Execution Types</h3>
 
                                     <div className="border-l-4 border-blue-500 pl-4">
-                                        <p className="font-semibold text-gray-900 text-sm mb-1">🌐 Webhook (External)</p>
+                                        <p className="font-semibold text-gray-900 text-sm mb-1">🌐 Webhook (External API)</p>
                                         <p className="text-sm text-gray-700">
-                                            Calls an external HTTP endpoint. Use for integrating with third-party APIs (Stripe, Mailchimp, CRMs, etc.). The AI sends a JSON POST with the parameters, and your server responds with data.
+                                            <strong>Calls your own server/API</strong> via HTTP POST. Use when you need to integrate with external systems, run custom business logic on your infrastructure, or connect to third-party services (Stripe, CRMs, ERPs, etc.). You control the endpoint and implementation.
                                         </p>
-                                        <p className="text-xs text-gray-500 mt-1">Best for: Payment processing, CRM lookups, email sending, inventory checks</p>
+                                        <p className="text-xs text-gray-500 mt-1">✅ Best for: Payment processing, inventory sync, custom calculations, external data lookups</p>
                                     </div>
 
                                     <div className="border-l-4 border-purple-500 pl-4">
-                                        <p className="font-semibold text-gray-900 text-sm mb-1">⚙️ Internal Logic</p>
+                                        <p className="font-semibold text-gray-900 text-sm mb-1">⚙️ Internal Logic (Platform Built-in)</p>
                                         <p className="text-sm text-gray-700">
-                                            Executes built-in platform logic. Used by system functions for order management, cart operations, profile updates, etc.
+                                            <strong>Executes code inside the eChatbot platform</strong>. System functions (orders, cart, profile) use this type. You cannot create new INTERNAL functions — this type is reserved for platform-managed operations that directly interact with the database.
                                         </p>
-                                        <p className="text-xs text-gray-500 mt-1">Best for: Platform-native operations (orders, cart, profile)</p>
+                                        <p className="text-xs text-gray-500 mt-1">⚠️ System functions only — not available for custom tools</p>
                                     </div>
 
                                     <div className="border-l-4 border-amber-500 pl-4">
-                                        <p className="font-semibold text-gray-900 text-sm mb-1">🤖 Specialized Agent</p>
+                                        <p className="font-semibold text-gray-900 text-sm mb-1">🤖 Specialized Agent (AI Sub-agent)</p>
                                         <p className="text-sm text-gray-700">
-                                            Delegates to a specialized AI sub-agent with its own prompt and expertise. Use for complex tasks requiring domain-specific knowledge.
+                                            <strong>Delegates to a specialized AI with its own prompt and context</strong>. Instead of calling an API, this triggers a full AI agent with domain expertise (e.g., product search, legal advice, order tracking). The sub-agent analyzes the request and generates a natural language response.
                                         </p>
-                                        <p className="text-xs text-gray-500 mt-1">Best for: Legal advice, technical support, product recommendations</p>
+                                        <p className="text-xs text-gray-500 mt-1">✅ Best for: Complex reasoning tasks, multi-step conversations, domain-specific expertise</p>
                                     </div>
                                 </div>
 
@@ -620,15 +632,19 @@ Credentials Mapping: {
                 )}
             </Card>
 
-            {/* Edit Modal */}
+            {/* Edit Modal - Horizontal 2-Column Layout */}
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>{editingFunction?.id ? 'Edit Tool' : 'New Custom Tool'}</DialogTitle>
+                        <DialogDescription className="text-xs text-slate-500">
+                            {editingFunction?.isSystemFunction && '🔒 System tool - only description, execution type, and response instructions can be edited'}
+                        </DialogDescription>
                     </DialogHeader>
 
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-6 py-4">
+                        {/* LEFT COLUMN - Basic Info */}
+                        <div className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="fnName">Function Name <span className="text-slate-400 font-normal">(camelCase)</span></Label>
                                 <Input
@@ -639,41 +655,58 @@ Credentials Mapping: {
                                     disabled={editingFunction?.isSystemFunction}
                                 />
                             </div>
+
                             <div className="space-y-2">
                                 <Label htmlFor="exType">Execution Type</Label>
                                 <Select
                                     value={editingFunction?.executionType}
                                     onValueChange={(val: any) => setEditingFunction(prev => ({ ...prev, executionType: val }))}
-                                    disabled={editingFunction?.isSystemFunction}
                                 >
                                     <SelectTrigger id="exType">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="WEBHOOK">Webhook (External)</SelectItem>
-                                        <SelectItem value="INTERNAL">Internal Logic</SelectItem>
-                                        <SelectItem value="DELEGATE_TO_AGENT">Specialized Agent</SelectItem>
+                                        <SelectItem value="WEBHOOK">🌐 Webhook (External API)</SelectItem>
+                                        <SelectItem value="INTERNAL">⚙️ Internal Logic (System)</SelectItem>
+                                        <SelectItem value="DELEGATE_TO_AGENT">🤖 Specialized Agent</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="fnDesc">Description (what the tool does, for the AI)</Label>
+                                <Textarea
+                                    id="fnDesc"
+                                    value={editingFunction?.description || ""}
+                                    onChange={(e) => setEditingFunction(prev => ({ ...prev, description: e.target.value }))}
+                                    placeholder="Returns the status of an order given its ID"
+                                    rows={3}
+                                />
+                            </div>
+
+                            {/* Response Instructions - in LEFT column */}
+                            <div className="space-y-2">
+                                <Label htmlFor="responseInstructions">
+                                    Response Instructions
+                                    <span className="ml-1 text-slate-400 font-normal">(optional)</span>
+                                </Label>
+                                <Textarea
+                                    id="responseInstructions"
+                                    value={editingFunction?.responseInstructions || ""}
+                                    onChange={(e) => setEditingFunction(prev => ({ ...prev, responseInstructions: e.target.value }))}
+                                    placeholder="Guide the AI on how to present the result"
+                                    rows={3}
+                                />
+                            </div>
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="fnDesc">Description (what the tool does, for the AI)</Label>
-                            <Textarea
-                                id="fnDesc"
-                                value={editingFunction?.description || ""}
-                                onChange={(e) => setEditingFunction(prev => ({ ...prev, description: e.target.value }))}
-                                placeholder="Returns the status of an order given its ID"
-                                rows={2}
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label>Parameters Schema (JSON Schema)</Label>
-                            <div className="border rounded-md overflow-hidden bg-white">
-                                <Editor
-                                    height="250px"
+                        {/* RIGHT COLUMN - Technical Details */}
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label>Parameters Schema (JSON Schema)</Label>
+                                <div className="border rounded-md overflow-hidden bg-white">
+                                    <Editor
+                                        height="200px"
                                     defaultLanguage="json"
                                     theme="vs-light"
                                     value={editingFunction?.parameters || ""}
@@ -689,8 +722,8 @@ Credentials Mapping: {
                             </div>
                         </div>
 
-                        {/* Attached LLM — only for DELEGATE_TO_AGENT type */}
-                        {editingFunction?.executionType === "DELEGATE_TO_AGENT" && (
+                            {/* Attached LLM — only for DELEGATE_TO_AGENT type */}
+                            {editingFunction?.executionType === "DELEGATE_TO_AGENT" && (
                             <div className="space-y-2">
                                 <Label htmlFor="attachedLlm">Specialist Agent</Label>
                                 <Select
@@ -709,10 +742,10 @@ Credentials Mapping: {
                                     </SelectContent>
                                 </Select>
                             </div>
-                        )}
+                            )}
 
-                        {/* Webhook URL — only for WEBHOOK type */}
-                        {editingFunction?.executionType === "WEBHOOK" && (
+                            {/* Webhook URL — only for WEBHOOK type */}
+                            {editingFunction?.executionType === "WEBHOOK" && (
                             <div className="space-y-2">
                                 <Label htmlFor="toolWebhookUrl">Webhook URL</Label>
                                 <div className="flex gap-2">
@@ -735,10 +768,10 @@ Credentials Mapping: {
                                 </div>
                                 <p className="text-xs text-slate-500">Payload sent as JSON POST request when AI calls this tool.</p>
                             </div>
-                        )}
+                            )}
 
-                        {/* Credentials Mapping — only for WEBHOOK type */}
-                        {editingFunction?.executionType === "WEBHOOK" && (
+                            {/* Credentials Mapping — only for WEBHOOK type */}
+                            {editingFunction?.executionType === "WEBHOOK" && (
                             <div className="space-y-2">
                                 <Label>
                                     Credentials Mapping
@@ -746,7 +779,7 @@ Credentials Mapping: {
                                 </Label>
                                 <div className="border rounded-md overflow-hidden bg-white">
                                     <Editor
-                                        height="140px"
+                                        height="120px"
                                         defaultLanguage="json"
                                         theme="vs-light"
                                         value={typeof editingFunction?.credentialsMapping === 'string'
@@ -770,25 +803,7 @@ Credentials Mapping: {
                                     </code>
                                 </p>
                             </div>
-                        )}
-
-                        {/* Response Instructions — visible for ALL execution types */}
-                        <div className="space-y-2">
-                            <Label htmlFor="responseInstructions">
-                                Response Instructions
-                                <span className="ml-1 text-slate-400 font-normal">(optional — guides the AI on how to present the result)</span>
-                            </Label>
-                            <Textarea
-                                id="responseInstructions"
-                                value={editingFunction?.responseInstructions || ""}
-                                onChange={(e) => setEditingFunction(prev => ({ ...prev, responseInstructions: e.target.value }))}
-                                placeholder={editingFunction?.executionType === "WEBHOOK"
-                                    ? "Guide the AI on how to present the webhook response"
-                                    : editingFunction?.executionType === "DELEGATE_TO_AGENT"
-                                    ? "Guide the AI on how to present the sub-agent result"
-                                    : "Guide the AI on how to present the function result"}
-                                rows={2}
-                            />
+                            )}
                         </div>
                     </div>
 

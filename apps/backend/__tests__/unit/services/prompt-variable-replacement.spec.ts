@@ -843,33 +843,6 @@ describe('PromptProcessorService - Variable Replacement (COMPLETE)', () => {
       expect(result).not.toContain('{{websiteUrl}}')
     })
 
-    it('should replace {{frustrationEscalationInstructions}}', () => {
-      const template = 'Escalate when: {{frustrationEscalationInstructions}}'
-      const variables: PromptVariables = {
-        customerName: 'Mario',
-        customerPhone: '+39123456789',
-        customerEmail: 'mario@example.com',
-        customerDiscount: 0,
-        languageUser: 'ITALIANO',
-        pushNotificationsConsent: false,
-        companyName: 'Shop',
-        chatbotName: 'Sofia',
-        channelName: 'Shop',
-        workspaceUrl: 'https://shop.com',
-        toneOfVoice: 'friendly',
-        channelMode: 'ECOMMERCE' as any,
-        isEcommerce: true,
-        hasHumanSupport: true,
-        hasSalesAgents: false,
-        tokenDuration: '15 minutes',
-        frustrationEscalationInstructions: 'Customer uses ALL CAPS, asks for refund',
-      }
-
-      const result = service.processWithVariables(template, variables)
-
-      expect(result).toBe('Escalate when: Customer uses ALL CAPS, asks for refund')
-      expect(result).not.toContain('{{frustrationEscalationInstructions}}')
-    })
 
     it('should replace {{operatorContactMethod}} and {{operatorWhatsappNumber}}', () => {
       const template = 'Contact operator via {{operatorContactMethod}}: {{operatorWhatsappNumber}}'

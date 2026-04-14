@@ -157,7 +157,6 @@ export async function contactOperator(
           operatorEmail: true, // 📧 Email operatore per notifiche
           hasHumanSupport: true,
           humanSupportInstructions: true, // ✅ Message to send to customer when escalating
-          frustrationEscalationInstructions: true, // 🎯 Triggers for when to escalate (not the message!)
           hasSalesAgents: true, // 🆕 Sales agent routing enabled?
           whatsappSettings: {
             select: { adminEmail: true },
@@ -538,7 +537,6 @@ Rispondi direttamente su WhatsApp.
 
 
       // 📝 Build response message with variable replacement (Andrea's spec)
-      // Use humanSupportInstructions (message to send) NOT frustrationEscalationInstructions (triggers)
       let responseMessage = workspace?.humanSupportInstructions ||
         "Hello {{nameUser}}, I'm connecting you with our support team. They will contact you as soon as possible. We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝"
 

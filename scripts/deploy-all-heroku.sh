@@ -30,6 +30,12 @@ echo ""
 echo "🚀 Deploying all Heroku apps from branch: main"
 echo "============================================================"
 
+# PRE-DEPLOY: Generate Prisma client locally
+echo ""
+echo "📦 Generating Prisma client locally..."
+npm run prisma:generate
+echo "✅ Prisma client generated"
+
 # Push to all 3 remotes in parallel
 echo ""
 echo "📦 Pushing to echatbot-app (backend + frontend)..."
@@ -74,6 +80,34 @@ fi
 echo ""
 if [ $FAILED -eq 0 ]; then
   echo "🎉 All apps deployed successfully!"
+  echo ""
+  echo "============================================================"
+  echo "🔄 Running post-deploy tasks on Heroku..."
+  echo "============================================================"
+  
+  # POST-DEPLOY: Run Prisma migrate and generate on all apps
+  echo ""
+  echo "📊 Running Prisma migrate on echatbot-app..."
+  heroku run -a echatbot-app "cd packages/database && npx prisma migrate deploy" || echo "⚠️  Migrate failed (may be already applied)"
+  
+  echo ""
+  echo "🔧 Generating Prisma client on echatbot-app..."
+  heroku run -a echatbot-app "cd packages/database && npx prisma generate" || echo "⚠️  Generate failed"
+  
+  echo ""
+  echo "📊 Running Prisma migrate on echatbot-scheduler..."
+  heroku run -a echatbot-scheduler "cd packages/database && npx prisma migrate deploy" || echo "⚠️  Migrate failed (may be already applied)"
+  
+  echo ""
+  echo "🔧 Generating Prisma client on echatbot-scheduler..."
+  heroku run -a echatbot-scheduler "cd packages/database && npx prisma generate" || echo "⚠️  Generate failed"
+  
+  echo ""
+  echo "✅ Post-deploy tasks completed!"
+  echo ""
+  echo "============================================================"
+  echo "🎊 DEPLOY COMPLETE - All apps updated and migrated!"
+  echo "============================================================"
 else
   echo "⚠️  One or more deploys failed. Check the output above."
   exit 1

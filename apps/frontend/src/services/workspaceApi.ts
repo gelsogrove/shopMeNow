@@ -49,7 +49,6 @@ export interface Workspace {
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
   humanSupportInstructions?: string
-  frustrationEscalationInstructions?: string // 🆕 Feature 203: Custom escalation triggers
   operatorContactMethod?: string
   operatorWhatsappNumber?: string
   toneOfVoice?: string
@@ -181,7 +180,6 @@ export interface UpdateWorkspaceData {
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
   humanSupportInstructions?: string
-  frustrationEscalationInstructions?: string // 🆕 Feature 203
   operatorContactMethod?: string
   operatorWhatsappNumber?: string
   toneOfVoice?: string

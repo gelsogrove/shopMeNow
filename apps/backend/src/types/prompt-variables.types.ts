@@ -177,12 +177,6 @@ export interface PromptVariables {
    */
   humanSupportInstructions: string
 
-  /** 🆕 Istruzioni escalation per frustrazione cliente
-   * Template: {{frustrationEscalationInstructions}}
-   * Source: workspace.frustrationEscalationInstructions || ''
-   * Used for: Custom escalation triggers in router/support prompts
-   */
-  frustrationEscalationInstructions: string
 
   /** Ha agenti commerciali
    * Template: {{hasSalesAgents}} (boolean for {{#if}})

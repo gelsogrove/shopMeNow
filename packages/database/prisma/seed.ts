@@ -287,13 +287,6 @@ Sono qui per aiutarti 😊`,
         humanSupportInstructions:
           "Hello {{nameUser}}, I'm connecting you with our agent {{agentName}}. They will contact you as soon as possible (phone: {{agentPhone}} / email: {{agentEmail}}). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝",
         // 🆕 Feature 203: Custom escalation triggers
-        frustrationEscalationInstructions: `Chiama IMMEDIATAMENTE l'operatore (contactOperator) quando il cliente:
-- Si lamenta che la MERCE È ARRIVATA SCADUTA (prodotto scaduto, data scadenza passata)
-- Si lamenta che la MERCE È ARRIVATA ROTTA/DANNEGGIATA (pacco danneggiato, prodotto rotto, bottiglia rotta)
-- Vuole MODIFICARE UN ORDINE già effettuato (cambiare prodotti, cambiare quantità, cambiare indirizzo)
-- Vuole CANCELLARE UN ORDINE (annullare ordine, disdire ordine)
-- Chiede ESPLICITAMENTE di parlare con un OPERATORE UMANO (operatore, assistenza umana, persona reale)
-
 ⚠️ IMPORTANTE: 
 - Prima controlla SEMPRE nelle FAQ se esiste una risposta predefinita
 - Se la FAQ risponde al problema, usa quella risposta SENZA chiamare l'operatore
@@ -399,12 +392,6 @@ Need anything else?"`,
         humanSupportInstructions:
           "Ciao {{nameUser}}, mi sto mettendo in contatto con il nostro operatore. Ti rispondera' al piu' presto. Disattivo il chatbot finche' non ricevi assistenza.",
         // 🆕 Feature 203: Custom escalation triggers (informational version)
-        frustrationEscalationInstructions: `Chiama l'operatore (contactOperator) quando il cliente:
-- Ha URGENZA di informazioni che non trovi nella knowledge base
-- È FRUSTRATO perché non riesce a trovare le informazioni richieste
-- Chiede ESPLICITAMENTE di parlare con un OPERATORE UMANO
-- Ha una SITUAZIONE COMPLESSA che richiede assistenza personalizzata
-
 ⚠️ IMPORTANTE: Prima verifica SEMPRE se la risposta è nelle FAQ o nella knowledge base`,
         operatorContactMethod: "EMAIL",
         toneOfVoice: "PROFESSIONAL",
@@ -894,8 +881,6 @@ Would you like details about something specific?"`,
         humanSupportInstructions:
           "Ciao {{nameUser}}, ti metto subito in contatto con un consulente eChatbot. Riceverai risposta entro 15 minuti da {{agentName}} (tel: {{agentPhone}} / email: {{agentEmail}}).",
         // 🆕 Feature 203: Custom escalation triggers (enterprise support)
-        frustrationEscalationInstructions: `# IMMEDIATE ESCALATION - Contact Human Consultant NOW
-
 Escalate IMMEDIATELY (call contactOperator) when customer:
 - Has TECHNICAL ISSUES with platform (bugs, errors, crashes)
 - Requests PLAN UPGRADE or DOWNGRADE

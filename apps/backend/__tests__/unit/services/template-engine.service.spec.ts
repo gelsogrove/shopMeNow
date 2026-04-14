@@ -143,30 +143,6 @@ After section
     })
 
     /**
-     * SCENARIO: SECTION nested inside {{#if}} block
-     * RULE: Both should work correctly together
-     */
-    it('should work with SECTION inside {{#if}} blocks', () => {
-      const template = `
-{{#if hasHumanSupport}}
-[[SECTION:frustrationEscalationInstructions]]
-## Escalation Triggers
-{{frustrationEscalationInstructions}}
-[[/SECTION]]
-{{/if}}
-`
-      const variables = {
-        hasHumanSupport: true,
-        frustrationEscalationInstructions: 'When angry, escalate'
-      }
-      
-      const result = templateEngine.process(template, variables)
-      
-      expect(result).toContain('## Escalation Triggers')
-      expect(result).toContain('When angry, escalate')
-    })
-
-    /**
      * SCENARIO: SECTION nested inside {{#if}}, but SECTION var is empty
      * RULE: SECTION is removed, {{#if}} still evaluates correctly
      */

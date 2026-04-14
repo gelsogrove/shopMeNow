@@ -2,7 +2,6 @@
  * 🎯 TEST: TranslationAgent Prompt Variables Completeness
  *
  * SCENARIO: TranslationAgent builds prompts from DB-stored templates.
- * Variables like {{frustrationEscalationInstructions}}, {{humanSupportInstructions}},
  * etc. MUST be replaced before sending to LLM.
  *
  * KEY RULES:
@@ -49,7 +48,6 @@ describe("TranslationAgent Prompt Variables Completeness", () => {
     customAiRules: "Always be polite",
     businessType: "ecommerce",
     // 🎯 CRITICAL variables from minrequirement
-    frustrationEscalationInstructions: "If the customer is frustrated, offer to connect with a human agent immediately.",
     humanSupportInstructions: "Our team is available Mon-Fri 9:00-18:00. Contact via WhatsApp at +39 333 1234567.",
     botIdentityResponse: "I'm ShopBot, your digital shopping assistant.",
     allowedExternalLinks: ["https://testshop.com", "https://wa.me/393331234567"],
@@ -69,17 +67,7 @@ describe("TranslationAgent Prompt Variables Completeness", () => {
   }
 
   describe("PromptVariableBuilder includes all required variables", () => {
-    it("should include frustrationEscalationInstructions in built variables", () => {
-      const variables = PromptVariableBuilder.build(
-        mockCustomer as any,
-        mockWorkspace as any,
-        { products: "", categories: "", services: "", offers: "", faqs: "" }
-      )
 
-      expect(variables.frustrationEscalationInstructions).toBe(
-        "If the customer is frustrated, offer to connect with a human agent immediately."
-      )
-    })
 
     it("should include humanSupportInstructions in built variables", () => {
       const variables = PromptVariableBuilder.build(
@@ -131,7 +119,6 @@ describe("TranslationAgent Prompt Variables Completeness", () => {
 You are {{chatbotName}}, assistant for {{companyName}}.
 
 When the customer is frustrated:
-{{frustrationEscalationInstructions}}
 
 Human support info:
 {{humanSupportInstructions}}
@@ -168,7 +155,6 @@ Language: translate to {TARGET_LANGUAGE}
       // SCENARIO: Workspace has none of the 4 critical fields set
       const emptyWorkspace = {
         ...mockWorkspace,
-        frustrationEscalationInstructions: null,
         humanSupportInstructions: null,
         botIdentityResponse: null,
         allowedExternalLinks: null,
@@ -181,7 +167,6 @@ Language: translate to {TARGET_LANGUAGE}
       )
 
       // Should not crash — empty string fallbacks
-      expect(variables.frustrationEscalationInstructions).toBe("")
       expect(variables.humanSupportInstructions).toBe("")
       expect(variables.botIdentityResponse).toBe("")
       // allowedExternalLinks with null should be empty string

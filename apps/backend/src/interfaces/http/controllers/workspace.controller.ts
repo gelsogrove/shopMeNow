@@ -95,7 +95,6 @@ export class WorkspaceController {
         hasSalesAgents: workspace.hasSalesAgents,
         hasHumanSupport: workspace.hasHumanSupport,
         humanSupportInstructions: workspace.humanSupportInstructions,
-        frustrationEscalationInstructions: workspace.frustrationEscalationInstructions, // 🆕 Feature 203
         operatorContactMethod: workspace.operatorContactMethod,
         operatorEmail: workspace.operatorEmail,
         operatorWhatsappNumber: workspace.operatorWhatsappNumber,
@@ -207,7 +206,6 @@ export class WorkspaceController {
           hasSalesAgents: workspace.hasSalesAgents,
           hasHumanSupport: workspace.hasHumanSupport,
           humanSupportInstructions: workspace.humanSupportInstructions,
-          frustrationEscalationInstructions: workspace.frustrationEscalationInstructions, // 🆕 Feature 203
           operatorContactMethod: workspace.operatorContactMethod,
           operatorEmail: workspace.operatorEmail,
           operatorWhatsappNumber: workspace.operatorWhatsappNumber,
@@ -478,7 +476,6 @@ export class WorkspaceController {
         hasSalesAgents: workspace.hasSalesAgents,
         hasHumanSupport: workspace.hasHumanSupport,
         humanSupportInstructions: workspace.humanSupportInstructions,
-        frustrationEscalationInstructions: workspace.frustrationEscalationInstructions,
         operatorContactMethod: workspace.operatorContactMethod,
         operatorEmail: workspace.operatorEmail,
         operatorWhatsappNumber: workspace.operatorWhatsappNumber,
@@ -666,7 +663,6 @@ export class WorkspaceController {
         hasSalesAgents: workspace.hasSalesAgents,
         hasHumanSupport: workspace.hasHumanSupport,
         humanSupportInstructions: workspace.humanSupportInstructions,
-        frustrationEscalationInstructions: workspace.frustrationEscalationInstructions, // 🆕 Feature 203
         operatorContactMethod: workspace.operatorContactMethod,
         operatorEmail: workspace.operatorEmail,
         operatorWhatsappNumber: workspace.operatorWhatsappNumber,

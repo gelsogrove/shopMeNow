@@ -718,7 +718,6 @@ export const workspaceService = {
         appointmentReminderChannel: true,
         appointmentReminderHours: true,
         minBookingBufferHours: true,
-        frustrationEscalationInstructions: true,
         whatsappSettings: {
           select: {
             phoneNumber: true,

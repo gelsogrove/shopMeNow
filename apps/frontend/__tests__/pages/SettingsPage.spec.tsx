@@ -64,7 +64,6 @@ const mockWorkspace = {
   hasSalesAgents: false,
   hasHumanSupport: true,
   humanSupportInstructions: 'Contact our team for help',
-  frustrationEscalationInstructions: 'Call operator on angry customer',
   operatorContactMethod: 'email',
   operatorWhatsappNumber: '',
   toneOfVoice: 'friendly',

@@ -142,7 +142,6 @@ export class PromptRenderService {
       customAiRules: workspace.customAiRules || "",
       botIdentityResponse: workspace.botIdentityResponse || "",
       humanSupportInstructions: workspace.humanSupportInstructions || "",
-      frustrationEscalationInstructions: workspace.frustrationEscalationInstructions || "",
       allowedExternalLinks: allowedLinks,
       operatorContactMethod: workspace.operatorContactMethod || "",
       operatorWhatsappNumber: workspace.operatorWhatsappNumber || "",

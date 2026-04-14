@@ -67,7 +67,6 @@ describe("Placeholder Linter — No unreplaced placeholders in output", () => {
     it("should catch all known prompt variables from TranslationAgent", () => {
       // RULE: These are the variables TranslationAgent requires
       const knownVars = [
-        "{{frustrationEscalationInstructions}}",
         "{{humanSupportInstructions}}",
         "{{botIdentityResponse}}",
         "{{allowedExternalLinks}}",

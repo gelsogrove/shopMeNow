@@ -81,8 +81,6 @@ export interface WorkspaceConfig {
   hasHumanSupport: boolean
   /** Human support escalation instructions */
   humanSupportInstructions?: string
-  /** Frustration escalation triggers */
-  frustrationEscalationInstructions?: string
   /** Operator contact method (EMAIL, WHATSAPP, etc.) */
   operatorContactMethod?: string
   /** Operator WhatsApp number */

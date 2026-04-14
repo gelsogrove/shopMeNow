@@ -452,7 +452,6 @@ Respond with JSON: {"translated": true, "originalLanguage": "mixed", "targetLang
           botIdentityResponse: true,
           hasHumanSupport: true,
           humanSupportInstructions: true,
-          frustrationEscalationInstructions: true,
           operatorContactMethod: true,
           operatorWhatsappNumber: true,
           hasSalesAgents: true,

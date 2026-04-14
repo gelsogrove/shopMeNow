@@ -125,7 +125,6 @@ describe("ContactOperator WhatsApp Summary Fix", () => {
       hasHumanSupport: true,
       hasSalesAgents: true, // Sales agent routing enabled for these tests
       humanSupportInstructions: "Hello {{nameUser}}, our team will contact you soon.",
-      frustrationEscalationInstructions: null,
       whatsappSettings: { adminEmail: "admin@test.com" },
     })
 

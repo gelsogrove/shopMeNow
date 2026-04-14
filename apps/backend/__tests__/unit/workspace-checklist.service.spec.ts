@@ -18,7 +18,6 @@ describe("WorkspaceChecklistService", () => {
           botIdentityResponse: "I am your assistant",
           hasHumanSupport: false,
           humanSupportInstructions: null,
-          frustrationEscalationInstructions: null,
           operatorContactMethod: "email",
           operatorEmail: "admin@example.com",
           operatorWhatsappNumber: null,

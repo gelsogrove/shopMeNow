@@ -32,7 +32,6 @@ const buildWorkspace = (overrides: Partial<any> = {}) => ({
   hasSalesAgents: false,
   hasHumanSupport: true,
   humanSupportInstructions: null,
-  frustrationEscalationInstructions: null,
   operatorContactMethod: "email",
   operatorWhatsappNumber: null,
   toneOfVoice: "friendly",
