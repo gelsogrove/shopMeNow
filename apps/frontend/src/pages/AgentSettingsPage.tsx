@@ -47,6 +47,7 @@ import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { Agent, getAgents, updateAgent } from "@/services/agentApi"
+import { FlowConfig, getAllForWorkspace } from "@/services/flowConfigApi"
 import {
   Bot,
   Brain,
@@ -54,8 +55,10 @@ import {
   Globe,
   HelpCircle,
   Loader2,
+  MessageCircle,
   Save,
   Shield,
+  Workflow,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -81,6 +84,9 @@ export function AgentSettingsPage() {
     Record<string, AgentFormData>
   >({})
   const [savingAgents, setSavingAgents] = useState<Record<string, boolean>>({})
+  const [flowConfigs, setFlowConfigs] = useState<FlowConfig[]>([])
+
+  const isFlowWorkspace = workspace?.channelMode === 'FLOW'
 
   // Redirect if no workspace
   useEffect(() => {
@@ -89,6 +95,14 @@ export function AgentSettingsPage() {
       navigate("/clients")
     }
   }, [workspace, navigate])
+
+  // Load FlowNodeConfigs for FLOW workspaces
+  useEffect(() => {
+    if (!isFlowWorkspace || !workspace?.id) return
+    getAllForWorkspace(workspace.id).then(setFlowConfigs).catch((err) => {
+      logger.error('Error loading flow configs:', err)
+    })
+  }, [workspace, isFlowWorkspace])
 
   // Load all agents
   useEffect(() => {
@@ -249,12 +263,172 @@ export function AgentSettingsPage() {
     )
   }
 
+  // Derive sub-agents for pipeline display (exclude ROUTER, SECURITY, TRANSLATION)
+  const pipelineSubAgents = agents.filter(
+    (a) => a.agentType !== 'ROUTER' && a.agentType !== 'SECURITY' && a.agentType !== 'TRANSLATION'
+  )
+  const routerAgent = agents.find((a) => a.agentType === 'ROUTER')
+  const translationAgent = agents.find((a) => a.agentType === 'TRANSLATION')
+  const securityAgent = agents.find((a) => a.agentType === 'SECURITY')
+
   return (
     <PageLayout>
       <PageHeader
         title="Agent Settings"
         description="Configure multi-agent LLM system: Router, Sub-Agents, and Safety Layer"
       />
+
+      {/* ── Visual Pipeline Graph ── */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="w-5 h-5" />
+            Agent Pipeline
+          </CardTitle>
+          <CardDescription>
+            Message flow through the multi-agent system
+            {isFlowWorkspace && (
+              <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700">
+                <Workflow className="w-3 h-3" />
+                FLOW mode
+              </span>
+            )}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center gap-2 py-2">
+
+            {/* User message */}
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-gray-50">
+              <MessageCircle className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-600">Customer Message</span>
+            </div>
+
+            {/* Arrow */}
+            <div className="w-px h-5 bg-gray-300" />
+            <div className="w-2 h-2 rounded-full bg-gray-400" />
+
+            {/* Router */}
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border-2"
+              style={{
+                borderColor: getAgentColor('ROUTER'),
+                backgroundColor: getAgentColor('ROUTER') + '18',
+              }}
+            >
+              <Brain className="w-4 h-4" style={{ color: getAgentColor('ROUTER') }} />
+              <span className="text-sm font-semibold" style={{ color: getAgentColor('ROUTER') }}>
+                {routerAgent?.name || 'Router'}
+              </span>
+            </div>
+
+            {/* Arrow */}
+            <div className="w-px h-5 bg-gray-300" />
+            <div className="w-2 h-2 rounded-full bg-gray-400" />
+
+            {/* Sub-agents row */}
+            {(pipelineSubAgents.length > 0 || (isFlowWorkspace && flowConfigs.length > 0)) && (
+              <div className="w-full">
+                <div className="relative border border-dashed border-gray-300 rounded-xl p-4">
+                  <span className="absolute -top-2.5 left-4 bg-white px-2 text-xs text-gray-400 font-medium">
+                    Sub-Agents
+                  </span>
+                  <div className="flex flex-wrap gap-2 justify-center">
+                    {/* Standard sub-agents */}
+                    {pipelineSubAgents.map((agent) => {
+                      const Icon = getAgentIcon(agent.agentType || '')
+                      const color = getAgentColor(agent.agentType || '')
+                      return (
+                        <div
+                          key={agent.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium"
+                          style={{ borderColor: color, backgroundColor: color + '15', color }}
+                        >
+                          <Icon className="w-3 h-3" />
+                          {agent.name}
+                        </div>
+                      )
+                    })}
+
+                    {/* FLOW sub-LLMs */}
+                    {isFlowWorkspace && flowConfigs.map((fc) => (
+                      <div
+                        key={fc.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium border-violet-400 bg-violet-50 text-violet-700"
+                      >
+                        <Workflow className="w-3 h-3" />
+                        {fc.flowLabel}
+                        <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-violet-200 text-violet-600 font-semibold">
+                          Sub-LLM
+                        </span>
+                      </div>
+                    ))}
+
+                    {/* Empty state for FLOW when no configs yet */}
+                    {isFlowWorkspace && flowConfigs.length === 0 && (
+                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-violet-300 text-xs text-violet-400">
+                        <Workflow className="w-3 h-3" />
+                        No Sub-LLMs configured yet
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Arrow */}
+            <div className="w-px h-5 bg-gray-300" />
+            <div className="w-2 h-2 rounded-full bg-gray-400" />
+
+            {/* Translation */}
+            {translationAgent && (
+              <>
+                <div
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border-2"
+                  style={{
+                    borderColor: getAgentColor('TRANSLATION'),
+                    backgroundColor: getAgentColor('TRANSLATION') + '18',
+                  }}
+                >
+                  <Globe className="w-4 h-4" style={{ color: getAgentColor('TRANSLATION') }} />
+                  <span className="text-sm font-semibold" style={{ color: getAgentColor('TRANSLATION') }}>
+                    {translationAgent.name}
+                  </span>
+                </div>
+                <div className="w-px h-5 bg-gray-300" />
+                <div className="w-2 h-2 rounded-full bg-gray-400" />
+              </>
+            )}
+
+            {/* Security */}
+            {securityAgent && (
+              <>
+                <div
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border-2"
+                  style={{
+                    borderColor: getAgentColor('SECURITY'),
+                    backgroundColor: getAgentColor('SECURITY') + '18',
+                  }}
+                >
+                  <Shield className="w-4 h-4" style={{ color: getAgentColor('SECURITY') }} />
+                  <span className="text-sm font-semibold" style={{ color: getAgentColor('SECURITY') }}>
+                    {securityAgent.name}
+                  </span>
+                </div>
+                <div className="w-px h-5 bg-gray-300" />
+                <div className="w-2 h-2 rounded-full bg-gray-400" />
+              </>
+            )}
+
+            {/* Customer response */}
+            <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-gray-50">
+              <MessageCircle className="w-4 h-4 text-gray-500" />
+              <span className="text-sm font-medium text-gray-600">Customer Response</span>
+            </div>
+
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Agent Cards - CRUD Interface */}
       <div className="space-y-6">
