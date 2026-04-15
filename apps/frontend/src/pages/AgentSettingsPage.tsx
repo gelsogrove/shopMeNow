@@ -27,16 +27,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import MarkdownEditor from "@/components/ui/markdown-editor"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import {
   Tooltip,
   TooltipContent,
@@ -46,22 +52,95 @@ import {
 import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
-import { Agent, getAgents, updateAgent } from "@/services/agentApi"
+import { FlowConfigSheet } from "@/components/shared/FlowConfigSheet"
+import { Agent, getAgents } from "@/services/agents-legacy-api"
+import { updateAgentConfig } from "@/services/agent-config-api"
 import { FlowConfig, getAllForWorkspace } from "@/services/flowConfigApi"
 import {
   Bot,
   Brain,
+  Check,
   CheckCircle,
+  ChevronsUpDown,
   Globe,
   HelpCircle,
   Loader2,
   MessageCircle,
+  Plus,
   Save,
   Shield,
   Workflow,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import React, { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+
+// ── Pipeline graph helpers ──────────────────────────────────────────────────
+
+interface PipelineNodeProps {
+  icon: React.ElementType
+  label: string
+  sublabel?: string
+  color: string
+  bg: string
+  border: string
+  bold?: boolean
+  isActive?: boolean
+  onClick?: () => void
+}
+
+function PipelineNode({ icon: Icon, label, sublabel, color, bg, border, bold, isActive, onClick }: PipelineNodeProps) {
+  const isClickable = !!onClick
+  return (
+    <div
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={isClickable ? (e) => e.key === 'Enter' && onClick?.() : undefined}
+      className={`group relative flex items-center gap-2.5 px-5 py-2.5 rounded-xl border-2 transition-all ${
+        isClickable ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] active:scale-[0.99]' : ''
+      }`}
+      style={{ borderColor: border, backgroundColor: bg, minWidth: 190 }}
+    >
+      {/* Active/inactive dot */}
+      {isActive !== undefined && (
+        <span
+          className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full border border-white ${
+            isActive ? 'bg-green-500' : 'bg-gray-300'
+          }`}
+        />
+      )}
+      <Icon className="w-4 h-4 shrink-0" style={{ color }} />
+      <div className="flex-1 min-w-0">
+        <div className={`text-sm leading-tight ${bold ? 'font-semibold' : 'font-medium'}`} style={{ color }}>
+          {label}
+        </div>
+        {sublabel && (
+          <div className="text-[11px] text-muted-foreground">{sublabel}</div>
+        )}
+      </div>
+      {/* Edit pencil on hover */}
+      {isClickable && (
+        <svg className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity shrink-0 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+      )}
+    </div>
+  )
+}
+
+function VerticalConnector() {
+  return (
+    <div className="flex flex-col items-center gap-0">
+      <div className="w-px h-4 bg-gray-300" />
+      <svg width="10" height="8" viewBox="0 0 10 8">
+        <polygon points="5,8 0,0 10,0" fill="#94a3b8" />
+      </svg>
+    </div>
+  )
+}
+
+// ──────────────────────────────────────────────────────────────────────────
 
 interface AgentFormData {
   id: string
@@ -84,9 +163,30 @@ export function AgentSettingsPage() {
     Record<string, AgentFormData>
   >({})
   const [savingAgents, setSavingAgents] = useState<Record<string, boolean>>({})
+  const [modelComboOpen, setModelComboOpen] = useState<Record<string, boolean>>({})
   const [flowConfigs, setFlowConfigs] = useState<FlowConfig[]>([])
+  const [flowSheetOpen, setFlowSheetOpen] = useState(false)
+  const [selectedFlowConfig, setSelectedFlowConfig] = useState<FlowConfig | null>(null)
+  const [highlightAgentId, setHighlightAgentId] = useState<string | null>(null)
 
   const isFlowWorkspace = workspace?.channelMode === 'FLOW'
+
+  const OPENROUTER_MODELS = [
+    { value: "openai/gpt-4o-mini",                label: "GPT-4o Mini" },
+    { value: "openai/gpt-4o",                     label: "GPT-4o" },
+    { value: "openai/gpt-4-turbo",                label: "GPT-4 Turbo" },
+    { value: "openai/o1-mini",                    label: "o1 Mini" },
+    { value: "anthropic/claude-3.5-sonnet",       label: "Claude 3.5 Sonnet" },
+    { value: "anthropic/claude-3-haiku",          label: "Claude 3 Haiku" },
+    { value: "anthropic/claude-3-opus",           label: "Claude 3 Opus" },
+    { value: "google/gemini-2.0-flash-001",       label: "Gemini 2.0 Flash" },
+    { value: "google/gemini-pro-1.5",             label: "Gemini Pro 1.5" },
+    { value: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B" },
+    { value: "meta-llama/llama-3.1-8b-instruct",  label: "Llama 3.1 8B" },
+    { value: "mistralai/mistral-large",           label: "Mistral Large" },
+    { value: "mistralai/mistral-7b-instruct",     label: "Mistral 7B" },
+    { value: "deepseek/deepseek-chat",            label: "DeepSeek Chat" },
+  ]
 
   // Redirect if no workspace
   useEffect(() => {
@@ -97,12 +197,38 @@ export function AgentSettingsPage() {
   }, [workspace, navigate])
 
   // Load FlowNodeConfigs for FLOW workspaces
+  const reloadFlowConfigs = () => {
+    if (workspace?.id) {
+      getAllForWorkspace(workspace.id).then(setFlowConfigs).catch((err) => {
+        logger.error('Error loading flow configs:', err)
+      })
+    }
+  }
+
   useEffect(() => {
     if (!isFlowWorkspace || !workspace?.id) return
-    getAllForWorkspace(workspace.id).then(setFlowConfigs).catch((err) => {
-      logger.error('Error loading flow configs:', err)
-    })
+    reloadFlowConfigs()
   }, [workspace, isFlowWorkspace])
+
+  // Scroll to and highlight an agent card
+  const handleNodeClick = (agentId: string) => {
+    setHighlightAgentId(agentId)
+    const el = document.getElementById(`agent-card-${agentId}`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setTimeout(() => setHighlightAgentId(null), 2500)
+  }
+
+  // Open FlowConfigSheet for a specific sub-LLM
+  const handleFlowNodeClick = (fc: FlowConfig) => {
+    setSelectedFlowConfig(fc)
+    setFlowSheetOpen(true)
+  }
+
+  // Open FlowConfigSheet for creating a new sub-LLM
+  const handleAddSubLLM = () => {
+    setSelectedFlowConfig(null)
+    setFlowSheetOpen(true)
+  }
 
   // Load all agents
   useEffect(() => {
@@ -160,7 +286,7 @@ export function AgentSettingsPage() {
       setSavingAgents((prev) => ({ ...prev, [agentId]: true }))
       logger.info("Saving agent:", agentId, formData)
 
-      await updateAgent(workspace.id, agentId, {
+      await updateAgentConfig(workspace.id, agentId, {
         name: formData.name,
         systemPrompt: formData.systemPrompt,
         temperature: formData.temperature,
@@ -295,144 +421,274 @@ export function AgentSettingsPage() {
             )}
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center gap-2 py-2">
+        <CardContent className="overflow-x-auto">
+          {(() => {
+            // Build the list of child nodes: standard sub-agents + FLOW sub-LLMs
+            const childNodes: {
+              id: string; label: string; sublabel?: string; color: string
+              icon: React.ElementType; isFlow?: boolean; agentId?: string
+              flowConfig?: FlowConfig; isActive?: boolean
+            }[] = [
+              ...pipelineSubAgents.map((a) => ({
+                id: a.id,
+                agentId: a.id,
+                label: a.name,
+                sublabel: editingAgents[a.id]?.model?.split('/')[1],
+                color: getAgentColor(a.agentType || ''),
+                icon: getAgentIcon(a.agentType || ''),
+                isActive: a.isActive ?? true,
+              })),
+              ...(isFlowWorkspace ? flowConfigs.map((fc) => ({
+                id: fc.id,
+                label: fc.flowLabel,
+                sublabel: fc.model?.split('/')[1] || undefined,
+                color: '#7c3aed',
+                icon: Workflow,
+                isFlow: true,
+                flowConfig: fc,
+                isActive: fc.isActive,
+              })) : []),
+            ]
 
-            {/* User message */}
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-gray-50">
-              <MessageCircle className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-600">Customer Message</span>
-            </div>
+            // If no child nodes, add a placeholder
+            const hasChildren = childNodes.length > 0
 
-            {/* Arrow */}
-            <div className="w-px h-5 bg-gray-300" />
-            <div className="w-2 h-2 rounded-full bg-gray-400" />
+            // Node width and spacing for child row
+            const NODE_W = 140
+            const NODE_H = 60
+            const GAP = 12
+            const addSlot = isFlowWorkspace ? 1 : 0
+            const totalChildren = Math.max((hasChildren ? childNodes.length : 0) + addSlot, 1)
+            const rowWidth = totalChildren * NODE_W + (totalChildren - 1) * GAP
+            const svgWidth = Math.max(rowWidth, 200)
+            const centerX = svgWidth / 2
 
-            {/* Router */}
-            <div
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border-2"
-              style={{
-                borderColor: getAgentColor('ROUTER'),
-                backgroundColor: getAgentColor('ROUTER') + '18',
-              }}
-            >
-              <Brain className="w-4 h-4" style={{ color: getAgentColor('ROUTER') }} />
-              <span className="text-sm font-semibold" style={{ color: getAgentColor('ROUTER') }}>
-                {routerAgent?.name || 'Router'}
-              </span>
-            </div>
+            return (
+              <div className="flex flex-col items-center gap-0 py-4 min-w-[300px]" style={{ width: svgWidth + 40 }}>
 
-            {/* Arrow */}
-            <div className="w-px h-5 bg-gray-300" />
-            <div className="w-2 h-2 rounded-full bg-gray-400" />
+                {/* 1. Customer Message */}
+                <PipelineNode
+                  icon={MessageCircle}
+                  label="Customer Message"
+                  color="#64748b"
+                  bg="#f8fafc"
+                  border="#e2e8f0"
+                />
 
-            {/* Sub-agents row */}
-            {(pipelineSubAgents.length > 0 || (isFlowWorkspace && flowConfigs.length > 0)) && (
-              <div className="w-full">
-                <div className="relative border border-dashed border-gray-300 rounded-xl p-4">
-                  <span className="absolute -top-2.5 left-4 bg-white px-2 text-xs text-gray-400 font-medium">
-                    Sub-Agents
-                  </span>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {/* Standard sub-agents */}
-                    {pipelineSubAgents.map((agent) => {
-                      const Icon = getAgentIcon(agent.agentType || '')
-                      const color = getAgentColor(agent.agentType || '')
+                {/* Arrow down */}
+                <VerticalConnector />
+
+                {/* 2. Router */}
+                <PipelineNode
+                  icon={Brain}
+                  label={routerAgent?.name || 'Router'}
+                  sublabel="Intent Routing"
+                  color={getAgentColor('ROUTER')}
+                  bg={getAgentColor('ROUTER') + '18'}
+                  border={getAgentColor('ROUTER')}
+                  isActive={routerAgent?.isActive ?? true}
+                  bold
+                  onClick={routerAgent ? () => handleNodeClick(routerAgent.id) : undefined}
+                />
+
+                {/* Fan-out SVG lines from Router to children */}
+                {hasChildren && (
+                  <div style={{ width: svgWidth + 40, position: 'relative' }}>
+                    <svg
+                      width={svgWidth + 40}
+                      height={48}
+                      style={{ display: 'block' }}
+                      overflow="visible"
+                    >
+                      {childNodes.map((_, i) => {
+                        const childCenterX = 20 + (i * (NODE_W + GAP)) + NODE_W / 2
+                        return (
+                          <line
+                            key={i}
+                            x1={centerX + 20}
+                            y1={0}
+                            x2={childCenterX}
+                            y2={48}
+                            stroke="#cbd5e1"
+                            strokeWidth={1.5}
+                            strokeDasharray="4 3"
+                          />
+                        )
+                      })}
+                    </svg>
+                  </div>
+                )}
+
+                {/* 3. Children row (sub-agents + sub-LLMs) */}
+                {(hasChildren || isFlowWorkspace) ? (
+                  <div className="flex gap-3 flex-wrap justify-center" style={{ width: svgWidth + 40 }}>
+                    {childNodes.map((node) => {
+                      const Icon = node.icon
                       return (
-                        <div
-                          key={agent.id}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium"
-                          style={{ borderColor: color, backgroundColor: color + '15', color }}
+                        <button
+                          key={node.id}
+                          type="button"
+                          onClick={() => {
+                            if (node.isFlow && node.flowConfig) handleFlowNodeClick(node.flowConfig)
+                            else if (node.agentId) handleNodeClick(node.agentId)
+                          }}
+                          className="group relative flex flex-col items-center gap-1 rounded-xl border-2 px-3 py-2.5 text-center transition-all hover:shadow-md hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
+                          style={{ width: NODE_W, minHeight: NODE_H, borderColor: node.color, backgroundColor: node.color + '15' }}
                         >
-                          <Icon className="w-3 h-3" />
-                          {agent.name}
-                        </div>
+                          {/* active dot */}
+                          {node.isActive !== undefined && (
+                            <span className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full border border-white ${node.isActive ? 'bg-green-500' : 'bg-gray-300'}`} />
+                          )}
+                          {/* edit icon on hover */}
+                          <svg className="absolute top-1.5 left-1.5 w-3 h-3 opacity-0 group-hover:opacity-50 transition-opacity" style={{ color: node.color }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          </svg>
+                          <Icon className="w-4 h-4 mt-1" style={{ color: node.color }} />
+                          <span className="text-xs font-semibold leading-tight" style={{ color: node.color }}>{node.label}</span>
+                          {node.isFlow && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-200 text-violet-700 font-bold">Sub-LLM</span>
+                          )}
+                          {node.sublabel && !node.isFlow && (
+                            <span className="text-[9px] text-muted-foreground leading-none">{node.sublabel}</span>
+                          )}
+                        </button>
                       )
                     })}
 
-                    {/* FLOW sub-LLMs */}
-                    {isFlowWorkspace && flowConfigs.map((fc) => (
-                      <div
-                        key={fc.id}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium border-violet-400 bg-violet-50 text-violet-700"
+                    {/* + Add Sub-LLM button (FLOW workspaces only) */}
+                    {isFlowWorkspace && (
+                      <button
+                        type="button"
+                        onClick={handleAddSubLLM}
+                        className="flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-violet-300 px-3 py-2.5 text-violet-400 hover:border-violet-500 hover:text-violet-600 hover:bg-violet-50 transition-all cursor-pointer"
+                        style={{ width: NODE_W, minHeight: NODE_H }}
                       >
-                        <Workflow className="w-3 h-3" />
-                        {fc.flowLabel}
-                        <span className="ml-1 px-1.5 py-0.5 rounded text-[10px] bg-violet-200 text-violet-600 font-semibold">
-                          Sub-LLM
-                        </span>
-                      </div>
-                    ))}
-
-                    {/* Empty state for FLOW when no configs yet */}
-                    {isFlowWorkspace && flowConfigs.length === 0 && (
-                      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-dashed border-violet-300 text-xs text-violet-400">
-                        <Workflow className="w-3 h-3" />
-                        No Sub-LLMs configured yet
-                      </div>
+                        <Plus className="w-5 h-5" />
+                        <span className="text-[10px] font-semibold">Add Sub-LLM</span>
+                      </button>
                     )}
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-gray-300 text-xs text-gray-400">
+                    <Bot className="w-3 h-3" />
+                    No sub-agents configured
+                  </div>
+                )}
+
+                {/* Fan-in SVG lines from children to History */}
+                {hasChildren && (
+                  <div style={{ width: svgWidth + 40, position: 'relative' }}>
+                    <svg
+                      width={svgWidth + 40}
+                      height={48}
+                      style={{ display: 'block' }}
+                      overflow="visible"
+                    >
+                      {childNodes.map((_, i) => {
+                        const childCenterX = 20 + (i * (NODE_W + GAP)) + NODE_W / 2
+                        return (
+                          <line
+                            key={i}
+                            x1={childCenterX}
+                            y1={0}
+                            x2={centerX + 20}
+                            y2={48}
+                            stroke="#cbd5e1"
+                            strokeWidth={1.5}
+                            strokeDasharray="4 3"
+                          />
+                        )
+                      })}
+                    </svg>
+                  </div>
+                )}
+
+                {!hasChildren && <VerticalConnector />}
+
+                {/* 4. Conversation History */}
+                <PipelineNode
+                  icon={MessageCircle}
+                  label="Conversation History"
+                  sublabel="Context accumulated"
+                  color="#0ea5e9"
+                  bg="#f0f9ff"
+                  border="#bae6fd"
+                />
+
+                <VerticalConnector />
+
+                {/* 5. Translation Layer */}
+                {translationAgent ? (
+                  <PipelineNode
+                    icon={Globe}
+                    label={translationAgent.name}
+                    sublabel="Translation Layer"
+                    color={getAgentColor('TRANSLATION')}
+                    bg={getAgentColor('TRANSLATION') + '18'}
+                    border={getAgentColor('TRANSLATION')}
+                    bold
+                    isActive={translationAgent.isActive ?? true}
+                    onClick={() => handleNodeClick(translationAgent.id)}
+                  />
+                ) : (
+                  <PipelineNode
+                    icon={Globe}
+                    label="Translation Layer"
+                    color="#0d9488"
+                    bg="#f0fdfa"
+                    border="#99f6e4"
+                  />
+                )}
+
+                <VerticalConnector />
+
+                {/* 6. Security Layer */}
+                {securityAgent ? (
+                  <PipelineNode
+                    icon={Shield}
+                    label={securityAgent.name}
+                    sublabel="Security Layer"
+                    color={getAgentColor('SECURITY')}
+                    bg={getAgentColor('SECURITY') + '18'}
+                    border={getAgentColor('SECURITY')}
+                    bold
+                    isActive={securityAgent.isActive ?? true}
+                    onClick={() => handleNodeClick(securityAgent.id)}
+                  />
+                ) : (
+                  <PipelineNode
+                    icon={Shield}
+                    label="Security Layer"
+                    color="#ef4444"
+                    bg="#fef2f2"
+                    border="#fecaca"
+                  />
+                )}
+
+                <VerticalConnector />
+
+                {/* 7. Response to Customer */}
+                <PipelineNode
+                  icon={MessageCircle}
+                  label="Response to Customer"
+                  color="#64748b"
+                  bg="#f8fafc"
+                  border="#e2e8f0"
+                />
+
               </div>
-            )}
-
-            {/* Arrow */}
-            <div className="w-px h-5 bg-gray-300" />
-            <div className="w-2 h-2 rounded-full bg-gray-400" />
-
-            {/* Translation */}
-            {translationAgent && (
-              <>
-                <div
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border-2"
-                  style={{
-                    borderColor: getAgentColor('TRANSLATION'),
-                    backgroundColor: getAgentColor('TRANSLATION') + '18',
-                  }}
-                >
-                  <Globe className="w-4 h-4" style={{ color: getAgentColor('TRANSLATION') }} />
-                  <span className="text-sm font-semibold" style={{ color: getAgentColor('TRANSLATION') }}>
-                    {translationAgent.name}
-                  </span>
-                </div>
-                <div className="w-px h-5 bg-gray-300" />
-                <div className="w-2 h-2 rounded-full bg-gray-400" />
-              </>
-            )}
-
-            {/* Security */}
-            {securityAgent && (
-              <>
-                <div
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border-2"
-                  style={{
-                    borderColor: getAgentColor('SECURITY'),
-                    backgroundColor: getAgentColor('SECURITY') + '18',
-                  }}
-                >
-                  <Shield className="w-4 h-4" style={{ color: getAgentColor('SECURITY') }} />
-                  <span className="text-sm font-semibold" style={{ color: getAgentColor('SECURITY') }}>
-                    {securityAgent.name}
-                  </span>
-                </div>
-                <div className="w-px h-5 bg-gray-300" />
-                <div className="w-2 h-2 rounded-full bg-gray-400" />
-              </>
-            )}
-
-            {/* Customer response */}
-            <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-gray-50">
-              <MessageCircle className="w-4 h-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-600">Customer Response</span>
-            </div>
-
-          </div>
+            )
+          })()}
         </CardContent>
       </Card>
 
       {/* Agent Cards - CRUD Interface */}
       <div className="space-y-6">
-        <h2 className="text-2xl font-bold">Agent Configuration</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold">Agent Configuration</h2>
+          <p className="text-xs text-muted-foreground">Click a node in the pipeline above to jump to its config</p>
+        </div>
         {agents.map((agent) => {
           const formData = editingAgents[agent.id]
           if (!formData) return null
@@ -441,7 +697,11 @@ export function AgentSettingsPage() {
           const isSaving = savingAgents[agent.id]
 
           return (
-            <Card key={agent.id}>
+            <Card
+              key={agent.id}
+              id={`agent-card-${agent.id}`}
+              className={`transition-all duration-500 ${highlightAgentId === agent.id ? 'ring-2 ring-primary ring-offset-2 shadow-lg' : ''}`}
+            >
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -504,31 +764,57 @@ export function AgentSettingsPage() {
                         </Tooltip>
                       </TooltipProvider>
                     </Label>
-                    <Select
-                      value={formData.model}
-                      onValueChange={(value) =>
-                        handleFieldChange(agent.id, "model", value)
+                    <Popover
+                      open={!!modelComboOpen[agent.id]}
+                      onOpenChange={(open) =>
+                        setModelComboOpen((prev) => ({ ...prev, [agent.id]: open }))
                       }
                     >
-                      <SelectTrigger id={`model-${agent.id}`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="openai/gpt-4o-mini">
-                          GPT-4o Mini
-                        </SelectItem>
-                        <SelectItem value="openai/gpt-4o">GPT-4o</SelectItem>
-                        <SelectItem value="anthropic/claude-3.5-sonnet">
-                          Claude 3.5 Sonnet
-                        </SelectItem>
-                        <SelectItem value="anthropic/claude-3-haiku">
-                          Claude 3 Haiku
-                        </SelectItem>
-                        <SelectItem value="google/gemini-pro-1.5">
-                          Gemini Pro 1.5
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          className="w-full justify-between font-normal"
+                        >
+                          <span className="truncate">
+                            {OPENROUTER_MODELS.find((m) => m.value === formData.model)?.label ||
+                              formData.model ||
+                              "Select model..."}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[280px] p-0">
+                        <Command>
+                          <CommandInput placeholder="Search model..." />
+                          <CommandList>
+                            <CommandEmpty>No model found.</CommandEmpty>
+                            <CommandGroup>
+                              {OPENROUTER_MODELS.map((m) => (
+                                <CommandItem
+                                  key={m.value}
+                                  value={m.value}
+                                  onSelect={(val) => {
+                                    handleFieldChange(agent.id, "model", val)
+                                    setModelComboOpen((prev) => ({ ...prev, [agent.id]: false }))
+                                  }}
+                                >
+                                  <Check
+                                    className={`mr-2 h-4 w-4 ${
+                                      formData.model === m.value ? "opacity-100" : "opacity-0"
+                                    }`}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{m.label}</span>
+                                    <span className="text-xs text-muted-foreground">{m.value}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   {/* Temperature */}
@@ -734,6 +1020,17 @@ export function AgentSettingsPage() {
           )
         })}
       </div>
+
+      {/* FlowConfigSheet — opened when clicking a Sub-LLM node or "+ Add Sub-LLM" */}
+      {workspace?.id && (
+        <FlowConfigSheet
+          open={flowSheetOpen}
+          onOpenChange={setFlowSheetOpen}
+          workspaceId={workspace.id}
+          config={selectedFlowConfig}
+          onSaved={reloadFlowConfigs}
+        />
+      )}
 
       {/* Help Section */}
       <div className="mt-8 space-y-6">
