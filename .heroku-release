@@ -3,7 +3,21 @@ set -euo pipefail
 
 echo "🗄️  Running Prisma migrations..."
 cd packages/database
-npx prisma migrate deploy
 
+# Install deps if not already installed
+if [ ! -d "node_modules" ]; then
+  echo "Installing dependencies..."
+  npm install
+fi
+
+# Generate Prisma client first
 echo "🔄 Generating Prisma client..."
 npx prisma generate
+
+# Deploy migrations
+echo "📋 Deploying pending migrations..."
+npx prisma migrate deploy || {
+  echo "⚠️  Migration deployment failed. Checking migration status..."
+  npx prisma migrate status || true
+  exit 1
+}
