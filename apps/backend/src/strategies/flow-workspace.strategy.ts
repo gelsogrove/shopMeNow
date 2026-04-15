@@ -1,38 +1,51 @@
 /**
  * FlowWorkspaceStrategy
  *
- * Routing strategy for flow workspaces (channelMode=FLOW).
+ * Routing strategy for FLOW workspaces (channelMode=FLOW).
  *
- * Behavior:
- * - Currently identical to InformationalWorkspaceStrategy
- * - Routes to INFO_AGENT with FAQ system
- * - Will be enhanced later with guided step-by-step flow logic
+ * 3-path routing:
+ *   1. QR code message (START_FLOW_{N}_{flowKey}) → load FlowNodeConfig, save context, welcome
+ *   2. Active flowState → FlowEngineService.handleMessage() (0 LLM tokens, deterministic)
+ *   3. Else → FlowAgentLLM.handleQuery() (LLM decides: startFlow, contactOperator, or plain text)
+ *
+ * Post-processing on ALL paths:
+ *   - TranslationAgent (translate response to customer language)
+ *   - SecurityAgent (widget only)
+ *   - contactOperator() if shouldCallOperator
  *
  * Use Case:
- * - Guided troubleshooting bots
- * - Step-by-step onboarding flows
- * - Decision tree chatbots
+ * - Guided troubleshooting bots (washing machines, dryers, etc.)
+ * - Step-by-step decision tree chatbots
  *
  * @architecture Strategy Pattern implementation
  */
 
 import { AgentType, ChannelMode, PrismaClient, Workspace } from "@echatbot/database"
 import logger from "../utils/logger"
-import { CustomerSupportAgentLLM } from "../application/agents/CustomerSupportAgentLLM"
+import { FlowAgentLLM } from "../application/agents/FlowAgentLLM"
+import { FlowEngineService } from "../application/services/flow-engine.service"
+import { FlowNodeConfigRepository } from "../repositories/flow-node-config.repository"
 import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { TranslationAgent } from "../application/agents/TranslationAgent"
 import { SecurityAgent, type SecurityResult } from "../application/agents/SecurityAgent"
+import { contactOperator } from "../domain/calling-functions/contactOperator"
+import { ChatContext, FlowMap } from "../types/flow.types"
 import type { RoutingContext, RoutingResult, RoutingStrategy } from "./routing-strategy.interface"
+
+/** QR code pattern: START_FLOW_{machineNumber}_{flowKey} */
+const QR_CODE_REGEX = /^START_FLOW_(\d+)_(.+)$/
 
 export class FlowWorkspaceStrategy implements RoutingStrategy {
   private linkReplacementService: LinkReplacementService
   private translationAgent: TranslationAgent
   private securityAgent: SecurityAgent
+  private flowNodeConfigRepo: FlowNodeConfigRepository
 
   constructor(private prisma: PrismaClient) {
     this.linkReplacementService = new LinkReplacementService()
     this.translationAgent = new TranslationAgent(prisma)
     this.securityAgent = new SecurityAgent(prisma)
+    this.flowNodeConfigRepo = new FlowNodeConfigRepository(prisma)
   }
 
   /**
@@ -43,18 +56,109 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
   }
 
   /**
-   * Route ALL messages to INFO_AGENT (placeholder — will be replaced with flow logic later)
+   * 🆕 E0b - Check if session has expired after operator escalation
+   *
+   * When a customer is escalated to an operator, we set `ChatSession.escalatedAt`.
+   * If the customer returns after `workspace.sessionResetTimeout` seconds,
+   * we reset the flow state and allow them to restart the conversation.
+   *
+   * Reset Logic for FLOW:
+   * - Clear flowState and flowKey from context
+   * - Clear escalatedAt timestamp
+   * - Customer can start fresh flow
+   *
+   * @param context - Current routing context
+   * @param workspace - Workspace configuration
+   * @returns true if session was reset, false otherwise
+   */
+  private async checkAndResetExpiredSession(
+    context: RoutingContext,
+    workspace: Workspace
+  ): Promise<boolean> {
+    // If sessionResetTimeout = 0 → "Never" auto-reset
+    if (workspace.sessionResetTimeout === 0) {
+      return false
+    }
+
+    // Find active chat session
+    const chatSession = await this.prisma.chatSession.findFirst({
+      where: {
+        customerId: context.customerId,
+        status: "active",
+      },
+      orderBy: { createdAt: "desc" },
+    })
+
+    // No session or not escalated → no reset needed
+    if (!chatSession || !chatSession.escalatedAt) {
+      return false
+    }
+
+    // Calculate time since escalation
+    const now = new Date()
+    const escalatedAt = new Date(chatSession.escalatedAt)
+    const elapsedSeconds = Math.floor((now.getTime() - escalatedAt.getTime()) / 1000)
+
+    // If timeout not exceeded → no reset
+    if (elapsedSeconds < workspace.sessionResetTimeout) {
+      logger.info(`⏰ E0b - Session NOT expired (${elapsedSeconds}s / ${workspace.sessionResetTimeout}s)`, {
+        sessionId: chatSession.id,
+        customerId: context.customerId,
+      })
+      return false
+    }
+
+    // 🔄 TIMEOUT EXCEEDED - Reset flow state
+    logger.info(`🔄 E0b - Session EXPIRED - Resetting flow state (${elapsedSeconds}s > ${workspace.sessionResetTimeout}s)`, {
+      sessionId: chatSession.id,
+      customerId: context.customerId,
+    })
+
+    // Parse current context
+    const currentContext = chatSession.context ? (chatSession.context as any) : {}
+
+    // Clear flow-specific state
+    delete currentContext.flowState
+    delete currentContext.flowKey
+    delete currentContext.flowNumber
+
+    // Update session - clear flow state and escalatedAt
+    await this.prisma.chatSession.update({
+      where: { id: chatSession.id },
+      data: {
+        context: currentContext,
+        escalatedAt: null,
+      },
+    })
+
+    logger.info("✅ E0b - Flow state reset complete", {
+      sessionId: chatSession.id,
+      customerId: context.customerId,
+    })
+
+    return true
+  }
+
+  /**
+   * Route message through the 3-path flow pipeline:
+   *   Path A: QR code → load config, save context, return welcome
+   *   Path B: Active flow → FlowEngineService (deterministic, 0 LLM tokens)
+   *   Path C: No active flow → FlowAgentLLM (LLM decides startFlow / contactOperator / text)
    */
   async route(context: RoutingContext, workspace: Workspace): Promise<RoutingResult> {
     const startTime = Date.now()
 
-    logger.info("🔄 FlowWorkspaceStrategy - Routing to Flow Agent", {
+    logger.info("🔄 FlowWorkspaceStrategy - Route start", {
       workspaceId: context.workspaceId,
       customerId: context.customerId,
       message: context.message.substring(0, 50) + "...",
     })
 
+    // 🆕 E0b - Check for expired session timeout and reset if needed
+    await this.checkAndResetExpiredSession(context, workspace)
+
     try {
+      // Load customer data
       const customerData = await this.prisma.customers.findFirst({
         where: {
           id: context.customerId,
@@ -64,6 +168,7 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
           id: true,
           name: true,
           email: true,
+          phone: true,
           isActive: true,
           language: true,
         },
@@ -73,59 +178,215 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         throw new Error(`Customer not found: ${context.customerId}`)
       }
 
-      const customerSupportAgent = new CustomerSupportAgentLLM(this.prisma)
-
-      const agentResponse = await customerSupportAgent.handleQuery({
-        workspaceId: context.workspaceId,
-        customerId: context.customerId,
-        customerName: context.customerName || customerData.name,
-        customerLanguage: context.customerLanguage || customerData.language || "en",
-        query: context.message,
-        customerData: {
-          nameUser: customerData.name,
-          name: customerData.name,
-          email: customerData.email || "",
-          isActive: customerData.isActive || false,
-          discountUser: 0,
-          companyName: workspace.name,
-          lastordercode: "",
-          languageUser: customerData.language || "en",
-          agentName: "",
-          agentPhone: "",
-          agentEmail: "",
+      // Load ChatSession context
+      const chatSession = await this.prisma.chatSession.findFirst({
+        where: {
+          customerId: context.customerId,
+          status: "active",
         },
+        orderBy: { createdAt: "desc" },
       })
 
-      const executionTime = Date.now() - startTime
+      let chatContext: ChatContext = chatSession?.context
+        ? (chatSession.context as unknown as ChatContext)
+        : {}
 
-      logger.info("✅ FlowWorkspaceStrategy - Flow Agent completed", {
-        workspaceId: context.workspaceId,
-        tokensUsed: agentResponse.tokensUsed || 0,
-        executionTimeMs: executionTime,
-      })
+      let responseText = ""
+      let tokensUsed = 0
+      let executionTimeMs = 0
+      let shouldCallOperator = false
+      const debugSteps: any[] = []
+      const functionCalls: any[] = []
 
-      // STEP 1: Link Replacement
-      const linkReplacedResponse = await this.linkReplacementService.replaceTokens(
-        { response: agentResponse.output },
+      // ─── PATH A: QR Code detection ──────────────────────────────────────
+      const qrMatch = context.message.match(QR_CODE_REGEX)
+      if (qrMatch) {
+        const flowNumber = qrMatch[1]
+        const flowKey = qrMatch[2]
+
+        logger.info("📱 FlowWorkspaceStrategy - QR code detected", { flowNumber, flowKey })
+
+        const flowConfig = await this.flowNodeConfigRepo.findByFlowKey(context.workspaceId, flowKey)
+        if (!flowConfig) {
+          responseText = `Machine configuration "${flowKey}" not found. Please check the QR code and try again.`
+        } else {
+          // Save flowKey + flowNumber to context
+          chatContext.flowKey = flowKey
+          chatContext.flowNumber = flowNumber
+          // Clear any previous flowState
+          delete chatContext.flowState
+
+          responseText = `Hi! I'm your assistant for **${flowConfig.flowLabel}** (machine #${flowNumber}). How can I help you? Describe your issue and I'll guide you step by step.`
+        }
+
+        debugSteps.push({
+          type: "flow-engine",
+          agent: "QR Code Handler",
+          timestamp: new Date().toISOString(),
+          input: { qrCode: context.message, flowKey, flowNumber },
+          output: { responseText, configFound: !!flowConfig },
+          tokensUsed: 0,
+          executionTimeMs: Date.now() - startTime,
+        })
+      }
+      // ─── PATH B: Active flowState → FlowEngineService (deterministic) ──
+      else if (chatContext.flowState?.flowStatus === "ACTIVE" && chatContext.flowKey) {
+        logger.info("⚙️ FlowWorkspaceStrategy - Active flow → FlowEngineService", {
+          flowId: chatContext.flowState.flowId,
+          currentNodeId: chatContext.flowState.currentNodeId,
+        })
+
+        const flowConfig = await this.flowNodeConfigRepo.findByFlowKey(
+          context.workspaceId,
+          chatContext.flowKey
+        )
+        if (!flowConfig) {
+          throw new Error(`FlowNodeConfig disappeared for flowKey="${chatContext.flowKey}"`)
+        }
+
+        const flows = flowConfig.flows as unknown as FlowMap
+        const engine = new FlowEngineService(flows)
+        const result = engine.handleMessage(context.message, chatContext)
+
+        responseText = result.responseText
+        chatContext = { ...chatContext } // flowState updated in-place by engine
+        shouldCallOperator = result.shouldCallOperator
+
+        debugSteps.push({
+          type: "flow-engine",
+          agent: "FlowEngineService",
+          timestamp: new Date().toISOString(),
+          input: { userMessage: context.message, currentNodeId: chatContext.flowState?.currentNodeId },
+          output: {
+            responseText: result.responseText,
+            nextNodeId: result.nextNodeId,
+            flowStatus: result.flowStatus,
+            shouldCallOperator: result.shouldCallOperator,
+          },
+          tokensUsed: 0,
+          executionTimeMs: Date.now() - startTime,
+        })
+      }
+      // ─── PATH C: No active flow → FlowAgentLLM (LLM call) ─────────────
+      else if (chatContext.flowKey) {
+        logger.info("🤖 FlowWorkspaceStrategy - No active flow → FlowAgentLLM", {
+          flowKey: chatContext.flowKey,
+        })
+
+        const flowAgent = new FlowAgentLLM(this.prisma)
+        const agentResult = await flowAgent.handleQuery({
+          workspaceId: context.workspaceId,
+          customerId: context.customerId,
+          conversationId: context.conversationId || "",
+          flowKey: chatContext.flowKey,
+          message: context.message,
+          chatContext,
+          customerName: context.customerName || customerData.name,
+          customerLanguage: context.customerLanguage || customerData.language || "en",
+          customerPhone: customerData.phone || undefined,
+        })
+
+        responseText = agentResult.output
+        chatContext = agentResult.chatContext
+        tokensUsed = agentResult.tokensUsed
+        executionTimeMs = agentResult.executionTimeMs
+        shouldCallOperator = agentResult.shouldCallOperator
+        functionCalls.push(...agentResult.functionCalls)
+
+        debugSteps.push({
+          type: "flow-agent",
+          agent: "FlowAgentLLM",
+          model: "from-config",
+          timestamp: new Date().toISOString(),
+          input: { userMessage: context.message, flowKey: chatContext.flowKey },
+          output: {
+            message: agentResult.output,
+            functionCalls: agentResult.functionCalls,
+            shouldCallOperator: agentResult.shouldCallOperator,
+          },
+          tokensUsed: agentResult.tokensUsed,
+          executionTimeMs: agentResult.executionTimeMs,
+        })
+      }
+      // ─── No flowKey at all → hint customer to scan QR ──────────────────
+      else {
+        responseText = "Please scan the QR code on your machine to start. I'll guide you step by step!"
+        debugSteps.push({
+          type: "flow-engine",
+          agent: "No-FlowKey Handler",
+          timestamp: new Date().toISOString(),
+          input: { message: context.message },
+          output: { responseText },
+          tokensUsed: 0,
+          executionTimeMs: 0,
+        })
+      }
+
+      // ─── STEP: Save updated context to ChatSession ──────────────────────
+      if (chatSession) {
+        await this.prisma.chatSession.update({
+          where: { id: chatSession.id },
+          data: { context: chatContext as any },
+        })
+      }
+
+      // ─── STEP: Contact operator if requested ────────────────────────────
+      if (shouldCallOperator) {
+        try {
+          await contactOperator({
+            phoneNumber: customerData.phone || "",
+            workspaceId: context.workspaceId,
+            customerId: context.customerId,
+            reason: "Flow escalation",
+            channel: context.channel,
+          })
+          logger.info("📞 FlowWorkspaceStrategy - contactOperator() executed")
+        } catch (opError: any) {
+          logger.error("❌ FlowWorkspaceStrategy - contactOperator() failed:", opError)
+        }
+      }
+
+      // ─── STEP: Link replacement ─────────────────────────────────────────
+      const linkResult = await this.linkReplacementService.replaceTokens(
+        { response: responseText },
         context.customerId,
         context.workspaceId
       )
+      responseText = linkResult.response || responseText
 
-      // STEP 2: Translation Layer
-      const translationInput = linkReplacedResponse.response || agentResponse.output
+      // ─── STEP: Translation ──────────────────────────────────────────────
+      const targetLang = context.customerLanguage || customerData.language || "en"
       const translationResult = await this.translationAgent.process({
         workspaceId: context.workspaceId,
-        message: translationInput,
-        targetLanguage: customerData.language || "en",
+        message: responseText,
+        targetLanguage: targetLang,
         customerName: customerData.name,
         customerId: customerData.id,
         channel: context.channel,
       })
 
       let finalResponse = translationResult.message
+      tokensUsed += translationResult.tokensUsed || 0
       let securityResult: SecurityResult | null = null
 
-      // STEP 3: Security Layer (widget only)
+      debugSteps.push({
+        type: "safety",
+        agent: "Translation Layer",
+        timestamp: new Date().toISOString(),
+        input: { previousResponse: responseText, targetLanguage: targetLang },
+        output: {
+          translatedText: translationResult.message,
+          decision: translationResult.translated ? "translated" : "passthrough",
+          executionTimeMs: translationResult.executionTimeMs,
+        },
+        tokenUsage: {
+          promptTokens: 0,
+          completionTokens: translationResult.tokensUsed || 0,
+          totalTokens: translationResult.tokensUsed || 0,
+        },
+      })
+
+      // ─── STEP: Security (widget only) ───────────────────────────────────
       if (context.channel === "widget") {
         securityResult = await this.securityAgent.process({
           workspaceId: context.workspaceId,
@@ -134,49 +395,8 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
           customerId: customerData.id,
         })
         finalResponse = securityResult.message || finalResponse
-      }
+        tokensUsed += securityResult.tokensUsed || 0
 
-      const debugSteps: any[] = [
-        {
-          type: "sub_agent",
-          agent: "Flow Agent",
-          model: "gpt-4o-mini",
-          temperature: 0.7,
-          timestamp: new Date().toISOString(),
-          input: {
-            userMessage: context.message,
-            customerLanguage: context.customerLanguage || "en",
-          },
-          output: {
-            message: agentResponse.output,
-            functionCalls: agentResponse.functionCalls || [],
-          },
-          tokensUsed: agentResponse.tokensUsed || 0,
-          executionTimeMs: agentResponse.executionTimeMs || 0,
-          containsTokens: false,
-        },
-        {
-          type: "safety",
-          agent: "Translation Layer",
-          timestamp: new Date().toISOString(),
-          input: {
-            previousResponse: translationInput,
-            targetLanguage: customerData.language || "en",
-          },
-          output: {
-            translatedText: translationResult.message,
-            decision: translationResult.translated ? "translated" : "passthrough",
-            executionTimeMs: translationResult.executionTimeMs,
-          },
-          tokenUsage: {
-            promptTokens: 0,
-            completionTokens: translationResult.tokensUsed || 0,
-            totalTokens: translationResult.tokensUsed || 0,
-          },
-        },
-      ]
-
-      if (context.channel === "widget" && securityResult) {
         debugSteps.push({
           type: "safety",
           agent: "Widget Security Layer",
@@ -202,14 +422,10 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         response: finalResponse,
         agentType: "INFO_AGENT" as AgentType,
         debugSteps,
-        totalTokens:
-          (agentResponse.tokensUsed || 0) +
-          (translationResult.tokensUsed || 0) +
-          (securityResult?.tokensUsed || 0),
+        totalTokens: tokensUsed,
         conversationId: context.conversationId,
       }
-
-    } catch (error) {
+    } catch (error: any) {
       const executionTime = Date.now() - startTime
       logger.error("❌ FlowWorkspaceStrategy - Error", {
         workspaceId: context.workspaceId,

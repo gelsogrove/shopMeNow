@@ -30,6 +30,8 @@ model Workspace {
   messageLimit              Int       @default(50)
   url                       String?
   welcomeMessage            String?   @default("Welcome! I'm {{chatbotName}}, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?") @db.Text
+  enableWelcomeMessage      Boolean   @default(true) // Toggle to enable/disable welcome message (E0a - cross-cutting feature)
+  sessionResetTimeout       Int       @default(3600) // Seconds after escalation before auto-reset (E0b - cross-cutting feature)
   wipMessage                String?   @default("Work in progress. Please contact us later.") @db.Text
   afterRegistrationMessages String?   @default("Thank you for registering, {{customerName}}! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?") @db.Text
   debugMode                 Boolean   @default(false)
@@ -167,11 +169,34 @@ model Workspace {
   appointmentReminderHours      Int[]    @default([24, 1]) // Hours when reminders are sent (e.g., [24, 1, 0.5] for 24h, 1h, and 30min before)
   minBookingBufferHours         Int      @default(12) // Minimum hours in advance a slot can be booked (e.g., 12 = slots must be at least 12h from now)
 
-  flowNodeConfigs          FlowNodeConfig[]
+  // 🔄 FLOW workspace configs (E1)
+  flowNodeConfigs FlowNodeConfig[] // FLOW chatbot configurations (machine-specific flows)
 
   @@index([ownerId])
   @@index([deletedAt])
   @@index([wasenderApiKey])
+}
+
+// 🔄 FLOW Node Configuration (Epic E1)
+model FlowNodeConfig {
+  id                  String    @id @default(cuid())
+  workspaceId         String
+  flowKey             String    // Machine identifier (e.g., "hs60xx", "ed340") - maps to QR code
+  flowLabel           String    // Human-readable label (e.g., "Lavadora HS-60XX")
+  systemPrompt        String    @default("") @db.Text // Machine-specific context for FlowAgentLLM
+  model               String    @default("openai/gpt-4o-mini") // LLM model for this flow
+  temperature         Float     @default(0.3)
+  maxTokens           Int       @default(2048)
+  availableFunctions  Json      @default("[]") // Array of calling function names FlowAgentLLM can use
+  flows               Json      @default("{}") // Complete flow definitions: { flowId: { nodes: {...}, startNode: "..." } }
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, flowKey]) // Each machine is unique per workspace
+  @@index([workspaceId])
+  @@map("flow_node_configs")
 }
 
 model Categories {
@@ -795,6 +820,7 @@ model ChatSession {
   context     Json?     @default("{}")
   startedAt   DateTime  @default(now())
   endedAt     DateTime?
+  escalatedAt DateTime? // 🆕 E0b - Timestamp when session was escalated to operator
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?

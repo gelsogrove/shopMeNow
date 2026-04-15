@@ -91,6 +91,7 @@ import { createCallingFunctionsRouter } from "../interfaces/http/routes/calling-
 import { createEnvironmentVariableRoutes } from "../interfaces/http/routes/environment-variable.routes"
 import creditNoteRoutes from "../interfaces/http/routes/credit-note.routes"
 import typeRoutes from "../interfaces/http/routes/type.routes"
+import flowNodeConfigRoutes from "../interfaces/http/routes/flow-node-config.routes"
 import { chatRouter } from "../interfaces/http/routes/chat.routes"
 import { checkoutRouter } from "../interfaces/http/routes/checkout.routes"
 import { offersRouter } from "../interfaces/http/routes/offers.routes"
@@ -777,6 +778,10 @@ logger.info("Registered certification router with workspace routes")
 // Mount type routes
 router.use("/workspaces/:workspaceId/types", typeRoutes)
 logger.info("Registered type router with workspace routes")
+
+// Mount flow-config routes
+router.use("/workspaces/:workspaceId/flow-configs", flowNodeConfigRoutes)
+logger.info("Registered flow-config router with workspace routes")
 
 // Mount WhatsApp queue routes
 router.use(whatsappQueueRoutes)

@@ -124,4 +124,102 @@ describe("WelcomeMessageHandler", () => {
     expect(result.isWelcomeMessage).toBe(false)
     expect(prisma.conversationMessage.create).not.toHaveBeenCalled()
   })
+
+  // E0a — enableWelcomeMessage flag tests
+  it("E0a: skips welcome message when enableWelcomeMessage=false", async () => {
+    // SCENARIO: Admin explicitly disables welcome message via settings toggle
+    // RULE: enableWelcomeMessage===false → return {isWelcomeMessage: false} even if welcomeMessage is set
+    prisma.conversationMessage.count.mockResolvedValue(0)
+    prisma.workspace.findUnique.mockResolvedValue({
+      welcomeMessage: "Welcome!",
+      enableWelcomeMessage: false,
+    })
+
+    const result = await handler.handleWelcomeMessage({
+      customerId,
+      workspaceId,
+      customerLanguage: "en",
+      customerMessage: userMessage,
+      conversationId,
+    })
+
+    expect(result.isWelcomeMessage).toBe(false)
+    expect(prisma.conversationMessage.create).not.toHaveBeenCalled()
+  })
+
+  it("E0a: shows welcome message when enableWelcomeMessage=true (explicit)", async () => {
+    // SCENARIO: Admin explicitly enables welcome message
+    // RULE: enableWelcomeMessage===true → behave as normal (show welcome if message set)
+    prisma.conversationMessage.count.mockResolvedValue(0)
+    prisma.workspace.findUnique.mockResolvedValue({
+      welcomeMessage: "Hello! How can I help?",
+      enableWelcomeMessage: true,
+      chatbotName: "Bot",
+      botIdentityResponse: null,
+      customAiRules: null,
+    })
+    prisma.customers.findFirst.mockResolvedValue({
+      id: customerId,
+      name: "Test",
+      email: "t@t.com",
+      phone: "+1",
+      discount: 0,
+      isActive: true,
+      language: "en",
+      company: null,
+      push_notifications_consent: false,
+      sales: null,
+    })
+    prisma.conversationMessage.create
+      .mockResolvedValueOnce({ id: "u1" })
+      .mockResolvedValueOnce({ id: "a1" })
+
+    const result = await handler.handleWelcomeMessage({
+      customerId,
+      workspaceId,
+      customerLanguage: "en",
+      customerMessage: userMessage,
+      conversationId,
+    })
+
+    expect(result.isWelcomeMessage).toBe(true)
+  })
+
+  it("E0a: shows welcome message when enableWelcomeMessage is undefined (default=true)", async () => {
+    // SCENARIO: Legacy workspace without enableWelcomeMessage field in DB response
+    // RULE: undefined is treated as true (default), so welcome message is shown
+    prisma.conversationMessage.count.mockResolvedValue(0)
+    prisma.workspace.findUnique.mockResolvedValue({
+      welcomeMessage: "Hello!",
+      enableWelcomeMessage: undefined, // field not present (legacy)
+      chatbotName: "Bot",
+      botIdentityResponse: null,
+      customAiRules: null,
+    })
+    prisma.customers.findFirst.mockResolvedValue({
+      id: customerId,
+      name: "Test",
+      email: "t@t.com",
+      phone: "+1",
+      discount: 0,
+      isActive: true,
+      language: "en",
+      company: null,
+      push_notifications_consent: false,
+      sales: null,
+    })
+    prisma.conversationMessage.create
+      .mockResolvedValueOnce({ id: "u2" })
+      .mockResolvedValueOnce({ id: "a2" })
+
+    const result = await handler.handleWelcomeMessage({
+      customerId,
+      workspaceId,
+      customerLanguage: "en",
+      customerMessage: userMessage,
+      conversationId,
+    })
+
+    expect(result.isWelcomeMessage).toBe(true)
+  })
 })

@@ -2,15 +2,15 @@
 CREATE TABLE "flow_node_configs" (
     "id" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT,
+    "flowKey" TEXT NOT NULL,
+    "flowLabel" TEXT NOT NULL,
     "systemPrompt" TEXT NOT NULL DEFAULT '',
     "model" TEXT NOT NULL DEFAULT 'openai/gpt-4o-mini',
-    "temperature" DOUBLE PRECISION NOT NULL DEFAULT 0.7,
+    "temperature" DOUBLE PRECISION NOT NULL DEFAULT 0.3,
     "maxTokens" INTEGER NOT NULL DEFAULT 2048,
-    "order" INTEGER NOT NULL DEFAULT 0,
+    "availableFunctions" JSONB NOT NULL DEFAULT '[]',
+    "flows" JSONB NOT NULL DEFAULT '{}',
     "isActive" BOOLEAN NOT NULL DEFAULT true,
-    "availableFunctions" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -18,7 +18,10 @@ CREATE TABLE "flow_node_configs" (
 );
 
 -- CreateIndex
-CREATE INDEX "flow_node_configs_workspaceId_order_idx" ON "flow_node_configs"("workspaceId", "order");
+CREATE INDEX "flow_node_configs_workspaceId_idx" ON "flow_node_configs"("workspaceId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "flow_node_configs_workspaceId_flowKey_key" ON "flow_node_configs"("workspaceId", "flowKey");
 
 -- AddForeignKey
 ALTER TABLE "flow_node_configs" ADD CONSTRAINT "flow_node_configs_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;

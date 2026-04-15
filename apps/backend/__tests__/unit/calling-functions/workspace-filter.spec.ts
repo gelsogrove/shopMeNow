@@ -30,7 +30,7 @@ const mockPrisma = {
   productSearch: { create: mockProductSearchCreate },
   orders: { create: mockOrdersCreate, count: mockOrdersCount },
   workspace: { findUnique: mockWorkspaceFindUnique },
-  chatSession: { findFirst: jest.fn() },
+  chatSession: { findFirst: jest.fn(), update: jest.fn() },
   conversationMessage: { findMany: jest.fn() },
   user: { findFirst: jest.fn() },
   sales: { findUnique: jest.fn() },

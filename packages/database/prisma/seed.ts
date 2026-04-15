@@ -274,24 +274,13 @@ Con questo servizio puoi:
 
 Sono qui per aiutarti 😊`,
         wipMessage: "Sorry, I'm currently being improved. Please try again later.",
-        ownerId: adminUser.id,
-        // ✅ PREMIUM plan
-        planType: "PREMIUM",
-        creditBalance: 100.0,
-        trialEndsAt: null, // No trial - paid plan
-        planStartedAt: new Date(),
+        owner: { connect: { id: adminUser.id } },
         // ✅ E-COMMERCE workspace
         channelMode: "ECOMMERCE",
         hasSalesAgents: true,
         hasHumanSupport: true,
         humanSupportInstructions:
           "Hello {{nameUser}}, I'm connecting you with our agent {{agentName}}. They will contact you as soon as possible (phone: {{agentPhone}} / email: {{agentEmail}}). We're disabling the chatbot until you receive a response. Thank you for your patience! 🤝",
-        // 🆕 Feature 203: Custom escalation triggers
-⚠️ IMPORTANTE: 
-- Prima controlla SEMPRE nelle FAQ se esiste una risposta predefinita
-- Se la FAQ risponde al problema, usa quella risposta SENZA chiamare l'operatore
-- Chiama l'operatore SOLO per i casi sopra elencati quando NON c'è risposta FAQ
-- Per tutti gli altri casi, rispondi normalmente senza escalation`,
         operatorContactMethod: "EMAIL",
         toneOfVoice: "FRIENDLY",
         botIdentityResponse: "I'm the BellItalia VIP virtual assistant, here to help you discover and purchase authentic Italian gourmet products! 🇮🇹",
@@ -381,18 +370,12 @@ Need anything else?"`,
         debugMode: false,
         welcomeMessage: "Welcome to BellItalia! Ask me anything about our products and services.",
         wipMessage: "Sorry, I'm currently being improved. Please try again later.",
-        ownerId: adminUser.id,
-        planType: "PREMIUM",
-        creditBalance: 171.0,
-        trialEndsAt: null,
-        planStartedAt: new Date(),
+        owner: { connect: { id: adminUser.id } },
         channelMode: "INFORMATIONAL",
         hasSalesAgents: false,
         hasHumanSupport: true,
         humanSupportInstructions:
           "Ciao {{nameUser}}, mi sto mettendo in contatto con il nostro operatore. Ti rispondera' al piu' presto. Disattivo il chatbot finche' non ricevi assistenza.",
-        // 🆕 Feature 203: Custom escalation triggers (informational version)
-⚠️ IMPORTANTE: Prima verifica SEMPRE se la risposta è nelle FAQ o nella knowledge base`,
         operatorContactMethod: "EMAIL",
         toneOfVoice: "PROFESSIONAL",
         botIdentityResponse: "I'm the BellItalia assistant, here to provide information about our Italian gourmet products and services! 📚",
@@ -870,30 +853,12 @@ Would you like details about something specific?"`,
           "Hi! I'm your eChatbot product assistant. Ask me anything about plans, integrations or onboarding. 🚀",
         wipMessage:
           "Our assistants are being updated. If you need immediate help please write to support@echatbot.ai.",
-        ownerId: adminUser.id,
-        planType: "ENTERPRISE",
-        creditBalance: 500,
-        trialEndsAt: null,
-        planStartedAt: new Date(),
+        owner: { connect: { id: adminUser.id } },
         channelMode: "INFORMATIONAL",
         hasSalesAgents: false,
         hasHumanSupport: true,
         humanSupportInstructions:
           "Ciao {{nameUser}}, ti metto subito in contatto con un consulente eChatbot. Riceverai risposta entro 15 minuti da {{agentName}} (tel: {{agentPhone}} / email: {{agentEmail}}).",
-        // 🆕 Feature 203: Custom escalation triggers (enterprise support)
-Escalate IMMEDIATELY (call contactOperator) when customer:
-- Has TECHNICAL ISSUES with platform (bugs, errors, crashes)
-- Requests PLAN UPGRADE or DOWNGRADE
-- Has BILLING or PAYMENT questions
-- Needs CUSTOM INTEGRATIONS or API access
-- EXPLICITLY asks to speak with HUMAN CONSULTANT
-- Reports SECURITY or DATA concerns
-- Shows HIGH FRUSTRATION with our services
-
-⚠️ ALWAYS check FAQ/documentation first before escalating
-
-# Example Escalation
-"I understand you need technical assistance. Let me connect you with our specialist team 🔧"`,
         operatorContactMethod: "EMAIL",
         toneOfVoice: "PROFESSIONAL",
         botIdentityResponse:
@@ -1560,6 +1525,731 @@ Can I help with anything else?"`,
     `   - Channels: 3 (E-commerce: BellItalia VIP, Informational: BellItalia, Support: eChatbot HQ)\n`
   )
 
+  // ============================================================================
+  // ECOLAUNDRY — FLOW workspace (Neapolis / Cliente-0)
+  // ============================================================================
+  console.log("🏢 Creating/updating FLOW workspace (Ecolaundry) for admin user...")
+
+  let ecolaundryWorkspace = await prisma.workspace.findFirst({
+    where: { slug: "ecolaundry" },
+  })
+
+  if (!ecolaundryWorkspace) {
+    console.log("   Creating new FLOW workspace...")
+    ecolaundryWorkspace = await prisma.workspace.create({
+      data: {
+        name: "Ecolaundry",
+        slug: "ecolaundry",
+        owner: { connect: { id: adminUser.id } },
+        channelMode: "FLOW",
+        language: "ESP",
+        currency: "EUR",
+        description: "Self-service laundry with smart troubleshooting via QR codes",
+        channelStatus: true,
+        chatbotName: "Sofia",
+        botIdentityResponse:
+          "I'm Sofia, the self-service laundry digital assistant. I help customers use the washing machines and dryers. When a customer scans the QR code on a machine, I guide them step-by-step through troubleshooting. I can help with startup issues, error codes, and washing problems. If I can't resolve the issue, I connect them with a human operator.",
+        toneOfVoice: "FRIENDLY",
+        welcomeMessage:
+          "Hi! 👋 I'm {{chatbotName}}, your laundry assistant.\nScan the QR code on the machine to get started, or describe your problem and I'll help you right away.",
+        wipMessage:
+          "The service is temporarily unavailable. Please contact the laundry staff directly.",
+        businessType: "services",
+        hasHumanSupport: true,
+        operatorContactMethod: "EMAIL",
+        notificationEmail: "gelsogrove@gmail.com",
+        humanSupportInstructions:
+          "Hello {{nameUser}}, I'm connecting you with our maintenance team. Someone will assist you shortly (email: {{agentEmail}}). The chatbot is paused until they respond. Thank you for your patience! 🤝",
+        enableWelcomeMessage: true,
+        sessionResetTimeout: 3600,
+      },
+    })
+  } else {
+    console.log(`   ✅ FLOW workspace already exists: ${ecolaundryWorkspace.name}`)
+  }
+
+  console.log(`✅ FLOW workspace ready: ${ecolaundryWorkspace.name} (${ecolaundryWorkspace.id})`)
+
+  // Associate admin user with Ecolaundry workspace
+  const existingEcoLink = await prisma.userWorkspace.findFirst({
+    where: { userId: adminUser.id, workspaceId: ecolaundryWorkspace.id },
+  })
+
+  if (!existingEcoLink) {
+    await prisma.userWorkspace.create({
+      data: {
+        userId: adminUser.id,
+        workspaceId: ecolaundryWorkspace.id,
+        role: "SUPER_ADMIN",
+      },
+    })
+    console.log(`   ✅ Admin user linked to Ecolaundry workspace`)
+  }
+
+  // WhatsApp settings for Ecolaundry
+  const existingEcoWhatsapp = await prisma.whatsappSettings.findFirst({
+    where: { workspaceId: ecolaundryWorkspace.id },
+  })
+  if (!existingEcoWhatsapp) {
+    await prisma.whatsappSettings.create({
+      data: {
+        workspaceId: ecolaundryWorkspace.id,
+        phoneNumber: "+34600000000",
+        apiKey: process.env.WHATSAPP_API_KEY || "dummy-api-key",
+        webhookUrl: process.env.WHATSAPP_WEBHOOK_URL || "https://echatbot.ai/webhook",
+        webhookId: `webhook-${ecolaundryWorkspace.id}`,
+        webhookToken: `token-eco-${Date.now()}`,
+        adminEmail: adminEmail,
+        smtpHost: "smtp.gmail.com",
+        smtpPort: 465,
+        smtpSecure: true,
+        smtpUser: process.env.SMTP_USER || adminEmail,
+        smtpPass: process.env.SMTP_PASS || "",
+        smtpFrom: `Ecolaundry <${adminEmail}>`,
+      },
+    })
+  }
+
+  // Languages for Ecolaundry
+  for (const lang of [
+    { code: "ESP", name: "Español", isDefault: true },
+    { code: "ENG", name: "English", isDefault: false },
+    { code: "IT", name: "Italiano", isDefault: false },
+  ]) {
+    await prisma.languages.create({
+      data: {
+        code: lang.code,
+        name: lang.name,
+        isDefault: lang.isDefault,
+        isActive: true,
+        workspaceId: ecolaundryWorkspace.id,
+      },
+    })
+  }
+
+  // AgentConfig entries for Ecolaundry (same as Informational — no ecommerce agents)
+  const ecoAgents = defaultAgents(ecolaundryWorkspace.id).filter(
+    (agent) =>
+      !["PRODUCT_SEARCH", "CART_MANAGEMENT", "ORDER_TRACKING"].includes(agent.type)
+  )
+
+  for (const agentCfg of ecoAgents) {
+    await prisma.agentConfig.create({
+      data: {
+        workspaceId: agentCfg.workspaceId,
+        name: agentCfg.name,
+        type: agentCfg.type,
+        description: agentCfg.description,
+        icon: agentCfg.icon,
+        systemPrompt: agentCfg.type === "TRANSLATION" ? TRANSLATION_PROMPT : "",
+        model: agentCfg.model,
+        temperature: agentCfg.temperature,
+        maxTokens: agentCfg.maxTokens,
+        order: agentCfg.order,
+        isActive: agentCfg.isActive,
+        availableFunctions: agentCfg.availableFunctions || null,
+      },
+    })
+  }
+
+  // ── Ecolaundry systemPrompt (Acceptance Criteria from Andrea) ──────────────
+  // This prompt embeds ALL the business rules from the Ecolaundry acceptance doc:
+  // tone, limits, anti-fraud rules, knowledge base, escalation protocol, etc.
+  const ECOLAUNDRY_SYSTEM_PROMPT = `You are Sofia, the Ecolaundry customer support chatbot.
+You help customers resolve laundry machine issues quickly, clearly, and reassuringly.
+
+## PRIORITIES
+1. Reduce customer frustration
+2. Help them complete the service if possible
+3. Collect only necessary data
+4. Give simple instructions, one at a time
+5. Escalate to operator when the case is ambiguous, inconsistent, or requires validation
+6. Never improvise compensations outside defined rules
+7. Never directly accuse anyone of fraud
+
+## TONE & STYLE
+- Close, professional, calm, solution-oriented, brief
+- Short sentences
+- One question at a time (never ask two questions in one message)
+- Maximum 3 consecutive instructions
+- Flow: reassure → diagnose → resolve
+- If customer is angry → respond calmly, never argue
+- Template phrases:
+  - "Don't worry, I'll help you."
+  - "To start, tell me which location you're at."
+  - "Please check what exactly appears on the display."
+  - "Thanks, with that I can guide you."
+
+## WHAT YOU CAN DO
+- Explain basic operation of washers and dryers
+- Guide through common errors (SEL, PUSH PROG, DOOR, ALM DOOR, 001, ALM/ALN)
+- Explain how loyalty cards work (purchase and recharge)
+- Give info on invoices, prices, hours, and differences between locations
+- Collect data for refunds/returns
+- Guide the customer before escalating to a human
+
+## WHAT YOU MUST NEVER DO
+- Promise refunds without collecting data first
+- Accuse of fraud or say "this is a scam"
+- Decide doubtful cases without human review
+- Handle undocumented exceptions
+- Invent or affirm prices not confirmed in the knowledge base
+- Promise compensations unless there is a clear automatic rule
+
+## BASIC FLOW
+Opening: "Hi, I'm the Ecolaundry assistant. I'll help with your request. Which location are you at?"
+Minimum data to collect: location, washer or dryer, machine number, what happened, whether service completed.
+Order: 1. identify location → 2. identify machine type → 3. was the service completed? → 4. identify the error → 5. give simplest solution → 6. if needed, collect data to escalate.
+
+## MAIN INTENTS
+
+### 5.1 Washer not working
+Goal: identify if it's a process error, payment issue, or machine fault.
+Questions (one per turn): location? machine number? paid with card, cash, or code? what's on the display? did the central unit return change?
+Base response: "OK, I'll help you step by step. Tell me what exactly appears on the washer display."
+Escalate if: display doesn't match known cases, unclear payment, suspected fault.
+
+### 5.2 Dryer not working
+Goal: differentiate between usage error, missing added time, or technical fault.
+Questions: location? dryer number? did it start at all? did you add time or is it the first cycle? what's on the display?
+Base response: "Thanks. Let me check. Tell me if the dryer started at any point or if it never began."
+Escalate if: at Alemanya or Pineda money was added but minutes didn't increase, suspected fault.
+
+### 5.3 Double charge
+Goal: determine if service was completed and collect refund data.
+Questions: location? were you able to wash or dry? explain step by step what you did? last 4 digits of the card? can you send a payment screenshot?
+If service completed: "Thanks. To review, we need the last 4 digits of your card and a payment screenshot. We can also send you the refund form."
+Preventive advice: "Next time, before paying again, contact us and we'll help you right away."
+Escalate if: amount doesn't match the location, story is confusing, customer is very upset.
+
+### 5.4 Paid but won't start
+Goal: detect selection error, confirmation issue, door problem, or technical fault.
+Questions in order: 1. location? 2. washer or dryer? 3. machine number? 4. what's on the display? 5. did the central unit return change?
+RULES: never diagnose without location + machine type + display state. Ask only one question per turn.
+
+#### Display states diagnostic:
+**SEL** — Machine available, pending selection after payment.
+Response: "The machine is pending selection. Please check that you pressed the correct machine number or program."
+Action: re-select machine or program. Escalate only if already done and machine still doesn't respond.
+
+**PUSH PROG** — Program confirmation missing.
+Response: "Press the program you want and tell me if the machine responds."
+Action: press program. Escalate only if it doesn't respond after pressing.
+
+**DOOR** — Door not closed properly.
+Response: "Open and close the door properly, then try again."
+Action: open and close door correctly. Escalate if message persists after repeating.
+
+**ALM DOOR** — Door latch problem or object stuck in door/drum.
+Response: "Carefully open the door, check if anything is stuck, and close it properly again. Tell me if the message disappears."
+Action: inspect door and close again. Escalate if message doesn't disappear.
+
+**001** — Program may have been selected before payment, state didn't reset.
+Response: "It's possible the program was selected before payment. We'll review it to help you."
+Action: wait for instructions. ALWAYS escalate.
+
+**ALM / ALN / ALN A / ALN N** — Machine alarm or interrupted cycle.
+Response: "It seems the machine detected an issue and we need to review it."
+Action: do not continue operating the machine. ALWAYS escalate.
+
+#### Change returned rules:
+If central unit did NOT return change → possible wrong machine number selected.
+Response: "You may not have selected the right machine number. Check if there's still credit on the central unit and press the correct button."
+If central unit DID return change → check display and proceed according to display state.
+Escalate if: customer followed steps and still not working, contradiction between payment and machine state, undocumented display code, suspected fault.
+
+### 5.5 Error AL001
+Goal: explain the cause and correct the usage sequence.
+Response: "This warning usually appears when the process was done in the wrong order. I'll help you complete it. Tell me which location you're at and what you did just before it appeared."
+Secondary goal: educate the customer to avoid repeating the error.
+Escalate if: customer can't follow instructions, error persists after correct process.
+
+### 5.6 I have a code
+Goal: differentiate if it's a lower or higher amount code and help use it.
+Questions: what's the exact code including any letters? which location? is a small amount missing or does the code cover more?
+Rules:
+- If code seems incomplete (only numbers), ask if there are letters before it.
+- If a small amount is missing, ask to put the remaining money in the central unit and not touch anything else, then guide them at the machine.
+- If it's a higher amount, escalate or generate a new code per human operations.
+Response: "I'll help you use it. Tell me the exact code, including letters if any."
+Escalate if: incoherent code, customer says no letters but format doesn't match, new code needed.
+
+### 5.7 Refund request
+Goal: collect minimum data and route correctly.
+Response: "To process the refund, we need: the last 4 digits of your card, a payment screenshot, and a brief description of what happened. We'll also send you the refund form."
+Form: https://forms.gle/XFGPAd9581AhC9eu7
+Support email: service@alberwaz.net
+Escalate if: customer demands immediate refund, complex incident.
+
+### 5.8 Invoice request
+Goal: give clear, closed instructions.
+Response: "To get an invoice, please send an email to olga@alberwaz.net with the following information:"
+Required data: company name (raó social), email, laundry location used, CIF/NIF, address, date of use, washer 20kg / washer 15kg / washer 10kg / dryer usage, observations.
+
+### 5.9 Loyalty card
+Goal: explain purchase and recharge.
+Response: "The loyalty card costs €20 in cash and only works at the store where it was purchased."
+For Goya and Pineda: "At the button central unit, press the second button on the right line."
+To recharge: "Insert the card and follow the central unit instructions."
+
+### 5.10 Hours, prices, and location differences
+Goal: give practical information without guessing.
+General hours: "Opening hours are 8:00 to 22:00, every day of the year."
+Exception L'Escala: "At L'Escala, machines can be used from 7:00 to 23:00."
+If customer asks for prices: consult location knowledge base. If not confirmed, escalate to review.
+
+## ANTI-FRAUD RULES
+NEVER say "this is a scam" or "fraud". Instead use:
+- "We need to verify this case manually."
+- "There's a piece of data that doesn't match, we'll review it."
+- "To check properly, we're forwarding this for review."
+Flag as inconsistent:
+- At Goya, customer says card reader charged €10 (should be €7)
+- At Pineda, customer says card reader charged €10 (should be €8)
+- Customer gives a numbers-only code and says there are no letters
+- The process description is very contradictory
+Action: do NOT confront, collect data, escalate to human review.
+
+## COMPENSATION RULES
+General rule: the chatbot can inform that a solution will be sought, but must NOT promise compensations unless there's a very clear automatic rule.
+Response: "We'll review it and help you find the best solution."
+Cases where chatbot can mention possible solutions (without granting):
+- Clothes didn't come out clean/dry enough
+- Incident attributable to the service
+- Customer lost time due to our problem
+Possible solutions to mention: free machine activation, free dryer, direct code, referral to refund form.
+ALWAYS escalate when: deciding free machine activation, deciding free dryer, issuing a new code, customer claims specific compensation, ambiguous case or debatable responsibility.
+Escalation message: "We're forwarding your case for review so we can apply the most appropriate solution."
+
+## LOCATION KNOWLEDGE BASE
+
+### General (all locations)
+- All machines are Girbau brand
+- Soap and softener included
+- Do NOT recommend adding extra products (can damage machines)
+- Average wash cycle: ~28 minutes
+- 15 min drying can dry ~20kg of mixed laundry
+- 100% cotton usually needs more time
+
+### L'Escala
+- Hours (machine use): 7:00–23:00
+- Loyalty card: NO
+- Central unit type: standard
+- TPV fixed amount: not confirmed
+- Returns change: not confirmed
+- Notes: open location, machine may auto-activate without re-confirming program (verify with customer)
+- Common issues: verify with customer if activation actually occurred
+
+### Goya
+- Hours: 8:00–22:00
+- Loyalty card: YES (€7)
+- Central unit type: button central
+- TPV fixed amount: €7
+- Returns change: yes, in coins
+- Notes: customer must remove lint from dryer by opening the tray
+- Common issues: if customer says card reader charged €10 → flag as inconsistent, escalate
+
+### Pineda
+- Hours: 8:00–22:00
+- Loyalty card: YES (€8)
+- Central unit type: button central
+- TPV fixed amount: €8
+- Returns change: yes, in coins
+- Notes: central with buttons and individual charging
+- Common issues: if customer says card reader charged €10 → flag as inconsistent, escalate. Sometimes adding money to dryer doesn't add minutes.
+
+### Alemanya
+- Hours: 8:00–22:00
+- Loyalty card: YES
+- Central unit type: standard
+- TPV fixed amount: not confirmed
+- Returns change: not confirmed
+- Notes: may require technical support for payment or drying
+- Common issues: sometimes adding money to dryer doesn't add minutes, sometimes card payment doesn't work
+
+### Hortes
+- Hours: 8:00–22:00
+- Loyalty card: YES
+- Central unit type: standard
+- TPV fixed amount: not confirmed
+- Returns change: not confirmed
+- Notes: no specific observations confirmed
+- Common issues: sometimes card payment doesn't work
+
+## ESCALATION PROTOCOL
+Escalate when:
+- Customer is very angry
+- Contradiction in amount or story
+- Problem doesn't match known errors
+- Need to manually activate a machine
+- Need to decide a compensation
+- Suspected fraud or inconsistency
+- Incorrect code or need to generate a new one
+- Incidents with cameras or AJAX systems
+Escalation message: "We're forwarding your case for review so we can help you in the most appropriate way."
+
+## REUSABLE RESPONSE TEMPLATES
+- Welcome: "Hi, I'm the Ecolaundry assistant. Happy to help. Which location are you at right now?"
+- Calm down: "Don't worry, let's review this together."
+- Ask specific data: "Please tell me what exactly appears on the display."
+- Payment data needed: "To review properly, we need the last 4 digits of your card and a payment screenshot."
+- Escalation: "We'll review this manually because there's a piece of data we need to verify."
+- Prevent re-payment: "Before paying again, contact us and we'll help you right away."
+
+## SYSTEM RULES
+1. ALWAYS respond in English — TranslationAgent handles i18n
+2. If the customer describes a machine problem → call startFlow with the matching flowId
+3. If the customer asks a general question → answer from the knowledge base above
+4. If unsure which flow → ask a clarifying question
+5. NEVER invent technical info not documented above
+6. If frustrated or asks for help → call contactOperator
+7. Identify the location FIRST, then the machine type, THEN diagnose
+8. When there's a machine incident, ask for the exact display state before diagnosing
+9. Never ask more than one question per turn
+10. If the case doesn't clearly fit a known flow, escalate`
+
+  // ── FlowNodeConfig #1: Washer HS-60XX ───────────────────────────────────────
+  const existingWasherConfig = await prisma.flowNodeConfig.findFirst({
+    where: { workspaceId: ecolaundryWorkspace.id, flowKey: "lavatrice_hs60xx" },
+  })
+  if (!existingWasherConfig) {
+    await prisma.flowNodeConfig.create({
+      data: {
+        workspaceId: ecolaundryWorkspace.id,
+        flowKey: "lavatrice_hs60xx",
+        flowLabel: "Washer HS-60XX",
+        systemPrompt: ECOLAUNDRY_SYSTEM_PROMPT + `
+
+## MACHINE SPECS — Washer HS-60XX
+- Capacity: 8 kg
+- Programs: Cotton, Synthetics, Delicates, Wool, Quick 30min
+- Prices: €4.00 (Cotton), €3.50 (Synthetics), €3.00 (Delicates/Wool), €2.50 (Quick)
+- Payment: coins or contactless
+- Spin speed: 800/1000/1200 RPM (selectable)
+- EXTRA options: Extra rinse (+€0.50), Pre-wash (+€1.00)
+
+Available flows: non_parte, errore_alm, lavaggio_problema`,
+        model: "openai/gpt-4o-mini",
+        temperature: 0.3,
+        maxTokens: 2048,
+        availableFunctions: JSON.parse(JSON.stringify(["startFlow", "contactOperator"])),
+        flows: {
+          non_parte: {
+            step_0: {
+              type: "CHOICE",
+              prompt: "What do you see on the washer display?\n\n1️⃣ SEL\n2️⃣ PUSH / Pr\n3️⃣ DOOR\n4️⃣ A number (e.g. 04.00)\n5️⃣ EXTRA light is on\n6️⃣ ALM DOOR\n7️⃣ 001\n8️⃣ ALM / ALN / other alarm code",
+              transitions: {
+                "1": "non_parte.caso_sel",
+                "2": "non_parte.caso_push",
+                "3": "non_parte.caso_door",
+                "4": "non_parte.caso_importo",
+                "5": "non_parte.caso_extra",
+                "6": "non_parte.caso_alm_door",
+                "7": "non_parte.caso_001",
+                "8": "non_parte.caso_alm_gen",
+              },
+              onInterruptFallback: "Check the display 👀\nWhat does it show? Reply with a number (1-8)",
+            },
+            caso_sel: {
+              type: "ACTION",
+              prompt: "SEL means the machine is ready and waiting for you to select a program.\n👉 Press the correct machine number or program button.",
+              transitions: { default: "non_parte.ask_resolved" },
+            },
+            caso_push: {
+              type: "ACTION",
+              prompt: "You've inserted credit but haven't confirmed the program yet.\n👉 Press the program you want and tell me if the machine responds.",
+              transitions: { default: "non_parte.ask_resolved" },
+            },
+            caso_door: {
+              type: "ACTION",
+              prompt: "The door isn't closed properly.\n👉 Open and close the door firmly until you hear it click, then try again.",
+              transitions: { default: "non_parte.ask_resolved" },
+            },
+            caso_importo: {
+              type: "CHOICE",
+              prompt: "Not enough credit. Did the central unit return your change?\n\n1️⃣ Yes, it returned the change\n2️⃣ No, it didn't return change",
+              transitions: {
+                "1": "non_parte.cambio_si",
+                "2": "non_parte.cambio_no",
+              },
+            },
+            cambio_si: {
+              type: "ACTION",
+              prompt: "OK, check the display state and insert the correct amount shown.\n👉 You can pay with coins or contactless.",
+              transitions: { default: "non_parte.ask_resolved" },
+            },
+            cambio_no: {
+              type: "ACTION",
+              prompt: "You may not have selected the right machine number.\n👉 Check if there's still credit on the central unit and press the correct button for your machine.",
+              transitions: { default: "non_parte.ask_resolved" },
+            },
+            caso_extra: {
+              type: "INFO",
+              prompt: "An EXTRA option may be active.\n👉 If an EXTRA button is lit:\n- if you don't want it → press the button to deactivate\n- if you want it → insert the remaining credit shown on display",
+              isTerminal: true,
+            },
+            caso_alm_door: {
+              type: "ACTION",
+              prompt: "ALM DOOR — possible object stuck in the door or drum.\n👉 Carefully open the door, check if anything is caught, and close it properly again.\nTell me if the message disappears.",
+              transitions: { default: "non_parte.ask_resolved" },
+            },
+            caso_001: {
+              type: "INFO",
+              prompt: "Error 001 — the program may have been selected before payment and the state didn't reset correctly.\n👉 We'll review this to help you. I'm contacting an operator.",
+              isTerminal: true,
+            },
+            caso_alm_gen: {
+              type: "INFO",
+              prompt: "The machine has detected an alarm and we need to review it.\n👉 Do NOT continue operating the machine.\nI'm contacting an operator to assist you.",
+              isTerminal: true,
+            },
+            ask_resolved: {
+              type: "CONFIRMATION",
+              prompt: "Did that solve the problem? (yes / no)",
+              transitions: {
+                YES: "non_parte.end_success",
+                NO: "non_parte.handle_escalate",
+              },
+            },
+            end_success: {
+              type: "INFO",
+              prompt: "Great! ✅ Enjoy your wash 👍",
+              isTerminal: true,
+            },
+            handle_escalate: {
+              type: "INFO",
+              prompt: "I understand 😔 I'm contacting an operator to help you.",
+              isTerminal: true,
+            },
+          },
+          errore_alm: {
+            step_0: {
+              type: "CHOICE",
+              prompt: "What code do you see after ALM?\n\n1️⃣ ALM/A (water intake)\n2️⃣ ALM/E (drainage)\n3️⃣ ALM/door\n4️⃣ ALM/VAr",
+              transitions: {
+                "1": "errore_alm.alm_acqua",
+                "2": "errore_alm.alm_scarico",
+                "3": "errore_alm.alm_door",
+                "4": "errore_alm.alm_var",
+              },
+              onInterruptFallback: "Tell me the code after ALM 🔧\nReply with 1, 2, 3, or 4",
+            },
+            alm_acqua: {
+              type: "ACTION",
+              prompt: "Water intake problem.\n👉 Press STOP once.\n\nIf the issue persists, please use another machine.\nI'll notify maintenance.",
+              isTerminal: true,
+            },
+            alm_scarico: {
+              type: "ACTION",
+              prompt: "Drainage problem.\n👉 Press STOP once.\n\n⚠️ The door may stay locked for up to 30 minutes while the water drains.\n\nIf the issue persists, please use another machine.",
+              isTerminal: true,
+            },
+            alm_door: {
+              type: "ACTION",
+              prompt: "Door latch problem.\n👉 Press STOP once.\n\nIf the issue persists, please use another machine.",
+              isTerminal: true,
+            },
+            alm_var: {
+              type: "INFO",
+              prompt: "Technical machine fault.\n👉 Please use another machine.\nWe'll provide a compensation 👍\n\nI'm notifying maintenance.",
+              isTerminal: true,
+            },
+          },
+          lavaggio_problema: {
+            step_0: {
+              type: "CHOICE",
+              prompt: "What problem did you notice?\n\n1️⃣ Didn't spin / clothes still wet\n2️⃣ END + bAL on the display",
+              transitions: {
+                "1": "lavaggio_problema.no_centrifuga",
+                "2": "lavaggio_problema.end_bal",
+              },
+              onInterruptFallback: "Describe what happened during the wash 🔧\nReply with 1 or 2",
+            },
+            no_centrifuga: {
+              type: "INFO",
+              prompt: "The load was probably too large or unbalanced.\n👉 Split the load and run a new spin cycle (Quick program at €2.50).",
+              isTerminal: true,
+            },
+            end_bal: {
+              type: "INFO",
+              prompt: "The wash finished but the spin cycle failed due to an unbalanced load.\n👉 Split the load and run a new spin cycle (Quick program at €2.50).",
+              isTerminal: true,
+            },
+          },
+        },
+        isActive: true,
+      },
+    })
+    console.log("   ✅ FlowNodeConfig created: Washer HS-60XX")
+  }
+
+  // ── FlowNodeConfig #2: Dryer ED-340 ────────────────────────────────────────
+  const existingDryerConfig = await prisma.flowNodeConfig.findFirst({
+    where: { workspaceId: ecolaundryWorkspace.id, flowKey: "asciugatrice_ed340" },
+  })
+  if (!existingDryerConfig) {
+    await prisma.flowNodeConfig.create({
+      data: {
+        workspaceId: ecolaundryWorkspace.id,
+        flowKey: "asciugatrice_ed340",
+        flowLabel: "Dryer ED-340",
+        systemPrompt: ECOLAUNDRY_SYSTEM_PROMPT + `
+
+## MACHINE SPECS — Dryer ED-340
+- Capacity: 15 kg
+- Programs: Cotton High Temp, Cotton Low Temp, Synthetics, Delicates
+- Duration: 30 min (standard), 45 min (+€1.50), 15 min (quick dry)
+- Prices: €3.00 (30 min), €4.50 (45 min), €2.00 (15 min quick)
+- Payment: coins or contactless
+- Lint filter: should be cleaned before each use
+
+Available flows: non_parte, errore_reset`,
+        model: "openai/gpt-4o-mini",
+        temperature: 0.3,
+        maxTokens: 2048,
+        availableFunctions: JSON.parse(JSON.stringify(["startFlow", "contactOperator"])),
+        flows: {
+          non_parte: {
+            step_0: {
+              type: "CHOICE",
+              prompt: "What's happening with the dryer?\n\n1️⃣ Display shows nothing / blank\n2️⃣ Door won't close properly\n3️⃣ Shows a price but won't start",
+              transitions: {
+                "1": "non_parte.display_blank",
+                "2": "non_parte.door_issue",
+                "3": "non_parte.credit_issue",
+              },
+              onInterruptFallback: "Tell me what you see on the dryer 🔧\nReply with 1, 2, or 3",
+            },
+            display_blank: {
+              type: "ACTION",
+              prompt: "The dryer may need a reset.\n👉 Open the door, wait 10 seconds, close it firmly, then try again.\n\nIf the display stays blank, please use another dryer.",
+              transitions: { default: "non_parte.ask_resolved" },
+            },
+            door_issue: {
+              type: "ACTION",
+              prompt: "The door latch may be stuck.\n👉 Check that no clothes are caught in the door seal.\n👉 Close the door firmly until you hear it click.",
+              transitions: { default: "non_parte.ask_resolved" },
+            },
+            credit_issue: {
+              type: "ACTION",
+              prompt: "You may need to insert more credit.\n👉 Check the amount shown on the display and insert coins or tap contactless.\n\nIf the issue persists after paying, try pressing the START button firmly.",
+              transitions: { default: "non_parte.ask_resolved" },
+            },
+            ask_resolved: {
+              type: "CONFIRMATION",
+              prompt: "Did that solve the problem? (yes / no)",
+              transitions: {
+                YES: "non_parte.end_success",
+                NO: "non_parte.handle_escalate",
+              },
+            },
+            end_success: {
+              type: "INFO",
+              prompt: "Great! ✅ Your clothes will be dry soon 👍",
+              isTerminal: true,
+            },
+            handle_escalate: {
+              type: "INFO",
+              prompt: "I understand 😔 I'm contacting an operator to help you.",
+              isTerminal: true,
+            },
+          },
+          errore_reset: {
+            step_0: {
+              type: "CHOICE",
+              prompt: "What problem do you see?\n\n1️⃣ Alarm / red light\n2️⃣ Not heating (clothes still wet after full cycle)\n3️⃣ Dryer stops mid-cycle",
+              transitions: {
+                "1": "errore_reset.allarme",
+                "2": "errore_reset.non_scalda",
+                "3": "errore_reset.mid_stop",
+              },
+              onInterruptFallback: "Tell me what you see on the dryer 🔧\nReply with 1, 2, or 3",
+            },
+            allarme: {
+              type: "ACTION",
+              prompt: "To reset the alarm:\n👉 Press and hold the STOP button for 3 seconds.\n👉 Open the door, clean the lint filter, close the door.\n👉 Try starting again.",
+              transitions: { default: "errore_reset.ask_resolved" },
+            },
+            non_scalda: {
+              type: "ACTION",
+              prompt: "First, check the lint filter — a clogged filter reduces heat.\n👉 Pull out the filter, remove lint, put it back.\n👉 Run a new cycle.\n\nIf it still doesn't heat, the heating element may need service. Please use another dryer.",
+              transitions: { default: "errore_reset.ask_resolved" },
+            },
+            mid_stop: {
+              type: "ACTION",
+              prompt: "The dryer may have overheated (safety shut-off).\n👉 Wait 5 minutes for it to cool down.\n👉 Check and clean the lint filter.\n👉 Try starting again with a smaller load.",
+              transitions: { default: "errore_reset.ask_resolved" },
+            },
+            ask_resolved: {
+              type: "CONFIRMATION",
+              prompt: "Did that solve the problem? (yes / no)",
+              transitions: {
+                YES: "errore_reset.end_success",
+                NO: "errore_reset.handle_escalate",
+              },
+            },
+            end_success: {
+              type: "INFO",
+              prompt: "Great! ✅ Your clothes will be dry soon 👍",
+              isTerminal: true,
+            },
+            handle_escalate: {
+              type: "INFO",
+              prompt: "I understand 😔 I'm contacting an operator to help you.",
+              isTerminal: true,
+            },
+          },
+        },
+        isActive: true,
+      },
+    })
+    console.log("   ✅ FlowNodeConfig created: Dryer ED-340")
+  }
+
+  // WorkspaceCallingFunctions for Ecolaundry
+  const ecoCallingFunctions = [
+    {
+      functionName: "customerSupportAgent",
+      description: "Delegate to Customer Support Agent when the customer requests a human operator or when the troubleshooting flow escalates.",
+      parameters: { type: "object", properties: { query: { type: "string", description: "Support request context" } }, required: ["query"] },
+      isSystemFunction: true,
+      executionType: "DELEGATE_TO_AGENT",
+      attachedLlm: "CUSTOMER_SUPPORT",
+    },
+    {
+      functionName: "changeLanguage",
+      description: "Change the customer's preferred language. Supported: Italian (it), English (en), Spanish (es), Portuguese (pt).",
+      parameters: { type: "object", properties: { language: { type: "string", enum: ["it", "en", "es", "pt"], description: "ISO 639-1 language code" } }, required: ["language"] },
+      isSystemFunction: true,
+      executionType: "INTERNAL",
+    },
+    {
+      functionName: "profileManagementAgent",
+      description: "Delegate to Profile Management Agent for email updates, notification preferences, profile data changes.",
+      parameters: { type: "object", properties: { query: { type: "string", description: "Profile-related request" } }, required: ["query"] },
+      isSystemFunction: true,
+      executionType: "DELEGATE_TO_AGENT",
+      attachedLlm: "PROFILE_MANAGEMENT",
+    },
+  ]
+
+  for (const func of ecoCallingFunctions) {
+    await prisma.workspaceCallingFunction.create({
+      data: {
+        workspaceId: ecolaundryWorkspace.id,
+        functionName: func.functionName,
+        description: func.description,
+        parameters: func.parameters,
+        isSystemFunction: func.isSystemFunction,
+        executionType: func.executionType,
+        attachedLlm: (func as any).attachedLlm || null,
+        isActive: true,
+      },
+    })
+  }
+
+  console.log(`✅ Ecolaundry FLOW workspace configured: 2 FlowNodeConfigs + ${ecoCallingFunctions.length} calling functions`)
+
   // Use BellItalia VIP as the main workspace for demo data
   const workspace = ecommerceWorkspace
 
@@ -1760,12 +2450,10 @@ Can I help with anything else?"`,
         stock: prod.stock,
         status: prod.status as any,
         slug: prod.slug,
-        categoryId: categoryId,
         workspaceId: workspace.id,
         imageUrl: prod.imageUrl || [],
         type: type,
         region: region,
-        certifications: [], // ⚠️ DEPRECATED: Keep empty array for backward compatibility
       },
     })
 
@@ -1948,12 +2636,14 @@ Confermi la tua presenza?`,
   ]
 
   for (const type of appointmentTypes) {
-    await prisma.appointmentType.create({
-      data: {
-        workspaceId: workspace.id,
-        ...type
-      }
-    })
+    if ((prisma as any).appointmentType) {
+      await (prisma as any).appointmentType.create({
+        data: {
+          workspaceId: workspace.id,
+          ...type
+        }
+      })
+    }
   }
 
   console.log(`   ✅ Created ${appointmentTypes.length} appointment types`)

@@ -36,6 +36,7 @@ jest.mock("@echatbot/database", () => ({
     },
     chatSession: {
       findFirst: (...args: any[]) => mockFindFirst(...args),
+      update: jest.fn().mockResolvedValue({}),
     },
     conversationMessage: {
       findMany: (...args: any[]) => mockFindMany(...args),

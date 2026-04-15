@@ -238,3 +238,268 @@ describe("MessageFlowDialog - textContent Display", () => {
     expect(result).not.toContain("{")
   })
 })
+
+describe("MessageFlowDialog - Flow Step Colors", () => {
+  // RULE: flow-engine gets violet (#7C3AED), flow-agent gets dark blue (#1D4ED8)
+  // These are FLOW workspace-specific step types
+
+  const getAgentColor = (type: string, agent?: string): string => {
+    if (type === "user" || agent === "Customer") return "#6B7280"
+    if (type === "operator_message") return "#3B82F6"
+    if (type === "flow-engine") return "#7C3AED" // Violet
+    if (type === "flow-agent") return "#1D4ED8"  // Dark blue
+    if (type === "router") return "#9333EA"
+    if (agent?.includes("Translation")) return "#14B8A6"
+    if (type === "safety") return "#DC2626"
+    return "#3B82F6"
+  }
+
+  it("flow-engine step should have violet color (#7C3AED)", () => {
+    // SCENARIO: FlowEngineService step in FLOW workspace debug view
+    // RULE: violet signals deterministic state-machine execution (no LLM)
+    const color = getAgentColor("flow-engine", "⚙️ Flow Engine")
+    expect(color).toBe("#7C3AED")
+  })
+
+  it("flow-agent step should have dark blue color (#1D4ED8)", () => {
+    // SCENARIO: FlowAgentLLM step that decides which flow to start
+    // RULE: dark blue distinguishes flow-agent from generic router (purple)
+    const color = getAgentColor("flow-agent", "🤖 Flow Agent")
+    expect(color).toBe("#1D4ED8")
+  })
+
+  it("flow-engine color should differ from router color", () => {
+    // RULE: flow-engine (violet) vs router (purple) must be visually distinct
+    const flowEngineColor = getAgentColor("flow-engine")
+    const routerColor = getAgentColor("router")
+    expect(flowEngineColor).not.toBe(routerColor)
+  })
+
+  it("flow-agent color should differ from flow-engine color", () => {
+    // RULE: the two FLOW step types must be visually distinct from each other
+    const flowAgentColor = getAgentColor("flow-agent")
+    const flowEngineColor = getAgentColor("flow-engine")
+    expect(flowAgentColor).not.toBe(flowEngineColor)
+  })
+})
+
+describe("MessageFlowDialog - Flow Step formatReadable", () => {
+  // RULE: flow-engine and flow-agent inputs/outputs must produce human-readable summaries
+
+  const formatReadable = (obj: any, type: "input" | "output"): string => {
+    if (!obj || Object.keys(obj).length === 0) return ""
+    const lines: string[] = []
+
+    if (type === "input") {
+      if (obj.textContent) return obj.textContent
+      if (obj.userMessage) lines.push(`User Message: ${obj.userMessage}`)
+      // flow-agent input
+      if (obj.flowKey) lines.push(`Flow: ${obj.flowKey}${obj.flowLabel ? ` (${obj.flowLabel})` : ""}`)
+      if (obj.toolsAvailable?.length) lines.push(`Tools: ${obj.toolsAvailable.join(", ")}`)
+      if (obj.flowsAvailable?.length) lines.push(`Flows: ${obj.flowsAvailable.join(", ")}`)
+      if (obj.historyMessages !== undefined) lines.push(`History Messages: ${obj.historyMessages}`)
+      // flow-engine input
+      if (obj.flowId) lines.push(`Flow ID: ${obj.flowId}`)
+      if (obj.action) lines.push(`Action: ${obj.action}`)
+      if (obj.userInput !== undefined && obj.userInput !== null) lines.push(`User Input: ${obj.userInput}`)
+      if (obj.previousNodeId) lines.push(`Previous Node: ${obj.previousNodeId}`)
+      if (obj.classification) lines.push(`Classification: ${obj.classification}`)
+    }
+
+    if (type === "output") {
+      if (obj.textContent) return obj.textContent
+      if (obj.decision) lines.push(`Decision: ${obj.decision}`)
+      // flow-agent output
+      if (obj.toolCall) lines.push(`Tool Call: ${obj.toolCall.name}(${JSON.stringify(obj.toolCall.arguments)})`)
+      // flow-engine output
+      if (obj.nodeId) lines.push(`Node: ${obj.nodeId}`)
+      if (obj.nodeType) lines.push(`Node Type: ${obj.nodeType}`)
+      if (obj.flowStatus) lines.push(`Status: ${obj.flowStatus}`)
+      if (obj.transitionKey !== undefined) lines.push(`Transition: ${obj.transitionKey}`)
+      if (obj.shouldCallOperator !== undefined) lines.push(`Call Operator: ${obj.shouldCallOperator ? "✅ Yes" : "No"}`)
+      if (obj.interruptCount !== undefined) lines.push(`Interrupts: ${obj.interruptCount}`)
+    }
+
+    return lines.length > 0 ? lines.join("\n") : ""
+  }
+
+  it("flow-agent input should show flowKey and available tools", () => {
+    // SCENARIO: Flow Agent receives message + flow context from router
+    const input = {
+      userMessage: "la lavatrice non parte",
+      flowKey: "lavatrice_hs60xx",
+      flowLabel: "Washer HS-60XX",
+      historyMessages: 4,
+      toolsAvailable: ["startFlow", "contactOperator"],
+      flowsAvailable: ["non_parte", "errore_alm"],
+    }
+    const result = formatReadable(input, "input")
+    expect(result).toContain("Flow: lavatrice_hs60xx (Washer HS-60XX)")
+    expect(result).toContain("Tools: startFlow, contactOperator")
+    expect(result).toContain("Flows: non_parte, errore_alm")
+    expect(result).toContain("History Messages: 4")
+    expect(result).toContain("User Message: la lavatrice non parte")
+  })
+
+  it("flow-agent output should show tool call name and arguments", () => {
+    // SCENARIO: Flow Agent decided to call startFlow with flowId
+    const output = {
+      decision: "tool_call",
+      toolCall: { name: "startFlow", arguments: { flowId: "non_parte" } },
+    }
+    const result = formatReadable(output, "output")
+    expect(result).toContain("Decision: tool_call")
+    expect(result).toContain('Tool Call: startFlow({"flowId":"non_parte"})')
+  })
+
+  it("flow-engine input for startFlow should show flowId and action", () => {
+    // SCENARIO: Flow Engine receives startFlow action from Flow Agent
+    const input = {
+      flowId: "non_parte",
+      action: "startFlow",
+      userInput: null,
+    }
+    const result = formatReadable(input, "input")
+    expect(result).toContain("Flow ID: non_parte")
+    expect(result).toContain("Action: startFlow")
+  })
+
+  it("flow-engine input for handleMessage should show classification", () => {
+    // SCENARIO: User replied to a CHOICE node with "1" → classification=MATCH
+    const input = {
+      flowId: "non_parte",
+      action: "handleMessage",
+      userInput: "1",
+      previousNodeId: "non_parte.step_0",
+      classification: "MATCH",
+    }
+    const result = formatReadable(input, "input")
+    expect(result).toContain("User Input: 1")
+    expect(result).toContain("Previous Node: non_parte.step_0")
+    expect(result).toContain("Classification: MATCH")
+  })
+
+  it("flow-engine output should show nodeId, flowStatus, and interruptCount", () => {
+    // SCENARIO: Flow Engine advanced to next node, flow still active
+    const output = {
+      nodeId: "non_parte.caso_sel",
+      nodeType: "CHOICE",
+      flowStatus: "ACTIVE",
+      responseText: "Is the door closed?",
+      shouldCallOperator: false,
+      interruptCount: 0,
+    }
+    const result = formatReadable(output, "output")
+    expect(result).toContain("Node: non_parte.caso_sel")
+    expect(result).toContain("Node Type: CHOICE")
+    expect(result).toContain("Status: ACTIVE")
+    expect(result).toContain("Call Operator: No")
+    expect(result).toContain("Interrupts: 0")
+  })
+})
+
+describe("MessageFlowDialog - FlowStateSummaryBar", () => {
+  // RULE: footer bar is shown only when flow-engine steps are present
+  // Displays: Flow ID · Node ID · Status (with color) · Interrupt count
+
+  const getFlowStatusColor = (status?: string): string => {
+    if (status === "ACTIVE") return "text-green-600"
+    if (status === "PAUSED") return "text-yellow-600"
+    if (status === "COMPLETED") return "text-blue-600"
+    if (status === "ESCALATED") return "text-red-600"
+    return "text-gray-600"
+  }
+
+  const getFlowStatusEmoji = (status?: string): string => {
+    if (status === "ACTIVE") return "🟢"
+    if (status === "PAUSED") return "⏸️"
+    if (status === "COMPLETED") return "✅"
+    if (status === "ESCALATED") return "🔴"
+    return ""
+  }
+
+  it("should show green color for ACTIVE flow", () => {
+    // RULE: green signals the flow is currently running and waiting for user input
+    expect(getFlowStatusColor("ACTIVE")).toBe("text-green-600")
+    expect(getFlowStatusEmoji("ACTIVE")).toBe("🟢")
+  })
+
+  it("should show yellow color for PAUSED flow", () => {
+    expect(getFlowStatusColor("PAUSED")).toBe("text-yellow-600")
+    expect(getFlowStatusEmoji("PAUSED")).toBe("⏸️")
+  })
+
+  it("should show blue color for COMPLETED flow", () => {
+    expect(getFlowStatusColor("COMPLETED")).toBe("text-blue-600")
+    expect(getFlowStatusEmoji("COMPLETED")).toBe("✅")
+  })
+
+  it("should show red color for ESCALATED flow", () => {
+    expect(getFlowStatusColor("ESCALATED")).toBe("text-red-600")
+    expect(getFlowStatusEmoji("ESCALATED")).toBe("🔴")
+  })
+
+  it("should use last flow-engine step when multiple steps present", () => {
+    // SCENARIO: Multi-message flow has 2 flow-engine steps (step_0, caso_sel)
+    // RULE: show LAST step's state (most recent = current state)
+    const flowEngineSteps = [
+      { output: { nodeId: "non_parte.step_0", flowStatus: "ACTIVE", interruptCount: 0 } },
+      { output: { nodeId: "non_parte.caso_sel", flowStatus: "ACTIVE", interruptCount: 0 } },
+    ]
+    const lastStep = flowEngineSteps[flowEngineSteps.length - 1]
+    expect(lastStep.output.nodeId).toBe("non_parte.caso_sel")
+  })
+
+  it("should NOT show footer when no flow-engine steps present", () => {
+    // RULE: footer is hidden for non-FLOW workspace messages (regular ecommerce)
+    const flowEngineSteps: any[] = []
+    const lastFlowEngineStep = flowEngineSteps.length > 0
+      ? flowEngineSteps[flowEngineSteps.length - 1]
+      : null
+    expect(lastFlowEngineStep).toBeNull()
+  })
+
+  it("should show footer when flow-engine step is present", () => {
+    // RULE: footer appears for FLOW workspace messages
+    const flowEngineSteps = [
+      { output: { nodeId: "non_parte.step_0", flowStatus: "ACTIVE", interruptCount: 0 } },
+    ]
+    const lastFlowEngineStep = flowEngineSteps.length > 0
+      ? flowEngineSteps[flowEngineSteps.length - 1]
+      : null
+    expect(lastFlowEngineStep).not.toBeNull()
+  })
+})
+
+describe("MessageFlowDialog - Timeline Sequence with Flow Steps", () => {
+  // RULE: flow-agent comes before flow-engine in the timeline
+  // PATH B: Router → FlowAgent (decides flow) → FlowEngine (runs flow) → Translation
+  // PATH A: Router → FlowEngine (flow already active) → Translation (no FlowAgent)
+
+  it("flow-agent should appear before flow-engine in PATH B sequence", () => {
+    // SCENARIO: New message triggers flow selection (PATH B)
+    const sequence = [
+      "router",
+      "flow-agent",   // decides which flow to start
+      "flow-engine",  // runs the flow
+      "translation",
+    ]
+    const flowAgentIdx = sequence.indexOf("flow-agent")
+    const flowEngineIdx = sequence.indexOf("flow-engine")
+    expect(flowAgentIdx).toBeLessThan(flowEngineIdx)
+  })
+
+  it("PATH A should have flow-engine but no flow-agent", () => {
+    // SCENARIO: Flow already active, user replied to CHOICE node
+    // The router routes directly to FlowEngine without needing FlowAgent
+    const steps = [
+      { type: "router" },
+      { type: "flow-engine" },
+      // no flow-agent step
+    ]
+    const hasFlowAgent = steps.some(s => s.type === "flow-agent")
+    const hasFlowEngine = steps.some(s => s.type === "flow-engine")
+    expect(hasFlowAgent).toBe(false)
+    expect(hasFlowEngine).toBe(true)
+  })
+})

@@ -321,6 +321,47 @@ Il sistema è organizzato in **4 applicazioni Heroku indipendenti**:
 - Frontend: channelMode dropdown disabled in Settings page with amber warning text
 - Backend: `workspace.service.ts update()` throws 400 before any DB write if `data.channelMode !== currentWorkspace.channelMode`
 
+#### **ChannelMode: FLOW (Guided Troubleshooting)**
+
+**Purpose**: Deterministic decision-tree chatbot for appliance/equipment troubleshooting.
+
+**Use cases**: Self-service laundries, vending machines, equipment support kiosks, appliance repair support.
+
+**Key differences from ECOMMERCE/INFORMATIONAL**:
+
+| Feature | ECOMMERCE | INFORMATIONAL | FLOW |
+|---|---|---|---|
+| **Router LLM** | Full multi-agent router | Single INFO_AGENT | FlowAgentLLM (config-specific) |
+| **Calling functions** | 7+ (product, cart, order...) | 3 (support, profile, language) | 2 (startFlow, contactOperator) + shared |
+| **Data source** | Products, categories, offers | FAQ system | FlowNodeConfig.flows JSON |
+| **User entry** | Free text | Free text | QR code scan → flowKey parameter |
+| **Conversation model** | Free-form chat | Free-form FAQ answering | Guided decision tree with exit points |
+| **DB model** | Products, Carts, Orders | AgentConfig (FAQ) | FlowNodeConfig (per machine/config) |
+| **Agents available** | 7 specialized agents | INFO_AGENT + support/profile | FlowAgent (decides flow) + support/profile |
+
+**Architecture**:
+1. **FlowWorkspaceStrategy** routes messages based on active flow state from `ChatSession.context`
+2. **FlowAgentLLM** reads config-specific prompt from `FlowNodeConfig.systemPrompt` and decides which flow to start (PATH B) or routes to active flow (PATH A)
+3. **FlowEngineService** executes decision trees **deterministically** (0 LLM tokens) — state machine with CHOICE/ACTION/CONFIRMATION/INFO node types
+4. **QR codes** trigger flow identification: scan → extract `flowKey` → load `FlowNodeConfig` → start flow
+5. **Escalation** to operator via `contactOperator()` when flow reaches terminal node or customer interrupts (HARD_BREAK input)
+6. **CUSTOMER_SUPPORT agent** included (same as INFORMATIONAL — `DELEGATE_TO_AGENT` pattern) for AI-assisted escalation
+
+**Admin UI**: Dashboard → Settings → "Flow Configs" (visible only for FLOW workspaces)
+
+**Data model**: `FlowNodeConfig` in schema.prisma:
+- `flowKey` (unique per workspace) — identifier for QR code scan
+- `flowLabel` — display name (machine model or config name)
+- `systemPrompt` — config-specific context for FlowAgentLLM
+- `flows` JSON — decision tree nodes indexed by `flowId.nodeId`
+- `availableFunctions` — list of functions this config can trigger (startFlow, contactOperator, etc.)
+
+**Node types**:
+- `CHOICE` — decision point with numbered transitions
+- `ACTION` — instruction step, advances on any input
+- `CONFIRMATION` — yes/no question (YES/NO transitions)
+- `INFO` — info node, optionally terminal
+
 ##### Calling Functions CRUD API (2026-04)
 - `GET    /workspaces/:workspaceId/functions` — List all (with feature-flag filtering)
 - `POST   /workspaces/:workspaceId/functions` — Create custom function

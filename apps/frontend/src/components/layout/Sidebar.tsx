@@ -18,6 +18,7 @@ import {
   ShoppingCart,
   UserCircle,
   Users,
+  Workflow,
   Wrench,
   X,
 } from "lucide-react"
@@ -103,6 +104,12 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
       label: t('nav.faq'),
       icon: HelpCircle,
     },
+    // Flow Configs — only visible for FLOW workspaces
+    ...(workspace?.channelMode === 'FLOW' ? [{
+      href: "/flow-configs",
+      label: "Flow Configs",
+      icon: Workflow,
+    }] : []),
     // E-commerce menu - only if channelMode is ECOMMERCE
     ...(workspace?.channelMode === 'ECOMMERCE' ? [{
       label: t('nav.ecommerce'),

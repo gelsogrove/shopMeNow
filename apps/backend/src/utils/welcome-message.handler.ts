@@ -113,8 +113,9 @@ export class WelcomeMessageHandler {
       // Load workspace configuration
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: input.workspaceId },
-        select: { 
+        select: {
           welcomeMessage: true,
+          enableWelcomeMessage: true,
           chatbotName: true,
           botIdentityResponse: true,
           customAiRules: true,
@@ -130,10 +131,13 @@ export class WelcomeMessageHandler {
         hasWelcomeMessage: !!workspace?.welcomeMessage,
         welcomeMessageType: typeof workspace?.welcomeMessage,
         welcomeMessageLength: workspace?.welcomeMessage ? String(workspace.welcomeMessage).length : 0,
+        enableWelcomeMessage: workspace?.enableWelcomeMessage,
       })
 
-      if (!workspace || !workspace.welcomeMessage) {
-        logger.info("🚫 [WelcomeMessageHandler] No welcome message configured")
+      // E0a: Check enable flag AND message content
+      // enableWelcomeMessage defaults to true - only skip if explicitly set to false
+      if (!workspace || workspace.enableWelcomeMessage === false || !workspace.welcomeMessage) {
+        logger.info("🚫 [WelcomeMessageHandler] No welcome message (disabled or not configured)")
         return { isWelcomeMessage: false }
       }
 

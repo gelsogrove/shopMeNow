@@ -56,6 +56,7 @@ const mockPrisma = {
   },
   chatSession: {
     findFirst: jest.fn(),
+    update: jest.fn(),
   },
   conversationMessage: {
     findMany: jest.fn(),

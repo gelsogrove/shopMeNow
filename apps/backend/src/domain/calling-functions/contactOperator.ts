@@ -99,6 +99,22 @@ export async function contactOperator(
 
       logger.info("✅ Chatbot disabled for customer:", customer.id)
 
+      // 🆕 E0b - Mark session as escalated (for session reset timeout tracking)
+      const activeSession = await prisma.chatSession.findFirst({
+        where: { customerId: customer.id, status: "active" },
+        orderBy: { createdAt: "desc" },
+      })
+
+      if (activeSession) {
+        await prisma.chatSession.update({
+          where: { id: activeSession.id },
+          data: {
+            escalatedAt: new Date(),
+          },
+        })
+        logger.info("✅ E0b - Session marked as escalated:", activeSession.id)
+      }
+
       // 📋 QUEUE POSITION — assign next position in the operator relay queue
       // Position 1 = served immediately (operator notified below)
       // Position >1 = customer waits; they will be notified when their turn arrives

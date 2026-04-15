@@ -45,6 +45,60 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
   }
 
   /**
+   * Check if escalated session has expired and reset if needed
+   * E0b - Session Reset Timeout (cross-cutting feature)
+   */
+  private async checkAndResetExpiredSession(
+    context: RoutingContext,
+    workspace: Workspace
+  ): Promise<void> {
+    if (!context.sessionId) {
+      return
+    }
+
+    // Load chat session
+    const chatSession = await this.prisma.chatSession.findUnique({
+      where: { id: context.sessionId },
+    })
+
+    if (!chatSession || !chatSession.escalatedAt) {
+      return // Not escalated, no reset needed
+    }
+
+    // Calculate time since escalation
+    const now = new Date()
+    const timeSinceEscalation = (now.getTime() - chatSession.escalatedAt.getTime()) / 1000 // seconds
+
+    // Check if timeout exceeded
+    if (timeSinceEscalation <= workspace.sessionResetTimeout) {
+      return // Still within timeout, no reset needed
+    }
+
+    logger.info("🔄 E0b - Session reset triggered (escalation timeout exceeded)", {
+      workspaceId: workspace.id,
+      sessionId: chatSession.id,
+      customerId: chatSession.customerId,
+      escalatedAt: chatSession.escalatedAt,
+      timeoutSeconds: workspace.sessionResetTimeout,
+      timeSinceEscalation,
+    })
+
+    // INFORMATIONAL reset: clear context + escalatedAt (no cart)
+    await this.prisma.chatSession.update({
+      where: { id: chatSession.id },
+      data: {
+        context: {},
+        escalatedAt: null,
+      },
+    })
+
+    logger.info("✅ E0b - Session reset completed (context cleared)", {
+      workspaceId: workspace.id,
+      sessionId: chatSession.id,
+    })
+  }
+
+  /**
    * Route ALL messages to INFO_AGENT
    * INFO_AGENT has FAQ system enabled
    */
@@ -56,6 +110,9 @@ export class InformationalWorkspaceStrategy implements RoutingStrategy {
       customerId: context.customerId,
       message: context.message.substring(0, 50) + "...",
     })
+
+    // E0b - Check and reset expired escalation session
+    await this.checkAndResetExpiredSession(context, workspace)
 
     try {
       // Load customer data for agent context

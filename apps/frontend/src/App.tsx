@@ -61,6 +61,7 @@ import { ResetPasswordPage } from "./pages/ResetPasswordPage"
 import SalesPage from "./pages/SalesPage"
 import { ServicesPage } from "./pages/ServicesPage"
 import { AppointmentsPage } from "./pages/AppointmentsPage"
+import { FlowConfigsPage } from "./pages/FlowConfigsPage"
 import { BusinessHoursPage } from "./pages/BusinessHoursPage"
 import { BlackoutPeriodsPage } from "./pages/BlackoutPeriodsPage"
 import { CategoriesPage as SettingsCategoriesPage } from "./pages/settings/CategoriesPage"
@@ -329,6 +330,10 @@ function AppWithProviders() {
 
                   <Route path="/faq" element={<MinimalLayout />}>
                     <Route index element={<FAQPage />} />
+                  </Route>
+
+                  <Route path="/flow-configs" element={<MinimalLayout />}>
+                    <Route index element={<FlowConfigsPage />} />
                   </Route>
 
                   <Route path="/profile" element={<MinimalLayout />}>

@@ -1,4 +1,5 @@
 import {
+  Bot,
   ChevronRight,
   Copy,
   Calendar,
@@ -15,6 +16,7 @@ import {
   Shield,
   ShoppingCart,
   User,
+  Workflow,
   X,
 } from "lucide-react"
 
@@ -41,6 +43,8 @@ interface DebugStep {
     | "operator_message"
     | "user"
     | "token-replacement"
+    | "flow-agent"
+    | "flow-engine"
   agent?: string
   model?: string
   temperature?: number
@@ -54,6 +58,18 @@ interface DebugStep {
     userMessage?: string
     conversationHistory?: any[]
     functionResult?: any
+    // flow-agent input
+    flowKey?: string
+    flowLabel?: string
+    historyMessages?: number
+    toolsAvailable?: string[]
+    flowsAvailable?: string[]
+    // flow-engine input
+    flowId?: string
+    action?: string
+    userInput?: string | null
+    previousNodeId?: string
+    classification?: string
   }
   output?: {
     decision?: string
@@ -61,6 +77,16 @@ interface DebugStep {
     textResponse?: string
     result?: any
     executionTimeMs?: number
+    // flow-agent output
+    toolCall?: { name: string; arguments: any }
+    // flow-engine output
+    nodeId?: string
+    nodeType?: string
+    flowStatus?: string
+    responseText?: string
+    shouldCallOperator?: boolean
+    interruptCount?: number
+    transitionKey?: string
   }
   duration?: number
   functionName?: string
@@ -88,6 +114,8 @@ export default function MessageFlowDialog({
   const getAgentColor = (type: string, agent?: string): string => {
     if (type === "user" || agent === "Customer") return "#6B7280" // Gray
     if (type === "operator_message") return "#3B82F6" // Blue for operator
+    if (type === "flow-engine") return "#7C3AED" // Violet
+    if (type === "flow-agent") return "#1D4ED8" // Dark blue
     if (type === "router") return "#9333EA" // Purple
     if (agent?.includes("Info Agent")) return "#9333EA" // Purple for Info Agent
     if (agent?.includes("Widget Security Layer")) return "#14B8A6" // Teal for widget security
@@ -116,6 +144,10 @@ export default function MessageFlowDialog({
 
     // 👨‍💼 Human Operator
     if (type === "operator_message") return <Headphones className="w-5 h-5" />
+
+    // 🔀 Flow Engine and Flow Agent
+    if (type === "flow-engine") return <Workflow className="w-5 h-5" />
+    if (type === "flow-agent") return <Bot className="w-5 h-5" />
 
     // 🆕 System Notification (Admin Triggered) - NO robot icon, use Settings
     if (agent?.includes("System Notification"))
@@ -195,6 +227,17 @@ export default function MessageFlowDialog({
       if (obj.prompt && !obj.systemPrompt) lines.push(`Prompt: ${typeof obj.prompt === 'string' ? obj.prompt.substring(0, 300) + (obj.prompt.length > 300 ? '...' : '') : JSON.stringify(obj.prompt)}`)
       if (obj.textToSave) lines.push(`Text: ${obj.textToSave.substring(0, 200)}${obj.textToSave.length > 200 ? '...' : ''}`)
       if (obj.functionResult) lines.push(`Function Result: ${typeof obj.functionResult === 'string' ? obj.functionResult.substring(0, 200) : JSON.stringify(obj.functionResult).substring(0, 200)}...`)
+      // flow-agent input
+      if (obj.flowKey) lines.push(`Flow: ${obj.flowKey}${obj.flowLabel ? ` (${obj.flowLabel})` : ''}`)
+      if (obj.toolsAvailable?.length) lines.push(`Tools: ${obj.toolsAvailable.join(', ')}`)
+      if (obj.flowsAvailable?.length) lines.push(`Flows: ${obj.flowsAvailable.join(', ')}`)
+      if (obj.historyMessages !== undefined) lines.push(`History Messages: ${obj.historyMessages}`)
+      // flow-engine input
+      if (obj.flowId) lines.push(`Flow ID: ${obj.flowId}`)
+      if (obj.action) lines.push(`Action: ${obj.action}`)
+      if (obj.userInput !== undefined && obj.userInput !== null) lines.push(`User Input: ${obj.userInput}`)
+      if (obj.previousNodeId) lines.push(`Previous Node: ${obj.previousNodeId}`)
+      if (obj.classification) lines.push(`Classification: ${obj.classification}`)
     }
 
     // OUTPUT formatting
@@ -218,6 +261,15 @@ export default function MessageFlowDialog({
       if (obj.responseText) lines.push(`Response: ${obj.responseText.substring(0, 300)}${obj.responseText.length > 300 ? '...' : ''}`)
       if (obj.executionTimeMs) lines.push(`Duration: ${obj.executionTimeMs}ms`)
       if (obj.message) lines.push(`Message: ${obj.message.substring(0, 200)}${obj.message.length > 200 ? '...' : ''}`)
+      // flow-agent output
+      if (obj.toolCall) lines.push(`Tool Call: ${obj.toolCall.name}(${JSON.stringify(obj.toolCall.arguments)})`)
+      // flow-engine output
+      if (obj.nodeId) lines.push(`Node: ${obj.nodeId}`)
+      if (obj.nodeType) lines.push(`Node Type: ${obj.nodeType}`)
+      if (obj.flowStatus) lines.push(`Status: ${obj.flowStatus}`)
+      if (obj.transitionKey !== undefined) lines.push(`Transition: ${obj.transitionKey}`)
+      if (obj.shouldCallOperator !== undefined) lines.push(`Call Operator: ${obj.shouldCallOperator ? '✅ Yes' : 'No'}`)
+      if (obj.interruptCount !== undefined) lines.push(`Interrupts: ${obj.interruptCount}`)
     }
 
     return lines.length > 0 ? lines.join('\n') : ""
@@ -277,6 +329,10 @@ export default function MessageFlowDialog({
 
   // Operator Message steps (human operator messages)
   const operatorMessageSteps = allSteps.filter((s) => s.type === "operator_message")
+
+  // 🆕 FLOW workspace steps
+  const flowAgentSteps = allSteps.filter((s) => s.type === "flow-agent")
+  const flowEngineSteps = allSteps.filter((s) => s.type === "flow-engine")
 
   // Link Replacement step
   const linkReplacementSteps = allSteps.filter(
@@ -377,6 +433,8 @@ export default function MessageFlowDialog({
     routerSteps[0], // STEP 2: Router iteration 1 (delega a sub-agent)
     ...regularSubAgentSteps, // STEP 3: Sub-agent execution (regular ones)
     ...summaryAgentSteps, // STEP 3.5: Summary Agent execution (if present)
+    ...flowAgentSteps, // STEP 3A: Flow Agent (PATH B - decides which flow to run)
+    ...flowEngineSteps, // STEP 3B: Flow Engine (runs the flow, returns response)
     routerSteps[1], // STEP 4: Router iteration 2 (riceve risposta)
     linkReplacementSteps[0], // STEP 5: Link Replacement (BEFORE Translation) ✅
     translationStep, // STEP 6: Translation Layer ✅
@@ -386,6 +444,9 @@ export default function MessageFlowDialog({
     ...securityCheckSteps, // STEP 9: Security Check (from scheduler) ✅
     ...sendToWhatsAppSteps, // STEP 10: Send to WhatsApp (from scheduler) ✅
   ].filter(Boolean) // Rimuovi undefined
+
+  // 🆕 FlowStateSummaryBar: use the LAST flow-engine step (most recent state)
+  const lastFlowEngineStep = flowEngineSteps.length > 0 ? flowEngineSteps[flowEngineSteps.length - 1] : null
 
   // 📋 Copy all timeline content to clipboard
   const copyAllToClipboard = () => {
@@ -696,6 +757,56 @@ export default function MessageFlowDialog({
             })}
           </VerticalTimeline>
         </div>
+
+        {/* 🆕 FlowStateSummaryBar — visible only for FLOW workspace messages */}
+        {lastFlowEngineStep && (
+          <div className="bg-violet-50 border-t border-violet-200 px-6 py-3 flex flex-wrap items-center gap-4 text-sm">
+            <span className="font-semibold text-violet-700">Flow State:</span>
+            <span className="text-gray-600">
+              Flow:{" "}
+              <span className="font-mono font-semibold text-violet-800">
+                {lastFlowEngineStep.input?.flowId || "—"}
+              </span>
+            </span>
+            <span className="text-gray-400">·</span>
+            <span className="text-gray-600">
+              Node:{" "}
+              <span className="font-mono font-semibold text-violet-800">
+                {lastFlowEngineStep.output?.nodeId || "—"}
+              </span>
+            </span>
+            <span className="text-gray-400">·</span>
+            <span className="text-gray-600">
+              Status:{" "}
+              <span
+                className={`font-semibold ${
+                  lastFlowEngineStep.output?.flowStatus === "ACTIVE"
+                    ? "text-green-600"
+                    : lastFlowEngineStep.output?.flowStatus === "PAUSED"
+                    ? "text-yellow-600"
+                    : lastFlowEngineStep.output?.flowStatus === "COMPLETED"
+                    ? "text-blue-600"
+                    : lastFlowEngineStep.output?.flowStatus === "ESCALATED"
+                    ? "text-red-600"
+                    : "text-gray-600"
+                }`}
+              >
+                {lastFlowEngineStep.output?.flowStatus === "ACTIVE" && "🟢 "}
+                {lastFlowEngineStep.output?.flowStatus === "PAUSED" && "⏸️ "}
+                {lastFlowEngineStep.output?.flowStatus === "COMPLETED" && "✅ "}
+                {lastFlowEngineStep.output?.flowStatus === "ESCALATED" && "🔴 "}
+                {lastFlowEngineStep.output?.flowStatus || "—"}
+              </span>
+            </span>
+            <span className="text-gray-400">·</span>
+            <span className="text-gray-600">
+              Interrupts:{" "}
+              <span className="font-semibold">
+                {lastFlowEngineStep.output?.interruptCount ?? 0}
+              </span>
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )
