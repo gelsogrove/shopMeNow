@@ -87,9 +87,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { FlowConfigSheet } from "@/components/shared/FlowConfigSheet"
 import { HelpPanel } from "@/components/settings/HelpPanel"
 import { toast } from "@/lib/toast"
 import { logger } from "@/lib/logger"
+import type { FlowConfig } from "@/services/flowConfigApi"
 
 // Types
 interface AgentConfig {
@@ -107,12 +109,15 @@ interface AgentConfig {
 
 interface AgentFlowDiagramProps {
   isEcommerce: boolean
+  channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   agents: AgentConfig[]
   workspaceId: string
   onSaveAgent: (agentId: string, data: Partial<AgentConfig>) => Promise<void>
   onResetToDefaults: () => Promise<void>
   isLoading?: boolean
   className?: string
+  flowConfigs?: FlowConfig[]
+  onFlowConfigSaved?: () => void
 }
 
 // Available LLM Models with cost and performance ratings
@@ -516,13 +521,18 @@ function BranchLine({ className }: { className?: string }) {
 // Main Component
 export function AgentFlowDiagram({
   isEcommerce,
+  channelMode,
   agents,
   workspaceId,
   onSaveAgent,
   onResetToDefaults,
   isLoading = false,
   className,
+  flowConfigs = [],
+  onFlowConfigSaved,
 }: AgentFlowDiagramProps) {
+  const isFlow = channelMode === 'FLOW'
+  
   // State
   const [selectedAgent, setSelectedAgent] = useState<AgentConfig | null>(null)
   const [editedPrompt, setEditedPrompt] = useState("")
@@ -534,6 +544,10 @@ export function AgentFlowDiagram({
   const [helpAgent, setHelpAgent] = useState<string | null>(null)
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+  
+  // FLOW workspace state
+  const [flowSheetOpen, setFlowSheetOpen] = useState(false)
+  const [selectedFlowConfig, setSelectedFlowConfig] = useState<FlowConfig | null>(null)
 
   const getResolvedMeta = (type: string) => {
     if (!isEcommerce && (type === "CUSTOMER_SUPPORT" || type === "INFO_AGENT")) {
@@ -688,6 +702,23 @@ export function AgentFlowDiagram({
     }
   }
 
+  // Handle flow node click - open FlowConfigSheet for editing
+  const handleFlowNodeClick = (fc: FlowConfig) => {
+    setSelectedFlowConfig(fc)
+    setFlowSheetOpen(true)
+  }
+
+  // Handle add new flow config
+  const handleAddFlowConfig = () => {
+    setSelectedFlowConfig(null)
+    setFlowSheetOpen(true)
+  }
+
+  // Handle flow config saved (create or update)
+  const handleFlowConfigSaved = () => {
+    onFlowConfigSaved?.()
+  }
+
   // Loading state
   if (isLoading) {
     return (
@@ -719,10 +750,12 @@ export function AgentFlowDiagram({
             <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-xl">
               <GitBranch className="h-6 w-6 text-white" />
             </div>
-            {isEcommerce ? "E-commerce Agent Flow" : "Informational Agent Flow"}
+            {isFlow ? "Flow Agent Pipeline" : isEcommerce ? "E-commerce Agent Flow" : "Informational Agent Flow"}
           </h2>
           <p className="text-gray-500 mt-1">
-            {isEcommerce 
+            {isFlow
+              ? "Deterministic flow engine with per-flow Sub-LLM configuration"
+              : isEcommerce 
               ? "Full e-commerce flow with product search, cart, and order management"
               : "Streamlined flow for FAQ and customer support"
             }
@@ -732,11 +765,13 @@ export function AgentFlowDiagram({
         <div className="flex items-center gap-3">
           <span className={cn(
             "text-sm px-3 py-1.5 rounded-full flex items-center gap-2 font-medium",
-            isEcommerce 
+            isFlow
+              ? "bg-violet-100 text-violet-700"
+              : isEcommerce 
               ? "bg-green-100 text-green-700"
               : "bg-blue-100 text-blue-700"
           )}>
-            {isEcommerce ? "🛒 E-commerce Mode" : "ℹ️ Info-only mode"}
+            {isFlow ? "⚙️ Flow Mode" : isEcommerce ? "🛒 E-commerce Mode" : "ℹ️ Info-only mode"}
           </span>
           <Button
             variant="outline"
@@ -772,26 +807,121 @@ export function AgentFlowDiagram({
         
         {/* Root Agent */}
         <AgentNode
-          agent={getAgent(isEcommerce ? "ROUTER" : "INFO_AGENT") || getAgent("CUSTOMER_SUPPORT")}
-          metadata={getResolvedMeta(isEcommerce ? "ROUTER" : "INFO_AGENT")}
+          agent={getAgent(isFlow ? "ROUTER" : isEcommerce ? "ROUTER" : "INFO_AGENT") || getAgent("CUSTOMER_SUPPORT")}
+          metadata={getResolvedMeta(isFlow ? "ROUTER" : isEcommerce ? "ROUTER" : "INFO_AGENT")}
           displayName={
-            isEcommerce
+            isFlow
+              ? "Router Agent"
+              : isEcommerce
               ? "Router Agent"
               : getAgentDisplayName("INFO_AGENT", INFO_AGENT_METADATA)
           }
           isEditable={true}
           isActive={true}
-          onClick={() => handleAgentClick(isEcommerce ? "ROUTER" : (getAgent("INFO_AGENT") ? "INFO_AGENT" : "CUSTOMER_SUPPORT"))}
+          onClick={() => handleAgentClick(isFlow ? "ROUTER" : isEcommerce ? "ROUTER" : (getAgent("INFO_AGENT") ? "INFO_AGENT" : "CUSTOMER_SUPPORT"))}
           size="large"
         />
-        {!isEcommerce && (
+        {!isEcommerce && !isFlow && (
           <span className="sr-only">Info Agent</span>
         )}
         
         <ConnectorArrow />
+
+        {/* FLOW Sub-LLMs Branch */}
+        {isFlow && (
+          <>
+            <div className="relative w-full max-w-5xl">
+              {/* Horizontal line */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90%] h-0.5 bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
+              
+              {/* Flow config nodes + Add button */}
+              <div className="flex items-start justify-center gap-3 pt-6 flex-wrap">
+                {flowConfigs.map((fc) => (
+                  <div key={fc.id} className="flex flex-col items-center">
+                    <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => handleFlowNodeClick(fc)}
+                            className={cn(
+                              "group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 transition-all duration-200",
+                              fc.isActive
+                                ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer border-violet-400"
+                                : "bg-gray-100 text-gray-400 border-gray-200 cursor-pointer opacity-60 hover:opacity-80"
+                            )}
+                          >
+                            {/* Active dot indicator */}
+                            <div className={cn(
+                              "absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full border-2 border-white",
+                              fc.isActive ? "bg-green-400" : "bg-gray-400"
+                            )} />
+                            <div className={cn("p-1.5 rounded-lg", fc.isActive ? "bg-white/20" : "bg-gray-200")}>
+                              <Sparkles className={cn("h-4 w-4", fc.isActive ? "text-white" : "text-gray-400")} />
+                            </div>
+                            <div className="flex flex-col items-start">
+                              <span className="font-semibold text-xs">{fc.flowLabel}</span>
+                              <span className={cn("text-[10px] font-mono", fc.isActive ? "text-white/70" : "text-gray-400")}>
+                                {fc.flowKey}
+                              </span>
+                            </div>
+                            <Edit3 className="h-3 w-3 opacity-50 group-hover:opacity-100 ml-1" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-xs p-3">
+                          <div className="space-y-1.5">
+                            <p className="font-semibold text-sm">{fc.flowLabel}</p>
+                            <p className="text-xs text-gray-500">Key: <code className="bg-gray-100 px-1 rounded">{fc.flowKey}</code></p>
+                            <p className="text-xs text-gray-500">Model: {fc.model || "default"}</p>
+                            <p className="text-xs text-gray-500">Status: {fc.isActive ? "✅ Active" : "❌ Inactive"}</p>
+                            <p className="text-xs text-blue-600 mt-1">Click to edit</p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                ))}
+
+                {/* Add Sub-LLM button */}
+                <div className="flex flex-col items-center">
+                  <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
+                  <button
+                    onClick={handleAddFlowConfig}
+                    className="flex items-center gap-2 rounded-xl border-2 border-dashed border-violet-300 px-4 py-3 text-violet-500 hover:bg-violet-50 hover:border-violet-400 hover:text-violet-600 transition-all duration-200 cursor-pointer"
+                  >
+                    <div className="p-1 rounded-lg bg-violet-100">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </div>
+                    <span className="font-semibold text-xs">Add Sub-LLM</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            {/* Merge line */}
+            <div className="w-[60%] max-w-md h-0.5 bg-gradient-to-r from-transparent via-violet-300 to-transparent mt-6" />
+            
+            <ConnectorArrow />
+            
+            {/* Customer Support (FLOW also has it for escalation) */}
+            {agentExists("CUSTOMER_SUPPORT") && (
+              <>
+                <AgentNode
+                  agent={getAgent("CUSTOMER_SUPPORT")}
+                  metadata={AGENT_METADATA.CUSTOMER_SUPPORT}
+                  isEditable={true}
+                  isActive={true}
+                  onClick={() => handleAgentClick("CUSTOMER_SUPPORT")}
+                  size="normal"
+                />
+                <ConnectorArrow />
+              </>
+            )}
+          </>
+        )}
         
         {/* Specialists Branch (E-commerce only) */}
-        {isEcommerce && (
+        {isEcommerce && !isFlow && (
           <>
             <div className="relative w-full max-w-5xl">
               {/* Horizontal line */}
@@ -935,16 +1065,41 @@ export function AgentFlowDiagram({
       {/* Legend */}
       <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-600">
         <span>Click to edit</span>
-        <span>E-commerce only</span>
+        {isFlow && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" /> Active</span>}
+        {isFlow && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400 inline-block" /> Inactive</span>}
+        {!isFlow && <span>E-commerce only</span>}
       </div>
 
-      {/* Enterprise Message */}
-      <div className="flex items-center justify-center mt-8">
-        <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg px-4 py-2 text-sm text-purple-700">
-          <Sparkles className="h-4 w-4 inline mr-2" />
-          Want custom agent flows? <span className="font-semibold">Upgrade to Enterprise</span> for advanced customization.
+      {/* Enterprise Message — hidden for FLOW (they already have custom flows) */}
+      {!isFlow && (
+        <div className="flex items-center justify-center mt-8">
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg px-4 py-2 text-sm text-purple-700">
+            <Sparkles className="h-4 w-4 inline mr-2" />
+            Want custom agent flows? <span className="font-semibold">Upgrade to Enterprise</span> for advanced customization.
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Flow Config Summary — only for FLOW workspaces */}
+      {isFlow && (
+        <div className="flex items-center justify-center mt-8">
+          <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg px-4 py-2 text-sm text-violet-700">
+            <Sparkles className="h-4 w-4 inline mr-2" />
+            {flowConfigs.length} Sub-LLM{flowConfigs.length !== 1 ? 's' : ''} configured · {flowConfigs.filter(fc => fc.isActive).length} active
+          </div>
+        </div>
+      )}
+
+      {/* FlowConfigSheet for FLOW workspaces */}
+      {isFlow && (
+        <FlowConfigSheet
+          open={flowSheetOpen}
+          onOpenChange={setFlowSheetOpen}
+          workspaceId={workspaceId}
+          config={selectedFlowConfig}
+          onSaved={handleFlowConfigSaved}
+        />
+      )}
 
       {/* Edit Sheet */}
       <Sheet open={!!selectedAgent} onOpenChange={() => setSelectedAgent(null)}>
