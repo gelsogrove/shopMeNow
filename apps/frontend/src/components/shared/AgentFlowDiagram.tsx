@@ -28,6 +28,8 @@ import {
   Edit3,
   Lock,
   ChevronDown,
+  ChevronsUpDown,
+  Check,
   Save,
   X,
   RefreshCcw,
@@ -44,6 +46,15 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 import {
   Dialog,
   DialogContent,
@@ -953,41 +964,65 @@ export function AgentFlowDiagram({
               </SheetHeader>
               
               <div className="mt-6 space-y-6">
-                {/* Model Selection with Cost & Performance Ratings */}
-                <div className="space-y-3">
-                  <Label htmlFor="model" className="flex items-center gap-2">
-                    Model (OpenRouter)
-                  </Label>
-                  <div className="border rounded-lg bg-white divide-y">
-                    {AVAILABLE_MODELS.map((model) => (
-                      <button
-                        key={model.id}
-                        onClick={() => setEditedModel(model.id)}
-                        className={cn(
-                          "w-full text-left px-3 py-3 hover:bg-gray-50 transition-colors flex items-center justify-between",
-                          editedModel === model.id && "bg-blue-50 border-l-2 border-blue-500"
-                        )}
+                {/* Model Selection — Combobox with Cost & Performance Ratings */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">Model (OpenRouter)</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between font-normal"
                       >
-                        <div>
-                          <div className="font-medium text-sm text-gray-900">{model.label}</div>
-                          <div className="text-xs text-gray-500 font-mono mt-1">{model.id}</div>
+                        <div className="flex flex-col items-start text-left overflow-hidden">
+                          <span className="font-medium text-sm">
+                            {AVAILABLE_MODELS.find(m => m.id === editedModel)?.label ?? editedModel ?? "Select model…"}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-mono truncate max-w-[240px]">
+                            {editedModel}
+                          </span>
                         </div>
-                        <div className="flex flex-col gap-2 ml-4">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-600 whitespace-nowrap">Cost:</span>
-                            <StarRating stars={model.costStars} />
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-600 whitespace-nowrap">Performance:</span>
-                            <StarRating stars={model.performanceStars} />
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    Click to select a model. Cost: ⭐ = cheaper, Performance: ⭐ = faster/smarter
-                  </p>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[420px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search model…" />
+                        <CommandList>
+                          <CommandEmpty>No model found.</CommandEmpty>
+                          <CommandGroup>
+                            {AVAILABLE_MODELS.map((model) => (
+                              <CommandItem
+                                key={model.id}
+                                value={`${model.label} ${model.id}`}
+                                onSelect={() => setEditedModel(model.id)}
+                                className="flex items-center justify-between py-3"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Check className={cn("h-4 w-4 shrink-0", editedModel === model.id ? "opacity-100" : "opacity-0")} />
+                                  <div>
+                                    <div className="font-medium text-sm">{model.label}</div>
+                                    <div className="text-xs text-muted-foreground font-mono">{model.id}</div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-1 ml-4 shrink-0">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[10px] text-gray-500 w-20">Cost:</span>
+                                    <StarRating stars={model.costStars} />
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[10px] text-gray-500 w-20">Performance:</span>
+                                    <StarRating stars={model.performanceStars} />
+                                  </div>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <p className="text-xs text-muted-foreground">Cost: ⭐ = cheaper · Performance: ⭐ = faster/smarter</p>
                 </div>
                 
                 {/* Help Box */}
