@@ -805,22 +805,32 @@ export function AgentFlowDiagram({
         
         <ConnectorArrow />
         
-        {/* Root Agent */}
-        <AgentNode
-          agent={getAgent(isFlow ? "ROUTER" : isEcommerce ? "ROUTER" : "INFO_AGENT") || getAgent("CUSTOMER_SUPPORT")}
-          metadata={getResolvedMeta(isFlow ? "ROUTER" : isEcommerce ? "ROUTER" : "INFO_AGENT")}
-          displayName={
-            isFlow
-              ? "Router Agent"
-              : isEcommerce
-              ? "Router Agent"
-              : getAgentDisplayName("INFO_AGENT", INFO_AGENT_METADATA)
-          }
-          isEditable={true}
-          isActive={true}
-          onClick={() => handleAgentClick(isFlow ? "ROUTER" : isEcommerce ? "ROUTER" : (getAgent("INFO_AGENT") ? "INFO_AGENT" : "CUSTOMER_SUPPORT"))}
-          size="large"
-        />
+        {/* Root Agent — FLOW uses a non-editable "Flow Engine" label */}
+        {isFlow ? (
+          <div className="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl shadow-lg border-2 border-violet-400">
+            <div className="p-1.5 rounded-lg bg-white/20">
+              <GitBranch className="h-6 w-6 text-white" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-bold text-base">Flow Engine</span>
+              <span className="text-xs text-white/70">Deterministic router — not editable</span>
+            </div>
+          </div>
+        ) : (
+          <AgentNode
+            agent={getAgent(isEcommerce ? "ROUTER" : "INFO_AGENT") || getAgent("CUSTOMER_SUPPORT")}
+            metadata={getResolvedMeta(isEcommerce ? "ROUTER" : "INFO_AGENT")}
+            displayName={
+              isEcommerce
+                ? "Router Agent"
+                : getAgentDisplayName("INFO_AGENT", INFO_AGENT_METADATA)
+            }
+            isEditable={true}
+            isActive={true}
+            onClick={() => handleAgentClick(isEcommerce ? "ROUTER" : (getAgent("INFO_AGENT") ? "INFO_AGENT" : "CUSTOMER_SUPPORT"))}
+            size="large"
+          />
+        )}
         {!isEcommerce && !isFlow && (
           <span className="sr-only">Info Agent</span>
         )}

@@ -18,7 +18,6 @@ import {
   ShoppingCart,
   UserCircle,
   Users,
-  Workflow,
   Wrench,
   X,
 } from "lucide-react"
@@ -104,12 +103,8 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
       label: t('nav.faq'),
       icon: HelpCircle,
     },
-    // Flow Configs — only visible for FLOW workspaces
-    ...(workspace?.channelMode === 'FLOW' ? [{
-      href: "/flow-configs",
-      label: "Flow Configs",
-      icon: Workflow,
-    }] : []),
+    // Flow Configs — managed from Agents Configuration graph
+    // Menu item removed: FLOW Sub-LLMs are now editable from /agents pipeline
     // E-commerce menu - only if channelMode is ECOMMERCE
     ...(workspace?.channelMode === 'ECOMMERCE' ? [{
       label: t('nav.ecommerce'),

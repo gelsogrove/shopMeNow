@@ -462,6 +462,7 @@ export function AgentConfigurationPage() {
               systemPrompt: data.systemPrompt ?? agent.systemPrompt ?? agent.content ?? "",
               temperature: data.temperature ?? agent.temperature ?? 0.7,
               maxTokens: data.maxTokens ?? agent.maxTokens ?? 1000,
+              model: data.model ?? agent.model ?? "openai/gpt-4.1-mini",
             } as Agent)
           }}
           onResetToDefaults={handleResetToDefaults}
