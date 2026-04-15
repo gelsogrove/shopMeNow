@@ -41,6 +41,7 @@ import {
   updateAgentConfig,
 } from "@/services/agent-config-api"
 import { Agent, getAgents } from "@/services/agents-legacy-api"
+import { FlowConfig, flowConfigApi } from "@/services/flowConfigApi"
 import {
   Bell,
   Bot,
@@ -172,6 +173,9 @@ export function AgentConfigurationPage() {
   // Reset confirmation dialog state
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+  
+  // FLOW workspace state
+  const [flowConfigs, setFlowConfigs] = useState<FlowConfig[]>([])
   const [useDynamicTemplates, setUseDynamicTemplates] = useState(true) // 🆕 Default to dynamic templates
 
   // Redirect if no workspace
@@ -196,6 +200,12 @@ export function AgentConfigurationPage() {
           getAgents(workspace.id),
           getAgentConfigs(workspace.id),
         ])
+
+        // Load flow configs for FLOW workspaces
+        if (workspace.channelMode === 'FLOW') {
+          const fcs = await flowConfigApi.getAllForWorkspace(workspace.id)
+          setFlowConfigs(fcs)
+        }
 
         // Sort by order field (Router Agent first with order=0)
         const sortedAgents = agentsData.sort((a, b) => a.order - b.order)
@@ -429,6 +439,7 @@ export function AgentConfigurationPage() {
         {/* 🎨 Agent Flow Diagram - Visual representation of multi-agent architecture */}
         <AgentFlowDiagram 
           isEcommerce={workspace?.channelMode === 'ECOMMERCE'}
+          channelMode={workspace?.channelMode as 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | undefined}
           agents={agents.map(agent => ({
             id: agent.id,
             name: agent.name,
@@ -456,6 +467,13 @@ export function AgentConfigurationPage() {
           onResetToDefaults={handleResetToDefaults}
           isLoading={isLoading}
           className="mb-6"
+          flowConfigs={flowConfigs}
+          onFlowConfigSaved={async () => {
+            if (workspace?.id) {
+              const fcs = await flowConfigApi.getAllForWorkspace(workspace.id)
+              setFlowConfigs(fcs)
+            }
+          }}
         />
 
       </div>
