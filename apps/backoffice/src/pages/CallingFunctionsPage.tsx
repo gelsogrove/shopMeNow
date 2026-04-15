@@ -506,7 +506,12 @@ export default function CallingFunctionsPage() {
                                     onValueChange={(val: any) => setEditingFunction(prev => prev ? { ...prev, executionType: val } : null)}
                                 >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select type" />
+                                        <SelectValue>
+                                            {editingFunction?.executionType === 'WEBHOOK' ? '📡' :
+                                             editingFunction?.executionType === 'INTERNAL' ? '💻' :
+                                             editingFunction?.executionType === 'DELEGATE_TO_AGENT' ? '👥' :
+                                             'Select type'}
+                                        </SelectValue>
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="WEBHOOK">📡 Webhook Dispatch</SelectItem>

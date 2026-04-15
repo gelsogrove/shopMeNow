@@ -1,16 +1,15 @@
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Textarea } from "@/components/ui/textarea"
-import { logger } from "@/lib/logger"
-import { toast } from "@/lib/toast"
 import {
-  FlowConfig,
-  CreateFlowConfigData,
-  UpdateFlowConfigData,
-  flowConfigApi,
-} from "@/services/flowConfigApi"
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Sheet,
   SheetContent,
@@ -18,7 +17,29 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
+import { logger } from "@/lib/logger"
+import { toast } from "@/lib/toast"
+import { callingFunctionsApi, CallingFunction } from "@/services/callingFunctionApi"
+import {
+  FlowConfig,
+  CreateFlowConfigData,
+  UpdateFlowConfigData,
+  flowConfigApi,
+} from "@/services/flowConfigApi"
 import { useEffect, useState } from "react"
+
+const AVAILABLE_MODELS = [
+  { value: "openai/gpt-4o-mini", label: "GPT-4o Mini (fast, cheap)" },
+  { value: "openai/gpt-4o", label: "GPT-4o (smart, pricier)" },
+  { value: "openai/gpt-4-turbo", label: "GPT-4 Turbo" },
+  { value: "anthropic/claude-3-haiku", label: "Claude 3 Haiku (fast)" },
+  { value: "anthropic/claude-3-sonnet", label: "Claude 3 Sonnet" },
+  { value: "anthropic/claude-sonnet-4-5", label: "Claude Sonnet 4.5" },
+  { value: "google/gemini-flash-1.5", label: "Gemini Flash 1.5" },
+  { value: "meta-llama/llama-3.1-8b-instruct", label: "Llama 3.1 8B" },
+]
 
 interface FlowConfigSheetProps {
   open: boolean
@@ -47,6 +68,17 @@ export function FlowConfigSheet({
   const [flowsError, setFlowsError] = useState<string | null>(null)
   const [isActive, setIsActive] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  // Available functions from workspace calling functions
+  const [allFunctions, setAllFunctions] = useState<CallingFunction[]>([])
+  const [selectedFunctions, setSelectedFunctions] = useState<string[]>([])
+
+  // Load calling functions list when workspace changes
+  useEffect(() => {
+    if (!workspaceId) return
+    callingFunctionsApi.list(workspaceId).then(setAllFunctions).catch(() => {
+      // Non-critical: silently fail (no functions will be shown)
+    })
+  }, [workspaceId])
 
   // Populate form when editing an existing config
   useEffect(() => {
@@ -62,6 +94,13 @@ export function FlowConfigSheet({
       )
       setFlowsError(null)
       setIsActive(config.isActive)
+      // Load selected functions from config
+      const funcs = config.availableFunctions
+      if (Array.isArray(funcs)) {
+        setSelectedFunctions(funcs as string[])
+      } else {
+        setSelectedFunctions([])
+      }
     } else {
       // Reset for new config
       setFlowKey("")
@@ -73,6 +112,7 @@ export function FlowConfigSheet({
       setFlowsJson("{}")
       setFlowsError(null)
       setIsActive(true)
+      setSelectedFunctions([])
     }
   }, [config, open])
 
@@ -122,6 +162,7 @@ export function FlowConfigSheet({
           model: model || undefined,
           temperature,
           maxTokens,
+          availableFunctions: selectedFunctions,
           flows: parsedFlows,
           isActive,
         }
@@ -135,6 +176,7 @@ export function FlowConfigSheet({
           model: model || undefined,
           temperature,
           maxTokens,
+          availableFunctions: selectedFunctions,
           flows: parsedFlows,
           isActive,
         }
@@ -199,13 +241,22 @@ export function FlowConfigSheet({
 
           {/* Model */}
           <div className="space-y-1">
-            <Label htmlFor="model">Model</Label>
-            <Input
-              id="model"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              placeholder="openai/gpt-4o-mini"
-            />
+            <Label htmlFor="model">Sub-LLM Model</Label>
+            <Select value={model} onValueChange={setModel}>
+              <SelectTrigger id="model">
+                <SelectValue placeholder="Select model" />
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABLE_MODELS.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              This LLM is used exclusively for this flow (independent of the workspace default model).
+            </p>
           </div>
 
           {/* Temperature + MaxTokens */}
@@ -251,16 +302,70 @@ export function FlowConfigSheet({
           {/* Flows JSON */}
           <div className="space-y-1">
             <Label htmlFor="flowsJson">Flows (JSON)</Label>
+            <p className="text-xs text-muted-foreground">
+              Decision tree definition. Top-level keys are flow IDs (e.g. <code className="font-mono bg-muted px-1 rounded">non_parte</code>), each containing nodes keyed by node ID starting from <code className="font-mono bg-muted px-1 rounded">step_0</code>.
+            </p>
             <Textarea
               id="flowsJson"
               value={flowsJson}
               onChange={(e) => handleFlowsChange(e.target.value)}
-              placeholder='{ "step_id": {...} }'
+              placeholder='{ "non_parte": { "step_0": { "type": "CHOICE", "prompt": "..." } } }'
               rows={12}
               className="font-mono text-sm"
             />
             {flowsError && (
               <p className="text-sm text-destructive">{flowsError}</p>
+            )}
+          </div>
+
+          {/* Available Functions */}
+          <div className="space-y-2">
+            <Label>Available Functions</Label>
+            <p className="text-xs text-muted-foreground">
+              Select which calling functions this flow agent can invoke.
+            </p>
+            {allFunctions.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">
+                No calling functions found for this workspace.
+              </p>
+            ) : (
+              <div className="space-y-2 rounded-md border p-3">
+                {allFunctions.map((fn) => (
+                  <div key={fn.functionName} className="flex items-start gap-3">
+                    <Checkbox
+                      id={`fn-${fn.functionName}`}
+                      checked={selectedFunctions.includes(fn.functionName)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedFunctions((prev) => [...prev, fn.functionName])
+                        } else {
+                          setSelectedFunctions((prev) =>
+                            prev.filter((f) => f !== fn.functionName)
+                          )
+                        }
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <label
+                        htmlFor={`fn-${fn.functionName}`}
+                        className="text-sm font-medium cursor-pointer"
+                      >
+                        {fn.functionName}
+                        {fn.isSystemFunction && (
+                          <Badge variant="outline" className="ml-2 text-xs">
+                            system
+                          </Badge>
+                        )}
+                      </label>
+                      {fn.description && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {fn.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 
