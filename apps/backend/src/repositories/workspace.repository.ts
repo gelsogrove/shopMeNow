@@ -810,6 +810,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           currency: true,
           messageLimit: true,
           welcomeMessage: true,
+          enableWelcomeMessage: true, // E0a
+          sessionResetTimeout: true, // E0b
           wipMessage: true,
           afterRegistrationMessages: true,
           channelStatus: true, // ✅ CRITICAL: Include channelStatus

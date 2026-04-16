@@ -5,10 +5,25 @@
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Bot, Briefcase, Smile, Award, Coffee } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Bot, Briefcase, Smile, Award, Coffee, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Editor from "@monaco-editor/react"
+
+// E0b - Session reset timeout options (seconds). 0 = never auto-reset.
+const SESSION_RESET_OPTIONS = [
+  { value: 3600, label: "1 hour" },
+  { value: 7200, label: "2 hours" },
+  { value: 14400, label: "4 hours" },
+  { value: 28800, label: "8 hours" },
+  { value: 43200, label: "12 hours" },
+  { value: 86400, label: "24 hours" },
+  { value: 172800, label: "48 hours" },
+  { value: 259200, label: "72 hours" },
+  { value: 0, label: "Never" },
+] as const
 
 interface AIPersonalitySectionProps {
   formData: {
@@ -17,6 +32,8 @@ interface AIPersonalitySectionProps {
     toneOfVoice: "formal" | "friendly" | "professional" | "casual"
     channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
     welcomeMessage: string
+    enableWelcomeMessage: boolean
+    sessionResetTimeout: number
     customAiRules: string
     wipMessage: string
   }
@@ -149,14 +166,30 @@ export function AIPersonalitySection({
 
           {/* Divider */}
           <div className="border-t pt-6" />
-          {/* Welcome Message */}
+          {/* Welcome Message + Enable Toggle (E0a) */}
           <div
             className="space-y-2"
             onFocus={() => onFieldFocus?.("welcomeMessage")}
             data-focus-key="welcomeMessage"
           >
-            <Label htmlFor="welcomeMessage">Welcome Message</Label>
-            <div className="border rounded-md overflow-hidden">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="welcomeMessage">Welcome Message</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500">
+                  {formData.enableWelcomeMessage ? "Enabled" : "Disabled"}
+                </span>
+                <Switch
+                  id="enableWelcomeMessage"
+                  checked={formData.enableWelcomeMessage}
+                  onCheckedChange={(checked) => onFieldChange("enableWelcomeMessage", checked)}
+                  disabled={!canEdit}
+                />
+              </div>
+            </div>
+            <div className={cn(
+              "border rounded-md overflow-hidden transition-opacity",
+              !formData.enableWelcomeMessage && "opacity-50"
+            )}>
               <Editor
                 height="200px"
                 defaultLanguage="markdown"
@@ -174,10 +207,44 @@ export function AIPersonalitySection({
                   renderLineHighlight: "all",
                   tabSize: 2,
                   padding: { top: 8, bottom: 8 },
-                  readOnly: !canEdit,
+                  readOnly: !canEdit || !formData.enableWelcomeMessage,
                 }}
               />
             </div>
+            <p className="text-xs text-gray-500">
+              When disabled, no welcome message is sent on first contact. The text is preserved for later use.
+            </p>
+          </div>
+
+          {/* Session Reset Timeout (E0b) */}
+          <div
+            className="space-y-2"
+            onFocus={() => onFieldFocus?.("sessionResetTimeout")}
+            data-focus-key="sessionResetTimeout"
+          >
+            <Label htmlFor="sessionResetTimeout" className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-gray-500" />
+              Session Reset Timeout
+            </Label>
+            <Select
+              value={String(formData.sessionResetTimeout ?? 3600)}
+              onValueChange={(value) => onFieldChange("sessionResetTimeout", Number(value))}
+              disabled={!canEdit}
+            >
+              <SelectTrigger id="sessionResetTimeout" className="w-64">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SESSION_RESET_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={String(opt.value)}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500">
+              How long to wait after operator escalation before auto-resetting the session (cart, conversation context, flow state). Applies to all chatbot types.
+            </p>
           </div>
 
           {/* Maintenance Message */}

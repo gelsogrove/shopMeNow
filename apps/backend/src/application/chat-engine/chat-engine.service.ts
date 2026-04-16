@@ -1892,22 +1892,32 @@ export class ChatEngineService {
           welcomeMessageLength: welcomeResult.welcomeText?.length,
         })
 
-        return {
-          message: welcomeResult.welcomeText!,
-          agentType: AgentType.ROUTER,
-          wasHandled: true,
-          intent: "GREETING",
-          confidence: "HIGH",
-          source: "PATTERN",
-          processingTimeMs: Date.now() - startTime,
-          debugInfo: {
-            steps: debugSteps,
-            totalTokens: 0,
-            executionTimeMs: Date.now() - startTime,
-          },
-          tokensUsed: 0,
-          agentUsed: "WELCOME",
-          _assistantMessageId: welcomeResult.assistantMessageId,
+        // 🆕 FLOW workspaces: Don't return early — combine welcome + response
+        // For FLOW, the welcome message is prepended to the actual response
+        // so the customer gets "Hi! I'm Sofia...\n\nTell me what's happening..."
+        if (workspaceConfig.channelMode === "FLOW") {
+          logger.info("🔄 [ChatEngine] FLOW workspace — continuing with welcome prefix", {
+            channelMode: workspaceConfig.channelMode,
+          })
+          // Continue to STEP 0.2 with welcomePrefix
+        } else {
+          return {
+            message: welcomeResult.welcomeText!,
+            agentType: AgentType.ROUTER,
+            wasHandled: true,
+            intent: "GREETING",
+            confidence: "HIGH",
+            source: "PATTERN",
+            processingTimeMs: Date.now() - startTime,
+            debugInfo: {
+              steps: debugSteps,
+              totalTokens: 0,
+              executionTimeMs: Date.now() - startTime,
+            },
+            tokensUsed: 0,
+            agentUsed: "WELCOME",
+            _assistantMessageId: welcomeResult.assistantMessageId,
+          }
         }
       }
 
@@ -1920,6 +1930,7 @@ export class ChatEngineService {
           workspaceConfig,
           startTime,
           debugSteps,
+          welcomePrefix: welcomeResult.isWelcomeMessage ? welcomeResult.welcomeText : undefined,
         })
       }
 
@@ -5545,8 +5556,9 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
     workspaceConfig: WorkspaceConfig
     startTime: number
     debugSteps: DebugStep[]
+    welcomePrefix?: string
   }): Promise<ChatEngineOutput> {
-    const { input, workspaceConfig, startTime, debugSteps } = params
+    const { input, workspaceConfig, startTime, debugSteps, welcomePrefix } = params
     const conversationId = input.conversationId || `temp-${input.customerId}`
 
     // ========================================================================
@@ -5811,6 +5823,17 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         ? `\n\nSe preferisci, puoi contattarci a ${workspaceConfig.adminEmail}.`
         : ""
       finalMessage = `Ciao! Sono l'assistente di ${agentName}. Al momento non sono riuscito a elaborare la tua richiesta. Puoi riformulare la domanda?${fallbackSupport}`
+    }
+
+    // 🆕 FLOW: Prepend welcome prefix to response so customer gets
+    // "Hi! I'm Sofia...\n\nTell me what's happening with your appliance..."
+    if (welcomePrefix && finalMessage) {
+      finalMessage = welcomePrefix + "\n\n" + finalMessage
+      logger.info("🔄 [ChatEngine] Prepended welcome prefix to FLOW response", {
+        workspaceId: input.workspaceId,
+        welcomePrefixLength: welcomePrefix.length,
+        finalMessageLength: finalMessage.length,
+      })
     }
 
     debugSteps.push({

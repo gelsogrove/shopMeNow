@@ -36,6 +36,8 @@ export interface Workspace {
   adminEmail?: string
   debugMode?: boolean
   welcomeMessage?: string
+  enableWelcomeMessage?: boolean // E0a - toggle welcome message on/off
+  sessionResetTimeout?: number // E0b - seconds after escalation before auto-reset (0 = never)
   wipMessage?: string
   defaultLanguage?: string // 🌍 ISO-2 default language for customers
   createdAt: string
@@ -170,6 +172,8 @@ export interface UpdateWorkspaceData {
   url?: string
   debugMode?: boolean
   welcomeMessage?: string
+  enableWelcomeMessage?: boolean // E0a
+  sessionResetTimeout?: number // E0b (seconds, 0 = never)
   wipMessage?: string
   defaultLanguage?: string // 🌍 ISO-2 default language for customers
   allowedExternalLinks?: string

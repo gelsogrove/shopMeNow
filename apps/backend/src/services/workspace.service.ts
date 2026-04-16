@@ -113,6 +113,8 @@ interface UpdateWorkspaceData {
   blocklist?: string
   url?: string
   welcomeMessage?: string // English only
+  enableWelcomeMessage?: boolean // E0a - toggle welcome message on/off
+  sessionResetTimeout?: number // E0b - seconds after escalation before auto-reset (0 = never)
   allowedExternalLinks?: string[] // 🛡️ Security: allowed domains for external links
   logoUrl?: string // Logo URL
   logoKey?: string // 💾 Storage key for cleanup
@@ -177,6 +179,8 @@ export const workspaceService = {
         url: true,
         webhookUrl: true,
         welcomeMessage: true,
+        enableWelcomeMessage: true, // E0a
+        sessionResetTimeout: true, // E0b
         allowedExternalLinks: true, // 🛡️ Security
         // 🆕 Channel Configuration (Feature 199)
         enableWhatsapp: true,
@@ -275,6 +279,8 @@ export const workspaceService = {
         url: true,
         webhookUrl: true,
         welcomeMessage: true,
+        enableWelcomeMessage: true, // E0a
+        sessionResetTimeout: true, // E0b
         allowedExternalLinks: true, // 🛡️ Security
         // 🆕 Channel Configuration (Feature 199)
         enableWhatsapp: true,
@@ -467,6 +473,8 @@ export const workspaceService = {
         // blocklist: true, // REMOVED: field no longer exists
         url: true,
         welcomeMessage: true,
+        enableWelcomeMessage: true, // E0a
+        sessionResetTimeout: true, // E0b
         registrationPage: true,
         requireManualApproval: true,
         enableWhatsapp: true,
@@ -614,6 +622,7 @@ export const workspaceService = {
       'hasHumanSupport',
       'requireManualApproval',
       'hasSalesAgents',
+      'enableWelcomeMessage',
       'translateProductNames',
       'translateCategoryNames',
       'translateServiceNames',
@@ -677,6 +686,8 @@ export const workspaceService = {
         wipMessage: true,
         url: true,
         welcomeMessage: true,
+        enableWelcomeMessage: true, // E0a
+        sessionResetTimeout: true, // E0b
         allowedExternalLinks: true, // 🛡️ Security
         // 🆕 Channel Configuration (Feature 199 + Andrea's wizard)
         channelType: true,

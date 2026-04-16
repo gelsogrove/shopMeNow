@@ -2,6 +2,7 @@
  * CallingFunctionsSection - Custom Tools management (External Tools / Internal / Delegate)
  */
 import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -24,6 +25,8 @@ import {
     ChevronDown,
     ChevronUp,
     RefreshCw,
+    Network,
+    ArrowUpRight,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Editor from "@monaco-editor/react"
@@ -264,12 +267,23 @@ export function CallingFunctionsSection({
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div>
-                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                    <Wrench className="h-6 w-6 text-blue-600" />
-                    Custom Tools
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">Connect your AI to external services (Webhooks), internal logic, or specialized sub-agents</p>
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                        <Wrench className="h-6 w-6 text-blue-600" />
+                        Custom Tools
+                    </h2>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Connect your AI to external services (Webhooks), internal logic, or specialized sub-agents
+                    </p>
+                </div>
+                <Link to="/agents" className="shrink-0">
+                    <Button variant="outline" size="sm" className="gap-2">
+                        <Network className="h-4 w-4" />
+                        Agent Configuration
+                        <ArrowUpRight className="h-3.5 w-3.5 opacity-70" />
+                    </Button>
+                </Link>
             </div>
 
             {/* Functions List Card */}

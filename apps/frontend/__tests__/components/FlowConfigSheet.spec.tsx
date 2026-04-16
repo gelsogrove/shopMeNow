@@ -12,6 +12,18 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi, beforeEach } from "vitest"
 import { FlowConfigSheet } from "@/components/shared/FlowConfigSheet"
 
+// MOCK: Monaco Editor — replace with simple textarea for testing
+vi.mock("@monaco-editor/react", () => ({
+  default: ({ value, onChange }: any) => (
+    <textarea
+      data-testid="monaco-editor"
+      value={value || ""}
+      onChange={(e) => onChange?.(e.target.value)}
+      placeholder='{ "step_id": {...} }'
+    />
+  ),
+}))
+
 // MOCK: flowConfigApi
 const mockCreate = vi.fn()
 const mockUpdate = vi.fn()
@@ -20,6 +32,13 @@ vi.mock("@/services/flowConfigApi", () => ({
   flowConfigApi: {
     create: (...args: any[]) => mockCreate(...args),
     update: (...args: any[]) => mockUpdate(...args),
+  },
+}))
+
+// MOCK: callingFunctionsApi
+vi.mock("@/services/callingFunctionsApi", () => ({
+  callingFunctionsApi: {
+    list: vi.fn().mockResolvedValue([]),
   },
 }))
 
@@ -53,8 +72,12 @@ describe("FlowConfigSheet", () => {
     // SCENARIO: User types bad JSON in the flows textarea → error message appears + save disabled
     render(<FlowConfigSheet {...defaultProps} />)
 
-    // Find the flows textarea
-    const flowsTextarea = screen.getByPlaceholderText('{ "step_id": {...} }')
+    // Navigate to Flow tab (editor is on the "flow" tab)
+    const flowTab = screen.getByRole("tab", { name: /flow/i })
+    fireEvent.click(flowTab)
+
+    // Find the flows textarea (Monaco Editor is mocked as textarea with testid)
+    const flowsTextarea = await screen.findByTestId("monaco-editor")
     expect(flowsTextarea).toBeInTheDocument()
 
     // Type invalid JSON
@@ -86,8 +109,12 @@ describe("FlowConfigSheet", () => {
     const flowLabelInput = screen.getByPlaceholderText("e.g. Washer HS-60XX")
     fireEvent.change(flowLabelInput, { target: { value: "My Machine" } })
 
+    // Navigate to Flow tab
+    const flowTab = screen.getByRole("tab", { name: /flow/i })
+    fireEvent.click(flowTab)
+
     // Ensure flows has valid JSON (default is "{}")
-    const flowsTextarea = screen.getByPlaceholderText('{ "step_id": {...} }')
+    const flowsTextarea = await screen.findByTestId("monaco-editor")
     fireEvent.change(flowsTextarea, {
       target: { value: '{ "step_1": { "type": "INFO" } }' },
     })

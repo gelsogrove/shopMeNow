@@ -21,6 +21,22 @@ router.get(
   flowNodeConfigController.getAll.bind(flowNodeConfigController)
 )
 
+// GET /api/workspaces/:workspaceId/flow-configs/schema-guide
+router.get(
+  "/schema-guide",
+  authMiddleware,
+  validateWorkspaceOperation,
+  flowNodeConfigController.getSchemaGuide.bind(flowNodeConfigController)
+)
+
+// POST /api/workspaces/:workspaceId/flow-configs/validate
+router.post(
+  "/validate",
+  authMiddleware,
+  validateWorkspaceOperation,
+  flowNodeConfigController.validateFlows.bind(flowNodeConfigController)
+)
+
 // GET /api/workspaces/:workspaceId/flow-configs/:id
 router.get(
   "/:id",

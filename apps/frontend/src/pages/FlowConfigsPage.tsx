@@ -1,5 +1,6 @@
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { FlowConfigSheet } from "@/components/shared/FlowConfigSheet"
+import { FlowQRDialog } from "@/components/shared/FlowQRDialog"
 import { PageLayout } from "@/components/layout/PageLayout"
 import { Button } from "@/components/ui/button"
 import {
@@ -15,7 +16,7 @@ import { useWorkspace } from "@/hooks/use-workspace"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
 import { flowConfigApi, FlowConfig } from "@/services/flowConfigApi"
-import { Pencil, Plus, Trash2, Workflow } from "lucide-react"
+import { Pencil, Plus, QrCode, Trash2, Workflow } from "lucide-react"
 import { useEffect, useState } from "react"
 
 export function FlowConfigsPage() {
@@ -25,6 +26,7 @@ export function FlowConfigsPage() {
   const [showAddSheet, setShowAddSheet] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showQRDialog, setShowQRDialog] = useState(false)
   const [selectedConfig, setSelectedConfig] = useState<FlowConfig | null>(null)
 
   const loadConfigs = async () => {
@@ -153,6 +155,17 @@ export function FlowConfigsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => {
+                              setSelectedConfig(config)
+                              setShowQRDialog(true)
+                            }}
+                            title="Generate QR code"
+                          >
+                            <QrCode className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleEdit(config)}
                             title="Edit"
                           >
@@ -195,6 +208,20 @@ export function FlowConfigsPage() {
         config={selectedConfig}
         onSaved={loadConfigs}
       />
+
+      {/* QR Code Dialog */}
+      {selectedConfig && (
+        <FlowQRDialog
+          open={showQRDialog}
+          onOpenChange={(open) => {
+            setShowQRDialog(open)
+            if (!open) setSelectedConfig(null)
+          }}
+          flowKey={selectedConfig.flowKey}
+          flowLabel={selectedConfig.flowLabel}
+          widgetUrl={workspace?.url}
+        />
+      )}
 
       {/* Delete Dialog */}
       <ConfirmDialog

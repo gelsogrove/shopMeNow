@@ -121,6 +121,8 @@ interface FormData {
   // AI Config
   customAiRules: string
   welcomeMessage: string
+  enableWelcomeMessage: boolean // E0a
+  sessionResetTimeout: number // E0b (seconds, 0 = never)
   wipMessage: string
   // Security
   allowedExternalLinks: string
@@ -231,6 +233,8 @@ export function SettingsPage() {
     widgetQuickReplies: [],
     customAiRules: "",
     welcomeMessage: defaultWelcomeMessage,
+    enableWelcomeMessage: true,
+    sessionResetTimeout: 3600,
     wipMessage: defaultWipMessage,
     allowedExternalLinks: "",
     hasHumanSupport: true,
@@ -313,6 +317,8 @@ export function SettingsPage() {
         widgetQuickReplies: currentWorkspace.widgetQuickReplies || [],
         customAiRules: currentWorkspace.customAiRules || "",
         welcomeMessage: currentWorkspace.welcomeMessage || defaultWelcomeMessage,
+        enableWelcomeMessage: currentWorkspace.enableWelcomeMessage ?? true,
+        sessionResetTimeout: currentWorkspace.sessionResetTimeout ?? 3600,
         wipMessage: currentWorkspace.wipMessage || defaultWipMessage,
         allowedExternalLinks: Array.isArray(currentWorkspace.allowedExternalLinks)
           ? currentWorkspace.allowedExternalLinks.join(", ")
@@ -580,6 +586,16 @@ export function SettingsPage() {
           delete updateData.enableCalendarBooking
         }
 
+        // E0a - enableWelcomeMessage - protect if unchanged
+        if (updateData.enableWelcomeMessage === currentWorkspace.enableWelcomeMessage) {
+          delete updateData.enableWelcomeMessage
+        }
+
+        // E0b - sessionResetTimeout - protect if unchanged
+        if (updateData.sessionResetTimeout === currentWorkspace.sessionResetTimeout) {
+          delete updateData.sessionResetTimeout
+        }
+
         // Appointment reminder fields MUST ALWAYS be sent (never delete!)
         // They are explicitly set above and should always be persisted
       }
@@ -704,6 +720,8 @@ export function SettingsPage() {
               toneOfVoice: formData.toneOfVoice,
               channelMode: formData.channelMode,
               welcomeMessage: formData.welcomeMessage,
+              enableWelcomeMessage: formData.enableWelcomeMessage,
+              sessionResetTimeout: formData.sessionResetTimeout,
               customAiRules: formData.customAiRules,
               wipMessage: formData.wipMessage,
             }}

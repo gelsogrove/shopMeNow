@@ -117,6 +117,45 @@ export const update = async (
   }
 }
 
+export interface FlowValidationError {
+  path: string
+  message: string
+  severity: "error" | "warning"
+}
+
+export interface FlowValidationResult {
+  valid: boolean
+  errors: FlowValidationError[]
+  warnings: FlowValidationError[]
+  stats: {
+    totalFlows: number
+    totalNodes: number
+    terminalNodes: number
+    choiceNodes: number
+  }
+}
+
+/**
+ * Validate flows JSON server-side (schema + graph integrity).
+ */
+export const validateFlows = async (
+  workspaceId: string,
+  flows: unknown
+): Promise<FlowValidationResult> => {
+  try {
+    const response = await api.post(
+      `/workspaces/${workspaceId}/flow-configs/validate`,
+      { flows }
+    )
+    return response.data
+  } catch (error: any) {
+    logger.error("Error validating flows:", error)
+    throw new Error(
+      error.response?.data?.error || "Failed to validate flows"
+    )
+  }
+}
+
 /**
  * Delete a flow config
  */
@@ -140,4 +179,5 @@ export const flowConfigApi = {
   create,
   update,
   remove,
+  validateFlows,
 }

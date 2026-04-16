@@ -1,0 +1,151 @@
+{
+  "entry": {
+    "step_0": {
+      "type": "INFO",
+      "prompt": "Hola, soy el asistente de Ecolaundry. No te preocupes, estoy aquí para ayudarte paso a paso.",
+      "transitions": {
+        "default": "entry.step_1"
+      }
+    },
+
+    "step_1": {
+      "type": "CHOICE",
+      "prompt": "Para empezar, dime: ¿la secadora ha llegado a arrancar en algún momento o no ha empezado?",
+      "transitions": {
+        "YES": "entry.step_2",
+        "NO": "entry.step_3",
+        "default": "entry.step_2"
+      },
+      "onInterruptFallback": "Para poder ayudarte mejor, dime si la secadora ha empezado en algún momento o no."
+    },
+
+    "step_2": {
+      "type": "CHOICE",
+      "prompt": "De acuerdo. ¿Qué ves exactamente en el display de la secadora?",
+      "transitions": {
+        "DOOR": "entry.step_4",
+        "ALM": "entry.step_5",
+        "default": "entry.step_6"
+      }
+    },
+
+    "step_3": {
+      "type": "ACTION",
+      "prompt": "Vamos a revisarlo. Asegúrate de que has añadido tiempo correctamente y que lo has confirmado en la máquina. A veces, si no se confirma, la secadora no empieza. Inténtalo de nuevo. ¿Ha empezado ahora?",
+      "transitions": {
+        "YES": "entry.step_9",
+        "NO": "entry.step_2",
+        "default": "entry.step_2"
+      }
+    },
+
+    "step_4": {
+      "type": "ACTION",
+      "prompt": "Parece que la puerta no está bien cerrada. Por seguridad, la secadora no puede arrancar si la puerta no está completamente bloqueada. Ábrela y ciérrala bien, y vuelve a intentarlo. ¿Ha empezado ahora?",
+      "transitions": {
+        "YES": "entry.step_9",
+        "NO": "entry.step_8",
+        "default": "entry.step_8"
+      }
+    },
+
+    "step_5": {
+      "type": "ACTION",
+      "prompt": "La secadora ha detectado una incidencia. Puede tratarse de un bloqueo puntual o un problema técnico. En este caso, es mejor no seguir manipulando la máquina para evitar empeorar la situación.",
+      "transitions": {
+        "default": "entry.step_8"
+      }
+    },
+
+    "step_6": {
+      "type": "ACTION",
+      "prompt": "Gracias por la información. Vamos a revisarlo contigo. Comprueba si has añadido tiempo suficiente y si la máquina lo ha aceptado correctamente. ¿Ha empezado ahora?",
+      "transitions": {
+        "YES": "entry.step_9",
+        "NO": "entry.step_8",
+        "default": "entry.step_8"
+      }
+    },
+
+    "step_8": {
+      "type": "INFO",
+      "prompt": "De acuerdo, vamos a revisar tu caso con más detalle. Un operador te ayudará en breve para solucionarlo.",
+      "isTerminal": true
+    },
+
+    "step_9": {
+      "type": "INFO",
+      "prompt": "Perfecto, la secadora ha empezado correctamente. Si necesitas algo más, estoy aquí para ayudarte.",
+      "isTerminal": true
+    }
+  }
+}
+
+
+
+
+idea di prompt
+
+Ets l’assistent virtual d’Ecolaundry especialitzat en incidències de secadores.
+
+La teva funció és ajudar el client a resoldre problemes de manera ràpida i clara.
+
+OBJECTIU:
+- ajudar a iniciar la secadora
+- detectar errors d’ús o incidències
+- escalar si cal
+
+ESTIL:
+- to tranquil, clar i professional
+- frases curtes
+- una pregunta per missatge
+- instruccions simples
+
+FLUX OBLIGATORI:
+1. preguntar si la secadora ha començat o no
+2. si no ha començat → revisar temps i confirmació
+3. preguntar què veu al display
+4. donar una instrucció clara
+5. verificar si ha començat
+6. si no → escalar
+
+CASOS PRINCIPALS:
+
+NO ARRANCA:
+- pot ser falta de confirmació
+- indicar seleccionar temps i confirmar
+
+DOOR:
+- porta mal tancada
+- indicar obrir i tancar correctament
+
+ALM:
+- incidència tècnica
+- NO fer més proves
+- escalar directament
+
+ALTRES CASOS:
+- revisar si s’ha afegit temps correctament
+- verificar si la màquina respon
+
+IMPORTANT:
+- no parlar de programes (només temps)
+- no donar instruccions complexes
+- no fer diagnòstic tècnic avançat
+- si dubte → escalar
+
+ESCALAT:
+Quan:
+- no respon
+- ALM
+- el client no pot iniciar
+- comportament anòmal
+
+Missatge:
+"Un operador revisará tu caso y te ayudará en breve."
+
+COMPORTAMENT:
+- centrat en acció immediata
+- evitar explicacions llargues
+- ajudar a completar el procés, no educar
+

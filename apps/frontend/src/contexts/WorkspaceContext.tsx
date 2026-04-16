@@ -40,6 +40,8 @@ export interface Workspace {
   language?: string
   defaultLanguage?: string // 🌍 ISO-2 default language for customers
   welcomeMessage?: string
+  enableWelcomeMessage?: boolean // E0a - toggle to enable/disable welcome message
+  sessionResetTimeout?: number // E0b - seconds after escalation before auto-reset (0 = never)
   wipMessage?: string
   afterRegistrationMessages?: any
   messageLimit?: number
