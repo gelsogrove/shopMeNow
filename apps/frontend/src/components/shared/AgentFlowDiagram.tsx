@@ -805,17 +805,32 @@ export function AgentFlowDiagram({
         
         <ConnectorArrow />
         
-        {/* Root Agent — FLOW uses a non-editable "Flow Engine" label */}
+        {/* Router — FLOW uses FlowWorkspaceStrategy (first step) */}
         {isFlow ? (
-          <div className="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl shadow-lg border-2 border-violet-400">
-            <div className="p-1.5 rounded-lg bg-white/20">
-              <GitBranch className="h-6 w-6 text-white" />
+          <>
+            <div className="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl shadow-lg border-2 border-blue-400">
+              <div className="p-1.5 rounded-lg bg-white/20">
+                <GitBranch className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-base">Router</span>
+                <span className="text-xs text-white/70">FlowWorkspaceStrategy — QR code / Flow active / Default</span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-base">Flow Engine</span>
-              <span className="text-xs text-white/70">Deterministic router — not editable</span>
+            
+            <ConnectorArrow />
+            
+            {/* Flow Engine (deterministic, after routing) */}
+            <div className="flex items-center gap-3 px-6 py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl shadow-lg border-2 border-violet-400">
+              <div className="p-1.5 rounded-lg bg-white/20">
+                <Sparkles className="h-6 w-6 text-white" />
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-base">Flow Engine</span>
+                <span className="text-xs text-white/70">Deterministic flow execution — not editable</span>
+              </div>
             </div>
-          </div>
+          </>
         ) : (
           <AgentNode
             agent={getAgent(isEcommerce ? "ROUTER" : "INFO_AGENT") || getAgent("CUSTOMER_SUPPORT")}
