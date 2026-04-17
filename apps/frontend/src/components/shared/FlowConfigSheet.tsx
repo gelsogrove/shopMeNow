@@ -37,9 +37,83 @@ import Editor from "@monaco-editor/react"
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Info,
 } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+
+// ─── Available prompt variables grouped by category ─────────────────────────
+// Source of truth: PromptVariableBuilder.build() in backend
+const PROMPT_VARIABLES = [
+  {
+    group: "Bot & Workspace",
+    vars: [
+      { name: "chatbotName", desc: "Bot name (from Settings > General)" },
+      { name: "companyName", desc: "Workspace / company name" },
+      { name: "toneOfVoice", desc: "Configured tone (friendly, formal…)" },
+      { name: "botIdentityResponse", desc: "Answer to 'who are you?'" },
+      { name: "channelMode", desc: "FLOW | ECOMMERCE | INFORMATIONAL" },
+      { name: "address", desc: "Physical address" },
+      { name: "workspaceUrl", desc: "Workspace URL" },
+      { name: "websiteUrl", desc: "Website URL" },
+      { name: "adminEmail", desc: "Admin / support email" },
+      { name: "supportEmail", desc: "Support email" },
+      { name: "customAiRules", desc: "Custom AI rules" },
+      { name: "allowedExternalLinks", desc: "Allowed external links" },
+    ],
+  },
+  {
+    group: "Customer",
+    vars: [
+      { name: "customerName", desc: "Customer first/last name" },
+      { name: "customerPhone", desc: "Customer WhatsApp number" },
+      { name: "customerEmail", desc: "Customer email address" },
+      { name: "customerDiscount", desc: "Discount percentage (0-100)" },
+      { name: "languageUser", desc: "ITALIANO | ENGLISH | ESPAÑOL | PORTUGUÊS" },
+    ],
+  },
+  {
+    group: "Content (FLOW)",
+    vars: [
+      { name: "faqs", desc: "All active FAQs — Q: … A: … blocks" },
+    ],
+  },
+  {
+    group: "Content (Ecommerce)",
+    vars: [
+      { name: "products", desc: "Full product catalog" },
+      { name: "categories", desc: "Product categories" },
+      { name: "offers", desc: "Active offers" },
+      { name: "services", desc: "Services list" },
+    ],
+  },
+  {
+    group: "Human Support",
+    vars: [
+      { name: "hasHumanSupport", desc: "true/false — human support enabled" },
+      { name: "humanSupportInstructions", desc: "Escalation instructions" },
+      { name: "operatorContactMethod", desc: "EMAIL | WHATSAPP" },
+      { name: "operatorWhatsappNumber", desc: "Operator WhatsApp number" },
+    ],
+  },
+  {
+    group: "Sales Agent",
+    vars: [
+      { name: "salesAgentName", desc: "Assigned sales agent name" },
+      { name: "salesAgentEmail", desc: "Assigned sales agent email" },
+      { name: "salesAgentPhone", desc: "Assigned sales agent phone" },
+    ],
+  },
+  {
+    group: "Calendar",
+    vars: [
+      { name: "hasCalendarEnabled", desc: "true/false — calendar bookings enabled" },
+      { name: "appointmentTypes", desc: "List of bookable appointment types" },
+      { name: "customerUpcomingAppointments", desc: "Customer's upcoming appointments" },
+    ],
+  },
+] as const
 
 const AVAILABLE_MODELS = [
   { value: "openai/gpt-4o-mini", label: "GPT-4o Mini (fast, cheap)" },
@@ -97,6 +171,8 @@ export function FlowConfigSheet({
   const [isSaving, setIsSaving] = useState(false)
   const [allFunctions, setAllFunctions] = useState<CallingFunction[]>([])
   const [selectedFunctions, setSelectedFunctions] = useState<string[]>([])
+  const [showVarPanel, setShowVarPanel] = useState(false)
+  const editorRef = useRef<any>(null)
 
   useEffect(() => {
     if (!workspaceId) return
@@ -362,20 +438,79 @@ export function FlowConfigSheet({
             </TabsContent>
 
             {/* ───── PROMPT ───── */}
-            <TabsContent value="prompt" className="space-y-2 pt-4">
+            <TabsContent value="prompt" className="space-y-3 pt-4">
               <div className="flex items-center justify-between">
                 <Label htmlFor="systemPrompt">System Prompt</Label>
-                <span className="text-xs text-muted-foreground">
-                  Markdown · {systemPrompt.length} chars
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">
+                    Markdown · {systemPrompt.length} chars
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowVarPanel(v => !v)}
+                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {showVarPanel ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                    {showVarPanel ? "Hide variables" : "Available variables"}
+                  </button>
+                </div>
               </div>
+
+              {/* ── Variable reference panel ── */}
+              {showVarPanel && (
+                <div className="border rounded-md bg-slate-50 p-3 space-y-3 text-xs max-h-60 overflow-y-auto">
+                  <p className="text-slate-500 text-[11px]">
+                    Click a variable to insert it at the cursor position in the prompt.
+                    All variables are replaced at runtime — injected by the backend before the LLM call.
+                  </p>
+                  {PROMPT_VARIABLES.map(group => (
+                    <div key={group.group}>
+                      <p className="font-semibold text-slate-700 mb-1">{group.group}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {group.vars.map(v => (
+                          <button
+                            key={v.name}
+                            type="button"
+                            title={v.desc}
+                            onClick={() => {
+                              const tag = `{{${v.name}}}`
+                              if (editorRef.current) {
+                                const editor = editorRef.current
+                                const position = editor.getPosition()
+                                editor.executeEdits("insert-variable", [{
+                                  range: {
+                                    startLineNumber: position.lineNumber,
+                                    startColumn: position.column,
+                                    endLineNumber: position.lineNumber,
+                                    endColumn: position.column,
+                                  },
+                                  text: tag,
+                                }])
+                                editor.focus()
+                              } else {
+                                // Fallback: append to prompt text
+                                setSystemPrompt(prev => prev + tag)
+                              }
+                            }}
+                            className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 font-mono text-[10px] hover:bg-blue-100 cursor-pointer"
+                          >
+                            {`{{${v.name}}}`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="border rounded-md overflow-hidden">
                 <Editor
-                  height="420px"
+                  height="380px"
                   defaultLanguage="markdown"
                   theme="vs-light"
                   value={systemPrompt}
                   onChange={(value) => setSystemPrompt(value || "")}
+                  onMount={(editor) => { editorRef.current = editor }}
                   options={{
                     minimap: { enabled: false },
                     fontSize: 13,
@@ -390,9 +525,11 @@ export function FlowConfigSheet({
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                Machine-specific instructions for this sub-LLM. Keep focused —
-                mention machine model, behavior, edge cases. Leave the
-                multi-language handling to the TranslationAgent.
+                Machine-specific instructions for this sub-LLM. Use{" "}
+                <code className="bg-muted px-1 rounded font-mono text-[11px]">{"{{chatbotName}}"}</code>,{" "}
+                <code className="bg-muted px-1 rounded font-mono text-[11px]">{"{{faqs}}"}</code>,{" "}
+                <code className="bg-muted px-1 rounded font-mono text-[11px]">{"{{toneOfVoice}}"}</code>{" "}
+                and other variables above. Multilingual output is handled by TranslationAgent.
               </p>
             </TabsContent>
 
