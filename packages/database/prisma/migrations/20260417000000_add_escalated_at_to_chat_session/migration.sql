@@ -1,2 +1,2 @@
--- Add escalatedAt column to ChatSession (E0b - session reset after operator escalation)
-ALTER TABLE "ChatSession" ADD COLUMN "escalatedAt" TIMESTAMP(3);
+-- Add escalatedAt column to chat_sessions (E0b - session reset after operator escalation)
+ALTER TABLE "chat_sessions" ADD COLUMN "escalatedAt" TIMESTAMP(3);
