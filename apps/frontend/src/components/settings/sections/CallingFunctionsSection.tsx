@@ -31,9 +31,11 @@ import {
 import { cn } from "@/lib/utils"
 import Editor from "@monaco-editor/react"
 import { callingFunctionsApi, CallingFunction } from "@/services/callingFunctionApi"
+import { flowConfigApi, FlowConfig } from "@/services/flowConfigApi"
 import { toast } from "@/lib/toast"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
@@ -69,12 +71,14 @@ export function CallingFunctionsSection({
     canEdit,
 }: CallingFunctionsSectionProps) {
     const [functions, setFunctions] = useState<CallingFunction[]>([])
+    const [flowConfigs, setFlowConfigs] = useState<FlowConfig[]>([])
     const [missingSystemFunctions, setMissingSystemFunctions] = useState<Array<{ functionName: string; description: string; executionType: string; attachedLlm?: string | null }>>([])
     const [loading, setLoading] = useState(true)
     const [testingToolWebhook, setTestingToolWebhook] = useState(false)
     const [isModalOpen, setIsModalOpen] = useState(false)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [editingFunction, setEditingFunction] = useState<Record<string, any> | null>(null)
+    const [attachedFlowIds, setAttachedFlowIds] = useState<Set<string>>(new Set())
     const [isSaving, setIsSaving] = useState(false)
     // Delete confirmation dialog
     const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; functionName: string | null }>({ open: false, functionName: null })
@@ -90,12 +94,14 @@ export function CallingFunctionsSection({
     const loadFunctions = async () => {
         try {
             setLoading(true)
-            const [data, missingData] = await Promise.all([
+            const [data, missingData, flowData] = await Promise.all([
                 callingFunctionsApi.list(workspaceId),
                 callingFunctionsApi.getSystemMissing(workspaceId),
+                flowConfigApi.getAllForWorkspace(workspaceId),
             ])
             setFunctions(data)
             setMissingSystemFunctions(missingData.missing)
+            setFlowConfigs(flowData)
         } catch (error) {
             console.error("Failed to load functions:", error)
             toast.error("Failed to load custom tools")
@@ -145,6 +151,13 @@ export function CallingFunctionsSection({
                         : JSON.stringify(fn.credentialsMapping, null, 2))
                     : ""
             })
+            // Compute which FlowNodeConfigs already have this function
+            const attached = new Set(
+                flowConfigs
+                    .filter(fc => (fc.availableFunctions as string[] || []).includes(fn.functionName))
+                    .map(fc => fc.id)
+            )
+            setAttachedFlowIds(attached)
         } else {
             setEditingFunction({
                 functionName: "",
@@ -160,6 +173,7 @@ export function CallingFunctionsSection({
                 isActive: true,
                 credentialsMapping: "",
             })
+            setAttachedFlowIds(new Set())
         }
         setIsModalOpen(true)
     }
@@ -215,6 +229,20 @@ export function CallingFunctionsSection({
                 const createPayload = { ...payload, functionName: editingFunction.functionName }
                 await callingFunctionsApi.create(workspaceId, createPayload)
                 toast.success("New tool added successfully")
+            }
+
+            // Save FlowNodeConfig attachment changes (add/remove functionName from availableFunctions)
+            const fnName = editingFunction.functionName as string
+            for (const fc of flowConfigs) {
+                const wasAttached = ((fc.availableFunctions as string[]) || []).includes(fnName)
+                const isNowAttached = attachedFlowIds.has(fc.id)
+                if (wasAttached !== isNowAttached) {
+                    const currentFns = (fc.availableFunctions as string[]) || []
+                    const newFns = isNowAttached
+                        ? [...currentFns, fnName]
+                        : currentFns.filter((f) => f !== fnName)
+                    await flowConfigApi.update(workspaceId, fc.id, { availableFunctions: newFns })
+                }
             }
 
             setIsModalOpen(false)
@@ -709,6 +737,43 @@ Credentials Mapping: {
                                 />
                             </div>
                         </div>
+
+                            {/* Attached Sub-LLMs — which FlowNodeConfigs can call this function */}
+                            {flowConfigs.length > 0 && (
+                            <div className="space-y-2">
+                                <Label>Attached Sub-LLMs</Label>
+                                <p className="text-xs text-slate-500">Which sub-LLMs can call this function</p>
+                                <div className="space-y-1 border rounded-md p-3 max-h-40 overflow-y-auto">
+                                    {flowConfigs.map(fc => (
+                                        <div key={fc.id} className="flex items-center gap-2">
+                                            <Checkbox
+                                                id={`fc-${fc.id}`}
+                                                checked={attachedFlowIds.has(fc.id)}
+                                                onCheckedChange={(checked) => {
+                                                    setAttachedFlowIds(prev => {
+                                                        const next = new Set(prev)
+                                                        if (checked) next.add(fc.id)
+                                                        else next.delete(fc.id)
+                                                        return next
+                                                    })
+                                                }}
+                                            />
+                                            <label htmlFor={`fc-${fc.id}`} className="text-sm cursor-pointer flex items-center gap-1.5">
+                                                <span className={cn(
+                                                    "px-1.5 py-0.5 rounded text-[10px] font-mono",
+                                                    fc.flowKey === 'router'
+                                                        ? 'bg-indigo-50 text-indigo-700'
+                                                        : 'bg-slate-100 text-slate-600'
+                                                )}>
+                                                    {fc.flowKey}
+                                                </span>
+                                                <span className="text-slate-500">{fc.flowLabel}</span>
+                                            </label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                            )}
 
                             {/* Webhook URL — only for WEBHOOK type */}
                             {editingFunction?.executionType === "WEBHOOK" && (

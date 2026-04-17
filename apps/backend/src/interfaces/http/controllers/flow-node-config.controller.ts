@@ -159,11 +159,8 @@ export class FlowNodeConfigController {
         return res.status(400).json({ error: "flowKey and flowLabel are required" })
       }
 
-      // Validate flows JSON structure if provided
-      if (flows) {
-        if (typeof flows !== "object") {
-          return res.status(400).json({ error: "flows must be a valid JSON object" })
-        }
+      // Validate flows JSON structure if provided (skip for empty objects — e.g. Router has no flows)
+      if (flows && typeof flows === "object" && Object.keys(flows).length > 0) {
         const validation = this.validator.validate(flows)
         if (!validation.valid) {
           return res.status(400).json({
@@ -173,6 +170,8 @@ export class FlowNodeConfigController {
             stats: validation.stats,
           })
         }
+      } else if (flows && typeof flows !== "object") {
+        return res.status(400).json({ error: "flows must be a valid JSON object" })
       }
 
       const config = await this.repository.create(workspaceId, {
@@ -258,19 +257,21 @@ export class FlowNodeConfigController {
       const workspaceId = (req as any).workspaceId
       const { flowLabel, systemPrompt, model, temperature, maxTokens, availableFunctions, flows, isActive } = req.body
 
-      // Validate flows JSON structure if provided
+      // Validate flows JSON structure if provided (skip for empty objects — Router has no flows)
       if (flows !== undefined && flows !== null) {
         if (typeof flows !== "object") {
           return res.status(400).json({ error: "flows must be a valid JSON object" })
         }
-        const validation = this.validator.validate(flows)
-        if (!validation.valid) {
-          return res.status(400).json({
-            error: "Invalid flow JSON structure",
-            validationErrors: validation.errors,
-            warnings: validation.warnings,
-            stats: validation.stats,
-          })
+        if (Object.keys(flows).length > 0) {
+          const validation = this.validator.validate(flows)
+          if (!validation.valid) {
+            return res.status(400).json({
+              error: "Invalid flow JSON structure",
+              validationErrors: validation.errors,
+              warnings: validation.warnings,
+              stats: validation.stats,
+            })
+          }
         }
       }
 

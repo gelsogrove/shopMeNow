@@ -1687,12 +1687,8 @@ EXAMPLES:
 - "washer" → "What's the machine number? You'll find it on the label."
 - "42" → call assignMachine(flowKey="lavatrice_hs60xx", machineNumber="42") and briefly confirm
 
-GENERAL FAQ (answer directly without routing):
-- Hours: open 8:00–22:00 every day (L'Escala: 7:00–23:00)
-- Soap and softener: included in the machine price
-- Payment: coins or contactless card
-- Average wash cycle: ~28 minutes
-- Refund requests: collect last 4 digits of card + payment screenshot, send to service@alberwaz.net
+GENERAL FAQ (answer directly without routing; use the information below):
+{{faqs}}
 
 NEVER invent information. NEVER ask more than one question at a time.
 ALWAYS respond in English — TranslationAgent handles multilingual output.`

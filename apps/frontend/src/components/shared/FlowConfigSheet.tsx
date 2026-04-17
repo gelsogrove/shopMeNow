@@ -18,7 +18,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { logger } from "@/lib/logger"
 import { toast } from "@/lib/toast"
@@ -95,7 +94,6 @@ export function FlowConfigSheet({
   const [validationResult, setValidationResult] =
     useState<FlowValidationResult | null>(null)
   const [isValidating, setIsValidating] = useState(false)
-  const [isActive, setIsActive] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [allFunctions, setAllFunctions] = useState<CallingFunction[]>([])
   const [selectedFunctions, setSelectedFunctions] = useState<string[]>([])
@@ -119,7 +117,6 @@ export function FlowConfigSheet({
       setTemperature(config.temperature ?? 0.3)
       setMaxTokens(config.maxTokens ?? 500)
       setFlowsJson(config.flows ? JSON.stringify(config.flows, null, 2) : "{}")
-      setIsActive(config.isActive)
       const funcs = config.availableFunctions
       setSelectedFunctions(Array.isArray(funcs) ? (funcs as string[]) : [])
     } else {
@@ -130,7 +127,6 @@ export function FlowConfigSheet({
       setTemperature(0.3)
       setMaxTokens(500)
       setFlowsJson("{}")
-      setIsActive(true)
       setSelectedFunctions([])
     }
     setActiveTab("basics")
@@ -201,8 +197,7 @@ export function FlowConfigSheet({
           temperature,
           maxTokens,
           availableFunctions: selectedFunctions,
-          flows: parsedFlows,
-          isActive,
+          flows: isRouter ? undefined : parsedFlows,
         }
         await flowConfigApi.update(workspaceId, config.id, updateData)
         toast.success("Flow config updated successfully")
@@ -215,8 +210,7 @@ export function FlowConfigSheet({
           temperature,
           maxTokens,
           availableFunctions: selectedFunctions,
-          flows: parsedFlows,
-          isActive,
+          flows: flowKey === 'router' ? undefined : parsedFlows,
         }
         await flowConfigApi.create(workspaceId, createData)
         toast.success("Flow config created successfully")
@@ -364,20 +358,7 @@ export function FlowConfigSheet({
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 rounded-md border p-3">
-                <Switch
-                  id="isActive"
-                  checked={isActive}
-                  onCheckedChange={setIsActive}
-                />
-                <div className="flex-1">
-                  <Label htmlFor="isActive">Active</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Inactive flows are ignored by the router even if the QR is
-                    scanned.
-                  </p>
-                </div>
-              </div>
+
             </TabsContent>
 
             {/* ───── PROMPT ───── */}
