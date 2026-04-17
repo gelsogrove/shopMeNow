@@ -386,37 +386,38 @@ export class WhatsAppWebhookController {
         return
       }
 
-      // 🔒 SECURITY: Verify signature BEFORE checking channelStatus
-      // This prevents information disclosure (workspace enumeration attack)
-      const sigHeader = req.header("x-hub-signature-256")
-      if (!sigHeader) {
-        logger.warn("[WEBHOOK] ❌ Missing signature header", { webhookId })
-        res.status(403).json({ error: "missing_signature" })
-        return
-      }
-
-      try {
-        const appSecret = whatsappSettings.appSecret
-        if (!appSecret) {
-          logger.error("[WEBHOOK] ❌ Missing app secret in WhatsApp settings", { webhookId })
-          res.status(500).json({ error: "webhook_signature_config_missing" })
+      // 🔒 SECURITY: Verify Meta signature (skip for playground — no HMAC header)
+      if (!isPlayground) {
+        const sigHeader = req.header("x-hub-signature-256")
+        if (!sigHeader) {
+          logger.warn("[WEBHOOK] ❌ Missing signature header", { webhookId })
+          res.status(403).json({ error: "missing_signature" })
           return
         }
 
-        const rawBody = (req as any).rawBody || req.body || {}
-        const isValid = verifyWhatsAppSignature(rawBody, sigHeader, appSecret)
+        try {
+          const appSecret = whatsappSettings.appSecret
+          if (!appSecret) {
+            logger.error("[WEBHOOK] ❌ Missing app secret in WhatsApp settings", { webhookId })
+            res.status(500).json({ error: "webhook_signature_config_missing" })
+            return
+          }
 
-        if (!isValid) {
-          logger.warn("[WEBHOOK] ❌ Invalid signature", { webhookId })
+          const rawBody = (req as any).rawBody || req.body || {}
+          const isValid = verifyWhatsAppSignature(rawBody, sigHeader, appSecret)
+
+          if (!isValid) {
+            logger.warn("[WEBHOOK] ❌ Invalid signature", { webhookId })
+            res.status(403).json({ error: "invalid_signature" })
+            return
+          }
+        } catch (err) {
+          logger.warn("[WEBHOOK] ⚠️ Signature verification failed", {
+            error: (err as Error).message,
+          })
           res.status(403).json({ error: "invalid_signature" })
           return
         }
-      } catch (err) {
-        logger.warn("[WEBHOOK] ⚠️ Signature verification failed", {
-          error: (err as Error).message,
-        })
-        res.status(403).json({ error: "invalid_signature" })
-        return
       }
 
       // Owner inactive or channel disabled (checked AFTER authentication)
