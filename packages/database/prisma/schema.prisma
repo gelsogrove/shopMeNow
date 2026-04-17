@@ -63,6 +63,10 @@ model Workspace {
   enableCalendarBooking             Boolean     @default(false) // Enables appointment booking via WhatsApp chatbot
   hasSalesAgents                    Boolean     @default(false) // Has sales team for customer assignment?
   hasHumanSupport                   Boolean     @default(true) // Can customers request human support?
+  hasProductCatalog                 Boolean     @default(true) // Enable product search agent in pipeline
+  hasCart                           Boolean     @default(true) // Enable cart management agent in pipeline
+  hasOrderTracking                  Boolean     @default(true) // Enable order tracking agent in pipeline
+  needRegistration                  Boolean     @default(true) // Enable profile management agent in pipeline
   humanSupportInstructions          String?     @db.Text // Instructions for human support requests
   operatorContactMethod             String?     @default("email") // 'email' | 'whatsapp'
   operatorEmail                     String? // Email for human support notifications
