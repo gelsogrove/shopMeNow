@@ -56,6 +56,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       blocklist: data.blocklist,
       welcomeMessage: data.welcomeMessage,
       wipMessage: data.wipMessage,
+      enableWelcomeMessage: data.enableWelcomeMessage ?? true, // E0a
+      sessionResetTimeout: data.sessionResetTimeout ?? 3600, // E0b
       channelStatus: data.channelStatus,
       deletedAt: data.deletedAt ?? null,
       url: data.url,

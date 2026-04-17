@@ -194,6 +194,8 @@ export class WorkspaceController {
           messageLimit: workspace.messageLimit,
           blocklist: workspace.blocklist,
           welcomeMessage: workspace.welcomeMessage,
+          enableWelcomeMessage: workspace.enableWelcomeMessage ?? true, // E0a
+          sessionResetTimeout: workspace.sessionResetTimeout ?? 3600, // E0b
           wipMessage: workspace.wipMessage,
           channelStatus: workspace.channelStatus,
           url: workspace.url,
@@ -654,10 +656,10 @@ export class WorkspaceController {
         messageLimit: workspace.messageLimit,
         blocklist: workspace.blocklist,
         welcomeMessage: workspace.welcomeMessage,
+        enableWelcomeMessage: workspace.enableWelcomeMessage ?? true, // E0a
+        sessionResetTimeout: workspace.sessionResetTimeout ?? 3600, // E0b
         wipMessage: workspace.wipMessage,
         channelStatus: workspace.channelStatus,
-
-        url: workspace.url,
         websiteUrl: workspace.websiteUrl ?? null,
         debugMode: workspace.debugMode,
         createdAt: workspace.createdAt,

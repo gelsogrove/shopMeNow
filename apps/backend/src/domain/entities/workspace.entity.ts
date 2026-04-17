@@ -47,6 +47,8 @@ export interface WorkspaceProps {
   websiteUrl?: string | null
   assistantPhone?: string | null
   welcomeMessage?: any
+  enableWelcomeMessage?: boolean // E0a
+  sessionResetTimeout?: number // E0b
   wipMessage?: any
   afterRegistrationMessages?: any
   debugMode: boolean
@@ -291,6 +293,14 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get welcomeMessage(): any {
     return this.props.welcomeMessage
+  }
+
+  get enableWelcomeMessage(): boolean | undefined {
+    return this.props.enableWelcomeMessage
+  }
+
+  get sessionResetTimeout(): number | undefined {
+    return this.props.sessionResetTimeout
   }
 
   get wipMessage(): any {

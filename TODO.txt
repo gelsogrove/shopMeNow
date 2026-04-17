@@ -10,12 +10,20 @@ FATTO
 - generare JOSN lavatrice
 
 
-PROGRESS
+
+progress
+
+Welcome Message non si salva
+
+
+
+
 - grafico fattto bene? dynamic ?
 - CAlling function sono attaccate bene e ben descritte
 - Ruter con FlowJSON?
 - PROMPTS fatti?
-
+- Tempalte non vanno
+- info Anget non esiste in chatbot tipo flow
 
 TODO
 
