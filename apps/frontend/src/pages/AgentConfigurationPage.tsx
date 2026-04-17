@@ -41,6 +41,7 @@ import {
   updateAgentConfig,
 } from "@/services/agent-config-api"
 import { Agent, getAgents } from "@/services/agents-legacy-api"
+import { callingFunctionsApi, CallingFunction } from "@/services/callingFunctionApi"
 import { FlowConfig, flowConfigApi } from "@/services/flowConfigApi"
 import {
   Bell,
@@ -176,7 +177,8 @@ export function AgentConfigurationPage() {
   
   // FLOW workspace state
   const [flowConfigs, setFlowConfigs] = useState<FlowConfig[]>([])
-  const [useDynamicTemplates, setUseDynamicTemplates] = useState(true) // 🆕 Default to dynamic templates
+  const [useDynamicTemplates, setUseDynamicTemplates] = useState(true)
+  const [allCallingFunctions, setAllCallingFunctions] = useState<CallingFunction[]>([])
 
   // Redirect if no workspace
   useEffect(() => {
@@ -206,6 +208,9 @@ export function AgentConfigurationPage() {
           const fcs = await flowConfigApi.getAllForWorkspace(workspace.id)
           setFlowConfigs(fcs)
         }
+
+        // Load all calling functions for the workspace (for editable checkboxes)
+        callingFunctionsApi.list(workspace.id).then(setAllCallingFunctions).catch(() => {})
 
         // Sort by order field (Router Agent first with order=0)
         const sortedAgents = agentsData.sort((a, b) => a.order - b.order)
@@ -304,6 +309,7 @@ export function AgentConfigurationPage() {
         isActive: updatedAgent.isActive,
         order: updatedAgent.order,
         type: updatedAgent.agentType,
+        availableFunctions: (updatedAgent as any).availableFunctions ?? undefined,
       })
 
       // Update local state
@@ -453,16 +459,18 @@ export function AgentConfigurationPage() {
             availableFunctions: agentFunctions[agent.id] || [],
           }))}
           workspaceId={workspace.id}
+          allCallingFunctions={allCallingFunctions}
           onSaveAgent={async (agentId, data) => {
             const agent = agents.find(a => a.id === agentId)
             if (!agent) return
-            
+
             await handleSaveFromSlide({
               ...agent,
               systemPrompt: data.systemPrompt ?? agent.systemPrompt ?? agent.content ?? "",
               temperature: data.temperature ?? agent.temperature ?? 0.7,
               maxTokens: data.maxTokens ?? agent.maxTokens ?? 1000,
               model: data.model ?? agent.model ?? "openai/gpt-4.1-mini",
+              availableFunctions: data.availableFunctions,
             } as Agent)
           }}
           onResetToDefaults={handleResetToDefaults}

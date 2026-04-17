@@ -42,6 +42,7 @@ import {
   Star,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
@@ -118,6 +119,7 @@ interface AgentFlowDiagramProps {
   className?: string
   flowConfigs?: FlowConfig[]
   onFlowConfigSaved?: () => void
+  allCallingFunctions?: { functionName: string; description?: string; isSystemFunction?: boolean }[]
 }
 
 // Available LLM Models with cost and performance ratings
@@ -530,6 +532,7 @@ export function AgentFlowDiagram({
   className,
   flowConfigs = [],
   onFlowConfigSaved,
+  allCallingFunctions = [],
 }: AgentFlowDiagramProps) {
   const isFlow = channelMode === 'FLOW'
   
@@ -545,6 +548,9 @@ export function AgentFlowDiagram({
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
   
+  // Editable calling functions for agent
+  const [editedFunctions, setEditedFunctions] = useState<string[]>([])
+
   // FLOW workspace state
   const [flowSheetOpen, setFlowSheetOpen] = useState(false)
   const [selectedFlowConfig, setSelectedFlowConfig] = useState<FlowConfig | null>(null)
@@ -556,8 +562,8 @@ export function AgentFlowDiagram({
     return AGENT_METADATA[type]
   }
 
-  // Get display name for agent - "Info Agent" for informational channels
   const getAgentDisplayName = (type: string, meta: typeof AGENT_METADATA[keyof typeof AGENT_METADATA]): string => {
+    if (isFlow) return meta.name
     if (!isEcommerce && (type === "CUSTOMER_SUPPORT" || type === "INFO_AGENT")) {
       return "Info Agent"
     }
@@ -630,6 +636,7 @@ export function AgentFlowDiagram({
     setEditedTemperature(agent.temperature || 0.7)
     setEditedMaxTokens(agent.maxTokens || 1000)
     setEditedModel(agent.model || "mistral/mistral-large")
+    setEditedFunctions(agent.availableFunctions || [])
   }
 
   // Handle save
@@ -643,6 +650,7 @@ export function AgentFlowDiagram({
         temperature: editedTemperature,
         maxTokens: editedMaxTokens,
         model: editedModel,
+        availableFunctions: editedFunctions,
       })
       setSelectedAgent(null)
     } catch (error) {
@@ -676,7 +684,7 @@ export function AgentFlowDiagram({
         workspaceType: isEcommerce ? "ecommerce" : "informational",
         agents: agents.map(agent => ({
           type: agent.type,
-          name: !isEcommerce && (agent.type.toUpperCase() === "CUSTOMER_SUPPORT" || agent.type.toUpperCase() === "INFO_AGENT")
+          name: !isEcommerce && !isFlow && (agent.type.toUpperCase() === "CUSTOMER_SUPPORT" || agent.type.toUpperCase() === "INFO_AGENT")
             ? "Info Agent"
             : agent.name,
           systemPrompt: agent.systemPrompt,
@@ -731,16 +739,6 @@ export function AgentFlowDiagram({
   const selectedMeta = selectedAgent ? getResolvedMeta(selectedAgent.type.toUpperCase()) : null
   const helpMeta = helpAgent ? getResolvedMeta(helpAgent) : null
   
-  // Filter available functions based on workspace type (ecommerce vs informational)
-  const ecommerceFunctions = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
-  const getFilteredFunctions = (meta: typeof selectedMeta) => {
-    if (!meta?.availableFunctions) return []
-    if (isEcommerce) return meta.availableFunctions
-    // Informational mode: filter out e-commerce specific functions
-    return meta.availableFunctions.filter(fn => !ecommerceFunctions.includes(fn))
-  }
-  const filteredFunctions = selectedMeta ? getFilteredFunctions(selectedMeta) : []
-
   return (
     <div className={cn("bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 rounded-2xl p-8 border border-slate-200 shadow-lg", className)}>
       {/* Header */}
@@ -808,9 +806,15 @@ export function AgentFlowDiagram({
         {/* Router — Editable Agent (INFO_AGENT for FLOW, ROUTER for ECOMMERCE) */}
         <AgentNode
           agent={getAgent(isEcommerce ? "ROUTER" : "INFO_AGENT") || getAgent("CUSTOMER_SUPPORT")}
-          metadata={getResolvedMeta(isEcommerce ? "ROUTER" : "INFO_AGENT")}
+          metadata={isFlow ? {
+            ...getResolvedMeta("INFO_AGENT"),
+            name: "Router Agent",
+            gradientFrom: "from-indigo-500",
+            gradientTo: "to-indigo-700",
+            borderColor: "border-indigo-400",
+          } : getResolvedMeta(isEcommerce ? "ROUTER" : "INFO_AGENT")}
           displayName={
-            isFlow 
+            isFlow
               ? "Router Agent"
               : isEcommerce
                 ? "Router Agent"
@@ -823,6 +827,9 @@ export function AgentFlowDiagram({
         />
         {!isEcommerce && !isFlow && (
           <span className="sr-only">Info Agent</span>
+        )}
+        {isFlow && (
+          <span className="sr-only">Router</span>
         )}
         
         <ConnectorArrow />
@@ -1260,44 +1267,61 @@ export function AgentFlowDiagram({
                   />
                 </div>
                 
-                {/* Available Functions (read-only) - filtered by workspace type */}
-                {filteredFunctions.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      Available Functions
-                      <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
-                        {filteredFunctions.length}
-                      </span>
-                      <Lock className="h-3 w-3 text-gray-400" />
-                    </Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {filteredFunctions.map((fn, idx) => (
-                        <span
-                          key={idx}
-                          className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 border border-gray-200 rounded-md text-xs font-mono text-gray-700"
-                        >
-                          ⚡ {fn}
-                        </span>
+                {/* Available Functions — editable checkboxes */}
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    Available Functions
+                    <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                      {editedFunctions.length}
+                    </span>
+                  </Label>
+                  {allCallingFunctions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">
+                      No calling functions found for this workspace.
+                    </p>
+                  ) : (
+                    <div className="space-y-2 rounded-md border p-3 max-h-[280px] overflow-y-auto">
+                      {allCallingFunctions.map((fn) => (
+                        <div key={fn.functionName} className="flex items-start gap-3">
+                          <Checkbox
+                            id={`agent-fn-${fn.functionName}`}
+                            checked={editedFunctions.includes(fn.functionName)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setEditedFunctions((prev) => [...prev, fn.functionName])
+                              } else {
+                                setEditedFunctions((prev) =>
+                                  prev.filter((f) => f !== fn.functionName)
+                                )
+                              }
+                            }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <label
+                              htmlFor={`agent-fn-${fn.functionName}`}
+                              className="text-sm font-medium cursor-pointer font-mono"
+                            >
+                              {fn.functionName}
+                              {fn.isSystemFunction && (
+                                <span className="ml-2 text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                                  system
+                                </span>
+                              )}
+                            </label>
+                            {fn.description && (
+                              <p className="text-xs text-muted-foreground truncate">
+                                {fn.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       ))}
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Functions this agent can call during conversations (read-only)
-                    </p>
-                  </div>
-                )}
-                {filteredFunctions.length === 0 && (
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      Available Functions
-                      <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
-                        0
-                      </span>
-                    </Label>
-                    <p className="text-xs text-gray-500">
-                      This agent doesn't call external functions - it processes context and generates responses directly.
-                    </p>
-                  </div>
-                )}
+                  )}
+                  <p className="text-xs text-gray-500">
+                    Functions this agent can call during conversations. Add or remove as needed.
+                  </p>
+                </div>
 
                 {/* Available Variables */}
                 <HelpPanel
