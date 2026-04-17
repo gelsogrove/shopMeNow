@@ -424,6 +424,10 @@ export function AgentSettingsPage() {
         <CardContent className="overflow-x-auto">
           {(() => {
             // Build the list of child nodes: standard sub-agents + FLOW sub-LLMs
+            // Separate the "router" flow config (shown as History layer) from machine sub-LLMs
+            const routerFlowConfig = isFlowWorkspace ? flowConfigs.find((fc) => fc.flowKey === 'router') : undefined
+            const machineFlowConfigs = isFlowWorkspace ? flowConfigs.filter((fc) => fc.flowKey !== 'router') : []
+
             const childNodes: {
               id: string; label: string; sublabel?: string; color: string
               icon: React.ElementType; isFlow?: boolean; agentId?: string
@@ -438,7 +442,7 @@ export function AgentSettingsPage() {
                 icon: getAgentIcon(a.agentType || ''),
                 isActive: a.isActive ?? true,
               })),
-              ...(isFlowWorkspace ? flowConfigs.map((fc) => ({
+              ...(isFlowWorkspace ? machineFlowConfigs.map((fc) => ({
                 id: fc.id,
                 label: fc.flowLabel,
                 sublabel: fc.model?.split('/')[1] || undefined,
@@ -606,15 +610,29 @@ export function AgentSettingsPage() {
 
                 {!hasChildren && <VerticalConnector />}
 
-                {/* 4. Conversation History */}
-                <PipelineNode
-                  icon={MessageCircle}
-                  label="Conversation History"
-                  sublabel="Context accumulated"
-                  color="#0ea5e9"
-                  bg="#f0f9ff"
-                  border="#bae6fd"
-                />
+                {/* 4. Conversation History / Router Flow Agent */}
+                {routerFlowConfig ? (
+                  <PipelineNode
+                    icon={MessageCircle}
+                    label="History"
+                    sublabel={routerFlowConfig.flowLabel}
+                    color="#0ea5e9"
+                    bg="#f0f9ff"
+                    border="#bae6fd"
+                    isActive={routerFlowConfig.isActive}
+                    bold
+                    onClick={() => handleFlowNodeClick(routerFlowConfig)}
+                  />
+                ) : (
+                  <PipelineNode
+                    icon={MessageCircle}
+                    label="Conversation History"
+                    sublabel="Context accumulated"
+                    color="#0ea5e9"
+                    bg="#f0f9ff"
+                    border="#bae6fd"
+                  />
+                )}
 
                 <VerticalConnector />
 
