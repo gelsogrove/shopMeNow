@@ -17,7 +17,6 @@ export interface AgentConfigData {
   temperature: number
   maxTokens: number
   order: number
-  isActive: boolean
   availableFunctions: string[] | null
 }
 

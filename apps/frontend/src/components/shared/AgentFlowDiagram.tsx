@@ -103,7 +103,6 @@ interface AgentConfig {
   temperature: number
   maxTokens: number
   model: string
-  isActive: boolean
   order: number
   availableFunctions?: string[]
 }
