@@ -98,15 +98,25 @@ export class CallingFunctionsController {
             // Hide system functions based on feature flags
             const workspace = await this.prisma.workspace.findUnique({
                 where: { id: workspaceId },
-                select: { enableCalendarBooking: true, hasHumanSupport: true, channelMode: true }
+                select: {
+                    enableCalendarBooking: true,
+                    hasHumanSupport: true,
+                    hasProductCatalog: true,
+                    hasCart: true,
+                    hasOrderTracking: true,
+                    needRegistration: true,
+                    channelMode: true,
+                }
             })
             const APPOINTMENT_FN_NAMES = ["bookAppointment", "cancelAppointment", "getCustomerAppointments", "listAvailableSlots", "rescheduleAppointment"]
-            const ECOMMERCE_FN_NAMES = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
             const filteredFunctions = functions.filter(f => {
                 if (!f.isSystemFunction) return true
                 if (APPOINTMENT_FN_NAMES.includes(f.functionName) && !workspace?.enableCalendarBooking) return false
+                if (f.functionName === "productSearchAgent" && !workspace?.hasProductCatalog) return false
+                if (f.functionName === "cartManagementAgent" && !workspace?.hasCart) return false
+                if (f.functionName === "orderTrackingAgent" && !workspace?.hasOrderTracking) return false
                 if (f.functionName === "customerSupportAgent" && !workspace?.hasHumanSupport) return false
-                if (ECOMMERCE_FN_NAMES.includes(f.functionName) && workspace?.channelMode !== "ECOMMERCE") return false
+                if (f.functionName === "profileManagementAgent" && !workspace?.needRegistration) return false
                 return true
             })
 
@@ -224,7 +234,15 @@ export class CallingFunctionsController {
 
             const workspace = await this.prisma.workspace.findUnique({
                 where: { id: workspaceId },
-                select: { enableCalendarBooking: true, hasHumanSupport: true, channelMode: true }
+                select: {
+                    enableCalendarBooking: true,
+                    hasHumanSupport: true,
+                    hasProductCatalog: true,
+                    hasCart: true,
+                    hasOrderTracking: true,
+                    needRegistration: true,
+                    channelMode: true,
+                }
             })
             if (!workspace) {
                 return res.status(404).json({ error: "Workspace not found" })
@@ -233,16 +251,17 @@ export class CallingFunctionsController {
             const installedFunctions = await this.repository.findAllByWorkspace(workspaceId)
             const installedNames = new Set(installedFunctions.map(f => f.functionName))
 
-            // Same filtering rules as getFunctions — only show functions valid for this workspace
             const APPOINTMENT_FN_NAMES = ["bookAppointment", "cancelAppointment", "getCustomerAppointments", "listAvailableSlots", "rescheduleAppointment"]
-            const ECOMMERCE_FN_NAMES = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
 
             const missing: SystemFunctionDef[] = []
             for (const [name, fnDef] of SYSTEM_FUNCTIONS_BY_NAME) {
                 if (installedNames.has(name)) continue
                 if (APPOINTMENT_FN_NAMES.includes(name) && !workspace.enableCalendarBooking) continue
+                if (name === "productSearchAgent" && !workspace.hasProductCatalog) continue
+                if (name === "cartManagementAgent" && !workspace.hasCart) continue
+                if (name === "orderTrackingAgent" && !workspace.hasOrderTracking) continue
                 if (name === "customerSupportAgent" && !workspace.hasHumanSupport) continue
-                if (ECOMMERCE_FN_NAMES.includes(name) && workspace.channelMode !== "ECOMMERCE") continue
+                if (name === "profileManagementAgent" && !workspace.needRegistration) continue
                 missing.push(fnDef)
             }
 

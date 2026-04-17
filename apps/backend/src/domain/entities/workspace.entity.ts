@@ -61,6 +61,10 @@ export interface WorkspaceProps {
   channelMode?: import("@echatbot/database").ChannelMode
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
+  hasProductCatalog?: boolean
+  hasCart?: boolean
+  hasOrderTracking?: boolean
+  needRegistration?: boolean
   humanSupportInstructions?: string | null
   operatorContactMethod?: string | null
   operatorEmail?: string | null

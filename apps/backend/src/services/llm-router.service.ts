@@ -1263,15 +1263,18 @@ export class LLMRouterService {
       const appointmentFunctions = ["listAvailableSlots", "bookAppointment", "cancelAppointment", "rescheduleAppointment", "getCustomerAppointments"]
       
       const filteredDbFunctions = dbFunctions.filter(fn => {
-        // Rule 1: Exclude e-commerce functions if workspace is informational
-        if (!isEcommerce(workspace) && ecommerceFunctions.includes(fn.functionName)) {
+        // Dynamic Pipeline: each agent controlled by its workspace flag
+        if (fn.functionName === "productSearchAgent" && !workspace?.hasProductCatalog) return false
+        if (fn.functionName === "cartManagementAgent" && !workspace?.hasCart) return false
+        if (fn.functionName === "orderTrackingAgent" && !workspace?.hasOrderTracking) return false
+        if (fn.functionName === "customerSupportAgent" && !workspace?.hasHumanSupport) return false
+        if (fn.functionName === "profileManagementAgent" && !workspace?.needRegistration) return false
+
+        // Exclude appointment functions if calendar not enabled
+        if (!workspace?.enableCalendarBooking && appointmentFunctions.includes(fn.functionName)) {
           return false
         }
-        // Rule 2: Exclude appointment functions if calendar not enabled
-        if (!workspace.enableCalendarBooking && appointmentFunctions.includes(fn.functionName)) {
-          return false
-        }
-        // Rule 3: Widget channel must not expose profile/personal-data tools
+        // Widget channel must not expose profile/personal-data tools
         const widgetBlockedFunctions = [
           "profileManagementAgent",
           "getProfileLink",
@@ -1280,7 +1283,6 @@ export class LLMRouterService {
         if (params.channel === "widget" && widgetBlockedFunctions.includes(fn.functionName)) {
           return false
         }
-        // 🔮 Future: Add filters for hasSalesAgents, hasHumanSupport, etc.
         return true
       })
 

@@ -50,6 +50,10 @@ export interface Workspace {
   channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
+  hasProductCatalog?: boolean
+  hasCart?: boolean
+  hasOrderTracking?: boolean
+  needRegistration?: boolean
   humanSupportInstructions?: string
   operatorContactMethod?: string
   operatorWhatsappNumber?: string
@@ -183,6 +187,10 @@ export interface UpdateWorkspaceData {
   channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   hasSalesAgents?: boolean
   hasHumanSupport?: boolean
+  hasProductCatalog?: boolean
+  hasCart?: boolean
+  hasOrderTracking?: boolean
+  needRegistration?: boolean
   humanSupportInstructions?: string
   operatorContactMethod?: string
   operatorWhatsappNumber?: string

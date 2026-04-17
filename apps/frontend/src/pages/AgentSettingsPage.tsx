@@ -448,9 +448,19 @@ export function AgentSettingsPage() {
   }
 
   // Derive sub-agents for pipeline display (exclude ROUTER, SECURITY, TRANSLATION)
-  const pipelineSubAgents = agents.filter(
-    (a) => a.agentType !== 'ROUTER' && a.agentType !== 'SECURITY' && a.agentType !== 'TRANSLATION'
-  )
+  const pipelineSubAgents = agents.filter((a) => {
+    // Always exclude infrastructure agents
+    if (['ROUTER', 'SECURITY', 'TRANSLATION', 'SUMMARY_AGENT', 'CONVERSATION_HISTORY'].includes(a.agentType || '')) {
+      return false
+    }
+    // Filter by workspace feature flags (dynamic pipeline)
+    if (a.agentType === 'PRODUCT_SEARCH' && !workspace?.hasProductCatalog) return false
+    if (a.agentType === 'CART_MANAGEMENT' && !workspace?.hasCart) return false
+    if (a.agentType === 'ORDER_TRACKING' && !workspace?.hasOrderTracking) return false
+    if (a.agentType === 'CUSTOMER_SUPPORT' && !workspace?.hasHumanSupport) return false
+    if (a.agentType === 'PROFILE_MANAGEMENT' && !workspace?.needRegistration) return false
+    return true
+  })
   const routerAgent = agents.find((a) => a.agentType === 'ROUTER')
   const translationAgent = agents.find((a) => a.agentType === 'TRANSLATION')
   const securityAgent = agents.find((a) => a.agentType === 'SECURITY')

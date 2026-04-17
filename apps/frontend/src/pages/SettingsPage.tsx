@@ -134,6 +134,11 @@ interface FormData {
   address: string
   registrationPage: string
   requireManualApproval: boolean
+  hasHumanSupport: boolean
+  hasProductCatalog: boolean
+  hasCart: boolean
+  hasOrderTracking: boolean
+  needRegistration: boolean
   // Webhooks
   webhookUrl: string
   webhookTimeout: number
@@ -245,6 +250,10 @@ export function SettingsPage() {
     address: "",
     registrationPage: "",
     requireManualApproval: false,
+    hasProductCatalog: true,
+    hasCart: true,
+    hasOrderTracking: true,
+    needRegistration: true,
     webhookUrl: "",
     webhookTimeout: 10000,
     // Calendar & Appointments
@@ -332,6 +341,10 @@ export function SettingsPage() {
         address: currentWorkspace.address || "",
         registrationPage: currentWorkspace.registrationPage || "",
         requireManualApproval: currentWorkspace.requireManualApproval || false,
+        hasProductCatalog: currentWorkspace.hasProductCatalog ?? true,
+        hasCart: currentWorkspace.hasCart ?? true,
+        hasOrderTracking: currentWorkspace.hasOrderTracking ?? true,
+        needRegistration: currentWorkspace.needRegistration ?? true,
         webhookUrl: currentWorkspace.webhookUrl || "",
         webhookTimeout: currentWorkspace.webhookTimeout || 10000,
         // Calendar & Appointments
@@ -747,6 +760,11 @@ export function SettingsPage() {
               address: formData.address,
               registrationPage: formData.registrationPage,
               requireManualApproval: formData.requireManualApproval,
+              hasHumanSupport: formData.hasHumanSupport,
+              hasProductCatalog: formData.hasProductCatalog,
+              hasCart: formData.hasCart,
+              hasOrderTracking: formData.hasOrderTracking,
+              needRegistration: formData.needRegistration,
             }}
             errors={errors}
             canEdit={canEdit}

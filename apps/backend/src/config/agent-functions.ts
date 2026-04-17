@@ -557,24 +557,31 @@ export function getFunctionsForAPI() {
  * @param options.channelMode - If not ECOMMERCE, exclude e-commerce agents (product, cart, order)
  * @param options.channel - Optional channel ("widget" | "whatsapp")
  */
-export function getFunctionsForRouter(options?: { channelMode?: import("@echatbot/database").ChannelMode; channel?: string }) {
-  const isEcommerceMode = options?.channelMode === "ECOMMERCE"
+export function getFunctionsForRouter(options?: {
+  channelMode?: import("@echatbot/database").ChannelMode
+  channel?: string
+  workspace?: {
+    hasHumanSupport?: boolean
+    hasProductCatalog?: boolean
+    hasCart?: boolean
+    hasOrderTracking?: boolean
+    needRegistration?: boolean
+  }
+}) {
   const channel = (options?.channel || "whatsapp").toLowerCase()
+  const ws = options?.workspace
 
   // Router Agent can call:
   // 1. Delegation functions (productSearchAgent, cartManagementAgent, orderTrackingAgent, customerSupportAgent)
   // 2. Direct functions (manageNotifications, RESET_ACTIVE_AGENT)
   const routerFunctions = AGENT_FUNCTIONS.filter((fn) => {
-    // E-commerce agents - only include if channelMode is ECOMMERCE
-    const ecommerceAgents = [
-      "productSearchAgent",
-      "cartManagementAgent",
-      "orderTrackingAgent",
-    ]
+    // Dynamic pipeline: each agent controlled by its workspace flag
+    if (fn.name === "productSearchAgent" && ws?.hasProductCatalog === false) return false
+    if (fn.name === "cartManagementAgent" && ws?.hasCart === false) return false
+    if (fn.name === "orderTrackingAgent" && ws?.hasOrderTracking === false) return false
+    if (fn.name === "customerSupportAgent" && ws?.hasHumanSupport === false) return false
+    if (fn.name === "profileManagementAgent" && ws?.needRegistration === false) return false
 
-    if (!isEcommerceMode && ecommerceAgents.includes(fn.name)) {
-      return false // Exclude e-commerce agents for informational/flow mode
-    }
     // Widget channel does not support profile management flows
     if (channel === "widget" && fn.name === "profileManagementAgent") {
       return false
