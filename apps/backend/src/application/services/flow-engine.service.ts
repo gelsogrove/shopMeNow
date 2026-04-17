@@ -137,7 +137,7 @@ export class FlowEngineService {
     state.lastInterruptType = null;
 
     // Check if this node triggers operator escalation
-    const shouldCallOperator = nextNodeId.endsWith("handle_escalate");
+    const shouldCallOperator = nextNode.action === "escalate";
 
     if (nextNode.isTerminal) {
       state.flowStatus = shouldCallOperator ? "ESCALATED" : "COMPLETED";

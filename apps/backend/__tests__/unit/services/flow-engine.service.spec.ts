@@ -51,12 +51,14 @@ const TEST_FLOW_MAP: FlowMap = {
       prompt: "Great! The issue is resolved 🎉",
       transitions: {},
       isTerminal: true,
+      action: "resolve",
     },
     handle_escalate: {
       type: "ACTION",
       prompt: "Connecting you with a technician 🔧",
       transitions: {},
       isTerminal: true,
+      action: "escalate",
     },
   },
 }
@@ -171,7 +173,7 @@ describe("FlowEngineService › terminal nodes", () => {
 
   it("should set flowStatus=ESCALATED when reaching handle_escalate", () => {
     // SCENARIO: User needs technician — caso_rumore path leads to handle_escalate
-    // RULE: nodeId ending in "handle_escalate" → shouldCallOperator=true + ESCALATED
+    // RULE: action:"escalate" on terminal node → shouldCallOperator=true + ESCALATED
     const svc = makeService()
     const ctx = activeContext({ currentNodeId: "non_parte.caso_rumore" })
 

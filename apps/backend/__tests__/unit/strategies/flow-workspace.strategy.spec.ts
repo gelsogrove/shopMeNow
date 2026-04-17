@@ -585,11 +585,41 @@ describe("FlowWorkspaceStrategy", () => {
     })
 
     // ───────────────────────────────────────────────────────────────────────
-    // T11: No flowKey in context + no QR → returns "scan QR first" hint
+    // T11: No flowKey + no QR → calls Router FlowAgentLLM (PATH D)
     // ───────────────────────────────────────────────────────────────────────
-    // SCENARIO: Customer writes to FLOW workspace without scanning QR first
-    // RULE: Strategy returns a helpful message asking them to scan the QR code
-    it("No flowKey in context + no QR → returns 'scan QR' hint", async () => {
+    // SCENARIO: Customer writes to FLOW workspace without any assigned machine
+    // RULE: Strategy calls Router FlowAgentLLM (flowKey="router") to gather
+    //       locale → machine type → machine number → assignMachine()
+    //       (changed from static QR hint — Andrea's requirement Apr 2026)
+    it("No flowKey in context + no QR → calls Router FlowAgentLLM (PATH D)", async () => {
+      const MOCK_ROUTER_CONFIG = {
+        id: "fnc-router",
+        workspaceId: "ws-flow-1",
+        flowKey: "router",
+        flowLabel: "Router",
+        systemPrompt: "You are the Ecolaundry router assistant...",
+        model: "openai/gpt-4o-mini",
+        temperature: 0.3,
+        maxTokens: 1024,
+        availableFunctions: ["assignMachine"],
+        flows: { "lavatrice_hs60xx": {}, "asciugatrice_ed340": {} },
+        isActive: true,
+      }
+
+      // Router config exists in this workspace
+      mockFindByFlowKey.mockResolvedValue(MOCK_ROUTER_CONFIG)
+
+      // Router LLM responds with a welcome + first question
+      mockHandleQuery.mockResolvedValue({
+        success: true,
+        output: "¡Hola! Soy el asistente de Ecolaundry, ¿cómo puedo ayudarte hoy?",
+        chatContext: {}, // no flowKey yet (user just greeted)
+        tokensUsed: 30,
+        executionTimeMs: 200,
+        functionCalls: [],
+        shouldCallOperator: false,
+      })
+
       const prisma = createPrismaMock({
         chatSession: {
           findFirst: jest.fn().mockResolvedValue({
@@ -602,15 +632,18 @@ describe("FlowWorkspaceStrategy", () => {
       })
       const strategy = new FlowWorkspaceStrategy(prisma)
       const workspace = createFlowWorkspace()
-      const context = createContext({ message: "help me" })
+      const context = createContext({ message: "ciao" })
 
       const result = await strategy.route(context, workspace)
 
-      // ASSERT: Hint to scan QR
+      // ASSERT: Response is defined (from Router LLM)
       expect(result.response).toBeDefined()
-      // ASSERT: No FlowEngine or FlowAgentLLM called
+      // ASSERT: Router LLM was called with flowKey="router" (PATH D behaviour)
+      expect(mockHandleQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ flowKey: "router", message: "ciao" })
+      )
+      // ASSERT: FlowEngineService NOT called (no active flow to process)
       expect(mockHandleMessage).not.toHaveBeenCalled()
-      expect(mockHandleQuery).not.toHaveBeenCalled()
     })
   })
 })

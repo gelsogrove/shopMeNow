@@ -16,9 +16,26 @@
 
 import { FlowAgentLLM, FlowAgentContext } from "../../../src/application/agents/FlowAgentLLM"
 
+// ─── Mock PromptProcessorService — passthrough ──────────────────────────────
+jest.mock("../../../src/services/prompt-processor.service", () => ({
+  PromptProcessorService: jest.fn().mockImplementation(() => ({
+    processWithVariables: jest.fn((template: string) => template),
+  })),
+}))
+
+// ─── Mock PromptVariableBuilder — returns empty vars ─────────────────────────
+jest.mock("../../../src/application/services/prompt-variable-builder.service", () => ({
+  PromptVariableBuilder: { build: jest.fn().mockReturnValue({}) },
+}))
+
 // ─── Mock prisma ──────────────────────────────────────────────────────────────
+const mockPrisma = {
+  workspace: { findUnique: jest.fn().mockResolvedValue({ id: "ws-test-1", name: "Test" }) },
+  customers: { findFirst: jest.fn().mockResolvedValue({ id: "cust-1", name: "Test Customer" }) },
+  fAQ: { findMany: jest.fn().mockResolvedValue([]) },
+}
 jest.mock("@echatbot/database", () => ({
-  prisma: {},
+  prisma: mockPrisma,
 }))
 
 // ─── Mock axios ───────────────────────────────────────────────────────────────
@@ -121,7 +138,7 @@ describe("E3 - FlowAgentLLM.handleQuery", () => {
     mockFindByFlowKey.mockResolvedValue(makeFlowConfig())
     mockedAxios.post.mockResolvedValue(makeLLMResponse())
 
-    const agent = new FlowAgentLLM({} as any)
+    const agent = new FlowAgentLLM(mockPrisma as any)
     await agent.handleQuery(makeContext())
 
     const callBody = mockedAxios.post.mock.calls[0][1] as any
@@ -142,7 +159,7 @@ describe("E3 - FlowAgentLLM.handleQuery", () => {
     )
     mockedAxios.post.mockResolvedValue(makeLLMResponse())
 
-    const agent = new FlowAgentLLM({} as any)
+    const agent = new FlowAgentLLM(mockPrisma as any)
     await agent.handleQuery(makeContext())
 
     const callBody = mockedAxios.post.mock.calls[0][1] as any
@@ -157,7 +174,7 @@ describe("E3 - FlowAgentLLM.handleQuery", () => {
     mockFindByFlowKey.mockResolvedValue(makeFlowConfig({ systemPrompt: customPrompt }))
     mockedAxios.post.mockResolvedValue(makeLLMResponse())
 
-    const agent = new FlowAgentLLM({} as any)
+    const agent = new FlowAgentLLM(mockPrisma as any)
     await agent.handleQuery(makeContext())
 
     const callBody = mockedAxios.post.mock.calls[0][1] as any
@@ -173,7 +190,7 @@ describe("E3 - FlowAgentLLM.handleQuery", () => {
     )
     mockedAxios.post.mockResolvedValue(makeLLMResponse())
 
-    const agent = new FlowAgentLLM({} as any)
+    const agent = new FlowAgentLLM(mockPrisma as any)
     await agent.handleQuery(makeContext())
 
     const callBody = mockedAxios.post.mock.calls[0][1] as any
@@ -186,7 +203,7 @@ describe("E3 - FlowAgentLLM.handleQuery", () => {
     // The error message must include workspaceId and flowKey to aid debugging.
     mockFindByFlowKey.mockResolvedValue(null)
 
-    const agent = new FlowAgentLLM({} as any)
+    const agent = new FlowAgentLLM(mockPrisma as any)
     await expect(agent.handleQuery(makeContext())).rejects.toThrow(
       /FlowNodeConfig not found.*hs60xx.*ws-test-1/
     )
@@ -198,7 +215,7 @@ describe("E3 - FlowAgentLLM.handleQuery", () => {
     mockFindByFlowKey.mockResolvedValue(makeFlowConfig())
     mockedAxios.post.mockResolvedValue(makeLLMResponse())
 
-    const agent = new FlowAgentLLM({} as any)
+    const agent = new FlowAgentLLM(mockPrisma as any)
     await agent.handleQuery(makeContext())
 
     expect(mockLoadHistory).toHaveBeenCalledWith(WORKSPACE_ID, CONV_ID)
@@ -223,7 +240,7 @@ describe("E3 - FlowAgentLLM.handleQuery", () => {
       ])
     )
 
-    const agent = new FlowAgentLLM({} as any)
+    const agent = new FlowAgentLLM(mockPrisma as any)
     const result = await agent.handleQuery(makeContext())
 
     // Output must be the step_0 prompt from the flow definition
@@ -243,7 +260,7 @@ describe("E3 - FlowAgentLLM.handleQuery", () => {
     mockFindByFlowKey.mockResolvedValue(makeFlowConfig())
     mockedAxios.post.mockResolvedValue(makeLLMResponse())
 
-    const agent = new FlowAgentLLM({} as any)
+    const agent = new FlowAgentLLM(mockPrisma as any)
     await agent.handleQuery(makeContext({ workspaceId: "ws-specific-99" }))
 
     expect(mockFindByFlowKey).toHaveBeenCalledWith("ws-specific-99", FLOW_KEY)

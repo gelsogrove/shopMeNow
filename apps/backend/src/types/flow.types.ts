@@ -8,6 +8,7 @@ export interface FlowNode {
   prompt: string;
   transitions?: Record<string, string>;
   isTerminal?: boolean;
+  action?: "escalate" | "resolve";
   onInterruptFallback?: string;
 }
 

@@ -48,6 +48,8 @@ import { ConversationManager, Message } from "../../services/conversation-manage
 import { FlowEngineService } from "../services/flow-engine.service"
 import { contactOperator } from "../../domain/calling-functions/contactOperator"
 import { ChatContext, FlowMap } from "../../types/flow.types"
+import { PromptVariableBuilder } from "../services/prompt-variable-builder.service"
+import { PromptProcessorService } from "../../services/prompt-processor.service"
 import logger from "../../utils/logger"
 
 export interface FlowAgentContext {
@@ -85,10 +87,12 @@ export class FlowAgentLLM {
   private conversationManager: ConversationManager
   private openRouterApiKey: string
   private openRouterBaseUrl: string
+  private promptProcessor: PromptProcessorService
 
   constructor(private prisma: PrismaClient) {
     this.flowNodeConfigRepo = new FlowNodeConfigRepository(prisma)
     this.conversationManager = new ConversationManager(prisma)
+    this.promptProcessor = new PromptProcessorService()
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
     this.openRouterBaseUrl = "https://openrouter.ai/api/v1"
 
@@ -120,7 +124,34 @@ export class FlowAgentLLM {
     const model = flowConfig.model ?? "openai/gpt-4o-mini"
     const temperature = flowConfig.temperature ?? 0.3
     const maxTokens = flowConfig.maxTokens ?? 2048
-    const systemPrompt = flowConfig.systemPrompt ?? ""
+    const rawSystemPrompt = flowConfig.systemPrompt ?? ""
+
+    // ── STEP 1b: Inject workspace variables ({{faqs}}, {{chatbotName}}, etc.) ──
+    const [workspace, customer, faqs] = await Promise.all([
+      this.prisma.workspace.findUnique({ where: { id: ctx.workspaceId } }),
+      this.prisma.customers.findFirst({
+        where: { id: ctx.customerId, workspaceId: ctx.workspaceId },
+        include: { sales: true },
+      }),
+      this.prisma.fAQ.findMany({
+        where: { workspaceId: ctx.workspaceId, isActive: true },
+        select: { question: true, answer: true },
+      }),
+    ])
+
+    const faqsFormatted = faqs.length > 0
+      ? faqs.map((f) => `Q: ${f.question}\nA: ${f.answer}`).join("\n\n")
+      : ""
+
+    const promptVariables = PromptVariableBuilder.build(
+      customer,
+      workspace,
+      { faqs: faqsFormatted },
+      { channel: "whatsapp" },
+      { includeDynamicContent: true, skipValidation: true }
+    )
+
+    const systemPrompt = this.promptProcessor.processWithVariables(rawSystemPrompt, promptVariables)
 
     // ── STEP 2: Load conversation history ────────────────────────────────────
     const history: Message[] = await this.conversationManager.loadHistory(
@@ -196,8 +227,22 @@ export class FlowAgentLLM {
         output = result.responseText
 
         functionCalls.push({ name: "startFlow", arguments: fnArgs, result: { flowId } })
+      } else if (fnName === "assignMachine") {
+        // ── 5b. assignMachine (Router mode) ──────────────────────────────────
+        // Called by the Router LLM when it has collected: machine type + machine number
+        // Saves flowKey+flowNumber to context → next message routes to PATH C (Sub-LLM)
+        const selectedFlowKey = String(fnArgs.flowKey ?? "")
+        const machineNumber = String(fnArgs.machineNumber ?? "")
+
+        logger.info("🔑 FlowAgentLLM: tool_call assignMachine", { selectedFlowKey, machineNumber })
+
+        chatContext.flowKey = selectedFlowKey
+        chatContext.flowNumber = machineNumber
+
+        // output remains as LLM's text response (e.g. "Perfecto, te asigno la lavadora #42")
+        functionCalls.push({ name: "assignMachine", arguments: fnArgs, result: { flowKey: selectedFlowKey, machineNumber } })
       } else if (fnName === "contactOperator") {
-        // ── 5b. contactOperator ───────────────────────────────────────────────
+        // ── 5c. contactOperator ───────────────────────────────────────────────
         logger.info("📞 FlowAgentLLM: tool_call contactOperator")
         shouldCallOperator = true
         // Actual contactOperator() call is deferred to strategy (needs full workspace object)
@@ -248,7 +293,36 @@ export class FlowAgentLLM {
   ): Array<Record<string, unknown>> {
     const tools: Array<Record<string, unknown>> = []
 
-    if (flowIds.length > 0) {
+    // Router mode: assignMachine replaces startFlow
+    // Triggered when config explicitly declares "assignMachine" in availableFunctions
+    if (availableFunctions.includes("assignMachine") && flowIds.length > 0) {
+      tools.push({
+        type: "function",
+        function: {
+          name: "assignMachine",
+          description:
+            "Assign the customer to a specific machine type and number. " +
+            "Call this ONLY when you have collected BOTH: machine type AND machine number from the customer. " +
+            "Do NOT call this if you are still missing either piece of information.",
+          parameters: {
+            type: "object",
+            properties: {
+              flowKey: {
+                type: "string",
+                enum: flowIds,
+                description: "The machine type identifier (from the configured list).",
+              },
+              machineNumber: {
+                type: "string",
+                description: "The machine number found on the label. E.g. '42'.",
+              },
+            },
+            required: ["flowKey", "machineNumber"],
+          },
+        },
+      })
+    } else if (flowIds.length > 0) {
+      // Normal Sub-LLM mode: startFlow
       tools.push({
         type: "function",
         function: {

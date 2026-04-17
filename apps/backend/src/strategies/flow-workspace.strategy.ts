@@ -3,10 +3,11 @@
  *
  * Routing strategy for FLOW workspaces (channelMode=FLOW).
  *
- * 3-path routing:
+ * 4-path routing:
  *   1. QR code message (START_FLOW_{N}_{flowKey}) → load FlowNodeConfig, save context, welcome
  *   2. Active flowState → FlowEngineService.handleMessage() (0 LLM tokens, deterministic)
- *   3. Else → FlowAgentLLM.handleQuery() (LLM decides: startFlow, contactOperator, or plain text)
+ *   3. flowKey set but no active flow → FlowAgentLLM.handleQuery() (Sub-LLM for machine)
+ *   4. No flowKey → Router FlowAgentLLM (flowKey="router") gathers machine info, calls assignMachine()
  *
  * Post-processing on ALL paths:
  *   - TranslationAgent (translate response to customer language)
@@ -140,10 +141,11 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
   }
 
   /**
-   * Route message through the 3-path flow pipeline:
+   * Route message through the 4-path flow pipeline:
    *   Path A: QR code → load config, save context, return welcome
    *   Path B: Active flow → FlowEngineService (deterministic, 0 LLM tokens)
-   *   Path C: No active flow → FlowAgentLLM (LLM decides startFlow / contactOperator / text)
+   *   Path C: flowKey set, no active flow → FlowAgentLLM Sub-LLM (startFlow / contactOp / text)
+   *   Path D: No flowKey → Router FlowAgentLLM gathers locale/machine-type/number → assignMachine()
    */
   async route(context: RoutingContext, workspace: Workspace): Promise<RoutingResult> {
     const startTime = Date.now()
@@ -308,17 +310,56 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
           executionTimeMs: agentResult.executionTimeMs,
         })
       }
-      // ─── No flowKey at all → hint customer to scan QR ──────────────────
+      // ─── PATH D: No flowKey → Router FlowAgentLLM ──────────────────────
+      // The Router LLM gathers: locale → machine type → machine number,
+      // then calls assignMachine() to set chatContext.flowKey.
+      // Next message will route to PATH C (Sub-LLM for the assigned machine).
       else {
-        responseText = "Please scan the QR code on your machine to start. I'll guide you step by step!"
+        logger.info("🎯 FlowWorkspaceStrategy - PATH D: No flowKey → Router LLM", {
+          customerId: context.customerId,
+        })
+
+        const routerConfig = await this.flowNodeConfigRepo.findByFlowKey(
+          context.workspaceId,
+          "router"
+        )
+
+        if (!routerConfig) {
+          // Fallback: workspace has no 'router' FlowNodeConfig configured
+          logger.warn("FlowWorkspaceStrategy PATH D: no 'router' FlowNodeConfig found, using fallback", {
+            workspaceId: context.workspaceId,
+          })
+          responseText = "Hello! I'm here to help. How can I assist you today?"
+        } else {
+          const flowAgent = new FlowAgentLLM(this.prisma)
+          const agentResult = await flowAgent.handleQuery({
+            workspaceId: context.workspaceId,
+            customerId: context.customerId,
+            conversationId: context.conversationId || "",
+            flowKey: "router",
+            message: context.message,
+            chatContext,
+            customerName: context.customerName || customerData.name,
+            customerLanguage: context.customerLanguage || customerData.language || "en",
+            customerPhone: customerData.phone || undefined,
+          })
+
+          responseText = agentResult.output
+          chatContext = agentResult.chatContext // may now have flowKey if assignMachine was called
+          tokensUsed = agentResult.tokensUsed
+          executionTimeMs = agentResult.executionTimeMs
+          shouldCallOperator = agentResult.shouldCallOperator
+          functionCalls.push(...agentResult.functionCalls)
+        }
+
         debugSteps.push({
-          type: "flow-engine",
-          agent: "No-FlowKey Handler",
+          type: "flow-agent",
+          agent: "RouterFlowAgentLLM",
           timestamp: new Date().toISOString(),
           input: { message: context.message },
           output: { responseText },
-          tokensUsed: 0,
-          executionTimeMs: 0,
+          tokensUsed,
+          executionTimeMs,
         })
       }
 
