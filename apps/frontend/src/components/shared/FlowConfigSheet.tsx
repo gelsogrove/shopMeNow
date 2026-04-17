@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Slider } from "@/components/ui/slider"
 import {
   Select,
   SelectContent,
@@ -327,22 +328,25 @@ export function FlowConfigSheet({
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="temperature">Temperature</Label>
-                  <Input
-                    id="temperature"
-                    type="number"
+                <div className="space-y-2">
+                  <Label className="flex items-center justify-between">
+                    <span>Temperature</span>
+                    <span className="text-sm font-mono bg-gray-100 px-2 py-0.5 rounded">
+                      {temperature.toFixed(1)}
+                    </span>
+                  </Label>
+                  <Slider
+                    value={[temperature]}
+                    onValueChange={(v) => setTemperature(v[0])}
                     min={0}
                     max={1}
                     step={0.1}
-                    value={temperature}
-                    onChange={(e) =>
-                      setTemperature(parseFloat(e.target.value))
-                    }
+                    className="w-full"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    0 = deterministic, 1 = creative. 0.3 recommended.
-                  </p>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Precise (0.0)</span>
+                    <span>Creative (1.0)</span>
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="maxTokens">Max Tokens</Label>

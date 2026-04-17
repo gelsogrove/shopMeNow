@@ -9,6 +9,7 @@
  *   3. No flowKey → Router FlowAgentLLM (flowKey="router") gathers machine info, calls assignMachine()
  *
  * Post-processing on ALL paths:
+ *   - ConversationHistoryLayer (humanize response)
  *   - TranslationAgent (translate response to customer language)
  *   - SecurityAgent (widget only)
  *   - contactOperator() if shouldCallOperator
@@ -28,18 +29,21 @@ import { FlowNodeConfigRepository } from "../repositories/flow-node-config.repos
 import { LinkReplacementService } from "../application/services/link-replacement.service"
 import { TranslationAgent } from "../application/agents/TranslationAgent"
 import { SecurityAgent, type SecurityResult } from "../application/agents/SecurityAgent"
+import { ConversationHistoryLayer } from "../application/layers/ConversationHistoryLayer"
 import { contactOperator } from "../domain/calling-functions/contactOperator"
 import { ChatContext, FlowMap } from "../types/flow.types"
 import type { RoutingContext, RoutingResult, RoutingStrategy } from "./routing-strategy.interface"
 
 export class FlowWorkspaceStrategy implements RoutingStrategy {
   private linkReplacementService: LinkReplacementService
+  private conversationHistoryLayer: ConversationHistoryLayer
   private translationAgent: TranslationAgent
   private securityAgent: SecurityAgent
   private flowNodeConfigRepo: FlowNodeConfigRepository
 
   constructor(private prisma: PrismaClient) {
     this.linkReplacementService = new LinkReplacementService()
+    this.conversationHistoryLayer = new ConversationHistoryLayer(prisma)
     this.translationAgent = new TranslationAgent(prisma)
     this.securityAgent = new SecurityAgent(prisma)
     this.flowNodeConfigRepo = new FlowNodeConfigRepository(prisma)
@@ -356,6 +360,36 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         context.workspaceId
       )
       responseText = linkResult.response || responseText
+
+      // ─── STEP: Conversation History (humanize response) ─────────────────
+      try {
+        const historyResult = await this.conversationHistoryLayer.process({
+          workspaceId: context.workspaceId,
+          customerId: context.customerId,
+          customerName: context.customerName || "",
+          technicalResponse: {
+            type: "GENERIC",
+            message: responseText,
+          },
+          conversationHistory: [],
+          activeOffers: [],
+          isFirstMessage: false,
+        })
+        responseText = historyResult.message || responseText
+        tokensUsed += historyResult.metadata?.tokensUsed || 0
+
+        debugSteps.push({
+          type: "humanization",
+          agent: "ConversationHistoryLayer",
+          timestamp: new Date().toISOString(),
+          input: { rawResponse: responseText.substring(0, 100) },
+          output: { humanizedResponse: historyResult.message?.substring(0, 100) },
+          tokensUsed: historyResult.metadata?.tokensUsed || 0,
+          executionTimeMs: historyResult.metadata?.executionTimeMs || 0,
+        })
+      } catch (historyError: any) {
+        logger.warn("⚠️ ConversationHistoryLayer failed, using raw response:", historyError.message)
+      }
 
       // ─── STEP: Translation ──────────────────────────────────────────────
       const targetLang = context.customerLanguage || customerData.language || "en"

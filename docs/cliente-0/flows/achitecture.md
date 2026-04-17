@@ -6,7 +6,8 @@
 > ⚠️ **NOTA IMPLEMENTAZIONE** (codice reale vs documento):
 > - `FlowAgentLLM` è **una singola chiamata LLM** che fa sia routing che risposta — NON esistono 2 LLM separati
 > - Durante il **flow attivo (PATH A)**, il Router **non viene mai chiamato** — `FlowClassifierService` classifica l'input strutturalmente (0 token)
-> - Il concetto "History Agent" in questo documento = `FlowAgentLLM` nel codice (non esiste `AgentConfig` di tipo `HISTORY`)
+> - I subLLM (per macchina) hanno prompt dinamici configurati nel CRUD FlowNodeConfig — NON hanno template markdown
+> - **Pipeline completa**: Router → subLLM → Conversation History → Translation → Security → WhatsApp Queue
 
 ---
 
@@ -212,9 +213,16 @@ Cliente scrive messaggio
 **POST-PROCESSING (tutti i path):**
 ```
 1. Salva messaggio utente + risposta bot in DB
-2. Translation Agent (se lingua ≠ base)
-3. Security Agent (solo widget)
-4. Link replacement
+2. Conversation History Agent (umanizza la risposta, aggiunge contesto)
+3. Translation Agent (se lingua ≠ base)
+4. Security Agent (solo widget)
+5. Link replacement
+6. WhatsApp Queue (scheduler, 6s cooldown)
+```
+
+**Pipeline UI (grafico AgentFlowDiagram):**
+```
+Customer Message → Router → subLLM (dinamico) → Historial → Translation → Security → WhatsApp Queue → Response
 ```
 
 ---

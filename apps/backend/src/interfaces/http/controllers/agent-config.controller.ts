@@ -134,8 +134,7 @@ export class AgentConfigController {
           temperature: true,
           maxTokens: true,
           order: true,
-          isActive: true,
-          availableFunctions: true, // ✅ Now populated from agent-functions.config.ts
+          availableFunctions: true,
         },
       })
 
@@ -374,7 +373,6 @@ export class AgentConfigController {
               temperature: expected.temperature,
               maxTokens: expected.maxTokens,
               order: expected.order,
-              isActive: expected.isActive,
               availableFunctions: expected.availableFunctions,
             },
           })

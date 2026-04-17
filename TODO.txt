@@ -1,11 +1,12 @@
 
 FATTO
-- Archettura - OK
-- FAQ sono - OK
-- SCHEMA DB - OK
-- DB - OK
-- FLOW WASDHER - OK
-- FLOW DRIVER - OK
+- Archettura -
+- FAQ sono -
+- SCHEMA DB K
+- DB e schema
+- FLOW WASDHER 
+- FLOW DRIVER 
+- PROMPTS fatti??
 
 
 TODO
@@ -21,11 +22,14 @@ TODO
 - cambio user?
 - acative disactive non serve
 
+
+
 - il mio chatbot da info sbaglatiate
-
 You can start your free trial here: 
-
 https://app.echatbot.io
-
 Do you have any other questions about the trial? 💬
+li link e' sbagliato non e' un link valido l apagina di registrazione e0:
+https://www.echatbot.ai/registration/echatbot-hq-support
+
+guarda se questo errore e' presente su tutti i chatbot 
 

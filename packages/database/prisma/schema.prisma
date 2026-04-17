@@ -1085,14 +1085,13 @@ model AgentConfig {
   temperature        Float     @default(0.7)
   maxTokens          Int       @default(4096) // Increased from 1000
   order              Int       @default(0) // Execution order (0=Router, 99=Safety)
-  isActive           Boolean   @default(true)
   availableFunctions Json? // Array of Calling Function names
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, type]) // One agent per type per workspace
-  @@index([workspaceId, isActive])
+  @@index([workspaceId])
   @@index([order])
   @@map("agent_configs")
 }

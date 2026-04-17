@@ -684,7 +684,9 @@ export function AgentFlowDiagram({
         workspaceType: isEcommerce ? "ecommerce" : "informational",
         agents: agents.map(agent => ({
           type: agent.type,
-          name: !isEcommerce && !isFlow && (agent.type.toUpperCase() === "CUSTOMER_SUPPORT" || agent.type.toUpperCase() === "INFO_AGENT")
+          name: isFlow
+            ? agent.name
+            : !isEcommerce && (agent.type.toUpperCase() === "CUSTOMER_SUPPORT" || agent.type.toUpperCase() === "INFO_AGENT")
             ? "Info Agent"
             : agent.name,
           systemPrompt: agent.systemPrompt,
@@ -774,17 +776,6 @@ export function AgentFlowDiagram({
           )}>
             {isFlow ? "⚙️ Flow Mode" : isEcommerce ? "🛒 E-commerce Mode" : "ℹ️ Info-only mode"}
           </span>
-          {isFlow && routerFlowConfig && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleFlowNodeClick(routerFlowConfig)}
-              className="gap-2 border-orange-300 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
-            >
-              <MessageSquare className="h-4 w-4" />
-              Router Logic
-            </Button>
-          )}
           <Button
             variant="outline"
             size="sm"
@@ -817,34 +808,34 @@ export function AgentFlowDiagram({
         
         <ConnectorArrow />
         
-        {/* Router — Editable Agent (INFO_AGENT for FLOW, ROUTER for ECOMMERCE) */}
+        {/* Router — For FLOW: opens FlowConfigSheet (router config), for others: opens agent edit */}
         <AgentNode
-          agent={getAgent(isEcommerce ? "ROUTER" : "INFO_AGENT") || getAgent("CUSTOMER_SUPPORT")}
+          agent={isFlow ? undefined : (getAgent(isEcommerce ? "ROUTER" : "INFO_AGENT") || getAgent("CUSTOMER_SUPPORT"))}
           metadata={isFlow ? {
-            ...getResolvedMeta("INFO_AGENT"),
-            name: "Router Agent",
+            ...AGENT_METADATA.ROUTER,
+            name: "Router",
             gradientFrom: "from-indigo-500",
             gradientTo: "to-indigo-700",
             borderColor: "border-indigo-400",
           } : getResolvedMeta(isEcommerce ? "ROUTER" : "INFO_AGENT")}
           displayName={
             isFlow
-              ? "Router Agent"
+              ? "Router"
               : isEcommerce
                 ? "Router Agent"
                 : getAgentDisplayName("INFO_AGENT", INFO_AGENT_METADATA)
           }
           isEditable={true}
           isActive={true}
-          onClick={() => handleAgentClick(isEcommerce ? "ROUTER" : (getAgent("INFO_AGENT") ? "INFO_AGENT" : "CUSTOMER_SUPPORT"))}
+          onClick={() => {
+            if (isFlow && routerFlowConfig) {
+              handleFlowNodeClick(routerFlowConfig)
+            } else {
+              handleAgentClick(isEcommerce ? "ROUTER" : (getAgent("INFO_AGENT") ? "INFO_AGENT" : "CUSTOMER_SUPPORT"))
+            }
+          }}
           size="large"
         />
-        {!isEcommerce && !isFlow && (
-          <span className="sr-only">Info Agent</span>
-        )}
-        {isFlow && (
-          <span className="sr-only">Router</span>
-        )}
         
         <ConnectorArrow />
 
@@ -925,21 +916,6 @@ export function AgentFlowDiagram({
             <div className="w-[60%] max-w-md h-0.5 bg-gradient-to-r from-transparent via-violet-300 to-transparent mt-6" />
             
             <ConnectorArrow />
-            
-            {/* Customer Support (FLOW also has it for escalation) */}
-            {agentExists("CUSTOMER_SUPPORT") && (
-              <>
-                <AgentNode
-                  agent={getAgent("CUSTOMER_SUPPORT")}
-                  metadata={AGENT_METADATA.CUSTOMER_SUPPORT}
-                  isEditable={true}
-                  isActive={true}
-                  onClick={() => handleAgentClick("CUSTOMER_SUPPORT")}
-                  size="normal"
-                />
-                <ConnectorArrow />
-              </>
-            )}
           </>
           )
         })()}
@@ -1031,8 +1007,8 @@ export function AgentFlowDiagram({
           </>
         )}
         
-        {/* Conversation History (E-commerce only) */}
-        {isEcommerce && (
+        {/* Conversation History (E-commerce and FLOW) */}
+        {(isEcommerce || isFlow) && (
           <>
             <div className="flex flex-col items-center gap-1">
               <AgentNode
@@ -1078,11 +1054,14 @@ export function AgentFlowDiagram({
         
         <ConnectorArrow />
 
-        {/* WhatsApp Queue — only for FLOW (WhatsApp channel) */}
+        {/* WhatsApp Queue — clickable, opens /queue page */}
         {isFlow && (
           <>
             <div className="flex flex-col items-center gap-1">
-              <div className="flex items-center gap-2.5 rounded-xl border-2 border-green-300 bg-green-50 px-5 py-3 shadow-sm">
+              <button
+                onClick={() => window.open("/queue", "_blank")}
+                className="flex items-center gap-2.5 rounded-xl border-2 border-green-300 bg-green-50 px-5 py-3 shadow-sm hover:shadow-md hover:bg-green-100 hover:scale-105 transition-all duration-200 cursor-pointer"
+              >
                 <div className="p-1.5 rounded-lg bg-green-100">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 </div>
@@ -1090,7 +1069,8 @@ export function AgentFlowDiagram({
                   <span className="font-bold text-sm text-green-700">WhatsApp Queue</span>
                   <span className="text-[10px] text-green-600">Scheduler · 6s cooldown</span>
                 </div>
-              </div>
+                <Edit3 className="h-3 w-3 text-green-500 opacity-50 hover:opacity-100" />
+              </button>
             </div>
             <ConnectorArrow />
           </>
