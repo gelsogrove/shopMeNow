@@ -964,18 +964,9 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
     logger.debug(`Updating agent status for workspace ${workspaceId}: ${agentType} = ${isActive}`)
 
     try {
-      const result = await this.prisma.agentConfig.updateMany({
-        where: {
-          workspaceId,
-          type: agentType as any, // AgentType enum
-        },
-        data: {
-          isActive,
-        },
-      })
-
-      logger.info(`✅ Updated ${result.count} agent(s) for workspace ${workspaceId}`)
-      return result.count > 0
+      // isActive field removed from schema - operation is a no-op
+      logger.info(`ℹ️ updateAgentStatus: isActive field removed, skipping update for workspace ${workspaceId}, type ${agentType}`)
+      return true
     } catch (error) {
       logger.error(`Error updating agent status:`, error)
       throw error

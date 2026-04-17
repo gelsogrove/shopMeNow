@@ -131,11 +131,11 @@ export class SecurityAgent {
         }
       }
 
-      if (!securityAgent.isActive) {
+      // isActive was removed from DB schema, but check for backward compatibility with mocks/legacy data
+      if ((securityAgent as any).isActive === false) {
         logger.warn(
           `⚠️ SECURITY agent is INACTIVE for workspace ${options.workspaceId}`
         )
-        // Allow message if security agent disabled
         return {
           safe: true,
           message: options.message,

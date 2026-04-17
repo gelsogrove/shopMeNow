@@ -81,7 +81,6 @@ export class SafetyTranslationAgent {
           where: {
             workspaceId: options.workspaceId,
             type: "TRANSLATION",
-            isActive: true,
           },
         })
 

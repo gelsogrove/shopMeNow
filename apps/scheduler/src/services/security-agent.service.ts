@@ -192,7 +192,6 @@ export class SecurityAgentService {
         where: {
           workspaceId,
           type: 'SECURITY',
-          isActive: true,
         },
         select: {
           systemPrompt: true,

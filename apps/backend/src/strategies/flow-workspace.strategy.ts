@@ -367,12 +367,24 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
           workspaceId: context.workspaceId,
           customerId: context.customerId,
           customerName: context.customerName || "",
+          currentQuestion: context.message,
           technicalResponse: {
             type: "GENERIC",
-            message: responseText,
+            rawMessage: responseText,
           },
+          botIdentity: {
+            name: workspace.chatbotName || "Bot",
+            personality: null,
+          },
+          customAiRules: null,
+          companyName: workspace.name || "",
+          hasSalesAgents: workspace.hasSalesAgents || false,
           conversationHistory: [],
           activeOffers: [],
+          faqs: [],
+          mindset: "NEUTRAL",
+          lastAgentUsed: "FLOW",
+          customerLanguage: context.customerLanguage || customerData.language || "en",
           isFirstMessage: false,
         })
         responseText = historyResult.message || responseText

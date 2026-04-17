@@ -2789,7 +2789,6 @@ export class MessageRepository {
       const agentConfig = await this.prisma.agentConfig.findFirst({
         where: {
           workspaceId: workspaceId,
-          isActive: true,
         },
         orderBy: {
           createdAt: "desc",

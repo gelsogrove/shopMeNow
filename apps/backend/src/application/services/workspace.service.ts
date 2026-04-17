@@ -463,7 +463,6 @@ For privacy inquiries, please contact our support team.`
               temperature: agent.temperature,
               maxTokens: agent.maxTokens,
               order: agent.order,
-              isActive: agent.isActive,
               availableFunctions: agent.availableFunctions,
             },
           })

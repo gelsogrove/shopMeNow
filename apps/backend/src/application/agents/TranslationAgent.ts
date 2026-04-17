@@ -127,7 +127,6 @@ export class TranslationAgent {
           where: {
             workspaceId: options.workspaceId,
             type: "TRANSLATION",
-            isActive: true,
           },
         })
 

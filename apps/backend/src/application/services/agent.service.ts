@@ -48,7 +48,6 @@ export class AgentService {
         agents = await this.prisma.agentConfig.findMany({
           where: {
             workspaceId,
-            isActive: true, // ← AGGIUNTO: solo quelli attivi!
           },
         })
         logger.info("DEBUG AGENT SERVICE: Prisma result:", agents)

@@ -170,7 +170,6 @@ export class LLMService {
         where: {
           workspaceId: workspace.id,
           type: agentType,
-          isActive: true,
         },
       })
       prompt = agentConfig?.systemPrompt || null

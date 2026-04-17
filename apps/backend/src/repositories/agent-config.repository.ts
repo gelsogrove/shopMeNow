@@ -156,7 +156,6 @@ export class AgentConfigRepository {
           temperature: data.temperature,
           maxTokens: data.maxTokens,
           order: data.order,
-          isActive: data.isActive ?? true,
           availableFunctions: data.availableFunctions,
         },
       })
@@ -267,7 +266,6 @@ export class AgentConfigRepository {
       return await this.prisma.agentConfig.count({
         where: {
           workspaceId,
-          isActive: true,
         },
       })
     } catch (error) {
