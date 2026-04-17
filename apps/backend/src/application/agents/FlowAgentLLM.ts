@@ -243,6 +243,7 @@ export class FlowAgentLLM {
         const delegateFn = await this.callingFunctionRepo.findByName(ctx.workspaceId, fnName)
 
         if (delegateFn && delegateFn.executionType === "DELEGATE_TO_AGENT" && delegateFn.attachedFlowKey) {
+          // ── 5c-i. DELEGATE_TO_FLOW — delegate to another FlowNodeConfig sub-LLM ──
           const targetFlowKey = delegateFn.attachedFlowKey
           const machineNumber = String(fnArgs.machineNumber ?? "")
 
@@ -259,6 +260,23 @@ export class FlowAgentLLM {
               type: "DELEGATE_TO_FLOW",
               attachedFlowKey: targetFlowKey,
               machineNumber,
+            },
+          })
+        } else if (delegateFn && delegateFn.executionType === "DELEGATE_TO_AGENT" && delegateFn.attachedLlm) {
+          // ── 5c-ii. DELEGATE_TO_AGENT_LLM — delegate to a peer AgentConfig agent ──
+          // e.g. CUSTOMER_SUPPORT, PROFILE_MANAGEMENT
+          const agentType = delegateFn.attachedLlm // e.g. "CUSTOMER_SUPPORT"
+          const query = String(fnArgs.query ?? ctx.message)
+
+          logger.info("🤝 FlowAgentLLM: DELEGATE_TO_AGENT_LLM", { fnName, agentType, query })
+
+          functionCalls.push({
+            name: fnName,
+            arguments: fnArgs,
+            result: {
+              type: "DELEGATE_TO_AGENT_LLM",
+              agentType,
+              query,
             },
           })
         } else {

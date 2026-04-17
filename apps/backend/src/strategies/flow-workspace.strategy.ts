@@ -31,6 +31,9 @@ import { TranslationAgent } from "../application/agents/TranslationAgent"
 import { SecurityAgent, type SecurityResult } from "../application/agents/SecurityAgent"
 import { ConversationHistoryLayer } from "../application/layers/ConversationHistoryLayer"
 import { contactOperator } from "../domain/calling-functions/contactOperator"
+import { CustomerSupportAgentLLM } from "../application/agents/CustomerSupportAgentLLM"
+import { ProfileManagementAgentLLM } from "../application/agents/ProfileManagementAgentLLM"
+import { PromptBuilderService } from "../application/services/prompt-builder/prompt-builder.service"
 import { ChatContext, FlowMap } from "../types/flow.types"
 import type { RoutingContext, RoutingResult, RoutingStrategy } from "./routing-strategy.interface"
 
@@ -370,6 +373,79 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
               tokensUsed: subResult.tokensUsed,
               executionTimeMs: subResult.executionTimeMs,
             })
+          }
+
+          // ── Detect DELEGATE_TO_AGENT_LLM: Router delegated to a peer agent ──
+          // e.g. customerSupportAgent → CustomerSupportAgentLLM
+          //      profileManagementAgent → ProfileManagementAgentLLM
+          const agentDelegateCall = agentResult.functionCalls.find(
+            (fc) => fc.result && (fc.result as any).type === "DELEGATE_TO_AGENT_LLM"
+          )
+          if (agentDelegateCall) {
+            const { agentType, query } = agentDelegateCall.result as {
+              type: string
+              agentType: string
+              query: string
+            }
+
+            logger.info("🤝 FlowWorkspaceStrategy - DELEGATE_TO_AGENT_LLM detected", {
+              agentType,
+              query: query.substring(0, 60),
+            })
+
+            try {
+              if (agentType === "CUSTOMER_SUPPORT") {
+                const csAgent = new CustomerSupportAgentLLM(this.prisma)
+                const csResult = await csAgent.handleQuery({
+                  workspaceId: context.workspaceId,
+                  customerId: context.customerId,
+                  customerName: context.customerName || customerData.name,
+                  customerLanguage: context.customerLanguage || customerData.language || "en",
+                  channel: context.channel,
+                  query,
+                })
+                responseText = csResult.output
+                tokensUsed += csResult.tokensUsed
+                debugSteps.push({
+                  type: "flow-agent",
+                  agent: "CustomerSupportAgentLLM",
+                  timestamp: new Date().toISOString(),
+                  input: { query },
+                  output: { message: csResult.output },
+                  tokensUsed: csResult.tokensUsed,
+                  executionTimeMs: csResult.executionTimeMs,
+                })
+              } else if (agentType === "PROFILE_MANAGEMENT") {
+                const promptBuilder = new PromptBuilderService(this.prisma)
+                const pmAgent = new ProfileManagementAgentLLM(this.prisma, promptBuilder)
+                const pmResult = await pmAgent.handleQuery({
+                  workspaceId: context.workspaceId,
+                  customerId: context.customerId,
+                  customerName: context.customerName || customerData.name,
+                  customerLanguage: context.customerLanguage || customerData.language || "en",
+                  channel: context.channel,
+                  query,
+                })
+                responseText = pmResult.output
+                tokensUsed += pmResult.tokensUsed
+                debugSteps.push({
+                  type: "flow-agent",
+                  agent: "ProfileManagementAgentLLM",
+                  timestamp: new Date().toISOString(),
+                  input: { query },
+                  output: { message: pmResult.output },
+                  tokensUsed: pmResult.tokensUsed,
+                  executionTimeMs: pmResult.executionTimeMs,
+                })
+              } else {
+                logger.warn("FlowWorkspaceStrategy: unsupported agentType for delegation", { agentType })
+              }
+            } catch (delegateError: any) {
+              logger.error("❌ FlowWorkspaceStrategy: peer agent delegation failed", {
+                agentType,
+                error: delegateError.message,
+              })
+            }
           }
         }
 
