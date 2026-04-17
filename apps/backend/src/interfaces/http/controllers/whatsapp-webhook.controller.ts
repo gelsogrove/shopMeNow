@@ -663,14 +663,17 @@ export class WhatsAppWebhookController {
         // 🆕 Feature 174: Removed STEP 1&2 (RegistrationAttempts check) - users receive welcome freely
 
         // 🔒 ACCESS CHECK (debug/channel/owner/billing blocks) BEFORE welcome flow
+        // 🧪 PLAYGROUND: skip debug/WIP check — playground must always work regardless of debugMode
         const { WorkspaceAccessService } = await import(
           "../../../application/services/workspace-access.service"
         )
         const workspaceAccessService = new WorkspaceAccessService(prisma)
-        const accessResult = await workspaceAccessService.canProcessMessages(
-          workspaceId,
-          false // check channelStatus + debugMode
-        )
+        const accessResult = isPlayground
+          ? { canProcess: true, blockReason: null, message: null }
+          : await workspaceAccessService.canProcessMessages(
+              workspaceId,
+              false // check channelStatus + debugMode
+            )
 
         // Get workspace config early (needed for WIP + language)
         const workspace = await prisma.workspace.findUnique({
@@ -2013,17 +2016,20 @@ export class WhatsAppWebhookController {
 
       // 🔒 Feature 197: Check workspace access BEFORE billing
       // This handles: PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED (< -$10), DEBUG_MODE (WIP), CHANNEL_DISABLED (silent)
+      // 🧪 PLAYGROUND: skip debug/WIP check — playground must always work regardless of debugMode
       const { WorkspaceAccessService } = await import(
         "../../../application/services/workspace-access.service"
       )
       const workspaceAccessService = new WorkspaceAccessService(prisma)
       
       // Check ALL access conditions including channel status
-      // RULE: debugMode=true → WIP message (NO bypass!)
-      const accessResult = await workspaceAccessService.canProcessMessages(
-        customer.workspaceId,
-        false // DO check channelStatus - WIP mode needs special handling
-      )
+      // RULE: debugMode=true → WIP message — but NOT for Playground!
+      const accessResult = isPlayground
+        ? { canProcess: true, blockReason: null, message: null }
+        : await workspaceAccessService.canProcessMessages(
+            customer.workspaceId,
+            false // DO check channelStatus - WIP mode needs special handling
+          )
 
       if (!accessResult.canProcess) {
         // 🚫 CHANNEL_DISABLED → Silent block (no response)

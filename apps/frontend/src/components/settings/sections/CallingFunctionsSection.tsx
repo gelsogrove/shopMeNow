@@ -347,9 +347,6 @@ export function CallingFunctionsSection({
                                                             {AGENT_TYPE_LABELS[fn.attachedLlm] || fn.attachedLlm}
                                                         </span>
                                                     )}
-                                                    {fn.isSystemFunction && (
-                                                        <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-bold text-slate-500">SYSTEM</span>
-                                                    )}
                                                     {!fn.isActive && (
                                                         <span className="px-1.5 py-0.5 rounded bg-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Inactive</span>
                                                     )}

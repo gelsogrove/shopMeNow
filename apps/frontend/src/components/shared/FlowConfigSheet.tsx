@@ -37,13 +37,10 @@ import {
 import Editor from "@monaco-editor/react"
 import {
   AlertCircle,
-  ArrowUpRight,
   CheckCircle2,
-  ExternalLink,
   Info,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
 
 const AVAILABLE_MODELS = [
   { value: "openai/gpt-4o-mini", label: "GPT-4o Mini (fast, cheap)" },
@@ -239,6 +236,8 @@ export function FlowConfigSheet({
     }
   }
 
+  const isRouter = config?.flowKey === 'router'
+
   const allIssues = validationResult
     ? [
         ...validationResult.errors.map((e) => ({ ...e, kind: "error" as const })),
@@ -265,16 +264,18 @@ export function FlowConfigSheet({
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className={`grid w-full ${isRouter ? 'grid-cols-3' : 'grid-cols-4'}`}>
               <TabsTrigger value="basics">Basics</TabsTrigger>
               <TabsTrigger value="prompt">Prompt</TabsTrigger>
               <TabsTrigger value="tools">Tools</TabsTrigger>
-              <TabsTrigger value="flow" className="relative">
-                Flow JSON
-                {hasBlockingErrors && (
-                  <span className="ml-2 inline-block h-2 w-2 rounded-full bg-destructive" />
-                )}
-              </TabsTrigger>
+              {!isRouter && (
+                <TabsTrigger value="flow" className="relative">
+                  Flow JSON
+                  {hasBlockingErrors && (
+                    <span className="ml-2 inline-block h-2 w-2 rounded-full bg-destructive" />
+                  )}
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* ───── BASICS ───── */}
@@ -416,39 +417,6 @@ export function FlowConfigSheet({
 
             {/* ───── TOOLS ───── */}
             <TabsContent value="tools" className="space-y-3 pt-4">
-              <div className="flex items-center justify-between rounded-md border bg-muted/30 p-3">
-                <div>
-                  <p className="text-sm font-medium">Calling Functions</p>
-                  <p className="text-xs text-muted-foreground">
-                    Manage and define functions workspace-wide.
-                  </p>
-                </div>
-                <Link
-                  to="/settings?tab=calling-functions"
-                  onClick={() => onOpenChange(false)}
-                >
-                  <Button type="button" variant="outline" size="sm">
-                    Manage Functions
-                    <ArrowUpRight className="ml-2 h-3.5 w-3.5" />
-                  </Button>
-                </Link>
-              </div>
-
-              <div className="flex items-center justify-between rounded-md border bg-muted/30 p-3">
-                <div>
-                  <p className="text-sm font-medium">Agent Configuration</p>
-                  <p className="text-xs text-muted-foreground">
-                    Workspace-wide agent prompts and settings.
-                  </p>
-                </div>
-                <Link to="/agents" onClick={() => onOpenChange(false)}>
-                  <Button type="button" variant="outline" size="sm">
-                    Open Agent Config
-                    <ExternalLink className="ml-2 h-3.5 w-3.5" />
-                  </Button>
-                </Link>
-              </div>
-
               <div>
                 <p className="text-sm font-medium mb-2">
                   Available to this flow
@@ -484,17 +452,19 @@ export function FlowConfigSheet({
                         <div className="flex-1 min-w-0">
                           <label
                             htmlFor={`fn-${fn.functionName}`}
-                            className="text-sm font-medium cursor-pointer"
+                            className="text-sm font-medium cursor-pointer flex items-center gap-2"
                           >
                             {fn.functionName}
-                            {fn.isSystemFunction && (
-                              <Badge
-                                variant="outline"
-                                className="ml-2 text-xs"
-                              >
-                                system
-                              </Badge>
-                            )}
+                            <Badge
+                              variant="outline"
+                              className={cn("text-[10px]", {
+                                "bg-amber-50 text-amber-600 border-amber-200": fn.executionType === "DELEGATE_TO_AGENT",
+                                "bg-purple-50 text-purple-600 border-purple-200": fn.executionType === "INTERNAL",
+                                "bg-blue-50 text-blue-600 border-blue-200": fn.executionType === "WEBHOOK",
+                              })}
+                            >
+                              {fn.executionType === "DELEGATE_TO_AGENT" ? "Agent" : fn.executionType === "INTERNAL" ? "Calling Function" : "Webhook"}
+                            </Badge>
                           </label>
                           {fn.description && (
                             <p className="text-xs text-muted-foreground">
