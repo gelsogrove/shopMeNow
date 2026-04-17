@@ -257,7 +257,7 @@ export function FlowConfigSheet({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (syntaxError || parsedFlows === null) {
+    if (!isRouter && (syntaxError || parsedFlows === null)) {
       toast.error("Flow JSON has syntax errors")
       setActiveTab("flow")
       return
@@ -298,7 +298,7 @@ export function FlowConfigSheet({
       // Surface backend validation errors on the Flow JSON tab
       const message = error.message || "Failed to save flow config"
       toast.error(message)
-      if (/flow|json|schema/i.test(message)) {
+      if (!isRouter && /flow|json|schema/i.test(message)) {
         setActiveTab("flow")
       }
     } finally {
@@ -603,8 +603,8 @@ export function FlowConfigSheet({
               </div>
             </TabsContent>
 
-            {/* ───── FLOW JSON ───── */}
-            <TabsContent value="flow" className="space-y-3 pt-4">
+            {/* ───── FLOW JSON ───── (hidden for Router) */}
+            {!isRouter && <TabsContent value="flow" className="space-y-3 pt-4">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <Label htmlFor="flowsJson">Decision Tree (JSON)</Label>
@@ -743,7 +743,7 @@ export function FlowConfigSheet({
                   against the schema before saving.
                 </p>
               )}
-            </TabsContent>
+            </TabsContent>}
           </Tabs>
 
           {/* Actions */}
@@ -768,7 +768,7 @@ export function FlowConfigSheet({
               </Button>
               <Button
                 type="submit"
-                disabled={isSaving || !!syntaxError || parsedFlows === null}
+                disabled={isSaving || (!isRouter && (!!syntaxError || parsedFlows === null))}
               >
                 {isSaving ? "Saving..." : isEdit ? "Save Changes" : "Create"}
               </Button>
