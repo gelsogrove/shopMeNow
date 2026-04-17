@@ -356,6 +356,22 @@ export class Workspace extends Entity<WorkspaceProps> {
     return this.props.hasHumanSupport ?? true
   }
 
+  get hasProductCatalog(): boolean {
+    return this.props.hasProductCatalog ?? true
+  }
+
+  get hasCart(): boolean {
+    return this.props.hasCart ?? true
+  }
+
+  get hasOrderTracking(): boolean {
+    return this.props.hasOrderTracking ?? true
+  }
+
+  get needRegistration(): boolean {
+    return this.props.needRegistration ?? true
+  }
+
   get humanSupportInstructions(): string | null | undefined {
     return this.props.humanSupportInstructions
   }
