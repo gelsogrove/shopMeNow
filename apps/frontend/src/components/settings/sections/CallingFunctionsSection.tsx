@@ -56,15 +56,6 @@ const EXECUTION_TYPE_CONFIG: Record<string, { label: string; icon: React.ReactNo
     },
 }
 
-// Human-readable labels for agent types returned by getAgentTypes endpoint
-const AGENT_TYPE_LABELS: Record<string, string> = {
-    PRODUCT_SEARCH: "Product Search",
-    CART_MANAGEMENT: "Cart Management",
-    ORDER_TRACKING: "Order Tracking",
-    CUSTOMER_SUPPORT: "Customer Support",
-    PROFILE_MANAGEMENT: "Profile Management",
-    INFO_AGENT: "Info Agent",
-}
 
 interface CallingFunctionsSectionProps {
     workspaceId: string
@@ -78,7 +69,6 @@ export function CallingFunctionsSection({
     canEdit,
 }: CallingFunctionsSectionProps) {
     const [functions, setFunctions] = useState<CallingFunction[]>([])
-    const [agentTypes, setAgentTypes] = useState<string[]>([])
     const [missingSystemFunctions, setMissingSystemFunctions] = useState<Array<{ functionName: string; description: string; executionType: string; attachedLlm?: string | null }>>([])
     const [loading, setLoading] = useState(true)
     const [testingToolWebhook, setTestingToolWebhook] = useState(false)
@@ -100,13 +90,11 @@ export function CallingFunctionsSection({
     const loadFunctions = async () => {
         try {
             setLoading(true)
-            const [data, agentTypesData, missingData] = await Promise.all([
+            const [data, missingData] = await Promise.all([
                 callingFunctionsApi.list(workspaceId),
-                callingFunctionsApi.getAgentTypes(workspaceId),
                 callingFunctionsApi.getSystemMissing(workspaceId),
             ])
             setFunctions(data)
-            setAgentTypes(agentTypesData.agentTypes)
             setMissingSystemFunctions(missingData.missing)
         } catch (error) {
             console.error("Failed to load functions:", error)
@@ -341,12 +329,6 @@ export function CallingFunctionsSection({
                                                         {typeConfig.icon}
                                                         {typeConfig.label}
                                                     </span>
-                                                    {/* attachedLlm badge for DELEGATE_TO_AGENT */}
-                                                    {fn.attachedLlm && (
-                                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200">
-                                                            {AGENT_TYPE_LABELS[fn.attachedLlm] || fn.attachedLlm}
-                                                        </span>
-                                                    )}
                                                     {!fn.isActive && (
                                                         <span className="px-1.5 py-0.5 rounded bg-slate-200 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Inactive</span>
                                                     )}
@@ -419,11 +401,6 @@ export function CallingFunctionsSection({
                                                         {typeConfig.icon}
                                                         {typeConfig.label}
                                                     </span>
-                                                    {fn.attachedLlm && (
-                                                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-teal-50 text-teal-700 border border-teal-200">
-                                                            {AGENT_TYPE_LABELS[fn.attachedLlm] || fn.attachedLlm}
-                                                        </span>
-                                                    )}
                                                 </div>
                                                 <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{fn.description}</p>
                                             </div>
@@ -732,28 +709,6 @@ Credentials Mapping: {
                                 />
                             </div>
                         </div>
-
-                            {/* Attached LLM — only for DELEGATE_TO_AGENT type */}
-                            {editingFunction?.executionType === "DELEGATE_TO_AGENT" && (
-                            <div className="space-y-2">
-                                <Label htmlFor="attachedLlm">Specialist Agent</Label>
-                                <Select
-                                    value={editingFunction?.attachedLlm || ""}
-                                    onValueChange={(val) => setEditingFunction(prev => ({ ...prev, attachedLlm: val || null }))}
-                                >
-                                    <SelectTrigger id="attachedLlm">
-                                        <SelectValue placeholder="Select specialist agent..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {agentTypes.map(type => (
-                                            <SelectItem key={type} value={type}>
-                                                {AGENT_TYPE_LABELS[type] || type}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            )}
 
                             {/* Webhook URL — only for WEBHOOK type */}
                             {editingFunction?.executionType === "WEBHOOK" && (

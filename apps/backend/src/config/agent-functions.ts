@@ -570,17 +570,25 @@ export function getFunctionsForRouter(options?: {
 }) {
   const channel = (options?.channel || "whatsapp").toLowerCase()
   const ws = options?.workspace
+  const isEcommerceMode = options?.channelMode === "ECOMMERCE"
 
   // Router Agent can call:
   // 1. Delegation functions (productSearchAgent, cartManagementAgent, orderTrackingAgent, customerSupportAgent)
   // 2. Direct functions (manageNotifications, RESET_ACTIVE_AGENT)
   const routerFunctions = AGENT_FUNCTIONS.filter((fn) => {
     // Dynamic pipeline: each agent controlled by its workspace flag
-    if (fn.name === "productSearchAgent" && ws?.hasProductCatalog === false) return false
-    if (fn.name === "cartManagementAgent" && ws?.hasCart === false) return false
-    if (fn.name === "orderTrackingAgent" && ws?.hasOrderTracking === false) return false
-    if (fn.name === "customerSupportAgent" && ws?.hasHumanSupport === false) return false
-    if (fn.name === "profileManagementAgent" && ws?.needRegistration === false) return false
+    // Fallback to channelMode-based filtering when workspace flags are not provided
+    const ecommerceAgents = ["productSearchAgent", "cartManagementAgent", "orderTrackingAgent"]
+
+    if (ws) {
+      if (fn.name === "productSearchAgent" && ws.hasProductCatalog === false) return false
+      if (fn.name === "cartManagementAgent" && ws.hasCart === false) return false
+      if (fn.name === "orderTrackingAgent" && ws.hasOrderTracking === false) return false
+      if (fn.name === "customerSupportAgent" && ws.hasHumanSupport === false) return false
+      if (fn.name === "profileManagementAgent" && ws.needRegistration === false) return false
+    } else if (!isEcommerceMode && ecommerceAgents.includes(fn.name)) {
+      return false
+    }
 
     // Widget channel does not support profile management flows
     if (channel === "widget" && fn.name === "profileManagementAgent") {
