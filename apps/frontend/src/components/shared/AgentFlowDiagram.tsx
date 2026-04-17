@@ -752,7 +752,7 @@ export function AgentFlowDiagram({
           </h2>
           <p className="text-gray-500 mt-1">
             {isFlow
-              ? "Deterministic flow engine with per-flow Sub-LLM configuration"
+              ? "Deterministic flow engine with per-flow Flow Agent configuration"
               : isEcommerce 
               ? "Full e-commerce flow with product search, cart, and order management"
               : "Streamlined flow for FAQ and customer support"
@@ -874,7 +874,7 @@ export function AgentFlowDiagram({
           )
         })()}
 
-        {/* FLOW Sub-LLMs Branch (machine configs only — excludes flowKey="router") */}
+        {/* FLOW Flow Engines Branch (machine configs only — excludes flowKey="router") */}
         {isFlow && (() => {
           const machineFlowConfigs = flowConfigs.filter(fc => fc.flowKey !== 'router')
           return (
@@ -931,7 +931,7 @@ export function AgentFlowDiagram({
                   </div>
                 ))}
 
-                {/* Add Sub-LLM button */}
+                {/* Add Flow Engine button */}
                 <div className="flex flex-col items-center">
                   <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
                   <button
@@ -941,7 +941,7 @@ export function AgentFlowDiagram({
                     <div className="p-1 rounded-lg bg-violet-100">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </div>
-                    <span className="font-semibold text-xs">Add Sub-LLM</span>
+                    <span className="font-semibold text-xs">Add Flow Engine</span>
                   </button>
                 </div>
               </div>
@@ -1103,6 +1103,24 @@ export function AgentFlowDiagram({
         </div>
         
         <ConnectorArrow />
+
+        {/* WhatsApp Queue — only for FLOW (WhatsApp channel) */}
+        {isFlow && (
+          <>
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-2.5 rounded-xl border-2 border-green-300 bg-green-50 px-5 py-3 shadow-sm">
+                <div className="p-1.5 rounded-lg bg-green-100">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div className="flex flex-col items-start">
+                  <span className="font-bold text-sm text-green-700">WhatsApp Queue</span>
+                  <span className="text-[10px] text-green-600">Scheduler · 6s cooldown</span>
+                </div>
+              </div>
+            </div>
+            <ConnectorArrow />
+          </>
+        )}
         
         {/* Final Response */}
         <div className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full shadow-lg">
@@ -1135,7 +1153,7 @@ export function AgentFlowDiagram({
         <div className="flex items-center justify-center mt-8">
           <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg px-4 py-2 text-sm text-violet-700">
             <Sparkles className="h-4 w-4 inline mr-2" />
-            {flowConfigs.length} Sub-LLM{flowConfigs.length !== 1 ? 's' : ''} configured · {flowConfigs.filter(fc => fc.isActive).length} active
+            {flowConfigs.filter(fc => fc.flowKey !== 'router').length} Flow Engine{flowConfigs.filter(fc => fc.flowKey !== 'router').length !== 1 ? 's' : ''} configured · {flowConfigs.filter(fc => fc.flowKey !== 'router' && fc.isActive).length} active
           </div>
         </div>
       )}
