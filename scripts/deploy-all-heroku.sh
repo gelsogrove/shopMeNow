@@ -36,18 +36,36 @@ echo "📦 Generating Prisma client locally..."
 npm run prisma:generate
 echo "✅ Prisma client generated"
 
+# Helper: push to Heroku, treat duplicate-build as success
+heroku_push() {
+  local remote=$1
+  local output
+  output=$(git push "$remote" main 2>&1)
+  local exit_code=$?
+  echo "$output"
+  if [ $exit_code -ne 0 ]; then
+    # Duplicate build = code already deployed, treat as success
+    if echo "$output" | grep -q "duplicate-build-version\|same version of this code has already been built"; then
+      echo "⚠️  $remote: already up to date (duplicate build - skipping)"
+      return 0
+    fi
+    return $exit_code
+  fi
+  return 0
+}
+
 # Push to all 3 remotes in parallel
 echo ""
 echo "📦 Pushing to echatbot-app (backend + frontend)..."
-git push heroku-app main &
+heroku_push heroku-app &
 PID_APP=$!
 
 echo "⚙️  Pushing to echatbot-scheduler..."
-git push heroku-scheduler main &
+heroku_push heroku-scheduler &
 PID_SCHEDULER=$!
 
 echo "🖥️  Pushing to echatbot-backoffice..."
-git push heroku-backoffice main &
+heroku_push heroku-backoffice &
 PID_BACKOFFICE=$!
 
 # Wait for all pushes and collect results
