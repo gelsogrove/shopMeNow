@@ -13,6 +13,7 @@ export interface CallingFunction {
     responseInstructions?: string | null
     credentialsMapping?: Record<string, any> | null
     attachedLlm?: string | null
+    attachedFlowKey?: string | null
 }
 
 export const callingFunctionsApi = {

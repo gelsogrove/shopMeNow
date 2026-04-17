@@ -738,18 +738,25 @@ Credentials Mapping: {
                             </div>
                         </div>
 
-                            {/* Attached Sub-LLMs — which FlowNodeConfigs can call this function */}
+                                {/* Attached Sub-LLMs — which FlowNodeConfigs can call this function */}
                             {flowConfigs.length > 0 && (
                             <div className="space-y-2">
                                 <Label>Attached Sub-LLMs</Label>
                                 <p className="text-xs text-slate-500">Which sub-LLMs can call this function</p>
                                 <div className="space-y-1 border rounded-md p-3 max-h-40 overflow-y-auto">
-                                    {flowConfigs.map(fc => (
-                                        <div key={fc.id} className="flex items-center gap-2">
+                                    {flowConfigs.map(fc => {
+                                        // A DELEGATE_TO_AGENT function CANNOT be attached to the very sub-LLM it delegates to — infinite loop
+                                        const isSelfLoop =
+                                            editingFunction?.executionType === "DELEGATE_TO_AGENT" &&
+                                            editingFunction?.attachedFlowKey === fc.flowKey
+                                        return (
+                                        <div key={fc.id} className={cn("flex items-center gap-2", isSelfLoop && "opacity-40 cursor-not-allowed")}>
                                             <Checkbox
                                                 id={`fc-${fc.id}`}
                                                 checked={attachedFlowIds.has(fc.id)}
+                                                disabled={isSelfLoop}
                                                 onCheckedChange={(checked) => {
+                                                    if (isSelfLoop) return
                                                     setAttachedFlowIds(prev => {
                                                         const next = new Set(prev)
                                                         if (checked) next.add(fc.id)
@@ -758,7 +765,7 @@ Credentials Mapping: {
                                                     })
                                                 }}
                                             />
-                                            <label htmlFor={`fc-${fc.id}`} className="text-sm cursor-pointer flex items-center gap-1.5">
+                                            <label htmlFor={`fc-${fc.id}`} className={cn("text-sm flex items-center gap-1.5", isSelfLoop ? "cursor-not-allowed" : "cursor-pointer")}>
                                                 <span className={cn(
                                                     "px-1.5 py-0.5 rounded text-[10px] font-mono",
                                                     fc.flowKey === 'router'
@@ -768,9 +775,11 @@ Credentials Mapping: {
                                                     {fc.flowKey}
                                                 </span>
                                                 <span className="text-slate-500">{fc.flowLabel}</span>
+                                                {isSelfLoop && <span className="text-[10px] text-red-400 ml-1">(loop — disabled)</span>}
                                             </label>
                                         </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             </div>
                             )}

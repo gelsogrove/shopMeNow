@@ -409,7 +409,10 @@ export function FlowConfigSheet({
                   </p>
                 ) : (
                   <div className="space-y-2 rounded-md border p-3 max-h-[360px] overflow-y-auto">
-                    {allFunctions.map((fn) => (
+                    {/* Filter out DELEGATE_TO_AGENT functions that point TO this very flowKey — would cause an infinite loop */}
+                    {allFunctions.filter(fn =>
+                      !(fn.executionType === "DELEGATE_TO_AGENT" && fn.attachedFlowKey === config?.flowKey)
+                    ).map((fn) => (
                       <div
                         key={fn.functionName}
                         className="flex items-start gap-3"
