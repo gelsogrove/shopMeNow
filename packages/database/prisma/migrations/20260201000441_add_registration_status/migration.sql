@@ -1,14 +1,17 @@
 -- CreateEnum
-CREATE TYPE "RegistrationStatus" AS ENUM ('NEW', 'PENDING_APPROVAL', 'ACTIVE');
+DO $$ BEGIN
+  CREATE TYPE "RegistrationStatus" AS ENUM ('NEW', 'PENDING_APPROVAL', 'ACTIVE');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- AlterTable
-ALTER TABLE "Workspace" ADD COLUMN     "registrationPage" TEXT;
+ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "registrationPage" TEXT;
 
 -- AlterTable
-ALTER TABLE "customers" ADD COLUMN     "registrationStatus" "RegistrationStatus" NOT NULL DEFAULT 'NEW';
+ALTER TABLE "customers" ADD COLUMN IF NOT EXISTS "registrationStatus" "RegistrationStatus" NOT NULL DEFAULT 'NEW';
 
 -- CreateTable
-CREATE TABLE "ProductCharacteristic" (
+CREATE TABLE IF NOT EXISTS "ProductCharacteristic" (
     "id" TEXT NOT NULL,
     "productId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
