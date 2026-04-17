@@ -1,10 +1,10 @@
 -- Add dynamic pipeline flags to workspaces
 -- These flags control which agents/calling-functions appear in the pipeline graph and runtime
 
-ALTER TABLE "workspaces" ADD COLUMN "hasProductCatalog" BOOLEAN NOT NULL DEFAULT true;
-ALTER TABLE "workspaces" ADD COLUMN "hasCart" BOOLEAN NOT NULL DEFAULT true;
-ALTER TABLE "workspaces" ADD COLUMN "hasOrderTracking" BOOLEAN NOT NULL DEFAULT true;
-ALTER TABLE "workspaces" ADD COLUMN "needRegistration" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "workspaces" ADD COLUMN IF NOT EXISTS "hasProductCatalog" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "workspaces" ADD COLUMN IF NOT EXISTS "hasCart" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "workspaces" ADD COLUMN IF NOT EXISTS "hasOrderTracking" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "workspaces" ADD COLUMN IF NOT EXISTS "needRegistration" BOOLEAN NOT NULL DEFAULT true;
 
 -- Set correct defaults for INFORMATIONAL workspaces (no ecommerce features)
 UPDATE "workspaces"
