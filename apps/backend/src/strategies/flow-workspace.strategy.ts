@@ -600,7 +600,7 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
 
       return {
         response: finalResponse,
-        agentType: "INFO_AGENT" as AgentType,
+        agentType: "ROUTER" as AgentType, // FLOW workspace: FlowAgentLLM acts as router
         debugSteps,
         totalTokens: tokensUsed,
         conversationId: context.conversationId,

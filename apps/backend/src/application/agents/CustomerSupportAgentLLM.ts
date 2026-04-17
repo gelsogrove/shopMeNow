@@ -145,9 +145,9 @@ export class CustomerSupportAgentLLM {
 
       // STEP 1.8: Load system prompt from template files (include FAQ presence for conditionals)
       // 🔧 FIX: Use correct agent type based on workspace type
-      // Informational workspaces use INFO_AGENT template, ecommerce uses CUSTOMER_SUPPORT
-      const isEcommerceMode = workspace?.channelMode === "ECOMMERCE"
-      const templateAgentType = isEcommerceMode ? "CUSTOMER_SUPPORT" : "INFO_AGENT"
+      // Informational workspaces use INFO_AGENT template, ecommerce and FLOW use CUSTOMER_SUPPORT
+      const isEcommerceOrFlow = workspace?.channelMode === "ECOMMERCE" || workspace?.channelMode === "FLOW"
+      const templateAgentType = isEcommerceOrFlow ? "CUSTOMER_SUPPORT" : "INFO_AGENT"
 
       let systemPrompt = await this.templateLoader.loadAndRenderTemplate(
         templateAgentType,
@@ -233,7 +233,7 @@ export class CustomerSupportAgentLLM {
         },
         workspace?.websiteUrl || workspace?.url, // workspaceUrl
         {
-          channelMode: workspace?.channelMode ?? "INFORMATIONAL", // 🔧 Informational workspace
+          channelMode: workspace?.channelMode ?? "ECOMMERCE", // fallback to ECOMMERCE (most common)
           hasHumanSupport: workspace?.hasHumanSupport ?? false, // ✅ FIX: Use actual hasHumanSupport flag
           hasSalesAgents: workspace?.hasSalesAgents ?? false,
           address: workspace?.address || "",
