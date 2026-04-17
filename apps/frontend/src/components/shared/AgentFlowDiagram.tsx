@@ -738,6 +738,9 @@ export function AgentFlowDiagram({
 
   const selectedMeta = selectedAgent ? getResolvedMeta(selectedAgent.type.toUpperCase()) : null
   const helpMeta = helpAgent ? getResolvedMeta(helpAgent) : null
+  const routerFlowConfig = isFlow
+    ? flowConfigs.find((fc) => fc.flowKey === "router")
+    : undefined
   
   return (
     <div className={cn("bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 rounded-2xl p-8 border border-slate-200 shadow-lg", className)}>
@@ -771,6 +774,17 @@ export function AgentFlowDiagram({
           )}>
             {isFlow ? "⚙️ Flow Mode" : isEcommerce ? "🛒 E-commerce Mode" : "ℹ️ Info-only mode"}
           </span>
+          {isFlow && routerFlowConfig && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleFlowNodeClick(routerFlowConfig)}
+              className="gap-2 border-orange-300 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Router Logic
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -834,47 +848,7 @@ export function AgentFlowDiagram({
         
         <ConnectorArrow />
 
-        {/* FLOW: History node (Router FlowAgentLLM — flowKey="router") shown ABOVE machines */}
-        {isFlow && (() => {
-          const routerFlowConfig = flowConfigs.find(fc => fc.flowKey === 'router')
-          if (!routerFlowConfig) return null
-          return (
-            <>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => handleFlowNodeClick(routerFlowConfig)}
-                      className="group relative flex items-center gap-2.5 rounded-xl border-2 px-5 py-3 transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg hover:scale-105"
-                      style={{ borderColor: '#f97316', backgroundColor: '#fff7ed' }}
-                    >
-                      <div className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full border-2 border-white" style={{ backgroundColor: routerFlowConfig.isActive ? '#4ade80' : '#d1d5db' }} />
-                      <div className="p-1.5 rounded-lg" style={{ backgroundColor: '#fed7aa' }}>
-                        <MessageSquare className="h-4 w-4" style={{ color: '#f97316' }} />
-                      </div>
-                      <div className="flex flex-col items-start">
-                        <span className="font-bold text-sm" style={{ color: '#f97316' }}>History</span>
-                        <span className="text-[10px]" style={{ color: '#9a3412' }}>{routerFlowConfig.flowLabel}</span>
-                      </div>
-                      <Edit3 className="h-3 w-3 opacity-50 group-hover:opacity-100 ml-1" style={{ color: '#f97316' }} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-xs p-3">
-                    <div className="space-y-1.5">
-                      <p className="font-semibold text-sm">{routerFlowConfig.flowLabel}</p>
-                      <p className="text-xs text-gray-500">Router FlowAgentLLM — gathers context & assigns machine</p>
-                      <p className="text-xs text-gray-500">Key: <code className="bg-gray-100 px-1 rounded">{routerFlowConfig.flowKey}</code></p>
-                      <p className="text-xs text-blue-600 mt-1">Click to edit</p>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <ConnectorArrow />
-            </>
-          )
-        })()}
-
-        {/* FLOW Sub-LLMs Branch (machine configs only — excludes flowKey="router") */}
+        {/* FLOW Sub-LLMs Branch (machine configs only — excludes flowKey="router"). Branches directly from Router. */}
         {isFlow && (() => {
           const machineFlowConfigs = flowConfigs.filter(fc => fc.flowKey !== 'router')
           return (

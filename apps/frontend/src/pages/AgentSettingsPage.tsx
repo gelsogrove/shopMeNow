@@ -10,12 +10,12 @@
  * - Cards for each agent with inline editing
  *
  * Architecture:
- * Router Agent (order 0) → manages conversation history + function calling
+ * Router Agent (order 0) → decides routing/FAQ/escalation + function calling
  * Sub-Agents (order 1-90) → specialized: ProductSearch, CartManagement, OrderTracking
  * Safety Agent (order 99) → ALWAYS last, translates + validates PII/profanity
  *
  * @architecture Clean Component with shadcn/ui
- * @version 2.1.0 - History node + WhatsApp Queue panel
+ * @version 2.1.1 - FLOW graph aligned with runtime path
  */
 
 import { PageLayout } from "@/components/layout/PageLayout"
@@ -178,6 +178,12 @@ export function AgentSettingsPage() {
   const [highlightAgentId, setHighlightAgentId] = useState<string | null>(null)
 
   const isFlowWorkspace = workspace?.channelMode === 'FLOW'
+  const routerFlowConfig = isFlowWorkspace
+    ? flowConfigs.find((fc) => fc.flowKey === 'router')
+    : undefined
+  const machineFlowConfigs = isFlowWorkspace
+    ? flowConfigs.filter((fc) => fc.flowKey !== 'router')
+    : []
 
   // Channel type helpers
   const channelType = workspace?.channelType
@@ -492,14 +498,22 @@ export function AgentSettingsPage() {
                 FLOW mode
               </span>
             )}
+            {isFlowWorkspace && routerFlowConfig && (
+              <button
+                type="button"
+                onClick={() => handleFlowNodeClick(routerFlowConfig)}
+                className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border border-orange-200 bg-orange-50 text-orange-700 hover:bg-orange-100 transition-colors"
+              >
+                <MessageCircle className="w-3 h-3" />
+                Router logic
+              </button>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           {(() => {
-            // Build the list of child nodes: standard sub-agents + FLOW sub-LLMs
-            // Separate the "router" flow config (shown as History layer) from machine sub-LLMs
-            const routerFlowConfig = isFlowWorkspace ? flowConfigs.find((fc) => fc.flowKey === 'router') : undefined
-            const machineFlowConfigs = isFlowWorkspace ? flowConfigs.filter((fc) => fc.flowKey !== 'router') : []
+            // Build the list of child nodes: standard sub-agents + FLOW sub-LLMs.
+            // In FLOW, router config is edited separately via "Router logic".
 
             const childNodes: {
               id: string; label: string; sublabel?: string; color: string
@@ -568,36 +582,7 @@ export function AgentSettingsPage() {
                   onClick={routerAgent ? () => handleNodeClick(routerAgent.id) : undefined}
                 />
 
-                {/* 3a. Router FlowAgentLLM / History node (FLOW workspaces only — runs before machine assignment) */}
-                {isFlowWorkspace && (
-                  <>
-                    <VerticalConnector />
-                    {routerFlowConfig ? (
-                      <PipelineNode
-                        icon={MessageCircle}
-                        label="History"
-                        sublabel={routerFlowConfig.flowLabel}
-                        color="#f97316"
-                        bg="#fff7ed"
-                        border="#fed7aa"
-                        isActive={routerFlowConfig.isActive}
-                        bold
-                        onClick={() => handleFlowNodeClick(routerFlowConfig)}
-                      />
-                    ) : (
-                      <PipelineNode
-                        icon={MessageCircle}
-                        label="Conversation History"
-                        sublabel="Context accumulated"
-                        color="#f97316"
-                        bg="#fff7ed"
-                        border="#fed7aa"
-                      />
-                    )}
-                  </>
-                )}
-
-                {/* Fan-out SVG lines from Router (or History for FLOW) to children */}
+                {/* Fan-out SVG lines from Router to children */}
                 {hasChildren && (
                   <div style={{ width: svgWidth + 40, position: 'relative' }}>
                     <svg
