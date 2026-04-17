@@ -568,7 +568,36 @@ export function AgentSettingsPage() {
                   onClick={routerAgent ? () => handleNodeClick(routerAgent.id) : undefined}
                 />
 
-                {/* Fan-out SVG lines from Router to children */}
+                {/* 3a. Router FlowAgentLLM / History node (FLOW workspaces only — runs before machine assignment) */}
+                {isFlowWorkspace && (
+                  <>
+                    <VerticalConnector />
+                    {routerFlowConfig ? (
+                      <PipelineNode
+                        icon={MessageCircle}
+                        label="History"
+                        sublabel={routerFlowConfig.flowLabel}
+                        color="#f97316"
+                        bg="#fff7ed"
+                        border="#fed7aa"
+                        isActive={routerFlowConfig.isActive}
+                        bold
+                        onClick={() => handleFlowNodeClick(routerFlowConfig)}
+                      />
+                    ) : (
+                      <PipelineNode
+                        icon={MessageCircle}
+                        label="Conversation History"
+                        sublabel="Context accumulated"
+                        color="#f97316"
+                        bg="#fff7ed"
+                        border="#fed7aa"
+                      />
+                    )}
+                  </>
+                )}
+
+                {/* Fan-out SVG lines from Router (or History for FLOW) to children */}
                 {hasChildren && (
                   <div style={{ width: svgWidth + 40, position: 'relative' }}>
                     <svg
@@ -653,7 +682,7 @@ export function AgentSettingsPage() {
                   </div>
                 )}
 
-                {/* Fan-in SVG lines from children to History */}
+                {/* Fan-in SVG lines from children to Translation */}
                 {hasChildren && (
                   <div style={{ width: svgWidth + 40, position: 'relative' }}>
                     <svg
@@ -683,31 +712,21 @@ export function AgentSettingsPage() {
 
                 {!hasChildren && <VerticalConnector />}
 
-                {/* 4. Conversation History / Router Flow Agent */}
-                {routerFlowConfig ? (
-                  <PipelineNode
-                    icon={MessageCircle}
-                    label="History"
-                    sublabel={routerFlowConfig.flowLabel}
-                    color="#f97316"
-                    bg="#fff7ed"
-                    border="#fed7aa"
-                    isActive={routerFlowConfig.isActive}
-                    bold
-                    onClick={() => handleFlowNodeClick(routerFlowConfig)}
-                  />
-                ) : (
-                  <PipelineNode
-                    icon={MessageCircle}
-                    label="Conversation History"
-                    sublabel="Context accumulated"
-                    color="#f97316"
-                    bg="#fff7ed"
-                    border="#fed7aa"
-                  />
+                {/* 4. Conversation History (NON-FLOW workspaces only — aggregation after sub-agents) */}
+                {!isFlowWorkspace && (
+                  <>
+                    <PipelineNode
+                      icon={MessageCircle}
+                      label="Conversation History"
+                      sublabel="Context accumulated"
+                      color="#f97316"
+                      bg="#fff7ed"
+                      border="#fed7aa"
+                    />
+                    <VerticalConnector />
+                  </>
                 )}
-
-                <VerticalConnector />
+                {isFlowWorkspace && <VerticalConnector />}
 
                 {/* 5. Translation Layer */}
                 {translationAgent ? (

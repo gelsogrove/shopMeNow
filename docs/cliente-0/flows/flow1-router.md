@@ -14,6 +14,7 @@ Questo documento definisce solo la logica di routing per i messaggi fuori dal fl
 - Niente accuse di frode.
 - Nessuna compensazione promessa automaticamente.
 - Se il caso e ambiguo o richiede validazione: `contactOperator`.
+- Resume UX: quando un flow in PAUSA riprende, il sistema deve rimandare `currentNode.prompt` prima di chiedere nuovo input.
 
 ## Dati minimi da raccogliere
 
@@ -37,7 +38,7 @@ Questo documento definisce solo la logica di routing per i messaggi fuori dal fl
 | `GATHER_INFO` | Mancano dati minimi macchina | Chiedere solo il dato mancante |
 | `ASSIGN_MACHINE` | Tipo + numero disponibili | `assignMachine()` |
 | `START_FLOW` | Problema macchina chiaro con flowKey assegnato | `startFlow()` |
-| `FAQ` | Richiesta info generale (refund/fattura/carta/orari/prezzi) | Risposta knowledge base |
+| `FAQ` | Richiesta info generale (refund/fattura/carta/orari/prezzi) | Handoff alla risposta knowledge base |
 | `ESCALATE` | Caso incoerente, cliente arrabbiato, caso non riconosciuto | `contactOperator()` |
 | `CHANGE_LANG` | Richiesta cambio lingua | `changeLanguage()` |
 
@@ -54,7 +55,7 @@ Allineati al Playbook:
 - `LOYALTY_CARD` (5.9)
 - `HOURS_PRICES_LOCAL_DIFFS` (5.10)
 
-## Escalation immediata (Playbook §10)
+## Escalation immediata (Playbook §6 + §10)
 
 - cliente molto arrabbiato
 - contraddizioni in importo/racconto
@@ -64,6 +65,7 @@ Allineati al Playbook:
 - sospetta incoerenza/frode
 - codice errato/nuovo codice richiesto
 - incidente con telecamere/AJAX
+- caso sospetto Goya/Pineda: addebito dataphone 10 EUR
 
 ## Flowchart Router
 
@@ -78,7 +80,7 @@ ACTIVE -->|No| INTENT{"Intent principale"}
 INTENT -->|Saluto| GREETING["Action: GREETING"]
 INTENT -->|Richiesta operatore| ESC1["Action: ESCALATE -> contactOperator"]
 INTENT -->|Cambio lingua| LANG["Action: CHANGE_LANG -> changeLanguage"]
-INTENT -->|FAQ generale| FAQ["Action: FAQ"]
+INTENT -->|FAQ generale| FAQ["Action: FAQ (classifica + handoff)"]
 INTENT -->|Problema macchina| GATHER
 INTENT -->|Incoerente/ambigua| ESC2["Action: ESCALATE"]
 

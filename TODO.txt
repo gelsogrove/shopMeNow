@@ -1,0 +1,15 @@
+- Archettura
+- FAQ
+- SCHEMA DB
+- DB
+- FAQ
+- FLOW WASDHER
+- FLOW DRIVER
+
+
+TODO
+- JSON asciugatrce
+- JOSN lavatrice
+- app funziona?
+- MCP per provare
+- pulizia
