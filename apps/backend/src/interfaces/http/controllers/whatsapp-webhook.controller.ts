@@ -267,6 +267,7 @@ export class WhatsAppWebhookController {
         messageText = extractMessageText(message)
         whatsappMessageId = message.id || `wa-${Date.now()}`
         workspaceId = value.workspaceId // ✅ Extract workspaceId from WhatsApp format
+        isPlayground = value.isPlayground === true // 🧪 Extract playground flag from value (frontend simulator uses entry format)
         messageTimestamp = message.timestamp ? Number(message.timestamp) * 1000 : undefined
 
         logger.info("[WEBHOOK] 📨 WhatsApp API format detected", {
@@ -274,6 +275,7 @@ export class WhatsAppWebhookController {
           messageLength: messageText.length,
           whatsappMessageId,
           workspaceId,
+          isPlayground,
         })
       } else if (data.message && data.phoneNumber) {
         // Frontend simulator format (standard)
