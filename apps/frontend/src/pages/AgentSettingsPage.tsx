@@ -458,9 +458,30 @@ export function AgentSettingsPage() {
       {/* ── Visual Pipeline Graph ── */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Brain className="w-5 h-5" />
-            Agent Pipeline
+          <CardTitle className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <Brain className="w-5 h-5" />
+              Agent Pipeline
+            </span>
+            {/* Channel tabs — shown only when workspace has both WhatsApp + Widget */}
+            {hasBoth && (
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+                <button
+                  type="button"
+                  onClick={() => setChannelView('whatsapp')}
+                  className={`px-3 py-1 flex items-center gap-1.5 transition-colors ${channelView === 'whatsapp' ? 'bg-green-600 text-white' : 'text-muted-foreground hover:bg-muted'}`}
+                >
+                  <Send className="w-3.5 h-3.5" /> WhatsApp
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setChannelView('widget')}
+                  className={`px-3 py-1 flex items-center gap-1.5 transition-colors ${channelView === 'widget' ? 'bg-blue-600 text-white' : 'text-muted-foreground hover:bg-muted'}`}
+                >
+                  <Globe className="w-3.5 h-3.5" /> Widget
+                </button>
+              </div>
+            )}
           </CardTitle>
           <CardDescription>
             Message flow through the multi-agent system
@@ -667,9 +688,9 @@ export function AgentSettingsPage() {
                     icon={MessageCircle}
                     label="History"
                     sublabel={routerFlowConfig.flowLabel}
-                    color="#0ea5e9"
-                    bg="#f0f9ff"
-                    border="#bae6fd"
+                    color="#f97316"
+                    bg="#fff7ed"
+                    border="#fed7aa"
                     isActive={routerFlowConfig.isActive}
                     bold
                     onClick={() => handleFlowNodeClick(routerFlowConfig)}
@@ -679,9 +700,9 @@ export function AgentSettingsPage() {
                     icon={MessageCircle}
                     label="Conversation History"
                     sublabel="Context accumulated"
-                    color="#0ea5e9"
-                    bg="#f0f9ff"
-                    border="#bae6fd"
+                    color="#f97316"
+                    bg="#fff7ed"
+                    border="#fed7aa"
                   />
                 )}
 
@@ -737,7 +758,121 @@ export function AgentSettingsPage() {
 
                 <VerticalConnector />
 
-                {/* 7. Response to Customer */}
+                {/* 7. WhatsApp Queue — only for WhatsApp channel view */}
+                {hasWhatsApp && (!hasBoth || channelView === 'whatsapp') && (() => {
+                  const pendingCount = queueItems.filter(i => i.status === 'pending').length
+                  const sentCount = queueItems.filter(i => i.status === 'sent').length
+                  const errorCount = queueItems.filter(i => i.status === 'error' || i.status === 'blocked').length
+
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!queuePanelOpen) fetchQueueData()
+                          setQueuePanelOpen(!queuePanelOpen)
+                        }}
+                        className="group relative flex flex-col items-center gap-1 rounded-xl border-2 px-5 py-2.5 text-center transition-all hover:shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                        style={{ minWidth: 160, borderColor: '#22c55e', backgroundColor: '#f0fdf4' }}
+                      >
+                        <span
+                          className={`absolute top-1.5 right-1.5 w-2 h-2 rounded-full border border-white ${queueDebugMode ? 'bg-yellow-400' : 'bg-green-500'}`}
+                        />
+                        <Inbox className="w-4 h-4 mt-0.5" style={{ color: '#16a34a' }} />
+                        <span className="text-xs font-semibold" style={{ color: '#16a34a' }}>WhatsApp Queue</span>
+                        {queuePanelOpen && !queueLoading && (
+                          <span className="flex gap-2 text-[10px] mt-0.5">
+                            <span className="text-yellow-600">⏳{pendingCount}</span>
+                            <span className="text-green-600">✅{sentCount}</span>
+                            <span className="text-red-500">❌{errorCount}</span>
+                          </span>
+                        )}
+                        <span className="text-[9px] text-muted-foreground">{queuePanelOpen ? '▲ close' : '▼ view queue'}</span>
+                      </button>
+
+                      {/* Expandable queue mini-panel */}
+                      {queuePanelOpen && (
+                        <div
+                          className="w-full rounded-xl border border-green-200 bg-white shadow-sm overflow-hidden"
+                          style={{ maxWidth: svgWidth + 40 }}
+                        >
+                          {/* Header row */}
+                          <div className="flex items-center justify-between px-4 py-2.5 bg-green-50 border-b border-green-100">
+                            <span className="text-xs font-semibold text-green-800 flex items-center gap-1.5">
+                              <Inbox className="w-3.5 h-3.5" />
+                              WhatsApp Queue
+                            </span>
+                            <div className="flex items-center gap-2 text-xs text-green-700">
+                              <span>{queueDebugMode ? '🐛 Debug mode' : '● Active'}</span>
+                              <Switch
+                                checked={!queueDebugMode}
+                                onCheckedChange={async (val) => {
+                                  if (!workspace?.id) return
+                                  try {
+                                    await api.put(`/workspaces/${workspace.id}/whatsapp-queue/debug-mode`, { debugMode: !val })
+                                    setQueueDebugMode(!val)
+                                    toast.success(val ? 'Queue activated' : 'Debug mode on', { duration: 2000 })
+                                  } catch (e) { toast.error('Failed to update queue mode') }
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Stats row */}
+                          {!queueLoading && (
+                            <div className="flex gap-3 px-4 py-2 border-b border-gray-100 text-xs">
+                              <span className="flex items-center gap-1 text-yellow-700 font-medium">
+                                <Clock className="w-3 h-3" /> {pendingCount} Pending
+                              </span>
+                              <span className="flex items-center gap-1 text-green-700 font-medium">
+                                <Send className="w-3 h-3" /> {sentCount} Sent
+                              </span>
+                              <span className="flex items-center gap-1 text-red-600 font-medium">
+                                <XCircle className="w-3 h-3" /> {errorCount} Failed
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Message list */}
+                          {queueLoading ? (
+                            <div className="flex items-center justify-center py-4 gap-2 text-xs text-muted-foreground">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading...
+                            </div>
+                          ) : queueItems.length === 0 ? (
+                            <div className="flex items-center justify-center py-4 gap-2 text-xs text-muted-foreground">
+                              <CheckCircle className="w-3.5 h-3.5 text-green-400" /> Queue is empty
+                            </div>
+                          ) : (
+                            <div className="divide-y divide-gray-50 max-h-48 overflow-y-auto">
+                              {queueItems.map((item) => (
+                                <div key={item.id} className="flex items-center gap-2 px-4 py-1.5 text-xs hover:bg-gray-50">
+                                  <span
+                                    className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${
+                                      item.status === 'pending' ? 'bg-yellow-50 text-yellow-700' :
+                                      item.status === 'sent' ? 'bg-green-50 text-green-700' :
+                                      'bg-red-50 text-red-600'
+                                    }`}
+                                  >
+                                    {item.status === 'pending' ? <Clock className="w-2.5 h-2.5" /> :
+                                     item.status === 'sent' ? <Send className="w-2.5 h-2.5" /> :
+                                     <XCircle className="w-2.5 h-2.5" />}
+                                    {item.status}
+                                  </span>
+                                  <span className="font-medium text-gray-700 shrink-0 w-24 truncate">{item.customer}</span>
+                                  <span className="text-gray-400 truncate">{item.content}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )
+                })()}
+
+                <VerticalConnector />
+
+                {/* 8. Response to Customer */}
                 <PipelineNode
                   icon={MessageCircle}
                   label="Response to Customer"
