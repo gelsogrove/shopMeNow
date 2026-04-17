@@ -265,7 +265,6 @@ export class AgentService {
       if (data.temperature !== undefined)
         updateData.temperature = data.temperature
       if (data.maxTokens !== undefined) updateData.maxTokens = data.maxTokens
-      if (data.isActive !== undefined) updateData.isActive = data.isActive
       if (data.availableFunctions !== undefined) updateData.availableFunctions = data.availableFunctions
 
       logger.info("🛠️ Prepared update data:", updateData)

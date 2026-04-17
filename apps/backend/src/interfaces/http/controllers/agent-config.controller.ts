@@ -74,8 +74,6 @@ export class AgentConfigController {
    *                         type: number
    *                       order:
    *                         type: number
-   *                       isActive:
-   *                         type: boolean
    *                       availableFunctions:
    *                         type: array
    *                         items:
