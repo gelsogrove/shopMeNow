@@ -15,6 +15,7 @@
  * Safety Agent (order 99) → ALWAYS last, translates + validates PII/profanity
  *
  * @architecture Clean Component with shadcn/ui
+ * @version 2.1.0 - History node + WhatsApp Queue panel
  */
 
 import { PageLayout } from "@/components/layout/PageLayout"
