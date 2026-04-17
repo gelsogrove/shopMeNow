@@ -78,6 +78,7 @@ lerna-debug.log*
 
 # Local files
 browser-tools-mcp/ 
+.mcp.json
 .specstory/
 .cursor/
 dump/

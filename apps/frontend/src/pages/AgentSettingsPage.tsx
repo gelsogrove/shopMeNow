@@ -56,19 +56,26 @@ import { FlowConfigSheet } from "@/components/shared/FlowConfigSheet"
 import { Agent, getAgents } from "@/services/agents-legacy-api"
 import { updateAgentConfig } from "@/services/agent-config-api"
 import { FlowConfig, getAllForWorkspace } from "@/services/flowConfigApi"
+import { api } from "@/services/api"
+import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import {
   Bot,
   Brain,
   Check,
   CheckCircle,
   ChevronsUpDown,
+  Clock,
   Globe,
   HelpCircle,
+  Inbox,
   Loader2,
   MessageCircle,
   Plus,
   Save,
+  Send,
   Shield,
+  XCircle,
   Workflow,
 } from "lucide-react"
 import React, { useEffect, useState } from "react"
@@ -171,6 +178,23 @@ export function AgentSettingsPage() {
 
   const isFlowWorkspace = workspace?.channelMode === 'FLOW'
 
+  // Channel type helpers
+  const channelType = workspace?.channelType
+  const hasWhatsApp = !channelType || channelType === 'WHATSAPP'
+  const hasWidget = channelType === 'WIDGET'
+  const hasBoth = hasWhatsApp && hasWidget // always false today – ready for future BOTH enum
+
+  // WhatsApp Queue mini-panel state
+  interface QueueItem {
+    id: string; customer: string; content: string
+    status: 'pending' | 'sent' | 'error' | 'blocked'; createdAt: string
+  }
+  const [queuePanelOpen, setQueuePanelOpen] = useState(false)
+  const [queueLoading, setQueueLoading] = useState(false)
+  const [queueItems, setQueueItems] = useState<QueueItem[]>([])
+  const [queueDebugMode, setQueueDebugMode] = useState(false)
+  const [channelView, setChannelView] = useState<'whatsapp' | 'widget'>('whatsapp')
+
   const OPENROUTER_MODELS = [
     { value: "openai/gpt-4o-mini",                label: "GPT-4o Mini" },
     { value: "openai/gpt-4o",                     label: "GPT-4o" },
@@ -228,6 +252,33 @@ export function AgentSettingsPage() {
   const handleAddSubLLM = () => {
     setSelectedFlowConfig(null)
     setFlowSheetOpen(true)
+  }
+
+  // Fetch WhatsApp queue data for the mini-panel in the pipeline diagram
+  const fetchQueueData = async () => {
+    if (!workspace?.id) return
+    setQueueLoading(true)
+    try {
+      const [queueRes, statusRes] = await Promise.all([
+        api.get(`/workspaces/${workspace.id}/whatsapp-queue`),
+        api.get(`/workspaces/${workspace.id}/whatsapp-queue/status`),
+      ])
+      const msgs = Array.isArray(queueRes.data) ? queueRes.data : []
+      setQueueItems(
+        msgs.slice(0, 15).map((m: any) => ({
+          id: m.id,
+          customer: m.customer?.name || m.phoneNumber || '?',
+          content: (m.messageContent || '').substring(0, 55),
+          status: m.status as QueueItem['status'],
+          createdAt: m.createdAt,
+        }))
+      )
+      if (statusRes.data.success) setQueueDebugMode(statusRes.data.debugMode ?? false)
+    } catch (e) {
+      logger.error('Failed to fetch queue data:', e)
+    } finally {
+      setQueueLoading(false)
+    }
   }
 
   // Load all agents
