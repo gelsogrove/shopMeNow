@@ -306,7 +306,6 @@ export function AgentConfigurationPage() {
         temperature: updatedAgent.temperature,
         model: updatedAgent.model,
         maxTokens: updatedAgent.maxTokens,
-        isActive: updatedAgent.isActive,
         order: updatedAgent.order,
         type: updatedAgent.agentType,
         availableFunctions: (updatedAgent as any).availableFunctions ?? undefined,
@@ -454,7 +453,6 @@ export function AgentConfigurationPage() {
             temperature: agent.temperature || 0.7,
             maxTokens: agent.maxTokens || 1000,
             model: agent.model || "openai/gpt-4.1-mini",
-            isActive: agent.isActive ?? true,
             order: agent.order || 0,
             availableFunctions: agentFunctions[agent.id] || [],
           }))}

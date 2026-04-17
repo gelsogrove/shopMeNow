@@ -33,42 +33,15 @@ export class AgentConfigRepository {
     type: AgentType
   ): Promise<AgentConfig | null> {
     try {
-      // 🌍 DEBUG: Log query parameters
-      logger.info("🔍 AgentConfigRepository.findByType() called", {
-        workspaceId,
-        type,
-        searchingForActive: true,
-      })
-
       const agent = await this.prisma.agentConfig.findFirst({
         where: {
           workspaceId,
           type,
-          isActive: true,
         },
       })
 
-      // 🌍 DEBUG: Log result
       if (!agent) {
         logger.warn(`⚠️ Agent type ${type} NOT FOUND for workspace ${workspaceId}`)
-        
-        // 🌍 DEBUG: Check if agent exists but is inactive
-        const inactiveAgent = await this.prisma.agentConfig.findFirst({
-          where: { workspaceId, type },
-        })
-        
-        if (inactiveAgent) {
-          logger.warn(`⚠️ Agent type ${type} EXISTS but isActive=${inactiveAgent.isActive}`)
-        } else {
-          logger.warn(`⚠️ Agent type ${type} DOES NOT EXIST in database for this workspace`)
-        }
-      } else {
-        logger.info(`✅ Agent type ${type} FOUND`, {
-          id: agent.id,
-          name: agent.name,
-          isActive: agent.isActive,
-          model: agent.model,
-        })
       }
 
       return agent
@@ -79,47 +52,35 @@ export class AgentConfigRepository {
   }
 
   /**
-   * Find all active agents sorted by order (for agent execution pipeline)
+   * Find all agents sorted by order (for agent execution pipeline)
    * @param workspaceId - Workspace ID (security filter)
    * @returns Array of agent configurations sorted by order field
    */
   async findActiveByOrder(workspaceId: string): Promise<AgentConfig[]> {
     try {
       const agents = await this.prisma.agentConfig.findMany({
-        where: {
-          workspaceId,
-          isActive: true,
-        },
-        orderBy: {
-          order: "asc", // ROUTER first (0), then specialists (2-5), SAFETY last (99)
-        },
+        where: { workspaceId },
+        orderBy: { order: "asc" },
       })
-
-      logger.info(
-        `Found ${agents.length} active agents for workspace ${workspaceId}`
-      )
       return agents
     } catch (error) {
-      logger.error("Error finding active agents by order:", error)
+      logger.error("Error finding agents by order:", error)
       throw error
     }
   }
 
   /**
-   * Find all active agents (without order sorting)
+   * Find all agents for a workspace
    * @param workspaceId - Workspace ID (security filter)
-   * @returns Array of active agent configurations
+   * @returns Array of agent configurations
    */
   async findActiveAgents(workspaceId: string): Promise<AgentConfig[]> {
     try {
       return await this.prisma.agentConfig.findMany({
-        where: {
-          workspaceId,
-          isActive: true,
-        },
+        where: { workspaceId },
       })
     } catch (error) {
-      logger.error("Error finding active agents:", error)
+      logger.error("Error finding agents:", error)
       throw error
     }
   }

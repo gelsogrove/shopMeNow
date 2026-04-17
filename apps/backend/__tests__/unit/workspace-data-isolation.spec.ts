@@ -191,7 +191,6 @@ describe("Workspace Data Isolation", () => {
           where: expect.objectContaining({
             workspaceId: WORKSPACE_A,
             type: "PRODUCT_SEARCH",
-            isActive: true,
           }),
         })
       )

@@ -227,6 +227,30 @@ Customer Message → Router → subLLM (dinamico) → Historial → Translation 
 
 ---
 
+## 2b. Mappatura LLM — Template, Variabili, Calling Functions
+
+Ogni LLM nel pipeline ha il suo template markdown (tranne subLLM che è dinamico da DB).
+
+| LLM | Template | Variabili chiave | Calling Functions |
+|-----|----------|-----------------|-------------------|
+| **Router** | `templates/flow/01-flow-agent.template.md` | `{{chatbotName}}`, `{{companyName}}`, `{{customerName}}`, `{{toneOfVoice}}`, `{{botIdentityResponse}}`, `{{faqs}}`, `{{customAiRules}}`, `{{websiteUrl}}`, `{{supportEmail}}`, `{{address}}` | `contactOperator`, `profileManagementAgent`, `listAvailableSlots`, `bookAppointment`, `cancelAppointment`, `getCustomerAppointments` |
+| **subLLM** | **Nessun template** (prompt da `FlowNodeConfig.systemPrompt` in DB) | `{{chatbotName}}`, `{{customerName}}`, `{{toneOfVoice}}` | `startFlow`, `contactOperator` |
+| **Conversation History** | `templates/flow/05-conversation-history.template.md` | `{{chatbotName}}`, `{{botIdentityResponse}}`, `{{companyName}}`, `{{customAiRules}}` | Nessuna |
+| **Translation** | `templates/flow/03-translation.template.md` | `{{languageUser}}` | Nessuna |
+| **Security** | `templates/flow/02-security.template.md` | `{{companyName}}`, `{{allowedExternalLinks}}` | Nessuna |
+
+**Variabili condivise (fonte: Workspace settings):**
+- `{{chatbotName}}` — Nome del bot (es. "EcoBot")
+- `{{companyName}}` — Nome azienda (es. "Ecolaundry")
+- `{{toneOfVoice}}` — Tono di voce (friendly, professional, etc.)
+- `{{botIdentityResponse}}` — Descrizione personalità bot
+- `{{customAiRules}}` — Regole business custom
+- `{{customerName}}` — Nome cliente (dinamico, da Customer DB)
+
+**Import/Export defaults:** `npm run update:prompts` carica i template .md → DB. `npm run export:prompts` esporta da DB → .md.
+
+---
+
 ## 3. Scenari Completi — Verifica Caso per Caso
 
 ### Scenario 1: Primo contatto — "Hola"
