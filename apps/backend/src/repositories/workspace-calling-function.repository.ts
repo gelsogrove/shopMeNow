@@ -56,6 +56,34 @@ export class WorkspaceCallingFunctionRepository {
     }
 
     /**
+     * Find DELEGATE_TO_AGENT functions that have an attachedFlowKey (sub-LLM delegations for FLOW workspaces).
+     * Used by FlowAgentLLM Router mode to build dynamic tool definitions per sub-LLM.
+     *
+     * @param workspaceId - Workspace ID
+     * @param functionNames - Subset of function names to filter by (from FlowNodeConfig.availableFunctions)
+     */
+    async findFlowDelegateFunctions(
+        workspaceId: string,
+        functionNames: string[]
+    ): Promise<WorkspaceCallingFunction[]> {
+        if (functionNames.length === 0) return []
+        try {
+            return await this.prisma.workspaceCallingFunction.findMany({
+                where: {
+                    workspaceId,
+                    functionName: { in: functionNames },
+                    executionType: "DELEGATE_TO_AGENT",
+                    attachedFlowKey: { not: null },
+                    isActive: true,
+                },
+            })
+        } catch (error) {
+            logger.error(`Error finding flow delegate functions for workspace ${workspaceId}:`, error)
+            throw error
+        }
+    }
+
+    /**
      * Find all functions for a workspace (including inactive)
      * @param workspaceId - Workspace ID
      */

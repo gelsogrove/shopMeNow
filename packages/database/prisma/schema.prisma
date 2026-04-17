@@ -1836,7 +1836,8 @@ model WorkspaceCallingFunction {
   
   isSystemFunction      Boolean   @default(false)  // true = core, non cancellabile
   executionType         String    @default("WEBHOOK")  // "DELEGATE_TO_AGENT" | "WEBHOOK" | "INTERNAL"
-  attachedLlm           String?   // For DELEGATE_TO_AGENT: which agent handles dispatch (e.g. "PRODUCT_SEARCH", "CART_MANAGEMENT")
+  attachedLlm           String?   // For DELEGATE_TO_AGENT (AgentConfig): agent type (e.g. "PRODUCT_SEARCH", "CART_MANAGEMENT")
+  attachedFlowKey       String?   // For DELEGATE_TO_AGENT (FlowNodeConfig): flowKey of the sub-LLM to delegate to
   webhookUrl            String?   // 🆕 Per-function webhook URL (overrides workspace default if set)
   
   // 🔐 Credentials mapping - specifica dove e come injettare le credenziali

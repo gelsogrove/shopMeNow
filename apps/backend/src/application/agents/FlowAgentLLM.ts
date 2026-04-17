@@ -44,6 +44,7 @@ import { PrismaClient } from "@echatbot/database"
 import axios from "axios"
 import { withOpenRouterRetry } from "../../utils/llm-retry"
 import { FlowNodeConfigRepository } from "../../repositories/flow-node-config.repository"
+import { WorkspaceCallingFunctionRepository } from "../../repositories/workspace-calling-function.repository"
 import { ConversationManager, Message } from "../../services/conversation-manager.service"
 import { FlowEngineService } from "../services/flow-engine.service"
 import { contactOperator } from "../../domain/calling-functions/contactOperator"
@@ -84,6 +85,7 @@ export interface FlowAgentResponse {
 
 export class FlowAgentLLM {
   private flowNodeConfigRepo: FlowNodeConfigRepository
+  private callingFunctionRepo: WorkspaceCallingFunctionRepository
   private conversationManager: ConversationManager
   private openRouterApiKey: string
   private openRouterBaseUrl: string
@@ -91,6 +93,7 @@ export class FlowAgentLLM {
 
   constructor(private prisma: PrismaClient) {
     this.flowNodeConfigRepo = new FlowNodeConfigRepository(prisma)
+    this.callingFunctionRepo = new WorkspaceCallingFunctionRepository(prisma)
     this.conversationManager = new ConversationManager(prisma)
     this.promptProcessor = new PromptProcessorService()
     this.openRouterApiKey = process.env.OPENROUTER_API_KEY || ""
@@ -162,7 +165,8 @@ export class FlowAgentLLM {
     // ── STEP 3: Build tools dynamically ──────────────────────────────────────
     // Tool enum comes from DB flows keys — server-side, tamper-proof
     const flowIds = Object.keys(flows)
-    const tools = this.buildTools(flowIds, availableFunctions)
+    const isRouterMode = ctx.flowKey === "router"
+    const tools = await this.buildTools(flowIds, availableFunctions, isRouterMode, ctx.workspaceId)
 
     // ── STEP 4: Call LLM ─────────────────────────────────────────────────────
     const messages = [
@@ -227,28 +231,39 @@ export class FlowAgentLLM {
         output = result.responseText
 
         functionCalls.push({ name: "startFlow", arguments: fnArgs, result: { flowId } })
-      } else if (fnName === "assignMachine") {
-        // ── 5b. assignMachine (Router mode) ──────────────────────────────────
-        // Called by the Router LLM when it has collected: machine type + machine number
-        // Saves flowKey+flowNumber to context → next message routes to PATH C (Sub-LLM)
-        const selectedFlowKey = String(fnArgs.flowKey ?? "")
-        const machineNumber = String(fnArgs.machineNumber ?? "")
-
-        logger.info("🔑 FlowAgentLLM: tool_call assignMachine", { selectedFlowKey, machineNumber })
-
-        chatContext.flowKey = selectedFlowKey
-        chatContext.flowNumber = machineNumber
-
-        // output remains as LLM's text response (e.g. "Perfecto, te asigno la lavadora #42")
-        functionCalls.push({ name: "assignMachine", arguments: fnArgs, result: { flowKey: selectedFlowKey, machineNumber } })
       } else if (fnName === "contactOperator") {
-        // ── 5c. contactOperator ───────────────────────────────────────────────
+        // ── 5b. contactOperator ───────────────────────────────────────────────
         logger.info("📞 FlowAgentLLM: tool_call contactOperator")
         shouldCallOperator = true
         // Actual contactOperator() call is deferred to strategy (needs full workspace object)
         functionCalls.push({ name: "contactOperator", arguments: fnArgs, result: "deferred_to_strategy" })
       } else {
-        logger.warn("FlowAgentLLM: unknown tool_call", { fnName })
+        // ── 5c. DELEGATE_TO_FLOW — Router delegating to a sub-LLM ────────────
+        // Check if this tool name matches a Flow DELEGATE_TO_AGENT calling function
+        const delegateFn = await this.callingFunctionRepo.findByName(ctx.workspaceId, fnName)
+
+        if (delegateFn && delegateFn.executionType === "DELEGATE_TO_AGENT" && delegateFn.attachedFlowKey) {
+          const targetFlowKey = delegateFn.attachedFlowKey
+          const machineNumber = String(fnArgs.machineNumber ?? "")
+
+          logger.info("🔑 FlowAgentLLM: DELEGATE_TO_FLOW", { fnName, targetFlowKey, machineNumber })
+
+          // Update chatContext — strategy will immediately invoke sub-LLM this turn
+          chatContext.flowKey = targetFlowKey
+          chatContext.flowNumber = machineNumber
+
+          functionCalls.push({
+            name: fnName,
+            arguments: fnArgs,
+            result: {
+              type: "DELEGATE_TO_FLOW",
+              attachedFlowKey: targetFlowKey,
+              machineNumber,
+            },
+          })
+        } else {
+          logger.warn("FlowAgentLLM: unknown tool_call", { fnName })
+        }
       }
     }
 
@@ -284,45 +299,56 @@ export class FlowAgentLLM {
   /**
    * Build OpenAI-compatible tool definitions dynamically from DB config.
    *
-   * Security: flowId enum is built server-side from DB keys — customer cannot inject
-   * arbitrary flowIds. The LLM is constrained to the enumerated values.
+   * Router mode (flowKey === "router"):
+   *   Loads DELEGATE_TO_AGENT calling functions with attachedFlowKey from DB.
+   *   Builds one tool per sub-LLM. Replaces the old assignMachine tool.
+   *
+   * Sub-LLM mode (any other flowKey):
+   *   Builds startFlow tool using flow IDs from the FlowNodeConfig.
+   *
+   * Security: tool names and enums come from DB only — customer cannot inject arbitrary values.
    */
-  private buildTools(
+  private async buildTools(
     flowIds: string[],
-    availableFunctions: string[]
-  ): Array<Record<string, unknown>> {
+    availableFunctions: string[],
+    isRouterMode: boolean,
+    workspaceId: string
+  ): Promise<Array<Record<string, unknown>>> {
     const tools: Array<Record<string, unknown>> = []
 
-    // Router mode: assignMachine replaces startFlow
-    // Triggered when config explicitly declares "assignMachine" in availableFunctions
-    if (availableFunctions.includes("assignMachine") && flowIds.length > 0) {
-      tools.push({
-        type: "function",
-        function: {
-          name: "assignMachine",
-          description:
-            "Assign the customer to a specific machine type and number. " +
-            "Call this ONLY when you have collected BOTH: machine type AND machine number from the customer. " +
-            "Do NOT call this if you are still missing either piece of information.",
-          parameters: {
-            type: "object",
-            properties: {
-              flowKey: {
-                type: "string",
-                enum: flowIds,
-                description: "The machine type identifier (from the configured list).",
-              },
-              machineNumber: {
-                type: "string",
-                description: "The machine number found on the label. E.g. '42'.",
-              },
+    if (isRouterMode) {
+      // Router mode: one DELEGATE_TO_FLOW tool per sub-LLM calling function
+      const delegateFns = await this.callingFunctionRepo.findFlowDelegateFunctions(
+        workspaceId,
+        availableFunctions
+      )
+
+      for (const fn of delegateFns) {
+        // Use custom parameters schema if provided, otherwise default to machineNumber
+        const parametersSchema = fn.parameters ?? {
+          type: "object",
+          properties: {
+            machineNumber: {
+              type: "string",
+              description: "Machine number found on the label (e.g. '42').",
             },
-            required: ["flowKey", "machineNumber"],
           },
-        },
-      })
+          required: ["machineNumber"],
+        }
+
+        tools.push({
+          type: "function",
+          function: {
+            name: fn.functionName,
+            description:
+              fn.description ??
+              `Delegate to the ${fn.attachedFlowKey} specialist agent after collecting the machine number.`,
+            parameters: parametersSchema,
+          },
+        })
+      }
     } else if (flowIds.length > 0) {
-      // Normal Sub-LLM mode: startFlow
+      // Sub-LLM mode: startFlow tool constrained to this config's flow IDs
       tools.push({
         type: "function",
         function: {

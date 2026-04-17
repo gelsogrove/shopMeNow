@@ -311,11 +311,66 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
           })
 
           responseText = agentResult.output
-          chatContext = agentResult.chatContext // may now have flowKey if assignMachine was called
+          chatContext = agentResult.chatContext // may now have flowKey if DELEGATE_TO_FLOW was called
           tokensUsed = agentResult.tokensUsed
           executionTimeMs = agentResult.executionTimeMs
           shouldCallOperator = agentResult.shouldCallOperator
           functionCalls.push(...agentResult.functionCalls)
+
+          // ── Detect DELEGATE_TO_FLOW: Router delegated to a sub-LLM ──────────
+          // If the Router called a DELEGATE_TO_AGENT function pointing to a FlowNodeConfig,
+          // immediately invoke the sub-LLM in the same turn (no extra round-trip for customer).
+          const delegateCall = agentResult.functionCalls.find(
+            (fc) => fc.result && (fc.result as any).type === "DELEGATE_TO_FLOW"
+          )
+          if (delegateCall) {
+            const { attachedFlowKey, machineNumber } = delegateCall.result as {
+              type: string
+              attachedFlowKey: string
+              machineNumber: string
+            }
+
+            logger.info("🔀 FlowWorkspaceStrategy - DELEGATE_TO_FLOW detected, invoking sub-LLM", {
+              attachedFlowKey,
+              machineNumber,
+            })
+
+            // chatContext already updated by FlowAgentLLM (flowKey + flowNumber set)
+            const subLlmAgent = new FlowAgentLLM(this.prisma)
+            const subResult = await subLlmAgent.handleQuery({
+              workspaceId: context.workspaceId,
+              customerId: context.customerId,
+              conversationId: context.conversationId || "",
+              flowKey: attachedFlowKey,
+              message: context.message,
+              chatContext,
+              customerName: context.customerName || customerData.name,
+              customerLanguage: context.customerLanguage || customerData.language || "en",
+              customerPhone: customerData.phone || undefined,
+            })
+
+            responseText = subResult.output
+            chatContext = subResult.chatContext
+            tokensUsed += subResult.tokensUsed
+            executionTimeMs += subResult.executionTimeMs
+            shouldCallOperator = shouldCallOperator || subResult.shouldCallOperator
+            functionCalls.push(...subResult.functionCalls)
+
+            debugSteps.push({
+              type: "flow-agent",
+              agent: "FlowAgentLLM-SubLLM",
+              model: "from-config",
+              timestamp: new Date().toISOString(),
+              input: { userMessage: context.message, flowKey: attachedFlowKey, machineNumber },
+              output: {
+                message: subResult.output,
+                functionCalls: subResult.functionCalls,
+                shouldCallOperator: subResult.shouldCallOperator,
+              },
+              tokensUsed: subResult.tokensUsed,
+              executionTimeMs: subResult.executionTimeMs,
+            })
+          }
         }
 
         debugSteps.push({
