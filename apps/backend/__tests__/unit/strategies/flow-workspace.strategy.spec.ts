@@ -2,9 +2,9 @@
  * E4 — FlowWorkspaceStrategy Unit Tests
  *
  * Tests the 3-path routing logic:
- *   Path A: QR code → load FlowNodeConfig, save context, return welcome
- *   Path B: Active flowState → FlowEngineService (deterministic, 0 LLM tokens)
- *   Path C: No active flow → FlowAgentLLM (LLM decides startFlow/contactOperator/text)
+ *   Path A: Active flowState → FlowEngineService (deterministic, 0 LLM tokens)
+ *   Path B: flowKey set, no active flow → FlowAgentLLM (Sub-LLM for machine)
+ *   Path C: No flowKey → Router FlowAgentLLM (gathers locale/machine/number)
  *
  * Also verifies post-processing: TranslationAgent, contactOperator, context saving.
  */
@@ -220,71 +220,7 @@ describe("FlowWorkspaceStrategy", () => {
 
   describe("route", () => {
     // ───────────────────────────────────────────────────────────────────────
-    // T2: QR code message → loads FlowNodeConfig, saves flowKey to context
-    // ───────────────────────────────────────────────────────────────────────
-    // SCENARIO: Customer scans QR code on machine #3 labeled "lavatrice_hs60xx"
-    // RULE: Strategy extracts flowKey + flowNumber, loads config from DB, saves to session context
-    it("QR message → loads FlowNodeConfig, saves flowKey to context", async () => {
-      const prisma = createPrismaMock()
-      const strategy = new FlowWorkspaceStrategy(prisma)
-      const workspace = createFlowWorkspace()
-      const context = createContext({ message: "START_FLOW_3_lavatrice_hs60xx" })
-
-      mockFindByFlowKey.mockResolvedValue(MOCK_FLOW_CONFIG)
-
-      const result = await strategy.route(context, workspace)
-
-      // ASSERT: FlowNodeConfig loaded by (workspaceId, flowKey)
-      expect(mockFindByFlowKey).toHaveBeenCalledWith("ws-flow-1", "lavatrice_hs60xx")
-
-      // ASSERT: Context saved with flowKey + flowNumber
-      expect(prisma.chatSession.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            context: expect.objectContaining({
-              flowKey: "lavatrice_hs60xx",
-              flowNumber: "3",
-            }),
-          }),
-        })
-      )
-
-      // ASSERT: Welcome message includes flowLabel and machine number
-      expect(result.response).toBeDefined()
-    })
-
-    // ───────────────────────────────────────────────────────────────────────
-    // T3: QR with unknown flowKey → returns error message
-    // ───────────────────────────────────────────────────────────────────────
-    // SCENARIO: QR code has a flowKey that doesn't exist in the database
-    // RULE: Strategy returns a user-friendly error, does NOT crash
-    it("QR with unknown flowKey → returns error message (does not throw)", async () => {
-      const prisma = createPrismaMock()
-      const strategy = new FlowWorkspaceStrategy(prisma)
-      const workspace = createFlowWorkspace()
-      const context = createContext({ message: "START_FLOW_1_unknown_machine" })
-
-      mockFindByFlowKey.mockResolvedValue(null) // Config not found
-
-      // Make translation pass through for this test
-      mockTranslationProcess.mockImplementation(async (opts: any) => ({
-        translated: false,
-        originalLanguage: "en",
-        targetLanguage: "es",
-        message: opts.message, // Pass through original
-        tokensUsed: 0,
-      }))
-
-      const result = await strategy.route(context, workspace)
-
-      // ASSERT: Returns readable error containing the unknown flowKey
-      expect(result.response).toContain("unknown_machine")
-      // ASSERT: FlowAgentLLM was NOT called
-      expect(mockHandleQuery).not.toHaveBeenCalled()
-    })
-
-    // ───────────────────────────────────────────────────────────────────────
-    // T4: flowState ACTIVE → routes to FlowEngine, NOT FlowAgentLLM
+    // T2: flowState ACTIVE → routes to FlowEngine, NOT FlowAgentLLM
     // ───────────────────────────────────────────────────────────────────────
     // SCENARIO: Customer is mid-flow (e.g., step_0 → replied "1")
     // RULE: Active flow goes to deterministic FlowEngine (0 LLM tokens)
@@ -327,9 +263,9 @@ describe("FlowWorkspaceStrategy", () => {
     })
 
     // ───────────────────────────────────────────────────────────────────────
-    // T5: No active flow + flowKey present → routes to FlowAgentLLM
+    // T3: No active flow + flowKey present → routes to FlowAgentLLM
     // ───────────────────────────────────────────────────────────────────────
-    // SCENARIO: Customer scanned QR earlier but no flow started yet, types free text
+    // SCENARIO: Customer assigned to machine but no flow started yet, types free text
     // RULE: FlowAgentLLM handles → LLM decides whether to startFlow or respond
     it("No active flow + flowKey present → routes to FlowAgentLLM", async () => {
       const prisma = createPrismaMock({
@@ -364,7 +300,7 @@ describe("FlowWorkspaceStrategy", () => {
     })
 
     // ───────────────────────────────────────────────────────────────────────
-    // T6: FlowEngine output → TranslationAgent called
+    // T4: FlowEngine output → TranslationAgent called
     // ───────────────────────────────────────────────────────────────────────
     // SCENARIO: FlowEngine produces English response, customer speaks Spanish
     // RULE: TranslationAgent MUST translate EVERY response, regardless of path
@@ -411,7 +347,7 @@ describe("FlowWorkspaceStrategy", () => {
     })
 
     // ───────────────────────────────────────────────────────────────────────
-    // T7: FlowAgentLLM output → TranslationAgent called
+    // T5: FlowAgentLLM output → TranslationAgent called
     // ───────────────────────────────────────────────────────────────────────
     // SCENARIO: LLM returns English response, customer speaks Spanish
     // RULE: TranslationAgent runs on FlowAgentLLM output too
@@ -452,7 +388,7 @@ describe("FlowWorkspaceStrategy", () => {
     })
 
     // ───────────────────────────────────────────────────────────────────────
-    // T8: shouldCallOperator → contactOperator() called
+    // T6: shouldCallOperator → contactOperator() called
     // ───────────────────────────────────────────────────────────────────────
     // SCENARIO: FlowEngine reaches handle_escalate node (shouldCallOperator=true)
     // RULE: contactOperator() is called with correct workspace/customer data
@@ -502,7 +438,7 @@ describe("FlowWorkspaceStrategy", () => {
     })
 
     // ───────────────────────────────────────────────────────────────────────
-    // T9: ChatSession.context saved after every message
+    // T7: ChatSession.context saved after every message
     // ───────────────────────────────────────────────────────────────────────
     // SCENARIO: After any path processes a message, updated context must be persisted
     // RULE: ChatSession.update() is always called with the updated context
@@ -545,7 +481,7 @@ describe("FlowWorkspaceStrategy", () => {
     })
 
     // ───────────────────────────────────────────────────────────────────────
-    // T10: FlowEngine throws → strategy catches and returns readable error
+    // T8: FlowEngine throws → strategy catches and returns readable error
     // ───────────────────────────────────────────────────────────────────────
     // SCENARIO: FlowNodeConfig exists but flows JSON is corrupt → FlowEngine throws
     // RULE: Strategy catches, logs error, re-throws (handled by caller)
@@ -585,13 +521,12 @@ describe("FlowWorkspaceStrategy", () => {
     })
 
     // ───────────────────────────────────────────────────────────────────────
-    // T11: No flowKey + no QR → calls Router FlowAgentLLM (PATH D)
+    // T9: No flowKey → calls Router FlowAgentLLM (PATH C)
     // ───────────────────────────────────────────────────────────────────────
     // SCENARIO: Customer writes to FLOW workspace without any assigned machine
     // RULE: Strategy calls Router FlowAgentLLM (flowKey="router") to gather
     //       locale → machine type → machine number → assignMachine()
-    //       (changed from static QR hint — Andrea's requirement Apr 2026)
-    it("No flowKey in context + no QR → calls Router FlowAgentLLM (PATH D)", async () => {
+    it("No flowKey in context → calls Router FlowAgentLLM (PATH C)", async () => {
       const MOCK_ROUTER_CONFIG = {
         id: "fnc-router",
         workspaceId: "ws-flow-1",
@@ -638,7 +573,7 @@ describe("FlowWorkspaceStrategy", () => {
 
       // ASSERT: Response is defined (from Router LLM)
       expect(result.response).toBeDefined()
-      // ASSERT: Router LLM was called with flowKey="router" (PATH D behaviour)
+      // ASSERT: Router LLM was called with flowKey="router" (PATH C behaviour)
       expect(mockHandleQuery).toHaveBeenCalledWith(
         expect.objectContaining({ flowKey: "router", message: "ciao" })
       )

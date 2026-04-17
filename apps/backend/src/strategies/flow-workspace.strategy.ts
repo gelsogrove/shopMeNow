@@ -3,11 +3,10 @@
  *
  * Routing strategy for FLOW workspaces (channelMode=FLOW).
  *
- * 4-path routing:
- *   1. QR code message (START_FLOW_{N}_{flowKey}) → load FlowNodeConfig, save context, welcome
- *   2. Active flowState → FlowEngineService.handleMessage() (0 LLM tokens, deterministic)
- *   3. flowKey set but no active flow → FlowAgentLLM.handleQuery() (Sub-LLM for machine)
- *   4. No flowKey → Router FlowAgentLLM (flowKey="router") gathers machine info, calls assignMachine()
+ * 3-path routing:
+ *   1. Active flowState → FlowEngineService.handleMessage() (0 LLM tokens, deterministic)
+ *   2. flowKey set but no active flow → FlowAgentLLM.handleQuery() (Sub-LLM for machine)
+ *   3. No flowKey → Router FlowAgentLLM (flowKey="router") gathers machine info, calls assignMachine()
  *
  * Post-processing on ALL paths:
  *   - TranslationAgent (translate response to customer language)
@@ -32,9 +31,6 @@ import { SecurityAgent, type SecurityResult } from "../application/agents/Securi
 import { contactOperator } from "../domain/calling-functions/contactOperator"
 import { ChatContext, FlowMap } from "../types/flow.types"
 import type { RoutingContext, RoutingResult, RoutingStrategy } from "./routing-strategy.interface"
-
-/** QR code pattern: START_FLOW_{machineNumber}_{flowKey} */
-const QR_CODE_REGEX = /^START_FLOW_(\d+)_(.+)$/
 
 export class FlowWorkspaceStrategy implements RoutingStrategy {
   private linkReplacementService: LinkReplacementService
@@ -200,39 +196,8 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
       const debugSteps: any[] = []
       const functionCalls: any[] = []
 
-      // ─── PATH A: QR Code detection ──────────────────────────────────────
-      const qrMatch = context.message.match(QR_CODE_REGEX)
-      if (qrMatch) {
-        const flowNumber = qrMatch[1]
-        const flowKey = qrMatch[2]
-
-        logger.info("📱 FlowWorkspaceStrategy - QR code detected", { flowNumber, flowKey })
-
-        const flowConfig = await this.flowNodeConfigRepo.findByFlowKey(context.workspaceId, flowKey)
-        if (!flowConfig) {
-          responseText = `Machine configuration "${flowKey}" not found. Please check the QR code and try again.`
-        } else {
-          // Save flowKey + flowNumber to context
-          chatContext.flowKey = flowKey
-          chatContext.flowNumber = flowNumber
-          // Clear any previous flowState
-          delete chatContext.flowState
-
-          responseText = `Hi! I'm your assistant for **${flowConfig.flowLabel}** (machine #${flowNumber}). How can I help you? Describe your issue and I'll guide you step by step.`
-        }
-
-        debugSteps.push({
-          type: "flow-engine",
-          agent: "QR Code Handler",
-          timestamp: new Date().toISOString(),
-          input: { qrCode: context.message, flowKey, flowNumber },
-          output: { responseText, configFound: !!flowConfig },
-          tokensUsed: 0,
-          executionTimeMs: Date.now() - startTime,
-        })
-      }
-      // ─── PATH B: Active flowState → FlowEngineService (deterministic) ──
-      else if (chatContext.flowState?.flowStatus === "ACTIVE" && chatContext.flowKey) {
+      // ─── PATH A: Active flowState → FlowEngineService (deterministic) ──
+      if (chatContext.flowState?.flowStatus === "ACTIVE" && chatContext.flowKey) {
         logger.info("⚙️ FlowWorkspaceStrategy - Active flow → FlowEngineService", {
           flowId: chatContext.flowState.flowId,
           currentNodeId: chatContext.flowState.currentNodeId,
@@ -269,7 +234,7 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
           executionTimeMs: Date.now() - startTime,
         })
       }
-      // ─── PATH C: No active flow → FlowAgentLLM (LLM call) ─────────────
+      // ─── PATH B: No active flow → FlowAgentLLM (LLM call) ─────────────
       else if (chatContext.flowKey) {
         logger.info("🤖 FlowWorkspaceStrategy - No active flow → FlowAgentLLM", {
           flowKey: chatContext.flowKey,
@@ -310,12 +275,9 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
           executionTimeMs: agentResult.executionTimeMs,
         })
       }
-      // ─── PATH D: No flowKey → Router FlowAgentLLM ──────────────────────
-      // The Router LLM gathers: locale → machine type → machine number,
-      // then calls assignMachine() to set chatContext.flowKey.
-      // Next message will route to PATH C (Sub-LLM for the assigned machine).
+      // ─── PATH C: No flowKey → Router FlowAgentLLM ──────────────────────
       else {
-        logger.info("🎯 FlowWorkspaceStrategy - PATH D: No flowKey → Router LLM", {
+        logger.info("🎯 FlowWorkspaceStrategy - PATH C: No flowKey → Router LLM", {
           customerId: context.customerId,
         })
 
