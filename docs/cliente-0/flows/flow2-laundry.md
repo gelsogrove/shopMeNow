@@ -1,56 +1,64 @@
+# Flow 2 — Lavatrice (Deterministico)
+
+Fonte di verita: `achitecture.md`.
+
+## Regole operative
+
+- Questo flow e eseguito dal `FlowEngineService` (0 token LLM).
+- Una sola istruzione/domanda per step.
+- Se non risolto o caso ambiguo: escalation umana.
+- Nessuna compensazione automatica promessa dal bot.
+
+```mermaid
 flowchart TD
 
-START --> START_RUN
-START_RUN["Il servizio è partito?"]
+START --> SR{"Il servizio e partito?"}
 
-%% NON PARTE
-START_RUN -->|No| NP2
-NP2["Cosa dice il display?"]
+SR -->|No| D1{"Cosa vedi sul display?"}
+D1 -->|DOOR| DOOR["Chiudi bene la porta"] --> AR1
+D1 -->|SEL| SEL["Seleziona il programma"] --> AR1
+D1 -->|PUSH PROG| PUSH["Premi il pulsante programma"] --> AR1
+D1 -->|Credito/prezzo| CREDIT["Verifica saldo centrale e numero macchina"] --> AR1
+D1 -->|AL001| AL001["Errore di sequenza: rifai i passaggi nell'ordine corretto"] --> AR1
+D1 -->|ALM| ALM_STOP["Premi STOP una volta"] --> AR_ALM
+D1 -->|END + bAL| BAL["Carico sbilanciato: separa il carico in 2 lavatrici"] --> ESC_COMP
+D1 -->|Altro| ESC_TECH["Escalare: errore non riconosciuto"]
 
-NP2 -->|Porta / door| DOOR["Chiudere porta"] --> AR1
-NP2 -->|Selezione / SEL| SEL["Selezionare programma"] --> AR1
-NP2 -->|Start / PUSH PROG| PUSH["Premere pulsante programma"] --> AR1
-NP2 -->|Credito / prezzo| CREDIT["Verificare credito"] --> AR1
-NP2 -->|ALM + tipo| ALM_CHECK["Premere STOP (1 volta)"] --> AR_ALM
-NP2 -->|END + bAL| BAL["Desequilibrio carico: separare ropa in 2 lavatrici"] --> ESC_BAL
-NP2 -->|Altro| ESC1["Escalare"]
+AR_ALM{"Ha funzionato?"}
+AR_ALM -->|Si| OK_ALM["Risolto"]
+AR_ALM -->|No| ESC_COMP["Escalare: operatore valuta compensazione"]
 
-%% ALLARMI
-AR_ALM["Ha funzionato?"]
-AR_ALM -->|Si| OK_ALM["OK - riparte"]
-AR_ALM -->|No| ESC_ALM["Usare altra lavatrice + compensazione"]
+AR1{"Ha funzionato?"}
+AR1 -->|Si| OK1["Risolto"]
+AR1 -->|No| D1
 
-%% DESEQUILIBRIO
-ESC_BAL["Escalare + compensazione"]
+SR -->|Si| F1{"Il ciclo e finito?"}
+F1 -->|No| RUN{"Che succede ora?"}
+RUN -->|Sta funzionando| WAIT["Attendi la fine ciclo"] --> F1
+RUN -->|STOP premuto| STOP_MSG["STOP annulla il lavaggio"] --> ESC_STOP
+ESC_STOP["Escalare: decisione operatore su eventuale compensazione"]
 
-%% PARTE
-START_RUN -->|Si| P1
-P1["Il ciclo è finito?"]
+F1 -->|Si| P2{"Problema finale?"}
+P2 -->|Bagnata/non centrifugata| WET["Carico eccessivo: separa e rilava"] --> AR2
+P2 -->|Non scarica acqua| DRAIN["Possibile guasto"] --> ESC_T2
+P2 -->|Non carica acqua| WATER["Possibile guasto"] --> ESC_T3
+P2 -->|Rumore| NOISE["Possibile guasto"] --> ESC_T4
+P2 -->|Porta bloccata| LOCK["Attendi lo sblocco porta"] --> AR2
+P2 -->|Rovinata| DAMAGE["Verifica etichetta/uso. Nessuna compensazione automatica"] --> RES_INFO
+P2 -->|No sapone/schiuma| SOAP["Detergente industriale: poca schiuma e normale"] --> RES_INFO
+P2 -->|Nessun problema| OK2["Risolto"]
 
-P1 -->|No| P1_PROBLEM["Che succede?"]
-P1_PROBLEM -->|Sta funzionando| WAIT["Attendere fine ciclo"]
-P1_PROBLEM -->|STOP premuto| STOP_INFO["STOP cancella il lavaggio. Pagare di nuovo"] --> STOP_COMP
-STOP_COMP["Prima volta?"]
-STOP_COMP -->|Si| STOP_FREE["Attivazione gratuita"]
-STOP_COMP -->|No| STOP_PAY["Deve ripagare"]
+AR2{"Ha funzionato?"}
+AR2 -->|Si| OK3["Risolto"]
+AR2 -->|No| ESC_COMP2["Escalare: operatore"]
 
-P1 -->|Si| P2
+RES_INFO["Chiusura informativa. Se cliente contesta: escalation"]
+```
 
-P2["Problema?"]
+## Copertura Playbook
 
-P2 -->|Bagnata / non centrifugata| WET["Carico eccessivo: separare in 2 lavatrici"] --> AR2
-P2 -->|Non scarica acqua| DRAIN["Possibile guasto"] --> ESC2
-P2 -->|Non carica acqua| WATER["Possibile guasto"] --> ESC3
-P2 -->|Rumore| NOISE["Possibile guasto"] --> ESC4
-P2 -->|Porta bloccata| LOCK["Attendere sblocco"] --> AR2
-P2 -->|Rovinata| DAMAGE["Verificare uso errato: NO compensazione"]
-P2 -->|No sapone / schiuma| SOAP["Detergente industriale: poca schiuma è normale"]
-
-%% ASK RESOLVED
-AR1["Ha funzionato?"]
-AR1 -->|Si| OK1["OK"]
-AR1 -->|No| NP2
-
-AR2["Ha funzionato?"]
-AR2 -->|Si| OK2["OK"]
-AR2 -->|No| ESC5["Escalare + compensazione"]
+- 5.1 No funciona la rentadora
+- 5.4 He pagat i no s'ha activat
+- 5.5 Error AL001
+- Regole compensazione §7
+- Escalation §10

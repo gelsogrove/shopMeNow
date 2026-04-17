@@ -1,767 +1,824 @@
-# FLOW Architecture — Ecolaundry (Sofia)
+# FLOW Architecture — Ecolaundry
 
-> Analisi completa del pipeline messaggi per workspace `channelMode=FLOW`.
-> Obiettivo: capire se la struttura copre tutti i casi e se il JSON dei flow va rivisto.
+> Architettura definitiva del pipeline messaggi per workspace `channelMode=FLOW`.
+> 3 percorsi: **PATH A** (flow attivo → FlowEngine, 0 token) + **PATH B** (flowKey senza flow → FlowAgentLLM) + **PATH C** (no flowKey → FlowAgentLLM Router).
+
+> ⚠️ **NOTA IMPLEMENTAZIONE** (codice reale vs documento):
+> - `FlowAgentLLM` è **una singola chiamata LLM** che fa sia routing che risposta — NON esistono 2 LLM separati
+> - Durante il **flow attivo (PATH A)**, il Router **non viene mai chiamato** — `FlowClassifierService` classifica l'input strutturalmente (0 token)
+> - Il concetto "History Agent" in questo documento = `FlowAgentLLM` nel codice (non esiste `AgentConfig` di tipo `HISTORY`)
 
 ---
 
-## 1. Pipeline Completa — Visione d'Insieme
+## 1. I 3 Componenti — Chi Fa Cosa
+
+### ROUTER (LLM leggero — il cervello decisionale)
+
+| | |
+|---|---|
+| **Tipo** | LLM con calling functions |
+| **Modello** | Economico (gpt-4o-mini), prompt corto |
+| **Ruolo** | Classificare l'intent del cliente e smistare |
+| **Parla al cliente?** | **MAI** — produce solo decisioni JSON interne |
+| **Prompt contiene** | Solo regole di routing, lista macchine, context attivo |
+| **Prompt NON contiene** | FAQ, specs macchina, tono di voice |
+| **Input riceve** | Messaggio + ChatSession.context (flowKey, flowState, gatherState) |
+| **Input extra se flow attivo** | Il prompt dello step corrente (per capire se il messaggio è una risposta al flow) |
+| **Config DB** | `AgentConfig` tipo ROUTER |
+
+**Calling functions del Router:**
+
+| Function | Quando | Cosa fa |
+|---|---|---|
+| `assignMachine(flowKey, machineNumber)` | Ha raccolto locale + tipo + numero | Salva flowKey nel context |
+| `startFlow(flowId)` | Problema identificato, macchina assegnata | Avvia flow deterministico |
+| `contactOperator(reason)` | Cliente chiede operatore, o situazione ambigua | Scala a umano |
+| `changeLanguage(lang)` | Cliente chiede altra lingua | Aggiorna lingua nel DB |
+
+**Decisioni possibili del Router:**
+
+| Action | Quando | Cosa succede dopo |
+|---|---|---|
+| `FLOW_INPUT` | Flow attivo + input è risposta al flow (numero, sì/no) | → FlowEngine → History |
+| `FAQ` | Domanda su orari/prezzi/pagamento/rimborsi/fattura/carta | → History (ha le FAQ) |
+| `START_FLOW` | Problema chiaro + macchina assegnata → chiama startFlow() | → FlowEngine → History |
+| `GATHER_INFO` | Manca locale, tipo macchina, o numero | → History (formula la domanda) |
+| `ASSIGN_MACHINE` | Ha tutti i dati → chiama assignMachine() | → History (conferma assegnazione) |
+| `ESCALATE` | Cliente vuole operatore, o caso ambiguo → chiama contactOperator() | → History (messaggio escalazione) |
+| `CHANGE_LANG` | Richiesta cambio lingua → chiama changeLanguage() | → History (conferma) |
+| `GREETING` | Primo messaggio, saluto | → History (saluta con tono) |
+
+---
+
+### FLOW ENGINE (deterministico — 0 token LLM)
+
+| | |
+|---|---|
+| **Tipo** | Codice puro, legge JSON |
+| **Ruolo** | Eseguire step predefiniti dell'albero decisionale |
+| **Parla al cliente?** | **MAI** — produce output strutturato per History Agent |
+| **Costo** | 0 token, istantaneo |
+| **Config DB** | `FlowNodeConfig.flows` (JSON) |
+
+**Input:** flowId + currentNodeId + input utente (normalizzato)
+**Output:** `{ responseText, nextNodeId, flowStatus, shouldCallOperator }`
+
+**Tipi di nodo:**
+
+| Tipo | Input atteso | Esempio |
+|---|---|---|
+| `CHOICE` | Numero (1, 2, 3...) | "Cosa vedi sul display? 1) Porta 2) SEL 3) ALM" |
+| `ACTION` | Qualsiasi (conferma dopo istruzione) | "Chiudi la porta e riprova" |
+| `INFO` | Transizione automatica o default | Messaggio informativo |
+| `CONFIRMATION` | Sì / No | "Ha funzionato?" |
+
+**Nodi terminali:**
+- `isTerminal: true` + `action: "resolve"` → flow completato con successo
+- `isTerminal: true` + `action: "escalate"` → flow fallito, l'orchestratore chiama contactOperator()
+
+**I FlowNodeConfig NON sono LLM.** Contengono:
+- `flowKey`: identificativo macchina (es. "lavatrice_hs60xx")
+- `flowLabel`: nome leggibile (es. "Lavatrice HS-60XX Goya")
+- `machineSpecs`: specs tecniche della macchina (capacità, programmi, prezzi)
+- `flows`: JSON dell'albero decisionale
+- `availableFunctions`: per future integrazioni API esterne
+- `isActive`: on/off
+
+---
+
+### HISTORY AGENT / FlowAgentLLM (LLM — la voce del sistema)
+
+> ⚠️ Nel codice questo è `FlowAgentLLM` — la stessa classe usata anche per il Router. È **1 call LLM** che decide e risponde insieme. Non esiste `AgentConfig` di tipo `HISTORY`.
+
+| | |
+|---|---|
+| **Tipo** | LLM conversazionale (= `FlowAgentLLM` nel codice) |
+| **Ruolo** | Formulare la risposta finale al cliente |
+| **Parla al cliente?** | **SEMPRE LUI** — è l'unica voce |
+| **Config DB** | `FlowNodeConfig` con `flowKey='router'` (per PATH C) o flowKey macchina (per PATH B) |
+
+**Priorità delle fonti — REGOLA CRITICA DEL PROMPT:**
 
 ```
-Customer Message
-       │
-       ▼
-┌─────────────────────────────────────────────┐
-│  FlowWorkspaceStrategy (orchestratore)      │
-│                                             │
-│  PATH A: QR Code rilevato?                  │
-│    → Carica FlowNodeConfig                  │
-│    → Messaggio benvenuto                    │
-│                                             │
-│  PATH B: FlowState attivo?                  │
-│    → FlowEngineService (deterministico)     │
-│    → 0 token LLM, solo JSON                │
-│                                             │
-│  PATH C: Nessun flow attivo?                │
-│    → FlowAgentLLM (LLM decide)             │
-│    → Può: rispondere FAQ, startFlow(),      │
-│      contactOperator()                      │
-│                                             │
-│  PATH D: Nessun flowKey?                    │
-│    → "Scansiona il QR code"                 │
-└─────────────────────────────────────────────┘
-       │
-       ▼
-┌─────────────────────────────────────────────┐
-│  Post-Processing                            │
-│  1. Link replacement ([LINK_REGISTRATION])  │
-│  2. Translation Agent (se lingua ≠ base)    │
-│  3. Security Agent (solo widget)            │
-│  4. contactOperator() (se richiesto)        │
-└─────────────────────────────────────────────┘
-       │
-       ▼
-   WhatsApp / Widget Response
+🥇 1. FlowEngineResult   → SE presente: è la fonte PRIMARIA e NON MODIFICABILE
+                           Riformula con tono umano, non inventare alternative
+🥈 2. Router decision    → la direttiva: cosa comunicare al cliente
+🥉 3. FAQ del workspace  → risposta a domande generiche
+   4. machineSpecs       → background knowledge per domande su programmi/prezzi
+```
+
+> **⚠️ REGOLA ASSOLUTA**: Se `flowEngineResult` è presente nel contesto, il testo risposta viene da lì.
+> Il LLM può solo cambiare il **tono** (più caldo, più umano), MAI cambiare il **contenuto** (istruzioni, opzioni, next step).
+> Non inventare alternative, non aggiungere possibilità non previste dal flow.
+>
+> **⚠️ UNA SOLA DOMANDA PER TURNO**: Il LLM non deve mai fare 2+ domande nello stesso messaggio.
+> ❌ SBAGLIATO: "¿Qué ves en el display? ¿Es la primera vez que ocurre?"
+> ✅ CORRETTO: "¿Qué ves en el display? 1️⃣ Puerta 2️⃣ SEL 3️⃣ ALM..."
+
+**Cosa riceve in input (tutto):**
+
+| # | Dato | Fonte | Priorità |
+|---|---|---|---|
+| 1 | Output FlowEngine | `FlowEngineService.handleMessage()` | 🥇 PRIMARIA se presente |
+| 2 | Decisione del Router | Output routing | 🥈 Direttiva sempre presente |
+| 3 | FAQ del workspace | `{{faqs}}` da DB | 🥉 Solo se senza FlowResult |
+| 4 | Specs macchina | `FlowNodeConfig.machineSpecs` | Background knowledge |
+| 5 | Storico ultima ora | `ConversationMessage` | Coerenza dialogo |
+| 6 | Dati cliente | nome, lingua, storico | Personalizzazione |
+| 7 | Tono di voice | `{{toneOfVoice}}` da workspace | Stile comunicazione |
+| 8 | Flow state | flowKey, flowStatus, currentStep | Contesto flow in pausa |
+
+**Cosa fa:**
+1. **Se FlowEngineResult presente** → riformula con tono umano, mantieni istruzioni intatte
+2. **Saluta** il cliente (primo messaggio, o bentornato se ha storico)
+3. **Formula** risposte basate sulla decisione del Router (senza FlowEngine)
+4. **Risponde** alle FAQ con contesto (se parlava della secadora e chiede il prezzo, risponde il prezzo della secadora)
+5. **Ricorda** cosa ha già chiesto/detto (non ripete domande)
+6. **Gestisce** il cambio di argomento con fluidità ("Il lavaggio costa 3€. Vuoi continuare con il problema della lavadora?")
+7. **Gestisce** il cambio lingua (risponde nella nuova lingua da subito)
+
+**Calling functions future di History Agent:**
+
+| Function | Quando | Uso |
+|---|---|---|
+| `bookAppointment()` | Cliente vuole prenotare | Integrazione calendario |
+| `checkPaymentStatus()` | Verifica pagamento | Integrazione payment |
+| `generateCompensationCode()` | Compensazione approvata | Genera codice |
+
+---
+
+## 2. Pipeline Completa — Flusso Messaggio
+
+```
+Cliente scrive messaggio
+         │
+         ▼
+┌─────────────────────────────────────────────────────────┐
+│  ORCHESTRATORE (FlowWorkspaceStrategy — codice, no LLM) │
+│                                                         │
+│  1. Carica ChatSession.context                          │
+│  2. Controlla flowStatus                                │
+│  3. Sceglie PATH                                        │
+└─────────────────────────────────────────────────────────┘
+         │
+         ├─────── flowStatus=ACTIVE ────────────────────────────────────────┐
+         │                                                                   │
+         │  PATH A (flow attivo — 0 token LLM)                              │
+         │                                                                   ▼
+         │                         ┌──────────────────────────────────────────────┐
+         │                         │  FlowClassifierService (codice, 0 token)      │
+         │                         │                                              │
+         │                         │  MATCH     → FlowEngine.handleMessage()      │
+         │                         │  HARD_BREAK → cancella flow → PATH C         │
+         │                         │  SOFT_BREAK → flow in pausa → PATH C         │
+         │                         │  INTERRUPT_FAQ → flow pausa → PATH C         │
+         │                         │  AMBIGUOUS  → retry / escalate               │
+         │                         └──────────────────────────────────────────────┘
+         │                                    │
+         │                   ┌────────────────┘
+         │                   ▼
+         │  ┌──────────────────────────────────────┐
+         │  │  FlowEngine.handleMessage()           │
+         │  │  (deterministico, 0 token LLM)        │
+         │  │  Output: responseText (già completo)  │
+         │  └──────────────────────────────────────┘
+         │                   │
+         │                   └──→ POST-PROCESSING → Risposta cliente
+         │
+         ├─────── flowKey set, no flow attivo ──────────────────────────────┐
+         │                                                                   │
+         │  PATH B (sub-macchina)                                            ▼
+         │                         ┌──────────────────────────────────────────────┐
+         │                         │  FlowAgentLLM (1 call LLM)                   │
+         │                         │  Routing + risposta in una sola call          │
+         │                         │  Può chiamare: startFlow, contactOperator     │
+         │                         └──────────────────────────────────────────────┘
+         │                                    │
+         │                                    └──→ POST-PROCESSING → Risposta cliente
+         │
+         └─────── no flowKey ────────────────────────────────────────────────┐
+                                                                              │
+           PATH C (router generico)                                           ▼
+                            ┌──────────────────────────────────────────────────────┐
+                            │  FlowAgentLLM con flowKey='router' (1 call LLM)      │
+                            │  Routing + risposta in una sola call                  │
+                            │  Può chiamare: assignMachine, startFlow,              │
+                            │               contactOperator, changeLanguage         │
+                            └──────────────────────────────────────────────────────┘
+                                         │
+                                         └──→ POST-PROCESSING → Risposta cliente
+```
+
+**POST-PROCESSING (tutti i path):**
+```
+1. Salva messaggio utente + risposta bot in DB
+2. Translation Agent (se lingua ≠ base)
+3. Security Agent (solo widget)
+4. Link replacement
 ```
 
 ---
 
-## 2. I 3 Livelli — Chi Fa Cosa
+## 3. Scenari Completi — Verifica Caso per Caso
 
-### Livello 1: Router (INFO_AGENT)
+### Scenario 1: Primo contatto — "Hola"
 
-| Aspetto | Dettaglio |
-|---------|-----------|
-| **Tipo** | LLM conversazionale (AgentConfig in DB) |
-| **Quando** | Primo contatto, PRIMA di identificare una macchina |
-| **Gestisce** | FAQ generiche, pagamenti, rimborsi, orari, carta fedeltà, frode |
-| **Tools** | Nessun tool (solo risposta conversazionale) |
-| **Routing** | Identifica numero macchina → smista a Sub-LLM corretto |
-| **Prompt** | Da DB (`AgentConfig.promptContent` per INFO_AGENT) |
+```
+Router:  { action: "GREETING" }
+History: "¡Hola! Soy el asistente de Ecolaundry. ¿Cómo puedo ayudarte hoy?"
+```
 
-**Casi gestiti dal Router:**
-- "Come pago?" → Risponde direttamente (FAQ pagamento nel prompt)
-- "Ho un doppio addebito" → Risponde con procedura compensazione
-- "Che orari avete?" → Risponde con orari dal prompt
-- "La macchina 42 non parte" → Estrae numero → routing a Sub-LLM lavatrice
+### Scenario 2: Raccolta info — "La lavadora no funciona"
 
-**Perché il pagamento sta nel Router:**
-Il pagamento NON dipende dalla macchina. "La carta non funziona" è uguale per lavatrice e asciugatrice. Il Router risponde subito senza smistare inutilmente.
+```
+Router:  no flowKey → { action: "GATHER_INFO", need: "locale" }
+History: "No te preocupes, te ayudo. ¿En qué local estás?"
+```
 
----
+### Scenario 3: Raccolta info — "Goya"
 
-### Livello 2: Sub-LLM (FlowAgentLLM — uno per macchina)
+```
+Router:  context.locale=Goya → { action: "GATHER_INFO", need: "machine_type" }
+History: "Perfecto. ¿Es una lavadora o una secadora?"
+```
 
-| Aspetto | Dettaglio |
-|---------|-----------|
-| **Tipo** | LLM con tools (FlowNodeConfig in DB) |
-| **Quando** | Dopo routing, flowKey assegnato, nessun flow attivo |
-| **Gestisce** | Benvenuto macchina, capire il problema, avviare flow |
-| **Tools** | `startFlow(flowId)` + `contactOperator(reason)` |
-| **Prompt** | Da DB (`FlowNodeConfig.systemPrompt`) |
-| **Config** | model, temperature, maxTokens — tutto da DB |
+### Scenario 4: Raccolta info — "Lavadora número 42"
 
-**Logica:**
-1. Carica `FlowNodeConfig` dal DB (per `flowKey`)
-2. Costruisce tools dinamicamente da `Object.keys(config.flows)`:
-   ```
-   startFlow:
-     flowId: ENUM ["non_parte", "door_lock", "post_ciclo"]
-     desc: "Avvia flow troubleshooting"
-   
-   contactOperator:
-     reason: string (opzionale)
-     desc: "Scala a operatore umano"
-   ```
-3. Carica history conversazione (`ConversationMessage`)
-4. Chiama LLM → LLM decide: rispondere, startFlow, o escalare
-5. Se `startFlow("non_parte")` → passa controllo a FlowEngine
+```
+Router:  ha tutto → chiama assignMachine("lavatrice_hs60xx", 42) 
+         → { action: "ASSIGN_MACHINE", flowKey: "lavatrice_hs60xx" }
+History: "Entendido, te ayudo con la lavadora #42. ¿Qué problema tienes?"
+```
 
-**FlowNodeConfig per lavatrice_hs60xx:**
-```json
-{
-  "flowKey": "lavatrice_hs60xx",
-  "flowLabel": "Lavatrice HS-60XX",
-  "systemPrompt": "Sei Sofia, assistente Ecolaundry...",
-  "model": "openai/gpt-4o-mini",
-  "temperature": 0.3,
-  "maxTokens": 2048,
-  "availableFunctions": ["startFlow", "contactOperator"],
-  "flows": { ... }  // ← i flow JSON deterministici
-}
+### Scenario 5: Avvio flow — "No parte, ya he pagado"
+
+```
+Router:  flowKey assegnato, problema chiaro → chiama startFlow("non_parte")
+         → FlowEngine.startFlow() → step_0: "Cosa vedi sul display? 1) Porta 2) SEL..."
+         → { action: "START_FLOW", flowEngineResult: { step_0 prompt } }
+History: "Vamos a revisarlo paso a paso. ¿Qué ves exactamente en el display?
+          1️⃣ Puerta abierta
+          2️⃣ Seleccionar programa
+          3️⃣ Pulsar programa
+          4️⃣ Crédito / precio
+          5️⃣ ALM (alarma)
+          6️⃣ Otro"
+```
+
+### Scenario 6: Step nel flow — "1" (Porta)
+
+```
+Router:  flow attivo, input numerico → { action: "FLOW_INPUT", input: "1" }
+FlowEngine: transition → door node → "Chiudere porta" → ask_resolved
+         → { responseText: "Chiudere porta", nextStep: ask_resolved }
+History: "Prueba a abrir y cerrar bien la puerta, asegurándote de que queda bien bloqueada. ¿Ha funcionado?"
+```
+
+### Scenario 7: Risposta flow — "No"
+
+```
+Router:  flow attivo, input "no" → { action: "FLOW_INPUT", input: "NO" }
+FlowEngine: transition → escalate node → isTerminal, action: "escalate"
+         → { shouldCallOperator: true }
+Orchestratore: chiama contactOperator("Problema porta non risolto, lavadora #42 Goya")
+History: "Entiendo. Vamos a revisar tu caso con más detalle. Un operador te atenderá en breve."
+```
+
+### Scenario 8: FAQ durante flow attivo — "Quanto costa un lavaggio?"
+
+```
+Router:  riconosce FAQ nonostante flow attivo → { action: "FAQ", topic: "prezzi", flowPaused: true }
+         (flow resta in PAUSA, non viene cancellato)
+History: [ha FAQ prezzi + sa che il flow è in pausa]
+         "El lavado cuesta 7€ en Goya. ¿Seguimos con el problema de la lavadora #42?"
+```
+
+### Scenario 9: Ritorno al flow dopo FAQ — "Sì"
+
+```
+Router:  flow in pausa, "sì" = ripresa → { action: "FLOW_INPUT", resumeFlow: true }
+FlowEngine: riprende dallo step dove era rimasto
+History: "Perfecto, continuamos. ¿Qué ves en el display?"
+```
+
+### Scenario 10: Doppio addebito — "Me han cobrado dos veces"
+
+```
+Router:  nessun flow, FAQ → { action: "FAQ", topic: "doppio_addebito" }
+History: [ha FAQ doppio addebito]
+         "Para verificarlo, necesitamos los últimos 4 dígitos de tu tarjeta y una captura del pago.
+          También te enviaremos el formulario de devolución."
+```
+
+### Scenario 11: Fattura — "Quiero una factura"
+
+```
+Router:  → { action: "FAQ", topic: "fattura" }
+History: "Para obtener la factura, envía un email a olga@alberwaz.net con:
+          razón social, email, lavandería, CIF/NIF, dirección, fecha y máquinas utilizadas."
+```
+
+### Scenario 12: Carta fedeltà — "¿Cómo funciona la tarjeta?"
+
+```
+Router:  → { action: "FAQ", topic: "carta_fedelta" }
+History: [sa che locale=Goya dal contesto]
+         "La tarjeta se compra con 20€ en efectivo y solo funciona en Goya.
+          En la central, pulsa el segundo botón de la fila derecha."
+```
+
+### Scenario 13: ALM durante flow — "5" (opzione ALM)
+
+```
+Router:  flow attivo, input "5" → { action: "FLOW_INPUT", input: "5" }
+FlowEngine: transition → ALM_CHECK → "Premere STOP 1 volta" → ask_resolved
+History: "La máquina ha detectado una incidencia. Pulsa el botón STOP una vez y dime si la máquina responde."
+```
+
+### Scenario 14: STOP premuto per errore (lavatrice)
+
+```
+Router:  flowKey=lavatrice, "he pulsado STOP" → startFlow("non_parte")
+FlowEngine: navigates to STOP_INFO node → isTerminal, action: "escalate", reason: "stop_pressed"
+Orchestrator: contactOperator("Cliente pulsó STOP - posible compensación, primera vez?")
+History: "Cuando se pulsa STOP, se cancela el lavado. Lo revisamos y te ayudamos con la mejor solución."
+```
+
+> ⚠️ **MAI promettere compensazione automatica** — anche se è la prima volta. L'operatore decide. (Playbook §7: non promettere compensazioni automaticamente)
+
+### Scenario 15: Cambio macchina — "Espera, es una secadora"
+
+```
+Router:  riconosce contraddizione → chiama assignMachine("asciugatrice_ed340", 42)
+         → { action: "CHANGE_MACHINE", flowKey: "asciugatrice_ed340" }
+         (cancella flow attivo se c'era)
+History: "Entendido, es una secadora. ¿Qué problema tienes?"
+```
+
+### Scenario 16: Cambio lingua — "Parla in italiano"
+
+```
+Router:  → chiama changeLanguage("it") → { action: "CHANGE_LANG", lang: "it" }
+History: risponde normalmente
+Translation: da questo momento traduce in italiano
+```
+
+### Scenario 17: Operatore — "Voglio parlare con qualcuno"
+
+```
+Router:  → chiama contactOperator("Richiesta cliente") → { action: "ESCALATE" }
+History: "Capisco, ti metto in contatto con un operatore. Ti contatterà il prima possibile."
+```
+
+### Scenario 18: Ropa bruciata (secadora)
+
+```
+Router:  flowKey=secadora → startFlow → FlowEngine arriva a "Rovinata/bruciata"
+FlowEngine: nodo terminale → "Verificare etichetta: NO compensazione"
+History: "Mi dispiace molto. Purtroppo, quando la temperatura non è adeguata al tessuto, non è possibile 
+          offrire compensazione. È importante controllare sempre le etichette delle prendas."
+```
+
+### Scenario 19: Macchina occupata — "Hay ropa de otra persona"
+
+```
+Router:  → { action: "FAQ", topic: "macchina_occupata" }
+History: "Puedes sacar la ropa de la otra persona y dejarla en una mesa de la lavandería, 
+          así podrás usar la máquina. Si el otro cliente tiene algún problema, que nos llame."
+```
+
+### Scenario 20: Frode/incoerenza — Goya datàfon 10€
+
+```
+Router:  rileva incoerenza (Goya=7€, cliente dice 10€)
+         → { action: "ESCALATE", reason: "import_mismatch" }
+         → chiama contactOperator("Incoerenza importo: Goya 7€ vs cliente 10€")
+History: "Necesitamos revisar este caso con más detalle. Lo derivamos a revisión para ayudarte mejor."
+         (MAI accusa di frode)
+```
+
+### Scenario 21: No sapone/schiuma (lavatrice)
+
+```
+Router:  → { action: "FAQ", topic: "sapone" }
+History: "Es normal que haya poca espuma. Nuestro detergente es industrial y no genera tanta espuma 
+          como el doméstico. La espuma NO lava — tu ropa saldrá igual de limpia."
+```
+
+### Scenario 22: END + bAL (desequilibrio carico)
+
+```
+Router:  flowKey=lavatrice, durante flow → FlowEngine
+FlowEngine: nodo END+bAL → "Separare ropa in 2 lavatrici + compensazione"
+            → isTerminal, action: "escalate"
+Orchestratore: contactOperator("Desequilibrio carico, serve compensazione")
+History: "El ciclo no se ha completado correctamente por exceso de carga. 
+          Tendrás que separar la ropa en dos lavadoras. Un operador te ayudará con la compensación."
 ```
 
 ---
 
-### Livello 3: Flow Engine (deterministico — 0 token LLM)
-
-| Aspetto | Dettaglio |
-|---------|-----------|
-| **Tipo** | Motore JSON deterministico |
-| **Quando** | `flowState.flowStatus === "ACTIVE"` |
-| **Gestisce** | Steps predefiniti, albero decisionale |
-| **Costo** | 0 token LLM — solo logica JSON |
-| **Velocità** | Istantaneo (no API call) |
-
----
-
-## 3. FlowState — Gestione Stato
+## 4. Gestione dello Stato — ChatSession.context
 
 ```typescript
-interface FlowState {
-  flowId: string;           // "non_parte"
-  currentNodeId: string;    // "non_parte.step_0"
-  flowStatus: FlowStatus;  // "ACTIVE" | "PAUSED" | "COMPLETED" | "ESCALATED"
-  interruptCount: number;   // Conta domande fuori-tema
-  lastInterruptType?: string; // "FAQ" | "AMBIGUOUS"
-  lastValidStepAt: string;  // ISO timestamp per TTL
-}
-```
+interface ChatContext {
+  // Macchina assegnata
+  flowKey?: string              // "lavatrice_hs60xx" | "asciugatrice_ed340"
+  machineNumber?: string        // "42"
+  locale?: string               // "Goya" | "Pineda" | "L'Escala" | "Alemanya" | "Hortes"
 
-**Lifecycle:**
-```
-QR Scan → context = { flowKey, flowNumber }
-                    ↓
-Sub-LLM → startFlow() → flowState = { flowId, currentNodeId: "flowId.step_0", status: ACTIVE }
-                    ↓
-Flow Engine → aggiorna currentNodeId ad ogni step
-                    ↓
-isTerminal=true → flowStatus = COMPLETED | ESCALATED
-```
+  // Flow attivo (deterministico)
+  flowState?: {
+    flowId: string              // "non_parte"
+    currentNodeId: string       // "non_parte.door_issue"
+    flowStatus: FlowStatus      // "ACTIVE" | "PAUSED" | "COMPLETED" | "ESCALATED"
+    interruptCount: number      // FAQ durante flow → conta
+    lastValidStepAt: string     // ISO timestamp per TTL
+  }
 
-**Persistenza:** `ChatSession.context` (JSONB) — aggiornato dopo ogni messaggio.
-
----
-
-## 4. Struttura JSON dei Flow — Analisi
-
-### Tipi di Nodo
-
-| Tipo | Uso | Input Atteso |
-|------|-----|-------------|
-| `CHOICE` | Domanda con opzioni numerate (1, 2, 3...) | Numero |
-| `INFO` | Istruzione + conferma (Sì/No) | Sì/No |
-| `ACTION` | Chiede esecuzione + verifica | Testo libero |
-| `CONFIRMATION` | Conferma finale | Sì/No |
-| `FREE_TEXT` | Input libero (descrizione problema) | Qualsiasi testo |
-
-### Struttura Nodo
-
-```typescript
-interface FlowNode {
-  type: "CHOICE" | "ACTION" | "INFO" | "CONFIRMATION" | "FREE_TEXT";
-  prompt: string;                        // Messaggio mostrato al cliente
-  transitions?: Record<string, string>;  // "1" → "nodeId", "YES" → "nodeId"
-  isTerminal?: boolean;                  // true = fine flow
-  onInterruptFallback?: string;          // Risposta se domanda fuori-tema
-}
-```
-
-### Esempio: Flow "non_parte" (Lavatrice)
-
-```json
-{
-  "non_parte": {
-    "step_0": {
-      "type": "CHOICE",
-      "prompt": "Il servizio è partito?\n1. No, non parte\n2. Sì, ma c'è un problema",
-      "transitions": {
-        "1": "non_parte.display_check",
-        "2": "non_parte.cycle_check"
-      },
-      "onInterruptFallback": "Risolviamo prima il problema della macchina 🔧"
-    },
-    "display_check": {
-      "type": "CHOICE",
-      "prompt": "Cosa dice il display?\n1. Porta aperta\n2. Selezionare programma\n3. Premere avvio\n4. Credito insufficiente\n5. Altro",
-      "transitions": {
-        "1": "non_parte.fix_door",
-        "2": "non_parte.fix_program",
-        "3": "non_parte.fix_start",
-        "4": "non_parte.fix_credit",
-        "5": "non_parte.escalate"
-      }
-    },
-    "fix_door": {
-      "type": "INFO",
-      "prompt": "Chiudi bene la porta della lavatrice e premi avvio. Ha funzionato?",
-      "transitions": {
-        "YES": "non_parte.resolved",
-        "NO": "non_parte.display_check"
-      }
-    },
-    "fix_program": {
-      "type": "INFO",
-      "prompt": "Seleziona un programma di lavaggio dal pannello. Ha funzionato?",
-      "transitions": {
-        "YES": "non_parte.resolved",
-        "NO": "non_parte.display_check"
-      }
-    },
-    "fix_start": {
-      "type": "INFO",
-      "prompt": "Premi il pulsante di avvio (il grande pulsante verde). Ha funzionato?",
-      "transitions": {
-        "YES": "non_parte.resolved",
-        "NO": "non_parte.display_check"
-      }
-    },
-    "fix_credit": {
-      "type": "INFO",
-      "prompt": "Verifica di avere credito sufficiente. Puoi pagare con carta, monete o app. Ha funzionato?",
-      "transitions": {
-        "YES": "non_parte.resolved",
-        "NO": "non_parte.escalate"
-      }
-    },
-    "cycle_check": {
-      "type": "CHOICE",
-      "prompt": "Il ciclo è finito?\n1. No, è ancora in corso\n2. Sì, è finito ma c'è un problema",
-      "transitions": {
-        "1": "non_parte.wait_cycle",
-        "2": "non_parte.post_cycle"
-      }
-    },
-    "wait_cycle": {
-      "type": "INFO",
-      "prompt": "Attendi la fine del ciclo. Al termine, se persiste un problema, scrivi 'aiuto'. Buon lavaggio! 🧺",
-      "isTerminal": true
-    },
-    "post_cycle": {
-      "type": "CHOICE",
-      "prompt": "Quale problema hai?\n1. Vestiti ancora bagnati\n2. Non scarica acqua\n3. Non carica acqua\n4. Rumore anomalo\n5. Porta bloccata\n6. Vestiti rovinati",
-      "transitions": {
-        "1": "non_parte.fix_wet",
-        "2": "non_parte.escalate_drain",
-        "3": "non_parte.escalate_water",
-        "4": "non_parte.escalate_noise",
-        "5": "non_parte.fix_lock",
-        "6": "non_parte.damage_info"
-      }
-    },
-    "fix_wet": {
-      "type": "INFO",
-      "prompt": "I vestiti bagnati sono spesso causati da un carico eccessivo. Prova a ridurre il carico e ripeti il ciclo. Ha funzionato?",
-      "transitions": {
-        "YES": "non_parte.resolved",
-        "NO": "non_parte.escalate"
-      }
-    },
-    "fix_lock": {
-      "type": "INFO",
-      "prompt": "Attendi 2-3 minuti dopo la fine del ciclo, la porta si sblocca automaticamente. Ha funzionato?",
-      "transitions": {
-        "YES": "non_parte.resolved",
-        "NO": "non_parte.escalate"
-      }
-    },
-    "damage_info": {
-      "type": "INFO",
-      "prompt": "Mi dispiace per il danno. Verifica di aver selezionato il programma corretto per il tipo di tessuto. Per un reclamo, contatta l'operatore.",
-      "transitions": {
-        "default": "non_parte.escalate"
-      }
-    },
-    "escalate_drain": {
-      "type": "CONFIRMATION",
-      "prompt": "Sembra un guasto tecnico (scarico). Ti metto in contatto con un tecnico.",
-      "isTerminal": true
-    },
-    "escalate_water": {
-      "type": "CONFIRMATION",
-      "prompt": "Sembra un guasto tecnico (carico acqua). Ti metto in contatto con un tecnico.",
-      "isTerminal": true
-    },
-    "escalate_noise": {
-      "type": "CONFIRMATION",
-      "prompt": "Rumore anomalo può indicare un guasto. Ti metto in contatto con un tecnico.",
-      "isTerminal": true
-    },
-    "escalate": {
-      "type": "CONFIRMATION",
-      "prompt": "Non sono riuscita a risolvere il problema. Ti metto in contatto con un operatore.",
-      "isTerminal": true
-    },
-    "resolved": {
-      "type": "INFO",
-      "prompt": "Perfetto! Sono contenta che funzioni. Buon lavaggio! 🧺✨",
-      "isTerminal": true
+  // Raccolta info (Router)
+  gatherState?: {
+    need: string                // "locale" | "machine_type" | "machine_number"
+    retryCount: number          // 0-1: normale | 2: semplifica | 3: ESCALATE
+    collected: {
+      locale?: string
+      machineType?: string      // "lavatrice" | "asciugatrice"
+      machineNumber?: string
+      problemDescription?: string
     }
   }
 }
 ```
 
----
-
-## 5. Classificazione Input — Come il Flow Engine Capisce
-
-```
-Customer Input
-      │
-      ▼
-classifyInput(input)
-      │
-      ├── /^(operator|operatore|umano|help)$/i  → HARD_BREAK → Escalare subito
-      ├── /^(stop|basta|annulla|esci)$/i        → SOFT_BREAK → Pausa flow (riprendibile)
-      ├── /^[1-9]$/  o  /^(sì|no|ok|yes)$/i     → MATCH      → Transizione normale
-      ├── domanda tipo FAQ?                      → INTERRUPT   → onInterruptFallback + contatore
-      └── altro                                  → AMBIGUOUS   → "Puoi ripetere?" + contatore
-```
-
-**Limiti interruzioni:**
-- 3 interruzioni → avviso morbido ("Risolviamo prima il problema")
-- 4+ interruzioni → escalazione automatica a operatore
-
-**TTL:** Se >30 min senza input valido → reset `interruptCount` (l'utente è tornato fresco)
+**Persistenza:** `ChatSession.context` (JSONB) — aggiornato dopo ogni messaggio dall'orchestratore.
 
 ---
 
-## 6. Decisioni Architetturali — Cosa Copre Cosa
+## 5. Configurazione Database
 
-### Router (INFO_AGENT) — FAQ Generiche
-
-| Caso | Gestito? | Come |
-|------|----------|------|
-| "Come pago?" | ✅ | FAQ nel systemPrompt |
-| "Quanto costa un lavaggio?" | ✅ | FAQ nel systemPrompt |
-| "Ho un doppio addebito" | ✅ | FAQ + procedura compensazione |
-| "La carta non funziona" | ✅ | FAQ pagamento |
-| "Che orari avete?" | ✅ | FAQ nel systemPrompt |
-| "Dove siete?" | ✅ | FAQ nel systemPrompt |
-| "Carta fedeltà" | ✅ | FAQ nel systemPrompt |
-| "Voglio un rimborso" | ✅ | FAQ + regole compensazione |
-| "Macchina 42 non parte" | ✅ | Routing → Sub-LLM lavatrice |
-| "Ho un problema" (senza numero) | ✅ | Chiede numero macchina |
-
-### Sub-LLM (FlowAgentLLM) — Per Macchina
-
-| Caso | Gestito? | Come |
-|------|----------|------|
-| "Non parte" | ✅ | `startFlow("non_parte")` |
-| "C'è un errore" | ✅ | `startFlow("errore_display")` |
-| "La porta è bloccata" | ✅ | `startFlow("non_parte")` → nodo specifico |
-| "Voglio parlare con qualcuno" | ✅ | `contactOperator()` |
-| Problema non chiaro | ✅ | LLM conversazionale chiede dettagli |
-
-### Flow Engine (Deterministico) — Troubleshooting
-
-| Caso | Gestito? | Come |
-|------|----------|------|
-| Albero decisionale (display, check, etc.) | ✅ | Nodi CHOICE → transitions |
-| Istruzioni passo-passo | ✅ | Nodi INFO/ACTION |
-| Loop "Ha funzionato?" | ✅ | Transizione YES→resolved, NO→retry/escalate |
-| Escalazione automatica | ✅ | `isTerminal: true` su nodi escalation |
-| Domanda fuori-tema durante flow | ✅ | `onInterruptFallback` + contatore |
-| Utente vuole uscire | ✅ | SOFT_BREAK → pausa |
-| Utente vuole operatore | ✅ | HARD_BREAK → escalazione immediata |
-
----
-
-## 7. Gap Analysis — Codice/DB vs PDF Playbook
-
-### 🔴 BUG CRITICO: Escalazione Hardcoded su Nome Nodo
-
-**File:** `flow-engine.service.ts` linea 140
-```typescript
-const shouldCallOperator = nextNodeId.endsWith("handle_escalate");
-```
-
-**Problema:** L'escalazione funziona SOLO se il nodo si chiama `*.handle_escalate`.
-Ma i JSON del cliente (`01_asciugatrice.json`, `02_wascher.json`) usano nomi come `step_7`, `step_8`.
-Risultato: **nessun nodo terminale del cliente chiamerà mai `contactOperator()`**.
-
-**Fix necessario:** Usare il campo `action: "escalate"` (sezione 8) invece di parsare il nome nodo.
-
-```typescript
-// PRIMA (BUG):
-const shouldCallOperator = nextNodeId.endsWith("handle_escalate");
-
-// DOPO (FIX):
-const shouldCallOperator = nextNode.action === "escalate";
-```
-
----
-
-### 🔴 Gap 2: Transition Keys — YES/NO vs Testo Libero  
-
-**Problema:** Il `classifyInput()` ritorna `"MATCH"` solo per:
-- Singolo numero: `1`, `2`, `3`...
-- Sì/No: `sì`, `no`, `ok`, `yes`
-
-Ma i JSON del cliente usano transition keys come:
-```json
-"transitions": {
-  "DOOR": "entry.step_4",
-  "ALM": "entry.step_5",
-  "SEL": "entry.step_2",
-  "PUSH PROG": "entry.step_3"
-}
-```
-
-L'utente scrive "DOOR" o "vedo door" → `classifyInput()` ritorna `AMBIGUOUS` → non matcha!
-
-**Opzioni:**
-1. L'utente deve SEMPRE scegliere da lista numerata (noi convertiamo le transition keys in numeri)
-2. Il `normalizeInput()` deve estrarre keywords dai transitions disponibili
-3. I flow JSON usano SOLO numeri come keys (1, 2, 3) e il prompt elenca le opzioni
-
-**Raccomandazione:** Opzione 3 — tutti i flow usano CHOICE con opzioni numerate.
-Questo è il pattern più robusto (multilingual, nessun parsing di parole).
-
-```json
-// PRIMA (non funziona col classificatore):
-"transitions": { "DOOR": "...", "ALM": "...", "SEL": "..." }
-
-// DOPO (funziona):
-"step_1": {
-  "type": "CHOICE",
-  "prompt": "Cosa vedi sul display?\n1. DOOR\n2. ALM\n3. SEL\n4. PUSH PROG\n5. Altro",
-  "transitions": { "1": "...", "2": "...", "3": "...", "4": "...", "5": "..." }
-}
-```
-
----
-
-### 🔴 Gap 3: Transition Key YES/NO — Normalizzazione Mancante
-
-**Problema:** Il classificatore matcha `sì`, `no`, `ok`, `yes` come `MATCH`.
-Ma `normalizeInput()` deve poi convertire "sì" → "YES", "no" → "NO" per matchare le transition keys.
-
-**Verifica necessaria:** Controllare che `normalizeInput("sì")` ritorni `"YES"` e `normalizeInput("no")` ritorni `"NO"`.
-Se non lo fa, le transizioni YES/NO non funzioneranno.
-
----
-
-### ⚠️ Gap 4: Allarmi Macchina (Playbook §5.4-5.5)
-
-Il Playbook Ecolaundry prevede codici allarme: ALM/A, ALM/E, ALM/door, ALM/VAr.
-I flow attuali (flow2, flow3) NON li gestiscono come flow separato.
-
-**Soluzione:** Nel flow `non_parte`, il nodo "Cosa dice il display?" include già l'opzione ALM.
-Non serve un flow separato — basta un ramo nel flow esistente:
-
-```json
-"display_check": {
-  "type": "CHOICE",
-  "prompt": "Cosa vedi sul display?\n1. Porta\n2. Seleziona programma\n3. Premi avvio\n4. ALM (errore)\n5. Credito\n6. Altro",
-  "transitions": {
-    "1": "non_parte.fix_door",
-    "2": "non_parte.fix_program",
-    "3": "non_parte.fix_start",
-    "4": "non_parte.handle_alm",
-    "5": "non_parte.fix_credit",
-    "6": "non_parte.escalate"
-  }
-}
-
-"handle_alm": {
-  "type": "INFO",
-  "prompt": "La macchina ha rilevato un'incidenza (ALM). Prova a premere il pulsante STOP una volta. Ha funzionato?",
-  "transitions": {
-    "YES": "non_parte.resolved",
-    "NO": "non_parte.escalate"
-  }
-}
-```
-
----
-
-### ⚠️ Gap 5: Flow Entry — Saluto Iniziale (step_0)
-
-I JSON del cliente hanno un nodo `step_0` di benvenuto:
-```json
-"step_0": {
-  "type": "INFO",
-  "prompt": "Hola, soy el asistente de Ecolaundry...",
-  "transitions": { "default": "entry.step_1" }
-}
-```
-
-**Problema:** Transition `"default"` NON è gestita dal classificatore.
-Quando il FlowEngine mostra step_0 e l'utente scrive qualsiasi cosa, 
-`classifyInput()` potrebbe dare `AMBIGUOUS` invece di avanzare.
-
-**Opzioni:**
-1. I nodi INFO con singola transizione `"default"` avanzano automaticamente (auto-advance)
-2. Rimuovere step_0 dal flow — il Sub-LLM dà il benvenuto prima di `startFlow()`
-
-**Raccomandazione:** Opzione 2 — il benvenuto NON è nel flow JSON.
-Il Sub-LLM (FlowAgentLLM) gestisce il saluto nel `systemPrompt`. 
-Il flow inizia direttamente dalla prima domanda diagnostica.
-
----
-
-### ✅ Nessun Gap: Pagamento
-
-Pagamento gestito dal Router → nessun flow necessario. OK.
-
-### ✅ Nessun Gap: Ritorno dopo flow completato
-
-`flowStatus = COMPLETED` → PATH C (Sub-LLM) → può avviare un altro flow. OK.
-
----
-
-## 8. Proposta: Campo `action` nei FlowNode Terminali (APPROVATO)
-
-**Fix per BUG sezione 7 — Gap 1.**
-
-Attualmente:
-```typescript
-interface FlowNode {
-  type: FlowNodeType;
-  prompt: string;
-  transitions?: Record<string, string>;
-  isTerminal?: boolean;
-  onInterruptFallback?: string;
-}
-```
-
-**Proposta — aggiungere `action`:**
-```typescript
-interface FlowNode {
-  type: FlowNodeType;
-  prompt: string;
-  transitions?: Record<string, string>;
-  isTerminal?: boolean;
-  action?: "escalate" | "resolve";  // ← NUOVO: cosa fare quando terminale
-  onInterruptFallback?: string;
-}
-```
-
-**Vantaggi:**
-- Nessun parsing di testo per capire se escalare
-- Ogni nodo terminale dice esplicitamente cosa fare
-- Il FlowEngine chiama `contactOperator()` solo se `action: "escalate"`
-- Nodi `action: "resolve"` → flow finito, messaggio di chiusura
-
----
-
-## 9. Diagramma Completo — Flusso Decisionale
-
-```
-CUSTOMER MESSAGE
-       │
-       ▼
-  ┌─ QR Code? ─────── YES ──→ [Salva flowKey + flowNumber]
-  │                              → Benvenuto macchina
-  │                              → Aspetta domanda
-  │
-  NO
-  │
-  ▼
-  ┌─ FlowState ACTIVE? ─── YES ──→ [FlowEngine deterministico]
-  │                                   │
-  │                                   ├─ MATCH      → Transizione nodo
-  │                                   ├─ HARD_BREAK → contactOperator()
-  │                                   ├─ SOFT_BREAK → Pausa (riprendibile)
-  │                                   ├─ INTERRUPT  → onInterruptFallback
-  │                                   └─ AMBIGUOUS  → "Ripeti" / +contatore
-  │                                   │
-  │                                   ├─ isTerminal + action:"escalate"
-  │                                   │    → contactOperator() 
-  │                                   └─ isTerminal + action:"resolve"
-  │                                        → "Problema risolto! 🎉"
-  │
-  NO
-  │
-  ▼
-  ┌─ FlowKey exists? ─── YES ──→ [FlowAgentLLM (Sub-LLM)]
-  │                                 │
-  │                                 ├─ LLM risponde (FAQ macchina)
-  │                                 ├─ LLM chiama startFlow("non_parte")
-  │                                 │    → FlowEngine.startFlow()
-  │                                 │    → step_0.prompt
-  │                                 └─ LLM chiama contactOperator()
-  │                                      → Scala a operatore
-  │
-  NO
-  │
-  ▼
-  [Router INFO_AGENT]
-    │
-    ├─ FAQ generiche (pagamento, orari, rimborsi, carta fedeltà, frode)
-    ├─ Identifica numero macchina → assegna flowKey → routing a Sub-LLM
-    └─ "Non ho capito, puoi ripetere?"
-```
-
----
-
-## 10. Riepilogo Configurazione Database
-
-### AgentConfig (Router)
+### AgentConfig — Router
 
 | Campo | Valore |
-|-------|--------|
-| `agentType` | INFO_AGENT |
-| `promptContent` | System prompt con FAQ pagamento, orari, regole, routing |
-| `isActive` | true |
-| `workspaceId` | {workspace_id} |
+|---|---|
+| `type` | ROUTER |
+| `systemPrompt` | Regole di classificazione (corto, senza FAQ) |
+| `model` | openai/gpt-4o-mini |
+| `temperature` | 0.1 (deterministico) |
+| `maxTokens` | 256 (output breve, solo JSON) |
+| `availableFunctions` | ["assignMachine", "startFlow", "contactOperator", "changeLanguage"] |
 
-### FlowNodeConfig (Sub-LLM per macchina)
+### AgentConfig — History Agent
 
-| Campo | Lavatrice | Asciugatrice |
-|-------|-----------|-------------|
-| `flowKey` | lavatrice_hs60xx | asciugatrice_ed340 |
-| `flowLabel` | Lavatrice HS-60XX | Asciugatrice ED-340 |
-| `systemPrompt` | Sofia prompt + regole macchina | Sofia prompt + regole macchina |
-| `model` | openai/gpt-4o-mini | openai/gpt-4o-mini |
-| `temperature` | 0.3 | 0.3 |
-| `maxTokens` | 2048 | 2048 |
-| `availableFunctions` | ["startFlow","contactOperator"] | ["startFlow","contactOperator"] |
-| `flows` | { "non_parte": {...}, "allarmi": {...} } | { "non_parte": {...}, "allarmi": {...} } |
+| Campo | Valore |
+|---|---|
+| `type` | HISTORY |
+| `systemPrompt` | Regole di comunicazione, tono, saluto. Riceve variabili: {{faqs}}, {{toneOfVoice}}, {{chatbotName}}, {{machineSpecs}}, {{customerName}} |
+| `model` | openai/gpt-4o-mini |
+| `temperature` | 0.4 (più creativo per risposte naturali) |
+| `maxTokens` | 512 |
+| `availableFunctions` | [] (future: bookAppointment, checkPayment, etc.) |
 
----
+### FlowNodeConfig — Configurazione Macchina (NON è un LLM)
 
-## 11. MATRICE COMPLETA: PDF Playbook vs Struttura Codice/DB
+| Campo | Uso |
+|---|---|
+| `flowKey` | Identificativo macchina (es. "lavatrice_hs60xx") |
+| `flowLabel` | Nome leggibile (es. "Lavatrice HS-60XX") |
+| `machineSpecs` | Specs tecniche: capacità, programmi, prezzi, note (testo passato a History Agent) |
+| `flows` | JSON dell'albero decisionale (letto da FlowEngine) |
+| `availableFunctions` | Per future integrazioni API esterne |
+| `isActive` | on/off |
 
-### Playbook Sezione 1-3: Obiettivi, Tono, Limiti
+**Campi RIMOSSI da FlowNodeConfig** (non servono più):
+- ~~systemPrompt~~ → rinominato in `machineSpecs` (non è un prompt LLM)
+- ~~model~~ → FlowEngine non chiama LLM
+- ~~temperature~~ → FlowEngine non chiama LLM
+- ~~maxTokens~~ → FlowEngine non chiama LLM
 
-| Requisito PDF | Dove va? | Struttura DB | ✅/❌ |
-|---|---|---|---|
-| Nome bot: Sofia | `FlowNodeConfig.systemPrompt` | String @db.Text | ✅ C'è |
-| Tono: calmo, professionale, frasi corte | `FlowNodeConfig.systemPrompt` | String @db.Text | ✅ C'è |
-| Una domanda per messaggio | `FlowNode.prompt` (ogni nodo = 1 prompt) | JSON flows | ✅ C'è |
-| Non diagnosticare guasti tecnici | `FlowNodeConfig.systemPrompt` (regole) | String @db.Text | ✅ C'è |
-| Non parlare di programmi (asciugatrice) | `FlowNodeConfig.systemPrompt` (regole) | String @db.Text | ✅ C'è |
-| Escalare se dubbio | `FlowNode.isTerminal` + `action:"escalate"` | JSON flows | ⚠️ Serve campo `action` |
+### FAQ — Tabella FAQ (invariata)
 
-### Playbook Sezione 4: Flow Completi (Troubleshooting)
+| Campo | Uso |
+|---|---|
+| `question` | Domanda FAQ |
+| `answer` | Risposta FAQ |
+| `workspaceId` | Isolamento workspace |
+| `isActive` | on/off |
 
-| Caso Playbook | Tipo | Dove va? | Struttura DB | ✅/❌ |
-|---|---|---|---|---|
-| **Display SEL** (seleziona programma) | Flow deterministico | `FlowNodeConfig.flows.non_parte.display_check` → transition "2" | JSON FlowNode CHOICE | ✅ Coperto |
-| **Display PUSH PROG** (conferma) | Flow deterministico | `FlowNodeConfig.flows.non_parte.display_check` → transition "3" | JSON FlowNode CHOICE | ✅ Coperto |
-| **Display DOOR** (porta aperta) | Flow deterministico | `FlowNodeConfig.flows.non_parte.display_check` → transition "1" | JSON FlowNode CHOICE | ✅ Coperto |
-| **Display ALM** (allarme) | Flow deterministico | `FlowNodeConfig.flows.non_parte.handle_alm` | JSON FlowNode INFO | ⚠️ Da aggiungere nei flowchart |
-| **Non parte** (generico) | Flow deterministico | `FlowNodeConfig.flows.non_parte` | JSON FlowMap | ✅ Coperto |
-| **Vestiti bagnati** | Flow deterministico | `FlowNodeConfig.flows.non_parte.fix_wet` | JSON FlowNode INFO | ✅ Coperto |
-| **Non scarica acqua** | Flow deterministico | `FlowNodeConfig.flows.non_parte.escalate_drain` | JSON FlowNode terminal | ✅ Coperto |
-| **Rumore anomalo** | Flow deterministico | `FlowNodeConfig.flows.non_parte.escalate_noise` | JSON FlowNode terminal | ✅ Coperto |
-| **Porta bloccata** | Flow deterministico | `FlowNodeConfig.flows.non_parte.fix_lock` | JSON FlowNode INFO | ✅ Coperto |
-| **Vestiti rovinati** | Flow deterministico | `FlowNodeConfig.flows.non_parte.damage_info` | JSON FlowNode INFO | ✅ Coperto |
-| **Asciugatrice: non asciuga** | Flow deterministico | `FlowNodeConfig.flows.non_parte.fix_dry` | JSON FlowNode INFO | ✅ Coperto |
-| **Asciugatrice: troppo umida** | Flow deterministico | `FlowNodeConfig.flows.non_parte.fix_humid` | JSON FlowNode INFO | ✅ Coperto |
-| **Asciugatrice: odore** | Flow deterministico | `FlowNodeConfig.flows.non_parte.fix_smell` | JSON FlowNode INFO | ✅ Coperto |
-| **Asciugatrice: filtro** | Flow deterministico | `FlowNodeConfig.flows.non_parte.fix_filter` | JSON FlowNode INFO | ✅ Coperto |
-| **Loop "Ha funzionato?"** | Flow deterministico | `FlowNode.transitions.YES/NO` | JSON transitions | ✅ Coperto |
-
-### Playbook Sezione 5: Gestione Intents
-
-| Intent Playbook | Dove va? | Struttura DB | ✅/❌ |
-|---|---|---|---|
-| Saluto / benvenuto | Sub-LLM (systemPrompt) — NON nel flow! | `FlowNodeConfig.systemPrompt` | ✅ C'è |
-| Richiesta info pagamento | Router (INFO_AGENT) | `AgentConfig.promptContent` | ✅ C'è |
-| Richiesta orari | Router (INFO_AGENT) | `AgentConfig.promptContent` | ✅ C'è |
-| Richiesta posizione | Router (INFO_AGENT) | `AgentConfig.promptContent` | ✅ C'è |
-| Richiesta operatore | Flow classifier → HARD_BREAK | Codice (classifyInput) | ✅ C'è |
-| Uscire dal flow | Flow classifier → SOFT_BREAK | Codice (classifyInput) | ✅ C'è |
-| Domanda fuori-tema durante flow | `FlowNode.onInterruptFallback` + contatore | JSON + codice | ✅ C'è |
-
-### Playbook Sezione 5.7-5.9: Compensazioni, Rimborsi, Carta Fedeltà
-
-| Caso | Dove va? | Struttura DB | ✅/❌ |
-|---|---|---|---|
-| Doppio addebito | Router FAQ (systemPrompt) | `AgentConfig.promptContent` | ✅ C'è spazio |
-| Compensazione con codice | Router FAQ (systemPrompt) | `AgentConfig.promptContent` | ✅ C'è spazio |
-| Rimborso regole | Router FAQ (systemPrompt) | `AgentConfig.promptContent` | ✅ C'è spazio |
-| Carta fedeltà info | Router FAQ (systemPrompt) | `AgentConfig.promptContent` | ✅ C'è spazio |
-| Fattura | Router FAQ (systemPrompt) | `AgentConfig.promptContent` | ✅ C'è spazio |
-
-> Nota: "C'è spazio" = la struttura DB supporta il campo (Text illimitato), 
-> ma il contenuto specifico va ancora scritto nel systemPrompt del Router.
-
-### Playbook Sezione 6: Frode Detection
-
-| Caso | Dove va? | Struttura DB | ✅/❌ |
-|---|---|---|---|
-| Richieste sospette ripetute | Router FAQ + regole nel systemPrompt | `AgentConfig.promptContent` | ✅ C'è spazio |
-| Pattern compensazione abuso | Router FAQ + regole nel systemPrompt | `AgentConfig.promptContent` | ✅ C'è spazio |
-| Alert operatore per frode | `contactOperator(reason)` con motivo specifico | Codice + contactOperator | ✅ C'è |
-
-### Playbook Sezione 10: Escalazione
-
-| Caso | Dove va? | Struttura DB | ✅/❌ |
-|---|---|---|---|
-| Escalare a operatore | `contactOperator()` function | Codice (calling function) | ✅ C'è |
-| Summary 1 frase | SummaryAgentLLM | `AgentConfig` + LLM call | ✅ C'è |
-| Email a operatore | contactOperator → email service | Codice + workspace.operatorEmail | ✅ C'è |
-| Link supporto con token | SecureTokenService | Codice + DB | ✅ C'è |
-| Reset sessione dopo timeout | sessionResetTimeout | Workspace field | ✅ C'è |
-
-### Playbook Sezione 11: System Prompt
-
-| Requisito | Dove va? | Struttura DB | ✅/❌ |
-|---|---|---|---|
-| Prompt dinamico da DB | `FlowNodeConfig.systemPrompt` + `AgentConfig.promptContent` | String @db.Text | ✅ C'è |
-| Temperatura configurabile | `FlowNodeConfig.temperature` | Float | ✅ C'è |
-| Model configurabile | `FlowNodeConfig.model` | String | ✅ C'è |
-| Max tokens configurabile | `FlowNodeConfig.maxTokens` | Int | ✅ C'è |
-| Functions configurabili | `FlowNodeConfig.availableFunctions` | Json array | ✅ C'è |
+Le FAQ vengono caricate e passate a History Agent come variabile `{{faqs}}`.
 
 ---
 
-## 12. RIEPILOGO: Cosa Toccare nel Codice
+## 6. Costo LLM per Scenario
 
-### 🔴 FIX OBBLIGATORI (Bloccanti)
+| Scenario | Path | FlowClassifier | FlowEngine | FlowAgentLLM | Totale LLM |
+|---|---|---|---|---|---|
+| "Hola!" | C | — | — | 1 call | **1 call** |
+| "Che orari?" (FAQ) | C | — | — | 1 call | **1 call** |
+| "Non parte" (gather info) | C | — | — | 1 call | **1 call** |
+| "42" (assegna + startFlow) | B/C | — | 1 exec (0 token) | 1 call | **1 call** |
+| "1" (step nel flow attivo) | **A** | 1 exec (0 token) | 1 exec (0 token) | — | **0 calls** |
+| "Quanto costa?" (FAQ durante flow) | **A→C** | INTERRUPT_FAQ | — | 1 call | **1 call** |
+| "Voglio operatore" | C | — | — | 1 call | **1 call** |
+| Input ambiguo durante flow | **A** | AMBIGUOUS | retry/escalate | — | **0 calls** |
 
-| # | Cosa | File | Impatto |
-|---|------|------|---------|
-| 1 | **Campo `action` in FlowNode** | `flow.types.ts` | Aggiungere `action?: "escalate" \| "resolve"` |
-| 2 | **Fix escalazione** — usare `action` invece di nome nodo | `flow-engine.service.ts:140` | Sostituire `endsWith("handle_escalate")` con `nextNode.action === "escalate"` |
-| 3 | **Flow JSON con numeri** — TUTTE le transition keys devono essere numeri o YES/NO | JSON nei FlowNodeConfig | Riscrivere i JSON del cliente |
-
-### ⚠️ MIGLIORAMENTI (Raccomandati)
-
-| # | Cosa | File | Impatto |
-|---|------|------|---------|
-| 4 | Aggiungere nodo ALM nei flow | JSON flowchart → JSON FlowNodeConfig | Coprire allarmi Playbook |
-| 5 | Rimuovere step_0 benvenuto dai JSON | JSON FlowNodeConfig | Il Sub-LLM gestisce il saluto |
-| 6 | Verificare `normalizeInput("sì")` → "YES" | `flow-classifier.service.ts` | Garantire YES/NO matching |
-| 7 | Scrivere contenuto FAQ pagamento nel Router prompt | `AgentConfig` (SQL su Heroku) | Coprire sezioni 5.7-6 Playbook |
-
-### ✅ STRUTTURA OK (Nessun Cambio Necessario)
-
-| Cosa | Perché |
-|------|--------|
-| `FlowNodeConfig` schema | Tutti i campi necessari ci sono |
-| `FlowNode` types (eccetto `action`) | CHOICE/ACTION/INFO/CONFIRMATION/FREE_TEXT coprono tutti i casi |
-| `FlowState` | flowId, currentNodeId, interruptCount, TTL — tutto presente |
-| `ChatContext` | flowKey, flowNumber, flowState — tutto presente |
-| `classifyInput()` | Pattern strutturali OK (numeri, sì/no, operatore, stop) |
-| `contactOperator()` | Email, summary, token, sales routing — tutto funziona |
-| `FlowWorkspaceStrategy` 4 paths | QR, active flow, no flow + key, no key — copre tutto |
-| Translation + Security post-processing | OK |
-| Session reset timeout | Workspace.sessionResetTimeout — configurabile |
+**PATH A (flow attivo) = sempre 0 chiamate LLM.** `FlowClassifierService` è codice puro.
+**PATH B/C = 1 sola chiamata LLM** (`FlowAgentLLM` fa routing + risposta insieme).
 
 ---
 
-## 13. Cosa Verificare Prima di Convertire i Flowchart in JSON
+## 7. Regole Anti-Conflitto
 
-1. ✅ **Pagamento**: NO flow, gestito dal Router (FAQ) — CONFERMATO
-2. ✅ **Struttura DB**: FlowNodeConfig ha TUTTI i campi necessari
-3. 🔴 **Fix `action` field**: Aggiungere a FlowNode PRIMA di creare JSON
-4. 🔴 **Fix escalazione**: Cambiare logica in flow-engine.service.ts PRIMA di testare
-5. 🔴 **Transition keys**: Usare SOLO numeri (1,2,3) + YES/NO nei JSON
-6. ⚠️ **Allarmi ALM**: Aggiungere nei flowchart (flow2, flow3) PRIMA di convertire
-7. ⚠️ **Step 0 saluto**: Rimuovere dai flow JSON — il Sub-LLM saluta
-8. ⚠️ **Contenuto Router FAQ**: Scrivere pagamento/rimborsi/orari nel prompt
+| Regola | Perché |
+|---|---|
+| Router NON ha FAQ nel prompt | Non può rispondere, solo classificare |
+| Router NON ha tono di voice | Non può formulare risposte |
+| Router NON ha specs macchina | Non può rispondere su programmi/prezzi |
+| History Agent NON ha calling functions di routing | Non può smistare |
+| History Agent NON decide quale flow avviare | Decisione è del Router |
+| FlowEngine NON interpreta input | Solo numeri/sì/no normalizzati |
+| Orchestratore gestisce contactOperator da FlowEngine | Non è compito di Router né History |
+| Una sola voce (History Agent) | Tono sempre coerente |
+
+---
+
+## 8. Differenza con architettura precedente
+
+| Aspetto | Prima | Adesso |
+|---|---|---|
+| SubLLM | LLM separato per macchina con proprio prompt | **NON ESISTE PIÙ** — FlowNodeConfig è solo dati (specs + JSON) |
+| Chi parla al cliente | Chiunque (Router, SubLLM, FlowEngine) | **Solo History Agent** |
+| FAQ | Nel prompt del Router | Nel prompt di **History Agent** via {{faqs}} |
+| Specs macchina | Nel systemPrompt del SubLLM | In `FlowNodeConfig.machineSpecs`, passate a **History Agent** |
+| Numero di LLM call | 1-2 variabile | **Sempre 2** (Router + History) |
+| Flow durante FAQ | Interrotto o confuso | **Pausato**, History ricorda e chiede se riprendere |
+| Calling functions routing | Sparse su Router e SubLLM | **Solo su Router** |
+| Calling functions servizio | Sparse | **Solo su History Agent** (future) |
+
+---
+
+## 9. Flusso di Raccolta Info (Gathering)
+
+Il Router raccoglie info conversazionalmente in più messaggi:
+
+```
+Msg 1: "Non parte"
+  Router: salva problemDescription, need=locale
+  History: "No te preocupes. ¿En qué local estás?"
+
+Msg 2: "Goya"
+  Router: salva locale=Goya, need=machine_type
+  History: "¿Es una lavadora o una secadora?"
+
+Msg 3: "Lavadora 42"
+  Router: salva tipo+numero → assignMachine() → startFlow()
+  FlowEngine: step_0
+  History: "Perfecto. Vamos a revisarlo. ¿Qué ves en el display? 1️⃣ Puerta..."
+```
+
+Il Router può essere intelligente: se il cliente dice "La lavadora 42 de Goya no parte", raccoglie TUTTO in un colpo e salta direttamente ad assignMachine + startFlow.
+
+---
+
+## 10. Classificazione Input durante Flow Attivo
+
+⚠️ **quando il flow è attivo, il Router NON viene chiamato.**
+
+`FlowClassifierService` (codice puro, 0 token LLM) classifica l'input strutturalmente:
+
+```
+input: "1" / "2" / "sì" / "no" / "ok"  → MATCH         → FlowEngine.handleMessage() → avanza nodo
+input: "quanto costa?" / "orari?"       → INTERRUPT_FAQ → flow in PAUSA → PATH C (risponde FAQ, poi ri-mostra step)
+input: "STOP" / "annulla" / "restart"  → HARD_BREAK    → escalate → contactOperator()
+input: "aspetta" / "un secondo"         → SOFT_BREAK    → flow in PAUSA, messaggio "ok quando vuoi"
+input: "boh" / "non lo so" / "???" / qualsiasi testo → AMBIGUOUS → vedi sotto
+```
+
+**Regola MATCH:** solo `/^([1-9]|sì|yes|ok|no|nope)$/i` — nessun altro pattern.
+
+**AMBIGUOUS → gestione già implementata nel codice (`handleAmbiguous()`):**
+```
+interruptCount++
+se < INTERRUPT_HARD_LIMIT → restituisce node.onInterruptFallback (es. "No pasa nada 🙂 — dime el número")
+se >= INTERRUPT_HARD_LIMIT → escalate → contactOperator()
+```
+> ⚠️ ChatGPT ha suggerito di aggiungere `FLOW_INVALID_INPUT` — **non serve**: AMBIGUOUS già copre "boh", "non lo so", "???" con retry+escalate. È un alias inutile.
+
+**Resume dopo PAUSA — UX critica:**
+Quando il flow era PAUSED e l'utente riprende (es. risponde "vale" dopo una FAQ), FlowEngine deve **ri-mostrare il prompt dello step corrente** prima di attendere input:
+```
+FlowEngine.handleResume() → return currentNode.prompt  // NON silenzioso
+```
+Senza questo, l'utente non ricorda cosa stava vedendo sul display.
+
+**Zero keyword detection per contenuto semantico** — quella è responsabilità di FlowAgentLLM in PATH B/C.
+
+---
+
+## 11. Checklist Copertura — PDF Playbook vs Architettura
+
+### Problemi macchina (PDF Lavadora + Secadora)
+
+| Caso | Chi gestisce | Come |
+|---|---|---|
+| Display SEL/PUSH/DOOR/Credito | FlowEngine (nodi deterministici) | step → azione → "Ha funzionato?" |
+| ALM (tutti i tipi) | FlowEngine (nodo ALM con sotto-tipi) | STOP → retry → escalate |
+| END + bAL (desequilibrio) | FlowEngine (nodo terminale) | Escalate + compensazione |
+| STOP premuto | FlowEngine (ramo STOP) | Prima volta? → **ESCALATE** (operatore decide compensazione, mai automatica) |
+| Ropa bagnata/non centrifugata | FlowEngine (ramo post-ciclo) | Separare carico |
+| Non asciuga / troppo umida | FlowEngine (ramo asciugatrice) | Aggiungere tempo / rilavare |
+| Porta bloccata | FlowEngine (nodo) | Attendere sblocco |
+| Rumore / guasto | FlowEngine (nodo terminale) | Escalate |
+| Ropa bruciata / plastico / macchiata | FlowEngine (nodi terminali) | NO compensazione / compensazione parziale |
+| Odore | FlowEngine (nodo) | Pulire cestello |
+| No sapone/schiuma | History Agent (FAQ) | Detergente industriale, è normale |
+| Macchina occupata | History Agent (FAQ) | Togli ropa, metti su tavolo |
+| Filtro sporco (secadora) | FlowEngine (nodo) | Pulire filtro e sensore |
+
+### FAQ generiche (Playbook §5.3-5.10)
+
+| Caso | Chi gestisce | Come |
+|---|---|---|
+| Doppio addebito | History Agent (FAQ) | Chiede dati, formulario, email |
+| Ho pagato ma non si attiva | Router (classifica) + FlowEngine | Se ha macchina → flow. Se no → FAQ |
+| Errore AL001 | History Agent (FAQ) | Spiegazione sequenza |
+| Ho un codice | History Agent (FAQ) | Regole codice compensazione |
+| Rimborso | History Agent (FAQ) | Formulario + email |
+| Fattura | History Agent (FAQ) | Email olga@alberwaz.net + dati |
+| Carta fedeltà | History Agent (FAQ) | Regole per locale |
+| Orari/prezzi | History Agent (FAQ) | Info per locale |
+| Frode/incoerenza | Router (rileva) → Escalate | MAI accusare, raccogliere dati |
+| Compensazioni | History Agent (FAQ) + Escalate | Regole, non promettere automaticamente |
+
+### Gestione dialogo
+
+| Caso | Chi gestisce | Come |
+|---|---|---|
+| Cambio argomento durante flow | Router (classifica) | Flow in pausa, History risponde + chiede se riprendere |
+| Cambio lingua | Router (changeLanguage) | Translation Agent adatta |
+| Cambio macchina | Router (reassign) | Cancella flow, riassegna |
+| Richiesta operatore | Router (contactOperator) | History conferma escalazione |
+| Saluto | Router (GREETING) | History saluta con tono |
+| Messaggio ambiguo | Router (GATHER_INFO) | History chiede chiarimento |
+
+---
+
+## 12. Analisi Critica — ChatGPT Round 2 (5 punti)
+
+### Punto 1 — `FLOW_INVALID_INPUT`: ChatGPT ha **TORTO** ❌
+
+**Claim**: "boh", "non lo so", "???" finiscono in `FLOW_INPUT` e rompono FlowEngine.
+
+**Realtà nel codice**: `FlowClassifierService` già classifica qualsiasi testo non-numerico come **AMBIGUOUS** (non MATCH). `handleAmbiguous()` in `FlowEngineService` gestisce esattamente questi casi con `node.onInterruptFallback` e poi escalate dopo `INTERRUPT_HARD_LIMIT`. Aggiungere `FLOW_INVALID_INPUT` è un alias di AMBIGUOUS — zero valore, solo rumore.
+
+---
+
+### Punto 2 — Resume step visibile: ChatGPT ha **RAGIONE** ✅
+
+**Claim**: Quando il flow riprende dopo PAUSA, l'utente non ricorda più il prompt corrente.
+
+**Gap reale**: Confermato. FlowEngine riprende silenziosamente dallo step — ma non ri-invia `currentNode.prompt`. Fix documentato in Section 10.
+
+---
+
+### Punto 3 — `gatherState.retryCount`: ChatGPT ha **RAGIONE PARZIALE** ⚠️
+
+**Claim**: Loop infinito su GATHER_INFO se utente risponde "non lo so".
+
+**Parte corretta**: Il loop è un rischio reale — senza contatore, Router può iterare indefinitamente.
+
+**Parte over-engineered**: "Semplifica domanda al tentativo 2" è semantica che appartiene al prompt del Router/History, non a un campo nel context. Il fix giusto è solo `retryCount` con soglia di escalate — documentato in Section 4.
+
+---
+
+### Punto 4 — Compensazione automatica Scenario 14: ChatGPT ha **RAGIONE** ✅
+
+**Claim**: "Prima volta → compensazione gratuita" contraddice il playbook (§7: non promettere automaticamente).
+
+**Fix applicato**: Scenario 14 corretto — ora FlowEngine escala sempre, operatore decide.
+
+---
+
+### Punto 5 — "Una sola domanda per turno": ChatGPT ha **RAGIONE** ✅
+
+**Claim**: History Agent può fare 2+ domande nello stesso messaggio, violando le regole di supporto.
+
+**Fix applicato**: Regola aggiunta esplicitamente nella sezione priorità fonti.
+
+---
+
+**Verdetto finale Round 2**: 4/5 punti validi (1 falso positivo su FLOW_INVALID_INPUT, già gestito da AMBIGUOUS). I 3 fix reali (resume visibile, retryCount, no compensazione automatica) sono documentati.
+
+---
+
+## 13. Analisi Critica — ChatGPT Round 1
+
+### 🟡 Problema 2: Flow TTL — ChatGPT ha PARZIALMENTE ragione
+
+**Claim:** `lastValidStepAt` esiste ma il comportamento TTL non è definito → se l'utente torna dopo 2 ore/1 giorno il flow riprende, rompendo la UX.
+
+**Codice reale:** `checkAndResetExpiredSession()` in `FlowWorkspaceStrategy` gestisce già un TTL basato su `workspace.sessionResetTimeout`, ma **solo dopo una escalation** (`chatSession.escalatedAt`). Un flow ACTIVE o PAUSED senza escalation non ha reset automatico.
+
+**Dove ChatGPT ha ragione:**
+- Se un cliente avvia la diagnosi alle 10:00, si ferma al passo 2 e torna alle 17:00, il flow riprende dove era rimasto. Tecnicamente è un rischio reale.
+
+**Dove ChatGPT esagera:**
+- Nel contesto **laundromat**, il cliente è fisicamente alla macchina quando scrive. Il flow diagnostico dura 3-5 messaggi in pochi minuti.
+- Riprendere un flow "porta bloccata" dopo 2 ore non è drammatico: il cliente dice "sì" o "no" e si risolve. È UX friction, non UX failure.
+- Non è comparabile a riprendere un checkout o un form multi-step complesso.
+
+**Comportamento attuale per caso PAUSED:**
+- Flow in PAUSA (dopo FAQ o SOFT_BREAK): riprende normalmente → accettabile
+- Flow ACTIVE interrotto senza escalation: riprende dallo step → accettabile nel contesto
+
+**Fix raccomandato (leggero, non urgente):**
+```typescript
+// In FlowEngineService.handleMessage() — dopo aver caricato il context
+const FLOW_ACTIVE_TTL_HOURS = 4 // configurabile per workspace
+if (chatContext.flowState?.lastValidStepAt) {
+  const elapsed = Date.now() - new Date(chatContext.flowState.lastValidStepAt).getTime()
+  if (elapsed > FLOW_ACTIVE_TTL_HOURS * 3600_000) {
+    // Cancella flow silenziosamente → PATH B/C riparte da zero
+    delete chatContext.flowState
+    // FlowAgentLLM gestisce il re-entry naturalmente
+  }
+}
+```
+
+**Verdetto:** ⚠️ Valido ma bassa priorità per il caso laundromat. Da aggiungere come `FLOW_ACTIVE_TTL_HOURS` configurabile nel workspace.
+
+---
+
+### 🔴 Problema 3: "Super Prompt" — ChatGPT ha TORTO
+
+**Claim:** History Agent / FlowAgentLLM riceve troppi dati (FAQ + machineSpecs + flow output + decisioni router + tono + storico + cliente) → "super prompt" → degrado qualità nel tempo.
+
+**Perché il claim è sbagliato:**
+
+| Argomento ChatGPT | Realtà |
+|---|---|
+| "Troppi dati → qualità cala" | LLM performano MEGLIO con più contesto, non peggio |
+| "Super prompt = anti-pattern" | È il pattern RAG standard — tutte le piattaforme AI usano questo approccio |
+| "Rischio degrado nel tempo" | Il degrado sarebbe da token overflow, non da "troppi tipi di dato" |
+
+**Budget token reale:**
+```
+Storico ultima ora:    ~1.000 token (10 messaggi × 100 tok)
+machineSpecs (1 macchina): ~300 token
+FAQ Ecolaundry (~20 FAQ):  ~800 token
+flowEngine output:          ~100 token
+Tono + variabili:           ~200 token
+─────────────────────────────────────
+Totale prompt:          ~2.400 token
+Limite gpt-4o-mini:   128.000 token
+Utilizzo:               ~1.9% ✅
+```
+
+**Il VERO rischio (non quello di ChatGPT):**
+L'unica minaccia reale è se le FAQ crescono a 500+ voci non filtrate:
+- 500 FAQ × 150 tok = 75.000 token → problema reale
+- Soluzione: pre-filtro semantico (top 5-10 FAQ rilevanti al messaggio), non rimozione del contesto
+
+**Perché dividere sarebbe peggio:**
+- 2 LLM separati (Router + History) = doppio costo, doppia latenza
+- Il passaggio di informazioni tra LLM crea rischio di perdita di contesto
+- Un solo LLM con tutto il contesto è più coerente e meno costoso
+
+**Verdetto:** ❌ ChatGPT sbaglia. Il pattern attuale è corretto. L'unica ottimizzazione futura è il **pre-filtro semantico delle FAQ** se superano ~50 voci.
+
+---
+
+## 13. Riepilogo Finale
+
+```
+                 ┌─────────────────────────────────────┐
+                 │  FlowWorkspaceStrategy (orchestratore)│
+                 └─────────────────────────────────────┘
+                          │
+           ┌──────────────┼──────────────┐
+           ▼              ▼              ▼
+      PATH A          PATH B          PATH C
+   (flow attivo)   (flowKey set)    (no flowKey)
+        │                │               │
+        ▼                ▼               ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│FlowClassifier│  │ FlowAgentLLM │  │ FlowAgentLLM │
+│(codice puro) │  │(sub-macchina)│  │  (router)    │
+│              │  │              │  │              │
+│MATCH/BREAK/  │  │ 1 call LLM   │  │ 1 call LLM   │
+│FAQ/AMBIGUOUS │  │routing+reply │  │routing+reply │
+│              │  │              │  │              │
+│  0 token     │  │ ~500 tok     │  │ ~500 tok     │
+└──────────────┘  └──────────────┘  └──────────────┘
+        │
+        ▼
+┌──────────────┐
+│  FlowEngine  │
+│(deterministico)│
+│  0 token     │
+│  JSON puro   │
+└──────────────┘
+```
+
+**PATH A = 0 LLM calls.** `FlowClassifierService` gestisce tutto strutturalmente.
+**PATH B/C = 1 LLM call.** `FlowAgentLLM` fa routing + risposta finale in una sola call.
+**3 percorsi, responsabilità chiare, zero conflitti, copertura 100% dei casi PDF.**
