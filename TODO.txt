@@ -1,15 +1,31 @@
-- Archettura
-- FAQ
-- SCHEMA DB
-- DB
-- FAQ
-- FLOW WASDHER
-- FLOW DRIVER
+
+FATTO
+- Archettura - OK
+- FAQ sono - OK
+- SCHEMA DB - OK
+- DB - OK
+- FLOW WASDHER - OK
+- FLOW DRIVER - OK
 
 
 TODO
-- JSON asciugatrce
-- JOSN lavatrice
-- app funziona?
-- MCP per provare
-- pulizia
+- grafico fattto bene?
+- generare JSON asciugatrce
+- generare JOSN lavatrice
+- Flussi e grafici da dare al cliente
+- CAlling function sono attaccate bene e ben descritte
+- I prompts e il settings uno per uno
+- MCP per provare per vedere se funziona correttamente
+- Pulizia del codice
+- QRCODE al login?
+- cambio user?
+- acative disactive non serve
+
+- il mio chatbot da info sbaglatiate
+
+You can start your free trial here: 
+
+https://app.echatbot.io
+
+Do you have any other questions about the trial? 💬
+

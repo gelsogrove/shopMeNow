@@ -1652,6 +1652,35 @@ Can I help with anything else?"`,
     })
   }
 
+  // ── Router prompt (History node — collects location+type+number, calls assignMachine) ──
+  const ECOLAUNDRY_ROUTER_PROMPT = `You are Sofia, the virtual assistant of Ecolaundry, a self-service laundry.
+
+YOUR MISSION: Welcome the customer and collect the information needed to assign them the correct machine.
+
+RULES:
+1. If the customer only greets ("hi", "hello", "ciao", "hola", "buenas") respond: "Hi! I'm the Ecolaundry assistant. How can I help you today?"
+2. If the customer describes a problem, in ONE message: (a) acknowledge the problem, (b) ask for the location. Example: "I understand, don't worry. Which location are you at?"
+3. ONE question per message — NEVER ask multiple questions at once
+4. Collect in this order: 1) Location, 2) Machine type (washer or dryer), 3) Machine number
+5. When you have LOCATION + TYPE + NUMBER → call assignMachine() immediately
+6. assignMachine flowKey values: lavatrice_hs60xx = washer, asciugatrice_ed340 = dryer
+
+EXAMPLES:
+- "I paid but it won't start" → "I understand, don't worry. Which location are you at?"
+- "Goya" → "Is it a washer or a dryer?"
+- "washer" → "What's the machine number? You'll find it on the label."
+- "42" → call assignMachine(flowKey="lavatrice_hs60xx", machineNumber="42") and briefly confirm
+
+GENERAL FAQ (answer directly without routing):
+- Hours: open 8:00–22:00 every day (L'Escala: 7:00–23:00)
+- Soap and softener: included in the machine price
+- Payment: coins or contactless card
+- Average wash cycle: ~28 minutes
+- Refund requests: collect last 4 digits of card + payment screenshot, send to service@alberwaz.net
+
+NEVER invent information. NEVER ask more than one question at a time.
+ALWAYS respond in English — TranslationAgent handles multilingual output.`
+
   // ── Ecolaundry systemPrompt (Acceptance Criteria from Andrea) ──────────────
   // This prompt embeds ALL the business rules from the Ecolaundry acceptance doc:
   // tone, limits, anti-fraud rules, knowledge base, escalation protocol, etc.
@@ -1909,16 +1938,9 @@ Escalation message: "We're forwarding your case for review so we can help you in
 10. If the case doesn't clearly fit a known flow, escalate`
 
   // ── FlowNodeConfig #1: Washer HS-60XX ───────────────────────────────────────
-  const existingWasherConfig = await prisma.flowNodeConfig.findFirst({
-    where: { workspaceId: ecolaundryWorkspace.id, flowKey: "lavatrice_hs60xx" },
-  })
-  if (!existingWasherConfig) {
-    await prisma.flowNodeConfig.create({
-      data: {
-        workspaceId: ecolaundryWorkspace.id,
-        flowKey: "lavatrice_hs60xx",
-        flowLabel: "Washer HS-60XX",
-        systemPrompt: ECOLAUNDRY_SYSTEM_PROMPT + `
+  const washerFlowData = {
+    flowLabel: "Washer HS-60XX",
+    systemPrompt: ECOLAUNDRY_SYSTEM_PROMPT + `
 
 ## MACHINE SPECS — Washer HS-60XX
 - Capacity: 8 kg
@@ -1929,11 +1951,11 @@ Escalation message: "We're forwarding your case for review so we can help you in
 - EXTRA options: Extra rinse (+€0.50), Pre-wash (+€1.00)
 
 Available flows: non_parte, errore_alm, lavaggio_problema`,
-        model: "openai/gpt-4o-mini",
-        temperature: 0.3,
-        maxTokens: 2048,
-        availableFunctions: JSON.parse(JSON.stringify(["startFlow", "contactOperator"])),
-        flows: {
+    model: "openai/gpt-4o-mini",
+    temperature: 0.3,
+    maxTokens: 2048,
+    availableFunctions: JSON.parse(JSON.stringify(["startFlow", "contactOperator"])),
+    flows: {
           non_parte: {
             step_0: {
               type: "CHOICE",
@@ -2079,21 +2101,20 @@ Available flows: non_parte, errore_alm, lavaggio_problema`,
         },
         isActive: true,
       },
-    })
-    console.log("   ✅ FlowNodeConfig created: Washer HS-60XX")
+    },
+    isActive: true,
   }
+  await prisma.flowNodeConfig.upsert({
+    where: { workspaceId_flowKey: { workspaceId: ecolaundryWorkspace.id, flowKey: "lavatrice_hs60xx" } },
+    update: washerFlowData,
+    create: { workspaceId: ecolaundryWorkspace.id, flowKey: "lavatrice_hs60xx", ...washerFlowData },
+  })
+  console.log("   ✅ FlowNodeConfig upserted: Washer HS-60XX")
 
   // ── FlowNodeConfig #2: Dryer ED-340 ────────────────────────────────────────
-  const existingDryerConfig = await prisma.flowNodeConfig.findFirst({
-    where: { workspaceId: ecolaundryWorkspace.id, flowKey: "asciugatrice_ed340" },
-  })
-  if (!existingDryerConfig) {
-    await prisma.flowNodeConfig.create({
-      data: {
-        workspaceId: ecolaundryWorkspace.id,
-        flowKey: "asciugatrice_ed340",
-        flowLabel: "Dryer ED-340",
-        systemPrompt: ECOLAUNDRY_SYSTEM_PROMPT + `
+  const dryerFlowData = {
+    flowLabel: "Dryer ED-340",
+    systemPrompt: ECOLAUNDRY_SYSTEM_PROMPT + `
 
 ## MACHINE SPECS — Dryer ED-340
 - Capacity: 15 kg
@@ -2104,11 +2125,11 @@ Available flows: non_parte, errore_alm, lavaggio_problema`,
 - Lint filter: should be cleaned before each use
 
 Available flows: non_parte, errore_reset`,
-        model: "openai/gpt-4o-mini",
-        temperature: 0.3,
-        maxTokens: 2048,
-        availableFunctions: JSON.parse(JSON.stringify(["startFlow", "contactOperator"])),
-        flows: {
+    model: "openai/gpt-4o-mini",
+    temperature: 0.3,
+    maxTokens: 2048,
+    availableFunctions: JSON.parse(JSON.stringify(["startFlow", "contactOperator"])),
+    flows: {
           non_parte: {
             step_0: {
               type: "CHOICE",
@@ -2200,11 +2221,43 @@ Available flows: non_parte, errore_reset`,
             },
           },
         },
-        isActive: true,
-      },
-    })
-    console.log("   ✅ FlowNodeConfig created: Dryer ED-340")
+    isActive: true,
   }
+  await prisma.flowNodeConfig.upsert({
+    where: { workspaceId_flowKey: { workspaceId: ecolaundryWorkspace.id, flowKey: "asciugatrice_ed340" } },
+    update: dryerFlowData,
+    create: { workspaceId: ecolaundryWorkspace.id, flowKey: "asciugatrice_ed340", ...dryerFlowData },
+  })
+  console.log("   ✅ FlowNodeConfig upserted: Dryer ED-340")
+
+  // ── FlowNodeConfig #3: Router (History node — assigns machine via assignMachine()) ─────
+  await prisma.flowNodeConfig.upsert({
+    where: { workspaceId_flowKey: { workspaceId: ecolaundryWorkspace.id, flowKey: "router" } },
+    update: {
+      flowLabel: "Router - Asistente Ecolaundry",
+      systemPrompt: ECOLAUNDRY_ROUTER_PROMPT,
+      model: "openai/gpt-4o-mini",
+      temperature: 0.3,
+      maxTokens: 1024,
+      availableFunctions: JSON.parse(JSON.stringify(["assignMachine"])),
+      // flows contains available machine keys as metadata (no actual flow steps for the router)
+      flows: { lavatrice_hs60xx: {}, asciugatrice_ed340: {} },
+      isActive: true,
+    },
+    create: {
+      workspaceId: ecolaundryWorkspace.id,
+      flowKey: "router",
+      flowLabel: "Router - Asistente Ecolaundry",
+      systemPrompt: ECOLAUNDRY_ROUTER_PROMPT,
+      model: "openai/gpt-4o-mini",
+      temperature: 0.3,
+      maxTokens: 1024,
+      availableFunctions: JSON.parse(JSON.stringify(["assignMachine"])),
+      flows: { lavatrice_hs60xx: {}, asciugatrice_ed340: {} },
+      isActive: true,
+    },
+  })
+  console.log("   ✅ FlowNodeConfig upserted: Router (History)")
 
   // WorkspaceCallingFunctions for Ecolaundry
   const ecoCallingFunctions = [
@@ -2248,7 +2301,7 @@ Available flows: non_parte, errore_reset`,
     })
   }
 
-  console.log(`✅ Ecolaundry FLOW workspace configured: 2 FlowNodeConfigs + ${ecoCallingFunctions.length} calling functions`)
+  console.log(`✅ Ecolaundry FLOW workspace configured: 3 FlowNodeConfigs + ${ecoCallingFunctions.length} calling functions`)
 
   // Use BellItalia VIP as the main workspace for demo data
   const workspace = ecommerceWorkspace
