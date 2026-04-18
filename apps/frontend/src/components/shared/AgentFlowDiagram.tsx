@@ -110,6 +110,7 @@ interface AgentConfig {
 interface AgentFlowDiagramProps {
   isEcommerce: boolean
   channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
+  enableWelcomeMessage?: boolean
   agents: AgentConfig[]
   workspaceId: string
   onSaveAgent: (agentId: string, data: Partial<AgentConfig>) => Promise<void>
@@ -523,6 +524,7 @@ function BranchLine({ className }: { className?: string }) {
 export function AgentFlowDiagram({
   isEcommerce,
   channelMode,
+  enableWelcomeMessage = true,
   agents,
   workspaceId,
   onSaveAgent,
@@ -606,7 +608,9 @@ export function AgentFlowDiagram({
     const meta = getResolvedMeta(type)
     if (!meta) return false
     if (meta.ecommerceOnly && !isEcommerce) return false
-    if (!isEcommerce && (type === "ROUTER" || type === "PROFILE_MANAGEMENT")) return false
+    // ROUTER hidden for non-ecommerce; PROFILE_MANAGEMENT hidden for INFORMATIONAL (not FLOW - shown dynamically there)
+    if (!isEcommerce && !isFlow && (type === "ROUTER" || type === "PROFILE_MANAGEMENT")) return false
+    if (type === "PROFILE_MANAGEMENT" && !enableWelcomeMessage) return false
     if (type === "SECURITY") return false // Always hidden
     return true
   }
@@ -895,6 +899,36 @@ export function AgentFlowDiagram({
                   </div>
                 ))}
 
+                {/* Customer Support in FLOW - same level as Sub-LLMs */}
+                {agentExists("CUSTOMER_SUPPORT") && (
+                  <div className="flex flex-col items-center">
+                    <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
+                    <AgentNode
+                      agent={getAgent("CUSTOMER_SUPPORT")}
+                      metadata={AGENT_METADATA.CUSTOMER_SUPPORT}
+                      isEditable={true}
+                      isActive={true}
+                      onClick={() => handleAgentClick("CUSTOMER_SUPPORT")}
+                      size="small"
+                    />
+                  </div>
+                )}
+
+                {/* Profile Management in FLOW - same level as Sub-LLMs, only if enableWelcomeMessage */}
+                {shouldShowAgent("PROFILE_MANAGEMENT") && (
+                  <div className="flex flex-col items-center">
+                    <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
+                    <AgentNode
+                      agent={getAgent("PROFILE_MANAGEMENT")}
+                      metadata={AGENT_METADATA.PROFILE_MANAGEMENT}
+                      isEditable={true}
+                      isActive={true}
+                      onClick={() => handleAgentClick("PROFILE_MANAGEMENT")}
+                      size="small"
+                    />
+                  </div>
+                )}
+
                 {/* Add Sub-LLM button */}
                 <div className="flex flex-col items-center">
                   <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
@@ -985,6 +1019,7 @@ export function AgentFlowDiagram({
                 </div>
                 
                 {/* Profile Management */}
+                {shouldShowAgent("PROFILE_MANAGEMENT") && (
                 <div className="flex flex-col items-center">
                   <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
                   <AgentNode
@@ -996,6 +1031,7 @@ export function AgentFlowDiagram({
                     size="small"
                   />
                 </div>
+                )}
               </div>
             </div>
             

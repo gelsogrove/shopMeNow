@@ -12,36 +12,17 @@ FATTO
 
 
 progress
-
-Welcome Message non si salva
-
-
-
-
+playgournd?
 - grafico fattto bene? dynamic ?
 - CAlling function sono attaccate bene e ben descritte
-- Ruter con FlowJSON?
 - PROMPTS fatti?
-- Tempalte non vanno
-- info Anget non esiste in chatbot tipo flow
 
 TODO
 
 - Flussi e grafici da dare al cliente
 - I prompts e il settings uno per uno
 - MCP per provare per vedere se funziona correttamente
-- Pulizia del codice
 - cambio user echabto non funziona!
-- acative disactive non serve
 - flag di nuova registrazione ?
--
-
-- il mio chatbot da info sbaglatiate
-You can start your free trial here: 
-https://app.echatbot.io
-Do you have any other questions about the trial? 💬
-li link e' sbagliato non e' un link valido l apagina di registrazione e0:
-https://www.echatbot.ai/registration/echatbot-hq-support
-
-guarda se questo errore e' presente su tutti i chatbot 
+- Pulizia del codice
 

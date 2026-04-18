@@ -66,6 +66,7 @@ import {
   Shield,
   ShoppingCart,
   User,
+  Wrench,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -428,6 +429,18 @@ export function AgentConfigurationPage() {
             }
             description="Configure your multi-agent LLM system"
           />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              localStorage.setItem('settings-last-section', 'functions')
+              navigate('/settings')
+            }}
+            className="flex items-center gap-2 shrink-0"
+          >
+            <Wrench className="h-4 w-4" />
+            Custom Tools
+          </Button>
         </div>
 
         {/* ⚠️ Warning banner */}
@@ -445,6 +458,7 @@ export function AgentConfigurationPage() {
         <AgentFlowDiagram 
           isEcommerce={workspace?.channelMode === 'ECOMMERCE'}
           channelMode={workspace?.channelMode as 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | undefined}
+          enableWelcomeMessage={workspace?.enableWelcomeMessage !== false}
           agents={agents.map(agent => ({
             id: agent.id,
             name: agent.name,
