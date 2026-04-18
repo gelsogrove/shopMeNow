@@ -495,6 +495,10 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
       )
       responseText = linkResult.response || responseText
 
+      // Capture pre-humanization response for history — the ConversationHistoryLayer
+      // rewrites responseText which loses question structure needed by FlowAgentLLM
+      const preHumanizationResponse = responseText
+
       // ─── STEP: Conversation History (humanize response) ─────────────────
       try {
         const historyResult = await this.conversationHistoryLayer.process({
@@ -612,7 +616,7 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
             customerId: context.customerId,
             conversationId: context.conversationId,
             userContent: context.message,
-            assistantContent: responseText,
+            assistantContent: preHumanizationResponse,
           })
         } catch (saveError: any) {
           logger.warn("⚠️ FlowWorkspaceStrategy - Failed to save history:", saveError.message)
