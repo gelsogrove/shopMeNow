@@ -40,9 +40,9 @@ import {
   Download,
   Calendar,
   Star,
-  Zap,
   Bell,
   Wrench,
+  DollarSign,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -1285,8 +1285,8 @@ export function AgentFlowDiagram({
         
         <ConnectorArrow />
 
-        {/* WhatsApp Queue — clickable, opens slide panel — hidden for WIDGET channel */}
-        {isFlow && channelType !== 'WIDGET' && (
+        {/* WhatsApp Queue — clickable, opens slide panel — shown for WhatsApp channels only */}
+        {channelType !== 'WIDGET' && (
           <>
             <div className="flex flex-col items-center gap-1">
               <button
@@ -1317,7 +1317,7 @@ export function AgentFlowDiagram({
 
         {/* Recharge block */}
         <div className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded-full shadow-lg">
-          <Zap className="h-5 w-5" />
+          <DollarSign className="h-5 w-5" />
           <span className="font-medium">Recharge</span>
         </div>
 
