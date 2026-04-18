@@ -118,6 +118,7 @@ export class WorkspaceCallingFunctionRepository {
         responseInstructions?: string | null
         credentialsMapping?: any | null
         attachedLlm?: string | null
+        attachedFlowKey?: string | null
     }): Promise<WorkspaceCallingFunction> {
         try {
             return await this.prisma.workspaceCallingFunction.create({
