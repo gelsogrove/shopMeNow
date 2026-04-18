@@ -1222,9 +1222,10 @@ export function AgentFlowDiagram({
                   if (!agentType) return null
                   
                   // Must exist in database to be clickable/editable
-                  if (!agentExists(agentType)) return null
+                  // Exception: CUSTOMER_SUPPORT in FLOW mode is always shown even if agent not yet in DB
+                  if (!agentExists(agentType) && !(isFlow && agentType === 'CUSTOMER_SUPPORT')) return null
                   
-                  // Check visibility rules — for FLOW, CUSTOMER_SUPPORT always editable
+                  // Check visibility rules — for FLOW, CUSTOMER_SUPPORT always shown
                   if (agentType === 'CUSTOMER_SUPPORT' && !hasHumanSupport && !isFlow) return null
                   if (agentType === 'PROFILE_MANAGEMENT' && !needRegistration) return null
                   
@@ -1248,6 +1249,9 @@ export function AgentFlowDiagram({
 
                 {/* Calling Functions (no LLM — backend utilities) — amber/yellow style */}
                 {callingFunctions.map((funcName) => {
+                  // getProfileLink is only shown when customer registration is enabled
+                  if (funcName === 'getProfileLink' && !needRegistration) return null
+
                   const funcMeta = getCallingFunctionMetadata(funcName)
                   const FuncIcon = funcMeta.icon
                   

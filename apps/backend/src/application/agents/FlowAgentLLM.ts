@@ -269,13 +269,21 @@ export class FlowAgentLLM {
           chatContext.flowKey = targetFlowKey
           chatContext.flowNumber = machineNumber
 
+          // Extract locale and machineType — from fnArgs (explicit) or conversation history (fallback)
+          const localeFromArgs = (fnArgs.locale as string) || undefined
+          const machineTypeFromArgs = (fnArgs.machineType as string) || undefined
+          const localeFromHistory = localeFromArgs || this.extractFromHistory(history, "locale")
+          const machineTypeFromHistory = machineTypeFromArgs || this.extractFromHistory(history, "machineType")
+
           // Persist gathered info into gatherState for future turns
           chatContext.gatherState = {
-            locale: (fnArgs.locale as string) || chatContext.gatherState?.locale,
-            machineType: (fnArgs.machineType as string) || chatContext.gatherState?.machineType,
+            locale: localeFromHistory || chatContext.gatherState?.locale,
+            machineType: machineTypeFromHistory || chatContext.gatherState?.machineType,
             machineNumber: machineNumber || chatContext.gatherState?.machineNumber,
             retryCount: 0,
           }
+
+          logger.info("📍 FlowAgentLLM: gatherState saved", { gatherState: chatContext.gatherState })
 
           functionCalls.push({
             name: fnName,
@@ -367,6 +375,30 @@ export class FlowAgentLLM {
    *
    * Security: tool names and enums come from DB only — customer cannot inject arbitrary values.
    */
+  /**
+   * Extracts locale or machineType from conversation history as fallback
+   * when the LLM didn't include them in the tool call arguments.
+   */
+  private extractFromHistory(history: Message[], field: "locale" | "machineType"): string | undefined {
+    const locales = ["goya", "pineda", "l'escala", "lescala", "alemanya", "hortes"]
+    const washerPatterns = ["lavatrice", "washer", "lavadora", "washing machine"]
+    const dryerPatterns = ["asciugatrice", "dryer", "secadora", "drying machine"]
+
+    const fullText = history
+      .filter(m => m.role === "user")
+      .map(m => (m.content as string).toLowerCase())
+      .join(" ")
+
+    if (field === "locale") {
+      return locales.find(l => fullText.includes(l))?.replace("lescala", "l'escala")
+    }
+    if (field === "machineType") {
+      if (washerPatterns.some(p => fullText.includes(p))) return "lavatrice"
+      if (dryerPatterns.some(p => fullText.includes(p))) return "asciugatrice"
+    }
+    return undefined
+  }
+
   private async buildTools(
     flowIds: string[],
     availableFunctions: string[],
@@ -390,6 +422,14 @@ export class FlowAgentLLM {
             machineNumber: {
               type: "string",
               description: "Machine number found on the label (e.g. '42').",
+            },
+            locale: {
+              type: "string",
+              description: "Laundry location name (e.g. 'Goya', 'Pineda', 'L\\'Escala', 'Alemanya', 'Hortes').",
+            },
+            machineType: {
+              type: "string",
+              description: "Machine type: 'lavatrice' or 'asciugatrice'.",
             },
           },
           required: ["machineNumber"],
