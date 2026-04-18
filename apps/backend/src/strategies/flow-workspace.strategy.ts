@@ -270,9 +270,15 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         shouldCallOperator = result.shouldCallOperator
 
         // ─── Substitute {{customerName}} in static node prompts ─────────────
-        // FlowEngine returns raw node.prompt — must replace manually (no LLM here)
-        const nameToken = customerData.name || ""
-        responseText = result.responseText.replace(/\{\{customerName\}\}/g, nameToken)
+        // Only replace when customer has a name (registered customers).
+        // Unregistered customers → strip the placeholder + surrounding ", " or " " cleanly.
+        if (customerData.name) {
+          responseText = result.responseText.replace(/\{\{customerName\}\}/g, customerData.name)
+        } else {
+          responseText = result.responseText
+            .replace(/,\s*\{\{customerName\}\}/g, "")   // ", {{customerName}}" → ""
+            .replace(/\s*\{\{customerName\}\}[!,.]?/g, "") // " {{customerName}}!" → ""
+        }
 
         // ─── FIX 3: INTERRUPT_FAQ → answer via FlowAgentLLM, then append resume prompt ──
         if (result.isFaqInterrupt && chatContext.flowKey) {

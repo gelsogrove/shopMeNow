@@ -686,7 +686,6 @@ export function AgentFlowDiagram({
   const [addPopoverOpen, setAddPopoverOpen] = useState(false)
   const [deleteCallingFunctionName, setDeleteCallingFunctionName] = useState<string | null>(null)
   const [isDeletingCallingFunction, setIsDeletingCallingFunction] = useState(false)
-  const [missingAgentType, setMissingAgentType] = useState<string | null>(null)
 
   // WhatsApp Queue panel state
   const [queuePanelOpen, setQueuePanelOpen] = useState(false)
@@ -789,7 +788,7 @@ export function AgentFlowDiagram({
     
     const agent = getAgent(type)
     if (!agent) {
-      setMissingAgentType(type)
+      toast.error(`${getAgentDisplayName(type, meta)} is not configured. Use "Reset to Defaults" to create missing agents.`)
       return
     }
     
@@ -2003,38 +2002,6 @@ export function AgentFlowDiagram({
               ) : (
                 "Remove"
               )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Missing Agent Dialog — shown when clicking an unconfigured agent node */}
-      <AlertDialog open={!!missingAgentType} onOpenChange={(open) => !open && setMissingAgentType(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-amber-600">
-              <AlertCircle className="h-5 w-5" />
-              Agent not configured
-            </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>
-                The <strong>{missingAgentType ? getAgentDisplayName(missingAgentType, getResolvedMeta(missingAgentType) || AGENT_METADATA.CUSTOMER_SUPPORT) : ""}</strong> agent has not been initialized yet in this workspace.
-              </p>
-              <p>
-                Click <strong>"Initialize from defaults"</strong> to create it with the default system prompt and settings. You can customize the prompt afterwards.
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isResetting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={async () => {
-                setMissingAgentType(null)
-                setIsResetDialogOpen(true)
-              }}
-              className="bg-amber-600 hover:bg-amber-700"
-            >
-              Initialize from defaults
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

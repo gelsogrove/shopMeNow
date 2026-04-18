@@ -80,7 +80,7 @@ export const dynamicAgents = (
   }
 > => {
   const hasEcommerce = channelMode === "ECOMMERCE"
-  const isInformational = !hasEcommerce
+  const isInformational = channelMode === "INFORMATIONAL"
   const customerSupportFunctions = getAgentFunctionNames("CUSTOMER_SUPPORT") || []
   const profileFunctions = getAgentFunctionNames("PROFILE_MANAGEMENT") || []
   const infoAgentFunctions = Array.from(

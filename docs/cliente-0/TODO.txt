@@ -12,14 +12,14 @@ FATTO
 - PROMPTS fatti?
 - grafico fattto bene? dynamic ?
 - CRUD DI TUTTO?
-- Welcome message ?
+
 
 progress
-- Customer registration?
-- non saluto l'utente
-- playgournd?
+- Welcome message ?
+- Customer registration non va
+- Non va change Languae.
+- DebugFlow
 - MCP NO NIESPETTA DEBUGMODE?
-- DEGBUI NON RISPEETTA DEBUGMODE
 - MCP per provare per vedere se funziona correttamente
 - PUPI VERIFICARE SE EFFETTUA IL RECHARGE DOPO UN MESSAGGIO
 - change language mi chiedo se funziona visto che non abbiamo una profilazione...?
@@ -32,4 +32,3 @@ TODO
 - da errore  il wtahapp channel
 - Flussi e grafici da dare al cliente
 - cambio user echabtot non funziona!
-- Pulizia del codice

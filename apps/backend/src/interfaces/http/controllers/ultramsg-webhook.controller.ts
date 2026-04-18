@@ -713,35 +713,42 @@ export class UltraMsgWebhookController {
             messageId: welcomeResult.assistantMessageId,
           })
 
-          // 📤 CRITICAL: Queue welcome message for WhatsApp delivery
-          // Without this, the welcome message is saved to DB but NEVER sent to customer!
-          try {
-            const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
-            const queueService = new WhatsAppQueueService(prisma)
-            await queueService.enqueue({
-              workspaceId: customer.workspaceId,
+          // FLOW workspaces: skip standalone welcome send — ChatEngine will combine
+          // welcome + first bot response into a single message (better UX).
+          if (workspace.channelMode === 'FLOW') {
+            logger.info('[ULTRAMSG] 🔄 FLOW workspace — skipping standalone welcome, ChatEngine will combine')
+            // fall through to normal LLM processing below
+          } else {
+            // 📤 CRITICAL: Queue welcome message for WhatsApp delivery
+            // Without this, the welcome message is saved to DB but NEVER sent to customer!
+            try {
+              const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
+              const queueService = new WhatsAppQueueService(prisma)
+              await queueService.enqueue({
+                workspaceId: customer.workspaceId,
+                customerId: customer.id,
+                phoneNumber: customer.phone,
+                messageContent: welcomeResult.welcomeText,
+                conversationMessageId: welcomeResult.assistantMessageId,
+                isPlayground: false,
+              })
+              logger.info('[ULTRAMSG] ✅ Welcome message queued for WhatsApp delivery', {
+                customerId: customer.id,
+              })
+            } catch (queueError) {
+              logger.error('[ULTRAMSG] ❌ Failed to enqueue welcome message', {
+                error: queueError instanceof Error ? queueError.message : String(queueError),
+                customerId: customer.id,
+              })
+            }
+
+            return res.status(200).json({
+              status: 'welcomed',
+              message: welcomeResult.welcomeText,
               customerId: customer.id,
-              phoneNumber: customer.phone,
-              messageContent: welcomeResult.welcomeText,
-              conversationMessageId: welcomeResult.assistantMessageId,
-              isPlayground: false,
-            })
-            logger.info('[ULTRAMSG] ✅ Welcome message queued for WhatsApp delivery', {
-              customerId: customer.id,
-            })
-          } catch (queueError) {
-            logger.error('[ULTRAMSG] ❌ Failed to enqueue welcome message', {
-              error: queueError instanceof Error ? queueError.message : String(queueError),
-              customerId: customer.id,
+              messageId: welcomeResult.assistantMessageId,
             })
           }
-
-          return res.status(200).json({
-            status: 'welcomed',
-            message: welcomeResult.welcomeText,
-            customerId: customer.id,
-            messageId: welcomeResult.assistantMessageId,
-          })
         } else {
           logger.warn('[ULTRAMSG] ⚠️ Welcome message skipped', {
             reason: 'Not configured or disabled',
