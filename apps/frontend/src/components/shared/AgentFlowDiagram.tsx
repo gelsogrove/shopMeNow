@@ -763,7 +763,8 @@ export function AgentFlowDiagram({
     // ROUTER hidden for non-ecommerce; PROFILE_MANAGEMENT controlled by needRegistration
     if (!isEcommerce && !isFlow && type === "ROUTER") return false
     if (type === "PROFILE_MANAGEMENT" && !needRegistration) return false
-    if (type === "CUSTOMER_SUPPORT" && !hasHumanSupport) return false
+    // CUSTOMER_SUPPORT: shown if hasHumanSupport is true, OR if workspace is FLOW (always editable)
+    if (type === "CUSTOMER_SUPPORT" && !hasHumanSupport && !isFlow) return false
     if (type === "SECURITY") return false // Always hidden
     return true
   }
@@ -1194,6 +1195,7 @@ export function AgentFlowDiagram({
                                 <FuncIcon className="h-4 w-4 text-white" />
                               </div>
                               <span className="font-semibold text-xs">{funcMeta.name}</span>
+                              <Edit3 className="h-3 w-3 text-white opacity-50 group-hover:opacity-100 transition-opacity ml-1" />
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="bottom" className="max-w-xs p-3">
@@ -1365,7 +1367,7 @@ export function AgentFlowDiagram({
                 isEditable={true}
                 isActive={true}
                 onClick={() => handleAgentClick("CONVERSATION_HISTORY")}
-                size="normal"
+                size="wide"
               />
               <span className="text-xs text-amber-700">Humanization layer</span>
             </div>
@@ -1382,13 +1384,13 @@ export function AgentFlowDiagram({
             isEditable={true}
             isActive={true}
             onClick={() => handleAgentClick("TRANSLATION")}
-            size="normal"
+            size="wide"
           />
         </div>
 
         <ConnectorArrow />
 
-        {/* Widget Security Layer */}
+        {/* Security Layer */}
         <div className="flex flex-col items-center gap-1">
           <AgentNode
             agent={getAgent("WIDGET_SECURITY")}
@@ -1396,7 +1398,7 @@ export function AgentFlowDiagram({
             isEditable={true}
             isActive={true}
             onClick={() => handleAgentClick("WIDGET_SECURITY")}
-            size="normal"
+            size="wide"
           />
         </div>
         
@@ -1453,15 +1455,7 @@ export function AgentFlowDiagram({
         </div>
       )}
 
-      {/* Flow Config Summary — only for FLOW workspaces */}
-      {isFlow && (
-        <div className="flex items-center justify-center mt-8">
-          <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg px-4 py-2 text-sm text-violet-700">
-            <Sparkles className="h-4 w-4 inline mr-2" />
-            {flowConfigs.length} Sub-LLM{flowConfigs.length !== 1 ? 's' : ''} configured · {flowConfigs.filter(fc => fc.isActive).length} active
-          </div>
-        </div>
-      )}
+      {/* Flow Config Summary removed */}
 
       {/* WhatsApp Queue Side Panel */}
       <Sheet open={queuePanelOpen} onOpenChange={setQueuePanelOpen}>
