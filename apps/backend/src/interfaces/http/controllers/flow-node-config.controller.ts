@@ -11,15 +11,18 @@ import { Request, Response } from "express"
 import { PrismaClient } from "@echatbot/database"
 import { FlowNodeConfigRepository } from "../../../repositories/flow-node-config.repository"
 import { FlowJsonValidator } from "../../../application/services/flow-json-validator.service"
+import { FlowSyncService } from "../../../application/services/flow-sync.service"
 import logger from "../../../utils/logger"
 
 export class FlowNodeConfigController {
   private repository: FlowNodeConfigRepository
   private validator: FlowJsonValidator
+  private flowSyncService: FlowSyncService
 
   constructor(private prisma: PrismaClient) {
     this.repository = new FlowNodeConfigRepository(prisma)
     this.validator = new FlowJsonValidator()
+    this.flowSyncService = new FlowSyncService(prisma)
   }
 
   /**
@@ -187,6 +190,14 @@ export class FlowNodeConfigController {
       })
 
       logger.info(`Flow config created: ${config.id} (${flowKey})`)
+
+      // Auto-create DELEGATE_TO_AGENT calling function + add to Router
+      try {
+        await this.flowSyncService.ensureCallingFunctionForFlow(workspaceId, config.flowKey, config.flowLabel)
+      } catch (syncError) {
+        logger.warn(`[FlowSync] Non-fatal: failed to sync calling function for ${flowKey}:`, syncError)
+      }
+
       return res.status(201).json(config)
     } catch (error: any) {
       logger.error("Error creating flow config:", error)
@@ -287,6 +298,16 @@ export class FlowNodeConfigController {
       })
 
       logger.info(`Flow config updated: ${id}`)
+
+      // Sync calling function description if label changed
+      if (flowLabel && config.flowKey) {
+        try {
+          await this.flowSyncService.updateCallingFunctionLabel(workspaceId, config.flowKey, flowLabel)
+        } catch (syncError) {
+          logger.warn(`[FlowSync] Non-fatal: failed to sync label for ${config.flowKey}:`, syncError)
+        }
+      }
+
       return res.json(config)
     } catch (error: any) {
       logger.error("Error updating flow config:", error)
@@ -331,6 +352,18 @@ export class FlowNodeConfigController {
     try {
       const { id } = req.params
       const workspaceId = (req as any).workspaceId
+
+      // Get config before deleting to know the flowKey for cascade
+      const configToDelete = await this.repository.findById(workspaceId, id)
+
+      // Cascade: remove associated calling function + clean Router
+      if (configToDelete) {
+        try {
+          await this.flowSyncService.removeCallingFunctionForFlow(workspaceId, configToDelete.flowKey)
+        } catch (syncError) {
+          logger.warn(`[FlowSync] Non-fatal: failed to cleanup for ${configToDelete.flowKey}:`, syncError)
+        }
+      }
 
       await this.repository.delete(workspaceId, id)
       logger.info(`Flow config deleted: ${id}`)

@@ -88,6 +88,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { FlowConfigSheet } from "@/components/shared/FlowConfigSheet"
+import { CallingFunctionSheet } from "@/components/shared/CallingFunctionSheet"
 import { HelpPanel } from "@/components/settings/HelpPanel"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/lib/toast"
@@ -130,6 +131,10 @@ interface AgentFlowDiagramProps {
   enableWelcomeMessage?: boolean
   hasHumanSupport?: boolean
   needRegistration?: boolean
+  hasProductCatalog?: boolean
+  hasCart?: boolean
+  hasOrderTracking?: boolean
+  enableCalendarBooking?: boolean
   agents: AgentConfig[]
   workspaceId: string
   onSaveAgent: (agentId: string, data: Partial<AgentConfig>) => Promise<void>
@@ -572,6 +577,10 @@ export function AgentFlowDiagram({
   enableWelcomeMessage = true,
   hasHumanSupport = true,
   needRegistration = true,
+  hasProductCatalog = true,
+  hasCart = true,
+  hasOrderTracking = true,
+  enableCalendarBooking = false,
   agents,
   workspaceId,
   onSaveAgent,
@@ -669,6 +678,8 @@ export function AgentFlowDiagram({
   const [selectedFlowConfig, setSelectedFlowConfig] = useState<FlowConfig | null>(null)
   const [deleteFlowConfig, setDeleteFlowConfig] = useState<FlowConfig | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [callingFunctionSheetOpen, setCallingFunctionSheetOpen] = useState(false)
+  const [addPopoverOpen, setAddPopoverOpen] = useState(false)
 
   // WhatsApp Queue panel state
   const [queuePanelOpen, setQueuePanelOpen] = useState(false)
@@ -770,8 +781,8 @@ export function AgentFlowDiagram({
     
     const agent = getAgent(type)
     if (!agent) {
-      // Agent doesn't exist in database - show message
-      toast.error(`${getAgentDisplayName(type, meta)} is not configured for this workspace`)
+      // Agent doesn't exist in database - suggest using Reset to Defaults
+      toast.error(`${getAgentDisplayName(type, meta)} is not configured. Use "Reset to Defaults" to create missing agents.`)
       return
     }
     
@@ -868,105 +879,37 @@ export function AgentFlowDiagram({
     setFlowSheetOpen(true)
   }
 
-  // Handle add new flow config
+  // Handle add new flow config (Sub-LLM agent)
   const handleAddFlowConfig = () => {
+    setAddPopoverOpen(false)
     setSelectedFlowConfig(null)
     setFlowSheetOpen(true)
   }
 
-  // Handle flow config saved (create or update) — also create/sync calling function for Router
-  const handleFlowConfigSaved = async () => {
-    // Refresh flow configs in parent
-    onFlowConfigSaved?.()
-    
-    // After creation, ensure a DELEGATE_TO_AGENT calling function exists for the new Sub-LLM
-    // so the Router can dispatch to it
-    try {
-      const existingFunctions = await callingFunctionsApi.list(workspaceId)
-      
-      // Get latest flow configs to find any new ones
-      const latestFlowConfigs = await flowConfigApi.getAllForWorkspace(workspaceId)
-      const machineConfigs = latestFlowConfigs.filter((fc) => fc.flowKey !== "router")
-      
-      for (const fc of machineConfigs) {
-        // Check if a calling function with attachedFlowKey already exists for this flow
-        const hasFunction = existingFunctions.some(
-          (fn) => fn.executionType === "DELEGATE_TO_AGENT" && fn.attachedFlowKey === fc.flowKey
-        )
-        if (!hasFunction) {
-          // Auto-create the calling function
-          const functionName = fc.flowKey.replace(/[^a-zA-Z0-9]/g, '_') + 'Agent'
-          await callingFunctionsApi.create(workspaceId, {
-            functionName,
-            description: `Delegate to Sub-LLM: ${fc.flowLabel}. Use when the customer needs help with ${fc.flowLabel}.`,
-            executionType: "DELEGATE_TO_AGENT",
-            attachedFlowKey: fc.flowKey,
-            isActive: true,
-            isSystemFunction: false,
-            parameters: {},
-          })
-          logger.info(`Auto-created calling function ${functionName} for flow ${fc.flowKey}`)
-          
-          // Add the new function to Router's availableFunctions
-          const routerConfig = latestFlowConfigs.find((c) => c.flowKey === "router")
-          if (routerConfig) {
-            const currentFunctions = Array.isArray(routerConfig.availableFunctions) 
-              ? routerConfig.availableFunctions as string[]
-              : []
-            if (!currentFunctions.includes(functionName)) {
-              await flowConfigApi.update(workspaceId, routerConfig.id, {
-                availableFunctions: [...currentFunctions, functionName],
-              })
-              logger.info(`Added ${functionName} to Router's availableFunctions`)
-            }
-          }
-        }
-      }
-      
-      // Re-refresh after auto-creation
-      onFlowConfigSaved?.()
-    } catch (error) {
-      logger.error("Error auto-creating calling function for Sub-LLM:", error)
-    }
+  // Handle add new calling function
+  const handleAddCallingFunction = () => {
+    setAddPopoverOpen(false)
+    setCallingFunctionSheetOpen(true)
   }
 
-  // Handle delete flow config — also removes associated calling function
+  // Handle calling function saved from sheet
+  const handleCallingFunctionSaved = async () => {
+    setCallingFunctionSheetOpen(false)
+    onFlowConfigSaved?.()
+  }
+
+  // Handle flow config saved (create or update)
+  // Backend FlowSyncService handles cascade: auto-create calling function + add to Router
+  const handleFlowConfigSaved = async () => {
+    onFlowConfigSaved?.()
+  }
+
+  // Handle delete flow config — backend FlowSyncService handles cascade cleanup
   const handleDeleteFlowConfig = async () => {
     if (!deleteFlowConfig) return
     
     setIsDeleting(true)
     try {
-      const flowKey = deleteFlowConfig.flowKey
-      
-      // 1. Find and delete associated DELEGATE_TO_AGENT calling function
-      const existingFunctions = await callingFunctionsApi.list(workspaceId)
-      const associatedFunction = existingFunctions.find(
-        (fn) => fn.executionType === "DELEGATE_TO_AGENT" && fn.attachedFlowKey === flowKey
-      )
-      
-      if (associatedFunction) {
-        // Remove from Router's availableFunctions first
-        const latestFlowConfigs = await flowConfigApi.getAllForWorkspace(workspaceId)
-        const routerConfig = latestFlowConfigs.find((c) => c.flowKey === "router")
-        if (routerConfig) {
-          const currentFunctions = Array.isArray(routerConfig.availableFunctions)
-            ? routerConfig.availableFunctions as string[]
-            : []
-          const updatedFunctions = currentFunctions.filter((f) => f !== associatedFunction.functionName)
-          if (updatedFunctions.length !== currentFunctions.length) {
-            await flowConfigApi.update(workspaceId, routerConfig.id, {
-              availableFunctions: updatedFunctions,
-            })
-            logger.info(`Removed ${associatedFunction.functionName} from Router's availableFunctions`)
-          }
-        }
-        
-        // Delete the calling function
-        await callingFunctionsApi.delete(workspaceId, associatedFunction.functionName)
-        logger.info(`Deleted calling function ${associatedFunction.functionName}`)
-      }
-      
-      // 2. Delete the flow config itself
       await flowConfigApi.remove(workspaceId, deleteFlowConfig.id)
       
       toast.success(`Deleted Sub-LLM "${deleteFlowConfig.flowLabel}" and its calling function`)
@@ -1188,6 +1131,9 @@ export function AgentFlowDiagram({
                   const agentType = functionToAgentMap[funcName]
                   if (!agentType) return null
                   
+                  // Must exist in database to be clickable/editable
+                  if (!agentExists(agentType)) return null
+                  
                   // Check visibility rules
                   if (agentType === 'CUSTOMER_SUPPORT' && !hasHumanSupport) return null
                   if (agentType === 'PROFILE_MANAGEMENT' && !needRegistration) return null
@@ -1247,18 +1193,49 @@ export function AgentFlowDiagram({
                   )
                 })}
 
-                {/* Add Sub-LLM button */}
+                {/* Add button with choice: Agent or Calling Function */}
                 <div className="flex flex-col items-center">
                   <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
-                  <button
-                    onClick={handleAddFlowConfig}
-                    className="flex items-center gap-2 rounded-xl border-2 border-dashed border-violet-300 px-4 py-3 h-[52px] text-violet-500 hover:bg-violet-50 hover:border-violet-400 hover:text-violet-600 transition-all duration-200 cursor-pointer"
-                  >
-                    <div className="p-1 rounded-lg bg-violet-100">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    </div>
-                    <span className="font-semibold text-xs">Add</span>
-                  </button>
+                  <Popover open={addPopoverOpen} onOpenChange={setAddPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        className="flex items-center gap-2 rounded-xl border-2 border-dashed border-violet-300 px-4 py-3 h-[52px] text-violet-500 hover:bg-violet-50 hover:border-violet-400 hover:text-violet-600 transition-all duration-200 cursor-pointer"
+                      >
+                        <div className="p-1 rounded-lg bg-violet-100">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        </div>
+                        <span className="font-semibold text-xs">Add</span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-2" align="center">
+                      <div className="flex flex-col gap-1">
+                        <button
+                          onClick={handleAddFlowConfig}
+                          className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-left hover:bg-violet-50 transition-colors"
+                        >
+                          <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
+                            <Sparkles className="h-3.5 w-3.5 text-white" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">Agent (Sub-LLM)</div>
+                            <div className="text-[11px] text-gray-500">AI agent with prompt & model</div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={handleAddCallingFunction}
+                          className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-left hover:bg-amber-50 transition-colors"
+                        >
+                          <div className="p-1.5 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500">
+                            <Wrench className="h-3.5 w-3.5 text-white" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">Calling Function</div>
+                            <div className="text-[11px] text-gray-500">Webhook, internal or delegate</div>
+                          </div>
+                        </button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
             </div>
@@ -1585,6 +1562,16 @@ export function AgentFlowDiagram({
           config={selectedFlowConfig}
           onSaved={handleFlowConfigSaved}
           enableWelcomeMessage={enableWelcomeMessage}
+        />
+      )}
+
+      {/* CallingFunctionSheet for adding calling functions from diagram */}
+      {isFlow && (
+        <CallingFunctionSheet
+          open={callingFunctionSheetOpen}
+          onOpenChange={setCallingFunctionSheetOpen}
+          workspaceId={workspaceId}
+          onSaved={handleCallingFunctionSaved}
         />
       )}
 

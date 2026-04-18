@@ -481,6 +481,10 @@ export function AgentConfigurationPage() {
           enableWelcomeMessage={workspace?.enableWelcomeMessage !== false}
           hasHumanSupport={workspace?.hasHumanSupport}
           needRegistration={workspace?.needRegistration}
+          hasProductCatalog={workspace?.hasProductCatalog}
+          hasCart={workspace?.hasCart}
+          hasOrderTracking={workspace?.hasOrderTracking}
+          enableCalendarBooking={workspace?.enableCalendarBooking}
           agents={agents.map(agent => ({
             id: agent.id,
             name: agent.name,
@@ -513,8 +517,20 @@ export function AgentConfigurationPage() {
           flowConfigs={flowConfigs}
           onFlowConfigSaved={async () => {
             if (workspace?.id) {
-              const fcs = await flowConfigApi.getAllForWorkspace(workspace.id)
+              // Refresh all data: flowConfigs, agents (Router's availableFunctions may have changed), and calling functions
+              const [fcs, agentsData, configsData] = await Promise.all([
+                flowConfigApi.getAllForWorkspace(workspace.id),
+                getAgents(workspace.id),
+                getAgentConfigs(workspace.id),
+              ])
               setFlowConfigs(fcs)
+              setAgents(agentsData.sort((a, b) => a.order - b.order))
+              const functionsMap: Record<string, string[]> = {}
+              configsData.agents.forEach((config) => {
+                functionsMap[config.id] = config.availableFunctions || []
+              })
+              setAgentFunctions(functionsMap)
+              callingFunctionsApi.list(workspace.id).then(setAllCallingFunctions).catch(() => {})
             }
           }}
         />

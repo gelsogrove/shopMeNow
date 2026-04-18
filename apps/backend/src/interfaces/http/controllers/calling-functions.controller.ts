@@ -3,6 +3,7 @@ import { Request, Response } from "express"
 import logger from "../../../utils/logger"
 import { WorkspaceCallingFunctionRepository } from "../../../repositories/workspace-calling-function.repository"
 import { WebhookDispatchService } from "../../../services/webhook-dispatch.service"
+import { FlowSyncService } from "../../../application/services/flow-sync.service"
 import { SYSTEM_FUNCTIONS_BY_NAME, SystemFunctionDef } from "../../../constants/system-functions"
 import { getValidAgentTypesForMode } from "../../../utils/template-path.helper"
 
@@ -48,10 +49,12 @@ const IMMUTABLE_KEYS = new Set(["functionName", "isSystemFunction", "workspaceId
 export class CallingFunctionsController {
     private repository: WorkspaceCallingFunctionRepository
     private webhookService: WebhookDispatchService
+    private flowSyncService: FlowSyncService
 
     constructor(private prisma: PrismaClient) {
         this.repository = new WorkspaceCallingFunctionRepository(prisma)
         this.webhookService = new WebhookDispatchService()
+        this.flowSyncService = new FlowSyncService(prisma)
     }
 
     /**
@@ -133,7 +136,7 @@ export class CallingFunctionsController {
     async createFunction(req: Request, res: Response) {
         try {
             const workspaceId = (req as any).workspaceId
-            const { functionName, description, responseInstructions, parameters, executionType, isActive, webhookUrl, credentialsMapping, attachedLlm } = req.body
+            const { functionName, description, responseInstructions, parameters, executionType, isActive, webhookUrl, credentialsMapping, attachedLlm, attachedFlowKey } = req.body
 
             if (!functionName || !description || !executionType) {
                 return res.status(400).json({ error: "Missing required fields" })
@@ -157,7 +160,17 @@ export class CallingFunctionsController {
                 webhookUrl: webhookUrl || null,
                 credentialsMapping: credentialsMapping || null,
                 attachedLlm: attachedLlm || null,
+                attachedFlowKey: attachedFlowKey || null,
             })
+
+            // Auto-add DELEGATE_TO_AGENT to Router's availableFunctions
+            if (executionType === "DELEGATE_TO_AGENT") {
+                try {
+                    await this.flowSyncService.addDelegateToRouter(workspaceId, functionName)
+                } catch (syncError) {
+                    logger.warn(`[FlowSync] Non-fatal: failed to add ${functionName} to Router:`, syncError)
+                }
+            }
 
             logger.info(`✅ Custom function created: ${functionName} for workspace ${workspaceId}`)
             return res.status(201).json(newFunction)
@@ -216,6 +229,14 @@ export class CallingFunctionsController {
             }
 
             await this.repository.delete(workspaceId, functionName)
+
+            // Cascade: clean up FlowNodeConfig references to this function
+            try {
+                await this.flowSyncService.cleanupOrphanedReferences(workspaceId, functionName)
+            } catch (syncError) {
+                logger.warn(`[FlowSync] Non-fatal: failed to cleanup references for ${functionName}:`, syncError)
+            }
+
             logger.info(`✅ Function deleted: ${functionName} from workspace ${workspaceId}`)
             return res.status(204).send()
         } catch (error) {

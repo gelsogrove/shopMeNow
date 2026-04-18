@@ -1,0 +1,35 @@
+
+FATTO
+- Archettura -
+- FAQ sono -
+- SCHEMA DB K
+- DB e schema
+- FLOW WASDHER 
+- FLOW DRIVER 
+- generare JSON asciugatrce
+- generare JOSN lavatrice
+- CAlling function sono attaccate bene e ben descritte
+- PROMPTS fatti?
+- grafico fattto bene? dynamic ?
+- CRUD DI TUTTO?
+- Welcome message ?
+
+progress
+- Customer registration?
+- non saluto l'utente
+- playgournd?
+- MCP NO NIESPETTA DEBUGMODE?
+- DEGBUI NON RISPEETTA DEBUGMODE
+- MCP per provare per vedere se funziona correttamente
+- PUPI VERIFICARE SE EFFETTUA IL RECHARGE DOPO UN MESSAGGIO
+- change language mi chiedo se funziona visto che non abbiamo una profilazione...?
+- possiamo alzare la temperatura non so all'history e magari anche i lmodello ' non co chiedo...
+
+
+
+TODO
+- I prompts e il settings uno per uno
+- da errore  il wtahapp channel
+- Flussi e grafici da dare al cliente
+- cambio user echabtot non funziona!
+- Pulizia del codice
