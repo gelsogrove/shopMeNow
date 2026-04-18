@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { Store } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SUPPORTED_CURRENCIES } from "@/utils/format"
@@ -176,26 +177,53 @@ export function BusinessConfigSection({
               </p>
             </div>
 
-            {/* Require Manual Approval */}
+            {/* Need Registration Toggle */}
+            <div className="space-y-2 md:col-span-2" onFocus={() => onFieldFocus?.("needRegistration")}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label htmlFor="needRegistration" className="cursor-pointer text-sm font-medium">
+                    Customer Registration
+                  </Label>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    When enabled, customers must register before accessing full features. Profile Management agent will be activated.
+                  </p>
+                </div>
+                <Switch
+                  id="needRegistration"
+                  checked={formData.needRegistration ?? false}
+                  onCheckedChange={(checked) => {
+                    onFieldChange("needRegistration", checked)
+                    if (!checked) {
+                      onFieldChange("requireManualApproval", false)
+                    }
+                  }}
+                  disabled={!canEdit}
+                />
+              </div>
+            </div>
+
+            {/* Require Manual Approval — only visible when needRegistration is true */}
+            {formData.needRegistration && (
             <div className="space-y-2 md:col-span-2" onFocus={() => onFieldFocus?.("requireManualApproval")}>
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
+              <div className="flex items-center justify-between ml-4">
+                <div>
+                  <Label htmlFor="requireManualApproval" className="cursor-pointer text-sm font-medium">
+                    Require Manual Approval for New Customers
+                  </Label>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    When enabled, new customers will be in "Pending Approval" status after registration.
+                    An admin must manually approve them before they can access full features.
+                  </p>
+                </div>
+                <Switch
                   id="requireManualApproval"
                   checked={formData.requireManualApproval || false}
-                  onChange={(e) => onFieldChange("requireManualApproval", e.target.checked)}
+                  onCheckedChange={(checked) => onFieldChange("requireManualApproval", checked)}
                   disabled={!canEdit}
-                  className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                 />
-                <Label htmlFor="requireManualApproval" className="cursor-pointer">
-                  Require Manual Approval for New Customers
-                </Label>
               </div>
-              <p className="text-xs text-gray-500 ml-7">
-                When enabled, new customers will be in "Pending Approval" status after registration. 
-                An admin must manually approve them before they can access full features.
-              </p>
             </div>
+            )}
 
             {/* Currency */}
             <div className="space-y-2 md:col-span-2" data-focus-key="defaultLanguage">

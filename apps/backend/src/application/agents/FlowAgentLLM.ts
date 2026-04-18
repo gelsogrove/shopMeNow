@@ -182,7 +182,11 @@ export class FlowAgentLLM {
           model,
           messages,
           tools: tools.length > 0 ? tools : undefined,
-          tool_choice: tools.length > 0 ? "auto" : undefined,
+          // Router mode: force tool call after history has >= 4 messages (type + number collected)
+          // Otherwise use "auto" to allow FAQ answers without forcing a tool call
+          tool_choice: tools.length > 0
+            ? (isRouterMode && history.length >= 4 ? "required" : "auto")
+            : undefined,
           temperature,
           max_tokens: maxTokens,
         },
