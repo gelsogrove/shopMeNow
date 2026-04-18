@@ -41,6 +41,8 @@ import {
   Calendar,
   Star,
   Zap,
+  Bell,
+  Wrench,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -546,8 +548,8 @@ export function AgentFlowDiagram({
   channelMode,
   channelType,
   enableWelcomeMessage = true,
-  hasHumanSupport = false,
-  needRegistration = false,
+  hasHumanSupport = true,
+  needRegistration = true,
   agents,
   workspaceId,
   onSaveAgent,
@@ -559,6 +561,59 @@ export function AgentFlowDiagram({
   allCallingFunctions = [],
 }: AgentFlowDiagramProps) {
   const isFlow = channelMode === 'FLOW'
+  
+  // Mapping from calling function name to agent type
+  const functionToAgentMap: Record<string, string> = {
+    'productSearchAgent': 'PRODUCT_SEARCH',
+    'cartManagementAgent': 'CART_MANAGEMENT',
+    'orderTrackingAgent': 'ORDER_TRACKING',
+    'customerSupportAgent': 'CUSTOMER_SUPPORT',
+    'profileManagementAgent': 'PROFILE_MANAGEMENT',
+    'calendarBookingAgent': 'CALENDAR_BOOKING',
+  }
+  
+  // Generic metadata for calling functions that are not agents
+  const getCallingFunctionMetadata = (functionName: string) => {
+    const functionMeta: Record<string, any> = {
+      'changeLanguage': {
+        name: 'Change Language',
+        icon: Globe,
+        color: 'teal',
+        gradientFrom: 'from-teal-500',
+        gradientTo: 'to-teal-600',
+        borderColor: 'border-teal-400',
+        description: 'Language management',
+      },
+      'manageNotifications': {
+        name: 'Manage Notifications',
+        icon: Bell,
+        color: 'indigo',
+        gradientFrom: 'from-indigo-500',
+        gradientTo: 'to-indigo-600',
+        borderColor: 'border-indigo-400',
+        description: 'Notification settings',
+      },
+      'getProfileLink': {
+        name: 'Get Profile Link',
+        icon: User,
+        color: 'slate',
+        gradientFrom: 'from-slate-500',
+        gradientTo: 'to-slate-600',
+        borderColor: 'border-slate-400',
+        description: 'Profile registration link',
+      },
+    }
+    
+    return functionMeta[functionName] || {
+      name: functionName,
+      icon: Wrench,
+      color: 'gray',
+      gradientFrom: 'from-gray-500',
+      gradientTo: 'to-gray-600',
+      borderColor: 'border-gray-400',
+      description: 'Custom function',
+    }
+  }
   
   // State
   const [selectedAgent, setSelectedAgent] = useState<AgentConfig | null>(null)
@@ -1003,96 +1058,95 @@ export function AgentFlowDiagram({
           )
         })()}
         
-        {/* Specialists Branch (E-commerce only) */}
-        {isEcommerce && !isFlow && (
-          <>
-            <div className="relative w-full max-w-5xl">
-              {/* Horizontal line */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90%] h-0.5 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
-              
-              {/* Agent boxes - ALL ON SAME ROW - Only show agents that exist in database */}
-              <div className="flex items-start justify-center gap-2 pt-6">
-                {/* E-commerce Agents - only if they exist */}
-                {agentExists("PRODUCT_SEARCH") && (
-                  <div className="flex flex-col items-center">
-                    <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
-                    <AgentNode
-                      agent={getAgent("PRODUCT_SEARCH")}
-                      metadata={AGENT_METADATA.PRODUCT_SEARCH}
-                      isEditable={true}
-                      isActive={shouldShowAgent("PRODUCT_SEARCH")}
-                      onClick={() => handleAgentClick("PRODUCT_SEARCH")}
-                      size="small"
-                    />
-                  </div>
-                )}
+        {/* Specialists Branch (E-commerce only) - DYNAMIC based on Router's availableFunctions */}
+        {isEcommerce && !isFlow && (() => {
+          const routerAgent = getAgent("ROUTER")
+          const routerFunctions = routerAgent?.availableFunctions || []
+          
+          if (routerFunctions.length === 0) return null
+          
+          return (
+            <>
+              <div className="relative w-full max-w-5xl">
+                {/* Horizontal line */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90%] h-0.5 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
                 
-                {agentExists("CART_MANAGEMENT") && (
-                  <div className="flex flex-col items-center">
-                    <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
-                    <AgentNode
-                      agent={getAgent("CART_MANAGEMENT")}
-                      metadata={AGENT_METADATA.CART_MANAGEMENT}
-                      isEditable={true}
-                      isActive={shouldShowAgent("CART_MANAGEMENT")}
-                      onClick={() => handleAgentClick("CART_MANAGEMENT")}
-                      size="small"
-                    />
-                  </div>
-                )}
-                
-                {agentExists("ORDER_TRACKING") && (
-                  <div className="flex flex-col items-center">
-                    <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
-                    <AgentNode
-                      agent={getAgent("ORDER_TRACKING")}
-                      metadata={AGENT_METADATA.ORDER_TRACKING}
-                      isEditable={true}
-                      isActive={shouldShowAgent("ORDER_TRACKING")}
-                      onClick={() => handleAgentClick("ORDER_TRACKING")}
-                      size="small"
-                    />
-                  </div>
-                )}
-                
-                {/* Customer Support - only if hasHumanSupport */}
-                {shouldShowAgent("CUSTOMER_SUPPORT") && (
-                  <div className="flex flex-col items-center">
-                    <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
-                    <AgentNode
-                      agent={getAgent("CUSTOMER_SUPPORT")}
-                      metadata={AGENT_METADATA.CUSTOMER_SUPPORT}
-                      isEditable={true}
-                      isActive={true}
-                      onClick={() => handleAgentClick("CUSTOMER_SUPPORT")}
-                      size="small"
-                    />
-                  </div>
-                )}
-                
-                {/* Profile Management - only if needRegistration */}
-                {shouldShowAgent("PROFILE_MANAGEMENT") && (
-                <div className="flex flex-col items-center">
-                  <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
-                  <AgentNode
-                    agent={getAgent("PROFILE_MANAGEMENT")}
-                    metadata={AGENT_METADATA.PROFILE_MANAGEMENT}
-                    isEditable={true}
-                    isActive={true}
-                    onClick={() => handleAgentClick("PROFILE_MANAGEMENT")}
-                    size="small"
-                  />
+                {/* Agent boxes - DYNAMIC from Router's availableFunctions */}
+                <div className="flex items-start justify-center gap-2 pt-6 flex-wrap">
+                  {routerFunctions.map((funcName) => {
+                    // Skip RESET_ACTIVE_AGENT (internal function)
+                    if (funcName === 'RESET_ACTIVE_AGENT') return null
+                    
+                    // Check if this function maps to an agent
+                    const agentType = functionToAgentMap[funcName]
+                    
+                    if (agentType) {
+                      // It's an agent - check if it exists and should be shown
+                      if (!agentExists(agentType)) return null
+                      if (!shouldShowAgent(agentType)) return null
+                      
+                      return (
+                        <div key={funcName} className="flex flex-col items-center">
+                          <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
+                          <AgentNode
+                            agent={getAgent(agentType)}
+                            metadata={AGENT_METADATA[agentType]}
+                            isEditable={true}
+                            isActive={true}
+                            onClick={() => handleAgentClick(agentType)}
+                            size="small"
+                          />
+                        </div>
+                      )
+                    } else {
+                      // It's a calling function (not an agent) - show generic block
+                      const funcMeta = getCallingFunctionMetadata(funcName)
+                      const FuncIcon = funcMeta.icon
+                      
+                      return (
+                        <div key={funcName} className="flex flex-col items-center">
+                          <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div
+                                  className={cn(
+                                    "group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 transition-all duration-200",
+                                    `bg-gradient-to-r ${funcMeta.gradientFrom} ${funcMeta.gradientTo} text-white shadow-lg ${funcMeta.borderColor}`
+                                  )}
+                                >
+                                  <div className="p-1.5 rounded-lg bg-white/20">
+                                    <FuncIcon className="h-4 w-4 text-white" />
+                                  </div>
+                                  <span className="font-semibold text-xs">{funcMeta.name}</span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="max-w-xs p-3">
+                                <div className="space-y-1.5">
+                                  <p className="font-semibold text-sm flex items-center gap-2">
+                                    <FuncIcon className="h-4 w-4" />
+                                    {funcMeta.name}
+                                  </p>
+                                  <p className="text-xs text-gray-600">{funcMeta.description}</p>
+                                  <p className="text-xs text-gray-500">Calling Function: <code className="bg-gray-100 px-1 rounded">{funcName}</code></p>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      )
+                    }
+                  })}
                 </div>
-                )}
               </div>
-            </div>
-            
-            {/* Merge line */}
-            <div className="w-[60%] max-w-md h-0.5 bg-gradient-to-r from-transparent via-gray-300 to-transparent mt-6" />
-            
-            <ConnectorArrow />
-          </>
-        )}
+              
+              {/* Merge line */}
+              <div className="w-[60%] max-w-md h-0.5 bg-gradient-to-r from-transparent via-gray-300 to-transparent mt-6" />
+              
+              <ConnectorArrow />
+            </>
+          )
+        })()}
         
         {/* Conversation History (E-commerce and FLOW) */}
         {(isEcommerce || isFlow) && (
