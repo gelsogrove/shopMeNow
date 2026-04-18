@@ -50,4 +50,5 @@ export interface FlowStepResult {
   nextNodeId: string | null;
   flowStatus: FlowStatus;
   shouldCallOperator: boolean;
+  isFaqInterrupt?: boolean;   // true → strategy must answer FAQ via LLM then append responseText
 }
