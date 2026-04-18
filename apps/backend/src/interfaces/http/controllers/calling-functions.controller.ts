@@ -136,7 +136,7 @@ export class CallingFunctionsController {
     async createFunction(req: Request, res: Response) {
         try {
             const workspaceId = (req as any).workspaceId
-            const { functionName, description, responseInstructions, parameters, executionType, isActive, webhookUrl, credentialsMapping, attachedLlm, attachedFlowKey } = req.body
+            const { functionName, description, responseInstructions, parameters, executionType, isActive, webhookUrl, credentialsMapping, attachedLlm, attachedFlowKey, addToRouter } = req.body
 
             if (!functionName || !description || !executionType) {
                 return res.status(400).json({ error: "Missing required fields" })
@@ -163,8 +163,10 @@ export class CallingFunctionsController {
                 attachedFlowKey: attachedFlowKey || null,
             })
 
-            // Auto-add DELEGATE_TO_AGENT to Router's availableFunctions
-            if (executionType === "DELEGATE_TO_AGENT") {
+            // Auto-add to Router's availableFunctions:
+            // - DELEGATE_TO_AGENT: always added (it's a sub-LLM delegation)
+            // - INTERNAL/WEBHOOK with addToRouter=true: added when created from the diagram
+            if (executionType === "DELEGATE_TO_AGENT" || addToRouter === true) {
                 try {
                     await this.flowSyncService.addDelegateToRouter(workspaceId, functionName)
                 } catch (syncError) {

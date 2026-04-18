@@ -14,6 +14,8 @@ export interface CallingFunction {
     credentialsMapping?: Record<string, any> | null
     attachedLlm?: string | null
     attachedFlowKey?: string | null
+    /** When true, auto-add this function to the Router's availableFunctions on create */
+    addToRouter?: boolean
 }
 
 export const callingFunctionsApi = {

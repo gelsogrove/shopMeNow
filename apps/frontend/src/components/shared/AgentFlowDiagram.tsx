@@ -88,7 +88,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { FlowConfigSheet } from "@/components/shared/FlowConfigSheet"
-import { CallingFunctionSheet } from "@/components/shared/CallingFunctionSheet"
+import { CallingFunctionSheet, CallingFunctionSheetItem } from "@/components/shared/CallingFunctionSheet"
 import { HelpPanel } from "@/components/settings/HelpPanel"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/lib/toast"
@@ -143,7 +143,7 @@ interface AgentFlowDiagramProps {
   className?: string
   flowConfigs?: FlowConfig[]
   onFlowConfigSaved?: () => void
-  allCallingFunctions?: { functionName: string; description?: string; isSystemFunction?: boolean }[]
+  allCallingFunctions?: { functionName: string; description?: string; isSystemFunction?: boolean; executionType?: string; webhookUrl?: string | null; responseInstructions?: string | null }[]
 }
 
 // Available LLM Models with cost and performance ratings
@@ -679,6 +679,7 @@ export function AgentFlowDiagram({
   const [deleteFlowConfig, setDeleteFlowConfig] = useState<FlowConfig | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [callingFunctionSheetOpen, setCallingFunctionSheetOpen] = useState(false)
+  const [editingCallingFunction, setEditingCallingFunction] = useState<CallingFunctionSheetItem | null>(null)
   const [addPopoverOpen, setAddPopoverOpen] = useState(false)
 
   // WhatsApp Queue panel state
@@ -794,10 +795,26 @@ export function AgentFlowDiagram({
     setEditedFunctions(agent.availableFunctions || [])
   }
 
-  // Handle calling function click - navigate to Settings > Custom Tools
+  // Handle calling function click — open CallingFunctionSheet in EDIT mode
   const handleCallingFunctionClick = (functionName: string) => {
-    localStorage.setItem('settings-last-section', 'functions')
-    navigate('/settings')
+    const fn = allCallingFunctions.find((f) => f.functionName === functionName)
+    if (fn) {
+      setEditingCallingFunction({
+        functionName: fn.functionName,
+        description: fn.description || "",
+        executionType: (fn as any).executionType || "INTERNAL",
+        webhookUrl: (fn as any).webhookUrl || null,
+        responseInstructions: (fn as any).responseInstructions || null,
+      })
+    } else {
+      // System function or missing metadata — open with minimal info
+      setEditingCallingFunction({
+        functionName,
+        description: "",
+        executionType: "INTERNAL",
+      })
+    }
+    setCallingFunctionSheetOpen(true)
   }
 
   // Handle save
@@ -886,15 +903,17 @@ export function AgentFlowDiagram({
     setFlowSheetOpen(true)
   }
 
-  // Handle add new calling function
+  // Handle add new calling function (CREATE mode)
   const handleAddCallingFunction = () => {
     setAddPopoverOpen(false)
+    setEditingCallingFunction(null) // null = create mode
     setCallingFunctionSheetOpen(true)
   }
 
-  // Handle calling function saved from sheet
+  // Handle calling function saved from sheet (create or edit)
   const handleCallingFunctionSaved = async () => {
     setCallingFunctionSheetOpen(false)
+    setEditingCallingFunction(null)
     onFlowConfigSaved?.()
   }
 
@@ -1565,13 +1584,17 @@ export function AgentFlowDiagram({
         />
       )}
 
-      {/* CallingFunctionSheet for adding calling functions from diagram */}
+      {/* CallingFunctionSheet for adding/editing calling functions from diagram */}
       {isFlow && (
         <CallingFunctionSheet
           open={callingFunctionSheetOpen}
-          onOpenChange={setCallingFunctionSheetOpen}
+          onOpenChange={(open) => {
+            setCallingFunctionSheetOpen(open)
+            if (!open) setEditingCallingFunction(null)
+          }}
           workspaceId={workspaceId}
           onSaved={handleCallingFunctionSaved}
+          callingFunction={editingCallingFunction}
         />
       )}
 
