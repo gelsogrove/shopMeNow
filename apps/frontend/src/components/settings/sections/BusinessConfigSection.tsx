@@ -12,8 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Store, AlertCircle, Workflow } from "lucide-react"
+import { Store } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SUPPORTED_CURRENCIES } from "@/utils/format"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -242,39 +241,6 @@ export function BusinessConfigSection({
               <p className="text-xs text-gray-500">
                 Language used when customer language cannot be detected
               </p>
-            </div>
-
-            {/* Agent Pipeline Features */}
-            <div className="md:col-span-2 pt-4 border-t">
-              <div className="flex items-center gap-2 mb-3">
-                <Workflow className="h-5 w-5 text-indigo-600" />
-                <Label className="text-base font-semibold">Agent Pipeline Features</Label>
-              </div>
-              <p className="text-xs text-gray-500 mb-4">
-                Enable or disable agent capabilities. The pipeline graph and AI behavior update accordingly.
-              </p>
-              <div className="space-y-3">
-                {[
-                  { field: "hasProductCatalog", label: "Product Catalog", description: "Product search agent for browsing catalog" },
-                  { field: "hasCart", label: "Shopping Cart", description: "Cart management agent for add/remove items" },
-                  { field: "hasOrderTracking", label: "Order Tracking", description: "Order tracking agent for delivery status and history" },
-                  { field: "needRegistration", label: "Customer Registration", description: "Profile management agent for customer data" },
-                  { field: "hasHumanSupport", label: "Human Support", description: "Customer support agent with human escalation" },
-                ].map(({ field, label, description }) => (
-                  <div key={field} className="flex items-center justify-between rounded-lg border p-3">
-                    <div>
-                      <Label htmlFor={field} className="cursor-pointer font-medium">{label}</Label>
-                      <p className="text-xs text-gray-500">{description}</p>
-                    </div>
-                    <Switch
-                      id={field}
-                      checked={(formData as any)[field] ?? true}
-                      onCheckedChange={(checked) => onFieldChange(field, checked)}
-                      disabled={!canEdit}
-                    />
-                  </div>
-                ))}
-              </div>
             </div>
 
             {/* Channel Mode — immutable after creation (user must delete + recreate workspace to change) */}

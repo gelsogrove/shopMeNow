@@ -275,9 +275,13 @@ export function AgentConfigurationPage() {
         systemPrompt: newPrompt,
       })
 
-      // Update local state
+      // Update local state - merge with existing agent to preserve all fields
       setAgents((prev) =>
-        prev.map((agent) => (agent.id === promptEditorAgent.id ? savedAgent : agent))
+        prev.map((agent) => 
+          agent.id === promptEditorAgent.id 
+            ? { ...agent, systemPrompt: savedAgent.systemPrompt, content: savedAgent.systemPrompt }
+            : agent
+        )
       )
 
       // Update editing state
@@ -312,9 +316,24 @@ export function AgentConfigurationPage() {
         availableFunctions: (updatedAgent as any).availableFunctions ?? undefined,
       })
 
-      // Update local state
+      // Update local state - merge with existing agent to preserve all fields
       setAgents((prev) =>
-        prev.map((agent) => (agent.id === updatedAgent.id ? savedAgent : agent))
+        prev.map((agent) => 
+          agent.id === updatedAgent.id 
+            ? {
+                ...agent,
+                name: savedAgent.name,
+                systemPrompt: savedAgent.systemPrompt,
+                content: savedAgent.systemPrompt,
+                temperature: savedAgent.temperature,
+                model: savedAgent.model,
+                maxTokens: savedAgent.maxTokens,
+                order: savedAgent.order,
+                agentType: savedAgent.type,
+                icon: savedAgent.icon,
+              }
+            : agent
+        )
       )
 
       // Update editing state
@@ -323,13 +342,13 @@ export function AgentConfigurationPage() {
         [updatedAgent.id]: {
           id: savedAgent.id,
           name: savedAgent.name,
-          systemPrompt: savedAgent.content || "",
+          systemPrompt: savedAgent.systemPrompt,
           temperature: savedAgent.temperature || 0.7,
           model: savedAgent.model || "openai/gpt-4.1-mini",
           maxTokens: savedAgent.maxTokens || 1000,
-          isActive: savedAgent.isActive ?? true,
+          isActive: updatedAgent.isActive ?? true,
           order: savedAgent.order || 0,
-          agentType: savedAgent.agentType || "router",
+          agentType: savedAgent.type || "router",
           icon: savedAgent.icon,
         },
       }))
@@ -460,6 +479,8 @@ export function AgentConfigurationPage() {
           channelMode={workspace?.channelMode as 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | undefined}
           channelType={workspace?.channelType as 'WHATSAPP' | 'WIDGET' | null | undefined}
           enableWelcomeMessage={workspace?.enableWelcomeMessage !== false}
+          hasHumanSupport={workspace?.hasHumanSupport}
+          needRegistration={workspace?.needRegistration}
           agents={agents.map(agent => ({
             id: agent.id,
             name: agent.name,

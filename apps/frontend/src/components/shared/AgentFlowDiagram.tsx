@@ -129,6 +129,8 @@ interface AgentFlowDiagramProps {
   channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   channelType?: 'WHATSAPP' | 'WIDGET' | null
   enableWelcomeMessage?: boolean
+  hasHumanSupport?: boolean
+  needRegistration?: boolean
   agents: AgentConfig[]
   workspaceId: string
   onSaveAgent: (agentId: string, data: Partial<AgentConfig>) => Promise<void>
@@ -544,6 +546,8 @@ export function AgentFlowDiagram({
   channelMode,
   channelType,
   enableWelcomeMessage = true,
+  hasHumanSupport = false,
+  needRegistration = false,
   agents,
   workspaceId,
   onSaveAgent,
@@ -653,9 +657,10 @@ export function AgentFlowDiagram({
     const meta = getResolvedMeta(type)
     if (!meta) return false
     if (meta.ecommerceOnly && !isEcommerce) return false
-    // ROUTER hidden for non-ecommerce; PROFILE_MANAGEMENT hidden for INFORMATIONAL (not FLOW - shown dynamically there)
-    if (!isEcommerce && !isFlow && (type === "ROUTER" || type === "PROFILE_MANAGEMENT")) return false
-    if (type === "PROFILE_MANAGEMENT" && !enableWelcomeMessage) return false
+    // ROUTER hidden for non-ecommerce; PROFILE_MANAGEMENT controlled by needRegistration
+    if (!isEcommerce && !isFlow && type === "ROUTER") return false
+    if (type === "PROFILE_MANAGEMENT" && !needRegistration) return false
+    if (type === "CUSTOMER_SUPPORT" && !hasHumanSupport) return false
     if (type === "SECURITY") return false // Always hidden
     return true
   }
@@ -944,8 +949,8 @@ export function AgentFlowDiagram({
                   </div>
                 ))}
 
-                {/* Customer Support in FLOW - same level as Sub-LLMs */}
-                {agentExists("CUSTOMER_SUPPORT") && (
+                {/* Customer Support in FLOW - same level as Sub-LLMs - only if hasHumanSupport */}
+                {shouldShowAgent("CUSTOMER_SUPPORT") && (
                   <div className="flex flex-col items-center">
                     <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
                     <AgentNode
@@ -959,7 +964,7 @@ export function AgentFlowDiagram({
                   </div>
                 )}
 
-                {/* Profile Management in FLOW - same level as Sub-LLMs, only if enableWelcomeMessage */}
+                {/* Profile Management in FLOW - same level as Sub-LLMs - only if needRegistration */}
                 {shouldShowAgent("PROFILE_MANAGEMENT") && (
                   <div className="flex flex-col items-center">
                     <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
@@ -1050,20 +1055,22 @@ export function AgentFlowDiagram({
                   </div>
                 )}
                 
-                {/* Customer Support */}
-                <div className="flex flex-col items-center">
-                  <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
-                  <AgentNode
-                    agent={getAgent("CUSTOMER_SUPPORT")}
-                    metadata={AGENT_METADATA.CUSTOMER_SUPPORT}
-                    isEditable={true}
-                    isActive={true}
-                    onClick={() => handleAgentClick("CUSTOMER_SUPPORT")}
-                    size="small"
-                  />
-                </div>
+                {/* Customer Support - only if hasHumanSupport */}
+                {shouldShowAgent("CUSTOMER_SUPPORT") && (
+                  <div className="flex flex-col items-center">
+                    <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
+                    <AgentNode
+                      agent={getAgent("CUSTOMER_SUPPORT")}
+                      metadata={AGENT_METADATA.CUSTOMER_SUPPORT}
+                      isEditable={true}
+                      isActive={true}
+                      onClick={() => handleAgentClick("CUSTOMER_SUPPORT")}
+                      size="small"
+                    />
+                  </div>
+                )}
                 
-                {/* Profile Management */}
+                {/* Profile Management - only if needRegistration */}
                 {shouldShowAgent("PROFILE_MANAGEMENT") && (
                 <div className="flex flex-col items-center">
                   <div className="w-0.5 h-4 bg-gray-300 -mt-4" />
@@ -1165,16 +1172,9 @@ export function AgentFlowDiagram({
         <ConnectorArrow />
 
         {/* Recharge block */}
-        <div className="flex items-start gap-3 px-5 py-3 bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded-xl shadow-md max-w-xs text-left">
-          <div className="mt-0.5 shrink-0 p-1.5 bg-white/20 rounded-lg">
-            <Zap className="h-4 w-4" />
-          </div>
-          <div>
-            <span className="font-semibold text-sm block">Recharge</span>
-            <span className="text-[11px] text-sky-100 leading-tight block">
-              Session state is persisted, customer context is updated, and the pipeline is ready for the next message.
-            </span>
-          </div>
+        <div className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded-full shadow-lg">
+          <Zap className="h-5 w-5" />
+          <span className="font-medium">Recharge</span>
         </div>
 
         
