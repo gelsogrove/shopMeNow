@@ -740,7 +740,7 @@ export function AgentFlowDiagram({
       return {
         ...agent,
         type: "WIDGET_SECURITY",
-        name: "Widget Security Layer",
+        name: "Security Layer",
       }
     }
 
@@ -1154,8 +1154,8 @@ export function AgentFlowDiagram({
                   // Must exist in database to be clickable/editable
                   if (!agentExists(agentType)) return null
                   
-                  // Check visibility rules
-                  if (agentType === 'CUSTOMER_SUPPORT' && !hasHumanSupport) return null
+                  // Check visibility rules — for FLOW, CUSTOMER_SUPPORT always editable
+                  if (agentType === 'CUSTOMER_SUPPORT' && !hasHumanSupport && !isFlow) return null
                   if (agentType === 'PROFILE_MANAGEMENT' && !needRegistration) return null
                   
                   const meta = AGENT_METADATA[agentType]
@@ -1328,6 +1328,7 @@ export function AgentFlowDiagram({
                                     <FuncIcon className="h-4 w-4 text-white" />
                                   </div>
                                   <span className="font-semibold text-xs">{funcMeta.name}</span>
+                                  <Edit3 className="h-3 w-3 text-white opacity-50 group-hover:opacity-100 transition-opacity ml-1" />
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent side="bottom" className="max-w-xs p-3">
@@ -1367,7 +1368,7 @@ export function AgentFlowDiagram({
                 isEditable={true}
                 isActive={true}
                 onClick={() => handleAgentClick("CONVERSATION_HISTORY")}
-                size="wide"
+                size="large"
               />
               <span className="text-xs text-amber-700">Humanization layer</span>
             </div>
@@ -1384,7 +1385,7 @@ export function AgentFlowDiagram({
             isEditable={true}
             isActive={true}
             onClick={() => handleAgentClick("TRANSLATION")}
-            size="wide"
+            size="large"
           />
         </div>
 
@@ -1398,7 +1399,7 @@ export function AgentFlowDiagram({
             isEditable={true}
             isActive={true}
             onClick={() => handleAgentClick("WIDGET_SECURITY")}
-            size="wide"
+            size="large"
           />
         </div>
         
