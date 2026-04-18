@@ -458,6 +458,7 @@ export function AgentConfigurationPage() {
         <AgentFlowDiagram 
           isEcommerce={workspace?.channelMode === 'ECOMMERCE'}
           channelMode={workspace?.channelMode as 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW' | undefined}
+          channelType={workspace?.channelType as 'WHATSAPP' | 'WIDGET' | null | undefined}
           enableWelcomeMessage={workspace?.enableWelcomeMessage !== false}
           agents={agents.map(agent => ({
             id: agent.id,

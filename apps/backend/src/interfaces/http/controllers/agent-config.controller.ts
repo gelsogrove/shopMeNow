@@ -146,7 +146,7 @@ export class AgentConfigController {
         : null
 
       const mappedAgents = agents.map((agent) => {
-        if (isInformational && (agent.type === "CUSTOMER_SUPPORT" || agent.type === "INFO_AGENT")) {
+        if (isInformational && agent.type === "INFO_AGENT") {
           return {
             ...agent,
             name: "Info Agent",

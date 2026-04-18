@@ -92,17 +92,17 @@ export class AgentService {
             : agent.systemPrompt
 
         let functions = getFunctionsForAgentType(agent.type) || []
-        if (isInformational && (agent.type === "CUSTOMER_SUPPORT" || agent.type === "INFO_AGENT")) {
+        if (isInformational && agent.type === "INFO_AGENT") {
           const profileFunctions = getFunctionsForAgentType("PROFILE_MANAGEMENT") || []
           functions = Array.from(new Set([...functions, ...profileFunctions]))
         }
 
         const name =
-          isInformational && (agent.type === "CUSTOMER_SUPPORT" || agent.type === "INFO_AGENT")
+          isInformational && agent.type === "INFO_AGENT"
             ? "Info Agent"
             : agent.name
         const order =
-          isInformational && (agent.type === "CUSTOMER_SUPPORT" || agent.type === "INFO_AGENT") ? 0 : agent.order
+          isInformational && agent.type === "INFO_AGENT" ? 0 : agent.order
 
         return {
         id: agent.id,

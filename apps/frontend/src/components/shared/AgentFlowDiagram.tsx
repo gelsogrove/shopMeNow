@@ -127,6 +127,7 @@ interface QueueMessage {
 interface AgentFlowDiagramProps {
   isEcommerce: boolean
   channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
+  channelType?: 'WHATSAPP' | 'WIDGET' | null
   enableWelcomeMessage?: boolean
   agents: AgentConfig[]
   workspaceId: string
@@ -541,6 +542,7 @@ function BranchLine({ className }: { className?: string }) {
 export function AgentFlowDiagram({
   isEcommerce,
   channelMode,
+  channelType,
   enableWelcomeMessage = true,
   agents,
   workspaceId,
@@ -601,15 +603,14 @@ export function AgentFlowDiagram({
   }, [queuePanelOpen, workspaceId])
 
   const getResolvedMeta = (type: string) => {
-    if (!isEcommerce && (type === "CUSTOMER_SUPPORT" || type === "INFO_AGENT")) {
+    if (!isEcommerce && type === "INFO_AGENT") {
       return INFO_AGENT_METADATA
     }
     return AGENT_METADATA[type]
   }
 
   const getAgentDisplayName = (type: string, meta: typeof AGENT_METADATA[keyof typeof AGENT_METADATA]): string => {
-    if (isFlow) return meta.name
-    if (!isEcommerce && (type === "CUSTOMER_SUPPORT" || type === "INFO_AGENT")) {
+    if (!isEcommerce && type === "INFO_AGENT") {
       return "Info Agent"
     }
     return meta.name
@@ -1133,8 +1134,8 @@ export function AgentFlowDiagram({
         
         <ConnectorArrow />
 
-        {/* WhatsApp Queue — clickable, opens slide panel */}
-        {isFlow && (
+        {/* WhatsApp Queue — clickable, opens slide panel — hidden for WIDGET channel */}
+        {isFlow && channelType !== 'WIDGET' && (
           <>
             <div className="flex flex-col items-center gap-1">
               <button
@@ -1159,6 +1160,21 @@ export function AgentFlowDiagram({
         <div className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-full shadow-lg">
           <CheckCircle className="h-5 w-5" />
           <span className="font-medium">Response to Customer</span>
+        </div>
+
+        <ConnectorArrow />
+
+        {/* Recharge block */}
+        <div className="flex items-start gap-3 px-5 py-3 bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded-xl shadow-md max-w-xs text-left">
+          <div className="mt-0.5 shrink-0 p-1.5 bg-white/20 rounded-lg">
+            <Zap className="h-4 w-4" />
+          </div>
+          <div>
+            <span className="font-semibold text-sm block">Recharge</span>
+            <span className="text-[11px] text-sky-100 leading-tight block">
+              Session state is persisted, customer context is updated, and the pipeline is ready for the next message.
+            </span>
+          </div>
         </div>
 
         
