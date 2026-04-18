@@ -27,6 +27,7 @@ import {
   LARGE_VARIABLES
 } from "../../types/prompt-variables.types"
 import { SmartPromptBuilder } from "../../services/smart-prompt-builder.service"
+import { getCurrencySymbol } from "../../utils/currency"
 import logger from "../../utils/logger"
 
 /**
@@ -73,6 +74,7 @@ interface WorkspaceInput {
   customAiRules?: string | null
   chatbotName?: string | null
   businessType?: string | null
+  currency?: string | null
   websiteUrl?: string | null
   registrationPage?: string | null
   requireManualApproval?: boolean | null
@@ -210,6 +212,7 @@ export class PromptVariableBuilder {
       allowedExternalLinks: workspace?.allowedExternalLinks?.join('\n') || '',
       chatbotName: workspace?.chatbotName || VARIABLE_DEFAULTS.chatbotName!,
       businessType: workspace?.businessType || VARIABLE_DEFAULTS.businessType!,
+      currency: workspace?.currency || VARIABLE_DEFAULTS.currency!,
       operatorContactMethod: workspace?.operatorContactMethod || VARIABLE_DEFAULTS.operatorContactMethod!,
       operatorWhatsappNumber: workspace?.operatorWhatsappNumber || VARIABLE_DEFAULTS.operatorWhatsappNumber!,
       websiteUrl: workspace?.websiteUrl || workspace?.url || VARIABLE_DEFAULTS.websiteUrl!,
@@ -401,8 +404,9 @@ export class PromptVariableBuilder {
       ])
 
       if (types.length > 0) {
+        const currSym = getCurrencySymbol(workspace?.currency || 'EUR')
         appointmentTypes = types.map(t =>
-          `- ${t.name}${t.description ? ` (${t.description})` : ''}: ${t.duration} min${t.price ? `, €${t.price}` : ''}`
+          `- ${t.name}${t.description ? ` (${t.description})` : ''}: ${t.duration} min${t.price ? `, ${currSym}${t.price}` : ''}`
         ).join('\n')
       }
 
@@ -636,7 +640,8 @@ export class PromptVariableBuilder {
     prisma: PrismaClient,
     workspaceId: string,
     userMessage: string = '',
-    businessType: string = 'default'
+    businessType: string = 'default',
+    currency: string = 'EUR'
   ): Promise<DynamicContentInput> {
 
     try {
@@ -671,8 +676,8 @@ export class PromptVariableBuilder {
         // 🆕 New variables for enhanced prompts
         productsByCategory,
         productCharacteristics,
-        productsWithDetails: await this.buildProductsWithCharacteristics(prisma, workspaceId),
-        featuredProducts: await this.buildFeaturedProducts(prisma, workspaceId),
+        productsWithDetails: await this.buildProductsWithCharacteristics(prisma, workspaceId, currency),
+        featuredProducts: await this.buildFeaturedProducts(prisma, workspaceId, currency),
         // Existing variables
         categories,
         services,
@@ -695,7 +700,7 @@ export class PromptVariableBuilder {
    * @param workspaceId - Workspace ID
    * @returns Detailed string representation of products
    */
-  private static async buildProductsWithCharacteristics(prisma: PrismaClient, workspaceId: string): Promise<string> {
+  private static async buildProductsWithCharacteristics(prisma: PrismaClient, workspaceId: string, currency: string = 'EUR'): Promise<string> {
     const products: any[] = await prisma.products.findMany({
       where: { workspaceId, isActive: true },
       include: {
@@ -715,9 +720,10 @@ export class PromptVariableBuilder {
         .map((pc: any) => pc.category.name)
         .join(', ')
 
+      const currencySymbol = getCurrencySymbol(currency)
       return `
 📦 **${product.name}**
-💰 Prezzo: €${product.price.toLocaleString()}
+💰 Prezzo: ${currencySymbol}${product.price.toLocaleString()}
 📂 Categoria: ${categories || 'Non categorizzato'}
 📋 Caratteristiche: ${characteristics || 'Nessuna caratteristica'}
 📝 Descrizione: ${product.description?.substring(0, 200) || 'Nessuna descrizione'}
@@ -729,7 +735,7 @@ export class PromptVariableBuilder {
   /**
    * 🆕 Build featured products list
    */
-  private static async buildFeaturedProducts(prisma: PrismaClient, workspaceId: string): Promise<string> {
+  private static async buildFeaturedProducts(prisma: PrismaClient, workspaceId: string, currency: string = 'EUR'): Promise<string> {
     const products: any[] = await prisma.products.findMany({
       where: {
         workspaceId,
@@ -753,7 +759,7 @@ export class PromptVariableBuilder {
         .map((c: any) => `${c.value}${c.unit || ''}`)
         .join(' ')
 
-      return `⭐ ${product.name} - €${product.price.toLocaleString()} ${keyCharacteristics ? `(${keyCharacteristics})` : ''}`
+      return `⭐ ${product.name} - ${getCurrencySymbol(currency)}${product.price.toLocaleString()} ${keyCharacteristics ? `(${keyCharacteristics})` : ''}`
     }).join('\n')
   }
 

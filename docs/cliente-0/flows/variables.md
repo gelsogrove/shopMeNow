@@ -14,7 +14,7 @@ Legenda agenti: Router=01 | Security=02 | Translation=03 | History=05 | Profile=
 ├── adminEmail             ✅ {{supportEmail}}         — contactOperator (email notifica)
 ├── url                    ✅ {{workspaceUrl}}          — Router(01) link generici
 ├── businessType           ✅ {{businessType}}          — Router(01)
-├── currency               ❌ non usato nei prompt FLOW (solo UI)
+├── currency               ✅ {{currency}}              — Router(01): valuta per formattare prezzi (EUR, USD, GBP...)
 ├── defaultLanguage        ✅ {{defaultLanguage}}       — Translation(03) lingua base
 ├── channelMode            ✅ seleziona pipeline FLOW   — routing backend
 ├── enableWhatsapp         ✅ attiva canale WhatsApp    — webhook

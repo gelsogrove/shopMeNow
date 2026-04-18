@@ -19,6 +19,7 @@ If the name is "Cliente" or not available, use a friendly generic greeting.
 - **Support Email**: {{supportEmail}}
 - **Tone of Voice**: {{toneOfVoice}}
 - **customerEmail**: {{customerEmail}}
+- **Currency**: {{currency}}
 {{#if businessType}}
 - **Business Type**: {{businessType}}
 {{/if}}

@@ -228,6 +228,13 @@ export interface PromptVariables {
    */
   businessType: string
 
+  /** Valuta del workspace (es. EUR, USD, GBP)
+   * Template: {{currency}}
+   * Source: workspace.currency || 'EUR'
+   * Usato nei prompt per formattare prezzi coerentemente con la valuta del negozio
+   */
+  currency: string
+
   /** Metodo contatto operatore (email, whatsapp)
    * Template: {{operatorContactMethod}}
    * Source: workspace.operatorContactMethod || 'email'
@@ -512,6 +519,7 @@ export const VARIABLE_DEFAULTS: Partial<PromptVariables> = {
   channelName: 'Shop',
   chatbotName: 'Assistente',
   businessType: '',
+  currency: 'EUR',
   operatorContactMethod: 'email',
   operatorWhatsappNumber: '',
   websiteUrl: '',
