@@ -455,6 +455,7 @@ function AgentNode({
   isActive,
   onClick,
   size = "normal",
+  className,
 }: {
   agent?: AgentConfig
   metadata: typeof AGENT_METADATA.ROUTER
@@ -463,6 +464,7 @@ function AgentNode({
   isActive: boolean
   onClick?: () => void
   size?: "small" | "normal" | "large"
+  className?: string
 }) {
   const Icon = metadata.icon
   const name = displayName || metadata.name
@@ -489,6 +491,7 @@ function AgentNode({
                 ? `bg-gradient-to-r ${metadata.gradientFrom} ${metadata.gradientTo} text-white shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer`
                 : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-50",
               metadata.borderColor,
+              className,
             )}
           >
             {/* Icon */}
@@ -1023,33 +1026,76 @@ export function AgentFlowDiagram({
         <ConnectorArrow />
         
         {/* Router — For FLOW: opens FlowConfigSheet (router config), for others: opens agent edit */}
-        <AgentNode
-          agent={isFlow ? undefined : (getAgent(isEcommerce ? "ROUTER" : "INFO_AGENT") || getAgent("CUSTOMER_SUPPORT"))}
-          metadata={isFlow ? {
-            ...AGENT_METADATA.ROUTER,
-            name: "Router",
-            gradientFrom: "from-indigo-500",
-            gradientTo: "to-indigo-700",
-            borderColor: "border-indigo-400",
-          } : getResolvedMeta(isEcommerce ? "ROUTER" : "INFO_AGENT")}
-          displayName={
-            isFlow
-              ? "Router"
-              : isEcommerce
-                ? "Router Agent"
-                : getAgentDisplayName("INFO_AGENT", INFO_AGENT_METADATA)
-          }
-          isEditable={true}
-          isActive={true}
-          onClick={() => {
-            if (isFlow && routerFlowConfig) {
-              handleFlowNodeClick(routerFlowConfig)
-            } else {
-              handleAgentClick(isEcommerce ? "ROUTER" : (getAgent("INFO_AGENT") ? "INFO_AGENT" : "CUSTOMER_SUPPORT"))
+        <div className="relative">
+          <AgentNode
+            agent={isFlow ? undefined : (getAgent(isEcommerce ? "ROUTER" : "INFO_AGENT") || getAgent("CUSTOMER_SUPPORT"))}
+            metadata={isFlow ? {
+              ...AGENT_METADATA.ROUTER,
+              name: "Router",
+              gradientFrom: "from-indigo-500",
+              gradientTo: "to-indigo-700",
+              borderColor: "border-indigo-400",
+            } : getResolvedMeta(isEcommerce ? "ROUTER" : "INFO_AGENT")}
+            displayName={
+              isFlow
+                ? "Router"
+                : isEcommerce
+                  ? "Router Agent"
+                  : getAgentDisplayName("INFO_AGENT", INFO_AGENT_METADATA)
             }
-          }}
-          size="large"
-        />
+            isEditable={true}
+            isActive={true}
+            onClick={() => {
+              if (isFlow && routerFlowConfig) {
+                handleFlowNodeClick(routerFlowConfig)
+              } else {
+                handleAgentClick(isEcommerce ? "ROUTER" : (getAgent("INFO_AGENT") ? "INFO_AGENT" : "CUSTOMER_SUPPORT"))
+              }
+            }}
+            size="large"
+          />
+          {/* FLOW only: Add button floating on bottom-right of Router */}
+          {isFlow && (
+            <Popover open={addPopoverOpen} onOpenChange={setAddPopoverOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  className="absolute -bottom-2.5 -right-2.5 flex items-center justify-center w-6 h-6 rounded-full bg-violet-500 text-white shadow-md hover:bg-violet-600 hover:scale-110 transition-all duration-200 cursor-pointer z-10 border-2 border-white"
+                  title="Add Sub-LLM or Calling Function"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2" align="end" side="bottom">
+                <div className="flex flex-col gap-1">
+                  <button
+                    onClick={handleAddFlowConfig}
+                    className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-left hover:bg-violet-50 transition-colors"
+                  >
+                    <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
+                      <Sparkles className="h-3.5 w-3.5 text-white" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">Agent (Sub-LLM)</div>
+                      <div className="text-[11px] text-gray-500">AI agent with prompt &amp; model</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={handleAddCallingFunction}
+                    className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-left hover:bg-amber-50 transition-colors"
+                  >
+                    <div className="p-1.5 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500">
+                      <Wrench className="h-3.5 w-3.5 text-white" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">Calling Function</div>
+                      <div className="text-[11px] text-gray-500">Webhook, internal or delegate</div>
+                    </div>
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
         
         <ConnectorArrow />
 
@@ -1214,50 +1260,6 @@ export function AgentFlowDiagram({
                   )
                 })}
 
-                {/* Add button with choice: Agent or Calling Function */}
-                <div className="flex flex-col items-center">
-                  <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
-                  <Popover open={addPopoverOpen} onOpenChange={setAddPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <button
-                        className="flex items-center gap-2 rounded-xl border-2 border-dashed border-violet-300 px-4 py-3 h-[52px] text-violet-500 hover:bg-violet-50 hover:border-violet-400 hover:text-violet-600 transition-all duration-200 cursor-pointer"
-                      >
-                        <div className="p-1 rounded-lg bg-violet-100">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        </div>
-                        <span className="font-semibold text-xs">Add</span>
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-56 p-2" align="center">
-                      <div className="flex flex-col gap-1">
-                        <button
-                          onClick={handleAddFlowConfig}
-                          className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-left hover:bg-violet-50 transition-colors"
-                        >
-                          <div className="p-1.5 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
-                            <Sparkles className="h-3.5 w-3.5 text-white" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">Agent (Sub-LLM)</div>
-                            <div className="text-[11px] text-gray-500">AI agent with prompt & model</div>
-                          </div>
-                        </button>
-                        <button
-                          onClick={handleAddCallingFunction}
-                          className="flex items-center gap-3 w-full rounded-lg px-3 py-2.5 text-left hover:bg-amber-50 transition-colors"
-                        >
-                          <div className="p-1.5 rounded-lg bg-gradient-to-br from-amber-400 to-yellow-500">
-                            <Wrench className="h-3.5 w-3.5 text-white" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">Calling Function</div>
-                            <div className="text-[11px] text-gray-500">Webhook, internal or delegate</div>
-                          </div>
-                        </button>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
               </div>
             </div>
             
@@ -1369,6 +1371,7 @@ export function AgentFlowDiagram({
                 isActive={true}
                 onClick={() => handleAgentClick("CONVERSATION_HISTORY")}
                 size="large"
+                className="w-[272px]"
               />
               <span className="text-xs text-amber-700">Humanization layer</span>
             </div>
@@ -1386,6 +1389,7 @@ export function AgentFlowDiagram({
             isActive={true}
             onClick={() => handleAgentClick("TRANSLATION")}
             size="large"
+            className="w-[272px]"
           />
         </div>
 
@@ -1400,6 +1404,7 @@ export function AgentFlowDiagram({
             isActive={true}
             onClick={() => handleAgentClick("WIDGET_SECURITY")}
             size="large"
+            className="w-[272px]"
           />
         </div>
         
@@ -1411,7 +1416,7 @@ export function AgentFlowDiagram({
             <div className="flex flex-col items-center gap-1">
               <button
                 onClick={() => setQueuePanelOpen(true)}
-                className="flex items-center gap-2.5 rounded-xl border-2 border-green-300 bg-green-50 px-5 py-3 shadow-sm hover:shadow-md hover:bg-green-100 hover:scale-105 transition-all duration-200 cursor-pointer"
+                className="flex items-center gap-2.5 rounded-xl border-2 border-green-300 bg-green-50 px-5 py-3 shadow-sm hover:shadow-md hover:bg-green-100 hover:scale-105 transition-all duration-200 cursor-pointer w-[272px]"
               >
                 <div className="p-1.5 rounded-lg bg-green-100">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>

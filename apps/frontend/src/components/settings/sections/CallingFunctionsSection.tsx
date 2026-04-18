@@ -266,8 +266,10 @@ export function CallingFunctionsSection({
             await callingFunctionsApi.delete(workspaceId, name)
             toast.success("Tool deleted")
             loadFunctions()
-        } catch (error) {
-            toast.error("Deletion failed")
+        } catch (error: any) {
+            console.error("Delete failed:", error?.response?.status, error?.response?.data, error)
+            const msg = error?.response?.data?.error || error?.response?.data?.message || "Deletion failed"
+            toast.error(msg)
         }
     }
 
