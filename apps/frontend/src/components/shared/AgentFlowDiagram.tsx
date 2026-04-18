@@ -950,14 +950,33 @@ export function AgentFlowDiagram({
         {/* FLOW Sub-LLMs Branch (machine configs only — excludes flowKey="router"). Branches directly from Router. */}
         {isFlow && (() => {
           const machineFlowConfigs = flowConfigs.filter(fc => fc.flowKey !== 'router')
+          const routerAgent = getAgent("ROUTER")
+          const routerFunctions = routerAgent?.availableFunctions || []
+          
+          // Get flowKeys to exclude them from calling functions
+          const flowKeys = flowConfigs.map(fc => fc.flowKey)
+          
+          // Filter Router's calling functions:
+          // - Exclude RESET_ACTIVE_AGENT (internal)
+          // - Exclude functions that match flowKeys (already shown as Sub-LLMs)
+          // - Exclude customerSupportAgent and profileManagementAgent (shown separately)
+          const callingFunctions = routerFunctions.filter(funcName => {
+            if (funcName === 'RESET_ACTIVE_AGENT') return false
+            if (flowKeys.includes(funcName)) return false
+            if (funcName === 'customerSupportAgent' && shouldShowAgent("CUSTOMER_SUPPORT")) return false
+            if (funcName === 'profileManagementAgent' && shouldShowAgent("PROFILE_MANAGEMENT")) return false
+            return true
+          })
+          
           return (
           <>
             <div className="relative w-full max-w-5xl">
               {/* Horizontal line */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90%] h-0.5 bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
               
-              {/* Flow config nodes + Add button */}
+              {/* Flow config nodes + Agent nodes + Calling functions + Add button */}
               <div className="flex items-start justify-center gap-3 pt-6 flex-wrap">
+                {/* Sub-LLMs (flowConfigs) */}
                 {machineFlowConfigs.map((fc) => (
                   <div key={fc.id} className="flex flex-col items-center">
                     <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
@@ -1033,6 +1052,45 @@ export function AgentFlowDiagram({
                     />
                   </div>
                 )}
+
+                {/* Other Calling Functions (not Sub-LLMs, not agent-specific) - DYNAMIC */}
+                {callingFunctions.map((funcName) => {
+                  const funcMeta = getCallingFunctionMetadata(funcName)
+                  const FuncIcon = funcMeta.icon
+                  
+                  return (
+                    <div key={funcName} className="flex flex-col items-center">
+                      <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={cn(
+                                "group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 transition-all duration-200",
+                                `bg-gradient-to-r ${funcMeta.gradientFrom} ${funcMeta.gradientTo} text-white shadow-lg ${funcMeta.borderColor}`
+                              )}
+                            >
+                              <div className="p-1.5 rounded-lg bg-white/20">
+                                <FuncIcon className="h-4 w-4 text-white" />
+                              </div>
+                              <span className="font-semibold text-xs">{funcMeta.name}</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="max-w-xs p-3">
+                            <div className="space-y-1.5">
+                              <p className="font-semibold text-sm flex items-center gap-2">
+                                <FuncIcon className="h-4 w-4" />
+                                {funcMeta.name}
+                              </p>
+                              <p className="text-xs text-gray-600">{funcMeta.description}</p>
+                              <p className="text-xs text-gray-500">Calling Function: <code className="bg-gray-100 px-1 rounded">{funcName}</code></p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  )
+                })}
 
                 {/* Add Sub-LLM button */}
                 <div className="flex flex-col items-center">
