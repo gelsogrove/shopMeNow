@@ -56,7 +56,7 @@ export const INFORMATIONAL_TEMPLATE_FILES: Record<string, string> = {
   PROFILE_MANAGEMENT: "06-profile-management.template.md",
 }
 
-// 🗂️ FLOW TEMPLATE FILES (6 files — identical to informational for now)
+// 🗂️ FLOW TEMPLATE FILES (7 files)
 export const FLOW_TEMPLATE_FILES: Record<string, string> = {
   INFO_AGENT: "01-flow-agent.template.md",
   SECURITY: "02-security.template.md",
@@ -64,6 +64,7 @@ export const FLOW_TEMPLATE_FILES: Record<string, string> = {
   SUMMARY_AGENT: "04-summary.template.md",
   CONVERSATION_HISTORY: "05-conversation-history.template.md",
   PROFILE_MANAGEMENT: "06-profile-management.template.md",
+  CUSTOMER_SUPPORT: "07-customer-support.template.md",
 }
 
 // Agents that exist ONLY in e-commerce workspaces (aligned with dynamicAgents() actual creation)

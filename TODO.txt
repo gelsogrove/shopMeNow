@@ -8,21 +8,16 @@ FATTO
 - FLOW DRIVER 
 - generare JSON asciugatrce
 - generare JOSN lavatrice
-
-
-
-progress
-playgournd?
-- grafico fattto bene? dynamic ?
 - CAlling function sono attaccate bene e ben descritte
 - PROMPTS fatti?
 
-TODO
+progress
+- playgournd?
+- grafico fattto bene? dynamic ?
 
-- Flussi e grafici da dare al cliente
+TODO
 - I prompts e il settings uno per uno
 - MCP per provare per vedere se funziona correttamente
+- Flussi e grafici da dare al cliente
 - cambio user echabto non funziona!
-- flag di nuova registrazione ?
 - Pulizia del codice
-
