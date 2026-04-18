@@ -226,7 +226,32 @@ const StarRating = ({ stars, maxStars = 5 }: { stars: number; maxStars?: number 
   </div>
 )
 
-// Agent metadata with descriptions
+// ─── Agent Metadata ─────────────────────────────────────────────────────────
+// Each entry defines an LLM Agent with its visual representation and purpose.
+//
+// 🧠 AGENT = LLM with editable prompt, model, temperature, max tokens.
+//    Users can click on agent nodes to edit these settings.
+//
+// ⚡ CALLING FUNCTION = Backend utility (no LLM). Rendered as amber/yellow blocks.
+//    Calling functions are managed via "Available to this flow" checkboxes,
+//    not via prompt editing.
+//
+// RESPONSIBILITIES PER LLM:
+//   ROUTER - Brain: classifies intent, delegates to specialist agents. Needs: routing rules only.
+//   PRODUCT_SEARCH - Catalog: searches products by name/category/certifications. Needs: {{products}}, {{categories}}.
+//   CART_MANAGEMENT - Cart: add/remove items, checkout. Needs: cart context.
+//   ORDER_TRACKING - Orders: track shipments, order history. Needs: order context.
+//   CUSTOMER_SUPPORT - Escalation: handles complaints, transfers to human. Needs: {{faqs}}, escalation rules.
+//   PROFILE_MANAGEMENT - Profile: updates customer info (address, email). Needs: customer data.
+//   CONVERSATION_HISTORY - Humanizer: adds personality, remembers context. Needs: {{chatbotName}}, {{toneOfVoice}}.
+//   TRANSLATION - Translator: translates to customer language. Needs: {{languageUser}}.
+//   WIDGET_SECURITY - Sanitizer: blocks unsafe content for widget. Needs: security rules.
+//   CALENDAR_BOOKING - Scheduler: books appointments. Needs: calendar config.
+//
+// ⚠️ Variables: Each agent should ONLY receive variables relevant to its responsibility.
+//    Don't inject {{products}} into TRANSLATION (waste of tokens).
+//    Don't inject {{faqs}} into CART_MANAGEMENT (irrelevant context).
+// ─────────────────────────────────────────────────────────────────────────────
 const AGENT_METADATA: Record<string, {
   name: string
   icon: any
@@ -572,46 +597,57 @@ export function AgentFlowDiagram({
     'calendarBookingAgent': 'CALENDAR_BOOKING',
   }
   
-  // Generic metadata for calling functions that are not agents
+  // Generic metadata for calling functions (NOT agents — use amber/yellow palette to distinguish)
+  // Calling functions are backend utilities that perform a specific action (no LLM involved).
+  // They are visually distinct from Agent nodes (which are LLMs with editable prompts).
   const getCallingFunctionMetadata = (functionName: string) => {
     const functionMeta: Record<string, any> = {
       'changeLanguage': {
         name: 'Change Language',
         icon: Globe,
-        color: 'teal',
-        gradientFrom: 'from-teal-500',
-        gradientTo: 'to-teal-600',
-        borderColor: 'border-teal-400',
-        description: 'Language management',
+        color: 'amber',
+        gradientFrom: 'from-amber-400',
+        gradientTo: 'to-yellow-500',
+        borderColor: 'border-amber-300',
+        description: 'Changes customer preferred language. No LLM — direct DB update.',
       },
       'manageNotifications': {
-        name: 'Manage Notifications',
+        name: 'Notifications',
         icon: Bell,
-        color: 'indigo',
-        gradientFrom: 'from-indigo-500',
-        gradientTo: 'to-indigo-600',
-        borderColor: 'border-indigo-400',
-        description: 'Notification settings',
+        color: 'amber',
+        gradientFrom: 'from-amber-400',
+        gradientTo: 'to-yellow-500',
+        borderColor: 'border-amber-300',
+        description: 'Manage push notification preferences. No LLM — direct DB update.',
       },
       'getProfileLink': {
-        name: 'Get Profile Link',
+        name: 'Profile Link',
         icon: User,
-        color: 'slate',
-        gradientFrom: 'from-slate-500',
-        gradientTo: 'to-slate-600',
-        borderColor: 'border-slate-400',
-        description: 'Profile registration link',
+        color: 'amber',
+        gradientFrom: 'from-amber-400',
+        gradientTo: 'to-yellow-500',
+        borderColor: 'border-amber-300',
+        description: 'Generates a secure registration link. No LLM — token generation.',
+      },
+      'contactOperator': {
+        name: 'Contact Operator',
+        icon: Headphones,
+        color: 'amber',
+        gradientFrom: 'from-amber-400',
+        gradientTo: 'to-yellow-500',
+        borderColor: 'border-amber-300',
+        description: 'Escalates to human operator. No LLM — sends notification email.',
       },
     }
     
     return functionMeta[functionName] || {
       name: functionName,
       icon: Wrench,
-      color: 'gray',
-      gradientFrom: 'from-gray-500',
-      gradientTo: 'to-gray-600',
-      borderColor: 'border-gray-400',
-      description: 'Custom function',
+      color: 'amber',
+      gradientFrom: 'from-amber-400',
+      gradientTo: 'to-yellow-500',
+      borderColor: 'border-amber-300',
+      description: 'Calling function (no LLM)',
     }
   }
   
@@ -958,16 +994,24 @@ export function AgentFlowDiagram({
           // Get flowKeys to exclude them from calling functions
           const flowKeys = flowConfigs.map(fc => fc.flowKey)
           
-          // Filter Router's calling functions:
+          // Separate Router's availableFunctions into:
+          // - agentFunctions: functions that delegate to an Agent LLM (editable prompt/model)
+          // - callingFunctions: utility functions (no LLM, just backend logic)
           // - Exclude RESET_ACTIVE_AGENT (internal)
-          // - Exclude functions that match flowKeys (already shown as Sub-LLMs)
-          // - Exclude customerSupportAgent and profileManagementAgent (shown separately)
-          const callingFunctions = routerFunctions.filter(funcName => {
-            if (funcName === 'RESET_ACTIVE_AGENT') return false
-            if (flowKeys.includes(funcName)) return false
-            if (funcName === 'customerSupportAgent' && shouldShowAgent("CUSTOMER_SUPPORT")) return false
-            if (funcName === 'profileManagementAgent' && shouldShowAgent("PROFILE_MANAGEMENT")) return false
-            return true
+          // - Exclude flowKeys (already shown as Sub-LLMs)
+          const agentFunctions: string[] = []
+          const callingFunctions: string[] = []
+          
+          routerFunctions.forEach(funcName => {
+            if (funcName === 'RESET_ACTIVE_AGENT') return
+            if (flowKeys.includes(funcName)) return
+            
+            // Check if this function maps to an Agent (LLM with editable prompt)
+            if (functionToAgentMap[funcName]) {
+              agentFunctions.push(funcName)
+            } else {
+              callingFunctions.push(funcName)
+            }
           })
           
           return (
@@ -994,11 +1038,7 @@ export function AgentFlowDiagram({
                                 : "bg-gray-100 text-gray-400 border-gray-200 cursor-pointer opacity-60 hover:opacity-80"
                             )}
                           >
-                            {/* Active dot indicator */}
-                            <div className={cn(
-                              "absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full border-2 border-white",
-                              fc.isActive ? "bg-green-400" : "bg-gray-400"
-                            )} />
+
                             <div className={cn("p-1.5 rounded-lg", fc.isActive ? "bg-white/20" : "bg-gray-200")}>
                               <Sparkles className={cn("h-4 w-4", fc.isActive ? "text-white" : "text-gray-400")} />
                             </div>
@@ -1016,7 +1056,6 @@ export function AgentFlowDiagram({
                             <p className="font-semibold text-sm">{fc.flowLabel}</p>
                             <p className="text-xs text-gray-500">Key: <code className="bg-gray-100 px-1 rounded">{fc.flowKey}</code></p>
                             <p className="text-xs text-gray-500">Model: {fc.model || "default"}</p>
-                            <p className="text-xs text-gray-500">Status: {fc.isActive ? "✅ Active" : "❌ Inactive"}</p>
                             <p className="text-xs text-blue-600 mt-1">Click to edit</p>
                           </div>
                         </TooltipContent>
@@ -1025,37 +1064,34 @@ export function AgentFlowDiagram({
                   </div>
                 ))}
 
-                {/* Customer Support in FLOW - same level as Sub-LLMs - only if hasHumanSupport */}
-                {shouldShowAgent("CUSTOMER_SUPPORT") && (
-                  <div className="flex flex-col items-center">
-                    <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
-                    <AgentNode
-                      agent={getAgent("CUSTOMER_SUPPORT")}
-                      metadata={AGENT_METADATA.CUSTOMER_SUPPORT}
-                      isEditable={true}
-                      isActive={true}
-                      onClick={() => handleAgentClick("CUSTOMER_SUPPORT")}
-                      size="small"
-                    />
-                  </div>
-                )}
+                {/* Agent LLMs (editable prompt/model) — dynamically from Router's availableFunctions */}
+                {agentFunctions.map((funcName) => {
+                  const agentType = functionToAgentMap[funcName]
+                  if (!agentType) return null
+                  
+                  // Check visibility rules
+                  if (agentType === 'CUSTOMER_SUPPORT' && !hasHumanSupport) return null
+                  if (agentType === 'PROFILE_MANAGEMENT' && !needRegistration) return null
+                  
+                  const meta = AGENT_METADATA[agentType]
+                  if (!meta) return null
+                  
+                  return (
+                    <div key={funcName} className="flex flex-col items-center">
+                      <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
+                      <AgentNode
+                        agent={getAgent(agentType)}
+                        metadata={meta}
+                        isEditable={true}
+                        isActive={true}
+                        onClick={() => handleAgentClick(agentType)}
+                        size="small"
+                      />
+                    </div>
+                  )
+                })}
 
-                {/* Profile Management in FLOW - same level as Sub-LLMs - only if needRegistration */}
-                {shouldShowAgent("PROFILE_MANAGEMENT") && (
-                  <div className="flex flex-col items-center">
-                    <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
-                    <AgentNode
-                      agent={getAgent("PROFILE_MANAGEMENT")}
-                      metadata={AGENT_METADATA.PROFILE_MANAGEMENT}
-                      isEditable={true}
-                      isActive={true}
-                      onClick={() => handleAgentClick("PROFILE_MANAGEMENT")}
-                      size="small"
-                    />
-                  </div>
-                )}
-
-                {/* Other Calling Functions (not Sub-LLMs, not agent-specific) - DYNAMIC */}
+                {/* Calling Functions (no LLM — backend utilities) — amber/yellow style */}
                 {callingFunctions.map((funcName) => {
                   const funcMeta = getCallingFunctionMetadata(funcName)
                   const FuncIcon = funcMeta.icon
@@ -1067,13 +1103,10 @@ export function AgentFlowDiagram({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div
-                              className={cn(
-                                "group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 transition-all duration-200",
-                                `bg-gradient-to-r ${funcMeta.gradientFrom} ${funcMeta.gradientTo} text-white shadow-lg ${funcMeta.borderColor}`
-                              )}
+                              className="group relative flex items-center gap-2.5 rounded-xl border-2 px-3 py-2 transition-all duration-200 bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md border-amber-300"
                             >
-                              <div className="p-1.5 rounded-lg bg-white/20">
-                                <FuncIcon className="h-4 w-4 text-white" />
+                              <div className="p-1 rounded-lg bg-white/20">
+                                <FuncIcon className="h-3.5 w-3.5 text-white" />
                               </div>
                               <span className="font-semibold text-xs">{funcMeta.name}</span>
                             </div>
@@ -1085,7 +1118,7 @@ export function AgentFlowDiagram({
                                 {funcMeta.name}
                               </p>
                               <p className="text-xs text-gray-600">{funcMeta.description}</p>
-                              <p className="text-xs text-gray-500">Calling Function: <code className="bg-gray-100 px-1 rounded">{funcName}</code></p>
+                              <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">Calling Function</Badge>
                             </div>
                           </TooltipContent>
                         </Tooltip>
@@ -1104,7 +1137,7 @@ export function AgentFlowDiagram({
                     <div className="p-1 rounded-lg bg-violet-100">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </div>
-                    <span className="font-semibold text-xs">Add Sub-LLM</span>
+                    <span className="font-semibold text-xs">Add</span>
                   </button>
                 </div>
               </div>
@@ -1159,7 +1192,7 @@ export function AgentFlowDiagram({
                         </div>
                       )
                     } else {
-                      // It's a calling function (not an agent) - show generic block
+                      // It's a calling function (not an agent) — amber/yellow style, no LLM
                       const funcMeta = getCallingFunctionMetadata(funcName)
                       const FuncIcon = funcMeta.icon
                       
@@ -1170,13 +1203,10 @@ export function AgentFlowDiagram({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div
-                                  className={cn(
-                                    "group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 transition-all duration-200",
-                                    `bg-gradient-to-r ${funcMeta.gradientFrom} ${funcMeta.gradientTo} text-white shadow-lg ${funcMeta.borderColor}`
-                                  )}
+                                  className="group relative flex items-center gap-2.5 rounded-xl border-2 px-3 py-2 transition-all duration-200 bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md border-amber-300"
                                 >
-                                  <div className="p-1.5 rounded-lg bg-white/20">
-                                    <FuncIcon className="h-4 w-4 text-white" />
+                                  <div className="p-1 rounded-lg bg-white/20">
+                                    <FuncIcon className="h-3.5 w-3.5 text-white" />
                                   </div>
                                   <span className="font-semibold text-xs">{funcMeta.name}</span>
                                 </div>
@@ -1188,7 +1218,7 @@ export function AgentFlowDiagram({
                                     {funcMeta.name}
                                   </p>
                                   <p className="text-xs text-gray-600">{funcMeta.description}</p>
-                                  <p className="text-xs text-gray-500">Calling Function: <code className="bg-gray-100 px-1 rounded">{funcName}</code></p>
+                                  <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">Calling Function</Badge>
                                 </div>
                               </TooltipContent>
                             </Tooltip>
@@ -1294,11 +1324,7 @@ export function AgentFlowDiagram({
         
       </div>
 
-      {/* Legend */}
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-600">
-        {isFlow && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400 inline-block" /> Inactive</span>}
-        {!isFlow && <span>E-commerce only</span>}
-      </div>
+
 
       {/* Enterprise Message — hidden for FLOW (they already have custom flows) */}
       {!isFlow && (

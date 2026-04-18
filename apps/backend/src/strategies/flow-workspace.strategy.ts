@@ -602,6 +602,9 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
       }
 
       // ─── STEP: Save conversation history ───────────────────────────────
+      // Save responseText (pre-humanization) so FlowAgentLLM sees its original
+      // questions in history — humanized versions lose the question structure
+      // and cause the LLM to lose context on what it was waiting for.
       if (context.conversationId) {
         try {
           await this.conversationManager.saveUserAndAssistantAtomic({
@@ -609,7 +612,7 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
             customerId: context.customerId,
             conversationId: context.conversationId,
             userContent: context.message,
-            assistantContent: finalResponse,
+            assistantContent: responseText,
           })
         } catch (saveError: any) {
           logger.warn("⚠️ FlowWorkspaceStrategy - Failed to save history:", saveError.message)
