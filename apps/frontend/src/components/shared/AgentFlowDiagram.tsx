@@ -90,8 +90,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { FlowConfigSheet } from "@/components/shared/FlowConfigSheet"
 import { HelpPanel } from "@/components/settings/HelpPanel"
+import { Badge } from "@/components/ui/badge"
 import { toast } from "@/lib/toast"
 import { logger } from "@/lib/logger"
+import { api } from "@/services/api"
 import type { FlowConfig } from "@/services/flowConfigApi"
 
 // Types
@@ -105,6 +107,20 @@ interface AgentConfig {
   model: string
   order: number
   availableFunctions?: string[]
+}
+
+interface QueueMessage {
+  id: string
+  workspaceId: string
+  customerId: string
+  phoneNumber: string
+  messageContent: string
+  status: "pending" | "sent" | "error" | "blocked"
+  errorMessage: string | null
+  messageType?: "MESSAGE" | "PUSH"
+  createdAt: string
+  deliveredAt: string | null
+  customer: { name: string; email: string | null }
 }
 
 interface AgentFlowDiagramProps {
@@ -555,6 +571,33 @@ export function AgentFlowDiagram({
   // FLOW workspace state
   const [flowSheetOpen, setFlowSheetOpen] = useState(false)
   const [selectedFlowConfig, setSelectedFlowConfig] = useState<FlowConfig | null>(null)
+
+  // WhatsApp Queue panel state
+  const [queuePanelOpen, setQueuePanelOpen] = useState(false)
+  const [queueMessages, setQueueMessages] = useState<QueueMessage[]>([])
+  const [queueLoading, setQueueLoading] = useState(false)
+  const [queueFilter, setQueueFilter] = useState<"all" | "pending" | "sent" | "error">("all")
+  const [queueSearch, setQueueSearch] = useState("")
+
+  const fetchQueueMessages = async () => {
+    if (!workspaceId) return
+    setQueueLoading(true)
+    try {
+      const response = await api.get(`/workspaces/${workspaceId}/whatsapp-queue`)
+      setQueueMessages(Array.isArray(response.data) ? response.data : [])
+    } catch (error) {
+      logger.error("Failed to fetch queue messages:", error)
+    } finally {
+      setQueueLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!queuePanelOpen) return
+    fetchQueueMessages()
+    const interval = setInterval(fetchQueueMessages, 5000)
+    return () => clearInterval(interval)
+  }, [queuePanelOpen, workspaceId])
 
   const getResolvedMeta = (type: string) => {
     if (!isEcommerce && (type === "CUSTOMER_SUPPORT" || type === "INFO_AGENT")) {
@@ -1089,12 +1132,12 @@ export function AgentFlowDiagram({
         
         <ConnectorArrow />
 
-        {/* WhatsApp Queue — clickable, opens /queue page */}
+        {/* WhatsApp Queue — clickable, opens slide panel */}
         {isFlow && (
           <>
             <div className="flex flex-col items-center gap-1">
               <button
-                onClick={() => window.open("/queue", "_blank")}
+                onClick={() => setQueuePanelOpen(true)}
                 className="flex items-center gap-2.5 rounded-xl border-2 border-green-300 bg-green-50 px-5 py-3 shadow-sm hover:shadow-md hover:bg-green-100 hover:scale-105 transition-all duration-200 cursor-pointer"
               >
                 <div className="p-1.5 rounded-lg bg-green-100">
@@ -1146,6 +1189,115 @@ export function AgentFlowDiagram({
           </div>
         </div>
       )}
+
+      {/* WhatsApp Queue Side Panel */}
+      <Sheet open={queuePanelOpen} onOpenChange={setQueuePanelOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col overflow-hidden">
+          <SheetHeader className="shrink-0">
+            <SheetTitle className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-green-100">
+                <MessageSquare className="h-4 w-4 text-green-600" />
+              </div>
+              WhatsApp Queue
+            </SheetTitle>
+            <SheetDescription>Messages queued for delivery in this workspace</SheetDescription>
+          </SheetHeader>
+
+          {/* Filters */}
+          <div className="shrink-0 flex flex-col gap-2 mt-4">
+            <Input
+              placeholder="Search by name, phone or content..."
+              value={queueSearch}
+              onChange={(e) => setQueueSearch(e.target.value)}
+              className="h-8 text-sm"
+            />
+            <div className="flex gap-1 flex-wrap">
+              {(["all", "pending", "sent", "error"] as const).map((f) => {
+                const labels: Record<string, string> = { all: "All", pending: "⏳ Pending", sent: "✅ Sent", error: "❌ Failed" }
+                const colors: Record<string, string> = {
+                  all: queueFilter === "all" ? "bg-gray-800 text-white" : "bg-gray-100 text-gray-600",
+                  pending: queueFilter === "pending" ? "bg-yellow-500 text-white" : "bg-yellow-50 text-yellow-700",
+                  sent: queueFilter === "sent" ? "bg-green-600 text-white" : "bg-green-50 text-green-700",
+                  error: queueFilter === "error" ? "bg-red-600 text-white" : "bg-red-50 text-red-700",
+                }
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setQueueFilter(f)}
+                    className={cn("px-3 py-1 rounded-full text-xs font-medium transition-all", colors[f])}
+                  >
+                    {labels[f]}
+                    {f !== "all" && (
+                      <span className="ml-1 opacity-70">
+                        ({queueMessages.filter(m => f === "error" ? (m.status === "error" || m.status === "blocked") : m.status === f).length})
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+              <button
+                onClick={fetchQueueMessages}
+                className="ml-auto px-2 py-1 rounded-full text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all flex items-center gap-1"
+              >
+                <RefreshCcw className="h-3 w-3" />
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          {/* Messages list */}
+          <div className="flex-1 overflow-y-auto mt-3 space-y-2">
+            {queueLoading && queueMessages.length === 0 ? (
+              <div className="flex items-center justify-center h-32 text-gray-400">
+                <Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading...
+              </div>
+            ) : (() => {
+              const filtered = queueMessages.filter((msg) => {
+                const matchesSearch =
+                  msg.customer.name.toLowerCase().includes(queueSearch.toLowerCase()) ||
+                  msg.phoneNumber.includes(queueSearch) ||
+                  msg.messageContent.toLowerCase().includes(queueSearch.toLowerCase())
+                if (queueFilter === "all") return matchesSearch
+                if (queueFilter === "error") return matchesSearch && (msg.status === "error" || msg.status === "blocked")
+                return matchesSearch && msg.status === queueFilter
+              })
+              if (filtered.length === 0) {
+                return (
+                  <div className="flex flex-col items-center justify-center h-32 text-gray-400 gap-2">
+                    <CheckCircle className="h-8 w-8 text-gray-300" />
+                    <span className="text-sm">No messages found</span>
+                  </div>
+                )
+              }
+              return filtered.map((msg) => (
+                <div key={msg.id} className="rounded-lg border bg-white p-3 text-sm space-y-1.5 hover:shadow-sm transition-shadow">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-gray-800 truncate">{msg.customer.name}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {msg.messageType && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-mono">{msg.messageType}</span>
+                      )}
+                      {msg.status === "pending" && <Badge className="bg-yellow-50 text-yellow-700 border-yellow-300 text-[10px]">⏳ Pending</Badge>}
+                      {msg.status === "sent" && <Badge className="bg-green-50 text-green-700 border-green-300 text-[10px]">✅ Sent</Badge>}
+                      {msg.status === "error" && <Badge className="bg-red-50 text-red-700 border-red-300 text-[10px]">❌ Error</Badge>}
+                      {msg.status === "blocked" && <Badge className="bg-red-100 text-red-800 border-red-400 text-[10px]">🚫 Blocked</Badge>}
+                    </div>
+                  </div>
+                  <div className="text-gray-500 text-xs">{msg.phoneNumber}</div>
+                  <div className="text-gray-700 text-xs line-clamp-2 bg-gray-50 rounded px-2 py-1">{msg.messageContent}</div>
+                  {msg.errorMessage && (
+                    <div className="text-red-600 text-xs bg-red-50 rounded px-2 py-1">⚠️ {msg.errorMessage}</div>
+                  )}
+                  <div className="text-gray-400 text-[10px]">
+                    {new Date(msg.createdAt).toLocaleString()}
+                    {msg.deliveredAt && ` · Delivered: ${new Date(msg.deliveredAt).toLocaleString()}`}
+                  </div>
+                </div>
+              ))
+            })()}
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* FlowConfigSheet for FLOW workspaces */}
       {isFlow && (
