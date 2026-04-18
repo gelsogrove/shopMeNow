@@ -159,10 +159,21 @@ Cliente scrive messaggio
 ┌─────────────────────────────────────────────────────────┐
 │  ORCHESTRATORE (FlowWorkspaceStrategy — codice, no LLM) │
 │                                                         │
-│  1. Carica ChatSession.context                          │
-│  2. Controlla flowStatus                                │
-│  3. Sceglie PATH                                        │
+│  1. checkAndResetExpiredSession() → reset se TTL scaduto│
+│  2. Carica ChatSession.context                          │
+│  3. Controlla flowStatus → sceglie PATH                 │
 └─────────────────────────────────────────────────────────┘
+         │
+         ├─────── flowStatus=ESCALATED ─────────────────────────────────────┐
+         │                                                                   │
+         │  PATH 0 (operatore attivo — 0 token LLM)                         ▼
+         │                         ┌──────────────────────────────────────────────┐
+         │                         │  Risponde con humanSupportInstructions        │
+         │                         │  (workspace setting — nessun LLM coinvolto)  │
+         │                         │  agentType: OPERATOR                         │
+         │                         └──────────────────────────────────────────────┘
+         │                                    │
+         │                                    └──→ Risposta cliente (fine turno)
          │
          ├─────── flowStatus=ACTIVE ────────────────────────────────────────┐
          │                                                                   │
@@ -207,13 +218,15 @@ Cliente scrive messaggio
 
 **POST-PROCESSING (tutti i path):**
 ```
-1. Salva messaggio utente + risposta bot in DB
-2. Conversation History Agent (umanizza la risposta, aggiunge contesto)
-3. Translation Agent (se lingua ≠ base)
+1. contactOperator() se shouldCallOperator=true
+2. Link replacement (token [LINK_REGISTRATION] etc.)
+3. Translation Agent (se lingua ≠ base — TranslationAgent)
 4. Security Agent (solo widget)
-5. Link replacement
+5. Salva messaggio utente + risposta bot in DB
 6. WhatsApp Queue (scheduler, 6s cooldown)
 ```
+
+> ⚠️ **ConversationHistoryLayer è DISABILITATA per FLOW** — motivo: i prompt degli step deterministici (PATH A) sono istruzioni precise che non devono essere riscritte. Per PATH B/C, `FlowAgentLLM` produce già risposte naturali con tono umano — una seconda riscrittura sarebbe costosa e rischierebbe di alterare le istruzioni.
 
 **Pipeline UI (grafico AgentFlowDiagram):**
 ```
@@ -820,33 +833,35 @@ L'unica minaccia reale è se le FAQ crescono a 500+ voci non filtrate:
 ```
                  ┌─────────────────────────────────────┐
                  │  FlowWorkspaceStrategy (orchestratore)│
+                 │  checkAndResetExpiredSession() first  │
                  └─────────────────────────────────────┘
                           │
-           ┌──────────────┼──────────────┐
-           ▼              ▼              ▼
-      PATH A          PATH B          PATH C
-   (flow attivo)   (flowKey set)    (no flowKey)
-        │                │               │
-        ▼                ▼               ▼
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│FlowClassifier│  │ FlowAgentLLM │  │ FlowAgentLLM │
-│(codice puro) │  │(sub-macchina)│  │  (router)    │
-│              │  │              │  │              │
-│MATCH/BREAK/  │  │ 1 call LLM   │  │ 1 call LLM   │
-│FAQ/AMBIGUOUS │  │routing+reply │  │routing+reply │
-│              │  │              │  │              │
-│  0 token     │  │ ~500 tok     │  │ ~500 tok     │
-└──────────────┘  └──────────────┘  └──────────────┘
-        │
-        ▼
-┌──────────────┐
-│  FlowEngine  │
-│(deterministico)│
-│  0 token     │
-│  JSON puro   │
-└──────────────┘
+     ┌────────────────────┼──────────────┬──────────────┐
+     ▼                    ▼              ▼              ▼
+  PATH 0             PATH A          PATH B          PATH C
+(ESCALATED)       (flow attivo)   (flowKey set)    (no flowKey)
+     │                  │               │               │
+     ▼                  ▼               ▼               ▼
+┌──────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ OPERATOR │  │FlowClassifier│  │ FlowAgentLLM │  │ FlowAgentLLM │
+│ message  │  │(interno a    │  │(sub-macchina)│  │  (router)    │
+│          │  │ FlowEngine)  │  │              │  │              │
+│ 0 token  │  │              │  │ 1 call LLM   │  │ 1 call LLM   │
+│          │  │MATCH/BREAK/  │  │routing+reply │  │routing+reply │
+│          │  │FAQ/AMBIGUOUS │  │              │  │              │
+└──────────┘  │  0 token     │  │ ~500 tok     │  │ ~500 tok     │
+              └──────────────┘  └──────────────┘  └──────────────┘
+                      │
+                      ▼
+              ┌──────────────┐
+              │  FlowEngine  │
+              │(deterministico)│
+              │  0 token     │
+              │  JSON puro   │
+              └──────────────┘
 ```
 
-**PATH A = 0 LLM calls.** `FlowClassifierService` gestisce tutto strutturalmente.
+**PATH 0 = 0 LLM calls.** Operatore già attivo → risponde con `humanSupportInstructions`.
+**PATH A = 0 LLM calls.** `FlowClassifierService` (interno a FlowEngine) gestisce tutto strutturalmente.
 **PATH B/C = 1 LLM call.** `FlowAgentLLM` fa routing + risposta finale in una sola call.
-**3 percorsi, responsabilità chiare, zero conflitti, copertura 100% dei casi PDF.**
+**4 percorsi, responsabilità chiare, zero conflitti, copertura 100% dei casi.**
