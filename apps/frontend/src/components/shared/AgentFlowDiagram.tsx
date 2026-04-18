@@ -13,6 +13,7 @@
  * @security All operations validated by workspaceId + agentId + token
  */
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import Editor from "@monaco-editor/react"
 import {
   GitBranch,
@@ -580,6 +581,7 @@ export function AgentFlowDiagram({
   allCallingFunctions = [],
 }: AgentFlowDiagramProps) {
   const isFlow = channelMode === 'FLOW'
+  const navigate = useNavigate()
   
   // Mapping from calling function name to agent type
   const functionToAgentMap: Record<string, string> = {
@@ -775,6 +777,12 @@ export function AgentFlowDiagram({
     setEditedMaxTokens(agent.maxTokens || 1000)
     setEditedModel(agent.model || "mistral/mistral-large")
     setEditedFunctions(agent.availableFunctions || [])
+  }
+
+  // Handle calling function click - navigate to Settings > Custom Tools
+  const handleCallingFunctionClick = (functionName: string) => {
+    localStorage.setItem('settings-last-section', 'functions')
+    navigate('/settings')
   }
 
   // Handle save
@@ -1097,7 +1105,8 @@ export function AgentFlowDiagram({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div
-                              className="group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 h-[52px] transition-all duration-200 bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md border-amber-300"
+                              onClick={() => handleCallingFunctionClick(funcName)}
+                              className="group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 h-[52px] transition-all duration-200 bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md border-amber-300 cursor-pointer hover:shadow-lg hover:scale-105"
                             >
                               <div className="p-1.5 rounded-lg bg-white/20">
                                 <FuncIcon className="h-4 w-4 text-white" />
@@ -1197,7 +1206,8 @@ export function AgentFlowDiagram({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div
-                                  className="group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 h-[52px] transition-all duration-200 bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md border-amber-300"
+                                  onClick={() => handleCallingFunctionClick(funcName)}
+                                  className="group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 h-[52px] transition-all duration-200 bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md border-amber-300 cursor-pointer hover:shadow-lg hover:scale-105"
                                 >
                                   <div className="p-1.5 rounded-lg bg-white/20">
                                     <FuncIcon className="h-4 w-4 text-white" />

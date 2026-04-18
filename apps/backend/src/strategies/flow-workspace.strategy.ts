@@ -500,47 +500,9 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
       // rewrites responseText which loses question structure needed by FlowAgentLLM
       const preHumanizationResponse = responseText
 
-      // ─── STEP: Conversation History (humanize response) ─────────────────
-      try {
-        const historyResult = await this.conversationHistoryLayer.process({
-          workspaceId: context.workspaceId,
-          customerId: context.customerId,
-          customerName: context.customerName || "",
-          currentQuestion: context.message,
-          technicalResponse: {
-            type: "GENERIC",
-            rawMessage: responseText,
-          },
-          botIdentity: {
-            name: workspace.chatbotName || "Bot",
-            personality: null,
-          },
-          customAiRules: null,
-          companyName: workspace.name || "",
-          hasSalesAgents: workspace.hasSalesAgents || false,
-          conversationHistory: [],
-          activeOffers: [],
-          faqs: [],
-          mindset: "NEUTRAL",
-          lastAgentUsed: "FLOW",
-          customerLanguage: context.customerLanguage || customerData.language || "en",
-          isFirstMessage: false,
-        })
-        responseText = historyResult.message || responseText
-        tokensUsed += historyResult.metadata?.tokensUsed || 0
-
-        debugSteps.push({
-          type: "humanization",
-          agent: "ConversationHistoryLayer",
-          timestamp: new Date().toISOString(),
-          input: { rawResponse: responseText.substring(0, 100) },
-          output: { humanizedResponse: historyResult.message?.substring(0, 100) },
-          tokensUsed: historyResult.metadata?.tokensUsed || 0,
-          executionTimeMs: historyResult.metadata?.executionTimeMs || 0,
-        })
-      } catch (historyError: any) {
-        logger.warn("⚠️ ConversationHistoryLayer failed, using raw response:", historyError.message)
-      }
+      // ─── STEP: Conversation History (humanize response) — DISABLED for FLOW ──
+      // Flow node prompts are precisely crafted step-by-step questions that
+      // must not be rewritten — humanization destroys the guided conversation structure.
 
       // ─── STEP: Translation ──────────────────────────────────────────────
       const targetLang = context.customerLanguage || customerData.language || "en"
