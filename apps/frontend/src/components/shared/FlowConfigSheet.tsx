@@ -547,9 +547,13 @@ export function FlowConfigSheet({
                 ) : (
                   <div className="space-y-2 rounded-md border p-3 max-h-[360px] overflow-y-auto">
                     {/* Filter out DELEGATE_TO_AGENT functions that point TO this very flowKey — would cause an infinite loop */}
+                    {/* Sorted: Agents first, then Calling Functions / Webhooks */}
                     {allFunctions.filter(fn =>
                       !(fn.executionType === "DELEGATE_TO_AGENT" && fn.attachedFlowKey === config?.flowKey)
-                    ).map((fn) => (
+                    ).sort((a, b) => {
+                      const rank = (fn: CallingFunction) => fn.executionType === "DELEGATE_TO_AGENT" ? 0 : 1
+                      return rank(a) - rank(b) || a.functionName.localeCompare(b.functionName)
+                    }).map((fn) => (
                       <div
                         key={fn.functionName}
                         className="flex items-start gap-3"
