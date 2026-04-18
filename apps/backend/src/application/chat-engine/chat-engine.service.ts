@@ -1922,8 +1922,18 @@ export class ChatEngineService {
       }
 
       // ========================================================================
-      // STEP 0.2: Informational Workspace - Force INFO_AGENT prompt flow
+      // STEP 0.2: Non-ECOMMERCE Workspaces — Route to correct strategy
       // ========================================================================
+      if (workspaceConfig.channelMode === "FLOW") {
+        return await this.handleFlowMessage({
+          input,
+          workspaceConfig,
+          startTime,
+          debugSteps,
+          welcomePrefix: welcomeResult.isWelcomeMessage ? welcomeResult.welcomeText : undefined,
+        })
+      }
+
       if (workspaceConfig.channelMode !== "ECOMMERCE") {
         return await this.handleInformationalMessage({
           input,
@@ -5549,6 +5559,74 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
       "HUMAN_SUPPORT",
     ]
     return simpleTypes.includes(type)
+  }
+
+  /**
+   * Handle messages for FLOW workspaces.
+   * Delegates entirely to FlowWorkspaceStrategy via RouterOrchestrationService,
+   * bypassing the ECOMMERCE/INFORMATIONAL pipeline.
+   */
+  private async handleFlowMessage(params: {
+    input: ChatEngineInput
+    workspaceConfig: WorkspaceConfig
+    startTime: number
+    debugSteps: DebugStep[]
+    welcomePrefix?: string
+  }): Promise<ChatEngineOutput> {
+    const { input, startTime, debugSteps, welcomePrefix } = params
+
+    logger.info("🔄 [ChatEngine] FLOW workspace — delegating to FlowWorkspaceStrategy", {
+      workspaceId: input.workspaceId,
+      customerId: input.customerId,
+    })
+
+    try {
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: input.workspaceId },
+      })
+
+      if (!workspace) {
+        throw new Error(`Workspace not found: ${input.workspaceId}`)
+      }
+
+      const routingContext = {
+        message: input.message,
+        customerId: input.customerId,
+        workspaceId: input.workspaceId,
+        conversationId: input.conversationId || `temp-${input.customerId}`,
+        customerName: input.customerName,
+        customerLanguage: input.customerLanguage,
+        channel: input.channel || "whatsapp",
+      }
+
+      const result = await this.routerOrchestration.route(routingContext)
+
+      let responseText = result.response || ""
+
+      if (welcomePrefix) {
+        responseText = `${welcomePrefix}\n\n${responseText}`
+      }
+
+      return {
+        message: responseText,
+        agentType: result.agentType || AgentType.ROUTER,
+        wasHandled: true,
+        intent: "FLOW",
+        confidence: "HIGH",
+        source: "LLM_FALLBACK",
+        processingTimeMs: Date.now() - startTime,
+        debugInfo: {
+          steps: debugSteps,
+          totalTokens: result.tokensUsed || 0,
+          executionTimeMs: Date.now() - startTime,
+        },
+        tokensUsed: result.totalTokens || 0,
+        agentUsed: "FLOW",
+      }
+    } catch (error) {
+      logger.error("❌ [ChatEngine] handleFlowMessage failed", { error })
+      throw error
+    }
   }
 
   private async handleInformationalMessage(params: {
