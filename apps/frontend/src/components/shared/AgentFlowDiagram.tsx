@@ -17,12 +17,7 @@ import Editor from "@monaco-editor/react"
 import {
   GitBranch,
   Search,
-  ShoppingCart,
-  Package,
-  Headphones,
-  FileText,
   User,
-  Globe,
   MessageSquare,
   HelpCircle,
   Edit3,
@@ -40,7 +35,6 @@ import {
   Download,
   Calendar,
   Star,
-  Bell,
   Wrench,
   DollarSign,
 } from "lucide-react"
