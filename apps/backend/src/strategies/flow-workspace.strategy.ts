@@ -96,21 +96,37 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
       orderBy: { createdAt: "desc" },
     })
 
-    // No session or not escalated → no reset needed
-    if (!chatSession || !chatSession.escalatedAt) {
+    if (!chatSession) {
       return false
     }
 
-    // Calculate time since escalation
+    // Use last activity timestamp: prefer escalatedAt if set, otherwise updatedAt
+    // This covers BOTH cases:
+    //   - Customer escalated to operator → returns next day → reset
+    //   - Customer completed/resolved a flow → returns next day → reset
     const now = new Date()
-    const escalatedAt = new Date(chatSession.escalatedAt)
-    const elapsedSeconds = Math.floor((now.getTime() - escalatedAt.getTime()) / 1000)
+    const lastActivityAt = chatSession.escalatedAt
+      ? new Date(chatSession.escalatedAt)
+      : new Date(chatSession.updatedAt)
+
+    const elapsedSeconds = Math.floor((now.getTime() - lastActivityAt.getTime()) / 1000)
+
+    // Check if there's any flow state to reset
+    const hasFlowState = chatSession.context &&
+      ((chatSession.context as any).flowKey ||
+       (chatSession.context as any).flowState ||
+       (chatSession.context as any).gatherState)
+
+    if (!hasFlowState && !chatSession.escalatedAt) {
+      return false
+    }
 
     // If timeout not exceeded → no reset
     if (elapsedSeconds < workspace.sessionResetTimeout) {
       logger.info(`⏰ E0b - Session NOT expired (${elapsedSeconds}s / ${workspace.sessionResetTimeout}s)`, {
         sessionId: chatSession.id,
         customerId: context.customerId,
+        lastActivityAt,
       })
       return false
     }
@@ -119,6 +135,8 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
     logger.info(`🔄 E0b - Session EXPIRED - Resetting flow state (${elapsedSeconds}s > ${workspace.sessionResetTimeout}s)`, {
       sessionId: chatSession.id,
       customerId: context.customerId,
+      lastActivityAt,
+      hadEscalation: !!chatSession.escalatedAt,
     })
 
     // Parse current context
@@ -128,6 +146,7 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
     delete currentContext.flowState
     delete currentContext.flowKey
     delete currentContext.flowNumber
+    delete currentContext.gatherState
 
     // Update session - clear flow state and escalatedAt
     await this.prisma.chatSession.update({

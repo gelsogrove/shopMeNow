@@ -369,6 +369,7 @@ export class PromptVariableBuilder {
         chatbotName: true,
         businessType: true,
         websiteUrl: true,
+        currency: true,
       },
     })
 

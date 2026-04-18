@@ -168,9 +168,21 @@ export class FlowAgentLLM {
     const isRouterMode = ctx.flowKey === "router"
     const tools = await this.buildTools(flowIds, availableFunctions, isRouterMode, ctx.workspaceId)
 
-    // ── STEP 4: Call LLM ─────────────────────────────────────────────────────
+    // ── STEP 4: Build messages — inject gatherState context for router ──────
+    let enrichedSystemPrompt = systemPrompt
+    if (ctx.flowKey === "router" && ctx.chatContext.gatherState) {
+      const gs = ctx.chatContext.gatherState
+      const gathered: string[] = []
+      if (gs.locale) gathered.push(`Location: ${gs.locale}`)
+      if (gs.machineType) gathered.push(`Machine type: ${gs.machineType}`)
+      if (gs.machineNumber) gathered.push(`Machine number: ${gs.machineNumber}`)
+      if (gathered.length > 0) {
+        enrichedSystemPrompt += `\n\n## ALREADY COLLECTED (do NOT ask again)\n${gathered.join("\n")}`
+      }
+    }
+
     const messages = [
-      { role: "system" as const, content: systemPrompt },
+      { role: "system" as const, content: enrichedSystemPrompt },
       ...history,
       { role: "user" as const, content: ctx.message },
     ]
@@ -257,6 +269,14 @@ export class FlowAgentLLM {
           chatContext.flowKey = targetFlowKey
           chatContext.flowNumber = machineNumber
 
+          // Persist gathered info into gatherState for future turns
+          chatContext.gatherState = {
+            locale: (fnArgs.locale as string) || chatContext.gatherState?.locale,
+            machineType: (fnArgs.machineType as string) || chatContext.gatherState?.machineType,
+            machineNumber: machineNumber || chatContext.gatherState?.machineNumber,
+            retryCount: 0,
+          }
+
           functionCalls.push({
             name: fnName,
             arguments: fnArgs,
@@ -292,6 +312,23 @@ export class FlowAgentLLM {
     // If no tool_call and LLM returned text → plain FAQ/info answer
     if (toolCalls.length === 0 && !output) {
       output = "I'm here to help. Please describe your issue."
+    }
+
+    // Router gather retry tracking — increment retryCount when no tool was called in router mode
+    if (ctx.flowKey === "router" && toolCalls.length === 0) {
+      const currentRetry = chatContext.gatherState?.retryCount ?? 0
+      chatContext.gatherState = {
+        ...chatContext.gatherState,
+        retryCount: currentRetry + 1,
+        locale: chatContext.gatherState?.locale,
+        machineType: chatContext.gatherState?.machineType,
+        machineNumber: chatContext.gatherState?.machineNumber,
+      }
+      if (chatContext.gatherState.retryCount >= 3) {
+        logger.info("🚨 FlowAgentLLM: gatherState retryCount >= 3 → escalating to operator")
+        shouldCallOperator = true
+        functionCalls.push({ name: "contactOperator", arguments: { reason: "Max gather retries exceeded" }, result: "deferred_to_strategy" })
+      }
     }
 
     const executionTimeMs = Date.now() - startTime

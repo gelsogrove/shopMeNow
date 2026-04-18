@@ -31,10 +31,18 @@ export interface FlowState {
   lastValidStepAt: string; // ISO timestamp
 }
 
+export interface GatherState {
+  locale?: string;           // "Goya" | "Pineda" | "L'Escala" | "Alemanya" | "Hortes"
+  machineType?: string;      // "lavatrice" | "asciugatrice"
+  machineNumber?: string;    // "42"
+  retryCount: number;        // escalate after 3 failed attempts
+}
+
 export interface ChatContext {
   flowKey?: string;
   flowNumber?: string;
   flowState?: FlowState;
+  gatherState?: GatherState; // accumulated info during router gather phase
 }
 
 export interface FlowStepResult {

@@ -3,11 +3,13 @@
 > Architettura definitiva del pipeline messaggi per workspace `channelMode=FLOW`.
 > 3 percorsi: **PATH A** (flow attivo → FlowEngine, 0 token) + **PATH B** (flowKey senza flow → FlowAgentLLM) + **PATH C** (no flowKey → FlowAgentLLM Router).
 
-> ⚠️ **NOTA IMPLEMENTAZIONE** (codice reale vs documento):
-> - `FlowAgentLLM` è **una singola chiamata LLM** che fa sia routing che risposta — NON esistono 2 LLM separati
-> - Durante il **flow attivo (PATH A)**, il Router **non viene mai chiamato** — `FlowClassifierService` classifica l'input strutturalmente (0 token)
-> - I subLLM (per macchina) hanno prompt dinamici configurati nel CRUD FlowNodeConfig — NON hanno template markdown
-> - **Pipeline completa**: Router → subLLM → Conversation History → Translation → Security → WhatsApp Queue
+> ✅ **IMPLEMENTAZIONE REALE** (verificata sul codice):
+> - `FlowAgentLLM` è **una singola classe LLM** usata sia per PATH B (sub-macchina) che PATH C (router) — NON esistono 2 LLM separati
+> - Durante il **flow attivo (PATH A)**, `FlowAgentLLM` **non viene chiamato** — `FlowEngineService` gestisce tutto deterministicamente (0 token)
+> - `FlowNodeConfig.systemPrompt` è il prompt LLM usato da `FlowAgentLLM` — contiene knowledge base, tono, regole business. I campi `model`, `temperature`, `maxTokens` sono usati e personalizzabili per macchina
+> - `machineSpecs` **NON ESISTE** come campo separato — le specs macchina vanno dentro `systemPrompt`
+> - **`ConversationHistoryLayer` è DISABILITATA** per FLOW workspace — `FlowAgentLLM` produce già la risposta finale
+> - **Pipeline completa**: FlowAgentLLM (PATH B/C) → Translation → Security → WhatsApp Queue
 
 ---
 
@@ -167,22 +169,15 @@ Cliente scrive messaggio
          │  PATH A (flow attivo — 0 token LLM)                              │
          │                                                                   ▼
          │                         ┌──────────────────────────────────────────────┐
-         │                         │  FlowClassifierService (codice, 0 token)      │
+         │                         │  FlowEngine.handleMessage() (codice, 0 token) │
          │                         │                                              │
-         │                         │  MATCH     → FlowEngine.handleMessage()      │
-         │                         │  HARD_BREAK → cancella flow → PATH C         │
-         │                         │  SOFT_BREAK → flow in pausa → PATH C         │
-         │                         │  INTERRUPT_FAQ → flow pausa → PATH C         │
-         │                         │  AMBIGUOUS  → retry / escalate               │
+         │                         │  Internamente usa FlowClassifierService:     │
+         │                         │  MATCH       → avanza nodo via transitions   │
+         │                         │  HARD_BREAK  → escalate → contactOperator()  │
+         │                         │  SOFT_BREAK  → flow in pausa                 │
+         │                         │  INTERRUPT_FAQ → flow in pausa               │
+         │                         │  AMBIGUOUS   → retry / escalate              │
          │                         └──────────────────────────────────────────────┘
-         │                                    │
-         │                   ┌────────────────┘
-         │                   ▼
-         │  ┌──────────────────────────────────────┐
-         │  │  FlowEngine.handleMessage()           │
-         │  │  (deterministico, 0 token LLM)        │
-         │  │  Output: responseText (già completo)  │
-         │  └──────────────────────────────────────┘
          │                   │
          │                   └──→ POST-PROCESSING → Risposta cliente
          │
@@ -453,79 +448,80 @@ History: "El ciclo no se ha completado correctamente por exceso de carga.
 ## 4. Gestione dello Stato — ChatSession.context
 
 ```typescript
+// Source: apps/backend/src/types/flow.types.ts
 interface ChatContext {
-  // Macchina assegnata
+  // Macchina assegnata (set dal router via DELEGATE_TO_FLOW)
   flowKey?: string              // "lavatrice_hs60xx" | "asciugatrice_ed340"
-  machineNumber?: string        // "42"
-  locale?: string               // "Goya" | "Pineda" | "L'Escala" | "Alemanya" | "Hortes"
+  flowNumber?: string           // "42" (alias di gatherState.machineNumber)
 
-  // Flow attivo (deterministico)
+  // Flow attivo (deterministico — PATH A)
   flowState?: {
     flowId: string              // "non_parte"
-    currentNodeId: string       // "non_parte.door_issue"
+    currentNodeId: string       // "entry.step_4"
     flowStatus: FlowStatus      // "ACTIVE" | "PAUSED" | "COMPLETED" | "ESCALATED"
-    interruptCount: number      // FAQ durante flow → conta
+    interruptCount: number      // messaggi ambigui durante flow → conta
+    lastInterruptType?: string
     lastValidStepAt: string     // ISO timestamp per TTL
   }
 
-  // Raccolta info (Router)
+  // Raccolta info accumulata durante PATH C (router gather phase)
+  // Salvata nel DB → persiste tra messaggi → LLM non chiede di nuovo info già note
   gatherState?: {
-    need: string                // "locale" | "machine_type" | "machine_number"
-    retryCount: number          // 0-1: normale | 2: semplifica | 3: ESCALATE
-    collected: {
-      locale?: string
-      machineType?: string      // "lavatrice" | "asciugatrice"
-      machineNumber?: string
-      problemDescription?: string
-    }
+    locale?: string             // "Goya" | "Pineda" | "L'Escala" | "Alemanya" | "Hortes"
+    machineType?: string        // "lavatrice" | "asciugatrice"
+    machineNumber?: string      // "42"
+    retryCount: number          // 0-2: normale | >= 3: ESCALATE automatico
   }
 }
 ```
 
+**Come funziona `gatherState`:**
+1. Il router raccoglie `locale`, `machineType`, `machineNumber` conversazionalmente
+2. Quando chiama `DELEGATE_TO_FLOW`, salva i dati in `gatherState`
+3. Al turno successivo, `FlowAgentLLM` inietta `gatherState` nel system prompt: `## ALREADY COLLECTED (do NOT ask again)`
+4. Se il router non riesce a raccogliere le info dopo 3 tentativi (`retryCount >= 3`), scala automaticamente a `contactOperator`
+5. `gatherState` viene cancellato al reset della sessione
+
 **Persistenza:** `ChatSession.context` (JSONB) — aggiornato dopo ogni messaggio dall'orchestratore.
+
+**Reset automatico della sessione** (`workspace.sessionResetTimeout`):
+- Configurabile in Settings → Session Reset Timeout (secondi). Default: 3600s (1 ora).
+- `0` = mai resettare automaticamente.
+- Al primo messaggio di ogni turno, `checkAndResetExpiredSession()` controlla il tempo dall'**ultima attività** (`escalatedAt` se presente, altrimenti `updatedAt` della sessione).
+- Se il timeout è scaduto: cancella `flowState`, `flowKey`, `flowNumber`, `gatherState` → cliente riparte da zero.
+- **Caso tipico**: cliente risolve un problema alle 10:00, torna il giorno dopo → sessione scaduta → router non ricorda la vecchia macchina → nuovo dialogo pulito.
 
 ---
 
 ## 5. Configurazione Database
 
-### AgentConfig — Router
+### FlowNodeConfig — Router (flowKey = "router")
+
+> ⚠️ Il FLOW workspace NON usa `AgentConfig`. Usa esclusivamente `FlowNodeConfig`. Il router è un `FlowNodeConfig` con `flowKey='router'`.
 
 | Campo | Valore |
 |---|---|
-| `type` | ROUTER |
-| `systemPrompt` | Regole di classificazione (corto, senza FAQ) |
+| `flowKey` | `"router"` |
+| `flowLabel` | Es. "Router - Asistente Ecolaundry" |
+| `systemPrompt` | Regole di routing, lista macchine, tono. Riceve variabili: `{{chatbotName}}`, `{{companyName}}`, `{{customerName}}`, `{{toneOfVoice}}`, `{{faqs}}` |
 | `model` | openai/gpt-4o-mini |
-| `temperature` | 0.1 (deterministico) |
-| `maxTokens` | 256 (output breve, solo JSON) |
-| `availableFunctions` | ["assignMachine", "startFlow", "contactOperator", "changeLanguage"] |
+| `temperature` | 0.1-0.3 |
+| `maxTokens` | 500 |
+| `availableFunctions` | `["lavatrice_hs60xx", "asciugatrice_ed340", "contactOperator", "changeLanguage"]` |
 
-### AgentConfig — History Agent
-
-| Campo | Valore |
-|---|---|
-| `type` | HISTORY |
-| `systemPrompt` | Regole di comunicazione, tono, saluto. Riceve variabili: {{faqs}}, {{toneOfVoice}}, {{chatbotName}}, {{machineSpecs}}, {{customerName}} |
-| `model` | openai/gpt-4o-mini |
-| `temperature` | 0.4 (più creativo per risposte naturali) |
-| `maxTokens` | 512 |
-| `availableFunctions` | [] (future: bookAppointment, checkPayment, etc.) |
-
-### FlowNodeConfig — Configurazione Macchina (NON è un LLM)
+### FlowNodeConfig — Sub-macchina (flowKey = macchina)
 
 | Campo | Uso |
 |---|---|
-| `flowKey` | Identificativo macchina (es. "lavatrice_hs60xx") |
+| `flowKey` | Identificativo macchina (es. `"lavatrice_hs60xx"`) |
 | `flowLabel` | Nome leggibile (es. "Lavatrice HS-60XX") |
-| `machineSpecs` | Specs tecniche: capacità, programmi, prezzi, note (testo passato a History Agent) |
-| `flows` | JSON dell'albero decisionale (letto da FlowEngine) |
-| `availableFunctions` | Per future integrazioni API esterne |
+| `systemPrompt` | **Prompt LLM completo**: knowledge base macchina, specs tecniche, prezzi, tono, regole business, scenari |
+| `model` | openai/gpt-4o-mini (personalizzabile per macchina) |
+| `temperature` | 0.3 |
+| `maxTokens` | 2048 |
+| `flows` | JSON dell'albero decisionale (letto da FlowEngine in PATH A) |
+| `availableFunctions` | `["startFlow", "contactOperator"]` |
 | `isActive` | on/off |
-
-**Campi RIMOSSI da FlowNodeConfig** (non servono più):
-- ~~systemPrompt~~ → rinominato in `machineSpecs` (non è un prompt LLM)
-- ~~model~~ → FlowEngine non chiama LLM
-- ~~temperature~~ → FlowEngine non chiama LLM
-- ~~maxTokens~~ → FlowEngine non chiama LLM
 
 ### FAQ — Tabella FAQ (invariata)
 
@@ -581,7 +577,7 @@ Le FAQ vengono caricate e passate a History Agent come variabile `{{faqs}}`.
 | Chi parla al cliente | Chiunque (Router, SubLLM, FlowEngine) | **Solo History Agent** |
 | FAQ | Nel prompt del Router | Nel prompt di **History Agent** via {{faqs}} |
 | Specs macchina | Nel systemPrompt del SubLLM | In `FlowNodeConfig.machineSpecs`, passate a **History Agent** |
-| Numero di LLM call | 1-2 variabile | **Sempre 2** (Router + History) |
+| Numero di LLM call | 1-2 variabile | **1 sola call** (`FlowAgentLLM` fa routing + risposta insieme) |
 | Flow durante FAQ | Interrotto o confuso | **Pausato**, History ricorda e chiede se riprendere |
 | Calling functions routing | Sparse su Router e SubLLM | **Solo su Router** |
 | Calling functions servizio | Sparse | **Solo su History Agent** (future) |
