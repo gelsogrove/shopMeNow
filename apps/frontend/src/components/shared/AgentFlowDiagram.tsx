@@ -684,6 +684,8 @@ export function AgentFlowDiagram({
   const [callingFunctionSheetOpen, setCallingFunctionSheetOpen] = useState(false)
   const [editingCallingFunction, setEditingCallingFunction] = useState<CallingFunctionSheetItem | null>(null)
   const [addPopoverOpen, setAddPopoverOpen] = useState(false)
+  const [deleteCallingFunctionName, setDeleteCallingFunctionName] = useState<string | null>(null)
+  const [isDeletingCallingFunction, setIsDeletingCallingFunction] = useState(false)
 
   // WhatsApp Queue panel state
   const [queuePanelOpen, setQueuePanelOpen] = useState(false)
@@ -921,6 +923,28 @@ export function AgentFlowDiagram({
     onFlowConfigSaved?.()
   }
 
+  // Handle delete calling function from Router's availableFunctions
+  const handleDeleteCallingFunction = async () => {
+    if (!deleteCallingFunctionName || !routerFlowConfig) return
+    setIsDeletingCallingFunction(true)
+    try {
+      const updatedFunctions = ((routerFlowConfig.availableFunctions as string[]) || []).filter(
+        (f) => f !== deleteCallingFunctionName
+      )
+      await flowConfigApi.update(workspaceId, routerFlowConfig.id, {
+        availableFunctions: updatedFunctions,
+      })
+      toast.success(`Removed "${deleteCallingFunctionName}" from Router`)
+      setDeleteCallingFunctionName(null)
+      onFlowConfigSaved?.()
+    } catch (error) {
+      logger.error("Error removing calling function:", error)
+      toast.error("Failed to remove calling function")
+    } finally {
+      setIsDeletingCallingFunction(false)
+    }
+  }
+
   // Handle flow config saved (create or update)
   // Backend FlowSyncService handles cascade: auto-create calling function + add to Router
   const handleFlowConfigSaved = async () => {
@@ -1032,9 +1056,9 @@ export function AgentFlowDiagram({
             metadata={isFlow ? {
               ...AGENT_METADATA.ROUTER,
               name: "Router",
-              gradientFrom: "from-indigo-500",
-              gradientTo: "to-indigo-700",
-              borderColor: "border-indigo-400",
+              gradientFrom: "from-violet-500",
+              gradientTo: "to-purple-600",
+              borderColor: "border-violet-400",
             } : getResolvedMeta(isEcommerce ? "ROUTER" : "INFO_AGENT")}
             displayName={
               isFlow
@@ -1233,15 +1257,28 @@ export function AgentFlowDiagram({
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <div
-                              onClick={() => handleCallingFunctionClick(funcName)}
-                              className="group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 h-[52px] transition-all duration-200 bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md border-amber-300 cursor-pointer hover:shadow-lg hover:scale-105"
-                            >
-                              <div className="p-1.5 rounded-lg bg-white/20">
-                                <FuncIcon className="h-4 w-4 text-white" />
+                            <div className="relative group/cfnode">
+                              <div
+                                onClick={() => handleCallingFunctionClick(funcName)}
+                                className="group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 h-[52px] transition-all duration-200 bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md border-amber-300 cursor-pointer hover:shadow-lg hover:scale-105"
+                              >
+                                <div className="p-1.5 rounded-lg bg-white/20">
+                                  <FuncIcon className="h-4 w-4 text-white" />
+                                </div>
+                                <span className="font-semibold text-xs">{funcMeta.name}</span>
+                                <Edit3 className="h-3 w-3 text-white opacity-50 group-hover:opacity-100 transition-opacity ml-1" />
                               </div>
-                              <span className="font-semibold text-xs">{funcMeta.name}</span>
-                              <Edit3 className="h-3 w-3 text-white opacity-50 group-hover:opacity-100 transition-opacity ml-1" />
+                              {/* Delete button — appears on hover */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDeleteCallingFunctionName(funcName)
+                                }}
+                                className="absolute -top-2 -right-2 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover/cfnode:opacity-100 transition-opacity shadow-md hover:bg-red-600 z-10"
+                                title="Remove from Router"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
                             </div>
                           </TooltipTrigger>
                           <TooltipContent side="bottom" className="max-w-xs p-3">
@@ -1926,6 +1963,41 @@ export function AgentFlowDiagram({
                 </>
               ) : (
                 "Reset to Defaults"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Calling Function Confirmation Dialog */}
+      <AlertDialog open={!!deleteCallingFunctionName} onOpenChange={(open) => !open && setDeleteCallingFunctionName(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Remove Calling Function?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                This will remove <strong>{deleteCallingFunctionName}</strong> from the Router&apos;s available functions.
+              </p>
+              <p className="text-red-600 font-medium">This action cannot be undone.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingCallingFunction}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCallingFunction}
+              disabled={isDeletingCallingFunction}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeletingCallingFunction ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Removing...
+                </>
+              ) : (
+                "Remove"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
