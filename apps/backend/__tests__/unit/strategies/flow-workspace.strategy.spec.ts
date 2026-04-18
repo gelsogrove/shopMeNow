@@ -528,6 +528,116 @@ describe("FlowWorkspaceStrategy", () => {
     })
 
     // ───────────────────────────────────────────────────────────────────────
+    // T10: PAUSED flow → resumed as ACTIVE and routed to FlowEngine (Fix 2)
+    // ───────────────────────────────────────────────────────────────────────
+    // SCENARIO: Customer sent "OK, più tardi" → SOFT_BREAK → flowStatus=PAUSED
+    //           Next message should resume the flow (not fall to FlowAgentLLM)
+    // RULE: PAUSED status is reset to ACTIVE before PATH A check
+    it("flowState PAUSED → resumed to ACTIVE and routed to FlowEngine", async () => {
+      const prisma = createPrismaMock({
+        chatSession: {
+          findFirst: jest.fn().mockResolvedValue({
+            id: "session-1",
+            context: {
+              flowKey: "lavatrice_hs60xx",
+              flowState: {
+                flowId: "non_parte",
+                flowStatus: "PAUSED",
+                currentNodeId: "non_parte.step_0",
+                interruptCount: 0,
+              },
+            },
+            escalatedAt: null,
+            updatedAt: new Date(),
+          }),
+          update: jest.fn().mockResolvedValue({}),
+        },
+      })
+      const strategy = new FlowWorkspaceStrategy(prisma)
+      const workspace = createFlowWorkspace()
+      const context = createContext({ message: "ok riprendo" })
+
+      mockFindByFlowKey.mockResolvedValue(MOCK_FLOW_CONFIG)
+      mockHandleMessage.mockReturnValue({
+        responseText: "What do you see on the display?",
+        nextNodeId: "non_parte.step_0",
+        flowStatus: "ACTIVE",
+        shouldCallOperator: false,
+      })
+
+      await strategy.route(context, workspace)
+
+      // ASSERT: FlowEngine used (PAUSED → ACTIVE → PATH A)
+      expect(mockHandleMessage).toHaveBeenCalled()
+      // ASSERT: FlowAgentLLM NOT used (would be PATH B for non-active flows)
+      expect(mockHandleQuery).not.toHaveBeenCalled()
+    })
+
+    // ───────────────────────────────────────────────────────────────────────
+    // T11: INTERRUPT_FAQ → FlowAgentLLM answers FAQ, resume prompt appended (Fix 3)
+    // ───────────────────────────────────────────────────────────────────────
+    // SCENARIO: Customer is mid-flow but asks off-topic FAQ question
+    // RULE: isFaqInterrupt=true → FlowAgentLLM answers FAQ, then onInterruptFallback
+    //       is appended so the flow continues
+    it("INTERRUPT_FAQ → FlowAgentLLM answers FAQ then appends resume prompt", async () => {
+      const prisma = createPrismaMock({
+        chatSession: {
+          findFirst: jest.fn().mockResolvedValue({
+            id: "session-1",
+            context: {
+              flowKey: "lavatrice_hs60xx",
+              flowState: {
+                flowId: "non_parte",
+                flowStatus: "ACTIVE",
+                currentNodeId: "non_parte.step_0",
+                interruptCount: 0,
+              },
+            },
+            escalatedAt: null,
+            updatedAt: new Date(),
+          }),
+          update: jest.fn().mockResolvedValue({}),
+        },
+      })
+      const strategy = new FlowWorkspaceStrategy(prisma)
+      const workspace = createFlowWorkspace()
+      const context = createContext({ message: "quanto costa una lavatrice?" })
+
+      mockFindByFlowKey.mockResolvedValue(MOCK_FLOW_CONFIG)
+
+      // FlowEngine detects FAQ interrupt
+      mockHandleMessage.mockReturnValue({
+        responseText: "To continue: what do you see on display?",
+        nextNodeId: "non_parte.step_0",
+        flowStatus: "ACTIVE",
+        shouldCallOperator: false,
+        isFaqInterrupt: true,
+      })
+
+      // FlowAgentLLM answers the FAQ
+      mockHandleQuery.mockResolvedValue({
+        success: true,
+        output: "Le lavatrici costano tra €3-5 per lavaggio.",
+        chatContext: { flowKey: "lavatrice_hs60xx" },
+        tokensUsed: 80,
+        executionTimeMs: 400,
+        functionCalls: [],
+        shouldCallOperator: false,
+      })
+
+      const result = await strategy.route(context, workspace)
+
+      // ASSERT: FlowAgentLLM was called for FAQ answer
+      expect(mockHandleQuery).toHaveBeenCalled()
+      // ASSERT: Final response contains BOTH FAQ answer AND resume prompt
+      expect(mockTranslationProcess).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining("Le lavatrici costano"),
+        })
+      )
+    })
+
+    // ───────────────────────────────────────────────────────────────────────
     // T9: No flowKey → calls Router FlowAgentLLM (PATH C)
     // ───────────────────────────────────────────────────────────────────────
     // SCENARIO: Customer writes to FLOW workspace without any assigned machine

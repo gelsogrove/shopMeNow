@@ -94,13 +94,13 @@ export class FlowEngineService {
         };
       }
 
-      // Return FAQ signal — FlowWorkspaceStrategy will pass to FlowAgentLLM for FAQ answer,
-      // then append node.onInterruptFallback to resume the flow
+      // Signal to strategy: answer FAQ via FlowAgentLLM, then append resumePrompt
       return {
         responseText: node.onInterruptFallback ?? node.prompt,
         nextNodeId: state.currentNodeId,
         flowStatus: "ACTIVE",
         shouldCallOperator: false,
+        isFaqInterrupt: true,
       };
     }
 

@@ -242,6 +242,12 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         }
       }
 
+      // ─── FIX 2: Resume PAUSED flow on next user message ─────────────────
+      if (chatContext.flowState?.flowStatus === "PAUSED" && chatContext.flowKey) {
+        logger.info("▶️ FlowWorkspaceStrategy - Resuming PAUSED flow → back to ACTIVE")
+        chatContext.flowState.flowStatus = "ACTIVE"
+      }
+
       // ─── PATH A: Active flowState → FlowEngineService (deterministic) ──
       if (chatContext.flowState?.flowStatus === "ACTIVE" && chatContext.flowKey) {
         logger.info("⚙️ FlowWorkspaceStrategy - Active flow → FlowEngineService", {
@@ -261,9 +267,43 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         const engine = new FlowEngineService(flows)
         const result = engine.handleMessage(context.message, chatContext)
 
-        responseText = result.responseText
-        chatContext = { ...chatContext } // flowState updated in-place by engine
         shouldCallOperator = result.shouldCallOperator
+
+        // ─── Substitute {{customerName}} in static node prompts ─────────────
+        // FlowEngine returns raw node.prompt — must replace manually (no LLM here)
+        const nameToken = customerData.name || ""
+        responseText = result.responseText.replace(/\{\{customerName\}\}/g, nameToken)
+
+        // ─── FIX 3: INTERRUPT_FAQ → answer via FlowAgentLLM, then append resume prompt ──
+        if (result.isFaqInterrupt && chatContext.flowKey) {
+          logger.info("🟣 FlowWorkspaceStrategy - INTERRUPT_FAQ: answering FAQ via FlowAgentLLM")
+          try {
+            const faqAgent = new FlowAgentLLM(this.prisma)
+            const faqResult = await faqAgent.handleQuery({
+              workspaceId: context.workspaceId,
+              customerId: context.customerId,
+              conversationId: context.conversationId || "",
+              flowKey: chatContext.flowKey,
+              message: context.message,
+              chatContext,
+              customerName: context.customerName || customerData.name,
+              customerLanguage: context.customerLanguage || customerData.language || "en",
+              customerPhone: customerData.phone || undefined,
+            })
+            // Combine: FAQ answer + resume prompt (onInterruptFallback)
+            responseText = faqResult.output
+              ? `${faqResult.output}\n\n${result.responseText}`
+              : result.responseText
+            tokensUsed += faqResult.tokensUsed
+          } catch (faqErr: any) {
+            logger.warn("⚠️ FlowWorkspaceStrategy - FAQ answer failed, using fallback:", faqErr.message)
+            responseText = result.responseText
+          }
+        } else {
+          responseText = result.responseText
+        }
+
+        chatContext = { ...chatContext } // flowState updated in-place by engine
 
         debugSteps.push({
           type: "flow-engine",
