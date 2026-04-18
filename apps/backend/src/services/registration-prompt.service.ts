@@ -58,7 +58,7 @@ export class RegistrationPromptService {
 
   /**
    * @deprecated Chat is never blocked — this always returns false.
-   * Kept for backward compatibility; callers should be removed.
+   * Kept for backward compatibility and test contracts.
    */
   shouldBlockUser(_messageCount: number, _isRegistered: boolean): boolean {
     return false

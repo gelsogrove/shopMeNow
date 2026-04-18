@@ -598,6 +598,7 @@ export class WhatsAppWebhookController {
             name: true,
             welcomeMessage: true,
             defaultLanguage: true, // 🌍 Language fallback
+            needRegistration: true, // 🔧 Controls whether registration is required
           },
         },
       } as const
@@ -688,6 +689,7 @@ export class WhatsAppWebhookController {
             wipMessage: true,
             debugMode: true,
             channelStatus: true,
+            needRegistration: true, // 🔧 Controls whether registration is required
             ownerId: true,
             owner: {
               select: { status: true },
@@ -1014,39 +1016,46 @@ export class WhatsAppWebhookController {
           finalLanguage,
         })
 
-        // Generate registration link with secure token
-        const secureTokenService = new SecureTokenService()
-        const urlShortenerService = new UrlShortenerService()
+        // 🔧 Generate registration link ONLY if workspace requires registration
+        let registrationLink = ""
+        let registrationTexts: any = { link: "", validity: "" }
 
-        // Create secure token for registration (24 hours validity)
-        const registrationToken = await secureTokenService.createToken(
-          "registration",
-          workspaceId,
-          { phoneNumber, language: finalLanguage },
-          "24h",
-          undefined, // userId - not yet created
-          phoneNumber,
-          undefined, // ipAddress
-          undefined // customerId - not yet created (registration)
-        )
+        if (workspace.needRegistration !== false) {
+          const secureTokenService = new SecureTokenService()
+          const urlShortenerService = new UrlShortenerService()
 
-        // Get workspace URL and custom registration page (if configured)
-        const { url: workspaceUrl, registrationPage } =
-          await workspaceService.getWorkspaceURLWithRegistration(workspaceId)
+          // Create secure token for registration (24 hours validity)
+          const registrationToken = await secureTokenService.createToken(
+            "registration",
+            workspaceId,
+            { phoneNumber, language: finalLanguage },
+            "24h",
+            undefined, // userId - not yet created
+            phoneNumber,
+            undefined, // ipAddress
+            undefined // customerId - not yet created (registration)
+          )
 
-        // Use centralized link generator service for registration link
-        const { LinkGeneratorService } = require("../../../application/services/link-generator.service")
-        const linkGeneratorService = new LinkGeneratorService()
-        const registrationLink = await linkGeneratorService.generateRegistrationLink(
-          registrationToken,
-          workspaceUrl,
-          workspaceId,
-          registrationPage, // Pass custom registration page if configured
-          finalLanguage // 🌍 Pass customer language for registration page i18n
-        )
+          // Get workspace URL and custom registration page (if configured)
+          const { url: workspaceUrl, registrationPage } =
+            await workspaceService.getWorkspaceURLWithRegistration(workspaceId)
 
-        // Get localized registration texts
-        const registrationTexts = getRegistrationText(finalLanguage)
+          // Use centralized link generator service for registration link
+          const { LinkGeneratorService } = require("../../../application/services/link-generator.service")
+          const linkGeneratorService = new LinkGeneratorService()
+          registrationLink = await linkGeneratorService.generateRegistrationLink(
+            registrationToken,
+            workspaceUrl,
+            workspaceId,
+            registrationPage, // Pass custom registration page if configured
+            finalLanguage // 🌍 Pass customer language for registration page i18n
+          )
+
+          // Get localized registration texts
+          registrationTexts = getRegistrationText(finalLanguage)
+        } else {
+          logger.info("[WEBHOOK] 📋 needRegistration=false — skipping registration link for new customer", { workspaceId })
+        }
 
         // 🆕 Process variables in welcome message BEFORE using it
         const { PromptVariableBuilder } = require("../../../application/services/prompt-variable-builder.service")
@@ -1068,8 +1077,11 @@ export class WhatsAppWebhookController {
         let rawWelcomeMessage: string
         
         if (hasRegistrationToken && registrationLink) {
-          // Template has [LINK_REGISTRATION] → replace inline, no footer
+          // Template has [LINK_REGISTRATION] AND we have a link → replace inline, no footer
           rawWelcomeMessage = welcomeMessage.replace(/\[LINK_REGISTRATION\]/g, registrationLink)
+        } else if (hasRegistrationToken && !registrationLink) {
+          // Template has [LINK_REGISTRATION] but no link (needRegistration=false) → remove placeholder
+          rawWelcomeMessage = welcomeMessage.replace(/\[LINK_REGISTRATION\]/g, "").replace(/\n{3,}/g, "\n\n").trim()
         } else if (registrationLink) {
           // Template does NOT have [LINK_REGISTRATION] → append footer
           rawWelcomeMessage = `${welcomeMessage}\n\n${registrationTexts.link}: ${registrationLink}\n${registrationTexts.validity}`
@@ -1174,7 +1186,7 @@ export class WhatsAppWebhookController {
               name: contactName || "New Customer", // Temporary name
               email: `temp_${phoneForStorage.replace(/[^0-9]/g, "")}@pending.com`, // Temporary email (required field)
               language: finalLanguage,
-              isActive: false, // Mark as inactive until registration complete
+              isActive: workspace.needRegistration === false ? true : false, // Active immediately if registration not required
             },
           })
           
@@ -1402,6 +1414,7 @@ export class WhatsAppWebhookController {
             name: true,
             welcomeMessage: true,
             defaultLanguage: true,
+            needRegistration: true, // 🔧 Controls whether registration is required
             ownerId: true,
             owner: {
               select: { status: true },
@@ -1450,8 +1463,8 @@ export class WhatsAppWebhookController {
         let registrationLink = ""
         let registrationTexts: any = { link: "", validity: "" }
 
-        if (!customer.isActive) {
-          // Customer exists but not registered → generate link
+        if (!customer.isActive && workspace.needRegistration !== false) {
+          // Customer exists but not registered AND workspace requires registration → generate link
           const secureTokenService = new SecureTokenService()
           const urlShortenerService = new UrlShortenerService()
 
@@ -1483,6 +1496,11 @@ export class WhatsAppWebhookController {
             )
 
           registrationTexts = getRegistrationText(finalLanguage)
+        } else if (!customer.isActive && workspace.needRegistration === false) {
+          logger.info("[WEBHOOK] 📋 needRegistration=false — skipping registration link for existing customer", {
+            customerId: customer.id,
+            workspaceId: customer.workspaceId,
+          })
         }
 
         // ✅ STEP 5: Process welcome message template
@@ -1505,8 +1523,11 @@ export class WhatsAppWebhookController {
         let rawWelcomeMessage: string
         
         if (hasRegistrationToken && registrationLink) {
-          // Template has [LINK_REGISTRATION] → replace inline, no footer
+          // Template has [LINK_REGISTRATION] AND we have a link → replace inline, no footer
           rawWelcomeMessage = welcomeMessage.replace(/\[LINK_REGISTRATION\]/g, registrationLink)
+        } else if (hasRegistrationToken && !registrationLink) {
+          // Template has [LINK_REGISTRATION] but no link (needRegistration=false) → remove placeholder
+          rawWelcomeMessage = welcomeMessage.replace(/\[LINK_REGISTRATION\]/g, "").replace(/\n{3,}/g, "\n\n").trim()
         } else if (!customer.isActive && registrationLink) {
           // Template does NOT have [LINK_REGISTRATION] → append footer
           rawWelcomeMessage = `${welcomeMessage}\n\n${registrationTexts.link}: ${registrationLink}\n${registrationTexts.validity}`
@@ -2337,10 +2358,13 @@ export class WhatsAppWebhookController {
       }
 
       // 📊 REGISTRATION PROMPT: Calculate level for unregistered users
-      const registrationPromptLevel = registrationPromptService.getPromptLevel(
-        messageCount,
-        customer.isActive // isActive = registered in DB schema
-      )
+      // If workspace does not require registration, always use level 0 (no nudge)
+      const registrationPromptLevel = customer.workspace?.needRegistration === false
+        ? 0
+        : registrationPromptService.getPromptLevel(
+          messageCount,
+          customer.isActive // isActive = registered in DB schema
+        )
 
       logger.info("[WEBHOOK] 📊 Registration prompt level", {
         customerId: customer.id,
@@ -2348,28 +2372,6 @@ export class WhatsAppWebhookController {
         isRegistered: customer.isActive,
         promptLevel: registrationPromptLevel,
       })
-
-      // ⛔ BLOCK: If user sent 15+ messages without registering
-      if (registrationPromptService.shouldBlockUser(messageCount, customer.isActive)) {
-        logger.warn("[WEBHOOK] ⛔ Blocking unregistered user (15+ messages)", {
-          customerId: customer.id,
-          messageCount,
-        })
-
-        await prisma.customers.update({
-          where: { id: customer.id },
-          data: {
-            isBlacklisted: true, // 🚨 TEMP: Using isBlacklisted until migration adds isBlocked
-          },
-        })
-
-        res.status(200).json({
-          status: "blocked",
-          code: "MAX_MESSAGES_UNREGISTERED",
-          message: "Account blocked. Please register to continue chatting.",
-        })
-        return
-      }
 
       // 🤖 Process with ChatEngineService (CODE decides, LLM formats)
       logger.info("[WEBHOOK] 🎯 Calling ChatEngineService", {
