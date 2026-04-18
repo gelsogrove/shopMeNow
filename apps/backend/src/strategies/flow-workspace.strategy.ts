@@ -206,6 +206,23 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
       const debugSteps: any[] = []
       const functionCalls: any[] = []
 
+      // ─── PATH 0: Flow already ESCALATED → operator handling active, ignore new messages ──
+      if (chatContext.flowState?.flowStatus === "ESCALATED") {
+        logger.info("⚠️ FlowWorkspaceStrategy - Flow already ESCALATED, operator handling active")
+        const escalatedMsg = workspace.humanSupportInstructions
+          ? workspace.humanSupportInstructions
+              .replace("{{nameUser}}", customerData.name || "")
+              .replace("{{agentEmail}}", workspace.operatorEmail || "")
+          : "An operator will assist you shortly. Please wait."
+        return {
+          response: escalatedMsg,
+          agentType: "OPERATOR" as AgentType,
+          debugSteps: [],
+          totalTokens: 0,
+          conversationId: context.conversationId,
+        }
+      }
+
       // ─── PATH A: Active flowState → FlowEngineService (deterministic) ──
       if (chatContext.flowState?.flowStatus === "ACTIVE" && chatContext.flowKey) {
         logger.info("⚙️ FlowWorkspaceStrategy - Active flow → FlowEngineService", {
