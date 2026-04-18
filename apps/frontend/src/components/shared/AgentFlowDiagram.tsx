@@ -1161,27 +1161,11 @@ export function AgentFlowDiagram({
           <span className="font-medium">Response to Customer</span>
         </div>
 
-        <ConnectorArrow />
-
-        {/* Recharge block */}
-        <div className="flex items-start gap-3 px-5 py-3 bg-gradient-to-r from-orange-400 to-amber-500 text-white rounded-xl shadow-md max-w-xs text-left">
-          <div className="mt-0.5 shrink-0 p-1.5 bg-white/20 rounded-lg">
-            <Zap className="h-4 w-4" />
-          </div>
-          <div>
-            <span className="font-semibold text-sm block">Recharge</span>
-            <span className="text-[11px] text-orange-100 leading-tight block">
-              After delivery, the system recharges: session state is persisted, customer context is updated, and the pipeline is ready for the next message.
-            </span>
-          </div>
-        </div>
         
       </div>
 
       {/* Legend */}
       <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-600">
-        <span>Click to edit</span>
-        {isFlow && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" /> Active</span>}
         {isFlow && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-400 inline-block" /> Inactive</span>}
         {!isFlow && <span>E-commerce only</span>}
       </div>
