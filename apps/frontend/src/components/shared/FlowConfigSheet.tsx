@@ -145,6 +145,7 @@ interface FlowConfigSheetProps {
   workspaceId: string
   config?: FlowConfig | null
   onSaved: () => void
+  enableWelcomeMessage?: boolean
 }
 
 export function FlowConfigSheet({
@@ -153,6 +154,7 @@ export function FlowConfigSheet({
   workspaceId,
   config,
   onSaved,
+  enableWelcomeMessage = true,
 }: FlowConfigSheetProps) {
   const isEdit = !!config
 
@@ -549,7 +551,8 @@ export function FlowConfigSheet({
                     {/* Filter out DELEGATE_TO_AGENT functions that point TO this very flowKey — would cause an infinite loop */}
                     {/* Sorted: Agents first, then Calling Functions / Webhooks */}
                     {allFunctions.filter(fn =>
-                      !(fn.executionType === "DELEGATE_TO_AGENT" && fn.attachedFlowKey === config?.flowKey)
+                      !(fn.executionType === "DELEGATE_TO_AGENT" && fn.attachedFlowKey === config?.flowKey) &&
+                      !(fn.attachedLlm === "PROFILE_MANAGEMENT" && !enableWelcomeMessage)
                     ).sort((a, b) => {
                       const rank = (fn: CallingFunction) => fn.executionType === "DELEGATE_TO_AGENT" ? 0 : 1
                       return rank(a) - rank(b) || a.functionName.localeCompare(b.functionName)
