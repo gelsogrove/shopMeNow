@@ -291,6 +291,7 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
           customerId: context.customerId,
         })
 
+
         const routerConfig = await this.flowNodeConfigRepo.findByFlowKey(
           context.workspaceId,
           "router"

@@ -460,9 +460,9 @@ function AgentNode({
   const name = displayName || metadata.name
   
   const sizeClasses = {
-    small: { box: "px-3 py-2", icon: "h-4 w-4", text: "text-xs" },
-    normal: { box: "px-4 py-3", icon: "h-5 w-5", text: "text-sm" },
-    large: { box: "px-6 py-4", icon: "h-6 w-6", text: "text-base" },
+    small: { box: "px-3 py-2 h-[44px]", icon: "h-4 w-4", text: "text-xs" },
+    normal: { box: "px-4 py-3 h-[52px]", icon: "h-5 w-5", text: "text-sm" },
+    large: { box: "px-6 py-4 h-[56px]", icon: "h-6 w-6", text: "text-base" },
   }
   
   const classes = sizeClasses[size]
@@ -1015,7 +1015,7 @@ export function AgentFlowDiagram({
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90%] h-0.5 bg-gradient-to-r from-transparent via-violet-300 to-transparent" />
               
               {/* Flow config nodes + Agent nodes + Calling functions + Add button */}
-              <div className="flex items-start justify-center gap-3 pt-6 flex-wrap">
+              <div className="flex items-end justify-center gap-3 pt-6 flex-wrap">
                 {/* Sub-LLMs (flowConfigs) */}
                 {machineFlowConfigs.map((fc) => (
                   <div key={fc.id} className="flex flex-col items-center">
@@ -1026,7 +1026,7 @@ export function AgentFlowDiagram({
                           <button
                             onClick={() => handleFlowNodeClick(fc)}
                             className={cn(
-                              "group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 transition-all duration-200",
+                              "group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 h-[52px] transition-all duration-200",
                               fc.isActive
                                 ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer border-violet-400"
                                 : "bg-gray-100 text-gray-400 border-gray-200 cursor-pointer opacity-60 hover:opacity-80"
@@ -1079,7 +1079,7 @@ export function AgentFlowDiagram({
                         isEditable={true}
                         isActive={true}
                         onClick={() => handleAgentClick(agentType)}
-                        size="small"
+                        size="normal"
                       />
                     </div>
                   )
@@ -1097,10 +1097,10 @@ export function AgentFlowDiagram({
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div
-                              className="group relative flex items-center gap-2.5 rounded-xl border-2 px-3 py-2 transition-all duration-200 bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md border-amber-300"
+                              className="group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 h-[52px] transition-all duration-200 bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md border-amber-300"
                             >
-                              <div className="p-1 rounded-lg bg-white/20">
-                                <FuncIcon className="h-3.5 w-3.5 text-white" />
+                              <div className="p-1.5 rounded-lg bg-white/20">
+                                <FuncIcon className="h-4 w-4 text-white" />
                               </div>
                               <span className="font-semibold text-xs">{funcMeta.name}</span>
                             </div>
@@ -1126,7 +1126,7 @@ export function AgentFlowDiagram({
                   <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
                   <button
                     onClick={handleAddFlowConfig}
-                    className="flex items-center gap-2 rounded-xl border-2 border-dashed border-violet-300 px-4 py-3 text-violet-500 hover:bg-violet-50 hover:border-violet-400 hover:text-violet-600 transition-all duration-200 cursor-pointer"
+                    className="flex items-center gap-2 rounded-xl border-2 border-dashed border-violet-300 px-4 py-3 h-[52px] text-violet-500 hover:bg-violet-50 hover:border-violet-400 hover:text-violet-600 transition-all duration-200 cursor-pointer"
                   >
                     <div className="p-1 rounded-lg bg-violet-100">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -1159,7 +1159,7 @@ export function AgentFlowDiagram({
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[90%] h-0.5 bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
                 
                 {/* Agent boxes - DYNAMIC from Router's availableFunctions */}
-                <div className="flex items-start justify-center gap-2 pt-6 flex-wrap">
+                <div className="flex items-end justify-center gap-2 pt-6 flex-wrap">
                   {routerFunctions.map((funcName) => {
                     // Skip RESET_ACTIVE_AGENT (internal function)
                     if (funcName === 'RESET_ACTIVE_AGENT') return null
@@ -1181,7 +1181,7 @@ export function AgentFlowDiagram({
                             isEditable={true}
                             isActive={true}
                             onClick={() => handleAgentClick(agentType)}
-                            size="small"
+                            size="normal"
                           />
                         </div>
                       )
@@ -1197,10 +1197,10 @@ export function AgentFlowDiagram({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div
-                                  className="group relative flex items-center gap-2.5 rounded-xl border-2 px-3 py-2 transition-all duration-200 bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md border-amber-300"
+                                  className="group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 h-[52px] transition-all duration-200 bg-gradient-to-r from-amber-400 to-yellow-500 text-white shadow-md border-amber-300"
                                 >
-                                  <div className="p-1 rounded-lg bg-white/20">
-                                    <FuncIcon className="h-3.5 w-3.5 text-white" />
+                                  <div className="p-1.5 rounded-lg bg-white/20">
+                                    <FuncIcon className="h-4 w-4 text-white" />
                                   </div>
                                   <span className="font-semibold text-xs">{funcMeta.name}</span>
                                 </div>
