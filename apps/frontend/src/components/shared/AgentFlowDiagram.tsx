@@ -950,8 +950,10 @@ export function AgentFlowDiagram({
         {/* FLOW Sub-LLMs Branch (machine configs only — excludes flowKey="router"). Branches directly from Router. */}
         {isFlow && (() => {
           const machineFlowConfigs = flowConfigs.filter(fc => fc.flowKey !== 'router')
-          const routerAgent = getAgent("ROUTER")
-          const routerFunctions = routerAgent?.availableFunctions || []
+          
+          // In FLOW mode, read availableFunctions from Router FlowNodeConfig, not AgentConfig
+          const routerFlowConfig = flowConfigs.find(fc => fc.flowKey === 'router')
+          const routerFunctions = (routerFlowConfig?.availableFunctions as string[]) || []
           
           // Get flowKeys to exclude them from calling functions
           const flowKeys = flowConfigs.map(fc => fc.flowKey)

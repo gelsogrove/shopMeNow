@@ -30,6 +30,7 @@ import { LinkReplacementService } from "../application/services/link-replacement
 import { TranslationAgent } from "../application/agents/TranslationAgent"
 import { SecurityAgent, type SecurityResult } from "../application/agents/SecurityAgent"
 import { ConversationHistoryLayer } from "../application/layers/ConversationHistoryLayer"
+import { ConversationManager } from "../services/conversation-manager.service"
 import { contactOperator } from "../domain/calling-functions/contactOperator"
 import { CustomerSupportAgentLLM } from "../application/agents/CustomerSupportAgentLLM"
 import { ProfileManagementAgentLLM } from "../application/agents/ProfileManagementAgentLLM"
@@ -43,6 +44,7 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
   private translationAgent: TranslationAgent
   private securityAgent: SecurityAgent
   private flowNodeConfigRepo: FlowNodeConfigRepository
+  private conversationManager: ConversationManager
 
   constructor(private prisma: PrismaClient) {
     this.linkReplacementService = new LinkReplacementService()
@@ -50,6 +52,7 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
     this.translationAgent = new TranslationAgent(prisma)
     this.securityAgent = new SecurityAgent(prisma)
     this.flowNodeConfigRepo = new FlowNodeConfigRepository(prisma)
+    this.conversationManager = new ConversationManager(prisma)
   }
 
   /**
@@ -596,6 +599,21 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
           blocked: !securityResult.safe,
           blockedReason: securityResult.blockedReason,
         })
+      }
+
+      // ─── STEP: Save conversation history ───────────────────────────────
+      if (context.conversationId) {
+        try {
+          await this.conversationManager.saveUserAndAssistantAtomic({
+            workspaceId: context.workspaceId,
+            customerId: context.customerId,
+            conversationId: context.conversationId,
+            userContent: context.message,
+            assistantContent: finalResponse,
+          })
+        } catch (saveError: any) {
+          logger.warn("⚠️ FlowWorkspaceStrategy - Failed to save history:", saveError.message)
+        }
       }
 
       return {
