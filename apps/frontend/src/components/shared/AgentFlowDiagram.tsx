@@ -38,6 +38,7 @@ import {
   Star,
   Wrench,
   DollarSign,
+  Trash2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -92,7 +93,8 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "@/lib/toast"
 import { logger } from "@/lib/logger"
 import { api } from "@/services/api"
-import type { FlowConfig } from "@/services/flowConfigApi"
+import { flowConfigApi, type FlowConfig } from "@/services/flowConfigApi"
+import { callingFunctionsApi } from "@/services/callingFunctionApi"
 
 // Types
 interface AgentConfig {
@@ -665,6 +667,8 @@ export function AgentFlowDiagram({
   // FLOW workspace state
   const [flowSheetOpen, setFlowSheetOpen] = useState(false)
   const [selectedFlowConfig, setSelectedFlowConfig] = useState<FlowConfig | null>(null)
+  const [deleteFlowConfig, setDeleteFlowConfig] = useState<FlowConfig | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // WhatsApp Queue panel state
   const [queuePanelOpen, setQueuePanelOpen] = useState(false)
@@ -870,9 +874,110 @@ export function AgentFlowDiagram({
     setFlowSheetOpen(true)
   }
 
-  // Handle flow config saved (create or update)
-  const handleFlowConfigSaved = () => {
+  // Handle flow config saved (create or update) — also create/sync calling function for Router
+  const handleFlowConfigSaved = async () => {
+    // Refresh flow configs in parent
     onFlowConfigSaved?.()
+    
+    // After creation, ensure a DELEGATE_TO_AGENT calling function exists for the new Sub-LLM
+    // so the Router can dispatch to it
+    try {
+      const existingFunctions = await callingFunctionsApi.list(workspaceId)
+      
+      // Get latest flow configs to find any new ones
+      const latestFlowConfigs = await flowConfigApi.getAllForWorkspace(workspaceId)
+      const machineConfigs = latestFlowConfigs.filter((fc) => fc.flowKey !== "router")
+      
+      for (const fc of machineConfigs) {
+        // Check if a calling function with attachedFlowKey already exists for this flow
+        const hasFunction = existingFunctions.some(
+          (fn) => fn.executionType === "DELEGATE_TO_AGENT" && fn.attachedFlowKey === fc.flowKey
+        )
+        if (!hasFunction) {
+          // Auto-create the calling function
+          const functionName = fc.flowKey.replace(/[^a-zA-Z0-9]/g, '_') + 'Agent'
+          await callingFunctionsApi.create(workspaceId, {
+            functionName,
+            description: `Delegate to Sub-LLM: ${fc.flowLabel}. Use when the customer needs help with ${fc.flowLabel}.`,
+            executionType: "DELEGATE_TO_AGENT",
+            attachedFlowKey: fc.flowKey,
+            isActive: true,
+            isSystemFunction: false,
+            parameters: {},
+          })
+          logger.info(`Auto-created calling function ${functionName} for flow ${fc.flowKey}`)
+          
+          // Add the new function to Router's availableFunctions
+          const routerConfig = latestFlowConfigs.find((c) => c.flowKey === "router")
+          if (routerConfig) {
+            const currentFunctions = Array.isArray(routerConfig.availableFunctions) 
+              ? routerConfig.availableFunctions as string[]
+              : []
+            if (!currentFunctions.includes(functionName)) {
+              await flowConfigApi.update(workspaceId, routerConfig.id, {
+                availableFunctions: [...currentFunctions, functionName],
+              })
+              logger.info(`Added ${functionName} to Router's availableFunctions`)
+            }
+          }
+        }
+      }
+      
+      // Re-refresh after auto-creation
+      onFlowConfigSaved?.()
+    } catch (error) {
+      logger.error("Error auto-creating calling function for Sub-LLM:", error)
+    }
+  }
+
+  // Handle delete flow config — also removes associated calling function
+  const handleDeleteFlowConfig = async () => {
+    if (!deleteFlowConfig) return
+    
+    setIsDeleting(true)
+    try {
+      const flowKey = deleteFlowConfig.flowKey
+      
+      // 1. Find and delete associated DELEGATE_TO_AGENT calling function
+      const existingFunctions = await callingFunctionsApi.list(workspaceId)
+      const associatedFunction = existingFunctions.find(
+        (fn) => fn.executionType === "DELEGATE_TO_AGENT" && fn.attachedFlowKey === flowKey
+      )
+      
+      if (associatedFunction) {
+        // Remove from Router's availableFunctions first
+        const latestFlowConfigs = await flowConfigApi.getAllForWorkspace(workspaceId)
+        const routerConfig = latestFlowConfigs.find((c) => c.flowKey === "router")
+        if (routerConfig) {
+          const currentFunctions = Array.isArray(routerConfig.availableFunctions)
+            ? routerConfig.availableFunctions as string[]
+            : []
+          const updatedFunctions = currentFunctions.filter((f) => f !== associatedFunction.functionName)
+          if (updatedFunctions.length !== currentFunctions.length) {
+            await flowConfigApi.update(workspaceId, routerConfig.id, {
+              availableFunctions: updatedFunctions,
+            })
+            logger.info(`Removed ${associatedFunction.functionName} from Router's availableFunctions`)
+          }
+        }
+        
+        // Delete the calling function
+        await callingFunctionsApi.delete(workspaceId, associatedFunction.functionName)
+        logger.info(`Deleted calling function ${associatedFunction.functionName}`)
+      }
+      
+      // 2. Delete the flow config itself
+      await flowConfigApi.remove(workspaceId, deleteFlowConfig.id)
+      
+      toast.success(`Deleted Sub-LLM "${deleteFlowConfig.flowLabel}" and its calling function`)
+      setDeleteFlowConfig(null)
+      onFlowConfigSaved?.()
+    } catch (error) {
+      logger.error("Error deleting flow config:", error)
+      toast.error("Failed to delete Sub-LLM")
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   // Loading state
@@ -1028,41 +1133,53 @@ export function AgentFlowDiagram({
                 {machineFlowConfigs.map((fc) => (
                   <div key={fc.id} className="flex flex-col items-center">
                     <div className="w-0.5 h-4 bg-violet-300 -mt-4" />
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            onClick={() => handleFlowNodeClick(fc)}
-                            className={cn(
-                              "group relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 h-[52px] transition-all duration-200",
-                              fc.isActive
-                                ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer border-violet-400"
-                                : "bg-gray-100 text-gray-400 border-gray-200 cursor-pointer opacity-60 hover:opacity-80"
-                            )}
-                          >
-
-                            <div className={cn("p-1.5 rounded-lg", fc.isActive ? "bg-white/20" : "bg-gray-200")}>
-                              <Sparkles className={cn("h-4 w-4", fc.isActive ? "text-white" : "text-gray-400")} />
+                    <div className="relative group/node">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={() => handleFlowNodeClick(fc)}
+                              className={cn(
+                                "relative flex items-center gap-2.5 rounded-xl border-2 px-4 py-3 h-[52px] transition-all duration-200",
+                                fc.isActive
+                                  ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer border-violet-400"
+                                  : "bg-gray-100 text-gray-400 border-gray-200 cursor-pointer opacity-60 hover:opacity-80"
+                              )}
+                            >
+                              <div className={cn("p-1.5 rounded-lg", fc.isActive ? "bg-white/20" : "bg-gray-200")}>
+                                <Sparkles className={cn("h-4 w-4", fc.isActive ? "text-white" : "text-gray-400")} />
+                              </div>
+                              <div className="flex flex-col items-start">
+                                <span className="font-semibold text-xs">{fc.flowLabel}</span>
+                                <span className={cn("text-[10px] font-mono", fc.isActive ? "text-white/70" : "text-gray-400")}>
+                                  {fc.flowKey}
+                                </span>
+                              </div>
+                              <Edit3 className="h-3 w-3 opacity-50 group-hover/node:opacity-100 ml-1" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="max-w-xs p-3">
+                            <div className="space-y-1.5">
+                              <p className="font-semibold text-sm">{fc.flowLabel}</p>
+                              <p className="text-xs text-gray-500">Key: <code className="bg-gray-100 px-1 rounded">{fc.flowKey}</code></p>
+                              <p className="text-xs text-gray-500">Model: {fc.model || "default"}</p>
+                              <p className="text-xs text-blue-600 mt-1">Click to edit</p>
                             </div>
-                            <div className="flex flex-col items-start">
-                              <span className="font-semibold text-xs">{fc.flowLabel}</span>
-                              <span className={cn("text-[10px] font-mono", fc.isActive ? "text-white/70" : "text-gray-400")}>
-                                {fc.flowKey}
-                              </span>
-                            </div>
-                            <Edit3 className="h-3 w-3 opacity-50 group-hover:opacity-100 ml-1" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="max-w-xs p-3">
-                          <div className="space-y-1.5">
-                            <p className="font-semibold text-sm">{fc.flowLabel}</p>
-                            <p className="text-xs text-gray-500">Key: <code className="bg-gray-100 px-1 rounded">{fc.flowKey}</code></p>
-                            <p className="text-xs text-gray-500">Model: {fc.model || "default"}</p>
-                            <p className="text-xs text-blue-600 mt-1">Click to edit</p>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      {/* Delete button — appears on hover */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDeleteFlowConfig(fc)
+                        }}
+                        className="absolute -top-2 -right-2 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover/node:opacity-100 transition-opacity shadow-md hover:bg-red-600 z-10"
+                        title="Delete Sub-LLM"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
                 ))}
 
@@ -1799,6 +1916,44 @@ export function AgentFlowDiagram({
                 </>
               ) : (
                 "Reset to Defaults"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Sub-LLM Confirmation Dialog */}
+      <AlertDialog open={!!deleteFlowConfig} onOpenChange={(open) => !open && setDeleteFlowConfig(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="h-5 w-5" />
+              Delete Sub-LLM?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                This will permanently delete <strong>{deleteFlowConfig?.flowLabel}</strong> (key: <code className="bg-gray-100 px-1 rounded text-sm">{deleteFlowConfig?.flowKey}</code>).
+              </p>
+              <p>
+                The associated calling function will also be removed from the Router.
+              </p>
+              <p className="text-red-600 font-medium">This action cannot be undone.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteFlowConfig}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
