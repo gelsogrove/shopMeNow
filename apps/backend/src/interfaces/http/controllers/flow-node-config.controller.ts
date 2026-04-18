@@ -7,12 +7,23 @@
  * All endpoints require workspace-scoped auth (3-layer middleware).
  */
 
+import * as fs from "fs"
+import * as path from "path"
 import { Request, Response } from "express"
 import { PrismaClient } from "@echatbot/database"
 import { FlowNodeConfigRepository } from "../../../repositories/flow-node-config.repository"
 import { FlowJsonValidator } from "../../../application/services/flow-json-validator.service"
 import { FlowSyncService } from "../../../application/services/flow-sync.service"
 import logger from "../../../utils/logger"
+
+function loadRouterTemplate(): string {
+  try {
+    const templatePath = path.join(__dirname, "../../../templates/flow/00-router.template.md")
+    return fs.readFileSync(templatePath, "utf-8")
+  } catch {
+    return ""
+  }
+}
 
 export class FlowNodeConfigController {
   private repository: FlowNodeConfigRepository
@@ -177,10 +188,14 @@ export class FlowNodeConfigController {
         return res.status(400).json({ error: "flows must be a valid JSON object" })
       }
 
+      // Pre-populate systemPrompt from template when creating router without a prompt
+      const resolvedSystemPrompt = systemPrompt ||
+        (flowKey === "router" ? loadRouterTemplate() : "")
+
       const config = await this.repository.create(workspaceId, {
         flowKey,
         flowLabel,
-        systemPrompt,
+        systemPrompt: resolvedSystemPrompt,
         model,
         temperature,
         maxTokens,
