@@ -1269,6 +1269,7 @@ export class LLMRouterService {
         if (fn.functionName === "orderTrackingAgent" && !workspace?.hasOrderTracking) return false
         if (fn.functionName === "customerSupportAgent" && !workspace?.hasHumanSupport) return false
         if (fn.functionName === "profileManagementAgent" && !workspace?.needRegistration) return false
+        if (fn.functionName === "manageNotifications" && !workspace?.needRegistration) return false
 
         // Exclude appointment functions if calendar not enabled
         if (!workspace?.enableCalendarBooking && appointmentFunctions.includes(fn.functionName)) {

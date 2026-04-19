@@ -7,6 +7,8 @@ export interface FlowNode {
   type: FlowNodeType;
   prompt: string;
   transitions?: Record<string, string>;
+  /** LLM-readable descriptions for each transition key — used by Sub-LLM to classify free-text user input */
+  transitionDescriptions?: Record<string, string>;
   isTerminal?: boolean;
   action?: "escalate" | "resolve";
   onInterruptFallback?: string;
@@ -51,6 +53,12 @@ export interface FlowStepResult {
   flowStatus: FlowStatus;
   shouldCallOperator: boolean;
   isFaqInterrupt?: boolean;   // true → strategy must answer FAQ via LLM then append responseText
+  /** true → CHOICE node got AMBIGUOUS input; strategy should call Sub-LLM to classify then re-feed */
+  isAmbiguousChoice?: boolean;
+  /** transition descriptions for LLM classification (only set when isAmbiguousChoice=true) */
+  choiceTransitionDescriptions?: Record<string, string>;
+  /** raw user input that was ambiguous (for re-classification) */
+  ambiguousInput?: string;
   // DebugFlow — populated by FlowEngineService for rich debug traces
   debug?: {
     classification: string;       // MATCH | HARD_BREAK | SOFT_BREAK | INTERRUPT_FAQ | AMBIGUOUS

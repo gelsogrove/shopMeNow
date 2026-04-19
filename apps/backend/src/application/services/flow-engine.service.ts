@@ -111,7 +111,7 @@ export class FlowEngineService {
     }
 
     // ⚪ AMBIGUOUS — ask for clarification or escalate after too many attempts
-    return this.handleAmbiguous(node, state, context, classification, previousNodeId);
+    return this.handleAmbiguous(node, state, context, classification, previousNodeId, input);
   }
 
   // ---------------------------------------------------------------------------
@@ -181,7 +181,8 @@ export class FlowEngineService {
     state: FlowState,
     context: ChatContext,
     classification: string = "AMBIGUOUS",
-    previousNodeId?: string
+    previousNodeId?: string,
+    rawInput?: string
   ): FlowStepResult {
     state.interruptCount++;
     state.lastInterruptType = "AMBIGUOUS";
@@ -190,6 +191,21 @@ export class FlowEngineService {
       const result = this.escalate(state, context, "Let me connect you with an operator 👍");
       result.debug = { classification, previousNodeId: previousNodeId || state.currentNodeId, nodeType: node.type, interruptCount: state.interruptCount };
       return result;
+    }
+
+    // CHOICE nodes with transitionDescriptions → signal strategy to use Sub-LLM for classification
+    // instead of showing a generic "I didn't understand" fallback
+    if (node.type === "CHOICE" && node.transitionDescriptions && rawInput) {
+      return {
+        responseText: node.onInterruptFallback ?? node.prompt,
+        nextNodeId: state.currentNodeId,
+        flowStatus: "ACTIVE",
+        shouldCallOperator: false,
+        isAmbiguousChoice: true,
+        choiceTransitionDescriptions: node.transitionDescriptions,
+        ambiguousInput: rawInput,
+        debug: { classification, previousNodeId: previousNodeId || state.currentNodeId, nodeType: node.type, interruptCount: state.interruptCount },
+      };
     }
 
     return {
