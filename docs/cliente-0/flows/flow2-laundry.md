@@ -1,9 +1,8 @@
 # Flow 2 — Lavatrice HS-60XX (Deterministico)
 
-> **Source of truth**: [`achitecture.md`](achitecture.md)
+> **Source of truth**: `packages/database/prisma/seed.ts`
 > **flowKey**: `lavatrice_hs60xx`
-> **JSON config**: [`02_lavatrice.json`](02_lavatrice.json)
-> **Engine**: `FlowEngineService` (0 LLM tokens)
+> **Engine**: `FlowEngineService` (0 LLM tokens) + Sub-LLM classification for CHOICE nodes
 
 ## Machine Specs
 
@@ -17,113 +16,128 @@
 - **Capacity**: 8 kg
 - **Spin**: 800 / 1000 / 1200 RPM (selectable)
 - **Extras**: Extra rinse (+€0.50), Pre-wash (+€1.00)
-- **Payment**: Coins, card, or loyalty card at central panel
-- **Soap**: Automatic dosing (detergent + softener + active oxygen) — industrial, less foam is NORMAL
+- **Payment**: Coins or contactless at central unit
 - **Duration**: ~28 min (normal cycle)
 
-## Operating Rules
+## CHOICE Node Architecture
 
-- One instruction/question per step
-- Payment check is ALWAYS `step_0` (first step)
-- Retry limit: loop back max before escalation
-- If flow resumes from PAUSED: re-send `currentNode.prompt` before new input
-- No automatic compensation promised by bot
-- STOP = cancels wash → operator decides compensation
+CHOICE nodes use **open questions** (no numbered lists). Customer describes situation in free text.
+
+- `FlowEngineService` attempts deterministic matching via `classifyInput()` (digits, yes/no)
+- If input is AMBIGUOUS → signals `isAmbiguousChoice: true` to strategy
+- `FlowWorkspaceStrategy` calls Sub-LLM to classify free-text against `transitionDescriptions`
+- Classified key is re-fed to engine for deterministic transition
 
 ## Flows
 
-### Flow: `no_parte` (machine won't start)
+### Flow: `non_parte` (machine won't start)
 
-```mermaid
-flowchart TD
-    S0{"Paid already?"}
-    S0 -->|No| PAY["Payment instructions:<br/>1. Pay at central<br/>2. Select machine #<br/>3. Press program<br/>4. Close door"]
-    PAY --> PAY_R{"Paid now?"}
-    PAY_R -->|Yes| DISP
-    PAY_R -->|No| ESC_PAY["⚠ Escalate: payment issue"]
+**step_0** — CHOICE (open question):
+> "What exactly do you see on the washer display right now?"
 
-    S0 -->|Yes| DISP{"What does the display show?"}
+| Transition Key | Description | Target Node |
+|---------------|-------------|-------------|
+| `sel` | SEL — standby/selection mode | `caso_sel` |
+| `push` | PUSH or Pr + number — program not confirmed | `caso_push` |
+| `door` | DOOR — door-related message | `caso_door` |
+| `price` | Price/amount in euros — insufficient credit | `caso_importo` |
+| `extra` | EXTRA — extra option indicator lit | `caso_extra` |
+| `alm_door` | ALM DOOR — door alarm | `caso_alm_door` |
+| `001` | 001, AL001, error 001 — numeric error code | `caso_001` |
+| `alm` | ALM, ALN, other alarm codes | `caso_alm_gen` |
 
-    DISP -->|"1 SEL"| SEL["Select machine # / press program"]
-    DISP -->|"2 Price €"| PRICE{"Change returned?"}
-    DISP -->|"3 PUSH/Pr"| PUSH["Press program button"]
-    DISP -->|"4 DOOR"| DOOR["Close door firmly (click)"]
-    DISP -->|"5 ALM"| ALM
-    DISP -->|"6 AL001"| AL001["⚠ Escalate: sequence error<br/>(program before payment)"]
-    DISP -->|"7 END"| END_N["Cycle ended normally"]
+**caso_sel** — ACTION:
+> Display shows *SEL* → machine ready, waiting for program selection.
+> 👉 **Press the button for the program you want** (60°, 40°, 30° or Cold).
 
-    PRICE -->|Yes| PRICE_OK["Check display, insert correct amount"]
-    PRICE -->|No| PRICE_NO["Wrong machine #?<br/>Check credit on central, press correct button"]
+**caso_push** — ACTION:
+> Display shows *PUSH* + number → credit inserted, program not confirmed.
+> 👉 **Press the button for the program you want** firmly.
 
-    ALM --> ALM_T{"ALM subtype?"}
-    ALM_T -->|"1 Water"| ALM_W["Press STOP once"]
-    ALM_T -->|"2 Drain"| ALM_DR["Press STOP once"]
-    ALM_T -->|"3 Door"| ALM_D["Check door latch, close properly"]
-    ALM_T -->|"4 Other"| ALM_O["Press STOP once"]
+**caso_door** — ACTION:
+> Display shows *DOOR* → door not closed properly.
+> 👉 **Open the door completely**, check rubber seal, **close firmly until click**.
 
-    SEL --> AR{"Resolved?"}
-    PUSH --> AR
-    DOOR --> AR
-    PRICE_OK --> AR
-    PRICE_NO --> AR
-    ALM_W --> AR_ALM{"Resolved?"}
-    ALM_DR --> AR_ALM
-    ALM_D --> AR_ALM
-    ALM_O --> AR_ALM
+**caso_importo** — CHOICE (open question):
+> "The display is showing a price... did the central unit return your coins or change?"
+> → YES: `cambio_si` / NO: `cambio_no`
 
-    AR -->|Yes| OK["✅ Resolved"]
-    AR -->|No| ESC["⚠ Escalate: operator"]
+**cambio_si** — ACTION:
+> Central unit returned change → need to re-insert full amount.
+> 👉 **Check the exact amount** and **insert that amount** at central unit.
 
-    AR_ALM -->|Yes| OK_ALM["✅ Resolved"]
-    AR_ALM -->|No| ESC_ALM["⚠ Escalate: alarm persists"]
-```
+**cambio_no** — ACTION:
+> Change not returned → possibly wrong machine number selected.
+> 👉 **Go to the central unit** and check credit for another machine number.
 
-### Flow: `post_ciclo` (after wash finished)
+**caso_extra** — INFO (terminal):
+> *EXTRA* option activated, requires additional credit.
+> 👉 **Press the lit EXTRA button** to deactivate, or **insert remaining credit**.
 
-```mermaid
-flowchart TD
-    P0{"What's the problem?"}
+**caso_alm_door** — ACTION:
+> *ALM DOOR* → something stuck in door seal.
+> 👉 **Carefully open the door**, remove obstructions, **close firmly until click**.
 
-    P0 -->|"1 Clothes wet"| WET{"Was display END+bAL?"}
-    P0 -->|"2 Door locked"| LOCK["Wait 2-3 min (draining)"]
-    P0 -->|"3 Damaged"| DMG["⚠ Escalate: check label/usage"]
-    P0 -->|"4 No foam"| FOAM["Normal: industrial detergent,<br/>less foam is expected"]
+**caso_001** — INFO (terminal, escalate):
+> *Error 001* / *AL001* → program selected before payment, state didn't reset.
+> 👉 **Do not insert more money** — operator contacted automatically.
 
-    WET -->|Yes| BAL["⚠ Escalate: unbalanced load"]
-    WET -->|No| WET_NORM["Overloaded: split load,<br/>use Quick program €2.50"]
+**caso_alm_gen** — INFO (terminal, escalate):
+> Generic alarm → requires technical review.
+> 👉 **Do not continue operating** this machine. Use another one.
 
-    LOCK --> LOCK_R{"Door opened?"}
-    LOCK_R -->|Yes| OK["✅ Resolved"]
-    LOCK_R -->|No| ESC_DOOR["⚠ Escalate: door stuck"]
+**ask_resolved** → **end_success** ✅ / **handle_escalate** → operator contacted.
 
-    FOAM --> RES_INFO["ℹ Info closure"]
-    DMG --> RES_INFO
-    RES_INFO -->|"Customer contests"| ESC_COMP["⚠ Escalate"]
-```
+### Flow: `errore_alm` (alarm codes)
 
-### Flow: `stop_error` (STOP button pressed)
+**step_0** — CHOICE (open question):
+> "What alarm code do you see after ALM on the display?"
 
-```mermaid
-flowchart TD
-    S0{"Was it before the first cycle?"}
-    S0 -->|Yes| FIRST["Machine ready to restart.<br/>Select program and start again."]
-    S0 -->|No| MID["⚠ STOP cancels mid-cycle wash.<br/>No automatic compensation.<br/>Escalate: operator decides."]
-```
+| Transition Key | Description | Target Node |
+|---------------|-------------|-------------|
+| `alm_a` | ALM/A — water intake alarm | `alm_acqua` |
+| `alm_e` | ALM/E — drainage alarm | `alm_scarico` |
+| `alm_door` | ALM/door — door-related alarm | `alm_door` |
+| `alm_var` | ALM/VAr — variable/technical alarm | `alm_var` |
+
+**alm_acqua** — ACTION (terminal):
+> Water intake problem → **Press the STOP button once** to reset.
+> If persists → use another machine, maintenance notified.
+
+**alm_scarico** — ACTION (terminal):
+> Drainage problem → **Press the STOP button once**.
+> ⚠️ Door may stay **locked for up to 30 minutes** (safety feature).
+
+**alm_door** — ACTION (terminal):
+> Door latch problem → **Press STOP once**, check seal, **close firmly**.
+
+**alm_var** — INFO (terminal, escalate):
+> Technical fault → **Do not continue using** this machine.
+> Compensation provided 👍. Maintenance notified.
+
+### Flow: `lavaggio_problema` (wash problems)
+
+**step_0** — CHOICE (open question):
+> "What problem did you notice during or after the wash?"
+
+| Transition Key | Description | Target Node |
+|---------------|-------------|-------------|
+| `no_spin` | Didn't spin / clothes still very wet | `no_centrifuga` |
+| `end_bal` | Display shows END + bAL | `end_bal` |
+
+**no_centrifuga** — INFO (terminal):
+> Overloaded/unbalanced load → **Open door**, **split load**, **run Quick spin cycle** (€2.50).
+
+**end_bal** — INFO (terminal):
+> *END + bAL* = wash OK but spin skipped due to unbalanced load.
+> 👉 **Redistribute clothes** or **split load**, **run Quick spin cycle** (€2.50).
 
 ## Playbook Coverage
 
 | Section | Topic | Covered |
 |---------|-------|---------|
-| 5.1 | Washer not working | ✅ `no_parte` flow |
-| 5.4 | Paid but won't start | ✅ `no_parte.display_check` |
-| 5.5 | Error AL001 | ✅ `no_parte.case_al001` |
+| 5.1 | Washer not working | ✅ `non_parte` flow |
+| 5.4 | Paid but won't start | ✅ `non_parte.caso_importo` |
+| 5.5 | Error AL001 | ✅ `non_parte.caso_001` |
 | §7 | Compensation rules | ✅ No auto-promise, escalate |
-| §10 | Escalation protocol | ✅ All terminal `escalate` nodes |
-
-## Node Map (02_lavatrice.json)
-
-| Flow | Nodes | Types |
-|------|-------|-------|
-| `no_parte` | `step_0` → `pay_help` → `pay_retry` → `display_check` → 7 branches → `ask_resolved` | CONFIRMATION, ACTION, CHOICE, INFO |
-| `post_ciclo` | `step_0` → 5 branches (`wet_clothes`, `door_locked`, `damaged`, `foam_info`, `escalate`) | CHOICE, CONFIRMATION, INFO |
-| `stop_error` | `step_0` → `stop_first_time` / `stop_mid_cycle` | CONFIRMATION, INFO |
+| §10 | Escalation protocol | ✅ All terminal escalate nodes |
