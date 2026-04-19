@@ -14,6 +14,10 @@ Signs: "no funciona", "he pagado y no arranca", "display shows...", "AL001", "al
 Signs: "ropa muy mojada", "no centrifugó", "puerta bloqueada al final", "no espuma", "ropa dañada"
 → call startFlow("post_ciclo")
 
+### "stop_error" — Customer accidentally pressed STOP
+Signs: "he pulsado STOP", "pulsé stop por error", "he parado la lavadora", "ho premuto stop per sbaglio"
+→ call startFlow("stop_error")
+
 ## DECISION RULE
 - If the customer message makes it CLEAR which flow → call startFlow immediately, no questions
 - If unclear → ask ONLY: "¿Ha podido iniciar el lavado o la lavadora no arrancó?"

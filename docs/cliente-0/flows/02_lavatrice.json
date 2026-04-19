@@ -259,5 +259,27 @@
       "prompt": "Great! ✅ Glad it's resolved. If you need anything else, I'm here 😊",
       "isTerminal": true
     }
+  },
+  "stop_error": {
+    "step_0": {
+      "type": "CONFIRMATION",
+      "prompt": "I understand you pressed STOP ⛔\n\nWas this the *first time* starting this wash cycle (you hadn't washed anything yet)?",
+      "transitions": {
+        "YES": "stop_error.stop_first_time",
+        "NO": "stop_error.stop_mid_cycle"
+      }
+    },
+    "stop_first_time": {
+      "type": "INFO",
+      "prompt": "If STOP was pressed before the wash started, a free reactivation may be possible — but only the operator can authorize it. I'm notifying them now 🙌",
+      "isTerminal": true,
+      "action": "escalate"
+    },
+    "stop_mid_cycle": {
+      "type": "INFO",
+      "prompt": "If STOP was pressed during an active wash cycle, the cycle is cancelled and credit is lost. I'm notifying the operator to assess your case — no automatic compensation is guaranteed.",
+      "isTerminal": true,
+      "action": "escalate"
+    }
   }
 }
