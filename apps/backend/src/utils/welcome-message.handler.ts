@@ -210,10 +210,15 @@ export class WelcomeMessageHandler {
       logger.info("✅ [WelcomeMessageHandler] Variables replaced in welcome message", {
         customerName: variables.customerName,
         chatbotNameFromVars: variables.chatbotName,
+        chatbotNameFromDB: fullWorkspace.chatbotName,
         companyName: variables.companyName,
         hasBotIdentity: !!variables.botIdentityResponse,
         hasCustomAiRules: !!variables.customAiRules,
       })
+
+      if (!fullWorkspace.chatbotName) {
+        logger.warn(`⚠️ [WelcomeMessageHandler] workspace.chatbotName is null in DB — using fallback "${variables.chatbotName}". Fix: set chatbotName in Settings > AI Personality.`)
+      }
 
       // 🔍 DEBUG: Log ENTIRE welcome message after variable replacement
       logger.info("*******PROMPT WELCOME MESSAGE AFTER VARIABLE REPLACEMENT*******")

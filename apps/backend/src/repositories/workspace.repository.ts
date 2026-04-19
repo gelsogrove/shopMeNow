@@ -91,7 +91,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       customAiRules: data.customAiRules || null,
       registrationPage: data.registrationPage || null,
       requireManualApproval: data.requireManualApproval ?? false,
-      chatbotName: data.chatbotName || null,
+      chatbotName: data.chatbotName || data.name || null,
       businessType: data.businessType || null,
       // 🆕 Logo
       logoUrl: data.logoUrl || null,

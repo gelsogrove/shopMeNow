@@ -15,9 +15,7 @@ FATTO
 - router?? import?
 
 progress
-
 - Welcome message ?
-- anali
 - il pago lo controlla?
 - come facciamo a sapere se entra nello step deerministico?
 - i prompt sono fati bene?

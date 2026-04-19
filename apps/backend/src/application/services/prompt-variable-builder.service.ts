@@ -211,7 +211,7 @@ export class PromptVariableBuilder {
       appointmentTypes: dynamicContent?.appointmentTypes || '',
       customerUpcomingAppointments: dynamicContent?.customerUpcomingAppointments || '',
       allowedExternalLinks: workspace?.allowedExternalLinks?.join('\n') || '',
-      chatbotName: workspace?.chatbotName || VARIABLE_DEFAULTS.chatbotName!,
+      chatbotName: workspace?.chatbotName || workspace?.name || VARIABLE_DEFAULTS.chatbotName!,
       welcomeMessage: workspace?.welcomeMessage || '',
       businessType: workspace?.businessType || VARIABLE_DEFAULTS.businessType!,
       currency: workspace?.currency || VARIABLE_DEFAULTS.currency!,
