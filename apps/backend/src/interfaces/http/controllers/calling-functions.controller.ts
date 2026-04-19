@@ -280,8 +280,8 @@ export class CallingFunctionsController {
             for (const [name, fnDef] of SYSTEM_FUNCTIONS_BY_NAME) {
                 if (installedNames.has(name)) continue
                 if (APPOINTMENT_FN_NAMES.includes(name) && !workspace.enableCalendarBooking) continue
-                // FLOW workspaces never use ecommerce-specific agent delegates
-                if (workspace.channelMode === 'FLOW' && ['productSearchAgent', 'cartManagementAgent', 'orderTrackingAgent'].includes(name)) continue
+                // FLOW workspaces never use ecommerce-specific agent delegates or sub-LLM agents
+                if (workspace.channelMode === 'FLOW' && ['productSearchAgent', 'cartManagementAgent', 'orderTrackingAgent', 'customerSupportAgent', 'profileManagementAgent'].includes(name)) continue
                 if (name === "productSearchAgent" && !workspace.hasProductCatalog) continue
                 if (name === "cartManagementAgent" && !workspace.hasCart) continue
                 if (name === "orderTrackingAgent" && !workspace.hasOrderTracking) continue

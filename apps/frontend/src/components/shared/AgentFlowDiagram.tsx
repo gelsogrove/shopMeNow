@@ -768,8 +768,7 @@ export function AgentFlowDiagram({
     // ROUTER hidden for non-ecommerce; PROFILE_MANAGEMENT controlled by needRegistration
     if (!isEcommerce && !isFlow && type === "ROUTER") return false
     if (type === "PROFILE_MANAGEMENT" && !needRegistration) return false
-    // CUSTOMER_SUPPORT: shown if hasHumanSupport is true, OR if workspace is FLOW (always editable)
-    if (type === "CUSTOMER_SUPPORT" && !hasHumanSupport && !isFlow) return false
+    if (type === "CUSTOMER_SUPPORT" && !hasHumanSupport) return false
     if (type === "SECURITY") return false // Always hidden
     return true
   }
@@ -1221,11 +1220,10 @@ export function AgentFlowDiagram({
                   if (!agentType) return null
                   
                   // Must exist in database to be clickable/editable
-                  // Exception: CUSTOMER_SUPPORT in FLOW mode is always shown even if agent not yet in DB
-                  if (!agentExists(agentType) && !(isFlow && agentType === 'CUSTOMER_SUPPORT')) return null
+                  if (!agentExists(agentType)) return null
                   
-                  // Check visibility rules — for FLOW, CUSTOMER_SUPPORT always shown
-                  if (agentType === 'CUSTOMER_SUPPORT' && !hasHumanSupport && !isFlow) return null
+                  // Check visibility rules
+                  if (agentType === 'CUSTOMER_SUPPORT' && !hasHumanSupport) return null
                   if (agentType === 'PROFILE_MANAGEMENT' && !needRegistration) return null
                   
                   const meta = AGENT_METADATA[agentType]

@@ -2254,7 +2254,7 @@ Available flows: non_parte, errore_reset`,
       model: "openai/gpt-4o-mini",
       temperature: 0.3,
       maxTokens: 1024,
-      availableFunctions: JSON.parse(JSON.stringify(["assignMachine"])),
+      availableFunctions: JSON.parse(JSON.stringify(["assignMachine", "contactOperator"])),
       // flows contains available machine keys as metadata (no actual flow steps for the router)
       flows: { lavatrice_hs60xx: {}, asciugatrice_ed340: {} },
       isActive: true,
@@ -2267,7 +2267,7 @@ Available flows: non_parte, errore_reset`,
       model: "openai/gpt-4o-mini",
       temperature: 0.3,
       maxTokens: 1024,
-      availableFunctions: JSON.parse(JSON.stringify(["assignMachine"])),
+      availableFunctions: JSON.parse(JSON.stringify(["assignMachine", "contactOperator"])),
       flows: { lavatrice_hs60xx: {}, asciugatrice_ed340: {} },
       isActive: true,
     },
@@ -2275,14 +2275,14 @@ Available flows: non_parte, errore_reset`,
   console.log("   ✅ FlowNodeConfig upserted: Router (History)")
 
   // WorkspaceCallingFunctions for Ecolaundry
+  // FLOW workspaces use contactOperator (real escalation) — no agent delegates
   const ecoCallingFunctions = [
     {
-      functionName: "customerSupportAgent",
-      description: "Delegate to Customer Support Agent when the customer requests a human operator or when the troubleshooting flow escalates.",
-      parameters: { type: "object", properties: { query: { type: "string", description: "Support request context" } }, required: ["query"] },
+      functionName: "contactOperator",
+      description: "Contact human operator when the customer explicitly requests a human, or when the troubleshooting flow cannot resolve the issue.",
+      parameters: { type: "object", properties: { reason: { type: "string", description: "Reason for contacting the operator" } }, required: ["reason"] },
       isSystemFunction: true,
-      executionType: "DELEGATE_TO_AGENT",
-      attachedLlm: "CUSTOMER_SUPPORT",
+      executionType: "CALLING_FUNCTION",
     },
     {
       functionName: "changeLanguage",
@@ -2290,14 +2290,6 @@ Available flows: non_parte, errore_reset`,
       parameters: { type: "object", properties: { language: { type: "string", enum: ["it", "en", "es", "pt"], description: "ISO 639-1 language code" } }, required: ["language"] },
       isSystemFunction: true,
       executionType: "INTERNAL",
-    },
-    {
-      functionName: "profileManagementAgent",
-      description: "Delegate to Profile Management Agent for email updates, notification preferences, profile data changes.",
-      parameters: { type: "object", properties: { query: { type: "string", description: "Profile-related request" } }, required: ["query"] },
-      isSystemFunction: true,
-      executionType: "DELEGATE_TO_AGENT",
-      attachedLlm: "PROFILE_MANAGEMENT",
     },
   ]
 
@@ -2316,7 +2308,7 @@ Available flows: non_parte, errore_reset`,
     })
   }
 
-  console.log(`✅ Ecolaundry FLOW workspace configured: 3 FlowNodeConfigs + ${ecoCallingFunctions.length} calling functions`)
+  console.log(`✅ Ecolaundry FLOW workspace configured: 3 FlowNodeConfigs + ${ecoCallingFunctions.length} calling functions (contactOperator + changeLanguage)`)
 
   // Use BellItalia VIP as the main workspace for demo data
   const workspace = ecommerceWorkspace

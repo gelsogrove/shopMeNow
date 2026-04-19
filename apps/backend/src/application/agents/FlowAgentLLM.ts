@@ -253,6 +253,15 @@ export class FlowAgentLLM {
         shouldCallOperator = true
         // Actual contactOperator() call is deferred to strategy (needs full workspace object)
         functionCalls.push({ name: "contactOperator", arguments: fnArgs, result: "deferred_to_strategy" })
+      } else if (fnName === "resetSession") {
+        // ── 5b2. resetSession — clear machine assignment and flow state ────────
+        logger.info("🔄 FlowAgentLLM: tool_call resetSession")
+        delete chatContext.flowKey
+        delete chatContext.flowNumber
+        delete chatContext.flowState
+        delete chatContext.gatherState
+        output = "No problem! Let's start over. 😊 Are you having an issue with a washer or a dryer?"
+        functionCalls.push({ name: "resetSession", arguments: fnArgs, result: "context_cleared" })
       } else {
         // ── 5c. DELEGATE_TO_FLOW — Router delegating to a sub-LLM ────────────
         // Check if this tool name matches a Flow DELEGATE_TO_AGENT calling function
@@ -487,6 +496,23 @@ export class FlowAgentLLM {
                 description: "Brief reason for escalating to operator.",
               },
             },
+            required: [],
+          },
+        },
+      })
+    }
+
+    if (availableFunctions.includes("resetSession")) {
+      tools.push({
+        type: "function",
+        function: {
+          name: "resetSession",
+          description:
+            "Reset the session and clear the machine assignment when the customer made a mistake " +
+            "(wrong machine type, wrong number) or wants to start over from the beginning.",
+          parameters: {
+            type: "object",
+            properties: {},
             required: [],
           },
         },

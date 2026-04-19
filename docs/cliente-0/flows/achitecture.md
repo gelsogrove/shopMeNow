@@ -38,6 +38,17 @@
 | `contactOperator(reason)` | Cliente chiede operatore, o situazione ambigua | Scala a umano |
 | `changeLanguage(lang)` | Cliente chiede altra lingua | Aggiorna lingua nel DB |
 
+**Calling functions dei Sub-LLM (PATH B):**
+
+| Function | Quando | Cosa fa |
+|---|---|---|
+| `startFlow(flowId)` | Problema classificato | Avvia flow deterministico |
+| `contactOperator(reason)` | Cliente chiede operatore esplicitamente | Scala a umano |
+| `resetSession()` | Cliente si è sbagliato macchina/numero, vuole ricominciare | Cancella `flowKey`, `flowState`, `gatherState` dal context → il prossimo messaggio riparte dal Router |
+
+> **`resetSession` — flusso completo:**
+> Cliente assegnato a lavatrice_hs60xx dice "aspetta, è la asciugatrice" → sub-LLM chiama `resetSession()` → context pulito → risposta: "No problem! Let's start over." → messaggio successivo va a PATH C (Router) → Router raccoglie nuovo tipo + numero → assegna asciugatrice_ed340
+
 **Decisioni possibili del Router:**
 
 | Action | Quando | Cosa succede dopo |
@@ -618,6 +629,21 @@ interface ChatContext {
 | `isActive` | on/off |
 
 Le FAQ vengono caricate e passate a History Agent come variabile `{{faqs}}`.
+
+### WorkspaceCallingFunction — Funzioni disponibili per Ecolaundry
+
+> ⚠️ FLOW workspace usa SOLO `contactOperator` (CALLING_FUNCTION) e `changeLanguage` (INTERNAL).
+> NON usa `customerSupportAgent`, `profileManagementAgent`, o altri agent delegates — non esistono sub-agent LLM per FLOW.
+
+| functionName | executionType | Ruolo |
+|---|---|---|
+| `contactOperator` | CALLING_FUNCTION | Scala a operatore umano (email + stato ESCALATED) |
+| `changeLanguage` | INTERNAL | Cambio lingua cliente |
+| `lavatrice_hs60xx` | DELEGATE_TO_AGENT | Smista al Sub-LLM lavatrice |
+| `asciugatrice_ed340` | DELEGATE_TO_AGENT | Smista al Sub-LLM asciugatrice |
+| `bookAppointment` | INTERNAL | Prenotazione appuntamento (opzionale) |
+| `listAvailableSlots` | INTERNAL | Mostra slot disponibili (opzionale) |
+| ... | ... | Altri system function dal workspace settings |
 
 ---
 
