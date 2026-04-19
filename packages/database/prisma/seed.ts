@@ -1688,6 +1688,13 @@ EXAMPLES:
 - "washer" → "What's the machine number? You'll find it on the label."
 - "42" → call assignMachine(flowKey="lavatrice_hs60xx", machineNumber="42") and briefly confirm
 
+## WHEN TO CALL resetSession()
+Call resetSession() WITHOUT asking confirmation when the customer indicates they made a mistake or wants to start over. Typical signals (any language):
+- "wait, I meant the dryer / I was wrong about the machine"
+- "forget it, let's start over / restart / ricominciamo / empecemos de nuevo"
+- "no, actually the machine number is different" AFTER assignMachine was already called
+After resetSession() the context (location, type, number) is wiped — ask again from step 1.
+
 ## FREQUENTLY ASKED QUESTIONS
 If the customer asks a general question (hours, price, soap, refunds…) answer directly using the FAQs below WITHOUT routing to a specialist:
 
@@ -1968,11 +1975,18 @@ Escalation message: "We're forwarding your case for review so we can help you in
 - Spin speed: 800/1000/1200 RPM (selectable)
 - EXTRA options: Extra rinse (+€0.50), Pre-wash (+€1.00)
 
-Available flows: non_parte, errore_alm, lavaggio_problema`,
+Available flows: non_parte, errore_alm, lavaggio_problema
+
+## WHEN TO CALL resetSession()
+Call resetSession() without asking confirmation whenever the customer signals they picked the WRONG machine type/number or wants to restart (any language). Examples:
+- "wait, I meant the dryer" / "era l'asciugatrice" / "era la secadora"
+- "start over" / "ricominciamo" / "empecemos de nuevo"
+- "forget it, another machine"
+After reset the context is wiped and the Router will ask again from step 1.`,
     model: "openai/gpt-4o-mini",
     temperature: 0.3,
     maxTokens: 2048,
-    availableFunctions: JSON.parse(JSON.stringify(["startFlow", "contactOperator"])),
+    availableFunctions: JSON.parse(JSON.stringify(["startFlow", "contactOperator", "resetSession"])),
     flows: {
           non_parte: {
             step_0: {
@@ -2143,11 +2157,18 @@ Available flows: non_parte, errore_alm, lavaggio_problema`,
 - Payment: coins or contactless
 - Lint filter: should be cleaned before each use
 
-Available flows: non_parte, errore_reset`,
+Available flows: non_parte, errore_reset
+
+## WHEN TO CALL resetSession()
+Call resetSession() without asking confirmation whenever the customer signals they picked the WRONG machine type/number or wants to restart (any language). Examples:
+- "wait, I meant the washer" / "era la lavatrice" / "era la lavadora"
+- "start over" / "ricominciamo" / "empecemos de nuevo"
+- "forget it, another machine"
+After reset the context is wiped and the Router will ask again from step 1.`,
     model: "openai/gpt-4o-mini",
     temperature: 0.3,
     maxTokens: 2048,
-    availableFunctions: JSON.parse(JSON.stringify(["startFlow", "contactOperator"])),
+    availableFunctions: JSON.parse(JSON.stringify(["startFlow", "contactOperator", "resetSession"])),
     flows: {
           non_parte: {
             step_0: {
@@ -2258,7 +2279,7 @@ Available flows: non_parte, errore_reset`,
       model: "openai/gpt-4o-mini",
       temperature: 0.3,
       maxTokens: 1024,
-      availableFunctions: JSON.parse(JSON.stringify(["assignMachine", "contactOperator"])),
+      availableFunctions: JSON.parse(JSON.stringify(["assignMachine", "contactOperator", "resetSession"])),
       // flows contains available machine keys as metadata (no actual flow steps for the router)
       flows: { lavatrice_hs60xx: {}, asciugatrice_ed340: {} },
       isActive: true,
@@ -2271,7 +2292,7 @@ Available flows: non_parte, errore_reset`,
       model: "openai/gpt-4o-mini",
       temperature: 0.3,
       maxTokens: 1024,
-      availableFunctions: JSON.parse(JSON.stringify(["assignMachine", "contactOperator"])),
+      availableFunctions: JSON.parse(JSON.stringify(["assignMachine", "contactOperator", "resetSession"])),
       flows: { lavatrice_hs60xx: {}, asciugatrice_ed340: {} },
       isActive: true,
     },
@@ -2295,6 +2316,13 @@ Available flows: non_parte, errore_reset`,
       isSystemFunction: true,
       executionType: "INTERNAL",
     },
+    {
+      functionName: "resetSession",
+      description: "Reset the session when the customer realizes they picked the wrong machine type/number or explicitly wants to start over. Wipes flowKey, flowNumber, flowState and gatherState so the Router restarts from the beginning.",
+      parameters: { type: "object", properties: {}, required: [] },
+      isSystemFunction: true,
+      executionType: "INTERNAL",
+    },
   ]
 
   for (const func of ecoCallingFunctions) {
@@ -2312,7 +2340,7 @@ Available flows: non_parte, errore_reset`,
     })
   }
 
-  console.log(`✅ Ecolaundry FLOW workspace configured: 3 FlowNodeConfigs + ${ecoCallingFunctions.length} calling functions (contactOperator + changeLanguage)`)
+  console.log(`✅ Ecolaundry FLOW workspace configured: 3 FlowNodeConfigs + ${ecoCallingFunctions.length} calling functions (contactOperator + changeLanguage + resetSession)`)
 
   // Use BellItalia VIP as the main workspace for demo data
   const workspace = ecommerceWorkspace

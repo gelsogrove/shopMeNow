@@ -5617,8 +5617,8 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         source: "LLM_FALLBACK",
         processingTimeMs: Date.now() - startTime,
         debugInfo: {
-          steps: debugSteps,
-          totalTokens: result.tokensUsed || 0,
+          steps: [...(debugSteps || []), ...(result.debugSteps || [])],
+          totalTokens: result.totalTokens || 0,
           executionTimeMs: Date.now() - startTime,
         },
         tokensUsed: result.totalTokens || 0,

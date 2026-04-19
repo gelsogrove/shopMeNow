@@ -682,6 +682,9 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
             conversationId: context.conversationId,
             userContent: context.message,
             assistantContent: preHumanizationResponse,
+            agentType: "ROUTER",
+            tokensUsed: tokensUsed,
+            debugInfo: debugSteps.length > 0 ? { steps: debugSteps, totalTokens: tokensUsed, executionTimeMs: Date.now() - startTime } : undefined,
           })
         } catch (saveError: any) {
           logger.warn("⚠️ FlowWorkspaceStrategy - Failed to save history:", saveError.message)

@@ -629,6 +629,7 @@ export function getAgentFunctionsForWorkspace(
     channelMode?: import("@echatbot/database").ChannelMode
     hasSalesAgents?: boolean
     hasHumanSupport?: boolean
+    needRegistration?: boolean
   }
 ): FunctionDefinition[] | null {
   // Get base functions for agent type
@@ -655,6 +656,14 @@ export function getAgentFunctionsForWorkspace(
   // Filter out contactOperator if hasHumanSupport is explicitly false
   if (workspace.hasHumanSupport === false) {
     functions = functions.filter(fn => fn.function?.name !== "contactOperator")
+  }
+
+  // Filter out manageNotifications if needRegistration is false
+  if (workspace.needRegistration === false) {
+    functions = functions.filter(fn => 
+      fn.function?.name !== "manageNotifications" &&
+      fn.function?.name !== "profileManagementAgent"
+    )
   }
 
   return functions

@@ -120,6 +120,7 @@ export class CallingFunctionsController {
                 if (f.functionName === "orderTrackingAgent" && !workspace?.hasOrderTracking) return false
                 if (f.functionName === "customerSupportAgent" && !workspace?.hasHumanSupport) return false
                 if (f.functionName === "profileManagementAgent" && !workspace?.needRegistration) return false
+                if (f.functionName === "manageNotifications" && !workspace?.needRegistration) return false
                 return true
             })
 
