@@ -1,83 +1,129 @@
-# Flow 2 — Lavatrice (Deterministico)
+# Flow 2 — Lavatrice HS-60XX (Deterministico)
 
-Fonte di verita: `achitecture.md`.
+> **Source of truth**: [`achitecture.md`](achitecture.md)
+> **flowKey**: `lavatrice_hs60xx`
+> **JSON config**: [`02_lavatrice.json`](02_lavatrice.json)
+> **Engine**: `FlowEngineService` (0 LLM tokens)
 
-## Regole operative
+## Machine Specs
 
-- Questo flow e eseguito dal `FlowEngineService` (0 token LLM).
-- Una sola istruzione/domanda per step.
-- D1 ha retry limit: massimo 3 tentativi, poi escalation.
-- Nodo `CREDIT` diviso in step concreti (credito residuo, pressione tasto, nuovo credito).
-- Se flow riprende da PAUSA, rimandare sempre `currentNode.prompt` prima del nuovo input.
-- Nessuna compensazione automatica promessa dal bot.
+| Program | Temp | Fabrics | Price |
+|---------|------|---------|-------|
+| Molt Calent | 60° | White, work clothes, very dirty (resistant) | €4.00 |
+| Calent | 40° | Cotton, coloured, nylon, other fibres | €3.50 |
+| Temperat | 30° | Cotton blends, coloured, synthetics | €3.00 |
+| Fred (*) | Cold | Delicates, wool, silk, curtains, down | €3.00 |
+
+- **Capacity**: 8 kg
+- **Spin**: 800 / 1000 / 1200 RPM (selectable)
+- **Extras**: Extra rinse (+€0.50), Pre-wash (+€1.00)
+- **Payment**: Coins, card, or loyalty card at central panel
+- **Soap**: Automatic dosing (detergent + softener + active oxygen) — industrial, less foam is NORMAL
+- **Duration**: ~28 min (normal cycle)
+
+## Operating Rules
+
+- One instruction/question per step
+- Payment check is ALWAYS `step_0` (first step)
+- Retry limit: loop back max before escalation
+- If flow resumes from PAUSED: re-send `currentNode.prompt` before new input
+- No automatic compensation promised by bot
+- STOP = cancels wash → operator decides compensation
+
+## Flows
+
+### Flow: `no_parte` (machine won't start)
 
 ```mermaid
 flowchart TD
+    S0{"Paid already?"}
+    S0 -->|No| PAY["Payment instructions:<br/>1. Pay at central<br/>2. Select machine #<br/>3. Press program<br/>4. Close door"]
+    PAY --> PAY_R{"Paid now?"}
+    PAY_R -->|Yes| DISP
+    PAY_R -->|No| ESC_PAY["⚠ Escalate: payment issue"]
 
-START --> SR{"Il servizio e partito?"}
+    S0 -->|Yes| DISP{"What does the display show?"}
 
-SR -->|No| D1{"Cosa vedi sul display?"}
-D1 -->|DOOR| DOOR["Chiudi bene la porta"] --> AR1
-D1 -->|SEL| SEL["Seleziona il programma"] --> AR1
-D1 -->|PUSH PROG| PUSH["Premi il pulsante programma"] --> AR1
-D1 -->|Credito/prezzo| CREDIT_1["Controlla se resta credito sulla centrale"] --> CREDIT_2
-D1 -->|AL001| AL001["Errore di sequenza: rifai i passaggi nell'ordine corretto"] --> AR1
-D1 -->|ALM| ALM_STOP["Premi STOP una volta"] --> AR_ALM
-D1 -->|END + bAL| BAL["Carico sbilanciato: separa il carico in 2 lavatrici"] --> ESC_COMP
-D1 -->|Altro| ESC_TECH["Escalare: errore non riconosciuto"]
+    DISP -->|"1 SEL"| SEL["Select machine # / press program"]
+    DISP -->|"2 Price €"| PRICE{"Change returned?"}
+    DISP -->|"3 PUSH/Pr"| PUSH["Press program button"]
+    DISP -->|"4 DOOR"| DOOR["Close door firmly (click)"]
+    DISP -->|"5 ALM"| ALM
+    DISP -->|"6 AL001"| AL001["⚠ Escalate: sequence error<br/>(program before payment)"]
+    DISP -->|"7 END"| END_N["Cycle ended normally"]
 
-CREDIT_2{"C'e credito residuo?"}
-CREDIT_2 -->|Si| CREDIT_PRESS["Ripremi numero macchina / programma corretto"] --> AR1
-CREDIT_2 -->|No| CREDIT_ADD["Aggiungi credito richiesto e riprova"] --> AR1
+    PRICE -->|Yes| PRICE_OK["Check display, insert correct amount"]
+    PRICE -->|No| PRICE_NO["Wrong machine #?<br/>Check credit on central, press correct button"]
 
-AR_ALM{"Ha funzionato?"}
-AR_ALM -->|Si| OK_ALM["Risolto"]
-AR_ALM -->|No| ALM_TYPE{"Tipo allarme ALM?"}
-ALM_TYPE -->|ALM/A acqua| ALM_A["Controlla ingresso acqua e riprova"] --> AR_ALM2
-ALM_TYPE -->|ALM/E desague| ALM_E["Controlla scarico/ostruzioni e riprova"] --> AR_ALM2
-ALM_TYPE -->|ALM/door| ALM_D["Controlla chiusura sicurezza porta"] --> AR_ALM2
-ALM_TYPE -->|ALM/VAr| ALM_V["Possibile variatore: verifica e riprova"] --> AR_ALM2
-ALM_TYPE -->|Altro| ESC_ALM["Escalare: allarme non mappato"]
+    ALM --> ALM_T{"ALM subtype?"}
+    ALM_T -->|"1 Water"| ALM_W["Press STOP once"]
+    ALM_T -->|"2 Drain"| ALM_DR["Press STOP once"]
+    ALM_T -->|"3 Door"| ALM_D["Check door latch, close properly"]
+    ALM_T -->|"4 Other"| ALM_O["Press STOP once"]
 
-AR_ALM2{"Ha funzionato?"}
-AR_ALM2 -->|Si| OK_ALM2["Risolto"]
-AR_ALM2 -->|No| ESC_COMP["Escalare: operatore valuta il caso"]
+    SEL --> AR{"Resolved?"}
+    PUSH --> AR
+    DOOR --> AR
+    PRICE_OK --> AR
+    PRICE_NO --> AR
+    ALM_W --> AR_ALM{"Resolved?"}
+    ALM_DR --> AR_ALM
+    ALM_D --> AR_ALM
+    ALM_O --> AR_ALM
 
-AR1{"Ha funzionato?"}
-AR1 -->|Si| OK1["Risolto"]
-AR1 -->|No| D1_RETRY
+    AR -->|Yes| OK["✅ Resolved"]
+    AR -->|No| ESC["⚠ Escalate: operator"]
 
-D1_RETRY{"Tentativi D1 >= 3?"}
-D1_RETRY -->|No| D1
-D1_RETRY -->|Si| ESC_LOOP["Escalare: 3 tentativi senza esito"]
-
-SR -->|Si| F1{"Il ciclo e finito?"}
-F1 -->|No| RUN{"Che succede ora?"}
-RUN -->|Sta funzionando| WAIT["Attendi fine ciclo; se cambia qualcosa dimmi subito"] --> F1
-RUN -->|STOP premuto| STOP_MSG["STOP annulla il lavaggio: caso da revisionare, nessuna compensazione automatica"] --> ESC_STOP
-ESC_STOP["Escalare: decisione operatore"]
-
-F1 -->|Si| P2{"Problema finale?"}
-P2 -->|Bagnata/non centrifugata| WET["Carico eccessivo: separa e rilava"] --> AR2
-P2 -->|Non scarica acqua| DRAIN["Possibile guasto"] --> ESC_T2
-P2 -->|Non carica acqua| WATER["Possibile guasto"] --> ESC_T3
-P2 -->|Rumore| NOISE["Possibile guasto"] --> ESC_T4
-P2 -->|Porta bloccata| LOCK["Attendi 2-3 min per sblocco (anche di piu se sta drenando)"] --> AR2
-P2 -->|Rovinata| DAMAGE["Mi dispiace: verifichiamo etichetta/uso e lo revisamos"] --> RES_INFO
-P2 -->|No sapone/schiuma| SOAP["E normale: detergente industriale, poca schiuma. Se vuoi lo revisamos"] --> RES_INFO
-P2 -->|Nessun problema| OK2["Risolto"]
-
-AR2{"Ha funzionato?"}
-AR2 -->|Si| OK3["Risolto"]
-AR2 -->|No| ESC_COMP2["Escalare: operatore"]
-
-RES_INFO["Chiusura informativa; se il cliente contesta -> escalation"]
+    AR_ALM -->|Yes| OK_ALM["✅ Resolved"]
+    AR_ALM -->|No| ESC_ALM["⚠ Escalate: alarm persists"]
 ```
 
-## Copertura Playbook
+### Flow: `post_ciclo` (after wash finished)
 
-- 5.1 No funciona la rentadora
-- 5.4 He pagat i no s'ha activat
-- 5.5 Error AL001
-- Regole compensazione §7
-- Escalation §10
+```mermaid
+flowchart TD
+    P0{"What's the problem?"}
+
+    P0 -->|"1 Clothes wet"| WET{"Was display END+bAL?"}
+    P0 -->|"2 Door locked"| LOCK["Wait 2-3 min (draining)"]
+    P0 -->|"3 Damaged"| DMG["⚠ Escalate: check label/usage"]
+    P0 -->|"4 No foam"| FOAM["Normal: industrial detergent,<br/>less foam is expected"]
+
+    WET -->|Yes| BAL["⚠ Escalate: unbalanced load"]
+    WET -->|No| WET_NORM["Overloaded: split load,<br/>use Quick program €2.50"]
+
+    LOCK --> LOCK_R{"Door opened?"}
+    LOCK_R -->|Yes| OK["✅ Resolved"]
+    LOCK_R -->|No| ESC_DOOR["⚠ Escalate: door stuck"]
+
+    FOAM --> RES_INFO["ℹ Info closure"]
+    DMG --> RES_INFO
+    RES_INFO -->|"Customer contests"| ESC_COMP["⚠ Escalate"]
+```
+
+### Flow: `stop_error` (STOP button pressed)
+
+```mermaid
+flowchart TD
+    S0{"Was it before the first cycle?"}
+    S0 -->|Yes| FIRST["Machine ready to restart.<br/>Select program and start again."]
+    S0 -->|No| MID["⚠ STOP cancels mid-cycle wash.<br/>No automatic compensation.<br/>Escalate: operator decides."]
+```
+
+## Playbook Coverage
+
+| Section | Topic | Covered |
+|---------|-------|---------|
+| 5.1 | Washer not working | ✅ `no_parte` flow |
+| 5.4 | Paid but won't start | ✅ `no_parte.display_check` |
+| 5.5 | Error AL001 | ✅ `no_parte.case_al001` |
+| §7 | Compensation rules | ✅ No auto-promise, escalate |
+| §10 | Escalation protocol | ✅ All terminal `escalate` nodes |
+
+## Node Map (02_lavatrice.json)
+
+| Flow | Nodes | Types |
+|------|-------|-------|
+| `no_parte` | `step_0` → `pay_help` → `pay_retry` → `display_check` → 7 branches → `ask_resolved` | CONFIRMATION, ACTION, CHOICE, INFO |
+| `post_ciclo` | `step_0` → 5 branches (`wet_clothes`, `door_locked`, `damaged`, `foam_info`, `escalate`) | CHOICE, CONFIRMATION, INFO |
+| `stop_error` | `step_0` → `stop_first_time` / `stop_mid_cycle` | CONFIRMATION, INFO |

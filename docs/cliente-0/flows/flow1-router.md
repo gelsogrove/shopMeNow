@@ -1,99 +1,125 @@
-# Flow 1 — Router (Fonte di Verità: `achitecture.md`)
+# Flow 1 — Router LLM
 
-## Scopo
+> **Source of truth**: [`achitecture.md`](achitecture.md)
+> **Template**: `apps/backend/src/templates/flow/00-router.template.md`
+> **DB config**: `FlowNodeConfig` where `flowKey = 'router'`
 
-Questo documento definisce solo la logica di routing per i messaggi fuori dal flow deterministico.
+## Purpose
 
-- PATH A (flow attivo): NON usa Router LLM, usa `FlowClassifierService` + `FlowEngineService`.
-- PATH B/C: usa `FlowAgentLLM` in modalita router/sub-router per decidere azioni.
+The Router is the entry point for all FLOW workspace messages when no flow is active.
+It collects **locale**, **machine type**, and **machine number**, then calls `assignMachine()`.
 
-## Regole hard
+- **PATH A** (flow active): Router is BYPASSED → `FlowClassifierService` + `FlowEngineService` handle it
+- **PATH B/C**: Router LLM decides next action
 
-- Il Router decide, non improvvisa policy.
-- Una domanda per volta.
-- Niente accuse di frode.
-- Nessuna compensazione promessa automaticamente.
-- Se il caso e ambiguo o richiede validazione: `contactOperator`.
-- Resume UX: quando un flow in PAUSA riprende, il sistema deve rimandare `currentNode.prompt` prima di chiedere nuovo input.
+## Router Prompt (production template)
 
-## Dati minimi da raccogliere
+```
+You are {{chatbotName}}, the virtual assistant of {{companyName}}.
+Tone: {{toneOfVoice}}.
 
-- `locale`
-- `machine_type` (lavatrice o asciugatrice)
-- `machine_number`
-- `problem_description`
+WELCOME → {{welcomeMessage}} + address customer request
+MISSION → Collect locale → type → number → call tool
+EXTRACTION → Parse location/type/number from message BEFORE asking
+FLOW → Ask ONLY what's missing, ONE question per turn
+ESCALATION → contactOperator() if customer asks for human
+FAQ → {{faqs}} for general questions
+```
 
-## Calling functions
+### Template Variables
 
-- `assignMachine(flowKey, machineNumber)`
-- `startFlow(flowId)`
-- `contactOperator(reason)`
-- `changeLanguage(lang)`
+| Variable | Source | Example |
+|----------|--------|---------|
+| `{{chatbotName}}` | Workspace settings | "Sofia" |
+| `{{toneOfVoice}}` | Workspace settings | "Friendly, professional" |
+| `{{companyName}}` | Workspace settings | "Ecolaundry" |
+| `{{welcomeMessage}}` | Workspace settings | "Hi! I'm Sofia..." |
+| `{{faqs}}` | FAQ table (workspace-filtered) | Q&A pairs |
+
+## Hard Rules
+
+- ONE question per turn — NEVER ask multiple questions
+- No fraud accusations — "we need to verify manually"
+- No automatic compensation promises
+- If ambiguous or requires validation → `contactOperator`
+- Resume UX: when PAUSED flow resumes, re-send `currentNode.prompt`
+
+## Data Collection Order
+
+```
+1. locale        → "Which location?" (Goya, Pineda, L'Escala, Alemanya, Hortes)
+2. machine_type  → "Washer or dryer?"
+3. machine_number → "What's the machine number?"
+4. → assignMachine(flowKey, machineNumber)
+```
+
+## Calling Functions
+
+| Function | Type | When |
+|----------|------|------|
+| `assignMachine(flowKey, machineNumber)` | DELEGATE_TO_AGENT | locale + type + number collected |
+| `contactOperator(reason)` | CALLING_FUNCTION | Customer asks for human, ambiguous case |
+| `changeLanguage(lang)` | INTERNAL | Language change request |
+| `startFlow(flowId)` | INTERNAL | Sub-LLM identifies problem → starts deterministic flow |
 
 ## Decision Matrix
 
-| Action | Quando | Next step |
-|---|---|---|
-| `GREETING` | Primo messaggio/saluto | Risposta breve di apertura |
-| `GATHER_INFO` | Mancano dati minimi macchina | Chiedere solo il dato mancante |
-| `ASSIGN_MACHINE` | Tipo + numero disponibili | `assignMachine()` |
-| `START_FLOW` | Problema macchina chiaro con flowKey assegnato | `startFlow()` |
-| `FAQ` | Richiesta info generale (refund/fattura/carta/orari/prezzi) | Handoff alla risposta knowledge base |
-| `ESCALATE` | Caso incoerente, cliente arrabbiato, caso non riconosciuto | `contactOperator()` |
-| `CHANGE_LANG` | Richiesta cambio lingua | `changeLanguage()` |
+| Action | When | Next step |
+|--------|------|-----------|
+| `GREETING` | First message / greeting only | Welcome + ask locale |
+| `GATHER_INFO` | Missing locale, type, or number | Ask ONLY the missing datum |
+| `ASSIGN_MACHINE` | All 3 data points collected | `assignMachine()` → Sub-LLM |
+| `FAQ` | General question (hours, price, refund, invoice...) | Answer from knowledge base |
+| `ESCALATE` | Angry, contradictions, unknown error | `contactOperator()` |
+| `CHANGE_LANG` | Language change request | `changeLanguage()` |
 
-## FAQ intents (classificazione, non risposta nel Router)
+## FAQ Intents (from Playbook)
 
-Allineati al Playbook:
+| Intent | Playbook Section |
+|--------|-----------------|
+| `DOUBLE_CHARGE` | 5.3 |
+| `PAID_NOT_ACTIVATED` | 5.4 |
+| `AL001` | 5.5 |
+| `COMPENSATION_CODE` | 5.6 |
+| `REFUND` | 5.7 |
+| `INVOICE` | 5.8 |
+| `LOYALTY_CARD` | 5.9 |
+| `HOURS_PRICES_LOCAL_DIFFS` | 5.10 |
 
-- `DOUBLE_CHARGE` (5.3)
-- `PAID_NOT_ACTIVATED` (5.4)
-- `AL001` (5.5)
-- `COMPENSATION_CODE` (5.6)
-- `REFUND` (5.7)
-- `INVOICE` (5.8)
-- `LOYALTY_CARD` (5.9)
-- `HOURS_PRICES_LOCAL_DIFFS` (5.10)
+## Immediate Escalation Triggers (Playbook §6 + §10)
 
-## Escalation immediata (Playbook §6 + §10)
+- Customer very angry
+- Contradictions in amount or story
+- Error not mapped in known cases
+- Manual machine activation needed
+- Compensation decision required
+- Suspected fraud/inconsistency
+- Incorrect code / new code needed
+- Camera/AJAX system incidents
+- Goya/Pineda: dataphone charge of €10 (should be €7/€8)
 
-- cliente molto arrabbiato
-- contraddizioni in importo/racconto
-- errore non mappato
-- attivazione manuale necessaria
-- decisione su compensazione
-- sospetta incoerenza/frode
-- codice errato/nuovo codice richiesto
-- incidente con telecamere/AJAX
-- caso sospetto Goya/Pineda: addebito dataphone 10 EUR
-
-## Flowchart Router
+## Flowchart
 
 ```mermaid
 flowchart TD
+    MSG["Customer message"] --> ACTIVE{"flowState = ACTIVE?"}
 
-START["Cliente scrive"] --> ACTIVE{"flowState ACTIVE?"}
+    ACTIVE -->|Yes| PATH_A["PATH A:<br/>FlowClassifier + FlowEngine<br/>(Router bypassed)"]
+    ACTIVE -->|No| EXTRACT["Extract locale/type/number<br/>from message"]
 
-ACTIVE -->|Si| A_PATH["PATH A: FlowClassifier + FlowEngine (no Router)"]
-ACTIVE -->|No| INTENT{"Intent principale"}
+    EXTRACT --> INTENT{"Intent?"}
 
-INTENT -->|Saluto| GREETING["Action: GREETING"]
-INTENT -->|Richiesta operatore| ESC1["Action: ESCALATE -> contactOperator"]
-INTENT -->|Cambio lingua| LANG["Action: CHANGE_LANG -> changeLanguage"]
-INTENT -->|FAQ generale| FAQ["Action: FAQ (classifica + handoff)"]
-INTENT -->|Problema macchina| GATHER
-INTENT -->|Incoerente/ambigua| ESC2["Action: ESCALATE"]
+    INTENT -->|Greeting| GREET["Welcome + ask locale"]
+    INTENT -->|Human request| ESC["contactOperator()"]
+    INTENT -->|Language change| LANG["changeLanguage()"]
+    INTENT -->|FAQ| FAQ["Answer from knowledge base"]
+    INTENT -->|Machine problem| CHECK{"All 3 collected?"}
+    INTENT -->|Ambiguous| ESC
 
-GATHER["Raccogliere: locale -> tipo -> numero"] --> COMPLETE{"Dati completi?"}
-COMPLETE -->|No| ASK_MISSING["Action: GATHER_INFO (1 dato per turno)"]
-COMPLETE -->|Si| ASSIGN["Action: ASSIGN_MACHINE -> assignMachine"]
+    CHECK -->|No| ASK["Ask ONLY the missing datum<br/>(locale → type → number)"]
+    CHECK -->|Yes| ASSIGN["assignMachine(flowKey, number)"]
 
-ASSIGN --> ISSUE{"Problema tecnico chiaro?"}
-ISSUE -->|Si| STARTF["Action: START_FLOW -> startFlow"]
-ISSUE -->|No| ASK_PROBLEM["Action: GATHER_INFO (problem_description)"]
+    ASSIGN --> SUBLLM["Sub-LLM classifies problem"]
+    SUBLLM --> STARTFLOW["startFlow(flowId)"]
+    STARTFLOW --> FLOWENGINE["FlowEngine<br/>(deterministic, 0 tokens)"]
 ```
-
-## Note allineamento
-
-- Le risposte FAQ complete sono gestite dalla voce conversazionale (`FlowAgentLLM` con knowledge), non dalla parte decisionale del Router.
-- Durante flow attivo, il routing semantico non deve interferire con il deterministico.

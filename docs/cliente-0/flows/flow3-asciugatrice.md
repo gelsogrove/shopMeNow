@@ -1,87 +1,117 @@
-# Flow 3 — Asciugatrice/Secadora (Deterministico)
+# Flow 3 — Asciugatrice ED-340 (Deterministico)
 
-Fonte di verita: `achitecture.md`.
+> **Source of truth**: [`achitecture.md`](achitecture.md)
+> **flowKey**: `asciugatrice_ed340`
+> **JSON config**: [`01_secadora.json`](01_secadora.json)
+> **Engine**: `FlowEngineService` (0 LLM tokens)
 
-## Regole operative
+## Machine Specs
 
-- Flow deterministico (`FlowEngineService`), no LLM per la transizione nodi.
-- Una domanda/azione per step.
-- D1 ha retry limit: massimo 3 tentativi, poi escalation.
-- Nodo `CREDIT` diviso in step concreti (display minuti, nuovo credito, conferma avvio).
-- Se flow riprende da PAUSA, rimandare sempre `currentNode.prompt` prima del nuovo input.
-- Nessuna compensazione promessa automaticamente.
-- Casi locali critici (Alemanya/Pineda) sempre con escalation umana.
+| Program | Temp | Fabrics |
+|---------|------|---------|
+| Tª Alta | 80° | Towels, weekly laundry, 100% cotton |
+| Tª Mitja | 65° | Duvets, blankets, mixed fabrics (50% cotton) |
+| Tª Baixa | 50° | Sofa covers, work clothes, polyester/cotton blends |
+
+- **Capacity**: 15 kg
+- **Payment**: Coins at central display (€3 = 15 min, €4 = 20 min, €5 = 25 min)
+- **Start**: Press PAUSE to confirm time and start
+- **Cooling phase**: Last 2 min — door may stay locked briefly after cycle ends
+- **STOP**: Stops cycle completely — operator evaluates compensation
+- **Alarm types**: PUERTA DEL FILTRO, FALLO DE ROTACION, FALLO DE ASPIRACION
+
+> ⚠️ NEVER put soaking wet clothes in dryer — damages filter and clothes won't dry
+
+## Operating Rules
+
+- One instruction/question per step
+- Payment check is ALWAYS `step_0` (first step)
+- If flow resumes from PAUSED: re-send `currentNode.prompt` before new input
+- No automatic compensation promised by bot
+- Local anomalies (Alemanya/Pineda credit issues) → always escalate
+
+## Flows
+
+### Flow: `no_parte` (dryer won't start)
 
 ```mermaid
 flowchart TD
+    S0{"Inserted coins at<br/>central display?"}
+    S0 -->|No| PAY["Insert coins:<br/>€3=15min, €4=20min, €5=25min<br/>Press PAUSE to confirm"]
+    PAY --> PAY_R{"Coins inserted, time displayed?"}
+    PAY_R -->|Yes| DISP
+    PAY_R -->|No| ESC_PAY["⚠ Escalate: payment issue"]
 
-START --> SR{"Il servizio e partito?"}
+    S0 -->|Yes| DISP{"What does the display show?"}
 
-SR -->|No| D1{"Cosa dice il display?"}
-D1 -->|Porta| DOOR["Chiudi bene la porta"] --> AR1
-D1 -->|Filtro| FILTER["Pulisci filtro e sensore porta"] --> AR1
-D1 -->|Credito/tempo| CREDIT_1["Controlla minuti/prezzo sul display"] --> CREDIT_2
-D1 -->|Alarma| ALM_STOP["Premi STOP una volta"] --> AR_ALM
-D1 -->|Altro| ESC1["Escalare: errore non riconosciuto"]
+    DISP -->|"1 Price €"| CREDIT["Add more coins until time appears,<br/>then press PAUSE"]
+    DISP -->|"2 Minutes"| START_BTN["Press PAUSE to start"]
+    DISP -->|"3 DOOR"| DOOR["Close door firmly (click)"]
+    DISP -->|"4 FILTRO"| FILTER["Clean filter + sensor,<br/>close filter door, press STOP once"]
+    DISP -->|"5 FALLO"| FALLO
+    DISP -->|"6 Off"| NO_POWER["⚠ Escalate: power supply issue"]
 
-CREDIT_2{"I minuti aumentano dopo pagamento?"}
-CREDIT_2 -->|Si| CREDIT_START["Premi START/programma e verifica avvio"] --> AR1
-CREDIT_2 -->|No| ESC_LOCAL["Alemanya/Pineda o anomalia credito: escalation revisione umana"]
+    FALLO{"FALLO type?"}
+    FALLO -->|"1 ROTACION"| F_ROT["⚠ Escalate: drum sensor fault"]
+    FALLO -->|"2 ASPIRACION"| F_ASP["Clean filter + aspiration tube,<br/>press STOP to reset"]
+    FALLO -->|"3 Other"| F_GEN["Press STOP once to reset"]
 
-AR_ALM{"Ha funzionato?"}
-AR_ALM -->|Si| OK_ALM["Risolto"]
-AR_ALM -->|No| ALM_TYPE{"Tipo allarme?"}
+    CREDIT --> AR{"Resolved?"}
+    START_BTN --> AR
+    DOOR --> AR
+    FILTER --> AR
+    F_ASP --> AR
+    F_GEN --> AR
 
-ALM_TYPE -->|Filtro porta| ALM_F["Pulire filtro + sensore e riposizionare"] --> AR_ALM2
-ALM_TYPE -->|Rotazione| ALM_R["Possibile sensore rotazione"] --> ESC2
-ALM_TYPE -->|Aspirazione| ALM_A["Pulire filtro e tubo aspirazione"] --> AR_ALM2
-ALM_TYPE -->|Altro| ESC3["Escalare: guasto/allarme non mappato"]
+    AR -->|Yes| OK["✅ Resolved"]
+    AR -->|No| RETRY{"Display now?"}
 
-AR_ALM2{"Ha funzionato?"}
-AR_ALM2 -->|Si| OK_ALM2["Risolto"]
-AR_ALM2 -->|No| ESC4["Escalare: operatore"]
-
-AR1{"Ha funzionato?"}
-AR1 -->|Si| OK1["Risolto"]
-AR1 -->|No| D1_RETRY
-
-D1_RETRY{"Tentativi D1 >= 3?"}
-D1_RETRY -->|No| D1
-D1_RETRY -->|Si| ESC_LOOP["Escalare: 3 tentativi senza esito"]
-
-SR -->|Si| F1{"Il ciclo e finito?"}
-F1 -->|No| RUN{"Che succede ora?"}
-RUN -->|Sta asciugando| WAIT["Attendi fine ciclo; se cambia qualcosa dimmi subito"] --> F1
-RUN -->|STOP premuto| STOP_DRY["STOP interrompe ciclo: caso da revisionare, nessuna compensazione automatica"] --> AR2
-F1 -->|Si| P2{"Problema finale?"}
-
-P2 -->|Non asciuga| DRY_CAUSE
-P2 -->|Troppo umida dalla lavatrice| HUMID["Carico troppo umido: separa e rilava"] --> AR2
-P2 -->|Odore| SMELL["Pulizia cestello/filtro"] --> AR2
-P2 -->|Rumore| NOISE["Possibile guasto"] --> ESC5
-P2 -->|Porta bloccata| LOCK["Attendi 2-3 min (raffreddamento) e riprova"] --> AR2
-P2 -->|Rovinata/bruciata| DAMAGE["Mi dispiace. Verifica etichetta tessuto; non promettiamo compensazione automatica, ma lo revisamos"] --> RES_INFO
-P2 -->|Plastico attaccato| PLASTIC["Mi dispiace. Controllo tamburo prima uso; lo revisamos con operatore se serve"] --> RES_INFO
-P2 -->|Macchiata| STAIN["Rilava con pretrattamento; eventuale compensazione solo dopo revisione"] --> ESC_COMP
-P2 -->|Nessun problema| OK2["Risolto"]
-
-DRY_CAUSE{"Cause probabili"}
-DRY_CAUSE -->|Carico troppo pieno/in bolla| DRY_LOAD["Riduci carico e distendi i capi"] --> AR2
-DRY_CAUSE -->|Tempo insufficiente| DRY_TIME["Aggiungi 10-15 min e verifica"] --> AR2
-DRY_CAUSE -->|Centrifuga lavatrice insufficiente| DRY_SPIN["Rientra nel flusso lavatrice (centrifuga/carico)"] --> AR2
-
-AR2{"Ha funzionato?"}
-AR2 -->|Si| OK3["Risolto"]
-AR2 -->|No| ESC6["Escalare: operatore"]
-
-ESC_COMP["Escalare: valutazione compensazione umana"]
-RES_INFO["Chiusura informativa; se il cliente contesta -> escalation"]
+    RETRY -->|"1 Price"| CREDIT
+    RETRY -->|"2 Minutes"| START_BTN
+    RETRY -->|"3 DOOR"| DOOR
+    RETRY -->|"4 FILTRO"| FILTER
+    RETRY -->|"5 FALLO"| FALLO
+    RETRY -->|"6 Off"| NO_POWER
+    RETRY -->|Other| ESC["⚠ Escalate: operator"]
 ```
 
-## Copertura Playbook
+### Flow: `post_ciclo` (after drying finished)
 
-- 5.2 No funciona la secadora
-- 5.4 He pagat i no s'ha activat (parte secadora)
-- 8. Differenze per locale (Alemanya/Pineda, Goya)
-- Regole compensazione §7
-- Escalation §10
+```mermaid
+flowchart TD
+    P0{"What happened after drying?"}
+
+    P0 -->|"1 Still damp"| DAMP
+    P0 -->|"2 Burnt marks"| BURNT["⚠ Escalate: damage assessment"]
+    P0 -->|"3 Plastic melted"| PLASTIC["Foreign object in drum.<br/>⚠ Client responsibility,<br/>escalate for review"]
+    P0 -->|"4 Stains"| STAIN["⚠ Escalate: re-wash assessment"]
+    P0 -->|"5 Bad smell"| SMELL["⚠ Escalate: check drum/filter"]
+    P0 -->|"6 Door locked"| LOCK["Wait 2 min (cooling phase)"]
+
+    DAMP{"Possible cause?"}
+    DAMP -->|"1 Clothes soaking wet"| DAMP_WET["⚠ Never put soaking wet clothes!<br/>Escalate: may need re-wash"]
+    DAMP -->|"2 Drum too full"| DAMP_FULL["⚠ Overloaded.<br/>Escalate: re-dry assessment"]
+    DAMP -->|"3 Time too short"| DAMP_TIME["⚠ Escalate: re-dry assessment"]
+    DAMP -->|"4 Not sure"| DAMP_FULL
+
+    LOCK --> LOCK_R{"Door opened?"}
+    LOCK_R -->|Yes| OK["✅ Resolved"]
+    LOCK_R -->|No| ESC_DOOR["⚠ Escalate: door stuck"]
+```
+
+## Playbook Coverage
+
+| Section | Topic | Covered |
+|---------|-------|---------|
+| 5.2 | Dryer not working | ✅ `no_parte` flow |
+| 5.4 | Paid but won't start (dryer) | ✅ `no_parte.display_check` |
+| §7 | Compensation rules | ✅ No auto-promise, escalate |
+| §8 | Location-specific (Alemanya/Pineda) | ✅ Credit anomaly → escalate |
+| §10 | Escalation protocol | ✅ All terminal `escalate` nodes |
+
+## Node Map (01_secadora.json)
+
+| Flow | Nodes | Types |
+|------|-------|-------|
+| `no_parte` | `step_0` → `pay_help` → `pay_retry` → `display_check` → 6 branches → `check_result` → `check_retry` | CONFIRMATION, ACTION, CHOICE, INFO |
+| `post_ciclo` | `step_0` → 6 branches (`damp`, `burnt`, `plastic`, `stain`, `smell`, `door_locked`) | CHOICE, CONFIRMATION, ACTION, INFO |
