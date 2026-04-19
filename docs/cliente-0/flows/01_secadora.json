@@ -10,7 +10,7 @@
     },
     "pay_help": {
       "type": "ACTION",
-      "prompt": "No problem! Here's how to pay:\n💶 Insert coins at the central display:\n• €3 = 15 min\n• €4 = 20 min\n• €5 = 25 min\n\nOnce the time appears on the display, press PAUSE to confirm and start.",
+      "prompt": "No problem! Insert coins at the central display:\n• €3 = 15 min  •  €4 = 20 min  •  €5 = 25 min\n\nOnce the time appears on the display, press PAUSE to confirm and start.",
       "transitions": {
         "default": "no_parte.pay_retry"
       }
@@ -25,13 +25,13 @@
     },
     "display_check": {
       "type": "CHOICE",
-      "prompt": "Good — now, what does the display show?\n\n1️⃣ A price in € (e.g. 3.00, 4.00, 5.00) — need more coins\n2️⃣ Minutes of drying time\n3️⃣ DOOR\n4️⃣ FILTRO / filter alarm\n5️⃣ FALLO / fault alarm\n6️⃣ Display is off",
+      "prompt": "What does the display show?\n\n1️⃣ A price in € (need more coins)\n2️⃣ Minutes of drying time\n3️⃣ DOOR\n4️⃣ FILTRO / filter alarm\n5️⃣ FALLO / fault alarm\n6️⃣ Display is off",
       "transitions": {
         "1": "no_parte.check_credit",
         "2": "no_parte.check_start_btn",
         "3": "no_parte.door_close",
         "4": "no_parte.filter_alarm",
-        "5": "no_parte.fallo_alarm",
+        "5": "no_parte.fallo_alarm_type",
         "6": "no_parte.no_power",
         "default": "no_parte.escalate"
       },
@@ -39,77 +39,60 @@
     },
     "check_credit": {
       "type": "ACTION",
-      "prompt": "The display shows the price 💶 You need to add more coins:\n• €3 = 15 min  •  €4 = 20 min  •  €5 = 25 min\n\nInsert the remaining amount, then press PAUSE to confirm.",
+      "prompt": "The display shows the price 💶 Add more coins until the time appears:\n• €3 = 15 min  •  €4 = 20 min  •  €5 = 25 min\n\nThen press PAUSE to confirm.",
       "transitions": {
-        "default": "no_parte.check_credit_result"
-      }
-    },
-    "check_credit_result": {
-      "type": "CONFIRMATION",
-      "prompt": "Has the dryer started now? (yes / no)",
-      "transitions": {
-        "YES": "no_parte.ok",
-        "NO": "no_parte.escalate"
+        "default": "no_parte.check_result"
       }
     },
     "check_start_btn": {
       "type": "ACTION",
       "prompt": "Your credit is accepted ✅ Press the PAUSE button to confirm your time and start the dryer.",
       "transitions": {
-        "default": "no_parte.check_start_result"
-      }
-    },
-    "check_start_result": {
-      "type": "CONFIRMATION",
-      "prompt": "Has the dryer started now? (yes / no)",
-      "transitions": {
-        "YES": "no_parte.ok",
-        "NO": "no_parte.escalate"
+        "default": "no_parte.check_result"
       }
     },
     "door_close": {
       "type": "ACTION",
       "prompt": "DOOR means the door is not properly closed 🚪 Open it and close it firmly until you hear a click.",
       "transitions": {
-        "default": "no_parte.door_check"
-      }
-    },
-    "door_check": {
-      "type": "CONFIRMATION",
-      "prompt": "Has the dryer started now? (yes / no)",
-      "transitions": {
-        "YES": "no_parte.ok",
-        "NO": "no_parte.escalate"
+        "default": "no_parte.check_result"
       }
     },
     "filter_alarm": {
       "type": "ACTION",
-      "prompt": "The filter door alarm is active ⚠️ Press STOP once to reset it, then close the filter door properly and try again.",
+      "prompt": "The filter door alarm is active ⚠️ Clean the filter and sensor, then close the filter door properly and press STOP once to reset.",
       "transitions": {
-        "default": "no_parte.filter_check"
+        "default": "no_parte.check_result"
       }
     },
-    "filter_check": {
-      "type": "CONFIRMATION",
-      "prompt": "Has the dryer started now? (yes / no)",
+    "fallo_alarm_type": {
+      "type": "CHOICE",
+      "prompt": "There is a FALLO alarm ⚠️ Which type do you see?\n\n1️⃣ FALLO DE ROTACION (rotation fault)\n2️⃣ FALLO DE ASPIRACION (aspiration fault)\n3️⃣ Not sure / other",
       "transitions": {
-        "YES": "no_parte.ok",
-        "NO": "no_parte.escalate_filter"
+        "1": "no_parte.fallo_rotation",
+        "2": "no_parte.fallo_aspiration",
+        "3": "no_parte.fallo_generic",
+        "default": "no_parte.fallo_generic"
       }
     },
-    "fallo_alarm": {
+    "fallo_rotation": {
+      "type": "INFO",
+      "prompt": "FALLO DE ROTACION = drum rotation sensor fault 🔧 This requires a technician check. I'm notifying the operator — please do not use this machine.",
+      "isTerminal": true,
+      "action": "escalate"
+    },
+    "fallo_aspiration": {
       "type": "ACTION",
-      "prompt": "There is a FALLO alarm (rotation or aspiration fault) ⚠️ Press STOP once to reset it and try again.",
+      "prompt": "FALLO DE ASPIRACION = airflow blockage 💨 Clean the filter and aspiration tube, then press STOP once to reset and try again.",
       "transitions": {
-        "default": "no_parte.fallo_check"
+        "default": "no_parte.check_result"
       }
     },
-    "fallo_check": {
-      "type": "CONFIRMATION",
-      "prompt": "Has the dryer started now? (yes / no)",
+    "fallo_generic": {
+      "type": "ACTION",
+      "prompt": "Press STOP once to reset the fault alarm and try again.",
       "transitions": {
-        "YES": "no_parte.ok",
-        "NO": "no_parte.escalate_fallo"
+        "default": "no_parte.check_result"
       }
     },
     "no_power": {
@@ -117,6 +100,28 @@
       "prompt": "The display is off — this may be a power supply issue 🔌 I'm notifying the operator to check the machine.",
       "isTerminal": true,
       "action": "escalate"
+    },
+    "check_result": {
+      "type": "CONFIRMATION",
+      "prompt": "Has the dryer started now? (yes / no)",
+      "transitions": {
+        "YES": "no_parte.ok",
+        "NO": "no_parte.check_retry"
+      }
+    },
+    "check_retry": {
+      "type": "CHOICE",
+      "prompt": "Let's try again. What does the display show now?\n\n1️⃣ A price in €\n2️⃣ Minutes of drying time\n3️⃣ DOOR\n4️⃣ FILTRO / filter alarm\n5️⃣ FALLO / fault alarm\n6️⃣ Display is off",
+      "transitions": {
+        "1": "no_parte.check_credit",
+        "2": "no_parte.check_start_btn",
+        "3": "no_parte.door_close",
+        "4": "no_parte.filter_alarm",
+        "5": "no_parte.fallo_alarm_type",
+        "6": "no_parte.no_power",
+        "default": "no_parte.escalate"
+      },
+      "onInterruptFallback": "Please reply with a number (1–6)."
     },
     "escalate_pay": {
       "type": "INFO",
@@ -126,19 +131,7 @@
     },
     "escalate": {
       "type": "INFO",
-      "prompt": "No worries — I'm notifying the operator 🙌 They will check the dryer and assist you shortly.",
-      "isTerminal": true,
-      "action": "escalate"
-    },
-    "escalate_filter": {
-      "type": "INFO",
-      "prompt": "The filter alarm persists ⚠️ I'm notifying the operator — please avoid using this machine for now.",
-      "isTerminal": true,
-      "action": "escalate"
-    },
-    "escalate_fallo": {
-      "type": "INFO",
-      "prompt": "The fault alarm persists ⚠️ I'm notifying the operator — please do not use this machine.",
+      "prompt": "I'm notifying the operator 🙌 They will check the dryer and assist you shortly.",
       "isTerminal": true,
       "action": "escalate"
     },
@@ -151,54 +144,56 @@
   "post_ciclo": {
     "step_0": {
       "type": "CHOICE",
-      "prompt": "I'm sorry to hear there's an issue 😔 What happened after the drying cycle?\n\n1️⃣ Clothes still damp / not fully dried\n2️⃣ Burnt smell or marks on clothes\n3️⃣ Stains on clothes\n4️⃣ Unpleasant smell\n5️⃣ Door locked after cycle ended",
+      "prompt": "I'm sorry to hear there's an issue 😔 What happened after the drying cycle?\n\n1️⃣ Clothes still damp / not fully dried\n2️⃣ Burnt smell or marks on clothes\n3️⃣ Plastic melted on clothes\n4️⃣ Stains on clothes\n5️⃣ Unpleasant smell\n6️⃣ Door locked after cycle ended",
       "transitions": {
         "1": "post_ciclo.damp",
         "2": "post_ciclo.burnt",
-        "3": "post_ciclo.stain",
-        "4": "post_ciclo.smell",
-        "5": "post_ciclo.door_locked",
+        "3": "post_ciclo.plastic",
+        "4": "post_ciclo.stain",
+        "5": "post_ciclo.smell",
+        "6": "post_ciclo.door_locked",
         "default": "post_ciclo.escalate"
       },
-      "onInterruptFallback": "Please reply with a number (1–5) to describe what happened."
+      "onInterruptFallback": "Please reply with a number (1–6) to describe what happened."
     },
     "damp": {
-      "type": "CONFIRMATION",
-      "prompt": "Was the laundry soaking wet when you took it from the washer (spin cycle may have failed)? (yes / no)",
+      "type": "CHOICE",
+      "prompt": "What do you think caused the clothes to stay damp?\n\n1️⃣ The clothes were already very wet from the washer\n2️⃣ The drum was too full\n3️⃣ The cycle time was too short\n4️⃣ Not sure",
       "transitions": {
-        "YES": "post_ciclo.damp_washer",
-        "NO": "post_ciclo.damp_overload"
+        "1": "post_ciclo.damp_washer",
+        "2": "post_ciclo.damp_overload",
+        "3": "post_ciclo.damp_time",
+        "4": "post_ciclo.damp_overload",
+        "default": "post_ciclo.damp_overload"
       }
     },
     "damp_washer": {
       "type": "INFO",
-      "prompt": "⚠️ IMPORTANT: Never put soaking wet clothes in the dryer — it damages the filter.\n\nIf the washer's spin cycle failed (END+bAL), a re-wash in 2 separate machines may be needed. I'm notifying the operator to assess the situation and any possible compensation.",
+      "prompt": "⚠️ IMPORTANT: Never put soaking wet clothes in the dryer — it damages the filter.\n\nIf the washer's spin cycle failed (END+bAL), a re-wash in 2 separate machines may be needed. I'm notifying the operator to assess the situation.",
       "isTerminal": true,
       "action": "escalate"
     },
     "damp_overload": {
       "type": "INFO",
-      "prompt": "The dryer may have been overloaded or the cycle time was insufficient. I'm notifying the operator to assess whether a re-dry is possible.",
+      "prompt": "The drum was too full — clothes in a ball don't dry evenly. I'm notifying the operator to assess whether a re-dry is possible.",
+      "isTerminal": true,
+      "action": "escalate"
+    },
+    "damp_time": {
+      "type": "INFO",
+      "prompt": "The cycle time was insufficient. I'm notifying the operator to assess whether a re-dry is possible.",
       "isTerminal": true,
       "action": "escalate"
     },
     "burnt": {
-      "type": "CONFIRMATION",
-      "prompt": "Was there plastic material, coins, or any foreign object in the drum? (yes / no)",
-      "transitions": {
-        "YES": "post_ciclo.burnt_plastic",
-        "NO": "post_ciclo.burnt_normal"
-      }
-    },
-    "burnt_plastic": {
       "type": "INFO",
-      "prompt": "Burns caused by foreign objects in the drum are the customer's responsibility. I'm notifying the operator to assess the case — no automatic compensation is guaranteed.",
+      "prompt": "I'm sorry about your clothes 😔 I'm notifying the operator to assess the damage. No automatic compensation is guaranteed — each case is evaluated individually.",
       "isTerminal": true,
       "action": "escalate"
     },
-    "burnt_normal": {
+    "plastic": {
       "type": "INFO",
-      "prompt": "I'm sorry about your clothes 😔 I'm notifying the operator to assess the damage. No automatic compensation is guaranteed — each case is evaluated individually.",
+      "prompt": "Plastic melting in the drum is caused by a foreign object left inside 🔍 Please always check the drum before use.\n\nI'm notifying the operator — this is considered client responsibility, but each case is assessed individually.",
       "isTerminal": true,
       "action": "escalate"
     },
@@ -210,13 +205,13 @@
     },
     "smell": {
       "type": "INFO",
-      "prompt": "I'm notifying the operator about the unpleasant smell 🔧 They will check the machine and assess your case.",
+      "prompt": "An unpleasant smell can come from the drum or filter. I'm notifying the operator to check the machine and assess your case 🔧",
       "isTerminal": true,
       "action": "escalate"
     },
     "door_locked": {
       "type": "ACTION",
-      "prompt": "After the cycle ends, the door stays locked for about 2 minutes during the cooling phase 🌬️ Please wait a moment and try again.",
+      "prompt": "After the cycle ends, the door stays locked for about 2 minutes during the cooling phase 🌬️ Please wait and try again.",
       "transitions": {
         "default": "post_ciclo.door_locked_check"
       }

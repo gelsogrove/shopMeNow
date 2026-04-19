@@ -1959,8 +1959,11 @@ Escalation message: "We're forwarding your case for review so we can help you in
 
 ## MACHINE SPECS — Washer HS-60XX
 - Capacity: 8 kg
-- Programs: Cotton, Synthetics, Delicates, Wool, Quick 30min
-- Prices: €4.00 (Cotton), €3.50 (Synthetics), €3.00 (Delicates/Wool), €2.50 (Quick)
+- Programs:
+  • 60° Molt Calent — white clothes, work clothes, very dirty laundry (resistant fabrics) — €4.00
+  • 40° Calent — cotton, coloured clothes, nylon, other fibres — €3.50
+  • 30° Temperat — cotton blends, coloured clothes, synthetic fabrics — €3.00
+  • Fred (*) cold — delicates, wool, acrylics, silk, curtains, down — €3.00
 - Payment: coins or contactless
 - Spin speed: 800/1000/1200 RPM (selectable)
 - EXTRA options: Extra rinse (+€0.50), Pre-wash (+€1.00)
@@ -2133,9 +2136,10 @@ Available flows: non_parte, errore_alm, lavaggio_problema`,
 
 ## MACHINE SPECS — Dryer ED-340
 - Capacity: 15 kg
-- Programs: Cotton High Temp, Cotton Low Temp, Synthetics, Delicates
-- Duration: 30 min (standard), 45 min (+€1.50), 15 min (quick dry)
-- Prices: €3.00 (30 min), €4.50 (45 min), €2.00 (15 min quick)
+- Programs:
+  • 80° Tª Alta — towels, weekly laundry, 100% cotton — €5.00 (30 min), €6.50 (45 min)
+  • 65° Tª Mitja — duvets, blankets, mixed fabrics (50% cotton) — €4.00 (30 min), €5.50 (45 min)
+  • 50° Tª Baixa — sofa covers, work clothes, polyester/cotton blends — €3.00 (30 min), €4.50 (45 min)
 - Payment: coins or contactless
 - Lint filter: should be cleaned before each use
 

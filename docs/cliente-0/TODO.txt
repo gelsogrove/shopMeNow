@@ -13,11 +13,12 @@ FATTO
 - grafico fattto bene? dynamic ?
 - CRUD DI TUTTO?
 - router?? import?
-
-progress
 - Welcome message ?
 - il pago lo controlla?
-- come facciamo a sapere se entra nello step deerministico?
+
+progress
+
+ deerministico?
 - i prompt sono fati bene?
 - Customer registration non va
 - Non va change Language.
@@ -27,19 +28,11 @@ progress
 - possiamo alzare la temperatura non so all'history e magari anche i lmodello ' non co chiedo...
 - DebugFlow
 
- 
 
- ============== il pagamento =================
-Preguntes en ordre:
-  1. A quin local ets?
-  2. Quin número de secadora és?
-  3. Has pogut iniciar-la? ← verifica se la macchina si è avviata
-  (implica il pagamento)
-  4. Has afegit temps o és el primer cicle?
-  5. Què surt exactament a la pantalla?
 
 TODO
-- I prompts e il settings uno per uno
 - da errore  il wtahapp channel
 - Flussi e grafici da dare al cliente
 - cambio user echabtot non funziona!
+- sessioneID non scade posso sempre stare collegato
+

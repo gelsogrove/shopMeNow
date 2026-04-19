@@ -42,71 +42,67 @@
       "type": "ACTION",
       "prompt": "SEL means the machine is ready and waiting 👍\n\n👉 Select your machine NUMBER on the panel, then press any PROGRAM button.",
       "transitions": {
-        "default": "no_parte.case_sel_check"
-      }
-    },
-    "case_sel_check": {
-      "type": "CONFIRMATION",
-      "prompt": "Has the machine started now? (yes / no)",
-      "transitions": {
-        "YES": "no_parte.ok",
-        "NO": "no_parte.escalate"
+        "default": "no_parte.check_result"
       }
     },
     "case_price": {
       "type": "ACTION",
-      "prompt": "The display shows the remaining amount to pay 💶 Insert more coins or tap your card until the display changes to PUSH.",
+      "prompt": "The display shows the remaining amount to pay 💶\n\nFirst check: do you have remaining credit on the central panel?\n👉 If yes — re-select your machine number and press the program button.\n👉 If no — insert more coins or tap your card until the display shows PUSH.",
       "transitions": {
-        "default": "no_parte.case_price_check"
-      }
-    },
-    "case_price_check": {
-      "type": "CONFIRMATION",
-      "prompt": "Has it started now? (yes / no)",
-      "transitions": {
-        "YES": "no_parte.ok",
-        "NO": "no_parte.escalate"
+        "default": "no_parte.check_result"
       }
     },
     "case_push": {
       "type": "ACTION",
       "prompt": "Payment complete! ✅ The display shows PUSH/Pr-3.\n\n👉 Press any PROGRAM button to start the wash.",
       "transitions": {
-        "default": "no_parte.case_push_check"
-      }
-    },
-    "case_push_check": {
-      "type": "CONFIRMATION",
-      "prompt": "Has it started now? (yes / no)",
-      "transitions": {
-        "YES": "no_parte.ok",
-        "NO": "no_parte.escalate"
+        "default": "no_parte.check_result"
       }
     },
     "case_door": {
       "type": "ACTION",
       "prompt": "The display shows 'door' 🚪 The door is not fully closed.\n\n👉 Open it and close it firmly — the machine will start automatically.",
       "transitions": {
-        "default": "no_parte.case_door_check"
-      }
-    },
-    "case_door_check": {
-      "type": "CONFIRMATION",
-      "prompt": "Has it started now? (yes / no)",
-      "transitions": {
-        "YES": "no_parte.ok",
-        "NO": "no_parte.escalate"
+        "default": "no_parte.check_result"
       }
     },
     "case_alm": {
       "type": "CHOICE",
-      "prompt": "There's an alarm ⚠️ Which alarm code do you see?\n\n1️⃣ ALM/A\n2️⃣ ALM/E\n3️⃣ ALM/door\n4️⃣ ALM/VAr",
+      "prompt": "There's an alarm ⚠️ Which alarm code do you see?\n\n1️⃣ ALM/A (water inlet issue)\n2️⃣ ALM/E (drainage issue)\n3️⃣ ALM/door (door alarm)\n4️⃣ ALM/VAr (variator/electrical)",
       "transitions": {
-        "1": "no_parte.alm_reset",
-        "2": "no_parte.alm_reset",
+        "1": "no_parte.alm_water",
+        "2": "no_parte.alm_drain",
         "3": "no_parte.alm_door_fix",
-        "4": "no_parte.alm_reset",
+        "4": "no_parte.alm_var",
         "default": "no_parte.alm_reset"
+      }
+    },
+    "alm_water": {
+      "type": "ACTION",
+      "prompt": "ALM/A = water inlet alarm 💧 Press STOP once to reset, then check the water supply is open and try again.",
+      "transitions": {
+        "default": "no_parte.alm_check"
+      }
+    },
+    "alm_drain": {
+      "type": "ACTION",
+      "prompt": "ALM/E = drainage alarm 🚰 Press STOP once to reset. Check there are no obstructions in the drain, then try again.",
+      "transitions": {
+        "default": "no_parte.alm_check"
+      }
+    },
+    "alm_door_fix": {
+      "type": "ACTION",
+      "prompt": "ALM/door = door alarm 🚪 Open and firmly close the door, then press STOP to reset the alarm.",
+      "transitions": {
+        "default": "no_parte.alm_check"
+      }
+    },
+    "alm_var": {
+      "type": "ACTION",
+      "prompt": "ALM/VAr = electrical variator alarm ⚡ Press STOP once to reset and try again.",
+      "transitions": {
+        "default": "no_parte.alm_check"
       }
     },
     "alm_reset": {
@@ -124,40 +120,40 @@
         "NO": "no_parte.escalate_alm"
       }
     },
-    "alm_door_fix": {
-      "type": "ACTION",
-      "prompt": "ALM/door = door alarm 🚪 Open and firmly close the door, then press STOP to reset the alarm.",
-      "transitions": {
-        "default": "no_parte.alm_door_check"
-      }
-    },
-    "alm_door_check": {
-      "type": "CONFIRMATION",
-      "prompt": "Has it started now? (yes / no)",
-      "transitions": {
-        "YES": "no_parte.ok",
-        "NO": "no_parte.escalate_alm"
-      }
-    },
     "case_al001": {
       "type": "ACTION",
       "prompt": "AL001 = sequence error ❗ You pressed the program button before paying. Restart the full sequence:\n\n1️⃣ Pay → 2️⃣ Select machine number → 3️⃣ Press program → 4️⃣ Close door",
       "transitions": {
-        "default": "no_parte.case_al001_check"
-      }
-    },
-    "case_al001_check": {
-      "type": "CONFIRMATION",
-      "prompt": "Has it started now? (yes / no)",
-      "transitions": {
-        "YES": "no_parte.ok",
-        "NO": "no_parte.escalate"
+        "default": "no_parte.check_result"
       }
     },
     "case_end": {
       "type": "INFO",
       "prompt": "END means the wash cycle has finished normally ✅ If there is a problem with your laundry, please describe it.",
       "isTerminal": true
+    },
+    "check_result": {
+      "type": "CONFIRMATION",
+      "prompt": "Has the machine started now? (yes / no)",
+      "transitions": {
+        "YES": "no_parte.ok",
+        "NO": "no_parte.check_retry"
+      }
+    },
+    "check_retry": {
+      "type": "CHOICE",
+      "prompt": "Let's try again. What does the display show now?\n\n1️⃣ SEL\n2️⃣ A price (e.g. 12.00 / 04.00)\n3️⃣ PUSH or Pr-3\n4️⃣ door\n5️⃣ ALM / alarm\n6️⃣ AL001\n7️⃣ END",
+      "transitions": {
+        "1": "no_parte.case_sel",
+        "2": "no_parte.case_price",
+        "3": "no_parte.case_push",
+        "4": "no_parte.case_door",
+        "5": "no_parte.case_alm",
+        "6": "no_parte.case_al001",
+        "7": "no_parte.case_end",
+        "default": "no_parte.escalate"
+      },
+      "onInterruptFallback": "Please reply with a number (1–7)."
     },
     "escalate_pay": {
       "type": "INFO",
@@ -186,15 +182,16 @@
   "post_ciclo": {
     "step_0": {
       "type": "CHOICE",
-      "prompt": "I'm sorry to hear there's a problem after the wash 😔 What happened?\n\n1️⃣ Clothes still very wet / spin failed\n2️⃣ Door still locked\n3️⃣ Clothes appear damaged\n4️⃣ Very little foam (worried about detergent)",
+      "prompt": "I'm sorry to hear there's a problem after the wash 😔 What happened?\n\n1️⃣ Clothes still very wet / spin failed\n2️⃣ Door still locked\n3️⃣ Clothes appear damaged\n4️⃣ Very little foam (worried about detergent)\n5️⃣ Machine won't drain / other issue",
       "transitions": {
         "1": "post_ciclo.wet_clothes",
         "2": "post_ciclo.door_locked",
         "3": "post_ciclo.damaged",
         "4": "post_ciclo.foam_info",
+        "5": "post_ciclo.escalate",
         "default": "post_ciclo.escalate"
       },
-      "onInterruptFallback": "Please reply with a number (1–4) to describe the issue."
+      "onInterruptFallback": "Please reply with a number (1–5) to describe the issue."
     },
     "wet_clothes": {
       "type": "CONFIRMATION",
@@ -206,19 +203,19 @@
     },
     "bal_case": {
       "type": "INFO",
-      "prompt": "END+bAL = load imbalance — the spin cycle could not complete ⚖️\n\nA re-wash in 2 separate machines may be needed. I'm notifying the operator to assess the situation and any possible compensation.",
+      "prompt": "END+bAL = load imbalance — the spin cycle could not complete ⚖️\n\nThe laundry needs to be separated and re-washed in 2 machines. I'm notifying the operator to assess the situation and any possible compensation.",
       "isTerminal": true,
       "action": "escalate"
     },
     "wet_normal": {
       "type": "INFO",
-      "prompt": "I'm sorry the clothes are still wet 😔 I'm notifying the operator — they will assess whether a re-wash is needed.",
+      "prompt": "The load may have been too large or unbalanced. I'm notifying the operator — they will assess whether a re-wash is needed.",
       "isTerminal": true,
       "action": "escalate"
     },
     "door_locked": {
       "type": "ACTION",
-      "prompt": "After the cycle, the door may take a few minutes to unlock automatically ⏱️ Please wait 5 minutes and try again.",
+      "prompt": "After the cycle, the door may take 2–3 minutes to unlock (longer if the machine is still draining) ⏱️ Please wait and try again.",
       "transitions": {
         "default": "post_ciclo.door_locked_check"
       }
@@ -277,7 +274,7 @@
     },
     "stop_mid_cycle": {
       "type": "INFO",
-      "prompt": "If STOP was pressed during an active wash cycle, the cycle is cancelled and credit is lost. I'm notifying the operator to assess your case — no automatic compensation is guaranteed.",
+      "prompt": "If STOP was pressed during an active wash cycle, the cycle is cancelled. I'm notifying the operator to assess your case — no automatic compensation is guaranteed.",
       "isTerminal": true,
       "action": "escalate"
     }
