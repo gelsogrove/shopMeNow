@@ -12,67 +12,33 @@ FATTO
 - PROMPTS fatti?
 - grafico fattto bene? dynamic ?
 - CRUD DI TUTTO?
-
+- router?? import?
 
 progress
-- router?? import?
+
 - Welcome message ?
+- anali
+- il pago lo controlla?
+- come facciamo a sapere se entra nello step deerministico?
+- i prompt sono fati bene?
 - Customer registration non va
 - Non va change Language.
-- test improvments..
+- unit test improvments
 - MCP NO NIESPETTA DEBUGMODE?
 - change language mi chiedo se funziona visto che non abbiamo una profilazione...?
 - possiamo alzare la temperatura non so all'history e magari anche i lmodello ' non co chiedo...
 - DebugFlow
 
-====================example =================
+ 
 
-no funziona la secadorea
-01:40 AM
-¿Es una lavadora o una secadora?
-
-????????
-
-
-
-====================no chiede il pago? =================
-ciao
-01:40 AM
-¡Hola! 👋 Soy Assistente, tu asistente de lavandería.
-01:40 AM
-no funziona la secadorea
-01:40 AM
-¿Es una lavadora o una secadora?
-01:40 AM
-🤖 AI Assistant
-secadora
-01:40 AM
-¡Gracias! ¿Cuál es el número de la secadora?
-01:40 AM
-🤖 AI Assistant
-3434
-01:41 AM
-¿Has añadido tiempo a la secadora o es el primer ciclo?
-01:41 AM
-🤖 AI Assistant
-primero
-01:41 AM
-¡Gracias! ¿Empezó a funcionar en algún momento o nunca se activó?
-01:41 AM
-🤖 AI Assistant
-nunca
-01:41 AM
-Entiendo. Por favor, dime qué aparece exactamente en la pantalla.
-01:41 AM
-🤖 AI Assistant
-niente
-01:41 AM
-Parece que hay un problema con la secadora. ¡No te preocupes, estamos a punto de resolverlo! 🙌
-
-Te contactaré para asistencia. Un momento, por favor.
-01:41 AM
-
-============================================
+ ============== il pagamento =================
+Preguntes en ordre:
+  1. A quin local ets?
+  2. Quin número de secadora és?
+  3. Has pogut iniciar-la? ← verifica se la macchina si è avviata
+  (implica il pagamento)
+  4. Has afegit temps o és el primer cicle?
+  5. Què surt exactament a la pantalla?
 
 TODO
 - I prompts e il settings uno per uno

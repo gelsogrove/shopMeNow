@@ -279,6 +279,32 @@ Il sub-LLM (PATH B) riceve il contesto con la macchina già assegnata. Il suo **
 - Secadora: *"¿Ha podido iniciar el ciclo de secado o la secadora no arrancó?"*
 - Lavadora: *"¿Ha podido iniciar el lavado o la lavadora no arrancó?"*
 
+### ✅ Acceptance Criteria — `no_parte` (entrambe le macchine)
+
+> **Il payment check è SEMPRE il primo step** del flow `no_parte` (CONFIRMATION `step_0`).
+> Prima di chiedere cosa mostra il display, il FlowEngine verifica se il cliente ha effettuato il pagamento.
+> Solo se risponde **YES** si procede alla diagnosi del display.
+> Se risponde **NO** → guida al pagamento → se ancora KO → escalate operatore.
+>
+> **Rationale**: Senza pagamento, tutti i passi successivi (SEL, PUSH, ALM, ecc.) non hanno senso.
+> Verificare il pagamento per primo evita diagnosi errate e riduce i messaggi di escalate inutili.
+
+**Struttura `no_parte.step_0` (schema fisso — NON modificare):**
+```json
+{
+  "no_parte": {
+    "step_0": {
+      "type": "CONFIRMATION",
+      "prompt": "... have you already completed the payment ...?",
+      "transitions": { "YES": "no_parte.display_check", "NO": "no_parte.pay_help" }
+    },
+    "pay_help": { ... },
+    "pay_retry": { ... },
+    "display_check": { "type": "CHOICE", ... }
+  }
+}
+```
+
 ## 2d. FlowEngine — Nodi e Regole
 
 Il FlowEngine è deterministico (0 token LLM). Legge il JSON del flow e avanza nodo per nodo.
