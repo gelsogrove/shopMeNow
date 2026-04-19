@@ -689,6 +689,7 @@ export class WhatsAppWebhookController {
             wipMessage: true,
             debugMode: true,
             channelStatus: true,
+            channelMode: true, // 🛠️ DebugFlow: FLOW workspaces bypass WIP
             needRegistration: true, // 🔧 Controls whether registration is required
             ownerId: true,
             owner: {
@@ -711,6 +712,14 @@ export class WhatsAppWebhookController {
           })
           res.status(200).json({ success: true, message: "Message received" })
           return
+        }
+
+        // 🛠️ DebugFlow: FLOW workspaces process normally in debugMode
+        // Strategy appends debug trace to response instead of blocking with WIP
+        if (!accessResult.canProcess && accessResult.blockReason === "DEBUG_MODE" && workspace.channelMode === "FLOW") {
+          logger.info("[WEBHOOK] 🛠️ DebugFlow (new user) - FLOW workspace bypasses WIP, processing normally", { workspaceId })
+          accessResult.canProcess = true
+          accessResult.blockReason = null
         }
 
         if (!accessResult.canProcess) {
@@ -2053,6 +2062,23 @@ export class WhatsAppWebhookController {
             customer.workspaceId,
             false // DO check channelStatus - WIP mode needs special handling
           )
+
+      // 🛠️ DebugFlow: FLOW workspaces process normally in debugMode
+      // Strategy appends debug trace to response instead of blocking with WIP
+      if (!accessResult.canProcess && accessResult.blockReason === "DEBUG_MODE") {
+        const wsMode = await prisma.workspace.findUnique({
+          where: { id: customer.workspaceId },
+          select: { channelMode: true },
+        })
+        if (wsMode?.channelMode === "FLOW") {
+          logger.info("[WEBHOOK] 🛠️ DebugFlow (existing user) - FLOW workspace bypasses WIP, processing normally", {
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+          })
+          accessResult.canProcess = true
+          accessResult.blockReason = null
+        }
+      }
 
       if (!accessResult.canProcess) {
         // 🚫 CHANNEL_DISABLED → Silent block (no response)

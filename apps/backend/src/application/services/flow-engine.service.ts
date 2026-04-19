@@ -58,10 +58,13 @@ export class FlowEngineService {
 
     const node = this.resolveNode(state.currentNodeId);
     const classification = classifyInput(input);
+    const previousNodeId = state.currentNodeId;
 
     // 🔴 HARD_BREAK — immediate escalation
     if (classification === "HARD_BREAK") {
-      return this.escalate(state, context, "I'm connecting you with an operator 👍");
+      const result = this.escalate(state, context, "I'm connecting you with an operator 👍");
+      result.debug = { classification, previousNodeId, nodeType: node.type, interruptCount: state.interruptCount };
+      return result;
     }
 
     // 🟡 SOFT_BREAK — pause flow, keep state so user can resume
@@ -72,12 +75,13 @@ export class FlowEngineService {
         nextNodeId: state.currentNodeId,
         flowStatus: "PAUSED",
         shouldCallOperator: false,
+        debug: { classification, previousNodeId, nodeType: node.type, interruptCount: state.interruptCount },
       };
     }
 
     // 🔵 MATCH — advance to next node via transition table
     if (classification === "MATCH") {
-      return this.applyTransition(input, node, state, context);
+      return this.applyTransition(input, node, state, context, previousNodeId);
     }
 
     // 🟣 INTERRUPT_FAQ — off-topic question while flow is active
@@ -91,6 +95,7 @@ export class FlowEngineService {
           nextNodeId: state.currentNodeId,
           flowStatus: "ACTIVE",
           shouldCallOperator: false,
+          debug: { classification, previousNodeId, nodeType: node.type, interruptCount: state.interruptCount },
         };
       }
 
@@ -101,11 +106,12 @@ export class FlowEngineService {
         flowStatus: "ACTIVE",
         shouldCallOperator: false,
         isFaqInterrupt: true,
+        debug: { classification, previousNodeId, nodeType: node.type, interruptCount: state.interruptCount },
       };
     }
 
     // ⚪ AMBIGUOUS — ask for clarification or escalate after too many attempts
-    return this.handleAmbiguous(node, state, context);
+    return this.handleAmbiguous(node, state, context, classification, previousNodeId);
   }
 
   // ---------------------------------------------------------------------------
@@ -116,17 +122,28 @@ export class FlowEngineService {
     input: string,
     node: FlowNode,
     state: FlowState,
-    context: ChatContext
+    context: ChatContext,
+    previousNodeId: string
   ): FlowStepResult {
     const key = normalizeInput(input);
 
-    const nextNodeId =
-      node.transitions?.[key] ||
-      node.transitions?.[key.toUpperCase()] ||
-      node.transitions?.["default"];
+    // Find exact transition key used
+    let transitionKey: string | undefined;
+    let nextNodeId: string | undefined;
+
+    if (node.transitions?.[key]) {
+      transitionKey = key;
+      nextNodeId = node.transitions[key];
+    } else if (node.transitions?.[key.toUpperCase()]) {
+      transitionKey = key.toUpperCase();
+      nextNodeId = node.transitions[key.toUpperCase()];
+    } else if (node.transitions?.["default"]) {
+      transitionKey = "default";
+      nextNodeId = node.transitions["default"];
+    }
 
     if (!nextNodeId) {
-      return this.handleAmbiguous(node, state, context);
+      return this.handleAmbiguous(node, state, context, "MATCH", previousNodeId);
     }
 
     const nextNode = this.resolveNode(nextNodeId);
@@ -148,19 +165,31 @@ export class FlowEngineService {
       nextNodeId,
       flowStatus: state.flowStatus,
       shouldCallOperator,
+      debug: {
+        classification: "MATCH",
+        normalizedInput: key,
+        previousNodeId,
+        transitionKey,
+        nodeType: nextNode.type,
+        interruptCount: 0,
+      },
     };
   }
 
   private handleAmbiguous(
     node: FlowNode,
     state: FlowState,
-    context: ChatContext
+    context: ChatContext,
+    classification: string = "AMBIGUOUS",
+    previousNodeId?: string
   ): FlowStepResult {
     state.interruptCount++;
     state.lastInterruptType = "AMBIGUOUS";
 
     if (state.interruptCount >= INTERRUPT_HARD_LIMIT) {
-      return this.escalate(state, context, "Let me connect you with an operator 👍");
+      const result = this.escalate(state, context, "Let me connect you with an operator 👍");
+      result.debug = { classification, previousNodeId: previousNodeId || state.currentNodeId, nodeType: node.type, interruptCount: state.interruptCount };
+      return result;
     }
 
     return {
@@ -168,6 +197,7 @@ export class FlowEngineService {
       nextNodeId: state.currentNodeId,
       flowStatus: "ACTIVE",
       shouldCallOperator: false,
+      debug: { classification, previousNodeId: previousNodeId || state.currentNodeId, nodeType: node.type, interruptCount: state.interruptCount },
     };
   }
 

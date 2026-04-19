@@ -184,6 +184,16 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
     // 🆕 E0b - Check for expired session timeout and reset if needed
     await this.checkAndResetExpiredSession(context, workspace)
 
+    // 🛠️ DebugFlow: when debugMode=true, process normally but append debug trace to response
+    // (Previously returned WIP message — now FLOW workspaces process with debug info appended)
+    const isDebugFlow = !context.isPlayground && workspace.debugMode === true
+    if (isDebugFlow) {
+      logger.info("🛠️ FlowWorkspaceStrategy - DebugFlow active, processing with debug trace", {
+        workspaceId: context.workspaceId,
+        customerId: context.customerId,
+      })
+    }
+
     try {
       // Load customer data
       const customerData = await this.prisma.customers.findFirst({
@@ -269,6 +279,31 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
 
         shouldCallOperator = result.shouldCallOperator
 
+        // ── DebugFlow: capture engine debug data for PATH A ───────────────
+        if (result.debug) {
+          debugSteps.push({
+            type: "flow-engine",
+            agent: "FlowEngineService",
+            timestamp: new Date().toISOString(),
+            input: {
+              userMessage: context.message,
+              previousNodeId: result.debug.previousNodeId,
+            },
+            output: {
+              classification: result.debug.classification,
+              normalizedInput: result.debug.normalizedInput,
+              transitionKey: result.debug.transitionKey,
+              nextNodeId: result.nextNodeId,
+              nodeType: result.debug.nodeType,
+              flowStatus: result.flowStatus,
+              shouldCallOperator: result.shouldCallOperator,
+              interruptCount: result.debug.interruptCount,
+            },
+            tokensUsed: 0,
+            executionTimeMs: Date.now() - startTime,
+          })
+        }
+
         // ─── Substitute {{customerName}} in static node prompts ─────────────
         // Only replace when customer has a name (registered customers).
         // Unregistered customers → strip the placeholder + surrounding ", " or " " cleanly.
@@ -310,21 +345,6 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         }
 
         chatContext = { ...chatContext } // flowState updated in-place by engine
-
-        debugSteps.push({
-          type: "flow-engine",
-          agent: "FlowEngineService",
-          timestamp: new Date().toISOString(),
-          input: { userMessage: context.message, currentNodeId: chatContext.flowState?.currentNodeId },
-          output: {
-            responseText: result.responseText,
-            nextNodeId: result.nextNodeId,
-            flowStatus: result.flowStatus,
-            shouldCallOperator: result.shouldCallOperator,
-          },
-          tokensUsed: 0,
-          executionTimeMs: Date.now() - startTime,
-        })
       }
       // ─── PATH B: No active flow → FlowAgentLLM (LLM call) ─────────────
       else if (chatContext.flowKey) {
@@ -668,6 +688,13 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         }
       }
 
+      // ─── STEP: DebugFlow — append debug trace when debugMode=true ─────
+      if (isDebugFlow && debugSteps.length > 0) {
+        const debugTrace = this.buildDebugTrace(debugSteps, chatContext, tokensUsed, Date.now() - startTime)
+        finalResponse = `${finalResponse}\n\n${debugTrace}`
+        logger.info("🛠️ FlowWorkspaceStrategy - DebugFlow trace appended to response")
+      }
+
       return {
         response: finalResponse,
         agentType: "ROUTER" as AgentType, // FLOW workspace: FlowAgentLLM acts as router
@@ -684,5 +711,50 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
       })
       throw error
     }
+  }
+
+  /**
+   * Build a compact debug trace string for DebugFlow.
+   * Appended to the WhatsApp response when workspace.debugMode=true.
+   */
+  private buildDebugTrace(
+    debugSteps: any[],
+    chatContext: any,
+    tokensUsed: number,
+    totalTimeMs: number,
+  ): string {
+    const lines: string[] = []
+    lines.push("─── 🛠️ DEBUG TRACE ───")
+    lines.push(`Flow: ${chatContext.flowKey || "none"} | Node: ${chatContext.currentNodeId || "none"} | Status: ${chatContext.flowStatus || "none"}`)
+    lines.push(`Tokens: ${tokensUsed} | Time: ${totalTimeMs}ms`)
+    lines.push("")
+
+    for (let i = 0; i < debugSteps.length; i++) {
+      const step = debugSteps[i]
+      const prefix = `[${i + 1}] ${step.type || step.agent || "step"}`
+
+      if (step.type === "flow-engine") {
+        const o = step.output || {}
+        lines.push(`${prefix}: ${o.classification || "?"} → node=${o.nextNodeId || "?"} (key=${o.transitionKey || "auto"})`)
+        if (o.interruptCount) lines.push(`   interrupts: ${o.interruptCount}`)
+      } else if (step.type === "flow-agent") {
+        const fns = step.output?.functionCalls?.length || 0
+        lines.push(`${prefix}: ${step.tokensUsed || 0}tok ${step.executionTimeMs || 0}ms${fns > 0 ? ` | ${fns} fn calls` : ""}`)
+        if (step.output?.functionCalls) {
+          for (const fc of step.output.functionCalls) {
+            const name = typeof fc === "string" ? fc : fc?.name || "?"
+            lines.push(`   → ${name}`)
+          }
+        }
+      } else if (step.type === "function_call" || step.type === "function_result") {
+        const name = step.output?.functionCall?.name || step.agent || "?"
+        lines.push(`${prefix}: ${name}`)
+      } else {
+        lines.push(`${prefix}: ${step.executionTimeMs || 0}ms`)
+      }
+    }
+
+    lines.push("─── END DEBUG ───")
+    return lines.join("\n")
   }
 }

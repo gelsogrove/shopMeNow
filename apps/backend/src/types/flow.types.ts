@@ -51,4 +51,13 @@ export interface FlowStepResult {
   flowStatus: FlowStatus;
   shouldCallOperator: boolean;
   isFaqInterrupt?: boolean;   // true → strategy must answer FAQ via LLM then append responseText
+  // DebugFlow — populated by FlowEngineService for rich debug traces
+  debug?: {
+    classification: string;       // MATCH | HARD_BREAK | SOFT_BREAK | INTERRUPT_FAQ | AMBIGUOUS
+    normalizedInput?: string;     // "YES" | "NO" | "1" | "2" etc.
+    previousNodeId: string;       // node before transition
+    transitionKey?: string;       // the transition key used (e.g. "YES", "3", "default")
+    nodeType?: string;            // type of the resolved node (CHOICE, CONFIRMATION, etc.)
+    interruptCount?: number;
+  };
 }
