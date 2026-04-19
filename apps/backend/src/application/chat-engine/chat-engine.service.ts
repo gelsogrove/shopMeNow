@@ -5597,6 +5597,7 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         customerName: input.customerName,
         customerLanguage: input.customerLanguage,
         channel: input.channel || "whatsapp",
+        isPlayground: input.isPlayground ?? false,
       }
 
       const result = await this.routerOrchestration.route(routingContext)

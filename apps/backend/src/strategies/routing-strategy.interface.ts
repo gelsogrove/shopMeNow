@@ -28,6 +28,7 @@ export interface RoutingContext {
   isSystemMessage?: boolean
   sessionId?: string
   channel?: string // 🆕 'widget' | 'whatsapp' - determines Widget Security behavior
+  isPlayground?: boolean // 🧪 MCP/simulate — bypass debugMode WIP check
 }
 
 /**
