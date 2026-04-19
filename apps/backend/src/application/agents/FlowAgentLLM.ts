@@ -331,20 +331,51 @@ export class FlowAgentLLM {
       output = "I'm here to help. Please describe your issue."
     }
 
-    // Router gather retry tracking — increment retryCount when no tool was called in router mode
+    // Router gather retry tracking — increment retryCount ONLY when the user made
+    // no progress toward completing the gather (locale + machineType + machineNumber).
+    // First-turn welcomes and bit-by-bit info collection must NOT count as failed retries,
+    // otherwise normal conversations escalate to operator after 3 exchanges.
     if (ctx.flowKey === "router" && toolCalls.length === 0) {
-      const currentRetry = chatContext.gatherState?.retryCount ?? 0
-      chatContext.gatherState = {
-        ...chatContext.gatherState,
-        retryCount: currentRetry + 1,
-        locale: chatContext.gatherState?.locale,
-        machineType: chatContext.gatherState?.machineType,
-        machineNumber: chatContext.gatherState?.machineNumber,
-      }
-      if (chatContext.gatherState.retryCount >= 3) {
-        logger.info("🚨 FlowAgentLLM: gatherState retryCount >= 3 → escalating to operator")
-        shouldCallOperator = true
-        functionCalls.push({ name: "contactOperator", arguments: { reason: "Max gather retries exceeded" }, result: "deferred_to_strategy" })
+      const prev = chatContext.gatherState ?? { retryCount: 0 }
+      const isFirstTurn = history.length === 0
+
+      // Detect info from conversation (history + current message)
+      const historyWithCurrent: Message[] = [...history, { role: "user", content: ctx.message }]
+      const detectedLocale = this.extractFromHistory(historyWithCurrent, "locale")
+      const detectedMachineType = this.extractFromHistory(historyWithCurrent, "machineType")
+      const numericMatch = ctx.message.trim().match(/^(\d{1,2})$/)
+      const detectedMachineNumber = numericMatch ? numericMatch[1] : prev.machineNumber
+
+      const progressed =
+        (!!detectedLocale && detectedLocale !== prev.locale) ||
+        (!!detectedMachineType && detectedMachineType !== prev.machineType) ||
+        (!!detectedMachineNumber && detectedMachineNumber !== prev.machineNumber)
+
+      if (isFirstTurn || progressed) {
+        chatContext.gatherState = {
+          locale: detectedLocale ?? prev.locale,
+          machineType: detectedMachineType ?? prev.machineType,
+          machineNumber: detectedMachineNumber ?? prev.machineNumber,
+          retryCount: 0,
+        }
+        logger.info("📍 FlowAgentLLM: gather progress — retry reset", {
+          gatherState: chatContext.gatherState,
+          isFirstTurn,
+        })
+      } else {
+        const currentRetry = prev.retryCount ?? 0
+        chatContext.gatherState = {
+          ...prev,
+          retryCount: currentRetry + 1,
+        }
+        logger.info("⚠️ FlowAgentLLM: no gather progress — retry incremented", {
+          retryCount: chatContext.gatherState.retryCount,
+        })
+        if (chatContext.gatherState.retryCount >= 3) {
+          logger.info("🚨 FlowAgentLLM: gatherState retryCount >= 3 → escalating to operator")
+          shouldCallOperator = true
+          functionCalls.push({ name: "contactOperator", arguments: { reason: "Max gather retries exceeded" }, result: "deferred_to_strategy" })
+        }
       }
     }
 
