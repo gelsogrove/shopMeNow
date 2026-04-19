@@ -1,0 +1,357 @@
+{
+  "no_parte": {
+    "entry": "PAYMENT_CHECK",
+    "nodes": {
+      "PAYMENT_CHECK": {
+        "type": "CONFIRMATION",
+        "prompt": "¿Ha podido realizar el pago? ¿La lavadora ha aceptado el dinero (tarjeta, monedas o código)?\n1️⃣ Sí, he pagado\n2️⃣ No, no he podido pagar",
+        "transitions": {
+          "1": "DISPLAY",
+          "si": "DISPLAY",
+          "2": "ESC_PAYMENT",
+          "no": "ESC_PAYMENT"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si ha podido pagar o 2️⃣ si no ha podido."
+      },
+
+      "ESC_PAYMENT": {
+        "type": "ACTION",
+        "prompt": "Si la central no acepta el pago, prueba con otra lavadora disponible. 🔧 Derivamos tu caso a un operador.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Cliente no puede pagar — central no acepta pago"
+      },
+
+      "DISPLAY": {
+        "type": "CHOICE",
+        "prompt": "¿Qué aparece exactamente en la pantalla de la lavadora?\n1️⃣ SEL (selección de programa)\n2️⃣ Un precio (ej: 12.00) o importe restante (ej: 04.00)\n3️⃣ PUSH o Pr-3 (pulsar programa)\n4️⃣ door (puerta abierta)\n5️⃣ ALM (alarma con letras)\n6️⃣ AL001\n7️⃣ END o END+bAL\n8️⃣ Otro / no entiendo lo que pone",
+        "transitions": {
+          "1": "SEL",
+          "2": "PRICE",
+          "3": "PUSH",
+          "4": "DOOR",
+          "5": "ALM_STOP",
+          "6": "AL001",
+          "7": "END_CHECK",
+          "8": "ESC_TECH"
+        },
+        "onInterruptFallback": "Por favor elige del 1️⃣ al 8️⃣ según lo que aparece en pantalla."
+      },
+
+      "SEL": {
+        "type": "ACTION",
+        "prompt": "La pantalla SEL indica que la máquina está lista — *no hay ningún fallo*. Comprueba que has pulsado correctamente el número de la lavadora y el programa. ¿Ha arrancado?",
+        "transitions": {
+          "si": "OK1",
+          "1": "OK1",
+          "no": "CHANGE_CHECK",
+          "2": "CHANGE_CHECK"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si ha arrancado o 2️⃣ si no."
+      },
+
+      "PRICE": {
+        "type": "ACTION",
+        "prompt": "La pantalla muestra el precio del programa o el importe que falta por meter. Introduce ese importe en la central. ¿Ha arrancado la lavadora?",
+        "transitions": {
+          "si": "OK1",
+          "1": "OK1",
+          "no": "CHANGE_CHECK",
+          "2": "CHANGE_CHECK"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si ha arrancado o 2️⃣ si no."
+      },
+
+      "PUSH": {
+        "type": "ACTION",
+        "prompt": "El pago está completo. Ahora confirma el programa: pulsa cualquier botón de programa (no necesariamente el que indica la pantalla). ¿Ha arrancado la lavadora?",
+        "transitions": {
+          "si": "OK1",
+          "1": "OK1",
+          "no": "CHANGE_CHECK",
+          "2": "CHANGE_CHECK"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si ha arrancado o 2️⃣ si no."
+      },
+
+      "DOOR": {
+        "type": "ACTION",
+        "prompt": "El pago y el programa están correctos — solo falta cerrar la puerta. Ábrela completamente y ciérrala con firmeza hasta escuchar el clic. ¿Ha arrancado la lavadora?",
+        "transitions": {
+          "si": "OK1",
+          "1": "OK1",
+          "no": "ESC_TECH",
+          "2": "ESC_TECH"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si ha arrancado o 2️⃣ si sigue sin arrancar."
+      },
+
+      "CHANGE_CHECK": {
+        "type": "CONFIRMATION",
+        "prompt": "¿La central te ha devuelto el cambio o el saldo?\n1️⃣ Sí, me ha devuelto el cambio\n2️⃣ No, no ha devuelto nada",
+        "transitions": {
+          "1": "SEL_RETRY",
+          "si": "SEL_RETRY",
+          "2": "ESC_TECH",
+          "no": "ESC_TECH"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si te devolvió el cambio o 2️⃣ si no."
+      },
+
+      "SEL_RETRY": {
+        "type": "ACTION",
+        "prompt": "Puede que hayas seleccionado un número de máquina incorrecto. Verifica que has pulsado el número correcto de tu lavadora en la central. ¿Ha funcionado ahora?",
+        "transitions": {
+          "si": "OK1",
+          "1": "OK1",
+          "no": "ESC_TECH",
+          "2": "ESC_TECH"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si ha funcionado o 2️⃣ si sigue sin arrancar."
+      },
+
+      "ALM_STOP": {
+        "type": "ACTION",
+        "prompt": "Ha saltado una alarma. Pulsa el botón *STOP* una vez (pulsación corta, menos de 1 segundo) para que la máquina reintente desde el punto de la alarma. ¿Ha desaparecido la alarma?",
+        "transitions": {
+          "si": "OK_ALM",
+          "1": "OK_ALM",
+          "no": "ALM_TYPE",
+          "2": "ALM_TYPE"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si la alarma desapareció o 2️⃣ si continúa."
+      },
+
+      "ALM_TYPE": {
+        "type": "CHOICE",
+        "prompt": "¿Qué letras aparecen después de ALM en el display?\n1️⃣ ALM/A (agua)\n2️⃣ ALM/E (desagüe)\n3️⃣ ALM/door (puerta)\n4️⃣ ALM/VAr (variador)\n5️⃣ Otro código",
+        "transitions": {
+          "1": "ALM_A",
+          "2": "ALM_E",
+          "3": "ALM_DOOR",
+          "4": "ALM_VAR",
+          "5": "ESC_TECH"
+        },
+        "onInterruptFallback": "Elige: 1️⃣ A  2️⃣ E  3️⃣ door  4️⃣ VAr  5️⃣ otro"
+      },
+
+      "ALM_A": {
+        "type": "ACTION",
+        "prompt": "Alarma de entrada de agua. Pulsa STOP una vez para que la lavadora reintente. ¿Ha desaparecido la alarma?",
+        "transitions": {
+          "si": "OK_ALM",
+          "1": "OK_ALM",
+          "no": "ESC_ALM_COMP",
+          "2": "ESC_ALM_COMP"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si desapareció o 2️⃣ si sigue."
+      },
+
+      "ALM_E": {
+        "type": "ACTION",
+        "prompt": "Alarma de desagüe. Pulsa STOP una vez. ⚠️ Si hay atasco, la puerta *no se abrirá* hasta que salga toda el agua — puede tardar hasta 30 minutos. ¿Ha desaparecido la alarma?",
+        "transitions": {
+          "si": "OK_ALM",
+          "1": "OK_ALM",
+          "no": "ESC_ALM_COMP",
+          "2": "ESC_ALM_COMP"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si desapareció o 2️⃣ si sigue."
+      },
+
+      "ALM_DOOR": {
+        "type": "ACTION",
+        "prompt": "Fallo en el cierre de seguridad de la puerta. Pulsa STOP una vez y vuelve a cerrar la puerta con firmeza. ¿Ha desaparecido la alarma?",
+        "transitions": {
+          "si": "OK_ALM",
+          "1": "OK_ALM",
+          "no": "ESC_ALM_COMP",
+          "2": "ESC_ALM_COMP"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si desapareció o 2️⃣ si sigue."
+      },
+
+      "ALM_VAR": {
+        "type": "ACTION",
+        "prompt": "Fallo del variador. Pulsa STOP una vez para reintentar. ¿Ha desaparecido la alarma?",
+        "transitions": {
+          "si": "OK_ALM",
+          "1": "OK_ALM",
+          "no": "ESC_VAR",
+          "2": "ESC_VAR"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si desapareció o 2️⃣ si sigue."
+      },
+
+      "AL001": {
+        "type": "ACTION",
+        "prompt": "El error AL001 aparece cuando el proceso no se realizó en el orden correcto. Reinicia la secuencia desde el principio:\n1) Introduce el pago en la central\n2) Pulsa el número de tu lavadora\n3) Pulsa el botón de programa\n¿Ha funcionado?",
+        "transitions": {
+          "si": "OK1",
+          "1": "OK1",
+          "no": "ESC_TECH",
+          "2": "ESC_TECH"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si ha funcionado o 2️⃣ si sigue con el error."
+      },
+
+      "END_CHECK": {
+        "type": "CHOICE",
+        "prompt": "¿Qué aparece exactamente?\n1️⃣ END solo (fin de lavado normal)\n2️⃣ END + bAL (fin con desequilibrio de carga)",
+        "transitions": {
+          "1": "OK_END",
+          "2": "BAL"
+        },
+        "onInterruptFallback": "Elige: 1️⃣ solo END  2️⃣ END + bAL"
+      },
+
+      "OK_END": {
+        "type": "ACTION",
+        "prompt": "✅ El lavado ha terminado correctamente. Puedes abrir la puerta y recoger la ropa.",
+        "isTerminal": true,
+        "action": "resolve"
+      },
+
+      "BAL": {
+        "type": "ACTION",
+        "prompt": "Fin de lavado con desequilibrio excesivo de carga — la centrifugación no se realizó correctamente. ⚠️ *Nunca metas ropa chorreando agua en las secadoras*. Es necesario volver a lavar separando la ropa en dos lavadoras. 🔧 Derivamos a un operador para valorar compensación.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "END+bAL — centrifugado incorrecto por exceso de carga, compensación a valorar"
+      },
+
+      "ESC_ALM_COMP": {
+        "type": "ACTION",
+        "prompt": "La alarma persiste. Si nada funciona, utiliza otra lavadora disponible y te haremos una compensación. 🔧 Derivamos tu caso a un operador.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Alarma lavadora persiste tras STOP — cliente pasa a otra máquina, compensación"
+      },
+
+      "ESC_VAR": {
+        "type": "ACTION",
+        "prompt": "El fallo de variador requiere atención técnica especializada (SAT Girbau). 🔧 Derivamos tu caso a un operador.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "ALM/VAr persiste — requiere SAT Girbau"
+      },
+
+      "ESC_TECH": {
+        "type": "ACTION",
+        "prompt": "La lavadora no responde como debería. Si nada funciona, utiliza otra lavadora disponible. 🔧 Derivamos tu caso a un operador para valorar compensación.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Lavadora no arranca — display no reconocido o sin respuesta tras pasos"
+      },
+
+      "OK1": {
+        "type": "ACTION",
+        "prompt": "✅ ¡Perfecto! El problema está resuelto. Si necesitas algo más, escríbenos.",
+        "isTerminal": true,
+        "action": "resolve"
+      },
+
+      "OK_ALM": {
+        "type": "ACTION",
+        "prompt": "✅ ¡Genial! La alarma ha desaparecido y el lavado puede continuar. Si surge algo más, escríbenos.",
+        "isTerminal": true,
+        "action": "resolve"
+      }
+    }
+  },
+
+  "post_ciclo": {
+    "entry": "POST_PROBLEM",
+    "nodes": {
+      "POST_PROBLEM": {
+        "type": "CHOICE",
+        "prompt": "¿Cuál es el problema después del lavado?\n1️⃣ Ropa muy mojada / no centrifugó\n2️⃣ Alarma durante el ciclo\n3️⃣ Puerta bloqueada al final\n4️⃣ No sale espuma / sin jabón\n5️⃣ Ropa dañada (manchada, rota)",
+        "transitions": {
+          "1": "WET",
+          "2": "ALM_STOP",
+          "3": "LOCK_POST",
+          "4": "SOAP",
+          "5": "DAMAGE_POST"
+        },
+        "onInterruptFallback": "Por favor elige del 1️⃣ al 5️⃣."
+      },
+
+      "WET": {
+        "type": "ACTION",
+        "prompt": "La ropa sale muy mojada cuando hay exceso de carga o prendas pesadas (edredones, alfombras). Es necesario volver a lavar separando la ropa en dos máquinas. ⚠️ *Nunca metas ropa chorreando en las secadoras*. 🔧 Derivamos a un operador para valorar compensación.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Ropa no centrifugada — exceso de carga, compensación a valorar"
+      },
+
+      "ALM_STOP": {
+        "type": "ACTION",
+        "prompt": "Pulsa el botón *STOP* una vez (pulsación corta) para resetear desde el punto de la alarma. ¿Ha desaparecido la alarma?",
+        "transitions": {
+          "si": "OK_ALM",
+          "1": "OK_ALM",
+          "no": "ESC_ALM_POST",
+          "2": "ESC_ALM_POST"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si desapareció o 2️⃣ si sigue."
+      },
+
+      "LOCK_POST": {
+        "type": "ACTION",
+        "prompt": "Al final del lavado la puerta puede tardar unos segundos en desbloquearse automáticamente. Espera 1-2 minutos y vuelve a intentar. ¿Se ha abierto?",
+        "transitions": {
+          "si": "OK2",
+          "1": "OK2",
+          "no": "ESC_POST",
+          "2": "ESC_POST"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si se abrió o 2️⃣ si sigue bloqueada."
+      },
+
+      "SOAP": {
+        "type": "ACTION",
+        "prompt": "✅ Es completamente normal. *Todas* las lavadoras dosifican automáticamente detergente, suavizante y oxígeno activo. Los productos de Ecolaundry son industriales y generan poca espuma — eso *no significa* que laven peor. La espuma no lava. ¿Necesitas algo más?",
+        "isTerminal": true,
+        "action": "resolve"
+      },
+
+      "DAMAGE_POST": {
+        "type": "ACTION",
+        "prompt": "Lamentamos lo ocurrido. 🔧 Derivamos tu caso a un operador para revisarlo y valorar la mejor solución.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Ropa dañada tras lavado — revisión operador"
+      },
+
+      "ESC_ALM_POST": {
+        "type": "ACTION",
+        "prompt": "La alarma persiste. Usa otra lavadora y te haremos una compensación. 🔧 Derivamos tu caso a un operador.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Alarma lavadora persiste durante ciclo — compensación"
+      },
+
+      "ESC_POST": {
+        "type": "ACTION",
+        "prompt": "🔧 Derivamos tu caso a un operador para encontrar la mejor solución.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Problema post-ciclo lavadora no resuelto"
+      },
+
+      "OK_ALM": {
+        "type": "ACTION",
+        "prompt": "✅ La alarma ha desaparecido. El lavado puede continuar. Si surge algo más, escríbenos.",
+        "isTerminal": true,
+        "action": "resolve"
+      },
+
+      "OK2": {
+        "type": "ACTION",
+        "prompt": "✅ Me alegra que se haya resuelto. Si necesitas algo más, escríbenos.",
+        "isTerminal": true,
+        "action": "resolve"
+      }
+    }
+  }
+}

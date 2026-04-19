@@ -73,6 +73,7 @@ interface WorkspaceInput {
   address?: string | null
   customAiRules?: string | null
   chatbotName?: string | null
+  welcomeMessage?: string | null
   businessType?: string | null
   currency?: string | null
   websiteUrl?: string | null
@@ -211,6 +212,7 @@ export class PromptVariableBuilder {
       customerUpcomingAppointments: dynamicContent?.customerUpcomingAppointments || '',
       allowedExternalLinks: workspace?.allowedExternalLinks?.join('\n') || '',
       chatbotName: workspace?.chatbotName || VARIABLE_DEFAULTS.chatbotName!,
+      welcomeMessage: workspace?.welcomeMessage || '',
       businessType: workspace?.businessType || VARIABLE_DEFAULTS.businessType!,
       currency: workspace?.currency || VARIABLE_DEFAULTS.currency!,
       operatorContactMethod: workspace?.operatorContactMethod || VARIABLE_DEFAULTS.operatorContactMethod!,
@@ -367,6 +369,7 @@ export class PromptVariableBuilder {
         address: true,
         customAiRules: true,
         chatbotName: true,
+        welcomeMessage: true,
         businessType: true,
         websiteUrl: true,
         currency: true,

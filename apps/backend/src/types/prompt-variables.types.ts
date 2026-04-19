@@ -222,6 +222,12 @@ export interface PromptVariables {
    */
   chatbotName: string
 
+  /** Welcome message from workspace settings
+   * Template: {{welcomeMessage}}
+   * Source: workspace.welcomeMessage || ''
+   */
+  welcomeMessage: string
+
   /** Tipo di business (food, fashion, tech, etc.)
    * Template: {{businessType}}
    * Source: workspace.businessType || ''
@@ -518,6 +524,7 @@ export const VARIABLE_DEFAULTS: Partial<PromptVariables> = {
   customerUpcomingAppointments: '',
   channelName: 'Shop',
   chatbotName: 'Assistente',
+  welcomeMessage: '',
   businessType: '',
   currency: 'EUR',
   operatorContactMethod: 'email',

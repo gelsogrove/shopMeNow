@@ -1,3 +1,5 @@
+import * as fs from "fs"
+import * as path from "path"
 import { PrismaClient, AgentType, ChannelMode } from "@echatbot/database"
 import { Request, Response } from "express"
 import archiver from "archiver"
@@ -414,6 +416,42 @@ export class AgentConfigController {
       }
 
       logger.info(`✅ Reset ${resetCount} agent configs from ${templateSource} for workspace ${workspaceId}`)
+
+      // For FLOW workspaces: ensure router FlowNodeConfig exists with fresh template
+      if (wsChannelMode === "FLOW") {
+        try {
+          const routerTemplatePath = path.join(__dirname, "../../../templates/flow/00-router.template.md")
+          const routerSystemPrompt = fs.existsSync(routerTemplatePath)
+            ? fs.readFileSync(routerTemplatePath, "utf-8")
+            : ""
+          const existing = await this.prisma.flowNodeConfig.findFirst({
+            where: { workspaceId, flowKey: "router" },
+          })
+          if (existing) {
+            await this.prisma.flowNodeConfig.update({
+              where: { id: existing.id },
+              data: { systemPrompt: routerSystemPrompt },
+            })
+            logger.info(`✅ Reset router FlowNodeConfig systemPrompt for workspace ${workspaceId}`)
+          } else {
+            await this.prisma.flowNodeConfig.create({
+              data: {
+                workspaceId,
+                flowKey: "router",
+                flowLabel: "Router",
+                systemPrompt: routerSystemPrompt,
+                model: "openai/gpt-4o-mini",
+                temperature: 0,
+                maxTokens: 500,
+                isActive: true,
+              },
+            })
+            logger.info(`✅ Created router FlowNodeConfig for FLOW workspace ${workspaceId}`)
+          }
+        } catch (flowError) {
+          logger.warn(`[FlowSync] Non-fatal: failed to reset router FlowNodeConfig:`, flowError)
+        }
+      }
 
       return res.status(200).json({
         message: `Agent configurations reset from latest template files successfully`,

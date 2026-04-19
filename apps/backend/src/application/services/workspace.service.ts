@@ -473,6 +473,31 @@ For privacy inquiries, please contact our support team.`
 
         // 3b. 🆕 Seed system functions based on workspace type
         await this.seedSystemFunctions(tx, createdWorkspace.id, wsChannelMode === "ECOMMERCE");
+
+        // 3c. 🆕 Auto-create router FlowNodeConfig for FLOW workspaces
+        if (wsChannelMode === "FLOW") {
+          try {
+            const routerTemplatePath = path.join(__dirname, "../../../templates/flow/00-router.template.md")
+            const routerSystemPrompt = fs.existsSync(routerTemplatePath)
+              ? fs.readFileSync(routerTemplatePath, "utf-8")
+              : ""
+            await tx.flowNodeConfig.create({
+              data: {
+                workspaceId: createdWorkspace.id,
+                flowKey: "router",
+                flowLabel: "Router",
+                systemPrompt: routerSystemPrompt,
+                model: "openai/gpt-4o-mini",
+                temperature: 0,
+                maxTokens: 500,
+                isActive: true,
+              },
+            })
+            logger.info(`✅ Auto-created router FlowNodeConfig for FLOW workspace ${createdWorkspace.id}`)
+          } catch (flowError) {
+            logger.warn(`[FlowSync] Non-fatal: failed to create router FlowNodeConfig:`, flowError)
+          }
+        }
       } catch (error) {
         logger.error(
           `Error importing agents for workspace ${createdWorkspace.id}:`,

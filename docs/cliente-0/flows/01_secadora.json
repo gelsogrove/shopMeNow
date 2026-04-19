@@ -1,0 +1,345 @@
+{
+  "no_parte": {
+    "entry": "SR",
+    "nodes": {
+      "SR": {
+        "type": "CONFIRMATION",
+        "prompt": "¿Ha podido iniciar el ciclo de secado? ¿La secadora arrancó en algún momento?\n1️⃣ Sí, arrancó\n2️⃣ No, no arrancó",
+        "transitions": {
+          "1": "CYCLE_STATUS",
+          "si": "CYCLE_STATUS",
+          "2": "DISPLAY",
+          "no": "DISPLAY"
+        },
+        "onInterruptFallback": "Por favor, responde 1️⃣ si la secadora arrancó o 2️⃣ si no arrancó en absoluto."
+      },
+
+      "DISPLAY": {
+        "type": "CHOICE",
+        "prompt": "De acuerdo. ¿Qué aparece en la pantalla de la secadora?\n1️⃣ Muestra precio o minutos (ej: 3.00€ / 15')\n2️⃣ Icono de puerta abierta\n3️⃣ Icono de filtro o alarma\n4️⃣ Pantalla en blanco u otro",
+        "transitions": {
+          "1": "CREDIT_1",
+          "2": "DOOR",
+          "3": "ALM_STOP",
+          "4": "ESC1"
+        },
+        "onInterruptFallback": "Por favor elige: 1️⃣ precio/minutos  2️⃣ puerta  3️⃣ filtro/alarma  4️⃣ otro"
+      },
+
+      "CREDIT_1": {
+        "type": "CONFIRMATION",
+        "prompt": "¿Los minutos en la pantalla aumentaron después de introducir el pago?\n1️⃣ Sí, aumentaron\n2️⃣ No, no cambiaron",
+        "transitions": {
+          "1": "CREDIT_START",
+          "si": "CREDIT_START",
+          "2": "ESC_LOCAL",
+          "no": "ESC_LOCAL"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si los minutos aumentaron o 2️⃣ si no cambiaron."
+      },
+
+      "CREDIT_START": {
+        "type": "ACTION",
+        "prompt": "✅ El pago se registró correctamente. Ahora pulsa el botón de temperatura/programa para iniciar el ciclo. ¿Ha arrancado la secadora?",
+        "transitions": {
+          "si": "OK1",
+          "1": "OK1",
+          "no": "ESC1",
+          "2": "ESC1"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si arrancó o 2️⃣ si no."
+      },
+
+      "ESC_LOCAL": {
+        "type": "ACTION",
+        "prompt": "Los minutos no se han sumado correctamente. Esto requiere revisión técnica. 🔧 Derivamos tu caso a un operador.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Pago realizado pero minutos no suman — posible anomalía crédito (Alemanya/Pineda)"
+      },
+
+      "DOOR": {
+        "type": "ACTION",
+        "prompt": "La puerta no está bien cerrada. Ábrela completamente y ciérrala con firmeza hasta escuchar el clic. ¿Ha desaparecido el icono de puerta?",
+        "transitions": {
+          "si": "OK1",
+          "1": "OK1",
+          "no": "ESC1",
+          "2": "ESC1"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si el icono desapareció o 2️⃣ si sigue apareciendo."
+      },
+
+      "ALM_STOP": {
+        "type": "ACTION",
+        "prompt": "Ha saltado una alarma. Pulsa el botón *STOP* una vez (pulsación corta). ¿Ha desaparecido la alarma?",
+        "transitions": {
+          "si": "OK1",
+          "1": "OK1",
+          "no": "ALM_TYPE",
+          "2": "ALM_TYPE"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si la alarma desapareció o 2️⃣ si continúa."
+      },
+
+      "ALM_TYPE": {
+        "type": "CHOICE",
+        "prompt": "¿Qué tipo de alarma aparece en la pantalla?\n1️⃣ Filtro / puerta del filtro\n2️⃣ Fallo de rotación\n3️⃣ Fallo de aspiración\n4️⃣ Otra / no lo sé",
+        "transitions": {
+          "1": "ALM_FILTER",
+          "2": "ESC_ROT",
+          "3": "ALM_ASPIR",
+          "4": "ESC1"
+        },
+        "onInterruptFallback": "Elige: 1️⃣ filtro  2️⃣ rotación  3️⃣ aspiración  4️⃣ otra"
+      },
+
+      "ALM_FILTER": {
+        "type": "ACTION",
+        "prompt": "El filtro está lleno de pelusa o el sensor de la puerta del filtro está sucio. Saca el filtro, límpialo bien (también la parte trasera y el sensor) y vuelve a colocarlo. ¿Ha funcionado?",
+        "transitions": {
+          "si": "OK_ALM",
+          "1": "OK_ALM",
+          "no": "ESC_ALM",
+          "2": "ESC_ALM"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si funcionó o 2️⃣ si sigue con el problema."
+      },
+
+      "ALM_ASPIR": {
+        "type": "ACTION",
+        "prompt": "Fallo de aspiración. Limpia bien el filtro, la parte trasera y la rejilla de aspiración. ⚠️ Hazlo con la secadora *apagada*. ¿Ha funcionado?",
+        "transitions": {
+          "si": "OK_ALM",
+          "1": "OK_ALM",
+          "no": "ESC_ALM",
+          "2": "ESC_ALM"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si funcionó o 2️⃣ si sigue con el problema."
+      },
+
+      "ESC_ROT": {
+        "type": "ACTION",
+        "prompt": "El fallo de rotación requiere revisión del sensor interno. 🔧 Derivamos tu caso a un operador.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Alarma fallo de rotación — requiere técnico (sensor posición tambor)"
+      },
+
+      "ESC_ALM": {
+        "type": "ACTION",
+        "prompt": "La alarma persiste. Usa otra secadora disponible y te haremos una compensación. 🔧 Derivamos tu caso a un operador.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Alarma secadora persiste tras limpieza — compensación + revisión técnica"
+      },
+
+      "ESC1": {
+        "type": "ACTION",
+        "prompt": "La secadora no responde como debería. 🔧 Derivamos tu caso a un operador para encontrar la mejor solución.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Secadora no arranca — display no reconocido o sin respuesta"
+      },
+
+      "CYCLE_STATUS": {
+        "type": "CONFIRMATION",
+        "prompt": "¿El ciclo de secado ha terminado?\n1️⃣ Sí, ha terminado\n2️⃣ No, está en marcha o se interrumpió",
+        "transitions": {
+          "1": "POST_CYCLE",
+          "si": "POST_CYCLE",
+          "2": "RUNNING",
+          "no": "RUNNING"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si el ciclo terminó o 2️⃣ si sigue en marcha."
+      },
+
+      "RUNNING": {
+        "type": "CHOICE",
+        "prompt": "¿Qué está ocurriendo exactamente?\n1️⃣ La secadora funciona con normalidad\n2️⃣ He pulsado STOP por error\n3️⃣ Ha aparecido una alarma durante el ciclo",
+        "transitions": {
+          "1": "WAIT",
+          "2": "STOP_DRY",
+          "3": "ALM_STOP"
+        },
+        "onInterruptFallback": "Elige: 1️⃣ funcionando  2️⃣ STOP pulsado  3️⃣ alarma"
+      },
+
+      "WAIT": {
+        "type": "ACTION",
+        "prompt": "✅ La secadora está funcionando correctamente. Espera a que termine el ciclo. Si ocurre algún cambio, escríbenos de inmediato.",
+        "isTerminal": true,
+        "action": "resolve"
+      },
+
+      "STOP_DRY": {
+        "type": "ACTION",
+        "prompt": "Al pulsar STOP se interrumpe el ciclo de secado. La ropa puede estar aún húmeda. 🔧 Derivamos tu caso a un operador — evaluará la mejor solución. ⚠️ No se promete compensación automática.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "STOP pulsado durante ciclo secadora — operador evalúa compensación"
+      },
+
+      "POST_CYCLE": {
+        "type": "CHOICE",
+        "prompt": "¿Cuál es el problema después del secado?\n1️⃣ La ropa sigue húmeda o no ha secado bien\n2️⃣ Ropa empapada (venía muy mojada de la lavadora)\n3️⃣ Olor extraño\n4️⃣ Ropa dañada (quemada, plástico pegado o manchada)\n5️⃣ Puerta bloqueada\n6️⃣ Ruido extraño / posible avería",
+        "transitions": {
+          "1": "DRY_CAUSE",
+          "2": "HUMID",
+          "3": "SMELL",
+          "4": "DAMAGE_TYPE",
+          "5": "LOCK",
+          "6": "ESC_NOISE"
+        },
+        "onInterruptFallback": "Por favor elige del 1️⃣ al 6️⃣ según el problema."
+      },
+
+      "DRY_CAUSE": {
+        "type": "CHOICE",
+        "prompt": "¿Cuál puede ser la causa?\n1️⃣ Demasiada ropa o metida en bola\n2️⃣ Tiempo de secado insuficiente\n3️⃣ La lavadora no centrifugó bien (ropa muy húmeda al entrar)",
+        "transitions": {
+          "1": "DRY_LOAD",
+          "2": "DRY_TIME",
+          "3": "DRY_SPIN"
+        },
+        "onInterruptFallback": "Responde 1️⃣, 2️⃣ o 3️⃣."
+      },
+
+      "DRY_LOAD": {
+        "type": "ACTION",
+        "prompt": "Con demasiada ropa o en bola el aire caliente no circula bien. Reduce la carga y extiende las prendas antes de meterlas. ¿Ha mejorado con un nuevo ciclo?",
+        "transitions": {
+          "si": "OK2",
+          "1": "OK2",
+          "no": "ESC_POST",
+          "2": "ESC_POST"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si mejoró o 2️⃣ si sigue húmeda."
+      },
+
+      "DRY_TIME": {
+        "type": "ACTION",
+        "prompt": "Puedes añadir tiempo extra usando el botón de PAUSA o insertando más monedas durante el ciclo (aprox. 5 min por euro adicional). ¿Ha mejorado el secado?",
+        "transitions": {
+          "si": "OK2",
+          "1": "OK2",
+          "no": "ESC_POST",
+          "2": "ESC_POST"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si mejoró o 2️⃣ si sigue húmeda."
+      },
+
+      "DRY_SPIN": {
+        "type": "ACTION",
+        "prompt": "⚠️ *Nunca metas ropa chorreando agua directamente en la secadora* — no secará y se dañará el filtro. Hay que volver a lavar separando la carga en dos lavadoras para que centrifugue bien. 🔧 Derivamos a un operador para valorar compensación.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Ropa empapada en secadora por centrifugado insuficiente — posible compensación lavado"
+      },
+
+      "HUMID": {
+        "type": "ACTION",
+        "prompt": "⚠️ *Nunca metas ropa chorreando agua directamente en la secadora* — no secará y se dañará el filtro. Es necesario volver a lavar la ropa separándola en dos máquinas para que centrifugue bien. 🔧 Derivamos a un operador para valorar compensación.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Ropa muy húmeda/empapada introducida en secadora — lavado excesivo, compensación a valorar"
+      },
+
+      "SMELL": {
+        "type": "ACTION",
+        "prompt": "El olor puede deberse a restos en el tambor o el filtro. Limpia el cestello y el filtro. ¿Ha mejorado en el siguiente uso?",
+        "transitions": {
+          "si": "OK2",
+          "1": "OK2",
+          "no": "ESC_POST",
+          "2": "ESC_POST"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si mejoró o 2️⃣ si sigue con olor."
+      },
+
+      "DAMAGE_TYPE": {
+        "type": "CHOICE",
+        "prompt": "¿Qué tipo de daño tiene la ropa?\n1️⃣ Quemada o derretida\n2️⃣ Plástico pegado\n3️⃣ Manchada (no quemada)",
+        "transitions": {
+          "1": "DAMAGE_BURNT",
+          "2": "DAMAGE_PLASTIC",
+          "3": "DAMAGE_STAIN"
+        },
+        "onInterruptFallback": "Elige: 1️⃣ quemada  2️⃣ plástico  3️⃣ manchada"
+      },
+
+      "DAMAGE_BURNT": {
+        "type": "ACTION",
+        "prompt": "Lamentamos lo ocurrido. Es importante revisar siempre las etiquetas y usar la temperatura adecuada. Ecolaundry avisa de este riesgo en la lavandería. 🔧 Derivamos tu caso — se estudiará si el seguro puede hacerse cargo. ⚠️ No se garantiza compensación automática.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Ropa quemada/derretida en secadora — estudio caso/seguro, sin compensación automática"
+      },
+
+      "DAMAGE_PLASTIC": {
+        "type": "ACTION",
+        "prompt": "Lamentamos lo ocurrido. Es importante comprobar el estado del tambor antes de introducir la ropa. 🔧 Derivamos tu caso — se estudiará si el seguro puede hacerse cargo. ⚠️ No se garantiza compensación automática.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Ropa con plástico pegado en secadora — estudio caso/seguro, sin compensación automática"
+      },
+
+      "DAMAGE_STAIN": {
+        "type": "ACTION",
+        "prompt": "Lamentamos lo ocurrido. Será necesario volver a lavar las prendas pretratando las manchas. 🔧 Derivamos a un operador — como máximo, ese nuevo lavado será gratuito.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Ropa manchada en secadora — posible lavado gratuito como compensación"
+      },
+
+      "LOCK": {
+        "type": "ACTION",
+        "prompt": "La puerta se bloquea automáticamente durante la fase de enfriamiento (últimos 2 minutos) y puede tardar unos minutos más en abrirse. Espera 2-3 minutos y vuelve a intentarlo. ¿Se ha abierto?",
+        "transitions": {
+          "si": "OK2",
+          "1": "OK2",
+          "no": "ESC_POST",
+          "2": "ESC_POST"
+        },
+        "onInterruptFallback": "Responde 1️⃣ si se abrió o 2️⃣ si sigue bloqueada."
+      },
+
+      "ESC_NOISE": {
+        "type": "ACTION",
+        "prompt": "Un ruido extraño puede indicar una avería. 🔧 Derivamos tu caso a un operador.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Ruido extraño / posible avería mecánica secadora"
+      },
+
+      "ESC_POST": {
+        "type": "ACTION",
+        "prompt": "🔧 Derivamos tu caso a un operador para encontrar la mejor solución.",
+        "isTerminal": true,
+        "action": "escalate",
+        "escalateReason": "Problema post-ciclo secadora no resuelto — revisión operador"
+      },
+
+      "OK1": {
+        "type": "ACTION",
+        "prompt": "✅ ¡Perfecto! El problema está resuelto. Si necesitas algo más, escríbenos.",
+        "isTerminal": true,
+        "action": "resolve"
+      },
+
+      "OK_ALM": {
+        "type": "ACTION",
+        "prompt": "✅ ¡Genial! La alarma ha desaparecido. El ciclo puede continuar con normalidad. Si surge algo más, escríbenos.",
+        "isTerminal": true,
+        "action": "resolve"
+      },
+
+      "OK2": {
+        "type": "ACTION",
+        "prompt": "✅ Me alegra que se haya resuelto. Si necesitas más ayuda, escríbenos.",
+        "isTerminal": true,
+        "action": "resolve"
+      }
+    }
+  }
+}

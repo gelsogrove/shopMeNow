@@ -241,21 +241,67 @@ Ogni LLM nel pipeline ha il suo template markdown (tranne subLLM che è dinamico
 
 | LLM | Template | Variabili chiave | Calling Functions |
 |-----|----------|-----------------|-------------------|
-| **Router** | `templates/flow/01-flow-agent.template.md` | `{{chatbotName}}`, `{{companyName}}`, `{{customerName}}`, `{{toneOfVoice}}`, `{{botIdentityResponse}}`, `{{faqs}}`, `{{customAiRules}}`, `{{websiteUrl}}`, `{{supportEmail}}`, `{{address}}` | `contactOperator`, `profileManagementAgent`, `listAvailableSlots`, `bookAppointment`, `cancelAppointment`, `getCustomerAppointments` |
-| **subLLM** | **Nessun template** (prompt da `FlowNodeConfig.systemPrompt` in DB) | `{{chatbotName}}`, `{{customerName}}`, `{{toneOfVoice}}` | `startFlow`, `contactOperator` |
-| **Conversation History** | `templates/flow/05-conversation-history.template.md` | `{{chatbotName}}`, `{{botIdentityResponse}}`, `{{companyName}}`, `{{customAiRules}}` | Nessuna |
+| **Router** | `templates/flow/00-router.template.md` | `{{chatbotName}}`, `{{companyName}}`, `{{customerName}}`, `{{toneOfVoice}}`, `{{welcomeMessage}}`, `{{faqs}}` | `assignMachine`, `startFlow`, `contactOperator`, `changeLanguage` |
+| **subLLM** | **Nessun template** (prompt da `FlowNodeConfig.systemPrompt` in DB) | `{{chatbotName}}`, `{{customerName}}`, `{{toneOfVoice}}`, `{{faqs}}` | `startFlow`, `contactOperator` |
 | **Translation** | `templates/flow/03-translation.template.md` | `{{languageUser}}` | Nessuna |
 | **Security** | `templates/flow/02-security.template.md` | `{{companyName}}`, `{{allowedExternalLinks}}` | Nessuna |
 
 **Variabili condivise (fonte: Workspace settings):**
-- `{{chatbotName}}` — Nome del bot (es. "EcoBot")
-- `{{companyName}}` — Nome azienda (es. "Ecolaundry")
-- `{{toneOfVoice}}` — Tono di voce (friendly, professional, etc.)
-- `{{botIdentityResponse}}` — Descrizione personalità bot
-- `{{customAiRules}}` — Regole business custom
-- `{{customerName}}` — Nome cliente (dinamico, da Customer DB)
+- `{{chatbotName}}` — Nome del bot
+- `{{companyName}}` — Nome azienda
+- `{{toneOfVoice}}` — Tono di voce
+- `{{welcomeMessage}}` — Messaggio di benvenuto (da workspace settings)
+- `{{faqs}}` — FAQ caricate dal DB
+- `{{customerName}}` — Nome cliente (solo se registrato, altrimenti stringa vuota)
 
-**Import/Export defaults:** `npm run update:prompts` carica i template .md → DB. `npm run export:prompts` esporta da DB → .md.
+## 2c. Sub-LLM systemPrompt — Regola Critica
+
+Il sub-LLM (PATH B) riceve il contesto con la macchina già assegnata. Il suo **unico compito** è:
+1. Classificare il problema con **massimo 1 domanda** se il contesto non è chiaro
+2. Chiamare `startFlow(flowId)` **immediatamente**
+3. **MAI diagnosticare da solo** — tutto il dialogo deterministico è nel FlowEngine
+
+### Flow disponibili per macchina (source: docs/cliente-0/flows/)
+
+**Secadora ED-340** (`docs/cliente-0/flows/01_secadora.json`):
+| flowId | Quando usarlo |
+|--------|--------------|
+| `no_parte` | Macchina non parte, problema pagamento/credito, display, alarma all'avvio |
+| `post_ciclo` | Problema dopo il ciclo (ropa húmeda, quemada, manchada, puerta bloqueada) |
+
+**Lavadora HS-60XX** (`docs/cliente-0/flows/02_lavatrice.json`):
+| flowId | Quando usarlo |
+|--------|--------------|
+| `no_parte` | Macchina non parte, pagamento non accettato, display (SEL/PUSH/door/ALM/AL001/END+bAL) |
+| `post_ciclo` | Ropa muy mojada, alarma durante ciclo, puerta bloqueada, no espuma, ropa dañada |
+
+### Domanda di classificazione (solo se necessaria)
+- Secadora: *"¿Ha podido iniciar el ciclo de secado o la secadora no arrancó?"*
+- Lavadora: *"¿Ha podido iniciar el lavado o la lavadora no arrancó?"*
+
+## 2d. FlowEngine — Nodi e Regole
+
+Il FlowEngine è deterministico (0 token LLM). Legge il JSON del flow e avanza nodo per nodo.
+
+**Regole MATCH (unici input accettati come risposta valida):**
+- Numeri: `1`, `2`, `3`, ... (selezione opzione)
+- Conferme: `si`, `sì`, `yes`, `ok`, `no`, `nope`
+
+**Tutto il resto viene classificato da FlowClassifierService:**
+- Domanda FAQ → `INTERRUPT_FAQ` → flow in PAUSA, FlowAgentLLM risponde, poi ri-mostra step
+- `STOP` / `annulla` → `HARD_BREAK` → escalate
+- Testo ambiguo → `AMBIGUOUS` → `onInterruptFallback` → dopo N tentativi escalate
+
+**Nodi terminali:**
+- `isTerminal: true, action: "resolve"` → problema risolto ✅
+- `isTerminal: true, action: "escalate"` → escalate a operatore 🔧 (con `escalateReason`)
+
+**Compensazioni — REGOLA ASSOLUTA:**
+- Il bot **MAI** promette compensazione automatica
+- Nei nodi di escalate si indica solo che "derivamos a un operador"
+- L'operatore decide sempre (Playbook §7)
+
+**Import/Export defaults:** I flow JSON sono in `docs/cliente-0/flows/` e vanno caricati manualmente nel DB via Settings > Flow.
 
 ---
 
