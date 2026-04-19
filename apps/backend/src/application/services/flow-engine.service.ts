@@ -232,6 +232,21 @@ export class FlowEngineService {
   }
 
   /**
+   * Apply a pre-classified transition key directly (skips classifier).
+   * Used by FlowWorkspaceStrategy when Sub-LLM has already classified ambiguous CHOICE input.
+   */
+  applyClassifiedTransition(key: string, context: ChatContext): FlowStepResult {
+    const state = context.flowState!
+    const previousNodeId = state.currentNodeId!
+    const node = this.resolveNode(previousNodeId)
+
+    // Undo the interruptCount increment from the previous handleAmbiguous call
+    state.interruptCount = Math.max(0, state.interruptCount - 1)
+
+    return this.applyTransition(key, node, state, context, previousNodeId)
+  }
+
+  /**
    * Resolves a "flowId.nodeId" string to a FlowNode.
    * Example: "non_parte.caso_door" → flows["non_parte"]["caso_door"]
    */

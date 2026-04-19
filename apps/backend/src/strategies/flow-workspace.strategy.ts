@@ -22,6 +22,7 @@
  */
 
 import { AgentType, ChannelMode, PrismaClient, Workspace } from "@echatbot/database"
+import axios from "axios"
 import logger from "../utils/logger"
 import { FlowAgentLLM } from "../application/agents/FlowAgentLLM"
 import { FlowEngineService } from "../application/services/flow-engine.service"
@@ -338,6 +339,57 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
             tokensUsed += faqResult.tokensUsed
           } catch (faqErr: any) {
             logger.warn("⚠️ FlowWorkspaceStrategy - FAQ answer failed, using fallback:", faqErr.message)
+            responseText = result.responseText
+          }
+        }
+        // ── FIX 4: isAmbiguousChoice → LLM classification for free-text CHOICE ──
+        else if (result.isAmbiguousChoice && result.choiceTransitionDescriptions && result.ambiguousInput) {
+          logger.info("🔮 FlowWorkspaceStrategy - isAmbiguousChoice: classifying via LLM", {
+            ambiguousInput: result.ambiguousInput.substring(0, 80),
+            options: Object.keys(result.choiceTransitionDescriptions),
+          })
+
+          try {
+            const classifiedKey = await this.classifyChoiceViaLLM(
+              result.ambiguousInput,
+              result.choiceTransitionDescriptions,
+              flowConfig.model || "openai/gpt-4o-mini"
+            )
+
+            if (classifiedKey) {
+              logger.info("✅ FlowWorkspaceStrategy - LLM classified choice", {
+                classifiedKey,
+                input: result.ambiguousInput.substring(0, 50),
+              })
+
+              // Re-feed the classified key to engine (bypasses classifier)
+              const reclassifiedResult = engine.applyClassifiedTransition(classifiedKey, chatContext)
+              responseText = reclassifiedResult.responseText
+              shouldCallOperator = reclassifiedResult.shouldCallOperator
+
+              // Append debug step for classification
+              debugSteps.push({
+                type: "choice-classification",
+                agent: "LLM-ChoiceClassifier",
+                timestamp: new Date().toISOString(),
+                input: {
+                  ambiguousInput: result.ambiguousInput,
+                  options: result.choiceTransitionDescriptions,
+                },
+                output: {
+                  classifiedKey,
+                  nextNodeId: reclassifiedResult.nextNodeId,
+                  flowStatus: reclassifiedResult.flowStatus,
+                },
+                tokensUsed: 0, // minimal tokens — counted separately
+              })
+            } else {
+              // LLM couldn't classify → use original fallback
+              logger.warn("⚠️ FlowWorkspaceStrategy - LLM classification returned NONE, using fallback")
+              responseText = result.responseText
+            }
+          } catch (classifyError: any) {
+            logger.warn("⚠️ FlowWorkspaceStrategy - Choice classification failed, using fallback:", classifyError.message)
             responseText = result.responseText
           }
         } else {
@@ -791,6 +843,69 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         conversationId: context.conversationId,
       }
     }
+  }
+
+  /**
+   * Lightweight LLM call to classify free-text input against CHOICE node transition descriptions.
+   * Returns the matching transition key or null if no match.
+   */
+  private async classifyChoiceViaLLM(
+    userInput: string,
+    descriptions: Record<string, string>,
+    model: string
+  ): Promise<string | null> {
+    const optionsList = Object.entries(descriptions)
+      .map(([key, desc]) => `- "${key}": ${desc}`)
+      .join("\n")
+
+    const prompt = `The customer said: "${userInput}"
+
+Which category best matches? Reply with ONLY the key (the word in quotes). Nothing else.
+
+Options:
+${optionsList}
+
+If none clearly matches, reply: NONE`
+
+    const apiKey = process.env.OPENROUTER_API_KEY
+    if (!apiKey) {
+      logger.warn("⚠️ classifyChoiceViaLLM - No OPENROUTER_API_KEY, cannot classify")
+      return null
+    }
+
+    const startTime = Date.now()
+    const response = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.1,
+        max_tokens: 20,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 10000,
+      }
+    )
+
+    const answer = response.data?.choices?.[0]?.message?.content?.trim().toLowerCase()
+    const elapsed = Date.now() - startTime
+    logger.info("🔮 classifyChoiceViaLLM result", { answer, elapsed, model })
+
+    if (!answer || answer === "none") return null
+
+    // Exact match first
+    if (descriptions[answer]) return answer
+
+    // Partial match: check if the answer contains a valid key
+    for (const key of Object.keys(descriptions)) {
+      if (answer.includes(key)) return key
+    }
+
+    return null
   }
 
   /**
