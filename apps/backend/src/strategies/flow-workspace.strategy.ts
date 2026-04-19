@@ -706,10 +706,87 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
       const executionTime = Date.now() - startTime
       logger.error("❌ FlowWorkspaceStrategy - Error", {
         workspaceId: context.workspaceId,
+        customerId: context.customerId,
         error: error.message,
+        stack: error.stack,
         executionTimeMs: executionTime,
       })
-      throw error
+
+      // ─── ERROR RECOVERY: Save error to DB + notify operator via email ───
+      try {
+        const errorDebugInfo = {
+          error: true,
+          errorMessage: error.message,
+          errorStack: error.stack?.substring(0, 500),
+          executionTimeMs: executionTime,
+          timestamp: new Date().toISOString(),
+          source: "FlowWorkspaceStrategy",
+          flowKey: context.flowKey || "unknown",
+          message: context.message?.substring(0, 200),
+        }
+
+        // Save user message + error assistant message atomically
+        await this.conversationManager.saveUserAndAssistantAtomic({
+          workspaceId: context.workspaceId,
+          customerId: context.customerId,
+          conversationId: context.conversationId || "",
+          userContent: context.message,
+          assistantContent: "⚠️ An unexpected error occurred. The operator has been notified.",
+          agentType: "ROUTER",
+          tokensUsed: 0,
+          debugInfo: errorDebugInfo,
+        })
+
+        // Send error notification email to workspace operator + CC echatbot
+        const operatorEmail = workspace.operatorEmail
+        if (operatorEmail) {
+          const { EmailService } = await import("../application/services/email.service")
+          const emailService = new EmailService()
+          const errorSubject = `🚨 FLOW Error - ${workspace.name || context.workspaceId}`
+          const errorBody = [
+            `<h2>🚨 Flow Pipeline Error</h2>`,
+            `<p><strong>Workspace:</strong> ${workspace.name || context.workspaceId}</p>`,
+            `<p><strong>Customer ID:</strong> ${context.customerId}</p>`,
+            `<p><strong>Customer Message:</strong> ${context.message?.substring(0, 200)}</p>`,
+            `<p><strong>Flow:</strong> ${context.flowKey || "N/A"}</p>`,
+            `<p><strong>Error:</strong> <code>${error.message}</code></p>`,
+            `<p><strong>Time:</strong> ${new Date().toLocaleString("it-IT")}</p>`,
+            `<p><strong>Duration:</strong> ${executionTime}ms</p>`,
+            `<hr/>`,
+            `<p style="font-size:12px;color:#666;">Stack trace (first 500 chars):<br/><pre>${error.stack?.substring(0, 500)}</pre></p>`,
+          ].join("\n")
+
+          await emailService.sendMail({
+            type: "agent",
+            to: operatorEmail,
+            subject: errorSubject,
+            body: errorBody,
+            cc: "echatbotai@gmail.com",
+            workspaceId: context.workspaceId,
+          })
+          logger.info("📧 FlowWorkspaceStrategy - Error notification email sent", {
+            to: operatorEmail,
+            cc: "echatbotai@gmail.com",
+          })
+        } else {
+          logger.warn("⚠️ FlowWorkspaceStrategy - No operatorEmail configured, cannot send error notification")
+        }
+      } catch (recoveryError: any) {
+        // Recovery itself failed — log but don't mask original error
+        logger.error("❌ FlowWorkspaceStrategy - Error recovery failed", {
+          originalError: error.message,
+          recoveryError: recoveryError.message,
+        })
+      }
+
+      // Return fallback response instead of throwing (customer gets a message)
+      return {
+        response: "⚠️ An unexpected error occurred. The operator has been notified and will assist you shortly.",
+        agentType: "ROUTER" as AgentType,
+        debugSteps: [],
+        totalTokens: 0,
+        conversationId: context.conversationId,
+      }
     }
   }
 

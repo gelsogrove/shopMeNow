@@ -487,11 +487,13 @@ describe("FlowWorkspaceStrategy", () => {
     })
 
     // ───────────────────────────────────────────────────────────────────────
-    // T8: FlowEngine throws → strategy catches and returns readable error
+    // T8: FlowEngine throws → strategy catches error gracefully
     // ───────────────────────────────────────────────────────────────────────
     // SCENARIO: FlowNodeConfig exists but flows JSON is corrupt → FlowEngine throws
-    // RULE: Strategy catches, logs error, re-throws (handled by caller)
-    it("FlowEngine throws → strategy propagates error", async () => {
+    // RULE: Strategy catches error, saves debugInfo to DB, sends email to operator,
+    //       and returns a fallback response (customer is NOT left in silence)
+    // APPROVED CHANGE: Andrea requested error recovery with email notification (2026-04-20)
+    it("FlowEngine throws → strategy returns fallback response instead of propagating error", async () => {
       const prisma = createPrismaMock({
         chatSession: {
           findFirst: jest.fn().mockResolvedValue({
@@ -521,10 +523,11 @@ describe("FlowWorkspaceStrategy", () => {
         throw new Error("Invalid node reference: non_parte.broken_node")
       })
 
-      // ASSERT: Strategy propagates the error
-      await expect(strategy.route(context, workspace)).rejects.toThrow(
-        "Invalid node reference"
-      )
+      // ASSERT: Strategy returns fallback response (does NOT throw)
+      const result = await strategy.route(context, workspace)
+      expect(result.response).toContain("error occurred")
+      expect(result.agentType).toBe("ROUTER")
+      expect(result.totalTokens).toBe(0)
     })
 
     // ───────────────────────────────────────────────────────────────────────
