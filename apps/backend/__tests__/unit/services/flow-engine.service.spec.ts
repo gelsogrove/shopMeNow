@@ -300,6 +300,105 @@ describe("FlowEngineService › AMBIGUOUS input", () => {
 })
 
 // ---------------------------------------------------------------------------
+// handleMessage — AMBIGUOUS on CONFIRMATION nodes
+// ---------------------------------------------------------------------------
+
+describe("FlowEngineService › AMBIGUOUS on CONFIRMATION node", () => {
+  // Build a service with a CONFIRMATION node that has YES/NO transitions
+  const CONFIRM_FLOW_MAP: FlowMap = {
+    non_parte: {
+      ...TEST_FLOW_MAP.non_parte,
+      step_confirm: {
+        type: "CONFIRMATION",
+        prompt: "Did you complete the payment? Reply Yes or No.",
+        transitions: {
+          YES: "non_parte.step_ok",
+          NO: "non_parte.handle_escalate",
+        },
+        onInterruptFallback: "Did you complete the payment? Reply Yes or No.",
+      },
+    },
+  }
+
+  function makeConfirmService() {
+    return new FlowEngineService(CONFIRM_FLOW_MAP)
+  }
+
+  function confirmContext(overrides: Partial<FlowState> = {}): ChatContext {
+    return {
+      flowState: {
+        flowId: "non_parte",
+        currentNodeId: "non_parte.step_confirm",
+        flowStatus: "ACTIVE",
+        interruptCount: 0,
+        lastInterruptType: null,
+        lastValidStepAt: new Date().toISOString(),
+        ...overrides,
+      },
+    }
+  }
+
+  it("should return isAmbiguousChoice=true for 'bene' on CONFIRMATION node", () => {
+    // SCENARIO: User says "bene" (Italian for "good/ok") on a YES/NO confirmation node
+    // RULE: CONFIRMATION + AMBIGUOUS → trigger Sub-LLM path (isAmbiguousChoice)
+    //       so the Sub-LLM can classify "bene" → YES transition
+    //       instead of looping with re-prompt + eventually escalating
+    const svc = makeConfirmService()
+    const ctx = confirmContext()
+
+    const result = svc.handleMessage("bene", ctx)
+
+    expect(result.isAmbiguousChoice).toBe(true)
+    expect(result.ambiguousInput).toBe("bene")
+    expect(result.choiceTransitionDescriptions).toBeDefined()
+    expect(result.choiceTransitionDescriptions!["YES"]).toContain("agrees")
+    expect(result.flowStatus).toBe("ACTIVE")
+    expect(result.shouldCallOperator).toBe(false)
+  })
+
+  it("should return isAmbiguousChoice=true for 'fatto grazie' on CONFIRMATION node", () => {
+    // SCENARIO: User confirms with a multi-word phrase not in the MATCH list
+    // RULE: CONFIRMATION + AMBIGUOUS → isAmbiguousChoice path
+    const svc = makeConfirmService()
+    const ctx = confirmContext()
+
+    const result = svc.handleMessage("fatto grazie", ctx)
+
+    expect(result.isAmbiguousChoice).toBe(true)
+    expect(result.ambiguousInput).toBe("fatto grazie")
+    expect(result.flowStatus).toBe("ACTIVE")
+  })
+
+  it("'hecho' IS in MATCH list → classified as YES → advances to step_ok (terminal → COMPLETED)", () => {
+    // SCENARIO: Spanish user says "hecho" (done) — it's in normalizeInput → "YES"
+    // RULE: exact MATCH ("hecho" → YES) → applyTransition directly, NOT ambiguous path
+    //       step_ok is terminal with action="resolve" → flowStatus=COMPLETED, nextNodeId=null
+    const svc = makeConfirmService()
+    const ctx = confirmContext()
+
+    const result = svc.handleMessage("hecho", ctx)
+
+    // "hecho" is in the MATCH/normalizeInput list → classified directly as YES → step_ok (terminal)
+    expect(result.flowStatus).toBe("COMPLETED")
+    expect(result.isAmbiguousChoice).toBeFalsy()
+    expect(result.nextNodeId).toBe("non_parte.step_ok")
+  })
+
+  it("should NOT escalate immediately on first ambiguous input to CONFIRMATION node", () => {
+    // SCENARIO: User sends ambiguous text on a CONFIRMATION node
+    // RULE: Must NOT escalate on first ambiguous — should use isAmbiguousChoice path instead
+    const svc = makeConfirmService()
+    const ctx = confirmContext()
+
+    const result = svc.handleMessage("mi sembra di si", ctx)
+
+    expect(result.shouldCallOperator).toBe(false)
+    expect(result.flowStatus).toBe("ACTIVE")
+    expect(result.isAmbiguousChoice).toBe(true)
+  })
+})
+
+// ---------------------------------------------------------------------------
 // TTL reset
 // ---------------------------------------------------------------------------
 

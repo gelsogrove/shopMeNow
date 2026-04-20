@@ -208,6 +208,28 @@ export class FlowEngineService {
       };
     }
 
+    // CONFIRMATION nodes (YES/NO transitions) → also use Sub-LLM classification.
+    // Without this, inputs like "bene", "fatto grazie", "ok perfetto" would loop
+    // re-prompting 4 times then escalate to operator — bad UX.
+    // We synthesize transitionDescriptions so the existing isAmbiguousChoice path handles it.
+    const hasYesNo = node.transitions?.["YES"] && node.transitions?.["NO"]
+    if ((node.type === "CONFIRMATION" || hasYesNo) && rawInput) {
+      const confirmDescriptions = node.transitionDescriptions ?? {
+        YES: "User agrees, confirms, says yes, ok, done, great, fine, bene, fatto, hecho, listo",
+        NO: "User refuses, declines, says no, nope, no grazie, no thanks",
+      }
+      return {
+        responseText: node.onInterruptFallback ?? node.prompt,
+        nextNodeId: state.currentNodeId,
+        flowStatus: "ACTIVE",
+        shouldCallOperator: false,
+        isAmbiguousChoice: true,
+        choiceTransitionDescriptions: confirmDescriptions,
+        ambiguousInput: rawInput,
+        debug: { classification, previousNodeId: previousNodeId || state.currentNodeId, nodeType: node.type, interruptCount: state.interruptCount },
+      };
+    }
+
     return {
       responseText: node.onInterruptFallback ?? "I didn't quite understand 🤔 — could you try again?",
       nextNodeId: state.currentNodeId,

@@ -330,6 +330,29 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
 - **RATIONALE**: The platform is international. User-facing data (products, categories) comes from database in the customer's language, but UI chrome must be English.
 - **EXCEPTION**: LLM-generated responses to customers are dynamic and multilingual
 
+### 16. **FLOW Prompt Alignment — Always Keep 3 Sources in Sync** (🚨 MANDATORY)
+
+- **Rule**: When modifying the Ecolaundry router prompt (`ECOLAUNDRY_ROUTER_PROMPT` in `packages/database/prisma/seed.ts`), you MUST **immediately** sync these 3 sources:
+  1. `packages/database/prisma/seed.ts` — `ECOLAUNDRY_ROUTER_PROMPT` constant (source of truth)
+  2. `apps/backend/src/templates/flow/00-router.template.md` — template reference file (must mirror seed)
+  3. `packages/database/scripts/sync-ecolaundry-flow.ts` — if it has an inline prompt, update it too
+- **Also sync** `ECOLAUNDRY_SYSTEM_PROMPT` (sub-agent prompt) if that changes similarly
+- **After any prompt change**: run `packages/database/scripts/sync-ecolaundry-flow.ts` on Heroku to push to DB
+- **Violation**: Having 3 different versions causes silent bugs where DB has old prompt, seed has new, template has something else
+
+### 17. **LLM Architecture / AgentFlowDiagram / Debug View — Always Keep Aligned** (🚨 MANDATORY)
+
+- **These 3 must always represent the same agent pipeline:**
+  1. `docs/flow-engine-architecture.md` — written architecture spec (pipeline, steps, paths)
+  2. `apps/frontend/src/components/shared/AgentFlowDiagram.tsx` — visual graph displayed to admin
+  3. `apps/frontend/src/components/ChatWidget.tsx` (Debug Panel) + `apps/frontend/src/components/chat/adapters/debugAdapter.ts` — debug view that tests the live pipeline
+- **When to sync**: if you add/rename/remove an agent, change routing paths, or modify the pipeline steps, you MUST update ALL THREE in the same commit
+- **Examples of changes requiring alignment**:
+  - Adding a new agent (e.g. CALENDAR_AGENT) → add to architecture doc + add node to diagram + add agentName label in debug view
+  - Renaming PATH A/B/C → update architecture doc + update diagram tooltips + update debug metadata labels
+  - Adding a new FlowWorkspaceStrategy path → update architecture doc pipeline section + diagram
+- **Violation**: diagram shows old agents, architecture doc describes old flow, debug view shows wrong agent names → admin misreads system behavior
+
 ---
 
 ## 🏗️ Architecture Patterns

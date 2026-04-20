@@ -145,6 +145,40 @@ export class WelcomeMessageHandler {
         return { isWelcomeMessage: false }
       }
 
+      // ─── ATOMIC WELCOME CLAIM: prevent race condition ────────────────────
+      // Problem: user sends 2 messages in quick succession (< LLM processing time).
+      // Both requests read previousMessageCount=0 before the first save completes.
+      // Both would fire welcome, causing duplicate "Ciao!" messages.
+      // Fix: atomically set context.welcomeSent=true ONLY IF it's not already true.
+      // PostgreSQL's conditional UPDATE ensures exactly ONE request wins the race.
+      if (input.conversationId && !input.conversationId.startsWith("temp-")) {
+        try {
+          const rowsUpdated = (await this.prisma.$executeRaw`
+            UPDATE "ChatSession"
+            SET context = jsonb_set(COALESCE(context, '{}'), '{welcomeSent}', 'true')
+            WHERE id = ${input.conversationId}
+              AND COALESCE(context->>'welcomeSent', 'false') != 'true'
+          `) as unknown as number
+
+          if (rowsUpdated === 0) {
+            // Another concurrent request already claimed the welcome slot
+            logger.info("⚡ [WelcomeMessageHandler] Welcome already claimed by concurrent request — skipping duplicate", {
+              customerId: input.customerId,
+              conversationId: input.conversationId,
+            })
+            return { isWelcomeMessage: false }
+          }
+
+          logger.info("🔒 [WelcomeMessageHandler] Welcome slot claimed atomically", {
+            customerId: input.customerId,
+            conversationId: input.conversationId,
+          })
+        } catch (rawSqlError: any) {
+          // Non-critical: if the atomic check fails, proceed anyway (count-based check already passed)
+          logger.warn("⚠️ [WelcomeMessageHandler] Atomic welcome claim failed (non-critical):", rawSqlError?.message)
+        }
+      }
+
       // Load customer for variable replacement
       const customer = await this.prisma.customers.findFirst({
         where: {

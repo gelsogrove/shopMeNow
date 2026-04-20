@@ -1,5 +1,12 @@
 # Flow Engine Architecture — Infrastruttura Generica per Workspace Guidati
 
+<!--
+  🚨 ALIGNMENT RULE: This file must stay in sync with:
+  1. apps/frontend/src/components/shared/AgentFlowDiagram.tsx  — visual diagram shown to admin
+  2. apps/frontend/src/components/ChatWidget.tsx (Debug Panel)  — debug view that tests the pipeline
+  When you add/rename/remove agents or change routing paths, update ALL THREE in the same commit.
+-->
+
 ## Panoramica
 
 Infrastruttura generica per chatbot **deterministici a step** su qualsiasi dominio che richiede guida sequenziale: macchine self-service, processi di supporto tecnico, onboarding, troubleshooting strutturato.

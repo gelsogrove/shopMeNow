@@ -616,6 +616,59 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
           tokensUsed,
           executionTimeMs,
         })
+
+        // ── PATH C FALLBACK: chain call produced no text ──────────────────
+        // Scenario: Router called DELEGATE_TO_FLOW → sub-LLM ran → sub-LLM
+        // called startFlow whose first node returns responseText="" (e.g. transition-only node).
+        // Without this fallback the customer would see ONLY the welcome message.
+        // Fix: if responseText is still empty AND we now have a flowKey, run one
+        // more FlowAgentLLM call directly (equivalent to what PATH B would do next turn).
+        if (!responseText && chatContext.flowKey) {
+          logger.info("🔁 FlowWorkspaceStrategy - PATH C FALLBACK: responseText still empty, running PATH B inline", {
+            flowKey: chatContext.flowKey,
+          })
+          try {
+            const fallbackAgent = new FlowAgentLLM(this.prisma)
+            const fallbackResult = await fallbackAgent.handleQuery({
+              workspaceId: context.workspaceId,
+              customerId: context.customerId,
+              conversationId: context.conversationId || "",
+              flowKey: chatContext.flowKey,
+              message: context.message,
+              chatContext,
+              customerName: context.customerName || customerData.name,
+              customerLanguage: context.customerLanguage || customerData.language || "en",
+              customerPhone: customerData.phone || undefined,
+            })
+
+            if (fallbackResult.output) {
+              responseText = fallbackResult.output
+              chatContext = fallbackResult.chatContext
+              tokensUsed += fallbackResult.tokensUsed
+              shouldCallOperator = shouldCallOperator || fallbackResult.shouldCallOperator
+              functionCalls.push(...fallbackResult.functionCalls)
+
+              debugSteps.push({
+                type: "flow-agent",
+                agent: "FlowAgentLLM-PathCFallback",
+                timestamp: new Date().toISOString(),
+                input: { userMessage: context.message, flowKey: chatContext.flowKey },
+                output: {
+                  message: fallbackResult.output,
+                  functionCalls: fallbackResult.functionCalls,
+                },
+                tokensUsed: fallbackResult.tokensUsed,
+                executionTimeMs: fallbackResult.executionTimeMs,
+              })
+
+              logger.info("✅ FlowWorkspaceStrategy - PATH C FALLBACK produced response", {
+                responseLength: responseText.length,
+              })
+            }
+          } catch (fallbackErr: any) {
+            logger.warn("⚠️ FlowWorkspaceStrategy - PATH C FALLBACK failed (non-critical):", fallbackErr.message)
+          }
+        }
       }
 
       // ─── STEP: Save updated context to ChatSession ──────────────────────

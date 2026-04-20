@@ -656,15 +656,33 @@ export class UltraMsgWebhookController {
       if (welcomeMessageCount === 0) {
         // 🔧 CRITICAL: If customer has 0 messages but activeChatbot=false, reset it
         // This happens when chats are deleted but activeChatbot wasn't reset
+        // BUT: do NOT reset if the customer was escalated to human support (contactOperator was called)
         if (customer && !customer.activeChatbot) {
-          await prisma.customers.update({
-            where: { id: customer.id },
-            data: { activeChatbot: true },
+          const escalatedSession = await prisma.chatSession.findFirst({
+            where: {
+              customerId: customer.id,
+              workspaceId,
+              escalatedAt: { not: null },
+              status: 'active',
+            },
           })
-          customer.activeChatbot = true
-          logger.info('[ULTRAMSG] 🔄 Reset activeChatbot=true (customer had 0 messages but chatbot was disabled)', {
-            customerId: customer.id,
-          })
+
+          if (!escalatedSession) {
+            await prisma.customers.update({
+              where: { id: customer.id },
+              data: { activeChatbot: true },
+            })
+            customer.activeChatbot = true
+            logger.info('[ULTRAMSG] 🔄 Reset activeChatbot=true (customer had 0 messages but chatbot was disabled)', {
+              customerId: customer.id,
+            })
+          } else {
+            logger.info('[ULTRAMSG] ⚠️ Customer has 0 messages but was escalated — NOT resetting activeChatbot', {
+              customerId: customer.id,
+              escalatedAt: escalatedSession.escalatedAt,
+              sessionId: escalatedSession.id,
+            })
+          }
         }
 
         logger.info('[ULTRAMSG] 📭 Customer has NO chat history - sending welcome message', {

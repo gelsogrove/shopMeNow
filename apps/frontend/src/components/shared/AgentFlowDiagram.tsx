@@ -11,6 +11,11 @@
  * 
  * @architecture Visual component for Agent Configuration page
  * @security All operations validated by workspaceId + agentId + token
+ *
+ * 🚨 ALIGNMENT RULE: This diagram must stay in sync with:
+ * 1. docs/flow-engine-architecture.md         — written architecture spec (source of truth for pipeline)
+ * 2. apps/frontend/src/components/ChatWidget.tsx (Debug Panel) — debug view that tests the live pipeline
+ * When you add/rename/remove agents or change routing paths, update ALL THREE in the same commit.
  */
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"

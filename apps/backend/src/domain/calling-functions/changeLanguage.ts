@@ -22,6 +22,7 @@ export interface ChangeLanguageRequest {
   workspaceId: string
   customerId: string
   language: string // ISO 639-1: "it", "en", "es", "pt"
+  explicitRequest?: boolean // MUST be true — only change language on explicit user request
 }
 
 export interface ChangeLanguageResult {
@@ -49,6 +50,22 @@ export async function changeLanguage(
         success: false,
         message: "Missing required parameters",
         error: "workspaceId, customerId, and language are required",
+        timestamp: new Date().toISOString(),
+      }
+    }
+
+    // Safety guard: only change language when user explicitly requested it.
+    // Prevents the LLM from switching language just because it sees a foreign word,
+    // city name, or technical term inside an otherwise-unrelated message.
+    if (!request.explicitRequest) {
+      logger.info("🌍 changeLanguage blocked: not an explicit user request", {
+        customerId: request.customerId,
+        language: request.language,
+      })
+      return {
+        success: false,
+        message: "Language change requires an explicit user request (e.g. 'Can we speak in English?').",
+        error: "NOT_EXPLICIT_REQUEST",
         timestamp: new Date().toISOString(),
       }
     }

@@ -21,7 +21,6 @@ progress
 - deerministico o faq?
 - i prompt sono fati bene?
 - Customer registration va o non va ?
-- unit test improvments
 - change language mi chiedo se funziona visto che non abbiamo una profilazione...?
 
 TODO

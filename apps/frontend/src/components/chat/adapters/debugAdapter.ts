@@ -1,3 +1,14 @@
+/**
+ * debugAdapter — maps raw debug API messages to the ChatSurface display format.
+ *
+ * Used by the Debug Panel in ChatWidget.tsx to render agent responses
+ * with agentName, translatedQuery, processedPrompt, and other metadata.
+ *
+ * 🚨 ALIGNMENT RULE: The debug view must stay in sync with:
+ * 1. docs/flow-engine-architecture.md         — written architecture spec (source of truth for pipeline)
+ * 2. apps/frontend/src/components/shared/AgentFlowDiagram.tsx — visual diagram shown to admin
+ * When you add/rename agents or change pipeline metadata fields, update ALL THREE in the same commit.
+ */
 import { ChatSurfaceMessage } from "@/components/chat/ChatSurface"
 
 export type DebugSourceMessage = {
