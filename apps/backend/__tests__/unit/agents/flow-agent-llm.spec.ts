@@ -282,7 +282,9 @@ describe("E3 - FlowAgentLLM.filterByWorkspaceSettings", () => {
     mockedAxios.post.mockResolvedValue(makeLLMResponse())
 
     const agent = new FlowAgentLLM(mockPrisma as any)
-    await agent.handleQuery(makeContext())
+    // Provide a chatContext with gatherState so resetSession is NOT stripped
+    // (resetSession is only exposed when there is context to reset — see FlowAgentLLM STEP 3c)
+    await agent.handleQuery(makeContext({ chatContext: { gatherState: { retryCount: 0 } } }))
 
     const callBody = mockedAxios.post.mock.calls[0][1] as any
     const contactTool = callBody.tools?.find((t: any) => t.function.name === "contactOperator")
@@ -325,7 +327,9 @@ describe("E3 - FlowAgentLLM.filterByWorkspaceSettings", () => {
     mockedAxios.post.mockResolvedValue(makeLLMResponse())
 
     const agent = new FlowAgentLLM(mockPrisma as any)
-    await agent.handleQuery(makeContext())
+    // Provide a chatContext with gatherState so resetSession is NOT stripped
+    // (resetSession is only exposed when there is context to reset — see FlowAgentLLM STEP 3c)
+    await agent.handleQuery(makeContext({ chatContext: { gatherState: { retryCount: 0 } } }))
 
     const callBody = mockedAxios.post.mock.calls[0][1] as any
     const profileTool = callBody.tools?.find((t: any) => t.function.name === "profileManagementAgent")

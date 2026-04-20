@@ -1248,6 +1248,8 @@ export function AgentFlowDiagram({
                 {callingFunctions.map((funcName) => {
                   // getProfileLink is only shown when customer registration is enabled
                   if (funcName === 'getProfileLink' && !needRegistration) return null
+                  // contactOperator is only shown when human support is enabled
+                  if (funcName === 'contactOperator' && !hasHumanSupport) return null
 
                   const funcMeta = getCallingFunctionMetadata(funcName)
                   const FuncIcon = funcMeta.icon

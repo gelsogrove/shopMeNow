@@ -170,7 +170,18 @@ export class FlowAgentLLM {
     // ── STEP 3b: Filter availableFunctions by workspace settings ─────────────
     // Same pattern as ECOMMERCE llm-router.service.ts lines 1265-1280.
     // Workspace flags command the ENTIRE pipeline (UI + LLM algorithm).
-    const filteredAvailableFunctions = this.filterByWorkspaceSettings(availableFunctions, workspace)
+    let filteredAvailableFunctions = this.filterByWorkspaceSettings(availableFunctions, workspace)
+
+    // ── STEP 3c: Strip resetSession when there is nothing to reset ────────────
+    // If no flow is active and no gather progress, the LLM should NOT have
+    // resetSession as a tool — otherwise it tends to call it on greetings / FAQs.
+    const hasContextToReset =
+      !!ctx.chatContext.flowKey ||
+      !!ctx.chatContext.flowState ||
+      !!ctx.chatContext.gatherState
+    if (!hasContextToReset) {
+      filteredAvailableFunctions = filteredAvailableFunctions.filter((f) => f !== "resetSession")
+    }
 
     const tools = await this.buildTools(flowIds, filteredAvailableFunctions, isRouterMode, ctx.workspaceId, workspace)
 
