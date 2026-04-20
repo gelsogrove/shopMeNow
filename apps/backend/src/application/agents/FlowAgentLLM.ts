@@ -331,63 +331,14 @@ export class FlowAgentLLM {
       output = "I'm here to help. Please describe your issue."
     }
 
-    // Router gather retry tracking — increment retryCount ONLY when:
-    //   (a) gather mode has already started (at least one piece of info collected), AND
-    //   (b) the user made no new progress this turn.
-    // FAQ / greeting / general chat must NEVER count as failed retries, otherwise the bot
-    // escalates to operator during normal conversations that don't involve a machine problem.
-    if (ctx.flowKey === "router" && toolCalls.length === 0) {
-      const prev = chatContext.gatherState ?? { retryCount: 0 }
-
-      // Detect info from history + current message (cumulative on purpose — any sign of
-      // gather progress is enough to (a) mark gather mode as started and (b) reset retry).
-      const historyWithCurrent: Message[] = [...history, { role: "user", content: ctx.message }]
-      const detectedLocale = this.extractFromHistory(historyWithCurrent, "locale")
-      const detectedMachineType = this.extractFromHistory(historyWithCurrent, "machineType")
-      const numericMatch = ctx.message.trim().match(/^(\d{1,2})$/)
-      // Only treat a bare number as machineNumber if gather mode is already active for this
-      // conversation. Avoids "5" during an FAQ (e.g. hours, prices) being misread as a machine id.
-      const gatherAlreadyStarted = !!(prev.locale || prev.machineType || prev.machineNumber)
-      const detectedMachineNumber = numericMatch && gatherAlreadyStarted
-        ? numericMatch[1]
-        : prev.machineNumber
-
-      const progressed =
-        (!!detectedLocale && detectedLocale !== prev.locale) ||
-        (!!detectedMachineType && detectedMachineType !== prev.machineType) ||
-        (!!detectedMachineNumber && detectedMachineNumber !== prev.machineNumber)
-
-      const gatherModeActive = gatherAlreadyStarted || progressed
-
-      if (progressed) {
-        chatContext.gatherState = {
-          locale: detectedLocale ?? prev.locale,
-          machineType: detectedMachineType ?? prev.machineType,
-          machineNumber: detectedMachineNumber ?? prev.machineNumber,
-          retryCount: 0,
-        }
-        logger.info("📍 FlowAgentLLM: gather progress — retry reset", {
-          gatherState: chatContext.gatherState,
-        })
-      } else if (!gatherModeActive) {
-        // Not in gather mode (greeting, FAQ, small talk) — do not touch retry counter
-        logger.info("💬 FlowAgentLLM: non-gather turn — retry counter untouched")
-      } else {
-        const currentRetry = prev.retryCount ?? 0
-        chatContext.gatherState = {
-          ...prev,
-          retryCount: currentRetry + 1,
-        }
-        logger.info("⚠️ FlowAgentLLM: no gather progress — retry incremented", {
-          retryCount: chatContext.gatherState.retryCount,
-        })
-        if (chatContext.gatherState.retryCount >= 3) {
-          logger.info("🚨 FlowAgentLLM: gatherState retryCount >= 3 → escalating to operator")
-          shouldCallOperator = true
-          functionCalls.push({ name: "contactOperator", arguments: { reason: "Max gather retries exceeded" }, result: "deferred_to_strategy" })
-        }
-      }
-    }
+    // Escalation policy (aligned with docs/cliente-0/flows/flow1-router.md):
+    //   Escalation happens ONLY via:
+    //   (1) LLM calls `contactOperator` tool — user asks for human / is frustrated / ambiguous case
+    //   (2) Flow sub-node with action: "escalate" (handled by FlowEngineService) — alarm in flow
+    //   (3) Well-defined Playbook triggers (angry, contradictions, unknown error, manual activation,
+    //       compensation, fraud, camera/AJAX incidents, dataphone overcharges)
+    // Retry-based auto-escalation was removed: it fired on normal FAQ/greeting turns and
+    // is not documented in the Playbook.
 
     const executionTimeMs = Date.now() - startTime
 
