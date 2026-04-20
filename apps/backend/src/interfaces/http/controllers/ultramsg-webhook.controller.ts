@@ -685,60 +685,68 @@ export class UltraMsgWebhookController {
           }
         }
 
-        logger.info('[ULTRAMSG] 📭 Customer has NO chat history - sending welcome message', {
+        logger.info('[ULTRAMSG] 📭 Customer has NO chat history - deciding welcome strategy', {
           customerId: customer.id,
           phone: customer.phone,
+          channelMode: workspace.channelMode,
         })
 
-        // 🔧 FIX: Create a real chatSession for welcome messages
-        // Without this, welcome messages get saved with temp-{customerId} conversationId
-        // which is never cleaned up by deleteChat (it only deletes by real chatSessionId)
-        let welcomeSession = await prisma.chatSession.findFirst({
-          where: { customerId: customer.id, workspaceId, channel: 'whatsapp', status: 'active' },
-        })
-        if (!welcomeSession) {
-          welcomeSession = await prisma.chatSession.create({
-            data: {
+        // 🔄 FLOW workspaces: SKIP WelcomeMessageHandler here entirely.
+        // Reason: calling WelcomeMessageHandler here sets the atomic welcomeSent flag AND saves
+        // the user message + welcome to DB. When ChatEngine runs next, it finds welcomeSent=true
+        // and skips the welcome → no welcomePrefix. But the router prompt (if it contains
+        // {{welcomeMessage}}) makes the LLM echo the welcome anyway → DB history then has:
+        //   [user: msg] [assistant: welcome] [user: msg DUPLICATE] [assistant: welcome+question]
+        // The duplicate user message makes the LLM classify the next turn as a CONTRADICTION
+        // and call contactOperator. Fix: let ChatEngine handle the welcome for FLOW workspaces
+        // (it combines welcome + first LLM response into a single message via welcomePrefix).
+        if (workspace.channelMode === 'FLOW') {
+          logger.info('[ULTRAMSG] 🔄 FLOW workspace — ChatEngine handles welcome + response combined, skipping here')
+          // fall through to LLM processing below
+        } else {
+          // NON-FLOW: standalone welcome message handled here
+
+          // 🔧 FIX: Create a real chatSession for welcome messages
+          // Without this, welcome messages get saved with temp-{customerId} conversationId
+          let welcomeSession = await prisma.chatSession.findFirst({
+            where: { customerId: customer.id, workspaceId, channel: 'whatsapp', status: 'active' },
+          })
+          if (!welcomeSession) {
+            welcomeSession = await prisma.chatSession.create({
+              data: {
+                customerId: customer.id,
+                workspaceId,
+                channel: 'whatsapp',
+                status: 'active',
+              },
+            })
+            logger.info('[ULTRAMSG] ✅ Created chatSession for welcome message', {
+              sessionId: welcomeSession.id,
               customerId: customer.id,
-              workspaceId,
-              channel: 'whatsapp',
-              status: 'active',
-            },
-          })
-          logger.info('[ULTRAMSG] ✅ Created chatSession for welcome message', {
-            sessionId: welcomeSession.id,
+            })
+          }
+
+          // Import welcome message services
+          const { WelcomeMessageHandler } = await import('../../../utils/welcome-message.handler')
+          const welcomeHandler = new WelcomeMessageHandler(prisma)
+
+          // Process welcome message with real chatSession ID
+          const welcomeResult = await welcomeHandler.handleWelcomeMessage({
             customerId: customer.id,
-          })
-        }
-
-        // Import welcome message services
-        const { WelcomeMessageHandler } = await import('../../../utils/welcome-message.handler')
-        const welcomeHandler = new WelcomeMessageHandler(prisma)
-
-        // Process welcome message with real chatSession ID
-        const welcomeResult = await welcomeHandler.handleWelcomeMessage({
-          customerId: customer.id,
-          workspaceId: customer.workspaceId,
-          customerLanguage: customer.language,
-          customerMessage: messageText,
-          channel: 'whatsapp',
-          conversationId: welcomeSession.id,
-        })
-
-        if (welcomeResult.isWelcomeMessage && welcomeResult.welcomeText) {
-          logger.info('[ULTRAMSG] ✅ Welcome message prepared', {
-            customerId: customer.id,
-            messageId: welcomeResult.assistantMessageId,
+            workspaceId: customer.workspaceId,
+            customerLanguage: customer.language,
+            customerMessage: messageText,
+            channel: 'whatsapp',
+            conversationId: welcomeSession.id,
           })
 
-          // FLOW workspaces: skip standalone welcome send — ChatEngine will combine
-          // welcome + first bot response into a single message (better UX).
-          if (workspace.channelMode === 'FLOW') {
-            logger.info('[ULTRAMSG] 🔄 FLOW workspace — skipping standalone welcome, ChatEngine will combine')
-            // fall through to normal LLM processing below
-          } else {
+          if (welcomeResult.isWelcomeMessage && welcomeResult.welcomeText) {
+            logger.info('[ULTRAMSG] ✅ Welcome message prepared', {
+              customerId: customer.id,
+              messageId: welcomeResult.assistantMessageId,
+            })
+
             // 📤 CRITICAL: Queue welcome message for WhatsApp delivery
-            // Without this, the welcome message is saved to DB but NEVER sent to customer!
             try {
               const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
               const queueService = new WhatsAppQueueService(prisma)
@@ -766,11 +774,11 @@ export class UltraMsgWebhookController {
               customerId: customer.id,
               messageId: welcomeResult.assistantMessageId,
             })
+          } else {
+            logger.warn('[ULTRAMSG] ⚠️ Welcome message skipped', {
+              reason: 'Not configured or disabled',
+            })
           }
-        } else {
-          logger.warn('[ULTRAMSG] ⚠️ Welcome message skipped', {
-            reason: 'Not configured or disabled',
-          })
         }
       }
 
