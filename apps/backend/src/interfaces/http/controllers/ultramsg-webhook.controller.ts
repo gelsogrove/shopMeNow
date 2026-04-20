@@ -173,6 +173,7 @@ export class UltraMsgWebhookController {
               welcomeMessage: true,
               defaultLanguage: true,
               channelStatus: true,
+              channelMode: true,
               debugMode: true,
               wipMessage: true,
               whatsappProvider: true,

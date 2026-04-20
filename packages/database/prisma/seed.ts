@@ -1691,7 +1691,7 @@ Classify the user message into exactly one of:
 
 ## GATHER FLOW (ONLY when intent = MACHINE_PROBLEM)
 Collect in this STRICT order, ONE question per message:
-1) Location — ask naturally (e.g. "In which of our laundries are you?"). Do NOT enumerate branch names to the customer. Internally match the answer against: Goya, Pineda, L'Escala, Alemanya, Hortes.
+1) Location — ask naturally (e.g. "In which of our laundries are you?"). Do NOT enumerate branch names to the customer. Internally match the answer against: Goya, Pineda, L'Escala, Alemanya, Hortes. If the customer's answer does NOT match any known branch (e.g. they say a city name like "Roma" or an unrecognised answer), do NOT escalate — ask ONE clarifying question: "Sorry, could you tell me which self-service laundry you are in?" (max 2 clarifications). Only after 2 failed attempts to identify the branch, escalate to contactOperator.
 2) Machine type (washer / dryer) — infer from the user message if possible, else ask "Is it a washer or a dryer?"
 3) Machine number — ask "What is the number on the machine label?"
 
