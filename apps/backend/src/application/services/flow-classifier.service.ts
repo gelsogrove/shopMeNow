@@ -39,6 +39,15 @@ export function classifyInput(input: string): InputClassification {
     return "MATCH";
   }
 
+  // MATCH (extended): phrase STARTING with a clear yes/no token + trailing context.
+  // E.g. "Si ho già pagato", "No non ho pagato", "Ok perfetto"
+  // Only unambiguous confirmation/rejection — "done" variants (fatto, hecho, etc.)
+  // are excluded here because multi-word phrases starting with them are ambiguous
+  // and should go through LLM classification (classifyChoiceViaLLM).
+  if (/^(s[iì]|yes|ok|no|nope)(?=\s|[,.!])/i.test(trimmed)) {
+    return "MATCH";
+  }
+
   // INTERRUPT_FAQ: question words that signal an off-topic query
   // These are structural signals (question words), not business keywords
   if (/\b(quanto|how much|costo|cost|orari|hours|where|dove|come funziona|how does)\b/i.test(lower)) {
@@ -55,8 +64,10 @@ export function classifyInput(input: string): InputClassification {
 export function normalizeInput(input: string): string {
   const lower = input.trim().toLowerCase();
 
-  if (/^(s[iì]|yes|ok|hecho|listo|pronto|done|fatto|feito|perfecto|vale|genial|super)$/i.test(lower)) return "YES";
-  if (/^(no|nope)$/i.test(lower))       return "NO";
+  // Exact or starts-with yes-like word (e.g. "si ho già pagato" → YES)
+  // Uses lookahead instead of \b because accented chars (ì) are not \w in JS regex
+  if (/^(s[iì]|yes|ok|hecho|listo|pronto|done|fatto|feito|perfecto|vale|genial|super)(?=\s|[,.!]|$)/i.test(lower)) return "YES";
+  if (/^(no|nope)(?=\s|[,.!]|$)/i.test(lower)) return "NO";
 
   return input.trim(); // digit as-is: "1", "2", etc.
 }

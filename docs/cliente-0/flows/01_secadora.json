@@ -25,7 +25,7 @@
     },
     "display_check": {
       "type": "CHOICE",
-      "prompt": "What does the display show?\n\n1️⃣ A price in € (need more coins)\n2️⃣ Minutes of drying time\n3️⃣ DOOR\n4️⃣ FILTRO / filter alarm\n5️⃣ FALLO / fault alarm\n6️⃣ Display is off",
+      "prompt": "What does the display show? 👀",
       "transitions": {
         "1": "no_parte.check_credit",
         "2": "no_parte.check_start_btn",
@@ -35,7 +35,15 @@
         "6": "no_parte.no_power",
         "default": "no_parte.escalate"
       },
-      "onInterruptFallback": "Please reply with a number (1–6) to indicate what the display shows."
+      "transitionDescriptions": {
+        "1": "A price in euros — need more coins, shows how much to pay",
+        "2": "Minutes of drying time — shows countdown or remaining time",
+        "3": "DOOR — door-related message",
+        "4": "FILTRO, filter alarm, filter warning",
+        "5": "FALLO, fault alarm, fault error",
+        "6": "Display is off, blank, no power, nothing showing"
+      },
+      "onInterruptFallback": "Please describe what you see on the display 👀"
     },
     "check_credit": {
       "type": "ACTION",
@@ -67,13 +75,19 @@
     },
     "fallo_alarm_type": {
       "type": "CHOICE",
-      "prompt": "There is a FALLO alarm ⚠️ Which type do you see?\n\n1️⃣ FALLO DE ROTACION (rotation fault)\n2️⃣ FALLO DE ASPIRACION (aspiration fault)\n3️⃣ Not sure / other",
+      "prompt": "There is a FALLO alarm ⚠️ Which type do you see on the display?",
       "transitions": {
         "1": "no_parte.fallo_rotation",
         "2": "no_parte.fallo_aspiration",
         "3": "no_parte.fallo_generic",
         "default": "no_parte.fallo_generic"
-      }
+      },
+      "transitionDescriptions": {
+        "1": "FALLO DE ROTACION — rotation fault, drum not spinning",
+        "2": "FALLO DE ASPIRACION — aspiration fault, airflow blockage",
+        "3": "Not sure, other fallo, unknown fault type"
+      },
+      "onInterruptFallback": "Please describe the FALLO alarm you see on the display ⚠️"
     },
     "fallo_rotation": {
       "type": "INFO",
@@ -111,7 +125,7 @@
     },
     "check_retry": {
       "type": "CHOICE",
-      "prompt": "Let's try again. What does the display show now?\n\n1️⃣ A price in €\n2️⃣ Minutes of drying time\n3️⃣ DOOR\n4️⃣ FILTRO / filter alarm\n5️⃣ FALLO / fault alarm\n6️⃣ Display is off",
+      "prompt": "Let's try again. What does the display show now? 👀",
       "transitions": {
         "1": "no_parte.check_credit",
         "2": "no_parte.check_start_btn",
@@ -121,7 +135,15 @@
         "6": "no_parte.no_power",
         "default": "no_parte.escalate"
       },
-      "onInterruptFallback": "Please reply with a number (1–6)."
+      "transitionDescriptions": {
+        "1": "A price in euros — need more coins, shows how much to pay",
+        "2": "Minutes of drying time — shows countdown or remaining time",
+        "3": "DOOR — door-related message",
+        "4": "FILTRO, filter alarm, filter warning",
+        "5": "FALLO, fault alarm, fault error",
+        "6": "Display is off, blank, no power, nothing showing"
+      },
+      "onInterruptFallback": "Please describe what you see on the display 👀"
     },
     "escalate_pay": {
       "type": "INFO",
@@ -144,7 +166,7 @@
   "post_ciclo": {
     "step_0": {
       "type": "CHOICE",
-      "prompt": "I'm sorry to hear there's an issue 😔 What happened after the drying cycle?\n\n1️⃣ Clothes still damp / not fully dried\n2️⃣ Burnt smell or marks on clothes\n3️⃣ Plastic melted on clothes\n4️⃣ Stains on clothes\n5️⃣ Unpleasant smell\n6️⃣ Door locked after cycle ended",
+      "prompt": "I'm sorry to hear there's an issue 😔 What happened after the drying cycle?",
       "transitions": {
         "1": "post_ciclo.damp",
         "2": "post_ciclo.burnt",
@@ -154,18 +176,33 @@
         "6": "post_ciclo.door_locked",
         "default": "post_ciclo.escalate"
       },
-      "onInterruptFallback": "Please reply with a number (1–6) to describe what happened."
+      "transitionDescriptions": {
+        "1": "Clothes still damp, not fully dried, still wet",
+        "2": "Burnt smell, burn marks on clothes",
+        "3": "Plastic melted on clothes, foreign object melted",
+        "4": "Stains on clothes, marks, spots",
+        "5": "Unpleasant smell, bad odor, smells weird",
+        "6": "Door locked after cycle ended, can't open door"
+      },
+      "onInterruptFallback": "Please describe what happened after the drying cycle 😔"
     },
     "damp": {
       "type": "CHOICE",
-      "prompt": "What do you think caused the clothes to stay damp?\n\n1️⃣ The clothes were already very wet from the washer\n2️⃣ The drum was too full\n3️⃣ The cycle time was too short\n4️⃣ Not sure",
+      "prompt": "What do you think caused the clothes to stay damp?",
       "transitions": {
         "1": "post_ciclo.damp_washer",
         "2": "post_ciclo.damp_overload",
         "3": "post_ciclo.damp_time",
         "4": "post_ciclo.damp_overload",
         "default": "post_ciclo.damp_overload"
-      }
+      },
+      "transitionDescriptions": {
+        "1": "Clothes were already very wet from the washer, dripping, soaking",
+        "2": "Drum was too full, overloaded, too many clothes",
+        "3": "Cycle time was too short, not enough time, ended too quickly",
+        "4": "Not sure, don't know why"
+      },
+      "onInterruptFallback": "Please describe what you think caused the clothes to stay damp"
     },
     "damp_washer": {
       "type": "INFO",

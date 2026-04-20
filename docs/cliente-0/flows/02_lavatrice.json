@@ -25,7 +25,7 @@
     },
     "display_check": {
       "type": "CHOICE",
-      "prompt": "What does the display show?\n\n1️⃣ SEL\n2️⃣ A price (e.g. 12.00 / 04.00)\n3️⃣ PUSH or Pr-3\n4️⃣ door\n5️⃣ ALM / alarm\n6️⃣ AL001\n7️⃣ END",
+      "prompt": "What does the display show? 👀",
       "transitions": {
         "1": "no_parte.case_sel",
         "2": "no_parte.case_price",
@@ -36,7 +36,16 @@
         "7": "no_parte.case_end",
         "default": "no_parte.escalate"
       },
-      "onInterruptFallback": "Please reply with a number (1–7) to indicate what the display shows."
+      "transitionDescriptions": {
+        "1": "SEL — the display shows 'SEL' (standby/selection mode)",
+        "2": "A price or amount in euros (e.g. 04.00, 12.00, 3.50) — shows how much is left to pay",
+        "3": "PUSH or Pr-3 — program selected but not confirmed",
+        "4": "DOOR — the display shows a door-related message",
+        "5": "ALM, alarm, ALN or any alarm code (not AL001)",
+        "6": "AL001, 001, error 001 — numeric sequence error code",
+        "7": "END — the wash cycle has finished normally"
+      },
+      "onInterruptFallback": "Please describe what you see on the display 👀"
     },
     "case_sel": {
       "type": "ACTION",
@@ -68,14 +77,21 @@
     },
     "case_alm": {
       "type": "CHOICE",
-      "prompt": "There's an alarm ⚠️ Which alarm code do you see?\n\n1️⃣ ALM/A (water inlet issue)\n2️⃣ ALM/E (drainage issue)\n3️⃣ ALM/door (door alarm)\n4️⃣ ALM/VAr (variator/electrical)",
+      "prompt": "There's an alarm ⚠️ Which alarm code do you see on the display?",
       "transitions": {
         "1": "no_parte.alm_water",
         "2": "no_parte.alm_drain",
         "3": "no_parte.alm_door_fix",
         "4": "no_parte.alm_var",
         "default": "no_parte.alm_reset"
-      }
+      },
+      "transitionDescriptions": {
+        "1": "ALM/A or ALM A — water inlet alarm",
+        "2": "ALM/E or ALM E — drainage alarm",
+        "3": "ALM/door or ALM DOOR — door alarm",
+        "4": "ALM/VAr or ALM VAR — variator/electrical alarm"
+      },
+      "onInterruptFallback": "Please describe the alarm code you see on the display ⚠️"
     },
     "alm_water": {
       "type": "ACTION",
@@ -142,7 +158,7 @@
     },
     "check_retry": {
       "type": "CHOICE",
-      "prompt": "Let's try again. What does the display show now?\n\n1️⃣ SEL\n2️⃣ A price (e.g. 12.00 / 04.00)\n3️⃣ PUSH or Pr-3\n4️⃣ door\n5️⃣ ALM / alarm\n6️⃣ AL001\n7️⃣ END",
+      "prompt": "Let's try again. What does the display show now? 👀",
       "transitions": {
         "1": "no_parte.case_sel",
         "2": "no_parte.case_price",
@@ -153,7 +169,16 @@
         "7": "no_parte.case_end",
         "default": "no_parte.escalate"
       },
-      "onInterruptFallback": "Please reply with a number (1–7)."
+      "transitionDescriptions": {
+        "1": "SEL — the display shows 'SEL' (standby/selection mode)",
+        "2": "A price or amount in euros (e.g. 04.00, 12.00, 3.50) — shows how much is left to pay",
+        "3": "PUSH or Pr-3 — program selected but not confirmed",
+        "4": "DOOR — the display shows a door-related message",
+        "5": "ALM, alarm, ALN or any alarm code (not AL001)",
+        "6": "AL001, 001, error 001 — numeric sequence error code",
+        "7": "END — the wash cycle has finished normally"
+      },
+      "onInterruptFallback": "Please describe what you see on the display 👀"
     },
     "escalate_pay": {
       "type": "INFO",
@@ -182,7 +207,7 @@
   "post_ciclo": {
     "step_0": {
       "type": "CHOICE",
-      "prompt": "I'm sorry to hear there's a problem after the wash 😔 What happened?\n\n1️⃣ Clothes still very wet / spin failed\n2️⃣ Door still locked\n3️⃣ Clothes appear damaged\n4️⃣ Very little foam (worried about detergent)\n5️⃣ Machine won't drain / other issue",
+      "prompt": "I'm sorry to hear there's a problem after the wash 😔 What happened?",
       "transitions": {
         "1": "post_ciclo.wet_clothes",
         "2": "post_ciclo.door_locked",
@@ -191,7 +216,14 @@
         "5": "post_ciclo.escalate",
         "default": "post_ciclo.escalate"
       },
-      "onInterruptFallback": "Please reply with a number (1–5) to describe the issue."
+      "transitionDescriptions": {
+        "1": "Clothes still very wet, spin failed, laundry dripping",
+        "2": "Door still locked, can't open, door won't open",
+        "3": "Clothes appear damaged, ruined, torn, discolored",
+        "4": "Very little foam, no foam, worried about detergent",
+        "5": "Machine won't drain, water still inside, other issue"
+      },
+      "onInterruptFallback": "Please describe what happened after the wash 😔"
     },
     "wet_clothes": {
       "type": "CONFIRMATION",

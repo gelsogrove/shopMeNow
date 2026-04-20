@@ -1178,28 +1178,38 @@ export class UltraMsgWebhookController {
       }
 
       // 12. 💾 SAVE USER MESSAGE **FIRST** (CRITICAL - EXACTLY like Meta)
-      // This must happen BEFORE Security LLM so message appears in history
-      await prisma.conversationMessage.create({
-        data: {
-          workspaceId,
+      // 🔄 FLOW workspaces SKIP this step: FlowWorkspaceStrategy.saveUserAndAssistantAtomic()
+      // saves user+assistant together. Saving here would:
+      //   (a) create DUPLICATE user message in history → LLM sees contradiction
+      //   (b) make WelcomeMessageHandler count=1 → isFirstMessage=false → no welcome prefix
+      if (workspace.channelMode !== 'FLOW') {
+        await prisma.conversationMessage.create({
+          data: {
+            workspaceId,
+            customerId: customer.id,
+            conversationId: chatSession.id,
+            role: 'user',
+            content: messageMarkdown,
+            agentType: 'CUSTOMER',
+            tokensUsed: 0,
+            deliveryStatus: 'delivered', // User messages are always delivered
+            debugInfo: JSON.stringify({
+              source: 'ultramsg-webhook',
+              timestamp: new Date().toISOString(),
+            }),
+          },
+        })
+
+        logger.info('[ULTRAMSG] 💾 User message saved to history', {
           customerId: customer.id,
           conversationId: chatSession.id,
-          role: 'user',
-          content: messageMarkdown,
-          agentType: 'CUSTOMER',
-          tokensUsed: 0,
-          deliveryStatus: 'delivered', // User messages are always delivered
-          debugInfo: JSON.stringify({
-            source: 'ultramsg-webhook',
-            timestamp: new Date().toISOString(),
-          }),
-        },
-      })
-
-      logger.info('[ULTRAMSG] 💾 User message saved to history', {
-        customerId: customer.id,
-        conversationId: chatSession.id,
-      })
+        })
+      } else {
+        logger.info('[ULTRAMSG] 🔄 FLOW workspace — skipping user message save (FlowWorkspaceStrategy handles it)', {
+          customerId: customer.id,
+          conversationId: chatSession.id,
+        })
+      }
 
       // 13. 🔒 SECURITY CHECK (same as Meta)
       logger.info('[ULTRAMSG] 🔍 Starting security validation', {
