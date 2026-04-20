@@ -120,6 +120,7 @@ Use these to answer FAQ intents directly:
 - Tone: calm, warm, reassuring — like a helpful person right there at the laundry
 
 ## HARD RULES
+`
 
 const RESET_NOTE = `
 ## WHEN TO CALL resetSession()
@@ -158,6 +159,7 @@ async function main() {
   console.log("   ✅ Router updated")
 
   // 2) Washer — append resetSession note to existing prompt if missing + update availableFunctions
+  //            + fix caso_importo/cambio_si/cambio_no flow nodes (BUG-W3: semantic YES/NO fix)
   const washer = await prisma.flowNodeConfig.findUnique({
     where: {
       workspaceId_flowKey: { workspaceId: ECOLAUNDRY_WORKSPACE_ID, flowKey: "lavatrice_hs60xx" },
@@ -165,14 +167,54 @@ async function main() {
   })
   if (washer) {
     const needsNote = !washer.systemPrompt?.includes("WHEN TO CALL resetSession")
+
+    // Patch caso_importo + cambio_si + cambio_no inside flowJson
+    // BUG-W3 fix: rephrase question so "Si ho gia' pagato" (I already paid) → YES → correct path
+    const flowJson = washer.flowJson as Record<string, any> | null
+    if (flowJson?.flows?.non_parte) {
+      const nonParte = flowJson.flows.non_parte
+
+      // caso_importo: new question aligns "I already paid" → YES → cambio_no (credit on another machine)
+      nonParte.caso_importo = {
+        type: "CHOICE",
+        prompt:
+          "The display is showing a price — the machine is waiting for credit to start.\n\nDid you already pay at the central unit and it still shows this price, or have you not paid yet?",
+        transitions: {
+          YES: "non_parte.cambio_no",
+          NO: "non_parte.cambio_si",
+        },
+        transitionDescriptions: {
+          YES: "Customer already paid/inserted coins but the machine still shows a price (credit may be registered on a different machine number)",
+          NO: "Customer has not paid yet — needs to insert credit at the central unit",
+        },
+      }
+
+      // cambio_si: haven't paid yet → guide through payment
+      nonParte.cambio_si = {
+        type: "ACTION",
+        prompt:
+          "No problem! 👍 The machine is ready and just needs payment to start.\n\n👉 **Go to the central unit** and insert the exact amount shown on the machine display.\n👉 Make sure to press the button for **your machine number**.\n👉 Once the payment is confirmed, the machine should start automatically.\n\nLet me know if it starts!",
+        transitions: { default: "non_parte.ask_resolved" },
+      }
+
+      // cambio_no: already paid but machine still shows price → credit on another machine
+      nonParte.cambio_no = {
+        type: "ACTION",
+        prompt:
+          "Got it — you already paid but the machine is still showing a price. 🤔 This usually means the credit was registered on a **different machine number** at the central unit.\n\n👉 **Go to the central unit** and check if credit is showing for a different machine number.\n👉 If you see it, **press the button for your machine** to transfer the credit.\n👉 If nothing shows anywhere, don't worry — let me know and we'll get it sorted!\n\nWhat do you see at the central unit?",
+        transitions: { default: "non_parte.ask_resolved" },
+      }
+    }
+
     await prisma.flowNodeConfig.update({
       where: { id: washer.id },
       data: {
         systemPrompt: needsNote ? washer.systemPrompt + RESET_NOTE : washer.systemPrompt,
         availableFunctions: ["startFlow", "contactOperator", "resetSession"],
+        ...(flowJson?.flows?.non_parte ? { flowJson } : {}),
       },
     })
-    console.log(`   ✅ Washer updated${needsNote ? " (+ reset note)" : ""}`)
+    console.log(`   ✅ Washer updated${needsNote ? " (+ reset note)" : ""} + caso_importo BUG-W3 fix`)
   }
 
   // 3) Dryer

@@ -2091,24 +2091,29 @@ After reset the context is wiped and the Router will ask again from step 1.`,
             },
             caso_importo: {
               type: "CHOICE",
-              prompt: "The display is showing a price, which means there isn't enough credit to start the wash cycle. Before we continue — did the central unit return your coins or change?",
+              // BUG-W3 FIX: question rephrased so "Si ho gia' pagato" (I already paid)
+              // correctly maps to YES → cambio_no (credit may be on another machine number).
+              // Previously asked "did change come back?" which semantically misaligned with YES.
+              prompt: "The display is showing a price — the machine is waiting for credit to start.\n\nDid you already pay at the central unit and it still shows this price, or have you not paid yet?",
               transitions: {
-                "YES": "non_parte.cambio_si",
-                "NO": "non_parte.cambio_no",
+                "YES": "non_parte.cambio_no",   // already paid → credit may be on another machine
+                "NO": "non_parte.cambio_si",    // haven't paid yet → insert the correct amount
               },
               transitionDescriptions: {
-                "YES": "Yes, the central unit returned the change/coins",
-                "NO": "No, it did not return the change",
+                "YES": "Customer already paid/inserted coins but the machine still shows a price (credit may be registered on a different machine number)",
+                "NO": "Customer has not paid yet — needs to insert credit at the central unit",
               },
             },
             cambio_si: {
+              // Path: customer has NOT paid yet → guide through payment
               type: "ACTION",
-              prompt: "OK, since the central unit returned your change, the machine still needs the full amount to start.\n\n👉 **Check the exact amount shown on the display** and **insert that amount** using coins or contactless payment at the central unit.\n👉 After paying, make sure you've **selected the correct machine number** on the central unit.\n\nLet me know once you've done that and what the display shows.",
+              prompt: "No problem! 👍 The machine is ready and just needs payment to start.\n\n👉 **Go to the central unit** and insert the exact amount shown on the machine display.\n👉 Make sure to press the button for **your machine number**.\n👉 Once the payment is confirmed, the machine should start automatically.\n\nLet me know if it starts!",
               transitions: { default: "non_parte.ask_resolved" },
             },
             cambio_no: {
+              // Path: customer already paid but machine still shows a price → credit on another machine
               type: "ACTION",
-              prompt: "It's possible that the payment went to a different machine number. This happens when the wrong button is pressed on the central unit.\n\n👉 **Go to the central unit** and check if there's still credit showing for another machine number.\n👉 If you find it, **press the button for YOUR machine** to transfer the credit.\n👉 If nothing shows, you may need to **pay again** — but don't worry, we'll sort it out.\n\nLet me know what happens.",
+              prompt: "Got it — you already paid but the machine is still showing a price. 🤔 This usually means the credit was registered on a **different machine number** at the central unit.\n\n👉 **Go to the central unit** and check if credit is showing for a different machine number.\n👉 If you see it, **press the button for your machine** to transfer the credit.\n👉 If nothing shows anywhere, don't worry — let me know and we'll get it sorted!\n\nWhat do you see at the central unit?",
               transitions: { default: "non_parte.ask_resolved" },
             },
             caso_extra: {
