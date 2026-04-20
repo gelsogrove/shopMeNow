@@ -1486,6 +1486,28 @@ export function AgentFlowDiagram({
           <span className="font-medium">Recharge</span>
         </div>
 
+        {/* Legend */}
+        <div className="mt-8 w-full max-w-2xl">
+          <div className="flex flex-wrap gap-4 items-center justify-center text-xs text-gray-500 border border-gray-200 rounded-xl px-6 py-3 bg-white/60">
+            <div className="flex items-center gap-1.5">
+              <div className="p-1 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600">
+                <Edit3 className="h-3 w-3 text-white" />
+              </div>
+              <span>Click to edit</span>
+            </div>
+            {isEcommerce && (
+              <div className="flex items-center gap-1.5">
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700">E-commerce only</span>
+              </div>
+            )}
+            {channelType === "WIDGET" && (
+              <div className="flex items-center gap-1.5">
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">Widget only</span>
+              </div>
+            )}
+          </div>
+        </div>
+
         
       </div>
 

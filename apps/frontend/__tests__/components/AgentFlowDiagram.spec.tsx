@@ -19,6 +19,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { AgentFlowDiagram } from "@/components/shared/AgentFlowDiagram"
 
+// Mock react-router-dom: AgentFlowDiagram calls useNavigate() internally
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom")
+  return {
+    ...actual,
+    useNavigate: () => vi.fn(),
+    useLocation: () => ({ pathname: "/agent" }),
+    NavLink: ({ to, children, ...props }: any) => <a href={to} {...props}>{children}</a>,
+  }
+})
+
 // Mock dependencies
 vi.mock("@/lib/toast", () => ({
   toast: {
@@ -47,6 +58,14 @@ const mockAgents = [
     model: "openai/gpt-4.1-mini",
     isActive: true,
     order: 0,
+    availableFunctions: [
+      "productSearchAgent",
+      "cartManagementAgent",
+      "orderTrackingAgent",
+      "customerSupportAgent",
+      "profileManagementAgent",
+      "RESET_ACTIVE_AGENT",
+    ],
   },
   {
     id: "agent-2",

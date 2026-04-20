@@ -620,9 +620,28 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
 
       // ─── STEP: Save updated context to ChatSession ──────────────────────
       if (chatSession) {
+        // 🆕 If operator is being called, mark session as ESCALATED before saving
+        // so PATH 0 intercepts all future messages (chatbot stops responding).
+        const isEscalating = shouldCallOperator && workspace.hasHumanSupport !== false
+        if (isEscalating) {
+          if (chatContext.flowState) {
+            chatContext.flowState.flowStatus = "ESCALATED"
+          } else {
+            chatContext.flowState = {
+              flowId: "",
+              currentNodeId: "",
+              flowStatus: "ESCALATED",
+              interruptCount: 0,
+              lastValidStepAt: new Date().toISOString(),
+            }
+          }
+        }
         await this.prisma.chatSession.update({
           where: { id: chatSession.id },
-          data: { context: chatContext as any },
+          data: {
+            context: chatContext as any,
+            ...(isEscalating ? { escalatedAt: new Date() } : {}),
+          },
         })
       }
 
