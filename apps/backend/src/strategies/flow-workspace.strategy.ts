@@ -716,6 +716,17 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         logger.warn("⚠️ FlowWorkspaceStrategy - contactOperator skipped: workspace.hasHumanSupport=false")
       }
 
+      // ── Always override responseText with humanSupportInstructions when escalating ──
+      // Applies regardless of hasHumanSupport — the workspace-configured escalation message
+      // (Settings > "When to Escalate") is what the customer must see when the bot escalates.
+      // When hasHumanSupport=false: no email is sent, but the message is still shown.
+      if (shouldCallOperator && workspace.humanSupportInstructions) {
+        responseText = workspace.humanSupportInstructions
+          .replace("{{nameUser}}", customerData.name || "")
+          .replace("{{agentEmail}}", workspace.operatorEmail || "")
+        logger.info("📋 FlowWorkspaceStrategy - responseText overridden with humanSupportInstructions")
+      }
+
       // ─── STEP: Link replacement ─────────────────────────────────────────
       const linkResult = await this.linkReplacementService.replaceTokens(
         { response: responseText },
