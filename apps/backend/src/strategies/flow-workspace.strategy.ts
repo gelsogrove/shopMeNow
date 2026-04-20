@@ -610,9 +610,14 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         debugSteps.push({
           type: "flow-agent",
           agent: "RouterFlowAgentLLM",
+          path: "C",
           timestamp: new Date().toISOString(),
           input: { message: context.message },
-          output: { responseText },
+          output: {
+            responseText,
+            functionCalls,
+            shouldCallOperator,
+          },
           tokensUsed,
           executionTimeMs,
         })
@@ -721,10 +726,22 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
       // (Settings > "When to Escalate") is what the customer must see when the bot escalates.
       // When hasHumanSupport=false: no email is sent, but the message is still shown.
       if (shouldCallOperator && workspace.humanSupportInstructions) {
-        responseText = workspace.humanSupportInstructions
-          .replace("{{nameUser}}", customerData.name || "")
+        // Determine real customer name — skip generic defaults to avoid "Hello Nuovo Cliente"
+        const defaultNames = ["Nuovo Cliente", "New Customer", "Nuevo Cliente", "Cliente", ""]
+        const realName = customerData.name && !defaultNames.includes(customerData.name)
+          ? customerData.name
+          : null
+
+        let instructionText = workspace.humanSupportInstructions
+        if (!realName) {
+          // Comment out the greeting prefix (e.g. "Hello {{nameUser}}, ") when name is unknown
+          instructionText = instructionText.replace(/^(Hello|Ciao|Hola|Olá)\s*\{\{nameUser\}\},?\s*/i, "")
+        }
+
+        responseText = instructionText
+          .replace("{{nameUser}}", realName || "")
           .replace("{{agentEmail}}", workspace.operatorEmail || "")
-        logger.info("📋 FlowWorkspaceStrategy - responseText overridden with humanSupportInstructions")
+        logger.info("📋 FlowWorkspaceStrategy - responseText overridden with humanSupportInstructions", { greetingIncluded: !!realName })
       }
 
       // ─── STEP: Link replacement ─────────────────────────────────────────
@@ -1027,20 +1044,25 @@ If none clearly matches, reply: NONE`
 
     for (let i = 0; i < debugSteps.length; i++) {
       const step = debugSteps[i]
-      const prefix = `[${i + 1}] ${step.type || step.agent || "step"}`
+      const pathLabel = step.path ? ` [PATH ${step.path}]` : ""
+      const agentLabel = step.agent || step.type || "step"
+      const prefix = `[${i + 1}] ${agentLabel}${pathLabel}`
 
       if (step.type === "flow-engine") {
         const o = step.output || {}
         lines.push(`${prefix}: ${o.classification || "?"} → node=${o.nextNodeId || "?"} (key=${o.transitionKey || "auto"})`)
         if (o.interruptCount) lines.push(`   interrupts: ${o.interruptCount}`)
       } else if (step.type === "flow-agent") {
-        const fns = step.output?.functionCalls?.length || 0
-        lines.push(`${prefix}: ${step.tokensUsed || 0}tok ${step.executionTimeMs || 0}ms${fns > 0 ? ` | ${fns} fn calls` : ""}`)
-        if (step.output?.functionCalls) {
-          for (const fc of step.output.functionCalls) {
-            const name = typeof fc === "string" ? fc : fc?.name || "?"
-            lines.push(`   → ${name}`)
-          }
+        const fcs = step.output?.functionCalls || []
+        const fns = fcs.length
+        const escalated = step.output?.shouldCallOperator ? " | ⚠️ ESCALATE" : ""
+        lines.push(`${prefix}: ${step.tokensUsed || 0}tok ${step.executionTimeMs || 0}ms${fns > 0 ? ` | ${fns} CF` : ""}${escalated}`)
+        for (const fc of fcs) {
+          // fc can be a plain string, or an object with .name + .result
+          const name = typeof fc === "string" ? fc : (fc?.name || "?")
+          const resultType = (fc?.result as any)?.type || ""
+          const resultSuffix = resultType ? ` → ${resultType}` : ""
+          lines.push(`   📞 ${name}${resultSuffix}`)
         }
       } else if (step.type === "function_call" || step.type === "function_result") {
         const name = step.output?.functionCall?.name || step.agent || "?"
