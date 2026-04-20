@@ -626,8 +626,8 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         })
       }
 
-      // ─── STEP: Contact operator if requested ────────────────────────────
-      if (shouldCallOperator) {
+      // ─── STEP: Contact operator if requested (gated by workspace.hasHumanSupport) ──
+      if (shouldCallOperator && workspace.hasHumanSupport !== false) {
         try {
           await contactOperator({
             phoneNumber: customerData.phone || "",
@@ -640,6 +640,8 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         } catch (opError: any) {
           logger.error("❌ FlowWorkspaceStrategy - contactOperator() failed:", opError)
         }
+      } else if (shouldCallOperator && workspace.hasHumanSupport === false) {
+        logger.warn("⚠️ FlowWorkspaceStrategy - contactOperator skipped: workspace.hasHumanSupport=false")
       }
 
       // ─── STEP: Link replacement ─────────────────────────────────────────
@@ -776,7 +778,7 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
           executionTimeMs: executionTime,
           timestamp: new Date().toISOString(),
           source: "FlowWorkspaceStrategy",
-          flowKey: context.flowKey || "unknown",
+          flowKey: "unknown",
           message: context.message?.substring(0, 200),
         }
 
@@ -803,7 +805,7 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
             `<p><strong>Workspace:</strong> ${workspace.name || context.workspaceId}</p>`,
             `<p><strong>Customer ID:</strong> ${context.customerId}</p>`,
             `<p><strong>Customer Message:</strong> ${context.message?.substring(0, 200)}</p>`,
-            `<p><strong>Flow:</strong> ${context.flowKey || "N/A"}</p>`,
+            `<p><strong>Flow:</strong> N/A</p>`,
             `<p><strong>Error:</strong> <code>${error.message}</code></p>`,
             `<p><strong>Time:</strong> ${new Date().toLocaleString("it-IT")}</p>`,
             `<p><strong>Duration:</strong> ${executionTime}ms</p>`,

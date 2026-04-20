@@ -266,3 +266,166 @@ describe("E3 - FlowAgentLLM.handleQuery", () => {
     expect(mockFindByFlowKey).toHaveBeenCalledWith("ws-specific-99", FLOW_KEY)
   })
 })
+
+// ─── Tests: CF filtering by workspace settings ────────────────────────────────
+describe("E3 - FlowAgentLLM.filterByWorkspaceSettings", () => {
+  it("T9: hasHumanSupport=false → contactOperator REMOVED from tools", async () => {
+    // SCENARIO: Workspace has human support disabled.
+    // RULE: If hasHumanSupport=false, contactOperator must NOT appear as a tool.
+    // The LLM must never be able to call contactOperator.
+    mockPrisma.workspace.findUnique.mockResolvedValue({
+      id: WORKSPACE_ID, name: "Test", hasHumanSupport: false,
+    })
+    mockFindByFlowKey.mockResolvedValue(
+      makeFlowConfig({ availableFunctions: ["contactOperator", "resetSession"] })
+    )
+    mockedAxios.post.mockResolvedValue(makeLLMResponse())
+
+    const agent = new FlowAgentLLM(mockPrisma as any)
+    await agent.handleQuery(makeContext())
+
+    const callBody = mockedAxios.post.mock.calls[0][1] as any
+    const contactTool = callBody.tools?.find((t: any) => t.function.name === "contactOperator")
+    expect(contactTool).toBeUndefined()
+    // resetSession should still be there
+    const resetTool = callBody.tools?.find((t: any) => t.function.name === "resetSession")
+    expect(resetTool).toBeDefined()
+  })
+
+  it("T10: hasHumanSupport=true → contactOperator PRESENT in tools", async () => {
+    // SCENARIO: Workspace has human support enabled (default).
+    // RULE: contactOperator must appear when hasHumanSupport=true.
+    mockPrisma.workspace.findUnique.mockResolvedValue({
+      id: WORKSPACE_ID, name: "Test", hasHumanSupport: true,
+    })
+    mockFindByFlowKey.mockResolvedValue(
+      makeFlowConfig({ availableFunctions: ["contactOperator", "resetSession"] })
+    )
+    mockedAxios.post.mockResolvedValue(makeLLMResponse())
+
+    const agent = new FlowAgentLLM(mockPrisma as any)
+    await agent.handleQuery(makeContext())
+
+    const callBody = mockedAxios.post.mock.calls[0][1] as any
+    const contactTool = callBody.tools?.find((t: any) => t.function.name === "contactOperator")
+    expect(contactTool).toBeDefined()
+  })
+
+  it("T11: needRegistration=false → profileManagementAgent + manageNotifications REMOVED", async () => {
+    // SCENARIO: Workspace does NOT require customer registration.
+    // RULE: Profile and notification CFs must disappear from LLM tools.
+    mockPrisma.workspace.findUnique.mockResolvedValue({
+      id: WORKSPACE_ID, name: "Test", needRegistration: false,
+    })
+    mockFindByFlowKey.mockResolvedValue(
+      makeFlowConfig({
+        availableFunctions: ["contactOperator", "profileManagementAgent", "manageNotifications", "resetSession"]
+      })
+    )
+    mockedAxios.post.mockResolvedValue(makeLLMResponse())
+
+    const agent = new FlowAgentLLM(mockPrisma as any)
+    await agent.handleQuery(makeContext())
+
+    const callBody = mockedAxios.post.mock.calls[0][1] as any
+    const profileTool = callBody.tools?.find((t: any) => t.function.name === "profileManagementAgent")
+    const notifTool = callBody.tools?.find((t: any) => t.function.name === "manageNotifications")
+    expect(profileTool).toBeUndefined()
+    expect(notifTool).toBeUndefined()
+    // contactOperator and resetSession should remain
+    const contactTool = callBody.tools?.find((t: any) => t.function.name === "contactOperator")
+    const resetTool = callBody.tools?.find((t: any) => t.function.name === "resetSession")
+    expect(contactTool).toBeDefined()
+    expect(resetTool).toBeDefined()
+  })
+
+  it("T12: needRegistration=true → profileManagementAgent NOT filtered from availableFunctions", async () => {
+    // SCENARIO: Workspace requires registration (default).
+    // RULE: Profile and notification CFs must NOT be filtered out when needRegistration=true.
+    const agent = new FlowAgentLLM(mockPrisma as any)
+    const functions = ["contactOperator", "profileManagementAgent", "manageNotifications", "resetSession"]
+    const workspace = { needRegistration: true }
+
+    const result = agent.filterByWorkspaceSettings(functions, workspace as any)
+
+    expect(result).toContain("profileManagementAgent")
+    expect(result).toContain("manageNotifications")
+    expect(result).toHaveLength(4)
+  })
+
+  it("T13: filterByWorkspaceSettings pure unit test — all flags false", async () => {
+    // SCENARIO: ALL workspace features disabled.
+    // RULE: Only generic CFs survive (resetSession, changeLanguage).
+    const agent = new FlowAgentLLM(mockPrisma as any)
+    const allFunctions = [
+      "contactOperator", "customerSupportAgent",
+      "profileManagementAgent", "manageNotifications",
+      "productSearchAgent", "cartManagementAgent", "orderTrackingAgent",
+      "listAvailableSlots", "bookAppointment",
+      "resetSession", "changeLanguage",
+    ]
+    const workspace = {
+      hasHumanSupport: false,
+      needRegistration: false,
+      hasProductCatalog: false,
+      hasCart: false,
+      hasOrderTracking: false,
+      enableCalendarBooking: false,
+    }
+
+    const result = agent.filterByWorkspaceSettings(allFunctions, workspace as any)
+
+    // Only resetSession and changeLanguage should survive
+    expect(result).toEqual(["resetSession", "changeLanguage"])
+  })
+
+  it("T14: filterByWorkspaceSettings pure unit test — all flags true", async () => {
+    // SCENARIO: ALL workspace features enabled.
+    // RULE: All CFs survive — nothing is filtered out.
+    const agent = new FlowAgentLLM(mockPrisma as any)
+    const allFunctions = [
+      "contactOperator", "customerSupportAgent",
+      "profileManagementAgent", "manageNotifications",
+      "productSearchAgent", "cartManagementAgent", "orderTrackingAgent",
+      "listAvailableSlots", "bookAppointment",
+      "resetSession", "changeLanguage",
+    ]
+    const workspace = {
+      hasHumanSupport: true,
+      needRegistration: true,
+      hasProductCatalog: true,
+      hasCart: true,
+      hasOrderTracking: true,
+      enableCalendarBooking: true,
+    }
+
+    const result = agent.filterByWorkspaceSettings(allFunctions, workspace as any)
+
+    // ALL functions should survive
+    expect(result).toEqual(allFunctions)
+  })
+
+  it("T15: filterByWorkspaceSettings — null workspace returns unfiltered list", async () => {
+    // SCENARIO: workspace is null (edge case — DB issue).
+    // RULE: If workspace cannot be loaded, don't crash — return original list.
+    const agent = new FlowAgentLLM(mockPrisma as any)
+    const functions = ["contactOperator", "resetSession"]
+
+    const result = agent.filterByWorkspaceSettings(functions, null)
+
+    expect(result).toEqual(functions)
+  })
+
+  it("T16: filterByWorkspaceSettings — undefined flags treated as true (not filtered)", async () => {
+    // SCENARIO: Workspace loaded but flags not set (schema defaults).
+    // RULE: Only explicit `false` disables a CF. Undefined/null = enabled.
+    const agent = new FlowAgentLLM(mockPrisma as any)
+    const functions = ["contactOperator", "profileManagementAgent", "resetSession"]
+    const workspace = { id: "ws-1", name: "Test" } // no flags set
+
+    const result = agent.filterByWorkspaceSettings(functions, workspace as any)
+
+    // Nothing filtered — undefined is NOT false
+    expect(result).toEqual(functions)
+  })
+})

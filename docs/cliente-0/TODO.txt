@@ -18,15 +18,11 @@ FATTO
 
 progress
 
- deerministico?
+- deerministico?
 - i prompt sono fati bene?
-- Customer registration non va
-- Non va change Language.
+- Customer registration va o non va ?
 - unit test improvments
-- MCP NO NIESPETTA DEBUGMODE?
 - change language mi chiedo se funziona visto che non abbiamo una profilazione...?
-- possiamo alzare la temperatura non so all'history e magari anche i lmodello ' non co chiedo...
-- DebugFlow
 
 
 

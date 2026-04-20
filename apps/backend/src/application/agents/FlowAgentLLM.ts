@@ -166,7 +166,13 @@ export class FlowAgentLLM {
     // Tool enum comes from DB flows keys — server-side, tamper-proof
     const flowIds = Object.keys(flows)
     const isRouterMode = ctx.flowKey === "router"
-    const tools = await this.buildTools(flowIds, availableFunctions, isRouterMode, ctx.workspaceId)
+
+    // ── STEP 3b: Filter availableFunctions by workspace settings ─────────────
+    // Same pattern as ECOMMERCE llm-router.service.ts lines 1265-1280.
+    // Workspace flags command the ENTIRE pipeline (UI + LLM algorithm).
+    const filteredAvailableFunctions = this.filterByWorkspaceSettings(availableFunctions, workspace)
+
+    const tools = await this.buildTools(flowIds, filteredAvailableFunctions, isRouterMode, ctx.workspaceId, workspace)
 
     // ── STEP 4: Build messages — inject gatherState context for router ──────
     let enrichedSystemPrompt = systemPrompt
@@ -260,7 +266,9 @@ export class FlowAgentLLM {
         delete chatContext.flowNumber
         delete chatContext.flowState
         delete chatContext.gatherState
-        output = "No problem! Let's start over. 😊 Are you having an issue with a washer or a dryer?"
+        // Generic message — no business-specific text. The Router LLM will produce
+        // a contextual follow-up on the next turn (context is now empty → PATH C).
+        output = ""
         functionCalls.push({ name: "resetSession", arguments: fnArgs, result: "context_cleared" })
       } else {
         // ── 5c. DELEGATE_TO_FLOW — Router delegating to a sub-LLM ────────────
@@ -278,16 +286,15 @@ export class FlowAgentLLM {
           chatContext.flowKey = targetFlowKey
           chatContext.flowNumber = machineNumber
 
-          // Extract locale and machineType — from fnArgs (explicit) or conversation history (fallback)
-          const localeFromArgs = (fnArgs.locale as string) || undefined
-          const machineTypeFromArgs = (fnArgs.machineType as string) || undefined
-          const localeFromHistory = localeFromArgs || this.extractFromHistory(history, "locale")
-          const machineTypeFromHistory = machineTypeFromArgs || this.extractFromHistory(history, "machineType")
+          // Extract locale and machineType from fnArgs only — LLM is responsible for extraction,
+          // no hardcoded keyword patterns (rule #14)
+          const localeFromArgs = this.extractFromArgs(fnArgs, "locale")
+          const machineTypeFromArgs = this.extractFromArgs(fnArgs, "machineType")
 
           // Persist gathered info into gatherState for future turns
           chatContext.gatherState = {
-            locale: localeFromHistory || chatContext.gatherState?.locale,
-            machineType: machineTypeFromHistory || chatContext.gatherState?.machineType,
+            locale: localeFromArgs || chatContext.gatherState?.locale,
+            machineType: machineTypeFromArgs || chatContext.gatherState?.machineType,
             machineNumber: machineNumber || chatContext.gatherState?.machineNumber,
             retryCount: 0,
           }
@@ -377,52 +384,55 @@ export class FlowAgentLLM {
    * Security: tool names and enums come from DB only — customer cannot inject arbitrary values.
    */
   /**
-   * Extracts locale or machineType from conversation history as fallback
-   * when the LLM didn't include them in the tool call arguments.
+   * Extract a value from tool_call arguments.
+   * The LLM is responsible for extracting locale/machineType from conversation —
+   * NO hardcoded keyword patterns here (rule #14: no includes("string")).
+   * If the LLM didn't provide a value in fnArgs, return undefined.
    */
-  private extractFromHistory(history: Message[], field: "locale" | "machineType"): string | undefined {
-    const locales = ["goya", "pineda", "l'escala", "lescala", "alemanya", "hortes"]
-    const washerPatterns = ["lavatrice", "washer", "lavadora", "washing machine"]
-    const dryerPatterns = ["asciugatrice", "dryer", "secadora", "drying machine"]
+  private extractFromArgs(fnArgs: Record<string, unknown>, field: string): string | undefined {
+    const value = fnArgs[field]
+    return typeof value === "string" && value.trim() ? value.trim() : undefined
+  }
 
-    // Scan user messages newest-first so a self-correction ("wait, actually the dryer")
-    // wins over an earlier mention. Within a single message, honor positional order —
-    // whichever keyword appears LATER in the text is the user's final intent.
-    const userMessages = history
-      .filter((m) => m.role === "user")
-      .map((m) => (m.content as string).toLowerCase())
+  /**
+   * Filter availableFunctions based on workspace boolean flags.
+   * If a workspace setting is false, the corresponding CF is removed from the list.
+   * This enforces that workspace settings command the ENTIRE system — not just the UI.
+   */
+  filterByWorkspaceSettings(
+    availableFunctions: string[],
+    workspace: Record<string, unknown> | null
+  ): string[] {
+    if (!workspace) return availableFunctions
 
-    for (let i = userMessages.length - 1; i >= 0; i--) {
-      const text = userMessages[i]
-
-      if (field === "locale") {
-        let bestLocale: string | undefined
-        let bestIdx = -1
-        for (const l of locales) {
-          const idx = text.lastIndexOf(l)
-          if (idx > bestIdx) {
-            bestIdx = idx
-            bestLocale = l
-          }
-        }
-        if (bestLocale) return bestLocale.replace("lescala", "l'escala")
-      }
-
-      if (field === "machineType") {
-        const washerIdx = Math.max(...washerPatterns.map((p) => text.lastIndexOf(p)))
-        const dryerIdx = Math.max(...dryerPatterns.map((p) => text.lastIndexOf(p)))
-        if (washerIdx < 0 && dryerIdx < 0) continue
-        return washerIdx > dryerIdx ? "lavatrice" : "asciugatrice"
-      }
-    }
-    return undefined
+    return availableFunctions.filter(fnName => {
+      // hasHumanSupport = false → remove contactOperator + customerSupportAgent
+      if (fnName === "contactOperator" && workspace.hasHumanSupport === false) return false
+      if (fnName === "customerSupportAgent" && workspace.hasHumanSupport === false) return false
+      // needRegistration = false → remove profileManagementAgent + manageNotifications
+      if (fnName === "profileManagementAgent" && workspace.needRegistration === false) return false
+      if (fnName === "manageNotifications" && workspace.needRegistration === false) return false
+      // hasProductCatalog = false → remove productSearchAgent
+      if (fnName === "productSearchAgent" && workspace.hasProductCatalog === false) return false
+      // hasCart = false → remove cartManagementAgent
+      if (fnName === "cartManagementAgent" && workspace.hasCart === false) return false
+      // hasOrderTracking = false → remove orderTrackingAgent
+      if (fnName === "orderTrackingAgent" && workspace.hasOrderTracking === false) return false
+      // enableCalendarBooking = false → remove appointment CFs
+      if (workspace.enableCalendarBooking === false && [
+        "listAvailableSlots", "bookAppointment", "cancelAppointment",
+        "rescheduleAppointment", "getCustomerAppointments"
+      ].includes(fnName)) return false
+      return true
+    })
   }
 
   private async buildTools(
     flowIds: string[],
     availableFunctions: string[],
     isRouterMode: boolean,
-    workspaceId: string
+    workspaceId: string,
+    workspace?: Record<string, unknown> | null
   ): Promise<Array<Record<string, unknown>>> {
     const tools: Array<Record<string, unknown>> = []
 
@@ -434,24 +444,13 @@ export class FlowAgentLLM {
       )
 
       for (const fn of delegateFns) {
-        // Use custom parameters schema if provided, otherwise default to machineNumber
+        // Use custom parameters schema from DB — NO hardcoded fallback.
+        // Each CallingFunction MUST define its own parameters in the DB.
+        // If missing, use a minimal generic schema.
         const parametersSchema = fn.parameters ?? {
           type: "object",
-          properties: {
-            machineNumber: {
-              type: "string",
-              description: "Machine number found on the label (e.g. '42').",
-            },
-            locale: {
-              type: "string",
-              description: "Laundry location name (e.g. 'Goya', 'Pineda', 'L\\'Escala', 'Alemanya', 'Hortes').",
-            },
-            machineType: {
-              type: "string",
-              description: "Machine type: 'lavatrice' or 'asciugatrice'.",
-            },
-          },
-          required: ["machineNumber"],
+          properties: {},
+          required: [],
         }
 
         tools.push({
@@ -472,8 +471,8 @@ export class FlowAgentLLM {
         function: {
           name: "startFlow",
           description:
-            "Start a troubleshooting flow for a specific machine problem. " +
-            "Call this when the customer describes a symptom that matches a known flow. " +
+            "Start a guided flow for a specific problem or topic. " +
+            "Call this when the customer describes an issue that matches a known flow. " +
             "Do NOT call this if the customer is asking a general question.",
           parameters: {
             type: "object",
@@ -518,8 +517,8 @@ export class FlowAgentLLM {
         function: {
           name: "resetSession",
           description:
-            "Reset the session and clear the machine assignment when the customer made a mistake " +
-            "(wrong machine type, wrong number) or wants to start over from the beginning.",
+            "Reset the session and clear all gathered context when the customer made a mistake " +
+            "or wants to start over from the beginning.",
           parameters: {
             type: "object",
             properties: {},

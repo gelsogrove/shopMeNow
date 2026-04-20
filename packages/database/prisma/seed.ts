@@ -1684,9 +1684,9 @@ Classify the user message into exactly one of:
 
 ## RESPONSE BY INTENT
 - GREETING → "Hi! I'm the Ecolaundry assistant. How can I help you today?" — DO NOT ask location, DO NOT start gathering info.
-- FAQ → Answer the question using the FAQs section below. DO NOT ask for location, machine type or number. DO NOT call assignMachine().
+- FAQ → Answer the question using the FAQs section below. DO NOT ask for location, machine type or number. DO NOT call any delegate function.
 - MACHINE_PROBLEM → Start the gather flow (see GATHER FLOW below).
-- CORRECTION → If assignMachine was already called, call resetSession(). Otherwise update the missing piece and continue the gather.
+- CORRECTION → If the machine was already assigned (delegate function called), call resetSession(). Otherwise update the missing piece and continue the gather.
 - OTHER → Ask ONE clarifying question.
 
 ## GATHER FLOW (ONLY when intent = MACHINE_PROBLEM)
@@ -1694,16 +1694,18 @@ Collect in this STRICT order, ONE question per message:
 1) Location (Goya, Pineda, L'Escala, Alemanya, Hortes)
 2) Machine type (washer / dryer) — infer from the user message if possible, else ask
 3) Machine number (the number on the machine label)
-4) Payment method (card, cash, code)
-When ALL FOUR are known → call assignMachine() with:
-- flowKey: lavatrice_hs60xx (washer) | asciugatrice_ed340 (dryer)
-- machineNumber, locale, machineType, paymentMethod
+
+When ALL THREE are known → delegate to the specialist:
+- Washer problem → call lavatrice_hs60xx(machineNumber) — this hands off to the washer specialist agent
+- Dryer problem → call asciugatrice_ed340(machineNumber) — this hands off to the dryer specialist agent
+
+The specialist agent will handle payment verification, display codes, and every washer/dryer-specific troubleshooting step.
 
 ## WHEN TO CALL resetSession()
 Call resetSession() WITHOUT asking confirmation when the customer signals they made a mistake or wants to restart. Examples (any language):
 - "wait, I meant the dryer" / "era l'asciugatrice" / "era la secadora"
 - "forget it, let's start over" / "ricominciamo" / "empecemos de nuevo"
-- "the machine number is different" AFTER assignMachine was already called
+- "the machine number is different" AFTER the specialist was already called
 After resetSession() context is wiped — start over from GATHER FLOW step 1.
 
 ## EXAMPLES
@@ -1713,7 +1715,21 @@ After resetSession() context is wiped — start over from GATHER FLOW step 1.
 - "Quanto costa un lavaggio a 40 gradi?" → answer €3.50 from FAQs.  (FAQ — no gather)
 - "La lavatrice non parte, ho pagato" → "I understand, don't worry. Which location are you at?"  (MACHINE_PROBLEM — gather)
 - "Goya" (after MACHINE_PROBLEM) → "Is it a washer or a dryer?"  (gather step 2)
-- "Aspetta, era l'asciugatrice" (after assignMachine) → call resetSession()  (CORRECTION)
+- Washer + Goya + number "3" collected → call lavatrice_hs60xx(machineNumber: "3")
+- "Aspetta, era l'asciugatrice" (after delegate was called) → call resetSession()  (CORRECTION)
+
+## WHEN TO CALL contactOperator()
+Call contactOperator(reason) IMMEDIATELY (no retries, no "let me try again") when ANY of these happen:
+- Customer explicitly asks for a human ("voglio parlare con un operatore", "human please", "hablar con alguien")
+- Customer is clearly angry or frustrated (insults, "basta", "non funziona niente", caps lock rage)
+- Contradictions in the story or amount paid (says €5 then €3, says washer then dryer then washer)
+- Error / alarm code NOT documented in the sub-flows or FAQs
+- Manual machine activation requested (unlock, force start, override)
+- Refund / compensation / credit decision required
+- Suspected fraud or inconsistency
+- Camera / AJAX / security system incidents
+- Goya or Pineda dataphone overcharge (customer paid €10 instead of €7 or €8)
+NEVER escalate just because the customer is slow to answer or repeats themselves — only on the triggers above.
 
 ## FREQUENTLY ASKED QUESTIONS
 Use these to answer FAQ intents directly:
@@ -2325,7 +2341,15 @@ After reset the context is wiped and the Router will ask again from step 1.`,
   })
   console.log("   ✅ FlowNodeConfig upserted: Dryer ED-340")
 
-  // ── FlowNodeConfig #3: Router (History node — assigns machine via assignMachine()) ─────
+  // ── FlowNodeConfig #3: Router (delegates to washer/dryer specialist via DELEGATE_TO_AGENT CFs) ─
+  // availableFunctions lists the CF names the router can call. The two DELEGATE_TO_AGENT CFs
+  // (lavatrice_hs60xx, asciugatrice_ed340) must exist in WorkspaceCallingFunction.
+  const ROUTER_AVAILABLE_FUNCTIONS = [
+    "lavatrice_hs60xx",
+    "asciugatrice_ed340",
+    "contactOperator",
+    "resetSession",
+  ]
   await prisma.flowNodeConfig.upsert({
     where: { workspaceId_flowKey: { workspaceId: ecolaundryWorkspace.id, flowKey: "router" } },
     update: {
@@ -2334,8 +2358,7 @@ After reset the context is wiped and the Router will ask again from step 1.`,
       model: "openai/gpt-4o-mini",
       temperature: 0.3,
       maxTokens: 1024,
-      availableFunctions: JSON.parse(JSON.stringify(["assignMachine", "contactOperator", "resetSession"])),
-      // flows contains available machine keys as metadata (no actual flow steps for the router)
+      availableFunctions: JSON.parse(JSON.stringify(ROUTER_AVAILABLE_FUNCTIONS)),
       flows: { lavatrice_hs60xx: {}, asciugatrice_ed340: {} },
       isActive: true,
     },
@@ -2347,7 +2370,7 @@ After reset the context is wiped and the Router will ask again from step 1.`,
       model: "openai/gpt-4o-mini",
       temperature: 0.3,
       maxTokens: 1024,
-      availableFunctions: JSON.parse(JSON.stringify(["assignMachine", "contactOperator", "resetSession"])),
+      availableFunctions: JSON.parse(JSON.stringify(ROUTER_AVAILABLE_FUNCTIONS)),
       flows: { lavatrice_hs60xx: {}, asciugatrice_ed340: {} },
       isActive: true,
     },
@@ -2355,8 +2378,43 @@ After reset the context is wiped and the Router will ask again from step 1.`,
   console.log("   ✅ FlowNodeConfig upserted: Router (History)")
 
   // WorkspaceCallingFunctions for Ecolaundry
-  // FLOW workspaces use contactOperator (real escalation) — no agent delegates
+  // Router delegates via DELEGATE_TO_AGENT CFs (lavatrice_hs60xx, asciugatrice_ed340).
+  // contactOperator is real escalation. resetSession / changeLanguage are system internals.
   const ecoCallingFunctions = [
+    {
+      functionName: "lavatrice_hs60xx",
+      description: "Delegate to the washer specialist agent (Haier HS-60XX). Call when the customer has a problem with a WASHING machine and the machine number has been collected.",
+      parameters: {
+        type: "object",
+        properties: {
+          machineNumber: {
+            type: "string",
+            description: "Machine number found on the label (e.g. 42).",
+          },
+        },
+        required: ["machineNumber"],
+      },
+      isSystemFunction: true,
+      executionType: "DELEGATE_TO_AGENT",
+      attachedFlowKey: "lavatrice_hs60xx",
+    },
+    {
+      functionName: "asciugatrice_ed340",
+      description: "Delegate to the dryer specialist agent (ED-340). Call when the customer has a problem with a DRYING machine and the machine number has been collected.",
+      parameters: {
+        type: "object",
+        properties: {
+          machineNumber: {
+            type: "string",
+            description: "Machine number found on the label (e.g. 42).",
+          },
+        },
+        required: ["machineNumber"],
+      },
+      isSystemFunction: true,
+      executionType: "DELEGATE_TO_AGENT",
+      attachedFlowKey: "asciugatrice_ed340",
+    },
     {
       functionName: "contactOperator",
       description: "Contact human operator when the customer explicitly requests a human, or when the troubleshooting flow cannot resolve the issue.",
@@ -2390,12 +2448,13 @@ After reset the context is wiped and the Router will ask again from step 1.`,
         isSystemFunction: func.isSystemFunction,
         executionType: func.executionType,
         attachedLlm: (func as any).attachedLlm || null,
+        attachedFlowKey: (func as any).attachedFlowKey || null,
         isActive: true,
       },
     })
   }
 
-  console.log(`✅ Ecolaundry FLOW workspace configured: 3 FlowNodeConfigs + ${ecoCallingFunctions.length} calling functions (contactOperator + changeLanguage + resetSession)`)
+  console.log(`✅ Ecolaundry FLOW workspace configured: 3 FlowNodeConfigs + ${ecoCallingFunctions.length} calling functions (lavatrice_hs60xx + asciugatrice_ed340 + contactOperator + changeLanguage + resetSession)`)
 
   // Use BellItalia VIP as the main workspace for demo data
   const workspace = ecommerceWorkspace
