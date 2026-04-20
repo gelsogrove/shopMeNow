@@ -1870,6 +1870,9 @@ export class ChatEngineService {
         customerMessage: input.message,
         conversationId: input.conversationId,
         channel: input.channel || "whatsapp",
+        // FLOW workspaces: skip save here — FlowWorkspaceStrategy saves the
+        // combined welcome+flow response as a single DB entry.
+        skipSave: workspaceConfig.channelMode === "FLOW",
       })
 
       if (welcomeResult.isWelcomeMessage) {
@@ -5598,15 +5601,15 @@ Rispondi in modo naturale e fluido, come un assistente esperto.`
         customerLanguage: input.customerLanguage,
         channel: input.channel || "whatsapp",
         isPlayground: input.isPlayground ?? false,
+        // 🆕 Pass welcome prefix so FlowWorkspaceStrategy combines it in save + response.
+        // This ensures the DB and WhatsApp both see ONE combined message.
+        welcomePrefix,
       }
 
       const result = await this.routerOrchestration.route(routingContext)
 
-      let responseText = result.response || ""
-
-      if (welcomePrefix) {
-        responseText = `${welcomePrefix}\n\n${responseText}`
-      }
+      // welcomePrefix is now handled inside FlowWorkspaceStrategy — do NOT prepend again.
+      const responseText = result.response || ""
 
       return {
         message: responseText,

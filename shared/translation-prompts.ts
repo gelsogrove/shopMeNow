@@ -190,14 +190,31 @@ export function buildTranslationOnlyPrompt(params: {
   targetLanguage: string
   customerName?: string
   message: string
+  /** Customer's original incoming message — when provided, detect its language
+   *  and use THAT as the translation target, overriding targetLanguage if they differ. */
+  sourceMessage?: string
 }): string {
   const languageName = getLanguageName(params.targetLanguage)
   const customerName = params.customerName || "Cliente"
 
-  return TRANSLATION_ONLY_PROMPT
+  let prompt = TRANSLATION_ONLY_PROMPT
     .replace(/{TARGET_LANGUAGE}/g, languageName)
     .replace(/{CUSTOMER_NAME}/g, customerName)
     .replace("{MESSAGE}", params.message)
+
+  // 🌍 When the customer's original message is available, instruct the LLM to
+  // detect its actual language and use that for translation — this handles the
+  // case where workspace.defaultLanguage differs from what the customer writes.
+  if (params.sourceMessage) {
+    const langDetectionBlock =
+      `## CUSTOMER LANGUAGE AUTO-DETECTION\n` +
+      `Detect the language of the customer's message below and use THAT language as the translation target.\n` +
+      `If it differs from TARGET LANGUAGE (${languageName}), translate to the detected language instead.\n` +
+      `CUSTOMER MESSAGE: "${params.sourceMessage}"\n\n`
+    prompt = langDetectionBlock + prompt
+  }
+
+  return prompt
 }
 
 /**

@@ -32,8 +32,10 @@ export function classifyInput(input: string): InputClassification {
     return "SOFT_BREAK";
   }
 
-  // MATCH: single digit (1-9) or yes/no confirmation
-  if (/^([1-9]|s[iì]|yes|ok|no|nope)$/i.test(trimmed)) {
+  // MATCH: single digit (1-9), yes/no confirmation, or multilingual "done" acknowledgment.
+  // "Done" variants (hecho/fatto/feito/listo/pronto/done/ready) are structural COMPLETION
+  // signals across languages — they are NOT business keywords (rule #14 compliant).
+  if (/^([1-9]|s[iì]|yes|ok|no|nope|hecho|listo|pronto|done|fatto|feito|perfecto|vale|genial|super)$/i.test(trimmed)) {
     return "MATCH";
   }
 
@@ -53,7 +55,7 @@ export function classifyInput(input: string): InputClassification {
 export function normalizeInput(input: string): string {
   const lower = input.trim().toLowerCase();
 
-  if (/^(s[iì]|yes|ok)$/i.test(lower)) return "YES";
+  if (/^(s[iì]|yes|ok|hecho|listo|pronto|done|fatto|feito|perfecto|vale|genial|super)$/i.test(lower)) return "YES";
   if (/^(no|nope)$/i.test(lower))       return "NO";
 
   return input.trim(); // digit as-is: "1", "2", etc.

@@ -29,6 +29,10 @@ export interface RoutingContext {
   sessionId?: string
   channel?: string // 🆕 'widget' | 'whatsapp' - determines Widget Security behavior
   isPlayground?: boolean // 🧪 MCP/simulate — bypass debugMode WIP check
+  /** For FLOW workspaces: welcome message to prepend to the first response.
+   *  FlowWorkspaceStrategy uses this to combine welcome + flow response in
+   *  BOTH the DB save and the return value — single combined message everywhere. */
+  welcomePrefix?: string
 }
 
 /**

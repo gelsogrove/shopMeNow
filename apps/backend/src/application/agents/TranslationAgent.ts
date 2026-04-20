@@ -43,6 +43,10 @@ export interface ProcessOptions {
   customerName?: string
   customerId?: string
   channel?: string
+  /** Customer's original incoming message — used for language auto-detection.
+   *  When provided, the translator detects the actual language from this text
+   *  and overrides targetLanguage if they differ. */
+  sourceMessage?: string
 }
 
 /**
@@ -157,6 +161,7 @@ export class TranslationAgent {
           targetLanguage: normalizedLanguage,
           customerName: options.customerName,
           message: options.message,
+          sourceMessage: options.sourceMessage,
         })
       }
 

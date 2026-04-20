@@ -30,6 +30,10 @@ export interface WelcomeMessageInput {
   customerMessage: string
   conversationId?: string
   channel?: string
+  /** When true, skip saving welcome exchange to conversationMessage table.
+   *  Used for FLOW workspaces: FlowWorkspaceStrategy saves the combined
+   *  welcome+flow response as a single DB entry instead. */
+  skipSave?: boolean
 }
 
 export interface WelcomeMessageResult {
@@ -305,14 +309,19 @@ export class WelcomeMessageHandler {
       }
 
       // Save welcome exchange to conversation history
-      const conversationId = input.conversationId || `temp-${input.customerId}`
-      const assistantMessageId = await this.saveWelcomeMessages(
-        input.workspaceId,
-        input.customerId,
-        conversationId,
-        input.customerMessage,
-        welcomeText
-      )
+      // Skip when skipSave=true (FLOW workspaces): the combined welcome+flow
+      // response is saved by FlowWorkspaceStrategy as a single DB entry.
+      let assistantMessageId: string | undefined
+      if (!input.skipSave) {
+        const conversationId = input.conversationId || `temp-${input.customerId}`
+        assistantMessageId = await this.saveWelcomeMessages(
+          input.workspaceId,
+          input.customerId,
+          conversationId,
+          input.customerMessage,
+          welcomeText
+        )
+      }
 
       return {
         isWelcomeMessage: true,

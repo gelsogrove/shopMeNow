@@ -662,6 +662,11 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
 
       // ─── STEP: Translation ──────────────────────────────────────────────
       const targetLang = context.customerLanguage || customerData.language || "en"
+      // 🌍 Only use sourceMessage for language auto-detection when the message is
+      // meaningful (≥20 chars or ≥3 words). Single words like "Goya" (location name),
+      // "3" (menu choice), or "SI" should NOT override the resolved targetLang.
+      const rawSourceMsg = context.message.trim()
+      const isSourceMeaningful = rawSourceMsg.length >= 20 || rawSourceMsg.split(/\s+/).length >= 3
       const translationResult = await this.translationAgent.process({
         workspaceId: context.workspaceId,
         message: responseText,
@@ -669,6 +674,7 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         customerName: customerData.name,
         customerId: customerData.id,
         channel: context.channel,
+        sourceMessage: isSourceMeaningful ? rawSourceMsg : undefined,
       })
 
       let finalResponse = translationResult.message
@@ -728,14 +734,19 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
       // Save responseText (pre-humanization) so FlowAgentLLM sees its original
       // questions in history — humanized versions lose the question structure
       // and cause the LLM to lose context on what it was waiting for.
+      // 🆕 For first-message FLOW turns: prepend welcomePrefix so DB and WhatsApp
+      // both show ONE combined message (welcome + flow response).
       if (context.conversationId) {
         try {
+          const assistantContentToSave = context.welcomePrefix
+            ? `${context.welcomePrefix}\n\n${preHumanizationResponse}`
+            : preHumanizationResponse
           await this.conversationManager.saveUserAndAssistantAtomic({
             workspaceId: context.workspaceId,
             customerId: context.customerId,
             conversationId: context.conversationId,
             userContent: context.message,
-            assistantContent: preHumanizationResponse,
+            assistantContent: assistantContentToSave,
             agentType: "ROUTER",
             tokensUsed: tokensUsed,
             debugInfo: debugSteps.length > 0 ? { steps: debugSteps, totalTokens: tokensUsed, executionTimeMs: Date.now() - startTime } : undefined,
@@ -750,6 +761,11 @@ export class FlowWorkspaceStrategy implements RoutingStrategy {
         const debugTrace = this.buildDebugTrace(debugSteps, chatContext, tokensUsed, Date.now() - startTime)
         finalResponse = `${finalResponse}\n\n${debugTrace}`
         logger.info("🛠️ FlowWorkspaceStrategy - DebugFlow trace appended to response")
+      }
+
+      // 🆕 Combine welcome prefix into the final response for WhatsApp delivery
+      if (context.welcomePrefix) {
+        finalResponse = `${context.welcomePrefix}\n\n${finalResponse}`
       }
 
       return {
