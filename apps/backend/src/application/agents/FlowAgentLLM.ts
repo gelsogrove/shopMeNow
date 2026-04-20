@@ -331,27 +331,35 @@ export class FlowAgentLLM {
       output = "I'm here to help. Please describe your issue."
     }
 
-    // Router gather retry tracking — increment retryCount ONLY when the user made
-    // no progress toward completing the gather (locale + machineType + machineNumber).
-    // First-turn welcomes and bit-by-bit info collection must NOT count as failed retries,
-    // otherwise normal conversations escalate to operator after 3 exchanges.
+    // Router gather retry tracking — increment retryCount ONLY when:
+    //   (a) gather mode has already started (at least one piece of info collected), AND
+    //   (b) the user made no new progress this turn.
+    // FAQ / greeting / general chat must NEVER count as failed retries, otherwise the bot
+    // escalates to operator during normal conversations that don't involve a machine problem.
     if (ctx.flowKey === "router" && toolCalls.length === 0) {
       const prev = chatContext.gatherState ?? { retryCount: 0 }
-      const isFirstTurn = history.length === 0
 
-      // Detect info from conversation (history + current message)
+      // Detect info from history + current message (cumulative on purpose — any sign of
+      // gather progress is enough to (a) mark gather mode as started and (b) reset retry).
       const historyWithCurrent: Message[] = [...history, { role: "user", content: ctx.message }]
       const detectedLocale = this.extractFromHistory(historyWithCurrent, "locale")
       const detectedMachineType = this.extractFromHistory(historyWithCurrent, "machineType")
       const numericMatch = ctx.message.trim().match(/^(\d{1,2})$/)
-      const detectedMachineNumber = numericMatch ? numericMatch[1] : prev.machineNumber
+      // Only treat a bare number as machineNumber if gather mode is already active for this
+      // conversation. Avoids "5" during an FAQ (e.g. hours, prices) being misread as a machine id.
+      const gatherAlreadyStarted = !!(prev.locale || prev.machineType || prev.machineNumber)
+      const detectedMachineNumber = numericMatch && gatherAlreadyStarted
+        ? numericMatch[1]
+        : prev.machineNumber
 
       const progressed =
         (!!detectedLocale && detectedLocale !== prev.locale) ||
         (!!detectedMachineType && detectedMachineType !== prev.machineType) ||
         (!!detectedMachineNumber && detectedMachineNumber !== prev.machineNumber)
 
-      if (isFirstTurn || progressed) {
+      const gatherModeActive = gatherAlreadyStarted || progressed
+
+      if (progressed) {
         chatContext.gatherState = {
           locale: detectedLocale ?? prev.locale,
           machineType: detectedMachineType ?? prev.machineType,
@@ -360,8 +368,10 @@ export class FlowAgentLLM {
         }
         logger.info("📍 FlowAgentLLM: gather progress — retry reset", {
           gatherState: chatContext.gatherState,
-          isFirstTurn,
         })
+      } else if (!gatherModeActive) {
+        // Not in gather mode (greeting, FAQ, small talk) — do not touch retry counter
+        logger.info("💬 FlowAgentLLM: non-gather turn — retry counter untouched")
       } else {
         const currentRetry = prev.retryCount ?? 0
         chatContext.gatherState = {
@@ -424,17 +434,35 @@ export class FlowAgentLLM {
     const washerPatterns = ["lavatrice", "washer", "lavadora", "washing machine"]
     const dryerPatterns = ["asciugatrice", "dryer", "secadora", "drying machine"]
 
-    const fullText = history
-      .filter(m => m.role === "user")
-      .map(m => (m.content as string).toLowerCase())
-      .join(" ")
+    // Scan user messages newest-first so a self-correction ("wait, actually the dryer")
+    // wins over an earlier mention. Within a single message, honor positional order —
+    // whichever keyword appears LATER in the text is the user's final intent.
+    const userMessages = history
+      .filter((m) => m.role === "user")
+      .map((m) => (m.content as string).toLowerCase())
 
-    if (field === "locale") {
-      return locales.find(l => fullText.includes(l))?.replace("lescala", "l'escala")
-    }
-    if (field === "machineType") {
-      if (washerPatterns.some(p => fullText.includes(p))) return "lavatrice"
-      if (dryerPatterns.some(p => fullText.includes(p))) return "asciugatrice"
+    for (let i = userMessages.length - 1; i >= 0; i--) {
+      const text = userMessages[i]
+
+      if (field === "locale") {
+        let bestLocale: string | undefined
+        let bestIdx = -1
+        for (const l of locales) {
+          const idx = text.lastIndexOf(l)
+          if (idx > bestIdx) {
+            bestIdx = idx
+            bestLocale = l
+          }
+        }
+        if (bestLocale) return bestLocale.replace("lescala", "l'escala")
+      }
+
+      if (field === "machineType") {
+        const washerIdx = Math.max(...washerPatterns.map((p) => text.lastIndexOf(p)))
+        const dryerIdx = Math.max(...dryerPatterns.map((p) => text.lastIndexOf(p)))
+        if (washerIdx < 0 && dryerIdx < 0) continue
+        return washerIdx > dryerIdx ? "lavatrice" : "asciugatrice"
+      }
     }
     return undefined
   }
