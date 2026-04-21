@@ -1,0 +1,334 @@
+{
+  "non_parte": {
+    "step_0": {
+      "type": "CONFIRMATION",
+      "prompt": "Let's sort this out 🔍 Have you already completed the payment at the central unit?",
+      "transitions": {
+        "YES": "non_parte.display_check",
+        "NO": "non_parte.pay_help"
+      }
+    },
+
+    "pay_help": {
+      "type": "ACTION",
+      "prompt": "No problem 👍\n\n👉 Go to the central unit\n👉 Insert coins or use your card\n👉 Select your machine number\n👉 Press the program button\n👉 Close the door",
+      "transitions": {
+        "default": "non_parte.pay_retry"
+      }
+    },
+
+    "pay_retry": {
+      "type": "CONFIRMATION",
+      "prompt": "Were you able to complete the payment?",
+      "transitions": {
+        "YES": "non_parte.display_check",
+        "NO": "non_parte.escalate_pay"
+      }
+    },
+
+    "display_check": {
+      "type": "CHOICE",
+      "prompt": "What does the display show?\n\n1️⃣ SEL\n2️⃣ Price (€)\n3️⃣ PUSH / Pr\n4️⃣ DOOR\n5️⃣ ALM\n6️⃣ AL001\n7️⃣ END\n8️⃣ An EXTRA button stays fixed",
+      "transitions": {
+        "1": "non_parte.case_sel",
+        "2": "non_parte.case_price",
+        "3": "non_parte.case_push",
+        "4": "non_parte.case_door",
+        "5": "non_parte.case_alm",
+        "6": "non_parte.case_al001",
+        "7": "non_parte.case_end",
+        "8": "non_parte.case_extra_button",
+        "other": "non_parte.escalate"
+      }
+    },
+
+    "case_sel": {
+      "type": "ACTION",
+      "prompt": "SEL means the machine is ready 👍\n\n👉 Select your machine number and press a program button",
+      "transitions": {
+        "default": "non_parte.check_result"
+      }
+    },
+
+    "case_price": {
+      "type": "ACTION",
+      "prompt": "The display shows the remaining amount 💶\n\n👉 Insert coins or use your card until the display changes to PUSH",
+      "transitions": {
+        "default": "non_parte.check_result"
+      }
+    },
+
+    "case_push": {
+      "type": "ACTION",
+      "prompt": "Payment complete ✅\n\n👉 Press a program button to start the wash",
+      "transitions": {
+        "default": "non_parte.check_result"
+      }
+    },
+
+    "case_extra_button": {
+      "type": "CONFIRMATION",
+      "prompt": "Do you want that EXTRA option, or was it selected by mistake?\n\nReply YES if you want the EXTRA, NO if you do not.",
+      "transitions": {
+        "YES": "non_parte.case_extra_pay_more",
+        "NO": "non_parte.case_extra_remove",
+        "other": "non_parte.case_extra_remove"
+      }
+    },
+
+    "case_extra_remove": {
+      "type": "ACTION",
+      "prompt": "An EXTRA option may still be selected by mistake ⚠️\n\n👉 Press the EXTRA button that stays fixed so it turns off\n👉 Then continue the normal wash steps",
+      "transitions": {
+        "default": "non_parte.check_result"
+      }
+    },
+
+    "case_extra_pay_more": {
+      "type": "ACTION",
+      "prompt": "That EXTRA option needs additional payment 💶\n\n👉 Add the missing money for the EXTRA\n👉 Then continue with the normal wash steps",
+      "transitions": {
+        "default": "non_parte.check_result"
+      }
+    },
+
+    "case_door": {
+      "type": "ACTION",
+      "prompt": "The door is not properly closed 🚪\n\n👉 Open it and close it firmly until you hear a click",
+      "transitions": {
+        "default": "non_parte.check_result"
+      }
+    },
+
+    "case_alm": {
+      "type": "CHOICE",
+      "prompt": "Which alarm do you see?\n\n1️⃣ ALM/A\n2️⃣ ALM/E\n3️⃣ ALM/DOOR\n4️⃣ ALM/VAr\n5️⃣ Another ALM code",
+      "transitions": {
+        "1": "non_parte.case_alm_a",
+        "2": "non_parte.case_alm_e",
+        "3": "non_parte.case_alm_door",
+        "4": "non_parte.case_alm_var",
+        "5": "non_parte.case_alm_unknown",
+        "other": "non_parte.case_alm_unknown"
+      }
+    },
+
+    "case_alm_a": {
+      "type": "ACTION",
+      "prompt": "ALM/A = water inlet issue ⚠️\n\n👉 Press STOP once\n👉 Try the wash again",
+      "transitions": {
+        "default": "non_parte.check_result"
+      }
+    },
+
+    "case_alm_e": {
+      "type": "ACTION",
+      "prompt": "ALM/E = drain issue ⚠️\n\n👉 Press STOP once\n👉 Wait a few minutes in case the machine is still draining\n👉 Try again",
+      "transitions": {
+        "default": "non_parte.check_result"
+      }
+    },
+
+    "case_alm_door": {
+      "type": "ACTION",
+      "prompt": "ALM/DOOR = door safety lock issue ⚠️\n\n👉 Press STOP once\n👉 Open and close the door firmly\n👉 Try again",
+      "transitions": {
+        "default": "non_parte.check_result"
+      }
+    },
+
+    "case_alm_var": {
+      "type": "INFO",
+      "prompt": "ALM/VAr usually needs technical review ⚠️\n\nI'm notifying the operator to review the washer.",
+      "isTerminal": true,
+      "action": "escalate"
+    },
+
+    "case_alm_unknown": {
+      "type": "INFO",
+      "prompt": "This alarm code needs manual review ⚠️\n\nI'm notifying the operator to help you.",
+      "isTerminal": true,
+      "action": "escalate"
+    },
+
+    "case_al001": {
+      "type": "ACTION",
+      "prompt": "AL001 = sequence error ❗\n\n👉 Restart the full sequence:\n1️⃣ Pay\n2️⃣ Select machine\n3️⃣ Press program\n4️⃣ Close door",
+      "transitions": {
+        "default": "non_parte.check_result"
+      }
+    },
+
+    "case_end": {
+      "type": "CHOICE",
+      "prompt": "Do you see only END, or does it alternate with bAL?\n\n1️⃣ Only END\n2️⃣ END + bAL",
+      "transitions": {
+        "1": "non_parte.case_end_only",
+        "2": "non_parte.case_end_bal",
+        "other": "non_parte.case_end_only"
+      }
+    },
+
+    "case_end_only": {
+      "type": "INFO",
+      "prompt": "END means the wash cycle has finished ✅ If you have another issue, please describe it.",
+      "isTerminal": true
+    },
+
+    "case_end_bal": {
+      "type": "INFO",
+      "prompt": "END + bAL means the load was unbalanced ⚖️\n\n👉 Split the clothes and run another cycle\n👉 The operator can review possible compensation if needed",
+      "isTerminal": true,
+      "action": "escalate"
+    },
+
+    "check_result": {
+      "type": "CONFIRMATION",
+      "prompt": "Has the machine started?",
+      "transitions": {
+        "YES": "non_parte.ok",
+        "NO": "non_parte.escalate"
+      }
+    },
+
+    "escalate_pay": {
+      "type": "INFO",
+      "prompt": "I'm notifying the operator to help with the payment issue 🙌",
+      "isTerminal": true,
+      "action": "escalate"
+    },
+
+    "escalate": {
+      "type": "INFO",
+      "prompt": "I'm notifying the operator 🙌 They will assist you shortly.",
+      "isTerminal": true,
+      "action": "escalate"
+    },
+
+    "ok": {
+      "type": "INFO",
+      "prompt": "Perfect! The washing machine has started correctly ✅",
+      "isTerminal": true
+    }
+  },
+
+  "stop_error": {
+    "step_0": {
+      "type": "CONFIRMATION",
+      "prompt": "Did you press STOP before the wash had actually started?",
+      "transitions": {
+        "YES": "stop_error.before_start",
+        "NO": "stop_error.first_time_check"
+      }
+    },
+
+    "before_start": {
+      "type": "INFO",
+      "prompt": "If the wash had not started yet, select the program again and start the washer ✅",
+      "isTerminal": true
+    },
+
+    "first_time_check": {
+      "type": "CONFIRMATION",
+      "prompt": "Is this the first time this has happened?",
+      "transitions": {
+        "YES": "stop_error.first_time_escalate",
+        "NO": "stop_error.repay_required"
+      }
+    },
+
+    "first_time_escalate": {
+      "type": "INFO",
+      "prompt": "STOP cancels the wash cycle. I'm notifying the operator to review a possible first-time reactivation 🙌",
+      "isTerminal": true,
+      "action": "escalate"
+    },
+
+    "repay_required": {
+      "type": "INFO",
+      "prompt": "STOP cancels the wash cycle. To restart, the washer usually needs a new payment. Compensation is not automatic.",
+      "isTerminal": true
+    }
+  },
+
+  "post_ciclo": {
+    "step_0": {
+      "type": "CHOICE",
+      "prompt": "What happened after the wash?\n\n1️⃣ Clothes very wet\n2️⃣ Door locked\n3️⃣ Clothes damaged\n4️⃣ No foam\n5️⃣ Other issue",
+      "transitions": {
+        "1": "post_ciclo.wet",
+        "2": "post_ciclo.door",
+        "3": "post_ciclo.damage",
+        "4": "post_ciclo.foam",
+        "5": "post_ciclo.escalate",
+        "other": "post_ciclo.escalate"
+      }
+    },
+
+    "wet": {
+      "type": "CONFIRMATION",
+      "prompt": "Did the display alternate between END and bAL?",
+      "transitions": {
+        "YES": "post_ciclo.wet_balanced_issue",
+        "NO": "post_ciclo.wet_overload_issue"
+      }
+    },
+
+    "wet_balanced_issue": {
+      "type": "INFO",
+      "prompt": "END + bAL means the load was unbalanced ⚖️\n\n👉 Split the clothes into two loads\n👉 Run another cycle\n👉 The operator can review possible compensation if needed",
+      "isTerminal": true,
+      "action": "escalate"
+    },
+
+    "wet_overload_issue": {
+      "type": "INFO",
+      "prompt": "The washer may have been overloaded ⚖️\n\n👉 Split the clothes into two loads\n👉 Run another cycle\n👉 The operator can review possible compensation if needed",
+      "isTerminal": true,
+      "action": "escalate"
+    },
+
+    "door": {
+      "type": "ACTION",
+      "prompt": "The door may take 2–3 minutes to unlock ⏱️\n\n👉 Please wait a moment and try again",
+      "transitions": {
+        "default": "post_ciclo.door_check"
+      }
+    },
+
+    "door_check": {
+      "type": "CONFIRMATION",
+      "prompt": "Has the door opened?",
+      "transitions": {
+        "YES": "post_ciclo.ok",
+        "NO": "post_ciclo.escalate"
+      }
+    },
+
+    "damage": {
+      "type": "INFO",
+      "prompt": "I'm notifying the operator 🙌 They will review the case. Compensation is not automatic.",
+      "isTerminal": true,
+      "action": "escalate"
+    },
+
+    "foam": {
+      "type": "INFO",
+      "prompt": "Low foam is normal ✅ Industrial detergent produces less visible foam but washes effectively.",
+      "isTerminal": true
+    },
+
+    "escalate": {
+      "type": "INFO",
+      "prompt": "I'm notifying the operator 🙌 They will assist you shortly.",
+      "isTerminal": true,
+      "action": "escalate"
+    },
+
+    "ok": {
+      "type": "INFO",
+      "prompt": "Great! Everything is resolved ✅",
+      "isTerminal": true
+    }
+  }
+}
