@@ -2,7 +2,7 @@
   "non_parte": {
     "step_0": {
       "type": "CONFIRMATION",
-      "prompt": "Let's check this together 🔍 Have you already completed the payment at the central unit (coins or card)?",
+      "prompt": "Let's check this together. Have you already completed the payment at the central unit (coins or card)?",
       "transitions": {
         "YES": "non_parte.problem_check",
         "NO": "non_parte.pay_help"
@@ -11,7 +11,7 @@
 
     "pay_help": {
       "type": "ACTION",
-      "prompt": "No problem 👍\n\n👉 Go to the central unit\n👉 Insert coins or use your card\n👉 Select your dryer number\n👉 Press the PAUSE button to start",
+      "prompt": "No problem.\n\n1. Go to the central unit.\n2. Insert coins or use your card.\n3. Select your dryer number.\n4. Press the **PAUSE** button to start.",
       "transitions": {
         "default": "non_parte.pay_retry"
       }
@@ -28,7 +28,7 @@
 
     "problem_check": {
       "type": "CHOICE",
-      "prompt": "What’s happening with the dryer?\n\n1️⃣ Display is off\n2️⃣ Door problem\n3️⃣ I added money but minutes did not increase\n4️⃣ It shows time or price but does not start\n5️⃣ Other problem",
+      "prompt": "What’s happening with the dryer?\n\n1. Display is off\n2. Door problem\n3. I added money but minutes did not increase\n4. It shows time or price but does not start\n5. Other problem",
       "transitions": {
         "1": "non_parte.display_blank",
         "2": "non_parte.door_issue",
@@ -39,9 +39,25 @@
       }
     },
 
+    "case_sel": {
+      "type": "ACTION",
+      "prompt": "**SEL** means the dryer is ready.\n\n1. Select your dryer number.\n2. Press **PAUSE** firmly to start.",
+      "transitions": {
+        "default": "non_parte.check_result"
+      }
+    },
+
+    "case_al001": {
+      "type": "ACTION",
+      "prompt": "**AL001** usually means the start sequence was not completed correctly.\n\n1. Make sure the payment is completed.\n2. Select your dryer number again.\n3. Press **PAUSE** firmly to start.",
+      "transitions": {
+        "default": "non_parte.check_result"
+      }
+    },
+
     "display_blank": {
       "type": "ACTION",
-      "prompt": "The display is completely off ⚡\n\n👉 Open the door\n👉 Wait 10 seconds\n👉 Close it firmly until you hear a click\n\nIf it stays off, please use another dryer.",
+      "prompt": "The display is completely off.\n\n1. Open the door.\n2. Wait 10 seconds.\n3. Close it firmly until you hear a click.\n\nIf it stays off, please use another dryer.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -49,7 +65,7 @@
 
     "door_issue": {
       "type": "ACTION",
-      "prompt": "It looks like a door issue 🚪\n\n👉 Check that no clothes are stuck in the seal\n👉 Close the door firmly until you hear a click",
+      "prompt": "It looks like a door issue.\n\n1. Check that no clothes are stuck in the seal.\n2. Close the door firmly until you hear a click.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -57,14 +73,14 @@
 
     "minutes_not_added": {
       "type": "INFO",
-      "prompt": "If you added money and the minutes did not increase, this needs manual review 💳\n\nI'm notifying the operator to help you.",
+      "prompt": "If you added money and the minutes did not increase, this needs **manual review**. I’m notifying the operator to help you.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "credit_issue": {
       "type": "ACTION",
-      "prompt": "The dryer shows a price but does not start 💳\n\n👉 Insert the correct amount or use your card\n👉 Press the PAUSE button firmly to start",
+      "prompt": "The dryer shows a price but does not start.\n\n1. Insert the correct amount or use your card.\n2. Press the **PAUSE** button firmly to start.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -72,7 +88,7 @@
 
     "generic_restart": {
       "type": "ACTION",
-      "prompt": "Let's try a quick reset 🔄\n\n👉 Open and close the door firmly\n👉 Try starting the dryer again",
+      "prompt": "Let’s try a quick reset.\n\n1. Open and close the door firmly.\n2. Try starting the dryer again.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -83,19 +99,32 @@
       "prompt": "Has the dryer started now?",
       "transitions": {
         "YES": "non_parte.end_success",
-        "NO": "non_parte.handle_escalate"
+        "NO": "non_parte.followup_issue"
+      }
+    },
+
+    "followup_issue": {
+      "type": "CHOICE",
+      "prompt": "What do you see now?\n\n1. Door still does not close well\n2. Display is off\n3. It shows time or price but still does not start\n4. Minutes did not increase after adding money\n5. Nothing changed / other",
+      "transitions": {
+        "1": "non_parte.handle_escalate",
+        "2": "non_parte.display_blank",
+        "3": "non_parte.credit_issue",
+        "4": "non_parte.minutes_not_added",
+        "5": "non_parte.handle_escalate",
+        "other": "non_parte.handle_escalate"
       }
     },
 
     "end_success": {
       "type": "INFO",
-      "prompt": "Perfect! The dryer has started correctly ✅",
+      "prompt": "Perfect. The dryer has started correctly.",
       "isTerminal": true
     },
 
     "handle_escalate": {
       "type": "INFO",
-      "prompt": "I’m notifying the operator 🙌 They will assist you shortly.",
+      "prompt": "I’m notifying the operator. They will assist you shortly.",
       "isTerminal": true,
       "action": "escalate"
     }
@@ -104,7 +133,7 @@
   "errore_reset": {
     "step_0": {
       "type": "CHOICE",
-      "prompt": "What problem are you experiencing with the dryer?\n\n1️⃣ Filter / door filter warning\n2️⃣ FALLO DE ROTACION\n3️⃣ FALLO DE ASPIRACION\n4️⃣ Clothes still wet after cycle\n5️⃣ Dryer stopped mid-cycle or STOP\n6️⃣ Door blocked after cycle\n7️⃣ Burnt, plastic, or stained clothes\n8️⃣ Strange smell\n9️⃣ Other problem",
+      "prompt": "What problem are you experiencing with the dryer?\n\n1. Filter / door filter warning\n2. **FALLO DE ROTACION**\n3. **FALLO DE ASPIRACION**\n4. Clothes still wet after cycle\n5. Dryer stopped mid-cycle or **STOP**\n6. Door blocked after cycle\n7. Burnt, plastic, or stained clothes\n8. Strange smell\n9. Other problem",
       "transitions": {
         "1": "errore_reset.filter_alarm",
         "2": "errore_reset.rotation_alarm",
@@ -121,7 +150,7 @@
 
     "filter_alarm": {
       "type": "ACTION",
-      "prompt": "The dryer shows a filter or filter-door warning ⚠️\n\n👉 Remove and clean the lint filter\n👉 Clean the filter sensor area\n👉 Insert the filter back\n👉 Close the door firmly\n👉 Press STOP and try again",
+      "prompt": "The dryer shows a filter or filter-door warning.\n\n1. Remove and clean the lint filter.\n2. Clean the filter sensor area.\n3. Insert the filter back.\n4. Close the door firmly.\n5. Press **STOP** and try again.",
       "transitions": {
         "default": "errore_reset.check_result_2"
       }
@@ -129,14 +158,14 @@
 
     "rotation_alarm": {
       "type": "INFO",
-      "prompt": "FALLO DE ROTACION usually needs technical review ⚠️\n\nI'm notifying the operator to inspect the dryer.",
+      "prompt": "**FALLO DE ROTACION** usually needs technical review. I’m notifying the operator to inspect the dryer.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "aspiration_alarm": {
       "type": "ACTION",
-      "prompt": "FALLO DE ASPIRACION means the dryer may not be breathing correctly ⚠️\n\n👉 Clean the lint filter\n👉 Clean the rear/air outlet path if possible\n👉 Press STOP and try again",
+      "prompt": "**FALLO DE ASPIRACION** means the dryer may not be breathing correctly.\n\n1. Clean the lint filter.\n2. Clean the rear or air outlet path if possible.\n3. Press **STOP** and try again.",
       "transitions": {
         "default": "errore_reset.check_result_2"
       }
@@ -153,14 +182,14 @@
 
     "soaking_wet": {
       "type": "INFO",
-      "prompt": "Very wet clothes usually mean the washer did not spin correctly 💧\n\n👉 Do not keep drying soaking wet clothes\n👉 The load may need to be washed again with better balance\n👉 I'm notifying the operator to review the case.",
+      "prompt": "Very wet clothes usually mean the washer did not spin correctly.\n\n1. Do not keep drying soaking wet clothes.\n2. The load may need to be washed again with better balance.\n3. I’m notifying the operator to review the case.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "normal_damp": {
       "type": "ACTION",
-      "prompt": "If the clothes are still damp after the cycle 💧\n\n👉 Spread the clothes well in the drum\n👉 Clean the lint filter\n👉 Add more drying time and press PAUSE to continue",
+      "prompt": "If the clothes are still damp after the cycle:\n\n1. Spread the clothes well in the drum.\n2. Clean the lint filter.\n3. Add more drying time and press **PAUSE** to continue.",
       "transitions": {
         "default": "errore_reset.check_result_2"
       }
@@ -168,7 +197,7 @@
 
     "mid_stop": {
       "type": "ACTION",
-      "prompt": "If the dryer stopped during the cycle or STOP was confirmed ⏱️\n\n👉 Wait a moment\n👉 Clean the lint filter\n👉 Restart with a smaller and more even load",
+      "prompt": "If the dryer stopped during the cycle or **STOP** was confirmed:\n\n1. Wait a moment.\n2. Clean the lint filter.\n3. Restart with a smaller and more even load.",
       "transitions": {
         "default": "errore_reset.check_result_2"
       }
@@ -176,7 +205,7 @@
 
     "door_after_cycle": {
       "type": "ACTION",
-      "prompt": "The dryer door may stay locked during the cooling phase ⏱️\n\n👉 Wait about 2 minutes\n👉 Try opening the door again",
+      "prompt": "The dryer door may stay locked during the cooling phase.\n\n1. Wait about 2 minutes.\n2. Try opening the door again.",
       "transitions": {
         "default": "errore_reset.door_after_cycle_check"
       }
@@ -193,7 +222,7 @@
 
     "damage_case": {
       "type": "CHOICE",
-      "prompt": "What happened to the clothes?\n\n1️⃣ Burnt or melted\n2️⃣ Plastic stuck to clothes\n3️⃣ Stained clothes",
+      "prompt": "What happened to the clothes?\n\n1. Burnt or melted\n2. Plastic stuck to clothes\n3. Stained clothes",
       "transitions": {
         "1": "errore_reset.damage_burnt",
         "2": "errore_reset.damage_plastic",
@@ -232,7 +261,7 @@
 
     "generic_restart": {
       "type": "ACTION",
-      "prompt": "Let's try a quick reset 🔄\n\n👉 Open and close the door\n👉 Clean the lint filter if needed\n👉 Try again",
+      "prompt": "Let’s try a quick reset.\n\n1. Open and close the door.\n2. Clean the lint filter if needed.\n3. Try again.",
       "transitions": {
         "default": "errore_reset.check_result_2"
       }
@@ -249,13 +278,13 @@
 
     "end_success": {
       "type": "INFO",
-      "prompt": "Great! The issue is resolved ✅",
+      "prompt": "Great. The issue is resolved.",
       "isTerminal": true
     },
 
     "handle_escalate": {
       "type": "INFO",
-      "prompt": "I’m notifying the operator 🙌 They will assist you shortly.",
+      "prompt": "I’m notifying the operator. They will assist you shortly.",
       "isTerminal": true,
       "action": "escalate"
     }

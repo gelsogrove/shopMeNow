@@ -2,6 +2,9 @@
 
 Questo file serve come matrice di copertura dei casi del cliente-0.
 
+Checklist vincolante di conformita':
+- `docs/cliente-0/compliance-checklist.md`
+
 Regola di lettura:
 - `JSON flow` = deve vivere nei flow tecnici guidati
 - `Prompt/FAQ` = deve vivere fuori JSON, nei prompt e nella knowledge/FAQ

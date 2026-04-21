@@ -2,6 +2,9 @@
 
 Questo file serve come matrice separata per i casi che non devono vivere nei flow JSON tecnici.
 
+Checklist vincolante di conformita':
+- `docs/cliente-0/compliance-checklist.md`
+
 Regola di lettura:
 - `Router` = il caso dipende soprattutto da classificazione, estrazione fatti, reset o routing
 - `Conversation History` = il caso dipende soprattutto dalla voce cliente, raccolta dati o risposta FAQ
