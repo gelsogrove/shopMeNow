@@ -1,0 +1,42 @@
+{
+  "case": 1,
+  "scenario": 1.1,
+  "name": "Case 1 — Scenario 1.1 — Lavadora PUSH PROG (Happy Path)",
+  "description": "Cliente ha pagato, pantalla mostra PUSH PROG, selecciona el programa y la máquina funciona correctamente.",
+  "turns": [
+    "La lavadora no funciona",
+    "PUSH PROG",
+    "Goya",
+    "5",
+    "Sí, ahora funciona"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["hola", "pantalla"],
+      "excludes": []
+    },
+    {
+      "turn": 2,
+      "includes": ["lavander"],
+      "excludes": []
+    },
+    {
+      "turn": 3,
+      "includes": ["numero", "lavadora"],
+      "excludes": []
+    },
+    {
+      "turn": 4,
+      "includes": ["programa"],
+      "excludes": []
+    },
+    {
+      "turn": 5,
+      "includes": ["perfecto", "comenzado", "correctamente"],
+      "excludes": ["escalar", "operador"]
+    }
+  ],
+  "expectedOutcome": "RESOLVED",
+  "notes": "El cliente resuelve el problema siguiendo las instrucciones. No requiere escalación."
+}

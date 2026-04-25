@@ -1,0 +1,49 @@
+{
+  "case": 1,
+  "scenario": 1.2,
+  "name": "Case 1 — Escalation Path",
+  "description": "Cliente intenta seleccionar programa pero la lavadora sigue sin arrancar. El chatbot pide el nombre del usuario y escala el caso al operador con un resumen.",
+  "turns": [
+    "Hola, la lavadora no funciona",
+    "pone PUSH PROG",
+    "Goya",
+    "5",
+    "no arranca",
+    "se ha blcoqueada la pantalla",
+    "Carlos"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["hola", "pantalla"],
+      "excludes": ["programa", "presiona", "pulsa", "reinicia"]
+    },
+    {
+      "turn": 2,
+      "includes": ["lavander"],
+      "excludes": []
+    },
+    {
+      "turn": 3,
+      "includes": ["numero", "lavadora"],
+      "excludes": []
+    },
+    {
+      "turn": 4,
+      "includes": ["programa"],
+      "excludes": []
+    },
+    {
+      "turn": 6,
+      "includes": ["llamas"],
+      "excludes": []
+    },
+    {
+      "turn": 7,
+      "includes": ["escal", "operador"],
+      "excludes": []
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "El chatbot escala después de que el programa no resuelve el problema. Pide el nombre antes de escalar y hace un resumen del caso."
+}

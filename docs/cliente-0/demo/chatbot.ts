@@ -31,6 +31,9 @@ import {
   resolveKnownLocation,
   parseExplicitPaymentSignal,
   sanitizeCustomerReply,
+  isBlankDisplayReply,
+  hasExtraButtonIssue,
+  hasStopIntent,
 } from './utils/message-parsing.js'
 import {
   wrapPlainText,
@@ -58,27 +61,14 @@ import {
   type Runtime,
   type RegressionScenario,
   type RegressionAssertion,
+  type SupportedLanguage,
+  type Settings,
 } from './utils/runtime.js'
+import { QUESTIONS } from './utils/localization.js'
 import {
-  getWelcomeIntro,
-  getProblemReassurance,
-  getLocalizedLocationQuestion,
-  getLocalizedMachineTypeQuestion,
-  getLocalizedMachineNumberQuestion,
-  getLocalizedPaymentQuestion,
-  getLocalizedServiceCompletedQuestion,
-  getLocalizedDryerStartedQuestion,
-  getLocalizedDryerCycleContextQuestion,
-  getLocalizedDoubleChargeNarrativeQuestion,
-  getLocalizedLast4DigitsQuestion,
-  getLocalizedPaymentProofQuestion,
-  getLocalizedDisplayQuestion,
-  getLocalizedResetMessage,
-  getLocalizedClosureMessage,
-  getLocalizedOperatorMessage,
-  getLocalizedGreetingMessage,
-  getLocalizedDefaultHelpMessage,
-} from './utils/localization.js'
+  buildEscalationSummary,
+  extractEscalationContext,
+} from './utils/escalation.js'
 
 // Load OPENROUTER_API_KEY (and any other secrets) from the .env file
 // next to this script, so the key is never committed in source code.
@@ -92,19 +82,6 @@ try {
 type Route = 'washer' | 'dryer' | 'faq' | 'operator' | 'reset' | 'greeting' | 'unknown'
 type NextOwner = 'conversation_history' | 'washer_specialist' | 'dryer_specialist'
 
-type FlowNode = {
-  type: 'ACTION' | 'CONFIRMATION' | 'CHOICE' | 'INFO' | 'ROUTER' | 'INPUT'
-  prompt: string
-  transitions?: Record<string, string>
-  logic?: Record<string, string>
-  isTerminal?: boolean
-  action?: 'escalate'
-  strictMatching?: boolean
-  onInterruptFallback?: string
-}
-
-type FlowMap = Record<string, Record<string, FlowNode>>
-type FaqMap = Record<string, string>
 
 type RouterDecision = {
   route: Route
@@ -134,63 +111,6 @@ type FlowEngineResult = {
   action?: 'escalate'
 }
 
-type SessionState = {
-  language: 'it' | 'es' | 'en' | 'pt' | 'ca' | 'fr'
-  preferredLanguage: 'it' | 'es' | 'en' | 'pt' | 'ca' | 'fr' | null
-  location: string
-  locationClarificationCount: number
-  machineType: '' | 'washer' | 'dryer'
-  machineNumber: string
-  paymentCompleted: boolean | null
-  dryerStarted: boolean | null
-  dryerCycleContext: '' | 'first_cycle' | 'time_added'
-  serviceCompleted: boolean | null
-  paymentMethod: string
-  displayState: string
-  issueSummary: string
-  doubleChargeNarrativeProvided: boolean
-  doubleChargeNarrativeText: string
-  last4CardDigitsProvided: boolean
-  paymentProofProvided: boolean
-  activeFlowId: string | null
-  activeStepId: string | null
-  retryCount: number
-  lastResolvedIntent: Route | null
-  escalationReason: string | null
-  operatorRequested: boolean
-  turnCount: number
-  lastPresentedStepId: string | null
-  lastMissingFacts: string[]
-  pendingClosure: 'resolved' | 'escalated' | null
-  lastActivityAt: number
-}
-
-type LocationOverride = {
-  pueblo?: string
-  calle?: string
-  displayName?: string
-  metadata?: Record<string, unknown>
-  faqOverrides?: Record<string, string>
-  flowOverrides?: Record<string, { prompt?: string }>
-  escalationRules?: Array<{ id: string; trigger: string; action: string; reason?: string }>
-}
-
-type LocationsConfig = {
-  _principle?: string
-  _overrideTypes?: Record<string, string>
-  locations: Record<string, LocationOverride>
-}
-
-type Runtime = {
-  prompts: Record<string, string>
-  flows: {
-    washer: FlowMap
-    dryer: FlowMap
-  }
-  regressions: RegressionScenario[]
-  locations: LocationsConfig
-}
-
 type TurnResult = {
   reply: string
   debug: string[]
@@ -199,18 +119,6 @@ type TurnResult = {
 type ScriptedScenario = {
   name: string
   turns: string[]
-}
-
-type RegressionAssertion = {
-  turn: number
-  includes?: string[]
-  excludes?: string[]
-}
-
-type RegressionScenario = {
-  name: string
-  turns: string[]
-  assertions: RegressionAssertion[]
 }
 
 type UsecaseScenario = {
@@ -251,7 +159,6 @@ const BASE_URL = process.env.LLM_BASE_URL || 'https://openrouter.ai/api/v1'
 const API_KEY = process.env.OPENROUTER_API_KEY || ''
 const CHATBOT_NAME = 'Ecolaundry Assistant'
 const TONE_OF_VOICE = 'calm, reassuring, relaxed, warm, step-by-step'
-const COMPANY_NAME = 'Ecolaundry'
 const ALLOWED_LINKS = 'echatbot.ai, www.echatbot.ai, forms.gle, alberwaz.net'
 const FAQ_FALLBACK = 'If this question depends on local policy, the operator will review it manually.'
 
@@ -356,24 +263,6 @@ let FAQS: FaqMap = {}
 
 
 
-function addFirstTurnWelcome(state: SessionState, message: string, route: Route): string {
-  if (state.turnCount !== 1) return message
-
-  const trimmed = message.trim()
-  if (!trimmed) return getWelcomeIntro(state.language)
-  if (route === 'greeting') return trimmed
-
-  const isProblem = route === 'washer' || route === 'dryer'
-  if (isProblem) {
-    return [
-      getWelcomeIntro(state.language),
-      getProblemReassurance(state.language),
-      trimmed,
-    ].join(BOT_MESSAGE_SEPARATOR)
-  }
-
-  return `${getWelcomeIntro(state.language)}${BOT_MESSAGE_SEPARATOR}${trimmed}`
-}
 
 function extractDisplayState(message: string): string | null {
   const trimmed = message.trim()
@@ -482,6 +371,14 @@ function detectLanguageHeuristic(message: string): SessionState['language'] | nu
 
   if (/(asciug|lavatrice|lavanderia|centrifug|bagnat|sportello|cosa devo fare|ho gia risposto|schermata|pagamento|carta|lavato|asciugato)/i.test(normalized)) {
     return 'it'
+  }
+
+  if (/(rentadora|assecadora|rentadora|rentar|assecar|carrer|localitat|cobrament|pantalla de la rentadora|no arrenca|ha cobrat|pas a pas)/i.test(normalized)) {
+    return 'ca'
+  }
+
+  if (/(washer|dryer|laundromat|display shows|charged twice|double charge|step by step|card digits|screenshot|payment proof|did not start|does not start)/i.test(normalized)) {
+    return 'en'
   }
 
   return null
@@ -1169,7 +1066,6 @@ function extractJson<T>(value: string, fallback: T): T {
 
 function renderMissingFactQuestion(routerDecision: RouterDecision, state: SessionState): string {
   const firstMissing = routerDecision.missingFacts[0]
-  const language = state.language
   const resolvedMachineType = routerDecision.route === 'dryer' || state.machineType === 'dryer'
     ? 'dryer'
     : routerDecision.route === 'washer' || state.machineType === 'washer'
@@ -1177,50 +1073,23 @@ function renderMissingFactQuestion(routerDecision: RouterDecision, state: Sessio
       : ''
 
   if (firstMissing === 'location') {
-    return getLocalizedLocationQuestion(language, state.locationClarificationCount > 0)
+    return state.locationClarificationCount > 0 ? QUESTIONS.locationClarification : QUESTIONS.location
   }
-
-  if (firstMissing === 'machine type') {
-    return getLocalizedMachineTypeQuestion(language)
-  }
-
+  if (firstMissing === 'machine type') return QUESTIONS.machineType
   if (firstMissing === 'machine number') {
-    return getLocalizedMachineNumberQuestion(language, resolvedMachineType)
+    return resolvedMachineType === 'dryer' ? QUESTIONS.machineNumberDryer : QUESTIONS.machineNumberWasher
   }
-
-  if (firstMissing === 'payment completed or not') {
-    return getLocalizedPaymentQuestion(language)
-  }
-
-  if (firstMissing === 'dryer started or not') {
-    return getLocalizedDryerStartedQuestion(language)
-  }
-
-  if (firstMissing === 'dryer first cycle or added time') {
-    return getLocalizedDryerCycleContextQuestion(language)
-  }
-
-  if (firstMissing === 'service completed or not') {
-    return getLocalizedServiceCompletedQuestion(language)
-  }
-
-  if (firstMissing === 'double charge step by step') {
-    return getLocalizedDoubleChargeNarrativeQuestion(language)
-  }
-
-  if (firstMissing === 'last 4 card digits') {
-    return getLocalizedLast4DigitsQuestion(language)
-  }
-
-  if (firstMissing === 'payment proof') {
-    return getLocalizedPaymentProofQuestion(language)
-  }
-
+  if (firstMissing === 'payment completed or not') return QUESTIONS.payment
+  if (firstMissing === 'dryer started or not') return QUESTIONS.dryerStarted
+  if (firstMissing === 'dryer first cycle or added time') return QUESTIONS.dryerCycleContext
+  if (firstMissing === 'service completed or not') return QUESTIONS.serviceCompleted
+  if (firstMissing === 'double charge step by step') return QUESTIONS.doubleChargeNarrative
+  if (firstMissing === 'last 4 card digits') return QUESTIONS.last4Digits
+  if (firstMissing === 'payment proof') return QUESTIONS.paymentProof
   if (firstMissing === 'exact display state') {
-    return getLocalizedDisplayQuestion(language, resolvedMachineType === 'washer')
+    return resolvedMachineType === 'washer' ? QUESTIONS.displayWasher : QUESTIONS.displayDryer
   }
-
-  return getLocalizedDefaultHelpMessage(language)
+  return QUESTIONS.defaultHelp
 }
 
 
@@ -1357,7 +1226,12 @@ async function callOpenRouter(params: LlmRequest): Promise<string> {
   return data.choices?.[0]?.message?.content?.trim() || ''
 }
 
-async function detectLanguage(runtime: Runtime, message: string): Promise<'it' | 'es' | 'en' | 'pt' | 'ca' | 'fr'> {
+function resolveLanguage(detected: SupportedLanguage, settings: Settings): SupportedLanguage {
+  if (settings.enabledLanguages.includes(detected)) return detected
+  return settings.defaultLanguage
+}
+
+async function detectLanguage(runtime: Runtime, message: string): Promise<SupportedLanguage> {
   const heuristic = detectLanguageHeuristic(message)
   if (heuristic) {
     return heuristic
@@ -1761,21 +1635,13 @@ async function renderHistory(runtime: Runtime, state: SessionState, payload: {
   faqSource?: string
   action?: 'contactOperator' | 'resetSession' | 'closureAck' | null
   closureKind?: 'resolved' | 'escalated'
-}): Promise<string> {
+}): Promise<{ message: string; safe: boolean }> {
 
-  // Per architecture: Conversation History is the ONLY customer-facing voice.
-  // [EXACT] directive prevents the History LLM from inventing any content not present upstream.
-  //
-  // Case 1: Flow Engine result — the node prompt IS the source of truth (Translation runs after).
-  //   Inject [EXACT] so History outputs only the flow node text, zero additions.
-  //
-  // Case 2: Gather questions — inject exact localized question via [EXACT] so History
-  //   outputs it verbatim (already localized, Translation is a no-op for same language).
+  // [EXACT] directive: History LLM must translate and output only this text verbatim.
+  // Case 1: Flow Engine node prompt — source of truth, History translates and outputs only it.
+  // Case 2: Gather question — inject the Spanish base question, History translates it.
   let effectivePayload = payload
   if (payload.flowEngineResult?.prompt && !payload.action) {
-    // Remove flowEngineResult from the payload sent to History LLM so MAIN RULE does NOT fire.
-    // The LLM only sees [EXACT] in customerFacingGoal and must output it verbatim.
-    // This prevents the LLM from "making it sound natural" by inventing a preamble from session state.
     effectivePayload = {
       ...payload,
       flowEngineResult: null,
@@ -1785,13 +1651,20 @@ async function renderHistory(runtime: Runtime, state: SessionState, payload: {
       },
     }
   } else if (payload.routerDecision.missingFacts.length > 0 && !payload.action && !payload.faqSource) {
-    const exactQuestion = renderMissingFactQuestion(payload.routerDecision, state)
-    effectivePayload = {
-      ...payload,
-      routerDecision: {
-        ...payload.routerDecision,
-        customerFacingGoal: `[EXACT] ${exactQuestion}`,
-      },
+    // On turn 1, skip [EXACT] so the LLM can include the warm greeting before the question.
+    const isTurn1Greeting = state.turnCount === 1
+    if (isTurn1Greeting) {
+      // keep customerFacingGoal as-is (already contains greeting instruction + question)
+      effectivePayload = payload
+    } else {
+      const exactQuestion = renderMissingFactQuestion(payload.routerDecision, state)
+      effectivePayload = {
+        ...payload,
+        routerDecision: {
+          ...payload.routerDecision,
+          customerFacingGoal: `[EXACT] ${exactQuestion}`,
+        },
+      }
     }
   }
 
@@ -1799,11 +1672,15 @@ async function renderHistory(runtime: Runtime, state: SessionState, payload: {
     chatbotName: CHATBOT_NAME,
     toneOfVoice: TONE_OF_VOICE,
     faqs: Object.values(FAQS).join('\n'),
+    allowedExternalLinks: ALLOWED_LINKS,
   })
   const locationContext = buildLocationContext(runtime, state)
   const systemPrompt = locationContext ? `${baseSystemPrompt}\n\n${locationContext}` : baseSystemPrompt
   const userPrompt = `Current session state:\n${summarizeState(state)}\n\nRuntime decision:\n${JSON.stringify(effectivePayload, null, 2)}${effectivePayload.faqSource ? `\n\nFAQ source excerpt:\n${effectivePayload.faqSource}` : ''}`
-  return callModel({ systemPrompt, userPrompt, maxTokens: 220, temperature: 0.2 })
+  const raw = await callModel({ systemPrompt, userPrompt, maxTokens: 300, temperature: 0.2, json: true })
+  const parsed = extractJson<{ message?: string; safe?: boolean }>(raw, { message: '', safe: true })
+  const message = normalizeGeneratedMessage(state.language, parsed.message || '')
+  return { message, safe: parsed.safe !== false }
 }
 
 function createSystemRouterDecision(overrides?: Partial<RouterDecision>): RouterDecision {
@@ -1828,53 +1705,14 @@ async function renderCustomerFacingSystemMessage(
     closureKind?: 'resolved' | 'escalated'
   },
 ): Promise<string> {
-  const message = await renderHistory(runtime, state, {
+  const { message, safe } = await renderHistory(runtime, state, {
     routerDecision: payload.routerDecision || createSystemRouterDecision(),
     action: payload.action,
     closureKind: payload.closureKind,
   })
-  const translatedMessage = await translateIfNeeded(runtime, state, message)
-  const security = await securityCheck(runtime, translatedMessage)
-  return security.safe ? translatedMessage : fallbackBlockedMessage(state.language)
+  return safe ? message : fallbackBlockedMessage(state.language)
 }
 
-async function translateIfNeeded(runtime: Runtime, state: SessionState, message: string): Promise<string> {
-  if (state.language === 'en') return normalizeGeneratedMessage(state.language, message)
-  const systemPrompt = replaceVars(runtime.prompts.translation, { languageUser: state.language })
-  const translated = await callModel({ systemPrompt, userPrompt: message, maxTokens: 260, temperature: 0.1 })
-  return normalizeGeneratedMessage(state.language, translated || message)
-}
-
-async function securityCheck(runtime: Runtime, message: string): Promise<{ safe: boolean; reason?: string }> {
-  const systemPrompt = replaceVars(runtime.prompts.security, {
-    companyName: COMPANY_NAME,
-    allowedExternalLinks: ALLOWED_LINKS,
-  })
-  const result = await callModel({
-    systemPrompt,
-    userPrompt: `Check if this message is safe:\n\n${message}`,
-    json: true,
-    maxTokens: 120,
-  })
-  return extractJson<{ safe: boolean; reason?: string }>(result, { safe: true })
-}
-
-function shouldBypassSecurityForDoubleChargePrompt(state: SessionState, routerDecision: RouterDecision): boolean {
-  if (String(routerDecision.extractedFacts?.issueSummary || state.issueSummary || '') !== 'double charge') {
-    return false
-  }
-
-  return ['service completed or not', 'double charge step by step', 'last 4 card digits', 'payment proof', 'location'].includes(
-    routerDecision.missingFacts[0] || '',
-  )
-}
-
-function sanitizeCustomerReply(message: string): string {
-  return message
-    .replace(/\[EXACT\]\s*/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
-}
 
 function pickSingleMissingFact(routerDecision: RouterDecision, state: SessionState): RouterDecision {
   if (!routerDecision.missingFacts.length) {
@@ -1909,7 +1747,7 @@ function forceLocationQuestion(routerDecision: RouterDecision): RouterDecision {
   return {
     ...routerDecision,
     missingFacts: ['location'],
-    customerFacingGoal: 'Ask only which location the customer is in.',
+    customerFacingGoal: 'Ask only which lavandería autoservicio (town and street) the customer is at.',
   }
 }
 
@@ -2199,17 +2037,13 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
   if (state.pendingClosure && isClosureAcknowledgement(userMessage)) {
     const closureKind = state.pendingClosure
     state.pendingClosure = null
-    const reply = await renderHistory(runtime, state, {
+    const { message: reply, safe } = await renderHistory(runtime, state, {
       routerDecision: createSystemRouterDecision(),
       action: 'closureAck',
       closureKind,
     })
-    const translatedReply = await translateIfNeeded(runtime, state, reply)
-    const security = await securityCheck(runtime, translatedReply)
-    pushDebug(debug, 'closure.ack', { closureKind, reply })
-    pushDebug(debug, 'translation.closureAck', translatedReply)
-    pushDebug(debug, 'security.closureAck', security)
-    return { reply: sanitizeCustomerReply(security.safe ? translatedReply : fallbackBlockedMessage(state.language)), debug }
+    pushDebug(debug, 'closure.ack', { closureKind, reply, safe })
+    return { reply: sanitizeCustomerReply(safe ? reply : fallbackBlockedMessage(state.language)), debug }
   }
 
   if (state.pendingClosure) {
@@ -2219,24 +2053,51 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
   const normalizedUserMessage = preprocessUserInput(state, userMessage)
   pushDebug(debug, 'normalizedInput', normalizedUserMessage)
 
+  if (state.customerNameRequested && !state.customerName && normalizedUserMessage.length > 0) {
+    state.customerName = normalizedUserMessage.trim().split(/\s+/)[0]
+    state.customerNameRequested = false
+    state.operatorRequested = true
+    if (!state.escalationReason) {
+      state.escalationReason = 'Manual review requested.'
+    }
+    const escalationRouterDecision = createSystemRouterDecision({
+      route: 'operator',
+      nextOwner: 'conversation_history',
+      functionName: 'contactOperator',
+      escalationReason: state.escalationReason,
+      customerFacingGoal: 'Confirm escalation to a human operator and that the chatbot is now disabled.',
+    })
+    const finalReply = await renderCustomerFacingSystemMessage(runtime, state, {
+      routerDecision: escalationRouterDecision,
+      action: 'contactOperator',
+    })
+    state.pendingClosure = 'escalated'
+    const escalationContext = extractEscalationContext(state, state.customerName)
+    const operatorSummary = buildEscalationSummary(escalationContext)
+    pushDebug(debug, 'escalation.withName', { finalReply, operatorSummary })
+    return { reply: `${sanitizeCustomerReply(finalReply)}\n\n**Human Support message**\n${operatorSummary}`, debug }
+  }
+
   const requestedLanguage = getRequestedLanguage(userMessage)
   const heuristicLanguage = detectLanguageHeuristic(userMessage)
   if (requestedLanguage) {
-    state.preferredLanguage = requestedLanguage
-    state.language = requestedLanguage
+    state.preferredLanguage = resolveLanguage(requestedLanguage, runtime.settings)
+    state.language = state.preferredLanguage
   }
 
   if (state.preferredLanguage) {
-    state.language = state.preferredLanguage
+    state.language = resolveLanguage(state.preferredLanguage, runtime.settings)
+    state.preferredLanguage = state.language
   } else {
     if (heuristicLanguage) {
-      state.language = heuristicLanguage
+      state.language = resolveLanguage(heuristicLanguage, runtime.settings)
     } else if (state.turnCount > 1 && state.language) {
-      state.language = state.language || 'en'
+      state.language = state.language || runtime.settings.defaultLanguage
     } else if (isShortContextReply(userMessage) && state.language) {
-      state.language = state.language || 'en'
+      state.language = state.language || runtime.settings.defaultLanguage
     } else {
-      state.language = await detectLanguage(runtime, userMessage)
+      const detected = await detectLanguage(runtime, userMessage)
+      state.language = resolveLanguage(detected, runtime.settings)
     }
     state.preferredLanguage = state.language
   }
@@ -2280,7 +2141,7 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     if (!(routeMachineType && displayAlreadyProvided)) {
       routerDecision.functionName = null
       routerDecision.missingFacts = ['location']
-      routerDecision.customerFacingGoal = 'Ask only which location the customer is in before continuing the technical troubleshooting.'
+      routerDecision.customerFacingGoal = 'Ask only which lavandería autoservicio (town and street) the customer is at, before continuing the technical troubleshooting.'
     }
   }
 
@@ -2291,9 +2152,14 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     routerDecision.customerFacingGoal = 'Greet the customer, present yourself briefly, and ask the most useful next question.'
   }
 
-  if (state.turnCount === 1 && hasGreetingIntent(userMessage) && !state.location && routerDecision.route === 'greeting') {
-    routerDecision.missingFacts = ['location']
-    routerDecision.customerFacingGoal = 'Greet the customer, briefly present yourself, and ask only which location they are in.'
+  // Turn 1: ALWAYS greet warmly, regardless of whether the customer used a greeting word.
+  // The chatbot must introduce itself and add a reassurance phrase before collecting any data.
+  // missingFacts=['exact display state'] bypasses the later location-override guard and is
+  // also excluded from [EXACT] so the LLM can embed the greeting + display question together.
+  if (state.turnCount === 1 && !state.location) {
+    routerDecision.missingFacts = ['exact display state']
+    routerDecision.customerFacingGoal =
+      'Greet the customer warmly as the Ecolaundry virtual assistant. You MUST include the exact phrase "estoy aquí para ayudarte" in your greeting. Then ask only what appears on the display of the machine.'
   }
 
   if (
@@ -2323,7 +2189,7 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     const displayFirstStillNeeded = routerDecision.missingFacts.includes('exact display state')
     if (!(isTroubleshootingRoute && displayFirstStillNeeded)) {
       routerDecision.missingFacts = ['location']
-      routerDecision.customerFacingGoal = 'Ask only which location the customer is in before continuing the technical troubleshooting.'
+      routerDecision.customerFacingGoal = 'Ask only which lavandería autoservicio (town and street) the customer is at, before continuing the technical troubleshooting.'
     }
   } else if (
     routerDecision.route !== 'faq' &&
@@ -2351,26 +2217,31 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
   if (shouldAdvanceActiveFlow) {
     const flowResult = await advanceActiveFlow(runtime, state, userMessage)
     state.lastPresentedStepId = flowResult.stepId
-    const flowMessage = await renderHistory(runtime, state, { routerDecision, flowEngineResult: flowResult })
-    const translatedFlow = await translateIfNeeded(runtime, state, flowMessage)
-    const finalFlowReply = addFirstTurnWelcome(state, translatedFlow, routerDecision.route)
-    const security = await securityCheck(runtime, translatedFlow)
+    const { message, safe } = await renderHistory(runtime, state, { routerDecision, flowEngineResult: flowResult })
     state.pendingClosure = flowResult.isTerminal ? (flowResult.action === 'escalate' ? 'escalated' : 'resolved') : null
     pushDebug(debug, 'flow.advance', flowResult)
-    pushDebug(debug, 'history.flow', flowMessage)
-    pushDebug(debug, 'translation.flow', translatedFlow)
-    pushDebug(debug, 'security.flow', security)
-    return { reply: sanitizeCustomerReply(security.safe ? finalFlowReply : fallbackBlockedMessage(state.language)), debug }
+    pushDebug(debug, 'history.flow', { message, safe })
+    const flowReply = sanitizeCustomerReply(safe ? message : fallbackBlockedMessage(state.language))
+    if (flowResult.isTerminal && flowResult.action === 'escalate') {
+      if (!state.customerName && !state.customerNameRequested) {
+        state.customerNameRequested = true
+        state.pendingClosure = null
+        const nameQuestion = state.language === 'es' ? '¿Como te llamas?' : 'What is your name?'
+        return { reply: nameQuestion, debug }
+      }
+      const escalationContext = extractEscalationContext(state, state.customerName)
+      const operatorSummary = buildEscalationSummary(escalationContext)
+      return { reply: `${flowReply}\n\n**Human Support message**\n${operatorSummary}`, debug }
+    }
+    return { reply: flowReply, debug }
   }
 
   if (routerDecision.functionName === 'resetSession') {
     const language = state.language
     Object.assign(state, createInitialState(), { language })
-    const resetMessage = await renderHistory(runtime, state, { routerDecision, action: 'resetSession' })
-    const translatedReset = await translateIfNeeded(runtime, state, resetMessage)
-    pushDebug(debug, 'history.reset', resetMessage)
-    pushDebug(debug, 'translation.reset', translatedReset)
-    return { reply: sanitizeCustomerReply(translatedReset), debug }
+    const { message } = await renderHistory(runtime, state, { routerDecision, action: 'resetSession' })
+    pushDebug(debug, 'history.reset', message)
+    return { reply: sanitizeCustomerReply(message), debug }
   }
 
   if (routerDecision.functionName === 'contactOperator' || routerDecision.route === 'operator') {
@@ -2385,37 +2256,41 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
         missingFacts: blockingMissingFacts,
         customerFacingGoal: 'Ask only the next missing troubleshooting detail before any escalation.',
       }, state)
-      const missingMessage = await renderHistory(runtime, state, { routerDecision: gatedRouterDecision })
-      const translatedMissing = await translateIfNeeded(runtime, state, missingMessage)
-      const security = await securityCheck(runtime, translatedMissing)
-      pushDebug(debug, 'history.operatorEscalationBlocked', { missingFact: gatedRouterDecision.missingFacts[0], missingMessage })
-      pushDebug(debug, 'translation.operatorEscalationBlocked', translatedMissing)
-      pushDebug(debug, 'security.operatorEscalationBlocked', security)
-      return { reply: sanitizeCustomerReply(security.safe ? translatedMissing : fallbackBlockedMessage(state.language)), debug }
+      const { message, safe } = await renderHistory(runtime, state, { routerDecision: gatedRouterDecision })
+      pushDebug(debug, 'history.operatorEscalationBlocked', { missingFact: gatedRouterDecision.missingFacts[0], message, safe })
+      return { reply: sanitizeCustomerReply(safe ? message : fallbackBlockedMessage(state.language)), debug }
     }
+
+    if (!state.customerName && !state.customerNameRequested) {
+      state.customerNameRequested = true
+      const nameQuestion = state.language === 'es' ? '¿Como te llamas?' : 'What is your name?'
+      return { reply: nameQuestion, debug }
+    }
+
+    // Perform direct escalation (no name collection — matches flow-engine escalation behaviour)
     state.operatorRequested = true
     state.escalationReason = routerDecision.escalationReason || 'Manual review requested.'
-    const escalationMessage = await renderHistory(runtime, state, { routerDecision, action: 'contactOperator' })
-    const translatedEscalation = await translateIfNeeded(runtime, state, escalationMessage)
-    const security = await securityCheck(runtime, translatedEscalation)
+    const { message, safe } = await renderHistory(runtime, state, { routerDecision, action: 'contactOperator' })
     state.pendingClosure = 'escalated'
-    pushDebug(debug, 'history.escalation', escalationMessage)
-    pushDebug(debug, 'translation.escalation', translatedEscalation)
-    pushDebug(debug, 'security.escalation', security)
-    return { reply: sanitizeCustomerReply(security.safe ? translatedEscalation : fallbackBlockedMessage(state.language)), debug }
+
+    // Generate and print escalation summary for operator
+    const escalationContext = extractEscalationContext(state, state.customerName)
+    const operatorSummary = buildEscalationSummary(escalationContext)
+
+    pushDebug(debug, 'history.escalation', { message, safe, operatorSummary })
+
+    const finalReply = sanitizeCustomerReply(safe ? message : fallbackBlockedMessage(state.language))
+    const replyWithSummary = `${finalReply}\n\n**Human Support message**\n${operatorSummary}`
+
+    return { reply: replyWithSummary, debug }
   }
 
   if (routerDecision.route === 'faq') {
     const faqSource = await chooseFaqSource(normalizedUserMessage)
-    const faqMessage = await renderHistory(runtime, state, { routerDecision, faqSource })
-    const translatedFaq = await translateIfNeeded(runtime, state, faqMessage)
-    const finalFaqReply = addFirstTurnWelcome(state, translatedFaq, routerDecision.route)
-    const security = await securityCheck(runtime, translatedFaq)
+    const { message, safe } = await renderHistory(runtime, state, { routerDecision, faqSource })
     pushDebug(debug, 'faq.source', faqSource)
-    pushDebug(debug, 'history.faq', faqMessage)
-    pushDebug(debug, 'translation.faq', translatedFaq)
-    pushDebug(debug, 'security.faq', security)
-    return { reply: sanitizeCustomerReply(security.safe ? finalFaqReply : fallbackBlockedMessage(state.language)), debug }
+    pushDebug(debug, 'history.faq', { message, safe })
+    return { reply: sanitizeCustomerReply(safe ? message : fallbackBlockedMessage(state.language)), debug }
   }
 
   if (routerDecision.route === 'washer' || routerDecision.route === 'dryer') {
@@ -2425,15 +2300,10 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     }
     if (routerDecision.missingFacts.length > 0) {
       const singleMissingRouterDecision = pickSingleMissingFact(routerDecision, state)
-      const missingMessage = await renderHistory(runtime, state, { routerDecision: singleMissingRouterDecision })
-      const translatedMissing = await translateIfNeeded(runtime, state, missingMessage)
-      const finalMissingReply = addFirstTurnWelcome(state, translatedMissing, routerDecision.route)
-      const security = await securityCheck(runtime, translatedMissing)
+      const { message, safe } = await renderHistory(runtime, state, { routerDecision: singleMissingRouterDecision })
       state.pendingClosure = null
-      pushDebug(debug, 'history.missing', { askedMissingFact: singleMissingRouterDecision.missingFacts[0], missingMessage })
-      pushDebug(debug, 'translation.missing', translatedMissing)
-      pushDebug(debug, 'security.missing', security)
-      return { reply: sanitizeCustomerReply(security.safe ? finalMissingReply : fallbackBlockedMessage(state.language)), debug }
+      pushDebug(debug, 'history.missing', { askedMissingFact: singleMissingRouterDecision.missingFacts[0], message, safe })
+      return { reply: sanitizeCustomerReply(safe ? message : fallbackBlockedMessage(state.language)), debug }
     }
 
     const specialistDecision = applySpecialistFallback(
@@ -2451,27 +2321,15 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
           missingFacts: identityMissingFacts,
           customerFacingGoal: 'Ask only the next missing troubleshooting detail before any escalation.',
         }, state)
-        const missingMessage = await renderHistory(runtime, state, { routerDecision: gatedRouterDecision })
-        const translatedMissing = await translateIfNeeded(runtime, state, missingMessage)
-        const security = await securityCheck(runtime, translatedMissing)
-        pushDebug(debug, 'history.specialistEscalationBlocked', { missingFact: gatedRouterDecision.missingFacts[0], missingMessage })
-        pushDebug(debug, 'translation.specialistEscalationBlocked', translatedMissing)
-        pushDebug(debug, 'security.specialistEscalationBlocked', security)
-        return { reply: sanitizeCustomerReply(security.safe ? translatedMissing : fallbackBlockedMessage(state.language)), debug }
+        const { message, safe } = await renderHistory(runtime, state, { routerDecision: gatedRouterDecision })
+        pushDebug(debug, 'history.specialistEscalationBlocked', { missingFact: gatedRouterDecision.missingFacts[0], message, safe })
+        return { reply: sanitizeCustomerReply(safe ? message : fallbackBlockedMessage(state.language)), debug }
       }
       state.escalationReason = specialistDecision.escalationReason || 'Specialist escalation'
-      const escalationMessage = await renderHistory(runtime, state, {
-        routerDecision,
-        specialistDecision,
-        action: 'contactOperator',
-      })
-      const translatedEscalation = await translateIfNeeded(runtime, state, escalationMessage)
-      const security = await securityCheck(runtime, translatedEscalation)
+      const { message, safe } = await renderHistory(runtime, state, { routerDecision, specialistDecision, action: 'contactOperator' })
       state.pendingClosure = 'escalated'
-      pushDebug(debug, 'history.specialistEscalation', escalationMessage)
-      pushDebug(debug, 'translation.specialistEscalation', translatedEscalation)
-      pushDebug(debug, 'security.specialistEscalation', security)
-      return { reply: sanitizeCustomerReply(security.safe ? translatedEscalation : fallbackBlockedMessage(state.language)), debug }
+      pushDebug(debug, 'history.specialistEscalation', { message, safe })
+      return { reply: sanitizeCustomerReply(safe ? message : fallbackBlockedMessage(state.language)), debug }
     }
 
     const flowResult = startFlow(runtime, state, specialistDecision.flowId)
@@ -2479,28 +2337,16 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
       throw new Error('Flow could not start correctly')
     }
     state.lastPresentedStepId = flowResult.stepId
-    const openingFlowMessage = await renderHistory(runtime, state, { routerDecision, specialistDecision, flowEngineResult: flowResult })
-    const translatedFlow = await translateIfNeeded(runtime, state, openingFlowMessage)
-    const finalOpeningFlowReply = addFirstTurnWelcome(state, translatedFlow, routerDecision.route)
-    const security = await securityCheck(runtime, translatedFlow)
+    const { message, safe } = await renderHistory(runtime, state, { routerDecision, specialistDecision, flowEngineResult: flowResult })
     state.pendingClosure = flowResult.isTerminal ? (flowResult.action === 'escalate' ? 'escalated' : 'resolved') : null
     pushDebug(debug, 'flow.start', flowResult)
-    pushDebug(debug, 'history.flowStart', openingFlowMessage)
-    pushDebug(debug, 'translation.flowStart', translatedFlow)
-    pushDebug(debug, 'security.flowStart', security)
-    return { reply: sanitizeCustomerReply(security.safe ? finalOpeningFlowReply : fallbackBlockedMessage(state.language)), debug }
+    pushDebug(debug, 'history.flowStart', { message, safe })
+    return { reply: sanitizeCustomerReply(safe ? message : fallbackBlockedMessage(state.language)), debug }
   }
 
-  const defaultMessage = await renderHistory(runtime, state, { routerDecision })
-  const translatedDefault = await translateIfNeeded(runtime, state, defaultMessage)
-  const finalDefaultReply = addFirstTurnWelcome(state, translatedDefault, routerDecision.route)
-  const security = shouldBypassSecurityForDoubleChargePrompt(state, routerDecision)
-    ? { safe: true }
-    : await securityCheck(runtime, translatedDefault)
-  pushDebug(debug, 'history.default', defaultMessage)
-  pushDebug(debug, 'translation.default', translatedDefault)
-  pushDebug(debug, 'security.default', security)
-  return { reply: sanitizeCustomerReply(security.safe ? finalDefaultReply : fallbackBlockedMessage(state.language)), debug }
+  const { message: defaultMessage, safe: defaultSafe } = await renderHistory(runtime, state, { routerDecision })
+  pushDebug(debug, 'history.default', { message: defaultMessage, safe: defaultSafe })
+  return { reply: sanitizeCustomerReply(defaultSafe ? defaultMessage : fallbackBlockedMessage(state.language)), debug }
 }
 
 
@@ -2993,7 +2839,7 @@ async function evaluateCriteriaWithLLM(
  */
 async function findUsecaseFile(caseNumber: number): Promise<string | null> {
   const demoDir = getDemoDir()
-  const usecasesDir = path.resolve(demoDir, '..', 'usecases')
+  const usecasesDir = path.resolve(demoDir, '..', '..', 'usecases')
   const prefix = `case${String(caseNumber).padStart(2, '0')}`
   let entries: string[]
   try {
@@ -3016,30 +2862,78 @@ async function findUsecaseFile(caseNumber: number): Promise<string | null> {
 }
 
 /**
- * Finds the scenario.json for a given case number (lives next to the .md file).
+ * Finds ALL scenario JSON files for a given case number (live next to the .md file).
+ * Returns paths sorted alphabetically so scenario 1.1 runs before 1.2.
  */
-async function findUsecaseScenarioJson(caseNumber: number): Promise<string | null> {
+async function findUsecaseScenarioJsons(caseNumber: number): Promise<string[]> {
   const mdPath = await findUsecaseFile(caseNumber)
-  if (!mdPath) return null
-  const jsonPath = path.join(path.dirname(mdPath), 'scenario.json')
+  if (!mdPath) return []
+
+  const caseDir = path.dirname(mdPath)
+  let files: string[]
   try {
-    await readFile(jsonPath, 'utf8') // probe existence
-    return jsonPath
+    files = await readdir(caseDir)
   } catch {
-    return null
+    return []
+  }
+
+  const prefix = `case_${caseNumber}_scenario_`
+  const matching = files
+    .filter((f) => f.startsWith(prefix) && f.endsWith('.json'))
+    .sort()
+    .map((f) => path.join(caseDir, f))
+
+  if (matching.length > 0) return matching
+
+  // Fall back to legacy scenario.json if no new-pattern files found
+  const legacyPath = path.join(caseDir, 'scenario.json')
+  try {
+    await readFile(legacyPath, 'utf8')
+    return [legacyPath]
+  } catch {
+    return []
   }
 }
 
 /**
- * Rewrites the CONVERSATION and REPORT LLM sections of an individual
+ * Renders one conversation block (turns) as markdown lines.
+ */
+function renderConversationTurns(turns: Array<{you: string, bot: string}>): string {
+  if (turns.length === 0) return '_Sin diálogo registrado._'
+  return turns
+    .map(({you, bot}) => {
+      const botChunks = bot
+        .split(BOT_MESSAGE_SEPARATOR)
+        .map((chunk) => chunk.trim())
+        .filter(Boolean)
+      const renderedBotLines = (botChunks.length > 0 ? botChunks : [bot.trim()])
+        .map((chunk) => {
+          let normalizedChunk = chunk
+          const numberedLines = normalizedChunk.match(/(^|\n)\s*\d+\.\s+/g) || []
+          if (numberedLines.length === 1) {
+            normalizedChunk = normalizedChunk.replace(/(^|\n)(\s*)\d+\.\s+/, '$1$2')
+          }
+          return `**Bot:** ${normalizedChunk}`
+        })
+        .join('\n')
+      return `**Usuario:** ${you}\n${renderedBotLines}`
+    })
+    .join('\n\n')
+}
+
+/**
+ * Rewrites all CONVERSATION sections and the REPORT LLM section of an individual
  * use-case file (docs/cliente-0/usecases/caseNN-*.md).
  * SCENARIO and ACCEPTANCE CRITERIA are never modified.
+ * Each named conversation is rendered under its own ## CONVERSATION — <name> header.
+ * The REPORT shows ALL acceptance criteria with ✅/❌ so it is immediately clear
+ * which ones passed and which ones failed.
  */
 async function updateUsecaseMd(
   caseNumber: number,
   passed: boolean,
   failures: string[],
-  conversation: Array<{you: string, bot: string}> = [],
+  namedConversations: Array<{ scenarioName: string; turns: Array<{you: string, bot: string}> }> = [],
 ): Promise<void> {
   const mdPath = await findUsecaseFile(caseNumber)
   if (!mdPath) {
@@ -3061,10 +2955,13 @@ async function updateUsecaseMd(
   const criteriaTexts = existingCriteriaRaw
     .split('\n')
     .map((l: string) => l.replace(/^\s*-\s*(?:✅|❌)?\s*/, '').trim())
-    .filter((l: string) => l && !/^_?sin criterios/i.test(l))
+    .filter((l: string) => l && !/^_?sin criterios/i.test(l) && !/^[-_]{2,}$/.test(l))
 
-  // Evaluate the dialog via LLM.
-  const detailedEval = await evaluateCriteriaDetailedWithLLM(criteriaTexts, conversation, scenarioText)
+  // Combine all turns for LLM evaluation so criteria that only appear in one
+  // scenario path (e.g. escalation-specific) are still assessed correctly.
+  const allTurns = namedConversations.flatMap(({ turns }) => turns)
+
+  const detailedEval = await evaluateCriteriaDetailedWithLLM(criteriaTexts, allTurns, scenarioText)
 
   if (DEBUG_MODE) {
     const criteriaEval = detailedEval.assessments.reduce<Record<string, boolean>>((acc, item) => {
@@ -3074,89 +2971,81 @@ async function updateUsecaseMd(
     printCliMessage('Info', `Case ${caseNumber} criteria eval: ${JSON.stringify(criteriaEval)}`)
   }
 
-  const reason = failures.length > 0
-    ? `fallos detectados: ${failures.join(' | ')}`
-    : 'evaluación LLM generada'
+  // Render one ## CONVERSATION block per named scenario.
+  const allConversationBlocks = namedConversations
+    .map(({ scenarioName, turns }) =>
+      `## CONVERSATION — ${scenarioName}\n\n${renderConversationTurns(turns)}`,
+    )
+    .join('\n\n---\n\n')
 
-  // Render conversation block.
-  const conversationLines = conversation.length > 0
-    ? conversation
-      .map(({you, bot}) => {
-        const botChunks = bot
-          .split(BOT_MESSAGE_SEPARATOR)
-          .map((chunk) => chunk.trim())
-          .filter(Boolean)
-        const renderedBotLines = (botChunks.length > 0 ? botChunks : [bot.trim()])
-          .map((chunk) => {
-            let normalizedChunk = chunk
-            const numberedLines = normalizedChunk.match(/(^|\n)\s*\d+\.\s+/g) || []
-            if (numberedLines.length === 1) {
-              normalizedChunk = normalizedChunk.replace(/(^|\n)(\s*)\d+\.\s+/, '$1$2')
-            }
-            return `**Bot:** ${normalizedChunk}`
-          })
-          .join('\n')
-        return `**Usuario:** ${you}\n${renderedBotLines}`
+  // Render REPORT showing ALL criteria with ✅/❌ so Andrea sees the full picture.
+  const reportLines = detailedEval.assessments.length > 0
+    ? detailedEval.assessments
+      .map((item) => {
+        if (item.passed) {
+          return `- ✅ ${item.criterion}`
+        }
+        const evidence = item.evidence.length > 0 ? ` | Evidencia: ${item.evidence.join(' || ')}` : ''
+        return `- ❌ ${item.criterion} — ${item.reason}${evidence}`
       })
-      .join('\n\n')
-    : '_Sin diálogo registrado._'
+      .join('\n')
+    : '- _Sin criterios evaluados._'
 
-  // Render report block.
-  const failedAssessments = detailedEval.assessments.filter((item) => !item.passed)
-  const reportLines = failedAssessments.length > 0
-    ? failedAssessments.map((item) => {
-      const evidence = item.evidence.length > 0 ? ` | Evidencia: ${item.evidence.join(' || ')}` : ''
-      return `- ❌ ${item.criterion} — ${item.reason}${evidence}`
-    }).join('\n')
-    : '- Ningun criterio fallido.'
+  // Locate the first CONVERSATION header and the REPORT LLM header to replace the whole block.
+  const firstConvPos = content.search(/##[ \t]*CONVERSATION[^\n]*/i)
+  const reportPos = content.search(/\n##[ \t]*REPORT LLM/i)
 
-  // Replace only CONVERSATION and REPORT sections; keep everything above intact.
-  const conversationSectionRe = /(##\s*CONVERSATION\s*\n)[\s\S]*?(?=\n##\s*REPORT LLM|\n##\s*EVALUACI|$)/i
-  const reportSectionRe = /(##\s*REPORT LLM\s*\n)[\s\S]*?$/i
-
-  let updated = content
-
-  // Replace CONVERSATION section.
-  if (conversationSectionRe.test(updated)) {
-    updated = updated.replace(conversationSectionRe, `$1\n${conversationLines}\n`)
+  let updated: string
+  if (firstConvPos !== -1 && reportPos !== -1) {
+    // Replace everything from first CONVERSATION header up to (not including) \n## REPORT LLM.
+    const before = content.substring(0, firstConvPos)
+    const afterReport = content.substring(reportPos) // starts with \n## REPORT LLM...
+    updated = before + allConversationBlocks + '\n' + afterReport
+  } else if (firstConvPos !== -1) {
+    updated = content.substring(0, firstConvPos) + allConversationBlocks
   } else {
-    updated = updated.trimEnd() + `\n\n## CONVERSATION\n\n${conversationLines}\n`
+    updated = content.trimEnd() + '\n\n' + allConversationBlocks
   }
 
-  // Replace REPORT LLM section.
+  // Replace REPORT LLM section content.
+  const reportSectionRe = /(##[ \t]*REPORT LLM[ \t]*\r?\n)[\s\S]*?$/i
   if (reportSectionRe.test(updated)) {
-    updated = updated.replace(
-      reportSectionRe,
-      `$1\n${reportLines}\n`,
-    )
+    updated = updated.replace(reportSectionRe, `$1\n${reportLines}\n`)
   } else {
     updated = updated.trimEnd() + `\n\n## REPORT LLM\n\n${reportLines}\n`
   }
 
-  // Keep section spacing stable even after multiple rewrites or manual bulk edits.
-  // Enforce exactly one blank line after key headers, even when whitespace-only lines exist.
-  updated = updated
-    .replace(
-      /(##[ \t]*(?:SCENARIO|ACCEPTANCE CRITERIA|CONVERSATION|REPORT LLM)[ \t]*\r?\n)(?:[ \t]*\r?\n)*/gi,
-      '$1\n',
-    )
+  // Enforce exactly one blank line after each key header for stable diffs.
+  updated = updated.replace(
+    /(##[ \t]*(?:SCENARIO|ACCEPTANCE CRITERIA|REPORT LLM)[ \t]*\r?\n)(?:[ \t]*\r?\n)*/gi,
+    '$1\n',
+  )
 
   await writeFile(mdPath, updated, 'utf8')
   printCliMessage('Info', `Evaluation written to usecases/${path.basename(mdPath)} → Case ${caseNumber}.`)
 }
 
 async function runUsecaseSuite(runtime: Runtime): Promise<void> {
-  const demoDir = getDemoDir()
+  const demoDir = path.resolve(getDemoDir(), '..')
   const fallbackAll = JSON.parse(
-    await readFile(path.join(demoDir, 'usecases_test.json'), 'utf8'),
+    await readFile(path.join(demoDir, 'json', 'usecases_test.json'), 'utf8'),
   ) as UsecaseScenario[]
 
-  const loadScenarioForCase = async (caseNumber: number): Promise<UsecaseScenario | null> => {
-    const jsonPath = await findUsecaseScenarioJson(caseNumber)
-    if (jsonPath) {
-      return JSON.parse(await readFile(jsonPath, 'utf8')) as UsecaseScenario
+  // Load ALL scenario JSON files for a case. Falls back to usecases_test.json entry.
+  const loadScenariosForCase = async (
+    caseNumber: number,
+  ): Promise<Array<{ name: string; scenario: UsecaseScenario }>> => {
+    const jsonPaths = await findUsecaseScenarioJsons(caseNumber)
+    if (jsonPaths.length > 0) {
+      const results: Array<{ name: string; scenario: UsecaseScenario }> = []
+      for (const jsonPath of jsonPaths) {
+        const scenario = JSON.parse(await readFile(jsonPath, 'utf8')) as UsecaseScenario
+        results.push({ name: scenario.name, scenario })
+      }
+      return results
     }
-    return fallbackAll[caseNumber - 1] || null
+    const fallback = fallbackAll[caseNumber - 1]
+    return fallback ? [{ name: fallback.name, scenario: fallback }] : []
   }
 
   let caseNumbersToRun: number[] = []
@@ -3170,18 +3059,23 @@ async function runUsecaseSuite(runtime: Runtime): Promise<void> {
     caseNumbersToRun = fallbackAll.map((_, i) => i + 1)
   }
 
-  const pairs: Array<{ caseNumber: number; scenario: UsecaseScenario }> = []
+  // Build case groups: each case may have multiple scenario files.
+  type CaseGroup = {
+    caseNumber: number
+    scenarios: Array<{ name: string; scenario: UsecaseScenario }>
+  }
+  const caseGroups: CaseGroup[] = []
   for (const caseNumber of caseNumbersToRun) {
-    const scenario = await loadScenarioForCase(caseNumber)
-    if (scenario) {
-      pairs.push({ caseNumber, scenario })
+    const scenarios = await loadScenariosForCase(caseNumber)
+    if (scenarios.length > 0) {
+      caseGroups.push({ caseNumber, scenarios })
     }
   }
 
-  const toRun = pairs.map((p) => p.scenario)
+  const totalScenarios = caseGroups.reduce((sum, g) => sum + g.scenarios.length, 0)
   const writeEvaluationForSelection = USECASE_NUM !== null || USECASE_RANGE !== null
 
-  if (toRun.length === 0) {
+  if (totalScenarios === 0) {
     const selected = USECASE_NUM !== null
       ? `--usecase ${USECASE_NUM}`
       : (USECASE_RANGE !== null ? `--usecase-range ${USECASE_RANGE.start}-${USECASE_RANGE.end}` : '--usecases')
@@ -3191,50 +3085,55 @@ async function runUsecaseSuite(runtime: Runtime): Promise<void> {
   }
 
   const label = USECASE_NUM !== null
-    ? `Usecase ${USECASE_NUM}`
+    ? `Case ${USECASE_NUM} (${caseGroups[0]?.scenarios.length ?? 0} scenario/s)`
     : USECASE_RANGE !== null
-      ? `Usecases ${USECASE_RANGE.start}-${USECASE_RANGE.end}`
-    : `${toRun.length} acceptance-criteria scenarios`
+      ? `Cases ${USECASE_RANGE.start}-${USECASE_RANGE.end} (${totalScenarios} scenario/s)`
+      : `${caseGroups.length} cases, ${totalScenarios} scenarios`
 
   printCliBanner('Cliente-0 Usecase Suite', `Running ${label} with assertions.`)
 
   const allFailures: string[] = []
 
-  for (const [runIdx, scenario] of toRun.entries()) {
-    const scenarioNumber = pairs[runIdx]?.caseNumber ?? (runIdx + 1)
-    const state = createInitialState()
+  for (const { caseNumber, scenarios } of caseGroups) {
+    printCliBanner(`Case ${caseNumber} — ${scenarios.length} scenario/s`)
 
-    // Pre-populate state from scenario.preState (allows skipping context-collection turns)
-    if (scenario.preState) {
-      Object.assign(state, scenario.preState)
-    }
+    const namedConversations: Array<{ scenarioName: string; turns: Array<{you: string, bot: string}> }> = []
+    const caseFailures: string[] = []
 
-    printCliBanner(`Usecase ${scenarioNumber}/${toRun.length}: ${scenario.name}`)
+    for (const { name: scenarioName, scenario } of scenarios) {
+      printCliBanner(`  ${scenarioName}`)
 
-    const scenarioFailures: string[] = []
-    const conversationLog: Array<{you: string, bot: string}> = []
+      const state = createInitialState()
+      if (scenario.preState) {
+        Object.assign(state, scenario.preState)
+      }
 
-    for (const [turnIndex, turn] of scenario.turns.entries()) {
-      printCliMessage('You', turn)
-      const result = await handleTurn(runtime, state, turn)
-      printCliMessage('Bot', result.reply)
-      conversationLog.push({ you: turn, bot: result.reply })
-      if (DEBUG_MODE) printDebug(result.debug)
+      const conversationLog: Array<{you: string, bot: string}> = []
 
-      const assertions = scenario.assertions.filter((assertion) => assertion.turn === turnIndex + 1)
-      for (const assertion of assertions) {
-        const assertionFailures = assertRegressionReply(result.reply, assertion)
-        for (const failure of assertionFailures) {
-          const msg = `[${scenario.name}] turn ${assertion.turn}: ${failure}`
-          scenarioFailures.push(msg)
-          allFailures.push(msg)
+      for (const [turnIndex, turn] of scenario.turns.entries()) {
+        printCliMessage('You', turn)
+        const result = await handleTurn(runtime, state, turn)
+        printCliMessage('Bot', result.reply)
+        conversationLog.push({ you: turn, bot: result.reply })
+        if (DEBUG_MODE) printDebug(result.debug)
+
+        const assertions = scenario.assertions.filter((a) => a.turn === turnIndex + 1)
+        for (const assertion of assertions) {
+          const assertionFailures = assertRegressionReply(result.reply, assertion)
+          for (const failure of assertionFailures) {
+            const msg = `[${scenarioName}] turn ${assertion.turn}: ${failure}`
+            caseFailures.push(msg)
+            allFailures.push(msg)
+          }
         }
       }
+
+      namedConversations.push({ scenarioName, turns: conversationLog })
     }
 
-    // Write per-scenario evaluation when running a selected subset (single case or range).
+    // Write one evaluation per case (all scenarios combined) when running a selection.
     if (writeEvaluationForSelection) {
-      await updateUsecaseMd(scenarioNumber, scenarioFailures.length === 0, scenarioFailures, conversationLog)
+      await updateUsecaseMd(caseNumber, caseFailures.length === 0, caseFailures, namedConversations)
     }
   }
 

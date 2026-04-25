@@ -4,7 +4,7 @@ Reply with valid JSON only.
 
 ```json
 {
-  "language": "it|es|en|pt"
+  "language": "it|es|en|pt|ca|fr"
 }
 ```
 

@@ -1,4 +1,5 @@
 {
+  "_principle": "NO HARDCODED KEYWORD MATCHING. All intent classification, language detection and free-text-to-choice mapping go through the LLM. The flow engine only matches deterministic enumerated tokens (numeric option keys, exact display codes/icons, yes/no confirmations). Free-text customer replies must be classified by the LLM via classifyChoiceViaLLM, never by regex on the message.",
   "non_parte": {
     "step_0": {
       "type": "CONFIRMATION",
@@ -86,7 +87,7 @@
 
     "check_result": {
       "type": "CONFIRMATION",
-      "prompt": "Has the dryer started now?",
+      "prompt": "Once you've done that, let me know if the dryer has started working.",
       "transitions": {
         "YES": "non_parte.end_success",
         "NO": "non_parte.fallback"
@@ -95,7 +96,7 @@
 
     "fallback": {
       "type": "INFO",
-      "prompt": "Please use another dryer. The case will be reviewed manually by an operator.",
+      "prompt": "We are sorry for the inconvenience. Please use another dryer for now. The case will be reviewed manually by an operator.",
       "isTerminal": true,
       "action": "escalate"
     },
@@ -191,7 +192,7 @@
 
     "check_result": {
       "type": "CONFIRMATION",
-      "prompt": "Did this solve the problem?",
+      "prompt": "Once you've done that, let me know if it has started working now.",
       "transitions": {
         "YES": "errore_reset.end_success",
         "NO": "errore_reset.fallback"

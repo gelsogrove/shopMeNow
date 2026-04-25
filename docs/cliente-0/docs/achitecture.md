@@ -1,7 +1,7 @@
 # FLOW Architecture — Ecolaundry
 
 > Single source of truth for the FLOW chatbot.
-> Visual source of truth: `docs/cliente-0/flows/LLMarchetecture.png`.
+> Visual source of truth: `docs/cliente-0/docs/LLMarchetecture.png`.
 
 ---
 
@@ -378,7 +378,208 @@ Customer Message
 
 ---
 
-## 9. Scenario Examples
+## 9. Anti-Hardcode Rule
+
+**The system must never detect intent by matching strings or phrases.**
+
+### Why
+
+The chatbot is multilingual (Spanish, Italian, Portuguese, Catalan, French, English).
+Any hardcoded phrase check breaks silently when the customer uses a synonym, a typo, or another language.
+
+### What is forbidden
+
+```typescript
+// ❌ FORBIDDEN — hardcoded intent detection
+if (message.includes("no arranca")) { ... }
+if (/no funciona|non funziona/.test(message)) { ... }
+const keywords = ["ordine", "order"] // ❌
+
+// ❌ FORBIDDEN — per-language switch cases for customer-facing strings
+function getLocalizedWelcome(lang) {
+  if (lang === 'es') return 'Hola, soy tu asistente...'  // ❌ — Translation LLM handles this
+  if (lang === 'ca') return 'Hola, soc el teu assistent...'  // ❌
+}
+
+// ❌ FORBIDDEN — injecting language-specific text in the orchestrator
+function injectSpanishEscalationClosure(message) { ... }  // ❌
+```
+
+### What is allowed
+
+```typescript
+// ✅ ALLOWED — normalizing finite machine hardware codes
+normalizeDisplayState("PUSH PROG")  // → "PUSH"  (hardware codes, not language)
+
+// ✅ ALLOWED — small LLM call to classify ambiguous free-text input
+classifyChoiceViaLLM(node, userInput)  // max 20 tokens, maps input → choice key
+
+// ✅ ALLOWED — numeric selection
+if (/^\d+$/.test(input)) ...  // user picks a numbered option
+
+// ✅ ALLOWED — yes/no confirmation
+normalizeConfirmation(input)  // sí/no/ok/yes/no
+```
+
+### The rule
+
+| Responsibility | Who handles it |
+|---|---|
+| Intent classification | Router LLM |
+| Customer-facing text, tone, translation | Conversation History LLM |
+| Ambiguous choice resolution in active flow | classifyChoiceViaLLM (micro-LLM) |
+| Normalizing hardware display codes | `normalizeDisplayState()` — deterministic, finite set |
+
+---
+
+## 10. Full Runtime Pipeline
+
+The complete runtime sequence for one customer message is:
+
+```text
+Customer Message
+  │
+  ▼
+[STEP 1] Pre-Router Fact Extractor (deterministic, no LLM)
+  - Reads raw message before the Router sees it
+  - Extracts: location, machineType, machineNumber, displayState, paymentCompleted
+  - Uses pattern rules for finite hardware codes (SEL, PUSH, AL001, etc.)
+  - Updates SessionState directly
+  - Result: enriched message / extracted facts list passed to Router
+  │
+  ▼
+[STEP 2] Router LLM
+  - Receives: enriched message + current SessionState
+  - Outputs: RouterDecision (route, functionName, extractedFacts, missingFacts, customerFacingGoal)
+  - Does NOT speak to customer
+  - Does NOT own tone or wording
+  │
+  ▼
+[STEP 3] Router Safety Corrector (deterministic, no LLM)
+  - Runs after Router, before downstream
+  - Overrides incorrect Router decisions using session context:
+    - double-charge path enforcement
+    - no-foam FAQ override
+    - prevent false resetSession() when machine context exists
+    - re-route to washer/dryer when machineType is already known
+  - Reason: Router LLM can hallucinate or miss session state — this corrector is the safety net
+  │
+  ▼
+[STEP 4a] — if route = washer or dryer:
+  Specialist LLM (Washer or Dryer)
+    - Receives: session state + technical problem description
+    - Outputs: SpecialistDecision (flowId, shouldEscalate, technicalSummary)
+    - Does NOT speak to customer
+    │
+    ▼
+  [STEP 4b] — if Specialist returns a flowId:
+    Flow Engine (deterministic, no LLM)
+      - Reads JSON flow nodes and transitions
+      - Advances the active step
+      - For CHOICE nodes with free-text input:
+          classifyChoiceViaLLM (micro-LLM, max 20 tokens)
+          → maps customer reply to a choice key
+      - Returns: FlowEngineResult (stepId, prompt, type, isTerminal, action)
+  │
+  ▼
+[STEP 5] Conversation History LLM  ← single call: write + translate + security + welcome
+  - The ONLY customer-facing voice
+  - Receives: RouterDecision + SpecialistDecision + FlowEngineResult + SessionState
+  - Writes the final message DIRECTLY in the customer's language (per `language` in session state)
+  - On turn 1 (non-greeting): prepends warm welcome intro inline
+  - Runs inline security validation (injection, data exposure, harmful content, link policy)
+  - Returns JSON: {"message": "...", "safe": true/false}
+  - Must NOT invent technical facts
+  - Must NOT change the meaning of flow instructions
+  │
+  ▼
+[STEP 6] Calling Functions (if needed)
+  - contactOperator() — notifies human operator
+  - resetSession() — clears session state
+  - lavatrice_hs60xx(machineNumber) — starts washer flow
+  - asciugatrice_ed340(machineNumber) — starts dryer flow
+  │
+  ▼
+Response to Customer
+```
+
+---
+
+## 10b. Language & Translation Pipeline
+
+### Supported languages
+
+Configured in `demo/prompts/language.txt`:
+
+```
+it | es | en | pt | ca | fr
+```
+
+**To add a new language**: add the code to `language.txt`. Nothing else needs to change.
+
+### How it works
+
+```text
+Customer Message
+  → Language Detection LLM        (detects: it / es / en / pt / ca / fr)
+  → resolveLanguage()             (gates against settings.enabledLanguages → fallback to defaultLanguage)
+  → [session state: language = ca]
+  → Router → Specialist → Flow Engine
+  → History LLM                   (writes in ca, adds welcome on turn 1, checks security inline)
+  → {"message": "...", "safe": true}
+  → Customer
+```
+
+**LLM calls per turn: 3 min (lang heuristic + router + history) — 4 max (+ specialist or faq)**
+
+### Responsibilities
+
+| Layer | Responsibility |
+|---|---|
+| Language Detection LLM | Detects customer language (or heuristic, 0 calls) |
+| `resolveLanguage()` | Gates detected language against `settings.json` |
+| Conversation History LLM | Writes in customer's language + welcome on turn 1 + security inline |
+| `localization.ts` | Spanish-only base strings for `[EXACT]` questions — no switch/case |
+
+### The [EXACT] contract
+
+When a missing-fact question is injected as `[EXACT] ¿Has pagado?`:
+- History LLM translates it to the customer's language (e.g., Catalan: "Has pagat?")
+- Outputs only the translated text — nothing before, nothing after
+- Security is checked inline on the same output
+
+### Why translation.txt and security.txt are no longer loaded
+
+Both responsibilities are now inside `history.txt`.
+The files are kept for reference but not loaded at runtime.
+This eliminates 2 sequential LLM calls per turn.
+
+---
+
+## 11. Mock Layer (Demo / Test Only)
+
+The demo (`demo.ts`) includes a mock layer that replaces LLM calls during offline testing.
+
+**Mock functions are NOT production code.**
+
+| Mock function | Replaces in production |
+|---|---|
+| `routerMock()` | Router LLM call |
+| `specialistMock()` | Specialist LLM call |
+| `renderHistoryMock()` | Conversation History LLM call |
+| `chooseFaqSourceMock()` | Router FAQ intent + Conversation History LLM |
+| `translateMock()` | Conversation History LLM (translation) |
+| `detectLanguageMock()` | Language Detection LLM call |
+| `normalizeGeneratedMessage()` | Should not exist in production — belongs in Conversation History prompt |
+| `getLocalized*()` functions | Should not exist in production — belong in Conversation History prompt |
+| `injectSpanish*()` functions | Should not exist in production — belong in Conversation History prompt |
+
+The mock layer exists to make usecases runnable without an API key.
+In production all of these responsibilities move into the LLM prompt layers.
+
+---
+
+## 12. Scenario Examples
 
 ### Scenario A: Greeting
 
@@ -508,10 +709,10 @@ Conversation History writes the final message.
 ## 13. Prompt Alignment Rules
 
 If you change this architecture, you must immediately realign these files:
-- `docs/cliente-0/flows/prompt1-router.md`
-- `docs/cliente-0/flows/subllm-laundry.md`
-- `docs/cliente-0/flows/subllm-asciugatrice.md`
-- `docs/cliente-0/flows/prompt3-history.md`
+- `docs/cliente-0/docs/prompt1-router.md`
+- `docs/cliente-0/docs/subllm-laundry.md`
+- `docs/cliente-0/docs/subllm-asciugatrice.md`
+- `docs/cliente-0/docs/prompt3-history.md`
 
 The expected prompt ownership is now:
 - `prompt1-router.md` -> routing only
@@ -527,27 +728,27 @@ The expected prompt ownership is now:
 
 | Role | File | Path |
 |---|---|---|
-| Router | [prompt1-router.md](./prompt1-router.md) | `docs/cliente-0/flows/prompt1-router.md` |
-| Washer Specialist | [subllm-laundry.md](./subllm-laundry.md) | `docs/cliente-0/flows/subllm-laundry.md` |
-| Dryer Specialist | [subllm-asciugatrice.md](./subllm-asciugatrice.md) | `docs/cliente-0/flows/subllm-asciugatrice.md` |
-| Conversation History | [prompt3-history.md](./prompt3-history.md) | `docs/cliente-0/flows/prompt3-history.md` |
-| Escalation | [prompt4_contact.md](./prompt4_contact.md) | `docs/cliente-0/flows/prompt4_contact.md` |
-| Reset | [prompt5_reset.md](./prompt5_reset.md) | `docs/cliente-0/flows/prompt5_reset.md` |
+| Router | [prompt1-router.md](./prompt1-router.md) | `docs/cliente-0/docs/prompt1-router.md` |
+| Washer Specialist | [subllm-laundry.md](./subllm-laundry.md) | `docs/cliente-0/docs/subllm-laundry.md` |
+| Dryer Specialist | [subllm-asciugatrice.md](./subllm-asciugatrice.md) | `docs/cliente-0/docs/subllm-asciugatrice.md` |
+| Conversation History | [prompt3-history.md](./prompt3-history.md) | `docs/cliente-0/docs/prompt3-history.md` |
+| Escalation | [prompt4_contact.md](./prompt4_contact.md) | `docs/cliente-0/docs/prompt4_contact.md` |
+| Reset | [prompt5_reset.md](./prompt5_reset.md) | `docs/cliente-0/docs/prompt5_reset.md` |
 
 ### Flow JSON
 
 | Role | File | Path |
 |---|---|---|
-| Washer flow | [lavatrice_hs60xx.json](./json/lavatrice_hs60xx.json) | `docs/cliente-0/flows/json/lavatrice_hs60xx.json` |
-| Dryer flow | [asciugatrice_ed340.json](./json/asciugatrice_ed340.json) | `docs/cliente-0/flows/json/asciugatrice_ed340.json` |
+| Washer flow | [lavatrice_hs60xx.json](./json/lavatrice_hs60xx.json) | `docs/cliente-0/docs/json/lavatrice_hs60xx.json` |
+| Dryer flow | [asciugatrice_ed340.json](./json/asciugatrice_ed340.json) | `docs/cliente-0/docs/json/asciugatrice_ed340.json` |
 
 ### Supporting docs
 
 | Role | File | Path |
 |---|---|---|
-| Scenarios | [escenario.md](./escenario.md) | `docs/cliente-0/flows/escenario.md` |
-| Variables | [variables.md](./variables.md) | `docs/cliente-0/flows/variables.md` |
-| Visual architecture | [LLMarchetecture.png](./LLMarchetecture.png) | `docs/cliente-0/flows/LLMarchetecture.png` |
+| Scenarios | [escenario.md](./escenario.md) | `docs/cliente-0/docs/escenario.md` |
+| Variables | [variables.md](./variables.md) | `docs/cliente-0/docs/variables.md` |
+| Visual architecture | [LLMarchetecture.png](./LLMarchetecture.png) | `docs/cliente-0/docs/LLMarchetecture.png` |
 
 ---
 

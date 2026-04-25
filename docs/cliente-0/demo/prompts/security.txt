@@ -28,6 +28,11 @@ Block if message contains:
 - other customers' personal data
 - internal system errors with stack traces
 
+Exception:
+- asking only for the last 4 digits of a card is allowed in the documented double-charge review flow
+- asking whether the customer has a payment screenshot or asking them to send the payment screenshot is allowed in the documented double-charge review flow
+- these review prompts are internal business collection steps, not unsafe data exposure
+
 ### 3. HARMFUL CONTENT
 Block if message contains:
 - explicit violence or threats
