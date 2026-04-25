@@ -182,14 +182,14 @@
 
     "soaking_wet": {
       "type": "INFO",
-      "prompt": "Very wet clothes usually mean the washer did not spin correctly.\n\n1. Do not keep drying soaking wet clothes.\n2. The load may need to be washed again with better balance.\n3. I’m notifying the operator to review the case.",
+      "prompt": "Very wet clothes usually mean the washer did not spin correctly.\n\n1. Do not keep drying dripping wet clothes. The dryer will not dry them properly and the filter can be damaged.\n2. Wash the clothes again, separating the load into two washers so the spin can work correctly.\n3. Starting that new wash requires a new payment.\n4. If you rewash the clothes separated and the previous wash did not spin, the operator can review possible compensation.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "normal_damp": {
       "type": "ACTION",
-      "prompt": "If the clothes are still damp after the cycle:\n\n1. Spread the clothes well in the drum.\n2. Clean the lint filter.\n3. Add more drying time and press **PAUSE** to continue.",
+      "prompt": "If the clothes are still damp after the cycle:\n\n1. Make sure the load is not too large and spread the clothes well in the drum, not in a ball.\n2. Check that the washer spun correctly before drying.\n3. Clean the lint filter if needed.\n4. Add more drying time and press **PAUSE** to continue or restart the dryer.",
       "transitions": {
         "default": "errore_reset.check_result_2"
       }
@@ -233,21 +233,21 @@
 
     "damage_burnt": {
       "type": "INFO",
-      "prompt": "I'm sorry this happened. Burnt or melted clothes need manual review. Compensation is not automatic.",
+      "prompt": "I'm sorry this happened. Burnt or melted clothes usually mean the drying temperature was not suitable for that fabric.\n\n1. Check the garment labels and follow the manufacturer instructions before drying.\n2. Refund or compensation is usually not applicable.\n3. The case can still be reviewed manually in case insurance review is needed.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "damage_plastic": {
       "type": "INFO",
-      "prompt": "I'm sorry this happened. Plastic residue cases need manual review. Compensation is not automatic.",
+      "prompt": "I'm sorry this happened. Plastic stuck to clothes usually means the drum was not checked before use.\n\n1. It is important to inspect the drum before putting clothes inside.\n2. Refund or compensation is usually not applicable.\n3. The case can still be reviewed manually in case insurance review is needed.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "damage_stained": {
       "type": "INFO",
-      "prompt": "I'm sorry this happened. Stain cases may require a new wash and manual review of possible help.",
+      "prompt": "I'm sorry this happened. Stains after drying may come from damage left in the drum by a previous customer.\n\n1. Wash the clothes again after pre-treating the stains.\n2. At most, the operator can review a free replacement wash.\n3. I'm notifying the operator to review the case.",
       "isTerminal": true,
       "action": "escalate"
     },

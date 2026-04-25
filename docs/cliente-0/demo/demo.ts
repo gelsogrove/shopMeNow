@@ -46,8 +46,8 @@ type FlowEngineResult = {
 }
 
 type SessionState = {
-  language: 'it' | 'es' | 'en' | 'pt'
-  preferredLanguage: 'it' | 'es' | 'en' | 'pt' | null
+  language: 'it' | 'es' | 'en' | 'pt' | 'ca' | 'fr'
+  preferredLanguage: 'it' | 'es' | 'en' | 'pt' | 'ca' | 'fr' | null
   location: string
   machineType: '' | 'washer' | 'dryer'
   machineNumber: string
@@ -117,6 +117,7 @@ const FAQS = {
   doubleCharge: 'Para verificar el doble cobro necesitamos: nombre del local, si completaste el servicio o no, últimos 4 dígitos de la tarjeta y captura de pantalla del pago. Si completaste el servicio: te enviaremos el formulario de reembolso https://forms.gle/XFGPAd9581AhC9eu7. Si no lo completaste: la próxima vez, antes de volver a pagar, contáctanos y te ayudamos de inmediato. Escalamos si el importe no cuadra, el relato es confuso o el cliente está muy molesto.',
   paidButNotStarting: 'Si pagaste pero la máquina no arranca, necesitamos saber el local, si es lavadora o secadora, y qué indica el display. PUSH PROG: pulsa el programa deseado. DOOR: abre y cierra bien la puerta. 001: posible error de secuencia, lo revisamos juntos. Si la central no dio el cambio: verifica el saldo en la central y pulsa el botón correcto. Escalamos si ha seguido todos los pasos y sigue sin funcionar.',
   errorAl001: 'El error AL001 aparece cuando el proceso no se ha realizado en el orden correcto. Te ayudamos a completarlo paso a paso. Escalamos si el cliente no puede seguir las instrucciones o el error persiste.',
+  occupiedMachine: 'Si otra persona ha terminado su lavado pero sigue ocupando la lavadora, puedes sacar la ropa y dejarla en una mesa de la lavandería para poder usar la máquina. Si la otra persona tiene una queja, puede escribir a service@alberwaz.net. Si el caso sigue siendo conflictivo, lo revisará un operador.',
   compensationCode: 'Para usar el código necesitamos el código exacto, el nombre del local y el importe. Si falta un pequeño importe, introduce las monedas que faltan en la central. Se l\'importo è superiore al codice, escalamos para generar un código nuevo. Escalamos si el código es incoherente, le faltan letras o hace falta un código nuevo.',
   refundRequest: 'Para tramitar un reembolso necesitamos los últimos 4 dígitos de la tarjeta, captura de pantalla del pago y descripción de lo ocurrido. Formulario de reembolso: https://forms.gle/XFGPAd9581AhC9eu7. Email de soporte: service@alberwaz.net. Escalamos si la solicitud es urgente o la incidencia es compleja.',
   invoiceRequest: 'Escribe a olga@alberwaz.net. Indica razón social, email, nombre de la lavandería, CIF o NIF, dirección, fecha, detalle de las máquinas utilizadas y observaciones.',
@@ -152,6 +153,38 @@ const SCRIPTED_SCENARIOS: ScriptedScenario[] = [
   {
     name: 'language-switch-spanish',
     turns: ['hola, la lavadora no funciona', '3', 'sí', 'SEL'],
+  },
+  {
+    name: 'washer-paid-no-start-order',
+    turns: ['Goya', 'lavatrice', '3', 'ho messo i soldi ma non parte', 'PUSH'],
+  },
+  {
+    name: 'washer-direct-price-display',
+    turns: ['lavatrice 5, display 12.00'],
+  },
+  {
+    name: 'washer-occupied-machine-policy',
+    turns: ['la lavadora de otra persona ha terminado pero sigue ocupando la máquina'],
+  },
+  {
+    name: 'dryer-soaking-wet-clothes',
+    turns: ['asciugatrice 7', 'sì ho pagato', 'i vestiti sono usciti fradici dalla lavatrice', 'yes'],
+  },
+  {
+    name: 'dryer-burnt-clothes',
+    turns: ['asciugatrice 2', 'dopo il secado la ropa ha salido quemada'],
+  },
+  {
+    name: 'washer-extra-profit-plus',
+    turns: ['Girona', 'lavatrice', '3', 'sì ho pagato', 'algún botón EXTRA tiene la luz fija', 'no'],
+  },
+  {
+    name: 'washer-stop-first-time',
+    turns: ['Girona', 'lavatrice', '3', 'he pulsado STOP para cambiar el programa', 'no', 'yes'],
+  },
+  {
+    name: 'washer-alarm-persists',
+    turns: ['Girona', 'lavatrice', '4', 'sì ho pagato', 'ALM/E', 'no', 'nothing changed'],
   },
 ]
 
@@ -284,18 +317,29 @@ function printCliMessage(label: 'You' | 'Bot' | 'Info' | 'Error', message: strin
 
 function normalizeDisplayState(displayState: string): string {
   const normalized = displayState.trim().toUpperCase().replace(/\s+/g, ' ')
+  if (/END.*BAL|BAL.*END/.test(normalized)) return 'END_BAL'
+  if (/^ALM\/?A$/.test(normalized)) return 'ALM/A'
+  if (/^ALM\/?E$/.test(normalized)) return 'ALM/E'
+  if (/^ALM\/?DOOR$/.test(normalized)) return 'ALM/DOOR'
+  if (/^ALM\/?VAR$/.test(normalized)) return 'ALM/VAr'
   if (/^ALM\s*0*01$/.test(normalized.replace(/ /g, '')) || normalized === 'AL001') {
     return 'AL001'
   }
+  if (/^\d{1,2}[.,]\d{2}$/.test(normalized)) return 'PRICE'
   return normalized
 }
 
 function extractDisplayState(message: string): string | null {
   const trimmed = message.trim()
+  if (/END.*bAL|bAL.*END/i.test(trimmed)) return 'END_BAL'
+  if (/\b\d{1,2}[.,]\d{2}\b/.test(trimmed)) return 'PRICE'
   const alarm001Match = trimmed.match(/\bALM\s*0*01\b/i)
   if (alarm001Match) return 'AL001'
 
-  const genericMatch = trimmed.match(/\b(SEL|PUSH|PR|DOOR|ALM|AL001|END|FILTRO|FALLO DE ROTACION|FALLO DE ASPIRACION|STOP|water)\b/i)
+  const specificAlarmMatch = trimmed.match(/\b(ALM\/?A|ALM\/?E|ALM\/?DOOR|ALM\/?V(?:AR|Ar))\b/i)
+  if (specificAlarmMatch) return normalizeDisplayState(specificAlarmMatch[1])
+
+  const genericMatch = trimmed.match(/\b(SEL|PUSH|PR|DOOR|ALM|AL001|END|ON|FILTRO|FALLO DE ROTACION|FALLO DE ASPIRACION|STOP|water)\b/i)
   if (!genericMatch) return null
   return normalizeDisplayState(genericMatch[1])
 }
@@ -320,11 +364,6 @@ function hasOperationalContextIntent(message: string): boolean {
 
 function hasTroubleshootingIntent(message: string): boolean {
   return hasTechnicalIssueIntent(message) || hasOperationalContextIntent(message)
-}
-
-function isStartOrPaymentIssue(message: string): boolean {
-  const normalized = message.trim().toLowerCase()
-  return /non parte|does not start|no arranca|no funciona|non funziona|he introducido el dinero|introdujiste el dinero|ho messo i soldi|inserito i soldi|ho pagato|paid/i.test(normalized)
 }
 
 function isClosureAcknowledgement(message: string): boolean {
@@ -391,9 +430,17 @@ function getRequestedLanguage(message: string): SessionState['language'] | null 
   const normalized = message.trim().toLowerCase()
   if (/(italiano|italian\b)/i.test(normalized)) return 'it'
   if (/(español|espanol|spanish\b)/i.test(normalized)) return 'es'
+  if (/(català|catala|catalan\b)/i.test(normalized)) return 'ca'
+  if (/(français|francais|french\b)/i.test(normalized)) return 'fr'
   if (/(portugu[eê]s|portuguese\b)/i.test(normalized)) return 'pt'
   if (/(inglese|english\b)/i.test(normalized)) return 'en'
   return null
+}
+
+function extractExplicitLocation(message: string): string | null {
+  const match = message.match(/\b(?:sono a|sono in|mi trovo a|estoy en|estoy a|i am in|i'm in|i am at)\s+([A-Za-zÀ-ÿ' -]{2,40})/i)
+  if (!match) return null
+  return match[1].split(/[.,!?]/)[0].trim()
 }
 
 function parsePaymentAnswer(message: string): boolean | null {
@@ -416,41 +463,74 @@ function parsePaymentAnswer(message: string): boolean | null {
 
 function preprocessUserInput(state: SessionState, userMessage: string): string {
   const trimmed = userMessage.trim()
-  if (isLikelyStandaloneLocationInput(state, trimmed)) {
-    state.location = trimmed
-    return `Location is ${trimmed}`
+  const extractedFacts: string[] = []
+
+  if (hasDryerPostCycleIssue(trimmed) && !state.machineType) {
+    state.machineType = 'dryer'
+    state.issueSummary = 'Dryer post-cycle wet clothes issue after multiple drying attempts.'
+    extractedFacts.push('Machine type is dryer')
   }
+
+  const explicitLocation = extractExplicitLocation(trimmed)
+  if (explicitLocation && !state.location) {
+    state.location = explicitLocation
+    extractedFacts.push(`Location is ${explicitLocation}`)
+  } else if (isLikelyStandaloneLocationInput(state, trimmed)) {
+    state.location = trimmed
+    extractedFacts.push(`Location is ${trimmed}`)
+  }
+
   const explicitMachineType = normalizeMachineType(trimmed)
   if (explicitMachineType && (!state.machineType || state.machineType !== explicitMachineType)) {
     state.machineType = explicitMachineType
-    return `Machine type is ${explicitMachineType}`
+    extractedFacts.push(`Machine type is ${explicitMachineType}`)
   }
+
   const explicitMachineNumber = trimmed.match(/(?:numero|num(?:ero)?|n\.?|machine number|macchina)\s*[:#-]?\s*(\d{1,3})\b/i)?.[1]
   if (explicitMachineNumber && state.machineType && !state.machineNumber) {
     state.machineNumber = explicitMachineNumber
-    return `Machine number is ${explicitMachineNumber}`
-  }
-  if (/^\d{1,3}$/.test(trimmed) && state.machineType && !state.machineNumber) {
+    extractedFacts.push(`Machine number is ${explicitMachineNumber}`)
+  } else if (/\b\d{1,3}\b/.test(trimmed) && state.machineType && !state.machineNumber) {
+    const inlineMachineNumber = trimmed.match(/\b(\d{1,3})\b/)?.[1]
+    if (inlineMachineNumber) {
+      state.machineNumber = inlineMachineNumber
+      extractedFacts.push(`Machine number is ${inlineMachineNumber}`)
+    }
+  } else if (/^\d{1,3}$/.test(trimmed) && state.machineType && !state.machineNumber) {
     state.machineNumber = trimmed
-    return `Machine number is ${trimmed}`
+    extractedFacts.push(`Machine number is ${trimmed}`)
   }
+
   const explicitDisplayState = extractDisplayState(trimmed)
   if (explicitDisplayState && state.machineType && !state.displayState) {
     state.displayState = explicitDisplayState
-    return `Display state is ${explicitDisplayState}`
+    extractedFacts.push(`Display state is ${explicitDisplayState}`)
   }
+
   if (state.machineType && state.paymentCompleted === null && !state.activeFlowId && !isAwaitingLocation(state)) {
     const parsedPaymentAnswer = parsePaymentAnswer(trimmed)
     if (parsedPaymentAnswer !== null) {
       state.paymentCompleted = parsedPaymentAnswer
-      return `Payment completed is ${parsedPaymentAnswer ? 'yes' : 'no'}`
+      extractedFacts.push(`Payment completed is ${parsedPaymentAnswer ? 'yes' : 'no'}`)
     }
   }
+
+  if (extractedFacts.length) {
+    return extractedFacts.join('; ')
+  }
+
   return userMessage
 }
 
 function isContextualHeuristicInput(originalInput: string, normalizedInput: string): boolean {
   return originalInput.trim() !== normalizedInput.trim()
+}
+
+function hasDryerPostCycleIssue(message: string): boolean {
+  const normalized = message.trim().toLowerCase()
+  const mentionsDrying = /secad|dry|asciug/i.test(normalized)
+  const mentionsWetOutcome = /empapad|mojad|wet|bagnat|humed/i.test(normalized)
+  return mentionsDrying && mentionsWetOutcome
 }
 
 function applyContextualRouterFallback(
@@ -481,6 +561,18 @@ function applyContextualRouterFallback(
       nextDecision.route = routedMachineType
       nextDecision.nextOwner = routedMachineType === 'washer' ? 'washer_specialist' : 'dryer_specialist'
     }
+  }
+
+  if (hasDryerPostCycleIssue(originalInput)) {
+    nextDecision.route = 'dryer'
+    nextDecision.nextOwner = 'dryer_specialist'
+    nextDecision.functionName = null
+    nextDecision.extractedFacts = {
+      ...nextDecision.extractedFacts,
+      machineType: 'dryer',
+      issueSummary: 'Dryer post-cycle wet clothes issue after multiple drying attempts.',
+    }
+    nextDecision.customerFacingGoal = 'Treat this as a dryer post-cycle wet-clothes issue and ask only the next required troubleshooting detail.'
   }
 
   if (nextDecision.route === 'washer' || nextDecision.route === 'dryer') {
@@ -613,6 +705,13 @@ function applySpecialistFallback(
         shouldEscalate: false,
       }
     }
+    if (hasDryerPostCycleIssue(issue)) {
+      return {
+        ...decision,
+        flowId: 'errore_reset',
+        shouldEscalate: false,
+      }
+    }
 
     if (decision.flowId) {
       return decision
@@ -657,9 +756,11 @@ function extractJson<T>(value: string, fallback: T): T {
   }
 }
 
-function detectLanguageMock(message: string): 'it' | 'es' | 'en' | 'pt' {
+function detectLanguageMock(message: string): 'it' | 'es' | 'en' | 'pt' | 'ca' | 'fr' {
   const normalized = message.toLowerCase()
   if (normalized.includes('hola') || normalized.includes('lavadora') || normalized.includes('secadora') || normalized.includes('sí') || normalized.includes('gracias')) return 'es'
+  if (normalized.includes('bon dia') || normalized.includes('rentadora') || normalized.includes('assecadora') || normalized.includes('gràcies')) return 'ca'
+  if (normalized.includes('bonjour') || normalized.includes('merci')) return 'fr'
   if (normalized.includes('ola') || normalized.includes('máquina') || normalized.includes('obrigado')) return 'pt'
   if (normalized.includes('hello') || normalized.includes('dryer') || normalized.includes('washer') || normalized.includes('thanks') || normalized.includes('paid')) return 'en'
   return 'it'
@@ -786,7 +887,7 @@ function specialistMock(message: string, state: SessionState): SpecialistDecisio
     }
   }
 
-  if (/filtro|rotacion|aspiracion|umid|wet|porta bloccata|door blocked|odore|smell|stop/i.test(lower)) {
+  if (/filtro|rotacion|aspiracion|umid|wet|porta bloccata|door blocked|odore|smell|stop|quemad|burnt|melted|plastico|plastic|manchad|stained/i.test(lower)) {
     return {
       flowId: 'errore_reset',
       shouldEscalate: false,
@@ -828,6 +929,7 @@ function chooseFaqSourceHeuristic(message: string): string | null {
   if (/mezclar ropa|mezclar colores|distintos colores|colori diversi/i.test(lower)) return FAQS.mixedColors
   if (/limpias|higienizadas|higiene|desinfectadas/i.test(lower)) return FAQS.machineHygiene
   if (/ecol[oó]gic|ecologic|productos ecol[oó]gicos|jabones ecol[oó]gicos/i.test(lower)) return FAQS.ecoProducts
+  if (/otra persona.*ocupando la m[aá]quina|ocupando la lavadora|lavado de otra persona.*ocupando|machine occupied|occupied machine/i.test(lower)) return FAQS.occupiedMachine
   if (/doble cobro|cobrado dos veces|charged twice|doble pago/i.test(lower)) return FAQS.doubleCharge
   if (/pagu[eé].*no arranca|ho pagato.*non parte|paid.*does not start/i.test(lower)) return FAQS.paidButNotStarting
   if (/al001|001/i.test(lower)) return FAQS.errorAl001
@@ -837,6 +939,41 @@ function chooseFaqSourceHeuristic(message: string): string | null {
   if (/tarjeta de fidelidad|fidelity card|carta fedelt[aà]/i.test(lower)) return FAQS.loyaltyCard
   if (/(diferencias entre los locales|orari(?:o)?|horario|hours|prezzo|precio|tarjeta de fidelidad|fidelity card|goya|pineda|alemanya|hortes|l'escala)/i.test(lower) && /(local|lavander|horario|hours|prezzo|precio|tarjeta|card|differen)/i.test(lower)) return FAQS.locationDifferences
   return null
+}
+
+function renderMissingFactQuestion(routerDecision: RouterDecision, state: SessionState): string {
+  const firstMissing = routerDecision.missingFacts[0]
+
+  if (firstMissing === 'location') {
+    return 'Which location are you in?'
+  }
+
+  if (firstMissing === 'machine type') {
+    return 'Is it a washing machine or a dryer?'
+  }
+
+  if (firstMissing === 'machine number') {
+    if (routerDecision.route === 'dryer' || state.machineType === 'dryer') {
+      return 'What is the dryer machine number?'
+    }
+    if (routerDecision.route === 'washer' || state.machineType === 'washer') {
+      return 'What is the washer machine number?'
+    }
+    return 'What is the machine number?'
+  }
+
+  if (firstMissing === 'payment completed or not') {
+    return 'Have you already completed the payment?'
+  }
+
+  if (firstMissing === 'exact display state') {
+    if (routerDecision.route === 'washer' || state.machineType === 'washer') {
+      return 'What exactly do you see on the display, and is any EXTRA button staying fixed instead of blinking?'
+    }
+    return 'What exactly do you see on the display?'
+  }
+
+  return 'What is the missing detail?'
 }
 
 function renderHistoryMock(state: SessionState, payload: {
@@ -865,15 +1002,7 @@ function renderHistoryMock(state: SessionState, payload: {
     return payload.flowEngineResult.prompt
   }
   if (payload.routerDecision.missingFacts.length > 0) {
-    const firstMissing = payload.routerDecision.missingFacts[0]
-    const questionMap: Record<string, string> = {
-      location: 'Which location are you in?',
-      'machine type': 'Is it a washing machine or a dryer?',
-      'machine number': 'What is the machine number?',
-      'payment completed or not': 'Have you already completed the payment?',
-      'exact display state': 'What exactly do you see on the display?',
-    }
-    return questionMap[firstMissing] || 'What is the missing detail?' 
+    return renderMissingFactQuestion(payload.routerDecision, state)
   }
   if (payload.routerDecision.route === 'greeting') {
     return 'Hi, I can help. Which location are you in and which machine do you need help with?'
@@ -980,7 +1109,7 @@ async function callOpenRouter(params: LlmRequest): Promise<string> {
   return data.choices?.[0]?.message?.content?.trim() || ''
 }
 
-async function detectLanguage(runtime: Runtime, message: string): Promise<'it' | 'es' | 'en' | 'pt'> {
+async function detectLanguage(runtime: Runtime, message: string): Promise<'it' | 'es' | 'en' | 'pt' | 'ca' | 'fr'> {
   if (MOCK_MODE) {
     return detectLanguageMock(message)
   }
@@ -990,7 +1119,7 @@ async function detectLanguage(runtime: Runtime, message: string): Promise<'it' |
     json: true,
     maxTokens: 30,
   })
-  const parsed = extractJson<{ language?: 'it' | 'es' | 'en' | 'pt' }>(result, { language: 'en' })
+  const parsed = extractJson<{ language?: 'it' | 'es' | 'en' | 'pt' | 'ca' | 'fr' }>(result, { language: 'en' })
   return parsed.language || 'en'
 }
 
@@ -1098,11 +1227,18 @@ function selectInitialStepFromState(
   if (state.machineType === 'washer' && flowId === 'non_parte') {
     if (state.paymentCompleted === false && flow.pay_help) return 'pay_help'
     if (display === 'SEL' && flow.case_sel) return 'case_sel'
+    if (display === 'PRICE' && flow.case_price) return 'case_price'
     if ((display === 'PUSH' || display === 'PR') && flow.case_push) return 'case_push'
     if (display === 'DOOR' && flow.case_door) return 'case_door'
+    if (display === 'ALM/A' && flow.case_alm_a) return 'case_alm_a'
+    if (display === 'ALM/E' && flow.case_alm_e) return 'case_alm_e'
+    if (display === 'ALM/DOOR' && flow.case_alm_door) return 'case_alm_door'
+    if (display === 'ALM/VAr' && flow.case_alm_var) return 'case_alm_var'
     if (display === 'ALM' && flow.case_alm) return 'case_alm'
     if (display === 'AL001' && flow.case_al001) return 'case_al001'
+    if (display === 'END_BAL' && flow.case_end_bal) return 'case_end_bal'
     if (display === 'END' && flow.case_end) return 'case_end'
+    if (display === 'ON' && flow.ok) return 'ok'
     if (state.paymentCompleted === true && flow.display_check) return 'display_check'
   }
 
@@ -1153,20 +1289,43 @@ function normalizeConfirmation(input: string): 'YES' | 'NO' | null {
 
 async function classifyChoiceViaLLM(node: FlowNode, input: string): Promise<string | null> {
   const trimmed = input.trim().toLowerCase()
+  const detectedDisplay = extractDisplayState(input)
   if (/^(ok|ok risolto|risolto|fatto|ora funziona|funziona)$/i.test(trimmed)) {
     if (node.transitions?.YES) return 'YES'
   }
   if (/^(no|non funziona|ancora no)$/i.test(trimmed)) {
     if (node.transitions?.NO) return 'NO'
   }
-  if (trimmed === 'water' && node.prompt.includes('ALM/A')) {
-    return '1'
+  if (detectedDisplay && node.prompt.includes('What does the display show?')) {
+    if (detectedDisplay === 'SEL' && node.transitions?.['1']) return '1'
+    if (detectedDisplay === 'PRICE' && node.transitions?.['2']) return '2'
+    if ((detectedDisplay === 'PUSH' || detectedDisplay === 'PR') && node.transitions?.['3']) return '3'
+    if (detectedDisplay === 'DOOR' && node.transitions?.['4']) return '4'
+    if (detectedDisplay === 'ALM' && node.transitions?.['5']) return '5'
+    if (detectedDisplay === 'AL001' && node.transitions?.['6']) return '6'
+    if ((detectedDisplay === 'END' || detectedDisplay === 'END_BAL') && node.transitions?.['7']) return '7'
   }
-  if (/minut/i.test(trimmed) && /non aument|did not increase|no aument/i.test(trimmed)) {
-    if (node.prompt.includes('I added money but minutes did not increase') && node.transitions?.['3']) return '3'
-    if (node.prompt.includes('Minutes did not increase') && node.transitions?.['4']) return '4'
+  if (detectedDisplay && node.prompt.includes('Which alarm do you see?')) {
+    if (detectedDisplay === 'ALM/A' && node.transitions?.['1']) return '1'
+    if (detectedDisplay === 'ALM/E' && node.transitions?.['2']) return '2'
+    if (detectedDisplay === 'ALM/DOOR' && node.transitions?.['3']) return '3'
+    if (detectedDisplay === 'ALM/VAr' && node.transitions?.['4']) return '4'
+    if (node.transitions?.['5']) return '5'
+  }
+  if (detectedDisplay === 'END_BAL' && node.prompt.includes('END') && node.prompt.includes('bAL') && node.transitions?.['2']) {
+    return '2'
   }
   if (MOCK_MODE) {
+    if (trimmed === 'water' && node.prompt.includes('ALM/A')) {
+      return '1'
+    }
+    if (/extra|luz fija|luce fissa|fixed light|fixed button|parpadeando|blinking/i.test(input) && node.prompt.includes('EXTRA') && node.transitions?.['8']) {
+      return '8'
+    }
+    if (/minut/i.test(trimmed) && /non aument|did not increase|no aument/i.test(trimmed)) {
+      if (node.prompt.includes('I added money but minutes did not increase') && node.transitions?.['3']) return '3'
+      if (node.prompt.includes('Minutes did not increase') && node.transitions?.['4']) return '4'
+    }
     const normalized = normalizeConfirmation(input)
     if (normalized && node.transitions?.[normalized]) return normalized
     const numeric = input.trim().match(/^(\d+)$/)?.[1]
@@ -1259,10 +1418,6 @@ async function advanceActiveFlow(runtime: Runtime, state: SessionState, userInpu
 }
 
 async function chooseFaqSource(message: string): Promise<string> {
-  const heuristicSource = chooseFaqSourceHeuristic(message)
-  if (heuristicSource) {
-    return heuristicSource
-  }
   if (MOCK_MODE) {
     return chooseFaqSourceMock(message)
   }
@@ -1285,6 +1440,9 @@ async function renderHistory(runtime: Runtime, state: SessionState, payload: {
 }): Promise<string> {
   if (MOCK_MODE) {
     return renderHistoryMock(state, payload)
+  }
+  if (payload.routerDecision.missingFacts.length > 0) {
+    return renderMissingFactQuestion(payload.routerDecision, state)
   }
   const systemPrompt = replaceVars(runtime.prompts.history, {
     chatbotName: CHATBOT_NAME,
@@ -1376,6 +1534,8 @@ function fallbackBlockedMessage(language: SessionState['language']): string {
   return {
     it: 'Il caso verrà controllato manualmente da un operatore.',
     es: 'El caso será revisado manualmente por un operador.',
+    ca: 'El cas sera revisat manualment per un operador.',
+    fr: 'Le cas sera examine manuellement par un operateur.',
     pt: 'O caso será analisado manualmente por um operador.',
     en: 'The case will be reviewed manually by an operator.',
   }[language]
@@ -1403,11 +1563,52 @@ function getTroubleshootingBlockingMissingFacts(state: SessionState, userMessage
     `${state.issueSummary} ${userMessage}`,
   )
 
-  if (!state.displayState && !postCycleLikeIssue && isStartOrPaymentIssue(userMessage)) {
+  if (!state.displayState && !postCycleLikeIssue && state.machineType === 'washer') {
     missingFacts.push('exact display state')
   }
 
   return missingFacts
+}
+
+function applyMachineSpecificMissingQuestion(routerDecision: RouterDecision, state: SessionState): RouterDecision {
+  if (!routerDecision.missingFacts.length) {
+    return routerDecision
+  }
+
+  const firstMissing = routerDecision.missingFacts[0]
+
+  if (firstMissing === 'machine number') {
+    if ((routerDecision.route === 'dryer' || state.machineType === 'dryer')) {
+      return {
+        ...routerDecision,
+        customerFacingGoal: 'Ask only for the dryer machine number. Do not mention washer, payment, or display yet.',
+      }
+    }
+
+    if ((routerDecision.route === 'washer' || state.machineType === 'washer')) {
+      return {
+        ...routerDecision,
+        customerFacingGoal: 'Ask only for the washer machine number. Do not mention payment or display yet.',
+      }
+    }
+  }
+
+  if (firstMissing !== 'exact display state') {
+    return routerDecision
+  }
+
+  if ((routerDecision.route === 'washer' || state.machineType === 'washer')) {
+    return {
+      ...routerDecision,
+      customerFacingGoal:
+        'Ask only what the washer display shows and whether any EXTRA button is staying fixed instead of blinking.',
+    }
+  }
+
+  return {
+    ...routerDecision,
+    customerFacingGoal: 'Ask only what the machine display shows right now.',
+  }
 }
 
 async function handleTurn(runtime: Runtime, state: SessionState, userMessage: string): Promise<TurnResult> {
@@ -1460,8 +1661,16 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     userMessage,
     normalizedUserMessage,
   )
-  const heuristicFaqSource = !state.activeFlowId ? chooseFaqSourceHeuristic(normalizedUserMessage) : null
-  if (heuristicFaqSource && (routerDecision.route === 'greeting' || routerDecision.route === 'unknown' || routerDecision.route === 'faq')) {
+  const heuristicFaqSource = MOCK_MODE && !state.activeFlowId ? chooseFaqSourceHeuristic(normalizedUserMessage) : null
+  if (
+    heuristicFaqSource &&
+    (
+      routerDecision.route === 'greeting' ||
+      routerDecision.route === 'unknown' ||
+      routerDecision.route === 'faq' ||
+      heuristicFaqSource === FAQS.occupiedMachine
+    )
+  ) {
     routerDecision.route = 'faq'
     routerDecision.nextOwner = 'conversation_history'
     routerDecision.functionName = null
@@ -1475,7 +1684,7 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     routerDecision.missingFacts = ['location']
     routerDecision.customerFacingGoal = 'Ask only which location the customer is in before continuing the technical troubleshooting.'
   }
-  pushDebug(debug, 'router', routerDecision)
+  Object.assign(routerDecision, applyMachineSpecificMissingQuestion(routerDecision, state))
 
   if (routerDecision.route === 'greeting') {
     routerDecision.missingFacts = []
@@ -1497,6 +1706,25 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     routerDecision.missingFacts = ['machine type']
     routerDecision.customerFacingGoal = 'Do not greet again. Ask only whether it is a washer or a dryer.'
   }
+
+  if (
+    !state.location &&
+    !state.activeFlowId &&
+    routerDecision.route !== 'faq' &&
+    routerDecision.route !== 'greeting' &&
+    routerDecision.missingFacts.length > 0
+  ) {
+    routerDecision.missingFacts = ['location']
+    routerDecision.customerFacingGoal = 'Ask only which location the customer is in before continuing the technical troubleshooting.'
+  } else if (
+    routerDecision.route !== 'faq' &&
+    routerDecision.route !== 'greeting' &&
+    routerDecision.missingFacts.length > 1
+  ) {
+    Object.assign(routerDecision, pickSingleMissingFact(routerDecision, state))
+  }
+
+  pushDebug(debug, 'router', routerDecision)
 
   mergeFactsIntoState(state, routerDecision)
   state.lastMissingFacts = routerDecision.missingFacts

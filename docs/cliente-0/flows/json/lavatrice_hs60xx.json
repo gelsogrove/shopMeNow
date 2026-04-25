@@ -28,7 +28,7 @@
 
     "display_check": {
       "type": "CHOICE",
-      "prompt": "What does the display show?\n\n1. **SEL**\n2. Price (€)\n3. **PUSH / Pr**\n4. **DOOR**\n5. **ALM**\n6. **AL001**\n7. **END**\n8. An **EXTRA** button stays fixed",
+      "prompt": "What does the display show, and is any **EXTRA** button staying fixed instead of blinking?\n\n1. **SEL**\n2. Price (€)\n3. **PUSH / Pr**\n4. **DOOR**\n5. **ALM**\n6. **AL001**\n7. **END**\n8. An **EXTRA** button stays fixed",
       "transitions": {
         "1": "non_parte.case_sel",
         "2": "non_parte.case_price",
@@ -68,7 +68,7 @@
 
     "case_extra_button": {
       "type": "CONFIRMATION",
-      "prompt": "Do you want that **EXTRA** option, or was it selected by mistake?\n\nReply **YES** if you want the EXTRA, **NO** if you do not.",
+      "prompt": "An **EXTRA** button staying fixed usually means that EXTRA was selected before, so the machine still expects more money for it.\n\nDo you want that **EXTRA** option? Reply **YES** if you want it, **NO** if you do not.",
       "transitions": {
         "YES": "non_parte.case_extra_pay_more",
         "NO": "non_parte.case_extra_remove",
@@ -78,7 +78,7 @@
 
     "case_extra_remove": {
       "type": "ACTION",
-      "prompt": "An **EXTRA** option may still be selected by mistake.\n\n1. Press the **EXTRA** button that stays fixed so it turns off.\n2. Then continue the normal wash steps.",
+      "prompt": "If the customer does **not** want the **EXTRA**:\n\n1. Press the **EXTRA** button or buttons that stay fixed so they turn off.\n2. Then continue with the normal wash steps.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -86,7 +86,7 @@
 
     "case_extra_pay_more": {
       "type": "ACTION",
-      "prompt": "That **EXTRA** option needs additional payment.\n\n1. Add the missing money for the **EXTRA**.\n2. Then continue with the normal wash steps.",
+      "prompt": "If the customer **does** want the **EXTRA**:\n\n1. Add the missing money required for that **EXTRA** option.\n2. Then continue with the normal wash steps.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -115,7 +115,7 @@
 
     "case_alm_a": {
       "type": "ACTION",
-      "prompt": "**ALM/A** means a water inlet issue.\n\n1. Press **STOP** once.\n2. Try the wash again.",
+      "prompt": "**ALM/A** means a water inlet alarm.\n\n1. Press **STOP** once with a short press, less than one second.\n2. This tells the washer to try resuming the wash from the point where the alarm appeared.\n3. Try the wash again.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -123,7 +123,7 @@
 
     "case_alm_e": {
       "type": "ACTION",
-      "prompt": "**ALM/E** means a drain issue.\n\n1. Press **STOP** once.\n2. Wait a few minutes in case the machine is still draining.\n3. Try again.",
+      "prompt": "**ALM/E** means a drain obstruction alarm.\n\n1. Press **STOP** once with a short press, less than one second.\n2. Wait a few minutes in case the washer is still draining water.\n3. Try the wash again.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -131,7 +131,7 @@
 
     "case_alm_door": {
       "type": "ACTION",
-      "prompt": "**ALM/DOOR** means a door safety lock issue.\n\n1. Press **STOP** once.\n2. Open and close the door firmly.\n3. Try again.",
+      "prompt": "**ALM/DOOR** means a door safety lock alarm.\n\n1. Press **STOP** once with a short press, less than one second.\n2. Open and close the door firmly.\n3. Try the wash again.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -139,14 +139,14 @@
 
     "case_alm_var": {
       "type": "INFO",
-      "prompt": "**ALM/VAr** usually needs technical review. I’m notifying the operator to review the washer.",
+      "prompt": "**ALM/VAr** is a variator alarm and usually needs technical review. I’m notifying the operator to review the washer.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "case_alm_unknown": {
       "type": "INFO",
-      "prompt": "This alarm code needs **manual review**. I’m notifying the operator to help you.",
+      "prompt": "Please note the exact **ALM** code. This alarm needs **manual review** and should be reported to the responsible person. I’m notifying the operator to help you.",
       "isTerminal": true,
       "action": "escalate"
     },
@@ -213,7 +213,7 @@
 
     "escalate": {
       "type": "INFO",
-      "prompt": "I’m notifying the operator. They will assist you shortly.",
+      "prompt": "If nothing worked, please use another washer. I’m notifying the operator to review the case and possible compensation.",
       "isTerminal": true,
       "action": "escalate"
     },
@@ -252,14 +252,14 @@
 
     "first_time_escalate": {
       "type": "INFO",
-      "prompt": "STOP cancels the wash cycle. I'm notifying the operator to review a possible first-time reactivation 🙌",
+      "prompt": "Pressing **STOP** cancels the wash cycle and the payment is normally lost. **STOP** should only be used in an emergency, for example if an alarm appears.\n\nIf this is the first time it happened, I’m notifying the operator to review a possible free reactivation.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "repay_required": {
       "type": "INFO",
-      "prompt": "STOP cancels the wash cycle. To restart, the washer usually needs a new payment. Compensation is not automatic.",
+      "prompt": "Pressing **STOP** cancels the wash cycle completely. To put the washer back in operation, it normally needs a new payment. Compensation is not automatic.",
       "isTerminal": true
     }
   },
