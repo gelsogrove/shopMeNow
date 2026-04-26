@@ -46,10 +46,10 @@
 **Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** 2
-**Bot:** La puerta no está bien cerrada. Ábrela y ciérrala firmemente hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.
+**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** Sí
-**Bot:** ✅ Perfecto. La lavadora ha arrancado correctamente.
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
 
 ---
 
@@ -65,7 +65,7 @@
 **Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** 2
-**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.
+**Bot:** La puerta no está bien cerrada. Ábrela y ciérrala firmemente hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** NO
 **Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
