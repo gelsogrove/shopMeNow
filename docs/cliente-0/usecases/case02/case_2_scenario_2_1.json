@@ -1,0 +1,42 @@
+{
+  "case": 2,
+  "scenario": 2.1,
+  "name": "Case 2 — Scenario 2.1 — DOOR (Happy Path)",
+  "description": "Cliente ve DOOR, sigue instrucción de cerrar puerta y confirma resolución sin escalación.",
+  "turns": [
+    "La lavadora no arranca",
+    "DOOR",
+    "Hortes",
+    "2",
+    "Sí"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["hola", "pantalla"],
+      "excludes": ["programa", "reinicia", "operador"]
+    },
+    {
+      "turn": 2,
+      "includes": ["lavander"],
+      "excludes": []
+    },
+    {
+      "turn": 3,
+      "includes": ["numero", "lavadora"],
+      "excludes": []
+    },
+    {
+      "turn": 4,
+      "includes": ["cierra", "puerta", "funcion"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 5,
+      "includes": ["perfecto", "arrancado", "correctamente"],
+      "excludes": ["operador", "escal"]
+    }
+  ],
+  "expectedOutcome": "RESOLVED",
+  "notes": "DOOR se resuelve con acción guiada sin soporte humano."
+}

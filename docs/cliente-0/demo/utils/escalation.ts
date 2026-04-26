@@ -17,11 +17,15 @@ export function buildEscalationSummary(context: EscalationContext): string {
   const location = context.locationDisplay || 'ubicación desconocida'
   const machine = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
   const number = context.machineNumber || 'número desconocido'
-  const payment = context.paymentCompleted === true ? 'ha efectuado el pago' : 'estado de pago incierto'
+  const payment = context.paymentCompleted === true
+    ? 'ha efectuado el pago'
+    : context.paymentCompleted === false
+    ? 'no ha efectuado el pago'
+    : 'ha reportado un problema técnico'
   const displayInfo = context.displayState ? `la pantalla muestra: ${context.displayState}` : 'sin información de pantalla'
   const issue = context.issueSummary || 'problema técnico'
 
-  return `${name} en ${location} ha ${payment} por la ${machine} número ${number}. ` +
+  return `${name} en ${location} ${payment} por la ${machine} número ${number}. ` +
     `El cliente seleccionó el programa pero ${issue}. ` +
     `${displayInfo}.`
 }

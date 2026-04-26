@@ -30,7 +30,7 @@
     "display_check": {
       "type": "CHOICE",
       "strictMatching": true,
-      "prompt": "What exactly do you see on the display?\n\n1. **SEL**\n2. Price (€)\n3. **PUSH / Pr**\n4. **DOOR**\n5. **ALM**\n6. **AL001**\n7. **END**\n8. Nothing / blank screen\n9. **EXTRA** button light stays on",
+      "prompt": "What exactly do you see on the display? Please write only the exact code or value shown.",
       "transitions": {
         "1": "non_parte.case_sel",
         "2": "non_parte.case_price",
@@ -43,7 +43,7 @@
         "9": "non_parte.case_extra_button",
         "other": "non_parte.escalate"
       },
-      "onInterruptFallback": "Thanks. I can only interpret documented display codes: SEL, PUSH / Pr, DOOR, ALM, AL001, END. If you see a different code, I won't guess — share the exact code or I can connect an operator."
+      "onInterruptFallback": "Thanks. Please write only the exact display code shown. If it is not recognized, I will connect an operator."
     },
 
     "case_blank_display": {
@@ -56,7 +56,7 @@
 
     "case_sel": {
       "type": "ACTION",
-      "prompt": "**SEL** means the machine is ready.\n\n1. Select your machine number.\n2. Press a program button.",
+      "prompt": "**SEL** means the machine is ready.\n\n1. Select your machine number.\n2. Press a program button.\n3. Let me know if it works.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -64,7 +64,7 @@
 
     "case_price": {
       "type": "ACTION",
-      "prompt": "The display shows the remaining amount.\n\n1. Insert coins or use your card until the display changes to **PUSH**.",
+      "prompt": "The display shows the remaining amount.\n\n1. Insert coins or use your card until the display changes to **PUSH**.\n2. Let me know if it works.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -72,7 +72,7 @@
 
     "case_push": {
       "type": "ACTION",
-      "prompt": "Press a program button to start the wash.\n\nPrograms:\n60º Molt calent -> ropa muy sucia, blanca o de trabajo\n40º Calent -> ropa normal (algodon, color)\n30º Temperat -> ropa delicada o sintetica\nFrio -> prendas muy delicadas (lana, seda, etc.)",
+      "prompt": "Press a program button to start the wash.\n\nPrograms:\n60º Molt calent -> ropa muy sucia, blanca o de trabajo\n40º Calent -> ropa normal (algodon, color)\n30º Temperat -> ropa delicada o sintetica\nFrio -> prendas muy delicadas (lana, seda, etc.)\n\nAfter trying, let me know if it works.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -90,7 +90,7 @@
 
     "case_extra_remove": {
       "type": "ACTION",
-      "prompt": "If the customer does **not** want the **EXTRA**:\n\n1. Press the **EXTRA** button or buttons that stay fixed so they turn off.\n2. Then continue with the normal wash steps.",
+      "prompt": "If the customer does **not** want the **EXTRA**:\n\n1. Press the **EXTRA** button or buttons that stay fixed so they turn off.\n2. Then continue with the normal wash steps.\n3. Let me know if it works.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -98,7 +98,7 @@
 
     "case_extra_pay_more": {
       "type": "ACTION",
-      "prompt": "If the customer **does** want the **EXTRA**:\n\n1. Add the missing money required for that **EXTRA** option.\n2. Then continue with the normal wash steps.",
+      "prompt": "If the customer **does** want the **EXTRA**:\n\n1. Add the missing money required for that **EXTRA** option.\n2. Then continue with the normal wash steps.\n3. Let me know if it works.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -106,7 +106,7 @@
 
     "case_door": {
       "type": "ACTION",
-      "prompt": "The door is not properly closed.\n\n1. Open it and close it firmly until you hear a click.",
+      "prompt": "The door is not properly closed. Open it and close it firmly until you hear a click. Después de intentarlo, házmelo saber si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -129,7 +129,7 @@
 
     "case_alm_a": {
       "type": "ACTION",
-      "prompt": "**ALM/A** means a water inlet alarm.\n\n1. Press **STOP** once with a short press, less than one second.\n2. This tells the washer to try resuming the wash from the point where the alarm appeared.\n3. Try the wash again.",
+      "prompt": "**ALM/A** means a water inlet alarm.\n\n1. Press **STOP** once with a short press, less than one second.\n2. This tells the washer to try resuming the wash from the point where the alarm appeared.\n3. Try the wash again.\n4. Let me know if it works.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -137,7 +137,7 @@
 
     "case_alm_e": {
       "type": "ACTION",
-      "prompt": "**ALM/E** means a drain obstruction alarm.\n\n1. Press **STOP** once with a short press, less than one second.\n2. Wait a few minutes in case the washer is still draining water.\n3. Try the wash again.",
+      "prompt": "**ALM/E** means a drain obstruction alarm.\n\n1. Press **STOP** once with a short press, less than one second.\n2. Wait a few minutes in case the washer is still draining water.\n3. Try the wash again.\n4. Let me know if it works.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -167,7 +167,7 @@
 
     "case_al001": {
       "type": "ACTION",
-      "prompt": "**AL001** means a sequence error.\n\nRestart the full sequence:\n1. Pay.\n2. Select machine.\n3. Press program.\n4. Close the door.",
+      "prompt": "**AL001** means a sequence error.\n\nRestart the full sequence:\n1. Pay.\n2. Select machine.\n3. Press program.\n4. Close the door.\n5. Let me know if it works.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -210,18 +210,25 @@
     "followup_display": {
       "type": "CHOICE",
       "strictMatching": true,
-      "prompt": "Please tell me exactly what appears on the display.",
+      "prompt": "Please write only the exact code that appears on the display now, even if it is different from before.",
       "transitions": {
         "1": "non_parte.case_sel",
         "2": "non_parte.case_push",
         "3": "non_parte.case_door",
-        "4": "non_parte.case_alm",
+        "4": "non_parte.case_door_persist",
         "5": "non_parte.case_al001_persist",
         "6": "non_parte.escalate",
         "7": "non_parte.case_blank_followup",
         "other": "non_parte.escalate"
       },
-      "onInterruptFallback": "Thanks. I can only use documented display codes in this step (SEL, PUSH / Pr, DOOR, ALM, AL001). If it's a different code, I will escalate for manual verification."
+      "onInterruptFallback": "Thanks. Please write the exact display code. If it is still unclear, I will escalate for manual verification."
+    },
+
+    "case_door_persist": {
+      "type": "INFO",
+      "prompt": "⚠️ La puerta sigue bloqueada incluso después de repetir los pasos. Esto indica un posible fallo mecánico en el cierre de la puerta. Estoy notificando al operador ahora para que revise la lavadora manualmente.",
+      "isTerminal": true,
+      "action": "escalate"
     },
 
     "case_al001_persist": {

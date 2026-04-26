@@ -6,12 +6,13 @@ export function hasExtraButtonIssue(message: string): boolean {
 }
 
 export function hasStopIntent(message: string): boolean {
-  return /STOP|stop button|pressed STOP|pulsé STOP|presse STOP|pulsat STOP/.test(message)
+  const lower = message.toLowerCase().trim()
+  return /\b(stop|stop button|pressed stop|i pressed stop|bot[oó]n stop|he pulsado stop|pulsante stop|tasto stop|ho premuto stop|premuto stop|bot[oó] stop|he premut stop|pulsat stop|j'ai appuy[eé] sur stop|presse stop)\b/i.test(lower)
 }
 
 export function isBlankDisplayReply(message: string): boolean {
   const lower = message.toLowerCase().trim()
-  return /^(blank|empty|nada|nothing|void|vide|buit|nulla|pantalla en blanco|écran vide|pantalla buida|schermo vuoto)$/i.test(lower)
+  return /^(blank|empty|nothing|blank screen|screen is blank|empty screen|no display|nada|pantalla en blanco|pantalla en blanc|pantalla buida|void|vide|ecran vide|buit|nulla|schermo vuoto|schermo in bianco|schermo bianco|display vuoto)$/i.test(lower)
 }
 
 export function normalizeLocationValue(value: string): string {
@@ -33,8 +34,13 @@ export function resolveKnownLocation(rawValue: string): string | null {
 export function parseExplicitPaymentSignal(message: string): boolean | null {
   const lower = message.toLowerCase()
 
+  // Avoid false negatives from generic troubleshooting phrases such as
+  // "no arranca" or "non funziona": only parse yes/no when payment context exists.
+  const hasPaymentContext = /\b(pag|payment|paid|coins?|monedas?|card|tarjeta|carta|unidad central|central unit|pagamento)\b/.test(lower)
+  if (!hasPaymentContext) return null
+
   if (/\b(sì|si|yes|oui|sí|sim|so|ya|already|ja|ye)\b/.test(lower)) return true
-  if (/\b(no|non|not|no|nao|niet|nein)\b/.test(lower)) return false
+  if (/\b(no|non|not|nao|niet|nein)\b/.test(lower)) return false
 
   return null
 }

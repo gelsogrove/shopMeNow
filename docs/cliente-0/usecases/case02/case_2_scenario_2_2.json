@@ -1,0 +1,49 @@
+{
+  "case": 2,
+  "scenario": 2.2,
+  "name": "Case 2 — Scenario 2.2 — DOOR (Escalation Path)",
+  "description": "Cliente repite paso de puerta pero DOOR persiste y se escala con resumen al operador.",
+  "turns": [
+    "La lavadora no arranca",
+    "DOOR",
+    "Hortes",
+    "2",
+    "NO",
+    "DOOR",
+    "Carlos"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["hola", "pantalla"],
+      "excludes": ["programa", "operador"]
+    },
+    {
+      "turn": 2,
+      "includes": ["lavander"],
+      "excludes": []
+    },
+    {
+      "turn": 3,
+      "includes": ["numero", "lavadora"],
+      "excludes": []
+    },
+    {
+      "turn": 4,
+      "includes": ["puerta", "cierra", "funcion"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 6,
+      "includes": ["llamas"],
+      "excludes": []
+    },
+    {
+      "turn": 7,
+      "includes": ["operador", "human"],
+      "excludes": []
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Si DOOR persiste tras reintento, pide nombre y escala."
+}

@@ -41,6 +41,8 @@ Programas:
 30º Temperat -> ropa delicada o sintética
 Frío -> prendas muy delicadas (lana, seda, etc.)
 
+Después de intentarlo, házmelo saber si funciona.
+
 **Usuario:** Sí, ahora funciona
 **Bot:** Perfecto. La lavadora ha comenzado correctamente.
 
@@ -49,7 +51,7 @@ Frío -> prendas muy delicadas (lana, seda, etc.)
 ## CONVERSATION — Case 1 — Escalation Path
 
 **Usuario:** Hola, la lavadora no funciona
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿Qué aparece en la pantalla de tu lavadora?
+**Bot:** Hola, soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿Qué aparece en la pantalla de la lavadora?
 
 **Usuario:** pone PUSH PROG
 **Bot:** ¿En qué lavandería autoservicio estás? Dime el pueblo y la calle.
@@ -58,22 +60,24 @@ Frío -> prendas muy delicadas (lana, seda, etc.)
 **Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** 5
-**Bot:** Para iniciar el lavado, presiona un botón de programa. 
+**Bot:** Presiona un botón de programa para iniciar el lavado.
 
 Programas:
-1. 60º Molt calent -> ropa muy sucia, blanca o de trabajo
-2. 40º Calent -> ropa normal (algodón, color)
-3. 30º Temperat -> ropa delicada o sintética
-4. Frío -> prendas muy delicadas (lana, seda, etc.)
+60º Molt calent -> ropa muy sucia, blanca o de trabajo
+40º Calent -> ropa normal (algodón, color)
+30º Temperat -> ropa delicada o sintética
+Frío -> prendas muy delicadas (lana, seda, etc.)
+
+Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** no arranca
-**Bot:** Por favor, indícame exactamente qué aparece en la pantalla de la lavadora.
+**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora.
 
 **Usuario:** se ha blcoqueada la pantalla
 **Bot:** ¿Como te llamas?
 
 **Usuario:** Carlos
-**Bot:** Un operador humano se encargará de tu caso, Carlos. Por favor, espera un momento mientras te asisten. Si necesitas algo más, aquí estaré.
+**Bot:** Un humano se encargará de tu caso, Carlos. Por favor, espera un momento mientras revisan tu solicitud. El chatbot ya no estará disponible para esta conversación. Gracias por tu paciencia.
 
 **Human Support message**
 Usuario Carlos en Goya ha ha efectuado el pago por la lavadora número 5. El cliente seleccionó el programa pero pantalla bloqueada. la pantalla muestra: PUSH.

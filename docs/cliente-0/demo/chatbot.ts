@@ -2227,7 +2227,8 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
         state.customerNameRequested = true
         state.pendingClosure = null
         const nameQuestion = state.language === 'es' ? '¿Como te llamas?' : 'What is your name?'
-        return { reply: nameQuestion, debug }
+        // Use the node prompt directly (no LLM rewrite) so the specific alarm/reason is shown verbatim
+        return { reply: `${flowResult.prompt}\n\n${nameQuestion}`, debug }
       }
       const escalationContext = extractEscalationContext(state, state.customerName)
       const operatorSummary = buildEscalationSummary(escalationContext)
