@@ -153,14 +153,14 @@
 
     "case_alm_var": {
       "type": "INFO",
-      "prompt": "⚠️ **ALM/VAr** es una alarma del variador y normalmente requiere revisión técnica. Estoy notificando al operador para que revise la lavadora.",
+      "prompt": "⚠️ **ALM/VAr** es una alarma del variador y normalmente requiere revisión técnica. Tenemos que notificar al operador para que revise la lavadora.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "case_alm_unknown": {
       "type": "INFO",
-      "prompt": "⚠️ Ese código no coincide con ningún caso documentado, así que necesita revisión manual. Estoy notificando al operador para que lo revise.",
+      "prompt": "⚠️ Ese código no coincide con ningún caso documentado, así que necesita revisión manual. Tenemos que notificar al operador para que lo revise.",
       "isTerminal": true,
       "action": "escalate"
     },
@@ -193,7 +193,7 @@
 
     "case_end_unknown": {
       "type": "INFO",
-      "prompt": "⚠️ Gracias por indicar el código adicional junto a **END**. Ese código no está en nuestra lista documentada de incidencias, así que no voy a suponer el diagnóstico. Estoy notificando al operador para una verificación manual.",
+      "prompt": "⚠️ Gracias por indicar el código adicional junto a **END**. Ese código no está en nuestra lista documentada de incidencias, así que no voy a suponer el diagnóstico. Tenemos que notificar al operador para una verificación manual.",
       "isTerminal": true,
       "action": "escalate"
     },
@@ -226,49 +226,49 @@
 
     "case_door_persist": {
       "type": "INFO",
-      "prompt": "⚠️ La puerta sigue bloqueada incluso después de repetir los pasos. Esto indica un posible fallo mecánico en el cierre de la puerta. Estoy notificando al operador ahora para que revise la lavadora manualmente.",
+      "prompt": "⚠️ La puerta sigue bloqueada incluso después de repetir los pasos. Esto indica un posible fallo mecánico en el cierre de la puerta. Tenemos que notificar al operador ahora para que revise la lavadora manualmente.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "case_sel_persist": {
       "type": "INFO",
-      "prompt": "⚠️ La pantalla sigue mostrando SEL incluso después de repetir la selección. Estoy notificando al operador ahora para que revise la lavadora manualmente.",
+      "prompt": "⚠️ La pantalla sigue mostrando SEL incluso después de repetir la selección. Tenemos que notificar al operador ahora para que revise la lavadora manualmente.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "case_push_persist": {
       "type": "INFO",
-      "prompt": "⚠️ La pantalla sigue mostrando PUSH incluso después de intentar presionar el botón de programa. Esto indica que la máquina no responde al comando. Estoy notificando al operador ahora para que revise la lavadora manualmente.",
+      "prompt": "⚠️ La pantalla sigue mostrando PUSH incluso después de intentar presionar el botón de programa. Esto indica que la máquina no responde al comando. Tenemos que notificar al operador ahora para que revise la lavadora manualmente.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "case_al001_persist": {
       "type": "INFO",
-      "prompt": "⚠️ La pantalla sigue mostrando **AL001** después de repetir la secuencia correctamente. Estoy notificando al operador para que revise el caso manualmente.",
+      "prompt": "⚠️ La pantalla sigue mostrando **AL001** después de repetir la secuencia correctamente. Tenemos que notificar al operador para que revise el caso manualmente.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "case_blank_followup": {
       "type": "INFO",
-      "prompt": "⚠️ La pantalla sigue en blanco y la lavadora sigue sin responder. Estoy notificando al operador para que lo revise manualmente.",
+      "prompt": "⚠️ La pantalla sigue en blanco y la lavadora sigue sin responder. Tenemos que notificar al operador para que lo revise manualmente.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "escalate_pay": {
       "type": "INFO",
-      "prompt": "⚠️ Estoy notificando al operador para ayudarte con el problema del pago.",
+      "prompt": "⚠️ Tenemos que notificar al operador para ayudarte con el problema del pago.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "escalate": {
       "type": "INFO",
-      "prompt": "⚠️ Si nada ha funcionado, por favor usa otra lavadora. Estoy notificando al operador para que revise el caso y la posible compensación.",
+      "prompt": "⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador para que revise el caso y la posible compensación.",
       "isTerminal": true,
       "action": "escalate"
     },

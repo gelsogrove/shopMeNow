@@ -35,7 +35,7 @@
 ## CONVERSATION — Case 3 — Scenario 3.1 — SEL (Happy Path)
 
 **Usuario:** He pagado pero la lavadora no empieza
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿Qué aparece en la pantalla de tu lavadora?
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, y estoy aquí para ayudarte. ¿Qué aparece en la pantalla de tu lavadora?
 
 **Usuario:** SEL
 **Bot:** ¿En qué lavandería autoservicio estás? Dime el pueblo y la calle.
@@ -47,7 +47,7 @@
 **Bot:** Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina o el programa correspondiente.
 
 **Usuario:** Sí, ahora funciona
-**Bot:** Parece que tu consulta depende de la política local. Un operador revisará esto manualmente. Por favor, espera un momento mientras gestionamos tu caso.
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
 
 ---
 
@@ -69,7 +69,7 @@
 **Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
 
 **Usuario:** SEL
-**Bot:** ⚠️ La pantalla sigue mostrando SEL incluso después de repetir la selección. Estoy notificando al operador ahora para que revise la lavadora manualmente.
+**Bot:** ⚠️ La pantalla sigue mostrando SEL incluso después de repetir la selección. Tenemos que notificar al operador ahora para que revise la lavadora manualmente.
 
 ¿Como te llamas?
 
@@ -81,9 +81,6 @@ Usuario Carlos en Pineda ha reportado un problema técnico por la lavadora núme
 
 ## REPORT LLM
 
-- ❌ El caso tiene que soluconarse.
-  > Por qué no se cumple: El bot no resolvió el caso, sino que indicó que un operador revisará la consulta manualmente, lo cual no es correcto según el escenario 3.1.
-  > Ejemplo: "Parece que tu consulta depende de la política local. Un operador revisará esto manualmente."
-- ❌ En el Scenario 3.1 el bot NO debe escalar a operador
-  > Por qué no se cumple: El bot escaló el caso a un operador, lo cual es una violación clara del criterio para el escenario 3.1.
-  > Ejemplo: "Un operador revisará esto manualmente."
+- ❌ Cuando el cliente confirma que SEL sigue, el bot anuncia escalación con un mensaje que contiene "operador" y menciona explícitamente "SEL"
+  > Por qué no se cumple: Heuristic/LLM evaluation marked this criterion as not satisfied.
+  > Ejemplo: "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina o el programa correspondiente."

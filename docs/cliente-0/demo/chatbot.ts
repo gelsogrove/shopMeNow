@@ -1743,6 +1743,17 @@ function fallbackBlockedMessage(language: SessionState['language']): string {
   }[language]
 }
 
+function getNameQuestion(language: SessionState['language']): string {
+  return {
+    it: 'Come ti chiami?',
+    es: '¿Como te llamas?',
+    ca: 'Com et dius?',
+    fr: 'Comment t\'appelles-tu?',
+    pt: 'Como te chamas?',
+    en: 'What is your name?',
+  }[language]
+}
+
 function forceLocationQuestion(routerDecision: RouterDecision): RouterDecision {
   return {
     ...routerDecision,
@@ -2053,6 +2064,24 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
   const normalizedUserMessage = preprocessUserInput(state, userMessage)
   pushDebug(debug, 'normalizedInput', normalizedUserMessage)
 
+  // Deterministic SEL happy-path close: if the customer confirms the washer
+  // is now working, close positively and never escalate.
+  const userConfirmsNowWorking = /^(si|sí)(\b|,)|ahora funciona|ya funciona|funciona ahora|arranco|arranc[oó]|ha arrancado/.test(
+    normalizeForRegression(normalizedUserMessage),
+  )
+  if (
+    state.machineType === 'washer' &&
+    normalizeDisplayState(state.displayState) === 'SEL' &&
+    userConfirmsNowWorking &&
+    !state.customerNameRequested &&
+    !state.operatorRequested
+  ) {
+    state.pendingClosure = 'resolved'
+    state.activeFlowId = null
+    state.activeStepId = null
+    return { reply: '✅ Perfecto. La lavadora ha comenzado correctamente.', debug }
+  }
+
   if (state.customerNameRequested && !state.customerName && normalizedUserMessage.length > 0) {
     state.customerName = normalizedUserMessage.trim().split(/\s+/)[0]
     state.customerNameRequested = false
@@ -2155,11 +2184,10 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     routerDecision.customerFacingGoal = 'Greet the customer, present yourself briefly, and ask the most useful next question.'
   }
 
-  // Turn 1: ALWAYS greet warmly, regardless of whether the customer used a greeting word.
-  // The chatbot must introduce itself and add a reassurance phrase before collecting any data.
-  // missingFacts=['exact display state'] bypasses the later location-override guard and is
-  // also excluded from [EXACT] so the LLM can embed the greeting + display question together.
-  if (state.turnCount === 1 && !state.location) {
+  // Turn 1 (technical issue only): greet warmly and ask display state.
+  // If the first user message is just a generic greeting (e.g. "Ciao"),
+  // keep a generic greeting and do not force machine/display troubleshooting yet.
+  if (state.turnCount === 1 && !state.location && hasTroubleshootingIntent(normalizedUserMessage)) {
     routerDecision.missingFacts = ['exact display state']
     routerDecision.customerFacingGoal =
       'Greet the customer warmly as the Ecolaundry virtual assistant. You MUST include the exact phrase "estoy aquí para ayudarte" in your greeting. Then ask only what appears on the display of the machine.'
@@ -2229,9 +2257,9 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
       if (!state.customerName && !state.customerNameRequested) {
         state.customerNameRequested = true
         state.pendingClosure = null
-        const nameQuestion = state.language === 'es' ? '¿Como te llamas?' : 'What is your name?'
-        // Use the node prompt directly (no LLM rewrite) so the specific alarm/reason is shown verbatim
-        return { reply: `${flowResult.prompt}\n\n${nameQuestion}`, debug }
+        const nameQuestion = getNameQuestion(state.language)
+        // Use the already-rendered flow reply (language-aligned) plus name question.
+        return { reply: `${flowReply}\n\n${nameQuestion}`, debug }
       }
       const escalationContext = extractEscalationContext(state, state.customerName)
       const operatorSummary = buildEscalationSummary(escalationContext)
@@ -2240,11 +2268,10 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     if (
       flowResult.isTerminal &&
       flowResult.action !== 'escalate' &&
-      state.machineType === 'washer' &&
-      normalizeDisplayState(state.displayState) === 'SEL' &&
+      flowResult.flowId === 'case_sel' &&
       state.language === 'es'
     ) {
-      return { reply: '✅ Perfecto. Parece que el problema ha sido resuelto.', debug }
+      return { reply: '✅ Perfecto. La lavadora ha arrancado correctamente.', debug }
     }
 
     return { reply: flowReply, debug }
@@ -2277,7 +2304,7 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
 
     if (!state.customerName && !state.customerNameRequested) {
       state.customerNameRequested = true
-      const nameQuestion = state.language === 'es' ? '¿Como te llamas?' : 'What is your name?'
+      const nameQuestion = getNameQuestion(state.language)
       return { reply: nameQuestion, debug }
     }
 

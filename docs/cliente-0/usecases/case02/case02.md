@@ -46,7 +46,7 @@
 **Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** 2
-**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.
+**Bot:** La puerta no está bien cerrada. Ábrela y ciérrala firmemente hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** Sí
 **Bot:** ✅ Perfecto. La lavadora ha arrancado correctamente.
@@ -71,7 +71,7 @@
 **Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
 
 **Usuario:** DOOR
-**Bot:** ⚠️ La puerta sigue bloqueada incluso después de repetir los pasos. Esto indica un posible fallo mecánico en el cierre de la puerta. Estoy notificando al operador ahora para que revise la lavadora manualmente.
+**Bot:** ⚠️ La puerta sigue bloqueada incluso después de repetir los pasos. Esto indica un posible fallo mecánico en el cierre de la puerta. Tenemos que notificar al operador ahora para que revise la lavadora manualmente.
 
 ¿Como te llamas?
 
@@ -83,12 +83,4 @@ Usuario Carlos en Hortes ha reportado un problema técnico por la lavadora núme
 
 ## REPORT LLM
 
-- ❌ Cuando el cliente confirma "Sí", el bot cierra el caso con un mensaje positivo que contiene "perfecto" y "arrancado"
-  > Por qué no se cumple: Heuristic/LLM evaluation marked this criterion as not satisfied.
-  > Ejemplo: "✅ Perfecto. La lavadora ha arrancado correctamente."
-- ❌ Antes de escalar, el bot pregunta el nombre del cliente con la frase "¿Cómo te llamas?"
-  > Por qué no se cumple: Heuristic/LLM evaluation marked this criterion as not satisfied.
-  > Ejemplo: "Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes."
-- ❌ Tras confirmar la escalación, el bot informa explícitamente al cliente: "El chatbot será desactivado."
-  > Por qué no se cumple: Heuristic/LLM evaluation marked this criterion as not satisfied.
-  > Ejemplo: "Gracias Carlos, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado. **👤 Human Support message** Usuario Carlos en Hortes ha reportado un p"
+- No se detectaron criterios negativos.
