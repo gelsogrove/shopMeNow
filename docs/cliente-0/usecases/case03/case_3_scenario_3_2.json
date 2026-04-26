@@ -1,0 +1,49 @@
+{
+  "case": 3,
+  "scenario": 3.2,
+  "name": "Case 3 — Scenario 3.2 — SEL (Escalation Path)",
+  "description": "Cliente repite la selección pero SEL persiste; el bot pide el nombre y escala con resumen al operador mencionando el estado SEL.",
+  "turns": [
+    "He pagado pero la lavadora no empieza",
+    "SEL",
+    "Pineda",
+    "3",
+    "Aun no arranca",
+    "SEL",
+    "Carlos"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["hola", "pantalla"],
+      "excludes": ["operador", "escal", "hello", "what appears", "machine"]
+    },
+    {
+      "turn": 2,
+      "includes": ["lavander"],
+      "excludes": ["laundry", "self-service"]
+    },
+    {
+      "turn": 3,
+      "includes": ["numero", "lavadora"],
+      "excludes": ["number", "washing machine"]
+    },
+    {
+      "turn": 4,
+      "includes": ["pendiente de selecci", "pulsa"],
+      "excludes": ["operador", "escal", "machine is ready", "select your machine"]
+    },
+    {
+      "turn": 6,
+      "includes": ["llamas"],
+      "excludes": ["your name", "what's your"]
+    },
+    {
+      "turn": 7,
+      "includes": ["operador", "sel"],
+      "excludes": ["operator will", "human will"]
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Si SEL persiste tras reintentar la selección, escala con resumen que cita el display SEL."
+}

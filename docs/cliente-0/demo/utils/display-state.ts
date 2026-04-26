@@ -23,7 +23,7 @@ export function inferPaymentCompletedFromDisplayState(
 
   const normalized = normalizeDisplayState(displayState)
   if (normalized === 'PUSH' || normalized === 'PR') return true
-  if (normalized === 'SEL' || normalized === 'PRICE') return false
+  if (normalized === 'PRICE') return false
 
   return null
 }

@@ -16,32 +16,32 @@
     {
       "turn": 1,
       "includes": ["hola", "pantalla"],
-      "excludes": ["programa", "operador"]
+      "excludes": ["programa", "operador", "hello", "what appears", "machine"]
     },
     {
       "turn": 2,
       "includes": ["lavander"],
-      "excludes": []
+      "excludes": ["laundry", "self-service"]
     },
     {
       "turn": 3,
       "includes": ["numero", "lavadora"],
-      "excludes": []
+      "excludes": ["number", "washing machine"]
     },
     {
       "turn": 4,
       "includes": ["puerta", "cierra", "funcion"],
-      "excludes": ["operador", "escal"]
+      "excludes": ["operador", "escal", "close the door", "click"]
     },
     {
       "turn": 6,
       "includes": ["llamas"],
-      "excludes": []
+      "excludes": ["your name", "what's your"]
     },
     {
       "turn": 7,
-      "includes": ["operador", "human"],
-      "excludes": []
+      "includes": ["operador"],
+      "excludes": ["operator will", "human will", "please wait"]
     }
   ],
   "expectedOutcome": "ESCALATED",

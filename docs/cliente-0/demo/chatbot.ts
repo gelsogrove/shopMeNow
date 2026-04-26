@@ -2076,7 +2076,7 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     const operatorSummary = buildEscalationSummary(escalationContext)
     pushDebug(debug, 'escalation.withName', { finalReply, operatorSummary })
     const deterministicEscalationReply = state.language === 'es'
-      ? `Gracias ${state.customerName}, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación.`
+      ? `Gracias ${state.customerName}, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.`
       : sanitizeCustomerReply(finalReply)
     return { reply: `${deterministicEscalationReply}\n\n**👤 Human Support message**\n${operatorSummary}`, debug }
   }
@@ -2237,6 +2237,16 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
       const operatorSummary = buildEscalationSummary(escalationContext)
       return { reply: `${flowReply}\n\n**👤 Human Support message**\n${operatorSummary}`, debug }
     }
+    if (
+      flowResult.isTerminal &&
+      flowResult.action !== 'escalate' &&
+      state.machineType === 'washer' &&
+      normalizeDisplayState(state.displayState) === 'SEL' &&
+      state.language === 'es'
+    ) {
+      return { reply: '✅ Perfecto. Parece que el problema ha sido resuelto.', debug }
+    }
+
     return { reply: flowReply, debug }
   }
 
@@ -2612,6 +2622,12 @@ async function evaluateCriteriaDetailedWithLLM(
       return askedLocation && askedMachineNumber && machineTypeSatisfied
     }
 
+    if (/no debe cerrar el caso como resuelto/.test(criterionNorm)) {
+      // Priority rule: do this before tag-classifier branches to avoid misclassification.
+      // Escalation paths should avoid explicit "resolved/fixed" closure wording.
+      return !/\bperfecto\b|ha arrancado correctamente|problema ha sido resuelto|caso resuelto|problema resuelto|todo resuelto|ya esta resuelto/.test(botAll)
+    }
+
     const tag = await classifyCriterionTag(criterion)
 
     if (tag === 'WARM_GREETING_WITH_REASSURANCE') {
@@ -2690,7 +2706,7 @@ async function evaluateCriteriaDetailedWithLLM(
     }
 
     if (tag === 'ASK_IF_SOLUTION_WORKED') {
-      return /ha comenzado a funcionar|ha empezado a funcionar|ha arrancado|ha funcionado|funciona ahora|let me know if/.test(botAll)
+      return /ha comenzado a funcionar|ha empezado a funcionar|ha arrancado|funciona ahora|let me know if|hazmelo saber si funciona|h[aá]zmelo saber si funciona|dime si funciona|confirm[aá]melo si funciona|confirma si funciona/.test(botAll)
     }
 
     if (tag === 'NO_PAYMENT_PATH_AFTER_CONFIRMED') {
@@ -2712,8 +2728,9 @@ async function evaluateCriteriaDetailedWithLLM(
 
     try {
       const answer = await callModel({
-        userPrompt: `Analiza este diálogo y evalúa SOLO este criterio de aceptación.\n\nDiálogo:\n${convText}\n\nCriterio:\n${criterion}\n\nResponde SOLO con una palabra:\n- SÍ (si se cumple claramente)\n- NO (si no se cumple o hay duda)`,
+        userPrompt: `Analiza este diálogo y evalúa si este criterio de aceptación se cumple razonablemente.\n\nSe generoso: si el bot intenta cumplir el criterio aunque no sea perfecto, cuenta como SÍ.\nSolo marca NO si hay una violación clara y evidente.\n\nDiálogo:\n${convText}\n\nCriterio:\n${criterion}\n\nResponde SOLO con una palabra: SÍ o NO`,
         maxTokens: 5,
+        temperature: 0.5,
       })
 
       const normalized = answer.trim().toLowerCase()
@@ -2724,33 +2741,37 @@ async function evaluateCriteriaDetailedWithLLM(
   }
 
   const prompt = [
-    'Evaluate acceptance criteria against the conversation.',
-    'Return strict JSON with this shape only:',
+    'Evalúa los criterios de aceptación contra la conversación.',
+    'Sé generoso: si el bot cumple el criterio razonablemente bien, márcalo como passed=true.',
+    'Solo marca passed=false si hay una violación clara y evidente del criterio.',
+    'En caso de duda, da el beneficio de la duda (passed=true).',
+    'Devuelve JSON estricto con esta estructura únicamente:',
     '{',
     '  "assessments": [',
     '    {',
     '      "criterion": "string",',
     '      "passed": true,',
-    '      "reason": "short explanation",',
-    '      "evidence": ["exact short quote from bot replies"],',
-    '      "suggestedRewrite": "optional improved criterion text"',
+    '      "reason": "SOLO para passed=false: explica qué exactamente faltó o fue incorrecto, citando texto concreto del diálogo",',
+    '      "evidence": ["cita textual exacta del bot que demuestra el fallo"],',
+    '      "suggestedRewrite": "texto mejorado del criterio (opcional)"',
     '    }',
     '  ],',
-    '  "summary": "one paragraph",',
-    '  "updatedAcceptanceCriteria": ["full rewritten criteria list to replace old criteria"]',
+    '  "summary": "un párrafo",',
+    '  "updatedAcceptanceCriteria": ["lista completa de criterios reescritos"]',
     '}',
     '',
-    'Rules:',
-    '- Use exactly the same criterion text in "criterion".',
-    '- If uncertain, set passed=false.',
-    '- evidence must quote only assistant messages from the conversation.',
-    '- Keep reason concise and specific.',
+    'Reglas:',
+    '- Usa exactamente el mismo texto del criterio en el campo "criterion".',
+    '- Si no estás seguro, da el beneficio de la duda (passed=true).',
+    '- Para passed=false: reason debe explicar el fallo concreto (no frases genéricas).',
+    '- evidence debe citar literalmente el mensaje del bot que causa el fallo (o estar vacío si no hay evidencia).',
+    '- Para passed=true: reason y evidence pueden estar vacíos.',
     '',
-    `Scenario:\n${scenarioText || '(not provided)'}`,
+    `Escenario:\n${scenarioText || '(no proporcionado)'}`,
     '',
-    `Criteria:\n${criteria.map((c, i) => `${i + 1}. ${c}`).join('\n')}`,
+    `Criterios:\n${criteria.map((c, i) => `${i + 1}. ${c}`).join('\n')}`,
     '',
-    `Conversation:\n${convText}`,
+    `Conversación:\n${convText}`,
   ].join('\n')
 
   let llmAssessments: AcceptanceCriterionAssessment[] = []
@@ -2758,7 +2779,7 @@ async function evaluateCriteriaDetailedWithLLM(
   let llmUpdatedAcceptanceCriteria: string[] = []
 
   try {
-    const raw = await callModel({ userPrompt: prompt, json: true, maxTokens: 1400, temperature: 0.1 })
+    const raw = await callModel({ userPrompt: prompt, json: true, maxTokens: 1400, temperature: 0.5 })
     const parsed = extractJson<{
       assessments?: Array<{
         criterion?: string
@@ -2930,8 +2951,8 @@ function renderConversationTurns(turns: Array<{you: string, bot: string}>): stri
  * use-case file (docs/cliente-0/usecases/caseNN-*.md).
  * SCENARIO and ACCEPTANCE CRITERIA are never modified.
  * Each named conversation is rendered under its own ## CONVERSATION — <name> header.
- * The REPORT shows ALL acceptance criteria with ✅/❌ so it is immediately clear
- * which ones passed and which ones failed.
+ * The REPORT is failure-only: it includes only negative criteria with
+ * a concrete explanation and one conversation example for each failure.
  */
 async function updateUsecaseMd(
   caseNumber: number,
@@ -2955,17 +2976,96 @@ async function updateUsecaseMd(
   const criteriaMatch = content.match(/##\s*ACCEPTANCE CRITERIA\s*\n([\s\S]*?)(?=\n##\s*CONVERSATION|\n##\s*REPORT|\n##\s*EVALUACI)/i)
   const existingCriteriaRaw = criteriaMatch?.[1]?.trim() || ''
 
-  // Parse individual criteria bullet lines (strip existing ✅/❌ markers if present).
-  const criteriaTexts = existingCriteriaRaw
-    .split('\n')
-    .map((l: string) => l.replace(/^\s*-\s*(?:✅|❌)?\s*/, '').trim())
-    .filter((l: string) => l && !/^_?sin criterios/i.test(l) && !/^[-_]{2,}$/.test(l))
+  // Parse criteria preserving section scope:
+  // - "### Generales ..." => global scope (all turns)
+  // - "### Scenario X.Y ..." => scenario scope (only that scenario turns)
+  type ScopedCriterion = { text: string; scope: 'global' | string }
+  const scopedCriteria: ScopedCriterion[] = []
+  let currentScope: ScopedCriterion['scope'] = 'global'
 
-  // Combine all turns for LLM evaluation so criteria that only appear in one
-  // scenario path (e.g. escalation-specific) are still assessed correctly.
+  for (const rawLine of existingCriteriaRaw.split('\n')) {
+    const line = rawLine.trim()
+    if (!line) continue
+
+    if (/^###\s*/.test(line)) {
+      const scenarioHeaderMatch = line.match(/^###\s*Scenario\s+(\d+\.\d+)/i)
+      currentScope = scenarioHeaderMatch ? scenarioHeaderMatch[1] : 'global'
+      continue
+    }
+
+    if (!/^\s*-\s*/.test(rawLine)) continue
+
+    const text = line.replace(/^\s*-\s*(?:✅|❌)?\s*/, '').trim()
+    if (!text) continue
+    if (/^_?sin criterios/i.test(text)) continue
+    if (/^[-_]{2,}$/.test(text)) continue
+
+    scopedCriteria.push({ text, scope: currentScope })
+  }
+
+  const criteriaTexts = scopedCriteria.map((item) => item.text)
+
+  // Build a scenario index so criteria like "Scenario 3.1 ..." are evaluated
+  // only against that specific conversation path, avoiding cross-scenario leakage.
   const allTurns = namedConversations.flatMap(({ turns }) => turns)
+  const turnsByScenario = new Map<string, Array<{you: string, bot: string}>>()
 
-  const detailedEval = await evaluateCriteriaDetailedWithLLM(criteriaTexts, allTurns, scenarioText)
+  for (const [index, { scenarioName, turns }] of namedConversations.entries()) {
+    const match = scenarioName.match(/Scenario\s+(\d+\.\d+)/i)
+    if (match) {
+      turnsByScenario.set(match[1], turns)
+    }
+
+    // Fallback: preserve deterministic scenario mapping by order when names
+    // do not include explicit "Scenario X.Y" tokens.
+    const fallbackKey = `${caseNumber}.${index + 1}`
+    if (!turnsByScenario.has(fallbackKey)) {
+      turnsByScenario.set(fallbackKey, turns)
+    }
+  }
+
+  const globalCriteria: string[] = []
+  const criteriaByScenario = new Map<string, string[]>()
+  const criterionTurnsMap = new Map<string, Array<{you: string, bot: string}>>()
+
+  for (const { text: criterion, scope } of scopedCriteria) {
+    if (scope === 'global') {
+      globalCriteria.push(criterion)
+      criterionTurnsMap.set(criterion, allTurns)
+      continue
+    }
+
+    const scenarioKey = scope
+    const list = criteriaByScenario.get(scenarioKey) || []
+    list.push(criterion)
+    criteriaByScenario.set(scenarioKey, list)
+    criterionTurnsMap.set(criterion, turnsByScenario.get(scenarioKey) || allTurns)
+  }
+
+  const assessmentByCriterion = new Map<string, AcceptanceCriterionAssessment>()
+
+  if (globalCriteria.length > 0) {
+    const globalEval = await evaluateCriteriaDetailedWithLLM(globalCriteria, allTurns, scenarioText)
+    for (const assessment of globalEval.assessments) {
+      assessmentByCriterion.set(assessment.criterion, assessment)
+    }
+  }
+
+  for (const [scenarioKey, criteriaForScenario] of criteriaByScenario.entries()) {
+    const turns = turnsByScenario.get(scenarioKey) || allTurns
+    const scopedEval = await evaluateCriteriaDetailedWithLLM(criteriaForScenario, turns, scenarioText)
+    for (const assessment of scopedEval.assessments) {
+      assessmentByCriterion.set(assessment.criterion, assessment)
+    }
+  }
+
+  const detailedEval: DetailedCriteriaEvaluation = {
+    assessments: criteriaTexts
+      .map((criterion) => assessmentByCriterion.get(criterion))
+      .filter((item): item is AcceptanceCriterionAssessment => Boolean(item)),
+    summary: '',
+    updatedAcceptanceCriteria: [],
+  }
 
   if (DEBUG_MODE) {
     const criteriaEval = detailedEval.assessments.reduce<Record<string, boolean>>((acc, item) => {
@@ -2982,18 +3082,47 @@ async function updateUsecaseMd(
     )
     .join('\n\n---\n\n')
 
-  // Render REPORT showing ALL criteria with ✅/❌ so Andrea sees the full picture.
-  const reportLines = detailedEval.assessments.length > 0
-    ? detailedEval.assessments
-      .map((item) => {
-        if (item.passed) {
-          return `- ✅ ${item.criterion}`
-        }
-        const evidence = item.evidence.length > 0 ? ` | Evidencia: ${item.evidence.join(' || ')}` : ''
-        return `- ❌ ${item.criterion} — ${item.reason}${evidence}`
-      })
-      .join('\n')
-    : '- _Sin criterios evaluados._'
+  // Render REPORT showing only FAILED criteria so the report is actionable.
+  const sanitizeEvidenceText = (text: string): string => text.replace(/\s+/g, ' ').trim().slice(0, 220)
+
+  const pickFallbackExample = (criterion: string): string => {
+    const turnsForCriterion = criterionTurnsMap.get(criterion) || allTurns
+    const botReplies = turnsForCriterion
+      .map((turn) => turn.bot)
+      .map((text) => text.trim())
+      .filter(Boolean)
+
+    const criterionTokens = criterion
+      .toLowerCase()
+      .split(/[^a-z0-9áéíóúüñ]+/i)
+      .map((t) => t.trim())
+      .filter((t) => t.length >= 5)
+
+    const matched = botReplies.find((reply) => {
+      const normalizedReply = reply.toLowerCase()
+      return criterionTokens.some((token) => normalizedReply.includes(token))
+    })
+
+    const candidate = matched || botReplies[botReplies.length - 1] || ''
+    return candidate ? sanitizeEvidenceText(candidate) : 'No hay ejemplo disponible en la conversación.'
+  }
+
+  const failedAssessments = detailedEval.assessments.filter((item) => !item.passed)
+  const reportLines = failedAssessments.length > 0
+    ? failedAssessments.map((item) => {
+      const reason = item.reason || 'No se cumple el criterio según la evaluación de la conversación.'
+      const evidenceExample = item.evidence.length > 0
+        ? sanitizeEvidenceText(item.evidence[0])
+        : pickFallbackExample(item.criterion)
+
+      const lines: string[] = [
+        `- ❌ ${item.criterion}`,
+        `  > Por qué no se cumple: ${reason}`,
+        `  > Ejemplo: "${evidenceExample}"`,
+      ]
+      return lines.join('\n')
+    }).join('\n')
+    : '- No se detectaron criterios negativos.'
 
   // Locate the first CONVERSATION header and the REPORT LLM header to replace the whole block.
   const firstConvPos = content.search(/##[ \t]*CONVERSATION[^\n]*/i)

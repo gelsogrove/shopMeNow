@@ -14,27 +14,27 @@
     {
       "turn": 1,
       "includes": ["hola", "pantalla"],
-      "excludes": []
+      "excludes": ["hello", "what appears", "what do you see", "machine", "please"]
     },
     {
       "turn": 2,
       "includes": ["lavander"],
-      "excludes": []
+      "excludes": ["laundry", "where are you", "self-service"]
     },
     {
       "turn": 3,
       "includes": ["numero", "lavadora"],
-      "excludes": []
+      "excludes": ["number", "washing machine"]
     },
     {
       "turn": 4,
       "includes": ["programa"],
-      "excludes": []
+      "excludes": ["program button", "press a", "wash"]
     },
     {
       "turn": 5,
       "includes": ["perfecto", "comenzado", "correctamente"],
-      "excludes": ["escalar", "operador"]
+      "excludes": ["escalar", "operador", "started", "correctly"]
     }
   ],
   "expectedOutcome": "RESOLVED",

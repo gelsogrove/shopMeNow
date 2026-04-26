@@ -39,6 +39,8 @@ export function parseExplicitPaymentSignal(message: string): boolean | null {
   const hasPaymentContext = /\b(pag|payment|paid|coins?|monedas?|card|tarjeta|carta|unidad central|central unit|pagamento)\b/.test(lower)
   if (!hasPaymentContext) return null
 
+  if (/\b(no he pagado|no pagué|no pague|no he pagat|not paid|non ho pagato|nao paguei|sin pagar)\b/.test(lower)) return false
+  if (/\b(pagado|pagato|pagat|pagué|pague|paid|payé|paye|pago hecho|pago realizado|payment completed)\b/.test(lower)) return true
   if (/\b(sì|si|yes|oui|sí|sim|so|ya|already|ja|ye)\b/.test(lower)) return true
   if (/\b(no|non|not|nao|niet|nein)\b/.test(lower)) return false
 
