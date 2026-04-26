@@ -2075,7 +2075,10 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     const escalationContext = extractEscalationContext(state, state.customerName)
     const operatorSummary = buildEscalationSummary(escalationContext)
     pushDebug(debug, 'escalation.withName', { finalReply, operatorSummary })
-    return { reply: `${sanitizeCustomerReply(finalReply)}\n\n**Human Support message**\n${operatorSummary}`, debug }
+    const deterministicEscalationReply = state.language === 'es'
+      ? `Gracias ${state.customerName}, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación.`
+      : sanitizeCustomerReply(finalReply)
+    return { reply: `${deterministicEscalationReply}\n\n**👤 Human Support message**\n${operatorSummary}`, debug }
   }
 
   const requestedLanguage = getRequestedLanguage(userMessage)
@@ -2232,7 +2235,7 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
       }
       const escalationContext = extractEscalationContext(state, state.customerName)
       const operatorSummary = buildEscalationSummary(escalationContext)
-      return { reply: `${flowReply}\n\n**Human Support message**\n${operatorSummary}`, debug }
+      return { reply: `${flowReply}\n\n**👤 Human Support message**\n${operatorSummary}`, debug }
     }
     return { reply: flowReply, debug }
   }
@@ -2281,7 +2284,7 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     pushDebug(debug, 'history.escalation', { message, safe, operatorSummary })
 
     const finalReply = sanitizeCustomerReply(safe ? message : fallbackBlockedMessage(state.language))
-    const replyWithSummary = `${finalReply}\n\n**Human Support message**\n${operatorSummary}`
+    const replyWithSummary = `${finalReply}\n\n**👤 Human Support message**\n${operatorSummary}`
 
     return { reply: replyWithSummary, debug }
   }

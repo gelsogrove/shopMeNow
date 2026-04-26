@@ -35,7 +35,7 @@
 **Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** Sí
-**Bot:** Perfecto. La lavadora ha arrancado correctamente.
+**Bot:** ✅ Perfecto. La lavadora ha arrancado correctamente.
 
 ---
 
@@ -51,7 +51,7 @@
 **Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** 2
-**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.
+**Bot:** La puerta no está bien cerrada. Ábrela y ciérrala firmemente hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** NO
 **Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es diferente de antes.
@@ -62,9 +62,9 @@
 ¿Como te llamas?
 
 **Usuario:** Carlos
-**Bot:** Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. Gracias por tu paciencia.
+**Bot:** Gracias Carlos, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación.
 
-**Human Support message**
+**👤 Human Support message**
 Usuario Carlos en Hortes ha reportado un problema técnico por la lavadora número 2. El cliente seleccionó el programa pero La lavadora no arranca. la pantalla muestra: DOOR.
 
 ## REPORT LLM

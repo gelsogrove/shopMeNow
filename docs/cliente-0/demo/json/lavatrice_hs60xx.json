@@ -261,7 +261,7 @@
 
     "ok": {
       "type": "INFO",
-      "prompt": "Perfect. The washing machine has started correctly.",
+      "prompt": "✅ Perfect. The washing machine has started correctly.",
       "isTerminal": true
     }
   },
