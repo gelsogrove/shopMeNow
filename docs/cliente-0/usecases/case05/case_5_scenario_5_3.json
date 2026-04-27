@@ -1,0 +1,54 @@
+{
+  "case": 5,
+  "scenario": 5.3,
+  "name": "Case 5 — Scenario 5.3 — AL001 Escalación: error persiste tras reinicio correcto",
+  "description": "Cliente sigue los pasos correctamente pero AL001 sigue apareciendo. El bot confirma el display y escala.",
+  "turns": [
+    "Me sale AL001",
+    "L'Escala",
+    "Lavadora",
+    "3",
+    "Lo he hecho bien pero sigue saliendo",
+    "AL001",
+    "Carlos"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["lavander"],
+      "excludes": ["operador", "escal", "pantalla", "display", "qué aparece"]
+    },
+    {
+      "turn": 2,
+      "includes": ["lavadora", "secadora"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 3,
+      "includes": ["número", "máquina"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 4,
+      "includes": ["secuencia", "AL001"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 5,
+      "includes": ["código", "pantalla"],
+      "excludes": ["operador", "perfecto"]
+    },
+    {
+      "turn": 6,
+      "includes": ["operador", "llamas"],
+      "excludes": ["perfecto", "resuelto"]
+    },
+    {
+      "turn": 7,
+      "includes": ["operador", "desactivado"],
+      "excludes": ["perfecto", "resuelto"]
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Tras el reinicio fallido, el bot pide confirmar el display antes de escalar — seguendo il flow followup_display → case_al001_persist."
+}

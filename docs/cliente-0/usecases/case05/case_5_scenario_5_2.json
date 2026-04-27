@@ -1,0 +1,48 @@
+{
+  "case": 5,
+  "scenario": 5.2,
+  "name": "Case 5 — Scenario 5.2 — AL001 Escalación: cliente no puede seguir instrucciones",
+  "description": "Cliente reporta AL001 pero no puede seguir las instrucciones de reinicio. El bot escala a soporte humano.",
+  "turns": [
+    "Me sale AL001",
+    "L'Escala",
+    "Lavadora",
+    "3",
+    "No entiendo cómo hacerlo",
+    "María"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["lavander"],
+      "excludes": ["operador", "escal", "pantalla", "display", "qué aparece"]
+    },
+    {
+      "turn": 2,
+      "includes": ["lavadora", "secadora"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 3,
+      "includes": ["número", "máquina"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 4,
+      "includes": ["secuencia", "AL001"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 5,
+      "includes": ["operador", "llamas"],
+      "excludes": ["perfecto", "resuelto"]
+    },
+    {
+      "turn": 6,
+      "includes": ["operador", "desactivado"],
+      "excludes": ["perfecto", "resuelto"]
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "El bot escala directamente cuando el cliente no puede seguir instrucciones, sin pedir un reintento."
+}
