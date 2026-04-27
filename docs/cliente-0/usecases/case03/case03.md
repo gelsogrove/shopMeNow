@@ -35,7 +35,7 @@
 ## CONVERSATION — Case 3 — Scenario 3.1 — SEL (Happy Path)
 
 **Usuario:** He pagado pero la lavadora no empieza
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, y estoy aquí para ayudarte. ¿Qué aparece en la pantalla de tu lavadora?
+**Bot:** Hola, soy el asistente virtual de Ecolaundry. Para poder ayudarte mejor, ¿podrías decirme qué muestra la pantalla de tu lavadora en este momento?
 
 **Usuario:** SEL
 **Bot:** ¿En qué lavandería autoservicio estás? Dime el pueblo y la calle.
@@ -54,7 +54,7 @@
 ## CONVERSATION — Case 3 — Scenario 3.2 — SEL (Escalation Path)
 
 **Usuario:** He pagado pero la lavadora no empieza
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿Qué aparece en la pantalla de tu lavadora?
+**Bot:** Hola, soy el asistente virtual de Ecolaundry. Para poder ayudarte mejor, ¿podrías decirme qué muestra la pantalla de tu lavadora en este momento?
 
 **Usuario:** SEL
 **Bot:** ¿En qué lavandería autoservicio estás? Dime el pueblo y la calle.
@@ -81,6 +81,12 @@ Usuario Carlos en Pineda ha reportado un problema técnico por la lavadora núme
 
 ## REPORT LLM
 
+- ❌ El primer mensaje contiene un saludo de bienvenida con tono cálido
+  > Por qué no se cumple: Deterministic rule evaluation marked this criterion as not satisfied.
+  > Ejemplo: "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina o el programa correspondiente."
 - ❌ Cuando el cliente confirma que SEL sigue, el bot anuncia escalación con un mensaje que contiene "operador" y menciona explícitamente "SEL"
   > Por qué no se cumple: Heuristic/LLM evaluation marked this criterion as not satisfied.
   > Ejemplo: "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina o el programa correspondiente."
+- ❌ Antes de escalar, el bot pregunta el nombre del cliente con la frase "¿Cómo te llamas?"
+  > Por qué no se cumple: Deterministic rule evaluation marked this criterion as not satisfied.
+  > Ejemplo: "Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes."

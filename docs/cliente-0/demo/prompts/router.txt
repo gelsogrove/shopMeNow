@@ -109,6 +109,9 @@ Do not ask the question yourself — set `customerFacingGoal` and let Conversati
 
 Exception: double-charge cases follow DOUBLE CHARGE RULE, not this priority.
 
+Exception: central coin-selection error path.
+When the customer reports having paid but the machine did not activate, and no display code has been mentioned at any point in the session, the issue may be a coin-selection error at the central (wrong machine button pressed). In this case, asking for the display state is not useful because there is no error on the display. Instead, collect location, machineType, and machineNumber, then ask whether the central returned the change. Do not ask about the display.
+
 ## ROUTING RULES
 
 Choose `functionName: lavatrice_hs60xx` when:

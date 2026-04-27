@@ -59,6 +59,11 @@
       "faqOverrides": {
         "loyaltyCard": "En Calle Pineda (Pineda de Mar), la tarjeta de fidelidad se compra con 20€ en efectivo y se activa pulsando el segundo botón de la fila derecha de la central. Solo funciona en este local."
       },
+      "flowOverrides": {
+        "lavatrice_hs60xx.non_parte.case_sel": {
+          "prompt": "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina o el programa correspondiente."
+        }
+      },
       "escalationRules": [
         {
           "id": "datafono-10eur-anomaly",

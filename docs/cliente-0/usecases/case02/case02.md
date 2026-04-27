@@ -49,7 +49,7 @@
 **Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** Sí
-**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
+**Bot:** ✅ Perfecto. La lavadora ha arrancado correctamente.
 
 ---
 

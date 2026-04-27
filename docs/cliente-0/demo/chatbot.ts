@@ -297,7 +297,24 @@ function isShortContextReply(message: string): boolean {
 
 function hasOperationalContextIntent(message: string): boolean {
   const normalized = message.trim().toLowerCase()
-  return /ho messo i soldi|messo i soldi|metto i soldi|sto mettendo i soldi|inserito i soldi|ho pagato|paid already|already paid|payment completed|pagamento fatto|cosa devo fare adesso|what do i do now|que hago ahora|non aumentano i minuti|minutes did not increase|minuti non aumentano/i.test(normalized)
+  return /ho messo i soldi|messo i soldi|metto i soldi|sto mettendo i soldi|inserito i soldi|ho pagato|paid already|already paid|payment completed|pagamento fatto|cosa devo fare adesso|what do i do now|que hago ahora|non aumentano i minuti|minutes did not increase|minuti non aumentano|no se ha activado|no se activa|activarla|activarse|puesta en marcha|se ha puesto en marcha/i.test(normalized)
+}
+
+function extractUnknownDisplayCode(message: string): string | null {
+  const trimmed = message.trim()
+  if (!trimmed) return null
+  if (extractDisplayState(trimmed)) return null
+
+  const codeMatch = trimmed.match(/\b([A-Z]{1,3}\d{1,3})\b/i)
+  return codeMatch ? codeMatch[1].toUpperCase() : null
+}
+
+function isPaidButNotActivatedCase(state: SessionState, _issueSummary: string, routeMachineType: '' | 'washer' | 'dryer'): boolean {
+  if (routeMachineType !== 'washer' && routeMachineType !== 'dryer') return false
+  if (state.paymentCompleted !== true) return false
+  if (state.displayState) return false
+  // paymentCompleted===true + no display is sufficient signal; no need to parse issueSummary
+  return true
 }
 
 function hasNoFoamConcern(message: string): boolean {
@@ -358,7 +375,7 @@ function hasExplicitResetIntent(message: string): boolean {
 
 function hasTechnicalIssueIntent(message: string): boolean {
   const normalized = message.trim().toLowerCase()
-  return /non si chiude|sportello|door|non parte|non funziona|non si avvia|does not start|doesn't start|won't start|does not work|doesn't work|not working|no arranca|no funciona|no se pone en marcha|stop|display|alm|sel|push|errore|error|filtro|rotacion|aspiracion|bagnat|wet|smell|odore/i.test(normalized)
+  return /non si chiude|sportello|door|non parte|non funziona|non si avvia|does not start|doesn't start|won't start|does not work|doesn't work|not working|no arranca|no funciona|no se pone en marcha|no se ha activado|no se activa|activarla|activarse|puesta en marcha|stop|display|alm|sel|push|errore|error|filtro|rotacion|aspiracion|bagnat|wet|smell|odore/i.test(normalized)
 }
 
 function detectLanguageHeuristic(message: string): SessionState['language'] | null {
@@ -535,6 +552,15 @@ function preprocessUserInput(state: SessionState, userMessage: string): string {
   if (explicitPaymentSignal !== null && state.paymentCompleted === null) {
     state.paymentCompleted = explicitPaymentSignal
     extractedFacts.push(`Payment completed is ${explicitPaymentSignal ? 'yes' : 'no'}`)
+  }
+
+  // If payment is signalled AND an unknown display code is present, persist the original
+  // message as issueSummary so the case-4.3 escalation path can find the code later.
+  if (explicitPaymentSignal === true && !state.displayState && !state.issueSummary) {
+    const earlyUnknownCode = extractUnknownDisplayCode(trimmed)
+    if (earlyUnknownCode) {
+      state.issueSummary = trimmed
+    }
   }
 
   if (hasDryerPostCycleIssue(trimmed) && !state.machineType) {
@@ -1435,10 +1461,13 @@ function mapChoiceDescriptions(node: FlowNode): Record<string, string> {
 
 function normalizeConfirmation(input: string): 'YES' | 'NO' | null {
   const value = input.trim().toLowerCase()
-  if (/^(y|yes|yeah|yep|si|sí|sì|ok|done|fatto|risolto)\b/i.test(value)) return 'YES'
+  // Normalize accented chars so \b works correctly with JS regex (e.g. "sí," → "si,")
+  const nfd = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  if (/^(y|yes|yeah|yep|si|sì|ok|done|fatto|risolto)\b/i.test(nfd)) return 'YES'
+  if (/^si[^a-z]/i.test(nfd) || nfd === 'si') return 'YES'
   if (/\b(si pienso que si|creo que si|pienso que si|yes i think so|direi di si)\b/i.test(value)) return 'YES'
   if (/\b(ho gia'? detto di si|i paid already|already paid|ho pagato|pagato|payment completed|fatto il pagamento)\b/i.test(value)) return 'YES'
-  if (/^(no|n|nope)\b/i.test(value)) return 'NO'
+  if (/^(no|n|nope)\b/i.test(nfd)) return 'NO'
   if (/\b(non ancora|ancora no|non funziona|not yet|not paid|non ho pagato|no hace nada|non fa niente|does nothing)\b/i.test(value)) return 'NO'
   return null
 }
@@ -1798,6 +1827,16 @@ function computeTroubleshootingMissingFacts(params: {
   const hasDisplay = Boolean(displayState)
 
   if (routeMachineType === 'washer') {
+    if (isPaidButNotActivatedCase(state, issueSummary, routeMachineType)) {
+      if (askLocationFirst && !state.location) {
+        missingFacts.push('location')
+      }
+      if (!machineNumber) {
+        missingFacts.push('machine number')
+      }
+      return missingFacts
+    }
+
     // Display-first for washer: identify payment-vs-technical path before identity data.
     if (!hasDisplay && !postCycleLikeIssue && !extraButtonIssue && !stopLikeIssue) {
       missingFacts.push('exact display state')
@@ -1870,12 +1909,15 @@ function applyMachineSpecificMissingQuestion(routerDecision: RouterDecision, sta
   const routeMachineType = routerDecision.route === 'washer' || routerDecision.route === 'dryer'
     ? routerDecision.route
     : state.machineType
+  const paidButNotActivatedCase = isPaidButNotActivatedCase(state, state.issueSummary, routeMachineType)
 
   const preferredMissingFacts: string[] = []
   if (!state.machineType && routeMachineType !== 'washer' && routeMachineType !== 'dryer') preferredMissingFacts.push('machine type')
 
   if (routeMachineType === 'washer') {
-    if (!state.displayState) {
+    if (paidButNotActivatedCase) {
+      if (!state.machineNumber) preferredMissingFacts.push('machine number')
+    } else if (!state.displayState) {
       preferredMissingFacts.push('exact display state')
     } else if (!isWasherPaymentPendingDisplay(state.displayState)) {
       if (!state.location) preferredMissingFacts.push('location')
@@ -2063,6 +2105,77 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
 
   const normalizedUserMessage = preprocessUserInput(state, userMessage)
   pushDebug(debug, 'normalizedInput', normalizedUserMessage)
+
+  // Case-4 deterministic top check: all facts collected, handle paid-but-not-activated BEFORE router runs.
+  // - If unknown display code present (LLM or preprocessor extracted it): escalate immediately (scenario 4.3)
+  // - If no display code at all: ask about central change (scenarios 4.1 / 4.2)
+  // - If known display code (SEL, PUSH, etc.): fall through to normal LLM router (cases 1-3)
+  if (
+    state.paymentCompleted === true &&
+    state.machineType &&
+    state.machineNumber &&
+    state.location &&
+    !state.lastMissingFacts.includes('central change returned or not') &&
+    !state.lastMissingFacts.includes('activated after central balance review') &&
+    !state.customerNameRequested &&
+    !state.operatorRequested
+  ) {
+    // Detect unknown display code from: LLM-extracted displayState, issueSummary, or current userMessage
+    const unknownCode =
+      (state.displayState ? extractUnknownDisplayCode(state.displayState) : null) ||
+      extractUnknownDisplayCode(state.issueSummary || '') ||
+      extractUnknownDisplayCode(userMessage)
+    if (unknownCode) {
+      state.customerNameRequested = true
+      state.issueSummary = state.issueSummary || `Código desconocido ${unknownCode} tras el pago; la máquina no se ha activado.`
+      state.escalationReason = `Unknown display code ${unknownCode} after payment completed.`
+      return {
+        reply: `⚠️ El código ${unknownCode} no está documentado. Tenemos que notificar al operador para que revise el caso.\n\n${getNameQuestion(state.language)}`,
+        debug,
+      }
+    }
+    // No display state at all → case 4.1/4.2: ask whether central returned change
+    if (!state.displayState) {
+      state.lastMissingFacts = ['central change returned or not']
+      return { reply: '¿La central ha devuelto el cambio?', debug }
+    }
+    // Known display code → fall through to normal LLM router (cases 1-3 handle this)
+  }
+
+  if (state.lastMissingFacts.includes('central change returned or not')) {
+    const confirmation = normalizeConfirmation(normalizedUserMessage)
+    if (confirmation === 'NO') {
+      state.lastMissingFacts = ['activated after central balance review']
+      return {
+        reply: 'Es posible que se haya marcado mal el número de máquina. Revisa, por favor, el saldo en la central y prueba otra vez con el número correcto. Dime si la máquina ya se ha activado.',
+        debug,
+      }
+    }
+  }
+
+  if (state.lastMissingFacts.includes('activated after central balance review')) {
+    const confirmation = normalizeConfirmation(normalizedUserMessage)
+    const stillNotActivated = confirmation === 'NO' || (confirmation === null && hasTechnicalIssueIntent(normalizedUserMessage))
+
+    if (confirmation === 'YES') {
+      state.pendingClosure = 'resolved'
+      state.activeFlowId = null
+      state.activeStepId = null
+      state.lastMissingFacts = []
+      return { reply: '✅ Perfecto. La máquina ha arrancado correctamente.', debug }
+    }
+
+    if (stillNotActivated) {
+      state.lastMissingFacts = []
+      state.customerNameRequested = true
+      state.issueSummary = 'La máquina sigue sin activarse tras revisar el saldo en la central.'
+      state.escalationReason = 'Machine still not activated after central balance review.'
+      return {
+        reply: `⚠️ La máquina sigue sin activarse. Tenemos que notificar al operador para revisar el caso.\n\n${getNameQuestion(state.language)}`,
+        debug,
+      }
+    }
+  }
 
   // Deterministic SEL happy-path close: if the customer confirms the washer
   // is now working, close positively and never escalate.
@@ -2339,6 +2452,29 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     if (routerDecision.extractedFacts.machineNumber) {
       state.machineNumber = String(routerDecision.extractedFacts.machineNumber)
     }
+
+    const unknownDisplayCode = extractUnknownDisplayCode(state.issueSummary || normalizedUserMessage)
+    if (
+      isPaidButNotActivatedCase(state, state.issueSummary || normalizedUserMessage, state.machineType) &&
+      state.location &&
+      state.machineNumber
+    ) {
+      if (unknownDisplayCode) {
+        state.customerNameRequested = true
+        state.issueSummary = `Código desconocido ${unknownDisplayCode} tras el pago; la máquina no se ha activado.`
+        state.escalationReason = `Unknown display code ${unknownDisplayCode} after payment completed.`
+        return {
+          reply: `⚠️ El código ${unknownDisplayCode} no está documentado. Tenemos que notificar al operador para que revise el caso.\n\n${getNameQuestion(state.language)}`,
+          debug,
+        }
+      }
+
+      if (!state.lastMissingFacts.includes('central change returned or not') && !state.lastMissingFacts.includes('activated after central balance review')) {
+        state.lastMissingFacts = ['central change returned or not']
+        return { reply: '¿La central ha devuelto el cambio?', debug }
+      }
+    }
+
     if (routerDecision.missingFacts.length > 0) {
       const singleMissingRouterDecision = pickSingleMissingFact(routerDecision, state)
       const { message, safe } = await renderHistory(runtime, state, { routerDecision: singleMissingRouterDecision })
@@ -2653,6 +2789,10 @@ async function evaluateCriteriaDetailedWithLLM(
       // Priority rule: do this before tag-classifier branches to avoid misclassification.
       // Escalation paths should avoid explicit "resolved/fixed" closure wording.
       return !/\bperfecto\b|ha arrancado correctamente|problema ha sido resuelto|caso resuelto|problema resuelto|todo resuelto|ya esta resuelto/.test(botAll)
+    }
+
+    if (/perfecto/.test(criterionNorm) && /correctamente/.test(criterionNorm)) {
+      return /\bperfecto\b/.test(botAll) && /correctamente/.test(botAll)
     }
 
     const tag = await classifyCriterionTag(criterion)

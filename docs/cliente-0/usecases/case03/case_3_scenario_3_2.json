@@ -35,13 +35,13 @@
     },
     {
       "turn": 6,
-      "includes": ["llamas"],
-      "excludes": ["your name", "what's your"]
+      "includes": ["operador", "sel", "llamas"],
+      "excludes": ["perfecto", "resuelto"]
     },
     {
       "turn": 7,
-      "includes": ["operador", "sel"],
-      "excludes": ["operator will", "human will"]
+      "includes": ["operador"],
+      "excludes": ["perfecto", "resuelto"]
     }
   ],
   "expectedOutcome": "ESCALATED",
