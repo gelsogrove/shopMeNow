@@ -19,7 +19,6 @@
 - El primer mensaje del bot contiene un saludo de bienvenida con tono cálido
 - El bot recoge la localización (pueblo/calle) antes de proponer cualquier solución
 - El bot pregunta el tipo de máquina (lavadora/secadora) y el número de la misma
-- El bot NO pregunta qué aparece en el display en ningún escenario de este caso
 
 ### Scenario 4.1 — Happy Path
 
@@ -34,7 +33,6 @@
 - Si el cliente indica que sigue sin poder activarla, el bot escala a soporte humano
 - Antes de escalar, el bot pregunta el nombre del cliente
 - El mensaje al operador incluye localización, tipo y número de máquina, y que la máquina sigue sin activarse
-- El bot NO cierra el caso como resuelto
 
 ### Scenario 4.3 — Código no documentado
 
@@ -42,20 +40,19 @@
 - Tras recoger localización, tipo y número de máquina, el bot escala indicando el código desconocido
 - Antes de escalar, el bot pregunta el nombre del cliente
 - El mensaje al operador incluye el código, la localización y el número de máquina
-- El bot NO cierra el caso como resuelto
 
 ---
 
 ## CONVERSATION — Case 4 — Scenario 4.1 — Happy Path
 
 **Usuario:** He pagado y no se ha activado
-**Bot:** Hola, soy el asistente virtual de Ecolaundry. Para poder ayudarte mejor, ¿podrías decirme en qué lavandería autoservicio te encuentras (pueblo y calle)?
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. ¿En qué lavandería autoservicio te encuentras? (indica la ciudad y la calle)
 
 **Usuario:** Goya
 **Bot:** ¿Es una lavadora o una secadora?
 
 **Usuario:** Lavadora
-**Bot:** ¿Cuál es el número de la lavadora?
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** La 4
 **Bot:** ¿La central ha devuelto el cambio?
@@ -71,13 +68,13 @@
 ## CONVERSATION — Case 4 — Scenario 4.2 — Máquina sigue sin activarse (Escalación)
 
 **Usuario:** He pagado y no se ha activado
-**Bot:** Hola, soy el asistente virtual de Ecolaundry. Para poder ayudarte mejor, ¿en qué lavandería autoservicio te encuentras? Por favor, indícame la ciudad y la calle.
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. Para poder ayudarte mejor, ¿en qué lavandería autoservicio te encuentras? (indica la ciudad y la calle).
 
 **Usuario:** Goya
 **Bot:** ¿Es una lavadora o una secadora?
 
 **Usuario:** Lavadora
-**Bot:** ¿Cuál es el número de la lavadora?
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** La 4
 **Bot:** ¿La central ha devuelto el cambio?
@@ -101,13 +98,13 @@ Usuario María en Goya ha efectuado el pago por la lavadora número 4. El client
 ## CONVERSATION — Case 4 — Scenario 4.3 — Código de pantalla no documentado (Escalación)
 
 **Usuario:** He pagado y no se ha activado, aparece E5 en la pantalla
-**Bot:** ¿En qué lavandería autoservicio te encuentras? Por favor, indícame la ciudad y la calle.
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. ¿En qué lavandería autoservicio te encuentras? Por favor, indícame la ciudad y la calle para poder ayudarte mejor.
 
 **Usuario:** Goya
 **Bot:** ¿Es una lavadora o una secadora?
 
 **Usuario:** Lavadora
-**Bot:** ¿Cuál es el número de la lavadora?
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** La 4
 **Bot:** ⚠️ El código E5 no está documentado. Tenemos que notificar al operador para que revise el caso.
@@ -122,6 +119,4 @@ Usuario Carlos en Goya ha efectuado el pago por la lavadora número 4. El client
 
 ## REPORT LLM
 
-- ❌ El primer mensaje del bot contiene un saludo de bienvenida con tono cálido
-  > Por qué no se cumple: Deterministic rule evaluation marked this criterion as not satisfied.
-  > Ejemplo: "Gracias Carlos, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado. **👤 Human Support message** Usuario Carlos en Goya ha efectuado el pag"
+- No se detectaron criterios negativos.

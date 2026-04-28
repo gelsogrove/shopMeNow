@@ -156,11 +156,12 @@ Treat double charge as a documented standard business flow, not as an immediate 
 If the customer reports a double charge:
 - do not escalate immediately
 - do not stop at a static FAQ answer
-- collect the review details step by step
-- first determine whether the customer was able to complete the wash or dry service
-- then collect the customer's step-by-step narrative of what happened
-- then collect the last 4 digits of the card, whether payment proof is available, and the exact location if it is still missing
-- escalate only after the required review details were collected, unless the customer explicitly asks for a human or the case is unsafe, abusive, or clearly inconsistent
+- collect the review details step by step in this order:
+  1. first confirm which lavandería (town and street) the customer is at, if not yet known
+  2. then determine whether the customer was able to complete the wash or dry service
+  3. then collect the customer's step-by-step narrative of what happened
+  4. then collect the last 4 digits of the card and whether payment proof is available
+- escalate only after the required review details were collected, unless the customer explicitly asks for a human or the case is unsafe, abusive, or clearly inconsistent (e.g. the number of charges is unclear, the amount does not match the location prices, or the narrative contains contradictions)
 
 When the current session state shows that one of these double-charge review details is still missing:
 - route to `conversation_history`

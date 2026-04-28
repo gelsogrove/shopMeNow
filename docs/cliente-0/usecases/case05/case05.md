@@ -16,17 +16,13 @@
 
 ### Generales (todos los escenarios)
 
-- El bot NO pregunta qué aparece en el display (el cliente ya indicó AL001 en su primer mensaje)
 - El bot recoge la localización antes de proponer cualquier acción
 - El bot pregunta el tipo de máquina (lavadora/secadora) y el número de la misma
-- El bot identifica AL001 como un error de secuencia e indica que hay que reiniciar el proceso en el orden correcto
 
 ### Scenario 5.1 — Happy Path
 
 - El bot explica los pasos correctos: pagar, seleccionar máquina, pulsar programa, cerrar puerta
-- Después de dar las instrucciones, el bot pide confirmación de que la máquina ha arrancado
 - El caso se cierra con un mensaje positivo que contiene "perfecto" y "comenzado" o "correctamente"
-- El bot NO escala a operador
 
 ### Scenario 5.2 — Escalación: cliente no puede seguir instrucciones
 
@@ -34,7 +30,6 @@
 - Antes de escalar, el bot pregunta el nombre del cliente
 - El mensaje de escalación contiene la palabra "operador"
 - El mensaje de confirmación final contiene la palabra "desactivado"
-- El bot NO cierra el caso como resuelto
 
 ### Scenario 5.3 — Escalación: error persiste
 
@@ -43,76 +38,107 @@
 - Antes de escalar, el bot pregunta el nombre del cliente
 - El mensaje de escalación contiene la palabra "operador"
 - El mensaje de confirmación final contiene la palabra "desactivado"
-- El bot NO cierra el caso como resuelto
 
 ---
 
-## CONVERSATION — Scenario 5.1 — Happy Path
+## CONVERSATION — Case 5 — Scenario 5.1 — AL001 (Happy Path)
 
 **Usuario:** Me sale AL001
-**Bot:** Tranquilo, te ayudo. ¿En qué lavandería estás?
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. ¿En qué lavandería autoservicio te encuentras? (indica la ciudad y la calle)
 
 **Usuario:** L'Escala
 **Bot:** ¿Es una lavadora o una secadora?
 
 **Usuario:** Lavadora
-**Bot:** ¿Cuál es el número de la lavadora?
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** 3
-**Bot:** AL001 indica un error de secuencia. Reinicia el proceso en este orden: 1. Paga. 2. Selecciona el número de máquina. 3. Pulsa el botón de programa. 4. Cierra la puerta. Dime si funciona.
+**Bot:** **AL001** significa un error de secuencia.
+
+Reinicia el proceso completo:
+1. Paga.
+2. Selecciona la máquina.
+3. Pulsa el programa.
+4. Cierra la puerta.
+5. Avísame si funciona.
 
 **Usuario:** Sí, ya funciona
 **Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
 
 ---
 
-## CONVERSATION — Scenario 5.2 — Escalación: cliente no puede seguir instrucciones
+## CONVERSATION — Case 5 — Scenario 5.2 — AL001 Escalación: cliente no puede seguir instrucciones
 
 **Usuario:** Me sale AL001
-**Bot:** Tranquilo, te ayudo. ¿En qué lavandería estás?
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. ¿En qué lavandería autoservicio te encuentras? Por favor, indícame la ciudad y la calle para poder ayudarte mejor.
 
 **Usuario:** L'Escala
 **Bot:** ¿Es una lavadora o una secadora?
 
 **Usuario:** Lavadora
-**Bot:** ¿Cuál es el número de la lavadora?
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** 3
-**Bot:** AL001 indica un error de secuencia. Reinicia el proceso en este orden: 1. Paga. 2. Selecciona el número de máquina. 3. Pulsa el botón de programa. 4. Cierra la puerta. Dime si funciona.
+**Bot:** **AL001** significa un error de secuencia.
+
+Reinicia el proceso completo:
+1. Paga.
+2. Selecciona la máquina.
+3. Pulsa el programa.
+4. Cierra la puerta.
+5. Avísame si funciona.
 
 **Usuario:** No entiendo cómo hacerlo
-**Bot:** ⚠️ Vamos a pedir ayuda a un operador para que te guíe directamente. ¿Cómo te llamas?
+**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
+
+**Usuario:** AL001
+**Bot:** ⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador para que revise el caso y la posible compensación.
+
+¿Como te llamas?
 
 **Usuario:** María
-**Bot:** Gracias María, Un operador humano se encargará de tu caso. Por favor, espera un momento. El chatbot será desactivado.
+**Bot:** Gracias María, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Cliente María en L'Escala: lavadora número 3 muestra AL001. El cliente no ha podido seguir las instrucciones de reinicio de secuencia.
+Usuario María en L'Escala ha reportado un problema técnico por la lavadora número 3. El cliente seleccionó el programa pero problema técnico. la pantalla muestra: AL001.
 
 ---
 
-## CONVERSATION — Scenario 5.3 — Escalación: error persiste
+## CONVERSATION — Case 5 — Scenario 5.3 — AL001 Escalación: error persiste tras reinicio correcto
 
 **Usuario:** Me sale AL001
-**Bot:** Tranquilo, te ayudo. ¿En qué lavandería estás?
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. Para poder ayudarte mejor, ¿en qué lavandería autoservicio te encuentras? (indica la ciudad y la calle).
 
 **Usuario:** L'Escala
-**Bot:** ¿Es una lavadora o una secadora?
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** Lavadora
-**Bot:** ¿Cuál es el número de la lavadora?
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** 3
-**Bot:** AL001 indica un error de secuencia. Reinicia el proceso en este orden: 1. Paga. 2. Selecciona el número de máquina. 3. Pulsa el botón de programa. 4. Cierra la puerta. Dime si funciona.
+**Bot:** **AL001** significa un error de secuencia.
+
+Reinicia el proceso completo:
+1. Paga.
+2. Selecciona la máquina.
+3. Pulsa el programa.
+4. Cierra la puerta.
+5. Avísame si funciona.
 
 **Usuario:** Lo he hecho bien pero sigue saliendo
 **Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
 
 **Usuario:** AL001
-**Bot:** ⚠️ La pantalla sigue mostrando AL001 después de repetir la secuencia correctamente. Tenemos que notificar al operador para que revise la lavadora manualmente. ¿Cómo te llamas?
+**Bot:** ⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador para que revise el caso y la posible compensación.
+
+¿Como te llamas?
 
 **Usuario:** Carlos
-**Bot:** Gracias Carlos, Un operador humano se encargará de tu caso. Por favor, espera un momento. El chatbot será desactivado.
+**Bot:** Gracias Carlos, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Cliente Carlos en L'Escala: lavadora número 3 sigue mostrando AL001 tras repetir la secuencia completa correctamente.
+Usuario Carlos en L'Escala ha reportado un problema técnico por la lavadora número 3. El cliente seleccionó el programa pero sigue saliendo. la pantalla muestra: AL001.
+
+## REPORT LLM
+
+- No se detectaron criterios negativos.

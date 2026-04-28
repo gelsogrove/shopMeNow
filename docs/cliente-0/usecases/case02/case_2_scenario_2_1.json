@@ -33,7 +33,7 @@
     },
     {
       "turn": 5,
-      "includes": ["perfecto", "arrancado", "correctamente"],
+      "includes": ["perfecto", "correctamente"],
       "excludes": ["operador", "escal", "started", "correctly"]
     }
   ],

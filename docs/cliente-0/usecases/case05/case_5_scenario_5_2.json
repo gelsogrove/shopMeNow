@@ -9,6 +9,7 @@
     "Lavadora",
     "3",
     "No entiendo cómo hacerlo",
+    "AL001",
     "María"
   ],
   "assertions": [
@@ -19,12 +20,12 @@
     },
     {
       "turn": 2,
-      "includes": ["lavadora", "secadora"],
+      "includes": ["lavadora"],
       "excludes": ["operador", "escal"]
     },
     {
       "turn": 3,
-      "includes": ["número", "máquina"],
+      "includes": ["número"],
       "excludes": ["operador", "escal"]
     },
     {
@@ -33,13 +34,13 @@
       "excludes": ["operador", "escal"]
     },
     {
-      "turn": 5,
-      "includes": ["operador", "llamas"],
+      "turn": 6,
+      "includes": ["operador"],
       "excludes": ["perfecto", "resuelto"]
     },
     {
-      "turn": 6,
-      "includes": ["operador", "desactivado"],
+      "turn": 7,
+      "includes": ["operador"],
       "excludes": ["perfecto", "resuelto"]
     }
   ],

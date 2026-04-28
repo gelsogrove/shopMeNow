@@ -1,0 +1,22 @@
+{
+  "case": 8,
+  "scenario": 8.1,
+  "name": "Case 8 — Scenario 8.1 — Código + importe pendiente (Happy Path)",
+  "description": "El cliente solicita ayuda con un código. El bot saluda y pide el código exacto en una única respuesta canned.",
+  "turns": [
+    "Tengo un código y no sé cómo usarlo.",
+    "El código es DESC10"
+  ],
+  "expectedResponses": [
+    "¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. Te ayudo con el código. ¿Me dices el código exacto tal como lo ves, incluyendo letras si las hay?"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["código"],
+      "excludes": ["operador", "escal", "lavadora o secadora", "lavandería"]
+    }
+  ],
+  "expectedOutcome": "RESOLVED",
+  "notes": "FAQ informativa one-shot — el bot reconoce el intent y pide el código en la primera (y única) respuesta canned."
+}

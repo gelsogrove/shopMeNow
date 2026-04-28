@@ -20,7 +20,7 @@
 
 - Cuando el display es DOOR, el bot indica explícitamente que la puerta no está bien cerrada y pide abrir/cerrar bien hasta oír un clic
 - Después de la indicación, el bot pide al cliente que confirme si la máquina ha arrancado
-- Cuando el cliente confirma "Sí", el bot cierra el caso con un mensaje positivo que contiene "perfecto" y "arrancado"
+- Cuando el cliente confirma "Sí", el bot cierra el caso con un mensaje positivo que contiene "perfecto" y "correctamente"
 - En el Scenario 2.1 el bot NO debe escalar a operador
 
 ### Scenario 2.2 — Escalation Path (DOOR persiste)
@@ -37,35 +37,35 @@
 ## CONVERSATION — Case 2 — Scenario 2.1 — DOOR (Happy Path)
 
 **Usuario:** La lavadora no arranca
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿Qué aparece en la pantalla de tu lavadora?
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?
 
 **Usuario:** DOOR
 **Bot:** ¿En qué lavandería autoservicio estás? Dime el pueblo y la calle.
 
 **Usuario:** Hortes
-**Bot:** ¿Cuál es el número de la lavadora?
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** 2
 **Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** Sí
-**Bot:** ✅ Perfecto. La lavadora ha arrancado correctamente.
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
 
 ---
 
 ## CONVERSATION — Case 2 — Scenario 2.2 — DOOR (Escalation Path)
 
 **Usuario:** La lavadora no arranca
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿Qué aparece en la pantalla de tu lavadora?
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?
 
 **Usuario:** DOOR
 **Bot:** ¿En qué lavandería autoservicio estás? Dime el pueblo y la calle.
 
 **Usuario:** Hortes
-**Bot:** ¿Cuál es el número de la lavadora?
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** 2
-**Bot:** La puerta no está bien cerrada. Ábrela y ciérrala firmemente hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.
+**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** NO
 **Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.

@@ -38,49 +38,49 @@
 ## CONVERSATION — Case 1 — Scenario 1.1 — Lavadora PUSH PROG (Happy Path)
 
 **Usuario:** La lavadora no funciona
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿Qué aparece en la pantalla de tu lavadora?
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?
 
 **Usuario:** PUSH PROG
 **Bot:** ¿En qué lavandería autoservicio estás? Dime el pueblo y la calle.
 
 **Usuario:** Goya
-**Bot:** ¿Cuál es el número de la lavadora?
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** 5
 **Bot:** Presiona un botón de programa para iniciar el lavado.
 
 Programas:
-1. 60º Molt calent -> ropa muy sucia, blanca o de trabajo
-2. 40º Calent -> ropa normal (algodón, color)
-3. 30º Temperat -> ropa delicada o sintética
-4. Frío -> prendas muy delicadas (lana, seda, etc.)
+60º Molt calent -> ropa muy sucia, blanca o de trabajo
+40º Calent -> ropa normal (algodón, color)
+30º Temperat -> ropa delicada o sintética
+Frío -> prendas muy delicadas (lana, seda, etc.)
 
 Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** Sí, ahora funciona
-**Bot:** Parece que la lavadora está funcionando correctamente ahora. Si tienes alguna otra pregunta o necesitas más ayuda, no dudes en decírmelo. Estoy aquí para ayudarte.
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
 
 ---
 
 ## CONVERSATION — Case 1 — Escalation Path
 
 **Usuario:** Hola, la lavadora no funciona
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿Qué aparece en la pantalla de tu lavadora?
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?
 
 **Usuario:** pone PUSH PROG
 **Bot:** ¿En qué lavandería autoservicio estás? Dime el pueblo y la calle.
 
 **Usuario:** Goya
-**Bot:** ¿Cuál es el número de la lavadora?
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** 5
 **Bot:** Presiona un botón de programa para iniciar el lavado.
 
 Programas:
-1. 60º Molt calent -> ropa muy sucia, blanca o de trabajo
-2. 40º Calent -> ropa normal (algodón, color)
-3. 30º Temperat -> ropa delicada o sintética
-4. Frío -> prendas muy delicadas (lana, seda, etc.)
+60º Molt calent -> ropa muy sucia, blanca o de trabajo
+40º Calent -> ropa normal (algodón, color)
+30º Temperat -> ropa delicada o sintética
+Frío -> prendas muy delicadas (lana, seda, etc.)
 
 Después de intentarlo, házmelo saber si funciona.
 
@@ -100,9 +100,4 @@ Usuario Carlos en Goya ha efectuado el pago por la lavadora número 5. El client
 
 ## REPORT LLM
 
-- ❌ Cuando el cliente confirma que la lavadora funciona, el bot cierra el caso con un mensaje positivo que contiene "perfecto" y "correctamente"
-  > Por qué no se cumple: Deterministic rule evaluation marked this criterion as not satisfied.
-  > Ejemplo: "¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿Qué aparece en la pantalla de tu lavadora?"
-- ❌ El mensaje de escalación del bot contiene la palabra "operador" y pregunta el nombre del cliente en el mismo mensaje
-  > Por qué no se cumple: El mensaje de escalación menciona la palabra "operador", pero la pregunta sobre el nombre del cliente fue realizada en un mensaje separado y no en el mismo mensaje de escalación.
-  > Ejemplo: "⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador para que revise el caso y la posible compensación."
+- No se detectaron criterios negativos.

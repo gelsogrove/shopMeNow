@@ -1,0 +1,21 @@
+{
+  "case": 8,
+  "scenario": 8.2,
+  "name": "Case 8 — Scenario 8.2 — Código (variante) ",
+  "description": "Variante con frase distinta: el cliente solicita ayuda con un código y el bot reconoce el intent en una única respuesta canned.",
+  "turns": [
+    "Tengo un código y no sé cómo usarlo con la lavadora."
+  ],
+  "expectedResponses": [
+    "¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. Te ayudo con el código. ¿Me dices el código exacto tal como lo ves, incluyendo letras si las hay?"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["código"],
+      "excludes": ["lavadora o secadora", "lavandería"]
+    }
+  ],
+  "expectedOutcome": "RESOLVED",
+  "notes": "FAQ informativa one-shot — variante de 8.1."
+}

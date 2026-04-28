@@ -1,0 +1,28 @@
+{
+  "case": 13,
+  "scenario": 13.1,
+  "name": "Case 13 — Scenario 13.1 — Escalación directa por código de alarma",
+  "description": "El cliente reporta un código de alarma (ALN, ALM, 001). El bot reconoce la incidencia, pide el nombre y escala sin intentar resolver técnicamente.",
+  "turns": [
+    "He pagado y ahora sale ALN.",
+    "Sofía"
+  ],
+  "expectedResponses": [
+    "Gracias por avisarnos. La máquina ha detectado una incidencia interna que necesitamos revisar manualmente. ⚠️ Voy a derivar tu caso a un operador. ¿Cómo te llamas?",
+    "Gracias Sofía, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado."
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["incidencia", "manual", "operador", "llamas"],
+      "excludes": []
+    },
+    {
+      "turn": 2,
+      "includes": ["operador", "desactivado"],
+      "excludes": []
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Escalación directa sin intentar resolución técnica. Aplica para todos los códigos de alarma o incoherencias."
+}

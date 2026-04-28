@@ -1,0 +1,42 @@
+{
+  "case": 6,
+  "scenario": 6.3,
+  "name": "Case 6 — Scenario 6.3 — Doble cobro: relato inconsistente o importe no cuadra",
+  "description": "El bot inicia el flujo estándar pero al recoger el relato detecta incoherencias (número de cobros indefinido, importe que no cuadra). Escala a soporte humano sin solicitar más datos.",
+  "turns": [
+    "Me habéis cobrado dos veces con la tarjeta.",
+    "Goya",
+    "Sí",
+    "No sé exactamente, creo que me han cobrado tres o cuatro veces, el importe no me cuadra.",
+    "Carlos"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["lavander"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 2,
+      "includes": ["lavado"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 3,
+      "includes": ["paso a paso"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 4,
+      "includes": ["operador", "llamas"],
+      "excludes": ["dígitos", "captura"]
+    },
+    {
+      "turn": 5,
+      "includes": ["operador", "desactivado"],
+      "excludes": ["dígitos", "captura"]
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Cuando el relato es inconsistente (número de cobros indefinido, importe no cuadra), el bot escala tras el paso del relato sin continuar con la recogida de dígitos o captura."
+}

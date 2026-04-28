@@ -1,0 +1,21 @@
+{
+  "case": 9,
+  "scenario": 9.1,
+  "name": "Case 9 — Scenario 9.1 — Solicitud de factura (Happy Path)",
+  "description": "El cliente pide factura. El bot proporciona correo y lista de datos requeridos.",
+  "turns": [
+    "Quiero una factura."
+  ],
+  "expectedResponses": [
+    "¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. Para obtener tu factura, debes enviar un correo a olga@alberwaz.net con esta información: razón social, email, lavandería utilizada, CIF/NIF, dirección, fecha de uso, máquinas utilizadas y observaciones."
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["olga@alberwaz.net", "CIF"],
+      "excludes": ["operador", "escal"]
+    }
+  ],
+  "expectedOutcome": "RESOLVED",
+  "notes": "FAQ informativa cerrada. No escala."
+}

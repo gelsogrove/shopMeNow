@@ -1,0 +1,21 @@
+{
+  "case": 11,
+  "scenario": 11.1,
+  "name": "Case 11 — Scenario 11.1 — Recargar tarjeta (Happy Path)",
+  "description": "El bot reconoce el intent de recarga y da la instrucción.",
+  "turns": [
+    "¿Cómo recargo la tarjeta?"
+  ],
+  "expectedResponses": [
+    "¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. Para recargar la tarjeta, introdúcela en la central y sigue las instrucciones que aparecen en pantalla. Si aparece algún mensaje extraño, dímelo y lo revisamos juntos."
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["tarjeta", "central"],
+      "excludes": ["operador", "escal"]
+    }
+  ],
+  "expectedOutcome": "RESOLVED",
+  "notes": "FAQ informativa cerrada. No escala."
+}

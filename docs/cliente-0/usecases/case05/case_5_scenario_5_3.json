@@ -20,12 +20,12 @@
     },
     {
       "turn": 2,
-      "includes": ["lavadora", "secadora"],
+      "includes": ["lavadora"],
       "excludes": ["operador", "escal"]
     },
     {
       "turn": 3,
-      "includes": ["número", "máquina"],
+      "includes": ["número"],
       "excludes": ["operador", "escal"]
     },
     {

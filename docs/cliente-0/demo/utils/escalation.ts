@@ -15,6 +15,16 @@ export type EscalationContext = {
 export function buildEscalationSummary(context: EscalationContext): string {
   const name = context.customerName ? `Usuario ${context.customerName}` : 'Usuario sin nombre'
   const location = context.locationDisplay || 'ubicación desconocida'
+
+  // Case 6: double charge — no machine info needed
+  if (/double charge/i.test(context.issueSummary)) {
+    const narrative = context.issueSummary.includes('narrative:')
+      ? context.issueSummary.replace(/.*narrative:\s*/i, '').trim()
+      : null
+    const narrativePart = narrative ? ` Relato del cliente: ${narrative}` : ''
+    return `${name} en ${location} ha reportado un doble cobro con tarjeta.${narrativePart}`
+  }
+
   const machine = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
   const number = context.machineNumber || 'número desconocido'
   const payment = context.paymentCompleted === true

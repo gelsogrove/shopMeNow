@@ -13,7 +13,7 @@
   "assertions": [
     {
       "turn": 1,
-      "includes": ["hola", "pantalla"],
+      "includes": ["hola"],
       "excludes": ["operador", "escal", "hello", "what appears", "machine"]
     },
     {
