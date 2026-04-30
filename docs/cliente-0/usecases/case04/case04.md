@@ -115,7 +115,7 @@ Usuario María en Goya ha efectuado el pago por la lavadora número 4. El client
 **Bot:** Gracias Carlos, Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?
 
 **👤 Human Support message**
-Usuario Carlos en Goya ha efectuado el pago por la lavadora número 4. El cliente seleccionó el programa pero no se ha activado, aparece E5 en la pantalla. la pantalla muestra: E5.
+Usuario Carlos en Goya ha efectuado el pago por la lavadora número 4. El cliente seleccionó el programa pero Código desconocido E5 tras el pago; la máquina no se ha activado.. la pantalla muestra: E5.
 
 ## REPORT LLM
 

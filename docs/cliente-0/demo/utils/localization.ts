@@ -15,7 +15,7 @@ export const QUESTIONS = {
     '¿Es el primer secado de esta ropa o añadiste minutos a un ciclo que ya estaba en marcha?',
   serviceCompleted: '¿Pudiste completar el lavado o secado?',
   doubleChargeNarrative:
-    '¿Es posible que hayas pasado varias veces la tarjeta por el datáfono?',
+    'Explícame, por favor, paso a paso qué has hecho desde que has entrado.',
   last4Digits: '¿Cuáles son los últimos 4 dígitos de la tarjeta con la que pagaste?',
   paymentProof: '¿Tienes una captura de pantalla del pago o comprobante?',
   displayWasher: '¿Qué aparece exactamente en la pantalla de la lavadora?',

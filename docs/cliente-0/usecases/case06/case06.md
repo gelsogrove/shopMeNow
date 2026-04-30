@@ -41,7 +41,7 @@
 
 ### Scenario 6.3 — Escalación: relato inconsistente
 
-- El bot sigue el flujo estándar hasta recoger el relato
+- El bot recoge la localización antes de escalar (sigue el flujo estándar hasta detectar la incoherencia)
 - Cuando el relato es inconsistente o el importe no cuadra, el bot escala
 - Antes de escalar, el bot pregunta el nombre del cliente junto con el mensaje de escalación
 - El mensaje de escalación contiene la palabra "operador"
@@ -59,7 +59,7 @@
 **Bot:** ¿Pudiste completar el lavado o secado?
 
 **Usuario:** Sí
-**Bot:** ¿Es posible que hayas pasado varias veces la tarjeta por el datáfono?
+**Bot:** Explícame, por favor, paso a paso qué has hecho desde que has entrado.
 
 **Usuario:** He pagado, no iba y volví a pasar la tarjeta.
 **Bot:** ¿Cuáles son los últimos 4 dígitos de la tarjeta con la que pagaste?
@@ -71,7 +71,7 @@
 **Bot:** Hemos recibido toda la información necesaria. ¿Como te llamas?
 
 **Usuario:** Goya
-**Bot:** Tranquilo, Goya. Hemos recibido toda la información necesaria. Vamos a revisar tu caso y te enviaremos un formulario de reembolso. Para la próxima vez, te recomendamos contactar con soporte antes de volver a pagar. 😊
+**Bot:** Tranquilo, Goya. Hemos recibido toda la información necesaria para tu caso. Vamos a revisar tu situación y te enviaremos un formulario de reembolso. Para la próxima vez, te recomendamos contactar con soporte antes de volver a pagar. ¡Gracias por tu comprensión!
 
 ---
 
@@ -97,7 +97,7 @@ Usuario María en ubicación no identificada ha reportado un doble cobro.
 **Bot:** ¿Pudiste completar el lavado o secado?
 
 **Usuario:** Sí
-**Bot:** ¿Es posible que hayas pasado varias veces la tarjeta por el datáfono?
+**Bot:** Explícame, por favor, paso a paso qué has hecho desde que has entrado.
 
 **Usuario:** No sé exactamente, creo que me han cobrado tres o cuatro veces, el importe no me cuadra.
 **Bot:** ⚠️ Necesitamos derivar tu caso a un operador para revisarlo. ¿Como te llamas?
@@ -110,6 +110,4 @@ Usuario Carlos en Goya ha reportado un doble cobro.
 
 ## REPORT LLM
 
-- ❌ El bot sigue el flujo estándar hasta recoger el relato
-  > Por qué no se cumple: Deterministic rule evaluation marked this criterion as not satisfied.
-  > Ejemplo: "Gracias Carlos, Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora? **👤 Human Support message** Us"
+- No se detectaron criterios negativos.

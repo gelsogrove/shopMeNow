@@ -47,7 +47,7 @@
 **Bot:** ¡Hola! Soy el asistente virtual de la lavandería. ¿En qué lavandería autoservicio te encuentras?
 
 **Usuario:** L'Escala
-**Bot:** ¿Cuál es el número de la lavadora?
+**Bot:** ¿Es una lavadora o una secadora?
 
 **Usuario:** Lavadora
 **Bot:** ¿Cuál es el número de la lavadora?
@@ -140,7 +140,7 @@ Reinicia el proceso completo siguiendo este orden:
 **Bot:** Gracias Carlos, Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?
 
 **👤 Human Support message**
-Usuario Carlos en L'Escala ha reportado un problema técnico por la lavadora número 3. El cliente seleccionó el programa pero sigue saliendo. la pantalla muestra: AL001.
+Usuario Carlos en L'Escala ha reportado un problema técnico por la lavadora número 3. El cliente seleccionó el programa pero AL001. la pantalla muestra: AL001.
 
 ## REPORT LLM
 

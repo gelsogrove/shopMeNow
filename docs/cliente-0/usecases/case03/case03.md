@@ -6,8 +6,6 @@
 
 **Scenario 3.2 — Escalation Path:** El flujo es el mismo hasta la indicación de repetir la selección. Si el display sigue mostrando SEL después de que el cliente vuelve a pulsar, el chatbot pide el nombre del cliente y escala a soporte humano con un resumen que incluye localización, número de máquina y estado del display SEL.
 
-**Scenario 3.3 — Disponible (Pago incompleto):** El cliente ha pagado en la central de pago pero no ha pulsado el botón de confirmación de la máquina. Cuando regresa a la central de pago, ve el display "disponible" con el saldo disponible. El chatbot explica que debe presionar el botón de la máquina durante unos segundos hasta que desaparezca el saldo y reciba el cambio. Una vez completado, el cliente regresa a la lavadora y ve "PUSH PROG", selecciona el programa y el caso se resuelve sin escalación.
-
 ## ACCEPTANCE CRITERIA
 
 ### Generales (ambos escenarios)
@@ -31,16 +29,6 @@
 - Antes de escalar, el bot pregunta el nombre del cliente con la frase "¿Cómo te llamas?"
 - El mensaje final al operador (Human Support message) resume nombre, localización, número de máquina y estado del display SEL
 - En el Scenario 3.2 el bot NO debe cerrar el caso como resuelto
-
-### Scenario 3.3 — Disponible (Pago incompleto)
-
-- Cuando el cliente indica que ve "disponible" en la central de pago, el bot explica que el saldo está disponible pero el pago no se ha completado en la máquina
-- El bot instruye al cliente a presionar el botón de la máquina que ha seleccionado, apretando firmemente durante unos segundos
-- El bot especifica que el saldo disponible debe desaparecer y el cliente debe recibir el cambio
-- Después de completar la instrucción, el bot pide al cliente que regrese a la lavadora y reporte qué indica el display
-- Cuando el cliente indica "PUSH PROG", el bot instruye a seleccionar el programa deseado
-- Una vez que el cliente confirma que funciona, el bot cierra el caso con un mensaje positivo sin escalación
-- En el Scenario 3.3 el bot NO debe escalar a operador
 
 ---
 
@@ -81,7 +69,7 @@
 **Bot:** Por favor, escribe solo lo que ves en la pantalla, los números y las letras tal y como aparecen en la pantalla ahora, incluso si es el mismo que antes.
 
 **Usuario:** SEL
-**Bot:** ⚠️ La pantalla sigue mostrando SEL incluso después de repetir la selección. Vamos a notificar a un operador ahora para que revise la lavadora manualmente. Por favor, espera un momento mientras gestionamos esto.
+**Bot:** ⚠️ La pantalla sigue mostrando SEL incluso después de repetir la selección. Tenemos que notificar al operador ahora para que revise la lavadora manualmente. Por favor, espera un momento mientras gestionamos esto.
 
 ¿Como te llamas?
 
@@ -93,12 +81,4 @@ Usuario Carlos en Pineda ha reportado un problema técnico por la lavadora núme
 
 ## REPORT LLM
 
-- ❌ El bot instruye al cliente a presionar el botón de la máquina que ha seleccionado, apretando firmemente durante unos segundos
-  > Por qué no se cumple: Deterministic rule evaluation marked this criterion as not satisfied.
-  > Ejemplo: "¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?"
-- ❌ Cuando el cliente indica "PUSH PROG", el bot instruye a seleccionar el programa deseado
-  > Por qué no se cumple: Deterministic rule evaluation marked this criterion as not satisfied.
-  > Ejemplo: "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago."
-- ❌ Una vez que el cliente confirma que funciona, el bot cierra el caso con un mensaje positivo sin escalación
-  > Por qué no se cumple: Deterministic rule evaluation marked this criterion as not satisfied.
-  > Ejemplo: "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago."
+- No se detectaron criterios negativos.

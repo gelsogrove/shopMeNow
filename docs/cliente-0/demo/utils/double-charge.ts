@@ -115,7 +115,7 @@ export function buildDoubleChargeStepDecision(
           : missingFacts[0] === 'service completed or not'
             ? '[EXACT] ¿Pudiste completar el lavado o secado?'
             : missingFacts[0] === 'double charge step by step'
-              ? '[EXACT] ¿Es posible que hayas pasado varias veces la tarjeta por el datáfono?'
+              ? '[EXACT] Explícame, por favor, paso a paso qué has hecho desde que has entrado.'
               : missingFacts[0] === 'last 4 card digits'
                 ? '[EXACT] ¿Cuáles son los últimos 4 dígitos de la tarjeta con la que pagaste?'
                 : missingFacts[0] === 'payment proof'

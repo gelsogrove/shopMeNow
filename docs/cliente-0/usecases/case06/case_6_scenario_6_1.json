@@ -25,7 +25,7 @@
     },
     {
       "turn": 3,
-      "includes": ["tarjeta"],
+      "includes": ["paso a paso"],
       "excludes": ["operador", "escal"]
     },
     {
