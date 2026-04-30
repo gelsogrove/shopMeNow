@@ -2,7 +2,12 @@
 const KNOWN_LOCATIONS = ['Goya', 'Pineda', "L'Escala", 'Alemanya', 'Hortes'] as const
 
 export function hasExtraButtonIssue(message: string): boolean {
-  return /button|EXTRA|button with fixed light|pulsante|botton|bouton|pulsador/.test(message.toLowerCase())
+  // RULE: Only trigger when "extra" is explicitly mentioned.
+  // Generic button words alone (pulsante, pulsador, button, botton, bouton) are not enough:
+  // they appear in LLM-extracted issueSummary whenever the user presses ANY button (e.g. "l'ho schiacchiato"
+  // → issueSummary = "user pressed the button/pulsante"). That caused false-positive routing to case_extra_button.
+  // The EXTRA button is a specific machine option — only trigger when "extra" itself is present.
+  return /\bextra\b/i.test(message)
 }
 
 export function hasStopIntent(message: string): boolean {
