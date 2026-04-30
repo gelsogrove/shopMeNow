@@ -1380,7 +1380,20 @@ export class WhatsAppWebhookController {
         },
       })
 
-      if (messageCount === 0) {
+      // 🤖 CUSTOM CHATBOT BYPASS: Workspaces with a custom chatbot (FLOW mode) must process
+      // ALL messages through the LLM pipeline — the chatbot generates its own greeting on turn 1.
+      // The workspace welcomeMessage is for standard (non-custom) workspaces only.
+      // Source of truth: customChatbotId in DB. No slug fallback.
+      const hasCustomChatbot = !!(customer as any).workspace?.customChatbotId
+
+      if (messageCount === 0 && hasCustomChatbot) {
+        logger.info("[WEBHOOK] 🤖 Custom chatbot workspace — skipping welcome-only block, routing to LLM", {
+          customerId: customer.id,
+          customChatbotId: (customer as any).workspace?.customChatbotId,
+          hasCustomChatbot,
+        })
+        // Fall through to LLM processing below
+      } else if (messageCount === 0) {
         logger.info("[WEBHOOK] 📭 Customer has NO chat history - sending welcome message", {
           customerId: customer.id,
           phone: customer.phone,
@@ -1765,10 +1778,11 @@ export class WhatsAppWebhookController {
         return
       }
 
-      // Customer has chat history → continue to normal LLM processing
-      logger.info("[WEBHOOK] 📚 Customer has chat history - continuing normal flow", {
+      // Customer continuing to LLM processing (includes hasCustomChatbot=true with messageCount===0)
+      logger.info("[WEBHOOK] 📚 Customer continuing to LLM processing", {
         customerId: customer.id,
         messageCount,
+        hasCustomChatbot,
       })
 
       // 🚦 RATE LIMIT CHECK (token bucket): prevent abuse but allow bursts
@@ -2449,13 +2463,13 @@ export class WhatsAppWebhookController {
       
       const normalizedCustomerLang = normalizeLanguage(customer.language)
       const detectedLang = detectLanguageFromPhonePrefix(customer.phone)
-      const customerLanguage =
-        normalizedCustomerLang ||
-        detectedLang ||
-        normalizeLanguage(customer.workspace?.defaultLanguage || "") ||
-        "en" // Fallback to workspace default; final safety is English
+      // 🧪 PLAYGROUND: ignore customer.language from DB (may have been set with wrong language on first creation)
+      // Use phone prefix detection as the source of truth for playground sessions
+      const customerLanguage = isPlayground
+        ? detectedLang || normalizedCustomerLang || normalizeLanguage(customer.workspace?.defaultLanguage || "") || "en"
+        : normalizedCustomerLang || detectedLang || normalizeLanguage(customer.workspace?.defaultLanguage || "") || "en"
       
-      logger.info("🌍 [ULTRAMSG] Language resolution", {
+      logger.info("🌍 [WEBHOOK] Language resolution", {
         customerLanguageRaw: customer.language,
         normalizedCustomerLang,
         detectedFromPhone: detectedLang,

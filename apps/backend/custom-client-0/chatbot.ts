@@ -498,6 +498,19 @@ export async function handleTurn(
   state.lastMissingFacts = routerDecision.missingFacts
   state.lastResolvedIntent = routerDecision.route
 
+  // If location answer contains a comma, split into city and street (user answered both at once)
+  if (state.location && !state.locationStreet) {
+    const commaIdx = state.location.indexOf(',')
+    if (commaIdx > 0) {
+      const streetPart = state.location.slice(commaIdx + 1).trim()
+      if (streetPart) {
+        state.locationStreet = streetPart
+        state.location = state.location.slice(0, commaIdx).trim()
+        pushDebug(debug, 'location.parsed', { city: state.location, street: state.locationStreet })
+      }
+    }
+  }
+
   // Mataró-specific: if location is Mataró and we haven't yet asked for the street, ask for it now
   if (
     state.location &&

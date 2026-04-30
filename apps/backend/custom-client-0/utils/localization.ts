@@ -3,9 +3,9 @@
 // To add a new language: update language.txt and settings.json only. No changes here.
 
 export const QUESTIONS = {
-  location: '¿En qué pueblo está la lavandería autoservicio?',
+  location: '¿Cuál es la dirección exacta de la lavandería autoservicio? (ciudad y calle)',
   locationClarification:
-    'Perdona, necesito el pueblo exacto de la lavandería donde estás. ¿En qué pueblo estás?',
+    'Perdona, necesito la dirección exacta de la lavandería: ciudad y calle. ¿Me puedes indicar dónde está?',
   machineType: '¿Es una lavadora o una secadora?',
   machineNumberWasher: '¿Cuál es el número de la lavadora?',
   machineNumberDryer: '¿Cuál es el número de la secadora?',
