@@ -103,10 +103,8 @@ export class CustomClientChatbotService {
         },
       })
 
-      // Prepend welcome message on first turn (history empty)
-      if (output.reply && params.history.length === 0 && params.welcomeMessage.trim()) {
-        output.reply = `${params.welcomeMessage.trim()}\n\n${output.reply}`
-      }
+      // NOTE: Welcome message is handled inside chatbotFn (LLM generates its own greeting).
+      // The workspace welcomeMessage setting is for standard (non-custom) chatbot workspaces only.
 
       // Attach wipMessage from workspace settings (used by widget/WhatsApp to show debug banner)
       if (params.debugChannel && params.wipMessage) {

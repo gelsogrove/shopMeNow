@@ -1978,39 +1978,47 @@ export class WhatsAppWebhookController {
       }
 
       // 🔒 SECURITY CHECK: Validate message before processing with LLM
-      logger.info("[WEBHOOK] 🔍 Starting security validation for WhatsApp message", {
-        customerId: customer.id,
-        workspaceId: customer.workspaceId,
-        phoneNumber: customer.phone,
-      })
+      // Skip for playground (testing mode — no need to spend tokens on security checks)
+      let securityResults: any[] = []
 
-      let securityResults
-      try {
-        securityResults = await SecurityCheckService.validateMessage({
-          workspaceId: customer.workspaceId,
-          visitorId: customer.phone, // Use phone as visitorId for WhatsApp
-          message: messageMarkdown,
-          channel: "whatsapp",
-        })
-        logger.info("[WEBHOOK] ✅ Security validation completed", { 
-          resultsCount: securityResults.length,
+      if (isPlayground) {
+        logger.info("[WEBHOOK] 🧪 Playground mode - skipping security validation", {
           customerId: customer.id,
         })
-      } catch (securityError) {
-        logger.error("[WEBHOOK] ❌ Security validation error", {
-          error: securityError instanceof Error ? securityError.message : String(securityError),
-          stack: securityError instanceof Error ? securityError.stack : undefined,
+      } else {
+        logger.info("[WEBHOOK] 🔍 Starting security validation for WhatsApp message", {
           customerId: customer.id,
           workspaceId: customer.workspaceId,
+          phoneNumber: customer.phone,
         })
-        
-        // Return 500 to prevent message processing
-        res.status(500).json({
-          status: "security_check_error",
-          code: "SECURITY_CHECK_ERROR",
-          message: "Failed to validate message security",
-        })
-        return
+
+        try {
+          securityResults = await SecurityCheckService.validateMessage({
+            workspaceId: customer.workspaceId,
+            visitorId: customer.phone, // Use phone as visitorId for WhatsApp
+            message: messageMarkdown,
+            channel: "whatsapp",
+          })
+          logger.info("[WEBHOOK] ✅ Security validation completed", { 
+            resultsCount: securityResults.length,
+            customerId: customer.id,
+          })
+        } catch (securityError) {
+          logger.error("[WEBHOOK] ❌ Security validation error", {
+            error: securityError instanceof Error ? securityError.message : String(securityError),
+            stack: securityError instanceof Error ? securityError.stack : undefined,
+            customerId: customer.id,
+            workspaceId: customer.workspaceId,
+          })
+          
+          // Return 500 to prevent message processing
+          res.status(500).json({
+            status: "security_check_error",
+            code: "SECURITY_CHECK_ERROR",
+            message: "Failed to validate message security",
+          })
+          return
+        }
       }
 
       // Check if any security step failed
