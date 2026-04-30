@@ -258,3 +258,45 @@ La domanda era: il numero di telefono del cliente (es. `+34612345678`) deve arri
 ## 10. Prossimo step
 
 Andrea conferma §7.6 (phone number opzionale) → apro PR per **task #1** (copia `docs/cliente-0/demo/` → `apps/backend/custom-client-0/`).
+
+
+
+
+RAccontami in poche parole poche frasi 
+- cosa hai fatto
+- cosa ti manca
+- passaggio di parametri
+- struttura dimmi e' ben fatta? hai da migliorare? se si fallo...
+- mi sembra strano che hai un file txt per ogni faq portebbee essere lenta la lettura possiamo far in qualche altro modo?
+- vedi problemi di multiutente
+- il chabto si intergra bene con webhook e queuee di whtaspp o widget?
+- puoi ricontrollare il lavoto ? il passaggio di parametri ? capire se uttto ha senso?
+-ricrdati che ogni cosa ha la sua responsabiñita
+- dentro cliente-0/doc dobbiamo aggionare la documertnazione e assicurarci che anidmo nella stessa direzionie
+
+Acceptance Criteria
+- mi connetto vedo il mio canale quando mi collegto con gelsogrove@gmail.com che si chiama Ecolandry entro dentro l'applicaizone e vedo le chats 
+- posso vedere le chat rispondere...attivare disattivare chatbot vedere utenti
+- posso moificare i settings dentro il worskpsae
+- devo avere un campo dove e' presente il path del chatbot persanalizato dentro i settings
+mettilo dentro AI personlity (occhio al CRUD che deve funzioanre bene)
+- deve essere chatbot di tipo Flow  
+- build deve funzionare
+- test deve funzionare
+- deve conitnuare a funzioonare i WIP message
+- deve continuare a bloccarsi se il channel e' disattivato
+- se il channel e' debugMOde=treu devo poter entrare vedere il playground chattare senza che mi ricarichi nulla sul conto
+- ogni volta che c'e' un dialogo ricordati di ricaricare il conto ini base alle configurazione
+- come vedi quello che cambia e' solo il motere del chatbot personalizato
+- occhio al prisma
+- occhio al generate di prisam
+- occio al migrate di primsa
+- devi fare il deploy su Heroku sei test e la build funzionano
+
+vedi probelmi? puoi farlo ? 
+
+IN poche parole 
+
+
+
+SENTI MA POI 

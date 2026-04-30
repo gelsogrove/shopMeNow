@@ -1,0 +1,160 @@
+{
+  "_principle": "Per-location overrides. Loaded at runtime when the customer's location (pueblo + calle) is identified by the Router. The active location override is injected into the system prompt of the Specialist and Conversation History as 'ACTIVE LOCATION CONTEXT'. A single LLM handles all locations; behavior varies because the prompt context varies. Anything per-location can be overridden: metadata, FAQ answers, flow node prompts, escalation rules, machine-specific notes. Anti-hardcode rule: never branch on location name in code; always read from this file.",
+  "_overrideTypes": {
+    "metadata": "Static facts about the location (hours, prices, central type, returns change, has loyalty card, etc.). Used by the LLM to answer questions and adapt instructions.",
+    "faqOverrides": "Map from FAQ key (matching faqs.json keys) to a location-specific answer that REPLACES the base FAQ answer when this location is active.",
+    "flowOverrides": "Map from flow path 'flowFile.flowId.stepId' to partial step overrides (currently 'prompt'). The Flow Engine merges the override on top of the base step before rendering.",
+    "escalationRules": "Array of rules { id, trigger, action, reason }. The Specialist LLM applies them when the trigger condition matches the current case. Action can be 'escalate', 'suggest_coins_or_escalate', or any documented action."
+  },
+  "locations": {
+    "Goya": {
+      "pueblo": "Madrid",
+      "calle": "Calle Goya",
+      "displayName": "Calle Goya (Madrid)",
+      "metadata": {
+        "hours": "8:00-22:00",
+        "centralType": "buttons",
+        "cardUnitPrice": "7€",
+        "returnsChangeCoins": true,
+        "loyaltyCard": true,
+        "dryerFilterSelfService": true,
+        "cardPaymentUnreliable": false,
+        "ajaxRestartPossible": false,
+        "dryerMinutesIncreaseIssue": false,
+        "selfStartMachine": true
+      },
+      "faqOverrides": {
+        "loyaltyCard": "En Calle Goya (Madrid), la tarjeta de fidelidad se compra con 20€ en efectivo y se activa pulsando el segundo botón de la fila derecha de la central. Solo funciona en este local. Para recargarla, introduce la tarjeta y sigue las instrucciones de la central."
+      },
+      "flowOverrides": {
+        "asciugatrice_ed340.non_parte.filter_warning": {
+          "prompt": "Recuerda que en Calle Goya (Madrid), el cliente debe limpiar el filtro de la secadora abriendo el cajón antes de cada uso."
+        }
+      },
+      "escalationRules": [
+        {
+          "id": "datafono-10eur-anomaly",
+          "trigger": "el cliente afirma que el datáfono cobró 10€",
+          "action": "escalate",
+          "reason": "Importe anómalo en este local: posible incoherencia o incidencia hardware. Revisar manualmente sin acusar al cliente."
+        }
+      ]
+    },
+    "Pineda": {
+      "pueblo": "Pineda de Mar",
+      "calle": "Calle Pineda",
+      "displayName": "Calle Pineda (Pineda de Mar)",
+      "metadata": {
+        "hours": "8:00-22:00",
+        "centralType": "buttons",
+        "cardUnitPrice": "8€",
+        "returnsChangeCoins": true,
+        "loyaltyCard": true,
+        "dryerFilterSelfService": false,
+        "cardPaymentUnreliable": false,
+        "ajaxRestartPossible": false,
+        "dryerMinutesIncreaseIssue": true,
+        "selfStartMachine": true
+      },
+      "faqOverrides": {
+        "loyaltyCard": "En Calle Pineda (Pineda de Mar), la tarjeta de fidelidad se compra con 20€ en efectivo y se activa pulsando el segundo botón de la fila derecha de la central. Solo funciona en este local."
+      },
+      "flowOverrides": {
+        "lavatrice_hs60xx.non_parte.case_sel": {
+          "prompt": "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago."
+        }
+      },
+      "escalationRules": [
+        {
+          "id": "datafono-10eur-anomaly",
+          "trigger": "el cliente afirma que el datáfono cobró 10€",
+          "action": "escalate",
+          "reason": "Importe anómalo en este local: posible incoherencia o incidencia hardware. Revisar manualmente sin acusar al cliente."
+        },
+        {
+          "id": "dryer-minutes-stuck",
+          "trigger": "el cliente añadió dinero a la secadora pero los minutos no aumentaron",
+          "action": "escalate",
+          "reason": "Incidencia conocida en este local: añadir dinero a veces no añade minutos."
+        }
+      ]
+    },
+    "L'Escala": {
+      "pueblo": "L'Escala",
+      "calle": "Carrer de la Mar",
+      "displayName": "Carrer de la Mar (L'Escala)",
+      "metadata": {
+        "hours": "7:00-23:00",
+        "centralType": "buttons",
+        "cardUnitPrice": null,
+        "returnsChangeCoins": true,
+        "loyaltyCard": false,
+        "dryerFilterSelfService": false,
+        "cardPaymentUnreliable": false,
+        "ajaxRestartPossible": false,
+        "dryerMinutesIncreaseIssue": false,
+        "selfStartMachine": true
+      },
+      "faqOverrides": {
+        "openingHours": "En L'Escala, las máquinas se pueden utilizar de 7:00 a 23:00, todos los días del año.",
+        "loyaltyCard": "L'Escala no dispone de tarjeta de fidelidad."
+      }
+    },
+    "Alemanya": {
+      "pueblo": "Barcelona",
+      "calle": "Carrer d'Alemanya",
+      "displayName": "Carrer d'Alemanya (Barcelona)",
+      "metadata": {
+        "hours": "8:00-22:00",
+        "centralType": "buttons",
+        "cardUnitPrice": "7€",
+        "returnsChangeCoins": true,
+        "loyaltyCard": true,
+        "dryerFilterSelfService": false,
+        "cardPaymentUnreliable": true,
+        "ajaxRestartPossible": true,
+        "dryerMinutesIncreaseIssue": true,
+        "selfStartMachine": true
+      },
+      "escalationRules": [
+        {
+          "id": "card-payment-fail",
+          "trigger": "el cliente no puede pagar con tarjeta",
+          "action": "suggest_coins_or_escalate",
+          "reason": "En este local a veces no se puede pagar con tarjeta; puede requerir reinicio AJAX por parte del equipo."
+        },
+        {
+          "id": "dryer-minutes-stuck",
+          "trigger": "el cliente añadió dinero a la secadora pero los minutos no aumentaron",
+          "action": "escalate",
+          "reason": "Incidencia conocida en este local: añadir dinero a veces no añade minutos."
+        }
+      ]
+    },
+    "Hortes": {
+      "pueblo": "Sabadell",
+      "calle": "Carrer de les Hortes",
+      "displayName": "Carrer de les Hortes (Sabadell)",
+      "metadata": {
+        "hours": "8:00-22:00",
+        "centralType": "buttons",
+        "cardUnitPrice": "7€",
+        "returnsChangeCoins": true,
+        "loyaltyCard": true,
+        "dryerFilterSelfService": false,
+        "cardPaymentUnreliable": true,
+        "ajaxRestartPossible": true,
+        "dryerMinutesIncreaseIssue": false,
+        "selfStartMachine": true
+      },
+      "escalationRules": [
+        {
+          "id": "card-payment-fail",
+          "trigger": "el cliente no puede pagar con tarjeta",
+          "action": "suggest_coins_or_escalate",
+          "reason": "En este local a veces no se puede pagar con tarjeta; puede requerir reinicio AJAX por parte del equipo."
+        }
+      ]
+    }
+  }
+}

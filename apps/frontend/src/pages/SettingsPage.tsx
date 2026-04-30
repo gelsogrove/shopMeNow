@@ -120,6 +120,7 @@ interface FormData {
   widgetQuickReplies: string[]
   // AI Config
   customAiRules: string
+  customChatbotId: string  // Custom chatbot module for FLOW workspaces (e.g. "cliente-0")
   welcomeMessage: string
   enableWelcomeMessage: boolean // E0a
   sessionResetTimeout: number // E0b (seconds, 0 = never)
@@ -237,6 +238,7 @@ export function SettingsPage() {
     widgetAutoSuggestionsEnabled: false,
     widgetQuickReplies: [],
     customAiRules: "",
+    customChatbotId: "",
     welcomeMessage: defaultWelcomeMessage,
     enableWelcomeMessage: true,
     sessionResetTimeout: 3600,
@@ -325,6 +327,7 @@ export function SettingsPage() {
         widgetAutoSuggestionsEnabled: currentWorkspace.widgetAutoSuggestionsEnabled ?? false,
         widgetQuickReplies: currentWorkspace.widgetQuickReplies || [],
         customAiRules: currentWorkspace.customAiRules || "",
+        customChatbotId: currentWorkspace.customChatbotId || "",
         welcomeMessage: currentWorkspace.welcomeMessage || defaultWelcomeMessage,
         enableWelcomeMessage: currentWorkspace.enableWelcomeMessage ?? true,
         sessionResetTimeout: currentWorkspace.sessionResetTimeout ?? 3600,
@@ -737,6 +740,7 @@ export function SettingsPage() {
               sessionResetTimeout: formData.sessionResetTimeout,
               customAiRules: formData.customAiRules,
               wipMessage: formData.wipMessage,
+              customChatbotId: formData.customChatbotId,
             }}
             errors={errors}
             canEdit={canEdit}

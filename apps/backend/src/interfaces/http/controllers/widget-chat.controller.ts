@@ -28,6 +28,7 @@ import {
   WIDGET_PUSH_CONSENT_SCHEMA,
   type WidgetMessageInput,
 } from "../schemas/widget.schemas"
+import { CustomClientChatbotService } from "../../../application/services/custom-client-chatbot.service"
 
 const llmRouterService = new LLMRouterService(prisma)
 const translationAgent = new TranslationAgent(prisma)
@@ -337,6 +338,8 @@ export function buildWidgetSuggestions(responseText: string, quickReplies?: stri
 }
 
 export class WidgetChatController {
+  private readonly customClientChatbotService = new CustomClientChatbotService()
+
   private normalizeLanguage(raw?: string | null): string | null {
     if (!raw) return null
     const code = raw.toLowerCase().split("-")[0]
@@ -666,6 +669,7 @@ export class WidgetChatController {
         },
         select: {
           id: true,
+          slug: true,
           deletedAt: true,
           channelStatus: true,
           ownerId: true,
@@ -673,10 +677,12 @@ export class WidgetChatController {
           defaultLanguage: true,
           debugMode: true,
           wipMessage: true,
+          welcomeMessage: true,
           widgetAutoSuggestionsEnabled: true,
           widgetQuickReplies: true,
           websiteUrl: true,
           allowedExternalLinks: true,
+          customChatbotId: true,
         },
       })
 
@@ -1000,45 +1006,108 @@ export class WidgetChatController {
       let llmTokensUsed = 0
       let suggestions: string[] = []
 
+      // 🎯 CUSTOM CLIENT: Try custom chatbot first (e.g. cliente-0)
+      // Pass history: [] because this is the first message of a new session.
+      // chatbotFn will prepend welcomeMessage automatically when history is empty.
+      let customClientRegHandled = false
       try {
-        const llmResult = await llmRouterService.routeMessage({
+        const wipRegMessageStr =
+          typeof workspace.wipMessage === "string"
+            ? workspace.wipMessage
+            : typeof workspace.wipMessage === "object" && workspace.wipMessage !== null
+              ? (workspace.wipMessage as Record<string, string>).en ||
+                (workspace.wipMessage as Record<string, string>).it ||
+                Object.values(workspace.wipMessage as Record<string, string>)[0] ||
+                "Work in progress."
+              : "Work in progress."
+
+        const customClientRegResult = await this.customClientChatbotService.invoke({
           workspaceId: resolvedWorkspaceId,
+          workspaceSlug: workspace.slug,
+          customChatbotId: workspace.customChatbotId,
+          userMessage: firstMessage,
+          userName: customer.name,
+          channel: isPlayground ? "playground" : "widget",
+          welcomeMessage: typeof workspace.welcomeMessage === "string" ? workspace.welcomeMessage : "",
+          wipMessage: wipRegMessageStr,
+          channelActive: workspace.channelStatus !== false,
+          debugChannel: workspace.debugMode === true,
+          isPlayground: isPlayground || false,
+          language: normalizedLanguage,
+          sessionId: chatSession.id,
           customerId: customer.id,
-          conversationId: chatSession.id,
-          messageId: `widget-reg-${visitorId}-${Date.now()}`,
-          message: firstMessage,
-          customerLanguage: normalizedLanguage,
-          customerName: customer.name,
-          isSystemMessage: false,
-          channel: "widget",
-          registrationPromptLevel: 0, // Registered user - no registration prompts
+          phoneNumber: normalizedPhone,
+          history: [], // first message: no prior history in this fresh session
         })
 
-        logger.info("[WIDGET-REGISTER] ✅ LLM response received", {
-          agentUsed: llmResult.agentUsed,
-          tokensUsed: llmResult.tokensUsed,
-        })
-
-        llmResponse = llmResult.response || llmResponse
-        llmAgentUsed = llmResult.agentUsed || llmAgentUsed
-        llmTokensUsed = llmResult.tokensUsed || 0
-
-        // Generate AI suggestions for first message too (so user sees quick reply buttons)
-        if (workspace.widgetAutoSuggestionsEnabled === true) {
-          suggestions = await buildWidgetSuggestionsWithAI(
-            llmResponse,
-            normalizedLanguage || "en",
-            workspace.widgetQuickReplies as any,
-            resolvedWorkspaceId
-          )
+        if (customClientRegResult.handled && customClientRegResult.output) {
+          customClientRegHandled = true
+          const customOutput = customClientRegResult.output
+          llmResponse = customOutput.reply || llmResponse
+          llmAgentUsed = AgentType.ROUTER
+          llmTokensUsed = customOutput.meta?.tokensUsed || 0
+          if (!customOutput.shouldEscalate && workspace.widgetAutoSuggestionsEnabled === true && customOutput.reply) {
+            suggestions = await buildWidgetSuggestionsWithAI(
+              customOutput.reply,
+              normalizedLanguage || "en",
+              workspace.widgetQuickReplies as any,
+              resolvedWorkspaceId
+            )
+          }
+          logger.info("[WIDGET-REGISTER-CUSTOM-CLIENT] ✅ custom-client processed first message", {
+            workspaceId: resolvedWorkspaceId,
+            customerId: customer.id,
+            hasReply: Boolean(customOutput.reply),
+          })
         }
-      } catch (llmError) {
-        logger.error("[WIDGET-REGISTER] ❌ LLM call failed (non-fatal) — returning fallback response", {
-          error: llmError instanceof Error ? llmError.message : String(llmError),
-          customerId: customer.id,
+      } catch (customClientError) {
+        logger.error("[WIDGET-REGISTER-CUSTOM-CLIENT] ❌ custom-client failed (non-fatal), falling back to LLM", {
+          error: customClientError instanceof Error ? customClientError.message : String(customClientError),
           workspaceId: resolvedWorkspaceId,
         })
-        // Registration still succeeds — user can continue chatting normally
+      }
+
+      if (!customClientRegHandled) {
+        try {
+          const llmResult = await llmRouterService.routeMessage({
+            workspaceId: resolvedWorkspaceId,
+            customerId: customer.id,
+            conversationId: chatSession.id,
+            messageId: `widget-reg-${visitorId}-${Date.now()}`,
+            message: firstMessage,
+            customerLanguage: normalizedLanguage,
+            customerName: customer.name,
+            isSystemMessage: false,
+            channel: "widget",
+            registrationPromptLevel: 0, // Registered user - no registration prompts
+          })
+
+          logger.info("[WIDGET-REGISTER] ✅ LLM response received", {
+            agentUsed: llmResult.agentUsed,
+            tokensUsed: llmResult.tokensUsed,
+          })
+
+          llmResponse = llmResult.response || llmResponse
+          llmAgentUsed = llmResult.agentUsed || llmAgentUsed
+          llmTokensUsed = llmResult.tokensUsed || 0
+
+          // Generate AI suggestions for first message too (so user sees quick reply buttons)
+          if (workspace.widgetAutoSuggestionsEnabled === true) {
+            suggestions = await buildWidgetSuggestionsWithAI(
+              llmResponse,
+              normalizedLanguage || "en",
+              workspace.widgetQuickReplies as any,
+              resolvedWorkspaceId
+            )
+          }
+        } catch (llmError) {
+          logger.error("[WIDGET-REGISTER] ❌ LLM call failed (non-fatal) — returning fallback response", {
+            error: llmError instanceof Error ? llmError.message : String(llmError),
+            customerId: customer.id,
+            workspaceId: resolvedWorkspaceId,
+          })
+          // Registration still succeeds — user can continue chatting normally
+        }
       }
 
       // 11. Save LLM response to conversation history
@@ -1208,6 +1277,7 @@ export class WidgetChatController {
         },
         select: {
           id: true,
+          slug: true,
           deletedAt: true,
           channelStatus: true,
           ownerId: true,
@@ -1221,6 +1291,7 @@ export class WidgetChatController {
           widgetQuickReplies: true,
           websiteUrl: true,
           allowedExternalLinks: true,
+          customChatbotId: true,
         },
       })
 
@@ -1701,6 +1772,164 @@ export class WidgetChatController {
         explicitLanguageFromWidget: language,
         normalizedExplicitLanguage: explicitLanguage,
       })
+
+      // 🎯 CUSTOM CLIENT: Check if this workspace uses a custom chatbot function (e.g. cliente-0)
+      // Wrapped in try-catch: any failure falls through gracefully to the normal LLM pipeline.
+      try {
+        const historyForCustomClient = await prisma.conversationMessage.findMany({
+          where: {
+            workspaceId: resolvedWorkspaceId,
+            customerId: customer.id,
+            conversationId: chatSession.id,
+            role: { in: ["user", "assistant"] },
+          },
+          select: { role: true, content: true },
+          orderBy: { createdAt: "asc" },
+        })
+
+        // Extract wipMessage string (could be JSON object or plain string in DB)
+        const wipMessageStr =
+          typeof workspace.wipMessage === "string"
+            ? workspace.wipMessage
+            : typeof workspace.wipMessage === "object" && workspace.wipMessage !== null
+              ? (workspace.wipMessage as Record<string, string>).en ||
+                (workspace.wipMessage as Record<string, string>).it ||
+                Object.values(workspace.wipMessage as Record<string, string>)[0] ||
+                "Work in progress."
+              : "Work in progress."
+
+        const customClientResult = await this.customClientChatbotService.invoke({
+          workspaceId: resolvedWorkspaceId,
+          workspaceSlug: workspace.slug,
+          customChatbotId: workspace.customChatbotId,
+          userMessage: message,
+          userName: customer.name,
+          channel: isPlayground ? "playground" : "widget",
+          welcomeMessage: typeof workspace.welcomeMessage === "string" ? workspace.welcomeMessage : "",
+          wipMessage: wipMessageStr,
+          channelActive: workspace.channelStatus !== false,
+          debugChannel: workspace.debugMode === true,
+          isPlayground: isPlayground || false,
+          language: customerLanguage,
+          sessionId: chatSession.id,
+          customerId: customer.id,
+          phoneNumber: phoneNumber || customer.phone || undefined,
+          history: historyForCustomClient.map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content || "",
+          })),
+        })
+
+        if (customClientResult.handled && customClientResult.output) {
+          const customOutput = customClientResult.output
+
+          if (customOutput.error) {
+            logger.warn("[WIDGET-CUSTOM-CLIENT] ⚠️ custom-client-0 returned error", {
+              workspaceId: resolvedWorkspaceId,
+              customerId: customer.id,
+              error: customOutput.error,
+            })
+          }
+
+          // Save user message to conversation history
+          await prisma.conversationMessage.create({
+            data: {
+              workspaceId: resolvedWorkspaceId,
+              customerId: customer.id,
+              conversationId: chatSession.id,
+              role: "user",
+              content: message,
+              agentType: AgentType.ROUTER,
+              tokensUsed: 0,
+            },
+          })
+
+          // Save assistant message if present
+          if (customOutput.reply) {
+            await prisma.conversationMessage.create({
+              data: {
+                workspaceId: resolvedWorkspaceId,
+                customerId: customer.id,
+                conversationId: chatSession.id,
+                role: "assistant",
+                content: customOutput.reply,
+                agentType: AgentType.ROUTER,
+                tokensUsed: customOutput.meta?.tokensUsed || 0,
+              },
+            })
+          }
+
+          // Billing: deduct widget message credit — only when a reply was actually generated.
+          // If reply is null (e.g. channel inactive guard), skip billing.
+          if (!workspace.debugMode && !isPlayground && workspace.ownerId && customOutput.reply) {
+            try {
+              const billingService = new SubscriptionBillingService(prisma)
+              await billingService.deductOwnerWidgetMessageCredit(
+                workspace.ownerId,
+                resolvedWorkspaceId,
+                `widget-custom-${visitorId}-${Date.now()}`
+              )
+            } catch (billingError) {
+              logger.error("[WIDGET-CUSTOM-CLIENT] ❌ Billing error (non-fatal):", billingError)
+            }
+          }
+
+          // WebSocket notification for admin dashboard
+          try {
+            const { websocketService } = require("../../../services/websocket.service")
+            websocketService.notifyNewMessage(resolvedWorkspaceId, {
+              id: `widget-custom-${Date.now()}`,
+              sessionId: chatSession.id,
+              content: customOutput.reply || "",
+              sender: "assistant",
+              timestamp: new Date().toISOString(),
+              workspaceId: resolvedWorkspaceId,
+            })
+          } catch (wsError) {
+            logger.warn("[WIDGET-CUSTOM-CLIENT] ⚠️ WebSocket notification failed", wsError)
+          }
+
+          // AI suggestions (same as normal flow)
+          const customSuggestions =
+            !customOutput.shouldEscalate && workspace.widgetAutoSuggestionsEnabled === true && customOutput.reply
+              ? await buildWidgetSuggestionsWithAI(
+                  customOutput.reply,
+                  customerLanguage || "en",
+                  workspace.widgetQuickReplies as any,
+                  resolvedWorkspaceId
+                )
+              : []
+
+          logger.info("[WIDGET-CUSTOM-CLIENT] ✅ custom-client processed message", {
+            workspaceId: resolvedWorkspaceId,
+            customerId: customer.id,
+            hasReply: Boolean(customOutput.reply),
+            shouldEscalate: customOutput.shouldEscalate,
+          })
+
+          return res.status(200).json({
+            success: true,
+            messageId: `widget-${visitorId}-${Date.now()}`,
+            sessionId: chatSession.id,
+            response: customOutput.reply || "",
+            status: "ready",
+            suggestions: customSuggestions,
+            language: customerLanguage || "en",
+            ...(customOutput.shouldEscalate && { activeChatbot: false }),
+            customerProfile: {
+              name: customer.name,
+              email: customer.email?.endsWith("@visitor.local") ? null : customer.email,
+              phone: customer.phone,
+              isActive: customer.isActive,
+            },
+          })
+        }
+      } catch (customClientError) {
+        logger.error("[WIDGET-CUSTOM-CLIENT] ❌ Error in custom client path, falling through to normal LLM", {
+          error: customClientError instanceof Error ? customClientError.message : String(customClientError),
+          workspaceId: resolvedWorkspaceId,
+        })
+      }
 
       // 🔄 Use ChatEngine (not LLMRouterService directly) so the FAST-PATH for numeric
       // selections (e.g. APPOINTMENT_SLOTS → bookAppointment) works correctly.

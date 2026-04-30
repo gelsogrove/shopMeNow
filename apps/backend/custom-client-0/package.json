@@ -1,0 +1,25 @@
+{
+  "name": "cliente-0-demo",
+  "version": "1.0.0",
+  "description": "Cliente-0 Chatbot Interactive Demo with Scenario Testing",
+  "type": "module",
+  "scripts": {
+    "demo": "node --import tsx chatbot.ts",
+    "demo:check": "node --import tsx chatbot.ts --check",
+    "demo:scripted": "node --import tsx chatbot.ts --scripted",
+    "demo:verify": "node --import tsx chatbot.ts --verify",
+    "demo:usecase": "node --import tsx chatbot.ts --usecases",
+    "example:happy": "node --import tsx examples/01-happy-path.ts",
+    "example:escalation": "node --import tsx examples/02-escalation.ts"
+  },
+  "keywords": [
+    "chatbot",
+    "ecolaundry",
+    "cliente-0",
+    "testing",
+    "scenarios"
+  ],
+  "devDependencies": {
+    "tsx": "^4.7.0"
+  }
+}

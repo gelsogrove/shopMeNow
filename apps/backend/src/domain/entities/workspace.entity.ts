@@ -76,6 +76,7 @@ export interface WorkspaceProps {
   // 🆕 Prompt Builder fields (Dynamic Prompt System)
   address?: string | null
   customAiRules?: string | null
+  customChatbotId?: string | null  // Custom chatbot module for FLOW workspaces (e.g. "cliente-0")
   registrationPage?: string | null
   requireManualApproval?: boolean
   // 🆕 Chatbot Personalization
@@ -402,6 +403,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get customAiRules(): string | null | undefined {
     return this.props.customAiRules
+  }
+
+  get customChatbotId(): string | null | undefined {
+    return this.props.customChatbotId
   }
 
   get registrationPage(): string | null | undefined {

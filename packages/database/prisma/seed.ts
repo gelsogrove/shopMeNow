@@ -1572,6 +1572,7 @@ Can I help with anything else?"`,
         hasCart: false,
         hasOrderTracking: false,
         needRegistration: false,
+        customChatbotId: "cliente-0",
         operatorContactMethod: "EMAIL",
         notificationEmail: "gelsogrove@gmail.com",
         humanSupportInstructions:
@@ -1581,6 +1582,14 @@ Can I help with anything else?"`,
       },
     })
   } else {
+    // Ensure customChatbotId is set on existing Ecolaundry workspace
+    if (!ecolaundryWorkspace.customChatbotId) {
+      await prisma.workspace.update({
+        where: { id: ecolaundryWorkspace.id },
+        data: { customChatbotId: "cliente-0" },
+      })
+      console.log(`   ✅ customChatbotId set on existing Ecolaundry workspace`)
+    }
     console.log(`   ✅ FLOW workspace already exists: ${ecolaundryWorkspace.name}`)
   }
 

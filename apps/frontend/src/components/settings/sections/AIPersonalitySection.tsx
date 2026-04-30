@@ -36,6 +36,7 @@ interface AIPersonalitySectionProps {
     sessionResetTimeout: number
     customAiRules: string
     wipMessage: string
+    customChatbotId: string
   }
   errors: Record<string, string>
   canEdit: boolean
@@ -304,6 +305,24 @@ export function AIPersonalitySection({
               />
             </div>
           </div>
+
+          {/* Custom Chatbot ID — only relevant for FLOW workspaces */}
+          {formData.channelMode === 'FLOW' && (
+            <div className="space-y-2">
+              <Label htmlFor="customChatbotId">Custom Chatbot ID</Label>
+              <Input
+                id="customChatbotId"
+                value={formData.customChatbotId}
+                onChange={(e) => onFieldChange("customChatbotId", e.target.value)}
+                placeholder="e.g. cliente-0"
+                disabled={!canEdit}
+              />
+              <p className="text-xs text-gray-500">
+                Module identifier for the custom chatbot used in FLOW mode (e.g. <code>cliente-0</code>).
+                Leave empty to use the standard AI agents.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

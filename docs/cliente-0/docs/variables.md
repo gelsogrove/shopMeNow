@@ -38,6 +38,7 @@ Legenda agenti: Router=01 | Security=02 | Translation=03 | History=05 | Profile=
 ├── enableWelcomeMessage   ✅ Feature E0a               — abilita/disabilita welcome
 ├── sessionResetTimeout    ✅ Feature E0b               — reset sessione dopo N sec
 ├── customAiRules          ✅ {{customAiRules}}         — Router(01), History(05)
+├── customChatbotId        ✅ modulo chatbot custom     — seleziona custom-client-N (es. "cliente-0"). Quando impostato + channelMode=FLOW → bypassa AI agents standard e usa chatbotFn custom.
 └── wipMessage             ✅ canale offline             — risposta quando channelStatus=false
 
 ══════════════════════════════════════════════════════

@@ -96,6 +96,7 @@ model Workspace {
   address                           String?     @db.Text // Physical address/location for "where are you?" questions
   chatbotName                       String?     @default("Assistente") // 🆕 Custom name for the chatbot (e.g., "Sofia", "Marco", "Assistant")
   businessType                      String?     @default("other") // 🆕 Business sector for LLM context (e.g., "food", "fashion", "tech")
+  customChatbotId                   String?     @db.Text // 🆕 Custom chatbot module identifier for FLOW workspaces (e.g., "cliente-0")
   registrationPage                  String?     @db.Text // 🆕 Custom registration page URL for customers (used by LINK_REGISTRATION)
   requireManualApproval             Boolean     @default(false) // 🆕 If true, new customers go to PENDING_APPROVAL after registration (admin must activate)
   approvalMessage                   String?     @db.Text // 🆕 Message sent to customer when admin approves their registration (default: "🎉 Your registration has been approved!")

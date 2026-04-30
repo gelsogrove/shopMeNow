@@ -1,6 +1,7 @@
 import { Request, Response } from "express"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
 import { SecurityCheckService } from "../../../application/services/security-check.service"
+import { CustomClientChatbotService } from "../../../application/services/custom-client-chatbot.service"
 import { UrlShortenerService } from "../../../application/services/url-shortener.service"
 import { platformConfigService } from "../../../services/platform-config.service"
 import { prisma } from "../../../lib/prisma"
@@ -52,6 +53,8 @@ const customerMessageLocks = new Map<string, Promise<void>>()
  */
 
 export class WhatsAppWebhookController {
+  private readonly customClientChatbotService = new CustomClientChatbotService()
+
   /**
    * GET /api/whatsapp/webhook/:webhookId
    * Webhook verification endpoint (one-time setup by Meta)
@@ -349,6 +352,7 @@ export class WhatsAppWebhookController {
             workspace: {
               select: {
                 id: true,
+                slug: true,
                 name: true,
                 channelStatus: true,
                 deletedAt: true,
@@ -370,6 +374,7 @@ export class WhatsAppWebhookController {
             workspace: {
               select: {
                 id: true,
+                slug: true,
                 name: true,
                 channelStatus: true,
                 deletedAt: true,
@@ -595,10 +600,15 @@ export class WhatsAppWebhookController {
         workspace: {
           select: {
             id: true,
+            slug: true,
             name: true,
             welcomeMessage: true,
             defaultLanguage: true, // 🌍 Language fallback
+            wipMessage: true,
+            channelStatus: true,
+            debugMode: true,
             needRegistration: true, // 🔧 Controls whether registration is required
+            customChatbotId: true, // 🤖 Custom chatbot module for FLOW workspaces
           },
         },
       } as const
@@ -2444,6 +2454,139 @@ export class WhatsAppWebhookController {
         finalLanguage: customerLanguage,
         phone: customer.phone
       })
+
+      // 🎯 CUSTOM CLIENT 0: Use custom chatbot function when workspace is mapped
+      const historyMessages = await prisma.conversationMessage.findMany({
+        where: {
+          workspaceId: customer.workspaceId,
+          customerId: customer.id,
+          conversationId: chatSession.id,
+          role: { in: ["user", "assistant"] },
+        },
+        select: { role: true, content: true },
+        orderBy: { createdAt: "asc" },
+      })
+
+      const customClientResult = await this.customClientChatbotService.invoke({
+        workspaceId: customer.workspaceId,
+        workspaceSlug: customer.workspace?.slug,
+        customChatbotId: customer.workspace?.customChatbotId,
+        userMessage: messageMarkdown,
+        userName: customer.name || "Customer",
+        channel: isPlayground ? "playground" : "whatsapp",
+        welcomeMessage: customer.workspace?.welcomeMessage || "",
+        wipMessage: customer.workspace?.wipMessage || "Work in progress. Please contact us later.",
+        channelActive: customer.workspace?.channelStatus !== false,
+        debugChannel: customer.workspace?.debugMode === true,
+        isPlayground,
+        language: customerLanguage,
+        sessionId: chatSession.id,
+        customerId: customer.id,
+        phoneNumber: customer.phone,
+        history: historyMessages.map((message) => ({
+          role: message.role as "user" | "assistant",
+          content: message.content || "",
+        })),
+      })
+
+      if (customClientResult.handled && customClientResult.output) {
+        const customOutput = customClientResult.output
+
+        if (customOutput.error) {
+          logger.warn("[WEBHOOK] ⚠️ custom-client-0 returned error", {
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+            error: customOutput.error,
+          })
+        }
+
+        const savedUserMessage = await prisma.conversationMessage.create({
+          data: {
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+            conversationId: chatSession.id,
+            role: "user",
+            content: messageMarkdown,
+            agentType: "CUSTOMER",
+            tokensUsed: 0,
+            deliveryStatus: "delivered",
+            debugInfo: JSON.stringify({
+              source: "whatsapp-webhook",
+              pipeline: "custom-client-0",
+              timestamp: new Date().toISOString(),
+            }),
+          },
+        })
+
+        let savedAssistantMessageId: string | undefined
+        if (customOutput.reply) {
+          const savedAssistantMessage = await prisma.conversationMessage.create({
+            data: {
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              conversationId: chatSession.id,
+              role: "assistant",
+              content: customOutput.reply,
+              agentType: "ROUTER",
+              tokensUsed: customOutput.meta?.tokensUsed || 0,
+              deliveryStatus: "pending",
+              debugInfo: JSON.stringify({
+                source: "whatsapp-webhook",
+                pipeline: "custom-client-0",
+                shouldEscalate: customOutput.shouldEscalate,
+                escalationSummary: customOutput.escalationSummary,
+                meta: customOutput.meta,
+              }),
+            },
+          })
+          savedAssistantMessageId = savedAssistantMessage.id
+        }
+
+        if (!isPlayground && customOutput.reply) {
+          try {
+            const { WhatsAppQueueService } = require("../../../services/whatsapp-queue.service")
+            const queueService = new WhatsAppQueueService(prisma)
+            await queueService.enqueue({
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              phoneNumber: customer.phone,
+              messageContent: customOutput.reply,
+              conversationMessageId: savedAssistantMessageId,
+              isPlayground,
+            })
+          } catch (queueError) {
+            logger.error("[WEBHOOK] ❌ Failed to enqueue custom-client-0 response", {
+              error: queueError,
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+            })
+          }
+        }
+
+        logger.info("[WEBHOOK] ✅ custom-client-0 processed message", {
+          workspaceId: customer.workspaceId,
+          customerId: customer.id,
+          hasReply: Boolean(customOutput.reply),
+          shouldEscalate: customOutput.shouldEscalate,
+          userMessageId: savedUserMessage.id,
+          assistantMessageId: savedAssistantMessageId,
+        })
+
+        res.status(200).json({
+          success: true,
+          status: "processed",
+          data: {
+            message: customOutput.reply,
+            sessionId: chatSession.id,
+            customerId: customer.id,
+          },
+          agentUsed: "custom-client-0",
+          tokensUsed: customOutput.meta?.tokensUsed || 0,
+          response: customOutput.reply,
+          debugInfo: customOutput.meta?.debug,
+        })
+        return
+      }
       
       const routerResult = await chatEngine.routeMessage({
         workspaceId: customer.workspaceId,

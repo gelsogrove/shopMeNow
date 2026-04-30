@@ -37,6 +37,7 @@
 import { Request, Response } from 'express'
 import { prisma } from '@echatbot/database'
 import { SecurityCheckService } from '../../../application/services/security-check.service'
+import { CustomClientChatbotService } from '../../../application/services/custom-client-chatbot.service'
 import { getChatEngine } from '../../../application/chat-engine'
 import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from '../../../middlewares/rateLimiter'
 import { platformConfigService } from '../../../services/platform-config.service'
@@ -62,6 +63,7 @@ const customerMessageLocks = new Map<string, Promise<void>>()
 
 export class UltraMsgWebhookController {
   private readonly operatorRelayService = new OperatorRelayService(prisma)
+  private readonly customClientChatbotService = new CustomClientChatbotService()
   /**
    * Handle incoming webhook from UltraMsg
    * POST /api/whatsapp/ultramsg/:webhookId
@@ -169,6 +171,7 @@ export class UltraMsgWebhookController {
           workspace: {
             select: {
               id: true,
+              slug: true,
               name: true,
               welcomeMessage: true,
               defaultLanguage: true,
@@ -182,6 +185,7 @@ export class UltraMsgWebhookController {
               whatsappPhoneNumber: true,
               operatorWhatsappNumber: true,
               ownerId: true,
+              customChatbotId: true, // 🤖 Custom chatbot module for FLOW workspaces
               owner: {
                 select: { status: true }
               }
@@ -343,9 +347,13 @@ export class UltraMsgWebhookController {
         workspace: {
           select: {
             id: true,
+            slug: true,
             name: true,
             welcomeMessage: true,
             defaultLanguage: true,
+            wipMessage: true,
+            channelStatus: true,
+            debugMode: true,
           },
         },
       } as const
@@ -1183,8 +1191,9 @@ export class UltraMsgWebhookController {
       // saves user+assistant together. Saving here would:
       //   (a) create DUPLICATE user message in history → LLM sees contradiction
       //   (b) make WelcomeMessageHandler count=1 → isFirstMessage=false → no welcome prefix
+      let savedUserMessage: { id: string } | null = null
       if (workspace.channelMode !== 'FLOW') {
-        await prisma.conversationMessage.create({
+        savedUserMessage = await prisma.conversationMessage.create({
           data: {
             workspaceId,
             customerId: customer.id,
@@ -1204,6 +1213,7 @@ export class UltraMsgWebhookController {
         logger.info('[ULTRAMSG] 💾 User message saved to history', {
           customerId: customer.id,
           conversationId: chatSession.id,
+          messageId: savedUserMessage.id,
         })
       } else {
         logger.info('[ULTRAMSG] 🔄 FLOW workspace — skipping user message save (FlowWorkspaceStrategy handles it)', {
@@ -1328,13 +1338,146 @@ export class UltraMsgWebhookController {
         registrationPromptLevel, // Pass level to chat engine
       })
 
+      const customerLanguage =
+        customer.language ||
+        detectLanguageFromPhonePrefix(customer.phone) ||
+        workspace.defaultLanguage
+
+      const historyMessages = await prisma.conversationMessage.findMany({
+        where: {
+          workspaceId,
+          customerId: customer.id,
+          conversationId: chatSession.id,
+          role: { in: ['user', 'assistant'] },
+          ...(savedUserMessage ? { id: { not: savedUserMessage.id } } : {}),
+        },
+        select: {
+          role: true,
+          content: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      })
+
+      const customClientResult = await this.customClientChatbotService.invoke({
+        workspaceId,
+        workspaceSlug: workspace.slug,
+        customChatbotId: workspace.customChatbotId, // 🤖 DB field (authoritative)
+        userMessage: messageMarkdown,
+        userName: customer.name || 'Customer',
+        channel: 'whatsapp',
+        welcomeMessage: workspace.welcomeMessage || '',
+        wipMessage: workspace.wipMessage || 'Work in progress. Please contact us later.',
+        channelActive: workspace.channelStatus !== false,
+        debugChannel: workspace.debugMode === true,
+        isPlayground: false,
+        language: customerLanguage,
+        sessionId: chatSession.id,
+        customerId: customer.id,
+        phoneNumber: customer.phone,
+        history: historyMessages.map((message) => ({
+          role: message.role as 'user' | 'assistant',
+          content: message.content || '',
+        })),
+      })
+
+      if (customClientResult.handled && customClientResult.output) {
+        const customOutput = customClientResult.output
+
+        if (!savedUserMessage) {
+          savedUserMessage = await prisma.conversationMessage.create({
+            data: {
+              workspaceId,
+              customerId: customer.id,
+              conversationId: chatSession.id,
+              role: 'user',
+              content: messageMarkdown,
+              agentType: 'CUSTOMER',
+              tokensUsed: 0,
+              deliveryStatus: 'delivered',
+              debugInfo: JSON.stringify({
+                source: 'ultramsg-webhook',
+                pipeline: 'custom-client-0',
+                timestamp: new Date().toISOString(),
+              }),
+            },
+            select: { id: true },
+          })
+        }
+
+        let assistantMessageId: string | undefined
+        if (customOutput.reply) {
+          const savedAssistantMessage = await prisma.conversationMessage.create({
+            data: {
+              workspaceId,
+              customerId: customer.id,
+              conversationId: chatSession.id,
+              role: 'assistant',
+              content: customOutput.reply,
+              agentType: 'ROUTER',
+              tokensUsed: customOutput.meta?.tokensUsed || 0,
+              deliveryStatus: 'pending',
+              debugInfo: JSON.stringify({
+                source: 'ultramsg-webhook',
+                pipeline: 'custom-client-0',
+                shouldEscalate: customOutput.shouldEscalate,
+                escalationSummary: customOutput.escalationSummary,
+                meta: customOutput.meta,
+              }),
+            },
+          })
+          assistantMessageId = savedAssistantMessage.id
+        }
+
+        if (customOutput.reply) {
+          try {
+            const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
+            const queueService = new WhatsAppQueueService(prisma)
+            await queueService.enqueue({
+              workspaceId,
+              customerId: customer.id,
+              phoneNumber: customer.phone,
+              messageContent: customOutput.reply,
+              conversationMessageId: assistantMessageId,
+              isPlayground: false,
+            })
+          } catch (queueError) {
+            logger.error('[ULTRAMSG] ❌ Failed to enqueue custom-client-0 response', {
+              error: queueError,
+              workspaceId,
+              customerId: customer.id,
+            })
+          }
+        }
+
+        logger.info('[ULTRAMSG] ✅ custom-client-0 processed message', {
+          workspaceId,
+          customerId: customer.id,
+          hasReply: Boolean(customOutput.reply),
+          shouldEscalate: customOutput.shouldEscalate,
+        })
+
+        return res.status(200).json({
+          success: true,
+          status: 'processed',
+          data: {
+            message: customOutput.reply,
+            sessionId: chatSession.id,
+            customerId: customer.id,
+          },
+          agentUsed: 'custom-client-0',
+          tokensUsed: customOutput.meta?.tokensUsed || 0,
+          response: customOutput.reply,
+          debugInfo: customOutput.meta?.debug,
+        })
+      }
+
       const chatEngine = getChatEngine(prisma)
       const routerResult = await chatEngine.routeMessage({
         workspaceId,
         customerId: customer.id,
         conversationId: chatSession.id,
         message: messageMarkdown,
-        customerLanguage: customer.language || detectLanguageFromPhonePrefix(customer.phone) || workspace.defaultLanguage, // 🌍 Priority: customer.language → phone prefix (IT/ES/PT) → workspace.defaultLanguage (NOT nullable)
+        customerLanguage, // 🌍 Priority: customer.language → phone prefix (IT/ES/PT) → workspace.defaultLanguage (NOT nullable)
         customerName: customer.name,
         customerDiscount: customer.discount || 0,
         isPlayground: false,
