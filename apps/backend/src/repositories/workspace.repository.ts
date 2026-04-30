@@ -89,6 +89,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       botIdentityResponse: data.botIdentityResponse || null,
       address: data.address || null,
       customAiRules: data.customAiRules || null,
+      customChatbotId: data.customChatbotId ?? null,
       registrationPage: data.registrationPage || null,
       requireManualApproval: data.requireManualApproval ?? false,
       chatbotName: data.chatbotName || data.name || null,
