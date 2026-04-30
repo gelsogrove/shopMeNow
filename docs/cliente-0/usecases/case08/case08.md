@@ -1,42 +1,76 @@
-# Case 8 — Tengo un código
+# Case 8 — Tengo un código de importe menor
 
 ## SCENARIO
 
-**Objetivo:** Reconocer que el cliente quiere usar un código (descuento, cupón, prepago) y darle la primera instrucción de forma directa sin entrar en troubleshooting técnico.
+**Objetivo:** Ayudar al cliente a completar el proceso con un código y un pequeño importe pendiente.
 
-**Cuándo aplica:** El cliente menciona que tiene un código y necesita ayuda para usarlo. Es una consulta informativa one-shot: el bot saluda como asistente virtual de Ecolaundry, reconoce el intent del código y pide el código exacto (incluyendo letras si las hay) en una única respuesta canned. NO formula preguntas de troubleshooting técnico (lavadora/secadora, número de máquina, contenido de la pantalla) porque el caso no es un problema de máquina sino una consulta sobre uso de un código. Tampoco mezcla la pregunta del código con la de la lavandería — una sola pregunta por turno.
+**Cuándo aplica:** El cliente tiene un código válido (con letras delante) y solo le falta una pequeña parte del importe. El bot pide el código exacto, la lavandería, verifica si falta o sobra importe, da instrucciones para introducir el importe pendiente en la central y confirma la resolución. Una sola pregunta por turno.
 
-**Scenario 8.1 — Happy Path:** El cliente menciona "tengo un código y no sé cómo usarlo". El bot saluda, reconoce el intent y pide el código exacto en una única respuesta.
+**Scenario 8.1 — Happy Path:** El cliente tiene un código y le falta un pequeño importe. El bot recoge el código, la lavandería, verifica la situación del importe, da instrucciones para completar la operación y cierra el caso como resuelto.
 
-**Scenario 8.2 — Variante:** Misma intención del cliente, misma respuesta canned del bot.
+**Scenario 8.2 — Escalación: no funciona tras introducir el importe:** El bot sigue el mismo flujo pero, tras dar las instrucciones, el cliente indica que la máquina sigue sin funcionar. El bot escala a soporte humano.
 
 ## ACCEPTANCE CRITERIA
 
+### Generales
+
+- El bot pide el código exacto (incluyendo letras si las hay) en la primera respuesta
+- El bot pregunta la lavandería después de recibir el código
+- El bot NO pregunta si es lavadora o secadora
+- El bot NO escala de inmediato: primero da instrucciones para el importe pendiente
+
 ### Scenario 8.1 — Happy Path
 
-- El bot saluda como asistente virtual de Ecolaundry en la primera respuesta
-- La respuesta menciona la palabra "código"
-- En la primera respuesta el bot pide SOLO el código (no pregunta también por la lavandería en el mismo turno)
-- El bot NO pregunta si es lavadora o secadora
-- El bot NO pregunta qué aparece en la pantalla
-- El bot NO escala a operador
+- El bot pregunta si falta una pequeña parte o el código cubre un importe mayor
+- El bot indica introducir el importe que falta en la central y no tocar nada más
+- El mensaje final confirma resolución con "resuelta" o "perfecto"
+- El bot NO escala
 
-### Scenario 8.2 — Variante
+### Scenario 8.2 — Escalación: no funciona tras el paso indicado
 
-- El bot saluda como asistente virtual de Ecolaundry en la primera respuesta
-- La respuesta menciona la palabra "código"
-- El bot NO pregunta si es lavadora o secadora
+- Cuando el cliente indica que sigue sin funcionar, el bot escala
+- El mensaje de escalación contiene la palabra "operador"
 
 ---
 
-## CONVERSATION — Case 8 — Scenario 8.1 — Código + importe pendiente (Happy Path)
+## CONVERSATION — Case 8 — Scenario 8.1 — Código con importe pendiente (Happy Path)
 
 **Usuario:** Tengo un código y no sé cómo usarlo.
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. Te ayudo con el código. ¿Me dices el código exacto tal como lo ves, incluyendo letras si las hay?
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte. Te ayudo con el código. ¿Me dices el código exacto tal como lo ves, incluyendo letras si las hay?
+
+**Usuario:** AB12345.
+**Bot:** Gracias. ¿En qué lavandería lo quieres usar?
+
+**Usuario:** Goya.
+**Bot:** Perfecto. ¿Te falta una pequeña parte para completar el importe o el código cubre un importe mayor?
+
+**Usuario:** Me falta un poco.
+**Bot:** De acuerdo. Introduce en la central el importe que falta y no toques nada más. Después ponte delante de la máquina y dime si ya puedes continuar.
+
+**Usuario:** Sí, ya funciona.
+**Bot:** Perfecto, incidencia resuelta.
 
 ---
 
-## CONVERSATION — Case 8 — Scenario 8.2 — Variante
+## CONVERSATION — Case 8 — Scenario 8.2 — Escalación: no funciona tras introducir el importe
 
 **Usuario:** Tengo un código y no sé cómo usarlo.
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. Te ayudo con el código. ¿Me dices el código exacto tal como lo ves, incluyendo letras si las hay?
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte. Te ayudo con el código. ¿Me dices el código exacto tal como lo ves, incluyendo letras si las hay?
+
+**Usuario:** AB12345.
+**Bot:** Gracias. ¿En qué lavandería lo quieres usar?
+
+**Usuario:** Goya.
+**Bot:** Perfecto. ¿Te falta una pequeña parte para completar el importe o el código cubre un importe mayor?
+
+**Usuario:** Me falta un poco.
+**Bot:** De acuerdo. Introduce en la central el importe que falta y no toques nada más. Después ponte delante de la máquina y dime si ya puedes continuar.
+
+**Usuario:** No, sigue sin funcionar.
+**Bot:** Entiendo. Voy a pasarte con un operador para que te ayude personalmente.
+
+## REPORT LLM
+
+- ❌ El bot pregunta si falta una pequeña parte o el código cubre un importe mayor
+  > Por qué no se cumple: Deterministic rule evaluation marked this criterion as not satisfied.
+  > Ejemplo: "¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte. Te ayudo con el código. ¿Me dices el código exacto tal como lo ves, incluyendo letras si las hay?"

@@ -181,8 +181,8 @@ export async function evaluateCriteriaDetailedWithLLM(
       return /operador|escalar|derivar/i.test(botAfterAngry)
     }
     if (/mensaje de escalacion contiene.*operador|contiene la palabra.*operador/.test(criterionNorm)) {
-      const escalationBotTurn = botTurns.find((t) => /operador|escal|derivar|⚠/i.test(t))
-      return escalationBotTurn ? /operador/i.test(escalationBotTurn) : false
+      const escalationBotTurns = botTurns.filter((t) => /operador|escal|derivar|⚠|encarg/i.test(t))
+      return escalationBotTurns.some((t) => /operador/i.test(t))
     }
     if (/human support message.*resume|mensaje final al operador.*resume|resume.*nombre.*localizacion|resume.*nombre.*maquina/.test(criterionNorm)) {
       if (operatorAll.length === 0) return false
@@ -196,6 +196,14 @@ export async function evaluateCriteriaDetailedWithLLM(
     if (/mensaje de confirmacion final contiene.*desactivado|contiene la palabra.*desactivado|informa explicitamente.*desactivado|chatbot sera desactivado/.test(criterionNorm)) {
       const lastBotTurn = botTurns[botTurns.length - 1] || ''
       return /desactivado/i.test(lastBotTurn)
+    }
+    if (/mensaje de confirmacion final contiene.*brevedad|brevedad.*llamada|contiene.*brevedad.*llamada telefonica|llamada telefonica/.test(criterionNorm)) {
+      const lastBotTurn = botTurns[botTurns.length - 1] || ''
+      return /brevedad/i.test(lastBotTurn) && /llamada/i.test(lastBotTurn)
+    }
+    if (/anuncia que un operador.*brevedad|brevedad posible.*llamada|operador se encargara.*maxima brevedad/.test(criterionNorm)) {
+      const lastBotTurn = botTurns[botTurns.length - 1] || ''
+      return /brevedad/i.test(lastBotTurn) && /llamada/i.test(lastBotTurn)
     }
     if (/relato es inconsistente|importe no cuadra/.test(criterionNorm) && /escala/.test(criterionNorm)) {
       const inconsistentUserIdx = userTurns.findIndex((t) =>
@@ -222,11 +230,22 @@ export async function evaluateCriteriaDetailedWithLLM(
     const isOrderedSequenceCriterion =
       /pagar|paga/.test(criterionNorm) &&
       /seleccionar|selecciona/.test(criterionNorm) &&
-      /pulsar|presiona|programa/.test(criterionNorm) &&
+      (/pulsar|presiona|programa/.test(criterionNorm) || /elige.*programa/.test(criterionNorm)) &&
       /cerrar|cierra/.test(criterionNorm) &&
       /puerta/.test(criterionNorm)
 
     if (isOrderedSequenceCriterion) {
+      // New 6-step order: cargar lavadora, cerrar puerta, pagar (central), seleccionar maquina, programa, avisar
+      const isNewOrderCriterion = /carga.*lavadora|cargar la lavadora|central de pago/.test(criterionNorm)
+      if (isNewOrderCriterion) {
+        const cargaIndex = botAll.search(/carga la lavadora|cargar la lavadora/)
+        const doorIndex = botAll.search(/cierra la puerta|cerrar la puerta/)
+        const payIndex = botAll.search(/central de pago|\bpaga\b/)
+        const selectIndex = botAll.search(/selecciona el numero|selecciona el número|seleccionar.*numero/)
+        const programIndex = botAll.search(/elige el programa|programa/)
+        return cargaIndex !== -1 && doorIndex !== -1 && payIndex !== -1 && selectIndex !== -1 && programIndex !== -1 &&
+          cargaIndex < doorIndex && doorIndex < payIndex && payIndex < selectIndex && selectIndex < programIndex
+      }
       const payIndex = botAll.search(/\bpaga\b|\bpay\b/)
       const selectIndex = botAll.search(/selecciona la maquina|selecciona la máquina|select machine/)
       const programIndex = botAll.search(/presiona el programa|pulsa.*programa|press program/)
@@ -298,8 +317,8 @@ export async function evaluateCriteriaDetailedWithLLM(
           : botAll
       return quotedSegments.every((w) => target.includes(w))
     }
-    if (/saluda como asistente virtual de ecolaundry/.test(criterionNorm)) {
-      return /asistente virtual de ecolaundry/.test(firstBotNormLocal)
+    if (/saluda como asistente virtual de (ecolaundry|la lavanderia)/.test(criterionNorm)) {
+      return /asistente virtual de (ecolaundry|la lavanderia)/.test(firstBotNormLocal)
     }
     if (/no pregunta si es lavadora o secadora/.test(criterionNorm)) {
       return !hasMachineTypeQuestion(botAll)

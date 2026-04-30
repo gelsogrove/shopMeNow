@@ -10,7 +10,7 @@
 
 ### Generales (ambos escenarios)
 
-- El primer mensaje contiene un mensaje de bienvenida con tono cálido y una frase de tranquilidad
+- El primer mensaje contiene un saludo de bienvenida con tono cálido: "¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte."
 - Todas las respuestas del bot deben estar en el mismo idioma del cliente (si el cliente escribe en español, el bot responde en español; nunca en inglés ni en otro idioma)
 - No propone soluciones antes de conocer el display
 - Pregunta la localización antes de proponer cualquier acción técnica
@@ -29,7 +29,7 @@
 - Si tras seleccionar el programa la máquina sigue sin arrancar, el bot vuelve a preguntar por el código exacto de la pantalla antes de escalar
 - Antes de escalar el bot debe preguntar el nombre del cliente con la frase "¿Cómo te llamas?"
 - El bot anuncia la escalación con un mensaje que contiene la palabra "operador"
-- El mensaje de confirmación final contiene la palabra "desactivado"
+- El mensaje de confirmación final contiene "brevedad" y "llamada telefónica"
 - El mensaje final al operador (Human Support message) debe resumir: nombre del cliente, localización y número de máquina
 - En el Scenario 1.2 el bot NO debe cerrar el caso como resuelto
 
@@ -38,13 +38,13 @@
 ## CONVERSATION — Case 1 — Scenario 1.1 — Lavadora PUSH PROG (Happy Path)
 
 **Usuario:** La lavadora no funciona
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?
 
 **Usuario:** PUSH PROG
-**Bot:** ¿En qué lavandería autoservicio estás? Dime el pueblo y la calle.
+**Bot:** ¿En qué pueblo está la lavandería autoservicio?
 
 **Usuario:** Goya
-**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+**Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** 5
 **Bot:** Presiona un botón de programa para iniciar el lavado.
@@ -65,13 +65,13 @@ Después de intentarlo, házmelo saber si funciona.
 ## CONVERSATION — Case 1 — Escalation Path
 
 **Usuario:** Hola, la lavadora no funciona
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?
 
 **Usuario:** pone PUSH PROG
-**Bot:** ¿En qué lavandería autoservicio estás? Dime el pueblo y la calle.
+**Bot:** ¿En qué pueblo está la lavandería autoservicio?
 
 **Usuario:** Goya
-**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+**Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** 5
 **Bot:** Presiona un botón de programa para iniciar el lavado.
@@ -85,18 +85,18 @@ Frío -> prendas muy delicadas (lana, seda, etc.)
 Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** no arranca
-**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
+**Bot:** Por favor, escribe solo lo que ves en la pantalla, los números y las letras tal y como aparecen en la pantalla ahora, incluso si es el mismo que antes.
 
 **Usuario:** se ha bloqueada la pantalla
-**Bot:** ⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador para que revise el caso y la posible compensación.
+**Bot:** ⚠️ ¿Permites que te llame un agente para poder ayudarte de forma rápida? Vamos a activarte otra lavadora para que puedas lavar. Tendrás que cambiar la ropa de lavadora; selecciona una que esté libre mientras te busco a un agente para que te ayude.
 
 ¿Como te llamas?
 
 **Usuario:** Carlos
-**Bot:** Gracias Carlos, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
+**Bot:** Gracias Carlos, Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?
 
 **👤 Human Support message**
-Usuario Carlos en Goya ha efectuado el pago por la lavadora número 5. El cliente seleccionó el programa pero se ha bloqueada la pantalla. la pantalla muestra: PUSH.
+Usuario Carlos en Goya ha efectuado el pago por la lavadora número 5. El cliente seleccionó el programa pero pantalla bloqueada. la pantalla muestra: PUSH.
 
 ## REPORT LLM
 

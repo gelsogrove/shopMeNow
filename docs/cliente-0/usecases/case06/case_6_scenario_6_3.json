@@ -23,7 +23,7 @@
     },
     {
       "turn": 3,
-      "includes": ["paso a paso"],
+      "includes": ["tarjeta"],
       "excludes": ["operador", "escal"]
     },
     {
@@ -33,7 +33,7 @@
     },
     {
       "turn": 5,
-      "includes": ["operador", "desactivado"],
+      "includes": ["operador", "brevedad", "llamada"],
       "excludes": ["dígitos", "captura"]
     }
   ],

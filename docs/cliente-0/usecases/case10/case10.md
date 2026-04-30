@@ -21,7 +21,7 @@
 ## CONVERSATION — Case 10 — Scenario 10.1 — Comprar tarjeta de fidelización (Happy Path)
 
 **Usuario:** ¿Cómo consigo la tarjeta de fidelización?
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. La tarjeta de fidelización se compra con 20 € en efectivo y solo funciona en la tienda donde se ha comprado. ¿En qué lavandería te encuentras?
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte. La tarjeta de fidelización se compra con 20 € en efectivo y solo funciona en la tienda donde se ha comprado. ¿En qué lavandería te encuentras?
 
 ## REPORT LLM
 

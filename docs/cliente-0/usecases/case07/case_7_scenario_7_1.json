@@ -35,7 +35,7 @@
     {
       "turn": 6,
       "includes": ["perfecto"],
-      "excludes": ["operador", "desactivado"]
+      "excludes": ["operador", "brevedad", "llamada"]
     }
   ],
   "expectedOutcome": "RESOLVED",

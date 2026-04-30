@@ -36,12 +36,12 @@
     },
     {
       "turn": 7,
-      "includes": ["operador"],
+      "includes": ["llamas"],
       "excludes": []
     },
     {
       "turn": 8,
-      "includes": ["operador", "desactivado"],
+      "includes": ["operador", "brevedad", "llamada"],
       "excludes": []
     }
   ],

@@ -1,21 +1,32 @@
 {
   "case": 8,
   "scenario": 8.2,
-  "name": "Case 8 — Scenario 8.2 — Código (variante) ",
-  "description": "Variante con frase distinta: el cliente solicita ayuda con un código y el bot reconoce el intent en una única respuesta canned.",
+  "name": "Case 8 — Scenario 8.2 — Escalación: no funciona tras introducir el importe",
+  "description": "El cliente introduce el importe pendiente pero la máquina sigue sin funcionar. El bot escala a soporte humano.",
   "turns": [
-    "Tengo un código y no sé cómo usarlo con la lavadora."
-  ],
-  "expectedResponses": [
-    "¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. Te ayudo con el código. ¿Me dices el código exacto tal como lo ves, incluyendo letras si las hay?"
+    "Tengo un código y no sé cómo usarlo.",
+    "AB12345.",
+    "Goya.",
+    "Me falta un poco.",
+    "No, sigue sin funcionar."
   ],
   "assertions": [
     {
       "turn": 1,
       "includes": ["código"],
-      "excludes": ["lavadora o secadora", "lavandería"]
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 4,
+      "includes": ["central", "importe"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 5,
+      "includes": ["operador"],
+      "excludes": []
     }
   ],
-  "expectedOutcome": "RESOLVED",
-  "notes": "FAQ informativa one-shot — variante de 8.1."
+  "expectedOutcome": "ESCALATED",
+  "notes": "El bot sigue el flujo estándar pero escala cuando el cliente confirma que sigue sin funcionar tras introducir el importe pendiente."
 }

@@ -3,6 +3,8 @@ export type SessionState = {
   language: 'it' | 'es' | 'en' | 'pt' | 'ca' | 'fr'
   preferredLanguage: 'it' | 'es' | 'en' | 'pt' | 'ca' | 'fr' | null
   location: string
+  locationStreet: string
+  locationStreetRequested: boolean
   locationClarificationCount: number
   machineType: '' | 'washer' | 'dryer'
   machineNumber: string
@@ -30,6 +32,9 @@ export type SessionState = {
   lastMissingFacts: string[]
   pendingClosure: 'resolved' | 'escalated' | null
   lastActivityAt: number
+  activeFaqFlow: string | null  // e.g. 'discount-code'
+  faqStep: number               // 0 = inactive, 1+ = step index within the flow
+  faqCodeValue: string          // code received from the customer in the codice flow
 }
 
 export function createInitialState(): SessionState {
@@ -37,6 +42,8 @@ export function createInitialState(): SessionState {
     language: 'en',
     preferredLanguage: null,
     location: '',
+    locationStreet: '',
+    locationStreetRequested: false,
     locationClarificationCount: 0,
     machineType: '',
     machineNumber: '',
@@ -64,6 +71,9 @@ export function createInitialState(): SessionState {
     lastMissingFacts: [],
     pendingClosure: null,
     lastActivityAt: Date.now(),
+    activeFaqFlow: null,
+    faqStep: 0,
+    faqCodeValue: '',
   }
 }
 

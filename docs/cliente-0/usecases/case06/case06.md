@@ -22,13 +22,13 @@
 
 ### Scenario 6.1 — Happy Path
 
-- El bot pregunta en qué lavandería está el cliente
+- El bot pregunta en qué lavandería está el cliente sin mencionar el doble cobro en el saludo
 - El bot pregunta si ha podido completar el lavado o secado
-- El bot solicita el relato paso a paso de lo ocurrido
+- El bot pregunta si es posible que el cliente haya pasado varias veces la tarjeta por el datáfono
 - El bot solicita los últimos 4 dígitos de la tarjeta
 - El bot solicita una captura del pago
 - Una vez recogidos todos los datos, el bot confirma que el caso será revisado y enviará el formulario de devolución
-- El mensaje final NO contiene "operador" ni "desactivado"
+- El mensaje final NO contiene "operador" ni "llamada telefónica" (NO debe escalar)
 - El bot NO escala a operador en el sentido de transferir la conversación
 
 ### Scenario 6.2 — Escalación: cliente muy molesto
@@ -36,7 +36,7 @@
 - Si el cliente indica que está muy molesto y exige hablar con una persona, el bot escala inmediatamente
 - Antes de escalar, el bot pregunta el nombre del cliente junto con el mensaje de escalación
 - El mensaje de escalación contiene la palabra "operador"
-- El mensaje de confirmación final contiene la palabra "desactivado"
+- El mensaje de confirmación final contiene "brevedad" y "llamada telefónica"
 - El bot NO continúa recogiendo datos de revisión
 
 ### Scenario 6.3 — Escalación: relato inconsistente
@@ -45,7 +45,7 @@
 - Cuando el relato es inconsistente o el importe no cuadra, el bot escala
 - Antes de escalar, el bot pregunta el nombre del cliente junto con el mensaje de escalación
 - El mensaje de escalación contiene la palabra "operador"
-- El mensaje de confirmación final contiene la palabra "desactivado"
+- El mensaje de confirmación final contiene "brevedad" y "llamada telefónica"
 - El bot NO continúa solicitando más datos (dígitos, captura)
 
 ---
@@ -53,13 +53,13 @@
 ## CONVERSATION — Case 6 — Scenario 6.1 — Doble cobro, servicio completado (Happy Path)
 
 **Usuario:** Me habéis cobrado dos veces con la tarjeta.
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. He notado que tienes una preocupación sobre un doble cobro. ¿En qué lavandería te encuentras? (indica la ciudad y la calle)
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería y estoy aquí para ayudarte. ¿En qué lavandería te encuentras?
 
 **Usuario:** Goya
 **Bot:** ¿Pudiste completar el lavado o secado?
 
 **Usuario:** Sí
-**Bot:** Por favor, cuéntame paso a paso qué pasó: cómo empezó, qué hiciste, cuándo viste el doble cobro.
+**Bot:** ¿Es posible que hayas pasado varias veces la tarjeta por el datáfono?
 
 **Usuario:** He pagado, no iba y volví a pasar la tarjeta.
 **Bot:** ¿Cuáles son los últimos 4 dígitos de la tarjeta con la que pagaste?
@@ -71,7 +71,7 @@
 **Bot:** Hemos recibido toda la información necesaria. ¿Como te llamas?
 
 **Usuario:** Goya
-**Bot:** Tranquilo, Goya. Hemos recibido toda la información necesaria para tu caso. Vamos a revisar tu situación y te enviaremos un formulario de reembolso. Para la próxima vez, te recomendamos contactar con soporte antes de volver a pagar. Si necesitas algo más, aquí estoy para ayudarte.
+**Bot:** Tranquilo, Goya. Hemos recibido toda la información necesaria. Vamos a revisar tu caso y te enviaremos un formulario de reembolso. Para la próxima vez, te recomendamos contactar con soporte antes de volver a pagar. 😊
 
 ---
 
@@ -81,33 +81,35 @@
 **Bot:** ⚠️ Necesitamos derivar tu caso a un operador para revisarlo. ¿Como te llamas?
 
 **Usuario:** María
-**Bot:** Gracias María, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
+**Bot:** Gracias María, Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?
 
 **👤 Human Support message**
-Usuario María en ubicación no identificada ha reportado un doble cobro con tarjeta.
+Usuario María en ubicación no identificada ha reportado un doble cobro.
 
 ---
 
 ## CONVERSATION — Case 6 — Scenario 6.3 — Doble cobro: relato inconsistente o importe no cuadra
 
 **Usuario:** Me habéis cobrado dos veces con la tarjeta.
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. He notado tu preocupación por un doble cobro. ¿En qué lavandería te encuentras? (indica la ciudad y la calle)
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería y estoy aquí para ayudarte. ¿En qué lavandería te encuentras?
 
 **Usuario:** Goya
 **Bot:** ¿Pudiste completar el lavado o secado?
 
 **Usuario:** Sí
-**Bot:** Por favor, cuéntame paso a paso qué pasó: cómo empezó, qué hiciste, cuándo viste el doble cobro.
+**Bot:** ¿Es posible que hayas pasado varias veces la tarjeta por el datáfono?
 
 **Usuario:** No sé exactamente, creo que me han cobrado tres o cuatro veces, el importe no me cuadra.
 **Bot:** ⚠️ Necesitamos derivar tu caso a un operador para revisarlo. ¿Como te llamas?
 
 **Usuario:** Carlos
-**Bot:** Gracias Carlos, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
+**Bot:** Gracias Carlos, Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?
 
 **👤 Human Support message**
-Usuario Carlos en Goya ha reportado un doble cobro con tarjeta.
+Usuario Carlos en Goya ha reportado un doble cobro.
 
 ## REPORT LLM
 
-- No se detectaron criterios negativos.
+- ❌ El bot sigue el flujo estándar hasta recoger el relato
+  > Por qué no se cumple: Deterministic rule evaluation marked this criterion as not satisfied.
+  > Ejemplo: "Gracias Carlos, Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora? **👤 Human Support message** Us"

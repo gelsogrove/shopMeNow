@@ -20,7 +20,7 @@
 ## CONVERSATION — Case 11 — Scenario 11.1 — Recargar tarjeta (Happy Path)
 
 **Usuario:** ¿Cómo recargo la tarjeta?
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. Para recargar la tarjeta, introdúcela en la central y sigue las instrucciones que aparecen en pantalla. Si aparece algún mensaje extraño, dímelo y lo revisamos juntos.
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte. Para recargar la tarjeta, introdúcela en la central y sigue las instrucciones que aparecen en pantalla. Si aparece algún mensaje extraño, dímelo y lo revisamos juntos.
 
 ## REPORT LLM
 

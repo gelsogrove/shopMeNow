@@ -252,7 +252,7 @@ export async function advanceActiveFlow(runtime: Runtime, state: SessionState, u
       return {
         flowId,
         stepId: 'escalate',
-        prompt: "I'm notifying the operator 🙌 They will assist you shortly.",
+        prompt: "Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?",
         type: 'INFO',
         isTerminal: true,
         action: 'escalate',

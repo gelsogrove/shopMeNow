@@ -144,8 +144,8 @@ export function applyContextualRouterFallback(
         missingFacts.length > 0
           ? missingFacts[0] === 'location'
             ? state.turnCount === 1
-              ? 'Greet the customer warmly as the Ecolaundry virtual assistant. You MUST include the exact phrase "estoy aquí para ayudarte" in your greeting. Then acknowledge the double charge concern and ask only which lavandería (town and street) the customer is at.'
-              : 'Acknowledge the double charge concern briefly. Ask only which lavandería (town and street) the customer is at.'
+              ? 'Greet the customer warmly as the laundry virtual assistant (use "asistente virtual de la lavandería"). You MUST include the exact phrase "estoy aquí para ayudarte" in your greeting. Then ask only which lavandería (pueblo only) the customer is at. Do NOT mention the double charge concern.'
+              : 'Ask only which lavandería (pueblo only) the customer is at. Do NOT mention the double charge concern.'
             : 'Collect the documented double-charge review details step by step. Do not escalate yet.'
           : 'Confirm that the double-charge case will be reviewed manually now that the required details were collected.',
       escalationReason: missingFacts.length > 0 ? null : 'Double charge evidence collected and ready for manual review.',

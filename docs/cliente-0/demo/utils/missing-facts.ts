@@ -103,7 +103,7 @@ export function forceLocationQuestion(routerDecision: RouterDecision): RouterDec
   return {
     ...routerDecision,
     missingFacts: ['location'],
-    customerFacingGoal: 'Ask only which lavandería autoservicio (town and street) the customer is at.',
+    customerFacingGoal: 'Ask only which lavandería autoservicio (pueblo only) the customer is at.',
   }
 }
 

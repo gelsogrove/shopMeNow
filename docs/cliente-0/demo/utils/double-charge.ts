@@ -110,12 +110,12 @@ export function buildDoubleChargeStepDecision(
       missingFacts.length > 0
         ? missingFacts[0] === 'location'
           ? state.turnCount === 1
-            ? 'Greet the customer warmly as the Ecolaundry virtual assistant. You MUST include the exact phrase "estoy aquí para ayudarte" in your greeting. Then acknowledge the double charge concern and ask only which lavandería (town and street) the customer is at.'
-            : 'Acknowledge the double charge concern briefly. Ask only which lavandería (town and street) the customer is at.'
+            ? 'Greet the customer warmly as the laundry virtual assistant (use "asistente virtual de la lavandería"). You MUST include the exact phrase "estoy aquí para ayudarte" in your greeting. Then ask only which lavandería (pueblo only) the customer is at. Do NOT mention the double charge concern.'
+            : 'Ask only which lavandería (pueblo only) the customer is at. Do NOT mention the double charge concern.'
           : missingFacts[0] === 'service completed or not'
             ? '[EXACT] ¿Pudiste completar el lavado o secado?'
             : missingFacts[0] === 'double charge step by step'
-              ? '[EXACT] Por favor, cuéntame paso a paso qué pasó: cómo empezó, qué hiciste, cuándo viste el doble cobro.'
+              ? '[EXACT] ¿Es posible que hayas pasado varias veces la tarjeta por el datáfono?'
               : missingFacts[0] === 'last 4 card digits'
                 ? '[EXACT] ¿Cuáles son los últimos 4 dígitos de la tarjeta con la que pagaste?'
                 : missingFacts[0] === 'payment proof'

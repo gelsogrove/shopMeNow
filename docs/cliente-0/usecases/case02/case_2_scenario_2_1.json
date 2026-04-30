@@ -2,12 +2,13 @@
   "case": 2,
   "scenario": 2.1,
   "name": "Case 2 — Scenario 2.1 — DOOR (Happy Path)",
-  "description": "Cliente ve DOOR, sigue instrucción de cerrar puerta y confirma resolución sin escalación.",
+  "description": "Cliente ve DOOR, el bot pregunta si hay mucha ropa, cliente confirma y vacía un poco. Confirma resolución sin escalación.",
   "turns": [
     "La lavadora no arranca",
     "DOOR",
     "Hortes",
     "2",
+    "Sí, bastante",
     "Sí"
   ],
   "assertions": [
@@ -28,15 +29,20 @@
     },
     {
       "turn": 4,
-      "includes": ["cierra", "puerta", "funcion"],
-      "excludes": ["operador", "escal", "close the door", "click"]
+      "includes": ["ropa"],
+      "excludes": ["operador", "escal"]
     },
     {
       "turn": 5,
+      "includes": ["vac"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 6,
       "includes": ["perfecto", "correctamente"],
       "excludes": ["operador", "escal", "started", "correctly"]
     }
   ],
   "expectedOutcome": "RESOLVED",
-  "notes": "DOOR se resuelve con acción guiada sin soporte humano."
+  "notes": "DOOR se resuelve con acción guiada (vaciar ropa) sin soporte humano."
 }

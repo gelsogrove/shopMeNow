@@ -30,7 +30,7 @@
       "turn": 4,
       "includes": [
         "ese mensaje indica que la máquina está pendiente de selección",
-        "comprueba, por favor, que has pulsado bien el número de la máquina o el programa correspondiente"
+        "comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago"
       ],
       "excludes": ["operador", "escal"]
     },

@@ -25,7 +25,7 @@
     },
     {
       "turn": 3,
-      "includes": ["paso a paso"],
+      "includes": ["tarjeta"],
       "excludes": ["operador", "escal"]
     },
     {
@@ -41,12 +41,12 @@
     {
       "turn": 6,
       "includes": ["llamas"],
-      "excludes": ["operador", "desactivado"]
+      "excludes": ["operador", "brevedad", "llamada"]
     },
     {
       "turn": 7,
       "includes": ["revisar"],
-      "excludes": ["operador", "desactivado"]
+      "excludes": ["operador", "brevedad", "llamada"]
     }
   ],
   "expectedOutcome": "RESOLVED",

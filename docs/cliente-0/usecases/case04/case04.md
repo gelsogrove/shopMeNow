@@ -30,7 +30,7 @@
 ### Scenario 4.2 — Máquina sigue sin activarse
 
 - El bot sugiere revisar el saldo en la central (igual que 4.1)
-- Si el cliente indica que sigue sin poder activarla, el bot escala a soporte humano
+- Si el cliente indica que sigue sin poder activarla, el bot pide qué aparece en la pantalla de la central de pago y de la máquina antes de escalar (mensaje contiene "pantalla de la central de pago" y "pantalla de la máquina")
 - Antes de escalar, el bot pregunta el nombre del cliente
 - El mensaje al operador incluye localización, tipo y número de máquina, y que la máquina sigue sin activarse
 
@@ -46,13 +46,13 @@
 ## CONVERSATION — Case 4 — Scenario 4.1 — Happy Path
 
 **Usuario:** He pagado y no se ha activado
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. ¿En qué lavandería autoservicio te encuentras? (indica la ciudad y la calle)
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería. ¿En qué lavandería autoservicio te encuentras?
 
 **Usuario:** Goya
 **Bot:** ¿Es una lavadora o una secadora?
 
 **Usuario:** Lavadora
-**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+**Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** La 4
 **Bot:** ¿La central ha devuelto el cambio?
@@ -68,13 +68,13 @@
 ## CONVERSATION — Case 4 — Scenario 4.2 — Máquina sigue sin activarse (Escalación)
 
 **Usuario:** He pagado y no se ha activado
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. Para poder ayudarte mejor, ¿en qué lavandería autoservicio te encuentras? (indica la ciudad y la calle).
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería. ¿En qué lavandería autoservicio te encuentras?
 
 **Usuario:** Goya
 **Bot:** ¿Es una lavadora o una secadora?
 
 **Usuario:** Lavadora
-**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+**Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** La 4
 **Bot:** ¿La central ha devuelto el cambio?
@@ -83,12 +83,12 @@
 **Bot:** Es posible que se haya marcado mal el número de máquina. Revisa, por favor, el saldo en la central y prueba otra vez con el número correcto. Dime si la máquina ya se ha activado.
 
 **Usuario:** Sigo sin poder activarla
-**Bot:** ⚠️ La máquina sigue sin activarse. Tenemos que notificar al operador para revisar el caso.
+**Bot:** ⚠️ Vamos a notificar al operador para revisar el caso. Pero antes dime qué te pone en la pantalla de la central de pago, y en la pantalla de la máquina, para que te dirija a la persona adecuada.
 
 ¿Como te llamas?
 
 **Usuario:** María
-**Bot:** Gracias María, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
+**Bot:** Gracias María, Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?
 
 **👤 Human Support message**
 Usuario María en Goya ha efectuado el pago por la lavadora número 4. El cliente seleccionó el programa pero La máquina sigue sin activarse tras revisar el saldo en la central.. sin información de pantalla.
@@ -98,13 +98,13 @@ Usuario María en Goya ha efectuado el pago por la lavadora número 4. El client
 ## CONVERSATION — Case 4 — Scenario 4.3 — Código de pantalla no documentado (Escalación)
 
 **Usuario:** He pagado y no se ha activado, aparece E5 en la pantalla
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. ¿En qué lavandería autoservicio te encuentras? Por favor, indícame la ciudad y la calle para poder ayudarte mejor.
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería. ¿En qué lavandería autoservicio te encuentras?
 
 **Usuario:** Goya
 **Bot:** ¿Es una lavadora o una secadora?
 
 **Usuario:** Lavadora
-**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+**Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** La 4
 **Bot:** ⚠️ El código E5 no está documentado. Tenemos que notificar al operador para que revise el caso.
@@ -112,10 +112,10 @@ Usuario María en Goya ha efectuado el pago por la lavadora número 4. El client
 ¿Como te llamas?
 
 **Usuario:** Carlos
-**Bot:** Gracias Carlos, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
+**Bot:** Gracias Carlos, Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?
 
 **👤 Human Support message**
-Usuario Carlos en Goya ha efectuado el pago por la lavadora número 4. El cliente seleccionó el programa pero Código desconocido E5 tras el pago; la máquina no se ha activado.. la pantalla muestra: E5.
+Usuario Carlos en Goya ha efectuado el pago por la lavadora número 4. El cliente seleccionó el programa pero no se ha activado, aparece E5 en la pantalla. la pantalla muestra: E5.
 
 ## REPORT LLM
 

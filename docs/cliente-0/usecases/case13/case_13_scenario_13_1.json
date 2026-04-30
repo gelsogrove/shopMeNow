@@ -9,7 +9,7 @@
   ],
   "expectedResponses": [
     "Gracias por avisarnos. La máquina ha detectado una incidencia interna que necesitamos revisar manualmente. ⚠️ Voy a derivar tu caso a un operador. ¿Cómo te llamas?",
-    "Gracias Sofía, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado."
+    "Gracias Sofía, Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?"
   ],
   "assertions": [
     {
@@ -19,7 +19,7 @@
     },
     {
       "turn": 2,
-      "includes": ["operador", "desactivado"],
+      "includes": ["operador", "brevedad", "llamada telefónica"],
       "excludes": []
     }
   ],

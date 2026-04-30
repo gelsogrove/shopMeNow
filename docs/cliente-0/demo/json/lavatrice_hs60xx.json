@@ -41,6 +41,7 @@
         "7": "non_parte.case_end",
         "8": "non_parte.case_blank_display",
         "9": "non_parte.case_extra_button",
+        "10": "non_parte.case_disponible",
         "other": "non_parte.escalate"
       },
       "onInterruptFallback": "Thanks. Please write only the exact display code shown. If it is not recognized, I will connect an operator."
@@ -56,7 +57,7 @@
 
     "case_sel": {
       "type": "ACTION",
-      "prompt": "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina o el programa correspondiente.",
+      "prompt": "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -104,9 +105,44 @@
       }
     },
 
-    "case_door": {
+    "case_disponible": {
       "type": "ACTION",
-      "prompt": "The door is not properly closed. Open it and close it firmly until you hear a click. Después de intentarlo, házmelo saber si funciona.",
+      "prompt": "Entendido. El saldo está disponible pero el pago aún no se ha completado en la máquina. Por favor, presiona el botón de la máquina que has seleccionado, apreta firmemente durante unos segundos hasta que veas que el saldo disponible desaparece y te devuelve el cambio.\n\nUna vez completado, regresa a la lavadora y dime qué te pone en la pantalla.",
+      "transitions": {
+        "default": "non_parte.followup_disponible"
+      }
+    },
+
+    "followup_disponible": {
+      "type": "CHOICE",
+      "strictMatching": true,
+      "prompt": "¿Ha desaparecido el saldo y has recibido el cambio? ¿Qué indica ahora la pantalla de la lavadora?",
+      "transitions": {
+        "3": "non_parte.case_push",
+        "other": "non_parte.escalate"
+      }
+    },
+
+    "case_door": {
+      "type": "CONFIRMATION",
+      "prompt": "¿Has puesto mucha ropa dentro de la lavadora?",
+      "transitions": {
+        "YES": "non_parte.case_door_mucha_ropa",
+        "NO": "non_parte.case_door_poca_ropa"
+      }
+    },
+
+    "case_door_mucha_ropa": {
+      "type": "ACTION",
+      "prompt": "Te recomiendo que vacíes un poco de ropa e intentes de nuevo. A veces, un exceso de carga impide que la puerta cierre correctamente.",
+      "transitions": {
+        "default": "non_parte.check_result"
+      }
+    },
+
+    "case_door_poca_ropa": {
+      "type": "ACTION",
+      "prompt": "Ábrela y ciérrala con un ligero empujón hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -167,7 +203,7 @@
 
     "case_al001": {
       "type": "ACTION",
-      "prompt": "**AL001** means a sequence error.\n\nRestart the full sequence:\n1. Pay.\n2. Select machine.\n3. Press program.\n4. Close the door.\n5. Let me know if it works.",
+      "prompt": "**AL001** indica un error de secuencia.\n\nReinicia el proceso completo siguiendo este orden:\n1. Carga la lavadora.\n2. Cierra la puerta.\n3. Dirígete a la central de pago y paga.\n4. Selecciona el número de máquina y recoge el cambio si toca.\n5. Dirígete a la máquina seleccionada y elige el programa.\n6. Avísame si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -210,7 +246,7 @@
     "followup_display": {
       "type": "CHOICE",
       "strictMatching": true,
-      "prompt": "Please write only the exact code that appears on the display now, even if it is the same as before.",
+      "prompt": "Por favor, escribe solo lo que ves en la pantalla, los números y las letras tal y como aparecen en la pantalla ahora, incluso si es el mismo que antes.",
       "transitions": {
         "1": "non_parte.case_sel_persist",
         "2": "non_parte.case_push_persist",
@@ -268,7 +304,7 @@
 
     "escalate": {
       "type": "INFO",
-      "prompt": "⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador para que revise el caso y la posible compensación.",
+      "prompt": "⚠️ ¿Permites que te llame un agente para poder ayudarte de forma rápida? Vamos a activarte otra lavadora para que puedas lavar. Tendrás que cambiar la ropa de lavadora; selecciona una que esté libre mientras te busco a un agente para que te ayude.",
       "isTerminal": true,
       "action": "escalate"
     },
@@ -388,7 +424,7 @@
 
     "escalate": {
       "type": "INFO",
-      "prompt": "I’m notifying the operator. They will assist you shortly.",
+      "prompt": "Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?",
       "isTerminal": true,
       "action": "escalate"
     },

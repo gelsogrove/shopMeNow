@@ -32,14 +32,14 @@
 ## CONVERSATION — Case 12 — Scenario 12.1 — Horario (Happy Path)
 
 **Usuario:** ¿Cuál es el horario?
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. El horario general de atención al público es de 8:00 a 22:00 todos los días del año. En L'Escala las máquinas se pueden utilizar de 7:00 a 23:00. Si me preguntas por el precio de una máquina concreta, tengo que revisarlo antes de confirmártelo.
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte. El horario general de atención al público es de 8:00 a 22:00 todos los días del año. En L'Escala las máquinas se pueden utilizar de 7:00 a 23:00. Si me preguntas por el precio de una máquina concreta, tengo que revisarlo antes de confirmártelo.
 
 ---
 
 ## CONVERSATION — Case 12 — Scenario 12.2 — Pregunta sobre precio
 
 **Usuario:** ¿Cuánto cuesta esta máquina?
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. El horario general de atención al público es de 8:00 a 22:00 todos los días del año. En L'Escala las máquinas se pueden utilizar de 7:00 a 23:00. Si me preguntas por el precio de una máquina concreta, tengo que revisarlo antes de confirmártelo.
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte. El horario general de atención al público es de 8:00 a 22:00 todos los días del año. En L'Escala las máquinas se pueden utilizar de 7:00 a 23:00. Si me preguntas por el precio de una máquina concreta, tengo que revisarlo antes de confirmártelo.
 
 ## REPORT LLM
 

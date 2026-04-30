@@ -61,7 +61,7 @@
       },
       "flowOverrides": {
         "lavatrice_hs60xx.non_parte.case_sel": {
-          "prompt": "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina o el programa correspondiente."
+          "prompt": "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago."
         }
       },
       "escalationRules": [

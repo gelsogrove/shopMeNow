@@ -22,7 +22,7 @@ export function buildEscalationSummary(context: EscalationContext): string {
       ? context.issueSummary.replace(/.*narrative:\s*/i, '').trim()
       : null
     const narrativePart = narrative ? ` Relato del cliente: ${narrative}` : ''
-    return `${name} en ${location} ha reportado un doble cobro con tarjeta.${narrativePart}`
+    return `${name} en ${location} ha reportado un doble cobro.${narrativePart}`
   }
 
   const machine = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
@@ -41,7 +41,8 @@ export function buildEscalationSummary(context: EscalationContext): string {
 }
 
 export function extractEscalationContext(state: SessionState, customerName: string | null): EscalationContext {
-  const location = state.location || 'ubicación no identificada'
+  const baseLocation = state.location || 'ubicación no identificada'
+  const location = state.locationStreet ? `${baseLocation}, ${state.locationStreet}` : baseLocation
   const now = new Date().toLocaleString('es-ES')
 
   return {

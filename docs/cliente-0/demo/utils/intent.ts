@@ -50,7 +50,7 @@ export function isShortContextReply(message: string): boolean {
 
 export function hasOperationalContextIntent(message: string): boolean {
   const normalized = message.trim().toLowerCase()
-  return /ho messo i soldi|messo i soldi|metto i soldi|sto mettendo i soldi|inserito i soldi|ho pagato|paid already|already paid|payment completed|pagamento fatto|cosa devo fare adesso|what do i do now|que hago ahora|non aumentano i minuti|minutes did not increase|minuti non aumentano|no se ha activado|no se activa|activarla|activarse|puesta en marcha|se ha puesto en marcha/i.test(normalized)
+  return /ho messo i soldi|messo i soldi|metto i soldi|sto mettendo i soldi|inserito i soldi|ho pagato|he pagado|hemos pagado|paid already|already paid|payment completed|pagamento fatto|cosa devo fare adesso|what do i do now|que hago ahora|non aumentano i minuti|minutes did not increase|minuti non aumentano|no se ha activado|no se activa|activarla|activarse|puesta en marcha|se ha puesto en marcha/i.test(normalized)
 }
 
 export function extractUnknownDisplayCode(message: string): string | null {
@@ -137,7 +137,7 @@ export function hasExplicitResetIntent(message: string): boolean {
 
 export function hasTechnicalIssueIntent(message: string): boolean {
   const normalized = message.trim().toLowerCase()
-  return /non si chiude|sportello|door|non parte|non funziona|non si avvia|does not start|doesn't start|won't start|does not work|doesn't work|not working|no arranca|no funciona|no se pone en marcha|no se ha activado|no se activa|activarla|activarse|puesta en marcha|stop|display|alm|sel|push|errore|error|filtro|rotacion|aspiracion|bagnat|wet|smell|odore/i.test(normalized)
+  return /non si chiude|sportello|door|non parte|non funziona|non si avvia|does not start|doesn't start|won't start|does not work|doesn't work|not working|no arranca|no funciona|no empieza|no inicia|no comienza|no se pone en marcha|no se ha activado|no se activa|activarla|activarse|puesta en marcha|stop|display|alm|sel|push|errore|error|filtro|rotacion|aspiracion|bagnat|wet|smell|odore/i.test(normalized)
 }
 
 export function detectLanguageHeuristic(message: string): SessionState['language'] | null {

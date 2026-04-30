@@ -14,7 +14,6 @@ import { fileURLToPath } from 'node:url'
 
 // Utilities
 import { createInitialState, pushDebug, type SessionState } from './utils/state.js'
-import { normalizeDisplayState, isWasherPaymentPendingDisplay } from './utils/display-state.js'
 import { sanitizeCustomerReply } from './utils/message-parsing.js'
 import { printCliBanner, printCliMessage, printDebug } from './utils/cli.js'
 import { loadRuntime, type Runtime } from './utils/runtime.js'
@@ -34,13 +33,6 @@ import {
   isShortContextReply,
   isClosureAcknowledgement,
 } from './utils/intent.js'
-import {
-  applyMachineSpecificMissingQuestion,
-  fallbackBlockedMessage,
-  getNameQuestion,
-  getTroubleshootingBlockingMissingFacts,
-  getTroubleshootingIdentityMissingFacts,
-} from './utils/missing-facts.js'
 import { resolveLanguage, detectLanguage } from './utils/llm.js'
 import {
   normalizeConfirmation,
@@ -57,7 +49,7 @@ import {
   runSpecialist,
 } from './utils/router.js'
 import { buildDoubleChargeStepDecision } from './utils/double-charge.js'
-import { detectFaqIntent, buildFaqReply, isEscalatingFaqIntent } from './utils/faq-intents.js'
+import { detectFaqIntent, buildFaqReply, isEscalatingFaqIntent, advanceDiscountCodeFlow } from './utils/faq-intents.js'
 import {
   chooseFaqSource,
   renderHistory,
@@ -163,6 +155,21 @@ export async function handleTurn(
   const normalizedUserMessage = preprocessUserInput(state, userMessage)
   pushDebug(debug, 'normalizedInput', normalizedUserMessage)
 
+  // Case 4.3: detect unknown display code early to avoid asking display state again
+  if (!state.displayState && state.turnCount <= 2) {
+    const earlyUnknownCode = extractUnknownDisplayCode(userMessage)
+    if (earlyUnknownCode) {
+      state.displayState = earlyUnknownCode
+      pushDebug(debug, 'earlyUnknownCode', earlyUnknownCode)
+    }
+  }
+
+  // Mataró-specific: if location is Mataró, ask for street (only there)
+  if (state.locationStreetRequested && !state.locationStreet) {
+    state.locationStreet = userMessage.trim()
+    pushDebug(debug, 'mataro.street.captured', state.locationStreet)
+  }
+
   // Case-4 deterministic top check: all facts collected, handle paid-but-not-activated BEFORE router runs.
   // - If unknown display code present (LLM or preprocessor extracted it): escalate immediately (scenario 4.3)
   // - If no display code at all: ask about central change (scenarios 4.1 / 4.2)
@@ -225,19 +232,23 @@ export async function handleTurn(
       state.issueSummary = 'La máquina sigue sin activarse tras revisar el saldo en la central.'
       state.escalationReason = 'Machine still not activated after central balance review.'
       return {
-        reply: `⚠️ La máquina sigue sin activarse. Tenemos que notificar al operador para revisar el caso.\n\n${getNameQuestion(state.language)}`,
+        reply: `⚠️ Vamos a notificar al operador para revisar el caso. Pero antes dime qué te pone en la pantalla de la central de pago, y en la pantalla de la máquina, para que te dirija a la persona adecuada.\n\n${getNameQuestion(state.language)}`,
         debug,
       }
     }
   }
 
-  // Deterministic SEL happy-path close
-  const userConfirmsNowWorking = /^(si|sí)(\b|,)|ahora funciona|ya funciona|funciona ahora|arranco|arranc[oó]|ha arrancado/.test(
+  // Deterministic washer happy-path close — when user confirms machine is now working and there is an active washer flow
+  // NOTE: ^(si|sí)\s*$  matches ONLY a standalone "sí"/"si" (nothing after it).
+  // We intentionally do NOT match "sí, [anything]" here because "Sí, bastante"
+  // (answering a CONFIRMATION about clothes) would fire a false closure.
+  // "Sí, ya funciona" is covered by the `ya funciona` branch below.
+  const userConfirmsNowWorking = /^(si|sí)\s*[.!?]*\s*$|ahora funciona|ya funciona|funciona ahora|arranco|arranc[oó]|ha arrancado|ya func/.test(
     normalizeForRegression(normalizedUserMessage),
   )
   if (
     state.machineType === 'washer' &&
-    normalizeDisplayState(state.displayState) === 'SEL' &&
+    state.activeFlowId &&
     userConfirmsNowWorking &&
     !state.customerNameRequested &&
     !state.operatorRequested
@@ -284,7 +295,7 @@ export async function handleTurn(
     const operatorSummary = buildEscalationSummary(escalationContext)
     pushDebug(debug, 'escalation.withName', { finalReply, operatorSummary })
     const deterministicEscalationReply = state.language === 'es'
-      ? `Gracias ${state.customerName}, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.`
+      ? `Gracias ${state.customerName}, Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?`
       : sanitizeCustomerReply(finalReply)
     return { reply: `${deterministicEscalationReply}\n\n**👤 Human Support message**\n${operatorSummary}`, debug }
   }
@@ -319,7 +330,33 @@ export async function handleTurn(
   // invoice, loyalty card buy/recharge, hours/prices, alarm code).
   // Only triggers on turn 1 OR when no active conversation context, to avoid
   // hijacking the troubleshooting flows of cases 1-7 mid-conversation.
-  if (state.turnCount === 1 || (!state.location && !state.machineType && !state.activeFlowId)) {
+
+    // ── Discount-code multi-turn flow (case 8) ───────────────────────────────────
+    // If the customer is already in the discount-code flow, advance the step
+    // regardless of what the message says (the flow drives the conversation).
+    if (state.activeFaqFlow === 'discount-code' && state.faqStep >= 1) {
+      const result = advanceDiscountCodeFlow(state, userMessage)
+      const stepDecision = createSystemRouterDecision({
+        route: result.escalate ? 'operator' : 'faq',
+        nextOwner: 'conversation_history',
+        functionName: result.escalate ? 'contactOperator' : null,
+        customerFacingGoal: result.reply,
+      })
+      if (result.escalate) {
+        state.customerNameRequested = true
+        state.escalationReason = state.escalationReason || `Codice non risolto: ${state.faqCodeValue}`
+        state.issueSummary = state.issueSummary || `Discount code issue: ${state.faqCodeValue} @ ${state.location}`
+      }
+      if (result.done) {
+        state.activeFaqFlow = null
+        state.faqStep = 0
+      }
+      pushDebug(debug, 'discountCodeFlow', { step: state.faqStep, escalate: result.escalate, done: result.done })
+      const { message, safe } = await renderHistory(runtime, state, { routerDecision: stepDecision })
+      return { reply: sanitizeCustomerReply(safe ? message : fallbackBlockedMessage(state.language)), debug }
+    }
+
+    if (state.turnCount === 1 || (!state.location && !state.machineType && !state.activeFlowId)) {
     const faqIntent = detectFaqIntent(userMessage)
     if (faqIntent) {
       const isEscalating = isEscalatingFaqIntent(faqIntent)
@@ -334,6 +371,11 @@ export async function handleTurn(
         state.escalationReason = state.escalationReason || `Alarm code reported: ${userMessage.trim()}`
         state.issueSummary = state.issueSummary || `Alarm/incoherence: ${userMessage.trim()}`
       }
+        // Start multi-turn tracking for discount-code
+        if (faqIntent === 'discount-code') {
+          state.activeFaqFlow = 'discount-code'
+          state.faqStep = 1
+        }
       pushDebug(debug, 'faqIntent', { faqIntent, isEscalating })
       const { message, safe } = await renderHistory(runtime, state, { routerDecision: faqRouterDecision })
       return { reply: sanitizeCustomerReply(safe ? message : fallbackBlockedMessage(state.language)), debug }
@@ -380,7 +422,7 @@ export async function handleTurn(
     if (!(routeMachineType && displayAlreadyProvided)) {
       routerDecision.functionName = null
       routerDecision.missingFacts = ['location']
-      routerDecision.customerFacingGoal = 'Ask only which lavandería autoservicio (town and street) the customer is at, before continuing the technical troubleshooting.'
+      routerDecision.customerFacingGoal = 'Ask only which lavandería autoservicio (pueblo only) the customer is at, before continuing the technical troubleshooting.'
     }
   }
 
@@ -400,7 +442,7 @@ export async function handleTurn(
     if (displayAlreadyKnown) {
       routerDecision.missingFacts = ['location']
       routerDecision.customerFacingGoal =
-        'Greet the customer warmly as the Ecolaundry virtual assistant. Then ask only which lavandería autoservicio (ciudad y calle) the customer is at.'
+        'Greet the customer warmly as the laundry virtual assistant (use "asistente virtual de la lavandería"). Then ask only which lavandería autoservicio (ciudad y calle) the customer is at.'
       routerDecision.extractedFacts = {
         ...(routerDecision.extractedFacts || {}),
         displayState: displayInMessage || routerDecision.extractedFacts?.displayState || '',
@@ -409,7 +451,7 @@ export async function handleTurn(
     } else {
       routerDecision.missingFacts = ['exact display state']
       routerDecision.customerFacingGoal =
-        '[EXACT] ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?'
+        '[EXACT] ¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?'
     }
   }
 
@@ -440,7 +482,7 @@ export async function handleTurn(
     const displayFirstStillNeeded = routerDecision.missingFacts.includes('exact display state')
     if (!(isTroubleshootingRoute && displayFirstStillNeeded)) {
       routerDecision.missingFacts = ['location']
-      routerDecision.customerFacingGoal = 'Greet the customer warmly as the Ecolaundry virtual assistant (start with "¡Hola!"). Then ask only which lavandería autoservicio (town and street) the customer is at, before continuing the technical troubleshooting.'
+      routerDecision.customerFacingGoal = 'Greet the customer warmly as the laundry virtual assistant (start with "¡Hola! Soy el asistente virtual de la lavandería"). Then ask only which lavandería autoservicio (pueblo only) the customer is at, before continuing the technical troubleshooting.'
     }
   } else if (
     routerDecision.route !== 'faq' &&
@@ -456,6 +498,18 @@ export async function handleTurn(
   state.lastMissingFacts = routerDecision.missingFacts
   state.lastResolvedIntent = routerDecision.route
 
+  // Mataró-specific: if location is Mataró and we haven't yet asked for the street, ask for it now
+  if (
+    state.location &&
+    /^matar[oó]\b/i.test(state.location.trim()) &&
+    !state.locationStreetRequested &&
+    !state.locationStreet
+  ) {
+    state.locationStreetRequested = true
+    pushDebug(debug, 'mataro.street.requested', true)
+    return { reply: '¿En qué calle de Mataró está la lavandería?', debug }
+  }
+
   // Deterministic machine-type and machine-number questions in Spanish/Catalan
   if (!state.activeFlowId && !isDoubleChargeCase) {
     if (routerDecision.missingFacts[0] === 'machine type' && (state.language === 'es' || state.language === 'ca')) {
@@ -467,7 +521,7 @@ export async function handleTurn(
       (state.language === 'es' || state.language === 'ca')
     ) {
       const mWord = state.machineType === 'dryer' ? 'secadora' : 'lavadora'
-      return { reply: `¿Cuál es el número de la máquina (${mWord})?`, debug }
+      return { reply: `¿Cuál es el número de la ${mWord}?`, debug }
     }
   }
 

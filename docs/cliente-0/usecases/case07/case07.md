@@ -28,20 +28,20 @@
 - Cuando el cliente indica que la máquina sigue sin responder, el bot escala
 - Antes de escalar, el bot pregunta el nombre del cliente
 - El mensaje de escalación contiene la palabra "operador"
-- El mensaje de confirmación final contiene la palabra "desactivado"
+- El mensaje de confirmación final contiene "brevedad" y "llamada telefónica"
 
 ---
 
 ## CONVERSATION — Case 7 — Scenario 7.1 — Pagado sin usar, resuelto vía pantalla (Happy Path)
 
 **Usuario:** He pagado y no he podido usar la máquina.
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. ¿En qué lavandería autoservicio te encuentras? (indica la ciudad y la calle).
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería. ¿En qué lavandería autoservicio te encuentras?
 
 **Usuario:** Pineda
 **Bot:** ¿Es una lavadora o una secadora?
 
 **Usuario:** Lavadora
-**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+**Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** 5
 **Bot:** ¿La central ha devuelto el cambio?
@@ -65,13 +65,13 @@ Después de intentarlo, házmelo saber si funciona.
 ## CONVERSATION — Case 7 — Scenario 7.2 — Escalación: máquina no responde tras paso indicado
 
 **Usuario:** He pagado y no he podido usar la máquina.
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. ¿En qué lavandería autoservicio te encuentras? Por favor, indícame la ciudad y la calle.
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería. ¿En qué lavandería autoservicio te encuentras?
 
 **Usuario:** Pineda
 **Bot:** ¿Es una lavadora o una secadora?
 
 **Usuario:** Lavadora
-**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+**Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** 5
 **Bot:** ¿La central ha devuelto el cambio?
@@ -88,15 +88,15 @@ Frío -> prendas muy delicadas (lana, seda, etc.)
 Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** no arranca
-**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
+**Bot:** Por favor, escribe solo lo que ves en la pantalla, los números y las letras tal y como aparecen en la pantalla ahora, incluso si es el mismo que antes.
 
 **Usuario:** se ha bloqueado
-**Bot:** ⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador para que revise el caso y la posible compensación.
+**Bot:** ⚠️ ¿Permites que te llame un agente para poder ayudarte de forma rápida? Vamos a activarte otra lavadora para que puedas lavar. Tendrás que cambiar la ropa de lavadora; selecciona una que esté libre mientras te busco a un agente para que te ayude.
 
 ¿Como te llamas?
 
 **Usuario:** Luis
-**Bot:** Gracias Luis, Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
+**Bot:** Gracias Luis, Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?
 
 **👤 Human Support message**
 Usuario Luis en Pineda ha efectuado el pago por la lavadora número 5. El cliente seleccionó el programa pero se ha bloqueado. la pantalla muestra: PUSH.

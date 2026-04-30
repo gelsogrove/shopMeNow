@@ -11,12 +11,12 @@
     {
       "turn": 1,
       "includes": ["operador", "llamas"],
-      "excludes": ["paso a paso", "dígitos"]
+      "excludes": ["tarjeta", "dígitos"]
     },
     {
       "turn": 2,
-      "includes": ["operador", "desactivado"],
-      "excludes": ["paso a paso", "dígitos"]
+      "includes": ["operador", "brevedad", "llamada"],
+      "excludes": ["tarjeta", "dígitos"]
     }
   ],
   "expectedOutcome": "ESCALATED",

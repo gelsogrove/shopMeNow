@@ -23,7 +23,7 @@
 ## CONVERSATION — Case 9 — Scenario 9.1 — Solicitud de factura (Happy Path)
 
 **Usuario:** Quiero una factura.
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. Para obtener tu factura, debes enviar un correo a olga@alberwaz.net con esta información: razón social, email, lavandería utilizada, CIF/NIF, dirección, fecha de uso, máquinas utilizadas y observaciones.
+**Bot:** ¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte. Para obtener tu factura, debes enviar un correo a olga@alberwaz.net con esta información: razón social, email, lavandería utilizada, CIF/NIF, dirección, fecha de uso, máquinas utilizadas y observaciones.
 
 ## REPORT LLM
 

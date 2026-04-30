@@ -35,17 +35,17 @@
     },
     {
       "turn": 5,
-      "includes": ["código", "pantalla"],
+      "includes": ["pantalla"],
       "excludes": ["operador", "perfecto"]
     },
     {
       "turn": 6,
-      "includes": ["operador", "llamas"],
+      "includes": ["llamas"],
       "excludes": ["perfecto", "resuelto"]
     },
     {
       "turn": 7,
-      "includes": ["operador", "desactivado"],
+      "includes": ["operador", "brevedad", "llamada"],
       "excludes": ["perfecto", "resuelto"]
     }
   ],

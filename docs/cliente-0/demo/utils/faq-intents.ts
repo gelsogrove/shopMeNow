@@ -100,7 +100,7 @@ export function loadFaqPrompt(intent: FaqIntent): string {
 // greeting so the FAQ flows match the same opening style as the troubleshooting
 // flows (cases 1-7). On later turns we skip the greeting (e.g. follow-up).
 
-const GREETING_ES = '¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte.'
+const GREETING_ES = '¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte.'
 
 export function buildFaqReply(intent: FaqIntent, turnCount: number): string {
   const body = loadFaqPrompt(intent)
@@ -115,4 +115,91 @@ export function buildFaqReply(intent: FaqIntent, turnCount: number): string {
 
 export function isEscalatingFaqIntent(intent: FaqIntent): boolean {
   return intent === 'alarm-code'
+}
+
+// ── Discount-code multi-turn flow ─────────────────────────────────────────────
+//
+// Step layout (faqStep value stored in state):
+//   1 → bot asked for the code  (turn 1 — entry, canned reply)
+//   2 → bot received code, asked for lavandería
+//   3 → bot received lavandería, asked about remaining amount
+//   4 → bot gave instructions to enter amount at central, awaiting confirmation
+//   5 → closed (resolved or escalated) — caller resets activeFaqFlow
+//
+// The function is pure: it reads state.faqStep and the raw customer message,
+// updates state in-place, and returns the [EXACT]-tagged reply string.
+// The caller (chatbot.ts) is responsible for rendering the reply via renderHistory.
+
+type DiscountCodeStepResult = {
+  reply: string        // [EXACT]-tagged
+  escalate: boolean
+  done: boolean        // true → caller should clear activeFaqFlow / faqStep
+}
+
+export function advanceDiscountCodeFlow(
+  state: { faqStep: number; faqCodeValue: string; location: string },
+  userMessage: string,
+): DiscountCodeStepResult {
+  const step = state.faqStep
+
+  // Step 2: user just sent the code → store it, ask for lavandería
+  if (step === 1) {
+    state.faqCodeValue = userMessage.trim()
+    state.faqStep = 2
+    return {
+      reply: '[EXACT] Gracias. ¿En qué lavandería lo quieres usar?',
+      escalate: false,
+      done: false,
+    }
+  }
+
+  // Step 3: user sent lavandería → store it, ask about remaining amount
+  if (step === 2) {
+    state.location = userMessage.trim()
+    state.faqStep = 3
+    return {
+      reply: '[EXACT] Perfecto. ¿Te falta una pequeña parte para completar el importe o el código cubre un importe mayor?',
+      escalate: false,
+      done: false,
+    }
+  }
+
+  // Step 4: user answered about the amount → give instructions, ask confirmation
+  if (step === 3) {
+    state.faqStep = 4
+    return {
+      reply: '[EXACT] De acuerdo. Introduce en la central el importe que falta y no toques nada más. Después ponte delante de la máquina y dime si ya puedes continuar.',
+      escalate: false,
+      done: false,
+    }
+  }
+
+  // Step 5: user confirms whether it works or not (yes/no detection is allowed
+  // here per project principles: it is a deterministic yes-or-no choice node)
+  if (step === 4) {
+    const lower = userMessage.trim().toLowerCase()
+    const resolved = /\b(s[ií]|funciona|yes|ok|perfecto|resuelto|ya va|va bien|genial|gracias)\b/.test(lower)
+    state.faqStep = 5
+    if (resolved) {
+      return {
+        reply: '[EXACT] Perfecto, incidencia resuelta.',
+        escalate: false,
+        done: true,
+      }
+    }
+    // Not resolved → escalate
+    return {
+      reply: '[EXACT] Entiendo. Voy a pasarte con un operador para que te ayude personalmente.',
+      escalate: true,
+      done: true,
+    }
+  }
+
+  // Fallback: flow is in an unexpected step — reset and escalate
+  state.faqStep = 5
+  return {
+    reply: '[EXACT] Voy a pasarte con un operador para que te ayude personalmente.',
+    escalate: true,
+    done: true,
+  }
 }

@@ -2494,7 +2494,7 @@ async function handleTurn(runtime: Runtime, state: SessionState, userMessage: st
     if (routerDecision.missingFacts[0] === 'machine number' && !state.activeFlowId &&
         (state.language === 'es' || state.language === 'ca')) {
       const mWord = state.machineType === 'dryer' ? 'secadora' : 'lavadora'
-      return { reply: `¿Cuál es el número de la máquina (${mWord})?`, debug }
+      return { reply: `¿Cuál es el número de la ${mWord}?`, debug }
     }
   }
 
