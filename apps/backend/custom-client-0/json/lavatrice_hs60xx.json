@@ -124,25 +124,8 @@
     },
 
     "case_door": {
-      "type": "CONFIRMATION",
-      "prompt": "¿Has puesto mucha ropa dentro de la lavadora?",
-      "transitions": {
-        "YES": "non_parte.case_door_mucha_ropa",
-        "NO": "non_parte.case_door_poca_ropa"
-      }
-    },
-
-    "case_door_mucha_ropa": {
       "type": "ACTION",
-      "prompt": "Te recomiendo que vacíes un poco de ropa e intentes de nuevo. A veces, un exceso de carga impide que la puerta cierre correctamente.",
-      "transitions": {
-        "default": "non_parte.check_result"
-      }
-    },
-
-    "case_door_poca_ropa": {
-      "type": "ACTION",
-      "prompt": "Ábrela y ciérrala con un ligero empujón hasta que escuches un clic. Después de intentarlo, házmelo saber si funciona.",
+      "prompt": "La pantalla DOOR indica que la puerta no está bien cerrada.\n\n1. Comprueba que no hay ropa atascada entre la puerta y el tambor.\n2. Si hay demasiada ropa, saca un poco.\n3. Cierra la puerta con un empujón firme hasta escuchar un clic.\n4. Dime si la lavadora ha arrancado.",
       "transitions": {
         "default": "non_parte.check_result"
       }

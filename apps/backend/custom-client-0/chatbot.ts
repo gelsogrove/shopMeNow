@@ -422,7 +422,7 @@ export async function handleTurn(
     if (!(routeMachineType && displayAlreadyProvided)) {
       routerDecision.functionName = null
       routerDecision.missingFacts = ['location']
-      routerDecision.customerFacingGoal = 'Ask only which lavandería autoservicio (pueblo only) the customer is at, before continuing the technical troubleshooting.'
+      routerDecision.customerFacingGoal = 'Ask only the exact address (city and street) of the lavandería autoservicio where the customer is, before continuing the technical troubleshooting.'
     }
   }
 
@@ -482,7 +482,7 @@ export async function handleTurn(
     const displayFirstStillNeeded = routerDecision.missingFacts.includes('exact display state')
     if (!(isTroubleshootingRoute && displayFirstStillNeeded)) {
       routerDecision.missingFacts = ['location']
-      routerDecision.customerFacingGoal = 'Greet the customer warmly as the laundry virtual assistant (start with "¡Hola! Soy el asistente virtual de la lavandería"). Then ask only which lavandería autoservicio (pueblo only) the customer is at, before continuing the technical troubleshooting.'
+      routerDecision.customerFacingGoal = 'Greet the customer warmly as the laundry virtual assistant (start with "¡Hola! Soy el asistente virtual de la lavandería"). Then ask only the exact address (city and street) of the lavandería autoservicio where the customer is.'
     }
   } else if (
     routerDecision.route !== 'faq' &&
