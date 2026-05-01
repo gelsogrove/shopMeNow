@@ -185,6 +185,18 @@ export function preprocessUserInput(state: SessionState, userMessage: string): s
     }
   }
 
+  // Mid-flow context shift: if customer reports a known display state while we are
+  // still waiting for the post-central-balance confirmation, the case has shifted
+  // to a display-driven flow (e.g. PUSH PROG → case_push). Clear the pending fact
+  // so the downstream router/flow engine can take over instead of treating the
+  // reply as a YES/NO confirmation.
+  if (explicitDisplayState && state.lastMissingFacts.includes('activated after central balance review')) {
+    state.lastMissingFacts = state.lastMissingFacts.filter(
+      (fact) => fact !== 'activated after central balance review',
+    )
+    extractedFacts.push(`Context shift to display state ${explicitDisplayState}`)
+  }
+
   if (state.machineType && state.paymentCompleted === null && !state.activeFlowId && !isAwaitingLocation(state)) {
     const parsedPaymentAnswer = parsePaymentAnswer(trimmed)
     if (parsedPaymentAnswer !== null) {
