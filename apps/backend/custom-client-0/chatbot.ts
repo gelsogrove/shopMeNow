@@ -435,23 +435,21 @@ export async function handleTurn(
     routerDecision.customerFacingGoal = 'Greet the customer, present yourself briefly, and ask the most useful next question.'
   }
 
-  // Turn 1 (technical issue only): greet warmly and ask display state.
+  // Turn 1 (technical issue): greet warmly and ALWAYS ask the local first.
+  // The display state is the most informative fact for routing the fix, but the
+  // playbook (and Andrea's spec) requires identifying the local before
+  // proceeding. If the customer already gave the display code in their first
+  // message (e.g. "pone ALM DOOR"), capture it silently into extractedFacts so
+  // we don't re-ask later — but still ask for the local now.
   if (state.turnCount === 1 && !state.location && (hasTroubleshootingIntent(normalizedUserMessage) || Boolean(extractDisplayState(userMessage)))) {
     const displayInMessage = extractDisplayState(userMessage)
-    const displayAlreadyKnown = Boolean(displayInMessage || routerDecision.extractedFacts?.displayState || state.displayState)
-    if (displayAlreadyKnown) {
-      routerDecision.missingFacts = ['location']
-      routerDecision.customerFacingGoal =
-        'Greet the customer warmly as the laundry virtual assistant (use "asistente virtual de la lavandería"). Then ask only which lavandería autoservicio (ciudad y calle) the customer is at.'
-      routerDecision.extractedFacts = {
-        ...(routerDecision.extractedFacts || {}),
-        displayState: displayInMessage || routerDecision.extractedFacts?.displayState || '',
-        machineType: '',
-      }
-    } else {
-      routerDecision.missingFacts = ['exact display state']
-      routerDecision.customerFacingGoal =
-        '[EXACT] ¡Hola! Soy el asistente virtual de la lavandería, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?'
+    routerDecision.missingFacts = ['location']
+    routerDecision.customerFacingGoal =
+      'Greet the customer warmly as the laundry virtual assistant (use "asistente virtual de la lavandería"). Then ask only which lavandería autoservicio (ciudad y calle) the customer is at.'
+    routerDecision.extractedFacts = {
+      ...(routerDecision.extractedFacts || {}),
+      displayState: displayInMessage || routerDecision.extractedFacts?.displayState || '',
+      machineType: routerDecision.extractedFacts?.machineType || '',
     }
   }
 
@@ -468,6 +466,24 @@ export async function handleTurn(
     routerDecision.route = 'unknown'
     routerDecision.missingFacts = ['machine type']
     routerDecision.customerFacingGoal = 'Do not greet again. Ask only whether it is a washer or a dryer.'
+  }
+
+  // Andrea's playbook order: after location + machineType, ALWAYS ask the
+  // machine number BEFORE the display state. The router LLM tends to skip the
+  // machine-number step and jump to display, so guard it deterministically.
+  if (
+    state.turnCount > 1 &&
+    state.location &&
+    state.machineType &&
+    !state.machineNumber &&
+    !state.activeFlowId &&
+    !isDoubleChargeCase &&
+    routerDecision.route !== 'faq' &&
+    routerDecision.route !== 'operator' &&
+    routerDecision.route !== 'reset'
+  ) {
+    routerDecision.missingFacts = ['machine number']
+    routerDecision.customerFacingGoal = 'Do not greet again. Ask only the machine number.'
   }
 
   if (

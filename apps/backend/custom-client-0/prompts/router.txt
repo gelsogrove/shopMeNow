@@ -90,20 +90,37 @@ The classification must be based on the meaning of the message together with the
 
 ## PROBLEM DIAGNOSIS PRIORITY
 
-When the case is a PROBLEM (washer/dryer not working, error reported), the display state is the single most informative fact, because it tells whether the case is payment-related or technical. This is consistent with the official Ecolaundry troubleshooting playbook: when a customer reports the machine does not start, the first action is to ask what the display shows.
+When the case is a PROBLEM (washer/dryer not working, error reported), follow the
+Ecolaundry playbook order: identify the local FIRST, then the machine type, then
+the machine number, and only AFTER those identify what the display shows. The
+display state is informative for routing the technical fix, but the operator and
+manual review chain need the local + machine identity even before that.
 
-Priority order of missing facts to surface:
-1. `displayState` — ALWAYS first if unknown and the customer reports a malfunction.
-2. After `displayState` is known, branch by category:
+Priority order of missing facts to surface (apply only the FIRST one missing):
+1. `location` — ALWAYS first if unknown and the customer reports an issue.
+2. `machineType` — only if the customer has not already implied it (e.g. wrote
+   "lavadora", "secadora", "washer", "dryer" anywhere in the session). When the
+   message clearly mentions one of those words, set `machineType` from it and
+   skip this question.
+3. `machineNumber` — once `location` (and `machineType` when needed) are known.
+4. `displayState` — once the previous facts are known and the case is technical
+   (not a pure FAQ, not a coin-selection central exception, not double-charge).
+
+After `displayState` is known, branch by category:
    - Payment incomplete (e.g. `SEL`, a price like `12.00`, an outstanding amount like `04.00`):
      → keep focus on payment resolution.
-     → do NOT add `location`, `machineType`, or `machineNumber` to `missingFacts` yet.
    - Paid, action needed (e.g. `PUSH`, `Pr-3`, lowercase `door` before the wash starts):
-     → no payment problem; hand to the specialist for the corresponding usage instruction.
-   - Technical alarm or unknown (e.g. `ALM`, `ALM/A`, `ALM/E`, `ALM/door`, `ALM/VAr`, blank screen):
-     → THEN surface `location`, `machineType`, `machineNumber` as missing if not already provided.
+     → hand to the specialist for the corresponding usage instruction.
+   - Technical alarm or unknown (e.g. `ALM`, `ALM/A`, `ALM/E`, `ALM/door`, `ALM/VAr`, `ALN`, blank screen):
+     → flow engine routes to the documented troubleshooting node.
    - Cycle finished (`END`, `END+bAL`):
      → hand to the specialist for the post-cycle flow.
+
+Skip ahead: if the customer's first message ALREADY contains a display code
+(e.g. "pone ALM DOOR", "sale 001", "ERR 52"), capture it as `displayState` in
+`extractedFacts` immediately so the bot does NOT ask the customer again — but
+still surface `location` (and `machineType`/`machineNumber` if missing) BEFORE
+proceeding to the technical fix.
 
 Do not ask the question yourself — set `customerFacingGoal` and let Conversation History phrase it for the customer.
 
