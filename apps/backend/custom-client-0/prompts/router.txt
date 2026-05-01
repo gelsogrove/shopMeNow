@@ -112,6 +112,12 @@ Exception: double-charge cases follow DOUBLE CHARGE RULE, not this priority.
 Exception: central coin-selection error path.
 When the customer reports having paid but the machine did not activate, and no display code has been mentioned at any point in the session, the issue may be a coin-selection error at the central (wrong machine button pressed). In this case, asking for the display state is not useful because there is no error on the display. Instead, collect location, machineType, and machineNumber, then ask whether the central returned the change. Do not ask about the display.
 
+Exception: customer cannot read or describe the display.
+When the customer states (in any language) that they cannot see, read, recognise, or describe what is shown on the display — examples in any language: "no sé qué pone", "non vedo bene", "I cannot read the screen", "no entiendo el código" — DO NOT keep asking for the display state. Instead:
+1. Once `location` and `machineType` are known, set `customerFacingGoal` to ask the customer for a photo of the display, with a fallback that you will escalate if no photo can be provided.
+2. If the customer next replies that they cannot send a photo, set `route: operator`, `functionName: contactOperator`, and an escalation reason explaining the case must be reviewed manually because no display info could be obtained.
+Never accuse the customer of failing to describe the screen; treat it as a normal limitation and offer the photo / escalate path with a calm tone.
+
 ## ROUTING RULES
 
 Choose `functionName: lavatrice_hs60xx` when:

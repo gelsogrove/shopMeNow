@@ -52,14 +52,22 @@ export function hasHoursOrPricesIntent(message: string): boolean {
 
 export function hasAlarmCodeIntent(message: string): boolean {
   const m = message.trim().toUpperCase()
-  // Exclude known display states already handled elsewhere (AL001 → case 5).
+  // Exclude AL001 / ALM 001 — case 5 has its own dedicated flow.
   if (/\bAL\s*001\b/.test(m) || /\bALM\s*0*01\b/.test(m)) return false
-  // Match generic alarm codes that the bot does NOT have a documented flow for:
-  // - ALN, ALN001, ALN-anything
-  // - 001 standalone
-  // - ALM with anything other than 001
-  if (/\bALN\b/.test(m)) return true
-  if (/\bALM\b/.test(m) && !/\bALM\s*0*01\b/.test(m)) return true
+  // Exclude ALM sub-codes that have a dedicated troubleshooting flow in
+  // lavatrice_hs60xx.json (case_alm_door / case_alm_a / case_alm_e / case_alm_var).
+  // For these the chatbot should run the documented troubleshooting first
+  // (gather location + machine number, then guide the customer step by step)
+  // and only escalate via the persist node if the issue is not resolved.
+  if (/\bALM\s*[\/\s]*(?:DOOR|A|E|VAR)\b/.test(m)) return false
+  // ALN family is also handled by the troubleshooting flow now: the router
+  // recognises ALN as a display state and routes it to case_alm_unknown
+  // (washer) / fallback (dryer), which escalates AFTER location + machine
+  // info are collected — matching the doc for case 16.
+  if (/\bALN\b/.test(m)) return false
+  // ALM (bare, no known sub-code) and bare "001" still don't have a dedicated
+  // flow → keep them on the FAQ alarm-code immediate-escalation path.
+  if (/\bALM\b/.test(m)) return true
   if (/^\s*0*01\s*$/.test(m)) return true
   if (/\b(c[oó]digo de alarma|alarm code|codice di allarme|codi d['']alarma)\b/.test(message.toLowerCase())) return true
   return false

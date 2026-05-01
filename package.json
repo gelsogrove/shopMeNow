@@ -52,6 +52,7 @@
     "test:backoffice": "npm run test -w @echatbot/backoffice",
     "test:db": "npm run test -w @echatbot/database",
     "test:integration": "npm run test:integration -w @echatbot/backend",
+    "test:case": "bash apps/backend/custom-client-0/scripts/test-case.sh",
     "test:unit": "npm run test:unit -w @echatbot/backend",
     "test:security": "npm run test:security -w @echatbot/backend",
     "test:coverage": "npm run test:coverage -w @echatbot/backend",

@@ -9,6 +9,7 @@
     "demo:scripted": "node --import tsx chatbot.ts --scripted",
     "demo:verify": "node --import tsx chatbot.ts --verify",
     "demo:usecase": "node --import tsx chatbot.ts --usecases",
+    "test:case": "bash scripts/test-case.sh",
     "example:happy": "node --import tsx examples/01-happy-path.ts",
     "example:escalation": "node --import tsx examples/02-escalation.ts"
   },

@@ -21,9 +21,21 @@ export function extractDisplayState(message: string): string | null {
   if (/puerta abierta|dibujo de la puerta|icono de puerta|door open|open door icon/i.test(trimmed)) return 'DOOR'
   const alarm001Match = trimmed.match(/\bALM\s*0*01\b/i)
   if (alarm001Match) return 'AL001'
+  // Bare "001" / "01" code (without the "ALM" prefix) — surfaces as AL001 too,
+  // matching customer phrasing like "en la pantalla sale 001". Use \D boundary
+  // (instead of \b) so "1001" or "100" don't false-match.
+  if (/(?:^|\D)0*01(?:\D|$)/.test(trimmed) && !/\b\d{4,}\b/.test(trimmed)) return 'AL001'
 
-  const specificAlarmMatch = trimmed.match(/\b(ALM\/?A|ALM\/?E|ALM\/?DOOR|ALM\/?V(?:AR|Ar))\b/i)
+  // Accept the sub-code separated by "/", whitespace, or nothing — "ALM DOOR",
+  // "ALM/DOOR", "ALMDOOR" should all collapse to the same display token.
+  const specificAlarmMatch = trimmed.match(/\b(ALM[\/\s]?A|ALM[\/\s]?E|ALM[\/\s]?DOOR|ALM[\/\s]?V(?:AR|Ar))\b/i)
   if (specificAlarmMatch) return normalizeDisplayState(specificAlarmMatch[1])
+
+  // ALN family ("ALN", "ALN A", "ALN N") is treated as an undocumented alarm —
+  // matched here so it surfaces as a display state and the flow engine can
+  // route it through the troubleshooting → escalate path (case 16).
+  const alnMatch = trimmed.match(/\bALN(?:\s*[AN])?\b/i)
+  if (alnMatch) return normalizeDisplayState(alnMatch[0])
 
   const genericMatch = trimmed.match(/\b(SEL|PUSH|PR|DOOR|ALM|AL001|END|ON|FILTRO|FALLO DE ROTACION|FALLO DE ASPIRACION|STOP|water)\b/i)
   if (!genericMatch) return null

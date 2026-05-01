@@ -1,56 +1,267 @@
 [
   {
-    "name": "UC1 - lavadora no funciona sin contexto",
-    "turns": [
-      "Hola, la lavadora no funciona",
-      "pone PUSH PROG",
-      "Goya",
-      "5",
-      "no arranca",
-      "6"
-    ],
+    "name": "UC1 - PUSH PROG resolved",
+    "turns": ["La lavadora no funciona", "Goya", "La 5", "Sí", "PUSH PROG", "Sí, ahora funciona"],
     "assertions": [
-      {
-        "turn": 1,
-        "includes": [
-          "pantalla"
-        ],
-        "excludes": [
-          "lavander",
-          "numero de la lavadora",
-          "pago completado",
-          "payment complete"
-        ]
-      },
-      {
-        "turn": 2,
-        "includes": [
-          "lavander"
-        ],
-        "excludes": [
-          "programa"
-        ]
-      },
-      {
-        "turn": 3,
-        "includes": [
-          "numero de la lavadora"
-        ],
-        "excludes": [
-          "pago completado",
-          "payment complete"
-        ]
-      },
-      {
-        "turn": 4,
-        "includes": [
-          "programa"
-        ],
-        "excludes": [
-          "pago completado",
-          "payment complete"
-        ]
-      }
+      { "turn": 1, "includes": ["lavanderia"], "excludes": ["operador"] },
+      { "turn": 2, "includes": ["numero"], "excludes": [] },
+      { "turn": 6, "includes": ["perfecto"], "excludes": ["operador"] }
+    ]
+  },
+  {
+    "name": "UC2 - DOOR resolved",
+    "turns": ["La lavadora no arranca", "Hortes", "La 2", "DOOR", "Ahora sí funciona"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavanderia"], "excludes": ["operador"] },
+      { "turn": 4, "includes": ["puerta"], "excludes": [] },
+      { "turn": 5, "includes": ["perfecto"], "excludes": ["operador"] }
+    ]
+  },
+  {
+    "name": "UC3 - SEL resolved",
+    "turns": ["He pagado pero la lavadora no empieza", "Pineda", "La 3", "SEL", "Ya lo he hecho y ahora sí funciona"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavanderia"], "excludes": ["operador"] },
+      { "turn": 4, "includes": ["selecci"], "excludes": [] },
+      { "turn": 5, "includes": ["perfecto"], "excludes": ["operador"] }
+    ]
+  },
+  {
+    "name": "UC4 - pagado no activado central no devuelve cambio",
+    "turns": ["He pagado y no se ha activado", "Goya", "Lavadora", "La 4", "No", "Sí, ahora ya se ha puesto en marcha"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavanderia"], "excludes": ["operador"] },
+      { "turn": 6, "includes": ["perfecto"], "excludes": ["operador"] }
+    ]
+  },
+  {
+    "name": "UC5 - AL001 explica + revisar",
+    "turns": ["Me sale AL001", "L'Escala", "Lavadora", "Toqué el programa antes de acabar el pago"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavanderia"], "excludes": [] },
+      { "turn": 4, "includes": ["revisar"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC6 - doble cobro con uso",
+    "turns": ["Me habéis cobrado dos veces con la tarjeta", "Goya", "Sí", "He pagado, no iba y volví a pasar la tarjeta", "4821", "Vale"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavar"], "excludes": ["operador"] },
+      { "turn": 5, "includes": ["captura"], "excludes": [] },
+      { "turn": 6, "includes": ["revisar"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC7 - pagado no usado, central devolvió cambio, PUSH PROG",
+    "turns": ["He pagado y no he podido usar la máquina", "Pineda", "Lavadora", "La 7", "Sí", "PUSH PROG", "Ahora sí"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavanderia"], "excludes": [] },
+      { "turn": 7, "includes": ["perfecto"], "excludes": ["operador"] }
+    ]
+  },
+  {
+    "name": "UC8 - código importe menor",
+    "turns": ["Tengo un código y no sé cómo usarlo", "AB12345", "Goya", "Me falta un poco", "Sí, ya funciona"],
+    "assertions": [
+      { "turn": 1, "includes": ["código"], "excludes": [] },
+      { "turn": 4, "includes": ["importe"], "excludes": [] },
+      { "turn": 5, "includes": ["perfecto"], "excludes": ["operador"] }
+    ]
+  },
+  {
+    "name": "UC9 - factura info",
+    "turns": ["Quiero una factura"],
+    "assertions": [
+      { "turn": 1, "includes": ["olga@alberwaz.net"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC10 - comprar tarjeta fidelización",
+    "turns": ["¿Cómo consigo la tarjeta de fidelización?", "Estoy en Goya"],
+    "assertions": [
+      { "turn": 1, "includes": ["20"], "excludes": [] },
+      { "turn": 2, "includes": ["botón"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC11 - recargar tarjeta",
+    "turns": ["¿Cómo recargo la tarjeta?", "Vale"],
+    "assertions": [
+      { "turn": 1, "includes": ["central"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC12 - horarios general",
+    "turns": ["¿Cuál es el horario?"],
+    "assertions": [
+      { "turn": 1, "includes": ["8:00", "22:00"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC13 - escalación por ALN",
+    "turns": ["He pagado y ahora sale ALN", "Goya", "Vale"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavanderia"], "excludes": [] },
+      { "turn": 3, "includes": ["revisar"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC14 - ALM DOOR escalation",
+    "turns": ["La lavadora no funciona y pone ALM DOOR", "Goya", "La 6", "Ya lo he hecho", "No"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavanderia"], "excludes": ["operador"] },
+      { "turn": 2, "includes": ["numero"], "excludes": ["operador"] },
+      { "turn": 3, "includes": ["puerta"], "excludes": ["operador"] },
+      { "turn": 4, "includes": ["desaparec"], "excludes": [] },
+      { "turn": 5, "includes": ["revision"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC15 - 001 escalate immediate",
+    "turns": ["En la pantalla sale 001", "Pineda", "¿Qué hago?"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavanderia"], "excludes": [] },
+      { "turn": 3, "includes": ["revisar"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC16 - ALN secadora escalate",
+    "turns": ["La secadora pone ALN", "Alemanya", "¿Pruebo otra vez?"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavanderia"], "excludes": [] },
+      { "turn": 2, "includes": ["revisar"], "excludes": [] },
+      { "turn": 3, "includes": ["revisar"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC17 - no display info, no foto, escalate",
+    "turns": ["La máquina no va, pero no sé qué pone", "Hortes", "Lavadora", "No puedo hacer la foto"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavanderia"], "excludes": [] },
+      { "turn": 2, "includes": ["lavadora", "secadora"], "excludes": [] },
+      { "turn": 3, "includes": ["foto"], "excludes": [] },
+      { "turn": 4, "includes": ["revisar"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC18 - código solo numérico sin letras",
+    "turns": ["Tengo un código: 23432023", "No", "¿Por qué?"],
+    "assertions": [
+      { "turn": 1, "includes": ["letras"], "excludes": ["mentira", "imposible"] },
+      { "turn": 3, "includes": ["revisar"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC19 - datafono 10€ Goya",
+    "turns": ["Estoy en Goya y el datáfono me ha cobrado 10 €", "No", "Vale"],
+    "assertions": [
+      { "turn": 1, "includes": ["servicio"], "excludes": ["mentira"] },
+      { "turn": 3, "includes": ["revisar"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC20 - datafono 10€ Pineda",
+    "turns": ["En Pineda me ha cobrado 10 €", "No", "Vale"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavar", "secar"], "excludes": ["mentira"] },
+      { "turn": 3, "includes": ["revisar"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC21 - Alemanya secadora minutos no suman",
+    "turns": ["He puesto más dinero en la secadora y no suma minutos", "Sí", "¿No se puede arreglar ahora?"],
+    "assertions": [
+      { "turn": 1, "includes": ["alemanya", "lavanderia"], "excludes": [] },
+      { "turn": 3, "includes": ["revisar", "revision"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC22 - Pineda secadora minutos no suman",
+    "turns": ["He añadido tiempo a la secadora y no lo ha sumado", "Sí", "Vale"],
+    "assertions": [
+      { "turn": 1, "includes": ["pineda", "lavanderia"], "excludes": [] },
+      { "turn": 3, "includes": ["revisar", "revision"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC23 - Alemanya no tarjeta",
+    "turns": ["No puedo pagar con tarjeta", "Alemanya", "Vale"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavanderia"], "excludes": [] },
+      { "turn": 3, "includes": ["revisar"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC24 - Hortes no tarjeta",
+    "turns": ["La tarjeta no funciona para pagar", "Sí", "Vale"],
+    "assertions": [
+      { "turn": 1, "includes": ["hortes", "lavanderia"], "excludes": [] },
+      { "turn": 3, "includes": ["revisar"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC25 - cliente enfadado coopera",
+    "turns": ["¡Esto siempre falla! ¡Quiero una solución ya!", "Goya", "Lavadora"],
+    "assertions": [
+      { "turn": 1, "includes": ["entiendo"], "excludes": ["cálmate"] },
+      { "turn": 3, "includes": ["numero"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC26 - devolución inmediata",
+    "turns": ["Quiero que me devolváis el dinero ahora mismo", "Quiero la devolución ya"],
+    "assertions": [
+      { "turn": 1, "includes": ["dígitos", "captura"], "excludes": ["devolveremos"] },
+      { "turn": 2, "includes": ["revisar", "revision"], "excludes": ["devolveremos"] }
+    ]
+  },
+  {
+    "name": "UC27 - compensación concreta",
+    "turns": ["Quiero una secadora gratis por las molestias", "Pero quiero que me lo confirmes ya"],
+    "assertions": [
+      { "turn": 1, "includes": ["revisar"], "excludes": ["gratis confirmado"] },
+      { "turn": 2, "includes": ["revisar", "revision"], "excludes": ["confirmo"] }
+    ]
+  },
+  {
+    "name": "UC28 - doble cobro relato contradictorio",
+    "turns": ["Me cobró dos veces, aunque creo que también pagué en efectivo, pero no sé si llegó a arrancar", "No lo sé bien", "Vale"],
+    "assertions": [
+      { "turn": 1, "includes": ["servicio", "revisar"], "excludes": [] },
+      { "turn": 3, "includes": ["revisar", "revision"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC29 - cámaras/AJAX",
+    "turns": ["Mirad las cámaras porque yo he pagado", "Vale"],
+    "assertions": [
+      { "turn": 1, "includes": ["revisar"], "excludes": ["miro las cámaras"] },
+      { "turn": 2, "includes": ["revisar", "revision"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC30 - código no documentado ERR 52",
+    "turns": ["En la pantalla sale ERR 52", "L'Escala", "Entendido"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavanderia"], "excludes": [] },
+      { "turn": 3, "includes": ["revisar"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC31 - cliente no indica local",
+    "turns": ["La secadora no funciona", "No lo sé", "Vale, estoy en Goya"],
+    "assertions": [
+      { "turn": 1, "includes": ["lavanderia"], "excludes": [] },
+      { "turn": 2, "includes": ["lavanderia", "necesito"], "excludes": [] },
+      { "turn": 3, "includes": ["numero"], "excludes": [] }
+    ]
+  },
+  {
+    "name": "UC32 - mezcla incidencia + pago",
+    "turns": ["He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro", "Pineda", "No"],
+    "assertions": [
+      { "turn": 1, "includes": ["paso a paso", "lavanderia"], "excludes": [] },
+      { "turn": 3, "includes": ["pantalla"], "excludes": [] }
     ]
   }
 ]

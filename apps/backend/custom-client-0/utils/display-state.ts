@@ -4,10 +4,12 @@ export function normalizeDisplayState(displayState: string): string {
   if (normalized === 'BLANK') return 'BLANK'
   if (/^PUSH(?:\s+PROG)?$/.test(normalized)) return 'PUSH'
   if (/END.*BAL|BAL.*END/.test(normalized)) return 'END_BAL'
-  if (/^ALM\/?A$/.test(normalized)) return 'ALM/A'
-  if (/^ALM\/?E$/.test(normalized)) return 'ALM/E'
-  if (/^ALM\/?DOOR$/.test(normalized)) return 'ALM/DOOR'
-  if (/^ALM\/?VAR$/.test(normalized)) return 'ALM/VAr'
+  // Accept ALM separated from the sub-code by either "/", a space, or nothing
+  // (so "ALM DOOR", "ALM/DOOR", "ALMDOOR" all normalize to the same token).
+  if (/^ALM[\/\s]?A$/.test(normalized)) return 'ALM/A'
+  if (/^ALM[\/\s]?E$/.test(normalized)) return 'ALM/E'
+  if (/^ALM[\/\s]?DOOR$/.test(normalized)) return 'ALM/DOOR'
+  if (/^ALM[\/\s]?VAR$/.test(normalized)) return 'ALM/VAr'
   // ALN family (ALN, ALN A, ALN N, etc.) is an alarm code that's not in our documented
   // troubleshooting list — normalize to a single token so the flow engine can route it
   // to case_alm_unknown for immediate escalation (per Caso 16).
