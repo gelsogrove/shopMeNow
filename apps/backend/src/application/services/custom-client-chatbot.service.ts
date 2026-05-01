@@ -103,8 +103,13 @@ export class CustomClientChatbotService {
         },
       })
 
-      // NOTE: Welcome message is handled inside chatbotFn (LLM generates its own greeting).
-      // The workspace welcomeMessage setting is for standard (non-custom) chatbot workspaces only.
+      // Welcome merge (Option C): on the first turn (no prior history), prepend the workspace
+      // welcomeMessage to the chatbot reply so the customer receives one combined message
+      // ("¡Hola! Soy ...\n\nTranquilo, te ayudo. ¿En qué...?") instead of two separate ones.
+      const isFirstTurn = params.history.length === 0
+      if (isFirstTurn && params.welcomeMessage && output.reply) {
+        output.reply = `${params.welcomeMessage}\n\n${output.reply}`
+      }
 
       // Attach wipMessage from workspace settings (used by widget/WhatsApp to show debug banner)
       if (params.debugChannel && params.wipMessage) {

@@ -1,0 +1,36 @@
+{
+  "case": 32,
+  "scenario": 32.1,
+  "name": "Case 32 — Scenario 32.1 — Reconduce to Machine Flow",
+  "description": "Cliente mezcla problema técnico/pago. Bot reconduce al flujo correcto paso a paso.",
+  "turns": [
+    "He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro",
+    "Pineda",
+    "No",
+    "Pone DOOR"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["paso a paso", "lavandería"],
+      "excludes": []
+    },
+    {
+      "turn": 2,
+      "includes": ["máquina", "usar"],
+      "excludes": []
+    },
+    {
+      "turn": 3,
+      "includes": ["pantalla"],
+      "excludes": []
+    },
+    {
+      "turn": 4,
+      "includes": ["puerta"],
+      "excludes": ["escal"]
+    }
+  ],
+  "expectedOutcome": "CONTINUE_DIAGNOSIS",
+  "notes": "Caso mixto reconducido al flujo correcto: pantalla → diagnóstico DOOR."
+}

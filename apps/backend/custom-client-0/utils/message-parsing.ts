@@ -1,5 +1,5 @@
 // Message parsing and content extraction
-const KNOWN_LOCATIONS = ['Goya', 'Pineda', "L'Escala", 'Alemanya', 'Hortes'] as const
+const KNOWN_LOCATIONS = ['Goya', 'Pineda', "L'Escala", 'Alemanya', 'Hortes', 'Mataró'] as const
 
 export function hasExtraButtonIssue(message: string): boolean {
   // RULE: Only trigger when "extra" is explicitly mentioned.

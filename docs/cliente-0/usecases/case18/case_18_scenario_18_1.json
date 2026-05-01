@@ -1,0 +1,30 @@
+{
+  "case": 18,
+  "scenario": 18.1,
+  "name": "Case 18 — Scenario 18.1 — Numeric-only Code",
+  "description": "Cliente da código solo numérico y niega letras. Incoherencia detectada sin confrontación. Escalación.",
+  "turns": [
+    "Tengo un código: 23432023",
+    "No",
+    "Lucía"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["letras"],
+      "excludes": ["mentira", "imposible"]
+    },
+    {
+      "turn": 2,
+      "includes": ["revisar", "manual"],
+      "excludes": ["mentira", "incorrecto"]
+    },
+    {
+      "turn": 3,
+      "includes": ["operador", "brevedad"],
+      "excludes": []
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Código numérico sin letras = incoherencia. Bot escala sin confrontar al cliente."
+}

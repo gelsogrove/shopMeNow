@@ -3,7 +3,7 @@
   "non_parte": {
     "step_0": {
       "type": "CONFIRMATION",
-      "prompt": "Let’s sort this out. Have you already completed the payment at the central unit?",
+      "prompt": "Tranquilo, vamos a resolverlo. ¿Has completado ya el pago en la central de pago?",
       "transitions": {
         "YES": "non_parte.display_check",
         "NO": "non_parte.pay_help"
@@ -12,7 +12,7 @@
 
     "pay_help": {
       "type": "ACTION",
-      "prompt": "No problem.\n\n1. Go to the central unit.\n2. Insert coins or use your card.\n3. Select your machine number.\n4. Press the program button.\n5. Close the door.",
+      "prompt": "No hay problema.\n\n1. Acércate a la central de pago.\n2. Introduce monedas o usa tu tarjeta.\n3. Selecciona el número de tu máquina.\n4. Pulsa el botón de programa.\n5. Cierra la puerta.",
       "transitions": {
         "default": "non_parte.pay_retry"
       }
@@ -20,7 +20,7 @@
 
     "pay_retry": {
       "type": "CONFIRMATION",
-      "prompt": "Were you able to complete the payment?",
+      "prompt": "¿Has podido completar el pago?",
       "transitions": {
         "YES": "non_parte.display_check",
         "NO": "non_parte.escalate_pay"
@@ -30,7 +30,7 @@
     "display_check": {
       "type": "CHOICE",
       "strictMatching": true,
-      "prompt": "What exactly do you see on the display? Please write only the exact code or value shown.",
+      "prompt": "¿Qué aparece exactamente en la pantalla? Por favor, escribe solo el código o el valor exacto que ves.",
       "transitions": {
         "1": "non_parte.case_sel",
         "2": "non_parte.case_price",
@@ -44,12 +44,12 @@
         "10": "non_parte.case_disponible",
         "other": "non_parte.escalate"
       },
-      "onInterruptFallback": "Thanks. Please write only the exact display code shown. If it is not recognized, I will connect an operator."
+      "onInterruptFallback": "Gracias. Por favor, escribe solo el código exacto que aparece en la pantalla. Si no se reconoce, te paso con un operador."
     },
 
     "case_blank_display": {
       "type": "ACTION",
-      "prompt": "Ok. If nothing appears on the display, the washer may be stopped.\n\n1. Press the program you want.\n2. Tell me if it starts or if nothing happens.",
+      "prompt": "De acuerdo. Si no aparece nada en la pantalla, puede que la lavadora esté parada.\n\n1. Pulsa el programa que quieras.\n2. Dime si arranca o si no pasa nada.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -65,7 +65,7 @@
 
     "case_price": {
       "type": "ACTION",
-      "prompt": "The display shows the remaining amount.\n\n1. Insert coins or use your card until the display changes to **PUSH**.\n2. Let me know if it works.",
+      "prompt": "La pantalla muestra el importe restante.\n\n1. Introduce monedas o usa tu tarjeta hasta que la pantalla cambie a **PUSH**.\n2. Dime si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -73,7 +73,7 @@
 
     "case_push": {
       "type": "ACTION",
-      "prompt": "Press a program button to start the wash.\n\nPrograms:\n60º Molt calent -> ropa muy sucia, blanca o de trabajo\n40º Calent -> ropa normal (algodon, color)\n30º Temperat -> ropa delicada o sintetica\nFrio -> prendas muy delicadas (lana, seda, etc.)\n\nAfter trying, let me know if it works.",
+      "prompt": "Pulsa un botón de programa para iniciar el lavado.\n\nProgramas:\n60º Molt calent → ropa muy sucia, blanca o de trabajo\n40º Calent → ropa normal (algodón, color)\n30º Temperat → ropa delicada o sintética\nFrío → prendas muy delicadas (lana, seda, etc.)\n\nUna vez lo intentes, dime si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -81,7 +81,7 @@
 
     "case_extra_button": {
       "type": "CONFIRMATION",
-      "prompt": "An **EXTRA** button staying fixed usually means that EXTRA was selected before, so the machine still expects more money for it.\n\nDo you want that **EXTRA** option? Reply **YES** if you want it, **NO** if you do not.",
+      "prompt": "Que un botón **EXTRA** se quede fijo suele significar que la opción EXTRA fue seleccionada antes, así que la máquina sigue esperando dinero adicional para esa opción.\n\n¿Quieres esa opción **EXTRA**? Responde **SÍ** si la quieres, **NO** si no la quieres.",
       "transitions": {
         "YES": "non_parte.case_extra_pay_more",
         "NO": "non_parte.case_extra_remove",
@@ -91,7 +91,7 @@
 
     "case_extra_remove": {
       "type": "ACTION",
-      "prompt": "If the customer does **not** want the **EXTRA**:\n\n1. Press the **EXTRA** button or buttons that stay fixed so they turn off.\n2. Then continue with the normal wash steps.\n3. Let me know if it works.",
+      "prompt": "Si **no** quieres la opción **EXTRA**:\n\n1. Pulsa el botón **EXTRA** o los botones que se hayan quedado fijos para que se apaguen.\n2. Después continúa con los pasos normales del lavado.\n3. Dime si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -99,7 +99,7 @@
 
     "case_extra_pay_more": {
       "type": "ACTION",
-      "prompt": "If the customer **does** want the **EXTRA**:\n\n1. Add the missing money required for that **EXTRA** option.\n2. Then continue with the normal wash steps.\n3. Let me know if it works.",
+      "prompt": "Si **sí** quieres la opción **EXTRA**:\n\n1. Añade el dinero que falta para esa opción **EXTRA**.\n2. Después continúa con los pasos normales del lavado.\n3. Dime si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -134,7 +134,7 @@
     "case_alm": {
       "type": "CHOICE",
       "strictMatching": true,
-      "prompt": "Which alarm do you see?\n\n1. **ALM/A**\n2. **ALM/E**\n3. **ALM/DOOR**\n4. **ALM/VAr**\n5. Another **ALM** code",
+      "prompt": "¿Qué alarma ves?\n\n1. **ALM/A**\n2. **ALM/E**\n3. **ALM/DOOR**\n4. **ALM/VAr**\n5. Otro código **ALM**",
       "transitions": {
         "1": "non_parte.case_alm_a",
         "2": "non_parte.case_alm_e",
@@ -143,12 +143,12 @@
         "5": "non_parte.case_alm_unknown",
         "other": "non_parte.case_alm_unknown"
       },
-      "onInterruptFallback": "Thanks. If the alarm code does not match a documented case, I will not guess the diagnosis. The case needs manual review by an operator."
+      "onInterruptFallback": "Gracias. Si el código de alarma no coincide con un caso documentado, no voy a suponer el diagnóstico. El caso necesita revisión manual por un operador."
     },
 
     "case_alm_a": {
       "type": "ACTION",
-      "prompt": "**ALM/A** means a water inlet alarm.\n\n1. Press **STOP** once with a short press, less than one second.\n2. This tells the washer to try resuming the wash from the point where the alarm appeared.\n3. Try the wash again.\n4. Let me know if it works.",
+      "prompt": "**ALM/A** indica una alarma de entrada de agua.\n\n1. Pulsa **STOP** una sola vez con una pulsación corta, menos de un segundo.\n2. Esto le indica a la lavadora que intente reanudar el lavado desde el punto donde apareció la alarma.\n3. Prueba de nuevo el lavado.\n4. Dime si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -156,7 +156,7 @@
 
     "case_alm_e": {
       "type": "ACTION",
-      "prompt": "**ALM/E** means a drain obstruction alarm.\n\n1. Press **STOP** once with a short press, less than one second.\n2. Wait a few minutes in case the washer is still draining water.\n3. Try the wash again.\n4. Let me know if it works.",
+      "prompt": "**ALM/E** indica una alarma de obstrucción en el desagüe.\n\n1. Pulsa **STOP** una sola vez con una pulsación corta, menos de un segundo.\n2. Espera unos minutos por si la lavadora aún está vaciando el agua.\n3. Prueba de nuevo el lavado.\n4. Dime si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -164,10 +164,26 @@
 
     "case_alm_door": {
       "type": "ACTION",
-      "prompt": "**ALM/DOOR** usually means the door did not close correctly or a garment may be trapped.\n\n1. Open the door carefully.\n2. Check whether any garment is trapped.\n3. Close the door firmly again.\n4. Tell me if the message disappears.",
+      "prompt": "De acuerdo. Ese mensaje puede indicar un problema de cierre o que hay alguna prenda atrapada. Abre la puerta con cuidado, revisa si hay alguna prenda atrapada y vuelve a cerrarla bien.",
       "transitions": {
-        "default": "non_parte.check_result"
+        "default": "non_parte.case_alm_door_check"
       }
+    },
+
+    "case_alm_door_check": {
+      "type": "CONFIRMATION",
+      "prompt": "Perfecto. Dime, por favor, si el mensaje ha desaparecido.",
+      "transitions": {
+        "YES": "non_parte.ok",
+        "NO": "non_parte.case_alm_door_persist"
+      }
+    },
+
+    "case_alm_door_persist": {
+      "type": "INFO",
+      "prompt": "Gracias. Vamos a pasar tu caso a revisión para ayudarte de la manera más adecuada.",
+      "isTerminal": true,
+      "action": "escalate"
     },
 
     "case_alm_var": {
@@ -195,18 +211,18 @@
     "case_end": {
       "type": "CHOICE",
       "strictMatching": true,
-      "prompt": "Do you see only **END**, or **END** with another display code?\n\n1. Only **END**\n2. **END** with another code",
+      "prompt": "¿Ves solo **END**, o **END** con otro código en la pantalla?\n\n1. Solo **END**\n2. **END** con otro código",
       "transitions": {
         "1": "non_parte.case_end_only",
         "2": "non_parte.case_end_unknown",
         "other": "non_parte.case_end_only"
       },
-      "onInterruptFallback": "Thanks. If the display shows only END, choose option 1. If END appears with any other code, choose option 2 so we can verify it safely."
+      "onInterruptFallback": "Gracias. Si la pantalla muestra solo END, elige la opción 1. Si END aparece con otro código, elige la opción 2 para que podamos verificarlo con seguridad."
     },
 
     "case_end_only": {
       "type": "INFO",
-      "prompt": "Ok 👍 I can see **END** on the display. If the washer still does not start, press the program you want and tell me if anything changes.",
+      "prompt": "Perfecto 👍 Veo que aparece **END** en la pantalla. Si la lavadora aún no arranca, pulsa el programa que quieras y dime si algo cambia.",
       "isTerminal": true
     },
 
@@ -219,7 +235,7 @@
 
     "check_result": {
       "type": "CONFIRMATION",
-      "prompt": "Once you've done that, let me know if the machine has started working.",
+      "prompt": "Una vez lo hayas hecho, dime si la máquina ha empezado a funcionar.",
       "transitions": {
         "YES": "non_parte.ok",
         "NO": "non_parte.followup_display"
@@ -240,7 +256,7 @@
         "7": "non_parte.case_blank_followup",
         "other": "non_parte.escalate"
       },
-      "onInterruptFallback": "Thanks. Please write the exact display code. If it is still unclear, I will escalate for manual verification."
+      "onInterruptFallback": "Gracias. Por favor, escribe el código exacto de la pantalla. Si sigue sin estar claro, lo paso a revisión manual."
     },
 
     "case_door_persist": {
@@ -302,7 +318,7 @@
   "stop_error": {
     "step_0": {
       "type": "CONFIRMATION",
-      "prompt": "Did you press STOP before the wash had actually started?",
+      "prompt": "¿Pulsaste STOP antes de que el lavado hubiera arrancado realmente?",
       "transitions": {
         "YES": "stop_error.before_start",
         "NO": "stop_error.first_time_check"
@@ -311,7 +327,7 @@
 
     "before_start": {
       "type": "INFO",
-      "prompt": "If the wash had not actually started yet, you can simply select the correct program again and start the washer. In that case the wash was not cancelled mid-cycle.",
+      "prompt": "Si el lavado aún no había arrancado realmente, puedes simplemente seleccionar de nuevo el programa correcto e iniciar la lavadora. En ese caso el lavado no se ha cancelado a mitad de ciclo.",
       "isTerminal": true
     },
 
@@ -341,7 +357,7 @@
   "post_ciclo": {
     "step_0": {
       "type": "CHOICE",
-      "prompt": "What happened after the wash?\n\n1. Clothes very wet\n2. Door locked\n3. Clothes damaged\n4. No foam\n5. Other issue",
+      "prompt": "¿Qué ha pasado después del lavado?\n\n1. Ropa muy mojada\n2. Puerta bloqueada\n3. Ropa dañada\n4. Sin espuma\n5. Otra incidencia",
       "transitions": {
         "1": "post_ciclo.wet",
         "2": "post_ciclo.door",
@@ -354,7 +370,7 @@
 
     "wet": {
       "type": "CONFIRMATION",
-      "prompt": "Did the display show **END** together with another code?",
+      "prompt": "¿La pantalla mostraba **END** junto con otro código?",
       "transitions": {
         "YES": "post_ciclo.wet_balanced_issue",
         "NO": "post_ciclo.wet_overload_issue"
@@ -363,21 +379,21 @@
 
     "wet_balanced_issue": {
       "type": "INFO",
-      "prompt": "Thanks for the code details. That display state is not in our documented troubleshooting list, so I won't guess the diagnosis. I’m notifying the operator for manual verification.",
+      "prompt": "Gracias por indicar el detalle del código. Ese estado de pantalla no está en nuestra lista documentada de incidencias, así que no voy a suponer el diagnóstico. Tenemos que notificar al operador para una verificación manual.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "wet_overload_issue": {
       "type": "INFO",
-      "prompt": "The washer was probably overloaded or the clothes were not balanced properly inside the drum. This is common with duvets, pillows, rugs, or bulky items that absorb a lot of water.\n\n1. Wash the clothes again, separating the load into **two washers** and leaving enough space for the clothes to move correctly.\n2. Do **not** put dripping wet clothes directly into the dryer — they will not dry properly and the filter can be damaged.\n3. If you rewash the clothes separated because this wash did not spin, **this time we will compensate the wash that failed to spin**.\n4. Please avoid overloading the washer again, because we may not be able to help next time.",
+      "prompt": "Probablemente la lavadora estaba sobrecargada o la ropa no estaba bien equilibrada dentro del tambor. Esto es habitual con edredones, almohadas, alfombras u otras prendas voluminosas que absorben mucha agua.\n\n1. Lava la ropa de nuevo, separando la carga en **dos lavadoras** y dejando espacio suficiente para que la ropa se pueda mover correctamente.\n2. **No** metas ropa empapada directamente en la secadora — no se secará bien y el filtro puede dañarse.\n3. Si vuelves a lavar la ropa separada porque este lavado no centrifugó, **esta vez te compensaremos el lavado que no centrifugó**.\n4. Por favor, evita sobrecargar la lavadora otra vez, porque puede que la próxima vez no podamos ayudarte.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "door": {
       "type": "ACTION",
-      "prompt": "The door may take 2 to 3 minutes to unlock.\n\n1. Please wait a moment.\n2. Try again.",
+      "prompt": "La puerta puede tardar de 2 a 3 minutos en desbloquearse.\n\n1. Por favor, espera un momento.\n2. Inténtalo de nuevo.",
       "transitions": {
         "default": "post_ciclo.door_check"
       }
@@ -385,7 +401,7 @@
 
     "door_check": {
       "type": "CONFIRMATION",
-      "prompt": "Has the door opened?",
+      "prompt": "¿Se ha abierto la puerta?",
       "transitions": {
         "YES": "post_ciclo.ok",
         "NO": "post_ciclo.escalate"
@@ -394,14 +410,14 @@
 
     "damage": {
       "type": "INFO",
-      "prompt": "I’m notifying the operator. They will review the case. Compensation is not automatic.",
+      "prompt": "Voy a notificar al operador. Revisarán el caso. La compensación no es automática.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "foam": {
       "type": "INFO",
-      "prompt": "Low foam is normal. Industrial detergent produces less visible foam but washes effectively.",
+      "prompt": "Que haya poca espuma es normal. El detergente industrial produce menos espuma visible pero lava igual de bien.",
       "isTerminal": true
     },
 
@@ -414,7 +430,7 @@
 
     "ok": {
       "type": "INFO",
-      "prompt": "Great. Everything is resolved.",
+      "prompt": "✅ Perfecto. Todo resuelto.",
       "isTerminal": true
     }
   }

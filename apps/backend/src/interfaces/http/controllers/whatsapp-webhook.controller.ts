@@ -701,6 +701,7 @@ export class WhatsAppWebhookController {
             channelStatus: true,
             channelMode: true, // 🛠️ DebugFlow: FLOW workspaces bypass WIP
             needRegistration: true, // 🔧 Controls whether registration is required
+            customChatbotId: true, // 🤖 FLOW/custom workspaces skip static welcome
             ownerId: true,
             owner: {
               select: { status: true },
@@ -1035,9 +1036,40 @@ export class WhatsAppWebhookController {
           finalLanguage,
         })
 
-        // 🔧 Generate registration link ONLY if workspace requires registration
-        let registrationLink = ""
-        let registrationTexts: any = { link: "", validity: "" }
+        // 🤖 CUSTOM CHATBOT NEW-USER BYPASS:
+        // For FLOW/custom workspaces, skip static welcome and route first message to the LLM pipeline.
+        if (workspace.customChatbotId) {
+          const phoneForStorage =
+            lookupVariants.find((v) => v.startsWith("+")) ||
+            lookupVariants[0] ||
+            phoneNumber
+
+          const createdCustomer = await prisma.customers.create({
+            data: {
+              phone: phoneForStorage,
+              workspaceId,
+              name: contactName || "New Customer",
+              email: `temp_${phoneForStorage.replace(/[^0-9]/g, "")}@pending.com`,
+              language: finalLanguage,
+              isActive: workspace.needRegistration === false ? true : false,
+            },
+          })
+
+          customer = await prisma.customers.findUnique({
+            where: { id: createdCustomer.id },
+            select: customerSelect,
+          })
+
+          logger.info("[WEBHOOK] 🤖 New user in custom chatbot workspace — skipping static welcome and routing to LLM", {
+            workspaceId,
+            customChatbotId: workspace.customChatbotId,
+            customerId: createdCustomer.id,
+            phoneNumber: phoneForStorage,
+          })
+        } else {
+          // 🔧 Generate registration link ONLY if workspace requires registration
+          let registrationLink = ""
+          let registrationTexts: any = { link: "", validity: "" }
 
         if (workspace.needRegistration !== false) {
           const secureTokenService = new SecureTokenService()
@@ -1343,6 +1375,7 @@ export class WhatsAppWebhookController {
           sessionId: chatSession.id,
         })
         return
+      }
       }
 
       logger.info("[WEBHOOK] ✅ Customer found", {

@@ -224,6 +224,19 @@ export async function advanceActiveFlow(runtime: Runtime, state: SessionState, u
   const exact = userInput.trim()
   if (node.transitions?.[exact]) transitionKey = exact
   if (!transitionKey && node.type === 'CONFIRMATION') {
+    // In check_result steps, a reported display code means the machine is not started yet.
+    // Route to NO so the flow can continue with follow-up display troubleshooting.
+    if (state.activeStepId === 'check_result') {
+      const detectedDisplay = normalizeDisplayState(extractDisplayState(userInput) || '')
+      if (detectedDisplay && node.transitions?.NO) {
+        if (detectedDisplay === 'ON' && node.transitions?.YES) {
+          transitionKey = 'YES'
+        } else {
+          transitionKey = 'NO'
+        }
+      }
+    }
+
     if (/payment|pagamento|central unit|coins|card/i.test(node.prompt)) {
       const paymentAnswer = parsePaymentAnswer(userInput)
       if (paymentAnswer !== null) {

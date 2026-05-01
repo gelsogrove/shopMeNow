@@ -1,0 +1,30 @@
+{
+  "case": 25,
+  "scenario": 25.2,
+  "name": "Case 25 — Scenario 25.2 — Persistent Angry Escalation",
+  "description": "Cliente muy alterado, no coopera. Bot escala manteniendo calma.",
+  "turns": [
+    "¡Esto es una vergüenza! ¡Quiero que me solucionéis esto AHORA!",
+    "¡No te voy a contestar nada hasta que me solucionéis esto!",
+    "Joan"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["entiendo"],
+      "excludes": ["cálmate", "tranquilízate"]
+    },
+    {
+      "turn": 2,
+      "includes": ["operador", "llamas"],
+      "excludes": []
+    },
+    {
+      "turn": 3,
+      "includes": ["operador", "brevedad"],
+      "excludes": []
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Cliente alterado y no coopera → escalación con tono empático."
+}

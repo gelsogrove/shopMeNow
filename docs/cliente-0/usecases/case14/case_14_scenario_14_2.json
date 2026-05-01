@@ -1,0 +1,48 @@
+{
+  "case": 14,
+  "scenario": 14.2,
+  "name": "Case 14 — Scenario 14.2 — ALM DOOR persiste (Escalation)",
+  "description": "Cliente reporta ALM DOOR. El bot recoge ubicación y número (tipo ya implícito), pide abrir la puerta, revisar y cerrar. El cliente confirma que el mensaje sigue apareciendo. El bot escala a soporte humano sin pedir un segundo intento.",
+  "turns": [
+    "La lavadora no funciona y pone ALM DOOR",
+    "Goya",
+    "La 6",
+    "Ya lo he hecho",
+    "No, sigue saliendo lo mismo",
+    "Carlos"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["lavander"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 2,
+      "includes": ["número"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 3,
+      "includes": ["puerta"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 4,
+      "includes": ["desaparec"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 5,
+      "includes": ["llamas"],
+      "excludes": []
+    },
+    {
+      "turn": 6,
+      "includes": ["operador", "brevedad", "llamada"],
+      "excludes": []
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "ALM DOOR persiste tras 1 tentativo. El bot escala con nombre + brevedad + llamada telefónica. NO se pide al cliente repetir el procedimiento."
+}

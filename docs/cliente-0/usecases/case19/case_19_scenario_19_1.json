@@ -1,0 +1,30 @@
+{
+  "case": 19,
+  "scenario": 19.1,
+  "name": "Case 19 — Scenario 19.1 — Goya 10€ Charge Discrepancy",
+  "description": "Cliente en Goya reporta cobro 10€ (incoherente con precios). Bot escala sin acusar.",
+  "turns": [
+    "Estoy en Goya y el datáfono me ha cobrado 10 €",
+    "No",
+    "Andreu"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["servicio"],
+      "excludes": ["mentira", "imposible"]
+    },
+    {
+      "turn": 2,
+      "includes": ["coincide", "manual"],
+      "excludes": ["mentira", "imposible"]
+    },
+    {
+      "turn": 3,
+      "includes": ["operador", "brevedad"],
+      "excludes": []
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Goya 10€ = importe incoherente. Escalación sin confrontación."
+}

@@ -9,7 +9,7 @@ Si modeláramos cada lavandería con un LLM dedicado, multiplicaríamos los prom
 ## File location
 
 ```
-docs/cliente-0/demo/json/locations.json
+apps/backend/custom-client-0/json/locations.json
 ```
 
 Cargado por el demo runner al inicio. Cuando el Router extrae `state.location`, el sistema busca `locations[state.location]` y, si existe, lo inyecta como `ACTIVE LOCATION CONTEXT` en los system prompts del Specialist y de Conversation History.

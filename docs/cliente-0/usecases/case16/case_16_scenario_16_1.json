@@ -1,0 +1,30 @@
+{
+  "case": 16,
+  "scenario": 16.1,
+  "name": "Case 16 — Scenario 16.1 — ALN/ALM Generic Alarm",
+  "description": "Cliente reporta código de alarma genérico (ALM, ALN, etc.). Bot escala sin pedir manipulaciones.",
+  "turns": [
+    "La secadora pone ALN",
+    "Alemanya",
+    "Pere"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["lavandería"],
+      "excludes": []
+    },
+    {
+      "turn": 2,
+      "includes": ["incidencia", "revisar"],
+      "excludes": ["pruebes", "intenta de nuevo"]
+    },
+    {
+      "turn": 3,
+      "includes": ["operador", "brevedad"],
+      "excludes": []
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Código alarma genérico → escalación inmediata sin tentativos. Diferente de ALM/DOOR que tiene tentativo único."
+}

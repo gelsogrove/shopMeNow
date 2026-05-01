@@ -1,0 +1,36 @@
+{
+  "case": 32,
+  "scenario": 32.2,
+  "name": "Case 32 — Scenario 32.2 — Confused Narrative Escalation",
+  "description": "Cliente con relato muy confuso, no recuerda ni la localización. Bot escala.",
+  "turns": [
+    "He pagado dos veces, creo, pero no sé, y la máquina no funciona pero quizás sí, no estoy seguro",
+    "Goya, creo. O Pineda. No me acuerdo",
+    "No me acuerdo",
+    "Roger"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["paso a paso"],
+      "excludes": []
+    },
+    {
+      "turn": 2,
+      "includes": ["seguro"],
+      "excludes": []
+    },
+    {
+      "turn": 3,
+      "includes": ["revisión", "manual"],
+      "excludes": []
+    },
+    {
+      "turn": 4,
+      "includes": ["operador", "brevedad"],
+      "excludes": []
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Relato muy confuso + localización incierta → escalación."
+}

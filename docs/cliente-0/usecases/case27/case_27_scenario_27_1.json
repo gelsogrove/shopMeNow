@@ -1,0 +1,36 @@
+{
+  "case": 27,
+  "scenario": 27.1,
+  "name": "Case 27 — Scenario 27.1 — Compensation Request",
+  "description": "Cliente solicita compensación concreta. Bot NO promete, escala para evaluación.",
+  "turns": [
+    "Quiero una secadora gratis por las molestias",
+    "Goya",
+    "La 8",
+    "David"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["solución", "adecuada"],
+      "excludes": ["gratis", "seguro", "confirmo"]
+    },
+    {
+      "turn": 2,
+      "includes": ["número"],
+      "excludes": []
+    },
+    {
+      "turn": 3,
+      "includes": ["compensación", "evaluar"],
+      "excludes": ["prometido", "gratis"]
+    },
+    {
+      "turn": 4,
+      "includes": ["operador", "brevedad"],
+      "excludes": []
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Cliente pide compensación → NO prometer desde bot → escalación para evaluación manual."
+}

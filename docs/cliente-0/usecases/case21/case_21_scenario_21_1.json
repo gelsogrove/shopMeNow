@@ -1,0 +1,30 @@
+{
+  "case": 21,
+  "scenario": 21.1,
+  "name": "Case 21 — Scenario 21.1 — Alemanya Dryer Coins Not Added",
+  "description": "Cliente en Alemanya: dinero en secadora pero no suma minutos. Escalación por incidencia técnica del local.",
+  "turns": [
+    "He puesto más dinero en la secadora y no suma minutos",
+    "Sí",
+    "Raúl"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["alemanya"],
+      "excludes": []
+    },
+    {
+      "turn": 2,
+      "includes": ["revisión"],
+      "excludes": []
+    },
+    {
+      "turn": 3,
+      "includes": ["operador", "brevedad"],
+      "excludes": []
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Incidencia habitual Alemanya: dinero no suma minutos en secadora → escalación inmediata."
+}

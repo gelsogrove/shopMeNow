@@ -1,0 +1,36 @@
+{
+  "case": 31,
+  "scenario": 31.2,
+  "name": "Case 31 — Scenario 31.2 — Client Cannot Identify Location",
+  "description": "Cliente no puede identificar localización. Bot escala sin poder diagnosticar.",
+  "turns": [
+    "La máquina no va",
+    "No lo sé, no reconozco el local",
+    "No veo nada claro",
+    "Tomás"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["lavandería"],
+      "excludes": []
+    },
+    {
+      "turn": 2,
+      "includes": ["dónde"],
+      "excludes": []
+    },
+    {
+      "turn": 3,
+      "includes": ["revisión"],
+      "excludes": []
+    },
+    {
+      "turn": 4,
+      "includes": ["operador", "brevedad"],
+      "excludes": []
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Cliente no puede identificar local → bot no puede diagnosticar → escalación inmediata."
+}

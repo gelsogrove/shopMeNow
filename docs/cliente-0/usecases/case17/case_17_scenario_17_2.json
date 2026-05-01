@@ -1,0 +1,42 @@
+{
+  "case": 17,
+  "scenario": 17.2,
+  "name": "Case 17 — Scenario 17.2 — No Photo Available",
+  "description": "Cliente no puede hacer foto. Bot escala sin insistir.",
+  "turns": [
+    "La máquina no va, pero no sé qué pone",
+    "Hortes",
+    "Lavadora",
+    "No puedo hacer la foto",
+    "Josep"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["tranquilo"],
+      "excludes": ["escal"]
+    },
+    {
+      "turn": 2,
+      "includes": ["número", "lavandería"],
+      "excludes": ["escal"]
+    },
+    {
+      "turn": 3,
+      "includes": ["foto"],
+      "excludes": ["escal"]
+    },
+    {
+      "turn": 4,
+      "includes": ["revisión", "manual"],
+      "excludes": []
+    },
+    {
+      "turn": 5,
+      "includes": ["operador", "brevedad"],
+      "excludes": []
+    }
+  ],
+  "expectedOutcome": "ESCALATED",
+  "notes": "Cliente no puede hacer foto → escalación inmediata sin repetir tentativo."
+}

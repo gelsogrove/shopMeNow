@@ -699,6 +699,106 @@ In this architecture:
 If specialists start writing polished final answers, tone and consistency break.
 In this architecture specialists provide technical decisions, not the final voice.
 
+---
+
+## 13. Webhook Integration — How a Customer Message Reaches the Pipeline
+
+### Entry point
+
+All WhatsApp messages enter via:
+
+```
+apps/backend/src/interfaces/http/controllers/whatsapp-webhook.controller.ts
+```
+
+### Routing logic based on `customChatbotId`
+
+When a workspace has `customChatbotId` set (e.g., `"cliente-0"`) and `channelMode = FLOW`, the webhook routes the message to the custom pipeline instead of the standard multi-agent system.
+
+```text
+WhatsApp Message Received
+  │
+  ▼
+[Check] Customer exists in DB?
+  │
+  ├─ YES → check messageCount and customChatbotId
+  │           if (messageCount === 0 && hasCustomChatbot):
+  │             → skip static welcome
+  │             → fall through to custom pipeline (same as subsequent messages)
+  │
+  └─ NO (new customer) → check workspace.customChatbotId
+                           │
+                           ├─ customChatbotId EXISTS:
+                           │    → create customer in DB
+                           │    → re-fetch customer (with full workspace context)
+                           │    → do NOT send static welcome
+                           │    → do NOT return — fall through to custom pipeline
+                           │
+                           └─ NO customChatbotId (standard workspace):
+                                → send static welcomeMessage from workspace settings
+                                → return (no LLM invoked)
+```
+
+### Why this bypass exists
+
+The static `welcomeMessage` stored in workspace settings is a generic text (e.g., "Bienvenido a EcoLaundry!").
+For a FLOW workspace, the first message from the customer may already contain technical content (e.g., "me sale ALM ERR01").
+If the bot replied with a generic welcome, the customer's real problem would be ignored.
+
+The correct behavior: pass the first message through the full LLM pipeline, which handles the welcome + contextual response via the `FIRST TURN WELCOME RULE` in `history.txt`.
+
+### Standard welcome path (non-FLOW workspaces)
+
+Standard workspaces (ECOMMERCE, INFO) are not affected.
+They still use the static `welcomeMessage` on first contact and return without calling any LLM.
+
+---
+
+## 14. First-Turn Welcome Behavior
+
+### The rule
+
+When `turnCount === 1` AND the route is NOT `greeting`, `Conversation History` must:
+
+1. **Prepend a short warm intro** (2–3 words or one sentence identifying the bot)
+2. **For washer/dryer routes**: add one reassurance phrase ("tranquilo, te ayudo paso a paso")
+3. **Then deliver the main content** (the contextually relevant response to what the customer actually said)
+
+This rule is defined in `apps/backend/custom-client-0/prompts/history.txt` under `FIRST TURN WELCOME RULE`.
+
+### Example
+
+Customer first message: `"me sale ALM ERR01"`
+
+Expected turn-1 response (good behavior):
+```
+¡Hola! Soy el asistente virtual de la lavandería. Tranquilo, te ayudo.
+ALM ERR01 indica una incidencia en la máquina. ¿Puedes decirme en qué local y número de máquina estás?
+```
+
+Bad behavior (before fix):
+```
+¡Hola! 👋 Soy EcoLaundry, tu asistente virtual. ¿En qué puedo ayudarte hoy?
+```
+(generic welcome — customer's actual message was ignored)
+
+### Why it works this way
+
+The welcome is **not hardcoded** anywhere in the orchestrator layer.
+It is a prompt rule inside `history.txt` that the Conversation History LLM applies when it detects `turnCount = 1`.
+
+This means:
+- the welcome is always in the customer's detected language
+- the welcome is always followed immediately by the contextually relevant response
+- no orchestrator code needs to manage "is this the first turn"
+
+### `--scripted` mode (CLI)
+
+The CLI demo runner (`apps/backend/custom-client-0/chatbot.ts --scripted`) always calls `handleTurn()` directly.
+It bypasses the webhook entirely.
+The `FIRST TURN WELCOME RULE` still applies because it lives in the History prompt, not the webhook.
+This is why `--scripted` mode always produced correct welcome behavior even before the webhook fix.
+
 ### Risk 5: Flow Engine is treated as humanization layer
 If Flow Engine is confused with Conversation History, deterministic instructions get mixed with prose generation.
 Flow Engine executes steps.

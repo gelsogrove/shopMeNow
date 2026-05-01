@@ -3,7 +3,7 @@
   "non_parte": {
     "step_0": {
       "type": "CONFIRMATION",
-      "prompt": "Has the dryer already been paid and has the cycle started?",
+      "prompt": "¿Has pagado ya la secadora y ha arrancado el ciclo?",
       "transitions": {
         "YES": "non_parte.problem_check",
         "NO": "non_parte.pay_help"
@@ -12,7 +12,7 @@
 
     "pay_help": {
       "type": "ACTION",
-      "prompt": "Please complete the payment at the central unit and select the dryer number to start the cycle.",
+      "prompt": "Por favor, completa el pago en la central y selecciona el número de secadora para iniciar el ciclo.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -20,7 +20,7 @@
 
     "problem_check": {
       "type": "INPUT",
-      "prompt": "What do you see exactly on the display?",
+      "prompt": "¿Qué aparece exactamente en la pantalla?",
       "transitions": {
         "default": "non_parte.interpret_display"
       }
@@ -39,7 +39,7 @@
 
     "door_issue": {
       "type": "ACTION",
-      "prompt": "It looks like a door issue. Please check that no clothes are stuck in the seal and close the door firmly until you hear a click.",
+      "prompt": "Parece un problema con la puerta. Por favor, comprueba que no haya ropa atrapada en la goma y cierra la puerta firmemente hasta escuchar un clic.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -47,7 +47,7 @@
 
     "ready_state": {
       "type": "ACTION",
-      "prompt": "The dryer is ready. Please select the program and start the cycle.",
+      "prompt": "La secadora está lista. Por favor, selecciona el programa e inicia el ciclo.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -55,7 +55,7 @@
 
     "credit_issue": {
       "type": "ACTION",
-      "prompt": "Please make sure the payment is completed and start the dryer.",
+      "prompt": "Por favor, asegúrate de que el pago se ha completado e inicia la secadora.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -63,7 +63,7 @@
 
     "alarm_state": {
       "type": "INPUT",
-      "prompt": "Please tell me the alarm code shown on the display.",
+      "prompt": "Por favor, dime el código de alarma que aparece en la pantalla.",
       "transitions": {
         "default": "non_parte.alarm_resolution"
       }
@@ -71,7 +71,7 @@
 
     "alarm_resolution": {
       "type": "ACTION",
-      "prompt": "If the alarm matches a documented case, follow the corresponding reset instructions. If the code is not documented or it appears again, the case needs manual review.",
+      "prompt": "Si la alarma coincide con un caso documentado, sigue las instrucciones de reinicio correspondientes. Si el código no está documentado o vuelve a aparecer, el caso necesita revisión manual.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -79,7 +79,7 @@
 
     "retry_flow": {
       "type": "ACTION",
-      "prompt": "Please try again selecting the dryer and starting the cycle. If it still does not work, use another dryer.",
+      "prompt": "Por favor, inténtalo de nuevo seleccionando la secadora e iniciando el ciclo. Si aún no funciona, usa otra secadora.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -87,7 +87,7 @@
 
     "check_result": {
       "type": "CONFIRMATION",
-      "prompt": "Once you've done that, let me know if the dryer has started working.",
+      "prompt": "Una vez lo hayas hecho, dime si la secadora ha empezado a funcionar.",
       "transitions": {
         "YES": "non_parte.end_success",
         "NO": "non_parte.fallback"
@@ -96,14 +96,14 @@
 
     "fallback": {
       "type": "INFO",
-      "prompt": "We are sorry for the inconvenience. Please use another dryer for now. The case will be reviewed manually by an operator.",
+      "prompt": "Sentimos las molestias. Por favor, usa otra secadora por ahora. Un operador revisará el caso manualmente.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "end_success": {
       "type": "INFO",
-      "prompt": "Perfect, the dryer is now working correctly.",
+      "prompt": "Perfecto, la secadora ya funciona correctamente.",
       "isTerminal": true
     }
   },
@@ -111,7 +111,7 @@
   "errore_reset": {
     "step_0": {
       "type": "INPUT",
-      "prompt": "What problem are you experiencing with the dryer?",
+      "prompt": "¿Qué problema tienes con la secadora?",
       "transitions": {
         "default": "errore_reset.classify"
       }
@@ -132,14 +132,14 @@
 
     "soaking_wet": {
       "type": "INFO",
-      "prompt": "Very wet clothes usually mean the washer did not spin correctly. Please wash the clothes again separating the load into two machines. A new payment is required. If needed, the case can be reviewed manually after the rewash.",
+      "prompt": "La ropa muy mojada suele significar que la lavadora no centrifugó correctamente. Por favor, lava la ropa de nuevo separando la carga en dos máquinas. Hace falta un nuevo pago. Si lo necesitas, el caso se puede revisar manualmente después del nuevo lavado.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "normal_damp": {
       "type": "ACTION",
-      "prompt": "If clothes are still damp, make sure the load is not too large and distribute the clothes well. You can add more drying time.",
+      "prompt": "Si la ropa sigue húmeda, asegúrate de que la carga no sea demasiado grande y reparte bien la ropa. Puedes añadir más tiempo de secado.",
       "transitions": {
         "default": "errore_reset.check_result"
       }
@@ -147,7 +147,7 @@
 
     "alarm_case": {
       "type": "INPUT",
-      "prompt": "Please tell me the alarm code shown on the display.",
+      "prompt": "Por favor, dime el código de alarma que aparece en la pantalla.",
       "transitions": {
         "default": "errore_reset.alarm_action"
       }
@@ -155,7 +155,7 @@
 
     "alarm_action": {
       "type": "ACTION",
-      "prompt": "If the alarm matches a documented case, follow the corresponding reset instructions. If the code is not documented or it appears again, the case needs manual review.",
+      "prompt": "Si la alarma coincide con un caso documentado, sigue las instrucciones de reinicio correspondientes. Si el código no está documentado o vuelve a aparecer, el caso necesita revisión manual.",
       "transitions": {
         "default": "errore_reset.check_result"
       }
@@ -163,28 +163,28 @@
 
     "damage_burnt": {
       "type": "INFO",
-      "prompt": "Burnt clothes usually happen when the temperature is not appropriate. Please follow garment instructions. The case can be reviewed manually, but compensation is not automatic.",
+      "prompt": "La ropa quemada suele ocurrir cuando la temperatura no es la adecuada. Por favor, sigue las instrucciones de la prenda. El caso se puede revisar manualmente, pero la compensación no es automática.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "damage_plastic": {
       "type": "INFO",
-      "prompt": "Plastic stuck to clothes may happen if the drum was not checked before use. The case can be reviewed manually, but compensation is not automatic.",
+      "prompt": "Que se pegue plástico a la ropa puede ocurrir si no se revisó el tambor antes de usarlo. El caso se puede revisar manualmente, pero la compensación no es automática.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "damage_stained": {
       "type": "INFO",
-      "prompt": "Stains may come from the drum condition. Please wash the clothes again with pre-treatment. If needed, the case can be reviewed manually.",
+      "prompt": "Las manchas pueden venir del estado del tambor. Por favor, lava la ropa de nuevo aplicando un pretratamiento. Si lo necesitas, el caso se puede revisar manualmente.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "generic_case": {
       "type": "ACTION",
-      "prompt": "Please try again with a smaller and well distributed load. If the problem continues, use another dryer.",
+      "prompt": "Por favor, inténtalo de nuevo con una carga más pequeña y bien repartida. Si el problema continúa, usa otra secadora.",
       "transitions": {
         "default": "errore_reset.check_result"
       }
@@ -192,7 +192,7 @@
 
     "check_result": {
       "type": "CONFIRMATION",
-      "prompt": "Once you've done that, let me know if it has started working now.",
+      "prompt": "Una vez lo hayas hecho, dime si ya ha empezado a funcionar.",
       "transitions": {
         "YES": "errore_reset.end_success",
         "NO": "errore_reset.fallback"
@@ -201,14 +201,14 @@
 
     "fallback": {
       "type": "INFO",
-      "prompt": "Please use another dryer. The case will be reviewed.",
+      "prompt": "Por favor, usa otra secadora. El caso será revisado.",
       "isTerminal": true,
       "action": "escalate"
     },
 
     "end_success": {
       "type": "INFO",
-      "prompt": "Great, the issue is resolved.",
+      "prompt": "Perfecto, la incidencia está resuelta.",
       "isTerminal": true
     }
   }

@@ -1,0 +1,42 @@
+{
+  "case": 14,
+  "scenario": 14.1,
+  "name": "Case 14 — Scenario 14.1 — ALM DOOR (Happy Path)",
+  "description": "Cliente reporta ALM DOOR. El bot recoge ubicación y número (tipo ya implícito en el mensaje inicial), pide abrir la puerta, revisar y cerrar. El cliente confirma que el mensaje desapareció y el caso se resuelve sin escalación.",
+  "turns": [
+    "La lavadora no funciona y pone ALM DOOR",
+    "Goya",
+    "La 6",
+    "Ya lo he hecho",
+    "Sí, ya ha desaparecido"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["lavander"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 2,
+      "includes": ["número"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 3,
+      "includes": ["puerta"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 4,
+      "includes": ["desaparec"],
+      "excludes": ["operador", "escal"]
+    },
+    {
+      "turn": 5,
+      "includes": ["perfecto"],
+      "excludes": ["operador", "escal"]
+    }
+  ],
+  "expectedOutcome": "RESOLVED",
+  "notes": "ALM DOOR: 1 tentativo de apertura/cierre. Si desaparece, caso resuelto sin escalación. El tipo (lavadora) se infiere del mensaje inicial → no se vuelve a preguntar."
+}

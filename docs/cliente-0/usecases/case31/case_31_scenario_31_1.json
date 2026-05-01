@@ -1,0 +1,42 @@
+{
+  "case": 31,
+  "scenario": 31.1,
+  "name": "Case 31 — Scenario 31.1 — Client Identifies Location",
+  "description": "Cliente no sabe dónde está inicialmente. Bot insiste. Cliente identifica localización. Continúa diagnóstico.",
+  "turns": [
+    "La secadora no funciona",
+    "No lo sé",
+    "Vale, estoy en Goya",
+    "La 3",
+    "Pantalla en blanco"
+  ],
+  "assertions": [
+    {
+      "turn": 1,
+      "includes": ["lavandería"],
+      "excludes": []
+    },
+    {
+      "turn": 2,
+      "includes": ["necesito"],
+      "excludes": []
+    },
+    {
+      "turn": 3,
+      "includes": ["perfecto"],
+      "excludes": ["escal"]
+    },
+    {
+      "turn": 4,
+      "includes": ["número"],
+      "excludes": []
+    },
+    {
+      "turn": 5,
+      "includes": ["pantalla"],
+      "excludes": ["escal"]
+    }
+  ],
+  "expectedOutcome": "CONTINUE_DIAGNOSIS",
+  "notes": "Cliente no sabe localización → bot insiste → cliente identifica → diagnóstico continúa."
+}
