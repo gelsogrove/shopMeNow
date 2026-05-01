@@ -20,10 +20,16 @@ export function normalizeLocationValue(value: string): string {
 }
 
 export function resolveKnownLocation(rawValue: string): string | null {
-  const normalized = normalizeLocationValue(rawValue).toLowerCase()
+  // Check the whole input (lowercased) so that compound replies like
+  // "Girona, calle Goya" or "estoy en Goya" still resolve to the known location.
+  // Normalizing to the first comma-separated segment would drop the actual match.
+  const normalized = rawValue.toLowerCase()
 
   for (const known of KNOWN_LOCATIONS) {
-    if (normalized.includes(known.toLowerCase())) {
+    const knownLower = known.toLowerCase()
+    // Word-boundary match where possible so "Goya" doesn't match inside an unrelated word.
+    const pattern = new RegExp(`\\b${knownLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
+    if (pattern.test(normalized)) {
       return known
     }
   }
