@@ -359,7 +359,7 @@ export function applySpecialistFallback(
 
   if (state.machineType === 'dryer') {
     if (hasStopIntent(issue)) return { ...decision, flowId: 'errore_reset', shouldEscalate: false }
-    if (['SEL', 'PUSH', 'PR', 'ALM', 'AL001', 'END'].includes(displayState))
+    if (['SEL', 'PUSH', 'PR', 'ALM', 'ALN', 'AL001', 'END'].includes(displayState))
       return { ...decision, flowId: 'non_parte', shouldEscalate: false }
     if (['FILTRO', 'FALLO DE ROTACION', 'FALLO DE ASPIRACION'].includes(displayState))
       return { ...decision, flowId: 'errore_reset', shouldEscalate: false }
@@ -370,7 +370,7 @@ export function applySpecialistFallback(
 
   if (state.machineType === 'washer') {
     if (hasStopIntent(issue)) return { ...decision, flowId: 'stop_error', shouldEscalate: false }
-    if (['SEL', 'PUSH', 'PR', 'DOOR', 'ALM', 'AL001', 'END'].includes(displayState))
+    if (['SEL', 'PUSH', 'PR', 'DOOR', 'ALM', 'ALN', 'AL001', 'END'].includes(displayState))
       return { ...decision, flowId: 'non_parte', shouldEscalate: false }
     if (hasWasherPostCycleIssue(issue)) return { ...decision, flowId: 'post_ciclo', shouldEscalate: false }
     if (decision.flowId) return decision

@@ -8,6 +8,10 @@ export function normalizeDisplayState(displayState: string): string {
   if (/^ALM\/?E$/.test(normalized)) return 'ALM/E'
   if (/^ALM\/?DOOR$/.test(normalized)) return 'ALM/DOOR'
   if (/^ALM\/?VAR$/.test(normalized)) return 'ALM/VAr'
+  // ALN family (ALN, ALN A, ALN N, etc.) is an alarm code that's not in our documented
+  // troubleshooting list — normalize to a single token so the flow engine can route it
+  // to case_alm_unknown for immediate escalation (per Caso 16).
+  if (/^ALN(\s*[AN])?$/.test(normalized)) return 'ALN'
   if (/^ALM\s*0*01$/.test(normalized.replace(/ /g, '')) || normalized === 'AL001') {
     return 'AL001'
   }

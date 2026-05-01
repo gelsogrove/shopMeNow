@@ -71,6 +71,7 @@ export function selectInitialStepFromState(
     if (display === 'ALM/DOOR' && flow.case_alm_door) return 'case_alm_door'
     if (display === 'ALM/VAr' && flow.case_alm_var) return 'case_alm_var'
     if (display === 'ALM' && flow.case_alm) return 'case_alm'
+    if (display === 'ALN' && flow.case_alm_unknown) return 'case_alm_unknown'
     if (display === 'AL001' && flow.case_al001) return 'case_al001'
     if (display === 'END_BAL' && flow.case_end_bal) return 'case_end_bal'
     if (display === 'END' && flow.case_end) return 'case_end'
@@ -90,6 +91,7 @@ export function selectInitialStepFromState(
     if (display === 'BLANK' && flow.display_blank) return 'display_blank'
     if (display === 'SEL' && flow.case_sel) return 'case_sel'
     if (display === 'DOOR' && flow.door_issue) return 'door_issue'
+    if (display === 'ALN' && flow.fallback) return 'fallback'
     if (display === 'AL001' && flow.case_al001) return 'case_al001'
     if (state.paymentCompleted === true && flow.problem_check) return 'problem_check'
   }
