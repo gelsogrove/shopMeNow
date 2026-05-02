@@ -32,6 +32,7 @@ import {
   getRequestedLanguage,
   isShortContextReply,
   isClosureAcknowledgement,
+  detectNonTroubleshootingIncident,
 } from './utils/intent.js'
 import { resolveLanguage, detectLanguage } from './utils/llm.js'
 import {
@@ -164,6 +165,20 @@ export async function handleTurn(
     }
   }
 
+  // Detect non-troubleshooting incidents (UC19-24, UC26, UC27, UC29) on turn 1.
+  // These customer reports DO NOT need machineType/machineNumber/displayState —
+  // after capturing only the location, the case escalates with a manual-review
+  // message. We persist the kind in state so downstream guards can skip the
+  // machine-flow gathering and the LLM can phrase the right escalation reason.
+  if (state.turnCount === 1 && !state.nonTroubleshootingIncident) {
+    const incidentKind = detectNonTroubleshootingIncident(userMessage)
+    if (incidentKind) {
+      state.nonTroubleshootingIncident = incidentKind
+      state.issueSummary = state.issueSummary || `${incidentKind}: ${userMessage.trim()}`
+      pushDebug(debug, 'nonTroubleshootingIncident', incidentKind)
+    }
+  }
+
   // Mataró-specific: if location is Mataró, ask for street (only there)
   if (state.locationStreetRequested && !state.locationStreet) {
     state.locationStreet = userMessage.trim()
@@ -204,6 +219,20 @@ export async function handleTurn(
   }
 
   if (state.lastMissingFacts.includes('central change returned or not')) {
+    // If the customer reveals they paid with CARD (no coins), the "did the
+    // central return change?" question doesn't apply — there's no change to
+    // return. Skip it and ask the display state instead. Multilingua note:
+    // covers Spanish / Italian / English roots that all share "tarj" or
+    // "carta" or "card"; kept narrow to avoid false positives on unrelated
+    // sentences.
+    const m = normalizedUserMessage.toLowerCase()
+    const paidWithCard = /\b(?:con\s+)?(?:la\s+)?(?:tarjeta|carta(?:\s+de\s+(?:cr[eé]dito|d[eé]bito))?|card)\b/.test(m)
+    if (paidWithCard) {
+      state.paymentMethod = 'card'
+      state.lastMissingFacts = []
+      pushDebug(debug, 'paymentMethod', 'card')
+      return { reply: '¿Qué aparece exactamente en la pantalla de la lavadora?', debug }
+    }
     const confirmation = normalizeConfirmation(normalizedUserMessage)
     if (confirmation === 'NO') {
       state.lastMissingFacts = ['activated after central balance review']
@@ -243,7 +272,7 @@ export async function handleTurn(
   // We intentionally do NOT match "sí, [anything]" here because "Sí, bastante"
   // (answering a CONFIRMATION about clothes) would fire a false closure.
   // "Sí, ya funciona" is covered by the `ya funciona` branch below.
-  const userConfirmsNowWorking = /^(si|sí)\s*[.!?]*\s*$|ahora funciona|ya funciona|funciona ahora|arranco|arranc[oó]|ha arrancado|ya func/.test(
+  const userConfirmsNowWorking = /^(si|sí)\s*[.!?]*\s*$|ahora funciona|ya funciona|funciona ahora|arranco|arranc[oó]|ha arrancado|ya func|ahora s[ií] funcion|ya s[ií] funcion/.test(
     normalizeForRegression(normalizedUserMessage),
   )
   if (
@@ -295,7 +324,7 @@ export async function handleTurn(
     const operatorSummary = buildEscalationSummary(escalationContext)
     pushDebug(debug, 'escalation.withName', { finalReply, operatorSummary })
     const deterministicEscalationReply = state.language === 'es'
-      ? `Gracias ${state.customerName}, Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?`
+      ? `Gracias ${state.customerName}, vamos a revisar tu caso manualmente. Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?`
       : sanitizeCustomerReply(finalReply)
     return { reply: `${deterministicEscalationReply}\n\n**👤 Human Support message**\n${operatorSummary}`, debug }
   }
@@ -435,6 +464,16 @@ export async function handleTurn(
     routerDecision.customerFacingGoal = 'Greet the customer, present yourself briefly, and ask the most useful next question.'
   }
 
+  // If a non-troubleshooting incident was detected but we still don't have the
+  // location, ask for the location FIRST (not the display state). The forced
+  // escalation block below will then fire on the next turn and produce the
+  // "vamos a revisar" message — without ever entering machine-flow gathering.
+  if (state.turnCount === 1 && state.nonTroubleshootingIncident && !state.location) {
+    routerDecision.missingFacts = ['location']
+    routerDecision.customerFacingGoal =
+      'Greet the customer warmly as the laundry virtual assistant. Acknowledge briefly the issue they described and ask only which lavandería autoservicio (ciudad y calle) they are at. Do NOT ask machine type, machine number, or display state.'
+  }
+
   // Turn 1 (technical issue): greet warmly and ALWAYS ask the local first.
   // The display state is the most informative fact for routing the fix, but the
   // playbook (and Andrea's spec) requires identifying the local before
@@ -453,12 +492,32 @@ export async function handleTurn(
     }
   }
 
+  // Display states that escalate directly (AL001, ALN, undocumented codes
+  // like ERR 52). For these, after gathering location the documented flow is
+  // to escalate — no need to keep asking machineType / machineNumber, since
+  // the operator does manual review regardless of the machine identity.
+  const escalateDirectlyDisplayStates = new Set(['AL001', 'ALN'])
+  const displayStateIsEscalateOnly =
+    escalateDirectlyDisplayStates.has(state.displayState.toUpperCase()) ||
+    Boolean(extractUnknownDisplayCode(state.displayState))
+
+  // Same idea: when a non-troubleshooting incident was detected on turn 1
+  // (card payment fails, datáfono wrong amount, dryer minutes not credited,
+  // refund/compensation demand, cameras/AJAX), skip machine-flow gathering.
+  const isNonTroubleshootingIncident = Boolean(state.nonTroubleshootingIncident)
+  const skipMachineGathering = displayStateIsEscalateOnly || isNonTroubleshootingIncident
+
   if (
     state.turnCount > 1 &&
     state.location &&
     !state.machineType &&
     !state.activeFlowId &&
     !isDoubleChargeCase &&
+    !skipMachineGathering &&
+    !state.operatorRequested &&
+    !state.customerNameRequested &&
+    state.pendingClosure !== 'escalated' &&
+    state.pendingClosure !== 'resolved' &&
     routerDecision.route !== 'faq' &&
     routerDecision.route !== 'operator' &&
     routerDecision.route !== 'reset'
@@ -478,12 +537,88 @@ export async function handleTurn(
     !state.machineNumber &&
     !state.activeFlowId &&
     !isDoubleChargeCase &&
+    !skipMachineGathering &&
+    !state.operatorRequested &&
+    !state.customerNameRequested &&
+    state.pendingClosure !== 'escalated' &&
+    state.pendingClosure !== 'resolved' &&
     routerDecision.route !== 'faq' &&
     routerDecision.route !== 'operator' &&
     routerDecision.route !== 'reset'
   ) {
     routerDecision.missingFacts = ['machine number']
     routerDecision.customerFacingGoal = 'Do not greet again. Ask only the machine number.'
+  }
+
+  // Fallback for non-troubleshooting incidents where the customer is unable
+  // or unwilling to give the local: after 2 turns without a location, escalate
+  // anyway with a manual-review message. This covers UC22/UC24/UC29 where the
+  // customer answered "Sí" / "Vale" without naming the local explicitly.
+  if (
+    isNonTroubleshootingIncident &&
+    !state.location &&
+    state.turnCount >= 2 &&
+    !state.activeFlowId &&
+    !isDoubleChargeCase &&
+    !state.operatorRequested &&
+    !state.customerNameRequested
+  ) {
+    routerDecision.route = 'operator'
+    routerDecision.functionName = 'contactOperator'
+    routerDecision.missingFacts = []
+    routerDecision.customerFacingGoal =
+      `The customer described a non-troubleshooting incident (${state.nonTroubleshootingIncident}) but has not been able to identify the local after several attempts. Acknowledge calmly and tell them the case will be revisado manually. The reply MUST include the verb "revisar" or noun "revisión". Use a calm tone.`
+  }
+
+  // Same fallback for double-charge cases where the customer's narrative is
+  // contradictory or they cannot identify the local (UC28). After 2+ turns
+  // without a location, escalate to manual review with a "revisar" message.
+  if (
+    isDoubleChargeCase &&
+    !state.location &&
+    state.turnCount >= 2 &&
+    !state.activeFlowId &&
+    !state.operatorRequested &&
+    !state.customerNameRequested
+  ) {
+    routerDecision.route = 'operator'
+    routerDecision.functionName = 'contactOperator'
+    routerDecision.missingFacts = []
+    routerDecision.customerFacingGoal =
+      'The customer reports a double charge but cannot identify the local or provides a contradictory narrative. Acknowledge calmly and tell them the case has to be revisado manually. The reply MUST include the verb "revisar" or noun "revisión".'
+  }
+
+  // Once location is known and either (a) the displayState is escalate-only,
+  // or (b) a non-troubleshooting incident was detected on turn 1, force the
+  // operator route. This produces a calm "vamos a revisar" message and skips
+  // any further machine-flow gathering.
+  // For non-troubleshooting incidents we allow turn>=1 (the customer's first
+  // message may already include the local, e.g. "Estoy en Goya y..."); for
+  // escalate-only displays we keep turn>2 to avoid hijacking flows
+  // mid-conversation (e.g. case_door check_result).
+  const turnCountThresholdMet = isNonTroubleshootingIncident
+    ? state.turnCount >= 1
+    : state.turnCount > 2
+  if (
+    turnCountThresholdMet &&
+    state.location &&
+    (displayStateIsEscalateOnly || isNonTroubleshootingIncident) &&
+    !state.activeFlowId &&
+    !isDoubleChargeCase &&
+    !state.operatorRequested &&
+    !state.customerNameRequested &&
+    routerDecision.route !== 'faq' &&
+    routerDecision.route !== 'reset' &&
+    !routerDecision.missingFacts.includes('exact display state')
+  ) {
+    routerDecision.route = 'operator'
+    routerDecision.functionName = 'contactOperator'
+    routerDecision.missingFacts = []
+    const reasonLabel = displayStateIsEscalateOnly
+      ? `the display code "${state.displayState}"`
+      : `the customer's report (${state.nonTroubleshootingIncident})`
+    routerDecision.customerFacingGoal =
+      `Acknowledge ${reasonLabel} and tell the customer the case has to be reviewed manually. The reply MUST include the verb "revisar" or the noun "revisión" naturally. Do not ask machineType, machineNumber, or displayState. Use a calm, reassuring tone. End with a brief reassuring closing.`
   }
 
   if (
@@ -540,7 +675,17 @@ export async function handleTurn(
   }
 
   // Deterministic machine-type and machine-number questions in Spanish/Catalan
-  if (!state.activeFlowId && !isDoubleChargeCase) {
+  // Skip when the case has already escalated to operator / closed — otherwise
+  // the bot keeps asking machine details after the customer was already handed
+  // over to a human operator.
+  if (
+    !state.activeFlowId &&
+    !isDoubleChargeCase &&
+    !state.operatorRequested &&
+    !state.customerNameRequested &&
+    state.pendingClosure !== 'escalated' &&
+    state.pendingClosure !== 'resolved'
+  ) {
     if (routerDecision.missingFacts[0] === 'machine type' && (state.language === 'es' || state.language === 'ca')) {
       return { reply: '¿Es una lavadora o una secadora?', debug }
     }
@@ -569,7 +714,7 @@ export async function handleTurn(
         state.pendingClosure = 'resolved'
         state.issueSummary = state.issueSummary || 'double charge'
         return {
-          reply: `Hemos recibido toda la información necesaria. ${getNameQuestion(state.language)}`,
+          reply: `Hemos recibido toda la información necesaria, vamos a revisar tu caso. ${getNameQuestion(state.language)}`,
           debug,
         }
       }
@@ -663,7 +808,16 @@ export async function handleTurn(
 
     if (!state.customerName && !state.customerNameRequested) {
       state.customerNameRequested = true
-      return { reply: getNameQuestion(state.language), debug }
+      // Prepend a short reassurance that the case will be revisado manually
+      // BEFORE asking for the name. Many use-cases (UC15/UC16/UC23/UC30/...)
+      // expect the operator-handover message to include the verb "revisar".
+      const reassurance = state.language === 'es' || state.language === 'ca'
+        ? '⚠️ Vamos a revisar tu caso manualmente.'
+        : ''
+      const reply = reassurance
+        ? `${reassurance} ${getNameQuestion(state.language)}`
+        : getNameQuestion(state.language)
+      return { reply, debug }
     }
 
     state.operatorRequested = true

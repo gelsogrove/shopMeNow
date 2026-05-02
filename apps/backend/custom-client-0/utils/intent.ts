@@ -58,6 +58,62 @@ export function isShortContextReply(message: string): boolean {
   )
 }
 
+// ── Non-troubleshooting incident detection ──────────────────────────────────
+// These are customer reports that should NOT enter the machine-troubleshooting
+// flow (no machineType / machineNumber / displayState gathering). After
+// capturing location, the case escalates to a human operator with a manual
+// review message that includes "revisar / revisión".
+// MULTILINGUA TODO: today the patterns are Spanish-only because cliente-0 is
+// configured for Spanish. When more languages are enabled, move these strings
+// to a per-language file or use an LLM classifier.
+export type NonTroubleshootingIncidentKind =
+  | 'card-payment'
+  | 'datafono-wrong-amount'
+  | 'dryer-minutes-not-credited'
+  | 'refund-demand'
+  | 'compensation-demand'
+  | 'cameras-or-ajax'
+
+export function detectNonTroubleshootingIncident(message: string): NonTroubleshootingIncidentKind | null {
+  const m = message.toLowerCase()
+  // Card payment cannot be made (UC23, UC24).
+  if (
+    /no\s+puedo\s+pagar\s+(?:con\s+)?(?:la\s+)?tarjeta/.test(m) ||
+    /(?:la\s+)?tarjeta\s+no\s+(?:funciona|va|sirve)\s+para\s+pagar/.test(m) ||
+    /(?:la\s+)?tarjeta\s+no\s+funciona/.test(m) && /pagar|pago/.test(m)
+  ) return 'card-payment'
+
+  // Datáfono / payment terminal charged a wrong amount (UC19, UC20).
+  if (/dat[áa]fono.*\b\d{1,2}\s*€/.test(m) || /\b\d{1,2}\s*€.*dat[áa]fono/.test(m)) return 'datafono-wrong-amount'
+  if (/me\s+ha\s+cobrado\s+\d{1,2}\s*€/.test(m) && !/dos\s+veces/.test(m)) return 'datafono-wrong-amount'
+
+  // Dryer money/time not credited (UC21, UC22).
+  if (
+    /no\s+sum[ae]\s+minutos/.test(m) ||
+    /no\s+(?:lo\s+|los\s+)?ha\s+sumado/.test(m) && /(secadora|tiempo|minutos)/.test(m) ||
+    /m[áa]s\s+dinero\s+(?:en\s+)?(?:la\s+)?secadora.*no/.test(m)
+  ) return 'dryer-minutes-not-credited'
+
+  // Immediate refund demand (UC26).
+  if (
+    /(?:quiero|exijo|devolved?me|devolverme)\s+(?:el\s+)?dinero/.test(m) ||
+    /devoluci[óo]n\s+(?:inmediata|ahora|ya)/.test(m) ||
+    /quiero\s+que\s+me\s+devolv/.test(m)
+  ) return 'refund-demand'
+
+  // Compensation demand (UC27).
+  if (
+    /(?:quiero|exijo)\s+(?:una\s+)?(?:secadora|lavadora|m[áa]quina)\s+gratis/.test(m) ||
+    /(?:un\s+)?c[óo]digo\s+nuevo/.test(m) ||
+    /por\s+las\s+molestias/.test(m) && /(gratis|compensaci[óo]n)/.test(m)
+  ) return 'compensation-demand'
+
+  // Cameras / AJAX / external review (UC29).
+  if (/c[áa]maras/.test(m) || /\bajax\b/.test(m) || /revisad?\s+(?:el\s+)?ajax/.test(m)) return 'cameras-or-ajax'
+
+  return null
+}
+
 // ── Operational context ───────────────────────────────────────────────────────
 
 export function hasOperationalContextIntent(message: string): boolean {
@@ -70,8 +126,11 @@ export function extractUnknownDisplayCode(message: string): string | null {
   if (!trimmed) return null
   if (extractDisplayState(trimmed)) return null
 
-  const codeMatch = trimmed.match(/\b([A-Z]{1,3}\d{1,3})\b/i)
-  return codeMatch ? codeMatch[1].toUpperCase() : null
+  // Letters + (optional space/dash) + digits: covers "ERR52", "ERR 52", "ERR-50".
+  // Case-sensitive UPPERCASE only — display codes are shown in caps; this avoids
+  // false matches on common phrases like "La 4" (article + machine number).
+  const codeMatch = trimmed.match(/\b([A-Z]{2,3}[\s\-]?\d{1,3})\b/)
+  return codeMatch ? codeMatch[1].toUpperCase().replace(/\s+/g, ' ') : null
 }
 
 export function isPaidButNotActivatedCase(
@@ -234,7 +293,7 @@ export function parsePaymentAnswer(message: string): boolean | null {
 
 export function hasDoubleChargeConcern(message: string): boolean {
   const normalized = message.trim().toLowerCase()
-  return /doble cobro|cobrado dos veces|me ha cobrado dos veces|double charge|charged twice|double payment|doble pago/i.test(normalized)
+  return /doble cobro|cobrado dos veces|cobr[oó]\s+dos\s+veces|me ha cobrado dos veces|double charge|charged twice|double payment|doble pago|dos veces con la tarjeta/i.test(normalized)
 }
 
 export function hasInconsistentDoubleChargeNarrative(message: string): boolean {

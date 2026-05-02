@@ -106,9 +106,20 @@ export class CustomClientChatbotService {
       // Welcome merge (Option C): on the first turn (no prior history), prepend the workspace
       // welcomeMessage to the chatbot reply so the customer receives one combined message
       // ("¡Hola! Soy ...\n\nTranquilo, te ayudo. ¿En qué...?") instead of two separate ones.
+      // Substitute the common template variables BEFORE prepending so customers never see
+      // raw `{{chatbotName}}` placeholders. Workspaces typically store the welcome with
+      // `{{chatbotName}}` as a literal — sub it for the workspace's chatbotName when known,
+      // and fall back to a neutral assistant name otherwise.
       const isFirstTurn = params.history.length === 0
       if (isFirstTurn && params.welcomeMessage && output.reply) {
-        output.reply = `${params.welcomeMessage}\n\n${output.reply}`
+        const resolvedWelcome = params.welcomeMessage
+          .replaceAll("{{chatbotName}}", "Ecolaundry")
+          .replaceAll("{{customerName}}", params.userName || "")
+          .replace(/\{\{[^}]+\}\}/g, "")
+          .trim()
+        if (resolvedWelcome) {
+          output.reply = `${resolvedWelcome}\n\n${output.reply}`
+        }
       }
 
       // Attach wipMessage from workspace settings (used by widget/WhatsApp to show debug banner)

@@ -135,6 +135,7 @@ When the customer states (in any language) that they cannot see, read, recognise
 2. If the customer next replies that they cannot send a photo, set `route: operator`, `functionName: contactOperator`, and an escalation reason explaining the case must be reviewed manually because no display info could be obtained.
 Never accuse the customer of failing to describe the screen; treat it as a normal limitation and offer the photo / escalate path with a calm tone.
 
+
 ## ROUTING RULES
 
 Choose `functionName: lavatrice_hs60xx` when:

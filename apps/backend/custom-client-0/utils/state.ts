@@ -34,6 +34,14 @@ export type SessionState = {
   lastActivityAt: number
   activeFaqFlow: string | null  // e.g. 'discount-code'
   faqStep: number               // 0 = inactive, 1+ = step index within the flow
+  // Set on turn 1 when the customer reports a NON machine-troubleshooting
+  // incident (card payment fails, datafono wrong amount, dryer minutes not
+  // credited, cameras / AJAX request, refund/compensation demand, contradictory
+  // double-charge narrative, undocumented display code). Used downstream to
+  // skip machineType/machineNumber/displayState gathering and force escalation
+  // after location is captured. Multilingua TODO: today the trigger patterns
+  // are in Spanish only.
+  nonTroubleshootingIncident: '' | 'card-payment' | 'datafono-wrong-amount' | 'dryer-minutes-not-credited' | 'refund-demand' | 'compensation-demand' | 'cameras-or-ajax' | 'contradictory-narrative' | 'numeric-only-code' | 'undocumented-display'
   faqCodeValue: string          // code received from the customer in the codice flow
 }
 
@@ -74,6 +82,7 @@ export function createInitialState(): SessionState {
     activeFaqFlow: null,
     faqStep: 0,
     faqCodeValue: '',
+    nonTroubleshootingIncident: '',
   }
 }
 

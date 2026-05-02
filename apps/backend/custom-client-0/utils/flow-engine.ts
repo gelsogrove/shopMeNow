@@ -3,7 +3,7 @@
 
 import { normalizeDisplayState } from './display-state.js'
 import { isBlankDisplayReply, hasExtraButtonIssue, hasStopIntent } from './message-parsing.js'
-import { extractDisplayState, parsePaymentAnswer } from './intent.js'
+import { extractDisplayState, isPaidButNotActivatedCase, parsePaymentAnswer } from './intent.js'
 import { callModel } from './llm.js'
 import type { FlowEngineResult } from './types.js'
 import type { SessionState } from './state.js'
@@ -76,7 +76,11 @@ export function selectInitialStepFromState(
     if (display === 'END_BAL' && flow.case_end_bal) return 'case_end_bal'
     if (display === 'END' && flow.case_end) return 'case_end'
     if (display === 'ON' && flow.ok) return 'ok'
-    if (state.paymentCompleted === true && flow.display_check) return 'display_check'
+    // Skip the display-check entry node when the case is "paid but not activated
+    // and the central did not return change". For that case the chatbot handles
+    // the coin-selection-error path directly (see chatbot.ts) — entering
+    // display_check here would force a display question that is not in the doc.
+    if (state.paymentCompleted === true && !isPaidButNotActivatedCase(state, '', state.machineType) && flow.display_check) return 'display_check'
   }
 
   if (state.machineType === 'washer' && flowId === 'post_ciclo') {

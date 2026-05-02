@@ -24,7 +24,8 @@
         "selfStartMachine": true
       },
       "faqOverrides": {
-        "loyaltyCard": "En Calle Goya (Madrid), la tarjeta de fidelidad se compra con 20€ en efectivo y se activa pulsando el segundo botón de la fila derecha de la central. Solo funciona en este local. Para recargarla, introduce la tarjeta y sigue las instrucciones de la central."
+        "buy-loyalty-card": "En Calle Goya (Madrid), la tarjeta de fidelidad se compra con 20€ en efectivo y se activa pulsando el segundo botón de la fila derecha de la central. Solo funciona en este local.",
+        "recharge-loyalty-card": "En Calle Goya (Madrid), introduce la tarjeta en la central y sigue las instrucciones que aparecen en pantalla."
       },
       "flowOverrides": {
         "asciugatrice_ed340.non_parte.filter_warning": {
