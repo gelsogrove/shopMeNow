@@ -1,9 +1,9 @@
 // 17 — Caso 13 ALN (alarma)
 //
-// Da 01usecaases.md Caso 13: cliente dice "He pagado y ahora sale ALN".
+// Da usecases.md Caso 13: cliente dice "He pagado y ahora sale ALN".
 // Il bot deve raccogliere i dati minimi (local + tipo + numero) e poi
 // escalare con frase canonica "necesitamos revisarlo manualmente".
-// Da 02reglas.md "Datos mínimos en incidencias de máquina": local + tipo +
+// Da reglas.md "Datos mínimos en incidencias de máquina": local + tipo +
 // numero + display sono obbligatori.
 
 import { type TestCase, expectMentionsAll, expectStateHas } from './_helpers.js'

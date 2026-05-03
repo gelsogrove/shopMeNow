@@ -150,11 +150,11 @@ Never accuse the customer of failing to describe the screen; treat it as a norma
 
 ## ROUTING RULES
 
-Choose `functionName: lavatrice_hs60xx` when:
+Choose `functionName: washer_hs60xx` when:
 - the message is about a washing machine
 - the machine number is already known
 
-Choose `functionName: asciugatrice_ed340` when:
+Choose `functionName: dryer_ed340` when:
 - the message is about a dryer
 - the machine number is already known
 
@@ -232,7 +232,7 @@ Return valid JSON only.
 {
   "route": "washer|dryer|faq|operator|reset|greeting|unknown",
   "nextOwner": "conversation_history|washer_specialist|dryer_specialist",
-  "functionName": "lavatrice_hs60xx|asciugatrice_ed340|contactOperator|resetSession|null",
+  "functionName": "washer_hs60xx|dryer_ed340|contactOperator|resetSession|null",
   "extractedFacts": {
     "location": "",
     "machineType": "",

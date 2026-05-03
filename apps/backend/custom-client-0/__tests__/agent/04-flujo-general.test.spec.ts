@@ -1,6 +1,6 @@
 // 04 — Flujo general
 //
-// Da 02reglas.md:
+// Da reglas.md:
 //   1. identificar el local
 //   2. identificar el tipo de incidencia (lavadora o secadora)
 //   3. recoger el dato mínimo crítico (numero macchina, display)

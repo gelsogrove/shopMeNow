@@ -2,7 +2,7 @@
 //
 // Regola: Mataró è l'unica location con più vie.
 // - Customer dice "Mataró" → bot chiede la calle (in spagnolo).
-// - Customer dice "Girona" (o qualunque altra location non-Mataró) → bot
+// - Customer dice "Goya" (o qualunque altra location non-Mataró) → bot
 //   NON chiede la calle, prosegue con la prossima domanda canonica.
 
 import { type TestCase, expectMentionsAll, expectMentionsNone } from './_helpers.js'
@@ -17,10 +17,10 @@ export const tests: TestCase[] = [
     },
   },
   {
-    name: 'ES — customer dice "Girona" al turn 2 → bot NON chiede la calle, va su numero',
+    name: 'ES — customer dice "Goya" al turn 2 → bot NON chiede la calle, va su numero',
     run: async (ctx) => {
       await ctx.send('hola no me funciona la lavadora')
-      const reply = await ctx.send('Girona')
+      const reply = await ctx.send('Goya')
       expectMentionsNone(reply, ['calle'])
       expectMentionsAll(reply, ['numero'])
     },

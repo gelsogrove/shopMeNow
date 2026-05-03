@@ -1,6 +1,6 @@
 // 24 — Caso 25 cliente enfadado
 //
-// Da 01usecaases.md Caso 25:
+// Da usecases.md Caso 25:
 //   USER: ¡Esto siempre falla! ¡Quiero una solución ya!
 //   BOT:  entiendo tu malestar y quiero ayudarte. Vamos a revisarlo lo
 //         antes posible. ¿En qué lavandería estás?

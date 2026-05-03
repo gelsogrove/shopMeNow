@@ -1,6 +1,6 @@
 // 07 — Caso 2 DOOR
 //
-// Da 01usecaases.md Caso 2:
+// Da usecases.md Caso 2:
 //   USER: la lavadora no arranca
 //   BOT:  saluto + ¿en qué lavandería estás?
 //   USER: Hortes

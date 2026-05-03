@@ -63,7 +63,7 @@ export function hasAlarmCodeIntent(message: string): boolean {
   // Exclude AL001 / ALM 001 — case 5 has its own dedicated flow.
   if (/\bAL\s*001\b/.test(m) || /\bALM\s*0*01\b/.test(m)) return false
   // Exclude ALM sub-codes that have a dedicated troubleshooting flow in
-  // lavatrice_hs60xx.json (case_alm_door / case_alm_a / case_alm_e / case_alm_var).
+  // washer_hs60xx.json (case_alm_door / case_alm_a / case_alm_e / case_alm_var).
   // For these the chatbot should run the documented troubleshooting first
   // (gather location + machine number, then guide the customer step by step)
   // and only escalate via the persist node if the issue is not resolved.

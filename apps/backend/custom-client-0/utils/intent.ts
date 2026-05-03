@@ -19,12 +19,13 @@ export function extractDisplayState(message: string): string | null {
   if (/END.*bAL|bAL.*END/i.test(trimmed)) return 'END_BAL'
   if (/\b\d{1,2}[.,]\d{2}\b/.test(trimmed)) return 'PRICE'
   if (/puerta abierta|dibujo de la puerta|icono de puerta|door open|open door icon/i.test(trimmed)) return 'DOOR'
-  const alarm001Match = trimmed.match(/\bALM\s*0*01\b/i)
+  // "AL001" or "ALM 001" → AL001 (caso 5: error in payment sequence).
+  const alarm001Match = trimmed.match(/\b(?:AL|ALM\s*)0*01\b/i)
   if (alarm001Match) return 'AL001'
-  // Bare "001" / "01" code (without the "ALM" prefix) — surfaces as AL001 too,
-  // matching customer phrasing like "en la pantalla sale 001". Use \D boundary
-  // (instead of \b) so "1001" or "100" don't false-match.
-  if (/(?:^|\D)0*01(?:\D|$)/.test(trimmed) && !/\b\d{4,}\b/.test(trimmed)) return 'AL001'
+  // Bare "001" / "01" code (without "AL"/"ALM" prefix) → C001 (caso 15:
+  // selection-before-payment, always escalates). Use \D boundary so "1001"
+  // or "100" don't false-match.
+  if (/(?:^|\D)0*01(?:\D|$)/.test(trimmed) && !/\b\d{4,}\b/.test(trimmed)) return 'C001'
 
   // Accept the sub-code separated by "/", whitespace, or nothing — "ALM DOOR",
   // "ALM/DOOR", "ALMDOOR" should all collapse to the same display token.
@@ -57,7 +58,7 @@ export function isShortContextReply(message: string): boolean {
   const trimmed = message.trim()
   return (
     /^\d{1,2}$/.test(trimmed) ||
-    /^(yes|y|si|sì|sí|no|n|ok|ok risolto|risolto|fatto|ora funziona|water)$/i.test(trimmed) ||
+    /^(yes|y|si|sì|sí|no|n|ok|ok risolto|risolto|fatto|ora funziona|water|perfecto|perfect|perfetto|gracias|grazie|thanks|vale|claro|de\s+acuerdo|entendido|capito|got\s+it|d'accordo|adelante|continuamos)$/i.test(trimmed) ||
     isBlankDisplayReply(trimmed) ||
     isDisplayCodeLikeInput(trimmed)
   )
@@ -280,6 +281,11 @@ export function isLikelyStandaloneLocationInput(state: SessionState, message: st
   if (/^(no\s+lo\s+s[eé]|no\s+s[eé]|no\s+me\s+acuerdo|ni\s+idea|no\s+tengo\s+idea)(?:\s|$|[.,!?])/i.test(trimmed)) {
     return false
   }
+  // Messages that mention an incident keyword are NOT a standalone location.
+  // E.g. "Tengo un código: 23432023" is Caso 18, not a location guess.
+  if (/c[oó]digo|cobr|pag[uoa]|tarjeta|datafono|factura|recargar|fidelizaci[oó]n|horario|cuesta|devolv|devu[ée]lv|reembolso|c[aá]maras|ajax|monedas|dinero|cuesta|gratis|compensaci[oó]n/i.test(trimmed)) {
+    return false
+  }
   return true
 }
 
@@ -302,8 +308,18 @@ export function extractExplicitLocation(message: string): string | null {
   //     known-style location names to avoid false positives.
   const explicit = message.match(/\b(?:sono a|sono in|mi trovo a|estoy en|estoy a|i am in|i'm in|i am at)\s+([A-Za-zÀ-ÿ' -]{2,40})/i)
   if (explicit) return explicit[1].split(/[.,!?]/)[0].trim()
-  const trailing = message.match(/\ben\s+([A-Z][a-zà-ÿ']{2,20})\b/)
-  if (trailing) return trailing[1].split(/[.,!?]/)[0].trim()
+  // Inline "en/a <Location>" pattern, case-insensitive — covers "En Pineda
+  // me ha cobrado", "...a Goya", "Sto usando una lavatrice a Goya", etc.
+  // Restrict to a single word after the preposition to avoid eating sentences
+  // ("en realidad", "a la 5", etc. handled by filler skip).
+  const trailing = message.match(/\b(?:en|a)\s+([A-ZÀ-ÿ][a-zà-ÿ']{2,20})\b/i)
+  if (trailing) {
+    const candidate = trailing[1].split(/[.,!?]/)[0].trim()
+    // Skip filler words that often follow "en"/"a"
+    if (!/^(realidad|verdad|cuanto|qu[eé]|la|el|los|las|este|esta|cu[aá]l|que)$/i.test(candidate)) {
+      return candidate
+    }
+  }
   return null
 }
 

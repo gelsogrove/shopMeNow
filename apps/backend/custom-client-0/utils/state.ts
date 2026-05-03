@@ -31,6 +31,15 @@ export type SessionState = {
   operatorRequested: boolean
   customerName: string | null
   customerNameRequested: boolean
+  // Set when guardForcePayment has just asked "¿Has podido realizar el pago?".
+  // Allows the next-turn extractor to accept a bare yes/no without requiring
+  // payment-context keywords ("pagado", "monedas", …).
+  paymentRequested: boolean
+  // Set when Caso 7 flow is active: customer paid but didn't use the machine.
+  // Skips machineType / machineNumber gather guards because the doc only asks
+  // for location + cambio + display, then redirects to the display-specific
+  // instruction (PUSH PROG, DOOR, SEL, …) without needing tipo or numero.
+  caso7Active: boolean
   turnCount: number
   lastPresentedStepId: string | null
   lastMissingFacts: string[]
@@ -84,6 +93,17 @@ export type SessionState = {
     | 'caso6-ask-captura'        // Caso 6 step 4: ask payment screenshot
     | 'caso17-ask-photo'         // Caso 17: customer can't read display → ask photo
     | 'caso17-await-photo'       // Caso 17 step 2: waiting yes/no on photo
+    | 'caso8-ask-code'           // Caso 8 step 1: ask exact code
+    | 'caso8-await-location'     // Caso 8 step 2: waiting for location
+    | 'caso8-ask-amount'         // Caso 8 step 3: ask if missing small amount
+    | 'caso8-await-amount'       // Caso 8 step 4: waiting for amount answer
+    | 'caso8-await-confirmation' // Caso 8 step 5: waiting for yes/no after instruction
+    | 'caso8-confirm-location'   // Caso 8: location not recognized, asking to confirm
+    | 'caso4-ask-cambio'         // Caso 4 step 4: ask "¿La central te ha devuelto el cambio?"
+    | 'caso4-await-cambio'       // Caso 4: waiting for cambio answer
+    | 'caso4-await-confirmation' // Caso 4 step 5: waiting yes/no after instruction
+    | 'caso5-await-relato'       // Caso 5: waiting for the customer's narrative after AL001 ask-before
+    | 'caso5-await-display'      // Caso 5: gave guidance, waiting for display state retry
 }
 
 export function createInitialState(): SessionState {
@@ -116,6 +136,8 @@ export function createInitialState(): SessionState {
     operatorRequested: false,
     customerName: null,
     customerNameRequested: false,
+    paymentRequested: false,
+    caso7Active: false,
     turnCount: 0,
     lastPresentedStepId: null,
     lastMissingFacts: [],

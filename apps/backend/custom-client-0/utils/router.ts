@@ -266,8 +266,8 @@ export function applyContextualRouterFallback(
     })
     nextDecision.functionName = resolvedMachineNumber
       ? nextDecision.route === 'washer'
-        ? 'lavatrice_hs60xx'
-        : 'asciugatrice_ed340'
+        ? 'washer_hs60xx'
+        : 'dryer_ed340'
       : null
   }
 
@@ -298,8 +298,8 @@ export function normalizeRouterDecision(decision: RouterDecision, state: Session
   const machineType =
     normalizeMachineType(decision.extractedFacts?.machineType) || state.machineType
   const functionName = pickAllowedToken(decision.functionName, [
-    'lavatrice_hs60xx',
-    'asciugatrice_ed340',
+    'washer_hs60xx',
+    'dryer_ed340',
     'contactOperator',
     'resetSession',
   ]) as RouterDecision['functionName']

@@ -1,6 +1,6 @@
 // 28 — Caso 28 relato contradictorio en doble cobro
 //
-// Da 01usecaases.md Caso 28:
+// Da usecases.md Caso 28:
 //   USER: Me cobró dos veces, aunque creo que también pagué en efectivo,
 //         pero no sé si llegó a arrancar
 //   BOT:  ¿has podido finalmente usar el servicio?

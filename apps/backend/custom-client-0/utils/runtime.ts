@@ -78,8 +78,8 @@ export async function loadRuntime(): Promise<Runtime> {
   )
   const faqs = JSON.parse(await readFile(path.join(flowDir, 'faqs.json'), 'utf8')) as FaqMap
   setFaqs(faqs)
-  const washer = JSON.parse(await readFile(path.join(flowDir, 'lavatrice_hs60xx.json'), 'utf8')) as FlowMap
-  const dryer = JSON.parse(await readFile(path.join(flowDir, 'asciugatrice_ed340.json'), 'utf8')) as FlowMap
+  const washer = JSON.parse(await readFile(path.join(flowDir, 'washer_hs60xx.json'), 'utf8')) as FlowMap
+  const dryer = JSON.parse(await readFile(path.join(flowDir, 'dryer_ed340.json'), 'utf8')) as FlowMap
   const locations = JSON.parse(await readFile(path.join(flowDir, 'locations.json'), 'utf8')) as LocationsConfig
   const settings = JSON.parse(await readFile(path.join(flowDir, 'settings.json'), 'utf8')) as Settings
   return { prompts: Object.fromEntries(promptEntries), flows: { washer, dryer }, regressions: [], locations, settings }

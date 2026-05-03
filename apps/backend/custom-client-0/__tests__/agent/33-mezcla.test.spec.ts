@@ -1,6 +1,6 @@
 // 33 — Caso 32 cliente mezcla incidencia de máquina y pago
 //
-// Da 01usecaases.md Caso 32:
+// Da usecases.md Caso 32:
 //   USER: He pagado, no arrancaba, volví a pagar y ahora no sé si el
 //         problema es la máquina o el cobro
 //   BOT:  vamos a ordenarlo paso a paso. ¿en qué lavandería estás?

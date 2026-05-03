@@ -29,21 +29,89 @@ export function normalizeLocationValue(value: string): string {
   return value.trim().split(/[,/]/).map((part) => part.trim()).filter(Boolean)[0] || ''
 }
 
+function stripAccents(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
 export function resolveKnownLocation(rawValue: string): string | null {
-  // Check the whole input (lowercased) so that compound replies like
-  // "Girona, calle Goya" or "estoy en Goya" still resolve to the known location.
-  // Normalizing to the first comma-separated segment would drop the actual match.
-  const normalized = rawValue.toLowerCase()
+  // Check the whole input (lowercased + accent-stripped) so "Mataro" / "mataró"
+  // / "MATARÓ" all resolve. Compound replies like "Girona, calle Goya" or
+  // "estoy en Goya" also work because we don't truncate to first segment.
+  const normalized = stripAccents(rawValue.toLowerCase())
 
   for (const known of KNOWN_LOCATIONS) {
-    const knownLower = known.toLowerCase()
-    // Word-boundary match where possible so "Goya" doesn't match inside an unrelated word.
-    const pattern = new RegExp(`\\b${knownLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
-    if (pattern.test(normalized)) {
+    const knownNormalized = stripAccents(known.toLowerCase())
+    const escaped = knownNormalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    // Accent-stripped boundaries — pure ASCII alphanumerics + apostrophe
+    // (for "L'Escala") count as "word", everything else is a boundary.
+    const pattern = new RegExp(`(?:^|[^a-z0-9'])${escaped}(?:$|[^a-z0-9'])`, 'i')
+    if (pattern.test(` ${normalized} `)) {
       return known
     }
   }
 
+  return null
+}
+
+// Damerau-Levenshtein distance (counts adjacent transpositions as 1 edit).
+function editDistance(a: string, b: string): number {
+  const m = a.length, n = b.length
+  if (m === 0) return n
+  if (n === 0) return m
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
+  for (let i = 0; i <= m; i++) dp[i][0] = i
+  for (let j = 0; j <= n; j++) dp[0][j] = j
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + 1)
+      }
+    }
+  }
+  return dp[m][n]
+}
+
+// Fuzzy resolver: try exact match first, then accept the closest known location
+// within a small edit distance. Keeps results conservative (only one candidate
+// within threshold) to avoid wrong matches between similar names.
+export function resolveKnownLocationFuzzy(rawValue: string): string | null {
+  const exact = resolveKnownLocation(rawValue)
+  if (exact) return exact
+
+  const normalized = stripAccents(rawValue.toLowerCase()).trim()
+  if (!normalized) return null
+
+  const tokens = normalized.split(/[^a-z0-9']+/).filter((tok) => tok.length >= 3)
+  if (tokens.length === 0) return null
+
+  let best: { name: string; distance: number } | null = null
+  let secondBest: number = Infinity
+
+  for (const known of KNOWN_LOCATIONS) {
+    const knownNormalized = stripAccents(known.toLowerCase())
+    let minDistance = Infinity
+    for (const tok of tokens) {
+      const len = Math.max(tok.length, knownNormalized.length)
+      // Threshold scales with length: 4-5 chars → 1 edit, 6+ chars → 2 edits.
+      const threshold = len <= 5 ? 1 : 2
+      const dist = editDistance(tok, knownNormalized)
+      if (dist <= threshold && dist < minDistance) minDistance = dist
+    }
+    if (minDistance < Infinity) {
+      if (!best || minDistance < best.distance) {
+        secondBest = best ? best.distance : secondBest
+        best = { name: known, distance: minDistance }
+      } else if (minDistance < secondBest) {
+        secondBest = minDistance
+      }
+    }
+  }
+
+  // Require the best candidate to be strictly better than any other to avoid
+  // ambiguous matches (e.g. two locations equally close to the typo).
+  if (best && best.distance < secondBest) return best.name
   return null
 }
 

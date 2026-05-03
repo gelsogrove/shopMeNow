@@ -1,6 +1,6 @@
 // 27 — Caso 27 cliente exige compensación concreta (lavadora gratis, etc.)
 //
-// Da 01usecaases.md Caso 27:
+// Da usecases.md Caso 27:
 //   USER: Quiero una secadora gratis por las molestias
 //   BOT:  vamos a revisar tu caso para ayudarte con la solución más adecuada.
 //   USER: Pero quiero que me lo confirmes ya

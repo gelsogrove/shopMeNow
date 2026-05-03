@@ -10,6 +10,8 @@ export type EscalationContext = {
   displayState: string
   issueSummary: string
   nonTroubleshootingIncident: string
+  discountCode: string
+  escalationReason: string
   timestamp: string
 }
 
@@ -38,6 +40,55 @@ export function buildEscalationSummary(context: EscalationContext): string {
     return `${name} en ${location} ha reportado un doble cobro.${narrativePart}`
   }
 
+  // Case 18: numeric-only code without letters — incoherence, escalate
+  // without confronting the customer. Detect via:
+  //   - reason starts with "Numeric-only code" (set by the deterministic guard)
+  //   - reason contains "código no documentado" or "incoherencia" (LLM rewrites)
+  //   - discountCode is purely numeric (≥3 digits, no letters)
+  // Detect this BEFORE the Caso 8 branch (which would otherwise grab the same
+  // faqCodeValue for purely-numeric codes).
+  const reasonLower = context.escalationReason || ''
+  const isCaso18 =
+    /numeric-only\s+code|caso\s*18/i.test(reasonLower) ||
+    (/c[oó]digo\s+no\s+documentado|incoherenc/i.test(reasonLower) && /^\d{3,}$/.test(context.discountCode)) ||
+    (/^\d{3,}$/.test(context.discountCode) && !/importe|pendiente|completar/i.test(reasonLower))
+  if (isCaso18 && context.discountCode) {
+    const code = context.discountCode
+    return `${name} en ${location} ha facilitado un código solo numérico (${code}) que no encaja con el formato esperado y requiere revisión manual.`
+  }
+
+  // Case 8: discount code with pending amount — escalate when code format
+  // is wrong, customer says "no letters", or machine doesn't start after
+  // the customer adds the missing amount on the central unit.
+  if (context.discountCode || /caso\s*8/i.test(context.escalationReason || '')) {
+    const code = context.discountCode || 'no especificado'
+    return `${name} en ${location} ha reportado un problema con el código de descuento ${code}: ` +
+      `tras introducir el importe pendiente en la central, la máquina no arrancó.`
+  }
+
+  // Case 5: AL001 sequence error — escalate after the retry guidance failed
+  // (display still shows AL001 or another error code, customer can't follow
+  // the instructions).
+  if (/caso\s*5/i.test(context.escalationReason || '')) {
+    const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
+    const numberLabel = context.machineNumber || 'desconocido'
+    const displayLabel = context.displayState ? ` (pantalla: ${context.displayState})` : ''
+    return `${name} en ${location} sigue con AL001 en la ${machineLabel} número ${numberLabel}${displayLabel}: la guía de secuencia correcta no ha resuelto el problema y requiere revisión técnica.`
+  }
+
+  // Case 4: paid but not activated, central did not return change (or did
+  // but machine still won't start). The LLM may rewrite escalationReason on
+  // later turns, so we also detect by content keywords (paid + not activated).
+  const reason = context.escalationReason || ''
+  const isCaso4 =
+    /caso\s*4/i.test(reason) ||
+    (/(pagad|pagat|pagat[oa]|pago)/i.test(reason) && /(no\s+se\s+(ha\s+)?activad|no\s+arranca|sigue\s+sin)/i.test(reason))
+  if (isCaso4) {
+    const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
+    const numberLabel = context.machineNumber || 'desconocido'
+    return `${name} en ${location} ha pagado pero la ${machineLabel} número ${numberLabel} no se ha activado tras corregir el número en la central. Requiere revisión manual.`
+  }
+
   // Non-troubleshooting incidents (datafono / cameras / refund / …) —
   // no machine template, just the incident-specific label.
   if (context.nonTroubleshootingIncident && NON_TROUBLE_LABEL[context.nonTroubleshootingIncident]) {
@@ -46,18 +97,41 @@ export function buildEscalationSummary(context: EscalationContext): string {
 
   // Default: machine-related incident (PUSH / DOOR / SEL / ALN / ALM / AL001 / 001 / ERR).
   const machine = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
-  const number = context.machineNumber || 'número desconocido'
-  const payment = context.paymentCompleted === true
+  const number = context.machineNumber || 'desconocido'
+  const display = context.displayState
+  const paymentClause = context.paymentCompleted === true
     ? 'ha efectuado el pago'
     : context.paymentCompleted === false
     ? 'no ha efectuado el pago'
-    : 'ha reportado un problema técnico'
-  const displayInfo = context.displayState ? `la pantalla muestra: ${context.displayState}` : 'sin información de pantalla'
-  const issue = context.issueSummary || 'problema técnico'
+    : 'no ha podido completar la operación'
 
-  return `${name} en ${location} ${payment} por la ${machine} número ${number}. ` +
-    `El cliente seleccionó el programa pero ${issue}. ` +
-    `${displayInfo}.`
+  // Display-specific narrative. We pick the phrasing per known display family
+  // so the operator gets a meaningful one-liner instead of a generic one.
+  let detail = ''
+  if (display) {
+    const d = display.toUpperCase().replace(/\s+/g, '')
+    if (d.startsWith('PUSH')) {
+      detail = `La pantalla muestra ${display} y, tras pulsar el programa, la máquina no responde.`
+    } else if (d === 'DOOR' || d === 'ALM/DOOR' || d === 'ALMDOOR') {
+      detail = `La pantalla muestra ${display}: la puerta no cierra correctamente.`
+    } else if (d === 'SEL') {
+      detail = `La pantalla muestra ${display}: el cliente debe seleccionar el programa pero el problema persiste.`
+    } else if (d === 'PR' || d.startsWith('PRICE')) {
+      detail = `La pantalla muestra ${display}: la máquina no acepta el pago.`
+    } else if (d.startsWith('AL') || d === '001' || d.startsWith('ALM') || d.startsWith('ALN')) {
+      detail = `La pantalla muestra el código de alarma ${display} y requiere revisión técnica.`
+    } else if (d.startsWith('ERR')) {
+      detail = `La pantalla muestra el código de error ${display} y la máquina no funciona.`
+    } else if (d === 'BLANK') {
+      detail = `La pantalla está en blanco y la máquina no responde.`
+    } else {
+      detail = `La pantalla muestra ${display} y la máquina no responde correctamente.`
+    }
+  } else {
+    detail = `Sin información clara de pantalla; se requiere revisión manual.`
+  }
+
+  return `${name} en ${location} ${paymentClause} en la ${machine} número ${number}. ${detail}`
 }
 
 export function extractEscalationContext(state: SessionState, customerName: string | null): EscalationContext {
@@ -74,6 +148,8 @@ export function extractEscalationContext(state: SessionState, customerName: stri
     displayState: state.displayState,
     issueSummary: state.issueSummary,
     nonTroubleshootingIncident: state.nonTroubleshootingIncident || '',
+    discountCode: state.faqCodeValue || '',
+    escalationReason: state.escalationReason || '',
     timestamp: now,
   }
 }

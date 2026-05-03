@@ -211,6 +211,14 @@ const TRANSLATIONS = {
     pt: 'O que aparece exatamente no ecrã?',
     fr: 'Qu\'apparaît-il exactement sur l\'écran ?',
   },
+  paymentAsk: {
+    es: '¿Has podido realizar el pago?',
+    it: 'Sei riuscito a effettuare il pagamento?',
+    ca: 'Has pogut fer el pagament?',
+    en: 'Were you able to make the payment?',
+    pt: 'Conseguiste efetuar o pagamento?',
+    fr: 'As-tu pu effectuer le paiement ?',
+  },
 
   // ── Caso 18 — codice solo numerico ─────────────────────────────────────────
   numericCodeAskLetters: {
@@ -222,12 +230,12 @@ const TRANSLATIONS = {
     fr: 'Merci. Vois-tu une lettre devant les chiffres ?',
   },
   numericCodeIncoherence: {
-    es: 'De acuerdo. Hay una información que necesitamos revisar manualmente antes de continuar.',
-    it: 'Va bene. C\'è un\'informazione che dobbiamo verificare manualmente prima di continuare.',
-    ca: 'D\'acord. Hi ha una informació que necessitem revisar manualment abans de continuar.',
-    en: 'Got it. There\'s some information we need to review manually before continuing.',
-    pt: 'De acordo. Há uma informação que precisamos rever manualmente antes de continuar.',
-    fr: 'D\'accord. Il y a une information que nous devons vérifier manuellement avant de continuer.',
+    es: 'Entendido. Lo paso a revisión manual.',
+    it: 'Capito. Lo passo a una revisione manuale.',
+    ca: 'Entès. Ho passo a revisió manual.',
+    en: 'Got it. I\'m passing this to a manual review.',
+    pt: 'Entendido. Passo isto para revisão manual.',
+    fr: 'Entendu. Je le transmets en révision manuelle.',
   },
 
   // ── Caso 14 — ALM DOOR ─────────────────────────────────────────────────────
@@ -322,6 +330,140 @@ const TRANSLATIONS = {
     fr: 'Le code {display} nécessite une révision manuelle. Nous transmettrons ton cas en révision pour t\'aider au mieux.',
   },
 
+  // ── Caso 15 cliente vede 001 in pantalla (step 1 spiegazione, step 2 escalation) ──
+  caso15Explain: {
+    es: 'De acuerdo. Ese mensaje puede aparecer cuando el programa se ha seleccionado antes del pago y el estado no se ha reiniciado correctamente.',
+    it: 'Va bene. Questo messaggio può apparire quando il programma è stato selezionato prima del pagamento e lo stato non si è reimpostato correttamente.',
+    ca: 'D\'acord. Aquest missatge pot aparèixer quan el programa s\'ha seleccionat abans del pagament i l\'estat no s\'ha reiniciat correctament.',
+    en: 'Got it. This message can appear when the program was selected before payment and the state didn\'t reset properly.',
+    pt: 'De acordo. Esta mensagem pode aparecer quando o programa foi selecionado antes do pagamento e o estado não se reiniciou corretamente.',
+    fr: 'D\'accord. Ce message peut apparaître quand le programme a été sélectionné avant le paiement et l\'état ne s\'est pas réinitialisé correctement.',
+  },
+  caso15Escalate: {
+    es: 'Vamos a revisarlo manualmente para ayudarte de la mejor manera posible.',
+    it: 'Verifichiamo manualmente per aiutarti al meglio.',
+    ca: 'Ho revisarem manualment per ajudar-te de la millor manera possible.',
+    en: 'We\'ll review it manually to help you in the best way possible.',
+    pt: 'Vamos rever manualmente para te ajudar da melhor forma possível.',
+    fr: 'Nous allons le vérifier manuellement pour t\'aider au mieux.',
+  },
+
+  // ── Caso 8 cliente ha codice ma non sa come usarlo ─────────────────────────
+  caso8AskCode: {
+    es: 'Te ayudo. Dime el código exacto tal como lo ves, incluyendo letras si las hay.',
+    it: 'Ti aiuto. Dimmi il codice esatto come lo vedi, comprese le lettere se ci sono.',
+    ca: 'T\'ajudo. Digue\'m el codi exacte tal com el veus, incloent les lletres si n\'hi ha.',
+    en: 'I\'ll help you. Tell me the exact code as you see it, including any letters.',
+    pt: 'Ajudo-te. Diz-me o código exato tal como o vês, incluindo letras se as houver.',
+    fr: 'Je t\'aide. Dis-moi le code exact tel que tu le vois, lettres comprises s\'il y en a.',
+  },
+  caso8AskAmount: {
+    es: 'Perfecto. ¿Te falta una pequeña parte para completar el importe o el código cubre un importe mayor?',
+    it: 'Perfetto. Ti manca una piccola parte per completare l\'importo o il codice copre un importo maggiore?',
+    ca: 'Perfecte. Et falta una petita part per completar l\'import o el codi cobreix un import més gran?',
+    en: 'Got it. Do you need to add a small amount to complete the price, or does the code cover a larger amount?',
+    pt: 'Perfeito. Falta-te uma pequena parte para completar o valor ou o código cobre um valor maior?',
+    fr: 'Parfait. Il te manque une petite partie pour compléter le montant ou le code couvre-t-il un montant plus grand ?',
+  },
+  caso8Instruction: {
+    es: 'De acuerdo. Introduce en la central el importe que falta y no toques nada más. Después ponte delante de la máquina y dime si ya puedes continuar.',
+    it: 'Va bene. Inserisci nella centralina l\'importo che manca e non toccare altro. Poi mettiti davanti alla macchina e dimmi se puoi continuare.',
+    ca: 'D\'acord. Introdueix a la central l\'import que falta i no toquis res més. Després posa\'t davant de la màquina i digue\'m si ja pots continuar.',
+    en: 'Got it. Add the missing amount on the central unit and don\'t touch anything else. Then go to the machine and tell me if you can continue.',
+    pt: 'De acordo. Introduz na central o valor em falta e não toques em mais nada. Depois vai à máquina e diz-me se já podes continuar.',
+    fr: 'D\'accord. Saisis sur la centrale le montant manquant et ne touche rien d\'autre. Puis va à la machine et dis-moi si tu peux continuer.',
+  },
+  caso5AskRelato: {
+    es: 'Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. ¿Qué has hecho justo antes de que apareciera el mensaje?',
+    it: 'Questo avviso compare quando il processo non è stato fatto nell\'ordine corretto. Cosa hai fatto subito prima che apparisse il messaggio?',
+    ca: 'Aquest avís sol aparèixer quan el procés no s\'ha fet en l\'ordre correcte. Què has fet just abans que aparegués el missatge?',
+    en: 'This message usually appears when the process wasn\'t done in the right order. What did you do right before the message appeared?',
+    pt: 'Este aviso costuma aparecer quando o processo não foi feito na ordem correta. O que fizeste mesmo antes de aparecer a mensagem?',
+    fr: 'Ce message apparaît généralement quand le processus n\'a pas été fait dans le bon ordre. Qu\'as-tu fait juste avant que le message apparaisse ?',
+  },
+  caso5GuideRetry: {
+    es: 'Eso explica el AL001. Para que funcione bien, primero debes completar el pago en la central y luego pulsar el programa en la lavadora. Prueba a hacerlo en ese orden y dime qué aparece ahora en la pantalla.',
+    it: 'Questo spiega l\'AL001. Per farla funzionare, prima devi completare il pagamento nella centralina e poi premere il programma sulla lavatrice. Prova a farlo in questo ordine e dimmi cosa appare adesso sullo schermo.',
+    ca: 'Això explica l\'AL001. Perquè funcioni bé, primer has de completar el pagament a la central i després prémer el programa a la rentadora. Prova a fer-ho en aquest ordre i digue\'m què apareix ara a la pantalla.',
+    en: 'That explains the AL001. To make it work, first complete the payment at the central and then press the program on the washer. Try it in that order and tell me what now appears on the screen.',
+    pt: 'Isso explica o AL001. Para funcionar bem, primeiro tens de completar o pagamento na central e depois carregar no programa da máquina de lavar. Tenta fazê-lo nessa ordem e diz-me o que aparece agora no ecrã.',
+    fr: 'Cela explique l\'AL001. Pour que ça marche, complète d\'abord le paiement sur la centrale puis appuie sur le programme sur le lave-linge. Essaie dans cet ordre et dis-moi ce qui s\'affiche maintenant à l\'écran.',
+  },
+  caso5Resolved: {
+    es: 'Perfecto, incidencia resuelta. ¿Necesitas algo más?',
+    it: 'Perfetto, problema risolto. Ti serve altro?',
+    ca: 'Perfecte, incidència resolta. Necessites res més?',
+    en: 'Great, issue resolved. Anything else you need?',
+    pt: 'Perfeito, incidência resolvida. Precisas de mais alguma coisa?',
+    fr: 'Parfait, problème résolu. As-tu besoin d\'autre chose ?',
+  },
+  caso4Resolved: {
+    es: 'Perfecto, ya estaría resuelto. ¿Necesitas algo más?',
+    it: 'Perfetto, problema risolto. Ti serve altro?',
+    ca: 'Perfecte, ja estaria resolt. Necessites res més?',
+    en: 'Great, all sorted. Anything else you need?',
+    pt: 'Perfeito, já estaria resolvido. Precisas de mais alguma coisa?',
+    fr: 'Parfait, c\'est résolu. As-tu besoin d\'autre chose ?',
+  },
+  caso8ConfirmLocation: {
+    es: 'No reconozco esa lavandería. ¿Puedes confirmar el nombre? Tenemos: Goya, Pineda, L\'Escala, Alemanya, Hortes, Mataró.',
+    it: 'Non riconosco questa lavanderia. Puoi confermare il nome? Abbiamo: Goya, Pineda, L\'Escala, Alemanya, Hortes, Mataró.',
+    ca: 'No reconec aquesta bugaderia. Pots confirmar el nom? Tenim: Goya, Pineda, L\'Escala, Alemanya, Hortes, Mataró.',
+    en: 'I don\'t recognize that laundry. Can you confirm the name? We have: Goya, Pineda, L\'Escala, Alemanya, Hortes, Mataró.',
+    pt: 'Não reconheço essa lavandaria. Podes confirmar o nome? Temos: Goya, Pineda, L\'Escala, Alemanya, Hortes, Mataró.',
+    fr: 'Je ne reconnais pas cette laverie. Peux-tu confirmer le nom ? Nous avons : Goya, Pineda, L\'Escala, Alemanya, Hortes, Mataró.',
+  },
+  caso8Resolved: {
+    es: 'Perfecto, incidencia resuelta. ¿Necesitas algo más?',
+    it: 'Perfetto, problema risolto. Ti serve altro?',
+    ca: 'Perfecte, incidència resolta. Necessites res més?',
+    en: 'Great, issue resolved. Anything else you need?',
+    pt: 'Perfeito, incidência resolvida. Precisas de mais alguma coisa?',
+    fr: 'Parfait, problème résolu. As-tu besoin d\'autre chose ?',
+  },
+
+  // ── Caso 11 cliente pide ricarga tarjeta ───────────────────────────────────
+  caso11Recarga: {
+    es: 'Introduce la tarjeta y sigue las instrucciones de la central. Si al hacerlo aparece algún mensaje extraño, dímelo y lo revisamos.',
+    it: 'Inserisci la tessera e segui le istruzioni della centralina. Se compare un messaggio strano, dimmelo e lo verifichiamo.',
+    ca: 'Introdueix la targeta i segueix les instruccions de la central. Si apareix algun missatge estrany, digue\'m-ho i ho revisem.',
+    en: 'Insert the card and follow the instructions on the central unit. If you see anything unusual, tell me and we\'ll check it.',
+    pt: 'Introduz o cartão e segue as instruções da central. Se aparecer alguma mensagem estranha, diz-me e verificamos.',
+    fr: 'Insère la carte et suis les instructions de la centrale. Si un message inhabituel apparaît, dis-le-moi et nous le vérifions.',
+  },
+
+  // ── Caso 10 step 1 cliente pide tarjeta (no location yet) ──────────────────
+  caso10TarjetaBase: {
+    es: 'La tarjeta de fidelización se compra con 20€ en efectivo y solo funciona en la tienda donde se ha comprado. ¿En qué lavandería estás?',
+    it: 'La tessera fedeltà si compra a 20€ in contanti e funziona solo nel locale dove l\'hai comprata. In quale lavanderia ti trovi?',
+    ca: 'La targeta de fidelització es compra amb 20€ en efectiu i només funciona a la botiga on s\'ha comprat. A quina bugaderia ets?',
+    en: 'The loyalty card costs 20€ in cash and only works in the store where it was bought. Which laundry are you at?',
+    pt: 'O cartão de fidelização compra-se com 20€ em dinheiro e só funciona na loja onde foi comprado. Em que lavandaria estás?',
+    fr: 'La carte de fidélité s\'achète avec 20€ en espèces et ne fonctionne que dans le magasin où elle a été achetée. Dans quelle laverie es-tu ?',
+  },
+
+  // ── FAQ closure — after a non-troubleshooting FAQ has been answered, the
+  // customer typically says "gracias / entendido / perfecto / vale". The bot
+  // must NOT switch to machine gather questions; just close politely.
+  faqClosure: {
+    es: 'Perfecto. Si necesitas algo más, dímelo.',
+    it: 'Perfetto. Se hai bisogno di altro, dimmelo.',
+    ca: 'Perfecte. Si necessites res més, digue-m\'ho.',
+    en: 'Great. If you need anything else, just let me know.',
+    pt: 'Perfeito. Se precisares de mais alguma coisa, diz-me.',
+    fr: 'Parfait. Si tu as besoin d\'autre chose, dis-le-moi.',
+  },
+
+  // ── Caso 9 cliente pide factura ─────────────────────────────────────────────
+  caso9Factura: {
+    es: 'Para obtenerla, debes enviar un correo a olga@alberwaz.net con esta información: razón social, email, lavandería utilizada, CIF/NIF, dirección, fecha de uso, máquinas utilizadas y observaciones.',
+    it: 'Per ottenerla, scrivi a olga@alberwaz.net indicando: ragione sociale, email, lavanderia utilizzata, codice fiscale/P.IVA, indirizzo, data d\'uso, macchine utilizzate e osservazioni.',
+    ca: 'Per obtenir-la, envia un correu a olga@alberwaz.net amb aquesta informació: raó social, email, bugaderia utilitzada, CIF/NIF, adreça, data d\'ús, màquines utilitzades i observacions.',
+    en: 'To get it, please email olga@alberwaz.net with: company name, email, laundry used, tax ID, address, date of use, machines used and notes.',
+    pt: 'Para obtê-la, envia um e-mail para olga@alberwaz.net com: razão social, e-mail, lavandaria utilizada, NIF, morada, data de uso, máquinas utilizadas e observações.',
+    fr: 'Pour l\'obtenir, envoie un e-mail à olga@alberwaz.net avec : raison sociale, e-mail, laverie utilisée, numéro fiscal, adresse, date d\'utilisation, machines utilisées et observations.',
+  },
+
   // ── Caso 25 cliente enfadado: empatia + chiede location ───────────────────
   caso25Empathic: {
     es: 'Entiendo tu malestar y quiero ayudarte. Vamos a revisarlo lo antes posible. ¿En qué lavandería estás?',
@@ -330,6 +472,26 @@ const TRANSLATIONS = {
     en: 'I understand your frustration and want to help. We will review it as soon as possible. Which laundry are you at?',
     pt: 'Entendo o teu desconforto e quero ajudar-te. Vamos rever o quanto antes. Em que lavandaria estás?',
     fr: 'Je comprends ton mécontentement et je veux t\'aider. Nous allons vérifier dès que possible. Dans quelle laverie es-tu ?',
+  },
+
+  // ── Caso 21-24 cliente reporta un problema NON documentato per la sua location ──
+  caso2124NotDocHere: {
+    es: 'No tenemos registrado este tipo de incidencia en {location}. Vamos a revisarlo manualmente para poder ayudarte.',
+    it: 'Non abbiamo registrato questo tipo di incidente a {location}. Lo verifichiamo manualmente per poterti aiutare.',
+    ca: 'No tenim registrat aquest tipus d\'incidència a {location}. Ho revisarem manualment per poder ajudar-te.',
+    en: 'We don\'t have this type of issue documented at {location}. We\'ll review it manually to help you.',
+    pt: 'Não temos registado este tipo de incidente em {location}. Vamos rever manualmente para te ajudar.',
+    fr: 'Nous n\'avons pas enregistré ce type d\'incident à {location}. Nous allons le vérifier manuellement pour t\'aider.',
+  },
+
+  // ── Caso 27 cliente pide compensación concreta (secadora gratis, ecc.) ─────
+  caso27Review: {
+    es: 'Vamos a revisar tu caso para ayudarte con la solución más adecuada.',
+    it: 'Verifichiamo il tuo caso per aiutarti con la soluzione più adatta.',
+    ca: 'Revisarem el teu cas per ajudar-te amb la solució més adequada.',
+    en: 'We\'ll review your case to help you with the most appropriate solution.',
+    pt: 'Vamos rever o teu caso para te ajudar com a solução mais adequada.',
+    fr: 'Nous allons examiner ton cas pour t\'aider avec la solution la plus appropriée.',
   },
 
   // ── Caso 26 cliente esige devolución: raccogliere dati senza promettere ────

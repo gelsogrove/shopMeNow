@@ -1,6 +1,6 @@
 // 06 — Escalar
 //
-// Da 01usecaases.md Caso 1:
+// Da usecases.md Caso 1:
 //   "Escalar si: el cliente pulsa el programa y la máquina no responde"
 //
 // Flusso:

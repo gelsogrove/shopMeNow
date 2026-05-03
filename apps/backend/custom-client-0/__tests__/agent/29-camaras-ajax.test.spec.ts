@@ -1,6 +1,6 @@
 // 29 — Caso 29 cliente menciona cámaras / AJAX / soporte técnico
 //
-// Da 01usecaases.md Caso 29:
+// Da usecases.md Caso 29:
 //   USER: Mirad las cámaras porque yo he pagado
 //   BOT:  vamos a revisar tu caso manualmente.
 //

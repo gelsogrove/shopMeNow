@@ -1,25 +1,17 @@
-// 14 — Caso 6 doble cobro con servicio usado
+// 14 — Caso 6 doble cobro con servicio usato
 //
-// Da 01usecaases.md Caso 6:
-//   USER: Me habéis cobrado dos veces con la tarjeta
-//   BOT:  saluto + ¿en qué lavandería estás?
-//   USER: Goya
-//   BOT:  ¿has podido lavar o secar la ropa?  ← NON pagado, ma "podido usar"
-//   USER: Sí
-//   BOT:  explícame paso a paso qué has hecho
-//   USER: relato
-//   BOT:  necesito los últimos 4 dígitos de la tarjeta
-//   USER: 4821
-//   BOT:  ahora necesito una captura del pago
-//   USER: vale
-//   BOT:  gracias, podremos revisarlo y enviarte el formulario de devolución;
-//         la próxima vez, antes de volver a pagar, contacta con nosotros.
+// Da usecases.md Caso 6: il cliente ha pagato 2 volte ma è riuscito a
+// usare il servizio. Il bot raccoglie i dati minimi (location, conferma
+// uso, relato, ultimi 4 cifre, captura) per la revisione e devolución.
+//
+// Flow attuale: captura + closure + ask nome sono concentrati in un solo
+// turno (più compatto del doc, ma valido).
 
 import { type TestCase, expectMentionsAll } from './_helpers.js'
 
 export const tests: TestCase[] = [
   {
-    name: 'ES — Caso 6 dopo location: bot chiede "podido lavar/secar" (NON pagado)',
+    name: 'ES — Caso 6 T2: dopo location, bot chiede "podido lavar/secar" (NON pagado)',
     run: async (ctx) => {
       await ctx.send('Me habéis cobrado dos veces con la tarjeta')
       const reply = await ctx.send('Goya')
@@ -27,7 +19,7 @@ export const tests: TestCase[] = [
     },
   },
   {
-    name: 'ES — Caso 6 dopo "sí podido lavar": bot chiede paso a paso',
+    name: 'ES — Caso 6 T3: dopo "sí podido lavar", bot chiede paso a paso',
     run: async (ctx) => {
       await ctx.send('Me habéis cobrado dos veces con la tarjeta')
       await ctx.send('Goya')
@@ -36,13 +28,51 @@ export const tests: TestCase[] = [
     },
   },
   {
-    name: 'ES — Caso 6 dopo relato: bot chiede 4 dígitos tarjeta',
+    name: 'ES — Caso 6 T4: dopo relato, bot chiede 4 dígitos tarjeta',
     run: async (ctx) => {
       await ctx.send('Me habéis cobrado dos veces con la tarjeta')
       await ctx.send('Goya')
       await ctx.send('Sí, he lavado')
       const reply = await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
       expectMentionsAll(reply, ['4', 'dig', 'tarjeta'])
+    },
+  },
+  {
+    // T5 (compatto): dopo i 4 digits, il bot chiede captura del pago
+    // + dà la closure (formulario devolución) + chiede il nome.
+    name: 'ES — Caso 6 T5: dopo 4 digits, bot chiede captura + closure + nome',
+    run: async (ctx) => {
+      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
+      await ctx.send('Goya')
+      await ctx.send('Sí, he lavado')
+      await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
+      const reply = await ctx.send('4821')
+      expectMentionsAll(reply, ['captura', 'devoluc'])
+      const lower = reply.toLowerCase()
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)) {
+        throw new Error(`Bot non chiede il nome: ${reply}`)
+      }
+    },
+  },
+  {
+    // T6: cliente dà il nome → escalation con summary doble cobro che
+    // include il relato del cliente.
+    name: 'ES — Caso 6 escalation summary: contiene location + relato cliente',
+    run: async (ctx) => {
+      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
+      await ctx.send('Goya')
+      await ctx.send('Sí, he lavado')
+      await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
+      await ctx.send('4821')
+      const reply = await ctx.send('Andrea')
+      expectMentionsAll(reply, ['Andrea', 'Goya', 'doble cobro'])
+      // Garanzie negative: niente template buggato.
+      if (/n[uú]mero\s+n[uú]mero/i.test(reply)) {
+        throw new Error(`Bug "número número" presente: ${reply}`)
+      }
+      if (/seleccion[oó]\s+el\s+programa\s+pero\s+problema\s+t[eé]cnico/i.test(reply)) {
+        throw new Error(`Frase nonsense presente: ${reply}`)
+      }
     },
   },
 ]

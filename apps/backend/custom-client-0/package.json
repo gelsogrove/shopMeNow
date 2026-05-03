@@ -5,8 +5,7 @@
   "type": "module",
   "scripts": {
     "demo": "node --import tsx agent.ts",
-    "test:agent": "node --import tsx __tests__/agent/run.ts",
-    "test:case": "bash scripts/test-case.sh"
+    "test:agent": "node --import tsx __tests__/agent/run.ts"
   },
   "keywords": [
     "chatbot",

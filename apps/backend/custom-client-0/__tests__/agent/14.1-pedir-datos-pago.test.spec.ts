@@ -1,6 +1,6 @@
 // 14.1 — "Pedir datos de pago"
 //
-// Da 02reglas.md "Respuestas modelo reutilizables → Pedir datos de pago":
+// Da reglas.md "Respuestas modelo reutilizables → Pedir datos de pago":
 //   "Para revisarlo bien, necesito los últimos 4 dígitos de la tarjeta y
 //    una captura del pago."
 //

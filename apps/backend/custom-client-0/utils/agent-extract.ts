@@ -131,14 +131,22 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   }
 
   // Location — first try explicit pattern ("estoy en Goya"), then standalone
-  // input ("Goya"). Resolve against known locations.json keys when possible;
-  // accept anything else as the literal value the customer typed.
+  // input ("Goya"). Resolve against known locations.json keys; if the
+  // customer types an unknown city/name (e.g. "Girona"), do NOT set the
+  // location — let guardCaso31InsistLocation re-ask. Mataró aside (multiple
+  // streets), we only operate in 6 known laundries so unknown names are
+  // either a typo or a wrong assumption from the customer.
   if (!state.location) {
     const explicit = extractExplicitLocation(trimmed)
     const candidate = explicit || (isLikelyStandaloneLocationInput(state, trimmed) ? trimmed : null)
     if (candidate) {
       const known = resolveKnownLocation(candidate)
-      state.location = known || candidate
+      if (known) {
+        state.location = known
+      } else {
+        // Mark for clarification — bot should insist on a valid location.
+        state.locationClarificationCount = (state.locationClarificationCount || 0) + 1
+      }
     }
   }
 
@@ -178,10 +186,18 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     }
   }
 
-  // Payment signal
+  // Payment signal. If we just asked "¿Has podido realizar el pago?", accept
+  // a bare yes/no answer without requiring payment-context keywords.
   if (state.paymentCompleted === null) {
     const paid = parseExplicitPaymentSignal(trimmed)
-    if (paid !== null) state.paymentCompleted = paid
+    if (paid !== null) {
+      state.paymentCompleted = paid
+    } else if (state.paymentRequested) {
+      const lower = trimmed.toLowerCase().replace(/[.,!?¿¡]/g, '').trim()
+      if (/^(s[ií]|yes|oui|sim|ok|vale|claro|por\s+supuesto)(\s|$)/.test(lower)) state.paymentCompleted = true
+      else if (/^(no|non|nope|nao)(\s|$)/.test(lower)) state.paymentCompleted = false
+    }
+    if (state.paymentCompleted !== null) state.paymentRequested = false
   }
 
   // Caso 7 marker: customer said "He pagado pero no he podido usar".
@@ -192,6 +208,33 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     /he\s+pagado.+(no\s+(he\s+podido|consegui|logr[eé])\s+usar|no\s+(la\s+)?(he\s+podido\s+)?utilizar)/i.test(userMessage)
   ) {
     state.pendingFlow = 'caso7-ask-cambio'
+    state.caso7Active = true
+  }
+
+  // Caso 4 marker: customer said "He pagado y no se ha activado" (or similar).
+  // Different from Caso 7: here the issue is about activation (not "he pagado pero
+  // no he podido usar"). Flow asks tipo → numero → cambio (NOT display, NOT pago).
+  if (
+    !state.pendingFlow &&
+    /he\s+pagado.+no\s+se\s+(ha\s+)?activad/i.test(userMessage)
+  ) {
+    state.pendingFlow = 'caso4-ask-cambio'
+  }
+
+  // Caso 8 marker: customer says "tengo un código y no sé cómo usarlo" or
+  // similar — but WITHOUT giving the code value inline. If they include a
+  // numeric value ("Tengo un código: 23432023") it's Caso 18 (incoherence)
+  // handled below. If they include an alphanumeric value with letters
+  // ("Tengo un código AB12345") we still ask for the code anyway (the doc
+  // step expects the customer to repeat it).
+  const inlineCodeValue = userMessage.match(/c[oó]digo[\s:.,-]+([A-Za-z0-9-]{3,})/i)?.[1] || ''
+  const inlineNumericCode = inlineCodeValue && /^\d{3,}$/.test(inlineCodeValue)
+  if (
+    !state.pendingFlow &&
+    !inlineNumericCode &&
+    /(tengo\s+un\s+c[oó]digo|c[oó]digo\s+que?\s+(?:no\s+s[eé]\s+c[oó]mo|usar)|how\s+to\s+use\s+(?:this|the)\s+code)/i.test(userMessage)
+  ) {
+    state.pendingFlow = 'caso8-ask-code'
   }
 
   // Caso 17 marker: customer says they can't read the display. Triggers the

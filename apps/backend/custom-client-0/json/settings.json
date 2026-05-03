@@ -3,6 +3,11 @@
   "defaultLanguage": "es",
   "chatbotName": "Eco",
   "welcomeMessage": {
-    "es": "¡Hola! Soy {{chatbotName}}, el asistente virtual de Ecolaundry. Te ayudo paso a paso con cualquier incidencia, duda o información práctica sobre la lavandería."
+    "es": "Hola, soy el asistente virtual de la lavandería. ¿Cómo puedo ayudarte?",
+    "it": "Ciao, sono l'assistente virtuale della lavanderia. Come posso aiutarti?",
+    "ca": "Hola, sóc l'assistent virtual de la bugaderia. Com puc ajudar-te?",
+    "en": "Hi, I'm the laundry's virtual assistant. How can I help you?",
+    "pt": "Olá, sou o assistente virtual da lavandaria. Como posso ajudar-te?",
+    "fr": "Bonjour, je suis l'assistant virtuel de la laverie. Comment puis-je t'aider ?"
   }
 }

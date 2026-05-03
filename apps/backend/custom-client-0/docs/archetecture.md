@@ -27,7 +27,7 @@ USER message
    ▼
 ┌──────────────────────────────────────────────┐
 │ 3. LLM agent loop (agent.ts)                 │  STOCHASTIC
-│    System prompt = prompts/agent.txt with    │  - {{reglas}} = docs/02reglas.md
+│    System prompt = prompts/agent.txt with    │  - {{reglas}} = docs/reglas.md
 │    runtime values substituted.               │    INJECTED at every turn
 │    LLM (OpenRouter gpt-4o-mini) can call     │  - 12 tools available
 │    tools to mutate state or read JSON.       │  - Loop until no tool call
@@ -109,10 +109,10 @@ Pipeline is **ordered**. Each guard is a pure function `(ar, userMessage) → ou
 
 ## What goes where
 
-- **JSON flows** (`json/lavatrice_hs60xx.json`, `json/asciugatrice_ed340.json`) — step-by-step technical workflows opened via `start_machine_flow`.
+- **JSON flows** (`json/washer_hs60xx.json`, `json/dryer_ed340.json`) — step-by-step technical workflows opened via `start_machine_flow`.
 - **Guards** — case-specific canned replies in the customer's language using `localization.ts`.
-- **`docs/02reglas.md`** — INJECTED in the system prompt (`{{reglas}}`) every turn. Defines tone, forbidden phrases, escalation criteria the LLM must respect.
-- **`docs/01usecases.md`** — spec / bible, NOT injected at runtime, but used by humans to write tests and design guards.
+- **`docs/reglas.md`** — INJECTED in the system prompt (`{{reglas}}`) every turn. Defines tone, forbidden phrases, escalation criteria the LLM must respect.
+- **`docs/usecases.md`** — spec / bible, NOT injected at runtime, but used by humans to write tests and design guards.
 - **`prompts/agent.txt`** — system prompt template with `{{placeholders}}`.
 - **`json/locations.json`** — per-laundry metadata + `faqOverrides` + `escalationRules`.
 - **`json/faqs.json`** — base FAQ texts (keyed by id: `loyaltyCard`, `paymentMethods`, `pricing`, …).

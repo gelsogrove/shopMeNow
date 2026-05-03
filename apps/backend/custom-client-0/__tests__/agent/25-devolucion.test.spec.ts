@@ -1,6 +1,6 @@
 // 25 — Caso 26 cliente esige devolución inmediata
 //
-// Da 01usecaases.md Caso 26:
+// Da usecases.md Caso 26:
 //   USER: Quiero que me devolváis el dinero ahora mismo
 //   BOT:  vamos a revisarlo. Para tramitarlo, necesito 4 dígitos tarjeta,
 //         captura del pago y un breve resumen.

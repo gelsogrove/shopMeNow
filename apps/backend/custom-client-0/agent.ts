@@ -51,6 +51,58 @@ try {
 
 const MAX_TOOL_HOPS = 6
 
+// Reasons whose guard reply already addresses a specific incident — in those
+// cases skipping the welcome paragraph keeps the dialog natural ("Hola, soy
+// el asistente… Para obtenerla, debes enviar un correo a olga@…" feels
+// robotic). For purely conversational openers (gather questions, generic
+// re-asks) we still prepend the welcome.
+const GUARD_REASONS_NO_WELCOME = new Set([
+  'caso9-factura',
+  'caso10-tarjeta-base',
+  'caso10-tarjeta-override',
+  'caso10-tarjeta-override-direct',
+  'caso11-recarga',
+  'caso12-horarios',
+  'caso12-precio',
+  'caso25-empathic',
+  'caso26-ask-refund-data',
+  'caso27-review',
+  'caso28-contradictory',
+  'escalate-non-troubleshooting',
+  'caso21-24-location-mismatch',
+  'caso17-direct-escalate',
+  'numeric-code-ask-letters',
+  'numeric-code-no-letters',
+  'numeric-code-yes-letters',
+  'caso8-ask-code',
+  'caso8-await-location',
+  'caso8-ask-amount',
+  'caso8-instruction',
+  'caso8-resolved',
+  'caso8-escalate',
+  'caso8-confirm-location',
+  'caso8-escalate-location',
+  'force-payment',
+  'caso4-ask-cambio',
+  'caso4-instruction',
+  'caso4-resolved',
+  'caso4-escalate',
+  'caso4-escalate-cambio-yes',
+  'caso5-al001-ask-before',
+  'caso5-ask-relato',
+  'caso5-guide-retry',
+  'caso5-resolved',
+  'caso5-escalate',
+  'caso15-explain',
+  'caso14-alm-door',
+  'faq-closure',
+])
+
+function shouldShowWelcome(reason: string | undefined): boolean {
+  if (!reason) return true
+  return !GUARD_REASONS_NO_WELCOME.has(reason)
+}
+
 // ── Session lifecycle ─────────────────────────────────────────────────────────
 
 export async function createAgentSession(): Promise<AgentSession> {
@@ -100,9 +152,11 @@ export async function agentTurn(session: AgentSession, userMessage: string): Pro
   const guardOutcome = runGuardPipeline(ar, userMessage)
   if (guardOutcome) {
     let reply = guardOutcome.reply
-    // First-turn welcome: prepend the configured welcome message even when
-    // a deterministic guard short-circuits the LLM.
-    if (ar.state.turnCount === 1) {
+    // First-turn welcome: prepend ONLY if the customer hasn't already
+    // described a specific problem. If a guard fires immediately (Caso 9
+    // factura, Caso 10 tarjeta, escalation, …) the welcome would feel
+    // robotic — we just answer the operational question.
+    if (ar.state.turnCount === 1 && shouldShowWelcome(guardOutcome.reason)) {
       const welcome = renderWelcomeForTurn(ar)
       if (welcome) reply = `${welcome}\n\n${reply}`
     }
@@ -156,11 +210,18 @@ export async function agentTurn(session: AgentSession, userMessage: string): Pro
   history.push({ role: 'assistant', content: assistantReply })
 
   // First-turn welcome: prepend the configured welcome message in the
-  // customer's detected language unless the LLM already greeted.
+  // customer's detected language unless the LLM already greeted OR the
+  // customer already gave concrete machine facts at T1 (location +
+  // displayState or location + machineType + machineNumber). In those
+  // cases the bot is already mid-action and adding "Hola, soy …" feels
+  // robotic.
   let finalReply = sanitizeCustomerReply(assistantReply)
   if (ar.state.turnCount === 1) {
-    const llmAlreadyGreeted = /\b(soy|sono|i'?m|i am|sou|je suis)\s+eco\b/i.test(finalReply)
-    if (!llmAlreadyGreeted) {
+    const llmAlreadyGreeted = /\b(soy|sono|i'?m|i am|sou|je suis)\s+(?:el|the|l['o]|le|il)?\s*asistente|\bsoy\s+eco\b/i.test(finalReply)
+    const hasOperationalFacts = !!(
+      ar.state.location && (ar.state.displayState || ar.state.machineNumber)
+    )
+    if (!llmAlreadyGreeted && !hasOperationalFacts) {
       const welcome = renderWelcomeForTurn(ar)
       if (welcome) finalReply = `${welcome}\n\n${finalReply}`
     }

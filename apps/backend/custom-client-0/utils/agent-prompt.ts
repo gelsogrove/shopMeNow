@@ -10,10 +10,10 @@ import { getLocationOverride } from './runtime.js'
 import type { AgentRuntime, PromptBundle } from './agent-types.js'
 
 export async function loadPromptBundle(): Promise<PromptBundle> {
-  // utils/ → ../prompts/ and ../docs/02reglas.md (one level up from this file).
+  // utils/ → ../prompts/ and ../docs/reglas.md (one level up from this file).
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
   const template = await readFile(path.join(root, 'prompts', 'agent.txt'), 'utf8')
-  const reglas = await readFile(path.join(root, 'docs', '02reglas.md'), 'utf8')
+  const reglas = await readFile(path.join(root, 'docs', 'reglas.md'), 'utf8')
   return { template, reglas }
 }
 

@@ -205,9 +205,21 @@ export async function executeTool(
     case 'set_location': {
       const v = String(args.location || '').trim()
       if (!v) return { ok: false, error: 'location empty' }
-      state.location = v
+      // Reject sentinel placeholders and unknown ASCII names — the LLM
+      // sometimes echoes the prompt's "(unknown)" placeholder back as a
+      // location. Only accept values that resolve to a known laundry.
+      if (/^\(.*\)$/.test(v) || /^unknown$/i.test(v)) {
+        return { ok: false, error: 'location placeholder rejected' }
+      }
+      const { resolveKnownLocation } = await import('./message-parsing.js')
+      const known = resolveKnownLocation(v)
+      if (!known) {
+        state.locationClarificationCount = (state.locationClarificationCount || 0) + 1
+        return { ok: false, error: `unknown location: ${v}` }
+      }
+      state.location = known
       state.locationClarificationCount = 0
-      return { ok: true, data: { location: v } }
+      return { ok: true, data: { location: known } }
     }
     case 'set_location_street': {
       const v = String(args.street || '').trim()
@@ -232,10 +244,15 @@ export async function executeTool(
       return { ok: true, data: { paymentCompleted: state.paymentCompleted, paymentMethod: state.paymentMethod } }
     }
     case 'set_display_state': {
-      const v = String(args.displayState || '').trim()
-      if (!v) return { ok: false, error: 'displayState empty' }
-      state.displayState = v
-      return { ok: true, data: { displayState: v } }
+      const raw = String(args.displayState || '').trim()
+      if (!raw) return { ok: false, error: 'displayState empty' }
+      // Normalize through extractDisplayState so the LLM can't bypass our
+      // canonical token mapping (e.g. it must not record '001' when the
+      // canonical token is 'C001' — caso 15).
+      const { extractDisplayState } = await import('./intent.js')
+      const canonical = extractDisplayState(raw) || raw
+      state.displayState = canonical
+      return { ok: true, data: { displayState: canonical } }
     }
     case 'start_machine_flow': {
       const flowId = String(args.flowId || 'non_parte')
@@ -292,12 +309,24 @@ export async function executeTool(
     case 'capture_customer_name': {
       const name = String(args.name || '').trim().split(/\s+/)[0]
       if (!name) return { ok: false, error: 'name empty' }
+      // Reject obvious non-names: short replies, yes/no, acknowledgments.
+      // The LLM sometimes mistakes "No", "Vale", "Sí" for a name when the
+      // customer is actually answering a different question.
+      const lowered = name.toLowerCase().replace(/[.,!?¿¡]/g, '')
+      const looksLikeAnswer = /^(no|si|sí|s[íi]|yes|ok|okay|vale|claro|gracias|grazie|thanks|perfecto|perfect|perfetto|entendido|capito|got|nope|nada|nope|d'accordo|adelante)$/i.test(lowered)
+      if (looksLikeAnswer) {
+        return { ok: false, error: `"${name}" looks like a confirmation, not a name. Ask the customer their name explicitly.` }
+      }
+      // Also reject pure numbers and very short tokens (1-2 chars).
+      if (/^\d+$/.test(name) || name.length < 2) {
+        return { ok: false, error: `"${name}" is not a valid name.` }
+      }
       state.customerName = name
       state.customerNameRequested = false
       return { ok: true, data: { name } }
     }
     case 'escalate_to_operator': {
-      // Per 02reglas.md "Datos mínimos en incidencias de máquina": when the
+      // Per reglas.md "Datos mínimos en incidencias de máquina": when the
       // incident is machine-related (display set, or customer mentioned a
       // machine problem implicitly), we require local + type + number BEFORE
       // escalating. We refuse the tool call so the LLM has to gather facts

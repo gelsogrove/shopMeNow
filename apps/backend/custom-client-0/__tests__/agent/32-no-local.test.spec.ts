@@ -1,6 +1,6 @@
 // 32 — Caso 31 cliente non sa indicare il local
 //
-// Da 01usecaases.md Caso 31:
+// Da usecases.md Caso 31:
 //   USER: La secadora no funciona
 //   BOT:  ¿en qué lavandería estás?
 //   USER: No lo sé

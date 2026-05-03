@@ -28,7 +28,7 @@
         "recharge-loyalty-card": "En Calle Goya (Madrid), introduce la tarjeta en la central y sigue las instrucciones que aparecen en pantalla."
       },
       "flowOverrides": {
-        "asciugatrice_ed340.non_parte.filter_warning": {
+        "dryer_ed340.non_parte.filter_warning": {
           "prompt": "Recuerda que en Calle Goya (Madrid), el cliente debe limpiar el filtro de la secadora abriendo el cajón antes de cada uso."
         }
       },
@@ -61,7 +61,7 @@
         "loyaltyCard": "En Calle Pineda (Pineda de Mar), la tarjeta de fidelidad se compra con 20€ en efectivo y se activa pulsando el segundo botón de la fila derecha de la central. Solo funciona en este local."
       },
       "flowOverrides": {
-        "lavatrice_hs60xx.non_parte.case_sel": {
+        "washer_hs60xx.non_parte.case_sel": {
           "prompt": "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago."
         }
       },

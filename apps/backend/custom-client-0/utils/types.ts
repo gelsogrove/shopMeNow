@@ -10,7 +10,7 @@ export type NextOwner = 'conversation_history' | 'washer_specialist' | 'dryer_sp
 export type RouterDecision = {
   route: Route
   nextOwner: NextOwner
-  functionName: 'lavatrice_hs60xx' | 'asciugatrice_ed340' | 'contactOperator' | 'resetSession' | null
+  functionName: 'washer_hs60xx' | 'dryer_ed340' | 'contactOperator' | 'resetSession' | null
   extractedFacts: Record<string, string | boolean | null>
   missingFacts: string[]
   customerFacingGoal: string

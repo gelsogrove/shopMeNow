@@ -18,17 +18,20 @@ __tests__/agent/
 ├── 02-faq.test.spec.ts
 ├── 03-mataro.test.spec.ts
 ├── …
-├── 31-codigo-no-doc.test.spec.ts
-├── 32-no-local.test.spec.ts
-└── locations/
-    ├── alemanya/
-    │   ├── 21-monedas-secadora.test.spec.ts
-    │   └── 23-no-tarjeta.test.spec.ts
-    ├── pineda/22-monedas-secadora.test.spec.ts
-    └── hortes/24-no-tarjeta.test.spec.ts
+├── locations/
+│   ├── alemanya/
+│   ├── pineda/
+│   └── hortes/
+└── cross/
+    ├── 01-mataro-doble-cobro.test.spec.ts
+    ├── 02-faq-during-flow.test.spec.ts
+    ├── 03-multi-context-switch.test.spec.ts
+    ├── 04-unknown-location.test.spec.ts
+    ├── 05-location-gated-21-24.test.spec.ts
+    └── 06-multi-fact-extraction.test.spec.ts
 ```
 
-Convention: file name = `NN-slug.test.spec.ts` where `NN` is the case number from [`docs/01usecases.md`](./01usecases.md). Location-specific cases (Caso 21–24) live under `locations/<laundry>/`.
+Convention: file name = `NN-slug.test.spec.ts` where `NN` is the case number from [`usecases.md`](./usecases.md). Location-specific cases (Caso 21–24) live under `locations/<laundry>/`. Cross-cutting tests live under `cross/`.
 
 ## Test shape
 
@@ -47,7 +50,7 @@ export const tests: TestCase[] = [
 ]
 ```
 
-Each `ctx.send` returns the bot reply. Assertions use accent- and case-insensitive substring matching, so tests describe **concepts** not exact wording — that lets the bot evolve without breaking tests for cosmetic changes.
+Each `ctx.send` returns the bot reply. Assertions use accent- and case-insensitive substring matching, so tests describe **concepts** not exact wording.
 
 ## Assertion helpers (`_helpers.ts`)
 
@@ -70,25 +73,17 @@ Each `ctx.send` returns the bot reply. Assertions use accent- and case-insensiti
 | `expectNoEscalation(reply)` | No "operador / operatore / human support" |
 | `expectStateHas(session, {...})` | Session state has these field values |
 
-## Adding a new test
+## Test policy
 
-1. Find the case in [`docs/01usecases.md`](./01usecases.md).
-2. Pick the file: existing `NN-slug.test.spec.ts` if Caso N already has tests, otherwise create a new one.
-3. Write small dialogs that mirror the doc's `Ejemplo de conversación`.
-4. Use `expectMentionsAll` / `expectMentionsNone` with the **canonical phrases** from the doc — not your own paraphrases.
-5. Run `npm run test:agent`. The runner picks it up automatically.
-
-## Test policy (Andrea's rule)
-
-> **Inside `custom-client-0/`, [`docs/01usecases.md`](./01usecases.md) is the bible.**
+> **Inside `custom-client-0/`, [`usecases.md`](./usecases.md) is the bible.**
 
 If a test assertion disagrees with the doc, **fix the test to match the doc**, not the other way around. Tests are a derived artifact; the doc is the spec.
 
 ## Determinism
 
-The bot uses an LLM (OpenRouter gpt-4o-mini) with `temperature` left at default. Some tests are inherently subject to LLM variation. To keep them stable we lean on:
+The bot uses an LLM (OpenRouter gpt-4o-mini). To keep tests stable we lean on:
 
-- **Deterministic guards** — for any case the doc describes with a canonical reply, the guard pipeline produces it without calling the LLM, so the test always matches.
+- **Deterministic guards** — for any case the doc describes with a canonical reply, the guard pipeline produces it without calling the LLM.
 - **Concept-based assertions** — `expectMentionsAll(['revis'])` instead of full-string equality.
 
 If you see a test pass once and fail later with the same code, it's almost always the LLM picking different wording. The fix is to add or extend a deterministic guard.

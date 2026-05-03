@@ -1,6 +1,6 @@
 // 31 — Caso 30 código no documentado en pantalla
 //
-// Da 01usecaases.md Caso 30:
+// Da usecases.md Caso 30:
 //   USER: En la pantalla sale ERR 52
 //   BOT:  ¿en qué lavandería estás?
 //   USER: L'Escala
