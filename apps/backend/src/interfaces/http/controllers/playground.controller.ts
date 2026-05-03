@@ -201,6 +201,93 @@ export class PlaygroundController {
     }
   }
 
+  // POST /api/v1/playground/chat
+  // Body: { customerPhone?, sessionId?, message }
+  // Creates a customer/session if needed, runs ChatEngine and returns response
+  async sendChat(req: Request, res: Response) {
+    try {
+      const { customerPhone, sessionId, message, customerName } = req.body
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ error: "message is required" })
+      }
+
+      let session: any = null
+      if (sessionId) {
+        session = await prisma.chatSession.findFirst({
+          where: { id: sessionId, workspaceId: ECOLAUNDRY_WORKSPACE_ID },
+          include: { customer: true },
+        })
+      }
+
+      let customer: any = session?.customer || null
+
+      if (!customer) {
+        if (!customerPhone) {
+          return res.status(400).json({ error: "customerPhone or sessionId required" })
+        }
+        const phoneVariants = buildPhoneVariants(customerPhone)
+        customer = await prisma.customers.findFirst({
+          where: {
+            workspaceId: ECOLAUNDRY_WORKSPACE_ID,
+            OR: phoneVariants.map((v) => ({ phone: v })),
+          },
+        })
+        if (!customer) {
+          const safeName = customerName || `playground_${customerPhone}`
+          customer = await prisma.customers.create({
+            data: {
+              workspaceId: ECOLAUNDRY_WORKSPACE_ID,
+              phone: customerPhone,
+              name: safeName,
+              email: `${safeName.replace(/[^a-z0-9]/gi, "_")}@playground.local`,
+              isActive: false,
+              registrationStatus: "NEW",
+              language: detectLanguageFromPhonePrefix(customerPhone) || "es",
+            },
+          })
+        }
+      }
+
+      if (!session) {
+        session = await prisma.chatSession.findFirst({
+          where: { customerId: customer.id, status: "active" },
+        })
+        if (!session) {
+          session = await prisma.chatSession.create({
+            data: {
+              workspaceId: ECOLAUNDRY_WORKSPACE_ID,
+              customerId: customer.id,
+              status: "active",
+            },
+          })
+        }
+      }
+
+      const chatEngine = getChatEngine(prisma as any)
+      const result = await chatEngine.routeMessage({
+        workspaceId: ECOLAUNDRY_WORKSPACE_ID,
+        customerId: customer.id,
+        conversationId: session.id,
+        message,
+        customerLanguage: customer.language || "es",
+        customerName: customer.name,
+        customerDiscount: customer.discount || 0,
+        isPlayground: true,
+        channel: "widget",
+        registrationPromptLevel: 0,
+      } as any)
+
+      return res.json({
+        sessionId: session.id,
+        customerId: customer.id,
+        response: (result as any).message || (result as any).response || "",
+      })
+    } catch (error: any) {
+      logger.error("Playground sendChat error:", error)
+      return res.status(500).json({ error: "Failed to send chat", message: error.message })
+    }
+  }
+
   // POST /api/v1/playground/todos/:id/comments
   async addComment(req: Request, res: Response) {
     try {

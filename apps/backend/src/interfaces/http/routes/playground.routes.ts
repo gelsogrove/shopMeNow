@@ -12,6 +12,7 @@ playgroundRouter.get("/playground/todos", (req, res) => controller.getTodos(req,
 playgroundRouter.post("/playground/todos", (req, res) => controller.createTodo(req, res))
 playgroundRouter.patch("/playground/todos/:id", (req, res) => controller.updateTodo(req, res))
 playgroundRouter.delete("/playground/todos/:id", (req, res) => controller.deleteTodo(req, res))
+playgroundRouter.post("/playground/chat", (req, res) => controller.sendChat(req, res))
 playgroundRouter.post("/playground/todos/:id/comments", (req, res) =>
   controller.addComment(req, res)
 )
