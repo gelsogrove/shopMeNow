@@ -2,10 +2,40 @@ import fs from "node:fs"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
-import type { ChatChannel } from "../../../custom-client-0/types"
-import type { ChatbotInput, ChatbotOutput } from "../../../custom-client-0/types"
-
 import logger from "../../utils/logger"
+
+type ChatChannel = string
+
+type ChatbotInput = {
+  userMessage: string
+  userName: string
+  channel: ChatChannel
+  config: {
+    workspaceId: string
+    debugChannel: boolean
+    isPlayground: boolean
+    language?: SupportedLanguage
+  }
+  context: {
+    sessionId: string
+    customerId?: string
+    phoneNumber?: string
+    history: HistoryEntry[]
+  }
+}
+
+type ChatbotOutput = {
+  reply: string | null
+  wipMessage?: string
+  shouldEscalate: boolean
+  escalationSummary?: string
+  error?: string
+  meta: {
+    tokensUsed: number
+    agentChain: string[]
+    debug?: unknown
+  }
+}
 
 type HistoryEntry = {
   role: "user" | "assistant"
@@ -113,8 +143,10 @@ export class CustomClientChatbotService {
       const isFirstTurn = params.history.length === 0
       if (isFirstTurn && params.welcomeMessage && output.reply) {
         const resolvedWelcome = params.welcomeMessage
-          .replaceAll("{{chatbotName}}", "Ecolaundry")
-          .replaceAll("{{customerName}}", params.userName || "")
+          .split("{{chatbotName}}")
+          .join("Ecolaundry")
+          .split("{{customerName}}")
+          .join(params.userName || "")
           .replace(/\{\{[^}]+\}\}/g, "")
           .trim()
         if (resolvedWelcome) {
