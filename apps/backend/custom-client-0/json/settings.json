@@ -1,4 +1,8 @@
 {
-  "enabledLanguages": ["es", "it", "en", "ca"],
-  "defaultLanguage": "es"
+  "enabledLanguages": ["es"],
+  "defaultLanguage": "es",
+  "chatbotName": "Eco",
+  "welcomeMessage": {
+    "es": "¡Hola! Soy {{chatbotName}}, el asistente virtual de Ecolaundry. Te ayudo paso a paso con cualquier incidencia, duda o información práctica sobre la lavandería."
+  }
 }

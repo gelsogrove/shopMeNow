@@ -1,24 +1,18 @@
 {
   "name": "cliente-0-demo",
   "version": "1.0.0",
-  "description": "Cliente-0 Chatbot Interactive Demo with Scenario Testing",
+  "description": "Cliente-0 (Ecolaundry) Chatbot — LLM-as-agent with deterministic guards",
   "type": "module",
   "scripts": {
-    "demo": "node --import tsx chatbot.ts",
-    "demo:check": "node --import tsx chatbot.ts --check",
-    "demo:scripted": "node --import tsx chatbot.ts --scripted",
-    "demo:verify": "node --import tsx chatbot.ts --verify",
-    "demo:usecase": "node --import tsx chatbot.ts --usecases",
-    "test:case": "bash scripts/test-case.sh",
-    "example:happy": "node --import tsx examples/01-happy-path.ts",
-    "example:escalation": "node --import tsx examples/02-escalation.ts"
+    "demo": "node --import tsx agent.ts",
+    "test:agent": "node --import tsx __tests__/agent/run.ts",
+    "test:case": "bash scripts/test-case.sh"
   },
   "keywords": [
     "chatbot",
     "ecolaundry",
     "cliente-0",
-    "testing",
-    "scenarios"
+    "llm-agent"
   ],
   "devDependencies": {
     "tsx": "^4.7.0"

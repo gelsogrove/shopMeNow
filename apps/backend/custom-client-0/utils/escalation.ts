@@ -9,7 +9,20 @@ export type EscalationContext = {
   paymentCompleted: boolean | null
   displayState: string
   issueSummary: string
+  nonTroubleshootingIncident: string
   timestamp: string
+}
+
+const NON_TROUBLE_LABEL: Record<string, string> = {
+  'datafono-wrong-amount': 'una incoherencia en el importe del datáfono',
+  'cameras-or-ajax': 'una incidencia que requiere revisión de cámaras o AJAX',
+  'dryer-minutes-not-credited': 'que ha añadido monedas a la secadora pero no se han sumado minutos',
+  'card-payment': 'que no ha podido pagar con la tarjeta',
+  'refund-demand': 'una solicitud de devolución',
+  'compensation-demand': 'una solicitud de compensación',
+  'contradictory-narrative': 'un relato contradictorio sobre un cobro',
+  'numeric-only-code': 'un código solo numérico que requiere revisión',
+  'undocumented-display': 'un código de pantalla no documentado',
 }
 
 export function buildEscalationSummary(context: EscalationContext): string {
@@ -25,6 +38,13 @@ export function buildEscalationSummary(context: EscalationContext): string {
     return `${name} en ${location} ha reportado un doble cobro.${narrativePart}`
   }
 
+  // Non-troubleshooting incidents (datafono / cameras / refund / …) —
+  // no machine template, just the incident-specific label.
+  if (context.nonTroubleshootingIncident && NON_TROUBLE_LABEL[context.nonTroubleshootingIncident]) {
+    return `${name} en ${location} ha reportado ${NON_TROUBLE_LABEL[context.nonTroubleshootingIncident]}.`
+  }
+
+  // Default: machine-related incident (PUSH / DOOR / SEL / ALN / ALM / AL001 / 001 / ERR).
   const machine = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
   const number = context.machineNumber || 'número desconocido'
   const payment = context.paymentCompleted === true
@@ -53,6 +73,7 @@ export function extractEscalationContext(state: SessionState, customerName: stri
     paymentCompleted: state.paymentCompleted,
     displayState: state.displayState,
     issueSummary: state.issueSummary,
+    nonTroubleshootingIncident: state.nonTroubleshootingIncident || '',
     timestamp: now,
   }
 }

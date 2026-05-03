@@ -70,6 +70,18 @@ Examples of customer replies and how to extract:
 - "Calle Pineda" → location: `"Pineda"`
 - "L'Escala" → location: `"L'Escala"`
 
+CRITICAL — NEVER fuzzy-match a location.
+- The customer's reply must contain the exact known key (case-insensitive,
+  accent-insensitive). Only a clear match counts.
+- If the customer says a city/street that is NOT in the list above (for
+  example: "Girona", "Barcelona Centre", "Lavanderia del Sol"), set
+  `location` to the literal value the customer typed — DO NOT map it to a
+  similar-sounding known key. "Girona" is NOT "Goya".
+- Phonetic similarity, partial overlap, or "looks like" reasoning are
+  forbidden. Trust the customer's wording.
+- When in doubt, leave `location` empty and add `location` to `missingFacts`
+  so the bot can ask for clarification.
+
 The location key is used to load per-location overrides (metadata, FAQ answers, flow prompts, escalation rules) from `locations.json`. A single LLM handles all locations; behavior varies because the context varies.
 
 ## INTENT CLASSIFICATION (FAQ vs PROBLEM)

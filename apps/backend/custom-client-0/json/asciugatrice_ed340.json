@@ -79,7 +79,7 @@
 
     "retry_flow": {
       "type": "ACTION",
-      "prompt": "Por favor, inténtalo de nuevo seleccionando la secadora e iniciando el ciclo. Si aún no funciona, usa otra secadora.",
+      "prompt": "El código que me has dicho no es uno de los típicos de la secadora. ¿Puedes mirar la pantalla otra vez y decirme exactamente qué letras o números aparecen? Si la pantalla está vacía o no reconozco el código, pasaremos el caso a un operador.",
       "transitions": {
         "default": "non_parte.check_result"
       }

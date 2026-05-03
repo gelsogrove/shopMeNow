@@ -38,6 +38,8 @@ export type SupportedLanguage = 'it' | 'es' | 'en' | 'pt' | 'ca' | 'fr'
 export type Settings = {
   enabledLanguages: SupportedLanguage[]
   defaultLanguage: SupportedLanguage
+  chatbotName?: string
+  welcomeMessage?: Partial<Record<SupportedLanguage, string>>
 }
 
 export type Runtime = {
@@ -46,21 +48,10 @@ export type Runtime = {
     washer: FlowMap
     dryer: FlowMap
   }
-  regressions: RegressionScenario[]
+  /** Kept for backwards compat with utils that still reference it; always []. */
+  regressions: never[]
   locations: LocationsConfig
   settings: Settings
-}
-
-export type RegressionScenario = {
-  name: string
-  turns: string[]
-  assertions: RegressionAssertion[]
-}
-
-export type RegressionAssertion = {
-  turn: number
-  includes?: string[]
-  excludes?: string[]
 }
 
 let FAQS: FaqMap = {}
@@ -87,12 +78,11 @@ export async function loadRuntime(): Promise<Runtime> {
   )
   const faqs = JSON.parse(await readFile(path.join(flowDir, 'faqs.json'), 'utf8')) as FaqMap
   setFaqs(faqs)
-  const regressions = JSON.parse(await readFile(path.join(demoDir, 'json', 'regressions.json'), 'utf8')) as RegressionScenario[]
   const washer = JSON.parse(await readFile(path.join(flowDir, 'lavatrice_hs60xx.json'), 'utf8')) as FlowMap
   const dryer = JSON.parse(await readFile(path.join(flowDir, 'asciugatrice_ed340.json'), 'utf8')) as FlowMap
   const locations = JSON.parse(await readFile(path.join(flowDir, 'locations.json'), 'utf8')) as LocationsConfig
   const settings = JSON.parse(await readFile(path.join(flowDir, 'settings.json'), 'utf8')) as Settings
-  return { prompts: Object.fromEntries(promptEntries), flows: { washer, dryer }, regressions, locations, settings }
+  return { prompts: Object.fromEntries(promptEntries), flows: { washer, dryer }, regressions: [], locations, settings }
 }
 
 export function getLocationOverride(runtime: Runtime, location: string | null | undefined): LocationOverride | null {
@@ -105,15 +95,22 @@ export function buildLocationContext(runtime: Runtime, state: { location: string
   const override = getLocationOverride(runtime, state.location)
   if (!override) return ''
   return [
-    'ACTIVE LOCATION CONTEXT:',
+    'ACTIVE LOCATION CONTEXT (internal — do not recite to the customer):',
     JSON.stringify(override, null, 2),
     '',
     'INSTRUCTIONS:',
+    '- This context is INTERNAL knowledge for routing and overrides. NEVER tell',
+    '  the customer "you are in <pueblo>" or "the laundry is at <calle>" — the',
+    '  customer already knows where they are. Only acknowledge their location',
+    '  briefly if needed (e.g. "Perfecto, sigamos.") and continue the flow.',
     '- Apply faqOverrides verbatim when the customer asks a matching FAQ.',
     '- Apply flowOverrides when the Flow Engine renders the matching step.',
     '- Trigger escalationRules when the conversation matches a rule\'s trigger description.',
     '- Use metadata to adapt answers about hours, change, prices, etc.',
     '- Anti-hardcode: do not branch on location name; read everything from this context.',
+    '- If the customer named a location that does NOT match this entry, trust the',
+    '  customer over this context — never override what the customer said with',
+    '  a different city/street.',
   ].join('\n')
 }
 

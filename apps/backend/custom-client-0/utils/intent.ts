@@ -37,6 +37,11 @@ export function extractDisplayState(message: string): string | null {
   const alnMatch = trimmed.match(/\bALN(?:\s*[AN])?\b/i)
   if (alnMatch) return normalizeDisplayState(alnMatch[0])
 
+  // Generic ERR/ERROR codes ("ERR 52", "ERROR 47", "ERR-50") — surfaces as
+  // an undocumented display so the bot escalates per Caso 30.
+  const errMatch = trimmed.match(/\b(ERR(?:OR)?[\s\-]?\d{1,3})\b/i)
+  if (errMatch) return errMatch[1].toUpperCase().replace(/\s+/g, ' ')
+
   const genericMatch = trimmed.match(/\b(SEL|PUSH|PR|DOOR|ALM|AL001|END|ON|FILTRO|FALLO DE ROTACION|FALLO DE ASPIRACION|STOP|water)\b/i)
   if (!genericMatch) return null
   return normalizeDisplayState(genericMatch[1])
@@ -112,6 +117,21 @@ export function detectNonTroubleshootingIncident(message: string): NonTroublesho
   if (/c[áa]maras/.test(m) || /\bajax\b/.test(m) || /revisad?\s+(?:el\s+)?ajax/.test(m)) return 'cameras-or-ajax'
 
   return null
+}
+
+// ── Angry / frustrated tone detection ──────────────────────────────────────
+// Detects when the customer's tone is aggressive, demanding, or very upset so
+// the bot can prepend an empathetic acknowledgement ("Entiendo tu malestar...")
+// before continuing the normal data gathering. MULTILINGUA TODO: kept Spanish
+// + a few Italian/English roots since cliente-0 is Spanish-only today.
+export function hasAngryToneIntent(message: string): boolean {
+  const m = message.trim()
+  // Multiple exclamation marks or upper-case shouting (heuristic).
+  const manyExclamations = /!.*!/.test(m)
+  const allCapsBlock = /\b[A-ZÁÉÍÓÚÑ]{4,}\b.*\b[A-ZÁÉÍÓÚÑ]{4,}\b/.test(m)
+  const lower = m.toLowerCase()
+  const angryWords = /siempre\s+falla|verg[uü]enza|harto|indignado|ridicul|una\s+soluci[óo]n\s+ya|quiero\s+(?:una\s+)?soluci[óo]n\s+ya|esto\s+es\s+rid|che\s+schifo|inaccettabile|disgrazia/.test(lower)
+  return (manyExclamations && angryWords) || allCapsBlock || angryWords
 }
 
 // ── Operational context ───────────────────────────────────────────────────────
@@ -215,7 +235,7 @@ export function detectLanguageHeuristic(message: string): SessionState['language
   const normalized = message.trim().toLowerCase()
   if (!normalized) return null
 
-  if (/(¿|¡|secadora|lavadora|lavander[ií]a|arranc|otra vez|pantalla|centrifug|ropa|mojad|dinero|he pulsado|he premudo|como lo|autoservicio|cobrado|doble cobro|paso a paso|lavar|secar|captura|tarjeta|local|me sale|aparece en|sale en|no arranca|no funciona|no se activa|he pagado|he puesto)/i.test(normalized)) {
+  if (/(¿|¡|secadora|lavadora|lavander[ií]a|arranc|otra vez|pantalla|centrifug|ropa|mojad|dinero|he pulsado|he premudo|como lo|autoservicio|cobrado|doble cobro|paso a paso|lavar|secar|captura|tarjeta|local|me sale|aparece en|sale en|no arranca|no funciona|no se activa|he pagado|he puesto|teneis|tenéis|ten[eé]is|qu[eé] horario|qu[eé] precio|cu[aá]nto cuesta|hola|estoy en|sí|por favor)/i.test(normalized)) {
     return 'es'
   }
 
@@ -227,8 +247,18 @@ export function detectLanguageHeuristic(message: string): SessionState['language
     return 'ca'
   }
 
-  if (/(washer|dryer|laundromat|display shows|charged twice|double charge|step by step|card digits|screenshot|payment proof|did not start|does not start)/i.test(normalized)) {
+  if (/(washer|dryer|laundromat|display shows|charged twice|double charge|step by step|card digits|screenshot|payment proof|did not start|does not start|i can'?t|hi|hello|my\s+(washer|dryer|machine))/i.test(normalized)) {
     return 'en'
+  }
+
+  // Portuguese: avoid matching Spanish "hola" as PT. Require explicit PT
+  // markers (accented olá, ã, ç, voce, etc.) or PT-only spellings.
+  if (/(\bolá\b|n[ãâ]o\s|lavandaria|m[áa]quina de lavar|m[áa]quina de secar|j[áa] paguei|comprovante|você|voce|estou em|obrigad[oa])/i.test(normalized)) {
+    return 'pt'
+  }
+
+  if (/(bonjour|salut|lave-linge|s[èe]che-linge|laverie|ne marche pas|ne fonctionne pas|j'?ai pay[ée]|je n'?arrive pas|d[ée]j[àa] pay[ée]|machine [aà])/i.test(normalized)) {
+    return 'fr'
   }
 
   return null
@@ -243,6 +273,11 @@ export function isLikelyStandaloneLocationInput(state: SessionState, message: st
   if (hasGreetingIntent(trimmed)) return false
   if (normalizeMachineType(trimmed)) return false
   if (/lavatric|washer|lavadora|asciugatric|dryer|secadora|display|alm|door|push|sel|filtro|rotacion|aspiracion/i.test(trimmed)) {
+    return false
+  }
+  // "No lo sé / no sé / no me acuerdo / ni idea" must not be captured as a
+  // location — Caso 31 needs the bot to insist on the location instead.
+  if (/^(no\s+lo\s+s[eé]|no\s+s[eé]|no\s+me\s+acuerdo|ni\s+idea|no\s+tengo\s+idea)(?:\s|$|[.,!?])/i.test(trimmed)) {
     return false
   }
   return true
@@ -260,9 +295,16 @@ export function getRequestedLanguage(message: string): SessionState['language'] 
 }
 
 export function extractExplicitLocation(message: string): string | null {
-  const match = message.match(/\b(?:sono a|sono in|mi trovo a|estoy en|estoy a|i am in|i'm in|i am at)\s+([A-Za-zÀ-ÿ' -]{2,40})/i)
-  if (!match) return null
-  return match[1].split(/[.,!?]/)[0].trim()
+  // Patterns:
+  //   "estoy en Goya", "sono a Pineda", "i am at Hortes" → explicit "I am at"
+  //   "...en Goya", "...en Pineda" → trailing "en <Loc>" reference (e.g.
+  //     "el datáfono me ha cobrado 10€ en Goya"). Restricted to single-word
+  //     known-style location names to avoid false positives.
+  const explicit = message.match(/\b(?:sono a|sono in|mi trovo a|estoy en|estoy a|i am in|i'm in|i am at)\s+([A-Za-zÀ-ÿ' -]{2,40})/i)
+  if (explicit) return explicit[1].split(/[.,!?]/)[0].trim()
+  const trailing = message.match(/\ben\s+([A-Z][a-zà-ÿ']{2,20})\b/)
+  if (trailing) return trailing[1].split(/[.,!?]/)[0].trim()
+  return null
 }
 
 // ── Payment parsing ───────────────────────────────────────────────────────────
@@ -332,6 +374,61 @@ export function parseDryerCycleContext(message: string): '' | 'first_cycle' | 't
 
 export function extractLast4CardDigits(message: string): string | null {
   return message.match(/\b(\d{4})\b/)?.[1] || null
+}
+
+// Detect "I cannot read / see / describe what is on the display" in any
+// supported language. The router prompt already documents this exception, but
+// the deterministic guard chain (machineNumber → display) needs an explicit
+// detector to skip straight to the photo / escalate path.
+export function hasDisplayUnreadableIntent(message: string): boolean {
+  const m = message.trim().toLowerCase()
+  if (!m) return false
+  // Spanish / Catalan
+  if (/\b(no s[eé] qu[eé] (pone|sale|aparece|hay)|no veo (bien )?(el |la )?(pantalla|display)|no consigo leer|no entiendo (el c[oó]digo|lo que pone)|no sale nada|pantalla apagada)\b/.test(m)) return true
+  // Italian
+  if (/\b(non vedo (bene )?(lo schermo|il display)|non capisco (cosa|che cosa) (c[' ]?e|appare)|non riesco a leggere|schermo spento)\b/.test(m)) return true
+  // English
+  if (/\b(i (can'?t|cannot) (see|read|tell what is on) the (screen|display)|the (screen|display) is (blank|off|empty))\b/.test(m)) return true
+  return false
+}
+
+// Detect a "mixed incident" first message — the customer reports multiple
+// concerns at once (paid + machine + double-pay confusion). The right answer
+// is to slow down and propose a "paso a paso" walkthrough. UC32.
+export function hasMixedIncidentIntent(message: string): boolean {
+  const m = message.trim().toLowerCase()
+  if (!m) return false
+  const paymentTokens = /(he\s+pagado|pagué|hemos pagado|volví\s+a\s+pagar|cobro|cobrado|me\s+han\s+cobrado|doble\s+pago|two\s+payments)/.test(m)
+  const machineTokens = /(no\s+arranca|no\s+arrancaba|no\s+funciona|m[aá]quina|el\s+problema)/.test(m)
+  const uncertainty = /(no\s+s[eé]\s+si|no\s+entiendo|estoy\s+confundido|me\s+he\s+l[ií]ado|don'?t\s+know\s+if)/.test(m)
+  return paymentTokens && machineTokens && uncertainty
+}
+
+// Detect "I don't know" replies in any supported language. Used to insist on
+// the location question when the customer cannot or does not want to identify
+// the laundry on the first ask.
+export function hasUnknownLocationIntent(message: string): boolean {
+  const m = message.trim().toLowerCase()
+  if (!m) return false
+  // Use lookahead for word boundary because \b is ASCII-only and would fail on
+  // accented characters like "sé".
+  const tail = '(?=\\s|$|[.,!?¿¡])'
+  if (new RegExp(`^(no lo s[eé]|no s[eé]|no me acuerdo|ni idea|no recuerdo|no sabr[ií]a)${tail}`).test(m)) return true
+  if (new RegExp(`^(non lo so|non ricordo|non saprei)${tail}`).test(m)) return true
+  if (new RegExp(`^(i don'?t know|i'm not sure|no idea|i can'?t remember)${tail}`).test(m)) return true
+  return false
+}
+
+// Detect "I cannot send a photo" — used after the bot asked for a photo of the
+// display. Triggers escalation in UC17.
+export function hasNoPhotoIntent(message: string): boolean {
+  const m = message.trim().toLowerCase()
+  if (!m) return false
+  if (/\bno\s+(puedo|consigo|tengo|s[eé]\s+c[oó]mo)\s+(hacer|sacar|mandar|enviar|tomar)\s+(la\s+)?foto\b/.test(m)) return true
+  if (/\b(no tengo (foto|c[aá]mara)|sin foto|no tengo m[oó]vil)\b/.test(m)) return true
+  if (/\b(non riesco|non posso) (a )?(fare|mandare|inviare) (la )?foto\b/.test(m)) return true
+  if (/\b(i (can'?t|cannot) (take|send) (a |the )?photo|no camera|i have no camera)\b/.test(m)) return true
+  return false
 }
 
 export function parsePaymentProofProvided(message: string): boolean | null {

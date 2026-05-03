@@ -19,6 +19,14 @@ export type FaqIntent =
   | 'hours-prices'
   | 'alarm-code'
 
+// FAQ intents that support a multi-turn follow-up where the bot first asks for
+// the location and then applies the per-location faqOverride.
+export type LocationAwareFaqIntent = 'buy-loyalty-card' | 'recharge-loyalty-card'
+
+export function isLocationAwareFaqIntent(intent: string | null | undefined): intent is LocationAwareFaqIntent {
+  return intent === 'buy-loyalty-card' || intent === 'recharge-loyalty-card'
+}
+
 // ── Detectors (multilang regex: es | it | ca | en) ────────────────────────────
 
 export function hasDiscountCodeIntent(message: string): boolean {
@@ -156,8 +164,23 @@ export function advanceDiscountCodeFlow(
 ): DiscountCodeStepResult {
   const step = state.faqStep
 
-  // Step 2: user just sent the code → store it, ask for lavandería
+  // Step 2: user just sent the code → store it, ask for lavandería.
+  // EXCEPTION (UC18 — código solo numérico sin letras): the prompt at step 0
+  // asked the customer "¿Me dices el código exacto tal como lo ves, incluyendo
+  // letras si las hay?". If the customer replies just "No" / "no hay letras",
+  // it means the code has no letters in front — that's an incoherence (valid
+  // codes always have letters). Escalate without confronting the customer.
   if (step === 1) {
+    const replyTrim = userMessage.trim().toLowerCase()
+    const noLetters = /^(no|sin\s+letras|no\s+hay\s+letras|sólo\s+n[uú]meros|solo\s+n[uú]meros|nessuna|no\s+letters)\b/.test(replyTrim)
+    if (noLetters) {
+      state.faqStep = 5
+      return {
+        reply: '[EXACT] De acuerdo. Hay una información que necesitamos revisar manualmente antes de continuar. Vamos a pasarlo a revisión para ayudarte correctamente.',
+        escalate: true,
+        done: true,
+      }
+    }
     state.faqCodeValue = userMessage.trim()
     state.faqStep = 2
     return {

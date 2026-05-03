@@ -156,6 +156,24 @@
           "reason": "En este local a veces no se puede pagar con tarjeta; puede requerir reinicio AJAX por parte del equipo."
         }
       ]
+    },
+    "Mataró": {
+      "pueblo": "Mataró",
+      "calle": "(varias calles)",
+      "displayName": "Mataró",
+      "metadata": {
+        "hours": "8:00-22:00",
+        "centralType": "buttons",
+        "cardUnitPrice": "7€",
+        "returnsChangeCoins": true,
+        "loyaltyCard": true,
+        "dryerFilterSelfService": false,
+        "cardPaymentUnreliable": false,
+        "ajaxRestartPossible": false,
+        "dryerMinutesIncreaseIssue": false,
+        "selfStartMachine": true,
+        "needsStreetClarification": true
+      }
     }
   }
 }

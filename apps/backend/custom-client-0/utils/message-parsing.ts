@@ -17,7 +17,12 @@ export function hasStopIntent(message: string): boolean {
 
 export function isBlankDisplayReply(message: string): boolean {
   const lower = message.toLowerCase().trim()
-  return /^(blank|empty|nothing|blank screen|screen is blank|empty screen|no display|nada|pantalla en blanco|pantalla en blanc|pantalla buida|void|vide|ecran vide|buit|nulla|schermo vuoto|schermo in bianco|schermo bianco|display vuoto)$/i.test(lower)
+  // Whole-message match (customer answered just "blanco", "vuoto", etc.)
+  if (/^(blank|empty|nothing|blank screen|screen is blank|empty screen|no display|nada|pantalla en blanco|pantalla blanca|pantalla en blanc|pantalla buida|void|vide|ecran vide|buit|nulla|schermo vuoto|schermo in bianco|schermo bianco|display vuoto)$/i.test(lower)) return true
+  // Inline mention inside a longer sentence — covers "ahora la pantalla es blanca"
+  // / "lo schermo è bianco" / "the screen is blank".
+  if (/\b(pantalla\s+(?:es\s+)?blanc[ao]|pantalla\s+en\s+blanco|schermo\s+bianco|schermo\s+vuoto|screen\s+(?:is\s+)?(?:blank|empty)|no\s+(?:hay\s+)?nada\s+en\s+(?:la\s+)?pantalla)\b/i.test(lower)) return true
+  return false
 }
 
 export function normalizeLocationValue(value: string): string {
@@ -47,7 +52,7 @@ export function parseExplicitPaymentSignal(message: string): boolean | null {
 
   // Avoid false negatives from generic troubleshooting phrases such as
   // "no arranca" or "non funziona": only parse yes/no when payment context exists.
-  const hasPaymentContext = /\b(pag|payment|paid|coins?|monedas?|card|tarjeta|carta|unidad central|central unit|pagamento)\b/.test(lower)
+  const hasPaymentContext = /\b(pag\w*|payment|paid|pay|coins?|monedas?|card|tarjeta|carta|unidad central|central unit)\b/.test(lower)
   if (!hasPaymentContext) return null
 
   if (/\b(no he pagado|no pagué|no pague|no he pagat|not paid|non ho pagato|nao paguei|sin pagar)\b/.test(lower)) return false

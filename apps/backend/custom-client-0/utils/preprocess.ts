@@ -131,6 +131,13 @@ export function preprocessUserInput(state: SessionState, userMessage: string): s
     }
   }
 
+  // Location capture. Two cases:
+  // 1) The customer named one of the known locations from locations.json →
+  //    use the canonical key so per-location overrides apply.
+  // 2) The customer named a location we don't have overrides for (e.g.
+  //    "Girona", "Sevilla") → STILL accept it as the literal value so the
+  //    flow can proceed. Without this fallback the bot keeps re-asking the
+  //    same clarification question, which is what UC-loop was hitting.
   const explicitLocation = extractExplicitLocation(trimmed)
   if (explicitLocation && !state.location) {
     const knownLocation = resolveKnownLocation(explicitLocation)
@@ -139,7 +146,9 @@ export function preprocessUserInput(state: SessionState, userMessage: string): s
       state.locationClarificationCount = 0
       extractedFacts.push(`Location is ${knownLocation}`)
     } else {
-      state.locationClarificationCount += 1
+      state.location = explicitLocation
+      state.locationClarificationCount = 0
+      extractedFacts.push(`Location is ${explicitLocation} (not in known locations)`)
     }
   } else if (isLikelyStandaloneLocationInput(state, trimmed)) {
     const knownLocation = resolveKnownLocation(trimmed)
@@ -148,7 +157,9 @@ export function preprocessUserInput(state: SessionState, userMessage: string): s
       state.locationClarificationCount = 0
       extractedFacts.push(`Location is ${knownLocation}`)
     } else {
-      state.locationClarificationCount += 1
+      state.location = trimmed
+      state.locationClarificationCount = 0
+      extractedFacts.push(`Location is ${trimmed} (not in known locations)`)
     }
   }
 
