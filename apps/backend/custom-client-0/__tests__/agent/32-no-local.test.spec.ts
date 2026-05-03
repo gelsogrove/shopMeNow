@@ -32,4 +32,26 @@ export const tests: TestCase[] = [
       expectMentionsAll(reply, ['numero'])
     },
   },
+  {
+    // Variante: cliente dice "ni idea" invece di "no lo sé" → stesso
+    // comportamento (insistere sulla location).
+    name: 'ES — Caso 31 variante "ni idea": bot insiste sulla location',
+    run: async (ctx) => {
+      await ctx.send('La lavadora no arranca')
+      const reply = await ctx.send('Ni idea')
+      expectMentionsAll(reply, ['lavanderia'])
+    },
+  },
+  {
+    // Variante: cliente dà location esplicita dopo l'insistenza → flow
+    // procede al numero come da doc.
+    name: 'ES — Caso 31 dopo location, flow procede al display normale',
+    run: async (ctx) => {
+      await ctx.send('La secadora no funciona')
+      await ctx.send('No lo sé')
+      await ctx.send('Estoy en Goya')
+      const reply = await ctx.send('La 3')
+      expectMentionsAll(reply, ['pantalla'])
+    },
+  },
 ]

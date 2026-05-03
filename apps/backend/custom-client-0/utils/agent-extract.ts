@@ -127,6 +127,13 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
       state.nonTroubleshootingIncident = 'refund-demand'
     } else if (COMPENSATION_TOPIC.test(userMessage)) {
       state.nonTroubleshootingIncident = 'compensation-demand'
+    } else if (
+      // Caso 28: messaggio T1 con narrativa intrinsecamente contraddittoria
+      // (pago doppio + cobro mixto + dubbi ripetuti). Pattern: cobró dos
+      // veces / aunque también pagué + creo / no sé / o algo así.
+      /(cobr[oó]\s+dos\s+veces|me\s+han\s+cobrad[oa]\s+(?:dos|2)\s+veces).*(creo|no\s+s[eé]|aunque|tambi[eé]n\s+pagu[eé]|no\s+lo\s+s[eé])/i.test(userMessage)
+    ) {
+      state.nonTroubleshootingIncident = 'contradictory-narrative'
     }
   }
 

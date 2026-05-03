@@ -21,4 +21,24 @@ export const tests: TestCase[] = [
       expectMentionsNone(reply, ['te devolveré', 'te devuelvo', 'devolución aprobada', 'reembolso confirmado'])
     },
   },
+  {
+    name: 'ES — Caso 26 T1: bot chiede dati (4 dígitos, captura, resumen)',
+    run: async (ctx) => {
+      const reply = await ctx.send('Quiero que me devolváis el dinero ahora mismo')
+      expectMentionsAll(reply, ['dig', 'tarjeta'])
+    },
+  },
+  {
+    // Summary regression: deve menzionare devolución e NON template buggati.
+    name: 'ES — Caso 26 escalation summary: contiene "devolución" + nome',
+    run: async (ctx) => {
+      await ctx.send('Quiero que me devolváis el dinero ahora mismo')
+      await ctx.send('Quiero la devolución ya')
+      const reply = await ctx.send('Andrea')
+      expectMentionsAll(reply, ['Andrea', 'devoluc'])
+      if (/n[uú]mero\s+n[uú]mero/i.test(reply)) {
+        throw new Error(`Bug "número número" presente: ${reply}`)
+      }
+    },
+  },
 ]

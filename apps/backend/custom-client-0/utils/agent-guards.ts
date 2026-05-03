@@ -264,11 +264,13 @@ export const guardCaso28Contradictory: Guard = (ar, userMessage) => {
   // (not just when they don't know the location — that's Caso 31).
   const uncertain = /(no\s+lo\s+s[eé]\s+bien|no\s+estoy\s+seguro|no\s+me\s+acuerdo\s+bien|creo\s+que.*no\s+s[eé])/i.test(reply)
   if (!uncertain) return null
-  // Need a prior incident hint: a payment/double-charge flow is in progress.
+  // Need a prior incident hint: a payment/double-charge flow is in progress
+  // OR the previous turn already showed contradictory clues.
   const hasIncidentContext =
     !!ar.state.pendingFlow.startsWith('caso6-') ||
     ar.state.nonTroubleshootingIncident === 'datafono-wrong-amount' ||
-    ar.state.nonTroubleshootingIncident === 'card-payment'
+    ar.state.nonTroubleshootingIncident === 'card-payment' ||
+    ar.state.nonTroubleshootingIncident === 'contradictory-narrative'
   if (!hasIncidentContext) return null
   ar.state.escalationReason = 'Caso 28 — contradictory narrative'
   ar.state.operatorRequested = true
@@ -602,6 +604,29 @@ export const guardCaso25Empathic: Guard = (ar, userMessage) => {
   if (exclamations < 2 && !angryWords) return null
   ar.state.empathicResponseSent = true
   return { reply: t('caso25Empathic', lang(ar)), reason: 'caso25-empathic' }
+}
+
+/** Caso 25 step 2 — after empathic opener and gather (location + tipo +
+ *  numero), escalate directly. The angry customer doesn't need a display
+ *  step; the operator will sort it out. */
+export const guardCaso25Escalate: Guard = (ar) => {
+  if (
+    !ar.state.empathicResponseSent ||
+    !ar.state.location ||
+    !ar.state.machineType ||
+    !ar.state.machineNumber ||
+    ar.state.operatorRequested ||
+    ar.state.customerNameRequested
+  ) {
+    return null
+  }
+  ar.state.escalationReason = 'Caso 25 — cliente muy enfadado, escalado tras recogida de datos mínimos'
+  ar.state.operatorRequested = true
+  ar.state.customerNameRequested = true
+  ar.pendingEscalation = { reason: ar.state.escalationReason }
+  const escalate = t('doubleChargeReview', lang(ar))
+  const nameAsk = t('customerNameAsk', lang(ar))
+  return { reply: `${escalate} ${nameAsk}`, reason: 'caso25-escalate' }
 }
 
 /** Caso 31bis — cliente fornisce un nome non valido (es. "Girona", che è una
@@ -1090,9 +1115,13 @@ export const guardCaso2124LocationMismatch: Guard = (ar) => {
 }
 
 export const guardEscalateNonTroubleshooting: Guard = (ar) => {
+  // Most non-troubleshooting incidents need a location for the operator,
+  // but `cameras-or-ajax` (Caso 29) is escalated immediately per doc — the
+  // operator will pull the customer's data from the cameras anyway.
+  const skipLocationCheck = ar.state.nonTroubleshootingIncident === 'cameras-or-ajax'
   if (
     !ar.state.nonTroubleshootingIncident ||
-    !ar.state.location ||
+    (!skipLocationCheck && !ar.state.location) ||
     ar.state.operatorRequested ||
     ar.state.customerName ||
     ar.state.customerNameRequested
@@ -1149,6 +1178,7 @@ export const GUARD_PIPELINE: Guard[] = [
   guardCaso12Precio,
   guardCaso12Horarios,
   guardCaso25Empathic,
+  guardCaso25Escalate,
   guardCaso28Contradictory,
   guardCaso6AskPodidoLavar,
   guardCaso6AskRelato,

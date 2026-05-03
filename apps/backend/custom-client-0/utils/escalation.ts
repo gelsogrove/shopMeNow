@@ -66,6 +66,18 @@ export function buildEscalationSummary(context: EscalationContext): string {
       `tras introducir el importe pendiente en la central, la máquina no arrancó.`
   }
 
+  // Case 28: contradictory narrative — escalate without arguing.
+  if (/caso\s*28|contradictory|relato\s+contradictorio|relato\s+confuso/i.test(context.escalationReason || '')) {
+    return `${name} en ${location} ha presentado un relato contradictorio o confuso sobre un cobro/incidencia y requiere revisión manual.`
+  }
+
+  // Case 25: cliente muy enfadado — escalado tras recogida de datos mínimos.
+  if (/caso\s*25|muy\s+enfadado|cliente.*alterado/i.test(context.escalationReason || '')) {
+    const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
+    const numberLabel = context.machineNumber || 'desconocido'
+    return `${name} en ${location} (${machineLabel} número ${numberLabel}) ha mostrado mucho malestar y exige una solución inmediata. Requiere atención prioritaria.`
+  }
+
   // Case 5: AL001 sequence error — escalate after the retry guidance failed
   // (display still shows AL001 or another error code, customer can't follow
   // the instructions).

@@ -96,6 +96,7 @@ const GUARD_REASONS_NO_WELCOME = new Set([
   'caso15-explain',
   'caso14-alm-door',
   'faq-closure',
+  'caso25-escalate',
 ])
 
 function shouldShowWelcome(reason: string | undefined): boolean {
