@@ -218,6 +218,24 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     state.caso7Active = true
   }
 
+  // Customer name capture: when the bot has explicitly asked for the name
+  // (customerNameRequested=true) and the user replies with a valid name
+  // token, persist it. This is a deterministic fallback for when the LLM
+  // does not call the capture_customer_name tool.
+  if (state.customerNameRequested && !state.customerName) {
+    const cleaned = trimmed.replace(/[.,!?¿¡]/g, '').trim()
+    const nameToken = cleaned.split(/\s+/)[0] || ''
+    const lowered = nameToken.toLowerCase()
+    const looksLikeAnswer = /^(no|si|sí|s[íi]|yes|ok|okay|vale|claro|gracias|grazie|thanks|perfecto|perfect|perfetto|entendido|capito|got|nope|nada)$/i.test(lowered)
+    const isPureNumber = /^\d+$/.test(nameToken)
+    const isShortToken = nameToken.length < 2
+    const isLikelyName = /^[A-Za-zÀ-ÖØ-öø-ÿ'][A-Za-zÀ-ÖØ-öø-ÿ'-]+$/.test(nameToken)
+    if (!looksLikeAnswer && !isPureNumber && !isShortToken && isLikelyName) {
+      state.customerName = nameToken
+      state.customerNameRequested = false
+    }
+  }
+
   // Caso 4 marker: customer said "He pagado y no se ha activado" (or similar).
   // Different from Caso 7: here the issue is about activation (not "he pagado pero
   // no he podido usar"). Flow asks tipo → numero → cambio (NOT display, NOT pago).
