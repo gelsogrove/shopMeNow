@@ -153,6 +153,7 @@ import {
   questionnairePublicRouter,
   questionnaireAdminRouter,
 } from "../interfaces/http/routes/onboarding-questionnaire.routes"
+import { playgroundRouter } from "../interfaces/http/routes/playground.routes"
 
 // ============================================================================
 // 7. TYPE IMPORTS
@@ -432,6 +433,7 @@ const SESSION_EXEMPT_ROUTES = [
   "/support-chat", // 🆘 PUBLIC operator handoff routes (token-authenticated)
   "/operator-dashboard", // 📊 PUBLIC operator dashboard routes (token-authenticated)
   "/questionnaire", // 📋 PUBLIC onboarding questionnaire (no auth)
+  "/playground", // 🎮 PUBLIC Ecolaundry demo playground (hardcoded FE auth)
   "/legal-documents", // 📜 PUBLIC legal pages (terms, privacy, refund, GDPR)
   "/auth/google/calendar/callback", // 📅 PUBLIC Google Calendar OAuth callback (workspaceId in state param)
 ]
@@ -665,6 +667,10 @@ logger.info("✅ Registered public questionnaire route: POST /api/questionnaire"
 // 🔒 ADMIN QUESTIONNAIRE ROUTES (auth required)
 router.use("/admin", questionnaireAdminRouter)
 logger.info("✅ Registered admin questionnaire routes: /api/admin/questionnaire")
+
+// 🎮 PLAYGROUND ROUTES (Ecolaundry demo, no auth — hardcoded FE login)
+router.use(playgroundRouter)
+logger.info("✅ Registered playground routes: /api/playground/*")
 
 // Removed messages, push-messaging, and push-testing routes (not used by frontend)
 router.use("/users", createUserRouter())
