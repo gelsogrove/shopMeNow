@@ -1,5 +1,3 @@
-[TOC]
-
 ## Objetivo del documento
 
 Este documento define el comportamiento base del chatbot de Ecolaundry.

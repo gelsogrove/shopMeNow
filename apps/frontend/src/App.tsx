@@ -180,7 +180,7 @@ export function App() {
         
         {/* Ecolaundry Playground — hardcoded login (ANDREA/HOLGA), no providers */}
         <Route
-          path="/demo/client-0"
+          path="/demo/cliente-0/*"
           element={
             <Suspense
               fallback={

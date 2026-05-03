@@ -1,7 +1,5 @@
 # Ecolaundry Chatbot - Bloque 1 de casos
 
-[TOC]
-
 ## Cómo usar este bloque
 
 Este documento reúne casos de conversación en español para configurar y probar el chatbot de Ecolaundry.
