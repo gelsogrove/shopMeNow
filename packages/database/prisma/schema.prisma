@@ -2196,3 +2196,40 @@ model OnboardingQuestionnaire {
 
   @@map("onboarding_questionnaires")
 }
+
+// 🆕 PLAYGROUND - Ecolaundry demo (cliente-0)
+// Collaborative TODO + comments layer over existing chat messages
+model PlaygroundTodo {
+  id              String   @id @default(uuid())
+  workspaceId     String   // Always Ecolaundry workspace
+  dialogId        String   // Reference to Message.id (no FK - cross-workspace safety)
+  messageType     String   // "chatbot" | "human"
+  messageContent  String
+  chatbotResponse String?
+  commentTitle    String
+  priority        String   @default("Medio") // "Alto" | "Medio" | "Basso"
+  status          String   @default("TODO")  // "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE" | "NICE_TO_HAVE"
+  position        Int      @default(0)       // Order within column
+  createdBy       String   // "ANDREA" | "HOLGA"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  comments PlaygroundComment[]
+
+  @@index([workspaceId, status])
+  @@index([dialogId])
+  @@map("playground_todos")
+}
+
+model PlaygroundComment {
+  id          String   @id @default(uuid())
+  todoId      String
+  todo        PlaygroundTodo @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  commentText String
+  createdBy   String
+  color       String?  // Hex color or username-derived
+  createdAt   DateTime @default(now())
+
+  @@index([todoId, createdAt])
+  @@map("playground_comments")
+}
