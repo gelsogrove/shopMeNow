@@ -86,33 +86,21 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   if (!trimmed) return
   const state = ar.state
 
-  // Post-resolution reset — if the previous incident was closed
-  // (`pendingClosure === 'resolved'`) and the customer is now sending a new
-  // message, the stale machine facts from the resolved case (machineType,
-  // machineNumber, displayState, activeFlowId, …) would confuse the LLM into
-  // thinking it has to keep working on that case. Wipe them now while
-  // preserving location / customerName / language (those still describe the
-  // *customer*, not the resolved incident). The next turn starts effectively
-  // fresh, but without re-asking "¿Dónde está la lavandería?".
+  // Post-resolution reset (R2 in the architecture doc).
   //
-  // Heuristic safety net: not every resolution flows through `mark_resolved`
-  // or a terminal flow node — sometimes the LLM autonomously writes
-  // "Perfecto, incidencia resuelta…" without firing the tool. So we ALSO
-  // detect a fresh incident report (push prog / display / no funciona / non
-  // parte / non funziona / etc.) AFTER a previous case had complete machine
-  // facts and the active flow has ended. In that case treat the previous
-  // case as resolved and reset.
-  const newIncidentReported = /\b(no\s+(funciona|va|arranca|empieza)|non\s+parte|non\s+funziona|push\s*prog|al\s*0*0?1|alm|sel|door|filtro|aspiraci[oó]n|rotaci[oó]n|ahora\s+(?:me\s+)?da|ora\s+(?:mi\s+)?d[aà]|nuev[ao]\s+problema|otro\s+problema|otra\s+vez|ayuda\s+con|ayuda\s+otra)/i.test(trimmed)
-  const previousCaseHasFacts =
-    !!state.machineType ||
-    !!state.machineNumber ||
-    !!state.displayState ||
-    state.paymentCompleted !== null
-  const previousCaseEnded = !state.activeFlowId && !state.pendingFlow
-  if (
-    state.pendingClosure === 'resolved' ||
-    (newIncidentReported && previousCaseHasFacts && previousCaseEnded)
-  ) {
+  // Single trigger: `state.pendingClosure === 'resolved'`.
+  //
+  // pendingClosure is set in exactly two places, both explicit:
+  //   1. The `mark_resolved` tool, called by the LLM when the customer
+  //      confirms the issue is fixed. (Mandatory per system prompt.)
+  //   2. The flow engine, when a non-escalating terminal node is reached.
+  //
+  // We do NOT try to guess "is this a new incident?" from the message
+  // text. Intent classification is the LLM's job. If the LLM forgets
+  // mark_resolved, the next turn answers with stale state — that is a
+  // prompt-side bug, not an extractor-side bug, and is handled by
+  // strengthening the prompt rather than by piling regex heuristics here.
+  if (state.pendingClosure === 'resolved') {
     resetMachineFacts(state)
     state.pendingClosure = null
     ar.resolved = false
@@ -199,54 +187,38 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     }
   }
 
-  // Machine type
-  // We accept a NEW machineType even when state.machineType is already set,
-  // IF the message explicitly names a machine type (washer/dryer keyword
-  // or a fuzzy match). This covers two real cases:
-  //   - Customer switches machine ("ahora la secadora 7 no funciona" after
-  //     resolving the washer).
-  //   - Customer corrects themselves ("ah no perdón es la secadora").
-  // The previous machineType is overwritten only if normalizeMachineType
-  // succeeds AND the result differs from the stored value.
-  const mt = normalizeMachineType(trimmed)
-  if (mt && mt !== state.machineType) {
-    // If the type changes, clear the stale machineNumber too (it belonged
-    // to the previous machine and may not match the new one).
-    if (state.machineType && mt !== state.machineType) {
-      state.machineNumber = ''
+  // Machine type — extract whenever the message explicitly names one.
+  // Cumulative semantics (R4): if the customer types a recognised machine
+  // word (washer/dryer/typo) we update state.machineType. The LLM owns
+  // intent: if the customer is switching machines mid-conversation, the
+  // LLM calls mark_resolved on the previous case first; the post-
+  // resolution reset above clears stale facts before this point.
+  if (!state.machineType) {
+    const mt = normalizeMachineType(trimmed)
+    if (mt) state.machineType = mt
+  }
+
+  // Machine number — extract on first mention. Two patterns:
+  //   1. Whole message is the number ("4", "la 4", "numero 4"). Only when
+  //      location is known, to avoid grabbing a stray digit too early.
+  //   2. Inline in a sentence ("...lavadora 5", "secadora 3").
+  //   3. Fuzzy fallback: machineType just set in this turn but the inline
+  //      regex didn't match the keyword (typo case "lavaroda 5") — grab
+  //      the first 1-3 digit number.
+  if (!state.machineNumber) {
+    if (state.location) {
+      const whole = trimmed.match(/^\s*(?:la\s+|n\.?\s*|num(?:ero)?\s*[:.#]?\s*)?(\d{1,3})\s*$/i)
+      if (whole) state.machineNumber = whole[1]
     }
-    state.machineType = mt
+    if (!state.machineNumber) {
+      const inline = trimmed.match(/\b(?:lavadora|secadora|lavatrice|asciugatrice|washer|dryer|rentadora|assecadora)\s+(?:n[º°.]?\s*|num(?:ero)?\s*[:.#]?\s*)?(\d{1,3})\b/i)
+      if (inline) state.machineNumber = inline[1]
+    }
+    if (!state.machineNumber && state.machineType) {
+      const fuzzyNum = trimmed.match(/\b(\d{1,3})\b/)
+      if (fuzzyNum) state.machineNumber = fuzzyNum[1]
+    }
   }
-
-  // Machine number.
-  // Two patterns:
-  //   1. The whole message is the number (loose: "4", "la 4", "numero 4").
-  //      Only when location is already known so we don't mis-grab a stray
-  //      digit during a free-form turn.
-  //   2. Inline within a sentence: "...lavadora 5", "secadora 3", "lavatrice 7".
-  //
-  // Update strategy: pattern 1 only fires when machineNumber is empty
-  // (otherwise a bare "5" mid-conversation would clobber the real number).
-  // Pattern 2 — explicit "lavadora 7" / "secadora 3" — ALWAYS updates,
-  // because that is an unambiguous re-statement by the customer (machine
-  // switch or correction).
-  if (!state.machineNumber && state.location) {
-    const whole = trimmed.match(/^\s*(?:la\s+|n\.?\s*|num(?:ero)?\s*[:.#]?\s*)?(\d{1,3})\s*$/i)
-    if (whole) state.machineNumber = whole[1]
-  }
-  const inline = trimmed.match(/\b(?:lavadora|secadora|lavatrice|asciugatrice|washer|dryer|rentadora|assecadora)\s+(?:n[º°.]?\s*|num(?:ero)?\s*[:.#]?\s*)?(\d{1,3})\b/i)
-  if (inline && inline[1] !== state.machineNumber) {
-    state.machineNumber = inline[1]
-  }
-  // Fuzzy fallback: if machineType was just set in THIS turn (regex above
-  // didn't match because the customer mistyped the keyword, e.g. "lavaroda 5"),
-  // grab the first 1-3 digit number in the message as the machine number.
-  // Conservative: only if no number is already stored AND we know the type.
-  if (!state.machineNumber && state.machineType && !inline) {
-    const fuzzyNum = trimmed.match(/\b(\d{1,3})\b/)
-    if (fuzzyNum) state.machineNumber = fuzzyNum[1]
-  }
-
   // Display state — covers SEL/PUSH/DOOR/ALM family/AL001/PRICE/BLANK first;
   // then any uppercase short token that matches the display whitelist.
   // We require state.machineType to be known so we don't grab "PINEDA" or

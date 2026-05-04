@@ -72,70 +72,44 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'new incident regex match (push prog dryer) after completed case → wipes facts',
+    name: 'no pendingClosure: machine facts NEVER reset by the extractor (intent is LLM job)',
     run: () => {
       const ar = makeAr()
-      // Pre-condition: previous case resolved IMPLICITLY (LLM wrote
-      // "Perfecto, incidencia resuelta" without firing mark_resolved, so
-      // pendingClosure stays null but activeFlowId/pendingFlow are clear).
+      // Pre-condition: state has machine facts but pendingClosure is NOT
+      // 'resolved'. The extractor must NOT guess "is this a new incident"
+      // from the message — that decision belongs to the LLM, which expresses
+      // it via mark_resolved (which sets pendingClosure='resolved').
       ar.state.location = 'Goya'
       ar.state.machineType = 'washer'
       ar.state.machineNumber = '5'
       ar.state.displayState = 'SEL'
-      ar.state.activeFlowId = null
-      ar.state.pendingFlow = ''
+      ar.state.pendingClosure = null
 
-      autoExtractFacts(ar, 'ora me da push prog il display e non funciona la secadora')
+      // A message that LOOKS like a new incident — but until the LLM marks
+      // the previous one resolved, the extractor stays out of intent.
+      autoExtractFacts(ar, 'no funciona la secadora')
 
-      // After reset, the extractor re-runs on the same message and pulls in
-      // fresh facts:
-      //   - "secadora"  → machineType=dryer
-      //   - "push prog" → displayState=PUSH
-      // The OLD washer/5/SEL are gone (reset wiped them) and only the NEW
-      // incident's facts survive. machineNumber stays empty because the
-      // message has no number. That is exactly the desired behaviour.
-      assertEq(ar.state.location, 'Goya', 'location preserved on heuristic reset')
-      assertEq(ar.state.machineType, 'dryer', 'machineType updated to NEW incident (dryer)')
-      assertEq(ar.state.machineNumber, '', 'old machineNumber wiped (no new number in msg)')
-      assertEq(ar.state.displayState, 'PUSH', 'displayState updated to NEW incident (PUSH)')
+      // Sticky facts unchanged: machineType stays washer (the extractor
+      // is idempotent — only fills empty slots), machineNumber stays 5,
+      // displayState stays SEL. The LLM, looking at this state on the
+      // next turn, will call mark_resolved on the previous case and
+      // set_machine_facts for the new one.
+      assertEq(ar.state.location, 'Goya', 'location preserved')
+      assertEq(ar.state.machineType, 'washer', 'machineType not overwritten')
+      assertEq(ar.state.machineNumber, '5', 'machineNumber not overwritten')
+      assertEq(ar.state.displayState, 'SEL', 'displayState not overwritten')
     },
   },
   {
-    name: 'new incident keywords (no funciona) but no previous facts → does NOT reset',
+    name: 'first message extracts facts even if it sounds like a "new incident" phrase',
     run: () => {
       const ar = makeAr()
-      // First-message scenario: customer just opened the chat, no prior
-      // machine facts. The heuristic must NOT misfire here.
-      ar.state.location = ''
-      ar.state.machineType = ''
-      ar.state.machineNumber = ''
-      ar.state.displayState = ''
-
+      // Empty state — first turn. Phrases like "no funciona la lavadora"
+      // are NOT special markers, just normal first-message content. The
+      // extractor must do its job: pull machineType from the message.
       autoExtractFacts(ar, 'no funciona la lavadora')
 
-      // location may now be set if the message contained one (it doesn't
-      // here), but no spurious resets should have fired.
-      assertEq(ar.state.machineType, 'washer', 'machineType extracted from "lavadora"')
-    },
-  },
-  {
-    name: 'active flow in progress (activeFlowId set) → does NOT reset even if incident keyword present',
-    run: () => {
-      const ar = makeAr()
-      ar.state.location = 'Goya'
-      ar.state.machineType = 'washer'
-      ar.state.machineNumber = '5'
-      ar.state.displayState = 'SEL'
-      ar.state.activeFlowId = 'non_parte'
-      ar.state.activeStepId = 'case_sel'
-
-      // Customer mid-flow says "no funciona" again — must NOT wipe state,
-      // the flow engine handles it via retry logic.
-      autoExtractFacts(ar, 'no funciona')
-
-      assertEq(ar.state.machineType, 'washer', 'machineType preserved (flow still active)')
-      assertEq(ar.state.machineNumber, '5', 'machineNumber preserved (flow still active)')
-      assertEq(ar.state.activeFlowId, 'non_parte', 'activeFlowId preserved')
+      assertEq(ar.state.machineType, 'washer', 'machineType extracted on first turn')
     },
   },
 ]

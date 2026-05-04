@@ -53,25 +53,6 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'machine number change mid-flow (5 → 7): updates number, keeps type',
-    run: () => {
-      const ar = makeAr()
-      ar.state.location = 'Pineda'
-      ar.state.machineType = 'washer'
-      ar.state.machineNumber = '5'
-      ar.state.displayState = 'SEL'
-      ar.state.activeFlowId = 'non_parte'
-      ar.state.activeStepId = 'case_sel'
-      ar.state.turnCount = 4
-
-      autoExtractFacts(ar, 'ah no perdón es la lavadora 7')
-
-      assertEq(ar.state.machineNumber, '7', 'machineNumber updated 5 → 7')
-      assertEq(ar.state.machineType, 'washer', 'machineType still washer')
-      assertEq(ar.state.location, 'Pineda', 'location preserved')
-    },
-  },
-  {
     name: 'first turn — customer mentions machineType + number directly',
     run: () => {
       const ar = makeAr()
