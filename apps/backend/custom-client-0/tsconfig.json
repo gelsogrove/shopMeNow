@@ -14,6 +14,6 @@
     "allowImportingTsExtensions": false,
     "types": ["node"]
   },
-  "include": ["agent.ts", "index.ts", "utils/**/*.ts"],
+  "include": ["agent.ts", "index.ts", "utils/**/*.ts", "models/**/*.ts"],
   "exclude": ["node_modules", "__tests__/**/*"]
 }

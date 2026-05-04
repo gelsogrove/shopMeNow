@@ -1,4 +1,4 @@
-// Public types shared across the agent modules.
+// Core agent runtime/session/message types.
 
 import type { Runtime } from './runtime.js'
 import type { SessionState } from './state.js'

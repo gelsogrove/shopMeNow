@@ -9,7 +9,7 @@ import {
   hasExtraButtonIssue,
   hasStopIntent,
 } from './message-parsing.js'
-import type { SessionState } from './state.js'
+import type { SessionState } from '../models/index.js'
 
 // ── Display state extraction ──────────────────────────────────────────────────
 

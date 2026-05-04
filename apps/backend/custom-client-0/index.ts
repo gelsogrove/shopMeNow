@@ -18,47 +18,15 @@
 import {
   agentTurn,
   createAgentSession,
-  type AgentSession,
 } from './agent.js'
 import { extractEscalationContext, buildEscalationSummary } from './utils/escalation.js'
 
-type ChatChannel = string
-
-type HistoryEntry = {
-  role: 'user' | 'assistant'
-  content: string
-}
-
-type ChatbotInput = {
-  userMessage: string
-  userName: string
-  channel: ChatChannel
-  config: {
-    workspaceId: string
-    debugChannel: boolean
-    isPlayground: boolean
-    language?: 'it' | 'es' | 'pt' | 'en' | 'ca' | 'fr'
-  }
-  context: {
-    sessionId: string
-    customerId?: string
-    phoneNumber?: string
-    history: HistoryEntry[]
-  }
-}
-
-type ChatbotOutput = {
-  reply: string | null
-  wipMessage?: string
-  shouldEscalate: boolean
-  escalationSummary?: string
-  error?: string
-  meta: {
-    tokensUsed: number
-    agentChain: string[]
-    debug?: unknown
-  }
-}
+import type {
+  AgentSession,
+  ChatbotInput,
+  ChatbotOutput,
+  HistoryEntry,
+} from './models/index.js'
 
 // Per-session cache of agent runtimes. Keyed by sessionId so concurrent
 // customers do not stomp on each other's sticky facts. Entries are evicted

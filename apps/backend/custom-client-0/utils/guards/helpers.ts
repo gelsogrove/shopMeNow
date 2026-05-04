@@ -1,13 +1,7 @@
-// Shared helpers for the guard pipeline.
+// Shared helpers for the guard pipeline. Type contracts (Guard,
+// GuardOutcome) live in ../../models/guards.ts.
 
-import type { AgentRuntime } from '../agent-types.js'
-
-export interface GuardOutcome {
-  reply: string
-  reason: string
-}
-
-export type Guard = (ar: AgentRuntime, userMessage: string) => GuardOutcome | null
+import type { AgentRuntime } from '../../models/index.js'
 
 export const RECOVERABLE_DISPLAYS = new Set([
   'SEL', 'PUSH', 'PR', 'DOOR', 'ALM/DOOR', 'PRICE', 'BLANK',

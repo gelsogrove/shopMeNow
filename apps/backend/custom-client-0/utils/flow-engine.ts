@@ -5,9 +5,12 @@ import { normalizeDisplayState } from './display-state.js'
 import { isBlankDisplayReply, hasExtraButtonIssue, hasStopIntent } from './message-parsing.js'
 import { extractDisplayState, isPaidButNotActivatedCase, parsePaymentAnswer } from './intent.js'
 import { callModel } from './llm.js'
-import type { FlowEngineResult } from './types.js'
-import type { SessionState } from './state.js'
-import type { Runtime, FlowNode } from './runtime.js'
+import type {
+  FlowEngineResult,
+  FlowNode,
+  Runtime,
+  SessionState,
+} from '../models/index.js'
 
 // ── Flow traversal ────────────────────────────────────────────────────────────
 
@@ -300,6 +303,12 @@ export async function advanceActiveFlow(runtime: Runtime, state: SessionState, u
         if (routeNode.isTerminal) {
           state.activeFlowId = null
           state.activeStepId = null
+          // Mark as resolved unless the terminal is an escalation, so the
+          // next-turn extractor wipes stale machine facts and the bot does
+          // not re-ask "¿Dónde está la lavandería?" on a follow-up incident.
+          if (routeNode.action !== 'escalate') {
+            state.pendingClosure = 'resolved'
+          }
         }
         return { flowId, stepId: routeStepId, prompt: routeNode.prompt, type: routeNode.type, isTerminal: Boolean(routeNode.isTerminal), action: routeNode.action }
       }
@@ -310,6 +319,9 @@ export async function advanceActiveFlow(runtime: Runtime, state: SessionState, u
   if (nextNode.isTerminal) {
     state.activeFlowId = null
     state.activeStepId = null
+    if (nextNode.action !== 'escalate') {
+      state.pendingClosure = 'resolved'
+    }
   }
   return { flowId, stepId: nextStepId, prompt: nextNode.prompt, type: nextNode.type, isTerminal: Boolean(nextNode.isTerminal), action: nextNode.action }
 }

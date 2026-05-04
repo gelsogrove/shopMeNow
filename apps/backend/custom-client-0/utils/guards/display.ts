@@ -3,7 +3,7 @@
 // unknown-display escalation.
 
 import { t, tt } from '../localization.js'
-import type { Guard } from './helpers.js'
+import type { Guard } from '../../models/index.js'
 import { lang, RECOVERABLE_DISPLAYS } from './helpers.js'
 
 /** Caso 5 step 2 — customer described what happened. */
@@ -34,6 +34,7 @@ export const guardCaso5AwaitDisplay: Guard = (ar, userMessage) => {
   ar.state.pendingFlow = ''
   if (resolved) {
     ar.resolved = true
+    ar.state.pendingClosure = 'resolved'
     return { reply: t('caso5Resolved', lang(ar)), reason: 'caso5-resolved' }
   }
   ar.state.escalationReason = 'Caso 5 — AL001 persiste tras la guía de secuencia correcta'

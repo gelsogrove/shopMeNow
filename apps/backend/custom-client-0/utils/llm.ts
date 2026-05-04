@@ -5,8 +5,12 @@ import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
-import type { LlmRequest } from './types.js'
-import type { SupportedLanguage, Settings, Runtime } from './runtime.js'
+import type {
+  LlmRequest,
+  Runtime,
+  Settings,
+  SupportedLanguage,
+} from '../models/index.js'
 import { detectLanguageHeuristic } from './intent.js'
 import { fetchLlmJson } from './llm-fetch.js'
 

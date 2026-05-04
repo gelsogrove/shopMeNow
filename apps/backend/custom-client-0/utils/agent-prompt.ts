@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { readFile } from 'node:fs/promises'
 
 import { getLocationOverride } from './runtime.js'
-import type { AgentRuntime, PromptBundle } from './agent-types.js'
+import type { AgentRuntime, PromptBundle } from '../models/index.js'
 
 export async function loadPromptBundle(): Promise<PromptBundle> {
   // utils/ → ../prompts/ and ../docs/reglas.md (one level up from this file).

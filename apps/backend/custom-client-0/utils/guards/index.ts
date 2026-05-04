@@ -14,8 +14,7 @@
 // reorder without knowing what you are doing — the order encodes priority
 // across cases (e.g. Mataró street must fire before any case-specific flow).
 
-import type { AgentRuntime } from '../agent-types.js'
-import type { Guard, GuardOutcome } from './helpers.js'
+import type { AgentRuntime, Guard, GuardOutcome } from '../../models/index.js'
 
 import {
   guardCaso7AskCambio,
@@ -76,7 +75,7 @@ import {
   guardEscalateNonTroubleshooting,
 } from './faq.js'
 
-export type { Guard, GuardOutcome } from './helpers.js'
+export type { Guard, GuardOutcome } from '../../models/index.js'
 
 /**
  * Ordered pipeline of guards. The first guard that returns a non-null outcome

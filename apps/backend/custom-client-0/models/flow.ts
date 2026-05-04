@@ -1,5 +1,4 @@
-// Shared TypeScript types for the cliente-0 chatbot demo.
-// Only types still imported by live code are kept here.
+// Flow-engine + LLM request types.
 
 import type { FlowNode } from './runtime.js'
 

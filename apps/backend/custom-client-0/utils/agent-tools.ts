@@ -4,7 +4,7 @@
 // (or an invocation of the existing flow engine). The LLM picks WHICH tool
 // to call; the side-effects live here.
 
-import type { AgentRuntime } from './agent-types.js'
+import type { AgentRuntime } from '../models/index.js'
 import { getFaqs, getLocationOverride } from './runtime.js'
 import { startFlow, advanceActiveFlow } from './flow-engine.js'
 

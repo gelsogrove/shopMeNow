@@ -19,8 +19,7 @@ import process from 'node:process'
 import { API_KEY, resolveModel } from './llm.js'
 import { TOOLS } from './agent-tools.js'
 import { fetchLlmJson } from './llm-fetch.js'
-import type { AgentMessage } from './agent-types.js'
-import type { Runtime } from './runtime.js'
+import type { AgentMessage, Runtime } from '../models/index.js'
 
 const BASE_URL = process.env.LLM_BASE_URL || 'https://openrouter.ai/api/v1'
 const DEFAULT_MAX_TOKENS = 800

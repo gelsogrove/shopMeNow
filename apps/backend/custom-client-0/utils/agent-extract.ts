@@ -6,7 +6,7 @@
 // reasonably confident the input maps to that fact. False positives are
 // worse than missing extractions.
 
-import type { AgentRuntime } from './agent-types.js'
+import type { AgentRuntime } from '../models/index.js'
 import {
   extractDisplayState,
   extractExplicitLocation,
@@ -85,6 +85,38 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   const trimmed = userMessage.trim()
   if (!trimmed) return
   const state = ar.state
+
+  // Post-resolution reset — if the previous incident was closed
+  // (`pendingClosure === 'resolved'`) and the customer is now sending a new
+  // message, the stale machine facts from the resolved case (machineType,
+  // machineNumber, displayState, activeFlowId, …) would confuse the LLM into
+  // thinking it has to keep working on that case. Wipe them now while
+  // preserving location / customerName / language (those still describe the
+  // *customer*, not the resolved incident). The next turn starts effectively
+  // fresh, but without re-asking "¿Dónde está la lavandería?".
+  //
+  // Heuristic safety net: not every resolution flows through `mark_resolved`
+  // or a terminal flow node — sometimes the LLM autonomously writes
+  // "Perfecto, incidencia resuelta…" without firing the tool. So we ALSO
+  // detect a fresh incident report (push prog / display / no funciona / non
+  // parte / non funziona / etc.) AFTER a previous case had complete machine
+  // facts and the active flow has ended. In that case treat the previous
+  // case as resolved and reset.
+  const newIncidentReported = /\b(no\s+(funciona|va|arranca|empieza)|non\s+parte|non\s+funziona|push\s*prog|al\s*0*0?1|alm|sel|door|filtro|aspiraci[oó]n|rotaci[oó]n|ahora\s+(?:me\s+)?da|ora\s+(?:mi\s+)?d[aà]|nuev[ao]\s+problema|otro\s+problema|otra\s+vez|ayuda\s+con|ayuda\s+otra)/i.test(trimmed)
+  const previousCaseHasFacts =
+    !!state.machineType ||
+    !!state.machineNumber ||
+    !!state.displayState ||
+    state.paymentCompleted !== null
+  const previousCaseEnded = !state.activeFlowId && !state.pendingFlow
+  if (
+    state.pendingClosure === 'resolved' ||
+    (newIncidentReported && previousCaseHasFacts && previousCaseEnded)
+  ) {
+    resetMachineFacts(state)
+    state.pendingClosure = null
+    ar.resolved = false
+  }
 
   // Topic-switch detection — runs first so the rest of the extractor doesn't
   // re-populate stale machine facts from the previous conversation segment.

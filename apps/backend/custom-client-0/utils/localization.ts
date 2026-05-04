@@ -7,7 +7,7 @@
 // IMPORTANT: keep all keys synchronised across languages. If a translation is
 // missing, the helper falls back to Spanish (the project's base language).
 
-import type { SessionState } from './state.js'
+import type { SessionState } from '../models/index.js'
 
 type Lang = SessionState['language']
 

@@ -1,20 +1,6 @@
-// Escalation to operator: collect customer name and generate summary for operator
-import type { SessionState } from './state.js'
-
-export type EscalationContext = {
-  customerName: string | null
-  locationDisplay: string
-  machineType: string
-  machineNumber: string
-  paymentCompleted: boolean | null
-  displayState: string
-  issueSummary: string
-  nonTroubleshootingIncident: string
-  discountCode: string
-  escalationReason: string
-  timestamp: string
-  pendingFlow: string
-}
+// Escalation to operator: collect customer name and generate summary for
+// operator. The EscalationContext type lives in ../models/escalation.ts.
+import type { EscalationContext, SessionState } from '../models/index.js'
 
 const NON_TROUBLE_LABEL: Record<string, string> = {
   'datafono-wrong-amount': 'una incoherencia en el importe del datáfono',

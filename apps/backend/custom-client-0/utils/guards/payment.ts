@@ -5,7 +5,7 @@
 import { t } from '../localization.js'
 import { getFaqs } from '../runtime.js'
 import { resolveKnownLocation, resolveKnownLocationFuzzy } from '../message-parsing.js'
-import type { Guard } from './helpers.js'
+import type { Guard } from '../../models/index.js'
 import { lang, notInActiveSubFlow } from './helpers.js'
 
 /** G1 — Caso 7 step 1: customer said "He pagado pero no he podido usar" → ask cambio. */
@@ -98,6 +98,7 @@ export const guardCaso4AwaitConfirmation: Guard = (ar, userMessage) => {
   ar.state.pendingFlow = ''
   if (resolved) {
     ar.resolved = true
+    ar.state.pendingClosure = 'resolved'
     return { reply: t('caso4Resolved', lang(ar)), reason: 'caso4-resolved' }
   }
   ar.state.escalationReason = 'Caso 4 — máquina sigue sin activar tras corregir el número en la central'
@@ -287,6 +288,7 @@ export const guardCaso8AwaitConfirmation: Guard = (ar, userMessage) => {
   ar.state.pendingFlow = ''
   if (resolved) {
     ar.resolved = true
+    ar.state.pendingClosure = 'resolved'
     return { reply: t('caso8Resolved', lang(ar)), reason: 'caso8-resolved' }
   }
   ar.state.escalationReason = 'Caso 8 — código de descuento, máquina no arrancó tras el ingreso'

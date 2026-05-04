@@ -3,7 +3,7 @@
 // location mismatch.
 
 import { t, tt } from '../localization.js'
-import type { Guard } from './helpers.js'
+import type { Guard } from '../../models/index.js'
 import { isMataro, lang, notInActiveSubFlow } from './helpers.js'
 
 /** G2.5 — Mataró street: as soon as the customer names Mataró as location,

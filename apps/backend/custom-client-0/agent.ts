@@ -96,10 +96,10 @@ import { renderWelcomeForTurn, shouldShowWelcome, stripWelcomeParagraphs } from 
 import { printCliBanner, printCliMessage } from './utils/cli.js'
 import { API_KEY } from './utils/llm.js'
 
-import type { AgentMessage, AgentRuntime, AgentSession } from './utils/agent-types.js'
+import type { AgentMessage, AgentRuntime, AgentSession } from './models/index.js'
 
 // Re-export public types so existing imports from './agent.js' keep working.
-export type { AgentRuntime, AgentSession } from './utils/agent-types.js'
+export type { AgentRuntime, AgentSession } from './models/index.js'
 
 // Load .env so OPENROUTER_API_KEY is available
 try {

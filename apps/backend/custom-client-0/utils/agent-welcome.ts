@@ -7,7 +7,7 @@
 //   - shouldShowWelcome: decides whether to prepend the welcome to a
 //     guard-produced reply on turn 1, based on the guard's `reason`.
 
-import type { AgentRuntime } from './agent-types.js'
+import type { AgentRuntime } from '../models/index.js'
 
 // Guard reasons whose canned reply already addresses a specific incident.
 // On those, prepending a generic welcome ("Hola, soy Eco...") feels robotic

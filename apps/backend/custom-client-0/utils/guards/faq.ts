@@ -3,7 +3,7 @@
 // contradictory (Caso 28), generic non-troubleshooting escalation.
 
 import { t } from '../localization.js'
-import type { Guard } from './helpers.js'
+import type { Guard } from '../../models/index.js'
 import { lang } from './helpers.js'
 
 /** Generic FAQ closure: after a non-troubleshooting FAQ, customer
