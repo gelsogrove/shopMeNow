@@ -186,8 +186,9 @@ export async function agentTurn(session: AgentSession, userMessage: string): Pro
 
   let hops = 0
   let assistantReply = ''
+  const maxToolHops = ar.runtime.settings.maxToolHops || DEFAULT_MAX_TOOL_HOPS
 
-  while (hops < MAX_TOOL_HOPS) {
+  while (hops < maxToolHops) {
     hops += 1
     const response = await callAgentLLM(messages, ar.runtime)
     messages.push(response)
