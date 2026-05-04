@@ -97,12 +97,74 @@ export function isPaidButNotActivatedCase(
 
 // ── Machine type + route normalization ───────────────────────────────────────
 
+// Canonical vocabulary used by the fuzzy matcher below. Keep entries ≥ 6
+// chars so the distance threshold doesn't accidentally swallow short
+// unrelated words ("gato", "lavar", "goya", …).
+const WASHER_VOCAB = ['lavadora', 'lavatrice', 'washer', 'rentadora', 'lavelinge']
+const DRYER_VOCAB = ['secadora', 'asciugatrice', 'dryer', 'assecadora', 'sechelinge']
+
+/** Levenshtein distance (in-place DP, tiny). Used only on short tokens. */
+function levenshtein(a: string, b: string): number {
+  if (a === b) return 0
+  if (!a.length) return b.length
+  if (!b.length) return a.length
+  const m = a.length
+  const n = b.length
+  let prev = Array.from({ length: n + 1 }, (_, i) => i)
+  const curr = new Array(n + 1).fill(0)
+  for (let i = 1; i <= m; i += 1) {
+    curr[0] = i
+    for (let j = 1; j <= n; j += 1) {
+      const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1
+      curr[j] = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost)
+    }
+    prev = curr.slice()
+  }
+  return prev[n]
+}
+
+/** True if `token` is within distance `maxDist` of any vocab entry whose
+ *  length is similar (avoids matching across vastly different lengths). */
+function fuzzyMatchesVocab(token: string, vocab: string[], maxDist: number): boolean {
+  if (token.length < 6) return false
+  for (const word of vocab) {
+    if (Math.abs(word.length - token.length) > maxDist) continue
+    if (levenshtein(token, word) <= maxDist) return true
+  }
+  return false
+}
+
 export function normalizeMachineType(value: unknown): '' | 'washer' | 'dryer' {
   const normalized = String(value || '').trim().toLowerCase()
+  if (!normalized) return ''
+  // Strip non-letters for fuzzy comparison only ("lave-linge" → "lavelinge").
+  const stripped = normalized.replace(/[^a-zàèéìòùáéíóúüñç]/gi, '')
+
+  // Tier 1 — exact match on canonical vocab.
   if (['washer', 'lavatrice', 'lavadora', 'washing machine'].includes(normalized)) return 'washer'
   if (['dryer', 'asciugatrice', 'secadora'].includes(normalized)) return 'dryer'
+
+  // Tier 2 — root regex (covers compound utterances and minor inflections).
   if (/lavat(?:rice|ric|rce)|lavador|wash(?:er|ing machine)/i.test(normalized)) return 'washer'
   if (/asci(?:ugatrice|ugatric)|ascig(?:atrice|aatrice|a+trice)|secador|dry(?:er|ing)/i.test(normalized)) return 'dryer'
+
+  // Tier 3 — fuzzy match (Levenshtein ≤ 2) for typos like "lavaroda",
+  // "lavdora", "secadra", "asciuagtrice". Kept conservative on length
+  // (≥ 6 chars + similar-length filter) so unrelated short words never
+  // accidentally classify.
+  //
+  // We scan TOKEN BY TOKEN because the input may be a full sentence
+  // ("la lavaroda 5 no funciona"), not just a single word. Tokens are
+  // letter-only fragments; numbers / punctuation split the boundary.
+  const tokens = normalized.split(/[^a-zàèéìòùáéíóúüñç]+/i).filter(Boolean)
+  for (const token of tokens) {
+    if (fuzzyMatchesVocab(token, WASHER_VOCAB, 2)) return 'washer'
+    if (fuzzyMatchesVocab(token, DRYER_VOCAB, 2)) return 'dryer'
+  }
+  // Also try the stripped form (removes hyphens for "lave-linge").
+  if (fuzzyMatchesVocab(stripped, WASHER_VOCAB, 2)) return 'washer'
+  if (fuzzyMatchesVocab(stripped, DRYER_VOCAB, 2)) return 'dryer'
+
   return ''
 }
 

@@ -133,26 +133,16 @@ export class CustomClientChatbotService {
         },
       })
 
-      // Welcome merge (Option C): on the first turn (no prior history), prepend the workspace
-      // welcomeMessage to the chatbot reply so the customer receives one combined message
-      // ("¡Hola! Soy ...\n\nTranquilo, te ayudo. ¿En qué...?") instead of two separate ones.
-      // Substitute the common template variables BEFORE prepending so customers never see
-      // raw `{{chatbotName}}` placeholders. Workspaces typically store the welcome with
-      // `{{chatbotName}}` as a literal — sub it for the workspace's chatbotName when known,
-      // and fall back to a neutral assistant name otherwise.
-      const isFirstTurn = params.history.length === 0
-      if (isFirstTurn && params.welcomeMessage && output.reply) {
-        const resolvedWelcome = params.welcomeMessage
-          .split("{{chatbotName}}")
-          .join("Ecolaundry")
-          .split("{{customerName}}")
-          .join(params.userName || "")
-          .replace(/\{\{[^}]+\}\}/g, "")
-          .trim()
-        if (resolvedWelcome) {
-          output.reply = `${resolvedWelcome}\n\n${output.reply}`
-        }
-      }
+      // NOTE: previously this service prepended `params.welcomeMessage`
+      // (taken from `workspace.welcomeMessage`, e.g. "Hi! 👋 I'm Ecolaundry,
+      // your Ecolaundry assistant.") to the chatbot reply on the first turn.
+      // That caused a DOUBLE welcome on cliente-0, because cliente-0 already
+      // emits its own localized welcome from agent.ts via
+      // `settings.welcomeMessage` in custom-client-0/json/settings.json.
+      // The custom chatbot module is the single source of truth for its own
+      // greeting; the host workspace.welcomeMessage stays unused for these
+      // chatbots. If a future chatbot module needs the host welcome, it can
+      // accept it via `config` and prepend it itself.
 
       // Attach wipMessage from workspace settings (used by widget/WhatsApp to show debug banner)
       if (params.debugChannel && params.wipMessage) {

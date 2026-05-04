@@ -200,9 +200,22 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   }
 
   // Machine type
-  if (!state.machineType) {
-    const mt = normalizeMachineType(trimmed)
-    if (mt) state.machineType = mt
+  // We accept a NEW machineType even when state.machineType is already set,
+  // IF the message explicitly names a machine type (washer/dryer keyword
+  // or a fuzzy match). This covers two real cases:
+  //   - Customer switches machine ("ahora la secadora 7 no funciona" after
+  //     resolving the washer).
+  //   - Customer corrects themselves ("ah no perdón es la secadora").
+  // The previous machineType is overwritten only if normalizeMachineType
+  // succeeds AND the result differs from the stored value.
+  const mt = normalizeMachineType(trimmed)
+  if (mt && mt !== state.machineType) {
+    // If the type changes, clear the stale machineNumber too (it belonged
+    // to the previous machine and may not match the new one).
+    if (state.machineType && mt !== state.machineType) {
+      state.machineNumber = ''
+    }
+    state.machineType = mt
   }
 
   // Machine number.
@@ -211,31 +224,46 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   //      Only when location is already known so we don't mis-grab a stray
   //      digit during a free-form turn.
   //   2. Inline within a sentence: "...lavadora 5", "secadora 3", "lavatrice 7".
-  //      Captures multi-fact messages like "Estoy en Mataró con la lavadora 5"
-  //      where location is being extracted in the SAME turn — so we cannot
-  //      gate this branch on `state.location`.
-  if (!state.machineNumber) {
-    if (state.location) {
-      const whole = trimmed.match(/^\s*(?:la\s+|n\.?\s*|num(?:ero)?\s*[:.#]?\s*)?(\d{1,3})\s*$/i)
-      if (whole) state.machineNumber = whole[1]
-    }
-    if (!state.machineNumber) {
-      const inline = trimmed.match(/\b(?:lavadora|secadora|lavatrice|asciugatrice|washer|dryer|rentadora|assecadora)\s+(?:n[º°.]?\s*|num(?:ero)?\s*[:.#]?\s*)?(\d{1,3})\b/i)
-      if (inline) state.machineNumber = inline[1]
-    }
+  //
+  // Update strategy: pattern 1 only fires when machineNumber is empty
+  // (otherwise a bare "5" mid-conversation would clobber the real number).
+  // Pattern 2 — explicit "lavadora 7" / "secadora 3" — ALWAYS updates,
+  // because that is an unambiguous re-statement by the customer (machine
+  // switch or correction).
+  if (!state.machineNumber && state.location) {
+    const whole = trimmed.match(/^\s*(?:la\s+|n\.?\s*|num(?:ero)?\s*[:.#]?\s*)?(\d{1,3})\s*$/i)
+    if (whole) state.machineNumber = whole[1]
+  }
+  const inline = trimmed.match(/\b(?:lavadora|secadora|lavatrice|asciugatrice|washer|dryer|rentadora|assecadora)\s+(?:n[º°.]?\s*|num(?:ero)?\s*[:.#]?\s*)?(\d{1,3})\b/i)
+  if (inline && inline[1] !== state.machineNumber) {
+    state.machineNumber = inline[1]
+  }
+  // Fuzzy fallback: if machineType was just set in THIS turn (regex above
+  // didn't match because the customer mistyped the keyword, e.g. "lavaroda 5"),
+  // grab the first 1-3 digit number in the message as the machine number.
+  // Conservative: only if no number is already stored AND we know the type.
+  if (!state.machineNumber && state.machineType && !inline) {
+    const fuzzyNum = trimmed.match(/\b(\d{1,3})\b/)
+    if (fuzzyNum) state.machineNumber = fuzzyNum[1]
   }
 
   // Display state — covers SEL/PUSH/DOOR/ALM family/AL001/PRICE/BLANK first;
   // then any uppercase short token that matches the display whitelist.
   // We require state.machineType to be known so we don't grab "PINEDA" or
   // "GOYA" as a display when they're really pueblos.
-  if (!state.displayState) {
-    const display = extractDisplayState(trimmed)
-    if (display) {
-      state.displayState = display
-    } else if (state.machineType && shouldAcceptAsDisplay(trimmed)) {
-      state.displayState = trimmed.replace(/[.,!?¿¡:;"'()]/g, '').trim().toUpperCase()
-    }
+  //
+  // DISPLAY-CHANGE RULE: we accept a NEW display even when state.displayState
+  // is already set, IF the message contains a recognised display token that
+  // is different from the one in state. This covers the "progress" case
+  // where the customer follows the canonical instruction (SEL → presses the
+  // machine number → display advances to PUSH) and reports the new code.
+  // Without this rule the flow engine sees "no" and routes to case_X_persist
+  // (escalation), which is wrong: the display has CHANGED, not persisted.
+  const newDisplay = extractDisplayState(trimmed)
+  if (newDisplay && newDisplay !== state.displayState) {
+    state.displayState = newDisplay
+  } else if (!state.displayState && state.machineType && shouldAcceptAsDisplay(trimmed)) {
+    state.displayState = trimmed.replace(/[.,!?¿¡:;"'()]/g, '').trim().toUpperCase()
   }
 
   // Payment signal. If we just asked "¿Has podido realizar el pago?", accept
