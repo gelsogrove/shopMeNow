@@ -37,8 +37,6 @@ import {
 } from './payment.js'
 
 import {
-  guardCaso5AwaitRelato,
-  guardCaso5AwaitDisplay,
   guardCaso5Al001AskBefore,
   guardCaso14AlmDoor,
   guardCaso14AlmDoorEscalate,
@@ -90,8 +88,6 @@ export const GUARD_PIPELINE: Guard[] = [
   guardCaso4AskCambio,
   guardCaso4AwaitCambio,
   guardCaso4AwaitConfirmation,
-  guardCaso5AwaitRelato,
-  guardCaso5AwaitDisplay,
   guardCaso8AskCode,
   guardCaso8AwaitLocation,
   guardCaso8AskAmount,

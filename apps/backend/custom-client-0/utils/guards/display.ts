@@ -6,48 +6,18 @@ import { t, tt } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { lang, RECOVERABLE_DISPLAYS } from './helpers.js'
 
-/** Caso 5 step 2 — customer described what happened. */
-export const guardCaso5AwaitRelato: Guard = (ar) => {
-  if (
-    ar.state.pendingFlow !== 'caso5-await-relato' ||
-    ar.state.operatorRequested ||
-    ar.state.customerNameRequested
-  ) {
-    return null
-  }
-  ar.state.pendingFlow = 'caso5-await-display'
-  return { reply: t('caso5GuideRetry', lang(ar)), reason: 'caso5-guide-retry' }
-}
-
-/** Caso 5 step 3 — customer reports the screen state after the retry. */
-export const guardCaso5AwaitDisplay: Guard = (ar, userMessage) => {
-  if (
-    ar.state.pendingFlow !== 'caso5-await-display' ||
-    ar.state.operatorRequested ||
-    ar.state.customerNameRequested
-  ) {
-    return null
-  }
-  const lower = userMessage.trim().toLowerCase()
-  const stillBroken = /\b(al\s*0*0?1|sigue|persiste|no\s+(funciona|va|arranca)|igual|mismo)/i.test(lower)
-  const resolved = !stillBroken && /^(s[ií]|funciona|ya\s+(va|funciona)|ahora\s+(s[ií]|funciona)|nada|en\s+blanco|vacío|gracias|perfect)/i.test(lower)
-  ar.state.pendingFlow = ''
-  if (resolved) {
-    ar.resolved = true
-    ar.state.pendingClosure = 'resolved'
-    return { reply: t('caso5Resolved', lang(ar)), reason: 'caso5-resolved' }
-  }
-  ar.state.escalationReason = 'Caso 5 — AL001 persiste tras la guía de secuencia correcta'
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
-  const escalate = t('doubleChargeReview', lang(ar))
-  const nameAsk = t('customerNameAsk', lang(ar))
-  return { reply: `${escalate} ${nameAsk}`, reason: 'caso5-escalate' }
-}
-
-/** Caso 5 — AL001: after location + machineType + machineNumber, ask
- *  "what did you do just before?" instead of going straight to escalation. */
+/** Caso 5 — AL001: after location + machineType + machineNumber, intercept
+ *  the alarm BEFORE the LLM jumps to escalation. We open the case with the
+ *  educational "what did you do just before?" prompt; the LLM then drives
+ *  the 2 remaining turns (gather context → guide sequence → confirm
+ *  resolution) using its tool box. mark_resolved is called by the LLM on
+ *  customer confirmation in ANY language ("ora funciona", "ya va",
+ *  "now it works", …).
+ *
+ *  This used to be a 3-guard chain (caso5-await-relato + caso5-await-display)
+ *  but the latter two relied on Spanish-only regex (yes/no detection) and
+ *  escalated incorrectly when the customer answered in another language.
+ *  See architecture doc: deterministic guards must NOT classify intent. */
 export const guardCaso5Al001AskBefore: Guard = (ar) => {
   const display = ar.state.displayState.toUpperCase().replace(/\s+/g, '')
   if (
@@ -65,7 +35,6 @@ export const guardCaso5Al001AskBefore: Guard = (ar) => {
   ar.state.customerNameRequested = false
   ar.pendingEscalation = null
   ar.state.activeFlowId = 'caso5-al001'
-  ar.state.pendingFlow = 'caso5-await-relato'
   return { reply: t('caso5Al001AskBefore', lang(ar)), reason: 'caso5-al001-ask-before' }
 }
 

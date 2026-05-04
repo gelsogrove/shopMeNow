@@ -91,6 +91,4 @@ export type SessionState = {
     | 'caso4-ask-cambio'
     | 'caso4-await-cambio'
     | 'caso4-await-confirmation'
-    | 'caso5-await-relato'
-    | 'caso5-await-display'
 }
