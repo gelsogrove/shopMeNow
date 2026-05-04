@@ -752,6 +752,45 @@ function ChatScreen({
     return map
   }, [todos])
 
+  // Count of TODOs blocking deletion of each session.
+  // Sessions with at least one TODO referring to one of their messages cannot
+  // be deleted until those TODOs are removed/moved on the kanban.
+  const todoCountBySession = useMemo(() => {
+    const messageIdToSession = new Map<string, string>()
+    sessions.forEach((s) =>
+      s.messages.forEach((m) => messageIdToSession.set(m.id, s.id))
+    )
+    const map = new Map<string, number>()
+    todos.forEach((t) => {
+      const sid = messageIdToSession.get(t.dialogId)
+      if (sid) map.set(sid, (map.get(sid) || 0) + 1)
+    })
+    return map
+  }, [sessions, todos])
+
+  const deleteSession = async (sessionId: string) => {
+    const blocking = todoCountBySession.get(sessionId) || 0
+    if (blocking > 0) {
+      alert(
+        `This chat has ${blocking} TODO${
+          blocking === 1 ? "" : "s"
+        } on the kanban. Delete or move them first, then retry.`
+      )
+      return
+    }
+    if (!confirm("Delete this chat? Messages will be lost.")) return
+    const res = await fetch(`${API_BASE}/sessions/${sessionId}`, {
+      method: "DELETE",
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      alert(data.message || data.error || "Failed to delete chat")
+      return
+    }
+    if (activeSessionId === sessionId) setActiveSessionId(null)
+    fetchAll()
+  }
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       <TopBar
@@ -810,41 +849,68 @@ function ChatScreen({
                 /^(new customer|test_|playground_|unknown)/i.test(name.trim())
               const primary = phone || (!isGenericName ? name : null) || "Unknown"
               const secondary = !isGenericName && phone ? name : null
+              const blockingTodos = todoCountBySession.get(s.id) || 0
+              const canDelete = blockingTodos === 0
               return (
-                <button
+                <div
                   key={s.id}
-                  onClick={() => setActiveSessionId(s.id)}
-                  className={`w-full text-left px-3 py-2 border-b hover:bg-gray-50 transition ${
+                  className={`group relative border-b hover:bg-gray-50 transition ${
                     isActive
                       ? "bg-emerald-50 border-l-4 border-l-emerald-500"
                       : ""
                   }`}
                 >
-                  <div className="font-medium text-sm truncate">{primary}</div>
-                  {secondary && (
-                    <div className="text-[10px] text-gray-500 truncate">
-                      {secondary}
-                    </div>
-                  )}
-                  {lastMsg && (
-                    <div
-                      className="text-xs text-gray-500 mt-0.5 overflow-hidden"
-                      style={{
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                      }}
-                    >
-                      {lastMsg.direction === "OUTBOUND" ? "🤖 " : ""}
-                      {lastMsg.content}
-                    </div>
-                  )}
-                  {!lastMsg && (
-                    <div className="text-[10px] text-gray-400 italic mt-0.5">
-                      No messages yet
-                    </div>
-                  )}
-                </button>
+                  <button
+                    onClick={() => setActiveSessionId(s.id)}
+                    className="w-full text-left px-3 py-2 pr-9"
+                  >
+                    <div className="font-medium text-sm truncate">{primary}</div>
+                    {secondary && (
+                      <div className="text-[10px] text-gray-500 truncate">
+                        {secondary}
+                      </div>
+                    )}
+                    {lastMsg && (
+                      <div
+                        className="text-xs text-gray-500 mt-0.5 overflow-hidden"
+                        style={{
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                        }}
+                      >
+                        {lastMsg.direction === "OUTBOUND" ? "🤖 " : ""}
+                        {lastMsg.content}
+                      </div>
+                    )}
+                    {!lastMsg && (
+                      <div className="text-[10px] text-gray-400 italic mt-0.5">
+                        No messages yet
+                      </div>
+                    )}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      deleteSession(s.id)
+                    }}
+                    disabled={!canDelete}
+                    title={
+                      canDelete
+                        ? "Delete this chat"
+                        : `Cannot delete: ${blockingTodos} TODO${
+                            blockingTodos === 1 ? "" : "s"
+                          } on the kanban reference this chat. Remove them first.`
+                    }
+                    className={`absolute top-2 right-2 p-1 rounded transition ${
+                      canDelete
+                        ? "opacity-0 group-hover:opacity-100 text-red-500 hover:bg-red-50"
+                        : "opacity-60 text-gray-400 cursor-not-allowed"
+                    }`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               )
             })}
           </div>

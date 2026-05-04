@@ -173,11 +173,24 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     if (mt) state.machineType = mt
   }
 
-  // Machine number — only when location is already known. Loose match:
-  // "4", "la 4", "numero 4".
-  if (state.location && !state.machineNumber) {
-    const m = trimmed.match(/^\s*(?:la\s+|n\.?\s*|num(?:ero)?\s*[:.#]?\s*)?(\d{1,3})\s*$/i)
-    if (m) state.machineNumber = m[1]
+  // Machine number.
+  // Two patterns:
+  //   1. The whole message is the number (loose: "4", "la 4", "numero 4").
+  //      Only when location is already known so we don't mis-grab a stray
+  //      digit during a free-form turn.
+  //   2. Inline within a sentence: "...lavadora 5", "secadora 3", "lavatrice 7".
+  //      Captures multi-fact messages like "Estoy en Mataró con la lavadora 5"
+  //      where location is being extracted in the SAME turn — so we cannot
+  //      gate this branch on `state.location`.
+  if (!state.machineNumber) {
+    if (state.location) {
+      const whole = trimmed.match(/^\s*(?:la\s+|n\.?\s*|num(?:ero)?\s*[:.#]?\s*)?(\d{1,3})\s*$/i)
+      if (whole) state.machineNumber = whole[1]
+    }
+    if (!state.machineNumber) {
+      const inline = trimmed.match(/\b(?:lavadora|secadora|lavatrice|asciugatrice|washer|dryer|rentadora|assecadora)\s+(?:n[º°.]?\s*|num(?:ero)?\s*[:.#]?\s*)?(\d{1,3})\b/i)
+      if (inline) state.machineNumber = inline[1]
+    }
   }
 
   // Display state — covers SEL/PUSH/DOOR/ALM family/AL001/PRICE/BLANK first;

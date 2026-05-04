@@ -3,9 +3,12 @@ import { Request, Response } from "express"
 import * as fs from "fs"
 import * as path from "path"
 import { getChatEngine } from "../../../application/chat-engine"
+import { CustomClientChatbotService } from "../../../application/services/custom-client-chatbot.service"
 import { detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
 import { buildPhoneVariants } from "../../../utils/phone"
 import logger from "../../../utils/logger"
+
+const customClientChatbotService = new CustomClientChatbotService()
 
 const ECOLAUNDRY_SLUG = "ecolaundry"
 let ecolaundryWorkspaceIdCache: string | null = null
@@ -296,11 +299,88 @@ export class PlaygroundController {
         },
       })
 
-      // 2) Run the chat engine (isPlayground=true → billing bypassed,
-      //    behaves like debugMode: full LLM flow, no credit consumption)
+      // 2) If the workspace has a custom chatbot module (e.g. cliente-0),
+      //    call it DIRECTLY here — bypassing chat-engine + FlowWorkspaceStrategy.
+      //    The default FlowWorkspaceStrategy ignores customChatbotId and falls
+      //    back to a generic Router LLM that does not know about cliente-0
+      //    (it ends up calling contactOperator() on the very first message).
+      //    The widget controller already does this same direct invocation.
       let botResponse = ""
       let engineError: any = null
-      try {
+
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: {
+          slug: true,
+          customChatbotId: true,
+          welcomeMessage: true,
+          channelStatus: true,
+          debugMode: true,
+        },
+      })
+
+      if (workspace?.customChatbotId) {
+        try {
+          // Build conversation history for the custom chatbot
+          const recentMessages = await prisma.message.findMany({
+            where: { chatSessionId: session.id, deletedAt: null },
+            orderBy: { createdAt: "desc" },
+            take: 20,
+            select: { direction: true, content: true },
+          })
+          const history = recentMessages
+            .reverse()
+            // Skip the inbound message we just persisted (the custom chatbot
+            // expects the LATEST user message via `userMessage`, not in history).
+            .slice(0, -1)
+            .map((m) => ({
+              role: (m.direction === "INBOUND" ? "user" : "assistant") as
+                | "user"
+                | "assistant",
+              content: m.content || "",
+            }))
+
+          const customResult = await customClientChatbotService.invoke({
+            workspaceId,
+            workspaceSlug: workspace.slug,
+            customChatbotId: workspace.customChatbotId,
+            userMessage: message,
+            userName: customer.name,
+            channel: "playground",
+            welcomeMessage:
+              typeof workspace.welcomeMessage === "string"
+                ? workspace.welcomeMessage
+                : "",
+            wipMessage: "",
+            channelActive: workspace.channelStatus !== false,
+            debugChannel: workspace.debugMode === true,
+            isPlayground: true,
+            language: customer.language || "es",
+            sessionId: session.id,
+            customerId: customer.id,
+            phoneNumber: customer.phone || undefined,
+            history,
+          })
+
+          if (customResult.handled && customResult.output?.reply) {
+            botResponse = customResult.output.reply
+          } else if (customResult.output?.error) {
+            engineError = new Error(
+              `custom-client-${workspace.customChatbotId} error: ${customResult.output.error}`
+            )
+          }
+        } catch (err: any) {
+          engineError = err
+          logger.error("[Playground] Custom chatbot threw:", {
+            customChatbotId: workspace.customChatbotId,
+            message: err?.message,
+            stack: err?.stack,
+          })
+        }
+      }
+
+      // Fallback to chat-engine for workspaces without a custom chatbot.
+      if (!botResponse && !engineError) try {
         const chatEngine = getChatEngine(prisma as any)
         const result = await chatEngine.routeMessage({
           workspaceId,
@@ -369,6 +449,67 @@ export class PlaygroundController {
     } catch (error: any) {
       logger.error("Playground sendChat error:", error)
       return res.status(500).json({ error: "Failed to send chat", message: error.message })
+    }
+  }
+
+  // DELETE /api/v1/playground/sessions/:id
+  // Deletes a chat session and its messages. BLOCKED with 409 if any TODO
+  // still references one of this session's messages — the user must clean up
+  // the kanban first. We match TODOs by their dialogId, which the frontend
+  // sets to the message id when creating a TODO from the chat UI.
+  async deleteSession(req: Request, res: Response) {
+    try {
+      const { id } = req.params
+      if (!id) {
+        return res.status(400).json({ error: "session id required" })
+      }
+
+      const workspaceId = await getEcolaundryWorkspaceId()
+
+      const session = await prisma.chatSession.findFirst({
+        where: { id, workspaceId },
+        select: {
+          id: true,
+          messages: { where: { deletedAt: null }, select: { id: true } },
+        },
+      })
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" })
+      }
+
+      const messageIds = session.messages.map((m) => m.id)
+      const blockingTodos = messageIds.length
+        ? await prisma.playgroundTodo.findMany({
+            where: { workspaceId, dialogId: { in: messageIds } },
+            select: { id: true, commentTitle: true, status: true },
+          })
+        : []
+
+      if (blockingTodos.length > 0) {
+        return res.status(409).json({
+          error: "CHAT_HAS_TODOS",
+          message:
+            "This chat has TODO cards on the kanban. Delete or move them first, then retry.",
+          todos: blockingTodos,
+        })
+      }
+
+      // No blocking TODOs → safe to delete. We hard-delete the session and its
+      // messages because the playground is a debug surface; production chat
+      // history isn't affected (the playground only handles the Ecolaundry
+      // demo workspace).
+      await prisma.$transaction([
+        prisma.message.deleteMany({ where: { chatSessionId: id } }),
+        prisma.chatSession.delete({ where: { id } }),
+      ])
+
+      return res.json({ ok: true, deletedSessionId: id })
+    } catch (error: any) {
+      logger.error("Playground deleteSession error:", error)
+      return res.status(500).json({
+        error: "Failed to delete session",
+        message: error.message,
+      })
     }
   }
 

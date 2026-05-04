@@ -20,11 +20,16 @@ export const tests: TestCase[] = [
   },
   {
     // Cliente dà location + tipo macchina → bot chiede solo numero.
+    // NOTE: "lavanderia" intentionally NOT in the negative list because the
+    // standard greeting ("asistente virtual de la lavandería") legitimately
+    // contains the word. The forbidden tokens that prove the bot is NOT
+    // re-asking for things it already knows are: "donde" (location question)
+    // and "lavadora o secadora" (machine-type question).
     name: 'ES — "Sto usando una lavatrice a Goya" → bot chiede solo il numero',
     run: async (ctx) => {
       const reply = await ctx.send('Sto usando una lavatrice a Goya')
       expectMentionsAll(reply, ['numero'])
-      expectMentionsNone(reply, ['lavanderia', 'donde', 'lavadora o secadora'])
+      expectMentionsNone(reply, ['donde', 'lavadora o secadora'])
       expectStateHas(ctx.session, { location: 'Goya', machineType: 'washer' })
     },
   },

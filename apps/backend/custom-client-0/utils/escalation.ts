@@ -13,6 +13,7 @@ export type EscalationContext = {
   discountCode: string
   escalationReason: string
   timestamp: string
+  pendingFlow: string
 }
 
 const NON_TROUBLE_LABEL: Record<string, string> = {
@@ -89,12 +90,17 @@ export function buildEscalationSummary(context: EscalationContext): string {
   }
 
   // Case 4: paid but not activated, central did not return change (or did
-  // but machine still won't start). The LLM may rewrite escalationReason on
-  // later turns, so we also detect by content keywords (paid + not activated).
+  // but machine still won't start). Detection is layered because the LLM
+  // may rewrite escalationReason on later turns:
+  //   - explicit "caso 4" mention in the reason
+  //   - keyword pair pagado + activado in the reason
+  //   - or the deterministic flow flag set by agent-extract when the
+  //     customer triggered the case ("he pagado y no se ha activado").
   const reason = context.escalationReason || ''
   const isCaso4 =
     /caso\s*4/i.test(reason) ||
-    (/(pagad|pagat|pagat[oa]|pago)/i.test(reason) && /(no\s+se\s+(ha\s+)?activad|no\s+arranca|sigue\s+sin)/i.test(reason))
+    (/(pagad|pagat|pagat[oa]|pago)/i.test(reason) && /(no\s+se\s+(ha\s+)?activad|no\s+arranca|sigue\s+sin)/i.test(reason)) ||
+    /^caso4-/i.test(context.pendingFlow || '')
   if (isCaso4) {
     const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
     const numberLabel = context.machineNumber || 'desconocido'
@@ -163,6 +169,7 @@ export function extractEscalationContext(state: SessionState, customerName: stri
     discountCode: state.faqCodeValue || '',
     escalationReason: state.escalationReason || '',
     timestamp: now,
+    pendingFlow: state.pendingFlow || '',
   }
 }
 
