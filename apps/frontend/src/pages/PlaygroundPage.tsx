@@ -11,13 +11,22 @@ import {
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
-import { Link, Route, Routes, useNavigate } from "react-router-dom"
+import {
+  Link,
+  Route,
+  Routes,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom"
 import rehypeHighlight from "rehype-highlight"
 import remarkGfm from "remark-gfm"
 import "highlight.js/styles/github.css"
 
 const API_BASE = "/api/v1/playground"
-const POLL_INTERVAL = 4000
+// Background refresh: rare. The chat refetches explicitly after sending,
+// and the kanban refetches after a drag. The interval is just a safety net
+// for changes done in another tab (e.g. another collaborator edits a TODO).
+const POLL_INTERVAL = 30000
 
 const ALLOWED_USERS = {
   ANDREA: { password: "Admin123", color: "#2563eb" },
@@ -131,7 +140,7 @@ function LoginScreen({ onLogin }: { onLogin: (u: PlaygroundUser) => void }) {
         <p className="text-sm text-gray-500 text-center">Login to continue</p>
         <input
           type="text"
-          placeholder="Username (ANDREA or HOLGA)"
+          placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-400 focus:outline-none"
@@ -393,17 +402,34 @@ function CreateTodoModal({
 // ----------------------------------------------------------------------------
 function TodoDetailModal({
   todo,
+  sessions,
   user,
   onClose,
   onChanged,
 }: {
   todo: Todo
+  sessions: ChatSession[]
   user: PlaygroundUser
   onClose: () => void
   onChanged: () => void
 }) {
+  const navigate = useNavigate()
   const [comment, setComment] = useState("")
   const [posting, setPosting] = useState(false)
+
+  // Find the chat session that contains the message this TODO refers to,
+  // so we can render the WHOLE conversation alongside the comment thread.
+  const relatedSession = useMemo(
+    () =>
+      sessions.find((s) => s.messages.some((m) => m.id === todo.dialogId)) ||
+      null,
+    [sessions, todo.dialogId]
+  )
+  const conversation = relatedSession?.messages || []
+  const customerLabel =
+    relatedSession?.customer?.phone ||
+    relatedSession?.customer?.name ||
+    "Conversation"
 
   const addComment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -450,7 +476,22 @@ function TodoDetailModal({
               <span className="text-xs text-gray-500">by {todo.createdBy}</span>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {relatedSession && (
+              <button
+                onClick={() => {
+                  navigate(
+                    `/demo/cliente-0?session=${relatedSession.id}&highlight=${todo.dialogId}`
+                  )
+                  onClose()
+                }}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium shadow-sm"
+                title="Jump to this chat"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Open in chat
+              </button>
+            )}
             <button onClick={remove} title="Delete">
               <Trash2 className="w-5 h-5 text-red-500" />
             </button>
@@ -460,11 +501,55 @@ function TodoDetailModal({
           </div>
         </div>
 
-        <div className="bg-gray-50 p-3 rounded text-sm border-l-4 border-emerald-400">
-          <div className="text-xs text-gray-500 mb-1">
-            Original {todo.messageType} message
+        <div className="space-y-2">
+          <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            Conversation · {customerLabel}
           </div>
-          {todo.messageContent}
+          <div
+            className="rounded-lg border p-3 max-h-72 overflow-y-auto space-y-2"
+            style={{ background: "#ece5dd" }}
+          >
+            {conversation.length === 0 && (
+              <div className="text-xs text-gray-500 italic">
+                Conversation no longer available — showing the commented message only:
+                <div className="mt-2 bg-white rounded px-2 py-1 text-sm">
+                  {todo.messageContent}
+                </div>
+              </div>
+            )}
+            {conversation.map((m) => {
+              const isInbound = m.direction === "INBOUND"
+              const isHighlighted = m.id === todo.dialogId
+              return (
+                <div
+                  key={m.id}
+                  className={`flex ${
+                    isInbound ? "justify-start" : "justify-end"
+                  }`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-lg px-3 py-2 text-sm shadow ${
+                      isInbound ? "bg-white" : "bg-[#dcf8c6]"
+                    } ${
+                      isHighlighted
+                        ? "ring-2 ring-emerald-500 ring-offset-1"
+                        : ""
+                    }`}
+                  >
+                    <div className="whitespace-pre-wrap">{m.content}</div>
+                    <div className="text-[10px] text-gray-500 mt-1">
+                      {new Date(m.createdAt).toLocaleTimeString()}
+                      {isHighlighted && (
+                        <span className="ml-2 font-semibold text-emerald-700">
+                          · commented
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -521,6 +606,7 @@ function ChatScreen({
   onLogout: () => void
 }) {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [todos, setTodos] = useState<Todo[]>([])
@@ -529,6 +615,8 @@ function ChatScreen({
   const [showNewChat, setShowNewChat] = useState(false)
   const [chatInput, setChatInput] = useState("")
   const [sendingChat, setSendingChat] = useState(false)
+  // Message id to highlight & scroll to (set when arriving from a kanban "Open in chat" click)
+  const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null)
   const chatScrollRef = useRef<HTMLDivElement>(null)
 
   const fetchAll = useCallback(async () => {
@@ -546,26 +634,89 @@ function ChatScreen({
       .then((r) => r.text())
       .then(setUsecasesMd)
       .catch(() => setUsecasesMd("# Use Cases\n\nFile not found."))
-    const interval = setInterval(fetchAll, POLL_INTERVAL)
-    return () => clearInterval(interval)
+    // Pause polling when the tab is hidden — saves backend traffic
+    // for a playground that is left open in a background tab.
+    let interval: ReturnType<typeof setInterval> | null = null
+    const start = () => {
+      if (interval) return
+      interval = setInterval(fetchAll, POLL_INTERVAL)
+    }
+    const stop = () => {
+      if (!interval) return
+      clearInterval(interval)
+      interval = null
+    }
+    const onVisibility = () => {
+      if (document.hidden) stop()
+      else {
+        fetchAll()
+        start()
+      }
+    }
+    start()
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => {
+      stop()
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
   }, [fetchAll])
 
-  useEffect(() => {
-    if (!activeSessionId && sessions.length > 0) {
-      setActiveSessionId(sessions[0].id)
+  // Sort sessions by last message timestamp DESC (most recent activity on top).
+  // Falls back to session creation/update time when there are no messages yet.
+  const sortedSessions = useMemo(() => {
+    const getLastActivity = (s: ChatSession): number => {
+      const last = s.messages[s.messages.length - 1]
+      if (last?.createdAt) return new Date(last.createdAt).getTime()
+      return new Date((s as any).updatedAt || (s as any).createdAt || 0).getTime()
     }
-  }, [sessions, activeSessionId])
+    return [...sessions].sort((a, b) => getLastActivity(b) - getLastActivity(a))
+  }, [sessions])
+
+  useEffect(() => {
+    if (!activeSessionId && sortedSessions.length > 0) {
+      setActiveSessionId(sortedSessions[0].id)
+    }
+  }, [sortedSessions, activeSessionId])
+
+  // Deep-link: ?session=<id>&highlight=<messageId> from "Open in chat" in kanban.
+  // Selects the requested session and marks the message to scroll/flash.
+  useEffect(() => {
+    const sessionParam = searchParams.get("session")
+    const highlightParam = searchParams.get("highlight")
+    if (!sessionParam && !highlightParam) return
+    if (sessionParam) setActiveSessionId(sessionParam)
+    if (highlightParam) setHighlightMessageId(highlightParam)
+    // Strip params from the URL so a refresh doesn't keep re-triggering it
+    const next = new URLSearchParams(searchParams)
+    next.delete("session")
+    next.delete("highlight")
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
 
   const activeSession = useMemo(
-    () => sessions.find((s) => s.id === activeSessionId) || null,
-    [sessions, activeSessionId]
+    () => sortedSessions.find((s) => s.id === activeSessionId) || null,
+    [sortedSessions, activeSessionId]
   )
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive (skip when we're about to
+  // jump to a specific highlighted message instead).
   useEffect(() => {
+    if (highlightMessageId) return
     const el = chatScrollRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [activeSession?.messages.length, activeSessionId])
+  }, [activeSession?.messages.length, activeSessionId, highlightMessageId])
+
+  // When a highlight is requested, scroll to that message and clear after a moment.
+  useEffect(() => {
+    if (!highlightMessageId) return
+    if (!activeSession?.messages.some((m) => m.id === highlightMessageId)) return
+    const target = document.getElementById(`msg-${highlightMessageId}`)
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" })
+    }
+    const t = setTimeout(() => setHighlightMessageId(null), 4000)
+    return () => clearTimeout(t)
+  }, [highlightMessageId, activeSession])
 
   const sendChatMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -641,14 +792,14 @@ function ChatScreen({
             className="flex-1 overflow-y-auto"
             style={{ scrollbarGutter: "stable" }}
           >
-            {sessions.length === 0 && (
+            {sortedSessions.length === 0 && (
               <div className="text-center text-xs text-gray-400 p-4">
                 No chats yet.
                 <br />
                 Click "New Chat" to start.
               </div>
             )}
-            {sessions.map((s) => {
+            {sortedSessions.map((s) => {
               const isActive = s.id === activeSessionId
               const lastMsg = s.messages[s.messages.length - 1]
               const phone = s.customer?.phone
@@ -738,27 +889,41 @@ function ChatScreen({
             {activeSession?.messages.map((m) => {
               const isInbound = m.direction === "INBOUND"
               const todoCount = todoCountByDialog.get(m.id) || 0
+              const isHighlighted = m.id === highlightMessageId
               return (
                 <div
                   key={m.id}
+                  id={`msg-${m.id}`}
                   className={`flex ${isInbound ? "justify-start" : "justify-end"}`}
                 >
                   <div
-                    className={`max-w-[75%] rounded-lg px-3 py-2 shadow text-sm relative group ${
+                    className={`max-w-[75%] rounded-lg px-3 py-2 shadow text-sm relative group transition ${
                       isInbound ? "bg-white" : "bg-[#dcf8c6]"
+                    } ${
+                      isHighlighted
+                        ? "ring-4 ring-emerald-500 ring-offset-2 animate-pulse"
+                        : ""
                     }`}
                   >
                     <div className="whitespace-pre-wrap">{m.content}</div>
-                    <div className="text-[10px] text-gray-500 mt-1 flex justify-between gap-3">
+                    <div className="text-[10px] text-gray-500 mt-1 flex justify-between items-center gap-3">
                       <span>{new Date(m.createdAt).toLocaleTimeString()}</span>
-                      <button
-                        onClick={() => setCommentingMessage(m)}
-                        className="opacity-50 group-hover:opacity-100 transition flex items-center gap-1 hover:text-emerald-700"
-                        title="Add TODO"
-                      >
-                        <MessageCircle className="w-3 h-3" />
-                        {todoCount > 0 && <span>{todoCount}</span>}
-                      </button>
+                      {/* Comment button only for chatbot (OUTBOUND) messages.
+                          Users don't comment on their own messages. */}
+                      {!isInbound && (
+                        <button
+                          onClick={() => setCommentingMessage(m)}
+                          className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/70 hover:bg-emerald-100 text-emerald-700 transition shadow-sm"
+                          title="Comment this bot reply"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          {todoCount > 0 && (
+                            <span className="text-xs font-semibold">
+                              {todoCount}
+                            </span>
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -847,12 +1012,17 @@ function KanbanScreen({
   onLogout: () => void
 }) {
   const [todos, setTodos] = useState<Todo[]>([])
+  const [sessions, setSessions] = useState<ChatSession[]>([])
   const [openTodo, setOpenTodo] = useState<Todo | null>(null)
   const [filter, setFilter] = useState<"" | Priority>("")
 
   const fetchTodos = useCallback(async () => {
-    const r = await fetch(`${API_BASE}/todos`).then((r) => r.json())
-    setTodos(r.todos || [])
+    const [todosRes, msgRes] = await Promise.all([
+      fetch(`${API_BASE}/todos`).then((r) => r.json()),
+      fetch(`${API_BASE}/messages`).then((r) => r.json()),
+    ])
+    setTodos(todosRes.todos || [])
+    setSessions(msgRes.sessions || [])
   }, [])
 
   useEffect(() => {
@@ -1023,6 +1193,7 @@ function KanbanScreen({
       {openTodo && (
         <TodoDetailModal
           todo={openTodo}
+          sessions={sessions}
           user={user}
           onClose={() => setOpenTodo(null)}
           onChanged={fetchTodos}

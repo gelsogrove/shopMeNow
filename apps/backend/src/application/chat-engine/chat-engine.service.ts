@@ -1297,6 +1297,7 @@ export class ChatEngineService {
         notificationEmail: true,
         address: true,
         catalogBaseLanguage: true,
+        customChatbotId: true,
       },
     })
 
@@ -1315,6 +1316,7 @@ export class ChatEngineService {
       workspaceName: workspace?.name || "Il nostro shop",
       address: workspace?.address || null,
       catalogBaseLanguage: workspace?.catalogBaseLanguage || null,
+      customChatbotId: workspace?.customChatbotId || null,
     }
 
     workspaceConfigCache.set(workspaceId, { config, timestamp: Date.now() })
@@ -1632,13 +1634,20 @@ export class ChatEngineService {
       // The response was generated in the OLD language — we must translate it to the NEW one,
       // even if the new language matches the catalog base language.
       const languageChangedThisTurn = rawTargetLanguage !== (input.customerLanguage || "en")
-      const shouldSkipTranslation = !languageChangedThisTurn && normalizedLanguage === catalogBaseLanguage
+      // 🤖 CUSTOM CHATBOT: When the workspace delegates conversation to a custom chatbot
+      // module (e.g. cliente-0), translation already happens INSIDE the custom chatbot's
+      // history/conversation layer. Re-running TranslationAgent here would translate twice
+      // (wasted tokens, possible message corruption). Skip it.
+      const isCustomChatbot = !!workspaceConfig.customChatbotId
+      const shouldSkipTranslation = isCustomChatbot || (!languageChangedThisTurn && normalizedLanguage === catalogBaseLanguage)
 
       if (shouldSkipTranslation) {
-        logger.info("🌍 [ChatEngine] Skipping translation (customer language matches catalog base language)", {
-          normalizedLanguage,
+        logger.info("🌍 [ChatEngine] Skipping translation", {
           catalogBaseLanguage,
+          normalizedLanguage,
           customerLanguage: input.customerLanguage,
+          reason: isCustomChatbot ? "CUSTOM_CHATBOT_OWNS_TRANSLATION" : "CUSTOMER_LANG_MATCHES_CATALOG",
+          customChatbotId: workspaceConfig.customChatbotId,
         })
       } else {
         logger.info("🌍 [ChatEngine] Before translation", {

@@ -7,7 +7,23 @@ import { detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
 import { buildPhoneVariants } from "../../../utils/phone"
 import logger from "../../../utils/logger"
 
-const ECOLAUNDRY_WORKSPACE_ID = "9d5cc88b-a550-416f-9b3b-4bcc4a11d00d"
+const ECOLAUNDRY_SLUG = "ecolaundry"
+let ecolaundryWorkspaceIdCache: string | null = null
+
+async function getEcolaundryWorkspaceId(): Promise<string> {
+  if (ecolaundryWorkspaceIdCache) return ecolaundryWorkspaceIdCache
+  const ws = await (prisma as any).workspace.findFirst({
+    where: { slug: ECOLAUNDRY_SLUG },
+    select: { id: true },
+  })
+  if (!ws) {
+    throw new Error(
+      `Ecolaundry workspace (slug=${ECOLAUNDRY_SLUG}) not found in database`
+    )
+  }
+  ecolaundryWorkspaceIdCache = ws.id
+  return ws.id
+}
 
 const ALLOWED_USERS = ["ANDREA", "HOLGA"] as const
 type PlaygroundUser = (typeof ALLOWED_USERS)[number]
@@ -55,8 +71,9 @@ export class PlaygroundController {
   // GET /api/v1/playground/messages
   async getMessages(_req: Request, res: Response) {
     try {
+      const workspaceId = await getEcolaundryWorkspaceId()
       const sessions = await prisma.chatSession.findMany({
-        where: { workspaceId: ECOLAUNDRY_WORKSPACE_ID },
+        where: { workspaceId },
         include: {
           customer: { select: { id: true, name: true, phone: true } },
           messages: {
@@ -86,8 +103,9 @@ export class PlaygroundController {
   // GET /api/v1/playground/todos
   async getTodos(_req: Request, res: Response) {
     try {
+      const workspaceId = await getEcolaundryWorkspaceId()
       const todos = await prisma.playgroundTodo.findMany({
-        where: { workspaceId: ECOLAUNDRY_WORKSPACE_ID },
+        where: { workspaceId },
         include: { comments: { orderBy: { createdAt: "desc" } } },
         orderBy: [{ status: "asc" }, { position: "asc" }, { createdAt: "desc" }],
       })
@@ -122,8 +140,9 @@ export class PlaygroundController {
         return res.status(400).json({ error: "Invalid priority" })
       }
 
+      const workspaceId = await getEcolaundryWorkspaceId()
       const lastInColumn = await prisma.playgroundTodo.findFirst({
-        where: { workspaceId: ECOLAUNDRY_WORKSPACE_ID, status: "TODO" },
+        where: { workspaceId, status: "TODO" },
         orderBy: { position: "desc" },
         select: { position: true },
       })
@@ -131,7 +150,7 @@ export class PlaygroundController {
 
       const todo = await prisma.playgroundTodo.create({
         data: {
-          workspaceId: ECOLAUNDRY_WORKSPACE_ID,
+          workspaceId,
           dialogId,
           messageType,
           messageContent,
@@ -211,10 +230,12 @@ export class PlaygroundController {
         return res.status(400).json({ error: "message is required" })
       }
 
+      const workspaceId = await getEcolaundryWorkspaceId()
+
       let session: any = null
       if (sessionId) {
         session = await prisma.chatSession.findFirst({
-          where: { id: sessionId, workspaceId: ECOLAUNDRY_WORKSPACE_ID },
+          where: { id: sessionId, workspaceId },
           include: { customer: true },
         })
       }
@@ -228,7 +249,7 @@ export class PlaygroundController {
         const phoneVariants = buildPhoneVariants(customerPhone)
         customer = await prisma.customers.findFirst({
           where: {
-            workspaceId: ECOLAUNDRY_WORKSPACE_ID,
+            workspaceId,
             OR: phoneVariants.map((v) => ({ phone: v })),
           },
         })
@@ -236,7 +257,7 @@ export class PlaygroundController {
           const safeName = customerName || `playground_${customerPhone}`
           customer = await prisma.customers.create({
             data: {
-              workspaceId: ECOLAUNDRY_WORKSPACE_ID,
+              workspaceId,
               phone: customerPhone,
               name: safeName,
               email: `${safeName.replace(/[^a-z0-9]/gi, "_")}@playground.local`,
@@ -255,7 +276,7 @@ export class PlaygroundController {
         if (!session) {
           session = await prisma.chatSession.create({
             data: {
-              workspaceId: ECOLAUNDRY_WORKSPACE_ID,
+              workspaceId,
               customerId: customer.id,
               status: "active",
             },
@@ -263,24 +284,87 @@ export class PlaygroundController {
         }
       }
 
-      const chatEngine = getChatEngine(prisma as any)
-      const result = await chatEngine.routeMessage({
-        workspaceId: ECOLAUNDRY_WORKSPACE_ID,
-        customerId: customer.id,
-        conversationId: session.id,
-        message,
-        customerLanguage: customer.language || "es",
-        customerName: customer.name,
-        customerDiscount: customer.discount || 0,
-        isPlayground: true,
-        channel: "widget",
-        registrationPromptLevel: 0,
-      } as any)
+      // 1) Persist inbound user message immediately so the UI always sees it
+      await prisma.message.create({
+        data: {
+          chatSessionId: session.id,
+          direction: "INBOUND",
+          content: message,
+          type: "TEXT",
+          status: "received",
+          aiGenerated: false,
+        },
+      })
+
+      // 2) Run the chat engine (isPlayground=true → billing bypassed,
+      //    behaves like debugMode: full LLM flow, no credit consumption)
+      let botResponse = ""
+      let engineError: any = null
+      try {
+        const chatEngine = getChatEngine(prisma as any)
+        const result = await chatEngine.routeMessage({
+          workspaceId,
+          customerId: customer.id,
+          conversationId: session.id,
+          message,
+          customerLanguage: customer.language || "es",
+          customerName: customer.name,
+          customerDiscount: customer.discount || 0,
+          isPlayground: true,
+          channel: "widget",
+          registrationPromptLevel: 0,
+        } as any)
+        botResponse =
+          (result as any).message || (result as any).response || ""
+      } catch (err: any) {
+        engineError = err
+        logger.error("[Playground] ChatEngine threw:", {
+          message: err?.message,
+          stack: err?.stack,
+        })
+      }
+
+      if (!botResponse) {
+        botResponse = engineError
+          ? `[Playground debug] Engine error: ${engineError.message || engineError}`
+          : "[Playground debug] No response from chat engine"
+      }
+
+      // 3) Persist outbound bot response so the UI shows the dialog
+      //    Note: the engine itself may also persist via MessagePersistenceService.
+      //    We check that no identical assistant message was just saved to avoid duplicates.
+      const recentBotMsg = await prisma.message.findFirst({
+        where: {
+          chatSessionId: session.id,
+          direction: "OUTBOUND",
+          createdAt: { gte: new Date(Date.now() - 30_000) },
+        },
+        orderBy: { createdAt: "desc" },
+      })
+      if (!recentBotMsg || recentBotMsg.content !== botResponse) {
+        await prisma.message.create({
+          data: {
+            chatSessionId: session.id,
+            direction: "OUTBOUND",
+            content: botResponse,
+            type: "TEXT",
+            status: "sent",
+            aiGenerated: !engineError,
+          },
+        })
+      }
+
+      // Bump session.updatedAt so list ordering reflects activity
+      await prisma.chatSession.update({
+        where: { id: session.id },
+        data: { updatedAt: new Date() },
+      })
 
       return res.json({
         sessionId: session.id,
         customerId: customer.id,
-        response: (result as any).message || (result as any).response || "",
+        response: botResponse,
+        engineError: engineError ? String(engineError.message || engineError) : null,
       })
     } catch (error: any) {
       logger.error("Playground sendChat error:", error)
