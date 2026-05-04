@@ -21,24 +21,3 @@ export function normalizeDisplayState(displayState: string): string {
   return normalized
 }
 
-export function inferPaymentCompletedFromDisplayState(
-  machineType: string | '',
-  displayState: string,
-): boolean | null {
-  if (machineType !== 'washer') return null
-
-  const normalized = normalizeDisplayState(displayState)
-  if (normalized === 'PUSH' || normalized === 'PR') return true
-  if (normalized === 'PRICE') return false
-
-  return null
-}
-
-export function isWasherPaymentPendingDisplay(displayState: string): boolean {
-  return inferPaymentCompletedFromDisplayState('washer', displayState) === false
-}
-
-export function doesDryerDisplayNeedIdentityDetails(displayState: string): boolean {
-  const normalized = normalizeDisplayState(displayState)
-  return ['ALM', 'AL001', 'BLANK', 'FILTRO', 'FALLO DE ROTACION', 'FALLO DE ASPIRACION'].includes(normalized)
-}

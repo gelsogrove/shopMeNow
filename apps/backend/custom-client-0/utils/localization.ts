@@ -568,23 +568,3 @@ export function tt(
   )
 }
 
-// Backwards-compat alias used by older code paths.
-export const QUESTIONS = {
-  location: TRANSLATIONS.location.es,
-  locationClarification: TRANSLATIONS.locationClarification.es,
-  machineType: TRANSLATIONS.machineType.es,
-  machineNumberWasher: TRANSLATIONS.machineNumberWasher.es,
-  machineNumberDryer: TRANSLATIONS.machineNumberDryer.es,
-  payment: '¿Has pagado?',
-  dryerStarted: '¿La secadora arrancó?',
-  dryerCycleContext:
-    '¿Es el primer secado de esta ropa o añadiste minutos a un ciclo que ya estaba en marcha?',
-  serviceCompleted: '¿Pudiste completar el lavado o secado?',
-  doubleChargeNarrative:
-    'Explícame, por favor, paso a paso qué has hecho desde que has entrado.',
-  last4Digits: '¿Cuáles son los últimos 4 dígitos de la tarjeta con la que pagaste?',
-  paymentProof: '¿Tienes una captura de pantalla del pago o comprobante?',
-  displayWasher: TRANSLATIONS.displayWasher.es,
-  displayDryer: TRANSLATIONS.displayDryer.es,
-  defaultHelp: TRANSLATIONS.defaultHelp.es,
-} as const

@@ -86,12 +86,3 @@ export function resetMachineFacts(state: SessionState): void {
   state.lastMissingFacts = []
   state.retryCount = 0
 }
-
-export function summarizeState(state: SessionState): string {
-  return JSON.stringify(state, null, 2)
-}
-
-export function pushDebug(debug: string[], label: string, value: unknown): void {
-  const rendered = typeof value === 'string' ? value : JSON.stringify(value, null, 2)
-  debug.push(`${label}: ${rendered}`)
-}

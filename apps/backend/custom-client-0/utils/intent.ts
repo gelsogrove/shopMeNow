@@ -79,11 +79,6 @@ export function isShortContextReply(message: string): boolean {
 // + a few Italian/English roots since cliente-0 is Spanish-only today.
 // ── Operational context ───────────────────────────────────────────────────────
 
-export function hasOperationalContextIntent(message: string): boolean {
-  const normalized = message.trim().toLowerCase()
-  return /ho messo i soldi|messo i soldi|metto i soldi|sto mettendo i soldi|inserito i soldi|ho pagato|he pagado|hemos pagado|paid already|already paid|payment completed|pagamento fatto|cosa devo fare adesso|what do i do now|que hago ahora|non aumentano i minuti|minutes did not increase|minuti non aumentano|no se ha activado|no se activa|activarla|activarse|puesta en marcha|se ha puesto en marcha/i.test(normalized)
-}
-
 export function isPaidButNotActivatedCase(
   state: SessionState,
   _issueSummary: string,
@@ -176,11 +171,6 @@ export function isAwaitingLocation(state: SessionState): boolean {
 
 export function hasGreetingIntent(message: string): boolean {
   return /\b(ciao|ciao\s+come\s+stai|hello|hi|hola|buongiorno|buonasera)\b/i.test(message.trim())
-}
-
-export function hasTechnicalIssueIntent(message: string): boolean {
-  const normalized = message.trim().toLowerCase()
-  return /non si chiude|sportello|door|non parte|non funziona|non si avvia|does not start|doesn't start|won't start|does not work|doesn't work|not working|no arranca|no funciona|no empieza|no inicia|no comienza|no se pone en marcha|no se ha activado|no se activa|activarla|activarse|puesta en marcha|stop|display|alm|sel|push|errore|error|filtro|rotacion|aspiracion|bagnat|wet|smell|odore/i.test(normalized)
 }
 
 export function detectLanguageHeuristic(message: string): SessionState['language'] | null {
@@ -287,57 +277,7 @@ export function parsePaymentAnswer(message: string): boolean | null {
   return null
 }
 
-// ── Double charge parsing ─────────────────────────────────────────────────────
-
-export function hasDoubleChargeConcern(message: string): boolean {
-  const normalized = message.trim().toLowerCase()
-  return /doble cobro|cobrado dos veces|cobr[oó]\s+dos\s+veces|me ha cobrado dos veces|double charge|charged twice|double payment|doble pago|dos veces con la tarjeta/i.test(normalized)
-}
-
-export function parseServiceCompletedAnswer(message: string): boolean | null {
-  const normalized = message.trim().toLowerCase()
-  if (!normalized) return null
-  if (/^(no|non|not yet|ancora no|todav[ií]a no)$/i.test(normalized)) return false
-  if (/\b(no he podido|non ho potuto|non sono riuscito|i could not|i wasn't able to|non ho potuto usare|no pude usar)\b/i.test(normalized)) return false
-  if (/^(s[iíì]|yes|y)$/i.test(normalized)) return true
-  if (/\b(ho lavato|he lavado|he secado|ho asciugato|i washed|i dried|si pude|si he podido)\b/i.test(normalized)) return true
-  if (/\b(lavar|lavado|lavar la ropa|wash|washed|secar|secado|dry|dried|usar la maquina|usare la macchina)\b/i.test(normalized)) return true
-  return null
-}
-
-export function extractLast4CardDigits(message: string): string | null {
-  return message.match(/\b(\d{4})\b/)?.[1] || null
-}
-
-// Detect "I cannot read / see / describe what is on the display" in any
-// supported language. The router prompt already documents this exception, but
-// the deterministic guard chain (machineNumber → display) needs an explicit
-// detector to skip straight to the photo / escalate path.
-// Detect a "mixed incident" first message — the customer reports multiple
-// concerns at once (paid + machine + double-pay confusion). The right answer
-// is to slow down and propose a "paso a paso" walkthrough. UC32.
-// Detect "I don't know" replies in any supported language. Used to insist on
-// the location question when the customer cannot or does not want to identify
-// the laundry on the first ask.
-// Detect "I cannot send a photo" — used after the bot asked for a photo of the
-// display. Triggers escalation in UC17.
-export function parsePaymentProofProvided(message: string): boolean | null {
-  const normalized = message.trim().toLowerCase()
-  if (!normalized) return null
-  if (/^(no|non|not yet|todav[ií]a no)$/i.test(normalized)) return false
-  if (/\b(no la tengo|non ce l\'ho|no tengo captura|non ho la schermata|i don't have the screenshot|non ho lo screenshot)\b/i.test(normalized)) return false
-  if (/captura|screenshot|screen|pantallazo|adjunto|allego|te la mando|te lo mando|aqui esta|here it is/i.test(normalized)) return true
-  if (/^(vale|ok|sí|si|yes|claro|de acuerdo|por supuesto|tengo una|tengo foto)$/i.test(normalized)) return true
-  return null
-}
-
-export function isAlreadyAnsweredReply(message: string): boolean {
-  const normalized = message.trim().toLowerCase()
-  if (!normalized) return false
-  return /ho gi[aà]'? rispost|l'ho gi[aà]'? detto|te l'ho gi[aà]'? detto|already answered|already told you|i already answered|ya respond[ií]|ya lo dije|gi[aà] detto/i.test(normalized)
-}
-
 // ── Post-cycle issue detection ────────────────────────────────────────────────
 
-// Re-export helpers from other modules so consumers can import from one place
+// Re-export helpers from other modules so consumers can import from one place.
 export { hasExtraButtonIssue, hasStopIntent }

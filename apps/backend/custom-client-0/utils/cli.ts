@@ -1,10 +1,12 @@
-// CLI output and formatting utilities
-export const CLI_WIDTH = 78
-export const CLI_RULE = '='.repeat(78)
-export const CLI_SUBRULE = '-'.repeat(78)
-export const BOT_MESSAGE_SEPARATOR = '\n<<<BOT_SPLIT>>>\n'
+// CLI output and formatting utilities. Only used by the demo CLI
+// (`npm run demo`); the web entrypoint goes through index.ts directly.
 
-export function wrapPlainText(text: string, width = CLI_WIDTH - 4): string[] {
+const CLI_WIDTH = 78
+const CLI_RULE = '='.repeat(78)
+const CLI_SUBRULE = '-'.repeat(78)
+const BOT_MESSAGE_SEPARATOR = '\n<<<BOT_SPLIT>>>\n'
+
+function wrapPlainText(text: string, width = CLI_WIDTH - 4): string[] {
   const lines = text.replace(/\r/g, '').split('\n')
   const wrapped: string[] = []
 
@@ -66,10 +68,3 @@ export function printCliMessage(label: 'You' | 'Bot' | 'Info' | 'Error', message
   }
 }
 
-export function printDebug(debug: string[]): void {
-  if (!debug.length) return
-  console.log('\n[DEBUG]')
-  for (const line of debug) {
-    console.log(`  ${line}`)
-  }
-}

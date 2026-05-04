@@ -159,7 +159,3 @@ export function extractEscalationContext(state: SessionState, customerName: stri
   }
 }
 
-export function isReadyToEscalate(state: SessionState): boolean {
-  // Minimum context needed to escalate: we have machine type, number, and display state
-  return !!(state.machineType && state.machineNumber && state.displayState)
-}
