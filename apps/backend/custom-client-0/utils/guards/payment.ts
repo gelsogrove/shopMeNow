@@ -27,18 +27,13 @@ export const guardCaso7AskCambio: Guard = (ar) => {
   return null
 }
 
-/** G2 — Caso 7 step 2: customer answered "sí" to cambio → ask display. */
-export const guardCaso7AwaitDisplay: Guard = (ar, userMessage) => {
-  if (ar.state.pendingFlow !== 'caso7-await-display') return null
-  ar.state.pendingFlow = ''
-  const reply = userMessage.trim().toLowerCase()
-  const cambioYes = /^(s[ií]|claro|por supuesto|s[ií]\s+lo\s+ha\s+devuelto|me\s+ha\s+devuelto)/i.test(reply)
-  if (!cambioYes) return null
-  return {
-    reply: '¿Qué aparece exactamente en la pantalla de la máquina?',
-    reason: 'caso7-await-display',
-  }
-}
+// REMOVED: guardCaso7AwaitDisplay — was a Spanish-only regex classifying
+// the customer's yes/no answer to "central returned change?". Intent
+// detection across 6 languages is the LLM's job. After
+// guardCaso7AskCambio sets pendingFlow='caso7-await-display', the LLM
+// reads the sticky-state + the prompt rule "if customer confirms change
+// returned, ask the display next" and continues the dialogue in any
+// language. See architecture doc: regex must NOT classify intent.
 
 /** Caso 4 step 4 — after location + tipo + numero, ask
  *  "¿La central te ha devuelto el cambio?". */
@@ -57,58 +52,19 @@ export const guardCaso4AskCambio: Guard = (ar) => {
   return { reply: t('centralReturnedChange', lang(ar)), reason: 'caso4-ask-cambio' }
 }
 
-/** Caso 4 step 5 — customer answered yes/no on cambio. */
-export const guardCaso4AwaitCambio: Guard = (ar, userMessage) => {
-  if (
-    ar.state.pendingFlow !== 'caso4-await-cambio' ||
-    ar.state.operatorRequested ||
-    ar.state.customerNameRequested
-  ) {
-    return null
-  }
-  const lower = userMessage.trim().toLowerCase()
-  const cambioYes = /^(s[ií]|yes|oui|sim|me\s+ha\s+devuelto|s[ií]\s+lo\s+ha\s+devuelto)/i.test(lower)
-  if (cambioYes) {
-    ar.state.pendingFlow = ''
-    ar.state.escalationReason = 'Caso 4 — central ha devuelto el cambio pero la máquina no se activa'
-    ar.state.operatorRequested = true
-    ar.state.customerNameRequested = true
-    ar.pendingEscalation = { reason: ar.state.escalationReason }
-    const escalate = t('doubleChargeReview', lang(ar))
-    const nameAsk = t('customerNameAsk', lang(ar))
-    return { reply: `${escalate} ${nameAsk}`, reason: 'caso4-escalate-cambio-yes' }
-  }
-  ar.state.pendingFlow = 'caso4-await-confirmation'
-  return { reply: t('centralRetryAfterReview', lang(ar)), reason: 'caso4-instruction' }
-}
-
-/** Caso 4 step 6 — customer replies whether the machine started after the
- *  re-mark instruction. */
-export const guardCaso4AwaitConfirmation: Guard = (ar, userMessage) => {
-  if (
-    ar.state.pendingFlow !== 'caso4-await-confirmation' ||
-    ar.state.operatorRequested ||
-    ar.state.customerNameRequested
-  ) {
-    return null
-  }
-  const lower = userMessage.trim().toLowerCase()
-  const negative = /\b(no\s+(funciona|va|arranca|se\s+(ha\s+)?activad|empieza|ha\s+arrancad)|sigue\s+(sin|igual)|no\s+responde|nada)\b/i.test(lower)
-  const resolved = !negative && /^(s[ií]|yes|ok|vale|perfecto|funciona|ya\s+va|va\s+bien|en\s+marcha|se\s+ha\s+puesto|ha\s+arranc|ahora\s+(s[ií]|funciona|va))/i.test(lower)
-  ar.state.pendingFlow = ''
-  if (resolved) {
-    ar.resolved = true
-    ar.state.pendingClosure = 'resolved'
-    return { reply: t('caso4Resolved', lang(ar)), reason: 'caso4-resolved' }
-  }
-  ar.state.escalationReason = 'Caso 4 — máquina sigue sin activar tras corregir el número en la central'
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
-  const escalate = t('doubleChargeReview', lang(ar))
-  const nameAsk = t('customerNameAsk', lang(ar))
-  return { reply: `${escalate} ${nameAsk}`, reason: 'caso4-escalate' }
-}
+// REMOVED: guardCaso4AwaitCambio + guardCaso4AwaitConfirmation —
+// these classified yes/no in Spanish (with token-level imports from a
+// few other languages) and escalated to a human operator on negative
+// matches. They suffered from the same bug as Caso 5 (regex misses any
+// non-enumerated phrasing → wrong escalation).
+//
+// The dialogue from caso4-ask-cambio onward is now driven by the LLM:
+//   1. guardCaso4AskCambio asks "¿La central te ha devuelto el cambio?"
+//   2. LLM reads pendingFlow='caso4-await-cambio', interprets the
+//      customer's yes/no semantically, calls mark_resolved or
+//      escalate_to_operator depending on outcome.
+//   3. The retry instruction (centralRetryAfterReview) is given by the
+//      LLM as part of the conversation, not a deterministic step.
 
 /** Caso 6 step 1 — after location, ask "¿has podido lavar/secar?" */
 export const guardCaso6AskPodidoLavar: Guard = (ar) => {
@@ -274,31 +230,11 @@ export const guardCaso8AwaitAmount: Guard = (ar) => {
   return { reply: t('caso8Instruction', lang(ar)), reason: 'caso8-instruction' }
 }
 
-/** Caso 8 step 5 — customer replies whether the machine started. */
-export const guardCaso8AwaitConfirmation: Guard = (ar, userMessage) => {
-  if (
-    ar.state.pendingFlow !== 'caso8-await-confirmation' ||
-    ar.state.operatorRequested ||
-    ar.state.customerNameRequested
-  ) {
-    return null
-  }
-  const lower = userMessage.trim().toLowerCase()
-  const resolved = /^(s[ií]|yes|ok|okay|vale|perfecto|funciona|ya\s+va|va\s+bien|genial|gracias|tutto\s+ok|ha\s+funcionado|funcion[oó])\b/.test(lower)
-  ar.state.pendingFlow = ''
-  if (resolved) {
-    ar.resolved = true
-    ar.state.pendingClosure = 'resolved'
-    return { reply: t('caso8Resolved', lang(ar)), reason: 'caso8-resolved' }
-  }
-  ar.state.escalationReason = 'Caso 8 — código de descuento, máquina no arrancó tras el ingreso'
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
-  const escalate = t('doubleChargeReview', lang(ar))
-  const nameAsk = t('customerNameAsk', lang(ar))
-  return { reply: `${escalate} ${nameAsk}`, reason: 'caso8-escalate' }
-}
+// REMOVED: guardCaso8AwaitConfirmation — same monolingual yes/no regex
+// problem. After caso8-await-amount sets pendingFlow='caso8-await-
+// confirmation' and gives the instruction, the LLM reads the customer's
+// reply ("ya funciona", "ora va", "now it works", "ainda no"…) in any
+// language, calls mark_resolved or escalate_to_operator accordingly.
 
 /** Caso 10 — Tarjeta de fidelización. */
 const TARJETA_TOPIC = /(tarjeta\s+(?:de\s+)?fidelizaci[oó]n|tarjeta\s+(?:de\s+)?fidelidad|loyalty\s+card|c[oó]mo\s+(?:consigo|comprar|recargar)\s+(?:la\s+)?tarjeta)/i
