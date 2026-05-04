@@ -8,6 +8,7 @@ import path from 'node:path'
 import type { LlmRequest } from './types.js'
 import type { SupportedLanguage, Settings, Runtime } from './runtime.js'
 import { detectLanguageHeuristic } from './intent.js'
+import { fetchLlmJson } from './llm-fetch.js'
 
 // Load .env from the demo directory (if present)
 try {
@@ -63,13 +64,15 @@ export async function callOpenRouter(params: LlmRequest): Promise<string> {
     throw new Error('OPENROUTER_API_KEY missing in environment')
   }
 
-  const response = await fetch(`${BASE_URL}/chat/completions`, {
+  const data = await fetchLlmJson<{
+    choices?: { message?: { content?: string } }[]
+  }>(`${BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${API_KEY}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': 'https://echatbot.ai',
-      'X-Title': 'Cliente-0 Demo CLI',
+      'X-Title': 'Cliente-0',
     },
     body: JSON.stringify({
       model: params.model || resolveModel(),
@@ -83,11 +86,6 @@ export async function callOpenRouter(params: LlmRequest): Promise<string> {
     }),
   })
 
-  if (!response.ok) {
-    throw new Error(`OpenRouter error ${response.status}: ${await response.text()}`)
-  }
-
-  const data = (await response.json()) as { choices?: { message?: { content?: string } }[] }
   return data.choices?.[0]?.message?.content?.trim() || ''
 }
 

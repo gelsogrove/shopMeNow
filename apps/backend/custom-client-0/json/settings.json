@@ -1,14 +1,25 @@
 {
+  "_comment": "Tenant configuration for Ecolaundry / cliente-0. Single source of truth for behaviour-tuning + business constants. See docs/settings.md for the full field reference.",
+
   "enabledLanguages": ["es"],
   "defaultLanguage": "es",
   "chatbotName": "Eco",
+  "companyName": "Ecolaundry",
+
   "model": "openai/gpt-4o-mini",
+  "agentTemperature": 0.3,
+  "maxToolHops": 6,
+
+  "tone": "calm, reassuring, relaxed, warm, step-by-step",
+
+  "supportEmails": {
+    "invoice": "olga@alberwaz.net",
+    "support": "service@alberwaz.net"
+  },
+  "refundFormUrl": "https://forms.gle/XFGPAd9581AhC9eu7",
+  "allowedExternalLinks": "echatbot.ai, www.echatbot.ai, forms.gle, alberwaz.net",
+
   "welcomeMessage": {
-    "es": "Hola, soy el asistente virtual de la lavandería. ¿Cómo puedo ayudarte?",
-    "it": "Ciao, sono l'assistente virtuale della lavanderia. Come posso aiutarti?",
-    "ca": "Hola, sóc l'assistent virtual de la bugaderia. Com puc ajudar-te?",
-    "en": "Hi, I'm the laundry's virtual assistant. How can I help you?",
-    "pt": "Olá, sou o assistente virtual da lavandaria. Como posso ajudar-te?",
-    "fr": "Bonjour, je suis l'assistant virtuel de la laverie. Comment puis-je t'aider ?"
+    "es": "Hola, soy el asistente virtual de la lavandería. ¿Cómo puedo ayudarte?"
   }
 }

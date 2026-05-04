@@ -39,10 +39,28 @@ export type Settings = {
   enabledLanguages: SupportedLanguage[]
   defaultLanguage: SupportedLanguage
   chatbotName?: string
+  /** Tenant brand name, e.g. "Ecolaundry". Substituted into prompts and
+   *  used by escalation/handover summaries. */
+  companyName?: string
   /** OpenRouter model id used by every LLM call in this tenant (e.g.
    *  "openai/gpt-4o-mini"). Optional; falls back to LLM_MODEL env var or
    *  a hard-coded default in `utils/llm.ts` when omitted. */
   model?: string
+  /** Sampling temperature for the agent loop (default 0.3). */
+  agentTemperature?: number
+  /** Hard cap on tool-call iterations per turn (default 6). */
+  maxToolHops?: number
+  /** Free-form description of the desired tone, injected into agent.txt. */
+  tone?: string
+  /** Tenant support email addresses, exposed to FAQ/handover messages. */
+  supportEmails?: {
+    invoice?: string
+    support?: string
+  }
+  /** Public refund-form URL, used inside FAQ replies for double-charge etc. */
+  refundFormUrl?: string
+  /** Whitelisted external domains the bot is allowed to mention. */
+  allowedExternalLinks?: string
   welcomeMessage?: Partial<Record<SupportedLanguage, string>>
 }
 
@@ -127,4 +145,32 @@ export function replaceVars(template: string, vars: Record<string, string>): str
     (text, [key, value]) => text.replaceAll(`{{${key}}}`, value),
     template,
   )
+}
+
+/**
+ * Build the standard variable bag derived from `settings.json`. Use this any
+ * time you render a customer-facing string that may contain placeholders like
+ * `{{companyName}}`, `{{invoiceEmail}}`, `{{supportEmail}}`, `{{refundFormUrl}}`.
+ *
+ * Adding a new setting? Map it here once and every consumer (FAQs,
+ * localization, prompts) gets the substitution automatically.
+ */
+export function buildSettingsVars(settings: Settings): Record<string, string> {
+  return {
+    chatbotName: settings.chatbotName || 'Eco',
+    companyName: settings.companyName || 'Ecolaundry',
+    invoiceEmail: settings.supportEmails?.invoice || '',
+    supportEmail: settings.supportEmails?.support || '',
+    refundFormUrl: settings.refundFormUrl || '',
+    allowedExternalLinks: settings.allowedExternalLinks || '',
+    tone: settings.tone || 'calm, reassuring, relaxed, warm, step-by-step',
+  }
+}
+
+/**
+ * Convenience wrapper: substitutes settings-derived placeholders in `text`.
+ * Equivalent to `replaceVars(text, buildSettingsVars(runtime.settings))`.
+ */
+export function applySettingsVars(text: string, runtime: Runtime): string {
+  return replaceVars(text, buildSettingsVars(runtime.settings))
 }

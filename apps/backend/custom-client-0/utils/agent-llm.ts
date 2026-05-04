@@ -1,11 +1,17 @@
 // Thin wrapper around OpenRouter chat completions for the agent.
 // Sends the conversation + tools schema, returns the assistant message
 // (which may include tool_calls to be executed by the dispatcher).
+//
+// Resilience: OpenRouter is a multi-provider gateway and frequently returns
+// 502/504 when a backend provider blips. We delegate the HTTP call to
+// `fetchLlmJson()` which adds timeout + retry-with-backoff so a single bad
+// second doesn't ruin the customer's turn.
 
 import process from 'node:process'
 
 import { API_KEY, resolveModel } from './llm.js'
 import { TOOLS } from './agent-tools.js'
+import { fetchLlmJson } from './llm-fetch.js'
 import type { AgentMessage } from './agent-types.js'
 import type { Runtime } from './runtime.js'
 
@@ -16,13 +22,15 @@ export async function callAgentLLM(
   runtime?: Runtime,
 ): Promise<AgentMessage> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing')
-  const response = await fetch(`${BASE_URL}/chat/completions`, {
+  const data = await fetchLlmJson<{
+    choices?: Array<{ message?: AgentMessage }>
+  }>(`${BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${API_KEY}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': 'https://echatbot.ai',
-      'X-Title': 'Cliente-0 Agent CLI',
+      'X-Title': 'Cliente-0 Agent',
     },
     body: JSON.stringify({
       model: resolveModel(runtime),
@@ -33,11 +41,5 @@ export async function callAgentLLM(
       max_tokens: 800,
     }),
   })
-  if (!response.ok) {
-    throw new Error(`OpenRouter error ${response.status}: ${await response.text()}`)
-  }
-  const data = (await response.json()) as {
-    choices?: Array<{ message?: AgentMessage }>
-  }
   return data.choices?.[0]?.message || { role: 'assistant', content: '' }
 }
