@@ -2,6 +2,7 @@
   "enabledLanguages": ["es"],
   "defaultLanguage": "es",
   "chatbotName": "Eco",
+  "model": "openai/gpt-4o-mini",
   "welcomeMessage": {
     "es": "Hola, soy el asistente virtual de la lavandería. ¿Cómo puedo ayudarte?",
     "it": "Ciao, sono l'assistente virtuale della lavanderia. Come posso aiutarti?",

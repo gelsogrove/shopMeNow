@@ -5,7 +5,7 @@
 // to call; the side-effects live here.
 
 import type { AgentRuntime } from './agent-types.js'
-import { getLocationOverride } from './runtime.js'
+import { getFaqs, getLocationOverride } from './runtime.js'
 import { startFlow, advanceActiveFlow } from './flow-engine.js'
 
 // ── Tool definitions (passed to the LLM as JSON schemas) ──────────────────────
@@ -125,11 +125,15 @@ export const TOOLS = [
     function: {
       name: 'apply_faq_override',
       description:
-        'Read the per-location override for a given FAQ key from locations.json. Returns the location-specific text if present, else the base text. Use for buy-loyalty-card, recharge-loyalty-card, hours-prices, invoice.',
+        'Look up an FAQ answer (with optional per-location override). Returns the location-specific text if the active location overrides it, else the base text from json/faqs.json. Always prefer textToUse from the response. Valid keys (camelCase, must match json/faqs.json exactly): washDryTime, openingHours, washerCapacity, detergents, paymentMethods, pricing, appDownload, colorTemperature, greaseStains, mixedColors, machineHygiene, ecoProducts, noFoamNormal, doubleCharge, paidButNotStarting, errorAl001, occupiedMachine, compensationCode, refundRequest, invoiceRequest, loyaltyCard, locationDifferences.',
       parameters: {
         type: 'object',
         properties: {
-          faqKey: { type: 'string' },
+          faqKey: {
+            type: 'string',
+            description:
+              'One of the keys defined in json/faqs.json (camelCase, e.g. "loyaltyCard", "openingHours", "pricing").',
+          },
         },
         required: ['faqKey'],
       },
@@ -293,7 +297,11 @@ export async function executeTool(
       const key = String(args.faqKey || '')
       const override = getLocationOverride(runtime, state.location)
       const overrideAnswer = override?.faqOverrides?.[key]
-      const baseAnswer = (runtime as unknown as { faqs?: Record<string, string> }).faqs?.[key] || ''
+      // Base FAQs live in a module-level singleton populated by
+      // runtime.ts:loadRuntime() → setFaqs(). They are NOT on the Runtime
+      // object itself; the previous `runtime.faqs` lookup always returned
+      // undefined, so the LLM never received the base text.
+      const baseAnswer = getFaqs()[key] || ''
       return {
         ok: true,
         data: {

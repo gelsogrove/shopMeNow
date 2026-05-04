@@ -32,7 +32,7 @@ import { autoExtractFacts } from './utils/agent-extract.js'
 import { executeTool } from './utils/agent-tools.js'
 import { loadPromptBundle, buildSystemPrompt } from './utils/agent-prompt.js'
 import { callAgentLLM } from './utils/agent-llm.js'
-import { renderWelcomeForTurn, stripWelcomeParagraphs } from './utils/agent-welcome.js'
+import { renderWelcomeForTurn, shouldShowWelcome, stripWelcomeParagraphs } from './utils/agent-welcome.js'
 import { printCliBanner, printCliMessage } from './utils/cli.js'
 import { API_KEY } from './utils/llm.js'
 
@@ -50,59 +50,6 @@ try {
 }
 
 const MAX_TOOL_HOPS = 6
-
-// Reasons whose guard reply already addresses a specific incident — in those
-// cases skipping the welcome paragraph keeps the dialog natural ("Hola, soy
-// el asistente… Para obtenerla, debes enviar un correo a olga@…" feels
-// robotic). For purely conversational openers (gather questions, generic
-// re-asks) we still prepend the welcome.
-const GUARD_REASONS_NO_WELCOME = new Set([
-  'caso9-factura',
-  'caso10-tarjeta-base',
-  'caso10-tarjeta-override',
-  'caso10-tarjeta-override-direct',
-  'caso11-recarga',
-  'caso12-horarios',
-  'caso12-precio',
-  'caso25-empathic',
-  'caso26-ask-refund-data',
-  'caso27-review',
-  'caso28-contradictory',
-  'escalate-non-troubleshooting',
-  'caso21-24-location-mismatch',
-  'caso17-direct-escalate',
-  'numeric-code-ask-letters',
-  'numeric-code-no-letters',
-  'numeric-code-yes-letters',
-  'caso8-ask-code',
-  'caso8-await-location',
-  'caso8-ask-amount',
-  'caso8-instruction',
-  'caso8-resolved',
-  'caso8-escalate',
-  'caso8-confirm-location',
-  'caso8-escalate-location',
-  'force-payment',
-  'caso4-ask-cambio',
-  'caso4-instruction',
-  'caso4-resolved',
-  'caso4-escalate',
-  'caso4-escalate-cambio-yes',
-  'caso5-al001-ask-before',
-  'caso5-ask-relato',
-  'caso5-guide-retry',
-  'caso5-resolved',
-  'caso5-escalate',
-  'caso15-explain',
-  'caso14-alm-door',
-  'faq-closure',
-  'caso25-escalate',
-])
-
-function shouldShowWelcome(reason: string | undefined): boolean {
-  if (!reason) return true
-  return !GUARD_REASONS_NO_WELCOME.has(reason)
-}
 
 // ── Session lifecycle ─────────────────────────────────────────────────────────
 
@@ -179,7 +126,7 @@ export async function agentTurn(session: AgentSession, userMessage: string): Pro
 
   while (hops < MAX_TOOL_HOPS) {
     hops += 1
-    const response = await callAgentLLM(messages)
+    const response = await callAgentLLM(messages, ar.runtime)
     messages.push(response)
 
     const toolCalls = response.tool_calls || []

@@ -4,13 +4,17 @@
 
 import process from 'node:process'
 
-import { API_KEY, MODEL } from './llm.js'
+import { API_KEY, resolveModel } from './llm.js'
 import { TOOLS } from './agent-tools.js'
 import type { AgentMessage } from './agent-types.js'
+import type { Runtime } from './runtime.js'
 
 const BASE_URL = process.env.LLM_BASE_URL || 'https://openrouter.ai/api/v1'
 
-export async function callAgentLLM(messages: AgentMessage[]): Promise<AgentMessage> {
+export async function callAgentLLM(
+  messages: AgentMessage[],
+  runtime?: Runtime,
+): Promise<AgentMessage> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing')
   const response = await fetch(`${BASE_URL}/chat/completions`, {
     method: 'POST',
@@ -21,7 +25,7 @@ export async function callAgentLLM(messages: AgentMessage[]): Promise<AgentMessa
       'X-Title': 'Cliente-0 Agent CLI',
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: resolveModel(runtime),
       messages,
       tools: TOOLS,
       tool_choice: 'auto',

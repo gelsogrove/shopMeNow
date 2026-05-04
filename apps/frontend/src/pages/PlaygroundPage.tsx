@@ -93,6 +93,27 @@ const PRIORITY_COLOR: Record<Priority, string> = {
   Basso: "bg-green-100 text-green-700 border-green-300",
 }
 
+// Three-dot "typing" indicator used in the chat bubble while waiting for
+// the bot reply. Pure CSS; no extra deps.
+function TypingDots() {
+  return (
+    <div className="flex items-center gap-1 py-1">
+      <span
+        className="w-2 h-2 rounded-full bg-emerald-700/60 animate-bounce"
+        style={{ animationDelay: "0ms" }}
+      />
+      <span
+        className="w-2 h-2 rounded-full bg-emerald-700/60 animate-bounce"
+        style={{ animationDelay: "150ms" }}
+      />
+      <span
+        className="w-2 h-2 rounded-full bg-emerald-700/60 animate-bounce"
+        style={{ animationDelay: "300ms" }}
+      />
+    </div>
+  )
+}
+
 // ----------------------------------------------------------------------------
 // AUTH
 // ----------------------------------------------------------------------------
@@ -718,17 +739,29 @@ function ChatScreen({
     return () => clearTimeout(t)
   }, [highlightMessageId, activeSession])
 
+  // Optimistic state: while waiting for the server to persist & the bot to
+  // reply, we already render the user message and a typing indicator.
+  // Tied to a session id so it disappears automatically when the user
+  // switches chat mid-flight.
+  const [pendingForSession, setPendingForSession] = useState<{
+    sessionId: string
+    userMessage: string
+  } | null>(null)
+
   const sendChatMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!chatInput.trim() || !activeSession || sendingChat) return
+    const text = chatInput.trim()
     setSendingChat(true)
+    setChatInput("")
+    setPendingForSession({ sessionId: activeSession.id, userMessage: text })
     try {
       const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: activeSession.id,
-          message: chatInput.trim(),
+          message: text,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -736,13 +769,13 @@ function ChatScreen({
         alert(data.message || data.error || "Failed to send message")
         return
       }
-      setChatInput("")
-      // Refresh now and again after a short delay (chatbot may be still saving its response)
-      fetchAll()
-      setTimeout(fetchAll, 800)
-      setTimeout(fetchAll, 2000)
+      // Server now has the bot reply persisted: refresh once, that's enough.
+      // Clearing the optimistic state AFTER fetchAll resolves avoids a flash
+      // where the user message disappears before the real one is rendered.
+      await fetchAll()
     } finally {
       setSendingChat(false)
+      setPendingForSession(null)
     }
   }
 
@@ -797,18 +830,27 @@ function ChatScreen({
         user={user}
         onLogout={onLogout}
         rightSlot={
-          <button
-            onClick={() => navigate("/demo/cliente-0/kanban")}
-            className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
-          >
-            <KanbanSquare className="w-4 h-4" />
-            Kanban Board
-            {todos.length > 0 && (
-              <span className="bg-emerald-100 text-emerald-700 text-xs px-1.5 py-0.5 rounded-full">
-                {todos.length}
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowNewChat(true)}
+              className="bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
+            >
+              <Plus className="w-4 h-4" />
+              New Chat
+            </button>
+            <button
+              onClick={() => navigate("/demo/cliente-0/kanban")}
+              className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
+            >
+              <KanbanSquare className="w-4 h-4" />
+              Kanban Board
+              {todos.length > 0 && (
+                <span className="bg-emerald-100 text-emerald-700 text-xs px-1.5 py-0.5 rounded-full">
+                  {todos.length}
+                </span>
+              )}
+            </button>
+          </div>
         }
       />
 
@@ -817,15 +859,6 @@ function ChatScreen({
         <aside className="col-span-3 lg:col-span-2 bg-white rounded-xl shadow flex flex-col overflow-hidden min-h-0">
           <div className="px-3 py-2 bg-emerald-600 text-white shrink-0">
             <span className="font-semibold text-sm">Chats</span>
-          </div>
-          <div className="p-2 shrink-0 border-b">
-            <button
-              onClick={() => setShowNewChat(true)}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition"
-            >
-              <Plus className="w-4 h-4" />
-              New Chat
-            </button>
           </div>
           <div
             className="flex-1 overflow-y-auto"
@@ -840,7 +873,13 @@ function ChatScreen({
             )}
             {sortedSessions.map((s) => {
               const isActive = s.id === activeSessionId
-              const lastMsg = s.messages[s.messages.length - 1]
+              // Card preview shows the FIRST customer message of the
+              // conversation — the topic the user opened the chat with.
+              // Falls back to any first message if no INBOUND exists yet
+              // (rare: bot-initiated greeting before any user reply).
+              const previewMsg =
+                s.messages.find((m) => m.direction === "INBOUND") ||
+                s.messages[0]
               const phone = s.customer?.phone
               const name = s.customer?.name
               // Phone is the primary label. Name only if it looks meaningful.
@@ -870,7 +909,7 @@ function ChatScreen({
                         {secondary}
                       </div>
                     )}
-                    {lastMsg && (
+                    {previewMsg && (
                       <div
                         className="text-xs text-gray-500 mt-0.5 overflow-hidden"
                         style={{
@@ -879,11 +918,11 @@ function ChatScreen({
                           WebkitBoxOrient: "vertical",
                         }}
                       >
-                        {lastMsg.direction === "OUTBOUND" ? "🤖 " : ""}
-                        {lastMsg.content}
+                        {previewMsg.direction === "OUTBOUND" ? "🤖 " : ""}
+                        {previewMsg.content}
                       </div>
                     )}
-                    {!lastMsg && (
+                    {!previewMsg && (
                       <div className="text-[10px] text-gray-400 italic mt-0.5">
                         No messages yet
                       </div>
@@ -995,16 +1034,42 @@ function ChatScreen({
                 </div>
               )
             })}
+            {/* Optimistic render: while waiting for the server roundtrip,
+                show the just-sent user message + a typing indicator so the
+                UI feels instant. The bubbles disappear when fetchAll() pulls
+                in the server-persisted version. */}
+            {activeSession &&
+              pendingForSession?.sessionId === activeSession.id && (
+                <>
+                  <div className="flex justify-start">
+                    <div className="max-w-[75%] rounded-lg px-3 py-2 shadow text-sm bg-white opacity-80">
+                      <div className="whitespace-pre-wrap">
+                        {pendingForSession.userMessage}
+                      </div>
+                      <div className="text-[10px] text-gray-400 mt-1">
+                        sending…
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <div className="rounded-lg px-3 py-2 shadow text-sm bg-[#dcf8c6]">
+                      <TypingDots />
+                    </div>
+                  </div>
+                </>
+              )}
             {!activeSession && (
               <div className="text-center text-gray-500 mt-10">
                 Select a chat from the list, or click + to start a new one.
               </div>
             )}
-            {activeSession && !activeSession.messages.length && (
-              <div className="text-center text-gray-500 mt-10">
-                No messages in this chat yet.
-              </div>
-            )}
+            {activeSession &&
+              !activeSession.messages.length &&
+              pendingForSession?.sessionId !== activeSession.id && (
+                <div className="text-center text-gray-500 mt-10">
+                  No messages in this chat yet.
+                </div>
+              )}
           </div>
           {activeSession && (
             <form
@@ -1068,6 +1133,120 @@ function ChatScreen({
 }
 
 // ----------------------------------------------------------------------------
+// CREATE STANDALONE TASK MODAL — opened from the Kanban "+ New Task" button.
+// Backend `POST /todos` requires dialogId/messageType/messageContent because
+// the schema was designed for chat-derived tasks. For standalone tasks we
+// pass synthetic stable values: dialogId="manual-<timestamp>", type="manual",
+// messageContent equal to the user-typed task body. The detail modal already
+// handles the case where the related chat session no longer exists.
+// ----------------------------------------------------------------------------
+function CreateStandaloneTaskModal({
+  user,
+  onClose,
+  onCreated,
+}: {
+  user: PlaygroundUser
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const [title, setTitle] = useState("")
+  const [body, setBody] = useState("")
+  const [priority, setPriority] = useState<Priority>("Medio")
+  const [saving, setSaving] = useState(false)
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim() || saving) return
+    setSaving(true)
+    try {
+      const res = await fetch(`${API_BASE}/todos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dialogId: `manual-${Date.now()}`,
+          messageType: "manual",
+          messageContent: body.trim() || title.trim(),
+          chatbotResponse: null,
+          commentTitle: title.trim(),
+          priority,
+          createdBy: user,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.message || data.error || "Failed to create task")
+        return
+      }
+      onCreated()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <form
+        onSubmit={submit}
+        className="bg-white rounded-2xl p-6 w-[520px] max-h-[85vh] overflow-y-auto shadow-2xl space-y-4"
+      >
+        <div className="flex justify-between items-start">
+          <h2 className="text-xl font-bold">New Task</h2>
+          <button type="button" onClick={onClose}>
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-gray-600">Title</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Short summary"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none"
+            autoFocus
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-gray-600">
+            Description (optional)
+          </label>
+          <textarea
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            rows={4}
+            placeholder="Details, context, expected outcome..."
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-400 focus:outline-none"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-gray-600">Priority</label>
+          <div className="flex gap-2">
+            {(["Alto", "Medio", "Basso"] as const).map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => setPriority(p)}
+                className={`px-3 py-1 rounded-full border text-sm ${
+                  priority === p ? PRIORITY_COLOR[p] : "bg-white text-gray-500"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+        <button
+          type="submit"
+          disabled={saving || !title.trim()}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-medium disabled:opacity-50"
+        >
+          {saving ? "Creating..." : "Create Task"}
+        </button>
+      </form>
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
 // KANBAN SCREEN — dedicated page
 // ----------------------------------------------------------------------------
 function KanbanScreen({
@@ -1081,6 +1260,7 @@ function KanbanScreen({
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [openTodo, setOpenTodo] = useState<Todo | null>(null)
   const [filter, setFilter] = useState<"" | Priority>("")
+  const [showNewTask, setShowNewTask] = useState(false)
 
   const fetchTodos = useCallback(async () => {
     const [todosRes, msgRes] = await Promise.all([
@@ -1154,7 +1334,14 @@ function KanbanScreen({
           </p>
         </div>
         <div className="flex gap-2 items-center">
-          <span className="text-xs text-gray-500">Filter priority:</span>
+          <button
+            onClick={() => setShowNewTask(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1 shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            New Task
+          </button>
+          <span className="text-xs text-gray-500 ml-3">Filter priority:</span>
           {(["", "Alto", "Medio", "Basso"] as const).map((p) => (
             <button
               key={p || "all"}
@@ -1263,6 +1450,17 @@ function KanbanScreen({
           user={user}
           onClose={() => setOpenTodo(null)}
           onChanged={fetchTodos}
+        />
+      )}
+
+      {showNewTask && (
+        <CreateStandaloneTaskModal
+          user={user}
+          onClose={() => setShowNewTask(false)}
+          onCreated={() => {
+            setShowNewTask(false)
+            fetchTodos()
+          }}
         />
       )}
     </div>

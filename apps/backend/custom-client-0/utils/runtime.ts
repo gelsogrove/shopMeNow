@@ -39,6 +39,10 @@ export type Settings = {
   enabledLanguages: SupportedLanguage[]
   defaultLanguage: SupportedLanguage
   chatbotName?: string
+  /** OpenRouter model id used by every LLM call in this tenant (e.g.
+   *  "openai/gpt-4o-mini"). Optional; falls back to LLM_MODEL env var or
+   *  a hard-coded default in `utils/llm.ts` when omitted. */
+  model?: string
   welcomeMessage?: Partial<Record<SupportedLanguage, string>>
 }
 
@@ -72,7 +76,11 @@ export async function loadRuntime(): Promise<Runtime> {
   const demoDir = path.resolve(getDemoDir(), '..')
   const flowDir = path.resolve(demoDir, 'json')
   const promptDir = path.resolve(demoDir, 'prompts')
-  const promptNames = ['router', 'history', 'washer', 'dryer', 'language']
+  // Only `language.txt` is on the live call graph (used by llm.ts:detectLanguage
+  // as a fallback when the regex heuristic in intent.ts can't decide). The
+  // other prompt files in prompts/ are reference material — see docs/prompts.md
+  // for the full inventory. We avoid loading them at boot to skip dead I/O.
+  const promptNames = ['language']
   const promptEntries = await Promise.all(
     promptNames.map(async (name) => [name, await readFile(path.join(promptDir, `${name}.txt`), 'utf8')] as const),
   )

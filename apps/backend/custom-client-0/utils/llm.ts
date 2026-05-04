@@ -17,7 +17,22 @@ try {
   // Optional — env vars may already be set in the shell
 }
 
-export const MODEL = 'openai/gpt-4o-mini'
+/**
+ * Default OpenRouter model id when neither `Runtime.settings.model` nor the
+ * `LLM_MODEL` environment variable provides one. Resolution order at runtime:
+ *   1. explicit `runtime.settings.model` (json/settings.json) — per-tenant
+ *   2. process.env.LLM_MODEL — per-deployment override
+ *   3. this constant — last-resort fallback
+ *
+ * Use `resolveModel(runtime?)` to pick the right one; do NOT read this const
+ * directly from feature code.
+ */
+export const DEFAULT_MODEL = 'openai/gpt-4o-mini'
+
+export function resolveModel(runtime?: { settings?: { model?: string } }): string {
+  return runtime?.settings?.model || process.env.LLM_MODEL || DEFAULT_MODEL
+}
+
 const BASE_URL = process.env.LLM_BASE_URL || 'https://openrouter.ai/api/v1'
 export const API_KEY = process.env.OPENROUTER_API_KEY || ''
 
@@ -57,7 +72,7 @@ export async function callOpenRouter(params: LlmRequest): Promise<string> {
       'X-Title': 'Cliente-0 Demo CLI',
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: params.model || resolveModel(),
       messages: [
         ...(params.systemPrompt ? [{ role: 'system', content: params.systemPrompt }] : []),
         { role: 'user', content: params.userPrompt },
