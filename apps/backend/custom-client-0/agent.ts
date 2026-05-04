@@ -22,7 +22,7 @@
 //   └──────────────────────────────────────────────────────────────────────┘
 //                                  │
 //   ┌──────────────────────────────▼───────────────────────────────────────┐
-//   │ STEP 3 — runGuardPipeline (utils/agent-guards.ts) ← MAIN DECISION    │
+//   │ STEP 3 — runGuardPipeline (utils/guards/) ← MAIN DECISION            │
 //   │   26 ordered guards. Each is a pure (state, msg) → reply | null.     │
 //   │   FIRST MATCH WINS — pipeline halts and the canned reply is sent     │
 //   │   to the customer. ~70% of real conversations close here without    │
@@ -87,7 +87,7 @@ import { createInitialState } from './utils/state.js'
 import { extractEscalationContext, buildEscalationSummary } from './utils/escalation.js'
 import { sanitizeCustomerReply } from './utils/message-parsing.js'
 import { detectLanguageHeuristic } from './utils/intent.js'
-import { runGuardPipeline } from './utils/agent-guards.js'
+import { runGuardPipeline } from './utils/guards/index.js'
 import { autoExtractFacts } from './utils/agent-extract.js'
 import { executeTool } from './utils/agent-tools.js'
 import { loadPromptBundle, buildSystemPrompt } from './utils/agent-prompt.js'
@@ -159,7 +159,7 @@ export async function agentTurn(session: AgentSession, userMessage: string): Pro
 
   // Safety net 2: run the deterministic guard pipeline. The first guard
   // that fires produces a reply directly, bypassing the LLM. See
-  // utils/agent-guards.ts for the ordered list and conditions.
+  // utils/guards/index.ts for the ordered list and conditions.
   const guardOutcome = runGuardPipeline(ar, userMessage)
   if (guardOutcome) {
     let reply = guardOutcome.reply

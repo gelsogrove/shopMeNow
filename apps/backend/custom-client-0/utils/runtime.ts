@@ -48,6 +48,8 @@ export type Settings = {
   model?: string
   /** Sampling temperature for the agent loop (default 0.3). */
   agentTemperature?: number
+  /** Maximum tokens generated per LLM call (default 800). */
+  agentMaxTokens?: number
   /** Hard cap on tool-call iterations per turn (default 6). */
   maxToolHops?: number
   /** Free-form description of the desired tone, injected into agent.txt. */

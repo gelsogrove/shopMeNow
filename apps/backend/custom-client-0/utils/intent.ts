@@ -72,86 +72,16 @@ export function isShortContextReply(message: string): boolean {
 // MULTILINGUA TODO: today the patterns are Spanish-only because cliente-0 is
 // configured for Spanish. When more languages are enabled, move these strings
 // to a per-language file or use an LLM classifier.
-export type NonTroubleshootingIncidentKind =
-  | 'card-payment'
-  | 'datafono-wrong-amount'
-  | 'dryer-minutes-not-credited'
-  | 'refund-demand'
-  | 'compensation-demand'
-  | 'cameras-or-ajax'
-
-export function detectNonTroubleshootingIncident(message: string): NonTroubleshootingIncidentKind | null {
-  const m = message.toLowerCase()
-  // Card payment cannot be made (UC23, UC24).
-  if (
-    /no\s+puedo\s+pagar\s+(?:con\s+)?(?:la\s+)?tarjeta/.test(m) ||
-    /(?:la\s+)?tarjeta\s+no\s+(?:funciona|va|sirve)\s+para\s+pagar/.test(m) ||
-    /(?:la\s+)?tarjeta\s+no\s+funciona/.test(m) && /pagar|pago/.test(m)
-  ) return 'card-payment'
-
-  // Datáfono / payment terminal charged a wrong amount (UC19, UC20).
-  if (/dat[áa]fono.*\b\d{1,2}\s*€/.test(m) || /\b\d{1,2}\s*€.*dat[áa]fono/.test(m)) return 'datafono-wrong-amount'
-  if (/me\s+ha\s+cobrado\s+\d{1,2}\s*€/.test(m) && !/dos\s+veces/.test(m)) return 'datafono-wrong-amount'
-
-  // Dryer money/time not credited (UC21, UC22).
-  if (
-    /no\s+sum[ae]\s+minutos/.test(m) ||
-    /no\s+(?:lo\s+|los\s+)?ha\s+sumado/.test(m) && /(secadora|tiempo|minutos)/.test(m) ||
-    /m[áa]s\s+dinero\s+(?:en\s+)?(?:la\s+)?secadora.*no/.test(m)
-  ) return 'dryer-minutes-not-credited'
-
-  // Immediate refund demand (UC26).
-  if (
-    /(?:quiero|exijo|devolved?me|devolverme)\s+(?:el\s+)?dinero/.test(m) ||
-    /devoluci[óo]n\s+(?:inmediata|ahora|ya)/.test(m) ||
-    /quiero\s+que\s+me\s+devolv/.test(m)
-  ) return 'refund-demand'
-
-  // Compensation demand (UC27).
-  if (
-    /(?:quiero|exijo)\s+(?:una\s+)?(?:secadora|lavadora|m[áa]quina)\s+gratis/.test(m) ||
-    /(?:un\s+)?c[óo]digo\s+nuevo/.test(m) ||
-    /por\s+las\s+molestias/.test(m) && /(gratis|compensaci[óo]n)/.test(m)
-  ) return 'compensation-demand'
-
-  // Cameras / AJAX / external review (UC29).
-  if (/c[áa]maras/.test(m) || /\bajax\b/.test(m) || /revisad?\s+(?:el\s+)?ajax/.test(m)) return 'cameras-or-ajax'
-
-  return null
-}
-
 // ── Angry / frustrated tone detection ──────────────────────────────────────
 // Detects when the customer's tone is aggressive, demanding, or very upset so
 // the bot can prepend an empathetic acknowledgement ("Entiendo tu malestar...")
 // before continuing the normal data gathering. MULTILINGUA TODO: kept Spanish
 // + a few Italian/English roots since cliente-0 is Spanish-only today.
-export function hasAngryToneIntent(message: string): boolean {
-  const m = message.trim()
-  // Multiple exclamation marks or upper-case shouting (heuristic).
-  const manyExclamations = /!.*!/.test(m)
-  const allCapsBlock = /\b[A-ZÁÉÍÓÚÑ]{4,}\b.*\b[A-ZÁÉÍÓÚÑ]{4,}\b/.test(m)
-  const lower = m.toLowerCase()
-  const angryWords = /siempre\s+falla|verg[uü]enza|harto|indignado|ridicul|una\s+soluci[óo]n\s+ya|quiero\s+(?:una\s+)?soluci[óo]n\s+ya|esto\s+es\s+rid|che\s+schifo|inaccettabile|disgrazia/.test(lower)
-  return (manyExclamations && angryWords) || allCapsBlock || angryWords
-}
-
 // ── Operational context ───────────────────────────────────────────────────────
 
 export function hasOperationalContextIntent(message: string): boolean {
   const normalized = message.trim().toLowerCase()
   return /ho messo i soldi|messo i soldi|metto i soldi|sto mettendo i soldi|inserito i soldi|ho pagato|he pagado|hemos pagado|paid already|already paid|payment completed|pagamento fatto|cosa devo fare adesso|what do i do now|que hago ahora|non aumentano i minuti|minutes did not increase|minuti non aumentano|no se ha activado|no se activa|activarla|activarse|puesta en marcha|se ha puesto en marcha/i.test(normalized)
-}
-
-export function extractUnknownDisplayCode(message: string): string | null {
-  const trimmed = message.trim()
-  if (!trimmed) return null
-  if (extractDisplayState(trimmed)) return null
-
-  // Letters + (optional space/dash) + digits: covers "ERR52", "ERR 52", "ERR-50".
-  // Case-sensitive UPPERCASE only — display codes are shown in caps; this avoids
-  // false matches on common phrases like "La 4" (article + machine number).
-  const codeMatch = trimmed.match(/\b([A-Z]{2,3}[\s\-]?\d{1,3})\b/)
-  return codeMatch ? codeMatch[1].toUpperCase().replace(/\s+/g, ' ') : null
 }
 
 export function isPaidButNotActivatedCase(
@@ -165,24 +95,6 @@ export function isPaidButNotActivatedCase(
   return true
 }
 
-export function hasNoFoamConcern(message: string): boolean {
-  const normalized = message.trim().toLowerCase()
-  const mentionsFoamOrDetergent = /foam|schiuma|espuma|jabon|jab[oó]n|detergent|detergente|suavizante|soap/i.test(normalized)
-  const mentionsAbsenceOrDoubt = /no hay|no tiene|no veo|sin |senza|without|poca|poco|normal|is this normal|es normal|non c[' ]?e|non vedo/i.test(normalized)
-  return mentionsFoamOrDetergent && mentionsAbsenceOrDoubt
-}
-
-export function hasTroubleshootingIntent(message: string): boolean {
-  return hasTechnicalIssueIntent(message) || hasOperationalContextIntent(message)
-}
-
-export function isClosureAcknowledgement(message: string): boolean {
-  const trimmed = message.trim().toLowerCase()
-  if (!trimmed || trimmed.length > 24) return false
-  if (/\d/.test(trimmed) || trimmed.includes('?') || isDisplayCodeLikeInput(trimmed)) return false
-  return /^(ok|okay|ok risolto|risolto|fatto|grazie|gracias|thanks|thank you|bene|perfect|perfecto|perfetto|va bene|d'accordo|listo)$/i.test(trimmed)
-}
-
 // ── Machine type + route normalization ───────────────────────────────────────
 
 export function normalizeMachineType(value: unknown): '' | 'washer' | 'dryer' {
@@ -194,25 +106,6 @@ export function normalizeMachineType(value: unknown): '' | 'washer' | 'dryer' {
   return ''
 }
 
-export function normalizeRoute(value: unknown): import('./types.js').Route {
-  const normalized = String(value || '').trim().toLowerCase()
-  if (['washer', 'lavatrice', 'lavadora'].includes(normalized)) return 'washer'
-  if (['dryer', 'asciugatrice', 'secadora'].includes(normalized)) return 'dryer'
-  if (['faq', 'operator', 'reset', 'greeting', 'unknown'].includes(normalized)) {
-    return normalized as import('./types.js').Route
-  }
-  return 'unknown'
-}
-
-export function pickAllowedToken(rawValue: unknown, allowed: string[]): string | null {
-  const value = String(rawValue || '').trim()
-  if (!value) return null
-  for (const token of allowed) {
-    if (value === token || value.includes(token)) return token
-  }
-  return null
-}
-
 // ── Location / greeting / reset ───────────────────────────────────────────────
 
 export function isAwaitingLocation(state: SessionState): boolean {
@@ -221,10 +114,6 @@ export function isAwaitingLocation(state: SessionState): boolean {
 
 export function hasGreetingIntent(message: string): boolean {
   return /\b(ciao|ciao\s+come\s+stai|hello|hi|hola|buongiorno|buonasera)\b/i.test(message.trim())
-}
-
-export function hasExplicitResetIntent(message: string): boolean {
-  return /\b(reset|restart|start over|ricominci|ricomincia|ricominciamo|empecemos de nuevo|volver a empezar)\b/i.test(message.trim())
 }
 
 export function hasTechnicalIssueIntent(message: string): boolean {
@@ -289,17 +178,6 @@ export function isLikelyStandaloneLocationInput(state: SessionState, message: st
   return true
 }
 
-export function getRequestedLanguage(message: string): SessionState['language'] | null {
-  const normalized = message.trim().toLowerCase()
-  if (/(italiano|italian\b)/i.test(normalized)) return 'it'
-  if (/(español|espanol|spanish\b)/i.test(normalized)) return 'es'
-  if (/(català|catala|catalan\b)/i.test(normalized)) return 'ca'
-  if (/(français|francais|french\b)/i.test(normalized)) return 'fr'
-  if (/(portugu[eê]s|portuguese\b)/i.test(normalized)) return 'pt'
-  if (/(inglese|english\b)/i.test(normalized)) return 'en'
-  return null
-}
-
 export function extractExplicitLocation(message: string): string | null {
   // Patterns:
   //   "estoy en Goya", "sono a Pineda", "i am at Hortes" → explicit "I am at"
@@ -354,13 +232,6 @@ export function hasDoubleChargeConcern(message: string): boolean {
   return /doble cobro|cobrado dos veces|cobr[oó]\s+dos\s+veces|me ha cobrado dos veces|double charge|charged twice|double payment|doble pago|dos veces con la tarjeta/i.test(normalized)
 }
 
-export function hasInconsistentDoubleChargeNarrative(message: string): boolean {
-  const normalized = message.trim().toLowerCase()
-  const unclearCount = /no s[eé] (cu[aá]ntas|exactamente|bien)|\b(tres|cuatro|cinco|3|4|5)\s+o\s+(tres|cuatro|cinco|3|4|5)\s+veces\b|no recuerdo cu[aá]ntas|varias veces/i.test(normalized)
-  const amountMismatch = /importe no (me )?cuadra|no cuadra (el )?importe|no me cuadra|el importe es diferente|cobro diferente al esperado/i.test(normalized)
-  return unclearCount || amountMismatch
-}
-
 export function parseServiceCompletedAnswer(message: string): boolean | null {
   const normalized = message.trim().toLowerCase()
   if (!normalized) return null
@@ -372,22 +243,6 @@ export function parseServiceCompletedAnswer(message: string): boolean | null {
   return null
 }
 
-export function parseDryerStartedAnswer(message: string): boolean | null {
-  const normalized = message.trim().toLowerCase()
-  if (!normalized) return null
-  if (/\b(no ha arrancado|no arranca|no ha empezado|no empieza|not started|did not start|non e partita|non parte)\b/i.test(normalized)) return false
-  if (/\b(si ha arrancado|sí ha arrancado|ha arrancado|ha empezado|yes it started|started|e partita|partita)\b/i.test(normalized)) return true
-  return null
-}
-
-export function parseDryerCycleContext(message: string): '' | 'first_cycle' | 'time_added' {
-  const normalized = message.trim().toLowerCase()
-  if (!normalized) return ''
-  if (/\b(primer ciclo|first cycle|primo ciclo)\b/i.test(normalized)) return 'first_cycle'
-  if (/\b(a[nñ]adido tiempo|añad[ií] tiempo|he añadido tiempo|added time|aggiunto tempo)\b/i.test(normalized)) return 'time_added'
-  return ''
-}
-
 export function extractLast4CardDigits(message: string): string | null {
   return message.match(/\b(\d{4})\b/)?.[1] || null
 }
@@ -396,57 +251,14 @@ export function extractLast4CardDigits(message: string): string | null {
 // supported language. The router prompt already documents this exception, but
 // the deterministic guard chain (machineNumber → display) needs an explicit
 // detector to skip straight to the photo / escalate path.
-export function hasDisplayUnreadableIntent(message: string): boolean {
-  const m = message.trim().toLowerCase()
-  if (!m) return false
-  // Spanish / Catalan
-  if (/\b(no s[eé] qu[eé] (pone|sale|aparece|hay)|no veo (bien )?(el |la )?(pantalla|display)|no consigo leer|no entiendo (el c[oó]digo|lo que pone)|no sale nada|pantalla apagada)\b/.test(m)) return true
-  // Italian
-  if (/\b(non vedo (bene )?(lo schermo|il display)|non capisco (cosa|che cosa) (c[' ]?e|appare)|non riesco a leggere|schermo spento)\b/.test(m)) return true
-  // English
-  if (/\b(i (can'?t|cannot) (see|read|tell what is on) the (screen|display)|the (screen|display) is (blank|off|empty))\b/.test(m)) return true
-  return false
-}
-
 // Detect a "mixed incident" first message — the customer reports multiple
 // concerns at once (paid + machine + double-pay confusion). The right answer
 // is to slow down and propose a "paso a paso" walkthrough. UC32.
-export function hasMixedIncidentIntent(message: string): boolean {
-  const m = message.trim().toLowerCase()
-  if (!m) return false
-  const paymentTokens = /(he\s+pagado|pagué|hemos pagado|volví\s+a\s+pagar|cobro|cobrado|me\s+han\s+cobrado|doble\s+pago|two\s+payments)/.test(m)
-  const machineTokens = /(no\s+arranca|no\s+arrancaba|no\s+funciona|m[aá]quina|el\s+problema)/.test(m)
-  const uncertainty = /(no\s+s[eé]\s+si|no\s+entiendo|estoy\s+confundido|me\s+he\s+l[ií]ado|don'?t\s+know\s+if)/.test(m)
-  return paymentTokens && machineTokens && uncertainty
-}
-
 // Detect "I don't know" replies in any supported language. Used to insist on
 // the location question when the customer cannot or does not want to identify
 // the laundry on the first ask.
-export function hasUnknownLocationIntent(message: string): boolean {
-  const m = message.trim().toLowerCase()
-  if (!m) return false
-  // Use lookahead for word boundary because \b is ASCII-only and would fail on
-  // accented characters like "sé".
-  const tail = '(?=\\s|$|[.,!?¿¡])'
-  if (new RegExp(`^(no lo s[eé]|no s[eé]|no me acuerdo|ni idea|no recuerdo|no sabr[ií]a)${tail}`).test(m)) return true
-  if (new RegExp(`^(non lo so|non ricordo|non saprei)${tail}`).test(m)) return true
-  if (new RegExp(`^(i don'?t know|i'm not sure|no idea|i can'?t remember)${tail}`).test(m)) return true
-  return false
-}
-
 // Detect "I cannot send a photo" — used after the bot asked for a photo of the
 // display. Triggers escalation in UC17.
-export function hasNoPhotoIntent(message: string): boolean {
-  const m = message.trim().toLowerCase()
-  if (!m) return false
-  if (/\bno\s+(puedo|consigo|tengo|s[eé]\s+c[oó]mo)\s+(hacer|sacar|mandar|enviar|tomar)\s+(la\s+)?foto\b/.test(m)) return true
-  if (/\b(no tengo (foto|c[aá]mara)|sin foto|no tengo m[oó]vil)\b/.test(m)) return true
-  if (/\b(non riesco|non posso) (a )?(fare|mandare|inviare) (la )?foto\b/.test(m)) return true
-  if (/\b(i (can'?t|cannot) (take|send) (a |the )?photo|no camera|i have no camera)\b/.test(m)) return true
-  return false
-}
-
 export function parsePaymentProofProvided(message: string): boolean | null {
   const normalized = message.trim().toLowerCase()
   if (!normalized) return null
@@ -457,32 +269,6 @@ export function parsePaymentProofProvided(message: string): boolean | null {
   return null
 }
 
-export function shouldTreatAsDoubleChargeNarrative(message: string): boolean {
-  const trimmed = message.trim()
-  if (!trimmed) return false
-  if (hasDoubleChargeConcern(trimmed)) return false
-  if (isAlreadyAnsweredReply(trimmed)) return false
-  if (parseServiceCompletedAnswer(trimmed) !== null) return false
-  if (extractLast4CardDigits(trimmed)) return false
-  if (parsePaymentProofProvided(trimmed) !== null && trimmed.split(/\s+/).length <= 3) return false
-  if (trimmed.length >= 12) return true
-  return /\b(poi|despu[eé]s|luego|then|prima|dopo|first|second|segundo|tercero)\b/i.test(trimmed)
-}
-
-export function shouldForceDoubleChargeNarrativeStep(state: SessionState, message: string): boolean {
-  if (!state.lastMissingFacts.includes('double charge step by step')) return false
-
-  const trimmed = message.trim()
-  if (!trimmed) return false
-  if (isAlreadyAnsweredReply(trimmed)) return false
-  if (parseServiceCompletedAnswer(trimmed) !== null) return false
-  if (extractLast4CardDigits(trimmed)) return false
-  if (parsePaymentProofProvided(trimmed) !== null) return false
-  if (isLikelyStandaloneLocationInput(state, trimmed)) return false
-
-  return trimmed.length >= 20 || /\b(poi|despu[eé]s|luego|then|prima|dopo|first|second|segundo|tercero|partito|arranco|arranc[oó]|pagato|pagado|messo i soldi|met[ií] el dinero)\b/i.test(trimmed)
-}
-
 export function isAlreadyAnsweredReply(message: string): boolean {
   const normalized = message.trim().toLowerCase()
   if (!normalized) return false
@@ -490,22 +276,6 @@ export function isAlreadyAnsweredReply(message: string): boolean {
 }
 
 // ── Post-cycle issue detection ────────────────────────────────────────────────
-
-export function isContextualHeuristicInput(originalInput: string, normalizedInput: string): boolean {
-  return originalInput.trim() !== normalizedInput.trim()
-}
-
-export function hasDryerPostCycleIssue(message: string): boolean {
-  const normalized = message.trim().toLowerCase()
-  const mentionsDrying = /secad|dry|asciug/i.test(normalized)
-  const mentionsWetOutcome = /empapad|mojad|wet|bagnat|humed/i.test(normalized)
-  return mentionsDrying && mentionsWetOutcome
-}
-
-export function hasWasherPostCycleIssue(message: string): boolean {
-  const normalized = message.trim().toLowerCase()
-  return /finito|finished|terminado|centrifug|mojad|empapad|wet|bagnat|ropa.*mojad|salido.*mojad|porta non si apre|door blocked|schiuma|foam|espuma|jabon|jab[oó]n|detergent|detergente|suavizante/i.test(normalized)
-}
 
 // Re-export helpers from other modules so consumers can import from one place
 export { hasExtraButtonIssue, hasStopIntent }
