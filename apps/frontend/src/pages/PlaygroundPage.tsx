@@ -437,6 +437,30 @@ function TodoDetailModal({
   const navigate = useNavigate()
   const [comment, setComment] = useState("")
   const [posting, setPosting] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [titleDraft, setTitleDraft] = useState(todo.commentTitle)
+  const [savingTitle, setSavingTitle] = useState(false)
+
+  const saveTitle = async () => {
+    const next = titleDraft.trim()
+    if (!next || next === todo.commentTitle) {
+      setEditingTitle(false)
+      setTitleDraft(todo.commentTitle)
+      return
+    }
+    setSavingTitle(true)
+    try {
+      await fetch(`${API_BASE}/todos/${todo.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentTitle: next }),
+      })
+      setEditingTitle(false)
+      onChanged()
+    } finally {
+      setSavingTitle(false)
+    }
+  }
 
   // Find the chat session that contains the message this TODO refers to,
   // so we can render the WHOLE conversation alongside the comment thread.
@@ -494,8 +518,37 @@ function TodoDetailModal({
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-6 w-[560px] max-h-[85vh] overflow-y-auto shadow-2xl space-y-4">
         <div className="flex justify-between items-start">
-          <div>
-            <h2 className="text-xl font-bold">{todo.commentTitle}</h2>
+          <div className="flex-1 min-w-0 mr-2">
+            {editingTitle ? (
+              <input
+                autoFocus
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onBlur={saveTitle}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    ;(e.target as HTMLInputElement).blur()
+                  } else if (e.key === "Escape") {
+                    setTitleDraft(todo.commentTitle)
+                    setEditingTitle(false)
+                  }
+                }}
+                disabled={savingTitle}
+                className="w-full text-xl font-bold border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            ) : (
+              <h2
+                className="text-xl font-bold cursor-text hover:bg-gray-50 rounded px-1 -mx-1 truncate"
+                title="Click to edit"
+                onClick={() => {
+                  setTitleDraft(todo.commentTitle)
+                  setEditingTitle(true)
+                }}
+              >
+                {todo.commentTitle}
+              </h2>
+            )}
             <div className="flex gap-2 mt-1 items-center">
               <span
                 className={`px-2 py-0.5 rounded-full text-xs border ${
