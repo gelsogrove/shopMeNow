@@ -6,7 +6,7 @@
 // reasonably confident the input maps to that fact. False positives are
 // worse than missing extractions.
 
-import type { AgentRuntime } from '../models/index.js'
+import type { AgentRuntime, Runtime } from '../models/index.js'
 import {
   extractDisplayState,
   extractExplicitLocation,
@@ -15,69 +15,44 @@ import {
 } from './intent.js'
 import { resolveKnownLocation, parseExplicitPaymentSignal } from './message-parsing.js'
 import { resetMachineFacts } from './state.js'
+import { getPattern, matchPattern } from './nlu.js'
 
-// ── Display whitelist ────────────────────────────────────────────────────────
-// Tokens that count as a "display state" when typed alone in uppercase.
-// Restrictive on purpose: avoids capturing "OK", "NO", "SI" as a display.
-//
-// Patterns:
-//   - Known recoverable codes: SEL, PUSH, PR, DOOR, ALM/DOOR, PRICE, BLANK
-//   - Alarm family: ALM, ALN, ALN A, ALN N, AL001, 001
-//   - Generic error codes: ERR + digits ("ERR 52", "ERR-52", "ERR52")
-//   - Long uppercase codes (≥4 chars): "ERROR", "FAIL", "TIMEOUT"
-const KNOWN_DISPLAY_TOKEN = /^(SEL|PUSH(?:\s+PROG)?|PR|DOOR|ALM(?:[\s\/]?(?:DOOR|A|E|VAR))?|ALN(?:\s*[AN])?|AL\s*0*01|0*01|END(?:\s*BAL)?|FILTRO|FALLO\s+DE\s+ROTACION|FALLO\s+DE\s+ASPIRACION|STOP|water)$/i
-const ERR_CODE = /^ERR[\s\-]?\d{1,3}$/i
-const LONG_CODE = /^[A-Z]{4,15}$/
+// Display whitelist & topic-switch detection — pattern definitions live in
+// json/nlu-patterns.json. The functions below only orchestrate the lookups;
+// see docs/cliente-0/usecases.md for the underlying business rules.
 
-function shouldAcceptAsDisplay(rawInput: string): boolean {
-  const compact = rawInput.replace(/[.,!?¿¡:;"'()]/g, '').trim()
+function shouldAcceptAsDisplay(runtime: Runtime, rawInput: string): boolean {
+  const sanitize = getPattern(runtime, 'displaySanitize')
+  const compact = rawInput.replace(sanitize, '').trim()
   if (!compact) return false
   // Yes/no in uppercase should NOT become a display.
-  if (/^(OK|NO|SI|S[IÍ]|YES)$/i.test(compact)) return false
-  if (KNOWN_DISPLAY_TOKEN.test(compact)) return true
-  if (ERR_CODE.test(compact)) return true
-  if (LONG_CODE.test(compact)) return true
+  if (matchPattern(runtime, 'yesNoUppercase', compact)) return false
+  if (matchPattern(runtime, 'displayKnownToken', compact)) return true
+  if (matchPattern(runtime, 'displayErrCode', compact)) return true
+  if (matchPattern(runtime, 'displayLongCode', compact)) return true
   return false
 }
 
-// ── Public API ───────────────────────────────────────────────────────────────
-
-// ── Topic-switch detector ────────────────────────────────────────────────────
-// When the customer pivots to a different incident type (e.g. from a machine
-// problem to a payment issue), we wipe the machine facts so the next reply
-// doesn't mix old data into the new conversation.
-//
-// We trigger a switch when:
-//   - The customer mentions datáfono / TPV / cobro+€ → payment incident
-//   - The customer mentions cámaras / AJAX / soporte técnico → ops incident
-//   - The customer says "anzi/wait/no" + mentions a different topic
-//
-// Conservative: only fire if there are already stale machine facts to wipe
-// AND the new message contains an explicit pivot signal.
-const PAYMENT_TOPIC = /(dat[aá]fono|tpv|me\s+ha\s+cobrad[ao]|charged\s+(?:me\s+)?\d+|\d+\s*€|cobrad[ao]\s+\d+)/i
-const OPS_TOPIC = /(c[aá]maras|ajax|soporte\s+t[eé]cnico)/i
-// Customer added more coins/money to a dryer but the minutes didn't increase
-// (Caso 21 Alemanya, Caso 22 Pineda).
-const DRYER_MINUTES_TOPIC = /(?:m[aá]s\s+dinero|m[aá]s\s+monedas|a[ñn]ad(?:i|ido|i[óo])\s+tiempo|a[ñn]ad(?:i|ido|i[óo])\s+monedas|put\s+more\s+money).*(?:secadora|asciugatrice|dryer)|(?:secadora|asciugatrice|dryer).*(?:no\s+(?:suma|sumado|sumam|sum[óo])|no\s+(?:lo\s+)?ha\s+sumado|no\s+aumenta|no\s+aument[óo])/i
-// Customer can't pay with card (Caso 23 Alemanya, Caso 24 Hortes).
-const CARD_FAIL_TOPIC = /(no\s+puedo\s+pagar\s+con\s+(?:la\s+)?tarjeta|(?:la\s+)?tarjeta\s+no\s+(?:funciona|va)\s+(?:para\s+)?(?:pagar)?|tarjeta\s+rechazada|card\s+(?:doesn'?t|won'?t)\s+work)/i
-// Customer demands an immediate refund (Caso 26).
-const REFUND_DEMAND_TOPIC = /(devolv[áa]is|devu[ée]lvanme|devu[ée]lveme|devoluci[oó]n\s+(?:ya|ahora|inmediata|inmediatamente)|quiero\s+(?:que\s+me\s+)?devolv|reembolso\s+(?:ya|ahora|inmediato))/i
-// Customer demands a specific compensation (Caso 27).
-const COMPENSATION_TOPIC = /((?:secadora|lavadora)\s+gratis|c[oó]digo\s+nuevo|compensaci[oó]n|free\s+(?:dryer|washer))/i
-const SWITCH_HINT = /\b(anzi|aspetta|wait|en realidad|en realitat|de verdad|en\s+realidade|en\s+r[eé]alit[eé])\b/i
-
-function detectTopicSwitch(state: { displayState: string; machineNumber: string; pendingFlow: string }, userMessage: string): boolean {
+function detectTopicSwitch(
+  runtime: Runtime,
+  state: { displayState: string; machineNumber: string; pendingFlow: string },
+  userMessage: string,
+): boolean {
   const hasMachineFacts = !!(state.displayState || state.machineNumber || state.pendingFlow)
   if (!hasMachineFacts) return false
   const text = userMessage.toLowerCase()
-  if (PAYMENT_TOPIC.test(text)) return true
-  if (OPS_TOPIC.test(text)) return true
-  if (DRYER_MINUTES_TOPIC.test(text)) return true
-  if (CARD_FAIL_TOPIC.test(text)) return true
-  if (REFUND_DEMAND_TOPIC.test(text)) return true
-  if (COMPENSATION_TOPIC.test(text)) return true
-  if (SWITCH_HINT.test(text) && /(c[oó]digo|ticket|factura|tarjeta|datafono|cobrado|pago|cambio)/i.test(text)) return true
+  if (matchPattern(runtime, 'topicPayment', text)) return true
+  if (matchPattern(runtime, 'topicOps', text)) return true
+  if (matchPattern(runtime, 'topicDryerMinutes', text)) return true
+  if (matchPattern(runtime, 'topicCardFail', text)) return true
+  if (matchPattern(runtime, 'topicRefundDemand', text)) return true
+  if (matchPattern(runtime, 'topicCompensation', text)) return true
+  if (
+    matchPattern(runtime, 'switchHint', text) &&
+    matchPattern(runtime, 'topicCorrectionContext', text)
+  ) {
+    return true
+  }
   return false
 }
 

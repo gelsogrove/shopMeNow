@@ -12,7 +12,7 @@ import type {
   Runtime,
   Settings,
 } from '../models/index.js'
-import { validateDisplayFlowsFile } from '../models/index.js'
+import { validateDisplayFlowsFile, validateNluPatternsFile } from '../models/index.js'
 
 let FAQS: FaqMap = {}
 
@@ -48,7 +48,17 @@ export async function loadRuntime(): Promise<Runtime> {
   const settings = JSON.parse(await readFile(path.join(flowDir, 'settings.json'), 'utf8')) as Settings
   const displayFlowsRaw = JSON.parse(await readFile(path.join(flowDir, 'display-flows.json'), 'utf8'))
   const displayFlows = validateDisplayFlowsFile(displayFlowsRaw)
-  return { prompts: Object.fromEntries(promptEntries), flows: { washer, dryer }, regressions: [], locations, settings, displayFlows }
+  const nluPatternsRaw = JSON.parse(await readFile(path.join(flowDir, 'nlu-patterns.json'), 'utf8'))
+  const nluPatterns = validateNluPatternsFile(nluPatternsRaw)
+  return {
+    prompts: Object.fromEntries(promptEntries),
+    flows: { washer, dryer },
+    regressions: [],
+    locations,
+    settings,
+    displayFlows,
+    nluPatterns,
+  }
 }
 
 export function getLocationOverride(runtime: Runtime, location: string | null | undefined): LocationOverride | null {

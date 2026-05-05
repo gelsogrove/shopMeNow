@@ -1,0 +1,103 @@
+{
+  "_principle": "Declarative NLU patterns. Each entry is a named regex used by the deterministic extractors / guards to detect customer intent before the LLM is called. Centralising them here means: product owners can review/tweak phrasing without TS changes, new languages can be added by extending an entry (use byLanguage), and the regex is validated at boot. Anti-hardcode rule: any 'detect customer intent X by regex' MUST live here, never as a const RegExp in TS. Consumers go through utils/nlu.ts.",
+  "_schemaVersion": 1,
+  "patterns": [
+    {
+      "id": "displayKnownToken",
+      "kind": "display-token",
+      "description": "Known recoverable display tokens + alarm family (SEL/PUSH/DOOR/ALM*/ALN*/AL001/001/END/FILTRO/STOP/water). Matches when the customer types one of these as the WHOLE message.",
+      "regex": "^(SEL|PUSH(?:\\s+PROG)?|PR|DOOR|ALM(?:[\\s\\/]?(?:DOOR|A|E|VAR))?|ALN(?:\\s*[AN])?|AL\\s*0*01|0*01|END(?:\\s*BAL)?|FILTRO|FALLO\\s+DE\\s+ROTACION|FALLO\\s+DE\\s+ASPIRACION|STOP|water)$",
+      "flags": "i"
+    },
+    {
+      "id": "displayErrCode",
+      "kind": "display-token",
+      "description": "Generic ERR codes: ERR + 1-3 digits with optional space/dash separator (ERR 52, ERR-52, ERR52).",
+      "regex": "^ERR[\\s\\-]?\\d{1,3}$",
+      "flags": "i"
+    },
+    {
+      "id": "displayLongCode",
+      "kind": "display-token",
+      "description": "Catch-all uppercase code 4-15 chars (ERROR, FAIL, TIMEOUT). Case-sensitive on purpose (lowercase `error` is conversational, not a display).",
+      "regex": "^[A-Z]{4,15}$",
+      "flags": ""
+    },
+    {
+      "id": "yesNoUppercase",
+      "kind": "anti-pattern",
+      "description": "Uppercase yes/no tokens that should NOT be classified as a display state. Used by shouldAcceptAsDisplay() to short-circuit before the display-token whitelist.",
+      "regex": "^(OK|NO|SI|S[IÍ]|YES)$",
+      "flags": "i"
+    },
+    {
+      "id": "displaySanitize",
+      "kind": "sanitize",
+      "description": "Punctuation stripped before display-token classification. Replaces matching characters with empty string.",
+      "regex": "[.,!?¿¡:;\"'()]",
+      "flags": "g"
+    },
+    {
+      "id": "topicPayment",
+      "kind": "topic-switch",
+      "description": "Customer pivots to a payment incident: datafono / TPV / cobro+€. Triggers Caso 21-22 family + datafono-wrong-amount.",
+      "incidentTag": "datafono-wrong-amount",
+      "regex": "(dat[aá]fono|tpv|me\\s+ha\\s+cobrad[ao]|charged\\s+(?:me\\s+)?\\d+|\\d+\\s*€|cobrad[ao]\\s+\\d+)",
+      "flags": "i"
+    },
+    {
+      "id": "topicOps",
+      "kind": "topic-switch",
+      "description": "Customer pivots to an ops incident requiring camera / AJAX / technical support review.",
+      "incidentTag": "cameras-or-ajax",
+      "regex": "(c[aá]maras|ajax|soporte\\s+t[eé]cnico)",
+      "flags": "i"
+    },
+    {
+      "id": "topicDryerMinutes",
+      "kind": "topic-switch",
+      "description": "Customer added more coins/money to a dryer but minutes did not increase (Caso 21 Alemanya, Caso 22 Pineda).",
+      "incidentTag": "dryer-minutes-not-credited",
+      "regex": "(?:m[aá]s\\s+dinero|m[aá]s\\s+monedas|a[ñn]ad(?:i|ido|i[óo])\\s+tiempo|a[ñn]ad(?:i|ido|i[óo])\\s+monedas|put\\s+more\\s+money).*(?:secadora|asciugatrice|dryer)|(?:secadora|asciugatrice|dryer).*(?:no\\s+(?:suma|sumado|sumam|sum[óo])|no\\s+(?:lo\\s+)?ha\\s+sumado|no\\s+aumenta|no\\s+aument[óo])",
+      "flags": "i"
+    },
+    {
+      "id": "topicCardFail",
+      "kind": "topic-switch",
+      "description": "Customer cannot pay with the card (Caso 23 Alemanya, Caso 24 Hortes).",
+      "incidentTag": "card-payment",
+      "regex": "(no\\s+puedo\\s+pagar\\s+con\\s+(?:la\\s+)?tarjeta|(?:la\\s+)?tarjeta\\s+no\\s+(?:funciona|va)\\s+(?:para\\s+)?(?:pagar)?|tarjeta\\s+rechazada|card\\s+(?:doesn'?t|won'?t)\\s+work)",
+      "flags": "i"
+    },
+    {
+      "id": "topicRefundDemand",
+      "kind": "topic-switch",
+      "description": "Customer demands an immediate refund (Caso 26).",
+      "incidentTag": "refund-demand",
+      "regex": "(devolv[áa]is|devu[ée]lvanme|devu[ée]lveme|devoluci[oó]n\\s+(?:ya|ahora|inmediata|inmediatamente)|quiero\\s+(?:que\\s+me\\s+)?devolv|reembolso\\s+(?:ya|ahora|inmediato))",
+      "flags": "i"
+    },
+    {
+      "id": "topicCompensation",
+      "kind": "topic-switch",
+      "description": "Customer demands a specific compensation (Caso 27).",
+      "incidentTag": "compensation-demand",
+      "regex": "((?:secadora|lavadora)\\s+gratis|c[oó]digo\\s+nuevo|compensaci[oó]n|free\\s+(?:dryer|washer))",
+      "flags": "i"
+    },
+    {
+      "id": "switchHint",
+      "kind": "switch-hint",
+      "description": "Generic 'wait, actually' particle that signals a topic pivot. Combined with topicCorrectionContext to trigger a switch even without a strong topic signal.",
+      "regex": "\\b(anzi|aspetta|wait|en realidad|en realitat|de verdad|en\\s+realidade|en\\s+r[eé]alit[eé])\\b",
+      "flags": "i"
+    },
+    {
+      "id": "topicCorrectionContext",
+      "kind": "switch-hint",
+      "description": "Domain words that, paired with switchHint, confirm the customer is correcting their previous narrative toward a different topic.",
+      "regex": "(c[oó]digo|ticket|factura|tarjeta|datafono|cobrado|pago|cambio)",
+      "flags": "i"
+    }
+  ]
+}

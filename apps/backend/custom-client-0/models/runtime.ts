@@ -1,6 +1,7 @@
 // Runtime configuration types: flows, FAQs, locations, settings.
 
 import type { DisplayFlowsFile } from './display-flow.js'
+import type { NluPatternsFile } from './nlu-patterns.js'
 
 export type FlowNode = {
   type: 'ACTION' | 'CONFIRMATION' | 'CHOICE' | 'INFO' | 'ROUTER' | 'INPUT'
@@ -88,4 +89,7 @@ export type Runtime = {
   settings: Settings
   /** Declarative display-state intermediate flows, see models/display-flow.ts. */
   displayFlows: DisplayFlowsFile
+  /** Declarative NLU patterns (intent/topic/display detection regexes),
+   *  see models/nlu-patterns.ts. */
+  nluPatterns: NluPatternsFile
 }

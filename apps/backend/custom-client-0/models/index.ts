@@ -40,6 +40,13 @@ export type {
 } from './display-flow.js'
 export { validateDisplayFlowsFile } from './display-flow.js'
 
+export type {
+  NluPatternDefinition,
+  NluPatternKind,
+  NluPatternsFile,
+} from './nlu-patterns.js'
+export { validateNluPatternsFile } from './nlu-patterns.js'
+
 export type { EscalationContext } from './escalation.js'
 
 export type {
