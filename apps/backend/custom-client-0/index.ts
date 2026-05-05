@@ -19,6 +19,7 @@ import {
   agentTurn,
   createAgentSession,
 } from './agent.js'
+import { autoExtractFacts } from './utils/agent-extract.js'
 import { extractEscalationContext, buildEscalationSummary } from './utils/escalation.js'
 import { extractExplicitLocation } from './utils/intent.js'
 import { resolveKnownLocation } from './utils/message-parsing.js'
@@ -112,8 +113,25 @@ async function getOrCreateSession(
   // the first call to a fresh process (cold start, multi-dyno failover).
   // We push the messages directly into session.history; agentTurn will
   // include them in the LLM context on the next call.
+  //
+  // CRITICAL: we also rebuild deterministic state by running autoExtractFacts
+  // on each user message. Without this, on a cold start the LLM sees the
+  // history as plain text but state.displayState / machineType / machineNumber
+  // remain empty, so guards like guardCaso5Al001AskBefore (which need
+  // displayState='AL001' + machineType + machineNumber to fire) fail to
+  // trigger and the LLM escalates straight away. This matches what
+  // agentTurn does turn-by-turn in the CLI/test runner, so behaviour is
+  // identical between cold-start (web) and warm session (CLI).
   for (const h of history) {
     session.history.push({ role: h.role, content: h.content })
+    if (h.role === 'user') {
+      try {
+        autoExtractFacts(session.ar, h.content)
+      } catch {
+        // Extraction is best-effort during replay: a single bad turn must
+        // not break the whole session bootstrap.
+      }
+    }
   }
 
   // Seed sticky state with caller-provided customer info so the agent does
