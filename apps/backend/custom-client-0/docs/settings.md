@@ -16,12 +16,24 @@ Everything that varies per tenant lives in `json/`. The code is identical across
 }
 ```
 
-| Field | Type | Purpose |
-|---|---|---|
-| `enabledLanguages` | `string[]` | Hard tenant lock. If the customer types in a language that is NOT in this list, we fall back to `defaultLanguage`. |
-| `defaultLanguage` | `string` | Fallback language. |
-| `chatbotName` | `string` | Used inside `{{chatbotName}}` placeholders. |
-| `welcomeMessage` | `Record<lang, string>` | Per-language welcome rendered on the very first turn (and only when the customer hasn't already given operational facts — see `agent.ts` welcome logic). |
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `enabledLanguages` | `string[]` | — | Hard tenant lock. If the customer types in a language that is NOT in this list, we fall back to `defaultLanguage`. |
+| `defaultLanguage` | `string` | — | Fallback language. |
+| `chatbotName` | `string` | `"Eco"` | Used inside `{{chatbotName}}` placeholders in prompts. |
+| `companyName` | `string` | `"Ecolaundry"` | Tenant brand name, used in escalation summaries. |
+| `model` | `string` | env `LLM_MODEL` | OpenRouter model id (e.g. `"openai/gpt-4o-mini"`). |
+| `agentTemperature` | `number` | `0.3` | LLM sampling temperature. |
+| `agentMaxTokens` | `number` | `800` | Max tokens per LLM call. |
+| `maxToolHops` | `number` | `6` | Hard cap on tool-call iterations per turn. |
+| `tone` | `string` | — | Free-form tone description injected into the system prompt. |
+| `supportEmails.invoice` | `string` | — | Email for invoice requests (Caso 9). |
+| `supportEmails.support` | `string` | — | General support email. |
+| `refundFormUrl` | `string` | — | Public URL for the refund form (Caso 6/26). |
+| `allowedExternalLinks` | `string` | — | Comma-separated whitelisted domains the bot may mention. |
+| `welcomeMessage` | `Record<lang, string>` | — | Per-language welcome rendered on the very first turn (only when the customer hasn't already given operational facts). |
+| `locationCarryOverMs` | `number` | `3600000` (1 h) | How long (ms) to carry a customer's last known laundromat location forward into a cold-start session. Beyond this window the bot re-asks location. |
+| `sessionIdleTtlMs` | `number` | `1800000` (30 min) | In-process session cache TTL (ms). Sessions idle longer than this are evicted to keep memory bounded. |
 
 ## `json/locations.json` — laundries metadata + per-location overrides
 

@@ -31,13 +31,13 @@ import type {
   HistoryEntry,
 } from './models/index.js'
 
-// Reuse the customer's most recent location when they return within this window.
-// Beyond it, ask again — the customer may have moved to a different laundromat.
-const LOCATION_CARRY_OVER_MS = 60 * 60 * 1000 // 1 hour
+// Fallback values when settings.json omits the fields.
+const DEFAULT_LOCATION_CARRY_OVER_MS = 60 * 60 * 1000  // 1 hour
+const DEFAULT_SESSION_IDLE_TTL_MS    = 30 * 60 * 1000  // 30 minutes
 
 // Per-session cache of agent runtimes. Keyed by sessionId so concurrent
 // customers do not stomp on each other's sticky facts. Entries are evicted
-// after IDLE_TTL_MS of inactivity to keep memory bounded.
+// after `cachedIdleTtlMs` of inactivity to keep memory bounded.
 //
 // NOTE: each Node process has its own cache. On a multi-dyno deployment a
 // customer's next message may land on a different dyno; in that case the
@@ -49,13 +49,16 @@ const sessionCache = new Map<
   string,
   { session: AgentSession; lastUsedAt: number }
 >()
-const IDLE_TTL_MS = 30 * 60 * 1000 // 30 minutes
+
+// Cached from the first loaded session's settings so evictIdleSessions()
+// (which has no session context) can honour the tenant-configured TTL.
+let cachedIdleTtlMs = DEFAULT_SESSION_IDLE_TTL_MS
 
 /**
  * Walk the replayed history from newest to oldest and try to recover the
  * customer's last mentioned laundromat location. Only entries whose timestamp
- * is within LOCATION_CARRY_OVER_MS are considered; older mentions are stale
- * (the customer may have moved to another laundromat in between).
+ * are within `locationCarryOverMs` (from settings.json) are considered; older
+ * mentions are stale (the customer may have moved to another laundromat).
  *
  * History entries without a `timestamp` are skipped — the caller is expected
  * to provide them. We never guess.
@@ -65,6 +68,7 @@ function recoverStickyLocation(
   history: HistoryEntry[],
 ): void {
   if (session.ar.state.location) return // already known, nothing to recover
+  const carryOverMs = session.ar.runtime.settings.locationCarryOverMs ?? DEFAULT_LOCATION_CARRY_OVER_MS
   const now = Date.now()
   for (let i = history.length - 1; i >= 0; i--) {
     const h = history[i]
@@ -72,7 +76,7 @@ function recoverStickyLocation(
     if (!h.timestamp) continue
     const ts = Date.parse(h.timestamp)
     if (Number.isNaN(ts)) continue
-    if (now - ts > LOCATION_CARRY_OVER_MS) break // older entries are out of window
+    if (now - ts > carryOverMs) break // older entries are out of window
     const explicit = extractExplicitLocation(h.content)
     if (!explicit) continue
     const known = resolveKnownLocation(explicit)
@@ -86,7 +90,7 @@ function recoverStickyLocation(
 function evictIdleSessions(): void {
   const now = Date.now()
   for (const [key, entry] of sessionCache) {
-    if (now - entry.lastUsedAt > IDLE_TTL_MS) {
+    if (now - entry.lastUsedAt > cachedIdleTtlMs) {
       sessionCache.delete(key)
     }
   }
@@ -108,6 +112,9 @@ async function getOrCreateSession(
   }
 
   const session = await createAgentSession()
+
+  // Sync the TTL cache with this tenant's configured value so eviction honours it.
+  cachedIdleTtlMs = session.ar.runtime.settings.sessionIdleTtlMs ?? DEFAULT_SESSION_IDLE_TTL_MS
 
   // Replay caller-provided history so the agent has full context even on
   // the first call to a fresh process (cold start, multi-dyno failover).
@@ -148,7 +155,7 @@ async function getOrCreateSession(
   // history, so the bot doesn't ask "where are you?" again on a new incident
   // when the customer is clearly still at the same laundromat. We only carry
   // the location forward if the last user mention is within
-  // LOCATION_CARRY_OVER_MS — beyond that the customer may have moved.
+  // `settings.locationCarryOverMs` — beyond that the customer may have moved.
   //
   // Machine-level facts (lavadora/secadora, number, display) are intentionally
   // NOT recovered: each new incident must re-ask those, because the same

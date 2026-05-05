@@ -178,11 +178,15 @@ Edit [`json/settings.json`](./json/settings.json):
   "agentTemperature": 0.3,
   "agentMaxTokens": 800,
   "maxToolHops": 6,
+  "locationCarryOverMs": 3600000,
+  "sessionIdleTtlMs": 1800000,
   "welcomeMessage": { "es": "¡Hola! Soy {{chatbotName}}, …" }
 }
 ```
 
 `enabledLanguages` is a hard lock — even if the customer types in Italian, the bot replies in `defaultLanguage` when Italian isn't enabled.
+
+`locationCarryOverMs` controls how long (ms) a customer's last laundromat is remembered across sessions (default 1 h). `sessionIdleTtlMs` controls in-process session eviction (default 30 min). Both read from `settings.json` at runtime.
 
 ## Running tests
 
@@ -204,5 +208,7 @@ Concept-based assertions (`expectAsksForLocation`, `expectMentionsAll`, `expectS
 3. No hardcoded language detection — `settings.enabledLanguages` is the source of truth.
 4. **Never use regex to classify customer intent** (yes/no, confirmation, topic). That's what the LLM is for. Regex is for enumerable facts only.
 5. **`mark_resolved` is mandatory** when the customer confirms a fix. The deterministic post-resolution reset depends on it; the prompt rule documents this in detail.
-6. Multilingual: never hardcode Spanish responses; use `localization.ts` `t()` for any deterministic reply.
+6. Multilingual: never hardcode deterministic reply strings — use `localization.ts` `t()` / `tt()` for all customer-facing text in guards.
 7. JSON for technical flows. Small set of guards for opening flows. `reglas.md` for tone/policy.
+8. **Location-specific data belongs in `locations.json`**, not in guard code. Use `faqOverrides` for per-location FAQ answers (e.g. `openingHours`) so guards can stay generic.
+9. **Business constants belong in `settings.json`** — timeouts (`locationCarryOverMs`, `sessionIdleTtlMs`), model, temperatures, emails. See [`docs/settings.md`](./docs/settings.md) for the full reference.

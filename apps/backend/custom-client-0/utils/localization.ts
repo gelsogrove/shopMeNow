@@ -516,6 +516,47 @@ const TRANSLATIONS = {
     fr: 'Pour pouvoir t\'aider, j\'ai besoin de savoir d\'abord dans quelle laverie tu te trouves exactement.',
   },
 
+  // ── Caso 8 step 2 — after code received, ask location ─────────────────────
+  caso8AskLocation: {
+    es: 'Gracias. ¿En qué lavandería lo quieres usar?',
+    it: 'Grazie. In quale lavanderia vuoi usarlo?',
+    ca: 'Gràcies. A quina bugaderia el vols usar?',
+    en: 'Thanks. Which laundry do you want to use it at?',
+    pt: 'Obrigado. Em que lavandaria o queres usar?',
+    fr: 'Merci. Dans quelle laverie veux-tu l\'utiliser ?',
+  },
+
+  // ── Caso 12C — price not confirmed ────────────────────────────────────────
+  caso12Precio: {
+    es: 'Tengo que revisarlo antes de confirmarte ese importe.',
+    it: 'Devo verificarlo prima di confermarti quell\'importo.',
+    ca: 'Ho he de revisar abans de confirmar-te aquest import.',
+    en: 'I need to check that before confirming the amount.',
+    pt: 'Tenho de rever isso antes de te confirmar o valor.',
+    fr: 'Je dois vérifier avant de te confirmer ce montant.',
+  },
+
+  // ── Caso 12 — default general hours (no location override found) ──────────
+  caso12HorariosDefault: {
+    es: 'El horario general de atención al público es de 8:00 a 22:00 cada día del año.',
+    it: 'L\'orario generale di apertura al pubblico è dalle 8:00 alle 22:00 ogni giorno dell\'anno.',
+    ca: 'L\'horari general d\'atenció al públic és de 8:00 a 22:00 cada dia de l\'any.',
+    en: 'General opening hours are 8:00 to 22:00 every day of the year.',
+    pt: 'O horário geral de atendimento ao público é das 8:00 às 22:00 todos os dias do ano.',
+    fr: 'Les horaires généraux d\'ouverture au public sont de 8 h à 22 h tous les jours de l\'année.',
+  },
+
+  // ── Unknown location — dynamic list of known laundromats ──────────────────
+  // Note: contains {list} placeholder replaced via tt().
+  unknownLocationList: {
+    es: 'No reconozco esa ubicación. Nuestras lavanderías son: {list}. ¿En cuál de ellas estás?',
+    it: 'Non riconosco quella posizione. Le nostre lavanderie sono: {list}. In quale ti trovi?',
+    ca: 'No reconec aquesta ubicació. Les nostres bugaderies són: {list}. A quina d\'elles estàs?',
+    en: 'I don\'t recognize that location. Our laundromats are: {list}. Which one are you at?',
+    pt: 'Não reconheço essa localização. As nossas lavandarias são: {list}. Em qual delas estás?',
+    fr: 'Je ne reconnais pas cet emplacement. Nos laveries sont : {list}. Dans laquelle es-tu ?',
+  },
+
   // ── Misc ───────────────────────────────────────────────────────────────────
   defaultHelp: {
     es: 'Dime el siguiente detalle útil y te ayudaré paso a paso.',

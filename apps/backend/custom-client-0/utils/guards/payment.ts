@@ -20,7 +20,7 @@ export const guardCaso7AskCambio: Guard = (ar) => {
   ) {
     ar.state.pendingFlow = 'caso7-await-display'
     return {
-      reply: '¿La central te ha devuelto el cambio?',
+      reply: t('centralReturnedChange', lang(ar)),
       reason: 'caso7-ask-cambio',
     }
   }
@@ -163,7 +163,7 @@ export const guardCaso8AwaitLocation: Guard = (ar, userMessage) => {
   }
   ar.state.pendingFlow = 'caso8-ask-amount'
   return {
-    reply: 'Gracias. ¿En qué lavandería lo quieres usar?',
+    reply: t('caso8AskLocation', lang(ar)),
     reason: 'caso8-await-location',
   }
 }

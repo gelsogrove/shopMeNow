@@ -40,7 +40,7 @@ export const guardUnknownLocation: Guard = (ar) => {
     return null
   }
   return {
-    reply: `No reconozco esa ubicación. Nuestras lavanderías son: ${listLaundromatsForReply()}. ¿En cuál de ellas estás?`,
+    reply: tt('unknownLocationList', lang(ar), { list: listLaundromatsForReply() }),
     reason: 'unknown-location',
   }
 }
@@ -84,7 +84,15 @@ export const guardForceMachineType: Guard = (ar) => {
   return null
 }
 
-/** G4a — Force "¿Has podido realizar el pago?" when local+type+number known. */
+/**
+ * G4a — Force "¿Has podido realizar el pago?" when local+type+number known.
+ *
+ * NOTE: this guard is NOT currently included in GUARD_PIPELINE in guards/index.ts.
+ * Payment confirmation in the general flow is handled by the LLM reading the
+ * sticky state from the system prompt. If you want deterministic payment-step
+ * behaviour (per usecases.md Caso 1), add it to the pipeline between
+ * guardForceMachineNumber and guardForceDisplay and re-run the full test suite.
+ */
 export const guardForcePayment: Guard = (ar) => {
   if (
     ar.state.location &&

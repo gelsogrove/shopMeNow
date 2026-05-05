@@ -131,9 +131,6 @@ export const guardCaso17AskPhoto: Guard = (ar) => {
   return { reply: `${escalate} ${nameAsk}`, reason: 'caso17-direct-escalate' }
 }
 
-/** Caso 17 step 2 — kept for backward compat but never reached now. */
-export const guardCaso17NoPhoto: Guard = () => null
-
 /** Post-instruction failure: customer received an instruction and reports
  *  it didn't work → escalate. */
 export const guardPostInstructionFailure: Guard = (ar, userMessage) => {
@@ -151,7 +148,7 @@ export const guardPostInstructionFailure: Guard = (ar, userMessage) => {
     return null
   }
   const reply = userMessage.trim().toLowerCase()
-  const failure = /(sigue\s+(?:igual|sin\s+(?:arrancar|funcionar|responder|empezar))|sigue\s+(?:sin|igual)|no\s+(?:responde|arranca|empieza|funciona|desaparece)|todav[ií]a\s+(?:no|sale|sigue)|aun\s+(?:no|sale|sigue)|el\s+mensaje\s+(?:sigue|no\s+desaparece)|no\s+lo\s+s[eé]\s+bien|no\s+estoy\s+seguro|^(no|nada))/i.test(reply)
+  const failure = /(sigue\s+(?:igual|sin\s+(?:arrancar|funcionar|responder|empezar)|saliendo\b)|sigue\s+(?:sin|igual)|no\s+(?:responde|arranca|empieza|funciona|desaparece)|todav[ií]a\s+(?:no|sale|sigue)|aun\s+(?:no|sale|sigue)|el\s+mensaje\s+(?:sigue|no\s+desaparece)|no\s+lo\s+s[eé]\s+bien|no\s+estoy\s+seguro|^(no|nada))/i.test(reply)
   if (!failure) return null
   ar.state.activeFlowId = null
   ar.state.escalationReason = 'Customer reports the instruction did not resolve the issue'

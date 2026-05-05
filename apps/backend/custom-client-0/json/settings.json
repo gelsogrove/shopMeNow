@@ -21,5 +21,8 @@
 
   "welcomeMessage": {
     "es": "Hola, soy el asistente virtual de la lavandería. ¿Cómo puedo ayudarte?"
-  }
+  },
+
+  "locationCarryOverMs": 3600000,
+  "sessionIdleTtlMs": 1800000
 }

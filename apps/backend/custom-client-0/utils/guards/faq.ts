@@ -50,7 +50,7 @@ export const guardCaso12Precio: Guard = (ar, userMessage) => {
   }
   if (!PRECIO_TOPIC.test(userMessage)) return null
   return {
-    reply: 'Tengo que revisarlo antes de confirmarte ese importe.',
+    reply: t('caso12Precio', lang(ar)),
     reason: 'caso12-precio',
   }
 }
@@ -72,10 +72,13 @@ export const guardCaso12Horarios: Guard = (ar, userMessage) => {
   const followUpLocationMatch = userMessage.match(/(goya|pineda|l['']?escala|alemanya|hortes|matar[oó])/i)
   const inlineLocation = followUpLocationMatch?.[1] || ''
   const checkLocation = inlineLocation || ar.state.location
-  const isEscala = /^l['']?escala/i.test(checkLocation)
-  const reply = isEscala
-    ? 'En L\'Escala, las máquinas se pueden utilizar de 7:00 a 23:00.'
-    : 'El horario general de atención al público es de 8:00 a 22:00 cada día del año.'
+  // Data-driven: use faqOverrides.openingHours from locations.json when available,
+  // fall back to the default general hours string. This avoids hardcoding
+  // location-specific hours and keeps L'Escala's extended schedule in one place.
+  const locData = checkLocation
+    ? (ar.runtime.locations?.locations?.[checkLocation] as { faqOverrides?: Record<string, string> } | undefined)
+    : null
+  const reply = locData?.faqOverrides?.['openingHours'] ?? t('caso12HorariosDefault', lang(ar))
   ar.state.lastResolvedIntent = 'faq'
   return { reply, reason: 'caso12-horarios' }
 }

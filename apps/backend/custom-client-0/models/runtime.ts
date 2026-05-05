@@ -61,6 +61,17 @@ export type Settings = {
   /** Whitelisted external domains the bot is allowed to mention. */
   allowedExternalLinks?: string
   welcomeMessage?: Partial<Record<SupportedLanguage, string>>
+  /**
+   * How long (in ms) to carry a customer's last known laundromat location
+   * forward into a new session cold-start. Default 3 600 000 (1 hour).
+   * Beyond this window the bot re-asks location — the customer may have moved.
+   */
+  locationCarryOverMs?: number
+  /**
+   * In-process session cache TTL (ms). Sessions idle longer than this are
+   * evicted to keep memory bounded. Default 1 800 000 (30 minutes).
+   */
+  sessionIdleTtlMs?: number
 }
 
 export type Runtime = {
