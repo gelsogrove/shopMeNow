@@ -417,56 +417,20 @@ apps/frontend/src/
 - **ALWAYS** prevent race conditions when multiple customers write simultaneously
 - **Critical Operations Requiring Protection**:
   - ✅ **Session Creation**: Use Prisma transactions with unique constraint `(customerId, status="active")`
-  - ✅ **Message Saving**: Queue messages per customer, process sequentially
   - ✅ **Cart Operations**: Transaction-based updates with optimistic locking
-  - ✅ **LLM Processing**: In-memory lock per `customerId` (or message queue)
-- **Implementation Patterns**:
-
-  ```typescript
-  // Session creation with transaction
-  async findOrCreateChatSession(workspaceId: string, customerId: string) {
-    return await prisma.$transaction(async (tx) => {
-      let session = await tx.chatSession.findFirst({
-        where: { customerId, status: "active" }
-      })
-      if (!session) {
-        try {
-          session = await tx.chatSession.create({
-            data: { workspaceId, customerId, status: "active" }
-          })
-        } catch (error) {
-          if (error.code === "P2002") { // Unique constraint violation
-            session = await tx.chatSession.findFirst({
-              where: { customerId, status: "active" }
-            })
-          } else throw error
-        }
-      }
-      return session
-    })
-  }
-
-  // Customer-level locking for message processing
-  const customerLocks = new Map<string, Promise<void>>()
-  async function processCustomerMessage(customerId: string, message: string) {
-    const lockKey = `customer:${customerId}`
-    while (customerLocks.has(lockKey)) {
-      await customerLocks.get(lockKey)
-    }
-    let releaseLock: () => void
-    const lockPromise = new Promise<void>((resolve) => { releaseLock = resolve })
-    customerLocks.set(lockKey, lockPromise)
-    try {
-      await llmRouterService.routeMessage({ customerId, message, ... })
-    } finally {
-      customerLocks.delete(lockKey)
-      releaseLock!()
-    }
-  }
-  ```
-
-- **Database Schema**: Add unique constraint `@@unique([customerId, status])` to ChatSession
-- **Testing**: MUST include concurrent request tests
+  - ✅ **LLM Processing**: In-memory async lock per `sessionId` — IMPLEMENTED in `apps/backend/custom-client-0/index.ts:withSessionLock`
+- **Current Implementation** (custom-client-0):
+  - `withSessionLock(sessionId, fn)` chains turns of the SAME session sequentially via promise queue
+  - Different sessions still run in parallel (lock keyed by `sessionId`)
+  - Failed turns do NOT poison the queue (errors are absorbed in the tracking promise but propagated to the caller)
+  - Lock entry self-evicts when the chain settles (bounded memory)
+  - Tested in `__tests__/unit/session-concurrency.test.ts`
+- **Cache Bounds** (custom-client-0):
+  - `sessionCache` capped at `MAX_CACHED_SESSIONS` (default 10000, override via `AGENT_SESSION_CACHE_MAX` env)
+  - LRU eviction by `lastUsedAt` when over cap
+  - Idle TTL eviction unchanged (default 30 min)
+- **Database Schema**: Unique constraint `@@unique([customerId, status])` on ChatSession (enforced by Prisma)
+- **Testing**: Concurrent request tests live in `__tests__/unit/session-concurrency.test.ts` (pure unit, no LLM)
 - **NO global locks**: Only per-customer or per-session isolation
 - See `.specify/memory/constitution.md` Principle VI for complete details
 

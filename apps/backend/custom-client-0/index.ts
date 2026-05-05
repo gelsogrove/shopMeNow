@@ -45,10 +45,79 @@ const DEFAULT_SESSION_IDLE_TTL_MS    = 30 * 60 * 1000  // 30 minutes
 // caller) so the bot still has context — only the DETERMINISTIC sticky-state
 // (`location`, `displayState`, …) is lost across dynos. That is the same
 // guarantee the CLI gives, so behaviour stays consistent.
-const sessionCache = new Map<
+// Exported only for unit tests — production code MUST go through
+// getOrCreateSession() so cache caps and locks are honoured.
+export const sessionCache = new Map<
   string,
   { session: AgentSession; lastUsedAt: number }
 >()
+
+// Hard cap on cached sessions to prevent unbounded memory growth under load.
+// Default ~10k entries × ~30KB each ≈ 300MB peak. Override via env var when
+// provisioning larger Node processes.
+const MAX_CACHED_SESSIONS = Math.max(
+  100,
+  parseInt(process.env.AGENT_SESSION_CACHE_MAX || '10000', 10) || 10000,
+)
+
+// Per-session async lock. Two messages from the SAME sessionId are serialised
+// (the second await chains on the first), but messages from DIFFERENT sessions
+// run in parallel as before. This prevents race conditions where two concurrent
+// turns mutate `session.ar.state` (location, displayState, machineNumber, …)
+// at the same time — which under load corrupts the conversation state.
+//
+// SCOPE: this lock is INSIDE-PROCESS only. On a multi-dyno deployment, two
+// turns of the same sessionId could land on different dynos and bypass it.
+// Mitigation paths (in order of cost/benefit):
+//   - Sticky session at the load balancer level (Heroku: session affinity,
+//     ALB: `stickiness`). Cheapest, no code change. Recommended for current scale.
+//   - Postgres advisory locks (`pg_try_advisory_lock(hash(sessionId))`) for
+//     cross-process serialisation. Adds ~5-20ms per turn but works with any
+//     number of dynos. Do this when sticky session is not feasible.
+//   - Redis-based distributed lock (Redlock). Most robust, requires Redis.
+//
+// Map entry is removed when the chain settles, so memory stays bounded by
+// the number of currently in-flight sessions, not historical traffic.
+const sessionLocks = new Map<string, Promise<unknown>>()
+
+export function withSessionLock<T>(sessionId: string, fn: () => Promise<T>): Promise<T> {
+  const previous = sessionLocks.get(sessionId) || Promise.resolve()
+  // Run fn after `previous` settles regardless of outcome (then(fn, fn) means
+  // the new turn fires whether the prior one fulfilled or rejected — a single
+  // failing turn must not poison the queue for subsequent turns).
+  const next = previous.then(fn, fn)
+  // The chain entry kept in `sessionLocks` must NEVER reject — if it did, the
+  // unhandled rejection would crash the Node process even though the caller
+  // already handled `next`. We absorb errors here; the original rejection still
+  // surfaces through the returned `next` promise to the caller.
+  const tracked: Promise<unknown> = next.then(
+    () => undefined,
+    () => undefined,
+  ).finally(() => {
+    if (sessionLocks.get(sessionId) === tracked) {
+      sessionLocks.delete(sessionId)
+    }
+  })
+  sessionLocks.set(sessionId, tracked)
+  return next
+}
+
+/**
+ * Drop the oldest entries until `sessionCache.size <= MAX_CACHED_SESSIONS`.
+ * The Map preserves insertion order; we refresh `lastUsedAt` on hit but do
+ * NOT re-insert, so an LRU-by-lastUsedAt is implemented by sorting entries
+ * before evicting. Called from `getOrCreateSession` before insertion.
+ */
+export function enforceCacheCap(): void {
+  if (sessionCache.size < MAX_CACHED_SESSIONS) return
+  const overflow = sessionCache.size - MAX_CACHED_SESSIONS + 1
+  const entries = [...sessionCache.entries()].sort(
+    (a, b) => a[1].lastUsedAt - b[1].lastUsedAt,
+  )
+  for (let i = 0; i < overflow && i < entries.length; i++) {
+    sessionCache.delete(entries[i][0])
+  }
+}
 
 // Cached from the first loaded session's settings so evictIdleSessions()
 // (which has no session context) can honour the tenant-configured TTL.
@@ -162,12 +231,26 @@ async function getOrCreateSession(
   // customer may be using a different machine.
   recoverStickyLocation(session, history)
 
+  enforceCacheCap()
   sessionCache.set(sessionId, { session, lastUsedAt: Date.now() })
   return session
 }
 
 export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
   const agentChain: string[] = ['custom-client-0']
+  // Serialise turns belonging to the SAME session. Different sessions still
+  // run in parallel — the lock is keyed by sessionId. This is the smallest
+  // safe granularity: it lets the host process serve thousands of concurrent
+  // conversations while protecting each conversation's mutable state.
+  return withSessionLock(input.context.sessionId, () =>
+    runChatbotTurn(input, agentChain),
+  )
+}
+
+async function runChatbotTurn(
+  input: ChatbotInput,
+  agentChain: string[],
+): Promise<ChatbotOutput> {
   try {
     const session = await getOrCreateSession(
       input.context.sessionId,
