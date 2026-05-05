@@ -83,17 +83,17 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
 
   // Topic-switch detection — runs first so the rest of the extractor doesn't
   // re-populate stale machine facts from the previous conversation segment.
-  if (detectTopicSwitch(state, userMessage)) {
+  if (detectTopicSwitch(ar.runtime, state, userMessage)) {
     resetMachineFacts(state)
     // Mark the new incident type so the gather guards don't keep asking
     // about machineType/number when the conversation is now about payment.
-    if (PAYMENT_TOPIC.test(userMessage)) {
+    if (matchPattern(ar.runtime, 'topicPayment', userMessage)) {
       state.nonTroubleshootingIncident = 'datafono-wrong-amount'
-    } else if (OPS_TOPIC.test(userMessage)) {
+    } else if (matchPattern(ar.runtime, 'topicOps', userMessage)) {
       state.nonTroubleshootingIncident = 'cameras-or-ajax'
-    } else if (DRYER_MINUTES_TOPIC.test(userMessage)) {
+    } else if (matchPattern(ar.runtime, 'topicDryerMinutes', userMessage)) {
       state.nonTroubleshootingIncident = 'dryer-minutes-not-credited'
-    } else if (CARD_FAIL_TOPIC.test(userMessage)) {
+    } else if (matchPattern(ar.runtime, 'topicCardFail', userMessage)) {
       state.nonTroubleshootingIncident = 'card-payment'
     }
     // Allow location override on topic switch: if the customer mentions a
@@ -110,23 +110,23 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   // Triggers the same flag so the gather guards skip machine-type/number for
   // pure payment-related complaints.
   if (!state.nonTroubleshootingIncident && state.turnCount <= 1) {
-    if (PAYMENT_TOPIC.test(userMessage)) {
+    if (matchPattern(ar.runtime, 'topicPayment', userMessage)) {
       state.nonTroubleshootingIncident = 'datafono-wrong-amount'
-    } else if (OPS_TOPIC.test(userMessage)) {
+    } else if (matchPattern(ar.runtime, 'topicOps', userMessage)) {
       state.nonTroubleshootingIncident = 'cameras-or-ajax'
-    } else if (DRYER_MINUTES_TOPIC.test(userMessage)) {
+    } else if (matchPattern(ar.runtime, 'topicDryerMinutes', userMessage)) {
       state.nonTroubleshootingIncident = 'dryer-minutes-not-credited'
-    } else if (CARD_FAIL_TOPIC.test(userMessage)) {
+    } else if (matchPattern(ar.runtime, 'topicCardFail', userMessage)) {
       state.nonTroubleshootingIncident = 'card-payment'
-    } else if (REFUND_DEMAND_TOPIC.test(userMessage)) {
+    } else if (matchPattern(ar.runtime, 'topicRefundDemand', userMessage)) {
       state.nonTroubleshootingIncident = 'refund-demand'
-    } else if (COMPENSATION_TOPIC.test(userMessage)) {
+    } else if (matchPattern(ar.runtime, 'topicCompensation', userMessage)) {
       state.nonTroubleshootingIncident = 'compensation-demand'
     } else if (
       // Caso 28: messaggio T1 con narrativa intrinsecamente contraddittoria
       // (pago doppio + cobro mixto + dubbi ripetuti). Pattern: cobró dos
       // veces / aunque también pagué + creo / no sé / o algo así.
-      /(cobr[oó]\s+dos\s+veces|me\s+han\s+cobrad[oa]\s+(?:dos|2)\s+veces).*(creo|no\s+s[eé]|aunque|tambi[eé]n\s+pagu[eé]|no\s+lo\s+s[eé])/i.test(userMessage)
+      matchPattern(ar.runtime, 'topicContradictoryNarrative', userMessage)
     ) {
       state.nonTroubleshootingIncident = 'contradictory-narrative'
     }
