@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger"
 import { api } from "@/services/api"
 import React, { useEffect, useState } from "react"
+import { SEO } from "@/components/SEO"
 import { formatPrice } from "@/utils/format"
 import { useLocation, useSearchParams } from "react-router-dom"
 import {
@@ -892,6 +893,7 @@ const CheckoutPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO title="Checkout" description="Complete your order." robots="noindex, nofollow" />
       {/* Sticky Header with integrated menu */}
       <StickyHeader
         title={texts.finalizeOrder}

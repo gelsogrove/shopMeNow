@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async"
 import { useNavigate } from "react-router-dom"
 
 const ExpiredPage = () => {
@@ -5,6 +6,11 @@ const ExpiredPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+      <Helmet>
+        <title>Link Expired | eChatbot</title>
+        <meta name="robots" content="noindex, nofollow" />
+        <meta name="googlebot" content="noindex, nofollow" />
+      </Helmet>
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-orange-500 to-red-600 px-6 py-10 text-center">

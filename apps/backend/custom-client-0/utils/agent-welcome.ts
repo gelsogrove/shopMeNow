@@ -46,11 +46,16 @@ const GUARD_REASONS_NO_WELCOME = new Set<string>([
   'caso4-resolved',
   'caso4-escalate',
   'caso4-escalate-cambio-yes',
-  'caso5-guide-retry',
-  'caso5-resolved',
-  'caso5-escalate',
-  'caso15-explain',
+  // Display-flow guard reasons (data-driven via json/display-flows.json).
+  // Phase A reasons match the flow id; Phase B append `-resolved` or
+  // `-escalate`. Keep this list in sync with json/display-flows.json.
+  'caso5-al001',
+  'caso5-al001-resolved',
+  'caso5-al001-escalate',
   'caso14-alm-door',
+  'caso14-alm-door-escalate',
+  'caso15-001-explained',
+  'caso15-001-explained-escalate',
   'faq-closure',
   'caso25-escalate',
 ])

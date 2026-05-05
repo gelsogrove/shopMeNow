@@ -1,113 +1,13 @@
-// Display-state guards: AL001 (Caso 5), C001 (Caso 15), ALM/DOOR (Caso 14),
-// no-photo (Caso 17), numeric codes (Caso 18), post-instruction failure,
-// unknown-display escalation.
+// Display-state guards: no-photo (Caso 17), numeric codes (Caso 18),
+// post-instruction failure, unknown-display escalation.
+//
+// The "intercept display X → emit guidance → handle resolved/persist" pattern
+// (formerly Caso 5 / 14 / 15 hardcoded guards) is now data-driven via
+// json/display-flows.json + utils/guards/display-flow.ts. Add new cases there.
 
 import { t, tt } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { lang, RECOVERABLE_DISPLAYS } from './helpers.js'
-
-/** Caso 5 — AL001: after location + machineType + machineNumber, intercept
- *  the alarm BEFORE the LLM jumps to escalation. We immediately emit the
- *  6-step retry sequence (load → close → pay → select → program → confirm).
- *  The LLM then handles the customer's reply: if it works → mark_resolved;
- *  if it doesn't → ask name and escalate to assistance. */
-export const guardCaso5Al001AskBefore: Guard = (ar) => {
-  const display = ar.state.displayState.toUpperCase().replace(/\s+/g, '')
-  if (
-    display !== 'AL001' ||
-    !ar.state.location ||
-    !ar.state.machineType ||
-    !ar.state.machineNumber ||
-    ar.state.activeFlowId === 'caso5-al001' ||
-    ar.state.customerName ||
-    ar.state.customerNameRequested
-  ) {
-    return null
-  }
-  ar.state.operatorRequested = false
-  ar.state.customerNameRequested = false
-  ar.pendingEscalation = null
-  ar.state.activeFlowId = 'caso5-al001'
-  return { reply: t('caso5GuideRetry', lang(ar)), reason: 'caso5-guide-retry' }
-}
-
-/** Caso 14 — ALM DOOR display: deterministic instruction. */
-export const guardCaso14AlmDoor: Guard = (ar) => {
-  const display = ar.state.displayState.toUpperCase().replace(/\s+/g, '')
-  if (
-    display !== 'ALM/DOOR' ||
-    !ar.state.location ||
-    !ar.state.machineNumber ||
-    ar.state.activeFlowId ||
-    ar.state.operatorRequested ||
-    ar.state.customerNameRequested
-  ) {
-    return null
-  }
-  ar.state.activeFlowId = 'caso14-alm-door'
-  return { reply: t('caso14AlmDoor', lang(ar)), reason: 'caso14-alm-door' }
-}
-
-/** Caso 14 — ALM DOOR escalation: customer says "no desaparece" → escalate. */
-export const guardCaso14AlmDoorEscalate: Guard = (ar, userMessage) => {
-  if (
-    ar.state.activeFlowId !== 'caso14-alm-door' ||
-    ar.state.customerName ||
-    ar.state.customerNameRequested
-  ) {
-    return null
-  }
-  const reply = userMessage.trim().toLowerCase()
-  const persists = /(no\s+desaparece|sigue\s+(?:igual|sin\s+arrancar|saliendo)|continua|todav[ií]a\s+sale|aun\s+sale)/i.test(reply) ||
-    /^(no|nope)\b/i.test(reply)
-  if (!persists) return null
-  ar.state.activeFlowId = null
-  ar.state.escalationReason = 'Caso 14 — ALM DOOR persists after retry'
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
-  const escalate = t('numericCodeIncoherence', lang(ar))
-  const nameAsk = t('customerNameAsk', lang(ar))
-  return { reply: `${escalate} ${nameAsk}`, reason: 'caso14-alm-door-escalate' }
-}
-
-/** Caso 15 step 1 — Display 001/AL001 (originated from "001"): educational reply. */
-export const guardCaso15Explain001: Guard = (ar) => {
-  const display = ar.state.displayState.toUpperCase().replace(/\s+/g, '')
-  if (
-    display !== 'C001' ||
-    !ar.state.location ||
-    ar.state.activeFlowId === 'caso15-001-explained' ||
-    ar.state.operatorRequested ||
-    ar.state.customerNameRequested
-  ) {
-    return null
-  }
-  ar.state.operatorRequested = false
-  ar.state.customerNameRequested = false
-  ar.pendingEscalation = null
-  ar.state.activeFlowId = 'caso15-001-explained'
-  return { reply: t('caso15Explain', lang(ar)), reason: 'caso15-explain' }
-}
-
-/** Caso 15 step 2 — after the educational explanation, escalate. */
-export const guardCaso15Escalate001: Guard = (ar) => {
-  if (
-    ar.state.activeFlowId !== 'caso15-001-explained' ||
-    ar.state.customerName ||
-    ar.state.customerNameRequested
-  ) {
-    return null
-  }
-  ar.state.activeFlowId = null
-  ar.state.escalationReason = 'Caso 15 — display 001 always escalated'
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
-  const escalate = t('caso15Escalate', lang(ar))
-  const nameAsk = t('customerNameAsk', lang(ar))
-  return { reply: `${escalate} ${nameAsk}`, reason: 'caso15-escalate' }
-}
 
 /** Caso 17 — customer cannot read the display. Photo upload not supported,
  *  so escalate directly. */
@@ -216,7 +116,10 @@ export const guardEscalateUnknownDisplay: Guard = (ar) => {
     ar.state.operatorRequested ||
     ar.state.customerName ||
     ar.state.customerNameRequested ||
-    ar.state.activeFlowId === 'caso5-al001'
+    // Skip when any declarative display-flow is already handling this turn
+    // (e.g. caso5-al001, caso14-alm-door, caso15-001-explained). The flow
+    // engine in display-flow.ts owns the resolution/escalation lifecycle.
+    ar.state.activeFlowId !== null
   ) {
     return null
   }

@@ -33,6 +33,13 @@ export type {
 
 export type { SessionState } from './state.js'
 
+export type {
+  DisplayFlowDefinition,
+  DisplayFlowRequirement,
+  DisplayFlowsFile,
+} from './display-flow.js'
+export { validateDisplayFlowsFile } from './display-flow.js'
+
 export type { EscalationContext } from './escalation.js'
 
 export type {

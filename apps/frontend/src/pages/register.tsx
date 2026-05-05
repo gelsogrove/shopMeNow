@@ -311,6 +311,7 @@ const RegisterPage = () => {
     <SEO
       title="Registration"
       description="Complete your eChatbot registration smoothly on mobile or desktop with a responsive layout."
+      robots="noindex, nofollow"
     />
   )
 

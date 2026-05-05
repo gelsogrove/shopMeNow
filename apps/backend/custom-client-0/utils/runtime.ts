@@ -12,6 +12,7 @@ import type {
   Runtime,
   Settings,
 } from '../models/index.js'
+import { validateDisplayFlowsFile } from '../models/index.js'
 
 let FAQS: FaqMap = {}
 
@@ -45,7 +46,9 @@ export async function loadRuntime(): Promise<Runtime> {
   const dryer = JSON.parse(await readFile(path.join(flowDir, 'dryer_ed340.json'), 'utf8')) as FlowMap
   const locations = JSON.parse(await readFile(path.join(flowDir, 'locations.json'), 'utf8')) as LocationsConfig
   const settings = JSON.parse(await readFile(path.join(flowDir, 'settings.json'), 'utf8')) as Settings
-  return { prompts: Object.fromEntries(promptEntries), flows: { washer, dryer }, regressions: [], locations, settings }
+  const displayFlowsRaw = JSON.parse(await readFile(path.join(flowDir, 'display-flows.json'), 'utf8'))
+  const displayFlows = validateDisplayFlowsFile(displayFlowsRaw)
+  return { prompts: Object.fromEntries(promptEntries), flows: { washer, dryer }, regressions: [], locations, settings, displayFlows }
 }
 
 export function getLocationOverride(runtime: Runtime, location: string | null | undefined): LocationOverride | null {

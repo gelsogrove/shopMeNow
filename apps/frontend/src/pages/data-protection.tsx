@@ -1,4 +1,5 @@
 import { logger } from "@/lib/logger"
+import { Helmet } from "react-helmet-async"
 import { useEffect, useState } from "react"
 import { useSearchParams } from "react-router-dom"
 import { tokenApi } from "../services/tokenApi"
@@ -70,6 +71,11 @@ const DataProtectionPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+      <Helmet>
+        <title>Data Protection | eChatbot</title>
+        <meta name="robots" content="noindex, nofollow" />
+        <meta name="googlebot" content="noindex, nofollow" />
+      </Helmet>
       <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden">
         {/* Header with gradient */}
         <div className="bg-gradient-to-r from-blue-500 to-purple-600 px-6 py-8 text-white">

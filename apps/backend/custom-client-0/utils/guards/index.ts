@@ -5,10 +5,12 @@
 // earlier guards win.
 //
 // Guards are split by domain across sibling files:
-//   - payment.ts   — cambio (4, 7), pagado-no-usado (6), código (8), tarjeta (10), recarga (11)
-//   - display.ts   — AL001 (5), C001 (15), ALM/DOOR (14), no-photo (17), numeric (18), unknown
-//   - location.ts  — Mataró street, force-gather, location mismatch (21-24)
-//   - faq.ts       — closure, factura (9), precio/horarios (12), arrabbiato (25), refund (26-27), contradictory (28)
+//   - payment.ts      — cambio (4, 7), pagado-no-usado (6), código (8), tarjeta (10), recarga (11)
+//   - display.ts      — no-photo (17), numeric (18), post-instruction failure, unknown display
+//   - display-flow.ts — generic Phase A/B engine driven by json/display-flows.json
+//                       (AL001 caso 5, ALM/DOOR caso 14, C001 caso 15, …)
+//   - location.ts     — Mataró street, force-gather, location mismatch (21-24)
+//   - faq.ts          — closure, factura (9), precio/horarios (12), arrabbiato (25), refund (26-27), contradictory (28)
 //
 // This file ASSEMBLES them into the canonical ordered pipeline. DO NOT
 // reorder without knowing what you are doing — the order encodes priority
@@ -33,17 +35,17 @@ import {
 } from './payment.js'
 
 import {
-  guardCaso5Al001AskBefore,
-  guardCaso14AlmDoor,
-  guardCaso14AlmDoorEscalate,
-  guardCaso15Explain001,
-  guardCaso15Escalate001,
   guardCaso17AskPhoto,
   guardPostInstructionFailure,
   guardNumericCodeAskLetters,
   guardNumericCodeNoLetters,
   guardEscalateUnknownDisplay,
 } from './display.js'
+
+import {
+  guardDisplayFlowFollowUp,
+  guardDisplayFlowStart,
+} from './display-flow.js'
 
 import {
   guardMataroStreet,
@@ -102,11 +104,10 @@ export const GUARD_PIPELINE: Guard[] = [
   guardCaso31InsistLocation,
   guardUnknownLocation,
   guardCaso26Refund,
-  guardCaso5Al001AskBefore,
-  guardCaso15Escalate001,
-  guardCaso15Explain001,
-  guardCaso14AlmDoorEscalate,
-  guardCaso14AlmDoor,
+  // Phase B before Phase A: when a flow is already active, follow-up logic
+  // (resolved/persist) takes priority over re-detection of the display token.
+  guardDisplayFlowFollowUp,
+  guardDisplayFlowStart,
   guardPostInstructionFailure,
   guardCaso2124LocationMismatch,
   guardEscalateNonTroubleshooting,

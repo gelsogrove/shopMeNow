@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger"
 import { Download, FileText, Package, ShoppingCart, Truck } from "lucide-react"
 import React, { useEffect, useState } from "react"
+import { SEO } from "@/components/SEO"
 import { useParams, useSearchParams } from "react-router-dom"
 import { StickyHeader } from "../components/public/StickyHeader"
 import { TokenError } from "../components/ui/TokenError"
@@ -286,6 +287,7 @@ const OrdersPublicPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <SEO title="Order Details" description="View your order details." robots="noindex, nofollow" />
       <StickyHeader
         title={`${texts.orderCode} ${orderData.orderCode}`}
         subtitle={workspaceData?.name || ""}

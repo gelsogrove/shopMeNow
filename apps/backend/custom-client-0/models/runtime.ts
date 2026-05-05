@@ -1,5 +1,7 @@
 // Runtime configuration types: flows, FAQs, locations, settings.
 
+import type { DisplayFlowsFile } from './display-flow.js'
+
 export type FlowNode = {
   type: 'ACTION' | 'CONFIRMATION' | 'CHOICE' | 'INFO' | 'ROUTER' | 'INPUT'
   prompt: string
@@ -84,4 +86,6 @@ export type Runtime = {
   regressions: never[]
   locations: LocationsConfig
   settings: Settings
+  /** Declarative display-state intermediate flows, see models/display-flow.ts. */
+  displayFlows: DisplayFlowsFile
 }

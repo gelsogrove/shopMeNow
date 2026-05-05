@@ -1,0 +1,39 @@
+{
+  "_principle": "Declarative display-state intermediate flows. Each entry intercepts the LLM when a customer-reported display token (after location/type/number capture) matches one of the documented incident codes. Phase A emits a one-shot guidance reply (replyKey from localization.ts) and marks state.activeFlowId. Phase B reads the next customer turn: resolvedRegex closes the case, persistFailureRegex (or alwaysEscalateOnNextTurn) escalates with escalationReason. Anti-hardcode rule: never add a TypeScript guard for a 'display X → guide → escalate' pattern; add a JSON entry here. Schema/validation lives in models/display-flow.ts and is enforced at boot in utils/runtime.ts.",
+  "_schemaVersion": 1,
+  "flows": [
+    {
+      "id": "caso5-al001",
+      "displayMatches": ["AL001"],
+      "requires": ["location", "machineType", "machineNumber"],
+      "step": {
+        "replyKey": "caso5GuideRetry",
+        "resolvedReplyKey": "caso5Resolved"
+      },
+      "resolvedRegex": "(ya\\s+funciona|^funciona\\b|^ok\\s+resuelto|^resuelto\\b|^perfecto\\b|^perfetto\\b|gi[aà]\\s+funziona|ora\\s+funziona)",
+      "persistFailureRegex": "(sigue\\s+(?:igual|sin\\s+(?:arrancar|funcionar|responder|empezar)|saliendo)|sigue\\s+(?:sin|igual)|no\\s+(?:responde|arranca|empieza|funciona|desaparece)|todav[ií]a\\s+(?:no|sale|sigue)|aun\\s+(?:no|sale|sigue)|el\\s+mensaje\\s+(?:sigue|no\\s+desaparece)|^(no|nada)\\b)",
+      "escalationReason": "Caso 5 — AL001 sequence guidance did not resolve"
+    },
+    {
+      "id": "caso14-alm-door",
+      "displayMatches": ["ALM/DOOR", "ALMDOOR"],
+      "requires": ["location", "machineNumber"],
+      "step": {
+        "replyKey": "caso14AlmDoor"
+      },
+      "persistFailureRegex": "(no\\s+desaparece|sigue\\s+(?:igual|sin\\s+arrancar|saliendo)|continua|todav[ií]a\\s+sale|aun\\s+sale|^(no|nope)\\b)",
+      "escalationReason": "Caso 14 — ALM DOOR persists after retry"
+    },
+    {
+      "id": "caso15-001-explained",
+      "displayMatches": ["C001"],
+      "requires": ["location"],
+      "step": {
+        "replyKey": "caso15Explain",
+        "alwaysEscalateOnNextTurn": true
+      },
+      "escalationReplyKey": "caso15Escalate",
+      "escalationReason": "Caso 15 — display 001 always escalated"
+    }
+  ]
+}

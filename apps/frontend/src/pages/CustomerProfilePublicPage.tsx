@@ -1,6 +1,7 @@
 import { logger } from "@/lib/logger"
 import { Trash2, User } from "lucide-react"
 import React, { useEffect, useState } from "react"
+import { SEO } from "@/components/SEO"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import {
@@ -323,6 +324,7 @@ const CustomerProfilePublicPage: React.FC = () => {
 
   return (
     <PublicMobileShell accentColor="#0ea5e9" tone="slate" maxWidth="wide">
+      <SEO title="Profile" description="Your customer profile." robots="noindex, nofollow" />
       <StickyHeader
         title={profileData?.workspace?.name || texts.personalData}
         subtitle={texts.contactInfo}

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 import { api } from "../services/api"
+import { SEO } from "@/components/SEO"
 
 export default function FeedbackPage() {
   const [searchParams] = useSearchParams()
@@ -98,6 +99,7 @@ export default function FeedbackPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+      <SEO title="Feedback" description="Submit your feedback." robots="noindex, nofollow" />
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
         {/* Header */}
         <div className="text-center mb-8">

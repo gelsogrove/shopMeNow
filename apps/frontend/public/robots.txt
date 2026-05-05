@@ -1,0 +1,79 @@
+User-agent: *
+Allow: /
+
+# Public marketing pages - indexable
+Allow: /features
+Allow: /pricing
+Allow: /contact
+Allow: /widget-to-whatsapp
+Allow: /human-support
+Allow: /appointment-booking
+Allow: /crm-integration
+Allow: /team-collaboration
+Allow: /privacy-by-design
+Allow: /privacy
+Allow: /terms
+Allow: /refund
+Allow: /onboarding
+Allow: /faq
+
+# Disallow app pages (authenticated, token-gated, utility)
+Disallow: /chat
+Disallow: /queue
+Disallow: /analytics
+Disallow: /agents
+Disallow: /widget
+Disallow: /widget-settings
+Disallow: /widget-embed
+Disallow: /widget-test
+Disallow: /clients
+Disallow: /sales
+Disallow: /admin/
+Disallow: /products
+Disallow: /categories
+Disallow: /services
+Disallow: /appointments
+Disallow: /business-hours
+Disallow: /blackout-periods
+Disallow: /offers
+Disallow: /campaigns
+Disallow: /profile
+Disallow: /billing
+Disallow: /support/
+Disallow: /settings
+Disallow: /workspace
+Disallow: /workspace-selection
+Disallow: /gdpr
+
+# Token-gated public pages (crawlable so Google reads noindex meta, but should not be indexed)
+# Note: these pages have <meta name="robots" content="noindex, nofollow"> in their HTML
+# Do NOT add Disallow here - Google must crawl to read the noindex directive
+# Disallow: /registration  <- intentionally omitted
+# Disallow: /customer-profile  <- intentionally omitted
+# Disallow: /orders-public/  <- intentionally omitted
+# Disallow: /checkout  <- intentionally omitted
+# Disallow: /feedback  <- intentionally omitted
+
+# Utility pages that are clearly not for indexing
+Disallow: /checkout-success
+Disallow: /paypal-result
+Disallow: /registration-success
+Disallow: /expired
+
+# Auth pages
+Disallow: /auth/
+Disallow: /forgot-password
+Disallow: /accept-invite
+Disallow: /impersonate
+Disallow: /verify-otp
+
+# Utility / internal
+Disallow: /survey
+Disallow: /neapolis
+Disallow: /expired
+Disallow: /data-protection
+Disallow: /support-chat
+Disallow: /operator-dashboard
+Disallow: /demo/
+
+Sitemap: https://www.echatbot.ai/sitemap.xml
