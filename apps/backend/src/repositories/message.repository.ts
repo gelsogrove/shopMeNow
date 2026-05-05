@@ -2246,22 +2246,20 @@ export class MessageRepository {
     workspaceId?: string
   ): Promise<boolean> {
     try {
-      // First verify that the chat session belongs to the workspace if needed
-      if (workspaceId) {
-        const session = await this.prisma.chatSession.findFirst({
-          where: {
-            id: chatSessionId,
-            workspaceId,
-          },
-          select: { id: true },
-        })
+      // First verify that the chat session belongs to the workspace and get customerId
+      const session = await this.prisma.chatSession.findFirst({
+        where: {
+          id: chatSessionId,
+          ...(workspaceId ? { workspaceId } : {}),
+        },
+        select: { id: true, customerId: true },
+      })
 
-        if (!session) {
-          logger.warn(
-            `deleteChat: Chat session ${chatSessionId} not found in workspace ${workspaceId}`
-          )
-          return false
-        }
+      if (!session) {
+        logger.warn(
+          `deleteChat: Chat session ${chatSessionId} not found${workspaceId ? ` in workspace ${workspaceId}` : ""}`
+        )
+        return false
       }
 
       // Delete all messages in the chat session (old Message model)
@@ -2324,6 +2322,45 @@ export class MessageRepository {
       }
 
       logger.info(`Deleted chat session: ${chatSessionId}`)
+
+      // 🧹 CLEANUP: If customer is NOT registered (isActive=false), and has no remaining
+      // chat sessions, delete the orphaned customer record too.
+      // Registered customers (isActive=true) are ALWAYS kept.
+      if (session.customerId) {
+        const customer = await this.prisma.customers.findUnique({
+          where: { id: session.customerId },
+          select: { id: true, isActive: true, name: true },
+        })
+
+        if (customer && !customer.isActive) {
+          // Check if customer has any remaining chat sessions
+          const remainingSessions = await this.prisma.chatSession.count({
+            where: { customerId: session.customerId },
+          })
+
+          if (remainingSessions === 0) {
+            // Delete related data first (cart items → cart, search conversations, etc.)
+            await this.prisma.cartItem.deleteMany({
+              where: { cart: { customerId: session.customerId } },
+            })
+            await this.prisma.cart.deleteMany({
+              where: { customerId: session.customerId },
+            })
+            await this.prisma.searchConversation.deleteMany({
+              where: { customerId: session.customerId },
+            })
+            await this.prisma.secureToken.deleteMany({
+              where: { customerId: session.customerId },
+            })
+
+            await this.prisma.customers.delete({
+              where: { id: session.customerId },
+            })
+            logger.info(`🧹 Deleted orphaned unregistered customer: ${customer.name} (${session.customerId})`)
+          }
+        }
+      }
+
       return true
     } catch (error) {
       logger.error(`Error deleting chat session ${chatSessionId}:`, error)
