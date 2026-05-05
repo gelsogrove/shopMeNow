@@ -215,9 +215,24 @@ async function getOrCreateSession(
   // immediately without waiting for heuristics on the first message.
   if (userName) session.ar.state.customerName = userName
   if (phoneNumber) session.ar.state.customerPhone = phoneNumber
-  if (language) {
+
+  // Tenant locks the bot to a specific set of `enabledLanguages` in
+  // settings.json. The caller (chat-engine, widget, WhatsApp webhook) MAY
+  // pass a `language` based on phone prefix, browser locale or widget
+  // selector — but if that language is NOT enabled for this tenant we MUST
+  // fall back to `defaultLanguage`. Otherwise the deterministic guards
+  // (guardForceMachineType, guardForceMachineNumber, …) end up calling
+  // t(key, lang) with a language the tenant explicitly disabled, producing
+  // replies in the wrong language even though the LLM prompt is correctly
+  // configured. This was the root cause of "ES tenant + EN replies" reports.
+  const enabled = session.ar.runtime.settings.enabledLanguages || []
+  const defaultLang = session.ar.runtime.settings.defaultLanguage
+  if (language && enabled.includes(language)) {
     session.ar.state.language = language
     session.ar.state.preferredLanguage = language
+  } else if (defaultLang) {
+    session.ar.state.language = defaultLang
+    session.ar.state.preferredLanguage = defaultLang
   }
 
   // Recover the customer's most recently mentioned location from the replayed
