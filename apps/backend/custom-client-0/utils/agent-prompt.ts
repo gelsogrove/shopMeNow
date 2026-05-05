@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { readFile } from 'node:fs/promises'
 
 import { getLocationOverride } from './runtime.js'
+import { lang as resolveTenantLang } from './guards/helpers.js'
 import type { AgentRuntime, PromptBundle } from '../models/index.js'
 
 export async function loadPromptBundle(): Promise<PromptBundle> {
@@ -31,7 +32,11 @@ export function buildSystemPrompt(ar: AgentRuntime, bundle: PromptBundle): strin
   const vars: Record<string, string> = {
     chatbotName,
     welcomeBlock: welcomeBlock || '  (no welcome configured)',
-    language: state.language || '(not detected yet)',
+    // Always inject the TENANT-RESOLVED language into the system prompt, so
+    // the LLM never sees a value that violates settings.enabledLanguages.
+    // The instruction in agent.txt ("reply MUST be in STICKY FACTS language")
+    // is therefore guaranteed tenant-compliant by construction.
+    language: resolveTenantLang(ar),
     location: state.location || '(unknown)',
     locationStreet: state.locationStreet || '(unknown / not needed unless Mataró)',
     machineType: state.machineType || '(unknown)',

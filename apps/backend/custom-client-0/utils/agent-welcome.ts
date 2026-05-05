@@ -7,6 +7,7 @@
 //   - shouldShowWelcome: decides whether to prepend the welcome to a
 //     guard-produced reply on turn 1, based on the guard's `reason`.
 
+import { lang as resolveTenantLang } from './guards/helpers.js'
 import type { AgentRuntime } from '../models/index.js'
 
 // Guard reasons whose canned reply already addresses a specific incident.
@@ -80,7 +81,10 @@ export function stripWelcomeParagraphs(reply: string): string {
 export function renderWelcomeForTurn(ar: AgentRuntime): string | null {
   const settings = ar.runtime.settings
   if (!settings.welcomeMessage) return null
-  const lang = (ar.state.language || settings.defaultLanguage) as keyof NonNullable<typeof settings.welcomeMessage>
+  // Use the tenant-resolved language, NOT raw state.language. This guarantees
+  // the welcome respects settings.enabledLanguages even if state.language was
+  // seeded by an external caller with a non-allowed value.
+  const lang = resolveTenantLang(ar) as keyof NonNullable<typeof settings.welcomeMessage>
   const tpl = settings.welcomeMessage[lang] || settings.welcomeMessage[settings.defaultLanguage]
   if (!tpl) return null
   return tpl.replaceAll('{{chatbotName}}', settings.chatbotName || 'Eco')

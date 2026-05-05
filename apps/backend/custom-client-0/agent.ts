@@ -88,6 +88,7 @@ import { extractEscalationContext, buildEscalationSummary } from './utils/escala
 import { sanitizeCustomerReply } from './utils/message-parsing.js'
 import { detectLanguageHeuristic } from './utils/intent.js'
 import { runGuardPipeline } from './utils/guards/index.js'
+import { lang as resolveTenantLang } from './utils/guards/helpers.js'
 import { autoExtractFacts } from './utils/agent-extract.js'
 import { executeTool } from './utils/agent-tools.js'
 import { loadPromptBundle, buildSystemPrompt } from './utils/agent-prompt.js'
@@ -150,6 +151,18 @@ export async function agentTurn(session: AgentSession, userMessage: string): Pro
     const candidate = (heuristic && enabled.includes(heuristic)) ? heuristic : ar.runtime.settings.defaultLanguage
     ar.state.language = candidate
     ar.state.preferredLanguage = candidate
+  }
+
+  // Tenant lock — last line of defence. Every turn we re-validate that
+  // state.language is in settings.enabledLanguages. If a caller mutated it
+  // mid-session (or a tool reset it to a stale value), force it back to the
+  // tenant-resolved value. This makes "settings.json is law" structurally
+  // true: there is no code path that can produce a reply in a non-allowed
+  // language.
+  const resolved = resolveTenantLang(ar)
+  if (ar.state.language !== resolved) {
+    ar.state.language = resolved
+    ar.state.preferredLanguage = resolved
   }
 
   // Safety net 1: extract sticky facts from the customer message BEFORE the
