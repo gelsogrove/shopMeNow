@@ -47,6 +47,36 @@ export const tests: TestCase[] = [
     },
   },
   {
+    // SCENARIO (regression dal playground): l'utente risponde "Lavadora" alla
+    // domanda sul numero macchina invece di un numero. Il bot deve richiedere
+    // il numero (NON deve escalare) e, una volta ricevuto il numero, deve
+    // emettere i 6 passi della secuencia.
+    // RULE: la ripetizione di "lavadora" come risposta sbagliata alla domanda
+    // sul numero non deve far saltare il flusso Caso 5 verso l'escalation.
+    name: 'ES — Caso 5 T4 con "Lavadora" ripetuta: bot richiede numero, poi 6 passi',
+    run: async (ctx) => {
+      await ctx.send('Me sale AL001')
+      await ctx.send("L'Escala")
+      await ctx.send('Lavadora')
+      // Risposta sbagliata: ripete "Lavadora" invece di dire il numero.
+      const askAgain = await ctx.send('Lavadora')
+      const askAgainLower = askAgain.toLowerCase()
+      if (!/n[uú]mero/.test(askAgainLower)) {
+        throw new Error(`Bot deve richiedere il numero macchina, non escalare: ${askAgain}`)
+      }
+      if (/manualmente|operador|revisi[oó]n|asistencia/.test(askAgainLower)) {
+        throw new Error(`Bot non deve escalare quando l'utente ripete "Lavadora": ${askAgain}`)
+      }
+      // Ora il numero arriva: il bot deve emettere i 6 passi.
+      const reply = await ctx.send('5')
+      expectMentionsAll(reply, ['carga', 'cierra', 'paga', 'programa'])
+      const lower = reply.toLowerCase()
+      if (/manualmente|operador|revisi[oó]n\s+manual|c[oó]mo\s+te\s+llamas|me\s+puedes\s+dar\s+tu\s+nombre/.test(lower)) {
+        throw new Error(`Caso 5 T5 non deve escalare dopo il numero: deve guidare i 6 passi: ${reply}`)
+      }
+    },
+  },
+  {
     // T5 happy: cliente conferma che funziona dopo i 6 passi → resolved.
     name: 'ES — Caso 5 T5 risolto: cliente "ya funciona" → bot chiude',
     run: async (ctx) => {
