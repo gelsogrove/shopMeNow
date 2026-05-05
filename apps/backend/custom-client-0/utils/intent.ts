@@ -19,8 +19,13 @@ export function extractDisplayState(message: string): string | null {
   if (/END.*bAL|bAL.*END/i.test(trimmed)) return 'END_BAL'
   if (/\b\d{1,2}[.,]\d{2}\b/.test(trimmed)) return 'PRICE'
   if (/puerta abierta|dibujo de la puerta|icono de puerta|door open|open door icon/i.test(trimmed)) return 'DOOR'
-  // "AL001" or "ALM 001" → AL001 (caso 5: error in payment sequence).
-  const alarm001Match = trimmed.match(/\b(?:AL|ALM\s*)0*01\b/i)
+  // AL001 family — Caso 5 (error in payment sequence). Accepts the canonical
+  // "AL001"/"AL 001" plus the natural-language variants the customer often
+  // types instead of the code itself: "alarm 001", "alarma 001", "ALM 001".
+  // The downstream display-flow JSON (`displayMatches`) lists the same set,
+  // so the extractor and the flow engine stay in sync — both treat this
+  // as the same incident.
+  const alarm001Match = trimmed.match(/\b(?:AL\s*|ALM\s*|ALARMA?\s+)0*01\b/i)
   if (alarm001Match) return 'AL001'
   // Bare "001" / "01" code (without "AL"/"ALM" prefix) → C001 (caso 15:
   // selection-before-payment, always escalates). Use \D boundary so "1001"

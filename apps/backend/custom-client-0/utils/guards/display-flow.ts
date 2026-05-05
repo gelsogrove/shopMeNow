@@ -63,13 +63,22 @@ function prerequisitesMet(
  * Caso 5 / 14 / 15 use cases (try the documented fix BEFORE handing off).
  */
 export const guardDisplayFlowStart: Guard = (ar) => {
-  if (ar.state.activeFlowId) return null
   if (ar.state.customerName) return null
   const flow = findFlowForDisplay(ar, ar.state.displayState)
   if (!flow) return null
   if (!prerequisitesMet(ar, flow.requires)) return null
 
+  // Preemption rule: if another flow is currently active but the display the
+  // customer just reported maps to a DIFFERENT documented flow (e.g. they
+  // were on the SEL guidance from the washer flow-engine and now type
+  // "alarm 001"), abandon the previous flow and start the new one. The
+  // customer's most-recent display is the truth — earlier flows were
+  // chasing an obsolete code. Same-flow re-entry is a no-op so the JSON
+  // guidance is not emitted twice.
+  if (ar.state.activeFlowId === flow.id) return null
+
   ar.state.activeFlowId = flow.id
+  ar.state.activeStepId = null
   ar.state.operatorRequested = false
   ar.state.customerNameRequested = false
   ar.pendingEscalation = null

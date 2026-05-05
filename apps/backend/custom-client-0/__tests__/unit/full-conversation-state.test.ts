@@ -16,11 +16,12 @@
 import { autoExtractFacts } from '../../utils/agent-extract.js'
 import { createInitialState } from '../../utils/state.js'
 import type { AgentRuntime, SessionState } from '../../models/index.js'
+import { loadTestRuntime, getCachedTestRuntime } from './_helpers.js'
 
 function makeAr(): AgentRuntime {
   return {
     state: createInitialState(),
-    runtime: {} as never,
+    runtime: getCachedTestRuntime(),
     pendingEscalation: null,
     resolved: false,
     photoRequested: false,
@@ -214,19 +215,24 @@ function assertEq<T>(actual: T, expected: T, label: string): void {
   }
 }
 
-let passed = 0
-let failed = 0
-for (const c of cases) {
-  try {
-    c.run()
-    passed += 1
-    console.log(`\x1b[32m  ✓\x1b[0m ${c.name}`)
-  } catch (err) {
-    failed += 1
-    const reason = err instanceof Error ? err.message : String(err)
-    console.log(`\x1b[31m  ✗\x1b[0m ${c.name}\n      ${reason}`)
+async function main(): Promise<void> {
+  await loadTestRuntime()
+  let passed = 0
+  let failed = 0
+  for (const c of cases) {
+    try {
+      c.run()
+      passed += 1
+      console.log(`\x1b[32m  ✓\x1b[0m ${c.name}`)
+    } catch (err) {
+      failed += 1
+      const reason = err instanceof Error ? err.message : String(err)
+      console.log(`\x1b[31m  ✗\x1b[0m ${c.name}\n      ${reason}`)
+    }
   }
+
+  console.log(`\n${passed} passed, ${failed} failed (out of ${cases.length})\n`)
+  if (failed > 0) process.exit(1)
 }
 
-console.log(`\n${passed} passed, ${failed} failed (out of ${cases.length})\n`)
-if (failed > 0) process.exit(1)
+main()

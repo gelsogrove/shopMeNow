@@ -14,7 +14,7 @@ type Lang = SessionState['language']
 const TRANSLATIONS = {
   // ── Location gathering ─────────────────────────────────────────────────────
   location: {
-    es: '¿Dónde está la lavandería?',
+    es: '¿Podrías indicarme dónde está la lavandería? 🙂',
     it: 'Dove si trova la lavanderia?',
     ca: 'On està la bugaderia?',
     en: 'Where is the laundry?',
@@ -22,7 +22,7 @@ const TRANSLATIONS = {
     fr: 'Où se trouve la laverie ?',
   },
   locationClarification: {
-    es: 'Perdona, ¿me puedes decir dónde está la lavandería?',
+    es: 'Perdona, ¿podrías decirme, por favor, dónde está la lavandería?',
     it: 'Scusa, mi puoi dire dove si trova la lavanderia?',
     ca: 'Disculpa, em pots dir on està la bugaderia?',
     en: 'Sorry, can you tell me where the laundry is?',
@@ -30,7 +30,7 @@ const TRANSLATIONS = {
     fr: 'Excuse-moi, peux-tu me dire où se trouve la laverie ?',
   },
   locationInsist: {
-    es: 'Necesito saber dónde estás para poder ayudarte. ¿Dónde está la lavandería?',
+    es: 'Para poder ayudarte mejor, necesito saber dónde estás. ¿Podrías decirme, por favor, en qué lavandería te encuentras? 🙂',
     it: 'Ho bisogno di sapere dove sei per poterti aiutare. Dove si trova la lavanderia?',
     ca: 'Necessito saber on estàs per poder ajudar-te. On està la bugaderia?',
     en: 'I need to know where you are to help. Where is the laundry?',
@@ -38,7 +38,7 @@ const TRANSLATIONS = {
     fr: 'J\'ai besoin de savoir où tu es pour pouvoir t\'aider. Où se trouve la laverie ?',
   },
   mataroStreet: {
-    es: 'En Mataró tenemos dos lavanderías: C/ Francisco de Goya 117 y C/ Alemanya 17. ¿En cuál estás?',
+    es: 'En Mataró tenemos dos lavanderías: C/ Francisco de Goya 117 y C/ Alemanya 17. ¿Podrías indicarme en cuál estás? 🙂',
     it: 'A Mataró abbiamo due lavanderie: C/ Francisco de Goya 117 e C/ Alemanya 17. In quale ti trovi?',
     ca: 'A Mataró tenim dues bugaderies: C/ Francisco de Goya 117 i C/ Alemanya 17. A quina estàs?',
     en: 'We have two laundromats in Mataró: C/ Francisco de Goya 117 and C/ Alemanya 17. Which one are you at?',
@@ -48,7 +48,7 @@ const TRANSLATIONS = {
 
   // ── Machine identification ─────────────────────────────────────────────────
   machineType: {
-    es: '¿Es una lavadora o una secadora?',
+    es: '¿Podrías indicarme, por favor, si es una lavadora o una secadora? 🙂',
     it: 'È una lavatrice o un\'asciugatrice?',
     ca: 'És una rentadora o una assecadora?',
     en: 'Is it a washer or a dryer?',
@@ -56,7 +56,7 @@ const TRANSLATIONS = {
     fr: 'Est-ce un lave-linge ou un sèche-linge ?',
   },
   machineNumberWasher: {
-    es: '¿Cuál es el número de la lavadora?',
+    es: '¿Podrías decirme, por favor, qué número tiene la lavadora? 🙂',
     it: 'Qual è il numero della lavatrice?',
     ca: 'Quin és el número de la rentadora?',
     en: 'What is the washer number?',
@@ -64,7 +64,7 @@ const TRANSLATIONS = {
     fr: 'Quel est le numéro du lave-linge ?',
   },
   machineNumberDryer: {
-    es: '¿Cuál es el número de la secadora?',
+    es: '¿Podrías decirme, por favor, qué número tiene la secadora? 🙂',
     it: 'Qual è il numero dell\'asciugatrice?',
     ca: 'Quin és el número de l\'assecadora?',
     en: 'What is the dryer number?',
@@ -74,7 +74,7 @@ const TRANSLATIONS = {
 
   // ── Display state ──────────────────────────────────────────────────────────
   displayWasher: {
-    es: '¿Qué aparece exactamente en la pantalla de la lavadora?',
+    es: 'Cuéntame, por favor, ¿qué aparece exactamente en la pantalla de la lavadora? 🙂',
     it: 'Cosa appare esattamente sullo schermo della lavatrice?',
     ca: 'Què apareix exactament a la pantalla de la rentadora?',
     en: 'What exactly appears on the washer screen?',
@@ -82,7 +82,7 @@ const TRANSLATIONS = {
     fr: 'Qu\'apparaît-il exactement sur l\'écran du lave-linge ?',
   },
   displayDryer: {
-    es: '¿Qué aparece exactamente en la pantalla de la secadora?',
+    es: 'Cuéntame, por favor, ¿qué aparece exactamente en la pantalla de la secadora? 🙂',
     it: 'Cosa appare esattamente sullo schermo dell\'asciugatrice?',
     ca: 'Què apareix exactament a la pantalla de l\'assecadora?',
     en: 'What exactly appears on the dryer screen?',
@@ -90,7 +90,7 @@ const TRANSLATIONS = {
     fr: 'Qu\'apparaît-il exactement sur l\'écran du sèche-linge ?',
   },
   displayMachine: {
-    es: '¿Qué aparece exactamente en la pantalla de la máquina? Si no aparece nada, dímelo así lo sabemos.',
+    es: 'Cuéntame, por favor, ¿qué aparece exactamente en la pantalla de la máquina? Si no aparece nada, dímelo y lo tenemos en cuenta. 🙂',
     it: 'Cosa appare esattamente sullo schermo della macchina? Se non appare nulla, dimmelo così lo sappiamo.',
     ca: 'Què apareix exactament a la pantalla de la màquina? Si no apareix res, digues-m\'ho així ho sabem.',
     en: 'What exactly appears on the machine screen? If nothing shows up, just tell me so we know.',
@@ -100,7 +100,7 @@ const TRANSLATIONS = {
 
   // ── Payment / central ──────────────────────────────────────────────────────
   centralReturnedChange: {
-    es: '¿La central ha devuelto el cambio?',
+    es: 'Cuéntame, por favor, ¿la central te ha devuelto el cambio? 🙂',
     it: 'La centralina ha restituito il resto?',
     ca: 'La central ha tornat el canvi?',
     en: 'Did the central return your change?',
@@ -108,7 +108,7 @@ const TRANSLATIONS = {
     fr: 'La centrale a-t-elle rendu la monnaie ?',
   },
   centralRetryAfterReview: {
-    es: 'Es posible que se haya marcado mal el número de máquina. Revisa, por favor, el saldo en la central y prueba otra vez con el número correcto. Dime si la máquina ya se ha activado.',
+    es: 'Puede que se haya marcado mal el número de máquina. Revisa, por favor, el saldo en la central y prueba otra vez con el número correcto. Después cuéntame si la lavadora ya ha arrancado. 🙂',
     it: 'È possibile che sia stato selezionato male il numero della macchina. Controlla, per favore, il saldo nella centralina e riprova con il numero corretto. Dimmi se la macchina si è attivata.',
     ca: 'És possible que s\'hagi marcat malament el número de màquina. Revisa, si us plau, el saldo a la central i prova-ho un altre cop amb el número correcte. Digue\'m si la màquina ja s\'ha activat.',
     en: 'You may have entered the wrong machine number. Please check the balance on the central and try again with the correct number. Tell me if the machine has now activated.',
@@ -118,7 +118,7 @@ const TRANSLATIONS = {
 
   // ── Closure ────────────────────────────────────────────────────────────────
   resolvedWasher: {
-    es: '✅ Perfecto. La lavadora ha comenzado correctamente.',
+    es: '✅ ¡Perfecto! La lavadora ha comenzado correctamente. 🎉',
     it: '✅ Perfetto. La lavatrice è partita correttamente.',
     ca: '✅ Perfecte. La rentadora ha començat correctament.',
     en: '✅ Perfect. The washer has started correctly.',
@@ -126,7 +126,7 @@ const TRANSLATIONS = {
     fr: '✅ Parfait. Le lave-linge a démarré correctement.',
   },
   resolvedMachine: {
-    es: '✅ Perfecto. La máquina ha arrancado correctamente.',
+    es: '✅ ¡Perfecto! La máquina ha arrancado correctamente. 🎉',
     it: '✅ Perfetto. La macchina è partita correttamente.',
     ca: '✅ Perfecte. La màquina ha arrencat correctament.',
     en: '✅ Perfect. The machine has started correctly.',
@@ -136,7 +136,7 @@ const TRANSLATIONS = {
 
   // ── Empathy / pacing ───────────────────────────────────────────────────────
   empathyAngry: {
-    es: 'Entendido, lamento la situación y quiero ayudarte. Vamos a revisarlo lo antes posible. ¿En qué lavandería estás?',
+    es: 'Entendido, lamento mucho la situación y estoy aquí para ayudarte. 💚 Vamos a revisarlo cuanto antes. ¿Podrías decirme, por favor, en qué lavandería estás?',
     it: 'Capisco, mi dispiace per la situazione e voglio aiutarti. Lo controlleremo al più presto. In quale lavanderia sei?',
     ca: 'Entès, lamento la situació i vull ajudar-te. Ho revisarem com més aviat millor. A quina bugaderia ets?',
     en: 'Understood, I\'m sorry for the situation and I want to help. We\'ll look into it as soon as possible. Which laundry are you at?',
@@ -144,7 +144,7 @@ const TRANSLATIONS = {
     fr: 'Compris, je suis désolé de la situation et je veux t\'aider. Nous allons vérifier au plus vite. Dans quelle laverie es-tu ?',
   },
   mixedIncidentSlowDown: {
-    es: 'Entiendo, vamos paso a paso para ayudarte. ¿En qué lavandería estás?',
+    es: 'Entiendo, vamos paso a paso para ayudarte. 🙂 ¿Podrías decirme, por favor, en qué lavandería estás?',
     it: 'Capisco, andiamo passo dopo passo per aiutarti. In quale lavanderia sei?',
     ca: 'Entenc, anem pas a pas per ajudar-te. A quina bugaderia ets?',
     en: 'I understand, let\'s go step by step to help you. Which laundry are you at?',
@@ -154,7 +154,7 @@ const TRANSLATIONS = {
 
   // ── Escalation paths ───────────────────────────────────────────────────────
   reassurance: {
-    es: '⚠️ Vamos a revisar tu caso manualmente.',
+    es: '⚠️ Vamos a revisar tu caso manualmente para ayudarte mejor. 🙏',
     it: '⚠️ Controlleremo il tuo caso manualmente.',
     ca: '⚠️ Revisarem el teu cas manualment.',
     en: '⚠️ We will review your case manually.',
@@ -162,7 +162,7 @@ const TRANSLATIONS = {
     fr: '⚠️ Nous allons examiner ton cas manuellement.',
   },
   doubleChargeReview: {
-    es: '⚠️ Necesitamos derivar tu caso a un operador para revisarlo.',
+    es: '⚠️ Necesitamos derivar tu caso a un operador para revisarlo y ayudarte como mereces. 🙏',
     it: '⚠️ Dobbiamo passare il tuo caso a un operatore per controllarlo.',
     ca: '⚠️ Hem de derivar el teu cas a un operador per revisar-lo.',
     en: '⚠️ We need to escalate your case to an operator for review.',
@@ -170,7 +170,7 @@ const TRANSLATIONS = {
     fr: '⚠️ Nous devons transférer ton cas à un opérateur pour examen.',
   },
   doubleChargeAllReceived: {
-    es: 'Hemos recibido toda la información necesaria, vamos a revisar tu caso.',
+    es: 'Gracias, hemos recibido toda la información necesaria. Vamos a revisar tu caso con calma. 🙏',
     it: 'Abbiamo ricevuto tutte le informazioni necessarie, controlleremo il tuo caso.',
     ca: 'Hem rebut tota la informació necessària, revisarem el teu cas.',
     en: 'We have received all the information we need, we will review your case.',
@@ -178,7 +178,7 @@ const TRANSLATIONS = {
     fr: 'Nous avons reçu toutes les informations nécessaires, nous allons examiner ton cas.',
   },
   photoRequest: {
-    es: '¿Puedes mandarme una foto de la pantalla de la máquina? Si no es posible, lo derivamos a un operador.',
+    es: '¿Podrías mandarme, por favor, una foto de la pantalla de la máquina? 🙂 Si no es posible, lo derivamos a un operador.',
     it: 'Puoi mandarmi una foto dello schermo della macchina? Se non è possibile, lo passiamo a un operatore.',
     ca: 'Pots enviar-me una foto de la pantalla de la màquina? Si no és possible, ho derivem a un operador.',
     en: 'Can you send me a photo of the machine screen? If not possible, we\'ll escalate to an operator.',
@@ -186,7 +186,7 @@ const TRANSLATIONS = {
     fr: 'Peux-tu m\'envoyer une photo de l\'écran de la machine ? Si ce n\'est pas possible, nous transférons à un opérateur.',
   },
   noPhotoEscalate: {
-    es: '⚠️ Sin información del display ni foto, vamos a revisar tu caso manualmente.',
+    es: '⚠️ Sin información del display ni foto, vamos a revisar tu caso manualmente para ayudarte. 🙏',
     it: '⚠️ Senza informazioni sul display né foto, controlleremo il tuo caso manualmente.',
     ca: '⚠️ Sense informació del display ni foto, revisarem el teu cas manualment.',
     en: '⚠️ Without display info or photo, we\'ll review your case manually.',
@@ -194,7 +194,7 @@ const TRANSLATIONS = {
     fr: '⚠️ Sans information de l\'écran ni photo, nous examinerons ton cas manuellement.',
   },
   reaffirmEscalate: {
-    es: 'Vamos a revisar tu caso manualmente. ¿Cómo te llamas?',
+    es: 'Vamos a revisar tu caso manualmente para poder ayudarte mejor. 🙏 ¿Cómo te llamas, por favor?',
     it: 'Controlleremo il tuo caso manualmente. Come ti chiami?',
     ca: 'Revisarem el teu cas manualment. Com et dius?',
     en: 'We will review your case manually. What is your name?',
@@ -204,7 +204,7 @@ const TRANSLATIONS = {
 
   // ── Display question (generic, no "if nothing shows up") ───────────────────
   displayShort: {
-    es: '¿Qué aparece exactamente en la pantalla?',
+    es: 'Cuéntame, por favor, ¿qué aparece exactamente en la pantalla? 🙂',
     it: 'Cosa appare esattamente sullo schermo?',
     ca: 'Què apareix exactament a la pantalla?',
     en: 'What exactly appears on the screen?',
@@ -212,7 +212,7 @@ const TRANSLATIONS = {
     fr: 'Qu\'apparaît-il exactement sur l\'écran ?',
   },
   paymentAsk: {
-    es: '¿Has podido realizar el pago?',
+    es: '¿Has podido realizar el pago? 🙂',
     it: 'Sei riuscito a effettuare il pagamento?',
     ca: 'Has pogut fer el pagament?',
     en: 'Were you able to make the payment?',
@@ -222,7 +222,7 @@ const TRANSLATIONS = {
 
   // ── Caso 18 — codice solo numerico ─────────────────────────────────────────
   numericCodeAskLetters: {
-    es: 'Gracias. ¿Ves alguna letra delante de los números?',
+    es: '¡Gracias! 🙂 ¿Ves alguna letra delante de los números?',
     it: 'Grazie. Vedi qualche lettera davanti ai numeri?',
     ca: 'Gràcies. Veus alguna lletra davant dels números?',
     en: 'Thanks. Do you see any letter before the numbers?',
@@ -230,7 +230,7 @@ const TRANSLATIONS = {
     fr: 'Merci. Vois-tu une lettre devant les chiffres ?',
   },
   numericCodeIncoherence: {
-    es: 'Entendido. Lo paso a revisión manual.',
+    es: 'Entendido, lo paso a revisión manual para ayudarte mejor. 🙏',
     it: 'Capito. Lo passo a una revisione manuale.',
     ca: 'Entès. Ho passo a revisió manual.',
     en: 'Got it. I\'m passing this to a manual review.',
@@ -240,7 +240,7 @@ const TRANSLATIONS = {
 
   // ── Caso 14 — ALM DOOR ─────────────────────────────────────────────────────
   caso14AlmDoor: {
-    es: 'Ese mensaje puede indicar un problema de cierre o que hay alguna prenda atrapada. Abre la puerta con cuidado, revisa si hay alguna prenda atrapada y vuelve a cerrarla bien. Dime, por favor, si el mensaje ha desaparecido.',
+    es: 'Ese mensaje puede indicar un problema de cierre o que haya alguna prenda atrapada. Por favor, abre la puerta con cuidado, revisa si hay alguna prenda atrapada y vuelve a cerrarla bien. 🙂 Cuéntame después si el mensaje ha desaparecido.',
     it: 'Questo messaggio può indicare un problema di chiusura o un capo incastrato. Apri lo sportello con attenzione, controlla se c\'è qualche capo incastrato e richiudilo bene. Dimmi, per favore, se il messaggio è sparito.',
     ca: 'Aquest missatge pot indicar un problema de tancament o que hi ha alguna peça atrapada. Obre la porta amb compte, revisa si hi ha alguna peça atrapada i torna a tancar-la bé. Digue\'m, si us plau, si el missatge ha desaparegut.',
     en: 'That message may indicate a closing issue or a garment caught in the door. Carefully open the door, check for any caught garment and close it firmly again. Please tell me if the message has disappeared.',
@@ -250,7 +250,7 @@ const TRANSLATIONS = {
 
   // ── Caso 17 — cliente non sa qué pone en pantalla ──────────────────────────
   caso17AskPhoto: {
-    es: 'Si puedes, envíame una foto de la pantalla. Si no, lo pasamos a revisión.',
+    es: 'Si puedes, envíame, por favor, una foto de la pantalla. 🙂 Si no es posible, lo pasamos a revisión.',
     it: 'Se puoi, mandami una foto dello schermo. Se no, lo passiamo a revisione.',
     ca: 'Si pots, envia\'m una foto de la pantalla. Si no, ho passem a revisió.',
     en: 'If you can, send me a photo of the screen. If not, we\'ll pass it to review.',
@@ -258,7 +258,7 @@ const TRANSLATIONS = {
     fr: 'Si tu peux, envoie-moi une photo de l\'écran. Sinon, nous le passons en révision.',
   },
   caso17NoPhotoEscalate: {
-    es: 'De acuerdo. Vamos a revisarlo manualmente para poder ayudarte.',
+    es: 'De acuerdo, vamos a revisarlo manualmente para poder ayudarte. 🙏',
     it: 'D\'accordo. Lo controlleremo manualmente per poterti aiutare.',
     ca: 'D\'acord. Ho revisarem manualment per poder ajudar-te.',
     en: 'Got it. We\'ll review it manually to help you.',
@@ -268,7 +268,7 @@ const TRANSLATIONS = {
 
   // ── Caso 6 — doble cobro flow ──────────────────────────────────────────────
   caso6AskPodidoLavar: {
-    es: 'Gracias. ¿Has podido lavar o secar la ropa?',
+    es: '¡Gracias! 🙂 ¿Has podido lavar o secar la ropa?',
     it: 'Grazie. Sei riuscito a lavare o asciugare i vestiti?',
     ca: 'Gràcies. Has pogut rentar o assecar la roba?',
     en: 'Thanks. Were you able to wash or dry the clothes?',
@@ -276,7 +276,7 @@ const TRANSLATIONS = {
     fr: 'Merci. As-tu pu laver ou sécher le linge ?',
   },
   caso6AskRelato: {
-    es: 'De acuerdo. Explícame, por favor, paso a paso qué has hecho desde que has entrado.',
+    es: 'De acuerdo. ¿Podrías explicarme, por favor, paso a paso qué has hecho desde que has entrado? 🙂',
     it: 'D\'accordo. Spiegami, per favore, passo dopo passo cosa hai fatto da quando sei entrato.',
     ca: 'D\'acord. Explica\'m, si us plau, pas a pas què has fet des que has entrat.',
     en: 'Got it. Please explain step by step what you have done since you came in.',
@@ -284,7 +284,7 @@ const TRANSLATIONS = {
     fr: 'D\'accord. Explique-moi, s\'il te plaît, étape par étape ce que tu as fait depuis ton arrivée.',
   },
   caso6Ask4Digitos: {
-    es: 'Gracias. Para revisarlo bien, necesito los últimos 4 dígitos de la tarjeta.',
+    es: '¡Gracias! Para revisarlo bien, ¿podrías indicarme, por favor, los últimos 4 dígitos de la tarjeta? 🙂',
     it: 'Grazie. Per controllarlo bene, mi servono le ultime 4 cifre della carta.',
     ca: 'Gràcies. Per revisar-ho bé, necessito els últims 4 dígits de la targeta.',
     en: 'Thanks. To review it properly, I need the last 4 digits of the card.',
@@ -292,7 +292,7 @@ const TRANSLATIONS = {
     fr: 'Merci. Pour bien vérifier, j\'ai besoin des 4 derniers chiffres de la carte.',
   },
   caso6AskCaptura: {
-    es: 'Perfecto. Ahora necesito una captura del pago.',
+    es: '¡Perfecto! 🙂 ¿Podrías enviarme, por favor, una captura del pago?',
     it: 'Perfetto. Ora mi serve uno screenshot del pagamento.',
     ca: 'Perfecte. Ara necessito una captura del pagament.',
     en: 'Perfect. Now I need a screenshot of the payment.',
@@ -300,7 +300,7 @@ const TRANSLATIONS = {
     fr: 'Parfait. Maintenant j\'ai besoin d\'une capture du paiement.',
   },
   caso6Closure: {
-    es: 'Gracias. Con esos datos podremos revisarlo y enviarte el formulario de devolución. La próxima vez, antes de volver a pagar, contacta con nosotros y te ayudaremos al momento.',
+    es: '¡Gracias! 🙏 Con esos datos podremos revisarlo y enviarte el formulario de devolución. La próxima vez, antes de volver a pagar, contáctanos y te ayudamos al momento. 💚',
     it: 'Grazie. Con quei dati potremo controllarlo e inviarti il modulo di rimborso. La prossima volta, prima di pagare di nuovo, contattaci e ti aiuteremo subito.',
     ca: 'Gràcies. Amb aquestes dades podrem revisar-ho i enviar-te el formulari de devolució. La pròxima vegada, abans de tornar a pagar, contacta\'ns i t\'ajudarem al moment.',
     en: 'Thanks. With that data we will review it and send you the refund form. Next time, before paying again, contact us and we will help you right away.',
@@ -310,7 +310,7 @@ const TRANSLATIONS = {
 
   // ── Customer name handover ─────────────────────────────────────────────────
   customerNameAsk: {
-    es: '¿Cómo te llamas?',
+    es: '¿Cómo te llamas, por favor? 🙂',
     it: 'Come ti chiami?',
     ca: 'Com et dius?',
     en: 'What is your name?',
@@ -322,7 +322,7 @@ const TRANSLATIONS = {
   // Note: contains the {display} placeholder. Use tt(key, lang, { display })
   // to substitute it.
   unknownDisplayEscalate: {
-    es: 'El código {display} requiere revisión manual. Pasaremos tu caso a revisión para ayudarte de la manera más adecuada.',
+    es: 'El código {display} requiere revisión manual. Pasaremos tu caso a revisión para ayudarte de la mejor manera posible. 🙏',
     it: 'Il codice {display} richiede una revisione manuale. Passeremo il tuo caso in revisione per aiutarti al meglio.',
     ca: 'El codi {display} requereix revisió manual. Passarem el teu cas a revisió per ajudar-te de la millor manera.',
     en: 'Code {display} requires manual review. We\'ll pass your case for review to help you properly.',
@@ -332,7 +332,7 @@ const TRANSLATIONS = {
 
   // ── Caso 15 cliente vede 001 in pantalla (step 1 spiegazione, step 2 escalation) ──
   caso15Explain: {
-    es: 'De acuerdo. Ese mensaje puede aparecer cuando el programa se ha seleccionado antes del pago y el estado no se ha reiniciado correctamente.',
+    es: 'De acuerdo. Ese mensaje suele aparecer cuando el programa se ha seleccionado antes del pago y el estado no se ha reiniciado correctamente. 🙂',
     it: 'Va bene. Questo messaggio può apparire quando il programma è stato selezionato prima del pagamento e lo stato non si è reimpostato correttamente.',
     ca: 'D\'acord. Aquest missatge pot aparèixer quan el programa s\'ha seleccionat abans del pagament i l\'estat no s\'ha reiniciat correctament.',
     en: 'Got it. This message can appear when the program was selected before payment and the state didn\'t reset properly.',
@@ -340,7 +340,7 @@ const TRANSLATIONS = {
     fr: 'D\'accord. Ce message peut apparaître quand le programme a été sélectionné avant le paiement et l\'état ne s\'est pas réinitialisé correctement.',
   },
   caso15Escalate: {
-    es: 'Vamos a revisarlo manualmente para ayudarte de la mejor manera posible.',
+    es: 'Vamos a revisarlo manualmente para ayudarte de la mejor manera posible. 🙏',
     it: 'Verifichiamo manualmente per aiutarti al meglio.',
     ca: 'Ho revisarem manualment per ajudar-te de la millor manera possible.',
     en: 'We\'ll review it manually to help you in the best way possible.',
@@ -350,7 +350,7 @@ const TRANSLATIONS = {
 
   // ── Caso 8 cliente ha codice ma non sa come usarlo ─────────────────────────
   caso8AskCode: {
-    es: 'Te ayudo. Dime el código exacto tal como lo ves, incluyendo letras si las hay.',
+    es: 'Te ayudo. ¿Podrías indicarme, por favor, el código exacto tal como lo ves, incluyendo letras si las hay? 🙂',
     it: 'Ti aiuto. Dimmi il codice esatto come lo vedi, comprese le lettere se ci sono.',
     ca: 'T\'ajudo. Digue\'m el codi exacte tal com el veus, incloent les lletres si n\'hi ha.',
     en: 'I\'ll help you. Tell me the exact code as you see it, including any letters.',
@@ -358,7 +358,7 @@ const TRANSLATIONS = {
     fr: 'Je t\'aide. Dis-moi le code exact tel que tu le vois, lettres comprises s\'il y en a.',
   },
   caso8AskAmount: {
-    es: 'Perfecto. ¿Te falta una pequeña parte para completar el importe o el código cubre un importe mayor?',
+    es: '¡Perfecto! 🙂 ¿Te falta una pequeña parte para completar el importe, o el código cubre un importe mayor?',
     it: 'Perfetto. Ti manca una piccola parte per completare l\'importo o il codice copre un importo maggiore?',
     ca: 'Perfecte. Et falta una petita part per completar l\'import o el codi cobreix un import més gran?',
     en: 'Got it. Do you need to add a small amount to complete the price, or does the code cover a larger amount?',
@@ -366,7 +366,7 @@ const TRANSLATIONS = {
     fr: 'Parfait. Il te manque une petite partie pour compléter le montant ou le code couvre-t-il un montant plus grand ?',
   },
   caso8Instruction: {
-    es: 'De acuerdo. Introduce en la central el importe que falta y no toques nada más. Después ponte delante de la máquina y dime si ya puedes continuar.',
+    es: 'De acuerdo. Por favor, introduce en la central el importe que falta y no toques nada más. Después ponte delante de la máquina y cuéntame si ya puedes continuar. 🙂',
     it: 'Va bene. Inserisci nella centralina l\'importo che manca e non toccare altro. Poi mettiti davanti alla macchina e dimmi se puoi continuare.',
     ca: 'D\'acord. Introdueix a la central l\'import que falta i no toquis res més. Després posa\'t davant de la màquina i digue\'m si ja pots continuar.',
     en: 'Got it. Add the missing amount on the central unit and don\'t touch anything else. Then go to the machine and tell me if you can continue.',
@@ -374,7 +374,7 @@ const TRANSLATIONS = {
     fr: 'D\'accord. Saisis sur la centrale le montant manquant et ne touche rien d\'autre. Puis va à la machine et dis-moi si tu peux continuer.',
   },
   caso5GuideRetry: {
-    es: 'Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Antes de avisar a asistencia, vamos a verificar juntos la secuencia. Por favor sigue estos pasos en este orden:\n\n1. Carga la lavadora\n2. Cierra la puerta\n3. Dirígete a la central de pago y paga\n4. Selecciona el número de máquina y recoge el cambio si toca\n5. Dirígete a la máquina seleccionada y elige el programa\n6. Avísame si funciona',
+    es: 'Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. 🙂 Antes de avisar a asistencia, vamos a verificar juntos la secuencia. Por favor, sigue estos pasos en este orden:\n\n1. Carga la lavadora\n2. Cierra la puerta\n3. Dirígete a la central de pago y paga\n4. Selecciona el número de máquina y recoge el cambio si toca\n5. Dirígete a la máquina seleccionada y elige el programa\n6. Avísame si funciona',
     it: 'Questo avviso di solito appare quando il processo non è stato fatto nell\'ordine corretto. Prima di avvisare l\'assistenza, verifichiamo insieme la sequenza. Per favore segui questi passi in questo ordine:\n\n1. Carica la lavatrice\n2. Chiudi lo sportello\n3. Vai alla centralina di pagamento e paga\n4. Seleziona il numero della macchina e ritira il resto se serve\n5. Vai alla macchina selezionata e scegli il programma\n6. Fammi sapere se funziona',
     ca: 'Aquest avís sol aparèixer quan el procés no s\'ha fet en l\'ordre correcte. Abans d\'avisar l\'assistència, verifiquem junts la seqüència. Si us plau segueix aquests passos en aquest ordre:\n\n1. Carrega la rentadora\n2. Tanca la porta\n3. Dirigeix-te a la central de pagament i paga\n4. Selecciona el número de màquina i recull el canvi si cal\n5. Dirigeix-te a la màquina seleccionada i tria el programa\n6. Avisa\'m si funciona',
     en: 'This message usually appears when the process was not done in the correct order. Before contacting support, let\'s verify the sequence together. Please follow these steps in this order:\n\n1. Load the washer\n2. Close the door\n3. Go to the payment central and pay\n4. Select the machine number and pick up the change if any\n5. Go to the selected machine and choose the program\n6. Let me know if it works',
@@ -382,7 +382,7 @@ const TRANSLATIONS = {
     fr: 'Ce message apparaît généralement quand le processus n\'a pas été fait dans le bon ordre. Avant de prévenir l\'assistance, vérifions ensemble la séquence. Suis ces étapes dans cet ordre :\n\n1. Charge le lave-linge\n2. Ferme la porte\n3. Va à la centrale de paiement et paie\n4. Sélectionne le numéro de machine et récupère la monnaie si besoin\n5. Va à la machine sélectionnée et choisis le programme\n6. Préviens-moi si ça fonctionne',
   },
   caso5Resolved: {
-    es: 'Perfecto, incidencia resuelta. ¿Necesitas algo más?',
+    es: '✅ ¡Perfecto, incidencia resuelta! 🎉 ¿Necesitas algo más?',
     it: 'Perfetto, problema risolto. Ti serve altro?',
     ca: 'Perfecte, incidència resolta. Necessites res més?',
     en: 'Great, issue resolved. Anything else you need?',
@@ -390,7 +390,7 @@ const TRANSLATIONS = {
     fr: 'Parfait, problème résolu. As-tu besoin d\'autre chose ?',
   },
   caso4Resolved: {
-    es: 'Perfecto, ya estaría resuelto. ¿Necesitas algo más?',
+    es: '✅ ¡Perfecto, ya estaría resuelto! 🎉 ¿Necesitas algo más?',
     it: 'Perfetto, problema risolto. Ti serve altro?',
     ca: 'Perfecte, ja estaria resolt. Necessites res més?',
     en: 'Great, all sorted. Anything else you need?',
@@ -398,7 +398,7 @@ const TRANSLATIONS = {
     fr: 'Parfait, c\'est résolu. As-tu besoin d\'autre chose ?',
   },
   caso8ConfirmLocation: {
-    es: 'No reconozco esa lavandería. ¿Puedes confirmar el nombre? Tenemos: Goya, Pineda, L\'Escala, Alemanya, Hortes, Mataró.',
+    es: 'No reconozco esa lavandería. ¿Podrías confirmarme, por favor, el nombre? 🙂 Tenemos: Goya, Pineda, L\'Escala, Alemanya, Hortes, Mataró.',
     it: 'Non riconosco questa lavanderia. Puoi confermare il nome? Abbiamo: Goya, Pineda, L\'Escala, Alemanya, Hortes, Mataró.',
     ca: 'No reconec aquesta bugaderia. Pots confirmar el nom? Tenim: Goya, Pineda, L\'Escala, Alemanya, Hortes, Mataró.',
     en: 'I don\'t recognize that laundry. Can you confirm the name? We have: Goya, Pineda, L\'Escala, Alemanya, Hortes, Mataró.',
@@ -406,7 +406,7 @@ const TRANSLATIONS = {
     fr: 'Je ne reconnais pas cette laverie. Peux-tu confirmer le nom ? Nous avons : Goya, Pineda, L\'Escala, Alemanya, Hortes, Mataró.',
   },
   caso8Resolved: {
-    es: 'Perfecto, incidencia resuelta. ¿Necesitas algo más?',
+    es: '✅ ¡Perfecto, incidencia resuelta! 🎉 ¿Necesitas algo más?',
     it: 'Perfetto, problema risolto. Ti serve altro?',
     ca: 'Perfecte, incidència resolta. Necessites res més?',
     en: 'Great, issue resolved. Anything else you need?',
@@ -416,7 +416,7 @@ const TRANSLATIONS = {
 
   // ── Caso 11 cliente pide ricarga tarjeta ───────────────────────────────────
   caso11Recarga: {
-    es: 'Introduce la tarjeta y sigue las instrucciones de la central. Si al hacerlo aparece algún mensaje extraño, dímelo y lo revisamos.',
+    es: 'Por favor, introduce la tarjeta y sigue las instrucciones de la central. 🙂 Si aparece algún mensaje extraño, dímelo y lo revisamos.',
     it: 'Inserisci la tessera e segui le istruzioni della centralina. Se compare un messaggio strano, dimmelo e lo verifichiamo.',
     ca: 'Introdueix la targeta i segueix les instruccions de la central. Si apareix algun missatge estrany, digue\'m-ho i ho revisem.',
     en: 'Insert the card and follow the instructions on the central unit. If you see anything unusual, tell me and we\'ll check it.',
@@ -426,7 +426,7 @@ const TRANSLATIONS = {
 
   // ── Caso 10 step 1 cliente pide tarjeta (no location yet) ──────────────────
   caso10TarjetaBase: {
-    es: 'La tarjeta de fidelización se compra con 20€ en efectivo y solo funciona en la tienda donde se ha comprado. ¿En qué lavandería estás?',
+    es: 'La tarjeta de fidelización se compra con 20€ en efectivo y solo funciona en la tienda donde se ha comprado. 🙂 ¿En qué lavandería estás?',
     it: 'La tessera fedeltà si compra a 20€ in contanti e funziona solo nel locale dove l\'hai comprata. In quale lavanderia ti trovi?',
     ca: 'La targeta de fidelització es compra amb 20€ en efectiu i només funciona a la botiga on s\'ha comprat. A quina bugaderia ets?',
     en: 'The loyalty card costs 20€ in cash and only works in the store where it was bought. Which laundry are you at?',
@@ -438,7 +438,7 @@ const TRANSLATIONS = {
   // customer typically says "gracias / entendido / perfecto / vale". The bot
   // must NOT switch to machine gather questions; just close politely.
   faqClosure: {
-    es: 'Perfecto. Si necesitas algo más, dímelo.',
+    es: '¡Perfecto! 🙂 Si necesitas algo más, dímelo.',
     it: 'Perfetto. Se hai bisogno di altro, dimmelo.',
     ca: 'Perfecte. Si necessites res més, digue-m\'ho.',
     en: 'Great. If you need anything else, just let me know.',
@@ -448,7 +448,7 @@ const TRANSLATIONS = {
 
   // ── Caso 9 cliente pide factura ─────────────────────────────────────────────
   caso9Factura: {
-    es: 'Para obtenerla, debes enviar un correo a olga@alberwaz.net con esta información: razón social, email, lavandería utilizada, CIF/NIF, dirección, fecha de uso, máquinas utilizadas y observaciones.',
+    es: 'Para obtenerla, por favor envía un correo a olga@alberwaz.net con esta información: razón social, email, lavandería utilizada, CIF/NIF, dirección, fecha de uso, máquinas utilizadas y observaciones. 🙂',
     it: 'Per ottenerla, scrivi a olga@alberwaz.net indicando: ragione sociale, email, lavanderia utilizzata, codice fiscale/P.IVA, indirizzo, data d\'uso, macchine utilizzate e osservazioni.',
     ca: 'Per obtenir-la, envia un correu a olga@alberwaz.net amb aquesta informació: raó social, email, bugaderia utilitzada, CIF/NIF, adreça, data d\'ús, màquines utilitzades i observacions.',
     en: 'To get it, please email olga@alberwaz.net with: company name, email, laundry used, tax ID, address, date of use, machines used and notes.',
@@ -458,7 +458,7 @@ const TRANSLATIONS = {
 
   // ── Caso 25 cliente enfadado: empatia + chiede location ───────────────────
   caso25Empathic: {
-    es: 'Entiendo tu malestar y quiero ayudarte. Vamos a revisarlo lo antes posible. ¿En qué lavandería estás?',
+    es: 'Entiendo tu malestar y quiero ayudarte. 💚 Vamos a revisarlo cuanto antes. ¿Podrías decirme, por favor, en qué lavandería estás?',
     it: 'Capisco il tuo disagio e voglio aiutarti. Lo verifichiamo il prima possibile. In quale lavanderia ti trovi?',
     ca: 'Entenc el teu malestar i vull ajudar-te. Ho revisarem com més aviat millor. A quina bugaderia ets?',
     en: 'I understand your frustration and want to help. We will review it as soon as possible. Which laundry are you at?',
@@ -468,7 +468,7 @@ const TRANSLATIONS = {
 
   // ── Caso 21-24 cliente reporta un problema NON documentato per la sua location ──
   caso2124NotDocHere: {
-    es: 'No tenemos registrado este tipo de incidencia en {location}. Vamos a revisarlo manualmente para poder ayudarte.',
+    es: 'No tenemos registrado este tipo de incidencia en {location}. Vamos a revisarlo manualmente para poder ayudarte. 🙏',
     it: 'Non abbiamo registrato questo tipo di incidente a {location}. Lo verifichiamo manualmente per poterti aiutare.',
     ca: 'No tenim registrat aquest tipus d\'incidència a {location}. Ho revisarem manualment per poder ajudar-te.',
     en: 'We don\'t have this type of issue documented at {location}. We\'ll review it manually to help you.',
@@ -478,7 +478,7 @@ const TRANSLATIONS = {
 
   // ── Caso 27 cliente pide compensación concreta (secadora gratis, ecc.) ─────
   caso27Review: {
-    es: 'Vamos a revisar tu caso para ayudarte con la solución más adecuada.',
+    es: 'Vamos a revisar tu caso para ayudarte con la solución más adecuada. 🙏',
     it: 'Verifichiamo il tuo caso per aiutarti con la soluzione più adatta.',
     ca: 'Revisarem el teu cas per ajudar-te amb la solució més adequada.',
     en: 'We\'ll review your case to help you with the most appropriate solution.',
@@ -488,7 +488,7 @@ const TRANSLATIONS = {
 
   // ── Caso 26 cliente esige devolución: raccogliere dati senza promettere ────
   caso26AskRefundData: {
-    es: 'Vamos a revisarlo contigo. Para tramitarlo, necesito los últimos 4 dígitos de la tarjeta, una captura del pago y un breve resumen de lo ocurrido.',
+    es: 'Vamos a revisarlo contigo. 🙂 Para tramitarlo, ¿podrías facilitarme, por favor, los últimos 4 dígitos de la tarjeta, una captura del pago y un breve resumen de lo ocurrido?',
     it: 'Lo verifichiamo insieme. Per gestirlo, ho bisogno delle ultime 4 cifre della carta, una schermata del pagamento e un breve riassunto.',
     ca: 'Ho revisarem amb tu. Per tramitar-ho, necessito els últims 4 dígits de la targeta, una captura del pagament i un breu resum.',
     en: 'We\'ll review it with you. To process it, I need the last 4 digits of the card, a screenshot of the payment, and a brief summary.',
@@ -498,7 +498,7 @@ const TRANSLATIONS = {
 
   // ── Caso 26 cliente insiste con devolución: escalare senza prometterla ─────
   caso26EscalateNoPromise: {
-    es: 'Entiendo lo que me indicas. Vamos a pasar el caso a revisión para aplicar la solución más adecuada.',
+    es: 'Entiendo lo que me indicas. Vamos a pasar el caso a revisión para aplicar la solución más adecuada. 🙏',
     it: 'Capisco quello che mi dici. Passeremo il caso in revisione per trovare la soluzione più adatta.',
     ca: 'Entenc el que em dius. Passarem el cas a revisió per aplicar la solució més adequada.',
     en: 'I understand. We will pass the case for review to apply the most appropriate solution.',
@@ -508,7 +508,7 @@ const TRANSLATIONS = {
 
   // ── Caso 31 cliente non sa il local: insistere ─────────────────────────────
   caso31InsistLocation: {
-    es: 'Para poder ayudarte, necesito saber primero en qué lavandería estás exactamente.',
+    es: 'Para poder ayudarte, necesito saber primero en qué lavandería estás exactamente. 🙂',
     it: 'Per poterti aiutare, devo sapere prima in quale lavanderia ti trovi esattamente.',
     ca: 'Per poder ajudar-te, necessito saber primer a quina bugaderia ets exactament.',
     en: 'To help you, I first need to know exactly which laundry you are at.',
@@ -518,7 +518,7 @@ const TRANSLATIONS = {
 
   // ── Caso 8 step 2 — after code received, ask location ─────────────────────
   caso8AskLocation: {
-    es: 'Gracias. ¿En qué lavandería lo quieres usar?',
+    es: '¡Gracias! 🙂 ¿En qué lavandería lo quieres usar?',
     it: 'Grazie. In quale lavanderia vuoi usarlo?',
     ca: 'Gràcies. A quina bugaderia el vols usar?',
     en: 'Thanks. Which laundry do you want to use it at?',
@@ -528,7 +528,7 @@ const TRANSLATIONS = {
 
   // ── Caso 12C — price not confirmed ────────────────────────────────────────
   caso12Precio: {
-    es: 'Tengo que revisarlo antes de confirmarte ese importe.',
+    es: 'Tengo que revisarlo antes de confirmarte ese importe. 🙂',
     it: 'Devo verificarlo prima di confermarti quell\'importo.',
     ca: 'Ho he de revisar abans de confirmar-te aquest import.',
     en: 'I need to check that before confirming the amount.',
@@ -538,7 +538,7 @@ const TRANSLATIONS = {
 
   // ── Caso 12 — default general hours (no location override found) ──────────
   caso12HorariosDefault: {
-    es: 'El horario general de atención al público es de 8:00 a 22:00 cada día del año.',
+    es: 'El horario general de atención al público es de 8:00 a 22:00, todos los días del año. 🙂',
     it: 'L\'orario generale di apertura al pubblico è dalle 8:00 alle 22:00 ogni giorno dell\'anno.',
     ca: 'L\'horari general d\'atenció al públic és de 8:00 a 22:00 cada dia de l\'any.',
     en: 'General opening hours are 8:00 to 22:00 every day of the year.',
@@ -549,7 +549,7 @@ const TRANSLATIONS = {
   // ── Unknown location — dynamic list of known laundromats ──────────────────
   // Note: contains {list} placeholder replaced via tt().
   unknownLocationList: {
-    es: 'No reconozco esa ubicación. Nuestras lavanderías son: {list}. ¿En cuál de ellas estás?',
+    es: 'No reconozco esa ubicación. Nuestras lavanderías son: {list}. ¿Podrías indicarme en cuál de ellas estás? 🙂',
     it: 'Non riconosco quella posizione. Le nostre lavanderie sono: {list}. In quale ti trovi?',
     ca: 'No reconec aquesta ubicació. Les nostres bugaderies són: {list}. A quina d\'elles estàs?',
     en: 'I don\'t recognize that location. Our laundromats are: {list}. Which one are you at?',
@@ -559,7 +559,7 @@ const TRANSLATIONS = {
 
   // ── Misc ───────────────────────────────────────────────────────────────────
   defaultHelp: {
-    es: 'Dime el siguiente detalle útil y te ayudaré paso a paso.',
+    es: 'Cuéntame, por favor, el siguiente detalle útil y te ayudo paso a paso. 🙂',
     it: 'Dimmi il prossimo dettaglio utile e ti aiuterò passo dopo passo.',
     ca: 'Digue\'m el següent detall útil i t\'ajudaré pas a pas.',
     en: 'Tell me the next useful detail and I\'ll help step by step.',

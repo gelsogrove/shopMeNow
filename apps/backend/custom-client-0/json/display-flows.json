@@ -4,7 +4,7 @@
   "flows": [
     {
       "id": "caso5-al001",
-      "displayMatches": ["AL001"],
+      "displayMatches": ["AL001", "AL 001", "ALARM 001", "ALARM001", "ALARMA 001", "ALARMA001"],
       "requires": ["location", "machineType", "machineNumber"],
       "step": {
         "replyKey": "caso5GuideRetry",

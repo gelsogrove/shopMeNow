@@ -168,7 +168,8 @@ function evictIdleSessions(): void {
 async function getOrCreateSession(
   sessionId: string,
   history: HistoryEntry[],
-  userName: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _userName: string,
   language: ChatbotInput['config']['language'],
   phoneNumber?: string,
 ): Promise<AgentSession> {
@@ -210,10 +211,19 @@ async function getOrCreateSession(
     }
   }
 
-  // Seed sticky state with caller-provided customer info so the agent does
-  // not have to re-ask for the name and so language-aware guards behave
-  // immediately without waiting for heuristics on the first message.
-  if (userName) session.ar.state.customerName = userName
+  // Seed sticky state with caller-provided customer info.
+  //
+  // `userName` is INTENTIONALLY NOT copied into `customerName` here. The
+  // caller's `userName` typically comes from the registration form, widget
+  // profile, or auto-generated placeholder ("Unknown User-12345", "test1",
+  // "+34..."). Those values are NOT suitable for the operator handover
+  // summary, which must contain the name the customer provides EXPLICITLY
+  // during the escalation conversation (via the customerNameAsk guard).
+  //
+  // Pre-populating customerName from userName caused real escalations to
+  // surface technical placeholders to operators ("Usuario test1 en Mataró
+  // …"). The architectural contract is: customerName is set ONLY when the
+  // customer types their name in chat after the bot asks "¿Cómo te llamas?".
   if (phoneNumber) session.ar.state.customerPhone = phoneNumber
 
   // Tenant locks the bot to a specific set of `enabledLanguages` in

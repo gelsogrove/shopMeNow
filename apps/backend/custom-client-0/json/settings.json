@@ -20,7 +20,7 @@
   "allowedExternalLinks": "echatbot.ai, www.echatbot.ai, forms.gle, alberwaz.net",
 
   "welcomeMessage": {
-    "es": "Hola, soy el asistente virtual de la lavandería. ¿Cómo puedo ayudarte?"
+    "es": "Hola, soy el asistente virtual de la lavandería."
   },
 
   "locationCarryOverMs": 3600000,

@@ -23,13 +23,14 @@
 import { autoExtractFacts } from '../../utils/agent-extract.js'
 import { createInitialState } from '../../utils/state.js'
 import type { AgentRuntime } from '../../models/index.js'
+import { loadTestRuntime, getCachedTestRuntime } from './_helpers.js'
 
-// Minimal AgentRuntime shim — autoExtractFacts only reads `ar.state` and
-// writes `ar.resolved`, so a real `runtime` is not needed.
+// AgentRuntime built from real JSON-backed config (no LLM stack), so the
+// extractor's regex-driven detectors can run as in production.
 function makeAr(): AgentRuntime {
   return {
     state: createInitialState(),
-    runtime: {} as never,
+    runtime: getCachedTestRuntime(),
     pendingEscalation: null,
     resolved: false,
     photoRequested: false,
@@ -126,24 +127,29 @@ function assertEq<T>(actual: T, expected: T, label: string): void {
 
 // ── Runner ───────────────────────────────────────────────────────────────────
 
-let passed = 0
-let failed = 0
-const failures: Array<{ name: string; reason: string }> = []
+async function main(): Promise<void> {
+  await loadTestRuntime()
+  let passed = 0
+  let failed = 0
+  const failures: Array<{ name: string; reason: string }> = []
 
-for (const c of cases) {
-  try {
-    c.run()
-    passed += 1
-    console.log(`\x1b[32m  ✓\x1b[0m ${c.name}`)
-  } catch (err) {
-    failed += 1
-    const reason = err instanceof Error ? err.message : String(err)
-    failures.push({ name: c.name, reason })
-    console.log(`\x1b[31m  ✗\x1b[0m ${c.name}\n      ${reason}`)
+  for (const c of cases) {
+    try {
+      c.run()
+      passed += 1
+      console.log(`\x1b[32m  ✓\x1b[0m ${c.name}`)
+    } catch (err) {
+      failed += 1
+      const reason = err instanceof Error ? err.message : String(err)
+      failures.push({ name: c.name, reason })
+      console.log(`\x1b[31m  ✗\x1b[0m ${c.name}\n      ${reason}`)
+    }
+  }
+
+  console.log(`\n${passed} passed, ${failed} failed (out of ${cases.length})\n`)
+  if (failed > 0) {
+    process.exit(1)
   }
 }
 
-console.log(`\n${passed} passed, ${failed} failed (out of ${cases.length})\n`)
-if (failed > 0) {
-  process.exit(1)
-}
+main()
