@@ -209,7 +209,7 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   const newDisplay = extractDisplayState(trimmed)
   if (newDisplay && newDisplay !== state.displayState) {
     state.displayState = newDisplay
-  } else if (!state.displayState && state.machineType && shouldAcceptAsDisplay(trimmed)) {
+  } else if (!state.displayState && state.machineType && shouldAcceptAsDisplay(ar.runtime, trimmed)) {
     state.displayState = trimmed.replace(/[.,!?¿¡:;"'()]/g, '').trim().toUpperCase()
   }
 
