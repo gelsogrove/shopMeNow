@@ -373,21 +373,13 @@ const TRANSLATIONS = {
     pt: 'De acordo. Introduz na central o valor em falta e não toques em mais nada. Depois vai à máquina e diz-me se já podes continuar.',
     fr: 'D\'accord. Saisis sur la centrale le montant manquant et ne touche rien d\'autre. Puis va à la machine et dis-moi si tu peux continuer.',
   },
-  caso5AskRelato: {
-    es: 'Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. ¿Qué has hecho justo antes de que apareciera el mensaje?',
-    it: 'Questo avviso compare quando il processo non è stato fatto nell\'ordine corretto. Cosa hai fatto subito prima che apparisse il messaggio?',
-    ca: 'Aquest avís sol aparèixer quan el procés no s\'ha fet en l\'ordre correcte. Què has fet just abans que aparegués el missatge?',
-    en: 'This message usually appears when the process wasn\'t done in the right order. What did you do right before the message appeared?',
-    pt: 'Este aviso costuma aparecer quando o processo não foi feito na ordem correta. O que fizeste mesmo antes de aparecer a mensagem?',
-    fr: 'Ce message apparaît généralement quand le processus n\'a pas été fait dans le bon ordre. Qu\'as-tu fait juste avant que le message apparaisse ?',
-  },
   caso5GuideRetry: {
-    es: 'Eso explica el AL001. Para que funcione bien, primero debes completar el pago en la central y luego pulsar el programa en la lavadora. Prueba a hacerlo en ese orden y dime qué aparece ahora en la pantalla.',
-    it: 'Questo spiega l\'AL001. Per farla funzionare, prima devi completare il pagamento nella centralina e poi premere il programma sulla lavatrice. Prova a farlo in questo ordine e dimmi cosa appare adesso sullo schermo.',
-    ca: 'Això explica l\'AL001. Perquè funcioni bé, primer has de completar el pagament a la central i després prémer el programa a la rentadora. Prova a fer-ho en aquest ordre i digue\'m què apareix ara a la pantalla.',
-    en: 'That explains the AL001. To make it work, first complete the payment at the central and then press the program on the washer. Try it in that order and tell me what now appears on the screen.',
-    pt: 'Isso explica o AL001. Para funcionar bem, primeiro tens de completar o pagamento na central e depois carregar no programa da máquina de lavar. Tenta fazê-lo nessa ordem e diz-me o que aparece agora no ecrã.',
-    fr: 'Cela explique l\'AL001. Pour que ça marche, complète d\'abord le paiement sur la centrale puis appuie sur le programme sur le lave-linge. Essaie dans cet ordre et dis-moi ce qui s\'affiche maintenant à l\'écran.',
+    es: 'Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Antes de avisar a asistencia, vamos a verificar juntos la secuencia. Por favor sigue estos pasos en este orden:\n\n1. Carga la lavadora\n2. Cierra la puerta\n3. Dirígete a la central de pago y paga\n4. Selecciona el número de máquina y recoge el cambio si toca\n5. Dirígete a la máquina seleccionada y elige el programa\n6. Avísame si funciona',
+    it: 'Questo avviso di solito appare quando il processo non è stato fatto nell\'ordine corretto. Prima di avvisare l\'assistenza, verifichiamo insieme la sequenza. Per favore segui questi passi in questo ordine:\n\n1. Carica la lavatrice\n2. Chiudi lo sportello\n3. Vai alla centralina di pagamento e paga\n4. Seleziona il numero della macchina e ritira il resto se serve\n5. Vai alla macchina selezionata e scegli il programma\n6. Fammi sapere se funziona',
+    ca: 'Aquest avís sol aparèixer quan el procés no s\'ha fet en l\'ordre correcte. Abans d\'avisar l\'assistència, verifiquem junts la seqüència. Si us plau segueix aquests passos en aquest ordre:\n\n1. Carrega la rentadora\n2. Tanca la porta\n3. Dirigeix-te a la central de pagament i paga\n4. Selecciona el número de màquina i recull el canvi si cal\n5. Dirigeix-te a la màquina seleccionada i tria el programa\n6. Avisa\'m si funciona',
+    en: 'This message usually appears when the process was not done in the correct order. Before contacting support, let\'s verify the sequence together. Please follow these steps in this order:\n\n1. Load the washer\n2. Close the door\n3. Go to the payment central and pay\n4. Select the machine number and pick up the change if any\n5. Go to the selected machine and choose the program\n6. Let me know if it works',
+    pt: 'Este aviso costuma aparecer quando o processo não foi feito na ordem correta. Antes de avisar a assistência, vamos verificar juntos a sequência. Por favor segue estes passos nesta ordem:\n\n1. Carrega a máquina de lavar\n2. Fecha a porta\n3. Dirige-te à central de pagamento e paga\n4. Seleciona o número da máquina e recolhe o troco se houver\n5. Dirige-te à máquina selecionada e escolhe o programa\n6. Avisa-me se funciona',
+    fr: 'Ce message apparaît généralement quand le processus n\'a pas été fait dans le bon ordre. Avant de prévenir l\'assistance, vérifions ensemble la séquence. Suis ces étapes dans cet ordre :\n\n1. Charge le lave-linge\n2. Ferme la porte\n3. Va à la centrale de paiement et paie\n4. Sélectionne le numéro de machine et récupère la monnaie si besoin\n5. Va à la machine sélectionnée et choisis le programme\n6. Préviens-moi si ça fonctionne',
   },
   caso5Resolved: {
     es: 'Perfecto, incidencia resuelta. ¿Necesitas algo más?',
@@ -522,16 +514,6 @@ const TRANSLATIONS = {
     en: 'To help you, I first need to know exactly which laundry you are at.',
     pt: 'Para te poder ajudar, preciso de saber primeiro em que lavandaria estás exatamente.',
     fr: 'Pour pouvoir t\'aider, j\'ai besoin de savoir d\'abord dans quelle laverie tu te trouves exactement.',
-  },
-
-  // ── Caso 5 AL001 cause-tracking ────────────────────────────────────────────
-  caso5Al001AskBefore: {
-    es: 'De acuerdo. Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. ¿Qué has hecho justo antes de que apareciera el mensaje?',
-    it: 'Va bene. Questo avviso compare di solito quando il processo non è stato fatto nell\'ordine giusto. Cosa hai fatto subito prima che apparisse il messaggio?',
-    ca: 'D\'acord. Aquest avís sol aparèixer quan el procés no s\'ha fet en l\'ordre correcte. Què has fet just abans que aparegués el missatge?',
-    en: 'Got it. This notice usually appears when the process was not done in the correct order. What did you do just before the message appeared?',
-    pt: 'De acordo. Este aviso costuma aparecer quando o processo não foi feito na ordem correta. O que fizeste mesmo antes de aparecer a mensagem?',
-    fr: 'D\'accord. Cet avis apparaît généralement quand le processus n\'a pas été fait dans le bon ordre. Qu\'as-tu fait juste avant que le message apparaisse ?',
   },
 
   // ── Misc ───────────────────────────────────────────────────────────────────

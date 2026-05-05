@@ -181,20 +181,31 @@ El cliente indica que aparece `AL001`.
 **Bot:** Gracias. ¿Qué número de lavadora es?
 
 **Usuario:** La 3.  
-**Bot:** De acuerdo. Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. ¿Qué has hecho justo antes de que apareciera el mensaje?
+**Bot:** De acuerdo. Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Antes de avisar a asistencia, vamos a verificar juntos la secuencia correcta. Por favor sigue estos pasos en este orden:
 
-**Usuario:** Creo que toqué el programa antes de acabar el pago.  
-**Bot:** Eso explica el AL001. Para que funcione bien, primero debes completar el pago en la central y luego pulsar el programa en la lavadora. Prueba a hacerlo en ese orden y dime qué aparece ahora en la pantalla.
+1. Carga la lavadora
+2. Cierra la puerta
+3. Dirígete a la central de pago y paga
+4. Selecciona el número de máquina y recoge el cambio si toca
+5. Dirígete a la máquina seleccionada y elige el programa
+6. Avísame si funciona
 
 **Usuario:** Ya funciona, gracias.  
 **Bot:** Perfecto, incidencia resuelta.
 
-**Resultado esperado:**  
-El bot identifica que el problema está en la secuencia de uso, guía al cliente con la sequencia correcta y verifica el display tras el reintento.
+**Si el cliente indica que NO funciona tras seguir los 6 pasos:**
 
-**Escalar si:**  
+**Bot:** Entendido, en ese caso voy a avisar a asistencia. ¿Me puedes decir tu nombre, por favor?
+
+**Usuario:** Marco Rossi.  
+**Bot:** Gracias, Marco. Aviso a asistencia con tus datos y el detalle de la incidencia. Te contactarán lo antes posible.
+
+**Resultado esperado:**  
+El bot identifica que el problema está en la secuencia de uso, guía al cliente con los 6 pasos en el orden correcto, y solo si el cliente confirma que no funciona pide el nombre y escala a asistencia.
+
+**Escalar si (tras pedir el nombre):**  
+- el cliente confirma que el error persiste después de seguir los 6 pasos en orden
 - el cliente no puede seguir las instrucciones
-- el error persiste después de repetir el proceso correctamente
 - aparece otro código de pantalla diferente tras el reintento
 
 ---

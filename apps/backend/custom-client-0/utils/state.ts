@@ -34,6 +34,7 @@ export function createInitialState(): SessionState {
     operatorRequested: false,
     customerName: null,
     customerNameRequested: false,
+    customerPhone: null,
     paymentRequested: false,
     caso7Active: false,
     turnCount: 0,

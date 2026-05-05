@@ -3,6 +3,7 @@
 
 export type EscalationContext = {
   customerName: string | null
+  customerPhone: string | null
   locationDisplay: string
   machineType: string
   machineNumber: string

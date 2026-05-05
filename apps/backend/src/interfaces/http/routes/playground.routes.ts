@@ -19,5 +19,9 @@ playgroundRouter.delete("/playground/sessions/:id", (req, res) =>
 playgroundRouter.post("/playground/todos/:id/comments", (req, res) =>
   controller.addComment(req, res)
 )
+playgroundRouter.delete(
+  "/playground/todos/:todoId/comments/:commentId",
+  (req, res) => controller.deleteComment(req, res)
+)
 
 export { playgroundRouter }

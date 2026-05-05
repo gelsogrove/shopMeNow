@@ -480,6 +480,16 @@ function TodoDetailModal({
     onClose()
   }
 
+  const deleteComment = async (commentId: string) => {
+    if (!confirm("Delete this comment?")) return
+    await fetch(`${API_BASE}/todos/${todo.id}/comments/${commentId}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ createdBy: user }),
+    })
+    onChanged()
+  }
+
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-6 w-[560px] max-h-[85vh] overflow-y-auto shadow-2xl space-y-4">
@@ -592,6 +602,15 @@ function TodoDetailModal({
                 </div>
                 <div className="text-sm whitespace-pre-wrap">{c.commentText}</div>
               </div>
+              {c.createdBy === user && (
+                <button
+                  onClick={() => deleteComment(c.id)}
+                  title="Delete comment"
+                  className="self-start text-gray-400 hover:text-red-500"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -1054,28 +1073,52 @@ function ChatScreen({
             })}
             {/* Optimistic render: while waiting for the server roundtrip,
                 show the just-sent user message + a typing indicator so the
-                UI feels instant. The bubbles disappear when fetchAll() pulls
-                in the server-persisted version. */}
-            {activeSession &&
-              pendingForSession?.sessionId === activeSession.id && (
+                UI feels instant. We hide the optimistic user bubble as soon
+                as a matching real message lands from the server (background
+                polling can race with sendChatMessage's own fetchAll), to
+                avoid a duplicate "sending…" bubble next to the persisted one.
+                The typing indicator stays until the server reply lands. */}
+            {(() => {
+              if (!activeSession) return null
+              if (pendingForSession?.sessionId !== activeSession.id) return null
+              const pendingText = pendingForSession.userMessage.trim()
+              // Find the index of the user's persisted message. If it's there,
+              // the optimistic user bubble is redundant and must be hidden.
+              const userIdx = visibleMessages.findIndex(
+                (m) =>
+                  m.direction === "INBOUND" && m.content.trim() === pendingText,
+              )
+              const userPersisted = userIdx >= 0
+              // Bot has replied if there's an OUTBOUND message AFTER the user's
+              // persisted one. Without that anchor we can't tell whether a
+              // pre-existing bot bubble is the new reply or just history.
+              const botReplied =
+                userPersisted &&
+                visibleMessages
+                  .slice(userIdx + 1)
+                  .some((m) => m.direction === "OUTBOUND")
+              return (
                 <>
-                  <div className="flex justify-start">
-                    <div className="max-w-[75%] rounded-lg px-3 py-2 shadow text-sm bg-white opacity-80">
-                      <div className="whitespace-pre-wrap">
-                        {pendingForSession.userMessage}
-                      </div>
-                      <div className="text-[10px] text-gray-400 mt-1">
-                        sending…
+                  {!userPersisted && (
+                    <div className="flex justify-start">
+                      <div className="max-w-[75%] rounded-lg px-3 py-2 shadow text-sm bg-white opacity-80">
+                        <div className="whitespace-pre-wrap">{pendingText}</div>
+                        <div className="text-[10px] text-gray-400 mt-1">
+                          sending…
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex justify-end">
-                    <div className="rounded-lg px-3 py-2 shadow text-sm bg-[#dcf8c6]">
-                      <TypingDots />
+                  )}
+                  {!botReplied && (
+                    <div className="flex justify-end">
+                      <div className="rounded-lg px-3 py-2 shadow text-sm bg-[#dcf8c6]">
+                        <TypingDots />
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </>
-              )}
+              )
+            })()}
             {!activeSession && (
               <div className="text-center text-gray-500 mt-10">
                 Select a chat from the list, or click + to start a new one.

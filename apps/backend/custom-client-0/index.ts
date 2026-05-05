@@ -96,6 +96,7 @@ async function getOrCreateSession(
   history: HistoryEntry[],
   userName: string,
   language: ChatbotInput['config']['language'],
+  phoneNumber?: string,
 ): Promise<AgentSession> {
   evictIdleSessions()
 
@@ -119,6 +120,7 @@ async function getOrCreateSession(
   // not have to re-ask for the name and so language-aware guards behave
   // immediately without waiting for heuristics on the first message.
   if (userName) session.ar.state.customerName = userName
+  if (phoneNumber) session.ar.state.customerPhone = phoneNumber
   if (language) {
     session.ar.state.language = language
     session.ar.state.preferredLanguage = language
@@ -147,7 +149,13 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       input.context.history,
       input.userName,
       input.config.language,
+      input.context.phoneNumber,
     )
+
+    // Refresh phone in case the session was cached without one (or with an old value).
+    if (input.context.phoneNumber) {
+      session.ar.state.customerPhone = input.context.phoneNumber
+    }
 
     // Single source of truth: the SAME function the CLI runs.
     const reply = await agentTurn(session, input.userMessage)

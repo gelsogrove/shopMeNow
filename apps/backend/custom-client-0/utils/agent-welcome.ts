@@ -46,8 +46,6 @@ const GUARD_REASONS_NO_WELCOME = new Set<string>([
   'caso4-resolved',
   'caso4-escalate',
   'caso4-escalate-cambio-yes',
-  'caso5-al001-ask-before',
-  'caso5-ask-relato',
   'caso5-guide-retry',
   'caso5-resolved',
   'caso5-escalate',

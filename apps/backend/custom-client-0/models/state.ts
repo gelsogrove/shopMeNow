@@ -33,6 +33,7 @@ export type SessionState = {
   operatorRequested: boolean
   customerName: string | null
   customerNameRequested: boolean
+  customerPhone: string | null
   // Set when guardForcePayment has just asked "¿Has podido realizar el pago?".
   // Allows the next-turn extractor to accept a bare yes/no without requiring
   // payment-context keywords ("pagado", "monedas", …).

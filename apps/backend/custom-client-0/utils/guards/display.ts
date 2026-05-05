@@ -7,17 +7,10 @@ import type { Guard } from '../../models/index.js'
 import { lang, RECOVERABLE_DISPLAYS } from './helpers.js'
 
 /** Caso 5 — AL001: after location + machineType + machineNumber, intercept
- *  the alarm BEFORE the LLM jumps to escalation. We open the case with the
- *  educational "what did you do just before?" prompt; the LLM then drives
- *  the 2 remaining turns (gather context → guide sequence → confirm
- *  resolution) using its tool box. mark_resolved is called by the LLM on
- *  customer confirmation in ANY language ("ora funciona", "ya va",
- *  "now it works", …).
- *
- *  This used to be a 3-guard chain (caso5-await-relato + caso5-await-display)
- *  but the latter two relied on Spanish-only regex (yes/no detection) and
- *  escalated incorrectly when the customer answered in another language.
- *  See architecture doc: deterministic guards must NOT classify intent. */
+ *  the alarm BEFORE the LLM jumps to escalation. We immediately emit the
+ *  6-step retry sequence (load → close → pay → select → program → confirm).
+ *  The LLM then handles the customer's reply: if it works → mark_resolved;
+ *  if it doesn't → ask name and escalate to assistance. */
 export const guardCaso5Al001AskBefore: Guard = (ar) => {
   const display = ar.state.displayState.toUpperCase().replace(/\s+/g, '')
   if (
@@ -35,7 +28,7 @@ export const guardCaso5Al001AskBefore: Guard = (ar) => {
   ar.state.customerNameRequested = false
   ar.pendingEscalation = null
   ar.state.activeFlowId = 'caso5-al001'
-  return { reply: t('caso5Al001AskBefore', lang(ar)), reason: 'caso5-al001-ask-before' }
+  return { reply: t('caso5GuideRetry', lang(ar)), reason: 'caso5-guide-retry' }
 }
 
 /** Caso 14 — ALM DOOR display: deterministic instruction. */
@@ -225,7 +218,8 @@ export const guardEscalateUnknownDisplay: Guard = (ar) => {
     !ar.state.machineNumber ||
     ar.state.operatorRequested ||
     ar.state.customerName ||
-    ar.state.customerNameRequested
+    ar.state.customerNameRequested ||
+    ar.state.activeFlowId === 'caso5-al001'
   ) {
     return null
   }

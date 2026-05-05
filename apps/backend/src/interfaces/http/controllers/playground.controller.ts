@@ -548,4 +548,38 @@ export class PlaygroundController {
       return res.status(500).json({ error: "Failed to add comment", message: error.message })
     }
   }
+
+  // DELETE /api/v1/playground/todos/:todoId/comments/:commentId
+  async deleteComment(req: Request, res: Response) {
+    try {
+      const { todoId, commentId } = req.params
+      const { createdBy } = req.body
+
+      if (!isAllowedUser(createdBy)) {
+        return res.status(401).json({ error: "Invalid user" })
+      }
+
+      const comment = await prisma.playgroundComment.findUnique({
+        where: { id: commentId },
+      })
+      if (!comment || comment.todoId !== todoId) {
+        return res.status(404).json({ error: "Comment not found" })
+      }
+      if (comment.createdBy !== createdBy) {
+        return res.status(403).json({ error: "Cannot delete another user's comment" })
+      }
+
+      await prisma.playgroundComment.delete({ where: { id: commentId } })
+      await prisma.playgroundTodo.update({
+        where: { id: todoId },
+        data: { updatedAt: new Date() },
+      })
+
+      emit(req, "comment:deleted", { todoId, commentId })
+      return res.status(204).send()
+    } catch (error: any) {
+      logger.error("Playground deleteComment error:", error)
+      return res.status(500).json({ error: "Failed to delete comment", message: error.message })
+    }
+  }
 }

@@ -15,7 +15,8 @@ const NON_TROUBLE_LABEL: Record<string, string> = {
 }
 
 export function buildEscalationSummary(context: EscalationContext): string {
-  const name = context.customerName ? `Usuario ${context.customerName}` : 'Usuario sin nombre'
+  const baseName = context.customerName ? `Usuario ${context.customerName}` : 'Usuario sin nombre'
+  const name = context.customerPhone ? `${baseName} (${context.customerPhone})` : baseName
   const location = context.locationDisplay || 'ubicación desconocida'
 
   // Case 6: double charge — no machine info needed
@@ -145,6 +146,7 @@ export function extractEscalationContext(state: SessionState, customerName: stri
 
   return {
     customerName,
+    customerPhone: state.customerPhone,
     locationDisplay: location,
     machineType: state.machineType,
     machineNumber: state.machineNumber,

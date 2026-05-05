@@ -1,10 +1,11 @@
 // 10 — Caso 5 Error AL001
 //
-// Da usecases.md Caso 5: il bot esplora la causa (sequenza errata),
-// guida al cliente con la sequenza corretta (prima pago → poi programa)
-// e verifica il display dopo il retry.
+// Da usecases.md Caso 5: dopo aver raccolto location + tipo + numero,
+// il bot emette direttamente la sequenza dei 6 passi (carga → cierra →
+// paga → selecciona número → programa → avísame). Solo se il cliente
+// dice che NON funziona, il bot chiede il nome ed escala ad asistencia.
 //
-// 6 turni: location → tipo → numero → relato → guida + verify display → closure.
+// 5 turni: location → tipo → numero → 6-passi → conferma/non-conferma.
 
 import { type TestCase, expectMentionsAll } from './_helpers.js'
 
@@ -27,60 +28,52 @@ export const tests: TestCase[] = [
     },
   },
   {
-    name: 'ES — Caso 5 T4: dopo numero, bot chiede "qué has hecho justo antes"',
+    // T4: dopo numero, il bot deve emettere direttamente i 6 passi della
+    // sequenza corretta (carga → cierra → paga → número → programa →
+    // avísame). NON deve escalare e NON deve chiedere "qué has hecho".
+    name: 'ES — Caso 5 T4: dopo numero, bot emette i 6 passi della secuencia',
     run: async (ctx) => {
       await ctx.send('Me sale AL001')
       await ctx.send("L'Escala")
       await ctx.send('Lavadora')
       const reply = await ctx.send('La 3')
-      expectMentionsAll(reply, ['orden', 'antes'])
-    },
-  },
-  {
-    // T5: dopo il racconto del cliente, il bot deve guidare con la sequenza
-    // corretta (prima pago → poi programa) e chiedere di verificare il display
-    // dopo il retry. NON deve escalare subito.
-    name: 'ES — Caso 5 T5: dopo racconto, bot guida sequenza + chiede pantalla',
-    run: async (ctx) => {
-      await ctx.send('Me sale AL001')
-      await ctx.send("L'Escala")
-      await ctx.send('Lavadora')
-      await ctx.send('La 3')
-      const reply = await ctx.send('Creo que toqué el programa antes de acabar el pago')
-      expectMentionsAll(reply, ['pago', 'programa', 'pantalla'])
+      // Verifica menzione dei 6 passi chiave
+      expectMentionsAll(reply, ['carga', 'cierra', 'paga', 'programa'])
       // Garanzia: NON deve escalare a questo step.
       const lower = reply.toLowerCase()
       if (/operador|revisi[oó]n\s+manual|c[oó]mo\s+te\s+llamas/.test(lower)) {
-        throw new Error(`Caso 5 T5 non deve escalare, deve guidare: ${reply}`)
+        throw new Error(`Caso 5 T4 non deve escalare, deve guidare i 6 passi: ${reply}`)
       }
     },
   },
   {
-    // T6 happy: cliente conferma che funziona dopo il retry → resolved.
-    name: 'ES — Caso 5 T6 risolto: cliente "ya funciona" → bot chiude',
+    // T5 happy: cliente conferma che funziona dopo i 6 passi → resolved.
+    name: 'ES — Caso 5 T5 risolto: cliente "ya funciona" → bot chiude',
     run: async (ctx) => {
       await ctx.send('Me sale AL001')
       await ctx.send("L'Escala")
       await ctx.send('Lavadora')
       await ctx.send('La 3')
-      await ctx.send('Creo que toqué el programa antes de acabar el pago')
       const reply = await ctx.send('Ya funciona, gracias')
       expectMentionsAll(reply, ['perfect', 'resuelt'])
     },
   },
   {
-    // T6 escala: AL001 persiste → bot escala chiedendo il nome.
-    name: 'ES — Caso 5 T6 escala: AL001 persiste → bot escala',
+    // T5 escala: cliente dice che NON funziona dopo i 6 passi → bot escala
+    // chiedendo il nome.
+    name: 'ES — Caso 5 T5 escala: cliente "no funciona" → bot escala',
     run: async (ctx) => {
       await ctx.send('Me sale AL001')
       await ctx.send("L'Escala")
       await ctx.send('Lavadora')
       await ctx.send('La 3')
-      await ctx.send('Creo que toqué el programa antes de acabar el pago')
       const reply = await ctx.send('sigue saliendo AL001')
-      expectMentionsAll(reply, ['operador'])
       const lower = reply.toLowerCase()
-      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)) {
+      // Deve indicare escalation (operador, revisión, asistencia, ...) E chiedere il nome.
+      if (!/operador|revisi[oó]n|revisar|asistencia|manualmente/.test(lower)) {
+        throw new Error(`Bot non escala: ${reply}`)
+      }
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te|me\s+puedes\s+dar\s+tu\s+nombre/.test(lower)) {
         throw new Error(`Bot non chiede nome: ${reply}`)
       }
     },
@@ -94,7 +87,6 @@ export const tests: TestCase[] = [
       await ctx.send("L'Escala")
       await ctx.send('Lavadora')
       await ctx.send('La 3')
-      await ctx.send('Creo que toqué el programa antes de acabar el pago')
       await ctx.send('sigue saliendo AL001')
       const reply = await ctx.send('Andrea')
       expectMentionsAll(reply, ['Andrea', 'AL001', '3'])
