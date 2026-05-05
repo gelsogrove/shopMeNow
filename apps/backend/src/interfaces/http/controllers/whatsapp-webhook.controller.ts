@@ -2518,7 +2518,7 @@ export class WhatsAppWebhookController {
           conversationId: chatSession.id,
           role: { in: ["user", "assistant"] },
         },
-        select: { role: true, content: true },
+        select: { role: true, content: true, createdAt: true },
         orderBy: { createdAt: "asc" },
       })
 
@@ -2541,6 +2541,7 @@ export class WhatsAppWebhookController {
         history: historyMessages.map((message) => ({
           role: message.role as "user" | "assistant",
           content: message.content || "",
+          timestamp: message.createdAt?.toISOString(),
         })),
       })
 

@@ -1783,7 +1783,7 @@ export class WidgetChatController {
             conversationId: chatSession.id,
             role: { in: ["user", "assistant"] },
           },
-          select: { role: true, content: true },
+          select: { role: true, content: true, createdAt: true },
           orderBy: { createdAt: "asc" },
         })
 
@@ -1817,6 +1817,7 @@ export class WidgetChatController {
           history: historyForCustomClient.map((m) => ({
             role: m.role as "user" | "assistant",
             content: m.content || "",
+            timestamp: m.createdAt?.toISOString(),
           })),
         })
 

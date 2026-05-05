@@ -38,12 +38,12 @@ const TRANSLATIONS = {
     fr: 'J\'ai besoin de savoir où tu es pour pouvoir t\'aider. Où se trouve la laverie ?',
   },
   mataroStreet: {
-    es: '¿En qué calle de Mataró está la lavandería?',
-    it: 'In quale via di Mataró si trova la lavanderia?',
-    ca: 'A quin carrer de Mataró està la bugaderia?',
-    en: 'On which street in Mataró is the laundry?',
-    pt: 'Em que rua de Mataró está a lavandaria?',
-    fr: 'Dans quelle rue de Mataró se trouve la laverie ?',
+    es: 'En Mataró tenemos dos lavanderías: C/ Francisco de Goya 117 y C/ Alemanya 17. ¿En cuál estás?',
+    it: 'A Mataró abbiamo due lavanderie: C/ Francisco de Goya 117 e C/ Alemanya 17. In quale ti trovi?',
+    ca: 'A Mataró tenim dues bugaderies: C/ Francisco de Goya 117 i C/ Alemanya 17. A quina estàs?',
+    en: 'We have two laundromats in Mataró: C/ Francisco de Goya 117 and C/ Alemanya 17. Which one are you at?',
+    pt: 'Em Mataró temos duas lavandarias: C/ Francisco de Goya 117 e C/ Alemanya 17. Em qual estás?',
+    fr: 'À Mataró, nous avons deux laveries : C/ Francisco de Goya 117 et C/ Alemanya 17. Dans laquelle es-tu ?',
   },
 
   // ── Machine identification ─────────────────────────────────────────────────

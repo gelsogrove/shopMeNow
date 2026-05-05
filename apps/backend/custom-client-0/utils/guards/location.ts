@@ -5,6 +5,7 @@
 import { t, tt } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { isMataro, lang, notInActiveSubFlow } from './helpers.js'
+import { listLaundromatsForReply } from '../locations.js'
 
 /** G2.5 — Mataró street: as soon as the customer names Mataró as location,
  *  ask the street BEFORE asking machine type/number/display. */
@@ -39,7 +40,7 @@ export const guardUnknownLocation: Guard = (ar) => {
     return null
   }
   return {
-    reply: 'No reconozco esa ubicación. Nuestras lavanderías son: Goya, Pineda, L\'Escala, Alemanya, Hortes y Mataró. ¿En cuál de ellas estás?',
+    reply: `No reconozco esa ubicación. Nuestras lavanderías son: ${listLaundromatsForReply()}. ¿En cuál de ellas estás?`,
     reason: 'unknown-location',
   }
 }

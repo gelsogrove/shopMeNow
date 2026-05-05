@@ -326,7 +326,7 @@ export class PlaygroundController {
             where: { chatSessionId: session.id, deletedAt: null },
             orderBy: { createdAt: "desc" },
             take: 20,
-            select: { direction: true, content: true },
+            select: { direction: true, content: true, createdAt: true },
           })
           const history = recentMessages
             .reverse()
@@ -338,6 +338,7 @@ export class PlaygroundController {
                 | "user"
                 | "assistant",
               content: m.content || "",
+              timestamp: m.createdAt?.toISOString(),
             }))
 
           const customResult = await customClientChatbotService.invoke({

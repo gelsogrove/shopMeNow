@@ -40,6 +40,13 @@ type ChatbotOutput = {
 type HistoryEntry = {
   role: "user" | "assistant"
   content: string
+  /**
+   * ISO timestamp of when this message was created. Optional — kept for
+   * backward compatibility. When provided, the chatbot can apply time-based
+   * heuristics (e.g. carry the customer's location across incidents within
+   * the same hour, but not across longer gaps).
+   */
+  timestamp?: string
 }
 
 type SupportedLanguage = "it" | "es" | "pt" | "en" | "ca" | "fr"

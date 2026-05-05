@@ -785,6 +785,24 @@ function ChatScreen({
     return map
   }, [todos])
 
+  // Deduplicate consecutive identical messages (chatbot pipeline can save the same text twice)
+  const visibleMessages = useMemo(() => {
+    if (!activeSession) return []
+    const out: typeof activeSession.messages = []
+    for (const m of activeSession.messages) {
+      const prev = out[out.length - 1]
+      if (
+        prev &&
+        prev.direction === m.direction &&
+        prev.content.trim() === m.content.trim()
+      ) {
+        continue
+      }
+      out.push(m)
+    }
+    return out
+  }, [activeSession])
+
   // Count of TODOs blocking deletion of each session.
   // Sessions with at least one TODO referring to one of their messages cannot
   // be deleted until those TODOs are removed/moved on the kanban.
@@ -991,7 +1009,7 @@ function ChatScreen({
             className="flex-1 overflow-y-auto p-4 space-y-2"
             style={{ background: "#ece5dd" }}
           >
-            {activeSession?.messages.map((m) => {
+            {visibleMessages.map((m) => {
               const isInbound = m.direction === "INBOUND"
               const todoCount = todoCountByDialog.get(m.id) || 0
               const isHighlighted = m.id === highlightMessageId

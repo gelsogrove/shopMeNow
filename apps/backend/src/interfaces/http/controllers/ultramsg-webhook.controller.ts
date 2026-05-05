@@ -1354,6 +1354,7 @@ export class UltraMsgWebhookController {
         select: {
           role: true,
           content: true,
+          createdAt: true,
         },
         orderBy: { createdAt: 'asc' },
       })
@@ -1377,6 +1378,7 @@ export class UltraMsgWebhookController {
         history: historyMessages.map((message) => ({
           role: message.role as 'user' | 'assistant',
           content: message.content || '',
+          timestamp: message.createdAt?.toISOString(),
         })),
       })
 

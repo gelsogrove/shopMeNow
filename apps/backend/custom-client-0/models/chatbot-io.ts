@@ -8,6 +8,13 @@ export type ChatChannel = string
 export type HistoryEntry = {
   role: 'user' | 'assistant'
   content: string
+  /**
+   * ISO timestamp of when this message was created. Optional for backward
+   * compatibility — callers that don't provide it still work, but the agent
+   * cannot apply time-based heuristics (e.g. "reuse location only if last
+   * mention was within the last hour"). Always send it when available.
+   */
+  timestamp?: string
 }
 
 export type ChatbotInput = {
