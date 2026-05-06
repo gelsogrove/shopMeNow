@@ -178,7 +178,7 @@ Edit [`json/settings.json`](./json/settings.json):
   "agentTemperature": 0.3,
   "agentMaxTokens": 800,
   "maxToolHops": 6,
-  "locationCarryOverMs": 3600000,
+  "historyResetTtlMs": 3600000,
   "sessionIdleTtlMs": 1800000,
   "welcomeMessage": { "es": "¡Hola! Soy {{chatbotName}}, …" }
 }
@@ -186,7 +186,7 @@ Edit [`json/settings.json`](./json/settings.json):
 
 `enabledLanguages` is a hard lock — even if the customer types in Italian, the bot replies in `defaultLanguage` when Italian isn't enabled.
 
-`locationCarryOverMs` controls how long (ms) a customer's last laundromat is remembered across sessions (default 1 h). `sessionIdleTtlMs` controls in-process session eviction (default 30 min). Both read from `settings.json` at runtime.
+`historyResetTtlMs` controls how long (ms) the conversation history stays live: when the gap between the last history entry and the incoming message exceeds this value, the chatbot drops the history and starts a fresh session (welcome message again, no remembered location/machine). Default 1 h. `sessionIdleTtlMs` controls in-process session eviction (default 30 min). Both read from `settings.json` at runtime.
 
 ## Running tests
 
@@ -211,4 +211,4 @@ Concept-based assertions (`expectAsksForLocation`, `expectMentionsAll`, `expectS
 6. Multilingual: never hardcode deterministic reply strings — use `localization.ts` `t()` / `tt()` for all customer-facing text in guards.
 7. JSON for technical flows. Small set of guards for opening flows. `reglas.md` for tone/policy.
 8. **Location-specific data belongs in `locations.json`**, not in guard code. Use `faqOverrides` for per-location FAQ answers (e.g. `openingHours`) so guards can stay generic.
-9. **Business constants belong in `settings.json`** — timeouts (`locationCarryOverMs`, `sessionIdleTtlMs`), model, temperatures, emails. See [`docs/settings.md`](./docs/settings.md) for the full reference.
+9. **Business constants belong in `settings.json`** — timeouts (`historyResetTtlMs`, `sessionIdleTtlMs`), model, temperatures, emails. See [`docs/settings.md`](./docs/settings.md) for the full reference.

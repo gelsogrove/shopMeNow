@@ -23,6 +23,6 @@
     "es": "Hola, soy el asistente virtual de la lavandería."
   },
 
-  "locationCarryOverMs": 3600000,
+  "historyResetTtlMs": 3600000,
   "sessionIdleTtlMs": 1800000
 }

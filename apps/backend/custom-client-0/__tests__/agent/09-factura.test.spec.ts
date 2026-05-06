@@ -15,9 +15,11 @@ export const tests: TestCase[] = [
   {
     name: 'ES — Caso 9: bot raccoglie i dati passo passo e finalizza con nome + email',
     run: async (ctx) => {
-      // T1: trigger del flusso
+      // T1: trigger del flusso. Il bot deve premettere il welcome configurato
+      // in settings.json prima della prima domanda (caso 9 è un flusso
+      // conversazionale, non una risposta canned, quindi il welcome va mostrato).
       const r1 = await ctx.send('Quiero una factura')
-      expectMentionsAll(r1, ['lavander'])
+      expectMentionsAll(r1, ['asistente virtual', 'lavander'])
       expectMentionsNone(r1, ['olga@alberwaz.net'])
       // T2: lavandería
       const r2 = await ctx.send('Goya')

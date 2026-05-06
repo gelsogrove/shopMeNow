@@ -45,13 +45,19 @@ export function buildEscalationSummary(context: EscalationContext): string {
     return `${name} en ${location} ha facilitado un código solo numérico (${code}) que no encaja con el formato esperado y requiere revisión manual.`
   }
 
-  // Case 8: discount code with pending amount — escalate when code format
-  // is wrong, customer says "no letters", or machine doesn't start after
-  // the customer adds the missing amount on the central unit.
+  // Case 8: discount code. Two branches:
+  //   (a) code matches SAU2904266 format → forward parsed data + machine info
+  //       so the operator can validate and remotely activate the machine.
+  //   (b) code format invalid → ask the operator to review manually.
+  if (context.caso8Data && context.caso8Data.letters) {
+    const c = context.caso8Data
+    const machineLabel = context.machineNumber ? `máquina nº ${context.machineNumber}` : 'máquina sin número'
+    const doorLabel = c.doorClosed === true ? 'puerta cerrada' : c.doorClosed === false ? 'puerta NO cerrada' : 'estado puerta desconocido'
+    return `${name} en ${location} ha facilitado un código válido (${context.discountCode}: letras ${c.letters}, fecha ${c.fechaIso}, importe ${c.importe}€) en la ${machineLabel} (${doorLabel}). Requiere validación y activación remota.`
+  }
   if (context.discountCode || /caso\s*8/i.test(context.escalationReason || '')) {
     const code = context.discountCode || 'no especificado'
-    return `${name} en ${location} ha reportado un problema con el código de descuento ${code}: ` +
-      `tras introducir el importe pendiente en la central, la máquina no arrancó.`
+    return `${name} en ${location} ha facilitado el código ${code} con un formato no reconocido. Requiere revisión manual.`
   }
 
   // Case 28: contradictory narrative — escalate without arguing.
@@ -167,6 +173,7 @@ export function extractEscalationContext(state: SessionState, customerName: stri
     timestamp: now,
     pendingFlow: state.pendingFlow || '',
     invoiceData: state.invoiceData?.email ? { ...state.invoiceData } : undefined,
+    caso8Data: state.caso8Data?.letters ? { ...state.caso8Data } : undefined,
   }
 }
 

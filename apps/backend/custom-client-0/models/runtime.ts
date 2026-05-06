@@ -65,11 +65,16 @@ export type Settings = {
   allowedExternalLinks?: string
   welcomeMessage?: Partial<Record<SupportedLanguage, string>>
   /**
-   * How long (in ms) to carry a customer's last known laundromat location
-   * forward into a new session cold-start. Default 3 600 000 (1 hour).
-   * Beyond this window the bot re-asks location — the customer may have moved.
+   * How long (in ms) to keep replaying conversation history before treating
+   * the next message as a brand-new conversation. If the gap between the last
+   * history entry and the incoming message exceeds this value, the history is
+   * dropped and the session is recreated fresh — the bot welcomes the customer
+   * again and re-asks location/machine. Default 3 600 000 (1 hour).
+   *
+   * Requires history entries to carry a `timestamp`. Callers that do not
+   * provide timestamps fall back to no-reset behaviour.
    */
-  locationCarryOverMs?: number
+  historyResetTtlMs?: number
   /**
    * In-process session cache TTL (ms). Sessions idle longer than this are
    * evicted to keep memory bounded. Default 1 800 000 (30 minutes).

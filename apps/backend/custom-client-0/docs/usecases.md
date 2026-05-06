@@ -282,38 +282,57 @@ Resolución o redirección al flujo de pantalla.
 
 ---
 
-## Caso 8 — Tengo un código de importe menor
+## Caso 8 — Tengo un código de descuento
 
 **Objetivo:**  
-Ayudar al cliente a completar el proceso con un código y un pequeño importe pendiente.
+Validar el formato del código del cliente y, si es correcto, recoger los
+datos necesarios y derivar al operador para la activación remota de la
+máquina.
 
 **Cuándo aplica:**  
-El cliente tiene un código válido y solo le falta una pequeña parte del importe.
+El cliente tiene un código de descuento (formato: 3 letras + fecha
+DDMMYY + importe, ej. `SAU2904266`).
 
 **Ejemplo de conversación:**
 
 **Usuario:** Tengo un código y no sé cómo usarlo.  
-**Bot:** Te ayudo. Dime el código exacto tal como lo ves, incluyendo letras si las hay.
+**Bot:** Te ayudo. ¿Podrías indicarme, por favor, el código exacto tal como lo ves, incluyendo letras si las hay?
 
-**Usuario:** AB12345.  
-**Bot:** Gracias. ¿En qué lavandería lo quieres usar?
+**Usuario:** SAU2904266.  
+**Bot:** ¡Gracias! ¿Cuál es tu nombre?
+
+**Usuario:** Andrea.  
+**Bot:** ¿En qué pueblo / lavandería quieres usarlo?
 
 **Usuario:** Goya.  
-**Bot:** Perfecto. ¿Te falta una pequeña parte para completar el importe o el código cubre un importe mayor?
+**Bot:** ¿Qué número de máquina deseas usar?
 
-**Usuario:** Me falta un poco.  
-**Bot:** De acuerdo. Introduce en la central el importe que falta y no toques nada más. Después ponte delante de la máquina y dime si ya puedes continuar.
+**Usuario:** 5.  
+**Bot:** ¿La tienes cargada y con la puerta cerrada?
 
-**Usuario:** Sí, ya funciona.  
-**Bot:** Perfecto, incidencia resuelta.
+**Usuario:** Sí.  
+**Bot:** Dame un minuto, hacemos las comprobaciones correspondientes. Si el código es correcto, te activaremos la máquina. 🙂  
+*(seguido del resumen al operador con código parseado, fecha ISO, importe y datos máquina)*
+
+**Notas de comportamiento:**
+
+- Formato esperado: `^[A-Z]{3}\d{6}\d+$` → 3 letras (`SAU`) + 6 dígitos
+  fecha DDMMYY (`290426` → `2026-04-29`) + importe en dígitos (`6`).
+- Si el formato **no encaja**, el bot escala directamente con motivo
+  "código con formato no reconocido" sin seguir recogiendo datos.
+- Si la lavandería o el número de máquina ya están en el contexto, el
+  bot omite esas preguntas.
+- El operador valida el código y activa remotamente la máquina; tras la
+  activación responde manualmente al cliente con un mensaje del tipo
+  *"La máquina ya está activada, ¿ya funciona?"* (no es enviado por el
+  bot).
 
 **Resultado esperado:**  
-Incidencia resuelta.
+Datos completos en manos del operador, listos para validación + activación remota.
 
 **Escalar si:**  
 - el código no encaja con el formato esperado
 - el cliente dice que solo hay números y no hay letras delante
-- tras introducir el importe pendiente, no funciona
 
 ---
 

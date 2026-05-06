@@ -24,4 +24,11 @@ export type EscalationContext = {
     fechaIso: string
     email: string
   }
+  // Caso 8 — present when the customer provided a code in the SAU2904266 format.
+  caso8Data?: {
+    letters: string
+    fechaIso: string
+    importe: string
+    doorClosed: boolean | null
+  }
 }

@@ -21,8 +21,6 @@ import {
 } from './agent.js'
 import { autoExtractFacts } from './utils/agent-extract.js'
 import { extractEscalationContext, buildEscalationSummary } from './utils/escalation.js'
-import { extractExplicitLocation } from './utils/intent.js'
-import { resolveKnownLocation } from './utils/message-parsing.js'
 
 import type {
   AgentSession,
@@ -32,8 +30,8 @@ import type {
 } from './models/index.js'
 
 // Fallback values when settings.json omits the fields.
-const DEFAULT_LOCATION_CARRY_OVER_MS = 60 * 60 * 1000  // 1 hour
-const DEFAULT_SESSION_IDLE_TTL_MS    = 30 * 60 * 1000  // 30 minutes
+const DEFAULT_HISTORY_RESET_TTL_MS = 60 * 60 * 1000  // 1 hour
+const DEFAULT_SESSION_IDLE_TTL_MS  = 30 * 60 * 1000  // 30 minutes
 
 // Per-session cache of agent runtimes. Keyed by sessionId so concurrent
 // customers do not stomp on each other's sticky facts. Entries are evicted
@@ -124,36 +122,28 @@ export function enforceCacheCap(): void {
 let cachedIdleTtlMs = DEFAULT_SESSION_IDLE_TTL_MS
 
 /**
- * Walk the replayed history from newest to oldest and try to recover the
- * customer's last mentioned laundromat location. Only entries whose timestamp
- * are within `locationCarryOverMs` (from settings.json) are considered; older
- * mentions are stale (the customer may have moved to another laundromat).
+ * Decide whether the replayed history is too stale and should be discarded so
+ * the bot starts a brand-new conversation (welcome message, no remembered
+ * location/machine). We compare `now` to the most recent history entry's
+ * `timestamp` and reset when the gap exceeds `historyResetTtlMs`.
  *
- * History entries without a `timestamp` are skipped — the caller is expected
- * to provide them. We never guess.
+ * Returns `false` if any of the inputs is missing (caller didn't send
+ * timestamps, empty history, …) — in those cases we keep the legacy behaviour
+ * and replay the history as-is.
  */
-function recoverStickyLocation(
-  session: AgentSession,
+export function shouldResetHistory(
   history: HistoryEntry[],
-): void {
-  if (session.ar.state.location) return // already known, nothing to recover
-  const carryOverMs = session.ar.runtime.settings.locationCarryOverMs ?? DEFAULT_LOCATION_CARRY_OVER_MS
-  const now = Date.now()
+  resetTtlMs: number,
+): boolean {
+  if (!history.length) return false
   for (let i = history.length - 1; i >= 0; i--) {
-    const h = history[i]
-    if (h.role !== 'user') continue
-    if (!h.timestamp) continue
-    const ts = Date.parse(h.timestamp)
-    if (Number.isNaN(ts)) continue
-    if (now - ts > carryOverMs) break // older entries are out of window
-    const explicit = extractExplicitLocation(h.content)
-    if (!explicit) continue
-    const known = resolveKnownLocation(explicit)
-    if (known) {
-      session.ar.state.location = known
-      return
-    }
+    const ts = history[i].timestamp
+    if (!ts) continue
+    const parsed = Date.parse(ts)
+    if (Number.isNaN(parsed)) continue
+    return Date.now() - parsed > resetTtlMs
   }
+  return false
 }
 
 function evictIdleSessions(): void {
@@ -175,16 +165,35 @@ async function getOrCreateSession(
 ): Promise<AgentSession> {
   evictIdleSessions()
 
-  const cached = sessionCache.get(sessionId)
-  if (cached) {
-    cached.lastUsedAt = Date.now()
-    return cached.session
+  // If the gap between the last history entry and now exceeds the configured
+  // reset window (default 1h), treat this turn as a brand-new conversation:
+  // drop the cached session for this id and skip history replay below. The
+  // bot will welcome the customer again and re-ask location/machine.
+  const probeSession = sessionCache.get(sessionId)?.session
+  const resetTtlMs =
+    probeSession?.ar.runtime.settings.historyResetTtlMs ?? DEFAULT_HISTORY_RESET_TTL_MS
+  const resetHistory = shouldResetHistory(history, resetTtlMs)
+  if (resetHistory) {
+    sessionCache.delete(sessionId)
+  }
+
+  if (!resetHistory) {
+    const cached = sessionCache.get(sessionId)
+    if (cached) {
+      cached.lastUsedAt = Date.now()
+      return cached.session
+    }
   }
 
   const session = await createAgentSession()
 
   // Sync the TTL cache with this tenant's configured value so eviction honours it.
   cachedIdleTtlMs = session.ar.runtime.settings.sessionIdleTtlMs ?? DEFAULT_SESSION_IDLE_TTL_MS
+
+  // After a history reset we deliberately skip the replay loop below so the
+  // session has no facts, no location, no machine — exactly as if it were the
+  // customer's very first message.
+  const replayHistory = resetHistory ? [] : history
 
   // Replay caller-provided history so the agent has full context even on
   // the first call to a fresh process (cold start, multi-dyno failover).
@@ -199,7 +208,7 @@ async function getOrCreateSession(
   // trigger and the LLM escalates straight away. This matches what
   // agentTurn does turn-by-turn in the CLI/test runner, so behaviour is
   // identical between cold-start (web) and warm session (CLI).
-  for (const h of history) {
+  for (const h of replayHistory) {
     session.history.push({ role: h.role, content: h.content })
     if (h.role === 'user') {
       try {
@@ -244,17 +253,6 @@ async function getOrCreateSession(
     session.ar.state.language = defaultLang
     session.ar.state.preferredLanguage = defaultLang
   }
-
-  // Recover the customer's most recently mentioned location from the replayed
-  // history, so the bot doesn't ask "where are you?" again on a new incident
-  // when the customer is clearly still at the same laundromat. We only carry
-  // the location forward if the last user mention is within
-  // `settings.locationCarryOverMs` — beyond that the customer may have moved.
-  //
-  // Machine-level facts (lavadora/secadora, number, display) are intentionally
-  // NOT recovered: each new incident must re-ask those, because the same
-  // customer may be using a different machine.
-  recoverStickyLocation(session, history)
 
   enforceCacheCap()
   sessionCache.set(sessionId, { session, lastUsedAt: Date.now() })

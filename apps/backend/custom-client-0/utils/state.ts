@@ -62,6 +62,12 @@ export function createInitialState(): SessionState {
       fechaIso: '',
       email: '',
     },
+    caso8Data: {
+      letters: '',
+      fechaIso: '',
+      importe: '',
+      doorClosed: null,
+    },
   }
 }
 

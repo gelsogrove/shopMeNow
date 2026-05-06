@@ -1,136 +1,80 @@
-// 08 — Caso 8 cliente con codice + importe pendiente
+// 08 — Caso 8 cliente con código de descuento (NEW flow per cliente comment).
 //
 // Da docs/usecases.md Caso 8:
-//   USER: Tengo un código y no sé cómo usarlo.
-//   BOT:  Te ayudo. Dime el código exacto tal como lo ves, incluyendo
-//         letras si las hay.
-//   USER: AB12345.
-//   BOT:  Gracias. ¿En qué lavandería lo quieres usar?
-//   USER: Goya.
-//   BOT:  Perfecto. ¿Te falta una pequeña parte para completar el importe
-//         o el código cubre un importe mayor?
-//   USER: Me falta un poco.
-//   BOT:  De acuerdo. Introduce en la central el importe que falta y no
-//         toques nada más. Después ponte delante de la máquina y dime si
-//         ya puedes continuar.
+//   Format: 3 letras + DDMMYY + importe (ej. SAU2904266).
+//   Steps: ask code → validate → ask name → pueblo → machine number →
+//   "¿cargada y puerta cerrada?" → final reply + escalation.
+//
+// Format invalid → escalation immediata con motivo "formato no reconocido".
 
-import { type TestCase, expectMentionsAll } from './_helpers.js'
+import { type TestCase, expectMentionsAll, expectMentionsNone } from './_helpers.js'
 
 export const tests: TestCase[] = [
   {
-    name: 'ES — Caso 8 T1: bot chiede codice esatto incluyendo letras',
+    name: 'ES — Caso 8 T1: bot chiede codice (con welcome al T1)',
     run: async (ctx) => {
       const reply = await ctx.send('Tengo un código y no sé cómo usarlo.')
-      expectMentionsAll(reply, ['codigo', 'letras'])
+      // Welcome configurato in settings.json deve apparire al T1.
+      expectMentionsAll(reply, ['asistente virtual', 'codigo'])
     },
   },
   {
-    name: 'ES — Caso 8 T2: dopo codice alfanumerico, bot chiede location',
+    name: 'ES — Caso 8 happy path: codice valido → raccoglie nome/pueblo/maquina/puerta → escalation',
+    run: async (ctx) => {
+      // T1: trigger
+      await ctx.send('Tengo un código y no sé cómo usarlo.')
+      // T2: codice formato valido (SAU + 290426 + 6)
+      const r2 = await ctx.send('SAU2904266')
+      expectMentionsAll(r2, ['nombre'])
+      // T3: nome → pueblo
+      const r3 = await ctx.send('Andrea')
+      expectMentionsAll(r3, ['pueblo'])
+      // T4: pueblo → numero macchina
+      const r4 = await ctx.send('Goya')
+      expectMentionsAll(r4, ['numero', 'maquina'])
+      // T5: numero macchina → puerta
+      const r5 = await ctx.send('5')
+      expectMentionsAll(r5, ['puerta'])
+      // T6: puerta sí → final + escalation summary
+      const r6 = await ctx.send('Sí')
+      // Messaggio cortese al cliente
+      expectMentionsAll(r6, ['minuto', 'comprobaciones'])
+      // Resumen all'operatore con dati parseados
+      expectMentionsAll(r6, ['Andrea', 'Goya', 'SAU2904266', 'SAU', '2026-04-29', 'human support'])
+      // Garanzie negative: niente flussi vecchi
+      expectMentionsNone(r6, ['te falta', 'introduce en la central', 'incidencia resuelta'])
+    },
+  },
+  {
+    // Format invalid → escalation immediata, no raccolta dati.
+    name: 'ES — Caso 8 codice invalido: format check fallisce → escalation diretta',
     run: async (ctx) => {
       await ctx.send('Tengo un código y no sé cómo usarlo.')
       const reply = await ctx.send('AB12345')
-      expectMentionsAll(reply, ['lavanderia'])
-    },
-  },
-  {
-    name: 'ES — Caso 8 T3: dopo location, bot chiede se manca importe o copre di più',
-    run: async (ctx) => {
-      await ctx.send('Tengo un código y no sé cómo usarlo.')
-      await ctx.send('AB12345')
-      const reply = await ctx.send('Goya')
-      expectMentionsAll(reply, ['falta', 'importe'])
-    },
-  },
-  {
-    name: 'ES — Caso 8 T4: dopo "me falta un poco", bot dà istruzione central + máquina',
-    run: async (ctx) => {
-      await ctx.send('Tengo un código y no sé cómo usarlo.')
-      await ctx.send('AB12345')
-      await ctx.send('Goya')
-      const reply = await ctx.send('Me falta un poco')
-      expectMentionsAll(reply, ['central', 'importe', 'maquina'])
-    },
-  },
-  {
-    // BUG REGRESSION: prima del fix, dopo l'istruzione il flow chiudeva
-    // (pendingFlow = '') e il "si" cadeva nella pipeline troubleshooting,
-    // chiedendo "¿lavadora o secadora?" → loop infinito su displayState.
-    // Il bot DEVE chiudere con "incidencia resuelta" e NON chiedere mai
-    // tipo macchina / numero / pantalla.
-    name: 'ES — Caso 8 T5 SI: dopo "si" il bot chiude con "incidencia resuelta"',
-    run: async (ctx) => {
-      await ctx.send('Tengo un código y no sé cómo usarlo.')
-      await ctx.send('AB12345')
-      await ctx.send('Goya')
-      await ctx.send('Me falta un poco')
-      const reply = await ctx.send('si')
-      expectMentionsAll(reply, ['resuelta'])
-      // Garanzia: NON deve chiedere lavadora/secadora/pantalla.
-      const lower = reply.toLowerCase()
-      if (/lavadora|secadora|pantalla|qu[eé]\s+aparece/.test(lower)) {
-        throw new Error(`Caso 8 T5 SI doveva chiudere ma è caduto nel troubleshooting: ${reply}`)
-      }
-    },
-  },
-  {
-    // Path negativo: cliente dice che non funziona dopo aver inserito i soldi
-    // → escalation a operatore con richiesta del nome del cliente.
-    name: 'ES — Caso 8 T5 NO: dopo "no funciona" il bot escala chiedendo il nome',
-    run: async (ctx) => {
-      await ctx.send('Tengo un código y no sé cómo usarlo.')
-      await ctx.send('AB12345')
-      await ctx.send('Goya')
-      await ctx.send('Me falta un poco')
-      const reply = await ctx.send('no funciona')
-      expectMentionsAll(reply, ['operador'])
-      // Deve anche chiedere il nome (qualunque variante: "te llamas", "tu nombre", ...)
+      // Bot deve escalare con messaggio "formato no reconocido" e chiedere nome.
+      expectMentionsAll(reply, ['formato', 'manualmente'])
       const lower = reply.toLowerCase()
       if (!/te\s+llamas|tu\s+nombre|nombre.*por\s+favor|c[oó]mo\s+te/.test(lower)) {
-        throw new Error(`Bot non chiede il nome del cliente: ${reply}`)
+        throw new Error(`Bot deve chiedere il nome dopo escalation: ${reply}`)
       }
+      // NON deve continuare con domande del nuovo flusso.
+      expectMentionsNone(reply, ['pueblo', 'numero de maquina'])
     },
   },
   {
-    // BUG REGRESSION: il riepilogo Human Support per il Caso 8 deve
-    // contenere il codice del cliente, la lavandería e il motivo specifico
-    // (no genericamente "problema técnico"). Prima del fix, il summary
-    // diceva "lavadora número número desconocido" + "seleccionó el programa
-    // pero problema técnico" + nessuna menzione del codice.
-    name: 'ES — Caso 8 escalation summary: contiene código + location + motivo specifico',
+    // Skip pueblo se location già nota dal contesto.
+    name: 'ES — Caso 8: skip pueblo se location già nota',
     run: async (ctx) => {
+      // Pre-popola state.location via troubleshooting.
+      await ctx.send('Estoy en Goya con la lavadora 5 y aparece PUSH PROG')
+      // Ora chiedo aiuto per il codice.
       await ctx.send('Tengo un código y no sé cómo usarlo.')
-      await ctx.send('A636363')
-      await ctx.send('Goya')
-      await ctx.send('Me falta un poco')
-      await ctx.send('no funciona')
+      await ctx.send('SAU2904266')
       const reply = await ctx.send('Andrea')
-      // Il summary deve contenere: nome, location, codice, motivo Caso 8
-      expectMentionsAll(reply, ['Andrea', 'Goya', 'A636363', 'codigo de descuento'])
-      // Garanzie negative: NIENTE template buggato
-      if (/n[uú]mero\s+n[uú]mero/i.test(reply)) {
-        throw new Error(`Bug "número número" presente: ${reply}`)
-      }
-      if (/seleccion[oó]\s+el\s+programa\s+pero\s+problema\s+t[eé]cnico/i.test(reply)) {
-        throw new Error(`Frase nonsense "seleccionó el programa pero problema técnico" presente: ${reply}`)
-      }
-    },
-  },
-  {
-    // BUG REGRESSION: typo nella lavandería ("Giya" invece di "Goya").
-    // Prima del fix, il bot escalava direttamente al primo typo. Ora deve
-    // riconoscere il fuzzy match (distanza 1) e procedere come se l'utente
-    // avesse scritto "Goya".
-    name: 'ES — Caso 8 typo location: "Giya" → fuzzy match a Goya, prosegue il flow',
-    run: async (ctx) => {
-      await ctx.send('Tengo un código y no sé cómo usarlo.')
-      await ctx.send('AB12345')
-      const reply = await ctx.send('Giya')
-      expectMentionsAll(reply, ['falta', 'importe'])
-      // NON deve escalare al typo.
-      const lower = reply.toLowerCase()
-      if (/operador|revisar.*manualmente|nombre.*por\s+favor/.test(lower)) {
-        throw new Error(`Typo "Giya" non deve escalare immediatamente: ${reply}`)
-      }
+      // Salta pueblo (già noto Goya), salta machine-number (già noto 5),
+      // arriva direttamente alla domanda della porta.
+      expectMentionsAll(reply, ['puerta'])
+      expectMentionsNone(reply, ['pueblo', 'numero'])
     },
   },
 ]

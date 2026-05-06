@@ -32,7 +32,7 @@ Everything that varies per tenant lives in `json/`. The code is identical across
 | `refundFormUrl` | `string` | — | Public URL for the refund form (Caso 6/26). |
 | `allowedExternalLinks` | `string` | — | Comma-separated whitelisted domains the bot may mention. |
 | `welcomeMessage` | `Record<lang, string>` | — | Per-language welcome rendered on the very first turn (only when the customer hasn't already given operational facts). |
-| `locationCarryOverMs` | `number` | `3600000` (1 h) | How long (ms) to carry a customer's last known laundromat location forward into a cold-start session. Beyond this window the bot re-asks location. |
+| `historyResetTtlMs` | `number` | `3600000` (1 h) | How long (ms) the conversation history stays "live". If the gap between the most recent history entry and the incoming message is larger than this, the chatbot drops the history and starts a fresh session — welcome message again, no remembered location/machine. Requires history entries to carry a `timestamp`; callers that omit it fall back to no-reset behaviour. |
 | `sessionIdleTtlMs` | `number` | `1800000` (30 min) | In-process session cache TTL (ms). Sessions idle longer than this are evicted to keep memory bounded. |
 
 ## `json/locations.json` — laundries metadata + per-location overrides

@@ -94,7 +94,7 @@ export const guardNumericCodeNoLetters: Guard = (ar, userMessage) => {
 
   if (yesLetters) {
     ar.state.faqCodeValue = ''
-    ar.state.pendingFlow = 'caso8-await-location'
+    ar.state.pendingFlow = 'caso8-await-code'
     return {
       reply: t('caso8AskCode', lang(ar)),
       reason: 'numeric-code-yes-letters',

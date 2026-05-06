@@ -80,6 +80,14 @@ export type SessionState = {
     fechaIso: string    // normalized YYYY-MM-DD when parseable, else ''
     email: string
   }
+  // Caso 8 — discount code parsed from `state.faqCodeValue` once the format
+  // SAU2904266 (3 letters + DDMMYY + amount) is validated.
+  caso8Data: {
+    letters: string
+    fechaIso: string    // YYYY-MM-DD when format is valid, else ''
+    importe: string     // raw amount as typed
+    doorClosed: boolean | null
+  }
   // Pending multi-turn flow markers used by the agent's deterministic guards.
   pendingFlow:
     | ''
@@ -94,11 +102,11 @@ export type SessionState = {
     | 'caso17-ask-photo'
     | 'caso17-await-photo'
     | 'caso8-ask-code'
-    | 'caso8-await-location'
-    | 'caso8-ask-amount'
-    | 'caso8-await-amount'
-    | 'caso8-await-confirmation'
-    | 'caso8-confirm-location'
+    | 'caso8-await-code'
+    | 'caso8-await-name'
+    | 'caso8-await-pueblo'
+    | 'caso8-await-machine-number'
+    | 'caso8-await-puerta'
     | 'caso4-ask-cambio'
     | 'caso4-await-cambio'
     | 'caso4-await-confirmation'

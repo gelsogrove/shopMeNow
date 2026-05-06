@@ -7,6 +7,7 @@ import { getFaqs } from '../runtime.js'
 import { resolveKnownLocation, resolveKnownLocationFuzzy } from '../message-parsing.js'
 import type { Guard } from '../../models/index.js'
 import { lang, notInActiveSubFlow } from './helpers.js'
+import { buildEscalationSummary, extractEscalationContext } from '../escalation.js'
 
 /** G1 — Caso 7 step 1: customer said "He pagado pero no he podido usar" → ask cambio. */
 export const guardCaso7AskCambio: Guard = (ar) => {
@@ -133,7 +134,37 @@ export const guardCaso6AskCaptura: Guard = (ar) => {
   return { reply: `${captura}\n\n${closure} ${nameAsk}`, reason: 'caso6-ask-captura' }
 }
 
-/** Caso 8 step 1 — customer mentioned they have a code → ask the exact code. */
+// =============================================================================
+// Caso 8 — Tengo un código de importe menor (NEW flow per cliente comment)
+// =============================================================================
+//
+// Format expected for a valid discount code: `^([A-Z]{3})(\d{2})(\d{2})(\d{2})(\d+)$`
+//   - 3 uppercase letters         (e.g. SAU)
+//   - 6 digits date DDMMYY        (e.g. 290426 → 2026-04-29)
+//   - 1+ digits amount            (e.g. 6)
+// Example: SAU2904266
+//
+// Steps:
+//   1. ask-code        bot asks "dime el código exacto"
+//   2. await-code      user types code → validate format
+//                        - valid   → ask-name
+//                        - invalid → escalate (formato no reconocido)
+//   3. await-name      user types name → ask-pueblo (skip if location known)
+//   4. await-pueblo    user types pueblo → ask-machine-number (skip if known)
+//   5. await-machine   user types number → ask-puerta
+//   6. await-puerta    user confirms door closed → final closure + escalation
+
+const CASO8_CODE_RE = /^([A-Z]{3})(\d{2})(\d{2})(\d{2})(\d+)$/
+
+function parseCaso8Code(raw: string): { letters: string; fechaIso: string; importe: string } | null {
+  const cleaned = raw.trim().toUpperCase().replace(/[\s.,!?¿¡-]/g, '')
+  const m = cleaned.match(CASO8_CODE_RE)
+  if (!m) return null
+  const [, letters, dd, mm, yy, importe] = m
+  return { letters, fechaIso: `20${yy}-${mm}-${dd}`, importe }
+}
+
+/** Caso 8 step 1 — bot asks the customer for the exact code. */
 export const guardCaso8AskCode: Guard = (ar) => {
   if (
     ar.state.pendingFlow !== 'caso8-ask-code' ||
@@ -142,99 +173,106 @@ export const guardCaso8AskCode: Guard = (ar) => {
   ) {
     return null
   }
-  ar.state.pendingFlow = 'caso8-await-location'
+  ar.state.pendingFlow = 'caso8-await-code'
   return { reply: t('caso8AskCode', lang(ar)), reason: 'caso8-ask-code' }
 }
 
-/** Caso 8 step 2 — after the customer typed the code, ask the location. */
-export const guardCaso8AwaitLocation: Guard = (ar, userMessage) => {
+/** Caso 8 step 2 — customer typed the code: validate format, branch. */
+export const guardCaso8AwaitCode: Guard = (ar, userMessage) => {
   if (
-    ar.state.pendingFlow !== 'caso8-await-location' ||
+    ar.state.pendingFlow !== 'caso8-await-code' ||
     ar.state.operatorRequested ||
     ar.state.customerNameRequested
   ) {
     return null
   }
-  const code = userMessage.trim().replace(/[.,!?]/g, '').trim()
-  if (code) ar.state.faqCodeValue = code
-  if (/^\d{3,}$/.test(code)) {
+  const raw = userMessage.trim().replace(/[.,!?¿¡]/g, '').trim()
+  if (raw) ar.state.faqCodeValue = raw
+
+  // Numeric-only codes go to the existing "did the code have letters?" flow
+  // (Caso 18 — handled by display.ts guards).
+  if (/^\d{3,}$/.test(raw)) {
     ar.state.pendingFlow = 'numeric-code-ask-letters'
     return null
   }
-  ar.state.pendingFlow = 'caso8-ask-amount'
-  return {
-    reply: t('caso8AskLocation', lang(ar)),
-    reason: 'caso8-await-location',
-  }
-}
 
-/** Caso 8 step 3 — after location, ask if missing a small amount or code
- *  covers a bigger amount. */
-export const guardCaso8AskAmount: Guard = (ar, userMessage) => {
-  if (
-    ar.state.pendingFlow !== 'caso8-ask-amount' ||
-    ar.state.operatorRequested ||
-    ar.state.customerNameRequested
-  ) {
-    return null
-  }
-  if (!ar.state.location) {
-    const fuzzy = resolveKnownLocationFuzzy(userMessage)
-    if (fuzzy) {
-      ar.state.location = fuzzy
-    } else {
-      ar.state.pendingFlow = 'caso8-confirm-location'
-      return { reply: t('caso8ConfirmLocation', lang(ar)), reason: 'caso8-confirm-location' }
-    }
-  }
-  ar.state.pendingFlow = 'caso8-await-amount'
-  return { reply: t('caso8AskAmount', lang(ar)), reason: 'caso8-ask-amount' }
-}
-
-/** Caso 8 step 3b — customer's reply after we asked to confirm the location. */
-export const guardCaso8ConfirmLocation: Guard = (ar, userMessage) => {
-  if (
-    ar.state.pendingFlow !== 'caso8-confirm-location' ||
-    ar.state.operatorRequested ||
-    ar.state.customerNameRequested
-  ) {
-    return null
-  }
-  const exact = resolveKnownLocation(userMessage)
-  const matched = exact || resolveKnownLocationFuzzy(userMessage)
-  if (!matched) {
+  const parsed = parseCaso8Code(raw)
+  if (!parsed) {
+    // Format invalid → escalate, ask customer name.
     ar.state.pendingFlow = ''
-    ar.state.escalationReason = 'Caso 8 — lavandería no reconocida'
+    ar.state.escalationReason = 'Caso 8 — código con formato no reconocido'
     ar.state.operatorRequested = true
     ar.state.customerNameRequested = true
     ar.pendingEscalation = { reason: ar.state.escalationReason }
-    const escalate = t('doubleChargeReview', lang(ar))
+    const escalate = t('caso8FormatInvalid', lang(ar))
     const nameAsk = t('customerNameAsk', lang(ar))
-    return { reply: `${escalate} ${nameAsk}`, reason: 'caso8-escalate-location' }
+    return { reply: `${escalate} ${nameAsk}`, reason: 'caso8-escalate' }
   }
+
+  ar.state.caso8Data.letters = parsed.letters
+  ar.state.caso8Data.fechaIso = parsed.fechaIso
+  ar.state.caso8Data.importe = parsed.importe
+  ar.state.pendingFlow = 'caso8-await-name'
+  return { reply: t('caso8AskName', lang(ar)), reason: 'caso8-ask-name' }
+}
+
+/** Caso 8 step 3 — capture customer name, then ask pueblo (or skip). */
+export const guardCaso8AwaitName: Guard = (ar, userMessage) => {
+  if (ar.state.pendingFlow !== 'caso8-await-name') return null
+  ar.state.customerName = userMessage.trim()
+  if (ar.state.location) {
+    if (ar.state.machineNumber) {
+      ar.state.pendingFlow = 'caso8-await-puerta'
+      return { reply: t('caso8AskPuerta', lang(ar)), reason: 'caso8-ask-puerta' }
+    }
+    ar.state.pendingFlow = 'caso8-await-machine-number'
+    return { reply: t('caso8AskMachineNumber', lang(ar)), reason: 'caso8-ask-machine-number' }
+  }
+  ar.state.pendingFlow = 'caso8-await-pueblo'
+  return { reply: t('caso8AskPueblo', lang(ar)), reason: 'caso8-ask-pueblo' }
+}
+
+/** Caso 8 step 4 — capture pueblo (or accept the raw text as location). */
+export const guardCaso8AwaitPueblo: Guard = (ar, userMessage) => {
+  if (ar.state.pendingFlow !== 'caso8-await-pueblo') return null
+  const raw = userMessage.trim()
+  const matched = resolveKnownLocation(raw) || resolveKnownLocationFuzzy(raw) || raw
   ar.state.location = matched
-  ar.state.pendingFlow = 'caso8-await-amount'
-  return { reply: t('caso8AskAmount', lang(ar)), reason: 'caso8-ask-amount' }
-}
-
-/** Caso 8 step 4 — after amount answer, give the instruction. */
-export const guardCaso8AwaitAmount: Guard = (ar) => {
-  if (
-    ar.state.pendingFlow !== 'caso8-await-amount' ||
-    ar.state.operatorRequested ||
-    ar.state.customerNameRequested
-  ) {
-    return null
+  if (ar.state.machineNumber) {
+    ar.state.pendingFlow = 'caso8-await-puerta'
+    return { reply: t('caso8AskPuerta', lang(ar)), reason: 'caso8-ask-puerta' }
   }
-  ar.state.pendingFlow = 'caso8-await-confirmation'
-  return { reply: t('caso8Instruction', lang(ar)), reason: 'caso8-instruction' }
+  ar.state.pendingFlow = 'caso8-await-machine-number'
+  return { reply: t('caso8AskMachineNumber', lang(ar)), reason: 'caso8-ask-machine-number' }
 }
 
-// REMOVED: guardCaso8AwaitConfirmation — same monolingual yes/no regex
-// problem. After caso8-await-amount sets pendingFlow='caso8-await-
-// confirmation' and gives the instruction, the LLM reads the customer's
-// reply ("ya funciona", "ora va", "now it works", "ainda no"…) in any
-// language, calls mark_resolved or escalate_to_operator accordingly.
+/** Caso 8 step 5 — capture machine number. */
+export const guardCaso8AwaitMachineNumber: Guard = (ar, userMessage) => {
+  if (ar.state.pendingFlow !== 'caso8-await-machine-number') return null
+  ar.state.machineNumber = userMessage.trim()
+  ar.state.pendingFlow = 'caso8-await-puerta'
+  return { reply: t('caso8AskPuerta', lang(ar)), reason: 'caso8-ask-puerta' }
+}
+
+/** Caso 8 step 6 — door confirmation, then escalate to internal operator. */
+export const guardCaso8AwaitPuerta: Guard = (ar, userMessage) => {
+  if (ar.state.pendingFlow !== 'caso8-await-puerta') return null
+  const reply = userMessage.trim().toLowerCase()
+  // Permissive yes/no — store both yes and no, escalate either way (operator decides).
+  ar.state.caso8Data.doorClosed = !/^(no|nope|non|nada|nein|nao|n[aã]o)\b/i.test(reply)
+  ar.state.pendingFlow = ''
+  ar.state.escalationReason = 'Caso 8 — código válido, derivado al operador para activación remota'
+  ar.state.operatorRequested = true
+  ar.state.customerNameRequested = false
+  ar.pendingEscalation = { reason: ar.state.escalationReason }
+  ar.state.pendingClosure = 'escalated'
+
+  const closing = t('caso8FinalEscalate', lang(ar))
+  const ctx = extractEscalationContext(ar.state, ar.state.customerName)
+  const summary = buildEscalationSummary(ctx)
+  ar.pendingEscalation = null
+  return { reply: `${closing}\n\n**👤 Human Support message**\n${summary}`, reason: 'caso8-final' }
+}
 
 /** Caso 10 — Tarjeta de fidelización. */
 const TARJETA_TOPIC = /(tarjeta\s+(?:de\s+)?fidelizaci[oó]n|tarjeta\s+(?:de\s+)?fidelidad|loyalty\s+card|c[oó]mo\s+(?:consigo|comprar|recargar)\s+(?:la\s+)?tarjeta)/i
