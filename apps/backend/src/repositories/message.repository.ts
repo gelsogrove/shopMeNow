@@ -2340,13 +2340,13 @@ export class MessageRepository {
 
           if (remainingSessions === 0) {
             // Delete related data first (cart items → cart, search conversations, etc.)
-            await this.prisma.cartItem.deleteMany({
+            await this.prisma.cartItems.deleteMany({
               where: { cart: { customerId: session.customerId } },
             })
-            await this.prisma.cart.deleteMany({
+            await this.prisma.carts.deleteMany({
               where: { customerId: session.customerId },
             })
-            await this.prisma.searchConversation.deleteMany({
+            await this.prisma.searchConversations.deleteMany({
               where: { customerId: session.customerId },
             })
             await this.prisma.secureToken.deleteMany({
