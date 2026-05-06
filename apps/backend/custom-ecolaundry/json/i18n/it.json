@@ -45,7 +45,7 @@
   "caso8AskPuerta": "L'hai caricata e con la porta chiusa?",
   "caso8FinalEscalate": "Dammi un minuto, facciamo le verifiche del caso. Se il codice è corretto, ti attiveremo la macchina. 🙂",
   "caso8FormatInvalid": "Il codice non corrisponde al formato previsto, lo verifichiamo manualmente.",
-  "caso5GuideRetry": "Questo avviso di solito appare quando il processo non è stato fatto nell'ordine corretto. Prima di avvisare l'assistenza, verifichiamo insieme la sequenza. Per favore segui questi passi in questo ordine:\\n\\n1. Carica la lavatrice\\n2. Chiudi lo sportello\\n3. Vai alla centralina di pagamento e paga\\n4. Seleziona il numero della macchina e ritira il resto se serve\\n5. Vai alla macchina selezionata e scegli il programma\\n6. Fammi sapere se funziona",
+  "caso5GuideRetry": "Questo avviso di solito appare quando il processo non è stato fatto nell'ordine corretto. Prima di avvisare l'assistenza, verifichiamo insieme la sequenza. Per favore segui questi passi in questo ordine:\n\n1. Carica la lavatrice\n2. Chiudi lo sportello\n3. Vai alla centralina di pagamento e paga\n4. Seleziona il numero della macchina e ritira il resto se serve\n5. Vai alla macchina selezionata e scegli il programma\n6. Fammi sapere se funziona",
   "caso5Resolved": "Perfetto, problema risolto. Ti serve altro?",
   "caso4Resolved": "Perfetto, problema risolto. Ti serve altro?",
   "caso11Recarga": "Inserisci la tessera e segui le istruzioni della centralina. Se compare un messaggio strano, dimmelo e lo verifichiamo.",

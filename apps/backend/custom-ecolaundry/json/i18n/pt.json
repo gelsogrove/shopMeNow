@@ -45,7 +45,7 @@
   "caso8AskPuerta": "Está carregada e com a porta fechada?",
   "caso8FinalEscalate": "Dá-me um minuto, vamos fazer as verificações. Se o código estiver correto, ativaremos a máquina. 🙂",
   "caso8FormatInvalid": "O código não corresponde ao formato esperado, vamos rever manualmente.",
-  "caso5GuideRetry": "Este aviso costuma aparecer quando o processo não foi feito na ordem correta. Antes de avisar a assistência, vamos verificar juntos a sequência. Por favor segue estes passos nesta ordem:\\n\\n1. Carrega a máquina de lavar\\n2. Fecha a porta\\n3. Dirige-te à central de pagamento e paga\\n4. Seleciona o número da máquina e recolhe o troco se houver\\n5. Dirige-te à máquina selecionada e escolhe o programa\\n6. Avisa-me se funciona",
+  "caso5GuideRetry": "Este aviso costuma aparecer quando o processo não foi feito na ordem correta. Antes de avisar a assistência, vamos verificar juntos a sequência. Por favor segue estes passos nesta ordem:\n\n1. Carrega a máquina de lavar\n2. Fecha a porta\n3. Dirige-te à central de pagamento e paga\n4. Seleciona o número da máquina e recolhe o troco se houver\n5. Dirige-te à máquina selecionada e escolhe o programa\n6. Avisa-me se funciona",
   "caso5Resolved": "Perfeito, incidência resolvida. Precisas de mais alguma coisa?",
   "caso4Resolved": "Perfeito, já estaria resolvido. Precisas de mais alguma coisa?",
   "caso11Recarga": "Introduz o cartão e segue as instruções da central. Se aparecer alguma mensagem estranha, diz-me e verificamos.",

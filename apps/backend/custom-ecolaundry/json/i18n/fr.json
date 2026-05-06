@@ -45,7 +45,7 @@
   "caso8AskPuerta": "Est-elle chargée et la porte fermée ?",
   "caso8FinalEscalate": "Donne-moi une minute, on fait les vérifications. Si le code est correct, on activera la machine. 🙂",
   "caso8FormatInvalid": "Le code ne correspond pas au format attendu, on va le vérifier manuellement.",
-  "caso5GuideRetry": "Ce message apparaît généralement quand le processus n'a pas été fait dans le bon ordre. Avant de prévenir l'assistance, vérifions ensemble la séquence. Suis ces étapes dans cet ordre :\\n\\n1. Charge le lave-linge\\n2. Ferme la porte\\n3. Va à la centrale de paiement et paie\\n4. Sélectionne le numéro de machine et récupère la monnaie si besoin\\n5. Va à la machine sélectionnée et choisis le programme\\n6. Préviens-moi si ça fonctionne",
+  "caso5GuideRetry": "Ce message apparaît généralement quand le processus n'a pas été fait dans le bon ordre. Avant de prévenir l'assistance, vérifions ensemble la séquence. Suis ces étapes dans cet ordre :\n\n1. Charge le lave-linge\n2. Ferme la porte\n3. Va à la centrale de paiement et paie\n4. Sélectionne le numéro de machine et récupère la monnaie si besoin\n5. Va à la machine sélectionnée et choisis le programme\n6. Préviens-moi si ça fonctionne",
   "caso5Resolved": "Parfait, problème résolu. As-tu besoin d'autre chose ?",
   "caso4Resolved": "Parfait, c'est résolu. As-tu besoin d'autre chose ?",
   "caso11Recarga": "Insère la carte et suis les instructions de la centrale. Si un message inhabituel apparaît, dis-le-moi et nous le vérifions.",

@@ -45,7 +45,7 @@
   "caso8AskPuerta": "Is it loaded and with the door closed?",
   "caso8FinalEscalate": "Give me a minute, we'll do the checks. If the code is correct, we'll activate the machine for you. 🙂",
   "caso8FormatInvalid": "The code doesn't match the expected format, we'll review it manually.",
-  "caso5GuideRetry": "This message usually appears when the process was not done in the correct order. Before contacting support, let's verify the sequence together. Please follow these steps in this order:\\n\\n1. Load the washer\\n2. Close the door\\n3. Go to the payment central and pay\\n4. Select the machine number and pick up the change if any\\n5. Go to the selected machine and choose the program\\n6. Let me know if it works",
+  "caso5GuideRetry": "This message usually appears when the process was not done in the correct order. Before contacting support, let's verify the sequence together. Please follow these steps in this order:\n\n1. Load the washer\n2. Close the door\n3. Go to the payment central and pay\n4. Select the machine number and pick up the change if any\n5. Go to the selected machine and choose the program\n6. Let me know if it works",
   "caso5Resolved": "Great, issue resolved. Anything else you need?",
   "caso4Resolved": "Great, all sorted. Anything else you need?",
   "caso11Recarga": "Insert the card and follow the instructions on the central unit. If you see anything unusual, tell me and we'll check it.",
