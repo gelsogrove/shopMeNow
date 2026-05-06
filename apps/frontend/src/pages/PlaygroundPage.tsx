@@ -565,7 +565,7 @@ function TodoDetailModal({
               <button
                 onClick={() => {
                   navigate(
-                    `/demo/cliente-0?session=${relatedSession.id}&highlight=${todo.dialogId}`
+                    `/demo/ecolaundry?session=${relatedSession.id}&highlight=${todo.dialogId}`
                   )
                   onClose()
                 }}
@@ -857,6 +857,23 @@ function ChatScreen({
     return map
   }, [todos])
 
+  // Map sessionId → todos linked to any of the session's messages
+  const todosBySession = useMemo(() => {
+    const messageIdToSession = new Map<string, string>()
+    sessions.forEach((s) =>
+      s.messages.forEach((m) => messageIdToSession.set(m.id, s.id))
+    )
+    const map = new Map<string, Todo[]>()
+    todos.forEach((t) => {
+      const sid = messageIdToSession.get(t.dialogId)
+      if (sid) {
+        const existing = map.get(sid) || []
+        map.set(sid, [...existing, t])
+      }
+    })
+    return map
+  }, [sessions, todos])
+
   // Deduplicate consecutive identical messages (chatbot pipeline can save the same text twice)
   const visibleMessages = useMemo(() => {
     if (!activeSession) return []
@@ -929,7 +946,7 @@ function ChatScreen({
               New Chat
             </button>
             <button
-              onClick={() => navigate("/demo/cliente-0/kanban")}
+              onClick={() => navigate("/demo/ecolaundry/kanban")}
               className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
             >
               <KanbanSquare className="w-4 h-4" />
@@ -980,20 +997,45 @@ function ChatScreen({
               const secondary = !isGenericName && phone ? name : null
               const blockingTodos = todoCountBySession.get(s.id) || 0
               const canDelete = blockingTodos === 0
+              const linkedTodos = todosBySession.get(s.id) || []
+              const totalComments = linkedTodos.reduce(
+                (sum, t) => sum + t.comments.length,
+                0
+              )
+              const hasTodos = linkedTodos.length > 0
               return (
                 <div
                   key={s.id}
-                  className={`group relative border-b hover:bg-gray-50 transition ${
-                    isActive
+                  className={`group relative border-b transition ${
+                    hasTodos && !isActive
+                      ? "bg-amber-50 border-l-4 border-l-amber-400 hover:bg-amber-100"
+                      : isActive
                       ? "bg-emerald-50 border-l-4 border-l-emerald-500"
-                      : ""
+                      : "hover:bg-gray-50"
                   }`}
                 >
                   <button
                     onClick={() => setActiveSessionId(s.id)}
                     className="w-full text-left px-3 py-2 pr-9"
                   >
-                    <div className="font-medium text-sm truncate">{primary}</div>
+                    <div className="flex items-center justify-between gap-1 mb-0.5">
+                      <div className="font-medium text-sm truncate">{primary}</div>
+                      {hasTodos && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            navigate(
+                              `/demo/ecolaundry/kanban?todo=${linkedTodos[0].id}`
+                            )
+                          }}
+                          title={`${linkedTodos.length} todo${linkedTodos.length !== 1 ? "s" : ""} · ${totalComments} comment${totalComments !== 1 ? "s" : ""} — click to open kanban`}
+                          className="flex items-center gap-1 bg-amber-400 hover:bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 transition"
+                        >
+                          <KanbanSquare className="w-3 h-3" />
+                          {linkedTodos.length}
+                        </button>
+                      )}
+                    </div>
                     {secondary && (
                       <div className="text-[10px] text-gray-500 truncate">
                         {secondary}
@@ -1059,6 +1101,13 @@ function ChatScreen({
                 : "Select a chat"
               const secondary = !isGenericName && phone ? name : null
               const initial = (primary[0] || "?").toUpperCase()
+              const activeTodos = activeSession
+                ? todosBySession.get(activeSession.id) || []
+                : []
+              const activeTotalComments = activeTodos.reduce(
+                (sum, t) => sum + t.comments.length,
+                0
+              )
               return (
                 <>
                   <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center font-bold">
@@ -1072,6 +1121,20 @@ function ChatScreen({
                       </div>
                     )}
                   </div>
+                  {activeTodos.length > 0 && (
+                    <button
+                      onClick={() =>
+                        navigate(
+                          `/demo/ecolaundry/kanban?todo=${activeTodos[0].id}`
+                        )
+                      }
+                      title={`${activeTodos.length} todo${activeTodos.length !== 1 ? "s" : ""} · ${activeTotalComments} comment${activeTotalComments !== 1 ? "s" : ""} — open kanban`}
+                      className="flex items-center gap-1.5 bg-amber-400 hover:bg-amber-500 text-white text-xs font-bold px-2.5 py-1 rounded-full transition shrink-0"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      {activeTotalComments}
+                    </button>
+                  )}
                 </>
               )
             })()}
@@ -1375,6 +1438,7 @@ function KanbanScreen({
   const [openTodo, setOpenTodo] = useState<Todo | null>(null)
   const [filter, setFilter] = useState<"" | Priority>("")
   const [showNewTask, setShowNewTask] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const fetchTodos = useCallback(async () => {
     const [todosRes, msgRes] = await Promise.all([
@@ -1397,6 +1461,19 @@ function KanbanScreen({
       if (updated) setOpenTodo(updated)
     }
   }, [todos, openTodo])
+
+  // Deep-link: ?todo=<id> from "chat row with todo" click — auto-open that card
+  useEffect(() => {
+    const todoParam = searchParams.get("todo")
+    if (!todoParam || todos.length === 0) return
+    const target = todos.find((t) => t.id === todoParam)
+    if (target) {
+      setOpenTodo(target)
+      const next = new URLSearchParams(searchParams)
+      next.delete("todo")
+      setSearchParams(next, { replace: true })
+    }
+  }, [todos, searchParams, setSearchParams])
 
   const onDragEnd = async (result: DropResult) => {
     if (!result.destination) return
@@ -1430,7 +1507,7 @@ function KanbanScreen({
         onLogout={onLogout}
         leftSlot={
           <Link
-            to="/demo/cliente-0"
+            to="/demo/ecolaundry"
             className="bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2"
           >
             <ArrowLeft className="w-4 h-4" />
