@@ -83,6 +83,21 @@ Notably **NOT** in the pipeline (intentionally removed in the LLM-first refactor
 
 These now live in the LLM via the `PENDING-FLOW RULES` section of the prompt.
 
+#### Side-quest guards (interrupt-and-resume pattern)
+
+Some guards collect a transversal fact mid-flow without breaking the active multi-step conversation. They are allowed to fire **inside** an open `pendingFlow` (e.g. `caso8-await-pueblo`, `caso9-ask-fecha`) because they intentionally **do not write to `pendingFlow`**. The active flow stays intact and resumes automatically on the next turn.
+
+Examples:
+- `guardMataroStreet` — when the customer names a multi-street city (Mataró), the guard asks for the specific street, saves it to `state.locationStreet`, and returns. `pendingFlow` is untouched, so the parent flow (caso 8 invoice gather, caso 9 factura, troubleshooting) continues from where it left off.
+- `guardCaso12Horarios` mid-troubleshooting — answers an inline FAQ about opening hours without aborting an active machine flow.
+- Fuzzy-match resolution inside `guardCaso8AwaitPueblo` — if the typed pueblo is a typo of a known location, the guard normalises it and proceeds; no flow reset.
+
+**Rule of thumb when adding a new guard**:
+- If the guard *opens* a new multi-step conversation → it MUST set `pendingFlow` to the next expected step.
+- If the guard *answers a single transversal question* (street, FAQ, fuzzy resolution) → it MUST NOT touch `pendingFlow`. The state is the truth: leaving `pendingFlow` alone is what lets the parent flow resume.
+
+**Antipattern**: clearing `pendingFlow = ''` "to clean up" inside a side-quest guard. This silently breaks any active multi-step flow (caso 8, caso 9, caso 6, …) and the bot will appear to "forget" what it was doing two turns ago.
+
 ### 2.3 Conversation history
 Lives in `AgentSession.history` (in-memory per session). Every customer message + every assistant reply is appended. The LLM receives the **full transcript** every turn, so it has access to:
 - what the bot just asked (so it knows how to interpret the customer's answer)
