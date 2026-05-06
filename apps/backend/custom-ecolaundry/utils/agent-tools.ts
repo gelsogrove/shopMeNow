@@ -9,6 +9,7 @@ import { getFaqs, getLocationOverride } from './runtime.js'
 import { startFlow, advanceActiveFlow } from './flow-engine.js'
 import { logger } from './logger.js'
 import { validateCustomerName } from './customer-name.js'
+import { detectMixedSignal } from './mixed-signal.js'
 
 // ── Tool definitions (passed to the LLM as JSON schemas) ──────────────────────
 
@@ -442,6 +443,20 @@ export async function executeTool(
       return { ok: true, data: {} }
     }
     case 'mark_resolved': {
+      // Defensive validation: refuse mark_resolved when the customer's last
+      // message contains a "yes BUT new-problem" mixed signal. The LLM is
+      // forced to address the new concern instead of closing the case.
+      const mixed = detectMixedSignal(state.lastUserMessage)
+      if (mixed.detected) {
+        logger.warn('mark_resolved blocked: mixed signal in last user message', {
+          evidence: mixed.evidence,
+          lastUserMessage: state.lastUserMessage,
+        })
+        return {
+          ok: false,
+          error: `Mixed signal detected in customer's reply ("${mixed.evidence}"). The customer acknowledged progress AND reported a new concern. Do NOT mark resolved — address the new concern (gather facts, propose canonical fix, or escalate).`,
+        }
+      }
       ar.resolved = true
       state.pendingClosure = 'resolved'
       return { ok: true, data: {} }

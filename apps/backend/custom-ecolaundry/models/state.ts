@@ -44,6 +44,10 @@ export type SessionState = {
   // instruction (PUSH PROG, DOOR, SEL, …) without needing tipo or numero.
   caso7Active: boolean
   turnCount: number
+  // Last user message of the current turn. Set by `agentTurn` after sanitisation
+  // so tool validators (mark_resolved, escalate_to_operator, …) can inspect it
+  // without threading it through every executeTool call.
+  lastUserMessage: string
   lastPresentedStepId: string | null
   lastMissingFacts: string[]
   pendingClosure: 'resolved' | 'escalated' | null

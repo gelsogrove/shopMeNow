@@ -55,6 +55,9 @@ export async function agentTurn(session: AgentSession, rawUserMessage: string): 
   // the LLM, the guards or the fact extractor. Defence in depth against
   // prompt-stuffing and homograph/bidi-based prompt-injection payloads.
   const userMessage = sanitizeUserMessage(rawUserMessage)
+  // Make the current-turn user message available to tool validators (e.g.
+  // mark_resolved checks for mixed signals).
+  ar.state.lastUserMessage = userMessage
 
   resolveLanguageForTurn(ar, userMessage)
   autoExtractFacts(ar, userMessage)

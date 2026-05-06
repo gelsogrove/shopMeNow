@@ -14,6 +14,14 @@ export const MAX_USER_MESSAGE_LENGTH = 2000
 /** Max characters accepted in customerPhone after sanitisation. */
 export const MAX_PHONE_LENGTH = 32
 
+/**
+ * Minimum digit count required to consider a value a real phone number. The
+ * playground/widget can technically pass any string; without this floor a
+ * single-digit testing value (e.g. "5") would show up in the operator
+ * handover summary as "Usuario Andrea (5)" — confusing the human operator.
+ */
+export const MIN_PHONE_DIGITS = 5
+
 /** Max characters of a free-text field rendered into operator markdown. */
 export const MAX_DISPLAY_LENGTH = 200
 
@@ -69,6 +77,17 @@ export function sanitizePhoneNumber(raw: string | undefined | null): string | un
   if (typeof raw !== 'string') return undefined
   const cleaned = raw.replace(PHONE_DISALLOWED, '').trim()
   if (!cleaned) return undefined
+  // Reject values that don't have enough digits to be a real phone — keeps
+  // testing placeholders ("5", "123") out of operator-visible summaries.
+  const digitCount = (cleaned.match(/\d/g) || []).length
+  if (digitCount < MIN_PHONE_DIGITS) {
+    logger.warn('Phone number has too few digits; rejecting as not a real phone', {
+      received: cleaned,
+      digitCount,
+      min: MIN_PHONE_DIGITS,
+    })
+    return undefined
+  }
   return cleaned.slice(0, MAX_PHONE_LENGTH)
 }
 

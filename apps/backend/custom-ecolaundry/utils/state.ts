@@ -38,6 +38,7 @@ export function createInitialState(): SessionState {
     paymentRequested: false,
     caso7Active: false,
     turnCount: 0,
+    lastUserMessage: '',
     lastPresentedStepId: null,
     lastMissingFacts: [],
     pendingClosure: null,
