@@ -94,6 +94,14 @@ export function buildEscalationSummary(context: EscalationContext): string {
     return `${name} en ${location} ha pagado pero la ${machineLabel} número ${numberLabel} no se ha activado tras corregir el número en la central. Requiere revisión manual.`
   }
 
+  // Caso 9 — invoice request: include all collected billing data for the operator.
+  if (/caso\s*9|invoice|factura/i.test(context.escalationReason || '') && context.invoiceData) {
+    const inv = context.invoiceData
+    const fechaLabel = inv.fechaIso ? `${inv.fecha} (${inv.fechaIso})` : inv.fecha
+    const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
+    return `${name} en ${location} ha solicitado factura. Datos: razón social: ${inv.razonSocial}; dirección: ${inv.direccion}; CIF/NIF: ${inv.cif}; fecha de uso: ${fechaLabel}; máquina: ${machineLabel}; email: ${inv.email}.`
+  }
+
   // Non-troubleshooting incidents (datafono / cameras / refund / …) —
   // no machine template, just the incident-specific label.
   if (context.nonTroubleshootingIncident && NON_TROUBLE_LABEL[context.nonTroubleshootingIncident]) {
@@ -158,6 +166,7 @@ export function extractEscalationContext(state: SessionState, customerName: stri
     escalationReason: state.escalationReason || '',
     timestamp: now,
     pendingFlow: state.pendingFlow || '',
+    invoiceData: state.invoiceData?.email ? { ...state.invoiceData } : undefined,
   }
 }
 

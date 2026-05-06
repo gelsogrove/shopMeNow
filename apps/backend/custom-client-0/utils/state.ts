@@ -54,6 +54,14 @@ export function createInitialState(): SessionState {
     faqTopic: '',
     nonTroubleshootingIncident: '',
     pendingFlow: '',
+    invoiceData: {
+      razonSocial: '',
+      direccion: '',
+      cif: '',
+      fecha: '',
+      fechaIso: '',
+      email: '',
+    },
   }
 }
 

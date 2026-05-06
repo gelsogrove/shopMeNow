@@ -15,4 +15,13 @@ export type EscalationContext = {
   escalationReason: string
   timestamp: string
   pendingFlow: string
+  // Caso 9 — present when the customer completed the invoice data collection.
+  invoiceData?: {
+    razonSocial: string
+    direccion: string
+    cif: string
+    fecha: string
+    fechaIso: string
+    email: string
+  }
 }

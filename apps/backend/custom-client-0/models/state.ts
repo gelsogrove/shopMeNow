@@ -70,6 +70,16 @@ export type SessionState = {
   refundDataAsked: boolean      // Caso 26/27: bot has already asked refund data once
   empathicResponseSent: boolean // Caso 25: empathic opener already issued
   faqTopic: '' | 'buy-loyalty-card' | 'recharge-loyalty-card' | 'hours-prices' | 'invoice'
+  // Caso 9 — multi-step invoice data collection. Filled progressively as the
+  // bot asks each question. Sent to the operator via escalation summary.
+  invoiceData: {
+    razonSocial: string
+    direccion: string
+    cif: string
+    fecha: string       // raw text as typed by the customer
+    fechaIso: string    // normalized YYYY-MM-DD when parseable, else ''
+    email: string
+  }
   // Pending multi-turn flow markers used by the agent's deterministic guards.
   pendingFlow:
     | ''
@@ -92,4 +102,12 @@ export type SessionState = {
     | 'caso4-ask-cambio'
     | 'caso4-await-cambio'
     | 'caso4-await-confirmation'
+    | 'caso9-ask-lavanderia'
+    | 'caso9-ask-machine-type'
+    | 'caso9-ask-razon-social'
+    | 'caso9-ask-direccion'
+    | 'caso9-ask-cif'
+    | 'caso9-ask-fecha'
+    | 'caso9-ask-email'
+    | 'caso9-ask-name'
 }

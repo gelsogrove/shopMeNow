@@ -320,7 +320,8 @@ Incidencia resuelta.
 ## Caso 9 — Quiero una factura
 
 **Objetivo:**  
-Dar una instrucción cerrada y clara.
+Recoger interactivamente todos los datos necesarios para emitir la factura
+y derivar el caso al operador con un resumen completo.
 
 **Cuándo aplica:**  
 El cliente pide factura.
@@ -328,13 +329,49 @@ El cliente pide factura.
 **Ejemplo de conversación:**
 
 **Usuario:** Quiero una factura.  
-**Bot:** Para obtenerla, debes enviar un correo a olga@alberwaz.net con esta información: razón social, email, lavandería utilizada, CIF/NIF, dirección, fecha de uso, máquinas utilizadas y observaciones.
+**Bot:** Claro, te ayudo con la factura. 🙂 ¿En qué lavandería estuviste?
 
-**Usuario:** Perfecto.  
-**Bot:** Gracias. Si lo necesitas, te repito la lista paso a paso.
+**Usuario:** Goya.  
+**Bot:** Gracias. ¿Utilizaste lavadora o secadora?
+
+**Usuario:** Lavadora.  
+**Bot:** Perfecto. ¿Me indicas la razón social?
+
+**Usuario:** ACME SL.  
+**Bot:** ¿Y la dirección?
+
+**Usuario:** Calle Mayor 1, Madrid.  
+**Bot:** ¿Cuál es tu CIF/NIF/NIE?
+
+**Usuario:** B12345678.  
+**Bot:** ¿Qué día utilizaste el servicio? (puedes decirme "hoy", "ayer" o una fecha)
+
+**Usuario:** Ayer.  
+**Bot:** ¿A qué correo electrónico te enviamos la factura?
+
+**Usuario:** ana.  
+**Bot:** El correo no parece válido. ¿Puedes escribírmelo de nuevo, por favor?
+
+**Usuario:** ana@example.com.  
+**Bot:** Por último, ¿cuál es tu nombre?
+
+**Usuario:** Andrea.  
+**Bot:** Gracias Andrea, te enviaremos pronto la factura del 2026-05-05 a tu correo: ana@example.com. 🙂  
+*(seguido del resumen al operador con todos los datos recogidos)*
+
+**Notas de comportamiento:**
+
+- Si la lavandería o el tipo de máquina ya están en el contexto de la
+  conversación (porque el cliente los ha mencionado antes), el bot omite
+  esas preguntas y pasa directamente a la razón social.
+- El email se valida: si no tiene formato `algo@dominio.tld` el bot vuelve
+  a preguntarlo hasta recibir uno válido (no se avanza sin email).
+- Las fechas relativas ("hoy", "ayer", "anteayer", "oggi", "ieri",
+  "today", "yesterday", "hier"…) se normalizan a ISO `YYYY-MM-DD`. Si el
+  cliente escribe texto libre se conserva tal cual y se pasa al operador.
 
 **Resultado esperado:**  
-Consulta cerrada.
+Datos completos en manos del operador, cliente avisado del envío.
 
 **Escalar si:**  
 - el cliente plantea una excepción no contemplada

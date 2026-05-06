@@ -16,7 +16,6 @@ import type { AgentRuntime } from '../models/index.js'
 // For purely conversational openers (gather questions, generic re-asks)
 // we still prepend the welcome.
 const GUARD_REASONS_NO_WELCOME = new Set<string>([
-  'caso9-factura',
   'caso10-tarjeta-base',
   'caso10-tarjeta-override',
   'caso10-tarjeta-override-direct',
