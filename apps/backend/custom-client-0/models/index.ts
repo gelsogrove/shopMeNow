@@ -47,6 +47,9 @@ export type {
 } from './nlu-patterns.js'
 export { validateNluPatternsFile } from './nlu-patterns.js'
 
+export type { I18nCatalogue, I18nMap } from './i18n.js'
+export { validateI18nCatalogue } from './i18n.js'
+
 export type { EscalationContext } from './escalation.js'
 
 export type {

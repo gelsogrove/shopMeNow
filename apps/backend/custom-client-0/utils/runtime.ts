@@ -11,8 +11,16 @@ import type {
   LocationsConfig,
   Runtime,
   Settings,
+  SupportedLanguage,
 } from '../models/index.js'
-import { validateDisplayFlowsFile, validateNluPatternsFile } from '../models/index.js'
+import {
+  validateDisplayFlowsFile,
+  validateI18nCatalogue,
+  validateNluPatternsFile,
+} from '../models/index.js'
+import { setI18nCatalogue } from './localization.js'
+
+const I18N_LANGS: SupportedLanguage[] = ['es', 'it', 'ca', 'en', 'pt', 'fr']
 
 let FAQS: FaqMap = {}
 
@@ -50,6 +58,28 @@ export async function loadRuntime(): Promise<Runtime> {
   const displayFlows = validateDisplayFlowsFile(displayFlowsRaw)
   const nluPatternsRaw = JSON.parse(await readFile(path.join(flowDir, 'nlu-patterns.json'), 'utf8'))
   const nluPatterns = validateNluPatternsFile(nluPatternsRaw)
+
+  // i18n catalogue — load all per-language maps in parallel and install the
+  // validated catalogue into the localization helper. Missing files are
+  // tolerated (a tenant may disable a language); the validator enforces
+  // that every key declared in the base language exists in every language
+  // file that IS present.
+  const i18nDir = path.join(flowDir, 'i18n')
+  const i18nRaw: Partial<Record<SupportedLanguage, unknown>> = {}
+  await Promise.all(
+    I18N_LANGS.map(async (lang) => {
+      try {
+        const buf = await readFile(path.join(i18nDir, `${lang}.json`), 'utf8')
+        i18nRaw[lang] = JSON.parse(buf)
+      } catch (err) {
+        // ENOENT is acceptable (language not provided); other errors propagate.
+        if ((err as { code?: string } | null)?.code !== 'ENOENT') throw err
+      }
+    }),
+  )
+  const i18n = validateI18nCatalogue(i18nRaw)
+  setI18nCatalogue(i18n)
+
   return {
     prompts: Object.fromEntries(promptEntries),
     flows: { washer, dryer },

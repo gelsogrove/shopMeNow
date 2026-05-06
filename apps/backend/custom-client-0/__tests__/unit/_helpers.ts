@@ -11,9 +11,14 @@ import { fileURLToPath } from 'node:url'
 
 import {
   validateDisplayFlowsFile,
+  validateI18nCatalogue,
   validateNluPatternsFile,
   type Runtime,
+  type SupportedLanguage,
 } from '../../models/index.js'
+import { setI18nCatalogue } from '../../utils/localization.js'
+
+const I18N_LANGS: SupportedLanguage[] = ['es', 'it', 'ca', 'en', 'pt', 'fr']
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const jsonDir = path.resolve(here, '..', '..', 'json')
@@ -28,6 +33,20 @@ export async function loadTestRuntime(): Promise<Runtime> {
   const nluPatternsRaw = JSON.parse(
     await readFile(path.join(jsonDir, 'nlu-patterns.json'), 'utf8'),
   )
+  // Load all i18n maps so t()/tt() lookups behave identically to production.
+  const i18nDir = path.join(jsonDir, 'i18n')
+  const i18nRaw: Partial<Record<SupportedLanguage, unknown>> = {}
+  await Promise.all(
+    I18N_LANGS.map(async (lang) => {
+      try {
+        i18nRaw[lang] = JSON.parse(await readFile(path.join(i18nDir, `${lang}.json`), 'utf8'))
+      } catch (err) {
+        if ((err as { code?: string } | null)?.code !== 'ENOENT') throw err
+      }
+    }),
+  )
+  setI18nCatalogue(validateI18nCatalogue(i18nRaw))
+
   cachedRuntime = {
     prompts: {},
     flows: { washer: {}, dryer: {} },
