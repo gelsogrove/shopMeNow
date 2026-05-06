@@ -252,11 +252,15 @@ export class CustomClientChatbotService {
       throw new Error(`Invalid chatbotId "${chatbotId}": only lowercase letters, digits and hyphens are allowed`)
     }
 
-    // chatbotId (e.g. "ecolaundry") maps to custom-ecolaundry folder
-    // Convention: "cliente-N" → "custom-client-N"
+    // Map chatbotId → folder name. Conventions:
+    //   "cliente-N"        → "custom-client-N"   (legacy)
+    //   "custom-<name>"    → "custom-<name>"     (already prefixed)
+    //   "<name>"           → "custom-<name>"     (e.g. "ecolaundry" → "custom-ecolaundry")
     const folderName = chatbotId.startsWith("cliente-")
       ? chatbotId.replace("cliente-", "custom-client-")
-      : chatbotId
+      : chatbotId.startsWith("custom-")
+        ? chatbotId
+        : `custom-${chatbotId}`
 
     const candidates = [
       path.resolve(process.cwd(), `${folderName}/index.ts`),
