@@ -184,6 +184,52 @@ const cases: Case[] = [
       assertEq(ar.state.machineType, 'washer', 'no change on whitespace')
     },
   },
+
+  // ── Post-escalation re-entry (regression for "Tranquilo te ayudo" bug) ──
+  {
+    name: 'caso 8 trigger after a previous escalation clears blocking flags',
+    run: () => {
+      const ar = makeAr()
+      // Simulate the state right after a Caso 8 closure: escalation flags set,
+      // sticky facts (location, name) still populated. Without the fix this
+      // would prevent guardCaso8AskCode from firing on the next trigger.
+      ar.state.operatorRequested = true
+      ar.state.customerNameRequested = true
+      ar.state.escalationReason = 'Caso 8 — código válido'
+      ar.state.pendingClosure = 'escalated'
+      ar.pendingEscalation = { reason: 'Caso 8 — código válido' }
+      ar.state.customerName = 'Andrea'
+      ar.state.location = 'Alemanya'
+
+      autoExtractFacts(ar, 'tengo un codigo y no se donde ponerlo')
+
+      assertEq(ar.state.pendingFlow, 'caso8-ask-code', 'new caso 8 trigger registered')
+      assertEq(ar.state.operatorRequested, false, 'operatorRequested cleared')
+      assertEq(ar.state.customerNameRequested, false, 'customerNameRequested cleared')
+      assertEq(ar.state.escalationReason, '', 'escalationReason cleared')
+      assertEq(ar.state.pendingClosure, null, 'pendingClosure cleared')
+      assertEq(ar.pendingEscalation, null, 'pendingEscalation cleared')
+      // Sticky facts that survive across cases stay intact.
+      assertEq(ar.state.customerName, 'Andrea', 'customerName preserved')
+      assertEq(ar.state.location, 'Alemanya', 'location preserved')
+    },
+  },
+
+  {
+    name: 'caso 8 phrasing variants ("donde ponerlo" / "donde lo pongo") all trigger',
+    run: () => {
+      for (const msg of [
+        'tengo un codigo y no se como usarlo',
+        'tengo un codigo y no se donde ponerlo',
+        'tengo un codigo y no se donde lo pongo',
+        'tengo un codigo y no se donde meterlo',
+      ]) {
+        const ar = makeAr()
+        autoExtractFacts(ar, msg)
+        assertEq(ar.state.pendingFlow, 'caso8-ask-code', `triggered by: "${msg}"`)
+      }
+    },
+  },
 ]
 
 function assertEq<T>(actual: T, expected: T, label: string): void {

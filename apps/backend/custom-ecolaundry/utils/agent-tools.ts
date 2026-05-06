@@ -8,6 +8,7 @@ import type { AgentRuntime } from '../models/index.js'
 import { getFaqs, getLocationOverride } from './runtime.js'
 import { startFlow, advanceActiveFlow } from './flow-engine.js'
 import { logger } from './logger.js'
+import { validateCustomerName } from './customer-name.js'
 
 // ── Tool definitions (passed to the LLM as JSON schemas) ──────────────────────
 
@@ -399,23 +400,13 @@ export async function executeTool(
     case 'capture_customer_name': {
       const raw = asTrimmedString(args.name)
       if (!raw) return rejectInvalidArg(name, 'name', args.name, 'a non-empty string')
-      const firstName = raw.split(/\s+/)[0]
-      if (!firstName) return { ok: false, error: 'name empty' }
-      // Reject obvious non-names: short replies, yes/no, acknowledgments.
-      // The LLM sometimes mistakes "No", "Vale", "Sí" for a name when the
-      // customer is actually answering a different question.
-      const lowered = firstName.toLowerCase().replace(/[.,!?¿¡]/g, '')
-      const looksLikeAnswer = /^(no|si|sí|s[íi]|yes|ok|okay|vale|claro|gracias|grazie|thanks|perfecto|perfect|perfetto|entendido|capito|got|nope|nada|nope|d'accordo|adelante)$/i.test(lowered)
-      if (looksLikeAnswer) {
-        return { ok: false, error: `"${firstName}" looks like a confirmation, not a name. Ask the customer their name explicitly.` }
+      const validation = validateCustomerName(raw)
+      if (validation.valid === false) {
+        return { ok: false, error: validation.reason }
       }
-      // Also reject pure numbers and very short tokens (1-2 chars).
-      if (/^\d+$/.test(firstName) || firstName.length < 2) {
-        return { ok: false, error: `"${firstName}" is not a valid name.` }
-      }
-      state.customerName = firstName
+      state.customerName = validation.name
       state.customerNameRequested = false
-      return { ok: true, data: { name: firstName } }
+      return { ok: true, data: { name: validation.name } }
     }
     case 'escalate_to_operator': {
       // Per reglas.md "Datos mínimos en incidencias de máquina": when the

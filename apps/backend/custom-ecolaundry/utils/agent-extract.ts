@@ -56,6 +56,25 @@ function detectTopicSwitch(
   return false
 }
 
+/**
+ * Clear "post-escalation" flags so a NEW deterministic flow can run after
+ * the previous one closed. The customer just gave a fresh trigger phrase
+ * (caso 4 / 6 / 8 / 17 / …) — that means they have a NEW question, not a
+ * follow-up to the operator handover. We keep sticky facts that are useful
+ * across cases (`customerName`, `customerPhone`, `location`, …) and only
+ * reset the conversation-control flags.
+ *
+ * Same pattern used by `guardDisplayFlowStart` when a documented display
+ * flow preempts an earlier escalation path.
+ */
+function resetPostEscalationFlags(ar: AgentRuntime): void {
+  ar.state.operatorRequested = false
+  ar.state.customerNameRequested = false
+  ar.state.escalationReason = ''
+  ar.state.pendingClosure = null
+  ar.pendingEscalation = null
+}
+
 export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   const trimmed = userMessage.trim()
   if (!trimmed) return
@@ -264,6 +283,7 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     /he\s+pagado.+no\s+se\s+(ha\s+)?activad/i.test(userMessage)
   ) {
     state.pendingFlow = 'caso4-ask-cambio'
+    resetPostEscalationFlags(ar)
   }
 
   // Caso 8 marker: customer says "tengo un código y no sé cómo usarlo" or
@@ -277,9 +297,10 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   if (
     !state.pendingFlow &&
     !inlineNumericCode &&
-    /(tengo\s+un\s+c[oó]digo|c[oó]digo\s+que?\s+(?:no\s+s[eé]\s+c[oó]mo|usar)|how\s+to\s+use\s+(?:this|the)\s+code)/i.test(userMessage)
+    /(tengo\s+un\s+c[oó]digo|c[oó]digo\s+que?\s+(?:no\s+s[eé]\s+c[oó]mo|usar|d[oó]nde\s+(?:lo\s+)?pongo|d[oó]nde\s+ponerlo|d[oó]nde\s+meterlo)|how\s+to\s+use\s+(?:this|the)\s+code|where\s+to\s+(?:put|enter)\s+(?:this|the)\s+code)/i.test(userMessage)
   ) {
     state.pendingFlow = 'caso8-ask-code'
+    resetPostEscalationFlags(ar)
   }
 
   // Caso 17 marker: customer says they can't read the display. Triggers the
@@ -290,6 +311,7 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   ) {
     state.pendingFlow = 'caso17-ask-photo'
     state.displayUnreadable = true
+    resetPostEscalationFlags(ar)
   }
 
   // Caso 6 marker: customer reports a doble cobro / charged twice. Triggers
@@ -300,6 +322,7 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     /(me\s+(?:han\s+|hab[eé]is\s+|ha\s+)?cobrad[ao]\s+(?:dos\s+veces|2\s+veces|m[aá]s\s+de\s+una\s+vez|el\s+doble)|doble\s+cobro|charged\s+(?:me\s+)?twice|cobr[oó]\s+dos\s+veces)/i.test(userMessage)
   ) {
     state.pendingFlow = 'caso6-ask-podido-lavar'
+    resetPostEscalationFlags(ar)
   }
 
   // Caso 18 marker: customer says "tengo un código: NNNNN" with a numbers-only
@@ -316,6 +339,7 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     if (codeValue && /^\d{3,}$/.test(codeValue)) {
       state.faqCodeValue = codeValue
       state.pendingFlow = 'numeric-code-ask-letters'
+      resetPostEscalationFlags(ar)
     }
   }
 }

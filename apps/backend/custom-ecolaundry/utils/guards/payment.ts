@@ -8,6 +8,7 @@ import { resolveKnownLocation, resolveKnownLocationFuzzy } from '../message-pars
 import type { Guard } from '../../models/index.js'
 import { lang, notInActiveSubFlow } from './helpers.js'
 import { buildEscalationSummary, extractEscalationContext } from '../escalation.js'
+import { validateCustomerName } from '../customer-name.js'
 
 /** G1 — Caso 7 step 1: customer said "He pagado pero no he podido usar" → ask cambio. */
 export const guardCaso7AskCambio: Guard = (ar) => {
@@ -216,10 +217,17 @@ export const guardCaso8AwaitCode: Guard = (ar, userMessage) => {
   return { reply: t('caso8AskName', lang(ar)), reason: 'caso8-ask-name' }
 }
 
-/** Caso 8 step 3 — capture customer name, then ask pueblo (or skip). */
+/** Caso 8 step 3 — capture customer name, then ask pueblo (or skip).
+ *  Rejects confirmation words ("si"/"vale"/"gracias"), numeric-only tokens
+ *  and 1-char strings via the shared `validateCustomerName` helper, then
+ *  re-asks the name on a fresh turn instead of poisoning the state. */
 export const guardCaso8AwaitName: Guard = (ar, userMessage) => {
   if (ar.state.pendingFlow !== 'caso8-await-name') return null
-  ar.state.customerName = userMessage.trim()
+  const validation = validateCustomerName(userMessage)
+  if (!validation.valid) {
+    return { reply: t('customerNameAsk', lang(ar)), reason: 'caso8-await-name-reask' }
+  }
+  ar.state.customerName = validation.name
   if (ar.state.location) {
     if (ar.state.machineNumber) {
       ar.state.pendingFlow = 'caso8-await-puerta'

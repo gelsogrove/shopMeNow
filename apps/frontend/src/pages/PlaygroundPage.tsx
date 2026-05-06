@@ -238,7 +238,6 @@ function NewChatModal({
 }) {
   const [phone, setPhone] = useState("")
   const [message, setMessage] = useState("")
-  const [name, setName] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState("")
 
@@ -248,12 +247,15 @@ function NewChatModal({
     setSending(true)
     setError("")
     try {
+      // Demo invariant: the customer name MUST be captured by the bot during
+      // the conversation (e.g. "¿Cómo te llamas?" → user reply), never via a
+      // form shortcut. We deliberately do NOT send `customerName` so the
+      // backend falls back to its anonymous placeholder.
       const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerPhone: phone.trim(),
-          customerName: name.trim() || undefined,
           message: message.trim(),
         }),
       })
@@ -286,12 +288,6 @@ function NewChatModal({
           placeholder="Phone number (e.g. +34666123456)"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2"
-        />
-        <input
-          placeholder="Name (optional)"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
           className="w-full border rounded-lg px-3 py-2"
         />
         <textarea
@@ -1257,6 +1253,9 @@ function ChatScreen({
                 placeholder="Type a message..."
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                name="chat-message"
                 className="flex-1 border rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
               />
               <button
