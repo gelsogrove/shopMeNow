@@ -131,7 +131,7 @@ export class WelcomeMessageHandler {
         },
       })
 
-      // Workspaces running an internal custom chatbot (cliente-0 etc.) generate
+      // Workspaces running an internal custom chatbot (ecolaundry etc.) generate
       // their own greeting on the first turn. Skipping the standalone welcome
       // here avoids the duplicate "Ciao!" + duplicate-user-message issue.
       if (workspace?.customChatbotId || workspace?.channelMode === "FLOW") {

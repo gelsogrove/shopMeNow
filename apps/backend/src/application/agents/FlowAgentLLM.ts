@@ -349,7 +349,7 @@ export class FlowAgentLLM {
       output = "I'm here to help. Please describe your issue."
     }
 
-    // Escalation policy (aligned with docs/cliente-0/flows/flow1-router.md):
+    // Escalation policy (aligned with docs/ecolaundry/flows/flow1-router.md):
     //   Escalation happens ONLY via:
     //   (1) LLM calls `contactOperator` tool — user asks for human / is frustrated / ambiguous case
     //   (2) Flow sub-node with action: "escalate" (handled by FlowEngineService) — alarm in flow

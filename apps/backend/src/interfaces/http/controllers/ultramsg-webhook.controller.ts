@@ -1398,7 +1398,7 @@ export class UltraMsgWebhookController {
               deliveryStatus: 'delivered',
               debugInfo: JSON.stringify({
                 source: 'ultramsg-webhook',
-                pipeline: 'custom-client-0',
+                pipeline: 'custom-ecolaundry',
                 timestamp: new Date().toISOString(),
               }),
             },
@@ -1420,7 +1420,7 @@ export class UltraMsgWebhookController {
               deliveryStatus: 'pending',
               debugInfo: JSON.stringify({
                 source: 'ultramsg-webhook',
-                pipeline: 'custom-client-0',
+                pipeline: 'custom-ecolaundry',
                 shouldEscalate: customOutput.shouldEscalate,
                 escalationSummary: customOutput.escalationSummary,
                 meta: customOutput.meta,
@@ -1443,7 +1443,7 @@ export class UltraMsgWebhookController {
               isPlayground: false,
             })
           } catch (queueError) {
-            logger.error('[ULTRAMSG] ❌ Failed to enqueue custom-client-0 response', {
+            logger.error('[ULTRAMSG] ❌ Failed to enqueue custom-ecolaundry response', {
               error: queueError,
               workspaceId,
               customerId: customer.id,
@@ -1451,7 +1451,7 @@ export class UltraMsgWebhookController {
           }
         }
 
-        logger.info('[ULTRAMSG] ✅ custom-client-0 processed message', {
+        logger.info('[ULTRAMSG] ✅ custom-ecolaundry processed message', {
           workspaceId,
           customerId: customer.id,
           hasReply: Boolean(customOutput.reply),
@@ -1466,7 +1466,7 @@ export class UltraMsgWebhookController {
             sessionId: chatSession.id,
             customerId: customer.id,
           },
-          agentUsed: 'custom-client-0',
+          agentUsed: 'custom-ecolaundry',
           tokensUsed: customOutput.meta?.tokensUsed || 0,
           response: customOutput.reply,
           debugInfo: customOutput.meta?.debug,

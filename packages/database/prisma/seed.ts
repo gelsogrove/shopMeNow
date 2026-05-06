@@ -1538,7 +1538,7 @@ Can I help with anything else?"`,
   )
 
   // ============================================================================
-  // ECOLAUNDRY — FLOW workspace (Neapolis / Cliente-0)
+  // ECOLAUNDRY — FLOW workspace (Neapolis use case)
   // ============================================================================
   console.log("🏢 Creating/updating FLOW workspace (Ecolaundry) for admin user...")
 
@@ -1572,7 +1572,7 @@ Can I help with anything else?"`,
         hasCart: false,
         hasOrderTracking: false,
         needRegistration: false,
-        customChatbotId: "cliente-0",
+        customChatbotId: "ecolaundry",
         operatorContactMethod: "EMAIL",
         notificationEmail: "gelsogrove@gmail.com",
         humanSupportInstructions:
@@ -1586,7 +1586,7 @@ Can I help with anything else?"`,
     if (!ecolaundryWorkspace.customChatbotId) {
       await prisma.workspace.update({
         where: { id: ecolaundryWorkspace.id },
-        data: { customChatbotId: "cliente-0" },
+        data: { customChatbotId: "ecolaundry" },
       })
       console.log(`   ✅ customChatbotId set on existing Ecolaundry workspace`)
     }

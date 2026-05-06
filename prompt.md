@@ -8,7 +8,7 @@ Ciao sono Andrea
 
 ## 1. Obiettivo
 
-Integrare il chatbot di `docs/cliente-0/demo/` (oggi standalone, file `chatbot.ts`) nella piattaforma eChatbot **senza riscriverlo e senza accoppiarlo direttamente al backend**.
+Integrare il chatbot di `docs/ecolaundry/demo/` (oggi standalone, file `chatbot.ts`) nella piattaforma eChatbot **senza riscriverlo e senza accoppiarlo direttamente al backend**.
 
 L'idea è trattarlo come una **pura funzione TypeScript**:
 - input: un JSON con il messaggio dell'utente + tutta la config necessaria
@@ -116,9 +116,9 @@ type ChatbotOutput = {
 apps/backend/custom-client-0/        ← copia della demo, NON spostare l'originale
 ├── index.ts                         # export chatbotFn(input): Promise<output>
 ├── types.ts                         # ChatbotInput / ChatbotOutput
-├── chatbot.ts                       # copiato da docs/cliente-0/demo/
-├── prompts/                         # copiati da docs/cliente-0/demo/prompts/
-├── utils/                           # copiati da docs/cliente-0/demo/utils/
+├── chatbot.ts                       # copiato da docs/ecolaundry/demo/
+├── prompts/                         # copiati da docs/ecolaundry/demo/prompts/
+├── utils/                           # copiati da docs/ecolaundry/demo/utils/
 ├── examples/
 │   ├── 01-happy-path.ts
 │   └── 02-escalation.ts
@@ -126,7 +126,7 @@ apps/backend/custom-client-0/        ← copia della demo, NON spostare l'origin
 ```
 
 **Vincoli:**
-- ❌ NIENTE modifiche a `docs/cliente-0/demo/` (resta standalone funzionante)
+- ❌ NIENTE modifiche a `docs/ecolaundry/demo/` (resta standalone funzionante)
 - ✅ Si **COPIA** tutto in `apps/backend/custom-client-0/`
 - ✅ Eventuali adattamenti vanno SOLO sulla copia
 
@@ -170,7 +170,7 @@ apps/backend/custom-client-0/        ← copia della demo, NON spostare l'origin
 
 | # | Task | Output |
 |---|------|--------|
-| 1 | Copiare `docs/cliente-0/demo/` → `apps/backend/custom-client-0/` | copia identica funzionante |
+| 1 | Copiare `docs/ecolaundry/demo/` → `apps/backend/custom-client-0/` | copia identica funzionante |
 | 2 | Creare `types.ts` + entry `index.ts` con guard `channelActive` e `debugChannel` | scheletro compilabile |
 | 3 | Wrap di `chatbot.ts` esistente come pipeline interna | funzione end-to-end |
 | 4 | Esempio 1: happy path runnable | `npm run example:happy` |
@@ -246,7 +246,7 @@ La domanda era: il numero di telefono del cliente (es. `+34612345678`) deve arri
 
 ## 9. Vantaggi
 
-- ✅ La demo continua standalone (test rapidi su `docs/cliente-0/demo/`)
+- ✅ La demo continua standalone (test rapidi su `docs/ecolaundry/demo/`)
 - ✅ Stessa logica usata in produzione → un solo bug fix
 - ✅ Testabile in isolamento (pure function)
 - ✅ Nessun accoppiamento con Express/Prisma
@@ -257,7 +257,7 @@ La domanda era: il numero di telefono del cliente (es. `+34612345678`) deve arri
 
 ## 10. Prossimo step
 
-Andrea conferma §7.6 (phone number opzionale) → apro PR per **task #1** (copia `docs/cliente-0/demo/` → `apps/backend/custom-client-0/`).
+Andrea conferma §7.6 (phone number opzionale) → apro PR per **task #1** (copia `docs/ecolaundry/demo/` → `apps/backend/custom-client-0/`).
 
 
 
@@ -272,7 +272,7 @@ RAccontami in poche parole poche frasi
 - il chabto si intergra bene con webhook e queuee di whtaspp o widget?
 - puoi ricontrollare il lavoto ? il passaggio di parametri ? capire se uttto ha senso?
 -ricrdati che ogni cosa ha la sua responsabiñita
-- dentro cliente-0/doc dobbiamo aggionare la documertnazione e assicurarci che anidmo nella stessa direzionie
+- dentro ecolaundry/doc dobbiamo aggionare la documertnazione e assicurarci che anidmo nella stessa direzionie
 
 Acceptance Criteria
 - mi connetto vedo il mio canale quando mi collegto con gelsogrove@gmail.com che si chiama Ecolandry entro dentro l'applicaizone e vedo le chats 

@@ -143,9 +143,9 @@ export class CustomClientChatbotService {
       // NOTE: previously this service prepended `params.welcomeMessage`
       // (taken from `workspace.welcomeMessage`, e.g. "Hi! 👋 I'm Ecolaundry,
       // your Ecolaundry assistant.") to the chatbot reply on the first turn.
-      // That caused a DOUBLE welcome on cliente-0, because cliente-0 already
+      // That caused a DOUBLE welcome on ecolaundry, because ecolaundry already
       // emits its own localized welcome from agent.ts via
-      // `settings.welcomeMessage` in custom-client-0/json/settings.json.
+      // `settings.welcomeMessage` in custom-ecolaundry/json/settings.json.
       // The custom chatbot module is the single source of truth for its own
       // greeting; the host workspace.welcomeMessage stays unused for these
       // chatbots. If a future chatbot module needs the host welcome, it can
@@ -171,7 +171,7 @@ export class CustomClientChatbotService {
   /**
    * Resolve which custom chatbot to use, in priority order:
    * 1. workspace.customChatbotId (DB field — authoritative, set in AI Personality settings)
-   * 2. workspace.slug === "cliente-0" (legacy fallback for existing setup)
+   * 2. workspace.slug === "ecolaundry" (legacy fallback for existing setup)
    * 3. CUSTOM_CLIENT_0_WORKSPACE_IDS env var (legacy env var override)
    * Returns null if no custom chatbot is configured.
    */
@@ -179,11 +179,11 @@ export class CustomClientChatbotService {
     if (params.customChatbotId) {
       return params.customChatbotId.trim()
     }
-    if (params.workspaceSlug?.toLowerCase() === "cliente-0") {
-      return "cliente-0"
+    if (params.workspaceSlug?.toLowerCase() === "ecolaundry") {
+      return "ecolaundry"
     }
     if (this.customClient0WorkspaceIds.has(params.workspaceId)) {
-      return "cliente-0"
+      return "ecolaundry"
     }
     return null
   }
@@ -252,7 +252,7 @@ export class CustomClientChatbotService {
       throw new Error(`Invalid chatbotId "${chatbotId}": only lowercase letters, digits and hyphens are allowed`)
     }
 
-    // chatbotId (e.g. "cliente-0") maps to custom-client-0 folder
+    // chatbotId (e.g. "ecolaundry") maps to custom-ecolaundry folder
     // Convention: "cliente-N" → "custom-client-N"
     const folderName = chatbotId.startsWith("cliente-")
       ? chatbotId.replace("cliente-", "custom-client-")

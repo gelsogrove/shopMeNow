@@ -120,7 +120,7 @@ interface FormData {
   widgetQuickReplies: string[]
   // AI Config
   customAiRules: string
-  customChatbotId: string  // Custom chatbot module for FLOW workspaces (e.g. "cliente-0")
+  customChatbotId: string  // Custom chatbot module for FLOW workspaces (e.g. "ecolaundry")
   welcomeMessage: string
   enableWelcomeMessage: boolean // E0a
   sessionResetTimeout: number // E0b (seconds, 0 = never)

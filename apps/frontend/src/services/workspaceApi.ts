@@ -64,7 +64,7 @@ export interface Workspace {
   // 🆕 Prompt Builder fields
   address?: string
   customAiRules?: string
-  customChatbotId?: string // Custom chatbot module ID for FLOW workspaces (e.g. "cliente-0")
+  customChatbotId?: string // Custom chatbot module ID for FLOW workspaces (e.g. "ecolaundry")
   logoUrl?: string
   // 🆕 Translation Settings
   translateProductNames?: boolean
@@ -201,7 +201,7 @@ export interface UpdateWorkspaceData {
   // 🆕 Prompt Builder fields
   address?: string
   customAiRules?: string
-  customChatbotId?: string // Custom chatbot module ID for FLOW workspaces (e.g. "cliente-0")
+  customChatbotId?: string // Custom chatbot module ID for FLOW workspaces (e.g. "ecolaundry")
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean

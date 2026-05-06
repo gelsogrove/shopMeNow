@@ -2549,7 +2549,7 @@ export class WhatsAppWebhookController {
         const customOutput = customClientResult.output
 
         if (customOutput.error) {
-          logger.warn("[WEBHOOK] ⚠️ custom-client-0 returned error", {
+          logger.warn("[WEBHOOK] ⚠️ custom-ecolaundry returned error", {
             workspaceId: customer.workspaceId,
             customerId: customer.id,
             error: customOutput.error,
@@ -2568,7 +2568,7 @@ export class WhatsAppWebhookController {
             deliveryStatus: "delivered",
             debugInfo: JSON.stringify({
               source: "whatsapp-webhook",
-              pipeline: "custom-client-0",
+              pipeline: "custom-ecolaundry",
               timestamp: new Date().toISOString(),
             }),
           },
@@ -2588,7 +2588,7 @@ export class WhatsAppWebhookController {
               deliveryStatus: "pending",
               debugInfo: JSON.stringify({
                 source: "whatsapp-webhook",
-                pipeline: "custom-client-0",
+                pipeline: "custom-ecolaundry",
                 shouldEscalate: customOutput.shouldEscalate,
                 escalationSummary: customOutput.escalationSummary,
                 meta: customOutput.meta,
@@ -2611,7 +2611,7 @@ export class WhatsAppWebhookController {
               isPlayground,
             })
           } catch (queueError) {
-            logger.error("[WEBHOOK] ❌ Failed to enqueue custom-client-0 response", {
+            logger.error("[WEBHOOK] ❌ Failed to enqueue custom-ecolaundry response", {
               error: queueError,
               workspaceId: customer.workspaceId,
               customerId: customer.id,
@@ -2619,7 +2619,7 @@ export class WhatsAppWebhookController {
           }
         }
 
-        logger.info("[WEBHOOK] ✅ custom-client-0 processed message", {
+        logger.info("[WEBHOOK] ✅ custom-ecolaundry processed message", {
           workspaceId: customer.workspaceId,
           customerId: customer.id,
           hasReply: Boolean(customOutput.reply),
@@ -2636,7 +2636,7 @@ export class WhatsAppWebhookController {
             sessionId: chatSession.id,
             customerId: customer.id,
           },
-          agentUsed: "custom-client-0",
+          agentUsed: "custom-ecolaundry",
           tokensUsed: customOutput.meta?.tokensUsed || 0,
           response: customOutput.reply,
           debugInfo: customOutput.meta?.debug,

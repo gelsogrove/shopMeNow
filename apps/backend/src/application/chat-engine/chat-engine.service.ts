@@ -1635,7 +1635,7 @@ export class ChatEngineService {
       // even if the new language matches the catalog base language.
       const languageChangedThisTurn = rawTargetLanguage !== (input.customerLanguage || "en")
       // 🤖 CUSTOM CHATBOT: When the workspace delegates conversation to a custom chatbot
-      // module (e.g. cliente-0), translation already happens INSIDE the custom chatbot's
+      // module (e.g. ecolaundry), translation already happens INSIDE the custom chatbot's
       // history/conversation layer. Re-running TranslationAgent here would translate twice
       // (wasted tokens, possible message corruption). Skip it.
       const isCustomChatbot = !!workspaceConfig.customChatbotId

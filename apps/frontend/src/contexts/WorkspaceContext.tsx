@@ -71,7 +71,7 @@ export interface Workspace {
   botIdentityResponse?: string
   address?: string // 🆕 Physical address for "where are you?" questions
   customAiRules?: string // 🆕 Custom AI rules that override default behavior
-  customChatbotId?: string // 🆕 Custom chatbot module for FLOW workspaces (e.g. "cliente-0")
+  customChatbotId?: string // 🆕 Custom chatbot module for FLOW workspaces (e.g. "ecolaundry")
   allowedExternalLinks?: string[] // 🆕 Security: allowed external domains
   logoUrl?: string // 🆕 Channel logo/icon
   widgetLogoUrl?: string // 🆕 Widget bubble logo/image

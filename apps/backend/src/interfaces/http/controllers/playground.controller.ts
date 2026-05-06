@@ -54,9 +54,9 @@ export class PlaygroundController {
   async getUsecases(_req: Request, res: Response) {
     try {
       const candidates = [
-        path.resolve(__dirname, "../../../../custom-client-0/docs/usecases.md"),
-        path.resolve(process.cwd(), "custom-client-0/docs/usecases.md"),
-        path.resolve(process.cwd(), "apps/backend/custom-client-0/docs/usecases.md"),
+        path.resolve(__dirname, "../../../../custom-ecolaundry/docs/usecases.md"),
+        path.resolve(process.cwd(), "custom-ecolaundry/docs/usecases.md"),
+        path.resolve(process.cwd(), "apps/backend/custom-ecolaundry/docs/usecases.md"),
       ]
       const filePath = candidates.find((p) => fs.existsSync(p))
       if (!filePath) {
@@ -299,10 +299,10 @@ export class PlaygroundController {
         },
       })
 
-      // 2) If the workspace has a custom chatbot module (e.g. cliente-0),
+      // 2) If the workspace has a custom chatbot module (e.g. ecolaundry),
       //    call it DIRECTLY here — bypassing chat-engine + FlowWorkspaceStrategy.
       //    The default FlowWorkspaceStrategy ignores customChatbotId and falls
-      //    back to a generic Router LLM that does not know about cliente-0
+      //    back to a generic Router LLM that does not know about ecolaundry
       //    (it ends up calling contactOperator() on the very first message).
       //    The widget controller already does this same direct invocation.
       let botResponse = ""

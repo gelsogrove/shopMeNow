@@ -3,7 +3,7 @@
  * to a custom chatbot module (workspaceConfig.customChatbotId !== null).
  *
  * SCENARIO:
- *   Ecolaundry workspace runs cliente-0 custom chatbot. cliente-0 already
+ *   Ecolaundry workspace runs ecolaundry custom chatbot. ecolaundry already
  *   produces output in the customer's language via its internal `history`
  *   prompt. Running TranslationAgent again on that output would:
  *     - waste tokens (double LLM call per turn)
@@ -37,13 +37,13 @@ function shouldSkipTranslation(args: {
 }
 
 describe("ChatEngine.routeMessage — translation skip decision", () => {
-  // RULE: Custom chatbot workspaces (cliente-0 etc.) own translation themselves
+  // RULE: Custom chatbot workspaces (ecolaundry etc.) own translation themselves
   it("SKIPS translation when workspaceConfig.customChatbotId is set", () => {
-    // SCENARIO: Ecolaundry / cliente-0, customer writes in Spanish, catalog
+    // SCENARIO: Ecolaundry / ecolaundry, customer writes in Spanish, catalog
     // base is Italian. Without the custom-chatbot rule the engine would
     // translate (es ≠ it). With the rule it must skip.
     const result = shouldSkipTranslation({
-      customChatbotId: "cliente-0",
+      customChatbotId: "ecolaundry",
       languageChangedThisTurn: false,
       normalizedLanguage: "es",
       catalogBaseLanguage: "it",
@@ -55,7 +55,7 @@ describe("ChatEngine.routeMessage — translation skip decision", () => {
     // RULE: customChatbotId wins over the language-changed override.
     // The custom chatbot regenerates in the new language internally.
     const result = shouldSkipTranslation({
-      customChatbotId: "cliente-0",
+      customChatbotId: "ecolaundry",
       languageChangedThisTurn: true,
       normalizedLanguage: "pt",
       catalogBaseLanguage: "it",
@@ -66,7 +66,7 @@ describe("ChatEngine.routeMessage — translation skip decision", () => {
   it("SKIPS translation for custom chatbot even when languages match", () => {
     // RULE: still skip — the custom chatbot decides on its own.
     const result = shouldSkipTranslation({
-      customChatbotId: "cliente-0",
+      customChatbotId: "ecolaundry",
       languageChangedThisTurn: false,
       normalizedLanguage: "it",
       catalogBaseLanguage: "it",
