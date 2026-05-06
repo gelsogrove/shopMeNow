@@ -193,12 +193,24 @@ function polishReplyForTurn(ar: AgentRuntime, rawReply: string): string {
 }
 
 /**
- * True when the LLM reply already starts with a greeting/intro paragraph.
- * We delegate to `stripWelcomeParagraphs` (the canonical greeting filter):
- * if stripping changes the text, a greeting was present. This keeps the
- * detection in one place and covers every language the stripper covers.
+ * True when the LLM reply already opens with a greeting marker. Detection is
+ * sentence-level (not paragraph-level) because the LLM often inlines the
+ * greeting with the rest of the reply ("¡Hola! Soy Eco. ¿Dónde estás?") —
+ * the paragraph-based stripper would not catch this and we'd double-greet.
+ *
+ * Patterns: opening "Hola/Ciao/Hi/Hello/Olá/Bonjour" OR a self-introduction
+ * ("soy/sono/i'm/sou/je suis" + the chatbot name) anywhere in the reply.
  */
 function llmAlreadyGreeted(reply: string): boolean {
+  const trimmed = reply.trim()
+  if (!trimmed) return false
+  const startsWithGreeting =
+    /^(¡?hola[!,.\s]|ciao[!,.\s]|hi[!,.\s]|hello[!,.\s]|ol[áa][!,.\s]|bonjour[!,.\s])/i.test(
+      trimmed,
+    )
+  if (startsWithGreeting) return true
+  // Fallback: paragraph-level stripping changes the text → at least one
+  // greeting block was somewhere else in the reply.
   return stripWelcomeParagraphs(reply) !== reply
 }
 
@@ -290,6 +302,14 @@ async function handleCliTurn(session: AgentSession, message: string): Promise<vo
   } catch (err) {
     printCliMessage('Error', `Agent error: ${err instanceof Error ? err.message : String(err)}`)
   }
+}
+
+/**
+ * Test-only handles for internal helpers. Production code MUST go through
+ * `agentTurn()` — direct access is reserved for unit tests.
+ */
+export const __testing = {
+  llmAlreadyGreeted,
 }
 
 function isDirectExecution(): boolean {
