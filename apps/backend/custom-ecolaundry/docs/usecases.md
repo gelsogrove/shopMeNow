@@ -43,7 +43,15 @@ El cliente ha pagado y la pantalla muestra `PUSH PROG`.
 **Bot:** De acuerdo. ¿Qué aparece exactamente en la pantalla?
 
 **Usuario:** PUSH PROG.  
-**Bot:** Perfecto. Ese mensaje indica que falta seleccionar el programa. Pulsa ahora el programa que quieras usar y dime si la lavadora empieza a funcionar.
+**Bot:** Pulsa un botón de programa para iniciar el lavado.
+
+Programas:
+1. 60º (muy caliente) → ropa muy sucia, blanca o de trabajo
+2. 40º (templado) → ropa normal (algodón, color)
+3. 30º (suave) → ropa delicada o sintética
+4. Frío → prendas muy delicadas (lana, seda, etc.)
+
+Elige uno y púlsalo en la máquina. Después dime si la lavadora ha arrancado.
 
 **Usuario:** Sí, ahora funciona.  
 **Bot:** Perfecto, incidencia resuelta. Si vuelve a pasar o aparece otro mensaje en pantalla, dímelo y te sigo ayudando.
@@ -1030,28 +1038,27 @@ pida explícitamente.
 **Bot:** Hola, soy el asistente virtual de la lavandería. Tranquilo, te ayudo. ¿En qué lavandería estás ahora mismo?
 
 **Usuario:** Pineda.  
-**Bot:** ¿Podrías indicarme, por favor, si es una lavadora o una secadora y qué número tiene? 🙂
+**Bot:** ¿Podrías indicarme, por favor, si es una lavadora o una secadora? 🙂
 
 **Usuario:** Lavadora 3.  
 **Bot:** Cuéntame, por favor, ¿qué aparece exactamente en la pantalla? 🙂
 
 **Resultado esperado:**  
-El bot reconduce el caso al flujo adecuado en el menor número de turnos
-posible: una sola pregunta combinada para tipo + número evita el patrón
-incómodo "pregunto solo el tipo → cliente da el número → repito la
-pregunta del tipo sin reconocer el número".
+El bot reconduce el caso al flujo adecuado siguiendo el canonical question
+order: Step 2 = tipo, Step 3 = número, una pregunta por turno. Si el
+cliente adelanta el número, `autoExtractFacts` lo captura y el guard
+sequencial evita la re-ask.
 
 **Comportamiento garantizado por código (no por prompt):**  
 - L3 `autoExtractFacts` captura `machineNumber` aunque venga sin
   `machineType` (whole-message digit cuando hay `location`).
-- L4 `guardForceMachineType` (`utils/guards/location.ts`) ramifica el
-  reply: si faltan **ambos** (tipo + número) usa el i18n key
-  `machineTypeAndNumber`; si solo falta el tipo (número ya en estado)
-  usa `machineType`. La rama está pinneada por
+- L4 `guardForceMachineType` (`utils/guards/location.ts`) pide siempre
+  SOLO el tipo (i18n key `machineType`). El número lo pide el turno
+  siguiente `guardForceMachineNumber`. La separación está pinneada por
   `__tests__/unit/force-machine-type.test.ts`.
-- Si el cliente solo contesta el número (`"3"`), el siguiente turno el
-  guard pide solo el tipo (`machineType`) y, una vez completado, se
-  procede al display vía `guardForceDisplay`.
+- Si el cliente adelanta el número (`"3"`), `autoExtractFacts` lo guarda
+  y el guard pide solo el tipo en el turno siguiente — ninguna re-ask
+  awkward del número.
 
 **Escalar si:**  
 - el relato sigue siendo confuso

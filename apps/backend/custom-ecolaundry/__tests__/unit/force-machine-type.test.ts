@@ -1,21 +1,21 @@
-// Standalone unit test (NO LLM) — guardForceMachineType branching contract.
+// Standalone unit test (NO LLM) — guardForceMachineType single-step contract.
 //
-// SCENARIO (caso 32 — real CLI session reported by Andrea):
-//   1. Customer mixes machine + payment in T1 ("He pagado, no arrancaba…").
-//   2. Bot asks for location → customer answers "Pineda".
-//   3. At T2 the bot must NOT ask only the type ("¿lavadora o secadora?")
-//      and then leave the customer to volunteer the number with a stray "3"
-//      that the conversation never acknowledges. Instead, when BOTH type
-//      and number are missing, the guard asks the COMBINED question in a
-//      single turn ("¿Lavadora o secadora? ¿Y qué número?"). This keeps the
-//      conversation cohesive and avoids the awkward re-ask pattern.
+// SCENARIO (Andrea's rule — every step is its own question):
+//   The canonical question order from agent.txt enumerates type and number
+//   as TWO separate steps (Step 2 = type, Step 3 = number). This guard
+//   always asks ONLY the type ("¿lavadora o secadora?"); the number is
+//   asked on the next turn by guardForceMachineNumber. Caso 32 (customer
+//   volunteers the number) still works because autoExtractFacts populates
+//   machineNumber BEFORE the guard runs — when both extracted in the same
+//   turn, no guard fires; when only the number is volunteered, this guard
+//   asks only the type with no awkward re-ask of the number.
 //
 // CONTRACT pinned by this test:
-//   A) location set, type+number BOTH missing → reply uses the combined key
-//      `machineTypeAndNumber`; reason = "force-machine-type-and-number".
+//   A) location set, type+number BOTH missing → asks ONLY the type;
+//      reason = "force-machine-type", reply uses i18n key `machineType`.
 //   B) location set, type missing, number ALREADY in state (extracted in a
-//      previous turn or in this very turn by autoExtract) → reply uses the
-//      type-only key `machineType`; reason = "force-machine-type".
+//      previous turn or in this very turn by autoExtract) → same behaviour:
+//      reply uses the type-only key `machineType`; reason = "force-machine-type".
 //   C) Pre-conditions still apply: never fires before turnCount >= 2,
 //      never fires when displayState is set, never fires inside a sub-flow.
 //
@@ -44,7 +44,7 @@ interface Case {
 
 const cases: Case[] = [
   {
-    name: 'A) location only, type+number BOTH missing → combined ask',
+    name: 'A) location only, type+number BOTH missing → asks ONLY the type (no combined ask)',
     run: () => {
       const ar = makeAr()
       ar.state.location = 'Pineda'
@@ -52,16 +52,16 @@ const cases: Case[] = [
 
       const out = guardForceMachineType(ar, 'Pineda')
       if (!out) throw new Error('expected guard to fire, got null')
-      if (out.reason !== 'force-machine-type-and-number') {
-        throw new Error(`expected reason "force-machine-type-and-number", got "${out.reason}"`)
+      if (out.reason !== 'force-machine-type') {
+        throw new Error(`expected reason "force-machine-type", got "${out.reason}"`)
       }
-      // ES base catalogue: must include both "lavadora/secadora" AND "número".
+      // ES base catalogue: must include "lavadora/secadora" but NOT "número".
       const reply = out.reply.toLowerCase()
       if (!reply.includes('lavadora') || !reply.includes('secadora')) {
         throw new Error(`reply missing type tokens: ${out.reply}`)
       }
-      if (!reply.includes('número')) {
-        throw new Error(`reply missing number token: ${out.reply}`)
+      if (reply.includes('número')) {
+        throw new Error(`type-only reply must not ask for the number, got: ${out.reply}`)
       }
     },
   },

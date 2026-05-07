@@ -4,16 +4,17 @@
 // e spesso anticipa risposte (numeri, "lavadora") prima che il bot le
 // chieda esplicitamente. Il bot deve:
 //   - T1: salutare e chiedere la location senza farsi confondere
-//   - T2: dopo la location, chiedere TIPO + NUMERO insieme (combined ask)
-//         così se il cliente risponde "lavadora 3" o "3" o "lavadora",
-//         autoExtract recupera quello che dà e il guard sequenziale chiude
-//         il gap senza ri-domandare la stessa cosa.
-//   - T3: con tipo+numero estratti, procedere al display
+//   - T2: dopo la location, chiedere SOLO il tipo (Step 2). Il numero è
+//         Step 3, gestito al turno successivo da guardForceMachineNumber.
+//         Se il cliente anticipa il numero ("lavadora 3" o "3"),
+//         autoExtractFacts lo recupera e il guard branchato evita la
+//         re-ask awkward.
+//   - T3: con tipo (e numero, se anticipato) estratti, procedere al display
 //
 // Regola architettura pinneata:
-//   guardForceMachineType (utils/guards/location.ts) ramifica:
-//   - tipo+numero entrambi missing → key i18n "machineTypeAndNumber"
-//   - solo tipo missing (numero già in stato) → key i18n "machineType"
+//   guardForceMachineType (utils/guards/location.ts) chiede SEMPRE solo
+//   il tipo (key i18n "machineType"). La separazione tipo/numero è imposta
+//   dal canonical question order in prompts/agent.txt.
 //   La rama unitaria è in __tests__/unit/force-machine-type.test.ts.
 //   Questo file ne verifica il comportamento end-to-end con LLM.
 
@@ -30,17 +31,20 @@ export const tests: TestCase[] = [
     },
   },
   {
-    // T2: dopo location, il bot chiede TIPO + NUMERO COMBINATI in un solo
-    // turno. Pinned dalla i18n key "machineTypeAndNumber" che contiene
-    // entrambi "lavadora/secadora" e "número".
-    name: 'ES — Caso 32 T2: dopo location, bot chiede tipo + numero combinati',
+    // T2: dopo location, il bot chiede SOLO il tipo (Step 2 del canonical
+    // question order). Il numero è Step 3, asked al turno successivo.
+    name: 'ES — Caso 32 T2: dopo location, bot chiede SOLO il tipo (no combined)',
     run: async (ctx) => {
       await ctx.send('He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro')
       const reply = await ctx.send('Pineda')
-      // Combined ask: il bot DEVE menzionare sia il tipo che il numero
-      // nello stesso turno (no awkward re-ask quando il cliente anticipa
-      // il numero).
-      expectMentionsAll(reply, ['lavadora', 'secadora', 'numero'])
+      const lower = reply.toLowerCase()
+      if (!/lavadora/.test(lower) || !/secadora/.test(lower)) {
+        throw new Error(`Bot non chiede il tipo: ${reply}`)
+      }
+      // T2 must NOT ask the number — that's Step 3.
+      if (/n[uú]mero/.test(lower)) {
+        throw new Error(`T2 deve chiedere SOLO il tipo, non il numero: ${reply}`)
+      }
       expectStateHas(ctx.session, { location: 'Pineda', machineType: null, machineNumber: null })
     },
   },

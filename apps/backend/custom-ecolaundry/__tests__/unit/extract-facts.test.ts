@@ -151,6 +151,112 @@ const cases: Case[] = [
     },
   },
 
+  // ── Contextual display capture (all 3 facts known) ─────────────────────
+  // RULE: when location + machineType + machineNumber are all set and
+  // displayState is still empty, the bot has just asked "qué aparece en la
+  // pantalla?". Any short (1-3 char) non-yesno token is the display code.
+  // Covers the gap where customers type bare digits or short error codes that
+  // are NOT in the known-token whitelist (SEL/PUSH/ERR+digits/4+letters).
+  {
+    name: 'contextual display: bare digit "4" captured when all 3 facts known',
+    run: () => {
+      const ar = makeAr()
+      ar.state.location = 'Hortes'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '3'
+      // displayState is empty — bot just asked "qué aparece en la pantalla?"
+
+      autoExtractFacts(ar, '4')
+
+      assertEq(ar.state.displayState, '4', 'bare digit accepted as display code')
+    },
+  },
+  {
+    name: 'contextual display: "E3" (letter+digit) captured when all 3 facts known',
+    run: () => {
+      const ar = makeAr()
+      ar.state.location = 'Goya'
+      ar.state.machineType = 'dryer'
+      ar.state.machineNumber = '2'
+
+      autoExtractFacts(ar, 'E3')
+
+      assertEq(ar.state.displayState, 'E3', 'letter+digit code accepted')
+    },
+  },
+  {
+    name: 'contextual display: "F5" accepted; "12" accepted; "AB" accepted',
+    run: () => {
+      for (const [input, expected] of [['F5', 'F5'], ['12', '12'], ['AB', 'AB']] as const) {
+        const ar = makeAr()
+        ar.state.location = 'Pineda'
+        ar.state.machineType = 'washer'
+        ar.state.machineNumber = '7'
+        autoExtractFacts(ar, input)
+        assertEq(ar.state.displayState, expected, `contextual display: "${input}" → "${expected}"`)
+      }
+    },
+  },
+  {
+    name: 'contextual display: yes/no tokens rejected even in full context',
+    run: () => {
+      // RULE: yesNoUppercase anti-pattern always wins over contextual capture.
+      // "no" / "sí" / "ok" / "oui" / "non" / "sim" / "val" must NEVER become display codes.
+      for (const yesNo of ['no', 'sí', 'OK', 'YES', 'oui', 'NON', 'SIM', 'VAL', 'NOPE']) {
+        const ar = makeAr()
+        ar.state.location = 'Alemanya'
+        ar.state.machineType = 'washer'
+        ar.state.machineNumber = '5'
+        autoExtractFacts(ar, yesNo)
+        assertEq(ar.state.displayState, '', `"${yesNo}" must NOT become a display code`)
+      }
+    },
+  },
+  {
+    name: 'contextual display: NOT captured when machineNumber missing (context incomplete)',
+    run: () => {
+      // RULE: all 3 facts must be known. If machineNumber is absent, the bot
+      // hasn't asked "qué aparece en la pantalla?" yet — don't pre-capture.
+      const ar = makeAr()
+      ar.state.location = 'Goya'
+      ar.state.machineType = 'washer'
+      // machineNumber NOT set
+
+      autoExtractFacts(ar, '4')
+
+      assertEq(ar.state.displayState, '', '"4" must NOT be captured as display when machineNumber is missing')
+    },
+  },
+  {
+    name: 'contextual display: NOT captured when location missing',
+    run: () => {
+      const ar = makeAr()
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '3'
+      // location NOT set
+
+      autoExtractFacts(ar, '4')
+
+      assertEq(ar.state.displayState, '', '"4" must NOT be captured as display when location is missing')
+    },
+  },
+  {
+    name: 'contextual display: long tokens (>3 chars) NOT captured by context branch',
+    run: () => {
+      // RULE: tokens >3 chars fall back to shouldAcceptAsDisplay (e.g. displayLongCode ≥4 pure letters).
+      // Pure digit "1234" or mixed "E123" (4 chars) — neither captured as display by ANY path
+      // since they exceed the contextual limit and don't match other patterns.
+      const ar = makeAr()
+      ar.state.location = 'Hortes'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '3'
+
+      autoExtractFacts(ar, '1234')
+
+      assertEq(ar.state.displayState, '', '"1234" (4 digits) not captured — beyond context limit')
+    },
+  },
+
   // ── machineType/machineNumber: first-mention sticky ─────────────────────
   {
     name: 'machineType is set on first mention; subsequent mentions do not overwrite',

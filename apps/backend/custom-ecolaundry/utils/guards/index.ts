@@ -5,6 +5,7 @@
 // earlier guards win.
 //
 // Guards are split by domain across sibling files:
+//   - greeting.ts     — pure greeting short-circuit (G0)
 //   - payment.ts      — cambio (4, 7), pagado-no-usado (6), código (8), tarjeta (10), recarga (11)
 //   - display.ts      — no-photo (17), numeric (18), post-instruction failure, unknown display
 //   - display-flow.ts — generic Phase A/B engine driven by json/display-flows.json
@@ -17,6 +18,8 @@
 // across cases (e.g. Mataró street must fire before any case-specific flow).
 
 import type { AgentRuntime, Guard, GuardOutcome } from '../../models/index.js'
+
+import { guardPureGreeting } from './greeting.js'
 
 import {
   guardCaso7AskCambio,
@@ -78,6 +81,7 @@ export type { Guard, GuardOutcome } from '../../models/index.js'
  * pipeline (see git history of utils/agent-guards.ts for the original).
  */
 export const GUARD_PIPELINE: Guard[] = [
+  guardPureGreeting,
   guardMataroStreet,
   guardFaqClosure,
   guardCaso7AskCambio,

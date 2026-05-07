@@ -45,10 +45,18 @@ const cases: PatternCase[] = [
     negative: ['error', 'ABC', 'ABCDEFGHIJKLMNOP', 'AbCdE', 'A1B2C3'],
   },
   {
-    name: 'yesNoUppercase — should NOT be classified as display',
+    name: 'yesNoUppercase — should NOT be classified as display (all 6 languages)',
     patternId: 'yesNoUppercase',
-    positive: ['OK', 'NO', 'SI', 'YES', 'sí', 'Sí', 'no', 'yes'],
-    negative: ['SEL', 'AL001', 'PUSH', 'lavadora'],
+    // es: sí/si/no/ok  it: sì/no/ok  en: yes/no/ok  ca: val/no  pt: sim/não  fr: oui/non
+    positive: ['OK', 'NO', 'SI', 'YES', 'sí', 'Sí', 'no', 'yes', 'OUI', 'NON', 'SIM', 'VAL', 'NOPE', 'oui', 'non', 'sim', 'val'],
+    negative: ['SEL', 'AL001', 'PUSH', 'lavadora', 'E3', '4', 'F5'],
+  },
+  {
+    name: 'displayContextCode — short alphanumeric accepted in full context',
+    patternId: 'displayContextCode',
+    // 1-3 alphanumeric chars (no spaces) — paired with yesNoUppercase to exclude yes/no
+    positive: ['4', '12', '3', 'E3', 'F5', 'A2', 'AB', 'EC', 'E32', 'F12', 'ABC', 'E3F'],
+    negative: ['', 'ABCD', '1234', 'E 3', 'SEL CODE', 'ABCDE'],
   },
   {
     name: 'topicPayment — datafono / cobro / €',

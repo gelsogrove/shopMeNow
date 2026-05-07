@@ -34,6 +34,28 @@ function shouldAcceptAsDisplay(runtime: Runtime, rawInput: string): boolean {
   return false
 }
 
+/**
+ * Contextual display capture — used only when ALL THREE prerequisite facts
+ * (location, machineType, machineNumber) are already known and displayState
+ * is still empty. At that point the bot has just asked "qué aparece en la
+ * pantalla?" so any short, non-conversational token IS the display code.
+ *
+ * Covers gaps left by shouldAcceptAsDisplay:
+ *   - Bare digits:           "4", "12"
+ *   - Letter+digit combos:   "E3", "F5", "A2", "E32"
+ *   - Short uppercase codes: "AB", "EC"  (2-3 chars not in the main whitelist)
+ *
+ * The 1-3 char limit keeps conversational words ("bien", "vale", "claro")
+ * out of scope. yesNoUppercase exclusion covers yes/no in all 6 languages.
+ */
+function isDisplayContextCode(runtime: Runtime, rawInput: string): boolean {
+  const sanitize = getPattern(runtime, 'displaySanitize')
+  const compact = rawInput.replace(sanitize, '').trim()
+  if (!compact) return false
+  if (matchPattern(runtime, 'yesNoUppercase', compact)) return false
+  return matchPattern(runtime, 'displayContextCode', compact)
+}
+
 function detectTopicSwitch(
   runtime: Runtime,
   state: { displayState: string; machineNumber: string; pendingFlow: string },
@@ -181,6 +203,13 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   //   3. Fuzzy fallback: machineType just set in this turn but the inline
   //      regex didn't match the keyword (typo case "lavaroda 5") — grab
   //      the first 1-3 digit number.
+  // We snapshot whether machineNumber existed BEFORE this extraction pass so
+  // the contextual display branch (below) can distinguish between:
+  //   • User answering the machine-number question ("3") → machineNumber set
+  //     here for the first time → contextual display must NOT fire.
+  //   • User answering the display question ("4") on a later turn where
+  //     machineNumber was already known → contextual display fires correctly.
+  const machineNumberWasAlreadySet = !!state.machineNumber
   if (!state.machineNumber) {
     if (state.location) {
       const whole = trimmed.match(/^\s*(?:la\s+|n\.?\s*|num(?:ero)?\s*[:.#]?\s*)?(\d{1,3})\s*$/i)
@@ -211,6 +240,18 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   if (newDisplay && newDisplay !== state.displayState) {
     state.displayState = newDisplay
   } else if (!state.displayState && state.machineType && shouldAcceptAsDisplay(ar.runtime, trimmed)) {
+    state.displayState = trimmed.replace(/[.,!?¿¡:;"'()]/g, '').trim().toUpperCase()
+  } else if (
+    !state.displayState &&
+    state.location &&
+    state.machineType &&
+    machineNumberWasAlreadySet &&
+    isDisplayContextCode(ar.runtime, trimmed)
+  ) {
+    // All 3 prerequisites were known BEFORE this turn → bot has already asked
+    // "qué aparece en la pantalla?" so any short alphanumeric token is the display.
+    // machineNumberWasAlreadySet (not state.machineNumber) prevents false capture
+    // when the user answers the machine-number question with a digit like "4".
     state.displayState = trimmed.replace(/[.,!?¿¡:;"'()]/g, '').trim().toUpperCase()
   }
 

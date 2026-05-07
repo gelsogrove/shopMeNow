@@ -5,7 +5,6 @@
   "locationInsist": "Para poder ayudarte mejor, necesito saber dónde estás. ¿Podrías decirme, por favor, en qué lavandería te encuentras? 🙂",
   "mataroStreet": "En Mataró tenemos dos lavanderías: C/ Francisco de Goya 117 y C/ Alemanya 17. ¿Podrías indicarme en cuál estás? 🙂",
   "machineType": "¿Podrías indicarme, por favor, si es una lavadora o una secadora? 🙂",
-  "machineTypeAndNumber": "¿Podrías indicarme, por favor, si es una lavadora o una secadora y qué número tiene? 🙂",
   "machineNumberWasher": "¿Podrías decirme, por favor, qué número tiene la lavadora? 🙂",
   "machineNumberDryer": "¿Podrías decirme, por favor, qué número tiene la secadora? 🙂",
   "displayWasher": "Cuéntame, por favor, ¿qué aparece exactamente en la pantalla de la lavadora? 🙂",

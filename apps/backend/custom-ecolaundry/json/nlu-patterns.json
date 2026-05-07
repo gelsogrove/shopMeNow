@@ -26,9 +26,16 @@
     {
       "id": "yesNoUppercase",
       "kind": "anti-pattern",
-      "description": "Uppercase yes/no tokens that should NOT be classified as a display state. Used by shouldAcceptAsDisplay() to short-circuit before the display-token whitelist.",
-      "regex": "^(OK|NO|SI|S[IÍ]|YES)$",
+      "description": "Yes/no/ok tokens in all 6 supported languages (es, it, en, ca, pt, fr) that should NOT be classified as a display state. Used by shouldAcceptAsDisplay() and isDisplayContextCode() to short-circuit before the display-token whitelist.",
+      "regex": "^(OK|NO|SI|S[IÍÌ]|YES|OUI|NON|SIM|VAL|NOPE)$",
       "flags": "i"
+    },
+    {
+      "id": "displayContextCode",
+      "kind": "display-token",
+      "description": "Contextual display code: short alphanumeric token (1-3 chars, no spaces) accepted as a display state ONLY when all prerequisite facts (location+machineType+machineNumber) are already known. Covers bare digits ('4', '12'), letter+digit combos ('E3', 'F5', 'A2'), and short uppercase codes not in the main whitelist ('AB', 'EC'). Must be used together with yesNoUppercase exclusion.",
+      "regex": "^[A-Za-z0-9]{1,3}$",
+      "flags": ""
     },
     {
       "id": "displaySanitize",
