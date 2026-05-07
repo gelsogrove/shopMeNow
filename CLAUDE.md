@@ -566,6 +566,23 @@ apps/frontend/src/
 - **RATIONALE**: The platform is international. User-facing data (products, categories) comes from database in the customer's language, but UI chrome must be English.
 - **EXCEPTION**: LLM-generated responses to customers are dynamic and multilingual
 
+### 16. NO Patches — Architecture Layers Are Sacred (🚨 IRON RULE)
+
+- **PRINCIPLE**: when an LLM-driven feature behaves wrong, the fix is **deterministic code**, never another rule glued onto the system prompt
+- **APPLIES TO**: `apps/backend/custom-ecolaundry/` (and any future custom chatbot in this repo). The architectural contract is documented in [`apps/backend/custom-ecolaundry/docs/architecture.md`](apps/backend/custom-ecolaundry/docs/architecture.md)
+- **THE 8 IRON RULES** (full text in `docs/architecture.md`):
+  1. **No patches in the prompt** — prompt rules are NOT a control surface. Fix it in code (guard, tool validator, post-processor invariant).
+  2. **Tool refuses, LLM corrects** — tools validate args + semantics; rejection messages guide the LLM.
+  3. **One file = one responsibility** — files >150 lines mixing concerns must be split (cassette structure: `tool-handlers/`, `guards/`, detectors, transitions).
+  4. **State transitions are named & atomic** — go through `utils/state-transitions.ts` (`escalate`, `markResolved`, `requireCustomerName`, …). Inline mutations of `pendingClosure`, `operatorRequested`, `pendingEscalation` are forbidden outside that module.
+  5. **Each detector ships with tests** — pure helpers in `utils/` MUST have a sibling unit test file with happy + edge cases. 100% coverage on the detector itself.
+  6. **No hardcoded phrase detection for INTENT** — phrase routing belongs in the LLM. Phrase detection is allowed only for boundary signals (greeting, mixed-signal, contrast connectors).
+  7. **Settings are law** — `json/settings.json` is the source of truth for tenant config. `runtime.ts:validateSettings` fails fast on misconfiguration.
+  8. **Multi-language by design** — every detector covers all 6 supported languages (es, it, en, ca, pt, fr) with tests.
+- **HOW TO ADD A USE CASE**: see [`apps/backend/custom-ecolaundry/docs/adding-use-cases.md`](apps/backend/custom-ecolaundry/docs/adding-use-cases.md). Pick the matching recipe.
+- **HOW EACH TOOL VALIDATES**: see [`apps/backend/custom-ecolaundry/docs/contracts.md`](apps/backend/custom-ecolaundry/docs/contracts.md).
+- **ENFORCEMENT**: PRs that add `DO NOT DO X` lines to `prompts/agent.txt`, mutate state outside `state-transitions.ts`, or add a detector without tests must be rejected and rewritten following the recipes.
+
 ---
 
 ## 🎨 Code Conventions & Design Patterns
@@ -1022,3 +1039,4 @@ npx ts-node scripts/restore-workspace-backup.ts {workspaceId}
 - non fare mai il git add 
 - non toccare ma il fil .env
 - non harcodeare mai codice con stringe includes("string) o altre cose visto che e' LLM multilignua e se hai dubbi chiedi all'utente
+- **niente pezze**: per i custom chatbot (`apps/backend/custom-ecolaundry/` e simili) i bug NON si risolvono aggiungendo regole nel prompt. Si risolvono nel codice — guard deterministico, tool validator, o invariant nel post-processor. Vedi le 8 regole ferree nella sezione "16. NO Patches — Architecture Layers Are Sacred" sopra, e il playbook in [`apps/backend/custom-ecolaundry/docs/adding-use-cases.md`](apps/backend/custom-ecolaundry/docs/adding-use-cases.md).

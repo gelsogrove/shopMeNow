@@ -4,6 +4,7 @@
 
 import { t, tt } from '../localization.js'
 import type { Guard } from '../../models/index.js'
+import { escalate, requireCustomerName } from '../state-transitions.js'
 import { isMataro, lang, notInActiveSubFlow } from './helpers.js'
 import { listLaundromatsForReply } from '../locations.js'
 
@@ -172,10 +173,8 @@ export const guardCaso2124LocationMismatch: Guard = (ar) => {
   const flag = isDryerMinutes ? 'dryerMinutesIncreaseIssue' : 'cardPaymentUnreliable'
   if (meta[flag] === true) return null
 
-  ar.state.escalationReason = `${incident} reported at ${ar.state.location} (not documented)`
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
+  escalate(ar, `${incident} reported at ${ar.state.location} (not documented)`)
+  requireCustomerName(ar)
   const line = tt('caso2124NotDocHere', lang(ar), { location: ar.state.location })
   const nameAsk = t('customerNameAsk', lang(ar))
   return {

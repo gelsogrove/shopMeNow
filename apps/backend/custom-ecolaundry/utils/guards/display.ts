@@ -7,6 +7,7 @@
 
 import { t, tt } from '../localization.js'
 import type { Guard } from '../../models/index.js'
+import { escalate, requireCustomerName } from '../state-transitions.js'
 import { lang, RECOVERABLE_DISPLAYS } from './helpers.js'
 
 /** Caso 17 — customer cannot read the display. Photo upload not supported,
@@ -22,13 +23,11 @@ export const guardCaso17AskPhoto: Guard = (ar) => {
     return null
   }
   ar.state.pendingFlow = ''
-  ar.state.escalationReason = 'Caso 17 — customer cannot read display, no photo feature available'
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
-  const escalate = t('caso17NoPhotoEscalate', lang(ar))
+  escalate(ar, 'Caso 17 — customer cannot read display, no photo feature available')
+  requireCustomerName(ar)
+  const escalateText = t('caso17NoPhotoEscalate', lang(ar))
   const nameAsk = t('customerNameAsk', lang(ar))
-  return { reply: `${escalate} ${nameAsk}`, reason: 'caso17-direct-escalate' }
+  return { reply: `${escalateText} ${nameAsk}`, reason: 'caso17-direct-escalate' }
 }
 
 /** Post-instruction failure: customer received an instruction and reports
@@ -51,13 +50,11 @@ export const guardPostInstructionFailure: Guard = (ar, userMessage) => {
   const failure = /(sigue\s+(?:igual|sin\s+(?:arrancar|funcionar|responder|empezar)|saliendo\b)|sigue\s+(?:sin|igual)|no\s+(?:responde|arranca|empieza|funciona|desaparece)|todav[ií]a\s+(?:no|sale|sigue)|aun\s+(?:no|sale|sigue)|el\s+mensaje\s+(?:sigue|no\s+desaparece)|no\s+lo\s+s[eé]\s+bien|no\s+estoy\s+seguro|^(no|nada))/i.test(reply)
   if (!failure) return null
   ar.state.activeFlowId = null
-  ar.state.escalationReason = 'Customer reports the instruction did not resolve the issue'
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
-  const escalate = t('numericCodeIncoherence', lang(ar))
+  escalate(ar, 'Customer reports the instruction did not resolve the issue')
+  requireCustomerName(ar)
+  const escalateText = t('numericCodeIncoherence', lang(ar))
   const nameAsk = t('customerNameAsk', lang(ar))
-  return { reply: `${escalate} ${nameAsk}`, reason: 'post-instruction-failure' }
+  return { reply: `${escalateText} ${nameAsk}`, reason: 'post-instruction-failure' }
 }
 
 /** G7 — Caso 18 step 1: customer typed a pure-numeric code → ask if there
@@ -80,10 +77,8 @@ export const guardNumericCodeNoLetters: Guard = (ar, userMessage) => {
 
   if (noLetters) {
     ar.state.pendingFlow = ''
-    ar.state.escalationReason = `Numeric-only code (${ar.state.faqCodeValue || 'unknown'}) — incoherence`
-    ar.state.operatorRequested = true
-    ar.state.customerNameRequested = true
-    ar.pendingEscalation = { reason: ar.state.escalationReason }
+    escalate(ar, `Numeric-only code (${ar.state.faqCodeValue || 'unknown'}) — incoherence`)
+    requireCustomerName(ar)
     const incoherenceLine = t('numericCodeIncoherence', lang(ar))
     const nameAsk = t('customerNameAsk', lang(ar))
     return {
@@ -123,10 +118,8 @@ export const guardEscalateUnknownDisplay: Guard = (ar) => {
   ) {
     return null
   }
-  ar.state.escalationReason = `Unknown display code ${display}`
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
+  escalate(ar, `Unknown display code ${display}`)
+  requireCustomerName(ar)
   const escalateLine = tt('unknownDisplayEscalate', lang(ar), { display })
   const nameAsk = t('customerNameAsk', lang(ar))
   return {

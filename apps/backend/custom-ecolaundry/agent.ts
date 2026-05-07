@@ -22,6 +22,11 @@ import { printCliBanner, printCliMessage } from './utils/cli.js'
 import { API_KEY } from './utils/llm.js'
 import { logger } from './utils/logger.js'
 import { sanitizeUserMessage } from './utils/input-sanitize.js'
+import {
+  detectResolutionEscalationContradiction,
+  stripResolutionSentences,
+} from './utils/contradiction.js'
+import { undoResolved } from './utils/state-transitions.js'
 
 import type { AgentMessage, AgentRuntime, AgentSession } from './models/index.js'
 
@@ -179,12 +184,16 @@ function parseToolArgs(toolName: string, raw: string | undefined): Record<string
 }
 
 /**
- * Sanitize and adjust greetings: T1 prepends the welcome (unless the LLM
- * already greeted or the customer already gave operational facts); T2+
- * strips any greeting paragraph the LLM may have re-introduced.
+ * Sanitize, enforce invariants, and adjust greetings:
+ *   - turn 1 prepends the welcome (unless the LLM already greeted or the
+ *     customer already gave operational facts)
+ *   - turn 2+ strips any greeting paragraph the LLM may have re-introduced
+ *   - in all turns: enforce the no-contradiction invariant (a single reply
+ *     must NOT claim resolution AND announce an escalation)
  */
 function polishReplyForTurn(ar: AgentRuntime, rawReply: string): string {
-  const reply = sanitizeCustomerReply(rawReply)
+  const sanitized = sanitizeCustomerReply(rawReply)
+  const reply = enforceNoContradiction(ar, sanitized)
   if (ar.state.turnCount !== 1) {
     return stripWelcomeParagraphs(reply)
   }
@@ -193,6 +202,23 @@ function polishReplyForTurn(ar: AgentRuntime, rawReply: string): string {
   }
   const welcome = renderWelcomeForTurn(ar)
   return welcome ? `${welcome}\n\n${reply}` : reply
+}
+
+/**
+ * If the LLM produced a reply with both resolution and escalation markers,
+ * the case is being escalated (the customer reported a NEW issue): drop the
+ * resolution sentences AND undo any state mutation that might have come
+ * from a `mark_resolved` tool call earlier in the same turn.
+ */
+function enforceNoContradiction(ar: AgentRuntime, reply: string): string {
+  const report = detectResolutionEscalationContradiction(reply)
+  if (!report.detected) return reply
+  logger.warn('Resolution/escalation contradiction in LLM reply; stripping resolution sentences', {
+    resolutionPhrase: report.resolutionPhrase,
+    escalationPhrase: report.escalationPhrase,
+  })
+  undoResolved(ar)
+  return stripResolutionSentences(reply)
 }
 
 /**

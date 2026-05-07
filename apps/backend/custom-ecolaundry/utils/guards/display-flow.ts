@@ -6,6 +6,7 @@
 // next turn" shape.
 
 import { t } from '../localization.js'
+import { escalate, markResolved, requireCustomerName } from '../state-transitions.js'
 import { lang } from './helpers.js'
 import type {
   AgentRuntime,
@@ -100,8 +101,7 @@ export const guardDisplayFlowFollowUp: Guard = (ar, userMessage) => {
 
   if (flow.resolvedRegex && new RegExp(flow.resolvedRegex, 'i').test(reply)) {
     ar.state.activeFlowId = null
-    ar.state.pendingClosure = 'resolved'
-    ar.resolved = true
+    markResolved(ar)
     const ackKey = flow.step.resolvedReplyKey
     if (ackKey) {
       return { reply: t(ackKey, lang(ar)), reason: `${flow.id}-resolved` }
@@ -117,17 +117,15 @@ export const guardDisplayFlowFollowUp: Guard = (ar, userMessage) => {
   if (!shouldEscalate) return null
 
   ar.state.activeFlowId = null
-  ar.state.escalationReason = flow.escalationReason
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: flow.escalationReason }
+  escalate(ar, flow.escalationReason)
+  requireCustomerName(ar)
 
   const escalateKey = flow.escalationReplyKey || 'reaffirmEscalate'
-  const escalate = t(escalateKey, lang(ar))
+  const escalateText = t(escalateKey, lang(ar))
   const nameAsk = t('customerNameAsk', lang(ar))
   // `reaffirmEscalate` already contains the name ask in some locales; we
   // append it explicitly for keys that don't (caso15Escalate, etc.) so the
   // operator handover can capture the customer name on the next turn.
-  const reply_ = escalateKey === 'reaffirmEscalate' ? escalate : `${escalate} ${nameAsk}`
+  const reply_ = escalateKey === 'reaffirmEscalate' ? escalateText : `${escalateText} ${nameAsk}`
   return { reply: reply_, reason: `${flow.id}-escalate` }
 }

@@ -15,6 +15,7 @@ import {
 } from './intent.js'
 import { resolveKnownLocation, parseExplicitPaymentSignal } from './message-parsing.js'
 import { resetMachineFacts } from './state.js'
+import { resetPostEscalationFlags } from './state-transitions.js'
 import { getPattern, matchPattern } from './nlu.js'
 
 // Display whitelist & topic-switch detection — pattern definitions live in
@@ -54,25 +55,6 @@ function detectTopicSwitch(
     return true
   }
   return false
-}
-
-/**
- * Clear "post-escalation" flags so a NEW deterministic flow can run after
- * the previous one closed. The customer just gave a fresh trigger phrase
- * (caso 4 / 6 / 8 / 17 / …) — that means they have a NEW question, not a
- * follow-up to the operator handover. We keep sticky facts that are useful
- * across cases (`customerName`, `customerPhone`, `location`, …) and only
- * reset the conversation-control flags.
- *
- * Same pattern used by `guardDisplayFlowStart` when a documented display
- * flow preempts an earlier escalation path.
- */
-function resetPostEscalationFlags(ar: AgentRuntime): void {
-  ar.state.operatorRequested = false
-  ar.state.customerNameRequested = false
-  ar.state.escalationReason = ''
-  ar.state.pendingClosure = null
-  ar.pendingEscalation = null
 }
 
 export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {

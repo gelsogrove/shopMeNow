@@ -27,6 +27,7 @@ const API_BASE = "/api/v1/playground"
 // and the kanban refetches after a drag. The interval is just a safety net
 // for changes done in another tab (e.g. another collaborator edits a TODO).
 const POLL_INTERVAL = 30000
+const MIN_BOT_LOADING_MS = 1400
 
 const ALLOWED_USERS = {
   ANDREA: { password: "Admin123", color: "#2563eb" },
@@ -819,6 +820,7 @@ function ChatScreen({
   const sendChatMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!chatInput.trim() || !activeSession || sendingChat) return
+    const startedAt = Date.now()
     const text = chatInput.trim()
     setSendingChat(true)
     setChatInput("")
@@ -836,6 +838,12 @@ function ChatScreen({
       if (!res.ok) {
         alert(data.message || data.error || "Failed to send message")
         return
+      }
+      const elapsed = Date.now() - startedAt
+      if (elapsed < MIN_BOT_LOADING_MS) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, MIN_BOT_LOADING_MS - elapsed)
+        )
       }
       // Server now has the bot reply persisted: refresh once, that's enough.
       // Clearing the optimistic state AFTER fetchAll resolves avoids a flash
@@ -927,6 +935,26 @@ function ChatScreen({
     fetchAll()
   }
 
+  // Hide chats from the list when all linked TODOs are already in DONE.
+  // Chats with no linked TODOs stay visible.
+  const visibleSessions = useMemo(() => {
+    return sortedSessions.filter((s) => {
+      const linkedTodos = todosBySession.get(s.id) || []
+      if (linkedTodos.length === 0) return true
+      return linkedTodos.some((t) => t.status !== "DONE")
+    })
+  }, [sortedSessions, todosBySession])
+
+  // If the current chat becomes hidden by the DONE-only rule, switch to the
+  // first visible chat (or clear selection if none is left).
+  useEffect(() => {
+    if (!activeSessionId) return
+    const isStillVisible = visibleSessions.some((s) => s.id === activeSessionId)
+    if (!isStillVisible) {
+      setActiveSessionId(visibleSessions[0]?.id || null)
+    }
+  }, [visibleSessions, activeSessionId])
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       <TopBar
@@ -967,14 +995,14 @@ function ChatScreen({
             className="flex-1 overflow-y-auto"
             style={{ scrollbarGutter: "stable" }}
           >
-            {sortedSessions.length === 0 && (
+            {visibleSessions.length === 0 && (
               <div className="text-center text-xs text-gray-400 p-4">
                 No chats yet.
                 <br />
                 Click "New Chat" to start.
               </div>
             )}
-            {sortedSessions.map((s) => {
+            {visibleSessions.map((s) => {
               const isActive = s.id === activeSessionId
               // Card preview shows the FIRST customer message of the
               // conversation — the topic the user opened the chat with.
@@ -1261,9 +1289,13 @@ function ChatScreen({
               <button
                 type="submit"
                 disabled={sendingChat || !chatInput.trim()}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 rounded-full disabled:opacity-50"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 rounded-full disabled:opacity-50 min-w-[44px] flex items-center justify-center"
               >
-                <Send className="w-4 h-4" />
+                {sendingChat ? (
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
               </button>
             </form>
           )}

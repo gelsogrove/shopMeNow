@@ -1,315 +1,302 @@
 # Architecture — ecolaundry
 
-> The chatbot is a **coordinated mix** of regex extraction, ordered guards,
-> conversation history, system prompt, JSON knowledge tables, and an LLM
-> with tools. Each layer has a precise responsibility — together they
-> handle the long tail of customer phrasing across 6 languages without
-> any layer trying to do another's job.
+The chatbot is organised as **5 explicit layers**. Each layer has one
+responsibility; together they handle every customer turn in 6 languages
+without any layer trying to do another's job.
 
 ---
 
-## 1. The mix at a glance
+## 🔒 Iron rules (regole ferree del prodotto)
+
+These are not negotiable. Every change to this codebase must respect them.
+
+1. **No patches in the prompt** — when an LLM behaviour is wrong, the fix is
+   a deterministic guard, a tool validator, or a post-processor invariant.
+   Never another "DO NOT DO X" line in `prompts/agent.txt`.
+2. **Tool refuses, LLM corrects** — tools validate args + semantics and
+   return actionable errors. The LLM reads the error and retries correctly.
+   We never trust the LLM to "remember" a rule from the prompt alone.
+3. **One file = one responsibility** — files >150 lines that mix concerns
+   must be split. The cassette structure (`tool-handlers/`, `guards/`,
+   detectors, transitions) exists so each file is small and auditable.
+4. **State transitions are named & atomic** — `markResolved(ar)`,
+   `escalate(ar, reason)`, `requireCustomerName(ar)`, etc. live in
+   `utils/state-transitions.ts`. Inline mutations of `pendingClosure`,
+   `operatorRequested`, `pendingEscalation` outside that module are
+   forbidden.
+5. **Each detector ships with tests** — pure helpers in `utils/` (e.g.
+   `mixed-signal.ts`, `flow-compatibility.ts`, `customer-name.ts`,
+   `contradiction.ts`) MUST have a sibling `__tests__/unit/<name>.test.ts`
+   covering happy path + edge cases. 100% coverage on the detector itself.
+6. **No hardcoded phrase detection for INTENT** — phrases that route
+   intent ("if user says 'order' then…") belong in the LLM. Phrases that
+   detect *boundary signals* (greeting in reply, mixed-signal, contrast
+   connectors) are allowed because they're observability/safety, not
+   intent classification.
+7. **Settings are law** — `json/settings.json` is the source of truth for
+   tenant config (`enabledLanguages`, `defaultLanguage`, `maxToolHops`, …).
+   `runtime.ts:validateSettings` fails fast if a required field is missing.
+   No code path may produce a reply in a non-allowed language.
+8. **Multi-language by design** — every detector/validator/transition
+   covers all 6 supported languages (es, it, en, ca, pt, fr). Adding a
+   new language means updating the catalogue + each detector's keyword
+   list, with tests.
+
+---
+
+## 1. The 5 layers
 
 ```
-                   ┌──────────────────────────────────────┐
-                   │  CONVERSATION HISTORY (sticky)       │
-                   │  • per-session in-memory             │
-                   │  • survives across turns             │
-                   │  • LLM gets the full transcript      │
-                   └─────────────┬────────────────────────┘
-                                 │
-                                 ▼
-USER TURN ──┬─► ① REGEX EXTRACT ──► sticky facts updated
-            │       (pure facts, enumerable values)
-            │
-            ├─► ② ORDERED GUARDS ──► canned reply (rare, only when
-            │       (small set, opens flows /         the LLM would
-            │        hard escalation only)            statistically err)
-            │
-            └─► ③ LLM CALL ────────► reply
-                    System prompt =
-                        prompts/agent.txt (template)
-                      + sticky facts (from ①)
-                      + JSON knowledge (locations, FAQs)
-                      + reglas.md
-                    Plus: 12 tools to mutate state.
-                    Plus: full conversation history.
-                    Loop until no tool_call.
-                            │
-                            ▼
-                    Tools mutate state ──► next turn sees updated facts
-```
-
-Three layers, three jobs, **no overlap**:
-
-| Layer | Job | What it MUST NOT do |
-|---|---|---|
-| ① Regex extract | Pull enumerable values out of the message (numbers, codes, names from a closed list) | Classify intent ("is this a new incident? did the user confirm?") |
-| ② Ordered guards | Open multi-step flows (e.g. Caso 6 doble cobro) and trigger HARD escalation (unknown display, contradictory, refund demand, angry customer) | Decide yes/no answers in any specific language |
-| ③ LLM | Interpret intent, choose canonical answer, call tools, write reply | Invent prices, codes, policies; escalate when the answer is in the prompt |
-
----
-
-## 2. The 6 ingredients
-
-The bot's behaviour at any turn is the result of **6 ingredients** combined:
-
-### 2.1 Regex (deterministic extraction)
-Lives in [`utils/agent-extract.ts`](../utils/agent-extract.ts) + [`utils/intent.ts`](../utils/intent.ts).
-Used **only** for enumerable extraction:
-- numbers (`\b\d{1,3}\b` for machine number)
-- display codes from the manual (`SEL`, `PUSH`, `DOOR`, `ALM/DOOR`, `AL001`, …)
-- closed lists of names (`Goya`, `Pineda`, `L'Escala`, …)
-- vocabulary + Levenshtein fuzzy for `lavadora`/`secadora` typos
-- structural patterns (`\d+[,.]\d{2}€`)
-
-Adding a new language: push 1 word per machine type to `WASHER_VOCAB`/`DRYER_VOCAB`. Done. No intent regex changes — that's the LLM's job.
-
-### 2.2 Guards (deterministic short-circuits)
-Live in [`utils/guards/`](../utils/guards/). The pipeline is ordered: first guard whose preconditions match returns a canned reply and skips the LLM. Kept **small on purpose** — most guards open flows or fire hard escalation. They never classify a customer's free-form yes/no answer (that would require multilingual regex).
-
-Categories:
-- **Open multi-step flows**: `guardCaso6AskPodidoLavar` (doble cobro 4-step), `guardCaso7AskCambio` (cambio devuelto?), `guardCaso8AskCode` (código de descuento), `guardCaso5Al001AskBefore` (AL001 cause-finding).
-- **Hard escalation**: `guardEscalateUnknownDisplay`, `guardEscalateNonTroubleshooting`, `guardCaso26Refund`, `guardCaso25Empathic` + `guardCaso25Escalate`, `guardCaso28Contradictory`.
-- **Force gather** (deterministic when LLM might forget): `guardForceMachineType`, `guardForceMachineNumber`, `guardForceDisplay`.
-- **Special**: `guardMataroStreet` (Mataró has multiple streets).
-- **FAQ shortcuts** (cheap and language-aware via `localization.ts`): `guardCaso9Factura`, `guardCaso10Tarjeta`, `guardCaso11Recarga`, `guardCaso12Precio`, `guardCaso12Horarios`, `guardFaqClosure`.
-
-Notably **NOT** in the pipeline (intentionally removed in the LLM-first refactor):
-- `guardCaso5AwaitRelato` / `guardCaso5AwaitDisplay` — ES-only yes/no regex on alarm resolution.
-- `guardCaso4AwaitCambio` / `guardCaso4AwaitConfirmation` — ES-only yes/no on cambio + retry.
-- `guardCaso7AwaitDisplay` — ES-only yes/no on cambio.
-- `guardCaso8AwaitConfirmation` — ES-only yes/no on máquina arrancó.
-
-These now live in the LLM via the `PENDING-FLOW RULES` section of the prompt.
-
-#### Side-quest guards (interrupt-and-resume pattern)
-
-Some guards collect a transversal fact mid-flow without breaking the active multi-step conversation. They are allowed to fire **inside** an open `pendingFlow` (e.g. `caso8-await-pueblo`, `caso9-ask-fecha`) because they intentionally **do not write to `pendingFlow`**. The active flow stays intact and resumes automatically on the next turn.
-
-Examples:
-- `guardMataroStreet` — when the customer names a multi-street city (Mataró), the guard asks for the specific street, saves it to `state.locationStreet`, and returns. `pendingFlow` is untouched, so the parent flow (caso 8 invoice gather, caso 9 factura, troubleshooting) continues from where it left off.
-- `guardCaso12Horarios` mid-troubleshooting — answers an inline FAQ about opening hours without aborting an active machine flow.
-- Fuzzy-match resolution inside `guardCaso8AwaitPueblo` — if the typed pueblo is a typo of a known location, the guard normalises it and proceeds; no flow reset.
-
-**Rule of thumb when adding a new guard**:
-- If the guard *opens* a new multi-step conversation → it MUST set `pendingFlow` to the next expected step.
-- If the guard *answers a single transversal question* (street, FAQ, fuzzy resolution) → it MUST NOT touch `pendingFlow`. The state is the truth: leaving `pendingFlow` alone is what lets the parent flow resume.
-
-**Antipattern**: clearing `pendingFlow = ''` "to clean up" inside a side-quest guard. This silently breaks any active multi-step flow (caso 8, caso 9, caso 6, …) and the bot will appear to "forget" what it was doing two turns ago.
-
-### 2.3 Conversation history
-Lives in `AgentSession.history` (in-memory per session). Every customer message + every assistant reply is appended. The LLM receives the **full transcript** every turn, so it has access to:
-- what the bot just asked (so it knows how to interpret the customer's answer)
-- the open question that's still pending
-- the customer's tone and prior corrections
-
-This is what makes "ora funciona" interpretable: the LLM sees that one turn ago the bot gave the AL001 guidance, so a positive reply now means "guidance worked, mark resolved".
-
-### 2.4 System prompt ([`prompts/agent.txt`](../prompts/agent.txt))
-Reassembled every turn by [`buildSystemPrompt`](../utils/agent-prompt.ts). Variable parts injected at substitution time:
-- **Sticky facts** block — `{{location}}`, `{{machineType}}`, `{{machineNumber}}`, `{{displayState}}`, `{{customerName}}`, `{{turnCount}}`, etc. The LLM reads these BEFORE deciding what to ask next.
-- **Active location context** — `JSON.stringify(override, null, 2)` of the relevant entry from [`json/locations.json`](../json/locations.json). The whole metadata block, every field. The LLM reads `cardUnitPrice`, `centralType`, `selfStartMachine`, `dryerFilterSelfService`, etc. to give tenant-specific answers WITHOUT branching on location name in code.
-- **`{{reglas}}`** — content of [`docs/reglas.md`](./reglas.md) (tone, forbidden phrases, when to escalate).
-- **Welcome templates** — per-language, from [`json/settings.json`](../json/settings.json).
-
-Static parts of the prompt define:
-- 🌟 GOLDEN RULE — answer if you know, escalate as last resort
-- LANGUAGE-LOCK rule (always reply in `language` from sticky facts)
-- 🚨 TOOLS MANDATORY RULES — when to call `set_*`, `mark_resolved`, `escalate_to_operator`
-- DISPLAY → CANONICAL ANSWER table (SEL/PUSH/DOOR/ALM/DOOR/PRICE/BLANK/AL001 with the verbatim canonical reply)
-- DISPLAY-CHANGE RULE — display advanced ≠ failure
-- POST-RESOLUTION RULE — on `pendingClosure='resolved'`, sticky facts are wiped except customer-level
-- FAQ-TANGENTS RULE — answer + bridge back to flow
-- MULTI-PROBLEM RULE — same person, same laundry, different machines/displays
-- PENDING-FLOW RULES — for each `state.pendingFlow`, what the LLM must decide
-
-### 2.5 JSON knowledge tables
-Three files. Each has a different consumer:
-
-| File | Read by code? | Read by LLM? |
-|---|---|---|
-| [`json/settings.json`](../json/settings.json) | ✅ runtime config | partial (welcome, model name) |
-| [`json/locations.json`](../json/locations.json) | ✅ partial (`cardPaymentUnreliable`, `dryerMinutesIncreaseIssue` for guards) | ✅ **entire override** injected into prompt |
-| [`json/faqs.json`](../json/faqs.json) | ✅ via `getFaqs()` for FAQ guards | ✅ via `apply_faq_override` tool |
-| [`json/washer_hs60xx.json`](../json/washer_hs60xx.json) / [`dryer_ed340.json`](../json/dryer_ed340.json) | ✅ flow engine | indirectly (LLM relays the step prompts) |
-
-**Critical: `locations.json` metadata is mostly LLM-only knowledge.**
-Most fields (e.g. `cardUnitPrice`, `centralType`, `returnsChangeCoins`, `dryerFilterSelfService`, `ajaxRestartPossible`, `selfStartMachine`, `needsStreetClarification`) have ZERO TypeScript references. They are **not dead code** — they are read by the LLM via `locationContext` injection and used to give tenant-specific answers. See `_overrideTypes.metadata` in [`json/locations.json`](../json/locations.json) for the documented contract.
-
-### 2.6 LLM + tools
-The agent loop ([`agent.ts:agentTurn`](../agent.ts)) sends the full assembled context to OpenRouter. The LLM may:
-- Reply with text → loop exits, that's the answer.
-- Reply with `tool_calls` → executor runs them, results get appended to history as `role:'tool'` messages, loop iterates.
-
-12 tools available ([`utils/agent-tools.ts`](../utils/agent-tools.ts)):
-| Tool | Mutates | Use |
-|---|---|---|
-| `set_location` | `state.location` | When the customer names a laundry |
-| `set_location_street` | `state.locationStreet` | Mataró only |
-| `set_machine_facts` | `machineType`, `machineNumber` | When customer names them |
-| `set_payment_facts` | `paymentCompleted`, `paymentMethod` | When yes/no payment is explicit |
-| `set_display_state` | `state.displayState` | When customer reports a code |
-| `start_machine_flow` | `activeFlowId/StepId` | Open a JSON multi-step flow |
-| `advance_machine_flow` | `activeStepId` | Step the flow with user reply |
-| `apply_faq_override` | (read-only) | FAQ with location-specific text |
-| `capture_customer_name` | `state.customerName` | Before handover |
-| `request_photo` | `state.photoRequested` | When asking for a display photo |
-| `mark_resolved` ⭐ | `pendingClosure='resolved'` | **Mandatory** when customer confirms fix in any language |
-| `escalate_to_operator` | `pendingEscalation` | Last resort when answer is unknown |
-
-`maxToolHops` ([`json/settings.json`](../json/settings.json)) caps the loop to prevent runaway calls. Default 6.
-
----
-
-## 3. The principles (ordered)
-
-These principles are **not negotiable** — every change to the codebase must be checked against them.
-
-**P1 — Single source of truth.** Each piece of knowledge lives in ONE place: code OR prompt OR JSON, never duplicated.
-
-**P2 — Separation of concerns: deterministic vs semantic.**
-- Deterministic (regex/code): extract enumerable facts from text.
-- Semantic (LLM): interpret intent, decide replies, classify yes/no in any language.
-
-**P3 — Customer is ONE person in ONE laundry, with N problems.** Sticky facts about the *customer* (`location`, `customerName`, `language`) are immutable. Sticky facts about the *current incident* (`machineType`, `machineNumber`, `displayState`, `paymentCompleted`, `activeFlowId`) are transient and reset on `pendingClosure='resolved'`.
-
-**P4 — Knowledge first, escalation last.** If the answer exists in the canonical tables / FAQ / location overrides / flows, the bot must give it. Escalation is only for: unknown display, contradictory narrative, refund demand, angry customer (after empathy), explicit operator request.
-
-**P5 — Mixed messages are first-class.** Multi-fact ("estoy en Goya con la lavadora 5 SEL"), topic switching ("aspetta, e los horarios?"), incident chaining ("ahora la secadora 7 no calienta"), display advancement (SEL → PUSH PROG) — all must work without state pollution.
-
-**P6 — Tested behavior, not tested implementation.** Tests verify the **observable** outcome (state, reply structure, tool calls), not the regex pattern.
-
----
-
-## 4. Per-turn flow (concrete)
-
-```
-agentTurn(session, userMessage):
-  state.turnCount += 1
-  state.lastActivityAt = now()
-
-  ┌─ STEP 1: Language detection ─────────────────────────────┐
-  │ if !state.preferredLanguage:                             │
-  │   detectLanguageHeuristic(userMessage)                   │
-  │   if heuristic in settings.enabledLanguages → use it     │
-  │   else → fallback to settings.defaultLanguage            │
-  └──────────────────────────────────────────────────────────┘
-
-  ┌─ STEP 2: autoExtractFacts (DETERMINISTIC) ───────────────┐
-  │ • If state.pendingClosure === 'resolved' → wipe          │
-  │   per-incident facts (location/name/lang preserved)      │
-  │ • Detect topic switch (payment/refund/cameras/…)         │
-  │   → wipe machine facts + set nonTroubleshootingIncident  │
-  │ • Extract location (only if empty)                       │
-  │ • Extract machineType (only if empty; fuzzy fallback)    │
-  │ • Extract machineNumber (only if empty)                  │
-  │ • Extract displayState (always — display can advance)    │
-  │ • Extract payment signal (only if empty)                 │
-  └──────────────────────────────────────────────────────────┘
-
-  ┌─ STEP 3: runGuardPipeline (DETERMINISTIC, ORDERED) ──────┐
-  │ for guard in GUARD_PIPELINE:                             │
-  │   if outcome = guard(ar, userMessage):                   │
-  │     return outcome.reply (skip LLM entirely)             │
-  └──────────────────────────────────────────────────────────┘
-
-  ┌─ STEP 4: LLM agent loop ─────────────────────────────────┐
-  │ systemPrompt = buildSystemPrompt(ar, bundle)             │
-  │ messages = [system, ...history, {user, userMessage}]     │
-  │                                                          │
-  │ for hop in 0..maxToolHops:                               │
-  │   response = callAgentLLM(messages, runtime)             │
-  │   if response has tool_calls:                            │
-  │     for call in tool_calls: executeTool(...)             │
-  │     append tool results as role:'tool' messages          │
-  │     continue                                             │
-  │   else:                                                  │
-  │     return response.content                              │
-  └──────────────────────────────────────────────────────────┘
-
-  ┌─ STEP 5: Post-process ───────────────────────────────────┐
-  │ • Sanitize (strip role-leak, weird artifacts)            │
-  │ • On turn 1: prepend welcome unless LLM already greeted  │
-  │   or operational facts already gathered                  │
-  │ • On turn 2+: strip stray welcome paragraphs             │
-  │ • If pendingEscalation && customerName → append          │
-  │   operator-handover summary                              │
-  └──────────────────────────────────────────────────────────┘
-
-  Append (user, assistant) to history
-  Return final reply
+USER TURN
+   │
+   ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ L1 — INPUT SANITISERS (utils/input-sanitize.ts)                      │
+│   sanitizeUserMessage    strip control + zero-width chars, length cap│
+│   sanitizePhoneNumber    digits-only filter + min-length floor       │
+│   sanitizeForDisplay     strip markdown delimiters for operator text │
+│   Resp: defence at the trust boundary in/out.                        │
+└──────────────────────────────────────────────────────────────────────┘
+   │
+   ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ L2 — STATE MANAGEMENT (utils/state.ts + utils/state-transitions.ts)  │
+│   createInitialState        new session                              │
+│   resetMachineFacts         topic-switch / new-incident wipe         │
+│   markResolved / undoResolved  closure transitions                   │
+│   escalate / requireCustomerName  escalation transitions             │
+│   resetPostEscalationFlags  re-entry after a closed case             │
+│   resetForNewIncident       convenience wrapper                      │
+│   Resp: invariants of the SessionState; named atomic transitions.    │
+└──────────────────────────────────────────────────────────────────────┘
+   │
+   ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ L3 — DETECTORS (utils/<name>.ts)                                     │
+│   customer-name.ts        validateCustomerName                       │
+│   mixed-signal.ts         detectMixedSignal                          │
+│   flow-compatibility.ts   checkFlowCompatibility                     │
+│   contradiction.ts        detectResolutionEscalationContradiction    │
+│   Resp: pure deterministic helpers, multilingual, unit-tested.       │
+└──────────────────────────────────────────────────────────────────────┘
+   │
+   ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ L4 — TOOL CONTRACTS (utils/agent-tools.ts + utils/tool-handlers/)    │
+│   agent-tools.ts             schemas exposed to the LLM              │
+│   tool-handlers/index.ts     dispatcher (KNOWN_TOOLS + executeTool)  │
+│   tool-handlers/location.ts  set_location, set_location_street       │
+│   tool-handlers/machine.ts   set_machine_facts, set_payment_facts,   │
+│                              set_display_state                       │
+│   tool-handlers/flow.ts      start_machine_flow, advance_machine_flow│
+│   tool-handlers/customer.ts  capture_customer_name                   │
+│   tool-handlers/closure.ts   escalate_to_operator, mark_resolved,    │
+│                              request_photo                           │
+│   tool-handlers/faq.ts       apply_faq_override                      │
+│   Resp: validate args (arg-coercion.ts), validate semantics (L3),    │
+│         apply state transitions (L2), return ToolResult.             │
+└──────────────────────────────────────────────────────────────────────┘
+   │
+   ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│ L5 — OUTPUT POLICIES (agent.ts:polishReplyForTurn)                   │
+│   sanitizeCustomerReply           strip role-leak / format quirks    │
+│   enforceNoContradiction          drop resolution sentence when the  │
+│                                    same reply also escalates         │
+│   prependFirstTurnWelcome         T1 welcome unless LLM greeted or   │
+│                                    customer already gave facts       │
+│   stripWelcomeParagraphs          T2+ remove re-introduced greetings │
+│   appendEscalationSummary         operator handover when escalated   │
+│   Resp: invariants on the reply BEFORE returning to the customer.    │
+└──────────────────────────────────────────────────────────────────────┘
+   │
+   ▼
+REPLY TO CUSTOMER
 ```
 
 ---
 
-## 5. Why this design (decision log)
+## 2. Where each thing lives
 
-**Why a mix instead of all-LLM?**
-Hard cases (unknown display escalation, Mataró street, contradictory narrative) need deterministic guarantees. The LLM probabilistically gets these right, but probabilistically also gets them wrong. Guards are cheap auditable safety nets where errors are most costly.
-
-**Why a mix instead of all-regex / all-rule?**
-The customer speaks 6 languages, and "the customer confirmed it works" has hundreds of phrasings. Multilingual regex for intent is unmaintainable; the LLM handles all languages for free.
-
-**Why JSON knowledge instead of hardcoded if/else?**
-Adding a new laundry must be a JSON edit, not a code change. `_principle` in `locations.json` enforces this: "never branch on location name in code; always read from this file."
-
-**Why `mark_resolved` is mandatory in the prompt?**
-The deterministic post-resolution reset depends on `pendingClosure='resolved'`. The only way to set it from the LLM side is the `mark_resolved` tool. If the LLM forgets, sticky facts go stale and the next turn answers with wrong context. The prompt makes this explicit (anti-pattern + right-pattern examples).
-
-**Why we deleted the ES-only yes/no guards?**
-They were the cause of the "ora funciona" → false escalation bug. Intent classification across 6 languages is the LLM's job. Guards must NOT classify.
-
----
-
-## 6. State machine — sticky facts
-
-| Field | Lifetime | Wiped by |
+| Concern | File(s) | Layer |
 |---|---|---|
-| `location` | session | `/reset`, never auto |
-| `locationStreet` | session | `/reset`, never auto |
-| `customerName` | session | `/reset`, never auto |
-| `language`, `preferredLanguage` | session | `/reset`, never auto |
-| `machineType`, `machineNumber`, `displayState` | per-incident | `resetMachineFacts` (post-resolution OR topic switch) |
-| `paymentCompleted`, `paymentMethod` | per-incident | `resetMachineFacts` |
-| `activeFlowId`, `activeStepId` | per-incident | flow engine on terminal node, or `resetMachineFacts` |
-| `pendingFlow` | per-incident | guard that consumes it, or `resetMachineFacts` |
-| `pendingClosure` | one turn | extractor on next turn (after firing the reset) |
-| `operatorRequested`, `customerNameRequested`, `pendingEscalation` | until handover | post-handover cleanup |
+| Customer message sanitisation | `utils/input-sanitize.ts` | L1 |
+| Phone number sanitisation | `utils/input-sanitize.ts` | L1 |
+| Operator-facing markdown safety | `utils/input-sanitize.ts` | L1 |
+| Initial session state | `utils/state.ts:createInitialState` | L2 |
+| Per-incident state wipe | `utils/state.ts:resetMachineFacts` | L2 |
+| Named closure / escalation transitions | `utils/state-transitions.ts` | L2 |
+| Customer-name validation | `utils/customer-name.ts` | L3 |
+| Mixed-signal detection | `utils/mixed-signal.ts` | L3 |
+| Flow / machine compatibility | `utils/flow-compatibility.ts` | L3 |
+| Resolution/escalation contradiction | `utils/contradiction.ts` | L3 |
+| Tool schema for the LLM | `utils/agent-tools.ts` | L4 |
+| Tool dispatcher | `utils/tool-handlers/index.ts` | L4 |
+| Per-cassette tool handlers | `utils/tool-handlers/<topic>.ts` | L4 |
+| Strict arg coercion helpers | `utils/tool-handlers/arg-coercion.ts` | L4 |
+| Reply post-processing | `agent.ts:polishReplyForTurn` | L5 |
+| Welcome prepend / strip | `utils/agent-welcome.ts` (called from L5) | L5 |
+| Escalation summary | `utils/escalation.ts` (called from L5) | L5 |
+| Logger | `utils/logger.ts` | cross-cutting |
+| Settings validation | `utils/runtime.ts:validateSettings` | bootstrap |
 
 ---
 
-## 7. Adding a new language (e.g. German)
+## 3. The hybrid pipeline (orchestrator)
 
-1. [`json/settings.json`](../json/settings.json): add `"de"` to `enabledLanguages`.
-2. [`utils/intent.ts`](../utils/intent.ts): push `'waschmaschine'` to `WASHER_VOCAB`, `'trockner'` to `DRYER_VOCAB`.
-3. [`utils/localization.ts`](../utils/localization.ts): add `de:` translations for every `t()` key.
-4. [`json/settings.json`](../json/settings.json): add German welcome message.
-5. **No intent regex to update.** The LLM speaks German for free.
+`agent.ts:agentTurn()` is the single entry point. See
+[`docs/orchestrator.md`](orchestrator.md) for the step-by-step diagram.
+
+```
+1. sanitizeUserMessage         (L1)
+2. ar.state.lastUserMessage = userMessage
+3. resolveLanguageForTurn      (L2)
+4. autoExtractFacts            (L3 — sticky facts from regex)
+5. runGuardPipeline            (deterministic, ~70% of conversations close here)
+   └─ guards mutate state via L2 transitions (escalate / markResolved / …)
+6. runLlmLoop                  (L4 — LLM + tool calls)
+   └─ each tool: arg-coercion → L3 detectors → L2 transitions → ToolResult
+7. polishReplyForTurn          (L5 — invariants + welcome handling)
+8. appendEscalationSummary     (L5 — operator handover when applicable)
+```
 
 ---
 
-## 8. File responsibility summary
+## 4. Why hybrid (deterministic + LLM)?
 
-| File | Responsibility |
+- **Deterministic guards** — auditable, free, instant, regression-friendly.
+  About 70% of real conversations close without ever reaching the LLM.
+- **LLM tool calling** — handles the long tail / context switches / FAQ.
+- **Sticky state** — survives across turns so context-switching is natural
+  (the customer can ask about pricing mid-troubleshooting and come back).
+- **Tool contracts** — the LLM's freedom is bounded by validators that
+  refuse invalid actions and guide it to the right one.
+
+---
+
+## 5. Run modes — same code in both
+
+- **CLI**: `npm run demo` → calls `agentTurn()` interactively.
+- **Web**: `index.ts:chatbotFn` wraps `agentTurn()` with the API shape
+  `CustomClientChatbotService` expects. Identical behaviour.
+
+---
+
+## 6. Testing strategy
+
+- **Unit tests** (`__tests__/unit/*.test.ts`) — pure detectors, helpers,
+  state transitions, contracts. No LLM. Run with `npm run test:unit`.
+- **Agent E2E** (`__tests__/agent/*.test.spec.ts`) — full conversation
+  scenarios, require an LLM key. Run with `npm run test:agent`.
+
+The unit suite is the safety net: every refactor MUST keep it green.
+The E2E suite catches LLM regressions; it is slower and not free.
+
+---
+
+## 7. Knowledge model — two-tier FAQ
+
+The bot has TWO independent FAQ sources. They serve different purposes
+and MUST stay separate.
+
+### Tier 1 — System FAQs (deterministic, key-based)
+
+Stable, well-defined Q&A that need deterministic mapping. Referenced by
+guards, locations, and the LLM prompt via semantic keys.
+
+| Property | Value |
 |---|---|
-| [`agent.ts`](../agent.ts) | CLI entrypoint + orchestrator (`agentTurn`) |
-| [`index.ts`](../index.ts) | Web entrypoint (`chatbotFn`) — same orchestrator behind a different I/O |
-| [`prompts/agent.txt`](../prompts/agent.txt) | Static + variable-substituted system prompt template |
-| [`models/`](../models/) | Type definitions only (no runtime) |
-| [`utils/agent-extract.ts`](../utils/agent-extract.ts) | Deterministic fact extractor — no intent classification |
-| [`utils/guards/`](../utils/guards/) | Ordered short-circuits — open flows + hard escalation |
-| [`utils/agent-tools.ts`](../utils/agent-tools.ts) | LLM-callable tool dispatcher |
-| [`utils/agent-prompt.ts`](../utils/agent-prompt.ts) | Assembles the system prompt with sticky facts + locations |
-| [`utils/agent-llm.ts`](../utils/agent-llm.ts) | OpenRouter wrapper (timeout, retry, prompt cache, max tokens) |
-| [`utils/intent.ts`](../utils/intent.ts) | Regex helpers + Levenshtein fuzzy match |
-| [`utils/flow-engine.ts`](../utils/flow-engine.ts) | JSON multi-step flow runner |
-| [`utils/localization.ts`](../utils/localization.ts) | `t()` / `tt()` across 6 languages |
-| [`utils/runtime.ts`](../utils/runtime.ts) | Loads JSON config + `buildLocationContext` |
-| [`utils/state.ts`](../utils/state.ts) | `createInitialState` + `resetMachineFacts` |
-| [`utils/escalation.ts`](../utils/escalation.ts) | Operator handover summary |
-| [`docs/usecases.md`](./usecases.md) | 32 customer scenarios — the spec / bible |
-| [`docs/reglas.md`](./reglas.md) | Business rules — INJECTED in prompt |
-| [`json/locations.json`](../json/locations.json) | Per-laundry overrides (mostly LLM-read) |
-| [`json/faqs.json`](../json/faqs.json) | Base FAQ catalogue |
-| [`json/washer_hs60xx.json`](../json/washer_hs60xx.json), [`dryer_ed340.json`](../json/dryer_ed340.json) | Multi-step flows |
+| Storage | `json/faqs.json` (bundled file) |
+| Per-pueblo overrides | `json/locations.json:faqOverrides` |
+| LLM access | `apply_faq_override(faqKey)` tool |
+| Examples | `washDryTime`, `openingHours`, `paymentMethods`, `pricing` |
+| Lifecycle | Code redeploy |
+| Multilingual | i18n catalogue (`json/i18n/<lang>.json`) when needed |
+
+### Tier 2 — Workspace FAQs (dynamic, prompt-injected)
+
+Business-curated content edited by the PM from the backoffice without
+redeploy. Free-form questions; no semantic key required.
+
+| Property | Value |
+|---|---|
+| Storage | Postgres `FAQ` table (`workspaceId`, `question`, `answer`, `keywords`, `category`, `order`, `isActive`) |
+| Multilingual | NOT a stored property — the translation layer (`prompts/history.txt`) translates the matched FAQ inline to the customer's language. Stored in the workspace base language (es for ecolaundry) |
+| LLM access | `{{faq}}` block injected into the system prompt |
+| Token budget | `settings.maxFaqInjectionTokens` (default 2000) — enforced by chat-engine, log warn on truncation |
+| Lifecycle | Backoffice edit → cache invalidation → next turn |
+
+### Data flow (Tier 2)
+
+```
+Backoffice CRUD ─► faqs table (Postgres)
+                              │
+                              ▼
+chat-engine (apps/backend/src/…)
+  WorkspaceFaqService.getActiveFaqs(workspaceId)
+    cache: in-memory Map, 5-min TTL, key = workspaceId
+    invalidation: POST /api/internal/faq/cache/invalidate
+    budget:    truncate to maxFaqInjectionTokens, log warn
+                              │
+                              ▼
+ChatbotInput.context.workspaceFaqs = [{question, answer}, …]
+                              │
+                              ▼
+custom-ecolaundry/index.ts
+  ar.runtime.workspaceFaqs = input.context.workspaceFaqs ?? []
+  (passed through, zero Prisma in this module)
+                              │
+                              ▼
+utils/agent-prompt.ts:buildSystemPrompt
+  renders {{faq}} placeholder as:
+    "📚 WORKSPACE FAQ (fallback for free-form):
+     Q: …
+     A: …
+     …"
+```
+
+### Why this split?
+
+- **Stability vs freshness**: Tier 1 is part of the bot's contract
+  (guards reference these keys); changing one is a code change. Tier 2
+  is editable content; PM changes it without engineering.
+- **Cache friendliness**: Tier 1 lives in the system prompt as plain
+  rules; Tier 2 is appended once per session (and re-fetched on edit).
+  Splitting keeps Tier 1 cacheable and Tier 2 invalidatable.
+- **Zero-deps preservation**: Prisma stays in chat-engine; custom-
+  ecolaundry receives FAQs as data, not as a database connection.
+- **Iron rule alignment**: rule #7 (settings are law). The data
+  structure, cache TTL, token budget all live in `settings.json` —
+  no magic numbers in code.
+
+### LLM instruction (in `prompts/agent.txt`)
+
+The system prompt tells the LLM: "for known FAQ keys, ALWAYS prefer
+`apply_faq_override(faqKey)`; only fall back to the `{{faq}}` block
+for free-form questions that don't match any known key."
+
+### Anti-patterns (forbidden)
+
+- ❌ Importing Prisma into `custom-ecolaundry/` (preserves zero-deps)
+- ❌ Adding a `language` column to `FAQ` (translation belongs in the
+  prompt layer, not in storage)
+- ❌ Using `{{faq}}` for stable system FAQs (they belong in
+  `json/faqs.json` with a key — Tier 1)
+- ❌ Merging Tier 1 + Tier 2 in the same data structure or tool
+
+---
+
+## 8. Adding to the system
+
+When you need to add a new behaviour, ask: *which layer?*
+
+- **New customer-input vector** (e.g. accept emoji codes) → L1 sanitiser.
+- **New conversational state field** → L2 (`models/state.ts` +
+  `createInitialState` + maybe a transition in `state-transitions.ts`).
+- **New helper** to classify a reply pattern → L3 detector + tests.
+- **New tool exposed to the LLM** → schema in `agent-tools.ts` + handler
+  in `tool-handlers/` + register in `tool-handlers/index.ts:HANDLERS`.
+- **New invariant on the final reply** → L5 step in `polishReplyForTurn`.
+
+For full per-tool contracts see [`docs/contracts.md`](contracts.md).
+For step-by-step recipes see [`docs/adding-use-cases.md`](adding-use-cases.md).

@@ -9,6 +9,7 @@ import type { Guard } from '../../models/index.js'
 import { lang, notInActiveSubFlow } from './helpers.js'
 import { buildEscalationSummary, extractEscalationContext } from '../escalation.js'
 import { validateCustomerName } from '../customer-name.js'
+import { escalate, requireCustomerName } from '../state-transitions.js'
 
 /** G1 — Caso 7 step 1: customer said "He pagado pero no he podido usar" → ask cambio. */
 export const guardCaso7AskCambio: Guard = (ar) => {
@@ -122,13 +123,11 @@ export const guardCaso6AskCaptura: Guard = (ar) => {
     return null
   }
   ar.state.pendingFlow = ''
-  ar.state.escalationReason = 'Caso 6 doble cobro — review with refund form'
   if (!ar.state.issueSummary?.startsWith('double charge')) {
     ar.state.issueSummary = 'double charge'
   }
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
+  escalate(ar, 'Caso 6 doble cobro — review with refund form')
+  requireCustomerName(ar)
   const captura = t('caso6AskCaptura', lang(ar))
   const closure = t('caso6Closure', lang(ar))
   const nameAsk = t('customerNameAsk', lang(ar))
@@ -201,13 +200,11 @@ export const guardCaso8AwaitCode: Guard = (ar, userMessage) => {
   if (!parsed) {
     // Format invalid → escalate, ask customer name.
     ar.state.pendingFlow = ''
-    ar.state.escalationReason = 'Caso 8 — código con formato no reconocido'
-    ar.state.operatorRequested = true
-    ar.state.customerNameRequested = true
-    ar.pendingEscalation = { reason: ar.state.escalationReason }
-    const escalate = t('caso8FormatInvalid', lang(ar))
+    escalate(ar, 'Caso 8 — código con formato no reconocido')
+    requireCustomerName(ar)
+    const escalateText = t('caso8FormatInvalid', lang(ar))
     const nameAsk = t('customerNameAsk', lang(ar))
-    return { reply: `${escalate} ${nameAsk}`, reason: 'caso8-escalate' }
+    return { reply: `${escalateText} ${nameAsk}`, reason: 'caso8-escalate' }
   }
 
   ar.state.caso8Data.letters = parsed.letters
@@ -269,10 +266,8 @@ export const guardCaso8AwaitPuerta: Guard = (ar, userMessage) => {
   // Permissive yes/no — store both yes and no, escalate either way (operator decides).
   ar.state.caso8Data.doorClosed = !/^(no|nope|non|nada|nein|nao|n[aã]o)\b/i.test(reply)
   ar.state.pendingFlow = ''
-  ar.state.escalationReason = 'Caso 8 — código válido, derivado al operador para activación remota'
-  ar.state.operatorRequested = true
+  escalate(ar, 'Caso 8 — código válido, derivado al operador para activación remota')
   ar.state.customerNameRequested = false
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
   ar.state.pendingClosure = 'escalated'
 
   const closing = t('caso8FinalEscalate', lang(ar))

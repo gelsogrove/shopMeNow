@@ -7,6 +7,7 @@ import type { Guard } from '../../models/index.js'
 import { lang } from './helpers.js'
 import { parseRelativeDate } from '../relative-date.js'
 import { buildEscalationSummary, extractEscalationContext } from '../escalation.js'
+import { escalate, requireCustomerName } from '../state-transitions.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -130,9 +131,7 @@ export const guardCaso9Factura: Guard = (ar, userMessage) => {
       // Accept the raw input as the customer's name (no validation per Andrea's rules).
       ar.state.customerName = trimmed
       ar.state.customerNameRequested = false
-      ar.state.operatorRequested = true
-      ar.state.escalationReason = 'Caso 9 — invoice request, data collected'
-      ar.pendingEscalation = { reason: ar.state.escalationReason }
+      escalate(ar, 'Caso 9 — invoice request, data collected')
       ar.state.pendingFlow = ''
       ar.state.pendingClosure = 'escalated'
       const fechaDisplay = ar.state.invoiceData.fechaIso || ar.state.invoiceData.fecha
@@ -228,13 +227,11 @@ export const guardCaso25Escalate: Guard = (ar) => {
   ) {
     return null
   }
-  ar.state.escalationReason = 'Caso 25 — cliente muy enfadado, escalado tras recogida de datos mínimos'
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
-  const escalate = t('doubleChargeReview', lang(ar))
+  escalate(ar, 'Caso 25 — cliente muy enfadado, escalado tras recogida de datos mínimos')
+  requireCustomerName(ar)
+  const escalateText = t('doubleChargeReview', lang(ar))
   const nameAsk = t('customerNameAsk', lang(ar))
-  return { reply: `${escalate} ${nameAsk}`, reason: 'caso25-escalate' }
+  return { reply: `${escalateText} ${nameAsk}`, reason: 'caso25-escalate' }
 }
 
 /** Caso 26 — cliente esige devolución. Step 1: raccoglie dati. Step 2: escala. */
@@ -255,14 +252,12 @@ export const guardCaso26Refund: Guard = (ar, _userMessage) => {
       reason: incident === 'compensation-demand' ? 'caso27-review' : 'caso26-ask-refund-data',
     }
   }
-  ar.state.escalationReason = 'Caso 26 — refund/compensation demand, escalated without promise'
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
-  const escalate = t('caso26EscalateNoPromise', lang(ar))
+  escalate(ar, 'Caso 26 — refund/compensation demand, escalated without promise')
+  requireCustomerName(ar)
+  const escalateText = t('caso26EscalateNoPromise', lang(ar))
   const nameAsk = t('customerNameAsk', lang(ar))
   return {
-    reply: `${escalate} ${nameAsk}`,
+    reply: `${escalateText} ${nameAsk}`,
     reason: 'caso26-escalate',
   }
 }
@@ -285,13 +280,11 @@ export const guardCaso28Contradictory: Guard = (ar, userMessage) => {
     ar.state.nonTroubleshootingIncident === 'card-payment' ||
     ar.state.nonTroubleshootingIncident === 'contradictory-narrative'
   if (!hasIncidentContext) return null
-  ar.state.escalationReason = 'Caso 28 — contradictory narrative'
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
-  const escalate = t('numericCodeIncoherence', lang(ar))
+  escalate(ar, 'Caso 28 — contradictory narrative')
+  requireCustomerName(ar)
+  const escalateText = t('numericCodeIncoherence', lang(ar))
   const nameAsk = t('customerNameAsk', lang(ar))
-  return { reply: `${escalate} ${nameAsk}`, reason: 'caso28-contradictory' }
+  return { reply: `${escalateText} ${nameAsk}`, reason: 'caso28-contradictory' }
 }
 
 /** Generic non-troubleshooting escalation (datáfono / cámaras / etc.). */
@@ -306,10 +299,8 @@ export const guardEscalateNonTroubleshooting: Guard = (ar) => {
   ) {
     return null
   }
-  ar.state.escalationReason = `Non-troubleshooting incident: ${ar.state.nonTroubleshootingIncident}`
-  ar.state.operatorRequested = true
-  ar.state.customerNameRequested = true
-  ar.pendingEscalation = { reason: ar.state.escalationReason }
+  escalate(ar, `Non-troubleshooting incident: ${ar.state.nonTroubleshootingIncident}`)
+  requireCustomerName(ar)
   const incoherenceLine = t('numericCodeIncoherence', lang(ar))
   const nameAsk = t('customerNameAsk', lang(ar))
   return {

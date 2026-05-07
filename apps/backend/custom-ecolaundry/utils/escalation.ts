@@ -3,6 +3,25 @@
 import type { EscalationContext, SessionState } from '../models/index.js'
 import { sanitizeForDisplay } from './input-sanitize.js'
 
+/**
+ * Compose the operator-visible location string from `state.location` (the
+ * pueblo/laundromat key) and `state.locationStreet` (street within that
+ * laundromat, used for Mataró disambiguation).
+ *
+ * Rule: never repeat the same value twice. When the LLM treats a street
+ * answer as a fresh location (e.g. customer says "Alemanya" to disambiguate
+ * Mataró → set_location resolves it as the standalone Alemanya laundry AND
+ * sets locationStreet="Alemanya"), the naive `${a}, ${b}` produces
+ * "Alemanya, Alemanya". This formatter normalises and dedups.
+ */
+function formatLocationDisplay(location: string, street: string): string {
+  if (!street) return location
+  if (street.trim().toLowerCase() === location.trim().toLowerCase()) {
+    return location
+  }
+  return `${location}, ${street}`
+}
+
 const NON_TROUBLE_LABEL: Record<string, string> = {
   'datafono-wrong-amount': 'una incoherencia en el importe del datáfono',
   'cameras-or-ajax': 'una incidencia que requiere revisión de cámaras o AJAX',
@@ -161,7 +180,7 @@ export function buildEscalationSummary(context: EscalationContext): string {
 
 export function extractEscalationContext(state: SessionState, customerName: string | null): EscalationContext {
   const baseLocation = state.location || 'ubicación no identificada'
-  const location = state.locationStreet ? `${baseLocation}, ${state.locationStreet}` : baseLocation
+  const location = formatLocationDisplay(baseLocation, state.locationStreet)
   const now = new Date().toLocaleString('es-ES')
 
   return {
