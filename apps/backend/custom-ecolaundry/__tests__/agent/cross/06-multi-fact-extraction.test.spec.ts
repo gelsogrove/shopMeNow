@@ -77,11 +77,12 @@ export const tests: TestCase[] = [
     },
   },
   {
-    // Mataró inline → estratto + bot chiede calle (regola Mataró multi-strada).
-    name: 'ES — "Estoy en Mataró con la lavadora 5" → bot chiede la calle (regola Mataró)',
+    // Mataró inline → estratto + bot disambigua tra Goya/Alemanya
+    // (regola Mataró multi-strada).
+    name: 'ES — "Estoy en Mataró con la lavadora 5" → bot disambigua tra Goya/Alemanya',
     run: async (ctx) => {
       const reply = await ctx.send('Estoy en Mataró con la lavadora 5')
-      expectMentionsAll(reply, ['calle', 'mataro'])
+      expectMentionsAll(reply, ['mataro', 'goya', 'alemanya'])
       expectStateHas(ctx.session, {
         location: 'Mataró',
         machineType: 'washer',

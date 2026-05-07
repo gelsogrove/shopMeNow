@@ -1172,6 +1172,14 @@ function ChatScreen({
               const isInbound = m.direction === "INBOUND"
               const todoCount = todoCountByDialog.get(m.id) || 0
               const isHighlighted = m.id === highlightMessageId
+              const linkedTodo =
+                todoCount > 0
+                  ? todos.find((t) => t.dialogId === m.id) || null
+                  : null
+              const openTaskOnKanban = () => {
+                if (!linkedTodo) return
+                navigate(`/demo/ecolaundry/kanban?todo=${linkedTodo.id}`)
+              }
               return (
                 <div
                   key={m.id}
@@ -1179,11 +1187,15 @@ function ChatScreen({
                   className={`flex ${isInbound ? "justify-start" : "justify-end"}`}
                 >
                   <div
+                    onClick={linkedTodo ? openTaskOnKanban : undefined}
+                    title={linkedTodo ? "Click to open the linked task on the kanban" : undefined}
                     className={`max-w-[75%] rounded-lg px-3 py-2 shadow text-sm relative group transition ${
                       isInbound ? "bg-white" : "bg-[#dcf8c6]"
-                    } ${
+                    } ${linkedTodo ? "cursor-pointer hover:brightness-95" : ""} ${
                       isHighlighted
                         ? "ring-4 ring-emerald-500 ring-offset-2 animate-pulse"
+                        : linkedTodo
+                        ? "ring-2 ring-amber-400 ring-offset-1"
                         : ""
                     }`}
                   >
@@ -1194,7 +1206,10 @@ function ChatScreen({
                           Users don't comment on their own messages. */}
                       {!isInbound && (
                         <button
-                          onClick={() => setCommentingMessage(m)}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setCommentingMessage(m)
+                          }}
                           className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/70 hover:bg-emerald-100 text-emerald-700 transition shadow-sm"
                           title="Comment this bot reply"
                         >

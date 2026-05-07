@@ -79,20 +79,39 @@ export const tests: TestCase[] = [
   },
   {
     // Closure negativa: il cliente dice che la macchina sigue sin activar
-    // → bot escala chiedendo il nome.
-    name: 'ES — Caso 4 T7 escala: cliente "sigue sin activar" → bot escala',
+    // → bot deve avviare l'escalation. Per architettura M3 (2-turn
+    // protocol enforced by escalate_to_operator validator), il bot al
+    // turno N CHIEDE il nome — la parola "operador" appare solo al turno
+    // N+1 quando capture_customer_name + escalate_to_operator sono stati
+    // chiamati. Verifichiamo entrambi i turni.
+    name: 'ES — Caso 4 T7 escala: cliente "sigue sin activar" → bot chiede nome (M3) → escala con handover',
     run: async (ctx) => {
       await ctx.send('He pagado y no se ha activado')
       await ctx.send('Goya')
       await ctx.send('Lavadora')
       await ctx.send('La 4')
       await ctx.send('No')
-      const reply = await ctx.send('sigue sin activar')
-      expectMentionsAll(reply, ['operador'])
-      const lower = reply.toLowerCase()
-      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)) {
-        throw new Error(`Bot non chiede nome: ${reply}`)
+      // Turn N: bot must ask the name (M3 protocol — no escalation yet).
+      const askName = await ctx.send('sigue sin activar')
+      const lowerAsk = askName.toLowerCase()
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lowerAsk)) {
+        throw new Error(`Bot non chiede nome al turn N: ${askName}`)
       }
+      // Turn N+1: customer gives name → bot escala con frase canonica.
+      // La canonical phrase è "Vamos a revisar tu caso manualmente, <name>"
+      // + il "Human Support message" handover. Verifichiamo il marker
+      // strutturale (Human Support) e la presenza del nome.
+      const escalation = await ctx.send('Andrea')
+      const lowerEsc = escalation.toLowerCase()
+      const escalated =
+        /vamos\s+a\s+revisar|revisar\s+tu\s+caso\s+manualmente|human\s+support/i.test(escalation)
+      if (!escalated) {
+        throw new Error(`Bot non ha escalato al turn N+1: ${escalation}`)
+      }
+      expectMentionsAll(escalation, ['Andrea'])
+      // Sanity: il summary handover deve menzionare Goya e la macchina 4.
+      expectMentionsAll(escalation, ['goya', '4'])
+      void lowerEsc
     },
   },
   {

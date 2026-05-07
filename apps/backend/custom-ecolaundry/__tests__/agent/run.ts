@@ -2,8 +2,9 @@
 //
 // Usage:
 //   node --import tsx __tests__/agent/run.ts                   # all tests
-//   node --import tsx __tests__/agent/run.ts 01                # only files matching "01"
-//   node --import tsx __tests__/agent/run.ts welcome           # only welcome tests
+//   node --import tsx __tests__/agent/run.ts 01                # files matching "01"
+//   node --import tsx __tests__/agent/run.ts welcome           # files matching "welcome"
+//   node --import tsx __tests__/agent/run.ts 02,03,04          # comma-separated → match ANY
 //
 // Each spec file exports `tests: TestCase[]`. The runner discovers them all,
 // runs them sequentially, and prints a coloured summary.
@@ -48,8 +49,15 @@ async function discover(filter: string | null): Promise<DiscoveredFile[]> {
     return out
   }
 
+  const filterTokens = filter
+    ? filter.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean)
+    : []
   const files = (await walk(here))
-    .filter((f) => !filter || f.toLowerCase().includes(filter.toLowerCase()))
+    .filter(
+      (f) =>
+        filterTokens.length === 0 ||
+        filterTokens.some((t) => f.toLowerCase().includes(t)),
+    )
     .sort()
 
   const discovered: DiscoveredFile[] = []

@@ -94,6 +94,40 @@ Cross-layer code is the smell that produced the bugs the refactor closed.
 
 ---
 
+## 🔁 pendingFlow lifecycle — ask vs await phases
+
+Every multi-step `pendingFlow` has TWO phases. The phase is encoded in the
+suffix and determines who is in control:
+
+| Suffix | Phase | Who controls | Gather guards may fire? |
+|---|---|---|---|
+| `-ask-<topic>`   | gathering   | deterministic guards | ✅ yes (still asking facts) |
+| `-await-<topic>` | LLM-driven  | LLM tool-call loop | ❌ no (LLM is interpreting reply) |
+
+Examples:
+- `caso4-ask-cambio` → bot is asking for missing facts (location/type/number).
+  Gather guards (`forceLocation`, `forceMachineType`, …) may still preempt.
+- `caso4-await-cambio` → bot just asked "¿la central te ha devuelto el
+  cambio?". LLM must read the customer's reply (yes/no) and act. Gather
+  guards MUST NOT fire — they would derail the flow (e.g. asking about
+  display while the bot is waiting for cambio yes/no).
+
+This is enforced by [`utils/guards/helpers.ts:isAwaitingPendingFlow`](utils/guards/helpers.ts)
++ [`notInActiveSubFlow`](utils/guards/helpers.ts). Every gather guard
+already calls `notInActiveSubFlow(ar)` and gets the right behaviour
+automatically.
+
+### Convention when adding a new pendingFlow
+
+If your new flow has a phase where the LLM interprets the reply
+semantically, name that pendingFlow `<id>-await-<topic>`. The naming
+contract is what makes the gather guards step aside.
+
+Anti-pattern: ❌ adding a phase like `caso9-pending-name` instead of
+`caso9-await-name`. The guards would not detect it as LLM-controlled.
+
+---
+
 ## 📚 FAQ — two-tier knowledge (system + workspace)
 
 The bot has TWO independent FAQ sources. They serve different purposes

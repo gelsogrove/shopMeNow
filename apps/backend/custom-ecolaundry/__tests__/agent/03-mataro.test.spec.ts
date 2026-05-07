@@ -9,11 +9,14 @@ import { type TestCase, expectMentionsAll, expectMentionsNone } from './_helpers
 
 export const tests: TestCase[] = [
   {
-    name: 'ES — customer dice "Mataró" al turn 2 → bot chiede la calle (parole: calle, mataro)',
+    // Mataró ha 2 lavanderías → bot deve elencarle (Goya + Alemanya)
+    // perché il customer scelga. Accettiamo "calle" letterale OPPURE
+    // l'abbreviazione "C/" che la canonica usa effettivamente.
+    name: 'ES — customer dice "Mataró" al turn 2 → bot disambigua tra Goya e Alemanya',
     run: async (ctx) => {
       await ctx.send('hola no me funciona la lavadora')
       const reply = await ctx.send('Mataró')
-      expectMentionsAll(reply, ['calle', 'mataro'])
+      expectMentionsAll(reply, ['mataro', 'goya', 'alemanya'])
     },
   },
   {

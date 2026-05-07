@@ -20,10 +20,17 @@ import type { ToolHandler } from './types.js'
 export const escalateToOperator: ToolHandler = async (ar, args) => {
   const { state } = ar
   // Datos mínimos: per reglas.md, machine incidents require location +
-  // machineType + machineNumber BEFORE escalation. Non-troubleshooting
-  // incidents have their own escalation path via the guard pipeline.
+  // machineType + machineNumber BEFORE escalation. Two documented
+  // exceptions are exempt:
+  //   - Non-troubleshooting incidents (datáfono/cámaras/refund/…) — they
+  //     have their own escalation path via the guard pipeline.
+  //   - Caso 7 (`caso7Active`) — the canonical flow SKIPS machineType +
+  //     machineNumber. Only location + (display info, when available) is
+  //     required. Without this exemption the LLM gets blocked after name
+  //     capture and asks redundantly for machineType/Number.
   if (
     !state.nonTroubleshootingIncident &&
+    !state.caso7Active &&
     state.displayState &&
     (!state.location || !state.machineType || !state.machineNumber)
   ) {

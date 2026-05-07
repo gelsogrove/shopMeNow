@@ -1,7 +1,7 @@
 // Shared helpers for the guard pipeline. Type contracts (Guard,
 // GuardOutcome) live in ../../models/guards.ts.
 
-import type { AgentRuntime, SupportedLanguage } from '../../models/index.js'
+import type { AgentRuntime, SessionState, SupportedLanguage } from '../../models/index.js'
 
 export const RECOVERABLE_DISPLAYS = new Set([
   'SEL', 'PUSH', 'PR', 'DOOR', 'ALM/DOOR', 'PRICE', 'BLANK',
@@ -31,10 +31,42 @@ export function isMataro(ar: AgentRuntime): boolean {
   return /^matar[oó]$/i.test(ar.state.location.trim())
 }
 
+/**
+ * True when `pendingFlow` is in its LLM-controlled phase (suffix `-await-`).
+ *
+ * Convention: every multi-step pendingFlow has two phases:
+ *   - `caso<N>-ask-<topic>`   → deterministic gathering phase. The bot is
+ *                                still asking facts (location, type, number…)
+ *                                so the gather guards (forceLocation,
+ *                                forceMachineType, forceDisplay, …) MAY fire.
+ *   - `caso<N>-await-<topic>` → LLM-controlled interpretation phase. The bot
+ *                                already gave a question; the LLM must read
+ *                                the customer's reply semantically. Gather
+ *                                guards MUST NOT preempt — they would derail
+ *                                the flow (e.g. asking "qué aparece en la
+ *                                pantalla?" while the bot is waiting for
+ *                                yes/no on the cambio in caso4-await-cambio).
+ */
+export function isAwaitingPendingFlow(state: SessionState): boolean {
+  return Boolean(state.pendingFlow) && state.pendingFlow.includes('-await-')
+}
+
+/**
+ * True when no other multi-step flow is currently in control of the
+ * conversation. Used by the gather guards (forceLocation, forceMachineType,
+ * forceDisplay, …) to decide whether they may preempt the LLM.
+ *
+ * Blocked by:
+ *   - `activeFlowId` (declarative display-flow in progress)
+ *   - `operatorRequested` (escalation already triggered)
+ *   - `customerNameRequested` (waiting for the name)
+ *   - `pendingFlow` in `-await-` phase (see `isAwaitingPendingFlow`)
+ */
 export function notInActiveSubFlow(ar: AgentRuntime): boolean {
   return (
     !ar.state.activeFlowId &&
     !ar.state.operatorRequested &&
-    !ar.state.customerNameRequested
+    !ar.state.customerNameRequested &&
+    !isAwaitingPendingFlow(ar.state)
   )
 }

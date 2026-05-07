@@ -1,4 +1,4 @@
-# Ecolaundry Chatbot - Bloque 1 de casos
+# Ecolaundry Chatbot -Usecases
 
 ## Cómo usar este bloque
 
@@ -1016,24 +1016,42 @@ El bot no diagnostica hasta identificar el local.
 ## Caso 32 — El cliente mezcla incidencia de máquina y pago
 
 **Objetivo:**  
-Reconducir el caso al flujo correcto.
+Reconducir el caso al flujo correcto sin perder ningún dato que el cliente
+adelante (ej. el número de máquina).
 
 **Cuándo aplica:**  
-El cliente mezcla el problema técnico con el problema de cobro.
+El cliente mezcla el problema técnico con el problema de cobro y suele
+adelantar respuestas (números, "lavadora", etc.) antes de que el bot las
+pida explícitamente.
 
 **Ejemplo de conversación:**
 
 **Usuario:** He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro.  
-**Bot:** Vamos a ordenarlo paso a paso. ¿En qué lavandería estás?
+**Bot:** Hola, soy el asistente virtual de la lavandería. Tranquilo, te ayudo. ¿En qué lavandería estás ahora mismo?
 
 **Usuario:** Pineda.  
-**Bot:** Gracias. Primero necesito saber si has podido usar finalmente la máquina.
+**Bot:** ¿Podrías indicarme, por favor, si es una lavadora o una secadora y qué número tiene? 🙂
 
-**Usuario:** No.  
-**Bot:** De acuerdo. Entonces vamos a revisar primero qué aparece exactamente en la pantalla.
+**Usuario:** Lavadora 3.  
+**Bot:** Cuéntame, por favor, ¿qué aparece exactamente en la pantalla? 🙂
 
 **Resultado esperado:**  
-El bot reconduce el caso al flujo adecuado.
+El bot reconduce el caso al flujo adecuado en el menor número de turnos
+posible: una sola pregunta combinada para tipo + número evita el patrón
+incómodo "pregunto solo el tipo → cliente da el número → repito la
+pregunta del tipo sin reconocer el número".
+
+**Comportamiento garantizado por código (no por prompt):**  
+- L3 `autoExtractFacts` captura `machineNumber` aunque venga sin
+  `machineType` (whole-message digit cuando hay `location`).
+- L4 `guardForceMachineType` (`utils/guards/location.ts`) ramifica el
+  reply: si faltan **ambos** (tipo + número) usa el i18n key
+  `machineTypeAndNumber`; si solo falta el tipo (número ya en estado)
+  usa `machineType`. La rama está pinneada por
+  `__tests__/unit/force-machine-type.test.ts`.
+- Si el cliente solo contesta el número (`"3"`), el siguiente turno el
+  guard pide solo el tipo (`machineType`) y, una vez completado, se
+  procede al display vía `guardForceDisplay`.
 
 **Escalar si:**  
 - el relato sigue siendo confuso

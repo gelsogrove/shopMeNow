@@ -6,12 +6,14 @@ import { type TestCase, expectMentionsAll, expectMentionsNone } from '../_helper
 
 export const tests: TestCase[] = [
   {
-    name: 'ES — Caso 6 + Mataró: bot chiede calle PRIMA di entrare nel flow doble cobro',
+    // La street deve essere chiesta PRIMA del flow caso6: il bot deve
+    // disambiguare le 2 lavanderías di Mataró (Goya + Alemanya) e NON
+    // procedere con "¿has podido lavar?".
+    name: 'ES — Caso 6 + Mataró: bot disambigua tra Goya/Alemanya PRIMA di entrare nel flow',
     run: async (ctx) => {
       await ctx.send('Me habéis cobrado dos veces con la tarjeta')
       const reply = await ctx.send('Mataró')
-      // La street deve essere chiesta PRIMA di "¿has podido lavar?"
-      expectMentionsAll(reply, ['mataro', 'calle'])
+      expectMentionsAll(reply, ['mataro', 'goya', 'alemanya'])
       expectMentionsNone(reply, ['has podido', 'lavar', 'secar'])
     },
   },

@@ -194,7 +194,72 @@ The E2E suite catches LLM regressions; it is slower and not free.
 
 ---
 
-## 7. Knowledge model — two-tier FAQ
+## 7. pendingFlow lifecycle — ask vs await
+
+`pendingFlow` is the conversation-control flag for multi-step flows
+(caso4 cambio, caso6 doble cobro, caso8 código, caso9 invoice, caso17
+photo, …). Every flow has two phases distinguished by suffix:
+
+```
+state.pendingFlow = "<flowId>-ask-<topic>"     ← gathering phase (deterministic)
+state.pendingFlow = "<flowId>-await-<topic>"   ← LLM-driven phase (interpret reply)
+```
+
+### Why the two phases
+
+The bot needs deterministic gathering to collect facts (location,
+machineType, machineNumber, …). The "force gather" guards
+(`forceLocation`, `forceMachineType`, `forceMachineNumber`,
+`forceDisplay`, …) handle this — they preempt the LLM and ask the
+missing fact. This is correct ONLY when no specific flow is currently
+asking the customer to interpret a question.
+
+When the bot has just asked a closed yes/no/situation question
+("¿la central te ha devuelto el cambio?", "¿qué le pasa exactamente?"),
+the gather guards MUST step aside — they have no business asking about
+display state while the customer is supposed to answer the bot's
+question.
+
+### Enforcement
+
+[`utils/guards/helpers.ts`](../utils/guards/helpers.ts):
+
+```ts
+export function isAwaitingPendingFlow(state: SessionState): boolean {
+  return Boolean(state.pendingFlow) && state.pendingFlow.includes('-await-')
+}
+
+export function notInActiveSubFlow(ar: AgentRuntime): boolean {
+  return (
+    !ar.state.activeFlowId &&
+    !ar.state.operatorRequested &&
+    !ar.state.customerNameRequested &&
+    !isAwaitingPendingFlow(ar.state)   // ← stop gather guards in -await-
+  )
+}
+```
+
+Every "force gather" guard already calls `notInActiveSubFlow(ar)`, so
+the new check applies uniformly.
+
+### Naming contract for new pendingFlow values
+
+When adding a new multi-step flow:
+
+1. **Gathering phase** (still asking facts) → suffix with `-ask-<topic>`.
+   Example: `caso4-ask-cambio`, `caso6-ask-relato`.
+2. **LLM phase** (waiting for customer reply to be interpreted) →
+   suffix with `-await-<topic>`. Example: `caso4-await-cambio`,
+   `caso8-await-name`.
+
+This naming is the contract that makes `isAwaitingPendingFlow` work.
+A new pendingFlow with a non-conforming name (e.g. `caso9-pending-name`)
+will not trigger the guard suppression and will likely cause the bug
+this section was created to prevent.
+
+---
+
+## 8. Knowledge model — two-tier FAQ
 
 The bot has TWO independent FAQ sources. They serve different purposes
 and MUST stay separate.

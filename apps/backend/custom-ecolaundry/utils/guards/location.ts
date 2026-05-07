@@ -65,21 +65,29 @@ export const guardCaso31InsistLocation: Guard = (ar, userMessage) => {
   }
 }
 
-/** G3 — Force "lavadora o secadora?" when location is known but type is not. */
+/** G3 — Force machine identification when location is known but type is not.
+ *
+ *  When BOTH type and number are missing, ask both in a single combined turn
+ *  ("¿Lavadora o secadora? ¿Y qué número?") — keeps the conversation cohesive
+ *  and avoids the awkward re-ask pattern when the customer volunteers the
+ *  number proactively (caso 32: "He pagado, no arrancaba…" → "Pineda" → "3").
+ *  When only the type is missing (number already extracted in a previous turn
+ *  or in this very turn by autoExtractFacts), fall back to the type-only ask. */
 export const guardForceMachineType: Guard = (ar) => {
   if (
     ar.state.location &&
     !ar.state.machineType &&
     !ar.state.displayState &&
-    !ar.state.machineNumber &&
     !ar.state.nonTroubleshootingIncident &&
-    !ar.state.operatorRequested &&
-    !ar.state.customerNameRequested &&
+    notInActiveSubFlow(ar) &&
     ar.state.turnCount >= 2
   ) {
+    const numberMissing = !ar.state.machineNumber
+    const replyKey = numberMissing ? 'machineTypeAndNumber' : 'machineType'
+    const reason = numberMissing ? 'force-machine-type-and-number' : 'force-machine-type'
     return {
-      reply: t('machineType', lang(ar)),
-      reason: 'force-machine-type',
+      reply: t(replyKey, lang(ar)),
+      reason,
     }
   }
   return null

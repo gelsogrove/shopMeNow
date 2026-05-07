@@ -22,15 +22,24 @@ export const tests: TestCase[] = [
     },
   },
   {
-    name: 'ES — paso 2 identificar el tipo: T2 location data → bot chiede lavadora o secadora',
+    // T2: dopo la location, il bot chiede TIPO + NUMERO combinati in un
+    // solo turno (i18n key `machineTypeAndNumber`). Questo è il
+    // comportamento canonico introdotto col fix di Caso 32: evita il
+    // pattern "chiedo solo tipo → cliente anticipa numero → ri-chiedo
+    // tipo senza ack del numero". Pinned anche unit-side da
+    // __tests__/unit/force-machine-type.test.ts (case A).
+    name: 'ES — paso 2 identificar tipo+numero: T2 location data → bot chiede tipo + numero combinati',
     run: async (ctx) => {
       await ctx.send('hola, no funciona la máquina')
       const reply = await ctx.send('Goya')
-      expectMentionsAll(reply, ['lavadora', 'secadora'])
+      expectMentionsAll(reply, ['lavadora', 'secadora', 'numero'])
     },
   },
   {
-    name: 'ES — paso 3 dato crítico (numero): T3 tipo data → bot chiede numero',
+    // T3: il cliente risponde solo col tipo ("lavadora") → autoExtract
+    // setta machineType, il guard branchato chiede SOLO il numero (key
+    // i18n `machineNumberWasher`). Niente ri-domanda del tipo.
+    name: 'ES — paso 3 dato crítico (numero): T3 solo tipo data → bot chiede solo numero',
     run: async (ctx) => {
       await ctx.send('hola, no funciona la máquina')
       await ctx.send('Goya')
