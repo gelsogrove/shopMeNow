@@ -26,7 +26,8 @@ import {
   detectResolutionEscalationContradiction,
   stripResolutionSentences,
 } from './utils/contradiction.js'
-import { undoResolved } from './utils/state-transitions.js'
+import { closeAsEscalated, undoResolved } from './utils/state-transitions.js'
+import { applyOutputInvariants } from './utils/output-invariants.js'
 
 import type { AgentMessage, AgentRuntime, AgentSession } from './models/index.js'
 
@@ -193,7 +194,13 @@ function parseToolArgs(toolName: string, raw: string | undefined): Record<string
  */
 function polishReplyForTurn(ar: AgentRuntime, rawReply: string): string {
   const sanitized = sanitizeCustomerReply(rawReply)
-  const reply = enforceNoContradiction(ar, sanitized)
+  const noContradiction = enforceNoContradiction(ar, sanitized)
+  // Output invariants — strip the bug surfaces previously patched in
+  // prompts/agent.txt (rule #1: no patches in prompt). See
+  // utils/output-invariants.ts for the catalogue + tests.
+  const reply = applyOutputInvariants(noContradiction, {
+    location: ar.state.location || null,
+  })
   if (ar.state.turnCount !== 1) {
     return stripWelcomeParagraphs(reply)
   }
@@ -254,7 +261,7 @@ function appendEscalationSummary(ar: AgentRuntime, reply: string): string {
   const ctx = extractEscalationContext(ar.state, ar.state.customerName)
   const summary = buildEscalationSummary(ctx)
   ar.pendingEscalation = null
-  ar.state.pendingClosure = 'escalated'
+  closeAsEscalated(ar)
   return `${reply}\n\n**👤 Human Support message**\n${summary}`
 }
 

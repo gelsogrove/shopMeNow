@@ -259,12 +259,11 @@ this section was created to prevent.
 
 ---
 
-## 8. Knowledge model — two-tier FAQ
+## 8. Knowledge model — system FAQs
 
-The bot has TWO independent FAQ sources. They serve different purposes
-and MUST stay separate.
+The bot reads FAQs from a single source bundled with the module.
 
-### Tier 1 — System FAQs (deterministic, key-based)
+### System FAQs (deterministic, key-based)
 
 Stable, well-defined Q&A that need deterministic mapping. Referenced by
 guards, locations, and the LLM prompt via semantic keys.
@@ -278,76 +277,28 @@ guards, locations, and the LLM prompt via semantic keys.
 | Lifecycle | Code redeploy |
 | Multilingual | i18n catalogue (`json/i18n/<lang>.json`) when needed |
 
-### Tier 2 — Workspace FAQs (dynamic, prompt-injected)
+### Future work — workspace-editable FAQs
 
-Business-curated content edited by the PM from the backoffice without
-redeploy. Free-form questions; no semantic key required.
+A second tier of business-curated FAQs editable from the backoffice
+(without redeploy) was planned but **not implemented today**. If/when
+added it must:
+- live in a Postgres `FAQ` table read by the parent chat-engine, never
+  by this module (zero-Prisma rule preserved)
+- be passed through `ChatbotInput.context.workspaceFaqs` as data
+- be injected as a `{{faq}}` block in the system prompt
+- prefer `apply_faq_override(faqKey)` for any keyed question — the
+  `{{faq}}` block would be the fallback for free-form questions only
 
-| Property | Value |
-|---|---|
-| Storage | Postgres `FAQ` table (`workspaceId`, `question`, `answer`, `keywords`, `category`, `order`, `isActive`) |
-| Multilingual | NOT a stored property — the translation layer (`prompts/history.txt`) translates the matched FAQ inline to the customer's language. Stored in the workspace base language (es for ecolaundry) |
-| LLM access | `{{faq}}` block injected into the system prompt |
-| Token budget | `settings.maxFaqInjectionTokens` (default 2000) — enforced by chat-engine, log warn on truncation |
-| Lifecycle | Backoffice edit → cache invalidation → next turn |
-
-### Data flow (Tier 2)
-
-```
-Backoffice CRUD ─► faqs table (Postgres)
-                              │
-                              ▼
-chat-engine (apps/backend/src/…)
-  WorkspaceFaqService.getActiveFaqs(workspaceId)
-    cache: in-memory Map, 5-min TTL, key = workspaceId
-    invalidation: POST /api/internal/faq/cache/invalidate
-    budget:    truncate to maxFaqInjectionTokens, log warn
-                              │
-                              ▼
-ChatbotInput.context.workspaceFaqs = [{question, answer}, …]
-                              │
-                              ▼
-custom-ecolaundry/index.ts
-  ar.runtime.workspaceFaqs = input.context.workspaceFaqs ?? []
-  (passed through, zero Prisma in this module)
-                              │
-                              ▼
-utils/agent-prompt.ts:buildSystemPrompt
-  renders {{faq}} placeholder as:
-    "📚 WORKSPACE FAQ (fallback for free-form):
-     Q: …
-     A: …
-     …"
-```
-
-### Why this split?
-
-- **Stability vs freshness**: Tier 1 is part of the bot's contract
-  (guards reference these keys); changing one is a code change. Tier 2
-  is editable content; PM changes it without engineering.
-- **Cache friendliness**: Tier 1 lives in the system prompt as plain
-  rules; Tier 2 is appended once per session (and re-fetched on edit).
-  Splitting keeps Tier 1 cacheable and Tier 2 invalidatable.
-- **Zero-deps preservation**: Prisma stays in chat-engine; custom-
-  ecolaundry receives FAQs as data, not as a database connection.
-- **Iron rule alignment**: rule #7 (settings are law). The data
-  structure, cache TTL, token budget all live in `settings.json` —
-  no magic numbers in code.
-
-### LLM instruction (in `prompts/agent.txt`)
-
-The system prompt tells the LLM: "for known FAQ keys, ALWAYS prefer
-`apply_faq_override(faqKey)`; only fall back to the `{{faq}}` block
-for free-form questions that don't match any known key."
+Until then, every FAQ change is a code change to `json/faqs.json` plus
+release.
 
 ### Anti-patterns (forbidden)
 
 - ❌ Importing Prisma into `custom-ecolaundry/` (preserves zero-deps)
-- ❌ Adding a `language` column to `FAQ` (translation belongs in the
-  prompt layer, not in storage)
-- ❌ Using `{{faq}}` for stable system FAQs (they belong in
-  `json/faqs.json` with a key — Tier 1)
-- ❌ Merging Tier 1 + Tier 2 in the same data structure or tool
+- ❌ Hardcoding FAQ answers in TS source (they belong in
+  `json/faqs.json` with a stable key)
+- ❌ Using `apply_faq_override` for free-form questions (the tool
+  expects known semantic keys)
 
 ---
 

@@ -1,0 +1,44 @@
+// Output invariant — strip evasive responses ("no tengo la información",
+// "I don't have that info", and equivalents in 6 languages).
+//
+// Bug surface: the LLM falls back to a no-knowledge phrase instead of
+// using FAQ overrides or escalating. The customer ends up with a dead
+// end. Strip the evasive sentence; if the reply becomes empty, fall
+// back to the original to avoid sending an empty message.
+
+import { logger } from '../logger.js'
+
+const EVASIVE_PATTERNS: RegExp[] = [
+  // Spanish
+  /no\s+tengo\s+(?:esa\s+)?(?:la\s+)?informaci[oó]n[^.!?\n]*[.!?]?/gi,
+  /no\s+lo\s+s[eé](?!\s+bien)[^.!?\n]*[.!?]?/gi,
+  /no\s+puedo\s+(?:darte|proporcionarte|ofrecerte)\s+esa\s+informaci[oó]n[^.!?\n]*[.!?]?/gi,
+  // Italian
+  /non\s+ho\s+(?:quest[ao]|l[ae])\s+informazion[ei][^.!?\n]*[.!?]?/gi,
+  /non\s+lo\s+so(?!\s+bene)[^.!?\n]*[.!?]?/gi,
+  // English
+  /i\s+don'?t\s+have\s+(?:that|this)\s+inform(?:ation)?[^.!?\n]*[.!?]?/gi,
+  /i\s+don'?t\s+know(?!\s+(?:if|whether))[^.!?\n]*[.!?]?/gi,
+  // Catalan
+  /no\s+tinc\s+(?:aquesta\s+)?informaci[oó][^.!?\n]*[.!?]?/gi,
+  // Portuguese
+  /n[ãa]o\s+tenho\s+(?:essa\s+)?(?:a\s+)?informa[çc][ãa]o[^.!?\n]*[.!?]?/gi,
+  /n[ãa]o\s+sei(?!\s+bem)[^.!?\n]*[.!?]?/gi,
+  // French
+  /je\s+n'?ai\s+pas\s+(?:cette|l[ea])\s+informations?[^.!?\n]*[.!?]?/gi,
+]
+
+export function stripEvasivePhrases(reply: string): string {
+  let result = reply
+  for (const pattern of EVASIVE_PATTERNS) {
+    result = result.replace(pattern, '')
+  }
+  result = result.replace(/\s{2,}/g, ' ').replace(/^\s*[.,!?]\s*/, '').trim()
+  if (result !== reply) {
+    logger.warn('output-invariant: stripped evasive phrase from reply', {
+      original: reply.slice(0, 200),
+      result: result.slice(0, 200),
+    })
+  }
+  return result || reply
+}

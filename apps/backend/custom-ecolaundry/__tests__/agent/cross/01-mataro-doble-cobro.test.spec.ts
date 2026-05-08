@@ -1,4 +1,4 @@
-// Cross-test: Caso 6 doble cobro a Mataró — verifica che la calle venga
+// Cross-test: Double charge incident a Mataró — verifica che la calle venga
 // chiesta PRIMA del flow caso6 e che il summary handover contenga la calle
 // + narrativa, senza il template hardcoded di macchina.
 

@@ -74,8 +74,8 @@ export function buildEscalationSummary(context: EscalationContext): string {
   //   (a) code matches SAU2904266 format → forward parsed data + machine info
   //       so the operator can validate and remotely activate the machine.
   //   (b) code format invalid → ask the operator to review manually.
-  if (context.caso8Data && context.caso8Data.letters) {
-    const c = context.caso8Data
+  if (context.discountCodeData && context.discountCodeData.letters) {
+    const c = context.discountCodeData
     const machineLabel = context.machineNumber ? `máquina nº ${context.machineNumber}` : 'máquina sin número'
     const doorLabel = c.doorClosed === true ? 'puerta cerrada' : c.doorClosed === false ? 'puerta NO cerrada' : 'estado puerta desconocido'
     return `${name} en ${location} ha facilitado un código válido (${context.discountCode}: letras ${c.letters}, fecha ${c.fechaIso}, importe ${c.importe}€) en la ${machineLabel} (${doorLabel}). Requiere validación y activación remota.`
@@ -115,18 +115,18 @@ export function buildEscalationSummary(context: EscalationContext): string {
   //   - or the deterministic flow flag set by agent-extract when the
   //     customer triggered the case ("he pagado y no se ha activado").
   const reason = context.escalationReason || ''
-  const isCaso4 =
-    /caso\s*4/i.test(reason) ||
+  const isNoChange =
+    /No-change\s+incident|caso\s*4/i.test(reason) ||
     (/(pagad|pagat|pagat[oa]|pago)/i.test(reason) && /(no\s+se\s+(ha\s+)?activad|no\s+arranca|sigue\s+sin)/i.test(reason)) ||
-    /^caso4-/i.test(context.pendingFlow || '')
-  if (isCaso4) {
+    /^no-change-/i.test(context.pendingFlow || '')
+  if (isNoChange) {
     const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
     const numberLabel = context.machineNumber || 'desconocido'
     return `${name} en ${location} ha pagado pero la ${machineLabel} número ${numberLabel} no se ha activado tras corregir el número en la central. Requiere revisión manual.`
   }
 
-  // Caso 9 — invoice request: include all collected billing data for the operator.
-  if (/caso\s*9|invoice|factura/i.test(context.escalationReason || '') && context.invoiceData) {
+  // Invoice request — include all collected billing data for the operator.
+  if (/Invoice\s+request|invoice|factura/i.test(context.escalationReason || '') && context.invoiceData) {
     const inv = context.invoiceData
     const fechaLabel = inv.fechaIso ? `${inv.fecha} (${inv.fechaIso})` : inv.fecha
     const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
@@ -198,7 +198,7 @@ export function extractEscalationContext(state: SessionState, customerName: stri
     timestamp: now,
     pendingFlow: state.pendingFlow || '',
     invoiceData: state.invoiceData?.email ? { ...state.invoiceData } : undefined,
-    caso8Data: state.caso8Data?.letters ? { ...state.caso8Data } : undefined,
+    discountCodeData: state.discountCodeData?.letters ? { ...state.discountCodeData } : undefined,
   }
 }
 

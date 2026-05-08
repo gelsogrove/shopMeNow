@@ -94,7 +94,7 @@ export const TOOLS = [
     function: {
       name: 'start_machine_flow',
       description:
-        'Start a deterministic troubleshooting flow declared in json/washer_hs60xx.json or json/dryer_ed340.json. ONLY use a flowId from this allowlist: "non_parte" (machine does not start), "stop_error" (washer only), "post_ciclo" (washer only), "errore_reset" (dryer only). DO NOT pass pendingFlow values like "caso4-…" or "caso7-…" — those are conversation-state markers, not machine flow ids. Requires location + machineType + machineNumber + displayState already captured.',
+        'Start a deterministic troubleshooting flow declared in json/washer_hs60xx.json or json/dryer_ed340.json. ONLY use a flowId from this allowlist: "non_parte" (machine does not start), "stop_error" (washer only), "post_ciclo" (washer only), "errore_reset" (dryer only). Do NOT pass pendingFlow values like "no-change-…" or "paid-not-used-…" — those are conversation-state markers, not machine flow ids. Requires location + machineType + machineNumber + displayState already captured.',
       parameters: {
         type: 'object',
         properties: {

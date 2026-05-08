@@ -158,7 +158,7 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   // Location — first try explicit pattern ("estoy en Goya"), then standalone
   // input ("Goya"). Resolve against known locations.json keys; if the
   // customer types an unknown city/name (e.g. "Girona"), do NOT set the
-  // location — let guardCaso31InsistLocation re-ask. Mataró aside (multiple
+  // location — let guardInsistLocation re-ask. Mataró aside (multiple
   // streets), we only operate in 6 known laundries so unknown names are
   // either a typo or a wrong assumption from the customer.
   if (!state.location) {
@@ -276,8 +276,8 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     !state.pendingFlow &&
     /he\s+pagado.+(no\s+(he\s+podido|consegui|logr[eé])\s+usar|no\s+(la\s+)?(he\s+podido\s+)?utilizar)/i.test(userMessage)
   ) {
-    state.pendingFlow = 'caso7-ask-cambio'
-    state.caso7Active = true
+    state.pendingFlow = 'paid-not-used-ask-change'
+    state.paidNotUsedActive = true
   }
 
   // Customer name capture: when the bot has explicitly asked for the name
@@ -305,7 +305,7 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     !state.pendingFlow &&
     /he\s+pagado.+no\s+se\s+(ha\s+)?activad/i.test(userMessage)
   ) {
-    state.pendingFlow = 'caso4-ask-cambio'
+    state.pendingFlow = 'no-change-ask'
     resetPostEscalationFlags(ar)
   }
 
@@ -322,7 +322,7 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     !inlineNumericCode &&
     /(tengo\s+un\s+c[oó]digo|c[oó]digo\s+que?\s+(?:no\s+s[eé]\s+c[oó]mo|usar|d[oó]nde\s+(?:lo\s+)?pongo|d[oó]nde\s+ponerlo|d[oó]nde\s+meterlo)|how\s+to\s+use\s+(?:this|the)\s+code|where\s+to\s+(?:put|enter)\s+(?:this|the)\s+code)/i.test(userMessage)
   ) {
-    state.pendingFlow = 'caso8-ask-code'
+    state.pendingFlow = 'discount-code-ask'
     resetPostEscalationFlags(ar)
   }
 
@@ -332,7 +332,7 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     !state.pendingFlow &&
     /(no\s+s[eé]\s+(?:qu[eé]|qué)\s+pone|no\s+veo\s+(?:bien\s+)?la\s+pantalla|no\s+puedo\s+leer\s+la\s+pantalla|pero\s+no\s+s[eé]\s+qu[eé])/i.test(userMessage)
   ) {
-    state.pendingFlow = 'caso17-ask-photo'
+    state.pendingFlow = 'photo-await-decision'
     state.displayUnreadable = true
     resetPostEscalationFlags(ar)
   }
@@ -344,7 +344,7 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     !state.pendingFlow &&
     /(me\s+(?:han\s+|hab[eé]is\s+|ha\s+)?cobrad[ao]\s+(?:dos\s+veces|2\s+veces|m[aá]s\s+de\s+una\s+vez|el\s+doble)|doble\s+cobro|charged\s+(?:me\s+)?twice|cobr[oó]\s+dos\s+veces)/i.test(userMessage)
   ) {
-    state.pendingFlow = 'caso6-ask-podido-lavar'
+    state.pendingFlow = 'double-charge-ask-used'
     resetPostEscalationFlags(ar)
   }
 

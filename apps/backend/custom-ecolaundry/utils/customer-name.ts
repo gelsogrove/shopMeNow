@@ -1,6 +1,6 @@
 // Customer-name validation shared by:
 //   - capture_customer_name tool (utils/agent-tools.ts) — LLM-driven path
-//   - guardCaso8AwaitName guard (utils/guards/payment.ts) — deterministic path
+//   - guardDiscountCodeAwaitName guard (utils/guards/payment.ts) — deterministic path
 //
 // The two paths used to diverge: the tool rejected confirmation words and
 // numeric-only tokens, the guard accepted any non-empty trimmed string. That

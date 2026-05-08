@@ -24,13 +24,13 @@ export const escalateToOperator: ToolHandler = async (ar, args) => {
   // exceptions are exempt:
   //   - Non-troubleshooting incidents (datáfono/cámaras/refund/…) — they
   //     have their own escalation path via the guard pipeline.
-  //   - Caso 7 (`caso7Active`) — the canonical flow SKIPS machineType +
+  //   - Caso 7 (`paidNotUsedActive`) — the canonical flow SKIPS machineType +
   //     machineNumber. Only location + (display info, when available) is
   //     required. Without this exemption the LLM gets blocked after name
   //     capture and asks redundantly for machineType/Number.
   if (
     !state.nonTroubleshootingIncident &&
-    !state.caso7Active &&
+    !state.paidNotUsedActive &&
     state.displayState &&
     (!state.location || !state.machineType || !state.machineNumber)
   ) {

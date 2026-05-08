@@ -73,8 +73,8 @@ assert(
 
 // Flow not in any machine
 assert(
-  'washer + caso5-al001 → invalid (display-flow id, not machine flow)',
-  checkFlowCompatibility({ flowId: 'caso5-al001', machineType: 'washer', flows }),
+  'washer + al001-sequence-error → invalid (display-flow id, not machine flow)',
+  checkFlowCompatibility({ flowId: 'al001-sequence-error', machineType: 'washer', flows }),
   false,
   'not a registered machine flow',
 )

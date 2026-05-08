@@ -36,7 +36,7 @@ export function createInitialState(): SessionState {
     customerNameRequested: false,
     customerPhone: null,
     paymentRequested: false,
-    caso7Active: false,
+    paidNotUsedActive: false,
     turnCount: 0,
     lastUserMessage: '',
     lastPresentedStepId: null,
@@ -63,7 +63,7 @@ export function createInitialState(): SessionState {
       fechaIso: '',
       email: '',
     },
-    caso8Data: {
+    discountCodeData: {
       letters: '',
       fechaIso: '',
       importe: '',

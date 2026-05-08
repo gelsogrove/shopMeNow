@@ -22,7 +22,7 @@
 // Run with:
 //   node --import tsx __tests__/unit/force-machine-type.test.ts
 
-import { guardForceMachineType } from '../../utils/guards/location.js'
+import { guardForceMachineType } from '../../utils/guards/force-gather.js'
 import { createInitialState } from '../../utils/state.js'
 import type { AgentRuntime } from '../../models/index.js'
 import { loadTestRuntime, getCachedTestRuntime } from './_helpers.js'

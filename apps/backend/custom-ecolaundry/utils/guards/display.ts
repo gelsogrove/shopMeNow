@@ -12,9 +12,9 @@ import { lang, RECOVERABLE_DISPLAYS } from './helpers.js'
 
 /** Caso 17 — customer cannot read the display. Photo upload not supported,
  *  so escalate directly. */
-export const guardCaso17AskPhoto: Guard = (ar) => {
+export const guardAskPhoto: Guard = (ar) => {
   if (
-    ar.state.pendingFlow !== 'caso17-ask-photo' ||
+    ar.state.pendingFlow !== 'photo-await-decision' ||
     !ar.state.location ||
     !ar.state.machineType ||
     ar.state.operatorRequested ||
@@ -23,11 +23,11 @@ export const guardCaso17AskPhoto: Guard = (ar) => {
     return null
   }
   ar.state.pendingFlow = ''
-  escalate(ar, 'Caso 17 — customer cannot read display, no photo feature available')
+  escalate(ar, 'Display-unreadable — customer cannot read display, no photo feature available')
   requireCustomerName(ar)
-  const escalateText = t('caso17NoPhotoEscalate', lang(ar))
+  const escalateText = t('noPhotoEscalate', lang(ar))
   const nameAsk = t('customerNameAsk', lang(ar))
-  return { reply: `${escalateText} ${nameAsk}`, reason: 'caso17-direct-escalate' }
+  return { reply: `${escalateText} ${nameAsk}`, reason: 'no-photo-escalate' }
 }
 
 /** Post-instruction failure: customer received an instruction and reports
@@ -89,9 +89,9 @@ export const guardNumericCodeNoLetters: Guard = (ar, userMessage) => {
 
   if (yesLetters) {
     ar.state.faqCodeValue = ''
-    ar.state.pendingFlow = 'caso8-await-code'
+    ar.state.pendingFlow = 'discount-code-await'
     return {
-      reply: t('caso8AskCode', lang(ar)),
+      reply: t('discountCodeAsk', lang(ar)),
       reason: 'numeric-code-yes-letters',
     }
   }
@@ -112,7 +112,7 @@ export const guardEscalateUnknownDisplay: Guard = (ar) => {
     ar.state.customerName ||
     ar.state.customerNameRequested ||
     // Skip when any declarative display-flow is already handling this turn
-    // (e.g. caso5-al001, caso14-alm-door, caso15-001-explained). The flow
+    // (e.g. al001-sequence-error, alm-door-blocked, code-001-explained). The flow
     // engine in display-flow.ts owns the resolution/escalation lifecycle.
     ar.state.activeFlowId !== null
   ) {

@@ -3,7 +3,7 @@
 // Each machine has its own set of declared troubleshooting flows (washer:
 // non_parte / stop_error / post_ciclo, dryer: non_parte / errore_reset).
 // The LLM occasionally tries a flowId that exists only on the OTHER machine
-// — e.g. "caso5-al001" (which is a display-flow id from json/display-flows.json,
+// — e.g. "al001-sequence-error" (which is a display-flow id from json/display-flows.json,
 // not a machine flow at all). Without validation, `flow-engine.ts:startFlow`
 // would throw a generic "Flow X not found" error and the LLM would retry
 // blindly. With this validator the tool returns a *guidance* error that tells

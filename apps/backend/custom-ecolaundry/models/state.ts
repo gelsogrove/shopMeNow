@@ -42,7 +42,7 @@ export type SessionState = {
   // Skips machineType / machineNumber gather guards because the doc only asks
   // for location + cambio + display, then redirects to the display-specific
   // instruction (PUSH PROG, DOOR, SEL, …) without needing tipo or numero.
-  caso7Active: boolean
+  paidNotUsedActive: boolean
   turnCount: number
   // Last user message of the current turn. Set by `agentTurn` after sanitisation
   // so tool validators (mark_resolved, escalate_to_operator, …) can inspect it
@@ -74,7 +74,7 @@ export type SessionState = {
   refundDataAsked: boolean      // Caso 26/27: bot has already asked refund data once
   empathicResponseSent: boolean // Caso 25: empathic opener already issued
   faqTopic: '' | 'buy-loyalty-card' | 'recharge-loyalty-card' | 'hours-prices' | 'invoice'
-  // Caso 9 — multi-step invoice data collection. Filled progressively as the
+  // Invoice request — multi-step invoice data collection. Filled progressively as the
   // bot asks each question. Sent to the operator via escalation summary.
   invoiceData: {
     razonSocial: string
@@ -84,9 +84,9 @@ export type SessionState = {
     fechaIso: string    // normalized YYYY-MM-DD when parseable, else ''
     email: string
   }
-  // Caso 8 — discount code parsed from `state.faqCodeValue` once the format
+  // Discount code — discount code parsed from `state.faqCodeValue` once the format
   // SAU2904266 (3 letters + DDMMYY + amount) is validated.
-  caso8Data: {
+  discountCodeData: {
     letters: string
     fechaIso: string    // YYYY-MM-DD when format is valid, else ''
     importe: string     // raw amount as typed
@@ -95,31 +95,31 @@ export type SessionState = {
   // Pending multi-turn flow markers used by the agent's deterministic guards.
   pendingFlow:
     | ''
-    | 'caso7-ask-cambio'
-    | 'caso7-await-display'
+    | 'paid-not-used-ask-change'
+    | 'paid-not-used-await-display'
     | 'numeric-code-ask-letters'
     | 'numeric-code-await-answer'
-    | 'caso6-ask-podido-lavar'
-    | 'caso6-ask-relato'
-    | 'caso6-ask-4-digitos'
-    | 'caso6-ask-captura'
-    | 'caso17-ask-photo'
-    | 'caso17-await-photo'
-    | 'caso8-ask-code'
-    | 'caso8-await-code'
-    | 'caso8-await-name'
-    | 'caso8-await-pueblo'
-    | 'caso8-await-machine-number'
-    | 'caso8-await-puerta'
-    | 'caso4-ask-cambio'
-    | 'caso4-await-cambio'
-    | 'caso4-await-confirmation'
-    | 'caso9-ask-lavanderia'
-    | 'caso9-ask-machine-type'
-    | 'caso9-ask-razon-social'
-    | 'caso9-ask-direccion'
-    | 'caso9-ask-cif'
-    | 'caso9-ask-fecha'
-    | 'caso9-ask-email'
-    | 'caso9-ask-name'
+    | 'double-charge-ask-used'
+    | 'double-charge-ask-narrative'
+    | 'double-charge-ask-card-digits'
+    | 'double-charge-ask-receipt'
+    | 'photo-await-decision'
+    | 'photo-await-confirmation'
+    | 'discount-code-ask'
+    | 'discount-code-await'
+    | 'discount-code-await-name'
+    | 'discount-code-await-location'
+    | 'discount-code-await-machine'
+    | 'discount-code-await-door'
+    | 'no-change-ask'
+    | 'no-change-await-confirm'
+    | 'no-change-await-confirmation'
+    | 'invoice-ask-location'
+    | 'invoice-ask-machine-type'
+    | 'invoice-ask-company-name'
+    | 'invoice-ask-address'
+    | 'invoice-ask-tax-id'
+    | 'invoice-ask-date'
+    | 'invoice-ask-email'
+    | 'invoice-ask-name'
 }

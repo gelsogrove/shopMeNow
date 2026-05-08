@@ -298,18 +298,18 @@ const cases: Case[] = [
       const ar = makeAr()
       // Simulate the state right after a Caso 8 closure: escalation flags set,
       // sticky facts (location, name) still populated. Without the fix this
-      // would prevent guardCaso8AskCode from firing on the next trigger.
+      // would prevent guardDiscountCodeAsk from firing on the next trigger.
       ar.state.operatorRequested = true
       ar.state.customerNameRequested = true
-      ar.state.escalationReason = 'Caso 8 — código válido'
+      ar.state.escalationReason = 'Discount code — código válido'
       ar.state.pendingClosure = 'escalated'
-      ar.pendingEscalation = { reason: 'Caso 8 — código válido' }
+      ar.pendingEscalation = { reason: 'Discount code — código válido' }
       ar.state.customerName = 'Andrea'
       ar.state.location = 'Alemanya'
 
       autoExtractFacts(ar, 'tengo un codigo y no se donde ponerlo')
 
-      assertEq(ar.state.pendingFlow, 'caso8-ask-code', 'new caso 8 trigger registered')
+      assertEq(ar.state.pendingFlow, 'discount-code-ask', 'new caso 8 trigger registered')
       assertEq(ar.state.operatorRequested, false, 'operatorRequested cleared')
       assertEq(ar.state.customerNameRequested, false, 'customerNameRequested cleared')
       assertEq(ar.state.escalationReason, '', 'escalationReason cleared')
@@ -332,7 +332,7 @@ const cases: Case[] = [
       ]) {
         const ar = makeAr()
         autoExtractFacts(ar, msg)
-        assertEq(ar.state.pendingFlow, 'caso8-ask-code', `triggered by: "${msg}"`)
+        assertEq(ar.state.pendingFlow, 'discount-code-ask', `triggered by: "${msg}"`)
       }
     },
   },

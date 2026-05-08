@@ -8,10 +8,12 @@ Read it BEFORE every change. The rules below are non-negotiable.
 > - [`docs/contracts.md`](docs/contracts.md) — per-tool validators
 > - [`docs/adding-use-cases.md`](docs/adding-use-cases.md) — recipes
 > - [`docs/orchestrator.md`](docs/orchestrator.md) — turn pipeline
+> - [`json/cases.json`](json/cases.json) — bridge: doc "Caso N" ↔ code semanticId
+> - [`scripts/check-architecture.sh`](scripts/check-architecture.sh) — CI/pre-commit enforcement
 
 ---
 
-## 🔒 The 8 iron rules — verify on every change
+## 🔒 The 9 iron rules — verify on every change
 
 Before I write any code in this module, I must confirm each rule applies:
 
@@ -33,10 +35,13 @@ Before I write any code in this module, I must confirm each rule applies:
    [`utils/state-transitions.ts`](utils/state-transitions.ts):
    - `markResolved(ar)` / `undoResolved(ar)`
    - `escalate(ar, reason)`
-   - `requireCustomerName(ar)`
+   - `requireCustomerName(ar)` / `captureCustomerName(ar, name)`
+   - `closeAsEscalated(ar)`
+   - `startNewFlow(ar, flowId)`
    - `resetPostEscalationFlags(ar)`
    - `resetForNewIncident(ar)`
    ❌ Inline mutations of those fields outside that module are forbidden.
+   Enforced by `scripts/check-architecture.sh` (Rule #4 grep).
 
 5. **Each detector ships with tests**. Pure helpers in `utils/<name>.ts`
    (e.g. `mixed-signal.ts`, `flow-compatibility.ts`) MUST have a sibling
@@ -59,6 +64,23 @@ Before I write any code in this module, I must confirm each rule applies:
    updating each detector's keyword list AND the i18n catalogue, with
    tests.
 
+9. **Semantic naming, no ordinal references**. File names, pendingFlow
+   markers, reason strings, i18n keys, display flow ids, escalation
+   reasons MUST describe behaviour, not document order. Forbidden tokens
+   in code: `caso\d+`, `case\d+` (the `case_sel`/`case_push`/`case_door`
+   flow-engine keys are exempt — they describe machine-display behaviour,
+   not doc ordering).
+   The numeric "Caso N" labels in [`docs/usecases.md`](docs/usecases.md)
+   are documentation-only. The bridge between the two lives in
+   [`json/cases.json`](json/cases.json):
+   ```
+   docs/usecases.md:  ## Caso 4 — He pagado y no se ha activado, sin cambio
+   json/cases.json:   { docNumber: 4, semanticId: "no-change", ... }
+   utils/guards/:     payment-no-change.ts → guardNoChangeAsk
+   ```
+   If a case is renumbered in the doc, update `cases.json` only — the
+   code is unaffected. Enforced by `scripts/check-architecture.sh` (Rule #9).
+
 ---
 
 ## 🧭 The 5 layers — know which one you're in
@@ -79,18 +101,46 @@ Cross-layer code is the smell that produced the bugs the refactor closed.
 ## ✅ Pre-commit checklist (mental, every change)
 
 - [ ] Did I touch `prompts/agent.txt`? If yes, did I add a behavioural
-      "DO NOT DO X" rule? **Stop**: it goes in code (rule #1).
-- [ ] Did I mutate `pendingClosure`/`operatorRequested`/`pendingEscalation`
-      inline? **Stop**: use a transition from `state-transitions.ts`
-      (rule #4).
+      "DO NOT DO X" rule? **Stop**: it goes in code (rule #1). Approved
+      boundary signals can opt in by adding `// approved-by-andrea: <reason>`
+      on the line above.
+- [ ] Did I mutate `pendingClosure`/`operatorRequested`/`pendingEscalation`/
+      `customerNameRequested`/`escalationReason` inline? **Stop**: use a
+      transition from `state-transitions.ts` (rule #4).
 - [ ] Did I add a phrase regex? Is it for INTENT or for a boundary
       signal? Intent goes to the LLM (rule #6).
 - [ ] Did I add a detector? Did I write its tests? (rule #5)
 - [ ] Did I touch a tool? Did I update [`docs/contracts.md`](docs/contracts.md)?
-- [ ] Are the affected files <150 lines? If not, split (rule #3).
+- [ ] Are the affected files <150 lines? If not, split (rule #3). If
+      genuinely a single concern that has to stay big, add to
+      `ALLOWED_LARGE_FILES` in `scripts/check-architecture.sh` with a
+      documented reason.
+- [ ] Did I write `casoN` / `caseN` anywhere in code or JSON? **Stop**:
+      use a semantic id from `json/cases.json` (rule #9).
+- [ ] Did I add a new case? Did I add a row to `json/cases.json`?
 - [ ] Does `npm run typecheck` pass?
 - [ ] Does `npm run test:unit` pass (all suites)?
+- [ ] Does `bash scripts/check-architecture.sh` pass?
 - [ ] Multi-language: does my change cover es / it / en / ca / pt / fr? (rule #8)
+
+---
+
+## 🛡 Enforcement — what blocks a bad commit
+
+Rules above are not honour code. They are checked by
+[`scripts/check-architecture.sh`](scripts/check-architecture.sh) and the
+test suite, both wired into the project pre-commit hook.
+
+| Rule | Check | What it catches |
+|------|-------|-----------------|
+| #1 | grep `(DO NOT|NEVER|MUST NOT)` in `prompts/agent.txt` without `approved-by-andrea` marker | Behavioural patches that should have gone in code |
+| #3 | `wc -l` on `utils/*.ts` vs 150 | Cassettes that grew into mega-files |
+| #4 | grep `ar\.state\.<flag>\s*=` outside `state-transitions.ts` | Inline state mutations |
+| #5 | every `utils/<detector>.ts` has `__tests__/unit/<detector>.test.ts` | Detectors merged without tests |
+| #9 | grep `caso\d+\|case\d+` in code/json/prompts (excluding `cases.json`, `docs/`, `case_sel/push/door/...`) | Ordinal references to doc cases |
+
+To run locally: `bash scripts/check-architecture.sh`. Exit code is non-zero
+on any violation, and the offending lines are printed.
 
 ---
 
@@ -128,12 +178,11 @@ Anti-pattern: ❌ adding a phase like `caso9-pending-name` instead of
 
 ---
 
-## 📚 FAQ — two-tier knowledge (system + workspace)
+## 📚 FAQ knowledge (system-only)
 
-The bot has TWO independent FAQ sources. They serve different purposes
-and MUST stay separate. Don't merge them.
+The bot reads FAQs from a single source bundled with the module.
 
-### Tier 1 — System FAQs (deterministic, key-based)
+### System FAQs (deterministic, key-based)
 - **Where**: `json/faqs.json` (file, bundled with the module)
 - **Override per pueblo**: `json/locations.json:faqOverrides`
 - **Tool**: `apply_faq_override(faqKey)` — the LLM passes a known
@@ -143,51 +192,25 @@ and MUST stay separate. Don't merge them.
 - **Lifecycle**: changes require a code redeploy (these are part of the
   bot's "system contract")
 
-### Tier 2 — Workspace FAQs (dynamic, prompt-injected)
-- **Where**: Postgres `FAQ` table (`workspaceId`, `question`, `answer`,
-  `isActive`, `keywords`, `category`, `order`)
-- **NO `language` column** — content lives in the workspace's base
-  language (es for ecolaundry); the existing `history.txt` translation
-  layer handles output to the customer's language
-- **Source for the LLM**: a `{{faq}}` block in the system prompt,
-  populated per-turn from `ar.runtime.workspaceFaqs`
-- **Data flow**: the chat-engine (`apps/backend/src/...`) is the
-  ONLY layer that touches Postgres. It calls `WorkspaceFaqService.
-  getActiveFaqs(workspaceId)` (5-min in-memory cache, invalidate via
-  `POST /api/internal/faq/cache/invalidate`), enforces a token budget
-  (`settings.maxFaqInjectionTokens`, default 2000 tokens), and passes
-  the result via `ChatbotInput.context.workspaceFaqs`. Custom-ecolaundry
-  receives them already loaded — **zero Prisma in this module**
-  (iron rule: zero-deps runtime preserved)
-- **Tool**: none. The LLM reads them from the prompt directly when no
-  `apply_faq_override` key matches the customer's free-form question
-- **For**: business-curated content that the PM edits from the backoffice
-  without redeploy
-- **Lifecycle**: edit in backoffice → invalidate-cache endpoint →
-  next turn picks up the change
+### Future work — workspace-editable FAQs
+A second tier of FAQs editable from the backoffice (without redeploy)
+was planned but is **not implemented today**. If/when added it will:
+- live in a Postgres `FAQ` table read by the parent chat-engine, never
+  by this module (zero-Prisma rule preserved)
+- be injected as a `{{faq}}` block in the system prompt
+- prefer `apply_faq_override(faqKey)` for any keyed question — the
+  `{{faq}}` block is the fallback for free-form questions
 
-### Iron rule — `apply_faq_override` first, `{{faq}}` block as fallback
-The LLM is instructed to PREFER `apply_faq_override(faqKey)` for any
-question that matches a known key. The `{{faq}}` block is the
-fallback for free-form questions. This keeps the prompt cache hit rate
-high (the system prompt is identical per session; cache invalidates
-only when workspace FAQs are edited).
-
-### Adding a new business FAQ — workflow
-1. PM creates the row in the backoffice UI → DB INSERT
-2. Backoffice triggers cache invalidation → next call to chat-engine
-   re-fetches
-3. The bot starts using the new content on the next turn — no deploy
+Until then, every FAQ change is a code change to `json/faqs.json` +
+release.
 
 ### NOT to be done (anti-patterns)
-- ❌ Importing Prisma into `custom-ecolaundry/` — chat-engine fetches,
-  custom-ecolaundry only renders
-- ❌ Adding a `language` column to `FAQ` — translation belongs in
-  `prompts/history.txt`, not in storage
-- ❌ Using `{{faq}}` for stable system FAQs — those go in
-  `json/faqs.json` with a key (Tier 1)
-- ❌ Concatenating Tier 1 + Tier 2 in the same data structure — they
-  have different lifecycles and access patterns
+- ❌ Importing Prisma into `custom-ecolaundry/` — this module is a pure
+  renderer; data fetching is the chat-engine's job
+- ❌ Hardcoding FAQ answers in TS source — they go in `json/faqs.json`
+  with a stable key
+- ❌ Using `apply_faq_override` for free-form questions — that tool is
+  for known semantic keys only
 
 ---
 
@@ -216,6 +239,32 @@ recipe selector. If still unsure, ask Andrea.
 
 ---
 
+## 🗂 Adding a new use case — the bridge file
+
+When the doc grows a `## Caso 33 — XYZ` section, add a row to
+[`json/cases.json`](json/cases.json) before writing any code:
+
+```json
+{
+  "docNumber": 33,
+  "title": "XYZ behaviour summary",
+  "semanticId": "xyz-behaviour",         // stable, used by code
+  "kind": "machine-incident | payment-incident | escalation | faq | gather | display-flow",
+  "guardModule": "utils/guards/xyz.ts",  // file path
+  "guards": ["guardXyzAsk", "guardXyzAwait"],
+  "pendingFlowPrefix": "xyz-",
+  "i18nKey": "xyzAsk",                   // or "i18nKeys": [...]
+  "tests": ["__tests__/agent/NN-xyz.test.spec.ts"]
+}
+```
+
+Then use the `semanticId` everywhere in code: file names, pendingFlow
+markers (`xyz-ask` / `xyz-await-confirm`), reason strings, i18n keys.
+**Never `caso33` in code.** If the doc later renumbers this to "Caso 28",
+update only `docNumber` in `cases.json` — code is not affected.
+
+---
+
 ## 🛑 Anti-patterns I must reject (and call out)
 
 If a request asks me to do any of these, I MUST push back, propose the
@@ -227,6 +276,8 @@ correct layer, and only proceed once the user explicitly confirms:
 - "Skip the test, it's a small change" (rule #5)
 - "Hardcode this welcome string in the code" (rule #7)
 - "Just patch this one case in code, don't generalise" (rule #2)
+- "Call this flow `caso8-await-name` so it matches the doc number" (rule #9)
+- "Just put the new case logic in `payment.ts` for now, we'll split later" (rule #3)
 
 These were the symptoms behind the bugs the refactor closed. Falling
 back to them would re-open the same bug surface.
@@ -237,6 +288,7 @@ back to them would re-open the same bug surface.
 
 ```bash
 # Run from this directory:
+bash scripts/check-architecture.sh  # the 5 enforcement checks (rules 1/3/4/5/9)
 npm run typecheck          # tsc --noEmit -p tsconfig.json
 npm run test:unit          # all unit tests (~200 tests, <1s)
 npm run demo               # CLI agent loop (needs OPENROUTER_API_KEY)

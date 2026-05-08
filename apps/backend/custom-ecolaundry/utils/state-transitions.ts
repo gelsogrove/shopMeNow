@@ -78,3 +78,44 @@ export function resetPostEscalationFlags(ar: AgentRuntime): void {
 export function resetForNewIncident(ar: AgentRuntime): void {
   resetMachineFacts(ar.state)
 }
+
+/**
+ * The bot has captured the customer's name. Stores it on the state and
+ * clears the "name was requested" flag in one atomic step so callers
+ * cannot forget one or the other.
+ *
+ * Used by the `capture_customer_name` tool handler and any guard that
+ * accepts the raw input as the name (e.g. invoice flow step `invoice-ask-name`).
+ */
+export function captureCustomerName(ar: AgentRuntime, name: string): void {
+  ar.state.customerName = name
+  ar.state.customerNameRequested = false
+}
+
+/**
+ * Close the conversation as escalated to a human operator. Setting
+ * `pendingClosure='escalated'` is the LAST step of an escalation flow:
+ * the bot has already called `escalate(ar, reason)`, asked the name via
+ * `requireCustomerName(ar)`, and captured it via `captureCustomerName`.
+ * The `pendingClosure` flag tells the post-processor that no further
+ * automatic question should be asked this turn.
+ */
+export function closeAsEscalated(ar: AgentRuntime): void {
+  ar.state.pendingClosure = 'escalated'
+}
+
+/**
+ * Start a fresh deterministic flow on a new incident: clear escalation
+ * flags from any previous case and bind `activeFlowId` to the new one.
+ * Sticky customer facts (name, phone, location) are preserved on purpose.
+ *
+ * Used by the display-flow start guard when the customer reports a new
+ * display token after a previous escalation.
+ */
+export function startNewFlow(ar: AgentRuntime, flowId: string): void {
+  ar.state.activeFlowId = flowId
+  ar.state.activeStepId = null
+  ar.state.operatorRequested = false
+  ar.state.customerNameRequested = false
+  ar.pendingEscalation = null
+}

@@ -37,9 +37,6 @@ El cliente ha pagado y la pantalla muestra `PUSH PROG`.
 **Bot:** Gracias. ¿Qué número de lavadora es?
 
 **Usuario:** La 5.  
-**Bot:** Perfecto. ¿Has podido realizar el pago?
-
-**Usuario:** Sí.  
 **Bot:** De acuerdo. ¿Qué aparece exactamente en la pantalla?
 
 **Usuario:** PUSH PROG.  
@@ -618,10 +615,15 @@ Caso escalado correctamente con los datos mínimos (local + tipo + número + dis
 ## Caso 17 — El cliente no sabe qué aparece en pantalla
 
 **Objetivo:**  
-Intentar obtener la información mínima antes de escalar.
+Escalar cuando no se puede obtener el estado de pantalla.
 
 **Cuándo aplica:**  
 El cliente no sabe leer el display o no ve bien la pantalla.
+
+**Nota de implementación:** la subida de fotos NO está soportada hoy. Sin
+información del display el bot no puede dar instrucciones recuperables, así
+que escala directamente tras location + tipo. Si en el futuro se habilita
+el upload de fotos, este caso pasará por un paso intermedio de petición.
 
 **Ejemplo de conversación:**
 
@@ -632,17 +634,16 @@ El cliente no sabe leer el display o no ve bien la pantalla.
 **Bot:** Gracias. ¿Es una lavadora o una secadora?
 
 **Usuario:** Lavadora.  
-**Bot:** Perfecto. Si puedes, envíame una foto de la pantalla. Si no, lo pasamos a revisión.
+**Bot:** De acuerdo. Vamos a revisarlo manualmente para poder ayudarte. ¿Cómo te llamas?
 
-**Usuario:** No puedo hacer la foto.  
-**Bot:** De acuerdo. Vamos a revisarlo manualmente para poder ayudarte.
+**Usuario:** Andrea.  
+**Bot:** Pasamos tu caso a revisión. Un operador se pondrá en contacto contigo, gracias por la paciencia, Andrea.
 
 **Resultado esperado:**  
-Escalado cuando no se puede obtener el estado de pantalla.
+Caso escalado tras recoger location + tipo de máquina, sin paso de foto.
 
 **Escalar si:**  
-- el cliente no puede leer la pantalla
-- el cliente no puede enviar foto
+- siempre, cuando el cliente no puede leer la pantalla
 
 ---
 

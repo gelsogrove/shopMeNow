@@ -109,7 +109,7 @@
     {
       "id": "topicContradictoryNarrative",
       "kind": "topic-switch",
-      "description": "Caso 28 — first-turn narrative that is intrinsically contradictory (double charge claim + mixed/uncertain payment). Triggers escalation without arguing.",
+      "description": "Contradictory narrative — first-turn narrative that is intrinsically contradictory (double charge claim + mixed/uncertain payment). Triggers escalation without arguing.",
       "incidentTag": "contradictory-narrative",
       "regex": "(cobr[oó]\\s+dos\\s+veces|me\\s+han\\s+cobrad[oa]\\s+(?:dos|2)\\s+veces).*(creo|no\\s+s[eé]|aunque|tambi[eé]n\\s+pagu[eé]|no\\s+lo\\s+s[eé])",
       "flags": "i"

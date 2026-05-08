@@ -99,7 +99,7 @@ const cases: Case[] = [
 
   // ── Phase A: Caso 5 starts when AL001 + prerequisites ────────────────────
   {
-    name: 'guardDisplayFlowStart: AL001 + location/type/number → caso5-al001 fires',
+    name: 'guardDisplayFlowStart: AL001 + location/type/number → al001-sequence-error fires',
     run: () => {
       const ar = makeAr()
       ar.state.location = 'Mataró'
@@ -109,8 +109,8 @@ const cases: Case[] = [
       ar.state.displayState = 'AL001'
       const outcome = guardDisplayFlowStart(ar, 'AL001')
       if (!outcome) throw new Error('expected guard to fire, got null')
-      assertEq(ar.state.activeFlowId, 'caso5-al001', 'activeFlowId set')
-      assertEq(outcome.reason, 'caso5-al001', 'reason matches flow id')
+      assertEq(ar.state.activeFlowId, 'al001-sequence-error', 'activeFlowId set')
+      assertEq(outcome.reason, 'al001-sequence-error', 'reason matches flow id')
       // The 6-step guidance must be present in the reply (canonical content
       // assertion mirrors what the agent acceptance test 10-al001 checks).
       const reply = outcome.reply.toLowerCase()
@@ -124,7 +124,7 @@ const cases: Case[] = [
 
   // ── Preemption: different active flow + new display → new flow wins ──────
   {
-    name: 'preemption: SEL flow active, customer types AL001 → caso5-al001 takes over',
+    name: 'preemption: SEL flow active, customer types AL001 → al001-sequence-error takes over',
     run: () => {
       const ar = makeAr()
       ar.state.location = 'Mataró'
@@ -141,15 +141,15 @@ const cases: Case[] = [
 
       const outcome = guardDisplayFlowStart(ar, 'AL001')
       if (!outcome) throw new Error('expected preemption to fire, got null')
-      assertEq(ar.state.activeFlowId, 'caso5-al001', 'flow replaced by caso5-al001')
+      assertEq(ar.state.activeFlowId, 'al001-sequence-error', 'flow replaced by al001-sequence-error')
       assertEq(ar.state.activeStepId, null, 'activeStepId cleared by preemption')
-      assertEq(outcome.reason, 'caso5-al001', 'reason matches new flow')
+      assertEq(outcome.reason, 'al001-sequence-error', 'reason matches new flow')
     },
   },
 
   // ── Idempotency: same flow already active → no re-fire ───────────────────
   {
-    name: 'idempotency: caso5-al001 already active → guard returns null (no double guidance)',
+    name: 'idempotency: al001-sequence-error already active → guard returns null (no double guidance)',
     run: () => {
       const ar = makeAr()
       ar.state.location = 'Mataró'
@@ -157,7 +157,7 @@ const cases: Case[] = [
       ar.state.machineType = 'washer'
       ar.state.machineNumber = '4'
       ar.state.displayState = 'AL001'
-      ar.state.activeFlowId = 'caso5-al001'
+      ar.state.activeFlowId = 'al001-sequence-error'
       const outcome = guardDisplayFlowStart(ar, 'AL001')
       assertEq(outcome, null, 'no double-fire on same flow')
     },

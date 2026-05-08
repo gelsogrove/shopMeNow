@@ -1,0 +1,324 @@
+{
+  "_principle": "Bridge between docs/usecases.md (human ordering: Caso 1, 2, 3...) and the code (semantic ids: no-change, double-charge, ...). The doc number is documentation-only and may shift if cases are reordered. The code uses the semantic id, which is stable. This file is the single source of truth that maps one to the other so a developer can quickly answer 'Caso 4 in usecases.md — where is it in the code?' without grepping. Anti-hardcode rule: the code MUST NOT branch on case numbers. Branch on the semantic id, look up the doc number here only for human-readable references (logs, escalation summaries that mention 'caso 4', tests that pin doc-level expectations).",
+  "_schemaVersion": 1,
+  "cases": [
+    {
+      "docNumber": 1,
+      "title": "La lavadora no funciona y aparece PUSH PROG",
+      "semanticId": "push-prog",
+      "kind": "machine-incident",
+      "displayMatches": ["PUSH", "PUSH PROG", "PR"],
+      "handler": "flow-engine (washer_hs60xx.json:case_push)",
+      "tests": ["__tests__/agent/11-push-prog.test.spec.ts"]
+    },
+    {
+      "docNumber": 2,
+      "title": "La lavadora no funciona y aparece DOOR",
+      "semanticId": "door",
+      "kind": "machine-incident",
+      "displayMatches": ["DOOR"],
+      "handler": "flow-engine (washer_hs60xx.json:case_door)",
+      "tests": ["__tests__/agent/07-door.test.spec.ts"]
+    },
+    {
+      "docNumber": 3,
+      "title": "La lavadora no funciona y aparece SEL",
+      "semanticId": "sel",
+      "kind": "machine-incident",
+      "displayMatches": ["SEL"],
+      "handler": "flow-engine (washer_hs60xx.json:case_sel)",
+      "tests": ["__tests__/agent/08-sel.test.spec.ts"]
+    },
+    {
+      "docNumber": 4,
+      "title": "He pagado y no se ha activado, sin cambio",
+      "semanticId": "no-change",
+      "kind": "payment-incident",
+      "guardModule": "utils/guards/payment-no-change.ts",
+      "guards": ["guardNoChangeAsk"],
+      "pendingFlowPrefix": "no-change-",
+      "i18nKey": "noChangeResolved",
+      "tests": ["__tests__/agent/04-pago-sin-cambio.test.spec.ts"]
+    },
+    {
+      "docNumber": 5,
+      "title": "Error AL001",
+      "semanticId": "al001-sequence-error",
+      "kind": "display-flow",
+      "displayMatches": ["AL001", "AL 001", "ALARM 001"],
+      "handler": "json/display-flows.json (id: al001-sequence-error)",
+      "i18nKeys": ["al001GuideRetry", "al001Resolved"],
+      "tests": ["__tests__/agent/10-al001.test.spec.ts"]
+    },
+    {
+      "docNumber": 6,
+      "title": "Doble cobro pero el cliente ha podido usar el servicio",
+      "semanticId": "double-charge",
+      "kind": "payment-incident",
+      "guardModule": "utils/guards/payment-double-charge.ts",
+      "guards": [
+        "guardDoubleChargeAskUsed",
+        "guardDoubleChargeAskNarrative",
+        "guardDoubleChargeAskCardDigits",
+        "guardDoubleChargeAskReceipt"
+      ],
+      "pendingFlowPrefix": "double-charge-",
+      "i18nKeys": ["doubleChargeAskUsed", "doubleChargeAskNarrative", "doubleChargeAskCardDigits", "doubleChargeAskReceipt", "doubleChargeClosure"],
+      "tests": ["__tests__/agent/14-doble-pago.test.spec.ts", "__tests__/agent/14.1-pedir-datos-pago.test.spec.ts"]
+    },
+    {
+      "docNumber": 7,
+      "title": "He pagado pero no he podido usar el servicio",
+      "semanticId": "paid-not-used",
+      "kind": "payment-incident",
+      "guardModule": "utils/guards/payment-paid-not-used.ts",
+      "guards": ["guardPaidNotUsedAskChange"],
+      "pendingFlowPrefix": "paid-not-used-",
+      "tests": ["__tests__/agent/12-pagado-no-usado.test.spec.ts"]
+    },
+    {
+      "docNumber": 8,
+      "title": "Tengo un código de descuento",
+      "semanticId": "discount-code",
+      "kind": "code-flow",
+      "guardModule": "utils/guards/discount-code-flow.ts",
+      "guards": [
+        "guardDiscountCodeAsk",
+        "guardDiscountCodeAwait",
+        "guardDiscountCodeAwaitName",
+        "guardDiscountCodeAwaitLocation",
+        "guardDiscountCodeAwaitMachine",
+        "guardDiscountCodeAwaitDoor"
+      ],
+      "pendingFlowPrefix": "discount-code-",
+      "i18nKeys": ["discountCodeAsk", "discountCodeAskName", "discountCodeAskLocation", "discountCodeAskMachineNumber", "discountCodeAskDoor", "discountCodeFinalEscalate", "discountCodeFormatInvalid"],
+      "tests": ["__tests__/agent/08-codigo-importe.test.spec.ts"]
+    },
+    {
+      "docNumber": 9,
+      "title": "Quiero una factura",
+      "semanticId": "invoice",
+      "kind": "data-collection-flow",
+      "guardModule": "utils/guards/invoice-flow.ts",
+      "guards": ["guardInvoiceFlow"],
+      "pendingFlowPrefix": "invoice-",
+      "i18nKeys": ["invoiceAskLocation", "invoiceAskMachineType", "invoiceAskCompanyName", "invoiceAskAddress", "invoiceAskTaxId", "invoiceAskDate", "invoiceAskEmail", "invoiceAskEmailRetry", "invoiceAskName", "invoiceFinal"],
+      "tests": ["__tests__/agent/09-factura.test.spec.ts"]
+    },
+    {
+      "docNumber": 10,
+      "title": "Cómo comprar la tarjeta de fidelización",
+      "semanticId": "loyalty-card-buy",
+      "kind": "faq",
+      "guardModule": "utils/guards/loyalty-card-buy.ts",
+      "guards": ["guardLoyaltyCardBuy"],
+      "i18nKey": "loyaltyCardBuyBase",
+      "tests": ["__tests__/agent/15-tarjeta-fidelizacion.test.spec.ts"]
+    },
+    {
+      "docNumber": 11,
+      "title": "Cómo recargar la tarjeta de fidelización",
+      "semanticId": "loyalty-card-recharge",
+      "kind": "faq",
+      "guardModule": "utils/guards/loyalty-card-recharge.ts",
+      "guards": ["guardLoyaltyCardRecharge"],
+      "i18nKey": "loyaltyCardRecharge",
+      "tests": ["__tests__/agent/11-recarga-tarjeta.test.spec.ts"]
+    },
+    {
+      "docNumber": 12,
+      "title": "Horarios y precios",
+      "semanticId": "hours-and-pricing",
+      "kind": "faq",
+      "guardModule": "utils/guards/hours-and-pricing.ts",
+      "guards": ["guardPricingDeflect", "guardOpeningHours"],
+      "i18nKeys": ["pricingDeflect", "openingHoursDefault"],
+      "tests": ["__tests__/agent/02-faq.test.spec.ts", "__tests__/agent/12-horarios-precios.test.spec.ts"]
+    },
+    {
+      "docNumber": 13,
+      "title": "Escalado por código de alarma o incoherencia",
+      "semanticId": "unknown-display-or-incoherence",
+      "kind": "escalation",
+      "guardModule": "utils/guards/display.ts",
+      "guards": ["guardEscalateUnknownDisplay"],
+      "tests": ["__tests__/agent/16-fraude-incoherencia.test.spec.ts"]
+    },
+    {
+      "docNumber": 14,
+      "title": "La lavadora muestra ALM DOOR",
+      "semanticId": "alm-door-blocked",
+      "kind": "display-flow",
+      "displayMatches": ["ALM/DOOR", "ALMDOOR"],
+      "handler": "json/display-flows.json (id: alm-door-blocked)",
+      "i18nKey": "almDoorGuidance",
+      "tests": ["__tests__/agent/18-alm-door.test.spec.ts"]
+    },
+    {
+      "docNumber": 15,
+      "title": "La máquina muestra 001",
+      "semanticId": "code-001-explained",
+      "kind": "display-flow",
+      "displayMatches": ["C001", "001"],
+      "displayMappingNote": "Bare '001' is normalised to canonical 'C001' by utils/intent.ts mapDisplayToken().",
+      "handler": "json/display-flows.json (id: code-001-explained)",
+      "i18nKeys": ["code001Explain", "code001Escalate"],
+      "tests": ["__tests__/agent/19-001.test.spec.ts"]
+    },
+    {
+      "docNumber": 16,
+      "title": "La máquina muestra ALM, ALN o un código de alarma similar",
+      "semanticId": "alm-aln-generic",
+      "kind": "escalation",
+      "guardModule": "utils/guards/display.ts",
+      "guards": ["guardEscalateUnknownDisplay"],
+      "displayMatches": ["ALM", "ALN", "ALN A", "ALN N"],
+      "tests": ["__tests__/agent/16-alm-aln-generico.test.spec.ts", "__tests__/agent/17-aln.test.spec.ts"]
+    },
+    {
+      "docNumber": 17,
+      "title": "El cliente no sabe qué aparece en pantalla",
+      "semanticId": "display-unreadable",
+      "kind": "escalation",
+      "guardModule": "utils/guards/display.ts",
+      "guards": ["guardAskPhoto"],
+      "pendingFlowPrefix": "photo-",
+      "i18nKeys": ["photoAsk", "noPhotoEscalate"],
+      "tests": ["__tests__/agent/20-no-pantalla-foto.test.spec.ts"]
+    },
+    {
+      "docNumber": 18,
+      "title": "El cliente da un código solo numérico y dice que no hay letras",
+      "semanticId": "numeric-code-incoherence",
+      "kind": "escalation",
+      "guardModule": "utils/guards/display.ts",
+      "guards": ["guardNumericCodeAskLetters", "guardNumericCodeNoLetters"],
+      "pendingFlowPrefix": "numeric-code-",
+      "tests": ["__tests__/agent/30-codigo-numerico.test.spec.ts"]
+    },
+    {
+      "docNumber": 19,
+      "title": "Datáfono ha cobrado 10 € en Goya",
+      "semanticId": "datafono-wrong-amount-goya",
+      "kind": "location-gated-escalation",
+      "handler": "json/locations.json (Goya.escalationRules)",
+      "tests": ["__tests__/agent/16-fraude-incoherencia.test.spec.ts"]
+    },
+    {
+      "docNumber": 20,
+      "title": "Datáfono ha cobrado 10 € en Pineda",
+      "semanticId": "datafono-wrong-amount-pineda",
+      "kind": "location-gated-escalation",
+      "handler": "json/locations.json (Pineda.escalationRules)",
+      "tests": ["__tests__/agent/16-fraude-incoherencia.test.spec.ts"]
+    },
+    {
+      "docNumber": 21,
+      "title": "Alemanya: minutos de secadora no se han sumado",
+      "semanticId": "dryer-minutes-stuck-alemanya",
+      "kind": "location-gated-escalation",
+      "handler": "json/locations.json (Alemanya.escalationRules)",
+      "tests": ["__tests__/agent/locations/alemanya/21-monedas-secadora.test.spec.ts"]
+    },
+    {
+      "docNumber": 22,
+      "title": "Pineda: minutos de secadora no se han sumado",
+      "semanticId": "dryer-minutes-stuck-pineda",
+      "kind": "location-gated-escalation",
+      "handler": "json/locations.json (Pineda.escalationRules)",
+      "tests": ["__tests__/agent/locations/pineda/22-monedas-secadora.test.spec.ts"]
+    },
+    {
+      "docNumber": 23,
+      "title": "Alemanya: no se puede pagar con tarjeta",
+      "semanticId": "card-payment-fail-alemanya",
+      "kind": "location-gated-escalation",
+      "handler": "json/locations.json (Alemanya.escalationRules)",
+      "tests": ["__tests__/agent/locations/alemanya/23-no-tarjeta.test.spec.ts"]
+    },
+    {
+      "docNumber": 24,
+      "title": "Hortes: no se puede pagar con tarjeta",
+      "semanticId": "card-payment-fail-hortes",
+      "kind": "location-gated-escalation",
+      "handler": "json/locations.json (Hortes.escalationRules)",
+      "tests": ["__tests__/agent/locations/hortes/24-no-tarjeta.test.spec.ts"]
+    },
+    {
+      "docNumber": 25,
+      "title": "El cliente está muy enfadado",
+      "semanticId": "angry-customer",
+      "kind": "tone-handling",
+      "guardModule": "utils/guards/angry-customer.ts",
+      "guards": ["guardAngryCustomerEmpathic", "guardAngryCustomerEscalate"],
+      "i18nKey": "angryCustomerEmpathic",
+      "tests": ["__tests__/agent/24-enfadado.test.spec.ts"]
+    },
+    {
+      "docNumber": 26,
+      "title": "El cliente exige devolución inmediata",
+      "semanticId": "refund-demand",
+      "kind": "escalation",
+      "guardModule": "utils/guards/refund-and-compensation.ts",
+      "guards": ["guardRefundOrCompensation"],
+      "i18nKeys": ["refundAskData", "refundEscalateNoPromise"],
+      "tests": ["__tests__/agent/25-devolucion.test.spec.ts"]
+    },
+    {
+      "docNumber": 27,
+      "title": "El cliente pide una compensación concreta",
+      "semanticId": "compensation-demand",
+      "kind": "escalation",
+      "guardModule": "utils/guards/refund-and-compensation.ts",
+      "guards": ["guardRefundOrCompensation"],
+      "i18nKey": "compensationReview",
+      "tests": ["__tests__/agent/27-compensacion.test.spec.ts"]
+    },
+    {
+      "docNumber": 28,
+      "title": "Relato contradictorio en un doble cobro",
+      "semanticId": "contradictory-narrative",
+      "kind": "escalation",
+      "guardModule": "utils/guards/contradictory-narrative.ts",
+      "guards": ["guardContradictoryNarrative"],
+      "tests": ["__tests__/agent/28-relato-contradictorio.test.spec.ts"]
+    },
+    {
+      "docNumber": 29,
+      "title": "El cliente menciona cámaras o revisión técnica",
+      "semanticId": "cameras-or-ajax",
+      "kind": "escalation",
+      "guardModule": "utils/guards/faq-non-troubleshooting.ts",
+      "guards": ["guardEscalateNonTroubleshooting"],
+      "tests": ["__tests__/agent/29-camaras-ajax.test.spec.ts"]
+    },
+    {
+      "docNumber": 30,
+      "title": "Código no documentado en pantalla",
+      "semanticId": "unknown-display-code",
+      "kind": "escalation",
+      "guardModule": "utils/guards/display.ts",
+      "guards": ["guardEscalateUnknownDisplay"],
+      "tests": ["__tests__/agent/31-codigo-no-doc.test.spec.ts"]
+    },
+    {
+      "docNumber": 31,
+      "title": "El cliente no indica local",
+      "semanticId": "no-location",
+      "kind": "gather",
+      "guardModule": "utils/guards/location.ts",
+      "guards": ["guardInsistLocation"],
+      "i18nKey": "insistLocationFollowUp",
+      "tests": ["__tests__/agent/32-no-local.test.spec.ts"]
+    },
+    {
+      "docNumber": 32,
+      "title": "El cliente mezcla incidencia de máquina y pago",
+      "semanticId": "mixed-machine-and-payment",
+      "kind": "gather",
+      "guardModule": "utils/guards/location.ts",
+      "guards": ["guardForceMachineType", "guardForceMachineNumber"],
+      "tests": ["__tests__/agent/33-mezcla.test.spec.ts"]
+    }
+  ]
+}

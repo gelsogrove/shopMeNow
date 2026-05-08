@@ -36,30 +36,30 @@ console.log('isAwaitingPendingFlow')
 // -ask- phase → still gathering, NOT awaiting
 check('"" → not awaiting', isAwaitingPendingFlow(createInitialState()) === false)
 check(
-  '"caso4-ask-cambio" → not awaiting (still gathering)',
-  isAwaitingPendingFlow({ ...createInitialState(), pendingFlow: 'caso4-ask-cambio' }) === false,
+  '"no-change-ask" → not awaiting (still gathering)',
+  isAwaitingPendingFlow({ ...createInitialState(), pendingFlow: 'no-change-ask' }) === false,
 )
 check(
-  '"caso8-ask-code" → not awaiting',
-  isAwaitingPendingFlow({ ...createInitialState(), pendingFlow: 'caso8-ask-code' }) === false,
+  '"discount-code-ask" → not awaiting',
+  isAwaitingPendingFlow({ ...createInitialState(), pendingFlow: 'discount-code-ask' }) === false,
 )
 
 // -await- phase → LLM is interpreting
 check(
-  '"caso4-await-cambio" → awaiting',
-  isAwaitingPendingFlow({ ...createInitialState(), pendingFlow: 'caso4-await-cambio' }) === true,
+  '"no-change-await-confirm" → awaiting',
+  isAwaitingPendingFlow({ ...createInitialState(), pendingFlow: 'no-change-await-confirm' }) === true,
 )
 check(
-  '"caso4-await-confirmation" → awaiting',
-  isAwaitingPendingFlow({ ...createInitialState(), pendingFlow: 'caso4-await-confirmation' }) === true,
+  '"no-change-await-confirmation" → awaiting',
+  isAwaitingPendingFlow({ ...createInitialState(), pendingFlow: 'no-change-await-confirmation' }) === true,
 )
 check(
-  '"caso8-await-name" → awaiting',
-  isAwaitingPendingFlow({ ...createInitialState(), pendingFlow: 'caso8-await-name' }) === true,
+  '"discount-code-await-name" → awaiting',
+  isAwaitingPendingFlow({ ...createInitialState(), pendingFlow: 'discount-code-await-name' }) === true,
 )
 check(
-  '"caso7-await-display" → awaiting',
-  isAwaitingPendingFlow({ ...createInitialState(), pendingFlow: 'caso7-await-display' }) === true,
+  '"paid-not-used-await-display" → awaiting',
+  isAwaitingPendingFlow({ ...createInitialState(), pendingFlow: 'paid-not-used-await-display' }) === true,
 )
 
 console.log('\nnotInActiveSubFlow')
@@ -73,7 +73,7 @@ check(
 // activeFlowId blocks
 check(
   'activeFlowId set → guards stop',
-  notInActiveSubFlow(makeAr({ activeFlowId: 'caso5-al001' })) === false,
+  notInActiveSubFlow(makeAr({ activeFlowId: 'al001-sequence-error' })) === false,
 )
 
 // operatorRequested blocks
@@ -90,18 +90,18 @@ check(
 
 // pendingFlow ask-phase does NOT block (gathering may proceed)
 check(
-  'pendingFlow=caso4-ask-cambio → guards may fire (still gathering)',
-  notInActiveSubFlow(makeAr({ pendingFlow: 'caso4-ask-cambio' })) === true,
+  'pendingFlow=no-change-ask → guards may fire (still gathering)',
+  notInActiveSubFlow(makeAr({ pendingFlow: 'no-change-ask' })) === true,
 )
 
 // pendingFlow await-phase BLOCKS (LLM has the floor)
 check(
-  'pendingFlow=caso4-await-cambio → guards stop (LLM is interpreting)',
-  notInActiveSubFlow(makeAr({ pendingFlow: 'caso4-await-cambio' })) === false,
+  'pendingFlow=no-change-await-confirm → guards stop (LLM is interpreting)',
+  notInActiveSubFlow(makeAr({ pendingFlow: 'no-change-await-confirm' })) === false,
 )
 check(
-  'pendingFlow=caso7-await-display → guards stop',
-  notInActiveSubFlow(makeAr({ pendingFlow: 'caso7-await-display' })) === false,
+  'pendingFlow=paid-not-used-await-display → guards stop',
+  notInActiveSubFlow(makeAr({ pendingFlow: 'paid-not-used-await-display' })) === false,
 )
 
 console.log(`\n${pass} passed, ${fail} failed (out of ${pass + fail})`)

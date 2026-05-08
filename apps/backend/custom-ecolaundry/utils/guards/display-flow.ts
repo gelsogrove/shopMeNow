@@ -6,7 +6,7 @@
 // next turn" shape.
 
 import { t } from '../localization.js'
-import { escalate, markResolved, requireCustomerName } from '../state-transitions.js'
+import { escalate, markResolved, requireCustomerName, startNewFlow } from '../state-transitions.js'
 import { lang } from './helpers.js'
 import type {
   AgentRuntime,
@@ -78,11 +78,7 @@ export const guardDisplayFlowStart: Guard = (ar) => {
   // guidance is not emitted twice.
   if (ar.state.activeFlowId === flow.id) return null
 
-  ar.state.activeFlowId = flow.id
-  ar.state.activeStepId = null
-  ar.state.operatorRequested = false
-  ar.state.customerNameRequested = false
-  ar.pendingEscalation = null
+  startNewFlow(ar, flow.id)
   return { reply: t(flow.step.replyKey, lang(ar)), reason: flow.id }
 }
 
@@ -124,7 +120,7 @@ export const guardDisplayFlowFollowUp: Guard = (ar, userMessage) => {
   const escalateText = t(escalateKey, lang(ar))
   const nameAsk = t('customerNameAsk', lang(ar))
   // `reaffirmEscalate` already contains the name ask in some locales; we
-  // append it explicitly for keys that don't (caso15Escalate, etc.) so the
+  // append it explicitly for keys that don't (code001Escalate, etc.) so the
   // operator handover can capture the customer name on the next turn.
   const reply_ = escalateKey === 'reaffirmEscalate' ? escalateText : `${escalateText} ${nameAsk}`
   return { reply: reply_, reason: `${flow.id}-escalate` }

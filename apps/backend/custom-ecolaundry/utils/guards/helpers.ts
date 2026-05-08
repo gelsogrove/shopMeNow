@@ -45,7 +45,7 @@ export function isMataro(ar: AgentRuntime): boolean {
  *                                guards MUST NOT preempt — they would derail
  *                                the flow (e.g. asking "qué aparece en la
  *                                pantalla?" while the bot is waiting for
- *                                yes/no on the cambio in caso4-await-cambio).
+ *                                yes/no on the cambio in no-change-await-confirm).
  */
 export function isAwaitingPendingFlow(state: SessionState): boolean {
   return Boolean(state.pendingFlow) && state.pendingFlow.includes('-await-')

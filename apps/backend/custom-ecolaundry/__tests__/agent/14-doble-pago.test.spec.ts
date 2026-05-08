@@ -1,4 +1,4 @@
-// 14 — Caso 6 doble cobro con servicio usato
+// 14 — Double charge incident con servicio usato
 //
 // Da usecases.md Caso 6: il cliente ha pagato 2 volte ma è riuscito a
 // usare il servizio. Il bot raccoglie i dati minimi (location, conferma

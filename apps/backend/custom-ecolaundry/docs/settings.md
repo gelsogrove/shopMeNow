@@ -62,7 +62,7 @@ Everything that varies per tenant lives in `json/`. The code is identical across
 | `displayName` | Shown in the operator handover summary. |
 | `metadata.dryerMinutesIncreaseIssue` | Caso 21/22 — true means the location has the "monedas no suman" pattern documented; false means we tell the customer "no tenemos registrado este tipo de incidencia". |
 | `metadata.cardPaymentUnreliable` | Caso 23/24 — same gating logic for "no tarjeta". |
-| `faqOverrides[faqKey]` | Replaces base FAQ text from `faqs.json`. Used by `guardCaso10Tarjeta` and tool `apply_faq_override`. |
+| `faqOverrides[faqKey]` | Replaces base FAQ text from `faqs.json`. Used by `guardLoyaltyCardBuy` and tool `apply_faq_override`. |
 
 Other fields (`pueblo`, `calle`, `flowOverrides`, `escalationRules`, `metadata.hours`, …) are part of the type but currently only injected in the LLM system prompt as `{{locationContext}}` JSON. They serve as documentation for the LLM. Editing them changes what the LLM sees but doesn't affect the deterministic guards.
 
@@ -74,7 +74,7 @@ Other fields (`pueblo`, `calle`, `flowOverrides`, `escalationRules`, `metadata.h
 
 ## `json/faqs.json` — base FAQ catalogue
 
-Plain key → text. Used by `guardCaso10Tarjeta` (`loyaltyCard` key) and by the LLM tool `apply_faq_override`.
+Plain key → text. Used by `guardLoyaltyCardBuy` (`loyaltyCard` key) and by the LLM tool `apply_faq_override`.
 
 ## `json/washer_hs60xx.json` / `dryer_ed340.json` — flow trees
 

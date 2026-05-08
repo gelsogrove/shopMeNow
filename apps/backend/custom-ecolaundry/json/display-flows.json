@@ -3,37 +3,37 @@
   "_schemaVersion": 1,
   "flows": [
     {
-      "id": "caso5-al001",
+      "id": "al001-sequence-error",
       "displayMatches": ["AL001", "AL 001", "ALARM 001", "ALARM001", "ALARMA 001", "ALARMA001"],
       "requires": ["location", "machineType", "machineNumber"],
       "step": {
-        "replyKey": "caso5GuideRetry",
-        "resolvedReplyKey": "caso5Resolved"
+        "replyKey": "al001GuideRetry",
+        "resolvedReplyKey": "al001Resolved"
       },
       "resolvedRegex": "(ya\\s+funciona|^funciona\\b|^ok\\s+resuelto|^resuelto\\b|^perfecto\\b|^perfetto\\b|gi[aà]\\s+funziona|ora\\s+funziona)",
       "persistFailureRegex": "(sigue\\s+(?:igual|sin\\s+(?:arrancar|funcionar|responder|empezar)|saliendo)|sigue\\s+(?:sin|igual)|no\\s+(?:responde|arranca|empieza|funciona|desaparece)|todav[ií]a\\s+(?:no|sale|sigue)|aun\\s+(?:no|sale|sigue)|el\\s+mensaje\\s+(?:sigue|no\\s+desaparece)|^(no|nada)\\b)",
-      "escalationReason": "Caso 5 — AL001 sequence guidance did not resolve"
+      "escalationReason": "AL001 sequence error — guidance did not resolve"
     },
     {
-      "id": "caso14-alm-door",
+      "id": "alm-door-blocked",
       "displayMatches": ["ALM/DOOR", "ALMDOOR"],
       "requires": ["location", "machineNumber"],
       "step": {
-        "replyKey": "caso14AlmDoor"
+        "replyKey": "almDoorGuidance"
       },
       "persistFailureRegex": "(no\\s+desaparece|sigue\\s+(?:igual|sin\\s+arrancar|saliendo)|continua|todav[ií]a\\s+sale|aun\\s+sale|^(no|nope)\\b)",
-      "escalationReason": "Caso 14 — ALM DOOR persists after retry"
+      "escalationReason": "ALM DOOR — persists after retry"
     },
     {
-      "id": "caso15-001-explained",
+      "id": "code-001-explained",
       "displayMatches": ["C001"],
       "requires": ["location"],
       "step": {
-        "replyKey": "caso15Explain",
+        "replyKey": "code001Explain",
         "alwaysEscalateOnNextTurn": true
       },
-      "escalationReplyKey": "caso15Escalate",
-      "escalationReason": "Caso 15 — display 001 always escalated"
+      "escalationReplyKey": "code001Escalate",
+      "escalationReason": "Display 001 — always escalated"
     }
   ]
 }

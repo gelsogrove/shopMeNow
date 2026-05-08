@@ -21,25 +21,27 @@ import type { AgentRuntime, Guard, GuardOutcome } from '../../models/index.js'
 
 import { guardPureGreeting } from './greeting.js'
 
+import { guardNoChangeAsk } from './payment-no-change.js'
+import { guardPaidNotUsedAskChange } from './payment-paid-not-used.js'
 import {
-  guardCaso7AskCambio,
-  guardCaso4AskCambio,
-  guardCaso6AskPodidoLavar,
-  guardCaso6AskRelato,
-  guardCaso6Ask4Digitos,
-  guardCaso6AskCaptura,
-  guardCaso8AskCode,
-  guardCaso8AwaitCode,
-  guardCaso8AwaitName,
-  guardCaso8AwaitPueblo,
-  guardCaso8AwaitMachineNumber,
-  guardCaso8AwaitPuerta,
-  guardCaso10Tarjeta,
-  guardCaso11Recarga,
-} from './payment.js'
+  guardDoubleChargeAskUsed,
+  guardDoubleChargeAskNarrative,
+  guardDoubleChargeAskCardDigits,
+  guardDoubleChargeAskReceipt,
+} from './payment-double-charge.js'
+import {
+  guardDiscountCodeAsk,
+  guardDiscountCodeAwait,
+  guardDiscountCodeAwaitName,
+  guardDiscountCodeAwaitLocation,
+  guardDiscountCodeAwaitMachine,
+  guardDiscountCodeAwaitDoor,
+} from './discount-code-flow.js'
+import { guardLoyaltyCardBuy } from './loyalty-card-buy.js'
+import { guardLoyaltyCardRecharge } from './loyalty-card-recharge.js'
 
 import {
-  guardCaso17AskPhoto,
+  guardAskPhoto,
   guardPostInstructionFailure,
   guardNumericCodeAskLetters,
   guardNumericCodeNoLetters,
@@ -54,24 +56,22 @@ import {
 import {
   guardMataroStreet,
   guardUnknownLocation,
-  guardCaso31InsistLocation,
+  guardInsistLocation,
+} from './location-resolution.js'
+import {
   guardForceMachineType,
   guardForceDisplay,
   guardForceMachineNumber,
-  guardCaso2124LocationMismatch,
-} from './location.js'
+} from './force-gather.js'
+import { guardLocationGatedMismatch } from './location-gated-mismatch.js'
 
-import {
-  guardFaqClosure,
-  guardCaso9Factura,
-  guardCaso12Precio,
-  guardCaso12Horarios,
-  guardCaso25Empathic,
-  guardCaso25Escalate,
-  guardCaso26Refund,
-  guardCaso28Contradictory,
-  guardEscalateNonTroubleshooting,
-} from './faq.js'
+import { guardFaqClosure } from './faq-closure.js'
+import { guardInvoiceFlow } from './invoice-flow.js'
+import { guardPricingDeflect, guardOpeningHours } from './hours-and-pricing.js'
+import { guardAngryCustomerEmpathic, guardAngryCustomerEscalate } from './angry-customer.js'
+import { guardRefundOrCompensation } from './refund-and-compensation.js'
+import { guardContradictoryNarrative } from './contradictory-narrative.js'
+import { guardEscalateNonTroubleshooting } from './faq-non-troubleshooting.js'
 
 export type { Guard, GuardOutcome } from '../../models/index.js'
 
@@ -84,38 +84,38 @@ export const GUARD_PIPELINE: Guard[] = [
   guardPureGreeting,
   guardMataroStreet,
   guardFaqClosure,
-  guardCaso7AskCambio,
-  guardCaso4AskCambio,
-  guardCaso8AskCode,
-  guardCaso8AwaitCode,
-  guardCaso8AwaitName,
-  guardCaso8AwaitPueblo,
-  guardCaso8AwaitMachineNumber,
-  guardCaso8AwaitPuerta,
+  guardPaidNotUsedAskChange,
+  guardNoChangeAsk,
+  guardDiscountCodeAsk,
+  guardDiscountCodeAwait,
+  guardDiscountCodeAwaitName,
+  guardDiscountCodeAwaitLocation,
+  guardDiscountCodeAwaitMachine,
+  guardDiscountCodeAwaitDoor,
   guardNumericCodeAskLetters,
   guardNumericCodeNoLetters,
-  guardCaso9Factura,
-  guardCaso11Recarga,
-  guardCaso10Tarjeta,
-  guardCaso12Precio,
-  guardCaso12Horarios,
-  guardCaso25Empathic,
-  guardCaso25Escalate,
-  guardCaso28Contradictory,
-  guardCaso6AskPodidoLavar,
-  guardCaso6AskRelato,
-  guardCaso6Ask4Digitos,
-  guardCaso6AskCaptura,
-  guardCaso17AskPhoto,
-  guardCaso31InsistLocation,
+  guardInvoiceFlow,
+  guardLoyaltyCardRecharge,
+  guardLoyaltyCardBuy,
+  guardPricingDeflect,
+  guardOpeningHours,
+  guardAngryCustomerEmpathic,
+  guardAngryCustomerEscalate,
+  guardContradictoryNarrative,
+  guardDoubleChargeAskUsed,
+  guardDoubleChargeAskNarrative,
+  guardDoubleChargeAskCardDigits,
+  guardDoubleChargeAskReceipt,
+  guardAskPhoto,
+  guardInsistLocation,
   guardUnknownLocation,
-  guardCaso26Refund,
+  guardRefundOrCompensation,
   // Phase B before Phase A: when a flow is already active, follow-up logic
   // (resolved/persist) takes priority over re-detection of the display token.
   guardDisplayFlowFollowUp,
   guardDisplayFlowStart,
   guardPostInstructionFailure,
-  guardCaso2124LocationMismatch,
+  guardLocationGatedMismatch,
   guardEscalateNonTroubleshooting,
   guardForceMachineType,
   guardForceMachineNumber,
