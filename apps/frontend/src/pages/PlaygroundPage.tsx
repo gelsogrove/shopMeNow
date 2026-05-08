@@ -1281,8 +1281,10 @@ function ChatScreen({
           </div>
         </aside>
 
-        {/* CHAT */}
-        <section className="col-span-9 lg:col-span-6 bg-white rounded-xl shadow flex flex-col overflow-hidden min-h-0">
+        {/* CHAT — on lg screens reduced from col-span-6 to col-span-5
+            because the chat list grew from col-span-2 to col-span-3 (the
+            +80px requested). Total stays 12: 3 (chats) + 5 (chat) + 4 (use cases). */}
+        <section className="col-span-9 lg:col-span-5 bg-white rounded-xl shadow flex flex-col overflow-hidden min-h-0">
           <div className="px-4 py-3 bg-emerald-600 text-white shrink-0 flex items-center gap-3">
             {(() => {
               const phone = activeSession?.customer?.phone

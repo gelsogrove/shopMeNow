@@ -1,6 +1,6 @@
 # custom-ecolaundry — TODO
 
-Owner: Andrea — Last update: 2026-05-08
+Owner: Andrea — Last update: 2026-05-09
 
 > Snapshot of open items. Closed items are NOT tracked here (use git history).
 > Iron rules and architectural contract live in [`CLAUDE.md`](CLAUDE.md).
@@ -20,6 +20,7 @@ Owner: Andrea — Last update: 2026-05-08
 | Production language scope | 🟡 ES-only (`settings.json:enabledLanguages = ["es"]`) |
 | Branch router | 🟡 implemented, gated by `useBranchRouter=false` |
 | Documentation | ✅ 10 docs in `docs/` + `CLAUDE.md` per-folder |
+| Acceptance-criteria coverage | 🟡 ~85% test-asserted, ~10% code-only, ~5% LLM-only (items #7/#8/#9 close the gap) |
 
 ---
 
@@ -131,6 +132,112 @@ escalates directly, occasionally re-asks first.
 
 **Where:** `utils/guards/display.ts:guardPostInstructionFailure` +
 `__tests__/agent/06-escalar`, `07-door`, `08-sel`, `12-pagado-no-usado`.
+
+---
+
+### 7. Acceptance-criteria gap: negative assertions ("the bot must NOT say X")
+
+**What:** the `Criterios de aceptación` in `docs/usecases.md` for Casos
+13, 18, 19, 25, 28 explicitly state that the bot must **NOT** confront,
+accuse, or contradict the customer. Examples: "no acusar al cliente",
+"no decir 'te equivocas'", "no minimizar el malestar". These are
+NEGATIVE assertions and they are not enforced by any test today. The
+prompt's TONE & EMPATHY section documents the rule for the LLM, but
+nothing automated catches a regression.
+
+**Why this matters:** a single LLM hallucination in the wrong direction
+("eso no puede ser, has hecho algo mal") would breach trust on the most
+sensitive cases (angry customer, suspected fraud, contradictory
+narrative) and we'd find out only via customer complaint.
+
+**Done when:** every escalation-flavour test (Casos 13, 18, 19, 25, 28
+and the angry-customer / contradictory branches of Caso 6) asserts
+`expectMentionsNone(reply, FORBIDDEN_BLAME_TOKENS)` where the array
+includes (at minimum): `te equivocas`, `mientes`, `no es verdad`,
+`imposible`, `eso no es así`, `has hecho algo mal`. The list lives in
+`__tests__/agent/_helpers.ts` so it is reused.
+
+**Where:**
+- New helper: extend `__tests__/agent/_helpers.ts` with
+  `FORBIDDEN_BLAME_TOKENS` + `expectNoBlame(reply)` wrapper.
+- Apply to: `__tests__/agent/16-fraude-incoherencia.test.spec.ts`,
+  `24-enfadado.test.spec.ts`, `28-relato-contradictorio.test.spec.ts`,
+  `30-codigo-numerico.test.spec.ts`, the Caso 19/20 specs in
+  `cross/05-location-gated-21-24.test.spec.ts`, and the Scenario 6.2/6.3
+  blocks in `14-doble-pago.test.spec.ts`.
+
+**Effort:** ~1.5h (helper + ~6 test files).
+
+---
+
+### 8. Acceptance-criteria gap: emoji-policy enforcement
+
+**What:** the prompt defines a strict emoji policy
+(`prompts/agent.txt` → 😊 EMOJI POLICY): max 1 per reply, only at the
+end, only on closing-question / positive-resolution / first-contact
+empathy, NEVER on escalation / error / lists / replies with external URLs.
+Today this is documentation only — the LLM follows it most of the time,
+but there's no deterministic enforcement.
+
+**Why this matters:** spurious emojis on escalation handover ("vamos a
+revisar tu caso 🙂") feel inappropriate and break the formal tone the
+operator hand-off requires. It's the kind of regression no one notices
+until a customer screenshots it.
+
+**Done when:** an output-invariant in `utils/output-invariants.ts`
+(L5 layer) counts emojis in the reply and:
+1. If `count > 1` — strip down to the first one only.
+2. If the reply matches an escalation pattern (contains
+   `revisar`, `operador revisar`, `human support`, the L5 invariant
+   adds `desactivado` etc.) — strip ALL emojis from the body.
+3. Add a sibling unit test
+   `__tests__/unit/emoji-policy-invariant.test.ts` covering: 0/1/2/3
+   emoji inputs, escalation-with-emoji input, link-with-emoji input.
+
+**Where:**
+- `utils/output-invariants.ts` (add `stripEmojiOverflow` /
+  `stripEmojiOnEscalation`).
+- `agent.ts:polishReplyForTurn` already routes through
+  `applyOutputInvariants`, so wiring is one line.
+- Test scaffolding mirrors existing `output-invariants.test.ts` if
+  present, otherwise create.
+
+**Effort:** ~2h (regex for emoji detection is well-known, but tone
+detection on "is this an escalation?" needs care — start from a tight
+keyword list).
+
+---
+
+### 9. Acceptance-criteria gap: insistence cap on Caso 31 (no location)
+
+**What:** Caso 31's `Criterios de aceptación` says the bot insists on
+the location for "2-3 intentos" and then escalates if the customer can't
+or won't identify the laundry. Today the test (`32-no-local.test.spec.ts`)
+covers ONE round of insistence. There is no test that pushes the bot
+through 3 failed attempts in a row to verify it eventually escalates.
+Also the cap itself (when does the bot give up?) is implicit in the
+LLM, not encoded in code.
+
+**Why this matters:** without a hard cap, a customer who refuses to
+give a location could trap the bot in an infinite re-ask loop (turn
+budget burns, session never escalates). Andrea has flagged in CLAUDE.md
+that "do not loop" is a sacred rule.
+
+**Done when:**
+1. `state.locationClarificationCount` (already exists in `state.ts`)
+   triggers a deterministic escalation when it reaches 3 — guard added
+   in `utils/guards/location-resolution.ts:guardInsistLocation`.
+2. New agent test `32-no-local.test.spec.ts` scenario: customer says
+   "no lo sé" three times in a row → 3rd reply is an escalation
+   (`expectEscalation(reply)`) AND the bot asks for the name.
+3. New unit test on the guard verifies the count → escalate transition.
+
+**Where:**
+- `utils/guards/location-resolution.ts` — extend `guardInsistLocation`.
+- `__tests__/agent/32-no-local.test.spec.ts` — add insistence-cap test.
+- `__tests__/unit/location-resolution.test.ts` (or create if absent).
+
+**Effort:** ~1h.
 
 ---
 
