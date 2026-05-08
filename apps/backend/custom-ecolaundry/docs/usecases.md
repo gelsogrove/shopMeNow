@@ -1,30 +1,5 @@
 # Ecolaundry Chatbot -Usecases
 
-Este documento reúne casos de conversación en español para configurar y probar el chatbot de Ecolaundry.
-
-Cada caso incluye:
-- objetivo
-- cuándo aplica
-- ejemplo de conversación
-- resultado esperado
-- cuándo escalar
-
-Reglas generales para todos los casos:
-- hacer una sola pregunta por turno
-- **identificar primero el local — invariante absoluta**
-  - El bot NO empieza ningún flujo (display, gather de máquina, instrucción, escalación)
-    sin haber confirmado el local. Si el cliente adelanta el código de pantalla, el tipo
-    o el número antes que el local, el bot DEBE seguir pidiendo el local antes de procesar.
-  - Excepciones: incidencias que escalan sin local (cámaras / AJAX, devolución, compensación
-    pura). Estas se gestionan por el flujo de escalación correspondiente.
-  - Implementado por `utils/guards/location-resolution.ts:guardForceLocation`, primer
-    catch-all del pipeline antes de cualquier display-flow / gather guard.
-- no diagnosticar sin saber qué aparece en pantalla cuando hay una incidencia de máquina
-- no prometer compensaciones
-- si el caso no encaja claramente, escalar a revisión
-
----
-
 ## Caso 1 — La lavadora no funciona y aparece PUSH PROG
 
 **Objetivo:**  

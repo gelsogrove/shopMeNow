@@ -93,6 +93,53 @@ const cases: Case[] = [
       if (r !== original) throw new Error(`clean reply mutated: "${r}"`)
     },
   },
+  {
+    // REGRESSION: paragraph breaks (\n\n) used to be collapsed into a
+    // single space by the old `\s{2,}` step, silently destroying the
+    // PUSH PROG / SEL / DOOR multi-paragraph instructions. The post-fix
+    // collapse only touches spaces/tabs.
+    name: 'stripEvasivePhrases: paragraph breaks (\\n\\n) preserved on clean reply',
+    run: () => {
+      const original = 'Pulsa un botón.\n\nProgramas:\n**60º**\n**40º**\n\nDespués dime si arranca.'
+      const r = stripEvasivePhrases(original)
+      if (!/Pulsa un botón\.\n\nProgramas:/.test(r)) {
+        throw new Error(`paragraph break before list lost: "${r}"`)
+      }
+      if (!/\*\*40º\*\*\n\nDespués dime/.test(r)) {
+        throw new Error(`paragraph break before loopback lost: "${r}"`)
+      }
+    },
+  },
+  {
+    name: 'stripEvasivePhrases: triple+ newlines collapsed to double',
+    run: () => {
+      const r = stripEvasivePhrases('Línea uno.\n\n\n\nLínea dos.')
+      if (!/uno\.\n\nLínea dos/.test(r)) {
+        throw new Error(`triple newlines must collapse to double, got: "${r}"`)
+      }
+      if (/\n{3,}/.test(r)) throw new Error('reply still contains 3+ newlines')
+    },
+  },
+  {
+    name: 'stripEvasivePhrases: trailing spaces before newline cleaned',
+    run: () => {
+      const r = stripEvasivePhrases('Línea uno.   \n\nLínea dos.')
+      if (!/uno\.\n\nLínea dos/.test(r)) {
+        throw new Error(`trailing spaces before \\n must be cleaned: "${r}"`)
+      }
+    },
+  },
+  {
+    // After stripping an evasive phrase, the surrounding paragraph break
+    // must remain intact so the rest of the reply stays readable.
+    name: 'stripEvasivePhrases: evasive removed but paragraph structure preserved',
+    run: () => {
+      const original = 'No tengo la información sobre el precio.\n\nPasamos tu caso a revisión.'
+      const r = stripEvasivePhrases(original)
+      if (/no tengo la información/i.test(r)) throw new Error('evasive must be stripped')
+      if (!/Pasamos tu caso a revisión/.test(r)) throw new Error('rest must survive')
+    },
+  },
 
   // ── stripLocationParroting ───────────────────────────────────────────────
   {

@@ -73,7 +73,7 @@
 
     "case_push": {
       "type": "ACTION",
-      "prompt": "Pulsa un botón de programa para iniciar el lavado.\n\nProgramas:\n1. 60º (muy caliente) → ropa muy sucia, blanca o de trabajo\n2. 40º (templado) → ropa normal (algodón, color)\n3. 30º (suave) → ropa delicada o sintética\n4. Frío → prendas muy delicadas (lana, seda, etc.)\n\nElige uno y púlsalo en la máquina. Después dime si la lavadora ha arrancado.",
+      "prompt": "Pulsa un botón de programa para iniciar el lavado.\n\nProgramas:\n**60º** (muy caliente) → ropa muy sucia, blanca o de trabajo\n**40º** (templado) → ropa normal (algodón, color)\n**30º** (suave) → ropa delicada o sintética\n**Frío** → prendas muy delicadas (lana, seda, etc.)\n\nElige uno y púlsalo en la máquina.\n\nDespués dime si la lavadora ha arrancado.",
       "transitions": {
         "default": "non_parte.check_result"
       }

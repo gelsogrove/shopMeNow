@@ -33,7 +33,18 @@ export function stripEvasivePhrases(reply: string): string {
   for (const pattern of EVASIVE_PATTERNS) {
     result = result.replace(pattern, '')
   }
-  result = result.replace(/\s{2,}/g, ' ').replace(/^\s*[.,!?]\s*/, '').trim()
+  // Collapse multiple SPACES / TABS (but not newlines) into one space.
+  // Paragraph breaks (`\n\n`) are intentional — they let the bot present
+  // a closing question on its own line and keep replies readable. The
+  // older `\s{2,}` form swallowed `\n\n` too, which silently destroyed
+  // every multi-paragraph reply (e.g. PUSH PROG instruction → loopback).
+  result = result
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/^\s*[.,!?]\s*/, '')
+    .trim()
   if (result !== reply) {
     logger.warn('output-invariant: stripped evasive phrase from reply', {
       original: reply.slice(0, 200),
