@@ -101,6 +101,26 @@ type Feedback = "like" | "dislike"
 
 const TITLE_STORAGE_KEY = "ecolaundry-demo-chat-titles"
 const FEEDBACK_STORAGE_KEY = "ecolaundry-demo-chat-feedback"
+const ORDER_STORAGE_KEY = "ecolaundry-demo-chat-order"
+
+function readJsonArray(key: string): string[] {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : []
+  } catch {
+    return []
+  }
+}
+
+function writeJsonArray(key: string, value: string[]): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    /* quota exceeded — ignore, demo overlay */
+  }
+}
 
 function readJsonMap<T>(key: string): Record<string, T> {
   try {
@@ -872,6 +892,17 @@ function ChatScreen({
   const [chatFeedback, setChatFeedback] = useState<Record<string, Feedback>>(
     () => readJsonMap<Feedback>(FEEDBACK_STORAGE_KEY),
   )
+  // Ordered list of session ids in user-preferred order. Sessions NOT in
+  // this list keep their natural (lastActivity) ordering AFTER the pinned
+  // ones. New sessions land at the top of the natural list.
+  const [chatOrder, setChatOrderState] = useState<string[]>(() =>
+    readJsonArray(ORDER_STORAGE_KEY),
+  )
+
+  const persistChatOrder = useCallback((next: string[]) => {
+    setChatOrderState(next)
+    writeJsonArray(ORDER_STORAGE_KEY, next)
+  }, [])
 
   const setChatTitle = useCallback((sessionId: string, title: string) => {
     setChatTitles((prev) => {
@@ -1124,14 +1155,30 @@ function ChatScreen({
   }
 
   // Hide chats from the list when all linked TODOs are already in DONE.
-  // Chats with no linked TODOs stay visible.
+  // Chats with no linked TODOs stay visible. Then apply the user-defined
+  // drag-and-drop order: pinned sessions in `chatOrder` come first in
+  // that order; the rest keep their natural lastActivity order.
   const visibleSessions = useMemo(() => {
-    return sortedSessions.filter((s) => {
+    const filtered = sortedSessions.filter((s) => {
       const linkedTodos = todosBySession.get(s.id) || []
       if (linkedTodos.length === 0) return true
       return linkedTodos.some((t) => t.status !== "DONE")
     })
-  }, [sortedSessions, todosBySession])
+    if (chatOrder.length === 0) return filtered
+    const byId = new Map(filtered.map((s) => [s.id, s]))
+    const pinned: ChatSession[] = []
+    for (const id of chatOrder) {
+      const s = byId.get(id)
+      if (s) {
+        pinned.push(s)
+        byId.delete(id)
+      }
+    }
+    // The remaining sessions (not in chatOrder) keep their original
+    // sortedSessions order, appended after the pinned ones.
+    const rest = filtered.filter((s) => byId.has(s.id))
+    return [...pinned, ...rest]
+  }, [sortedSessions, todosBySession, chatOrder])
 
   // If the current chat becomes hidden by the DONE-only rule, switch to the
   // first visible chat (or clear selection if none is left).
@@ -1142,6 +1189,24 @@ function ChatScreen({
       setActiveSessionId(visibleSessions[0]?.id || null)
     }
   }, [visibleSessions, activeSessionId])
+
+  // Drag-and-drop reorder of the chat list. Captures the FULL displayed
+  // order (visibleSessions after the move) and persists it. Sessions
+  // hidden by the DONE filter aren't touched — they reappear in their
+  // natural position when their TODO leaves DONE.
+  const onChatListDragEnd = useCallback(
+    (result: DropResult) => {
+      if (!result.destination) return
+      const sourceIdx = result.source.index
+      const destIdx = result.destination.index
+      if (sourceIdx === destIdx) return
+      const reordered = [...visibleSessions]
+      const [moved] = reordered.splice(sourceIdx, 1)
+      reordered.splice(destIdx, 0, moved)
+      persistChatOrder(reordered.map((s) => s.id))
+    },
+    [visibleSessions, persistChatOrder],
+  )
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
@@ -1190,7 +1255,14 @@ function ChatScreen({
                 Click "New Chat" to start.
               </div>
             )}
-            {visibleSessions.map((s) => {
+            <DragDropContext onDragEnd={onChatListDragEnd}>
+              <Droppable droppableId="chat-list">
+                {(droppableProvided) => (
+                  <div
+                    ref={droppableProvided.innerRef}
+                    {...droppableProvided.droppableProps}
+                  >
+                    {visibleSessions.map((s, idx) => {
               const isActive = s.id === activeSessionId
               // Card preview shows the FIRST customer message of the
               // conversation — the topic the user opened the chat with.
@@ -1217,10 +1289,16 @@ function ChatScreen({
               const hasTodos = linkedTodos.length > 0
               const customTitle = chatTitles[s.id] || null
               return (
+                <Draggable key={s.id} draggableId={s.id} index={idx}>
+                  {(draggableProvided, draggableSnapshot) => (
                 <div
-                  key={s.id}
+                  ref={draggableProvided.innerRef}
+                  {...draggableProvided.draggableProps}
+                  {...draggableProvided.dragHandleProps}
                   className={`group relative border-b transition ${
-                    hasTodos && !isActive
+                    draggableSnapshot.isDragging
+                      ? "bg-emerald-100 ring-2 ring-emerald-400 shadow-lg"
+                      : hasTodos && !isActive
                       ? "bg-amber-50 border-l-4 border-l-amber-400 hover:bg-amber-100"
                       : isActive
                       ? "bg-emerald-50 border-l-4 border-l-emerald-500"
@@ -1347,8 +1425,15 @@ function ChatScreen({
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
+                  )}
+                </Draggable>
               )
-            })}
+                    })}
+                    {droppableProvided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
           </div>
         </aside>
 
