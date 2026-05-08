@@ -470,6 +470,22 @@ function TodoDetailModal({
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(todo.commentTitle)
   const [savingTitle, setSavingTitle] = useState(false)
+  const [savingPriority, setSavingPriority] = useState(false)
+
+  const savePriority = async (next: Priority) => {
+    if (next === todo.priority) return
+    setSavingPriority(true)
+    try {
+      await fetch(`${API_BASE}/todos/${todo.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priority: next }),
+      })
+      onChanged()
+    } finally {
+      setSavingPriority(false)
+    }
+  }
 
   const saveTitle = async () => {
     const next = titleDraft.trim()
@@ -579,15 +595,30 @@ function TodoDetailModal({
                 {todo.commentTitle}
               </h2>
             )}
-            <div className="flex gap-2 mt-1 items-center">
-              <span
-                className={`px-2 py-0.5 rounded-full text-xs border ${
-                  PRIORITY_COLOR[todo.priority]
-                }`}
-              >
-                {todo.priority}
-              </span>
-              <span className="text-xs text-gray-500">by {todo.createdBy}</span>
+            <div className="flex gap-1.5 mt-1 items-center">
+              {/* Click to change. The selected priority is filled with its
+                  PRIORITY_COLOR; the others stay neutral until clicked.
+                  Persists via PATCH /todos/:id. */}
+              {(["Alto", "Medio", "Basso"] as Priority[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => savePriority(p)}
+                  disabled={savingPriority}
+                  className={`px-2 py-0.5 rounded-full text-xs border transition disabled:opacity-50 ${
+                    todo.priority === p
+                      ? PRIORITY_COLOR[p]
+                      : "bg-white text-gray-500 border-gray-300 hover:bg-gray-50"
+                  }`}
+                  title={
+                    todo.priority === p
+                      ? `Current priority: ${p}`
+                      : `Change priority to ${p}`
+                  }
+                >
+                  {p}
+                </button>
+              ))}
+              <span className="text-xs text-gray-500 ml-2">by {todo.createdBy}</span>
             </div>
           </div>
           <div className="flex gap-2 items-center">
