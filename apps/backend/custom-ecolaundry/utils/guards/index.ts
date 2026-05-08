@@ -21,7 +21,11 @@ import type { AgentRuntime, Guard, GuardOutcome } from '../../models/index.js'
 
 import { guardPureGreeting } from './greeting.js'
 
-import { guardNoChangeAsk } from './payment-no-change.js'
+import {
+  guardNoChangeAsk,
+  guardNoChangeNoCambio,
+  guardNoChangeYesButBroken,
+} from './payment-no-change.js'
 import { guardPaidNotUsedAskChange } from './payment-paid-not-used.js'
 import {
   guardDoubleChargeAskUsed,
@@ -86,6 +90,8 @@ export const GUARD_PIPELINE: Guard[] = [
   guardFaqClosure,
   guardPaidNotUsedAskChange,
   guardNoChangeAsk,
+  guardNoChangeNoCambio,
+  guardNoChangeYesButBroken,
   guardDiscountCodeAsk,
   guardDiscountCodeAwait,
   guardDiscountCodeAwaitName,

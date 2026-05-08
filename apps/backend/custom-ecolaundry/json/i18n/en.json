@@ -20,16 +20,15 @@
   "reassurance": "⚠️ We will review your case manually.",
   "doubleChargeReview": "⚠️ We need to escalate your case to an operator for review.",
   "doubleChargeAllReceived": "We have received all the information we need, we will review your case.",
-  "noPhotoEscalate": "⚠️ Without display info or photo, we'll review your case manually.",
+  "noPhotoEscalate": "Got it. We'll review it manually to help you.",
   "reaffirmEscalate": "We will review your case manually. What is your name?",
   "displayShort": "What exactly appears on the screen?",
   "paymentAsk": "Were you able to make the payment?",
   "numericCodeAskLetters": "Thanks. Do you see any letter before the numbers?",
   "numericCodeIncoherence": "Got it. I'm passing this to a manual review.",
   "almDoorGuidance": "That message may indicate a closing issue or a garment caught in the door. Carefully open the door, check for any caught garment and close it firmly again. Please tell me if the message has disappeared.",
-  "noPhotoEscalate": "Got it. We'll review it manually to help you.",
   "doubleChargeAskUsed": "Thanks. Were you able to wash or dry the clothes?",
-  "doubleChargeAskNarrative": "Got it. Please explain step by step what you have done since you came in.",
+  "doubleChargeAskNarrative": "Got it. Please explain step by step what you have done since you came in. Is it possible you swiped your card more than once at the payment terminal?",
   "doubleChargeAskCardDigits": "Thanks. To review it properly, I need the last 4 digits of the card.",
   "doubleChargeAskReceipt": "Perfect. Now I need a screenshot of the payment.",
   "doubleChargeClosure": "Thanks. With that data we will review it and send you the refund form. Next time, before paying again, contact us and we will help you right away.",
@@ -69,5 +68,6 @@
   "pricingDeflect": "I need to check that before confirming the amount.",
   "openingHoursDefault": "General opening hours are 8:00 to 22:00 every day of the year.",
   "unknownLocationList": "I don't recognize that location. Our laundromats are: {list}. Which one are you at?",
-  "defaultHelp": "Tell me the next useful detail and I'll help step by step."
+  "defaultHelp": "Tell me the next useful detail and I'll help step by step.",
+  "operatorHandoffFinal": "A human operator will take over your case. Please wait a moment while they review the situation. The chatbot will be deactivated."
 }

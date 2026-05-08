@@ -81,6 +81,15 @@ export type Settings = {
    * evicted to keep memory bounded. Default 1 800 000 (30 minutes).
    */
   sessionIdleTtlMs?: number
+  /**
+   * Branch-router architecture (target — see docs/branch-router-architecture.md).
+   * When true, turn 1 is classified by utils/router.ts (one LLM call) into a
+   * branch (greeting/faq/trouble-machine/invoice/loyalty/escalation) and
+   * dispatched to utils/branches/<branch>/handler.ts. Subsequent turns are
+   * deterministic, driven by state.activeBranch. When false (default), the
+   * legacy guard pipeline runs unchanged.
+   */
+  useBranchRouter?: boolean
 }
 
 export type Runtime = {

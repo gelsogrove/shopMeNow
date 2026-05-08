@@ -83,10 +83,16 @@ export const guardDisplayFlowStart: Guard = (ar) => {
 }
 
 /**
- * Phase B — handle the customer's reply after a flow has been started.
- * Resolved → close the case. Persist (or alwaysEscalateOnNextTurn) →
- * escalate with the flow's `escalationReason`. Otherwise return null and
- * let the LLM (or downstream guards) handle it.
+ * Phase B/C — handle the customer's reply after a flow has been started.
+ *
+ * Phase B (normal): Resolved → close the case. Persist → escalate (or, if
+ *   `flow.reaskBeforeEscalate`, ask for the exact display code first — Phase C).
+ *
+ * Phase C (reask): pendingFlow was set to 'display-reask-pending' in Phase B.
+ *   Whatever the customer sends, escalate immediately and ask for name.
+ *
+ * In both cases, return null to let the LLM (or downstream guards) handle
+ * turns that don't match resolved/persist patterns.
  */
 export const guardDisplayFlowFollowUp: Guard = (ar, userMessage) => {
   const flow = findFlowById(ar, ar.state.activeFlowId)
@@ -95,6 +101,22 @@ export const guardDisplayFlowFollowUp: Guard = (ar, userMessage) => {
 
   const reply = userMessage.trim()
 
+  // Phase C: we already asked for the exact code on the previous turn.
+  // Whatever the customer sent, escalate now (the re-ask purpose was to
+  // confirm the code is still the same before handing off to the operator).
+  if (ar.state.pendingFlow === 'display-reask-pending') {
+    ar.state.pendingFlow = ''
+    ar.state.activeFlowId = null
+    escalate(ar, flow.escalationReason)
+    requireCustomerName(ar)
+    const escalateKey = flow.escalationReplyKey || 'reaffirmEscalate'
+    const escalateText = t(escalateKey, lang(ar))
+    const nameAsk = t('customerNameAsk', lang(ar))
+    const reply_ = escalateKey === 'reaffirmEscalate' ? escalateText : `${escalateText} ${nameAsk}`
+    return { reply: reply_, reason: `${flow.id}-reask-escalate` }
+  }
+
+  // Phase B: resolved?
   if (flow.resolvedRegex && new RegExp(flow.resolvedRegex, 'i').test(reply)) {
     ar.state.activeFlowId = null
     markResolved(ar)
@@ -112,6 +134,22 @@ export const guardDisplayFlowFollowUp: Guard = (ar, userMessage) => {
 
   if (!shouldEscalate) return null
 
+  // Phase B → escalation path.
+  // If `reaskBeforeEscalate` is set AND the customer's message does NOT
+  // already contain a known display token (e.g. "sigue saliendo" has no
+  // code, but "sigue saliendo AL001" already contains it), ask for the
+  // exact code first (Phase C next turn). This implements Scenario 5.3.
+  if (flow.reaskBeforeEscalate) {
+    const normalized = reply.toUpperCase().replace(/\s+/g, '')
+    const hasCode = flow.displayMatches.some(
+      (m) => normalized.includes(m.toUpperCase().replace(/\s+/g, '')),
+    )
+    if (!hasCode) {
+      ar.state.pendingFlow = 'display-reask-pending'
+      return { reply: t('displayShort', lang(ar)), reason: `${flow.id}-reask-ask` }
+    }
+  }
+
   ar.state.activeFlowId = null
   escalate(ar, flow.escalationReason)
   requireCustomerName(ar)
@@ -119,9 +157,6 @@ export const guardDisplayFlowFollowUp: Guard = (ar, userMessage) => {
   const escalateKey = flow.escalationReplyKey || 'reaffirmEscalate'
   const escalateText = t(escalateKey, lang(ar))
   const nameAsk = t('customerNameAsk', lang(ar))
-  // `reaffirmEscalate` already contains the name ask in some locales; we
-  // append it explicitly for keys that don't (code001Escalate, etc.) so the
-  // operator handover can capture the customer name on the next turn.
   const reply_ = escalateKey === 'reaffirmEscalate' ? escalateText : `${escalateText} ${nameAsk}`
   return { reply: reply_, reason: `${flow.id}-escalate` }
 }

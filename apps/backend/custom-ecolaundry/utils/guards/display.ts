@@ -31,7 +31,24 @@ export const guardAskPhoto: Guard = (ar) => {
 }
 
 /** Post-instruction failure: customer received an instruction and reports
- *  it didn't work → escalate. */
+ *  it didn't work.
+ *
+ *  Two phases (uniform with display-flow Phase B/C for AL001/ALM-DOOR/C001
+ *  and with usecases.md Scenario 1.2 / 5.2-3 / 7.2):
+ *
+ *    Phase B (first failure)  → ask the customer to confirm the exact
+ *                                display code BEFORE escalating. Sets
+ *                                pendingFlow='display-reask-pending'.
+ *
+ *    Phase C (after re-ask)   → whatever the customer types, escalate
+ *                                with reaffirmEscalate (contains "operador")
+ *                                and ask for the name. The next turn closes
+ *                                with the "desactivado" handover line.
+ *
+ *  Why split into two phases? A bare "no funciona" / "no responde" is
+ *  ambiguous: it can mean "didn't try yet" or "still broken". Asking for
+ *  the exact code one more time forces the customer to be explicit and
+ *  the operator gets a confirmed display token in the handover summary. */
 export const guardPostInstructionFailure: Guard = (ar, userMessage) => {
   const hasShownInstruction =
     !!(ar.state.activeFlowId || ar.state.lastPresentedStepId) ||
@@ -46,15 +63,29 @@ export const guardPostInstructionFailure: Guard = (ar, userMessage) => {
   ) {
     return null
   }
+
+  // Phase C — we already asked for the exact code on the previous turn.
+  // Whatever the customer sent now, escalate. (display-flow.ts Phase C
+  // covers the JSON-driven flows AL001/ALM-DOOR/C001; this branch covers
+  // the washer/dryer flow-engine flows like case_push/case_door/case_sel.)
+  if (ar.state.pendingFlow === 'display-reask-pending') {
+    ar.state.pendingFlow = ''
+    ar.state.activeFlowId = null
+    escalate(ar, 'Customer reports the instruction did not resolve the issue')
+    requireCustomerName(ar)
+    const escalateText = t('reaffirmEscalate', lang(ar))
+    return { reply: escalateText, reason: 'post-instruction-failure-escalate' }
+  }
+
   const reply = userMessage.trim().toLowerCase()
-  const failure = /(sigue\s+(?:igual|sin\s+(?:arrancar|funcionar|responder|empezar)|saliendo\b)|sigue\s+(?:sin|igual)|no\s+(?:responde|arranca|empieza|funciona|desaparece)|todav[ií]a\s+(?:no|sale|sigue)|aun\s+(?:no|sale|sigue)|el\s+mensaje\s+(?:sigue|no\s+desaparece)|no\s+lo\s+s[eé]\s+bien|no\s+estoy\s+seguro|^(no|nada))/i.test(reply)
+  const failure = /(sigue\s+(?:igual|sin\s+(?:arrancar|funcionar|responder|empezar)|saliendo\b)|sigue\s+(?:sin|igual)|no\s+(?:responde|arranca|empieza|funciona|desaparece)|todav[ií]a\s+(?:no|sale|sigue)|aun\s+(?:no|sale|sigue)|el\s+mensaje\s+(?:sigue|no\s+desaparece)|no\s+lo\s+s[eé]\s+bien|no\s+estoy\s+seguro|^(no|nada)|he\s+pulsado.+no\s+responde|pulsado.+no\s+responde|he\s+probado.+no\s+(?:funciona|responde))/i.test(reply)
   if (!failure) return null
-  ar.state.activeFlowId = null
-  escalate(ar, 'Customer reports the instruction did not resolve the issue')
-  requireCustomerName(ar)
-  const escalateText = t('numericCodeIncoherence', lang(ar))
-  const nameAsk = t('customerNameAsk', lang(ar))
-  return { reply: `${escalateText} ${nameAsk}`, reason: 'post-instruction-failure' }
+
+  // Phase B — first failure: ask the customer to confirm the exact code
+  // before escalating. This avoids escalating on an ambiguous "no funciona"
+  // when the customer might just have not tried yet.
+  ar.state.pendingFlow = 'display-reask-pending'
+  return { reply: t('displayShort', lang(ar)), reason: 'post-instruction-failure-reask' }
 }
 
 /** G7 — Caso 18 step 1: customer typed a pure-numeric code → ask if there

@@ -88,6 +88,8 @@ ALLOWED_LARGE_FILES="
   utils/agent-extract.ts        # Auto-fact extraction (multi-language detectors, single concern)
   utils/intent.ts               # Display token / intent classification (single concern)
   utils/escalation.ts           # Operator handover summary builder (single concern, branching by incident)
+  utils/guards/display-flow.ts  # Phase A+B+C display-flow engine (single responsibility; Phase C re-ask added for Scenario 5.3/7.2)
+  utils/guards/display.ts       # Display-state guards: no-photo, numeric codes, post-instruction failure, unknown-display (single concern)
 "
 ALLOWED_LARGE_FILES=$(echo "$ALLOWED_LARGE_FILES" | sed 's/#.*$//' | tr -s ' \n' ' ')
 violations=""
@@ -132,10 +134,11 @@ fi
 # --- Rule #5 — every detector has a sibling test ----------------------------
 echo -n "  [#5] every utils/<detector>.ts has a sibling unit test... "
 # These are infra/glue, not detectors — exempt from the test-sibling rule.
-EXEMPT="agent-llm cli llm-fetch logger runtime localization message-parsing locations agent-prompt agent-welcome display-state llm relative-date agent-tools agent-extract"
+EXEMPT="agent-llm cli llm-fetch logger runtime localization message-parsing locations agent-prompt agent-welcome display-state llm relative-date agent-tools agent-extract router-prompt"
 # agent-tools: pure OpenAI tool schema declarations, no logic to test.
 # agent-extract: multi-language extractor cassette covered indirectly by
 #   __tests__/agent/* E2E tests; pure-unit tests would duplicate them.
+# router-prompt: pure prompt string constant for utils/router.ts, no logic.
 missing=""
 while IFS= read -r f; do
   base="$(basename "$f" .ts)"

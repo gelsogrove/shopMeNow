@@ -14,7 +14,7 @@ export const guardContradictoryNarrative: Guard = (ar, userMessage) => {
     return null
   }
   const reply = userMessage.trim().toLowerCase()
-  const uncertain = /(no\s+lo\s+s[eé]\s+bien|no\s+estoy\s+seguro|no\s+me\s+acuerdo\s+bien|creo\s+que.*no\s+s[eé])/i.test(reply)
+  const uncertain = /(no\s+lo\s+s[eé]\s+bien|no\s+estoy\s+seguro|no\s+me\s+acuerdo\s+bien|creo\s+que.*no\s+s[eé]|no\s+s[eé]\s+exactamente)/i.test(reply)
   if (!uncertain) return null
   const hasIncidentContext =
     !!ar.state.pendingFlow.startsWith('double-charge-') ||

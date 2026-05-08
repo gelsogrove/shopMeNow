@@ -12,6 +12,7 @@
       },
       "resolvedRegex": "(ya\\s+funciona|^funciona\\b|^ok\\s+resuelto|^resuelto\\b|^perfecto\\b|^perfetto\\b|gi[aà]\\s+funziona|ora\\s+funziona)",
       "persistFailureRegex": "(sigue\\s+(?:igual|sin\\s+(?:arrancar|funcionar|responder|empezar)|saliendo)|sigue\\s+(?:sin|igual)|no\\s+(?:responde|arranca|empieza|funciona|desaparece)|todav[ií]a\\s+(?:no|sale|sigue)|aun\\s+(?:no|sale|sigue)|el\\s+mensaje\\s+(?:sigue|no\\s+desaparece)|^(no|nada)\\b)",
+      "reaskBeforeEscalate": true,
       "escalationReason": "AL001 sequence error — guidance did not resolve"
     },
     {

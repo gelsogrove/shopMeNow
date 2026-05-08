@@ -20,16 +20,15 @@
   "reassurance": "⚠️ Controlleremo il tuo caso manualmente.",
   "doubleChargeReview": "⚠️ Dobbiamo passare il tuo caso a un operatore per controllarlo.",
   "doubleChargeAllReceived": "Abbiamo ricevuto tutte le informazioni necessarie, controlleremo il tuo caso.",
-  "noPhotoEscalate": "⚠️ Senza informazioni sul display né foto, controlleremo il tuo caso manualmente.",
+  "noPhotoEscalate": "D'accordo. Lo controlleremo manualmente per poterti aiutare.",
   "reaffirmEscalate": "Controlleremo il tuo caso manualmente. Come ti chiami?",
   "displayShort": "Cosa appare esattamente sullo schermo?",
   "paymentAsk": "Sei riuscito a effettuare il pagamento?",
   "numericCodeAskLetters": "Grazie. Vedi qualche lettera davanti ai numeri?",
   "numericCodeIncoherence": "Capito. Lo passo a una revisione manuale.",
   "almDoorGuidance": "Questo messaggio può indicare un problema di chiusura o un capo incastrato. Apri lo sportello con attenzione, controlla se c'è qualche capo incastrato e richiudilo bene. Dimmi, per favore, se il messaggio è sparito.",
-  "noPhotoEscalate": "D'accordo. Lo controlleremo manualmente per poterti aiutare.",
   "doubleChargeAskUsed": "Grazie. Sei riuscito a lavare o asciugare i vestiti?",
-  "doubleChargeAskNarrative": "D'accordo. Spiegami, per favore, passo dopo passo cosa hai fatto da quando sei entrato.",
+  "doubleChargeAskNarrative": "D'accordo. Spiegami, per favore, passo dopo passo cosa hai fatto da quando sei entrato. È possibile che tu abbia strisciato la carta più volte al terminale?",
   "doubleChargeAskCardDigits": "Grazie. Per controllarlo bene, mi servono le ultime 4 cifre della carta.",
   "doubleChargeAskReceipt": "Perfetto. Ora mi serve uno screenshot del pagamento.",
   "doubleChargeClosure": "Grazie. Con quei dati potremo controllarlo e inviarti il modulo di rimborso. La prossima volta, prima di pagare di nuovo, contattaci e ti aiuteremo subito.",
@@ -69,5 +68,6 @@
   "pricingDeflect": "Devo verificarlo prima di confermarti quell'importo.",
   "openingHoursDefault": "L'orario generale di apertura al pubblico è dalle 8:00 alle 22:00 ogni giorno dell'anno.",
   "unknownLocationList": "Non riconosco quella posizione. Le nostre lavanderie sono: {list}. In quale ti trovi?",
-  "defaultHelp": "Dimmi il prossimo dettaglio utile e ti aiuterò passo dopo passo."
+  "defaultHelp": "Dimmi il prossimo dettaglio utile e ti aiuterò passo dopo passo.",
+  "operatorHandoffFinal": "Un operatore umano prenderà in carico il tuo caso. Attendi un momento mentre rivedono la situazione. Il chatbot sarà disattivato."
 }

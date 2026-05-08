@@ -27,6 +27,30 @@ export type SessionState = {
   // wipe the current flow. After serving the FAQ reply, the flow can resume from
   // pausedFlow.{flowId, stepId} on the next turn.
   pausedFlow: { flowId: string; stepId: string | null } | null
+  // Branch-router architecture (target — see docs/branch-router-architecture.md):
+  //   activeBranch: the branch chosen by the router at T1, sticky across turns.
+  //                 null when the legacy guard pipeline is in use.
+  //   previousBranch: when a topic-switch happens (T2+ message goes off-topic),
+  //                   the previous branch is stashed here so the conversation
+  //                   can resume after answering the off-topic question.
+  activeBranch:
+    | 'greeting'
+    | 'faq'
+    | 'trouble-machine'
+    | 'invoice'
+    | 'loyalty'
+    | 'escalation'
+    | 'unknown'
+    | null
+  previousBranch:
+    | 'greeting'
+    | 'faq'
+    | 'trouble-machine'
+    | 'invoice'
+    | 'loyalty'
+    | 'escalation'
+    | 'unknown'
+    | null
   retryCount: number
   lastResolvedIntent: 'washer' | 'dryer' | 'faq' | 'operator' | 'reset' | 'greeting' | 'unknown' | null
   escalationReason: string | null
@@ -38,11 +62,6 @@ export type SessionState = {
   // Allows the next-turn extractor to accept a bare yes/no without requiring
   // payment-context keywords ("pagado", "monedas", …).
   paymentRequested: boolean
-  // Set when Caso 7 flow is active: customer paid but didn't use the machine.
-  // Skips machineType / machineNumber gather guards because the doc only asks
-  // for location + cambio + display, then redirects to the display-specific
-  // instruction (PUSH PROG, DOOR, SEL, …) without needing tipo or numero.
-  paidNotUsedActive: boolean
   turnCount: number
   // Last user message of the current turn. Set by `agentTurn` after sanitisation
   // so tool validators (mark_resolved, escalate_to_operator, …) can inspect it
@@ -97,6 +116,7 @@ export type SessionState = {
     | ''
     | 'paid-not-used-ask-change'
     | 'paid-not-used-await-display'
+    | 'display-reask-pending'
     | 'numeric-code-ask-letters'
     | 'numeric-code-await-answer'
     | 'double-charge-ask-used'

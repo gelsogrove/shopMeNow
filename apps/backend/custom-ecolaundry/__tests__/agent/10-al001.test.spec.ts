@@ -5,7 +5,9 @@
 // paga → selecciona número → programa → avísame). Solo se il cliente
 // dice che NON funziona, il bot chiede il nome ed escala ad asistencia.
 //
-// 5 turni: location → tipo → numero → 6-passi → conferma/non-conferma.
+// Scenario 5.1 — Happy Path: "ya funciona" → resolved con "perfecto" + "comenzado".
+// Scenario 5.2 — Escalación sin entender: "no entiendo" → re-ask code → escalate → name → "desactivado".
+// Scenario 5.3 — Error persiste: "sigue saliendo" → re-ask code → "AL001" → escalate → name → "desactivado".
 
 import { type TestCase, expectMentionsAll } from './_helpers.js'
 
@@ -89,9 +91,9 @@ export const tests: TestCase[] = [
     },
   },
   {
-    // T5 escala: cliente dice che NON funziona dopo i 6 passi → bot escala
-    // chiedendo il nome.
-    name: 'ES — Caso 5 T5 escala: cliente "no funciona" → bot escala',
+    // T5 escala (codice incluso nel messaggio): "sigue saliendo AL001" contiene
+    // già il codice → il bot escalare direttamente (senza re-ask).
+    name: 'ES — Caso 5 T5 escala con codice: "sigue saliendo AL001" → bot escala direttamente',
     run: async (ctx) => {
       await ctx.send('Me sale AL001')
       await ctx.send("L'Escala")
@@ -129,6 +131,168 @@ export const tests: TestCase[] = [
       }
       if (/seleccion[oó]\s+el\s+programa\s+pero\s+problema\s+t[eé]cnico/i.test(reply)) {
         throw new Error(`Frase nonsense presente: ${reply}`)
+      }
+    },
+  },
+
+  // ── Scenario 5.1 ─────────────────────────────────────────────────────────
+  {
+    // SCENARIO 5.1 — Happy Path completo (Acceptance Criteria: "perfecto" + "comenzado"/"correctamente").
+    // RULE: dopo le istruzioni AL001, se il cliente dice "ya funciona",
+    // il bot chiude con un messaggio positivo che menziona l'avvio corretto.
+    name: 'ES — Scenario 5.1: happy path completo → resolved con "comenzado"/"correctamente"',
+    run: async (ctx) => {
+      await ctx.send('Me sale AL001')
+      await ctx.send("L'Escala")
+      await ctx.send('Lavadora')
+      await ctx.send('3')
+      const reply = await ctx.send('Sí, ya funciona')
+      const lower = reply.toLowerCase()
+      if (!/perfecto|perfect/.test(lower)) {
+        throw new Error(`Scenario 5.1: bot deve dire "perfecto": ${reply}`)
+      }
+      if (!/comenzad|correctament|resuelt/.test(lower)) {
+        throw new Error(`Scenario 5.1: bot deve confermare avvio ("comenzado"/"correctamente"/"resuelto"): ${reply}`)
+      }
+    },
+  },
+
+  // ── Scenario 5.2 ─────────────────────────────────────────────────────────
+  {
+    // SCENARIO 5.2 — Cliente non capisce le istruzioni.
+    // RULE: "No entiendo cómo hacerlo" → il bot deve eventualmente escalare
+    // (chiedendo il nome). "operador" deve comparire nella risposta che include
+    // il nome-ask o nella conferma finale.
+    name: 'ES — Scenario 5.2: "No entiendo" → escalation con nome',
+    run: async (ctx) => {
+      await ctx.send('Me sale AL001')
+      await ctx.send("L'Escala")
+      await ctx.send('Lavadora')
+      await ctx.send('3')
+      // Fase 1: cliente dice che non capisce. Il bot può fare re-ask del codice
+      // OPPURE escalare direttamente.
+      let reply = await ctx.send('No entiendo cómo hacerlo')
+      const lower1 = reply.toLowerCase()
+      const escalatesDirectly = /operador|revisi[oó]n|asistencia|manualmente/.test(lower1)
+      const asksCode = /c[oó]digo|pantalla|aparece/.test(lower1)
+      if (escalatesDirectly) {
+        // Escalation diretta: il bot deve anche chiedere il nome
+        if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower1)) {
+          throw new Error(`Scenario 5.2: escalation diretta ma senza richiesta nome: ${reply}`)
+        }
+      } else if (asksCode) {
+        // Re-ask del codice: il bot poi escalerà dopo il codice
+        reply = await ctx.send('AL001')
+        const lower2 = reply.toLowerCase()
+        if (!/operador|revisi[oó]n|asistencia|manualmente/.test(lower2)) {
+          throw new Error(`Scenario 5.2: dopo codice bot non escala: ${reply}`)
+        }
+        if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower2)) {
+          throw new Error(`Scenario 5.2: escalation senza richiesta nome: ${reply}`)
+        }
+      } else {
+        throw new Error(`Scenario 5.2: bot non escala né chiede codice dopo "No entiendo": ${reply}`)
+      }
+    },
+  },
+  {
+    // SCENARIO 5.2 — Conferma finale contiene "desactivado".
+    // RULE: dopo il nome, il bot dice che il chatbot sarà disattivato.
+    name: 'ES — Scenario 5.2: conferma finale contiene "desactivado"',
+    run: async (ctx) => {
+      await ctx.send('Me sale AL001')
+      await ctx.send("L'Escala")
+      await ctx.send('Lavadora')
+      await ctx.send('3')
+      let reply = await ctx.send('No entiendo cómo hacerlo')
+      // Gestisce sia escalation diretta sia re-ask
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(reply.toLowerCase())) {
+        reply = await ctx.send('AL001')
+      }
+      // Ora il bot ha chiesto il nome → invia il nome
+      const finalReply = await ctx.send('María')
+      const lower = finalReply.toLowerCase()
+      if (!/desactivado/.test(lower)) {
+        throw new Error(`Scenario 5.2: conferma finale non contiene "desactivado": ${finalReply}`)
+      }
+      if (!/operador/.test(lower)) {
+        throw new Error(`Scenario 5.2: conferma finale non menziona "operador": ${finalReply}`)
+      }
+    },
+  },
+
+  // ── Scenario 5.3 ─────────────────────────────────────────────────────────
+  {
+    // SCENARIO 5.3 — Errore persiste: il bot re-chiede il codice prima di escalare.
+    // RULE (Acceptance Criteria 5.3): "sigue saliendo" (senza codice nel messaggio)
+    // → il bot deve chiedere il codice esatto → poi escalare dopo "AL001".
+    name: 'ES — Scenario 5.3: "sigue saliendo" → bot re-chiede codice',
+    run: async (ctx) => {
+      await ctx.send('Me sale AL001')
+      await ctx.send("L'Escala")
+      await ctx.send('Lavadora')
+      await ctx.send('3')
+      const reply = await ctx.send('Lo he hecho bien pero sigue saliendo')
+      const lower = reply.toLowerCase()
+      // Il bot deve chiedere il codice esatto (non escalare direttamente).
+      if (!/c[oó]digo|pantalla|aparece/.test(lower)) {
+        throw new Error(`Scenario 5.3: bot deve ri-chiedere il codice, non escalare subito: ${reply}`)
+      }
+    },
+  },
+  {
+    // SCENARIO 5.3 — Dopo il re-ask, "AL001" → escalation + nome.
+    name: 'ES — Scenario 5.3: dopo re-ask, "AL001" → escalate + chiede nome',
+    run: async (ctx) => {
+      await ctx.send('Me sale AL001')
+      await ctx.send("L'Escala")
+      await ctx.send('Lavadora')
+      await ctx.send('3')
+      await ctx.send('Lo he hecho bien pero sigue saliendo')
+      const reply = await ctx.send('AL001')
+      const lower = reply.toLowerCase()
+      if (!/operador|revisi[oó]n|asistencia|manualmente/.test(lower)) {
+        throw new Error(`Scenario 5.3: dopo conferma codice bot non escala: ${reply}`)
+      }
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)) {
+        throw new Error(`Scenario 5.3: escalation senza richiesta nome: ${reply}`)
+      }
+    },
+  },
+  {
+    // SCENARIO 5.3 — Conferma finale contiene "desactivado".
+    name: 'ES — Scenario 5.3: conferma finale contiene "desactivado"',
+    run: async (ctx) => {
+      await ctx.send('Me sale AL001')
+      await ctx.send("L'Escala")
+      await ctx.send('Lavadora')
+      await ctx.send('3')
+      await ctx.send('Lo he hecho bien pero sigue saliendo')
+      await ctx.send('AL001')
+      const finalReply = await ctx.send('Carlos')
+      const lower = finalReply.toLowerCase()
+      if (!/desactivado/.test(lower)) {
+        throw new Error(`Scenario 5.3: conferma finale non contiene "desactivado": ${finalReply}`)
+      }
+      if (!/operador/.test(lower)) {
+        throw new Error(`Scenario 5.3: conferma finale non menziona "operador": ${finalReply}`)
+      }
+    },
+  },
+  {
+    // SCENARIO 5.3 — Summary operatore corretto (nome + location + numero + AL001).
+    name: 'ES — Scenario 5.3: summary operatore contiene Carlos, L\'Escala, 3, AL001',
+    run: async (ctx) => {
+      await ctx.send('Me sale AL001')
+      await ctx.send("L'Escala")
+      await ctx.send('Lavadora')
+      await ctx.send('3')
+      await ctx.send('Lo he hecho bien pero sigue saliendo')
+      await ctx.send('AL001')
+      const finalReply = await ctx.send('Carlos')
+      expectMentionsAll(finalReply, ['Carlos', 'AL001', '3'])
+      if (/n[uú]mero\s+n[uú]mero/i.test(finalReply)) {
+        throw new Error(`Bug "número número" in summary: ${finalReply}`)
       }
     },
   },

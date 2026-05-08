@@ -104,5 +104,12 @@ check(
   notInActiveSubFlow(makeAr({ pendingFlow: 'paid-not-used-await-display' })) === false,
 )
 
+// display-reask-pending does NOT block gather guards (intentional: at Phase C
+// all facts are already known, so gather guards won't fire regardless).
+check(
+  'pendingFlow=display-reask-pending → guards may fire (all facts already set at this point)',
+  notInActiveSubFlow(makeAr({ pendingFlow: 'display-reask-pending' })) === true,
+)
+
 console.log(`\n${pass} passed, ${fail} failed (out of ${pass + fail})`)
 if (fail > 0) process.exit(1)

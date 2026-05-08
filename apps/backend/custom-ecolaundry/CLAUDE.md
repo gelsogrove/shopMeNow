@@ -121,6 +121,58 @@ L5 OUTPUT POLICIES    agent.ts:polishReplyForTurn (sanitize, invariants, welcome
 When asked to "fix" something, I MUST identify the layer first.
 Cross-layer code is the smell that produced the bugs the refactor closed.
 
+## 🚦 Branch-router architecture (target — feature-flagged)
+
+Andrea (2026-05-08) decision. The legacy guard pipeline keeps working;
+the new path is OPT-IN via `settings.useBranchRouter`.
+
+```
+T1  customer message
+        ↓
+    LLM router (utils/router.ts) — single call, ~500ms, ~$0.0005
+        ↓
+    { branch, language, details }       state.activeBranch ← branch
+        ↓
+    branch dispatcher (utils/branches/index.ts)
+        ↓
+    utils/branches/<branch>/handler.ts  +  per-language file <lang>.json
+
+T2+ state.activeBranch is sticky → handler runs deterministically, NO router
+
+Topic switch  → handler returns { handoff: 'topic-switch' } → re-route on T+1
+Resolved      → handler returns { handoff: 'resolved' } → activeBranch = null
+Session expire (sessionIdleTtlMs) → state reset → next message restarts T1
+```
+
+Branches (current state):
+
+| Branch | Status | Handler |
+|---|---|---|
+| `greeting` | ✅ full POC | `utils/branches/greeting/handler.ts` (6 per-lang JSON) |
+| `faq` | ✅ full POC | `utils/branches/faq/handler.ts` (uses `json/faqs.json` + `locations.json:faqOverrides`, 6 per-lang JSON) |
+| `trouble-machine` | ✅ thin | `utils/branches/trouble-machine/handler.ts` — seeds `state.location` + `state.displayState` from router hints, delegates remaining gather + flow to the legacy guard pipeline |
+| `invoice` | ✅ thin | `utils/branches/invoice/handler.ts` — sets `pendingFlow="invoice-ask-location"`, delegates 8-step gather to `guardCaso9Factura` |
+| `loyalty` | ✅ thin | `utils/branches/loyalty/handler.ts` — delegates buy/recharge classification to legacy `guardLoyaltyCardBuy` / `guardLoyaltyCardRecharge` |
+| `escalation` | ✅ thin | `utils/branches/escalation/handler.ts` — seeds `state.nonTroubleshootingIncident` from router `incidentType`, delegates to `guardEscalateNonTroubleshooting` |
+
+"Thin" = the handler owns the routing (T1 LLM classification works for
+all 6 languages and seeds sticky state from the router hints) but
+returns `handoff: 'delegate-to-legacy'`. The legacy guard pipeline still
+produces the actual reply. `state.activeBranch` stays sticky so
+subsequent turns don't re-run the router.
+
+Mix regex + LLM — rule of thumb:
+
+```
+L1 REGEX boundary    → instant   (pure greeting, mataró street)
+L2 LLM router (T1)   → 500ms     (one call per session)
+L3 Branch handler    → < 100ms   (state machine, per-lang JSON)
+L4 LLM in branch     → only for  semantic yes/no in 6 langs
+```
+
+The router system prompt lives in [`utils/router-prompt.ts`](utils/router-prompt.ts);
+edit it without touching the orchestration logic in `utils/router.ts`.
+
 ---
 
 ## ✅ Pre-commit checklist (mental, every change)

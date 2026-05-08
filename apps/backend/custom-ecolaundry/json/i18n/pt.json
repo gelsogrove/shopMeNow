@@ -20,16 +20,15 @@
   "reassurance": "⚠️ Vamos rever o teu caso manualmente.",
   "doubleChargeReview": "⚠️ Precisamos de encaminhar o teu caso a um operador para revisão.",
   "doubleChargeAllReceived": "Recebemos todas as informações necessárias, vamos rever o teu caso.",
-  "noPhotoEscalate": "⚠️ Sem informações do ecrã nem foto, vamos rever o teu caso manualmente.",
+  "noPhotoEscalate": "De acordo. Vamos rever manualmente para te ajudar.",
   "reaffirmEscalate": "Vamos rever o teu caso manualmente. Como te chamas?",
   "displayShort": "O que aparece exatamente no ecrã?",
   "paymentAsk": "Conseguiste efetuar o pagamento?",
   "numericCodeAskLetters": "Obrigado. Vês alguma letra à frente dos números?",
   "numericCodeIncoherence": "Entendido. Passo isto para revisão manual.",
   "almDoorGuidance": "Essa mensagem pode indicar um problema de fecho ou que há uma peça presa. Abre a porta com cuidado, verifica se há alguma peça presa e fecha-a bem. Diz-me, por favor, se a mensagem desapareceu.",
-  "noPhotoEscalate": "De acordo. Vamos rever manualmente para te ajudar.",
   "doubleChargeAskUsed": "Obrigado. Conseguiste lavar ou secar a roupa?",
-  "doubleChargeAskNarrative": "De acordo. Explica-me, por favor, passo a passo o que fizeste desde que entraste.",
+  "doubleChargeAskNarrative": "De acordo. Explica-me, por favor, passo a passo o que fizeste desde que entraste. É possível que tenhas passado o cartão várias vezes no terminal de pagamento?",
   "doubleChargeAskCardDigits": "Obrigado. Para rever bem, preciso dos últimos 4 dígitos do cartão.",
   "doubleChargeAskReceipt": "Perfeito. Agora preciso de uma captura do pagamento.",
   "doubleChargeClosure": "Obrigado. Com esses dados poderemos rever e enviar-te o formulário de devolução. Da próxima vez, antes de voltar a pagar, contacta-nos e ajudamos-te logo.",
@@ -69,5 +68,6 @@
   "pricingDeflect": "Tenho de rever isso antes de te confirmar o valor.",
   "openingHoursDefault": "O horário geral de atendimento ao público é das 8:00 às 22:00 todos os dias do ano.",
   "unknownLocationList": "Não reconheço essa localização. As nossas lavandarias são: {list}. Em qual delas estás?",
-  "defaultHelp": "Diz-me o próximo detalhe útil e ajudo-te passo a passo."
+  "defaultHelp": "Diz-me o próximo detalhe útil e ajudo-te passo a passo.",
+  "operatorHandoffFinal": "Um operador humano vai assumir o teu caso. Por favor, espera um momento enquanto analisam a situação. O chatbot será desativado."
 }

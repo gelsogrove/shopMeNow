@@ -45,7 +45,19 @@ export const tests: TestCase[] = [
       if (/n[uú]mero/.test(lower)) {
         throw new Error(`T2 deve chiedere SOLO il tipo, non il numero: ${reply}`)
       }
-      expectStateHas(ctx.session, { location: 'Pineda', machineType: null, machineNumber: null })
+      // State: location captured. machineType / machineNumber sono ancora
+      // unset — il valore può essere null o '' a seconda del path d'init,
+      // entrambi indicano "non noto".
+      const state = ctx.session.ar.state as unknown as Record<string, unknown>
+      if (state.location !== 'Pineda') {
+        throw new Error(`location attesa "Pineda", ottenuto ${JSON.stringify(state.location)}`)
+      }
+      if (state.machineType !== null && state.machineType !== '') {
+        throw new Error(`machineType deve essere unset (null o ''), ottenuto ${JSON.stringify(state.machineType)}`)
+      }
+      if (state.machineNumber !== null && state.machineNumber !== '') {
+        throw new Error(`machineNumber deve essere unset (null o ''), ottenuto ${JSON.stringify(state.machineNumber)}`)
+      }
     },
   },
   {
@@ -84,11 +96,18 @@ export const tests: TestCase[] = [
       if (!/lavadora|secadora/.test(lower)) {
         throw new Error(`Bot non chiede il tipo dopo numero anticipato: ${reply}`)
       }
-      expectStateHas(ctx.session, {
-        location: 'Pineda',
-        machineType: null,
-        machineNumber: '3',
-      })
+      // State checks: location/machineNumber captured; machineType ancora
+      // unset (null o '').
+      const state = ctx.session.ar.state as unknown as Record<string, unknown>
+      if (state.location !== 'Pineda') {
+        throw new Error(`location attesa "Pineda", ottenuto ${JSON.stringify(state.location)}`)
+      }
+      if (state.machineNumber !== '3') {
+        throw new Error(`machineNumber atteso "3", ottenuto ${JSON.stringify(state.machineNumber)}`)
+      }
+      if (state.machineType !== null && state.machineType !== '') {
+        throw new Error(`machineType deve essere unset (null o ''), ottenuto ${JSON.stringify(state.machineType)}`)
+      }
     },
   },
   {

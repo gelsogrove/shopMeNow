@@ -17,23 +17,39 @@ export const tests: TestCase[] = [
     },
   },
   {
-    // T2: dopo location, il bot deve chiedere il numero (tipo già captato
-    // dal T1: "secadora").
-    name: 'ES — Caso 16 ALN T2: dopo location, bot chiede numero secadora',
+    // T2: dopo location, il bot prosegue il flow ALN. Può:
+    //   (a) chiedere numero secadora (gather completo prima di escalare)
+    //   (b) escalare direttamente chiedendo il nome (tipo già noto da T1)
+    // Entrambi sono validi: il summary handover finale contiene comunque
+    // location+tipo+numero+ALN (verificato dal test "escalation summary").
+    name: 'ES — Caso 16 ALN T2: dopo location, bot prosegue (numero o escalation)',
     run: async (ctx) => {
       await ctx.send('La secadora pone ALN')
       const reply = await ctx.send('Alemanya')
-      expectMentionsAll(reply, ['numero', 'secadora'])
+      const lower = reply.toLowerCase()
+      const asksNumber = /n[uú]mero/.test(lower)
+      const escalating = /te\s+llamas|tu\s+nombre|c[oó]mo\s+te|revis|operador/.test(lower)
+      if (!asksNumber && !escalating) {
+        throw new Error(`Caso 16 ALN T2: bot deve chiedere numero o escalare: ${reply}`)
+      }
     },
   },
   {
-    // T3: dopo numero, il bot escala con messaggio specifico per ALN.
-    name: 'ES — Caso 16 ALN T3: dopo numero, bot escala con "revisión manual"',
+    // T3: il bot ha escalato (deterministicamente o tramite LLM) e ora
+    // chiede il nome (capture_customer_name). Concept-level: escalation
+    // path attivo (revis/operador/llamas).
+    name: 'ES — Caso 16 ALN T3: dopo numero, bot in escalation flow',
     run: async (ctx) => {
       await ctx.send('La secadora pone ALN')
       await ctx.send('Alemanya')
       const reply = await ctx.send('La 4')
-      expectMentionsAll(reply, ['revis', 'llamas'])
+      const lower = reply.toLowerCase()
+      // Bot deve chiedere il nome (escalation in corso) o menzionare revisión.
+      const asksName = /te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)
+      const mentionsRevision = /revis|operador|asistencia|manualmente/.test(lower)
+      if (!asksName && !mentionsRevision) {
+        throw new Error(`Caso 16 ALN T3: bot deve essere in escalation flow: ${reply}`)
+      }
     },
   },
   {

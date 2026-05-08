@@ -6,6 +6,9 @@
 //   "¿cargada y puerta cerrada?" → final reply + escalation.
 //
 // Format invalid → escalation immediata con motivo "formato no reconocido".
+//
+// Scenario 8.1 — Happy Path: bot saluta + chiede solo il codice (no machine/display/escalation).
+// Scenario 8.2 — Variante: stesso trigger, stessa risposta canned.
 
 import { type TestCase, expectMentionsAll, expectMentionsNone } from './_helpers.js'
 
@@ -75,6 +78,45 @@ export const tests: TestCase[] = [
       // arriva direttamente alla domanda della porta.
       expectMentionsAll(reply, ['puerta'])
       expectMentionsNone(reply, ['pueblo', 'numero'])
+    },
+  },
+
+  // ── Scenario 8.1 ─────────────────────────────────────────────────────────
+  {
+    // SCENARIO 8.1 — Happy Path: bot riconosce il codice e chiede SOLO il codice.
+    // RULE: risposta saluta come "asistente virtual de Ecolaundry" + menziona "código" +
+    // NON chiede lavadora/secadora né pantalla né escalation nell'unica risposta canned.
+    name: 'ES — Scenario 8.1: trigger "tengo un código" → saludo + pide solo código',
+    run: async (ctx) => {
+      const reply = await ctx.send('Tengo un código y no sé cómo usarlo.')
+      const lower = reply.toLowerCase()
+      expectMentionsAll(reply, ['asistente virtual', 'codigo'])
+      // NON deve chiedere tipo macchina né display né escalare
+      if (/lavadora|secadora/.test(lower)) {
+        throw new Error(`Scenario 8.1: NON deve chiedere lavadora/secadora: ${reply}`)
+      }
+      if (/pantalla|aparece/.test(lower)) {
+        throw new Error(`Scenario 8.1: NON deve chiedere la pantalla: ${reply}`)
+      }
+      if (/operador|desactivado/.test(lower)) {
+        throw new Error(`Scenario 8.1: NON deve escalare: ${reply}`)
+      }
+    },
+  },
+
+  // ── Scenario 8.2 ─────────────────────────────────────────────────────────
+  {
+    // SCENARIO 8.2 — Variante: frase diversa, stessa risposta canned.
+    // RULE: qualsiasi variante di "tengo un código/cupón" produce la stessa
+    // risposta con saluto + richiesta codice, mai domande su lavadora/secadora.
+    name: 'ES — Scenario 8.2: variante "tengo un código de descuento" → stessa risposta canned',
+    run: async (ctx) => {
+      const reply = await ctx.send('Tengo un código de descuento, ¿cómo lo uso?')
+      const lower = reply.toLowerCase()
+      expectMentionsAll(reply, ['asistente virtual', 'codigo'])
+      if (/lavadora|secadora/.test(lower)) {
+        throw new Error(`Scenario 8.2: NON deve chiedere lavadora/secadora: ${reply}`)
+      }
     },
   },
 ]

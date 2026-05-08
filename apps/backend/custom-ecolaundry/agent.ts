@@ -22,6 +22,9 @@ import { printCliBanner, printCliMessage } from './utils/cli.js'
 import { API_KEY } from './utils/llm.js'
 import { logger } from './utils/logger.js'
 import { sanitizeUserMessage } from './utils/input-sanitize.js'
+import { dispatchSubsequentTurn, dispatchTurnOne } from './utils/branches/index.js'
+import { t } from './utils/localization.js'
+import type { SupportedLanguage } from './models/index.js'
 import {
   detectResolutionEscalationContradiction,
   stripResolutionSentences,
@@ -68,6 +71,21 @@ export async function agentTurn(session: AgentSession, rawUserMessage: string): 
   resolveLanguageForTurn(ar, userMessage)
   autoExtractFacts(ar, userMessage)
 
+  // Branch-router architecture (feature-flagged via settings.useBranchRouter).
+  // When enabled and we have a registered handler for the chosen branch,
+  // dispatch directly. Otherwise fall through to the legacy guard pipeline
+  // so the bot keeps working while branches are migrated incrementally.
+  // See docs/branch-router-architecture.md for the migration plan.
+  if (ar.runtime.settings?.useBranchRouter) {
+    const dispatchResult = await maybeDispatchBranch(ar, userMessage)
+    if (dispatchResult) {
+      history.push({ role: 'user', content: userMessage })
+      history.push({ role: 'assistant', content: dispatchResult })
+      const polished = polishReplyForTurn(ar, dispatchResult)
+      return appendEscalationSummary(ar, polished)
+    }
+  }
+
   const guardOutcome = runGuardPipeline(ar, userMessage)
   if (guardOutcome) {
     return applyGuardOutcome(session, guardOutcome, userMessage)
@@ -79,6 +97,26 @@ export async function agentTurn(session: AgentSession, rawUserMessage: string): 
 
   const polished = polishReplyForTurn(ar, assistantReply)
   return appendEscalationSummary(ar, polished)
+}
+
+/**
+ * Branch-router dispatch (feature-flagged). Returns the handler reply
+ * when the dispatcher was able to handle the turn, else null so the
+ * caller falls through to the legacy pipeline. Pure side-effect-free
+ * fall-back: when no handler exists for the chosen branch, no state
+ * mutation persists across the dispatch (the dispatcher only stores
+ * activeBranch when it actually invokes a handler).
+ */
+async function maybeDispatchBranch(ar: AgentRuntime, userMessage: string): Promise<string | null> {
+  // T2+ first: if the previous turn pinned a sticky branch, route there
+  // directly without re-classifying.
+  if (ar.state.activeBranch && ar.state.activeBranch !== 'unknown') {
+    const result = await dispatchSubsequentTurn(ar, userMessage, ar.state.language as SupportedLanguage ?? 'es')
+    return result.handled && result.output ? result.output.reply : null
+  }
+  // T1: classify and dispatch.
+  const result = await dispatchTurnOne(ar, userMessage)
+  return result.handled && result.output ? result.output.reply : null
 }
 
 // ── Turn pipeline ─────────────────────────────────────────────────────────────
@@ -255,14 +293,32 @@ function hasOperationalFacts(ar: AgentRuntime): boolean {
   return Boolean(location && (displayState || machineNumber))
 }
 
-/** Append the operator handover summary when the pipeline marked an escalation. */
+/** Append the operator handover summary when the pipeline marked an escalation.
+ *
+ *  The final reply has 3 parts (uniform across all escalation branches —
+ *  Caso 1.2 / 5.2 / 5.3 / 7.2 / 13 / 17 / 18 / 25 / 26-27 / 28 / 29 / 30):
+ *
+ *    1. The LLM-generated empathic line ("Vamos a revisar tu caso, Andrea...")
+ *       — varies in tone, language, phrasing.
+ *    2. A FIXED handoff line from i18n key `operatorHandoffFinal` containing
+ *       the customer-facing keywords "operador" + "desactivado" — uniform,
+ *       deterministic, multilingual via the i18n catalogue.
+ *    3. The operator-side "👤 Human Support message" summary.
+ *
+ *  Rule #8 (multi-language by design): the handoff line is in 6 languages
+ *  in `json/i18n/<lang>.json:operatorHandoffFinal`. Adding a 7th language
+ *  = adding 1 entry to each i18n file, no code change.
+ */
 function appendEscalationSummary(ar: AgentRuntime, reply: string): string {
   if (!ar.pendingEscalation || !ar.state.customerName) return reply
   const ctx = extractEscalationContext(ar.state, ar.state.customerName)
   const summary = buildEscalationSummary(ctx)
   ar.pendingEscalation = null
   closeAsEscalated(ar)
-  return `${reply}\n\n**👤 Human Support message**\n${summary}`
+  // Determine output language: tenant lock first, fallback to state.language.
+  const lang = resolveTenantLang(ar)
+  const handoff = t('operatorHandoffFinal', lang)
+  return `${reply}\n\n${handoff}\n\n**👤 Human Support message**\n${summary}`
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────

@@ -24,5 +24,8 @@
   },
 
   "historyResetTtlMs": 3600000,
-  "sessionIdleTtlMs": 1800000
+  "sessionIdleTtlMs": 1800000,
+
+  "_comment_useBranchRouter": "When true, T1 messages are classified by utils/router.ts (LLM call) into a branch and dispatched to utils/branches/<branch>/handler.ts. T2+ stay deterministic via state.activeBranch. When false (default), the legacy guard pipeline runs unchanged. See docs/branch-router-architecture.md.",
+  "useBranchRouter": false
 }

@@ -271,13 +271,13 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
 
   // Caso 7 marker: customer said "He pagado pero no he podido usar".
   // Sets pendingFlow so the guard pipeline can short-circuit on the next turn
-  // with "¿La central te ha devuelto el cambio?".
+  // after collecting location + machineType + machineNumber with
+  // "¿La central te ha devuelto el cambio?".
   if (
     !state.pendingFlow &&
     /he\s+pagado.+(no\s+(he\s+podido|consegui|logr[eé])\s+usar|no\s+(la\s+)?(he\s+podido\s+)?utilizar)/i.test(userMessage)
   ) {
     state.pendingFlow = 'paid-not-used-ask-change'
-    state.paidNotUsedActive = true
   }
 
   // Customer name capture: when the bot has explicitly asked for the name

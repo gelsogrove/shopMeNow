@@ -62,6 +62,85 @@ Incidencia resuelta.
 
 ---
 
+### Scenario 1.1 — PUSH PROG Happy Path
+
+**Objetivo:** El cliente pulsa el programa y la lavadora arranca correctamente.
+
+**Criterios de aceptación:**
+- El bot recoge localización → número (sin paso intermedio "¿has pagado?").
+- El bot da los 4 programas (60º, 40º, 30º, Frío) y cierra con la pregunta de loopback.
+- Sobre confirmación "ahora funciona" → la respuesta contiene "perfecto" y ("resuelt" o "ya estaría").
+- `state.pendingClosure === "resolved"` al final del flujo.
+
+**Conversación:**
+
+**Usuario:** La lavadora no funciona  
+**Bot:** Hola, soy el asistente virtual de Ecolaundry. Te ayudo paso a paso. ¿En qué lavandería estás?
+
+**Usuario:** Goya  
+**Bot:** Gracias. ¿Qué número de lavadora es?
+
+**Usuario:** La 5  
+**Bot:** De acuerdo. ¿Qué aparece exactamente en la pantalla?
+
+**Usuario:** PUSH PROG  
+**Bot:** Pulsa un botón de programa para iniciar el lavado.
+
+Programas:
+1. 60º (muy caliente) → ropa muy sucia, blanca o de trabajo
+2. 40º (templado) → ropa normal (algodón, color)
+3. 30º (suave) → ropa delicada o sintética
+4. Frío → prendas muy delicadas (lana, seda, etc.)
+
+Elige uno y púlsalo en la máquina. Después dime si la lavadora ha arrancado.
+
+**Usuario:** Sí, ahora funciona  
+**Bot:** Perfecto, incidencia resuelta. Si vuelve a pasar o aparece otro mensaje en pantalla, dímelo y te sigo ayudando.
+
+---
+
+### Scenario 1.2 — PUSH PROG Escalación: máquina no responde tras pulsar
+
+**Objetivo:** El cliente pulsa el programa pero la máquina sigue sin
+arrancar; el bot escala a soporte humano de manera uniforme con los
+demás casos (Caso 5.2/5.3, Caso 7.2).
+
+**Criterios de aceptación:**
+- Tras la instrucción del programa, el cliente reporta que no responde ("he pulsado pero no responde", "sigue sin arrancar").
+- El bot pide confirmación del display ("escribe el código exacto que ves") antes de escalar (Phase B re-ask, evita escalar por palabra ambigua).
+- Sobre confirmación "PUSH PROG" → el bot escala con un mensaje que contiene "operador".
+- Antes de cerrar, el bot pide el nombre del cliente.
+- El mensaje final (tras `capture_customer_name`) contiene "desactivado".
+- El resumen al operador contiene: nombre del cliente, location, número, "PUSH".
+
+**Conversación:**
+
+**Usuario:** La lavadora no funciona  
+**Bot:** Hola, soy el asistente virtual de Ecolaundry. ¿En qué lavandería estás?
+
+**Usuario:** Goya  
+**Bot:** Gracias. ¿Qué número de lavadora es?
+
+**Usuario:** La 5  
+**Bot:** De acuerdo. ¿Qué aparece en la pantalla?
+
+**Usuario:** PUSH PROG  
+**Bot:** Pulsa un botón de programa... [4 programmi] ...Después dime si la lavadora ha arrancado.
+
+**Usuario:** He pulsado pero no responde  
+**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
+
+**Usuario:** PUSH PROG  
+**Bot:** ⚠️ Si nada ha funcionado, vamos a notificar al **operador** para que revise el caso. ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** Gracias, Andrea. Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será **desactivado**.
+
+**👤 Human Support message** *(al operador)*  
+Usuario Andrea en Goya ha pagado pero la lavadora número 5 no responde tras pulsar el programa. Pantalla muestra PUSH PROG. Requiere revisión manual.
+
+---
+
 ## Caso 2 — La lavadora no funciona y aparece DOOR
 
 **Objetivo:**  
@@ -96,6 +175,75 @@ Incidencia resuelta.
 
 ---
 
+### Scenario 2.1 — DOOR Happy Path
+
+**Objetivo:** El cliente confirma que la lavadora arranca tras cerrar bien la puerta.
+
+**Criterios de aceptación:**
+- El bot recoge localización y número de máquina antes de dar la instrucción DOOR.
+- El bot indica que la puerta no está bien cerrada y pide abrirla y cerrarla firmemente.
+- Después de la indicación, el bot pide al cliente confirmar si la máquina ha arrancado.
+- El caso se cierra con un mensaje que contiene "perfecto" y "correctamente" o "comenzado".
+- El bot NO escala a operador en este escenario.
+
+**Conversación:**
+
+**Usuario:** La lavadora no arranca  
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?
+
+**Usuario:** DOOR  
+**Bot:** ¿En qué lavandería autoservicio estás?
+
+**Usuario:** Hortes  
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+
+**Usuario:** 2  
+**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente. Después de intentarlo, házmelo saber si funciona.
+
+**Usuario:** Sí  
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
+
+---
+
+### Scenario 2.2 — DOOR Escalación: puerta bloqueada tras repetir el paso
+
+**Objetivo:** El cliente cierra la puerta pero DOOR persiste. El bot re-pregunta el código y escala.
+
+**Criterios de aceptación:**
+- Si DOOR persiste tras repetir el paso, el bot re-pregunta el código exacto del display.
+- Cuando el cliente confirma que DOOR sigue, el bot anuncia escalación con un mensaje que contiene "operador" y menciona "puerta" o "DOOR".
+- Antes de escalar, el bot pregunta el nombre del cliente.
+- El mensaje de confirmación final contiene "desactivado".
+- El resumen al operador contiene nombre, localización, número de máquina y estado DOOR.
+- El bot NO cierra el caso como resuelto en este escenario.
+
+**Conversación:**
+
+**Usuario:** La lavadora no arranca  
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?
+
+**Usuario:** DOOR  
+**Bot:** ¿En qué lavandería autoservicio estás?
+
+**Usuario:** Hortes  
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+
+**Usuario:** 2  
+**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente. Después de intentarlo, házmelo saber si funciona.
+
+**Usuario:** NO  
+**Bot:** Por favor, escribe solo lo que ves en la pantalla, los números y las letras tal y como aparecen en la pantalla ahora, incluso si es el mismo que antes.
+
+**Usuario:** DOOR  
+**Bot:** ⚠️ La puerta sigue bloqueada incluso después de repetir los pasos. Esto indica un posible fallo mecánico en el cierre de la puerta. Tenemos que notificar al operador ahora para que revise la lavadora manualmente. ¿Cómo te llamas?
+
+**Usuario:** Carlos  
+**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+👤 **Human Support:** Usuario Carlos en Hortes — pantalla DOOR tras repetir cierre, lavadora número 2. Requiere revisión manual del cierre de puerta.
+
+---
+
 ## Caso 3 — La lavadora no funciona y aparece SEL
 
 **Objetivo:**  
@@ -126,6 +274,72 @@ Incidencia resuelta.
 
 **Escalar si:**  
 - el cliente ya ha repetido la selección y la máquina sigue sin responder
+
+---
+
+### Scenario 3.1 — SEL Happy Path
+
+**Objetivo:** El cliente confirma que la máquina arranca tras seguir la instrucción.
+
+**Criterios de aceptación:**
+- El bot recoge localización y número de máquina antes de dar la instrucción.
+- El bot da la instrucción SEL ("pendiente de selección", comprobar número o programa).
+- El caso se cierra con un mensaje que contiene "perfecto" y "comenzado" o "correctamente".
+
+**Conversación:**
+
+**Usuario:** He pagado pero la lavadora no empieza  
+**Bot:** ¡Hola! ¿En qué lavandería autoservicio te encuentras?
+
+**Usuario:** Pineda  
+**Bot:** ¿Qué número de lavadora es?
+
+**Usuario:** La 3  
+**Bot:** ¿Qué aparece exactamente en la pantalla?
+
+**Usuario:** SEL  
+**Bot:** Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago. Una vez lo hayas hecho, dime si la máquina ha empezado a funcionar.
+
+**Usuario:** Ahora sí funciona  
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
+
+---
+
+### Scenario 3.2 — SEL Escalación: error persiste tras repetir selección
+
+**Objetivo:** El cliente repite la selección pero la máquina sigue mostrando SEL. El bot pide el código exacto y escala.
+
+**Criterios de aceptación:**
+- Si el cliente dice que no arranca, el bot re-pregunta el código exacto del display.
+- Cuando el cliente confirma que sigue siendo SEL, el bot menciona "SEL" y "operador" en el mensaje de escalación.
+- Antes de escalar, el bot pregunta el nombre del cliente.
+- El mensaje de confirmación final contiene la palabra "desactivado".
+- El resumen al operador contiene nombre del cliente, location, número de máquina y "SEL".
+
+**Conversación:**
+
+**Usuario:** He pagado pero la lavadora no empieza  
+**Bot:** ¡Hola! ¿En qué lavandería autoservicio te encuentras?
+
+**Usuario:** Pineda  
+**Bot:** ¿Qué número de lavadora es?
+
+**Usuario:** La 3  
+**Bot:** ¿Qué aparece exactamente en la pantalla?
+
+**Usuario:** SEL  
+**Bot:** Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago. Una vez lo hayas hecho, dime si la máquina ha empezado a funcionar.
+
+**Usuario:** Aun no arranca  
+**Bot:** Por favor, escribe solo lo que ves en la pantalla, los números y las letras tal y como aparecen en la pantalla ahora, incluso si es el mismo que antes.
+
+**Usuario:** SEL  
+**Bot:** ⚠️ La pantalla sigue mostrando SEL incluso después de repetir la selección. Tenemos que notificar al operador ahora para que revise la lavadora manualmente. ¿Cómo te llamas?
+
+**Usuario:** Luis  
+**Bot:** Gracias Luis. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+👤 **Human Support:** Usuario Luis en Pineda — pantalla SEL tras repetir selección, lavadora número 3.
 
 ---
 
@@ -163,6 +377,75 @@ Incidencia resuelta.
 **Escalar si:**  
 - el cliente sigue sin poder activarla
 - aparece un código de pantalla no documentado
+
+---
+
+### Scenario 4.1 — No-change Happy Path
+
+**Objetivo:** Tras la guía sobre marcar el número correcto, la máquina arranca.
+
+**Criterios de aceptación:**
+- El bot recoge localización → tipo → número antes de preguntar por el cambio.
+- Sobre "No" al cambio → el bot da la instrucción canonica (revisa saldo en central + marca el número).
+- Sobre confirmación de arranque → reply contiene "perfecto" y ("resuelt" o "ya estaría").
+- `state.pendingClosure === "resolved"` al final del flujo.
+
+**Conversación:**
+
+**Usuario:** He pagado y no se ha activado  
+**Bot:** Hola, soy el asistente virtual de Ecolaundry. ¿En qué local estás?
+
+**Usuario:** Goya  
+**Bot:** Gracias. ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** Perfecto. ¿Qué número de máquina es?
+
+**Usuario:** La 4  
+**Bot:** De acuerdo. ¿La central te ha devuelto el cambio?
+
+**Usuario:** No  
+**Bot:** Es posible que no se haya marcado bien el número de la máquina. Mira si todavía aparece saldo en la central y pulsa correctamente el botón correspondiente.
+
+**Usuario:** Sí, ahora ya se ha puesto en marcha  
+**Bot:** Perfecto, ya estaría resuelto.
+
+---
+
+### Scenario 4.2 — No-change Escalación: cambio devuelto pero máquina no arranca
+
+**Objetivo:** Si la central devolvió el cambio pero la máquina sigue sin
+arrancar, el bot escala uniformemente con los demás casos.
+
+**Criterios de aceptación:**
+- Sobre "Sí" al cambio → la máquina sí cobró pero no arrancó. El bot
+  escala con un mensaje que contiene "operador".
+- Antes de cerrar, el bot pide el nombre del cliente.
+- El mensaje final (tras `capture_customer_name`) contiene "desactivado".
+- El resumen al operador contiene: nombre, location, número, "lavadora".
+
+**Conversación:**
+
+**Usuario:** He pagado y no se ha activado  
+**Bot:** Hola, soy el asistente virtual de Ecolaundry. ¿En qué local estás?
+
+**Usuario:** Goya  
+**Bot:** Gracias. ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Qué número de máquina es?
+
+**Usuario:** La 4  
+**Bot:** ¿La central te ha devuelto el cambio?
+
+**Usuario:** Sí, pero la máquina no arranca  
+**Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** Gracias, Andrea. Un **operador** humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será **desactivado**.
+
+**👤 Human Support message** *(al operador)*  
+Usuario Andrea en Goya ha pagado pero la lavadora número 4 no se ha activado tras corregir el número en la central. Requiere revisión manual.
 
 ---
 
@@ -215,6 +498,108 @@ El bot identifica que el problema está en la secuencia de uso, guía al cliente
 
 ---
 
+### Scenario 5.1 — AL001 Happy Path
+
+**Objetivo:** Explicar el motivo del error y corregir la secuencia de uso. El cliente confirma que funciona.
+
+**Criterios de aceptación:**
+- El bot recoge localización, tipo de máquina y número antes de dar la instrucción.
+- El caso se cierra con un mensaje que contiene "perfecto" y "comenzado" o "correctamente".
+
+**Conversación:**
+
+**Usuario:** Me sale AL001  
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. ¿En qué lavandería autoservicio te encuentras?
+
+**Usuario:** L'Escala  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+
+**Usuario:** 3  
+**Bot:** **AL001** significa un error de secuencia. Reinicia el proceso completo: 1. Paga. 2. Selecciona la máquina. 3. Pulsa el programa. 4. Cierra la puerta. 5. Avísame si funciona.
+
+**Usuario:** Sí, ya funciona  
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
+
+---
+
+### Scenario 5.2 — AL001 Escalación: cliente no puede seguir instrucciones
+
+**Objetivo:** El cliente no entiende cómo aplicar la secuencia. El bot escala.
+
+**Criterios de aceptación:**
+- Si el cliente indica que no puede seguir las instrucciones, el bot escala a soporte humano.
+- Antes de escalar, el bot pregunta el nombre del cliente.
+- El mensaje de escalación contiene la palabra "operador".
+- El mensaje de confirmación final contiene la palabra "desactivado".
+
+**Conversación:**
+
+**Usuario:** Me sale AL001  
+**Bot:** ¡Hola! ¿En qué lavandería autoservicio te encuentras?
+
+**Usuario:** L'Escala  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+
+**Usuario:** 3  
+**Bot:** **AL001** significa un error de secuencia. [instrucciones de secuencia]
+
+**Usuario:** No entiendo cómo hacerlo  
+**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
+
+**Usuario:** AL001  
+**Bot:** ⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador para que revise el caso y la posible compensación. ¿Cómo te llamas?
+
+**Usuario:** María  
+**Bot:** Gracias María. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+👤 **Human Support:** Usuario María en L'Escala — problema técnico lavadora número 3. Pantalla: AL001.
+
+---
+
+### Scenario 5.3 — AL001 Escalación: error persiste tras reinicio correcto
+
+**Objetivo:** El cliente ha seguido la secuencia correctamente pero AL001 persiste. El bot confirma el código y escala.
+
+**Criterios de aceptación:**
+- Si el cliente dice que ha seguido los pasos pero el error persiste, el bot vuelve a preguntar el código exacto del display.
+- Cuando el cliente confirma que sigue siendo AL001, el bot escala a soporte humano.
+- Antes de escalar, el bot pregunta el nombre del cliente.
+- El mensaje de escalación contiene la palabra "operador".
+- El mensaje de confirmación final contiene la palabra "desactivado".
+
+**Conversación:**
+
+**Usuario:** Me sale AL001  
+**Bot:** ¡Hola! ¿En qué lavandería autoservicio te encuentras?
+
+**Usuario:** L'Escala  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+
+**Usuario:** 3  
+**Bot:** **AL001** significa un error de secuencia. [instrucciones de secuencia]
+
+**Usuario:** Lo he hecho bien pero sigue saliendo  
+**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
+
+**Usuario:** AL001  
+**Bot:** ⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador para que revise el caso y la posible compensación. ¿Cómo te llamas?
+
+**Usuario:** Carlos  
+**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+👤 **Human Support:** Usuario Carlos en L'Escala — problema técnico lavadora número 3. Pantalla: AL001.
+
+---
+
 ## Caso 6 — Me han cobrado dos veces pero he podido usar el servicio
 
 **Objetivo:**  
@@ -253,6 +638,99 @@ Datos recogidos y caso preparado para revisión.
 
 ---
 
+### Scenario 6.1 — Doble cobro, servicio completado (Happy Path)
+
+**Objetivo:** El cliente aporta todos los datos; el caso queda preparado para revisión sin escalación en vivo.
+
+**Criterios de aceptación:**
+- El bot pregunta la localización antes de cualquier otra información.
+- El bot NO pregunta tipo ni número de máquina (no es un problema técnico de la máquina).
+- El bot pregunta si el cliente pudo completar el lavado o secado.
+- El bot solicita el relato paso a paso, incluyendo la sugerencia de si pasó la tarjeta varias veces por el datáfono.
+- El bot solicita los últimos 4 dígitos de la tarjeta.
+- El bot solicita una captura del pago.
+- El bot pregunta el nombre del cliente.
+- El mensaje de cierre tras el nombre confirma la revisión y el formulario de devolución.
+- El mensaje final NO contiene "operador" ni "desactivado".
+
+**Conversación:**
+
+**Usuario:** Me habéis cobrado dos veces con la tarjeta.  
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿En qué lavandería te encuentras? (indica la ciudad y la calle)
+
+**Usuario:** Goya  
+**Bot:** ¿Pudiste completar el lavado o secado?
+
+**Usuario:** Sí  
+**Bot:** De acuerdo. ¿Podrías explicarme, por favor, paso a paso qué has hecho desde que has entrado? ¿Es posible que hayas pasado varias veces la tarjeta por el datáfono?
+
+**Usuario:** He pagado, no iba y volví a pasar la tarjeta.  
+**Bot:** ¡Gracias! Para revisarlo bien, ¿podrías indicarme los últimos 4 dígitos de la tarjeta?
+
+**Usuario:** 4821  
+**Bot:** ¡Perfecto! ¿Podrías enviarme una captura del pago? Con esos datos podremos revisarlo y enviarte el formulario de devolución. La próxima vez, antes de volver a pagar, contáctanos y te ayudamos al momento. ¿Cómo te llamas?
+
+**Usuario:** Goya  
+**Bot:** Tranquilo/a, Goya. Hemos recibido toda la información necesaria para tu caso. Vamos a revisar tu situación y te enviaremos un formulario de reembolso. Si necesitas algo más, aquí estoy para ayudarte.
+
+---
+
+### Scenario 6.2 — Escalación: cliente muy molesto que exige atención humana
+
+**Objetivo:** El cliente indica que está muy enfadado y quiere hablar con una persona. El bot escala inmediatamente.
+
+**Criterios de aceptación:**
+- Si el cliente indica que está muy molesto y exige hablar con una persona, el bot escala inmediatamente.
+- Antes de escalar, el bot pregunta el nombre del cliente junto con el mensaje de escalación.
+- El mensaje de escalación contiene la palabra "operador".
+- El mensaje de confirmación final contiene la palabra "desactivado".
+- El bot NO continúa recogiendo datos de revisión.
+
+**Conversación:**
+
+**Usuario:** Me habéis cobrado dos veces, estoy muy enfadado y quiero hablar con un operador ahora mismo.  
+**Bot:** ⚠️ Necesitamos derivar tu caso a un operador para revisarlo. ¿Cómo te llamas?
+
+**Usuario:** María  
+**Bot:** Gracias María. Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
+
+👤 **Human Support:** Usuario María en ubicación no identificada ha reportado un doble cobro con tarjeta.
+
+---
+
+### Scenario 6.3 — Escalación: relato inconsistente o importe no cuadra
+
+**Objetivo:** El relato del cliente tiene inconsistencias. El bot escala sin solicitar más datos.
+
+**Criterios de aceptación:**
+- El bot sigue el flujo estándar hasta solicitar el relato.
+- Cuando el relato es inconsistente (no sé exactamente, importe no cuadra), el bot escala.
+- Antes de escalar, el bot pregunta el nombre del cliente junto con el mensaje de escalación.
+- El mensaje de escalación contiene la palabra "operador".
+- El mensaje de confirmación final contiene la palabra "desactivado".
+- El bot NO continúa solicitando dígitos de tarjeta ni captura.
+
+**Conversación:**
+
+**Usuario:** Me habéis cobrado dos veces con la tarjeta.  
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿En qué lavandería te encuentras?
+
+**Usuario:** Goya  
+**Bot:** ¿Pudiste completar el lavado o secado?
+
+**Usuario:** Sí  
+**Bot:** De acuerdo. ¿Podrías explicarme paso a paso qué has hecho desde que has entrado?
+
+**Usuario:** No sé exactamente, creo que me han cobrado tres o cuatro veces, el importe no me cuadra.  
+**Bot:** ⚠️ Necesitamos derivar tu caso a un operador para revisarlo. ¿Cómo te llamas?
+
+**Usuario:** Carlos  
+**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+👤 **Human Support:** Usuario Carlos en Goya ha reportado un doble cobro con tarjeta.
+
+---
+
 ## Caso 7 — He pagado pero no he podido usar el servicio
 
 **Objetivo:**  
@@ -284,6 +762,78 @@ Resolución o redirección al flujo de pantalla.
 **Escalar si:**  
 - tras seguir el paso, la máquina no responde
 - el cliente no sabe leer la pantalla y no puede enviar foto
+
+---
+
+### Scenario 7.1 — Pagado sin usar, resuelto vía pantalla PUSH PROG (Happy Path)
+
+**Objetivo:** El cliente pagó pero no pudo usar la máquina. Tras recoger tipo y número, el bot detecta PUSH PROG como respuesta a la pregunta del cambio y guía la selección de programa. El cliente confirma que la lavadora arranca.
+
+**Criterios de aceptación:**
+- El bot recoge localización, tipo de máquina y número antes de preguntar por el cambio.
+- El bot reconoce que "PUSH PROG" es un código de pantalla aunque el cliente lo dé como respuesta a la pregunta del cambio.
+- El caso se cierra con un mensaje que contiene "perfecto" o "comenzado".
+
+**Conversación:**
+
+**Usuario:** He pagado y no he podido usar la máquina.  
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. ¿En qué lavandería autoservicio te encuentras?
+
+**Usuario:** Pineda  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+
+**Usuario:** 5  
+**Bot:** ¿La central ha devuelto el cambio?
+
+**Usuario:** PUSH PROG  
+**Bot:** Presiona un botón de programa para iniciar el lavado. Programas: 60º Molt calent → ropa muy sucia; 40º Calent → ropa normal; 30º Temperat → ropa delicada; Frío → prendas muy delicadas. Después avísame si funciona.
+
+**Usuario:** Ahora sí  
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
+
+---
+
+### Scenario 7.2 — Pagado sin usar, máquina no responde tras paso indicado (Escalación)
+
+**Objetivo:** El cliente pagó y la pantalla mostraba PUSH PROG, pero tras pulsar el programa la máquina no arranca. El bot re-pregunta el código, el cliente describe el bloqueo, y el bot escala.
+
+**Criterios de aceptación:**
+- El bot recoge localización, tipo y número antes de preguntar por el cambio.
+- Tras la instrucción, si la máquina no arranca el bot pide el código exacto de pantalla.
+- El bot escala indicando el operador y pregunta el nombre.
+- El mensaje de confirmación final contiene "desactivado".
+- El resumen al operador contiene el nombre del cliente, la localización, el número de máquina y el código de pantalla.
+
+**Conversación:**
+
+**Usuario:** He pagado y no he podido usar la máquina.  
+**Bot:** ¡Hola! ¿En qué lavandería autoservicio te encuentras?
+
+**Usuario:** Pineda  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+
+**Usuario:** 5  
+**Bot:** ¿La central ha devuelto el cambio?
+
+**Usuario:** PUSH PROG  
+**Bot:** Presiona un botón de programa para iniciar el lavado. [programas] Después avísame.
+
+**Usuario:** no arranca  
+**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
+
+**Usuario:** se ha bloqueado  
+**Bot:** ⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador para que revise el caso y la posible compensación. ¿Cómo te llamas?
+
+**Usuario:** Luis  
+**Bot:** Gracias Luis. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+👤 **Human Support:** Usuario Luis en Pineda ha efectuado el pago por la lavadora número 5. El cliente seleccionó el programa pero se ha bloqueado. La pantalla muestra: PUSH.
 
 ---
 
@@ -338,6 +888,41 @@ Datos completos en manos del operador, listos para validación + activación rem
 **Escalar si:**  
 - el código no encaja con el formato esperado
 - el cliente dice que solo hay números y no hay letras delante
+
+---
+
+### Scenario 8.1 — Código: Happy Path (bot pide solo el código)
+
+**Objetivo:** El bot reconoce el intent del código y pide el código exacto sin mezclar otras preguntas.
+
+**Criterios de aceptación:**
+- El bot saluda como asistente virtual de Ecolaundry en la primera respuesta.
+- La respuesta menciona la palabra "código".
+- El bot pide SOLO el código (no pregunta también por la lavandería en el mismo turno).
+- El bot NO pregunta si es lavadora o secadora.
+- El bot NO pregunta qué aparece en la pantalla.
+- El bot NO escala a operador.
+
+**Conversación:**
+
+**Usuario:** Tengo un código y no sé cómo usarlo.  
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. Te ayudo con el código. ¿Me dices el código exacto tal como lo ves, incluyendo letras si las hay?
+
+---
+
+### Scenario 8.2 — Código: Variante (misma respuesta canned)
+
+**Objetivo:** Variante del mismo trigger, misma respuesta del bot.
+
+**Criterios de aceptación:**
+- El bot saluda como asistente virtual de Ecolaundry en la primera respuesta.
+- La respuesta menciona la palabra "código".
+- El bot NO pregunta si es lavadora o secadora.
+
+**Conversación:**
+
+**Usuario:** Tengo un código de descuento, ¿cómo lo uso?  
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. Te ayudo con el código. ¿Me dices el código exacto tal como lo ves, incluyendo letras si las hay?
 
 ---
 
@@ -399,6 +984,104 @@ Datos completos en manos del operador, cliente avisado del envío.
 
 **Escalar si:**  
 - el cliente plantea una excepción no contemplada
+
+---
+
+### Scenario 9.1 — Factura Happy Path
+
+**Objetivo:** Recogida completa de los 8 datos de facturación con email
+válido al primer intento, cierre con el riepilogo + despedida personalizada.
+
+**Criterios de aceptación:**
+- El bot pregunta los 8 campos en orden: lavandería, tipo, razón social,
+  dirección, CIF/NIF/NIE, fecha, email, nombre.
+- Si la lavandería o el tipo de máquina ya están en sticky state, los
+  steps 1-2 se saltan y se pregunta directamente la razón social.
+- El email se valida (`algo@dominio.tld`) ANTES de pedir el nombre.
+- Sobre nombre dado → reply contiene el nombre del cliente, el email y
+  la fecha (raw o ISO).
+- El handover summary al operador contiene: razón social, dirección,
+  CIF, fecha, email.
+
+**Conversación:**
+
+**Usuario:** Quiero una factura  
+**Bot:** Claro, te ayudo con la factura. ¿En qué lavandería estuviste?
+
+**Usuario:** Goya  
+**Bot:** Gracias. ¿Utilizaste lavadora o secadora?
+
+**Usuario:** Lavadora  
+**Bot:** Perfecto. ¿Me indicas la razón social?
+
+**Usuario:** ACME SL  
+**Bot:** ¿Y la dirección?
+
+**Usuario:** Calle Mayor 1, Madrid  
+**Bot:** ¿Cuál es tu CIF/NIF/NIE?
+
+**Usuario:** B12345678  
+**Bot:** ¿Qué día utilizaste el servicio? (puedes decirme "hoy", "ayer" o una fecha)
+
+**Usuario:** Ayer  
+**Bot:** ¿A qué correo electrónico te enviamos la factura?
+
+**Usuario:** ana@example.com  
+**Bot:** Por último, ¿cuál es tu nombre?
+
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea, te enviaremos pronto la factura del 2026-05-07 a tu correo: ana@example.com.
+
+**👤 Human Support message** *(al operador)*  
+Usuario Andrea ha solicitado factura. Datos: razón social ACME SL; dirección Calle Mayor 1, Madrid; CIF B12345678; fecha 2026-05-07; máquina lavadora; email ana@example.com.
+
+---
+
+### Scenario 9.2 — Factura: email inválido → re-ask hasta que sea válido
+
+**Objetivo:** Si el cliente escribe un email mal formado, el bot vuelve a
+pedirlo en el mismo step sin avanzar al nombre. La validación se aplica
+hasta que el formato es correcto.
+
+**Criterios de aceptación:**
+- Sobre email mal formado (e.g. "ana", "ana@dominio", "abc") → reply
+  contiene "no parece válido" o equivalente y vuelve a pedir el correo.
+- El bot NO avanza al step "nombre" hasta recibir un email con formato
+  `algo@dominio.tld`.
+- Sobre email válido al segundo intento → continúa al nombre y luego
+  al cierre canónico.
+
+**Conversación:**
+
+**Usuario:** Quiero una factura  
+**Bot:** Claro, te ayudo con la factura. ¿En qué lavandería estuviste?
+
+**Usuario:** Goya  
+**Bot:** Gracias. ¿Utilizaste lavadora o secadora?
+
+**Usuario:** Lavadora  
+**Bot:** Perfecto. ¿Me indicas la razón social?
+
+**Usuario:** ACME SL  
+**Bot:** ¿Y la dirección?
+
+**Usuario:** Calle Mayor 1, Madrid  
+**Bot:** ¿Cuál es tu CIF/NIF/NIE?
+
+**Usuario:** B12345678  
+**Bot:** ¿Qué día utilizaste el servicio?
+
+**Usuario:** Ayer  
+**Bot:** ¿A qué correo electrónico te enviamos la factura?
+
+**Usuario:** ana  
+**Bot:** El correo no parece válido. ¿Puedes escribírmelo de nuevo, por favor?
+
+**Usuario:** ana@example.com  
+**Bot:** Por último, ¿cuál es tu nombre?
+
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea, te enviaremos pronto la factura del 2026-05-07 a tu correo: ana@example.com.
 
 ---
 

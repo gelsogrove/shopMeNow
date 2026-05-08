@@ -52,6 +52,13 @@ export interface DisplayFlowDefinition {
   escalationReplyKey?: TranslationKey
   /** Stored in `state.escalationReason` and surfaced in the operator handover. */
   escalationReason: string
+  /**
+   * When true, Phase B asks the customer to confirm the current display code
+   * before escalating. Only triggers re-ask when `persistFailureRegex` matches
+   * AND the customer's message does NOT already contain a known display token
+   * from `displayMatches` (so "sigue saliendo AL001" still escalates directly).
+   */
+  reaskBeforeEscalate?: boolean
 }
 
 export interface DisplayFlowsFile {
@@ -140,6 +147,9 @@ export function validateDisplayFlowsFile(raw: unknown): DisplayFlowsFile {
     if (f.escalationReplyKey !== undefined && typeof f.escalationReplyKey !== 'string') {
       throw new Error(`${ctx}.escalationReplyKey: must be a string when present`)
     }
+    if (f.reaskBeforeEscalate !== undefined && typeof f.reaskBeforeEscalate !== 'boolean') {
+      throw new Error(`${ctx}.reaskBeforeEscalate: must be a boolean when present`)
+    }
     if (typeof f.escalationReason !== 'string' || !f.escalationReason) {
       throw new Error(`${ctx}.escalationReason: must be a non-empty string`)
     }
@@ -168,6 +178,7 @@ export function validateDisplayFlowsFile(raw: unknown): DisplayFlowsFile {
       persistFailureRegex: f.persistFailureRegex as string | undefined,
       escalationReplyKey: f.escalationReplyKey as TranslationKey | undefined,
       escalationReason: f.escalationReason,
+      reaskBeforeEscalate: f.reaskBeforeEscalate === true,
     }
   })
 
