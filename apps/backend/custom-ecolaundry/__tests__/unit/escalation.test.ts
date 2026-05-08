@@ -265,6 +265,124 @@ const cases: Case[] = [
       if (c.invoiceData.email !== 'cliente@example.com') throw new Error('email must propagate')
     },
   },
+
+  // ── Customer name + phone in handover summary ─────────────────────────────
+  // SCENARIO (#10): the operator handover summary MUST always carry the
+  // customer's name; when WhatsApp metadata provides a phone, it MUST
+  // appear next to the name in parentheses. This is the operator's only
+  // contact info — it cannot drop silently.
+  // NOTE on phone formatting:
+  //   sanitizeForDisplay strips markdown specials (incl. "+") so the operator
+  //   sees "34600123456" not "+34600123456". The digits are preserved (which
+  //   is what matters for callbacks). These tests assert the digits, not the
+  //   leading "+".
+  {
+    name: 'name+phone: both present → "Usuario Andrea (34600123456)" — digits preserved',
+    run: () => {
+      const s = buildEscalationSummary(ctx({
+        customerName: 'Andrea',
+        customerPhone: '+34600123456',
+        displayState: 'PUSH',
+      }))
+      if (!/Usuario Andrea/.test(s)) throw new Error('summary must include name')
+      if (!/34600123456/.test(s)) throw new Error('summary must include phone digits')
+      if (!/Usuario Andrea\s*\(34600123456\)/.test(s)) {
+        throw new Error(`expected "Usuario Andrea (34600123456)", got: ${s}`)
+      }
+    },
+  },
+  {
+    name: 'name only (no phone) → "Usuario Andrea" without parentheses',
+    run: () => {
+      const s = buildEscalationSummary(ctx({
+        customerName: 'Andrea',
+        customerPhone: null,
+        displayState: 'PUSH',
+      }))
+      if (!/Usuario Andrea/.test(s)) throw new Error('summary must include name')
+      if (/Usuario Andrea\s*\(/.test(s)) {
+        throw new Error(`no parentheses when phone is null, got: ${s}`)
+      }
+    },
+  },
+  {
+    name: 'phone digits always present (Caso 4 no-change branch)',
+    run: () => {
+      const s = buildEscalationSummary(ctx({
+        customerName: 'Carlos',
+        customerPhone: '+34611222333',
+        pendingFlow: 'no-change-await-confirm',
+        escalationReason: 'No-change incident',
+      }))
+      if (!/Carlos/.test(s)) throw new Error('Caso 4 summary must include name')
+      if (!/34611222333/.test(s)) throw new Error('Caso 4 summary must include phone digits')
+    },
+  },
+  {
+    name: 'phone digits always present (Caso 6 double charge branch)',
+    run: () => {
+      const s = buildEscalationSummary(ctx({
+        customerName: 'María',
+        customerPhone: '+34622333444',
+        issueSummary: 'double charge — narrative: pagué dos veces',
+      }))
+      if (!/María/.test(s)) throw new Error('Caso 6 summary must include name')
+      if (!/34622333444/.test(s)) throw new Error('Caso 6 summary must include phone digits')
+    },
+  },
+  {
+    name: 'phone digits always present (Caso 16 ALN branch)',
+    run: () => {
+      const s = buildEscalationSummary(ctx({
+        customerName: 'Luis',
+        customerPhone: '+34633444555',
+        displayState: 'ALN',
+        machineType: 'dryer',
+        machineNumber: '4',
+        locationDisplay: 'Alemanya',
+      }))
+      if (!/Luis/.test(s)) throw new Error('Caso 16 summary must include name')
+      if (!/34633444555/.test(s)) throw new Error('Caso 16 summary must include phone digits')
+    },
+  },
+
+  // ── Spanish-only handover summary (#11) ──────────────────────────────────
+  // SCENARIO: the operator handover summary is ALWAYS in Spanish, regardless
+  // of the customer's chat language. This pins the deliberate ES-first
+  // exemption documented in CLAUDE.md (escalation.ts holds ~30 hardcoded
+  // ES phrases). When other languages go live, this test must move to a
+  // tenant-language-aware variant.
+  {
+    name: 'summary always in Spanish (default branch — machine incident)',
+    run: () => {
+      const s = buildEscalationSummary(ctx({
+        customerName: 'Andrea',
+        customerPhone: '+34600000000',
+        displayState: 'PUSH',
+      }))
+      // Discriminative ES words: any of "Usuario", "en", "ha", "máquina",
+      // "ubicación", "número", "lavadora", "secadora" → ES.
+      const isSpanish = /\b(Usuario|en|ha|m[áa]quina|ubicaci[oó]n|n[uú]mero|lavadora|secadora)\b/.test(s)
+      if (!isSpanish) {
+        throw new Error(`summary must be in Spanish, got: ${s}`)
+      }
+    },
+  },
+  {
+    name: 'summary always in Spanish (Caso 4 no-change)',
+    run: () => {
+      const s = buildEscalationSummary(ctx({
+        customerName: 'Carlos',
+        customerPhone: '+34611222333',
+        pendingFlow: 'no-change-await-confirm',
+        escalationReason: 'No-change incident',
+      }))
+      // ES-discriminative words specific to this branch
+      if (!/(?:Usuario|cobrad|m[aá]quina|cambio)/i.test(s)) {
+        throw new Error(`Caso 4 summary must contain ES vocabulary, got: ${s}`)
+      }
+    },
+  },
 ]
 
 let passed = 0

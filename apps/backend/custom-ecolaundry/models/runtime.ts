@@ -82,6 +82,12 @@ export type Settings = {
    */
   sessionIdleTtlMs?: number
   /**
+   * Hard cap on cached sessions in memory. When exceeded, oldest sessions
+   * (by lastUsedAt) are evicted (LRU). Default 10000. Falls back to env var
+   * AGENT_SESSION_CACHE_MAX when not set in settings.
+   */
+  agentSessionCacheMax?: number
+  /**
    * Branch-router architecture (target — see docs/branch-router-architecture.md).
    * When true, turn 1 is classified by utils/router.ts (one LLM call) into a
    * branch (greeting/faq/trouble-machine/invoice/loyalty/escalation) and

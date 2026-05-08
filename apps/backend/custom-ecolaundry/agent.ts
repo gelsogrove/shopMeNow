@@ -31,6 +31,11 @@ import {
 } from './utils/contradiction.js'
 import { closeAsEscalated, undoResolved } from './utils/state-transitions.js'
 import { applyOutputInvariants } from './utils/output-invariants.js'
+import {
+  auditFactDiscipline,
+  collectInvokedSetTools,
+  snapshotFacts,
+} from './utils/fact-call-audit.js'
 
 import type { AgentMessage, AgentRuntime, AgentSession } from './models/index.js'
 
@@ -172,6 +177,10 @@ async function runLlmLoop(
     { role: 'user', content: userMessage },
   ]
   const maxToolHops = ar.runtime.settings.maxToolHops
+  // Snapshot facts before the LLM runs. autoExtractFacts (agent.ts:72) has
+  // already populated state; this baseline lets the audit detect new facts
+  // gained during the LLM turn vs sticky facts that were already present.
+  const beforeSnapshot = snapshotFacts(ar.state)
 
   for (let hops = 0; hops < maxToolHops; hops++) {
     const response = await callAgentLLM(messages, ar.runtime)
@@ -179,6 +188,9 @@ async function runLlmLoop(
 
     const toolCalls = response.tool_calls || []
     if (toolCalls.length === 0) {
+      auditFactDiscipline(beforeSnapshot, snapshotFacts(ar.state), collectInvokedSetTools(messages), {
+        turnCount: ar.state.turnCount,
+      })
       return response.content || ''
     }
     await runToolCalls(ar, toolCalls, messages)

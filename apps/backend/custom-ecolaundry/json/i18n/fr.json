@@ -70,5 +70,6 @@
   "pricingDeflect": "Je dois vérifier avant de te confirmer ce montant.",
   "openingHoursDefault": "Les horaires généraux d'ouverture au public sont de 8 h à 22 h tous les jours de l'année.",
   "unknownLocationList": "Je ne reconnais pas cet emplacement. Nos laveries sont : {list}. Dans laquelle es-tu ?",
-  "defaultHelp": "Dis-moi le détail utile suivant et je t'aiderai pas à pas."
+  "defaultHelp": "Dis-moi le détail utile suivant et je t'aiderai pas à pas.",
+  "flowResumePrompt": "On continue avec le problème de la laverie ?"
 }

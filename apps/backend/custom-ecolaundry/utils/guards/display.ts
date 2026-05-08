@@ -9,6 +9,7 @@ import { t, tt } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { escalate, requireCustomerName } from '../state-transitions.js'
 import { lang, RECOVERABLE_DISPLAYS } from './helpers.js'
+import { extractDisplayState } from '../intent.js'
 
 /** Caso 17 — customer cannot read the display. Photo upload not supported,
  *  so escalate directly. */
@@ -69,6 +70,21 @@ export const guardPostInstructionFailure: Guard = (ar, userMessage) => {
   // covers the JSON-driven flows AL001/ALM-DOOR/C001; this branch covers
   // the washer/dryer flow-engine flows like case_push/case_door/case_sel.)
   if (ar.state.pendingFlow === 'display-reask-pending') {
+    // PIVOT — if the customer's reply contains a NEW display token, they
+    // are reporting a different problem (e.g. previous flow was DOOR,
+    // re-ask got "SEL"). Reset the flow state and let the next pipeline
+    // pass route the new display through the proper guard. Do NOT escalate
+    // on the old flow.
+    const newDisplay = extractDisplayState(userMessage)
+    const currentDisplay = ar.state.displayState ? String(ar.state.displayState).toUpperCase() : ''
+    if (newDisplay && newDisplay.toUpperCase() !== currentDisplay) {
+      ar.state.pendingFlow = ''
+      ar.state.activeFlowId = null
+      ar.state.activeStepId = null
+      ar.state.lastPresentedStepId = null
+      ar.state.displayState = newDisplay
+      return null
+    }
     ar.state.pendingFlow = ''
     ar.state.activeFlowId = null
     escalate(ar, 'Customer reports the instruction did not resolve the issue')
@@ -78,7 +94,30 @@ export const guardPostInstructionFailure: Guard = (ar, userMessage) => {
   }
 
   const reply = userMessage.trim().toLowerCase()
-  const failure = /(sigue\s+(?:igual|sin\s+(?:arrancar|funcionar|responder|empezar)|saliendo\b)|sigue\s+(?:sin|igual)|no\s+(?:responde|arranca|empieza|funciona|desaparece)|todav[ií]a\s+(?:no|sale|sigue)|aun\s+(?:no|sale|sigue)|el\s+mensaje\s+(?:sigue|no\s+desaparece)|no\s+lo\s+s[eé]\s+bien|no\s+estoy\s+seguro|^(no|nada)|he\s+pulsado.+no\s+responde|pulsado.+no\s+responde|he\s+probado.+no\s+(?:funciona|responde))/i.test(reply)
+  // ES failure patterns. Multi-language coverage is deferred per the
+  // ES-first scope (CLAUDE.md rule #8 exemption). When a 2nd language
+  // ships, mirror these patterns or move them to nlu-patterns.json.
+  const failure =
+    // "sigue + igual / sin <verb> / saliendo"
+    /(sigue\s+(?:igual|sin\s+(?:arrancar|funcionar|responder|empezar)|saliendo\b)|sigue\s+(?:sin|igual))/i.test(reply) ||
+    // "no <verb>" — direct present-tense
+    /no\s+(?:responde|arranca|empieza|funciona|desaparece)/i.test(reply) ||
+    // "no me ha <past-participle>" / "no se ha <past-participle>" — perfect tense.
+    // Catches "no me ha funcionado", "no se ha activado", "no ha respondido".
+    /no\s+(?:me\s+|se\s+)?(?:ha|han)\s+(?:funcionado|respondido|arrancado|empezado|activado|desaparecido)/i.test(reply) ||
+    // "tampoco <verb>" — alternative negation
+    /tampoco\s+(?:funciona|arranca|responde|empieza)/i.test(reply) ||
+    // "todavía/aun + (no/sale/sigue)"
+    /todav[ií]a\s+(?:no|sale|sigue)/i.test(reply) ||
+    /aun\s+(?:no|sale|sigue)/i.test(reply) ||
+    // "el mensaje sigue / no desaparece"
+    /el\s+mensaje\s+(?:sigue|no\s+desaparece)/i.test(reply) ||
+    // Customer is uncertain (treat as failure → re-ask for explicit code)
+    /no\s+lo\s+s[eé]\s+bien|no\s+estoy\s+seguro/i.test(reply) ||
+    // Bare "no" / "nada" at the start of the reply
+    /^(no|nada)\b/i.test(reply) ||
+    // "he pulsado/probado X y no responde/funciona"
+    /(?:he\s+pulsado|pulsado|he\s+probado).+no\s+(?:responde|funciona)/i.test(reply)
   if (!failure) return null
 
   // Phase B — first failure: ask the customer to confirm the exact code

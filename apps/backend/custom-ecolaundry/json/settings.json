@@ -1,17 +1,24 @@
 {
   "_comment": "Tenant configuration for Ecolaundry / ecolaundry. Single source of truth for behaviour-tuning + business constants. See docs/settings.md for the full field reference.",
 
+  "_section_languages": "Active languages for this tenant. defaultLanguage is the fallback when the customer's language can't be detected. enabledLanguages MUST contain defaultLanguage.",
   "enabledLanguages": ["es"],
   "defaultLanguage": "es",
+
+  "_section_branding": "Tenant identity strings. Substituted into prompts (welcome, escalation summary, FAQ replies). Both are used by buildSystemPrompt + escalation.ts.",
   "chatbotName": "Eco",
   "companyName": "Ecolaundry",
 
+  "_section_llm": "LLM provider tuning. model is the OpenRouter id; agentTemperature controls creativity (0.0=deterministic, 1.0=creative); agentMaxTokens caps output length per call; maxToolHops caps tool-call iterations per turn.",
   "model": "openai/gpt-4o-mini",
   "agentTemperature": 0.3,
+  "agentMaxTokens": 800,
   "maxToolHops": 6,
 
+  "_section_tone": "Free-form tone descriptor injected into agent.txt. Reinforces the prompt's TONE & EMPATHY section. Keep short and concrete.",
   "tone": "calm, reassuring, relaxed, warm, step-by-step",
 
+  "_section_support_contacts": "Email addresses surfaced in FAQ + handover summaries. The 'invoice' inbox handles billing/factura cases (Caso 9); 'support' is the generic operator inbox.",
   "supportEmails": {
     "invoice": "olga@alberwaz.net",
     "support": "service@alberwaz.net"
@@ -19,13 +26,16 @@
   "refundFormUrl": "https://forms.gle/XFGPAd9581AhC9eu7",
   "allowedExternalLinks": "echatbot.ai, www.echatbot.ai, forms.gle, alberwaz.net",
 
+  "_section_welcome": "Per-language welcome line shown only on T1 (rule #G2). Adding a language requires both an entry here AND parity in json/i18n/<lang>.json.",
   "welcomeMessage": {
     "es": "Hola, soy el asistente virtual de la lavandería."
   },
 
+  "_section_session_lifecycle": "historyResetTtlMs: when the gap between last assistant message and incoming user message exceeds this, the session is recreated fresh (welcome + re-ask location). Default 3 600 000 (1 hour). sessionIdleTtlMs: in-process session cache eviction (idle > this → evicted to bound memory). Default 1 800 000 (30 minutes). agentSessionCacheMax: hard cap on cached sessions (LRU eviction by lastUsedAt when over cap).",
   "historyResetTtlMs": 3600000,
   "sessionIdleTtlMs": 1800000,
+  "agentSessionCacheMax": 10000,
 
-  "_comment_useBranchRouter": "When true, T1 messages are classified by utils/router.ts (LLM call) into a branch and dispatched to utils/branches/<branch>/handler.ts. T2+ stay deterministic via state.activeBranch. When false (default), the legacy guard pipeline runs unchanged. See docs/branch-router-architecture.md.",
+  "_section_branch_router": "When true, T1 messages are classified by utils/router.ts (LLM call) into a branch and dispatched to utils/branches/<branch>/handler.ts. T2+ stay deterministic via state.activeBranch. When false (default), the legacy guard pipeline runs unchanged. See docs/branch-router-architecture.md and TODO.md item #2.",
   "useBranchRouter": false
 }
