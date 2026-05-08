@@ -1,11 +1,15 @@
 import { DragDropContext, Draggable, Droppable, DropResult } from "@hello-pangea/dnd"
 import {
   ArrowLeft,
+  Check,
   KanbanSquare,
   LogOut,
   MessageCircle,
+  Pencil,
   Plus,
   Send,
+  ThumbsDown,
+  ThumbsUp,
   Trash2,
   X,
 } from "lucide-react"
@@ -40,7 +44,7 @@ const STATUS_COLUMNS: { id: TodoStatus; title: string; headerBg: string; bg: str
   { id: "IN_PROGRESS", title: "IN PROGRESS", headerBg: "bg-blue-200", bg: "bg-blue-50" },
   { id: "REVIEW", title: "REVIEW", headerBg: "bg-yellow-200", bg: "bg-yellow-50" },
   { id: "DONE", title: "DONE", headerBg: "bg-green-200", bg: "bg-green-50" },
-  { id: "NICE_TO_HAVE", title: "NICE TO HAVE", headerBg: "bg-purple-200", bg: "bg-purple-50" },
+  { id: "NICE_TO_HAVE", title: "VER 2", headerBg: "bg-purple-200", bg: "bg-purple-50" },
 ]
 
 type TodoStatus = "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE" | "NICE_TO_HAVE"
@@ -86,6 +90,36 @@ type ChatSession = {
   id: string
   customer: { id: string; name: string | null; phone: string | null }
   messages: ChatMessage[]
+}
+
+// ── Local-only chat metadata (demo, not persisted to backend) ────────────────
+// Chat title overrides + per-message feedback live in localStorage so the
+// playground can display them without a backend column. When the data model
+// graduates to production, these maps move to the ChatSession / ChatMessage
+// columns.
+
+type Feedback = "like" | "dislike"
+
+const TITLE_STORAGE_KEY = "ecolaundry-demo-chat-titles"
+const FEEDBACK_STORAGE_KEY = "ecolaundry-demo-msg-feedback"
+
+function readJsonMap<T>(key: string): Record<string, T> {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, T>) : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeJsonMap<T>(key: string, value: Record<string, T>): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    /* quota exceeded or storage disabled — ignore, this is a demo overlay */
+  }
 }
 
 const PRIORITY_COLOR: Record<Priority, string> = {
@@ -686,6 +720,97 @@ function TodoDetailModal({
 }
 
 // ----------------------------------------------------------------------------
+// CHAT TITLE EDIT — inline editor for the chat list header
+// ----------------------------------------------------------------------------
+// Demo-only overlay. The chat session has no `title` field on the backend
+// today; the value is stored in localStorage by the parent component.
+// When backend support is added, swap the prop callback for an API call.
+function ChatTitleEdit({
+  fallbackLabel,
+  currentTitle,
+  onSave,
+}: {
+  fallbackLabel: string
+  currentTitle: string | null
+  onSave: (next: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(currentTitle || "")
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!editing) setDraft(currentTitle || "")
+  }, [currentTitle, editing])
+
+  useEffect(() => {
+    if (editing) inputRef.current?.focus()
+  }, [editing])
+
+  const commit = () => {
+    onSave(draft)
+    setEditing(false)
+  }
+
+  const cancel = () => {
+    setDraft(currentTitle || "")
+    setEditing(false)
+  }
+
+  if (editing) {
+    return (
+      <div
+        className="flex items-center gap-1 mb-0.5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commit()
+            if (e.key === "Escape") cancel()
+          }}
+          placeholder={fallbackLabel}
+          className="flex-1 min-w-0 text-sm border rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-emerald-500"
+        />
+        <button
+          onClick={commit}
+          className="p-0.5 text-emerald-600 hover:bg-emerald-100 rounded"
+          title="Save title"
+        >
+          <Check className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={cancel}
+          className="p-0.5 text-gray-500 hover:bg-gray-100 rounded"
+          title="Cancel"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1 mb-0.5 group/title">
+      <div className="font-medium text-sm truncate flex-1 min-w-0">
+        {currentTitle || fallbackLabel}
+      </div>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          setEditing(true)
+        }}
+        className="p-0.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded opacity-0 group-hover/title:opacity-100 transition shrink-0"
+        title="Edit chat title"
+      >
+        <Pencil className="w-3 h-3" />
+      </button>
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
 // CHAT SCREEN — main page
 // ----------------------------------------------------------------------------
 function ChatScreen({
@@ -708,6 +833,39 @@ function ChatScreen({
   // Message id to highlight & scroll to (set when arriving from a kanban "Open in chat" click)
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null)
   const chatScrollRef = useRef<HTMLDivElement>(null)
+  // Demo-only overlays persisted in localStorage (no backend column today).
+  // When backend support lands, these move to ChatSession.title and
+  // ChatMessage.feedback respectively.
+  const [chatTitles, setChatTitles] = useState<Record<string, string>>(() =>
+    readJsonMap<string>(TITLE_STORAGE_KEY),
+  )
+  const [messageFeedback, setMessageFeedback] = useState<Record<string, Feedback>>(
+    () => readJsonMap<Feedback>(FEEDBACK_STORAGE_KEY),
+  )
+
+  const setChatTitle = useCallback((sessionId: string, title: string) => {
+    setChatTitles((prev) => {
+      const next = { ...prev }
+      const trimmed = title.trim()
+      if (trimmed) next[sessionId] = trimmed
+      else delete next[sessionId]
+      writeJsonMap(TITLE_STORAGE_KEY, next)
+      return next
+    })
+  }, [])
+
+  const toggleMessageFeedback = useCallback(
+    (messageId: string, value: Feedback) => {
+      setMessageFeedback((prev) => {
+        const next = { ...prev }
+        if (next[messageId] === value) delete next[messageId]
+        else next[messageId] = value
+        writeJsonMap(FEEDBACK_STORAGE_KEY, next)
+        return next
+      })
+    },
+    [],
+  )
 
   const fetchAll = useCallback(async () => {
     const [msgRes, todosRes] = await Promise.all([
@@ -986,8 +1144,8 @@ function ChatScreen({
       />
 
       <div className="flex-1 grid grid-cols-12 gap-3 p-3 min-h-0">
-        {/* CHAT LIST */}
-        <aside className="col-span-3 lg:col-span-2 bg-white rounded-xl shadow flex flex-col overflow-hidden min-h-0">
+        {/* CHAT LIST — wider column (+80px) for chat title visibility */}
+        <aside className="col-span-3 bg-white rounded-xl shadow flex flex-col overflow-hidden min-h-0 min-w-[280px]">
           <div className="px-3 py-2 bg-emerald-600 text-white shrink-0">
             <span className="font-semibold text-sm">Chats</span>
           </div>
@@ -1027,6 +1185,7 @@ function ChatScreen({
                 0
               )
               const hasTodos = linkedTodos.length > 0
+              const customTitle = chatTitles[s.id] || null
               return (
                 <div
                   key={s.id}
@@ -1038,12 +1197,18 @@ function ChatScreen({
                       : "hover:bg-gray-50"
                   }`}
                 >
-                  <button
+                  <div
                     onClick={() => setActiveSessionId(s.id)}
-                    className="w-full text-left px-3 py-2 pr-9"
+                    className="w-full text-left px-3 py-2 pr-9 cursor-pointer"
                   >
-                    <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <div className="font-medium text-sm truncate">{primary}</div>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <div className="flex-1 min-w-0">
+                        <ChatTitleEdit
+                          fallbackLabel={primary}
+                          currentTitle={customTitle}
+                          onSave={(next) => setChatTitle(s.id, next)}
+                        />
+                      </div>
                       {hasTodos && (
                         <button
                           onClick={(e) => {
@@ -1060,6 +1225,11 @@ function ChatScreen({
                         </button>
                       )}
                     </div>
+                    {customTitle && (
+                      <div className="text-[10px] text-gray-500 truncate">
+                        {primary}
+                      </div>
+                    )}
                     {secondary && (
                       <div className="text-[10px] text-gray-500 truncate">
                         {secondary}
@@ -1083,7 +1253,7 @@ function ChatScreen({
                         No messages yet
                       </div>
                     )}
-                  </button>
+                  </div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -1202,24 +1372,64 @@ function ChatScreen({
                     <div className="whitespace-pre-wrap">{m.content}</div>
                     <div className="text-[10px] text-gray-500 mt-1 flex justify-between items-center gap-3">
                       <span>{new Date(m.createdAt).toLocaleTimeString()}</span>
-                      {/* Comment button only for chatbot (OUTBOUND) messages.
-                          Users don't comment on their own messages. */}
+                      {/* Feedback + comment buttons only for chatbot
+                          (OUTBOUND) messages. Users don't rate their own
+                          messages. Like/dislike toggle the same value off
+                          when re-clicked. Persisted in localStorage. */}
                       {!isInbound && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setCommentingMessage(m)
-                          }}
-                          className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/70 hover:bg-emerald-100 text-emerald-700 transition shadow-sm"
-                          title="Comment this bot reply"
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                          {todoCount > 0 && (
-                            <span className="text-xs font-semibold">
-                              {todoCount}
-                            </span>
-                          )}
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleMessageFeedback(m.id, "like")
+                            }}
+                            className={`flex items-center justify-center p-1 rounded-full transition shadow-sm ${
+                              messageFeedback[m.id] === "like"
+                                ? "bg-emerald-200 text-emerald-700"
+                                : "bg-white/70 hover:bg-emerald-100 text-emerald-700"
+                            }`}
+                            title={
+                              messageFeedback[m.id] === "like"
+                                ? "Click to remove like"
+                                : "Mark this reply as good"
+                            }
+                          >
+                            <ThumbsUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleMessageFeedback(m.id, "dislike")
+                            }}
+                            className={`flex items-center justify-center p-1 rounded-full transition shadow-sm ${
+                              messageFeedback[m.id] === "dislike"
+                                ? "bg-red-200 text-red-700"
+                                : "bg-white/70 hover:bg-red-100 text-red-700"
+                            }`}
+                            title={
+                              messageFeedback[m.id] === "dislike"
+                                ? "Click to remove dislike"
+                                : "Mark this reply as bad"
+                            }
+                          >
+                            <ThumbsDown className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setCommentingMessage(m)
+                            }}
+                            className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/70 hover:bg-emerald-100 text-emerald-700 transition shadow-sm"
+                            title="Comment this bot reply"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                            {todoCount > 0 && (
+                              <span className="text-xs font-semibold">
+                                {todoCount}
+                              </span>
+                            )}
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
