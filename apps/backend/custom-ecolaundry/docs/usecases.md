@@ -1215,6 +1215,12 @@ Responder consultas generales sin inventar datos.
 **Cuándo aplica:**  
 El cliente pregunta por horarios o precios.
 
+**Criterios de aceptación:**
+- Horarios: respuesta por defecto 8:00-22:00. Excepción L'Escala: 7:00-23:00 (override leído de `locations.json:faqOverrides.openingHours`).
+- Precios: respuesta canónica de "deflect" — el bot **no** inventa importes; redirige a "tengo que revisarlo antes de confirmártelo".
+- Reconocimiento multilingüe del input: el cliente puede escribir en ES / IT / EN / CA / PT / FR y el bot detecta la pregunta vía `HORARIOS_TOPIC` / `PRECIO_TOPIC` (regex multilingüe). El **output** se mantiene en el idioma del tenant (ES).
+- Follow-up "¿y en L'Escala?" (después de un horario general) → respuesta con la excepción, sin re-pedir contexto.
+
 **Ejemplo de conversación A — Horario general**
 
 **Usuario:** ¿Cuál es el horario?  
@@ -1263,6 +1269,12 @@ Escalar sin confrontar al cliente, recopilando los datos mínimos para el operad
 **Cuándo aplica:**  
 Aparece `ALM`, `ALN`, `001`, un código no documentado, o hay incoherencias en el relato o en el importe.
 
+**Criterios de aceptación:**
+- Caso "paraguas" para alarmas/incoherencias genéricas. Más específicos: Caso 14 (ALM DOOR), Caso 15 (001), Caso 16 (ALM/ALN secadora), Caso 18 (numérico), Caso 30 (no documentado).
+- Gather **completo** antes de escalar: location → tipo → número → display. Sin display el operador no puede triar.
+- Reply de escalación contiene `revisión manual` + petición del nombre del cliente.
+- El bot **nunca** confronta al cliente: tono "lo revisamos para ayudarte", no "tu información no cuadra".
+
 **Ejemplo de conversación:**
 
 **Usuario:** He pagado y ahora sale ALN.  
@@ -1296,6 +1308,12 @@ Gestionar correctamente un problema de cierre o una posible prenda atrapada ante
 
 **Cuándo aplica:**  
 El cliente indica que en pantalla aparece `ALM DOOR`.
+
+**Criterios de aceptación:**
+- Diferencia clave con Caso 2 (DOOR simple): el bot intenta **una vez** la guía de "abrir + revisar prendas atrapadas + cerrar bien" antes de escalar.
+- Si el cliente confirma que el mensaje desaparece → resolved.
+- Si el cliente reporta que NO desaparece → escalación con resumen que incluye `ALM DOOR` (no un "DOOR" genérico).
+- Reconocimiento robusto del código: acepta `ALM DOOR`, `ALM/DOOR`, `ALMDOOR` (normalizado por `extractDisplayState`).
 
 **Ejemplo de conversación:**
 
@@ -1332,6 +1350,12 @@ Reconocer un caso que debe escalarse siempre.
 **Cuándo aplica:**  
 El cliente indica que aparece `001`.
 
+**Criterios de aceptación:**
+- Reconocimiento de `001` puro (sin prefijo `AL`/`ALM`) → display token canónico `C001`.
+- El bot da una **explicación educativa** ("ese mensaje aparece cuando se ha seleccionado el programa antes del pago") antes de escalar — sin pedir al cliente que repita pasos.
+- Sólo necesita location antes de escalar (no display de nuevo, no número obligatorio).
+- Diferencia clave con Caso 5 (AL001): este NO admite recovery — siempre se escala.
+
 **Ejemplo de conversación:**
 
 **Usuario:** En la pantalla sale 001.  
@@ -1358,6 +1382,12 @@ Detectar una alarma de máquina y escalar sin hacer manipular más al cliente, r
 
 **Cuándo aplica:**  
 El cliente indica `ALM`, `ALN`, `ALN A`, `ALN N` o un código de alarma similar.
+
+**Criterios de aceptación:**
+- Reconocimiento robusto: `ALN`, `ALN A`, `ALN N` se normalizan al token correspondiente; familias `ALM/A`, `ALM/E`, `ALM/VAr` se normalizan también.
+- Tras location + tipo + número, escalación inmediata: el bot **no** pide al cliente abrir/cerrar nada (a diferencia del Caso 14 ALM DOOR).
+- Diferencia clave con Caso 13 (genérico): Caso 16 es específico de la familia ALM/ALN, normalmente sobre secadora.
+- El resumen al operador incluye el código exacto (ALN, ALN A, etc.), location, tipo y número.
 
 **Ejemplo de conversación:**
 
@@ -1388,6 +1418,12 @@ Escalar cuando no se puede obtener el estado de pantalla.
 
 **Cuándo aplica:**  
 El cliente no sabe leer el display o no ve bien la pantalla.
+
+**Criterios de aceptación:**
+- Trigger: el cliente dice "no sé qué pone", "no veo la pantalla", "está en blanco" o equivalente.
+- Gather mínimo: location + tipo de máquina (sin display, sin número obligatorio).
+- Tras gather → escalación inmediata. El resumen al operador indica explícitamente la falta de información de pantalla ("display no legible / cliente no puede leerlo").
+- **No** se pide foto al cliente (feature no soportada hoy). Cuando se habilite, este caso pasará por un paso intermedio.
 
 **Nota de implementación:** la subida de fotos NO está soportada hoy. Sin
 información del display el bot no puede dar instrucciones recuperables, así
@@ -1424,6 +1460,13 @@ Detectar una incoherencia sin confrontar al cliente.
 **Cuándo aplica:**  
 El cliente facilita un código compuesto solo por números y afirma que no tiene letras delante.
 
+**Criterios de aceptación:**
+- Trigger: input que matche `^\d{3,}$` (3+ dígitos puros, sin letras).
+- Step 1: el bot pregunta explícitamente "¿ves alguna letra delante?" (`numericCodeAskLetters`).
+- Step 2 — respuesta "Sí" → reset al flujo Caso 8 (pide código completo con letras).
+- Step 2 — respuesta "No" → escalación inmediata; el resumen al operador indica `código solo numérico (XXXX) requiere revisión` — **NO** "código no documentado" (que es Caso 30).
+- El bot **no** dice "te equivocas" ni similar — sólo "necesitamos revisarlo manualmente".
+
 **Ejemplo de conversación:**
 
 **Usuario:** Tengo un código: 23432023.  
@@ -1450,6 +1493,12 @@ Detectar una incoherencia de importe sin acusar al cliente.
 
 **Cuándo aplica:**  
 El cliente está en Goya y afirma que el datáfono ha cobrado 10 €.
+
+**Criterios de aceptación:**
+- Trigger: input mencionar `datáfono` + cifra atípica + location Goya. Detector en `nluPatterns.topicPayment` + `location-gated-mismatch`.
+- Set state: `nonTroubleshootingIncident="datafono-wrong-amount"`. El gather de máquina queda **deshabilitado** (no se piden tipo/número).
+- El bot pregunta sólo "¿has podido usar el servicio?" como dato adicional para el operador.
+- Resumen al operador: `Goya + datáfono + importe incoherente`. **No** se acusa al cliente ni se discute la cifra.
 
 **Ejemplo de conversación:**
 
@@ -1478,6 +1527,11 @@ Detectar una incoherencia de importe sin confrontar.
 **Cuándo aplica:**  
 El cliente está en Pineda y afirma que el datáfono ha cobrado 10 €.
 
+**Criterios de aceptación:**
+- Mismo flujo del Caso 19, pero con location = Pineda. Misma escalación, mismo `nonTroubleshootingIncident="datafono-wrong-amount"`.
+- Mismatch detector (`location-gated-mismatch`) confirma que esta incidencia se reconoce **sólo** en Goya y Pineda; en otras localizaciones el bot indica "no tenemos registrado en <local>" antes de escalar.
+- Resumen al operador: `Pineda + datáfono + importe incoherente`.
+
 **Ejemplo de conversación:**
 
 **Usuario:** En Pineda me ha cobrado 10 €.  
@@ -1504,6 +1558,12 @@ Identificar una incidencia habitual del local y escalarla correctamente.
 
 **Cuándo aplica:**  
 El cliente está en Alemanya, usa secadora y dice que ha añadido tiempo pero no se han sumado minutos.
+
+**Criterios de aceptación:**
+- Trigger: `topicDryerMinutes` + location Alemanya + machineType=dryer.
+- Set state: `nonTroubleshootingIncident="dryer-minutes-not-credited"`. El bot **no** entra al gather de display.
+- El bot **confirma** la location ("¿estás en la lavandería Alemanya?") antes de escalar — esta incidencia se reconoce sólo en Alemanya y Pineda.
+- Resumen al operador: `Alemanya + secadora + monedas no sumadas`.
 
 **Ejemplo de conversación:**
 
@@ -1532,6 +1592,11 @@ Identificar una incidencia habitual del local y escalar.
 **Cuándo aplica:**  
 El cliente está en Pineda y los minutos añadidos no se reflejan.
 
+**Criterios de aceptación:**
+- Mismo flujo del Caso 21, location = Pineda. Misma `nonTroubleshootingIncident="dryer-minutes-not-credited"`.
+- En otras localizaciones (Goya, Hortes, L'Escala) el bot indica explícitamente "no tenemos registrado en <local>" antes de escalar (mismatch detector).
+- Resumen al operador: `Pineda + secadora + monedas no sumadas`.
+
 **Ejemplo de conversación:**
 
 **Usuario:** He añadido tiempo a la secadora y no lo ha sumado.  
@@ -1558,6 +1623,12 @@ Reconocer una incidencia operativa del local y derivarla.
 
 **Cuándo aplica:**  
 El cliente indica que está en Alemanya y no puede pagar con tarjeta.
+
+**Criterios de aceptación:**
+- Trigger: `topicCardFail` + location Alemanya. Set `nonTroubleshootingIncident="card-payment"`.
+- Mensaje de escalación menciona "soporte técnico" (la incidencia no es de máquina sino del datáfono del local).
+- En otras localizaciones que NO sean Alemanya/Hortes (Goya, Pineda, L'Escala) → mismatch: el bot dice "no tenemos registrado en <local>".
+- Resumen al operador: `Alemanya + tarjeta + no se puede pagar`.
 
 **Ejemplo de conversación:**
 
@@ -1586,6 +1657,11 @@ Reconocer una incidencia operativa del local y derivarla.
 **Cuándo aplica:**  
 El cliente indica que está en Hortes y no puede pagar con tarjeta.
 
+**Criterios de aceptación:**
+- Mismo flujo del Caso 23, location = Hortes. Misma `nonTroubleshootingIncident="card-payment"`.
+- Confirmación de location proactiva si no fue dada en el primer mensaje.
+- Resumen al operador: `Hortes + tarjeta + no se puede pagar`.
+
 **Ejemplo de conversación:**
 
 **Usuario:** La tarjeta no funciona para pagar.  
@@ -1613,6 +1689,12 @@ Mantener un tono calmado y no discutir.
 **Cuándo aplica:**  
 El cliente usa un tono agresivo, exigente o muy molesto.
 
+**Criterios de aceptación:**
+- T1: el bot abre con empatía explícita ("entiendo tu malestar, quiero ayudarte") **antes** de cualquier pregunta — `guardAngryCustomerEmpathic`.
+- Si el cliente sigue alterado o exige solución inmediata → escalación con resumen que indica "cliente muy enfadado, requiere atención prioritaria".
+- El bot **nunca** se justifica, no contradice, no minimiza ("no es para tanto" = ❌).
+- Si el cliente colabora tras la empatía, sigue el flujo normal del problema reportado (puede ser cualquier Caso 1-24).
+
 **Ejemplo de conversación:**
 
 **Usuario:** ¡Esto siempre falla! ¡Quiero una solución ya!  
@@ -1638,6 +1720,12 @@ Recoger datos sin prometer una devolución automática.
 
 **Cuándo aplica:**  
 El cliente pide devolución inmediata.
+
+**Criterios de aceptación:**
+- Trigger: `topicRefundDemand`. Set `nonTroubleshootingIncident="refund-demand"`.
+- El bot recoge datos mínimos (4 dígitos, captura, resumen) **sin prometer** la devolución (la decisión es del operador).
+- Reply de escalación contiene `revisión` + `devolución` pero NO "te lo devolvemos" / "haremos la devolución".
+- Resumen al operador: nombre + "devolución" + datos parseados.
 
 **Ejemplo de conversación:**
 
@@ -1665,6 +1753,13 @@ No prometer compensaciones no automatizadas.
 **Cuándo aplica:**  
 El cliente exige una secadora gratis, una lavadora gratis, un código nuevo o cualquier compensación concreta.
 
+**Criterios de aceptación:**
+- Trigger: `topicCompensation`. Set `nonTroubleshootingIncident="compensation-demand"`.
+- El bot reconoce la petición pero **no** confirma activaciones gratuitas, códigos nuevos, ni cualquier solución ad-hoc.
+- Si el cliente insiste ("confirma ya"), el bot mantiene la línea: "no puedo confirmarlo desde aquí, lo pasamos a revisión".
+- Resumen al operador: nombre + "compensación" + descripción.
+- Diferencia con Caso 26: aquí el cliente pide algo CONCRETO (lavadora gratis), no una devolución.
+
 **Ejemplo de conversación:**
 
 **Usuario:** Quiero una secadora gratis por las molestias.  
@@ -1690,6 +1785,13 @@ Detectar incoherencia y escalar sin discutir.
 
 **Cuándo aplica:**  
 El cliente mezcla versiones incompatibles de lo ocurrido.
+
+**Criterios de aceptación:**
+- Trigger: `topicContradictoryNarrative` — patrón "cobró dos veces / aunque también pagué + creo / no sé / o algo así". Detector en `guardContradictoryNarrative`.
+- Set `nonTroubleshootingIncident="contradictory-narrative"`.
+- El bot **no** intenta clarificar el relato (no interroga al cliente sobre incoherencias) — eso lo hace el operador.
+- Reply de escalación menciona "revisar" sin acusar al cliente de mentir.
+- Resumen al operador: nombre + "relato contradictorio" o "relato confuso".
 
 **Ejemplo de conversación:**
 
@@ -1718,6 +1820,12 @@ No prometer una comprobación directa desde el bot y derivar correctamente.
 **Cuándo aplica:**  
 El cliente menciona cámaras, AJAX o soporte técnico.
 
+**Criterios de aceptación:**
+- Trigger: `topicOps` (palabras: cámaras, AJAX, soporte técnico). Set `nonTroubleshootingIncident="cameras-or-ajax"`.
+- El bot **no** dice "vamos a mirarlo" como si pudiera ver las cámaras — eso es un job del operador. Sólo dice "lo revisamos manualmente".
+- Escalación inmediata: el bot pide directamente el nombre, sin más gather (no necesita máquina/display).
+- Resumen al operador: nombre + "cámaras" o "AJAX".
+
 **Ejemplo de conversación:**
 
 **Usuario:** Mirad las cámaras porque yo he pagado.  
@@ -1743,6 +1851,12 @@ Escalar cuando el mensaje no coincide con ningún caso conocido.
 
 **Cuándo aplica:**  
 El cliente da un código distinto de `SEL`, `PUSH PROG`, `DOOR`, `ALM DOOR`, `001`, `ALM`, `ALN`.
+
+**Criterios de aceptación:**
+- Detector: `extractDisplayState` reconoce el patrón pero el código no encaja en `RECOVERABLE_DISPLAYS`. Ejemplos: `ERR 52`, `ERR-47`, `STOP`, `FILTRO`.
+- Tras gather (location + tipo + número), escalación con resumen que **incluye el código exacto** (no normalizado a "ALARMA").
+- Diferencia con Caso 16: la familia ALM/ALN está reconocida; aquí el código es nuevo / no clasificado.
+- El bot **no** inventa interpretaciones del código.
 
 **Ejemplo de conversación:**
 
@@ -1770,6 +1884,13 @@ Evitar diagnosticar sin el dato mínimo más importante.
 
 **Cuándo aplica:**  
 El cliente explica el problema pero no dice en qué lavandería está.
+
+**Criterios de aceptación:**
+- El bot **no** procede al gather de tipo/número/display sin location (excepción: Casos no-troubleshooting que escalan directo).
+- Si el cliente dice "no lo sé" / "ni idea" → re-ask con énfasis: "para poder ayudarte, necesito saber primero en qué lavandería estás".
+- Si tras la insistencia el cliente da un nombre conocido (Goya, Pineda, etc.) → procede al siguiente paso.
+- Si el cliente da un nombre desconocido (ej. "Girona") → `guardInsistLocation` lista las lavanderías reales.
+- Si el cliente se niega o no puede identificar el local → escalación tras 2-3 intentos.
 
 **Ejemplo de conversación:**
 
@@ -1801,6 +1922,12 @@ adelante (ej. el número de máquina).
 El cliente mezcla el problema técnico con el problema de cobro y suele
 adelantar respuestas (números, "lavadora", etc.) antes de que el bot las
 pida explícitamente.
+
+**Criterios de aceptación:**
+- T1: el bot pregunta location y **no** se deja confundir por la narrativa mixta del cliente (no entra en gather de pago todavía).
+- Canonical question order respetado: Step 2 = tipo, Step 3 = número (una pregunta por turno).
+- Si el cliente adelanta un fact (ej. "lavadora 3" combinado, o sólo "3"), `autoExtractFacts` lo captura **antes** de que el guard correspondiente fire → el guard pregunta sólo lo que falta, evitando re-asks awkward.
+- Si tras gather el problema se aclara como display + pago (Caso 4 / Caso 7), el bot reenruta al flujo correspondiente sin reset de los facts ya capturados.
 
 **Ejemplo de conversación:**
 
