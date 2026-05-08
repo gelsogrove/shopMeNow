@@ -1151,6 +1151,12 @@ Explicar compra y limitación de uso de la tarjeta.
 **Cuándo aplica:**  
 El cliente quiere adquirir una tarjeta.
 
+**Criterios de aceptación:**
+- Respuesta canónica: precio (20 €) + restricción ("solo funciona en la tienda donde se ha comprado").
+- Si el cliente da la location, el bot añade la instrucción específica del local (ej. en Goya: "segundo botón de la línea de la derecha en la central"), leída de `locations.json:faqOverrides`.
+- No se inventan instrucciones para locales sin override; se escala si el cliente describe una central distinta.
+- No se piden tipo de máquina, número, ni display: es una FAQ, no incidencia.
+
 **Ejemplo de conversación:**
 
 **Usuario:** ¿Cómo consigo la tarjeta de fidelización?  
@@ -1177,6 +1183,12 @@ Explicar la recarga de forma simple.
 
 **Cuándo aplica:**  
 El cliente ya tiene tarjeta y quiere recargarla.
+
+**Criterios de aceptación:**
+- Respuesta canónica corta: "introduce la tarjeta y sigue las instrucciones de la central".
+- Cierre proactivo: invita al cliente a reportar si aparece un mensaje extraño durante la recarga (sin escalar todavía).
+- Diferencia clave con Caso 10: aquí no se pide location (la operación es estándar en todas las centrales).
+- Escala si el cliente reporta error o que la central no responde.
 
 **Ejemplo de conversación:**
 
