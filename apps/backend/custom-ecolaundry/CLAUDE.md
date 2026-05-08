@@ -13,7 +13,7 @@ Read it BEFORE every change. The rules below are non-negotiable.
 
 ---
 
-## 🔒 The 9 iron rules — verify on every change
+## 🔒 The 10 iron rules — verify on every change
 
 Before I write any code in this module, I must confirm each rule applies:
 
@@ -106,6 +106,47 @@ Before I write any code in this module, I must confirm each rule applies:
    If a case is renumbered in the doc, update `cases.json` only — the
    code is unaffected. Enforced by `scripts/check-architecture.sh` (Rule #9).
 
+10. **Guard preconditions must not cancel each other out — every required
+    fact has a catch-all asker**. The cassette's gather/flow guards skip
+    when an unrelated state field is set (e.g. `guardForce*` skip on
+    `displayState` so display flows can take over; display flows skip on
+    missing `requires`). When the customer volunteers facts out of canonical
+    order, this combination can produce a pipeline hole where NO guard
+    fires and the LLM is left to improvise — the exact failure mode behind
+    the AL001-without-location bug (2026-05-09).
+
+    **The rule:** for every fact the bot must collect, there is a
+    catch-all guard that fires whenever that fact is empty AND no legit
+    escape hatch applies. Today's instance:
+    [`utils/guards/location-resolution.ts:guardForceLocation`](utils/guards/location-resolution.ts).
+    It runs BEFORE every gather, display-flow, and force-* guard, and
+    asks for the location regardless of which other facts the customer
+    has volunteered. The escape hatches are explicit and small:
+    `customerNameRequested`, `operatorRequested`, `pendingFlow ===
+    "invoice-ask-location"` (its own copy), and the `INCIDENTS_NO_LOCATION_REQUIRED`
+    set (cameras / refund / compensation).
+
+    **Anti-pattern to reject in code review:**
+
+    ```ts
+    // ❌ a gather guard that gates on multiple unrelated state fields
+    if (!ar.state.location || !ar.state.machineType || !ar.state.displayState) {
+      return null
+    }
+    // The customer who fills two of three traps the third.
+    ```
+
+    **The mental check:** for every guard you add, ask: *if the customer
+    volunteers the fact this guard cares about WITHOUT the other facts
+    this guard is gated on, does any other guard pick up the slack?* If
+    the answer is "no", you've created a pipeline hole. Add the missing
+    catch-all OR weaken the precondition.
+
+    **Tested by:** `__tests__/unit/location-resolution.test.ts` pins
+    PATTERNS A/B/C/D for `guardForceLocation` (display-first, type-first,
+    number-first, all-three-first). Mirror this template when adding a
+    new mandatory fact.
+
 ---
 
 ## 🧭 The 5 layers — know which one you're in
@@ -195,6 +236,10 @@ edit it without touching the orchestration logic in `utils/router.ts`.
 - [ ] Did I write `casoN` / `caseN` anywhere in code or JSON? **Stop**:
       use a semantic id from `json/cases.json` (rule #9).
 - [ ] Did I add a new case? Did I add a row to `json/cases.json`?
+- [ ] Did I add a guard with multiple `!ar.state.X` preconditions? Trace
+      every combination: if the customer fills any subset of those fields,
+      does some other guard still pick up the missing one? If not, add the
+      catch-all (rule #10) — see `guardForceLocation` for the template.
 - [ ] Does `npm run typecheck` pass?
 - [ ] Does `npm run test:unit` pass (all suites)?
 - [ ] Does `bash scripts/check-architecture.sh` pass?
@@ -355,6 +400,9 @@ correct layer, and only proceed once the user explicitly confirms:
 - "Just patch this one case in code, don't generalise" (rule #2)
 - "Call this flow `caso8-await-name` so it matches the doc number" (rule #9)
 - "Just put the new case logic in `payment.ts` for now, we'll split later" (rule #3)
+- "This guard skips when X is set, that's fine, the LLM will handle the rest"
+  (rule #10) — never let the LLM fill the gap left by a guard that bowed out.
+  Every required fact has a deterministic catch-all asker.
 
 These were the symptoms behind the bugs the refactor closed. Falling
 back to them would re-open the same bug surface.

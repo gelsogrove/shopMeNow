@@ -61,6 +61,7 @@ import {
   guardMataroStreet,
   guardUnknownLocation,
   guardInsistLocation,
+  guardForceLocation,
 } from './location-resolution.js'
 import {
   guardForceMachineType,
@@ -116,6 +117,13 @@ export const GUARD_PIPELINE: Guard[] = [
   guardInsistLocation,
   guardUnknownLocation,
   guardRefundOrCompensation,
+  // Catch-all for the fact-out-of-order hole: when location is empty but
+  // the customer has volunteered display / type / number, every other gather
+  // and display-flow guard skips. This guard ALWAYS asks for the location
+  // before any flow can start. See location-resolution.ts:guardForceLocation
+  // for the rationale and CLAUDE.md → "guard preconditions must not cancel".
+  // MUST stay BEFORE guardDisplayFlowStart and guardForce* gather guards.
+  guardForceLocation,
   // Phase B before Phase A: when a flow is already active, follow-up logic
   // (resolved/persist) takes priority over re-detection of the display token.
   guardDisplayFlowFollowUp,

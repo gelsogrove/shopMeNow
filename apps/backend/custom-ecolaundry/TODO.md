@@ -1,6 +1,6 @@
 # custom-ecolaundry — TODO
 
-Owner: Andrea — Last update: 2026-05-09
+Owner: Andrea — Last update: 2026-05-09 (post-fact-out-of-order fix)
 
 > Snapshot of open items. Closed items are NOT tracked here (use git history).
 > Iron rules and architectural contract live in [`CLAUDE.md`](CLAUDE.md).
@@ -21,6 +21,7 @@ Owner: Andrea — Last update: 2026-05-09
 | Branch router | 🟡 implemented, gated by `useBranchRouter=false` |
 | Documentation | ✅ 10 docs in `docs/` + `CLAUDE.md` per-folder |
 | Acceptance-criteria coverage | 🟡 ~85% test-asserted, ~10% code-only, ~5% LLM-only (items #7/#8/#9 close the gap) |
+| Fact-out-of-order pipeline hole (rule #10) | ✅ closed by `guardForceLocation` (2026-05-09); pattern audit + drift remain — see #10 |
 
 ---
 
@@ -238,6 +239,81 @@ that "do not loop" is a sacred rule.
 - `__tests__/unit/location-resolution.test.ts` (or create if absent).
 
 **Effort:** ~1h.
+
+---
+
+### 10. Follow-up to the fact-out-of-order fix (rule #10)
+
+**Context:** on 2026-05-09 a real session showed the bot drifting badly
+when the customer reported the display BEFORE the location. Root cause:
+gather-guard pipeline hole — every guard skipped because preconditions
+cancelled out. Fix shipped: `guardForceLocation` catch-all + new iron
+rule #10 in `CLAUDE.md` + unit tests pinning patterns A/B/C/D.
+
+This follow-up captures what's NOT yet done after that fix:
+
+#### 10a. Audit other potential fact-out-of-order holes
+
+`guardForceLocation` plugs the hole for `state.location`. The same
+template should be applied to other "must-have" facts where preconditions
+might cancel out. Specifically:
+
+- `state.machineType` and `state.machineNumber`: today gated only by
+  `!ar.state.displayState && !ar.state.nonTroubleshootingIncident`. If a
+  display is volunteered first, no guard ever asks for type/number
+  before the display flow tries to start (and fails for `requires`).
+  `guardForceLocation` softens the fallout (location ask first), but if
+  location is given AND display is given but type isn't, we hit a
+  smaller version of the same hole. Add `guardForceMachineTypeAlways`
+  and `guardForceMachineNumberAlways` mirroring the `forceLocation`
+  template, OR drop the `!displayState` precondition from existing
+  `guardForce*` and rely on display-flow Phase B/C ordering.
+
+- Mataró street: `guardMataroStreet` fires only when location is Mataró.
+  If the customer reports `Mataró + AL001` in one message, displayState
+  set early might still trip the gather-guards (need to verify post-fix).
+  Add a unit test exercising this exact sequence.
+
+**Done when:** unit tests in `__tests__/unit/location-resolution.test.ts`
+extended with a `MachineFacts.test.ts` sibling that pins the same
+PATTERNS A/B/C/D for type and number. `bash scripts/check-architecture.sh`
+remains green.
+
+**Effort:** ~2h.
+
+#### 10b. `locations.ts` ↔ `locations.json` drift
+
+`utils/locations.ts:LAUNDROMATS` defines **6** laundromats including
+`Platja d'Aro`. `json/locations.json:locations` defines **5** (no Platja).
+Consequences:
+
+- `listLaundromatsForReply()` (used by `guardUnknownLocation`) lists 6.
+- `faqOverrides` lookups for "Platja d'Aro" return `undefined` →
+  customers in Platja get the default opening hours, not the local
+  override (if there should be one).
+- No agent test exercises Platja.
+
+**Done when:**
+1. Decide whether Platja is in scope (ask Andrea). If yes, add it to
+   `json/locations.json:locations` with its `faqOverrides` (at minimum
+   `openingHours`). If no, remove it from `utils/locations.ts:LAUNDROMATS`.
+2. Add a `runtime.ts:validateSettings`-side check that asserts the keys
+   in `LAUNDROMATS[].canonical` match the keys in `locations.json`. The
+   validator already exists for i18n parity — extend it.
+3. Add a unit test in `__tests__/unit/locations.test.ts` (create if
+   absent) that fails fast if the two sources of truth diverge.
+
+**Effort:** ~1h once the in-scope decision is made.
+
+#### 10c. Add the regression to the agent test suite
+
+`__tests__/agent/cross/08-fact-out-of-order.test.spec.ts` covers
+PATTERNS A/B/D end-to-end via the LLM. Run the full agent suite once
+OpenRouter credits / time allow, then add this file's results to the
+green baseline. Today the unit tests cover the deterministic guard, but
+the LLM path needs the real LLM to confirm no regressions.
+
+**Done when:** the file is green in the next full agent suite run.
 
 ---
 
