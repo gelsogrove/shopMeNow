@@ -107,18 +107,14 @@ export function buildEscalationSummary(context: EscalationContext): string {
     return `${name} en ${location} sigue con AL001 en la ${machineLabel} número ${numberLabel}${displayLabel}: la guía de secuencia correcta no ha resuelto el problema y requiere revisión técnica.`
   }
 
-  // Case 4: paid but not activated, central did not return change (or did
-  // but machine still won't start). Detection is layered because the LLM
-  // may rewrite escalationReason on later turns:
-  //   - explicit "caso 4" mention in the reason
-  //   - keyword pair pagado + activado in the reason
-  //   - or the deterministic flow flag set by agent-extract when the
-  //     customer triggered the case ("he pagado y no se ha activado").
-  const reason = context.escalationReason || ''
-  const isNoChange =
-    /No-change\s+incident|caso\s*4/i.test(reason) ||
-    (/(pagad|pagat|pagat[oa]|pago)/i.test(reason) && /(no\s+se\s+(ha\s+)?activad|no\s+arranca|sigue\s+sin)/i.test(reason)) ||
-    /^no-change-/i.test(context.pendingFlow || '')
+  // No-change incident (paid + not activated + central did not return change).
+  // Detection uses the SINGLE deterministic signal `pendingFlow` (never
+  // LLM-text), because the LLM tool call `escalate_to_operator(reason="…")`
+  // accepts any string and the prompt suggests "No-change incident — …" as
+  // a template, which the LLM applies to non-caso-4 reasons too. The flow
+  // markers under `no-change-*` are set ONLY by the deterministic side
+  // (agent-extract.ts on "he pagado y no se activado" + payment-no-change.ts).
+  const isNoChange = /^no-change-/i.test(context.pendingFlow || '')
   if (isNoChange) {
     const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
     const numberLabel = context.machineNumber || 'desconocido'

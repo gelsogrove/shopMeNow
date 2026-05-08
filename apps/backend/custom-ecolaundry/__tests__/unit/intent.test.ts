@@ -15,9 +15,11 @@ import {
   detectLanguageHeuristic,
   extractDisplayState,
   hasGreetingIntent,
+  isLikelyStandaloneLocationInput,
   isShortContextReply,
   normalizeMachineType,
 } from '../../utils/intent.js'
+import { createInitialState } from '../../utils/state.js'
 
 interface Case {
   name: string
@@ -236,6 +238,76 @@ const cases: Case[] = [
     run: () => {
       const r = detectLanguageHeuristic('ok')
       if (r !== null) throw new Error(`expected null, got ${r}`)
+    },
+  },
+
+  // ── isLikelyStandaloneLocationInput ──────────────────────────────────────
+  // SCENARIO (Andrea, 2026-05-08): customer typed "che orari avete?" (IT)
+  // after the welcome. The bot wrongly classified it as a location attempt
+  // and replied "I don't recognise that location". Fix: questions and
+  // FAQ-topic keywords (any of 6 languages) must NOT count as location.
+  {
+    name: 'isLikelyStandaloneLocationInput: question with "?" → false',
+    run: () => {
+      const s = createInitialState()
+      s.turnCount = 1
+      if (isLikelyStandaloneLocationInput(s, 'che orari avete?')) {
+        throw new Error('IT question classified as location')
+      }
+      if (isLikelyStandaloneLocationInput(s, 'quanto costa?')) {
+        throw new Error('IT question classified as location')
+      }
+      if (isLikelyStandaloneLocationInput(s, 'what time do you open?')) {
+        throw new Error('EN question classified as location')
+      }
+    },
+  },
+  {
+    name: 'isLikelyStandaloneLocationInput: interrogative pronoun start → false',
+    run: () => {
+      const s = createInitialState()
+      s.turnCount = 1
+      // Interrogatives without "?" — still not location.
+      if (isLikelyStandaloneLocationInput(s, 'che orari fate')) {
+        throw new Error('IT interrogative classified as location')
+      }
+      if (isLikelyStandaloneLocationInput(s, 'qué precio')) {
+        throw new Error('ES interrogative classified as location')
+      }
+    },
+  },
+  {
+    name: 'isLikelyStandaloneLocationInput: FAQ keyword in IT/EN/CA/PT/FR → false',
+    run: () => {
+      const s = createInitialState()
+      s.turnCount = 1
+      const faqMessages = [
+        'orario',           // IT — opening hours
+        'horaires',         // FR
+        'invoice please',   // EN — factura
+        'ricarica tessera', // IT — recarga tarjeta
+        'reembolso',        // ES — refund
+        'rimborso',         // IT
+        'compensazione',    // IT
+      ]
+      for (const m of faqMessages) {
+        if (isLikelyStandaloneLocationInput(s, m)) {
+          throw new Error(`FAQ keyword "${m}" classified as location`)
+        }
+      }
+    },
+  },
+  {
+    name: 'isLikelyStandaloneLocationInput: clean location name → true',
+    run: () => {
+      const s = createInitialState()
+      s.turnCount = 1
+      if (!isLikelyStandaloneLocationInput(s, 'Goya')) {
+        throw new Error('"Goya" should be treated as a possible location')
+      }
+      if (!isLikelyStandaloneLocationInput(s, 'Pineda')) {
+        throw new Error('"Pineda" should be treated as a possible location')
+      }
     },
   },
 ]

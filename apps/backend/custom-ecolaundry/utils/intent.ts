@@ -219,6 +219,13 @@ export function isLikelyStandaloneLocationInput(state: SessionState, message: st
   if (isShortContextReply(trimmed)) return false
   if (hasGreetingIntent(trimmed)) return false
   if (normalizeMachineType(trimmed)) return false
+  // Boundary signal: a question is never a standalone location reply. Catches
+  // "¿qué orari avete?", "what are your hours?", "che orari avete?", etc.
+  // across all 6 supported languages.
+  // NOTE: \b is ASCII-only in JS regex without /u flag, so it does NOT match
+  // after accented chars ("qué") — we use a non-word lookahead instead.
+  if (/[?¿]/.test(trimmed)) return false
+  if (/^(qu[eé]|che|what|cosa|qual|quel|quali|how|c[oó]mo|come|comment|com|when|cu[aá]ndo|quando|quan|onde|d[oó]nde|dove|o[uù]|on)(?=\s|$|[.,!?¿¡])/i.test(trimmed)) return false
   if (/lavatric|washer|lavadora|asciugatric|dryer|secadora|display|alm|door|push|sel|filtro|rotacion|aspiracion/i.test(trimmed)) {
     return false
   }
@@ -227,9 +234,11 @@ export function isLikelyStandaloneLocationInput(state: SessionState, message: st
   if (/^(no\s+lo\s+s[eé]|no\s+s[eé]|no\s+me\s+acuerdo|ni\s+idea|no\s+tengo\s+idea)(?:\s|$|[.,!?])/i.test(trimmed)) {
     return false
   }
-  // Messages that mention an incident keyword are NOT a standalone location.
-  // E.g. "Tengo un código: 23432023" is Caso 18, not a location guess.
-  if (/c[oó]digo|cobr|pag[uoa]|tarjeta|datafono|factura|recargar|fidelizaci[oó]n|horario|cuesta|devolv|devu[ée]lv|reembolso|c[aá]maras|ajax|monedas|dinero|cuesta|gratis|compensaci[oó]n/i.test(trimmed)) {
+  // Messages that mention an incident/FAQ keyword are NOT a standalone
+  // location. E.g. "Tengo un código: 23432023" is Caso 18, not a location.
+  // Multilingual coverage on FAQ topics so the active ES tenant correctly
+  // routes a customer who happens to type "orari" (it) / "horaires" (fr) etc.
+  if (/c[oó]digo|cobr|pag[uoa]|tarjeta|carta\s+fedelt|loyalty|datafono|factura|fattura|invoice|fatura|facture|recargar|ricaric|recharge|fidelizaci[oó]n|fidelit|horario|orario|orari|horaires?|hor[áa]rio|horari|opening|hours|cuesta|costa|cost|prezzo|precio|preu|pre[çc]o|price|prix|devolv|devu[ée]lv|reembolso|rimborso|refund|c[aá]maras|telecamere|cameras|ajax|monedas|monete|coins|dinero|denaro|money|gratis|free|gratuit|compensaci[oó]n|compensazione|compensation/i.test(trimmed)) {
     return false
   }
   return true

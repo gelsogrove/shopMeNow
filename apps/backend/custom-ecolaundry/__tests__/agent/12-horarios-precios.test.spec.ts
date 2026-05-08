@@ -52,4 +52,56 @@ export const tests: TestCase[] = [
       }
     },
   },
+
+  // BUG REGRESSION (Andrea, 2026-05-08):
+  //   Customer typed "Ciao" (saluto puro) → "che orari avete?" (IT question).
+  //   The bot wrongly classified the second turn as a failed location reply
+  //   ("No reconozco esa ubicación. Nuestras lavanderías son: …") instead of
+  //   answering the FAQ. Two-part fix:
+  //     1. utils/intent.ts:isLikelyStandaloneLocationInput now excludes
+  //        messages that contain "?" or start with an interrogative
+  //        pronoun in any of the 6 supported languages.
+  //     2. utils/guards/hours-and-pricing.ts:HORARIOS_TOPIC extended to
+  //        match IT/EN/CA/PT/FR (active tenant is ES but customers may
+  //        type in any of the 6 supported languages — rule #8 "Spanish
+  //        first" applies to OUTPUT, not input recognition).
+  //   This test pins the post-fix behaviour.
+  {
+    name: 'ES tenant — IT input "che orari avete?" after greeting → bot answers hours',
+    run: async (ctx) => {
+      await ctx.send('Ciao')
+      const reply = await ctx.send('che orari avete?')
+      expectMentionsAll(reply, ['8:00', '22:00'])
+      // Must NOT fall through to the unknown-location fallback.
+      const lower = reply.toLowerCase()
+      if (/no reconozco|nuestras lavander[ií]as son/i.test(lower)) {
+        throw new Error(`Bot wrongly asked for location instead of answering hours: ${reply}`)
+      }
+    },
+  },
+  {
+    // Same regression but for English, French, Portuguese, Catalan — pin
+    // the multilingual FAQ-topic recognition while ES output policy is in
+    // effect. Each is a separate scenario so a single language regression
+    // is reported independently.
+    name: 'ES tenant — EN input "what time do you open?" → bot answers hours',
+    run: async (ctx) => {
+      const reply = await ctx.send('what time do you open?')
+      expectMentionsAll(reply, ['8:00', '22:00'])
+    },
+  },
+  {
+    name: 'ES tenant — FR input "quels sont vos horaires?" → bot answers hours',
+    run: async (ctx) => {
+      const reply = await ctx.send('quels sont vos horaires?')
+      expectMentionsAll(reply, ['8:00', '22:00'])
+    },
+  },
+  {
+    name: 'ES tenant — PT input "que horas abrem?" → bot answers hours',
+    run: async (ctx) => {
+      const reply = await ctx.send('que horas abrem?')
+      expectMentionsAll(reply, ['8:00', '22:00'])
+    },
+  },
 ]

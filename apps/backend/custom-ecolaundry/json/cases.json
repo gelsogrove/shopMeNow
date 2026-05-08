@@ -133,7 +133,8 @@
       "guardModule": "utils/guards/hours-and-pricing.ts",
       "guards": ["guardPricingDeflect", "guardOpeningHours"],
       "i18nKeys": ["pricingDeflect", "openingHoursDefault"],
-      "tests": ["__tests__/agent/02-faq.test.spec.ts", "__tests__/agent/12-horarios-precios.test.spec.ts"]
+      "tests": ["__tests__/agent/02-faq.test.spec.ts", "__tests__/agent/12-horarios-precios.test.spec.ts"],
+      "notes": "FAQ topic regex extended (2026-05-08) to cover IT/EN/CA/PT/FR — input recognition is multilingual even though the active tenant outputs ES only (rule #8 'Spanish first')."
     },
     {
       "docNumber": 13,

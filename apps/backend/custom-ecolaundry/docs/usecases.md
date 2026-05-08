@@ -477,6 +477,22 @@ El cliente pregunta por horarios o precios.
 **Usuario:** ¿Cuánto cuesta esta máquina?  
 **Bot:** Tengo que revisarlo antes de confirmarte ese importe.
 
+**Ejemplo de conversación D — Cliente escribe en otro idioma (input)**
+
+El tenant Ecolaundry corre en **ES** (todas las respuestas en español),
+pero los clientes pueden escribir en cualquiera de las 6 lenguas
+soportadas. El bot debe reconocer la pregunta de horarios y responder.
+
+**Usuario (IT):** ciao  
+**Bot:** Hola, soy el asistente virtual de la lavandería. Cuéntame, ¿en qué te ayudo? 🙂
+
+**Usuario (IT):** che orari avete?  
+**Bot:** El horario general de atención al público es de 8:00 a 22:00 cada día del año.
+
+(equivalente para EN/FR/PT/CA: el bot SIEMPRE responde en ES, pero el
+input multilingüe es reconocido por `HORARIOS_TOPIC` y `PRECIO_TOPIC` en
+[`utils/guards/hours-and-pricing.ts`](../utils/guards/hours-and-pricing.ts).)
+
 **Resultado esperado:**  
 Consulta informativa resuelta o derivada correctamente.
 

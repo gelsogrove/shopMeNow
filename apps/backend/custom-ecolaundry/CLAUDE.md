@@ -53,6 +53,19 @@ Before I write any code in this module, I must confirm each rule applies:
    detection in code is allowed ONLY for boundary signals (greeting,
    mixed-signal, contrast connectors).
 
+   **Tracked exemption — FAQ topic guards.** The current code uses
+   regex-based detection for FAQ topics (`HORARIOS_TOPIC`, `PRECIO_TOPIC`,
+   `TARJETA_TOPIC`, `RECARGA_TOPIC`, `FACTURA_TOPIC`) in
+   `utils/guards/hours-and-pricing.ts`, `loyalty-card-buy.ts`,
+   `loyalty-card-recharge.ts`, `invoice-flow.ts`. These are intent
+   classifiers, not boundary signals — strictly a rule #6 violation.
+   They are kept as a fast-path optimisation: a regex hit avoids one
+   LLM round-trip for the most common ES FAQ topics. The patterns now
+   cover all 6 supported languages so they don't false-fail on IT/EN/
+   CA/PT/FR input. Plan: when ES is stable in production, reroute these
+   to the LLM with a slim system-prompt section listing FAQ keys, and
+   delete the topic regexes. Tracked TODO, not an open bug.
+
 7. **Settings are law**. `json/settings.json` is the source of truth
    for tenant config (`enabledLanguages`, `defaultLanguage`,
    `maxToolHops`, …). `runtime.ts:validateSettings` fails fast on
@@ -63,6 +76,18 @@ Before I write any code in this module, I must confirm each rule applies:
    languages (es, it, en, ca, pt, fr). Adding a new language means
    updating each detector's keyword list AND the i18n catalogue, with
    tests.
+
+   **Current scope (Andrea, 2026-05-08): SPANISH FIRST.**
+   The active tenant runs ES only (`settings.json:enabledLanguages = ["es"]`).
+   The other 5 catalogues exist and are kept consistent at the lexical
+   level (i18n keys mirror ES), but **non-ES production traffic is not a
+   target right now**. Specifically:
+   - The escalation summary builder ([`utils/escalation.ts`](utils/escalation.ts))
+     keeps ~30 hardcoded ES phrases for the operator handover. This is a
+     deliberate exemption to rule #8 until ES is stable in production.
+   - When extending to other languages, port `escalation.ts` to the i18n
+     catalogue and add per-language tests; this is parked as a tracked
+     TODO, not an open bug.
 
 9. **Semantic naming, no ordinal references**. File names, pendingFlow
    markers, reason strings, i18n keys, display flow ids, escalation
