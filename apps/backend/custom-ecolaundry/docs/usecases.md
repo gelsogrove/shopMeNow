@@ -26,6 +26,13 @@ Ayudar al cliente a iniciar el lavado cuando falta seleccionar el programa.
 **Cuándo aplica:**  
 El cliente ha pagado y la pantalla muestra `PUSH PROG`.
 
+**Criterios de aceptación (caso completo):**
+- Gather order: location → número de máquina → display. **No** se pregunta "¿has pagado?" como paso intermedio (PUSH PROG ya implica pago hecho).
+- Sobre `displayState=PUSH`, el bot emite la lista canónica de 4 programas (60º / 40º / 30º / Frío) y cierra con un loopback ("dime si arranca").
+- Closure positiva ("ahora funciona") → `mark_resolved` → `state.pendingClosure="resolved"`.
+- Closure negativa ("sigue igual") → Phase B/C: el bot re-pide el código exacto antes de escalar (evita escalar por palabra ambigua). Vea Scenario 1.2.
+- Variantes happy / escalación detalladas en Scenarios 1.1 y 1.2.
+
 **Ejemplo de conversación:**
 
 **Usuario:** La lavadora no funciona.  
@@ -147,6 +154,12 @@ Ayudar al cliente a cerrar correctamente la puerta.
 **Cuándo aplica:**  
 El cliente indica que en pantalla aparece `DOOR`.
 
+**Criterios de aceptación (caso completo):**
+- Gather order: location → número → display.
+- Sobre `displayState=DOOR`, instrucción canónica: "abre y cierra la puerta hasta oír un clic, comprueba prendas atrapadas" + loopback ("dime si funciona").
+- En el escalamiento final el handover summary debe mencionar la puerta (`puerta` / `DOOR`).
+- Variantes happy / escalación detalladas en Scenarios 2.1 y 2.2.
+
 **Ejemplo de conversación:**
 
 **Usuario:** La lavadora no arranca.  
@@ -250,6 +263,11 @@ Ayudar al cliente cuando la máquina está pendiente de selección.
 **Cuándo aplica:**  
 El cliente ha pagado y la pantalla muestra `SEL`.
 
+**Criterios de aceptación (caso completo):**
+- Gather order: location → número → display.
+- Sobre `displayState=SEL`, instrucción canónica: "comprueba que has pulsado bien el número de la máquina en la central de pago" + loopback. Diferente del Caso 1 (no se enseñan programas).
+- Variantes happy / escalación detalladas en Scenarios 3.1 y 3.2.
+
 **Ejemplo de conversación:**
 
 **Usuario:** He pagado pero la lavadora no empieza.  
@@ -348,6 +366,12 @@ Detectar un posible error de selección de máquina.
 
 **Cuándo aplica:**  
 El cliente ha pagado, la máquina no se activa y la central no ha devuelto el cambio.
+
+**Criterios de aceptación (caso completo):**
+- Gather order específico: location → tipo → número → ¿la central te ha devuelto el cambio? **No** se pregunta por display (este caso reemplaza el display por la pregunta del cambio).
+- Respuesta "No" → instrucción canónica que contiene `número` + `central` ("marca bien el número de la máquina en la central"); pendingFlow avanza a `no-change-await-confirmation`.
+- Respuesta "Sí + sigue sin arrancar" → escalación inmediata (la central hizo su parte, no es error de selección). Vea Scenario 4.2.
+- Variantes happy / escalación detalladas en Scenarios 4.1 y 4.2.
 
 **Ejemplo de conversación:**
 
@@ -454,6 +478,13 @@ Explicar el motivo del error y corregir la secuencia de uso.
 
 **Cuándo aplica:**  
 El cliente indica que aparece `AL001`.
+
+**Criterios de aceptación (caso completo):**
+- Reconocimiento robusto del código: el extractor acepta `AL001`, `AL 001`, `ALM 001`, `alarm 001`, `alarma 001` (variantes naturales del cliente, normalizadas a `AL001`).
+- Tras location + tipo + número, el bot emite la **secuencia de 6 pasos** del flow `al001-sequence-error` (declarativo en `json/display-flows.json`).
+- Closure positiva ("ya funciona") → resolved con la respuesta canónica de cierre.
+- Phase B/C: si tras los 6 pasos sigue saliendo AL001 o el cliente no entiende, re-pide código exacto y luego escala.
+- Variantes happy / escalación detalladas en Scenarios 5.1, 5.2 y 5.3.
 
 **Ejemplo de conversación:**
 
@@ -606,6 +637,13 @@ Recoger los datos mínimos para revisión y devolución.
 **Cuándo aplica:**  
 El cliente dice que ha habido doble cobro, pero sí ha podido lavar o secar.
 
+**Criterios de aceptación (caso completo):**
+- Gather específico (no es problema técnico): location → ¿has podido lavar/secar? → relato paso a paso (con sugerencia "datáfono") → últimos 4 dígitos de tarjeta → captura del pago + nombre.
+- Cierre tras nombre: mensaje de confirmación con `formulario` / `devolución` (NO con `desactivado`, no es escalación de máquina).
+- Resumen al operador contiene: nombre, location, "doble cobro", relato del cliente.
+- Vías de escalación inmediata: cliente muy enfadado + "operador" (Scenario 6.2), relato contradictorio (Scenario 6.3 → cae a Caso 28 detector).
+- Variantes detalladas en Scenarios 6.1, 6.2 y 6.3.
+
 **Ejemplo de conversación:**
 
 **Usuario:** Me habéis cobrado dos veces con la tarjeta.  
@@ -737,6 +775,13 @@ Comprobar si la central devolvió el cambio y reconducir al flujo correcto.
 **Cuándo aplica:**  
 El cliente pagó, pero no llegó a usar la máquina.
 
+**Criterios de aceptación (caso completo):**
+- Gather order: location → tipo → número → ¿la central te ha devuelto el cambio?
+- Reconducción de flujo: si el cliente, en lugar de responder yes/no a la pregunta del cambio, responde con un código de display (ej. `PUSH PROG`), el LLM lo reconoce y reenruta hacia el flujo de display correspondiente.
+- Cuando el flow de display da resultado positivo → resolved.
+- Cuando "no responde" tras la instrucción → Phase B/C escalada con resumen al operador que contiene `PUSH` / display relevante.
+- Variantes happy / escalación detalladas en Scenarios 7.1 y 7.2.
+
 **Ejemplo de conversación:**
 
 **Usuario:** He pagado y no he podido usar la máquina.  
@@ -846,6 +891,13 @@ máquina.
 El cliente tiene un código de descuento (formato: 3 letras + fecha
 DDMMYY + importe, ej. `SAU2904266`).
 
+**Criterios de aceptación (caso completo):**
+- Validación del formato `^[A-Z]{3}\d{6,7}$` antes de seguir. Códigos solo numéricos sin letras → cae a Caso 18 (incoherencia).
+- Cuando el formato es válido: el bot recoge nombre + location + número de máquina + estado de la puerta, en este orden.
+- El resumen al operador contiene los datos parseados (`letras`, `fechaIso`, `importe`) + la máquina + el estado de puerta, para activación remota.
+- Cuando el formato no encaja: escalación con "código no reconocido, requiere revisión manual" — sin discutir con el cliente.
+- Variantes detalladas en Scenarios 8.1 y 8.2.
+
 **Ejemplo de conversación:**
 
 **Usuario:** Tengo un código y no sé cómo usarlo.  
@@ -932,6 +984,14 @@ y derivar el caso al operador con un resumen completo.
 
 **Cuándo aplica:**  
 El cliente pide factura.
+
+**Criterios de aceptación (caso completo):**
+- Gather order de 8 pasos: lavandería → tipo → razón social → dirección → CIF → fecha (acepta "hoy" / "ayer" → ISO) → email → nombre.
+- Si location y/o tipo ya están en sticky state (de un turno anterior), el bot **omite** esos pasos y empieza directamente desde razón social.
+- Validación rigurosa de email (formato `algo@dominio.tld`): si no es válido → re-ask hasta que lo sea, **sin avanzar** al paso del nombre.
+- El reply final tras nombre contiene: nombre, email válido, "human support" trigger.
+- El resumen al operador contiene **todos** los campos billing (razón social, dirección, CIF, fecha ISO, email, nombre).
+- Variantes happy / email-retry detalladas en Scenarios 9.1 y 9.2.
 
 **Ejemplo de conversación:**
 
