@@ -77,6 +77,7 @@ import { guardAngryCustomerEmpathic, guardAngryCustomerEscalate } from './angry-
 import { guardRefundOrCompensation } from './refund-and-compensation.js'
 import { guardContradictoryNarrative } from './contradictory-narrative.js'
 import { guardEscalateNonTroubleshooting } from './faq-non-troubleshooting.js'
+import { guardAutoStartMachineFlow } from './auto-start-machine-flow.js'
 
 export type { Guard, GuardOutcome } from '../../models/index.js'
 
@@ -134,6 +135,13 @@ export const GUARD_PIPELINE: Guard[] = [
   guardForceMachineType,
   guardForceMachineNumber,
   guardForceDisplay,
+  // Deterministic auto-start of the washer/dryer flow when location +
+  // type + number + recoverable display are all set. Replaces the LLM's
+  // unreliable `start_machine_flow` tool call. Must come AFTER force-*
+  // gather guards (so missing facts get asked first) and AFTER
+  // guardDisplayFlowStart (so JSON-declarative flows AL001/ALM-DOOR/C001
+  // take priority for their codes).
+  guardAutoStartMachineFlow,
   guardEscalateUnknownDisplay,
 ]
 

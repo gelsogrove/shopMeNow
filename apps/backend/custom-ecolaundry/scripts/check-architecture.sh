@@ -90,6 +90,7 @@ ALLOWED_LARGE_FILES="
   utils/escalation.ts           # Operator handover summary builder (single concern, branching by incident)
   utils/guards/display-flow.ts  # Phase A+B+C display-flow engine (single responsibility; Phase C re-ask added for Scenario 5.3/7.2)
   utils/guards/display.ts       # Display-state guards: no-photo, numeric codes, post-instruction failure, unknown-display (single concern)
+  utils/guards/index.ts         # Pipeline assembly only — imports + ordered GUARD_PIPELINE array. Splitting hurts readability of the priority order.
 "
 ALLOWED_LARGE_FILES=$(echo "$ALLOWED_LARGE_FILES" | sed 's/#.*$//' | tr -s ' \n' ' ')
 violations=""

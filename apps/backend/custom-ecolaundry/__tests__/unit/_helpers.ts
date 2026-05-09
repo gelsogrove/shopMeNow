@@ -33,6 +33,17 @@ export async function loadTestRuntime(): Promise<Runtime> {
   const nluPatternsRaw = JSON.parse(
     await readFile(path.join(jsonDir, 'nlu-patterns.json'), 'utf8'),
   )
+  // Load the washer + dryer flow maps so guards that rely on the flow
+  // engine (e.g. guardAutoStartMachineFlow) can resolve nodes against
+  // real data instead of an empty `{}`. Casting is safe because the
+  // JSON is validated at runtime production-side; in tests we trust
+  // the source-of-truth files.
+  const washerFlowsRaw = JSON.parse(
+    await readFile(path.join(jsonDir, 'washer_hs60xx.json'), 'utf8'),
+  )
+  const dryerFlowsRaw = JSON.parse(
+    await readFile(path.join(jsonDir, 'dryer_ed340.json'), 'utf8'),
+  )
   // Load all i18n maps so t()/tt() lookups behave identically to production.
   const i18nDir = path.join(jsonDir, 'i18n')
   const i18nRaw: Partial<Record<SupportedLanguage, unknown>> = {}
@@ -47,9 +58,22 @@ export async function loadTestRuntime(): Promise<Runtime> {
   )
   setI18nCatalogue(validateI18nCatalogue(i18nRaw))
 
+  // Strip JSON-comment fields (`_principle`, etc.) so the FlowMap shape
+  // is not polluted; they're documentation-only in the source files.
+  const stripCommentKeys = (obj: Record<string, unknown>): Record<string, unknown> => {
+    const out: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(obj)) {
+      if (!k.startsWith('_')) out[k] = v
+    }
+    return out
+  }
+
   cachedRuntime = {
     prompts: {},
-    flows: { washer: {}, dryer: {} },
+    flows: {
+      washer: stripCommentKeys(washerFlowsRaw) as Runtime['flows']['washer'],
+      dryer: stripCommentKeys(dryerFlowsRaw) as Runtime['flows']['dryer'],
+    },
     regressions: [],
     locations: { locations: {} },
     settings: {
