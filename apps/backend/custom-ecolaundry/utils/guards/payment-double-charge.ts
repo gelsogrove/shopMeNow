@@ -1,43 +1,57 @@
 // Caso 6 — Doble cobro.
 //
 // Two scenarios:
-//   6.1 — customer USED the service after the second charge → narrative
-//         + card digits + receipt → escalate with a "doble cobro pero
-//         servicio completado" summary so the operator can refund
-//         without re-investigating the machine.
+//   6.1 — customer USED the service after the second charge → gather
+//         tipo + número de máquina, then narrative + card digits +
+//         receipt → escalate with a "doble cobro pero servicio
+//         completado" summary so the operator can refund without
+//         re-investigating the machine.
 //   6.4 — customer DID NOT use the service (charged twice but never
-//         washed/dryed) → escalate immediately with a different summary
-//         flagging "no service used" so the operator handles both the
-//         refund AND the missing service.
+//         washed/dryed) → escalate immediately, WITHOUT asking
+//         tipo/número (would feel like burocracia mientras el cliente
+//         está enfadado). The summary tells the operator the machine
+//         info is missing — they'll collect it on the phone if needed.
 //
-// Gather order (canonical, all 4 facts BEFORE branching on yes/no):
-//   1. location  (forceLocation, fires from T1)
-//   2. tipo      (forceMachineType)
-//   3. numero    (forceMachineNumber)
-//   4. ¿podido lavar?  (this guard) → branch:
-//      yes → relato → 4 dígitos → captura → closure (Scenario 6.1)
-//      no  → escalate as Scenario 6.4
+// Gather order (NEW, Andrea 2026-05-09):
+//   1. location          (forceLocation, fires from T1)
+//   2. ¿podido lavar?    (this cassette, asked right after location)
+//      └── No  → escalate (Scenario 6.4) — STOP here.
+//      └── Yes → continue:
+//   3. tipo              (this cassette, asks "lavadora o secadora?")
+//   4. número            (this cassette, asks "qué número?")
+//   5. relato            (asks "explícame paso a paso...")
+//   6. 4 dígitos         (asks "últimos 4 dígitos de la tarjeta")
+//   7. captura + nombre  (asks captura del pago + nombre, then closes
+//                          with the refund-form message — no live
+//                          operator handover, just a refund pipeline.)
 //
-// Why this order matters: the operator handover summary needs the
-// machine context (location + type + number) for both scenarios. Asking
-// "¿podido lavar?" before knowing which machine breaks if the customer
-// volunteers info out of order, and produces a useless summary like
-// "Usuario X en Goya ha reportado un doble cobro. Relato: puede ser".
+// Why "¿podido?" comes before tipo+número:
+//   The customer who was charged twice and DIDN'T get to wash is doubly
+//   frustrated. Asking machine details upfront felt like burocracia.
+//   By branching early on "¿podido?", the No path escalates fast, and
+//   the Yes path (where the operator needs the machine context for the
+//   refund cross-check) gathers tipo+número only when actually useful.
+//
+// All gather steps inherit the 3-strikes retry+escalate ladder from
+// CLAUDE.md regla #10:
+//   counter == 0 → canonical i18n ask key
+//   counter == 1 → guidance reask (i18n *Retry key)
+//   counter >= 2 → escalate(operator) + requireCustomerName, reset counter
 
 import { t } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { lang } from './helpers.js'
 import { escalate, requireCustomerName } from '../state-transitions.js'
 
-/** Caso 6 step 4 — after location + tipo + numero, ask "¿has podido
- *  lavar/secar?". Iron rule #10: gather completes BEFORE the branch
- *  question. */
+/** Caso 6 step 2 — after location is captured, ask "¿has podido lavar/secar?".
+ *
+ *  Iron rule #10 (NEW order): we ask this BEFORE gathering tipo+número
+ *  because the No branch shouldn't waste turns collecting machine info
+ *  that the operator can ask on the phone anyway. */
 export const guardDoubleChargeAskUsed: Guard = (ar) => {
   if (
     ar.state.pendingFlow !== 'double-charge-ask-used' ||
     !ar.state.location ||
-    !ar.state.machineType ||
-    !ar.state.machineNumber ||
     ar.state.operatorRequested ||
     ar.state.customerNameRequested
   ) {
@@ -47,15 +61,13 @@ export const guardDoubleChargeAskUsed: Guard = (ar) => {
   return { reply: t('doubleChargeAskUsed', lang(ar)), reason: 'double-charge-ask-used' }
 }
 
-/** Caso 6 step 5 — branch on the customer's answer to "¿has podido
- *  lavar/secar?":
- *    - "no" / "nada" / "no he podido" → Scenario 6.4: escalate
- *      immediately, mark `used service: no` so the summary builder
- *      generates the right operator brief.
- *    - any other reply (treat as yes) → Scenario 6.1: continue with the
- *      narrative ask. The customer's actual reply is preserved in
- *      issueSummary so the summary builder can quote the answer ("Sí,
- *      he lavado", "claro que sí", etc.). */
+/** Caso 6 step 3 — branch on the customer's yes/no answer to "¿has podido?":
+ *    - "no" / "nada" / "no he podido" → Scenario 6.4: escalate immediately.
+ *      No tipo/número/relato/dígitos. The summary builder produces a
+ *      "no service used" brief; the missing machine info is documented.
+ *    - any other reply (treat as yes) → Scenario 6.1: continue gathering.
+ *      Skip directly to narrative if tipo+número already volunteered
+ *      (e.g. "sí, lavadora 5"); else ask the missing facts in order. */
 export const guardDoubleChargeAskNarrative: Guard = (ar, userMessage) => {
   if (
     ar.state.pendingFlow !== 'double-charge-ask-narrative' ||
@@ -74,7 +86,8 @@ export const guardDoubleChargeAskNarrative: Guard = (ar, userMessage) => {
     /^(no\s+lo\s+he\s+usado|no\s+lo\s+pude\s+usar|no\s+he\s+lavado|no\s+he\s+secado)/i.test(reply)
 
   if (isNo) {
-    // Scenario 6.4 — charged twice without using the service.
+    // Scenario 6.4 — charged twice without using the service. Escalate
+    // straight away; no machine info collected.
     ar.state.issueSummary = `double charge — used service: no — customer reply: ${userMessage.trim()}`
     ar.state.pendingFlow = ''
     escalate(ar, 'Doble cobro sin uso del servicio')
@@ -85,13 +98,120 @@ export const guardDoubleChargeAskNarrative: Guard = (ar, userMessage) => {
     }
   }
 
-  // Scenario 6.1 — service used; continue with narrative gather.
+  // Scenario 6.1 — service used. Continue with tipo/número gather, then
+  // narrative. The customer's literal yes is preserved for the summary.
   ar.state.issueSummary = `double charge — used service: yes — customer reply: ${userMessage.trim()}`
-  ar.state.pendingFlow = 'double-charge-ask-card-digits'
-  return { reply: t('doubleChargeAskNarrative', lang(ar)), reason: 'double-charge-ask-narrative' }
+  // Skip ahead if facts already volunteered ("sí, lavadora 5").
+  if (ar.state.machineType && ar.state.machineNumber) {
+    ar.state.pendingFlow = 'double-charge-ask-card-digits'
+    return { reply: t('doubleChargeAskNarrative', lang(ar)), reason: 'double-charge-emit-narrative' }
+  }
+  if (!ar.state.machineType) {
+    ar.state.pendingFlow = 'double-charge-ask-type'
+    return { reply: t('machineType', lang(ar)), reason: 'double-charge-emit-type-ask' }
+  }
+  // machineType set, machineNumber missing → ask number directly.
+  ar.state.pendingFlow = 'double-charge-ask-number'
+  const numKey = ar.state.machineType === 'dryer' ? 'machineNumberDryer' : 'machineNumberWasher'
+  return { reply: t(numKey, lang(ar)), reason: 'double-charge-emit-number-ask' }
 }
 
-/** Caso 6 step 3 — after relato, ask the last 4 card digits. */
+/** Caso 6 step 4 (YES branch only) — gather machineType with 3-strikes
+ *  retry. autoExtractFacts captures the type from the user's reply each
+ *  turn, so when this guard fires after a successful capture, we advance
+ *  to the number ask. */
+export const guardDoubleChargeAskType: Guard = (ar) => {
+  if (
+    ar.state.pendingFlow !== 'double-charge-ask-type' ||
+    ar.state.operatorRequested ||
+    ar.state.customerNameRequested
+  ) {
+    return null
+  }
+
+  if (ar.state.machineType) {
+    // Type captured (autoExtractFacts) — advance.
+    ar.state.machineTypeAskAttempts = 0
+    if (ar.state.machineNumber) {
+      // Number also volunteered ("lavadora número 5") — skip to narrative.
+      ar.state.pendingFlow = 'double-charge-ask-card-digits'
+      return {
+        reply: t('doubleChargeAskNarrative', lang(ar)),
+        reason: 'double-charge-emit-narrative',
+      }
+    }
+    ar.state.pendingFlow = 'double-charge-ask-number'
+    const numKey = ar.state.machineType === 'dryer' ? 'machineNumberDryer' : 'machineNumberWasher'
+    return { reply: t(numKey, lang(ar)), reason: 'double-charge-emit-number-ask' }
+  }
+
+  const attempts = ar.state.machineTypeAskAttempts || 0
+  if (attempts >= 2) {
+    ar.state.machineTypeAskAttempts = 0
+    ar.state.pendingFlow = ''
+    escalate(ar, 'Double charge — could not gather machine type after 2 attempts')
+    requireCustomerName(ar)
+    return {
+      reply: t('reaffirmEscalate', lang(ar)),
+      reason: 'double-charge-type-unrecognized-escalate',
+    }
+  }
+  ar.state.machineTypeAskAttempts = attempts + 1
+  if (attempts === 0) {
+    return { reply: t('machineType', lang(ar)), reason: 'double-charge-ask-type' }
+  }
+  return {
+    reply: t('machineTypeRetry', lang(ar)),
+    reason: 'double-charge-type-unrecognized-reask',
+  }
+}
+
+/** Caso 6 step 5 (YES branch only) — gather machineNumber with 3-strikes
+ *  retry. Same shape as guardDoubleChargeAskType. */
+export const guardDoubleChargeAskNumber: Guard = (ar) => {
+  if (
+    ar.state.pendingFlow !== 'double-charge-ask-number' ||
+    ar.state.operatorRequested ||
+    ar.state.customerNameRequested
+  ) {
+    return null
+  }
+
+  if (ar.state.machineNumber) {
+    // Number captured — advance to narrative.
+    ar.state.machineNumberAskAttempts = 0
+    ar.state.pendingFlow = 'double-charge-ask-card-digits'
+    return {
+      reply: t('doubleChargeAskNarrative', lang(ar)),
+      reason: 'double-charge-emit-narrative',
+    }
+  }
+
+  const attempts = ar.state.machineNumberAskAttempts || 0
+  if (attempts >= 2) {
+    ar.state.machineNumberAskAttempts = 0
+    ar.state.pendingFlow = ''
+    escalate(ar, 'Double charge — could not gather machine number after 2 attempts')
+    requireCustomerName(ar)
+    return {
+      reply: t('reaffirmEscalate', lang(ar)),
+      reason: 'double-charge-number-unrecognized-escalate',
+    }
+  }
+  ar.state.machineNumberAskAttempts = attempts + 1
+  if (attempts === 0) {
+    const numKey = ar.state.machineType === 'dryer' ? 'machineNumberDryer' : 'machineNumberWasher'
+    return { reply: t(numKey, lang(ar)), reason: 'double-charge-ask-number' }
+  }
+  return {
+    reply: t('machineNumberRetry', lang(ar)),
+    reason: 'double-charge-number-unrecognized-reask',
+  }
+}
+
+/** Caso 6 step 6 — after relato, ask the last 4 card digits. The customer's
+ *  previous turn was the narrative; we capture it in issueSummary then
+ *  emit the digits ask. */
 export const guardDoubleChargeAskCardDigits: Guard = (ar, userMessage) => {
   if (
     ar.state.pendingFlow !== 'double-charge-ask-card-digits' ||
@@ -107,7 +227,7 @@ export const guardDoubleChargeAskCardDigits: Guard = (ar, userMessage) => {
   return { reply: t('doubleChargeAskCardDigits', lang(ar)), reason: 'double-charge-ask-card-digits' }
 }
 
-/** Caso 6 step 6 — consume the customer's reply to the 4-digits ask.
+/** Caso 6 step 7 — consume the customer's reply to the 4-digits ask.
  *
  *  Validation: the customer must give exactly 4 numeric digits (e.g.
  *  "4821"). Surrounding narrative is OK ("los últimos son 4821"), but

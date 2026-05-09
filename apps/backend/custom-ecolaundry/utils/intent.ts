@@ -62,6 +62,48 @@ export function extractDisplayState(message: string): string | null {
   return null
 }
 
+/**
+ * Customer-facing label for a display token, preserving the wording the
+ * customer used. Where `extractDisplayState` returns the canonical token
+ * (e.g. "PUSH" — used by the flow engine for routing), this function
+ * returns the literal string the customer typed (e.g. "PUSH PROG").
+ *
+ * Heuristic: locate the canonical token in the message, then extend
+ * rightward over adjacent ALL-UPPERCASE tokens. Lowercase prose stops
+ * the extension, so "veo PUSH PROG en la pantalla" → "PUSH PROG" but
+ * "veo push prog" → "PUSH" (we don't risk picking up lowercase prose).
+ *
+ * Returns the canonical token unchanged when no extension is possible.
+ *
+ * REGRESSION (Andrea, 2026-05-09): the operator handover summary was
+ * showing "La pantalla muestra PUSH" while the customer had typed
+ * "PUSH PROG". `extractDisplayState` collapses to "PUSH" because the
+ * \b word boundary in the regex stops at the space before "PROG". This
+ * function recovers the customer-friendly form.
+ */
+export function extractDisplayLabel(message: string, canonical: string): string {
+  if (!canonical) return ''
+  // Build a permissive matcher for the canonical token's "stem" (the part
+  // that actually appears in the customer's message). For PUSH/SEL/DOOR
+  // etc. the stem is the canonical itself. For canonicals that contain
+  // characters customers don't type literally (e.g. "ALM/DOOR" — the
+  // slash is the bot's separator), fall back to the leading alpha run.
+  const stem = canonical.match(/^[A-Z0-9]+/i)?.[0] || canonical
+  const re = new RegExp(`\\b${stem}\\b`, 'i')
+  const match = message.match(re)
+  if (!match || match.index === undefined) return canonical.toUpperCase()
+  let end = match.index + match[0].length
+  // Greedily extend over " WORD" runs of uppercase letters/digits in the
+  // SOURCE message. Lowercase prose stops the extension.
+  const tail = message.slice(end).match(/^(?:\s+[A-Z][A-Z0-9]{1,})+/)
+  if (tail) end += tail[0].length
+  return message
+    .slice(match.index, end)
+    .toUpperCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 // ── Fuzzy display match ───────────────────────────────────────────────────────
 //
 // The strict regex above misses common typos like "USH PROG" (missing P).
@@ -111,6 +153,88 @@ function fuzzyDisplayMatch(input: string): string | null {
 
 export function isDisplayCodeLikeInput(message: string): boolean {
   return Boolean(extractDisplayState(message))
+}
+
+/**
+ * Detect a "I don't know yet / I haven't done that yet" reply from the
+ * customer. Used by gather guards (forceMachineNumber, forceDisplay, …)
+ * to short-circuit the retry counter: when the customer is explicit that
+ * they can't give the requested info, asking again is pointless. The bot
+ * should jump straight to a guidance message or to the operator.
+ *
+ * Multilingual coverage on the 6 supported languages — boundary signal,
+ * not intent classification (rule #6 OK). Tested in
+ * `__tests__/unit/intent.test.ts`.
+ */
+export function detectIDontKnowReply(message: string): boolean {
+  const trimmed = message.trim().toLowerCase()
+  if (!trimmed) return false
+  return (
+    // Spanish — note: trailing "\b" after "[eé]" is replaced with a lookahead
+    // because JS regex `\b` is ASCII-only and does not match between "é" and a
+    // word boundary (same bug class fixed previously in guardNoChangeYesButBroken).
+    /\bno\s+lo\s+s[eé](?=[\s,.!?]|$)|\bno\s+s[eé](?=[\s,.!?]|$)|\bno\s+me\s+acuerdo\b|\bni\s+idea\b|\bno\s+tengo\s+idea\b/i.test(trimmed) ||
+    /\bno\s+(?:lo|la|los|las)\s+he\s+(?:seleccionad[oa]|elegid[oa]|cogid[oa]|usad[oa])/i.test(trimmed) ||
+    /\b(?:todav[ií]a|a[uú]n)\s+no\b/i.test(trimmed) ||
+    /\bno\s+he\s+(?:elegid[oa]|seleccionad[oa]|cogid[oa])/i.test(trimmed) ||
+    // Italian
+    /\bnon\s+lo\s+so\b|\bnon\s+l[''’]ho\b|\bnon\s+ricordo\b|\bnon\s+ancora\b/i.test(trimmed) ||
+    // English
+    /\bi\s+don'?t\s+know\b|\bi\s+haven'?t\s+(?:yet|done)\b|\bnot\s+(?:yet|sure)\b|\bno\s+idea\b/i.test(trimmed) ||
+    // Portuguese
+    /\bn[ãa]o\s+sei\b|\bainda\s+n[ãa]o\b|\bn[ãa]o\s+me\s+lembro\b/i.test(trimmed) ||
+    // French
+    /\bje\s+ne\s+sais\s+pas\b|\bpas\s+encore\b|\baucune\s+id[ée]e\b/i.test(trimmed) ||
+    // Catalan — same trailing lookahead trick after "[eé]"
+    /\bno\s+ho\s+s[eé](?=[\s,.!?]|$)|\bencara\s+no\b/i.test(trimmed)
+  )
+}
+
+// ── Doble-cobro intent detection ──────────────────────────────────────────────
+//
+// Topic classifier (rule #6 tracked exemption — fast-path for the most
+// common ES/multi-lang phrasings; the LLM still picks up free-form
+// reports). Returns true when the customer reports a double charge.
+//
+// Why a function and not an inline regex in `agent-extract.ts`:
+//   The original regex required a strict verb prefix
+//   `me\s+(?:han|hab[eé]is|ha)?\s+cobrad[ao]` which silently failed on
+//   typos like "me habieis cobrado dos veces" (real Andrea-2026-05-09
+//   chat) — the verb prefix doesn't match "habieis" because of the extra
+//   `i`. Detection failed, the case 6 flow never started, and the bot
+//   improvised. The new shape drops the verb-prefix requirement and
+//   relies on the unambiguous co-occurrence of "cobrad/charged/etc."
+//   plus a quantifier ("dos veces / twice / due volte / etc.").
+//
+// Multi-language coverage on the 6 supported languages (rule #8). Tested
+// in `__tests__/unit/intent.test.ts` — happy path + the historical typo
+// regression.
+export function detectDoubleChargeIntent(message: string): boolean {
+  const trimmed = message.toLowerCase()
+  if (!trimmed) return false
+  return (
+    // Spanish — "cobrado/cobrada dos veces", "doble cobro", "cobró dos veces", etc.
+    /\bcobrad[ao]\s+(?:dos\s+veces|2\s+veces|m[aá]s\s+de\s+una\s+vez|el\s+doble|dos\s+cargos)\b/i.test(trimmed) ||
+    /\bdoble\s+(?:cobro|cargo|cobr[ao])\b/i.test(trimmed) ||
+    /\bcobr[oó]\s+dos\s+veces\b/i.test(trimmed) ||
+    /\b2\s+(?:cargos|cobros)\b/i.test(trimmed) ||
+    // Italian — "addebitato due volte", "doppio addebito"
+    /\baddebitat[ao]\s+due\s+volte\b/i.test(trimmed) ||
+    /\bdoppio\s+addebito\b/i.test(trimmed) ||
+    // English — "charged twice", "double charge", "charged me two times"
+    /\bcharged\s+(?:me\s+)?twice\b/i.test(trimmed) ||
+    /\bcharged\s+(?:me\s+)?two\s+times\b/i.test(trimmed) ||
+    /\bdouble\s+charge\b/i.test(trimmed) ||
+    // Portuguese — "cobrado duas vezes", "cobrança dupla"
+    /\bcobrad[ao]\s+(?:duas\s+vezes|2\s+vezes)\b/i.test(trimmed) ||
+    /\bcobran[çc]a\s+dupla\b/i.test(trimmed) ||
+    // Catalan — "cobrat dues vegades", "cobrament doble"
+    /\bcobrat\s+(?:dues\s+vegades|2\s+vegades)\b/i.test(trimmed) ||
+    /\bcobrament\s+doble\b/i.test(trimmed) ||
+    // French — "débité deux fois", "double débit"
+    /\bd[eé]bit[eé]\s+deux\s+fois\b/i.test(trimmed) ||
+    /\bdouble\s+d[eé]bit\b/i.test(trimmed)
+  )
 }
 
 // ── Short reply classification ────────────────────────────────────────────────

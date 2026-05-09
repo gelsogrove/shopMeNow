@@ -9,9 +9,11 @@
 import type { AgentRuntime, Runtime } from '../models/index.js'
 import {
   extractDisplayState,
+  extractDisplayLabel,
   extractExplicitLocation,
   isLikelyStandaloneLocationInput,
   normalizeMachineType,
+  detectDoubleChargeIntent,
 } from './intent.js'
 import { resolveKnownLocation, parseExplicitPaymentSignal } from './message-parsing.js'
 import { resetMachineFacts } from './state.js'
@@ -239,8 +241,14 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   const newDisplay = extractDisplayState(trimmed)
   if (newDisplay && newDisplay !== state.displayState) {
     state.displayState = newDisplay
+    // Preserve the customer-facing label (e.g. "PUSH PROG") for the operator
+    // handover summary. Without this the operator reads the canonical token
+    // ("PUSH") and loses the customer's exact wording.
+    state.displayLabel = extractDisplayLabel(trimmed, newDisplay)
   } else if (!state.displayState && state.machineType && shouldAcceptAsDisplay(ar.runtime, trimmed)) {
-    state.displayState = trimmed.replace(/[.,!?¿¡:;"'()]/g, '').trim().toUpperCase()
+    const captured = trimmed.replace(/[.,!?¿¡:;"'()]/g, '').trim().toUpperCase()
+    state.displayState = captured
+    state.displayLabel = captured
   } else if (
     !state.displayState &&
     state.location &&
@@ -252,7 +260,9 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     // "qué aparece en la pantalla?" so any short alphanumeric token is the display.
     // machineNumberWasAlreadySet (not state.machineNumber) prevents false capture
     // when the user answers the machine-number question with a digit like "4".
-    state.displayState = trimmed.replace(/[.,!?¿¡:;"'()]/g, '').trim().toUpperCase()
+    const captured = trimmed.replace(/[.,!?¿¡:;"'()]/g, '').trim().toUpperCase()
+    state.displayState = captured
+    state.displayLabel = captured
   }
 
   // Payment signal. If we just asked "¿Has podido realizar el pago?", accept
@@ -338,12 +348,14 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   }
 
   // Caso 6 marker: customer reports a doble cobro / charged twice. Triggers
-  // the dedicated flow: ask "¿has podido lavar/secar?", then relato, then
-  // 4 dígitos, then captura.
-  if (
-    !state.pendingFlow &&
-    /(me\s+(?:han\s+|hab[eé]is\s+|ha\s+)?cobrad[ao]\s+(?:dos\s+veces|2\s+veces|m[aá]s\s+de\s+una\s+vez|el\s+doble)|doble\s+cobro|charged\s+(?:me\s+)?twice|cobr[oó]\s+dos\s+veces)/i.test(userMessage)
-  ) {
+  // the dedicated flow: ask "¿has podido lavar/secar?", then on YES:
+  // tipo → número → relato → 4 dígitos → captura. Detection is delegated
+  // to `detectDoubleChargeIntent` (utils/intent.ts) which handles the 6
+  // supported languages and is permissive on common verb-prefix typos
+  // (regression Andrea-2026-05-09: "me habieis cobrado" — typo, used to
+  // fall through silently because the original regex required exactly
+  // hab[eé]is).
+  if (!state.pendingFlow && detectDoubleChargeIntent(userMessage)) {
     state.pendingFlow = 'double-charge-ask-used'
     resetPostEscalationFlags(ar)
   }

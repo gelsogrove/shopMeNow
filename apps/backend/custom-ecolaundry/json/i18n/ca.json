@@ -8,6 +8,8 @@
   "machineType": "És una rentadora o una assecadora?",
   "machineNumberWasher": "Quin és el número de la rentadora?",
   "machineNumberDryer": "Quin és el número de l'assecadora?",
+  "machineNumberRetry": "El número està enganxat a la pròpia màquina, normalment a sobre o al costat de la pantalla. Podries comprovar-ho i dir-m'ho?",
+  "machineTypeRetry": "Si no n'estàs segur, fixa't en l'etiqueta de la màquina: les rentadores solen estar marcades amb una L i les assecadores amb una S o D. És una rentadora o una assecadora?",
   "displayWasher": "Què apareix exactament a la pantalla de la rentadora?",
   "displayDryer": "Què apareix exactament a la pantalla de l'assecadora?",
   "displayMachine": "Què apareix exactament a la pantalla de la màquina? Si no apareix res, digues-m'ho així ho sabem.",

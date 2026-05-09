@@ -12,7 +12,10 @@
 //   node --import tsx __tests__/unit/intent.test.ts
 
 import {
+  detectDoubleChargeIntent,
+  detectIDontKnowReply,
   detectLanguageHeuristic,
+  extractDisplayLabel,
   extractDisplayState,
   hasGreetingIntent,
   isLikelyStandaloneLocationInput,
@@ -371,6 +374,252 @@ const cases: Case[] = [
       // Sanity: exact "SEL" goes through the strict regex, NOT the fuzzy path.
       const r = extractDisplayState('SEL')
       if (r !== 'SEL') throw new Error(`exact match must work, got: ${r}`)
+    },
+  },
+
+  // ── detectIDontKnowReply — multi-language "I don't know" detector ─────────
+  // SCENARIO: customer can't or won't provide the requested fact (number,
+  // display, etc.). Used by gather guards to short-circuit the retry counter
+  // when the customer is explicit they can't help.
+  {
+    name: 'detectIDontKnow: ES "no lo sé" → true',
+    run: () => {
+      if (!detectIDontKnowReply('no lo sé')) throw new Error('"no lo sé" must be detected')
+    },
+  },
+  {
+    name: 'detectIDontKnow: ES "no me acuerdo" → true',
+    run: () => {
+      if (!detectIDontKnowReply('no me acuerdo')) throw new Error('"no me acuerdo" must be detected')
+    },
+  },
+  {
+    name: 'detectIDontKnow: ES "todavía no" → true',
+    run: () => {
+      if (!detectIDontKnowReply('todavía no he elegido la máquina')) {
+        throw new Error('"todavía no" must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectIDontKnow: ES "no lo he seleccionado" → true',
+    run: () => {
+      if (!detectIDontKnowReply('aún no lo he seleccionado')) {
+        throw new Error('"no lo he seleccionado" must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectIDontKnow: IT "non lo so" → true',
+    run: () => {
+      if (!detectIDontKnowReply('non lo so')) throw new Error('IT "non lo so" must be detected')
+    },
+  },
+  {
+    name: 'detectIDontKnow: EN "I don\'t know" → true',
+    run: () => {
+      if (!detectIDontKnowReply("I don't know")) throw new Error('EN "I don\'t know" must be detected')
+    },
+  },
+  {
+    name: 'detectIDontKnow: PT "não sei" → true',
+    run: () => {
+      if (!detectIDontKnowReply('não sei')) throw new Error('PT "não sei" must be detected')
+    },
+  },
+  {
+    name: 'detectIDontKnow: FR "je ne sais pas" → true',
+    run: () => {
+      if (!detectIDontKnowReply('je ne sais pas')) throw new Error('FR must be detected')
+    },
+  },
+  {
+    name: 'detectIDontKnow: a number "5" → false (real answer, not "I don\'t know")',
+    run: () => {
+      if (detectIDontKnowReply('5')) throw new Error('a digit must NOT match')
+    },
+  },
+  {
+    name: 'detectIDontKnow: a location "Goya" → false',
+    run: () => {
+      if (detectIDontKnowReply('Goya')) throw new Error('a location name must NOT match')
+    },
+  },
+
+  // ── detectDoubleChargeIntent — multi-language doble cobro classifier ──────
+  // REGRESSION (Andrea, 2026-05-09): the original regex required
+  // `me\s+(?:han|hab[eé]is|ha)?\s+cobrad[ao]` and silently failed on
+  // common typos like "habieis" (extra `i`). The new detector drops the
+  // verb-prefix requirement and matches `cobrado/charged/etc.` next to a
+  // quantifier. Every test below is a real or plausible customer phrasing.
+  {
+    name: 'detectDoubleCharge: ES "Me habieis cobrado dos veces con la tarjeda" → true (typo "habieis")',
+    run: () => {
+      if (!detectDoubleChargeIntent('Me habieis cobrado dos veces con la tarjeda')) {
+        throw new Error('typo "habieis" must still be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: ES "Me habéis cobrado dos veces" → true (canonical)',
+    run: () => {
+      if (!detectDoubleChargeIntent('Me habéis cobrado dos veces')) {
+        throw new Error('canonical phrasing must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: ES "doble cobro" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('he tenido un doble cobro')) {
+        throw new Error('doble cobro must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: ES "cobró dos veces" → true (verb-only, no "me")',
+    run: () => {
+      if (!detectDoubleChargeIntent('La máquina cobró dos veces')) {
+        throw new Error('"cobró dos veces" must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: IT "addebitato due volte" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('mi avete addebitato due volte la carta')) {
+        throw new Error('IT addebitato due volte must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: IT "doppio addebito" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('ho un doppio addebito')) {
+        throw new Error('IT doppio addebito must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: EN "charged me twice" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('you charged me twice')) {
+        throw new Error('EN charged twice must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: EN "double charge" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('I see a double charge on my card')) {
+        throw new Error('EN double charge must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: PT "cobrado duas vezes" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('foi cobrado duas vezes no cartão')) {
+        throw new Error('PT cobrado duas vezes must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: CA "cobrat dues vegades" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent("m'han cobrat dues vegades")) {
+        throw new Error('CA cobrat dues vegades must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: FR "débité deux fois" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('vous m\'avez débité deux fois')) {
+        throw new Error('FR débité deux fois must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: irrelevant "la lavadora no funciona" → false',
+    run: () => {
+      if (detectDoubleChargeIntent('la lavadora no funciona')) {
+        throw new Error('unrelated machine fault must NOT match')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: bare location "Goya" → false',
+    run: () => {
+      if (detectDoubleChargeIntent('Goya')) {
+        throw new Error('bare location must NOT match')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: empty string → false',
+    run: () => {
+      if (detectDoubleChargeIntent('')) {
+        throw new Error('empty must NOT match')
+      }
+    },
+  },
+
+  // ── extractDisplayLabel — preserve customer-facing wording ────────────────
+  // REGRESSION (Andrea, 2026-05-09): operator handover summary showed "La
+  // pantalla muestra PUSH" while the customer typed "PUSH PROG", because
+  // the canonical extractor stops at the word boundary. The label preserves
+  // the literal, multi-word wording for the operator.
+  {
+    name: 'extractDisplayLabel: "PUSH PROG" + canonical "PUSH" → "PUSH PROG"',
+    run: () => {
+      const r = extractDisplayLabel('PUSH PROG', 'PUSH')
+      if (r !== 'PUSH PROG') {
+        throw new Error(`expected "PUSH PROG", got "${r}"`)
+      }
+    },
+  },
+  {
+    name: 'extractDisplayLabel: customer prose "veo PUSH PROG en la pantalla" → "PUSH PROG"',
+    run: () => {
+      const r = extractDisplayLabel('veo PUSH PROG en la pantalla', 'PUSH')
+      if (r !== 'PUSH PROG') {
+        throw new Error(`uppercase tail must be preserved, got "${r}"`)
+      }
+    },
+  },
+  {
+    name: 'extractDisplayLabel: lowercase "veo push prog" → "PUSH" (no risky lowercase capture)',
+    run: () => {
+      const r = extractDisplayLabel('veo push prog', 'PUSH')
+      // We deliberately don\'t pick up lowercase prose — only ALL-UPPERCASE
+      // tail tokens that look like display-code stems.
+      if (r !== 'PUSH') {
+        throw new Error(`lowercase tail must NOT be captured, got "${r}"`)
+      }
+    },
+  },
+  {
+    name: 'extractDisplayLabel: "ALM DOOR" + canonical "ALM/DOOR" → "ALM DOOR"',
+    run: () => {
+      const r = extractDisplayLabel('me sale ALM DOOR en la pantalla', 'ALM/DOOR')
+      if (r !== 'ALM DOOR') {
+        throw new Error(`ALM family label, got "${r}"`)
+      }
+    },
+  },
+  {
+    name: 'extractDisplayLabel: bare canonical → canonical uppercase',
+    run: () => {
+      const r = extractDisplayLabel('SEL', 'SEL')
+      if (r !== 'SEL') throw new Error(`expected "SEL", got "${r}"`)
+    },
+  },
+  {
+    name: 'extractDisplayLabel: empty canonical → empty string',
+    run: () => {
+      const r = extractDisplayLabel('PUSH PROG', '')
+      if (r !== '') throw new Error(`empty canonical must short-circuit, got "${r}"`)
     },
   },
 ]

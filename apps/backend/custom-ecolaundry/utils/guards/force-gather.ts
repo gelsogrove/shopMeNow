@@ -135,24 +135,60 @@ export const guardForceDisplay: Guard = (ar) => {
 
 /** Step 3 — Force "cuál es el número?" when local+type known but number missing.
  *
+ *  Includes the same retry-then-escalate path as `guardForceDisplay` for
+ *  the case where the customer doesn't (or can't) give a number:
+ *
+ *    1st miss (counter == 0):  ask the canonical "qué número tiene la
+ *                              lavadora/secadora?"
+ *    2nd miss (counter == 1):  re-ask with a hint on where to find the
+ *                              number — "el número está pegado en la
+ *                              propia máquina, normalmente arriba o al
+ *                              lado de la pantalla. ¿Podrías comprobarlo?"
+ *    3rd miss (counter >= 2):  escalate to a human operator.
+ *
  *  Iron rule #10: same as guardForceMachineType — does NOT gate on
  *  `!ar.state.displayState`. If the customer volunteered the display
- *  before the number, we still need the number for the flow to start. */
+ *  before the number, we still need the number for the flow to start.
+ *  Counter is reset by resetMachineFacts and (implicitly) when
+ *  machineNumber is captured by autoExtractFacts. */
 export const guardForceMachineNumber: Guard = (ar) => {
   if (
-    ar.state.location &&
-    ar.state.machineType &&
-    !ar.state.machineNumber &&
-    !ar.state.nonTroubleshootingIncident &&
-    notInActiveSubFlow(ar) &&
-    ar.state.turnCount >= 2
+    !ar.state.location ||
+    !ar.state.machineType ||
+    ar.state.machineNumber ||
+    ar.state.nonTroubleshootingIncident ||
+    !notInActiveSubFlow(ar) ||
+    ar.state.turnCount < 2
   ) {
-    if (isMataro(ar) && !ar.state.locationStreet) return null
-    const numKey = ar.state.machineType === 'dryer' ? 'machineNumberDryer' : 'machineNumberWasher'
+    return null
+  }
+  if (isMataro(ar) && !ar.state.locationStreet) return null
+
+  const attempts = ar.state.machineNumberAskAttempts || 0
+
+  // 3rd strike: escalate. The customer has had two chances; the operator
+  // takes over.
+  if (attempts >= 2) {
+    ar.state.machineNumberAskAttempts = 0
+    escalate(ar, 'Customer could not provide machine number after 2 attempts')
+    requireCustomerName(ar)
     return {
-      reply: t(numKey, lang(ar)),
-      reason: 'force-machine-number',
+      reply: t('reaffirmEscalate', lang(ar)),
+      reason: 'machine-number-unrecognized-escalate',
     }
   }
-  return null
+
+  ar.state.machineNumberAskAttempts = attempts + 1
+
+  if (attempts === 0) {
+    // First ask — canonical wording.
+    const numKey = ar.state.machineType === 'dryer' ? 'machineNumberDryer' : 'machineNumberWasher'
+    return { reply: t(numKey, lang(ar)), reason: 'force-machine-number' }
+  }
+
+  // Second ask — hint where the number is.
+  return {
+    reply: t('machineNumberRetry', lang(ar)),
+    reason: 'machine-number-unrecognized-reask',
+  }
 }

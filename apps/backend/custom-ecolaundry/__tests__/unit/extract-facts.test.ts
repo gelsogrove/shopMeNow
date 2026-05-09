@@ -291,6 +291,54 @@ const cases: Case[] = [
     },
   },
 
+  // ── Bug A regression — Andrea, 2026-05-09: customer typo "habieis" ────────
+  // The original detection regex required the verb prefix `me\s+(?:han|hab[eé]is|ha)?`
+  // and silently failed on "me habieis cobrado" (extra "i" in "habieis"). With
+  // detection failing, pendingFlow stayed empty, the doble-cobro flow never
+  // started, and the bot improvised a generic machine flow. The fix moved
+  // detection to detectDoubleChargeIntent which drops the verb prefix.
+  {
+    name: 'Bug A regression: "me habieis cobrado dos veces" sets pendingFlow=double-charge-ask-used',
+    run: () => {
+      const ar = makeAr()
+      autoExtractFacts(ar, 'me habieis cobrado dos veces con la tarjeda')
+      assertEq(
+        ar.state.pendingFlow,
+        'double-charge-ask-used',
+        'doble cobro detection must fire even with "habieis" typo',
+      )
+    },
+  },
+  {
+    name: 'Bug A regression: canonical "me habéis cobrado dos veces" still works',
+    run: () => {
+      const ar = makeAr()
+      autoExtractFacts(ar, 'Me habéis cobrado dos veces con la tarjeta')
+      assertEq(
+        ar.state.pendingFlow,
+        'double-charge-ask-used',
+        'canonical phrasing must still trigger the flow',
+      )
+    },
+  },
+
+  // ── Bug C regression — Andrea, 2026-05-09: "PUSH PROG" → state.displayLabel
+  // Customer types "PUSH PROG", canonical extractor returns "PUSH". Without
+  // the displayLabel field, the operator handover summary truncated to
+  // "PUSH" and lost the customer's exact wording.
+  {
+    name: 'Bug C regression: "PUSH PROG" sets displayState=PUSH AND displayLabel="PUSH PROG"',
+    run: () => {
+      const ar = makeAr()
+      ar.state.location = 'Goya'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '3'
+      autoExtractFacts(ar, 'PUSH PROG')
+      assertEq(ar.state.displayState, 'PUSH', 'canonical token for flow engine')
+      assertEq(ar.state.displayLabel, 'PUSH PROG', 'literal label for operator summary')
+    },
+  },
+
   // ── Post-escalation re-entry (regression for "Tranquilo te ayudo" bug) ──
   {
     name: 'caso 8 trigger after a previous escalation clears blocking flags',

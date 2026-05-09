@@ -910,6 +910,11 @@ function ChatScreen({
   // Message id to highlight & scroll to (set when arriving from a kanban "Open in chat" click)
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null)
   const chatScrollRef = useRef<HTMLDivElement>(null)
+  // Tracks a session id that was JUST created and might not yet be in the
+  // sessions list (fetchAll is async). The "switch to first visible chat"
+  // effect below ignores this id so the new chat stays selected even
+  // before the backend echoes it back.
+  const justCreatedSessionRef = useRef<string | null>(null)
   // Demo-only overlays persisted in localStorage (no backend column today).
   // When backend support lands, these move to ChatSession.title +
   // ChatSession.feedback respectively.
@@ -1209,12 +1214,26 @@ function ChatScreen({
 
   // If the current chat becomes hidden by the DONE-only rule, switch to the
   // first visible chat (or clear selection if none is left).
+  //
+  // EXCEPTION (just-created session): when "+ New Chat" creates a session,
+  // we set activeSessionId to that id BEFORE fetchAll has echoed it back
+  // from the backend. Without this guard the effect would race-reset the
+  // new chat to whatever is currently visible. The ref is cleared once
+  // the new session finally appears in visibleSessions.
   useEffect(() => {
     if (!activeSessionId) return
     const isStillVisible = visibleSessions.some((s) => s.id === activeSessionId)
-    if (!isStillVisible) {
-      setActiveSessionId(visibleSessions[0]?.id || null)
+    if (isStillVisible) {
+      if (justCreatedSessionRef.current === activeSessionId) {
+        justCreatedSessionRef.current = null
+      }
+      return
     }
+    if (justCreatedSessionRef.current === activeSessionId) {
+      // Session just created; wait for fetchAll to bring it in.
+      return
+    }
+    setActiveSessionId(visibleSessions[0]?.id || null)
   }, [visibleSessions, activeSessionId])
 
   // Drag-and-drop reorder of the chat list. Captures the FULL displayed
@@ -1699,6 +1718,9 @@ function ChatScreen({
         <NewChatModal
           onClose={() => setShowNewChat(false)}
           onCreated={(sid) => {
+            // Mark the id as "just created" so the visibility-reset effect
+            // does not race-reset our selection while fetchAll is in flight.
+            justCreatedSessionRef.current = sid
             setActiveSessionId(sid)
             // Pin the new chat at the very top of the list, above any
             // user-reordered pinned chats. We prepend its id to chatOrder

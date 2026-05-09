@@ -133,6 +133,31 @@ export type SessionState = {
   //   ≥2 → escalate
   // Reset to 0 by resetMachineFacts.
   cardDigitsAskAttempts: number
+  // Counts how many times guardForceMachineNumber has asked for the machine
+  // number without the customer providing one. Same retry+escalate pattern
+  // as displayAskAttempts:
+  //   0 → first ask "¿qué número tiene la lavadora/secadora?"
+  //   1 → second ask with hint ("el número está pegado en la máquina")
+  //   ≥2 → escalate
+  // Reset to 0 by resetMachineFacts and when machineNumber is finally captured.
+  machineNumberAskAttempts: number
+  // Customer-facing display label preserved verbatim from what the customer
+  // typed. While `displayState` is the *canonical* token (e.g. "PUSH" — used
+  // by the flow engine for routing), `displayLabel` keeps the original
+  // wording (e.g. "PUSH PROG") so the operator handover summary shows
+  // exactly what the customer reported. Empty string when unknown.
+  // REGRESSION (Andrea, 2026-05-09): the operator was reading "La pantalla
+  // muestra PUSH" while the customer had clearly typed "PUSH PROG", because
+  // the canonical extractor collapsed the trailing word.
+  displayLabel: string
+  // Counts how many times the bot has asked "¿lavadora o secadora?" inside
+  // the double-charge YES branch without the customer providing a recognisable
+  // type. Same 3-strikes ladder as displayAskAttempts.
+  //   0 → first ask "¿lavadora o secadora?"
+  //   1 → second ask with hint ("fíjate en la etiqueta — L lavadora, S secadora")
+  //   ≥2 → escalate to operator
+  // Reset to 0 by resetMachineFacts and when machineType is finally captured.
+  machineTypeAskAttempts: number
   pendingFlow:
     | ''
     | 'paid-not-used-ask-change'
@@ -141,6 +166,8 @@ export type SessionState = {
     | 'numeric-code-ask-letters'
     | 'numeric-code-await-answer'
     | 'double-charge-ask-used'
+    | 'double-charge-ask-type'
+    | 'double-charge-ask-number'
     | 'double-charge-ask-narrative'
     | 'double-charge-ask-card-digits'
     | 'double-charge-ask-receipt'

@@ -8,6 +8,8 @@
   "machineType": "É uma máquina de lavar ou de secar?",
   "machineNumberWasher": "Qual é o número da máquina de lavar?",
   "machineNumberDryer": "Qual é o número da máquina de secar?",
+  "machineNumberRetry": "O número está colado na própria máquina, normalmente acima ou ao lado do ecrã. Podias verificar e dizer-me?",
+  "machineTypeRetry": "Se não tens a certeza, olha para a etiqueta da máquina: as máquinas de lavar costumam estar marcadas com um L e as de secar com um S ou D. É uma máquina de lavar ou de secar?",
   "displayWasher": "O que aparece exatamente no ecrã da máquina de lavar?",
   "displayDryer": "O que aparece exatamente no ecrã da máquina de secar?",
   "displayMachine": "O que aparece exatamente no ecrã da máquina? Se não aparecer nada, diz-me assim sabemos.",

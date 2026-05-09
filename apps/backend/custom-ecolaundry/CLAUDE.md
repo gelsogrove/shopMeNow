@@ -147,6 +147,39 @@ Before I write any code in this module, I must confirm each rule applies:
     number-first, all-three-first). Mirror this template when adding a
     new mandatory fact.
 
+    **Corollary — every gather step has a 3-strikes retry+escalate ladder.**
+    A catch-all asker is necessary but not sufficient: if the customer
+    can't (or won't) provide the fact, asking the same question forever
+    is itself a pipeline hole. Each gather guard must implement:
+
+    ```
+    counter == 0  → canonical ask          (i18n key: e.g. machineNumberWasher)
+    counter == 1  → guidance reask         (i18n key: e.g. machineNumberRetry)
+    counter >= 2  → escalate(operator) + requireCustomerName, reset counter
+    ```
+
+    The counter lives on `state.<fact>AskAttempts` and is reset by
+    `resetMachineFacts` (or the equivalent) when the fact is finally
+    captured. Today's instances:
+    - `state.displayAskAttempts` → [`guardForceDisplay`](utils/guards/force-gather.ts)
+    - `state.machineNumberAskAttempts` → [`guardForceMachineNumber`](utils/guards/force-gather.ts)
+    - `state.cardDigitsAskAttempts` → [`guardDoubleChargeAskCardDigits`](utils/guards/payment-double-charge.ts)
+
+    The boundary signal *"I don't know / not yet"* across all 6 languages
+    is detected by [`detectIDontKnowReply`](utils/intent.ts) — but the
+    escalation ladder fires regardless of intent, because plain silence
+    or repeated typos look the same to the orchestrator.
+
+    **Anti-pattern:** a gather guard that only asks the canonical
+    question and returns. After two unanswered turns the bot loops and
+    the LLM is left to improvise — the exact failure behind the
+    "auh no lo he selecioda" bug (2026-05-09).
+
+    **Tested by:** `__tests__/unit/force-display-retry.test.ts` and
+    `__tests__/unit/force-machine-number-retry.test.ts` pin the 0 → 1 → 2
+    → escalate progression for their respective guards. Mirror this
+    template when adding a new mandatory fact.
+
 ---
 
 ## 🧭 The 5 layers — know which one you're in

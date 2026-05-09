@@ -8,6 +8,8 @@
   "machineType": "Is it a washer or a dryer?",
   "machineNumberWasher": "What is the washer number?",
   "machineNumberDryer": "What is the dryer number?",
+  "machineNumberRetry": "The number is stuck on the machine itself, usually above or beside the screen. Could you check and tell me?",
+  "machineTypeRetry": "If you're not sure, look at the label on the machine: washers are usually marked with an L and dryers with an S or D. Is it a washer or a dryer?",
   "displayWasher": "What exactly appears on the washer screen?",
   "displayDryer": "What exactly appears on the dryer screen?",
   "displayMachine": "What exactly appears on the machine screen? If nothing shows up, just tell me so we know.",

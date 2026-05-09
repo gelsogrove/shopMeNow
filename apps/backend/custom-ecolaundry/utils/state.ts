@@ -58,6 +58,9 @@ export function createInitialState(): SessionState {
     displayReaskPrevCode: '',
     displayAskAttempts: 0,
     cardDigitsAskAttempts: 0,
+    machineNumberAskAttempts: 0,
+    machineTypeAskAttempts: 0,
+    displayLabel: '',
     pendingFlow: '',
     invoiceData: {
       razonSocial: '',
@@ -104,6 +107,9 @@ export function resetMachineFacts(state: SessionState): void {
   state.displayReaskPrevCode = ''
   state.displayAskAttempts = 0
   state.cardDigitsAskAttempts = 0
+  state.machineNumberAskAttempts = 0
+  state.machineTypeAskAttempts = 0
+  state.displayLabel = ''
   state.mixedIncident = false
   state.nonTroubleshootingIncident = ''
   state.lastMissingFacts = []

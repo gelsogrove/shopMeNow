@@ -37,6 +37,7 @@ function ctx(overrides: Partial<EscalationContext> = {}): EscalationContext {
     machineNumber: '5',
     paymentCompleted: true,
     displayState: '',
+    displayLabel: '',
     issueSummary: '',
     nonTroubleshootingIncident: '',
     discountCode: '',
@@ -230,6 +231,37 @@ const cases: Case[] = [
       const s = buildEscalationSummary(ctx({ displayState: '' }))
       if (!/sin informaci[oó]n clara/i.test(s)) {
         throw new Error('expected fallback narrative')
+      }
+    },
+  },
+
+  // ── displayLabel preserves "PUSH PROG" for the operator ─────────────────
+  // REGRESSION (Andrea, 2026-05-09): operator handover used to read
+  // "La pantalla muestra PUSH" while the customer typed "PUSH PROG". The
+  // canonical token is needed for the flow engine, but for the human-
+  // facing summary we want the customer's literal wording.
+  {
+    name: 'displayLabel: "PUSH PROG" + canonical "PUSH" → summary uses "PUSH PROG"',
+    run: () => {
+      const s = buildEscalationSummary(
+        ctx({ displayState: 'PUSH', displayLabel: 'PUSH PROG' }),
+      )
+      if (!/PUSH PROG/.test(s)) {
+        throw new Error(`summary must contain customer-facing "PUSH PROG", got: ${s}`)
+      }
+      if (/muestra PUSH\b(?! PROG)/.test(s)) {
+        throw new Error(`summary must NOT show truncated "PUSH" alone, got: ${s}`)
+      }
+    },
+  },
+  {
+    name: 'displayLabel: empty → fallback to canonical displayState',
+    run: () => {
+      const s = buildEscalationSummary(
+        ctx({ displayState: 'SEL', displayLabel: '' }),
+      )
+      if (!/SEL/.test(s)) {
+        throw new Error(`fallback must use displayState, got: ${s}`)
       }
     },
   },

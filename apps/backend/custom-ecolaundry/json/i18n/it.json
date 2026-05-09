@@ -8,6 +8,8 @@
   "machineType": "È una lavatrice o un'asciugatrice?",
   "machineNumberWasher": "Qual è il numero della lavatrice?",
   "machineNumberDryer": "Qual è il numero dell'asciugatrice?",
+  "machineNumberRetry": "Il numero è incollato sulla macchina stessa, di solito sopra o accanto al display. Potresti controllarlo e dirmelo?",
+  "machineTypeRetry": "Se non sei sicuro, guarda l'etichetta sulla macchina: le lavatrici di solito sono contrassegnate da una L e le asciugatrici da una S o D. È una lavatrice o un'asciugatrice?",
   "displayWasher": "Cosa appare esattamente sullo schermo della lavatrice?",
   "displayDryer": "Cosa appare esattamente sullo schermo dell'asciugatrice?",
   "displayMachine": "Cosa appare esattamente sullo schermo della macchina? Se non appare nulla, dimmelo così lo sappiamo.",

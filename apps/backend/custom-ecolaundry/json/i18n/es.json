@@ -9,6 +9,8 @@
   "machineType": "¿Podrías indicarme, por favor, si es una lavadora o una secadora?",
   "machineNumberWasher": "¿Podrías decirme, por favor, qué número tiene la lavadora?",
   "machineNumberDryer": "¿Podrías decirme, por favor, qué número tiene la secadora?",
+  "machineNumberRetry": "El número está pegado en la propia máquina, normalmente arriba o al lado de la pantalla. ¿Podrías comprobarlo y decírmelo?",
+  "machineTypeRetry": "Si no estás seguro, fíjate en la etiqueta de la máquina: las lavadoras suelen estar marcadas con una L y las secadoras con una S o D. ¿Es lavadora o secadora?",
   "displayWasher": "Cuéntame, por favor, ¿qué aparece exactamente en la pantalla de la lavadora?",
   "displayDryer": "Cuéntame, por favor, ¿qué aparece exactamente en la pantalla de la secadora?",
   "displayMachine": "Cuéntame, por favor, ¿qué aparece exactamente en la pantalla de la máquina? Si no aparece nada, dímelo y lo tenemos en cuenta.",

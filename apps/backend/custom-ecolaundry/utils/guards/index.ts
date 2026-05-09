@@ -30,6 +30,8 @@ import { guardPaidNotUsedAskChange } from './payment-paid-not-used.js'
 import {
   guardDoubleChargeAskUsed,
   guardDoubleChargeAskNarrative,
+  guardDoubleChargeAskType,
+  guardDoubleChargeAskNumber,
   guardDoubleChargeAskCardDigits,
   guardDoubleChargeAskReceipt,
 } from './payment-double-charge.js'
@@ -112,6 +114,8 @@ export const GUARD_PIPELINE: Guard[] = [
   guardContradictoryNarrative,
   guardDoubleChargeAskUsed,
   guardDoubleChargeAskNarrative,
+  guardDoubleChargeAskType,
+  guardDoubleChargeAskNumber,
   guardDoubleChargeAskCardDigits,
   guardDoubleChargeAskReceipt,
   guardAskPhoto,

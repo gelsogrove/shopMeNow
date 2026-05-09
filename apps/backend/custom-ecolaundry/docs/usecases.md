@@ -2,6 +2,7 @@
 
 ## Índice de casos
 
+- [Reglas generales del bot](#reglas-generales-del-bot)
 - [Caso 1 — La lavadora no funciona y aparece PUSH PROG](#caso-1--la-lavadora-no-funciona-y-aparece-push-prog)
   - [Scenario 1.1 — PUSH PROG Happy Path](#scenario-11--push-prog-happy-path)
   - [Scenario 1.2 — PUSH PROG Escalación: máquina no responde tras pulsar](#scenario-12--push-prog-escalación-máquina-no-responde-tras-pulsar)
@@ -59,6 +60,55 @@
 
 ---
 
+## Reglas generales del bot
+
+Estas reglas se aplican a **todos** los casos del documento. No las
+repetimos dentro de cada caso para evitar ruido — si una regla parece
+ausente de un caso concreto, sigue valiendo igualmente.
+
+### Regla 1 — Ningún cliente se queda atascado en una pregunta
+
+Cada vez que el bot pide un dato (local, tipo de máquina, número de
+máquina, código de pantalla, últimos 4 dígitos de la tarjeta, …) sigue
+una **escalera de 3 intentos**:
+
+| Intento | Comportamiento |
+|---|---|
+| 1º — pregunta canónica | El bot pide el dato con la fórmula estándar del catálogo. |
+| 2º — pista o reformulación | El bot reformula con una pista útil. *Ejemplos:* «el número está pegado en la propia máquina, normalmente arriba o al lado de la pantalla», «no reconozco ese código exactamente, ¿podrías comprobarlo?», «necesito exactamente los 4 últimos dígitos de la tarjeta». |
+| 3º — escalación a operador | El bot reconoce que no puede seguir solo, pide el nombre del cliente y deriva a un operador humano. La conversación queda registrada para revisión manual. |
+
+**Por qué existe esta regla:**
+- Evita que el bot se quede «mudo» o repita la misma pregunta cuando el
+  cliente escribe con typos, contesta «no lo sé / aún no lo he
+  seleccionado», o simplemente no sabe responder.
+- Garantiza que ninguna conversación termine sin respuesta — pasados los
+  3 intentos siempre interviene un humano.
+- Aplica de forma idéntica en **es / it / en / ca / pt / fr** (los
+  mensajes de pista y escalación están traducidos en los 6 idiomas
+  soportados).
+
+**Ámbito:** se aplica a todos los pasos de recogida de datos. Si un
+caso futuro añade un dato nuevo, deberá heredar esta misma escalera
+sin necesidad de mencionarlo en el documento.
+
+### Regla 2 — El cliente puede cambiar de tema en cualquier momento
+
+Si durante un flujo el cliente abandona el tema («mejor llamo más
+tarde», «en realidad quería preguntar otra cosa», «olvídalo»), el bot
+no insiste con la pregunta pendiente. Reconoce el cambio, cierra el
+flujo activo, y atiende la nueva petición. Si el cliente no aclara su
+intención el bot pregunta cómo puede ayudar.
+
+### Regla 3 — Idioma del cliente
+
+El bot responde siempre en el idioma del cliente, detectado del primer
+mensaje recibido. Una vez fijado, el idioma de la sesión no cambia
+salvo que el cliente lo haga explícitamente. El catálogo de idiomas
+soportados es: español, italiano, inglés, catalán, portugués y francés.
+
+---
+
 
 ## Caso 1 — La lavadora no funciona y aparece PUSH PROG
 
@@ -91,12 +141,14 @@ El cliente ha pagado y la pantalla muestra `PUSH PROG`.
 **Bot:** Pulsa un botón de programa para iniciar el lavado.
 
 Programas:
-1. 60º (muy caliente) → ropa muy sucia, blanca o de trabajo
-2. 40º (templado) → ropa normal (algodón, color)
-3. 30º (suave) → ropa delicada o sintética
-4. Frío → prendas muy delicadas (lana, seda, etc.)
+- **60º** (muy caliente) → ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → ropa normal (algodón, color)
+- **30º** (suave) → ropa delicada o sintética
+- **Frío** → prendas muy delicadas (lana, seda, etc.)
 
-Elige uno y púlsalo en la máquina. Después dime si la lavadora ha arrancado.
+Elige uno y púlsalo en la máquina.
+
+Después dime si la lavadora ha arrancado.
 
 **Usuario:** Sí, ahora funciona.  
 **Bot:** Perfecto, incidencia resuelta. Si vuelve a pasar o aparece otro mensaje en pantalla, dímelo y te sigo ayudando.
@@ -135,12 +187,14 @@ Incidencia resuelta.
 **Bot:** Pulsa un botón de programa para iniciar el lavado.
 
 Programas:
-1. 60º (muy caliente) → ropa muy sucia, blanca o de trabajo
-2. 40º (templado) → ropa normal (algodón, color)
-3. 30º (suave) → ropa delicada o sintética
-4. Frío → prendas muy delicadas (lana, seda, etc.)
+- **60º** (muy caliente) → ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → ropa normal (algodón, color)
+- **30º** (suave) → ropa delicada o sintética
+- **Frío** → prendas muy delicadas (lana, seda, etc.)
 
-Elige uno y púlsalo en la máquina. Después dime si la lavadora ha arrancado.
+Elige uno y púlsalo en la máquina.
+
+Después dime si la lavadora ha arrancado.
 
 **Usuario:** Sí, ahora funciona  
 **Bot:** Perfecto, incidencia resuelta. Si vuelve a pasar o aparece otro mensaje en pantalla, dímelo y te sigo ayudando.
@@ -172,7 +226,17 @@ demás casos (Caso 5.2/5.3, Caso 7.2).
 **Bot:** De acuerdo. ¿Qué aparece en la pantalla?
 
 **Usuario:** PUSH PROG  
-**Bot:** Pulsa un botón de programa... [4 programmi] ...Después dime si la lavadora ha arrancado.
+**Bot:** Pulsa un botón de programa para iniciar el lavado.
+
+Programas:
+- **60º** (muy caliente) → ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → ropa normal (algodón, color)
+- **30º** (suave) → ropa delicada o sintética
+- **Frío** → prendas muy delicadas (lana, seda, etc.)
+
+Elige uno y púlsalo en la máquina.
+
+Después dime si la lavadora ha arrancado.
 
 **Usuario:** He pulsado pero no responde  
 **Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
@@ -682,29 +746,18 @@ El cliente dice que ha habido doble cobro, independientemente de si ha
 podido o no usar la máquina (lavadora/secadora).
 
 **Criterios de aceptación:**
-- El bot pregunta primero, en este orden:
-  1. la lavandería,
-  2. si es lavadora o secadora,
-  3. el número de máquina,
-  4. si el cliente ha podido lavar o secar la ropa.
-  
-  El bot **no** salta directamente a "¿has podido lavar?" antes de saber lavandería, tipo y número de máquina, para que el resumen al operador sea completo.
-- Si el cliente dice **"Sí"** (ha podido usar la máquina), el bot le pide:
-  1. el relato paso a paso de lo ocurrido (sugiriendo si ha pasado la tarjeta varias veces por el datáfono),
-  2. los últimos 4 dígitos de la tarjeta,
-  3. una captura del pago,
-  4. el nombre del cliente.
-  
-  Cierra con un mensaje sobre el formulario de devolución, sin pasar el caso a un operador en vivo. Ver Scenario 6.1.
-- **Validación de los 4 dígitos** (paso 2 del flujo Sí): si el cliente escribe 3, 5 o más cifras, o algo que no contiene 4 dígitos exactos, el bot le pide que lo reescriba: **"Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?"**. Si tras un segundo intento sigue sin dar 4 dígitos exactos, el bot pasa el caso a un operador.
-- Si el cliente dice **"No"** (no ha podido usar la máquina), el bot pasa el caso directamente a un operador, sin pedir relato ni dígitos. El resumen indica claramente "no ha podido usar el servicio". Ver Scenario 6.4.
-- El resumen para el operador incluye: nombre del cliente, lavandería, tipo y número de máquina, si ha podido o no usar el servicio, y el relato o respuesta del cliente.
-- **Otras vías de escalación inmediata** (sin completar el gather):
+- El bot pregunta primero la **lavandería**, y a continuación si el cliente ha **podido lavar o secar** la ropa. Esa pregunta es el punto de bifurcación del caso:
+  - Si el cliente responde **"Sí"** → el bot continúa pidiendo, en este orden, **tipo de máquina** (lavadora o secadora), **número de máquina**, **relato paso a paso** (sugiriendo si ha pasado la tarjeta varias veces por el datáfono), **últimos 4 dígitos de la tarjeta**, **captura del pago** y **nombre del cliente**. Cierra con un mensaje sobre el formulario de devolución, sin pasar el caso a un operador en vivo. Ver Scenario 6.1.
+  - Si el cliente responde **"No"** → el bot escala inmediatamente al operador y pide el nombre del cliente. **No** pide tipo, número, relato ni dígitos: ese cliente está doblemente frustrado (cobro doble + servicio no prestado), no tiene sentido alargar el gather. El operador recoge los datos faltantes por teléfono. Ver Scenario 6.4.
+- **Validación de los 4 dígitos** (solo en el flujo Sí): si el cliente escribe 3, 5 o más cifras, o algo que no contiene 4 dígitos exactos, el bot le pide que lo reescriba: **"Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?"**. Si tras un segundo intento sigue sin dar 4 dígitos exactos, el bot pasa el caso a un operador.
+- **Escalera de 3 intentos para tipo y número de máquina** (regla general del bot, también en este caso): si el cliente no entrega un tipo o un número reconocible, el bot reformula con una pista útil; tras dos intentos fallidos escala al operador (Regla 1 — "Reglas generales del bot").
+- El resumen para el operador incluye: nombre del cliente, lavandería, tipo y número de máquina (si se han recogido), si ha podido o no usar el servicio, y el relato o respuesta del cliente.
+- **Otras vías de escalación inmediata** (sin llegar a la pregunta "¿has podido?"):
   - Si el cliente está muy enfadado y exige hablar con un operador, el bot escala al instante (Scenario 6.2).
   - Si el relato del cliente es contradictorio o incoherente, el bot escala (Scenario 6.3).
-- Variantes detalladas en Scenarios 6.1, 6.2, 6.3 y 6.4.
+- Variantes detalladas en Scenarios 6.1, 6.2, 6.3, 6.4 y 6.5.
 
-**Ejemplo de conversación:**
+**Ejemplo de conversación (flujo Sí):**
 
 **Usuario:** Me habéis cobrado dos veces con la tarjeta.  
 **Bot:** Lo revisamos contigo. ¿En qué lavandería estás?
@@ -713,16 +766,22 @@ podido o no usar la máquina (lavadora/secadora).
 **Bot:** Gracias. ¿Has podido lavar o secar la ropa?
 
 **Usuario:** Sí.  
-**Bot:** De acuerdo. Explícame, por favor, paso a paso qué has hecho desde que has entrado.
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora.  
+**Bot:** ¿Qué número tiene la lavadora?
+
+**Usuario:** 5.  
+**Bot:** De acuerdo. Explícame, por favor, paso a paso qué has hecho desde que has entrado. ¿Es posible que hayas pasado varias veces la tarjeta por el datáfono?
 
 **Usuario:** He pagado, no iba y volví a pasar la tarjeta.  
 **Bot:** Gracias. Para revisarlo bien, necesito los últimos 4 dígitos de la tarjeta.
 
 **Usuario:** 4821.  
-**Bot:** Perfecto. Ahora necesito una captura del pago.
+**Bot:** Perfecto. Ahora necesito una captura del pago. Con esos datos podremos revisarlo y enviarte el formulario de devolución. La próxima vez, antes de volver a pagar, contacta con nosotros y te ayudaremos al momento. ¿Cómo te llamas?
 
-**Usuario:** Vale.  
-**Bot:** Gracias. Con esos datos podremos revisarlo y enviarte el formulario de devolución. La próxima vez, antes de volver a pagar, contacta con nosotros y te ayudaremos al momento.
+**Usuario:** Carlos.  
+**Bot:** Gracias Carlos. Hemos recibido toda la información necesaria para tu caso. Vamos a revisar tu situación y te enviaremos el formulario de reembolso.
 
 **Resultado esperado:**  
 Datos recogidos y caso preparado para revisión.
@@ -739,24 +798,29 @@ Datos recogidos y caso preparado para revisión.
 **Objetivo:** El cliente aporta todos los datos; el caso queda preparado para revisión sin escalación en vivo.
 
 **Criterios de aceptación:**
-- El bot pregunta primero la lavandería, luego el tipo de máquina (lavadora/secadora) y luego el número de máquina, para que el resumen al operador sea completo.
-- El bot pregunta si el cliente ha podido completar el lavado o secado.
-- El bot pide el relato paso a paso, sugiriendo si el cliente ha pasado la tarjeta varias veces por el datáfono.
+- El bot pregunta primero la lavandería y luego "¿has podido lavar o secar la ropa?".
+- Cuando el cliente responde **"Sí"**, el bot continúa pidiendo (en este orden) **tipo de máquina**, **número de máquina**, **relato paso a paso** (sugiriendo si ha pasado la tarjeta varias veces por el datáfono), **últimos 4 dígitos de la tarjeta**, **captura del pago** y **nombre del cliente**.
+- Si el cliente ya volunteado el tipo y/o el número en una sola frase ("sí, lavadora 5"), el bot no vuelve a preguntar lo que ya sabe y avanza directamente al siguiente paso.
+- Para el tipo y para el número se aplica la **escalera de 3 intentos** (canónica → pista → escalación al operador).
 - El bot pide los últimos 4 dígitos de la tarjeta. Si el cliente escribe 3, 5 o más cifras (o algo sin 4 dígitos exactos), el bot pide que los reescriba: "Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?". Tras un segundo intento inválido, el bot escala a un operador.
-- El bot pide una captura del pago.
-- El bot pregunta el nombre del cliente.
 - El mensaje final, tras facilitar el nombre, confirma que se enviará el formulario de devolución.
 - El mensaje final NO menciona "operador" ni "desactivado": no es una escalación a un humano en vivo, es un trámite de devolución.
 
 **Conversación:**
 
 **Usuario:** Me habéis cobrado dos veces con la tarjeta.  
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿En qué lavandería te encuentras? (indica la ciudad y la calle)
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿En qué lavandería te encuentras?
 
 **Usuario:** Goya  
-**Bot:** ¿Pudiste completar el lavado o secado?
+**Bot:** ¿Has podido lavar o secar la ropa?
 
 **Usuario:** Sí  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Qué número tiene la lavadora?
+
+**Usuario:** 5  
 **Bot:** De acuerdo. ¿Podrías explicarme, por favor, paso a paso qué has hecho desde que has entrado? ¿Es posible que hayas pasado varias veces la tarjeta por el datáfono?
 
 **Usuario:** He pagado, no iba y volví a pasar la tarjeta.  
@@ -765,8 +829,8 @@ Datos recogidos y caso preparado para revisión.
 **Usuario:** 4821  
 **Bot:** ¡Perfecto! ¿Podrías enviarme una captura del pago? Con esos datos podremos revisarlo y enviarte el formulario de devolución. La próxima vez, antes de volver a pagar, contáctanos y te ayudamos al momento. ¿Cómo te llamas?
 
-**Usuario:** Goya  
-**Bot:** Tranquilo/a, Goya. Hemos recibido toda la información necesaria para tu caso. Vamos a revisar tu situación y te enviaremos un formulario de reembolso. Si necesitas algo más, aquí estoy para ayudarte.
+**Usuario:** Carlos  
+**Bot:** Gracias Carlos. Hemos recibido toda la información necesaria para tu caso. Vamos a revisar tu situación y te enviaremos un formulario de reembolso. Si necesitas algo más, aquí estoy para ayudarte.
 
 ---
 
@@ -809,18 +873,24 @@ Datos recogidos y caso preparado para revisión.
 **Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry y estoy aquí para ayudarte. ¿En qué lavandería te encuentras?
 
 **Usuario:** Goya  
-**Bot:** ¿Pudiste completar el lavado o secado?
+**Bot:** ¿Has podido lavar o secar la ropa?
 
 **Usuario:** Sí  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Qué número tiene la lavadora?
+
+**Usuario:** 5  
 **Bot:** De acuerdo. ¿Podrías explicarme paso a paso qué has hecho desde que has entrado?
 
 **Usuario:** No sé exactamente, creo que me han cobrado tres o cuatro veces, el importe no me cuadra.  
 **Bot:** ⚠️ Necesitamos derivar tu caso a un operador para revisarlo. ¿Cómo te llamas?
 
 **Usuario:** Carlos  
-**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso.
 
-👤 **Human Support:** Usuario Carlos en Goya ha reportado un doble cobro con tarjeta.
+👤 **Human Support:** Usuario Carlos en Goya (lavadora número 5) ha reportado un doble cobro con tarjeta.
 
 ---
 
@@ -833,17 +903,16 @@ servicio no fue prestado, con un resumen que el operador puede usar
 para gestionar tanto el reembolso como el servicio no prestado.
 
 **Criterios de aceptación:**
-- El bot pregunta primero la lavandería, el tipo de máquina y el número de máquina **antes** de preguntar si el cliente ha podido lavar o secar.
-- Cuando el cliente responde **"no"**, **"no he podido"** o **"nada"**, el bot NO sigue pidiendo relato, dígitos ni captura: pasa el caso a un operador inmediatamente.
-- El bot pide el nombre del cliente antes de cerrar.
-- El mensaje final, tras facilitar el nombre, indica que un operador humano se encargará del caso y que el chatbot se desactivará.
+- El bot pregunta primero la lavandería y, **a continuación**, "¿has podido lavar o secar la ropa?". **No** pregunta tipo ni número de máquina antes de esa pregunta.
+- Cuando el cliente responde **"no"**, **"no he podido"** o **"nada"**, el bot NO sigue pidiendo tipo, número, relato, dígitos ni captura: pasa el caso a un operador inmediatamente y pide solo el nombre.
+- El mensaje final, tras facilitar el nombre, indica que un operador humano se encargará del caso.
 - El resumen para el operador incluye:
   - nombre del cliente,
   - lavandería,
-  - tipo y número de máquina (ej. "lavadora número 5"),
-  - una indicación clara de que el cliente NO ha podido usar el servicio,
+  - **una indicación clara de que el cliente NO ha podido usar el servicio**,
   - la respuesta literal del cliente (ej. "no he podido"),
   - una nota de que el caso requiere reembolso y servicio no prestado.
+- El resumen NO contiene tipo ni número de máquina (no se han pedido). El operador los recogerá por teléfono si los necesita.
 - El resumen NO debe parecerse al de Scenario 6.1 (donde el cliente sí pudo usar el servicio): el operador tiene que entender la diferencia desde la primera línea.
 
 **Conversación:**
@@ -852,21 +921,15 @@ para gestionar tanto el reembolso como el servicio no prestado.
 **Bot:** 👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?
 
 **Usuario:** Goya  
-**Bot:** ¿Podrías indicarme, por favor, si es una lavadora o una secadora?
-
-**Usuario:** lavadora  
-**Bot:** ¿Podrías decirme, por favor, qué número tiene la lavadora?
-
-**Usuario:** 5  
-**Bot:** ¡Gracias! 👍 ¿Has podido lavar o secar la ropa?
+**Bot:** ¿Has podido lavar o secar la ropa?
 
 **Usuario:** no, no he podido  
 **Bot:** Vamos a revisar tu caso manualmente para poder ayudarte mejor. 🙏 ¿Cómo te llamas, por favor?
 
 **Usuario:** Carlos  
-**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
+**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación.
 
-👤 **Human Support:** Usuario Carlos en Goya (lavadora número 5) reporta doble cobro PERO NO ha podido usar el servicio. Respuesta del cliente: "no he podido". Requiere reembolso y revisión del servicio no prestado.
+👤 **Human Support:** Usuario Carlos en Goya reporta doble cobro PERO NO ha podido usar el servicio. Respuesta del cliente: "no he podido". Requiere reembolso y revisión del servicio no prestado.
 
 ---
 

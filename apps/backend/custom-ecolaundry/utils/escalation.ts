@@ -127,8 +127,9 @@ export function buildEscalationSummary(context: EscalationContext): string {
   if (/caso\s*5/i.test(context.escalationReason || '')) {
     const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
     const numberLabel = context.machineNumber || 'desconocido'
-    const displayLabel = context.displayState ? ` (pantalla: ${context.displayState})` : ''
-    return `${name} en ${location} sigue con AL001 en la ${machineLabel} número ${numberLabel}${displayLabel}: la guía de secuencia correcta no ha resuelto el problema y requiere revisión técnica.`
+    const display = context.displayLabel || context.displayState
+    const displayPart = display ? ` (pantalla: ${display})` : ''
+    return `${name} en ${location} sigue con AL001 en la ${machineLabel} número ${numberLabel}${displayPart}: la guía de secuencia correcta no ha resuelto el problema y requiere revisión técnica.`
   }
 
   // No-change incident (paid + not activated + central did not return change).
@@ -162,7 +163,11 @@ export function buildEscalationSummary(context: EscalationContext): string {
   // Default: machine-related incident (PUSH / DOOR / SEL / ALN / ALM / AL001 / 001 / ERR).
   const machine = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
   const number = context.machineNumber || 'desconocido'
-  const display = context.displayState
+  // Use the customer-facing label ("PUSH PROG") when available, falling back
+  // to the canonical token ("PUSH") only if the label was never captured.
+  // The bucket keys below still use the canonical form (`d`) for routing.
+  const display = context.displayLabel || context.displayState
+  const canonical = context.displayState
   const paymentClause = context.paymentCompleted === true
     ? 'ha efectuado el pago'
     : context.paymentCompleted === false
@@ -173,7 +178,7 @@ export function buildEscalationSummary(context: EscalationContext): string {
   // so the operator gets a meaningful one-liner instead of a generic one.
   let detail = ''
   if (display) {
-    const d = display.toUpperCase().replace(/\s+/g, '')
+    const d = canonical.toUpperCase().replace(/\s+/g, '')
     if (d.startsWith('PUSH')) {
       detail = `La pantalla muestra ${display} y, tras pulsar el programa, la máquina no responde.`
     } else if (d === 'DOOR' || d === 'ALM/DOOR' || d === 'ALMDOOR') {
@@ -211,6 +216,7 @@ export function extractEscalationContext(state: SessionState, customerName: stri
     machineNumber: state.machineNumber,
     paymentCompleted: state.paymentCompleted,
     displayState: state.displayState,
+    displayLabel: state.displayLabel || state.displayState,
     issueSummary: state.issueSummary,
     nonTroubleshootingIncident: state.nonTroubleshootingIncident || '',
     discountCode: state.faqCodeValue || '',

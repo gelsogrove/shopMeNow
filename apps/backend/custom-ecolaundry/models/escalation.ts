@@ -9,6 +9,11 @@ export type EscalationContext = {
   machineNumber: string
   paymentCompleted: boolean | null
   displayState: string
+  // Customer-facing display label preserving the literal wording the
+  // customer typed (e.g. "PUSH PROG" while displayState canonicalises to
+  // "PUSH"). Used by the operator handover summary so the operator reads
+  // exactly what the customer reported.
+  displayLabel: string
   issueSummary: string
   nonTroubleshootingIncident: string
   discountCode: string
