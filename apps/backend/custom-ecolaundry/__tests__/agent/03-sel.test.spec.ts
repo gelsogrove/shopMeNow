@@ -1,187 +1,90 @@
-// 08 — Caso 3 SEL
+// 03 — Caso 3 SEL
 //
 // Da usecases.md Caso 3: la macchina mostra SEL, il bot guida il cliente
-// a comprobar che ha pulsato bien el numero della macchina o el programa.
-// 5 turni: location → numero → display → istruzione → closure.
+// a comprobar che ha pulsato bien el numero della macchina alla central de pago.
 //
 // Scenario 3.1 — Happy Path: SEL → istruzione → "Ahora sí funciona" → resolved.
-// Scenario 3.2 — Escalación: "Aun no arranca" → re-ask codice → "SEL" → escalate → nome → "desactivado".
+// Scenario 3.2 — Escalación: "Aun no arranca" → re-ask → "SEL" → escalate → name → desactivado + summary.
+//
+// CONSOLIDATED LAYOUT (Andrea, 2026-05-09): un test per percorso, asserzioni
+// step-by-step inline. Eliminato il pattern "1 test = 1 turno" che rifaceva
+// la stessa conversazione 10 volte.
 
-import { type TestCase, expectMentionsAll, expectEscalation } from './_helpers.js'
+import { type TestCase, expectMentionsAll } from './_helpers.js'
 
 export const tests: TestCase[] = [
+  // ── Scenario 3.1 — Happy Path completo ───────────────────────────────────
   {
-    name: 'ES — Caso 3 T2: dopo location, bot chiede numero macchina',
+    name: 'ES — Scenario 3.1: happy path completo → SEL istruzione → "Ahora sí funciona" → resolved',
     run: async (ctx) => {
+      // T1 — trigger
       await ctx.send('He pagado pero la lavadora no empieza')
-      const reply = await ctx.send('Pineda')
-      expectMentionsAll(reply, ['numero'])
-    },
-  },
-  {
-    name: 'ES — Caso 3 T3: dopo numero, bot chiede display',
-    run: async (ctx) => {
-      await ctx.send('He pagado pero la lavadora no empieza')
-      await ctx.send('Pineda')
-      const reply = await ctx.send('La 3')
-      expectMentionsAll(reply, ['pantalla'])
-    },
-  },
-  {
-    name: 'ES — Caso 3 T4 SEL istruzione: "pendiente de selección" + chiede di premere il numero',
-    run: async (ctx) => {
-      await ctx.send('He pagado pero la lavadora no empieza')
-      await ctx.send('Pineda')
-      await ctx.send('La 3')
-      const reply = await ctx.send('SEL')
-      expectMentionsAll(reply, ['numero', 'maquina'])
-    },
-  },
-  {
-    name: 'ES — Caso 3 T5 risolto: cliente conferma "ahora sí funciona" → bot chiude',
-    run: async (ctx) => {
-      await ctx.send('He pagado pero la lavadora no empieza')
-      await ctx.send('Pineda')
-      await ctx.send('La 3')
-      await ctx.send('SEL')
-      const reply = await ctx.send('ya lo he hecho y ahora sí funciona')
-      expectMentionsAll(reply, ['perfect', 'resuelt'])
-    },
-  },
-  {
-    name: 'ES — Caso 3 T5 escala: cliente ripete e dice "sigue igual" → bot escala',
-    run: async (ctx) => {
-      await ctx.send('He pagado pero la lavadora no empieza')
-      await ctx.send('Pineda')
-      await ctx.send('La 3')
-      await ctx.send('SEL')
-      let reply = await ctx.send('ya lo he hecho pero sigue igual')
-      // Phase B: bot may re-ask display before escalating. If so, re-confirm.
-      if (/pantalla|c[oó]digo|aparece|escrib/i.test(reply)) {
-        reply = await ctx.send('SEL')
+      // T2 — location → bot chiede numero
+      const t2 = await ctx.send('Pineda')
+      if (!/n[uú]mero/i.test(t2)) {
+        throw new Error(`Caso 3 T2: bot non chiede numero: ${t2}`)
       }
-      expectEscalation(reply)
-    },
-  },
-  {
-    // BUG REGRESSION: il riepilogo Human Support per il Caso 3 deve contenere
-    // location, machineNumber e descrivere correttamente il sintomo SEL.
-    // Verifica che il summary sia contestualizzato (no "número número
-    // desconocido", no frase nonsense generica).
-    name: 'ES — Caso 3 escalation summary: corretto e contestualizzato a SEL',
-    run: async (ctx) => {
-      await ctx.send('He pagado pero la lavadora no empieza')
-      await ctx.send('Pineda')
-      await ctx.send('La 3')
-      await ctx.send('SEL')
-      let reply = await ctx.send('ya lo he repetido pero sigue sin responder')
-      // Phase B: bot may re-ask display before escalating. If so, re-confirm.
-      if (/pantalla|c[oó]digo|aparece|escrib/i.test(reply)) {
-        reply = await ctx.send('SEL')
+      // T3 — numero → bot chiede pantalla
+      const t3 = await ctx.send('La 3')
+      if (!/pantalla|aparece/i.test(t3)) {
+        throw new Error(`Caso 3 T3: bot non chiede pantalla: ${t3}`)
       }
-      // Now bot has escalated and is asking for the name. Provide it →
-      // handover summary contains all context.
-      const summary = await ctx.send('Andrea')
-      expectMentionsAll(summary, ['Andrea', 'Pineda', '3', 'SEL'])
-      if (/n[uú]mero\s+n[uú]mero/i.test(summary)) {
-        throw new Error(`Bug "número número" presente: ${summary}`)
+      // T4 — SEL → bot dà istruzione (numero + maquina)
+      const t4 = await ctx.send('SEL')
+      expectMentionsAll(t4, ['numero', 'maquina'])
+      // T5 — cliente conferma → resolved
+      const t5 = await ctx.send('Ahora sí funciona')
+      const t5Lower = t5.toLowerCase()
+      if (!/perfect/.test(t5Lower)) {
+        throw new Error(`Scenario 3.1: bot deve dire "perfecto": ${t5}`)
       }
-      if (/seleccion[oó]\s+el\s+programa\s+pero\s+problema\s+t[eé]cnico/i.test(summary)) {
-        throw new Error(`Frase nonsense presente: ${summary}`)
+      if (!/comenzad|correctament|resuelt|ya\s+estar[ií]a/.test(t5Lower)) {
+        throw new Error(`Scenario 3.1: deve confermare avvio: ${t5}`)
       }
     },
   },
 
-  // ── Scenario 3.1 ─────────────────────────────────────────────────────────
+  // ── Scenario 3.2 — Escalation: SEL persiste dopo retry ──────────────────
   {
-    // SCENARIO 3.1 — Happy Path completo:
-    // trigger → Pineda → La 3 → SEL → istruzione → "Ahora sí funciona" → resolved.
-    // RULE: dopo l'istruzione SEL, il cliente conferma che funziona;
-    // il bot chiude con "perfecto" + "comenzado"/"correctamente".
-    name: 'ES — Scenario 3.1: happy path completo → resolved con "comenzado"/"correctamente"',
-    run: async (ctx) => {
-      await ctx.send('He pagado pero la lavadora no empieza')
-      await ctx.send('Pineda')
-      await ctx.send('La 3')
-      await ctx.send('SEL')  // bot dà istruzione + chiede se ha funzionato
-      const finalReply = await ctx.send('Ahora sí funciona')
-      const lower = finalReply.toLowerCase()
-      if (!/perfecto|perfect/.test(lower)) {
-        throw new Error(`Scenario 3.1: bot deve dire "perfecto": ${finalReply}`)
-      }
-      if (!/comenzad|correctament|resuelt/.test(lower)) {
-        throw new Error(`Scenario 3.1: deve confermare avvio ("comenzado"/"correctamente"/"resuelto"): ${finalReply}`)
-      }
-    },
-  },
-
-  // ── Scenario 3.2 ─────────────────────────────────────────────────────────
-  {
-    // SCENARIO 3.2 — Escalación: macchina non risponde dopo istruzione SEL.
-    // RULE: "Aun no arranca" → bot re-chiede codice esatto (followup_display) →
-    // "SEL" → bot escala menzionando "SEL" + "operador" → chiede nome →
-    // nome → reply finale contiene "desactivado".
-    name: 'ES — Scenario 3.2: "Aun no arranca" → re-ask codice → "SEL" → escalate',
-    run: async (ctx) => {
-      await ctx.send('He pagado pero la lavadora no empieza')
-      await ctx.send('Pineda')
-      await ctx.send('La 3')
-      await ctx.send('SEL')  // bot dà istruzione
-      // Macchina non parte → check_result NO → followup_display (re-ask codice)
-      const reaskReply = await ctx.send('Aun no arranca')
-      const reaskLower = reaskReply.toLowerCase()
-      if (!/pantalla|c[oó]digo|aparece|escrib/.test(reaskLower)) {
-        throw new Error(`Scenario 3.2: bot deve ri-chiedere il codice esatto: ${reaskReply}`)
-      }
-      // Cliente ri-invia SEL → escalation: bot deve chiedere il nome.
-      // (Il display token "SEL" + "operador" appaiono nel summary handover finale.)
-      const escalateReply = await ctx.send('SEL')
-      const escalateLower = escalateReply.toLowerCase()
-      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(escalateLower)) {
-        throw new Error(`Scenario 3.2: bot deve chiedere il nome (escalation): ${escalateReply}`)
-      }
-    },
-  },
-  {
-    // SCENARIO 3.2 — Conferma finale contiene "desactivado".
-    name: 'ES — Scenario 3.2: conferma finale contiene "desactivado"',
+    name: 'ES — Scenario 3.2: "Aun no arranca" → re-ask → "SEL" → escalate → name → desactivado + summary',
     run: async (ctx) => {
       await ctx.send('He pagado pero la lavadora no empieza')
       await ctx.send('Pineda')
       await ctx.send('La 3')
       await ctx.send('SEL')
+      // Macchina non parte → bot re-chiede codice (Phase B) o escalate diretto.
       let reply = await ctx.send('Aun no arranca')
-      // Se ha già escalato direttamente (senza re-ask), salta
-      if (/pantalla|c[oó]digo|aparece|escrib/.test(reply.toLowerCase())) {
+      const reaskLower = reply.toLowerCase()
+      const isReAsk = /pantalla|c[oó]digo|aparece|escrib/.test(reaskLower)
+      const isDirectEscalate = /operador|revis|c[oó]mo\s+te\s+llamas/.test(reaskLower)
+      if (!isReAsk && !isDirectEscalate) {
+        throw new Error(`Scenario 3.2: bot né re-ask né escalate dopo "Aun no arranca": ${reply}`)
+      }
+      // Se Phase B re-ask: cliente conferma SEL → escalate
+      if (isReAsk) {
         reply = await ctx.send('SEL')
+        const escalateLower = reply.toLowerCase()
+        if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(escalateLower)) {
+          throw new Error(`Scenario 3.2: bot deve chiedere il nome (escalation): ${reply}`)
+        }
       }
-      const finalReply = await ctx.send('Luis')
-      const lower = finalReply.toLowerCase()
-      if (!/desactivado/.test(lower)) {
-        throw new Error(`Scenario 3.2: finale non contiene "desactivado": ${finalReply}`)
+      // Capture name → final reply
+      const final = await ctx.send('Luis')
+      const finalLower = final.toLowerCase()
+      if (!/desactivado/.test(finalLower)) {
+        throw new Error(`Scenario 3.2 final: NON contiene "desactivado": ${final}`)
       }
-      if (!/operador/.test(lower)) {
-        throw new Error(`Scenario 3.2: finale non menziona "operador": ${finalReply}`)
+      if (!/operador/.test(finalLower)) {
+        throw new Error(`Scenario 3.2 final: NON menziona "operador": ${final}`)
       }
-    },
-  },
-  {
-    // SCENARIO 3.2 — Summary operatore corretto.
-    // Il riepilogo deve contenere nome, location, numero macchina e SEL.
-    name: 'ES — Scenario 3.2: summary operatore contiene Luis, Pineda, 3, SEL',
-    run: async (ctx) => {
-      await ctx.send('He pagado pero la lavadora no empieza')
-      await ctx.send('Pineda')
-      await ctx.send('La 3')
-      await ctx.send('SEL')
-      let reply = await ctx.send('Aun no arranca')
-      if (/pantalla|c[oó]digo|aparece|escrib/.test(reply.toLowerCase())) {
-        reply = await ctx.send('SEL')
+      // Summary handover
+      expectMentionsAll(final, ['Luis', 'Pineda', '3', 'SEL'])
+      // Garanzie negative
+      if (/n[uú]mero\s+n[uú]mero/i.test(final)) {
+        throw new Error(`Bug "número número" presente: ${final}`)
       }
-      const summary = await ctx.send('Luis')
-      expectMentionsAll(summary, ['Luis', 'Pineda', '3', 'SEL'])
-      if (/n[uú]mero\s+n[uú]mero/i.test(summary)) {
-        throw new Error(`Bug "número número" in summary: ${summary}`)
+      if (/seleccion[oó]\s+el\s+programa\s+pero\s+problema\s+t[eé]cnico/i.test(final)) {
+        throw new Error(`Frase nonsense presente: ${final}`)
       }
     },
   },

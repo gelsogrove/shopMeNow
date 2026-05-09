@@ -705,6 +705,98 @@ back to them would re-open the same bug surface.
 
 ---
 
+## 🧪 Agent test pattern — consolidated, not granular
+
+REGRESSION pattern (Andrea, 2026-05-09): the original agent test files had
+the shape "1 test = 1 turn checkpoint" — for each Caso, ~8-10 isolated
+test cases, each one re-sending the SAME trigger phrase + prefix turns
+to reach the specific checkpoint. Result: 80% redundancy on LLM calls
+(same conversation prefix replayed 10 times) AND a `_runs/<file>.md`
+dialog log unreadable because every test starts with the same opening.
+
+**The right shape — one test per END-TO-END PATH, with step-by-step
+assertions inline.** Per Caso, write 2-3 tests at most:
+
+1. **Scenario X.1 — Happy Path completo**: trigger → gather → display
+   instruction → resolution. Asserts each turn's reply inside the same
+   conversation (T2 must mention "número", T3 must mention "pantalla",
+   …). One LLM-driven session, all checkpoints.
+2. **Scenario X.2 — Escalation completo**: trigger → gather → instruction
+   → customer signals failure → re-ask (Phase B) → escalate → name →
+   final reply with "operador"+"desactivado" + summary handover. One
+   session, all assertions inline.
+3. **(Optional) Edge case specifico**: e.g. "validación de los 4
+   dígitos" for Caso 6, "retry tras No al cambio" for Caso 4 — when an
+   independent path needs its own conversation.
+
+### Decision rule when adding agent tests
+
+Before adding a new test case to an agent test spec, answer:
+
+1. **Does this path differ from Scenario X.1 / X.2?** If yes → new test.
+   If no → add an inline assertion to the existing scenario instead.
+2. **Does the new test re-send the SAME trigger + prefix turns?** If yes →
+   that's redundancy. Move the assertion inline into an existing scenario.
+3. **Will this test run an LLM call?** If yes — keep it minimal. Each agent
+   test costs $.
+
+### Anti-pattern (rejected)
+
+```ts
+// ❌ Don't do this — 1 test = 1 turn checkpoint
+{ name: 'T2: dopo location, bot chiede numero',
+  run: async (ctx) => {
+    await ctx.send('La lavadora no funciona')  // re-sent in every test
+    const r = await ctx.send('Goya')
+    expectMentionsAll(r, ['numero'])
+  }
+},
+{ name: 'T3: dopo numero, bot chiede pantalla',
+  run: async (ctx) => {
+    await ctx.send('La lavadora no funciona')  // SAME trigger
+    await ctx.send('Goya')                      // SAME T2
+    const r = await ctx.send('La 5')
+    expectMentionsAll(r, ['pantalla'])
+  }
+},
+// ... and 8 more like this, each replaying the prefix
+```
+
+### Right shape (kept)
+
+```ts
+// ✅ One test per end-to-end path with step-by-step assertions
+{ name: 'Scenario 1.1: happy path completo → ... → resolved',
+  run: async (ctx) => {
+    await ctx.send('La lavadora no funciona')
+    const t2 = await ctx.send('Goya')
+    if (!/n[uú]mero/.test(t2)) throw new Error(`T2: ...`)
+    const t3 = await ctx.send('La 5')
+    if (!/pantalla/.test(t3)) throw new Error(`T3: ...`)
+    // ... rest of the conversation, all asserted inline
+  }
+}
+```
+
+### Mandatory regression check on shared-component changes
+
+When you modify a component that affects **multiple Casi** (e.g.
+`escalation.ts`, `state-transitions.ts`, `tool-handlers/closure.ts`,
+i18n files, the LLM prompt), MUST re-run the agent tests for **every
+Caso already validated** in the session, not only the one you're
+working on. The runner supports comma-separated filters:
+
+```bash
+node --import tsx __tests__/agent/run.ts "01-push,02-door,03-sel,04-pago" --save
+```
+
+This is the "regression sweep" Andrea asked for explicitly on
+2026-05-09 ("ma queste cose che hai cambiato non incidono i vecchi
+test?"). It catches cases where a change to escalation.ts breaks Caso 2
+DOOR even though you were fixing Caso 4.
+
+---
+
 ## 📊 Useful commands
 
 ```bash

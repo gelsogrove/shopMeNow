@@ -49,7 +49,16 @@ export const escalateToOperator: ToolHandler = async (ar, args) => {
         'cannot escalate yet — customerName is unknown. Ask the customer "what is your name?" (in their language), then call capture_customer_name with the reply, then retry escalate_to_operator.',
     }
   }
-  const reason = asTrimmedString(args.reason) ?? 'manual review'
+  // Preserve the more specific escalation reason set by a deterministic
+  // guard (e.g. "No-change incident — retry no resolvió"). The LLM's
+  // generic reason ("manual review", "issue not resolved") would override
+  // it and break the summary builder's case-specific routing.
+  // REGRESSION (Andrea, 2026-05-09 Caso 4): the no-change summary fell
+  // back to the default machine-incident template because the LLM
+  // overwrote the guard's reason on its escalate_to_operator call.
+  const guardReason = ar.state.escalationReason || ''
+  const llmReason = asTrimmedString(args.reason) ?? 'manual review'
+  const reason = guardReason || llmReason
   escalate(ar, reason)
   return { ok: true, data: { reason } }
 }

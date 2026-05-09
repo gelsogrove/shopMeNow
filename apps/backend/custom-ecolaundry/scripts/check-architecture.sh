@@ -94,6 +94,7 @@ ALLOWED_LARGE_FILES="
   utils/guards/force-gather.ts  # All "force-*" gather guards (location/type/number/payment/display) — single concern: each forces the next missing fact. Display has retry+escalate counter.
   utils/guards/payment-double-charge.ts  # Caso 6 multi-step double-charge gather (used? → narrative → 4 digits → receipt) with branch on yes/no AND validation+retry on 4 digits. Single concern: drive the doble-cobro flow end-to-end.
   utils/guards/discount-code-flow.ts  # Caso 8 discount-code multi-step flow (ask → format-validate with retry+escalate ladder → name → pueblo → machine → door → handover). Single concern: drive the código de descuento flow end-to-end.
+  utils/guards/payment-no-change.ts  # Caso 4 no-change multi-step flow (ask → no-cambio retry → confirmation → resolved/escalate). Single concern: drive the no-change flow end-to-end.
 "
 ALLOWED_LARGE_FILES=$(echo "$ALLOWED_LARGE_FILES" | sed 's/#.*$//' | tr -s ' \n' ' ')
 violations=""

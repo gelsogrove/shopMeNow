@@ -25,6 +25,7 @@ import {
   guardNoChangeAsk,
   guardNoChangeNoCambio,
   guardNoChangeYesButBroken,
+  guardNoChangeAfterRetry,
 } from './payment-no-change.js'
 import { guardPaidNotUsedAskChange } from './payment-paid-not-used.js'
 import {
@@ -96,6 +97,7 @@ export const GUARD_PIPELINE: Guard[] = [
   guardNoChangeAsk,
   guardNoChangeNoCambio,
   guardNoChangeYesButBroken,
+  guardNoChangeAfterRetry,
   guardDiscountCodeAsk,
   guardDiscountCodeAwait,
   guardDiscountCodeAwaitName,

@@ -150,7 +150,11 @@ export function buildEscalationSummary(context: EscalationContext): string {
   // a template, which the LLM applies to non-caso-4 reasons too. The flow
   // markers under `no-change-*` are set ONLY by the deterministic side
   // (agent-extract.ts on "he pagado y no se activado" + payment-no-change.ts).
-  const isNoChange = /^no-change-/i.test(context.pendingFlow || '')
+  // Also match on escalationReason because pendingFlow is cleared by the
+  // guard BEFORE escalate() runs (so the context arrives empty here).
+  const isNoChange =
+    /^no-change-/i.test(context.pendingFlow || '') ||
+    /no-change\s+incident/i.test(context.escalationReason || '')
   if (isNoChange) {
     const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
     const numberLabel = context.machineNumber || 'desconocido'

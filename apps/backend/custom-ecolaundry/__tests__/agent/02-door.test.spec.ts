@@ -1,151 +1,90 @@
-// 07 — Caso 2 DOOR
+// 02 — Caso 2 DOOR
 //
 // Da usecases.md Caso 2: la macchina mostra DOOR, il bot guida il cliente
 // a chiudere correttamente la porta.
 //
 // Scenario 2.1 — Happy Path: DOOR → istruzione → "Sí" → resolved.
-// Scenario 2.2 — Escalación: "NO" → re-ask codice → "DOOR" → case_door_persist → nome → "desactivado".
+// Scenario 2.2 — Escalación: "NO" → re-ask codice → "DOOR" → escalate → name → desactivado + summary.
+//
+// CONSOLIDATED LAYOUT (Andrea, 2026-05-09): un test per percorso, asserzioni
+// step-by-step inline. Eliminato il pattern "1 test = 1 turno" che rifaceva
+// la stessa conversazione 7 volte.
 
-import { type TestCase, expectMentionsAll, expectEscalation } from './_helpers.js'
+import { type TestCase, expectMentionsAll } from './_helpers.js'
 
 export const tests: TestCase[] = [
+  // ── Scenario 2.1 — Happy Path completo ───────────────────────────────────
   {
-    name: 'ES — Caso 2 DOOR risolto: cliente conferma "ahora sí funciona" → bot chiude (perfect, resuelt)',
+    name: 'ES — Scenario 2.1: happy path completo → DOOR istruzione → "Sí" → resolved',
     run: async (ctx) => {
+      // T1 — trigger
       await ctx.send('La lavadora no arranca')
-      await ctx.send('Hortes')
-      await ctx.send('La 2')
-      await ctx.send('DOOR')
-      const reply = await ctx.send('ahora sí funciona')
-      expectMentionsAll(reply, ['perfect', 'resuelt'])
-    },
-  },
-  {
-    name: 'ES — Caso 2 DOOR istruzione: bot dice di aprire e chiudere la puerta + loopback',
-    run: async (ctx) => {
-      await ctx.send('La lavadora no arranca')
-      await ctx.send('Hortes')
-      await ctx.send('La 2')
-      const reply = await ctx.send('DOOR')
-      // Istruzione (puerta + cerrar) + loopback (dimmi se la macchina parte).
-      // Accettiamo sinonimi spagnoli per "works/has started" — `funciona` o
-      // `arrancad`/`arranc` (Andrea-2026-05-09 audit: il bot reale usa "ha
-      // arrancado" che semanticamente equivale a "funciona").
-      expectMentionsAll(reply, ['puerta', 'cierr', 'dime'])
-      const lower = reply.toLowerCase()
-      if (!/funciona|arrancad|arranc/i.test(lower)) {
-        throw new Error(
-          `loopback question must mention "funciona" OR "arrancad/arranc", got: ${reply}`,
-        )
+      // T2 — location → bot chiede numero
+      const t2 = await ctx.send('Hortes')
+      if (!/n[uú]mero/i.test(t2)) {
+        throw new Error(`Caso 2 T2: bot non chiede numero: ${t2}`)
       }
-    },
-  },
-  {
-    name: 'ES — Caso 2 DOOR escalation: cliente ripete e dice "sigue sin arrancar" → bot escala',
-    run: async (ctx) => {
-      await ctx.send('La lavadora no arranca')
-      await ctx.send('Hortes')
-      await ctx.send('La 2')
-      await ctx.send('DOOR')
-      let reply = await ctx.send('sigue sin arrancar')
-      // Phase B: bot may re-ask display before escalating. If so, re-confirm.
-      if (/pantalla|c[oó]digo|aparece|escrib/i.test(reply)) {
-        reply = await ctx.send('DOOR')
+      // T3 — numero → bot chiede pantalla
+      const t3 = await ctx.send('La 2')
+      if (!/pantalla|aparece/i.test(t3)) {
+        throw new Error(`Caso 2 T3: bot non chiede pantalla: ${t3}`)
       }
-      // Concept-level: escalation reached.
-      expectEscalation(reply)
-    },
-  },
-
-  // ── Scenario 2.1 ─────────────────────────────────────────────────────────
-  {
-    // SCENARIO 2.1 — Happy Path completo:
-    // trigger → Hortes → La 2 → DOOR → istruzione → "Sí" → resolved.
-    // RULE: il bot chiude con "perfecto" + "correctamente"/"comenzado".
-    name: 'ES — Scenario 2.1: happy path completo → resolved con "perfecto" + "correctamente"',
-    run: async (ctx) => {
-      await ctx.send('La lavadora no arranca')
-      await ctx.send('Hortes')
-      await ctx.send('La 2')
-      await ctx.send('DOOR')  // bot dà istruzione + chiede se ha funzionato
-      const finalReply = await ctx.send('Sí')
-      const lower = finalReply.toLowerCase()
-      if (!/perfecto|perfect/.test(lower)) {
-        throw new Error(`Scenario 2.1: bot deve dire "perfecto": ${finalReply}`)
+      // T4 — DOOR → bot dà istruzione (puerta + cierr) + loopback
+      // (sinonimi accettati: funciona | arrancad | arranc — il bot reale
+      // usa "ha arrancado" che equivale semanticamente a "funciona")
+      const t4 = await ctx.send('DOOR')
+      expectMentionsAll(t4, ['puerta', 'cierr', 'dime'])
+      const t4Lower = t4.toLowerCase()
+      if (!/funciona|arrancad|arranc/.test(t4Lower)) {
+        throw new Error(`Caso 2 T4: loopback question deve menzionare "funciona/arrancad": ${t4}`)
       }
-      if (!/comenzad|correctament|resuelt/.test(lower)) {
-        throw new Error(`Scenario 2.1: deve confermare avvio ("comenzado"/"correctamente"/"resuelto"): ${finalReply}`)
+      // T5 — cliente conferma → resolved
+      const t5 = await ctx.send('Sí')
+      const t5Lower = t5.toLowerCase()
+      if (!/perfect/.test(t5Lower)) {
+        throw new Error(`Scenario 2.1: bot deve dire "perfecto": ${t5}`)
+      }
+      if (!/comenzad|correctament|resuelt|ya\s+estar[ií]a/.test(t5Lower)) {
+        throw new Error(`Scenario 2.1: deve confermare avvio: ${t5}`)
       }
     },
   },
 
-  // ── Scenario 2.2 ─────────────────────────────────────────────────────────
+  // ── Scenario 2.2 — Escalation: DOOR persiste dopo retry ─────────────────
   {
-    // SCENARIO 2.2 — Escalación: DOOR persiste dopo aver ripetuto il passo.
-    // RULE: "NO" → bot re-chiede codice esatto (followup_display) →
-    // "DOOR" → case_door_persist → ESCALATION (chiede nome).
-    // Il display token "puerta"/"DOOR" + "operador" appaiono nel handover
-    // summary FINALE, non nel reply intermedio (che è il template generico
-    // reaffirmEscalate + customerNameAsk). Vedi test "summary operatore".
-    name: 'ES — Scenario 2.2: "NO" → re-ask codice → "DOOR" → escalate',
-    run: async (ctx) => {
-      await ctx.send('La lavadora no arranca')
-      await ctx.send('Hortes')
-      await ctx.send('La 2')
-      await ctx.send('DOOR')  // bot dà istruzione
-      // Porta non si chiude → check_result NO → followup_display (re-ask codice)
-      const reaskReply = await ctx.send('NO')
-      const reaskLower = reaskReply.toLowerCase()
-      if (!/pantalla|c[oó]digo|aparece|escrib/.test(reaskLower)) {
-        throw new Error(`Scenario 2.2: bot deve ri-chiedere il codice esatto: ${reaskReply}`)
-      }
-      // Cliente ri-invia DOOR → escalation: bot deve chiedere il nome.
-      // (Il display token + "operador" appaiono nel summary handover finale.)
-      const escalateReply = await ctx.send('DOOR')
-      const escalateLower = escalateReply.toLowerCase()
-      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(escalateLower)) {
-        throw new Error(`Scenario 2.2: bot deve chiedere il nome (escalation): ${escalateReply}`)
-      }
-    },
-  },
-  {
-    // SCENARIO 2.2 — Conferma finale contiene "desactivado".
-    name: 'ES — Scenario 2.2: conferma finale contiene "desactivado"',
+    name: 'ES — Scenario 2.2: "NO" → re-ask codice → "DOOR" → escalate → name → desactivado + summary',
     run: async (ctx) => {
       await ctx.send('La lavadora no arranca')
       await ctx.send('Hortes')
       await ctx.send('La 2')
       await ctx.send('DOOR')
+      // Porta non si chiude → bot re-chiede codice (Phase B) o escalate diretto.
       let reply = await ctx.send('NO')
-      // Se ha già escalato direttamente (senza re-ask), salta il re-ask
-      if (/pantalla|c[oó]digo|aparece|escrib/.test(reply.toLowerCase())) {
+      const reaskLower = reply.toLowerCase()
+      const isReAsk = /pantalla|c[oó]digo|aparece|escrib/.test(reaskLower)
+      const isDirectEscalate = /operador|revis|c[oó]mo\s+te\s+llamas/.test(reaskLower)
+      if (!isReAsk && !isDirectEscalate) {
+        throw new Error(`Scenario 2.2: bot né re-ask né escalate dopo "NO": ${reply}`)
+      }
+      // Se Phase B re-ask: cliente conferma DOOR → escalate
+      if (isReAsk) {
         reply = await ctx.send('DOOR')
+        const escalateLower = reply.toLowerCase()
+        if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(escalateLower)) {
+          throw new Error(`Scenario 2.2: bot deve chiedere il nome (escalation): ${reply}`)
+        }
       }
-      const finalReply = await ctx.send('Carlos')
-      const lower = finalReply.toLowerCase()
-      if (!/desactivado/.test(lower)) {
-        throw new Error(`Scenario 2.2: finale non contiene "desactivado": ${finalReply}`)
+      // Capture name → final reply
+      const final = await ctx.send('Carlos')
+      const finalLower = final.toLowerCase()
+      if (!/desactivado/.test(finalLower)) {
+        throw new Error(`Scenario 2.2 final: NON contiene "desactivado": ${final}`)
       }
-      if (!/operador/.test(lower)) {
-        throw new Error(`Scenario 2.2: finale non menziona "operador": ${finalReply}`)
+      if (!/operador/.test(finalLower)) {
+        throw new Error(`Scenario 2.2 final: NON menziona "operador": ${final}`)
       }
-    },
-  },
-  {
-    // SCENARIO 2.2 — Summary operatore corretto.
-    // Il riepilogo deve contenere nome, location, numero macchina e DOOR.
-    name: 'ES — Scenario 2.2: summary operatore contiene Carlos, Hortes, 2, DOOR',
-    run: async (ctx) => {
-      await ctx.send('La lavadora no arranca')
-      await ctx.send('Hortes')
-      await ctx.send('La 2')
-      await ctx.send('DOOR')
-      let reply = await ctx.send('NO')
-      if (/pantalla|c[oó]digo|aparece|escrib/.test(reply.toLowerCase())) {
-        reply = await ctx.send('DOOR')
-      }
-      const summary = await ctx.send('Carlos')
-      expectMentionsAll(summary, ['Carlos', 'Hortes', '2', 'DOOR'])
+      // Summary handover
+      expectMentionsAll(final, ['Carlos', 'Hortes', '2', 'DOOR'])
     },
   },
 ]

@@ -21,7 +21,7 @@
 
 import { t } from '../localization.js'
 import type { Guard } from '../../models/index.js'
-import { escalate, requireCustomerName } from '../state-transitions.js'
+import { escalate, markResolved, requireCustomerName } from '../state-transitions.js'
 import { lang } from './helpers.js'
 
 /** Caso 4 step 4 — after location + tipo + numero, ask
@@ -120,4 +120,58 @@ export const guardNoChangeYesButBroken: Guard = (ar, userMessage) => {
     reply: t('reaffirmEscalate', lang(ar)),
     reason: 'no-change-yes-but-broken',
   }
+}
+
+/** Caso 4 step 6 — after `centralRetryAfterReview` (the "fix the number"
+ *  guidance), the customer reports the outcome:
+ *    - "Sí, ahora arranca / funciona / se ha activado" → resolved.
+ *      Emit deterministic `noChangeResolved` + mark state resolved.
+ *      Without this guard the LLM improvises ("¡Perfecto, eso es buena
+ *      señal!") and the i18n key is bypassed.
+ *    - "No, sigue sin arrancar" → escalate (operator handover).
+ *
+ *  REGRESSION (Andrea, 2026-05-09 Caso 4 LLM run): the `no-change-await-
+ *  confirmation` phase had NO deterministic guard, so the LLM owned the
+ *  closure. Tests asserting "ya estaría resuelto" failed because the
+ *  LLM produced free-form text. */
+export const guardNoChangeAfterRetry: Guard = (ar, userMessage) => {
+  if (
+    ar.state.pendingFlow !== 'no-change-await-confirmation' ||
+    ar.state.operatorRequested ||
+    ar.state.customerNameRequested
+  ) {
+    return null
+  }
+  const lower = userMessage.trim().toLowerCase()
+  // 6-language "yes, it works now" affirmation
+  const isResolved =
+    /^(s[íi]|sim|yes|oui)(?:[\s,.!?]|$)/i.test(lower) &&
+    /(arranc|funcion|activ|march|empez|partit|started|works|d[ée]marr[ée])/i.test(lower)
+  // Standalone "ya funciona / ahora sí / ya está / ya arrancó / ya empezó"
+  // patterns (without explicit yes prefix). Required: a working-state verb.
+  const isResolvedStandalone =
+    /\b(ya|ahora)\s+(?:funciona|arranca|empieza|s[íi]\s+funciona|s[íi]\s+arranca|est[áa]\s+(?:en\s+marcha|funcionando|encendida))/i.test(lower) ||
+    /\b(?:ya\s+(?:arranc[oó]|empez[oó])|ya\s+est[áa]\s+(?:en\s+marcha|funcionando)|ya\s+(?:lo\s+)?ha\s+(?:arrancad|comenzad|empezad))/i.test(lower)
+  if (isResolved || isResolvedStandalone) {
+    ar.state.pendingFlow = ''
+    markResolved(ar)
+    return {
+      reply: t('noChangeResolved', lang(ar)),
+      reason: 'no-change-resolved',
+    }
+  }
+  // 6-language "still broken" signal
+  const isStillBroken =
+    /(no\s+(?:arranca|funciona|empieza|responde|parte|va)|sigue\s+sin|todav[ií]a\s+(?:no|sin)|aun\s+(?:no|sin)|nada|sin\s+arrancar|sin\s+activar)/i.test(lower)
+  if (isStillBroken) {
+    ar.state.pendingFlow = ''
+    escalate(ar, 'No-change incident — retry no resolvió, escalado')
+    requireCustomerName(ar)
+    return {
+      reply: t('reaffirmEscalate', lang(ar)),
+      reason: 'no-change-retry-failed',
+    }
+  }
+  // Unrecognised reply → let the LLM handle it.
+  return null
 }
