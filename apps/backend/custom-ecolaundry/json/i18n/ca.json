@@ -24,7 +24,7 @@
   "doubleChargeAllReceived": "Hem rebut tota la informació necessària, revisarem el teu cas.",
   "noPhotoEscalate": "⚠️ Sense informació del display ni foto, revisarem el teu cas manualment.",
   "reaffirmEscalate": "Revisarem el teu cas manualment. Com et dius?",
-  "operatorHandoffFinal": "Un operador humà s'encarregarà del teu cas. Si us plau, espera un moment mentre revisen la situació. El chatbot serà desactivat.",
+  "operatorHandoffFinal": "Un operador humà s'encarregarà del teu cas. Si us plau, espera un moment mentre revisen la situació.",
   "displayShort": "Què apareix exactament a la pantalla?",
   "displayUnrecognizedReask": "No reconec aquest codi exactament. Podries comprovar-ho de nou?",
   "paymentAsk": "Has pogut fer el pagament?",

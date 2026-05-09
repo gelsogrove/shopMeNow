@@ -14,6 +14,7 @@ import {
   isLikelyStandaloneLocationInput,
   normalizeMachineType,
   detectDoubleChargeIntent,
+  detectDiscountCodeIntent,
 } from './intent.js'
 import { resolveKnownLocation, parseExplicitPaymentSignal } from './message-parsing.js'
 import { resetMachineFacts } from './state.js'
@@ -325,12 +326,17 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   // handled below. If they include an alphanumeric value with letters
   // ("Tengo un código AB12345") we still ask for the code anyway (the doc
   // step expects the customer to repeat it).
+  // Detection delegated to `detectDiscountCodeIntent` (utils/intent.ts) —
+  // multi-language + permissive on common verb-prefix typos.
+  // REGRESSION (Andrea, 2026-05-09): real chat showed "teng un codigo y
+  // no se como utilizarlo" (typo "teng" + variant "utilizarlo") fell
+  // through silently. Same pattern as Bug A on the doble-cobro detector.
   const inlineCodeValue = userMessage.match(/c[oó]digo[\s:.,-]+([A-Za-z0-9-]{3,})/i)?.[1] || ''
   const inlineNumericCode = inlineCodeValue && /^\d{3,}$/.test(inlineCodeValue)
   if (
     !state.pendingFlow &&
     !inlineNumericCode &&
-    /(tengo\s+un\s+c[oó]digo|c[oó]digo\s+que?\s+(?:no\s+s[eé]\s+c[oó]mo|usar|d[oó]nde\s+(?:lo\s+)?pongo|d[oó]nde\s+ponerlo|d[oó]nde\s+meterlo)|how\s+to\s+use\s+(?:this|the)\s+code|where\s+to\s+(?:put|enter)\s+(?:this|the)\s+code)/i.test(userMessage)
+    detectDiscountCodeIntent(userMessage)
   ) {
     state.pendingFlow = 'discount-code-ask'
     resetPostEscalationFlags(ar)

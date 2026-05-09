@@ -365,9 +365,10 @@ DISPLAY → CANONICAL ANSWER (washer, give verbatim, translated to
 customer language; codes like SEL/PUSH/DOOR stay as-is):
   SEL       → Comprueba que has pulsado bien el número de la máquina en
               la central de pago.
-  PUSH/PROG → Pulsa un botón de programa: 1) 60° muy sucia, 2) 40°
-              normal, 3) 30° delicada, 4) Frío lana/seda. Después dime
-              si la lavadora arranca.
+  PUSH/PROG → Pulsa un botón de programa para iniciar el lavado.
+              Programas: - 60º muy sucia/blanca - 40º normal - 30º
+              delicada/sintética - Frío lana/seda. Elige uno y púlsalo.
+              Después dime si la lavadora ha arrancado.
   DOOR      → Abre y cierra bien la puerta hasta oír un clic. Comprueba
               que no haya prendas atrapadas.
   ALM/DOOR  → Abre la puerta con cuidado, comprueba si hay prendas

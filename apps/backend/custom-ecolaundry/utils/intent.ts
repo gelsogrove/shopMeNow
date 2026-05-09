@@ -237,6 +237,49 @@ export function detectDoubleChargeIntent(message: string): boolean {
   )
 }
 
+// ── Discount-code intent detection (Caso 8) ──────────────────────────────────
+//
+// Topic classifier (rule #6 tracked exemption — fast-path before the LLM).
+// Returns true when the customer expresses they have a discount code, even
+// if they don't paste the value inline (the bot will ask for it).
+//
+// REGRESSION (Andrea, 2026-05-09): real chat showed the bot ignored the
+// intent because the customer typed "teng un codigo" (typo: missing 'o' on
+// the verb). The original regex required exactly "tengo" and silently
+// failed, so the bot drifted into the generic machine-troubleshooting flow
+// asking for type / number / display.
+//
+// Same fix shape as `detectDoubleChargeIntent`: relax the verb prefix
+// (allow "teng/tengo/tenga/tnego" with `t[ie]ng[oai]?`), and also accept
+// phrasings that mention "código + no sé cómo / cómo usar / dónde poner"
+// without any leading verb. Multi-language coverage on the 6 supported
+// languages (rule #8). Tested in `__tests__/unit/intent.test.ts`.
+export function detectDiscountCodeIntent(message: string): boolean {
+  const trimmed = message.toLowerCase()
+  if (!trimmed) return false
+  return (
+    // Spanish — verb-prefix permissive ("teng", "tengo"), plus standalone
+    // "código + (no sé cómo | cómo uso | dónde pongo)" phrasings.
+    /\bt[ie]ng[oai]?\s+un\s+c[oó]digo\b/i.test(trimmed) ||
+    /\bc[oó]digo\s+(?:de\s+descuento\s+)?(?:y\s+|que\s+)?(?:no\s+s[eé]\s+c[oó]mo|c[oó]mo\s+(?:lo\s+)?(?:uso|usar|usarlo|utilizar|utilizarlo|utilizo)|d[oó]nde\s+(?:lo\s+)?(?:pongo|poner|ponerlo|meto|meterlo))/i.test(trimmed) ||
+    // Italian — "ho un codice", "codice + non so come / come uso / dove metterlo"
+    /\bho\s+un\s+codice\b/i.test(trimmed) ||
+    /\bcodice\s+(?:e\s+)?(?:non\s+so\s+come|come\s+(?:lo\s+)?(?:uso|usare|utilizzo|utilizzarlo)|dove\s+(?:lo\s+)?(?:metto|mettere|mettelo))/i.test(trimmed) ||
+    // English — "I have a code", "code + don't know how / how to use / where to put"
+    /\bi\s+have\s+(?:a|the)\s+code\b/i.test(trimmed) ||
+    /\bcode\s+(?:and\s+)?(?:i\s+don'?t\s+know\s+how|how\s+(?:to|do\s+i)\s+(?:use|enter)|where\s+(?:to|do\s+i)\s+(?:put|enter))/i.test(trimmed) ||
+    // Portuguese — "tenho um código", "código + não sei como / onde colocar"
+    /\btenho\s+um\s+c[oó]digo\b/i.test(trimmed) ||
+    /\bc[oó]digo\s+(?:e\s+)?(?:n[ãa]o\s+sei\s+como|como\s+(?:o\s+)?(?:uso|usar|utilizar|utilizo)|onde\s+(?:o\s+)?(?:ponho|colocar|meter|meto))/i.test(trimmed) ||
+    // Catalan — "tinc un codi", "codi + no sé com / on poso"
+    /\btinc\s+un\s+codi\b/i.test(trimmed) ||
+    /\bcodi\s+(?:i\s+)?(?:no\s+s[eé]\s+com|com\s+(?:el\s+)?(?:uso|usar|utilitzar|utilitzo)|on\s+(?:el\s+)?(?:poso|posar|fico))/i.test(trimmed) ||
+    // French — "j'ai un code", "code + comment utiliser / où mettre"
+    /\bj['']?\s*ai\s+(?:un|le)\s+code\b/i.test(trimmed) ||
+    /\bcode\s+(?:et\s+)?(?:je\s+ne\s+sais\s+comment|comment\s+(?:l'?\s*)?(?:utiliser|utilise)|o[uù]\s+(?:le\s+)?(?:mettre|mets|saisir))/i.test(trimmed)
+  )
+}
+
 // ── Short reply classification ────────────────────────────────────────────────
 
 export function isShortContextReply(message: string): boolean {

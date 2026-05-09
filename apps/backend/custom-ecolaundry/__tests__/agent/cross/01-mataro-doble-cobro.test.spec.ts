@@ -18,21 +18,27 @@ export const tests: TestCase[] = [
     },
   },
   {
-    name: 'ES — Caso 6 + Mataró: dopo calle, bot procede al flow doble cobro',
+    name: 'ES — Caso 6 + Mataró: dopo calle, bot procede al flow doble cobro (¿podido?)',
     run: async (ctx) => {
       await ctx.send('Me habéis cobrado dos veces con la tarjeta')
       await ctx.send('Mataró')
       const reply = await ctx.send('Calle Sant Pere')
+      // Gather order aggiornato (Andrea 2026-05-09): subito dopo location
+      // (street disambiguata) il bot chiede "¿has podido lavar/secar?".
       expectMentionsAll(reply, ['podido', 'lavar'])
     },
   },
   {
+    // Sí branch end-to-end: location → calle → ¿podido? → tipo → numero →
+    // relato → 4 dígitos → captura → nome → handover summary.
     name: 'ES — Caso 6 + Mataró: summary handover contiene calle e doble cobro (no machine template)',
     run: async (ctx) => {
       await ctx.send('Me habéis cobrado dos veces con la tarjeta')
       await ctx.send('Mataró')
       await ctx.send('Calle Sant Pere')
       await ctx.send('si')
+      await ctx.send('lavadora')
+      await ctx.send('3')
       await ctx.send('He pagado, no iba y volví a pagar')
       await ctx.send('4444')
       const reply = await ctx.send('Andrea')

@@ -12,6 +12,7 @@
 //   node --import tsx __tests__/unit/intent.test.ts
 
 import {
+  detectDiscountCodeIntent,
   detectDoubleChargeIntent,
   detectIDontKnowReply,
   detectLanguageHeuristic,
@@ -620,6 +621,111 @@ const cases: Case[] = [
     run: () => {
       const r = extractDisplayLabel('PUSH PROG', '')
       if (r !== '') throw new Error(`empty canonical must short-circuit, got "${r}"`)
+    },
+  },
+
+  // ── detectDiscountCodeIntent — multi-language Caso 8 classifier ──────────
+  // REGRESSION (Andrea, 2026-05-09): real chat "teng un codigo y no se como
+  // utilizarlo" (typo "teng" + variant "utilizarlo") was NOT detected. The
+  // bot drifted into the machine-troubleshooting flow asking for type/
+  // number/display. Same shape as Bug A on doble-cobro.
+  {
+    name: 'detectDiscountCode: ES "teng un codigo y no se como utilizarlo" → true (typo "teng")',
+    run: () => {
+      if (!detectDiscountCodeIntent('teng un codigo y no se como utilizarlo')) {
+        throw new Error('typo "teng" + "utilizarlo" must still be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDiscountCode: ES "tengo un código" canonical → true',
+    run: () => {
+      if (!detectDiscountCodeIntent('tengo un código')) {
+        throw new Error('canonical "tengo un código" must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDiscountCode: ES "tengo un código y no sé cómo usarlo" → true',
+    run: () => {
+      if (!detectDiscountCodeIntent('tengo un código y no sé cómo usarlo')) {
+        throw new Error('"no sé cómo usarlo" phrasing must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDiscountCode: ES "tengo un código y no sé dónde meterlo" → true',
+    run: () => {
+      if (!detectDiscountCodeIntent('tengo un código y no sé dónde meterlo')) {
+        throw new Error('"dónde meterlo" phrasing must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDiscountCode: IT "ho un codice e non so come utilizzarlo" → true',
+    run: () => {
+      if (!detectDiscountCodeIntent('ho un codice e non so come utilizzarlo')) {
+        throw new Error('IT must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDiscountCode: EN "I have a code and I don\'t know how to use it" → true',
+    run: () => {
+      if (!detectDiscountCodeIntent("I have a code and I don't know how to use it")) {
+        throw new Error('EN must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDiscountCode: PT "tenho um código" → true',
+    run: () => {
+      if (!detectDiscountCodeIntent('tenho um código mas não sei como usar')) {
+        throw new Error('PT must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDiscountCode: CA "tinc un codi" → true',
+    run: () => {
+      if (!detectDiscountCodeIntent('tinc un codi i no sé com usar-lo')) {
+        throw new Error('CA must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDiscountCode: FR "j\'ai un code" → true',
+    run: () => {
+      if (!detectDiscountCodeIntent("j'ai un code et je ne sais comment l'utiliser")) {
+        throw new Error('FR must be detected')
+      }
+    },
+  },
+  {
+    name: 'detectDiscountCode: irrelevant "la lavadora no funciona" → false',
+    run: () => {
+      if (detectDiscountCodeIntent('la lavadora no funciona')) {
+        throw new Error('unrelated machine fault must NOT match')
+      }
+    },
+  },
+  {
+    name: 'detectDiscountCode: bare "código" alone → false (too ambiguous)',
+    run: () => {
+      // "código" by itself isn't enough — could be a numeric machine code,
+      // an alarm code, etc. We require either a "tengo/I have/etc." verb
+      // form OR a "no sé cómo / dónde poner" phrasing.
+      if (detectDiscountCodeIntent('código')) {
+        throw new Error('bare word must NOT match')
+      }
+    },
+  },
+  {
+    name: 'detectDiscountCode: empty string → false',
+    run: () => {
+      if (detectDiscountCodeIntent('')) {
+        throw new Error('empty must NOT match')
+      }
     },
   },
 ]

@@ -4,36 +4,36 @@
 
 - [Reglas generales del bot](#reglas-generales-del-bot)
 - [Caso 1 — La lavadora no funciona y aparece PUSH PROG](#caso-1--la-lavadora-no-funciona-y-aparece-push-prog)
-  - [Scenario 1.1 — PUSH PROG Happy Path](#scenario-11--push-prog-happy-path)
-  - [Scenario 1.2 — PUSH PROG Escalación: máquina no responde tras pulsar](#scenario-12--push-prog-escalación-máquina-no-responde-tras-pulsar)
+  - [1.1 — PUSH PROG Happy Path](#11--push-prog-happy-path)
+  - [1.2 — PUSH PROG Escalación: máquina no responde tras pulsar](#12--push-prog-escalación-máquina-no-responde-tras-pulsar)
 - [Caso 2 — La lavadora no funciona y aparece DOOR](#caso-2--la-lavadora-no-funciona-y-aparece-door)
-  - [Scenario 2.1 — DOOR Happy Path](#scenario-21--door-happy-path)
-  - [Scenario 2.2 — DOOR Escalación: puerta bloqueada tras repetir el paso](#scenario-22--door-escalación-puerta-bloqueada-tras-repetir-el-paso)
+  - [2.1 — DOOR Happy Path](#21--door-happy-path)
+  - [2.2 — DOOR Escalación: puerta bloqueada tras repetir el paso](#22--door-escalación-puerta-bloqueada-tras-repetir-el-paso)
 - [Caso 3 — La lavadora no funciona y aparece SEL](#caso-3--la-lavadora-no-funciona-y-aparece-sel)
-  - [Scenario 3.1 — SEL Happy Path](#scenario-31--sel-happy-path)
-  - [Scenario 3.2 — SEL Escalación: error persiste tras repetir selección](#scenario-32--sel-escalación-error-persiste-tras-repetir-selección)
+  - [3.1 — SEL Happy Path](#31--sel-happy-path)
+  - [3.2 — SEL Escalación: error persiste tras repetir selección](#32--sel-escalación-error-persiste-tras-repetir-selección)
 - [Caso 4 — He pagado y no se ha activado, y la central no ha devuelto el cambio](#caso-4--he-pagado-y-no-se-ha-activado-y-la-central-no-ha-devuelto-el-cambio)
-  - [Scenario 4.1 — No-change Happy Path](#scenario-41--no-change-happy-path)
-  - [Scenario 4.2 — No-change Escalación: cambio devuelto pero máquina no arranca](#scenario-42--no-change-escalación-cambio-devuelto-pero-máquina-no-arranca)
+  - [4.1 — No-change Happy Path](#41--no-change-happy-path)
+  - [4.2 — No-change Escalación: cambio devuelto pero máquina no arranca](#42--no-change-escalación-cambio-devuelto-pero-máquina-no-arranca)
 - [Caso 5 — Error AL001](#caso-5--error-al001)
-  - [Scenario 5.1 — AL001 Happy Path](#scenario-51--al001-happy-path)
-  - [Scenario 5.2 — AL001 Escalación: cliente no puede seguir instrucciones](#scenario-52--al001-escalación-cliente-no-puede-seguir-instrucciones)
-  - [Scenario 5.3 — AL001 Escalación: error persiste tras reinicio correcto](#scenario-53--al001-escalación-error-persiste-tras-reinicio-correcto)
+  - [5.1 — AL001 Happy Path](#51--al001-happy-path)
+  - [5.2 — AL001 Escalación: cliente no puede seguir instrucciones](#52--al001-escalación-cliente-no-puede-seguir-instrucciones)
+  - [5.3 — AL001 Escalación: error persiste tras reinicio correcto](#53--al001-escalación-error-persiste-tras-reinicio-correcto)
 - [Caso 6 — Me han cobrado dos veces](#caso-6--me-han-cobrado-dos-veces)
-  - [Scenario 6.1 — Doble cobro, servicio completado (Happy Path)](#scenario-61--doble-cobro-servicio-completado-happy-path)
-  - [Scenario 6.2 — Escalación: cliente muy molesto que exige atención humana](#scenario-62--escalación-cliente-muy-molesto-que-exige-atención-humana)
-  - [Scenario 6.3 — Escalación: relato inconsistente o importe no cuadra](#scenario-63--escalación-relato-inconsistente-o-importe-no-cuadra)
-  - [Scenario 6.4 — Doble cobro SIN haber usado el servicio](#scenario-64--doble-cobro-sin-haber-usado-el-servicio)
-  - [Scenario 6.5 — Validación de los 4 últimos dígitos de la tarjeta](#scenario-65--validación-de-los-4-últimos-dígitos-de-la-tarjeta)
+  - [6.1 — Doble cobro, servicio completado (Happy Path)](#61--doble-cobro-servicio-completado-happy-path)
+  - [6.2 — Escalación: cliente muy molesto que exige atención humana](#62--escalación-cliente-muy-molesto-que-exige-atención-humana)
+  - [6.3 — Escalación: relato inconsistente o importe no cuadra](#63--escalación-relato-inconsistente-o-importe-no-cuadra)
+  - [6.4 — Doble cobro SIN haber usado el servicio](#64--doble-cobro-sin-haber-usado-el-servicio)
+  - [6.5 — Validación de los 4 últimos dígitos de la tarjeta](#65--validación-de-los-4-últimos-dígitos-de-la-tarjeta)
 - [Caso 7 — He pagado pero no he podido usar el servicio](#caso-7--he-pagado-pero-no-he-podido-usar-el-servicio)
-  - [Scenario 7.1 — Pagado sin usar, resuelto vía pantalla PUSH PROG (Happy Path)](#scenario-71--pagado-sin-usar-resuelto-vía-pantalla-push-prog-happy-path)
-  - [Scenario 7.2 — Pagado sin usar, máquina no responde tras paso indicado (Escalación)](#scenario-72--pagado-sin-usar-máquina-no-responde-tras-paso-indicado-escalación)
+  - [7.1 — Pagado sin usar, resuelto vía pantalla PUSH PROG (Happy Path)](#71--pagado-sin-usar-resuelto-vía-pantalla-push-prog-happy-path)
+  - [7.2 — Pagado sin usar, máquina no responde tras paso indicado (Escalación)](#72--pagado-sin-usar-máquina-no-responde-tras-paso-indicado-escalación)
 - [Caso 8 — Tengo un código de descuento](#caso-8--tengo-un-código-de-descuento)
-  - [Scenario 8.1 — Código: Happy Path (bot pide solo el código)](#scenario-81--código-happy-path-bot-pide-solo-el-código)
-  - [Scenario 8.2 — Código: Variante (misma respuesta canned)](#scenario-82--código-variante-misma-respuesta-canned)
+  - [8.1 — Código: Happy Path (bot pide solo el código)](#81--código-happy-path-bot-pide-solo-el-código)
+  - [8.2 — Código: Variante (misma respuesta canned)](#82--código-variante-misma-respuesta-canned)
 - [Caso 9 — Quiero una factura](#caso-9--quiero-una-factura)
-  - [Scenario 9.1 — Factura Happy Path](#scenario-91--factura-happy-path)
-  - [Scenario 9.2 — Factura: email inválido → re-ask hasta que sea válido](#scenario-92--factura-email-inválido--re-ask-hasta-que-sea-válido)
+  - [9.1 — Factura Happy Path](#91--factura-happy-path)
+  - [9.2 — Factura: email inválido → re-ask hasta que sea válido](#92--factura-email-inválido--re-ask-hasta-que-sea-válido)
 - [Caso 10 — Cómo comprar la tarjeta de fidelización](#caso-10--cómo-comprar-la-tarjeta-de-fidelización)
 - [Caso 11 — Cómo recargar la tarjeta de fidelización](#caso-11--cómo-recargar-la-tarjeta-de-fidelización)
 - [Caso 12 — Horarios y precios](#caso-12--horarios-y-precios)
@@ -124,7 +124,7 @@ El cliente ha pagado y la pantalla muestra `PUSH PROG`.
 - Si el cliente dice que **funciona**, el bot cierra la incidencia con un mensaje positivo.
 - Si el cliente dice que **no funciona**, el bot le pide que confirme una vez más qué aparece exactamente en pantalla antes de escalar (para evitar pasar el caso a un operador por una respuesta ambigua).
 - Si tras la confirmación sigue sin funcionar, el bot pasa el caso a revisión manual.
-- Variantes happy y de escalación detalladas en Scenarios 1.1 y 1.2.
+- Variantes happy y de escalación detalladas en 1.1 y 1.2.
 
 **Ejemplo de conversación:**
 
@@ -162,7 +162,7 @@ Incidencia resuelta.
 
 ---
 
-### Scenario 1.1 — PUSH PROG Happy Path
+### 1.1 — PUSH PROG Happy Path
 
 **Objetivo:** El cliente pulsa el programa y la lavadora arranca correctamente.
 
@@ -201,7 +201,7 @@ Después dime si la lavadora ha arrancado.
 
 ---
 
-### Scenario 1.2 — PUSH PROG Escalación: máquina no responde tras pulsar
+### 1.2 — PUSH PROG Escalación: máquina no responde tras pulsar
 
 **Objetivo:** El cliente pulsa el programa pero la máquina sigue sin
 arrancar; el bot escala a soporte humano de manera uniforme con los
@@ -212,7 +212,7 @@ demás casos (Caso 5.2/5.3, Caso 7.2).
 - Antes de pasar el caso a un operador, el bot pide al cliente que confirme una vez más qué aparece exactamente en pantalla (para evitar escalar por una respuesta ambigua).
 - Cuando el cliente confirma de nuevo "PUSH PROG", el bot anuncia que pasa el caso a un operador y pide el nombre del cliente.
 - El mensaje final, tras facilitar el nombre, indica que un operador humano se encargará del caso y que el chatbot se desactivará.
-- El resumen para el operador incluye: nombre del cliente, lavandería, número de máquina y código de pantalla "PUSH".
+- El resumen para el operador incluye: nombre del cliente, lavandería, número de máquina y código de pantalla "PUSH PROG" (literal del cliente).
 
 **Conversación:**
 
@@ -264,7 +264,7 @@ El cliente indica que en pantalla aparece `DOOR`.
 - El bot pregunta primero la lavandería, luego el número de máquina y luego qué aparece en pantalla.
 - Cuando el cliente confirma que aparece **DOOR**, el bot indica abrir y cerrar bien la puerta hasta oír un clic, comprobar que no haya prendas atrapadas, y cierra preguntando si la lavadora arranca.
 - Cuando el caso se pasa a un operador, el resumen incluye el código DOOR y el contexto de la puerta para que el operador sepa el problema.
-- Variantes happy y de escalación detalladas en Scenarios 2.1 y 2.2.
+- Variantes happy y de escalación detalladas en 2.1 y 2.2.
 
 **Ejemplo de conversación:**
 
@@ -292,7 +292,7 @@ Incidencia resuelta.
 
 ---
 
-### Scenario 2.1 — DOOR Happy Path
+### 2.1 — DOOR Happy Path
 
 **Objetivo:** El cliente confirma que la lavadora arranca tras cerrar bien la puerta.
 
@@ -322,7 +322,7 @@ Incidencia resuelta.
 
 ---
 
-### Scenario 2.2 — DOOR Escalación: puerta bloqueada tras repetir el paso
+### 2.2 — DOOR Escalación: puerta bloqueada tras repetir el paso
 
 **Objetivo:** El cliente cierra la puerta pero DOOR persiste. El bot re-pregunta el código y escala.
 
@@ -355,7 +355,7 @@ Incidencia resuelta.
 **Bot:** ⚠️ La puerta sigue bloqueada incluso después de repetir los pasos. Esto indica un posible fallo mecánico en el cierre de la puerta. Tenemos que notificar al operador ahora para que revise la lavadora manualmente. ¿Cómo te llamas?
 
 **Usuario:** Carlos  
-**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso.
 
 👤 **Human Support:** Usuario Carlos en Hortes — pantalla DOOR tras repetir cierre, lavadora número 2. Requiere revisión manual del cierre de puerta.
 
@@ -373,7 +373,7 @@ El cliente ha pagado y la pantalla muestra `SEL`.
 - El bot pregunta primero la lavandería, luego el número de máquina y luego qué aparece en pantalla.
 - Cuando el cliente confirma que aparece **SEL**, el bot le explica que la máquina está pendiente de selección y le pide comprobar que ha pulsado bien el número de la máquina en la central de pago. Después le pregunta si la máquina arranca.
 - A diferencia del Caso 1 (PUSH PROG), aquí el bot **no** muestra los 4 programas: el problema es de selección, no de elección de programa.
-- Variantes happy y de escalación detalladas en Scenarios 3.1 y 3.2.
+- Variantes happy y de escalación detalladas en 3.1 y 3.2.
 
 **Ejemplo de conversación:**
 
@@ -400,7 +400,7 @@ Incidencia resuelta.
 
 ---
 
-### Scenario 3.1 — SEL Happy Path
+### 3.1 — SEL Happy Path
 
 **Objetivo:** El cliente confirma que la máquina arranca tras seguir la instrucción.
 
@@ -428,7 +428,7 @@ Incidencia resuelta.
 
 ---
 
-### Scenario 3.2 — SEL Escalación: error persiste tras repetir selección
+### 3.2 — SEL Escalación: error persiste tras repetir selección
 
 **Objetivo:** El cliente repite la selección pero la máquina sigue mostrando SEL. El bot pide el código exacto y escala.
 
@@ -459,7 +459,7 @@ Incidencia resuelta.
 **Bot:** ⚠️ La pantalla sigue mostrando SEL incluso después de repetir la selección. Tenemos que notificar al operador ahora para que revise la lavadora manualmente. ¿Cómo te llamas?
 
 **Usuario:** Luis  
-**Bot:** Gracias Luis. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+**Bot:** Gracias Luis. Un operador humano se encargará de tu caso.
 
 👤 **Human Support:** Usuario Luis en Pineda — pantalla SEL tras repetir selección, lavadora número 3.
 
@@ -476,8 +476,8 @@ El cliente ha pagado, la máquina no se activa y la central no ha devuelto el ca
 **Criterios de aceptación:**
 - El bot pregunta primero la lavandería, luego si es una lavadora o secadora, luego el número de máquina y finalmente si la central ha devuelto el cambio. En este caso **no** se pregunta qué aparece en pantalla: la pregunta del cambio reemplaza la del display.
 - Si el cliente responde **"No"** (la central no ha devuelto el cambio), el bot le explica que probablemente no se ha marcado bien el número de la máquina y le pide que mire si queda saldo en la central y pulse de nuevo el número correcto.
-- Si el cliente responde **"Sí, pero la máquina sigue sin arrancar"**, el bot pasa el caso directamente a un operador (la central hizo su parte, no es un simple error de marcación). Ver Scenario 4.2.
-- Variantes happy y de escalación detalladas en Scenarios 4.1 y 4.2.
+- Si el cliente responde **"Sí, pero la máquina sigue sin arrancar"**, el bot pasa el caso directamente a un operador (la central hizo su parte, no es un simple error de marcación). Ver 4.2.
+- Variantes happy y de escalación detalladas en 4.1 y 4.2.
 
 **Ejemplo de conversación:**
 
@@ -508,7 +508,7 @@ Incidencia resuelta.
 
 ---
 
-### Scenario 4.1 — No-change Happy Path
+### 4.1 — No-change Happy Path
 
 **Objetivo:** Tras la guía sobre marcar el número correcto, la máquina arranca.
 
@@ -540,7 +540,7 @@ Incidencia resuelta.
 
 ---
 
-### Scenario 4.2 — No-change Escalación: cambio devuelto pero máquina no arranca
+### 4.2 — No-change Escalación: cambio devuelto pero máquina no arranca
 
 **Objetivo:** Si la central devolvió el cambio pero la máquina sigue sin
 arrancar, el bot escala uniformemente con los demás casos.
@@ -590,7 +590,7 @@ El cliente indica que aparece `AL001`.
 - Una vez tiene los 3 datos, el bot le explica al cliente la **secuencia correcta de 6 pasos** (cargar la máquina, cerrar la puerta, ir a la central, pagar, seleccionar el número, recoger el cambio si toca, ir a la máquina, elegir el programa, y avisar si funciona).
 - Si el cliente confirma que **funciona**, el bot cierra la incidencia con un mensaje positivo.
 - Si el cliente dice que **no entiende** los pasos o que **el error persiste** tras seguirlos, el bot pide al cliente que confirme una vez más el código exacto en pantalla y luego pasa el caso a un operador.
-- Variantes happy y de escalación detalladas en Scenarios 5.1, 5.2 y 5.3.
+- Variantes happy y de escalación detalladas en 5.1, 5.2 y 5.3.
 
 **Ejemplo de conversación:**
 
@@ -633,7 +633,7 @@ El bot identifica que el problema está en la secuencia de uso, guía al cliente
 
 ---
 
-### Scenario 5.1 — AL001 Happy Path
+### 5.1 — AL001 Happy Path
 
 **Objetivo:** Explicar el motivo del error y corregir la secuencia de uso. El cliente confirma que funciona.
 
@@ -661,7 +661,7 @@ El bot identifica que el problema está en la secuencia de uso, guía al cliente
 
 ---
 
-### Scenario 5.2 — AL001 Escalación: cliente no puede seguir instrucciones
+### 5.2 — AL001 Escalación: cliente no puede seguir instrucciones
 
 **Objetivo:** El cliente no entiende cómo aplicar la secuencia. El bot escala.
 
@@ -697,7 +697,7 @@ El bot identifica que el problema está en la secuencia de uso, guía al cliente
 
 ---
 
-### Scenario 5.3 — AL001 Escalación: error persiste tras reinicio correcto
+### 5.3 — AL001 Escalación: error persiste tras reinicio correcto
 
 **Objetivo:** El cliente ha seguido la secuencia correctamente pero AL001 persiste. El bot confirma el código y escala.
 
@@ -747,15 +747,15 @@ podido o no usar la máquina (lavadora/secadora).
 
 **Criterios de aceptación:**
 - El bot pregunta primero la **lavandería**, y a continuación si el cliente ha **podido lavar o secar** la ropa. Esa pregunta es el punto de bifurcación del caso:
-  - Si el cliente responde **"Sí"** → el bot continúa pidiendo, en este orden, **tipo de máquina** (lavadora o secadora), **número de máquina**, **relato paso a paso** (sugiriendo si ha pasado la tarjeta varias veces por el datáfono), **últimos 4 dígitos de la tarjeta**, **captura del pago** y **nombre del cliente**. Cierra con un mensaje sobre el formulario de devolución, sin pasar el caso a un operador en vivo. Ver Scenario 6.1.
-  - Si el cliente responde **"No"** → el bot escala inmediatamente al operador y pide el nombre del cliente. **No** pide tipo, número, relato ni dígitos: ese cliente está doblemente frustrado (cobro doble + servicio no prestado), no tiene sentido alargar el gather. El operador recoge los datos faltantes por teléfono. Ver Scenario 6.4.
+  - Si el cliente responde **"Sí"** → el bot continúa pidiendo, en este orden, **tipo de máquina** (lavadora o secadora), **número de máquina**, **relato paso a paso** (sugiriendo si ha pasado la tarjeta varias veces por el datáfono), **últimos 4 dígitos de la tarjeta**, **captura del pago** y **nombre del cliente**. Cierra con un mensaje sobre el formulario de devolución, sin pasar el caso a un operador en vivo. Ver 6.1.
+  - Si el cliente responde **"No"** → el bot escala inmediatamente al operador y pide el nombre del cliente. **No** pide tipo, número, relato ni dígitos: ese cliente está doblemente frustrado (cobro doble + servicio no prestado), no tiene sentido alargar el gather. El operador recoge los datos faltantes por teléfono. Ver 6.4.
 - **Validación de los 4 dígitos** (solo en el flujo Sí): si el cliente escribe 3, 5 o más cifras, o algo que no contiene 4 dígitos exactos, el bot le pide que lo reescriba: **"Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?"**. Si tras un segundo intento sigue sin dar 4 dígitos exactos, el bot pasa el caso a un operador.
 - **Escalera de 3 intentos para tipo y número de máquina** (regla general del bot, también en este caso): si el cliente no entrega un tipo o un número reconocible, el bot reformula con una pista útil; tras dos intentos fallidos escala al operador (Regla 1 — "Reglas generales del bot").
 - El resumen para el operador incluye: nombre del cliente, lavandería, tipo y número de máquina (si se han recogido), si ha podido o no usar el servicio, y el relato o respuesta del cliente.
 - **Otras vías de escalación inmediata** (sin llegar a la pregunta "¿has podido?"):
-  - Si el cliente está muy enfadado y exige hablar con un operador, el bot escala al instante (Scenario 6.2).
-  - Si el relato del cliente es contradictorio o incoherente, el bot escala (Scenario 6.3).
-- Variantes detalladas en Scenarios 6.1, 6.2, 6.3, 6.4 y 6.5.
+  - Si el cliente está muy enfadado y exige hablar con un operador, el bot escala al instante (6.2).
+  - Si el relato del cliente es contradictorio o incoherente, el bot escala (6.3).
+- Variantes detalladas en 6.1, 6.2, 6.3, 6.4 y 6.5.
 
 **Ejemplo de conversación (flujo Sí):**
 
@@ -793,7 +793,7 @@ Datos recogidos y caso preparado para revisión.
 
 ---
 
-### Scenario 6.1 — Doble cobro, servicio completado (Happy Path)
+### 6.1 — Doble cobro, servicio completado (Happy Path)
 
 **Objetivo:** El cliente aporta todos los datos; el caso queda preparado para revisión sin escalación en vivo.
 
@@ -834,7 +834,7 @@ Datos recogidos y caso preparado para revisión.
 
 ---
 
-### Scenario 6.2 — Escalación: cliente muy molesto que exige atención humana
+### 6.2 — Escalación: cliente muy molesto que exige atención humana
 
 **Objetivo:** El cliente indica que está muy enfadado y quiere hablar con una persona. El bot escala inmediatamente.
 
@@ -856,7 +856,7 @@ Datos recogidos y caso preparado para revisión.
 
 ---
 
-### Scenario 6.3 — Escalación: relato inconsistente o importe no cuadra
+### 6.3 — Escalación: relato inconsistente o importe no cuadra
 
 **Objetivo:** El relato del cliente tiene inconsistencias. El bot escala sin solicitar más datos.
 
@@ -894,7 +894,7 @@ Datos recogidos y caso preparado para revisión.
 
 ---
 
-### Scenario 6.4 — Doble cobro SIN haber usado el servicio
+### 6.4 — Doble cobro SIN haber usado el servicio
 
 **Objetivo:** El cliente ha sido cobrado dos veces y NO ha podido usar la
 máquina (la lavadora/secadora no ha arrancado, el cliente no ha
@@ -913,7 +913,7 @@ para gestionar tanto el reembolso como el servicio no prestado.
   - la respuesta literal del cliente (ej. "no he podido"),
   - una nota de que el caso requiere reembolso y servicio no prestado.
 - El resumen NO contiene tipo ni número de máquina (no se han pedido). El operador los recogerá por teléfono si los necesita.
-- El resumen NO debe parecerse al de Scenario 6.1 (donde el cliente sí pudo usar el servicio): el operador tiene que entender la diferencia desde la primera línea.
+- El resumen NO debe parecerse al de 6.1 (donde el cliente sí pudo usar el servicio): el operador tiene que entender la diferencia desde la primera línea.
 
 **Conversación:**
 
@@ -933,7 +933,7 @@ para gestionar tanto el reembolso como el servicio no prestado.
 
 ---
 
-### Scenario 6.5 — Validación de los 4 últimos dígitos de la tarjeta
+### 6.5 — Validación de los 4 últimos dígitos de la tarjeta
 
 **Objetivo:** El cliente ha llegado al paso "últimos 4 dígitos de la
 tarjeta" pero escribe algo que no es un código válido (3 dígitos, 5+
@@ -994,7 +994,7 @@ El cliente pagó, pero no llegó a usar la máquina.
 - Si el cliente, en lugar de responder sí/no a la pregunta del cambio, escribe directamente un código de pantalla (ej. "PUSH PROG"), el bot reconoce el código y le da la instrucción correspondiente de ese código (en este caso, le explica los 4 programas y le pide pulsar uno).
 - Cuando el cliente confirma que la máquina ha arrancado, el bot cierra con un mensaje positivo.
 - Cuando el cliente dice que la máquina sigue sin responder tras la instrucción, el bot pide al cliente que confirme una vez más qué aparece en pantalla y luego pasa el caso a un operador. El resumen al operador incluye el código de pantalla relevante.
-- Variantes happy y de escalación detalladas en Scenarios 7.1 y 7.2.
+- Variantes happy y de escalación detalladas en 7.1 y 7.2.
 
 **Ejemplo de conversación:**
 
@@ -1022,7 +1022,7 @@ Resolución o redirección al flujo de pantalla.
 
 ---
 
-### Scenario 7.1 — Pagado sin usar, resuelto vía pantalla PUSH PROG (Happy Path)
+### 7.1 — Pagado sin usar, resuelto vía pantalla PUSH PROG (Happy Path)
 
 **Objetivo:** El cliente pagó pero no pudo usar la máquina. Tras recoger tipo y número, el bot detecta PUSH PROG como respuesta a la pregunta del cambio y guía la selección de programa. El cliente confirma que la lavadora arranca.
 
@@ -1053,7 +1053,7 @@ Resolución o redirección al flujo de pantalla.
 
 ---
 
-### Scenario 7.2 — Pagado sin usar, máquina no responde tras paso indicado (Escalación)
+### 7.2 — Pagado sin usar, máquina no responde tras paso indicado (Escalación)
 
 **Objetivo:** El cliente pagó y la pantalla mostraba PUSH PROG, pero tras pulsar el programa la máquina no arranca. El bot re-pregunta el código, el cliente describe el bloqueo, y el bot escala.
 
@@ -1110,7 +1110,7 @@ DDMMYY + importe, ej. `SAU2904266`).
 - Cuando el formato es válido: el bot recoge nombre + location + número de máquina + estado de la puerta, en este orden.
 - El resumen al operador contiene los datos parseados (`letras`, `fechaIso`, `importe`) + la máquina + el estado de puerta, para activación remota.
 - Cuando el formato no encaja: escalación con "código no reconocido, requiere revisión manual" — sin discutir con el cliente.
-- Variantes detalladas en Scenarios 8.1 y 8.2.
+- Variantes detalladas en 8.1 y 8.2.
 
 **Ejemplo de conversación:**
 
@@ -1155,7 +1155,7 @@ Datos completos en manos del operador, listos para validación + activación rem
 
 ---
 
-### Scenario 8.1 — Código: Happy Path (bot pide solo el código)
+### 8.1 — Código: Happy Path (bot pide solo el código)
 
 **Objetivo:** El bot reconoce el intent del código y pide el código exacto sin mezclar otras preguntas.
 
@@ -1174,7 +1174,7 @@ Datos completos en manos del operador, listos para validación + activación rem
 
 ---
 
-### Scenario 8.2 — Código: Variante (misma respuesta canned)
+### 8.2 — Código: Variante (misma respuesta canned)
 
 **Objetivo:** Variante del mismo trigger, misma respuesta del bot.
 
@@ -1205,7 +1205,7 @@ El cliente pide factura.
 - Validación rigurosa de email (formato `algo@dominio.tld`): si no es válido → re-ask hasta que lo sea, **sin avanzar** al paso del nombre.
 - El reply final tras nombre contiene: nombre, email válido, "human support" trigger.
 - El resumen al operador contiene **todos** los campos billing (razón social, dirección, CIF, fecha ISO, email, nombre).
-- Variantes happy / email-retry detalladas en Scenarios 9.1 y 9.2.
+- Variantes happy / email-retry detalladas en 9.1 y 9.2.
 
 **Ejemplo de conversación:**
 
@@ -1259,7 +1259,7 @@ Datos completos en manos del operador, cliente avisado del envío.
 
 ---
 
-### Scenario 9.1 — Factura Happy Path
+### 9.1 — Factura Happy Path
 
 **Objetivo:** Recogida completa de los 8 datos de facturación con email
 válido al primer intento, cierre con el riepilogo + despedida personalizada.
@@ -1309,7 +1309,7 @@ Usuario Andrea ha solicitado factura. Datos: razón social ACME SL; dirección C
 
 ---
 
-### Scenario 9.2 — Factura: email inválido → re-ask hasta que sea válido
+### 9.2 — Factura: email inválido → re-ask hasta que sea válido
 
 **Objetivo:** Si el cliente escribe un email mal formado, el bot vuelve a
 pedirlo en el mismo step sin avanzar al nombre. La validación se aplica

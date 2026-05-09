@@ -119,4 +119,25 @@ export const tests: TestCase[] = [
       }
     },
   },
+
+  // ── Bug D regression (Andrea, 2026-05-09) ───────────────────────────────
+  {
+    // Real production chat: customer typed "teng un codigo y no se como
+    // utilizarlo" (typo "teng" missing 'o', variant "utilizarlo" instead of
+    // "usarlo", no accents). The original regex required exactly "tengo" +
+    // narrow phrasing list and silently failed → bot drifted into the
+    // generic machine-troubleshooting flow asking for laundry/type/number/
+    // display. The fix moves detection to detectDiscountCodeIntent which is
+    // permissive on common verb-prefix typos and covers more phrasings.
+    name: 'ES — Bug D: typo "teng un codigo y no se como utilizarlo" → discount flow (NO machine flow)',
+    run: async (ctx) => {
+      const reply = await ctx.send('teng un codigo y no se como utilizarlo')
+      const lower = reply.toLowerCase()
+      expectMentionsAll(reply, ['codigo'])
+      // NON deve drift verso il flow macchina (lavandería/lavadora/numero/pantalla)
+      if (/lavader[ií]a|lavadora\s+o\s+(?:una\s+)?secadora|n[uú]mero\s+de.*lavadora|pantalla/.test(lower)) {
+        throw new Error(`Bug D: must NOT ask machine details: ${reply}`)
+      }
+    },
+  },
 ]
