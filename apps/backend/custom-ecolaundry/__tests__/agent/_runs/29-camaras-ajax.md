@@ -1,6 +1,6 @@
 # Agent test dialogues — `29-camaras-ajax.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.362Z
+Generated: 2026-05-09T22:53:01.232Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 29: trigger cámaras → escalate inmediato (no promesa) → name → summary "cámaras/ajax"

@@ -1,6 +1,6 @@
 # Agent test dialogues — `02-door.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.352Z
+Generated: 2026-05-09T22:53:01.223Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 2.1: happy path completo → DOOR istruzione → "Sí" → resolved

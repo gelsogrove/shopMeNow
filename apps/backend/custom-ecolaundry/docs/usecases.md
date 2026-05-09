@@ -322,7 +322,7 @@ El cliente ha pagado y la pantalla muestra `SEL`.
 **Bot:** ¿Qué aparece exactamente en la pantalla?
 
 **Usuario:** SEL  
-**Bot:** Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago. Una vez lo hayas hecho, dime si la máquina ha empezado a funcionar.
+**Bot:** Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago. Después dime si la lavadora ha arrancado.
 
 **Usuario:** Ahora sí funciona  
 **Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
@@ -351,7 +351,7 @@ El cliente ha pagado y la pantalla muestra `SEL`.
 **Bot:** ¿Qué aparece exactamente en la pantalla?
 
 **Usuario:** SEL  
-**Bot:** Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago. Una vez lo hayas hecho, dime si la máquina ha empezado a funcionar.
+**Bot:** Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago. Después dime si la lavadora ha arrancado.
 
 **Usuario:** Aun no arranca  
 **Bot:** Por favor, escribe solo lo que ves en la pantalla, los números y las letras tal y como aparecen en la pantalla ahora, incluso si es el mismo que antes.

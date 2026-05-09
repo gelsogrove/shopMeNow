@@ -1,6 +1,6 @@
 # Agent test dialogues — `06-doble-pago.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.355Z
+Generated: 2026-05-09T22:53:01.226Z
 Total: 7 | Pass: 7 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 6.1: happy path completo → Sí → tipo → número → 4 dígitos → handover

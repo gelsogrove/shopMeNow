@@ -1,6 +1,6 @@
 # Agent test dialogues — `12-horarios-precios.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.358Z
+Generated: 2026-05-09T22:53:01.229Z
 Total: 5 | Pass: 5 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 12A: horario general 8-22 + follow-up "¿Y en L'Escala?" → eccezione 7-23

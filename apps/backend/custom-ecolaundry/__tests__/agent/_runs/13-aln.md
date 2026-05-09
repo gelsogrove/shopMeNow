@@ -1,7 +1,6 @@
-
 # Agent test dialogues — `13-aln.test.spec.ts`
 
-Generated: 2026-05-09T21:57:48.139Z
+Generated: 2026-05-09T22:53:01.229Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 13 ALN: happy path completo → gather → escalate "revisar" + nome → state popolato

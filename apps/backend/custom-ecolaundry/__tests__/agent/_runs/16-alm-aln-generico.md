@@ -1,6 +1,6 @@
 # Agent test dialogues — `16-alm-aln-generico.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.359Z
+Generated: 2026-05-09T22:53:01.230Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 16.1: ALN secadora → gather → escalate → name → summary completo

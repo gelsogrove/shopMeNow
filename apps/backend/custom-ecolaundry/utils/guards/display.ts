@@ -170,9 +170,18 @@ export const guardNumericCodeAskLetters: Guard = (ar) => {
 /** G8 — Caso 18 step 2: customer answered "no" to letters → escalate. */
 export const guardNumericCodeNoLetters: Guard = (ar, userMessage) => {
   if (ar.state.pendingFlow !== 'numeric-code-await-answer') return null
-  const reply = userMessage.trim().toLowerCase()
-  const noLetters = /^(no|nope|non|nada|ninguna|sin\s+letras|nessuna|no\s+letters)\b/i.test(reply)
-  const yesLetters = /^(s[ií]|sí|si|yes|yep|claro|por\s+supuesto|exacto|sì|hay\s+letras|tiene\s+letras)\b/i.test(reply)
+  const reply = userMessage.trim()
+  const lower = reply.toLowerCase()
+  const noLetters = /^(no|nope|non|nada|ninguna|sin\s+letras|nessuna|no\s+letters)\b/i.test(lower)
+  // Affirmative answer: "sí" / "yes" / "claro" / "hay letras" / "tiene letras" /…
+  const explicitYes = /^(s[ií]|sí|si|yes|yep|claro|por\s+supuesto|exacto|sì|hay\s+letras|tiene\s+letras)\b/i.test(lower)
+  // Pure-uppercase short token (e.g. "AS", "ABC", "XY"): the customer
+  // typed the actual letters that go in front of the numeric code instead
+  // of saying "sí". Treat as implicit yesLetters → re-ask the full code.
+  // Constrained to UPPERCASE only to avoid false positives on words
+  // ("qué", "ok", "perfecto", etc. are lowercase or mixed case prose).
+  const implicitLettersTyped = /^[A-Z]{1,5}$/.test(reply)
+  const yesLetters = explicitYes || implicitLettersTyped
 
   if (noLetters) {
     ar.state.pendingFlow = ''

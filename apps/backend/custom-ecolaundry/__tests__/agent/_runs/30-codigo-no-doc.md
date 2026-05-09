@@ -1,6 +1,6 @@
 # Agent test dialogues — `30-codigo-no-doc.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.362Z
+Generated: 2026-05-09T22:53:01.232Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 30: ERR 52 → gather → escalate → name → summary contiene "ERR 52" exacto

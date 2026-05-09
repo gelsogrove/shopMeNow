@@ -67,4 +67,22 @@ export const tests: TestCase[] = [
       expectMentionsNone(reply, ['no reconozco', 'lavanderias son'])
     },
   },
+
+  // ── Scenario 18.3 — Path "AS" (implicit yes via uppercase letters typed) ─
+  {
+    // Bug regression (Andrea, 2026-05-10 real chat): customer typed the
+    // letters directly ("AS") instead of saying "sí" → before the fix the
+    // guard returned null and the LLM improvised by asking lavandería,
+    // skipping the re-ask of the full code. The fix detects pure-uppercase
+    // short tokens (^[A-Z]{1,5}$) as implicit yesLetters and re-asks the
+    // full code (faqCodeValue reset, pendingFlow='discount-code-await').
+    name: 'ES — Scenario 18.3: codice numerico → "AS" (uppercase letras) → bot rilancia chiedendo codice exacto',
+    run: async (ctx) => {
+      await ctx.send('Tengo un código: 64646')
+      const reply = await ctx.send('AS')
+      // Bot deve ri-chiedere il codice completo, NON saltare a lavandería
+      expectMentionsAll(reply, ['codigo', 'letras'])
+      expectMentionsNone(reply, ['lavander', 'lavadora o secadora'])
+    },
+  },
 ]

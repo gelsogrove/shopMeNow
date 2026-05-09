@@ -1,6 +1,6 @@
 # Agent test dialogues — `09-factura.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.357Z
+Generated: 2026-05-09T22:53:01.227Z
 Total: 3 | Pass: 3 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 9.1: happy path completo → 8 step + email valido al primo tentativo → summary

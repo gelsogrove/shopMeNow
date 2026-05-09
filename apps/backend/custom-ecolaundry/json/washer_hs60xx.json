@@ -57,7 +57,7 @@
 
     "case_sel": {
       "type": "ACTION",
-      "prompt": "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago.",
+      "prompt": "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago.\n\nDespués dime si la lavadora ha arrancado.",
       "transitions": {
         "default": "non_parte.check_result"
       }

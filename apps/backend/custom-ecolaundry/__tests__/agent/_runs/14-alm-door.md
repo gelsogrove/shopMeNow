@@ -1,6 +1,6 @@
 # Agent test dialogues — `14-alm-door.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.359Z
+Generated: 2026-05-09T22:53:01.230Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 14.1: happy path completo → ALM DOOR istruzione → "Sí ha desaparecido" → resolved

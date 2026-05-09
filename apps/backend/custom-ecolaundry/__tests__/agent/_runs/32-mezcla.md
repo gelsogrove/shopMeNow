@@ -1,6 +1,6 @@
 # Agent test dialogues — `32-mezcla.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.362Z
+Generated: 2026-05-09T22:53:01.233Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Caso 32: trigger mezcla → location → "lavadora 3" combined → display PUSH PROG → istruzione

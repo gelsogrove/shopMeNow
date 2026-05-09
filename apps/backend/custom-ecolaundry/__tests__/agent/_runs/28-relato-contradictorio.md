@@ -1,6 +1,6 @@
 # Agent test dialogues — `28-relato-contradictorio.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.361Z
+Generated: 2026-05-09T22:53:01.232Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 28: relato contradictorio → "no lo sé bien" → escalate → name → summary "contradictorio/confuso"

@@ -1,7 +1,7 @@
 # Agent test dialogues — `18-codigo-numerico.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.360Z
-Total: 2 | Pass: 2 | Fail: 0
+Generated: 2026-05-09T22:53:01.231Z
+Total: 3 | Pass: 3 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 18.1: codice numerico → "No" → escalate sin confrontar → name → summary "solo numérico"
 
@@ -51,6 +51,28 @@ Usuario Andrea en ubicación no identificada ha facilitado un código solo numé
 ```
 
 👤 **user:** SI
+
+🤖 **bot:**
+
+```
+Te ayudo. ¿Podrías indicarme, por favor, el código exacto tal como lo ves, incluyendo letras si las hay?
+```
+
+---
+
+## ✅ PASS — ES — Scenario 18.3: codice numerico → "AS" (uppercase letras) → bot rilancia chiedendo codice exacto
+
+**Dialog:**
+
+👤 **user:** Tengo un código: 64646
+
+🤖 **bot:**
+
+```
+¡Gracias! 👍 ¿Ves alguna letra delante de los números?
+```
+
+👤 **user:** AS
 
 🤖 **bot:**
 

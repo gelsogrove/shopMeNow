@@ -1,6 +1,6 @@
 # Agent test dialogues — `17-no-pantalla-foto.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.360Z
+Generated: 2026-05-09T22:53:01.231Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 17.1: "no sé qué pone" → location → tipo → escalate → name → summary

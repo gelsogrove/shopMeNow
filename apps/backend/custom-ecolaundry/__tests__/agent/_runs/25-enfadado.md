@@ -1,6 +1,6 @@
 # Agent test dialogues — `25-enfadado.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.360Z
+Generated: 2026-05-09T22:53:01.231Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 25: empathic T1 → gather → escalate automático → name → summary

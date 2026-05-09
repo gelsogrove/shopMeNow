@@ -1,6 +1,6 @@
 # Agent test dialogues — `03-sel.test.spec.ts`
 
-Generated: 2026-05-09T22:43:05.353Z
+Generated: 2026-05-09T22:53:01.224Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 3.1: happy path completo → SEL istruzione → "Ahora sí funciona" → resolved
@@ -37,6 +37,8 @@ Cuéntame, por favor, ¿qué aparece exactamente en la pantalla?
 
 ```
 Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago.
+
+Después dime si la lavadora ha arrancado.
 ```
 
 👤 **user:** Ahora sí funciona
@@ -44,7 +46,7 @@ Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por
 🤖 **bot:**
 
 ```
-¡Perfecto, incidencia resuelta! 🎉 Si necesitas más ayuda, no dudes en preguntar.
+¡Perfecto, ya está resuelto! 🎉 Si necesitas más ayuda, no dudes en decírmelo.
 ```
 
 ---
@@ -83,6 +85,8 @@ Cuéntame, por favor, ¿qué aparece exactamente en la pantalla?
 
 ```
 Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago.
+
+Después dime si la lavadora ha arrancado.
 ```
 
 👤 **user:** Aun no arranca
