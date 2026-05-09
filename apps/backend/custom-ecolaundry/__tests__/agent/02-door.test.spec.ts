@@ -27,8 +27,17 @@ export const tests: TestCase[] = [
       await ctx.send('Hortes')
       await ctx.send('La 2')
       const reply = await ctx.send('DOOR')
-      // Istruzione + loopback "dimmi se funciona"
-      expectMentionsAll(reply, ['puerta', 'cierr', 'dime', 'funciona'])
+      // Istruzione (puerta + cerrar) + loopback (dimmi se la macchina parte).
+      // Accettiamo sinonimi spagnoli per "works/has started" — `funciona` o
+      // `arrancad`/`arranc` (Andrea-2026-05-09 audit: il bot reale usa "ha
+      // arrancado" che semanticamente equivale a "funciona").
+      expectMentionsAll(reply, ['puerta', 'cierr', 'dime'])
+      const lower = reply.toLowerCase()
+      if (!/funciona|arrancad|arranc/i.test(lower)) {
+        throw new Error(
+          `loopback question must mention "funciona" OR "arrancad/arranc", got: ${reply}`,
+        )
+      }
     },
   },
   {

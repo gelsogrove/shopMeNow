@@ -220,7 +220,7 @@ El cliente indica que en pantalla aparece `DOOR`.
 **Bot:** ¿Qué aparece exactamente en la pantalla?
 
 **Usuario:** DOOR  
-**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente. Después de intentarlo, házmelo saber si funciona.
+**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente, comprobando que no haya ropa atascada. Dime si la lavadora ha arrancado.
 
 **Usuario:** Sí  
 **Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
@@ -251,7 +251,7 @@ El cliente indica que en pantalla aparece `DOOR`.
 **Bot:** ¿Qué aparece exactamente en la pantalla?
 
 **Usuario:** DOOR  
-**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente. Después de intentarlo, házmelo saber si funciona.
+**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente, comprobando que no haya ropa atascada. Dime si la lavadora ha arrancado.
 
 **Usuario:** NO  
 **Bot:** Por favor, escribe solo lo que ves en la pantalla, los números y las letras tal y como aparecen en la pantalla ahora, incluso si es el mismo que antes.

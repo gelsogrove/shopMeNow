@@ -125,7 +125,7 @@
 
     "case_door": {
       "type": "ACTION",
-      "prompt": "La pantalla DOOR indica que la puerta no está bien cerrada.\n\n1. Comprueba que no hay ropa atascada entre la puerta y el tambor.\n2. Si hay demasiada ropa, saca un poco.\n3. Cierra la puerta con un empujón firme hasta escuchar un clic.\n4. Dime si la lavadora ha arrancado.",
+      "prompt": "La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente, comprobando que no haya ropa atascada. Dime si la lavadora ha arrancado.",
       "transitions": {
         "default": "non_parte.check_result"
       }
