@@ -147,6 +147,32 @@ const PRIORITY_COLOR: Record<Priority, string> = {
   Basso: "bg-green-100 text-green-700 border-green-300",
 }
 
+// Bot replies are authored in markdown (the JSON flow prompts use
+// `**bold**` for program names like **60º**, **40º**, etc.). The
+// playground must render them as actual bold, not show the literal
+// asterisks. Customer messages stay as plain text — customers don't
+// type markdown and we don't want to interpret it.
+//
+// We strip the default `<p>` margins so paragraphs flow tightly inside
+// the chat bubble, and add a small gap between adjacent paragraphs to
+// keep the loopback question visually separated from the program list.
+function MessageBody({
+  content,
+  isInbound,
+}: {
+  content: string
+  isInbound: boolean
+}) {
+  if (isInbound) {
+    return <div className="whitespace-pre-wrap">{content}</div>
+  }
+  return (
+    <div className="prose prose-sm max-w-none [&_p]:my-0 [&_p+p]:mt-2 [&_strong]:font-semibold [&_ul]:my-1 [&_ol]:my-1">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    </div>
+  )
+}
+
 // Three-dot "typing" indicator used in the chat bubble while waiting for
 // the bot reply. Pure CSS; no extra deps.
 function TypingDots() {
@@ -701,7 +727,7 @@ function TodoDetailModal({
                         : ""
                     }`}
                   >
-                    <div className="whitespace-pre-wrap">{m.content}</div>
+                    <MessageBody content={m.content} isInbound={isInbound} />
                     <div className="text-[10px] text-gray-500 mt-1">
                       {new Date(m.createdAt).toLocaleTimeString()}
                       {isHighlighted && (
@@ -1527,7 +1553,7 @@ function ChatScreen({
                         : ""
                     }`}
                   >
-                    <div className="whitespace-pre-wrap">{m.content}</div>
+                    <MessageBody content={m.content} isInbound={isInbound} />
                     <div className="text-[10px] text-gray-500 mt-1 flex justify-between items-center gap-3">
                       <span>{new Date(m.createdAt).toLocaleTimeString()}</span>
                       {/* Comment button only for chatbot (OUTBOUND) messages.

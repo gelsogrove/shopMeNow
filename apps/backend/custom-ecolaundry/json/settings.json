@@ -28,7 +28,7 @@
 
   "_section_welcome": "Per-language welcome line shown only on T1 (rule #G2). Adding a language requires both an entry here AND parity in json/i18n/<lang>.json.",
   "welcomeMessage": {
-    "es": "Hola, soy el asistente virtual de la lavandería."
+    "es": "👋 Hola, soy el asistente virtual de la lavandería."
   },
 
   "_section_session_lifecycle": "historyResetTtlMs: when the gap between last assistant message and incoming user message exceeds this, the session is recreated fresh (welcome + re-ask location). Default 3 600 000 (1 hour). sessionIdleTtlMs: in-process session cache eviction (idle > this → evicted to bound memory). Default 1 800 000 (30 minutes). agentSessionCacheMax: hard cap on cached sessions (LRU eviction by lastUsedAt when over cap).",
