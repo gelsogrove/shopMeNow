@@ -19,12 +19,20 @@ import { isMataro, lang, notInActiveSubFlow } from './helpers.js'
  *  Caso 32 (customer volunteers the number proactively, e.g. "Pineda" → "3"):
  *  autoExtractFacts populates machineNumber before this guard runs. On the
  *  next turn guardForceMachineNumber is skipped (number already set) and
- *  this guard asks only the type — no awkward re-ask of the number. */
+ *  this guard asks only the type — no awkward re-ask of the number.
+ *
+ *  Iron rule #10: this guard does NOT gate on `!ar.state.displayState`
+ *  anymore. Earlier it did, on the assumption "if display is set, the
+ *  flow takes over". But the display flow can only start once
+ *  type+number are also set, so when the customer reports the display
+ *  before the type (e.g. "me sale PUSH PROG" first), the gather pipeline
+ *  used to skip type entirely and the LLM had to improvise. Active-flow
+ *  detection is delegated to `notInActiveSubFlow(ar)` which is the
+ *  authoritative signal. */
 export const guardForceMachineType: Guard = (ar) => {
   if (
     ar.state.location &&
     !ar.state.machineType &&
-    !ar.state.displayState &&
     !ar.state.nonTroubleshootingIncident &&
     notInActiveSubFlow(ar) &&
     ar.state.turnCount >= 2
@@ -85,13 +93,16 @@ export const guardForceDisplay: Guard = (ar) => {
   return null
 }
 
-/** Step 3 — Force "cuál es el número?" when local+type known but number missing. */
+/** Step 3 — Force "cuál es el número?" when local+type known but number missing.
+ *
+ *  Iron rule #10: same as guardForceMachineType — does NOT gate on
+ *  `!ar.state.displayState`. If the customer volunteered the display
+ *  before the number, we still need the number for the flow to start. */
 export const guardForceMachineNumber: Guard = (ar) => {
   if (
     ar.state.location &&
     ar.state.machineType &&
     !ar.state.machineNumber &&
-    !ar.state.displayState &&
     !ar.state.nonTroubleshootingIncident &&
     notInActiveSubFlow(ar) &&
     ar.state.turnCount >= 2

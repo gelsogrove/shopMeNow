@@ -100,7 +100,16 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'C2) does not fire when displayState is already set',
+    // REGRESSION (iron rule #10): the guard previously skipped when
+    // displayState was set, on the assumption that "if display is set,
+    // the flow takes over". But the flow can only start when type AND
+    // number are also set, so when the customer reports the display
+    // BEFORE the type (e.g. T1 "me sale PUSH PROG" → T2 location → T3
+    // bot must ask type), the gather pipeline used to skip type entirely
+    // and the LLM had to improvise. Active-flow detection now lives in
+    // notInActiveSubFlow(ar) — the authoritative signal — and this guard
+    // fires regardless of displayState.
+    name: 'C2) FIRES even when displayState is set (rule #10 — display-first scenario)',
     run: () => {
       const ar = makeAr()
       ar.state.location = 'Pineda'
@@ -108,7 +117,10 @@ const cases: Case[] = [
       ar.state.turnCount = 3
 
       const out = guardForceMachineType(ar, 'whatever')
-      if (out) throw new Error(`expected null when display set, got: ${JSON.stringify(out)}`)
+      if (!out) throw new Error('REGRESSION: must fire even when displayState is set, so the LLM does not improvise the type ask')
+      if (out.reason !== 'force-machine-type') {
+        throw new Error(`expected reason "force-machine-type", got "${out.reason}"`)
+      }
     },
   },
   {
