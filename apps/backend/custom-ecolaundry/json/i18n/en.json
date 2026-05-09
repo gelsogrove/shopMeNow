@@ -47,6 +47,7 @@
   "discountCodeAskDoor": "Is it loaded and with the door closed?",
   "discountCodeFinalEscalate": "Give me a minute, we'll do the checks. If the code is correct, we'll activate the machine for you. 🙂",
   "discountCodeFormatInvalid": "The code doesn't match the expected format, we'll review it manually.",
+  "discountCodeFormatRetry": "That code doesn't match the format we expect (3 letters + date + amount, e.g. SAU2904266). Could you double-check and type it again, please?",
   "al001GuideRetry": "This message usually appears when the process was not done in the correct order. Before contacting support, let's verify the sequence together. Please follow these steps in this order:\n\n1. Load the washer\n2. Close the door\n3. Go to the payment central and pay\n4. Select the machine number and pick up the change if any\n5. Go to the selected machine and choose the program\n6. Let me know if it works",
   "al001Resolved": "Great, issue resolved. Anything else you need?",
   "noChangeResolved": "Great, all sorted. Anything else you need?",

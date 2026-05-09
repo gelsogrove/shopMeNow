@@ -49,6 +49,7 @@
   "discountCodeAskDoor": "¿La tienes cargada y con la puerta cerrada?",
   "discountCodeFinalEscalate": "Dame un minuto, hacemos las comprobaciones correspondientes. Si el código es correcto, te activaremos la máquina.",
   "discountCodeFormatInvalid": "El código no encaja con el formato esperado, vamos a revisarlo manualmente.",
+  "discountCodeFormatRetry": "Ese código no encaja con el formato que esperamos (3 letras + fecha + importe, p. ej. SAU2904266). ¿Podrías comprobarlo y escribírmelo de nuevo, por favor?",
   "al001GuideRetry": "🔧 Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Antes de avisar a asistencia, vamos a verificar juntos la secuencia. Por favor, sigue estos pasos en este orden:\n\n1. Carga la lavadora\n2. Cierra la puerta\n3. Dirígete a la central de pago y paga\n4. Selecciona el número de máquina y recoge el cambio si toca\n5. Dirígete a la máquina seleccionada y elige el programa\n\nDespués dime si se ha arrancado.",
   "al001Resolved": "✅ ¡Perfecto, incidencia resuelta! 🎉 ¿Necesitas algo más?",
   "noChangeResolved": "✅ ¡Perfecto, ya estaría resuelto! 🎉 ¿Necesitas algo más?",

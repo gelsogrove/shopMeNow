@@ -96,7 +96,12 @@ export function selectInitialStepFromState(
   if (state.machineType === 'dryer' && flowId === 'non_parte') {
     if (state.paymentCompleted === false && flow.pay_help) return 'pay_help'
     if (display === 'BLANK' && flow.display_blank) return 'display_blank'
-    if (display === 'SEL' && flow.case_sel) return 'case_sel'
+    if (display === 'SEL' && flow.ready_state) return 'ready_state'
+    // PUSH on a dryer is unusual (PUSH is typically a washer code) but if
+    // the customer reports it, route to ready_state — same UX as SEL
+    // ("la secadora está lista, selecciona el programa"). Without this
+    // PUSH would fall through to problem_check and re-ask the display.
+    if (display === 'PUSH' && flow.ready_state) return 'ready_state'
     if (display === 'DOOR' && flow.door_issue) return 'door_issue'
     if (display === 'ALN' && flow.fallback) return 'fallback'
     if (display === 'AL001' && flow.case_al001) return 'case_al001'

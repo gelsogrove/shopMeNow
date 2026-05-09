@@ -15,7 +15,9 @@ import {
   detectDiscountCodeIntent,
   detectDoubleChargeIntent,
   detectIDontKnowReply,
+  detectInvoiceIntent,
   detectLanguageHeuristic,
+  detectTopicSwitchDuringEscalation,
   extractDisplayLabel,
   extractDisplayState,
   hasGreetingIntent,
@@ -728,6 +730,116 @@ const cases: Case[] = [
       }
     },
   },
+
+  // ── detectInvoiceIntent (Bug #7 — Andrea 2026-05-09) ─────────────────────
+  // Multi-language invoice trigger + typo tolerance.
+  {
+    name: 'detectInvoice: ES "Quiero una factura" → true',
+    run: () => {
+      if (!detectInvoiceIntent('Quiero una factura')) throw new Error('canonical must match')
+    },
+  },
+  {
+    name: 'detectInvoice: ES "necesito factura" → true',
+    run: () => {
+      if (!detectInvoiceIntent('necesito factura')) throw new Error('necesito factura must match')
+    },
+  },
+  {
+    name: 'detectInvoice: ES typo "necesito una factra" → true (typo tolerance)',
+    run: () => {
+      if (!detectInvoiceIntent('necesito una factra')) {
+        throw new Error('typo "factra" must still match (Bug #7 regression)')
+      }
+    },
+  },
+  {
+    name: 'detectInvoice: IT "voglio fattura" → true',
+    run: () => {
+      if (!detectInvoiceIntent('voglio fattura')) throw new Error('IT must match')
+    },
+  },
+  {
+    name: 'detectInvoice: EN "I need an invoice" → true',
+    run: () => {
+      if (!detectInvoiceIntent('I need an invoice')) throw new Error('EN must match')
+    },
+  },
+  {
+    name: 'detectInvoice: PT "preciso de fatura" → true',
+    run: () => {
+      if (!detectInvoiceIntent('preciso de fatura')) throw new Error('PT must match')
+    },
+  },
+  {
+    name: 'detectInvoice: FR "je voudrais une facture" → true',
+    run: () => {
+      if (!detectInvoiceIntent('je voudrais une facture')) throw new Error('FR must match')
+    },
+  },
+  {
+    name: 'detectInvoice: irrelevant "la lavadora no funciona" → false',
+    run: () => {
+      if (detectInvoiceIntent('la lavadora no funciona')) {
+        throw new Error('unrelated machine fault must NOT match')
+      }
+    },
+  },
+  {
+    name: 'detectInvoice: empty → false',
+    run: () => {
+      if (detectInvoiceIntent('')) throw new Error('empty must NOT match')
+    },
+  },
+
+  // ── detectTopicSwitchDuringEscalation (Bug #13.6 — Andrea 2026-05-09) ────
+  {
+    name: 'detectTopicSwitch: "mi da SEL ora la macchina" → true (display code)',
+    run: () => {
+      if (!detectTopicSwitchDuringEscalation('mi da SEL ora la macchina')) {
+        throw new Error('SEL display code must trigger topic switch')
+      }
+    },
+  },
+  {
+    name: 'detectTopicSwitch: "ahora me sale PUSH PROG" → true (new symptom phrasing)',
+    run: () => {
+      if (!detectTopicSwitchDuringEscalation('ahora me sale PUSH PROG')) {
+        throw new Error('PUSH PROG must trigger topic switch')
+      }
+    },
+  },
+  {
+    name: 'detectTopicSwitch: "tengo un código nuevo" → true (discount intent)',
+    run: () => {
+      if (!detectTopicSwitchDuringEscalation('tengo un código y no se cómo usarlo')) {
+        throw new Error('discount code intent must trigger topic switch')
+      }
+    },
+  },
+  {
+    name: 'detectTopicSwitch: "Andrea" (a name) → false',
+    run: () => {
+      if (detectTopicSwitchDuringEscalation('Andrea')) {
+        throw new Error('a bare name must NOT trigger topic switch')
+      }
+    },
+  },
+  {
+    name: 'detectTopicSwitch: "María García" → false',
+    run: () => {
+      if (detectTopicSwitchDuringEscalation('María García')) {
+        throw new Error('a full name must NOT trigger topic switch')
+      }
+    },
+  },
+  {
+    name: 'detectTopicSwitch: empty → false',
+    run: () => {
+      if (detectTopicSwitchDuringEscalation('')) throw new Error('empty must NOT match')
+    },
+  },
+
 ]
 
 let passed = 0

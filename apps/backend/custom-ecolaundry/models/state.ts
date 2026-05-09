@@ -150,6 +150,16 @@ export type SessionState = {
   // muestra PUSH" while the customer had clearly typed "PUSH PROG", because
   // the canonical extractor collapsed the trailing word.
   displayLabel: string
+  // Counts how many invalid attempts the customer has made when typing the
+  // discount code (Caso 8). The format is `^[A-Z]{3}\d{6}\d+$`. The retry
+  // ladder is:
+  //   0 → first ask: "¿podrías indicarme el código exacto?"
+  //   1 → first invalid → re-ask: "no encaja con el formato, ¿podrías escribirlo de nuevo?"
+  //   ≥2 → escalate to operator
+  // Reset by resetMachineFacts and on a successful parse.
+  // REGRESSION (Andrea, 2026-05-09): the customer typed "xxjdse7" and the
+  // bot escalated immediately without giving a chance to retype.
+  discountCodeAskAttempts: number
   // Counts how many times the bot has asked "¿lavadora o secadora?" inside
   // the double-charge YES branch without the customer providing a recognisable
   // type. Same 3-strikes ladder as displayAskAttempts.

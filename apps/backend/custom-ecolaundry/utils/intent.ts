@@ -280,6 +280,70 @@ export function detectDiscountCodeIntent(message: string): boolean {
   )
 }
 
+// ── Invoice intent detection (Caso 9) ─────────────────────────────────────────
+//
+// Topic classifier (rule #6 tracked exemption — fast-path before the LLM).
+// Returns true when the customer asks for an invoice / factura. Multi-
+// language coverage (es/it/en/pt/ca/fr) + tolerance for common typos
+// ("factra", "fctra", "fattra"). Tested in `__tests__/unit/intent.test.ts`.
+//
+// REGRESSION (Andrea, 2026-05-09): the inline FACTURA_TOPIC regex in
+// `guards/invoice-flow.ts` required exact "factura/fattura/invoice/etc."
+// and silently failed on typos ("factra" → bot drifted into machine flow).
+// Same pattern as Bug A on doble-cobro and Bug D on discount code.
+export function detectInvoiceIntent(message: string): boolean {
+  const trimmed = message.toLowerCase()
+  if (!trimmed) return false
+  return (
+    // Spanish — "factura/facturas/quiero factura/necesito factura"
+    /\bfactur[ao]s?\b/i.test(trimmed) ||
+    // Italian — "fattura/fatture"
+    /\bfattur[ae]\b/i.test(trimmed) ||
+    // Portuguese — "fatura/faturas"
+    /\bfatur[ao]s?\b/i.test(trimmed) ||
+    // English — "invoice/invoices"
+    /\binvoices?\b/i.test(trimmed) ||
+    // French / Catalan — "facture/factures"
+    /\bfactures?\b/i.test(trimmed) ||
+    // Typo tolerance: "factra", "fctra", "fattra", "fattura" missing letters.
+    // Heuristic: word starts with "f", contains "ct" or "tt", ends with "ra/re/ras",
+    // length 5-9. Catches common typos without over-matching.
+    /\bf[aàeéiou]?[ct]+[rt]+[aàeéiou]s?\b/i.test(trimmed) &&
+      /\b(?:quiero|necesito|me\s+(?:da|hace)|voglio|voglia|i\s+(?:want|need)|je\s+(?:veux|voudrais)|preciso|vull|hace\s+falta)\b/i.test(trimmed)
+  )
+}
+
+// ── Topic-switch detection during pending escalation ─────────────────────────
+//
+// When the bot has already escalated (operatorRequested + customerNameRequested
+// set) and the customer is being asked their name, sometimes the customer
+// instead reports a NEW problem ("ahora me sale SEL", "tengo un código",
+// "me cobraron dos veces"). Without a topic-switch reset, the bot's reply
+// mixes the old escalation handover with the new topic guidance — a
+// confused mess (Andrea-2026-05-09 chat: discount-code escalate +
+// "mi da SEL ora la macchina" → bot mixed SEL guidance with operator
+// handover line).
+//
+// This detector returns true when the user message looks like a new
+// incident report rather than a name. The caller resets escalation flags
+// and lets the pipeline re-run cleanly for the new topic.
+export function detectTopicSwitchDuringEscalation(message: string): boolean {
+  const trimmed = message.toLowerCase()
+  if (!trimmed) return false
+  return (
+    // New display token reported (PUSH, SEL, DOOR, AL001, etc.)
+    extractDisplayState(message) !== null ||
+    // New "Caso 6" doble cobro intent
+    detectDoubleChargeIntent(message) ||
+    // New "Caso 8" discount code intent
+    detectDiscountCodeIntent(message) ||
+    // "Ahora me sale X / mi da X / aparece X" — phrasing of a new symptom
+    /\b(?:ahora\s+(?:me\s+)?(?:sale|aparece|pone|dice)|mi\s+da|me\s+sale|aparece|adesso\s+mi\s+(?:da|appare))\b/i.test(trimmed) ||
+    // Reports of new machine problems
+    /\b(?:la\s+lavadora|la\s+secadora|the\s+(?:washer|dryer))\s+(?:no\s+(?:funciona|arranca|va)|sigue|otra\s+vez|otra)/i.test(trimmed)
+  )
+}
+
 // ── Short reply classification ────────────────────────────────────────────────
 
 export function isShortContextReply(message: string): boolean {

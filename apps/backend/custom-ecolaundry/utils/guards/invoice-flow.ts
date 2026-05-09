@@ -17,9 +17,9 @@ import { lang } from './helpers.js'
 import { parseRelativeDate } from '../relative-date.js'
 import { buildEscalationSummary, extractEscalationContext } from '../escalation.js'
 import { captureCustomerName, closeAsEscalated, escalate, requireCustomerName } from '../state-transitions.js'
+import { detectInvoiceIntent } from '../intent.js'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
-const FACTURA_TOPIC = /(\bfactura\b|\bfacturas\b|\bfattura\b|\binvoice\b|\bfatura\b|\bfacture\b|quiero\s+(?:una\s+)?factura)/i
 
 function nextCaso9Step(
   ar: { state: { location: string; machineType: string; pendingFlow: string } },
@@ -41,8 +41,11 @@ export const guardInvoiceFlow: Guard = (ar, userMessage) => {
   }
 
   // Entry point: customer mentions invoice and we are not already in the flow.
+  // Detection delegated to `detectInvoiceIntent` (utils/intent.ts) — multi-
+  // language + typo-tolerant. REGRESSION 2026-05-09: typo "factra" / "fctra"
+  // used to fall through silently and drop the customer into the machine flow.
   if (!isCaso9Flow) {
-    if (!FACTURA_TOPIC.test(userMessage)) return null
+    if (!detectInvoiceIntent(userMessage)) return null
     ar.state.lastResolvedIntent = 'faq'
     ar.state.faqTopic = 'invoice'
     // Decide which step to start from based on already-known sticky facts.

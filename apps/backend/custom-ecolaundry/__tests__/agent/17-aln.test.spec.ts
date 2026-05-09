@@ -1,8 +1,10 @@
-// 17 — Caso 13 ALN (alarma)
+// 17 — Caso 13 + Caso 16 (ALN — alarma generica)
 //
-// Da usecases.md Caso 13: cliente dice "He pagado y ahora sale ALN".
-// Il bot deve raccogliere i dati minimi (local + tipo + numero) e poi
-// escalare con frase canonica "necesitamos revisarlo manualmente".
+// ALN è un codice generico di allarme. La doc lo categorizza in:
+//   - Caso 13 (escalado por código de alarma o incoherencia, paraguas)
+//   - Caso 16 (la máquina muestra ALM/ALN o similar, specifico)
+// Entrambi convergono al medesimo flow: gather location → tipo → numero,
+// poi escalate con messaggio canonico "necesitamos revisarlo manualmente".
 // Da reglas.md "Datos mínimos en incidencias de máquina": local + tipo +
 // numero + display sono obbligatori.
 

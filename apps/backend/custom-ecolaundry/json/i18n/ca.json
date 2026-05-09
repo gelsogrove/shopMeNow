@@ -49,6 +49,7 @@
   "discountCodeAskDoor": "La tens carregada i amb la porta tancada?",
   "discountCodeFinalEscalate": "Dóna'm un minut, fem les comprovacions. Si el codi és correcte, t'activarem la màquina. 🙂",
   "discountCodeFormatInvalid": "El codi no encaixa amb el format esperat, ho revisarem manualment.",
+  "discountCodeFormatRetry": "Aquest codi no encaixa amb el format que esperem (3 lletres + data + import, p. ex. SAU2904266). Podries comprovar-lo i escriure-me'l de nou, si us plau?",
   "al001GuideRetry": "Aquest avís sol aparèixer quan el procés no s'ha fet en l'ordre correcte. Abans d'avisar l'assistència, verifiquem junts la seqüència. Si us plau segueix aquests passos en aquest ordre:\n\n1. Carrega la rentadora\n2. Tanca la porta\n3. Dirigeix-te a la central de pagament i paga\n4. Selecciona el número de màquina i recull el canvi si cal\n5. Dirigeix-te a la màquina seleccionada i tria el programa\n6. Avisa'm si funciona",
   "al001Resolved": "Perfecte, incidència resolta. Necessites res més?",
   "noChangeResolved": "Perfecte, ja estaria resolt. Necessites res més?",

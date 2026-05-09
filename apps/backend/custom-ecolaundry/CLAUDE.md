@@ -195,6 +195,160 @@ L5 OUTPUT POLICIES    agent.ts:polishReplyForTurn (sanitize, invariants, welcome
 When asked to "fix" something, I MUST identify the layer first.
 Cross-layer code is the smell that produced the bugs the refactor closed.
 
+---
+
+## 🧬 Auto-extract inference rules — `autoExtractFacts` (L3)
+
+[`utils/agent-extract.ts:autoExtractFacts`](utils/agent-extract.ts) runs **before
+every guard pipeline turn**. It mutates `state` from the raw user message
+without producing a reply. Adding a new fact-extraction rule here MUST
+follow these conventions:
+
+| Fact captured | Source | Notes |
+|---|---|---|
+| `state.location` | [`extractExplicitLocation`](utils/intent.ts), [`resolveKnownLocation`](utils/message-parsing.ts) | Free-text → canonical pueblo. |
+| `state.locationStreet` | Mataró street disambiguation | "Goya"/"Alemanya" sub-locations. |
+| `state.machineType` | [`normalizeMachineType`](utils/intent.ts) | "lavadora"/"lavatrice"/"washer" → `'washer'`. |
+| `state.machineNumber` | regex on the message | Pure digit short tokens. |
+| `state.displayState` | [`extractDisplayState`](utils/intent.ts) | **Canonical** token (e.g. `"PUSH"`). Used by the flow engine for routing. |
+| `state.displayLabel` | [`extractDisplayLabel`](utils/intent.ts) | **Customer-facing** label (e.g. `"PUSH PROG"`). Used by the operator handover summary. |
+| `state.paymentCompleted` | [`parseExplicitPaymentSignal`](utils/message-parsing.ts) | Yes/no parsed from explicit payment-context replies. |
+| `state.pendingFlow = 'double-charge-ask-used'` | [`detectDoubleChargeIntent`](utils/intent.ts) | Multi-language Caso 6 trigger. |
+| `state.pendingFlow = 'discount-code-ask'` | [`detectDiscountCodeIntent`](utils/intent.ts) | Multi-language Caso 8 trigger. |
+| `state.pendingFlow = 'no-change-ask'` | inline regex (legacy, audit pending) | Caso 4 trigger — to be extracted to a multi-lang detector. |
+| `state.pendingFlow = 'photo-await-decision'` | inline regex (legacy, audit pending) | Caso 17 (display unreadable) — to be extracted. |
+
+### `displayState` / `displayLabel` — the canonical / label pair
+
+Any code path that captures a display token MUST set both fields:
+
+```ts
+const newDisplay = extractDisplayState(trimmed)        // canonical
+if (newDisplay) {
+  state.displayState = newDisplay
+  state.displayLabel = extractDisplayLabel(trimmed, newDisplay)
+}
+```
+
+- **`displayState`** is the canonical key (`"PUSH"`, `"SEL"`, `"DOOR"`,
+  `"AL001"`, …) consumed by `display-flows.json` / `washer_hs60xx.json` /
+  `dryer_ed340.json` and by routing guards. Lower-case prose is normalised
+  away.
+- **`displayLabel`** is the literal wording the customer used, preserved
+  verbatim (e.g. `"PUSH PROG"` while `displayState = "PUSH"`). The
+  operator handover summary in [`utils/escalation.ts`](utils/escalation.ts)
+  prefers `displayLabel` so the operator reads exactly what the customer
+  reported. Fallback: `displayLabel || displayState`.
+
+REGRESSION (2026-05-09): the operator was reading `"La pantalla muestra
+PUSH"` while the customer had typed `"PUSH PROG"` because the canonical
+extractor collapsed the trailing word. The label field closed that gap.
+
+### Convention for adding a new fact-extraction rule
+
+1. Detector lives in `utils/intent.ts` (or `utils/message-parsing.ts` for
+   parsing concerns), exported as a pure function with tests in
+   `__tests__/unit/<detector>.test.ts`.
+2. The wire-up in `autoExtractFacts` is a 2–4 line block: import the
+   detector, call it, set the relevant `state.*` field. No business
+   logic in `autoExtractFacts` itself.
+3. Multi-language coverage is mandatory (rule #8). Detector covers all
+   six tenant languages with test cases for each.
+4. If the rule sets a `pendingFlow` value, register it in `cases.json`
+   with a stable `semanticId` and update the relevant guard module.
+
+---
+
+## 📋 Detector index — `utils/intent.ts`
+
+These are the deterministic detectors / extractors used as the L3 fast
+path. Keep this list in sync when adding or removing a detector.
+
+| Function | Purpose | Multi-lang | Notes |
+|---|---|---|---|
+| `extractDisplayState(message)` | Canonical display token (`"PUSH"`, `"SEL"`, …) | n/a (codes are language-neutral) | Includes fuzzy fallback for typos. |
+| `extractDisplayLabel(message, canonical)` | Literal customer wording (`"PUSH PROG"`) | n/a | Greedy uppercase tail extension. |
+| `normalizeMachineType(value)` | `lavadora|secadora` → `'washer'\|'dryer'` | ✓ 6 langs | Handles fuzzy match (Levenshtein). |
+| `extractExplicitLocation(message)` | `"estoy en Goya"` → `"Goya"` | ✓ 6 langs | Falls back to `resolveKnownLocation`. |
+| `parsePaymentAnswer(message)` | yes/no parsing for "¿has pagado?" | ✓ 6 langs | |
+| `detectIDontKnowReply(message)` | `"no lo sé"`/`"non lo so"`/… | ✓ 6 langs | Boundary signal — used by gather-step retry path. |
+| `detectDoubleChargeIntent(message)` | Caso 6 trigger | ✓ 6 langs | Tracked rule #6 exemption (fast-path). |
+| `detectDiscountCodeIntent(message)` | Caso 8 trigger | ✓ 6 langs | Tracked rule #6 exemption. Permissive on verb-prefix typos. |
+| `isPaidButNotActivatedCase(state, message)` | Caso 4 / 7 disambiguator | ES-only (legacy) | To be extended when more langs go to production. |
+| `hasGreetingIntent(message)` | Pure greeting detection | ✓ 6 langs | Boundary signal. |
+| `isShortContextReply(message)` | Numeric/yes/no/short reply classification | n/a | Pattern match on syntactic shape. |
+| `detectLanguageHeuristic(message)` | First-turn language guess | ✓ 6 langs | Used by `resolveLanguageForTurn`. |
+
+### Lessons learned — typo-tolerant detectors
+
+REGRESSION pattern (Bug A 2026-05-09 doble-cobro / Bug D discount code):
+inline regex required exact verb prefix (`hab[eé]is`, `tengo`) and
+silently failed on typos (`habieis`, `teng`). The fix:
+
+- Drop strict verb-prefix requirements when the rest of the phrase is
+  unambiguous (e.g. `cobrad+dos veces`, `c[oó]digo+no sé cómo`).
+- Use `\b<verb>[oa]?\b` patterns that tolerate truncated verb endings.
+- Cover all 6 languages with at least one test per language plus one
+  typo regression test.
+
+When extending or replacing a regex in `agent-extract.ts`, MUST extract
+to a named function in `intent.ts` with tests — never modify the regex
+in place.
+
+### 🚫 Anti-pattern — speculative typo-tolerant detectors
+
+**Don't extract detectors preventively.** Every multi-language detector
+in `intent.ts` MUST repair a REAL reported bug. Pattern-guessing 6-
+language coverage without a corpus of actual customer messages produces
+hardcoded regexes that silently fail on edge cases AND add maintenance
+weight.
+
+REGRESSION (Andrea, 2026-05-09 audit): I extracted `detectPaidNotUsedIntent`,
+`detectNoChangeIntent`, `detectNumericOnlyCodeIntent` "preventively"
+because they had inline regexes with strict prefixes. Tests caught the
+problem immediately:
+
+```
+✗ detectNoChange: "Pagué pero no arranca" → expected true, got false
+   reason: regex required "pagado/pagada" (participio) but missed the
+           preterito "pagué" — pattern-guessed without a real corpus.
+```
+
+The right call was **rollback** to the inline regex — those Casos had
+no real bug requiring multi-lang typo tolerance.
+
+### Decision rule when adding a new detector
+
+Before extracting an inline regex into `utils/intent.ts`, answer all 3:
+
+1. **Real bug evidence?** Did Andrea or a real chat surface this gap, OR
+   is it a "what-if"? If "what-if" → leave the inline regex.
+2. **Customer corpus?** Do we have at least one real customer message
+   per language we're claiming to support? If not → ES-only or skip.
+3. **Test the negative case immediately.** Before merging the new
+   detector, write a test for a phrasing variant the regex DOESN'T
+   match (preterito vs participio, synonyms, abandons). If you can't
+   convince yourself the test would pass, the regex is incomplete.
+
+If any answer is "no" / "not yet" → keep the inline regex, mark a TODO
+in `cases.json` linked to a future bug, and stop. **Speculative coverage
+without real evidence is a pezza disguised as architecture.**
+
+Detectors that **passed** these gates and are kept (each repaired a real
+bug shown by Andrea):
+
+- `detectDoubleChargeIntent` — Bug A 2026-05-09 ("me habieis cobrado")
+- `detectDiscountCodeIntent` — Bug D 2026-05-09 ("teng un codigo")
+- `detectInvoiceIntent` — Bug #7 2026-05-09 ("factra")
+- `detectIDontKnowReply` — Bug 2026-05-09 ("auh no lo he selecioda")
+- `detectTopicSwitchDuringEscalation` — Bug #13.6 2026-05-09 ("mi da SEL ora")
+
+Detectors that **failed** the gates and were rolled back:
+
+- ~~`detectPaidNotUsedIntent`~~ — preventive, no real bug
+- ~~`detectNoChangeIntent`~~ — preventive, regex failed on "Pagué"
+- ~~`detectNumericOnlyCodeIntent`~~ — preventive, no real bug
+
 ## 🚦 Branch-router architecture (target — feature-flagged)
 
 Andrea (2026-05-08) decision. The legacy guard pipeline keeps working;
@@ -299,6 +453,38 @@ on any violation, and the offending lines are printed.
 
 ---
 
+## 🗃 `ALLOWED_LARGE_FILES` policy — rule #3 in practice
+
+Rule #3 ("one file ≤ 150 lines") has an explicit escape hatch in
+[`scripts/check-architecture.sh`](scripts/check-architecture.sh):
+`ALLOWED_LARGE_FILES`. A file may exceed 150 lines if AND only if:
+
+1. **It is one cassette = one responsibility.** Splitting it would
+   fragment a coherent story (e.g. all the steps of Caso 6 belong
+   together; splitting by step would produce 6 tiny files with
+   confusing cross-references).
+2. **The reason is recorded** in the comment block at the top of the
+   `ALLOWED_LARGE_FILES` array.
+3. **Adding the file requires Andrea's approval** (touched in the
+   commit's PR description). New entries must justify why splitting
+   is worse than keeping the file large.
+
+Current entries (audit each periodically):
+
+| File | Lines | Reason |
+|---|---|---|
+| `utils/guards/index.ts` | ~150 | The orchestration pipeline — splitting destroys order visibility. |
+| `utils/guards/force-gather.ts` | ~190 | Three force guards share helpers + retry counters. |
+| `utils/guards/payment-double-charge.ts` | ~290 | One cassette = Caso 6 (askUsed → branch → askType → askNumber → narrative → digits → receipt). Pending refactor: extract shared retry-ladder helper to drop ~80 lines. |
+| `utils/escalation.ts` | ~220 | Operator handover summary builder — one switch over many incident types. |
+| `utils/agent-extract.ts` | ~400 | The L3 fact-extraction pipeline — one function with 15+ specialised inference rules. Pending refactor: extract per-incident detectors to `utils/intent.ts`. |
+
+Anti-pattern: adding a file to this list without splitting after a
+genuine attempt. The default answer to "this file got too big" is
+*split it*; the exception requires written justification.
+
+---
+
 ## 🔁 pendingFlow lifecycle — ask vs await phases
 
 Every multi-step `pendingFlow` has TWO phases. The phase is encoded in the
@@ -330,6 +516,78 @@ contract is what makes the gather guards step aside.
 
 Anti-pattern: ❌ adding a phase like `caso9-pending-name` instead of
 `caso9-await-name`. The guards would not detect it as LLM-controlled.
+
+---
+
+## 🪜 Gather orderings — per-case quick reference
+
+Each Caso has a documented gather order in
+[`docs/usecases.md`](docs/usecases.md). Below is the quick lookup for
+the orderings that diverge from "location → tipo → numero → display"
+because of UX trade-offs. **Source of truth is `usecases.md`** — this
+table is a navigation aid only.
+
+### Caso 6 — Doble cobro (Andrea, 2026-05-09 — reorder)
+
+```
+T1: trigger ("me han cobrado dos veces")
+T2: location
+T3: ¿has podido lavar/secar?  ← branch point
+    ├── No  → escalate immediately, only ask for name (Scenario 6.4)
+    └── Sí  → continue:
+        T4: tipo (lavadora/secadora)
+        T5: numero
+        T6: relato + datáfono hint
+        T7: 4 dígitos tarjeta (with retry+escalate ladder)
+        T8: captura del pago + nombre → refund-form closure
+```
+
+UX rationale: a customer who got charged twice without being able to
+wash is doubly frustrated. Asking machine details before knowing if
+they actually used the service felt like burocracia. The "no" path
+escalates fast; tipo/numero are recovered by the operator on the phone.
+
+### Caso 1 — PUSH PROG (no payment ask, payment is implicit)
+
+```
+T1: trigger ("la lavadora no funciona")
+T2: location
+T3: numero (NOT tipo — autoExtractFacts already captured "lavadora")
+T4: pantalla
+T5: PUSH PROG → flow engine emits canonical 4-program list
+T6: customer confirms or reports failure (LLM-driven resolution)
+```
+
+UX rationale: PUSH PROG only appears AFTER payment, so asking "¿has
+pagado?" is redundant. See `usecases.md` Caso 1 Criterios.
+
+### Generic gather (Casi 2, 3, 5, 7, 14, 15, 16, 30 — display-driven)
+
+```
+T1: trigger
+T2: location
+T3: tipo (if not volunteered)
+T4: numero
+T5: pantalla
+T6+: display-specific flow from `display-flows.json` /
+     `washer_hs60xx.json` / `dryer_ed340.json`
+```
+
+### Reglas generales (cross-case)
+
+Every gather step inherits these invariants:
+
+1. **3-strikes retry+escalate ladder**. Counter on the relevant
+   `state.<fact>AskAttempts` field. attempt 0 = canonical i18n key,
+   attempt 1 = guidance reask key, attempt ≥ 2 = escalate(operator) +
+   `requireCustomerName` + counter reset.
+2. **Customer can change topic at any moment**. Topic-switch detection
+   (LLM-driven) interrupts the gather and resets state.
+3. **Language is sticky per session**, locked from the first user
+   message via `resolveLanguageForTurn`.
+
+When you add a new Caso with a custom gather order, update both
+`usecases.md` and this section so the divergences stay easy to find.
 
 ---
 
@@ -436,6 +694,11 @@ correct layer, and only proceed once the user explicitly confirms:
 - "This guard skips when X is set, that's fine, the LLM will handle the rest"
   (rule #10) — never let the LLM fill the gap left by a guard that bowed out.
   Every required fact has a deterministic catch-all asker.
+- "Let me extract this inline regex into a multi-lang detector preventively,
+  before a bug shows up." → STOP. Pattern-guessing without a real customer
+  corpus is a pezza disguised as architecture. See `📋 Detector index →
+  🚫 Anti-pattern — speculative typo-tolerant detectors` for the decision
+  rule (3 gates). Wait for the bug, then fix.
 
 These were the symptoms behind the bugs the refactor closed. Falling
 back to them would re-open the same bug surface.

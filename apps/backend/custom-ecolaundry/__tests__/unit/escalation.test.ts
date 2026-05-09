@@ -154,6 +154,50 @@ const cases: Case[] = [
     },
   },
 
+  // ── Bug #12 (Andrea 2026-05-09): importe a 1 cifra è ambiguo, summary
+  // non deve "inventare" il valore in € ma dire "a confirmar manualmente".
+  {
+    name: 'discount code 1-digit importe: summary says "a confirmar" (not "6€")',
+    run: () => {
+      const s = buildEscalationSummary(
+        ctx({
+          discountCode: 'SAU2904266',
+          discountCodeData: {
+            letters: 'SAU',
+            fechaIso: '2026-04-29',
+            importe: '6', // 1-digit → ambiguous
+            doorClosed: true,
+          },
+        }),
+      )
+      if (/importe\s+6€/i.test(s)) {
+        throw new Error(`Bug #12: must NOT show "importe 6€" for 1-digit importe: ${s}`)
+      }
+      if (!/a confirmar manualmente/i.test(s)) {
+        throw new Error(`Bug #12: must say "a confirmar manualmente": ${s}`)
+      }
+    },
+  },
+  {
+    name: 'discount code 2-digit importe: summary shows the value (e.g. "20€")',
+    run: () => {
+      const s = buildEscalationSummary(
+        ctx({
+          discountCode: 'SAU29042620',
+          discountCodeData: {
+            letters: 'SAU',
+            fechaIso: '2026-04-29',
+            importe: '20', // 2 digits → meaningful
+            doorClosed: true,
+          },
+        }),
+      )
+      if (!/importe\s+20€/i.test(s)) {
+        throw new Error(`2-digit importe must appear as "importe 20€": ${s}`)
+      }
+    },
+  },
+
   // ── Caso 4 — no-change after pay (via pendingFlow prefix) ──────────────────
   {
     name: 'no-change incident: pendingFlow="no-change-await-confirm" → no-change summary',

@@ -15,8 +15,10 @@ import {
   normalizeMachineType,
   detectDoubleChargeIntent,
   detectDiscountCodeIntent,
+  detectTopicSwitchDuringEscalation,
 } from './intent.js'
 import { resolveKnownLocation, parseExplicitPaymentSignal } from './message-parsing.js'
+import { RECOVERABLE_DISPLAYS } from './guards/helpers.js'
 import { resetMachineFacts } from './state.js'
 import { resetPostEscalationFlags } from './state-transitions.js'
 import { getPattern, matchPattern } from './nlu.js'
@@ -105,6 +107,52 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     resetMachineFacts(state)
     state.pendingClosure = null
     ar.resolved = false
+  }
+
+  // Topic-switch reset (Bug #13.6 + MIX 1 orchestration, Andrea-2026-05-09).
+  //
+  // Two reset triggers:
+  //   1. Pending escalation: bot already escalated, customer changes topic.
+  //      Without reset the bot would mix the handover line with the new
+  //      topic guidance (Andrea's xxjdse7 → "mi da SEL" chat).
+  //   2. Mid-flow (no escalation): bot is waiting for a typed answer to a
+  //      narrow question (e.g. discount-code-await expects a SAU2904266
+  //      string), but the customer abandons / pivots ("mejor olvídalo,
+  //      me sale SEL"). The flow's strict validator would treat the pivot
+  //      as 2nd invalid → escalate when the customer just wants to switch
+  //      topics. The topic-switch detector resets the flow so the new
+  //      topic (display code) can be picked up by the canonical pipeline.
+  //
+  // The topic-switch detector requires specific signals (display code
+  // extracted, double-charge intent, discount-code intent, "ahora me
+  // sale X / mi da X" phrasings) — it's not just any non-canonical input.
+  // We deliberately do NOT check `!validateCustomerName(trimmed).valid`
+  // because that helper is permissive (accepts any 2+ char first word
+  // as a name) — it would say "mi" in "mi da SEL" is a valid name and
+  // block the reset. The topic-switch detector is specific enough to win.
+  //
+  // FLOWS_RESETABLE_ON_TOPIC_SWITCH lists the pendingFlow values from
+  // which a customer pivot is legitimate. Active troubleshooting flows
+  // are NOT listed because autoExtractFacts already captures new display
+  // codes naturally there — no reset needed.
+  const FLOWS_RESETABLE_ON_TOPIC_SWITCH = new Set<string>([
+    'discount-code-await',
+    'discount-code-await-name',
+    'discount-code-await-location',
+    'discount-code-await-machine',
+    'discount-code-await-door',
+    'numeric-code-ask-letters',
+    'numeric-code-await-answer',
+  ])
+  const inResetableFlow = FLOWS_RESETABLE_ON_TOPIC_SWITCH.has(state.pendingFlow)
+  const inPendingEscalation =
+    state.operatorRequested && state.customerNameRequested
+  if (
+    (inPendingEscalation || inResetableFlow) &&
+    detectTopicSwitchDuringEscalation(trimmed)
+  ) {
+    resetPostEscalationFlags(ar)
+    resetMachineFacts(state)
   }
 
   // Topic-switch detection — runs first so the rest of the extractor doesn't
@@ -280,10 +328,36 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     if (state.paymentCompleted !== null) state.paymentRequested = false
   }
 
+  // Inferred payment from a recoverable display code (Andrea-2026-05-09).
+  //
+  // When `state.displayState` is set to a recoverable code (PUSH / SEL /
+  // DOOR / PRICE / BLANK / ...) and `paymentCompleted` is still null,
+  // we INFER the payment was made. Rationale: those displays only appear
+  // AFTER payment has been processed by the central. Asking "¿has pagado?"
+  // when the display already proves payment is redundant — and worse,
+  // the dryer flow's `step_0` asks exactly that, then routes to pay_help
+  // on a "no" reply, breaking the resolution.
+  //
+  // REGRESSION fixed: Andrea's "me sale push prog" + secadora chat. The
+  // dryer flow started at step_0 (payment ask) instead of jumping to
+  // problem_check. The inference makes the flow engine's existing
+  // entry-node logic (flow-engine.ts:103) skip step_0 correctly.
+  if (
+    state.paymentCompleted === null &&
+    state.displayState &&
+    RECOVERABLE_DISPLAYS.has(state.displayState.toUpperCase())
+  ) {
+    state.paymentCompleted = true
+  }
+
   // Caso 7 marker: customer said "He pagado pero no he podido usar".
   // Sets pendingFlow so the guard pipeline can short-circuit on the next turn
   // after collecting location + machineType + machineNumber with
   // "¿La central te ha devuelto el cambio?".
+  // Caso 7 trigger (inline regex — left as-is until a real bug requires
+  // typo tolerance. Speculative refactor reverted on 2026-05-09 audit:
+  // pattern-guessed multi-lang coverage was failing on simple variants
+  // like "Pagué pero no arranca" without producing real-world value.)
   if (
     !state.pendingFlow &&
     /he\s+pagado.+(no\s+(he\s+podido|consegui|logr[eé])\s+usar|no\s+(la\s+)?(he\s+podido\s+)?utilizar)/i.test(userMessage)
@@ -312,6 +386,8 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   // Caso 4 marker: customer said "He pagado y no se ha activado" (or similar).
   // Different from Caso 7: here the issue is about activation (not "he pagado pero
   // no he podido usar"). Flow asks tipo → numero → cambio (NOT display, NOT pago).
+  // Caso 4 trigger (inline regex — left as-is until a real bug requires
+  // typo tolerance. Speculative refactor reverted on 2026-05-09 audit.)
   if (
     !state.pendingFlow &&
     /he\s+pagado.+no\s+se\s+(ha\s+)?activad/i.test(userMessage)
@@ -366,11 +442,8 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     resetPostEscalationFlags(ar)
   }
 
-  // Caso 18 marker: customer says "tengo un código: NNNNN" with a numbers-only
-  // value (no letters before the digits). Real Ecolaundry codes have letter
-  // prefixes (e.g. "AB12345"); a pure-numeric code is a sign of incoherence.
-  // Per doc Caso 18 the bot must ask once "¿ves alguna letra delante?" and,
-  // if customer says no, escalate without confronting.
+  // Caso 18 trigger (inline regex — left as-is. Speculative typo-tolerant
+  // refactor reverted on 2026-05-09 audit: not justified by a real bug.)
   if (
     !state.pendingFlow &&
     /(?:tengo|tenho|ho|i\s+have)\s+(?:un\s+)?(?:c[oó]digo|codice|code)[\s:.,-]*([A-Za-z0-9-]{3,})/i.test(userMessage)

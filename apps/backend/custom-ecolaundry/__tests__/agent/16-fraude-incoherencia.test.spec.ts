@@ -1,6 +1,6 @@
-// 16 — Datafono 10€ a Goya/Pineda → escala senza accusare
+// 16 — Casos 19 + 20 (Datáfono 10€ a Goya/Pineda) → escala senza accusare
 //
-// Da reglas.md "Reglas para incoherencias o posible fraude":
+// Da usecases.md Caso 19 (Goya) e Caso 20 (Pineda):
 //   - Casos típicos: en Goya o Pineda el cliente dice que el datáfono ha
 //     cobrado 10€ (mientras que el TPV cobra 7 o 8 €).
 //   - Acción: NO confrontar, recoger datos mínimos, escalar.

@@ -49,6 +49,7 @@
   "discountCodeAskDoor": "Est-elle chargée et la porte fermée ?",
   "discountCodeFinalEscalate": "Donne-moi une minute, on fait les vérifications. Si le code est correct, on activera la machine. 🙂",
   "discountCodeFormatInvalid": "Le code ne correspond pas au format attendu, on va le vérifier manuellement.",
+  "discountCodeFormatRetry": "Ce code ne correspond pas au format attendu (3 lettres + date + montant, p. ex. SAU2904266). Pourrais-tu vérifier et le retaper, s'il te plaît ?",
   "al001GuideRetry": "Ce message apparaît généralement quand le processus n'a pas été fait dans le bon ordre. Avant de prévenir l'assistance, vérifions ensemble la séquence. Suis ces étapes dans cet ordre :\n\n1. Charge le lave-linge\n2. Ferme la porte\n3. Va à la centrale de paiement et paie\n4. Sélectionne le numéro de machine et récupère la monnaie si besoin\n5. Va à la machine sélectionnée et choisis le programme\n6. Préviens-moi si ça fonctionne",
   "al001Resolved": "Parfait, problème résolu. As-tu besoin d'autre chose ?",
   "noChangeResolved": "Parfait, c'est résolu. As-tu besoin d'autre chose ?",

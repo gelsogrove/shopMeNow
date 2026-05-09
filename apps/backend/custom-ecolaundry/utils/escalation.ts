@@ -102,7 +102,18 @@ export function buildEscalationSummary(context: EscalationContext): string {
     const c = context.discountCodeData
     const machineLabel = context.machineNumber ? `máquina nº ${context.machineNumber}` : 'máquina sin número'
     const doorLabel = c.doorClosed === true ? 'puerta cerrada' : c.doorClosed === false ? 'puerta NO cerrada' : 'estado puerta desconocido'
-    return `${name} en ${location} ha facilitado un código válido (${context.discountCode}: letras ${c.letters}, fecha ${c.fechaIso}, importe ${c.importe}€) en la ${machineLabel} (${doorLabel}). Requiere validación y activación remota.`
+    // Importe parsing (Bug #12 Andrea-2026-05-09): the regex captures
+    // `\d+` after DDMMYY, which means a 1-digit trailing number is
+    // interpreted as importe (e.g. "SAU2904266" → importe="6"). For codes
+    // with importe < 10€ (single-digit) the value is ambiguous — the
+    // customer may have typed an incomplete code. We show the importe
+    // only when it has 2+ digits (≥10€); otherwise we tell the operator
+    // to confirm it manually instead of inventing "6€".
+    const importeIsAmbiguous = !c.importe || c.importe.length < 2
+    const importePart = importeIsAmbiguous
+      ? 'importe a confirmar manualmente'
+      : `importe ${c.importe}€`
+    return `${name} en ${location} ha facilitado un código válido (${context.discountCode}: letras ${c.letters}, fecha ${c.fechaIso}, ${importePart}) en la ${machineLabel} (${doorLabel}). Requiere validación y activación remota.`
   }
   if (context.discountCode || /caso\s*8/i.test(context.escalationReason || '')) {
     const code = context.discountCode || 'no especificado'

@@ -2,7 +2,6 @@
 
 ## Índice de casos
 
-- [Reglas generales del bot](#reglas-generales-del-bot)
 - [Caso 1 — La lavadora no funciona y aparece PUSH PROG](#caso-1--la-lavadora-no-funciona-y-aparece-push-prog)
   - [1.1 — PUSH PROG Happy Path](#11--push-prog-happy-path)
   - [1.2 — PUSH PROG Escalación: máquina no responde tras pulsar](#12--push-prog-escalación-máquina-no-responde-tras-pulsar)
@@ -60,55 +59,6 @@
 
 ---
 
-## Reglas generales del bot
-
-Estas reglas se aplican a **todos** los casos del documento. No las
-repetimos dentro de cada caso para evitar ruido — si una regla parece
-ausente de un caso concreto, sigue valiendo igualmente.
-
-### Regla 1 — Ningún cliente se queda atascado en una pregunta
-
-Cada vez que el bot pide un dato (local, tipo de máquina, número de
-máquina, código de pantalla, últimos 4 dígitos de la tarjeta, …) sigue
-una **escalera de 3 intentos**:
-
-| Intento | Comportamiento |
-|---|---|
-| 1º — pregunta canónica | El bot pide el dato con la fórmula estándar del catálogo. |
-| 2º — pista o reformulación | El bot reformula con una pista útil. *Ejemplos:* «el número está pegado en la propia máquina, normalmente arriba o al lado de la pantalla», «no reconozco ese código exactamente, ¿podrías comprobarlo?», «necesito exactamente los 4 últimos dígitos de la tarjeta». |
-| 3º — escalación a operador | El bot reconoce que no puede seguir solo, pide el nombre del cliente y deriva a un operador humano. La conversación queda registrada para revisión manual. |
-
-**Por qué existe esta regla:**
-- Evita que el bot se quede «mudo» o repita la misma pregunta cuando el
-  cliente escribe con typos, contesta «no lo sé / aún no lo he
-  seleccionado», o simplemente no sabe responder.
-- Garantiza que ninguna conversación termine sin respuesta — pasados los
-  3 intentos siempre interviene un humano.
-- Aplica de forma idéntica en **es / it / en / ca / pt / fr** (los
-  mensajes de pista y escalación están traducidos en los 6 idiomas
-  soportados).
-
-**Ámbito:** se aplica a todos los pasos de recogida de datos. Si un
-caso futuro añade un dato nuevo, deberá heredar esta misma escalera
-sin necesidad de mencionarlo en el documento.
-
-### Regla 2 — El cliente puede cambiar de tema en cualquier momento
-
-Si durante un flujo el cliente abandona el tema («mejor llamo más
-tarde», «en realidad quería preguntar otra cosa», «olvídalo»), el bot
-no insiste con la pregunta pendiente. Reconoce el cambio, cierra el
-flujo activo, y atiende la nueva petición. Si el cliente no aclara su
-intención el bot pregunta cómo puede ayudar.
-
-### Regla 3 — Idioma del cliente
-
-El bot responde siempre en el idioma del cliente, detectado del primer
-mensaje recibido. Una vez fijado, el idioma de la sesión no cambia
-salvo que el cliente lo haga explícitamente. El catálogo de idiomas
-soportados es: español, italiano, inglés, catalán, portugués y francés.
-
----
-
 
 ## Caso 1 — La lavadora no funciona y aparece PUSH PROG
 
@@ -118,47 +68,19 @@ Ayudar al cliente a iniciar el lavado cuando falta seleccionar el programa.
 **Cuándo aplica:**  
 El cliente ha pagado y la pantalla muestra `PUSH PROG`.
 
-**Criterios de aceptación:**
-- El bot pregunta primero la lavandería, luego el número de máquina y luego qué aparece en pantalla. No pregunta "¿has pagado?" porque cuando aparece PUSH PROG el pago ya se ha hecho.
-- Cuando el cliente confirma que aparece **PUSH PROG**, el bot le indica los 4 programas disponibles (60º, 40º, 30º y Frío) y cierra preguntando si la lavadora arranca.
-- Si el cliente dice que **funciona**, el bot cierra la incidencia con un mensaje positivo.
-- Si el cliente dice que **no funciona**, el bot le pide que confirme una vez más qué aparece exactamente en pantalla antes de escalar (para evitar pasar el caso a un operador por una respuesta ambigua).
-- Si tras la confirmación sigue sin funcionar, el bot pasa el caso a revisión manual.
-- Variantes happy y de escalación detalladas en 1.1 y 1.2.
+**Trigger (frases típicas del cliente):**
+- «La lavadora no funciona»
+- «No me arranca la lavadora»
+- «Me sale PUSH PROG en la pantalla»
+- «No sé qué hacer, me pone PUSH PROG»
 
-**Ejemplo de conversación:**
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
 
-**Usuario:** La lavadora no funciona.  
-**Bot:** Hola, soy el asistente virtual de Ecolaundry. Te ayudo paso a paso. ¿En qué lavandería estás?
-
-**Usuario:** Goya.  
-**Bot:** Gracias. ¿Qué número de lavadora es?
-
-**Usuario:** La 5.  
-**Bot:** De acuerdo. ¿Qué aparece exactamente en la pantalla?
-
-**Usuario:** PUSH PROG.  
-**Bot:** Pulsa un botón de programa para iniciar el lavado.
-
-Programas:
-- **60º** (muy caliente) → ropa muy sucia, blanca o de trabajo
-- **40º** (templado) → ropa normal (algodón, color)
-- **30º** (suave) → ropa delicada o sintética
-- **Frío** → prendas muy delicadas (lana, seda, etc.)
-
-Elige uno y púlsalo en la máquina.
-
-Después dime si la lavadora ha arrancado.
-
-**Usuario:** Sí, ahora funciona.  
-**Bot:** Perfecto, incidencia resuelta. Si vuelve a pasar o aparece otro mensaje en pantalla, dímelo y te sigo ayudando.
-
-**Resultado esperado:**  
-Incidencia resuelta.
-
-**Escalar si:**  
-- el cliente pulsa el programa y la máquina no responde
-- el mensaje cambia a otro código no documentado
+**Reglas comunes a 1.1 y 1.2:**
+- Orden de gather: lavandería → número de máquina → qué aparece en pantalla. **No pregunta «¿has pagado?»** porque cuando aparece PUSH PROG el pago ya se ha hecho.
+- Cuando el cliente confirma **PUSH PROG**, el bot indica los 4 programas (60º, 40º, 30º, Frío) y cierra preguntando si la lavadora ha arrancado.
+- Las dos ramas (funciona / no funciona) se detallan en 1.1 y 1.2 con sus propios criterios.
 
 ---
 
@@ -260,35 +182,18 @@ Ayudar al cliente a cerrar correctamente la puerta.
 **Cuándo aplica:**  
 El cliente indica que en pantalla aparece `DOOR`.
 
-**Criterios de aceptación:**
-- El bot pregunta primero la lavandería, luego el número de máquina y luego qué aparece en pantalla.
-- Cuando el cliente confirma que aparece **DOOR**, el bot indica abrir y cerrar bien la puerta hasta oír un clic, comprobar que no haya prendas atrapadas, y cierra preguntando si la lavadora arranca.
-- Cuando el caso se pasa a un operador, el resumen incluye el código DOOR y el contexto de la puerta para que el operador sepa el problema.
-- Variantes happy y de escalación detalladas en 2.1 y 2.2.
+**Trigger (frases típicas del cliente):**
+- «La lavadora no arranca»
+- «Me sale DOOR»
+- «No se cierra la puerta»
 
-**Ejemplo de conversación:**
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
 
-**Usuario:** La lavadora no arranca.  
-**Bot:** Hola, soy el asistente virtual de Ecolaundry. Te ayudo. ¿En qué lavandería estás?
-
-**Usuario:** Hortes.  
-**Bot:** Gracias. ¿Qué número de lavadora es?
-
-**Usuario:** La 2.  
-**Bot:** De acuerdo. ¿Qué aparece exactamente en la pantalla?
-
-**Usuario:** DOOR.  
-**Bot:** Ese mensaje indica que la puerta no está bien cerrada. Ábrela y ciérrala bien, y vuelve a probar.
-
-**Usuario:** Ahora sí funciona.  
-**Bot:** Perfecto, ya estaría resuelto.
-
-**Resultado esperado:**  
-Incidencia resuelta.
-
-**Escalar si:**  
-- el mensaje `DOOR` sigue apareciendo
-- el cliente repite el paso y no arranca
+**Reglas comunes a 2.1 y 2.2:**
+- Orden de gather: lavandería → número de máquina → qué aparece en pantalla.
+- Cuando el cliente confirma **DOOR**, el bot indica abrir y cerrar bien la puerta hasta oír un clic, comprobar que no haya prendas atrapadas, y cierra preguntando si la lavadora arranca.
+- Las dos ramas (resuelto / escalación) se detallan en 2.1 y 2.2 con sus propios criterios.
 
 ---
 
@@ -306,15 +211,15 @@ Incidencia resuelta.
 **Conversación:**
 
 **Usuario:** La lavadora no arranca  
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?
-
-**Usuario:** DOOR  
-**Bot:** ¿En qué lavandería autoservicio estás?
+**Bot:** 👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?
 
 **Usuario:** Hortes  
-**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+**Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** 2  
+**Bot:** ¿Qué aparece exactamente en la pantalla?
+
+**Usuario:** DOOR  
 **Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente. Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** Sí  
@@ -337,22 +242,22 @@ Incidencia resuelta.
 **Conversación:**
 
 **Usuario:** La lavadora no arranca  
-**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry, estoy aquí para ayudarte. ¿Qué aparece exactamente en la pantalla de la máquina?
-
-**Usuario:** DOOR  
-**Bot:** ¿En qué lavandería autoservicio estás?
+**Bot:** 👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?
 
 **Usuario:** Hortes  
-**Bot:** ¿Cuál es el número de la máquina (lavadora)?
+**Bot:** ¿Cuál es el número de la lavadora?
 
 **Usuario:** 2  
+**Bot:** ¿Qué aparece exactamente en la pantalla?
+
+**Usuario:** DOOR  
 **Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente. Después de intentarlo, házmelo saber si funciona.
 
 **Usuario:** NO  
 **Bot:** Por favor, escribe solo lo que ves en la pantalla, los números y las letras tal y como aparecen en la pantalla ahora, incluso si es el mismo que antes.
 
 **Usuario:** DOOR  
-**Bot:** ⚠️ La puerta sigue bloqueada incluso después de repetir los pasos. Esto indica un posible fallo mecánico en el cierre de la puerta. Tenemos que notificar al operador ahora para que revise la lavadora manualmente. ¿Cómo te llamas?
+**Bot:** ⚠️ La puerta sigue bloqueada incluso después de repetir los pasos. Tenemos que notificar al operador ahora para que revise la lavadora manualmente. ¿Cómo te llamas?
 
 **Usuario:** Carlos  
 **Bot:** Gracias Carlos. Un operador humano se encargará de tu caso.
@@ -369,34 +274,19 @@ Ayudar al cliente cuando la máquina está pendiente de selección.
 **Cuándo aplica:**  
 El cliente ha pagado y la pantalla muestra `SEL`.
 
-**Criterios de aceptación:**
-- El bot pregunta primero la lavandería, luego el número de máquina y luego qué aparece en pantalla.
-- Cuando el cliente confirma que aparece **SEL**, el bot le explica que la máquina está pendiente de selección y le pide comprobar que ha pulsado bien el número de la máquina en la central de pago. Después le pregunta si la máquina arranca.
+**Trigger (frases típicas del cliente):**
+- «He pagado pero la lavadora no empieza»
+- «Me sale SEL»
+- «La pantalla pone SEL»
+
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
+
+**Reglas comunes a 3.1 y 3.2:**
+- Orden de gather: lavandería → número de máquina → qué aparece en pantalla.
+- Cuando el cliente confirma **SEL**, el bot explica que la máquina está pendiente de selección y le pide comprobar que ha pulsado bien el número de la máquina en la central de pago.
 - A diferencia del Caso 1 (PUSH PROG), aquí el bot **no** muestra los 4 programas: el problema es de selección, no de elección de programa.
-- Variantes happy y de escalación detalladas en 3.1 y 3.2.
-
-**Ejemplo de conversación:**
-
-**Usuario:** He pagado pero la lavadora no empieza.  
-**Bot:** Hola, soy el asistente virtual de Ecolaundry. Te ayudo. ¿En qué lavandería estás?
-
-**Usuario:** Pineda.  
-**Bot:** Gracias. ¿Qué número de lavadora es?
-
-**Usuario:** La 3.  
-**Bot:** Perfecto. ¿Qué aparece exactamente en la pantalla?
-
-**Usuario:** SEL.  
-**Bot:** Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina o el programa correspondiente.
-
-**Usuario:** Ya lo he hecho y ahora sí funciona.  
-**Bot:** Perfecto, incidencia resuelta.
-
-**Resultado esperado:**  
-Incidencia resuelta.
-
-**Escalar si:**  
-- el cliente ya ha repetido la selección y la máquina sigue sin responder
+- Las dos ramas (resuelto / escalación) se detallan en 3.1 y 3.2.
 
 ---
 
@@ -473,38 +363,18 @@ Detectar un posible error de selección de máquina.
 **Cuándo aplica:**  
 El cliente ha pagado, la máquina no se activa y la central no ha devuelto el cambio.
 
-**Criterios de aceptación:**
-- El bot pregunta primero la lavandería, luego si es una lavadora o secadora, luego el número de máquina y finalmente si la central ha devuelto el cambio. En este caso **no** se pregunta qué aparece en pantalla: la pregunta del cambio reemplaza la del display.
-- Si el cliente responde **"No"** (la central no ha devuelto el cambio), el bot le explica que probablemente no se ha marcado bien el número de la máquina y le pide que mire si queda saldo en la central y pulse de nuevo el número correcto.
-- Si el cliente responde **"Sí, pero la máquina sigue sin arrancar"**, el bot pasa el caso directamente a un operador (la central hizo su parte, no es un simple error de marcación). Ver 4.2.
-- Variantes happy y de escalación detalladas en 4.1 y 4.2.
+**Trigger (frases típicas del cliente):**
+- «He pagado y no se ha activado»
+- «Pagué pero no arranca»
+- «No me funciona después de pagar»
 
-**Ejemplo de conversación:**
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
 
-**Usuario:** He pagado y no se ha activado.  
-**Bot:** Hola, soy el asistente virtual de Ecolaundry. ¿En qué local estás?
-
-**Usuario:** Goya.  
-**Bot:** Gracias. ¿Es una lavadora o una secadora?
-
-**Usuario:** Lavadora.  
-**Bot:** Perfecto. ¿Qué número de máquina es?
-
-**Usuario:** La 4.  
-**Bot:** De acuerdo. ¿La central te ha devuelto el cambio?
-
-**Usuario:** No.  
-**Bot:** Es posible que no se haya marcado bien el número de la máquina. Mira si todavía aparece saldo en la central y pulsa correctamente el botón correspondiente.
-
-**Usuario:** Sí, ahora ya se ha puesto en marcha.  
-**Bot:** Perfecto, ya estaría resuelto.
-
-**Resultado esperado:**  
-Incidencia resuelta.
-
-**Escalar si:**  
-- el cliente sigue sin poder activarla
-- aparece un código de pantalla no documentado
+**Reglas comunes a 4.1 y 4.2:**
+- Orden de gather: lavandería → tipo de máquina → número de máquina → ¿la central ha devuelto el cambio? En este caso **no** se pregunta qué aparece en pantalla: la pregunta del cambio reemplaza la del display.
+- Si el cliente responde **«No»** (la central no ha devuelto el cambio), el bot le explica que probablemente no se ha marcado bien el número de la máquina y le pide que mire si queda saldo en la central y pulse de nuevo el número correcto. Ver 4.1.
+- Si el cliente responde **«Sí, pero la máquina sigue sin arrancar»**, el bot pasa el caso directamente a un operador (la central hizo su parte, no es un simple error de marcación). Ver 4.2.
 
 ---
 
@@ -584,52 +454,21 @@ Explicar el motivo del error y corregir la secuencia de uso.
 **Cuándo aplica:**  
 El cliente indica que aparece `AL001`.
 
-**Criterios de aceptación:**
-- El bot reconoce el código aunque el cliente lo escriba de forma natural (ej. "AL001", "AL 001", "ALM 001", "alarm 001", "alarma 001"): todos llevan al mismo flujo.
-- El bot pregunta primero la lavandería, luego si es lavadora o secadora, y luego el número de máquina.
-- Una vez tiene los 3 datos, el bot le explica al cliente la **secuencia correcta de 6 pasos** (cargar la máquina, cerrar la puerta, ir a la central, pagar, seleccionar el número, recoger el cambio si toca, ir a la máquina, elegir el programa, y avisar si funciona).
-- Si el cliente confirma que **funciona**, el bot cierra la incidencia con un mensaje positivo.
-- Si el cliente dice que **no entiende** los pasos o que **el error persiste** tras seguirlos, el bot pide al cliente que confirme una vez más el código exacto en pantalla y luego pasa el caso a un operador.
-- Variantes happy y de escalación detalladas en 5.1, 5.2 y 5.3.
+**Trigger (frases típicas del cliente):**
+- «Me sale AL001»
+- «AL 001 en la pantalla»
+- «Tengo alarma 001»
+- «Alarm 001»
+- «ALM 001»
 
-**Ejemplo de conversación:**
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
 
-**Usuario:** Me sale AL001.  
-**Bot:** Tranquilo, te ayudo. ¿En qué lavandería estás?
-
-**Usuario:** L’Escala.  
-**Bot:** Gracias. ¿Es una lavadora o una secadora?
-
-**Usuario:** Lavadora.  
-**Bot:** Gracias. ¿Qué número de lavadora es?
-
-**Usuario:** La 3.  
-**Bot:** De acuerdo. Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Antes de avisar a asistencia, vamos a verificar juntos la secuencia correcta. Por favor sigue estos pasos en este orden:
-
-1. Carga la lavadora
-2. Cierra la puerta
-3. Dirígete a la central de pago y paga
-4. Selecciona el número de máquina y recoge el cambio si toca
-5. Dirígete a la máquina seleccionada y elige el programa
-6. Avísame si funciona
-
-**Usuario:** Ya funciona, gracias.  
-**Bot:** Perfecto, incidencia resuelta.
-
-**Si el cliente indica que NO funciona tras seguir los 6 pasos:**
-
-**Bot:** Entendido, en ese caso voy a avisar a asistencia. ¿Me puedes decir tu nombre, por favor?
-
-**Usuario:** Marco Rossi.  
-**Bot:** Gracias, Marco. Aviso a asistencia con tus datos y el detalle de la incidencia. Te contactarán lo antes posible.
-
-**Resultado esperado:**  
-El bot identifica que el problema está en la secuencia de uso, guía al cliente con los 6 pasos en el orden correcto, y solo si el cliente confirma que no funciona pide el nombre y escala a asistencia.
-
-**Escalar si (tras pedir el nombre):**  
-- el cliente confirma que el error persiste después de seguir los 6 pasos en orden
-- el cliente no puede seguir las instrucciones
-- aparece otro código de pantalla diferente tras el reintento
+**Reglas comunes a 5.1, 5.2 y 5.3:**
+- El bot reconoce el código aunque el cliente lo escriba de forma natural (ej. «AL001», «AL 001», «ALM 001», «alarm 001», «alarma 001»): todos llevan al mismo flujo.
+- Orden de gather: lavandería → tipo de máquina → número de máquina.
+- Una vez tiene los 3 datos, el bot le explica la **secuencia correcta de 6 pasos** (cargar la máquina, cerrar la puerta, ir a la central, pagar, seleccionar el número, recoger el cambio si toca, ir a la máquina, elegir el programa, y avisar si funciona).
+- Las tres ramas (resuelto / no entiende los pasos / error persiste) se detallan en 5.1, 5.2 y 5.3.
 
 ---
 
@@ -750,46 +589,21 @@ podido o no usar la máquina (lavadora/secadora).
   - Si el cliente responde **"Sí"** → el bot continúa pidiendo, en este orden, **tipo de máquina** (lavadora o secadora), **número de máquina**, **relato paso a paso** (sugiriendo si ha pasado la tarjeta varias veces por el datáfono), **últimos 4 dígitos de la tarjeta**, **captura del pago** y **nombre del cliente**. Cierra con un mensaje sobre el formulario de devolución, sin pasar el caso a un operador en vivo. Ver 6.1.
   - Si el cliente responde **"No"** → el bot escala inmediatamente al operador y pide el nombre del cliente. **No** pide tipo, número, relato ni dígitos: ese cliente está doblemente frustrado (cobro doble + servicio no prestado), no tiene sentido alargar el gather. El operador recoge los datos faltantes por teléfono. Ver 6.4.
 - **Validación de los 4 dígitos** (solo en el flujo Sí): si el cliente escribe 3, 5 o más cifras, o algo que no contiene 4 dígitos exactos, el bot le pide que lo reescriba: **"Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?"**. Si tras un segundo intento sigue sin dar 4 dígitos exactos, el bot pasa el caso a un operador.
-- **Escalera de 3 intentos para tipo y número de máquina** (regla general del bot, también en este caso): si el cliente no entrega un tipo o un número reconocible, el bot reformula con una pista útil; tras dos intentos fallidos escala al operador (Regla 1 — "Reglas generales del bot").
+- **Escalera de 3 intentos para tipo y número de máquina**: si el cliente no entrega un tipo o un número reconocible, el bot reformula con una pista útil; tras dos intentos fallidos escala al operador.
 - El resumen para el operador incluye: nombre del cliente, lavandería, tipo y número de máquina (si se han recogido), si ha podido o no usar el servicio, y el relato o respuesta del cliente.
 - **Otras vías de escalación inmediata** (sin llegar a la pregunta "¿has podido?"):
   - Si el cliente está muy enfadado y exige hablar con un operador, el bot escala al instante (6.2).
   - Si el relato del cliente es contradictorio o incoherente, el bot escala (6.3).
 - Variantes detalladas en 6.1, 6.2, 6.3, 6.4 y 6.5.
 
-**Ejemplo de conversación (flujo Sí):**
+**Trigger (frases típicas del cliente):**
+- «Me habéis cobrado dos veces con la tarjeta»
+- «Doble cobro»
+- «Me cobraron dos veces»
+- «Charged me twice» (multilingüe)
 
-**Usuario:** Me habéis cobrado dos veces con la tarjeta.  
-**Bot:** Lo revisamos contigo. ¿En qué lavandería estás?
-
-**Usuario:** Goya.  
-**Bot:** Gracias. ¿Has podido lavar o secar la ropa?
-
-**Usuario:** Sí.  
-**Bot:** ¿Es una lavadora o una secadora?
-
-**Usuario:** Lavadora.  
-**Bot:** ¿Qué número tiene la lavadora?
-
-**Usuario:** 5.  
-**Bot:** De acuerdo. Explícame, por favor, paso a paso qué has hecho desde que has entrado. ¿Es posible que hayas pasado varias veces la tarjeta por el datáfono?
-
-**Usuario:** He pagado, no iba y volví a pasar la tarjeta.  
-**Bot:** Gracias. Para revisarlo bien, necesito los últimos 4 dígitos de la tarjeta.
-
-**Usuario:** 4821.  
-**Bot:** Perfecto. Ahora necesito una captura del pago. Con esos datos podremos revisarlo y enviarte el formulario de devolución. La próxima vez, antes de volver a pagar, contacta con nosotros y te ayudaremos al momento. ¿Cómo te llamas?
-
-**Usuario:** Carlos.  
-**Bot:** Gracias Carlos. Hemos recibido toda la información necesaria para tu caso. Vamos a revisar tu situación y te enviaremos el formulario de reembolso.
-
-**Resultado esperado:**  
-Datos recogidos y caso preparado para revisión.
-
-**Escalar si:**  
-- el importe no cuadra con el local
-- el relato es confuso
-- el cliente está muy molesto
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
 
 ---
 
@@ -989,36 +803,18 @@ Comprobar si la central devolvió el cambio y reconducir al flujo correcto.
 **Cuándo aplica:**  
 El cliente pagó, pero no llegó a usar la máquina.
 
-**Criterios de aceptación:**
-- El bot pregunta primero la lavandería, luego si es lavadora o secadora, luego el número de máquina y finalmente si la central ha devuelto el cambio.
-- Si el cliente, en lugar de responder sí/no a la pregunta del cambio, escribe directamente un código de pantalla (ej. "PUSH PROG"), el bot reconoce el código y le da la instrucción correspondiente de ese código (en este caso, le explica los 4 programas y le pide pulsar uno).
-- Cuando el cliente confirma que la máquina ha arrancado, el bot cierra con un mensaje positivo.
-- Cuando el cliente dice que la máquina sigue sin responder tras la instrucción, el bot pide al cliente que confirme una vez más qué aparece en pantalla y luego pasa el caso a un operador. El resumen al operador incluye el código de pantalla relevante.
-- Variantes happy y de escalación detalladas en 7.1 y 7.2.
+**Trigger (frases típicas del cliente):**
+- «He pagado pero no he podido usar la máquina»
+- «Pagué y no pude lavar»
+- «No conseguí usar la lavadora aunque pagué»
 
-**Ejemplo de conversación:**
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
 
-**Usuario:** He pagado y no he podido usar la máquina.  
-**Bot:** Te ayudo a revisarlo. ¿En qué lavandería estás?
-
-**Usuario:** Pineda.  
-**Bot:** Gracias. ¿La central te ha devuelto el cambio?
-
-**Usuario:** Sí.  
-**Bot:** De acuerdo. ¿Qué aparece exactamente en la pantalla de la máquina?
-
-**Usuario:** PUSH PROG.  
-**Bot:** Perfecto. Pulsa ahora el programa que quieras usar y dime si la máquina responde.
-
-**Usuario:** Ahora sí.  
-**Bot:** Perfecto, ya estaría resuelto.
-
-**Resultado esperado:**  
-Resolución o redirección al flujo de pantalla.
-
-**Escalar si:**  
-- tras seguir el paso, la máquina no responde
-- el cliente no sabe leer la pantalla y no puede enviar foto
+**Reglas comunes a 7.1 y 7.2:**
+- Orden de gather: lavandería → tipo de máquina → número de máquina → ¿la central ha devuelto el cambio?
+- Si el cliente, en lugar de responder sí/no a la pregunta del cambio, escribe directamente un código de pantalla (ej. «PUSH PROG»), el bot reconoce el código y le da la instrucción correspondiente.
+- Las dos ramas (resuelto vía pantalla / no responde tras instrucción) se detallan en 7.1 y 7.2.
 
 ---
 
@@ -1105,53 +901,25 @@ máquina.
 El cliente tiene un código de descuento (formato: 3 letras + fecha
 DDMMYY + importe, ej. `SAU2904266`).
 
-**Criterios de aceptación (caso completo):**
-- Validación del formato `^[A-Z]{3}\d{6,7}$` antes de seguir. Códigos solo numéricos sin letras → cae a Caso 18 (incoherencia).
-- Cuando el formato es válido: el bot recoge nombre + location + número de máquina + estado de la puerta, en este orden.
-- El resumen al operador contiene los datos parseados (`letras`, `fechaIso`, `importe`) + la máquina + el estado de puerta, para activación remota.
-- Cuando el formato no encaja: escalación con "código no reconocido, requiere revisión manual" — sin discutir con el cliente.
-- Variantes detalladas en 8.1 y 8.2.
+**Trigger (frases típicas del cliente):**
+- «Tengo un código y no sé cómo usarlo»
+- «Tengo un código de descuento»
+- «Me han dado un código»
+- Variantes con typos del verbo («teng un codigo», «tnego un código»)
 
-**Ejemplo de conversación:**
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. Te ayudo. ¿Podrías indicarme, por favor, el código exacto tal como lo ves, incluyendo letras si las hay?»
 
-**Usuario:** Tengo un código y no sé cómo usarlo.  
-**Bot:** Te ayudo. ¿Podrías indicarme, por favor, el código exacto tal como lo ves, incluyendo letras si las hay?
+(El bot **no** pregunta lavandería / tipo de máquina / pantalla en este turno — solo pide el código.)
 
-**Usuario:** SAU2904266.  
-**Bot:** ¡Gracias! ¿Cuál es tu nombre?
-
-**Usuario:** Andrea.  
-**Bot:** ¿En qué pueblo / lavandería quieres usarlo?
-
-**Usuario:** Goya.  
-**Bot:** ¿Qué número de máquina deseas usar?
-
-**Usuario:** 5.  
-**Bot:** ¿La tienes cargada y con la puerta cerrada?
-
-**Usuario:** Sí.  
-**Bot:** Dame un minuto, hacemos las comprobaciones correspondientes. Si el código es correcto, te activaremos la máquina. 🙂  
-*(seguido del resumen al operador con código parseado, fecha ISO, importe y datos máquina)*
-
-**Notas de comportamiento:**
-
-- Formato esperado: `^[A-Z]{3}\d{6}\d+$` → 3 letras (`SAU`) + 6 dígitos
-  fecha DDMMYY (`290426` → `2026-04-29`) + importe en dígitos (`6`).
-- Si el formato **no encaja**, el bot escala directamente con motivo
-  "código con formato no reconocido" sin seguir recogiendo datos.
-- Si la lavandería o el número de máquina ya están en el contexto, el
-  bot omite esas preguntas.
-- El operador valida el código y activa remotamente la máquina; tras la
-  activación responde manualmente al cliente con un mensaje del tipo
-  *"La máquina ya está activada, ¿ya funciona?"* (no es enviado por el
-  bot).
-
-**Resultado esperado:**  
-Datos completos en manos del operador, listos para validación + activación remota.
-
-**Escalar si:**  
-- el código no encaja con el formato esperado
-- el cliente dice que solo hay números y no hay letras delante
+**Reglas comunes a 8.1 y 8.2:**
+- Validación del formato esperado: `^[A-Z]{3}\d{6}\d+$` → 3 letras + 6 dígitos fecha (DDMMYY) + importe.
+- Códigos solo numéricos sin letras → cae a Caso 18 (incoherencia).
+- Cuando el formato es válido: el bot recoge nombre → pueblo / lavandería → número de máquina → estado de la puerta, en ese orden.
+- Cuando el formato **no encaja**: el bot pide al cliente que lo escriba de nuevo (retry), y solo tras un segundo intento inválido escala al operador. No escala al primer intento.
+- Si la lavandería o el número de máquina ya están en el contexto, el bot omite esas preguntas.
+- El operador valida el código y activa remotamente la máquina.
+- Las dos variantes (formato válido / formato inválido tras retry) se detallan en 8.1 y 8.2.
 
 ---
 
@@ -1199,63 +967,24 @@ y derivar el caso al operador con un resumen completo.
 **Cuándo aplica:**  
 El cliente pide factura.
 
-**Criterios de aceptación (caso completo):**
-- Gather order de 8 pasos: lavandería → tipo → razón social → dirección → CIF → fecha (acepta "hoy" / "ayer" → ISO) → email → nombre.
-- Si location y/o tipo ya están en sticky state (de un turno anterior), el bot **omite** esos pasos y empieza directamente desde razón social.
+**Trigger (frases típicas del cliente):**
+- «Quiero una factura»
+- «Necesito factura»
+- «¿Me podéis dar factura?»
+- «Factura por favor»
+
+**Primera respuesta del bot:**  
+«👋 Claro, te ayudo con la factura. 🙂 ¿En qué lavandería estuviste?»
+
+(El bot **no** pregunta por la pantalla, número de máquina ni payment al iniciar el flujo: se va directo al gather de datos de facturación.)
+
+**Reglas comunes a 9.1 y 9.2:**
+- Gather order de 8 pasos: lavandería → tipo → razón social → dirección → CIF/NIF/NIE → fecha (acepta «hoy» / «ayer» → ISO) → email → nombre.
+- Si location y/o tipo ya están en sticky state (turno anterior), el bot **omite** esos pasos y empieza directamente desde la razón social.
 - Validación rigurosa de email (formato `algo@dominio.tld`): si no es válido → re-ask hasta que lo sea, **sin avanzar** al paso del nombre.
-- El reply final tras nombre contiene: nombre, email válido, "human support" trigger.
-- El resumen al operador contiene **todos** los campos billing (razón social, dirección, CIF, fecha ISO, email, nombre).
-- Variantes happy / email-retry detalladas en 9.1 y 9.2.
-
-**Ejemplo de conversación:**
-
-**Usuario:** Quiero una factura.  
-**Bot:** Claro, te ayudo con la factura. 🙂 ¿En qué lavandería estuviste?
-
-**Usuario:** Goya.  
-**Bot:** Gracias. ¿Utilizaste lavadora o secadora?
-
-**Usuario:** Lavadora.  
-**Bot:** Perfecto. ¿Me indicas la razón social?
-
-**Usuario:** ACME SL.  
-**Bot:** ¿Y la dirección?
-
-**Usuario:** Calle Mayor 1, Madrid.  
-**Bot:** ¿Cuál es tu CIF/NIF/NIE?
-
-**Usuario:** B12345678.  
-**Bot:** ¿Qué día utilizaste el servicio? (puedes decirme "hoy", "ayer" o una fecha)
-
-**Usuario:** Ayer.  
-**Bot:** ¿A qué correo electrónico te enviamos la factura?
-
-**Usuario:** ana.  
-**Bot:** El correo no parece válido. ¿Puedes escribírmelo de nuevo, por favor?
-
-**Usuario:** ana@example.com.  
-**Bot:** Por último, ¿cuál es tu nombre?
-
-**Usuario:** Andrea.  
-**Bot:** Gracias Andrea, te enviaremos pronto la factura del 2026-05-05 a tu correo: ana@example.com. 🙂  
-*(seguido del resumen al operador con todos los datos recogidos)*
-
-**Notas de comportamiento:**
-
-- Si la lavandería o el tipo de máquina ya están en el contexto de la
-  conversación (porque el cliente los ha mencionado antes), el bot omite
-  esas preguntas y pasa directamente a la razón social.
-- El email se valida: si no tiene formato `algo@dominio.tld` el bot vuelve
-  a preguntarlo hasta recibir uno válido (no se avanza sin email).
-- Las fechas relativas ("hoy", "ayer", "anteayer", "oggi", "ieri",
-  "today", "yesterday", "hier"…) se normalizan a ISO `YYYY-MM-DD`. Si el
-  cliente escribe texto libre se conserva tal cual y se pasa al operador.
-
-**Resultado esperado:**  
-Datos completos en manos del operador, cliente avisado del envío.
-
-**Escalar si:**  
-- el cliente plantea una excepción no contemplada
+- Las fechas relativas («hoy», «ayer», «anteayer»…) se normalizan a ISO `YYYY-MM-DD`. Si el cliente escribe texto libre se conserva tal cual.
+- El reply final tras el nombre confirma envío de la factura al email + se pasa al operador con resumen completo.
+- Las dos variantes (happy / email retry) se detallan en 9.1 y 9.2.
 
 ---
 
@@ -1365,6 +1094,16 @@ Explicar compra y limitación de uso de la tarjeta.
 **Cuándo aplica:**  
 El cliente quiere adquirir una tarjeta.
 
+**Trigger (frases típicas del cliente):**
+- «¿Cómo consigo la tarjeta?»
+- «¿Cómo compro la tarjeta de fidelización?»
+- «Quiero la tarjeta de descuento»
+
+**Primera respuesta del bot:**  
+«La tarjeta de fidelización se compra con 20 € en efectivo y solo funciona en la tienda donde se ha comprado. ¿En qué lavandería estás?»
+
+(El bot **no** pregunta por la pantalla, número de máquina ni payment: es una FAQ.)
+
 **Criterios de aceptación:**
 - Respuesta canónica: precio (20 €) + restricción ("solo funciona en la tienda donde se ha comprado").
 - Si el cliente da la location, el bot añade la instrucción específica del local (ej. en Goya: "segundo botón de la línea de la derecha en la central"), leída de `locations.json:faqOverrides`.
@@ -1398,6 +1137,16 @@ Explicar la recarga de forma simple.
 **Cuándo aplica:**  
 El cliente ya tiene tarjeta y quiere recargarla.
 
+**Trigger (frases típicas del cliente):**
+- «¿Cómo recargo la tarjeta?»
+- «Cargar la tarjeta de fidelización»
+- «No sé recargarla»
+
+**Primera respuesta del bot:**  
+«Introduce la tarjeta y sigue las instrucciones de la central. Si aparece algún mensaje extraño, dímelo y lo revisamos.»
+
+(El bot **no** pregunta location ni máquina: la operación de recarga es estándar en todas las centrales.)
+
 **Criterios de aceptación:**
 - Respuesta canónica corta: "introduce la tarjeta y sigue las instrucciones de la central".
 - Cierre proactivo: invita al cliente a reportar si aparece un mensaje extraño durante la recarga (sin escalar todavía).
@@ -1429,10 +1178,21 @@ Responder consultas generales sin inventar datos.
 **Cuándo aplica:**  
 El cliente pregunta por horarios o precios.
 
+**Trigger (frases típicas del cliente):**
+- «¿Cuál es el horario?»
+- «¿A qué hora abrís?»
+- «¿Hasta qué hora estáis abiertos?»
+- «¿Cuánto cuesta lavar?» / «¿Qué precios tenéis?»
+
+**Primera respuesta del bot:**  
+- Para horarios: «El horario general de atención al público es de 8:00 a 22:00 cada día del año.»
+- Para precios: «Tengo que revisarlo antes de confirmarte ese importe.»
+
+(El bot **no** pregunta por la pantalla, máquina ni payment: es una FAQ.)
+
 **Criterios de aceptación:**
 - Horarios: respuesta por defecto 8:00-22:00. Excepción L'Escala: 7:00-23:00 (override leído de `locations.json:faqOverrides.openingHours`).
 - Precios: respuesta canónica de "deflect" — el bot **no** inventa importes; redirige a "tengo que revisarlo antes de confirmártelo".
-- Reconocimiento multilingüe del input: el cliente puede escribir en ES / IT / EN / CA / PT / FR y el bot detecta la pregunta vía `HORARIOS_TOPIC` / `PRECIO_TOPIC` (regex multilingüe). El **output** se mantiene en el idioma del tenant (ES).
 - Follow-up "¿y en L'Escala?" (después de un horario general) → respuesta con la excepción, sin re-pedir contexto.
 
 **Ejemplo de conversación A — Horario general**
@@ -1450,22 +1210,6 @@ El cliente pregunta por horarios o precios.
 **Usuario:** ¿Cuánto cuesta esta máquina?  
 **Bot:** Tengo que revisarlo antes de confirmarte ese importe.
 
-**Ejemplo de conversación D — Cliente escribe en otro idioma (input)**
-
-El tenant Ecolaundry corre en **ES** (todas las respuestas en español),
-pero los clientes pueden escribir en cualquiera de las 6 lenguas
-soportadas. El bot debe reconocer la pregunta de horarios y responder.
-
-**Usuario (IT):** ciao  
-**Bot:** Hola, soy el asistente virtual de la lavandería. Cuéntame, ¿en qué te ayudo? 🙂
-
-**Usuario (IT):** che orari avete?  
-**Bot:** El horario general de atención al público es de 8:00 a 22:00 cada día del año.
-
-(equivalente para EN/FR/PT/CA: el bot SIEMPRE responde en ES, pero el
-input multilingüe es reconocido por `HORARIOS_TOPIC` y `PRECIO_TOPIC` en
-[`utils/guards/hours-and-pricing.ts`](../utils/guards/hours-and-pricing.ts).)
-
 **Resultado esperado:**  
 Consulta informativa resuelta o derivada correctamente.
 
@@ -1482,6 +1226,15 @@ Escalar sin confrontar al cliente, recopilando los datos mínimos para el operad
 
 **Cuándo aplica:**  
 Aparece `ALM`, `ALN`, `001`, un código no documentado, o hay incoherencias en el relato o en el importe.
+
+**Trigger (frases típicas del cliente):**
+- «Me sale ALN»
+- «Sale un código raro»
+- «No entiendo lo que pone»
+- «He pagado y ahora sale [código]»
+
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
 
 **Criterios de aceptación:**
 - Caso "paraguas" para alarmas/incoherencias genéricas. Más específicos: Caso 14 (ALM DOOR), Caso 15 (001), Caso 16 (ALM/ALN secadora), Caso 18 (numérico), Caso 30 (no documentado).
@@ -1522,6 +1275,14 @@ Gestionar correctamente un problema de cierre o una posible prenda atrapada ante
 
 **Cuándo aplica:**  
 El cliente indica que en pantalla aparece `ALM DOOR`.
+
+**Trigger (frases típicas del cliente):**
+- «Me sale ALM DOOR»
+- «Aparece ALM/DOOR en la pantalla»
+- «ALMDOOR»
+
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
 
 **Criterios de aceptación:**
 - Diferencia clave con Caso 2 (DOOR simple): el bot intenta **una vez** la guía de "abrir + revisar prendas atrapadas + cerrar bien" antes de escalar.
@@ -1564,6 +1325,14 @@ Reconocer un caso que debe escalarse siempre.
 **Cuándo aplica:**  
 El cliente indica que aparece `001`.
 
+**Trigger (frases típicas del cliente):**
+- «Sale 001 en la pantalla»
+- «Me pone 001»
+- «Aparece el número 001»
+
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
+
 **Criterios de aceptación:**
 - Reconocimiento de `001` puro (sin prefijo `AL`/`ALM`) → display token canónico `C001`.
 - El bot da una **explicación educativa** ("ese mensaje aparece cuando se ha seleccionado el programa antes del pago") antes de escalar — sin pedir al cliente que repita pasos.
@@ -1596,6 +1365,15 @@ Detectar una alarma de máquina y escalar sin hacer manipular más al cliente, r
 
 **Cuándo aplica:**  
 El cliente indica `ALM`, `ALN`, `ALN A`, `ALN N` o un código de alarma similar.
+
+**Trigger (frases típicas del cliente):**
+- «La secadora pone ALN»
+- «Me sale ALM»
+- «ALN A»
+- «Aparece un código de alarma»
+
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
 
 **Criterios de aceptación:**
 - Reconocimiento robusto: `ALN`, `ALN A`, `ALN N` se normalizan al token correspondiente; familias `ALM/A`, `ALM/E`, `ALM/VAr` se normalizan también.
@@ -1632,6 +1410,15 @@ Escalar cuando no se puede obtener el estado de pantalla.
 
 **Cuándo aplica:**  
 El cliente no sabe leer el display o no ve bien la pantalla.
+
+**Trigger (frases típicas del cliente):**
+- «No sé qué pone»
+- «No veo la pantalla»
+- «Está en blanco»
+- «No puedo leer el display»
+
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
 
 **Criterios de aceptación:**
 - Trigger: el cliente dice "no sé qué pone", "no veo la pantalla", "está en blanco" o equivalente.
@@ -1674,6 +1461,16 @@ Detectar una incoherencia sin confrontar al cliente.
 **Cuándo aplica:**  
 El cliente facilita un código compuesto solo por números y afirma que no tiene letras delante.
 
+**Trigger (frases típicas del cliente):**
+- «Tengo un código: 12345»
+- «Código 23432023»
+- «Mi código es 999888»
+
+**Primera respuesta del bot:**  
+«Gracias. ¿Ves alguna letra delante de los números?»
+
+(El bot **no** pregunta lavandería ni máquina al inicio: primero verifica si hay letras antes de continuar.)
+
 **Criterios de aceptación:**
 - Trigger: input que matche `^\d{3,}$` (3+ dígitos puros, sin letras).
 - Step 1: el bot pregunta explícitamente "¿ves alguna letra delante?" (`numericCodeAskLetters`).
@@ -1708,6 +1505,14 @@ Detectar una incoherencia de importe sin acusar al cliente.
 **Cuándo aplica:**  
 El cliente está en Goya y afirma que el datáfono ha cobrado 10 €.
 
+**Trigger (frases típicas del cliente):**
+- «El datáfono me ha cobrado 10 €»
+- «Estoy en Goya y me cobraron 10 euros»
+- «Goya: datáfono me ha sacado 10 euros»
+
+**Primera respuesta del bot:**  
+«Gracias por indicarlo. Vamos a revisarlo contigo. ¿Has podido usar el servicio?»
+
 **Criterios de aceptación:**
 - Trigger: input mencionar `datáfono` + cifra atípica + location Goya. Detector en `nluPatterns.topicPayment` + `location-gated-mismatch`.
 - Set state: `nonTroubleshootingIncident="datafono-wrong-amount"`. El gather de máquina queda **deshabilitado** (no se piden tipo/número).
@@ -1741,6 +1546,14 @@ Detectar una incoherencia de importe sin confrontar.
 **Cuándo aplica:**  
 El cliente está en Pineda y afirma que el datáfono ha cobrado 10 €.
 
+**Trigger (frases típicas del cliente):**
+- «En Pineda me ha cobrado 10 €»
+- «Pineda datáfono 10 euros»
+- «Estoy en Pineda y han cobrado 10»
+
+**Primera respuesta del bot:**  
+«Gracias. Vamos a revisarlo. ¿Has podido lavar o secar la ropa?»
+
 **Criterios de aceptación:**
 - Mismo flujo del Caso 19, pero con location = Pineda. Misma escalación, mismo `nonTroubleshootingIncident="datafono-wrong-amount"`.
 - Mismatch detector (`location-gated-mismatch`) confirma que esta incidencia se reconoce **sólo** en Goya y Pineda; en otras localizaciones el bot indica "no tenemos registrado en <local>" antes de escalar.
@@ -1772,6 +1585,14 @@ Identificar una incidencia habitual del local y escalarla correctamente.
 
 **Cuándo aplica:**  
 El cliente está en Alemanya, usa secadora y dice que ha añadido tiempo pero no se han sumado minutos.
+
+**Trigger (frases típicas del cliente):**
+- «He puesto más dinero en la secadora y no suma minutos»
+- «He añadido monedas y no se ha sumado tiempo»
+- «Estoy en Alemanya y la secadora no añade minutos»
+
+**Primera respuesta del bot:**  
+«Gracias. ¿Estás en la lavandería Alemanya?»
 
 **Criterios de aceptación:**
 - Trigger: `topicDryerMinutes` + location Alemanya + machineType=dryer.
@@ -1806,6 +1627,14 @@ Identificar una incidencia habitual del local y escalar.
 **Cuándo aplica:**  
 El cliente está en Pineda y los minutos añadidos no se reflejan.
 
+**Trigger (frases típicas del cliente):**
+- «He añadido tiempo a la secadora y no lo ha sumado»
+- «Estoy en Pineda y los minutos no se han añadido»
+- «Pineda secadora monedas no suman»
+
+**Primera respuesta del bot:**  
+«Gracias. ¿Estás en Pineda?»
+
 **Criterios de aceptación:**
 - Mismo flujo del Caso 21, location = Pineda. Misma `nonTroubleshootingIncident="dryer-minutes-not-credited"`.
 - En otras localizaciones (Goya, Hortes, L'Escala) el bot indica explícitamente "no tenemos registrado en <local>" antes de escalar (mismatch detector).
@@ -1837,6 +1666,14 @@ Reconocer una incidencia operativa del local y derivarla.
 
 **Cuándo aplica:**  
 El cliente indica que está en Alemanya y no puede pagar con tarjeta.
+
+**Trigger (frases típicas del cliente):**
+- «No puedo pagar con tarjeta»
+- «El datáfono no funciona»
+- «No me acepta la tarjeta en Alemanya»
+
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
 
 **Criterios de aceptación:**
 - Trigger: `topicCardFail` + location Alemanya. Set `nonTroubleshootingIncident="card-payment"`.
@@ -1871,6 +1708,14 @@ Reconocer una incidencia operativa del local y derivarla.
 **Cuándo aplica:**  
 El cliente indica que está en Hortes y no puede pagar con tarjeta.
 
+**Trigger (frases típicas del cliente):**
+- «La tarjeta no funciona para pagar»
+- «Estoy en Hortes y no puedo pagar con tarjeta»
+- «Hortes datáfono no acepta tarjeta»
+
+**Primera respuesta del bot:**  
+«Gracias. ¿Estás en Hortes?»
+
 **Criterios de aceptación:**
 - Mismo flujo del Caso 23, location = Hortes. Misma `nonTroubleshootingIncident="card-payment"`.
 - Confirmación de location proactiva si no fue dada en el primer mensaje.
@@ -1902,6 +1747,15 @@ Mantener un tono calmado y no discutir.
 
 **Cuándo aplica:**  
 El cliente usa un tono agresivo, exigente o muy molesto.
+
+**Trigger (frases típicas del cliente):**
+- «¡Esto siempre falla!»
+- «¡Quiero una solución ya!»
+- «¡Estoy harto!»
+- «¡Quiero hablar con un operador ahora mismo!»
+
+**Primera respuesta del bot:**  
+«Entiendo tu malestar y quiero ayudarte. Vamos a revisarlo lo antes posible. ¿En qué lavandería estás?»
 
 **Criterios de aceptación:**
 - T1: el bot abre con empatía explícita ("entiendo tu malestar, quiero ayudarte") **antes** de cualquier pregunta — `guardAngryCustomerEmpathic`.
@@ -1935,6 +1789,14 @@ Recoger datos sin prometer una devolución automática.
 **Cuándo aplica:**  
 El cliente pide devolución inmediata.
 
+**Trigger (frases típicas del cliente):**
+- «Quiero que me devolváis el dinero»
+- «Devolución ya»
+- «Me lo tenéis que devolver»
+
+**Primera respuesta del bot:**  
+«Vamos a revisarlo contigo. Para tramitarlo, necesito los últimos 4 dígitos de la tarjeta, una captura del pago y un breve resumen.»
+
 **Criterios de aceptación:**
 - Trigger: `topicRefundDemand`. Set `nonTroubleshootingIncident="refund-demand"`.
 - El bot recoge datos mínimos (4 dígitos, captura, resumen) **sin prometer** la devolución (la decisión es del operador).
@@ -1966,6 +1828,15 @@ No prometer compensaciones no automatizadas.
 
 **Cuándo aplica:**  
 El cliente exige una secadora gratis, una lavadora gratis, un código nuevo o cualquier compensación concreta.
+
+**Trigger (frases típicas del cliente):**
+- «Quiero una secadora gratis»
+- «Dame una lavadora gratis por las molestias»
+- «Quiero un código nuevo de descuento»
+- «Por las molestias, necesito una compensación»
+
+**Primera respuesta del bot:**  
+«Vamos a revisar tu caso para ayudarte con la solución más adecuada.»
 
 **Criterios de aceptación:**
 - Trigger: `topicCompensation`. Set `nonTroubleshootingIncident="compensation-demand"`.
@@ -1999,6 +1870,14 @@ Detectar incoherencia y escalar sin discutir.
 
 **Cuándo aplica:**  
 El cliente mezcla versiones incompatibles de lo ocurrido.
+
+**Trigger (frases típicas del cliente):**
+- «Me cobró dos veces, aunque creo que también pagué con monedas»
+- «Cobró dos veces, creo, no sé bien»
+- «No estoy seguro pero me cobró 3 o 4 veces»
+
+**Primera respuesta del bot:**  
+«Gracias. Vamos a revisarlo contigo. ¿Has podido finalmente usar el servicio?»
 
 **Criterios de aceptación:**
 - Trigger: `topicContradictoryNarrative` — patrón "cobró dos veces / aunque también pagué + creo / no sé / o algo así". Detector en `guardContradictoryNarrative`.
@@ -2034,6 +1913,15 @@ No prometer una comprobación directa desde el bot y derivar correctamente.
 **Cuándo aplica:**  
 El cliente menciona cámaras, AJAX o soporte técnico.
 
+**Trigger (frases típicas del cliente):**
+- «Mirad las cámaras»
+- «Revisad las cámaras de seguridad»
+- «Necesito que el soporte técnico lo mire»
+- «AJAX»
+
+**Primera respuesta del bot:**  
+«Gracias por indicarlo. Vamos a revisar tu caso manualmente para poder comprobarlo bien. ¿Cómo te llamas?»
+
 **Criterios de aceptación:**
 - Trigger: `topicOps` (palabras: cámaras, AJAX, soporte técnico). Set `nonTroubleshootingIncident="cameras-or-ajax"`.
 - El bot **no** dice "vamos a mirarlo" como si pudiera ver las cámaras — eso es un job del operador. Sólo dice "lo revisamos manualmente".
@@ -2065,6 +1953,16 @@ Escalar cuando el cliente da un código que no coincide con ningún caso conocid
 
 **Cuándo aplica:**  
 El cliente facilita un código distinto de los conocidos (PUSH PROG, SEL, DOOR, ALM DOOR, 001, ALM, ALN, AL001), o escribe un texto que el bot no consigue reconocer como un código.
+
+**Trigger (frases típicas del cliente):**
+- «En la pantalla sale ERR 52»
+- «STOP» / «FILTRO» / códigos no documentados
+- «asdf» / typos no reconocibles tras gather de display
+
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
+
+(Detección activa cuando el bot ya ha pedido el display y el cliente da algo que no es ningún código conocido — re-ask, luego escala.)
 
 **Criterios de aceptación:**
 - El bot pregunta primero la lavandería, el tipo de máquina y el número de máquina.
@@ -2119,6 +2017,16 @@ Evitar diagnosticar sin el dato mínimo más importante.
 **Cuándo aplica:**  
 El cliente explica el problema pero no dice en qué lavandería está.
 
+**Trigger (frases típicas del cliente):**
+- «La secadora no funciona» (sin mención de local)
+- «No me arranca» (sin local)
+- Cualquier descripción del problema sin referencia a una lavandería conocida
+
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
+
+(Si el cliente responde «no lo sé» / «ni idea» → bot insiste: «Para poder ayudarte, necesito saber primero en qué lavandería estás exactamente.»)
+
 **Criterios de aceptación:**
 - El bot **no** procede al gather de tipo/número/display sin location (excepción: Casos no-troubleshooting que escalan directo).
 - Si el cliente dice "no lo sé" / "ni idea" → re-ask con énfasis: "para poder ayudarte, necesito saber primero en qué lavandería estás".
@@ -2156,6 +2064,16 @@ adelante (ej. el número de máquina).
 El cliente mezcla el problema técnico con el problema de cobro y suele
 adelantar respuestas (números, "lavadora", etc.) antes de que el bot las
 pida explícitamente.
+
+**Trigger (frases típicas del cliente):**
+- «He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro»
+- «He pagado dos veces y la lavadora 3 no funciona»
+- Mensajes que combinan múltiples facts en una sola frase
+
+**Primera respuesta del bot:**  
+«👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
+
+(El bot recoge primero la lavandería y luego procede con el canonical order, captando los facts adelantados sin re-preguntarlos.)
 
 **Criterios de aceptación:**
 - T1: el bot pregunta location y **no** se deja confundir por la narrativa mixta del cliente (no entra en gather de pago todavía).

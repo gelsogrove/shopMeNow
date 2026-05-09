@@ -47,7 +47,22 @@ export const guardDiscountCodeAsk: Guard = (ar) => {
   return { reply: t('discountCodeAsk', lang(ar)), reason: 'discount-code-ask' }
 }
 
-/** Caso 8 step 2 — customer typed the code: validate format, branch. */
+/** Caso 8 step 2 — customer typed the code: validate format, branch.
+ *
+ *  3-strikes ladder on format invalid (Andrea, 2026-05-09 regression):
+ *  customer types something that doesn't match `^[A-Z]{3}\d{6}\d+$`:
+ *    - 1st invalid (counter == 0) → re-ask politely with format hint
+ *      (`discountCodeFormatRetry`). Keep `pendingFlow=discount-code-await`
+ *      so the next turn reaches this guard again.
+ *    - 2nd invalid in a row (counter >= 1) → escalate to operator with
+ *      the existing `discountCodeFormatInvalid` + name capture.
+ *    - Successful parse → counter resets to 0, flow advances.
+ *
+ *  REGRESSION: previously the guard escalated immediately on the first
+ *  invalid input (real chat: customer typed "xxjdse7" → escalate with no
+ *  chance to retype). The retry+escalate ladder mirrors the rule already
+ *  in place for display / machineNumber / 4-digits ask.
+ */
 export const guardDiscountCodeAwait: Guard = (ar, userMessage) => {
   if (
     ar.state.pendingFlow !== 'discount-code-await' ||
@@ -68,15 +83,28 @@ export const guardDiscountCodeAwait: Guard = (ar, userMessage) => {
 
   const parsed = parseCaso8Code(raw)
   if (!parsed) {
-    // Format invalid → escalate, ask customer name.
-    ar.state.pendingFlow = ''
-    escalate(ar, 'Discount code — código con formato no reconocido')
-    requireCustomerName(ar)
-    const escalateText = t('discountCodeFormatInvalid', lang(ar))
-    const nameAsk = t('customerNameAsk', lang(ar))
-    return { reply: `${escalateText} ${nameAsk}`, reason: 'discount-code-escalate' }
+    // Format invalid: retry once before escalating.
+    const attempts = ar.state.discountCodeAskAttempts || 0
+    if (attempts >= 1) {
+      // 2nd invalid in a row → escalate.
+      ar.state.discountCodeAskAttempts = 0
+      ar.state.pendingFlow = ''
+      escalate(ar, 'Discount code — código con formato no reconocido after 2 attempts')
+      requireCustomerName(ar)
+      const escalateText = t('discountCodeFormatInvalid', lang(ar))
+      const nameAsk = t('customerNameAsk', lang(ar))
+      return { reply: `${escalateText} ${nameAsk}`, reason: 'discount-code-escalate' }
+    }
+    // 1st invalid → re-ask politely. Keep pendingFlow.
+    ar.state.discountCodeAskAttempts = attempts + 1
+    return {
+      reply: t('discountCodeFormatRetry', lang(ar)),
+      reason: 'discount-code-format-retry',
+    }
   }
 
+  // Valid format → reset retry counter, advance.
+  ar.state.discountCodeAskAttempts = 0
   ar.state.discountCodeData.letters = parsed.letters
   ar.state.discountCodeData.fechaIso = parsed.fechaIso
   ar.state.discountCodeData.importe = parsed.importe

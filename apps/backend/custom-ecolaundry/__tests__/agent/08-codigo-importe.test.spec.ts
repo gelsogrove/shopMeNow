@@ -5,7 +5,9 @@
 //   Steps: ask code → validate → ask name → pueblo → machine number →
 //   "¿cargada y puerta cerrada?" → final reply + escalation.
 //
-// Format invalid → escalation immediata con motivo "formato no reconocido".
+// Format invalid → 1° intento: retry. 2° invalido consecutivo → escalation
+// con motivo "formato no reconocido" (Bug #13 fix Andrea-2026-05-09: prima
+// escalava già al 1° invalido, ora segue il retry+escalate ladder).
 //
 // Scenario 8.1 — Happy Path: bot saluta + chiede solo il codice (no machine/display/escalation).
 // Scenario 8.2 — Variante: stesso trigger, stessa risposta canned.
@@ -49,19 +51,39 @@ export const tests: TestCase[] = [
     },
   },
   {
-    // Format invalid → escalation immediata, no raccolta dati.
-    name: 'ES — Caso 8 codice invalido: format check fallisce → escalation diretta',
+    // Bug #13 fix (Andrea-2026-05-09): format invalid → RETRY first, escalate
+    // only on second consecutive invalid attempt. Mirror del retry+escalate
+    // ladder già in uso su display/machineNumber/cardDigits.
+    // approved-by-andrea: replaces "escalation diretta" assertion with the
+    // new ladder behavior.
+    name: 'ES — Caso 8 codice invalido (1° intento): retry, no escalation',
     run: async (ctx) => {
       await ctx.send('Tengo un código y no sé cómo usarlo.')
       const reply = await ctx.send('AB12345')
-      // Bot deve escalare con messaggio "formato no reconocido" e chiedere nome.
+      // 1° intento invalido → bot deve chiedere di riscriverlo, NON escalare.
+      const lower = reply.toLowerCase()
+      if (!/no\s+encaja|formato|comprobarlo|escrib[ií]rmelo\s+de\s+nuevo|escr[íi]belo\s+de\s+nuevo/.test(lower)) {
+        throw new Error(`Caso 8 invalido (1° intento): bot deve chiedere retry: ${reply}`)
+      }
+      // NON deve chiedere il nome (escalate non avvenuto).
+      if (/te\s+llamas|tu\s+nombre|c[oó]mo\s+te\s+llamas/.test(lower)) {
+        throw new Error(`Caso 8 invalido (1° intento): NON deve chiedere nome ancora: ${reply}`)
+      }
+      expectMentionsNone(reply, ['pueblo', 'numero de maquina'])
+    },
+  },
+  {
+    // Bug #13 (continuazione): 2° intento invalido consecutivo → escalate.
+    name: 'ES — Caso 8 codice invalido (2° intento consecutivo): escalation',
+    run: async (ctx) => {
+      await ctx.send('Tengo un código y no sé cómo usarlo.')
+      await ctx.send('AB12345') // 1° invalido → retry
+      const reply = await ctx.send('XYZ123') // 2° invalido → escalate
       expectMentionsAll(reply, ['formato', 'manualmente'])
       const lower = reply.toLowerCase()
-      if (!/te\s+llamas|tu\s+nombre|nombre.*por\s+favor|c[oó]mo\s+te/.test(lower)) {
-        throw new Error(`Bot deve chiedere il nome dopo escalation: ${reply}`)
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)) {
+        throw new Error(`Bot deve chiedere il nome dopo 2° invalido: ${reply}`)
       }
-      // NON deve continuare con domande del nuovo flusso.
-      expectMentionsNone(reply, ['pueblo', 'numero de maquina'])
     },
   },
   {

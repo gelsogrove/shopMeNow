@@ -47,6 +47,7 @@
   "discountCodeAskDoor": "L'hai caricata e con la porta chiusa?",
   "discountCodeFinalEscalate": "Dammi un minuto, facciamo le verifiche del caso. Se il codice è corretto, ti attiveremo la macchina. 🙂",
   "discountCodeFormatInvalid": "Il codice non corrisponde al formato previsto, lo verifichiamo manualmente.",
+  "discountCodeFormatRetry": "Quel codice non corrisponde al formato che ci aspettiamo (3 lettere + data + importo, ad es. SAU2904266). Potresti controllarlo e scrivermelo di nuovo, per favore?",
   "al001GuideRetry": "Questo avviso di solito appare quando il processo non è stato fatto nell'ordine corretto. Prima di avvisare l'assistenza, verifichiamo insieme la sequenza. Per favore segui questi passi in questo ordine:\n\n1. Carica la lavatrice\n2. Chiudi lo sportello\n3. Vai alla centralina di pagamento e paga\n4. Seleziona il numero della macchina e ritira il resto se serve\n5. Vai alla macchina selezionata e scegli il programma\n6. Fammi sapere se funziona",
   "al001Resolved": "Perfetto, problema risolto. Ti serve altro?",
   "noChangeResolved": "Perfetto, problema risolto. Ti serve altro?",

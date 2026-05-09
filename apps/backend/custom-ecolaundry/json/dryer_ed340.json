@@ -30,6 +30,7 @@
       "type": "ROUTER",
       "logic": {
         "SEL": "non_parte.ready_state",
+        "PUSH": "non_parte.ready_state",
         "DOOR": "non_parte.door_issue",
         "AL": "non_parte.alarm_state",
         "TIME_OR_PRICE": "non_parte.credit_issue",

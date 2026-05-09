@@ -10,6 +10,7 @@ import { t } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { isMataro, lang, notInActiveSubFlow } from './helpers.js'
 import { escalate, requireCustomerName } from '../state-transitions.js'
+import { nextRetryLadderStep } from './retry-ladder.js'
 
 /** Step 2 — Force "lavadora o secadora?" when location is known but type is not.
  *
@@ -105,12 +106,11 @@ export const guardForceDisplay: Guard = (ar) => {
   ) {
     return null
   }
-  const attempts = ar.state.displayAskAttempts || 0
-
-  // 3rd strike: escalate. The customer has had two chances to give a
-  // recognised code; we hand off to an operator with their name.
-  if (attempts >= 2) {
-    ar.state.displayAskAttempts = 0
+  const step = nextRetryLadderStep(
+    ar.state.displayAskAttempts || 0,
+    (n) => { ar.state.displayAskAttempts = n },
+  )
+  if (step === 'escalate') {
     escalate(ar, 'Display code unrecognised after 2 attempts')
     requireCustomerName(ar)
     return {
@@ -118,15 +118,10 @@ export const guardForceDisplay: Guard = (ar) => {
       reason: 'display-unrecognized-escalate',
     }
   }
-
-  ar.state.displayAskAttempts = attempts + 1
-
-  if (attempts === 0) {
-    // First ask — canonical wording.
+  if (step === 'first-ask') {
     return { reply: t('displayShort', lang(ar)), reason: 'force-display' }
   }
-
-  // Second ask — polite "no reconozco" with an invitation to re-check.
+  // step === 'reask'
   return {
     reply: t('displayUnrecognizedReask', lang(ar)),
     reason: 'display-unrecognized-reask',
@@ -164,12 +159,11 @@ export const guardForceMachineNumber: Guard = (ar) => {
   }
   if (isMataro(ar) && !ar.state.locationStreet) return null
 
-  const attempts = ar.state.machineNumberAskAttempts || 0
-
-  // 3rd strike: escalate. The customer has had two chances; the operator
-  // takes over.
-  if (attempts >= 2) {
-    ar.state.machineNumberAskAttempts = 0
+  const step = nextRetryLadderStep(
+    ar.state.machineNumberAskAttempts || 0,
+    (n) => { ar.state.machineNumberAskAttempts = n },
+  )
+  if (step === 'escalate') {
     escalate(ar, 'Customer could not provide machine number after 2 attempts')
     requireCustomerName(ar)
     return {
@@ -177,16 +171,11 @@ export const guardForceMachineNumber: Guard = (ar) => {
       reason: 'machine-number-unrecognized-escalate',
     }
   }
-
-  ar.state.machineNumberAskAttempts = attempts + 1
-
-  if (attempts === 0) {
-    // First ask — canonical wording.
+  if (step === 'first-ask') {
     const numKey = ar.state.machineType === 'dryer' ? 'machineNumberDryer' : 'machineNumberWasher'
     return { reply: t(numKey, lang(ar)), reason: 'force-machine-number' }
   }
-
-  // Second ask — hint where the number is.
+  // step === 'reask' — hint where the number is.
   return {
     reply: t('machineNumberRetry', lang(ar)),
     reason: 'machine-number-unrecognized-reask',

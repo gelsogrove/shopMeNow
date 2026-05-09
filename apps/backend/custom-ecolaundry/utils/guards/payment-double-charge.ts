@@ -42,6 +42,7 @@ import { t } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { lang } from './helpers.js'
 import { escalate, requireCustomerName } from '../state-transitions.js'
+import { nextRetryLadderStep } from './retry-ladder.js'
 
 /** Caso 6 step 2 — after location is captured, ask "¿has podido lavar/secar?".
  *
@@ -145,9 +146,11 @@ export const guardDoubleChargeAskType: Guard = (ar) => {
     return { reply: t(numKey, lang(ar)), reason: 'double-charge-emit-number-ask' }
   }
 
-  const attempts = ar.state.machineTypeAskAttempts || 0
-  if (attempts >= 2) {
-    ar.state.machineTypeAskAttempts = 0
+  const step = nextRetryLadderStep(
+    ar.state.machineTypeAskAttempts || 0,
+    (n) => { ar.state.machineTypeAskAttempts = n },
+  )
+  if (step === 'escalate') {
     ar.state.pendingFlow = ''
     escalate(ar, 'Double charge — could not gather machine type after 2 attempts')
     requireCustomerName(ar)
@@ -156,8 +159,7 @@ export const guardDoubleChargeAskType: Guard = (ar) => {
       reason: 'double-charge-type-unrecognized-escalate',
     }
   }
-  ar.state.machineTypeAskAttempts = attempts + 1
-  if (attempts === 0) {
+  if (step === 'first-ask') {
     return { reply: t('machineType', lang(ar)), reason: 'double-charge-ask-type' }
   }
   return {
@@ -187,9 +189,11 @@ export const guardDoubleChargeAskNumber: Guard = (ar) => {
     }
   }
 
-  const attempts = ar.state.machineNumberAskAttempts || 0
-  if (attempts >= 2) {
-    ar.state.machineNumberAskAttempts = 0
+  const step = nextRetryLadderStep(
+    ar.state.machineNumberAskAttempts || 0,
+    (n) => { ar.state.machineNumberAskAttempts = n },
+  )
+  if (step === 'escalate') {
     ar.state.pendingFlow = ''
     escalate(ar, 'Double charge — could not gather machine number after 2 attempts')
     requireCustomerName(ar)
@@ -198,8 +202,7 @@ export const guardDoubleChargeAskNumber: Guard = (ar) => {
       reason: 'double-charge-number-unrecognized-escalate',
     }
   }
-  ar.state.machineNumberAskAttempts = attempts + 1
-  if (attempts === 0) {
+  if (step === 'first-ask') {
     const numKey = ar.state.machineType === 'dryer' ? 'machineNumberDryer' : 'machineNumberWasher'
     return { reply: t(numKey, lang(ar)), reason: 'double-charge-ask-number' }
   }
