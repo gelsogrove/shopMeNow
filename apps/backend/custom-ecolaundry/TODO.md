@@ -22,6 +22,7 @@ Owner: Andrea — Last update: 2026-05-09 (post-fact-out-of-order fix)
 | Documentation | ✅ 10 docs in `docs/` + `CLAUDE.md` per-folder |
 | Acceptance-criteria coverage | 🟡 ~85% test-asserted, ~10% code-only, ~5% LLM-only (items #7/#8/#9 close the gap) |
 | Fact-out-of-order pipeline hole (rule #10) | ✅ closed by `guardForceLocation` (2026-05-09); pattern audit + drift remain — see #10 |
+| PII leak to OpenRouter via conversation history | 🟡 history retains customer PII (name, email, phone, CIF, address, card digits). Tracked in #11. |
 
 ---
 
@@ -314,6 +315,165 @@ green baseline. Today the unit tests cover the deterministic guard, but
 the LLM path needs the real LLM to confirm no regressions.
 
 **Done when:** the file is green in the next full agent suite run.
+
+---
+
+### 11. `scrubPiiForLlm(history)` — strip customer PII before sending history to OpenRouter
+
+**Context:** every call to `callAgentLLM(messages, runtime)` sends the full
+`messages` array (system prompt + accumulated history + new user turn) to
+OpenRouter. The history accumulates **all** prior turns, including those
+handled by deterministic guards. So PII collected via i18n-driven gather
+guards (Caso 9 invoice flow, Caso 6 double-charge captura, Caso 8 discount
+code, customer name on every escalation) ends up in the LLM input on the
+NEXT turn that triggers an LLM call.
+
+**Concrete leak inventory** (per turn that hits OpenRouter):
+
+| Field | Where it enters history | Source |
+|---|---|---|
+| `customerName` | every escalation reply quoting the name + the customer's typed name turn | `state.customerName` + raw user turn |
+| `customerPhone` | rendered into the operator handover summary appended to the assistant reply | `appendEscalationSummary()` in `agent.ts` |
+| Email | invoice flow turn ("ana@example.com") + the `invoiceFinal` reply | i18n key `invoiceFinal` + raw user turn |
+| Razón social, dirección, CIF/NIF | invoice flow user turns + `invoiceFinal` reply | raw user turn + state |
+| Last 4 digits of card | doble-charge user turn + summary | raw user turn |
+| Free-text customer narratives | doble-charge `relato` step | raw user turn |
+
+GDPR / data-minimisation principle: this PII is only needed by the
+OPERATOR (in the human-handover summary), not by the LLM. The LLM should
+see structural placeholders so it can keep its conversational context
+without seeing the actual values.
+
+**Goal:** an explicit `scrubPiiForLlm(messages: AgentMessage[]): AgentMessage[]`
+function that runs IN BETWEEN `runLlmLoop` building `messages` and
+`callAgentLLM` sending them. It returns a deep clone with PII replaced
+by stable placeholders.
+
+**Design — placeholder format:**
+
+Stable, semantic, easy to spot in logs and reversible offline:
+
+```
+"Andrea"               → "<CUSTOMER_NAME>"
+"+34 600 12 34 56"     → "<CUSTOMER_PHONE>"
+"ana@example.com"      → "<EMAIL>"
+"PIno pallo SRL"       → "<COMPANY>"
+"Calle Mayor 1, ..."   → "<ADDRESS>"
+"B12345678"            → "<TAX_ID>"
+"4821" (4-digit card)  → "<CARD_LAST4>"
+free-text narrative    → kept (drop only structured PII; narrative is
+                         semantic context the LLM needs)
+```
+
+The LLM never sees the real values. Replies the LLM produces with the
+placeholders are then UN-substituted on the way out (the `polishReplyForTurn`
+step replaces `<CUSTOMER_NAME>` back with the real `state.customerName`
+before the user sees the reply, and the operator handover summary
+continues to use real values because it goes through `escalation.ts`,
+not through the LLM).
+
+**Implementation outline:**
+
+1. **New module:** `utils/pii-scrub.ts` (~100 lines).
+
+   ```ts
+   export interface PiiScrubMap {
+     name: string | null
+     phone: string | null
+     email: string | null
+     company: string | null
+     address: string | null
+     taxId: string | null
+     cardLast4: string | null
+   }
+
+   export function buildScrubMapFromState(state: SessionState): PiiScrubMap
+   export function scrubText(text: string, map: PiiScrubMap): string
+   export function scrubMessages(messages: AgentMessage[], map: PiiScrubMap): AgentMessage[]
+   export function unscrubReply(reply: string, map: PiiScrubMap): string
+   ```
+
+2. **Hook in `agent-llm.ts`:** wrap `callAgentLLM` so the messages are
+   scrubbed before fetch and the response is unscrubbed after:
+
+   ```ts
+   const scrubMap = buildScrubMapFromState(ar.state)
+   const scrubbed = scrubMessages(messages, scrubMap)
+   const response = await callAgentLLM(scrubbed, ar.runtime)
+   if (response.content) {
+     response.content = unscrubReply(response.content, scrubMap)
+   }
+   ```
+
+3. **Don't scrub the operator handover summary:** that lives in
+   `agent.ts:appendEscalationSummary` and is appended AFTER the LLM
+   step. The summary is built from `state` directly, so it carries
+   real values to the operator. The scrub only protects the LLM input
+   path.
+
+4. **Detection rules:**
+   - `customerName`: from `state.customerName` (set by `captureCustomerName`)
+   - `customerPhone`: from `state.customerPhone`
+   - `email`: regex `/[\w.+-]+@[\w-]+\.[\w.-]+/g` on every message body,
+     plus `state.invoiceData.email` literal match
+   - `company`: literal match of `state.invoiceData.razonSocial`
+   - `address`: literal match of `state.invoiceData.address`
+   - `taxId`: literal match of `state.invoiceData.taxId`
+   - `cardLast4`: regex `/\b\d{4}\b/g` only when the previous turn was
+     `doubleChargeAskCardDigits` (avoid false positives on machine
+     numbers — if the customer says "4" and we strip it, the bot loses
+     the machine number).
+
+5. **Tests** (`__tests__/unit/pii-scrub.test.ts`):
+   - Round-trip: scrub → LLM-style transform (identity) → unscrub returns original
+   - Edge: customer name that collides with a place name (e.g. "Goya")
+     — must NOT scrub the location, only the explicit `state.customerName` mention
+   - Edge: card last-4 only when context says so
+   - Edge: missing state fields → no-op (placeholder map empty)
+   - Edge: nested `assistant.tool_calls.function.arguments` JSON strings
+     (must be scrubbed too — the LLM sees them)
+
+**Why this matters operationally:**
+
+- **GDPR / DPA**: OpenRouter is a US-routed gateway. Customer PII flowing
+  there triggers data-transfer obligations. Scrubbing turns the LLM call
+  into a "no PII" interaction.
+- **Token cost**: the scrub doesn't shorten history (placeholders have
+  similar length), but downstream we can be more aggressive (e.g. drop
+  the invoice flow turns entirely after `mark_resolved` because the
+  values are already in `state.invoiceData`).
+- **Audit log**: operator-side analytics can keep PII (different code
+  path); the LLM gateway just sees structure.
+
+**Done when:**
+
+1. `utils/pii-scrub.ts` exists and is unit-tested (8+ cases).
+2. `agent-llm.ts` (or `runLlmLoop` in `agent.ts`) scrubs before
+   `callAgentLLM` and unscrubs after.
+3. Operator handover summary in `appendEscalationSummary` is unaffected
+   (still uses real values — the scrub never touches `state` itself).
+4. New iron rule check in `scripts/check-architecture.sh` greps that
+   `callAgentLLM` is never called directly without `scrubMessages` in
+   the same function. Or unit-tested via spy in `__tests__/unit/agent-llm-scrub.test.ts`.
+5. CLAUDE.md gets a short paragraph under "Privacy posture" referencing
+   this module as the single chokepoint between conversation state and
+   external LLM gateway.
+
+**Effort:** ~3-4h (module + 8 unit tests + agent-llm wiring + arch
+check + CLAUDE.md note).
+
+**Dependencies / risk:**
+- Care must be taken to scrub the LLM's own previous tool-call arguments
+  (assistant messages with `tool_calls` carry the args as JSON strings).
+  Skipping this leaks PII via the LLM "I previously called set_location(...)" recall.
+- The unscrub on the way out must be idempotent: if the LLM doesn't echo
+  a placeholder, the reply is unchanged.
+- Avoid scrubbing the placeholder itself if the LLM emits it back
+  (`<CUSTOMER_NAME>` → still `<CUSTOMER_NAME>` after unscrub if no real
+  name is in scrubMap).
+
+**Where to start:** copy `utils/output-invariants/evasive.ts` as the
+template (small focused module + dedicated test file).
 
 ---
 
