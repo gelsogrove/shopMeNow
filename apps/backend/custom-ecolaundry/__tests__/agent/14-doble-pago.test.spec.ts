@@ -288,4 +288,71 @@ export const tests: TestCase[] = [
       }
     },
   },
+
+  // ── Scenario 6.5 (NEW) — Validación de los 4 dígitos ─────────────────────
+  {
+    // Scenario 6.5 conversación A: cliente da 5 cifras → re-ask → da 4 cifras
+    // válidas → flujo continúa normalmente con captura + closure.
+    name: 'ES — Scenario 6.5A: 5 dígitos (inválido) → re-ask → 4 dígitos válidos → flujo continúa',
+    run: async (ctx) => {
+      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
+      await ctx.send('Goya')
+      await ctx.send('lavadora')
+      await ctx.send('5')
+      await ctx.send('Sí, he lavado')
+      await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
+      // Cifre invalide (5 cifre)
+      const retry = await ctx.send('48215')
+      const lower = retry.toLowerCase()
+      if (!/exactamente|4 d[ií]gitos|d[ií]gitos\s+de\s+la\s+tarjeta/.test(lower)) {
+        throw new Error(`Scenario 6.5A: bot deve chiedere di riscrivere i 4 dígitos: ${retry}`)
+      }
+      // Cifre valide (4 cifre) → flusso continua con captura/devolución
+      const ok = await ctx.send('4821')
+      const okLower = ok.toLowerCase()
+      if (!/captura|devoluci/.test(okLower)) {
+        throw new Error(`Scenario 6.5A: dopo 4 cifras válidas il bot deve chiedere captura: ${ok}`)
+      }
+    },
+  },
+  {
+    // Scenario 6.5 conversación B: cliente da 3 cifras (1° intento), poi
+    // qualcosa senza cifre (2° intento) → escalation immediata.
+    name: 'ES — Scenario 6.5B: 2 risposte invalide consecutive → escalation',
+    run: async (ctx) => {
+      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
+      await ctx.send('Goya')
+      await ctx.send('lavadora')
+      await ctx.send('5')
+      await ctx.send('Sí, he lavado')
+      await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
+      // 1° invalido (3 cifre)
+      await ctx.send('482')
+      // 2° invalido (no cifre)
+      const escalate = await ctx.send('no me acuerdo')
+      const lower = escalate.toLowerCase()
+      // Bot deve passare il caso all'operatore + chiedere nome.
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)) {
+        throw new Error(`Scenario 6.5B: dopo 2 fail il bot deve chiedere il nome: ${escalate}`)
+      }
+    },
+  },
+  {
+    name: 'ES — Scenario 6.5B: conferma finale tras escalation contiene "desactivado"',
+    run: async (ctx) => {
+      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
+      await ctx.send('Goya')
+      await ctx.send('lavadora')
+      await ctx.send('5')
+      await ctx.send('Sí, he lavado')
+      await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
+      await ctx.send('482') // 1° invalido
+      await ctx.send('no me acuerdo') // 2° invalido → escala
+      const finalReply = await ctx.send('Andrea')
+      const lower = finalReply.toLowerCase()
+      if (!/desactivado/.test(lower)) {
+        throw new Error(`Scenario 6.5B finale: deve contenere "desactivado": ${finalReply}`)
+      }
+    },
+  },
 ]

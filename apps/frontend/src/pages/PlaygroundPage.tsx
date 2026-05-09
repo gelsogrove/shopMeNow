@@ -23,6 +23,7 @@ import {
   useSearchParams,
 } from "react-router-dom"
 import rehypeHighlight from "rehype-highlight"
+import rehypeSlug from "rehype-slug"
 import remarkGfm from "remark-gfm"
 import "highlight.js/styles/github.css"
 
@@ -1678,7 +1679,7 @@ function ChatScreen({
           <div className="flex-1 overflow-y-auto p-6 prose prose-sm max-w-none">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeHighlight]}
+              rehypePlugins={[rehypeSlug, rehypeHighlight]}
             >
               {usecasesMd}
             </ReactMarkdown>

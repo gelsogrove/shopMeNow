@@ -1,5 +1,65 @@
 # Ecolaundry Chatbot -Usecases
 
+## Índice de casos
+
+- [Caso 1 — La lavadora no funciona y aparece PUSH PROG](#caso-1--la-lavadora-no-funciona-y-aparece-push-prog)
+  - [Scenario 1.1 — PUSH PROG Happy Path](#scenario-11--push-prog-happy-path)
+  - [Scenario 1.2 — PUSH PROG Escalación: máquina no responde tras pulsar](#scenario-12--push-prog-escalación-máquina-no-responde-tras-pulsar)
+- [Caso 2 — La lavadora no funciona y aparece DOOR](#caso-2--la-lavadora-no-funciona-y-aparece-door)
+  - [Scenario 2.1 — DOOR Happy Path](#scenario-21--door-happy-path)
+  - [Scenario 2.2 — DOOR Escalación: puerta bloqueada tras repetir el paso](#scenario-22--door-escalación-puerta-bloqueada-tras-repetir-el-paso)
+- [Caso 3 — La lavadora no funciona y aparece SEL](#caso-3--la-lavadora-no-funciona-y-aparece-sel)
+  - [Scenario 3.1 — SEL Happy Path](#scenario-31--sel-happy-path)
+  - [Scenario 3.2 — SEL Escalación: error persiste tras repetir selección](#scenario-32--sel-escalación-error-persiste-tras-repetir-selección)
+- [Caso 4 — He pagado y no se ha activado, y la central no ha devuelto el cambio](#caso-4--he-pagado-y-no-se-ha-activado-y-la-central-no-ha-devuelto-el-cambio)
+  - [Scenario 4.1 — No-change Happy Path](#scenario-41--no-change-happy-path)
+  - [Scenario 4.2 — No-change Escalación: cambio devuelto pero máquina no arranca](#scenario-42--no-change-escalación-cambio-devuelto-pero-máquina-no-arranca)
+- [Caso 5 — Error AL001](#caso-5--error-al001)
+  - [Scenario 5.1 — AL001 Happy Path](#scenario-51--al001-happy-path)
+  - [Scenario 5.2 — AL001 Escalación: cliente no puede seguir instrucciones](#scenario-52--al001-escalación-cliente-no-puede-seguir-instrucciones)
+  - [Scenario 5.3 — AL001 Escalación: error persiste tras reinicio correcto](#scenario-53--al001-escalación-error-persiste-tras-reinicio-correcto)
+- [Caso 6 — Me han cobrado dos veces](#caso-6--me-han-cobrado-dos-veces)
+  - [Scenario 6.1 — Doble cobro, servicio completado (Happy Path)](#scenario-61--doble-cobro-servicio-completado-happy-path)
+  - [Scenario 6.2 — Escalación: cliente muy molesto que exige atención humana](#scenario-62--escalación-cliente-muy-molesto-que-exige-atención-humana)
+  - [Scenario 6.3 — Escalación: relato inconsistente o importe no cuadra](#scenario-63--escalación-relato-inconsistente-o-importe-no-cuadra)
+  - [Scenario 6.4 — Doble cobro SIN haber usado el servicio](#scenario-64--doble-cobro-sin-haber-usado-el-servicio)
+  - [Scenario 6.5 — Validación de los 4 últimos dígitos de la tarjeta](#scenario-65--validación-de-los-4-últimos-dígitos-de-la-tarjeta)
+- [Caso 7 — He pagado pero no he podido usar el servicio](#caso-7--he-pagado-pero-no-he-podido-usar-el-servicio)
+  - [Scenario 7.1 — Pagado sin usar, resuelto vía pantalla PUSH PROG (Happy Path)](#scenario-71--pagado-sin-usar-resuelto-vía-pantalla-push-prog-happy-path)
+  - [Scenario 7.2 — Pagado sin usar, máquina no responde tras paso indicado (Escalación)](#scenario-72--pagado-sin-usar-máquina-no-responde-tras-paso-indicado-escalación)
+- [Caso 8 — Tengo un código de descuento](#caso-8--tengo-un-código-de-descuento)
+  - [Scenario 8.1 — Código: Happy Path (bot pide solo el código)](#scenario-81--código-happy-path-bot-pide-solo-el-código)
+  - [Scenario 8.2 — Código: Variante (misma respuesta canned)](#scenario-82--código-variante-misma-respuesta-canned)
+- [Caso 9 — Quiero una factura](#caso-9--quiero-una-factura)
+  - [Scenario 9.1 — Factura Happy Path](#scenario-91--factura-happy-path)
+  - [Scenario 9.2 — Factura: email inválido → re-ask hasta que sea válido](#scenario-92--factura-email-inválido--re-ask-hasta-que-sea-válido)
+- [Caso 10 — Cómo comprar la tarjeta de fidelización](#caso-10--cómo-comprar-la-tarjeta-de-fidelización)
+- [Caso 11 — Cómo recargar la tarjeta de fidelización](#caso-11--cómo-recargar-la-tarjeta-de-fidelización)
+- [Caso 12 — Horarios y precios](#caso-12--horarios-y-precios)
+- [Caso 13 — Escalado por código de alarma o incoherencia](#caso-13--escalado-por-código-de-alarma-o-incoherencia)
+- [Caso 14 — La lavadora muestra ALM DOOR](#caso-14--la-lavadora-muestra-alm-door)
+- [Caso 15 — La máquina muestra 001](#caso-15--la-máquina-muestra-001)
+- [Caso 16 — La máquina muestra ALM, ALN o un código de alarma similar](#caso-16--la-máquina-muestra-alm-aln-o-un-código-de-alarma-similar)
+- [Caso 17 — El cliente no sabe qué aparece en pantalla](#caso-17--el-cliente-no-sabe-qué-aparece-en-pantalla)
+- [Caso 18 — El cliente da un código solo numérico y dice que no hay letras](#caso-18--el-cliente-da-un-código-solo-numérico-y-dice-que-no-hay-letras)
+- [Caso 19 — El cliente dice que el datáfono ha cobrado 10 € en Goya](#caso-19--el-cliente-dice-que-el-datáfono-ha-cobrado-10--en-goya)
+- [Caso 20 — El cliente dice que el datáfono ha cobrado 10 € en Pineda](#caso-20--el-cliente-dice-que-el-datáfono-ha-cobrado-10--en-pineda)
+- [Caso 21 — En Alemanya se han añadido monedas a la secadora y no se han sumado minutos](#caso-21--en-alemanya-se-han-añadido-monedas-a-la-secadora-y-no-se-han-sumado-minutos)
+- [Caso 22 — En Pineda se han añadido monedas a la secadora y no se han sumado minutos](#caso-22--en-pineda-se-han-añadido-monedas-a-la-secadora-y-no-se-han-sumado-minutos)
+- [Caso 23 — En Alemanya no se puede pagar con tarjeta](#caso-23--en-alemanya-no-se-puede-pagar-con-tarjeta)
+- [Caso 24 — En Hortes no se puede pagar con tarjeta](#caso-24--en-hortes-no-se-puede-pagar-con-tarjeta)
+- [Caso 25 — El cliente está muy enfadado](#caso-25--el-cliente-está-muy-enfadado)
+- [Caso 26 — El cliente exige devolución inmediata](#caso-26--el-cliente-exige-devolución-inmediata)
+- [Caso 27 — El cliente pide una compensación concreta](#caso-27--el-cliente-pide-una-compensación-concreta)
+- [Caso 28 — Relato contradictorio en un doble cobro](#caso-28--relato-contradictorio-en-un-doble-cobro)
+- [Caso 29 — El cliente menciona cámaras o revisión técnica](#caso-29--el-cliente-menciona-cámaras-o-revisión-técnica)
+- [Caso 30 — Código no documentado en pantalla](#caso-30--código-no-documentado-en-pantalla)
+- [Caso 31 — El cliente no indica local](#caso-31--el-cliente-no-indica-local)
+- [Caso 32 — El cliente mezcla incidencia de máquina y pago](#caso-32--el-cliente-mezcla-incidencia-de-máquina-y-pago)
+
+---
+
+
 ## Caso 1 — La lavadora no funciona y aparece PUSH PROG
 
 **Objetivo:**  
@@ -636,6 +696,7 @@ podido o no usar la máquina (lavadora/secadora).
   4. el nombre del cliente.
   
   Cierra con un mensaje sobre el formulario de devolución, sin pasar el caso a un operador en vivo. Ver Scenario 6.1.
+- **Validación de los 4 dígitos** (paso 2 del flujo Sí): si el cliente escribe 3, 5 o más cifras, o algo que no contiene 4 dígitos exactos, el bot le pide que lo reescriba: **"Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?"**. Si tras un segundo intento sigue sin dar 4 dígitos exactos, el bot pasa el caso a un operador.
 - Si el cliente dice **"No"** (no ha podido usar la máquina), el bot pasa el caso directamente a un operador, sin pedir relato ni dígitos. El resumen indica claramente "no ha podido usar el servicio". Ver Scenario 6.4.
 - El resumen para el operador incluye: nombre del cliente, lavandería, tipo y número de máquina, si ha podido o no usar el servicio, y el relato o respuesta del cliente.
 - **Otras vías de escalación inmediata** (sin completar el gather):
@@ -681,7 +742,7 @@ Datos recogidos y caso preparado para revisión.
 - El bot pregunta primero la lavandería, luego el tipo de máquina (lavadora/secadora) y luego el número de máquina, para que el resumen al operador sea completo.
 - El bot pregunta si el cliente ha podido completar el lavado o secado.
 - El bot pide el relato paso a paso, sugiriendo si el cliente ha pasado la tarjeta varias veces por el datáfono.
-- El bot pide los últimos 4 dígitos de la tarjeta.
+- El bot pide los últimos 4 dígitos de la tarjeta. Si el cliente escribe 3, 5 o más cifras (o algo sin 4 dígitos exactos), el bot pide que los reescriba: "Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?". Tras un segundo intento inválido, el bot escala a un operador.
 - El bot pide una captura del pago.
 - El bot pregunta el nombre del cliente.
 - El mensaje final, tras facilitar el nombre, confirma que se enviará el formulario de devolución.
@@ -806,6 +867,54 @@ para gestionar tanto el reembolso como el servicio no prestado.
 **Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 👤 **Human Support:** Usuario Carlos en Goya (lavadora número 5) reporta doble cobro PERO NO ha podido usar el servicio. Respuesta del cliente: "no he podido". Requiere reembolso y revisión del servicio no prestado.
+
+---
+
+### Scenario 6.5 — Validación de los 4 últimos dígitos de la tarjeta
+
+**Objetivo:** El cliente ha llegado al paso "últimos 4 dígitos de la
+tarjeta" pero escribe algo que no es un código válido (3 dígitos, 5+
+dígitos, texto sin números, dos grupos de 4). El bot le pide que lo
+reescriba; tras un segundo intento inválido, escala a un operador.
+
+**Criterios de aceptación:**
+- Tras pedir los 4 últimos dígitos, el bot acepta sólo respuestas que contienen exactamente 4 dígitos consecutivos no rodeados por más cifras. Ejemplos válidos: `4821`, `los últimos son 4821`, `4821, gracias`.
+- Ejemplos NO válidos: `48215` (5 cifras), `482` (3 cifras), `1234 5678` (dos grupos = ambiguo), `no me acuerdo` (sin cifras).
+- Sobre respuesta NO válida (1ª vez), el bot pide que lo reescriba: **"Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?"**.
+- Sobre respuesta NO válida (2ª vez consecutiva), el bot pasa el caso a un operador y pide el nombre del cliente.
+- Sobre respuesta válida, el bot continúa el flujo Caso 6.1 normalmente (captura del pago + cierre con formulario de devolución).
+- El contador de intentos se reinicia cuando el cliente da una respuesta válida o cuando se reinicia la incidencia (`resetMachineFacts` en código).
+
+**Conversación A — Recuperado al segundo intento:**
+
+**Usuario:** Me habéis cobrado dos veces con la tarjeta.  
+**Bot:** [flujo gather: lavandería → tipo → número → ¿podido lavar?] [...]
+
+**Usuario:** Sí, he lavado  
+**Bot:** [pide relato] [...]
+
+**Usuario:** [relato]  
+**Bot:** ¡Gracias! Para revisarlo bien, ¿podrías indicarme los últimos 4 dígitos de la tarjeta?
+
+**Usuario:** 48215  
+**Bot:** Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?
+
+**Usuario:** 4821  
+**Bot:** ¡Perfecto! ¿Podrías enviarme una captura del pago? [...continúa Caso 6.1...]
+
+**Conversación B — Escalada tras 2 intentos inválidos:**
+
+**Usuario:** [flujo hasta el paso 4 dígitos]  
+**Bot:** ¡Gracias! [...] ¿podrías indicarme los últimos 4 dígitos de la tarjeta?
+
+**Usuario:** 482  
+**Bot:** Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?
+
+**Usuario:** no me acuerdo  
+**Bot:** Vamos a revisar tu caso manualmente para poder ayudarte mejor. 🙏 ¿Cómo te llamas, por favor?
+
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
 
 ---
 
