@@ -23,9 +23,13 @@ Everything that varies per tenant lives in `json/`. The code is identical across
 | `chatbotName` | `string` | `"Eco"` | Used inside `{{chatbotName}}` placeholders in prompts. |
 | `companyName` | `string` | `"Ecolaundry"` | Tenant brand name, used in escalation summaries. |
 | `model` | `string` | env `LLM_MODEL` | OpenRouter model id (e.g. `"openai/gpt-4o-mini"`). |
-| `agentTemperature` | `number` | `0.3` | LLM sampling temperature. |
+| `agentTemperature` | `number` | `0.3` | Temperature for the **main turn LLM** (`utils/agent-llm.ts`) — generative free-form replies + tool calls. |
+| `routerTemperature` | `number` | `0` | Temperature for the **T1 branch classifier LLM** (`utils/router.ts`). Discrete classification (intent → branch); keep low to prevent routing hallucinations. Recommended 0–0.2. Only consumed when `useBranchRouter: true`. |
+| `rephraseTemperature` | `number` | `0.4` | Temperature for the **rephrase polish LLM** (`utils/agent-rephrase.ts`). Generative with strict content constraints (preserve keywords). Recommended 0.2–0.5. Only consumed when `naturalRephrase: true`. |
 | `agentMaxTokens` | `number` | `800` | Max tokens per LLM call. |
 | `maxToolHops` | `number` | `6` | Hard cap on tool-call iterations per turn. |
+| `useBranchRouter` | `boolean` | `false` | When true, T1 messages are classified by `utils/router.ts` (one extra LLM call per session) into a branch and dispatched to `utils/branches/<branch>/handler.ts`. Subsequent turns are deterministic via `state.activeBranch`. When false (default), the legacy guard pipeline runs unchanged. See [`branch-router-architecture.md`](branch-router-architecture.md). |
+| `naturalRephrase` | `boolean` | `false` | When true, every guard outcome (except T1 welcome and operator-only structured output) is passed through `utils/agent-rephrase.ts` for LLM tone-polish, using conversation history as context. Adds ~$0.0005 + ~1s latency per rephrased turn. Content invariants (display codes, location names, "operador"/"desactivado", "revisión manual", emoji, markdown) preserved by the rephrase prompt. **Decision (Andrea, 2026-05-10)**: tests run with this flag OFF so the assertion suite proves deterministic content; production can flip to ON for natural tone-matching. See CLAUDE.md *"Test deterministic vs production polished"* + Pending refactors D1. |
 | `tone` | `string` | — | Free-form tone description injected into the system prompt. |
 | `supportEmails.invoice` | `string` | — | Email for invoice requests (Caso 9). |
 | `supportEmails.support` | `string` | — | General support email. |

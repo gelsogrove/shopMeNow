@@ -910,11 +910,61 @@ refactor MUST be done — that's why each entry below has a clear trigger.
 | B2 | **Factory for deterministic name-capture guards.** The pattern *"if pendingFlow=X-await-name → validateName → ladder → captureCustomerName → close as Y → emit i18n Z"* is duplicated in `guardDiscountCodeAwaitName` (Caso 8) and `guardDoubleChargeAwaitName` (Caso 6.1). Extract a factory `createNameCaptureGuard({ pendingFlowKey, closureFn, finalI18nKey, escalateReason })`. | The third instance is added (i.e. a future Caso that ends with name capture and a non-trivial closure). | [`utils/guards/discount-code-flow.ts:guardDiscountCodeAwaitName`](utils/guards/discount-code-flow.ts) + [`utils/guards/payment-double-charge.ts:guardDoubleChargeAwaitName`](utils/guards/payment-double-charge.ts) |
 | C1 | **PII redaction before LLM forward.** Customer name + last 4 digits of the card + photo references reach the external LLM today. Privacy/GDPR forbids this. Mask captured PII fields in conversation history before forwarding. | Now (privacy obligation), but blocks scaling — at minimum before the next non-test traffic. | TODO grep `PII must not reach the LLM` in [`agent.ts`](agent.ts) |
 | B3 | **Rename `al001Resolved` i18n key → `displayResolved`.** The key is now reused by `alm-door-blocked` and any future display-flow recovery (content is generic "incidencia resuelta", name is legacy from the original AL001-only use). Touch points: `json/display-flows.json` (2 entries), `json/cases.json`, `json/i18n/*.json` (6 langs). | When a third display-flow with `resolvedReplyKey` is added (the legacy name will become misleading enough to merit the cross-cutting rename). | grep `al001Resolved` |
+| D1 | ✅ **Implemented as opt-in PoC (Andrea, 2026-05-10).** LLM natural-rephrase layer on guard outcomes lives in [`utils/agent-rephrase.ts`](utils/agent-rephrase.ts). Integration point: [`agent.ts:applyGuardOutcome`](agent.ts) (async, gated by `settings.naturalRephrase`). Skips T1 welcome and operator-only structured output. The rephrase prompt enforces keyword preservation (display codes, location names, "operador"/"desactivado", "revisión manual", emoji, markdown) so content invariants survive. **Decision (Andrea, 2026-05-10)**: tests run with `naturalRephrase: false` so the assertion suite proves the deterministic content is correct (no hallucination, sacred rules enforced). Production may flip to `true` for natural tone-matching with conversation history. Temperature configurable via `settings.rephraseTemperature` (default 0.4). | — (open work item: sweep with flag ON to see how many assertions break and decide whether the rephrase prompt is tight enough to keep them all green). | DONE for the PoC. Remaining: validate that flag-ON sweep stays green; if it does, the test suite is robust to rephrasing and we can ship. |
 
 **Anti-pattern to avoid:** silently start the refactor while doing
 unrelated work. Each entry above has a trigger; respect the trigger
 and don't extract preventively. When the trigger fires, point the PR
 description at the relevant row and close the entry.
+
+---
+
+## 🎚 Test deterministic vs production polished — separation of concerns
+
+Andrea's decision (2026-05-10): **the test suite runs against the
+deterministic core, the production deployment can layer LLM polish on
+top**. Two opt-in feature flags isolate the two regimes:
+
+```
+                 │  Test suite       │  Production
+─────────────────┼───────────────────┼─────────────────────
+useBranchRouter  │  false            │  false (today)
+naturalRephrase  │  false            │  may be true
+```
+
+**Why the test suite stays deterministic** (flag OFF):
+- Assertions verify **content correctness**, not wording style:
+  guard outcomes contain the right keywords (`operador`, `desactivado`,
+  `revisión manual`, exact display codes like `ERR 52`), state mutations
+  fire correctly, summary handover is structured, no hallucinated
+  prices, sacred rules enforced.
+- No LLM polish → no flakiness from the rephrase model. Sweep CI is
+  fast and reliable.
+- If a guard's i18n string changes, the test catches it without LLM
+  noise on top.
+
+**Why production can flip to polished** (flag ON):
+- The same canned reply, rephrased through `utils/agent-rephrase.ts`,
+  feels more natural: variation across turns, customer name woven in,
+  emoji, conversational tone.
+- The rephrase system prompt enforces keyword preservation, so the
+  content invariants survive. If the test suite is robust enough to
+  pass with flag ON, the production polish is safe to enable.
+
+**Test suite as the contract**: when adding a new feature that depends
+on canned reply wording (e.g. a new escalation summary keyword check),
+write the assertion against the *canned* form and test with flag OFF.
+The rephrase prompt MUST preserve that wording — if it doesn't, the
+test will catch the drift the moment we run flag ON.
+
+**Per-LLM temperatures** (configurable via `settings.json`):
+- `routerTemperature` (default 0): T1 branch classifier. Discrete
+  classification — keep low to prevent routing hallucinations.
+- `rephraseTemperature` (default 0.4): polish layer. Generative but
+  with strict content constraints — moderate value gives variation
+  without drift.
+- `agentTemperature` (default 0.3): main turn LLM (legacy free
+  generation + tool calls).
 
 ---
 
@@ -939,6 +989,7 @@ sembra reintrodurre uno di questi sintomi, è un sentinel di regressione.
 | F10 | 18 stale paths in `json/cases.json` che puntavano a test inesistenti (post rename collettivo `XX-name` → `N-name`) | Cleanup non completato dopo rename | Fix per ogni Caso durante l'audit (Casi 10, 13, 14, 15, 16, 17, 18, 19, 20 e altri). |
 | F11 | File legacy `02-faq.test.spec.ts` testava il Caso 12 (Horarios) ma il nome confondeva | Naming drift dopo riorganizzazione test | Eliminato. `cases.json` aggiornato. Caso 12 testato solo da `12-horarios-precios`. |
 | F12 | `26-context-switch.test.spec.ts` era nella root agent/ ma testava un comportamento cross-Caso, non Caso 26 | Naming convention sbagliata | Spostato in `__tests__/agent/cross/` con nota all'inizio del file. |
+| F13 | Dryer flow ACTION nodes (`ready_state`, `door_issue`, `credit_issue`, `payment_pending`) emettevano l'istruzione SENZA il loopback "Después dime si la secadora ha arrancado" — stesso pattern del F8 ma sul dryer JSON. Cliente in CLI demo segnalava "dopo SEL non mi ha chiesto, dime se ti funziona". | `json/dryer_ed340.json` ACTION prompts divergenti dal pattern washer (`case_sel`/`case_push`/`case_door` post-F8). Bug nascosto perché il cliente in test reali non lo notava (LLM rephrase può aggiungere il loopback ma non con flag OFF). | Aggiunto `\n\nDespués dime si la secadora ha arrancado.` ai 4 ACTION prompts che transitano a `check_result`. Allineato al pattern washer. **Pattern preservativo per il futuro**: ogni nodo `type: "ACTION"` con `transitions.default → check_result` MUST contenere il loopback inline nel prompt — è quello che il cliente vede prima di rispondere YES/NO al CONFIRMATION node successivo. |
 
 **Come usare questo log**: prima di un fix che sembra simile a un sintomo
 qui sopra, leggi la voce corrispondente per evitare di reintrodurre la

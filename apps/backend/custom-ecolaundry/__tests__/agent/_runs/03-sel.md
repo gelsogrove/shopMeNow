@@ -1,6 +1,6 @@
 # Agent test dialogues — `03-sel.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.122Z
+Generated: 2026-05-09T23:40:57.033Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 3.1: happy path completo → SEL istruzione → "Ahora sí funciona" → resolved
@@ -46,7 +46,7 @@ Después dime si la lavadora ha arrancado.
 🤖 **bot:**
 
 ```
-¡Perfecto, ya está resuelto! 🎉 Si necesitas más ayuda, no dudes en decírmelo.
+¡Perfecto, ya está resuelto! 🎉 Si necesitas más ayuda, no dudes en preguntar.
 ```
 
 ---

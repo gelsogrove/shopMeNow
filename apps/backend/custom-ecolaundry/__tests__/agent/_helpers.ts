@@ -21,6 +21,16 @@ export interface TestContext {
 
 export async function runTest(tc: TestCase): Promise<{ ok: boolean; reason?: string; dialog: Array<{ user: string; bot: string }> }> {
   const session = await createAgentSession()
+  // Force the LLM-polish opt-in flags OFF for the test suite. Decision
+  // (Andrea, 2026-05-10): tests assert the deterministic content of guard
+  // outcomes and the operator briefing. The settings.json file may have
+  // these flags ON for production / CLI demo, but the test runner must
+  // override them so assertions stay reliable. See CLAUDE.md "Test
+  // deterministic vs production polished".
+  if (session.ar.runtime.settings) {
+    ;(session.ar.runtime.settings as Record<string, unknown>).naturalRephrase = false
+    ;(session.ar.runtime.settings as Record<string, unknown>).operatorBriefingFromLlm = false
+  }
   const ctx: TestContext = {
     session,
     lastReply: '',

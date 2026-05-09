@@ -140,7 +140,7 @@ fi
 # --- Rule #5 — every detector has a sibling test ----------------------------
 echo -n "  [#5] every utils/<detector>.ts has a sibling unit test... "
 # These are infra/glue, not detectors — exempt from the test-sibling rule.
-EXEMPT="agent-llm cli llm-fetch logger runtime localization message-parsing locations agent-prompt agent-welcome display-state llm relative-date agent-tools agent-extract router-prompt"
+EXEMPT="agent-llm cli llm-fetch logger runtime localization message-parsing locations agent-prompt agent-welcome agent-rephrase operator-briefing display-state llm relative-date agent-tools agent-extract router-prompt"
 # agent-tools: pure OpenAI tool schema declarations, no logic to test.
 # agent-extract: multi-language extractor cassette covered indirectly by
 #   __tests__/agent/* E2E tests; pure-unit tests would duplicate them.

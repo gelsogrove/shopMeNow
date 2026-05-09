@@ -12,7 +12,7 @@
 
     "pay_help": {
       "type": "ACTION",
-      "prompt": "Por favor, completa el pago en la central y selecciona el número de secadora para iniciar el ciclo.",
+      "prompt": "Por favor, completa el pago en la central y selecciona el número de secadora para iniciar el ciclo.\n\nDespués dime si la secadora ha arrancado.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -40,7 +40,7 @@
 
     "door_issue": {
       "type": "ACTION",
-      "prompt": "Parece un problema con la puerta. Por favor, comprueba que no haya ropa atrapada en la goma y cierra la puerta firmemente hasta escuchar un clic.",
+      "prompt": "Parece un problema con la puerta. Por favor, comprueba que no haya ropa atrapada en la goma y cierra la puerta firmemente hasta escuchar un clic.\n\nDespués dime si la secadora ha arrancado.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -48,7 +48,7 @@
 
     "ready_state": {
       "type": "ACTION",
-      "prompt": "La secadora está lista. Por favor, selecciona el programa e inicia el ciclo.",
+      "prompt": "La secadora está lista. Por favor, selecciona el programa e inicia el ciclo.\n\nDespués dime si la secadora ha arrancado.",
       "transitions": {
         "default": "non_parte.check_result"
       }
@@ -56,7 +56,7 @@
 
     "credit_issue": {
       "type": "ACTION",
-      "prompt": "Por favor, asegúrate de que el pago se ha completado e inicia la secadora.",
+      "prompt": "Por favor, asegúrate de que el pago se ha completado e inicia la secadora.\n\nDespués dime si la secadora ha arrancado.",
       "transitions": {
         "default": "non_parte.check_result"
       }

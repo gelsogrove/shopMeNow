@@ -17,6 +17,8 @@ import { autoExtractFacts } from './utils/agent-extract.js'
 import { executeTool } from './utils/agent-tools.js'
 import { loadPromptBundle, buildSystemPrompt } from './utils/agent-prompt.js'
 import { callAgentLLM } from './utils/agent-llm.js'
+import { rephraseForTurn } from './utils/agent-rephrase.js'
+import { generateOperatorBriefingFromHistory } from './utils/operator-briefing.js'
 import {
   mergeWelcomeWithReply,
   renderWelcomeForTurn,
@@ -99,7 +101,7 @@ export async function agentTurn(session: AgentSession, rawUserMessage: string): 
       history.push({ role: 'user', content: userMessage })
       history.push({ role: 'assistant', content: dispatchResult })
       const polished = polishReplyForTurn(ar, dispatchResult)
-      return appendEscalationSummary(ar, polished)
+      return appendEscalationSummary(ar, polished, history)
     }
   }
 
@@ -113,7 +115,7 @@ export async function agentTurn(session: AgentSession, rawUserMessage: string): 
   history.push({ role: 'assistant', content: assistantReply })
 
   const polished = polishReplyForTurn(ar, assistantReply)
-  return appendEscalationSummary(ar, polished)
+  return appendEscalationSummary(ar, polished, history)
 }
 
 /**
@@ -159,17 +161,31 @@ function resolveLanguageForTurn(ar: AgentRuntime, userMessage: string): void {
   }
 }
 
-/** Persist the guard reply in history, optionally prepending the welcome on T1. */
-function applyGuardOutcome(
+/** Persist the guard reply in history, optionally prepending the welcome on T1.
+ *
+ *  When `settings.naturalRephrase=true`, the customer-facing reply is passed
+ *  through `utils/agent-rephrase.ts` for LLM tone-polish before being
+ *  stored in history. Operator-only structured output (handover summary)
+ *  and T1 welcome are NOT rephrased — see `rephraseForTurn` for the
+ *  filter. See CLAUDE.md Pending refactors D1.
+ */
+async function applyGuardOutcome(
   session: AgentSession,
   outcome: GuardOutcome,
   userMessage: string,
-): string {
+): Promise<string> {
   const { ar, history } = session
   let reply = outcome.reply
-  if (ar.state.turnCount === 1 && shouldShowWelcome(outcome.reason)) {
+  const isT1Welcome = ar.state.turnCount === 1 && shouldShowWelcome(outcome.reason)
+  if (isT1Welcome) {
     const welcome = renderWelcomeForTurn(ar)
     if (welcome) reply = mergeWelcomeWithReply(welcome, reply)
+  }
+  // Natural-rephrase pass (opt-in). Skipped for T1 welcome (canonical
+  // greeting must stay stable) and for operator-only structured output
+  // (filter inside rephraseForTurn).
+  if (!isT1Welcome && ar.runtime.settings?.naturalRephrase) {
+    reply = await rephraseForTurn(reply, ar, history)
   }
   history.push({ role: 'user', content: userMessage })
   history.push({ role: 'assistant', content: reply })
@@ -388,7 +404,7 @@ function hasOperationalFacts(ar: AgentRuntime): boolean {
  *        deterministically when possible.
  *    Tracking: search "PII must not reach the LLM" in this repo.
  */
-function appendEscalationSummary(ar: AgentRuntime, reply: string): string {
+async function appendEscalationSummary(ar: AgentRuntime, reply: string, history: AgentMessage[]): Promise<string> {
   // Refund-form path (Caso 6.1 Sí branch): customer used the service, the
   // case is closed via refund trámite — no live operator, no handoff line,
   // no Human Support summary. Triggered by markRefundFormPending() which
@@ -409,7 +425,12 @@ function appendEscalationSummary(ar: AgentRuntime, reply: string): string {
   }
   if (!ar.pendingEscalation || !customerName) return reply
   const ctx = extractEscalationContext(ar.state, ar.state.customerName)
-  const summary = buildEscalationSummary(ctx)
+  // Deterministic baseline summary — always computed (used as the fallback
+  // for the LLM path, AND emitted directly when settings.operatorBriefingFromLlm
+  // is false). Tests run with the flag OFF so assertions on summary content
+  // stay reliable. See CLAUDE.md "Test deterministic vs production polished".
+  const baseline = buildEscalationSummary(ctx)
+  const summary = await generateOperatorBriefingFromHistory(ar, history, baseline)
   ar.pendingEscalation = null
   closeAsEscalated(ar)
   // Determine output language: tenant lock first, fallback to state.language.

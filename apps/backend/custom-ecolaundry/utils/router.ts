@@ -74,12 +74,17 @@ export async function classifyMessageBranch(
   const model = options.model ?? resolveModel(options.runtime)
   let raw: string
   try {
+    // Router temperature: deliberately low — this is a discrete classification
+    // task (intent → branch), NOT a generative one. Hallucinations here mean
+    // routing the customer to the wrong branch. Configurable via
+    // `settings.routerTemperature` (default 0); recommended 0-0.2.
+    const routerTemp = options.runtime?.settings?.routerTemperature ?? 0
     raw = await callModel({
       model,
       systemPrompt: ROUTER_SYSTEM_PROMPT,
       userPrompt: trimmed,
       json: true,
-      temperature: 0,
+      temperature: routerTemp,
       maxTokens: 200,
     })
   } catch {

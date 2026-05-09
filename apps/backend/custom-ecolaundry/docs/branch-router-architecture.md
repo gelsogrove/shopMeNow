@@ -241,6 +241,27 @@ To avoid breaking the working pipeline, the new architecture ships behind
 a flag in `settings.json`. When `useBranchRouter: true` the dispatcher
 runs; otherwise the legacy guard pipeline keeps working unchanged.
 
+**Related opt-in flag** (since 2026-05-10): `naturalRephrase` (default
+`false`). Independent from `useBranchRouter`. When true, every guard
+outcome is passed through `utils/agent-rephrase.ts` for LLM tone-polish.
+Both flags can be toggled independently. See `docs/settings.md` and
+CLAUDE.md *"Test deterministic vs production polished"*.
+
+**Per-LLM temperatures** (configurable in `settings.json`):
+- `routerTemperature` (default `0`): T1 branch classifier — keep low,
+  it's a discrete routing task.
+- `rephraseTemperature` (default `0.4`): rephrase polish — moderate,
+  generative but constrained.
+- `agentTemperature` (default `0.3`): main turn LLM (legacy).
+
+**Known issue if you enable `useBranchRouter: true` today** (Andrea,
+2026-05-10 sweep): `json/faqs.json:pricing` exposes hardcoded prices
+that the legacy `guardPricingDeflect` correctly avoids. The branch
+FAQ handler bypasses the deflect → violates Playbook PDF §5.10 *"si
+no hi ha certesa, derivar a revisió"*. Must be fixed (drop the
+hardcoded prices, defer to manual review) before promoting the flag.
+Tracked in CLAUDE.md *"Architectural fixes log"*.
+
 | Phase | Scope | Status |
 |---|---|---|
 | A — Router + dispatcher + flag | Router, branch dispatcher, settings flag, `state.activeBranch`/`state.previousBranch` fields | ✅ done |

@@ -1,6 +1,6 @@
 # Agent test dialogues — `18-codigo-numerico.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.126Z
+Generated: 2026-05-09T23:24:29.082Z
 Total: 3 | Pass: 3 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 18.1: codice numerico → "No" → escalate sin confrontar → name → summary "solo numérico"
