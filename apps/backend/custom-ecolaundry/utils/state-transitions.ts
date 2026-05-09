@@ -90,6 +90,7 @@ export function resetForNewIncident(ar: AgentRuntime): void {
 export function captureCustomerName(ar: AgentRuntime, name: string): void {
   ar.state.customerName = name
   ar.state.customerNameRequested = false
+  ar.state.awaitNameAskAttempts = 0
 }
 
 /**
@@ -102,6 +103,42 @@ export function captureCustomerName(ar: AgentRuntime, name: string): void {
  */
 export function closeAsEscalated(ar: AgentRuntime): void {
   ar.state.pendingClosure = 'escalated'
+}
+
+/**
+ * Mark a case as ready for the refund-form trámite (Caso 6.1 Sí branch).
+ * Parallel to `escalate(ar, reason)` but for cases where the closure is
+ * a refund procedure, NOT a live operator handover:
+ *
+ * - The bot collects the customer name, captures the payment receipt, and
+ *   sends the refund-form link.
+ * - There is NO `operatorHandoffFinal` line ("operador" / "desactivado").
+ * - There is NO "👤 Human Support message" summary.
+ *
+ * Sets `pendingClosure='refund-form'` SUBITO so the post-processor in
+ * `agent.ts:appendEscalationSummary` can dispatch on the closure type
+ * without matching escalation reason strings (which are fragile). Also
+ * sets `escalationReason` so internal logging records the case details.
+ * Does NOT set `pendingEscalation` (which is the trigger for the
+ * operator handoff) and does NOT set `operatorRequested`.
+ *
+ * usecases.md §6.1 (riga 627): "El mensaje final NO menciona 'operador'
+ * ni 'desactivado': no es una escalación a un humano en vivo, es un
+ * trámite de devolución."
+ */
+export function markRefundFormPending(ar: AgentRuntime, reason: string): void {
+  ar.state.escalationReason = reason
+  ar.state.pendingClosure = 'refund-form'
+}
+
+/**
+ * Close the conversation as a refund-form trámite. Counterpart of
+ * `closeAsEscalated` for the refund path. The post-processor checks this
+ * value to decide whether to append the operator handoff or just return
+ * the LLM-generated reply as-is.
+ */
+export function closeAsRefundForm(ar: AgentRuntime): void {
+  ar.state.pendingClosure = 'refund-form'
 }
 
 /**

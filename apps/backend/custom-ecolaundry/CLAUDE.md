@@ -478,6 +478,7 @@ Current entries (audit each periodically):
 | `utils/guards/payment-double-charge.ts` | ~290 | One cassette = Caso 6 (askUsed → branch → askType → askNumber → narrative → digits → receipt). Pending refactor: extract shared retry-ladder helper to drop ~80 lines. |
 | `utils/escalation.ts` | ~220 | Operator handover summary builder — one switch over many incident types. |
 | `utils/agent-extract.ts` | ~400 | The L3 fact-extraction pipeline — one function with 15+ specialised inference rules. Pending refactor: extract per-incident detectors to `utils/intent.ts`. |
+| `utils/state-transitions.ts` | ~155 | Named atomic state transitions (markResolved, escalate, markRefundFormPending, captureCustomerName, …). Single responsibility — splitting would fragment the auditable surface that rule #4 protects. |
 
 Anti-pattern: adding a file to this list without splitting after a
 genuine attempt. The default answer to "this file got too big" is
@@ -794,6 +795,26 @@ This is the "regression sweep" Andrea asked for explicitly on
 2026-05-09 ("ma queste cose che hai cambiato non incidono i vecchi
 test?"). It catches cases where a change to escalation.ts breaks Caso 2
 DOOR even though you were fixing Caso 4.
+
+---
+
+## 🛠 Pending refactors — tracked, don't lose
+
+These are debts that we've consciously decided NOT to chase right now
+because the cost/benefit is wrong today (premature abstraction). When
+the third instance of the pattern appears, the trade-off flips and the
+refactor MUST be done — that's why each entry below has a clear trigger.
+
+| ID | Refactor | Trigger | Where to start |
+|----|----------|---------|----------------|
+| B1 | **Rename + dispatch `appendEscalationSummary`.** It currently does two things (refund-form closure replace OR escalation handover append). Rename to `polishClosureForTurn(ar, reply)` with explicit dispatch on `pendingClosure` (`'refund-form'` / `'escalated'` / `null`). | The third closure type appears (today: 2 = escalated, refund-form). | [`agent.ts:appendEscalationSummary`](agent.ts) |
+| B2 | **Factory for deterministic name-capture guards.** The pattern *"if pendingFlow=X-await-name → validateName → ladder → captureCustomerName → close as Y → emit i18n Z"* is duplicated in `guardDiscountCodeAwaitName` (Caso 8) and `guardDoubleChargeAwaitName` (Caso 6.1). Extract a factory `createNameCaptureGuard({ pendingFlowKey, closureFn, finalI18nKey, escalateReason })`. | The third instance is added (i.e. a future Caso that ends with name capture and a non-trivial closure). | [`utils/guards/discount-code-flow.ts:guardDiscountCodeAwaitName`](utils/guards/discount-code-flow.ts) + [`utils/guards/payment-double-charge.ts:guardDoubleChargeAwaitName`](utils/guards/payment-double-charge.ts) |
+| C1 | **PII redaction before LLM forward.** Customer name + last 4 digits of the card + photo references reach the external LLM today. Privacy/GDPR forbids this. Mask captured PII fields in conversation history before forwarding. | Now (privacy obligation), but blocks scaling — at minimum before the next non-test traffic. | TODO grep `PII must not reach the LLM` in [`agent.ts`](agent.ts) |
+
+**Anti-pattern to avoid:** silently start the refactor while doing
+unrelated work. Each entry above has a trigger; respect the trigger
+and don't extract preventively. When the trigger fires, point the PR
+description at the relevant row and close the entry.
 
 ---
 

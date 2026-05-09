@@ -1,5 +1,16 @@
 # Ecolaundry Chatbot -Usecases
 
+> ## ⚠ TODO globale (Andrea, 2026-05-09) — PII must not reach the LLM
+>
+> I dati personali del cliente (nome, ultimi 4 dígitos della tarjeta, foto/captura del pago, eventuali altri dati sensibili) oggi vengono inoltrati al modello LLM esterno (OpenRouter / OpenAI) come parte del messaggio utente o della conversation history. **Per privacy / GDPR questo non è accettabile**: il modello esterno non deve mai vedere PII in chiaro.
+>
+> **Fix da fare**:
+> - Catturare i campi PII in modo deterministico (già fatto per i 4 dígitos via `guardDoubleChargeAskCardDigits` e per il nome via `guardDoubleChargeAwaitName` / `guardDiscountCodeAwaitName`).
+> - Prima di inoltrare la conversation history al LLM, redact / mask dei campi PII salvati nello state (es. `4821` → `[REDACTED-CARD-4]`, `Andrea` → `[CUSTOMER]`). Lo state conserva i valori reali per il briefing operatore; il LLM vede solo placeholders.
+> - Verificare ogni guard che chiede aiuto al LLM in un turn che contiene già PII nel messaggio utente e short-circuitarlo deterministicamente dove possibile.
+>
+> Tracking: cerca `PII must not reach the LLM` in `agent.ts`.
+
 ## Índice de casos
 
 - [Caso 1 — La lavadora no funciona y aparece PUSH PROG](#caso-1--la-lavadora-no-funciona-y-aparece-push-prog)
@@ -470,6 +481,9 @@ El cliente indica que aparece `AL001`.
 - Una vez tiene los 3 datos, el bot le explica la **secuencia correcta de 6 pasos** (cargar la máquina, cerrar la puerta, ir a la central, pagar, seleccionar el número, recoger el cambio si toca, ir a la máquina, elegir el programa, y avisar si funciona).
 - Las tres ramas (resuelto / no entiende los pasos / error persiste) se detallan en 5.1, 5.2 y 5.3.
 
+**Desviación documentada respecto al Playbook PDF (Andrea, 2026-05-09):**
+El Playbook §5.5 («Error AL001») describe únicamente *«Digues-me en quin local ets i què has fet just abans que apareguís»* como pregunta diagnóstica, sin detallar los 6 pasos. Nuestro flujo amplía esa respuesta con la secuencia educativa completa porque resulta más útil para clientes que no saben en qué punto del proceso fallaron. La regla del PDF *«Escalar si: el client no pot seguir les instruccions»* sigue cubierta por los Scenarios 5.2 y 5.3.
+
 ---
 
 ### 5.1 — AL001 Happy Path
@@ -595,6 +609,9 @@ podido o no usar la máquina (lavadora/secadora).
   - Si el cliente está muy enfadado y exige hablar con un operador, el bot escala al instante (6.2).
   - Si el relato del cliente es contradictorio o incoherente, el bot escala (6.3).
 - Variantes detalladas en 6.1, 6.2, 6.3, 6.4 y 6.5.
+
+**Desviación documentada respecto al Playbook PDF (Andrea, 2026-05-09):**
+El Playbook §5.3 («M'ha cobrat dues vegades») lista 5 preguntas: 1) local, 2) ¿has podido lavar/secar?, 3) relato paso a paso, 4) últimos 4 dígitos, 5) captura del pago. **El PDF NO pide tipo ni número de máquina.** Nuestro flow añade tipo+número en el ramo "Sí" porque facilita al operador identificar la máquina sin tener que preguntárselo por teléfono. La regla del PDF *«Escalar si: el client està molt molest»* sigue cubierta por el Scenario 6.2 (boundary signal `guardAngryCustomerExplicit`). La regla *«Escalar si: el relat és confús»* sigue cubierta por el Scenario 6.3.
 
 **Trigger (frases típicas del cliente):**
 - «Me habéis cobrado dos veces con la tarjeta»
@@ -2113,3 +2130,103 @@ sequencial evita la re-ask.
 - el relato sigue siendo confuso
 - el cliente no sabe confirmar qué ocurrió
 - hay incoherencia de importe
+
+---
+
+### 32.1 — Doble cobro + display anómalo simultáneos (incidencia hardware prioritaria)
+
+**Objetivo:** El cliente reporta DOS problemas en una sola frase — un doble cobro Y una anomalía de pantalla (ej. AL001). El bot debe priorizar la incidencia hardware (que bloquea el servicio) y mantener vivo el contexto de doble cobro para resolverlo después, sin perder ningún fact ya volunteado.
+
+**Criterios de aceptación:**
+- `autoExtractFacts` captura en el primer turno: `location`, `machineType`, `machineNumber`, `displayState` y la intención de doble cobro (`pendingFlow = 'double-charge-ask-used'`).
+- El bot **NO** vuelve a preguntar location / tipo / numero / pantalla — todos ya volunteados.
+- El bot resuelve PRIMERO el display (AL001 → escalación hardware en el flow engine, según `washer_hs60xx.json`) porque el cliente no puede usar la máquina hasta que se resuelva.
+- La intención de doble cobro queda registrada en estado (no se pierde) y, si el caso se escala, el handover al operador menciona AMBOS problemas.
+- Una sola escalación con el resumen completo (location, máquina, display + doble cobro), no dos separadas.
+- El bot pide el nombre del cliente antes de cerrar.
+
+**Conversación:**
+
+**Usuario:** He pagado dos veces y la lavadora 3 en Pineda no arranca, marca AL001.  
+**Bot:** Lamento mucho la situación. El código AL001 indica un fallo de la máquina que necesita revisión técnica — voy a derivar el caso a un operador para que también revise el doble cobro. ¿Cómo te llamas?
+
+**Usuario:** Andrés  
+**Bot:** Gracias Andrés. Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
+
+👤 **Human Support:** Usuario Andrés en Pineda reporta lavadora 3 con error AL001 (fallo hardware) Y un doble cobro con tarjeta. Ambas incidencias necesitan revisión.
+
+**Comportamiento garantizado por código (no por prompt):**
+- L3 `autoExtractFacts` captura en paralelo `location='Pineda'`, `machineType='washer'`, `machineNumber=3`, `displayState='AL001'`, y `pendingFlow='double-charge-ask-used'` desde el mismo mensaje.
+- L4 el flow engine de `washer_hs60xx.json` tiene AL001 marcado como `requiresOperator: true` → la transición a `escalate(ar, 'hardware-fault-al001')` ocurre antes que el gather de doble-cobro.
+- L2 `utils/state-transitions.ts:escalate` mantiene `pendingFlow` y `state.doubleChargeContext` activos en el `escalationReason`, así el resumen de `utils/escalation.ts` lista ambos problemas.
+- Pinneado por `__tests__/agent/32-mixto-double-charge-display.test.spec.ts` (Scenario 32.1).
+
+---
+
+### 32.2 — Facts adelantados con narrativa ambigua (Caso 4 vs Caso 6)
+
+**Objetivo:** El cliente entrega location + tipo + numero en una sola frase, pero la narrativa es ambigua entre "no cambio" (Caso 4) y "doble cobro" (Caso 6). El bot debe hacer la pregunta disambiguante sin re-preguntar facts ya volunteados.
+
+**Criterios de aceptación:**
+- `autoExtractFacts` captura `location`, `machineType`, `machineNumber` desde el primer mensaje.
+- El bot **NO** re-pregunta location / tipo / numero.
+- El bot detecta que la narrativa contiene señales de Caso 4 ("sin cambio") **Y** de Caso 6 ("volví a pagar / dos veces") simultáneamente → pregunta de disambiguación: «¿la central te ha devuelto el cambio en algún momento?».
+- Si el cliente responde **"Sí, me devolvió el cambio pero igual cobró dos veces"** → reroute a Caso 6 sin reset de facts.
+- Si el cliente responde **"No, no me devolvió nada"** → reroute a Caso 4 sin reset de facts.
+- En cualquiera de los dos ramos, el bot continúa el flujo correspondiente saltando los pasos cuyos facts ya tiene.
+
+**Conversación:**
+
+**Usuario:** Estoy en Pineda, la 3 no me arranca aunque he pagado, primero le di sin cambio y luego volví a pagar.  
+**Bot:** Para entender bien qué pasó: ¿la central te ha devuelto el cambio en algún momento, o se quedó con todo el importe?
+
+**Usuario:** No, no me devolvió nada, lo perdí entero.  
+**Bot:** Entendido. Voy a derivar el caso al operador para gestionarte la devolución del importe sin cambio. ¿Cómo te llamas?
+
+**Usuario:** Lucía  
+**Bot:** Gracias Lucía. Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
+
+👤 **Human Support:** Usuario Lucía en Pineda reporta lavadora 3 que no arrancó tras pagar sin recibir cambio, y un segundo intento de pago. Necesita devolución.
+
+**Comportamiento garantizado por código (no por prompt):**
+- L3 `autoExtractFacts` captura `location='Pineda'`, `machineType='washer'`, `machineNumber=3` antes de cualquier guard.
+- L3 nuevo detector `detectMixedPaymentAmbiguity` (en `utils/intent.ts`) identifica la coexistencia de señales Caso 4 + Caso 6 en una misma frase y setea `pendingFlow='mixed-payment-disambiguate'`.
+- L4 nuevo guard `guardMixedPaymentAsk` (en `utils/guards/mixed-payment.ts`) emite la pregunta disambiguante exactamente una vez; la respuesta del cliente la parsea `parseMixedPaymentAnswer` y enruta al `pendingFlow` correcto (`no-change-ask` o `double-charge-ask-used`) preservando location/tipo/numero.
+- L2 reroute via `startNewFlow(ar, '<target>')` que NO llama a `resetMachineFacts` — los facts persisten.
+- Pinneado por `__tests__/agent/32-mixto-ambiguous-payment.test.spec.ts` (Scenario 32.2) + `__tests__/unit/mixed-payment.test.ts`.
+
+---
+
+### 32.3 — Topic switch durante gather (machine → payment a mitad de turno)
+
+**Objetivo:** El cliente inicia con problema de máquina; a mitad del gather pivota y revela que el verdadero problema es el pago. El bot debe abandonar el gather machine-trouble, pivotar al flujo Caso 6, preservar lo que sigue siendo válido (location, machineNumber) y resetear lo que pertenecía al flujo viejo (displayState, pendingFlow trouble-machine, askAttempts counters).
+
+**Criterios de aceptación:**
+- T1 cliente reporta problema de máquina con location + numero adelantados → `autoExtractFacts` captura ambos, el bot pregunta la pantalla.
+- T2 el cliente, en lugar de responder la pantalla, dice explícitamente *"no me importa la pantalla, el problema es que me han cobrado dos veces"* → el detector de topic switch dispara.
+- El bot **NO** insiste con la pregunta de la pantalla (no entra en retry counter del display) — abandona el flujo viejo.
+- El reset preserva `location` y `machineNumber` (siguen siendo válidos) y borra `displayState`, `displayLabel`, `displayAskAttempts` y el `pendingFlow` machine-trouble.
+- El bot continúa por Caso 6 desde la pregunta «¿has podido lavar o secar?» — la primera pregunta de Caso 6 no cubierta por los facts ya volunteados.
+- Si el cliente responde "No" → escalación rápida (Scenario 6.4); si responde "Sí" → continúa con tipo (ya capturado) → numero (ya capturado) → relato → 4 dígitos → captura → nombre.
+
+**Conversación:**
+
+**Usuario:** La lavadora 3 no funciona, estoy en Pineda.  
+**Bot:** Lamento la incidencia. ¿Qué aparece en la pantalla de la lavadora?
+
+**Usuario:** No me importa la pantalla, en realidad el problema es que me han cobrado dos veces.  
+**Bot:** Entiendo, vamos a centrarnos en el cobro entonces. ¿Has podido lavar la ropa?
+
+**Usuario:** No, ni siquiera arrancó.  
+**Bot:** Lo siento mucho. Voy a derivar el caso al operador para gestionar la devolución. ¿Cómo te llamas?
+
+**Usuario:** Marc  
+**Bot:** Gracias Marc. Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
+
+👤 **Human Support:** Usuario Marc en Pineda reporta lavadora 3 que no arrancó y un doble cobro con tarjeta. No pudo usar el servicio.
+
+**Comportamiento garantizado por código (no por prompt):**
+- L3 `detectTopicSwitchDuringGather` (extensión de `detectTopicSwitchDuringEscalation`) identifica la pivotación de gather machine → payment basándose en señales explícitas ("no me importa", "en realidad", "el problema es") + intención de doble cobro.
+- L2 nueva transición `pivotFlow(ar, 'double-charge-ask-used', { preserve: ['location', 'machineType', 'machineNumber'] })` en `utils/state-transitions.ts`. Borra explícitamente: `displayState`, `displayLabel`, `displayAskAttempts`, `machineNumberAskAttempts`, el `pendingFlow` viejo y cualquier `*AskAttempts` huérfano.
+- L4 los guards de Caso 6 (`guardDoubleChargeAskUsed`, …) reconocen los facts pre-existentes y saltan los pasos correspondientes — la conversación arranca directamente desde "¿has podido lavar?".
+- Pinneado por `__tests__/agent/32-mixto-topic-switch.test.spec.ts` (Scenario 32.3) + `__tests__/unit/pivot-flow.test.ts`.

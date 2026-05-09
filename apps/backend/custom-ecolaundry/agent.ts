@@ -357,9 +357,51 @@ function hasOperationalFacts(ar: AgentRuntime): boolean {
  *  Rule #8 (multi-language by design): the handoff line is in 6 languages
  *  in `json/i18n/<lang>.json:operatorHandoffFinal`. Adding a 7th language
  *  = adding 1 entry to each i18n file, no code change.
+ *
+ *  TODO (Andrea, 2026-05-09 — PII must not reach the LLM):
+ *    Personal data flows into the LLM prompt today and that is not
+ *    acceptable for privacy/GDPR. The customer's free-text messages are
+ *    forwarded verbatim to the external model (OpenRouter / OpenAI) and
+ *    they contain:
+ *      - customer name (Caso 6 / 8 / every escalation that asks the name)
+ *      - last 4 digits of the bank card (Caso 6 step 4-dígitos)
+ *      - photo references / receipt hints (Caso 6 captura, Caso 17 foto)
+ *      - location + machine number (less sensitive but still PII when
+ *        combined with the rest)
+ *    Fix direction:
+ *      - Capture PII deterministically (already done for card digits via
+ *        guardDoubleChargeAskCardDigits, and for the name via
+ *        guardDoubleChargeAwaitName / guardDiscountCodeAwaitName).
+ *      - Before forwarding the conversation history to the LLM, redact /
+ *        mask the captured PII fields (e.g. replace card digits with
+ *        "[REDACTED-CARD-4]", customer name with "[CUSTOMER]"). The state
+ *        keeps the real values for the operator briefing, but the LLM
+ *        only sees placeholders.
+ *      - Audit every guard that asks the LLM for help on a turn that
+ *        already contains PII in the user message and short-circuit it
+ *        deterministically when possible.
+ *    Tracking: search "PII must not reach the LLM" in this repo.
  */
 function appendEscalationSummary(ar: AgentRuntime, reply: string): string {
-  if (!ar.pendingEscalation || !ar.state.customerName) return reply
+  // Refund-form path (Caso 6.1 Sí branch): customer used the service, the
+  // case is closed via refund trámite — no live operator, no handoff line,
+  // no Human Support summary. Triggered by markRefundFormPending() which
+  // sets pendingClosure='refund-form' atomically. See usecases.md §6.1
+  // riga 627.
+  //
+  // Why we REPLACE the LLM reply with a deterministic i18n string: without
+  // operatorRequested/pendingEscalation set, the LLM is not guided into a
+  // closure phrase and may improvise (e.g. ask "what's on the screen?"
+  // because the displayState slot is empty). The i18n key `refundFormFinal`
+  // is the canonical closure for this branch.
+  const { pendingClosure: closure, customerName } = ar.state
+  if (closure === 'refund-form') {
+    if (!customerName) return reply
+    const lang = resolveTenantLang(ar)
+    const finalText = t('refundFormFinal', lang).replace('{name}', customerName)
+    return finalText
+  }
+  if (!ar.pendingEscalation || !customerName) return reply
   const ctx = extractEscalationContext(ar.state, ar.state.customerName)
   const summary = buildEscalationSummary(ctx)
   ar.pendingEscalation = null

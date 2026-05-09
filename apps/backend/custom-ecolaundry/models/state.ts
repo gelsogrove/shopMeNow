@@ -69,7 +69,12 @@ export type SessionState = {
   lastUserMessage: string
   lastPresentedStepId: string | null
   lastMissingFacts: string[]
-  pendingClosure: 'resolved' | 'escalated' | null
+  // 'resolved'    — case closed by markResolved (machine works).
+  // 'escalated'   — case handed over to a human operator (operatorHandoffFinal appended).
+  // 'refund-form' — case closed via refund flow (Caso 6.1 Sí branch): the bot asks
+  //                 the name, then closes with a refund-form message. NO operator
+  //                 handover line, NO "Human Support message" summary.
+  pendingClosure: 'resolved' | 'escalated' | 'refund-form' | null
   lastActivityAt: number
   activeFaqFlow: string | null  // e.g. 'discount-code'
   faqStep: number               // 0 = inactive, 1+ = step index within the flow
@@ -168,6 +173,21 @@ export type SessionState = {
   //   ≥2 → escalate to operator
   // Reset to 0 by resetMachineFacts and when machineType is finally captured.
   machineTypeAskAttempts: number
+  // Counts how many times the bot has asked "¿cómo te llamas?" inside ANY
+  // closure flow (refund-form / discount-code / future flows) without the
+  // customer providing a valid name. Iron rule #10 corollary — every
+  // gather step has a 3-strikes retry+escalate ladder, including the
+  // terminal name capture.
+  //   0 → first ask "¿cómo te llamas?" (canonical key customerNameAsk)
+  //   1 → second ask "¿cómo te llamas?" (counter increments)
+  //   ≥2 → escalate to operator (the customer is unable to provide a name,
+  //         we cannot keep looping)
+  // Shared counter across flows on purpose: the ladder is about the
+  // customer's ability to reply with a valid name, not about the specific
+  // case — and at most one closure flow is active per turn.
+  // Reset to 0 by captureCustomerName (state-transitions.ts) and by
+  // resetForNewIncident.
+  awaitNameAskAttempts: number
   pendingFlow:
     | ''
     | 'paid-not-used-ask-change'
@@ -181,6 +201,7 @@ export type SessionState = {
     | 'double-charge-ask-narrative'
     | 'double-charge-ask-card-digits'
     | 'double-charge-ask-receipt'
+    | 'double-charge-await-name'
     | 'photo-await-decision'
     | 'photo-await-confirmation'
     | 'discount-code-ask'

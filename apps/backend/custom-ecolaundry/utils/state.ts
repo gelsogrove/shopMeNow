@@ -60,6 +60,7 @@ export function createInitialState(): SessionState {
     cardDigitsAskAttempts: 0,
     machineNumberAskAttempts: 0,
     machineTypeAskAttempts: 0,
+    awaitNameAskAttempts: 0,
     displayLabel: '',
     discountCodeAskAttempts: 0,
     pendingFlow: '',
@@ -110,6 +111,7 @@ export function resetMachineFacts(state: SessionState): void {
   state.cardDigitsAskAttempts = 0
   state.machineNumberAskAttempts = 0
   state.machineTypeAskAttempts = 0
+  state.awaitNameAskAttempts = 0
   state.displayLabel = ''
   state.discountCodeAskAttempts = 0
   state.mixedIncident = false

@@ -26,6 +26,7 @@
   "noPhotoEscalate": "⚠️ Sin información del display ni foto, vamos a revisar tu caso manualmente para ayudarte. 🙏",
   "reaffirmEscalate": "Vamos a revisar tu caso manualmente para poder ayudarte mejor. 🙏 ¿Cómo te llamas, por favor?",
   "operatorHandoffFinal": "Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.",
+  "refundFormFinal": "¡Gracias, {name}! 🙏 Hemos recibido toda la información necesaria para tu caso. Vamos a revisar tu situación y te enviaremos el formulario de reembolso. Si necesitas algo más, aquí estoy para ayudarte. 💚",
   "displayShort": "Cuéntame, por favor, ¿qué aparece exactamente en la pantalla?",
   "displayUnrecognizedReask": "No reconozco ese código exactamente. ¿Podrías comprobarlo nuevamente?",
   "paymentAsk": "¿Has podido realizar el pago?",

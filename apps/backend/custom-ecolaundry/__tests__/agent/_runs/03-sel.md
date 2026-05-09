@@ -1,6 +1,6 @@
 # Agent test dialogues — `03-sel.test.spec.ts`
 
-Generated: 2026-05-09T19:44:40.438Z
+Generated: 2026-05-09T20:38:48.705Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 3.1: happy path completo → SEL istruzione → "Ahora sí funciona" → resolved
@@ -44,7 +44,7 @@ Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por
 🤖 **bot:**
 
 ```
-✅ Perfecto, ya está resuelto. 🎉
+¡Perfecto, incidencia resuelta! 🎉 Si necesitas más ayuda, no dudes en preguntar.
 ```
 
 ---

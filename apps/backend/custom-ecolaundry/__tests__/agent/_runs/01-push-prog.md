@@ -1,6 +1,6 @@
 # Agent test dialogues — `01-push-prog.test.spec.ts`
 
-Generated: 2026-05-09T19:44:40.436Z
+Generated: 2026-05-09T20:38:48.703Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 1.1: happy path completo → gather → PUSH PROG → "ahora funciona" → resolved
@@ -54,7 +54,7 @@ Después dime si la lavadora ha arrancado.
 🤖 **bot:**
 
 ```
-✅ Perfecto, incidencia resuelta. ¡Que tengas un buen día! 🎉
+¡Perfecto! 🎉 Incidencia resuelta. Si necesitas más ayuda, no dudes en preguntar.
 ```
 
 ---

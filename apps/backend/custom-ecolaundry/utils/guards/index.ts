@@ -35,6 +35,7 @@ import {
   guardDoubleChargeAskNumber,
   guardDoubleChargeAskCardDigits,
   guardDoubleChargeAskReceipt,
+  guardDoubleChargeAwaitName,
 } from './payment-double-charge.js'
 import {
   guardDiscountCodeAsk,
@@ -76,7 +77,7 @@ import { guardLocationGatedMismatch } from './location-gated-mismatch.js'
 import { guardFaqClosure } from './faq-closure.js'
 import { guardInvoiceFlow } from './invoice-flow.js'
 import { guardPricingDeflect, guardOpeningHours } from './hours-and-pricing.js'
-import { guardAngryCustomerEmpathic, guardAngryCustomerEscalate } from './angry-customer.js'
+import { guardAngryCustomerEmpathic, guardAngryCustomerEscalate, guardAngryCustomerExplicit } from './angry-customer.js'
 import { guardRefundOrCompensation } from './refund-and-compensation.js'
 import { guardContradictoryNarrative } from './contradictory-narrative.js'
 import { guardEscalateNonTroubleshooting } from './faq-non-troubleshooting.js'
@@ -92,6 +93,11 @@ export type { Guard, GuardOutcome } from '../../models/index.js'
 export const GUARD_PIPELINE: Guard[] = [
   guardPureGreeting,
   guardMataroStreet,
+  // Boundary signal: rage + explicit operator request → immediate escalate.
+  // Must run BEFORE guardForceLocation and any gather guard so the customer
+  // who screams "muy enfadado, quiero un operador" doesn't get asked
+  // "¿en qué lavandería estás?". See angry-customer.ts for rationale.
+  guardAngryCustomerExplicit,
   guardFaqClosure,
   guardPaidNotUsedAskChange,
   guardNoChangeAsk,
@@ -114,6 +120,11 @@ export const GUARD_PIPELINE: Guard[] = [
   guardAngryCustomerEmpathic,
   guardAngryCustomerEscalate,
   guardContradictoryNarrative,
+  // Refund-form name capture must run BEFORE forceLocation/forceDisplay
+  // — when the customer replies with their name after the receipt step,
+  // we must capture it deterministically and close as refund-form, NOT
+  // fall through to a gather guard asking pantalla.
+  guardDoubleChargeAwaitName,
   guardDoubleChargeAskUsed,
   guardDoubleChargeAskNarrative,
   guardDoubleChargeAskType,

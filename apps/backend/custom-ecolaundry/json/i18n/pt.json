@@ -75,5 +75,6 @@
   "unknownLocationList": "Não reconheço essa localização. As nossas lavandarias são: {list}. Em qual delas estás?",
   "defaultHelp": "Diz-me o próximo detalhe útil e ajudo-te passo a passo.",
   "operatorHandoffFinal": "Um operador humano vai assumir o teu caso. Por favor, espera um momento enquanto analisam a situação. O chatbot será desativado.",
+  "refundFormFinal": "Obrigado, {name}! 🙏 Recebemos todas as informações necessárias para o teu caso. Vamos rever a tua situação e enviar-te o formulário de reembolso. Se precisares de mais alguma coisa, estou aqui para ajudar. 💚",
   "flowResumePrompt": "Continuamos com o problema da lavandaria?"
 }

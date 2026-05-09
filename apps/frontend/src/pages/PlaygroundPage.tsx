@@ -174,6 +174,20 @@ function MessageBody({
   )
 }
 
+const HUMAN_SUPPORT_MARKER = "**👤 Human Support message**"
+
+function splitBotMessage(content: string): {
+  customer: string
+  operator: string | null
+} {
+  const idx = content.indexOf(HUMAN_SUPPORT_MARKER)
+  if (idx === -1) return { customer: content, operator: null }
+  return {
+    customer: content.slice(0, idx).trimEnd(),
+    operator: content.slice(idx),
+  }
+}
+
 // Three-dot "typing" indicator used in the chat bubble while waiting for
 // the bot reply. Pure CSS; no extra deps.
 function TypingDots() {
@@ -712,32 +726,49 @@ function TodoDetailModal({
             {conversation.map((m) => {
               const isInbound = m.direction === "INBOUND"
               const isHighlighted = m.id === todo.dialogId
+              const { customer: customerText, operator: operatorText } = isInbound
+                ? { customer: m.content, operator: null }
+                : splitBotMessage(m.content)
               return (
-                <div
-                  key={m.id}
-                  className={`flex ${
-                    isInbound ? "justify-start" : "justify-end"
-                  }`}
-                >
+                <div key={m.id} className="space-y-1">
                   <div
-                    className={`max-w-[80%] rounded-lg px-3 py-2 text-sm shadow ${
-                      isInbound ? "bg-white" : "bg-[#dcf8c6]"
-                    } ${
-                      isHighlighted
-                        ? "ring-2 ring-emerald-500 ring-offset-1"
-                        : ""
+                    className={`flex ${
+                      isInbound ? "justify-start" : "justify-end"
                     }`}
                   >
-                    <MessageBody content={m.content} isInbound={isInbound} />
-                    <div className="text-[10px] text-gray-500 mt-1">
-                      {new Date(m.createdAt).toLocaleTimeString()}
-                      {isHighlighted && (
-                        <span className="ml-2 font-semibold text-emerald-700">
-                          · commented
-                        </span>
-                      )}
+                    <div
+                      className={`max-w-[80%] rounded-lg px-3 py-2 text-sm shadow ${
+                        isInbound ? "bg-white" : "bg-[#dcf8c6]"
+                      } ${
+                        isHighlighted
+                          ? "ring-2 ring-emerald-500 ring-offset-1"
+                          : ""
+                      }`}
+                    >
+                      <MessageBody content={customerText} isInbound={isInbound} />
+                      <div className="text-[10px] text-gray-500 mt-1">
+                        {new Date(m.createdAt).toLocaleTimeString()}
+                        {isHighlighted && (
+                          <span className="ml-2 font-semibold text-emerald-700">
+                            · commented
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
+                  {operatorText && (
+                    <div className="flex justify-end">
+                      <div
+                        className="max-w-[80%] rounded-lg px-3 py-2 text-sm shadow bg-orange-100 border border-orange-300 text-orange-900"
+                        title="Internal operator handover — not sent to the customer"
+                      >
+                        <MessageBody content={operatorText} isInbound={false} />
+                        <div className="text-[10px] text-orange-700/80 mt-1 italic">
+                          internal — not visible to the customer
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -1554,49 +1585,65 @@ function ChatScreen({
                 if (!linkedTodo) return
                 navigate(`/demo/ecolaundry/kanban?todo=${linkedTodo.id}`)
               }
+              const { customer: customerText, operator: operatorText } = isInbound
+                ? { customer: m.content, operator: null }
+                : splitBotMessage(m.content)
               return (
-                <div
-                  key={m.id}
-                  id={`msg-${m.id}`}
-                  className={`flex ${isInbound ? "justify-start" : "justify-end"}`}
-                >
+                <div key={m.id} id={`msg-${m.id}`} className="space-y-1">
                   <div
-                    onClick={linkedTodo ? openTaskOnKanban : undefined}
-                    title={linkedTodo ? "Click to open the linked task on the kanban" : undefined}
-                    className={`max-w-[75%] rounded-lg px-3 py-2 shadow text-sm relative group transition ${
-                      isInbound ? "bg-white" : "bg-[#dcf8c6]"
-                    } ${linkedTodo ? "cursor-pointer hover:brightness-95" : ""} ${
-                      isHighlighted
-                        ? "ring-4 ring-emerald-500 ring-offset-2 animate-pulse"
-                        : linkedTodo
-                        ? "ring-2 ring-amber-400 ring-offset-1"
-                        : ""
-                    }`}
+                    className={`flex ${isInbound ? "justify-start" : "justify-end"}`}
                   >
-                    <MessageBody content={m.content} isInbound={isInbound} />
-                    <div className="text-[10px] text-gray-500 mt-1 flex justify-between items-center gap-3">
-                      <span>{new Date(m.createdAt).toLocaleTimeString()}</span>
-                      {/* Comment button only for chatbot (OUTBOUND) messages.
-                          Users don't comment on their own messages. */}
-                      {!isInbound && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setCommentingMessage(m)
-                          }}
-                          className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/70 hover:bg-emerald-100 text-emerald-700 transition shadow-sm"
-                          title="Comment this bot reply"
-                        >
-                          <MessageCircle className="w-4 h-4" />
-                          {todoCount > 0 && (
-                            <span className="text-xs font-semibold">
-                              {todoCount}
-                            </span>
-                          )}
-                        </button>
-                      )}
+                    <div
+                      onClick={linkedTodo ? openTaskOnKanban : undefined}
+                      title={linkedTodo ? "Click to open the linked task on the kanban" : undefined}
+                      className={`max-w-[75%] rounded-lg px-3 py-2 shadow text-sm relative group transition ${
+                        isInbound ? "bg-white" : "bg-[#dcf8c6]"
+                      } ${linkedTodo ? "cursor-pointer hover:brightness-95" : ""} ${
+                        isHighlighted
+                          ? "ring-4 ring-emerald-500 ring-offset-2 animate-pulse"
+                          : linkedTodo
+                          ? "ring-2 ring-amber-400 ring-offset-1"
+                          : ""
+                      }`}
+                    >
+                      <MessageBody content={customerText} isInbound={isInbound} />
+                      <div className="text-[10px] text-gray-500 mt-1 flex justify-between items-center gap-3">
+                        <span>{new Date(m.createdAt).toLocaleTimeString()}</span>
+                        {/* Comment button only for chatbot (OUTBOUND) messages.
+                            Users don't comment on their own messages. */}
+                        {!isInbound && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setCommentingMessage(m)
+                            }}
+                            className="flex items-center gap-1 px-2 py-1 rounded-full bg-white/70 hover:bg-emerald-100 text-emerald-700 transition shadow-sm"
+                            title="Comment this bot reply"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                            {todoCount > 0 && (
+                              <span className="text-xs font-semibold">
+                                {todoCount}
+                              </span>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
+                  {operatorText && (
+                    <div className="flex justify-end">
+                      <div
+                        className="max-w-[75%] rounded-lg px-3 py-2 shadow text-sm bg-orange-100 border border-orange-300 text-orange-900"
+                        title="Internal operator handover — not sent to the customer"
+                      >
+                        <MessageBody content={operatorText} isInbound={false} />
+                        <div className="text-[10px] text-orange-700/80 mt-1 italic">
+                          internal — not visible to the customer
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}

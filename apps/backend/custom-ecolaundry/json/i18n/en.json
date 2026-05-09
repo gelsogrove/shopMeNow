@@ -75,5 +75,6 @@
   "unknownLocationList": "I don't recognize that location. Our laundromats are: {list}. Which one are you at?",
   "defaultHelp": "Tell me the next useful detail and I'll help step by step.",
   "operatorHandoffFinal": "A human operator will take over your case. Please wait a moment while they review the situation. The chatbot will be deactivated.",
+  "refundFormFinal": "Thanks, {name}! 🙏 We have received all the information needed for your case. We will review your situation and send you the refund form. If you need anything else, I'm here to help. 💚",
   "flowResumePrompt": "Shall we continue with the laundry issue?"
 }

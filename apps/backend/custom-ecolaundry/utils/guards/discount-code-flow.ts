@@ -23,6 +23,7 @@ import { lang } from './helpers.js'
 import { buildEscalationSummary, extractEscalationContext } from '../escalation.js'
 import { validateCustomerName } from '../customer-name.js'
 import { captureCustomerName, closeAsEscalated, escalate, requireCustomerName } from '../state-transitions.js'
+import { nextRetryLadderStep } from './retry-ladder.js'
 
 const CASO8_CODE_RE = /^([A-Z]{3})(\d{2})(\d{2})(\d{2})(\d+)$/
 
@@ -115,13 +116,31 @@ export const guardDiscountCodeAwait: Guard = (ar, userMessage) => {
 /** Caso 8 step 3 — capture customer name, then ask pueblo (or skip).
  *  Rejects confirmation words ("si"/"vale"/"gracias"), numeric-only tokens
  *  and 1-char strings via the shared `validateCustomerName` helper, then
- *  re-asks the name on a fresh turn instead of poisoning the state. */
+ *  re-asks the name on a fresh turn instead of poisoning the state.
+ *
+ *  Iron rule #10 corollary — 3-strikes ladder via the shared
+ *  `awaitNameAskAttempts` counter. After 2 invalid attempts the bot
+ *  escalates to a live operator who can collect the name by phone. */
 export const guardDiscountCodeAwaitName: Guard = (ar, userMessage) => {
   if (ar.state.pendingFlow !== 'discount-code-await-name') return null
   const validation = validateCustomerName(userMessage)
   if (!validation.valid) {
+    const step = nextRetryLadderStep(
+      ar.state.awaitNameAskAttempts,
+      (n) => { ar.state.awaitNameAskAttempts = n },
+    )
+    if (step === 'escalate') {
+      ar.state.pendingFlow = ''
+      escalate(ar, 'Discount code — could not capture customer name after 2 attempts')
+      requireCustomerName(ar)
+      return {
+        reply: t('reaffirmEscalate', lang(ar)),
+        reason: 'discount-code-await-name-escalate',
+      }
+    }
     return { reply: t('customerNameAsk', lang(ar)), reason: 'discount-code-await-name-reask' }
   }
+  // Valid name — captureCustomerName resets awaitNameAskAttempts atomically.
   captureCustomerName(ar, validation.name)
   if (ar.state.location) {
     if (ar.state.machineNumber) {

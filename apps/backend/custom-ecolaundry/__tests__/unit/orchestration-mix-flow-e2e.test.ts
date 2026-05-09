@@ -313,13 +313,20 @@ const cases: Case[] = [
           user: '4821', // 4 digits — valid
           expectReason: 'double-charge-ask-receipt',
           expectReplyContains: /captura.*pago|formulario.*devoluc/i,
-          description: '4 valid digits → continue to receipt + closure',
+          description: '4 valid digits → continue to refund-form closure',
           assertState: (ar) => {
             if (ar.state.cardDigitsAskAttempts !== 0) {
               throw new Error('counter must reset on success')
             }
-            if (!ar.state.operatorRequested) {
-              throw new Error('receipt step also escalates for refund handover')
+            // Refund-form path: NO operatorRequested. usecases.md §6.1 riga
+            // 627 — el ramo Sí cierra como trámite de devolución, no como
+            // escalación. El estado se transmite vía escalationReason +
+            // customerNameRequested.
+            if (ar.state.operatorRequested) {
+              throw new Error('refund-form path must NOT set operatorRequested')
+            }
+            if (!ar.state.customerNameRequested) {
+              throw new Error('refund-form path still asks for the customer name')
             }
           },
         },

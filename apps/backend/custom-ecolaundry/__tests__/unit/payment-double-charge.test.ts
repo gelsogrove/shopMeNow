@@ -37,6 +37,7 @@ import {
   guardDoubleChargeAskType,
   guardDoubleChargeAskNumber,
   guardDoubleChargeAskReceipt,
+  guardDoubleChargeAwaitName,
 } from '../../utils/guards/payment-double-charge.js'
 import { createInitialState } from '../../utils/state.js'
 import type { AgentRuntime } from '../../models/index.js'
@@ -307,7 +308,7 @@ const cases: Case[] = [
 
   // ── guardDoubleChargeAskReceipt — 4-digit validation ──────────────────────
   {
-    name: 'digits VALID: "4821" → continue to receipt + closure',
+    name: 'digits VALID: "4821" → refund-form path (NOT escalation, see usecases.md §6.1 riga 627)',
     run: () => {
       const ar = makeAr()
       ar.state.pendingFlow = 'double-charge-ask-receipt'
@@ -317,8 +318,21 @@ const cases: Case[] = [
       if (out.reason !== 'double-charge-ask-receipt') {
         throw new Error(`expected receipt step, got ${out.reason}`)
       }
-      if (!ar.state.operatorRequested) {
-        throw new Error('receipt step also escalates (refund handover)')
+      // Refund-form path: NO operatorRequested, NO pendingEscalation. The
+      // bot collects the name and closes with a refund-form message — no
+      // live operator handover, no operatorHandoffFinal line. State carried
+      // by escalationReason (for internal logs) + customerNameRequested.
+      if (ar.state.operatorRequested) {
+        throw new Error('refund-form path must NOT set operatorRequested (it is not a live handover)')
+      }
+      if (ar.pendingEscalation !== null) {
+        throw new Error('refund-form path must NOT set pendingEscalation (would trigger handoff line)')
+      }
+      if (!ar.state.customerNameRequested) {
+        throw new Error('refund-form path still asks for the customer name')
+      }
+      if (ar.state.escalationReason !== 'Double charge incident — review with refund form') {
+        throw new Error(`escalationReason must record refund-form context, got: ${ar.state.escalationReason}`)
       }
     },
   },
@@ -418,6 +432,108 @@ const cases: Case[] = [
       if (ar.state.cardDigitsAskAttempts !== 0) {
         throw new Error(`counter must reset on success, got ${ar.state.cardDigitsAskAttempts}`)
       }
+    },
+  },
+
+  // ── guardDoubleChargeAwaitName — name capture + 3-strikes ladder ──────────
+  // Iron rule #10 corollary: the closure step that asks the customer name
+  // also runs a retry+escalate ladder via the shared awaitNameAskAttempts
+  // counter. Without this the bot would loop forever on confirmation words
+  // ("vale", "ok") or numeric-only replies.
+  {
+    name: 'awaitName VALID: "Andrea" → captureCustomerName + closeAsRefundForm + i18n finalText',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'double-charge-await-name'
+      ar.state.awaitNameAskAttempts = 1 // simulate previous invalid attempt
+      const out = guardDoubleChargeAwaitName(ar, 'Andrea')
+      if (out?.reason !== 'double-charge-refund-form-closure') {
+        throw new Error(`expected refund-form closure, got ${out?.reason}`)
+      }
+      if (ar.state.customerName !== 'Andrea') {
+        throw new Error(`name must be captured, got: ${ar.state.customerName}`)
+      }
+      if (ar.state.awaitNameAskAttempts !== 0) {
+        throw new Error(`counter must reset on success, got ${ar.state.awaitNameAskAttempts}`)
+      }
+      if (ar.state.pendingClosure !== 'refund-form') {
+        throw new Error(`pendingClosure must be 'refund-form', got: ${ar.state.pendingClosure}`)
+      }
+      if (ar.state.pendingFlow !== '') {
+        throw new Error(`pendingFlow must be cleared, got: ${ar.state.pendingFlow}`)
+      }
+      // Reply must contain the customer name (i18n template '{name}' interpolated).
+      if (!/Andrea/.test(out.reply)) {
+        throw new Error(`reply must include the captured name: ${out.reply}`)
+      }
+    },
+  },
+  {
+    name: 'awaitName INVALID 1st (confirmation word "vale") → re-ask, counter = 1',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'double-charge-await-name'
+      const out = guardDoubleChargeAwaitName(ar, 'vale')
+      if (out?.reason !== 'double-charge-await-name-retry') {
+        throw new Error(`expected retry, got ${out?.reason}`)
+      }
+      if (ar.state.awaitNameAskAttempts !== 1) {
+        throw new Error(`counter must be 1 after first invalid, got ${ar.state.awaitNameAskAttempts}`)
+      }
+      if (ar.state.operatorRequested) {
+        throw new Error('NO escalation on first invalid — must give a chance to retype')
+      }
+    },
+  },
+  {
+    name: 'awaitName INVALID 2nd (numeric "123") → re-ask, counter = 2',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'double-charge-await-name'
+      ar.state.awaitNameAskAttempts = 1
+      const out = guardDoubleChargeAwaitName(ar, '123')
+      if (out?.reason !== 'double-charge-await-name-retry') {
+        throw new Error(`expected retry, got ${out?.reason}`)
+      }
+      if (ar.state.awaitNameAskAttempts !== 2) {
+        throw new Error(`counter must be 2 after second invalid, got ${ar.state.awaitNameAskAttempts}`)
+      }
+      if (ar.state.operatorRequested) {
+        throw new Error('NO escalation on second invalid — one more chance')
+      }
+    },
+  },
+  {
+    name: 'awaitName INVALID 3rd → escalate to operator, counter resets to 0',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'double-charge-await-name'
+      ar.state.awaitNameAskAttempts = 2
+      const out = guardDoubleChargeAwaitName(ar, '?')
+      if (out?.reason !== 'double-charge-await-name-escalate') {
+        throw new Error(`expected escalate, got ${out?.reason}`)
+      }
+      if (!ar.state.operatorRequested) {
+        throw new Error('operatorRequested must be set on escalate')
+      }
+      if (!ar.state.customerNameRequested) {
+        throw new Error('customerNameRequested must be set so the human operator picks up the name ask')
+      }
+      if (ar.state.pendingFlow !== '') {
+        throw new Error(`pendingFlow must be cleared on escalate, got: ${ar.state.pendingFlow}`)
+      }
+      if (ar.state.awaitNameAskAttempts !== 0) {
+        throw new Error(`counter must reset to 0 on escalate, got ${ar.state.awaitNameAskAttempts}`)
+      }
+    },
+  },
+  {
+    name: 'awaitName precondition: pendingFlow !== double-charge-await-name → null',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'discount-code-await-name' // sibling flow
+      const out = guardDoubleChargeAwaitName(ar, 'Andrea')
+      if (out !== null) throw new Error('guard must skip when not in its flow')
     },
   },
 ]

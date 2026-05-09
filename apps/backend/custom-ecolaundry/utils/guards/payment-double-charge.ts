@@ -41,7 +41,14 @@
 import { t } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { lang } from './helpers.js'
-import { escalate, requireCustomerName } from '../state-transitions.js'
+import {
+  captureCustomerName,
+  closeAsRefundForm,
+  escalate,
+  markRefundFormPending,
+  requireCustomerName,
+} from '../state-transitions.js'
+import { validateCustomerName } from '../customer-name.js'
 import { nextRetryLadderStep } from './retry-ladder.js'
 
 /** Caso 6 step 2 — after location is captured, ask "¿has podido lavar/secar?".
@@ -282,15 +289,72 @@ export const guardDoubleChargeAskReceipt: Guard = (ar, userMessage) => {
   }
 
   // Valid 4 digits — proceed to receipt + closure.
+  // This is the Caso 6.1 Sí branch terminal step: the customer used the
+  // service, so the closure is a refund-form trámite, NOT a live operator
+  // handover. We use markRefundFormPending (NOT escalate) so the post-
+  // processor in agent.ts skips the operatorHandoffFinal + Human Support
+  // summary. See usecases.md §6.1 riga 627.
+  //
+  // pendingFlow='double-charge-await-name' tells the next-turn guard
+  // pipeline that the customer's reply is the name (deterministic capture
+  // by guardDoubleChargeAwaitName), preventing the LLM from improvising.
   ar.state.cardDigitsAskAttempts = 0
-  ar.state.pendingFlow = ''
+  ar.state.pendingFlow = 'double-charge-await-name'
   if (!ar.state.issueSummary?.startsWith('double charge')) {
     ar.state.issueSummary = 'double charge'
   }
-  escalate(ar, 'Double charge incident — review with refund form')
+  markRefundFormPending(ar, 'Double charge incident — review with refund form')
   requireCustomerName(ar)
   const captura = t('doubleChargeAskReceipt', lang(ar))
   const closure = t('doubleChargeClosure', lang(ar))
   const nameAsk = t('customerNameAsk', lang(ar))
   return { reply: `${captura}\n\n${closure} ${nameAsk}`, reason: 'double-charge-ask-receipt' }
+}
+
+/**
+ * Caso 6.1 closure — capture the customer's name and emit the refund-form
+ * final reply. Pre-condition: `pendingFlow === 'double-charge-await-name'`.
+ *
+ * Why deterministic: without this guard the LLM is left to interpret the
+ * name reply, and with `operatorRequested=false` (refund-form, not live
+ * escalation) it tends to improvise — e.g. ask "what's on the screen?"
+ * because the displayState slot is empty. This guard captures the name,
+ * closes the case as refund-form, and emits the i18n `refundFormFinal`
+ * reply with the name interpolated.
+ *
+ * usecases.md §6.1 riga 627: el ramo Sí cierra como trámite de devolución,
+ * no como escalación al operador.
+ */
+export const guardDoubleChargeAwaitName: Guard = (ar, userMessage) => {
+  if (ar.state.pendingFlow !== 'double-charge-await-name') return null
+  const validation = validateCustomerName(userMessage)
+  if (validation.valid === false) {
+    // Invalid name (numeric/confirmation/short). Iron rule #10 corollary:
+    // 3-strikes retry+escalate ladder. After 2 invalid attempts we cannot
+    // keep looping — escalate to a live operator so a human can collect
+    // the name (e.g. via phone call).
+    const step = nextRetryLadderStep(
+      ar.state.awaitNameAskAttempts,
+      (n) => { ar.state.awaitNameAskAttempts = n },
+    )
+    if (step === 'escalate') {
+      ar.state.pendingFlow = ''
+      escalate(ar, 'Double charge — could not capture customer name after 2 attempts')
+      requireCustomerName(ar)
+      return {
+        reply: t('reaffirmEscalate', lang(ar)),
+        reason: 'double-charge-await-name-escalate',
+      }
+    }
+    return {
+      reply: t('customerNameAsk', lang(ar)),
+      reason: 'double-charge-await-name-retry',
+    }
+  }
+  // Valid name — captureCustomerName resets awaitNameAskAttempts atomically.
+  captureCustomerName(ar, validation.name)
+  ar.state.pendingFlow = ''
+  closeAsRefundForm(ar)
+  const finalText = t('refundFormFinal', lang(ar)).replace('{name}', validation.name)
+  return { reply: finalText, reason: 'double-charge-refund-form-closure' }
 }

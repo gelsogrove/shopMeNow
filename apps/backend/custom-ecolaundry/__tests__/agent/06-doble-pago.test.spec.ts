@@ -1,298 +1,213 @@
-// 14 — Caso 6 Doble cobro
+// 06 — Caso 6 Doble cobro
 //
-// Da usecases.md Caso 6: il cliente è stato addebitato 2 volte. Due
-// scenari principali:
-//   6.1 — Happy Path: ha potuto usare il servizio → tipo + número +
-//          relato + 4 dígitos + captura → escalation con summary
-//          "habiendo podido usar el servicio".
-//   6.4 — NON ha potuto usare il servizio → escalation immediata, NO
-//          tipo/número, summary con "PERO NO ha podido usar el servicio".
-//
-// Gather order canonico (NEW, Andrea 2026-05-09 — Caso 6 reorder):
+// Da usecases.md Caso 6: il cliente è stato addebitato 2 volte. Gather
+// order canonico (Andrea 2026-05-09 — Caso 6 reorder):
 //   1. location              (forceLocation, da T1)
-//   2. ¿podido lavar/secar?  (guardDoubleChargeAskUsed, subito dopo location)
+//   2. ¿podido lavar/secar?  (guardDoubleChargeAskUsed, dopo location)
 //   3a. yes branch → tipo → número → relato → 4 dígitos → captura → name (6.1)
 //   3b. no  branch → escalation immediata (6.4)
 //
-// Why this order: a customer who got charged twice without being able to
-// wash is doubly frustrated. Asking machine details before knowing if they
-// got the service felt like burocracia. The "no" path now skips tipo/número
-// (operator collects them on the phone if needed).
+// UX rationale: a customer who got charged twice without being able to
+// wash is doubly frustrated. Asking machine details before knowing if
+// they got the service felt like burocracia. The "no" path skips
+// tipo/número (operator collects them on the phone if needed).
 //
-// Scenario 6.2 — Cliente arrabbiato → escalation immediata.
-// Scenario 6.3 — Relato contradittorio → escalation.
-// Scenario 6.5 — Validazione 4 dígitos.
+// Scenari coperti:
+//   6.1 — Happy Path (Sí): full path → handover summary "habiendo podido"
+//   6.2 — Cliente arrabbiato: rage + operador → escalate immediato
+//          (boundary signal handled by guardAngryCustomerExplicit, NEW)
+//   6.3 — Relato contradittorio: "no sé exactamente" → escalation
+//   6.4 — NO branch: cliente non ha potuto usare → escalate sin tipo/numero
+//   6.5A — Validación 4 dígitos: 5 cifre → re-ask → 4 cifre → continua
+//   6.5B — 2 risposte invalide → escalate
+//   Bug A — typo "habieis cobrado" → flusso parte (regression test)
+//
+// CONSOLIDATED LAYOUT (Andrea, 2026-05-09): un test per percorso, asserzioni
+// step-by-step inline. Eliminato il pattern "1 test = 1 turno" che rifaceva
+// la stessa conversazione 20 volte.
 
 import { type TestCase, expectMentionsAll, expectEscalation } from './_helpers.js'
 
 export const tests: TestCase[] = [
-  // ── Gather order T1-T2 (deterministic, pre-branch) ─────────────────────────
+  // ── Scenario 6.1 — Happy Path completo (Sí branch end-to-end) ────────────
   {
-    name: 'ES — Caso 6 T1: trigger "cobrado dos veces" → bot welcome + chiede LOCATION',
+    name: 'ES — Scenario 6.1: happy path completo → Sí → tipo → número → 4 dígitos → handover',
     run: async (ctx) => {
-      const reply = await ctx.send('Me habéis cobrado dos veces con la tarjeta')
-      // Iron rule #10: a T1 il bot deve chiedere location, NON improvvisare.
-      const lower = reply.toLowerCase()
-      if (!/lavander[ií]a|d[oó]nde\s+est[aá]s/.test(lower)) {
-        throw new Error(`T1: bot deve chiedere location, NON improvvisare: ${reply}`)
+      // T1 — trigger → bot chiede LOCATION (NO improvisation, NO podido-ask first)
+      const t1 = await ctx.send('Me habéis cobrado dos veces con la tarjeta')
+      const t1Lower = t1.toLowerCase()
+      if (!/lavander[ií]a|d[oó]nde\s+est[aá]s/.test(t1Lower)) {
+        throw new Error(`Caso 6 T1: bot deve chiedere location: ${t1}`)
       }
-      // Must NOT jump ahead to "podido lavar" before location is captured.
-      if (/podido\s+(?:lavar|secar)/i.test(lower)) {
-        throw new Error(`T1: bot non deve chiedere "podido lavar" prima della location: ${reply}`)
+      if (/podido\s+(?:lavar|secar)/.test(t1Lower)) {
+        throw new Error(`Caso 6 T1: bot non deve saltare a "podido" prima della location: ${t1}`)
       }
-    },
-  },
-  {
-    // NEW order (Andrea 2026-05-09): subito dopo location il bot chiede
-    // "¿has podido lavar/secar?", NON tipo/numero. Il tipo/numero arrivano
-    // solo nel ramo Sí.
-    name: 'ES — Caso 6 T2: dopo location, bot chiede "¿podido lavar/secar?" (NO tipo/numero)',
-    run: async (ctx) => {
-      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
-      const reply = await ctx.send('Goya')
-      const lower = reply.toLowerCase()
-      if (!/podido\s+(?:lavar|secar)/.test(lower)) {
-        throw new Error(`T2 (new order): bot deve chiedere "¿podido lavar/secar?": ${reply}`)
+      // T2 — location → bot chiede "¿podido lavar/secar?" (NO tipo/numero)
+      const t2 = await ctx.send('Goya')
+      const t2Lower = t2.toLowerCase()
+      if (!/podido\s+(?:lavar|secar)/.test(t2Lower)) {
+        throw new Error(`Caso 6 T2 (new order): bot deve chiedere "¿podido lavar/secar?": ${t2}`)
       }
-      // Must NOT pre-emptively ask for tipo/numero before knowing if the
-      // customer used the service.
-      if (/lavadora\s+o\s+(?:una\s+)?secadora/i.test(lower)) {
-        throw new Error(`T2 (new order): bot NON deve chiedere tipo prima di "¿podido?": ${reply}`)
+      if (/lavadora\s+o\s+(?:una\s+)?secadora/i.test(t2Lower)) {
+        throw new Error(`Caso 6 T2: bot NON deve chiedere tipo prima di "¿podido?": ${t2}`)
       }
-    },
-  },
-
-  // ── Branch SÍ (Scenario 6.1) — tipo → numero → relato → digits ────────────
-  {
-    name: 'ES — Caso 6 T3 (Sí): bot chiede TIPO macchina',
-    run: async (ctx) => {
-      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
-      await ctx.send('Goya')
-      const reply = await ctx.send('Sí, he podido lavar')
-      const lower = reply.toLowerCase()
-      if (!/lavadora|secadora/.test(lower)) {
-        throw new Error(`T3 (Sí branch): bot deve chiedere tipo macchina: ${reply}`)
+      // T3 — Sí branch → bot chiede TIPO macchina
+      const t3 = await ctx.send('Sí, he lavado')
+      if (!/lavadora|secadora/i.test(t3)) {
+        throw new Error(`Caso 6 T3 (Sí): bot deve chiedere tipo: ${t3}`)
       }
-    },
-  },
-  {
-    name: 'ES — Caso 6 T4 (Sí): dopo tipo, bot chiede NUMERO macchina',
-    run: async (ctx) => {
-      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
-      await ctx.send('Goya')
-      await ctx.send('Sí, he podido lavar')
-      const reply = await ctx.send('lavadora')
-      const lower = reply.toLowerCase()
-      if (!/n[uú]mero/.test(lower)) {
-        throw new Error(`T4: bot deve chiedere numero: ${reply}`)
+      // T4 — tipo → bot chiede NUMERO
+      const t4 = await ctx.send('lavadora')
+      if (!/n[uú]mero/i.test(t4)) {
+        throw new Error(`Caso 6 T4: bot deve chiedere numero: ${t4}`)
       }
-    },
-  },
-  {
-    name: 'ES — Caso 6 T5 (Sí): dopo numero, bot chiede paso a paso + datáfono hint',
-    run: async (ctx) => {
-      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
-      await ctx.send('Goya')
-      await ctx.send('Sí, he podido lavar')
-      await ctx.send('lavadora')
-      const reply = await ctx.send('5')
-      expectMentionsAll(reply, ['paso', 'explica'])
-      const lower = reply.toLowerCase()
-      if (!/dat[aá]fono|tarjeta.*veces|veces.*tarjeta/.test(lower)) {
-        throw new Error(`T5: reply must include datáfono / multi-card hint: ${reply}`)
+      // T5 — numero → bot chiede paso a paso + datáfono hint
+      const t5 = await ctx.send('5')
+      expectMentionsAll(t5, ['paso', 'explica'])
+      const t5Lower = t5.toLowerCase()
+      if (!/dat[aá]fono|tarjeta.*veces|veces.*tarjeta/.test(t5Lower)) {
+        throw new Error(`Caso 6 T5: reply must include datáfono / multi-card hint: ${t5}`)
       }
-    },
-  },
-  {
-    name: 'ES — Caso 6 T6 (Sí): dopo relato, bot chiede 4 dígitos tarjeta',
-    run: async (ctx) => {
-      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
-      await ctx.send('Goya')
-      await ctx.send('Sí, he podido lavar')
-      await ctx.send('lavadora')
-      await ctx.send('5')
-      const reply = await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
-      expectMentionsAll(reply, ['4', 'dig', 'tarjeta'])
-    },
-  },
-  {
-    name: 'ES — Caso 6 T7 (Sí): dopo 4 digits, bot chiede captura + nome',
-    run: async (ctx) => {
-      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
-      await ctx.send('Goya')
-      await ctx.send('Sí, he podido lavar')
-      await ctx.send('lavadora')
-      await ctx.send('5')
-      await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
-      const reply = await ctx.send('4821')
-      expectMentionsAll(reply, ['captura', 'devoluc'])
-      const lower = reply.toLowerCase()
-      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)) {
-        throw new Error(`Bot non chiede il nome: ${reply}`)
+      // T6 — relato → bot chiede 4 dígitos tarjeta
+      const t6 = await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
+      expectMentionsAll(t6, ['4', 'dig', 'tarjeta'])
+      // T7 — 4 dígitos → bot chiede captura + nome
+      const t7 = await ctx.send('4821')
+      expectMentionsAll(t7, ['captura', 'devoluc'])
+      const t7Lower = t7.toLowerCase()
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(t7Lower)) {
+        throw new Error(`Caso 6 T7: bot non chiede il nome: ${t7}`)
       }
-    },
-  },
-
-  // ── Scenario 6.1 — Happy Path full (Sí branch end-to-end) ────────────────
-  {
-    name: 'ES — Scenario 6.1: full Sí path → handover summary "habiendo podido usar"',
-    run: async (ctx) => {
-      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
-      await ctx.send('Goya')
-      await ctx.send('Sí, he lavado')
-      await ctx.send('lavadora')
-      await ctx.send('5')
-      await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
-      await ctx.send('4821')
-      const reply = await ctx.send('Andrea')
-      // Summary must include name, location, machine context, and the 6.1 marker.
-      expectMentionsAll(reply, ['Andrea', 'Goya', 'doble cobro'])
+      // T8 — name → final REFUND-FORM closure (NOT operator handover).
+      // usecases.md §6.1 riga 627: "El mensaje final NO menciona 'operador'
+      // ni 'desactivado': no es una escalación a un humano en vivo, es un
+      // trámite de devolución."
+      const final = await ctx.send('Andrea')
+      // Final must include the customer's name (LLM uses it in the closing).
+      expectMentionsAll(final, ['Andrea'])
+      const finalLower = final.toLowerCase()
+      // Closure must mention formulario/devolución/reembolso/revisar.
+      if (!/formular|devoluci|reembolso|revisar/.test(finalLower)) {
+        throw new Error(`Scenario 6.1: chiusura deve menzionare formulario/revisione: ${final}`)
+      }
+      // Negative assertions: refund path, no handover artefacts.
+      if (/desactivado/.test(finalLower)) {
+        throw new Error(`Scenario 6.1: finale NON deve contenere "desactivado" (è refund, non handover): ${final}`)
+      }
+      if (/operador/.test(finalLower)) {
+        throw new Error(`Scenario 6.1: finale NON deve menzionare "operador" (è refund, non handover): ${final}`)
+      }
+      if (/human\s+support/i.test(final)) {
+        throw new Error(`Scenario 6.1: finale NON deve contenere "Human Support message": ${final}`)
+      }
       // Garanzie negative: niente template buggato.
-      if (/n[uú]mero\s+n[uú]mero/i.test(reply)) {
-        throw new Error(`Bug "número número" presente: ${reply}`)
+      if (/n[uú]mero\s+n[uú]mero/i.test(final)) {
+        throw new Error(`Bug "número número" presente: ${final}`)
       }
-      if (/seleccion[oó]\s+el\s+programa\s+pero\s+problema\s+t[eé]cnico/i.test(reply)) {
-        throw new Error(`Frase nonsense presente: ${reply}`)
-      }
-    },
-  },
-  {
-    name: 'ES — Scenario 6.1: chiusura post-nome contiene "formular"/"devoluci" — no "desactivado"',
-    run: async (ctx) => {
-      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
-      await ctx.send('Goya')
-      await ctx.send('Sí, he lavado')
-      await ctx.send('lavadora')
-      await ctx.send('5')
-      await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
-      await ctx.send('4821')
-      const finalReply = await ctx.send('Andrea')
-      const lower = finalReply.toLowerCase()
-      if (!/formular|devoluci|reembolso|revisar/.test(lower)) {
-        throw new Error(`Scenario 6.1: chiusura non menziona formulario/revisione: ${finalReply}`)
+      if (/seleccion[oó]\s+el\s+programa\s+pero\s+problema\s+t[eé]cnico/i.test(final)) {
+        throw new Error(`Frase nonsense presente: ${final}`)
       }
     },
   },
 
-  // ── Scenario 6.2 — Cliente arrabbiato (escalation immediata) ─────────────
+  // ── Scenario 6.2 — Cliente arrabbiato + chiede operador → escalate immediato
   {
-    name: 'ES — Scenario 6.2: cliente arrabbiato + "operador" → escalation immediata',
+    // Boundary signal: rage + explicit operator request → guardAngryCustomerExplicit
+    // fires BEFORE forceLocation, so the bot escalates without asking
+    // location. NEW guard 2026-05-09 — see angry-customer.ts unit test.
+    name: 'ES — Scenario 6.2: "muy enfadado + quiero operador" → escalate immediato + name + desactivado',
     run: async (ctx) => {
-      const reply = await ctx.send('Me habéis cobrado dos veces, estoy muy enfadado y quiero hablar con un operador ahora mismo')
-      const lower = reply.toLowerCase()
-      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)) {
-        throw new Error(`Scenario 6.2: bot deve chiedere il nome (escalation): ${reply}`)
+      // T1 — rage marker + explicit operator request → asks name (escalation)
+      const t1 = await ctx.send('Me habéis cobrado dos veces, estoy muy enfadado y quiero hablar con un operador ahora mismo')
+      const t1Lower = t1.toLowerCase()
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(t1Lower)) {
+        throw new Error(`Scenario 6.2 T1: bot deve escalare e chiedere nome: ${t1}`)
       }
-    },
-  },
-  {
-    name: 'ES — Scenario 6.2: conferma finale contiene "desactivado"',
-    run: async (ctx) => {
-      await ctx.send('Me habéis cobrado dos veces, estoy muy enfadado y quiero hablar con un operador ahora mismo')
-      const finalReply = await ctx.send('María')
-      const lower = finalReply.toLowerCase()
-      if (!/desactivado/.test(lower)) {
-        throw new Error(`Scenario 6.2: finale non contiene "desactivado": ${finalReply}`)
+      // Bot must NOT ask location when rage+operator is explicit. Match the
+      // *question* pattern, not the literal word "lavandería" (which appears
+      // in the welcome string "asistente virtual de la lavandería").
+      if (/¿\s*(?:en\s+qu[eé]|d[oó]nde\s+est[aá]s|cu[aá]l\s+lavander[ií]a)/i.test(t1)) {
+        throw new Error(`Scenario 6.2 T1: bot non deve chiedere location dopo rage+operator: ${t1}`)
       }
-      if (!/operador/.test(lower)) {
-        throw new Error(`Scenario 6.2: finale non menziona "operador": ${finalReply}`)
+      // T2 — name → final handover with desactivado
+      const final = await ctx.send('María')
+      const finalLower = final.toLowerCase()
+      if (!/desactivado/.test(finalLower)) {
+        throw new Error(`Scenario 6.2 final: NON contiene "desactivado": ${final}`)
+      }
+      if (!/operador/.test(finalLower)) {
+        throw new Error(`Scenario 6.2 final: NON menziona "operador": ${final}`)
       }
     },
   },
 
-  // ── Scenario 6.3 — Relato contradittorio (post Sí branch) ────────────────
+  // ── Scenario 6.3 — Relato contradittorio (post Sí branch) → escalation ───
   {
-    name: 'ES — Scenario 6.3: "no sé exactamente" → escalation',
+    name: 'ES — Scenario 6.3: relato contradittorio → escalate → name → desactivado',
     run: async (ctx) => {
       await ctx.send('Me habéis cobrado dos veces con la tarjeta')
       await ctx.send('Goya')
       await ctx.send('Sí, he podido lavar')
       await ctx.send('lavadora')
       await ctx.send('5')
-      const reply = await ctx.send('No sé exactamente, creo que me han cobrado tres o cuatro veces, el importe no me cuadra')
-      const lower = reply.toLowerCase()
-      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)) {
-        throw new Error(`Scenario 6.3: bot deve chiedere il nome (escalation): ${reply}`)
+      // Relato vago + tres-o-cuatro veces → bot escala (contradictory narrative)
+      const escalate = await ctx.send('No sé exactamente, creo que me han cobrado tres o cuatro veces, el importe no me cuadra')
+      const escalateLower = escalate.toLowerCase()
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(escalateLower)) {
+        throw new Error(`Scenario 6.3: bot deve chiedere il nome (escalation): ${escalate}`)
       }
-    },
-  },
-  {
-    name: 'ES — Scenario 6.3: conferma finale contiene "desactivado"',
-    run: async (ctx) => {
-      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
-      await ctx.send('Goya')
-      await ctx.send('Sí, he podido lavar')
-      await ctx.send('lavadora')
-      await ctx.send('5')
-      await ctx.send('No sé exactamente, creo que me han cobrado tres o cuatro veces, el importe no me cuadra')
-      const finalReply = await ctx.send('Carlos')
-      const lower = finalReply.toLowerCase()
-      if (!/desactivado/.test(lower)) {
-        throw new Error(`Scenario 6.3: finale non contiene "desactivado": ${finalReply}`)
+      // usecases.md riga 688: "El bot no sigue pidiendo dígitos de tarjeta
+      // ni captura: el operador necesita revisarlo manualmente."
+      if (/4\s*d[ií]gitos|captura\s+del\s+pago/.test(escalateLower)) {
+        throw new Error(`Scenario 6.3: bot NON deve chiedere 4 dígitos / captura dopo escalation: ${escalate}`)
       }
-      if (!/operador/.test(lower)) {
-        throw new Error(`Scenario 6.3: finale non menziona "operador": ${finalReply}`)
+      // Final reply
+      const final = await ctx.send('Carlos')
+      const finalLower = final.toLowerCase()
+      if (!/desactivado/.test(finalLower)) {
+        throw new Error(`Scenario 6.3 final: NON contiene "desactivado": ${final}`)
+      }
+      if (!/operador/.test(finalLower)) {
+        throw new Error(`Scenario 6.3 final: NON menziona "operador": ${final}`)
       }
     },
   },
 
-  // ── Scenario 6.4 — NO branch (escalation immediata, NO tipo/numero) ──────
+  // ── Scenario 6.4 — NO branch (escalation senza tipo/numero) ──────────────
   {
-    // NEW (Andrea 2026-05-09): on "no" the bot escalates IMMEDIATELY after
-    // location, without asking tipo or número. The customer is doubly
-    // frustrated and the operator collects machine info on the phone.
-    name: 'ES — Scenario 6.4: cliente "no" subito dopo location → escalation senza chiedere tipo/numero',
+    // NEW (Andrea 2026-05-09): on "no, no he podido" the bot escalates
+    // IMMEDIATELY after location, without asking tipo or número. The
+    // customer is doubly frustrated and the operator collects machine
+    // info on the phone.
+    name: 'ES — Scenario 6.4: "no he podido" → escalate sin tipo/numero → summary "no ha podido usar"',
     run: async (ctx) => {
       await ctx.send('Me habéis cobrado dos veces con la tarjeta')
       await ctx.send('Goya')
-      const reply = await ctx.send('no, no he podido')
-      const lower = reply.toLowerCase()
-      // Bot must enter escalation flow (asks for name) — no tipo/numero ask,
-      // no narrative gather, no 4-digits ask.
-      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)) {
-        throw new Error(`Scenario 6.4: "no" must trigger immediate escalation (asks name): ${reply}`)
+      // Cliente non ha potuto usare → bot escala (chiede nome), NO tipo ask.
+      const escalate = await ctx.send('no, no he podido')
+      const escalateLower = escalate.toLowerCase()
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(escalateLower)) {
+        throw new Error(`Scenario 6.4: "no" deve attivare escalation immediata: ${escalate}`)
       }
-      if (/lavadora\s+o\s+(?:una\s+)?secadora/i.test(lower)) {
-        throw new Error(`Scenario 6.4 (new order): bot NON deve chiedere tipo dopo "no": ${reply}`)
+      if (/lavadora\s+o\s+(?:una\s+)?secadora/i.test(escalateLower)) {
+        throw new Error(`Scenario 6.4: bot NON deve chiedere tipo dopo "no": ${escalate}`)
       }
-      expectEscalation(reply)
-    },
-  },
-  {
-    name: 'ES — Scenario 6.4: handover summary contiene "no ha podido usar el servicio" (no machineLabel)',
-    run: async (ctx) => {
-      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
-      await ctx.send('Goya')
-      await ctx.send('no, no he podido')
-      const summary = await ctx.send('Carlos')
-      // Operator brief must mention name + location + 6.4 marker. The
-      // machine label is intentionally absent — operator collects it on
-      // the phone if needed.
-      expectMentionsAll(summary, ['Carlos', 'Goya', 'doble cobro'])
-      const lower = summary.toLowerCase()
-      if (!/no\s+ha\s+podido\s+usar\s+el\s+servicio|servicio no prestado|no\s+pude\s+usar/i.test(lower)) {
-        throw new Error(`Scenario 6.4 summary must flag "no service used": ${summary}`)
+      expectEscalation(escalate)
+      // Final summary: nome + location + marker, NO machineLabel.
+      const final = await ctx.send('Carlos')
+      expectMentionsAll(final, ['Carlos', 'Goya', 'doble cobro'])
+      const finalLower = final.toLowerCase()
+      if (!/no\s+ha\s+podido\s+usar\s+el\s+servicio|servicio no prestado|no\s+pude\s+usar/i.test(finalLower)) {
+        throw new Error(`Scenario 6.4 summary deve segnalare "no service used": ${final}`)
       }
-    },
-  },
-  {
-    name: 'ES — Scenario 6.4: conferma finale contiene "operador" (handover)',
-    run: async (ctx) => {
-      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
-      await ctx.send('Goya')
-      await ctx.send('no, no he podido')
-      const finalReply = await ctx.send('Carlos')
-      const lower = finalReply.toLowerCase()
-      if (!/operador/.test(lower)) {
-        throw new Error(`Scenario 6.4: finale non menziona "operador": ${finalReply}`)
+      if (!/operador/.test(finalLower)) {
+        throw new Error(`Scenario 6.4 final: NON menziona "operador": ${final}`)
       }
     },
   },
 
-  // ── Scenario 6.5 — Validación de los 4 dígitos (Sí branch only) ──────────
+  // ── Scenario 6.5A — Validación 4 dígitos: 5 cifre → re-ask → 4 cifre OK ──
   {
-    // Cliente da 5 cifras → re-ask → da 4 cifras válidas → flujo continúa.
-    // Note: i 4 dígitos arrivano nel Sí branch, dopo tipo+numero+relato.
     name: 'ES — Scenario 6.5A: 5 dígitos (inválido) → re-ask → 4 dígitos válidos → flujo continúa',
     run: async (ctx) => {
       await ctx.send('Me habéis cobrado dos veces con la tarjeta')
@@ -301,13 +216,13 @@ export const tests: TestCase[] = [
       await ctx.send('lavadora')
       await ctx.send('5')
       await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
-      // Cifre invalide (5 cifre)
+      // 5 cifre (invalido) → bot deve chiedere di riscrivere
       const retry = await ctx.send('48215')
-      const lower = retry.toLowerCase()
-      if (!/exactamente|4 d[ií]gitos|d[ií]gitos\s+de\s+la\s+tarjeta/.test(lower)) {
+      const retryLower = retry.toLowerCase()
+      if (!/exactamente|4 d[ií]gitos|d[ií]gitos\s+de\s+la\s+tarjeta/.test(retryLower)) {
         throw new Error(`Scenario 6.5A: bot deve chiedere di riscrivere i 4 dígitos: ${retry}`)
       }
-      // Cifre valide (4 cifre) → flusso continua con captura/devolución
+      // 4 cifre valide → flusso continua con captura
       const ok = await ctx.send('4821')
       const okLower = ok.toLowerCase()
       if (!/captura|devoluci/.test(okLower)) {
@@ -315,9 +230,10 @@ export const tests: TestCase[] = [
       }
     },
   },
+
+  // ── Scenario 6.5B — 2 risposte invalide consecutive → escalation ─────────
   {
-    // 2 risposte invalide consecutive → escalation immediata.
-    name: 'ES — Scenario 6.5B: 2 risposte invalide consecutive → escalation',
+    name: 'ES — Scenario 6.5B: 2 risposte invalide consecutive → escalate → name → desactivado',
     run: async (ctx) => {
       await ctx.send('Me habéis cobrado dos veces con la tarjeta')
       await ctx.send('Goya')
@@ -327,40 +243,28 @@ export const tests: TestCase[] = [
       await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
       // 1° invalido (3 cifre)
       await ctx.send('482')
-      // 2° invalido (no cifre)
+      // 2° invalido (no cifre) → escala
       const escalate = await ctx.send('no me acuerdo')
-      const lower = escalate.toLowerCase()
-      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)) {
+      const escalateLower = escalate.toLowerCase()
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(escalateLower)) {
         throw new Error(`Scenario 6.5B: dopo 2 fail il bot deve chiedere il nome: ${escalate}`)
       }
-    },
-  },
-  {
-    name: 'ES — Scenario 6.5B: conferma finale tras escalation contiene "desactivado"',
-    run: async (ctx) => {
-      await ctx.send('Me habéis cobrado dos veces con la tarjeta')
-      await ctx.send('Goya')
-      await ctx.send('Sí, he lavado')
-      await ctx.send('lavadora')
-      await ctx.send('5')
-      await ctx.send('He pagado, no iba y volví a pasar la tarjeta')
-      await ctx.send('482') // 1° invalido
-      await ctx.send('no me acuerdo') // 2° invalido → escala
-      const finalReply = await ctx.send('Andrea')
-      const lower = finalReply.toLowerCase()
-      if (!/desactivado/.test(lower)) {
-        throw new Error(`Scenario 6.5B finale: deve contenere "desactivado": ${finalReply}`)
+      // Final reply
+      const final = await ctx.send('Andrea')
+      const finalLower = final.toLowerCase()
+      if (!/desactivado/.test(finalLower)) {
+        throw new Error(`Scenario 6.5B final: deve contenere "desactivado": ${final}`)
       }
     },
   },
 
-  // ── Bug A regression: typo "habieis" must trigger the flow ──────────────
+  // ── Bug A regression — typo "habieis" must trigger the flow ──────────────
   {
     // Andrea 2026-05-09: real chat showed the bot ignored "me habieis cobrado
     // dos veces con la tarjeda" because the original regex required the
     // canonical verb "habéis" (no extra `i`). The detector now drops the
     // verb-prefix requirement.
-    name: 'ES — Bug A: typo "habieis cobrado" → bot avvia il flusso doble cobro',
+    name: 'ES — Bug A regression: typo "habieis cobrado" → bot avvia il flusso (chiede location)',
     run: async (ctx) => {
       const reply = await ctx.send('me habieis cobrado dos veces con la tarjeda')
       const lower = reply.toLowerCase()

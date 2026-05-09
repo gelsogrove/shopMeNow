@@ -1,6 +1,6 @@
 # Agent test dialogues — `02-door.test.spec.ts`
 
-Generated: 2026-05-09T19:44:40.438Z
+Generated: 2026-05-09T20:38:48.705Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 2.1: happy path completo → DOOR istruzione → "Sí" → resolved
@@ -44,7 +44,7 @@ La puerta no está cerrada correctamente. Ábrela y ciérrala firmemente, compro
 🤖 **bot:**
 
 ```
-✅ Perfecto, incidencia resuelta. ¡Que tengas un buen día! 🎉
+¡Perfecto! Incidencia resuelta. 🎉
 ```
 
 ---

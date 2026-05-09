@@ -204,17 +204,29 @@ const cases: Case[] = [
           expectReason: 'double-charge-ask-card-digits',
           expectReplyContains: /4 [úu]ltimos d[íi]gitos|d[íi]gitos.*tarjeta/i,
         },
-        // T7 — valid 4 digits. Bot asks captura + name; escalates for refund.
+        // T7 — valid 4 digits. Bot asks captura + name and marks the case
+        // as refund-form pending (NOT a live operator handover). usecases.md
+        // §6.1 riga 627: el ramo Sí cierra como trámite de devolución, no
+        // como escalación al operador, por lo que `operatorRequested` debe
+        // QUEDAR EN false. El estado se transmite vía `escalationReason`
+        // (para el log interno) + `customerNameRequested` (para que el bot
+        // pida el nombre antes de cerrar).
         {
           user: '4821',
           expectReason: 'double-charge-ask-receipt',
           expectReplyContains: /captura.*pago|formulario.*devolu/i,
           assertState: (ar) => {
-            if (!ar.state.operatorRequested) {
-              throw new Error('operator must be set on receipt step')
+            if (ar.state.operatorRequested) {
+              throw new Error('refund-form path must NOT set operatorRequested (it is not a live escalation)')
             }
             if (!ar.state.customerNameRequested) {
               throw new Error('name capture must follow receipt')
+            }
+            if (ar.state.escalationReason !== 'Double charge incident — review with refund form') {
+              throw new Error(`escalationReason must record refund-form context, got: ${ar.state.escalationReason}`)
+            }
+            if (ar.pendingEscalation !== null) {
+              throw new Error('refund-form path must NOT set pendingEscalation (would trigger operatorHandoffFinal)')
             }
           },
         },
