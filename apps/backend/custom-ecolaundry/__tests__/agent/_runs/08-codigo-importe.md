@@ -1,6 +1,6 @@
 # Agent test dialogues — `08-codigo-importe.test.spec.ts`
 
-Generated: 2026-05-09T22:53:01.227Z
+Generated: 2026-05-09T22:59:14.124Z
 Total: 4 | Pass: 4 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 8.1: happy path completo → SAU2904266 → name → pueblo → maquina → puerta → escalation

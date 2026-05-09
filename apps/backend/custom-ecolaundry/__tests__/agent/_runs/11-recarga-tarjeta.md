@@ -1,6 +1,6 @@
 # Agent test dialogues — `11-recarga-tarjeta.test.spec.ts`
 
-Generated: 2026-05-09T22:53:01.228Z
+Generated: 2026-05-09T22:59:14.125Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 11: happy path completo → istruzione canonica → "Vale" → cierre proactivo

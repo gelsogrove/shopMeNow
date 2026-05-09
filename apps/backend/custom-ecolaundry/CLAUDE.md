@@ -164,6 +164,18 @@ Before I write any code in this module, I must confirm each rule applies:
     - `state.displayAskAttempts` → [`guardForceDisplay`](utils/guards/force-gather.ts)
     - `state.machineNumberAskAttempts` → [`guardForceMachineNumber`](utils/guards/force-gather.ts)
     - `state.cardDigitsAskAttempts` → [`guardDoubleChargeAskCardDigits`](utils/guards/payment-double-charge.ts)
+    - `state.awaitNameAskAttempts` (shared) → [`guardDiscountCodeAwaitName`](utils/guards/discount-code-flow.ts) + [`guardDoubleChargeAwaitName`](utils/guards/payment-double-charge.ts) — name capture in any closure flow.
+
+    **Pipeline-hole pattern (rule #10 corollary)**: when the LLM is
+    expected to call a tool to advance a flow but skips it, the customer
+    falls into the gap and the bot improvises. Architectural defense: a
+    deterministic catch-all guard. Today's instances:
+    - `guardAdvanceMachineFlow` (washer/dryer flow engine T2+) — uses
+      sync `tryAdvanceFlowSync` from [`utils/flow-engine.ts`](utils/flow-engine.ts)
+      to advance YES/NO/numeric/exact transitions without LLM. See
+      *Architectural fixes log* F5 for the regression that closed it.
+    - `guardDisplayFlowFollowUp` (declarative display-flows JSON) — the
+      mirror image for AL001 / ALM-DOOR / C001.
 
     The boundary signal *"I don't know / not yet"* across all 6 languages
     is detected by [`detectIDontKnowReply`](utils/intent.ts) — but the
@@ -291,7 +303,7 @@ path. Keep this list in sync when adding or removing a detector.
 | Function | Purpose | Multi-lang | Notes |
 |---|---|---|---|
 | `extractDisplayState(message)` | Canonical display token (`"PUSH"`, `"SEL"`, …) | n/a (codes are language-neutral) | Includes fuzzy fallback for typos. |
-| `extractDisplayLabel(message, canonical)` | Literal customer wording (`"PUSH PROG"`) | n/a | Greedy uppercase tail extension. |
+| `extractDisplayLabel(message, canonical)` | Literal customer wording (`"PUSH PROG"`, `"ERR 52"`) | n/a | Greedy `[A-Z0-9]` tail extension — first char of each run accepts BOTH letters and digits so codes like `ERR 52` / `AL 001` keep the trailing numeric token (regression F7, see *Architectural fixes log*). |
 | `normalizeMachineType(value)` | `lavadora|secadora` → `'washer'\|'dryer'` | ✓ 6 langs | Handles fuzzy match (Levenshtein). |
 | `extractExplicitLocation(message)` | `"estoy en Goya"` → `"Goya"` | ✓ 6 langs | Falls back to `resolveKnownLocation`. |
 | `parsePaymentAnswer(message)` | yes/no parsing for "¿has pagado?" | ✓ 6 langs | |

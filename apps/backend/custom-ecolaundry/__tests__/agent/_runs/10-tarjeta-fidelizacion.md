@@ -1,6 +1,6 @@
 # Agent test dialogues — `10-tarjeta-fidelizacion.test.spec.ts`
 
-Generated: 2026-05-09T22:53:01.228Z
+Generated: 2026-05-09T22:59:14.125Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 10: happy path completo → 20€/efectivo → Goya override → Entendido → closure (no machine gather)

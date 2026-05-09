@@ -1,6 +1,6 @@
 # Agent test dialogues — `19-fraude-incoherencia.test.spec.ts`
 
-Generated: 2026-05-09T22:53:01.231Z
+Generated: 2026-05-09T22:59:14.127Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Caso 19 Goya: datáfono 10€ → escalate sin confrontar → name capture rifiuta "No"
@@ -20,7 +20,7 @@ Entendido, lo paso a revisión manual para ayudarte mejor. 🙏 ¿Cómo te llama
 🤖 **bot:**
 
 ```
-Para poder ayudarte, necesito recoger algunos datos. Vamos a revisar tu caso manualmente. 🙏 ¿Cómo te llamas?
+Para poder ayudarte, necesito recoger algunos datos. Es importante que me digas tu nombre para que podamos revisar tu caso correctamente. ¿Cómo te llamas?
 ```
 
 👤 **user:** Andrea
@@ -63,7 +63,7 @@ Entendido, lo paso a revisión manual para ayudarte mejor. 🙏 ¿Cómo te llama
 🤖 **bot:**
 
 ```
-Lo siento, no he entendido tu nombre. ¿Cómo te llamas, por favor?
+¿Podrías decirme tu nombre, por favor?
 ```
 
 👤 **user:** Andrea

@@ -1,6 +1,6 @@
 # Agent test dialogues — `07-pagado-sin-usar.test.spec.ts`
 
-Generated: 2026-05-09T22:53:01.226Z
+Generated: 2026-05-09T22:59:14.123Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 7.1: happy path completo → gather → pantalla PUSH PROG → istruzione → resolved

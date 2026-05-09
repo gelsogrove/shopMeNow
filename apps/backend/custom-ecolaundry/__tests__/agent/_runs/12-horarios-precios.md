@@ -1,6 +1,6 @@
 # Agent test dialogues — `12-horarios-precios.test.spec.ts`
 
-Generated: 2026-05-09T22:53:01.229Z
+Generated: 2026-05-09T22:59:14.125Z
 Total: 5 | Pass: 5 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 12A: horario general 8-22 + follow-up "¿Y en L'Escala?" → eccezione 7-23
@@ -34,7 +34,7 @@ En L'Escala, las máquinas se pueden utilizar de 7:00 a 23:00, todos los días d
 🤖 **bot:**
 
 ```
-👋 Hola, soy el asistente virtual de la lavandería. Tranquilo, te ayudo. ¿Es una lavadora o una secadora?
+👋 Hola, soy el asistente virtual de la lavandería. Tranquilo, te ayudo. ¿Qué tipo de máquina estás usando, una lavadora o una secadora?
 ```
 
 👤 **user:** ¿Cuál es el horario?

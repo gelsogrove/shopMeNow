@@ -1,6 +1,6 @@
 # Agent test dialogues — `17-no-pantalla-foto.test.spec.ts`
 
-Generated: 2026-05-09T22:53:01.231Z
+Generated: 2026-05-09T22:59:14.126Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 17.1: "no sé qué pone" → location → tipo → escalate → name → summary
@@ -63,7 +63,7 @@ Usuario Andrea en Hortes no ha podido completar la operación en la lavadora nú
 🤖 **bot:**
 
 ```
-Gracias. ¿Qué número de lavadora o secadora estás utilizando?
+Gracias. ¿Estás usando una lavadora o una secadora?
 ```
 
 👤 **user:** Lavadora

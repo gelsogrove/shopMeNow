@@ -1,6 +1,6 @@
 # Agent test dialogues — `locations/alemanya/23-no-tarjeta.test.spec.ts`
 
-Generated: 2026-05-09T22:53:01.234Z
+Generated: 2026-05-09T22:59:14.130Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 23 Alemanya: trigger no-tarjeta → location → escalate → name → summary completo

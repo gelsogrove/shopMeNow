@@ -1,6 +1,6 @@
 # Agent test dialogues — `locations/pineda/22-monedas-secadora.test.spec.ts`
 
-Generated: 2026-05-09T22:53:01.234Z
+Generated: 2026-05-09T22:59:14.130Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 22 Pineda: trigger no-suma-minutos → location → escalate → name → summary completo

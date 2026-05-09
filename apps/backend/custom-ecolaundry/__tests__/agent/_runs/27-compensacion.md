@@ -1,6 +1,6 @@
 # Agent test dialogues — `27-compensacion.test.spec.ts`
 
-Generated: 2026-05-09T22:53:01.232Z
+Generated: 2026-05-09T22:59:14.127Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 27: trigger compensación → bot revisar (no promesa) → cliente insiste → escalate → name → summary

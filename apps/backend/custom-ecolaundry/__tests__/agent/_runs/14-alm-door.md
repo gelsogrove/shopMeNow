@@ -1,6 +1,6 @@
 # Agent test dialogues — `14-alm-door.test.spec.ts`
 
-Generated: 2026-05-09T22:53:01.230Z
+Generated: 2026-05-09T22:59:14.126Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 14.1: happy path completo → ALM DOOR istruzione → "Sí ha desaparecido" → resolved
@@ -36,7 +36,7 @@ Total: 2 | Pass: 2 | Fail: 0
 🤖 **bot:**
 
 ```
-Perfecto, ¿qué aparece ahora en la pantalla de la lavadora?
+¿El mensaje ALM DOOR ha desaparecido? Dime, por favor, si la lavadora ya empieza a funcionar.
 ```
 
 👤 **user:** Sí, ha desaparecido

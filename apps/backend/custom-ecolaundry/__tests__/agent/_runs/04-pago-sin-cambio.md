@@ -1,6 +1,6 @@
 # Agent test dialogues — `04-pago-sin-cambio.test.spec.ts`
 
-Generated: 2026-05-09T22:53:01.224Z
+Generated: 2026-05-09T22:59:14.122Z
 Total: 3 | Pass: 3 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 4.1: happy path completo → gather → "No" cambio → arranca → resolved
