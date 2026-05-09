@@ -1673,6 +1673,12 @@ function ChatScreen({
           onClose={() => setShowNewChat(false)}
           onCreated={(sid) => {
             setActiveSessionId(sid)
+            // Pin the new chat at the very top of the list, above any
+            // user-reordered pinned chats. We prepend its id to chatOrder
+            // and dedupe in case the user re-creates a previously
+            // ordered session id (defensive — backend gives unique ids
+            // today).
+            persistChatOrder([sid, ...chatOrder.filter((id) => id !== sid)])
             fetchAll()
             setTimeout(fetchAll, 800)
             setTimeout(fetchAll, 2000)
