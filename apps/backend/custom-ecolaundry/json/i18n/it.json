@@ -74,6 +74,6 @@
   "openingHoursDefault": "L'orario generale di apertura al pubblico è dalle 8:00 alle 22:00 ogni giorno dell'anno.",
   "unknownLocationList": "Non riconosco quella posizione. Le nostre lavanderie sono: {list}. In quale ti trovi?",
   "defaultHelp": "Dimmi il prossimo dettaglio utile e ti aiuterò passo dopo passo.",
-  "operatorHandoffFinal": "Un operatore umano prenderà in carico il tuo caso. Attendi un momento mentre rivedono la situazione.",
+  "operatorHandoffFinal": "Un operatore umano prenderà in carico il tuo caso. Attendi un momento mentre rivedono la situazione. Il chatbot sarà disattivato.",
   "flowResumePrompt": "Riprendiamo con il problema della lavanderia?"
 }

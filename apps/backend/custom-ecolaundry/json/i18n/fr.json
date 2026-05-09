@@ -24,7 +24,7 @@
   "doubleChargeAllReceived": "Nous avons reçu toutes les informations nécessaires, nous allons examiner ton cas.",
   "noPhotoEscalate": "⚠️ Sans information de l'écran ni photo, nous examinerons ton cas manuellement.",
   "reaffirmEscalate": "Nous allons examiner ton cas manuellement. Comment t'appelles-tu ?",
-  "operatorHandoffFinal": "Un opérateur humain va prendre en charge ton dossier. Merci de patienter pendant qu'ils examinent la situation.",
+  "operatorHandoffFinal": "Un opérateur humain va prendre en charge ton dossier. Merci de patienter pendant qu'ils examinent la situation. Le chatbot sera désactivé.",
   "displayShort": "Qu'apparaît-il exactement sur l'écran ?",
   "displayUnrecognizedReask": "Je ne reconnais pas exactement ce code. Pourrais-tu vérifier à nouveau ?",
   "paymentAsk": "As-tu pu effectuer le paiement ?",

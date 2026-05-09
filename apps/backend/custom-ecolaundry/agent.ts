@@ -32,9 +32,10 @@ import { t } from './utils/localization.js'
 import type { SupportedLanguage } from './models/index.js'
 import {
   detectResolutionEscalationContradiction,
+  replyContainsResolutionMarker,
   stripResolutionSentences,
 } from './utils/contradiction.js'
-import { closeAsEscalated, undoResolved } from './utils/state-transitions.js'
+import { closeAsEscalated, markResolved, undoResolved } from './utils/state-transitions.js'
 import { applyOutputInvariants } from './utils/output-invariants.js'
 import {
   auditFactDiscipline,
@@ -250,6 +251,7 @@ function parseToolArgs(toolName: string, raw: string | undefined): Record<string
 function polishReplyForTurn(ar: AgentRuntime, rawReply: string): string {
   const sanitized = sanitizeCustomerReply(rawReply)
   const noContradiction = enforceNoContradiction(ar, sanitized)
+  enforceResolutionStateBackstop(ar, noContradiction)
   // Output invariants — strip the bug surfaces previously patched in
   // prompts/agent.txt (rule #1: no patches in prompt). See
   // utils/output-invariants.ts for the catalogue + tests.
@@ -281,6 +283,36 @@ function enforceNoContradiction(ar: AgentRuntime, reply: string): string {
   })
   undoResolved(ar)
   return stripResolutionSentences(reply)
+}
+
+/**
+ * Backstop: if the LLM emitted a closure phrase ("incidencia resuelta",
+ * "issue resolved", ...) but FORGOT to call the `mark_resolved` tool,
+ * set `state.pendingClosure='resolved'` deterministically so the state
+ * matches the customer-facing message.
+ *
+ * REGRESSION (Andrea, 2026-05-09 Caso 1.1 LLM run): the bot replied
+ * "✅ Perfecto, incidencia resuelta. ¡Gracias por tu paciencia! 🎉"
+ * but `state.pendingClosure` stayed null because the LLM skipped the
+ * tool call. The Scenario 1.1 test asserts `pendingClosure='resolved'`
+ * after the closure reply — without this backstop the state and the
+ * reply diverged.
+ *
+ * Architectural rationale (CLAUDE.md regla #2 corollary): "tool refuses,
+ * LLM corrects" handles bad calls. This handles forgotten calls — the
+ * post-processor compensates so the conversation state is consistent
+ * regardless of LLM compliance.
+ *
+ * Skips when an escalation is in progress (operatorRequested /
+ * customerNameRequested / pendingClosure already set) — those are
+ * legitimate non-resolved closures.
+ */
+function enforceResolutionStateBackstop(ar: AgentRuntime, reply: string): void {
+  if (ar.state.pendingClosure) return
+  if (ar.state.operatorRequested || ar.state.customerNameRequested) return
+  if (!replyContainsResolutionMarker(reply)) return
+  logger.info('Resolution backstop: setting pendingClosure="resolved" (LLM emitted closure without mark_resolved tool call)')
+  markResolved(ar)
 }
 
 /**

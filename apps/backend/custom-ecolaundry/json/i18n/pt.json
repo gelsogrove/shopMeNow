@@ -74,6 +74,6 @@
   "openingHoursDefault": "O horário geral de atendimento ao público é das 8:00 às 22:00 todos os dias do ano.",
   "unknownLocationList": "Não reconheço essa localização. As nossas lavandarias são: {list}. Em qual delas estás?",
   "defaultHelp": "Diz-me o próximo detalhe útil e ajudo-te passo a passo.",
-  "operatorHandoffFinal": "Um operador humano vai assumir o teu caso. Por favor, espera um momento enquanto analisam a situação.",
+  "operatorHandoffFinal": "Um operador humano vai assumir o teu caso. Por favor, espera um momento enquanto analisam a situação. O chatbot será desativado.",
   "flowResumePrompt": "Continuamos com o problema da lavandaria?"
 }

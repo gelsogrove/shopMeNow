@@ -84,6 +84,19 @@ export function detectResolutionEscalationContradiction(
 }
 
 /**
+ * True iff the reply contains a resolution marker (any language). Used as
+ * a deterministic backstop when the LLM emits a closure phrase but forgets
+ * to call the `mark_resolved` tool — the post-processor sets
+ * `state.pendingClosure='resolved'` so the conversation state matches the
+ * customer-facing message. CLAUDE.md regla #2: "tool refuses, LLM corrects"
+ * has its companion: "LLM forgets, post-processor compensates".
+ */
+export function replyContainsResolutionMarker(reply: string): boolean {
+  if (typeof reply !== 'string' || !reply) return false
+  return RESOLUTION_RE.test(reply)
+}
+
+/**
  * Strip the resolution-marker sentence(s) from the reply. Splitting on
  * sentence terminators (.!?) keeps surrounding context intact and only
  * removes the offending sentence(s). Returns the cleaned reply.
