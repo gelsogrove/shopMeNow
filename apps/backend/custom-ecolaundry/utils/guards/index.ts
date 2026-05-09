@@ -27,7 +27,6 @@ import {
   guardNoChangeYesButBroken,
   guardNoChangeAfterRetry,
 } from './payment-no-change.js'
-import { guardPaidNotUsedAskChange } from './payment-paid-not-used.js'
 import {
   guardDoubleChargeAskUsed,
   guardDoubleChargeAskNarrative,
@@ -82,6 +81,7 @@ import { guardRefundOrCompensation } from './refund-and-compensation.js'
 import { guardContradictoryNarrative } from './contradictory-narrative.js'
 import { guardEscalateNonTroubleshooting } from './faq-non-troubleshooting.js'
 import { guardAutoStartMachineFlow } from './auto-start-machine-flow.js'
+import { guardAdvanceMachineFlow } from './advance-machine-flow.js'
 
 export type { Guard, GuardOutcome } from '../../models/index.js'
 
@@ -99,7 +99,6 @@ export const GUARD_PIPELINE: Guard[] = [
   // "¿en qué lavandería estás?". See angry-customer.ts for rationale.
   guardAngryCustomerExplicit,
   guardFaqClosure,
-  guardPaidNotUsedAskChange,
   guardNoChangeAsk,
   guardNoChangeNoCambio,
   guardNoChangeYesButBroken,
@@ -146,7 +145,19 @@ export const GUARD_PIPELINE: Guard[] = [
   // (resolved/persist) takes priority over re-detection of the display token.
   guardDisplayFlowFollowUp,
   guardDisplayFlowStart,
+  // Post-instruction failure (Phase B/C re-ask + escalate) MUST run BEFORE
+  // guardAdvanceMachineFlow. Reason: the washer flow's check_result node has
+  // a special-case that routes any display-token reply to NO → followup_display
+  // — but when we're in Phase C (pendingFlow='display-reask-pending'), the
+  // customer's display code is meant to CONFIRM the failure for escalation,
+  // NOT to advance the flow. Phase C must intercept first.
   guardPostInstructionFailure,
+  // Washer/dryer flow engine catch-all (rule #10): when the LLM skips the
+  // advance_machine_flow tool, this guard advances the flow deterministically
+  // for unambiguous inputs (YES/NO, numeric, exact key). MUST run AFTER
+  // guardPostInstructionFailure (Phase C wins over flow advance) and BEFORE
+  // the gather/force guards (so an active flow is not interrupted by a re-ask).
+  guardAdvanceMachineFlow,
   guardLocationGatedMismatch,
   guardEscalateNonTroubleshooting,
   guardForceMachineType,

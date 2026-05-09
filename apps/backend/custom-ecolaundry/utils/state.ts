@@ -56,6 +56,7 @@ export function createInitialState(): SessionState {
     faqTopic: '',
     nonTroubleshootingIncident: '',
     displayReaskPrevCode: '',
+    displayStateAtTurnStart: '',
     displayAskAttempts: 0,
     cardDigitsAskAttempts: 0,
     machineNumberAskAttempts: 0,
@@ -107,6 +108,7 @@ export function resetMachineFacts(state: SessionState): void {
   state.displayUnreadable = false
   state.photoRequested = false
   state.displayReaskPrevCode = ''
+  state.displayStateAtTurnStart = ''
   state.displayAskAttempts = 0
   state.cardDigitsAskAttempts = 0
   state.machineNumberAskAttempts = 0

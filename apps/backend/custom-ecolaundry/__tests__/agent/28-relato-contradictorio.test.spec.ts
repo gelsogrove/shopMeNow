@@ -1,43 +1,42 @@
-// 28 — Caso 28 relato contradictorio en doble cobro
+// 28 — Caso 28 Relato contradictorio en un doble cobro
 //
-// Da usecases.md Caso 28:
-//   USER: Me cobró dos veces, aunque creo que también pagué en efectivo,
-//         pero no sé si llegó a arrancar
-//   BOT:  ¿has podido finalmente usar el servicio?
-//   USER: No lo sé bien
-//   BOT:  vamos a revisar el caso manualmente.
+// Da usecases.md Caso 28 (alineato al Playbook PDF §6 "regle de possible
+// frau o incoherència": "el relat del procés és molt contradictori" →
+// escalar a revisió humana, no confrontar):
 //
-// Regola: relato confuso → escalar senza discutir.
+// Trigger: pattern "cobró dos veces / aunque también pagué + creo / no sé"
+// (detector guardContradictoryNarrative).
+// Set nonTroubleshootingIncident="contradictory-narrative".
+//
+// REGOLA: bot NO intenta clarificar (no interroga sull'incoerenza) — la
+// chiarificazione la fa l'operador. Bot escala e basta.
+//
+// CONSOLIDATED LAYOUT (Andrea, 2026-05-09): un test per percorso, asserzioni
+// step-by-step inline. 2 test → 1.
 
 import { type TestCase, expectMentionsAll } from './_helpers.js'
 
 export const tests: TestCase[] = [
   {
-    name: 'ES — Caso 28 relato contradittorio: dopo "no lo sé bien" → bot escala con "revis"',
+    name: 'ES — Caso 28: relato contradictorio → "no lo sé bien" → escalate → name → summary "contradictorio/confuso"',
     run: async (ctx) => {
+      // T1 — trigger contradictorio (cobró dos veces + creo + también pagué efectivo + no sé)
       await ctx.send('Me cobró dos veces, aunque creo que también pagué en efectivo, pero no sé si llegó a arrancar')
-      const reply = await ctx.send('No lo sé bien')
-      expectMentionsAll(reply, ['revis'])
-    },
-  },
-  {
-    // Summary regression: deve menzionare "relato contradictorio" o "confuso",
-    // NON template machine-related buggati.
-    name: 'ES — Caso 28 escalation summary: contiene "contradictorio" o "confuso"',
-    run: async (ctx) => {
-      await ctx.send('Me cobró dos veces, aunque creo que también pagué en efectivo, pero no sé si llegó a arrancar')
-      await ctx.send('No lo sé bien')
-      const reply = await ctx.send('Andrea')
-      expectMentionsAll(reply, ['Andrea'])
-      const lower = reply.toLowerCase()
-      if (!/contradictorio|confuso|cobr/.test(lower)) {
-        throw new Error(`Summary non menziona contradictorio/cobro: ${reply}`)
+      // T2 — cliente conferma incertezza → bot escala con "revis"
+      const t2 = await ctx.send('No lo sé bien')
+      expectMentionsAll(t2, ['revis'])
+      // T finale — name → handover summary con marker contradictorio/confuso/cobro
+      const final = await ctx.send('Andrea')
+      expectMentionsAll(final, ['Andrea'])
+      const finalLower = final.toLowerCase()
+      if (!/contradictorio|confuso|cobr/.test(finalLower)) {
+        throw new Error(`Caso 28 summary non menziona contradictorio/cobro: ${final}`)
       }
-      if (/n[uú]mero\s+n[uú]mero/i.test(reply)) {
-        throw new Error(`Bug "número número" presente: ${reply}`)
+      if (/n[uú]mero\s+n[uú]mero/i.test(final)) {
+        throw new Error(`Bug "número número" presente: ${final}`)
       }
-      if (/seleccion[oó]\s+el\s+programa\s+pero\s+problema\s+t[eé]cnico/i.test(reply)) {
-        throw new Error(`Frase nonsense presente: ${reply}`)
+      if (/seleccion[oó]\s+el\s+programa\s+pero\s+problema\s+t[eé]cnico/i.test(final)) {
+        throw new Error(`Frase nonsense presente: ${final}`)
       }
     },
   },

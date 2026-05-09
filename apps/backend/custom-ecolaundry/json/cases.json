@@ -77,10 +77,10 @@
       "title": "He pagado pero no he podido usar el servicio",
       "semanticId": "paid-not-used",
       "kind": "payment-incident",
-      "guardModule": "utils/guards/payment-paid-not-used.ts",
-      "guards": ["guardPaidNotUsedAskChange"],
-      "pendingFlowPrefix": "paid-not-used-",
-      "tests": ["__tests__/agent/12-pagado-no-usado.test.spec.ts"]
+      "guardModule": null,
+      "guards": [],
+      "note": "Aligned to PDF Playbook §5.4 (Andrea, 2026-05-09): no dedicated guard. After location + tipo + numero the standard guardForceDisplay asks pantalla; the display flow handles the rest. Cambio is NOT a forced step — operator collects it on the phone if the display does not resolve.",
+      "tests": ["__tests__/agent/07-pagado-sin-usar.test.spec.ts"]
     },
     {
       "docNumber": 8,
@@ -119,7 +119,7 @@
       "guardModule": "utils/guards/loyalty-card-buy.ts",
       "guards": ["guardLoyaltyCardBuy"],
       "i18nKey": "loyaltyCardBuyBase",
-      "tests": ["__tests__/agent/15-tarjeta-fidelizacion.test.spec.ts"]
+      "tests": ["__tests__/agent/10-tarjeta-fidelizacion.test.spec.ts"]
     },
     {
       "docNumber": 11,
@@ -139,7 +139,7 @@
       "guardModule": "utils/guards/hours-and-pricing.ts",
       "guards": ["guardPricingDeflect", "guardOpeningHours"],
       "i18nKeys": ["pricingDeflect", "openingHoursDefault"],
-      "tests": ["__tests__/agent/02-faq.test.spec.ts", "__tests__/agent/12-horarios-precios.test.spec.ts"],
+      "tests": ["__tests__/agent/12-horarios-precios.test.spec.ts"],
       "notes": "FAQ topic regex extended (2026-05-08) to cover IT/EN/CA/PT/FR — input recognition is multilingual even though the active tenant outputs ES only (rule #8 'Spanish first')."
     },
     {
@@ -149,7 +149,7 @@
       "kind": "escalation",
       "guardModule": "utils/guards/display.ts",
       "guards": ["guardEscalateUnknownDisplay"],
-      "tests": ["__tests__/agent/16-fraude-incoherencia.test.spec.ts"]
+      "tests": ["__tests__/agent/13-aln.test.spec.ts"]
     },
     {
       "docNumber": 14,
@@ -158,8 +158,8 @@
       "kind": "display-flow",
       "displayMatches": ["ALM/DOOR", "ALMDOOR"],
       "handler": "json/display-flows.json (id: alm-door-blocked)",
-      "i18nKey": "almDoorGuidance",
-      "tests": ["__tests__/agent/18-alm-door.test.spec.ts"]
+      "i18nKeys": ["almDoorGuidance", "al001Resolved"],
+      "tests": ["__tests__/agent/14-alm-door.test.spec.ts"]
     },
     {
       "docNumber": 15,
@@ -170,7 +170,7 @@
       "displayMappingNote": "Bare '001' is normalised to canonical 'C001' by utils/intent.ts mapDisplayToken().",
       "handler": "json/display-flows.json (id: code-001-explained)",
       "i18nKeys": ["code001Explain", "code001Escalate"],
-      "tests": ["__tests__/agent/19-001.test.spec.ts"]
+      "tests": ["__tests__/agent/15-001.test.spec.ts"]
     },
     {
       "docNumber": 16,
@@ -180,7 +180,7 @@
       "guardModule": "utils/guards/display.ts",
       "guards": ["guardEscalateUnknownDisplay"],
       "displayMatches": ["ALM", "ALN", "ALN A", "ALN N"],
-      "tests": ["__tests__/agent/16-alm-aln-generico.test.spec.ts", "__tests__/agent/17-aln.test.spec.ts"]
+      "tests": ["__tests__/agent/16-alm-aln-generico.test.spec.ts"]
     },
     {
       "docNumber": 17,
@@ -191,7 +191,7 @@
       "guards": ["guardAskPhoto"],
       "pendingFlowPrefix": "photo-",
       "i18nKeys": ["photoAsk", "noPhotoEscalate"],
-      "tests": ["__tests__/agent/20-no-pantalla-foto.test.spec.ts"]
+      "tests": ["__tests__/agent/17-no-pantalla-foto.test.spec.ts"]
     },
     {
       "docNumber": 18,
@@ -201,7 +201,7 @@
       "guardModule": "utils/guards/display.ts",
       "guards": ["guardNumericCodeAskLetters", "guardNumericCodeNoLetters"],
       "pendingFlowPrefix": "numeric-code-",
-      "tests": ["__tests__/agent/30-codigo-numerico.test.spec.ts"]
+      "tests": ["__tests__/agent/18-codigo-numerico.test.spec.ts"]
     },
     {
       "docNumber": 19,
@@ -209,7 +209,7 @@
       "semanticId": "datafono-wrong-amount-goya",
       "kind": "location-gated-escalation",
       "handler": "json/locations.json (Goya.escalationRules)",
-      "tests": ["__tests__/agent/16-fraude-incoherencia.test.spec.ts"]
+      "tests": ["__tests__/agent/19-fraude-incoherencia.test.spec.ts"]
     },
     {
       "docNumber": 20,
@@ -217,7 +217,7 @@
       "semanticId": "datafono-wrong-amount-pineda",
       "kind": "location-gated-escalation",
       "handler": "json/locations.json (Pineda.escalationRules)",
-      "tests": ["__tests__/agent/16-fraude-incoherencia.test.spec.ts"]
+      "tests": ["__tests__/agent/19-fraude-incoherencia.test.spec.ts"]
     },
     {
       "docNumber": 21,

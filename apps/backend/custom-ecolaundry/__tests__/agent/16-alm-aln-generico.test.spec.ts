@@ -1,83 +1,73 @@
 // 16 — Caso 16 La máquina muestra ALM, ALN o un código de alarma similar
 //
-// Da usecases.md Caso 16: cliente vede ALM/ALN/ALN A/ALN N → bot raccoglie
-// dati minimi (location + tipo + numero) e escala.
+// Da usecases.md Caso 16 (alineado al Playbook PDF §5.4 ALM/ALN/ALN A/ALN N):
+//   "Sembla que la màquina ha detectat una incidència i ho hem de revisar."
+//   Escalar: sí, sempre. Cliente NO debe continuar manipulando la máquina.
 //
-// Differenza con Caso 13: Caso 13 è più generico (qualsiasi alarm code o
-// incoherenza); Caso 16 è specifico per la famiglia ALM/ALN su secadora.
+// Differenza con Caso 13 (paraguas): Caso 16 è specifico per la famiglia
+// ALM/ALN, normalmente sobre secadora. Reconocimiento robusto: ALN, ALN A,
+// ALN N, ALM/A, ALM/E, ALM/VAr.
+//
+// Differenza con Caso 14 (ALM DOOR): Caso 14 fa retry con istruzione,
+// Caso 16 escala direttamente (no manipulación).
+//
+// Scenari:
+//   16.1 — ALN secadora: gather → escalate → name → summary con ALN+location+tipo+numero
+//   16.2 — ALM lavadora: variante stesso flow su lavadora
+//
+// CONSOLIDATED LAYOUT (Andrea, 2026-05-09): un test per percorso, asserzioni
+// step-by-step inline. 5 test → 2.
 
 import { type TestCase, expectMentionsAll } from './_helpers.js'
 
 export const tests: TestCase[] = [
+  // ── Scenario 16.1 — ALN secadora completo ───────────────────────────────
   {
-    name: 'ES — Caso 16 ALN T1: bot saluta + chiede location',
+    name: 'ES — Scenario 16.1: ALN secadora → gather → escalate → name → summary completo',
     run: async (ctx) => {
-      const reply = await ctx.send('La secadora pone ALN')
-      expectMentionsAll(reply, ['lavanderia'])
-    },
-  },
-  {
-    // T2: dopo location, il bot prosegue il flow ALN. Può:
-    //   (a) chiedere numero secadora (gather completo prima di escalare)
-    //   (b) escalare direttamente chiedendo il nome (tipo già noto da T1)
-    // Entrambi sono validi: il summary handover finale contiene comunque
-    // location+tipo+numero+ALN (verificato dal test "escalation summary").
-    name: 'ES — Caso 16 ALN T2: dopo location, bot prosegue (numero o escalation)',
-    run: async (ctx) => {
-      await ctx.send('La secadora pone ALN')
-      const reply = await ctx.send('Alemanya')
-      const lower = reply.toLowerCase()
-      const asksNumber = /n[uú]mero/.test(lower)
-      const escalating = /te\s+llamas|tu\s+nombre|c[oó]mo\s+te|revis|operador/.test(lower)
+      // T1 — trigger ALN → bot saluta e chiede location
+      const t1 = await ctx.send('La secadora pone ALN')
+      expectMentionsAll(t1, ['lavanderia'])
+      // T2 — location → bot procede (può chiedere numero o escalare diretto;
+      // entrambe valide perché il summary handover finale conterrà comunque
+      // location+tipo+numero+ALN, verificato a T finale).
+      const t2 = await ctx.send('Alemanya')
+      const t2Lower = t2.toLowerCase()
+      const asksNumber = /n[uú]mero/.test(t2Lower)
+      const escalating = /te\s+llamas|tu\s+nombre|c[oó]mo\s+te|revis|operador/.test(t2Lower)
       if (!asksNumber && !escalating) {
-        throw new Error(`Caso 16 ALN T2: bot deve chiedere numero o escalare: ${reply}`)
+        throw new Error(`Caso 16 T2: bot deve chiedere numero o escalare: ${t2}`)
       }
-    },
-  },
-  {
-    // T3: il bot ha escalato (deterministicamente o tramite LLM) e ora
-    // chiede il nome (capture_customer_name). Concept-level: escalation
-    // path attivo (revis/operador/llamas).
-    name: 'ES — Caso 16 ALN T3: dopo numero, bot in escalation flow',
-    run: async (ctx) => {
-      await ctx.send('La secadora pone ALN')
-      await ctx.send('Alemanya')
-      const reply = await ctx.send('La 4')
-      const lower = reply.toLowerCase()
-      // Bot deve chiedere il nome (escalation in corso) o menzionare revisión.
-      const asksName = /te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)
-      const mentionsRevision = /revis|operador|asistencia|manualmente/.test(lower)
+      // T3 — numero → bot in escalation flow (revis/operador/llamas)
+      const t3 = await ctx.send('La 4')
+      const t3Lower = t3.toLowerCase()
+      const asksName = /te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(t3Lower)
+      const mentionsRevision = /revis|operador|asistencia|manualmente/.test(t3Lower)
       if (!asksName && !mentionsRevision) {
-        throw new Error(`Caso 16 ALN T3: bot deve essere in escalation flow: ${reply}`)
+        throw new Error(`Caso 16 T3: bot deve essere in escalation flow: ${t3}`)
+      }
+      // T finale — name → handover summary completo
+      const final = await ctx.send('Andrea')
+      // Summary deve menzionare nome + location + ALN + tipo macchina + numero
+      expectMentionsAll(final, ['Andrea', 'Alemanya', 'ALN', 'secadora', '4'])
+      // Garanzie negative
+      if (/n[uú]mero\s+n[uú]mero/i.test(final)) {
+        throw new Error(`Bug "número número" presente: ${final}`)
+      }
+      if (/seleccion[oó]\s+el\s+programa\s+pero\s+problema\s+t[eé]cnico/i.test(final)) {
+        throw new Error(`Frase nonsense presente: ${final}`)
       }
     },
   },
+
+  // ── Scenario 16.2 — ALM lavadora variante ───────────────────────────────
   {
-    // Variante ALM: stesso comportamento.
-    name: 'ES — Caso 16 ALM (lavadora): flow di escalation simile',
+    name: 'ES — Scenario 16.2: ALM lavadora → escalation flow simile (revis)',
     run: async (ctx) => {
       await ctx.send('La lavadora me sale ALM')
       await ctx.send('Goya')
       const reply = await ctx.send('La 5')
       expectMentionsAll(reply, ['revis'])
-    },
-  },
-  {
-    // Summary regression: il riepilogo deve menzionare ALN come código de
-    // alarma, location, tipo macchina (secadora) e numero.
-    name: 'ES — Caso 16 escalation summary: contiene ALN + location + tipo + numero',
-    run: async (ctx) => {
-      await ctx.send('La secadora pone ALN')
-      await ctx.send('Alemanya')
-      await ctx.send('La 4')
-      const reply = await ctx.send('Andrea')
-      expectMentionsAll(reply, ['Andrea', 'Alemanya', 'ALN', 'secadora', '4'])
-      if (/n[uú]mero\s+n[uú]mero/i.test(reply)) {
-        throw new Error(`Bug "número número" presente: ${reply}`)
-      }
-      if (/seleccion[oó]\s+el\s+programa\s+pero\s+problema\s+t[eé]cnico/i.test(reply)) {
-        throw new Error(`Frase nonsense presente: ${reply}`)
-      }
     },
   },
 ]

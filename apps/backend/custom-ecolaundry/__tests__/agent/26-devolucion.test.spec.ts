@@ -1,43 +1,36 @@
-// 25 — Caso 26 cliente esige devolución inmediata
+// 26 — Caso 26 El cliente exige devolución inmediata
 //
-// Da usecases.md Caso 26:
-//   USER: Quiero que me devolváis el dinero ahora mismo
-//   BOT:  vamos a revisarlo. Para tramitarlo, necesito 4 dígitos tarjeta,
-//         captura del pago y un breve resumen.
-//   USER: Quiero la devolución ya
-//   BOT:  vamos a pasar el caso a revisión.
+// Da usecases.md Caso 26 (alineato al Playbook PDF §10 criteris d'escalat:
+// "el client reclama una compensació concreta" → escalar):
+//   T1: bot risponde "vamos a revisarlo, necesito 4 dígitos + captura + resumen"
+//   T2: cliente insiste → bot escala SENZA promettere devolución
+//   T finale: handover summary con "devolución" e nome.
 //
-// Regola: NON prometere devolución, escalar.
+// REGOLA SACRA: NO prometere devolución (la decisione è dell'operador).
+// Vietate parole: "te devolveré", "te devuelvo", "devolución aprobada",
+// "reembolso confirmado".
+//
+// CONSOLIDATED LAYOUT (Andrea, 2026-05-09): un test per percorso, asserzioni
+// step-by-step inline. 3 test → 1.
 
 import { type TestCase, expectMentionsAll, expectMentionsNone } from './_helpers.js'
 
 export const tests: TestCase[] = [
   {
-    name: 'ES — Caso 26 esige devolución: bot escala con "revis" e NON promette',
+    name: 'ES — Caso 26: exige devolución → bot chiede 4 dígitos+captura → cliente insiste → escalate (no promesa) → name → summary',
     run: async (ctx) => {
-      await ctx.send('Quiero que me devolváis el dinero ahora mismo')
-      const reply = await ctx.send('Quiero la devolución ya')
-      expectMentionsAll(reply, ['revis'])
-      expectMentionsNone(reply, ['te devolveré', 'te devuelvo', 'devolución aprobada', 'reembolso confirmado'])
-    },
-  },
-  {
-    name: 'ES — Caso 26 T1: bot chiede dati (4 dígitos, captura, resumen)',
-    run: async (ctx) => {
-      const reply = await ctx.send('Quiero que me devolváis el dinero ahora mismo')
-      expectMentionsAll(reply, ['dig', 'tarjeta'])
-    },
-  },
-  {
-    // Summary regression: deve menzionare devolución e NON template buggati.
-    name: 'ES — Caso 26 escalation summary: contiene "devolución" + nome',
-    run: async (ctx) => {
-      await ctx.send('Quiero que me devolváis el dinero ahora mismo')
-      await ctx.send('Quiero la devolución ya')
-      const reply = await ctx.send('Andrea')
-      expectMentionsAll(reply, ['Andrea', 'devoluc'])
-      if (/n[uú]mero\s+n[uú]mero/i.test(reply)) {
-        throw new Error(`Bug "número número" presente: ${reply}`)
+      // T1 — trigger devolución → bot chiede dati (4 dígitos, captura, resumen)
+      const t1 = await ctx.send('Quiero que me devolváis el dinero ahora mismo')
+      expectMentionsAll(t1, ['dig', 'tarjeta'])
+      // T2 — cliente insiste → bot escala con "revis" SENZA promettere
+      const t2 = await ctx.send('Quiero la devolución ya')
+      expectMentionsAll(t2, ['revis'])
+      expectMentionsNone(t2, ['te devolveré', 'te devuelvo', 'devolución aprobada', 'reembolso confirmado'])
+      // T finale — name → handover summary
+      const final = await ctx.send('Andrea')
+      expectMentionsAll(final, ['Andrea', 'devoluc'])
+      if (/n[uú]mero\s+n[uú]mero/i.test(final)) {
+        throw new Error(`Bug "número número" presente: ${final}`)
       }
     },
   },

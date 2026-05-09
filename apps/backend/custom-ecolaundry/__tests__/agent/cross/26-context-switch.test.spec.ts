@@ -1,4 +1,8 @@
-// 26 — Context switch: FAQ in mezzo a un flow di troubleshooting
+// CROSS — Context switch: FAQ in mezzo a un flow di troubleshooting
+//
+// NOTE (Andrea, 2026-05-10): questo test NON copre Caso 26 di usecases.md
+// (devolución inmediata) — è una funzionalità trasversale (sticky facts
+// preservation durante FAQ interruption). Spostato in cross/ per chiarezza.
 //
 // Il customer è dentro un flow tecnico (location → tipo → numero → display)
 // e all'improvviso fa una domanda FAQ ("a che ora aprite?"). Il bot deve:
@@ -6,7 +10,7 @@
 //   2. NON perdere gli sticky facts già raccolti
 //   3. (Idealmente) tornare al flow dove era
 
-import { type TestCase, expectMentionsAll, expectStateHas } from './_helpers.js'
+import { type TestCase, expectMentionsAll, expectStateHas } from '../_helpers.js'
 
 export const tests: TestCase[] = [
   {

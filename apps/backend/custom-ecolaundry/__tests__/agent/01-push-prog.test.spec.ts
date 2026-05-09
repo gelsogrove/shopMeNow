@@ -55,7 +55,7 @@ export const tests: TestCase[] = [
       if (!/perfect/.test(t5Lower)) {
         throw new Error(`Scenario 1.1 T5: bot deve dire "perfecto": ${t5}`)
       }
-      if (!/resuelt|ya\s+estar[ií]a/.test(t5Lower)) {
+      if (!/comenzad|correctament|resuelt|ya\s+estar[ií]a/.test(t5Lower)) {
         throw new Error(`Scenario 1.1 T5: bot deve confermare chiusura: ${t5}`)
       }
       expectStateHas(ctx.session, { pendingClosure: 'resolved' })

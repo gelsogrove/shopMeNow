@@ -20,8 +20,10 @@
       "displayMatches": ["ALM/DOOR", "ALMDOOR"],
       "requires": ["location", "machineNumber"],
       "step": {
-        "replyKey": "almDoorGuidance"
+        "replyKey": "almDoorGuidance",
+        "resolvedReplyKey": "al001Resolved"
       },
+      "resolvedRegex": "(ya\\s+(?:funciona|no\\s+aparece)|^funciona\\b|^ok\\s+resuelto|^resuelto\\b|^perfecto\\b|^perfetto\\b|ha\\s+desaparecid|desaparecid|gi[aà]\\s+funziona|ora\\s+funziona)",
       "persistFailureRegex": "(no\\s+desaparece|sigue\\s+(?:igual|sin\\s+arrancar|saliendo)|continua|todav[ií]a\\s+sale|aun\\s+sale|^(no|nope)\\b)",
       "escalationReason": "ALM DOOR — persists after retry"
     },

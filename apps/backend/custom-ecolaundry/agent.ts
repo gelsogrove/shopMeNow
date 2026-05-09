@@ -80,6 +80,12 @@ export async function agentTurn(session: AgentSession, rawUserMessage: string): 
   ar.state.lastUserMessage = userMessage
 
   resolveLanguageForTurn(ar, userMessage)
+  // Snapshot displayState BEFORE autoExtractFacts runs. Guards downstream
+  // (e.g. guardPostInstructionFailureReask Phase B) compare snapshot vs
+  // current displayState to detect when the customer volunteered a NEW
+  // display in the same message — pivot instead of re-ask. See
+  // utils/guards/display.ts and __tests__/unit/display-pivot-phase-b.test.ts.
+  ar.state.displayStateAtTurnStart = ar.state.displayState || ''
   autoExtractFacts(ar, userMessage)
 
   // Branch-router architecture (feature-flagged via settings.useBranchRouter).

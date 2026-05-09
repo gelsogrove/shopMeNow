@@ -195,6 +195,30 @@ L5 OUTPUT POLICIES    agent.ts:polishReplyForTurn (sanitize, invariants, welcome
 When asked to "fix" something, I MUST identify the layer first.
 Cross-layer code is the smell that produced the bugs the refactor closed.
 
+### Pre-extract state snapshots (L2 turn-local)
+
+Some guards need to know whether a state field **changed during this turn**
+vs was already set before — e.g. did the customer volunteer a new display
+in this message, or is the existing one persisting? This requires a
+snapshot of the field BEFORE `autoExtractFacts` runs.
+
+Pattern: in `agent.ts:agentTurn` BEFORE calling `autoExtractFacts`, set
+`ar.state.<field>AtTurnStart = ar.state.<field>` (or the equivalent
+empty value). Guards downstream compare snapshot vs current to detect
+the in-turn change. The snapshot is a turn-local L2 field, reset at
+the top of every turn — declare it in `models/state.ts` with a JSDoc
+explaining who reads it.
+
+Current instances:
+- `displayStateAtTurnStart` → consumed by Phase B pivot in
+  [`utils/guards/display.ts:guardPostInstructionFailure`](utils/guards/display.ts).
+  When the customer combines a failure signal ("no") with a new display
+  token in the same message, the guard pivots instead of re-asking.
+  Pinned by [`__tests__/unit/display-pivot-phase-b.test.ts`](__tests__/unit/display-pivot-phase-b.test.ts).
+
+When adding a new snapshot field, add it to `resetMachineFacts` in
+`utils/state.ts` so mid-turn flow resets clear it consistently.
+
 ---
 
 ## 🧬 Auto-extract inference rules — `autoExtractFacts` (L3)
@@ -810,6 +834,7 @@ refactor MUST be done — that's why each entry below has a clear trigger.
 | B1 | **Rename + dispatch `appendEscalationSummary`.** It currently does two things (refund-form closure replace OR escalation handover append). Rename to `polishClosureForTurn(ar, reply)` with explicit dispatch on `pendingClosure` (`'refund-form'` / `'escalated'` / `null`). | The third closure type appears (today: 2 = escalated, refund-form). | [`agent.ts:appendEscalationSummary`](agent.ts) |
 | B2 | **Factory for deterministic name-capture guards.** The pattern *"if pendingFlow=X-await-name → validateName → ladder → captureCustomerName → close as Y → emit i18n Z"* is duplicated in `guardDiscountCodeAwaitName` (Caso 8) and `guardDoubleChargeAwaitName` (Caso 6.1). Extract a factory `createNameCaptureGuard({ pendingFlowKey, closureFn, finalI18nKey, escalateReason })`. | The third instance is added (i.e. a future Caso that ends with name capture and a non-trivial closure). | [`utils/guards/discount-code-flow.ts:guardDiscountCodeAwaitName`](utils/guards/discount-code-flow.ts) + [`utils/guards/payment-double-charge.ts:guardDoubleChargeAwaitName`](utils/guards/payment-double-charge.ts) |
 | C1 | **PII redaction before LLM forward.** Customer name + last 4 digits of the card + photo references reach the external LLM today. Privacy/GDPR forbids this. Mask captured PII fields in conversation history before forwarding. | Now (privacy obligation), but blocks scaling — at minimum before the next non-test traffic. | TODO grep `PII must not reach the LLM` in [`agent.ts`](agent.ts) |
+| B3 | **Rename `al001Resolved` i18n key → `displayResolved`.** The key is now reused by `alm-door-blocked` and any future display-flow recovery (content is generic "incidencia resuelta", name is legacy from the original AL001-only use). Touch points: `json/display-flows.json` (2 entries), `json/cases.json`, `json/i18n/*.json` (6 langs). | When a third display-flow with `resolvedReplyKey` is added (the legacy name will become misleading enough to merit the cross-cutting rename). | grep `al001Resolved` |
 
 **Anti-pattern to avoid:** silently start the refactor while doing
 unrelated work. Each entry above has a trigger; respect the trigger

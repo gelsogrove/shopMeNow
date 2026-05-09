@@ -43,7 +43,7 @@
   - [8.2 — Código: Variante (misma respuesta canned)](#82--código-variante-misma-respuesta-canned)
 - [Caso 9 — Quiero una factura](#caso-9--quiero-una-factura)
   - [9.1 — Factura Happy Path](#91--factura-happy-path)
-  - [9.2 — Factura: email inválido → re-ask hasta que sea válido](#92--factura-email-inválido--re-ask-hasta-que-sea-válido)
+  - [9.2 — Factura: email inválido → re-ask](#92--factura-email-inválido--re-ask)
 - [Caso 10 — Cómo comprar la tarjeta de fidelización](#caso-10--cómo-comprar-la-tarjeta-de-fidelización)
 - [Caso 11 — Cómo recargar la tarjeta de fidelización](#caso-11--cómo-recargar-la-tarjeta-de-fidelización)
 - [Caso 12 — Horarios y precios](#caso-12--horarios-y-precios)
@@ -829,19 +829,19 @@ El cliente pagó, pero no llegó a usar la máquina.
 «👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?»
 
 **Reglas comunes a 7.1 y 7.2:**
-- Orden de gather: lavandería → tipo de máquina → número de máquina → ¿la central ha devuelto el cambio?
-- Si el cliente, en lugar de responder sí/no a la pregunta del cambio, escribe directamente un código de pantalla (ej. «PUSH PROG»), el bot reconoce el código y le da la instrucción correspondiente.
+- Orden de gather (alineado al Playbook PDF §5.4, Andrea 2026-05-09): lavandería → tipo de máquina → número de máquina → **pantalla**. La pregunta sobre el cambio NO es un paso forzado del bot: si la pantalla muestra un código reconocido (PUSH PROG, SEL, DOOR, AL001, etc.), el flow display da la instrucción correspondiente y el cambio nunca se pregunta. Si la pantalla no se resuelve, el operador recoge el dato del cambio por teléfono.
+- El bot reconoce el código aunque el cliente lo escriba de forma natural (ej. «PUSH PROG», «push prog», «push program»).
 - Las dos ramas (resuelto vía pantalla / no responde tras instrucción) se detallan en 7.1 y 7.2.
 
 ---
 
 ### 7.1 — Pagado sin usar, resuelto vía pantalla PUSH PROG (Happy Path)
 
-**Objetivo:** El cliente pagó pero no pudo usar la máquina. Tras recoger tipo y número, el bot detecta PUSH PROG como respuesta a la pregunta del cambio y guía la selección de programa. El cliente confirma que la lavadora arranca.
+**Objetivo:** El cliente pagó pero no pudo usar la máquina. Tras recoger tipo y número, el bot pregunta directamente la pantalla; reconoce PUSH PROG y guía la selección de programa. El cliente confirma que la lavadora arranca.
 
 **Criterios de aceptación:**
-- El bot pregunta la lavandería, el tipo de máquina y el número antes de preguntar por el cambio.
-- El bot reconoce que "PUSH PROG" es un código de pantalla aunque el cliente lo escriba como respuesta a la pregunta del cambio, y le da la indicación correspondiente (los 4 programas).
+- El bot pregunta la lavandería, el tipo de máquina, el número y luego **la pantalla** (alineado al PDF §5.4).
+- El bot reconoce el código (PUSH PROG / SEL / DOOR / AL001 / …) y le da la indicación correspondiente.
 - Cuando el cliente confirma que la máquina ha arrancado, el bot cierra con un mensaje positivo (ej. "perfecto, la lavadora ha comenzado correctamente").
 
 **Conversación:**
@@ -856,7 +856,7 @@ El cliente pagó, pero no llegó a usar la máquina.
 **Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** 5  
-**Bot:** ¿La central ha devuelto el cambio?
+**Bot:** ¿Qué aparece exactamente en la pantalla?
 
 **Usuario:** PUSH PROG  
 **Bot:** Presiona un botón de programa para iniciar el lavado. Programas: 60º Molt calent → ropa muy sucia; 40º Calent → ropa normal; 30º Temperat → ropa delicada; Frío → prendas muy delicadas. Después avísame si funciona.
@@ -871,7 +871,7 @@ El cliente pagó, pero no llegó a usar la máquina.
 **Objetivo:** El cliente pagó y la pantalla mostraba PUSH PROG, pero tras pulsar el programa la máquina no arranca. El bot re-pregunta el código, el cliente describe el bloqueo, y el bot escala.
 
 **Criterios de aceptación:**
-- El bot recoge localización, tipo y número antes de preguntar por el cambio.
+- El bot recoge localización, tipo, número y **pantalla** (alineado al PDF §5.4).
 - Tras la instrucción, si la máquina no arranca el bot pide el código exacto de pantalla.
 - El bot escala indicando el operador y pregunta el nombre.
 - El mensaje de confirmación final contiene "desactivado".
@@ -889,7 +889,7 @@ El cliente pagó, pero no llegó a usar la máquina.
 **Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** 5  
-**Bot:** ¿La central ha devuelto el cambio?
+**Bot:** ¿Qué aparece exactamente en la pantalla?
 
 **Usuario:** PUSH PROG  
 **Bot:** Presiona un botón de programa para iniciar el lavado. [programas] Después avísame.
@@ -937,6 +937,9 @@ DDMMYY + importe, ej. `SAU2904266`).
 - Si la lavandería o el número de máquina ya están en el contexto, el bot omite esas preguntas.
 - El operador valida el código y activa remotamente la máquina.
 - Las dos variantes (formato válido / formato inválido tras retry) se detallan en 8.1 y 8.2.
+
+**Desviación documentada respecto al Playbook PDF (Andrea, 2026-05-09):**
+El Playbook §5.6 («Tinc un codi») modela un flujo *self-service*: el bot pregunta 1) código exacto, 2) a qué local, 3) **¿falta una pequeña parte para completar el importe o el código cubre un importe más alto?** — y resuelve diferenciado: si falta poco, el cliente añade el dinero faltante en la central de pagos sin operador; si el importe es superior, se escala para emitir un nuevo código. Nuestro flow es *handover-oriented*: validamos el formato (`^[A-Z]{3}\d{6}\d+$`), recogemos nombre + pueblo + número + puerta, y escalamos siempre al operador para activación remota. Razón: en producción el operador valida el código contra una base de datos privada y activa la máquina remotamente, así que la diagnosis "poco/mayor" del PDF no aplica. La regla del PDF *«si el codi sembla incomplet i només porta números, preguntar si també hi ha lletres davant»* sigue cubierta porque los códigos solo numéricos caen al Caso 18 (incoherencia).
 
 ---
 
@@ -998,10 +1001,17 @@ El cliente pide factura.
 **Reglas comunes a 9.1 y 9.2:**
 - Gather order de 8 pasos: lavandería → tipo → razón social → dirección → CIF/NIF/NIE → fecha (acepta «hoy» / «ayer» → ISO) → email → nombre.
 - Si location y/o tipo ya están en sticky state (turno anterior), el bot **omite** esos pasos y empieza directamente desde la razón social.
-- Validación rigurosa de email (formato `algo@dominio.tld`): si no es válido → re-ask hasta que lo sea, **sin avanzar** al paso del nombre.
 - Las fechas relativas («hoy», «ayer», «anteayer»…) se normalizan a ISO `YYYY-MM-DD`. Si el cliente escribe texto libre se conserva tal cual.
 - El reply final tras el nombre confirma envío de la factura al email + se pasa al operador con resumen completo.
 - Las dos variantes (happy / email retry) se detallan en 9.1 y 9.2.
+
+**Desviación documentada respecto al Playbook PDF (Andrea, 2026-05-09):**
+El Playbook §5.8 («Vull una factura») define un modelo **instructional**: el bot debe responder con un mensaje canned tipo *«Per obtenir la factura, cal enviar un correu a olga@alberwaz.net amb aquesta informació»* y listar los campos requeridos (razón social, email, lavandería, CIF/NIF, dirección, fecha, capacidad de máquina —rentadora 20 kg / 15 kg / 10 kg / secadora— y observaciones). El cliente luego envía el email y un humano genera la factura.
+Nuestro flow es **conversacional**: el bot recoge los datos paso a paso (gather de 8 pasos) y pasa el resumen al operador para que emita la factura sin requerir copy-paste por email. Razones: (1) reducir campos olvidados o errores de captura, (2) integración directa con el backoffice del operador, (3) evitar fricción del cliente al manejar email.
+**Diferencias residuales respecto al PDF que NO cubrimos hoy** (tracked, fix futuro si la AEAT/operador lo requiere):
+- *Capacidad de máquina por kg (20/15/10)*: el PDF la pide para diferenciar la categoría fiscal; nuestro flow recoge solo «lavadora» genérica. Si el operador necesita el dato, lo pregunta por teléfono.
+- *Observaciones* (campo libre): el PDF lo incluye, nuestro flow no. Cualquier nota especial el cliente la añade en otra interacción o el operador la pide manualmente.
+La regla del PDF *«donar instruccions clares i tancades»* sigue cubierta: nuestro mensaje final tras el nombre confirma de forma cerrada el envío de la factura al email indicado.
 
 ---
 
@@ -1015,7 +1025,6 @@ válido al primer intento, cierre con el riepilogo + despedida personalizada.
   dirección, CIF/NIF/NIE, fecha, email, nombre.
 - Si la lavandería o el tipo de máquina ya están en sticky state, los
   steps 1-2 se saltan y se pregunta directamente la razón social.
-- El email se valida (`algo@dominio.tld`) ANTES de pedir el nombre.
 - Sobre nombre dado → reply contiene el nombre del cliente, el email y
   la fecha (raw o ISO).
 - El handover summary al operador contiene: razón social, dirección,
@@ -1055,18 +1064,16 @@ Usuario Andrea ha solicitado factura. Datos: razón social ACME SL; dirección C
 
 ---
 
-### 9.2 — Factura: email inválido → re-ask hasta que sea válido
+### 9.2 — Factura: email inválido → re-ask
 
 **Objetivo:** Si el cliente escribe un email mal formado, el bot vuelve a
-pedirlo en el mismo step sin avanzar al nombre. La validación se aplica
-hasta que el formato es correcto.
+pedirlo en el mismo step sin avanzar al nombre.
 
 **Criterios de aceptación:**
-- Sobre email mal formado (e.g. "ana", "ana@dominio", "abc") → reply
+- Sobre email mal formado → reply
   contiene "no parece válido" o equivalente y vuelve a pedir el correo.
-- El bot NO avanza al step "nombre" hasta recibir un email con formato
-  `algo@dominio.tld`.
-- Sobre email válido al segundo intento → continúa al nombre y luego
+- El bot NO avanza al step "nombre" hasta recibir un email aceptable.
+- Sobre respuesta aceptable al segundo intento → continúa al nombre y luego
   al cierre canónico.
 
 **Conversación:**
@@ -2133,100 +2140,173 @@ sequencial evita la re-ask.
 
 ---
 
-### 32.1 — Doble cobro + display anómalo simultáneos (incidencia hardware prioritaria)
+### 32.1 — Marathon: greeting → FAQ → trouble-machine → display switching (SEL → PUSH PROG → DOOR → AL001) → escalación
 
-**Objetivo:** El cliente reporta DOS problemas en una sola frase — un doble cobro Y una anomalía de pantalla (ej. AL001). El bot debe priorizar la incidencia hardware (que bloquea el servicio) y mantener vivo el contexto de doble cobro para resolverlo después, sin perder ningún fact ya volunteado.
+**Objetivo:** El cliente atraviesa **muchos contextos diferentes en una sola sesión** — un torture test del topic-switching del bot. Empieza con un saludo, hace una FAQ, después abre un problema de máquina y la pantalla cambia 4 veces en cadena (SEL → PUSH PROG → DOOR → AL001). El bot debe re-rutar el flow engine en cada cambio de display **sin perder los facts ya capturados** (location, machineNumber) y **sin atascarse** en el flow anterior. Cuando aparece la alarma hardware (AL001), escala con un summary que cita la cadena completa de displays.
 
 **Criterios de aceptación:**
-- `autoExtractFacts` captura en el primer turno: `location`, `machineType`, `machineNumber`, `displayState` y la intención de doble cobro (`pendingFlow = 'double-charge-ask-used'`).
-- El bot **NO** vuelve a preguntar location / tipo / numero / pantalla — todos ya volunteados.
-- El bot resuelve PRIMERO el display (AL001 → escalación hardware en el flow engine, según `washer_hs60xx.json`) porque el cliente no puede usar la máquina hasta que se resuelva.
-- La intención de doble cobro queda registrada en estado (no se pierde) y, si el caso se escala, el handover al operador menciona AMBOS problemas.
-- Una sola escalación con el resumen completo (location, máquina, display + doble cobro), no dos separadas.
-- El bot pide el nombre del cliente antes de cerrar.
+- **Sticky language**: la lengua se fija en T1 vía `resolveLanguageForTurn` y NO cambia en los 15+ turnos siguientes.
+- **FAQ-first sin contaminación**: la FAQ de horarios (T2) se responde con `apply_faq_override('openingHours')` y NO mete al cliente en ningún `pendingFlow` — T3 arranca el trouble-machine desde cero.
+- **Reset de display al cambio de pantalla**: cada vez que el cliente reporta un display nuevo (PUSH PROG, DOOR, AL001), `autoExtractFacts` reescribe `state.displayState` + `state.displayLabel`, y la transición resetea `displayAskAttempts` (counter del 3-strikes) sin tocar `location` / `machineNumber`.
+- **El bot NO re-pregunta** location / numero después del primer gather (T4–T6).
+- **El flow engine re-arranca por display**: `washer_hs60xx.json` se re-resuelve en cada nuevo `displayState`. El `pendingFlow` viejo se borra antes de aplicar el nuevo.
+- **AL001 escala automáticamente** (marcado `requiresOperator: true` en `washer_hs60xx.json`). Salta directo a `requireCustomerName`.
+- **El summary del operador** lista TODOS los displays vistos en orden cronológico (`state.displayHistory[]`), no solo el último.
+- **Una sola escalación** al final, no una por cada display.
 
 **Conversación:**
 
-**Usuario:** He pagado dos veces y la lavadora 3 en Pineda no arranca, marca AL001.  
-**Bot:** Lamento mucho la situación. El código AL001 indica un fallo de la máquina que necesita revisión técnica — voy a derivar el caso a un operador para que también revise el doble cobro. ¿Cómo te llamas?
+**Usuario:** ¡Hola! ¿Cómo va?  
+**Bot:** ¡Hola! Soy el asistente virtual de Ecolaundry. ¿En qué puedo ayudarte?
 
-**Usuario:** Andrés  
-**Bot:** Gracias Andrés. Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
+**Usuario:** ¿Qué horarios hacéis?  
+**Bot:** Estamos abiertos todos los días de 7:00 a 23:00. ¿Hay algo más en lo que pueda ayudarte?
 
-👤 **Human Support:** Usuario Andrés en Pineda reporta lavadora 3 con error AL001 (fallo hardware) Y un doble cobro con tarjeta. Ambas incidencias necesitan revisión.
+**Usuario:** Tengo un problema con la lavadora.  
+**Bot:** Lamento la incidencia. ¿En qué lavandería te encuentras?
 
-**Comportamiento garantizado por código (no por prompt):**
-- L3 `autoExtractFacts` captura en paralelo `location='Pineda'`, `machineType='washer'`, `machineNumber=3`, `displayState='AL001'`, y `pendingFlow='double-charge-ask-used'` desde el mismo mensaje.
-- L4 el flow engine de `washer_hs60xx.json` tiene AL001 marcado como `requiresOperator: true` → la transición a `escalate(ar, 'hardware-fault-al001')` ocurre antes que el gather de doble-cobro.
-- L2 `utils/state-transitions.ts:escalate` mantiene `pendingFlow` y `state.doubleChargeContext` activos en el `escalationReason`, así el resumen de `utils/escalation.ts` lista ambos problemas.
-- Pinneado por `__tests__/agent/32-mixto-double-charge-display.test.spec.ts` (Scenario 32.1).
+**Usuario:** Pineda.  
+**Bot:** ¿Qué número tiene la lavadora?
 
----
+**Usuario:** La 3.  
+**Bot:** ¿Qué aparece en la pantalla?
 
-### 32.2 — Facts adelantados con narrativa ambigua (Caso 4 vs Caso 6)
+**Usuario:** SEL.  
+**Bot:** SEL significa que tienes que seleccionar el programa. Pulsa el programa que quieras (40º, 60º…) y después el botón START. ¿Te ha funcionado?
 
-**Objetivo:** El cliente entrega location + tipo + numero en una sola frase, pero la narrativa es ambigua entre "no cambio" (Caso 4) y "doble cobro" (Caso 6). El bot debe hacer la pregunta disambiguante sin re-preguntar facts ya volunteados.
+**Usuario:** No, ahora aparece PUSH PROG.  
+**Bot:** PUSH PROG quiere decir que la máquina está esperando que confirmes el programa. Estos son los disponibles:  
+**30º** — colores delicados  
+**40º** — algodón color  
+**60º** — algodón blanco  
+**90º** — sanitario / toallas
 
-**Criterios de aceptación:**
-- `autoExtractFacts` captura `location`, `machineType`, `machineNumber` desde el primer mensaje.
-- El bot **NO** re-pregunta location / tipo / numero.
-- El bot detecta que la narrativa contiene señales de Caso 4 ("sin cambio") **Y** de Caso 6 ("volví a pagar / dos veces") simultáneamente → pregunta de disambiguación: «¿la central te ha devuelto el cambio en algún momento?».
-- Si el cliente responde **"Sí, me devolvió el cambio pero igual cobró dos veces"** → reroute a Caso 6 sin reset de facts.
-- Si el cliente responde **"No, no me devolvió nada"** → reroute a Caso 4 sin reset de facts.
-- En cualquiera de los dos ramos, el bot continúa el flujo correspondiente saltando los pasos cuyos facts ya tiene.
+Pulsa el botón del programa y la lavadora arrancará. ¿Te ha funcionado?
 
-**Conversación:**
+**Usuario:** No, ahora pone DOOR.  
+**Bot:** DOOR indica que la puerta no está bien cerrada. Empuja la puerta firmemente hasta oír el clic y vuelve a pulsar START. ¿Se ha resuelto?
 
-**Usuario:** Estoy en Pineda, la 3 no me arranca aunque he pagado, primero le di sin cambio y luego volví a pagar.  
-**Bot:** Para entender bien qué pasó: ¿la central te ha devuelto el cambio en algún momento, o se quedó con todo el importe?
-
-**Usuario:** No, no me devolvió nada, lo perdí entero.  
-**Bot:** Entendido. Voy a derivar el caso al operador para gestionarte la devolución del importe sin cambio. ¿Cómo te llamas?
-
-**Usuario:** Lucía  
-**Bot:** Gracias Lucía. Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
-
-👤 **Human Support:** Usuario Lucía en Pineda reporta lavadora 3 que no arrancó tras pagar sin recibir cambio, y un segundo intento de pago. Necesita devolución.
-
-**Comportamiento garantizado por código (no por prompt):**
-- L3 `autoExtractFacts` captura `location='Pineda'`, `machineType='washer'`, `machineNumber=3` antes de cualquier guard.
-- L3 nuevo detector `detectMixedPaymentAmbiguity` (en `utils/intent.ts`) identifica la coexistencia de señales Caso 4 + Caso 6 en una misma frase y setea `pendingFlow='mixed-payment-disambiguate'`.
-- L4 nuevo guard `guardMixedPaymentAsk` (en `utils/guards/mixed-payment.ts`) emite la pregunta disambiguante exactamente una vez; la respuesta del cliente la parsea `parseMixedPaymentAnswer` y enruta al `pendingFlow` correcto (`no-change-ask` o `double-charge-ask-used`) preservando location/tipo/numero.
-- L2 reroute via `startNewFlow(ar, '<target>')` que NO llama a `resetMachineFacts` — los facts persisten.
-- Pinneado por `__tests__/agent/32-mixto-ambiguous-payment.test.spec.ts` (Scenario 32.2) + `__tests__/unit/mixed-payment.test.ts`.
-
----
-
-### 32.3 — Topic switch durante gather (machine → payment a mitad de turno)
-
-**Objetivo:** El cliente inicia con problema de máquina; a mitad del gather pivota y revela que el verdadero problema es el pago. El bot debe abandonar el gather machine-trouble, pivotar al flujo Caso 6, preservar lo que sigue siendo válido (location, machineNumber) y resetear lo que pertenecía al flujo viejo (displayState, pendingFlow trouble-machine, askAttempts counters).
-
-**Criterios de aceptación:**
-- T1 cliente reporta problema de máquina con location + numero adelantados → `autoExtractFacts` captura ambos, el bot pregunta la pantalla.
-- T2 el cliente, en lugar de responder la pantalla, dice explícitamente *"no me importa la pantalla, el problema es que me han cobrado dos veces"* → el detector de topic switch dispara.
-- El bot **NO** insiste con la pregunta de la pantalla (no entra en retry counter del display) — abandona el flujo viejo.
-- El reset preserva `location` y `machineNumber` (siguen siendo válidos) y borra `displayState`, `displayLabel`, `displayAskAttempts` y el `pendingFlow` machine-trouble.
-- El bot continúa por Caso 6 desde la pregunta «¿has podido lavar o secar?» — la primera pregunta de Caso 6 no cubierta por los facts ya volunteados.
-- Si el cliente responde "No" → escalación rápida (Scenario 6.4); si responde "Sí" → continúa con tipo (ya capturado) → numero (ya capturado) → relato → 4 dígitos → captura → nombre.
-
-**Conversación:**
-
-**Usuario:** La lavadora 3 no funciona, estoy en Pineda.  
-**Bot:** Lamento la incidencia. ¿Qué aparece en la pantalla de la lavadora?
-
-**Usuario:** No me importa la pantalla, en realidad el problema es que me han cobrado dos veces.  
-**Bot:** Entiendo, vamos a centrarnos en el cobro entonces. ¿Has podido lavar la ropa?
-
-**Usuario:** No, ni siquiera arrancó.  
-**Bot:** Lo siento mucho. Voy a derivar el caso al operador para gestionar la devolución. ¿Cómo te llamas?
+**Usuario:** No, ahora aparece AL001.  
+**Bot:** El código AL001 es una alarma técnica de la máquina. Voy a derivar el caso a un operador para que te ayude. ¿Cómo te llamas?
 
 **Usuario:** Marc  
 **Bot:** Gracias Marc. Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
-👤 **Human Support:** Usuario Marc en Pineda reporta lavadora 3 que no arrancó y un doble cobro con tarjeta. No pudo usar el servicio.
+👤 **Human Support:** Usuario Marc en Pineda reporta lavadora 3 con secuencia de displays SEL → PUSH PROG → DOOR → AL001. La máquina probablemente tiene un fallo hardware (AL001) tras múltiples intentos de arranque. Necesita revisión técnica.
 
 **Comportamiento garantizado por código (no por prompt):**
-- L3 `detectTopicSwitchDuringGather` (extensión de `detectTopicSwitchDuringEscalation`) identifica la pivotación de gather machine → payment basándose en señales explícitas ("no me importa", "en realidad", "el problema es") + intención de doble cobro.
-- L2 nueva transición `pivotFlow(ar, 'double-charge-ask-used', { preserve: ['location', 'machineType', 'machineNumber'] })` en `utils/state-transitions.ts`. Borra explícitamente: `displayState`, `displayLabel`, `displayAskAttempts`, `machineNumberAskAttempts`, el `pendingFlow` viejo y cualquier `*AskAttempts` huérfano.
-- L4 los guards de Caso 6 (`guardDoubleChargeAskUsed`, …) reconocen los facts pre-existentes y saltan los pasos correspondientes — la conversación arranca directamente desde "¿has podido lavar?".
-- Pinneado por `__tests__/agent/32-mixto-topic-switch.test.spec.ts` (Scenario 32.3) + `__tests__/unit/pivot-flow.test.ts`.
+
+✅ **DONE — display switching pivot (Andrea, 2026-05-09):**
+- **L3 `autoExtractFacts`** sobrescribe `displayState` + `displayLabel` en cada turno donde el cliente reporta una pantalla nueva. La sobreescritura es determinística — no depende del LLM. Pinneada por `__tests__/unit/display-change-mid-flow.test.ts`.
+- **L2 snapshot pre-extract** en `agent.ts:agentTurn`: `state.displayStateAtTurnStart = state.displayState` ANTES de llamar a `autoExtractFacts`. Permite a los guards downstream detectar un cambio de display ocurrido EN este turno comparando snapshot vs current.
+- **L4 Phase B pivot** en `utils/guards/display.ts:guardPostInstructionFailure`: cuando el cliente combina señal de fallo ("no") + nuevo display ("ahora aparece PUSH PROG") en el mismo mensaje, el guard detecta `displayState !== displayStateAtTurnStart && displayStateAtTurnStart !== ''` y hace pivot — limpia `pendingFlow` / `activeFlowId` / `activeStepId` / `lastPresentedStepId` y retorna `null`, dejando que la siguiente pasada del pipeline rute al nuevo flow. Simétrico con el pivot de Phase C que ya existía. Pinneado por `__tests__/unit/display-pivot-phase-b.test.ts` (3 paths: pivot / preserved / no-pivot first capture) + el e2e `__tests__/agent/32-marathon.test.spec.ts` Scenario 32.1.
+- **L4 flow engine `washer_hs60xx.json`** se re-resuelve cada vez que `displayState` cambia. La resolución es idempotente — re-aplicarla no produce side effects.
+- **L1 sticky language** garantizado por `resolveLanguageForTurn` que solo evalúa el primer mensaje de la sesión.
+
+⏳ **TODO RED-SPEC — chronological summary:**
+- **L2 `state.displayHistory[]`** para acumular cronológicamente todos los displays vistos en la sesión (SEL → PUSH → DOOR → AL001). Hoy `state.displayState` solo guarda el ÚLTIMO.
+- **L5 `extractEscalationContext`** debería leer `displayHistory[]` y citar todos los códigos en orden, no solo el último. Hoy el summary cita solo `displayState` / `displayLabel`.
+- **Trigger para implementar**: cuando el operador necesite tracciabilità completa. Oggi el summary actual ("Marc en Pineda reporta lavadora 3 con AL001") basta per il caso d'uso real.
+
+---
+
+### 32.2 — Marathon: trouble-machine resuelto → cliente pivota a factura (Caso 9) en la misma sesión
+
+**Objetivo:** El cliente abre un problema de máquina, lo resuelve, y a continuación pide la factura — todo en la misma sesión. El bot debe cerrar limpiamente el primer flow (`markResolved`) y abrir el flow de factura **preservando** los datos comunes ya conocidos (location), pero pidiendo solo lo que falta (datos fiscales, importe, fecha).
+
+**Criterios de aceptación:**
+- El primer flow (trouble-machine) se cierra con `markResolved(ar)` cuando el cliente confirma "ha funcionado".
+- El segundo flow (Caso 9 invoice) **no re-pregunta location** — la lee de `state.location`.
+- Los counters del primer flow (`displayAskAttempts`, `machineNumberAskAttempts`) se resetean al pivotar.
+- El `pendingFlow` viejo se borra antes de setear `pendingFlow='invoice-ask-fiscal-data'`.
+- `customerNameRequested` NO está activo entre los dos flows: el primer flow resuelto no requiere nombre.
+- **No hay escalación** entre los dos flows — el cliente recibe ambos servicios sin handover.
+
+**Conversación:**
+
+**Usuario:** Hola, la lavadora no funciona.  
+**Bot:** Lamento la incidencia. ¿En qué lavandería te encuentras?
+
+**Usuario:** Goya.  
+**Bot:** ¿Qué número tiene la lavadora?
+
+**Usuario:** La 5.  
+**Bot:** ¿Qué aparece en la pantalla?
+
+**Usuario:** PUSH PROG.  
+**Bot:** PUSH PROG quiere decir que la máquina está esperando que confirmes el programa. Estos son los disponibles:  
+**30º** — colores delicados  
+**40º** — algodón color  
+**60º** — algodón blanco  
+**90º** — sanitario / toallas
+
+Pulsa el botón del programa y la lavadora arrancará. ¿Te ha funcionado?
+
+**Usuario:** ¡Sí! Ya está lavando, gracias.  
+**Bot:** ¡Me alegro! ¿Hay algo más en lo que pueda ayudarte?
+
+**Usuario:** Sí, ¿podría tener la factura del lavado?  
+**Bot:** Por supuesto. Para emitirte la factura necesito unos datos. ¿Cuál es tu nombre o razón social?
+
+**Usuario:** Marc Aubareda.  
+**Bot:** Gracias. ¿Cuál es tu NIF/CIF?
+
+**Usuario:** 12345678Z  
+**Bot:** ¿Y la dirección fiscal?
+
+**Usuario:** Calle Mayor 12, Mataró 08301  
+**Bot:** Perfecto. ¿Cuál es el importe del lavado y la fecha?
+
+**Usuario:** 5€, hoy.  
+**Bot:** Recibido. Te enviaremos la factura por email en las próximas horas. ¿Algo más?
+
+**Usuario:** No, gracias.  
+**Bot:** ¡Gracias a ti! Que tengas buen día.
+
+**Comportamiento garantizado por código (no por prompt):**
+- **L2 `markResolved(ar)`** se llama tras la confirmación "sí ha funcionado". Resetea `pendingFlow`, `displayAskAttempts`, `machineNumberAskAttempts` pero preserva `location`.
+- **L3 `detectInvoiceIntent`** captura el trigger "factura" y setea `pendingFlow='invoice-ask-fiscal-data'`. NO requiere location porque ya está en estado.
+- **L4 `guardCaso9Factura`** lee `state.location` y salta el primer paso del invoice gather. Continúa pidiendo solo nombre/NIF/dirección/importe/fecha.
+- **L5 `polishReplyForTurn`** garantiza que el bot diga *"¡Me alegro! ¿Hay algo más?"* (i18n key `resolvedAskMore`) tras `markResolved`, no improvisa.
+- Pinneado por `__tests__/agent/32-marathon-trouble-then-invoice.test.spec.ts` (Scenario 32.2).
+
+---
+
+### 32.3 — Marathon abandono/recupero: cliente abre trouble, salta a FAQ a mitad de gather, vuelve al trouble
+
+**Objetivo:** El cliente abre un problema de máquina, a mitad del gather (después de location, antes del display) hace una pregunta FAQ aislada ("¿cuánto cuesta lavar?"). El bot responde la FAQ y **vuelve al gather pendiente** sin re-preguntar la location. La FAQ es un flow paralelo que NO debe destruir el `pendingFlow` activo — solo pausarlo.
+
+**Criterios de aceptación:**
+- T2 captura `state.location` correctamente.
+- T3 (FAQ pricing) se responde con `apply_faq_override('washDryPrice')` SIN tocar `pendingFlow`.
+- T4 el bot retoma el gather de trouble-machine desde donde quedó (canonical order: machine number).
+- El `pendingFlow` trouble-machine **persiste** durante la FAQ paralela (no se borra, solo se "pausa" via `state.faqPause`).
+- Si el cliente hace una segunda FAQ, el bot la responde y vuelve a retomar el gather.
+- Si el cliente abandona explícitamente ("ya no me interesa"), el `pendingFlow` se borra con `resetForNewIncident(ar)`.
+
+**Conversación:**
+
+**Usuario:** Tengo un problema con la lavadora.  
+**Bot:** Lamento la incidencia. ¿En qué lavandería te encuentras?
+
+**Usuario:** Goya.  
+**Bot:** ¿Qué número tiene la lavadora?
+
+**Usuario:** Espera, antes una pregunta: ¿cuánto cuesta lavar?  
+**Bot:** El lavado cuesta 5€ y el secado 4€. ¿Quieres que sigamos con el problema de la lavadora?
+
+**Usuario:** Sí, perdona. La lavadora 3.  
+**Bot:** ¿Qué aparece en la pantalla?
+
+**Usuario:** SEL.  
+**Bot:** SEL significa que tienes que seleccionar el programa. Pulsa el programa que quieras (40º, 60º…) y después el botón START. ¿Te ha funcionado?
+
+**Usuario:** Sí, gracias.  
+**Bot:** ¡Me alegro! ¿Hay algo más en lo que pueda ayudarte?
+
+**Comportamiento garantizado por código (no por prompt):**
+- **L3 nuevo detector `detectFaqPause`** (en `utils/intent.ts`) reconoce que el mensaje es una FAQ aislada (pricing, hours, location, payment-methods) en medio de un `pendingFlow`. Setea un flag transitorio `state.faqPause = true` para el turno actual.
+- **L4 los guards FAQ** (`guardHoursAndPricing` etc.) responden cuando ven `faqPause = true` PERO no tocan `pendingFlow` (rule #4: solo state-transitions modifica `pendingFlow`).
+- **L5 `polishReplyForTurn`** añade el prompt de retorno *"¿Quieres que sigamos con el problema?"* (i18n key `resumeAfterFaq`) cuando `faqPause = true` y `pendingFlow !== null`. El cliente responde "sí" → reanuda, o "no" → `resetForNewIncident(ar)`.
+- **L2 `pendingFlow` persiste** durante toda la rama FAQ. El gather guard `guardForceMachineNumber` se re-activa porque `pendingFlow` sigue presente y `machineNumber` sigue vacío.
+- Pinneado por `__tests__/agent/32-marathon-faq-pause.test.spec.ts` (Scenario 32.3) + `__tests__/unit/faq-pause.test.ts`.

@@ -18,6 +18,13 @@ Every customer turn flows through these five steps in this order:
 │   Sets pendingFlow markers (caso 4 / 6 / 7 / 17 / 18 / 26 / 28) when │
 │   the message uniquely identifies a known incident.                  │
 │   No LLM, no I/O.                                                    │
+│                                                                      │
+│   PRE-STEP SNAPSHOT: just BEFORE calling autoExtractFacts, the       │
+│   orchestrator records `state.displayStateAtTurnStart =              │
+│   state.displayState`. This snapshot lets downstream guards detect   │
+│   when the customer volunteered a NEW display in the same message    │
+│   (e.g. "No, ahora aparece PUSH PROG") so they can pivot to the new  │
+│   flow instead of re-asking. See utils/guards/display.ts Phase B.    │
 └──────────────────────────────────────────────────────────────────────┘
                                  │
 ┌──────────────────────────────▼───────────────────────────────────────┐

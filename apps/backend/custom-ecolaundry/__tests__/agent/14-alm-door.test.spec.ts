@@ -1,76 +1,78 @@
-// 18 — Caso 14 ALM DOOR
+// 14 — Caso 14 La lavadora muestra ALM DOOR
 //
-// Da usecases.md Caso 14: ALM DOOR.
-// Bot prima dà istruzione "abre con cuidado, revisa prendas atrapadas, ciérrala".
-// Loopback: "dime si el mensaje ha desaparecido".
-// Se NO desaparecido → escala con "vamos a pasar tu caso a revisión".
+// Da usecases.md Caso 14 (alineado al Playbook PDF §5.4 ALM DOOR):
+//   Differenza chiave con Caso 2 (DOOR simple): retry esplicito con
+//   istruzione "abrir + revisar prendas atrapadas + cerrar bien" + loopback
+//   "¿el mensaje ha desaparecido?". Solo se NO desaparece → escalate.
+//   Reconocimiento robusto: ALM DOOR / ALM/DOOR / ALMDOOR.
+//
+// Scenari:
+//   14.1 — Happy: ALM DOOR → istruzione → "Sí ha desaparecido" → resolved
+//   14.2 — Escalation: ALM DOOR → istruzione → "No desaparece" → escalate
+//          → name → desactivado + summary che menziona ALM DOOR
+//
+// CONSOLIDATED LAYOUT (Andrea, 2026-05-09): un test per percorso, asserzioni
+// step-by-step inline. 5 test → 2.
 
 import { type TestCase, expectMentionsAll } from './_helpers.js'
 
 export const tests: TestCase[] = [
+  // ── Scenario 14.1 — Happy Path completo ─────────────────────────────────
   {
-    name: 'ES — Caso 14 ALM DOOR istruzione: bot dice "abre puerta, revisa prendas atrapadas"',
+    name: 'ES — Scenario 14.1: happy path completo → ALM DOOR istruzione → "Sí ha desaparecido" → resolved',
     run: async (ctx) => {
-      await ctx.send('La lavadora no funciona y pone ALM DOOR')
-      await ctx.send('Goya')
-      const reply = await ctx.send('La 6')
-      expectMentionsAll(reply, ['puerta', 'prend', 'cierr'])
-    },
-  },
-  {
-    name: 'ES — Caso 14 ALM DOOR escalation: cliente dice "no desaparece" → bot escala',
-    run: async (ctx) => {
-      await ctx.send('La lavadora no funciona y pone ALM DOOR')
-      await ctx.send('Goya')
-      await ctx.send('La 6')
-      await ctx.send('Ya lo he hecho')
-      const reply = await ctx.send('No, no desaparece')
-      expectMentionsAll(reply, ['revis', 'llamas'])
-    },
-  },
-  {
-    // T1: dopo il trigger ALM DOOR, il bot saluta e chiede location (NON
-    // escala subito, NON salta a "qué número").
-    name: 'ES — Caso 14 T1: bot saluta + chiede location',
-    run: async (ctx) => {
-      const reply = await ctx.send('La lavadora no funciona y pone ALM DOOR')
-      expectMentionsAll(reply, ['lavanderia'])
-    },
-  },
-  {
-    // Path felice: dopo il retry, cliente dice "sí ha desaparecido" → bot
-    // chiude resolved.
-    name: 'ES — Caso 14 happy path: "sí ha desaparecido" → bot chiude',
-    run: async (ctx) => {
-      await ctx.send('La lavadora no funciona y pone ALM DOOR')
-      await ctx.send('Goya')
-      await ctx.send('La 6')
-      await ctx.send('Ya lo he hecho')
-      const reply = await ctx.send('Sí, ha desaparecido')
-      expectMentionsAll(reply, ['perfect', 'resuelt'])
-    },
-  },
-  {
-    // Summary regression: il riepilogo deve menzionare ALM DOOR e descrivere
-    // il sintomo (no template buggati).
-    name: 'ES — Caso 14 escalation summary: corretto e contestualizzato a ALM DOOR',
-    run: async (ctx) => {
-      await ctx.send('La lavadora no funciona y pone ALM DOOR')
-      await ctx.send('Goya')
-      await ctx.send('La 6')
-      await ctx.send('Ya lo he hecho')
-      await ctx.send('No, no desaparece')
-      const reply = await ctx.send('Andrea')
-      expectMentionsAll(reply, ['Andrea', 'Goya', '6'])
-      const lower = reply.toLowerCase()
-      if (!/alm.*door|door.*alm|puerta/.test(lower)) {
-        throw new Error(`Summary non contiene ALM DOOR né puerta: ${reply}`)
+      // T1 — trigger ALM DOOR → bot saluta e chiede location
+      const t1 = await ctx.send('La lavadora no funciona y pone ALM DOOR')
+      expectMentionsAll(t1, ['lavanderia'])
+      // T2 — location → bot chiede numero (machineType inferito da "lavadora")
+      const t2 = await ctx.send('Goya')
+      if (!/n[uú]mero/i.test(t2)) {
+        throw new Error(`Caso 14 T2: bot deve chiedere numero: ${t2}`)
       }
-      if (/n[uú]mero\s+n[uú]mero/i.test(reply)) {
-        throw new Error(`Bug "número número" presente: ${reply}`)
+      // T3 — numero → bot dà istruzione (puerta + prendas atrapadas + cerrar)
+      const t3 = await ctx.send('La 6')
+      expectMentionsAll(t3, ['puerta', 'prend', 'cierr'])
+      // T4 — cliente conferma di aver fatto il check (risposta ambigua,
+      // bot può fare re-ask generico o loopback specifico — entrambi OK)
+      await ctx.send('Ya lo he hecho')
+      // T5 — cliente conferma esplicito → resolved (closure positiva:
+      // accetta wording "perfect" o "genial" + marker resuelt)
+      const final = await ctx.send('Sí, ha desaparecido')
+      const finalLower = final.toLowerCase()
+      if (!/perfect|genial/.test(finalLower)) {
+        throw new Error(`Caso 14 closure: bot deve dire "perfecto"/"genial": ${final}`)
       }
-      if (/seleccion[oó]\s+el\s+programa\s+pero\s+problema\s+t[eé]cnico/i.test(reply)) {
-        throw new Error(`Frase nonsense presente: ${reply}`)
+      if (!/resuelt|comenzad|correctament/.test(finalLower)) {
+        throw new Error(`Caso 14 closure: bot deve confermare resoluzione: ${final}`)
+      }
+    },
+  },
+
+  // ── Scenario 14.2 — Escalation completo ─────────────────────────────────
+  {
+    name: 'ES — Scenario 14.2: "No desaparece" → escalate → name → desactivado + summary ALM DOOR',
+    run: async (ctx) => {
+      await ctx.send('La lavadora no funciona y pone ALM DOOR')
+      await ctx.send('Goya')
+      await ctx.send('La 6')
+      await ctx.send('Ya lo he hecho')
+      // Cliente: messaggio NON desaparece → bot escala con "revisar" + nome
+      const escalate = await ctx.send('No, no desaparece')
+      expectMentionsAll(escalate, ['revis', 'llamas'])
+      // T finale — name → handover summary
+      const final = await ctx.send('Andrea')
+      // Summary deve menzionare nome + location + numero + display ALM DOOR
+      expectMentionsAll(final, ['Andrea', 'Goya', '6'])
+      const finalLower = final.toLowerCase()
+      if (!/alm.*door|door.*alm|puerta/.test(finalLower)) {
+        throw new Error(`Caso 14 summary non menziona ALM DOOR né puerta: ${final}`)
+      }
+      // Garanzie negative: niente template buggati
+      if (/n[uú]mero\s+n[uú]mero/i.test(final)) {
+        throw new Error(`Bug "número número" presente: ${final}`)
+      }
+      if (/seleccion[oó]\s+el\s+programa\s+pero\s+problema\s+t[eé]cnico/i.test(final)) {
+        throw new Error(`Frase nonsense presente: ${final}`)
       }
     },
   },

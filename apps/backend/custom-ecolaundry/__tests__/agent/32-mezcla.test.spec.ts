@@ -1,103 +1,77 @@
-// 33 — Caso 32 cliente mezcla incidencia de máquina y pago
+// 32 — Caso 32 El cliente mezcla incidencia de máquina y pago
 //
-// Da usecases.md Caso 32: il cliente mescola problema tecnico e cobro
-// e spesso anticipa risposte (numeri, "lavadora") prima che il bot le
-// chieda esplicitamente. Il bot deve:
-//   - T1: salutare e chiedere la location senza farsi confondere
-//   - T2: dopo la location, chiedere SOLO il tipo (Step 2). Il numero è
-//         Step 3, gestito al turno successivo da guardForceMachineNumber.
-//         Se il cliente anticipa il numero ("lavadora 3" o "3"),
-//         autoExtractFacts lo recupera e il guard branchato evita la
-//         re-ask awkward.
-//   - T3: con tipo (e numero, se anticipato) estratti, procedere al display
+// Da usecases.md Caso 32 (alineato al PDF Playbook §11 "una pregunta cada
+// vegada" + §4 canonical question order):
 //
-// Regola architettura pinneata:
-//   guardForceMachineType (utils/guards/location.ts) chiede SEMPRE solo
-//   il tipo (key i18n "machineType"). La separazione tipo/numero è imposta
-//   dal canonical question order in prompts/agent.txt.
-//   La rama unitaria è in __tests__/unit/force-machine-type.test.ts.
-//   Questo file ne verifica il comportamento end-to-end con LLM.
+// REGOLA architettura: il bot NON si confonde con narrativa mista del
+// cliente. Procede sempre con canonical question order (location → tipo
+// → numero → pantalla, una pregunta per turno). Se il cliente anticipa un
+// fact (es. "lavadora 3"), `autoExtractFacts` lo cattura PRIMA dei guard,
+// e il guard branchato chiede solo quello che manca (no re-ask awkward).
+//
+// Pinned by unit tests:
+//   __tests__/unit/force-machine-type.test.ts  (T2 ask SOLO il tipo)
+//   __tests__/unit/extract-facts.test.ts       (combined "lavadora 3")
+//
+// CONSOLIDATED LAYOUT (Andrea, 2026-05-10): un test per percorso, asserzioni
+// step-by-step inline. 5 test → 2.
 
 import { type TestCase, expectMentionsAll, expectStateHas } from './_helpers.js'
 
 export const tests: TestCase[] = [
+  // ── Path completo: combined answer "lavadora 3" → display ───────────────
   {
-    // T1: il bot saluta e chiede location senza farsi confondere dalla
-    // narrativa mista del cliente.
-    name: 'ES — Caso 32 T1: bot chiede location dopo narrativa mista',
+    name: 'ES — Caso 32: trigger mezcla → location → "lavadora 3" combined → display PUSH PROG → istruzione',
     run: async (ctx) => {
-      const reply = await ctx.send('He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro')
-      expectMentionsAll(reply, ['lavanderia'])
-    },
-  },
-  {
-    // T2: dopo location, il bot chiede SOLO il tipo (Step 2 del canonical
-    // question order). Il numero è Step 3, asked al turno successivo.
-    name: 'ES — Caso 32 T2: dopo location, bot chiede SOLO il tipo (no combined)',
-    run: async (ctx) => {
-      await ctx.send('He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro')
-      const reply = await ctx.send('Pineda')
-      const lower = reply.toLowerCase()
-      if (!/lavadora/.test(lower) || !/secadora/.test(lower)) {
-        throw new Error(`Bot non chiede il tipo: ${reply}`)
+      // T1 — trigger narrativa mista → bot chiede SOLO location (no confusione)
+      const t1 = await ctx.send('He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro')
+      expectMentionsAll(t1, ['lavanderia'])
+      // T2 — location → bot chiede SOLO il tipo (Step 2 canonical, NO numero)
+      const t2 = await ctx.send('Pineda')
+      const t2Lower = t2.toLowerCase()
+      if (!/lavadora/.test(t2Lower) || !/secadora/.test(t2Lower)) {
+        throw new Error(`Caso 32 T2: bot deve chiedere il tipo: ${t2}`)
       }
-      // T2 must NOT ask the number — that's Step 3.
-      if (/n[uú]mero/.test(lower)) {
-        throw new Error(`T2 deve chiedere SOLO il tipo, non il numero: ${reply}`)
+      if (/n[uú]mero/.test(t2Lower)) {
+        throw new Error(`Caso 32 T2: deve chiedere SOLO il tipo, NON il numero: ${t2}`)
       }
-      // State: location captured. machineType / machineNumber sono ancora
-      // unset — il valore può essere null o '' a seconda del path d'init,
-      // entrambi indicano "non noto".
-      const state = ctx.session.ar.state as unknown as Record<string, unknown>
-      if (state.location !== 'Pineda') {
-        throw new Error(`location attesa "Pineda", ottenuto ${JSON.stringify(state.location)}`)
+      // T3 — risposta combinata "lavadora 3" → autoExtractFacts cattura
+      // tipo+numero in un turno, bot avanza a pantalla SENZA re-ask numero
+      const t3 = await ctx.send('lavadora 3')
+      const t3Lower = t3.toLowerCase()
+      if (!/pantalla/.test(t3Lower)) {
+        throw new Error(`Caso 32 T3: bot non chiede pantalla dopo combined answer: ${t3}`)
       }
-      if (state.machineType !== null && state.machineType !== '') {
-        throw new Error(`machineType deve essere unset (null o ''), ottenuto ${JSON.stringify(state.machineType)}`)
+      // T4 — display PUSH PROG → bot dà istruzione canonica Caso 1
+      const t4 = await ctx.send('PUSH PROG')
+      const t4Lower = t4.toLowerCase()
+      if (!/puls|program|revis/.test(t4Lower)) {
+        throw new Error(`Caso 32 T4: bot non guida né escala dopo display: ${t4}`)
       }
-      if (state.machineNumber !== null && state.machineNumber !== '') {
-        throw new Error(`machineNumber deve essere unset (null o ''), ottenuto ${JSON.stringify(state.machineNumber)}`)
-      }
-    },
-  },
-  {
-    // T3a: cliente risponde COMBINATO ("lavadora 3") → autoExtract recupera
-    // tipo + numero in un turno solo → bot avanza al display senza riaskare.
-    name: 'ES — Caso 32 T3a: risposta combinata "lavadora 3" → bot chiede display',
-    run: async (ctx) => {
-      await ctx.send('He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro')
-      await ctx.send('Pineda')
-      const reply = await ctx.send('lavadora 3')
-      // Una volta tipo+numero estratti, il prossimo step è il display.
-      // Loose check: contiene "pantalla" (la domanda di display).
-      const lower = reply.toLowerCase()
-      if (!/pantalla/.test(lower)) {
-        throw new Error(`Bot non chiede il display dopo combined answer: ${reply}`)
-      }
+      // State coherent: tutti i facts capturati, nessun re-ask awkward
       expectStateHas(ctx.session, {
         location: 'Pineda',
         machineType: 'washer',
         machineNumber: '3',
+        displayState: 'PUSH',
       })
     },
   },
+
+  // ── Edge T3b: solo numero "3" → guard chiede tipo (no re-ask numero) ────
   {
-    // T3b: cliente risponde solo col NUMERO ("3") → autoExtract setta
-    // machineNumber, il guard branchato chiede SOLO il tipo nel turno dopo
-    // (no ri-domanda dello stesso). NESSUNA re-ask awkward.
-    name: 'ES — Caso 32 T3b: risposta solo "3" → guard chiede solo il tipo (no re-ask combinato)',
+    name: 'ES — Caso 32 edge: risposta solo "3" → guard chiede SOLO il tipo (no re-ask numero)',
     run: async (ctx) => {
       await ctx.send('He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro')
       await ctx.send('Pineda')
+      // Cliente risponde solo "3" (numero anticipato senza tipo)
       const reply = await ctx.send('3')
       const lower = reply.toLowerCase()
-      // Bot deve menzionare il tipo (lavadora/secadora) ma NON deve
-      // chiedere di nuovo il numero, perché "3" è già stato estratto.
+      // Bot deve chiedere il tipo (lavadora/secadora), NON ri-chiedere il numero
       if (!/lavadora|secadora/.test(lower)) {
-        throw new Error(`Bot non chiede il tipo dopo numero anticipato: ${reply}`)
+        throw new Error(`Caso 32 edge: bot non chiede il tipo dopo numero anticipato: ${reply}`)
       }
-      // State checks: location/machineNumber captured; machineType ancora
-      // unset (null o '').
+      // State checks: location e machineNumber capturati, machineType ancora unset
       const state = ctx.session.ar.state as unknown as Record<string, unknown>
       if (state.location !== 'Pineda') {
         throw new Error(`location attesa "Pineda", ottenuto ${JSON.stringify(state.location)}`)
@@ -106,30 +80,8 @@ export const tests: TestCase[] = [
         throw new Error(`machineNumber atteso "3", ottenuto ${JSON.stringify(state.machineNumber)}`)
       }
       if (state.machineType !== null && state.machineType !== '') {
-        throw new Error(`machineType deve essere unset (null o ''), ottenuto ${JSON.stringify(state.machineType)}`)
+        throw new Error(`machineType deve essere unset, ottenuto ${JSON.stringify(state.machineType)}`)
       }
-    },
-  },
-  {
-    // Path completo: location → combined ask → combined answer → display
-    // PUSH PROG → istruzione canonica caso 1.
-    name: 'ES — Caso 32 path completo: location + combined + display PUSH PROG → istruzione',
-    run: async (ctx) => {
-      await ctx.send('He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro')
-      await ctx.send('Pineda')
-      await ctx.send('lavadora 3')
-      const reply = await ctx.send('PUSH PROG')
-      const lower = reply.toLowerCase()
-      // Una volta arrivati al display, il bot deve dare un'istruzione recoverable.
-      if (!/puls|program|revis/.test(lower)) {
-        throw new Error(`Bot non guida né escala dopo display: ${reply}`)
-      }
-      expectStateHas(ctx.session, {
-        location: 'Pineda',
-        machineType: 'washer',
-        machineNumber: '3',
-        displayState: 'PUSH',
-      })
     },
   },
 ]

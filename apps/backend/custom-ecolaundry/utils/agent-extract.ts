@@ -354,16 +354,13 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   // Sets pendingFlow so the guard pipeline can short-circuit on the next turn
   // after collecting location + machineType + machineNumber with
   // "¿La central te ha devuelto el cambio?".
-  // Caso 7 trigger (inline regex — left as-is until a real bug requires
-  // typo tolerance. Speculative refactor reverted on 2026-05-09 audit:
-  // pattern-guessed multi-lang coverage was failing on simple variants
-  // like "Pagué pero no arranca" without producing real-world value.)
-  if (
-    !state.pendingFlow &&
-    /he\s+pagado.+(no\s+(he\s+podido|consegui|logr[eé])\s+usar|no\s+(la\s+)?(he\s+podido\s+)?utilizar)/i.test(userMessage)
-  ) {
-    state.pendingFlow = 'paid-not-used-ask-change'
-  }
+  // Caso 7 trigger (paid-not-used) — NO pendingFlow setup needed.
+  // Andrea (2026-05-09): aligned to PDF Playbook §5.4. After location +
+  // tipo + numero, the standard guardForceDisplay asks pantalla; the
+  // display flow handles the rest (PUSH/SEL/DOOR/AL001/...). Cambio is
+  // NOT a forced gather step — it's a fallback the operator collects on
+  // the phone if the display does not resolve. The previous flow forced
+  // the cambio question before pantalla, which inverted the PDF order.
 
   // Customer name capture: when the bot has explicitly asked for the name
   // (customerNameRequested=true) and the user replies with a valid name

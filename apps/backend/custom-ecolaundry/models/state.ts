@@ -16,6 +16,15 @@ export type SessionState = {
   serviceCompleted: boolean | null
   paymentMethod: string
   displayState: string
+  // Snapshot of `displayState` taken at the very start of the current turn,
+  // BEFORE autoExtractFacts runs. Lets guards that fire on "user reports a
+  // failure" (post-instruction-failure-reask) detect the case where the
+  // customer ALSO volunteered a NEW display token in the same message
+  // (e.g. "No, ahora aparece PUSH PROG"): if `displayState !==
+  // displayStateAtTurnStart`, the customer is signalling a display change,
+  // not just a failure → pivot to the new flow instead of re-asking.
+  // Reset every turn at the top of agentTurn (agent.ts).
+  displayStateAtTurnStart: string
   issueSummary: string
   doubleChargeNarrativeProvided: boolean
   doubleChargeNarrativeText: string
@@ -190,8 +199,6 @@ export type SessionState = {
   awaitNameAskAttempts: number
   pendingFlow:
     | ''
-    | 'paid-not-used-ask-change'
-    | 'paid-not-used-await-display'
     | 'display-reask-pending'
     | 'numeric-code-ask-letters'
     | 'numeric-code-await-answer'

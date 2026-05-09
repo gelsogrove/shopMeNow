@@ -1,51 +1,47 @@
-// 24 — Caso 25 cliente enfadado
+// 25 — Caso 25 El cliente está muy enfadado
 //
-// Da usecases.md Caso 25:
-//   USER: ¡Esto siempre falla! ¡Quiero una solución ya!
-//   BOT:  entiendo tu malestar y quiero ayudarte. Vamos a revisarlo lo
-//         antes posible. ¿En qué lavandería estás?
+// Da usecases.md Caso 25 (alineato al Playbook PDF §10 criteris d'escalat:
+// "el client està molt enfadat" → escalar):
+//   T1: bot apre con empathic ("entiendo tu malestar, quiero ayudarte")
+//        + chiede location.
+//   Tras gather mínimo (location+tipo+numero) → escalate automático
+//   con summary "cliente muy enfadado".
+//
+// Differenza con Scenario 6.2 (rage + explicit operator request):
+// Caso 6.2 = boundary signal "muy enfadado + quiero operador" → escalate
+// immediato. Caso 25 = trigger di sole esclamazioni angry → empathic
+// gather + escalate dopo gather minimo.
+//
+// CONSOLIDATED LAYOUT (Andrea, 2026-05-09): un test per percorso, asserzioni
+// step-by-step inline. 3 test → 1.
 
 import { type TestCase, expectMentionsAll, expectMentionsNone } from './_helpers.js'
 
 export const tests: TestCase[] = [
   {
-    name: 'ES — Caso 25 cliente enfadado T1: bot risponde con calma (entiendo) + chiede location',
+    name: 'ES — Caso 25: empathic T1 → gather → escalate automático → name → summary',
     run: async (ctx) => {
-      const reply = await ctx.send('¡Esto siempre falla! ¡Quiero una solución ya!')
-      expectMentionsAll(reply, ['entiend', 'lavanderia'])
-      expectMentionsNone(reply, ['no es posible', 'tienes que esperar', 'estafa'])
-    },
-  },
-  {
-    // BUG REGRESSION: dopo gather completo (location + tipo + numero), il
-    // bot deve escalare automaticamente per il cliente enfadado, NON
-    // continuare a chiedere display all'infinito.
-    name: 'ES — Caso 25 dopo gather completo: bot escala automaticamente',
-    run: async (ctx) => {
-      await ctx.send('¡Esto siempre falla! ¡Quiero una solución ya!')
+      // T1 — trigger angry → bot empathic + chiede location
+      const t1 = await ctx.send('¡Esto siempre falla! ¡Quiero una solución ya!')
+      expectMentionsAll(t1, ['entiend', 'lavanderia'])
+      expectMentionsNone(t1, ['no es posible', 'tienes que esperar', 'estafa'])
+      // T2 — location → gather continua
       await ctx.send('Goya')
+      // T3 — tipo → gather continua
       await ctx.send('Lavadora')
-      const reply = await ctx.send('La 5')
-      expectMentionsAll(reply, ['operador'])
-      const lower = reply.toLowerCase()
-      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(lower)) {
-        throw new Error(`Bot non chiede nome: ${reply}`)
+      // T4 — numero → bot escala automáticamente (cliente angry, no dopo display)
+      const t4 = await ctx.send('La 5')
+      expectMentionsAll(t4, ['operador'])
+      const t4Lower = t4.toLowerCase()
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(t4Lower)) {
+        throw new Error(`Caso 25: bot deve chiedere il nome: ${t4}`)
       }
-    },
-  },
-  {
-    // Summary regression: contiene location + tipo + numero. Niente template
-    // buggati.
-    name: 'ES — Caso 25 escalation summary: contiene location + tipo + numero',
-    run: async (ctx) => {
-      await ctx.send('¡Esto siempre falla! ¡Quiero una solución ya!')
-      await ctx.send('Goya')
-      await ctx.send('Lavadora')
-      await ctx.send('La 5')
-      const reply = await ctx.send('Andrea')
-      expectMentionsAll(reply, ['Andrea', 'Goya'])
-      if (/n[uú]mero\s+n[uú]mero/i.test(reply)) {
-        throw new Error(`Bug "número número" presente: ${reply}`)
+      // T finale — name → handover summary
+      const final = await ctx.send('Andrea')
+      expectMentionsAll(final, ['Andrea', 'Goya'])
+      // Garanzie negative
+      if (/n[uú]mero\s+n[uú]mero/i.test(final)) {
+        throw new Error(`Bug "número número" presente: ${final}`)
       }
     },
   },

@@ -330,3 +330,102 @@ export async function advanceActiveFlow(runtime: Runtime, state: SessionState, u
   }
   return { flowId, stepId: nextStepId, prompt: nextNode.prompt, type: nextNode.type, isTerminal: Boolean(nextNode.isTerminal), action: nextNode.action }
 }
+
+/**
+ * Synchronous, deterministic-only variant of `advanceActiveFlow`. Used by
+ * `guardAdvanceMachineFlow` to close the pipeline-hole rule #10: when the
+ * LLM skips the `advance_machine_flow` tool, this guard advances the flow
+ * deterministically for inputs that match exact / CONFIRMATION-normalized /
+ * numeric transitions.
+ *
+ * Returns `null` (instead of throwing or escalating) when:
+ *   - no flow is active
+ *   - the user input does not produce a deterministic transition match
+ *   - the next node is a ROUTER (needs LLM classify)
+ *
+ * In those null cases the caller (the guard) returns null too, letting the
+ * downstream LLM keep its chance to call the `advance_machine_flow` tool.
+ */
+export function tryAdvanceFlowSync(
+  runtime: Runtime,
+  state: SessionState,
+  userInput: string,
+): FlowEngineResult | null {
+  const flowId = state.activeFlowId
+  let node = currentFlowNode(runtime, state)
+  if (!flowId || !node || !state.activeStepId) return null
+
+  if (node.type === 'ACTION' && node.transitions?.default) {
+    state.activeStepId = node.transitions.default.split('.').pop() || node.transitions.default
+    node = currentFlowNode(runtime, state)
+    if (!node || !state.activeStepId) return null
+  }
+
+  let transitionKey: string | null = null
+  const exact = userInput.trim()
+  if (node.transitions?.[exact]) transitionKey = exact
+  if (!transitionKey && node.type === 'CONFIRMATION') {
+    if (state.activeStepId === 'check_result') {
+      const detectedDisplay = normalizeDisplayState(extractDisplayState(userInput) || '')
+      if (detectedDisplay && node.transitions?.NO) {
+        if (detectedDisplay === 'ON' && node.transitions?.YES) {
+          transitionKey = 'YES'
+        } else {
+          transitionKey = 'NO'
+        }
+      }
+    }
+    if (/payment|pagamento|central unit|coins|card/i.test(node.prompt)) {
+      const paymentAnswer = parsePaymentAnswer(userInput)
+      if (paymentAnswer !== null) {
+        transitionKey = paymentAnswer ? 'YES' : 'NO'
+      }
+    }
+    if (!transitionKey) {
+      const normalized = normalizeConfirmation(userInput)
+      if (normalized && node.transitions?.[normalized]) transitionKey = normalized
+    }
+  }
+  if (!transitionKey) {
+    const numeric = exact.match(/^(\d+)$/)?.[1]
+    if (numeric && node.transitions?.[numeric]) transitionKey = numeric
+  }
+  // Deliberately NOT calling classifyChoiceViaLLM: this is the deterministic
+  // path. Fall back to the `other` transition when defined — same fallback
+  // `advanceActiveFlow` uses after LLM classify fails. This matters for
+  // CHOICE nodes whose strictMatching transitions are numeric (1-7, …) but
+  // the customer writes the display code instead. Without `other`,
+  // `tryAdvanceFlowSync` would return null and the LLM would improvise a
+  // closure on a flow that the JSON expects to escalate.
+  if (!transitionKey && node.transitions?.other) {
+    transitionKey = 'other'
+  }
+  if (!transitionKey) return null
+
+  const nextRef = node.transitions?.[transitionKey] || node.transitions?.other
+  const nextStepId = nextRef?.split('.').pop()
+  if (!nextStepId) return null
+  state.activeStepId = nextStepId
+  state.retryCount = 0
+  const nextNode = currentFlowNode(runtime, state)
+  if (!nextNode) return null
+
+  // ROUTER nodes need LLM classify — bail out and let the LLM tool take over.
+  if (nextNode.type === 'ROUTER' && nextNode.logic) return null
+
+  if (nextNode.isTerminal) {
+    state.activeFlowId = null
+    state.activeStepId = null
+    if (nextNode.action !== 'escalate') {
+      state.pendingClosure = 'resolved'
+    }
+  }
+  return {
+    flowId,
+    stepId: nextStepId,
+    prompt: nextNode.prompt,
+    type: nextNode.type,
+    isTerminal: Boolean(nextNode.isTerminal),
+    action: nextNode.action,
+  }
+}

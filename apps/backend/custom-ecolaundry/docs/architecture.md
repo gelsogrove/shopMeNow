@@ -68,6 +68,14 @@ USER TURN
 │   resetPostEscalationFlags  re-entry after a closed case             │
 │   resetForNewIncident       convenience wrapper                      │
 │   Resp: invariants of the SessionState; named atomic transitions.    │
+│                                                                      │
+│   PRE-EXTRACT SNAPSHOTS (turn-local L2): some guards need to compare │
+│   a state field BEFORE vs AFTER autoExtractFacts to detect in-turn   │
+│   changes. The snapshot is taken in agent.ts before STEP 2.          │
+│   Current instances:                                                 │
+│     - displayStateAtTurnStart → consumed by Phase B pivot in         │
+│       guards/display.ts to detect "no + new display" combos.         │
+│   Pattern documented in CLAUDE.md "Pre-extract state snapshots".     │
 └──────────────────────────────────────────────────────────────────────┘
    │
    ▼

@@ -99,6 +99,26 @@ export const guardPostInstructionFailure: Guard = (ar, userMessage) => {
     return { reply: escalateText, reason: 'post-instruction-failure-escalate' }
   }
 
+  // Phase B PIVOT — if the customer's message contains BOTH a failure signal
+  // ("no", "no funciona") AND a new display token different from the one we
+  // had at the start of the turn, the customer is reporting a display CHANGE,
+  // not just a persistent failure. Symmetric with Phase C (riga 73-92).
+  // Without this, "No, ahora aparece PUSH PROG" gets re-asked as displayShort
+  // even though autoExtractFacts already updated displayState SEL → PUSH.
+  // Pinned by __tests__/unit/display-pivot-phase-b.test.ts.
+  const turnStart = ar.state.displayStateAtTurnStart || ''
+  if (
+    ar.state.displayState &&
+    ar.state.displayState !== turnStart &&
+    turnStart !== ''
+  ) {
+    ar.state.pendingFlow = ''
+    ar.state.activeFlowId = null
+    ar.state.activeStepId = null
+    ar.state.lastPresentedStepId = null
+    return null
+  }
+
   const reply = userMessage.trim().toLowerCase()
   // ES failure patterns. Multi-language coverage is deferred per the
   // ES-first scope (CLAUDE.md rule #8 exemption). When a 2nd language

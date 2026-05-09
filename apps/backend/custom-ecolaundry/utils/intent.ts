@@ -95,7 +95,11 @@ export function extractDisplayLabel(message: string, canonical: string): string 
   let end = match.index + match[0].length
   // Greedily extend over " WORD" runs of uppercase letters/digits in the
   // SOURCE message. Lowercase prose stops the extension.
-  const tail = message.slice(end).match(/^(?:\s+[A-Z][A-Z0-9]{1,})+/)
+  // First char of each run accepts BOTH letters and digits so codes like
+  // "ERR 52" / "AL 001" / "PUSH 03" preserve the trailing numeric token —
+  // requested by usecases.md Caso 30 ("el bot incluye el código exacto que
+  // el cliente ha escrito sin reinterpretarlo ni normalizarlo").
+  const tail = message.slice(end).match(/^(?:\s+[A-Z0-9][A-Z0-9]{1,})+/)
   if (tail) end += tail[0].length
   return message
     .slice(match.index, end)
