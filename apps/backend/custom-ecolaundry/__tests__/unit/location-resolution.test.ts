@@ -67,11 +67,40 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'forceLocation: turnCount < 2 → null (T1 still in welcome path)',
+    // REGRESSION: previous version skipped on turnCount<2 to "leave the
+    // welcome path alone". But the LLM exploited that gap to improvise
+    // a gather question on T1 when pendingFlow was set by autoExtract
+    // (e.g. "Me habéis cobrado dos veces" → pendingFlow=
+    // double-charge-ask-used → LLM jumped straight to "¿has podido
+    // lavar?"). Now the guard fires from T1 too; the welcome paragraph
+    // is prepended by applyGuardOutcome → shouldShowWelcome.
+    name: 'forceLocation: T1 (turnCount=1) ALSO fires (rule #10 — close the LLM-improvise gap)',
     run: () => {
       const ar = makeAr(1)
       const out = guardForceLocation(ar, '')
-      if (out !== null) throw new Error('must skip on T1')
+      if (!out) throw new Error('REGRESSION: guard must fire on T1 to prevent LLM from improvising gather questions')
+      if (out.reason !== 'force-location') {
+        throw new Error(`expected reason "force-location", got "${out.reason}"`)
+      }
+    },
+  },
+
+  {
+    // REGRESSION the bug closed (2026-05-09 evening): customer T1 says
+    // "me han cobrado dos veces", autoExtract sets pendingFlow=
+    // double-charge-ask-used. The deterministic guardDoubleChargeAskUsed
+    // can't fire because location is still empty. forceLocation MUST
+    // fire BEFORE the LLM gets a turn — otherwise the LLM improvises
+    // "¿has podido lavar?" out of canonical order and the guard later
+    // re-asks the same question once location arrives.
+    name: 'forceLocation: T1 with pendingFlow=double-charge-ask-used → fires (no LLM improvise)',
+    run: () => {
+      const ar = makeAr(1)
+      ar.state.pendingFlow = 'double-charge-ask-used'
+      const out = guardForceLocation(ar, '')
+      if (!out) {
+        throw new Error('REGRESSION: forceLocation must fire when location is empty even at T1, regardless of pendingFlow')
+      }
     },
   },
 

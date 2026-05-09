@@ -17,7 +17,12 @@ import { autoExtractFacts } from './utils/agent-extract.js'
 import { executeTool } from './utils/agent-tools.js'
 import { loadPromptBundle, buildSystemPrompt } from './utils/agent-prompt.js'
 import { callAgentLLM } from './utils/agent-llm.js'
-import { renderWelcomeForTurn, shouldShowWelcome, stripWelcomeParagraphs } from './utils/agent-welcome.js'
+import {
+  mergeWelcomeWithReply,
+  renderWelcomeForTurn,
+  shouldShowWelcome,
+  stripWelcomeParagraphs,
+} from './utils/agent-welcome.js'
 import { printCliBanner, printCliMessage } from './utils/cli.js'
 import { API_KEY } from './utils/llm.js'
 import { logger } from './utils/logger.js'
@@ -157,7 +162,7 @@ function applyGuardOutcome(
   let reply = outcome.reply
   if (ar.state.turnCount === 1 && shouldShowWelcome(outcome.reason)) {
     const welcome = renderWelcomeForTurn(ar)
-    if (welcome) reply = `${welcome}\n\n${reply}`
+    if (welcome) reply = mergeWelcomeWithReply(welcome, reply)
   }
   history.push({ role: 'user', content: userMessage })
   history.push({ role: 'assistant', content: reply })
@@ -258,7 +263,7 @@ function polishReplyForTurn(ar: AgentRuntime, rawReply: string): string {
     return reply
   }
   const welcome = renderWelcomeForTurn(ar)
-  return welcome ? `${welcome}\n\n${reply}` : reply
+  return welcome ? mergeWelcomeWithReply(welcome, reply) : reply
 }
 
 /**

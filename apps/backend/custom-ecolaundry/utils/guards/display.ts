@@ -71,13 +71,19 @@ export const guardPostInstructionFailure: Guard = (ar, userMessage) => {
   // the washer/dryer flow-engine flows like case_push/case_door/case_sel.)
   if (ar.state.pendingFlow === 'display-reask-pending') {
     // PIVOT — if the customer's reply contains a NEW display token, they
-    // are reporting a different problem (e.g. previous flow was DOOR,
+    // are reporting a different problem (e.g. previous flow was PUSH,
     // re-ask got "SEL"). Reset the flow state and let the next pipeline
     // pass route the new display through the proper guard. Do NOT escalate
     // on the old flow.
+    //
+    // Use displayReaskPrevCode (saved by Phase B) rather than the current
+    // state.displayState: autoExtractFacts already ran this turn and may
+    // have overwritten displayState with the very token we're about to
+    // classify as "changed", making the comparison always look like "same".
     const newDisplay = extractDisplayState(userMessage)
-    const currentDisplay = ar.state.displayState ? String(ar.state.displayState).toUpperCase() : ''
-    if (newDisplay && newDisplay.toUpperCase() !== currentDisplay) {
+    const prevCode = (ar.state.displayReaskPrevCode || '').toUpperCase()
+    ar.state.displayReaskPrevCode = ''
+    if (newDisplay && newDisplay.toUpperCase() !== prevCode) {
       ar.state.pendingFlow = ''
       ar.state.activeFlowId = null
       ar.state.activeStepId = null
@@ -123,6 +129,9 @@ export const guardPostInstructionFailure: Guard = (ar, userMessage) => {
   // Phase B — first failure: ask the customer to confirm the exact code
   // before escalating. This avoids escalating on an ambiguous "no funciona"
   // when the customer might just have not tried yet.
+  // Save current displayState so Phase C can detect a genuine code change
+  // even after autoExtractFacts has updated state.displayState next turn.
+  ar.state.displayReaskPrevCode = ar.state.displayState || ''
   ar.state.pendingFlow = 'display-reask-pending'
   return { reply: t('displayShort', lang(ar)), reason: 'post-instruction-failure-reask' }
 }

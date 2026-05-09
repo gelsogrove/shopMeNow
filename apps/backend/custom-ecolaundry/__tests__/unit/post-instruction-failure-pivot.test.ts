@@ -51,6 +51,7 @@ const cases: Case[] = [
       ar.state.activeStepId = 'case_door'
       ar.state.lastPresentedStepId = 'case_door'
       ar.state.turnCount = 6
+      ar.state.displayReaskPrevCode = 'DOOR' // saved by Phase B
       ar.state.pendingFlow = 'display-reask-pending'
 
       const result = guardPostInstructionFailure(ar, 'SEL')
@@ -89,6 +90,7 @@ const cases: Case[] = [
       ar.state.activeFlowId = 'non_parte'
       ar.state.activeStepId = 'case_sel'
       ar.state.turnCount = 6
+      ar.state.displayReaskPrevCode = 'SEL' // saved by Phase B
       ar.state.pendingFlow = 'display-reask-pending'
 
       const result = guardPostInstructionFailure(ar, 'ahora me sale AL001')
@@ -119,6 +121,7 @@ const cases: Case[] = [
       ar.state.activeStepId = 'case_door'
       ar.state.lastPresentedStepId = 'case_door'
       ar.state.turnCount = 6
+      ar.state.displayReaskPrevCode = 'DOOR' // saved by Phase B
       ar.state.pendingFlow = 'display-reask-pending'
 
       const result = guardPostInstructionFailure(ar, 'DOOR')
@@ -146,6 +149,7 @@ const cases: Case[] = [
       ar.state.activeFlowId = 'non_parte'
       ar.state.activeStepId = 'case_push'
       ar.state.turnCount = 6
+      ar.state.displayReaskPrevCode = 'PUSH' // saved by Phase B
       ar.state.pendingFlow = 'display-reask-pending'
 
       const result = guardPostInstructionFailure(ar, 'no, no funciona')
@@ -167,6 +171,7 @@ const cases: Case[] = [
       ar.state.activeFlowId = 'non_parte'
       ar.state.activeStepId = 'case_sel'
       ar.state.turnCount = 6
+      ar.state.displayReaskPrevCode = 'SEL' // saved by Phase B
       ar.state.pendingFlow = 'display-reask-pending'
 
       const result = guardPostInstructionFailure(ar, 'door')

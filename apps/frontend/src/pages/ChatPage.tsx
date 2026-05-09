@@ -25,6 +25,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Ban,
   Bot,
+  Check,
+  ClipboardCopy,
   Eye,
   Loader2,
   Lock,
@@ -196,6 +198,8 @@ export function ChatPage() {
   const messagesScrollContainerRef = useRef<HTMLDivElement>(null) // 📍 Ref for scroll preservation
   const hasCompletedChatDataRef = useRef(false) // 🔥 Traccia se abbiamo completato i dati della chat
   const hasResetOnMountRef = useRef(false) // 🔥 Traccia se abbiamo fatto il reset iniziale
+  const prevChatSessionIdsRef = useRef<Set<string>>(new Set())
+  const hasInitialChatsRef = useRef(false)
 
   const [clientSearchTerm, setClientSearchTerm] = useState(
     searchParams.get("client") || ""
@@ -263,6 +267,7 @@ export function ChatPage() {
   } | null>(null)
 
   const [showPlaygroundDialog, setShowPlaygroundDialog] = useState(false)
+  const [copySuccess, setCopySuccess] = useState(false)
   const queryClient = useQueryClient()
 
   // 🚨 RESET COMPLETO: Pulisce tutto quando si entra in ChatPage (UNA SOLA VOLTA)
@@ -468,6 +473,33 @@ export function ChatPage() {
       return
     }
   }, [chats, clientSearchTerm])
+
+  // Reset new-chat tracking when workspace changes
+  useEffect(() => {
+    if (isWorkspaceChanging) {
+      prevChatSessionIdsRef.current = new Set()
+      hasInitialChatsRef.current = false
+    }
+  }, [isWorkspaceChanging])
+
+  // Auto-select when a brand-new chat appears at the top of the list
+  useEffect(() => {
+    if (chats.length === 0) return
+
+    if (!hasInitialChatsRef.current) {
+      prevChatSessionIdsRef.current = new Set(chats.map((c) => c.sessionId))
+      hasInitialChatsRef.current = true
+      return
+    }
+
+    const firstChat = chats[0]
+    if (firstChat && !prevChatSessionIdsRef.current.has(firstChat.sessionId)) {
+      logger.info("[ChatPage] 🆕 New chat at top, auto-selecting:", firstChat.customerName)
+      selectChat(firstChat)
+    }
+
+    prevChatSessionIdsRef.current = new Set(chats.map((c) => c.sessionId))
+  }, [chats])
 
   // 🔑 Get workspaceId - prefer URL, fallback to localStorage, then context
   const workspaceId = effectiveWorkspaceId || workspace?.id
@@ -801,6 +833,34 @@ export function ChatPage() {
         .catch((err) => {
           logger.error("Error marking messages as read:", err)
         })
+    }
+  }
+
+  // Copy full conversation to clipboard as Markdown
+  const handleCopyChat = async () => {
+    if (!selectedChat || polledMessages.length === 0) return
+
+    const header = `# Chat with ${selectedChat.customerName}\n**Phone**: ${selectedChat.customerPhone || "—"}\n**Date**: ${new Date().toLocaleDateString()}\n\n---\n\n`
+
+    const body = polledMessages
+      .map((msg) => {
+        const time = msg.timestamp
+          ? new Date(msg.timestamp).toLocaleString()
+          : ""
+        const sender =
+          msg.sender === "customer"
+            ? `**${selectedChat.customerName}**`
+            : `**${msg.agentName || "Agent"}**`
+        return `${sender} _(${time})_:\n${msg.content}`
+      })
+      .join("\n\n")
+
+    try {
+      await navigator.clipboard.writeText(header + body)
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000)
+    } catch {
+      toast.error("Failed to copy conversation")
     }
   }
 
@@ -1461,6 +1521,19 @@ export function ChatPage() {
                     />
                   </div>
 
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopyChat}
+                    className="hover:bg-blue-50 h-10 w-10 p-0"
+                    title="Copy conversation as Markdown"
+                  >
+                    {copySuccess ? (
+                      <Check className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <ClipboardCopy className="h-5 w-5 text-blue-500" />
+                    )}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="sm"

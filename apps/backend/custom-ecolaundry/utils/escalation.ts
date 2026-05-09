@@ -44,13 +44,37 @@ export function buildEscalationSummary(context: EscalationContext): string {
   const name = safePhone ? `${baseName} (${safePhone})` : baseName
   const location = context.locationDisplay || 'ubicación desconocida'
 
-  // Case 6: double charge — no machine info needed
+  // Case 6: double charge. Two scenarios encoded in issueSummary:
+  //   - "used service: yes" → Scenario 6.1 (washed, refund only)
+  //   - "used service: no"  → Scenario 6.4 (didn't wash, refund + missing service)
+  // The issueSummary also carries the customer's literal yes/no reply
+  // ("customer reply: ...") and the narrative ("narrative: ...") so the
+  // operator gets a full picture without losing the original phrasing.
   if (/double charge/i.test(context.issueSummary)) {
+    const usedServiceNo = /used service:\s*no\b/i.test(context.issueSummary)
     const narrative = context.issueSummary.includes('narrative:')
       ? context.issueSummary.replace(/.*narrative:\s*/i, '').trim()
       : null
+    const customerReply = context.issueSummary.includes('customer reply:')
+      ? context.issueSummary
+          .replace(/.*customer reply:\s*/i, '')
+          .replace(/\s*—\s*narrative:.*$/i, '')
+          .trim()
+      : null
+    const machineLabel = context.machineNumber
+      ? `${context.machineType === 'dryer' ? 'secadora' : 'lavadora'} número ${context.machineNumber}`
+      : null
+    const machinePart = machineLabel ? ` (${machineLabel})` : ''
     const narrativePart = narrative ? ` Relato del cliente: ${narrative}` : ''
-    return `${name} en ${location} ha reportado un doble cobro.${narrativePart}`
+    const replyPart =
+      customerReply && !narrative
+        ? ` Respuesta del cliente: "${customerReply}".`
+        : ''
+
+    if (usedServiceNo) {
+      return `${name} en ${location}${machinePart} reporta doble cobro PERO NO ha podido usar el servicio.${replyPart}${narrativePart} Requiere reembolso y revisión del servicio no prestado.`
+    }
+    return `${name} en ${location}${machinePart} reporta doble cobro habiendo podido usar el servicio.${narrativePart} Requiere revisión y devolución del cargo duplicado.`
   }
 
   // Case 18: numeric-only code without letters — incoherence, escalate

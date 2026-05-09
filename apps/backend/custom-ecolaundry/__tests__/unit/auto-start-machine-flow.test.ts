@@ -65,14 +65,24 @@ const cases: Case[] = [
       const out = guardAutoStartMachineFlow(ar, '')
       if (!out) throw new Error('expected reply')
       const reply = out.reply
-      // Bold programs (markdown)
-      if (!/\*\*60º\*\*/.test(reply)) throw new Error('reply must contain **60º** in bold')
-      if (!/\*\*40º\*\*/.test(reply)) throw new Error('reply must contain **40º**')
-      if (!/\*\*30º\*\*/.test(reply)) throw new Error('reply must contain **30º**')
-      if (!/\*\*Frío\*\*/.test(reply)) throw new Error('reply must contain **Frío**')
+      // Bold programs as MARKDOWN BULLET LIST (Andrea, 2026-05-09): each
+      // program on its own line, prefixed with `- `, name in **bold**.
+      // The frontend renders this as a real <ul><li><strong> list.
+      if (!/^- \*\*60º\*\*/m.test(reply)) {
+        throw new Error('reply must contain "- **60º**" as a bullet list item')
+      }
+      if (!/^- \*\*40º\*\*/m.test(reply)) {
+        throw new Error('reply must contain "- **40º**" as a bullet list item')
+      }
+      if (!/^- \*\*30º\*\*/m.test(reply)) {
+        throw new Error('reply must contain "- **30º**" as a bullet list item')
+      }
+      if (!/^- \*\*Frío\*\*/m.test(reply)) {
+        throw new Error('reply must contain "- **Frío**" as a bullet list item')
+      }
       // No legacy "1." numbering
       if (/^1\.\s+60/m.test(reply)) {
-        throw new Error('reply must NOT use "1. 60º" — use **60º** bold instead')
+        throw new Error('reply must NOT use "1. 60º" — use "- **60º**" bullet instead')
       }
       // Paragraph break before the loopback line
       if (!/Elige uno y púlsalo en la máquina\.\n\nDespués dime/.test(reply)) {

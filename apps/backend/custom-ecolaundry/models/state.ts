@@ -112,6 +112,10 @@ export type SessionState = {
     doorClosed: boolean | null
   }
   // Pending multi-turn flow markers used by the agent's deterministic guards.
+  // Saved displayState at the moment Phase B of guardPostInstructionFailure fired.
+  // Lets Phase C detect a genuine display change even after autoExtractFacts has
+  // already updated state.displayState for the current turn.
+  displayReaskPrevCode: string
   pendingFlow:
     | ''
     | 'paid-not-used-ask-change'

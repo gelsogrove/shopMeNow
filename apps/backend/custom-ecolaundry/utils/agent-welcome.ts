@@ -82,3 +82,30 @@ export function renderWelcomeForTurn(ar: AgentRuntime): string | null {
   if (!tpl) return null
   return tpl.replaceAll('{{chatbotName}}', settings.chatbotName || 'Eco')
 }
+
+/**
+ * Merge the welcome paragraph with a turn reply. Two concerns handled:
+ *
+ *  1. **Avoid duplicate opening emoji**: the welcome already starts with 👋
+ *     (settings.json:welcomeMessage). The LLM, primed by the prompt's
+ *     examples ("Tranquilo, te ayudo, ..."), often prepends another 👋.
+ *     We strip leading opening-context emojis from the reply before joining
+ *     so the customer sees one 👋 at the start, not two.
+ *  2. **Inline flow**: Andrea's preference is for the welcome and the
+ *     reply opener to read as ONE paragraph ("👋 Hola, soy el asistente
+ *     virtual de la lavandería. Tranquilo, te ayudo. ¿Dónde está la
+ *     lavandería?"), not stacked across two paragraphs. We use a single
+ *     space as separator. Internal `\n\n` paragraph breaks inside the
+ *     reply (e.g. PUSH PROG instruction list) are preserved.
+ */
+export function mergeWelcomeWithReply(welcome: string, reply: string): string {
+  let body = reply.trimStart()
+  // Leading opening-context emojis (👋 🙂 😊 💚 🙏 ✅ 🔧) plus any whitespace
+  // that follows. Multiple emojis (decoration spam) all get stripped.
+  body = body.replace(
+    /^(?:[\u{1F44B}\u{1F642}\u{1F60A}\u{1F49A}\u{1F64F}\u{2705}\u{1F527}]+\s*)+/u,
+    '',
+  )
+  if (!body) return welcome
+  return `${welcome} ${body}`
+}

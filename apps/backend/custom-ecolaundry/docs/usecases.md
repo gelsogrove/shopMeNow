@@ -8,12 +8,13 @@ Ayudar al cliente a iniciar el lavado cuando falta seleccionar el programa.
 **Cuándo aplica:**  
 El cliente ha pagado y la pantalla muestra `PUSH PROG`.
 
-**Criterios de aceptación (caso completo):**
-- Gather order: location → número de máquina → display. **No** se pregunta "¿has pagado?" como paso intermedio (PUSH PROG ya implica pago hecho).
-- Sobre `displayState=PUSH`, el bot emite la lista canónica de 4 programas (60º / 40º / 30º / Frío) y cierra con un loopback ("dime si arranca").
-- Closure positiva ("ahora funciona") → `mark_resolved` → `state.pendingClosure="resolved"`.
-- Closure negativa ("sigue igual") → Phase B/C: el bot re-pide el código exacto antes de escalar (evita escalar por palabra ambigua). Vea Scenario 1.2.
-- Variantes happy / escalación detalladas en Scenarios 1.1 y 1.2.
+**Criterios de aceptación:**
+- El bot pregunta primero la lavandería, luego el número de máquina y luego qué aparece en pantalla. No pregunta "¿has pagado?" porque cuando aparece PUSH PROG el pago ya se ha hecho.
+- Cuando el cliente confirma que aparece **PUSH PROG**, el bot le indica los 4 programas disponibles (60º, 40º, 30º y Frío) y cierra preguntando si la lavadora arranca.
+- Si el cliente dice que **funciona**, el bot cierra la incidencia con un mensaje positivo.
+- Si el cliente dice que **no funciona**, el bot le pide que confirme una vez más qué aparece exactamente en pantalla antes de escalar (para evitar pasar el caso a un operador por una respuesta ambigua).
+- Si tras la confirmación sigue sin funcionar, el bot pasa el caso a revisión manual.
+- Variantes happy y de escalación detalladas en Scenarios 1.1 y 1.2.
 
 **Ejemplo de conversación:**
 
@@ -54,10 +55,10 @@ Incidencia resuelta.
 **Objetivo:** El cliente pulsa el programa y la lavadora arranca correctamente.
 
 **Criterios de aceptación:**
-- El bot recoge localización → número (sin paso intermedio "¿has pagado?").
-- El bot da los 4 programas (60º, 40º, 30º, Frío) y cierra con la pregunta de loopback.
-- Sobre confirmación "ahora funciona" → la respuesta contiene "perfecto" y ("resuelt" o "ya estaría").
-- `state.pendingClosure === "resolved"` al final del flujo.
+- El bot pregunta primero la lavandería y luego el número de máquina (sin pedir confirmación de pago).
+- El bot indica los 4 programas (60º, 40º, 30º, Frío) y cierra preguntando si la lavadora ha arrancado.
+- Cuando el cliente confirma que funciona, el bot responde con un mensaje positivo (ej. "perfecto, incidencia resuelta").
+- La incidencia queda marcada como resuelta y no se escala a un operador.
 
 **Conversación:**
 
@@ -93,12 +94,11 @@ arrancar; el bot escala a soporte humano de manera uniforme con los
 demás casos (Caso 5.2/5.3, Caso 7.2).
 
 **Criterios de aceptación:**
-- Tras la instrucción del programa, el cliente reporta que no responde ("he pulsado pero no responde", "sigue sin arrancar").
-- El bot pide confirmación del display ("escribe el código exacto que ves") antes de escalar (Phase B re-ask, evita escalar por palabra ambigua).
-- Sobre confirmación "PUSH PROG" → el bot escala con un mensaje que contiene "operador".
-- Antes de cerrar, el bot pide el nombre del cliente.
-- El mensaje final (tras `capture_customer_name`) contiene "desactivado".
-- El resumen al operador contiene: nombre del cliente, location, número, "PUSH".
+- Tras la instrucción del programa, el cliente indica que la máquina no responde ("he pulsado pero no responde", "sigue sin arrancar").
+- Antes de pasar el caso a un operador, el bot pide al cliente que confirme una vez más qué aparece exactamente en pantalla (para evitar escalar por una respuesta ambigua).
+- Cuando el cliente confirma de nuevo "PUSH PROG", el bot anuncia que pasa el caso a un operador y pide el nombre del cliente.
+- El mensaje final, tras facilitar el nombre, indica que un operador humano se encargará del caso y que el chatbot se desactivará.
+- El resumen para el operador incluye: nombre del cliente, lavandería, número de máquina y código de pantalla "PUSH".
 
 **Conversación:**
 
@@ -136,11 +136,11 @@ Ayudar al cliente a cerrar correctamente la puerta.
 **Cuándo aplica:**  
 El cliente indica que en pantalla aparece `DOOR`.
 
-**Criterios de aceptación (caso completo):**
-- Gather order: location → número → display.
-- Sobre `displayState=DOOR`, instrucción canónica: "abre y cierra la puerta hasta oír un clic, comprueba prendas atrapadas" + loopback ("dime si funciona").
-- En el escalamiento final el handover summary debe mencionar la puerta (`puerta` / `DOOR`).
-- Variantes happy / escalación detalladas en Scenarios 2.1 y 2.2.
+**Criterios de aceptación:**
+- El bot pregunta primero la lavandería, luego el número de máquina y luego qué aparece en pantalla.
+- Cuando el cliente confirma que aparece **DOOR**, el bot indica abrir y cerrar bien la puerta hasta oír un clic, comprobar que no haya prendas atrapadas, y cierra preguntando si la lavadora arranca.
+- Cuando el caso se pasa a un operador, el resumen incluye el código DOOR y el contexto de la puerta para que el operador sepa el problema.
+- Variantes happy y de escalación detalladas en Scenarios 2.1 y 2.2.
 
 **Ejemplo de conversación:**
 
@@ -173,11 +173,11 @@ Incidencia resuelta.
 **Objetivo:** El cliente confirma que la lavadora arranca tras cerrar bien la puerta.
 
 **Criterios de aceptación:**
-- El bot recoge localización y número de máquina antes de dar la instrucción DOOR.
-- El bot indica que la puerta no está bien cerrada y pide abrirla y cerrarla firmemente.
-- Después de la indicación, el bot pide al cliente confirmar si la máquina ha arrancado.
-- El caso se cierra con un mensaje que contiene "perfecto" y "correctamente" o "comenzado".
-- El bot NO escala a operador en este escenario.
+- El bot pregunta la lavandería y el número de máquina antes de dar la indicación DOOR.
+- El bot explica que la puerta no está bien cerrada y pide abrirla y cerrarla firmemente, comprobando que no haya prendas atrapadas.
+- Tras la indicación, el bot pide al cliente que confirme si la lavadora ha arrancado.
+- Cuando el cliente confirma que funciona, el bot cierra con un mensaje positivo (ej. "perfecto, la lavadora ha comenzado correctamente").
+- El bot no pasa el caso a un operador en este escenario.
 
 **Conversación:**
 
@@ -203,10 +203,10 @@ Incidencia resuelta.
 **Objetivo:** El cliente cierra la puerta pero DOOR persiste. El bot re-pregunta el código y escala.
 
 **Criterios de aceptación:**
-- Si DOOR persiste tras repetir el paso, el bot re-pregunta el código exacto del display.
-- Cuando el cliente confirma que DOOR sigue, el bot anuncia escalación con un mensaje que contiene "operador" y menciona "puerta" o "DOOR".
-- Antes de escalar, el bot pregunta el nombre del cliente.
-- El mensaje de confirmación final contiene "desactivado".
+- Si el código DOOR sigue apareciendo después de repetir el paso, el bot pide al cliente que vuelva a confirmar exactamente qué código aparece en pantalla.
+- Cuando el cliente confirma de nuevo "DOOR", el bot anuncia que pasa el caso a un operador y pide el nombre del cliente.
+- El mensaje final, tras facilitar el nombre, indica que un operador humano se encargará del caso y que el chatbot se desactivará.
+- El resumen para el operador incluye el contexto de la puerta para que el operador sepa el problema desde el primer momento.
 - El resumen al operador contiene nombre, localización, número de máquina y estado DOOR.
 - El bot NO cierra el caso como resuelto en este escenario.
 
@@ -245,10 +245,11 @@ Ayudar al cliente cuando la máquina está pendiente de selección.
 **Cuándo aplica:**  
 El cliente ha pagado y la pantalla muestra `SEL`.
 
-**Criterios de aceptación (caso completo):**
-- Gather order: location → número → display.
-- Sobre `displayState=SEL`, instrucción canónica: "comprueba que has pulsado bien el número de la máquina en la central de pago" + loopback. Diferente del Caso 1 (no se enseñan programas).
-- Variantes happy / escalación detalladas en Scenarios 3.1 y 3.2.
+**Criterios de aceptación:**
+- El bot pregunta primero la lavandería, luego el número de máquina y luego qué aparece en pantalla.
+- Cuando el cliente confirma que aparece **SEL**, el bot le explica que la máquina está pendiente de selección y le pide comprobar que ha pulsado bien el número de la máquina en la central de pago. Después le pregunta si la máquina arranca.
+- A diferencia del Caso 1 (PUSH PROG), aquí el bot **no** muestra los 4 programas: el problema es de selección, no de elección de programa.
+- Variantes happy y de escalación detalladas en Scenarios 3.1 y 3.2.
 
 **Ejemplo de conversación:**
 
@@ -280,9 +281,9 @@ Incidencia resuelta.
 **Objetivo:** El cliente confirma que la máquina arranca tras seguir la instrucción.
 
 **Criterios de aceptación:**
-- El bot recoge localización y número de máquina antes de dar la instrucción.
-- El bot da la instrucción SEL ("pendiente de selección", comprobar número o programa).
-- El caso se cierra con un mensaje que contiene "perfecto" y "comenzado" o "correctamente".
+- El bot pregunta la lavandería y el número de máquina antes de dar la indicación SEL.
+- El bot explica que la máquina está pendiente de selección y pide comprobar que se ha pulsado bien el número de la máquina en la central de pago.
+- Cuando el cliente confirma que la máquina arranca, el bot cierra con un mensaje positivo (ej. "perfecto, la lavadora ha comenzado correctamente").
 
 **Conversación:**
 
@@ -308,11 +309,10 @@ Incidencia resuelta.
 **Objetivo:** El cliente repite la selección pero la máquina sigue mostrando SEL. El bot pide el código exacto y escala.
 
 **Criterios de aceptación:**
-- Si el cliente dice que no arranca, el bot re-pregunta el código exacto del display.
-- Cuando el cliente confirma que sigue siendo SEL, el bot menciona "SEL" y "operador" en el mensaje de escalación.
-- Antes de escalar, el bot pregunta el nombre del cliente.
-- El mensaje de confirmación final contiene la palabra "desactivado".
-- El resumen al operador contiene nombre del cliente, location, número de máquina y "SEL".
+- Si el cliente indica que la máquina no arranca, el bot pide al cliente que vuelva a confirmar exactamente qué aparece en pantalla.
+- Cuando el cliente confirma de nuevo "SEL", el bot anuncia que pasa el caso a un operador y pide el nombre del cliente.
+- El mensaje final, tras facilitar el nombre, indica que un operador humano se encargará del caso y que el chatbot se desactivará.
+- El resumen para el operador incluye: nombre del cliente, lavandería, número de máquina y código "SEL".
 
 **Conversación:**
 
@@ -349,11 +349,11 @@ Detectar un posible error de selección de máquina.
 **Cuándo aplica:**  
 El cliente ha pagado, la máquina no se activa y la central no ha devuelto el cambio.
 
-**Criterios de aceptación (caso completo):**
-- Gather order específico: location → tipo → número → ¿la central te ha devuelto el cambio? **No** se pregunta por display (este caso reemplaza el display por la pregunta del cambio).
-- Respuesta "No" → instrucción canónica que contiene `número` + `central` ("marca bien el número de la máquina en la central"); pendingFlow avanza a `no-change-await-confirmation`.
-- Respuesta "Sí + sigue sin arrancar" → escalación inmediata (la central hizo su parte, no es error de selección). Vea Scenario 4.2.
-- Variantes happy / escalación detalladas en Scenarios 4.1 y 4.2.
+**Criterios de aceptación:**
+- El bot pregunta primero la lavandería, luego si es una lavadora o secadora, luego el número de máquina y finalmente si la central ha devuelto el cambio. En este caso **no** se pregunta qué aparece en pantalla: la pregunta del cambio reemplaza la del display.
+- Si el cliente responde **"No"** (la central no ha devuelto el cambio), el bot le explica que probablemente no se ha marcado bien el número de la máquina y le pide que mire si queda saldo en la central y pulse de nuevo el número correcto.
+- Si el cliente responde **"Sí, pero la máquina sigue sin arrancar"**, el bot pasa el caso directamente a un operador (la central hizo su parte, no es un simple error de marcación). Ver Scenario 4.2.
+- Variantes happy y de escalación detalladas en Scenarios 4.1 y 4.2.
 
 **Ejemplo de conversación:**
 
@@ -389,10 +389,10 @@ Incidencia resuelta.
 **Objetivo:** Tras la guía sobre marcar el número correcto, la máquina arranca.
 
 **Criterios de aceptación:**
-- El bot recoge localización → tipo → número antes de preguntar por el cambio.
-- Sobre "No" al cambio → el bot da la instrucción canonica (revisa saldo en central + marca el número).
-- Sobre confirmación de arranque → reply contiene "perfecto" y ("resuelt" o "ya estaría").
-- `state.pendingClosure === "resolved"` al final del flujo.
+- El bot pregunta la lavandería, el tipo de máquina y el número de máquina antes de preguntar por el cambio.
+- Cuando el cliente dice que la central **no** ha devuelto el cambio, el bot le pide que revise el saldo en la central y vuelva a marcar el número correcto.
+- Cuando el cliente confirma que la máquina ya ha arrancado, el bot cierra con un mensaje positivo (ej. "perfecto, ya estaría resuelto").
+- La incidencia queda marcada como resuelta y no se pasa a un operador.
 
 **Conversación:**
 
@@ -422,11 +422,10 @@ Incidencia resuelta.
 arrancar, el bot escala uniformemente con los demás casos.
 
 **Criterios de aceptación:**
-- Sobre "Sí" al cambio → la máquina sí cobró pero no arrancó. El bot
-  escala con un mensaje que contiene "operador".
-- Antes de cerrar, el bot pide el nombre del cliente.
-- El mensaje final (tras `capture_customer_name`) contiene "desactivado".
-- El resumen al operador contiene: nombre, location, número, "lavadora".
+- Cuando el cliente confirma que la central **sí** ha devuelto el cambio (la central cobró correctamente) pero la máquina sigue sin arrancar, el bot pasa el caso directamente a un operador sin pedir más datos: no es un error de marcación, es una avería real.
+- El bot anuncia que pasa el caso a un operador y pide el nombre del cliente.
+- El mensaje final, tras facilitar el nombre, indica que un operador humano se encargará del caso y que el chatbot se desactivará.
+- El resumen para el operador incluye: nombre del cliente, lavandería, número de máquina y tipo (lavadora/secadora).
 
 **Conversación:**
 
@@ -461,12 +460,13 @@ Explicar el motivo del error y corregir la secuencia de uso.
 **Cuándo aplica:**  
 El cliente indica que aparece `AL001`.
 
-**Criterios de aceptación (caso completo):**
-- Reconocimiento robusto del código: el extractor acepta `AL001`, `AL 001`, `ALM 001`, `alarm 001`, `alarma 001` (variantes naturales del cliente, normalizadas a `AL001`).
-- Tras location + tipo + número, el bot emite la **secuencia de 6 pasos** del flow `al001-sequence-error` (declarativo en `json/display-flows.json`).
-- Closure positiva ("ya funciona") → resolved con la respuesta canónica de cierre.
-- Phase B/C: si tras los 6 pasos sigue saliendo AL001 o el cliente no entiende, re-pide código exacto y luego escala.
-- Variantes happy / escalación detalladas en Scenarios 5.1, 5.2 y 5.3.
+**Criterios de aceptación:**
+- El bot reconoce el código aunque el cliente lo escriba de forma natural (ej. "AL001", "AL 001", "ALM 001", "alarm 001", "alarma 001"): todos llevan al mismo flujo.
+- El bot pregunta primero la lavandería, luego si es lavadora o secadora, y luego el número de máquina.
+- Una vez tiene los 3 datos, el bot le explica al cliente la **secuencia correcta de 6 pasos** (cargar la máquina, cerrar la puerta, ir a la central, pagar, seleccionar el número, recoger el cambio si toca, ir a la máquina, elegir el programa, y avisar si funciona).
+- Si el cliente confirma que **funciona**, el bot cierra la incidencia con un mensaje positivo.
+- Si el cliente dice que **no entiende** los pasos o que **el error persiste** tras seguirlos, el bot pide al cliente que confirme una vez más el código exacto en pantalla y luego pasa el caso a un operador.
+- Variantes happy y de escalación detalladas en Scenarios 5.1, 5.2 y 5.3.
 
 **Ejemplo de conversación:**
 
@@ -514,8 +514,9 @@ El bot identifica que el problema está en la secuencia de uso, guía al cliente
 **Objetivo:** Explicar el motivo del error y corregir la secuencia de uso. El cliente confirma que funciona.
 
 **Criterios de aceptación:**
-- El bot recoge localización, tipo de máquina y número antes de dar la instrucción.
-- El caso se cierra con un mensaje que contiene "perfecto" y "comenzado" o "correctamente".
+- El bot pregunta la lavandería, el tipo de máquina y el número antes de dar la instrucción.
+- El bot explica los 6 pasos de la secuencia correcta (carga, cierre, pago, selección, programa, aviso).
+- Cuando el cliente confirma que la máquina funciona, el bot cierra con un mensaje positivo (ej. "perfecto, la lavadora ha comenzado correctamente").
 
 **Conversación:**
 
@@ -541,10 +542,9 @@ El bot identifica que el problema está en la secuencia de uso, guía al cliente
 **Objetivo:** El cliente no entiende cómo aplicar la secuencia. El bot escala.
 
 **Criterios de aceptación:**
-- Si el cliente indica que no puede seguir las instrucciones, el bot escala a soporte humano.
-- Antes de escalar, el bot pregunta el nombre del cliente.
-- El mensaje de escalación contiene la palabra "operador".
-- El mensaje de confirmación final contiene la palabra "desactivado".
+- Si el cliente indica que no entiende cómo seguir las instrucciones, el bot pasa el caso a un operador.
+- Antes de cerrar, el bot pide el nombre del cliente.
+- El mensaje final, tras facilitar el nombre, indica que un operador humano se encargará del caso y que el chatbot se desactivará.
 
 **Conversación:**
 
@@ -578,11 +578,9 @@ El bot identifica que el problema está en la secuencia de uso, guía al cliente
 **Objetivo:** El cliente ha seguido la secuencia correctamente pero AL001 persiste. El bot confirma el código y escala.
 
 **Criterios de aceptación:**
-- Si el cliente dice que ha seguido los pasos pero el error persiste, el bot vuelve a preguntar el código exacto del display.
-- Cuando el cliente confirma que sigue siendo AL001, el bot escala a soporte humano.
-- Antes de escalar, el bot pregunta el nombre del cliente.
-- El mensaje de escalación contiene la palabra "operador".
-- El mensaje de confirmación final contiene la palabra "desactivado".
+- Si el cliente dice que ha seguido los pasos pero el error sigue, el bot le pide que confirme una vez más exactamente qué aparece en pantalla.
+- Cuando el cliente confirma de nuevo "AL001", el bot pasa el caso a un operador y pide el nombre del cliente.
+- El mensaje final, tras facilitar el nombre, indica que un operador humano se encargará del caso y que el chatbot se desactivará.
 
 **Conversación:**
 
@@ -611,20 +609,39 @@ El bot identifica que el problema está en la secuencia de uso, guía al cliente
 
 ---
 
-## Caso 6 — Me han cobrado dos veces pero he podido usar el servicio
+## Caso 6 — Me han cobrado dos veces
 
 **Objetivo:**  
-Recoger los datos mínimos para revisión y devolución.
+Recoger los datos mínimos para revisión y devolución, distinguiendo entre
+"cobrado dos veces y servicio completado" (devolución del cargo extra) y
+"cobrado dos veces sin haber usado el servicio" (devolución completa +
+servicio no prestado).
 
 **Cuándo aplica:**  
-El cliente dice que ha habido doble cobro, pero sí ha podido lavar o secar.
+El cliente dice que ha habido doble cobro, independientemente de si ha
+podido o no usar la máquina (lavadora/secadora).
 
-**Criterios de aceptación (caso completo):**
-- Gather específico (no es problema técnico): location → ¿has podido lavar/secar? → relato paso a paso (con sugerencia "datáfono") → últimos 4 dígitos de tarjeta → captura del pago + nombre.
-- Cierre tras nombre: mensaje de confirmación con `formulario` / `devolución` (NO con `desactivado`, no es escalación de máquina).
-- Resumen al operador contiene: nombre, location, "doble cobro", relato del cliente.
-- Vías de escalación inmediata: cliente muy enfadado + "operador" (Scenario 6.2), relato contradictorio (Scenario 6.3 → cae a Caso 28 detector).
-- Variantes detalladas en Scenarios 6.1, 6.2 y 6.3.
+**Criterios de aceptación:**
+- El bot pregunta primero, en este orden:
+  1. la lavandería,
+  2. si es lavadora o secadora,
+  3. el número de máquina,
+  4. si el cliente ha podido lavar o secar la ropa.
+  
+  El bot **no** salta directamente a "¿has podido lavar?" antes de saber lavandería, tipo y número de máquina, para que el resumen al operador sea completo.
+- Si el cliente dice **"Sí"** (ha podido usar la máquina), el bot le pide:
+  1. el relato paso a paso de lo ocurrido (sugiriendo si ha pasado la tarjeta varias veces por el datáfono),
+  2. los últimos 4 dígitos de la tarjeta,
+  3. una captura del pago,
+  4. el nombre del cliente.
+  
+  Cierra con un mensaje sobre el formulario de devolución, sin pasar el caso a un operador en vivo. Ver Scenario 6.1.
+- Si el cliente dice **"No"** (no ha podido usar la máquina), el bot pasa el caso directamente a un operador, sin pedir relato ni dígitos. El resumen indica claramente "no ha podido usar el servicio". Ver Scenario 6.4.
+- El resumen para el operador incluye: nombre del cliente, lavandería, tipo y número de máquina, si ha podido o no usar el servicio, y el relato o respuesta del cliente.
+- **Otras vías de escalación inmediata** (sin completar el gather):
+  - Si el cliente está muy enfadado y exige hablar con un operador, el bot escala al instante (Scenario 6.2).
+  - Si el relato del cliente es contradictorio o incoherente, el bot escala (Scenario 6.3).
+- Variantes detalladas en Scenarios 6.1, 6.2, 6.3 y 6.4.
 
 **Ejemplo de conversación:**
 
@@ -661,15 +678,14 @@ Datos recogidos y caso preparado para revisión.
 **Objetivo:** El cliente aporta todos los datos; el caso queda preparado para revisión sin escalación en vivo.
 
 **Criterios de aceptación:**
-- El bot pregunta la localización antes de cualquier otra información.
-- El bot NO pregunta tipo ni número de máquina (no es un problema técnico de la máquina).
-- El bot pregunta si el cliente pudo completar el lavado o secado.
-- El bot solicita el relato paso a paso, incluyendo la sugerencia de si pasó la tarjeta varias veces por el datáfono.
-- El bot solicita los últimos 4 dígitos de la tarjeta.
-- El bot solicita una captura del pago.
+- El bot pregunta primero la lavandería, luego el tipo de máquina (lavadora/secadora) y luego el número de máquina, para que el resumen al operador sea completo.
+- El bot pregunta si el cliente ha podido completar el lavado o secado.
+- El bot pide el relato paso a paso, sugiriendo si el cliente ha pasado la tarjeta varias veces por el datáfono.
+- El bot pide los últimos 4 dígitos de la tarjeta.
+- El bot pide una captura del pago.
 - El bot pregunta el nombre del cliente.
-- El mensaje de cierre tras el nombre confirma la revisión y el formulario de devolución.
-- El mensaje final NO contiene "operador" ni "desactivado".
+- El mensaje final, tras facilitar el nombre, confirma que se enviará el formulario de devolución.
+- El mensaje final NO menciona "operador" ni "desactivado": no es una escalación a un humano en vivo, es un trámite de devolución.
 
 **Conversación:**
 
@@ -698,11 +714,10 @@ Datos recogidos y caso preparado para revisión.
 **Objetivo:** El cliente indica que está muy enfadado y quiere hablar con una persona. El bot escala inmediatamente.
 
 **Criterios de aceptación:**
-- Si el cliente indica que está muy molesto y exige hablar con una persona, el bot escala inmediatamente.
-- Antes de escalar, el bot pregunta el nombre del cliente junto con el mensaje de escalación.
-- El mensaje de escalación contiene la palabra "operador".
-- El mensaje de confirmación final contiene la palabra "desactivado".
-- El bot NO continúa recogiendo datos de revisión.
+- Si el cliente indica que está muy molesto y exige hablar con una persona, el bot pasa el caso a un operador inmediatamente.
+- El bot pide el nombre del cliente antes de cerrar.
+- El mensaje final, tras facilitar el nombre, indica que un operador humano se encargará del caso y que el chatbot se desactivará.
+- El bot no sigue pidiendo datos de revisión (relato, dígitos, captura): el operador los pedirá si los necesita.
 
 **Conversación:**
 
@@ -721,12 +736,11 @@ Datos recogidos y caso preparado para revisión.
 **Objetivo:** El relato del cliente tiene inconsistencias. El bot escala sin solicitar más datos.
 
 **Criterios de aceptación:**
-- El bot sigue el flujo estándar hasta solicitar el relato.
-- Cuando el relato es inconsistente (no sé exactamente, importe no cuadra), el bot escala.
-- Antes de escalar, el bot pregunta el nombre del cliente junto con el mensaje de escalación.
-- El mensaje de escalación contiene la palabra "operador".
-- El mensaje de confirmación final contiene la palabra "desactivado".
-- El bot NO continúa solicitando dígitos de tarjeta ni captura.
+- El bot sigue el flujo estándar hasta llegar al relato.
+- Cuando el relato es contradictorio o el cliente dice cosas como "no sé exactamente" o "el importe no me cuadra", el bot pasa el caso a un operador.
+- El bot pide el nombre del cliente antes de cerrar.
+- El mensaje final, tras facilitar el nombre, indica que un operador humano se encargará del caso y que el chatbot se desactivará.
+- El bot no sigue pidiendo dígitos de tarjeta ni captura: el operador necesita revisarlo manualmente.
 
 **Conversación:**
 
@@ -749,6 +763,52 @@ Datos recogidos y caso preparado para revisión.
 
 ---
 
+### Scenario 6.4 — Doble cobro SIN haber usado el servicio
+
+**Objetivo:** El cliente ha sido cobrado dos veces y NO ha podido usar la
+máquina (la lavadora/secadora no ha arrancado, el cliente no ha
+completado el ciclo). El bot escala inmediatamente tras saber que el
+servicio no fue prestado, con un resumen que el operador puede usar
+para gestionar tanto el reembolso como el servicio no prestado.
+
+**Criterios de aceptación:**
+- El bot pregunta primero la lavandería, el tipo de máquina y el número de máquina **antes** de preguntar si el cliente ha podido lavar o secar.
+- Cuando el cliente responde **"no"**, **"no he podido"** o **"nada"**, el bot NO sigue pidiendo relato, dígitos ni captura: pasa el caso a un operador inmediatamente.
+- El bot pide el nombre del cliente antes de cerrar.
+- El mensaje final, tras facilitar el nombre, indica que un operador humano se encargará del caso y que el chatbot se desactivará.
+- El resumen para el operador incluye:
+  - nombre del cliente,
+  - lavandería,
+  - tipo y número de máquina (ej. "lavadora número 5"),
+  - una indicación clara de que el cliente NO ha podido usar el servicio,
+  - la respuesta literal del cliente (ej. "no he podido"),
+  - una nota de que el caso requiere reembolso y servicio no prestado.
+- El resumen NO debe parecerse al de Scenario 6.1 (donde el cliente sí pudo usar el servicio): el operador tiene que entender la diferencia desde la primera línea.
+
+**Conversación:**
+
+**Usuario:** Me habéis cobrado dos veces con la tarjeta.  
+**Bot:** 👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?
+
+**Usuario:** Goya  
+**Bot:** ¿Podrías indicarme, por favor, si es una lavadora o una secadora?
+
+**Usuario:** lavadora  
+**Bot:** ¿Podrías decirme, por favor, qué número tiene la lavadora?
+
+**Usuario:** 5  
+**Bot:** ¡Gracias! 👍 ¿Has podido lavar o secar la ropa?
+
+**Usuario:** no, no he podido  
+**Bot:** Vamos a revisar tu caso manualmente para poder ayudarte mejor. 🙏 ¿Cómo te llamas, por favor?
+
+**Usuario:** Carlos  
+**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
+
+👤 **Human Support:** Usuario Carlos en Goya (lavadora número 5) reporta doble cobro PERO NO ha podido usar el servicio. Respuesta del cliente: "no he podido". Requiere reembolso y revisión del servicio no prestado.
+
+---
+
 ## Caso 7 — He pagado pero no he podido usar el servicio
 
 **Objetivo:**  
@@ -757,12 +817,12 @@ Comprobar si la central devolvió el cambio y reconducir al flujo correcto.
 **Cuándo aplica:**  
 El cliente pagó, pero no llegó a usar la máquina.
 
-**Criterios de aceptación (caso completo):**
-- Gather order: location → tipo → número → ¿la central te ha devuelto el cambio?
-- Reconducción de flujo: si el cliente, en lugar de responder yes/no a la pregunta del cambio, responde con un código de display (ej. `PUSH PROG`), el LLM lo reconoce y reenruta hacia el flujo de display correspondiente.
-- Cuando el flow de display da resultado positivo → resolved.
-- Cuando "no responde" tras la instrucción → Phase B/C escalada con resumen al operador que contiene `PUSH` / display relevante.
-- Variantes happy / escalación detalladas en Scenarios 7.1 y 7.2.
+**Criterios de aceptación:**
+- El bot pregunta primero la lavandería, luego si es lavadora o secadora, luego el número de máquina y finalmente si la central ha devuelto el cambio.
+- Si el cliente, en lugar de responder sí/no a la pregunta del cambio, escribe directamente un código de pantalla (ej. "PUSH PROG"), el bot reconoce el código y le da la instrucción correspondiente de ese código (en este caso, le explica los 4 programas y le pide pulsar uno).
+- Cuando el cliente confirma que la máquina ha arrancado, el bot cierra con un mensaje positivo.
+- Cuando el cliente dice que la máquina sigue sin responder tras la instrucción, el bot pide al cliente que confirme una vez más qué aparece en pantalla y luego pasa el caso a un operador. El resumen al operador incluye el código de pantalla relevante.
+- Variantes happy y de escalación detalladas en Scenarios 7.1 y 7.2.
 
 **Ejemplo de conversación:**
 
@@ -795,9 +855,9 @@ Resolución o redirección al flujo de pantalla.
 **Objetivo:** El cliente pagó pero no pudo usar la máquina. Tras recoger tipo y número, el bot detecta PUSH PROG como respuesta a la pregunta del cambio y guía la selección de programa. El cliente confirma que la lavadora arranca.
 
 **Criterios de aceptación:**
-- El bot recoge localización, tipo de máquina y número antes de preguntar por el cambio.
-- El bot reconoce que "PUSH PROG" es un código de pantalla aunque el cliente lo dé como respuesta a la pregunta del cambio.
-- El caso se cierra con un mensaje que contiene "perfecto" o "comenzado".
+- El bot pregunta la lavandería, el tipo de máquina y el número antes de preguntar por el cambio.
+- El bot reconoce que "PUSH PROG" es un código de pantalla aunque el cliente lo escriba como respuesta a la pregunta del cambio, y le da la indicación correspondiente (los 4 programas).
+- Cuando el cliente confirma que la máquina ha arrancado, el bot cierra con un mensaje positivo (ej. "perfecto, la lavadora ha comenzado correctamente").
 
 **Conversación:**
 

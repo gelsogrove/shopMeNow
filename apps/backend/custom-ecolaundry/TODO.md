@@ -1,6 +1,6 @@
 # custom-ecolaundry — TODO
 
-Owner: Andrea — Last update: 2026-05-09 (post-fact-out-of-order fix)
+Owner: Andrea — Last update: 2026-05-09 (post-Caso 6 rework)
 
 > Snapshot of open items. Closed items are NOT tracked here (use git history).
 > Iron rules and architectural contract live in [`CLAUDE.md`](CLAUDE.md).
@@ -21,7 +21,8 @@ Owner: Andrea — Last update: 2026-05-09 (post-fact-out-of-order fix)
 | Branch router | 🟡 implemented, gated by `useBranchRouter=false` |
 | Documentation | ✅ 10 docs in `docs/` + `CLAUDE.md` per-folder |
 | Acceptance-criteria coverage | 🟡 ~85% test-asserted, ~10% code-only, ~5% LLM-only (items #7/#8/#9 close the gap) |
-| Fact-out-of-order pipeline hole (rule #10) | ✅ closed by `guardForceLocation` (2026-05-09); pattern audit + drift remain — see #10 |
+| Fact-out-of-order pipeline hole (rule #10) | ✅ closed for location, machineType, machineNumber, double-charge gather (4 instances closed 2026-05-09) — Mataró+display-first edge open in #10a |
+| Caso 6 doble cobro rework | ✅ gather order canonical (location → tipo → numero → ¿podido?), Scenario 6.4 added (no he podido → escalation immediata), summary builder distingue 6.1 vs 6.4 |
 | PII leak to OpenRouter via conversation history | 🟡 history retains customer PII (name, email, phone, CIF, address, card digits). Tracked in #11. |
 
 ---
@@ -255,32 +256,28 @@ This follow-up captures what's NOT yet done after that fix:
 
 #### 10a. Audit other potential fact-out-of-order holes
 
-`guardForceLocation` plugs the hole for `state.location`. The same
-template should be applied to other "must-have" facts where preconditions
-might cancel out. Specifically:
+✅ **Mostly closed (2026-05-09 evening)** by:
+- `guardForceLocation` (location)
+- `guardForceMachineType` / `guardForceMachineNumber` — `!displayState`
+  precondition removed (now they fire even when the customer reports the
+  display first)
+- `guardDoubleChargeAskUsed` — added `machineType + machineNumber`
+  preconditions so Caso 6 gathers location → tipo → numero BEFORE the
+  branch question (regression: Andrea's "me han cobrado dos veces" →
+  bot used to ask "¿podido lavar?" before having type+number, producing
+  a useless operator summary).
 
-- `state.machineType` and `state.machineNumber`: today gated only by
-  `!ar.state.displayState && !ar.state.nonTroubleshootingIncident`. If a
-  display is volunteered first, no guard ever asks for type/number
-  before the display flow tries to start (and fails for `requires`).
-  `guardForceLocation` softens the fallout (location ask first), but if
-  location is given AND display is given but type isn't, we hit a
-  smaller version of the same hole. Add `guardForceMachineTypeAlways`
-  and `guardForceMachineNumberAlways` mirroring the `forceLocation`
-  template, OR drop the `!displayState` precondition from existing
-  `guardForce*` and rely on display-flow Phase B/C ordering.
+Still open:
+- Mataró street out-of-order: customer reports `Mataró + AL001` in one
+  message → displayState set early, `guardMataroStreet` should still
+  fire to ask the street. Verify with a unit test exercising this exact
+  sequence.
 
-- Mataró street: `guardMataroStreet` fires only when location is Mataró.
-  If the customer reports `Mataró + AL001` in one message, displayState
-  set early might still trip the gather-guards (need to verify post-fix).
-  Add a unit test exercising this exact sequence.
-
-**Done when:** unit tests in `__tests__/unit/location-resolution.test.ts`
-extended with a `MachineFacts.test.ts` sibling that pins the same
-PATTERNS A/B/C/D for type and number. `bash scripts/check-architecture.sh`
+**Done when:** unit test in `__tests__/unit/location-resolution.test.ts`
+covers the Mataró + display-first edge case. `bash scripts/check-architecture.sh`
 remains green.
 
-**Effort:** ~2h.
+**Effort:** ~30min (single test).
 
 #### 10b. `locations.ts` ↔ `locations.json` drift
 

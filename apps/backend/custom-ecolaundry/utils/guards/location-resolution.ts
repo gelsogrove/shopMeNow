@@ -91,7 +91,6 @@ export const guardForceLocation: Guard = (ar) => {
     ar.state.location ||
     ar.state.operatorRequested ||
     ar.state.customerNameRequested ||
-    ar.state.turnCount < 2 ||
     // Mataró: handled by guardMataroStreet which fires earlier in the pipeline
     // (only when location IS Mataró). If location is empty, we still want the
     // generic location ask here — the customer can name Mataró in the reply
@@ -104,6 +103,18 @@ export const guardForceLocation: Guard = (ar) => {
   ) {
     return null
   }
+  // NOTE: this guard intentionally fires from T1 (no `turnCount < 2`
+  // shortcut) so the LLM never has the chance to improvise a gather
+  // question while location is still empty. The welcome paragraph is
+  // prepended automatically by `applyGuardOutcome` →
+  // `shouldShowWelcome('force-location')` (the reason is not in the
+  // GUARD_REASONS_NO_WELCOME blacklist), so the customer still gets
+  // "Hola, soy el asistente..." before the location question.
+  // REGRESSION the bug closed (2026-05-09): customer T1 "me han cobrado
+  // dos veces" set pendingFlow=double-charge-ask-used, no guard fired
+  // (location empty + turnCount<2), the LLM improvised an out-of-order
+  // "¿has podido lavar?" ask, then the deterministic guard re-asked the
+  // same question once location arrived. Iron rule #10 again.
   return {
     reply: t('location', lang(ar)),
     reason: 'force-location',

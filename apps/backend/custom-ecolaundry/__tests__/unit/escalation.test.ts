@@ -53,13 +53,64 @@ interface Case {
 }
 
 const cases: Case[] = [
-  // ── Double charge (issueSummary detection) ─────────────────────────────────
+  // ── Double charge — Scenario 6.1 (used service) ───────────────────────────
   {
-    name: 'double charge: issueSummary "double charge ..." → double-charge summary',
+    name: 'double charge 6.1: used service yes → "habiendo podido usar el servicio" summary',
     run: () => {
-      const s = buildEscalationSummary(ctx({ issueSummary: 'double charge — narrative: pagué dos veces' }))
-      if (!/doble cobro/i.test(s)) throw new Error(`expected doble cobro, got: ${s}`)
-      if (!/Andrea/.test(s)) throw new Error('customer name must appear')
+      const s = buildEscalationSummary(
+        ctx({
+          issueSummary:
+            'double charge — used service: yes — customer reply: Sí, he lavado — narrative: pagué dos veces',
+          machineType: 'washer',
+          machineNumber: '5',
+        }),
+      )
+      if (!/doble cobro/i.test(s)) throw new Error(`expected doble cobro: ${s}`)
+      if (!/habiendo podido usar/i.test(s)) {
+        throw new Error(`expected "habiendo podido usar": ${s}`)
+      }
+      if (!/lavadora número 5/.test(s)) {
+        throw new Error(`expected machine label "lavadora número 5": ${s}`)
+      }
+      if (!/Relato del cliente: pagué dos veces/.test(s)) {
+        throw new Error(`expected narrative quoted: ${s}`)
+      }
+    },
+  },
+  // ── Double charge — Scenario 6.4 (did NOT use service) ───────────────────
+  {
+    name: 'double charge 6.4: used service no → "PERO NO ha podido usar el servicio" + reply quoted',
+    run: () => {
+      const s = buildEscalationSummary(
+        ctx({
+          issueSummary: 'double charge — used service: no — customer reply: no he lavado',
+          machineType: 'washer',
+          machineNumber: '3',
+        }),
+      )
+      if (!/doble cobro/i.test(s)) throw new Error(`expected doble cobro: ${s}`)
+      if (!/PERO NO ha podido usar el servicio/i.test(s)) {
+        throw new Error(`expected "PERO NO ha podido usar el servicio": ${s}`)
+      }
+      if (!/lavadora número 3/.test(s)) {
+        throw new Error(`expected machine label: ${s}`)
+      }
+      if (!/no he lavado/.test(s)) {
+        throw new Error(`expected customer reply quoted: ${s}`)
+      }
+      if (!/refunds?o|reembolso|servicio no prestado/i.test(s)) {
+        throw new Error(`expected operator-action hint (refund/servicio no prestado): ${s}`)
+      }
+    },
+  },
+  // ── Double charge — backward-compat: legacy issueSummary without yes/no ──
+  {
+    name: 'double charge legacy: no used-service flag → defaults to "habiendo podido usar"',
+    run: () => {
+      const s = buildEscalationSummary(
+        ctx({ issueSummary: 'double charge — narrative: pagué dos veces' }),
+      )
+      if (!/doble cobro/i.test(s)) throw new Error(`expected doble cobro: ${s}`)
       if (!/Pineda/.test(s)) throw new Error('location must appear')
     },
   },

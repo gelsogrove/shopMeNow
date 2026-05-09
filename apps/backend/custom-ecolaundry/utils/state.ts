@@ -55,6 +55,7 @@ export function createInitialState(): SessionState {
     empathicResponseSent: false,
     faqTopic: '',
     nonTroubleshootingIncident: '',
+    displayReaskPrevCode: '',
     pendingFlow: '',
     invoiceData: {
       razonSocial: '',
@@ -98,6 +99,7 @@ export function resetMachineFacts(state: SessionState): void {
   state.pendingFlow = ''
   state.displayUnreadable = false
   state.photoRequested = false
+  state.displayReaskPrevCode = ''
   state.mixedIncident = false
   state.nonTroubleshootingIncident = ''
   state.lastMissingFacts = []

@@ -52,7 +52,7 @@
     },
     {
       "docNumber": 6,
-      "title": "Doble cobro pero el cliente ha podido usar el servicio",
+      "title": "Doble cobro (con o sin uso del servicio)",
       "semanticId": "double-charge",
       "kind": "payment-incident",
       "guardModule": "utils/guards/payment-double-charge.ts",
@@ -64,6 +64,12 @@
       ],
       "pendingFlowPrefix": "double-charge-",
       "i18nKeys": ["doubleChargeAskUsed", "doubleChargeAskNarrative", "doubleChargeAskCardDigits", "doubleChargeAskReceipt", "doubleChargeClosure"],
+      "scenarios": [
+        { "id": "6.1", "label": "Doble cobro con servicio usado (happy: relato + 4 dígitos + captura → formulario devolución)" },
+        { "id": "6.2", "label": "Cliente arrabbiato → escalation immediata (operador + desactivado)" },
+        { "id": "6.3", "label": "Relato contradittorio → escalation via guardContradictoryNarrative" },
+        { "id": "6.4", "label": "Doble cobro SIN haber usado el servicio → escalation immediata con summary 'PERO NO ha podido usar el servicio'" }
+      ],
       "tests": ["__tests__/agent/14-doble-pago.test.spec.ts", "__tests__/agent/14.1-pedir-datos-pago.test.spec.ts"]
     },
     {
