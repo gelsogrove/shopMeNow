@@ -11,7 +11,7 @@
 
   "_section_llm": "LLM provider tuning. model is the OpenRouter id; agentTemperature controls creativity (0.0=deterministic, 1.0=creative); agentMaxTokens caps output length per call; maxToolHops caps tool-call iterations per turn.",
   "model": "openai/gpt-4o-mini",
-  "agentTemperature": 0.3,
+  "agentTemperature": 0.5,
   "agentMaxTokens": 800,
   "maxToolHops": 6,
 

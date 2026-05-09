@@ -803,6 +803,69 @@ Before adding a new test case to an agent test spec, answer:
 }
 ```
 
+### 4-source verification workflow — per-Caso method
+
+Pattern formalizzato durante l'audit Casi 1-32 (Andrea, 2026-05-09 / 2026-05-10).
+Ogni volta che si tocca o valida un Caso, le 4 fonti devono dire la stessa
+cosa. Quando divergono, si decide *consapevolmente* (con AskUserQuestion)
+quale è la verità e si allineano le altre — niente pezze, niente "lo
+sistemiamo dopo".
+
+**Le 4 fonti**:
+
+1. **PDF Playbook** (`docs/pdf/Ecolaundry Chatbot Playbook (6).pdf`) —
+   contratto col cliente. Verità ultima quando esiste una sezione
+   dedicata. Quando la regola PDF è generale (es. §6 frau o incoerència,
+   §10 criteris d'escalat), il Caso può essere più specifico ma deve
+   rispettare lo spirito della regola.
+2. **`docs/usecases.md`** — spec interna del bot. Per ogni Caso N:
+   trigger, primera respuesta, criterios de aceptación, esempio
+   conversazione. Quando devia dal PDF, deve avere un blocco
+   `**Desviación documentada respecto al Playbook PDF**` esplicito.
+3. **`json/cases.json`** + i guard / i18n / flow-engine JSON
+   referenziati. Bridge fra `docNumber` (doc) e `semanticId` (codice).
+   Path test referenziati DEVONO esistere (no stale ref).
+4. **Bot reale** — output deterministico verificato dall'agent test
+   sotto `__tests__/agent/N-*.test.spec.ts`.
+
+**Workflow per ogni Caso**:
+
+```
+PER CASO N:
+  1. Leggo PDF Playbook §X.Y (sezione corrispondente)
+  2. Leggo docs/usecases.md ## Caso N
+  3. Verifico json/cases.json mapping (docNumber, tests path)
+  4. Lancio __tests__/agent/N-*.test.spec.ts → bot reale
+  5. Confronto le 4 fonti. Identifico divergenze:
+       - Test path stale in cases.json? → fix
+       - Test pattern "1 test = 1 turno"? → consolida (vedi sezione sopra)
+       - PDF dice X, usecases dice Y, bot fa Z?
+         → AskUserQuestion: tieni flow attuale + documenta deviazione,
+           OPPURE allinea al PDF (modifica codice + doc + test).
+       - Bot diverge da usecases? → BUG architetturale (fix in codice
+         deterministico, NO patch in prompt).
+  6. Implemento fix architetturale (NO pezze)
+  7. Run typecheck + check-architecture + unit suite
+  8. Run regression sweep Casi 1..N (rule below)
+```
+
+**Casi tipici di divergenza incontrati durante audit Casi 1-32**:
+
+- **PDF deviazione documentata** (Casi 5, 6, 8, 9): nostro flow è più
+  ricco/diverso del PDF per ragioni UX o di integrazione. Documento in
+  usecases.md, mantengo il flow.
+- **Allineamento al PDF** (Casi 7, 10, 11): PDF e usecases dicevano
+  cose diverse, abbiamo allineato modificando il codice.
+- **Stale ref** (Casi 10, 13, 14, 15, 16, 17, 18, 19, 20): paths di
+  test in `json/cases.json` puntavano a file inesistenti (legacy dal
+  rename collettivo). Fix in cases.json.
+- **Bug architetturale latente** (Casi 14, 30): fonti d'accordo ma
+  flow JSON / detector aveva un gap che il LLM mascherava
+  (resolvedRegex mancante, displayLabel troncava cifre). Fix nel
+  codice deterministico.
+- **Wording inconsistente JSON ↔ doc** (Caso 3 SEL): JSON aveva
+  loopback diverso da usecases. Allineato il JSON al doc.
+
 ### Mandatory regression check on shared-component changes
 
 When you modify a component that affects **multiple Casi** (e.g.
@@ -840,6 +903,35 @@ refactor MUST be done — that's why each entry below has a clear trigger.
 unrelated work. Each entry above has a trigger; respect the trigger
 and don't extract preventively. When the trigger fires, point the PR
 description at the relevant row and close the entry.
+
+---
+
+## 📜 Architectural fixes log — bugs closed during Casi 1-32 audit
+
+Storico dei bug architetturali risolti durante l'audit Casi 1-32 (Andrea,
+2026-05-09 / 2026-05-10). Mantenuto come **regression catalogue**: ogni
+voce documenta un pattern che NON deve riapparire. Se un cambio futuro
+sembra reintrodurre uno di questi sintomi, è un sentinel di regressione.
+
+| # | Sintomo | Root cause | Fix architetturale |
+|---|---------|------------|---------------------|
+| F1 | Caso 6.1 ramo Sí cierra como escalation invece di refund-form | `payment-double-charge.ts` chiamava `escalate()` per il refund → `pendingEscalation` set → operatorHandoffFinal + Human Support summary appesi al cliente | Nuovo path semanticamente separato: `markRefundFormPending` + `closeAsRefundForm` + `pendingClosure='refund-form'` + i18n `refundFormFinal` (6 lang). Post-processor [`agent.ts:appendEscalationSummary`](agent.ts) skippa handover su closure refund-form. |
+| F2 | Caso 6/8 nome capture loops infinito su input invalido | `guardDoubleChargeAwaitName` / `guardDiscountCodeAwaitName` re-asks senza ladder | Counter shared `state.awaitNameAskAttempts` (reset atomico in `captureCustomerName`) + retry+escalate ladder via `nextRetryLadderStep` (rule #10 corollary). |
+| F3 | Caso 6.2 cliente "muy enfadado + quiero operador" cade in forceLocation | `guardAngryCustomerEmpathic` regex troppo stretta (richiedeva esclamazioni) | Nuovo `guardAngryCustomerExplicit` boundary signal (rage marker + explicit operator request → escalate immediato) + 10 unit test multilingua. |
+| F4 | Caso 7 chiedeva cambio prima della pantalla, divergente dal PDF §5.4 | `guardPaidNotUsedAskChange` forzava il cambio prima della pantalla | **Rimosso** il guard. Allineato al PDF: location → tipo → numero → pantalla (display flow handler gestisce il resto). −1 file, −2 pendingFlow values. |
+| F5 | Casi PUSH/SEL/DOOR: bot improvvisava su risposta utente dopo istruzione (LLM skip del tool `advance_machine_flow`) | Pipeline-hole rule #10: `guardAutoStartMachineFlow` gestiva il T1 ma nessun catch-all per i T2+ del washer/dryer flow engine | Nuovo `guardAdvanceMachineFlow` + helper sync `tryAdvanceFlowSync` in [`utils/flow-engine.ts`](utils/flow-engine.ts) (deterministic-only, no LLM classify). Pipeline order: `guardPostInstructionFailure` PRIMA di `guardAdvanceMachineFlow` (Phase C precede flow advance, perché il check_result node ha special-case `display token → NO transition` che intercetterebbe il display di Phase C re-ask). |
+| F6 | Caso 14 ALM DOOR happy path flakey: "Sí ha desaparecido" non sempre triggerava il resolved reply | `display-flows.json:alm-door-blocked` mancava `resolvedRegex` + `step.resolvedReplyKey` | Aggiunti entrambi (riuso `al001Resolved` come closure i18n key — pattern poi tracked come refactor B3 da rinominare a `displayResolved`). |
+| F7 | Caso 30 summary perdeva il "52" del codice "ERR 52" → operatore vedeva solo "ERR" | `extractDisplayLabel` greedy extension `^(?:\s+[A-Z][A-Z0-9]{1,})+`: il primo char di ogni run richiedeva una **lettera**, le cifre venivano scartate | Pattern allargato a `^(?:\s+[A-Z0-9][A-Z0-9]{1,})+` (primo char accetta lettere E cifre). Preserva "ERR 52" / "AL 001" / "PUSH 03" interi. usecases riga 1996 esige *"sin reinterpretarlo ni normalizarlo"*. |
+| F8 | Caso 3 SEL: prompt JSON privo del loopback "Después dime…" mentre usecases lo ha | `washer_hs60xx.json:case_sel.prompt` divergente da usecases.md riga 325/354 e da `case_push` (che ha il loopback su nuova riga) | Allineato JSON a usecases + a `case_push`: aggiunto `\n\nDespués dime si la lavadora ha arrancado.`. Allineato anche wording usecases a "Después dime…" (era "Una vez lo hayas hecho, dime…"). 4-fonti coerenti. |
+| F9 | Caso 18 cliente digita "AS" come letras davanti al codice → bot saltava al gather location | `guardNumericCodeNoLetters`: branchi yes/no espliciti non coprivano input letter-only ("AS", "ABC") → null → LLM improvvisa | Aggiunto `implicitLettersTyped = /^[A-Z]{1,5}$/.test(reply)` come fallback yesLetters (constraint UPPERCASE per evitare false positives su prose). |
+| F10 | 18 stale paths in `json/cases.json` che puntavano a test inesistenti (post rename collettivo `XX-name` → `N-name`) | Cleanup non completato dopo rename | Fix per ogni Caso durante l'audit (Casi 10, 13, 14, 15, 16, 17, 18, 19, 20 e altri). |
+| F11 | File legacy `02-faq.test.spec.ts` testava il Caso 12 (Horarios) ma il nome confondeva | Naming drift dopo riorganizzazione test | Eliminato. `cases.json` aggiornato. Caso 12 testato solo da `12-horarios-precios`. |
+| F12 | `26-context-switch.test.spec.ts` era nella root agent/ ma testava un comportamento cross-Caso, non Caso 26 | Naming convention sbagliata | Spostato in `__tests__/agent/cross/` con nota all'inizio del file. |
+
+**Come usare questo log**: prima di un fix che sembra simile a un sintomo
+qui sopra, leggi la voce corrispondente per evitare di reintrodurre la
+stessa regressione. Quando aggiungi una voce, segui lo schema (sintomo
+osservabile / root cause / fix architetturale).
 
 ---
 
