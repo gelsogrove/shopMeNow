@@ -310,6 +310,69 @@ const cases: Case[] = [
       }
     },
   },
+
+  // ── extractDisplayState — fuzzy match for typos ──────────────────────────
+  // SCENARIO: customer types a typo of a known display code. The strict
+  // regex misses it (no exact word boundary match), so the fuzzy fallback
+  // catches it via Levenshtein distance ≤ 1-2. Without this, the bot
+  // would loop on "no entiendo" or escalate prematurely.
+  {
+    name: 'fuzzy: "USH PROG" (missing P) → PUSH (PUSH PROG canonical)',
+    run: () => {
+      const r = extractDisplayState('USH PROG')
+      if (r !== 'PUSH') throw new Error(`expected "PUSH", got "${r}"`)
+    },
+  },
+  {
+    name: 'fuzzy: "DOR" (missing O) → DOOR',
+    run: () => {
+      const r = extractDisplayState('DOR')
+      if (r !== 'DOOR') throw new Error(`expected "DOOR", got "${r}"`)
+    },
+  },
+  {
+    name: 'fuzzy: "PUSH-PROG" (separator typo) → PUSH',
+    run: () => {
+      const r = extractDisplayState('PUSH-PROG')
+      if (r !== 'PUSH') throw new Error(`expected "PUSH", got "${r}"`)
+    },
+  },
+  {
+    name: 'fuzzy: random sentence "no funciona la lavadora" → null (not fuzzy-matched)',
+    run: () => {
+      const r = extractDisplayState('no funciona la lavadora')
+      if (r !== null) throw new Error(`free-text sentences must not fuzzy-match, got: ${r}`)
+    },
+  },
+  {
+    name: 'fuzzy: short word "ok" → null (under 3-char threshold)',
+    run: () => {
+      const r = extractDisplayState('ok')
+      if (r !== null) throw new Error(`"ok" must not fuzzy-match, got: ${r}`)
+    },
+  },
+  {
+    name: 'fuzzy: long sentence (>12 chars) → null (only short codes get fuzzy)',
+    run: () => {
+      const r = extractDisplayState('me parece que algo no va bien')
+      if (r !== null) throw new Error(`long sentences must not fuzzy-match, got: ${r}`)
+    },
+  },
+  {
+    name: 'fuzzy: "asdf" garbage → null',
+    run: () => {
+      const r = extractDisplayState('asdf')
+      if (r !== null) throw new Error(`garbage must not fuzzy-match, got: ${r}`)
+    },
+  },
+  {
+    name: 'fuzzy: exact match still wins (no fuzzy needed)',
+    run: () => {
+      // Sanity: exact "SEL" goes through the strict regex, NOT the fuzzy path.
+      const r = extractDisplayState('SEL')
+      if (r !== 'SEL') throw new Error(`exact match must work, got: ${r}`)
+    },
+  },
 ]
 
 let passed = 0

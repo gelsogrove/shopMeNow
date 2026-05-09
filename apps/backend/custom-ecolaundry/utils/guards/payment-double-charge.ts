@@ -107,8 +107,20 @@ export const guardDoubleChargeAskCardDigits: Guard = (ar, userMessage) => {
   return { reply: t('doubleChargeAskCardDigits', lang(ar)), reason: 'double-charge-ask-card-digits' }
 }
 
-/** Caso 6 step 4 — after 4 digits, ask the payment screenshot + closure. */
-export const guardDoubleChargeAskReceipt: Guard = (ar) => {
+/** Caso 6 step 6 — consume the customer's reply to the 4-digits ask.
+ *
+ *  Validation: the customer must give exactly 4 numeric digits (e.g.
+ *  "4821"). Surrounding narrative is OK ("los últimos son 4821"), but
+ *  the 4-digit chunk must be unambiguous (no longer/shorter sequence).
+ *
+ *    valid (4 digits, e.g. "4821")    → proceed to receipt+closure ask
+ *    invalid (3, 5+, no digits, etc.) → re-ask with cardDigitsRetry
+ *    invalid 2nd time                  → escalate to a human operator
+ *
+ *  Iron rule #10: validation prevents the LLM from inheriting bad data
+ *  in the operator handover summary ("últimos 4 dígitos: 482156" would
+ *  be useless to the operator). */
+export const guardDoubleChargeAskReceipt: Guard = (ar, userMessage) => {
   if (
     ar.state.pendingFlow !== 'double-charge-ask-receipt' ||
     ar.state.operatorRequested ||
@@ -116,6 +128,38 @@ export const guardDoubleChargeAskReceipt: Guard = (ar) => {
   ) {
     return null
   }
+
+  // Look for an unambiguous 4-digit chunk: exactly 4 consecutive digits,
+  // not part of a longer digit run. Multiple matches → ambiguous → invalid.
+  const matches = userMessage.match(/(?<!\d)\d{4}(?!\d)/g) || []
+  const isValid = matches.length === 1
+  if (!isValid) {
+    ar.state.cardDigitsAskAttempts = (ar.state.cardDigitsAskAttempts || 0) + 1
+    if (ar.state.cardDigitsAskAttempts >= 2) {
+      // 2 invalid attempts → escalate. Operator will collect the digits
+      // manually if needed.
+      ar.state.cardDigitsAskAttempts = 0
+      ar.state.pendingFlow = ''
+      if (!ar.state.issueSummary?.startsWith('double charge')) {
+        ar.state.issueSummary = 'double charge — invalid card digits after 2 attempts'
+      }
+      escalate(ar, 'Double charge — invalid card digits after 2 attempts')
+      requireCustomerName(ar)
+      return {
+        reply: t('reaffirmEscalate', lang(ar)),
+        reason: 'double-charge-card-digits-escalate',
+      }
+    }
+    // 1st invalid → re-ask politely. Keep pendingFlow so this guard fires
+    // again on the next turn.
+    return {
+      reply: t('cardDigitsRetry', lang(ar)),
+      reason: 'double-charge-card-digits-retry',
+    }
+  }
+
+  // Valid 4 digits — proceed to receipt + closure.
+  ar.state.cardDigitsAskAttempts = 0
   ar.state.pendingFlow = ''
   if (!ar.state.issueSummary?.startsWith('double charge')) {
     ar.state.issueSummary = 'double charge'

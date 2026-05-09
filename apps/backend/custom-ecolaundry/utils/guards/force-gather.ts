@@ -9,6 +9,7 @@
 import { t } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { isMataro, lang, notInActiveSubFlow } from './helpers.js'
+import { escalate, requireCustomerName } from '../state-transitions.js'
 
 /** Step 2 — Force "lavadora o secadora?" when location is known but type is not.
  *
@@ -74,23 +75,62 @@ export const guardForcePayment: Guard = (ar) => {
   return null
 }
 
-/** Step 4 — Force "qué aparece en la pantalla?" when local+type+number known. */
+/** Step 4 — Force "qué aparece en la pantalla?" when local+type+number known.
+ *
+ *  Includes a retry-then-escalate path for unrecognised codes (typos, free
+ *  text that doesn't look like any known display token). The customer-facing
+ *  flow is:
+ *
+ *    1st miss (counter == 0):  ask the canonical "qué aparece en pantalla"
+ *    2nd miss (counter == 1):  re-ask politely — "no reconozco ese código
+ *                              exactamente, ¿podrías comprobarlo nuevamente?"
+ *    3rd miss (counter >= 2):  escalate to a human operator (asks the
+ *                              customer name, hands off).
+ *
+ *  Iron rule #10: this guard is a single deterministic catch-all for the
+ *  "display still empty" state. Without the retry+escalate logic, the
+ *  customer who types a typo (e.g. "USH PROG") would either hit an
+ *  infinite re-ask loop or trigger LLM improvisation. Counter is reset by
+ *  resetMachineFacts and (implicitly) when displayState is set by
+ *  autoExtractFacts on a recognised input. */
 export const guardForceDisplay: Guard = (ar) => {
   if (
-    ar.state.location &&
-    ar.state.machineType &&
-    ar.state.machineNumber &&
-    !ar.state.displayState &&
-    !ar.state.nonTroubleshootingIncident &&
-    notInActiveSubFlow(ar) &&
-    ar.state.turnCount >= 2
+    !ar.state.location ||
+    !ar.state.machineType ||
+    !ar.state.machineNumber ||
+    ar.state.displayState ||
+    ar.state.nonTroubleshootingIncident ||
+    !notInActiveSubFlow(ar) ||
+    ar.state.turnCount < 2
   ) {
+    return null
+  }
+  const attempts = ar.state.displayAskAttempts || 0
+
+  // 3rd strike: escalate. The customer has had two chances to give a
+  // recognised code; we hand off to an operator with their name.
+  if (attempts >= 2) {
+    ar.state.displayAskAttempts = 0
+    escalate(ar, 'Display code unrecognised after 2 attempts')
+    requireCustomerName(ar)
     return {
-      reply: t('displayShort', lang(ar)),
-      reason: 'force-display',
+      reply: t('reaffirmEscalate', lang(ar)),
+      reason: 'display-unrecognized-escalate',
     }
   }
-  return null
+
+  ar.state.displayAskAttempts = attempts + 1
+
+  if (attempts === 0) {
+    // First ask — canonical wording.
+    return { reply: t('displayShort', lang(ar)), reason: 'force-display' }
+  }
+
+  // Second ask — polite "no reconozco" with an invitation to re-check.
+  return {
+    reply: t('displayUnrecognizedReask', lang(ar)),
+    reason: 'display-unrecognized-reask',
+  }
 }
 
 /** Step 3 — Force "cuál es el número?" when local+type known but number missing.

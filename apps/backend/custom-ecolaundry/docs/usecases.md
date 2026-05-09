@@ -1889,33 +1889,53 @@ Caso escalado.
 ## Caso 30 — Código no documentado en pantalla
 
 **Objetivo:**  
-Escalar cuando el mensaje no coincide con ningún caso conocido.
+Escalar cuando el cliente da un código que no coincide con ningún caso conocido, ya sea porque es un código real no documentado (ERR 52, STOP, FILTRO) o porque el cliente escribe algo que no parece un código (typo o texto libre).
 
 **Cuándo aplica:**  
-El cliente da un código distinto de `SEL`, `PUSH PROG`, `DOOR`, `ALM DOOR`, `001`, `ALM`, `ALN`.
+El cliente facilita un código distinto de los conocidos (PUSH PROG, SEL, DOOR, ALM DOOR, 001, ALM, ALN, AL001), o escribe un texto que el bot no consigue reconocer como un código.
 
 **Criterios de aceptación:**
-- Detector: `extractDisplayState` reconoce el patrón pero el código no encaja en `RECOVERABLE_DISPLAYS`. Ejemplos: `ERR 52`, `ERR-47`, `STOP`, `FILTRO`.
-- Tras gather (location + tipo + número), escalación con resumen que **incluye el código exacto** (no normalizado a "ALARMA").
-- Diferencia con Caso 16: la familia ALM/ALN está reconocida; aquí el código es nuevo / no clasificado.
-- El bot **no** inventa interpretaciones del código.
+- El bot pregunta primero la lavandería, el tipo de máquina y el número de máquina.
+- Tras pedir qué aparece en pantalla, el bot acepta variantes con typos pequeños (1-2 letras de diferencia): "USH PROG" se reconoce como PUSH PROG, "DOR" como DOOR, "ALM01" como AL001.
+- Si lo que escribe el cliente no parece un código (sea un typo grande o texto sin sentido), el bot le pide que lo compruebe nuevamente con un mensaje amable: **"No reconozco ese código exactamente. ¿Podrías comprobarlo nuevamente?"**.
+- Si el cliente vuelve a dar algo que no se reconoce, el bot pasa el caso a un operador (pide el nombre y avisa que se desactivará el chatbot).
+- Si el cliente sí da un código real pero no documentado (ej. "ERR 52"), el bot escala con un resumen que incluye **el código exacto** que el cliente ha escrito (sin reinterpretarlo ni normalizarlo).
+- El bot **no** inventa interpretaciones del código en ningún caso.
 
-**Ejemplo de conversación:**
+**Ejemplo de conversación (typo recuperado al segundo intento):**
+
+**Usuario:** asdf  
+**Bot:** No reconozco ese código exactamente. ¿Podrías comprobarlo nuevamente?
+
+**Usuario:** PUSH PROG  
+**Bot:** Pulsa un botón de programa para iniciar el lavado. [...]
+
+**Ejemplo de conversación (código no documentado real):**
 
 **Usuario:** En la pantalla sale ERR 52.  
-**Bot:** Gracias. ¿En qué lavandería estás?
+**Bot:** Ese código no coincide con un caso documentado y necesitamos revisarlo manualmente. ¿Cómo te llamas?
 
-**Usuario:** L’Escala.  
-**Bot:** De acuerdo. Ese código no coincide con un caso documentado y necesitamos revisarlo manualmente.
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
 
-**Usuario:** Entendido.  
-**Bot:** Pasaremos tu caso a revisión para ayudarte de la manera más adecuada.
+**Ejemplo de conversación (escalada tras dos intentos sin reconocer):**
+
+**Usuario:** asdf  
+**Bot:** No reconozco ese código exactamente. ¿Podrías comprobarlo nuevamente?
+
+**Usuario:** qwerty  
+**Bot:** Vamos a revisar tu caso manualmente para poder ayudarte mejor. ¿Cómo te llamas?
+
+**Usuario:** Carlos  
+**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. El chatbot será desactivado.
 
 **Resultado esperado:**  
-Caso escalado.
+- Si el cliente corrige el typo en el segundo intento → flujo normal del código corregido.
+- Si el cliente sigue sin dar un código reconocible tras dos intentos → caso escalado.
 
 **Escalar si:**  
-- siempre en códigos no documentados
+- el código es real pero no documentado.
+- el cliente da algo no reconocible y, tras un segundo intento, sigue sin reconocerse.
 
 ---
 

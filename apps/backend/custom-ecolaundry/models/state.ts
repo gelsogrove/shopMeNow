@@ -116,6 +116,23 @@ export type SessionState = {
   // Lets Phase C detect a genuine display change even after autoExtractFacts has
   // already updated state.displayState for the current turn.
   displayReaskPrevCode: string
+  // Counts how many times guardForceDisplay has asked for the display code
+  // without the customer providing one we could recognise (autoExtractFacts
+  // returned no match). Drives the unrecognised-display retry path:
+  //   0 → first ask: "qué aparece en pantalla"
+  //   1 → second ask: "no reconozco ese código, ¿podrías comprobarlo nuevamente?"
+  //   ≥2 → escalate (asks the customer name and hands off to operator)
+  // Reset to 0 by resetMachineFacts and when displayState is finally captured.
+  displayAskAttempts: number
+  // Caso 6 step 4 — counts invalid replies to "últimos 4 dígitos de la tarjeta".
+  // The customer must give exactly 4 digits (e.g. "4821"); if they type 3, 5,
+  // or non-digit text, the guard re-asks. After 2 invalid attempts, the case
+  // is escalated to a human operator.
+  //   0 → not yet asked OR last reply was valid (counter reset on success)
+  //   1 → first invalid → re-ask "necesito exactamente 4 dígitos…"
+  //   ≥2 → escalate
+  // Reset to 0 by resetMachineFacts.
+  cardDigitsAskAttempts: number
   pendingFlow:
     | ''
     | 'paid-not-used-ask-change'

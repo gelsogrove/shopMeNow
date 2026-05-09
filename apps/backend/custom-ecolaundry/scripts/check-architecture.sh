@@ -91,6 +91,8 @@ ALLOWED_LARGE_FILES="
   utils/guards/display-flow.ts  # Phase A+B+C display-flow engine (single responsibility; Phase C re-ask added for Scenario 5.3/7.2)
   utils/guards/display.ts       # Display-state guards: no-photo, numeric codes, post-instruction failure, unknown-display (single concern)
   utils/guards/index.ts         # Pipeline assembly only — imports + ordered GUARD_PIPELINE array. Splitting hurts readability of the priority order.
+  utils/guards/force-gather.ts  # All "force-*" gather guards (location/type/number/payment/display) — single concern: each forces the next missing fact. Display has retry+escalate counter.
+  utils/guards/payment-double-charge.ts  # Caso 6 multi-step double-charge gather (used? → narrative → 4 digits → receipt) with branch on yes/no AND validation+retry on 4 digits. Single concern: drive the doble-cobro flow end-to-end.
 "
 ALLOWED_LARGE_FILES=$(echo "$ALLOWED_LARGE_FILES" | sed 's/#.*$//' | tr -s ' \n' ' ')
 violations=""

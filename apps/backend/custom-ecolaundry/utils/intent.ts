@@ -49,8 +49,64 @@ export function extractDisplayState(message: string): string | null {
   if (errMatch) return errMatch[1].toUpperCase().replace(/\s+/g, ' ')
 
   const genericMatch = trimmed.match(/\b(SEL|PUSH|PR|DOOR|ALM|AL001|END|ON|FILTRO|FALLO DE ROTACION|FALLO DE ASPIRACION|STOP|water)\b/i)
-  if (!genericMatch) return null
-  return normalizeDisplayState(genericMatch[1])
+  if (genericMatch) return normalizeDisplayState(genericMatch[1])
+
+  // Fuzzy fallback for common typos: "USH PROG" (missing P) → PUSH PROG,
+  // "DOR" → DOOR, "ALM01" → AL001, "selh" → SEL.
+  // Only fires when the strict regexes above fail. Accepts edit distance ≤ 1
+  // for short tokens (≤4 chars) and ≤ 2 for longer ones — small enough to
+  // catch single-letter typos without false-matching unrelated words.
+  const fuzzy = fuzzyDisplayMatch(trimmed)
+  if (fuzzy) return fuzzy
+
+  return null
+}
+
+// ── Fuzzy display match ───────────────────────────────────────────────────────
+//
+// The strict regex above misses common typos like "USH PROG" (missing P).
+// This fuzzy match runs only as a fallback and uses a small Levenshtein
+// distance so it cannot accidentally rebrand unrelated words — anything
+// further than 1-2 edits away is rejected.
+
+const FUZZY_TARGETS: ReadonlyArray<{ token: string; canonical: string }> = [
+  { token: 'PUSH PROG', canonical: 'PUSH' },
+  { token: 'PUSH', canonical: 'PUSH' },
+  { token: 'SEL', canonical: 'SEL' },
+  { token: 'DOOR', canonical: 'DOOR' },
+  { token: 'ALM DOOR', canonical: 'ALM/DOOR' },
+  { token: 'ALMDOOR', canonical: 'ALM/DOOR' },
+  { token: 'AL001', canonical: 'AL001' },
+  { token: 'ALARM 001', canonical: 'AL001' },
+  { token: 'ALARMA 001', canonical: 'AL001' },
+  { token: 'ALN', canonical: 'ALN' },
+  { token: 'ALM', canonical: 'ALM' },
+]
+
+function fuzzyDisplayMatch(input: string): string | null {
+  // Normalise: uppercase, collapse whitespace, drop punctuation that the
+  // customer often interleaves ("PUSH-PROG", "PUSH.PROG").
+  const norm = input
+    .toUpperCase()
+    .replace(/[/.\-_,;:]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (norm.length < 3) return null
+  // Reject obvious non-codes (sentences with multiple words and lowercase
+  // letters in original) — only fuzzy-match if the input looks like a code:
+  // mostly uppercase letters and digits, ≤ 12 chars after normalisation.
+  if (norm.length > 12) return null
+  if (!/^[A-Z0-9 ]+$/.test(norm)) return null
+
+  let best: { token: string; canonical: string; dist: number } | null = null
+  for (const { token, canonical } of FUZZY_TARGETS) {
+    const dist = levenshtein(norm, token)
+    const maxDist = token.length <= 4 ? 1 : 2
+    if (dist <= maxDist && (!best || dist < best.dist)) {
+      best = { token, canonical, dist }
+    }
+  }
+  return best ? best.canonical : null
 }
 
 export function isDisplayCodeLikeInput(message: string): boolean {
