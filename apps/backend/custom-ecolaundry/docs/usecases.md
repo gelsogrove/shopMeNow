@@ -1,15 +1,4 @@
-# Ecolaundry Chatbot -Usecases
-
-> ## ⚠ TODO globale (Andrea, 2026-05-09) — PII must not reach the LLM
->
-> I dati personali del cliente (nome, ultimi 4 dígitos della tarjeta, foto/captura del pago, eventuali altri dati sensibili) oggi vengono inoltrati al modello LLM esterno (OpenRouter / OpenAI) come parte del messaggio utente o della conversation history. **Per privacy / GDPR questo non è accettabile**: il modello esterno non deve mai vedere PII in chiaro.
->
-> **Fix da fare**:
-> - Catturare i campi PII in modo deterministico (già fatto per i 4 dígitos via `guardDoubleChargeAskCardDigits` e per il nome via `guardDoubleChargeAwaitName` / `guardDiscountCodeAwaitName`).
-> - Prima di inoltrare la conversation history al LLM, redact / mask dei campi PII salvati nello state (es. `4821` → `[REDACTED-CARD-4]`, `Andrea` → `[CUSTOMER]`). Lo state conserva i valori reali per il briefing operatore; il LLM vede solo placeholders.
-> - Verificare ogni guard che chiede aiuto al LLM in un turn che contiene già PII nel messaggio utente e short-circuitarlo deterministicamente dove possibile.
->
-> Tracking: cerca `PII must not reach the LLM` in `agent.ts`.
+# Ecolaundry Chatbot - Usecases
 
 ## Índice de casos
 

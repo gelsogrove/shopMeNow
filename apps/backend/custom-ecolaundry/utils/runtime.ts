@@ -75,13 +75,26 @@ export async function loadRuntime(): Promise<Runtime> {
   const demoDir = path.resolve(getDemoDir(), '..')
   const flowDir = path.resolve(demoDir, 'json')
   const promptDir = path.resolve(demoDir, 'prompts')
-  // Only `language.txt` is on the live call graph (used by llm.ts:detectLanguage
-  // as a fallback when the regex heuristic in intent.ts can't decide). The
-  // other prompt files in prompts/ are reference material — see docs/prompts.md
-  // for the full inventory. We avoid loading them at boot to skip dead I/O.
-  const promptNames = ['language']
+  // Live prompts loaded at boot (call graph touches them at runtime):
+  //   - language: utils/llm.ts:detectLanguage (fallback when regex heuristic can't decide)
+  //   - router: utils/router.ts:classifyMessageBranch (T1 branch classifier)
+  //   - rephrase: utils/agent-rephrase.ts:rephraseForTurn (LLM polish layer)
+  //   - operator-briefing: utils/operator-briefing.ts:generateOperatorBriefingFromHistory
+  // The other prompt files in prompts/ are reference material — see docs/prompts.md.
+  // Each caller has a TS-const fallback if the file is missing (graceful degradation).
+  const promptNames = ['language', 'router', 'rephrase', 'operator-briefing']
+  // Safe-load: missing files become empty strings, so callers can fall back
+  // to their TS-const default. This keeps deployments forgiving (a missing
+  // optional prompt file does not break the bot at boot).
   const promptEntries = await Promise.all(
-    promptNames.map(async (name) => [name, await readFile(path.join(promptDir, `${name}.txt`), 'utf8')] as const),
+    promptNames.map(async (name) => {
+      try {
+        const content = await readFile(path.join(promptDir, `${name}.txt`), 'utf8')
+        return [name, content] as const
+      } catch {
+        return [name, ''] as const
+      }
+    }),
   )
   const faqs = JSON.parse(await readFile(path.join(flowDir, 'faqs.json'), 'utf8')) as FaqMap
   setFaqs(faqs)

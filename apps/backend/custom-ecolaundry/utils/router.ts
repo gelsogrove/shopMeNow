@@ -79,9 +79,14 @@ export async function classifyMessageBranch(
     // routing the customer to the wrong branch. Configurable via
     // `settings.routerTemperature` (default 0); recommended 0-0.2.
     const routerTemp = options.runtime?.settings?.routerTemperature ?? 0
+    // System prompt: prefer prompts/router.txt (loaded by runtime), fall
+    // back to the TS const for graceful degradation when the file is
+    // missing. See CLAUDE.md Pending refactors D2.
+    const promptFromFile = options.runtime?.prompts?.router?.trim()
+    const systemPrompt = promptFromFile || ROUTER_SYSTEM_PROMPT
     raw = await callModel({
       model,
-      systemPrompt: ROUTER_SYSTEM_PROMPT,
+      systemPrompt,
       userPrompt: trimmed,
       json: true,
       temperature: routerTemp,

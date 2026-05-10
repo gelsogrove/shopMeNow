@@ -219,25 +219,37 @@ export function detectDoubleChargeIntent(message: string): boolean {
   return (
     // Spanish — "cobrado/cobrada dos veces", "doble cobro", "cobró dos veces", etc.
     /\bcobrad[ao]\s+(?:dos\s+veces|2\s+veces|m[aá]s\s+de\s+una\s+vez|el\s+doble|dos\s+cargos)\b/i.test(trimmed) ||
-    /\bdoble\s+(?:cobro|cargo|cobr[ao])\b/i.test(trimmed) ||
+    /\bdoble\s+(?:cobro|cargo|cobr[ao]|pago)\b/i.test(trimmed) ||
     /\bcobr[oó]\s+dos\s+veces\b/i.test(trimmed) ||
     /\b2\s+(?:cargos|cobros)\b/i.test(trimmed) ||
+    // Spanish colloquial — "me hizo/hicieron pagar dos veces", "pagué dos veces" (F15)
+    /\bme\s+(?:hizo|hicieron|han\s+hecho|ha\s+hecho)\s+pagar\s+(?:dos\s+veces|2\s+veces)\b/i.test(trimmed) ||
+    /\bpag(?:u[eé]|ado|ar)\s+(?:dos\s+veces|2\s+veces)\b/i.test(trimmed) ||
     // Italian — "addebitato due volte", "doppio addebito"
     /\baddebitat[ao]\s+due\s+volte\b/i.test(trimmed) ||
-    /\bdoppio\s+addebito\b/i.test(trimmed) ||
+    /\bdoppio\s+(?:addebito|pagamento)\b/i.test(trimmed) ||
+    // Italian colloquial — "fatto pagare due volte", "pagato due volte" (F15)
+    /\b(?:fatt[oa]|fatti)\s+pagare\s+(?:due\s+volte|2\s+volte)\b/i.test(trimmed) ||
+    /\bpag(?:ato|are|hi)\s+(?:due\s+volte|2\s+volte)\b/i.test(trimmed) ||
     // English — "charged twice", "double charge", "charged me two times"
     /\bcharged\s+(?:me\s+)?twice\b/i.test(trimmed) ||
     /\bcharged\s+(?:me\s+)?two\s+times\b/i.test(trimmed) ||
-    /\bdouble\s+charge\b/i.test(trimmed) ||
+    /\bdouble\s+(?:charge|payment)\b/i.test(trimmed) ||
+    // English colloquial — "paid twice", "made me pay twice" (F15)
+    /\bpaid\s+twice\b/i.test(trimmed) ||
+    /\bmade\s+me\s+pay\s+twice\b/i.test(trimmed) ||
     // Portuguese — "cobrado duas vezes", "cobrança dupla"
     /\bcobrad[ao]\s+(?:duas\s+vezes|2\s+vezes)\b/i.test(trimmed) ||
     /\bcobran[çc]a\s+dupla\b/i.test(trimmed) ||
+    /\bpag(?:uei|o|ar)\s+(?:duas\s+vezes|2\s+vezes)\b/i.test(trimmed) ||
     // Catalan — "cobrat dues vegades", "cobrament doble"
     /\bcobrat\s+(?:dues\s+vegades|2\s+vegades)\b/i.test(trimmed) ||
     /\bcobrament\s+doble\b/i.test(trimmed) ||
+    /\bpagat\s+(?:dues\s+vegades|2\s+vegades)\b/i.test(trimmed) ||
     // French — "débité deux fois", "double débit"
     /\bd[eé]bit[eé]\s+deux\s+fois\b/i.test(trimmed) ||
-    /\bdouble\s+d[eé]bit\b/i.test(trimmed)
+    /\bdouble\s+(?:d[eé]bit|paiement)\b/i.test(trimmed) ||
+    /\bpay[eé]\s+deux\s+fois\b/i.test(trimmed)
   )
 }
 

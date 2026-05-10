@@ -78,9 +78,14 @@ export async function generateOperatorBriefingFromHistory(
     'Produce el briefing operativo siguiendo las reglas del sistema.',
   ].join('\n')
 
+  // System prompt: prefer prompts/operator-briefing.txt (loaded by runtime),
+  // fall back to the TS const BRIEFING_SYSTEM_PROMPT for graceful degradation.
+  // See CLAUDE.md Pending refactors D2.
+  const promptFromFile = ar.runtime.prompts?.['operator-briefing']?.trim()
+  const systemPrompt = promptFromFile || BRIEFING_SYSTEM_PROMPT
   try {
     const briefing = await callModel({
-      systemPrompt: BRIEFING_SYSTEM_PROMPT,
+      systemPrompt,
       userPrompt,
       temperature,
       maxTokens: 250,

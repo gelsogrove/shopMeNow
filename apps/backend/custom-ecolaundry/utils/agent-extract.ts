@@ -17,7 +17,7 @@ import {
   detectDiscountCodeIntent,
   detectTopicSwitchDuringEscalation,
 } from './intent.js'
-import { resolveKnownLocation, parseExplicitPaymentSignal } from './message-parsing.js'
+import { resolveKnownLocation, resolveKnownLocationFuzzy, parseExplicitPaymentSignal } from './message-parsing.js'
 import { RECOVERABLE_DISPLAYS } from './guards/helpers.js'
 import { resetMachineFacts } from './state.js'
 import { resetPostEscalationFlags } from './state-transitions.js'
@@ -175,7 +175,8 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     // overwrite the previous one. We only do this when topic switches.
     const explicitNew = extractExplicitLocation(trimmed)
     if (explicitNew) {
-      const known = resolveKnownLocation(explicitNew)
+      // Exact + fuzzy fallback (typo tolerance, see riga 219 below).
+      const known = resolveKnownLocation(explicitNew) || resolveKnownLocationFuzzy(explicitNew)
       state.location = known || explicitNew
     }
   }
@@ -216,7 +217,13 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     const explicit = extractExplicitLocation(trimmed)
     const candidate = explicit || (isLikelyStandaloneLocationInput(state, trimmed) ? trimmed : null)
     if (candidate) {
-      const known = resolveKnownLocation(candidate)
+      // Exact match first; fall back to fuzzy resolver to catch typos like
+      // "Mtaró" → "Mataró", "Granolers" → "Granollers", "Pineda Mar" →
+      // "Pineda" (Damerau-Levenshtein distance ≤ threshold). Same pattern
+      // used by `guardDiscountCodeAwaitLocation`. Without the fuzzy fallback,
+      // typos drop the customer into the unknown-location list which doesn't
+      // include the ambiguous pueblo "Mataró" → confusing UX.
+      const known = resolveKnownLocation(candidate) || resolveKnownLocationFuzzy(candidate)
       if (known) {
         state.location = known
       } else {

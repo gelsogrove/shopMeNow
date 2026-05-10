@@ -543,6 +543,51 @@ const cases: Case[] = [
       }
     },
   },
+  // F15 regression — colloquial "pagare/pagar/paid" instead of formal
+  // cobrar/addebitare/charge. Andrea, 2026-05-10 real CLI: customer typed
+  // "mi ha fatto pagare due volte" → trigger Caso 6 was missed → bot
+  // dropped into machine flow. Detector now covers colloquial forms in
+  // 6 langs.
+  {
+    name: 'detectDoubleCharge F15: IT "mi ha fatto pagare due volte" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('mi ha fatto pagare due volte')) {
+        throw new Error('IT colloquial "fatto pagare due volte" must be detected (F15 regression)')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge F15: IT "ho pagato due volte" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('ho pagato due volte')) {
+        throw new Error('IT colloquial "pagato due volte" must be detected (F15 regression)')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge F15: ES "me hizo pagar dos veces" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('me hizo pagar dos veces')) {
+        throw new Error('ES colloquial "hizo pagar dos veces" must be detected (F15 regression)')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge F15: ES "tengo un doble pago" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('tengo un doble pago en la cuenta')) {
+        throw new Error('ES colloquial "doble pago" must be detected (F15 regression)')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge F15: EN "I paid twice" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('I paid twice for the same washer')) {
+        throw new Error('EN colloquial "paid twice" must be detected (F15 regression)')
+      }
+    },
+  },
   {
     name: 'detectDoubleCharge: irrelevant "la lavadora no funciona" → false',
     run: () => {

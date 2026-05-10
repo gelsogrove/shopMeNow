@@ -77,7 +77,12 @@ export const LAUNDROMATS: LaundromatLocation[] = [
  * of these without a clarifying alias, the bot must ask which street they're
  * on rather than assuming.
  */
-export const AMBIGUOUS_PUEBLOES: ReadonlySet<string> = new Set(['Mataró', 'Mataro'])
+// Single accented form. Lookups via resolveKnownLocation strip accents so
+// "Mataro" / "mataró" / "MATARÓ" all match. Adding the unaccented form
+// here used to break the fuzzy resolver: two equidistant candidates →
+// ambiguous → returned null (Andrea, 2026-05-10 regression F14: "Mtaró"
+// typo dropped to unknown-location list because fuzzy couldn't pick one).
+export const AMBIGUOUS_PUEBLOES: ReadonlySet<string> = new Set(['Mataró'])
 
 /** Reply shown when the customer mentions an ambiguous pueblo. */
 export function buildAmbiguousPuebloReply(pueblo: string): string {

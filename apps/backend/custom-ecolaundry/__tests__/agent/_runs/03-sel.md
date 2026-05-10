@@ -1,6 +1,6 @@
 # Agent test dialogues — `03-sel.test.spec.ts`
 
-Generated: 2026-05-09T23:40:57.033Z
+Generated: 2026-05-10T00:13:15.654Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 3.1: happy path completo → SEL istruzione → "Ahora sí funciona" → resolved

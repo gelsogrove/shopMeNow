@@ -86,9 +86,14 @@ export async function rephraseForTurn(
   // Configurable via `settings.rephraseTemperature` (default 0.4);
   // recommended 0.2-0.5.
   const rephraseTemp = ar.runtime.settings?.rephraseTemperature ?? 0.4
+  // System prompt: prefer prompts/rephrase.txt (loaded by runtime), fall
+  // back to the TS const REPHRASE_SYSTEM_PROMPT for graceful degradation.
+  // See CLAUDE.md Pending refactors D2.
+  const promptFromFile = ar.runtime.prompts?.rephrase?.trim()
+  const systemPrompt = promptFromFile || REPHRASE_SYSTEM_PROMPT
   try {
     const rephrased = await callModel({
-      systemPrompt: REPHRASE_SYSTEM_PROMPT,
+      systemPrompt,
       userPrompt,
       temperature: rephraseTemp,
       maxTokens: Math.max(150, Math.ceil(reply.length * 1.5)),
