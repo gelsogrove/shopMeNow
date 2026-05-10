@@ -146,7 +146,7 @@ export const guardDisplayFlowFollowUp: Guard = (ar, userMessage) => {
     )
     if (!hasCode) {
       ar.state.pendingFlow = 'display-reask-pending'
-      return { reply: t('displayShort', lang(ar)), reason: `${flow.id}-reask-ask` }
+      return { reply: t('displayReaskAfterFailure', lang(ar)), reason: `${flow.id}-reask-ask` }
     }
   }
 

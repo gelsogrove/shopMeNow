@@ -25,6 +25,7 @@
   "noPhotoEscalate": "Got it. We'll review it manually to help you.",
   "reaffirmEscalate": "We will review your case manually. What is your name?",
   "displayShort": "What exactly appears on the screen?",
+  "displayReaskAfterFailure": "Please write only the exact code that appears on the screen now, even if it is the same as before.",
   "displayUnrecognizedReask": "I don't quite recognise that code. Could you check again?",
   "paymentAsk": "Were you able to make the payment?",
   "numericCodeAskLetters": "Thanks. Do you see any letter before the numbers?",

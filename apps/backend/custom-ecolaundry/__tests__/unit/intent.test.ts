@@ -14,6 +14,7 @@
 import {
   detectDiscountCodeIntent,
   detectDoubleChargeIntent,
+  detectPaidNotActivatedIntent,
   detectIDontKnowReply,
   detectInvoiceIntent,
   detectLanguageHeuristic,
@@ -608,6 +609,93 @@ const cases: Case[] = [
     name: 'detectDoubleCharge: empty string → false',
     run: () => {
       if (detectDoubleChargeIntent('')) {
+        throw new Error('empty must NOT match')
+      }
+    },
+  },
+
+  // ── detectPaidNotActivatedIntent — Caso 4 trigger (F16) ──────────────────
+  // REGRESSION (Andrea, 2026-05-10): real chat showed bot ignored the intent
+  // because customer typed "acrivado" (typo of "activado", c↔t swap). The
+  // original inline regex required exact "activad" substring and silently
+  // failed → bot drifted into generic gather. Detector uses Levenshtein
+  // distance ≤ 1 on the verb token to recover from typos.
+  {
+    name: 'detectPaidNotActivated: canonical "He pagado y no se ha activado" → true',
+    run: () => {
+      if (!detectPaidNotActivatedIntent('He pagado y no se ha activado')) {
+        throw new Error('canonical phrase must match')
+      }
+    },
+  },
+  {
+    name: 'detectPaidNotActivated: typo "He pagado y no se ha acrivado" → true (F16)',
+    run: () => {
+      if (!detectPaidNotActivatedIntent('He pagado y no se ha acrivado')) {
+        throw new Error('typo "acrivado" (distance 1) must match')
+      }
+    },
+  },
+  {
+    name: 'detectPaidNotActivated: preterito "Pagué y no se ha activado" → true',
+    run: () => {
+      if (!detectPaidNotActivatedIntent('Pagué y no se ha activado')) {
+        throw new Error('preterito "Pagué" must match')
+      }
+    },
+  },
+  {
+    name: 'detectPaidNotActivated: alt verb form "He pagado y no se activa" → true',
+    run: () => {
+      if (!detectPaidNotActivatedIntent('He pagado y no se activa')) {
+        throw new Error('present-tense "no se activa" must match')
+      }
+    },
+  },
+  {
+    name: 'detectPaidNotActivated: preterito form "He pagado y no se activó" → true',
+    run: () => {
+      if (!detectPaidNotActivatedIntent('He pagado y no se activó')) {
+        throw new Error('preterito "no se activó" must match')
+      }
+    },
+  },
+  {
+    name: 'detectPaidNotActivated: typo "actibado" (v→b) → true',
+    run: () => {
+      if (!detectPaidNotActivatedIntent('He pagado y no se ha actibado')) {
+        throw new Error('typo "actibado" (distance 1) must match')
+      }
+    },
+  },
+  {
+    name: 'detectPaidNotActivated: NEGATIVE — Caso 7 "He pagado pero no he podido usar" → false',
+    run: () => {
+      if (detectPaidNotActivatedIntent('He pagado pero no he podido usar')) {
+        throw new Error('Caso 7 phrase must NOT match Caso 4')
+      }
+    },
+  },
+  {
+    name: 'detectPaidNotActivated: NEGATIVE — "la lavadora no funciona" → false',
+    run: () => {
+      if (detectPaidNotActivatedIntent('la lavadora no funciona')) {
+        throw new Error('generic machine fault must NOT match Caso 4')
+      }
+    },
+  },
+  {
+    name: 'detectPaidNotActivated: NEGATIVE — bare location "Goya" → false',
+    run: () => {
+      if (detectPaidNotActivatedIntent('Goya')) {
+        throw new Error('bare location must NOT match')
+      }
+    },
+  },
+  {
+    name: 'detectPaidNotActivated: NEGATIVE — empty string → false',
+    run: () => {
+      if (detectPaidNotActivatedIntent('')) {
         throw new Error('empty must NOT match')
       }
     },

@@ -27,6 +27,7 @@
   "operatorHandoffFinal": "Un operador humà s'encarregarà del teu cas. Si us plau, espera un moment mentre revisen la situació. El chatbot serà desactivat.",
   "refundFormFinal": "Gràcies, {name}! 🙏 Hem rebut tota la informació necessària per al teu cas. Revisarem la teva situació i t'enviarem el formulari de devolució. Si necessites alguna cosa més, sóc aquí per ajudar-te. 💚",
   "displayShort": "Què apareix exactament a la pantalla?",
+  "displayReaskAfterFailure": "Si us plau, escriu només el codi exacte que apareix ara a la pantalla, encara que sigui el mateix d'abans.",
   "displayUnrecognizedReask": "No reconec aquest codi exactament. Podries comprovar-ho de nou?",
   "paymentAsk": "Has pogut fer el pagament?",
   "numericCodeAskLetters": "Gràcies. Veus alguna lletra davant dels números?",

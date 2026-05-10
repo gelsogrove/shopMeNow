@@ -103,7 +103,7 @@ export const guardPostInstructionFailure: Guard = (ar, userMessage) => {
   // ("no", "no funciona") AND a new display token different from the one we
   // had at the start of the turn, the customer is reporting a display CHANGE,
   // not just a persistent failure. Symmetric with Phase C (riga 73-92).
-  // Without this, "No, ahora aparece PUSH PROG" gets re-asked as displayShort
+  // Without this, "No, ahora aparece PUSH PROG" gets re-asked as displayReaskAfterFailure
   // even though autoExtractFacts already updated displayState SEL → PUSH.
   // Pinned by __tests__/unit/display-pivot-phase-b.test.ts.
   const turnStart = ar.state.displayStateAtTurnStart || ''
@@ -153,7 +153,7 @@ export const guardPostInstructionFailure: Guard = (ar, userMessage) => {
   // even after autoExtractFacts has updated state.displayState next turn.
   ar.state.displayReaskPrevCode = ar.state.displayState || ''
   ar.state.pendingFlow = 'display-reask-pending'
-  return { reply: t('displayShort', lang(ar)), reason: 'post-instruction-failure-reask' }
+  return { reply: t('displayReaskAfterFailure', lang(ar)), reason: 'post-instruction-failure-reask' }
 }
 
 /** G7 — Caso 18 step 1: customer typed a pure-numeric code → ask if there

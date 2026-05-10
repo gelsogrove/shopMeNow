@@ -15,6 +15,7 @@ import {
   normalizeMachineType,
   detectDoubleChargeIntent,
   detectDiscountCodeIntent,
+  detectPaidNotActivatedIntent,
   detectTopicSwitchDuringEscalation,
 } from './intent.js'
 import { resolveKnownLocation, resolveKnownLocationFuzzy, parseExplicitPaymentSignal } from './message-parsing.js'
@@ -390,12 +391,9 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   // Caso 4 marker: customer said "He pagado y no se ha activado" (or similar).
   // Different from Caso 7: here the issue is about activation (not "he pagado pero
   // no he podido usar"). Flow asks tipo → numero → cambio (NOT display, NOT pago).
-  // Caso 4 trigger (inline regex — left as-is until a real bug requires
-  // typo tolerance. Speculative refactor reverted on 2026-05-09 audit.)
-  if (
-    !state.pendingFlow &&
-    /he\s+pagado.+no\s+se\s+(ha\s+)?activad/i.test(userMessage)
-  ) {
+  // Detection delegated to `detectPaidNotActivatedIntent` (utils/intent.ts) —
+  // typo-tolerant via Levenshtein on the verb token (F16, Andrea 2026-05-10).
+  if (!state.pendingFlow && detectPaidNotActivatedIntent(userMessage)) {
     state.pendingFlow = 'no-change-ask'
     resetPostEscalationFlags(ar)
   }

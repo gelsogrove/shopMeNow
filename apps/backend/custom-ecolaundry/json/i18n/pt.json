@@ -25,6 +25,7 @@
   "noPhotoEscalate": "De acordo. Vamos rever manualmente para te ajudar.",
   "reaffirmEscalate": "Vamos rever o teu caso manualmente. Como te chamas?",
   "displayShort": "O que aparece exatamente no ecrã?",
+  "displayReaskAfterFailure": "Por favor, escreve só o código exato que aparece no ecrã agora, mesmo que seja o mesmo de antes.",
   "displayUnrecognizedReask": "Não reconheço esse código exatamente. Podias verificar novamente?",
   "paymentAsk": "Conseguiste efetuar o pagamento?",
   "numericCodeAskLetters": "Obrigado. Vês alguma letra à frente dos números?",

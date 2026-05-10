@@ -253,6 +253,49 @@ export function detectDoubleChargeIntent(message: string): boolean {
   )
 }
 
+// ── Paid-not-activated intent detection (Caso 4) ─────────────────────────────
+//
+// Topic classifier (rule #6 tracked exemption — fast-path before the LLM).
+// Returns true when the customer reports they paid but the machine didn't
+// activate — Caso 4 (`pendingFlow='no-change-ask'`).
+//
+// REGRESSION (Andrea, 2026-05-10): real chat showed the bot ignored the
+// intent because the customer typed "He pagado y no se ha acrivado" (typo:
+// "acrivado" instead of "activado", a c↔t character swap). The original
+// inline regex in `agent-extract.ts` required exact "activad" substring and
+// silently failed, so the bot drifted into the generic machine-troubleshooting
+// flow asking for type → number → display instead of asking about the change.
+//
+// Fix shape: payment signal AND not-activated signal, where the latter
+// tolerates Levenshtein distance 1 on the verb token ("activado" / "activada").
+// ES-only for now (production language); other 5 langs to be added when they
+// ship traffic.
+export function detectPaidNotActivatedIntent(message: string): boolean {
+  const lower = message.toLowerCase().trim()
+  if (!lower) return false
+
+  // \b is ASCII-only in JS; non-ASCII trailing chars (é, ó) need a manual
+  // lookahead instead of \b for the right boundary.
+  const wordEnd = '(?=\\s|[!?.,;]|$)'
+  const paymentSignal =
+    /\bhe\s+pagado\b/i.test(lower) ||
+    new RegExp(`\\bpagu[eé]${wordEnd}`, 'i').test(lower) ||
+    /\bpagad[oa]\b/i.test(lower)
+  if (!paymentSignal) return false
+
+  if (/\bno\s+se\s+(?:ha\s+)?activad[oa]\b/i.test(lower)) return true
+  if (new RegExp(`\\bno\\s+se\\s+activ[aoó]${wordEnd}`, 'i').test(lower)) return true
+
+  const m = lower.match(/\bno\s+se\s+(?:ha\s+)?([a-záéíóúñ]{6,})\b/i)
+  if (m) {
+    const token = m[1]
+    if (levenshtein(token, 'activado') <= 1) return true
+    if (levenshtein(token, 'activada') <= 1) return true
+  }
+
+  return false
+}
+
 // ── Discount-code intent detection (Caso 8) ──────────────────────────────────
 //
 // Topic classifier (rule #6 tracked exemption — fast-path before the LLM).
