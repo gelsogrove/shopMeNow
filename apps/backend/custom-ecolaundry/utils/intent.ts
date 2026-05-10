@@ -276,6 +276,16 @@ export function detectPaidNotActivatedIntent(message: string): boolean {
   const lower = message.toLowerCase().trim()
   if (!lower) return false
 
+  // F29 (Andrea 2026-05-10 — real chat regression on "he pagado pero no se
+  // arranca"): the F24 audit conclusion ("Pagué pero no arranca is ambiguous,
+  // let display flow handle it") was wrong. usecases.md riga 368 lists this
+  // verbatim as Caso 4 trigger. The right discriminator is whether a display
+  // code is mentioned: if YES → display flow (Caso 1/3/5/...); if NO → Caso 4.
+  // Without a display token, "Pagué pero no arranca" can only be Caso 4 —
+  // the bot needs to ask "¿la central te ha devuelto el cambio?" instead of
+  // chasing the display.
+  if (extractDisplayState(message)) return false
+
   // \b is ASCII-only in JS; non-ASCII trailing chars (é, ó) need a manual
   // lookahead instead of \b for the right boundary.
   const wordEnd = '(?=\\s|[!?.,;]|$)'
@@ -287,33 +297,31 @@ export function detectPaidNotActivatedIntent(message: string): boolean {
     new RegExp(`\\bpagu[eé]${wordEnd}`, 'i').test(lower) ||
     /\bpagad[oa]\b/i.test(lower)
 
-  // Negation signal — STRICT: must mention "activad..." (or its typo).
-  // Generic verbs ("no arranca", "no funciona") are AMBIGUOUS — they may be
-  // Caso 1 (PUSH PROG visible) or Caso 4 (no activation). Better to let the
-  // display flow resolve them via gather → display capture.
-  // (F24 audit, Andrea 2026-05-10: reverted broad regex that caused Caso 1
-  // false positives.)
-  const negationCanonical =
-    /\bno\s+se\s+(?:ha\s+)?activad[oa]\b/i.test(lower) ||
-    new RegExp(`\\bno\\s+se\\s+activ[aoó]${wordEnd}`, 'i').test(lower)
+  if (!paymentSignal) {
+    // Temporal anchor "después de pagar" + failure — pagar (infinitive) needs
+    // its own check because the strict paymentSignal above requires past forms.
+    const afterPaymentFailure =
+      /\b(?:despu[eé]s|tras)\s+(?:de\s+)?pagar\b/i.test(lower) &&
+      /\bno\s+(?:me\s+|se\s+)?(?:funciona|arranca|empieza|responde|parte|va)\b/i.test(lower)
+    return afterPaymentFailure
+  }
 
-  // Typo-tolerant: token after "no se (ha)" within Levenshtein 1 of activado.
-  let negationTypo = false
+  // Canonical "activado/activada" + typo tolerance via Levenshtein.
+  if (/\bno\s+se\s+(?:ha\s+)?activad[oa]\b/i.test(lower)) return true
+  if (new RegExp(`\\bno\\s+se\\s+activ[aoó]${wordEnd}`, 'i').test(lower)) return true
+
   const m = lower.match(/\bno\s+se\s+(?:ha\s+)?([a-záéíóúñ]{6,})\b/i)
   if (m) {
     const token = m[1]
-    negationTypo = levenshtein(token, 'activado') <= 1 || levenshtein(token, 'activada') <= 1
+    if (levenshtein(token, 'activado') <= 1) return true
+    if (levenshtein(token, 'activada') <= 1) return true
   }
 
-  // Temporal anchor: "después de pagar" / "tras pagar" + generic failure.
-  // Narrower than just temporal — needs an explicit failure verb in the
-  // same message ("no me funciona después de pagar").
-  const afterPaymentFailure =
-    /\b(?:despu[eé]s|tras)\s+(?:de\s+)?pagar\b/i.test(lower) &&
-    /\bno\s+(?:me\s+)?(?:funciona|arranca|empieza|responde|parte|va)\b/i.test(lower)
-
-  if (paymentSignal && (negationCanonical || negationTypo)) return true
-  if (afterPaymentFailure) return true
+  // Generic failure verbs — only safe to match here because we already
+  // returned false above when a display code was present in the message.
+  // Covers "no arranca", "no se arranca", "no funciona", "no me funciona",
+  // "no empieza", "no responde", "no parte", "no va".
+  if (/\bno\s+(?:me\s+|se\s+)?(?:arranca|funciona|empieza|responde|parte|va)\b/i.test(lower)) return true
 
   return false
 }

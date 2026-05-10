@@ -779,14 +779,21 @@ const cases: Case[] = [
       }
     },
   },
-  // F24 — usecases.md riga 366-369 trigger alignment (Andrea audit 2026-05-10).
-  //
-  // STRICT detector: only fires on explicit "activad..." (canonical or typo)
-  // OR temporal "después de pagar" + failure verb. Generic "no arranca/funciona"
-  // is intentionally NOT matched because it's ambiguous between Caso 1
-  // (PUSH PROG visible) and Caso 4. The display flow resolves the ambiguity.
+  // F29 (Andrea 2026-05-10 — real chat regression): all 3 usecases.md riga
+  // 367-369 triggers MUST match. The earlier F24 conclusion "Pagué pero no
+  // arranca is ambiguous" was wrong: usecases lists it verbatim as Caso 4
+  // trigger. Ambiguity is resolved by checking for a display code in the
+  // message (when present, display flow takes precedence).
   {
-    name: 'detectPaidNotActivated: usecases trigger 3 "No me funciona después de pagar" → true (F24)',
+    name: 'detectPaidNotActivated: usecases trigger 2 "Pagué pero no arranca" → true (F29)',
+    run: () => {
+      if (!detectPaidNotActivatedIntent('Pagué pero no arranca')) {
+        throw new Error('usecases.md trigger 2 "Pagué pero no arranca" must match Caso 4')
+      }
+    },
+  },
+  {
+    name: 'detectPaidNotActivated: usecases trigger 3 "No me funciona después de pagar" → true',
     run: () => {
       if (!detectPaidNotActivatedIntent('No me funciona después de pagar')) {
         throw new Error('usecases.md trigger 3 "No me funciona después de pagar" must match')
@@ -794,13 +801,30 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'detectPaidNotActivated: ambiguous "Pagué pero no arranca" → false (F24)',
+    name: 'detectPaidNotActivated: real-chat variant "he pagado pero no se arranca" → true (F29)',
     run: () => {
-      // Per F24 audit: this trigger is ambiguous (Caso 1 or Caso 4). The
-      // display flow resolves it by gathering display state. detectPaidNotActivated
-      // intentionally requires "activad..." OR "después de pagar" anchor.
-      if (detectPaidNotActivatedIntent('Pagué pero no arranca')) {
-        throw new Error('"Pagué pero no arranca" is ambiguous — display flow handles it')
+      // Andrea\'s real chat 2026-05-10T21:52: bot was chasing display instead
+      // of asking for cambio. Reflexive "se arranca" must be covered.
+      if (!detectPaidNotActivatedIntent('he pagado pero no se arranca')) {
+        throw new Error('real-chat reflexive "no se arranca" must match Caso 4')
+      }
+    },
+  },
+  {
+    name: 'detectPaidNotActivated: display code present "He pagado y aparece SEL pero no arranca" → false (F29)',
+    run: () => {
+      // When a display token is in the message, it\'s NOT Caso 4 — it\'s the
+      // display flow (Caso 3 SEL). Display-code preflight check must reject.
+      if (detectPaidNotActivatedIntent('He pagado y aparece SEL pero no arranca')) {
+        throw new Error('display token must route to display flow, not Caso 4')
+      }
+    },
+  },
+  {
+    name: 'detectPaidNotActivated: display code present "He pagado y aparece PUSH PROG" → false (F29)',
+    run: () => {
+      if (detectPaidNotActivatedIntent('He pagado y aparece PUSH PROG')) {
+        throw new Error('PUSH PROG token must route to display flow')
       }
     },
   },
