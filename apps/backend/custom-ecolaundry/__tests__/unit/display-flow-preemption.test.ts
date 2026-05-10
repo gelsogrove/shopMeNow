@@ -24,7 +24,7 @@
 
 import { extractDisplayState } from '../../utils/intent.js'
 import { autoExtractFacts } from '../../utils/agent-extract.js'
-import { guardDisplayFlowStart } from '../../utils/guards/display-flow.js'
+import { guardDisplayFlowStart, guardDisplayFlowFollowUp } from '../../utils/guards/display-flow.js'
 import { createInitialState } from '../../utils/state.js'
 import type { AgentRuntime } from '../../models/index.js'
 import { loadTestRuntime, getCachedTestRuntime } from './_helpers.js'
@@ -176,6 +176,67 @@ const cases: Case[] = [
       ar.state.customerName = 'Andrea'
       const outcome = guardDisplayFlowStart(ar, 'AL001')
       assertEq(outcome, null, 'customerName gates the guard off')
+    },
+  },
+
+  // ── F30 — Phase C pivot when customer reports a NEW display ───────────────
+  // REGRESSION (Andrea 2026-05-10 21:58 chat): user reported AL001, bot gave
+  // sequence guidance, user replied "no funcionó" → bot Phase B re-asked the
+  // exact code → user typed "DOOR" (a DIFFERENT display token). Bot escalated
+  // instead of pivoting to case_door. Root cause: display-flow.ts Phase C
+  // unconditionally escalated regardless of new vs same code.
+  {
+    name: 'guardDisplayFlowFollowUp Phase C: AL001 active, re-ask reply "DOOR" → pivot (returns null) (F30)',
+    run: () => {
+      const ar = makeAr()
+      ar.state.location = 'Mataró'
+      ar.state.locationStreet = 'Calle Francisco de Goya 117'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '5'
+      ar.state.displayState = 'AL001'
+      ar.state.activeFlowId = 'al001-sequence-error'
+      ar.state.pendingFlow = 'display-reask-pending'
+      const outcome = guardDisplayFlowFollowUp(ar, 'DOOR')
+      // Pivot: returns null so the next pipeline pass routes the new display.
+      assertEq(outcome, null, 'pivot returns null on new display token')
+      assertEq(ar.state.pendingFlow, '', 'pendingFlow cleared')
+      assertEq(ar.state.activeFlowId, null, 'activeFlowId cleared')
+      assertEq(ar.state.displayState, 'DOOR', 'displayState updated to new code')
+      assertEq(ar.state.operatorRequested, false, 'NOT escalated')
+      assertEq(ar.state.customerNameRequested, false, 'NO name asked')
+    },
+  },
+  {
+    name: 'guardDisplayFlowFollowUp Phase C: AL001 active, re-ask reply confirms "AL001" → escalate (F30)',
+    run: () => {
+      const ar = makeAr()
+      ar.state.location = 'Mataró'
+      ar.state.locationStreet = 'Calle Francisco de Goya 117'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '5'
+      ar.state.displayState = 'AL001'
+      ar.state.activeFlowId = 'al001-sequence-error'
+      ar.state.pendingFlow = 'display-reask-pending'
+      const outcome = guardDisplayFlowFollowUp(ar, 'AL001')
+      // Same code → escalate as intended (instruction failed)
+      if (!outcome) throw new Error('confirmed-same-code must escalate, not pivot')
+      assertEq(outcome.reason, 'al001-sequence-error-reask-escalate', 'escalation reason')
+      assertEq(ar.state.operatorRequested, true, 'escalated correctly')
+    },
+  },
+  {
+    name: 'guardDisplayFlowFollowUp Phase C: AL001 active, re-ask reply "no responde" (no display) → escalate (F30)',
+    run: () => {
+      const ar = makeAr()
+      ar.state.location = 'Mataró'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '5'
+      ar.state.displayState = 'AL001'
+      ar.state.activeFlowId = 'al001-sequence-error'
+      ar.state.pendingFlow = 'display-reask-pending'
+      const outcome = guardDisplayFlowFollowUp(ar, 'no responde')
+      if (!outcome) throw new Error('no display token in reply must escalate')
+      assertEq(ar.state.operatorRequested, true, 'escalated when no new display')
     },
   },
 ]

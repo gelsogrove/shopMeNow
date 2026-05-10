@@ -28,6 +28,14 @@ export type Branch =
   | 'escalation'
   | 'unknown'
 
+export type TroubleSubCase =
+  | 'paid-not-activated'    // Caso 4 — pagò pero la maquina no se activó (cambio question)
+  | 'paid-not-used'          // Caso 7 — pagò pero no he podido usar
+  | 'display-unreadable'     // Caso 17 — no veo / pantalla rota / apagada
+  | 'numeric-code'           // Caso 18 — código sólo numérico
+  | 'display-driven'         // Casi 1/2/3/5/13/14/15/16/30 — pantalla con código
+  | 'none'                   // ambiguous / no clear sub-case
+
 export interface RouterDecision {
   branch: Branch
   language: SupportedLanguage
@@ -41,6 +49,13 @@ export interface RouterDecision {
     displayHint?: string
     /** For branch="trouble-machine": location name the customer mentioned. */
     locationHint?: string
+    /** For branch="trouble-machine": sub-case identification (F31). The router
+     *  classifies the message into one of the documented Casi at the same
+     *  time as the branch decision, so the trouble-machine handler can set
+     *  `state.pendingFlow` semantically (caso4 → 'no-change-ask',
+     *  caso17 → 'photo-await-decision', etc.) without falling back to
+     *  fragile regex L3 detectors. */
+    subCase?: TroubleSubCase
     /** For branch="escalation": the kind of non-troubleshooting incident
      *  (e.g. "datafono-wrong-amount", "cameras-or-ajax"). */
     incidentType?: string
@@ -118,8 +133,20 @@ function validateDecision(d: RouterDecision): RouterDecision {
     'unknown',
   ]
   const allowedLangs: SupportedLanguage[] = ['es', 'it', 'en', 'ca', 'pt', 'fr']
+  const allowedSubCases: TroubleSubCase[] = [
+    'paid-not-activated',
+    'paid-not-used',
+    'display-unreadable',
+    'numeric-code',
+    'display-driven',
+    'none',
+  ]
   const branch: Branch = allowedBranches.includes(d.branch) ? d.branch : 'unknown'
   const language: SupportedLanguage = allowedLangs.includes(d.language) ? d.language : 'es'
-  const details = d.details && typeof d.details === 'object' ? d.details : {}
+  const details = d.details && typeof d.details === 'object' ? { ...d.details } : {}
+  // Defensive normalisation for subCase — fallback to 'none' if drift.
+  if (details.subCase && !allowedSubCases.includes(details.subCase)) {
+    details.subCase = 'none'
+  }
   return { branch, language, details }
 }

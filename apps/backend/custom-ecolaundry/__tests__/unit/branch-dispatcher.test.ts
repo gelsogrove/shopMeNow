@@ -266,6 +266,112 @@ const cases: Case[] = [
     },
   },
 
+  // ── F31 — subCase routing: router LLM classifies sub-case → handler sets
+  // state.pendingFlow semantically, bypassing fragile regex L3 detectors.
+  // Replaces the F16/F24/F29 audit chain with a deterministic LLM-driven
+  // signal. Each test verifies one subCase value → expected pendingFlow.
+  {
+    name: 'troubleMachineHandler F31: subCase=paid-not-activated → pendingFlow=no-change-ask',
+    run: async () => {
+      const ar = makeAr()
+      await troubleMachineHandler({
+        message: 'he pagado pero no se arranca',
+        ar,
+        routerDetails: { subCase: 'paid-not-activated' },
+        language: 'es',
+      })
+      if (ar.state.pendingFlow !== 'no-change-ask') {
+        throw new Error(`expected pendingFlow=no-change-ask, got "${ar.state.pendingFlow}"`)
+      }
+    },
+  },
+  {
+    name: 'troubleMachineHandler F31: subCase=display-unreadable → pendingFlow=photo-await-decision + flag',
+    run: async () => {
+      const ar = makeAr()
+      await troubleMachineHandler({
+        message: 'no veo bien la pantalla',
+        ar,
+        routerDetails: { subCase: 'display-unreadable' },
+        language: 'es',
+      })
+      if (ar.state.pendingFlow !== 'photo-await-decision') {
+        throw new Error(`expected pendingFlow=photo-await-decision, got "${ar.state.pendingFlow}"`)
+      }
+      if (!ar.state.displayUnreadable) {
+        throw new Error('expected displayUnreadable=true')
+      }
+    },
+  },
+  {
+    name: 'troubleMachineHandler F31: subCase=numeric-code → no pendingFlow seed (legacy detectNumericCodeIntent path)',
+    run: async () => {
+      const ar = makeAr()
+      await troubleMachineHandler({
+        message: 'Tengo un código: 12345',
+        ar,
+        routerDetails: { subCase: 'numeric-code' },
+        language: 'es',
+      })
+      // Numeric code path: handler does NOT set pendingFlow; the inline
+      // detectNumericCodeIntent in autoExtractFacts handles the actual
+      // value extraction. This test pins the architectural choice.
+      if (ar.state.pendingFlow !== '') {
+        throw new Error(`numeric-code should not seed pendingFlow, got "${ar.state.pendingFlow}"`)
+      }
+    },
+  },
+  {
+    name: 'troubleMachineHandler F31: subCase=display-driven → no pendingFlow seed (display flow handles)',
+    run: async () => {
+      const ar = makeAr()
+      await troubleMachineHandler({
+        message: 'me sale AL001',
+        ar,
+        routerDetails: { subCase: 'display-driven', displayHint: 'AL001' },
+        language: 'es',
+      })
+      if (ar.state.pendingFlow !== '') {
+        throw new Error(`display-driven should not seed pendingFlow, got "${ar.state.pendingFlow}"`)
+      }
+      // displayHint should be seeded though.
+      if (ar.state.displayState !== 'AL001') {
+        throw new Error(`expected displayState=AL001, got "${ar.state.displayState}"`)
+      }
+    },
+  },
+  {
+    name: 'troubleMachineHandler F31: subCase=none → no pendingFlow seed (fallback to gather)',
+    run: async () => {
+      const ar = makeAr()
+      await troubleMachineHandler({
+        message: 'la lavadora no funciona',
+        ar,
+        routerDetails: { subCase: 'none' },
+        language: 'es',
+      })
+      if (ar.state.pendingFlow !== '') {
+        throw new Error(`subCase=none should not seed pendingFlow, got "${ar.state.pendingFlow}"`)
+      }
+    },
+  },
+  {
+    name: 'troubleMachineHandler F31: existing pendingFlow is NEVER overwritten by subCase',
+    run: async () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'discount-code-await'  // a previous turn set this
+      await troubleMachineHandler({
+        message: 'whatever',
+        ar,
+        routerDetails: { subCase: 'paid-not-activated' },
+        language: 'es',
+      })
+      if (ar.state.pendingFlow !== 'discount-code-await') {
+        throw new Error(`existing pendingFlow must be preserved, got "${ar.state.pendingFlow}"`)
+      }
+    },
+  },
+
   {
     name: 'invoiceHandler: returns delegate-to-legacy without pre-setting pendingFlow',
     // pendingFlow is intentionally NOT set: pre-setting it caused the legacy

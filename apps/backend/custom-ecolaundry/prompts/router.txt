@@ -25,11 +25,45 @@ Your ONLY job: classify the customer's first message into one of these branches:
 
 Detect the customer's LANGUAGE among: es, it, en, ca, pt, fr.
 
+When `branch="trouble-machine"`, ALSO classify the SUB-CASE:
+
+  - "paid-not-activated"   Customer paid but the machine did not activate / did not start.
+                           Caso 4 — the bot must ask "¿la central te ha devuelto el cambio?".
+                           Triggers (any phrasing, any tipo, any verb): "He pagado pero no
+                           arranca / no funciona / no se enciende / no anda / se queda parada
+                           / no se activa / no se ha activado / nada (after pagar) / no me
+                           funciona después de pagar". WITHOUT a display code in the message.
+
+  - "paid-not-used"        Customer paid but couldn't use the machine (e.g. door, wrong
+                           machine selection, finished other person's cycle was running).
+                           Caso 7 — gather location → tipo → numero → pantalla.
+                           Triggers: "He pagado pero no he podido usar la máquina /
+                           no he podido lavar / no conseguí usar la lavadora aunque pagué".
+
+  - "display-unreadable"   Customer cannot read the display.
+                           Caso 17 — escalate immediately (no photo support).
+                           Triggers: "no sé qué pone / no veo la pantalla / pantalla
+                           apagada / pantalla rota / pantalla en blanco / no puedo leer
+                           el display / está borrosa".
+
+  - "numeric-code"         Customer mentions a code that is purely numeric.
+                           Caso 18 — the bot must ask if there are letters in front.
+                           Triggers: "Tengo un código: 12345 / Mi código es 999888 /
+                           Codigo: 23432023" (the code in the message is ALL DIGITS).
+
+  - "display-driven"       Customer mentions a recognised display token (PUSH/PUSH PROG /
+                           SEL / DOOR / AL001 / ALM / ALN / 001 / ERR XX). Casi 1, 2, 3,
+                           5, 13, 14, 15, 16, 30 — the display flow handles the rest.
+                           Triggers: any message containing one of those tokens.
+
+  - "none"                 Generic trouble-machine intent without a clear sub-case.
+                           E.g. "la máquina no funciona" without payment/display context.
+
 Respond with a SINGLE JSON object on one line, no prose, no markdown:
 
-  {"branch":"<branch>","language":"<lang>","details":{"faqKey":"<key>","displayHint":"<token>","locationHint":"<name>","incidentType":"<type>"}}
+  {"branch":"<branch>","language":"<lang>","details":{"faqKey":"<key>","displayHint":"<token>","locationHint":"<name>","incidentType":"<type>","subCase":"<subcase>"}}
 
-Only include detail fields that you can extract verbatim from the customer's words. Empty object if none.
+Only include detail fields that you can extract verbatim from the customer's words. Empty object if none. The `subCase` field is REQUIRED when branch="trouble-machine"; for other branches omit it.
 
 Examples:
   Customer: "ciao"
@@ -39,7 +73,34 @@ Examples:
   → {"branch":"faq","language":"it","details":{"faqKey":"openingHours"}}
 
   Customer: "no funciona la lavadora 5 en Goya, sale PUSH PROG"
-  → {"branch":"trouble-machine","language":"es","details":{"displayHint":"PUSH PROG","locationHint":"Goya"}}
+  → {"branch":"trouble-machine","language":"es","details":{"displayHint":"PUSH PROG","locationHint":"Goya","subCase":"display-driven"}}
+
+  Customer: "He pagado y no se ha activado la máquina"
+  → {"branch":"trouble-machine","language":"es","details":{"subCase":"paid-not-activated"}}
+
+  Customer: "Pagué pero no arranca"
+  → {"branch":"trouble-machine","language":"es","details":{"subCase":"paid-not-activated"}}
+
+  Customer: "he pagado pero no se arranca"
+  → {"branch":"trouble-machine","language":"es","details":{"subCase":"paid-not-activated"}}
+
+  Customer: "He pagado y la máquina no se enciende"
+  → {"branch":"trouble-machine","language":"es","details":{"subCase":"paid-not-activated"}}
+
+  Customer: "He pagado pero no he podido usar la máquina"
+  → {"branch":"trouble-machine","language":"es","details":{"subCase":"paid-not-used"}}
+
+  Customer: "No veo bien la pantalla"
+  → {"branch":"trouble-machine","language":"es","details":{"subCase":"display-unreadable"}}
+
+  Customer: "Tengo un código: 12345"
+  → {"branch":"trouble-machine","language":"es","details":{"subCase":"numeric-code"}}
+
+  Customer: "Me sale AL001"
+  → {"branch":"trouble-machine","language":"es","details":{"displayHint":"AL001","subCase":"display-driven"}}
+
+  Customer: "la máquina no funciona"
+  → {"branch":"trouble-machine","language":"es","details":{"subCase":"none"}}
 
   Customer: "Quiero una factura"
   → {"branch":"invoice","language":"es","details":{}}
@@ -51,13 +112,7 @@ Examples:
   → {"branch":"escalation","language":"es","details":{"incidentType":"datafono-wrong-amount"}}
 
   Customer: "¡Esto siempre falla! ¡Quiero una solución ya!"
-  → {"branch":"trouble-machine","language":"es","details":{}}
-
-  Customer: "¡Estoy muy enfadado! ¡Es una vergüenza!"
-  → {"branch":"trouble-machine","language":"es","details":{}}
+  → {"branch":"trouble-machine","language":"es","details":{"subCase":"none"}}
 
   Customer: "¿Cuánto cuesta esta máquina?"
   → {"branch":"faq","language":"es","details":{"faqKey":"pricing"}}
-
-  Customer: "He pagado y no se ha activado la máquina"
-  → {"branch":"trouble-machine","language":"es","details":{}}

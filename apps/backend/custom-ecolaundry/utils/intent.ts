@@ -223,6 +223,15 @@ export function detectDoubleChargeIntent(message: string): boolean {
     /\bcobr[oó]\s+dos\s+veces\b/i.test(trimmed) ||
     // 3rd-person plural preterito: "me cobraron dos veces" (G5, F19).
     /\bcobraron\s+(?:dos\s+veces|2\s+veces)\b/i.test(trimmed) ||
+    // 2nd-person preterito: "me cobraste dos veces" (F31 audit).
+    /\bcobraste\s+(?:dos\s+veces|2\s+veces)\b/i.test(trimmed) ||
+    // "tarjeta cobrada/cargada N veces" (F31 audit).
+    /\btarjeta\s+(?:cobrad[ao]|cargad[ao])\s+(?:dos\s+veces|2\s+veces)\b/i.test(trimmed) ||
+    // "descontado dos veces" (alt verb "descontar" — F31 audit).
+    /\bdescontad[ao]\s+(?:dos\s+veces|2\s+veces)\b/i.test(trimmed) ||
+    // "el cobro me ha llegado N veces" (F31 audit).
+    /\bcobro\s+(?:me\s+)?(?:ha\s+)?llegad[ao]\s+(?:dos\s+veces|2\s+veces)\b/i.test(trimmed) ||
+    /\bllegad[ao]\s+(?:el\s+)?cobro\s+(?:dos\s+veces|2\s+veces)\b/i.test(trimmed) ||
     /\b2\s+(?:cargos|cobros)\b/i.test(trimmed) ||
     // Spanish colloquial — "me hizo/hicieron pagar dos veces", "pagué dos veces" (F15)
     /\bme\s+(?:hizo|hicieron|han\s+hecho|ha\s+hecho)\s+pagar\s+(?:dos\s+veces|2\s+veces)\b/i.test(trimmed) ||

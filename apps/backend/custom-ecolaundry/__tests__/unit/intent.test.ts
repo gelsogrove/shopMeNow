@@ -53,6 +53,58 @@ const cases: Case[] = [
       if (r !== 'AL001') throw new Error(`expected "AL001", got ${r}`)
     },
   },
+  // ── Caso 5 EXTENDED — AL001 real-chat phrasings ──────────────────────────
+  {
+    name: 'extractDisplayState EXT: "AL 001" with space → AL001',
+    run: () => {
+      const r = extractDisplayState('AL 001')
+      if (r !== 'AL001') throw new Error(`"AL 001" must collapse to AL001, got ${r}`)
+    },
+  },
+  {
+    name: 'extractDisplayState EXT: "ALM 001" → AL001',
+    run: () => {
+      const r = extractDisplayState('me sale ALM 001')
+      if (r !== 'AL001') throw new Error(`"ALM 001" must map to AL001, got ${r}`)
+    },
+  },
+  {
+    name: 'extractDisplayState EXT: "alarm 001" lowercase → AL001',
+    run: () => {
+      const r = extractDisplayState('me sale alarm 001')
+      if (r !== 'AL001') throw new Error(`"alarm 001" lowercase must map, got ${r}`)
+    },
+  },
+  {
+    name: 'extractDisplayState EXT: "Tengo alarma 001" → AL001',
+    run: () => {
+      const r = extractDisplayState('Tengo alarma 001')
+      if (r !== 'AL001') throw new Error(`"tengo alarma 001" must map, got ${r}`)
+    },
+  },
+  {
+    name: 'extractDisplayState EXT: "Me sale un alarme AL001" (real chat 2026-05-10) → AL001',
+    run: () => {
+      // Andrea\'s real chat: "Me sale un alarme AL001". Includes typo "alarme"
+      // (alarm + e) but the canonical "AL001" should still extract.
+      const r = extractDisplayState('Me sale un alarme AL001')
+      if (r !== 'AL001') throw new Error(`real-chat phrase must extract AL001, got ${r}`)
+    },
+  },
+  {
+    name: 'extractDisplayState EXT: "el display muestra AL001" → AL001',
+    run: () => {
+      const r = extractDisplayState('el display muestra AL001')
+      if (r !== 'AL001') throw new Error(`"display muestra AL001" must extract, got ${r}`)
+    },
+  },
+  {
+    name: 'extractDisplayState EXT: "me ha salido el código AL001" → AL001',
+    run: () => {
+      const r = extractDisplayState('me ha salido el código AL001')
+      if (r !== 'AL001') throw new Error(`"código AL001" must extract, got ${r}`)
+    },
+  },
   {
     name: 'extractDisplayState: bare "001" → C001 (caso 15: pre-payment selection)',
     run: () => {
@@ -725,6 +777,73 @@ const cases: Case[] = [
     },
   },
 
+  // ── Caso 6 EXTENDED REAL-CHAT VARIANTS (Andrea 2026-05-10) ───────────────
+  // Real customer phrasings that may bypass the current regex.
+  {
+    name: 'detectDoubleCharge EXT: "me cobraste dos veces" (2nd-person preterito) → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('me cobraste dos veces')) {
+        throw new Error('2nd-person "cobraste" must match')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge EXT: "el sistema me cobró dos veces" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('el sistema me cobró dos veces')) {
+        throw new Error('"sistema me cobró" must match')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge EXT: "tarjeta cargada 2 veces" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('tarjeta cargada 2 veces')) {
+        throw new Error('"tarjeta cargada 2 veces" alt phrasing must match')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge EXT: "He visto un doble cargo en la tarjeta" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('He visto un doble cargo en la tarjeta')) {
+        throw new Error('"he visto un doble cargo" must match')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge EXT: "me han descontado dos veces" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('me han descontado dos veces')) {
+        throw new Error('"descontado" alt verb (debit) must match')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge EXT: "Me hicieron pagar dos veces" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('Me hicieron pagar dos veces')) {
+        throw new Error('"me hicieron pagar" must match')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge EXT: "se cobró dos veces el lavado" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('se cobró dos veces el lavado')) {
+        throw new Error('"se cobró dos veces" reflexive must match')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge EXT: "me ha llegado el cobro 2 veces" → true',
+    run: () => {
+      if (!detectDoubleChargeIntent('me ha llegado el cobro 2 veces')) {
+        throw new Error('"me ha llegado cobro" alt phrasing must match')
+      }
+    },
+  },
+
   // ── detectPaidNotActivatedIntent — Caso 4 trigger (F16) ──────────────────
   // REGRESSION (Andrea, 2026-05-10): real chat showed bot ignored the intent
   // because customer typed "acrivado" (typo of "activado", c↔t swap). The
@@ -828,6 +947,14 @@ const cases: Case[] = [
       }
     },
   },
+
+  // ── F31 NOTE — Caso 4 EXTENDED variants moved to router LLM tests ────────
+  // Real-chat variants like "no se enciende", "no anda", "se queda parada",
+  // "pagué hace 5 minutos y nada" are now classified by the router LLM
+  // (subCase='paid-not-activated' in trouble-machine branch). The deterministic
+  // regex `detectPaidNotActivatedIntent` remains as a fast-path for the
+  // canonical phrasings (covered by the existing tests above F16/F29).
+  // End-to-end behaviour of the LLM router is verified by agent tests.
   {
     name: 'detectPaidNotActivated: NEGATIVE — Caso 7 "He pagado pero no he podido usar" → false',
     run: () => {

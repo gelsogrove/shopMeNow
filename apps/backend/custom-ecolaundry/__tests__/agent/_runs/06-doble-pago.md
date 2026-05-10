@@ -1,6 +1,6 @@
 # Agent test dialogues — `06-doble-pago.test.spec.ts`
 
-Generated: 2026-05-10T15:02:22.128Z
+Generated: 2026-05-10T20:39:37.058Z
 Total: 7 | Pass: 7 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 6.1: happy path completo → Sí → tipo → número → 4 dígitos → handover
@@ -28,7 +28,7 @@ Total: 7 | Pass: 7 | Fail: 0
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué **número** tiene la lavadora?
+¿Podrías decirme, por favor, qué número tiene la lavadora?
 ```
 
 👤 **user:** lavadora
@@ -36,7 +36,7 @@ Total: 7 | Pass: 7 | Fail: 0
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué **número** tiene la lavadora?
+¿Podrías decirme, por favor, qué número tiene la lavadora?
 ```
 
 👤 **user:** 5
@@ -97,7 +97,7 @@ Vamos a revisar tu caso manualmente, María, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-El domingo 10 de mayo a las 16:59, Usuario María en ubicación no identificada (lavadora número desconocido) ha mostrado mucho malestar y exige una solución inmediata. Requiere atención prioritaria.
+El domingo 10 de mayo a las 22:39, Usuario María en ubicación no identificada ha reportado un doble cobro con tarjeta y exige hablar con un operador. Requiere atención prioritaria.
 ```
 
 ---
@@ -135,7 +135,7 @@ El domingo 10 de mayo a las 16:59, Usuario María en ubicación no identificada 
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué **número** tiene la lavadora?
+¿Podrías decirme, por favor, qué número tiene la lavadora?
 ```
 
 👤 **user:** 5
@@ -164,7 +164,7 @@ Vamos a revisar tu caso manualmente, Carlos, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-El domingo 10 de mayo a las 16:59, Usuario Carlos en Goya (lavadora número 5) reporta doble cobro habiendo podido usar el servicio. Requiere revisión y devolución del cargo duplicado.
+El domingo 10 de mayo a las 22:39, Usuario Carlos en Goya (lavadora número 5) reporta doble cobro habiendo podido usar el servicio. El relato del cliente es contradictorio o confuso. Requiere revisión y devolución del cargo duplicado.
 ```
 
 ---
@@ -207,7 +207,7 @@ Vamos a revisar tu caso manualmente, Carlos, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-El domingo 10 de mayo a las 16:59, Usuario Carlos en Goya reporta doble cobro PERO NO ha podido usar el servicio. Respuesta del cliente: "no, no he podido". Requiere reembolso y revisión del servicio no prestado.
+El domingo 10 de mayo a las 22:39, Usuario Carlos en Goya reporta doble cobro PERO NO ha podido usar el servicio. Respuesta del cliente: "no, no he podido". Requiere reembolso y revisión del servicio no prestado.
 ```
 
 ---
@@ -237,7 +237,7 @@ El domingo 10 de mayo a las 16:59, Usuario Carlos en Goya reporta doble cobro PE
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué **número** tiene la lavadora?
+¿Podrías decirme, por favor, qué número tiene la lavadora?
 ```
 
 👤 **user:** lavadora
@@ -245,7 +245,7 @@ El domingo 10 de mayo a las 16:59, Usuario Carlos en Goya reporta doble cobro PE
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué **número** tiene la lavadora?
+¿Podrías decirme, por favor, qué número tiene la lavadora?
 ```
 
 👤 **user:** 5
@@ -309,7 +309,7 @@ Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribír
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué **número** tiene la lavadora?
+¿Podrías decirme, por favor, qué número tiene la lavadora?
 ```
 
 👤 **user:** lavadora
@@ -317,7 +317,7 @@ Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribír
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué **número** tiene la lavadora?
+¿Podrías decirme, por favor, qué número tiene la lavadora?
 ```
 
 👤 **user:** 5
@@ -362,7 +362,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-El domingo 10 de mayo a las 16:59, Usuario Andrea en Goya (lavadora número 5) reporta doble cobro habiendo podido usar el servicio. Relato del cliente: He pagado, no iba y volví a pasar la tarjeta Requiere revisión y devolución del cargo duplicado.
+El domingo 10 de mayo a las 22:39, Usuario Andrea en Goya (lavadora número 5) reporta doble cobro habiendo podido usar el servicio. Relato del cliente: He pagado, no iba y volví a pasar la tarjeta Requiere revisión y devolución del cargo duplicado.
 ```
 
 ---

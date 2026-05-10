@@ -7,6 +7,7 @@
 
 import { t } from '../localization.js'
 import { escalate, markResolved, requireCustomerName, startNewFlow } from '../state-transitions.js'
+import { extractDisplayState } from '../intent.js'
 import { lang } from './helpers.js'
 import type {
   AgentRuntime,
@@ -102,9 +103,32 @@ export const guardDisplayFlowFollowUp: Guard = (ar, userMessage) => {
   const reply = userMessage.trim()
 
   // Phase C: we already asked for the exact code on the previous turn.
-  // Whatever the customer sent, escalate now (the re-ask purpose was to
-  // confirm the code is still the same before handing off to the operator).
+  // F30 (Andrea 2026-05-10 real chat): the original handler unconditionally
+  // escalated regardless of what the customer typed. Bug: if the customer
+  // typed a NEW display token (e.g. AL001 flow → user reports "DOOR"),
+  // they're signalling a CHANGED problem, not confirming the previous one.
+  // The bot must pivot to the new display flow, NOT escalate.
+  // Pivot logic: if the customer's reply contains a recognised display
+  // token that does NOT match this flow's displayMatches, clear the flow
+  // and return null so the next pipeline pass routes the new display.
   if (ar.state.pendingFlow === 'display-reask-pending') {
+    const newDisplay = extractDisplayState(reply)
+    if (newDisplay) {
+      const flowMatchesNew = flow.displayMatches.some(
+        (m) => normalizeDisplay(m) === normalizeDisplay(newDisplay),
+      )
+      if (!flowMatchesNew) {
+        // Customer reported a DIFFERENT display — pivot to its flow.
+        ar.state.pendingFlow = ''
+        ar.state.activeFlowId = null
+        ar.state.activeStepId = null
+        ar.state.lastPresentedStepId = null
+        ar.state.displayState = newDisplay
+        return null
+      }
+    }
+    // No new code, OR the new code matches this same flow → escalate as
+    // intended (customer re-confirmed the original code, instruction failed).
     ar.state.pendingFlow = ''
     ar.state.activeFlowId = null
     escalate(ar, flow.escalationReason)
