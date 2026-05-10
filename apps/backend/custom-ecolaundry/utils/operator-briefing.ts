@@ -19,6 +19,7 @@
 
 import type { AgentMessage, AgentRuntime } from '../models/index.js'
 import { callModel } from './llm.js'
+import { formatHandoverTimestamp } from './escalation.js'
 import { logger } from './logger.js'
 
 const BRIEFING_SYSTEM_PROMPT = `Eres un asistente que produce un briefing operativo en español para un operador humano de una lavandería de autoservicio. El briefing es UN MENSAJE INTERNO al operador, NO al cliente.
@@ -65,6 +66,7 @@ export async function generateOperatorBriefingFromHistory(
 
   const userPrompt = [
     'STATE_FACTS:',
+    `  timestamp: ${formatHandoverTimestamp()}`,
     `  customerName: ${customerName || '(missing)'}`,
     `  location: ${location || '(missing)'}${locationStreet ? `, ${locationStreet}` : ''}`,
     `  machineType: ${machineType || '(missing)'}`,
