@@ -113,10 +113,22 @@ function buildEscalationSummaryBody(context: EscalationContext): string {
         ? ` Respuesta del cliente: "${customerReply}".`
         : ''
 
+    // F26 (Andrea 2026-05-10 audit): if the escalation reason flags a
+    // contradictory narrative within the double-charge flow (Caso 6.3 /
+    // Caso 28 mid-flow), surface BOTH facts so the operator knows the
+    // customer's report was inconsistent. usecases.md Caso 6.3 criterio:
+    // "Resumen al operador: nombre + 'relato contradictorio' o 'relato confuso'."
+    const isContradictory = /contradictory|relato\s+contradictorio|relato\s+confuso/i.test(
+      context.escalationReason || '',
+    )
+    const contradictoryQualifier = isContradictory
+      ? ' El relato del cliente es contradictorio o confuso.'
+      : ''
+
     if (usedServiceNo) {
-      return `${name} en ${location}${machinePart} reporta doble cobro PERO NO ha podido usar el servicio.${replyPart}${narrativePart} Requiere reembolso y revisión del servicio no prestado.`
+      return `${name} en ${location}${machinePart} reporta doble cobro PERO NO ha podido usar el servicio.${replyPart}${narrativePart}${contradictoryQualifier} Requiere reembolso y revisión del servicio no prestado.`
     }
-    return `${name} en ${location}${machinePart} reporta doble cobro habiendo podido usar el servicio.${narrativePart} Requiere revisión y devolución del cargo duplicado.`
+    return `${name} en ${location}${machinePart} reporta doble cobro habiendo podido usar el servicio.${narrativePart}${contradictoryQualifier} Requiere revisión y devolución del cargo duplicado.`
   }
 
   // Case 18: numeric-only code without letters — incoherence, escalate
@@ -168,10 +180,23 @@ function buildEscalationSummaryBody(context: EscalationContext): string {
   }
 
   // Case 25: cliente muy enfadado — escalado tras recogida de datos mínimos.
-  if (/caso\s*25|muy\s+enfadado|cliente.*alterado/i.test(context.escalationReason || '')) {
+  // F26 (Andrea 2026-05-10 audit): if the customer ALSO reported a double-
+  // charge intent before the angry escalation (Caso 6.2 — angry customer
+  // mid-doble-cobro), surface BOTH facts so the operator knows the original
+  // incident type. usecases.md Caso 6.2 criterio implicit: summary must
+  // mention "doble cobro con tarjeta" alongside the rage marker.
+  if (/caso\s*25|muy\s+enfadado|cliente.*alterado|angry\s+customer/i.test(context.escalationReason || '')) {
     const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
     const numberLabel = context.machineNumber || 'desconocido'
-    return `${name} en ${location} (${machineLabel} número ${numberLabel}) ha mostrado mucho malestar y exige una solución inmediata. Requiere atención prioritaria.`
+    const machinePart =
+      context.machineNumber || context.machineType
+        ? ` (${machineLabel} número ${numberLabel})`
+        : ''
+    const isDoubleCharge = /double-charge-/.test(context.pendingFlow || '')
+    if (isDoubleCharge) {
+      return `${name} en ${location}${machinePart} ha reportado un doble cobro con tarjeta y exige hablar con un operador. Requiere atención prioritaria.`
+    }
+    return `${name} en ${location}${machinePart} ha mostrado mucho malestar y exige una solución inmediata. Requiere atención prioritaria.`
   }
 
   // Case 5: AL001 sequence error — escalate after the retry guidance failed
@@ -257,7 +282,15 @@ function buildEscalationSummaryBody(context: EscalationContext): string {
     detail = `Sin información clara de pantalla; se requiere revisión manual.`
   }
 
-  return `${name} en ${location} ${paymentClause} en la ${machine} número ${number}. ${detail}`
+  // F27 (Andrea 2026-05-10, Caso 32.1 RED-SPEC closure): when the customer
+  // has shown more than one distinct display during the incident (Marathon
+  // pattern), surface the full chronological sequence so the operator sees
+  // "SEL → PUSH PROG → DOOR → AL001" instead of only the last code.
+  const history = context.displayHistory || []
+  const historyPart =
+    history.length > 1 ? ` Secuencia de pantallas vista: ${history.join(' → ')}.` : ''
+
+  return `${name} en ${location} ${paymentClause} en la ${machine} número ${number}. ${detail}${historyPart}`
 }
 
 export function extractEscalationContext(state: SessionState, customerName: string | null): EscalationContext {
@@ -274,6 +307,7 @@ export function extractEscalationContext(state: SessionState, customerName: stri
     paymentCompleted: state.paymentCompleted,
     displayState: state.displayState,
     displayLabel: state.displayLabel || state.displayState,
+    displayHistory: state.displayHistory || [],
     issueSummary: state.issueSummary,
     nonTroubleshootingIncident: state.nonTroubleshootingIncident || '',
     discountCode: state.faqCodeValue || '',

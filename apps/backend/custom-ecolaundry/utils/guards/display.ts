@@ -95,8 +95,12 @@ export const guardPostInstructionFailure: Guard = (ar, userMessage) => {
     ar.state.activeFlowId = null
     escalate(ar, 'Customer reports the instruction did not resolve the issue')
     requireCustomerName(ar)
-    const escalateText = t('reaffirmEscalate', lang(ar))
-    return { reply: escalateText, reason: 'post-instruction-failure-escalate' }
+    // F26 (Andrea 2026-05-10 audit): use the specific "use another machine +
+    // possible compensation" wording from usecases.md Caso 7.2 riga 898 (and
+    // Caso 5.2/5.3 riga 533/569) instead of the generic reaffirmEscalate.
+    const escalateText = t('displayInstructionFailureEscalate', lang(ar))
+    const nameAsk = t('customerNameAsk', lang(ar))
+    return { reply: `${escalateText} ${nameAsk}`, reason: 'post-instruction-failure-escalate' }
   }
 
   // Phase B PIVOT — if the customer's message contains BOTH a failure signal

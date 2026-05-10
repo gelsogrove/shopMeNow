@@ -18,6 +18,7 @@ import {
   detectNumericCodeIntent,
   detectPaidNotActivatedIntent,
   detectIDontKnowReply,
+  detectFaqPause,
   detectInvoiceIntent,
   detectLanguageHeuristic,
   detectTopicSwitchDuringEscalation,
@@ -1263,6 +1264,74 @@ const cases: Case[] = [
     name: 'detectInvoice: empty → false',
     run: () => {
       if (detectInvoiceIntent('')) throw new Error('empty must NOT match')
+    },
+  },
+
+  // ── detectFaqPause — Caso 32.3 RED-SPEC closure (F28) ────────────────────
+  // Customer interrupts an active trouble flow with a brief FAQ. Detector
+  // must require BOTH a pause marker AND a FAQ topic hint (price, schedule,
+  // loyalty, invoice). Plain "espera un momento" without a FAQ topic must
+  // NOT fire (false positive on conversational filler).
+  {
+    name: 'detectFaqPause: "Espera, antes una pregunta: ¿cuánto cuesta lavar?" → true',
+    run: () => {
+      if (!detectFaqPause('Espera, antes una pregunta: ¿cuánto cuesta lavar?')) {
+        throw new Error('canonical pause + price FAQ must match')
+      }
+    },
+  },
+  {
+    name: 'detectFaqPause: "Una pregunta antes: ¿qué horario tenéis?" → true',
+    run: () => {
+      if (!detectFaqPause('Una pregunta antes: ¿qué horario tenéis?')) {
+        throw new Error('"una pregunta antes" + horario must match')
+      }
+    },
+  },
+  {
+    name: 'detectFaqPause: "Antes una pregunta sobre la tarjeta de fidelización" → true',
+    run: () => {
+      if (!detectFaqPause('Antes una pregunta sobre la tarjeta de fidelización')) {
+        throw new Error('loyalty FAQ pause must match')
+      }
+    },
+  },
+  {
+    name: 'detectFaqPause: "Espera, ¿cuánto vale el lavado?" → true',
+    run: () => {
+      if (!detectFaqPause('Espera, ¿cuánto vale el lavado?')) {
+        throw new Error('espera + price FAQ must match')
+      }
+    },
+  },
+  {
+    name: 'detectFaqPause: NEGATIVE — "espera un momento" without FAQ topic → false',
+    run: () => {
+      if (detectFaqPause('espera un momento')) {
+        throw new Error('plain pause without FAQ hint must NOT match')
+      }
+    },
+  },
+  {
+    name: 'detectFaqPause: NEGATIVE — "¿cuánto cuesta?" without pause marker → false',
+    run: () => {
+      if (detectFaqPause('¿cuánto cuesta?')) {
+        throw new Error('plain FAQ without pause marker must NOT match (handled by pricing guard)')
+      }
+    },
+  },
+  {
+    name: 'detectFaqPause: NEGATIVE — "Goya" → false',
+    run: () => {
+      if (detectFaqPause('Goya')) {
+        throw new Error('bare location must NOT match')
+      }
+    },
+  },
+  {
+    name: 'detectFaqPause: NEGATIVE — empty → false',
+    run: () => {
+      if (detectFaqPause('')) throw new Error('empty must NOT match')
     },
   },
 

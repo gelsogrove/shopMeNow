@@ -16,6 +16,7 @@ import {
   detectDoubleChargeIntent,
   detectDiscountCodeIntent,
   detectDisplayUnreadableIntent,
+  detectFaqPause,
   detectNumericCodeIntent,
   detectPaidNotActivatedIntent,
   detectTopicSwitchDuringEscalation,
@@ -91,6 +92,26 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   const trimmed = userMessage.trim()
   if (!trimmed) return
   const state = ar.state
+
+  // F28 (Andrea 2026-05-10, Caso 32.3 RED-SPEC closure): detect FAQ pause —
+  // customer interrupts an active trouble-machine flow with a brief FAQ
+  // ("antes una pregunta, ¿cuánto cuesta?"). Setting state.faqPause = true
+  // tells the L5 polish layer to append a "¿Sigamos con tu problema?" prompt
+  // (i18n key resumeAfterFaq) at the end of the FAQ reply so the customer
+  // knows the original flow is paused, not lost. Only fires when:
+  //   1. there's an active troubleshooting context (pendingFlow OR display
+  //      OR machineNumber), AND
+  //   2. the message has both a pause marker and a FAQ topic hint.
+  // The flag is cleared on the next turn when the customer resumes
+  // (resetForNewIncident / resetMachineFacts also clear it).
+  const hasTroubleContext = !!(state.pendingFlow || state.displayState || state.machineNumber)
+  if (hasTroubleContext && detectFaqPause(trimmed)) {
+    state.faqPause = true
+  } else if (state.faqPause) {
+    // Customer's next message after the FAQ — clear the flag so the prompt
+    // doesn't re-append on the resumed turn.
+    state.faqPause = false
+  }
 
   // Post-resolution reset (R2 in the architecture doc).
   //
@@ -307,17 +328,28 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   // machine number → display advances to PUSH) and reports the new code.
   // Without this rule the flow engine sees "no" and routes to case_X_persist
   // (escalation), which is wrong: the display has CHANGED, not persisted.
+  // F27 (Andrea 2026-05-10, Caso 32.1 RED-SPEC closure): each time displayState
+  // changes to a non-empty value, push the customer-facing displayLabel onto
+  // state.displayHistory so the operator handover summary can render the full
+  // chronological sequence ("SEL → PUSH PROG → DOOR → AL001"). Helper inline
+  // because the logic must run on every assignment site below.
+  const recordDisplay = (canonical: string, label: string): void => {
+    state.displayState = canonical
+    state.displayLabel = label
+    if (label && state.displayHistory[state.displayHistory.length - 1] !== label) {
+      state.displayHistory.push(label)
+    }
+  }
+
   const newDisplay = extractDisplayState(trimmed)
   if (newDisplay && newDisplay !== state.displayState) {
-    state.displayState = newDisplay
     // Preserve the customer-facing label (e.g. "PUSH PROG") for the operator
     // handover summary. Without this the operator reads the canonical token
     // ("PUSH") and loses the customer's exact wording.
-    state.displayLabel = extractDisplayLabel(trimmed, newDisplay)
+    recordDisplay(newDisplay, extractDisplayLabel(trimmed, newDisplay))
   } else if (!state.displayState && state.machineType && shouldAcceptAsDisplay(ar.runtime, trimmed)) {
     const captured = trimmed.replace(/[.,!?¿¡:;"'()]/g, '').trim().toUpperCase()
-    state.displayState = captured
-    state.displayLabel = captured
+    recordDisplay(captured, captured)
   } else if (
     !state.displayState &&
     state.location &&
@@ -330,8 +362,7 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     // machineNumberWasAlreadySet (not state.machineNumber) prevents false capture
     // when the user answers the machine-number question with a digit like "4".
     const captured = trimmed.replace(/[.,!?¿¡:;"'()]/g, '').trim().toUpperCase()
-    state.displayState = captured
-    state.displayLabel = captured
+    recordDisplay(captured, captured)
   }
 
   // Payment signal. If we just asked "¿Has podido realizar el pago?", accept

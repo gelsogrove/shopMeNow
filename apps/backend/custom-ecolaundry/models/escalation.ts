@@ -14,6 +14,10 @@ export type EscalationContext = {
   // "PUSH"). Used by the operator handover summary so the operator reads
   // exactly what the customer reported.
   displayLabel: string
+  // Chronological list of every distinct displayLabel the customer has shown
+  // during this incident (Caso 32.1 Marathon — SEL → PUSH PROG → DOOR → AL001).
+  // Empty array when no display token has been reported yet.
+  displayHistory: string[]
   issueSummary: string
   nonTroubleshootingIncident: string
   discountCode: string

@@ -164,6 +164,21 @@ export type SessionState = {
   // muestra PUSH" while the customer had clearly typed "PUSH PROG", because
   // the canonical extractor collapsed the trailing word.
   displayLabel: string
+  // Chronological list of every distinct displayLabel the customer has shown
+  // during this incident. Pushed by `autoExtractFacts` whenever displayState
+  // changes to a non-empty canonical token. Used by the operator handover
+  // summary (Caso 32.1 Marathon) so the operator sees the full sequence
+  // (e.g. "SEL → PUSH PROG → DOOR → AL001"), not only the last code.
+  // Cleared by `resetMachineFacts` and `resetForNewIncident`.
+  // F27 (Andrea 2026-05-10 audit, Caso 32.1 RED-SPEC closure).
+  displayHistory: string[]
+  // F28 (Andrea 2026-05-10, Caso 32.3 RED-SPEC closure): set to true when
+  // `detectFaqPause` fires while a trouble-machine pendingFlow is active.
+  // Signals to the L5 polish layer that the FAQ reply must be appended with
+  // a "¿Sigamos con tu problema?" prompt (i18n key `resumeAfterFaq`) so the
+  // customer knows the original flow is paused, not lost. Cleared on the
+  // next turn when the customer resumes the trouble flow.
+  faqPause: boolean
   // Counts how many invalid attempts the customer has made when typing the
   // discount code (Caso 8). The format is `^[A-Z]{3}\d{6}\d+$`. The retry
   // ladder is:

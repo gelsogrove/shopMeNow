@@ -277,9 +277,20 @@ function polishReplyForTurn(ar: AgentRuntime, rawReply: string): string {
   // Output invariants — strip the bug surfaces previously patched in
   // prompts/agent.txt (rule #1: no patches in prompt). See
   // utils/output-invariants.ts for the catalogue + tests.
-  const reply = applyOutputInvariants(noContradiction, {
+  let reply = applyOutputInvariants(noContradiction, {
     location: ar.state.location || null,
   })
+  // F28 (Andrea 2026-05-10, Caso 32.3 RED-SPEC closure): if the customer
+  // paused an active trouble flow with a brief FAQ this turn, append the
+  // "¿Sigamos con tu problema?" prompt so they know the flow is paused,
+  // not lost. Skip on closure turns (escalated / resolved / refund-form)
+  // to avoid contradicting the closure message.
+  if (ar.state.faqPause && ar.state.pendingFlow && !ar.state.pendingClosure) {
+    const resume = t('resumeAfterFaq', ar.state.language)
+    if (resume && !reply.includes(resume)) {
+      reply = `${reply.trimEnd()}\n\n${resume}`
+    }
+  }
   if (ar.state.turnCount !== 1) {
     return stripWelcomeParagraphs(reply)
   }

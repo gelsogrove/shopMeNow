@@ -63,6 +63,8 @@ export function createInitialState(): SessionState {
     machineTypeAskAttempts: 0,
     awaitNameAskAttempts: 0,
     displayLabel: '',
+    displayHistory: [],
+    faqPause: false,
     discountCodeAskAttempts: 0,
     pendingFlow: '',
     invoiceData: {
@@ -115,6 +117,8 @@ export function resetMachineFacts(state: SessionState): void {
   state.machineTypeAskAttempts = 0
   state.awaitNameAskAttempts = 0
   state.displayLabel = ''
+  state.displayHistory = []
+  state.faqPause = false
   state.discountCodeAskAttempts = 0
   state.mixedIncident = false
   state.nonTroubleshootingIncident = ''

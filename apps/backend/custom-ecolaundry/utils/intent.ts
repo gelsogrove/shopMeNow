@@ -318,6 +318,48 @@ export function detectPaidNotActivatedIntent(message: string): boolean {
   return false
 }
 
+// ── FAQ-pause detection (Caso 32.3) ───────────────────────────────────────────
+//
+// Boundary signal — rule #6: detects when the customer interrupts an active
+// trouble-machine flow with a brief FAQ ("antes una pregunta, ¿cuánto cuesta?",
+// "espera, una cosa antes...") so the orchestrator can:
+//   1. answer the FAQ
+//   2. preserve the active pendingFlow (pause, not abandon)
+//   3. append a "¿Sigamos con tu problema?" prompt at the end of the reply
+//      (resumeAfterFaq invariant)
+//
+// usecases.md Caso 32.3 RED-SPEC closure (F28, Andrea 2026-05-10).
+// Returns true when the message contains an explicit pause marker AND a FAQ
+// hint (price, schedule, loyalty card, etc.).
+export function detectFaqPause(message: string): boolean {
+  const lower = message.toLowerCase().trim()
+  if (!lower) return false
+
+  const pauseMarker =
+    /\b(?:espera|esperate|aspetta|wait|pera)\b/i.test(lower) ||
+    /\bantes\s+(?:una\s+(?:pregunta|cosa|duda)|de\s+(?:eso|nada|seguir|continuar))\b/i.test(lower) ||
+    /\buna\s+(?:pregunta|cosa|duda)\s+antes\b/i.test(lower) ||
+    /\b(?:pregunto|pregunta)\s+(?:antes|primero|r[áa]pida|r[áa]pido)\b/i.test(lower) ||
+    /\bperdona,?\s+(?:una\s+(?:pregunta|cosa|duda)|antes)\b/i.test(lower)
+
+  if (!pauseMarker) return false
+
+  // Topic hint — must contain a recognised FAQ keyword so we don't false-fire
+  // on plain "espera un momento". Covers pricing, schedule, loyalty, invoice.
+  const faqHint =
+    /\bcu[aá]nto\s+(?:cuesta|cuestan|vale|valen)\b/i.test(lower) ||
+    /\bqu[eé]\s+precio\b/i.test(lower) ||
+    /\bcu[aá]l\s+es\s+el\s+precio\b/i.test(lower) ||
+    /\bhorario\b/i.test(lower) ||
+    /\bqu[eé]\s+horas?\b/i.test(lower) ||
+    /\ba\s+qu[eé]\s+hora\b/i.test(lower) ||
+    /\bcu[aá]ndo\s+(?:abr[ií]s|cierr[áa]is)\b/i.test(lower) ||
+    /\btarjeta\s+(?:de\s+)?(?:fidelizaci[oó]n|fidelidad|descuento)\b/i.test(lower) ||
+    /\bfactura\b/i.test(lower)
+
+  return faqHint
+}
+
 // ── Display-unreadable intent detection (Caso 17) ────────────────────────────
 //
 // Topic classifier (rule #6 tracked exemption — fast-path before the LLM).
