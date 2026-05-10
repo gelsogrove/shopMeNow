@@ -47,6 +47,6 @@
   "_section_temperatures": "Per-LLM-call temperatures. Each LLM call site has its own use case: router=classification (low T, anti-hallucination), agent=generation (medium T), rephrase=polish (medium T with strict content constraints), operatorBriefing=summarisation (low T, factual). agentTemperature is the legacy global setting consumed by utils/agent-llm.ts (main turn LLM). routerTemperature drives utils/router.ts (T1 branch classifier — recommended 0-0.2). rephraseTemperature drives utils/agent-rephrase.ts (recommended 0.2-0.5). operatorBriefingTemperature drives utils/operator-briefing.ts (recommended 0-0.3 — keep low to avoid invented facts).",
   "agentTemperature": 0.3,
   "routerTemperature": 0.2,
-  "rephraseTemperature": 0.5,
+  "rephraseTemperature": 0.4,
   "operatorBriefingTemperature": 0.2
 }

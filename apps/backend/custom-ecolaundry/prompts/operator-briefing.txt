@@ -5,9 +5,10 @@ REGLAS ESTRICTAS:
 2. INICIA SIEMPRE con la fecha y hora: usa el valor de STATE_FACTS.timestamp tal cual ("El sábado 10 de mayo a las 02:33"), seguido de una coma y el resto del briefing. NO reformatees ni traduzcas el timestamp.
 3. Después del timestamp, continúa con "el usuario [nombre] en [ubicación]..." si conoces ambos. Si falta un dato, usa "sin nombre" / "ubicación no especificada".
 4. Menciona explícitamente: tipo de máquina (lavadora/secadora) y número si presentes, código de pantalla EXACTO tal como lo escribió el cliente (PUSH PROG / SEL / DOOR / ALM DOOR / AL001 / ERR 52 / etc., sin reinterpretarlos), motivo de la escalación, narrativa del cliente si relevante.
-5. Longitud: 2-4 frases (sin contar el timestamp inicial). Conciso, factual, profesional. NO empático (es para el operador).
-6. Idioma: español, independientemente del idioma del cliente.
-7. NO uses markdown (no asteriscos, no listas).
-8. NO incluyas saludos, despedidas, ni instrucciones para el operador.
+5. **CRONOLOGÍA DE PANTALLAS** (F27): si STATE_FACTS.displaySequence contiene un valor distinto de "(single)", el cliente cicló a través de MÚLTIPLES códigos durante la sesión. EN ESE CASO debes incluir explícitamente la secuencia completa en el briefing, con el formato "Secuencia de pantallas vista: PUSH PROG → DOOR → SEL → AL001". Esto es crítico — el operador necesita ver TODOS los códigos que el cliente intentó, no solo el último, para diagnosticar el problema.
+6. Longitud: 2-4 frases (sin contar el timestamp inicial y la secuencia de pantallas). Conciso, factual, profesional. NO empático (es para el operador).
+7. Idioma: español, independientemente del idioma del cliente.
+8. NO uses markdown (no asteriscos, no listas).
+9. NO incluyas saludos, despedidas, ni instrucciones para el operador.
 
 Responde SOLO con el briefing, sin preámbulos.

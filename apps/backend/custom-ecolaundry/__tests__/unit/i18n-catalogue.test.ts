@@ -133,6 +133,38 @@ const cases: Case[] = [
       if (keys.length < 10) throw new Error(`base keys list too small: ${keys.length}`)
     },
   },
+  // F34 — refundFormFinal must include both placeholders ({name} + {refundFormUrl})
+  // in all 6 language catalogues. agent.ts substitutes them at runtime; missing
+  // a placeholder = customer never gets the URL = "ma a chi lo mandiamo?"
+  // Andrea bug 2026-05-10.
+  {
+    name: 'F34: refundFormFinal contains {name} placeholder in every language',
+    run: async () => {
+      const files = (await readdir(i18nDir)).filter((f) => f.endsWith('.json'))
+      for (const f of files) {
+        const raw = JSON.parse(await readFile(path.join(i18nDir, f), 'utf8')) as Record<string, string>
+        const tpl = raw.refundFormFinal
+        if (!tpl) throw new Error(`${f}: refundFormFinal missing`)
+        if (!tpl.includes('{name}')) {
+          throw new Error(`${f}: refundFormFinal must contain {name} placeholder, got: ${tpl}`)
+        }
+      }
+    },
+  },
+  {
+    name: 'F34: refundFormFinal contains {refundFormUrl} placeholder in every language',
+    run: async () => {
+      const files = (await readdir(i18nDir)).filter((f) => f.endsWith('.json'))
+      for (const f of files) {
+        const raw = JSON.parse(await readFile(path.join(i18nDir, f), 'utf8')) as Record<string, string>
+        const tpl = raw.refundFormFinal
+        if (!tpl) throw new Error(`${f}: refundFormFinal missing`)
+        if (!tpl.includes('{refundFormUrl}')) {
+          throw new Error(`${f}: refundFormFinal must contain {refundFormUrl} placeholder, got: ${tpl}`)
+        }
+      }
+    },
+  },
 ]
 
 async function main(): Promise<void> {

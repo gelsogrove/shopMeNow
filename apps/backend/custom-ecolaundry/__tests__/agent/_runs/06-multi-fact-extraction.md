@@ -1,6 +1,6 @@
 # Agent test dialogues — `cross/06-multi-fact-extraction.test.spec.ts`
 
-Generated: 2026-05-10T18:49:49.593Z
+Generated: 2026-05-10T20:42:37.926Z
 Total: 6 | Pass: 6 | Fail: 0
 
 ## ✅ PASS — ES — "En Pineda me ha cobrado 10€" → escalation diretta (location estratta)
@@ -26,7 +26,7 @@ Entendido, lo paso a revisión manual para ayudarte mejor. 🙏 ¿Cómo te llama
 🤖 **bot:**
 
 ```
-👋 Hola, soy el asistente virtual de la lavandería. Tranquilo, te ayudo. ¿Qué número de lavadora es?
+👋 Hola, soy el asistente virtual de la lavandería. Tranquilo, te ayudo. ¿Qué número de lavadora estás usando?
 ```
 
 ---
@@ -78,7 +78,7 @@ Gracias. ¿Qué aparece exactamente en la pantalla de la lavadora?
 🤖 **bot:**
 
 ```
-Gracias. ¿Qué aparece exactamente en la pantalla de la lavadora?
+Gracias. ¿Qué aparece exactamente en la pantalla de la lavadora 3?
 ```
 
 ---

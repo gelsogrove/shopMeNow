@@ -57,6 +57,12 @@ export async function generateOperatorBriefingFromHistory(
   const machineNumber = ar.state.machineNumber || ''
   const displayLabel = ar.state.displayLabel || ar.state.displayState || ''
   const escalationReason = ar.state.escalationReason || ''
+  // F27 — chronological list of every distinct display the customer reported
+  // during this incident. Drives the "Secuencia de pantallas vista: X → Y → Z"
+  // line in the operator briefing when the customer cycled through multiple
+  // display states (Caso 32.1 marathon).
+  const displayHistory = (ar.state.displayHistory || []).filter(Boolean)
+  const displaySequence = displayHistory.length > 1 ? displayHistory.join(' → ') : ''
 
   // Last 30 turns max to keep token cost bounded.
   const trimmed = history.slice(-30)
@@ -72,6 +78,7 @@ export async function generateOperatorBriefingFromHistory(
     `  machineType: ${machineType || '(missing)'}`,
     `  machineNumber: ${machineNumber || '(missing)'}`,
     `  displayLabel: ${displayLabel || '(missing)'}`,
+    `  displaySequence: ${displaySequence || '(single)'}`,
     `  escalationReason: ${escalationReason || '(missing)'}`,
     '',
     'CONVERSATION_HISTORY:',

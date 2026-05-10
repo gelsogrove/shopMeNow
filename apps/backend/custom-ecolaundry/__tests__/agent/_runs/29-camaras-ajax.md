@@ -1,6 +1,6 @@
 # Agent test dialogues — `29-camaras-ajax.test.spec.ts`
 
-Generated: 2026-05-10T15:02:22.133Z
+Generated: 2026-05-10T20:42:11.450Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 29: trigger cámaras → escalate inmediato (no promesa) → name → summary "cámaras/ajax"
@@ -25,7 +25,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-El domingo 10 de mayo a las 17:01, Usuario Andrea en ubicación no identificada ha reportado una incidencia que requiere revisión de cámaras o AJAX.
+El domingo 10 de mayo a las 22:42, Usuario Andrea en ubicación no identificada ha reportado una incidencia que requiere revisión de cámaras o AJAX.
 ```
 
 ---

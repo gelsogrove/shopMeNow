@@ -1,6 +1,6 @@
 # Agent test dialogues — `31-no-local.test.spec.ts`
 
-Generated: 2026-05-10T15:02:22.133Z
+Generated: 2026-05-10T20:42:11.454Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 31: trigger senza location → "no lo sé" → bot insiste → "Goya" → flow procede
@@ -28,7 +28,7 @@ Para poder ayudarte, necesito saber primero en qué lavandería estás exactamen
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué **número** tiene la secadora?
+¿Podrías decirme, por favor, qué número tiene la secadora?
 ```
 
 👤 **user:** La 3

@@ -1,6 +1,6 @@
 # Agent test dialogues — `cross/02-faq-during-flow.test.spec.ts`
 
-Generated: 2026-05-10T15:02:22.134Z
+Generated: 2026-05-10T20:42:37.921Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — flow tecnico interrotto da FAQ horarios: bot risponde + facts intatti
@@ -20,7 +20,7 @@ Total: 2 | Pass: 2 | Fail: 0
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué **número** tiene la lavadora?
+¿Podrías decirme, por favor, qué número tiene la lavadora?
 ```
 
 👤 **user:** 5
@@ -58,7 +58,7 @@ El horario general de atención al público es de 8:00 a 22:00, todos los días 
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué **número** tiene la lavadora?
+¿Podrías decirme, por favor, qué número tiene la lavadora?
 ```
 
 👤 **user:** ¿Cómo consigo la tarjeta de fidelización?

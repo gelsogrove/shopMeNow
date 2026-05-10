@@ -76,6 +76,15 @@ USER TURN
 │     - displayStateAtTurnStart → consumed by Phase B pivot in         │
 │       guards/display.ts to detect "no + new display" combos.         │
 │   Pattern documented in CLAUDE.md "Pre-extract state snapshots".     │
+│                                                                      │
+│   CHRONOLOGICAL FIELDS (F27, F28):                                   │
+│     - displayHistory: string[]   — every distinct display label the  │
+│       customer has reported during this incident. Pushed by          │
+│       autoExtractFacts on each display change; rendered in the       │
+│       operator handover summary as "Secuencia: SEL → PUSH → DOOR".  │
+│     - faqPause: boolean          — set true when detectFaqPause      │
+│       fires during an active flow; cleared on the next turn.         │
+│       Drives the L5 "resumeAfterFaq" invariant.                      │
 └──────────────────────────────────────────────────────────────────────┘
    │
    ▼
@@ -85,7 +94,12 @@ USER TURN
 │   mixed-signal.ts         detectMixedSignal                          │
 │   flow-compatibility.ts   checkFlowCompatibility                     │
 │   contradiction.ts        detectResolutionEscalationContradiction    │
+│   intent.ts               extractDisplayState, detect{*}Intent,       │
+│                           detectFaqPause (F28), detectPaidNot...     │
 │   Resp: pure deterministic helpers, multilingual, unit-tested.       │
+│   Note: intent.ts detectors are FAST PATH only. Authoritative intent │
+│   classification is delegated to the LLM router (utils/router.ts).   │
+│   See section 9 below.                                               │
 └──────────────────────────────────────────────────────────────────────┘
    │
    ▼
@@ -114,7 +128,17 @@ USER TURN
 │   prependFirstTurnWelcome         T1 welcome unless LLM greeted or   │
 │                                    customer already gave facts       │
 │   stripWelcomeParagraphs          T2+ remove re-introduced greetings │
+│   resumeAfterFaq invariant (F28)  append "¿Sigamos con tu problema?" │
+│                                    when state.faqPause + pendingFlow │
 │   appendEscalationSummary         operator handover when escalated   │
+│                                    (with displayHistory chronology   │
+│                                    via F27 in escalation.ts)         │
+│   naturalRephrase (opt-in flag)   pass guard outcome through         │
+│                                    rephrase LLM with conversation    │
+│                                    history; preserves keywords +     │
+│                                    operational details (F32)         │
+│   operatorBriefingFromLlm (flag)  generate operator handover summary │
+│                                    via LLM with full history         │
 │   Resp: invariants on the reply BEFORE returning to the customer.    │
 └──────────────────────────────────────────────────────────────────────┘
    │
@@ -159,14 +183,25 @@ REPLY TO CUSTOMER
 1. sanitizeUserMessage         (L1)
 2. ar.state.lastUserMessage = userMessage
 3. resolveLanguageForTurn      (L2)
-4. autoExtractFacts            (L3 — sticky facts from regex)
-5. runGuardPipeline            (deterministic, ~70% of conversations close here)
+4. dispatchTurnOne / Subsequent (router LLM at T1, sticky T2+)
+   └─ classifies branch + subCase + language → seeds state
+   └─ trouble-machine handler → maps subCase → state.pendingFlow
+5. autoExtractFacts            (L3 — sticky facts; regex as FAST PATH)
+6. runGuardPipeline            (deterministic, ~70% of conversations close here)
    └─ guards mutate state via L2 transitions (escalate / markResolved / …)
-6. runLlmLoop                  (L4 — LLM + tool calls)
+7. runLlmLoop                  (L4 — LLM + tool calls, only if no guard fired)
    └─ each tool: arg-coercion → L3 detectors → L2 transitions → ToolResult
-7. polishReplyForTurn          (L5 — invariants + welcome handling)
-8. appendEscalationSummary     (L5 — operator handover when applicable)
+8. polishReplyForTurn          (L5 — invariants + welcome + naturalRephrase)
+9. appendEscalationSummary     (L5 — operator handover, with displayHistory)
 ```
+
+**Two opt-in LLM polish stages** ([settings.json](../json/settings.json)):
+- `naturalRephrase: true`  — guard outcomes pass through `agent-rephrase.ts`
+  with conversation history for tone-matching; preserves all keywords
+  (display codes, location names, operational verbs).
+- `operatorBriefingFromLlm: true` — operator handover summary generated
+  by `operator-briefing.ts` from history; falls back to deterministic
+  template on any error.
 
 ---
 
@@ -321,6 +356,107 @@ When you need to add a new behaviour, ask: *which layer?*
 - **New tool exposed to the LLM** → schema in `agent-tools.ts` + handler
   in `tool-handlers/` + register in `tool-handlers/index.ts:HANDLERS`.
 - **New invariant on the final reply** → L5 step in `polishReplyForTurn`.
+- **New trouble-machine sub-case** → extend `TroubleSubCase` type in
+  `utils/router.ts` + add classification example to `prompts/router.txt` +
+  wire-up in `branches/trouble-machine/handler.ts` (set `pendingFlow`).
 
 For full per-tool contracts see [`docs/contracts.md`](contracts.md).
 For step-by-step recipes see [`docs/adding-use-cases.md`](adding-use-cases.md).
+
+---
+
+## 9. Branch router LLM (intent classification)
+
+The pipeline starts with a **single LLM classification call** that picks a
+branch and (for `trouble-machine`) the sub-case. Detailed contract in
+[`docs/branch-router-architecture.md`](branch-router-architecture.md).
+
+```
+T1 customer message
+        ↓
+   utils/router.ts:classifyMessageBranch  (~500ms, ~$0.0005, low temperature)
+        ↓
+   { branch: greeting | faq | trouble-machine | invoice | loyalty |
+                escalation | unknown,
+     language: es|it|en|pt|ca|fr,
+     details: { faqKey?, displayHint?, locationHint?,
+                subCase?, incidentType? } }
+        ↓
+   utils/branches/<branch>/handler.ts
+        ↓
+   T2+ → state.activeBranch is sticky → no router call
+```
+
+**Why this exists**:
+- Replaces fragile regex L3 detectors as the primary intent classifier.
+- Handles all 6 supported languages natively (no per-language keyword lists).
+- Sub-case routing (F31): `subCase` field tells the trouble-machine handler
+  which `pendingFlow` to seed (`paid-not-activated` → `'no-change-ask'`,
+  `display-unreadable` → `'photo-await-decision'`, etc.). The regex L3
+  detectors in `agent-extract.ts` remain only as FAST PATH optimisations.
+
+**Settings flag**: `useBranchRouter: true` (default ON in this tenant).
+When OFF, the legacy guard pipeline runs unchanged.
+
+**Cost discipline**: 1 router LLM call per session at T1, 0 at T2+
+(sticky branch). Average per turn cost is bounded.
+
+---
+
+## 10. Display flow Phase A/B/C (machine incidents)
+
+The display-driven Casi (1, 2, 3, 5, 13, 14, 15, 16, 30) all flow through
+`utils/guards/display-flow.ts`, which reads declarative entries from
+`json/display-flows.json` (validated at boot via `models/display-flow.ts`).
+
+```
+Phase A — instruction emission
+   guard fires when state.displayState matches a documented flow
+   → emit guidance reply, set state.activeFlowId
+
+Phase B — failure / re-ask before escalating
+   customer says "no funciona" / "sigue saliendo" → bot re-asks
+   "qué código aparece exactamente, incluso si es el mismo" (F18 wording)
+   → set state.pendingFlow = 'display-reask-pending'
+
+Phase C — pivot or escalate (F30)
+   customer reply contains a NEW display token different from the active
+   flow's displayMatches  → PIVOT: clear flow + return null → next pipeline
+                            pass routes the new display
+   customer reply matches same code OR contains no display token  → escalate
+   with displayInstructionFailureEscalate ("usa otra lavadora + posible
+   compensación", F26 wording).
+```
+
+The Phase C pivot is critical for marathon scenarios (Caso 32.1) where
+the customer cycles through multiple displays in one session
+(SEL → PUSH PROG → DOOR → AL001). The chronological list lives in
+`state.displayHistory` (F27) and is rendered in the operator handover
+summary as "Secuencia de pantallas vista: ...".
+
+---
+
+## 11. F-log (regression catalogue)
+
+Every architectural fix is recorded in [`CLAUDE.md`](../CLAUDE.md) under
+"📜 Architectural fixes log" with a stable F-number (F1, F2, ...). Each
+entry has three columns: observable symptom, root cause, architectural
+fix + preservative pattern.
+
+The log is the **regression catalogue**: before any fix that resembles
+a previous symptom, read the corresponding F-entry to avoid reintroducing
+the same bug.
+
+Currently 31 entries (F1-F31) covering: refund-form vs escalation,
+retry+escalate ladder, angry customer multilang, gather order alignment
+to PDF, flow-engine pivot, ALM DOOR resolved regex, ERR 52 label
+preservation, SEL/dryer JSON loopback, numeric-code letter typing,
+test path cleanup, location fuzzy + Mataró, double-charge multilang
+(formal+colloquial+plural preterito), paid-not-activated typo
+tolerance, parsePaymentAnswer ASCII \b bug, hasGreetingIntent extension,
+Caso 17/18 detector extraction, discount code phrasing, angry pure
+multilang, pricing usecases consistency, loyalty card topic regex,
+escalation summary cross-incident (angry+doblecobro, contradictory+
+doblecobro, AL001/Caso 7 wording), displayHistory marathon, FAQ pause
+invariant, F29 trigger coverage rule, F30 Phase C pivot, F31 router
+subCase classifier.

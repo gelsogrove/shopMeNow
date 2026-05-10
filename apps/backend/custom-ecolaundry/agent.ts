@@ -431,7 +431,16 @@ async function appendEscalationSummary(ar: AgentRuntime, reply: string, history:
   if (closure === 'refund-form') {
     if (!customerName) return reply
     const lang = resolveTenantLang(ar)
-    const finalText = t('refundFormFinal', lang).replace('{name}', customerName)
+    // F34 (Andrea 2026-05-10): the customer was getting the message
+    // "te enviaremos el formulario de reembolso" but never the actual URL
+    // → no clue when/how/where the form arrives. Inject `{refundFormUrl}`
+    // from settings so the customer sees the link directly in the close
+    // message and can fill it immediately. Empty string fallback if not
+    // configured (the message degrades gracefully without leaking braces).
+    const refundFormUrl = ar.runtime.settings?.refundFormUrl ?? ''
+    const finalText = t('refundFormFinal', lang)
+      .replace('{name}', customerName)
+      .replace('{refundFormUrl}', refundFormUrl)
     // Append a compact incident summary under "📋 Resumen para tramitación" so
     // the team processing the refund form can see location, machine, and
     // incident details without reading the full conversation log. Uses a

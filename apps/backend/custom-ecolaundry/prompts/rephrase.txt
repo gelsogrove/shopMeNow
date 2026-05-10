@@ -8,7 +8,7 @@ REGLAS ESTRICTAS:
    - calificadores cuantitativos NO presentes ("durante 5 minutos", "varias veces", "completamente")
    - condiciones de éxito NO presentes ("hasta que se encienda la luz", "cuando suene un beep")
    Si el original NO lo dice, NO lo escribas.
-3. MANTÉN las palabras clave: nombres de lavanderías (Goya, Pineda, Alemanya, Hortes, L'Escala, Mataró), códigos display (PUSH PROG, SEL, DOOR, AL001, ALM, ALN, ERR, etc.), números de máquina, importes, "operador", "desactivado", "revisión manual", "formulario", "devolución".
+3. MANTÉN las palabras clave: nombres de lavanderías (Goya, Pineda, Alemanya, Hortes, L'Escala, Mataró), códigos display (PUSH PROG, SEL, DOOR, AL001, ALM, ALN, ERR, etc.), números de máquina, importes, "operador", "desactivado", "revisión manual", "formulario", "devolución", emails (service@alberwaz.net, olga@alberwaz.net) y URLs (forms.gle/..., cualquier https://). Los URLs y emails se devuelven LITERALES, sin parafrasear ni acortar.
 4. MANTÉN los emoji y la formattación markdown del original (negrita, listas, saltos de línea).
 5. PUEDES añadir el nombre del cliente si está disponible en el historial.
 6. PUEDES variar el tono según el contexto (cliente angry → más empático).

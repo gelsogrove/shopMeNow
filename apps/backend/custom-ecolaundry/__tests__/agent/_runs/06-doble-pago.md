@@ -1,6 +1,6 @@
 # Agent test dialogues — `06-doble-pago.test.spec.ts`
 
-Generated: 2026-05-10T20:39:37.058Z
+Generated: 2026-05-10T21:00:56.727Z
 Total: 7 | Pass: 7 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 6.1: happy path completo → Sí → tipo → número → 4 dígitos → handover
@@ -70,7 +70,9 @@ De acuerdo. ¿Podrías explicarme, por favor, paso a paso qué has hecho desde q
 🤖 **bot:**
 
 ```
-¡Gracias, Andrea! 🙏 Hemos recibido toda la información necesaria para tu caso. Vamos a revisar tu situación y te enviaremos el formulario de reembolso. Si necesitas algo más, aquí estoy para ayudarte. 💚
+¡Gracias, Andrea! 🙏 Hemos recibido toda la información necesaria para tu caso. Aquí tienes el formulario de reembolso, por favor complétalo cuando puedas: https://forms.gle/XFGPAd9581AhC9eu7
+
+Vamos a revisar tu situación. Si necesitas algo más, aquí estoy para ayudarte. 💚
 ```
 
 ---
@@ -97,7 +99,7 @@ Vamos a revisar tu caso manualmente, María, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-El domingo 10 de mayo a las 22:39, Usuario María en ubicación no identificada ha reportado un doble cobro con tarjeta y exige hablar con un operador. Requiere atención prioritaria.
+El domingo 10 de mayo a las 23:00, Usuario María en ubicación no identificada ha reportado un doble cobro con tarjeta y exige hablar con un operador. Requiere atención prioritaria.
 ```
 
 ---
@@ -164,7 +166,7 @@ Vamos a revisar tu caso manualmente, Carlos, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-El domingo 10 de mayo a las 22:39, Usuario Carlos en Goya (lavadora número 5) reporta doble cobro habiendo podido usar el servicio. El relato del cliente es contradictorio o confuso. Requiere revisión y devolución del cargo duplicado.
+El domingo 10 de mayo a las 23:00, Usuario Carlos en Goya (lavadora número 5) reporta doble cobro habiendo podido usar el servicio. El relato del cliente es contradictorio o confuso. Requiere revisión y devolución del cargo duplicado.
 ```
 
 ---
@@ -207,7 +209,7 @@ Vamos a revisar tu caso manualmente, Carlos, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-El domingo 10 de mayo a las 22:39, Usuario Carlos en Goya reporta doble cobro PERO NO ha podido usar el servicio. Respuesta del cliente: "no, no he podido". Requiere reembolso y revisión del servicio no prestado.
+El domingo 10 de mayo a las 23:00, Usuario Carlos en Goya reporta doble cobro PERO NO ha podido usar el servicio. Respuesta del cliente: "no, no he podido". Requiere reembolso y revisión del servicio no prestado.
 ```
 
 ---
@@ -362,7 +364,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-El domingo 10 de mayo a las 22:39, Usuario Andrea en Goya (lavadora número 5) reporta doble cobro habiendo podido usar el servicio. Relato del cliente: He pagado, no iba y volví a pasar la tarjeta Requiere revisión y devolución del cargo duplicado.
+El domingo 10 de mayo a las 23:00, Usuario Andrea en Goya (lavadora número 5) reporta doble cobro habiendo podido usar el servicio. Relato del cliente: He pagado, no iba y volví a pasar la tarjeta Requiere revisión y devolución del cargo duplicado.
 ```
 
 ---

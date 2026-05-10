@@ -90,6 +90,13 @@ export const tests: TestCase[] = [
       if (!/formular|devoluci|reembolso|revisar/.test(finalLower)) {
         throw new Error(`Scenario 6.1: chiusura deve menzionare formulario/revisione: ${final}`)
       }
+      // F34 — closure MUST include the actual refund form URL so the customer
+      // knows where to fill it. usecases.md riga 658-661: "te enviaremos el
+      // formulario de reembolso" was vague (Andrea: "ma a chi lo mandiamo?").
+      // Now the URL from settings.refundFormUrl is rendered directly.
+      if (!/forms\.gle\/|https?:\/\//i.test(final)) {
+        throw new Error(`Scenario 6.1 (F34): final reply must include the refund form URL: ${final}`)
+      }
       // Negative assertions: refund path, no handover artefacts.
       if (/desactivado/.test(finalLower)) {
         throw new Error(`Scenario 6.1: finale NON deve contenere "desactivado" (è refund, non handover): ${final}`)

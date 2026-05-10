@@ -355,6 +355,13 @@ export const guardDoubleChargeAwaitName: Guard = (ar, userMessage) => {
   captureCustomerName(ar, validation.name)
   ar.state.pendingFlow = ''
   closeAsRefundForm(ar)
-  const finalText = t('refundFormFinal', lang(ar)).replace('{name}', validation.name)
+  // F34 — substitute BOTH placeholders ({name} + {refundFormUrl}). The guard
+  // emits the final reply directly so we cannot rely on agent.ts:appendEscalationSummary
+  // to do the URL substitution. refundFormUrl falls back to '' if the setting
+  // is missing (graceful degradation, no leaked braces).
+  const refundFormUrl = ar.runtime.settings?.refundFormUrl ?? ''
+  const finalText = t('refundFormFinal', lang(ar))
+    .replace('{name}', validation.name)
+    .replace('{refundFormUrl}', refundFormUrl)
   return { reply: finalText, reason: 'double-charge-refund-form-closure' }
 }
