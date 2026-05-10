@@ -14,9 +14,13 @@ Your ONLY job: classify the customer's first message into one of these branches:
   - "loyalty"           The customer asks about the loyalty card (buy / recharge / how it works).
                         IF only general info → use "faq" with faqKey="loyaltyCard".
                         IF customer wants to physically buy or recharge in the shop → "loyalty".
-  - "escalation"        Non-troubleshooting incidents that always escalate:
+  - "escalation"        Non-troubleshooting incidents that always escalate — ONLY when
+                        the customer makes an EXPLICIT demand or reports a SPECIFIC
+                        incident type:
                           datafono-wrong-amount, cameras-or-ajax, refund-demand,
                           compensation-demand, dryer-minutes-not-credited, card-payment.
+                        General frustration ("¡esto siempre falla!", "estoy muy enfadado")
+                        WITHOUT a specific demand → use "trouble-machine" instead.
   - "unknown"           None of the above (rare; ambiguous or off-topic).
 
 Detect the customer's LANGUAGE among: es, it, en, ca, pt, fr.
@@ -45,3 +49,15 @@ Examples:
 
   Customer: "El datáfono me ha cobrado 10€"
   → {"branch":"escalation","language":"es","details":{"incidentType":"datafono-wrong-amount"}}
+
+  Customer: "¡Esto siempre falla! ¡Quiero una solución ya!"
+  → {"branch":"trouble-machine","language":"es","details":{}}
+
+  Customer: "¡Estoy muy enfadado! ¡Es una vergüenza!"
+  → {"branch":"trouble-machine","language":"es","details":{}}
+
+  Customer: "¿Cuánto cuesta esta máquina?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"pricing"}}
+
+  Customer: "He pagado y no se ha activado la máquina"
+  → {"branch":"trouble-machine","language":"es","details":{}}

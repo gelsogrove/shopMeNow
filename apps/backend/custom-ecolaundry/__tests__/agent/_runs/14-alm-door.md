@@ -1,6 +1,6 @@
 # Agent test dialogues — `14-alm-door.test.spec.ts`
 
-Generated: 2026-05-10T00:13:15.656Z
+Generated: 2026-05-10T15:02:22.131Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 14.1: happy path completo → ALM DOOR istruzione → "Sí ha desaparecido" → resolved
@@ -20,7 +20,7 @@ Total: 2 | Pass: 2 | Fail: 0
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 6
@@ -36,7 +36,7 @@ Total: 2 | Pass: 2 | Fail: 0
 🤖 **bot:**
 
 ```
-Perfecto, ¿ha desaparecido el mensaje ALM DOOR y la lavadora ya empieza a funcionar?
+Perfecto, ¿qué aparece ahora en la pantalla de la lavadora?
 ```
 
 👤 **user:** Sí, ha desaparecido
@@ -66,7 +66,7 @@ Perfecto, ¿ha desaparecido el mensaje ALM DOOR y la lavadora ya empieza a funci
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 6
@@ -103,7 +103,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en Goya ha efectuado el pago en la lavadora número 6. La pantalla muestra ALM DOOR: la puerta no cierra correctamente.
+El domingo 10 de mayo a las 17:00, Usuario Andrea en Goya ha efectuado el pago en la lavadora número 6. La pantalla muestra ALM DOOR: la puerta no cierra correctamente.
 ```
 
 ---

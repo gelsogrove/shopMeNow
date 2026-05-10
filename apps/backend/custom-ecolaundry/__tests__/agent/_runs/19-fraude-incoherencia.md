@@ -1,6 +1,6 @@
 # Agent test dialogues — `19-fraude-incoherencia.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.127Z
+Generated: 2026-05-10T15:02:22.132Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Caso 19 Goya: datáfono 10€ → escalate sin confrontar → name capture rifiuta "No"
@@ -20,7 +20,7 @@ Entendido, lo paso a revisión manual para ayudarte mejor. 🙏 ¿Cómo te llama
 🤖 **bot:**
 
 ```
-Para poder ayudarte, necesito recoger algunos datos. Es importante que me digas tu nombre para que podamos revisar tu caso correctamente. ¿Cómo te llamas?
+Para poder ayudarte, necesito que me digas tu nombre. Esto es necesario para revisar tu caso manualmente. ¿Cómo te llamas?
 ```
 
 👤 **user:** Andrea
@@ -33,7 +33,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en Goya ha reportado una incoherencia en el importe del datáfono.
+El domingo 10 de mayo a las 17:00, Usuario Andrea en Goya ha reportado una incoherencia en el importe del datáfono.
 ```
 
 ---
@@ -63,7 +63,7 @@ Entendido, lo paso a revisión manual para ayudarte mejor. 🙏 ¿Cómo te llama
 🤖 **bot:**
 
 ```
-¿Podrías decirme tu nombre, por favor?
+Lo siento, no he entendido tu nombre. ¿Cómo te llamas, por favor?
 ```
 
 👤 **user:** Andrea
@@ -76,7 +76,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en Pineda ha reportado una incoherencia en el importe del datáfono.
+El domingo 10 de mayo a las 17:00, Usuario Andrea en Pineda ha reportado una incoherencia en el importe del datáfono.
 ```
 
 ---

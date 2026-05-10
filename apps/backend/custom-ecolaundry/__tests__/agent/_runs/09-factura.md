@@ -1,6 +1,6 @@
 # Agent test dialogues — `09-factura.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.124Z
+Generated: 2026-05-10T15:02:22.130Z
 Total: 3 | Pass: 3 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 9.1: happy path completo → 8 step + email valido al primo tentativo → summary
@@ -79,7 +79,7 @@ Por último, ¿cuál es tu nombre?
 Gracias Andrea, te enviaremos pronto la factura del 2026-05-09 a tu correo: ana@example.com. 📧
 
 **👤 Human Support message**
-Usuario Andrea en Goya ha solicitado factura. Datos: razón social: ACME SL; dirección: Calle Mayor 1, Madrid; CIF/NIF: B12345678; fecha de uso: ayer (2026-05-09); máquina: lavadora; email: ana@example.com.
+El domingo 10 de mayo a las 17:00, Usuario Andrea en Goya ha solicitado factura. Datos: razón social: ACME SL; dirección: Calle Mayor 1, Madrid; CIF/NIF: B12345678; fecha de uso: ayer (2026-05-09); máquina: lavadora; email: ana@example.com.
 ```
 
 ---
@@ -168,7 +168,7 @@ Por último, ¿cuál es tu nombre?
 Gracias Andrea, te enviaremos pronto la factura del 2026-05-09 a tu correo: ana@example.com. 📧
 
 **👤 Human Support message**
-Usuario Andrea en Goya ha solicitado factura. Datos: razón social: ACME SL; dirección: Calle Mayor 1, Madrid; CIF/NIF: B12345678; fecha de uso: ayer (2026-05-09); máquina: lavadora; email: ana@example.com.
+El domingo 10 de mayo a las 17:00, Usuario Andrea en Goya ha solicitado factura. Datos: razón social: ACME SL; dirección: Calle Mayor 1, Madrid; CIF/NIF: B12345678; fecha de uso: ayer (2026-05-09); máquina: lavadora; email: ana@example.com.
 ```
 
 ---

@@ -496,7 +496,15 @@ El Playbook §5.5 («Error AL001») describe únicamente *«Digues-me en quin lo
 **Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** 3  
-**Bot:** **AL001** significa un error de secuencia. Reinicia el proceso completo: 1. Paga. 2. Selecciona la máquina. 3. Pulsa el programa. 4. Cierra la puerta. 5. Avísame si funciona.
+**Bot:** 🔧 Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Antes de avisar a asistencia, vamos a verificar juntos la secuencia. Por favor, sigue estos pasos en este orden:
+
+1. Carga la lavadora
+2. Cierra la puerta
+3. Dirígete a la central de pago y paga
+4. Selecciona el número de máquina y recoge el cambio si toca
+5. Dirígete a la máquina seleccionada y elige el programa
+
+Después dime si se ha arrancado.
 
 **Usuario:** Sí, ya funciona  
 **Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
@@ -524,7 +532,7 @@ El Playbook §5.5 («Error AL001») describe únicamente *«Digues-me en quin lo
 **Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** 3  
-**Bot:** **AL001** significa un error de secuencia. [instrucciones de secuencia]
+**Bot:** 🔧 Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Antes de avisar a asistencia, vamos a verificar juntos la secuencia. Por favor, sigue estos pasos en este orden: 1. Carga la lavadora. 2. Cierra la puerta. 3. Dirígete a la central de pago y paga. 4. Selecciona el número de máquina y recoge el cambio si toca. 5. Dirígete a la máquina seleccionada y elige el programa. Después dime si se ha arrancado.
 
 **Usuario:** No entiendo cómo hacerlo  
 **Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
@@ -560,7 +568,7 @@ El Playbook §5.5 («Error AL001») describe únicamente *«Digues-me en quin lo
 **Bot:** ¿Cuál es el número de la máquina (lavadora)?
 
 **Usuario:** 3  
-**Bot:** **AL001** significa un error de secuencia. [instrucciones de secuencia]
+**Bot:** 🔧 Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Antes de avisar a asistencia, vamos a verificar juntos la secuencia. Por favor, sigue estos pasos en este orden: 1. Carga la lavadora. 2. Cierra la puerta. 3. Dirígete a la central de pago y paga. 4. Selecciona el número de máquina y recoge el cambio si toca. 5. Dirígete a la máquina seleccionada y elige el programa. Después dime si se ha arrancado.
 
 **Usuario:** Lo he hecho bien pero sigue saliendo  
 **Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.

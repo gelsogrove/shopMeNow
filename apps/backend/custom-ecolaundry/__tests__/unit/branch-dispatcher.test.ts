@@ -267,7 +267,11 @@ const cases: Case[] = [
   },
 
   {
-    name: 'invoiceHandler: sets pendingFlow="invoice-ask-location" + delegate-to-legacy',
+    name: 'invoiceHandler: returns delegate-to-legacy without pre-setting pendingFlow',
+    // pendingFlow is intentionally NOT set: pre-setting it caused the legacy
+    // guardInvoiceFlow to process T1 ("Quiero una factura") as the location answer.
+    // The legacy guard detects the trigger via detectInvoiceIntent and calls
+    // nextCaso9Step to decide the first question.
     run: async () => {
       const ar = makeAr()
       const out = await invoiceHandler({
@@ -279,8 +283,8 @@ const cases: Case[] = [
       if (out.handoff !== 'delegate-to-legacy') {
         throw new Error(`expected delegate-to-legacy, got "${out.handoff}"`)
       }
-      if (ar.state.pendingFlow !== 'invoice-ask-location') {
-        throw new Error(`expected pendingFlow="invoice-ask-location", got "${ar.state.pendingFlow}"`)
+      if (ar.state.pendingFlow !== '') {
+        throw new Error(`pendingFlow must remain empty (legacy guard owns the entry), got "${ar.state.pendingFlow}"`)
       }
       if (ar.state.faqTopic !== 'invoice') {
         throw new Error('faqTopic must be set to "invoice" for legacy guard handover')

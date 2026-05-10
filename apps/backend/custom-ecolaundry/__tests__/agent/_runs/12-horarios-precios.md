@@ -1,6 +1,6 @@
 # Agent test dialogues — `12-horarios-precios.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.125Z
+Generated: 2026-05-10T15:02:22.130Z
 Total: 5 | Pass: 5 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 12A: horario general 8-22 + follow-up "¿Y en L'Escala?" → eccezione 7-23
@@ -12,7 +12,7 @@ Total: 5 | Pass: 5 | Fail: 0
 🤖 **bot:**
 
 ```
-El horario general de atención al público es de 8:00 a 22:00, todos los días del año. ⏰
+👋 Hola, soy el asistente virtual de la lavandería. Abierto los 365 días del año, incluidos festivos. Horario: de 8:00h a 22:00h. Último ciclo de lavado: 21:00h. No necesitas reservar, simplemente ven cuando quieras.
 ```
 
 👤 **user:** ¿Y en L'Escala?
@@ -34,7 +34,7 @@ En L'Escala, las máquinas se pueden utilizar de 7:00 a 23:00, todos los días d
 🤖 **bot:**
 
 ```
-👋 Hola, soy el asistente virtual de la lavandería. Tranquilo, te ayudo. ¿Qué tipo de máquina estás usando, una lavadora o una secadora?
+👋 Hola, soy el asistente virtual de la lavandería. Tranquilo, te ayudo. ¿Es una lavadora o una secadora?
 ```
 
 👤 **user:** ¿Cuál es el horario?
@@ -56,7 +56,7 @@ En L'Escala, las máquinas se pueden utilizar de 7:00 a 23:00, todos los días d
 🤖 **bot:**
 
 ```
-Tengo que revisarlo antes de confirmarte ese importe.
+👋 Hola, soy el asistente virtual de la lavandería. Tengo que revisarlo antes de confirmarte ese importe. Cada máquina puede tener tarifas distintas según el local. ¿Puedo ayudarte con algo más?
 ```
 
 ---
@@ -70,7 +70,7 @@ Tengo que revisarlo antes de confirmarte ese importe.
 🤖 **bot:**
 
 ```
-👋 Hola, soy el asistente virtual de la lavandería. Cuéntame, ¿en qué te ayudo?
+👋 Hola, soy el asistente virtual de la lavandería. Cuéntame, ¿en qué te ayudo? 🙂
 ```
 
 👤 **user:** che orari avete?
@@ -78,7 +78,7 @@ Tengo que revisarlo antes de confirmarte ese importe.
 🤖 **bot:**
 
 ```
-El horario general de atención al público es de 8:00 a 22:00, todos los días del año. ⏰
+Abierto los 365 días del año, incluidos festivos. Horario: de 8:00h a 22:00h. Último ciclo de lavado: 21:00h. No necesitas reservar, simplemente ven cuando quieras.
 ```
 
 ---
@@ -92,7 +92,7 @@ El horario general de atención al público es de 8:00 a 22:00, todos los días 
 🤖 **bot:**
 
 ```
-El horario general de atención al público es de 8:00 a 22:00, todos los días del año. ⏰
+👋 Hola, soy el asistente virtual de la lavandería. Abierto los 365 días del año, incluidos festivos. Horario: de 8:00h a 22:00h. Último ciclo de lavado: 21:00h. No necesitas reservar, simplemente ven cuando quieras.
 ```
 
 👤 **user:** quels sont vos horaires?
@@ -100,7 +100,7 @@ El horario general de atención al público es de 8:00 a 22:00, todos los días 
 🤖 **bot:**
 
 ```
-El horario general de atención al público es de 8:00 a 22:00, todos los días del año. ⏰
+Abierto los 365 días del año, incluidos festivos. Horario: de 8:00h a 22:00h. Último ciclo de lavado: 21:00h. No necesitas reservar, simplemente ven cuando quieras.
 ```
 
 👤 **user:** que horas abrem?
@@ -108,7 +108,7 @@ El horario general de atención al público es de 8:00 a 22:00, todos los días 
 🤖 **bot:**
 
 ```
-El horario general de atención al público es de 8:00 a 22:00, todos los días del año. ⏰
+Abierto los 365 días del año, incluidos festivos. Horario: de 8:00h a 22:00h. Último ciclo de lavado: 21:00h. No necesitas reservar, simplemente ven cuando quieras.
 ```
 
 ---

@@ -1,6 +1,6 @@
 # Agent test dialogues — `28-relato-contradictorio.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.128Z
+Generated: 2026-05-10T15:02:22.133Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 28: relato contradictorio → "no lo sé bien" → escalate → name → summary "contradictorio/confuso"
@@ -33,7 +33,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en ubicación no identificada ha presentado un relato contradictorio o confuso sobre un cobro/incidencia y requiere revisión manual.
+El domingo 10 de mayo a las 17:01, Usuario Andrea en ubicación no identificada ha presentado un relato contradictorio o confuso sobre un cobro/incidencia y requiere revisión manual.
 ```
 
 ---

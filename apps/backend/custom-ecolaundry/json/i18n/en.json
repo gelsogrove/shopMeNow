@@ -24,6 +24,7 @@
   "doubleChargeAllReceived": "We have received all the information we need, we will review your case.",
   "noPhotoEscalate": "Got it. We'll review it manually to help you.",
   "reaffirmEscalate": "We will review your case manually. What is your name?",
+  "al001Escalate": "⚠️ If nothing worked, please use another washer. We need to notify the operator so they can review the case and possible compensation.",
   "displayShort": "What exactly appears on the screen?",
   "displayReaskAfterFailure": "Please write only the exact code that appears on the screen now, even if it is the same as before.",
   "displayUnrecognizedReask": "I don't quite recognise that code. Could you check again?",

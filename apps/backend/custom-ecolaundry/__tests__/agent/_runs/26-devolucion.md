@@ -1,6 +1,6 @@
 # Agent test dialogues — `26-devolucion.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.127Z
+Generated: 2026-05-10T15:02:22.132Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 26: exige devolución → bot chiede 4 dígitos+captura → cliente insiste → escalate (no promesa) → name → summary
@@ -33,7 +33,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en ubicación no identificada ha reportado una solicitud de devolución.
+El domingo 10 de mayo a las 17:00, Usuario Andrea en ubicación no identificada ha reportado una solicitud de devolución.
 ```
 
 ---

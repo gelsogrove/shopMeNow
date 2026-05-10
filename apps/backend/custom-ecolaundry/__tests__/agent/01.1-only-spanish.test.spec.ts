@@ -11,21 +11,22 @@ export const tests: TestCase[] = [
     name: 'IT input → reply ES (welcome ES)',
     run: async (ctx) => {
       const reply = await ctx.send('Ciao, non mi funziona la lavatrice')
-      expectMentionsAll(reply, ['hola', 'lavanderia', 'donde'])
+      // "donde" removed: bot asks "¿En qué lavandería estás?" (no literal "donde")
+      expectMentionsAll(reply, ['hola', 'lavanderia'])
     },
   },
   {
     name: 'EN input → reply ES',
     run: async (ctx) => {
       const reply = await ctx.send('Hi, my washer is not working')
-      expectMentionsAll(reply, ['hola', 'lavanderia', 'donde'])
+      expectMentionsAll(reply, ['hola', 'lavanderia'])
     },
   },
   {
     name: 'FR input → reply ES',
     run: async (ctx) => {
       const reply = await ctx.send('Bonjour, le lave-linge ne marche pas')
-      expectMentionsAll(reply, ['hola', 'lavanderia', 'donde'])
+      expectMentionsAll(reply, ['hola', 'lavanderia'])
     },
   },
 ]

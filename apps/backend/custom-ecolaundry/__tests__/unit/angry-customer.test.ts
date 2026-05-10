@@ -82,33 +82,63 @@ const cases: Case[] = [
       if (!out) throw new Error('guard must fire on desastre + encargado')
     },
   },
+  // G9 / F23 (Andrea 2026-05-10 audit) — pure-language inputs.
+  // Previous tests used ES-prefixed mixed input ("estoy muy enfadado — I want
+  // to speak with a human") which masked the gap that angryMarker was ES-only.
+  // angryMarker now covers all 6 langs natively.
   {
-    name: 'IT — "sono molto arrabbiato, voglio parlare con un operatore"  → escalate (multi-lang)',
+    name: 'IT — pure "sono molto arrabbiato, voglio parlare con un operatore" → escalate',
     run: () => {
       const ar = makeAr()
-      // The detector covers IT angry markers via "molest" (italian "molestato"
-      // is rare, but the operatorRequest regex handles "parlare con un operatore"
-      // explicitly). To be robust, we also include the IT rage marker via the
-      // "estoy muy molesto" shape.
       const out = guardAngryCustomerExplicit(
         ar,
-        'Estoy muy molesto, voglio parlare con un operatore',
+        'sono molto arrabbiato, voglio parlare con un operatore',
       )
-      if (!out) throw new Error('guard must fire on multi-language rage + operator')
+      if (!out) throw new Error('IT pure rage + operator request must fire')
     },
   },
   {
-    name: 'EN — "I am very angry, I want to speak with a human" → escalate (multi-lang)',
+    name: 'EN — pure "I am very angry, I want to speak with a human" → escalate',
     run: () => {
       const ar = makeAr()
-      // Mixed EN+ES sample: rage marker in ES (estoy muy enfadado) + EN
-      // operator request "speak with a human". This shape is realistic for
-      // multilingual customers who switch mid-message.
       const out = guardAngryCustomerExplicit(
         ar,
-        'estoy muy enfadado — I want to speak with a human now',
+        'I am very angry, I want to speak with a human now',
       )
-      if (!out) throw new Error('guard must fire on EN operator request')
+      if (!out) throw new Error('EN pure rage + operator request must fire')
+    },
+  },
+  {
+    name: 'PT — pure "estou muito irritado, quero um operador" → escalate',
+    run: () => {
+      const ar = makeAr()
+      const out = guardAngryCustomerExplicit(
+        ar,
+        'estou muito irritado, quero um operador',
+      )
+      if (!out) throw new Error('PT pure rage + operator request must fire')
+    },
+  },
+  {
+    name: 'CA — pure "estic molt enfadat, vull un operador" → escalate',
+    run: () => {
+      const ar = makeAr()
+      const out = guardAngryCustomerExplicit(
+        ar,
+        'estic molt enfadat, vull un operador',
+      )
+      if (!out) throw new Error('CA pure rage + operator request must fire')
+    },
+  },
+  {
+    name: 'FR — pure "je suis très en colère, je veux un opérateur" → escalate',
+    run: () => {
+      const ar = makeAr()
+      const out = guardAngryCustomerExplicit(
+        ar,
+        'je suis très en colère, je veux un opérateur',
+      )
+      if (!out) throw new Error('FR pure rage + operator request must fire')
     },
   },
   {

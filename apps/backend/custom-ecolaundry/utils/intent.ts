@@ -221,6 +221,8 @@ export function detectDoubleChargeIntent(message: string): boolean {
     /\bcobrad[ao]\s+(?:dos\s+veces|2\s+veces|m[aá]s\s+de\s+una\s+vez|el\s+doble|dos\s+cargos)\b/i.test(trimmed) ||
     /\bdoble\s+(?:cobro|cargo|cobr[ao]|pago)\b/i.test(trimmed) ||
     /\bcobr[oó]\s+dos\s+veces\b/i.test(trimmed) ||
+    // 3rd-person plural preterito: "me cobraron dos veces" (G5, F19).
+    /\bcobraron\s+(?:dos\s+veces|2\s+veces)\b/i.test(trimmed) ||
     /\b2\s+(?:cargos|cobros)\b/i.test(trimmed) ||
     // Spanish colloquial — "me hizo/hicieron pagar dos veces", "pagué dos veces" (F15)
     /\bme\s+(?:hizo|hicieron|han\s+hecho|ha\s+hecho)\s+pagar\s+(?:dos\s+veces|2\s+veces)\b/i.test(trimmed) ||
@@ -277,23 +279,109 @@ export function detectPaidNotActivatedIntent(message: string): boolean {
   // \b is ASCII-only in JS; non-ASCII trailing chars (é, ó) need a manual
   // lookahead instead of \b for the right boundary.
   const wordEnd = '(?=\\s|[!?.,;]|$)'
+
+  // Payment signal — participio ("he pagado", "pagado", "pagada") OR preterito
+  // ("pagué", word-end lookahead because \b ASCII bug).
   const paymentSignal =
     /\bhe\s+pagado\b/i.test(lower) ||
     new RegExp(`\\bpagu[eé]${wordEnd}`, 'i').test(lower) ||
     /\bpagad[oa]\b/i.test(lower)
-  if (!paymentSignal) return false
 
-  if (/\bno\s+se\s+(?:ha\s+)?activad[oa]\b/i.test(lower)) return true
-  if (new RegExp(`\\bno\\s+se\\s+activ[aoó]${wordEnd}`, 'i').test(lower)) return true
+  // Negation signal — STRICT: must mention "activad..." (or its typo).
+  // Generic verbs ("no arranca", "no funciona") are AMBIGUOUS — they may be
+  // Caso 1 (PUSH PROG visible) or Caso 4 (no activation). Better to let the
+  // display flow resolve them via gather → display capture.
+  // (F24 audit, Andrea 2026-05-10: reverted broad regex that caused Caso 1
+  // false positives.)
+  const negationCanonical =
+    /\bno\s+se\s+(?:ha\s+)?activad[oa]\b/i.test(lower) ||
+    new RegExp(`\\bno\\s+se\\s+activ[aoó]${wordEnd}`, 'i').test(lower)
 
+  // Typo-tolerant: token after "no se (ha)" within Levenshtein 1 of activado.
+  let negationTypo = false
   const m = lower.match(/\bno\s+se\s+(?:ha\s+)?([a-záéíóúñ]{6,})\b/i)
   if (m) {
     const token = m[1]
-    if (levenshtein(token, 'activado') <= 1) return true
-    if (levenshtein(token, 'activada') <= 1) return true
+    negationTypo = levenshtein(token, 'activado') <= 1 || levenshtein(token, 'activada') <= 1
   }
 
+  // Temporal anchor: "después de pagar" / "tras pagar" + generic failure.
+  // Narrower than just temporal — needs an explicit failure verb in the
+  // same message ("no me funciona después de pagar").
+  const afterPaymentFailure =
+    /\b(?:despu[eé]s|tras)\s+(?:de\s+)?pagar\b/i.test(lower) &&
+    /\bno\s+(?:me\s+)?(?:funciona|arranca|empieza|responde|parte|va)\b/i.test(lower)
+
+  if (paymentSignal && (negationCanonical || negationTypo)) return true
+  if (afterPaymentFailure) return true
+
   return false
+}
+
+// ── Display-unreadable intent detection (Caso 17) ────────────────────────────
+//
+// Topic classifier (rule #6 tracked exemption — fast-path before the LLM).
+// Returns true when the customer reports they cannot read the display
+// (Caso 17 — sets `pendingFlow='photo-await-decision'`).
+//
+// REGRESSION (Andrea, 2026-05-10 audit, F20): the inline regex in
+// `agent-extract.ts` was narrow ("no se que pone", "no veo la pantalla"). It
+// missed common phrasings: "pantalla apagada", "pantalla rota", "no entiendo
+// lo que pone", "no se ve nada en la pantalla". Same pattern as F16.
+// ES-only (production language); other 5 langs to be added when they ship.
+export function detectDisplayUnreadableIntent(message: string): boolean {
+  const lower = message.toLowerCase().trim()
+  if (!lower) return false
+  return (
+    // "no sé qué pone" — original canonical
+    /\bno\s+s[eé]\s+(?:qu[eé]|que)\s+(?:pone|sale|aparece|dice|est[áa]\s+escrito)\b/i.test(lower) ||
+    // "no veo (bien) la pantalla" / "no veo bien lo que pone"
+    /\bno\s+veo\s+(?:bien\s+)?(?:la\s+pantalla|lo\s+que)\b/i.test(lower) ||
+    // "no puedo leer la pantalla"
+    /\bno\s+puedo\s+leer\s+la\s+pantalla\b/i.test(lower) ||
+    // "pero no sé qué" — fragment still useful
+    /\bpero\s+no\s+s[eé]\s+qu[eé]\b/i.test(lower) ||
+    // "pantalla {apagada|rota|borrosa|negra|estropeada|defectuosa|en blanco}"
+    /\bpantalla\s+(?:apagad[ao]|rot[ao]|borros[ao]|negr[ao]|estropead[ao]|defectuos[ao]|en\s+blanco|sin\s+luz|no\s+funciona|no\s+enciende|no\s+se\s+ve)\b/i.test(lower) ||
+    // "(la) pantalla está/esta {apagada|rota|borrosa|negra|estropeada|...}"
+    /\b(?:la\s+)?pantalla\s+est[áa]\s+(?:apagad[ao]|rot[ao]|borros[ao]|negr[ao]|estropead[ao]|defectuos[ao]|en\s+blanco|rayad[ao])\b/i.test(lower) ||
+    // Bare "está en blanco" / "está apagada" without "pantalla" mention —
+    // usecases.md riga 1430 trigger 3 (Andrea 2026-05-10 audit).
+    /\best[áa]\s+(?:en\s+blanco|apagad[ao]|negr[ao]|borros[ao])\b/i.test(lower) ||
+    // "display" as synonym of "pantalla" — usecases.md riga 1431 trigger 4
+    // ("No puedo leer el display").
+    /\bno\s+(?:puedo|s[eé])\s+(?:leer|ver|entender)\s+(?:bien\s+)?(?:el\s+|la\s+)?display\b/i.test(lower) ||
+    // "no se ve (bien) (nada) en la pantalla" / "no se entiende"
+    /\bno\s+se\s+(?:ve|entiende)\s+(?:bien\s+|nada\s+)?(?:en\s+)?(?:la\s+)?pantalla\b/i.test(lower) ||
+    // "no entiendo (lo que) pone/aparece/dice"
+    /\bno\s+entiendo\s+(?:lo\s+que\s+)?(?:pone|aparece|dice|sale)\b/i.test(lower) ||
+    // "está rayada/rota la pantalla" — swapped order
+    /\b(?:est[áa]|esta)\s+(?:toda\s+)?(?:rayad[ao]|rot[ao]|estropead[ao]|borros[ao])\s+la\s+pantalla\b/i.test(lower)
+  )
+}
+
+// ── Numeric-only-code intent detection (Caso 18) ─────────────────────────────
+//
+// Caso 18: customer mentions a code that is purely numeric (e.g. "23432023").
+// Per the doc this is incoherence — real codes have letters.
+// Returns the numeric value if detected, null otherwise.
+//
+// REGRESSION (Andrea, 2026-05-10 audit, F21): the inline regex required
+// strict verb prefix ("tengo|tenho|ho|i have"). Missed phrasings:
+// "Mi código es 123456", "Codigo: 123456", "Recibí el código 123456".
+export function detectNumericCodeIntent(message: string): string | null {
+  // Strict patterns: <verb prefix> + "código/codice/code" + numeric value
+  const strictPatterns = [
+    /(?:tengo|tenho|ho|i\s+have|recib[ií]|me\s+han\s+dado)\s+(?:un\s+|el\s+|este\s+)?(?:c[oó]digo|codice|code)[\s:.,-]*([0-9]{3,})/i,
+    /(?:mi|el)\s+(?:c[oó]digo|codice|code)\s+(?:es|is|[èe])[\s:.,-]+([0-9]{3,})/i,
+    /(?:c[oó]digo|codice|code)\s*[:.]\s*([0-9]{3,})/i,
+    /^(?:c[oó]digo|codice|code)[\s:.,-]+([0-9]{3,})$/i,
+  ]
+  for (const p of strictPatterns) {
+    const m = message.match(p)
+    if (m && m[1]) return m[1]
+  }
+  return null
 }
 
 // ── Discount-code intent detection (Caso 8) ──────────────────────────────────
@@ -317,10 +405,22 @@ export function detectDiscountCodeIntent(message: string): boolean {
   const trimmed = message.toLowerCase()
   if (!trimmed) return false
   return (
-    // Spanish — verb-prefix permissive ("teng", "tengo"), plus standalone
+    // Spanish — verb-prefix permissive ("teng", "tengo") with optional
+    // article "un/el/este/mi" (G8, F22 — without "un": "tengo el codigo",
+    // "tengo este código", "tengo codigo de descuento"). Plus standalone
     // "código + (no sé cómo | cómo uso | dónde pongo)" phrasings.
-    /\bt[ie]ng[oai]?\s+un\s+c[oó]digo\b/i.test(trimmed) ||
+    /\bt[ie]ng[oai]?\s+(?:un|el|este|mi)?\s*c[oó]digo\b/i.test(trimmed) ||
     /\bc[oó]digo\s+(?:de\s+descuento\s+)?(?:y\s+|que\s+)?(?:no\s+s[eé]\s+c[oó]mo|c[oó]mo\s+(?:lo\s+)?(?:uso|usar|usarlo|utilizar|utilizarlo|utilizo)|d[oó]nde\s+(?:lo\s+)?(?:pongo|poner|ponerlo|meto|meterlo))/i.test(trimmed) ||
+    // ES: "código (de) descuento" mention without verb. "de" is optional
+    // because customers often write "codigo descuento" colloquially.
+    /\bc[oó]digo\s+(?:de\s+)?descuento\b/i.test(trimmed) ||
+    // ES usecases trigger 3: "Me han dado un código" / "han dado un código" /
+    // "Recibí un código" / "me dieron un código" (F22 audit, Andrea 2026-05-10).
+    /\b(?:me\s+)?(?:han\s+dado|dieron|me\s+dio|recib[ií]|tengo\s+que\s+usar)\s+(?:un\s+|el\s+)?c[oó]digo\b/i.test(trimmed) ||
+    // ES typo with consonant-vowel swap: "tnego" (t-n-e-g-o instead of t-e-n-g-o).
+    // Levenshtein distance 2 from "tengo" — handle via explicit pattern since
+    // distance 1 from "tengo" would also match common words. Restricted form.
+    /\bt[a-z]{1,2}eg[oai]?\s+(?:un|el|este|mi)?\s*c[oó]digo\b/i.test(trimmed) ||
     // Italian — "ho un codice", "codice + non so come / come uso / dove metterlo"
     /\bho\s+un\s+codice\b/i.test(trimmed) ||
     /\bcodice\s+(?:e\s+)?(?:non\s+so\s+come|come\s+(?:lo\s+)?(?:uso|usare|utilizzo|utilizzarlo)|dove\s+(?:lo\s+)?(?:metto|mettere|mettelo))/i.test(trimmed) ||
@@ -521,7 +621,19 @@ export function isAwaitingLocation(state: SessionState): boolean {
 }
 
 export function hasGreetingIntent(message: string): boolean {
-  return /\b(ciao|ciao\s+come\s+stai|hello|hi|hola|buongiorno|buonasera)\b/i.test(message.trim())
+  // ES: hola, buenos días/tardes/noches, buenas (alone). \b ASCII-only after
+  // accented á → use word-end lookahead. (G4, F18, Andrea 2026-05-10).
+  // IT: ciao, salve, buongiorno, buonasera. EN: hi, hello, hey.
+  // PT: olá, oi, bom dia. CA: hola (same as ES). FR: bonjour, salut.
+  const m = message.trim()
+  return (
+    /\b(ciao|ciao\s+come\s+stai|hello|hey|hi|hola|buongiorno|buonasera|salve|bonjour|salut|oi)\b/i.test(m) ||
+    /\bol[áa](?=\s|[!?.,;]|$)/i.test(m) ||
+    /\bbuen[oa]s\s+(?:d[ií]as|tardes|noches|nits)(?=\s|[!?.,;]|$)/i.test(m) ||
+    /\bbom\s+dia(?=\s|[!?.,;]|$)/i.test(m) ||
+    /\bboa\s+(?:tarde|noite)(?=\s|[!?.,;]|$)/i.test(m) ||
+    /^buenas(?=\s|[!?.,;]|$)/i.test(m)
+  )
 }
 
 export function detectLanguageHeuristic(message: string): SessionState['language'] | null {
@@ -619,17 +731,33 @@ export function parsePaymentAnswer(message: string): boolean | null {
   const normalized = message.trim().toLowerCase()
   if (!normalized) return null
 
-  if (/^(no|not yet|non ancora|ancora no)$/i.test(normalized)) {
+  // Negative — explicit "no" / "not yet" / "todavía no" / "aun no" (with or
+  // without accent on "aún"). Covered for all 6 langs.
+  if (/^(no|not yet|non ancora|ancora no|todav[ií]a no|a[uú]n no|aun no|pas encore|ainda n[ãa]o|encara no)$/i.test(normalized)) {
     return false
   }
 
-  if (/\b(non ho pagato|not paid|non pagato|no he pagado|todav[ií]a no)\b/i.test(normalized)) {
+  if (/\b(non ho pagato|not paid|non pagato|no he pagado|todav[ií]a no|a[uú]n no|n[ãa]o paguei|no he pagat|pas encore pay[eé])\b/i.test(normalized)) {
     return false
   }
 
+  // Positive — bare "sí" / "si" / "yes" plus common ES affirmative phrases.
+  // \b is ASCII-only in JS regex → does NOT match after accented "í" — use
+  // explicit lookahead for word boundary (G1, F17, Andrea 2026-05-10).
+  const wordEnd = '(?=\\s|[!?.,;]|$)'
   if (
-    /^(yes|y|si|sì|sí)\b/i.test(normalized) ||
-    /\b(ho pagato|pagato|paid|pagamento fatto|payment completed|fatto il pagamento|ho messo i soldi|messo i soldi|inserito i soldi)\b/i.test(normalized)
+    new RegExp(`^(yes|y|si|sì|sí|sim|oui|és)${wordEnd}`, 'i').test(normalized) ||
+    /\b(ho pagato|pagato|paid|pagamento fatto|payment completed|fatto il pagamento|ho messo i soldi|messo i soldi|inserito i soldi)\b/i.test(normalized) ||
+    // ES positive verbs/phrases: "pagué" (preterito), "he pagado" (perfecto),
+    // "ya pagué" / "ya he pagado" / "sí he pagado". Word-end lookahead because
+    // "pagué" / "pagué\b" suffers the same \b ASCII bug as "sí".
+    new RegExp(`\\bpagu[eé]${wordEnd}`, 'i').test(normalized) ||
+    /\bhe\s+pagado\b/i.test(normalized) ||
+    /\bya\s+pagu[eé]\b/i.test(normalized) ||
+    /\bya\s+he\s+pagado\b/i.test(normalized) ||
+    /\bs[íi]\s+he\s+pagado\b/i.test(normalized) ||
+    // PT positive: "já paguei", "paguei"
+    /\b(j[áa]\s+)?paguei\b/i.test(normalized)
   ) {
     return true
   }

@@ -1,6 +1,6 @@
 # Agent test dialogues — `04-pago-sin-cambio.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.122Z
+Generated: 2026-05-10T15:02:22.128Z
 Total: 3 | Pass: 3 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 4.1: happy path completo → gather → "No" cambio → arranca → resolved
@@ -28,7 +28,7 @@ Total: 3 | Pass: 3 | Fail: 0
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 4
@@ -82,7 +82,7 @@ Puede que se haya marcado mal el número de máquina. Revisa, por favor, el sald
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 4
@@ -111,7 +111,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en Goya ha pagado pero la lavadora número 4 no se ha activado tras corregir el número en la central. Requiere revisión manual.
+El domingo 10 de mayo a las 16:59, Usuario Andrea en Goya ha pagado pero la lavadora número 4 no se ha activado tras corregir el número en la central. Requiere revisión manual.
 ```
 
 ---
@@ -141,7 +141,7 @@ Usuario Andrea en Goya ha pagado pero la lavadora número 4 no se ha activado tr
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 4
@@ -178,7 +178,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en Goya ha pagado pero la lavadora número 4 no se ha activado tras corregir el número en la central. Requiere revisión manual.
+El domingo 10 de mayo a las 16:59, Usuario Andrea en Goya ha pagado pero la lavadora número 4 no se ha activado tras corregir el número en la central. Requiere revisión manual.
 ```
 
 ---

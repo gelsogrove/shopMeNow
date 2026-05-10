@@ -1,6 +1,6 @@
-# Agent test dialogues — `26-context-switch.test.spec.ts`
+# Agent test dialogues — `cross/26-context-switch.test.spec.ts`
 
-Generated: 2026-05-09T22:33:29.832Z
+Generated: 2026-05-10T15:02:22.135Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — context switch: dopo Goya+5 fa FAQ "qué horarios" → bot risponde con orari
@@ -20,7 +20,7 @@ Total: 2 | Pass: 2 | Fail: 0
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** 5
@@ -58,7 +58,7 @@ El horario general de atención al público es de 8:00 a 22:00, todos los días 
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** 5

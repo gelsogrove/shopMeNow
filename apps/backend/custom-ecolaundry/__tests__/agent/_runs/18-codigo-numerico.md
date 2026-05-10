@@ -1,6 +1,6 @@
 # Agent test dialogues — `18-codigo-numerico.test.spec.ts`
 
-Generated: 2026-05-10T00:13:15.656Z
+Generated: 2026-05-10T15:02:22.132Z
 Total: 3 | Pass: 3 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 18.1: codice numerico → "No" → escalate sin confrontar → name → summary "solo numérico"
@@ -33,7 +33,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en ubicación no identificada ha facilitado un código solo numérico (23432023) que no encaja con el formato esperado y requiere revisión manual.
+El domingo 10 de mayo a las 17:00, Usuario Andrea en ubicación no identificada ha facilitado un código solo numérico (23432023) que no encaja con el formato esperado y requiere revisión manual.
 ```
 
 ---

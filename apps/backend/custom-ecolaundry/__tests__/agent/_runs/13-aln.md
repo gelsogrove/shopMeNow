@@ -1,6 +1,6 @@
 # Agent test dialogues — `13-aln.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.125Z
+Generated: 2026-05-10T15:02:22.131Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 13 ALN: happy path completo → gather → escalate "revisar" + nome → state popolato
@@ -28,7 +28,7 @@ Total: 1 | Pass: 1 | Fail: 0
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** 5
@@ -49,7 +49,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en Goya ha efectuado el pago en la lavadora número 5. La pantalla muestra el código de alarma ALN y requiere revisión técnica.
+El domingo 10 de mayo a las 17:00, Usuario Andrea en Goya ha efectuado el pago en la lavadora número 5. La pantalla muestra el código de alarma ALN y requiere revisión técnica.
 ```
 
 ---

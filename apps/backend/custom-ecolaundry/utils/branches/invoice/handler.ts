@@ -15,15 +15,13 @@
 import type { BranchHandler } from '../types.js'
 
 export const invoiceHandler: BranchHandler = async ({ ar }) => {
-  // Activate the legacy invoice flow at the right starting step. The
-  // existing nextCaso9Step() helper inside invoice-flow.ts then skips
-  // any step whose data is already in sticky state (location, machine
-  // type) and asks only the missing ones.
-  if (!ar.state.pendingFlow.startsWith('invoice-')) {
-    ar.state.pendingFlow = 'invoice-ask-location'
-    ar.state.lastResolvedIntent = 'faq'
-    ar.state.faqTopic = 'invoice'
-  }
+  // Mark the topic so downstream guards/history know we are in an invoice flow.
+  // Do NOT pre-set pendingFlow: the legacy guardInvoiceFlow entry point detects
+  // the invoice trigger via detectInvoiceIntent and calls nextCaso9Step to decide
+  // the first question. Pre-setting 'invoice-ask-location' caused the guard's
+  // switch to consume T1 ("Quiero una factura") as the location answer.
+  ar.state.lastResolvedIntent = 'faq'
+  ar.state.faqTopic = 'invoice'
 
   return {
     reply: '',

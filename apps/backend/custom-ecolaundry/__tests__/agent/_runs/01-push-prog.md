@@ -1,6 +1,6 @@
 # Agent test dialogues — `01-push-prog.test.spec.ts`
 
-Generated: 2026-05-10T00:13:15.652Z
+Generated: 2026-05-10T15:02:22.124Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 1.1: happy path completo → gather → PUSH PROG → "ahora funciona" → resolved
@@ -20,7 +20,7 @@ Total: 2 | Pass: 2 | Fail: 0
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 5
@@ -76,7 +76,7 @@ Después dime si la lavadora ha arrancado.
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 5
@@ -110,7 +110,7 @@ Después dime si la lavadora ha arrancado.
 🤖 **bot:**
 
 ```
-Cuéntame, por favor, ¿qué aparece exactamente en la pantalla?
+Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
 ```
 
 👤 **user:** PUSH PROG
@@ -131,7 +131,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en Goya ha efectuado el pago en la lavadora número 5. La pantalla muestra PUSH PROG y, tras pulsar el programa, la máquina no responde.
+El domingo 10 de mayo a las 16:58, Usuario Andrea en Goya ha efectuado el pago en la lavadora número 5. La pantalla muestra PUSH PROG y, tras pulsar el programa, la máquina no responde.
 ```
 
 ---

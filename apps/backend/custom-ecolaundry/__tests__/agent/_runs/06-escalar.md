@@ -1,6 +1,6 @@
 # Agent test dialogues — `06-escalar.test.spec.ts`
 
-Generated: 2026-05-09T21:20:28.338Z
+Generated: 2026-05-10T15:02:22.129Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 1 PUSH PROG: cliente pulsa pero la máquina no responde → bot escala
@@ -20,7 +20,7 @@ Total: 1 | Pass: 1 | Fail: 0
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 5
@@ -62,7 +62,7 @@ Después dime si la lavadora ha arrancado.
 🤖 **bot:**
 
 ```
-Cuéntame, por favor, ¿qué aparece exactamente en la pantalla?
+Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
 ```
 
 👤 **user:** PUSH PROG

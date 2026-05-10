@@ -1,6 +1,6 @@
 # Agent test dialogues — `locations/alemanya/21-monedas-secadora.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.129Z
+Generated: 2026-05-10T15:02:22.135Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 21 Alemanya: trigger no-suma-minutos → location → escalate → name → summary completo
@@ -33,7 +33,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en Alemanya ha reportado que ha añadido monedas a la secadora pero no se han sumado minutos.
+El domingo 10 de mayo a las 17:02, Usuario Andrea en Alemanya ha reportado que ha añadido monedas a la secadora pero no se han sumado minutos.
 ```
 
 ---

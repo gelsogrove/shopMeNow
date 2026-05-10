@@ -36,7 +36,7 @@
   "agentSessionCacheMax": 10000,
 
   "_section_branch_router": "When true, T1 messages are classified by utils/router.ts (LLM call) into a branch and dispatched to utils/branches/<branch>/handler.ts. T2+ stay deterministic via state.activeBranch. When false (default), the legacy guard pipeline runs unchanged. See docs/branch-router-architecture.md and TODO.md item #2.",
-  "useBranchRouter": false,
+  "useBranchRouter": true,
 
   "_section_natural_rephrase": "When true, every guard outcome that is NOT operator-only structured output is passed through utils/agent-rephrase.ts (LLM polish call) for natural tone-matching, using conversation history as context. Adds ~$0.0005 + ~1s latency per rephrased turn. Content invariants are preserved by the rephrase prompt (sacred rules, keywords, codes). Off by default — opt-in via this flag. See CLAUDE.md Pending refactors D1.",
   "naturalRephrase": true,

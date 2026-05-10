@@ -1,6 +1,6 @@
 # Agent test dialogues — `17-no-pantalla-foto.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.126Z
+Generated: 2026-05-10T15:02:22.131Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 17.1: "no sé qué pone" → location → tipo → escalate → name → summary
@@ -41,7 +41,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en Hortes no ha podido completar la operación en la lavadora número desconocido. Sin información clara de pantalla; se requiere revisión manual.
+El domingo 10 de mayo a las 17:00, Usuario Andrea en Hortes no ha podido completar la operación en la lavadora número desconocido. Sin información clara de pantalla; se requiere revisión manual.
 ```
 
 ---
@@ -63,7 +63,7 @@ Usuario Andrea en Hortes no ha podido completar la operación en la lavadora nú
 🤖 **bot:**
 
 ```
-Gracias. ¿Estás usando una lavadora o una secadora?
+Gracias. ¿Qué número de lavadora o secadora estás utilizando?
 ```
 
 👤 **user:** Lavadora

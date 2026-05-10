@@ -11,7 +11,10 @@ import { getFaqs } from '../runtime.js'
 import type { Guard } from '../../models/index.js'
 import { lang } from './helpers.js'
 
-const TARJETA_TOPIC = /(tarjeta\s+(?:de\s+)?fidelizaci[oó]n|tarjeta\s+(?:de\s+)?fidelidad|loyalty\s+card|c[oó]mo\s+(?:consigo|comprar|recargar)\s+(?:la\s+)?tarjeta)/i
+// F25 (Andrea 2026-05-10 audit): added "tarjeta de descuento" and "quiero la
+// tarjeta" patterns from usecases.md riga 1113 ("Quiero la tarjeta de
+// descuento") which the legacy regex missed.
+const TARJETA_TOPIC = /(tarjeta\s+(?:de\s+)?(?:fidelizaci[oó]n|fidelidad|descuento)|loyalty\s+card|c[oó]mo\s+(?:consigo|comprar|recargar)\s+(?:la\s+)?tarjeta|(?:quiero|necesito|me\s+gustar[ií]a)\s+(?:la\s+|una\s+)?tarjeta)/i
 
 export const guardLoyaltyCardBuy: Guard = (ar, userMessage) => {
   if (

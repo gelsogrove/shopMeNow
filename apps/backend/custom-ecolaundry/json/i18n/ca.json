@@ -24,6 +24,7 @@
   "doubleChargeAllReceived": "Hem rebut tota la informació necessària, revisarem el teu cas.",
   "noPhotoEscalate": "⚠️ Sense informació del display ni foto, revisarem el teu cas manualment.",
   "reaffirmEscalate": "Revisarem el teu cas manualment. Com et dius?",
+  "al001Escalate": "⚠️ Si res ha funcionat, si us plau utilitza una altra rentadora. Hem d'avisar l'operador perquè revisi el cas i la possible compensació.",
   "operatorHandoffFinal": "Un operador humà s'encarregarà del teu cas. Si us plau, espera un moment mentre revisen la situació. El chatbot serà desactivat.",
   "refundFormFinal": "Gràcies, {name}! 🙏 Hem rebut tota la informació necessària per al teu cas. Revisarem la teva situació i t'enviarem el formulari de devolució. Si necessites alguna cosa més, sóc aquí per ajudar-te. 💚",
   "displayShort": "Què apareix exactament a la pantalla?",

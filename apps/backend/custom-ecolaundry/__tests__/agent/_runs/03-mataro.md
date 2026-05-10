@@ -1,6 +1,6 @@
 # Agent test dialogues — `03-mataro.test.spec.ts`
 
-Generated: 2026-05-09T21:20:28.336Z
+Generated: 2026-05-10T15:02:22.126Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — customer dice "Mataró" al turn 2 → bot disambigua tra Goya e Alemanya
@@ -42,7 +42,7 @@ En Mataró tenemos dos lavanderías: C/ Francisco de Goya 117 y C/ Alemanya 17. 
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 ---

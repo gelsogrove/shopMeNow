@@ -36,11 +36,16 @@ export const tests: TestCase[] = [
   {
     // Cliente dà location + tipo + numero + display → bot va dritto
     // all'istruzione del flow tecnico (case_push), nessuna domanda di gather.
+    // NOTE: "lavanderia" is intentionally NOT in the negative list because the
+    // standard greeting ("asistente virtual de la lavandería") legitimately
+    // contains the word. The real signal that the bot is NOT re-asking for
+    // location is the absence of "donde" (or "en qué lavandería"). This is
+    // consistent with the comment in the test above.
     name: 'ES — "En Goya lavadora 3 PUSH PROG" → bot dà istruzione (tutti i fatti estratti)',
     run: async (ctx) => {
       const reply = await ctx.send('En Goya lavadora 3 PUSH PROG')
       expectMentionsAll(reply, ['program'])
-      expectMentionsNone(reply, ['donde', 'lavanderia', 'lavadora o secadora', 'numero de la lavadora'])
+      expectMentionsNone(reply, ['donde', 'lavadora o secadora', 'numero de la lavadora'])
       expectStateHas(ctx.session, {
         location: 'Goya',
         machineType: 'washer',

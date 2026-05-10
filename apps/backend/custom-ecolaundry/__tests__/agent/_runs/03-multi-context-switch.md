@@ -1,6 +1,6 @@
 # Agent test dialogues — `cross/03-multi-context-switch.test.spec.ts`
 
-Generated: 2026-05-09T21:20:28.340Z
+Generated: 2026-05-10T15:02:22.134Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — context switch machine → datafono: machine facts resetati, datafono incident attivo
@@ -20,7 +20,7 @@ Total: 1 | Pass: 1 | Fail: 0
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** 5

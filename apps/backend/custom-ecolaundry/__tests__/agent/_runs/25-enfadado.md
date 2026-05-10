@@ -1,6 +1,6 @@
 # Agent test dialogues — `25-enfadado.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.127Z
+Generated: 2026-05-10T15:02:22.132Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Caso 25: empathic T1 → gather → escalate automático → name → summary
@@ -28,7 +28,7 @@ Entiendo tu malestar y quiero ayudarte. 💚 Vamos a revisarlo cuanto antes. ¿P
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 5
@@ -49,7 +49,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en Goya (lavadora número 5) ha mostrado mucho malestar y exige una solución inmediata. Requiere atención prioritaria.
+El domingo 10 de mayo a las 17:00, Usuario Andrea en Goya (lavadora número 5) ha mostrado mucho malestar y exige una solución inmediata. Requiere atención prioritaria.
 ```
 
 ---

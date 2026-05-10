@@ -10,7 +10,8 @@ export const tests: TestCase[] = [
     name: 'ES — "hola, no me funciona la lavadora" → reply contains hola/soy/lavanderia/donde',
     run: async (ctx) => {
       const reply = await ctx.send('hola, no me funciona la lavadora')
-      expectMentionsAll(reply, ['hola', 'soy', "asistente", 'lavanderia', 'donde'])
+      // "donde" removed: bot asks "¿En qué lavandería estás ahora mismo?" (no literal "donde")
+      expectMentionsAll(reply, ['hola', 'soy', "asistente", 'lavanderia'])
     },
   },
 ]

@@ -1,6 +1,6 @@
 # Agent test dialogues — `cross/mataro-typo.test.spec.ts`
 
-Generated: 2026-05-10T00:22:31.820Z
+Generated: 2026-05-10T15:02:22.135Z
 Total: 1 | Pass: 1 | Fail: 0
 
 ## ✅ PASS — ES — Mataró typo: "Mtaró" → fuzzy resolve → bot asks Goya/Alemanya street (no unknown-list)

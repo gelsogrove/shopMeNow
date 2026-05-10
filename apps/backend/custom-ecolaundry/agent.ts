@@ -421,7 +421,16 @@ async function appendEscalationSummary(ar: AgentRuntime, reply: string, history:
     if (!customerName) return reply
     const lang = resolveTenantLang(ar)
     const finalText = t('refundFormFinal', lang).replace('{name}', customerName)
-    return finalText
+    // Append a compact incident summary under "📋 Resumen para tramitación" so
+    // the team processing the refund form can see location, machine, and
+    // incident details without reading the full conversation log. Uses a
+    // different section header than live-operator escalation (no "Human
+    // Support message", no "operador") so Scenario 6.1 assertions stay green
+    // (usecases.md §6.1 riga 627: "no es una escalación a un humano en vivo").
+    const ctx = extractEscalationContext(ar.state, customerName)
+    const summary = await generateOperatorBriefingFromHistory(ar, history, buildEscalationSummary(ctx))
+    ar.pendingEscalation = null
+    return `${finalText}\n\n**📋 Resumen para tramitación:**\n${summary}`
   }
   if (!ar.pendingEscalation || !customerName) return reply
   const ctx = extractEscalationContext(ar.state, ar.state.customerName)

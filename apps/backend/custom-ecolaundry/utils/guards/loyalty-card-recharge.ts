@@ -9,7 +9,10 @@ import { t } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { lang } from './helpers.js'
 
-const RECARGA_TOPIC = /(c[oó]mo\s+recargo|recargar\s+(?:la\s+)?tarjeta|recarga\s+(?:de\s+)?(?:la\s+)?tarjeta|how\s+(?:do\s+i\s+|to\s+)?(?:re)?charge\s+(?:the\s+)?(?:loyalty\s+)?card)/i
+// F25 (Andrea 2026-05-10 audit): added "cargar la tarjeta" (without "re-") and
+// "recargarla" (verb with attached pronoun) from usecases.md riga 1155-1156
+// trigger 2/3 which the legacy regex missed.
+const RECARGA_TOPIC = /(c[oó]mo\s+recargo|(?:re)?cargar(?:la|lo)?\s+(?:la\s+)?tarjeta|recarga(?:r|rla|rlo)?\s+(?:de\s+)?(?:la\s+)?tarjeta|recargarla|recargarlo|no\s+s[eé]\s+(?:c[oó]mo\s+)?recargar(?:la|lo)?|how\s+(?:do\s+i\s+|to\s+)?(?:re)?charge\s+(?:the\s+)?(?:loyalty\s+)?card)/i
 
 export const guardLoyaltyCardRecharge: Guard = (ar, userMessage) => {
   if (

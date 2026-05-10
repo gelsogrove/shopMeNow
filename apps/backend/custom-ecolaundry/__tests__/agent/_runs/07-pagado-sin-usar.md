@@ -1,6 +1,6 @@
 # Agent test dialogues — `07-pagado-sin-usar.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.123Z
+Generated: 2026-05-10T15:02:22.129Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 7.1: happy path completo → gather → pantalla PUSH PROG → istruzione → resolved
@@ -28,7 +28,7 @@ Total: 2 | Pass: 2 | Fail: 0
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** 5
@@ -62,7 +62,7 @@ Después dime si la lavadora ha arrancado.
 🤖 **bot:**
 
 ```
-✅ Perfecto, ya está resuelto. ¡Que tengas un buen día! 🎉
+¡Perfecto, incidencia resuelta! 🎉 Si necesitas más ayuda, no dudes en preguntar.
 ```
 
 ---
@@ -92,7 +92,7 @@ Después dime si la lavadora ha arrancado.
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** 5
@@ -126,7 +126,7 @@ Después dime si la lavadora ha arrancado.
 🤖 **bot:**
 
 ```
-Cuéntame, por favor, ¿qué aparece exactamente en la pantalla?
+Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
 ```
 
 👤 **user:** se ha bloqueado
@@ -147,7 +147,7 @@ Vamos a revisar tu caso manualmente, Luis, para poder ayudarte de la manera más
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Luis en Pineda ha efectuado el pago en la lavadora número 5. La pantalla muestra PUSH PROG y, tras pulsar el programa, la máquina no responde.
+El domingo 10 de mayo a las 16:59, Usuario Luis en Pineda ha efectuado el pago en la lavadora número 5. La pantalla muestra PUSH PROG y, tras pulsar el programa, la máquina no responde.
 ```
 
 ---

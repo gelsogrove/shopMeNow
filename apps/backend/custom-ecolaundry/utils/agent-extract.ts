@@ -15,6 +15,8 @@ import {
   normalizeMachineType,
   detectDoubleChargeIntent,
   detectDiscountCodeIntent,
+  detectDisplayUnreadableIntent,
+  detectNumericCodeIntent,
   detectPaidNotActivatedIntent,
   detectTopicSwitchDuringEscalation,
 } from './intent.js'
@@ -231,6 +233,16 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
         // Mark for clarification — bot should insist on a valid location.
         state.locationClarificationCount = (state.locationClarificationCount || 0) + 1
       }
+    } else {
+      // Inline scan: find a known location name anywhere in the free-text
+      // message (e.g. "Lavadora 3 Goya" → Goya). This covers free-order
+      // multi-fact messages where isLikelyStandaloneLocationInput returns false
+      // (machine keywords disqualify standalone check) and extractExplicitLocation
+      // returns null (no preposition). Exact-match only to minimise false positives.
+      const inlineKnown = resolveKnownLocation(trimmed)
+      if (inlineKnown) {
+        state.location = inlineKnown
+      }
     }
   }
 
@@ -393,7 +405,10 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   // no he podido usar"). Flow asks tipo → numero → cambio (NOT display, NOT pago).
   // Detection delegated to `detectPaidNotActivatedIntent` (utils/intent.ts) —
   // typo-tolerant via Levenshtein on the verb token (F16, Andrea 2026-05-10).
-  if (!state.pendingFlow && detectPaidNotActivatedIntent(userMessage)) {
+  // Skip when the branch router has already classified this as trouble-machine:
+  // generic "paid + not starting" phrases overlap with display-code incidents
+  // (Caso 3/SEL) and would incorrectly divert the gather to Caso 4 (cambio).
+  if (!state.pendingFlow && ar.state.activeBranch !== 'trouble-machine' && detectPaidNotActivatedIntent(userMessage)) {
     state.pendingFlow = 'no-change-ask'
     resetPostEscalationFlags(ar)
   }
@@ -422,10 +437,10 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
 
   // Caso 17 marker: customer says they can't read the display. Triggers the
   // photo-or-escalate path.
-  if (
-    !state.pendingFlow &&
-    /(no\s+s[eé]\s+(?:qu[eé]|qué)\s+pone|no\s+veo\s+(?:bien\s+)?la\s+pantalla|no\s+puedo\s+leer\s+la\s+pantalla|pero\s+no\s+s[eé]\s+qu[eé])/i.test(userMessage)
-  ) {
+  // Caso 17 trigger — customer reports they cannot read the display.
+  // Detection delegated to `detectDisplayUnreadableIntent` (utils/intent.ts) —
+  // expanded coverage (F20, Andrea 2026-05-10).
+  if (!state.pendingFlow && detectDisplayUnreadableIntent(userMessage)) {
     state.pendingFlow = 'photo-await-decision'
     state.displayUnreadable = true
     resetPostEscalationFlags(ar)
@@ -444,16 +459,13 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     resetPostEscalationFlags(ar)
   }
 
-  // Caso 18 trigger (inline regex — left as-is. Speculative typo-tolerant
-  // refactor reverted on 2026-05-09 audit: not justified by a real bug.)
-  if (
-    !state.pendingFlow &&
-    /(?:tengo|tenho|ho|i\s+have)\s+(?:un\s+)?(?:c[oó]digo|codice|code)[\s:.,-]*([A-Za-z0-9-]{3,})/i.test(userMessage)
-  ) {
-    const m = userMessage.match(/(?:c[oó]digo|codice|code)[\s:.,-]*([A-Za-z0-9-]{3,})/i)
-    const codeValue = m?.[1] || ''
-    if (codeValue && /^\d{3,}$/.test(codeValue)) {
-      state.faqCodeValue = codeValue
+  // Caso 18 trigger — customer reports a purely numeric "code".
+  // Detection delegated to `detectNumericCodeIntent` (utils/intent.ts) —
+  // expanded coverage beyond strict verb prefix (F21, Andrea 2026-05-10).
+  if (!state.pendingFlow) {
+    const numericCode = detectNumericCodeIntent(userMessage)
+    if (numericCode) {
+      state.faqCodeValue = numericCode
       state.pendingFlow = 'numeric-code-ask-letters'
       resetPostEscalationFlags(ar)
     }

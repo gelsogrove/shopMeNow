@@ -1,6 +1,6 @@
 # Agent test dialogues — `cross/05-location-gated-21-24.test.spec.ts`
 
-Generated: 2026-05-09T21:20:28.340Z
+Generated: 2026-05-10T15:02:22.134Z
 Total: 10 | Pass: 10 | Fail: 0
 
 ## ✅ PASS — ES — Caso 21 monedas Alemanya (DOC): escalation standard

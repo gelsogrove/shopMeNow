@@ -1,6 +1,6 @@
 # Agent test dialogues — `03-sel.test.spec.ts`
 
-Generated: 2026-05-10T00:13:15.654Z
+Generated: 2026-05-10T15:02:22.126Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 3.1: happy path completo → SEL istruzione → "Ahora sí funciona" → resolved
@@ -20,7 +20,7 @@ Total: 2 | Pass: 2 | Fail: 0
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 3
@@ -68,7 +68,7 @@ Después dime si la lavadora ha arrancado.
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 3
@@ -94,7 +94,7 @@ Después dime si la lavadora ha arrancado.
 🤖 **bot:**
 
 ```
-Cuéntame, por favor, ¿qué aparece exactamente en la pantalla?
+Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
 ```
 
 👤 **user:** SEL
@@ -115,7 +115,7 @@ Vamos a revisar tu caso manualmente, Luis, para poder ayudarte de la manera más
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Luis en Pineda ha efectuado el pago en la lavadora número 3. La pantalla muestra SEL: el cliente debe seleccionar el programa pero el problema persiste.
+El domingo 10 de mayo a las 16:59, Usuario Luis en Pineda ha efectuado el pago en la lavadora número 3. La pantalla muestra SEL: el cliente debe seleccionar el programa pero el problema persiste.
 ```
 
 ---

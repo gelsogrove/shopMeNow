@@ -1,6 +1,6 @@
 # Agent test dialogues — `16-alm-aln-generico.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.126Z
+Generated: 2026-05-10T15:02:22.131Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 16.1: ALN secadora → gather → escalate → name → summary completo
@@ -20,7 +20,7 @@ Total: 2 | Pass: 2 | Fail: 0
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la secadora?
+¿Podrías decirme, por favor, qué **número** tiene la secadora?
 ```
 
 👤 **user:** La 4
@@ -41,7 +41,7 @@ Vamos a revisar tu caso manualmente, Andrea, para poder ayudarte de la manera m�
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Andrea en Alemanya no ha podido completar la operación en la secadora número 4. La pantalla muestra el código de alarma ALN y requiere revisión técnica.
+El domingo 10 de mayo a las 17:00, Usuario Andrea en Alemanya no ha podido completar la operación en la secadora número 4. La pantalla muestra el código de alarma ALN y requiere revisión técnica.
 ```
 
 ---
@@ -63,7 +63,7 @@ Usuario Andrea en Alemanya no ha podido completar la operación en la secadora n
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 5

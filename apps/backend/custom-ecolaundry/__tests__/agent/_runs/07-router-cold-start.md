@@ -1,6 +1,6 @@
 # Agent test dialogues — `cross/07-router-cold-start.test.spec.ts`
 
-Generated: 2026-05-09T21:20:28.340Z
+Generated: 2026-05-10T15:02:22.135Z
 Total: 5 | Pass: 5 | Fail: 0
 
 ## ✅ PASS — cold-start — pure FAQ "qué horarios" → answer with hours (no troubleshooting question)
@@ -12,7 +12,7 @@ Total: 5 | Pass: 5 | Fail: 0
 🤖 **bot:**
 
 ```
-El horario general de atención al público es de 8:00 a 22:00, todos los días del año. ⏰
+👋 Hola, soy el asistente virtual de la lavandería. Abierto los 365 días del año, incluidos festivos. Horario: de 8:00h a 22:00h. Último ciclo de lavado: 21:00h. No necesitas reservar, simplemente ven cuando quieras.
 ```
 
 ---
@@ -26,7 +26,7 @@ El horario general de atención al público es de 8:00 a 22:00, todos los días 
 🤖 **bot:**
 
 ```
-El horario general de atención al público es de 8:00 a 22:00, todos los días del año. ⏰
+👋 Hola, soy el asistente virtual de la lavandería. Abierto los 365 días del año, incluidos festivos. Horario: de 8:00h a 22:00h. Último ciclo de lavado: 21:00h. No necesitas reservar, simplemente ven cuando quieras.
 ```
 
 ---
@@ -68,7 +68,7 @@ El horario general de atención al público es de 8:00 a 22:00, todos los días 
 🤖 **bot:**
 
 ```
-👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?
+👋 Hola, soy el asistente virtual de la lavandería. Cuéntame, ¿en qué te ayudo? 🙂
 ```
 
 ---

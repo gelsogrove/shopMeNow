@@ -1,6 +1,6 @@
 # Agent test dialogues — `32-marathon.test.spec.ts`
 
-Generated: 2026-05-09T21:25:59.581Z
+Generated: 2026-05-10T15:02:22.133Z
 Total: 3 | Pass: 2 | Fail: 1
 
 ## ✅ PASS — ES — Scenario 32.1: marathon greeting → FAQ → SEL → PUSH PROG → DOOR → AL001 → escalación
@@ -12,7 +12,7 @@ Total: 3 | Pass: 2 | Fail: 1
 🤖 **bot:**
 
 ```
-👋 Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás ahora mismo?
+👋 Hola, soy el asistente virtual de la lavandería. Cuéntame, ¿en qué te ayudo? 🙂
 ```
 
 👤 **user:** ¿Qué horarios hacéis?
@@ -20,7 +20,7 @@ Total: 3 | Pass: 2 | Fail: 1
 🤖 **bot:**
 
 ```
-El horario general de atención al público es de 8:00 a 22:00, todos los días del año. ⏰
+Abierto los 365 días del año, incluidos festivos. Horario: de 8:00h a 22:00h. Último ciclo de lavado: 21:00h. No necesitas reservar, simplemente ven cuando quieras.
 ```
 
 👤 **user:** Tengo un problema con la lavadora
@@ -36,7 +36,7 @@ El horario general de atención al público es de 8:00 a 22:00, todos los días 
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 3
@@ -53,6 +53,8 @@ Cuéntame, por favor, ¿qué aparece exactamente en la pantalla?
 
 ```
 Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago.
+
+Después dime si la lavadora ha arrancado.
 ```
 
 👤 **user:** No, ahora aparece PUSH PROG
@@ -115,7 +117,7 @@ Vamos a revisar tu caso manualmente, Marc, para poder ayudarte de la manera más
 Un operador humano se encargará de tu caso. Por favor, espera un momento mientras revisan la situación. El chatbot será desactivado.
 
 **👤 Human Support message**
-Usuario Marc en Pineda ha efectuado el pago en la lavadora número 3. La pantalla muestra el código de alarma AL001 y requiere revisión técnica.
+El domingo 10 de mayo a las 17:01, Usuario Marc en Pineda ha efectuado el pago en la lavadora número 3. La pantalla muestra el código de alarma AL001 y requiere revisión técnica.
 ```
 
 ---
@@ -137,7 +139,7 @@ Usuario Marc en Pineda ha efectuado el pago en la lavadora número 3. La pantall
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** La 5
@@ -171,7 +173,7 @@ Después dime si la lavadora ha arrancado.
 🤖 **bot:**
 
 ```
-✅ Perfecto, incidencia resuelta. ¡Gracias por tu paciencia! 🎉
+✅ Perfecto. La lavadora ha comenzado correctamente.
 ```
 
 👤 **user:** Sí, ¿podría tener la factura del lavado?
@@ -206,7 +208,7 @@ Scenario 32.3 T3: bot non risponde con prezzo: Tengo que revisarlo antes de conf
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** Espera, antes una pregunta: ¿cuánto cuesta lavar?

@@ -1,6 +1,6 @@
 # Agent test dialogues — `08-codigo-importe.test.spec.ts`
 
-Generated: 2026-05-09T22:59:14.124Z
+Generated: 2026-05-10T15:02:22.129Z
 Total: 4 | Pass: 4 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 8.1: happy path completo → SAU2904266 → name → pueblo → maquina → puerta → escalation
@@ -55,7 +55,7 @@ Total: 4 | Pass: 4 | Fail: 0
 Dame un minuto, hacemos las comprobaciones correspondientes. Si el código es correcto, te activaremos la máquina.
 
 **👤 Human Support message**
-Usuario Andrea en Goya ha facilitado un código válido (SAU2904266: letras SAU, fecha 2026-04-29, importe a confirmar manualmente) en la máquina nº 5 (puerta cerrada). Requiere validación y activación remota.
+El domingo 10 de mayo a las 16:59, Usuario Andrea en Goya ha facilitado un código válido (SAU2904266: letras SAU, fecha 2026-04-29, importe a confirmar manualmente) en la máquina nº 5 (puerta cerrada). Requiere validación y activación remota.
 ```
 
 ---

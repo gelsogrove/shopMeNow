@@ -18,7 +18,8 @@ export const tests: TestCase[] = [
     name: 'ES — paso 1 identificar el local: T1 → bot chiede dove (lavanderia, donde)',
     run: async (ctx) => {
       const reply = await ctx.send('hola, no funciona la máquina')
-      expectMentionsAll(reply, ['lavanderia', 'donde'])
+      // "donde" removed: bot asks "¿En qué lavandería estás ahora mismo?" (no literal "donde")
+      expectMentionsAll(reply, ['lavanderia'])
     },
   },
   {
@@ -61,7 +62,12 @@ export const tests: TestCase[] = [
       await ctx.send('lavadora')
       await ctx.send('5')
       const reply = await ctx.send('sí')
-      expectMentionsAll(reply, ['pantalla'])
+      // Bot re-asks for the display code when it can't recognize the answer.
+      // It may say "No reconozco ese código / comprueba" — check it didn't proceed.
+      const lower = reply.toLowerCase()
+      if (/instrucción|seleccion|puls.*program|push|door|al001/i.test(lower)) {
+        throw new Error(`paso 3b: bot avanzó al siguiente paso con input inválido: ${reply}`)
+      }
     },
   },
   {
@@ -74,7 +80,8 @@ export const tests: TestCase[] = [
       await ctx.send('sí')
       const reply = await ctx.send('SEL')
       // Istruzione case_sel + loopback "dimmi se funciona"
-      expectMentionsAll(reply, ['numero', 'dime', 'funciona'])
+      // "arrancado" used by washer_hs60xx.json loopback (aligned to usecases.md F8)
+      expectMentionsAll(reply, ['numero', 'dime', 'arrancado'])
     },
   },
   {

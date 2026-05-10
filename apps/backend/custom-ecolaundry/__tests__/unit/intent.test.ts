@@ -13,7 +13,9 @@
 
 import {
   detectDiscountCodeIntent,
+  detectDisplayUnreadableIntent,
   detectDoubleChargeIntent,
+  detectNumericCodeIntent,
   detectPaidNotActivatedIntent,
   detectIDontKnowReply,
   detectInvoiceIntent,
@@ -25,6 +27,7 @@ import {
   isLikelyStandaloneLocationInput,
   isShortContextReply,
   normalizeMachineType,
+  parsePaymentAnswer,
 } from '../../utils/intent.js'
 import { createInitialState } from '../../utils/state.js'
 
@@ -196,6 +199,96 @@ const cases: Case[] = [
     name: 'hasGreetingIntent: "no funciona la lavadora" → false',
     run: () => {
       if (hasGreetingIntent('no funciona la lavadora')) throw new Error('expected false')
+    },
+  },
+  // G4 / F18 — extended ES + IT + PT + FR greetings (Andrea 2026-05-10 audit).
+  {
+    name: 'hasGreetingIntent: "buenos días" → true (G4)',
+    run: () => { if (!hasGreetingIntent('buenos días')) throw new Error('expected true') },
+  },
+  {
+    name: 'hasGreetingIntent: "buenos dias" (no accent) → true',
+    run: () => { if (!hasGreetingIntent('buenos dias')) throw new Error('expected true') },
+  },
+  {
+    name: 'hasGreetingIntent: "buenas tardes" → true',
+    run: () => { if (!hasGreetingIntent('buenas tardes')) throw new Error('expected true') },
+  },
+  {
+    name: 'hasGreetingIntent: "buenas noches" → true',
+    run: () => { if (!hasGreetingIntent('buenas noches')) throw new Error('expected true') },
+  },
+  {
+    name: 'hasGreetingIntent: bare "buenas" → true',
+    run: () => { if (!hasGreetingIntent('buenas')) throw new Error('expected true') },
+  },
+  {
+    name: 'hasGreetingIntent: "salve" (IT) → true',
+    run: () => { if (!hasGreetingIntent('salve')) throw new Error('expected true') },
+  },
+  {
+    name: 'hasGreetingIntent: "olá" (PT) → true',
+    run: () => { if (!hasGreetingIntent('olá')) throw new Error('expected true') },
+  },
+  {
+    name: 'hasGreetingIntent: "bom dia" (PT) → true',
+    run: () => { if (!hasGreetingIntent('bom dia')) throw new Error('expected true') },
+  },
+  {
+    name: 'hasGreetingIntent: "bonjour" (FR) → true',
+    run: () => { if (!hasGreetingIntent('bonjour')) throw new Error('expected true') },
+  },
+
+  // ── parsePaymentAnswer — G1/G2/G3 / F17 (Andrea 2026-05-10 audit) ────────
+  // REGRESSION: bare "sí" returned null because \b is ASCII-only in JS regex
+  // (does not match after accented "í"). Same root as F16. Fix uses explicit
+  // word-end lookahead `(?=\s|[!?.,;]|$)`.
+  {
+    name: 'parsePaymentAnswer: bare "sí" → true (G1, ASCII \\b bug)',
+    run: () => {
+      if (parsePaymentAnswer('sí') !== true) throw new Error('bare "sí" must be true')
+    },
+  },
+  {
+    name: 'parsePaymentAnswer: "ya pagué" → true (G2)',
+    run: () => {
+      if (parsePaymentAnswer('ya pagué') !== true) throw new Error('"ya pagué" must be true')
+    },
+  },
+  {
+    name: 'parsePaymentAnswer: "he pagado" → true (G2)',
+    run: () => {
+      if (parsePaymentAnswer('he pagado') !== true) throw new Error('"he pagado" must be true')
+    },
+  },
+  {
+    name: 'parsePaymentAnswer: "sí he pagado" → true',
+    run: () => {
+      if (parsePaymentAnswer('sí he pagado') !== true) throw new Error('"sí he pagado" must be true')
+    },
+  },
+  {
+    name: 'parsePaymentAnswer: "aun no" → false (G3, missing "todavía")',
+    run: () => {
+      if (parsePaymentAnswer('aun no') !== false) throw new Error('"aun no" must be false')
+    },
+  },
+  {
+    name: 'parsePaymentAnswer: "aún no" → false (with accent)',
+    run: () => {
+      if (parsePaymentAnswer('aún no') !== false) throw new Error('"aún no" must be false')
+    },
+  },
+  {
+    name: 'parsePaymentAnswer: "no he pagado" → false',
+    run: () => {
+      if (parsePaymentAnswer('no he pagado') !== false) throw new Error('"no he pagado" must be false')
+    },
+  },
+  {
+    name: 'parsePaymentAnswer: empty string → null',
+    run: () => {
+      if (parsePaymentAnswer('') !== null) throw new Error('empty must be null')
     },
   },
 
@@ -480,6 +573,23 @@ const cases: Case[] = [
       }
     },
   },
+  // G5 / F19 — 3rd-person plural preterito (Andrea 2026-05-10 audit).
+  {
+    name: 'detectDoubleCharge: ES "me cobraron dos veces" → true (G5, plural preterito)',
+    run: () => {
+      if (!detectDoubleChargeIntent('me cobraron dos veces')) {
+        throw new Error('ES plural preterito "cobraron" must match')
+      }
+    },
+  },
+  {
+    name: 'detectDoubleCharge: ES "Me cobraron 2 veces" → true (numeric variant)',
+    run: () => {
+      if (!detectDoubleChargeIntent('Me cobraron 2 veces')) {
+        throw new Error('ES "cobraron 2 veces" must match')
+      }
+    },
+  },
   {
     name: 'detectDoubleCharge: ES "cobró dos veces" → true (verb-only, no "me")',
     run: () => {
@@ -668,6 +778,31 @@ const cases: Case[] = [
       }
     },
   },
+  // F24 — usecases.md riga 366-369 trigger alignment (Andrea audit 2026-05-10).
+  //
+  // STRICT detector: only fires on explicit "activad..." (canonical or typo)
+  // OR temporal "después de pagar" + failure verb. Generic "no arranca/funciona"
+  // is intentionally NOT matched because it's ambiguous between Caso 1
+  // (PUSH PROG visible) and Caso 4. The display flow resolves the ambiguity.
+  {
+    name: 'detectPaidNotActivated: usecases trigger 3 "No me funciona después de pagar" → true (F24)',
+    run: () => {
+      if (!detectPaidNotActivatedIntent('No me funciona después de pagar')) {
+        throw new Error('usecases.md trigger 3 "No me funciona después de pagar" must match')
+      }
+    },
+  },
+  {
+    name: 'detectPaidNotActivated: ambiguous "Pagué pero no arranca" → false (F24)',
+    run: () => {
+      // Per F24 audit: this trigger is ambiguous (Caso 1 or Caso 4). The
+      // display flow resolves it by gathering display state. detectPaidNotActivated
+      // intentionally requires "activad..." OR "después de pagar" anchor.
+      if (detectPaidNotActivatedIntent('Pagué pero no arranca')) {
+        throw new Error('"Pagué pero no arranca" is ambiguous — display flow handles it')
+      }
+    },
+  },
   {
     name: 'detectPaidNotActivated: NEGATIVE — Caso 7 "He pagado pero no he podido usar" → false',
     run: () => {
@@ -836,6 +971,53 @@ const cases: Case[] = [
       }
     },
   },
+  // F22 — usecases.md riga 911-914 lists 4 trigger phrasings (Andrea 2026-05-10
+  // audit). All must match.
+  {
+    name: 'detectDiscountCode: usecases trigger 3 "Me han dado un código" → true (F22)',
+    run: () => {
+      if (!detectDiscountCodeIntent('Me han dado un código')) {
+        throw new Error('"Me han dado un código" must match')
+      }
+    },
+  },
+  {
+    name: 'detectDiscountCode: usecases trigger 4 typo "tnego un código" → true (F22)',
+    run: () => {
+      if (!detectDiscountCodeIntent('tnego un código')) {
+        throw new Error('typo "tnego" (consonant-vowel swap) must match')
+      }
+    },
+  },
+  // G8 / F22 — phrasings without "un" article (Andrea 2026-05-10 audit).
+  {
+    name: 'detectDiscountCode: ES "tengo el código" → true (G8, "el" instead of "un")',
+    run: () => {
+      if (!detectDiscountCodeIntent('tengo el codigo')) throw new Error('"tengo el codigo" must match')
+    },
+  },
+  {
+    name: 'detectDiscountCode: ES "tengo este código" → true (G8)',
+    run: () => {
+      if (!detectDiscountCodeIntent('tengo este código')) throw new Error('"tengo este código" must match')
+    },
+  },
+  {
+    name: 'detectDiscountCode: ES "tengo codigo de descuento" → true (G8, no article)',
+    run: () => {
+      if (!detectDiscountCodeIntent('tengo codigo de descuento')) {
+        throw new Error('"tengo codigo de descuento" must match')
+      }
+    },
+  },
+  {
+    name: 'detectDiscountCode: ES "código descuento como uso" → true (G8, no "de")',
+    run: () => {
+      if (!detectDiscountCodeIntent('código descuento como uso')) {
+        throw new Error('"código descuento" without "de" must match')
+      }
+    },
+  },
   {
     name: 'detectDiscountCode: irrelevant "la lavadora no funciona" → false',
     run: () => {
@@ -861,6 +1043,165 @@ const cases: Case[] = [
       if (detectDiscountCodeIntent('')) {
         throw new Error('empty must NOT match')
       }
+    },
+  },
+
+  // ── detectDisplayUnreadableIntent — Caso 17 trigger (G6, F20) ────────────
+  // REGRESSION (Andrea 2026-05-10): inline regex was narrow ("no se que pone",
+  // "no veo la pantalla"). Missed common phrasings like "pantalla apagada",
+  // "pantalla rota", "no entiendo lo que pone".
+  {
+    name: 'detectDisplayUnreadable: "no sé qué pone" → true (canonical)',
+    run: () => {
+      if (!detectDisplayUnreadableIntent('no sé qué pone')) throw new Error('canonical must match')
+    },
+  },
+  {
+    name: 'detectDisplayUnreadable: "no veo la pantalla" → true',
+    run: () => {
+      if (!detectDisplayUnreadableIntent('no veo la pantalla')) throw new Error('"no veo la pantalla" must match')
+    },
+  },
+  {
+    name: 'detectDisplayUnreadable: "pantalla apagada" → true (G6)',
+    run: () => {
+      if (!detectDisplayUnreadableIntent('pantalla apagada')) throw new Error('"pantalla apagada" must match')
+    },
+  },
+  {
+    name: 'detectDisplayUnreadable: "pantalla rota" → true (G6)',
+    run: () => {
+      if (!detectDisplayUnreadableIntent('pantalla rota')) throw new Error('"pantalla rota" must match')
+    },
+  },
+  {
+    name: 'detectDisplayUnreadable: "la pantalla está rota" → true (canonical order)',
+    run: () => {
+      if (!detectDisplayUnreadableIntent('la pantalla está rota')) {
+        throw new Error('"la pantalla está rota" must match')
+      }
+    },
+  },
+  {
+    name: 'detectDisplayUnreadable: "no entiendo lo que pone" → true (G6)',
+    run: () => {
+      if (!detectDisplayUnreadableIntent('no entiendo lo que pone')) {
+        throw new Error('"no entiendo lo que pone" must match')
+      }
+    },
+  },
+  {
+    name: 'detectDisplayUnreadable: "no se ve nada en la pantalla" → true',
+    run: () => {
+      if (!detectDisplayUnreadableIntent('no se ve nada en la pantalla')) {
+        throw new Error('"no se ve nada" must match')
+      }
+    },
+  },
+  // F20 — usecases.md riga 1428-1431 lists 4 trigger phrasings (Andrea audit).
+  {
+    name: 'detectDisplayUnreadable: usecases trigger 3 "Está en blanco" → true (F20)',
+    run: () => {
+      if (!detectDisplayUnreadableIntent('Está en blanco')) {
+        throw new Error('"Está en blanco" must match')
+      }
+    },
+  },
+  {
+    name: 'detectDisplayUnreadable: usecases trigger 4 "No puedo leer el display" → true (F20)',
+    run: () => {
+      if (!detectDisplayUnreadableIntent('No puedo leer el display')) {
+        throw new Error('"No puedo leer el display" must match')
+      }
+    },
+  },
+  {
+    name: 'detectDisplayUnreadable: NEGATIVE — "la lavadora no funciona" → false',
+    run: () => {
+      if (detectDisplayUnreadableIntent('la lavadora no funciona')) {
+        throw new Error('machine fault must NOT match Caso 17')
+      }
+    },
+  },
+  {
+    name: 'detectDisplayUnreadable: NEGATIVE — "PUSH PROG" → false',
+    run: () => {
+      if (detectDisplayUnreadableIntent('PUSH PROG')) {
+        throw new Error('display code must NOT match Caso 17')
+      }
+    },
+  },
+  {
+    name: 'detectDisplayUnreadable: NEGATIVE — empty → false',
+    run: () => {
+      if (detectDisplayUnreadableIntent('')) throw new Error('empty must NOT match')
+    },
+  },
+
+  // ── detectNumericCodeIntent — Caso 18 trigger (G7, F21) ──────────────────
+  // REGRESSION (Andrea 2026-05-10): inline regex required strict verb prefix
+  // ("tengo|tenho|ho|i have"). Missed "Mi código es 123", "Codigo: 123",
+  // "Recibí el código 123". Returns the numeric value or null.
+  {
+    name: 'detectNumericCode: "Tengo un código 123456" → "123456"',
+    run: () => {
+      if (detectNumericCodeIntent('Tengo un código 123456') !== '123456') {
+        throw new Error('canonical with verb prefix must extract')
+      }
+    },
+  },
+  {
+    name: 'detectNumericCode: "Mi código es 123456" → "123456" (G7)',
+    run: () => {
+      if (detectNumericCodeIntent('Mi código es 123456') !== '123456') {
+        throw new Error('"Mi código es" must extract')
+      }
+    },
+  },
+  {
+    name: 'detectNumericCode: "Codigo: 123456" → "123456" (G7)',
+    run: () => {
+      if (detectNumericCodeIntent('Codigo: 123456') !== '123456') {
+        throw new Error('"Codigo:" must extract')
+      }
+    },
+  },
+  {
+    name: 'detectNumericCode: "Recibí el codigo 123456" → "123456" (G7)',
+    run: () => {
+      if (detectNumericCodeIntent('Recibí el codigo 123456') !== '123456') {
+        throw new Error('"Recibí el codigo" must extract')
+      }
+    },
+  },
+  {
+    name: 'detectNumericCode: "Me han dado un código 123456" → "123456"',
+    run: () => {
+      if (detectNumericCodeIntent('Me han dado un código 123456') !== '123456') {
+        throw new Error('"Me han dado" must extract')
+      }
+    },
+  },
+  {
+    name: 'detectNumericCode: NEGATIVE — alphanumeric "Tengo un código AB12345" → null',
+    run: () => {
+      if (detectNumericCodeIntent('Tengo un código AB12345') !== null) {
+        throw new Error('alphanumeric code is NOT Caso 18 — must return null')
+      }
+    },
+  },
+  {
+    name: 'detectNumericCode: NEGATIVE — "no funciona" → null',
+    run: () => {
+      if (detectNumericCodeIntent('no funciona') !== null) {
+        throw new Error('unrelated text must return null')
+      }
+    },
+  },
+  {
+    name: 'detectNumericCode: NEGATIVE — empty → null',
+    run: () => {
+      if (detectNumericCodeIntent('') !== null) throw new Error('empty must return null')
     },
   },
 

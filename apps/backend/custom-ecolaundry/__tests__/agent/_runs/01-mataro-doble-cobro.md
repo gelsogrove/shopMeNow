@@ -1,6 +1,6 @@
 # Agent test dialogues — `cross/01-mataro-doble-cobro.test.spec.ts`
 
-Generated: 2026-05-09T21:20:28.339Z
+Generated: 2026-05-10T18:49:49.590Z
 Total: 3 | Pass: 2 | Fail: 1
 
 ## ✅ PASS — ES — Caso 6 + Mataró: bot disambigua tra Goya/Alemanya PRIMA di entrare nel flow
@@ -103,7 +103,7 @@ En Mataró tenemos dos lavanderías: C/ Francisco de Goya 117 y C/ Alemanya 17. 
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 👤 **user:** 3

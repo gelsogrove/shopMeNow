@@ -1,6 +1,6 @@
 # Agent test dialogues — `cross/04-unknown-location.test.spec.ts`
 
-Generated: 2026-05-09T21:20:28.340Z
+Generated: 2026-05-10T15:02:22.134Z
 Total: 2 | Pass: 2 | Fail: 0
 
 ## ✅ PASS — ES — unknown location "Girona": bot insiste elencando le lavanderías reali
@@ -50,7 +50,7 @@ No reconozco esa ubicación. Nuestras lavanderías son: Hortes, Goya, Alemanya, 
 🤖 **bot:**
 
 ```
-¿Podrías decirme, por favor, qué número tiene la lavadora?
+¿Podrías decirme, por favor, qué **número** tiene la lavadora?
 ```
 
 ---

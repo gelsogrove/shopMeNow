@@ -108,7 +108,10 @@ export function expectInLanguage(reply: string, lang: 'es' | 'it' | 'en' | 'ca' 
  */
 export function expectAsksForLocation(reply: string): void {
   const n = norm(reply)
-  const whereWord = /\b(donde|dove|where|on|onde|ou)\b/.test(n)
+  // The ES canonical location question "¿En qué lavandería estás?" lacks
+  // "donde" — accept "en que" + laundry-word as an equivalent where-signal.
+  const whereWord =
+    /\b(donde|dove|where|on|onde|ou)\b/.test(n) || n.includes('en que')
   const laundryWord = /\b(lavanderia|laundry|bugaderia|laverie|lavandaria)\b/.test(n)
   if (!(whereWord && laundryWord)) {
     throw new Error(`expected a question asking for the laundry location.\nReply: ${reply}`)
