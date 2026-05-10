@@ -4,6 +4,39 @@ import type { EscalationContext, SessionState } from '../models/index.js'
 import { sanitizeForDisplay } from './input-sanitize.js'
 
 /**
+ * Operator-facing timestamp prefix (Andrea, 2026-05-10): every handover
+ * summary opens with "El [día] [fecha] a las [HH:MM]" so the operator
+ * sees WHEN the case happened without parsing the dialog. Uses Europe/Madrid
+ * timezone (tenant locale) and Spanish locale for day/month names.
+ *
+ * Example output: "El sábado 10 de mayo a las 02:33"
+ *
+ * Exported so the LLM-generated briefing path
+ * (`utils/operator-briefing.ts`) can pass the same timestamp into its
+ * user prompt — both deterministic and LLM paths produce identically
+ * stamped briefings.
+ */
+export function formatHandoverTimestamp(): string {
+  const now = new Date()
+  const day = new Intl.DateTimeFormat('es-ES', {
+    weekday: 'long',
+    timeZone: 'Europe/Madrid',
+  }).format(now)
+  const date = new Intl.DateTimeFormat('es-ES', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'Europe/Madrid',
+  }).format(now)
+  const time = new Intl.DateTimeFormat('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Europe/Madrid',
+  }).format(now)
+  return `El ${day} ${date} a las ${time}`
+}
+
+/**
  * Compose the operator-visible location string from `state.location` (the
  * pueblo/laundromat key) and `state.locationStreet` (street within that
  * laundromat, used for Mataró disambiguation).
@@ -35,6 +68,15 @@ const NON_TROUBLE_LABEL: Record<string, string> = {
 }
 
 export function buildEscalationSummary(context: EscalationContext): string {
+  // Operator briefing format (Andrea, 2026-05-10): every handover summary
+  // opens with "El [día] [fecha] a las [HH:MM]," so the operator sees WHEN
+  // the case happened without parsing the dialog. The body (incident-specific
+  // narrative) follows.
+  const timestamp = formatHandoverTimestamp()
+  return `${timestamp}, ${buildEscalationSummaryBody(context)}`
+}
+
+function buildEscalationSummaryBody(context: EscalationContext): string {
   // Defence in depth: even if upstream sanitisers were skipped, strip markdown
   // delimiters here so an attacker-controlled customerName/customerPhone can't
   // break formatting or fake links in the operator handover note.
