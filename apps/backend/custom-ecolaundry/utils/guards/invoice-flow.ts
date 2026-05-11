@@ -97,6 +97,15 @@ export const guardInvoiceFlow: Guard = (ar, userMessage) => {
     case 'invoice-ask-date': {
       ar.state.invoiceData.fecha = trimmed
       ar.state.invoiceData.fechaIso = parseRelativeDate(trimmed, ar.state.language)
+      ar.state.pendingFlow = 'invoice-ask-coste'
+      return { reply: t('invoiceAskCoste', lang(ar)), reason: 'invoice' }
+    }
+    case 'invoice-ask-coste': {
+      // F42 — Andrea 2026-05-11: accept any text verbatim (no validation,
+      // operator interprets). "5", "5€", "5 euros", "12.50", "no me acuerdo"
+      // all accepted. The PII bypass for invoice-* in agent.ts protects
+      // this field from reaching the rephrase LLM.
+      ar.state.invoiceData.costeTotal = trimmed
       ar.state.pendingFlow = 'invoice-ask-email'
       return { reply: t('invoiceAskEmail', lang(ar)), reason: 'invoice' }
     }

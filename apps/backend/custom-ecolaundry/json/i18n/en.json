@@ -63,6 +63,7 @@
   "invoiceAskAddress": "And the address?",
   "invoiceAskTaxId": "What's your tax ID (CIF/NIF/NIE)?",
   "invoiceAskDate": "Which day did you use the service? (you can say \"today\", \"yesterday\" or a date)",
+  "invoiceAskCoste": "What was the total cost of the service?",
   "invoiceAskEmail": "Which email should we send the invoice to?",
   "invoiceAskEmailRetry": "That email doesn't look valid. Could you write it again, please?",
   "invoiceAskNotes": "Would you like to add any notes or observations for the invoice? (If you have nothing to add, write \"no\".)",

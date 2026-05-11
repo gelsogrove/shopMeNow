@@ -31,6 +31,7 @@ export type EscalationContext = {
     cif: string
     fecha: string
     fechaIso: string
+    costeTotal: string  // F42 — total cost of service, verbatim from customer (any format)
     email: string
     notes: string  // F35 — optional free-text observations from the customer
   }

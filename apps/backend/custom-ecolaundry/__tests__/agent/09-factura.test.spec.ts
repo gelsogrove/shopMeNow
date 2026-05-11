@@ -1,10 +1,12 @@
 // 09 — Caso 9 cliente pide factura
 //
-// Da usecases.md Caso 9: il bot raccoglie interattivamente 9 dati di
+// Da usecases.md Caso 9: il bot raccoglie interattivamente 10 dati di
 // fatturazione (lavandería → tipo → razón social → dirección → CIF/NIF
-// → fecha → email → notas → nombre) e passa il caso all'operatore con il
-// summary. F35 (Andrea 2026-05-10): step "notas" aggiunto + disclaimer
+// → fecha → coste → email → notas → nombre) e passa il caso all'operatore
+// con il summary. F35 (Andrea 2026-05-10): step "notas" aggiunto + disclaimer
 // privacy + bypass rephrase LLM (PII non esce verso third-party LLM).
+// F42 (Andrea 2026-05-11): step "coste total" aggiunto dopo fecha.
+// Operator briefing include "coste: X" verbatim.
 //
 // Validazione email rigorosa: input non valido → re-ask, NON avanza al
 // nombre finché non riceve un email con formato algo@dominio.tld.
@@ -47,23 +49,29 @@ export const tests: TestCase[] = [
       // T6 — CIF → bot chiede fecha
       const t6 = await ctx.send('B12345678')
       expectMentionsAll(t6, ['fecha'])
-      // T7 — fecha (relativa "ayer") → bot chiede email
+      // T7 — fecha (relativa "ayer") → bot chiede coste (F42)
       const t7 = await ctx.send('ayer')
-      expectMentionsAll(t7, ['correo'])
-      // T8 — email valido al PRIMO tentativo → bot avanza al step "notas" (F35)
-      const t8 = await ctx.send('ana@example.com')
-      const t8Lower = t8.toLowerCase()
-      if (/no parece v[áa]lido|correo no parece|escribírmelo de nuevo/.test(t8Lower)) {
-        throw new Error(`Scenario 9.1: email valido erroneamente respinto: ${t8}`)
+      const t7Lower = t7.toLowerCase()
+      if (!/coste|costo|coût|cost/i.test(t7Lower)) {
+        throw new Error(`Scenario 9.1 (F42): bot deve chiedere "coste" dopo fecha: ${t7}`)
+      }
+      // T8 — coste verbatim → bot chiede email
+      const t8 = await ctx.send('6€')
+      expectMentionsAll(t8, ['correo'])
+      // T9 — email valido al PRIMO tentativo → bot avanza al step "notas" (F35)
+      const t9 = await ctx.send('ana@example.com')
+      const t9Lower = t9.toLowerCase()
+      if (/no parece v[áa]lido|correo no parece|escribírmelo de nuevo/.test(t9Lower)) {
+        throw new Error(`Scenario 9.1: email valido erroneamente respinto: ${t9}`)
       }
       // F35 — bot deve chiedere notas/observaciones prima del nome
-      if (!/nota|observaci/i.test(t8Lower)) {
-        throw new Error(`Scenario 9.1 (F35): bot deve chiedere "notas" dopo email: ${t8}`)
+      if (!/nota|observaci/i.test(t9Lower)) {
+        throw new Error(`Scenario 9.1 (F35): bot deve chiedere "notas" dopo email: ${t9}`)
       }
-      // T9 — notas (cliente dice "no" → vuoto) → bot chiede nombre
-      const t9 = await ctx.send('no')
-      expectMentionsAll(t9, ['nombre'])
-      // T10 — nome → final reply + handover summary + disclaimer privacy
+      // T10 — notas (cliente dice "no" → vuoto) → bot chiede nombre
+      const t10 = await ctx.send('no')
+      expectMentionsAll(t10, ['nombre'])
+      // T11 — nome → final reply + handover summary + disclaimer privacy
       const final = await ctx.send('Andrea')
       // Reply al cliente: nome + email
       expectMentionsAll(final, ['Andrea', 'ana@example.com'])
@@ -72,8 +80,11 @@ export const tests: TestCase[] = [
       if (!/no se comparten con terceros|no comparte/i.test(finalLower)) {
         throw new Error(`Scenario 9.1 (F35): final reply must include privacy disclaimer: ${final}`)
       }
-      // Handover summary: tutti i campi billing
+      // Handover summary: tutti i campi billing inclusi coste (F42)
       expectMentionsAll(final, ['ACME SL', 'B12345678', 'Calle Mayor 1', 'human support'])
+      if (!/coste:\s*6€/i.test(final)) {
+        throw new Error(`Scenario 9.1 (F42): operator briefing must include "coste: 6€": ${final}`)
+      }
     },
   },
 
@@ -89,6 +100,7 @@ export const tests: TestCase[] = [
       await ctx.send('Calle Mayor 1, Madrid')
       await ctx.send('B12345678')
       await ctx.send('ayer')
+      await ctx.send('6€') // F42 — coste step
       // Email invalido (manca @ + domain) → bot deve respingere e ri-chiedere
       const reAsk = await ctx.send('ana')
       const reAskLower = reAsk.toLowerCase()
@@ -124,6 +136,24 @@ export const tests: TestCase[] = [
       const reply = await ctx.send('Necesito una factura')
       expectMentionsAll(reply, ['raz'])
       expectMentionsNone(reply, ['lavander', 'lavadora o secadora'])
+    },
+  },
+
+  // ── F43 — recibo/comprobante synonyms trigger Caso 9 ─────────────────────
+  {
+    // F43 (Andrea 2026-05-11): recibo, comprobante, ricevuta, receipt, reçu,
+    // rebut are customer synonyms for factura. All MUST trigger Caso 9.
+    name: 'F43 — ES "puedo recibir el recibo" triggers Caso 9 (synonym of factura)',
+    run: async (ctx) => {
+      const t1 = await ctx.send('puedo recibir el recibo?')
+      expectMentionsAll(t1, ['asistente virtual', 'lavander'])
+    },
+  },
+  {
+    name: 'F43 — ES "teneis el comprobante?" triggers Caso 9 (synonym of factura)',
+    run: async (ctx) => {
+      const t1 = await ctx.send('teneis el comprobante?')
+      expectMentionsAll(t1, ['lavander'])
     },
   },
 ]

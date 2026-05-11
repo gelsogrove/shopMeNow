@@ -66,6 +66,7 @@
   "invoiceAskAddress": "Et l'adresse ?",
   "invoiceAskTaxId": "Quel est ton numéro fiscal ?",
   "invoiceAskDate": "Quel jour as-tu utilisé le service ? (tu peux dire \"aujourd'hui\", \"hier\" ou une date)",
+  "invoiceAskCoste": "Quel a été le coût total du service ?",
   "invoiceAskEmail": "À quelle adresse e-mail envoyons-nous la facture ?",
   "invoiceAskEmailRetry": "Cet e-mail ne semble pas valide. Peux-tu l'écrire à nouveau, s'il te plaît ?",
   "invoiceAskNotes": "Souhaites-tu ajouter une note ou une observation pour la facture ? (Si tu n'as rien à ajouter, écris \"non\".)",

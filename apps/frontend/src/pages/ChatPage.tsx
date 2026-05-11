@@ -28,6 +28,7 @@ import {
   Check,
   ClipboardCopy,
   Eye,
+  Filter,
   Loader2,
   Lock,
   MessageSquare,
@@ -37,6 +38,7 @@ import {
   Trash2,
   MessageCircle,
   Square,
+  X,
 } from "lucide-react"
 import { parsePhoneNumberFromString } from "libphonenumber-js"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -53,7 +55,9 @@ import {
 } from "../components/ui/alert-dialog"
 import { Button } from "../components/ui/button"
 import { Card } from "../components/ui/card"
+import { Checkbox } from "../components/ui/checkbox"
 import { Input } from "../components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover"
 import { Switch } from "../components/ui/switch"
 import { Textarea } from "../components/ui/textarea"
 
@@ -205,6 +209,13 @@ export function ChatPage() {
     searchParams.get("client") || ""
   )
   const [hideBlocked, setHideBlocked] = useState(true)
+  // Customer-name multi-select filter. URL param ?names=Andrea,Olga (CSV).
+  const [selectedCustomerNames, setSelectedCustomerNames] = useState<string[]>(
+    () => {
+      const raw = searchParams.get("names") || ""
+      return raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : []
+    }
+  )
   const initialLoadRef = useRef(true)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showBlockDialog, setShowBlockDialog] = useState(false)
@@ -384,9 +395,25 @@ export function ChatPage() {
       )
     : chats
 
-  const visibleChats = hideBlocked
-    ? filteredChats.filter((chat: Chat) => !chat.isBlacklisted)
+  // Apply customer-name multi-select filter (empty selection = no filter, show all).
+  const nameFilteredChats = selectedCustomerNames.length > 0
+    ? filteredChats.filter((chat: Chat) =>
+        chat.customerName ? selectedCustomerNames.includes(chat.customerName) : false
+      )
     : filteredChats
+
+  const visibleChats = hideBlocked
+    ? nameFilteredChats.filter((chat: Chat) => !chat.isBlacklisted)
+    : nameFilteredChats
+
+  // Unique customer names from full chat list (for the filter dropdown options).
+  const uniqueCustomerNames = Array.from(
+    new Set(
+      chats
+        .map((c: Chat) => c.customerName)
+        .filter((n): n is string => Boolean(n))
+    )
+  ).sort((a, b) => a.localeCompare(b))
 
   // SMART SELECTION: Auto-select when appropriate, but DON'T update existing selection
   useEffect(() => {
@@ -1267,6 +1294,75 @@ export function ChatPage() {
             </div>
           </div>
 
+          {/* Customer-name multi-select filter — top-left, above search */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-full max-w-[calc(100%-50px)] justify-between text-sm font-normal"
+              >
+                <span className="flex items-center gap-2 truncate">
+                  <Filter className="h-3.5 w-3.5" />
+                  {selectedCustomerNames.length === 0
+                    ? "All customers"
+                    : selectedCustomerNames.length === 1
+                    ? selectedCustomerNames[0]
+                    : `${selectedCustomerNames.length} customers`}
+                </span>
+                {selectedCustomerNames.length > 0 && (
+                  <X
+                    className="h-3.5 w-3.5 opacity-60 hover:opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      const newParams = new URLSearchParams(searchParams)
+                      newParams.delete("names")
+                      setSearchParams(newParams)
+                      setSelectedCustomerNames([])
+                    }}
+                  />
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[260px] p-2" align="start">
+              <div className="max-h-[280px] overflow-y-auto flex flex-col gap-1">
+                {uniqueCustomerNames.length === 0 ? (
+                  <p className="text-xs text-gray-500 px-2 py-1">
+                    No customers available
+                  </p>
+                ) : (
+                  uniqueCustomerNames.map((name) => {
+                    const isChecked = selectedCustomerNames.includes(name)
+                    return (
+                      <label
+                        key={name}
+                        className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer text-sm"
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={(checked) => {
+                            const next = checked
+                              ? [...selectedCustomerNames, name]
+                              : selectedCustomerNames.filter((n) => n !== name)
+                            const newParams = new URLSearchParams(searchParams)
+                            if (next.length > 0) {
+                              newParams.set("names", next.join(","))
+                            } else {
+                              newParams.delete("names")
+                            }
+                            setSearchParams(newParams)
+                            setSelectedCustomerNames(next)
+                          }}
+                        />
+                        <span className="truncate">{name}</span>
+                      </label>
+                    )
+                  })
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
           {/* Search Bar */}
           <Input
             type="search"
@@ -1284,7 +1380,7 @@ export function ChatPage() {
               setClientSearchTerm(e.target.value)
             }}
           />
-          
+
           {/* WebSocket Status + Blocked Filter */}
           <div className="flex items-center justify-between text-xs text-gray-500 px-1">
             <div className="flex items-center gap-2">

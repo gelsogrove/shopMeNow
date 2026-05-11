@@ -36,7 +36,7 @@ const MIN_BOT_LOADING_MS = 1400
 
 const ALLOWED_USERS = {
   ANDREA: { password: "Admin123", color: "#2563eb" },
-  HOLGA: { password: "Admin123", color: "#db2777" },
+  OLGA: { password: "Admin123", color: "#db2777" },
 } as const
 type PlaygroundUser = keyof typeof ALLOWED_USERS
 

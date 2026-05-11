@@ -1418,6 +1418,99 @@ const cases: Case[] = [
     },
   },
 
+  // ── F43: receipt synonyms (Andrea 2026-05-11) ─────────────────────────────
+  // Customers use recibo/comprobante/ricevuta/receipt/reçu/rebut as synonyms
+  // of factura. All must trigger invoice flow (operator delivers right doc).
+  {
+    name: 'F43 detectInvoice: ES "puedo recibir el recibo?" → true',
+    run: () => {
+      if (!detectInvoiceIntent('puedo recibir el recibo?')) {
+        throw new Error('ES "recibo" must match (F43 synonym)')
+      }
+    },
+  },
+  {
+    name: 'F43 detectInvoice: ES "teneis el comprobante?" → true',
+    run: () => {
+      if (!detectInvoiceIntent('teneis el comprobante?')) {
+        throw new Error('ES "comprobante" must match (F43 synonym)')
+      }
+    },
+  },
+  {
+    name: 'F43 detectInvoice: ES "necesito un justificante" → true',
+    run: () => {
+      if (!detectInvoiceIntent('necesito un justificante')) {
+        throw new Error('ES "justificante" must match (F43 synonym)')
+      }
+    },
+  },
+  {
+    name: 'F43 detectInvoice: IT "vorrei una ricevuta" → true',
+    run: () => {
+      if (!detectInvoiceIntent('vorrei una ricevuta')) {
+        throw new Error('IT "ricevuta" must match (F43 synonym)')
+      }
+    },
+  },
+  {
+    name: 'F43 detectInvoice: IT "mi serve lo scontrino" → true',
+    run: () => {
+      if (!detectInvoiceIntent('mi serve lo scontrino')) {
+        throw new Error('IT "scontrino" must match (F43 synonym)')
+      }
+    },
+  },
+  {
+    name: 'F43 detectInvoice: EN "can I have the receipt?" → true',
+    run: () => {
+      if (!detectInvoiceIntent('can I have the receipt?')) {
+        throw new Error('EN "receipt" must match (F43 synonym)')
+      }
+    },
+  },
+  {
+    name: 'F43 detectInvoice: PT "preciso de um comprovante" → true',
+    run: () => {
+      if (!detectInvoiceIntent('preciso de um comprovante')) {
+        throw new Error('PT "comprovante" must match (F43 synonym)')
+      }
+    },
+  },
+  {
+    name: 'F43 detectInvoice: FR "j\'ai besoin du reçu" → true',
+    run: () => {
+      if (!detectInvoiceIntent('j\'ai besoin du reçu')) {
+        throw new Error('FR "reçu" must match (F43 synonym)')
+      }
+    },
+  },
+  {
+    name: 'F43 detectInvoice: CA "necessito el rebut" → true',
+    run: () => {
+      if (!detectInvoiceIntent('necessito el rebut')) {
+        throw new Error('CA "rebut" must match (F43 synonym)')
+      }
+    },
+  },
+  {
+    name: 'F43 detectInvoice: CA "vull el comprovant" → true',
+    run: () => {
+      if (!detectInvoiceIntent('vull el comprovant')) {
+        throw new Error('CA "comprovant" must match (F43 synonym)')
+      }
+    },
+  },
+  // Negative — "recibir" as verb (to receive) should NOT match alone
+  {
+    name: 'F43 detectInvoice: "voy a recibir un paquete" → false (verb recibir, not noun recibo)',
+    run: () => {
+      if (detectInvoiceIntent('voy a recibir un paquete')) {
+        throw new Error('verb "recibir" (to receive) must NOT match — only noun "recibo/recibos"')
+      }
+    },
+  },
+
   // ── detectFaqPause — Caso 32.3 RED-SPEC closure (F28) ────────────────────
   // Customer interrupts an active trouble flow with a brief FAQ. Detector
   // must require BOTH a pause marker AND a FAQ topic hint (price, schedule,

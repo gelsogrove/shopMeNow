@@ -28,7 +28,7 @@ async function getEcolaundryWorkspaceId(): Promise<string> {
   return ws.id
 }
 
-const ALLOWED_USERS = ["ANDREA", "HOLGA"] as const
+const ALLOWED_USERS = ["ANDREA", "OLGA"] as const
 type PlaygroundUser = (typeof ALLOWED_USERS)[number]
 
 const ALLOWED_STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "DONE", "NICE_TO_HAVE"]

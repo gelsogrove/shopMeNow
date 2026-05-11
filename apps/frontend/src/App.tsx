@@ -178,7 +178,7 @@ export function App() {
           }
         />
         
-        {/* Ecolaundry Playground — hardcoded login (ANDREA/HOLGA), no providers */}
+        {/* Ecolaundry Playground — hardcoded login (ANDREA/OLGA), no providers */}
         <Route
           path="/demo/ecolaundry/*"
           element={

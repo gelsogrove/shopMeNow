@@ -97,6 +97,7 @@ ALLOWED_LARGE_FILES="
   utils/guards/payment-double-charge.ts  # Caso 6 multi-step double-charge gather (used? → narrative → 4 digits → receipt) with branch on yes/no AND validation+retry on 4 digits. Single concern: drive the doble-cobro flow end-to-end.
   utils/guards/discount-code-flow.ts  # Caso 8 discount-code multi-step flow (ask → format-validate with retry+escalate ladder → name → pueblo → machine → door → handover). Single concern: drive the código de descuento flow end-to-end.
   utils/guards/payment-no-change.ts  # Caso 4 no-change multi-step flow (ask → no-cambio retry → confirmation → resolved/escalate). Single concern: drive the no-change flow end-to-end.
+  utils/guards/invoice-flow.ts  # Caso 9 invoice multi-step flow (location → tipo → razón → dir → CIF → fecha → coste → email retry → notas → name → handover). F42 added coste step. Single concern: drive the factura flow end-to-end.
   utils/state-transitions.ts  # Named atomic state transitions (markResolved, escalate, markRefundFormPending, captureCustomerName, …). Single responsibility — splitting fragments the auditable surface that rule #4 protects.
 "
 ALLOWED_LARGE_FILES=$(echo "$ALLOWED_LARGE_FILES" | sed 's/#.*$//' | tr -s ' \n' ' ')

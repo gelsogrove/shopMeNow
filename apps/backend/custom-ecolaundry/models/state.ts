@@ -115,6 +115,7 @@ export type SessionState = {
     cif: string
     fecha: string       // raw text as typed by the customer
     fechaIso: string    // normalized YYYY-MM-DD when parseable, else ''
+    costeTotal: string  // F42 — total cost of service as typed by the customer (any format: "5", "5€", "5 euros"). No validation, operator interprets.
     email: string
     notes: string       // F35 — free-text customer notes (e.g. "factura ordinaria", "contiene IVA"). Optional, may be empty.
   }
@@ -242,6 +243,7 @@ export type SessionState = {
     | 'invoice-ask-address'
     | 'invoice-ask-tax-id'
     | 'invoice-ask-date'
+    | 'invoice-ask-coste'
     | 'invoice-ask-email'
     | 'invoice-ask-notes'
     | 'invoice-ask-name'

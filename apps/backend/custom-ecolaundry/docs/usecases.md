@@ -717,10 +717,10 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ### 9.1 — Happy Path
 
 **Criterios de aceptación:**
-1. Gather: lavandería → tipo → razón social → dirección → CIF/NIF → fecha → email → notas → nombre.
-2. Una pregunta por turno (NO listas combinadas).
+1. Gather: lavandería → tipo → razón social → dirección → CIF/NIF → fecha → **coste** → email → notas → nombre.
+2. Una pregunta por turno (NO listas combinadas). Coste total se acepta verbatim (cualquier formato).
 3. Datos PII NO pasan por rephrase LLM ni operator-briefing LLM.
-4. Mensaje final incluye disclaimer de privacidad.
+4. Mensaje final incluye disclaimer de privacidad. Operator briefing incluye `coste: X`.
 
 **Conversación:**
 
@@ -743,6 +743,9 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Bot:** ¿Qué día utilizaste el servicio? (puedes decirme «hoy», «ayer» o una fecha)
 
 **Usuario:** Ayer  
+**Bot:** ¿Cuál fue el coste total del servicio?
+
+**Usuario:** 6€  
 **Bot:** ¿A qué correo electrónico te enviamos la factura?
 
 **Usuario:** ana@example.com  
@@ -768,7 +771,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 **Conversación:**
 
-[gather hasta email]
+[gather hasta coste → bot pide email]
 
 **Usuario:** ana  
 **Bot:** El correo no parece válido. ¿Puedes escribírmelo de nuevo, por favor?
@@ -1336,26 +1339,3 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Usuario:** Marc  
 **Bot:** Gracias Marc. Un operador humano se encargará de tu caso. El chatbot será desactivado.
 
----
-
-### 32.2 — Marathon: trouble resuelto → factura
-
-**Criterios de aceptación:**
-1. Primer flow se cierra con resolved.
-2. Segundo flow (factura) NO re-pregunta location ni tipo (sticky cross-flow).
-3. customerNameRequested NO está activo entre los dos flows.
-4. NO hay escalación entre los dos flows.
-
-**Conversación:**
-
-[T1-T5: trouble PUSH PROG resuelto]
-
-**Usuario:** Sí, ya funciona  
-**Bot:** ✅ Perfecto, incidencia resuelta.
-
-**Usuario:** ¿Podría tener la factura del lavado?  
-**Bot:** Perfecto. ¿Me indicas la razón social?
-
-[continúa flujo Caso 9 desde razón social — salta location y tipo]
-
---- 

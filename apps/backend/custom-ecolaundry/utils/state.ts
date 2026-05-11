@@ -73,6 +73,7 @@ export function createInitialState(): SessionState {
       cif: '',
       fecha: '',
       fechaIso: '',
+      costeTotal: '',
       email: '',
       notes: '',
     },

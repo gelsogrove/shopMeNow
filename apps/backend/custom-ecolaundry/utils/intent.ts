@@ -523,6 +523,26 @@ export function detectInvoiceIntent(message: string): boolean {
     /\binvoices?\b/i.test(trimmed) ||
     // French / Catalan — "facture/factures"
     /\bfactures?\b/i.test(trimmed) ||
+    // F43 — Receipt synonyms (Andrea 2026-05-11): customers often use
+    // recibo/comprobante/ricevuta/receipt/reçu/rebut interchangeably with
+    // factura. Treat as synonyms → route to invoice flow (operator
+    // delivers the right fiscal document).
+    // Spanish — "recibo/recibos/comprobante/comprobantes/justificante"
+    /\brecibos?\b/i.test(trimmed) ||
+    /\bcomprobantes?\b/i.test(trimmed) ||
+    /\bjustificantes?\b/i.test(trimmed) ||
+    // Italian — "ricevuta/ricevute/scontrino/scontrini"
+    /\bricevut[ae]\b/i.test(trimmed) ||
+    /\bscontrin[oi]\b/i.test(trimmed) ||
+    // Portuguese — "recibo/recibos/comprovante/comprovantes"
+    /\bcomprovantes?\b/i.test(trimmed) ||
+    // English — "receipt/receipts"
+    /\breceipts?\b/i.test(trimmed) ||
+    // French — "reçu/reçus/ticket"
+    /\bre[çc]us?\b/i.test(trimmed) ||
+    // Catalan — "rebut/rebuts/comprovant"
+    /\brebuts?\b/i.test(trimmed) ||
+    /\bcomprovants?\b/i.test(trimmed) ||
     // Typo tolerance: "factra", "fctra", "fattra", "fattura" missing letters.
     // Heuristic: word starts with "f", contains "ct" or "tt", ends with "ra/re/ras",
     // length 5-9. Catches common typos without over-matching.

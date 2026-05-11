@@ -66,6 +66,7 @@
   "invoiceAskAddress": "I l'adreça?",
   "invoiceAskTaxId": "Quin és el teu CIF/NIF/NIE?",
   "invoiceAskDate": "Quin dia vas fer servir el servei? (pots dir-me \"avui\", \"ahir\" o una data)",
+  "invoiceAskCoste": "Quin va ser el cost total del servei?",
   "invoiceAskEmail": "A quin correu electrònic t'enviem la factura?",
   "invoiceAskEmailRetry": "El correu no sembla vàlid. Me'l pots tornar a escriure, si us plau?",
   "invoiceAskNotes": "Vols afegir alguna nota o observació per a la factura? (Si no tens res a afegir, escriu \"no\".)",

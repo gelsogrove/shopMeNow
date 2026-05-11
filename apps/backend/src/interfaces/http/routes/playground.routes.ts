@@ -4,7 +4,7 @@ import { PlaygroundController } from "../controllers/playground.controller"
 const controller = new PlaygroundController()
 const playgroundRouter = Router()
 
-// All endpoints public — auth handled in frontend (hardcoded ANDREA/HOLGA login)
+// All endpoints public — auth handled in frontend (hardcoded ANDREA/OLGA login)
 // because this is a demo playground for a single workspace (Ecolaundry)
 playgroundRouter.get("/playground/usecases", (req, res) => controller.getUsecases(req, res))
 playgroundRouter.get("/playground/messages", (req, res) => controller.getMessages(req, res))

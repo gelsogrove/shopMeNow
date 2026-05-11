@@ -2210,7 +2210,7 @@ model PlaygroundTodo {
   priority        String   @default("Medio") // "Alto" | "Medio" | "Basso"
   status          String   @default("TODO")  // "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE" | "NICE_TO_HAVE"
   position        Int      @default(0)       // Order within column
-  createdBy       String   // "ANDREA" | "HOLGA"
+  createdBy       String   // "ANDREA" | "OLGA"
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

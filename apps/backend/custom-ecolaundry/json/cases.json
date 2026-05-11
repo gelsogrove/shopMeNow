@@ -120,7 +120,7 @@
       "guardModule": "utils/guards/invoice-flow.ts",
       "guards": ["guardInvoiceFlow"],
       "pendingFlowPrefix": "invoice-",
-      "i18nKeys": ["invoiceAskLocation", "invoiceAskMachineType", "invoiceAskCompanyName", "invoiceAskAddress", "invoiceAskTaxId", "invoiceAskDate", "invoiceAskEmail", "invoiceAskEmailRetry", "invoiceAskName", "invoiceFinal"],
+      "i18nKeys": ["invoiceAskLocation", "invoiceAskMachineType", "invoiceAskCompanyName", "invoiceAskAddress", "invoiceAskTaxId", "invoiceAskDate", "invoiceAskCoste", "invoiceAskEmail", "invoiceAskEmailRetry", "invoiceAskNotes", "invoiceAskName", "invoiceFinal"],
       "tests": ["__tests__/agent/09-factura.test.spec.ts"]
     },
     {
