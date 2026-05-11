@@ -18,7 +18,7 @@ export const tests: TestCase[] = [
     name: 'ES — paso 1 identificar el local: T1 → bot chiede dove (lavanderia, donde)',
     run: async (ctx) => {
       const reply = await ctx.send('hola, no funciona la máquina')
-      // "donde" removed: bot asks "¿En qué lavandería estás ahora mismo?" (no literal "donde")
+      // Bot welcome: "Hola, soy el asistente virtual de la lavandería. ¿En qué pueblo se encuentra la lavandería que deseas usar?"
       expectMentionsAll(reply, ['lavanderia'])
     },
   },

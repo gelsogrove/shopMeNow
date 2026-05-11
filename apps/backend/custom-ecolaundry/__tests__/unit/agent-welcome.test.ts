@@ -53,9 +53,9 @@ const cases: Case[] = [
   {
     name: 'merge: reply with no leading emoji → space-joined as-is',
     run: () => {
-      const reply = '¿En qué lavandería estás ahora mismo?'
+      const reply = '¿En qué pueblo se encuentra la lavandería que deseas usar?'
       const out = mergeWelcomeWithReply(WELCOME, reply)
-      const expected = `${WELCOME} ¿En qué lavandería estás ahora mismo?`
+      const expected = `${WELCOME} ¿En qué pueblo se encuentra la lavandería que deseas usar?`
       if (out !== expected) throw new Error(`expected "${expected}", got "${out}"`)
     },
   },
