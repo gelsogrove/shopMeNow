@@ -86,6 +86,7 @@ ALLOWED_LARGE_FILES="
   utils/agent-tools.ts          # OpenAI tool schema declarations (one big object)
   utils/runtime.ts              # Boot loader + validators (single responsibility)
   utils/router.ts               # F31 branch + subCase classifier (single LLM call, schema validator, fallback). Single concern — splitting would fragment the contract.
+  utils/state.ts                # Session state factory + reset helpers (F38: resetIncidentDetails vs resetMachineFacts variants). Single concern — splitting would fragment the state invariants.
   utils/agent-extract.ts        # Auto-fact extraction (multi-language detectors, single concern)
   utils/intent.ts               # Display token / intent classification (single concern)
   utils/escalation.ts           # Operator handover summary builder (single concern, branching by incident)

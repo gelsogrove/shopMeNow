@@ -86,6 +86,51 @@ export function createInitialState(): SessionState {
 }
 
 /**
+ * F38 (Andrea 2026-05-11) — lighter reset for post-resolved transitions.
+ * The previous incident is closed (`mark_resolved`) but the SAME machine
+ * is still identified. A follow-up flow (e.g. factura for the wash that
+ * just finished) should NOT re-ask "lavadora o secadora?" / "qué número?"
+ * because that information is still valid in the session TTL window
+ * (1 hour, settings.json:historyResetTtlMs).
+ *
+ * Preserved: location, locationStreet, customerName, language,
+ * **machineType, machineNumber** (the new bits).
+ *
+ * Wiped: display state, payment, active flow markers, retry counters,
+ * pendingFlow. Anything specific to the incident trajectory.
+ *
+ * resetMachineFacts() below is the FULL reset used on topic switch
+ * (different incident: machine → datáfono); resetIncidentDetails() is
+ * used on resolution (same machine, new question).
+ */
+export function resetIncidentDetails(state: SessionState): void {
+  state.displayState = ''
+  state.paymentCompleted = null
+  state.paymentMethod = ''
+  state.dryerStarted = null
+  state.dryerCycleContext = ''
+  state.serviceCompleted = null
+  state.activeFlowId = null
+  state.activeStepId = null
+  state.pendingFlow = ''
+  state.displayUnreadable = false
+  state.photoRequested = false
+  state.displayReaskPrevCode = ''
+  state.displayStateAtTurnStart = ''
+  state.displayAskAttempts = 0
+  state.cardDigitsAskAttempts = 0
+  state.awaitNameAskAttempts = 0
+  state.displayLabel = ''
+  state.displayHistory = []
+  state.faqPause = false
+  state.discountCodeAskAttempts = 0
+  state.mixedIncident = false
+  state.nonTroubleshootingIncident = ''
+  state.lastMissingFacts = []
+  state.retryCount = 0
+}
+
+/**
  * Wipe machine-incident facts when the customer switches to a different
  * incident (e.g. from "la lavadora SEL" to "datáfono ha cobrado 10€").
  *

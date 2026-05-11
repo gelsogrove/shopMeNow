@@ -52,6 +52,36 @@ const cases: Case[] = [
       }
     },
   },
+  // F36 (Andrea 2026-05-11): markResolved must ALSO clear escalation flags.
+  // Without this, when mark_resolved fires mid-name-capture (customer said
+  // "si funciona" while operatorRequested=true), the residual flags pollute
+  // the next turn — bug surfaced when customer asked for a factura right
+  // after a resolution: bot captured "posso" (first word of "posso avere
+  // la fattura") as the customer name and appended the OLD handover summary.
+  {
+    name: 'markResolved F36: clears operatorRequested + customerNameRequested + pendingEscalation',
+    run: () => {
+      const ar = makeAr()
+      // Simulate an in-flight escalation when mark_resolved fires.
+      ar.state.operatorRequested = true
+      ar.state.customerNameRequested = true
+      ar.state.escalationReason = 'Some prior escalation reason'
+      ar.pendingEscalation = { reason: 'Some prior escalation reason' }
+      markResolved(ar)
+      if (ar.state.operatorRequested !== false) {
+        throw new Error('operatorRequested must be cleared after markResolved')
+      }
+      if (ar.state.customerNameRequested !== false) {
+        throw new Error('customerNameRequested must be cleared after markResolved')
+      }
+      if (ar.state.escalationReason !== '') {
+        throw new Error(`escalationReason must be cleared, got "${ar.state.escalationReason}"`)
+      }
+      if (ar.pendingEscalation !== null) {
+        throw new Error('pendingEscalation must be null after markResolved')
+      }
+    },
+  },
   {
     name: 'undoResolved reverts markResolved',
     run: () => {

@@ -151,11 +151,13 @@ const cases: Case[] = [
           },
         },
         // T4 — PUSH PROG. canonical → 'PUSH', label → 'PUSH PROG' (Bug C).
-        // The auto-start-machine-flow guard kicks the flow engine; the reply
-        // contains the 4-program list + loopback question.
+        // F37 (Andrea 2026-05-11) PDF-aligned: PDF §5.4 PUSH PROG says
+        // *"Prem ara el programa que vols i digues-me si la màquina respon."*
+        // No 4-program list (60º/40º/30º/Frío). Assertion now matches the
+        // PDF wording: "pulsa programa + loopback".
         {
           user: 'PUSH PROG',
-          expectReplyContains: /60[º°]|40[º°]|30[º°]|fr[ií]o/i,
+          expectReplyContains: /pulsa.*programa|programa.*quieras/i,
           assertState: (ar) => {
             if (ar.state.displayState !== 'PUSH') {
               throw new Error(`canonical must be "PUSH", got "${ar.state.displayState}"`)
@@ -182,10 +184,10 @@ const cases: Case[] = [
         { user: 'La lavadora no funciona', expectReason: 'force-location' },
         { user: 'Goya', expectReason: 'force-machine-number' },
         { user: 'La 5', expectReason: 'force-display' },
-        // T4 — PUSH PROG → flow engine pushes program guidance.
+        // T4 — PUSH PROG → flow engine pushes program guidance (F37 PDF-aligned).
         {
           user: 'PUSH PROG',
-          expectReplyContains: /60[º°]|fr[ií]o/i,
+          expectReplyContains: /pulsa.*programa|programa.*quieras/i,
         },
         // T5 — customer reports failure. Phase B should re-ask the display.
         {

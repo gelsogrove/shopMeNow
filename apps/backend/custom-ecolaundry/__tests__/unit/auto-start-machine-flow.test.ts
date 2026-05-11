@@ -58,35 +58,28 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'PUSH PROG: reply contains canonical 4 programs (bold) + loopback paragraph',
+    name: 'PUSH PROG: reply asks to press program + loopback (F37 PDF-aligned)',
     run: () => {
       const ar = makeAr()
       ar.state.displayState = 'PUSH'
       const out = guardAutoStartMachineFlow(ar, '')
       if (!out) throw new Error('expected reply')
       const reply = out.reply
-      // Bold programs as MARKDOWN BULLET LIST (Andrea, 2026-05-09): each
-      // program on its own line, prefixed with `- `, name in **bold**.
-      // The frontend renders this as a real <ul><li><strong> list.
-      if (!/^- \*\*60º\*\*/m.test(reply)) {
-        throw new Error('reply must contain "- **60º**" as a bullet list item')
+      // F37 (Andrea 2026-05-11) — PDF Playbook §5.4 PUSH PROG says:
+      // "Prem ara el programa que vols i digues-me si la màquina respon."
+      // No 4-program list (60º/40º/30º/Frío), just press-and-tell.
+      // Previous version (auditing as F8 before F37) emitted the 4-program
+      // bullet list as a usability extra — Andrea audited it against the
+      // PDF and asked for strict alignment.
+      if (!/pulsa.*programa/i.test(reply)) {
+        throw new Error(`reply must ask the customer to press a program: ${reply}`)
       }
-      if (!/^- \*\*40º\*\*/m.test(reply)) {
-        throw new Error('reply must contain "- **40º**" as a bullet list item')
+      if (!/dime|d[ií]me|av[ií]same|funcion|arrancad/i.test(reply)) {
+        throw new Error(`reply must close with a loopback question: ${reply}`)
       }
-      if (!/^- \*\*30º\*\*/m.test(reply)) {
-        throw new Error('reply must contain "- **30º**" as a bullet list item')
-      }
-      if (!/^- \*\*Frío\*\*/m.test(reply)) {
-        throw new Error('reply must contain "- **Frío**" as a bullet list item')
-      }
-      // No legacy "1." numbering
-      if (/^1\.\s+60/m.test(reply)) {
-        throw new Error('reply must NOT use "1. 60º" — use "- **60º**" bullet instead')
-      }
-      // Paragraph break before the loopback line
-      if (!/Elige uno y púlsalo en la máquina\.\n\nDespués dime/.test(reply)) {
-        throw new Error('reply must have \\n\\n between "Elige uno..." and "Después dime..."')
+      // Negative assertion (F37): no canonical 4-program list anymore.
+      if (/\*\*60º\*\*.*\*\*40º\*\*/s.test(reply)) {
+        throw new Error('F37: reply must NOT include the 4-program bullet list (PDF deviates)')
       }
     },
   },

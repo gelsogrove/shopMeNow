@@ -258,7 +258,7 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'askNumber attempt 2 (counter=1) → guidance reask with "pegado en la máquina"',
+    name: 'askNumber attempt 2 (counter=1) → guidance reask asking the machine number (F37 PDF-aligned)',
     run: () => {
       const ar = makeAr()
       ar.state.machineType = 'washer'
@@ -269,8 +269,10 @@ const cases: Case[] = [
       if (out?.reason !== 'double-charge-number-unrecognized-reask') {
         throw new Error(`expected number reask, got ${out?.reason}`)
       }
-      if (!/pegado en la propia m[áa]quina/i.test(out.reply)) {
-        throw new Error(`reply must include the location hint, got: ${out.reply}`)
+      // F37 (Andrea 2026-05-11): "pegado en la propia máquina, al lado de
+      // la pantalla" hint was an invented detail not in PDF §5.4. Removed.
+      if (!/comprobar.*n[uú]mero|n[uú]mero.*m[áa]quina/i.test(out.reply)) {
+        throw new Error(`reply must re-ask the machine number, got: ${out.reply}`)
       }
     },
   },

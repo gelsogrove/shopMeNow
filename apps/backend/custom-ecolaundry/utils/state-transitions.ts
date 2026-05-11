@@ -12,10 +12,23 @@ import { resetMachineFacts } from './state.js'
  * Mark the current conversation as resolved. Called by the `mark_resolved`
  * tool, the flow engine on terminal-success nodes, and any guard that
  * closes a case after a deterministic confirmation.
+ *
+ * F36 (Andrea 2026-05-11): also clear ALL escalation control flags. Without
+ * this, when the LLM calls `mark_resolved` while an escalation is still
+ * pending (e.g. customer said "si funciona" mid name-capture after a retry-
+ * ladder escalation), the residual `operatorRequested + customerNameRequested
+ * + pendingEscalation` flags pollute the next turn: a new trigger (e.g. Caso
+ * 9 factura) would still append the old handover summary AND capture the
+ * first word of the new message as the customer name. mark_resolved means
+ * "the case is closed — wipe everything related to the previous trajectory".
  */
 export function markResolved(ar: AgentRuntime): void {
   ar.resolved = true
   ar.state.pendingClosure = 'resolved'
+  ar.state.operatorRequested = false
+  ar.state.customerNameRequested = false
+  ar.state.escalationReason = ''
+  ar.pendingEscalation = null
 }
 
 /**

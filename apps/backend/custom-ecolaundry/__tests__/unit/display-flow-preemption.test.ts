@@ -111,13 +111,20 @@ const cases: Case[] = [
       if (!outcome) throw new Error('expected guard to fire, got null')
       assertEq(ar.state.activeFlowId, 'al001-sequence-error', 'activeFlowId set')
       assertEq(outcome.reason, 'al001-sequence-error', 'reason matches flow id')
-      // The 6-step guidance must be present in the reply (canonical content
-      // assertion mirrors what the agent acceptance test 10-al001 checks).
+      // F37 (Andrea 2026-05-11) PDF-aligned: PDF §5.5 AL001 says
+      // *"Aquest avís acostuma a aparèixer quan el procés no s'ha fet en l'ordre
+      // correcte. T'ajudo a completar-lo. Digues-me en quin local ets i què
+      // has fet just abans que aparegués."* — short ask, no 5-step sequence.
+      // Previous version (audit F8-F26) emitted a 5-step educational sequence;
+      // F37 removed it for strict PDF alignment.
       const reply = outcome.reply.toLowerCase()
-      for (const keyword of ['carga', 'cierra', 'paga', 'programa']) {
-        if (!reply.includes(keyword)) {
-          throw new Error(`reply missing keyword "${keyword}": ${outcome.reply}`)
-        }
+      // Must mention the AL001 root cause hint
+      if (!/orden|sequencia|secuencia|orden correcto/i.test(reply)) {
+        throw new Error(`reply must mention "orden correcto": ${outcome.reply}`)
+      }
+      // Must invite the customer to share what they did before AL001 appeared
+      if (!/qu[eé]\s+has\s+hecho|antes/i.test(reply)) {
+        throw new Error(`reply must invite "qué has hecho antes": ${outcome.reply}`)
       }
     },
   },

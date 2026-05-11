@@ -96,10 +96,14 @@ const cases: Case[] = [
           `expected reason "machine-number-unrecognized-reask", got "${out.reason}"`,
         )
       }
-      // Reply must contain the guidance hint (ES base catalogue).
-      if (!/pegado en la propia m[áa]quina|al lado de la pantalla/i.test(out.reply)) {
+      // F37 (Andrea 2026-05-11) PDF-aligned: the "pegado en la propia
+      // máquina, al lado de la pantalla" hint was an invented detail not
+      // present in the PDF Playbook §5.4. Reverted to the strict PDF wording
+      // ("¿Podrías comprobar el número de la máquina y decírmelo?"). The
+      // assertion now only checks that the reply re-asks the number.
+      if (!/comprobar.*n[uú]mero|n[uú]mero.*m[áa]quina/i.test(out.reply)) {
         throw new Error(
-          `reply must contain the "where the number is" hint: ${out.reply}`,
+          `reply must re-ask the machine number: ${out.reply}`,
         )
       }
       if (ar.state.machineNumberAskAttempts !== 2) {

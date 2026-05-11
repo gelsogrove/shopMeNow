@@ -44,7 +44,7 @@ interface Case {
 
 const cases: Case[] = [
   {
-    name: 'pendingClosure=resolved + new message → wipes machine facts, preserves location',
+    name: 'F38: pendingClosure=resolved + non-switching new message → preserves machineType/Number, wipes display/payment',
     run: () => {
       const ar = makeAr()
       // Pre-condition: previous case has been resolved, machine facts populated.
@@ -58,18 +58,43 @@ const cases: Case[] = [
       ar.state.pendingClosure = 'resolved'
       ar.resolved = true
 
-      // Customer sends a new (unrelated-looking) message.
+      // F38 — Customer message is NOT a machine switch (no explicit
+      // "secadora" or "lavadora" different from current). Light reset:
+      // machineType/Number sticky for follow-up flows (e.g. factura),
+      // but display/payment/flow-incident wiped.
       autoExtractFacts(ar, 'gracias')
 
       assertEq(ar.state.location, 'Goya', 'location preserved')
       assertEq(ar.state.customerName, 'Andrea', 'customerName preserved')
       assertEq(ar.state.language, 'es', 'language preserved')
-      assertEq(ar.state.machineType, '', 'machineType wiped')
-      assertEq(ar.state.machineNumber, '', 'machineNumber wiped')
+      assertEq(ar.state.machineType, 'washer', 'F38: machineType preserved on non-switching message')
+      assertEq(ar.state.machineNumber, '5', 'F38: machineNumber preserved on non-switching message')
       assertEq(ar.state.displayState, '', 'displayState wiped')
       assertEq(ar.state.paymentCompleted, null, 'paymentCompleted wiped')
       assertEq(ar.state.pendingClosure, null, 'pendingClosure cleared')
       assertEq(ar.resolved, false, 'ar.resolved cleared')
+    },
+  },
+  {
+    name: 'F38: pendingClosure=resolved + switching message ("secadora") → FULL reset wipes all machine facts',
+    run: () => {
+      const ar = makeAr()
+      ar.state.location = 'Goya'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '5'
+      ar.state.displayState = 'SEL'
+      ar.state.pendingClosure = 'resolved'
+      ar.resolved = true
+
+      // Customer explicitly switches machine: "secadora" != current "washer"
+      // → full reset, then autoExtractFacts captures the new type.
+      autoExtractFacts(ar, 'ahora la secadora no calienta')
+
+      assertEq(ar.state.location, 'Goya', 'location preserved')
+      assertEq(ar.state.machineType, 'dryer', 'F38: machineType switched to dryer (new explicit type)')
+      assertEq(ar.state.machineNumber, '', 'F38: machineNumber wiped (new machine)')
+      assertEq(ar.state.displayState, '', 'displayState wiped')
+      assertEq(ar.state.pendingClosure, null, 'pendingClosure cleared')
     },
   },
   {

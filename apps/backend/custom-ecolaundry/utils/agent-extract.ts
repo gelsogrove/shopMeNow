@@ -23,7 +23,7 @@ import {
 } from './intent.js'
 import { resolveKnownLocation, resolveKnownLocationFuzzy, parseExplicitPaymentSignal } from './message-parsing.js'
 import { RECOVERABLE_DISPLAYS } from './guards/helpers.js'
-import { resetMachineFacts } from './state.js'
+import { resetIncidentDetails, resetMachineFacts } from './state.js'
 import { resetPostEscalationFlags } from './state-transitions.js'
 import { getPattern, matchPattern } from './nlu.js'
 
@@ -128,7 +128,23 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   // prompt-side bug, not an extractor-side bug, and is handled by
   // strengthening the prompt rather than by piling regex heuristics here.
   if (state.pendingClosure === 'resolved') {
-    resetMachineFacts(state)
+    // F38 (Andrea 2026-05-11): post-resolved transition — discriminate
+    // between (a) follow-up flow on the SAME machine (e.g. factura for the
+    // wash that just finished → keep machineType+machineNumber sticky so
+    // the bot doesn't re-ask tipo/numero) and (b) the customer reporting a
+    // NEW incident on a DIFFERENT machine (e.g. "ahora la secadora 7..."
+    // → full reset so the new facts overwrite the old ones).
+    // Heuristic: if the new message explicitly names a machine type that
+    // DIFFERS from the current state.machineType, full reset. Otherwise
+    // light reset (preserves machine identity for follow-up flows like
+    // factura). Sticky window: session TTL (1 hour by default).
+    const newType = normalizeMachineType(trimmed)
+    const switchedMachine = newType && state.machineType && newType !== state.machineType
+    if (switchedMachine) {
+      resetMachineFacts(state)
+    } else {
+      resetIncidentDetails(state)
+    }
     state.pendingClosure = null
     ar.resolved = false
   }
