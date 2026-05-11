@@ -374,6 +374,27 @@ const cases: Case[] = [
     },
   },
 
+  // ── F45 — runtime hot-reload cache + in-place mutation (dev UX) ──────────
+  // Full behavioral assertions in __tests__/unit/runtime-hot-reload.test.ts.
+  // Here we pin only the architectural invariant: the exported functions
+  // exist and runtime.ts uses module-level caching (presence check on source).
+  {
+    name: 'F45 — utils/runtime.ts exports reloadRuntimeFromDisk + watchRuntimeFilesForDev',
+    run: () => {
+      const filePath = path.resolve(__dirname, '../../utils/runtime.ts')
+      const content = fs.readFileSync(filePath, 'utf8')
+      if (!/export\s+async\s+function\s+reloadRuntimeFromDisk/.test(content)) {
+        throw new Error('F45: runtime.ts must export reloadRuntimeFromDisk()')
+      }
+      if (!/export\s+function\s+watchRuntimeFilesForDev/.test(content)) {
+        throw new Error('F45: runtime.ts must export watchRuntimeFilesForDev()')
+      }
+      if (!/let\s+cachedRuntime/.test(content)) {
+        throw new Error('F45: runtime.ts must declare module-level cachedRuntime')
+      }
+    },
+  },
+
   // ── F44 — TARJETA_TOPIC matches verb+adjective variants ──────────────────
   {
     name: 'F44 — TARJETA_TOPIC matches "quiero comprar una nueva tarjeta" (real customer chat)',

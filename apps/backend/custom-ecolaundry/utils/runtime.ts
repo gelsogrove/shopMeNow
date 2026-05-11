@@ -1,6 +1,7 @@
 // Runtime loading + helpers. Type definitions live in ../models/runtime.ts.
 
 import { readFile } from 'node:fs/promises'
+import * as fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -71,7 +72,90 @@ export function getDemoDir(): string {
   return path.dirname(fileURLToPath(import.meta.url))
 }
 
+// F45 — Andrea 2026-05-11: module-level cache so that hot-reload can mutate
+// the runtime in-place. All AgentSessions created via `loadRuntime()` share
+// the same Runtime reference; when a watched JSON file changes, we patch the
+// cached object's properties so all existing sessions observe the new data
+// on their NEXT property access (no agent restart needed).
+let cachedRuntime: Runtime | null = null
+let devWatcherActive = false
+let reloadDebounce: NodeJS.Timeout | null = null
+
 export async function loadRuntime(): Promise<Runtime> {
+  if (cachedRuntime) return cachedRuntime
+  cachedRuntime = await buildRuntimeFromDisk()
+  // F45 — start the dev watcher on first load. Strict opt-in: only when
+  // NODE_ENV === 'development'. Tests run with unset/test NODE_ENV → no
+  // fs.watch handle, no hanging event loop. Production runs with
+  // NODE_ENV === 'production' → no watcher. Andrea must run with
+  // NODE_ENV=development (ts-node-dev sets this by default).
+  if (process.env.NODE_ENV === 'development' && !devWatcherActive) {
+    watchRuntimeFilesForDev()
+  }
+  return cachedRuntime
+}
+
+/**
+ * F45 — re-read all JSON files and mutate the cached runtime in-place.
+ *
+ * Why in-place? Existing AgentSessions hold a reference to the cached
+ * Runtime object. If we replace `cachedRuntime` with a new object, those
+ * sessions keep the OLD reference and never see the new data. By assigning
+ * to existing properties (`cachedRuntime.flows.washer = fresh.flows.washer`,
+ * etc.), every session observes the updated catalogue on its next access.
+ *
+ * For i18n + FAQs, the module-level setters (setI18nCatalogue, setFaqs)
+ * are called inside `buildRuntimeFromDisk()` → automatically refreshed.
+ */
+export async function reloadRuntimeFromDisk(): Promise<void> {
+  if (!cachedRuntime) return
+  const fresh = await buildRuntimeFromDisk()
+  // Prompts: mutate keys on the existing dict.
+  for (const key of Object.keys(cachedRuntime.prompts)) delete cachedRuntime.prompts[key]
+  Object.assign(cachedRuntime.prompts, fresh.prompts)
+  // Flows: top-level reassign (consumers access via ar.runtime.flows.washer
+  // each time, no nested caching observed in current call graph).
+  cachedRuntime.flows.washer = fresh.flows.washer
+  cachedRuntime.flows.dryer = fresh.flows.dryer
+  cachedRuntime.locations = fresh.locations
+  cachedRuntime.settings = fresh.settings
+  cachedRuntime.displayFlows = fresh.displayFlows
+  cachedRuntime.nluPatterns = fresh.nluPatterns
+}
+
+/**
+ * F45 — fs.watch on the JSON + prompts directories. Debounced 150ms to
+ * coalesce editor double-fires. Active only in NODE_ENV=development.
+ */
+export function watchRuntimeFilesForDev(): void {
+  if (devWatcherActive) return
+  devWatcherActive = true
+  const demoDir = path.resolve(getDemoDir(), '..')
+  const dirsToWatch = [
+    path.resolve(demoDir, 'json'),
+    path.resolve(demoDir, 'json', 'i18n'),
+    path.resolve(demoDir, 'prompts'),
+  ]
+  for (const dir of dirsToWatch) {
+    try {
+      fs.watch(dir, (_event, filename) => {
+        if (!filename) return
+        if (!filename.endsWith('.json') && !filename.endsWith('.txt')) return
+        if (reloadDebounce) clearTimeout(reloadDebounce)
+        reloadDebounce = setTimeout(() => {
+          reloadRuntimeFromDisk().then(
+            () => console.log(`[runtime] Hot-reloaded after change in ${dir}/${filename}`),
+            (err) => console.error(`[runtime] Hot-reload failed:`, err),
+          )
+        }, 150)
+      })
+    } catch (err) {
+      console.warn(`[runtime] fs.watch failed for ${dir}:`, err)
+    }
+  }
+}
+
+async function buildRuntimeFromDisk(): Promise<Runtime> {
   const demoDir = path.resolve(getDemoDir(), '..')
   const flowDir = path.resolve(demoDir, 'json')
   const promptDir = path.resolve(demoDir, 'prompts')
