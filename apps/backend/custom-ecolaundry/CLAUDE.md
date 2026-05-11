@@ -194,6 +194,88 @@ Before I write any code in this module, I must confirm each rule applies:
 
 ---
 
+## 🐛 Bug intake protocol — mandatory before touching code
+
+**When Andrea reports a bug (chat output, real customer message, screenshot,
+or "il bot non capisce X"), I MUST execute this protocol BEFORE writing
+any code or proposing any fix.** The protocol is a typed-out checkbox that
+Andrea reads in my response. If a step is missing or rushed, the discipline
+broke — Andrea calls it out.
+
+### The 7-step bug intake template
+
+```
+## 🐛 Bug intake — Caso N / F<N+1>
+
+1. **Sintomo**: <one sentence describing the WRONG output>
+2. **Layer**: L1 input / L2 state / L3 detector / L4 guard / L5 polish
+3. **4-source verification**:
+   - PDF Playbook §X.Y says: …
+   - docs/usecases.md Caso N says: …
+   - Code/JSON says: …
+   - Bot reality (the chat Andrea showed): …
+   - **Divergenza**: where the 4 disagree.
+4. **Iron rules trap check** (mandatory NO answers):
+   - Sto per patchare `prompts/agent.txt`?  → NO (rule #1)
+   - Sto per mutare `pendingClosure`/`operatorRequested`/etc. inline?  → NO (rule #4)
+   - Sto per aggiungere intent-phrase detection senza real-bug evidence?  → NO (rule #6)
+   - Sto per saltare il test sibling del detector?  → NO (rule #5)
+   - Sto per usare `casoN` ordinal in codice?  → NO (rule #9)
+5. **Fix layer-correct**: <which file + function, at the identified layer>
+6. **F-log entry draft**: sintomo / root cause / fix architetturale (1 paragrafo)
+7. **Pin location**: `__tests__/unit/f-log-regression.test.ts` test name `F<N+1> — <canonical marker>`
+
+→ Procedo a codare SOLO dopo aver scritto tutti i 7 punti.
+```
+
+### Anti-patterns I MUST reject when reading a bug report
+
+- **"Just patch the prompt with 'DON'T DO X'"** → rule #1 violation. The fix
+  goes in a guard / tool validator / post-processor invariant, never in
+  the LLM prompt.
+- **"Quick regex tweak inline in agent-extract.ts"** → check rule #6.
+  If it's a NEW detector for INTENT, extract to `utils/intent.ts` with tests.
+- **"Bypass the gather guard for this specific case"** → check rule #10.
+  Every required fact has a catch-all asker. If you're bypassing, you're
+  creating a pipeline hole.
+- **"Add a `caso17_handler` function"** → rule #9 violation. Use semantic
+  ids from `json/cases.json` (e.g. `photoUnreadable-handler`).
+- **"Just make this one test pass, no full audit"** → check the 4-source
+  workflow. A divergence between PDF/usecases.md/code/bot is a bug
+  surface — fix the diverging source first.
+
+### Why this protocol exists (the meta-rule)
+
+The iron rules, F-log, check-architecture.sh, and 800+ unit tests catch
+violations **structurally** — but only AFTER I've written code. The
+protocol catches violations at the **reasoning stage**, BEFORE any
+code is touched. It's the cheapest place to catch a pezza (free) and
+the most expensive place to skip (silently produces a wrong fix that
+passes structural checks).
+
+**Failure mode this prevents**: I jump to "I see the regex doesn't match,
+let me add a pattern" without first asking which LAYER the bug lives in,
+without checking the 4 sources, without checking if the fix would create
+a pipeline hole elsewhere. The protocol makes me verbalize the discipline.
+
+**Verification**: Andrea reads the protocol output. If a step is missing,
+typed-as-empty, or contradicts the iron rules, Andrea calls it out and
+I redo. Mechanical (check-architecture.sh) + reasoning (this protocol)
++ structural (tests) = three independent layers of defense.
+
+### Scope: when to skip the protocol
+
+The protocol is mandatory for **bug reports** (something doesn't work as
+expected). It is NOT required for:
+- Feature additions (use the recipe in `docs/adding-use-cases.md`)
+- Documentation-only changes (typos in usecases.md, comments)
+- Refactors with no behaviour change
+
+When in doubt: run the protocol. The cost of typing 7 lines is trivial
+compared to the cost of a pezza.
+
+---
+
 ## 🧭 The 5 layers — know which one you're in
 
 ```

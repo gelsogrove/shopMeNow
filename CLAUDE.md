@@ -581,6 +581,7 @@ apps/frontend/src/
   8. **Multi-language by design** — every detector covers all 6 supported languages (es, it, en, ca, pt, fr) with tests.
 - **HOW TO ADD A USE CASE**: see [`apps/backend/custom-ecolaundry/docs/adding-use-cases.md`](apps/backend/custom-ecolaundry/docs/adding-use-cases.md). Pick the matching recipe.
 - **HOW EACH TOOL VALIDATES**: see [`apps/backend/custom-ecolaundry/docs/contracts.md`](apps/backend/custom-ecolaundry/docs/contracts.md).
+- **BUG INTAKE PROTOCOL** (🚨 MANDATORY when Andrea reports a bug): see [`apps/backend/custom-ecolaundry/CLAUDE.md → 🐛 Bug intake protocol`](apps/backend/custom-ecolaundry/CLAUDE.md). 7-step typed-out checklist that I MUST produce BEFORE writing any fix code. Catches pezza-thinking at the reasoning stage, before structural checks can catch it post-fix.
 - **ENFORCEMENT**: PRs that add `DO NOT DO X` lines to `prompts/agent.txt`, mutate state outside `state-transitions.ts`, or add a detector without tests must be rejected and rewritten following the recipes.
 
 ---
