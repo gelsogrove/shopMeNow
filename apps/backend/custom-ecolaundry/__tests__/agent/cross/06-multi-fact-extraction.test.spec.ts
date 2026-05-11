@@ -14,7 +14,7 @@ export const tests: TestCase[] = [
     run: async (ctx) => {
       const reply = await ctx.send('En Pineda me ha cobrado 10 €.')
       expectMentionsAll(reply, ['revis', 'manual'])
-      expectMentionsNone(reply, ['donde', 'en qué lavanderia'])
+      expectMentionsNone(reply, ['donde', 'en qué lavanderia', 'en qué pueblo'])
       expectStateHas(ctx.session, { location: 'Pineda' })
     },
   },

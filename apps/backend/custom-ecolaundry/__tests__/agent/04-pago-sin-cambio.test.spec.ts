@@ -118,4 +118,33 @@ export const tests: TestCase[] = [
       }
     },
   },
+
+  // ── Scenario 4.4 — F39 pin: bare "Sí" cambio → escalate diretto ────────
+  {
+    // F39 regression (Andrea 2026-05-11): bot ricevette "si" (bare yes) come
+    // risposta a "¿la central te ha devuelto el cambio?" e improvvisò chiedendo
+    // la pantalla invece di escalare. Il guardNoChangeYesButBroken richiedeva
+    // due markers nello stesso messaggio (yes + still-broken explicit).
+    // Fix: il still-broken è implicito dal trigger originale; bare "Sí" basta.
+    name: 'F39 — bare "Sí" al cambio → escalate (still-broken implicit from trigger)',
+    run: async (ctx) => {
+      await ctx.send('He pagado y no se ha activado')
+      await ctx.send('Goya')
+      await ctx.send('Lavadora')
+      await ctx.send('La 4')
+      // Bare "Sí" — niente "pero no arranca". F39 deve escalare lo stesso.
+      const r = await ctx.send('Sí')
+      const rLower = r.toLowerCase()
+      const asksName = /c[oó]mo\s+te\s+llamas|tu\s+nombre/.test(rLower)
+      const escalates = /revis|operador|manualmente/.test(rLower)
+      if (!asksName && !escalates) {
+        throw new Error(`F39 regression: bare "Sí" deve escalare, non drift a display: ${r}`)
+      }
+      // Negative: bot NON deve chiedere "¿qué aparece en la pantalla?" né
+      // gather di display (caduta nel pipeline machine-incident default).
+      if (/qu[eé]\s+aparece\s+en\s+la\s+pantalla|c[oó]digo.*pantalla/i.test(rLower)) {
+        throw new Error(`F39 regression: bot drift a display gather invece di escalate: ${r}`)
+      }
+    },
+  },
 ]

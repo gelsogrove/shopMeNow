@@ -14,7 +14,13 @@ import { lang } from './helpers.js'
 // F25 (Andrea 2026-05-10 audit): added "tarjeta de descuento" and "quiero la
 // tarjeta" patterns from usecases.md riga 1113 ("Quiero la tarjeta de
 // descuento") which the legacy regex missed.
-const TARJETA_TOPIC = /(tarjeta\s+(?:de\s+)?(?:fidelizaci[oó]n|fidelidad|descuento)|loyalty\s+card|c[oó]mo\s+(?:consigo|comprar|recargar)\s+(?:la\s+)?tarjeta|(?:quiero|necesito|me\s+gustar[ií]a)\s+(?:la\s+|una\s+)?tarjeta)/i
+// F44 — Andrea 2026-05-11: extended the intent-verb pattern to allow an
+// optional action verb (comprar/tener/conseguir/sacar/adquirir) AND an
+// optional adjective ("nueva", "otra") between the intent verb and
+// "tarjeta". Catches "quiero comprar una nueva tarjeta" / "necesito sacar
+// la tarjeta" / "me gustaría tener una tarjeta nueva" that the previous
+// pattern missed.
+export const TARJETA_TOPIC = /(tarjeta\s+(?:de\s+)?(?:fidelizaci[oó]n|fidelidad|descuento)|loyalty\s+card|c[oó]mo\s+(?:consigo|comprar|recargar|saco|adquiero|tengo)\s+(?:la\s+|una\s+)?tarjeta|(?:quiero|necesito|me\s+gustar[ií]a|quisiera)\s+(?:comprar\s+|tener\s+|conseguir\s+|sacar\s+|adquirir\s+)?(?:una?\s+|la\s+|mi\s+|otra\s+)?(?:nueva\s+|nuevita\s+)?tarjeta)/i
 
 export const guardLoyaltyCardBuy: Guard = (ar, userMessage) => {
   if (

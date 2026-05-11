@@ -198,6 +198,49 @@ else
   echo -e "${GREEN}✓${NC}"
 fi
 
+# --- Rule #11 — every F-log entry has a regression pin ---------------------
+# Every entry in CLAUDE.md "Architectural fixes log" MUST have at least one
+# pin in __tests__/unit/f-log-regression.test.ts. The pin's `name` must
+# start with the F-number. This guarantees that reverting a past fix fails
+# LOUDLY with a test name that points directly to the F-log entry.
+#
+# EXEMPT_F_ENTRIES: legacy entries that predate this discipline (F1-F16)
+# OR are LLM-dependent (no deterministic pin possible). When adding to this
+# list, document the reason inline.
+echo -n "  [#11] every F-log entry has a pin in f-log-regression.test.ts... "
+EXEMPT_F_ENTRIES="
+  F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12 F13 F14 F15 F16  # Legacy (pre-F17 discipline) — covered by dedicated unit tests
+  F31  # Router subCase classification — LLM-dependent, no deterministic pin
+  F37  # PDF-strict alignment — reverted by F40 (UX > PDF for PUSH PROG)
+"
+EXEMPT_F_ENTRIES=$(echo "$EXEMPT_F_ENTRIES" | sed 's/#.*$//' | tr -s ' \n' ' ')
+pin_file="__tests__/unit/f-log-regression.test.ts"
+if [ -f CLAUDE.md ] && [ -f "$pin_file" ]; then
+  flog_entries=$(grep -oE '^\| F[0-9]+ ' CLAUDE.md | grep -oE 'F[0-9]+' | sort -u)
+  pinned=$(grep -oE 'F[0-9]+' "$pin_file" | sort -u)
+  missing=""
+  for f in $flog_entries; do
+    # Skip exempt entries
+    if echo " $EXEMPT_F_ENTRIES " | grep -q " ${f} "; then
+      continue
+    fi
+    if ! echo "$pinned" | grep -q "^${f}$"; then
+      missing="$missing $f"
+    fi
+  done
+  if [ -n "$missing" ]; then
+    echo -e "${RED}✗${NC}"
+    echo -e "    ${RED}F-log entries without regression pin:${NC}$missing"
+    echo -e "    ${YELLOW}Add a pin in __tests__/unit/f-log-regression.test.ts with the F-number in its name.${NC}"
+    echo -e "    ${YELLOW}If genuinely impossible to pin deterministically, add to EXEMPT_F_ENTRIES with reason.${NC}"
+    errors=$((errors + 1))
+  else
+    echo -e "${GREEN}✓${NC}"
+  fi
+else
+  echo -e "${YELLOW}skipped (CLAUDE.md or pin file missing)${NC}"
+fi
+
 # --- summary ----------------------------------------------------------------
 echo
 if [ "$errors" -gt 0 ]; then

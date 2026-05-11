@@ -82,8 +82,10 @@ export const tests: TestCase[] = [
       if (!/60[º°]|40[º°]|30[º°]|90[º°]|programa/.test(t7Lower)) {
         throw new Error(`Scenario 32.1 T7: bot non switcha a PUSH PROG flow (no 4 programmi): ${t7}`)
       }
-      // location/numero NON re-richiesti (sopravvivono al display switch)
-      if (/en\s+qu[eé]\s+lavander|qu[eé]\s+n[uú]mero/.test(t7Lower)) {
+      // location/numero NON re-richiesti (sopravvivono al display switch).
+      // Welcome wording change (F39+): bot ora dice "en qué pueblo" non
+      // "en qué lavandería" — regex coperto entrambi i wording.
+      if (/en\s+qu[eé]\s+(?:lavander|pueblo)|qu[eé]\s+n[uú]mero/.test(t7Lower)) {
         throw new Error(`Scenario 32.1 T7: bot ha ri-chiesto location/numero dopo display switch: ${t7}`)
       }
       // T8 — cliente nega + nuovo display DOOR → bot deve switchare a DOOR flow
@@ -188,8 +190,9 @@ export const tests: TestCase[] = [
       if (!/raz[oó]n|raz|fiscal|nombre|nif|cif/.test(t6Lower)) {
         throw new Error(`Scenario 32.2 T6: bot non apre invoice gather: ${t6}`)
       }
-      // ⚠️ RED-SPEC: bot NON deve ri-chiedere location/lavadora già note
-      expectMentionsNone(t6, ['en qué lavandería', 'qué lavanderia', 'goya o', 'pineda'])
+      // ⚠️ RED-SPEC: bot NON deve ri-chiedere location/lavadora già note.
+      // Coverage estesa per nuova welcome wording: "en qué pueblo ..." (F39+).
+      expectMentionsNone(t6, ['en qué lavandería', 'qué lavanderia', 'en qué pueblo', 'qué pueblo', 'goya o', 'pineda'])
       // State: location preservata cross-flow
       expectStateHas(ctx.session, { location: 'Goya' })
     },

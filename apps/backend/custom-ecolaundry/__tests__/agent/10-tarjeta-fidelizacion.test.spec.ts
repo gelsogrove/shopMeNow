@@ -35,4 +35,23 @@ export const tests: TestCase[] = [
       }
     },
   },
+
+  // ── F44 — verb+adjective trigger variant (Andrea CLI bug 2026-05-11) ───
+  {
+    // Real customer chat from playground: "quiero comprar una nueva tarjeta".
+    // The previous TARJETA_TOPIC regex required "tarjeta" immediately after
+    // "quiero" + article. Verb+adjective intermediates broke the match → bot
+    // drifted to location ask instead of returning the loyalty card FAQ.
+    name: 'F44 — ES "quiero comprar una nueva tarjeta" triggers loyalty-card-buy FAQ',
+    run: async (ctx) => {
+      const t1 = await ctx.send('quiero comprar una nueva tarjeta')
+      // Must contain the canonical FAQ markers: 20€ + efectivo. Must NOT
+      // drift to machine gather (no "lavadora o secadora" question).
+      expectMentionsAll(t1, ['20', 'efectivo'])
+      const t1Lower = t1.toLowerCase()
+      if (/lavadora\s+o\s+secadora|qu[eé]\s+aparece\s+en\s+la\s+pantalla/i.test(t1Lower)) {
+        throw new Error(`F44 regression: bot deve rispondere FAQ tarjeta, NON gather machine: ${t1}`)
+      }
+    },
+  },
 ]
