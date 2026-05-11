@@ -1,6 +1,6 @@
 # Agent test dialogues — `09-factura.test.spec.ts`
 
-Generated: 2026-05-10T15:02:22.130Z
+Generated: 2026-05-10T21:12:21.593Z
 Total: 3 | Pass: 3 | Fail: 0
 
 ## ✅ PASS — ES — Scenario 9.1: happy path completo → 8 step + email valido al primo tentativo → summary
@@ -68,6 +68,14 @@ Perfecto. ¿Me indicas la razón social?
 🤖 **bot:**
 
 ```
+¿Quieres añadir alguna nota u observación para la factura? (Si no necesitas añadir nada, escribe "no".)
+```
+
+👤 **user:** no
+
+🤖 **bot:**
+
+```
 Por último, ¿cuál es tu nombre?
 ```
 
@@ -78,8 +86,10 @@ Por último, ¿cuál es tu nombre?
 ```
 Gracias Andrea, te enviaremos pronto la factura del 2026-05-09 a tu correo: ana@example.com. 📧
 
+🔒 Tus datos (razón social, CIF/NIF, dirección, correo) se usan únicamente para emitir la factura y no se comparten con terceros.
+
 **👤 Human Support message**
-El domingo 10 de mayo a las 17:00, Usuario Andrea en Goya ha solicitado factura. Datos: razón social: ACME SL; dirección: Calle Mayor 1, Madrid; CIF/NIF: B12345678; fecha de uso: ayer (2026-05-09); máquina: lavadora; email: ana@example.com.
+El domingo 10 de mayo a las 23:12, Usuario Andrea en Goya ha solicitado factura. Datos: razón social: ACME SL; dirección: Calle Mayor 1, Madrid; CIF/NIF: B12345678; fecha de uso: ayer (2026-05-09); máquina: lavadora; email: ana@example.com.
 ```
 
 ---
@@ -157,6 +167,14 @@ El correo no parece válido. ¿Puedes escribírmelo de nuevo, por favor?
 🤖 **bot:**
 
 ```
+¿Quieres añadir alguna nota u observación para la factura? (Si no necesitas añadir nada, escribe "no".)
+```
+
+👤 **user:** ninguna
+
+🤖 **bot:**
+
+```
 Por último, ¿cuál es tu nombre?
 ```
 
@@ -167,8 +185,10 @@ Por último, ¿cuál es tu nombre?
 ```
 Gracias Andrea, te enviaremos pronto la factura del 2026-05-09 a tu correo: ana@example.com. 📧
 
+🔒 Tus datos (razón social, CIF/NIF, dirección, correo) se usan únicamente para emitir la factura y no se comparten con terceros.
+
 **👤 Human Support message**
-El domingo 10 de mayo a las 17:00, Usuario Andrea en Goya ha solicitado factura. Datos: razón social: ACME SL; dirección: Calle Mayor 1, Madrid; CIF/NIF: B12345678; fecha de uso: ayer (2026-05-09); máquina: lavadora; email: ana@example.com.
+El domingo 10 de mayo a las 23:12, Usuario Andrea en Goya ha solicitado factura. Datos: razón social: ACME SL; dirección: Calle Mayor 1, Madrid; CIF/NIF: B12345678; fecha de uso: ayer (2026-05-09); máquina: lavadora; email: ana@example.com.
 ```
 
 ---

@@ -184,7 +184,15 @@ async function applyGuardOutcome(
   // Natural-rephrase pass (opt-in). Skipped for T1 welcome (canonical
   // greeting must stay stable) and for operator-only structured output
   // (filter inside rephraseForTurn).
-  if (!isT1Welcome && ar.runtime.settings?.naturalRephrase) {
+  // F35 — Andrea 2026-05-10 (PII privacy): the invoice flow (Caso 9) carries
+  // sensitive personal data (CIF/NIF, dirección, email, razón social) entered
+  // turn-by-turn into ar.state.invoiceData. The history at every invoice turn
+  // contains those fields. The rephrase LLM forwards the full conversation
+  // history to a third-party API; that would leak PII outside the system.
+  // We deliberately SKIP rephrase for any pendingFlow starting with 'invoice-'.
+  // Customer sees the deterministic i18n reply unchanged.
+  const isInvoiceFlow = ar.state.pendingFlow.startsWith('invoice-')
+  if (!isT1Welcome && !isInvoiceFlow && ar.runtime.settings?.naturalRephrase) {
     reply = await rephraseForTurn(reply, ar, history)
   }
   history.push({ role: 'user', content: userMessage })

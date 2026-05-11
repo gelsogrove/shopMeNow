@@ -106,6 +106,17 @@ export const guardInvoiceFlow: Guard = (ar, userMessage) => {
         return { reply: t('invoiceAskEmailRetry', lang(ar)), reason: 'invoice' }
       }
       ar.state.invoiceData.email = trimmed
+      // F35 — Andrea 2026-05-10: ask optional notes before the name. Customer
+      // can type "no" / "ninguna" / free-form text. Whatever they type goes
+      // into invoiceData.notes verbatim.
+      ar.state.pendingFlow = 'invoice-ask-notes'
+      return { reply: t('invoiceAskNotes', lang(ar)), reason: 'invoice' }
+    }
+    case 'invoice-ask-notes': {
+      // F35 — accept any text including "no/ninguna/nessuna" → store as empty.
+      const lower = trimmed.toLowerCase()
+      const isNegative = /^(no|ninguna|nessuna|nothing|none|nada|rien)\b/i.test(lower)
+      ar.state.invoiceData.notes = isNegative ? '' : trimmed
       ar.state.pendingFlow = 'invoice-ask-name'
       requireCustomerName(ar)
       return { reply: t('invoiceAskName', lang(ar)), reason: 'invoice' }
@@ -123,6 +134,9 @@ export const guardInvoiceFlow: Guard = (ar, userMessage) => {
         .replace('{email}', ar.state.invoiceData.email)
       // Append the operator handoff summary in-place: guard outcomes short-circuit
       // agent.ts before the auto-escalation block runs, so we mirror that block here.
+      // F35 — invoice case carries sensitive PII (email, CIF, address). The
+      // summary is built deterministically here, NEVER passed through the
+      // operator-briefing LLM (which would forward it to a third-party API).
       const ctx = extractEscalationContext(ar.state, ar.state.customerName)
       const summary = buildEscalationSummary(ctx)
       ar.pendingEscalation = null

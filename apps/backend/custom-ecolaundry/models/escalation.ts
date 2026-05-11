@@ -32,6 +32,7 @@ export type EscalationContext = {
     fecha: string
     fechaIso: string
     email: string
+    notes: string  // F35 — optional free-text observations from the customer
   }
   // Discount code — present when the customer provided a code in the SAU2904266 format.
   discountCodeData?: {

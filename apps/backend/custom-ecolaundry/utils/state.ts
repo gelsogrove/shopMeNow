@@ -74,6 +74,7 @@ export function createInitialState(): SessionState {
       fecha: '',
       fechaIso: '',
       email: '',
+      notes: '',
     },
     discountCodeData: {
       letters: '',

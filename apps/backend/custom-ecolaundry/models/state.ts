@@ -116,6 +116,7 @@ export type SessionState = {
     fecha: string       // raw text as typed by the customer
     fechaIso: string    // normalized YYYY-MM-DD when parseable, else ''
     email: string
+    notes: string       // F35 — free-text customer notes (e.g. "factura ordinaria", "contiene IVA"). Optional, may be empty.
   }
   // Discount code — discount code parsed from `state.faqCodeValue` once the format
   // SAU2904266 (3 letters + DDMMYY + amount) is validated.
@@ -242,5 +243,6 @@ export type SessionState = {
     | 'invoice-ask-tax-id'
     | 'invoice-ask-date'
     | 'invoice-ask-email'
+    | 'invoice-ask-notes'
     | 'invoice-ask-name'
 }

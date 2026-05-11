@@ -233,7 +233,9 @@ function buildEscalationSummaryBody(context: EscalationContext): string {
     const inv = context.invoiceData
     const fechaLabel = inv.fechaIso ? `${inv.fecha} (${inv.fechaIso})` : inv.fecha
     const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
-    return `${name} en ${location} ha solicitado factura. Datos: razón social: ${inv.razonSocial}; dirección: ${inv.direccion}; CIF/NIF: ${inv.cif}; fecha de uso: ${fechaLabel}; máquina: ${machineLabel}; email: ${inv.email}.`
+    // F35 — append customer notes when present (free-text observations).
+    const notesLabel = inv.notes ? `; notas: ${inv.notes}` : ''
+    return `${name} en ${location} ha solicitado factura. Datos: razón social: ${inv.razonSocial}; dirección: ${inv.direccion}; CIF/NIF: ${inv.cif}; fecha de uso: ${fechaLabel}; máquina: ${machineLabel}; email: ${inv.email}${notesLabel}.`
   }
 
   // Non-troubleshooting incidents (datafono / cameras / refund / …) —
