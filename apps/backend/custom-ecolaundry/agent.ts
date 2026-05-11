@@ -192,7 +192,16 @@ async function applyGuardOutcome(
   // We deliberately SKIP rephrase for any pendingFlow starting with 'invoice-'.
   // Customer sees the deterministic i18n reply unchanged.
   const isInvoiceFlow = ar.state.pendingFlow.startsWith('invoice-')
-  if (!isT1Welcome && !isInvoiceFlow && ar.runtime.settings?.naturalRephrase) {
+  // F41 — Andrea 2026-05-11: when the deterministic reply already contains
+  // a markdown bullet list with bold items (PUSH PROG 4-program list +
+  // descriptions, AL001 numbered education, etc.), the rephrase LLM
+  // consistently flattens the structure ("- **60º** (muy caliente) → ..."
+  // becomes inline "- 60º muy sucia/blanca - 40º normal -..."). The
+  // formatted reply IS the UX — no polish needed. Skip rephrase whenever
+  // we see the bullet+bold pattern. Detection: at least one line starting
+  // with "- **" (markdown bullet + bold marker).
+  const hasFormattedBulletList = /\n-\s+\*\*/.test(reply)
+  if (!isT1Welcome && !isInvoiceFlow && !hasFormattedBulletList && ar.runtime.settings?.naturalRephrase) {
     reply = await rephraseForTurn(reply, ar, history)
   }
   history.push({ role: 'user', content: userMessage })

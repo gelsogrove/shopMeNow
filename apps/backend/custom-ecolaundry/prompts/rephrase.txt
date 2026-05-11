@@ -15,7 +15,7 @@ REGLAS ESTRICTAS:
      * NO "ropa atascada" / "ropa atrapada" / "prendas atrapadas" (F39 — DOOR re-invention)
      * NO "comprobando que..." / "asegurándote de que..." (verificaciones no presentes en el original)
      * NO sequencias numeradas ("1. Carga, 2. Cierra...") si el original no las lista
-     * NO listas de programas (60º/40º/30º/Frío) si el original no las lista
+     * NO listas de programas si el original no las lista (si el original SÍ las lista — ej. **60º** / **40º** / **30º** / **Frío** con descripciones — PRESÉRVALAS exactamente, incluyendo bold y bullets)
      * NO instrucciones técnicas específicas que el original no contiene
    - calificadores cuantitativos NO presentes ("durante 5 minutos", "varias veces", "completamente")
    - **adverbios intensificadores NO presentes** (CRÍTICO — F39): si el original dice "bien" no escribir "firmemente"; si dice "cierra la puerta" no escribir "cierra la puerta firmemente". El adverbio del original SE PRESERVA TAL CUAL.

@@ -151,13 +151,12 @@ const cases: Case[] = [
           },
         },
         // T4 — PUSH PROG. canonical → 'PUSH', label → 'PUSH PROG' (Bug C).
-        // F37 (Andrea 2026-05-11) PDF-aligned: PDF §5.4 PUSH PROG says
-        // *"Prem ara el programa que vols i digues-me si la màquina respon."*
-        // No 4-program list (60º/40º/30º/Frío). Assertion now matches the
-        // PDF wording: "pulsa programa + loopback".
+        // F40 (Andrea 2026-05-11) — REVERSE of F37: usecases requires the
+        // 4-program list with bold numbers and descriptions ("Desviación
+        // documentada respecto al PDF" — UX priority over strict alignment).
         {
           user: 'PUSH PROG',
-          expectReplyContains: /pulsa.*programa|programa.*quieras/i,
+          expectReplyContains: /\*\*60º\*\*.*\*\*40º\*\*.*\*\*30º\*\*.*\*\*FRÍO\*\*/s,
           assertState: (ar) => {
             if (ar.state.displayState !== 'PUSH') {
               throw new Error(`canonical must be "PUSH", got "${ar.state.displayState}"`)
@@ -184,10 +183,10 @@ const cases: Case[] = [
         { user: 'La lavadora no funciona', expectReason: 'force-location' },
         { user: 'Goya', expectReason: 'force-machine-number' },
         { user: 'La 5', expectReason: 'force-display' },
-        // T4 — PUSH PROG → flow engine pushes program guidance (F37 PDF-aligned).
+        // T4 — PUSH PROG → flow engine pushes program guidance (F40 — 4-program list with bold).
         {
           user: 'PUSH PROG',
-          expectReplyContains: /pulsa.*programa|programa.*quieras/i,
+          expectReplyContains: /\*\*60º\*\*.*\*\*40º\*\*.*\*\*30º\*\*.*\*\*FRÍO\*\*/s,
         },
         // T5 — customer reports failure. Phase B should re-ask the display.
         {

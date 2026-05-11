@@ -68,7 +68,7 @@
 
 **Criterios de aceptación:**
 1. Gather: lavandería → número de máquina → pantalla. NO pregunta «¿has pagado?».
-2. Tras PUSH PROG, el bot pide pulsar un botón de programa.
+2. Tras PUSH PROG, el bot muestra los 4 programas disponibles (**60º**, **40º**, **30º**, **FRÍO**) con descripción y pide pulsar uno.
 3. Cuando el cliente confirma que funciona, el bot cierra como resuelto.
 4. No se escala a operador.
 
@@ -84,7 +84,16 @@
 **Bot:** ¿Qué aparece en la pantalla?
 
 **Usuario:** PUSH PROG  
-**Bot:** Pulsa ahora el programa que quieras y dime si la lavadora ha arrancado.
+**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
+
+Los programas disponibles son:
+
+- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → perfecto para ropa normal (algodón, color)
+- **30º** (suave) → adecuado para ropa delicada o sintética
+- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
+
+Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
 
 **Usuario:** Sí, ahora funciona  
 **Bot:** ✅ Perfecto, incidencia resuelta.
@@ -111,7 +120,16 @@
 **Bot:** ¿Qué aparece en la pantalla?
 
 **Usuario:** PUSH PROG  
-**Bot:** Pulsa ahora el programa que quieras y dime si la lavadora ha arrancado.
+**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
+
+Los programas disponibles son:
+
+- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → perfecto para ropa normal (algodón, color)
+- **30º** (suave) → adecuado para ropa delicada o sintética
+- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
+
+Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
 
 **Usuario:** He pulsado pero no responde  
 **Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
@@ -577,7 +595,16 @@
 **Bot:** ¿Qué aparece en la pantalla?
 
 **Usuario:** PUSH PROG  
-**Bot:** Pulsa ahora el programa que quieras y dime si la lavadora ha arrancado.
+**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
+
+Los programas disponibles son:
+
+- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → perfecto para ropa normal (algodón, color)
+- **30º** (suave) → adecuado para ropa delicada o sintética
+- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
+
+Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
 
 **Usuario:** Ahora sí  
 **Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
@@ -607,7 +634,16 @@
 **Bot:** ¿Qué aparece en la pantalla?
 
 **Usuario:** PUSH PROG  
-**Bot:** Pulsa ahora el programa que quieras y dime si la lavadora ha arrancado.
+**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
+
+Los programas disponibles son:
+
+- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → perfecto para ropa normal (algodón, color)
+- **30º** (suave) → adecuado para ropa delicada o sintética
+- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
+
+Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
 
 **Usuario:** no arranca  
 **Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora.
@@ -1185,7 +1221,16 @@
 **Bot:** No reconozco ese código exactamente. ¿Podrías comprobarlo nuevamente?
 
 **Usuario:** PUSH PROG  
-**Bot:** Pulsa ahora el programa que quieras y dime si la lavadora ha arrancado.
+**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
+
+Los programas disponibles son:
+
+- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → perfecto para ropa normal (algodón, color)
+- **30º** (suave) → adecuado para ropa delicada o sintética
+- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
+
+Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
 
 **Conversación B — código no documentado:**
 
@@ -1268,7 +1313,16 @@
 **Bot:** La máquina está pendiente de selección. Comprueba que has pulsado bien el número en la central de pago.
 
 **Usuario:** No, ahora aparece PUSH PROG  
-**Bot:** Pulsa ahora el programa que quieras y dime si la lavadora ha arrancado.
+**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
+
+Los programas disponibles son:
+
+- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → perfecto para ropa normal (algodón, color)
+- **30º** (suave) → adecuado para ropa delicada o sintética
+- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
+
+Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
 
 **Usuario:** No, ahora pone DOOR  
 **Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez.
@@ -1304,26 +1358,4 @@
 
 [continúa flujo Caso 9 desde razón social — salta location y tipo]
 
----
-
-### 32.3 — Marathon: FAQ pause mid-gather
-
-**Criterios de aceptación:**
-1. FAQ aislada no destruye pendingFlow activo (pausa solo).
-2. El bot responde la FAQ y vuelve al gather.
-3. NO re-pregunta location ya capturada.
-4. El cliente puede hacer múltiples FAQ y retomar el gather siempre.
-
-**Conversación:**
-
-**Usuario:** Tengo un problema con la lavadora  
-**Bot:** ¿En qué lavandería te encuentras?
-
-**Usuario:** Goya  
-**Bot:** ¿Qué número tiene la lavadora?
-
-**Usuario:** Espera, antes una pregunta: ¿cuánto cuesta lavar?  
-**Bot:** Tengo que revisarlo antes de confirmarte ese importe. ¿Quieres que sigamos con el problema?
-
-**Usuario:** Sí, la lavadora 3  
-**Bot:** ¿Qué aparece en la pantalla?
+--- 

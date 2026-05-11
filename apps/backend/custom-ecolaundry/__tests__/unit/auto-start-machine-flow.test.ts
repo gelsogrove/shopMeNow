@@ -58,28 +58,31 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'PUSH PROG: reply asks to press program + loopback (F37 PDF-aligned)',
+    name: 'PUSH PROG: reply contains 4-program list in bold + descriptions + loopback (F40)',
     run: () => {
       const ar = makeAr()
       ar.state.displayState = 'PUSH'
       const out = guardAutoStartMachineFlow(ar, '')
       if (!out) throw new Error('expected reply')
       const reply = out.reply
-      // F37 (Andrea 2026-05-11) — PDF Playbook §5.4 PUSH PROG says:
-      // "Prem ara el programa que vols i digues-me si la màquina respon."
-      // No 4-program list (60º/40º/30º/Frío), just press-and-tell.
-      // Previous version (auditing as F8 before F37) emitted the 4-program
-      // bullet list as a usability extra — Andrea audited it against the
-      // PDF and asked for strict alignment.
+      // F40 (Andrea 2026-05-11) — REVERSE of F37: usecases.md ahora exige
+      // mostrar los 4 programas con descripciones y números en bold.
+      // "Desviación documentada respecto al Playbook PDF" — el cliente
+      // necesita información explícita en chat (no puede leer ambient
+      // signage), prioridad UX sobre alignment estricto al PDF.
       if (!/pulsa.*programa/i.test(reply)) {
         throw new Error(`reply must ask the customer to press a program: ${reply}`)
       }
-      if (!/dime|d[ií]me|av[ií]same|funcion|arrancad/i.test(reply)) {
-        throw new Error(`reply must close with a loopback question: ${reply}`)
+      // F40 positive assertions: 4 programs in bold with descriptions
+      if (!/\*\*60º\*\*/.test(reply)) throw new Error('F40: missing **60º**')
+      if (!/\*\*40º\*\*/.test(reply)) throw new Error('F40: missing **40º**')
+      if (!/\*\*30º\*\*/.test(reply)) throw new Error('F40: missing **30º**')
+      if (!/\*\*FRÍO\*\*/.test(reply)) throw new Error('F40/F41: missing **FRÍO** (capital)')
+      if (!/muy caliente|templado|suave|delicad/i.test(reply)) {
+        throw new Error(`F40: missing program descriptions: ${reply}`)
       }
-      // Negative assertion (F37): no canonical 4-program list anymore.
-      if (/\*\*60º\*\*.*\*\*40º\*\*/s.test(reply)) {
-        throw new Error('F37: reply must NOT include the 4-program bullet list (PDF deviates)')
+      if (!/comenzado\s+a\s+funcionar|arrancad|funcion/i.test(reply)) {
+        throw new Error(`reply must close with a loopback question: ${reply}`)
       }
     },
   },
