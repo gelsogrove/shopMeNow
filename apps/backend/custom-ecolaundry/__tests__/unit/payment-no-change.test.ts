@@ -104,14 +104,27 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'yes-but-broken: bare "Sí" (no still-broken signal) → null (LLM handles it)',
+    name: 'F39: bare "Sí" → escalate (still-broken is implicit from trigger context)',
     run: () => {
       const ar = makeAr()
       ar.state.pendingFlow = 'no-change-await-confirm'
       const out = guardNoChangeYesButBroken(ar, 'Sí')
-      if (out !== null) {
-        throw new Error('bare "Sí" must NOT escalate — LLM drives the rest')
+      if (!out) {
+        throw new Error('bare "Sí" must escalate (Caso 4.2 — central refunded, machine still broken)')
       }
+      if (ar.state.pendingFlow !== '') throw new Error('pendingFlow must be cleared')
+      if (!ar.state.escalationReason.includes('No-change incident')) {
+        throw new Error(`unexpected escalation reason: ${ar.state.escalationReason}`)
+      }
+    },
+  },
+  {
+    name: 'F39: bare "si" (lowercase) → escalate',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'no-change-await-confirm'
+      const out = guardNoChangeYesButBroken(ar, 'si')
+      if (!out) throw new Error('bare "si" lowercase must escalate (Caso 4.2)')
     },
   },
   {

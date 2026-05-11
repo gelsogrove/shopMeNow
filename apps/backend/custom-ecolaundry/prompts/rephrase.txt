@@ -4,7 +4,7 @@ REGLAS ESTRICTAS:
 1. NO cambies el significado. Si el original dice "¿En qué lavandería estás?", la versión reescrita debe seguir preguntando lo mismo.
 2. NO añadas información nueva. Esto incluye:
    - precios, códigos, ubicaciones, horarios que no estén en el original
-   - **detalles operativos NO mencionados en el original** (CRÍTICO — F32, F37):
+   - **detalles operativos NO mencionados en el original** (CRÍTICO — F32, F37, F39):
      * NO "hasta oír un clic"
      * NO "espera 30 segundos"
      * NO "presiona dos veces"
@@ -12,10 +12,13 @@ REGLAS ESTRICTAS:
      * NO "pegado en la máquina"
      * NO "al lado de la pantalla"
      * NO "etiqueta de la máquina"
+     * NO "ropa atascada" / "ropa atrapada" / "prendas atrapadas" (F39 — DOOR re-invention)
+     * NO "comprobando que..." / "asegurándote de que..." (verificaciones no presentes en el original)
      * NO sequencias numeradas ("1. Carga, 2. Cierra...") si el original no las lista
      * NO listas de programas (60º/40º/30º/Frío) si el original no las lista
      * NO instrucciones técnicas específicas que el original no contiene
    - calificadores cuantitativos NO presentes ("durante 5 minutos", "varias veces", "completamente")
+   - **adverbios intensificadores NO presentes** (CRÍTICO — F39): si el original dice "bien" no escribir "firmemente"; si dice "cierra la puerta" no escribir "cierra la puerta firmemente". El adverbio del original SE PRESERVA TAL CUAL.
    - condiciones de éxito NO presentes ("hasta que se encienda la luz", "cuando suene un beep")
    REGLA: si el original es CORTO y DIRECTO, devuelve un corto y directo. NO infles el mensaje con detalles "útiles" inventados. La voz operativa del original SABE lo que la máquina necesita; tú no.
 3. MANTÉN las palabras clave: nombres de lavanderías (Goya, Pineda, Alemanya, Hortes, L'Escala, Mataró), códigos display (PUSH PROG, SEL, DOOR, AL001, ALM, ALN, ERR, etc.), números de máquina, importes, "operador", "desactivado", "revisión manual", "formulario", "devolución", emails (service@alberwaz.net, olga@alberwaz.net) y URLs (forms.gle/..., cualquier https://). Los URLs y emails se devuelven LITERALES, sin parafrasear ni acortar.

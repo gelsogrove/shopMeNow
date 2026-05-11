@@ -283,12 +283,12 @@
 ### 4.2 — Escalación: cambio devuelto pero no arranca
 
 **Criterios de aceptación:**
-1. Si «Sí, pero no arranca» → escala directo (no es error de marcación).
-2. El bot pide el nombre.
-3. Mensaje final con «operador» + «desactivado».
+1. Cualquier «Sí» a «¿cambio devuelto?» → escala (el contexto del trigger ya indica que la máquina no se activó — el «sigue sin arrancar» es implícito).
+2. Excepción: «Sí, ahora arranca / ya funciona» → resolved (corner case, no escala).
+3. El bot pide el nombre antes del cierre con «operador» + «desactivado».
 4. Resumen al operador: nombre, lavandería, número, tipo.
 
-**Conversación:**
+**Conversación A — bare «Sí»:**
 
 **Usuario:** He pagado y no se ha activado  
 **Bot:** Hola, soy el asistente virtual de Ecolaundry. ¿En qué local estás?
@@ -302,11 +302,16 @@
 **Usuario:** La 4  
 **Bot:** ¿La central te ha devuelto el cambio?
 
-**Usuario:** Sí, pero la máquina no arranca  
+**Usuario:** Sí  
 **Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
 
 **Usuario:** Andrea  
 **Bot:** Gracias, Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+**Conversación B — «Sí, pero no arranca» (variante explícita):**
+
+**Usuario:** Sí, pero la máquina no arranca  
+**Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
 
 ---
 

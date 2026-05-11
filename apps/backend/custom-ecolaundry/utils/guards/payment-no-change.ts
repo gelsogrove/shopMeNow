@@ -79,22 +79,27 @@ export const guardNoChangeNoCambio: Guard = (ar, userMessage) => {
   }
 }
 
-/** Caso 4 step 5 (escalation) — deterministic catch for the combined
- *  "Sí (cambio devuelto) PERO la máquina no arranca" answer.
+/** Caso 4 step 5 (escalation) — deterministic catch for "Sí (cambio
+ *  devuelto)" in the await-confirm phase.
  *
  *  When the customer is in `pendingFlow='no-change-await-confirm'` and
- *  answers a "yes" affirmation followed by a still-broken signal, the
- *  retry instruction makes no sense (the central did its part — it's
- *  not a number-selection mistake). Escalate immediately with the
- *  uniform handover path (`reaffirmEscalate` + `customerNameAsk` + the
- *  L5 `operatorHandoffFinal` invariant adds "operador"+"desactivado"
- *  on the next turn after capture_customer_name).
+ *  answers "yes" to "¿la central te ha devuelto el cambio?", the retry
+ *  instruction makes no sense (central did its part — not a number-
+ *  selection mistake). The trigger already stated the machine is not
+ *  activated, so any yes-affirmation implies "cambio devuelto AND
+ *  machine still broken" → escalate (Caso 4.2).
  *
- *  Multilingual coverage by design (rule #8): patterns cover the 6
- *  supported languages. The yes-marker and the still-broken-marker are
- *  both required — bare "Sí" alone keeps the LLM-driven branch active
- *  (the LLM may produce the retry instruction for the location-aware
- *  case, e.g. Pineda override).
+ *  Exception: explicit resolution markers ("Sí, ahora arranca", "ya
+ *  funciona") → null, let downstream LLM/guard close as resolved
+ *  (corner case where customer found a workaround between turns).
+ *
+ *  REGRESSION (Andrea, 2026-05-11 F39 CLI): bot fell through to LLM on
+ *  bare "Sí" → LLM improvised asking for display → cascaded into Caso 2
+ *  DOOR flow. The fix: bare yes-affirmation alone is sufficient signal
+ *  (still-broken state is IMPLICIT from the trigger context).
+ *
+ *  Multilingual coverage by design (rule #8): yes-marker and resolution
+ *  markers cover all 6 supported languages.
  */
 export const guardNoChangeYesButBroken: Guard = (ar, userMessage) => {
   if (
@@ -109,9 +114,20 @@ export const guardNoChangeYesButBroken: Guard = (ar, userMessage) => {
   // lookahead instead of \b because \b is ASCII-only in JS regex and
   // does not work after accented characters like "í".
   const startsWithYes = /^(s[íi]|s[íì]|sim|yes|oui|ja|gi[aà])(?=[\s,.!?]|$)/i.test(lower)
-  // 6-language still-broken signals (verb + negation OR persist patterns).
-  const stillBroken = /(no\s+(?:arranca|funciona|empieza|responde|parte|va)|sigue\s+sin|todav[ií]a\s+(?:no|sin)|aun\s+(?:no|sin)|non\s+(?:parte|funziona|risponde)|n[ãa]o\s+(?:arranca|funciona|liga)|ne\s+(?:fonctionne|d[ée]marre)\s+pas|doesn'?t\s+(?:start|work)|still\s+(?:broken|not\s+(?:starting|working)))/i.test(lower)
-  if (!startsWithYes || !stillBroken) return null
+  if (!startsWithYes) return null
+
+  // 6-language explicit resolution markers — customer indicates the
+  // machine NOW works. Corner case in this phase; let LLM/downstream
+  // close as resolved instead of escalating.
+  const isResolution =
+    /\b(ahora|ya)\s+(?:s[íi]\s+)?(?:arranca|funciona|empieza|march|est[áa]\s+(?:funcionando|en\s+marcha|encendida))/i.test(lower) ||
+    /\bya\s+(?:lo\s+)?ha\s+(?:arrancad|funcionad|empezad|comenzad)/i.test(lower) ||
+    /\b(now\s+(?:it\s+)?works|works\s+now|started\s+now|is\s+working\s+now|just\s+started)/i.test(lower) ||
+    /\b(ora\s+(?:funziona|parte|va\s+bene)|adesso\s+(?:funziona|parte))/i.test(lower) ||
+    /\bmaintenant\s+(?:il|elle|ça|ca)\s+(?:fonctionne|d[ée]marre|marche)/i.test(lower) ||
+    /\bagora\s+(?:funciona|arranca|liga)/i.test(lower) ||
+    /\bara\s+(?:funciona|arranca|marxa)/i.test(lower)
+  if (isResolution) return null
 
   ar.state.pendingFlow = ''
   escalate(ar, 'No-change incident — cambio devuelto pero máquina no se activa')

@@ -35,10 +35,22 @@
       "semanticId": "no-change",
       "kind": "payment-incident",
       "guardModule": "utils/guards/payment-no-change.ts",
-      "guards": ["guardNoChangeAsk"],
+      "guards": [
+        "guardNoChangeAsk",
+        "guardNoChangeNoCambio",
+        "guardNoChangeYesButBroken",
+        "guardNoChangeAfterRetry"
+      ],
       "pendingFlowPrefix": "no-change-",
-      "i18nKey": "noChangeResolved",
-      "tests": ["__tests__/agent/04-pago-sin-cambio.test.spec.ts"]
+      "i18nKeys": ["centralReturnedChange", "centralRetryAfterReview", "noChangeResolved", "reaffirmEscalate"],
+      "scenarios": [
+        { "id": "4.1", "label": "No-change happy path (No al cambio → retry instruction → resolved)" },
+        { "id": "4.2", "label": "Bare 'Sí' al cambio → escalate (still-broken implicit from trigger, F39)" }
+      ],
+      "tests": [
+        "__tests__/agent/04-pago-sin-cambio.test.spec.ts",
+        "__tests__/unit/payment-no-change.test.ts"
+      ]
     },
     {
       "docNumber": 5,
