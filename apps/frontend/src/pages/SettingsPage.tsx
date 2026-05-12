@@ -51,8 +51,17 @@ import { CalendarSection } from "@/components/settings/sections/CalendarSection"
 // Types
 type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "functions" | "calendar"
 
-// Section definitions for dropdown
-const SECTIONS: SettingsSection[] = [
+// Section definitions for dropdown.
+//
+// F50 — Andrea 2026-05-13: when the workspace runs a custom chatbot module
+// (`customChatbotId` set, e.g. "ecolaundry"), sections that are not used by
+// the custom flow are filtered out at render time:
+//   - Appointments & Calendar (no booking)
+//   - Custom Tools (no external functions / sub-agents)
+// The remaining sections stay visible because they still configure
+// platform-wide concerns (Business Config, WhatsApp, Widget, Human Support,
+// Security) or contain the Custom Chatbot ID field itself (AI Personality).
+const ALL_SECTIONS: SettingsSection[] = [
   { key: "business", label: "Business Config", description: "Company info and preferences" },
   { key: "ai-personality", label: "AI Personality", description: "Bot identity, messages and rules" },
   { key: "whatsapp", label: "WhatsApp Channel", description: "WhatsApp Business API settings" },
@@ -62,6 +71,13 @@ const SECTIONS: SettingsSection[] = [
   { key: "security", label: "Security", description: "Access control and domains" },
   { key: "functions", label: "Custom Tools", description: "External functions and webhooks" },
 ]
+
+const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = ["calendar", "functions"]
+
+function getVisibleSections(isCustomChatbot: boolean): SettingsSection[] {
+  if (!isCustomChatbot) return ALL_SECTIONS
+  return ALL_SECTIONS.filter((s) => !HIDDEN_FOR_CUSTOM_CHATBOT.includes(s.key as SectionKey))
+}
 
 // Default help content for each section
 const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
@@ -167,6 +183,10 @@ export function SettingsPage() {
     userId: currentUserId,
   })
   const canEdit = isOwner || isSuperAdmin
+  // F50: filter the dropdown to hide sections that don't apply when the
+  // workspace runs a custom chatbot module.
+  const isCustomChatbot = Boolean(currentWorkspace?.customChatbotId)
+  const SECTIONS = getVisibleSections(isCustomChatbot)
 
   // 🆕 Load last opened section from localStorage
   const getLastOpenedSection = (): SectionKey => {

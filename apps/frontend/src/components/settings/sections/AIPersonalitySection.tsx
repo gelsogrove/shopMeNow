@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Bot, Briefcase, Smile, Award, Coffee, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Editor from "@monaco-editor/react"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
 
 // E0b - Session reset timeout options (seconds). 0 = never auto-reset.
 const SESSION_RESET_OPTIONS = [
@@ -58,6 +59,16 @@ export function AIPersonalitySection({
   onFieldChange,
   onFieldFocus,
 }: AIPersonalitySectionProps) {
+  // F50 — Andrea 2026-05-13: when the workspace runs a custom chatbot module
+  // (`customChatbotId` set, e.g. "ecolaundry"), the in-platform AI personality
+  // fields (Assistant Name, Tone, Bot Identity, Welcome Message, Override
+  // Rules) are NOT used by the custom module — those settings live in the
+  // module's own JSON config (`apps/backend/custom-<name>/json/settings.json`
+  // + `json/i18n/*.json`). We hide them to avoid confusion. The remaining
+  // fields (Session Reset Timeout, Maintenance Message, Custom Chatbot ID)
+  // are still platform-level and stay visible.
+  const { workspace } = useWorkspace()
+  const isCustomChatbot = Boolean(workspace?.customChatbotId)
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -77,7 +88,9 @@ export function AIPersonalitySection({
             AI Configuration
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-6 space-y-6">{/* Chatbot Name */}
+        <CardContent className="pt-6 space-y-6">
+          {/* F50: Assistant Name — hidden in custom chatbot mode (defined in module's json/settings.json). */}
+          {!isCustomChatbot && (
           <div
             className="space-y-2"
             onFocus={() => onFieldFocus?.("botName")}
@@ -96,8 +109,10 @@ export function AIPersonalitySection({
               <p className="text-xs text-red-600">{errors.chatbotName}</p>
             )}
           </div>
+          )}
 
-          {/* Tone of Voice */}
+          {/* F50: Tone of Voice — hidden in custom chatbot mode (module owns tone via its own prompts). */}
+          {!isCustomChatbot && (
           <div
             className="space-y-2"
             onFocus={() => onFieldFocus?.("toneOfVoice")}
@@ -133,8 +148,10 @@ export function AIPersonalitySection({
               ))}
             </div>
           </div>
+          )}
 
-          {/* Bot Identity Response */}
+          {/* F50: Bot Identity — hidden in custom chatbot mode (module owns identity prompts). */}
+          {!isCustomChatbot && (
           <div
             className="space-y-2"
             onFocus={() => onFieldFocus?.("botDescription")}
@@ -164,10 +181,12 @@ export function AIPersonalitySection({
               />
             </div>
           </div>
+          )}
 
           {/* Divider */}
-          <div className="border-t pt-6" />
-          {/* Welcome Message + Enable Toggle (E0a) */}
+          {!isCustomChatbot && <div className="border-t pt-6" />}
+          {/* F50: Welcome Message — hidden in custom chatbot mode (module owns welcomeMessage per language). */}
+          {!isCustomChatbot && (
           <div
             className="space-y-2"
             onFocus={() => onFieldFocus?.("welcomeMessage")}
@@ -216,8 +235,9 @@ export function AIPersonalitySection({
               When disabled, no welcome message is sent on first contact. The text is preserved for later use.
             </p>
           </div>
+          )}
 
-          {/* Session Reset Timeout (E0b) */}
+          {/* Session Reset Timeout (E0b) — KEEP for all workspaces (platform-level setting). */}
           <div
             className="space-y-2"
             onFocus={() => onFieldFocus?.("sessionResetTimeout")}
@@ -279,7 +299,9 @@ export function AIPersonalitySection({
             </div>
           </div>
 
-          {/* Override Rules (formerly Custom AI Rules) */}
+          {/* F50: Override Rules — hidden in custom chatbot mode (rephrase LLM rules
+              live in the module's own prompts/rephrase.txt and its rephrase config). */}
+          {!isCustomChatbot && (
           <div className="space-y-2" onFocus={() => onFieldFocus?.("agentSystemPrompt")}>
             <Label htmlFor="customAiRules">Override Rules</Label>
             <div className="border rounded-md overflow-hidden">
@@ -305,6 +327,7 @@ export function AIPersonalitySection({
               />
             </div>
           </div>
+          )}
 
           {/* Custom Chatbot ID — only relevant for FLOW workspaces */}
           {formData.channelMode === 'FLOW' && (
