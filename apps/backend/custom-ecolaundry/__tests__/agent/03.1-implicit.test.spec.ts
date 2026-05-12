@@ -28,9 +28,12 @@ export const tests: TestCase[] = [
   {
     name: 'ES — T2 dopo location: bot chiede numero (NON tipo, NON pagado)',
     run: async (ctx) => {
+      // F48: post separation-of-concerns, il bot chiede il numero con
+      // wording generic "máquina" (NO "lavadora"/"secadora"). Lo state
+      // resta machineType=washer (catturato al T1) per l'operator briefing.
       await ctx.send('He pagado pero la lavadora no empieza')
       const reply = await ctx.send('Pineda')
-      expectMentionsAll(reply, ['numero', 'lavadora'])
+      expectMentionsAll(reply, ['numero', 'maquina'])
       expectMentionsNone(reply, ['secadora', 'pagado'])
     },
   },
