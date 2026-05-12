@@ -127,6 +127,38 @@ function ProtectedAnalyticsRoute() {
   return <AnalyticsPage />
 }
 
+/**
+ * F50 — CustomChatbotGuard
+ *
+ * Defensive route guard: when the active workspace runs a custom chatbot
+ * module (`workspace.customChatbotId` is set, e.g. "ecolaundry"), the entire
+ * standard-platform feature surface (catalog, FAQ, appointments, agent
+ * configuration, sales, analytics, etc.) is not used. The sidebar already
+ * hides those entries; this guard catches users who navigate directly via
+ * URL and redirects them back to /chat — the meaningful home in custom
+ * chatbot mode.
+ *
+ * Wrap any Route element that must be unreachable in custom chatbot mode:
+ *
+ *   <Route path="/products" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
+ *     ...
+ *   </Route>
+ */
+function CustomChatbotGuard({ children }: { children: React.ReactNode }) {
+  const { workspace, loading } = useWorkspace()
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-green-600 border-t-transparent" />
+      </div>
+    )
+  }
+  if (workspace?.customChatbotId) {
+    return <Navigate to="/chat" replace />
+  }
+  return <>{children}</>
+}
+
 // Renders the platform support widget on all pages except /survey and /neapolis
 function GlobalChatWidget() {
   const location = useLocation()
@@ -300,12 +332,15 @@ function AppWithProviders() {
                   <Route path="/queue" element={<MinimalLayout />}>
                     <Route index element={<QueuePage />} />
                   </Route>
-                  <Route path="/analytics" element={<MinimalLayout />}>
+                  <Route path="/analytics" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
                     <Route index element={<ProtectedAnalyticsRoute />} />
                   </Route>
-                  <Route path="/agents" element={<MinimalLayout />}>
-                    <Route index element={<AgentConfigurationPage />} />
-                  </Route>
+                  {/* F50 — Andrea 2026-05-13: Visual Flow Builder ("Agent Configuration")
+                      permanently deprecated for ALL workspaces. The page caused unacceptable
+                      latency in production (1 LLM call per node). Replaced by code-based
+                      custom chatbot modules (`apps/backend/custom-<name>/`). The route is
+                      kept as a universal redirect so any bookmarked link lands on /chat. */}
+                  <Route path="/agents" element={<Navigate to="/chat" replace />} />
                   <Route path="/widget" element={<MinimalLayout />}>
                     <Route index element={<WidgetPage />} />
                   </Route>
@@ -316,35 +351,35 @@ function AppWithProviders() {
                     <Route index element={<ClientsPage />} />
                     <Route path=":id" element={<ClientsPage />} />
                   </Route>
-                  <Route path="/sales" element={<MinimalLayout />}>
+                  <Route path="/sales" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
                     <Route index element={<SalesPage />} />
                   </Route>
-                  <Route path="/admin/orders" element={<MinimalLayout />}>
+                  <Route path="/admin/orders" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
                     <Route index element={<OrdersPage />} />
                   </Route>
-                  <Route path="/products" element={<MinimalLayout />}>
+                  <Route path="/products" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
                     <Route index element={<ProductsPage />} />
                   </Route>
-                  <Route path="/categories" element={<MinimalLayout />}>
+                  <Route path="/categories" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
                     <Route index element={<CategoriesPage />} />
                   </Route>
 
-                  <Route path="/services" element={<MinimalLayout />}>
+                  <Route path="/services" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
                     <Route index element={<ServicesPage />} />
                   </Route>
 
                   {/* Appointment Booking Routes */}
-                  <Route path="/appointments" element={<MinimalLayout />}>
+                  <Route path="/appointments" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
                     <Route index element={<AppointmentsPage />} />
                   </Route>
-                  <Route path="/business-hours" element={<MinimalLayout />}>
+                  <Route path="/business-hours" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
                     <Route index element={<BusinessHoursPage />} />
                   </Route>
-                  <Route path="/blackout-periods" element={<MinimalLayout />}>
+                  <Route path="/blackout-periods" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
                     <Route index element={<BlackoutPeriodsPage />} />
                   </Route>
 
-                  <Route path="/faq" element={<MinimalLayout />}>
+                  <Route path="/faq" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
                     <Route index element={<FAQPage />} />
                   </Route>
 
@@ -381,7 +416,7 @@ function AppWithProviders() {
                     <Route index element={<WorkspacePage />} />
                   </Route>
 
-                  <Route path="/offers" element={<MinimalLayout />}>
+                  <Route path="/offers" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
                     <Route index element={<OffersPage />} />
                   </Route>
 

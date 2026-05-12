@@ -1,3 +1,7 @@
+/**
+ * @deprecated F50 — Andrea 2026-05-13 — Visual Flow Builder deprecated.
+ * Replaced by code-based custom chatbot modules. Pending physical removal.
+ */
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"

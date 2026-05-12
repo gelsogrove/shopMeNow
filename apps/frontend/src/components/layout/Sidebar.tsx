@@ -86,6 +86,18 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
     }))
   }
 
+  // F50 — Custom chatbot mode (Andrea, 2026-05-13).
+  // When `workspace.customChatbotId` is set (e.g. "ecolaundry"), the workspace
+  // runs a custom-coded chatbot module instead of the platform's standard
+  // multi-agent pipeline. The bulk of the sidebar features (catalog, FAQ,
+  // appointments, agent configuration, …) are NOT used in that mode — the
+  // custom chatbot owns its own configuration via the JSON files inside
+  // `apps/backend/custom-<name>/`. We hide those entries to keep the UI
+  // focused on what's actually relevant (chat, clients, widget, campaigns,
+  // settings, billing). Same conditional-rendering pattern already used
+  // for `channelMode === 'ECOMMERCE'`. Route-level guards live in App.tsx.
+  const isCustomChatbot = Boolean(workspace?.customChatbotId)
+
   const baseLinks: SidebarLink[] = [
     {
       href: "/chat",
@@ -98,15 +110,17 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
       label: t('nav.clients'),
       icon: Users,
     },
-    {
+    // FAQ — hidden in custom chatbot mode (the custom module manages its own
+    // FAQ catalogue via `json/faqs.json`).
+    ...(!isCustomChatbot ? [{
       href: "/faq",
       label: t('nav.faq'),
       icon: HelpCircle,
-    },
+    }] : []),
     // Flow Configs — managed from Agents Configuration graph
     // Menu item removed: FLOW Sub-LLMs are now editable from /agents pipeline
-    // E-commerce menu - only if channelMode is ECOMMERCE
-    ...(workspace?.channelMode === 'ECOMMERCE' ? [{
+    // E-commerce menu - only if channelMode is ECOMMERCE AND NOT a custom chatbot
+    ...(!isCustomChatbot && workspace?.channelMode === 'ECOMMERCE' ? [{
       label: t('nav.ecommerce'),
       icon: ShoppingCart,
       key: "ecommerce",
@@ -141,21 +155,22 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
         },
       ],
     }] : []),
-    // Services standalone - visible when calendar booking is enabled OR for informational workspaces
-    // (informational workspaces need to create services BEFORE they can enable calendar booking)
-    ...((workspace?.enableCalendarBooking === true || workspace?.channelMode !== 'ECOMMERCE') ? [{
+    // Services standalone - visible when calendar booking is enabled OR for informational workspaces.
+    // F50: also hidden in custom chatbot mode.
+    ...(!isCustomChatbot && (workspace?.enableCalendarBooking === true || workspace?.channelMode !== 'ECOMMERCE') ? [{
       href: "/services",
       label: t('nav.services'),
       icon: Wrench,
     }] : []),
-    // Sales Agents standalone - for informational workspaces with sales agents
-    ...(workspace?.channelMode !== 'ECOMMERCE' && workspace?.hasSalesAgents === true ? [{
+    // Sales Agents standalone - for informational workspaces with sales agents.
+    // F50: also hidden in custom chatbot mode.
+    ...(!isCustomChatbot && workspace?.channelMode !== 'ECOMMERCE' && workspace?.hasSalesAgents === true ? [{
       href: "/sales",
       label: t('nav.sales'),
       icon: UserCircle,
     }] : []),
-    // Appointments menu - only if enableCalendarBooking is true
-    ...(workspace?.enableCalendarBooking === true ? [{
+    // Appointments menu - only if enableCalendarBooking is true. F50: hidden in custom chatbot mode.
+    ...(!isCustomChatbot && workspace?.enableCalendarBooking === true ? [{
       label: 'Appointments',
       icon: Calendar,
       key: "appointments",

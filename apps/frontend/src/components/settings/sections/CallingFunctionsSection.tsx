@@ -3,6 +3,7 @@
  */
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -70,6 +71,13 @@ export function CallingFunctionsSection({
     workspaceId,
     canEdit,
 }: CallingFunctionsSectionProps) {
+    // F50 — Andrea 2026-05-13: the Visual Flow Builder ("Agent Configuration"
+    // graph with sub-LLM per node) is deprecated. It caused unacceptable
+    // latency in production (1 LLM call per node) and has been replaced by
+    // code-based custom chatbot modules (`apps/backend/custom-<name>/`).
+    // The CTA below is permanently hidden until physical removal in a
+    // dedicated cleanup session. The underlying page (/agents) redirects
+    // to /chat at the route layer (see App.tsx).
     const [functions, setFunctions] = useState<CallingFunction[]>([])
     const [flowConfigs, setFlowConfigs] = useState<FlowConfig[]>([])
     const [missingSystemFunctions, setMissingSystemFunctions] = useState<Array<{ functionName: string; description: string; executionType: string; attachedLlm?: string | null }>>([])
@@ -295,13 +303,7 @@ export function CallingFunctionsSection({
                         Connect your AI to external services (Webhooks), internal logic, or specialized sub-agents
                     </p>
                 </div>
-                <Link to="/agents" className="shrink-0">
-                    <Button variant="outline" size="sm" className="gap-2">
-                        <Network className="h-4 w-4" />
-                        Agent Configuration
-                        <ArrowUpRight className="h-3.5 w-3.5 opacity-70" />
-                    </Button>
-                </Link>
+                {/* F50: Agent Configuration CTA permanently hidden (Visual Flow Builder deprecated). */}
             </div>
 
             {/* Functions List Card */}

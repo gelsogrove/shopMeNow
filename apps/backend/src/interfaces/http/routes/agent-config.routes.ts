@@ -1,3 +1,8 @@
+/**
+ * @deprecated F50 — Andrea 2026-05-13 — Visual Flow Builder deprecated.
+ * Routes still mounted but each call emits console.warn in the controller.
+ * Pending physical removal in a dedicated cleanup session.
+ */
 import { prisma } from "@echatbot/database"
 import { Router } from "express"
 import { AgentConfigController } from "../controllers/agent-config.controller"

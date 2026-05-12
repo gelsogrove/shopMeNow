@@ -31,6 +31,7 @@ import {
 import { TeamMembersTable } from "@/components/workspace/TeamMembersTable"
 import { BillingSection } from "@/components/billing/BillingSection"
 import { UsageLimitsCard } from "@/components/billing/UsageLimitsCard"
+import { cn } from "@/lib/utils"
 import type { Workspace } from "@/hooks/use-workspace"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
@@ -2539,25 +2540,39 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
           </div>
         </dialog>
 
-        {/* Subscription & Billing + Usage Limits Row - ONLY for Owner (SUPER_ADMIN) */}
-        {firstWorkspaceId && !isRoleLoading && isSuperAdmin && (
-          <div id="billing-section" className="mt-8 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
-            {/* Main - Subscription & Billing */}
-            <BillingSection 
-              workspaceId={firstWorkspaceId} 
-              onBillingOverviewLoaded={setSharedBillingOverview}
-              openUpgradeDialog={openChangePlanDialog}
-              onUpgradeDialogClose={() => setOpenChangePlanDialog(false)}
-            />
-            
-            {/* Side - Usage Limits (uses shared data from BillingSection) */}
-            <UsageLimitsCard 
-              workspaceId={firstWorkspaceId} 
-              billingOverview={sharedBillingOverview}
-              isLoading={!sharedBillingOverview}
-            />
-          </div>
-        )}
+        {/* Subscription & Billing + Usage Limits Row - ONLY for Owner (SUPER_ADMIN)
+            F50 — Andrea 2026-05-13: when the workspace runs a custom chatbot
+            (`customChatbotId` set, e.g. "ecolaundry"), the platform "Enterprise
+            Usage Limits" card is not applicable — the custom module governs
+            its own delivery limits. Hide the card and collapse the grid to a
+            single column so BillingSection uses the full width. */}
+        {firstWorkspaceId && !isRoleLoading && isSuperAdmin && (() => {
+          const isCustomChatbot = Boolean(firstWorkspace?.customChatbotId)
+          return (
+            <div id="billing-section" className={cn(
+              "mt-8 grid gap-4",
+              isCustomChatbot ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-[1fr_280px]",
+            )}>
+              {/* Main - Subscription & Billing */}
+              <BillingSection
+                workspaceId={firstWorkspaceId}
+                onBillingOverviewLoaded={setSharedBillingOverview}
+                openUpgradeDialog={openChangePlanDialog}
+                onUpgradeDialogClose={() => setOpenChangePlanDialog(false)}
+              />
+
+              {/* Side - Usage Limits (uses shared data from BillingSection).
+                  Hidden for custom-chatbot workspaces (F50). */}
+              {!isCustomChatbot && (
+                <UsageLimitsCard
+                  workspaceId={firstWorkspaceId}
+                  billingOverview={sharedBillingOverview}
+                  isLoading={!sharedBillingOverview}
+                />
+              )}
+            </div>
+          )
+        })()}
 
         {/* Team Members Section */}
         {firstWorkspaceId && !isRoleLoading && (

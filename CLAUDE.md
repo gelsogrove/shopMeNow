@@ -166,6 +166,39 @@ apps/backend/src/
 - `SecureTokenService` - Time-limited access tokens for public URLs
 - `PromptProcessorService` - Variable replacement in agent prompts
 
+### ⚠️ F50 — Visual Flow Builder DEPRECATED (Andrea 2026-05-13)
+
+The legacy "Visual Flow Builder" (a.k.a. **Agent Configuration UI** with a
+node graph, sub-LLM per node, dynamic FlowConfigs) is **deprecated**. It
+caused unacceptable latency in production (1 LLM call per node = compounding
+wait time for the customer).
+
+**New paradigm**: workspaces that need a custom conversational flow set
+`workspace.customChatbotId` (e.g. `"ecolaundry"`) and the platform routes
+inbound messages to a **code-based module** at
+[`apps/backend/custom-<name>/`](apps/backend/custom-ecolaundry/) — fully
+deterministic, testable, multi-language, with its own bug intake protocol.
+
+**What this means for this codebase**:
+- ❌ Frontend Agent Configuration / Agent Settings / Flow Configs pages: no
+  longer reachable from the UI. The `/agents` route redirects to `/chat`
+  universally. The pages still exist on disk with `@deprecated` headers,
+  pending physical removal in a dedicated cleanup session.
+- ❌ Backend `FlowAgentLLM`, `FlowWorkspaceStrategy`, `AgentConfigRepository`,
+  `agent-config.controller`, `agent-config.routes`, `flow.types.ts`: marked
+  `@deprecated`. `FlowAgentLLM` emits a `console.warn` on every instantiation
+  so production logs surface lingering callers before physical removal.
+- ❌ DB tables `AgentConfig` / `FlowConfig`: pending cleanup (separate session,
+  requires migration plan + backup).
+- ✅ Custom chatbot modules in [`apps/backend/custom-<name>/`](apps/backend/custom-ecolaundry/)
+  remain the way forward. The standard multi-agent pipeline below is unchanged
+  for workspaces without `customChatbotId`.
+
+When working on tickets that touch these deprecated files, do NOT extend
+their behaviour — migrate to a custom chatbot module instead.
+
+---
+
 ### Multi-Agent LLM System
 
 **Agent Pipeline**:

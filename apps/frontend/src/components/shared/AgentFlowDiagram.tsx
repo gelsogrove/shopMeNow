@@ -1,6 +1,9 @@
 /**
+ * @deprecated F50 — Andrea 2026-05-13 — Visual Flow Builder deprecated.
+ * Replaced by code-based custom chatbot modules. Pending physical removal.
+ *
  * AgentFlowDiagram - Full-screen visual representation of multi-agent architecture
- * 
+ *
  * Features:
  * - Beautiful visual flow diagram showing agent hierarchy
  * - Click on agent to edit prompt (slide panel)

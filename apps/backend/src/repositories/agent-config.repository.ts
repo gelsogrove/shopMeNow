@@ -1,4 +1,7 @@
 /**
+ * @deprecated F50 — Andrea 2026-05-13 — Visual Flow Builder deprecated.
+ * Replaced by code-based custom chatbot modules. Pending physical removal.
+ *
  * AgentConfigRepository
  *
  * Repository for managing Agent Configurations in the multi-agent system.

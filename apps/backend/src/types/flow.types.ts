@@ -1,3 +1,9 @@
+/**
+ * @deprecated F50 — Andrea 2026-05-13 — Visual Flow Builder deprecated.
+ * Replaced by code-based custom chatbot modules (apps/backend/custom-<name>/).
+ * Types kept temporarily for compatibility while we measure production
+ * usage. Pending physical removal in a dedicated cleanup session.
+ */
 // Flow Engine types for ChannelMode.FLOW workspaces
 // Used by FlowEngineService, FlowAgentLLM, and FlowWorkspaceStrategy
 

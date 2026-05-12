@@ -1,4 +1,19 @@
 /**
+ * @deprecated F50 — Andrea 2026-05-13
+ *
+ * Visual Flow Builder deprecated. Caused unacceptable latency in production
+ * (1 LLM call per node = compounding wait time for the customer). Replaced
+ * by code-based custom chatbot modules at `apps/backend/custom-<name>/`
+ * (e.g. custom-ecolaundry).
+ *
+ * This service is no longer wired into the active runtime routing for new
+ * workspaces (customChatbotId is the new contract). Kept for compatibility
+ * with any legacy workspace still on channelMode=FLOW without customChatbotId.
+ * A console.warn is emitted on every invocation to surface lingering usage
+ * in production logs — once logs show zero hits over a window, it can be
+ * physically removed in a dedicated cleanup session.
+ *
+ * --------------------------------------------------------------------
  * FlowAgentLLM
  *
  * ✅ SPECIALIST AGENT for ChannelMode.FLOW workspaces.
@@ -92,6 +107,9 @@ export class FlowAgentLLM {
   private promptProcessor: PromptProcessorService
 
   constructor(private prisma: PrismaClient) {
+    // F50 deprecation telemetry — every instantiation is logged so we can
+    // confirm zero production hits before physical removal.
+    logger.warn("[DEPRECATED F50] FlowAgentLLM instantiated. Visual Flow Builder is deprecated; this workspace should migrate to a custom chatbot module (apps/backend/custom-<name>/).")
     this.flowNodeConfigRepo = new FlowNodeConfigRepository(prisma)
     this.callingFunctionRepo = new WorkspaceCallingFunctionRepository(prisma)
     this.conversationManager = new ConversationManager(prisma)

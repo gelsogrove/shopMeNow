@@ -1,4 +1,17 @@
 /**
+ * @deprecated F50 — Andrea 2026-05-13
+ *
+ * Visual Flow Builder deprecated. Caused unacceptable latency in production
+ * (1 LLM call per node). Replaced by code-based custom chatbot modules at
+ * `apps/backend/custom-<name>/` (e.g. custom-ecolaundry).
+ *
+ * The /agents route now redirects to /chat (see App.tsx). This file is kept
+ * in place for compatibility and pending physical removal in a dedicated
+ * cleanup session (along with AgentSettingsPage, FlowConfigsPage, and the
+ * shared Agent/Flow components).
+ *
+ * Original docs below.
+ * --------------------------------------------------------------------
  * Agent Configuration Dashboard
  *
  * Unified interface for managing all LLM agents in the multi-agent system.

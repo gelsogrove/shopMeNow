@@ -1,4 +1,14 @@
 /**
+ * @deprecated F50 — Andrea 2026-05-13
+ *
+ * Part of the deprecated Visual Flow Builder. The multi-agent pipeline
+ * with sub-LLM per node is replaced by code-based custom chatbot modules
+ * (`apps/backend/custom-<name>/`). Page no longer reachable from the UI
+ * (no route, no sidebar entry). Pending physical removal in a dedicated
+ * cleanup session.
+ *
+ * Original docs below.
+ * --------------------------------------------------------------------
  * Agent Settings Dashboard
  *
  * Multi-Agent LLM Management Interface

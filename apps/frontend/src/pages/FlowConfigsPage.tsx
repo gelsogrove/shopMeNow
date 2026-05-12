@@ -1,3 +1,12 @@
+/**
+ * @deprecated F50 — Andrea 2026-05-13
+ *
+ * Part of the deprecated Visual Flow Builder. Flow Configs (dynamic node
+ * editor with sub-LLM per node) caused unacceptable latency in production
+ * and is replaced by code-based custom chatbot modules at
+ * `apps/backend/custom-<name>/`. Page no longer reachable from the UI.
+ * Pending physical removal in a dedicated cleanup session.
+ */
 import {
   AlertDialog,
   AlertDialogAction,

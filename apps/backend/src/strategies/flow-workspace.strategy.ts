@@ -1,4 +1,13 @@
 /**
+ * @deprecated F50 — Andrea 2026-05-13
+ *
+ * Visual Flow Builder strategy deprecated. The DB-driven flow node graph
+ * with per-node Sub-LLM caused unacceptable latency. Workspaces should use
+ * `customChatbotId` (e.g. "ecolaundry") which routes to a code-based module
+ * at `apps/backend/custom-<name>/`. Kept for compatibility with any legacy
+ * workspace still on `channelMode=FLOW` without `customChatbotId`.
+ *
+ * --------------------------------------------------------------------
  * FlowWorkspaceStrategy
  *
  * Routing strategy for FLOW workspaces (channelMode=FLOW).

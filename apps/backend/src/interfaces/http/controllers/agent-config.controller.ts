@@ -1,3 +1,12 @@
+/**
+ * @deprecated F50 — Andrea 2026-05-13
+ *
+ * Agent Configuration controller for the deprecated Visual Flow Builder.
+ * Frontend UI removed (route /agents redirects to /chat). API endpoints
+ * kept for now but each handler emits a `console.warn` so production logs
+ * surface lingering external callers. Pending physical removal in a
+ * dedicated cleanup session.
+ */
 import * as fs from "fs"
 import * as path from "path"
 import { PrismaClient, AgentType, ChannelMode } from "@echatbot/database"
