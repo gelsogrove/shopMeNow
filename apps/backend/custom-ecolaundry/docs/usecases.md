@@ -662,7 +662,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 **Criterios de aceptación:**
 1. El bot pide SOLO el código (no lavandería ni tipo en el mismo turno).
-2. Validación formato: `^[A-Z]{3}\d{6}\d+$` (3 letras + DDMMYY + importe).
+2. Validación formato: `^<prefix>\d{6}\d+$` (prefijo + DDMMYY + importe). El **prefijo es config-driven** por tenant — `settings.discountCodePrefix` en `json/settings.json` (default Ecolaundry: `SAU`). `validateSettings` falla al boot si el prefijo falta o no es uppercase letters-only. El mismo prefijo se pasa a `validateCustomerName` para que un código (p. ej. `SAU2904266`) NO sea aceptado como nombre del cliente (F46).
 3. Si formato válido, recoge: nombre → pueblo → número → puerta.
 4. Escala siempre al operador para activación remota.
 

@@ -276,6 +276,103 @@ compared to the cost of a pezza.
 
 ---
 
+## ✨ Feature intake protocol — mandatory before implementing a new feature
+
+**When Andrea requests a new feature** (new Caso, new gather step, new language,
+new detector, new integration, new tool, …), I MUST execute this protocol
+BEFORE writing any code. It's the proactive twin of the Bug intake protocol —
+catches non-scalable design at the reasoning stage.
+
+### The 8-step feature intake template
+
+```
+## ✨ Feature intake — <feature name>
+
+1. **What**: <one sentence describing the feature>
+2. **Layer impact**: L1 input / L2 state / L3 detector / L4 guard / L5 polish / 4 LLM calls — list which.
+3. **Scalability check** (CRITICAL — answer all 3):
+   - Scala a nuovi FLUSSI? (es. se aggiungo uno step a invoice-flow, il pattern
+     vale per double-charge / discount-code? Pattern modulare o ad-hoc?)
+   - Scala a nuovi CASI? (es. se aggiungo un detector per Caso N, lo stesso
+     pattern serve Caso N+1? O è Caso-specifico?)
+   - Scala a nuove LINGUE? (es. detector copre tutte 6 supported langs (es/it/en/ca/pt/fr) con test? O ES-only oggi?)
+   - Se ANCHE UNA risposta è "no, ad-hoc" → riprogetta prima di codare.
+4. **Recipe match**: quale pattern da [`docs/adding-use-cases.md`](docs/adding-use-cases.md) applico?
+   (display-flow / machine-incident / payment-flow / non-troubleshooting / FAQ / multi-step gather)
+5. **Architecture change?**: la feature richiede modifiche al CLAUDE.md
+   architettura (iron rules, 5 layers, allowed-large-files, branch-router
+   structure, F-log policy, pre-commit checklist)?
+   - Se **NO** → procedo
+   - Se **SÌ** → **STOP. Discuto con Andrea PRIMA di toccare CLAUDE.md**.
+     Andrea decide se l'architettura va estesa, modificata, o se la feature
+     va riprogettata per stare dentro l'architettura esistente.
+6. **Pin plan**: dove pinnare il test della nuova feature?
+   - Detector → `__tests__/unit/<detector>.test.ts`
+   - Guard → `__tests__/unit/<guard>.test.ts` + agent E2E in `__tests__/agent/N-<case>.test.spec.ts`
+   - Cross-flow → `__tests__/agent/cross/N-<topic>.test.spec.ts`
+7. **F-log relevance**: la feature chiude un bug noto o introduce un pattern
+   nuovo che potrebbe regredire? Se SÌ → F-log entry + pin in
+   `__tests__/unit/f-log-regression.test.ts` con F-number nel nome.
+8. **Docs to update**:
+   - `docs/usecases.md` (nuovo Caso o estensione di esistente)
+   - `docs/contracts.md` (se aggiungo/modifico un tool)
+   - `json/cases.json` (bridge: docNumber → semanticId)
+   - `apps/backend/custom-ecolaundry/CLAUDE.md` SOLO se step 5 = SÌ AND discussione con Andrea fatta
+
+→ Procedo a codare SOLO dopo aver scritto tutti gli 8 punti AND aver
+  ottenuto da Andrea il go-ahead esplicito sullo step 5 (se applicabile).
+```
+
+### Anti-patterns I MUST reject when reading a feature request
+
+- **"Quick hack just for Caso X"** → step 3 violato (non scala). Se vale solo
+  per un caso, probabilmente sto patchando, non estendendo.
+- **"Solo per ES, le altre lingue dopo"** → step 3 violato (multi-lang by
+  design). O lo facciamo 6-lang dal giorno 1, o lo dichiariamo esplicitamente
+  con TODO tracked (come F8 escalation.ts) — mai "lo aggiungo dopo".
+- **"Aggiungo una sezione nuova al CLAUDE.md mentre implemento"** → step 5
+  violato (architecture change senza discussione). STOP, discuti.
+- **"Inline questo qui invece di estrarre il pattern"** → step 4 violato.
+  Se la recipe esiste, segui la recipe. Se no, è il momento di crearne una.
+- **"Test e F-log dopo, prima faccio funzionare"** → mai. Test + F-log sono
+  PARTE della feature, non extra.
+
+### Why this protocol exists (the meta-rule for features)
+
+Le feature aggiunte senza scalability check creano debito tecnico esponenziale:
+ogni nuovo caso/lingua richiede di toccare TUTTI i punti dove la feature è
+hardcoded. Vedi F31 (router subCase) come esempio positivo: invece di
+estendere 6 detector L3 inline per ogni nuovo sotto-caso, Andrea ha chiesto di
+spostare la classification al router LLM → 0 nuovo codice deterministico per
+ogni futuro sotto-caso. Quella era una decisione di architettura discussa
+esplicitamente.
+
+**La regola di ferro su CLAUDE.md modifications**: io NON tocco le sezioni
+architetturali di CLAUDE.md (iron rules, 5 layers, F-log policy, allowed-
+large-files, pre-commit checklist) silenziosamente. Quelle sezioni sono il
+contratto tra me e Andrea. Modifiche = nuovo contratto = richiede consenso
+esplicito. Aggiungere una nuova F-log entry sotto la tabella esistente è
+normale workflow (non architectural change). Cambiare la STRUTTURA delle
+regole è architectural change.
+
+### Scope: when to skip the protocol
+
+Il Feature intake protocol è obbligatorio per **nuove funzionalità**. NON
+serve per:
+- Bug fixes (usa il [Bug intake protocol](#-bug-intake-protocol--mandatory-before-touching-code))
+- Doc-only changes (typos in usecases.md, comments)
+- Refactor con comportamento invariato (ma comunque scrivi una breve nota nel
+  PR su cosa cambia strutturalmente)
+- Estensioni minori di un detector già esistente con un sinonimo nuovo (es.
+  F43 aggiunta "recibo" a detectInvoiceIntent) — qui basta Bug intake o
+  micro-feature inline. Soglia indicativa: se il cambio sta in <20 righe e
+  non tocca file diversi da quello che già hostava la feature → micro.
+
+In dubbio: run protocollo. Tipare 8 punti costa 30 secondi, evitare
+re-architecture costa giorni.
+
+---
+
 ## 🧭 The 5 layers — know which one you're in
 
 ```
@@ -1124,6 +1221,7 @@ sembra reintrodurre uno di questi sintomi, è un sentinel di regressione.
 | F42 | Andrea CLI 2026-05-11 dopo chat reale completa Caso 9 (Mataró → Francisco → PUSH PROG → DOOR → resolved → factura completa): operator briefing finale conteneva razón social, dirección, CIF/NIF, fecha, máquina, email, MA mancava **il coste total del servicio**. Andrea: *"Hay que añadir y preguntar por el coste total del servicio del la factura (y ponerlo obviamente en el human message finale). si consiglia dopo ¿Qué día utilizaste el servicio?"*. Step da aggiungere fra fecha e email. | Mancava un campo nel flow factura per il dato fiscale "importo del servizio". Senza questo, l'operatore non sa quanto fatturare al cliente — richiede follow-up manuale. Errore documentale: usecases.md elencava solo 9 step di gather (location/tipo/razón/dir/CIF/fecha/email/notas/nombre) — il coste mai discusso prima. | Estensione additiva al flow factura, zero collisioni cross-flow grazie al disegno modulare di Caso 9: (1) `models/state.ts` aggiunto `costeTotal: string` a `invoiceData` + `'invoice-ask-coste'` al union type pendingFlow. (2) `models/escalation.ts` aggiunto `costeTotal` a `EscalationContext.invoiceData`. (3) `utils/state.ts:createInitialState` inizializza `costeTotal: ''`. (4) `utils/guards/invoice-flow.ts` nuovo case `'invoice-ask-coste'` fra `invoice-ask-date` e `invoice-ask-email`: accetta testo verbatim, nessuna validazione (Andrea: "accetta tutto", operatore interpreta). Transizione `pendingFlow = 'invoice-ask-email'`. (5) 6 cataloghi i18n (es/it/en/ca/pt/fr) nuova chiave `invoiceAskCoste` posizionata fra `invoiceAskDate` e `invoiceAskEmail`. ES: *"¿Cuál fue el coste total del servicio?"*. (6) `utils/escalation.ts:buildInvoiceSummary` aggiunge `costeLabel = inv.costeTotal ? '; coste: ${inv.costeTotal}' : ''` fra `máquina` e `email`. (7) `docs/usecases.md` Caso 9.1 criterio #1 aggiornato (gather 10 step), criterio #2 ("coste total se acepta verbatim"), criterio #4 (operator briefing include `coste: X`). Dialogo 9.1 + 9.2 aggiornati. (8) `__tests__/agent/09-factura.test.spec.ts` aggiunte assertion: T7 chiede coste, T8 invia "6€", final reply matcha `/coste:\s*6€/i`. (9) `json/cases.json` Caso 9 i18nKeys array esteso con `invoiceAskCoste` + `invoiceAskNotes` (era mancante anche notes). **Pattern preservativo (estensione di flow modulare)**: i flow factura/double-charge/discount-code sono progettati come **sequenze lineari di step** dove ogni step = (1 pendingFlow value + 1 i18n key + 1 field invoiceData/etc.). Aggiungere uno step è additivo per definizione: NON tocca altri flow, NON tocca altri guard, F35 bypass rephrase eredita la protezione automaticamente. Quando il cliente chiede un nuovo dato in un flow esistente, il pattern è F42: 9 step (state model + initialization + guard case + i18n×6 + briefing + docs + test + bridge + F-log). NESSUNA "pezza" — l'architettura era pronta a estendersi. |
 | F43 | Andrea audit 2026-05-11 dopo F42: *"funzionerebbe anche con recibo, o Comprobante? puedo recibir el recibo? teneis el comprobante? il test e' fatto bene?"*. Verificato: `detectInvoiceIntent` copre solo factura/fattura/invoice/facture (6 langs) MA non i sinonimi cliente recibo/comprobante/ricevuta/receipt/reçu/rebut. Coverage gap reale: cliente che usa il termine "ricevuta-like" cade nel LLM → improvvisa. Test 09-factura usava solo `'Quiero una factura'` come trigger. | Stessa categoria di F15 (doble cobro formal vs colloquial) e F25 (TARJETA_TOPIC mancava "descuento"/"recargarla"): il detector aveva claim "✓ 6 langs" ma copertura **incompleta** sui sinonimi reali del cliente. Andrea, Mark, fiscalmente recibo ≠ factura (recibo non ha CIF/NIF), MA dal punto di vista UX cliente li usa come sinonimi. L'operatore decide poi quale documento emettere — il bot deve solo raccogliere i dati e instradare. | (1) `utils/intent.ts:detectInvoiceIntent` esteso con 7 nuovi pattern regex 6-lang: ES `recibos?\|comprobantes?\|justificantes?`, IT `ricevut[ae]\|scontrin[oi]`, PT `comprovantes?`, EN `receipts?`, FR `re[çc]us?`, CA `rebuts?\|comprovants?`. (2) `__tests__/unit/intent.test.ts` 11 nuovi test F43: 10 positive (ES recibo + comprobante + justificante, IT ricevuta + scontrino, EN receipt, PT comprovante, FR reçu, CA rebut + comprovant) + 1 negative (verbo "recibir" in "voy a recibir un paquete" → false, evita false positive sul verbo). (3) `__tests__/agent/09-factura.test.spec.ts` 2 agent test F43: trigger "puedo recibir el recibo?" e "teneis el comprobante?" → bot chiede lavandería (Caso 9 entry confermato). **Pattern preservativo (regola sinonimi UX)**: ogni intent detector che funziona su un termine fiscale/tecnico DEVE coprire anche i sinonimi che il cliente usa colloquialmente. La gerarchia: termine fiscale (factura) → sinonimi customer-facing (recibo, comprobante, ricevuta) → tutti routati allo stesso flow → operatore decide il documento finale. La regola "real bug evidence required" del F-log resta valida: aggiunto F43 dopo che Andrea ha sollevato la questione esplicitamente (non speculative). Aggiunto test negative per il verbo "recibir" → evita over-matching su frasi come "voy a recibir un paquete" che non sono intent invoice. |
 | F44 | Andrea CLI 2026-05-11: cliente scrive *"quiero comprar una nueva tarjeta"* (Caso 10 — comprar tarjeta de fidelización). Bot risponde con greeting + ask lavandería invece di rispondere con la FAQ canonica «La tarjeta de fidelización se compra con 20€ en efectivo...» → drift al gather machine. Andrea screenshot dal playground: il TODO mostra il bot che chiede location invece di rispondere FAQ. *"tienes que funcionar como se fuera la pregunta 'Como consigo la tarjeta de fidelizacíon?'"*. | `TARJETA_TOPIC` regex in `utils/guards/loyalty-card-buy.ts` aveva 4 pattern, l'ultimo `(?:quiero\|necesito\|me\s+gustar[ií]a)\s+(?:la\s+\|una\s+)?tarjeta` richiedeva **tarjeta IMMEDIATAMENTE dopo** quiero + articolo. Frase reale del cliente: "quiero **comprar una nueva** tarjeta" ha 3 token intermedi (verbo+articolo+aggettivo) → no match → cade nel pipeline default → location ask. Stesso bug pattern di F15/F19/F25/F43: la regex copriva i pattern canonical ma non le variazioni naturali del parlato cliente. F25 aveva esteso il vocabolario aggiungendo "quiero/necesito/me gustaría + (la/una)? tarjeta" — F44 estende la **struttura sintattica** consentendo verbi d'azione + aggettivi intermedi. | (1) `utils/guards/loyalty-card-buy.ts:TARJETA_TOPIC` regex estesa: l'ultimo gruppo ora accetta `(?:quiero\|necesito\|me\s+gustar[ií]a\|quisiera)\s+(?:comprar\s+\|tener\s+\|conseguir\s+\|sacar\s+\|adquirir\s+)?(?:una?\s+\|la\s+\|mi\s+\|otra\s+)?(?:nueva\s+\|nuevita\s+)?tarjeta`. Aggiunto anche `quisiera` come variante formale. Esteso pattern interrogativo con verbi addizionali: `c[oó]mo\s+(?:consigo\|comprar\|recargar\|saco\|adquiero\|tengo)`. Pattern `tarjeta` reso esportabile per testing. (2) Nuovo `__tests__/unit/loyalty-card-buy.test.ts`: 13 test (5 canonical pre-F44 must-still-match + 6 F44 new variants + 2 negative). Tutti verdi al primo run. Test reali: "quiero comprar una nueva tarjeta" (caso reale Andrea), "necesito sacar la tarjeta", "me gustaría tener una tarjeta", "quisiera conseguir otra tarjeta". Negative: "no funciona la lavadora", empty string. **Pattern preservativo (struttura sintattica vs vocabolario)**: F15/F19/F25/F43 estendevano il **vocabolario** (sinonimi formal vs colloquial). F44 estende la **struttura sintattica** consentendo costituenti intermedi tra intent verb e oggetto. Quando un cliente reale evidenzia una phrasing che il regex non matcha, prima domanda: vocabolario o struttura? Se vocabolario → aggiungi sinonimo. Se struttura → aggiungi pattern intermedi (verbo+articolo+aggettivo) come gruppo optional. Sempre testare con il caso reale come pin-test (qui: "quiero comprar una nueva tarjeta"). |
+| F46 | Andrea CLI 2026-05-12: chat reale Caso 8.1 in ES — cliente digita `SAU2904266636363` come codice (valido, accettato), bot chiede `¿Cómo te llamas?`, cliente risponde `SAU2904266` (un altro codice di sconto) → bot **accetta come nome** e prosegue chiedendo `¿En qué pueblo / lavandería?`. Andrea: *"bisongna verdere se e' giusto SEMPRE INIZIA CON SAU ma questa vallidaizione non funziono"*. Due bug architetturali: (a) la regex L4 in `utils/guards/discount-code-flow.ts` accettava `^[A-Z]{3}\d{6}\d+$` (qualsiasi 3 lettere maiuscole) invece del prefisso fisso tenant SAU → violation di iron rule #7 (settings are law), il prefisso era hardcoded nel codice anziché letto da `json/settings.json`; (b) `validateCustomerName` in `utils/customer-name.ts` non sapeva nulla della shape codice → token alfanumerico-uppercase + cifre (len≥2, non confirmation word) passava indisturbato come nome. | Stesso pattern di F42 (mancava uno step nel flow) e F44 (regex copriva un sottoinsieme della realtà): la pipeline aveva due responsabilità separate (parse del codice, validazione del nome) che non condividevano il source-of-truth della shape codice. Cliente che continua a digitare codici come nome (perché magari ne ha più di uno, o perché il copy/paste fa autofill) è un caso plausibile e va rifiutato deterministicamente — non con una regola in `prompts/agent.txt` (rule #1) ma al layer L3 detector. La hardcodatura `[A-Z]{3}` rendeva inoltre impossibile multi-tenant con prefissi alternativi. | (1) `models/runtime.ts` aggiunto `discountCodePrefix: string` come campo **required** in `Settings`. (2) `utils/runtime.ts:validateSettings` aggiunto check fail-fast: prefisso deve essere `/^[A-Z]+$/` non vuoto — boot fallisce esplicitamente se mancante/invalid. (3) `json/settings.json` nuova sezione `_section_business_codes` con `"discountCodePrefix": "SAU"`. (4) Nuovo file `utils/discount-code-format.ts` (helper puro L3, no state, no i18n): `buildDiscountCodeRegex(prefix)`, `parseDiscountCode(raw, prefix)`, `looksLikeDiscountCode(raw, prefix)`. Il normaliser strippa whitespace + `[.,!?¿¡-]` per robustezza ai typo cliente. (5) `utils/guards/discount-code-flow.ts` refactorato: rimossa `CASO8_CODE_RE` hardcoded + `parseCaso8Code` inline; importa `parseDiscountCode` dall'helper, legge il prefix via `ar.runtime.settings.discountCodePrefix`. (6) `utils/customer-name.ts:validateCustomerName(raw, options?)` accetta `options.discountCodePrefix?`. Quando supplito, `looksLikeDiscountCode(firstName, prefix)` rifiuta il token con reason "looks like a discount code, not a name". Senza option, backwards-compat preservato. (7) `utils/guards/discount-code-flow.ts:guardDiscountCodeAwaitName` + `utils/guards/payment-double-charge.ts:guardDoubleChargeAwaitName` + `utils/tool-handlers/customer.ts:captureCustomerName` passano il prefix dalle settings. (8) Nuovo `__tests__/unit/discount-code-format.test.ts`: 31 test multi-lingua (ES/IT/EN/PT/CA/FR) — prefix validation, parse happy/sad, normaliser su punctuation di ogni lingua, alternate tenant prefix. (9) `__tests__/unit/customer-name.test.ts` esteso con sezione F46: rifiuta `SAU2904266` con prefix, accetta nomi reali di tutte 6 le lingue, accetta "Saul" (starts-with-SAU ma no digits), backwards-compat senza option. (10) `__tests__/unit/_helpers.ts` aggiornato con `discountCodePrefix: 'SAU'` nelle test settings. (11) Pin F46 in `f-log-regression.test.ts`. (12) `docs/usecases.md §8.1` criterio 2 aggiornato: shape è `^<prefix>\d{6}\d+$` dove `prefix` viene da settings (default tenant Ecolaundry: SAU). **Pattern preservativo (config-driven shape + cross-layer composition)**: ogni dato strutturato che il bot riconosce DEVE avere un helper puro L3 con il pattern parametrizzato da settings, NON una regex inline nel guard. Quando lo stesso pattern serve a due decisioni di layer diversi (parse del codice nel guard L4 + rifiuto del nome nel detector L3), si compone l'helper — non si duplica la regex. La rule architetturale: regex business-specific = helper L3 + settings field. Mai inline. Mai hardcoded. |
 | F45 | Andrea CLI 2026-05-11 dopo F42: cliente prova il flow factura completo in playground, ma il bot **non chiede il coste total** (step F42) e usa ancora il vecchio wording «¿En qué lavandería estuviste?» (pre-F39 welcome change). Andrea: *"non avevi messo uno step in piu per cheidere il coste total del servicio?"*. Verifica del codice sorgente: `utils/guards/invoice-flow.ts:103: case 'invoice-ask-coste'` presente ✓, `json/i18n/es.json:69: invoiceAskCoste` presente ✓, tutti i 794 unit test passano. Quindi il codice è giusto, il **processo bot sta servendo dati cached al boot**. | `utils/runtime.ts:loadRuntime()` legge tutti i JSON (i18n × 6, washer/dryer/display-flows/locations/settings/faqs) una sola volta al boot e li cacha via `setI18nCatalogue`/`setFaqs` (module-level) o restituendoli nel Runtime object. **Nessun fs.watch / hot-reload**. ts-node-dev ricarica il codice TS ma NON i JSON. Risultato: ogni modifica i18n o JSON richiede a Andrea di riavviare manualmente il bot, e il bug "wording stale" si presenta ogni volta che dimentica il restart. Ux pessima per dev. | (1) `utils/runtime.ts` refactorato con cache module-level `cachedRuntime`. `loadRuntime()` restituisce sempre la stessa istanza Runtime su chiamate successive. Tutti gli AgentSession condividono la stessa Runtime reference. (2) Nuova funzione `reloadRuntimeFromDisk()`: ri-legge tutti i JSON da disco e **muta la Runtime cached in-place** (proprietà `flows.washer`, `flows.dryer`, `locations`, `settings`, `displayFlows`, `nluPatterns`, `prompts` riassegnate sullo stesso oggetto). i18n + FAQs aggiornati via i loro setter module-level già esistenti. Mutazione in-place è essenziale: esistenti sessioni hanno reference all'oggetto cached → vedono i nuovi dati al prossimo accesso senza restart. (3) Nuova funzione `watchRuntimeFilesForDev()` con `fs.watch` su `json/`, `json/i18n/`, `prompts/`. Debounce 150ms per coalescere doppi-fire degli editor. Auto-attivata da `loadRuntime` SOLO se `NODE_ENV === 'development'` (strict opt-in: tests con NODE_ENV unset/test non avviano watcher → no event loop pending → no test hang). Production con `NODE_ENV === 'production'` skippa il watcher. (4) Nuovo test `__tests__/unit/runtime-hot-reload.test.ts` con 5 pin: cache identity, reload preserva la reference (in-place), t() restituisce i18n loaded, runtime.flows.washer resta valido dopo reload, getFaqs popolato. (5) Pin F45 in `f-log-regression.test.ts`. **Pattern preservativo (dev UX vs production discipline)**: ogni risorsa "data-driven" che il bot legge al boot DEVE avere un meccanismo di hot-reload in dev — altrimenti ogni modifica i18n/JSON richiede un restart manuale e il bug "stale catalogue" si ripresenta sistematicamente. La regola: in dev (`NODE_ENV=development`), file watch + in-place mutation. In prod, load-once-and-cache. Test environment NON deve attivare watcher (mantiene event loop pulito). |
 
 **Come usare questo log**: prima di un fix che sembra simile a un sintomo

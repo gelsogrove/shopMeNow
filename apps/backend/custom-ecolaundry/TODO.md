@@ -474,6 +474,124 @@ template (small focused module + dedicated test file).
 
 ---
 
+### 12. Pricing & per-location rules — analysis BEFORE implementation
+
+**Owner:** Andrea — requested 2026-05-12. **Status:** ANALYSIS PHASE. Decision required on 4 open points before any code. Apply Feature intake protocol (CLAUDE.md → ✨ Feature intake protocol).
+
+#### Andrea's questions
+
+1. *"accetti qualsiasi cosa oppure quando ti dicono la lavandería associ la chat a quella lavandería?"* — il bot normalizza l'input cliente?
+2. *"utente può mettere di tutto, può paese maiuscolo minuscolo e altro... se non associamo bene non possiamo dare i giusti prezzi"* — robustness della location resolution
+3. *"dove metteremo i prezzi?"*
+4. *"ci sono regole diverse per ogni lavandería, come gestiamo base + override?"*
+
+#### Current state — verified (✅ già esiste)
+
+**A. Location resolution è robusta** (`utils/locations.ts` + `utils/message-parsing/locations.ts`):
+- Canonical keys: `Hortes`, `Goya`, `Alemanya`, `Pineda`, `L'Escala`, `Platja d'Aro`
+- Aliases per canonical (es. `Granollers → Hortes`, `Francisco de Goya → Goya`)
+- Normalization: `stripAccents` (NFD) + `toLowerCase` + word-boundary regex + fuzzy fallback (Damerau-Levenshtein)
+- Ambiguous pueblo handling: `Mataró` chiede street (Goya / Alemanya)
+- **Input "GOYA", "goya", "Goya", "calle Goya", "Francisco de Goya 117", "Goyaaa" → tutti `Goya`**.
+
+**B. Prezzi: già pattern parziale** (`json/locations.json`):
+- Campo singolo `metadata.cardUnitPrice` per location (`"7€"` Goya / `"8€"` Pineda / `null` Alemanya / `"7€"` Hortes/L'Escala/Platja)
+- Iniettato nel system prompt del Specialist LLM via `buildLocationContext()` (`utils/runtime.ts`)
+- LLM legge e risponde, no logica TS
+
+**C. Base + override pattern già implementato**:
+- Base FAQ: `json/faqs.json` (universale)
+- Base flow: `json/washer_hs60xx.json` + `json/dryer_ed340.json`
+- Per-location FAQ override: `json/locations.json:locations[].faqOverrides` (mappa FAQ key → testo)
+- Per-location flow override: `json/locations.json:locations[].flowOverrides` (merge sul singolo step)
+- Per-location escalation rule: `json/locations.json:locations[].escalationRules[]`
+- Merge a runtime: `buildLocationContext()` inietta i metadata nel prompt
+
+#### Scalability check (Feature intake protocol step 3)
+
+| Domanda | Risposta | Note |
+|---|---|---|
+| Scala a nuovi FLUSSI? | ✅ Sì | `metadata` opaco al codice — LLM legge campi nuovi senza che TS sappia. `flowOverrides` modulare. |
+| Scala a nuovi CASI? | ✅ Sì | `faqOverrides` + `escalationRules[]` array estendibile per case-specific behaviour. |
+| Scala a nuove LINGUE? | ⚠️ Parziale | Oggi i testi in `faqOverrides` sono ES-only. Quando 2nd lang va live, decidere: (a) ES nel metadata + LLM traduce, (b) struttura per-lingua `faqOverrides: { es: {...}, it: {...} }`. Aligned con item #2 di questo todo. |
+
+**Conclusione**: l'architettura SCALA. Le domande di Andrea sono già risolte a livello infrastructure. Le 4 decisioni sotto sono SOLO sulla forma dei prezzi.
+
+#### Architecture change (Feature intake protocol step 5)
+
+⚠️ Probabile sì se decidiamo schema prezzi strutturato (Punto 1 sotto opzione B/C). **Richiede consenso esplicito Andrea prima di toccare CLAUDE.md** (vedi memoria `feedback_claudemd_architecture_changes.md`).
+
+#### ❓ 4 punti aperti — decisione di Andrea
+
+##### Punto 1 — Schema prezzi: flat o strutturato?
+
+- **A (flat, attuale)**: `metadata.cardUnitPrice: "7€"` — un solo prezzo per location.
+- **B (strutturato per servizio)**:
+  ```json
+  "prices": {
+    "washer": "7€",
+    "dryer": "5€",
+    "loyaltyCardPurchase": "20€",
+    "loyaltyCardRecharge": "minimum 5€",
+    "extraDryerMinutes": "1€ per 10min"
+  }
+  ```
+- **C (strutturato + per-macchina)**:
+  ```json
+  "prices": {
+    "washer": { "default": "7€", "size_8kg": "9€" },
+    "dryer": { "default": "5€" }
+  }
+  ```
+
+**Question to Andrea**: i prezzi variano solo per location, o anche per servizio/macchina dentro la stessa location?
+
+##### Punto 2 — Dove memorizzare i prezzi?
+
+- **A**: tutto in `json/locations.json:metadata.prices` (file unico, già esiste). **Raccomandazione mia**.
+- **B**: file separato `json/pricing.json` (per audit, se cambiano spesso).
+- **C**: DB Postgres. **NO** — viola la regola "no DB import" del modulo (vedi `CLAUDE.md` "📚 FAQ knowledge → NOT to be done").
+
+##### Punto 3 — Domande prezzi: LLM o guard deterministico?
+
+- **A (LLM only, attuale)**: il LLM legge `metadata.prices` dal context e risponde. Pro: flessibile. Contro: a volte improvvisa (Caso 12 fallback "Tengo que revisarlo").
+- **B (Guard `guardPriceQuery`)**: detector regex multi-lang per «cuánto cuesta» / «qué precio» / «how much» → guard cita prezzo letterale. Pro: zero hallucination. Contro: detector speculativo se non c'è bug reale → viola CLAUDE.md "🚫 Anti-pattern speculative detector".
+
+**Raccomandazione mia**: rimanere su **A** finché non c'è bug reale. Se Andrea vede il bot improvvisare sui prezzi → F-fix con detector.
+
+##### Punto 4 — Multi-language per i price texts
+
+- **A (ES-only, attuale)**: valore = numero+valuta language-neutral. LLM rephrasea in lingua corrente. **Raccomandazione mia** — coerente con iron rule #8 exemption (ES-first).
+- **B (struttura per-lingua)**: `prices: { washer: { value: "7€", label: { es: "por lavado", it: "per lavaggio" } } }`. Da fare quando 2nd lang va live (item #2 di questo todo).
+
+#### Roadmap proposta (post-decisioni)
+
+1. **F46 — Pricing schema canonical**
+   - Estendere `metadata.prices` (Opzione decisa)
+   - Migrare `cardUnitPrice` esistente
+   - Test pin: ogni location ha prezzi validi, formato consistente
+2. **F47 — Price query handling** (SE Punto 3 = B)
+   - Guard `guardPriceQuery` con detector multi-lang (12+ unit test)
+   - Pin in `f-log-regression.test.ts`
+3. **`docs/usecases.md` Caso 12** — tabella prezzi per location + esempi
+4. **CLAUDE.md `Per-location pricing schema`** — SOLO se Punto 1 = B/C → **richiede consenso esplicito Andrea**
+
+#### Sicurezza già garantita (Andrea's concerns)
+
+| Concern | Verdict |
+|---|---|
+| "accetti qualsiasi cosa o associ?" | **Già associa**. `resolveKnownLocation` → canonical. Test in `__tests__/unit/agent-extract.ts` + `location-resolution.test.ts`. |
+| "uppercase / lowercase / typo" | **Tutti gestiti**: `stripAccents` + `toLowerCase` + word-boundary + fuzzy. |
+| "base + override" | **Già implementato**: faqs.json base + locations.json:faqOverrides + buildLocationContext merge. |
+
+L'architettura è pronta. Le 4 decisioni sono sulla **forma dei prezzi**, non sull'infrastructure.
+
+#### Next step
+
+Andrea risponde ai 4 punti. Io scrivo F46 (e eventualmente F47) seguendo Feature intake protocol completo. **Niente codice finché tutti i 4 punti decisi.**
+
+---
+
 ## 📐 Conventions for adding to this list
 
 - One section per item, with a clear "Done when" so closure is unambiguous.

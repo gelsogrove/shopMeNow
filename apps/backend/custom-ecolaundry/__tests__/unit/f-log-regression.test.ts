@@ -41,6 +41,8 @@ import {
 } from '../../utils/guards/payment-no-change.js'
 import { markResolved } from '../../utils/state-transitions.js'
 import { createInitialState } from '../../utils/state.js'
+import { validateCustomerName } from '../../utils/customer-name.js'
+import { looksLikeDiscountCode } from '../../utils/discount-code-format.js'
 import type { AgentRuntime } from '../../models/index.js'
 import { getCachedTestRuntime, loadTestRuntime } from './_helpers.js'
 import * as fs from 'fs'
@@ -409,6 +411,64 @@ const cases: Case[] = [
     run: () => {
       if (!TARJETA_TOPIC.test('necesito sacar la tarjeta')) {
         throw new Error('F44: action verb "sacar" must be accepted')
+      }
+    },
+  },
+
+  // ── F46 — discountCodePrefix config + name validator rejects code-shape ──
+  // Real chat (Andrea, 2026-05-12): customer typed "SAU2904266" when the bot
+  // asked for their name; pre-F46 the validator accepted it. The fix has
+  // two structural parts that both need to stay in place:
+  //   (a) Settings.discountCodePrefix is required + validated at boot.
+  //   (b) validateCustomerName refuses code-shaped tokens when the option
+  //       is supplied.
+  {
+    name: 'F46 — settings.json declares discountCodePrefix (config-driven, not hardcoded)',
+    run: () => {
+      const settingsPath = path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        'json',
+        'settings.json',
+      )
+      const content = fs.readFileSync(settingsPath, 'utf8')
+      if (!/"discountCodePrefix"\s*:\s*"SAU"/.test(content)) {
+        throw new Error(
+          'F46: json/settings.json must declare "discountCodePrefix": "SAU" (Ecolaundry tenant default)',
+        )
+      }
+    },
+  },
+  {
+    name: 'F46 — looksLikeDiscountCode("SAU2904266", "SAU") === true (matches real chat marker)',
+    run: () => {
+      if (looksLikeDiscountCode('SAU2904266', 'SAU') !== true) {
+        throw new Error(
+          'F46: the canonical chat code "SAU2904266" must be recognised by looksLikeDiscountCode',
+        )
+      }
+    },
+  },
+  {
+    name: 'F46 — validateCustomerName("SAU2904266", {prefix:"SAU"}) is invalid (refuses code-shape)',
+    run: () => {
+      const r = validateCustomerName('SAU2904266', { discountCodePrefix: 'SAU' })
+      if (r.valid !== false) {
+        throw new Error(
+          `F46: code-shaped tokens MUST be refused as a name when prefix is supplied. Got: ${JSON.stringify(r)}`,
+        )
+      }
+    },
+  },
+  {
+    name: 'F46 — validateCustomerName("Andrea", {prefix:"SAU"}) still valid (no false-positive on plain names)',
+    run: () => {
+      const r = validateCustomerName('Andrea', { discountCodePrefix: 'SAU' })
+      if (r.valid !== true || r.name !== 'Andrea') {
+        throw new Error(
+          `F46: real names must still pass with the prefix option. Got: ${JSON.stringify(r)}`,
+        )
       }
     },
   },

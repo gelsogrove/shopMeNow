@@ -53,6 +53,12 @@ export type Settings = {
   /** Hard cap on tool-call iterations per turn. Required: must be defined
    *  in `json/settings.json` (no in-code fallback). */
   maxToolHops: number
+  /** Tenant-specific prefix for discount codes (Caso 8). The full code shape is
+   *  `^<prefix>\d{6}\d+$` (prefix + DDMMYY + amount), e.g. `SAU2904266`.
+   *  Required so the same `validateCustomerName` / discount-code guard can
+   *  refuse code-shaped tokens as a customer name (F46). Must be a non-empty
+   *  uppercase letters-only string. */
+  discountCodePrefix: string
   /** Free-form description of the desired tone, injected into agent.txt. */
   tone?: string
   /** Tenant support email addresses, exposed to FAQ/handover messages. */

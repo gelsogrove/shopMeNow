@@ -45,6 +45,18 @@ function validateSettings(settings: Settings): void {
   if (typeof settings.maxToolHops !== 'number' || settings.maxToolHops < 1) {
     errors.push('maxToolHops must be a positive number')
   }
+  // F46 — discountCodePrefix gates the regex builder used by Caso 8 guards
+  // AND by validateCustomerName (to refuse code-shaped tokens as a name).
+  // Iron rule #7 (settings are law) → fail-fast on missing/invalid prefix
+  // instead of falling back to a hardcoded "SAU".
+  if (
+    typeof settings.discountCodePrefix !== 'string' ||
+    !/^[A-Z]+$/.test(settings.discountCodePrefix)
+  ) {
+    errors.push(
+      'discountCodePrefix must be a non-empty uppercase letters-only string (e.g. "SAU")',
+    )
+  }
   if (
     settings.agentTemperature !== undefined &&
     (typeof settings.agentTemperature !== 'number' ||

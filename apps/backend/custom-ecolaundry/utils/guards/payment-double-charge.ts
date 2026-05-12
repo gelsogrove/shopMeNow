@@ -327,7 +327,12 @@ export const guardDoubleChargeAskReceipt: Guard = (ar, userMessage) => {
  */
 export const guardDoubleChargeAwaitName: Guard = (ar, userMessage) => {
   if (ar.state.pendingFlow !== 'double-charge-await-name') return null
-  const validation = validateCustomerName(userMessage)
+  // F46 — same name validator path, parametrised with the tenant discount-code
+  // prefix so a customer who accidentally types a code in the name field gets
+  // rejected and re-asked.
+  const validation = validateCustomerName(userMessage, {
+    discountCodePrefix: ar.runtime.settings.discountCodePrefix,
+  })
   if (validation.valid === false) {
     // Invalid name (numeric/confirmation/short). Iron rule #10 corollary:
     // 3-strikes retry+escalate ladder. After 2 invalid attempts we cannot

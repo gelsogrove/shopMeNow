@@ -79,7 +79,10 @@ export async function loadTestRuntime(): Promise<Runtime> {
     settings: {
       enabledLanguages: ['es'],
       defaultLanguage: 'es',
-    },
+      // F46 — required field. Tests pin "SAU" so the discount-code guard and
+      // validateCustomerName behave identically to the Ecolaundry tenant.
+      discountCodePrefix: 'SAU',
+    } as Runtime['settings'],
     displayFlows: validateDisplayFlowsFile(displayFlowsRaw),
     nluPatterns: validateNluPatternsFile(nluPatternsRaw),
   }

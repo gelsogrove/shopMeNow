@@ -14,6 +14,9 @@
   "agentMaxTokens": 800,
   "maxToolHops": 6,
 
+  "_section_business_codes": "Tenant-specific code shapes. discountCodePrefix is the fixed uppercase prefix of the Caso 8 discount code (full shape `^<prefix>\\d{6}\\d+$` — prefix + DDMMYY + amount, e.g. SAU2904266). Required: validateSettings fails fast on missing/invalid prefix (F46). The same prefix is used by validateCustomerName to refuse code-shaped tokens as a customer name.",
+  "discountCodePrefix": "SAU",
+
   "_section_tone": "Free-form tone descriptor injected into agent.txt. Reinforces the prompt's TONE & EMPATHY section. Keep short and concrete.",
   "tone": "calm, reassuring, relaxed, warm, step-by-step",
 

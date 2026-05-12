@@ -1,10 +1,14 @@
 // Discount code — Tengo un código de descuento (LLM detects, deterministic gather).
 //
-// Format expected for a valid discount code: `^([A-Z]{3})(\d{2})(\d{2})(\d{2})(\d+)$`
-//   - 3 uppercase letters         (e.g. SAU)
-//   - 6 digits date DDMMYY        (e.g. 290426 → 2026-04-29)
-//   - 1+ digits amount            (e.g. 6)
-// Example: SAU2904266
+// Format expected for a valid discount code: `^<prefix>(\d{2})(\d{2})(\d{2})(\d+)$`
+//   - prefix:        uppercase letters from settings.json (e.g. SAU)
+//   - 6 digits date: DDMMYY                              (e.g. 290426 → 2026-04-29)
+//   - 1+ digits:     amount                              (e.g. 6)
+// Example with prefix "SAU": SAU2904266
+//
+// F46 — the prefix is no longer hardcoded `[A-Z]{3}` here. It comes from
+// `runtime.settings.discountCodePrefix` (single source of truth, Iron rule #7).
+// Parsing/format checks delegate to utils/discount-code-format.ts (pure L3).
 //
 // Steps:
 //   1. ask-code        bot asks "dime el código exacto"
@@ -18,21 +22,16 @@
 
 import { t } from '../localization.js'
 import { resolveKnownLocation, resolveKnownLocationFuzzy } from '../message-parsing.js'
-import type { Guard } from '../../models/index.js'
+import type { AgentRuntime, Guard } from '../../models/index.js'
 import { lang } from './helpers.js'
 import { buildEscalationSummary, extractEscalationContext } from '../escalation.js'
 import { validateCustomerName } from '../customer-name.js'
+import { parseDiscountCode } from '../discount-code-format.js'
 import { captureCustomerName, closeAsEscalated, escalate, requireCustomerName } from '../state-transitions.js'
 import { nextRetryLadderStep } from './retry-ladder.js'
 
-const CASO8_CODE_RE = /^([A-Z]{3})(\d{2})(\d{2})(\d{2})(\d+)$/
-
-function parseCaso8Code(raw: string): { letters: string; fechaIso: string; importe: string } | null {
-  const cleaned = raw.trim().toUpperCase().replace(/[\s.,!?¿¡-]/g, '')
-  const m = cleaned.match(CASO8_CODE_RE)
-  if (!m) return null
-  const [, letters, dd, mm, yy, importe] = m
-  return { letters, fechaIso: `20${yy}-${mm}-${dd}`, importe }
+function discountCodePrefix(ar: AgentRuntime): string {
+  return ar.runtime.settings.discountCodePrefix
 }
 
 /** Caso 8 step 1 — bot asks the customer for the exact code. */
@@ -82,7 +81,7 @@ export const guardDiscountCodeAwait: Guard = (ar, userMessage) => {
     return null
   }
 
-  const parsed = parseCaso8Code(raw)
+  const parsed = parseDiscountCode(raw, discountCodePrefix(ar))
   if (!parsed) {
     // Format invalid: retry once before escalating.
     const attempts = ar.state.discountCodeAskAttempts || 0
@@ -123,7 +122,9 @@ export const guardDiscountCodeAwait: Guard = (ar, userMessage) => {
  *  escalates to a live operator who can collect the name by phone. */
 export const guardDiscountCodeAwaitName: Guard = (ar, userMessage) => {
   if (ar.state.pendingFlow !== 'discount-code-await-name') return null
-  const validation = validateCustomerName(userMessage)
+  const validation = validateCustomerName(userMessage, {
+    discountCodePrefix: discountCodePrefix(ar),
+  })
   if (!validation.valid) {
     const step = nextRetryLadderStep(
       ar.state.awaitNameAskAttempts,

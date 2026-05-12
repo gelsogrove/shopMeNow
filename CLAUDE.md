@@ -582,6 +582,7 @@ apps/frontend/src/
 - **HOW TO ADD A USE CASE**: see [`apps/backend/custom-ecolaundry/docs/adding-use-cases.md`](apps/backend/custom-ecolaundry/docs/adding-use-cases.md). Pick the matching recipe.
 - **HOW EACH TOOL VALIDATES**: see [`apps/backend/custom-ecolaundry/docs/contracts.md`](apps/backend/custom-ecolaundry/docs/contracts.md).
 - **BUG INTAKE PROTOCOL** (🚨 MANDATORY when Andrea reports a bug): see [`apps/backend/custom-ecolaundry/CLAUDE.md → 🐛 Bug intake protocol`](apps/backend/custom-ecolaundry/CLAUDE.md). 7-step typed-out checklist that I MUST produce BEFORE writing any fix code. Catches pezza-thinking at the reasoning stage, before structural checks can catch it post-fix.
+- **FEATURE INTAKE PROTOCOL** (🚨 MANDATORY when Andrea requests a new feature): see [`apps/backend/custom-ecolaundry/CLAUDE.md → ✨ Feature intake protocol`](apps/backend/custom-ecolaundry/CLAUDE.md). 8-step proactive twin of bug protocol. CRITICAL step 3: scalability check across flows/cases/languages. STOP and ask Andrea if architecture (iron rules / 5 layers / protocols) must be modified — those sections are the CONTRACT, never silent edits.
 - **ENFORCEMENT**: PRs that add `DO NOT DO X` lines to `prompts/agent.txt`, mutate state outside `state-transitions.ts`, or add a detector without tests must be rejected and rewritten following the recipes.
 
 ---
