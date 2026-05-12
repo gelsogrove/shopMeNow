@@ -72,7 +72,10 @@ const ALL_SECTIONS: SettingsSection[] = [
   { key: "functions", label: "Custom Tools", description: "External functions and webhooks" },
 ]
 
-const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = ["calendar", "functions"]
+// F50: Business Config also hidden in custom chatbot mode (the company info /
+// business type / currency / registration flags are not consumed by the
+// custom module — it has its own JSON config). Calendar + Custom Tools idem.
+const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = ["business", "calendar", "functions"]
 
 function getVisibleSections(isCustomChatbot: boolean): SettingsSection[] {
   if (!isCustomChatbot) return ALL_SECTIONS

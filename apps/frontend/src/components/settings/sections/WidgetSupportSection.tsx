@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Headphones, Smartphone, Users, Mail } from "lucide-react"
+import { useWorkspace } from "@/contexts/WorkspaceContext"
 
 interface WidgetSupportSectionProps {
   formData: {
@@ -23,6 +24,9 @@ interface WidgetSupportSectionProps {
   onFieldFocus?: (fieldKey: string) => void
 }
 
+// F50 — Andrea 2026-05-13: "Enable Sales Agent Routing" only makes sense
+// for ECOMMERCE workspaces. Hidden for INFORMATIONAL and FLOW (custom
+// chatbot) workspaces — they don't use the sales-agent dispatch model.
 export function WidgetSupportSection({
   formData,
   errors,
@@ -30,6 +34,8 @@ export function WidgetSupportSection({
   onFieldChange,
   onFieldFocus,
 }: WidgetSupportSectionProps) {
+  const { workspace } = useWorkspace()
+  const isEcommerce = workspace?.channelMode === 'ECOMMERCE'
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -192,22 +198,25 @@ export function WidgetSupportSection({
                 />
               </div>
 
-              {/* Sales Agents Toggle */}
-              <div className="space-y-2 pt-4 border-t">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-sm font-medium">Enable Sales Agent Routing</Label>
-                    <p className="text-xs text-gray-500 mt-1">
-                      When enabled, support requests are routed to the customer's assigned sales agent. Enables the Sales Agents list in the navigation menu and the Salesperson field in customer profiles.
-                    </p>
+              {/* Sales Agents Toggle — F50: only meaningful for ECOMMERCE
+                  workspaces. Hidden for INFORMATIONAL and FLOW (custom chatbot). */}
+              {isEcommerce && (
+                <div className="space-y-2 pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-sm font-medium">Enable Sales Agent Routing</Label>
+                      <p className="text-xs text-gray-500 mt-1">
+                        When enabled, support requests are routed to the customer's assigned sales agent. Enables the Sales Agents list in the navigation menu and the Salesperson field in customer profiles.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={formData.hasSalesAgents}
+                      onCheckedChange={(checked) => onFieldChange("hasSalesAgents", checked)}
+                      disabled={!canEdit}
+                    />
                   </div>
-                  <Switch
-                    checked={formData.hasSalesAgents}
-                    onCheckedChange={(checked) => onFieldChange("hasSalesAgents", checked)}
-                    disabled={!canEdit}
-                  />
                 </div>
-              </div>
+              )}
             </>
           )}
         </CardContent>
