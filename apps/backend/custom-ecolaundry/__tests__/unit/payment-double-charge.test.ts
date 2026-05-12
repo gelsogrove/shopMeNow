@@ -242,7 +242,7 @@ const cases: Case[] = [
 
   // ── guardDoubleChargeAskNumber — 3-strikes ladder (NEW) ───────────────────
   {
-    name: 'askNumber attempt 1 (counter=0) → canonical "machineNumberWasher" question',
+    name: 'F48 — askNumber attempt 1 (counter=0) → canonical generic "machineNumberAsk" question (no type-specific)',
     run: () => {
       const ar = makeAr()
       ar.state.machineType = 'washer'

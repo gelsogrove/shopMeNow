@@ -45,13 +45,27 @@ export const tests: TestCase[] = [
   {
     // T3: il cliente risponde solo col tipo ("lavadora") → autoExtract
     // setta machineType, il guard branchato chiede SOLO il numero (key
-    // i18n `machineNumberWasher`). Niente ri-domanda del tipo.
-    name: 'ES — paso 3 dato crítico (numero): T3 solo tipo data → bot chiede solo numero',
+    // i18n `machineNumberAsk` — generic, F48). Niente ri-domanda del tipo.
+    // F48 contract: il prompt customer-facing è generico ("máquina") per
+    // evitare che il rephrase LLM flippi lavadora↔secadora. Il fact
+    // (state.machineType=washer) resta preservato per il briefing operator.
+    name: 'F48 — paso 3 dato crítico (numero): T3 solo tipo data → bot chiede solo numero (generic "máquina", NO lavadora/secadora)',
     run: async (ctx) => {
       await ctx.send('hola, no funciona la máquina')
       await ctx.send('Goya')
       const reply = await ctx.send('lavadora')
       expectMentionsAll(reply, ['numero'])
+      // F48: the bot MUST use the generic term, NOT the type-specific one.
+      // The fact "lavadora" is captured in state.machineType for the
+      // operator briefing — the customer-facing prompt is intentionally
+      // generic to avoid the rephrase LLM flipping lavadora↔secadora.
+      const lower = reply.toLowerCase()
+      if (/secadora/.test(lower)) {
+        throw new Error(`F48: bot reply MUST NOT say "secadora" when customer said "lavadora": ${reply}`)
+      }
+      // Optional: tone-polished bot output may still keep "lavadora" if the
+      // rephrase decides to. The contract is strictly: do not contradict
+      // state.machineType. So "lavadora" appearing is OK, "secadora" is NOT.
     },
   },
   {

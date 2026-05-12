@@ -19,12 +19,13 @@ import {
   detectFaqPause,
   detectNumericCodeIntent,
   detectPaidNotActivatedIntent,
+  detectPaymentMention,
   detectTopicSwitchDuringEscalation,
 } from './intent.js'
 import { resolveKnownLocation, resolveKnownLocationFuzzy, parseExplicitPaymentSignal } from './message-parsing.js'
 import { RECOVERABLE_DISPLAYS } from './guards/helpers.js'
 import { resetIncidentDetails, resetMachineFacts } from './state.js'
-import { resetPostEscalationFlags } from './state-transitions.js'
+import { pivotToNoChangeAsk, resetPostEscalationFlags } from './state-transitions.js'
 import { getPattern, matchPattern } from './nlu.js'
 
 // Display whitelist & topic-switch detection — pattern definitions live in
@@ -452,12 +453,41 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   // no he podido usar"). Flow asks tipo → numero → cambio (NOT display, NOT pago).
   // Detection delegated to `detectPaidNotActivatedIntent` (utils/intent.ts) —
   // typo-tolerant via Levenshtein on the verb token (F16, Andrea 2026-05-10).
+  //
   // Skip when the branch router has already classified this as trouble-machine:
   // generic "paid + not starting" phrases overlap with display-code incidents
   // (Caso 3/SEL) and would incorrectly divert the gather to Caso 4 (cambio).
+  //
   if (!state.pendingFlow && ar.state.activeBranch !== 'trouble-machine' && detectPaidNotActivatedIntent(userMessage)) {
     state.pendingFlow = 'no-change-ask'
     resetPostEscalationFlags(ar)
+  }
+
+  // F47 — AL001 → Caso 4 pivot (Andrea 2026-05-12 real chat):
+  // when the customer is in the `al001-sequence-error` display flow (Caso 5)
+  // AND mentions they have already paid ("He pagado y apretado el numero…"),
+  // the incident type flips from "sequence error" to "paid but not activated"
+  // (Caso 4). The pivot is deterministic — handled by `pivotToNoChangeAsk` —
+  // so Caso 4 guards (4.2 escalate on "Sí cambio devuelto") own the handoff
+  // and we don't bounce LLM-improvised instructions.
+  //
+  // Detector choice: we use `detectPaymentMention` (bare payment signal),
+  // NOT `detectPaidNotActivatedIntent`. The latter requires BOTH a payment
+  // signal AND an explicit failure verb ("no arranca", "no funciona", …)
+  // — a sensible guard for cold-start Caso 4 detection where the bot has no
+  // other context. Here the AL001 flow is already an in-progress
+  // troubleshooting incident, so the failure is implicit from the trigger
+  // context: a bare "he pagado" is enough to flip the case. The
+  // `activeFlowId === 'al001-sequence-error'` gate keeps Caso 3/SEL safe —
+  // a generic "he pagado" mid-SEL flow does NOT pivot.
+  //
+  // Documented in usecases.md §5.4.
+  if (
+    !state.pendingFlow &&
+    ar.state.activeFlowId === 'al001-sequence-error' &&
+    detectPaymentMention(userMessage)
+  ) {
+    pivotToNoChangeAsk(ar)
   }
 
   // Caso 8 marker: customer says "tengo un código y no sé cómo usarlo" or

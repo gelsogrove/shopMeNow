@@ -56,7 +56,7 @@ interface Case {
 
 const cases: Case[] = [
   {
-    name: 'attempt 1 (counter=0) → asks number via canonical "machineNumberWasher", increments counter',
+    name: 'F48 — attempt 1 (counter=0) → asks number via generic "machineNumberAsk", increments counter',
     run: () => {
       const ar = makeAr()
       const out = guardForceMachineNumber(ar, '')
@@ -69,18 +69,38 @@ const cases: Case[] = [
           `counter must be 1 after first ask, got ${ar.state.machineNumberAskAttempts}`,
         )
       }
+      // F48: the reply MUST be generic ("máquina"), NOT type-specific. This
+      // is the architectural contract: customer-facing prompts don't expose
+      // facts the rephrase LLM can flip (lavadora↔secadora). The fact lives
+      // in state.machineType for the operator briefing (escalation.ts).
+      if (!/m[áa]quina|machine|macchina|m[àa]quina/i.test(out.reply)) {
+        throw new Error(`F48: reply must use the generic "máquina/machine/macchina" wording: ${out.reply}`)
+      }
+      if (/lavadora|secadora|lavatrice|asciugatrice|washer|dryer|rentadora|assecadora|lave-linge|s[èe]che-linge/i.test(out.reply)) {
+        throw new Error(`F48: reply MUST NOT contain type-specific terms (rephrase can flip them): ${out.reply}`)
+      }
     },
   },
   {
-    name: 'attempt 1 with dryer → asks "machineNumberDryer" (type-aware)',
+    name: 'F48 — attempt 1 with dryer in state → STILL uses generic "máquina" (no type-specific in prompt)',
     run: () => {
+      // F48 contract: even with state.machineType=dryer, the customer-facing
+      // prompt must be generic. The type is preserved in state for the
+      // operator briefing (escalation.ts:189,206,226,etc.) — NOT for the
+      // customer-facing rephrase pipeline where the LLM can flip terms.
       const ar = makeAr()
       ar.state.machineType = 'dryer'
       const out = guardForceMachineNumber(ar, '')
       if (!out) throw new Error('guard must fire on first attempt')
-      // Reply must mention "secadora" (ES dryer wording).
-      if (!/secadora/i.test(out.reply)) {
-        throw new Error(`reply must mention "secadora" for dryer: ${out.reply}`)
+      if (!/m[áa]quina|machine|macchina|m[àa]quina/i.test(out.reply)) {
+        throw new Error(`F48: even with dryer state, reply must be generic "máquina": ${out.reply}`)
+      }
+      if (/secadora|asciugatrice|dryer|assecadora|s[èe]che-linge/i.test(out.reply)) {
+        throw new Error(`F48: customer-facing reply MUST NOT expose machineType (rephrase can flip): ${out.reply}`)
+      }
+      // The fact is preserved for operator briefing.
+      if (ar.state.machineType !== 'dryer') {
+        throw new Error('F48: state.machineType MUST be preserved for operator briefing')
       }
     },
   },

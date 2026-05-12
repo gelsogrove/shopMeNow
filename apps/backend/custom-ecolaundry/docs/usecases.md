@@ -18,6 +18,7 @@
   - [5.1 — Happy Path](#51--happy-path)
   - [5.2 — Escalación: cliente no puede seguir instrucciones](#52--escalación-cliente-no-puede-seguir-instrucciones)
   - [5.3 — Escalación: AL001 persiste](#53--escalación-al001-persiste)
+  - [5.4 — Pivot AL001 → Caso 4 (cliente confirma pagamento)](#54--pivot-al001--caso-4-cliente-confirma-pagamento)
 - [Caso 6 — Doble cobro](#caso-6--doble-cobro)
   - [6.1 — Servicio completado (Happy Path)](#61--servicio-completado-happy-path)
   - [6.2 — Escalación: cliente muy molesto](#62--escalación-cliente-muy-molesto)
@@ -30,6 +31,7 @@
 - [Caso 8 — Código de descuento](#caso-8--código-de-descuento)
   - [8.1 — Happy Path (formato válido)](#81--happy-path-formato-válido)
   - [8.2 — Formato inválido (retry + escalate)](#82--formato-inválido-retry--escalate)
+  - [8.3 — Cliente repite un código en el campo nombre (rechazo + re-ask)](#83--cliente-repite-un-código-en-el-campo-nombre-rechazo--re-ask)
 - [Caso 9 — Factura](#caso-9--factura)
   - [9.1 — Happy Path](#91--happy-path)
   - [9.2 — Email inválido (retry)](#92--email-inválido-retry)
@@ -62,6 +64,28 @@
 
 ---
 
+## 🏛 Convenciones arquitectónicas (transversales)
+
+**F48 — Separation of concerns: customer-facing vs operator-facing wording.**
+
+Los prompts customer-facing (i18n) usan términos **genéricos** cuando el rephrase
+LLM podría deformarlos. La especificidad se conserva en el `state` y se utiliza
+**determinísticamente** en el operator briefing.
+
+- `machineType` (washer/dryer): el prompt customer-facing del turno "ask number"
+  usa "máquina/machine/macchina/màquina" en lugar de "lavadora/secadora". Razón:
+  el rephrase LLM con T=0.4 puede flippar lavadora↔secadora (chat real Andrea
+  2026-05-12). Estado preservado en `state.machineType`; operator briefing
+  ([utils/escalation.ts](../utils/escalation.ts)) interpola el término correcto
+  ("Andrea en Pineda con la **lavadora** número 3...").
+- **Patrón aplicable a futuros bugs análogos**: si el rephrase puede deformar
+  otro `fact` estructurado del estado (`location`, `displayState`, `machineNumber`),
+  el fix arquitectónico es genericar el prompt customer-facing y dejar la
+  interpolación específica al briefing operatore (no añadir reglas textuales
+  al prompt rephrase — Iron rule #1).
+
+---
+
 ## Caso 1 — PUSH PROG
 
 ### 1.1 — Happy Path
@@ -78,7 +102,7 @@
 **Bot:** Hola, soy el asistente virtual de Ecolaundry. ¿En qué lavandería estás?
 
 **Usuario:** Goya  
-**Bot:** Gracias. ¿Qué número de lavadora es?
+**Bot:** Gracias. ¿Qué número tiene la máquina?
 
 **Usuario:** La 5  
 **Bot:** ¿Qué aparece en la pantalla?
@@ -114,7 +138,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Bot:** Hola, soy el asistente virtual de Ecolaundry. ¿En qué lavandería estás?
 
 **Usuario:** Goya  
-**Bot:** Gracias. ¿Qué número de lavadora es?
+**Bot:** Gracias. ¿Qué número tiene la máquina?
 
 **Usuario:** La 5  
 **Bot:** ¿Qué aparece en la pantalla?
@@ -158,7 +182,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Bot:** Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás?
 
 **Usuario:** Hortes  
-**Bot:** ¿Cuál es el número de la lavadora?
+**Bot:** ¿Qué número tiene la máquina?
 
 **Usuario:** 2  
 **Bot:** ¿Qué aparece en la pantalla?
@@ -185,7 +209,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Bot:** Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás?
 
 **Usuario:** Hortes  
-**Bot:** ¿Cuál es el número de la lavadora?
+**Bot:** ¿Qué número tiene la máquina?
 
 **Usuario:** 2  
 **Bot:** ¿Qué aparece en la pantalla?
@@ -220,7 +244,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Bot:** ¡Hola! ¿En qué lavandería estás?
 
 **Usuario:** Pineda  
-**Bot:** ¿Qué número de lavadora es?
+**Bot:** ¿Qué número tiene la máquina?
 
 **Usuario:** La 3  
 **Bot:** ¿Qué aparece en la pantalla?
@@ -247,7 +271,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Bot:** ¡Hola! ¿En qué lavandería estás?
 
 **Usuario:** Pineda  
-**Bot:** ¿Qué número de lavadora es?
+**Bot:** ¿Qué número tiene la máquina?
 
 **Usuario:** La 3  
 **Bot:** ¿Qué aparece en la pantalla?
@@ -425,6 +449,39 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 **Usuario:** Carlos  
 **Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+---
+
+### 5.4 — Pivot AL001 → Caso 4 (cliente confirma pagamento)
+
+**Criterios de aceptación:**
+1. El cliente entra con AL001 → bot hace gather (lavandería → tipo → número) y explica el error de secuencia (Caso 5 happy path).
+2. Si en el siguiente turno el cliente menciona que ha pagado (señal `detectPaidNotActivatedIntent`, multi-idioma — "he pagado", "ho pagato", "I paid", "paguei", "j'ai payé", "he pagat"), el bot **pivota deterministically al Caso 4**: abandona el flow AL001 (`activeFlowId=null`) y arma `pendingFlow='no-change-ask'`.
+3. A partir de ahí los guards de Caso 4 (4.1 / 4.2) toman el control: la próxima pregunta es «¿La central te ha devuelto el cambio?». Un «Sí» → escalación inmediata (regla 4.2). Un «No» → instrucción de revisar saldo y, si tras eso el cliente confirma que sigue roto, escalación (regla 4.2).
+4. NO se acumulan instrucciones improvisadas por el LLM: el pivot deja el state machine en una rama documentada y deterministica.
+
+**Conversación:**
+
+**Usuario:** AL001  
+**Bot:** Hola, soy el asistente virtual de la lavandería. ¿En qué pueblo está la lavandería?
+
+**Usuario:** Pineda  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Cuál es el número de la máquina?
+
+**Usuario:** 3  
+**Bot:** Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Te ayudo a completarlo: dime qué has hecho justo antes de que apareciera.
+
+**Usuario:** He pagado y apretado el número de la lavadora  
+**Bot:** ¿La central te ha devuelto el cambio?
+
+**Usuario:** Sí  
+**Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** Gracias, Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
 
 ---
 
@@ -712,6 +769,48 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ---
 
+### 8.3 — Cliente repite un código en el campo nombre (rechazo + re-ask)
+
+**Criterios de aceptación:**
+1. Tras un código válido (`SAU2904266`), el bot pregunta `¿Cuál es tu nombre?`.
+2. Si el cliente responde con un token que coincide con el formato del código de descuento (`^<prefix>(\d{2})(\d{2})(\d{2})(\d{1,2})$` con `prefix = settings.discountCodePrefix`), `validateCustomerName` lo rechaza con `reason = "<token> looks like a discount code, not a name"` (F46).
+3. El bot **NO acepta** el token como nombre — vuelve a preguntar `¿Cómo te llamas?` y mantiene `pendingFlow='discount-code-await-name'`.
+4. El contador `awaitNameAskAttempts` se incrementa con cada intento no valido (3-strikes ladder via `nextRetryLadderStep`): 1° y 2° invalidos → re-ask; 3° invalido → escala al operador (ladder corolario regla #10).
+5. El rechazo es deterministico — vale en las 6 lenguas soportadas porque el detector `looksLikeDiscountCode` solo mira el formato, no el contenido lingüístico.
+
+**Conversación A — recuperado al re-ask:**
+
+**Usuario:** Tengo un código  
+**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves, incluyendo letras si las hay?
+
+**Usuario:** SAU2904266  
+**Bot:** ¡Gracias! ¿Cuál es tu nombre?
+
+**Usuario:** SAU2904266  
+**Bot:** ¿Cómo te llamas? *(rechazo silencioso del token: looks like a discount code, no como nombre)*
+
+**Usuario:** Andrea  
+**Bot:** ¿En qué pueblo / lavandería quieres usarlo?
+
+**Conversación B — escalación tras 3 intentos no validos (ladder):**
+
+**Usuario:** Tengo un código  
+**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto?
+
+**Usuario:** SAU2904266  
+**Bot:** ¡Gracias! ¿Cuál es tu nombre?
+
+**Usuario:** SAU2904266  
+**Bot:** ¿Cómo te llamas?
+
+**Usuario:** sau2904266  
+**Bot:** ¿Cómo te llamas?
+
+**Usuario:** SAU2904266  
+**Bot:** Vamos a revisar tu caso manualmente. *(escalación tras 3 intentos)*
+
+---
+
 ## Caso 9 — Factura
 
 ### 9.1 — Happy Path
@@ -864,7 +963,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Bot:** Gracias. ¿Es una lavadora o una secadora?
 
 **Usuario:** Lavadora  
-**Bot:** ¿Qué número de lavadora es?
+**Bot:** ¿Qué número tiene la máquina?
 
 **Usuario:** La 5  
 **Bot:** El código ALN requiere revisión manual. Pasaremos tu caso a revisión. ¿Cómo te llamas?
@@ -888,7 +987,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Bot:** Tranquilo, te ayudo. ¿En qué lavandería estás?
 
 **Usuario:** Goya  
-**Bot:** ¿Qué número de lavadora es?
+**Bot:** ¿Qué número tiene la máquina?
 
 **Usuario:** La 6  
 **Bot:** Ese mensaje puede indicar un problema de cierre o que hay alguna pieza atrapada. Abre la puerta con cuidado, revisa si hay alguna prenda atrapada y vuelve a cerrarla bien.
@@ -936,7 +1035,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Bot:** Tranquilo, te ayudo. ¿Dónde está la lavandería?
 
 **Usuario:** Alemanya  
-**Bot:** Gracias. ¿Qué número de secadora es?
+**Bot:** Gracias. ¿Qué número tiene la máquina?
 
 **Usuario:** La 4  
 **Bot:** El código ALN requiere revisión manual. ¿Cómo te llamas?
@@ -1262,7 +1361,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Bot:** Para poder ayudarte, necesito saber primero en qué lavandería estás exactamente.
 
 **Usuario:** Estoy en Goya  
-**Bot:** Perfecto. ¿Qué número de secadora es?
+**Bot:** Perfecto. ¿Qué número tiene la máquina?
 
 ---
 

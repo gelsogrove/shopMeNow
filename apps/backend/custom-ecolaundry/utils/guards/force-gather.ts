@@ -172,8 +172,10 @@ export const guardForceMachineNumber: Guard = (ar) => {
     }
   }
   if (step === 'first-ask') {
-    const numKey = ar.state.machineType === 'dryer' ? 'machineNumberDryer' : 'machineNumberWasher'
-    return { reply: t(numKey, lang(ar)), reason: 'force-machine-number' }
+    // F48 — generic "máquina" wording (no lavadora/secadora) so the rephrase
+    // LLM can't flip the machineType in the customer-facing prompt. The fact
+    // is preserved in state.machineType for the operator briefing.
+    return { reply: t('machineNumberAsk', lang(ar)), reason: 'force-machine-number' }
   }
   // step === 'reask' — hint where the number is.
   return {

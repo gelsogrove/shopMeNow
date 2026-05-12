@@ -119,9 +119,10 @@ export const guardDoubleChargeAskNarrative: Guard = (ar, userMessage) => {
     return { reply: t('machineType', lang(ar)), reason: 'double-charge-emit-type-ask' }
   }
   // machineType set, machineNumber missing → ask number directly.
+  // F48 — generic "máquina" wording (no lavadora/secadora) so the rephrase
+  // LLM can't flip the machineType in the customer-facing prompt.
   ar.state.pendingFlow = 'double-charge-ask-number'
-  const numKey = ar.state.machineType === 'dryer' ? 'machineNumberDryer' : 'machineNumberWasher'
-  return { reply: t(numKey, lang(ar)), reason: 'double-charge-emit-number-ask' }
+  return { reply: t('machineNumberAsk', lang(ar)), reason: 'double-charge-emit-number-ask' }
 }
 
 /** Caso 6 step 4 (YES branch only) — gather machineType with 3-strikes
@@ -149,8 +150,8 @@ export const guardDoubleChargeAskType: Guard = (ar) => {
       }
     }
     ar.state.pendingFlow = 'double-charge-ask-number'
-    const numKey = ar.state.machineType === 'dryer' ? 'machineNumberDryer' : 'machineNumberWasher'
-    return { reply: t(numKey, lang(ar)), reason: 'double-charge-emit-number-ask' }
+    // F48 — generic "máquina" wording (no lavadora/secadora).
+    return { reply: t('machineNumberAsk', lang(ar)), reason: 'double-charge-emit-number-ask' }
   }
 
   const step = nextRetryLadderStep(
@@ -210,8 +211,8 @@ export const guardDoubleChargeAskNumber: Guard = (ar) => {
     }
   }
   if (step === 'first-ask') {
-    const numKey = ar.state.machineType === 'dryer' ? 'machineNumberDryer' : 'machineNumberWasher'
-    return { reply: t(numKey, lang(ar)), reason: 'double-charge-ask-number' }
+    // F48 — generic "máquina" wording (no lavadora/secadora).
+    return { reply: t('machineNumberAsk', lang(ar)), reason: 'double-charge-ask-number' }
   }
   return {
     reply: t('machineNumberRetry', lang(ar)),

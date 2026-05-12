@@ -169,3 +169,29 @@ export function startNewFlow(ar: AgentRuntime, flowId: string): void {
   ar.state.customerNameRequested = false
   ar.pendingEscalation = null
 }
+
+/**
+ * F47 — Atomic pivot from a display-flow (e.g. AL001 sequence error) into the
+ * Caso 4 "paid but not activated" gather. The customer was reporting a display
+ * incident, but in their next turn they revealed they had already paid; that
+ * signal flips the incident type. We abandon the display flow, clear the
+ * step pointers, and arm `pendingFlow='no-change-ask'` so the existing
+ * Caso 4 guards (`guardNoChangeAsk` → `guardNoChangeYesButBroken` /
+ * `guardNoChangeNoCambio` → `guardNoChangeAfterRetry`) own the handoff.
+ *
+ * Sticky customer facts (name, location, machineType, machineNumber) are
+ * preserved on purpose — they are already valid for the new flow. We also
+ * call `resetPostEscalationFlags` to wipe any escalation half-state inherited
+ * from the abandoned flow.
+ *
+ * Used by `agent-extract.ts` when `detectPaidNotActivatedIntent` triggers
+ * while `activeFlowId === 'al001-sequence-error'` (Caso 5 → Caso 4 pivot,
+ * documented in usecases.md §5.4).
+ */
+export function pivotToNoChangeAsk(ar: AgentRuntime): void {
+  ar.state.activeFlowId = null
+  ar.state.activeStepId = null
+  ar.state.lastPresentedStepId = null
+  ar.state.pendingFlow = 'no-change-ask'
+  resetPostEscalationFlags(ar)
+}

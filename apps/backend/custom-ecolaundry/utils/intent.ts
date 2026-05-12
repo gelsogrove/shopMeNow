@@ -335,6 +335,69 @@ export function detectPaidNotActivatedIntent(message: string): boolean {
   return false
 }
 
+// ── Bare-payment-mention detection (F47, used by the AL001 → Caso 4 pivot) ──
+//
+// Topic classifier (rule #6 tracked exemption — fast-path before the LLM).
+// Returns true when the customer mentions that they HAVE paid, regardless
+// of whether they also state a failure. Stricter siblings:
+//   - `detectPaidNotActivatedIntent` (Caso 4 trigger from a cold start) needs
+//     BOTH payment + failure signals because a generic "he pagado" outside
+//     any troubleshooting context is too ambiguous to divert into Caso 4.
+//   - `detectPaymentMention` (this function) only needs the payment signal:
+//     the caller is already in a troubleshooting flow (AL001 / Caso 5) and
+//     uses `activeFlowId` as the gate. In that context the failure is
+//     IMPLICIT from the trigger that started the flow.
+//
+// Negation is explicitly excluded: "no he pagado" / "non ho pagato" /
+// "I haven't paid" / "n'ai pas payé" → false. Past participle / preterite
+// only — promises ("voy a pagar") don't count.
+//
+// Multi-language coverage: es, it, en, pt, ca, fr (Iron rule #8).
+export function detectPaymentMention(message: string): boolean {
+  const lower = message.toLowerCase().trim()
+  if (!lower) return false
+
+  // Negation guard: the payment is denied or has not happened yet.
+  // ES "no he pagado", IT "non ho pagato", EN "haven't paid" / "did not pay",
+  // PT "não paguei" / "não pagué", CA "no he pagat", FR "n'ai pas payé".
+  // Trailing-accent words like "payé" trip the ASCII-only \b: we use a manual
+  // word-end lookahead `(?=\s|[!?.,;]|$)` for the FR / accented patterns.
+  if (
+    /\bno\s+he\s+pagad[oa]\b/i.test(lower) ||
+    /\bno\s+pagu[eé]\b/i.test(lower) ||
+    /\bnon\s+ho\s+pagat[oa]\b/i.test(lower) ||
+    /\b(?:haven'?t|have\s+not|did\s+not|didn'?t)\s+paid\b/i.test(lower) ||
+    /\bn[ãa]o\s+(?:paguei|pagei|tenho\s+pago)\b/i.test(lower) ||
+    /\bno\s+he\s+pagat\b/i.test(lower) ||
+    /\bn'?ai\s+pas\s+pay[eé]e?(?=\s|[!?.,;]|$)/i.test(lower)
+  ) {
+    return false
+  }
+
+  // Past forms (participio / preterite) only — promises don't qualify.
+  return (
+    // ES: "he pagado", "ya he pagado", "pagué", "pagado", "pagada"
+    /\bhe\s+pagado\b/i.test(lower) ||
+    /\bpagu[eé](?=\s|[!?.,;]|$)/i.test(lower) ||
+    /\bpagad[oa]\b/i.test(lower) ||
+    // IT: "ho pagato", "ho già pagato", "pagato", "pagata"
+    /\bho\s+(?:gi[àa]\s+)?pagat[oa]\b/i.test(lower) ||
+    /(?:^|\s)pagat[oa](?=\s|[!?.,;]|$)/i.test(lower) ||
+    // EN: "I paid", "I've paid", "I have paid", "have paid"
+    /\bi(?:\s+have|'ve|\s+'?ve)?\s+paid\b/i.test(lower) ||
+    /\bhave\s+paid\b/i.test(lower) ||
+    // PT: "paguei", "já paguei", "pago" (past participle in "tenho pago")
+    /\b(?:j[áa]\s+)?paguei\b/i.test(lower) ||
+    /\btenho\s+pago\b/i.test(lower) ||
+    // CA: "he pagat", "ja he pagat", "pagat"
+    /\b(?:ja\s+)?he\s+pagat\b/i.test(lower) ||
+    /(?:^|\s)pagat(?=\s|[!?.,;]|$)/i.test(lower) ||
+    // FR: "j'ai payé", "ai payé", "payé", "payée"
+    /\b(?:j'?ai|ai)\s+pay[eé]e?\b/i.test(lower) ||
+    /(?:^|\s)pay[eé]e?(?=\s|[!?.,;]|$)/i.test(lower)
+  )
+}
+
 // ── FAQ-pause detection (Caso 32.3) ───────────────────────────────────────────
 //
 // Boundary signal — rule #6: detects when the customer interrupts an active

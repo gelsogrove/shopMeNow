@@ -105,6 +105,36 @@ export const tests: TestCase[] = [
     },
   },
 
+  // ── Scenario 8.3 — F46: customer repeats a code in the name field ──────
+  // Real chat (Andrea, 2026-05-12): after the bot asked "¿Cuál es tu nombre?",
+  // the customer typed "SAU2904266" (another discount code, not a name).
+  // Pre-F46 the validator accepted it and advanced; post-F46 the validator
+  // composes `looksLikeDiscountCode(prefix='SAU')` to refuse code-shaped
+  // tokens. The guard `guardDiscountCodeAwaitName` keeps `pendingFlow`
+  // pinned to `discount-code-await-name` and re-asks until either a real
+  // name is captured (Conversación A) or the 3-strikes ladder escalates
+  // (Conversación B).
+  {
+    name: 'ES — Scenario 8.3 (F46): code in the name field → re-ask, then real name → continue',
+    run: async (ctx) => {
+      await ctx.send('Tengo un código y no sé cómo usarlo.')
+      await ctx.send('SAU2904266')
+      // Customer repeats the code instead of giving a name — must be rejected.
+      const reaskReply = await ctx.send('SAU2904266')
+      const reaskLower = reaskReply.toLowerCase()
+      // The bot should re-ask the name; must NOT advance to pueblo/numero/puerta.
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te|nombre/.test(reaskLower)) {
+        throw new Error(`Scenario 8.3: must re-ask the name, got: ${reaskReply}`)
+      }
+      if (/pueblo|n[uú]mero\s+de\s+m[aá]quina|puerta/.test(reaskLower)) {
+        throw new Error(`Scenario 8.3: must NOT advance the gather, got: ${reaskReply}`)
+      }
+      // Now the customer gives a real name → bot advances to pueblo.
+      const afterName = await ctx.send('Andrea')
+      expectMentionsAll(afterName, ['pueblo'])
+    },
+  },
+
   // ── Bug D regression — typo "teng un codigo" must trigger discount flow ─
   {
     // Real production chat (Andrea, 2026-05-09): customer typed "teng un codigo

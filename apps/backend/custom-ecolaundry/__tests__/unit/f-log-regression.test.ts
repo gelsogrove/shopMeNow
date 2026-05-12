@@ -43,6 +43,9 @@ import { markResolved } from '../../utils/state-transitions.js'
 import { createInitialState } from '../../utils/state.js'
 import { validateCustomerName } from '../../utils/customer-name.js'
 import { looksLikeDiscountCode } from '../../utils/discount-code-format.js'
+import { detectPaymentMention } from '../../utils/intent.js'
+import { pivotToNoChangeAsk } from '../../utils/state-transitions.js'
+import { autoExtractFacts } from '../../utils/agent-extract.js'
 import type { AgentRuntime } from '../../models/index.js'
 import { getCachedTestRuntime, loadTestRuntime } from './_helpers.js'
 import * as fs from 'fs'
@@ -468,6 +471,173 @@ const cases: Case[] = [
       if (r.valid !== true || r.name !== 'Andrea') {
         throw new Error(
           `F46: real names must still pass with the prefix option. Got: ${JSON.stringify(r)}`,
+        )
+      }
+    },
+  },
+
+  // ── F47 — AL001 → Caso 4 pivot when customer mentions payment ───────────
+  // Real chat (Andrea, 2026-05-12): AL001 flow active; customer says "He
+  // pagado y apretado…"; bot drifted because pivot was blocked by the
+  // `activeBranch !== 'trouble-machine'` check. Fix: bare-payment detector +
+  // semantic-flowId pivot in agent-extract.ts.
+  {
+    name: 'F47 — detectPaymentMention("He pagado y apretado el numero") === true (real chat marker)',
+    run: () => {
+      if (detectPaymentMention('He pagado y apretado el numero de la lavadora') !== true) {
+        throw new Error('F47: the bare payment signal must be detected without a failure verb')
+      }
+    },
+  },
+  {
+    name: 'F47 — detectPaymentMention("no he pagado") === false (negation guard)',
+    run: () => {
+      if (detectPaymentMention('no he pagado todavía') !== false) {
+        throw new Error('F47: negation must NOT trigger the bare-payment detector')
+      }
+    },
+  },
+  {
+    name: 'F47 — pivotToNoChangeAsk clears activeFlowId and arms pendingFlow=no-change-ask',
+    run: () => {
+      const ar = makeAr()
+      ar.state.activeFlowId = 'al001-sequence-error'
+      pivotToNoChangeAsk(ar)
+      if (ar.state.activeFlowId !== null) {
+        throw new Error('F47: pivot must clear activeFlowId')
+      }
+      if (ar.state.pendingFlow !== 'no-change-ask') {
+        throw new Error('F47: pivot must arm pendingFlow=no-change-ask')
+      }
+    },
+  },
+  {
+    name: 'F47 — autoExtractFacts on AL001 + "He pagado…" triggers the pivot end-to-end',
+    run: () => {
+      const ar = makeAr()
+      ar.state.activeFlowId = 'al001-sequence-error'
+      ar.state.activeBranch = 'trouble-machine'
+      ar.state.location = 'Pineda'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '3'
+      autoExtractFacts(ar, 'He pagado y apretado el numero de la lavadora')
+      if (ar.state.pendingFlow !== 'no-change-ask') {
+        throw new Error('F47: AL001 + payment signal must end up with pendingFlow=no-change-ask')
+      }
+      if (ar.state.activeFlowId !== null) {
+        throw new Error('F47: pivot must abandon the AL001 flow')
+      }
+    },
+  },
+  {
+    name: 'F47 — autoExtractFacts on Caso 3 SEL + "he pagado" must NOT pivot (Caso 3/SEL safety)',
+    run: () => {
+      const ar = makeAr()
+      ar.state.activeFlowId = 'sel-select-program' // non-AL001 display flow
+      ar.state.activeBranch = 'trouble-machine'
+      ar.state.location = 'Pineda'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '3'
+      autoExtractFacts(ar, 'He pagado pero no funciona')
+      if (ar.state.pendingFlow === 'no-change-ask') {
+        throw new Error('F47: non-AL001 display flows must NOT pivot — would break Caso 3/SEL gather')
+      }
+    },
+  },
+
+  // ── F48 — customer-facing machine-number prompt is generic, machineType preserved in state ──
+  // Real chat (Andrea, 2026-05-12): customer said "lavadora" → state captured
+  // washer ✓ → bot at T3 said "qué número tiene la secadora?" (rephrase LLM
+  // flip). Fix: i18n keys fused into generic `machineNumberAsk` ("máquina")
+  // + guards no longer select type-aware key. State.machineType preserved
+  // for operator briefing (escalation.ts interpolates from state).
+  {
+    name: 'F48 — i18n: machineNumberAsk is generic (no lavadora/secadora) in all 6 languages',
+    run: () => {
+      const langs = ['es', 'it', 'en', 'pt', 'ca', 'fr'] as const
+      const i18nDir = path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        'json',
+        'i18n',
+      )
+      for (const lang of langs) {
+        const content = JSON.parse(fs.readFileSync(path.join(i18nDir, `${lang}.json`), 'utf8'))
+        const text = content.machineNumberAsk
+        if (!text || typeof text !== 'string') {
+          throw new Error(`F48: ${lang}.json must define machineNumberAsk (generic key)`)
+        }
+        if (/lavadora|secadora|lavatrice|asciugatrice|washer|dryer|rentadora|assecadora|lave-linge|s[èe]che-linge/i.test(text)) {
+          throw new Error(`F48: ${lang}.json:machineNumberAsk MUST NOT contain type-specific terms: "${text}"`)
+        }
+      }
+    },
+  },
+  {
+    name: 'F48 — i18n: deprecated machineNumberWasher/Dryer keys are REMOVED in all 6 languages',
+    run: () => {
+      const langs = ['es', 'it', 'en', 'pt', 'ca', 'fr'] as const
+      const i18nDir = path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        'json',
+        'i18n',
+      )
+      for (const lang of langs) {
+        const content = JSON.parse(fs.readFileSync(path.join(i18nDir, `${lang}.json`), 'utf8'))
+        if ('machineNumberWasher' in content || 'machineNumberDryer' in content) {
+          throw new Error(`F48: ${lang}.json still has the deprecated type-aware keys — fix not applied`)
+        }
+      }
+    },
+  },
+  {
+    name: 'F48 — code: no guards select type-aware key for machine number ask',
+    run: () => {
+      const guardsDir = path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        'utils',
+        'guards',
+      )
+      const files = ['force-gather.ts', 'payment-double-charge.ts']
+      for (const file of files) {
+        const content = fs.readFileSync(path.join(guardsDir, file), 'utf8')
+        // The pattern that selected the type-aware key — must be gone.
+        if (/machineType\s*===\s*'dryer'\s*\?\s*'machineNumberDryer'/.test(content)) {
+          throw new Error(
+            `F48: guards/${file} still selects machineNumberWasher/Dryer based on type. Fix reverted.`,
+          )
+        }
+        // Must reference the new generic key at least once (in the files that
+        // ask for the number — both do).
+        if (!/machineNumberAsk/.test(content)) {
+          throw new Error(`F48: guards/${file} must reference 'machineNumberAsk'`)
+        }
+      }
+    },
+  },
+  {
+    name: 'F48 — operator briefing still interpolates machineType from state (no regression)',
+    run: () => {
+      // The architectural guarantee: customer-facing is generic, BUT the
+      // operator briefing must still produce the type-specific term from
+      // state. The check below ensures escalation.ts keeps the interpolation.
+      const escPath = path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        'utils',
+        'escalation.ts',
+      )
+      const content = fs.readFileSync(escPath, 'utf8')
+      const matches = content.match(/machineType\s*===\s*'dryer'\s*\?\s*'secadora'\s*:\s*'lavadora'/g) || []
+      if (matches.length < 4) {
+        throw new Error(
+          `F48: escalation.ts must keep at least 4 interpolations of machineType → 'lavadora'/'secadora' (operator briefing). Found ${matches.length}.`,
         )
       }
     },

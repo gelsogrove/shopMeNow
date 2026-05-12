@@ -125,4 +125,45 @@ export const tests: TestCase[] = [
       expectMentionsAll(final, ['Carlos', "L'Escala", '3', 'AL001'])
     },
   },
+
+  // ── Scenario 5.4 — F47: AL001 + customer mentions payment → pivot Caso 4 ─
+  // Real chat (Andrea, 2026-05-12): customer in AL001 flow said "He pagado y
+  // apretado el numero…" → bot drifted because no deterministic pivot. Fix:
+  // `detectPaymentMention` + `pivotToNoChangeAsk` + agent-extract.ts branch.
+  // Once pivoted, Caso 4.2 guards take over: "Sí" to "¿cambio devuelto?" →
+  // immediate escalation.
+  {
+    name: 'ES — Scenario 5.4 (F47): AL001 + "He pagado" → pivot Caso 4 → "Sí" cambio → escalate',
+    run: async (ctx) => {
+      await ctx.send('AL001')
+      await ctx.send('Pineda')
+      await ctx.send('Lavadora')
+      await ctx.send('3')
+      // Customer reveals payment → pivot should arm Caso 4 deterministically.
+      const cambioAsk = await ctx.send('He pagado y apretado el numero de la lavadora')
+      const cambioLower = cambioAsk.toLowerCase()
+      // The bot must ask about "cambio" (Caso 4 entry), NOT improvise display reask.
+      if (!/cambio|central\s+te\s+ha\s+devuelto/.test(cambioLower)) {
+        throw new Error(`Scenario 5.4: bot must ask about cambio devuelto, got: ${cambioAsk}`)
+      }
+      if (/pantalla|aparece|escrib.*c[oó]digo/.test(cambioLower)) {
+        throw new Error(`Scenario 5.4: bot must NOT bounce display reask after the pivot, got: ${cambioAsk}`)
+      }
+      // "Sí" cambio devuelto → Caso 4.2 escalates immediately.
+      const escalateReply = await ctx.send('Sí')
+      const escalateLower = escalateReply.toLowerCase()
+      if (!/te\s+llamas|tu\s+nombre|c[oó]mo\s+te/.test(escalateLower)) {
+        throw new Error(`Scenario 5.4: bot must ask the name on "Sí" cambio (Caso 4.2): ${escalateReply}`)
+      }
+      // Final closure.
+      const final = await ctx.send('Andrea')
+      const finalLower = final.toLowerCase()
+      if (!/desactivado/.test(finalLower)) {
+        throw new Error(`Scenario 5.4 final: must contain "desactivado": ${final}`)
+      }
+      if (!/operador/.test(finalLower)) {
+        throw new Error(`Scenario 5.4 final: must mention "operador": ${final}`)
+      }
+    },
+  },
 ]
