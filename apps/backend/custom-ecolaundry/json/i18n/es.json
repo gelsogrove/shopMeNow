@@ -53,7 +53,7 @@
   "discountCodeAskDoor": "¿La tienes cargada y con la puerta cerrada?",
   "discountCodeFinalEscalate": "Dame un minuto, hacemos las comprobaciones correspondientes. Si el código es correcto, te activaremos la máquina.",
   "discountCodeFormatInvalid": "El código no encaja con el formato esperado, vamos a revisarlo manualmente.",
-  "discountCodeFormatRetry": "Ese código no encaja con el formato que esperamos (3 letras + fecha + importe, p. ej. SAU2904266). ¿Podrías comprobarlo y escribírmelo de nuevo, por favor?",
+  "discountCodeFormatRetry": "Ese código no encaja con el formato que esperamos. ¿Podrías comprobarlo y escribírmelo de nuevo, por favor?",
   "al001GuideRetry": "Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Te ayudo a completarlo: dime qué has hecho justo antes de que apareciera.",
   "al001Resolved": "✅ ¡Perfecto, incidencia resuelta! 🎉 ¿Necesitas algo más?",
   "noChangeResolved": "✅ ¡Perfecto, ya estaría resuelto! 🎉 ¿Necesitas algo más?",

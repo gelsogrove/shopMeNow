@@ -53,7 +53,7 @@
   "discountCodeAskDoor": "La tens carregada i amb la porta tancada?",
   "discountCodeFinalEscalate": "Dóna'm un minut, fem les comprovacions. Si el codi és correcte, t'activarem la màquina. 🙂",
   "discountCodeFormatInvalid": "El codi no encaixa amb el format esperat, ho revisarem manualment.",
-  "discountCodeFormatRetry": "Aquest codi no encaixa amb el format que esperem (3 lletres + data + import, p. ex. SAU2904266). Podries comprovar-lo i escriure-me'l de nou, si us plau?",
+  "discountCodeFormatRetry": "Aquest codi no encaixa amb el format que esperem. Podries comprovar-lo i escriure-me'l de nou, si us plau?",
   "al001GuideRetry": "Aquest avís acostuma a aparèixer quan el procés no s'ha fet en l'ordre correcte. T'ajudo a completar-lo: digues-me què has fet just abans que aparegués.",
   "al001Resolved": "Perfecte, incidència resolta. Necessites res més?",
   "noChangeResolved": "Perfecte, ja estaria resolt. Necessites res més?",

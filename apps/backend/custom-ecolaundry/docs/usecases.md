@@ -662,7 +662,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 **Criterios de aceptación:**
 1. El bot pide SOLO el código (no lavandería ni tipo en el mismo turno).
-2. Validación formato: `^<prefix>\d{6}\d+$` (prefijo + DDMMYY + importe). El **prefijo es config-driven** por tenant — `settings.discountCodePrefix` en `json/settings.json` (default Ecolaundry: `SAU`). `validateSettings` falla al boot si el prefijo falta o no es uppercase letters-only. El mismo prefijo se pasa a `validateCustomerName` para que un código (p. ej. `SAU2904266`) NO sea aceptado como nombre del cliente (F46).
+2. Validación formato: `^<prefix>(\d{2})(\d{2})(\d{2})(\d{1,2})$` (prefijo + DDMMYY + importe 1-2 dígitos). Adicional: `dd ∈ 01..31` y `mm ∈ 01..12` (saneamiento de fecha). El **prefijo es config-driven** por tenant — `settings.discountCodePrefix` en `json/settings.json` (default Ecolaundry: `SAU`). `validateSettings` falla al boot si el prefijo falta o no es uppercase letters-only. El mismo prefijo se pasa a `validateCustomerName` para que un código (p. ej. `SAU2904266`) NO sea aceptado como nombre del cliente (F46).
 3. Si formato válido, recoge: nombre → pueblo → número → puerta.
 4. Escala siempre al operador para activación remota.
 
@@ -702,7 +702,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves?
 
 **Usuario:** AB12345  
-**Bot:** Ese código no encaja con el formato que esperamos (3 letras + fecha + importe, p. ej. SAU2904266). ¿Podrías comprobarlo y escribírmelo de nuevo?
+**Bot:** Ese código no encaja con el formato que esperamos. ¿Podrías comprobarlo y escribírmelo de nuevo?
 
 **Usuario:** XYZ123  
 **Bot:** El código no encaja con el formato esperado, vamos a revisarlo manualmente. ¿Cómo te llamas?

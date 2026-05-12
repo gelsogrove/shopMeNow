@@ -50,7 +50,7 @@
   "discountCodeAskDoor": "L'hai caricata e con la porta chiusa?",
   "discountCodeFinalEscalate": "Dammi un minuto, facciamo le verifiche del caso. Se il codice è corretto, ti attiveremo la macchina. 🙂",
   "discountCodeFormatInvalid": "Il codice non corrisponde al formato previsto, lo verifichiamo manualmente.",
-  "discountCodeFormatRetry": "Quel codice non corrisponde al formato che ci aspettiamo (3 lettere + data + importo, ad es. SAU2904266). Potresti controllarlo e scrivermelo di nuovo, per favore?",
+  "discountCodeFormatRetry": "Quel codice non corrisponde al formato che ci aspettiamo. Potresti controllarlo e scrivermelo di nuovo, per favore?",
   "al001GuideRetry": "Questo avviso di solito appare quando il processo non è stato fatto nell'ordine corretto. Ti aiuto a completarlo: dimmi cosa hai fatto subito prima che apparisse.",
   "al001Resolved": "Perfetto, problema risolto. Ti serve altro?",
   "noChangeResolved": "Perfetto, problema risolto. Ti serve altro?",

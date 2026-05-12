@@ -66,7 +66,7 @@ check('rejects object', { name: 'Andrea' }, false)
 const sau: ValidateCustomerNameOptions = { discountCodePrefix: 'SAU' }
 
 check('F46 — rejects "SAU2904266" when prefix=SAU (real chat case)', 'SAU2904266', false, undefined, sau)
-check('F46 — rejects "SAU2904266636363" (long amount tail)', 'SAU2904266636363', false, undefined, sau)
+check('F46 — rejects "SAU29042612" (valid code, 2-digit importe)', 'SAU29042612', false, undefined, sau)
 // Customer typed the code in lowercase: validator first-word normaliser is
 // case-insensitive via looksLikeDiscountCode (uppercases internally).
 check('F46 — rejects "sau2904266" (lowercase variant of the real chat case)', 'sau2904266', false, undefined, sau)

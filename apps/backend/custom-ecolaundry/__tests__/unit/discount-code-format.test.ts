@@ -90,11 +90,11 @@ console.log('\nparseDiscountCode — happy path (prefix SAU)')
   )
 }
 {
-  // From the production chat: long amount tail still valid per the spec.
-  const r = parseDiscountCode('SAU2904266636363', 'SAU')
+  // Importe to 2 digits (Andrea: "puo' essere o a una cifra o a due cifre").
+  const r = parseDiscountCode('SAU29042612', 'SAU')
   check(
-    'SAU2904266636363 → parsed (importe=6636363, multi-digit tail)',
-    r !== null && r.importe === '6636363',
+    'SAU29042612 → parsed (importe=12, two-digit amount)',
+    r !== null && r.importe === '12',
     `got: ${JSON.stringify(r)}`,
   )
 }
@@ -134,7 +134,7 @@ console.log('\nparseDiscountCode — happy path (prefix SAU)')
 }
 
 // ── parseDiscountCode — rejections ───────────────────────────────────────
-console.log('\nparseDiscountCode — rejections')
+console.log('\nparseDiscountCode — rejections (shape mismatch)')
 check('null on wrong prefix length "SA2904266" (2 letters)', parseDiscountCode('SA2904266', 'SAU') === null)
 check('null on wrong prefix "ABC2904266" when tenant is SAU', parseDiscountCode('ABC2904266', 'SAU') === null)
 check('null on missing date digits "SAU29046"', parseDiscountCode('SAU29046', 'SAU') === null)
@@ -143,6 +143,33 @@ check('null on digits-only "2904266"', parseDiscountCode('2904266', 'SAU') === n
 check('null on empty string', parseDiscountCode('', 'SAU') === null)
 check('null on plain customer name "Andrea"', parseDiscountCode('Andrea', 'SAU') === null)
 check('null on "Luis Pérez" (two-word name with accent)', parseDiscountCode('Luis Pérez', 'SAU') === null)
+
+// ── parseDiscountCode — rejections (Andrea constraints F46) ──────────────
+// Importe constrained to 1-2 digits (euros, not millions). Real chat case:
+// SAU2904266636363 was previously parsed as importe=6636363 → fix.
+console.log('\nparseDiscountCode — rejections (importe length / date sanity)')
+check(
+  'null on SAU2904266636363 (importe > 2 digits — real chat regression)',
+  parseDiscountCode('SAU2904266636363', 'SAU') === null,
+)
+check(
+  'null on SAU290426123 (importe = 3 digits, just over the cap)',
+  parseDiscountCode('SAU290426123', 'SAU') === null,
+)
+// Calendar sanity: dd ∈ 01..31, mm ∈ 01..12.
+check('null on SAU3204266 (dd=32 invalid)', parseDiscountCode('SAU3204266', 'SAU') === null)
+check('null on SAU0004266 (dd=00 invalid)', parseDiscountCode('SAU0004266', 'SAU') === null)
+check('null on SAU0113266 (mm=13 invalid)', parseDiscountCode('SAU0113266', 'SAU') === null)
+check('null on SAU0100266 (mm=00 invalid)', parseDiscountCode('SAU0100266', 'SAU') === null)
+// Boundary OK: dd=31, mm=12 must still parse.
+{
+  const r = parseDiscountCode('SAU3112269', 'SAU')
+  check(
+    'SAU3112269 → parsed (dd=31, mm=12 boundary OK)',
+    r !== null && r.fechaIso === '2026-12-31' && r.importe === '9',
+    `got: ${JSON.stringify(r)}`,
+  )
+}
 
 // ── parseDiscountCode — different tenant prefix ──────────────────────────
 console.log('\nparseDiscountCode — alternate tenant prefix')
@@ -162,7 +189,12 @@ check(
 // ── looksLikeDiscountCode — the F46 hook for the name validator ──────────
 console.log('\nlooksLikeDiscountCode — used by validateCustomerName (F46)')
 check('true for "SAU2904266" (the real chat case)', looksLikeDiscountCode('SAU2904266', 'SAU') === true)
-check('true for "SAU2904266636363" (long amount tail)', looksLikeDiscountCode('SAU2904266636363', 'SAU') === true)
+check('true for "SAU29042612" (two-digit amount)', looksLikeDiscountCode('SAU29042612', 'SAU') === true)
+// Post-F46 the 7-digit tail no longer qualifies as a code → returns false.
+// The discount-code guard rejects it for format and re-asks; the name
+// validator no longer needs to refuse it via this path. Plain alphanumeric
+// names like "Andrea" remain accepted as before.
+check('false for "SAU2904266636363" (importe > 2 digits, not a valid code)', looksLikeDiscountCode('SAU2904266636363', 'SAU') === false)
 check('false for "Andrea" (plain ES name)', looksLikeDiscountCode('Andrea', 'SAU') === false)
 check('false for "Luis" (plain ES name)', looksLikeDiscountCode('Luis', 'SAU') === false)
 check('false for "Marco" (plain IT name)', looksLikeDiscountCode('Marco', 'SAU') === false)
