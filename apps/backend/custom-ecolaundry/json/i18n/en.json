@@ -42,7 +42,7 @@
   "unknownDisplayEscalate": "Code {display} requires manual review. We'll pass your case for review to help you properly.",
   "code001Explain": "Got it. This message can appear when the program was selected before payment and the state didn't reset properly.",
   "code001Escalate": "We'll review it manually to help you in the best way possible.",
-  "discountCodeAsk": "I'll help you. Tell me the exact code as you see it, including any letters.",
+  "discountCodeAsk": "I'll help you. Tell me the exact code as you see it.",
   "discountCodeAskName": "Thanks. What's your name?",
   "discountCodeAskLocation": "Which town / laundry do you want to use it at?",
   "discountCodeAskMachineNumber": "Which machine number do you want to use?",

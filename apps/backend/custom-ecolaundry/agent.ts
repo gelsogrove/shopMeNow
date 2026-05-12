@@ -201,7 +201,21 @@ async function applyGuardOutcome(
   // we see the bullet+bold pattern. Detection: at least one line starting
   // with "- **" (markdown bullet + bold marker).
   const hasFormattedBulletList = /\n-\s+\*\*/.test(reply)
-  if (!isT1Welcome && !isInvoiceFlow && !hasFormattedBulletList && ar.runtime.settings?.naturalRephrase) {
+  // F49 — Andrea 2026-05-12: bypass rephrase for the discount-code ask turn
+  // (`discount-code-ask`). Source i18n is `"¿Podrías indicarme, por favor, el
+  // código exacto tal como lo ves?"` (clean post-F46) but the rephrase LLM
+  // kept appending "incluyendo letras si las hay" autonomously — same F32-F41
+  // pattern where the rephrase "naturalizes" by adding invented detail.
+  // Deterministic bypass: when emitting the discount-code-ask reply, skip
+  // rephrase. The i18n source IS the UX.
+  const isDiscountCodeAsk = outcome.reason === 'discount-code-ask'
+  if (
+    !isT1Welcome &&
+    !isInvoiceFlow &&
+    !hasFormattedBulletList &&
+    !isDiscountCodeAsk &&
+    ar.runtime.settings?.naturalRephrase
+  ) {
     reply = await rephraseForTurn(reply, ar, history)
   }
   history.push({ role: 'user', content: userMessage })

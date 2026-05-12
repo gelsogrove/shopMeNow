@@ -45,7 +45,7 @@
   "unknownDisplayEscalate": "El codi {display} requereix revisió manual. Passarem el teu cas a revisió per ajudar-te de la millor manera.",
   "code001Explain": "D'acord. Aquest missatge pot aparèixer quan el programa s'ha seleccionat abans del pagament i l'estat no s'ha reiniciat correctament.",
   "code001Escalate": "Ho revisarem manualment per ajudar-te de la millor manera possible.",
-  "discountCodeAsk": "T'ajudo. Digue'm el codi exacte tal com el veus, incloent les lletres si n'hi ha.",
+  "discountCodeAsk": "T'ajudo. Digue'm el codi exacte tal com el veus.",
   "discountCodeAskName": "Gràcies. Quin és el teu nom?",
   "discountCodeAskLocation": "A quin poble / bugaderia el vols fer servir?",
   "discountCodeAskMachineNumber": "Quin número de màquina vols fer servir?",

@@ -42,7 +42,7 @@
   "unknownDisplayEscalate": "Il codice {display} richiede una revisione manuale. Passeremo il tuo caso in revisione per aiutarti al meglio.",
   "code001Explain": "Va bene. Questo messaggio può apparire quando il programma è stato selezionato prima del pagamento e lo stato non si è reimpostato correttamente.",
   "code001Escalate": "Verifichiamo manualmente per aiutarti al meglio.",
-  "discountCodeAsk": "Ti aiuto. Dimmi il codice esatto come lo vedi, comprese le lettere se ci sono.",
+  "discountCodeAsk": "Ti aiuto. Dimmi il codice esatto come lo vedi.",
   "discountCodeAskName": "Grazie. Come ti chiami?",
   "discountCodeAskLocation": "In quale paese / lavanderia vuoi usarlo?",
   "discountCodeAskMachineNumber": "Quale numero di macchina vuoi usare?",

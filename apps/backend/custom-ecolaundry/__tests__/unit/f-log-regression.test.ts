@@ -620,6 +620,63 @@ const cases: Case[] = [
       }
     },
   },
+  // ── F49 — discount-code-ask turn bypasses the rephrase LLM ─────────────
+  // Real chat (Andrea, 2026-05-12): rephrase kept appending "incluyendo
+  // letras si las hay" even after the source i18n was cleaned. The
+  // architectural fix: deterministic bypass for the discount-code-ask
+  // turn (pattern F35 invoice / F41 bullet+bold). The customer sees the
+  // source i18n verbatim — no rephrase invention.
+  {
+    name: 'F49 — agent.ts contains isDiscountCodeAsk bypass for the rephrase pipeline',
+    run: () => {
+      const agentPath = path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        'agent.ts',
+      )
+      const content = fs.readFileSync(agentPath, 'utf8')
+      if (!/isDiscountCodeAsk\s*=\s*outcome\.reason\s*===\s*'discount-code-ask'/.test(content)) {
+        throw new Error('F49: agent.ts must define `isDiscountCodeAsk = outcome.reason === \'discount-code-ask\'`')
+      }
+      if (!/!isDiscountCodeAsk/.test(content)) {
+        throw new Error('F49: rephrase guard must include `!isDiscountCodeAsk` in its condition')
+      }
+    },
+  },
+  {
+    name: 'F49 — i18n discountCodeAsk does NOT contain "incluyendo letras si las hay" (or analogues)',
+    run: () => {
+      const langs = ['es', 'it', 'en', 'pt', 'ca', 'fr'] as const
+      const i18nDir = path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        'json',
+        'i18n',
+      )
+      const forbidden = [
+        /incluyendo\s+letras\s+si\s+las\s+hay/i,
+        /comprese\s+le\s+lettere\s+se\s+ci\s+sono/i,
+        /including\s+any\s+letters/i,
+        /incluindo\s+letras\s+se\s+as\s+houver/i,
+        /incloent\s+les\s+lletres\s+si\s+n['’]hi\s+ha/i,
+        /lettres\s+comprises\s+s['’]il\s+y\s+en\s+a/i,
+      ]
+      for (const lang of langs) {
+        const content = JSON.parse(fs.readFileSync(path.join(i18nDir, `${lang}.json`), 'utf8'))
+        const text: string | undefined = content.discountCodeAsk
+        if (!text) {
+          throw new Error(`F49: ${lang}.json must define discountCodeAsk`)
+        }
+        for (const re of forbidden) {
+          if (re.test(text)) {
+            throw new Error(`F49: ${lang}.json:discountCodeAsk reintroduced the forbidden "letters if any" wording: "${text}"`)
+          }
+        }
+      }
+    },
+  },
   {
     name: 'F48 — operator briefing still interpolates machineType from state (no regression)',
     run: () => {

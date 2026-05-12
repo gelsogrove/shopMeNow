@@ -726,7 +726,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Conversación:**
 
 **Usuario:** Tengo un código y no sé cómo usarlo  
-**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves, incluyendo letras si las hay?
+**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves?
 
 **Usuario:** SAU2904266  
 **Bot:** ¡Gracias! ¿Cuál es tu nombre?
@@ -781,7 +781,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Conversación A — recuperado al re-ask:**
 
 **Usuario:** Tengo un código  
-**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves, incluyendo letras si las hay?
+**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves?
 
 **Usuario:** SAU2904266  
 **Bot:** ¡Gracias! ¿Cuál es tu nombre?
