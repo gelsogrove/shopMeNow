@@ -248,6 +248,48 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
     }
   }
 
+  // Location switch in FAQ context (Caso 12 — Andrea 2026-05-14).
+  //
+  // Scope: NARROW — fires only when state.lastResolvedIntent === 'faq' or
+  // pendingFlow starts with 'faq-'. We deliberately do NOT widen this to
+  // trouble flows (Casi 1-7, 13-17): there an accidental location word
+  // would silently swap laundries mid-troubleshoot.
+  //
+  // Use case: customer just got prices/hours for one location and asks
+  // about another in the next breath ("e a Playa d'aro?", "en L'Escala?").
+  // Without this, state.location is sticky and the bot re-renders the old
+  // location's data forever (Andrea's loop bug).
+  //
+  // Override only when:
+  //   - in FAQ context (see above)
+  //   - the message contains an EXPLICIT preposition pattern via
+  //     extractExplicitLocation (not a bare token)
+  //   - the resolved location differs from state.location
+  if (
+    state.location &&
+    (state.lastResolvedIntent === 'faq' ||
+      state.pendingFlow === 'faq-prices-await-dryer-confirm' ||
+      state.pendingFlow === 'faq-prices-await-location' ||
+      state.pendingFlow === 'faq-hours-await-location')
+  ) {
+    const explicitSwitch = extractExplicitLocation(trimmed)
+    if (explicitSwitch) {
+      const resolved =
+        resolveKnownLocation(explicitSwitch) || resolveKnownLocationFuzzy(explicitSwitch)
+      if (resolved && resolved !== state.location) {
+        state.location = resolved
+        // Re-arm pendingFlow for the FAQ sub-state so the next guard pass
+        // renders the new location's data. Without this, the stale
+        // dryer-confirm flag could block re-render.
+        if (state.pendingFlow === 'faq-prices-await-dryer-confirm') {
+          // Customer pivoted from "see dryers in old loc" to "what about new loc"
+          // → fresh prices flow on new loc.
+          state.pendingFlow = ''
+        }
+      }
+    }
+  }
+
   // Location — first try explicit pattern ("estoy en Goya"), then standalone
   // input ("Goya"). Resolve against known locations.json keys; if the
   // customer types an unknown city/name (e.g. "Girona"), do NOT set the
@@ -295,14 +337,20 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   }
 
   // Machine type — extract whenever the message explicitly names one.
-  // Cumulative semantics (R4): if the customer types a recognised machine
-  // word (washer/dryer/typo) we update state.machineType. The LLM owns
-  // intent: if the customer is switching machines mid-conversation, the
-  // LLM calls mark_resolved on the previous case first; the post-
-  // resolution reset above clears stale facts before this point.
-  if (!state.machineType) {
-    const mt = normalizeMachineType(trimmed)
-    if (mt) state.machineType = mt
+  //
+  // F55 (Andrea 2026-05-15, narrow FAQ-context override — mirror of F51 for
+  // location): default first-set-wins is conservative to avoid mid-trouble
+  // flips ("ah no scusa la secadora"). BUT after a FAQ resolution the type
+  // can be stale (e.g. FAQ asciugare set machineType='dryer'; customer then
+  // says "mi lavadora no funciona" → must flip to 'washer'). Allow override
+  // ONLY when no active flow is running AND we just came from a FAQ context.
+  const newType = normalizeMachineType(trimmed)
+  const inActiveFlow = state.pendingFlow || state.activeFlowId
+  const cameFromFaq = state.lastResolvedIntent === 'faq'
+  if (state.machineType && newType && newType !== state.machineType && !inActiveFlow && cameFromFaq) {
+    state.machineType = newType
+  } else if (!state.machineType && newType) {
+    state.machineType = newType
   }
 
   // Machine number — extract on first mention. Two patterns:

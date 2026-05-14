@@ -19,7 +19,10 @@ import {
   detectPaidNotActivatedIntent,
   detectIDontKnowReply,
   detectFaqPause,
+  detectHoursIntent,
   detectInvoiceIntent,
+  detectMachineTypeMention,
+  detectPriceIntent,
   detectLanguageHeuristic,
   detectTopicSwitchDuringEscalation,
   extractDisplayLabel,
@@ -1624,6 +1627,246 @@ const cases: Case[] = [
     name: 'detectTopicSwitch: empty → false',
     run: () => {
       if (detectTopicSwitchDuringEscalation('')) throw new Error('empty must NOT match')
+    },
+  },
+
+  // ── detectHoursIntent (Caso 12.1 — Andrea 2026-05-14) ────────────────────
+  {
+    name: 'detectHoursIntent ES: "¿Cuáles son los horarios?" → true',
+    run: () => {
+      if (!detectHoursIntent('¿Cuáles son los horarios?')) throw new Error('canonical ES must match')
+    },
+  },
+  {
+    name: 'detectHoursIntent ES: "¿hasta qué hora están abiertos?" → true',
+    run: () => {
+      if (!detectHoursIntent('¿hasta qué hora están abiertos?')) throw new Error('hasta qué hora must match')
+    },
+  },
+  {
+    name: 'detectHoursIntent ES: "cuándo abren" → true',
+    run: () => {
+      if (!detectHoursIntent('cuándo abren')) throw new Error('cuándo abren must match')
+    },
+  },
+  {
+    name: 'detectHoursIntent IT: "che orario fate?" → true',
+    run: () => {
+      if (!detectHoursIntent('che orario fate?')) throw new Error('IT must match')
+    },
+  },
+  {
+    name: 'detectHoursIntent EN: "what are your opening hours?" → true',
+    run: () => {
+      if (!detectHoursIntent('what are your opening hours?')) throw new Error('EN must match')
+    },
+  },
+  {
+    name: 'detectHoursIntent PT: "qual o horário?" → true',
+    run: () => {
+      if (!detectHoursIntent('qual o horário?')) throw new Error('PT must match')
+    },
+  },
+  {
+    name: 'detectHoursIntent CA: "quins horaris feu?" → true',
+    run: () => {
+      if (!detectHoursIntent('quins horaris feu?')) throw new Error('CA must match')
+    },
+  },
+  {
+    name: 'detectHoursIntent FR: "quels horaires?" → true',
+    run: () => {
+      if (!detectHoursIntent('quels horaires?')) throw new Error('FR must match')
+    },
+  },
+  {
+    name: 'detectHoursIntent: unrelated "la lavadora no funciona" → false',
+    run: () => {
+      if (detectHoursIntent('la lavadora no funciona')) {
+        throw new Error('machine issue must NOT match hours intent')
+      }
+    },
+  },
+  {
+    name: 'detectHoursIntent: empty → false',
+    run: () => {
+      if (detectHoursIntent('')) throw new Error('empty must NOT match')
+    },
+  },
+
+  // ── detectPriceIntent (Caso 12.2 — Andrea 2026-05-14) ────────────────────
+  {
+    name: 'detectPriceIntent ES: "¿Cuánto cuesta la lavadora?" → true (canonical with accent)',
+    run: () => {
+      if (!detectPriceIntent('¿Cuánto cuesta la lavadora?')) throw new Error('canonical ES must match')
+    },
+  },
+  {
+    name: 'detectPriceIntent ES: "cuanto costa lavare la roba?" → true (no accent — F46 regression repair)',
+    run: () => {
+      if (!detectPriceIntent('cuanto costa lavare la roba?')) {
+        throw new Error('accent-stripped ES must match (real customer typing)')
+      }
+    },
+  },
+  {
+    name: 'detectPriceIntent ES: bare "precios" → true',
+    run: () => {
+      if (!detectPriceIntent('precios')) throw new Error('bare precios must match')
+    },
+  },
+  {
+    name: 'detectPriceIntent ES: "qué precio tiene?" → true',
+    run: () => {
+      if (!detectPriceIntent('qué precio tiene?')) throw new Error('qué precio must match')
+    },
+  },
+  {
+    name: 'detectPriceIntent IT: "quanto costa?" → true',
+    run: () => {
+      if (!detectPriceIntent('quanto costa?')) throw new Error('IT must match')
+    },
+  },
+  {
+    name: 'detectPriceIntent EN: "how much does it cost?" → true',
+    run: () => {
+      if (!detectPriceIntent('how much does it cost?')) throw new Error('EN must match')
+    },
+  },
+  {
+    name: 'detectPriceIntent PT: "qual é o preço?" → true',
+    run: () => {
+      if (!detectPriceIntent('qual é o preço?')) throw new Error('PT must match')
+    },
+  },
+  {
+    name: 'detectPriceIntent CA: "quin és el preu?" → true',
+    run: () => {
+      if (!detectPriceIntent('quin és el preu?')) throw new Error('CA must match')
+    },
+  },
+  {
+    name: 'detectPriceIntent FR: "combien ça coûte?" → true',
+    run: () => {
+      if (!detectPriceIntent('combien ça coûte?')) throw new Error('FR must match')
+    },
+  },
+  {
+    name: 'detectPriceIntent: unrelated "la lavadora no funciona" → false',
+    run: () => {
+      if (detectPriceIntent('la lavadora no funciona')) {
+        throw new Error('machine issue must NOT match price intent')
+      }
+    },
+  },
+  {
+    name: 'detectPriceIntent: empty → false',
+    run: () => {
+      if (detectPriceIntent('')) throw new Error('empty must NOT match')
+    },
+  },
+
+  // ── detectMachineTypeMention (Caso 12.2 helper) ──────────────────────────
+  {
+    name: 'detectMachineTypeMention ES: "lavadora" → washer',
+    run: () => {
+      const r = detectMachineTypeMention('cuánto cuesta la lavadora')
+      if (r !== 'washer') throw new Error(`expected washer, got ${r}`)
+    },
+  },
+  {
+    name: 'detectMachineTypeMention ES: "secadora" → dryer',
+    run: () => {
+      const r = detectMachineTypeMention('y la secadora?')
+      if (r !== 'dryer') throw new Error(`expected dryer, got ${r}`)
+    },
+  },
+  {
+    name: 'detectMachineTypeMention IT: "asciugatrice" → dryer',
+    run: () => {
+      const r = detectMachineTypeMention('quanto costa l\'asciugatrice')
+      if (r !== 'dryer') throw new Error(`expected dryer, got ${r}`)
+    },
+  },
+  {
+    name: 'detectMachineTypeMention EN: "dryer" → dryer',
+    run: () => {
+      const r = detectMachineTypeMention('how much for the dryer')
+      if (r !== 'dryer') throw new Error(`expected dryer, got ${r}`)
+    },
+  },
+  {
+    name: 'detectMachineTypeMention FR: "sèche-linge" → dryer',
+    run: () => {
+      const r = detectMachineTypeMention('combien pour le sèche-linge')
+      if (r !== 'dryer') throw new Error(`expected dryer, got ${r}`)
+    },
+  },
+  {
+    name: 'detectMachineTypeMention: no mention → null',
+    run: () => {
+      const r = detectMachineTypeMention('cuánto cuesta?')
+      if (r !== null) throw new Error(`expected null, got ${r}`)
+    },
+  },
+  {
+    name: 'detectMachineTypeMention: dryer wins over washer when both mentioned (order: dryer first)',
+    run: () => {
+      // "secadora" must win because it's more specific — generic "lavadora"
+      // routing happens later in renderPrices when no specific type is named.
+      const r = detectMachineTypeMention('la secadora y la lavadora')
+      if (r !== 'dryer') throw new Error(`expected dryer (specific wins), got ${r}`)
+    },
+  },
+
+  // ── F52 — detectMachineTypeMention recognises VERB forms (Andrea 2026-05-14) ──
+  {
+    name: 'F52 detectMachineTypeMention IT verb: "asciugare" → dryer',
+    run: () => {
+      const r = detectMachineTypeMention('ma quanto costa asciugare i vestiti?')
+      if (r !== 'dryer') throw new Error(`F52: IT "asciugare" must map to dryer, got ${r}`)
+    },
+  },
+  {
+    name: 'F52 detectMachineTypeMention IT verb: "lavare" → washer',
+    run: () => {
+      const r = detectMachineTypeMention('quanto costa lavare la roba?')
+      if (r !== 'washer') throw new Error(`expected washer for IT "lavare", got ${r}`)
+    },
+  },
+  {
+    name: 'F52 detectMachineTypeMention ES verb: "secar" → dryer',
+    run: () => {
+      const r = detectMachineTypeMention('cuánto cuesta secar la ropa?')
+      if (r !== 'dryer') throw new Error(`expected dryer for ES "secar", got ${r}`)
+    },
+  },
+  {
+    name: 'F52 detectMachineTypeMention ES verb: "lavar" → washer',
+    run: () => {
+      const r = detectMachineTypeMention('quiero lavar')
+      if (r !== 'washer') throw new Error(`expected washer for ES "lavar", got ${r}`)
+    },
+  },
+  {
+    name: 'F52 detectMachineTypeMention EN verb: "to dry" → dryer',
+    run: () => {
+      const r = detectMachineTypeMention('how much to dry clothes?')
+      if (r !== 'dryer') throw new Error(`expected dryer for EN "to dry", got ${r}`)
+    },
+  },
+  {
+    name: 'F52 detectMachineTypeMention FR verb: "sécher" → dryer',
+    run: () => {
+      const r = detectMachineTypeMention('combien pour sécher?')
+      if (r !== 'dryer') throw new Error(`expected dryer for FR "sécher", got ${r}`)
+    },
+  },
+  {
+    name: 'F52 detectMachineTypeMention: bare location string returns null (no verb in "Pineda")',
+    run: () => {
+      const r = detectMachineTypeMention('Pineda')
+      if (r !== null) throw new Error(`bare location must not match a machine verb: got ${r}`)
     },
   },
 

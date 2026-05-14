@@ -62,6 +62,14 @@ export type SessionState = {
     | null
   retryCount: number
   lastResolvedIntent: 'washer' | 'dryer' | 'faq' | 'operator' | 'reset' | 'greeting' | 'unknown' | null
+  /**
+   * Caso 12.2 — persists the machine-type the customer requested at the
+   * price-FAQ T1 ("quanto costa asciugare?") so that T2 (location reply)
+   * can render the right block. Cleared after the render lands.
+   * F52 — Andrea 2026-05-14: without this, customer asks for dryer prices,
+   * gives location, gets washer prices instead.
+   */
+  faqPricesType: 'washer' | 'dryer' | null
   escalationReason: string | null
   operatorRequested: boolean
   customerName: string | null
@@ -247,4 +255,7 @@ export type SessionState = {
     | 'invoice-ask-email'
     | 'invoice-ask-notes'
     | 'invoice-ask-name'
+    | 'faq-hours-await-location'
+    | 'faq-prices-await-location'
+    | 'faq-prices-await-dryer-confirm'
 }

@@ -2,15 +2,18 @@
   "_principle": "Per-location overrides. Loaded at runtime when the customer's location (pueblo + calle) is identified by the Router. The active location override is injected into the system prompt of the Specialist and Conversation History as 'ACTIVE LOCATION CONTEXT'. A single LLM handles all locations; behavior varies because the prompt context varies. Anything per-location can be overridden: metadata, FAQ answers, flow node prompts, escalation rules, machine-specific notes. Anti-hardcode rule: never branch on location name in code; always read from this file.",
   "_overrideTypes": {
     "metadata": "Static facts about the location (hours, prices, central type, returns change, has loyalty card, dryer filter self-service, AJAX restart possible, dryer minutes increase issue, self-start machine, needs street clarification, etc.). The ENTIRE metadata block is serialized into the system prompt of every LLM turn via buildLocationContext() (see utils/runtime.ts). The LLM reads these fields to give tenant-specific answers (price, hours, payment instructions, escalation triggers). Most fields are NOT referenced by TypeScript code — they are LLM knowledge, not dead code. Do NOT remove a metadata field just because grep finds zero references in *.ts files; always check the prompt injection path first.",
+    "machines": "Per-location inventory of physical machines (washers + dryers). Each entry has: number (e.g. 'L1', 'S5'), weightKg (capacity, null when unknown), fidelity (price with fidelity card), cash (price in cash). Dryers express price as 'X€/Nmin'. The LLM reads this list to answer 'cuánto cuesta la L3?' / 'qué máquinas hay aquí?' / 'cuál es la más grande?' without hardcoded branching. Source of truth: 'PESO/PRECIOS ALBERWAZ' table maintained by operations.",
+    "extras": "Optional per-location surcharges (e.g. extraAclarado, extraLavado for L'Escala and Platja d'Aro).",
+    "tpvCobra": "Optional fee charged by the TPV (card terminal) for non-fidelity payments, when applicable (e.g. Goya 7€, Pineda 8€).",
     "faqOverrides": "Map from FAQ key (matching faqs.json keys) to a location-specific answer that REPLACES the base FAQ answer when this location is active.",
     "flowOverrides": "Map from flow path 'flowFile.flowId.stepId' to partial step overrides (currently 'prompt'). The Flow Engine merges the override on top of the base step before rendering.",
     "escalationRules": "Array of rules { id, trigger, action, reason }. The Specialist LLM applies them when the trigger condition matches the current case. Action can be 'escalate', 'suggest_coins_or_escalate', or any documented action."
   },
   "locations": {
     "Goya": {
-      "pueblo": "Madrid",
-      "calle": "Calle Goya",
-      "displayName": "Calle Goya (Madrid)",
+      "pueblo": "Mataró",
+      "calle": "Carrer Francisco de Goya 117",
+      "displayName": "Goya",
       "metadata": {
         "hours": "8:00-22:00",
         "centralType": "buttons",
@@ -21,7 +24,21 @@
         "cardPaymentUnreliable": false,
         "ajaxRestartPossible": false,
         "dryerMinutesIncreaseIssue": false,
-        "selfStartMachine": true
+        "selfStartMachine": true,
+        "tpvCobra": "7€",
+        "machines": {
+          "washers": [
+            { "number": "L4", "weightKg": 20, "fidelity": "6,5€", "cash": "7€" },
+            { "number": "L5", "weightKg": 20, "fidelity": "6,5€", "cash": "7€" },
+            { "number": "L6", "weightKg": 10, "fidelity": "3,5€", "cash": "4€" },
+            { "number": "L7", "weightKg": 10, "fidelity": "3,5€", "cash": "4€" }
+          ],
+          "dryers": [
+            { "number": "S1", "weightKg": null, "fidelity": "2€/15min", "cash": "2€/15min" },
+            { "number": "S2", "weightKg": null, "fidelity": "2€/15min", "cash": "2€/15min" },
+            { "number": "S3", "weightKg": null, "fidelity": "2€/15min", "cash": "2€/15min" }
+          ]
+        }
       },
       "faqOverrides": {
         "buy-loyalty-card": "En Calle Goya (Madrid), la tarjeta de fidelidad se compra con 20€ en efectivo y se activa pulsando el segundo botón de la fila derecha de la central. Solo funciona en este local.",
@@ -55,7 +72,19 @@
         "cardPaymentUnreliable": false,
         "ajaxRestartPossible": false,
         "dryerMinutesIncreaseIssue": true,
-        "selfStartMachine": true
+        "selfStartMachine": true,
+        "tpvCobra": "8€",
+        "machines": {
+          "washers": [
+            { "number": "L1", "weightKg": 10, "fidelity": "4,5€", "cash": "5€" },
+            { "number": "L2", "weightKg": 15, "fidelity": "6€", "cash": "7€" },
+            { "number": "L3", "weightKg": 20, "fidelity": "7€", "cash": "8€" }
+          ],
+          "dryers": [
+            { "number": "S4", "weightKg": 20, "fidelity": "2€/15min", "cash": "2€/15min" },
+            { "number": "S5", "weightKg": 20, "fidelity": "2€/15min", "cash": "2€/15min" }
+          ]
+        }
       },
       "faqOverrides": {
         "loyaltyCard": "En Calle Pineda (Pineda de Mar), la tarjeta de fidelidad se compra con 20€ en efectivo y se activa pulsando el segundo botón de la fila derecha de la central. Solo funciona en este local."
@@ -94,7 +123,23 @@
         "cardPaymentUnreliable": false,
         "ajaxRestartPossible": false,
         "dryerMinutesIncreaseIssue": false,
-        "selfStartMachine": true
+        "selfStartMachine": true,
+        "machines": {
+          "washers": [
+            { "number": "L1", "weightKg": null, "fidelity": "6€", "cash": "6€" },
+            { "number": "L2", "weightKg": null, "fidelity": "6€", "cash": "6€" },
+            { "number": "L3", "weightKg": null, "fidelity": "9€", "cash": "9€" },
+            { "number": "L4", "weightKg": null, "fidelity": "9€", "cash": "9€" }
+          ],
+          "dryers": [
+            { "number": "S5", "weightKg": null, "fidelity": "3€/15min", "cash": "4€/20min", "extended": "5€/25min" },
+            { "number": "S6", "weightKg": null, "fidelity": "3€/15min", "cash": "4€/20min", "extended": "5€/25min" }
+          ]
+        },
+        "extras": {
+          "extraAclarado": "1€",
+          "extraLavado": "1€"
+        }
       },
       "faqOverrides": {
         "openingHours": "En L'Escala, las máquinas se pueden utilizar de 7:00 a 23:00, todos los días del año.",
@@ -115,7 +160,19 @@
         "cardPaymentUnreliable": true,
         "ajaxRestartPossible": true,
         "dryerMinutesIncreaseIssue": true,
-        "selfStartMachine": true
+        "selfStartMachine": true,
+        "machines": {
+          "washers": [
+            { "number": "L1", "weightKg": 20, "fidelity": "7€", "cash": "8€" },
+            { "number": "L2", "weightKg": 20, "fidelity": "7€", "cash": "8€" },
+            { "number": "L3", "weightKg": 10, "fidelity": "4€", "cash": "4,5€" },
+            { "number": "L4", "weightKg": 10, "fidelity": "4€", "cash": "4,5€" }
+          ],
+          "dryers": [
+            { "number": "S5", "weightKg": 20, "fidelity": "2,5€/15min", "cash": "3€/15min" },
+            { "number": "S6", "weightKg": 20, "fidelity": "2,5€/15min", "cash": "3€/15min" }
+          ]
+        }
       },
       "escalationRules": [
         {
@@ -146,7 +203,21 @@
         "cardPaymentUnreliable": true,
         "ajaxRestartPossible": true,
         "dryerMinutesIncreaseIssue": false,
-        "selfStartMachine": true
+        "selfStartMachine": true,
+        "machines": {
+          "washers": [
+            { "number": "L1", "weightKg": 8, "fidelity": "4€", "cash": "5€" },
+            { "number": "L2", "weightKg": 8, "fidelity": "4€", "cash": "5€" },
+            { "number": "L3", "weightKg": 13, "fidelity": "6€", "cash": "7€" },
+            { "number": "L4", "weightKg": 18, "fidelity": "7€", "cash": "8€" },
+            { "number": "L5", "weightKg": 18, "fidelity": "7€", "cash": "8€" }
+          ],
+          "dryers": [
+            { "number": "S6", "weightKg": 17, "fidelity": "3€/15min", "cash": "3€/15min" },
+            { "number": "S7", "weightKg": 17, "fidelity": "3€/25min", "cash": "4€/25min" },
+            { "number": "S8", "weightKg": 17, "fidelity": "3€/25min", "cash": "4€/25min" }
+          ]
+        }
       },
       "escalationRules": [
         {
@@ -173,6 +244,39 @@
         "dryerMinutesIncreaseIssue": false,
         "selfStartMachine": true,
         "needsStreetClarification": true
+      }
+    },
+    "PlatjaDAro": {
+      "pueblo": "Platja d'Aro",
+      "calle": "(consultar local)",
+      "displayName": "Platja d'Aro",
+      "metadata": {
+        "hours": "8:00-22:00",
+        "centralType": "buttons",
+        "cardUnitPrice": null,
+        "returnsChangeCoins": true,
+        "loyaltyCard": false,
+        "dryerFilterSelfService": false,
+        "cardPaymentUnreliable": false,
+        "ajaxRestartPossible": false,
+        "dryerMinutesIncreaseIssue": false,
+        "selfStartMachine": true,
+        "machines": {
+          "washers": [
+            { "number": "L1", "weightKg": 20, "fidelity": "10€", "cash": "10€" },
+            { "number": "L2", "weightKg": 15, "fidelity": "8€", "cash": "8€" },
+            { "number": "L3", "weightKg": 15, "fidelity": "8€", "cash": "8€" },
+            { "number": "L4", "weightKg": 13, "fidelity": "5€", "cash": "5€" }
+          ],
+          "dryers": [
+            { "number": "S5", "weightKg": null, "fidelity": "3€/20min", "cash": "3€/20min" },
+            { "number": "S6", "weightKg": null, "fidelity": "3€/20min", "cash": "3€/20min" }
+          ]
+        },
+        "extras": {
+          "extraAclarado": "1€",
+          "extraLavado": "1€"
+        }
       }
     }
   }

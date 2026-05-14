@@ -699,6 +699,357 @@ const cases: Case[] = [
       }
     },
   },
+
+  // ── F57 — state pollution scoping in LLM operator briefing ─────────────
+  // Andrea 2026-05-15: LLM briefing was citing facts from abandoned trouble
+  // flows in subsequent unrelated escalations (e.g. "lavadora 5 + DOOR"
+  // appearing in a discount-code escalation summary). Fix: getEscalationCategory
+  // helper + scoped STATE_FACTS payload + prompt rule #10.
+  {
+    name: 'F57 — operator-briefing.ts exports getEscalationCategory helper',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const fp = path.resolve(here, '..', '..', 'utils', 'operator-briefing.ts')
+      const content = fs.readFileSync(fp, 'utf8')
+      if (!/export\s+function\s+getEscalationCategory/.test(content)) {
+        throw new Error('F57: operator-briefing.ts must export getEscalationCategory')
+      }
+      // 4 categories must all be present in the type.
+      for (const cat of ['discount-code', 'invoice', 'non-trouble', 'machine-trouble']) {
+        if (!new RegExp(`['"]${cat}['"]`).test(content)) {
+          throw new Error(`F57: EscalationCategory type must include '${cat}'`)
+        }
+      }
+    },
+  },
+  {
+    name: 'F57 — STATE_FACTS payload omits machine facts for non-machine-trouble categories',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const fp = path.resolve(here, '..', '..', 'utils', 'operator-briefing.ts')
+      const content = fs.readFileSync(fp, 'utf8')
+      // Code must branch on isMachineTrouble to decide machine fact inclusion.
+      if (!/isMachineTrouble/.test(content)) {
+        throw new Error('F57: must guard machine facts via isMachineTrouble flag')
+      }
+      // Marker for the LLM that machine facts are out of scope.
+      if (!/not applicable for/.test(content)) {
+        throw new Error('F57: STATE_FACTS must mark omitted facts as "(not applicable for ...)"')
+      }
+    },
+  },
+  {
+    name: 'F57 — prompts/operator-briefing.txt has the scoping rule (#10 ÁMBITO)',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const fp = path.resolve(here, '..', '..', 'prompts', 'operator-briefing.txt')
+      const content = fs.readFileSync(fp, 'utf8')
+      if (!/ÁMBITO DEL CASO|escalationCategory/.test(content)) {
+        throw new Error('F57: prompts/operator-briefing.txt must include the ÁMBITO/escalationCategory rule')
+      }
+      if (!/not applicable/.test(content)) {
+        throw new Error('F57: prompt must reference the "(not applicable ...)" marker')
+      }
+    },
+  },
+
+  // ── F56 — rephrase bypass for active display flows ─────────────────────
+  // Andrea 2026-05-15: rephrase LLM kept inventing operational details
+  // ("ropa en la goma", "hasta que encaje bien") on top of JSON-vetted
+  // display flow prompts. F56 bypasses rephrase whenever state.activeFlowId
+  // is set (case_push/case_sel/case_door/AL001/ALM-DOOR/C001/…).
+  {
+    name: 'F56 — agent.ts has isDisplayFlowActive bypass for the rephrase pipeline',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const fp = path.resolve(here, '..', '..', 'agent.ts')
+      const content = fs.readFileSync(fp, 'utf8')
+      if (!/isDisplayFlowActive/.test(content)) {
+        throw new Error('F56: agent.ts must declare isDisplayFlowActive bypass variable')
+      }
+      // Bypass must read state.activeFlowId (not pendingFlow or another field).
+      if (!/isDisplayFlowActive\s*=\s*!!\s*ar\.state\.activeFlowId/.test(content)) {
+        throw new Error('F56: isDisplayFlowActive must derive from state.activeFlowId')
+      }
+      // Must be wired into the rephrase guard expression.
+      if (!/!isDisplayFlowActive/.test(content)) {
+        throw new Error('F56: !isDisplayFlowActive must gate the rephrase invocation')
+      }
+    },
+  },
+
+  // ── F55 — machineType FAQ-context override (B4 resolved) ────────────────
+  // Andrea 2026-05-15: state.machineType was sticky on first-set-wins
+  // (`if (!state.machineType)`) and stayed wrong after FAQ asciugare →
+  // trouble lavadora. Fix mirrors F51 for location: override allowed only
+  // when no active flow AND lastResolvedIntent === 'faq'.
+  {
+    name: 'F55 — autoExtractFacts allows machineType override gated by FAQ context',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const fp = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')
+      const content = fs.readFileSync(fp, 'utf8')
+      if (!/cameFromFaq/.test(content)) {
+        throw new Error('F55: agent-extract.ts must reference cameFromFaq guard')
+      }
+      if (!/inActiveFlow/.test(content)) {
+        throw new Error('F55: agent-extract.ts must reference inActiveFlow guard')
+      }
+      // The override must check newType !== state.machineType (no-op on same type).
+      if (!/newType\s*!==\s*state\.machineType/.test(content)) {
+        throw new Error('F55: override must compare newType against existing state.machineType')
+      }
+    },
+  },
+
+  // ── F54 — Caso 12.2: collapse identical-spec machines into plural label ──
+  // Andrea 2026-05-14: Pineda had 2 dryers with identical specs rendered
+  // as 2 redundant bullet lines. Fix: groupBySpecs collapses groups under
+  // a plural label (Lavadoras/Secadoras); single-machine groups keep the
+  // canonical number.
+  {
+    name: 'F54 — faq-location-formatter.ts exposes groupBySpecs helper',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const fp = path.resolve(here, '..', '..', 'utils', 'faq-location-formatter.ts')
+      const content = fs.readFileSync(fp, 'utf8')
+      if (!/function\s+groupBySpecs/.test(content)) {
+        throw new Error('F54: faq-location-formatter.ts must define groupBySpecs helper')
+      }
+      if (!/formatGroupLine/.test(content)) {
+        throw new Error('F54: faq-location-formatter.ts must use formatGroupLine for rendering')
+      }
+    },
+  },
+  {
+    name: 'F54 — formatDryerPrices passes "Secadoras" plural label to formatGroupLine',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const fp = path.resolve(here, '..', '..', 'utils', 'faq-location-formatter.ts')
+      const content = fs.readFileSync(fp, 'utf8')
+      if (!/formatGroupLine\(g,\s*['"]Secadoras['"]\)/.test(content)) {
+        throw new Error('F54: formatDryerPrices must call formatGroupLine with "Secadoras"')
+      }
+      if (!/formatGroupLine\(g,\s*['"]Lavadoras['"]\)/.test(content)) {
+        throw new Error('F54: formatWasherPrices must call formatGroupLine with "Lavadoras"')
+      }
+    },
+  },
+
+  // ── F53 — Caso 12.2 Option B: explicit dryer-hint question ─────────────
+  // Andrea 2026-05-14: silent arming of `faq-prices-await-dryer-confirm`
+  // without showing the dryer question caused out-of-context "sí" replies
+  // to trigger dryer prices. Fix: the washer-default branch now appends
+  // `pricesDryerHint` (a direct question) to the reply so "sí" is grounded.
+  {
+    name: 'F53 — pricesDryerHint i18n is a direct question (not a statement) in ES',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const esPath = path.resolve(here, '..', '..', 'json', 'i18n', 'es.json')
+      const es = JSON.parse(fs.readFileSync(esPath, 'utf8')) as Record<string, string>
+      if (!es.pricesDryerHint) throw new Error('F53: ES pricesDryerHint missing')
+      // Must end with "?" and start with "¿" — direct question form.
+      if (!/^¿.+\?$/.test(es.pricesDryerHint.trim())) {
+        throw new Error(`F53: ES pricesDryerHint must be a direct question, got "${es.pricesDryerHint}"`)
+      }
+    },
+  },
+  {
+    name: 'F53 — renderPrices washer-default branch appends pricesDryerHint to reply',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const guardPath = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-prices.ts')
+      const content = fs.readFileSync(guardPath, 'utf8')
+      // Reply must concatenate washers + pricesDryerHint. Pattern is
+      // tolerant to template-literal whitespace.
+      if (!/pricesDryerHint/.test(content)) {
+        throw new Error('F53: faq-prices.ts must reference pricesDryerHint i18n key')
+      }
+      if (!/\$\{washers\}[\s\S]*\$\{t\(['"]pricesDryerHint['"]/.test(content)) {
+        throw new Error('F53: renderPrices washer-default reply must include both washers and pricesDryerHint via template literal')
+      }
+    },
+  },
+
+  // ── F52 — Caso 12 verb-form detection + T1-capture/T2-consume ───────────
+  {
+    name: 'F52 — detectMachineTypeMention recognises IT verb "asciugare" as dryer',
+    run: async () => {
+      const { detectMachineTypeMention } = await import('../../utils/intent.js')
+      const r = detectMachineTypeMention('ma quanto costa asciugare i vestiti?')
+      if (r !== 'dryer') throw new Error(`F52: IT verb "asciugare" must map to dryer, got ${r}`)
+    },
+  },
+  {
+    name: 'F52 — detectMachineTypeMention recognises ES verb "secar" as dryer',
+    run: async () => {
+      const { detectMachineTypeMention } = await import('../../utils/intent.js')
+      const r = detectMachineTypeMention('cuánto cuesta secar la ropa?')
+      if (r !== 'dryer') throw new Error(`F52: ES verb "secar" must map to dryer, got ${r}`)
+    },
+  },
+  {
+    name: 'F52 — state.faqPricesType field exists in SessionState',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const statePath = path.resolve(here, '..', '..', 'models', 'state.ts')
+      const content = fs.readFileSync(statePath, 'utf8')
+      if (!/faqPricesType:\s*['"]washer['"]\s*\|\s*['"]dryer['"]\s*\|\s*null/.test(content)) {
+        throw new Error('F52: SessionState must declare faqPricesType: "washer"|"dryer"|null')
+      }
+    },
+  },
+  {
+    name: 'F52 — guardFaqPrices captures T1 type AND renderPrices consumes+clears state.faqPricesType',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const guardPath = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-prices.ts')
+      const content = fs.readFileSync(guardPath, 'utf8')
+      // T1 must assign state.faqPricesType from detectMachineTypeMention.
+      if (!/ar\.state\.faqPricesType\s*=\s*mentionedAtT1/.test(content)) {
+        throw new Error('F52: guardFaqPrices must store T1 detected type into state.faqPricesType')
+      }
+      // renderPrices must read state.faqPricesType as fallback when message has no type.
+      if (!/detectMachineTypeMention\(userMessage\)\s*\|\|\s*ar\.state\.faqPricesType/.test(content)) {
+        throw new Error('F52: renderPrices must fall back to state.faqPricesType when message has no type')
+      }
+      // After consume, the field must clear to null.
+      if (!/ar\.state\.faqPricesType\s*=\s*null/.test(content)) {
+        throw new Error('F52: renderPrices must clear state.faqPricesType after consume')
+      }
+    },
+  },
+
+  // ── F51 — Caso 12 follow-up: Goya data + FAQ location switch + Playa alias ──
+  {
+    name: 'F51 — locations.json: Goya pueblo is "Mataró" not "Madrid"',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const locPath = path.resolve(here, '..', '..', 'json', 'locations.json')
+      const locations = JSON.parse(fs.readFileSync(locPath, 'utf8')) as {
+        locations: Record<string, { pueblo?: string; displayName?: string }>
+      }
+      const goya = locations.locations.Goya
+      if (!goya) throw new Error('F51: Goya entry missing')
+      if (goya.pueblo !== 'Mataró') {
+        throw new Error(`F51: Goya.pueblo must be "Mataró", got "${goya.pueblo}"`)
+      }
+      if (/Madrid/.test(goya.displayName || '')) {
+        throw new Error(`F51: Goya.displayName must NOT mention Madrid, got "${goya.displayName}"`)
+      }
+    },
+  },
+  {
+    name: 'F51 — Spanish alias "Playa" resolves to "Platja d\'Aro"',
+    run: () => {
+      // Read locations.ts directly because LAUNDROMATS is exported but the
+      // resolver lives in a sibling that needs runtime init. Inspect the
+      // source to confirm the aliases list contains the Spanish variants.
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const locPath = path.resolve(here, '..', '..', 'utils', 'locations.ts')
+      const content = fs.readFileSync(locPath, 'utf8')
+      // Locate the PlatjaDAro block and assert that Spanish aliases are present.
+      const platjaBlock = content.match(/canonical:\s*["']Platja d'Aro["'][\s\S]*?aliases:\s*\[([^\]]+)\]/)
+      if (!platjaBlock) throw new Error('F51: Platja d\'Aro entry not found')
+      const aliasesStr = platjaBlock[1]
+      if (!/['"]Playa d'?Aro['"]|['"]Playa['"]/.test(aliasesStr)) {
+        throw new Error(`F51: Platja d'Aro must have Spanish "Playa" aliases, got: ${aliasesStr}`)
+      }
+    },
+  },
+  {
+    name: 'F51 — autoExtractFacts has FAQ-only location switch (narrow scope)',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const extractPath = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')
+      const content = fs.readFileSync(extractPath, 'utf8')
+      // The location-switch block must be gated to FAQ contexts ONLY, not
+      // broadened to all flows (Andrea's "narrow scope" decision 2026-05-14).
+      if (!/state\.lastResolvedIntent\s*===\s*['"]faq['"]/.test(content)) {
+        throw new Error(
+          'F51: agent-extract.ts must gate location switch by state.lastResolvedIntent === "faq" (narrow FAQ scope)',
+        )
+      }
+      if (!/state\.pendingFlow\s*===\s*['"]faq-prices-await-location['"]/.test(content)) {
+        throw new Error('F51: location switch must also fire on faq-prices-await-location')
+      }
+    },
+  },
+
+  // ── F50 — Caso 12 FAQ horarios y precios location-driven ─────────────────
+  {
+    name: 'F50 — legacy guard file utils/guards/hours-and-pricing.ts is DELETED',
+    run: () => {
+      const legacyPath = path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        'utils',
+        'guards',
+        'hours-and-pricing.ts',
+      )
+      if (fs.existsSync(legacyPath)) {
+        throw new Error(
+          'F50: legacy guards/hours-and-pricing.ts must be deleted (replaced by faq-hours.ts + faq-prices.ts)',
+        )
+      }
+    },
+  },
+  {
+    name: 'F50 — new cassette files faq-hours.ts + faq-prices.ts exist and stay under 150 lines',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const hoursPath = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-hours.ts')
+      const pricesPath = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-prices.ts')
+      for (const p of [hoursPath, pricesPath]) {
+        if (!fs.existsSync(p)) throw new Error(`F50: missing ${p}`)
+        const lines = fs.readFileSync(p, 'utf8').split('\n').length
+        if (lines > 150) throw new Error(`F50: ${path.basename(p)} exceeds 150 lines (${lines})`)
+      }
+    },
+  },
+  {
+    name: 'F50 — faqHandler delegates pricing/openingHours to legacy guard pipeline',
+    run: () => {
+      const handlerPath = path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        'utils',
+        'branches',
+        'faq',
+        'handler.ts',
+      )
+      const content = fs.readFileSync(handlerPath, 'utf8')
+      // T1 delegation: faqKey === 'pricing' || 'openingHours' → delegate-to-legacy.
+      if (!/faqKey\s*===\s*['"]pricing['"]/.test(content) || !/faqKey\s*===\s*['"]openingHours['"]/.test(content)) {
+        throw new Error('F50: faqHandler must delegate pricing/openingHours to legacy pipeline')
+      }
+      // T2+ delegation: sticky pendingFlow with empty routerDetails.
+      if (!/pending\s*===\s*['"]faq-prices-await-location['"]/.test(content)) {
+        throw new Error('F50: faqHandler must delegate when pendingFlow=faq-prices-await-location (T2+)')
+      }
+      if (!/pending\s*===\s*['"]faq-prices-await-dryer-confirm['"]/.test(content)) {
+        throw new Error('F50: faqHandler must delegate when pendingFlow=faq-prices-await-dryer-confirm (T3)')
+      }
+    },
+  },
+  {
+    name: 'F50 — faqs.json:pricing no longer contains the legacy "Tengo que revisarlo" deflection',
+    run: () => {
+      const faqsPath = path.resolve(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        '..',
+        'json',
+        'faqs.json',
+      )
+      const faqs = JSON.parse(fs.readFileSync(faqsPath, 'utf8')) as Record<string, string>
+      if (/Tengo que revisarlo/.test(faqs.pricing || '')) {
+        throw new Error('F50: faqs.json:pricing must NOT contain the legacy deflection string')
+      }
+    },
+  },
 ]
 
 async function main(): Promise<void> {

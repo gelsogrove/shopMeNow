@@ -614,6 +614,75 @@ export function detectInvoiceIntent(message: string): boolean {
   )
 }
 
+// ── Hours intent detection (Caso 12.1) ───────────────────────────────────────
+//
+// Topic classifier (rule #6 tracked exemption — fast-path before the LLM).
+// Returns true when the customer asks about opening hours / schedule.
+// Multi-language coverage (es/it/en/pt/ca/fr). Tested in
+// `__tests__/unit/intent.test.ts`.
+//
+// Pattern extracted from the legacy `guardOpeningHours` HORARIOS_TOPIC regex,
+// kept as a single source of truth for hour-topic detection across the bot.
+export function detectHoursIntent(message: string): boolean {
+  const trimmed = message.toLowerCase()
+  if (!trimmed) return false
+  return /(\bhorario\b|\bhorarios\b|qu[eé]\s+horas?|a\s+qu[eé]\s+hora|cu[aá]ndo\s+abr|cu[aá]ndo\s+cierr|hasta\s+qu[eé]\s+hora|opening\s+hours|what\s+time|\bche\s+orari?\b|\borario\b|\borari\b|a\s+che\s+ora|quando\s+(?:apr|chiud)|\bhoraires?\b|quels?\s+horaires|\bhor[áa]rios?\b|que\s+horas|\bhoraris?\b|quins\s+horaris)/i.test(trimmed)
+}
+
+// ── Price intent detection (Caso 12.2) ───────────────────────────────────────
+//
+// Topic classifier (rule #6 tracked exemption — fast-path before the LLM).
+// Returns true when the customer asks about prices / cost of washing/drying.
+// Multi-language coverage (es/it/en/pt/ca/fr) including accent variants
+// ("cuanto" / "cuánto"). Tested in `__tests__/unit/intent.test.ts`.
+//
+// Pattern extracted from the legacy `guardPricingDeflect` PRECIO_TOPIC regex,
+// extended with accent-insensitive forms (Andrea, 2026-05-14: real customer
+// typed "cuanto costa" without the accent and the strict regex missed it).
+export function detectPriceIntent(message: string): boolean {
+  const trimmed = message.toLowerCase()
+  if (!trimmed) return false
+  return /(cu[aá]nto\s+(?:cuesta|costa)|qu[eé]\s+precio|cu[aá]l\s+es\s+el\s+precio|how\s+much\s+(?:does\s+it\s+)?cost|quanto\s+costa|qual\s+[èe]\s+il\s+prezzo|combien(?:\s+[a-zà-ÿ']+){0,2}\s+(?:co[ûu]te|coute)|qual\s+[ée]\s+o\s+pre[çc]o|quin\s+[ée]s\s+el\s+preu|\bprecios?\b|\bprezzi?\b|\bprice\b|\bpre[çc]o\b|\bpreu\b|\btarifa\b)/i.test(trimmed)
+}
+
+// ── Machine type mention in arbitrary message (used by Caso 12.2 guard) ──────
+//
+// Lightweight detector that returns 'washer' / 'dryer' / null based on the
+// customer's wording. Does NOT mutate state — guards use this to choose
+// which price block (washers/dryers) to render.
+//
+// Multi-language coverage (6 langs) including:
+//   - Nouns: "secadora", "asciugatrice", "dryer", "lavadora", "washer", …
+//   - Verb forms (infinitive + conjugated stems): "asciugare", "secar",
+//     "lavar", "wash", "dry", "laver", "sécher", "secar" (PT/ES). F52
+//     regression (Andrea 2026-05-14: "ma quanto costa asciugare i vestiti?"
+//     was misclassified as washer because only nouns were detected).
+//
+// Order matters: dryer terms are checked first so the more-specific
+// "máquina de secar" / "asciugare" wins over the generic washer fallback.
+export function detectMachineTypeMention(message: string): 'washer' | 'dryer' | null {
+  const trimmed = message.toLowerCase()
+  if (!trimmed) return null
+  // Dryer — nouns + verb stems across 6 langs.
+  // Nouns: secadora/asciugatrice/dryer/sèche-linge/assecadora/estenedor.
+  // Verbs (infinitive + common conjugations): "asciugar(e/i)", "secar(la/lo)?",
+  // "to dry / drying", "sécher", "secar" (PT), "assecar" (CA).
+  const dryerNouns = /\b(?:secador[ae]s?|asciugat(?:rice|rici|ore|ori)|dryers?|sechag[eo]s?|s[eè]che[-\s]?linge|m[aá]quina[s]?\s+de\s+secar|assecadora|estenedor)\b/i
+  const dryerVerbs = /\b(?:asciugar[eio]?|secar(?:la|lo|los|las|me|se)?|to\s+dry|drying|s[eé]cher|s[eé]chage|assecar(?:la|lo)?|secar)\b/i
+  if (dryerNouns.test(trimmed) || dryerVerbs.test(trimmed)) {
+    return 'dryer'
+  }
+  // Washer — nouns + verb stems across 6 langs.
+  // Nouns: lavadora/lavatrice/washer/lave-linge/rentadora.
+  // Verbs: "lavar(la/lo)?", "lavare", "to wash / washing", "laver".
+  const washerNouns = /\b(?:lavadora[s]?|lavatric[ie]s?|washer|washing[-\s]?machine|m[aá]quina[s]?\s+de\s+lavar|rentadora|lave[-\s]?linge)\b/i
+  const washerVerbs = /\b(?:lavar(?:la|lo|los|las|me|se)?|lavare|to\s+wash|washing|laver)\b/i
+  if (washerNouns.test(trimmed) || washerVerbs.test(trimmed)) {
+    return 'washer'
+  }
+  return null
+}
+
 // ── Topic-switch detection during pending escalation ─────────────────────────
 //
 // When the bot has already escalated (operatorRequested + customerNameRequested

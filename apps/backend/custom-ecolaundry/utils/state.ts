@@ -32,6 +32,7 @@ export function createInitialState(): SessionState {
     previousBranch: null,
     retryCount: 0,
     lastResolvedIntent: null,
+    faqPricesType: null,
     escalationReason: null,
     operatorRequested: false,
     customerName: null,

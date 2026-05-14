@@ -21,11 +21,23 @@
 // Run with:
 //   node --import tsx __tests__/unit/orchestration-mix-flow-e2e.test.ts
 
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { autoExtractFacts } from '../../utils/agent-extract.js'
 import { runGuardPipeline } from '../../utils/guards/index.js'
 import { createInitialState } from '../../utils/state.js'
 import type { AgentRuntime } from '../../models/index.js'
 import { loadTestRuntime, getCachedTestRuntime } from './_helpers.js'
+
+// Load real json/locations.json so the FAQ prices/hours guards have actual
+// machine + hours data to render (otherwise they fall back to generic i18n
+// and we can't pin the realistic "washer list" reply).
+const __here = path.dirname(fileURLToPath(import.meta.url))
+const realLocations = JSON.parse(
+  readFileSync(path.resolve(__here, '..', '..', 'json', 'locations.json'), 'utf8'),
+) as AgentRuntime['runtime']['locations']
 
 interface Turn {
   user: string
@@ -38,9 +50,15 @@ interface Turn {
 }
 
 function makeAr(): AgentRuntime {
+  const base = getCachedTestRuntime()
+  // Inject real locations into the runtime so the FAQ data-driven guards
+  // (faq-hours / faq-prices) can render actual hours + machine prices.
+  // Without this the formatters return null → fallback i18n fires, which
+  // is a different code path than production.
+  const runtime = { ...base, locations: realLocations }
   return {
     state: { ...createInitialState(), turnCount: 0 },
-    runtime: getCachedTestRuntime(),
+    runtime,
     pendingEscalation: null,
     resolved: false,
     photoRequested: false,
@@ -116,6 +134,200 @@ interface Case {
 }
 
 const cases: Case[] = [
+  // ── 0. MIXED FAQ ORCHESTRATION (Andrea 2026-05-14) ───────────────────────
+  // Customer freely mixes FAQ topics + trouble + closure in one session.
+  // Pins the contract Andrea articulated: "dobbiamo essere sempre pronti a
+  // rispondere, per questo abbiamo dei test mixati". Each pivot must reach
+  // the right guard deterministically — no LLM fallback, no drift.
+  {
+    name: 'MIX 0: horarios → prezzi → secadora → trouble lavadora → grazie',
+    run: () => {
+      const ar = makeAr()
+      const turns: Turn[] = [
+        // T1 — hours intent, no location yet → ask pueblo.
+        {
+          user: '¿qué horarios tenéis?',
+          expectReason: 'faq-hours-ask-location',
+          expectReplyContains: /pueblo|lavander[íi]a/i,
+          description: 'T1 hours intent → ask location',
+        },
+        // T2 — location provided → render hours from locations.json (or
+        // openingHoursDefault fallback when test runtime has no metadata).
+        {
+          user: 'Goya',
+          expectReason: 'faq-hours-resolved',
+          expectReplyContains: /8:00|22:00|horario/i,
+          description: 'T2 location captured → render hours',
+          assertState: (ar) => {
+            if (ar.state.location !== 'Goya') throw new Error('location must be Goya')
+            if (ar.state.pendingFlow !== '') throw new Error('pendingFlow must be cleared after T2')
+            if (ar.state.lastResolvedIntent !== 'faq') throw new Error('lastResolvedIntent must be faq')
+          },
+        },
+        // T3 — customer pivots to PRICES (location already sticky from T2).
+        // No machine type mentioned → washer-default branch + dryer-confirm
+        // pendingFlow armed. F53 (Andrea 2026-05-14, Option B): reply MUST
+        // include the explicit dryer-hint question "¿También quieres
+        // información de secadora?" so the follow-up "sí" has semantic
+        // context. Prior design (silent arming, no question) caused
+        // out-of-context "sí" to trigger dryer prices unexpectedly.
+        {
+          user: '¿cuánto cuesta?',
+          expectReason: 'faq-prices-washers-default',
+          expectReplyContains: /tambi[ée]n\s+quieres\s+informaci[oó]n\s+de\s+secadora/i,
+          description: 'T3 price intent (no type) → washer list + explicit dryer-hint question (F53)',
+          assertState: (ar) => {
+            if (ar.state.pendingFlow !== 'faq-prices-await-dryer-confirm') {
+              throw new Error('dryer-confirm must be armed')
+            }
+          },
+        },
+        // T4 — "y la secadora?" naturally pivots to dryer prices.
+        {
+          user: 'y la secadora?',
+          expectReason: 'faq-prices-dryer-confirm',
+          expectReplyContains: /secadora/i,
+          description: 'T4 dryer mention → render dryer prices, clear flag',
+          assertState: (ar) => {
+            if (ar.state.pendingFlow !== '') throw new Error('pendingFlow must be cleared')
+          },
+        },
+        // T5 — customer pivots to TROUBLE: "no funciona". The legacy
+        // gather/force-machine guards must take over now that the FAQ
+        // closure released control. We don't pin which exact guard fires
+        // (depends on whether machineType is sticky from T4 dryer FAQ or
+        // freshly extracted) — only that SOME deterministic guard does
+        // and the reply asks for the next missing fact (number or type).
+        // The orchestration contract: NO LLM fallback after a topic switch.
+        {
+          user: 'no funciona',
+          expectReplyContains: /n[uú]mero|lavadora|secadora|m[áa]quina|pantalla/i,
+          description: 'T5 topic-switch trouble-machine → some gather guard fires',
+        },
+        // T6 — bare "6" must be accepted as a machine number (alias of L6).
+        // Andrea: "se utente mette il numero della macchina con 6 oppure L6
+        // è la stessa cosa".
+        {
+          user: '6',
+          description: 'T6 bare digit accepted as machine number (alias of L6)',
+          assertState: (ar) => {
+            // Internal state stores the digit only ("6"); operator briefing
+            // reconstructs "L6"/"S6" via machineType.
+            if (ar.state.machineNumber !== '6') {
+              throw new Error(
+                `machineNumber must accept bare "6" as alias of L6: got "${ar.state.machineNumber}"`,
+              )
+            }
+          },
+        },
+      ]
+      const transcript = runConversation(ar, turns)
+      printTranscript('MIX 0 — FAQ + trouble + closure orchestration', transcript)
+    },
+  },
+
+  // ── 0.b. FAQ LOCATION SWITCH (F51 — Andrea 2026-05-14) ────────────────────
+  // Customer asks prices for one laundry, then switches to a different one.
+  // The narrow FAQ-only location switch must override state.location so the
+  // second render is for the new laundry. Without F51 the bot loops on the
+  // first location forever (sticky state.location, no override).
+  // Pins: data fix (Goya pueblo=Mataró) + Spanish alias "Playa" → "Platja
+  // d'Aro" + autoExtractFacts FAQ-only override.
+  {
+    name: 'MIX 0.b (F51): FAQ price → location switch "a Playa d\'aro" → render new location',
+    run: () => {
+      const ar = makeAr()
+      const turns: Turn[] = [
+        {
+          user: '¿cuánto cuesta lavar la ropa?',
+          expectReason: 'faq-prices-ask-location',
+          description: 'T1 price intent → ask location',
+        },
+        {
+          // Post-F52: T1 verb "lavar" is captured into state.faqPricesType='washer'.
+          // T2 renderPrices reads it back → goes to washer-specific branch
+          // (reason 'faq-prices-washer'), NOT the no-type-mentioned default
+          // (reason 'faq-prices-washers-default').
+          user: 'Goya',
+          expectReason: 'faq-prices-washer',
+          // F54: machines with identical specs collapse under "Lavadoras"
+          // plural label. Goya has L4/L5 (20kg/6,5€-7€) AND L6/L7 (10kg/3,5€-4€)
+          // → 2 collapsed groups, both labelled "Lavadoras" with different kg.
+          // Individual L4/L5/L6/L7 numbers no longer appear as bold labels.
+          expectReplyContains: /\*\*Lavadoras\*\*\s+\d+kg/,
+          expectReplyDoesNotContain: /Madrid/i, // F51 data fix
+          description: 'T2 Goya (Mataró, NOT Madrid) → washer list from T1 verb capture',
+          assertState: (ar) => {
+            if (ar.state.location !== 'Goya') {
+              throw new Error(`state.location must be Goya: got "${ar.state.location}"`)
+            }
+          },
+        },
+        {
+          user: "e quanto costa a Playa d'aro?",
+          expectReason: 'faq-prices-washers-default',
+          expectReplyContains: /Platja d'Aro/,
+          expectReplyDoesNotContain: /Goya/, // critical: must switch, not re-render
+          description: 'T3 Spanish "Playa" alias → switch to Platja d\'Aro',
+          assertState: (ar) => {
+            if (ar.state.location !== "Platja d'Aro") {
+              throw new Error(
+                `F51: state.location must switch to "Platja d'Aro": got "${ar.state.location}"`,
+              )
+            }
+          },
+        },
+      ]
+      const transcript = runConversation(ar, turns)
+      printTranscript('MIX 0.b — FAQ location switch (F51)', transcript)
+    },
+  },
+
+  // ── 0.c. ASCIUGARE / SECAR VERB → DRYER (F52 Andrea 2026-05-14) ───────────
+  // Customer asks about drying using a VERB ("asciugare" / "secar" / "to dry")
+  // instead of a noun ("secadora" / "dryer"). The detector must classify the
+  // intent as dryer, and the type must PERSIST from T1 (verb mentioned) to T2
+  // (location-only reply) via state.faqPricesType. Without F52, T2 renders
+  // washer-default because detectMachineTypeMention('Pineda') returns null.
+  {
+    name: 'MIX 0.c (F52): "asciugare" T1 verb → location T2 → render DRYER prices',
+    run: () => {
+      const ar = makeAr()
+      const turns: Turn[] = [
+        {
+          user: 'ma quanto costa asciugare i vestiti?',
+          expectReason: 'faq-prices-ask-location',
+          description: 'T1: IT verb "asciugare" → dryer intent captured in state.faqPricesType',
+          assertState: (ar) => {
+            if (ar.state.faqPricesType !== 'dryer') {
+              throw new Error(
+                `F52: state.faqPricesType must persist 'dryer' from T1: got "${ar.state.faqPricesType}"`,
+              )
+            }
+          },
+        },
+        {
+          user: 'Pineda',
+          expectReason: 'faq-prices-dryer',
+          // F54: Pineda has 2 dryers with identical specs (S4/S5 both 20kg
+          // 2€/15min) → collapse to single "Secadoras" line. Individual
+          // S4/S5 numbers no longer appear as bold labels.
+          expectReplyContains: /\*\*Secadoras\*\*\s+20kg:\s+2€\/15min/,
+          expectReplyDoesNotContain: /\*\*L(?:avadoras|\d+)\*\*/, // NO washer mention
+          description: 'T2: location reply renders DRYER prices (type from state.faqPricesType)',
+          assertState: (ar) => {
+            // After render, the persisted type must clear so next FAQ cycle starts fresh.
+            if (ar.state.faqPricesType !== null) {
+              throw new Error('F52: faqPricesType must clear after render')
+            }
+          },
+        },
+      ]
+      const transcript = runConversation(ar, turns)
+      printTranscript('MIX 0.c — asciugare verb → dryer (F52)', transcript)
+    },
+  },
+
   // ── 1. MIXED ORCHESTRATION ───────────────────────────────────────────────
   // Customer pivots between several topics in one session. We verify each
   // pivot reaches the correct guard. Some turns are LLM-territory (the
@@ -196,11 +408,15 @@ const cases: Case[] = [
           description: 'all facts present → flow engine emits PUSH PROG guidance',
         },
         // T7 — customer pivots: asks for opening hours (FAQ during active flow)
+        // Caso 12 refactor (2026-05-14): reason `opening-hours` was renamed to
+        // `faq-hours` when guardOpeningHours was replaced by guardFaqHours.
+        // Reply contract is unchanged — falls back to openingHoursDefault
+        // (`8:00 a 22:00`) when locations.json has no hours metadata in tests.
         {
           user: '¿Cuál es el horario?',
-          expectReason: 'opening-hours',
+          expectReason: 'faq-hours',
           expectReplyContains: /8:00\s+a\s+22:00/i,
-          description: 'FAQ during active flow → opening-hours wins',
+          description: 'FAQ during active flow → faq-hours guard wins',
         },
         // T8 — customer asks for invoice (Caso 9 trigger)
         {

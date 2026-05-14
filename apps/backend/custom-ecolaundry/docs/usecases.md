@@ -84,6 +84,108 @@ LLM podría deformarlos. La especificidad se conserva en el `state` y se utiliza
   interpolación específica al briefing operatore (no añadir reglas textuales
   al prompt rephrase — Iron rule #1).
 
+**F55 — Override condicional de `state.machineType` en contexto FAQ.**
+
+`autoExtractFacts` aplica **first-set-wins** por defecto a `state.machineType`
+para evitar flips accidentales mid-trouble (ej. typo «ah no scusa la
+secadora»). PERO esa regla falla cuando el cliente entra primero en una FAQ
+con un verbo que captura el tipo, y luego pivota a un problema real con tipo
+distinto: el state se queda pegado en el tipo equivocado y el bot ejecuta el
+flow JSON de la máquina incorrecta.
+
+- **Trigger real**: chat Andrea 2026-05-15. T1 «ma quanto costa asciugare a
+  Pineda?» → `state.machineType='dryer'` (vía detector F52 verb form). T2
+  «Pineda» → FAQ resuelta. T3 «mi lavadora no funciona» → el bot respondía
+  *«La puerta no está cerrada... dime si la **secadora** ha arrancado»* (mal:
+  ejecutaba `dryer_ed340.json:case_door`).
+- **Fix L3** en [utils/agent-extract.ts](../utils/agent-extract.ts): permite
+  override sólo si **3 gates cumulativos** son verdaderos:
+  1. `!state.pendingFlow` (no hay flow de gather activo)
+  2. `!state.activeFlowId` (no hay display flow activo)
+  3. `state.lastResolvedIntent === 'faq'` (venimos de una FAQ resuelta)
+- **Dentro de un trouble flow activo**: first-set-wins se preserva (anti-flip
+  «ah no scusa la secadora» mid-troubleshoot).
+- **Pin** en [`__tests__/unit/machine-type-faq-flip.test.ts`](../__tests__/unit/machine-type-faq-flip.test.ts)
+  con 7 escenarios (happy + 3 guards + backcompat).
+- **Patrón aplicable**: si aparece un tercer state field con misma dinámica
+  (sticky con first-set-wins y un caso FAQ→trouble), aplicar el mismo gate
+  cumulativo. Espejo del F51 para `state.location`.
+
+**F57 — State pollution scoping en el briefing operador (LLM path).**
+
+Cuando el cliente abandona un flujo (ej. abre un trouble Caso 2 DOOR, no lo
+resuelve, no escala) y pivota a un caso totalmente NO relacionado (ej. Caso 8
+discount code), los facts machine-related (`machineType`, `machineNumber`,
+`displayLabel`, `displayHistory`) permanecen sticky en `SessionState`. El
+briefing generado por el LLM (`operatorBriefingFromLlm=true`) los incluía
+indiscriminadamente, produciendo summaries como:
+
+> *"Andrea en Goya **reportó un problema con la lavadora número 5**. El
+> **código de pantalla** mostrado fue **DOOR**. Motivo: código de descuento
+> — formato no reconocido."*
+
+El operador recibe facts pertenecientes a otra conversación → confusión, posible
+mal trato del caso. Trigger real: Andrea CLI 2026-05-15.
+
+- **Fix L3+L5** en [utils/operator-briefing.ts](../utils/operator-briefing.ts):
+  nuevo helper `getEscalationCategory(state)` que clasifica la escalación en:
+  - `discount-code`: customer + location + código son relevantes (machine
+    facts marcados como "(not applicable ...)" en STATE_FACTS para que el
+    LLM los ignore).
+  - `invoice`: customer + location + `invoiceData` son relevantes.
+  - `non-trouble`: customer + location + `nonTroubleshootingIncident`.
+  - `machine-trouble` (default): todos los machine facts.
+
+  Mirror de las ramas que ya existían en `buildEscalationSummaryBody`
+  (deterministic path) — mantener en sync al añadir un nuevo flujo.
+
+- **Fix L5** en [`prompts/operator-briefing.txt`](../prompts/operator-briefing.txt):
+  nueva regla #10 que instruye al LLM a IGNORAR los machine/display details
+  que aparezcan en CONVERSATION_HISTORY si `STATE_FACTS.machineFacts` está
+  marcado como "(not applicable for X escalations)". El LLM ve el bloque
+  scoped y entiende que esos turns son de otra conversación.
+
+- **Pin** en [`__tests__/unit/escalation-category.test.ts`](../__tests__/unit/escalation-category.test.ts)
+  con 12 escenarios (3 paths × 4 categorías + 2 regressions + 1 priority).
+
+- **Patrón aplicable**: cada vez que un nuevo flujo de escalación se añade
+  al casebook, extender `getEscalationCategory` con la rama correspondiente
+  AND actualizar tanto el código (STATE_FACTS scoping) como el prompt
+  (regla #10 explícita). Mantener mirror con `buildEscalationSummaryBody`
+  para que ambos paths (deterministic / LLM) produzcan briefings con
+  el mismo scoping.
+
+---
+
+**F56 — Rephrase governance via `state.activeFlowId` gate.**
+
+El rephrase LLM (T=0.4, `naturalRephrase=true`) inventa repetidamente detalles
+operativos sobre interacciones físicas con las máquinas: «hasta oír un clic»
+(F32), «ropa atascada» (F37), «pegado en la máquina» (F38), «ropa atrapada»
+(F39), «ropa en la goma» (F56), «hasta que encaje bien» (F56). Cada anti-pattern
+añadido al `prompts/rephrase.txt` el LLM lo ignora o lo sustituye por otra
+variante — el approach de anti-pattern lists no escala.
+
+- **Trigger real**: chat Andrea 2026-05-15. Display DOOR → bot inventa *«revisa
+  si hay **ropa en la goma** y cierres la puerta **hasta que encaje bien**»*.
+  El source [`json/washer_hs60xx.json:case_door`](../json/washer_hs60xx.json)
+  post-F37 dice sólo *«La puerta no está cerrada correctamente. Ábrela y
+  ciérrala bien, y prueba otra vez.»* — sin «goma», sin «encaje».
+- **Fix L5** en [agent.ts](../agent.ts): nueva condición
+  `isDisplayFlowActive = !!ar.state.activeFlowId` añadida a la lista de bypass
+  del rephrase (`isT1Welcome`, `isInvoiceFlow`, `hasFormattedBulletList`,
+  `isDiscountCodeAsk`, **`isDisplayFlowActive`**). Cuando un display flow está
+  activo, el customer ve el prompt JSON-vetted **verbatim** sin polish.
+- **Gate `state.activeFlowId` vs pattern match en `outcome.reason`**: elegimos
+  `activeFlowId` porque persiste durante TODOS los turnos del display flow
+  (case_push, case_sel, case_door, AL001, ALM-DOOR, C001, …), independientemente
+  de qué guard concreto emita la respuesta.
+- **Patrón aplicable**: cada layer de contenido que describa interacciones
+  físicas con dispositivos reales (display flows, machine instructions,
+  hardware troubleshooting) DEBE bypassar el rephrase. Anti-pattern lists
+  textuales son lotería. La secuencia F32→F37→F38→F39→F41→F56 demuestra el
+  fracaso del approach textual.
+
 ---
 
 ## Caso 1 — PUSH PROG
@@ -923,26 +1025,68 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ## Caso 12 — Horarios y precios
 
+### 12.1 — Horarios por location
+
 **Criterios de aceptación:**
-1. Horarios: respuesta por defecto 8:00-22:00.
-2. Excepción L'Escala: 7:00-23:00.
-3. Precios: respuesta de deflect, NO inventa importes.
-4. Follow-up «¿y en L'Escala?» tras horario general → excepción.
+1. Bot pregunta: «¿En qué lavandería / pueblo estás?»
+2. Cliente responde con pueblo/calle → bot responde con `metadata.hours` de esa location
+3. Si el cliente dice un pueblo con múltiples ubicaciones (ej. Mataró), bot pregunta calle/zona
+4. Respuesta incluye días de apertura si varían (e.g. "abierto todos los días")
+5. No se inventa información de horarios
 
-**Conversación A — horario general:**
+**Conversación:**
 
-**Usuario:** ¿Cuál es el horario?  
-**Bot:** El horario general de atención al público es de 8:00 a 22:00 cada día del año.
+**Usuario:** ¿Cuáles son los horarios?  
+**Bot:** ¿En qué lavandería o pueblo estás?
 
-**Conversación B — excepción L'Escala:**
+**Usuario:** Platja d'Aro  
+**Bot:** En Platja d'Aro, el horario es de 8:00 a 22:00, todos los días del año.
 
-**Usuario:** ¿Y en L'Escala?  
-**Bot:** En L'Escala, las máquinas se pueden utilizar de 7:00 a 23:00.
+**Usuario:** Y en L'Escala  
+**Bot:** En L'Escala, las máquinas se pueden utilizar de 7:00 a 23:00, todos los días.
 
-**Conversación C — precios:**
+---
 
-**Usuario:** ¿Cuánto cuesta esta máquina?  
-**Bot:** Tengo que revisarlo antes de confirmarte ese importe.
+### 12.2 — Precios de lavadora por location y peso
+
+**Criterios de aceptación:**
+1. Bot pregunta: «¿Cuánto cuesta la lavadora?» → «¿En qué lavandería estás?»
+2. Cliente responde con pueblo → bot muestra lista de lavatrices **en bold** con peso y precios (fidelity/cash)
+3. Formato: `**L1** 20kg: 10€ (fidelidad) / 10€ (efectivo), **L2** 15kg: 8€ / 8€, …`
+4. Si cliente pide información de secadora o máquina específica, bot responde con esos datos
+5. NO inventa precios, usa solo data de `locations.json:machines`
+6. **F53 — Opción B (Andrea 2026-05-14):** cuando el cliente pide precios SIN especificar el tipo de máquina, el bot muestra la lavadora por defecto Y añade la pregunta explícita «¿También quieres información de secadora?». De esta forma una respuesta «sí» tiene contexto semántico claro. Antes era silent-arming del flag dryer-confirm (un «sí» fuera de contexto disparaba la secadora) — UX inconsistente.
+7. **F54 — Collapse de máquinas con specs idénticas (Andrea 2026-05-15):** cuando dos o más máquinas de la misma location comparten `weightKg + fidelity + cash`, el bot las colapsa en UNA sola línea bajo la etiqueta plural «Lavadoras» / «Secadoras» sin enumerar los números individuales. Si todas las specs difieren, cada máquina conserva su número (L1, L2, …). Ejemplo Pineda: 2 secadoras S4/S5 ambas 20kg 2€/15min → `- **Secadoras** 20kg: 2€/15min` (1 línea, no 2 duplicadas).
+
+**Conversación:**
+
+**Usuario:** ¿Cuánto cuesta la lavadora?  
+**Bot:** ¿En qué lavandería estás?
+
+**Usuario:** Platja d'Aro  
+**Bot:** En Platja d'Aro, los precios de lavadora son:
+
+- **L1** 20kg: 10€ (fidelidad) / 10€ (efectivo)
+- **L2** 15kg: 8€ / 8€
+- **L3** 15kg: 8€ / 8€
+- **L4** 13kg: 5€ / 5€
+
+¿También quieres información de secadora?
+
+**Usuario:** Sí  
+**Bot:** En Platja d'Aro, los precios de secadora son:
+
+- **S5** 20min: 3€
+- **S6** 20min: 3€
+
+**Ejemplo F54 (collapse identical specs) — Pineda con 2 secadoras idénticas:**
+
+**Usuario:** quanto costa asciugare a Pineda?  
+**Bot:** En Calle Pineda (Pineda de Mar), los precios de secadora son:
+
+- **Secadoras** 20kg: 2€/15min
+
+> En lugar de listar `**S4** 20kg: 2€/15min` y `**S5** 20kg: 2€/15min` como dos líneas duplicadas, el formatter detecta que comparten specs (weightKg+fidelity+cash) y las colapsa bajo la etiqueta plural «Secadoras» sin enumerar los números individuales (el cliente no necesita saber qué número concreto para conocer el precio).
 
 ---
 

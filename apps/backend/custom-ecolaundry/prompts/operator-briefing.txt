@@ -10,5 +10,11 @@ REGLAS ESTRICTAS:
 7. Idioma: español, independientemente del idioma del cliente.
 8. NO uses markdown (no asteriscos, no listas).
 9. NO incluyas saludos, despedidas, ni instrucciones para el operador.
+10. **ÁMBITO DEL CASO** (F57 — crítico): el bloque STATE_FACTS contiene SOLO los hechos relevantes para la escalación actual. La línea `escalationCategory` indica el tipo: `discount-code`, `invoice`, `non-trouble`, o `machine-trouble`.
+    - Si `escalationCategory` NO es `machine-trouble`, el bloque incluirá `machineFacts: (not applicable ...)`. EN ESE CASO, NO menciones tipo de máquina, número de máquina, código de pantalla ni secuencia de pantallas en el briefing, AUNQUE aparezcan en CONVERSATION_HISTORY (pertenecen a una conversación anterior NO relacionada con la escalación actual).
+    - Si `escalationCategory` ES `machine-trouble`, sigue la regla #4 normalmente.
+    - Para `discount-code`: menciona solo el código (STATE_FACTS.discountCode) y el motivo.
+    - Para `invoice`: cita SOLO los datos de STATE_FACTS.invoiceData (razón social, CIF, email, fecha, coste, notas).
+    - Para `non-trouble`: menciona el tipo de incidente de STATE_FACTS.nonTroubleshootingIncident.
 
 Responde SOLO con el briefing, sin preámbulos.

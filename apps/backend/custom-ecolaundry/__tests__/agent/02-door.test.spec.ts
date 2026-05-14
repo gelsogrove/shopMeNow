@@ -87,4 +87,40 @@ export const tests: TestCase[] = [
       expectMentionsAll(final, ['Carlos', 'Hortes', '2', 'DOOR'])
     },
   },
+
+  // ── F56 — rephrase bypass during active display flow ─────────────────────
+  // Andrea 2026-05-15: the rephrase LLM kept inventing operational details
+  // ("ropa en la goma", "hasta que encaje bien", "hasta oír un clic") on
+  // top of the JSON-vetted case_door prompt. F56 bypasses rephrase whenever
+  // state.activeFlowId is set. Customer-facing reply must match the source
+  // text verbatim — no invented operational details.
+  {
+    name: 'F56 — DOOR instruction stays verbatim (no invented "goma"/"encaje"/"clic")',
+    run: async (ctx) => {
+      await ctx.send('La lavadora no arranca')
+      await ctx.send('Hortes')
+      await ctx.send('La 2')
+      const doorReply = await ctx.send('DOOR')
+      const lower = doorReply.toLowerCase()
+      // Must NOT contain the historical invented details from F32/F37/F38/F39/F56.
+      const invented = [
+        /ropa\s+en\s+la\s+goma/,
+        /hasta\s+que\s+encaje/,
+        /hasta\s+o[ií]r\s+un?\s+clic/,
+        /ropa\s+atascad/,
+        /prendas?\s+atrapad/,
+        /pegado\s+en\s+la\s+m[aá]quina/,
+        /etiqueta\s+de\s+la\s+m[aá]quina/,
+      ]
+      for (const pattern of invented) {
+        if (pattern.test(lower)) {
+          throw new Error(
+            `F56: rephrase invented operational detail matching ${pattern}, got: "${doorReply}"`,
+          )
+        }
+      }
+      // Must contain the source-vetted phrasing (puerta + cierr + prueba/dime).
+      expectMentionsAll(doorReply, ['puerta', 'cierr'])
+    },
+  },
 ]

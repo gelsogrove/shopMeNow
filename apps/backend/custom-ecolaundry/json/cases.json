@@ -145,14 +145,20 @@
     },
     {
       "docNumber": 12,
-      "title": "Horarios y precios",
-      "semanticId": "hours-and-pricing",
+      "title": "Horarios y precios (location-driven FAQ)",
+      "semanticId": "faq-location-context",
       "kind": "faq",
-      "guardModule": "utils/guards/hours-and-pricing.ts",
-      "guards": ["guardPricingDeflect", "guardOpeningHours"],
-      "i18nKeys": ["pricingDeflect", "openingHoursDefault"],
+      "guardModule": "utils/guards/faq-hours.ts, utils/guards/faq-prices.ts",
+      "guards": [
+        "guardFaqHours",
+        "guardFaqHoursAwaitLocation",
+        "guardFaqPrices",
+        "guardFaqPricesAwaitLocation"
+      ],
+      "pendingFlowPrefix": "faq-",
+      "i18nKeys": ["hoursAsk", "pricesAsk", "priceWarning", "pricesDryerHint", "openingHoursDefault"],
       "tests": ["__tests__/agent/12-horarios-precios.test.spec.ts"],
-      "notes": "FAQ topic regex extended (2026-05-08) to cover IT/EN/CA/PT/FR — input recognition is multilingual even though the active tenant outputs ES only (rule #8 'Spanish first')."
+      "notes": "Replaces legacy guardPricingDeflect + guardOpeningHours (2026-05-14 rewrite). Data-driven: reads metadata.hours and metadata.machines.{washers,dryers} from json/locations.json. Two-phase flow per topic: T1 detects intent + asks location if missing; T2 (pendingFlow=faq-{prices,hours}-await-location) renders the answer once the location-extractor captures one. detectMachineTypeMention in utils/intent.ts decides washer/dryer render. The legacy pricingDeflect i18n key is retained for backwards-compat but no code path references it anymore."
     },
     {
       "docNumber": 13,

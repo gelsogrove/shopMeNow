@@ -75,7 +75,12 @@ import { guardLocationGatedMismatch } from './location-gated-mismatch.js'
 
 import { guardFaqClosure } from './faq-closure.js'
 import { guardInvoiceFlow } from './invoice-flow.js'
-import { guardPricingDeflect, guardOpeningHours } from './hours-and-pricing.js'
+import { guardFaqHours, guardFaqHoursAwaitLocation } from './faq-hours.js'
+import {
+  guardFaqPrices,
+  guardFaqPricesAwaitLocation,
+  guardFaqPricesAwaitDryerConfirm,
+} from './faq-prices.js'
 import { guardAngryCustomerEmpathic, guardAngryCustomerEscalate, guardAngryCustomerExplicit } from './angry-customer.js'
 import { guardRefundOrCompensation } from './refund-and-compensation.js'
 import { guardContradictoryNarrative } from './contradictory-narrative.js'
@@ -98,6 +103,18 @@ export const GUARD_PIPELINE: Guard[] = [
   // who screams "muy enfadado, quiero un operador" doesn't get asked
   // "¿en qué lavandería estás?". See angry-customer.ts for rationale.
   guardAngryCustomerExplicit,
+  // Caso 12 — FAQ hours & prices (location-driven, data-aware).
+  // Must run EARLY: customer asking "¿cuánto cuesta?" / "¿qué horarios?"
+  // gets a concrete data-driven answer (or a location ask) BEFORE the
+  // generic gather/flow guards can derail the conversation.
+  // T1 guards (intent + maybe-ask-location):
+  guardFaqHours,
+  guardFaqPrices,
+  // T2 guards (location reply unlocks the answer):
+  guardFaqHoursAwaitLocation,
+  guardFaqPricesAwaitLocation,
+  // T3: "sí" follow-up after washer-default reply renders dryer prices.
+  guardFaqPricesAwaitDryerConfirm,
   guardFaqClosure,
   guardNoChangeAsk,
   guardNoChangeNoCambio,
@@ -114,8 +131,9 @@ export const GUARD_PIPELINE: Guard[] = [
   guardInvoiceFlow,
   guardLoyaltyCardRecharge,
   guardLoyaltyCardBuy,
-  guardPricingDeflect,
-  guardOpeningHours,
+  // (legacy guardPricingDeflect + guardOpeningHours removed — replaced by
+  // guardFaqPrices / guardFaqHours above with full location-aware behaviour.
+  // See utils/guards/faq-location-context.ts and Caso 12 in usecases.md.)
   guardAngryCustomerEmpathic,
   guardAngryCustomerEscalate,
   guardContradictoryNarrative,

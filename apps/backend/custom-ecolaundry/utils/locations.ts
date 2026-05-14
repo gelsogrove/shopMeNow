@@ -68,7 +68,7 @@ export const LAUNDROMATS: LaundromatLocation[] = [
     canonical: "Platja d'Aro",
     pueblo: "Platja d'Aro",
     address: "Av. Castell d'Aro 37",
-    aliases: ['Platja Aro', 'Castell d\'Aro', 'Castell de Aro', 'Platja', "Platja d Aro"],
+    aliases: ['Platja Aro', 'Castell d\'Aro', 'Castell de Aro', 'Platja', "Platja d Aro", "Playa d'Aro", 'Playa Aro', 'Playa', "Playa d aro", "Playa d'aro"],
   },
 ]
 

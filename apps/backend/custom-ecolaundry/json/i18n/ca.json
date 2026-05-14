@@ -79,6 +79,10 @@
   "insistLocationFollowUp": "Per poder ajudar-te, necessito saber primer a quina bugaderia ets exactament.",
   "pricingDeflect": "Ho he de revisar abans de confirmar-te aquest import.",
   "openingHoursDefault": "L'horari general d'atenció al públic és de 8:00 a 22:00 cada dia de l'any.",
+  "hoursAsk": "A quin poble o bugaderia ets?",
+  "pricesAsk": "A quin poble o bugaderia ets?",
+  "priceWarning": "Els preus varien segons la bugaderia. A quina ets i necessites informació de rentadora o assecadora?",
+  "pricesDryerHint": "Vols també informació de l'assecadora?",
   "unknownLocationList": "No reconec aquesta ubicació. Les nostres bugaderies són: {list}. A quina d'elles estàs?",
   "defaultHelp": "Digue'm el següent detall útil i t'ajudaré pas a pas.",
   "flowResumePrompt": "Continuem amb el problema de la bugaderia?"

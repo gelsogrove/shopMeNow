@@ -79,6 +79,10 @@
   "insistLocationFollowUp": "Para poder ayudarte, necesito saber primero en qué lavandería estás exactamente.",
   "pricingDeflect": "Tengo que revisarlo antes de confirmarte ese importe.",
   "openingHoursDefault": "El horario general de atención al público es de 8:00 a 22:00, todos los días del año. ⏰",
+  "hoursAsk": "¿En qué pueblo o lavandería estás?",
+  "pricesAsk": "¿En qué pueblo o lavandería estás?",
+  "priceWarning": "Los precios varían según la lavandería. ¿En qué local estás y necesitas información de lavadora o secadora?",
+  "pricesDryerHint": "¿También quieres información de secadora?",
   "unknownLocationList": "No reconozco esa ubicación. Nuestras lavanderías son: {list}. ¿Podrías indicarme en cuál de ellas estás?",
   "defaultHelp": "Cuéntame, por favor, el siguiente detalle útil y te ayudo paso a paso.",
   "flowResumePrompt": "¿Seguimos con el problema de la lavandería?"

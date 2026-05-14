@@ -45,7 +45,45 @@ export const faqHandler: BranchHandler = async ({ ar, routerDetails, language })
   const tenantLang = pickOutputLanguage(ar, language)
   const strings = pickLang(I18N, tenantLang)
 
+  // Caso 12 T2+ (Andrea 2026-05-14): when the FAQ branch is sticky from a
+  // previous turn (T1 armed `faq-prices-await-location` or
+  // `faq-hours-await-location`), the customer's next message is the location
+  // reply ("Goya", "Platja d'Aro"). T2+ does NOT re-run the router, so
+  // routerDetails is empty — without this delegation the handler would
+  // return unknownKey ("no estoy seguro de haber entendido"). Instead,
+  // delegate so guardFaqHoursAwaitLocation / guardFaqPricesAwaitLocation
+  // can capture the location-extracted state and render the data answer.
+  const pending = ar.state.pendingFlow
+  if (
+    pending === 'faq-prices-await-location' ||
+    pending === 'faq-hours-await-location' ||
+    pending === 'faq-prices-await-dryer-confirm'
+  ) {
+    return { reply: '', handoff: 'delegate-to-legacy' }
+  }
+
   const faqKey = routerDetails.faqKey
+
+  // Post-FAQ closure (Andrea T4 fix 2026-05-14): after a data-driven FAQ
+  // rendered (hours / prices), state.lastResolvedIntent === 'faq'. The
+  // branch is still sticky and T2+ skips the router → routerDetails empty.
+  // If the customer sends a closure word ("gracias", "grazie", "thanks",
+  // "ok"…), the legacy `guardFaqClosure` handles it gracefully — but only
+  // when control reaches the legacy pipeline. Delegate so the closure
+  // guard can fire instead of returning the unknownKey reply.
+  if (!faqKey && ar.state.lastResolvedIntent === 'faq') {
+    return { reply: '', handoff: 'delegate-to-legacy' }
+  }
+
+  // Caso 12 T1: pricing + openingHours are no longer static FAQ entries.
+  // They're handled by guardFaqPrices / guardFaqHours in the legacy
+  // pipeline, which read metadata.hours + metadata.machines from
+  // json/locations.json to produce a location-aware answer. Delegate so the
+  // guard pipeline takes over (same thin-handler pattern as loyalty / invoice).
+  if (faqKey === 'pricing' || faqKey === 'openingHours') {
+    return { reply: '', handoff: 'delegate-to-legacy' }
+  }
+
   if (!faqKey) {
     // Router couldn't extract a key — fall back to the unknown-key reply.
     // Topic-switch so the next turn can be re-routed (the customer will

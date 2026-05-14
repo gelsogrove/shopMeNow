@@ -209,11 +209,22 @@ async function applyGuardOutcome(
   // Deterministic bypass: when emitting the discount-code-ask reply, skip
   // rephrase. The i18n source IS the UX.
   const isDiscountCodeAsk = outcome.reason === 'discount-code-ask'
+  // F56 — Andrea 2026-05-15: bypass rephrase when an active display flow is
+  // running (washer/dryer flow engine: case_push/case_sel/case_door; or
+  // JSON display flows: AL001, ALM-DOOR, C001, …). Those prompts come from
+  // carefully-vetted JSON files (washer_hs60xx.json, dryer_ed340.json,
+  // display-flows.json). The rephrase LLM keeps inventing operational
+  // details ("ropa en la goma", "hasta que encaje bien", "hasta oír un
+  // clic") that contradict the physical machine behaviour. Same pattern
+  // family as F32/F37/F38/F39/F41 — anti-pattern lists in the rephrase
+  // prompt are insufficient. Deterministic bypass is the only robust fix.
+  const isDisplayFlowActive = !!ar.state.activeFlowId
   if (
     !isT1Welcome &&
     !isInvoiceFlow &&
     !hasFormattedBulletList &&
     !isDiscountCodeAsk &&
+    !isDisplayFlowActive &&
     ar.runtime.settings?.naturalRephrase
   ) {
     reply = await rephraseForTurn(reply, ar, history)

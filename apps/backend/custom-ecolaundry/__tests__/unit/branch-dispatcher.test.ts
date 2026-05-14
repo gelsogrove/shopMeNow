@@ -87,7 +87,33 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'faqHandler: known faqKey → returns FAQ answer',
+    name: 'faqHandler: known static faqKey → returns FAQ answer',
+    run: async () => {
+      const ar = makeAr()
+      const out = await faqHandler({
+        message: '¿cuánto tarda el lavado?',
+        ar,
+        routerDetails: { faqKey: 'washDryTime' },
+        language: 'es',
+      })
+      if (!/1\s+hora|ciclo|lavado/i.test(out.reply)) {
+        throw new Error(`expected wash-time answer, got: ${out.reply}`)
+      }
+      if (out.handoff !== 'topic-switch') {
+        throw new Error(`expected handoff="topic-switch", got "${out.handoff}"`)
+      }
+      if (ar.state.lastResolvedIntent !== 'faq') {
+        throw new Error('lastResolvedIntent must be set to "faq"')
+      }
+    },
+  },
+  {
+    // Caso 12 (Andrea 2026-05-14): pricing + openingHours are NO LONGER
+    // static FAQ entries; they delegate to the legacy guard pipeline so
+    // guardFaqPrices / guardFaqHours can produce a location-aware answer
+    // from json/locations.json. Pinned here so we don't accidentally
+    // re-introduce the deflection.
+    name: 'faqHandler: faqKey="openingHours" → delegate-to-legacy (Caso 12 rewrite)',
     run: async () => {
       const ar = makeAr()
       const out = await faqHandler({
@@ -96,16 +122,84 @@ const cases: Case[] = [
         routerDetails: { faqKey: 'openingHours' },
         language: 'it',
       })
-      if (!/8:00|22:00|horario/i.test(out.reply)) {
-        throw new Error(`expected hours answer, got: ${out.reply}`)
+      if (out.handoff !== 'delegate-to-legacy') {
+        throw new Error(`expected handoff="delegate-to-legacy", got "${out.handoff}"`)
       }
-      if (out.handoff !== 'topic-switch') {
-        throw new Error(`expected handoff="topic-switch", got "${out.handoff}"`)
+      if (out.reply !== '') {
+        throw new Error(`delegate-to-legacy must return empty reply, got "${out.reply}"`)
       }
-      // The handler must also flag intent so a "thanks" on the next turn
-      // can be closed by the FAQ closure logic.
-      if (ar.state.lastResolvedIntent !== 'faq') {
-        throw new Error('lastResolvedIntent must be set to "faq"')
+    },
+  },
+  {
+    name: 'faqHandler: faqKey="pricing" → delegate-to-legacy (Caso 12 rewrite)',
+    run: async () => {
+      const ar = makeAr()
+      const out = await faqHandler({
+        message: '¿cuánto cuesta?',
+        ar,
+        routerDetails: { faqKey: 'pricing' },
+        language: 'es',
+      })
+      if (out.handoff !== 'delegate-to-legacy') {
+        throw new Error(`expected handoff="delegate-to-legacy", got "${out.handoff}"`)
+      }
+    },
+  },
+  {
+    // Caso 12 T2+ (Andrea 2026-05-14): when activeBranch=faq is sticky and
+    // T1 armed faq-prices-await-location, the customer's next reply
+    // ("Goya", "Platja d'Aro") MUST delegate to legacy so the data-driven
+    // guardFaqPricesAwaitLocation can render the prices. Without this the
+    // handler returns unknownKey because routerDetails is empty in T2+.
+    name: 'faqHandler T2+: pendingFlow=faq-prices-await-location + empty routerDetails → delegate-to-legacy',
+    run: async () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'faq-prices-await-location'
+      const out = await faqHandler({
+        message: 'Goya',
+        ar,
+        routerDetails: {}, // T2+: router does not re-run
+        language: 'es',
+      })
+      if (out.handoff !== 'delegate-to-legacy') {
+        throw new Error(`expected handoff="delegate-to-legacy", got "${out.handoff}"`)
+      }
+    },
+  },
+  {
+    name: 'faqHandler T2+: pendingFlow=faq-hours-await-location + empty routerDetails → delegate-to-legacy',
+    run: async () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'faq-hours-await-location'
+      const out = await faqHandler({
+        message: "Platja d'Aro",
+        ar,
+        routerDetails: {},
+        language: 'es',
+      })
+      if (out.handoff !== 'delegate-to-legacy') {
+        throw new Error(`expected handoff="delegate-to-legacy", got "${out.handoff}"`)
+      }
+    },
+  },
+  {
+    // T4 closure (Andrea 2026-05-14): after a FAQ render
+    // (state.lastResolvedIntent='faq'), a closure word like "grazie" /
+    // "gracias" / "thanks" must reach the legacy `guardFaqClosure`, not be
+    // swallowed by the FAQ handler's unknownKey fallback. The handler
+    // delegates when there's no faqKey AND a FAQ was just resolved.
+    name: 'faqHandler T4 closure: lastResolvedIntent=faq + empty routerDetails → delegate-to-legacy',
+    run: async () => {
+      const ar = makeAr()
+      ar.state.lastResolvedIntent = 'faq'
+      const out = await faqHandler({
+        message: 'grazie',
+        ar,
+        routerDetails: {},
+        language: 'es',
+      })
+      if (out.handoff !== 'delegate-to-legacy') {
+        throw new Error(`expected handoff="delegate-to-legacy", got "${out.handoff}"`)
       }
     },
   },
