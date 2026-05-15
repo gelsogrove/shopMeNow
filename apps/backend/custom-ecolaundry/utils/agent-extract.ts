@@ -265,10 +265,19 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   //   - the message contains an EXPLICIT preposition pattern via
   //     extractExplicitLocation (not a bare token)
   //   - the resolved location differs from state.location
+  // F64 (Andrea 2026-05-15): also accept `state.previousBranch === 'faq'` as
+  // a valid FAQ-context signal — after F62 closure + F63 branch release, the
+  // intent/key markers are wiped but previousBranch persists. Without this
+  // widening, a customer who closes a FAQ ("no") and then opens a trouble
+  // flow with an explicit location ("no funciona la lavadora 6 a Goya")
+  // would lose the override because line 303 below blocks bare/standalone
+  // location captures when state.location is already set.
   if (
     state.location &&
     (state.lastResolvedIntent === 'faq' ||
+      state.previousBranch === 'faq' ||
       state.pendingFlow === 'faq-prices-await-dryer-confirm' ||
+      state.pendingFlow === 'faq-prices-await-washer-confirm' ||
       state.pendingFlow === 'faq-prices-await-location' ||
       state.pendingFlow === 'faq-hours-await-location')
   ) {
@@ -280,11 +289,24 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
         state.location = resolved
         // Re-arm pendingFlow for the FAQ sub-state so the next guard pass
         // renders the new location's data. Without this, the stale
-        // dryer-confirm flag could block re-render.
-        if (state.pendingFlow === 'faq-prices-await-dryer-confirm') {
-          // Customer pivoted from "see dryers in old loc" to "what about new loc"
-          // → fresh prices flow on new loc.
+        // dryer-confirm / washer-confirm flag could block re-render.
+        if (
+          state.pendingFlow === 'faq-prices-await-dryer-confirm' ||
+          state.pendingFlow === 'faq-prices-await-washer-confirm'
+        ) {
           state.pendingFlow = ''
+        }
+        // F61 (Andrea 2026-05-15): after the location switch, re-arm the
+        // correct faq-{prices,hours}-await-location flow so the next guard
+        // pass renders the new location deterministically. Without this,
+        // a switch like "e a Pineda?" after a price render leaves
+        // pendingFlow='' AND no price-keyword in the message →
+        // `guardFaqPrices` skips → LLM rephrase improvises a non-canonical
+        // reply (Bug A in Andrea's 2026-05-15 mixed-flow chat).
+        if (!state.pendingFlow && state.lastFaqKey === 'pricing') {
+          state.pendingFlow = 'faq-prices-await-location'
+        } else if (!state.pendingFlow && state.lastFaqKey === 'openingHours') {
+          state.pendingFlow = 'faq-hours-await-location'
         }
       }
     }

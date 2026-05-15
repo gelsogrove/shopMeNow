@@ -21,10 +21,15 @@ export const guardEscalateNonTroubleshooting: Guard = (ar) => {
   }
   escalate(ar, `Non-troubleshooting incident: ${ar.state.nonTroubleshootingIncident}`)
   requireCustomerName(ar)
-  const incoherenceLine = t('numericCodeIncoherence', lang(ar))
+  // compensation-demand gets a warmer opening (usecases.md §27 F65).
+  // All other non-troubleshooting incidents use the generic incoherence line.
+  const isCompensation = ar.state.nonTroubleshootingIncident === 'compensation-demand'
+  const openingLine = isCompensation
+    ? t('compensationReview', lang(ar))
+    : t('numericCodeIncoherence', lang(ar))
   const nameAsk = t('customerNameAsk', lang(ar))
   return {
-    reply: `${incoherenceLine} ${nameAsk}`,
+    reply: `${openingLine} ${nameAsk}`,
     reason: 'escalate-non-troubleshooting',
   }
 }

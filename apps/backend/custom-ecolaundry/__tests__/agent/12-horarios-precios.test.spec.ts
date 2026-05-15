@@ -84,6 +84,54 @@ export const tests: TestCase[] = [
     },
   },
   {
+    // F58 (Andrea 2026-05-15): the real-chat regression. Customer asks
+    // "cuanto cuesta lavare la roba?" (verb "lavar" → F52 detects 'washer'
+    // at T1 → state.faqPricesType='washer'). T2 with location → renderPrices
+    // takes the washer-only branch. BEFORE F58 the branch did NOT arm the
+    // dryer-confirm flag, did NOT emit the dryer hint → "y la secadora?"
+    // at T3 fell through to guardForceMachineNumber (autoExtractFacts set
+    // machineType='dryer' from the mention, location+type+!number triggered
+    // the gather). AFTER F58 the washer-only branch arms the flag + emits
+    // the hint, and the dryer mention at T3 confirms the symmetric guard.
+    name: 'F58 — verb-T1 "lavare" + T3 "y la secadora?" renders dryer prices (real chat bug)',
+    run: async (ctx) => {
+      // T1 — verb "lavar" picks up F52 detector → 'washer'.
+      await ctx.send('cuanto cuesta lavar la roba?')
+      // T2 — location reply triggers washer-only render branch.
+      const t2 = await ctx.send('Goya')
+      // F58: must still emit the dryer hint even on the type-specific branch.
+      if (!/tambi[ée]n\s+quieres\s+informaci[oó]n\s+de\s+secadora/i.test(t2)) {
+        throw new Error(`F58: washer-only branch must emit dryer hint, got: "${t2}"`)
+      }
+      // T3 — the dryer mention confirms the dryer-confirm flag (Andrea's chat).
+      const t3 = await ctx.send('y la secadora?')
+      expectMentionsAll(t3, ['secadora', '**S'])
+      // Must NOT ask for machine number (that was the pre-F58 bug).
+      if (/n[uú]mero/i.test(t3)) {
+        throw new Error(`F58: bot must render dryer prices, not ask machine number, got: "${t3}"`)
+      }
+    },
+  },
+  {
+    // F58 mirror — dryer-first path: customer asks "asciugare", then asks
+    // for washer prices via "y la lavadora?". guardFaqPricesAwaitWasherConfirm
+    // must render washer prices.
+    name: 'F58 mirror — verb-T1 "asciugare" + T3 "y la lavadora?" renders washer prices',
+    run: async (ctx) => {
+      await ctx.send('quanto costa asciugare?')
+      const t2 = await ctx.send('Goya')
+      // F58: dryer-only branch must emit washer hint.
+      if (!/tambi[ée]n\s+quieres\s+informaci[oó]n\s+de\s+lavadora/i.test(t2)) {
+        throw new Error(`F58 mirror: dryer-only branch must emit washer hint, got: "${t2}"`)
+      }
+      const t3 = await ctx.send('y la lavadora?')
+      expectMentionsAll(t3, ['lavadora', '**L'])
+      if (/n[uú]mero/i.test(t3)) {
+        throw new Error(`F58 mirror: bot must render washer prices, not ask machine number, got: "${t3}"`)
+      }
+    },
+  },
+  {
     // F54 (Andrea 2026-05-15): when 2+ machines in a location share specs
     // (weightKg + fidelity + cash), the formatter collapses them under the
     // plural label "Lavadoras"/"Secadoras" instead of listing duplicates.

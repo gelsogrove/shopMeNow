@@ -70,6 +70,17 @@ export type SessionState = {
    * gives location, gets washer prices instead.
    */
   faqPricesType: 'washer' | 'dryer' | null
+  /**
+   * F61 (Andrea 2026-05-15) — tracks the FAQ key the bot most recently
+   * resolved (`'pricing'` after a price render, `'openingHours'` after a
+   * hours render). Cleared on FAQ→trouble transition by
+   * `clearFaqContextOnTroubleEntry`. Used by the F51 location-switch block
+   * in `agent-extract.ts` to RE-ARM the correct `faq-{prices,hours}-await-
+   * location` pendingFlow when the customer changes location ("e a Pineda?")
+   * — without re-arm, the next guard pass falls through to the LLM and
+   * improvises (Bug A in Andrea's 2026-05-15 mixed-flow chat).
+   */
+  lastFaqKey: 'pricing' | 'openingHours' | null
   escalationReason: string | null
   operatorRequested: boolean
   customerName: string | null
@@ -258,4 +269,5 @@ export type SessionState = {
     | 'faq-hours-await-location'
     | 'faq-prices-await-location'
     | 'faq-prices-await-dryer-confirm'
+    | 'faq-prices-await-washer-confirm'
 }

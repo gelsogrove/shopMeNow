@@ -153,12 +153,19 @@
         "guardFaqHours",
         "guardFaqHoursAwaitLocation",
         "guardFaqPrices",
-        "guardFaqPricesAwaitLocation"
+        "guardFaqPricesAwaitLocation",
+        "guardFaqPricesAwaitDryerConfirm",
+        "guardFaqPricesAwaitWasherConfirm"
       ],
       "pendingFlowPrefix": "faq-",
-      "i18nKeys": ["hoursAsk", "pricesAsk", "priceWarning", "pricesDryerHint", "openingHoursDefault"],
-      "tests": ["__tests__/agent/12-horarios-precios.test.spec.ts"],
-      "notes": "Replaces legacy guardPricingDeflect + guardOpeningHours (2026-05-14 rewrite). Data-driven: reads metadata.hours and metadata.machines.{washers,dryers} from json/locations.json. Two-phase flow per topic: T1 detects intent + asks location if missing; T2 (pendingFlow=faq-{prices,hours}-await-location) renders the answer once the location-extractor captures one. detectMachineTypeMention in utils/intent.ts decides washer/dryer render. The legacy pricingDeflect i18n key is retained for backwards-compat but no code path references it anymore."
+      "i18nKeys": ["hoursAsk", "pricesAsk", "priceWarning", "pricesDryerHint", "pricesWasherHint", "openingHoursDefault"],
+      "tests": [
+        "__tests__/agent/12-horarios-precios.test.spec.ts",
+        "__tests__/unit/faq-prices.test.ts",
+        "__tests__/unit/faq-location-rearm.test.ts",
+        "__tests__/unit/faq-trouble-transition.test.ts"
+      ],
+      "notes": "Replaces legacy guardPricingDeflect + guardOpeningHours (2026-05-14 rewrite). Data-driven: reads metadata.hours and metadata.machines.{washers,dryers} from json/locations.json. Two-phase flow per topic: T1 detects intent + asks location if missing; T2 (pendingFlow=faq-{prices,hours}-await-location) renders the answer once the location-extractor captures one. detectMachineTypeMention in utils/intent.ts decides washer/dryer render. F58 (2026-05-15): both type-specific T2 branches arm the opposite-type follow-up flag (`faq-prices-await-{dryer,washer}-confirm`) and append the corresponding hint, so the customer who asked one type can ask for the other without falling into guardForceMachineNumber. F60 (2026-05-15): FAQ→trouble-machine boundary clears `state.location + lastResolvedIntent + lastFaqKey` via `clearFaqContextOnTroubleEntry` (state-transitions.ts), called from dispatchTurnOne when router returns 'trouble-machine' AND prior lastResolvedIntent='faq' — avoids stale FAQ-comparison location bleeding into the trouble incident. F61 (2026-05-15): new `state.lastFaqKey: 'pricing' | 'openingHours' | null` marker set by renderPrices and faq-hours guards; agent-extract.ts F51 location-switch block uses it to re-arm `faq-{prices,hours}-await-location` so the deterministic guard renders the new location's data instead of falling through to LLM rephrase. The legacy pricingDeflect i18n key is retained for backwards-compat but no code path references it anymore."
     },
     {
       "docNumber": 13,

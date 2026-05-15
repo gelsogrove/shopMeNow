@@ -73,7 +73,7 @@
   "invoiceFinal": "Gràcies {name}, t'enviarem aviat la factura del {fecha} al teu correu: {email}. 📧\n\n🔒 Les teves dades (raó social, NIF, adreça, correu) s'utilitzen únicament per emetre la factura i no es comparteixen amb tercers.",
   "angryCustomerEmpathic": "Entenc el teu malestar i vull ajudar-te. Ho revisarem com més aviat millor. A quina bugaderia ets?",
   "locationGatedNotDocumented": "No tenim registrat aquest tipus d'incidència a {location}. Ho revisarem manualment per poder ajudar-te.",
-  "compensationReview": "Revisarem el teu cas per ajudar-te amb la solució més adequada.",
+  "compensationReview": "Farem un cop d'ull al teu cas per oferir-te la millor solució. 🙏",
   "refundAskData": "Ho revisarem amb tu. Per tramitar-ho, necessito els últims 4 dígits de la targeta, una captura del pagament i un breu resum.",
   "refundEscalateNoPromise": "Entenc el que em dius. Passarem el cas a revisió per aplicar la solució més adequada.",
   "insistLocationFollowUp": "Per poder ajudar-te, necessito saber primer a quina bugaderia ets exactament.",
@@ -83,6 +83,7 @@
   "pricesAsk": "A quin poble o bugaderia ets?",
   "priceWarning": "Els preus varien segons la bugaderia. A quina ets i necessites informació de rentadora o assecadora?",
   "pricesDryerHint": "Vols també informació de l'assecadora?",
+  "pricesWasherHint": "Vols també informació de la rentadora?",
   "unknownLocationList": "No reconec aquesta ubicació. Les nostres bugaderies són: {list}. A quina d'elles estàs?",
   "defaultHelp": "Digue'm el següent detall útil i t'ajudaré pas a pas.",
   "flowResumePrompt": "Continuem amb el problema de la bugaderia?"

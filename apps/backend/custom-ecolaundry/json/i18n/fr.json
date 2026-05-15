@@ -73,7 +73,7 @@
   "invoiceFinal": "Merci {name}, nous t'enverrons bientôt la facture du {fecha} à ton adresse : {email}. 📧\n\n🔒 Tes données (raison sociale, NIF/SIRET, adresse, e-mail) sont utilisées uniquement pour émettre la facture et ne sont pas partagées avec des tiers.",
   "angryCustomerEmpathic": "Je comprends ton mécontentement et je veux t'aider. Nous allons vérifier dès que possible. Dans quelle laverie es-tu ?",
   "locationGatedNotDocumented": "Nous n'avons pas enregistré ce type d'incident à {location}. Nous allons le vérifier manuellement pour t'aider.",
-  "compensationReview": "Nous allons examiner ton cas pour t'aider avec la solution la plus appropriée.",
+  "compensationReview": "Nous allons jeter un œil à ton cas pour te proposer la meilleure solution. 🙏",
   "refundAskData": "Nous allons le vérifier avec toi. Pour le traiter, j'ai besoin des 4 derniers chiffres de la carte, d'une capture du paiement et d'un bref résumé.",
   "refundEscalateNoPromise": "Je comprends ce que tu me dis. Nous allons transmettre le cas en révision pour appliquer la solution la plus appropriée.",
   "insistLocationFollowUp": "Pour pouvoir t'aider, j'ai besoin de savoir d'abord dans quelle laverie tu te trouves exactement.",
@@ -83,6 +83,7 @@
   "pricesAsk": "Dans quelle ville ou laverie es-tu ?",
   "priceWarning": "Les prix varient selon la laverie. Dans laquelle es-tu et as-tu besoin d'informations sur le lave-linge ou le sèche-linge ?",
   "pricesDryerHint": "Veux-tu aussi les infos sur le sèche-linge ?",
+  "pricesWasherHint": "Veux-tu aussi les infos sur le lave-linge ?",
   "unknownLocationList": "Je ne reconnais pas cet emplacement. Nos laveries sont : {list}. Dans laquelle es-tu ?",
   "defaultHelp": "Dis-moi le détail utile suivant et je t'aiderai pas à pas.",
   "flowResumePrompt": "On continue avec le problème de la laverie ?"

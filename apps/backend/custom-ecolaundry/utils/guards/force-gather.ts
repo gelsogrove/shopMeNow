@@ -8,9 +8,49 @@
 
 import { t } from '../localization.js'
 import type { Guard } from '../../models/index.js'
+import type { SessionState } from '../../models/index.js'
 import { isMataro, lang, notInActiveSubFlow } from './helpers.js'
 import { escalate, requireCustomerName } from '../state-transitions.js'
 import { nextRetryLadderStep } from './retry-ladder.js'
+
+/** F59 (Andrea 2026-05-15) — Gate semantico FAQ context.
+ *
+ *  After a FAQ resolution (`lastResolvedIntent === 'faq'`), the customer
+ *  may mention a machine type ("y la secadora", "lavadora") as part of a
+ *  FAQ follow-up — NOT as a trouble report. `autoExtractFacts` sets
+ *  `state.machineType` from any bare mention, which would otherwise cause
+ *  the force-gather guards to fire and ask for the machine number as if
+ *  it were a trouble incident.
+ *
+ *  The gate skips the force-gather guards when:
+ *  - `lastResolvedIntent === 'faq'` AND
+ *  - no trouble pendingFlow is armed AND
+ *  - the current message does NOT contain a trouble boundary signal
+ *    ("no funciona" / "non funziona" / "doesn't work" / …).
+ *
+ *  The boundary signal is what lets MIX 0 (FAQ → trouble pivot) still
+ *  trigger guardForceMachineType normally — when the customer explicitly
+ *  says "no funciona" they are leaving the FAQ topic. Iron rule #6
+ *  exception: boundary signal (topic switch), not intent classification. */
+const TROUBLE_SIGNAL_RE =
+  /\b(?:no\s+funciona|no\s+arranca|no\s+va\b|est[áa]\s+rot[ao]|non\s+funziona|non\s+parte|non\s+va\b|non\s+arranca|doesn'?t\s+work|isn'?t\s+working|doesn'?t\s+start|broken|n[aã]o\s+funciona|n[aã]o\s+arranca|ne\s+fonctionne\s+pas|ne\s+marche\s+pas|ne\s+d[ée]marre\s+pas)/i
+
+function isInFaqContext(state: SessionState, userMessage: string): boolean {
+  if (state.lastResolvedIntent !== 'faq') return false
+  if (state.pendingFlow && !state.pendingFlow.startsWith('faq-')) return false
+  if (TROUBLE_SIGNAL_RE.test(userMessage)) {
+    // Boundary signal: customer pivots FAQ → trouble. Clear the FAQ marker
+    // so subsequent turns ("6" as machine number, "PUSH" as display, …) are
+    // not gated. Without this, T+1 in MIX 0 would fall through to LLM
+    // improvisation because the trouble keyword is only present in T.
+    // lastResolvedIntent is not in the protected-flag list (rule #4 covers
+    // pendingClosure/operatorRequested/escalationReason/customerNameRequested
+    // /pendingEscalation only) — inline clear is allowed.
+    state.lastResolvedIntent = null
+    return false
+  }
+  return true
+}
 
 /** Step 2 — Force "lavadora o secadora?" when location is known but type is not.
  *
@@ -31,7 +71,8 @@ import { nextRetryLadderStep } from './retry-ladder.js'
  *  used to skip type entirely and the LLM had to improvise. Active-flow
  *  detection is delegated to `notInActiveSubFlow(ar)` which is the
  *  authoritative signal. */
-export const guardForceMachineType: Guard = (ar) => {
+export const guardForceMachineType: Guard = (ar, userMessage) => {
+  if (isInFaqContext(ar.state, userMessage)) return null
   if (
     ar.state.location &&
     !ar.state.machineType &&
@@ -94,7 +135,8 @@ export const guardForcePayment: Guard = (ar) => {
  *  infinite re-ask loop or trigger LLM improvisation. Counter is reset by
  *  resetMachineFacts and (implicitly) when displayState is set by
  *  autoExtractFacts on a recognised input. */
-export const guardForceDisplay: Guard = (ar) => {
+export const guardForceDisplay: Guard = (ar, userMessage) => {
+  if (isInFaqContext(ar.state, userMessage)) return null
   if (
     !ar.state.location ||
     !ar.state.machineType ||
@@ -146,7 +188,8 @@ export const guardForceDisplay: Guard = (ar) => {
  *  before the number, we still need the number for the flow to start.
  *  Counter is reset by resetMachineFacts and (implicitly) when
  *  machineNumber is captured by autoExtractFacts. */
-export const guardForceMachineNumber: Guard = (ar) => {
+export const guardForceMachineNumber: Guard = (ar, userMessage) => {
+  if (isInFaqContext(ar.state, userMessage)) return null
   if (
     !ar.state.location ||
     !ar.state.machineType ||

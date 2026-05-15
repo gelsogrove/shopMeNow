@@ -700,6 +700,399 @@ const cases: Case[] = [
     },
   },
 
+  // ── F63 — Release sticky activeBranch on FAQ closure ──────────────────
+  // Andrea CLI mixed-flow test 2026-05-15 (post-F62): customer said "no" to
+  // dryer follow-up → F62 emitted faqClosure → state.activeBranch stayed
+  // 'faq' sticky → next turn "no funciona la lavadora 6 a Goya" re-entered
+  // faqHandler with empty routerDetails → unknownKey reply. Fix: dedicated
+  // helper releaseBranchOnFaqClosure called from F62 decline branches AND
+  // guardFaqClosure → T+1 re-enters dispatchTurnOne for fresh classification.
+  {
+    name: 'F63 — state-transitions.ts exports releaseBranchOnFaqClosure',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'state-transitions.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      if (!/export function releaseBranchOnFaqClosure/.test(content)) {
+        throw new Error('F63: state-transitions.ts must export releaseBranchOnFaqClosure')
+      }
+      // Mirrors applyHandoff('topic-switch') semantics: previousBranch ← active, active ← null.
+      if (!/ar\.state\.previousBranch\s*=\s*ar\.state\.activeBranch/.test(content)) {
+        throw new Error('F63: helper must move activeBranch into previousBranch')
+      }
+      if (!/ar\.state\.activeBranch\s*=\s*null/.test(content)) {
+        throw new Error('F63: helper must clear activeBranch to null')
+      }
+    },
+  },
+  {
+    name: 'F63 — F62 decline branches AND guardFaqClosure call releaseBranchOnFaqClosure',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const pricesPath = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-prices.ts')
+      const closurePath = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-closure.ts')
+      const pricesContent = fs.readFileSync(pricesPath, 'utf8')
+      const closureContent = fs.readFileSync(closurePath, 'utf8')
+      const pricesCalls = pricesContent.match(/releaseBranchOnFaqClosure\(ar\)/g)
+      if (!pricesCalls || pricesCalls.length < 2) {
+        throw new Error(
+          `F63: faq-prices.ts must call releaseBranchOnFaqClosure in both decline branches, found ${pricesCalls?.length ?? 0}`,
+        )
+      }
+      if (!/releaseBranchOnFaqClosure\(ar\)/.test(closureContent)) {
+        throw new Error('F63: faq-closure.ts must call releaseBranchOnFaqClosure')
+      }
+    },
+  },
+
+  // ── F62 — FAQ confirm-guards close politely on non-affirmative ────────
+  // Andrea CLI mixed-flow test 2026-05-15 (post-F60/F61): customer said "no"
+  // to "¿también quieres información de secadora?" → confirm guard returned
+  // null → pipeline empty → LLM rephrase improvised a trouble-flow reply
+  // ("Volviendo a la lavadora, ¿qué aparece en la pantalla?") from the
+  // chat-history machine context. Fix: confirm guards now emit faqClosure
+  // i18n key on decline (no pipeline hole, iron rule #10 catch-all).
+  {
+    name: 'F62 — guardFaqPricesAwaitDryerConfirm emits faqClosure on non-affirmative',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-prices.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      // The dryer-confirm guard MUST return a reply with reason
+      // 'faq-prices-dryer-decline' instead of returning null.
+      if (!/faq-prices-dryer-decline/.test(content)) {
+        throw new Error("F62: faq-prices.ts must emit reason='faq-prices-dryer-decline' on decline")
+      }
+      if (!/faq-prices-washer-decline/.test(content)) {
+        throw new Error("F62: faq-prices.ts must emit reason='faq-prices-washer-decline' on decline (symmetric)")
+      }
+      // Both decline branches must call t('faqClosure', ...) — single source
+      // of truth across the 6 locales.
+      const closureCalls = content.match(/t\(['"]faqClosure['"]/g)
+      if (!closureCalls || closureCalls.length < 2) {
+        throw new Error(`F62: both confirm guards must use faqClosure i18n, found ${closureCalls?.length ?? 0}`)
+      }
+    },
+  },
+
+  // ── F60 — FAQ→trouble transition clears sticky FAQ-context location ───
+  // Andrea CLI mixed-flow test 2026-05-15: customer compared Goya/Pineda prices
+  // (F51 switched location to Pineda), then pivoted to trouble flow on Goya
+  // ("no funciona la lavadora"). state.location stayed Pineda → any subsequent
+  // FAQ pivot (orari, prezzi) answered for Pineda instead of Goya. Fix:
+  // clearFaqContextOnTroubleEntry helper called from dispatchTurnOne when
+  // router returns 'trouble-machine' AND prior lastResolvedIntent === 'faq'.
+  {
+    name: 'F60 — state-transitions.ts exports clearFaqContextOnTroubleEntry',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'state-transitions.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      if (!/export function clearFaqContextOnTroubleEntry/.test(content)) {
+        throw new Error('F60: state-transitions.ts must export clearFaqContextOnTroubleEntry')
+      }
+      // Helper must wipe location, lastResolvedIntent, and lastFaqKey atomically.
+      if (!/ar\.state\.location\s*=\s*''/.test(content)) {
+        throw new Error('F60: helper must clear state.location')
+      }
+      if (!/ar\.state\.lastResolvedIntent\s*=\s*null/.test(content)) {
+        throw new Error('F60: helper must clear state.lastResolvedIntent')
+      }
+      if (!/ar\.state\.lastFaqKey\s*=\s*null/.test(content)) {
+        throw new Error('F60: helper must clear state.lastFaqKey')
+      }
+    },
+  },
+  {
+    name: 'F60 — boundary-resets.ts applyBranchEntryResets calls clearFaqContextOnTroubleEntry on FAQ→trouble',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      // F60/F64 logic was extracted from branches/index.ts to a dedicated
+      // boundary-resets.ts cassette (entry-time helper). The dispatcher
+      // now imports applyBranchEntryResets and delegates the boundary
+      // check to it. We pin both: (1) the helper itself encodes the
+      // predicate, (2) the dispatcher actually calls it.
+      const helperPath = path.resolve(
+        here, '..', '..', 'utils', 'branches', 'boundary-resets.ts',
+      )
+      const helperContent = fs.readFileSync(helperPath, 'utf8')
+      if (!/import\s*\{[^}]*clearFaqContextOnTroubleEntry[^}]*\}\s*from\s*['"]\.\.\/state-transitions/.test(helperContent)) {
+        throw new Error('F60: boundary-resets.ts must import clearFaqContextOnTroubleEntry')
+      }
+      // Guarded call: branch='trouble-machine' AND (lastResolvedIntent='faq'
+      // OR previousBranch='faq'). F64 widened the predicate so the clear
+      // also fires when F62 closure already wiped lastResolvedIntent.
+      if (
+        !/decision\.branch\s*===\s*['"]trouble-machine['"][\s\S]*?clearFaqContextOnTroubleEntry/.test(
+          helperContent,
+        )
+      ) {
+        throw new Error(
+          "F60: applyBranchEntryResets must call clearFaqContextOnTroubleEntry when branch='trouble-machine'",
+        )
+      }
+      if (
+        !/ar\.state\.lastResolvedIntent\s*===\s*['"]faq['"]/.test(helperContent) ||
+        !/ar\.state\.previousBranch\s*===\s*['"]faq['"]/.test(helperContent)
+      ) {
+        throw new Error(
+          "F64: F60 trigger must check BOTH lastResolvedIntent='faq' AND previousBranch='faq'",
+        )
+      }
+      // Dispatcher wiring: index.ts must actually invoke the helper.
+      const dispatcherPath = path.resolve(
+        here, '..', '..', 'utils', 'branches', 'index.ts',
+      )
+      const dispatcherContent = fs.readFileSync(dispatcherPath, 'utf8')
+      if (!/import\s*\{\s*applyBranchEntryResets\s*\}\s*from\s*['"]\.\/boundary-resets/.test(dispatcherContent)) {
+        throw new Error('F60: branches/index.ts must import applyBranchEntryResets')
+      }
+      if (!/applyBranchEntryResets\(\s*ar\s*,\s*decision\s*\)/.test(dispatcherContent)) {
+        throw new Error('F60: branches/index.ts must call applyBranchEntryResets(ar, decision)')
+      }
+    },
+  },
+  {
+    name: 'F64 — agent-extract F51 block accepts previousBranch="faq" as FAQ-context signal',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      // The F51 conditional must accept previousBranch === 'faq' as one of
+      // the FAQ-context predicates (post-F62 closure / post-F63 release).
+      if (!/state\.previousBranch\s*===\s*['"]faq['"]/.test(content)) {
+        throw new Error("F64: agent-extract.ts F51 block must include state.previousBranch === 'faq'")
+      }
+    },
+  },
+
+  // ── F61 — Location switch in FAQ context re-arms prices/hours guard ───
+  // Andrea CLI mixed-flow test 2026-05-15 (Bug A): customer said "e a Pineda?"
+  // after dryer-confirm closed → F51 switched location but pendingFlow was ''
+  // and "e a Pineda?" has no price keyword → guardFaqPrices skipped → LLM
+  // rephrase improvised a non-canonical reply with nested bullets + both
+  // lavadora and secadora together. Fix: lastFaqKey marker (set by render
+  // sites) + re-arm in agent-extract F51 block.
+  {
+    name: 'F61 — SessionState type declares lastFaqKey field',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'models', 'state.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      if (!/lastFaqKey:\s*'pricing'\s*\|\s*'openingHours'\s*\|\s*null/.test(content)) {
+        throw new Error("F61: state.ts must declare lastFaqKey: 'pricing' | 'openingHours' | null")
+      }
+    },
+  },
+  {
+    name: "F61 — renderPrices sets lastFaqKey='pricing'",
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-prices.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      if (!/ar\.state\.lastFaqKey\s*=\s*['"]pricing['"]/.test(content)) {
+        throw new Error("F61: faq-prices.ts must set lastFaqKey='pricing' in renderPrices")
+      }
+    },
+  },
+  {
+    name: "F61 — faq-hours guards set lastFaqKey='openingHours' on both render sites",
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-hours.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      const matches = content.match(/ar\.state\.lastFaqKey\s*=\s*['"]openingHours['"]/g)
+      if (!matches || matches.length < 2) {
+        throw new Error(
+          `F61: faq-hours.ts must set lastFaqKey='openingHours' in both render sites (T1 direct + T2 await), found ${matches?.length ?? 0}`,
+        )
+      }
+    },
+  },
+  {
+    name: 'F61 — agent-extract.ts F51 block re-arms faq-{prices,hours}-await-location',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      // Both re-arms must be present, gated by lastFaqKey.
+      if (
+        !/state\.lastFaqKey\s*===\s*['"]pricing['"][\s\S]*?state\.pendingFlow\s*=\s*['"]faq-prices-await-location['"]/.test(
+          content,
+        )
+      ) {
+        throw new Error('F61: agent-extract.ts must re-arm faq-prices-await-location when lastFaqKey=pricing')
+      }
+      if (
+        !/state\.lastFaqKey\s*===\s*['"]openingHours['"][\s\S]*?state\.pendingFlow\s*=\s*['"]faq-hours-await-location['"]/.test(
+          content,
+        )
+      ) {
+        throw new Error('F61: agent-extract.ts must re-arm faq-hours-await-location when lastFaqKey=openingHours')
+      }
+    },
+  },
+
+  // ── F59 — FAQ-context gate in force-gather guards ─────────────────────
+  // Andrea CLI mixed-flow test 2026-05-15 (post-F58): customer asked prices,
+  // saw lavadora, said "sí" for secadora, then mid-flow "e a Pineda?" + bare
+  // "secadora" → autoExtractFacts set machineType=dryer, location+type+!number
+  // signature triggered guardForceMachineNumber → bot wrongly asked machine
+  // number as if it were a trouble report. Fix: isInFaqContext helper + skip
+  // gate at the top of guardForceMachineType/Number/Display.
+  {
+    name: 'F59 — force-gather.ts exports isInFaqContext helper (private but referenced 3 times)',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'guards', 'force-gather.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      if (!/function isInFaqContext/.test(content)) {
+        throw new Error('F59: force-gather.ts must define isInFaqContext helper')
+      }
+      // Must be called by all 3 force-gather guards.
+      const matches = content.match(/isInFaqContext\(ar\.state,/g)
+      if (!matches || matches.length < 3) {
+        throw new Error(`F59: isInFaqContext must gate all 3 force-gather guards, found ${matches?.length ?? 0} calls`)
+      }
+    },
+  },
+  {
+    name: 'F59 — gate semantics include trouble boundary signal (state + userMessage)',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'guards', 'force-gather.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      // Helper signature includes userMessage (for boundary signal check).
+      if (!/function isInFaqContext\(state: SessionState, userMessage: string\)/.test(content)) {
+        throw new Error('F59: isInFaqContext must take userMessage to detect FAQ→trouble boundary signal')
+      }
+      // Trouble signal regex must cover the 6 supported languages at minimum.
+      if (!/TROUBLE_SIGNAL_RE/.test(content)) {
+        throw new Error('F59: TROUBLE_SIGNAL_RE must be defined')
+      }
+      // Sample coverage: ES "no funciona", IT "non funziona", EN "doesn't work",
+      // PT "não funciona", FR "ne fonctionne pas". Use substring matching
+      // (.includes) because the source contains literal regex syntax (\s+ etc).
+      const expected = ['no\\s+funciona', 'non\\s+funziona', "doesn'?t\\s+work", 'n[aã]o\\s+funciona', 'ne\\s+fonctionne\\s+pas']
+      for (const e of expected) {
+        if (!content.includes(e)) {
+          throw new Error(`F59: TROUBLE_SIGNAL_RE must include literal pattern "${e}"`)
+        }
+      }
+    },
+  },
+
+  // ── F58 — FAQ prices: opposite-type follow-up after type-specific render ──
+  // Andrea 2026-05-15: F52 verb capture at T1 routed "cuanto costa lavare?"
+  // into the washer-only branch which did NOT arm the dryer-confirm flag
+  // and did NOT emit the dryer hint. Customer follow-up "y la secadora?"
+  // then fell through to guardForceMachineNumber. Mirror fix for the dryer-
+  // first path. Both type-specific branches now arm the opposite-type flag
+  // + append the corresponding hint i18n. New symmetric guard
+  // guardFaqPricesAwaitWasherConfirm completes the cassette.
+  {
+    name: 'F58 — pricesWasherHint i18n exists as direct question in ES',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const esPath = path.resolve(here, '..', '..', 'json', 'i18n', 'es.json')
+      const es = JSON.parse(fs.readFileSync(esPath, 'utf8')) as Record<string, string>
+      if (!es.pricesWasherHint) throw new Error('F58: ES pricesWasherHint missing')
+      if (!/^¿.+\?$/.test(es.pricesWasherHint.trim())) {
+        throw new Error(`F58: ES pricesWasherHint must be a direct question, got "${es.pricesWasherHint}"`)
+      }
+    },
+  },
+  {
+    name: 'F58 — faq-prices.ts exports guardFaqPricesAwaitWasherConfirm',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-prices.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      if (!/export const guardFaqPricesAwaitWasherConfirm/.test(content)) {
+        throw new Error('F58: guardFaqPricesAwaitWasherConfirm export missing')
+      }
+      if (!/'faq-prices-await-washer-confirm'/.test(content)) {
+        throw new Error('F58: pendingFlow literal faq-prices-await-washer-confirm missing')
+      }
+    },
+  },
+  {
+    name: 'F58 — washer-only renderPrices branch arms dryer-confirm + appends pricesDryerHint',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-prices.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      // The washer-only branch (mentioned === 'washer') must contain BOTH
+      // the dryer-confirm flag arming AND the pricesDryerHint reference.
+      const washerBranch = content.match(/if \(mentioned === 'washer'\)[\s\S]+?return \{ reply: t\('priceWarning'/)
+      if (!washerBranch) throw new Error('F58: washer-only branch not found')
+      if (!/faq-prices-await-dryer-confirm/.test(washerBranch[0])) {
+        throw new Error('F58: washer-only branch must arm faq-prices-await-dryer-confirm')
+      }
+      if (!/pricesDryerHint/.test(washerBranch[0])) {
+        throw new Error('F58: washer-only branch must append pricesDryerHint')
+      }
+    },
+  },
+  {
+    name: 'F58 — dryer-only renderPrices branch arms washer-confirm + appends pricesWasherHint',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-prices.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      const dryerBranch = content.match(/if \(mentioned === 'dryer'\)[\s\S]+?return \{ reply: t\('priceWarning'/)
+      if (!dryerBranch) throw new Error('F58: dryer-only branch not found')
+      if (!/faq-prices-await-washer-confirm/.test(dryerBranch[0])) {
+        throw new Error('F58: dryer-only branch must arm faq-prices-await-washer-confirm')
+      }
+      if (!/pricesWasherHint/.test(dryerBranch[0])) {
+        throw new Error('F58: dryer-only branch must append pricesWasherHint')
+      }
+    },
+  },
+  {
+    name: 'F58 — guardFaqPricesAwaitWasherConfirm registered in GUARD_PIPELINE',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'guards', 'index.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      if (!/guardFaqPricesAwaitWasherConfirm/.test(content)) {
+        throw new Error('F58: utils/guards/index.ts must import + register guardFaqPricesAwaitWasherConfirm')
+      }
+    },
+  },
+  {
+    // F58 symmetry gap closure: every cross-file reader of
+    // 'faq-prices-await-dryer-confirm' must also read the washer-confirm
+    // mirror, otherwise edge cases (location switch, branch-router delegate,
+    // re-arm logic) drift only on the dryer-first path.
+    name: 'F58 — agent-extract.ts F51 location switch includes washer-confirm flag',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      if (!/faq-prices-await-washer-confirm/.test(content)) {
+        throw new Error('F58: agent-extract.ts must reference faq-prices-await-washer-confirm (F51 mirror)')
+      }
+      // The two occurrences: (1) FAQ-context override gate, (2) re-arm clear.
+      const matches = content.match(/faq-prices-await-washer-confirm/g)
+      if (!matches || matches.length < 2) {
+        throw new Error(`F58: expected ≥2 references to washer-confirm in agent-extract.ts (override gate + re-arm), got ${matches?.length ?? 0}`)
+      }
+    },
+  },
+  {
+    name: 'F58 — branches/faq/handler.ts delegates washer-confirm pendingFlow to legacy pipeline',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const p = path.resolve(here, '..', '..', 'utils', 'branches', 'faq', 'handler.ts')
+      const content = fs.readFileSync(p, 'utf8')
+      if (!/faq-prices-await-washer-confirm/.test(content)) {
+        throw new Error('F58: faq handler must include faq-prices-await-washer-confirm in the delegate-to-legacy condition')
+      }
+    },
+  },
+
   // ── F57 — state pollution scoping in LLM operator briefing ─────────────
   // Andrea 2026-05-15: LLM briefing was citing facts from abandoned trouble
   // flows in subsequent unrelated escalations (e.g. "lavadora 5 + DOOR"
@@ -1047,6 +1440,41 @@ const cases: Case[] = [
       const faqs = JSON.parse(fs.readFileSync(faqsPath, 'utf8')) as Record<string, string>
       if (/Tengo que revisarlo/.test(faqs.pricing || '')) {
         throw new Error('F50: faqs.json:pricing must NOT contain the legacy deflection string')
+      }
+    },
+  },
+  // ── F65 — compensation-demand uses compensationReview + customerNameAsk inline ─
+  {
+    name: 'F65 — guardEscalateNonTroubleshooting uses compensationReview for compensation-demand',
+    run: () => {
+      const guardPath = path.resolve(
+        __dirname,
+        '..',
+        '..',
+        'utils',
+        'guards',
+        'faq-non-troubleshooting.ts',
+      )
+      const content = fs.readFileSync(guardPath, 'utf8')
+      if (!/compensation-demand/.test(content)) {
+        throw new Error('F65: guard must branch on compensation-demand')
+      }
+      if (!/compensationReview/.test(content)) {
+        throw new Error('F65: guard must use compensationReview i18n key for compensation-demand')
+      }
+    },
+  },
+  {
+    name: 'F65 — compensationReview i18n key does not contain legacy "revisión manual" wording',
+    run: () => {
+      const i18nPath = path.resolve(__dirname, '..', '..', 'json', 'i18n', 'es.json')
+      const catalogue = JSON.parse(fs.readFileSync(i18nPath, 'utf8')) as Record<string, string>
+      const key = catalogue['compensationReview'] ?? ''
+      if (/revisión manual/.test(key)) {
+        throw new Error('F65: compensationReview must not contain "revisión manual" — it is now a warmer compensation-specific opening')
+      }
+      if (!key.trim()) {
+        throw new Error('F65: compensationReview must not be empty')
       }
     },
   },

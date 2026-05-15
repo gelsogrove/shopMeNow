@@ -57,7 +57,8 @@ export const faqHandler: BranchHandler = async ({ ar, routerDetails, language })
   if (
     pending === 'faq-prices-await-location' ||
     pending === 'faq-hours-await-location' ||
-    pending === 'faq-prices-await-dryer-confirm'
+    pending === 'faq-prices-await-dryer-confirm' ||
+    pending === 'faq-prices-await-washer-confirm'
   ) {
     return { reply: '', handoff: 'delegate-to-legacy' }
   }

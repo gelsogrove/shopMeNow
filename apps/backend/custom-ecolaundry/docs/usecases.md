@@ -1055,8 +1055,11 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 3. Formato: `**L1** 20kg: 10€ (fidelidad) / 10€ (efectivo), **L2** 15kg: 8€ / 8€, …`
 4. Si cliente pide información de secadora o máquina específica, bot responde con esos datos
 5. NO inventa precios, usa solo data de `locations.json:machines`
-6. **F53 — Opción B (Andrea 2026-05-14):** cuando el cliente pide precios SIN especificar el tipo de máquina, el bot muestra la lavadora por defecto Y añade la pregunta explícita «¿También quieres información de secadora?». De esta forma una respuesta «sí» tiene contexto semántico claro. Antes era silent-arming del flag dryer-confirm (un «sí» fuera de contexto disparaba la secadora) — UX inconsistente.
-7. **F54 — Collapse de máquinas con specs idénticas (Andrea 2026-05-15):** cuando dos o más máquinas de la misma location comparten `weightKg + fidelity + cash`, el bot las colapsa en UNA sola línea bajo la etiqueta plural «Lavadoras» / «Secadoras» sin enumerar los números individuales. Si todas las specs difieren, cada máquina conserva su número (L1, L2, …). Ejemplo Pineda: 2 secadoras S4/S5 ambas 20kg 2€/15min → `- **Secadoras** 20kg: 2€/15min` (1 línea, no 2 duplicadas).
+6. Cuando el cliente pide precios SIN especificar el tipo de máquina, el bot muestra la lavadora por defecto y añade la pregunta explícita «¿También quieres información de secadora?». La respuesta «sí» del cliente debe tener un contexto semántico claro.
+7. Cuando dos o más máquinas de la misma location comparten `weightKg + fidelity + cash`, el bot las colapsa en una sola línea bajo la etiqueta plural «Lavadoras» / «Secadoras» sin enumerar los números individuales. Si todas las specs difieren, cada máquina conserva su número (L1, L2, …).
+8. Cuando el cliente pide explícitamente UN tipo en T1 (verbo «lavar» / «asciugare» o sustantivo «lavadora» / «secadora»), el bot muestra solo ese tipo en T2 y añade el hint del opuesto («¿También quieres información de secadora?» tras lavadora, y simétrico). Un follow-up «y la secadora?» / «y la lavadora?» en T3 renderiza el otro tipo.
+9. Cuando el cliente, después de un render de precios/horarios, cambia de location en un mensaje de seguimiento («e a Pineda?», «en L'Escala?»), el bot actualiza la location y renderiza los precios/horarios de la nueva location de manera determinística (mismo formato que el render inicial).
+10. En la transición de FAQ a una incidencia (trouble-machine), el bot resetea la location capturada en contexto FAQ y vuelve a preguntar la lavandería para el caso actual — no arrastra la location de la comparación FAQ previa.
 
 **Conversación:**
 
@@ -1079,7 +1082,27 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 - **S5** 20min: 3€
 - **S6** 20min: 3€
 
-**Ejemplo F54 (collapse identical specs) — Pineda con 2 secadoras idénticas:**
+**Ejemplo (follow-up del tipo opuesto tras rama type-specific):**
+
+**Usuario:** ¿Cuánto cuesta lavar la ropa?  
+**Bot:** ¿En qué pueblo o lavandería estás?
+
+**Usuario:** Goya  
+**Bot:** En Goya, los precios de lavadora son:
+
+- **L4** 20kg: 6,5€ (fidelidad) / 7€ (efectivo)
+- **L5** 10kg: 3,5€ (fidelidad) / 4€ (efectivo)
+
+¿También quieres información de secadora?
+
+**Usuario:** y la secadora?  
+**Bot:** En Goya, los precios de secadora son:
+
+- **S1**: 2€/15min
+
+(Simétrico para la rama dryer-first: «¿cuánto cuesta asciugare?» → muestra secadora + «¿También quieres información de lavadora?» → «y la lavadora?» → muestra lavadora.)
+
+**Ejemplo (collapse de máquinas con specs idénticas) — Pineda con 2 secadoras idénticas:**
 
 **Usuario:** quanto costa asciugare a Pineda?  
 **Bot:** En Calle Pineda (Pineda de Mar), los precios de secadora son:
@@ -1400,14 +1423,15 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 **Criterios de aceptación:**
 1. NO confirma activaciones gratuitas ni códigos nuevos.
-2. Si el cliente insiste, mantiene la línea «no puedo confirmarlo desde aquí».
-3. Resumen al operador: nombre + «compensación» + descripción.
-4. Diferencia con Caso 26: pide algo CONCRETO (lavadora gratis), no devolución.
+2. La primera respuesta incluye el wording `compensationReview` + `¿Cómo te llamas?` en un único mensaje (F65).
+3. Si el cliente insiste, mantiene la línea «no puedo confirmarlo desde aquí».
+4. Resumen al operador: nombre + «compensación» + descripción.
+5. Diferencia con Caso 26: pide algo CONCRETO (lavadora gratis), no devolución.
 
 **Conversación:**
 
 **Usuario:** Quiero una secadora gratis por las molestias  
-**Bot:** Vamos a revisar tu caso para ayudarte con la solución más adecuada.
+**Bot:** Vamos a echar un vistazo a tu caso para poder ofrecerte la mejor solución. 🙏 ¿Cómo te llamas, por favor?
 
 **Usuario:** Pero quiero que me lo confirmes ya  
 **Bot:** No puedo confirmarlo directamente desde aquí. Vamos a pasarlo a revisión.

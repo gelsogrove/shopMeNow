@@ -9,6 +9,8 @@
 
 import { classifyMessageBranch, type Branch, type RouterDecision } from '../router.js'
 import type { AgentRuntime, SupportedLanguage } from '../../models/index.js'
+import { applyBranchEntryResets } from './boundary-resets.js'
+import { applyHandoff } from './handoff.js'
 import { greetingHandler } from './greeting/handler.js'
 import { faqHandler } from './faq/handler.js'
 import { troubleMachineHandler } from './trouble-machine/handler.js'
@@ -54,6 +56,9 @@ export async function dispatchTurnOne(
   message: string,
 ): Promise<DispatchResult> {
   const decision = await classifyMessageBranch(message, { runtime: ar.runtime })
+
+  applyBranchEntryResets(ar, decision)
+
   ar.state.activeBranch = decision.branch
   ar.state.previousBranch = null
 
@@ -111,35 +116,4 @@ export async function dispatchSubsequentTurn(
     return { handled: false }
   }
   return { handled: true, output }
-}
-
-/** Apply the handler's handoff signal to the runtime state. */
-function applyHandoff(ar: AgentRuntime, output: BranchOutput): void {
-  switch (output.handoff) {
-    case 'resolved':
-      // Branch closed the case → release sticky branch so T+1 starts fresh.
-      ar.state.previousBranch = ar.state.activeBranch
-      ar.state.activeBranch = null
-      break
-    case 'topic-switch':
-      // Handler explicitly releases control → T+1 will re-run the router.
-      ar.state.previousBranch = ar.state.activeBranch
-      ar.state.activeBranch = null
-      break
-    case 'escalate':
-      // Escalation already mutated state via state-transitions; we leave
-      // activeBranch in place so the rest of the conversation (capture
-      // name, handover summary) stays in the escalation branch.
-      break
-    case 'delegate-to-legacy':
-      // Thin handler — the work for this turn is done by the legacy
-      // pipeline. Keep activeBranch sticky so T+1 stays in this branch
-      // (no re-routing) but signal to the dispatcher that the dispatcher
-      // result is "not handled" → agent loop continues with guards + LLM.
-      break
-    case null:
-    case undefined:
-      // Branch keeps control on the next turn.
-      break
-  }
 }

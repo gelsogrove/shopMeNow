@@ -73,7 +73,7 @@
   "invoiceFinal": "Gracias {name}, te enviaremos pronto la factura del {fecha} a tu correo: {email}. 📧\n\n🔒 Tus datos (razón social, CIF/NIF, dirección, correo) se usan únicamente para emitir la factura y no se comparten con terceros.",
   "angryCustomerEmpathic": "Entiendo tu malestar y quiero ayudarte. 💚 Vamos a revisarlo cuanto antes. ¿Podrías decirme, por favor, en qué lavandería estás?",
   "locationGatedNotDocumented": "No tenemos registrado este tipo de incidencia en {location}. Vamos a revisarlo manualmente para poder ayudarte. 🙏",
-  "compensationReview": "Vamos a revisar tu caso para ayudarte con la solución más adecuada. 🙏",
+  "compensationReview": "Vamos a echar un vistazo a tu caso para poder ofrecerte la mejor solución. 🙏",
   "refundAskData": "Vamos a revisarlo contigo. Para tramitarlo, ¿podrías facilitarme, por favor, los últimos 4 dígitos de la tarjeta, una captura del pago y un breve resumen de lo ocurrido?",
   "refundEscalateNoPromise": "Entiendo lo que me indicas. Vamos a pasar el caso a revisión para aplicar la solución más adecuada. 🙏",
   "insistLocationFollowUp": "Para poder ayudarte, necesito saber primero en qué lavandería estás exactamente.",
@@ -83,6 +83,7 @@
   "pricesAsk": "¿En qué pueblo o lavandería estás?",
   "priceWarning": "Los precios varían según la lavandería. ¿En qué local estás y necesitas información de lavadora o secadora?",
   "pricesDryerHint": "¿También quieres información de secadora?",
+  "pricesWasherHint": "¿También quieres información de lavadora?",
   "unknownLocationList": "No reconozco esa ubicación. Nuestras lavanderías son: {list}. ¿Podrías indicarme en cuál de ellas estás?",
   "defaultHelp": "Cuéntame, por favor, el siguiente detalle útil y te ayudo paso a paso.",
   "flowResumePrompt": "¿Seguimos con el problema de la lavandería?"

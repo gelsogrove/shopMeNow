@@ -80,6 +80,7 @@ import {
   guardFaqPrices,
   guardFaqPricesAwaitLocation,
   guardFaqPricesAwaitDryerConfirm,
+  guardFaqPricesAwaitWasherConfirm,
 } from './faq-prices.js'
 import { guardAngryCustomerEmpathic, guardAngryCustomerEscalate, guardAngryCustomerExplicit } from './angry-customer.js'
 import { guardRefundOrCompensation } from './refund-and-compensation.js'
@@ -113,8 +114,11 @@ export const GUARD_PIPELINE: Guard[] = [
   // T2 guards (location reply unlocks the answer):
   guardFaqHoursAwaitLocation,
   guardFaqPricesAwaitLocation,
-  // T3: "sí" follow-up after washer-default reply renders dryer prices.
+  // T3: "sí" or "y la secadora" follow-up renders dryer prices.
   guardFaqPricesAwaitDryerConfirm,
+  // T3 mirror (F58): "sí" or "y la lavadora" follow-up renders washer prices
+  // after a dryer-only T2 render.
+  guardFaqPricesAwaitWasherConfirm,
   guardFaqClosure,
   guardNoChangeAsk,
   guardNoChangeNoCambio,

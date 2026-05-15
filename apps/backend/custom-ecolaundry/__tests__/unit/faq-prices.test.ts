@@ -17,6 +17,7 @@ import {
   guardFaqPrices,
   guardFaqPricesAwaitLocation,
   guardFaqPricesAwaitDryerConfirm,
+  guardFaqPricesAwaitWasherConfirm,
 } from '../../utils/guards/faq-prices.js'
 import { createInitialState } from '../../utils/state.js'
 import type { AgentRuntime } from '../../models/index.js'
@@ -352,14 +353,24 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'guardFaqPricesAwaitDryerConfirm: non-affirmative reply clears flag + returns null',
+    name: 'F62 — guardFaqPricesAwaitDryerConfirm: non-affirmative emits faqClosure (no LLM hole)',
     run: () => {
       const ar = makeAr()
       ar.state.pendingFlow = 'faq-prices-await-dryer-confirm'
       ar.state.location = 'PlatjaDAro'
-      const out = guardFaqPricesAwaitDryerConfirm(ar, 'gracias, eso es todo')
-      if (out !== null) throw new Error('non-affirmative must NOT fire dryer render')
-      if (ar.state.pendingFlow !== '') throw new Error('pendingFlow must clear to release control')
+      ar.state.lastResolvedIntent = 'faq'
+      ar.state.lastFaqKey = 'pricing'
+      const out = guardFaqPricesAwaitDryerConfirm(ar, 'no')
+      if (!out) throw new Error('F62: non-affirmative must emit a deterministic closure reply, not null')
+      if (out.reason !== 'faq-prices-dryer-decline') {
+        throw new Error(`F62: expected reason=faq-prices-dryer-decline, got "${out.reason}"`)
+      }
+      if (!/perfect|si\s+necesitas|otra/i.test(out.reply)) {
+        throw new Error(`F62: expected closure-style reply, got "${out.reply}"`)
+      }
+      if (ar.state.pendingFlow !== '') throw new Error('pendingFlow must clear')
+      if (ar.state.lastResolvedIntent !== null) throw new Error('lastResolvedIntent must clear (FAQ closed)')
+      if (ar.state.lastFaqKey !== null) throw new Error('lastFaqKey must clear')
     },
   },
   {
@@ -369,6 +380,180 @@ const cases: Case[] = [
       ar.state.location = 'PlatjaDAro'
       const out = guardFaqPricesAwaitDryerConfirm(ar, 'sí')
       if (out !== null) throw new Error('must NOT fire outside the confirm phase')
+    },
+  },
+
+  // ── F58 (Andrea 2026-05-15) — washer-only/dryer-only branches now arm
+  //    the opposite-type follow-up + emit a hint, so the customer can
+  //    follow up "y la secadora?" / "y la lavadora?" without falling
+  //    into guardForceMachineNumber. ────────────────────────────────────
+  {
+    name: 'F58 — T1 washer-explicit (verb "lavar") arms dryer-confirm + emits dryer hint',
+    run: () => {
+      const ar = makeAr()
+      ar.state.location = 'PlatjaDAro'
+      // detectMachineTypeMention("cuanto cuesta lavar?") → 'washer' (F52 verb)
+      const out = guardFaqPrices(ar, 'cuanto cuesta lavar la roba?')
+      if (!out) throw new Error('expected guard to fire')
+      if (!/\*\*L1\*\*/.test(out.reply)) throw new Error(`expected washer prices, got: ${out.reply}`)
+      if (!/secadora/i.test(out.reply)) {
+        throw new Error(`F58: washer-only branch MUST emit dryer hint, got: ${out.reply}`)
+      }
+      if (ar.state.pendingFlow !== 'faq-prices-await-dryer-confirm') {
+        throw new Error(`F58: expected dryer-confirm armed, got "${ar.state.pendingFlow}"`)
+      }
+    },
+  },
+  {
+    name: 'F58 — T1 washer-explicit + T3 "y la secadora?" → renders dryer prices (real chat bug)',
+    run: () => {
+      // Reproduces Andrea's CLI chat 2026-05-15:
+      //   "cuanto cuesta lavare la roba?" → Goya prices lavadora
+      //   "y la secadora?" → bot WAS asking machine number; MUST render dryer prices.
+      const ar = makeAr()
+      ar.state.location = 'PlatjaDAro'
+      const t1 = guardFaqPrices(ar, 'cuanto cuesta lavar la roba?')
+      if (!t1) throw new Error('T1 expected to fire')
+      // T3 follow-up via dryer mention.
+      const t3 = guardFaqPricesAwaitDryerConfirm(ar, 'y la secadora?')
+      if (!t3) throw new Error('F58: dryer mention must confirm + render dryer prices')
+      if (!/\*\*S5\*\*/.test(t3.reply)) throw new Error(`expected dryer S5, got: ${t3.reply}`)
+      if (ar.state.pendingFlow !== '') throw new Error('pendingFlow must clear after confirm')
+    },
+  },
+  {
+    name: 'F58 — T1 dryer-explicit (verb "asciugare") arms washer-confirm + emits washer hint',
+    run: () => {
+      const ar = makeAr()
+      ar.state.location = 'PlatjaDAro'
+      const out = guardFaqPrices(ar, 'quanto costa asciugare?')
+      if (!out) throw new Error('expected guard to fire')
+      if (!/\*\*S5\*\*/.test(out.reply)) throw new Error(`expected dryer prices, got: ${out.reply}`)
+      if (!/lavadora|lavatrice|washer|rentadora|lavar/i.test(out.reply)) {
+        throw new Error(`F58: dryer-only branch MUST emit washer hint, got: ${out.reply}`)
+      }
+      if (ar.state.pendingFlow !== 'faq-prices-await-washer-confirm') {
+        throw new Error(`F58: expected washer-confirm armed, got "${ar.state.pendingFlow}"`)
+      }
+    },
+  },
+  {
+    name: 'F58 — T1 dryer-explicit + T3 "y la lavadora?" → renders washer prices',
+    run: () => {
+      const ar = makeAr()
+      ar.state.location = 'PlatjaDAro'
+      const t1 = guardFaqPrices(ar, 'quanto costa asciugare?')
+      if (!t1) throw new Error('T1 expected to fire')
+      const t3 = guardFaqPricesAwaitWasherConfirm(ar, 'y la lavadora?')
+      if (!t3) throw new Error('F58: washer mention must confirm + render washer prices')
+      if (!/\*\*L1\*\*/.test(t3.reply)) throw new Error(`expected washer L1, got: ${t3.reply}`)
+      if (ar.state.pendingFlow !== '') throw new Error('pendingFlow must clear after confirm')
+    },
+  },
+  {
+    name: 'F58 — guardFaqPricesAwaitWasherConfirm: "sí" → render washer prices + clear flag',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'faq-prices-await-washer-confirm'
+      ar.state.location = 'PlatjaDAro'
+      const out = guardFaqPricesAwaitWasherConfirm(ar, 'sí')
+      if (!out) throw new Error('expected guard to fire on "sí"')
+      if (!/\*\*L1\*\*/.test(out.reply)) throw new Error(`expected bold L1 washer, got: ${out.reply}`)
+      if (ar.state.pendingFlow !== '') throw new Error('pendingFlow must clear after confirm')
+      if (out.reason !== 'faq-prices-washer-confirm') throw new Error('reason mismatch')
+    },
+  },
+  {
+    name: 'F58 — guardFaqPricesAwaitWasherConfirm: bare "lavadora" → render washer prices',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'faq-prices-await-washer-confirm'
+      ar.state.location = 'PlatjaDAro'
+      const out = guardFaqPricesAwaitWasherConfirm(ar, 'lavadora')
+      if (!out) throw new Error('expected washer mention to confirm')
+      if (!/\*\*L1\*\*/.test(out.reply)) throw new Error('expected washer prices rendered')
+    },
+  },
+  {
+    name: 'F62 — guardFaqPricesAwaitWasherConfirm: non-affirmative emits faqClosure (no LLM hole)',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'faq-prices-await-washer-confirm'
+      ar.state.location = 'PlatjaDAro'
+      ar.state.lastResolvedIntent = 'faq'
+      ar.state.lastFaqKey = 'pricing'
+      const out = guardFaqPricesAwaitWasherConfirm(ar, 'no gracias')
+      if (!out) throw new Error('F62: non-affirmative must emit deterministic closure, not null')
+      if (out.reason !== 'faq-prices-washer-decline') {
+        throw new Error(`F62: expected reason=faq-prices-washer-decline, got "${out.reason}"`)
+      }
+      if (ar.state.pendingFlow !== '') throw new Error('pendingFlow must clear')
+      if (ar.state.lastResolvedIntent !== null) throw new Error('lastResolvedIntent must clear')
+      if (ar.state.lastFaqKey !== null) throw new Error('lastFaqKey must clear')
+    },
+  },
+  {
+    name: 'F58 — guardFaqPricesAwaitWasherConfirm: no pendingFlow → null',
+    run: () => {
+      const ar = makeAr()
+      ar.state.location = 'PlatjaDAro'
+      const out = guardFaqPricesAwaitWasherConfirm(ar, 'sí')
+      if (out !== null) throw new Error('must NOT fire outside the confirm phase')
+    },
+  },
+
+  // ── F61 — renderPrices marks lastFaqKey for F51 re-arm ──────────────────
+  {
+    name: 'F61 — guardFaqPrices direct render sets lastFaqKey="pricing"',
+    run: () => {
+      const ar = makeAr()
+      ar.state.location = 'PlatjaDAro'
+      const out = guardFaqPrices(ar, '¿cuánto cuesta lavar?')
+      if (!out) throw new Error('expected guard to fire')
+      if (ar.state.lastFaqKey !== 'pricing') {
+        throw new Error(`expected lastFaqKey="pricing", got "${ar.state.lastFaqKey}"`)
+      }
+      if (ar.state.lastResolvedIntent !== 'faq') {
+        throw new Error('lastResolvedIntent must be set to "faq"')
+      }
+    },
+  },
+  {
+    name: 'F61 — guardFaqPricesAwaitLocation render sets lastFaqKey="pricing"',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'faq-prices-await-location'
+      ar.state.location = 'PlatjaDAro'
+      const out = guardFaqPricesAwaitLocation(ar, "Platja d'Aro")
+      if (!out) throw new Error('expected guard to fire')
+      if (ar.state.lastFaqKey !== 'pricing') {
+        throw new Error(`expected lastFaqKey="pricing", got "${ar.state.lastFaqKey}"`)
+      }
+    },
+  },
+  {
+    name: 'F61 — guardFaqHours direct render sets lastFaqKey="openingHours"',
+    run: () => {
+      const ar = makeAr()
+      ar.state.location = 'PlatjaDAro'
+      const out = guardFaqHours(ar, '¿qué horarios?')
+      if (!out) throw new Error('expected guard to fire')
+      if (ar.state.lastFaqKey !== 'openingHours') {
+        throw new Error(`expected lastFaqKey="openingHours", got "${ar.state.lastFaqKey}"`)
+      }
+    },
+  },
+  {
+    name: 'F61 — guardFaqHoursAwaitLocation render sets lastFaqKey="openingHours"',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'faq-hours-await-location'
+      ar.state.location = 'PlatjaDAro'
+      const out = guardFaqHoursAwaitLocation(ar, "Platja d'Aro")
+      if (!out) throw new Error('expected guard to fire')
+      if (ar.state.lastFaqKey !== 'openingHours') {
+        throw new Error(`expected lastFaqKey="openingHours", got "${ar.state.lastFaqKey}"`)
+      }
     },
   },
 ]

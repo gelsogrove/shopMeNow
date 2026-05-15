@@ -31,6 +31,9 @@ export const guardFaqHours: Guard = (ar, userMessage) => {
 
   const formatted = formatHours(ar.state.location, ar.runtime)
   ar.state.lastResolvedIntent = 'faq'
+  // F61: mark FAQ subtype so the F51 location-switch block re-arms the
+  // correct hours flow on a subsequent location pivot.
+  ar.state.lastFaqKey = 'openingHours'
   return {
     reply: formatted || t('openingHoursDefault', lang(ar)),
     reason: 'faq-hours',
@@ -43,6 +46,7 @@ export const guardFaqHoursAwaitLocation: Guard = (ar) => {
 
   ar.state.pendingFlow = ''
   ar.state.lastResolvedIntent = 'faq'
+  ar.state.lastFaqKey = 'openingHours'
   const formatted = formatHours(ar.state.location, ar.runtime)
   return {
     reply: formatted || t('openingHoursDefault', lang(ar)),

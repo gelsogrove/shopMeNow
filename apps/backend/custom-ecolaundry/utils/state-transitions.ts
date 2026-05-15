@@ -195,3 +195,49 @@ export function pivotToNoChangeAsk(ar: AgentRuntime): void {
   ar.state.pendingFlow = 'no-change-ask'
   resetPostEscalationFlags(ar)
 }
+
+/**
+ * F63 (Andrea 2026-05-15) — Release the sticky branch after a FAQ closure.
+ *
+ * `dispatchSubsequentTurn` reads `state.activeBranch` to decide which handler
+ * to run on T2+; if a legacy guard (guardFaqClosure, F62 dryer/washer-decline)
+ * emits a closure reply WITHOUT also releasing the branch, the next customer
+ * message re-enters `faqHandler` with empty routerDetails and falls into the
+ * unknownKey reply ("No estoy seguro de haber entendido…") even though the
+ * customer is starting a brand-new topic.
+ *
+ * Mirror of `applyHandoff('topic-switch')` semantics — moves `activeBranch`
+ * into `previousBranch` so the next turn re-enters `dispatchTurnOne` and the
+ * router re-classifies the incoming message.
+ */
+export function releaseBranchOnFaqClosure(ar: AgentRuntime): void {
+  ar.state.previousBranch = ar.state.activeBranch
+  ar.state.activeBranch = null
+}
+
+/**
+ * F60 (Andrea 2026-05-15) — Boundary transition FAQ → trouble-machine.
+ *
+ * When the branch router classifies a new turn as `trouble-machine` AND the
+ * previous turn left `state.lastResolvedIntent === 'faq'`, the FAQ-context
+ * sticky `state.location` (possibly switched via F51 to a location the
+ * customer was only comparing prices for) must be cleared so the trouble
+ * flow asks "¿en qué lavandería estás?" fresh and the customer's reply
+ * (Goya) becomes the actual incident location.
+ *
+ * Without this, a customer who just compared Goya/Pineda prices and then
+ * said "no funciona" would proceed through the trouble gather narratively
+ * with one location while `state.location` silently retained the other —
+ * any FAQ pivot mid-trouble (orari, prezzi) would then answer for the
+ * wrong location.
+ *
+ * Architectural placement: called from `branches/index.ts:dispatchTurnOne`
+ * where the router decision is the authoritative signal of intent change.
+ * No phrase regex involved — iron rule #6 respected (the signal is a
+ * router classification, not a customer-phrase pattern).
+ */
+export function clearFaqContextOnTroubleEntry(ar: AgentRuntime): void {
+  ar.state.location = ''
+  ar.state.lastResolvedIntent = null
+  ar.state.lastFaqKey = null
+}
