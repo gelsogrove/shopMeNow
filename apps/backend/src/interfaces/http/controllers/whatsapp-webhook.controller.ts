@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
 import { SecurityCheckService } from "../../../application/services/security-check.service"
-import { CustomClientChatbotService, applyCustomerPatches } from "../../../application/services/custom-client-chatbot.service"
+import { CustomClientChatbotService, applyCustomerPatches, applyEscalationNotification } from "../../../application/services/custom-client-chatbot.service"
 import { UrlShortenerService } from "../../../application/services/url-shortener.service"
 import { platformConfigService } from "../../../services/platform-config.service"
 import { prisma } from "../../../lib/prisma"
@@ -2549,6 +2549,17 @@ export class WhatsAppWebhookController {
       if (customClientResult.handled && customClientResult.output) {
         const customOutput = customClientResult.output
         await applyCustomerPatches(customOutput.patches, customer.id, customer.workspaceId)
+
+        if (customOutput.shouldEscalate && customOutput.escalationSummary) {
+          void applyEscalationNotification({
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+            escalationSummary: customOutput.escalationSummary,
+            history: historyMessages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content || '' })),
+            customerName: customer.name || 'Unknown',
+            customerPhone: customer.phone || undefined,
+          })
+        }
 
         if (customOutput.error) {
           logger.warn("[WEBHOOK] ⚠️ custom-ecolaundry returned error", {

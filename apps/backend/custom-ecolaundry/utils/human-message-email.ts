@@ -18,6 +18,8 @@ export interface HumanMessageEmailData {
   history: AgentMessage[]
   /** Customer display name (may be unknown if not yet captured). */
   customerName: string
+  /** Customer phone number (optional). */
+  customerPhone?: string
   /** Tenant brand name from settings (e.g. "Ecolaundry"). */
   companyName: string
   /** ISO timestamp string for the escalation turn. */
@@ -50,7 +52,7 @@ function renderChatHistory(history: AgentMessage[]): string {
 
   const bubbles = history.map((msg) => {
     const isUser = msg.role === 'user'
-    const bgColor = isUser ? '#f1f5f9' : '#4f46e5'
+    const bgColor = isUser ? '#f1f5f9' : '#25D366'
     const textColor = isUser ? '#1e293b' : '#ffffff'
     const align = isUser ? 'left' : 'right'
     const label = isUser ? '👤 Cliente' : '🤖 Bot'
@@ -94,7 +96,7 @@ export function buildEmailHtml(data: HumanMessageEmailData): string {
           <!-- Header -->
           <tr>
             <td style="background:#4f46e5;padding:24px 32px;">
-              <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">🔔 Human Support message</h1>
+              <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">🔔 Human Support — Usuario ${escapHtml(data.customerName)}${data.customerPhone ? ' ' + escapHtml(data.customerPhone) : ''}</h1>
               <p style="margin:6px 0 0;color:#c7d2fe;font-size:14px;">${escapHtml(data.companyName)} · ${escapHtml(data.timestamp)}</p>
             </td>
           </tr>
@@ -103,7 +105,7 @@ export function buildEmailHtml(data: HumanMessageEmailData): string {
           <tr>
             <td style="background:#fef3c7;border-left:4px solid #f59e0b;padding:16px 32px;">
               <p style="margin:0;color:#92400e;font-size:14px;font-weight:600;">
-                ⚠️ Il cliente <strong>${escapHtml(data.customerName)}</strong> ha richiesto supporto operatore.
+                ⚠️ El cliente <strong>${escapHtml(data.customerName)}</strong> ha solicitado soporte con un operador.
               </p>
             </td>
           </tr>
@@ -112,7 +114,7 @@ export function buildEmailHtml(data: HumanMessageEmailData): string {
           <tr>
             <td style="padding:24px 32px 0;">
               <h2 style="margin:0 0 12px;color:#1e293b;font-size:16px;font-weight:700;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">
-                📋 Riepilogo per l'operatore
+                📋 Resumen para el operador
               </h2>
               <div style="background:#f8fafc;border-left:4px solid #4f46e5;padding:14px 18px;border-radius:0 8px 8px 0;font-size:14px;color:#334155;line-height:1.6;">
                 ${summaryHtml}
@@ -124,7 +126,7 @@ export function buildEmailHtml(data: HumanMessageEmailData): string {
           <tr>
             <td style="padding:24px 32px;">
               <h2 style="margin:0 0 16px;color:#1e293b;font-size:16px;font-weight:700;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">
-                💬 Conversazione completa
+                💬 Conversación completa
               </h2>
               <div style="background:#f8fafc;border-radius:8px;padding:16px;">
                 ${chatHtml}
@@ -136,7 +138,7 @@ export function buildEmailHtml(data: HumanMessageEmailData): string {
           <tr>
             <td style="background:#f1f5f9;padding:16px 32px;border-top:1px solid #e2e8f0;">
               <p style="margin:0;color:#94a3b8;font-size:12px;text-align:center;">
-                Generato automaticamente dal chatbot ${escapHtml(data.companyName)} · Non rispondere a questa email
+                Generado automáticamente por el chatbot ${escapHtml(data.companyName)} · No responder a este correo
               </p>
             </td>
           </tr>

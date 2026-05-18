@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url"
 
 import { prisma as defaultPrisma, PrismaClient } from "@echatbot/database"
 import logger from "../../utils/logger"
+import { WhatsAppDirectSendService } from "../../services/whatsapp-direct-send.service"
 
 type ChatChannel = string
 
@@ -317,4 +318,94 @@ export async function applyCustomerPatches(
     data,
   })
   logger.info('[applyCustomerPatches] Customer profile updated', { customerId, workspaceId, fields: Object.keys(data) })
+}
+
+export interface EscalationNotificationParams {
+  workspaceId: string
+  customerId: string
+  escalationSummary: string
+  history: Array<{ role: 'user' | 'assistant'; content: string }>
+  customerName: string
+  customerPhone?: string
+}
+
+/**
+ * Dispatches the escalation notification to the operator using the workspace
+ * Human Support settings (operatorContactMethod, operatorEmail, operatorWhatsappNumber).
+ * The custom chatbot declares shouldEscalate=true; this function decides HOW to notify.
+ * Never throws — notification failure must not block the chat reply to the customer.
+ */
+export async function applyEscalationNotification(
+  params: EscalationNotificationParams,
+  db: PrismaClient = defaultPrisma
+): Promise<void> {
+  const { workspaceId, customerId, escalationSummary, history, customerName, customerPhone } = params
+
+  const workspace = await db.workspace.findFirst({
+    where: { id: workspaceId },
+    select: {
+      hasHumanSupport: true,
+      operatorContactMethod: true,
+      operatorEmail: true,
+      operatorWhatsappNumber: true,
+      name: true,
+    },
+  })
+
+  if (!workspace || !workspace.hasHumanSupport) {
+    logger.info('[applyEscalationNotification] Human support disabled or workspace not found', { workspaceId })
+    return
+  }
+
+  const method = workspace.operatorContactMethod || 'email'
+  logger.info('[applyEscalationNotification] Dispatching escalation', { workspaceId, customerId, method })
+
+  if (method === 'whatsapp') {
+    const operatorPhone = workspace.operatorWhatsappNumber
+    if (!operatorPhone) {
+      logger.warn('[applyEscalationNotification] WhatsApp method set but no operatorWhatsappNumber configured', { workspaceId })
+      return
+    }
+    try {
+      const directSend = new WhatsAppDirectSendService(db)
+      const messageContent = `🔔 *Human Support* — ${customerName}\n\n${escalationSummary}`
+      await directSend.send({
+        workspaceId,
+        customerId,
+        phoneNumber: operatorPhone,
+        messageContent,
+        skipSecurityCheck: true,
+      })
+      logger.info('[applyEscalationNotification] WhatsApp notification sent', { workspaceId, operatorPhone })
+    } catch (err) {
+      logger.error('[applyEscalationNotification] WhatsApp notification failed', { workspaceId, error: err instanceof Error ? err.message : String(err) })
+    }
+    return
+  }
+
+  // Default: email
+  const operatorEmail = workspace.operatorEmail
+  if (!operatorEmail) {
+    logger.warn('[applyEscalationNotification] Email method set but no operatorEmail configured', { workspaceId })
+    return
+  }
+  try {
+    const { sendHumanMessageEmail } = await import(
+      /* webpackIgnore: true */ '../../../custom-ecolaundry/utils/human-message-email.js' as string
+    ) as { sendHumanMessageEmail: (data: any, emails: string) => Promise<void> }
+    await sendHumanMessageEmail(
+      {
+        summary: escalationSummary,
+        history,
+        customerName,
+        customerPhone,
+        companyName: workspace.name || 'Chatbot',
+        timestamp: new Date().toISOString(),
+      },
+      operatorEmail
+    )
+    logger.info('[applyEscalationNotification] Email notification sent', { workspaceId, operatorEmail })
+  } catch (err) {
+    logger.error('[applyEscalationNotification] Email notification failed', { workspaceId, error: err instanceof Error ? err.message : String(err) })
+  }
 }

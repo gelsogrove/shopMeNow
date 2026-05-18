@@ -36,6 +36,7 @@ export function WidgetSupportSection({
 }: WidgetSupportSectionProps) {
   const { workspace } = useWorkspace()
   const isEcommerce = workspace?.channelMode === 'ECOMMERCE'
+  const isCustomChatbot = !!workspace?.customChatbotId
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -168,35 +169,39 @@ export function WidgetSupportSection({
                 )}
               </div>
 
-              {/* Escalation Instructions */}
-              <div className="space-y-2 pt-2 border-t" onFocus={() => onFieldFocus?.("escalationInstructions")}>
-                <Label htmlFor="humanSupportInstructions" className="pt-4 block">When to Escalate</Label>
-                <Textarea
-                  id="humanSupportInstructions"
-                  value={formData.humanSupportInstructions}
-                  onChange={(e) => onFieldChange("humanSupportInstructions", e.target.value)}
-                  placeholder="Examples:
+              {/* Escalation Instructions — hidden for custom chatbot workspaces:
+                  escalation is deterministic in code, not LLM-prompt-driven */}
+              {!isCustomChatbot && (
+                <>
+                  <div className="space-y-2 pt-2 border-t" onFocus={() => onFieldFocus?.("escalationInstructions")}>
+                    <Label htmlFor="humanSupportInstructions" className="pt-4 block">When to Escalate</Label>
+                    <Textarea
+                      id="humanSupportInstructions"
+                      value={formData.humanSupportInstructions}
+                      onChange={(e) => onFieldChange("humanSupportInstructions", e.target.value)}
+                      placeholder="Examples:
 - When customer explicitly asks for a human
 - For complaints or refund requests
 - When AI cannot resolve the issue after 3 attempts
 - For orders over €1000"
-                  disabled={!canEdit}
-                  className="min-h-[120px]"
-                />
-              </div>
+                      disabled={!canEdit}
+                      className="min-h-[120px]"
+                    />
+                  </div>
 
-              {/* Frustration Escalation Triggers */}
-              <div
-                className="space-y-2 pt-4"
-                onFocus={() => onFieldFocus?.("frustrationTriggers")}
-                data-focus-key="frustrationTriggers"
-              >
-                <p className="text-xs text-gray-500">When the customer shows frustration or panic, escalate immediately</p>
-                <Textarea
-                  disabled={!canEdit}
-                  className="min-h-[100px]"
-                />
-              </div>
+                  <div
+                    className="space-y-2 pt-4"
+                    onFocus={() => onFieldFocus?.("frustrationTriggers")}
+                    data-focus-key="frustrationTriggers"
+                  >
+                    <p className="text-xs text-gray-500">When the customer shows frustration or panic, escalate immediately</p>
+                    <Textarea
+                      disabled={!canEdit}
+                      className="min-h-[100px]"
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Sales Agents Toggle — F50: only meaningful for ECOMMERCE
                   workspaces. Hidden for INFORMATIONAL and FLOW (custom chatbot). */}

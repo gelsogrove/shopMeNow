@@ -37,7 +37,7 @@
 import { Request, Response } from 'express'
 import { prisma } from '@echatbot/database'
 import { SecurityCheckService } from '../../../application/services/security-check.service'
-import { CustomClientChatbotService, applyCustomerPatches } from '../../../application/services/custom-client-chatbot.service'
+import { CustomClientChatbotService, applyCustomerPatches, applyEscalationNotification } from '../../../application/services/custom-client-chatbot.service'
 import { getChatEngine } from '../../../application/chat-engine'
 import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from '../../../middlewares/rateLimiter'
 import { platformConfigService } from '../../../services/platform-config.service'
@@ -1383,6 +1383,17 @@ export class UltraMsgWebhookController {
       if (customClientResult.handled && customClientResult.output) {
         const customOutput = customClientResult.output
         await applyCustomerPatches(customOutput.patches, customer.id, workspaceId)
+
+        if (customOutput.shouldEscalate && customOutput.escalationSummary) {
+          void applyEscalationNotification({
+            workspaceId,
+            customerId: customer.id,
+            escalationSummary: customOutput.escalationSummary,
+            history: (historyMessages ?? []).map((m: any) => ({ role: m.role as 'user' | 'assistant', content: m.content || '' })),
+            customerName: customer.name || 'Unknown',
+            customerPhone: customer.phone || undefined,
+          })
+        }
 
         if (!savedUserMessage) {
           savedUserMessage = await prisma.conversationMessage.create({
