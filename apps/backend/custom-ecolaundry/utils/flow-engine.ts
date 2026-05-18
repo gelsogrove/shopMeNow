@@ -365,6 +365,7 @@ export function tryAdvanceFlowSync(
   runtime: Runtime,
   state: SessionState,
   userInput: string,
+  translateFn?: (key: string) => string,
 ): FlowEngineResult | null {
   const flowId = state.activeFlowId
   let node = currentFlowNode(runtime, state)
@@ -438,7 +439,7 @@ export function tryAdvanceFlowSync(
   return {
     flowId,
     stepId: nextStepId,
-    prompt: nextNode.prompt,
+    prompt: resolveNodePrompt(nextNode, translateFn),
     type: nextNode.type,
     isTerminal: Boolean(nextNode.isTerminal),
     action: nextNode.action,

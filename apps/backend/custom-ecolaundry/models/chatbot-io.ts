@@ -49,6 +49,8 @@ export type ChatbotOutput = {
   wipMessage?: string
   shouldEscalate: boolean
   escalationSummary?: string
+  /** Comma-separated email list from settings.notificationEmails. Populated by the chatbot module so the host app can send the escalation email without reading settings itself. */
+  notificationEmails?: string
   error?: string
   /**
    * Customer-profile fields captured or updated during this turn.

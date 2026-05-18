@@ -155,20 +155,32 @@ async function maybeDispatchBranch(ar: AgentRuntime, userMessage: string): Promi
  * or mutated value can never produce a reply in a disabled language.
  */
 function resolveLanguageForTurn(ar: AgentRuntime, userMessage: string): void {
+  const enabled = ar.runtime.settings.enabledLanguages || []
+
   if (!ar.state.preferredLanguage) {
-    const enabled = ar.runtime.settings.enabledLanguages || []
+    // First turn: detect language from message, fall back to defaultLanguage.
     const heuristic = detectLanguageHeuristic(userMessage)
     const candidate = heuristic && enabled.includes(heuristic)
       ? heuristic
       : ar.runtime.settings.defaultLanguage
     ar.state.language = candidate
     ar.state.preferredLanguage = candidate
+    return
   }
-  const resolved = resolveTenantLang(ar)
-  if (ar.state.language !== resolved) {
-    ar.state.language = resolved
-    ar.state.preferredLanguage = resolved
+
+  // Subsequent turns: preferredLanguage is sticky — only update if the new
+  // message explicitly signals a different enabled language. Neutral messages
+  // (display codes, numbers, short replies) return null from detectLanguageHeuristic
+  // and must NOT reset the language to defaultLanguage.
+  const heuristic = detectLanguageHeuristic(userMessage)
+  if (heuristic && enabled.includes(heuristic) && heuristic !== ar.state.preferredLanguage) {
+    ar.state.language = heuristic
+    ar.state.preferredLanguage = heuristic
+    return
   }
+
+  // Keep the locked language.
+  ar.state.language = ar.state.preferredLanguage as typeof ar.state.language
 }
 
 /** Persist the guard reply in history, optionally prepending the welcome on T1.
@@ -515,8 +527,13 @@ async function appendEscalationSummary(ar: AgentRuntime, reply: string, history:
   ar.pendingEscalation = null
   closeAsEscalated(ar)
 
-  // Determine output language: tenant lock first, fallback to state.language.
-  const lang = resolveTenantLang(ar)
+  // Use the language the LLM already used in the reply so handoff matches it.
+  // Falls back to resolveTenantLang (state.language / defaultLanguage) when
+  // the reply is too short to detect.
+  const detectedLang = detectLanguageHeuristic(reply)
+  const lang = (detectedLang && ar.runtime.settings.enabledLanguages?.includes(detectedLang))
+    ? detectedLang
+    : resolveTenantLang(ar)
   const handoff = t('operatorHandoffFinal', lang)
   return `${reply}\n\n${handoff}\n\n**👤 Human Support message**\n${summary}`
 }

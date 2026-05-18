@@ -134,11 +134,13 @@ async function runChatbotTurn(input: ChatbotInput, agentChain: string[]): Promis
     const reply = await agentTurn(session, input.userMessage)
     const patches = buildPatches(snapshotBefore, session)
     const { shouldEscalate, escalationSummary } = buildEscalationOutcome(session)
+    const notificationEmails = session.ar.runtime.settings?.notificationEmails
 
     return {
       reply,
       shouldEscalate,
       escalationSummary,
+      notificationEmails,
       patches,
       meta: { tokensUsed: 0, agentChain },
     }
@@ -197,6 +199,11 @@ function buildPatches(before: PatchableSnapshot, session: AgentSession): StatePa
   const patches: StatePatch[] = []
   const keys = Object.keys(before) as (keyof PatchableSnapshot)[]
   for (const key of keys) {
+    // Language is managed by the session heuristic every turn and must NOT
+    // be persisted back to the customer DB record — doing so causes the detected
+    // language to flip the DB value on every message, making subsequent turns
+    // switch language based on stale DB data rather than the live conversation.
+    if (key === 'language') continue
     const prev = before[key] ?? ''
     const curr = after[key] ?? ''
     if (curr && curr !== prev) {

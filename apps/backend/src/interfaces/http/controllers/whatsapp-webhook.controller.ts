@@ -2558,6 +2558,7 @@ export class WhatsAppWebhookController {
             history: historyMessages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content || '' })),
             customerName: customer.name || 'Unknown',
             customerPhone: customer.phone || undefined,
+            notificationEmails: customOutput.notificationEmails,
           })
         }
 

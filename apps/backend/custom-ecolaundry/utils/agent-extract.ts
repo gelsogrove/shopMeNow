@@ -188,7 +188,17 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   const inResetableFlow = FLOWS_RESETABLE_ON_TOPIC_SWITCH.has(state.pendingFlow)
   const inPendingEscalation =
     state.operatorRequested && state.customerNameRequested
+  // When the bot is actively waiting for the customer's name (customerNameRequested),
+  // a display code like "PUSH PROG" is NOT a topic switch — the customer is repeating
+  // what they see on the screen. Only reset when the customer reports a genuinely
+  // different incident (new doble-cobro or discount-code intent), not just a display token.
+  const isNameAwaitTopicSwitch =
+    inPendingEscalation &&
+    !detectDoubleChargeIntent(trimmed) &&
+    !detectDiscountCodeIntent(trimmed) &&
+    extractDisplayState(trimmed) !== null
   if (
+    !isNameAwaitTopicSwitch &&
     (inPendingEscalation || inResetableFlow) &&
     detectTopicSwitchDuringEscalation(trimmed)
   ) {

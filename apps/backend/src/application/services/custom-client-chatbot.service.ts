@@ -327,6 +327,8 @@ export interface EscalationNotificationParams {
   history: Array<{ role: 'user' | 'assistant'; content: string }>
   customerName: string
   customerPhone?: string
+  /** Comma-separated email list from chatbot settings.notificationEmails — takes precedence over workspace.operatorEmail for custom chatbot tenants. */
+  notificationEmails?: string
 }
 
 /**
@@ -339,7 +341,7 @@ export async function applyEscalationNotification(
   params: EscalationNotificationParams,
   db: PrismaClient = defaultPrisma
 ): Promise<void> {
-  const { workspaceId, customerId, escalationSummary, history, customerName, customerPhone } = params
+  const { workspaceId, customerId, escalationSummary, history, customerName, customerPhone, notificationEmails } = params
 
   const workspace = await db.workspace.findFirst({
     where: { id: workspaceId },
@@ -384,9 +386,11 @@ export async function applyEscalationNotification(
   }
 
   // Default: email
-  const operatorEmail = workspace.operatorEmail
-  if (!operatorEmail) {
-    logger.warn('[applyEscalationNotification] Email method set but no operatorEmail configured', { workspaceId })
+  // notificationEmails from chatbot settings takes precedence over workspace.operatorEmail
+  // (custom chatbot tenants configure emails in settings.json, not in the workspace DB record)
+  const emailRecipients = notificationEmails || workspace.operatorEmail
+  if (!emailRecipients) {
+    logger.warn('[applyEscalationNotification] Email method set but no email configured', { workspaceId })
     return
   }
   try {
@@ -402,9 +406,9 @@ export async function applyEscalationNotification(
         companyName: workspace.name || 'Chatbot',
         timestamp: new Date().toISOString(),
       },
-      operatorEmail
+      emailRecipients
     )
-    logger.info('[applyEscalationNotification] Email notification sent', { workspaceId, operatorEmail })
+    logger.info('[applyEscalationNotification] Email notification sent', { workspaceId, emailRecipients })
   } catch (err) {
     logger.error('[applyEscalationNotification] Email notification failed', { workspaceId, error: err instanceof Error ? err.message : String(err) })
   }

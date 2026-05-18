@@ -28,7 +28,7 @@ import type { Guard } from '../../models/index.js'
 import { tryAdvanceFlowSync } from '../flow-engine.js'
 import { markResolved, escalate, requireCustomerName } from '../state-transitions.js'
 import { lang } from './helpers.js'
-import { t } from '../localization.js'
+import { t, type TranslationKey } from '../localization.js'
 
 export const guardAdvanceMachineFlow: Guard = (ar, userMessage) => {
   if (
@@ -44,7 +44,8 @@ export const guardAdvanceMachineFlow: Guard = (ar, userMessage) => {
   // `guardDisplayFlowFollowUp`.
   if (ar.state.activeFlowId !== 'non_parte') return null
 
-  const result = tryAdvanceFlowSync(ar.runtime, ar.state, userMessage)
+  const translateFn = (key: string) => t(key as TranslationKey, lang(ar))
+  const result = tryAdvanceFlowSync(ar.runtime, ar.state, userMessage, translateFn)
   if (!result) return null
 
   // Terminal node: tryAdvanceFlowSync has already cleared activeFlowId/
