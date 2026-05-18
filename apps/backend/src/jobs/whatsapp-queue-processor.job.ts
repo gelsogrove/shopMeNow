@@ -1,3 +1,16 @@
+// =============================================================================
+// DEAD CODE — PRESERVED INTENTIONALLY (2026-05-18)
+//
+// This file is NOT imported anywhere in the backend.
+// The WhatsApp Channel Queue cron job was replaced by WhatsAppDirectSendService
+// (apps/backend/src/services/whatsapp-direct-send.service.ts), which sends
+// messages synchronously at call time instead of via a queue + cron cycle.
+//
+// WHY KEPT: The queue-based approach may be revived in the future
+// (e.g. for rate-limiting, retry logic, or bulk campaign delivery).
+// Do NOT delete — restore by importing from apps/scheduler/src/jobs/ if needed.
+// =============================================================================
+
 // External dependencies
 import cron from "node-cron"
 import { prisma } from "@echatbot/database"

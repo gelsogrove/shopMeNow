@@ -14,7 +14,7 @@
 
 import { PrismaClient } from "@echatbot/database"
 import { ConversationMessageRepository } from "../repositories/conversation-message.repository"
-import { WhatsAppQueueService } from "./whatsapp-queue.service"
+import { WhatsAppDirectSendService } from "./whatsapp-direct-send.service"
 import logger from "../utils/logger"
 
 export interface Message {
@@ -39,7 +39,7 @@ export interface SaveMessageParams {
 
 export class ConversationManager {
   private conversationRepo: ConversationMessageRepository
-  private whatsappQueueService: WhatsAppQueueService
+  private directSendService: WhatsAppDirectSendService
   private historyWindowMinutes: number
 
   constructor(
@@ -47,7 +47,7 @@ export class ConversationManager {
     historyWindowMinutes: number = 1440 // 🚀 IMPROVEMENT: Changed from 5 minutes to 24 hours (1440 min)
   ) {
     this.conversationRepo = new ConversationMessageRepository(prisma)
-    this.whatsappQueueService = new WhatsAppQueueService(prisma)
+    this.directSendService = new WhatsAppDirectSendService(prisma)
     this.historyWindowMinutes = historyWindowMinutes
 
     const hours = Math.round(historyWindowMinutes / 60)
@@ -256,23 +256,23 @@ export class ConversationManager {
       // Enqueue after transaction if needed
       if (deliveryStatus === "pending" && customerPhone) {
         try {
-          logger.info("📤 [ConversationManager] ENQUEUING message to WhatsApp queue", {
+          logger.info("📤 [ConversationManager] Sending message directly", {
             workspaceId,
             customerId,
             phoneNumber: customerPhone,
             messageLength: assistantContent.length,
             conversationMessageId: result.assistantId,
           })
-          await this.whatsappQueueService.enqueue({
+          await this.directSendService.send({
             workspaceId,
             customerId,
             phoneNumber: customerPhone,
             messageContent: assistantContent,
             conversationMessageId: result.assistantId,
           })
-          logger.info("✅ [ConversationManager] Message SUCCESSFULLY added to queue")
-        } catch (queueError) {
-          logger.error("❌ Failed to add message to WhatsApp queue (atomic path):", queueError)
+          logger.info("✅ [ConversationManager] Message sent successfully")
+        } catch (sendError) {
+          logger.error("❌ Failed to send message (atomic path):", sendError)
           await this.conversationRepo.updateDeliveryStatus(result.assistantId, "not_queued")
         }
       }
@@ -356,23 +356,20 @@ export class ConversationManager {
       // 2️⃣ If pending status, try to add to WhatsApp Queue with the message ID
       if (deliveryStatus === "pending" && customerPhone) {
         try {
-          await this.whatsappQueueService.enqueue({
+          await this.directSendService.send({
             workspaceId: params.workspaceId,
             customerId: params.customerId,
             phoneNumber: customerPhone,
             messageContent: params.content,
-            conversationMessageId: messageId, // ✅ Link queue to conversation message for timeline tracking
+            conversationMessageId: messageId,
           })
-          logger.debug("📤 Assistant message added to WhatsApp queue", {
+          logger.debug("📤 Assistant message sent directly", {
             messageId,
             customerId: params.customerId,
             phone: customerPhone,
-            deliveryStatus: "pending",
           })
-        } catch (queueError) {
-          // Non-critical: update message status and log error
-          logger.error("❌ Failed to add message to WhatsApp queue:", queueError)
-          // Update message to not_queued since enqueue failed
+        } catch (sendError) {
+          logger.error("❌ Failed to send assistant message:", sendError)
           await this.conversationRepo.updateDeliveryStatus(messageId, "not_queued")
         }
       }

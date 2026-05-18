@@ -24,7 +24,7 @@
  * 12. 💾 Save customer message
  * 13. 🔒 Security LLM check
  * 14. 🤖 Chat Engine (routeMessage)
- * 15. 📤 Queue delivery (WhatsAppQueueService)
+ * 15. 📤 Direct send (WhatsAppDirectSendService)
  */
 
 import { Request, Response } from 'express'
@@ -43,6 +43,7 @@ import { whatsAppToMarkdown } from '../../../utils/whatsapp-formatter'
 import { buildPhoneVariants } from '../../../utils/phone'
 import { detectLanguageFromPhonePrefix } from '../../../utils/language-detector'
 import { OperatorRelayService } from '../../../application/services/operator-relay.service'
+import { WhatsAppDirectSendService } from '../../../services/whatsapp-direct-send.service'
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -666,11 +667,8 @@ export class WasenderWebhookController {
       return res.status(410).json({ status: 'blocked' })
     }
 
-    // 12. 📤 Queue delivery
+    // 12. 📤 Direct send
     try {
-      const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
-      const queueService = new WhatsAppQueueService(prisma)
-
       const assistantMessage = await prisma.conversationMessage.findFirst({
         where: {
           conversationId: chatSession.id,
@@ -680,18 +678,18 @@ export class WasenderWebhookController {
         orderBy: { createdAt: 'desc' },
       })
 
-      await queueService.enqueue({
+      const directSend = new WhatsAppDirectSendService(prisma)
+      await directSend.send({
         workspaceId,
         customerId: customer.id,
         phoneNumber: customer.phone,
         messageContent: routerResult.response,
         conversationMessageId: assistantMessage?.id,
-        isPlayground: false,
       })
 
-      logger.info('[WASENDER] ✅ Response queued for delivery', { customerId: customer.id })
-    } catch (queueError) {
-      logger.error('[WASENDER] ❌ Failed to enqueue response:', queueError)
+      logger.info('[WASENDER] ✅ Response sent directly to WhatsApp', { customerId: customer.id })
+    } catch (sendError) {
+      logger.error('[WASENDER] ❌ Failed to send response:', sendError)
     }
 
     return res.status(200).json({ status: 'processed' })

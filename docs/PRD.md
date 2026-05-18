@@ -142,29 +142,38 @@ Il sistema è organizzato in **4 applicazioni Heroku indipendenti**:
 
 ---
 
-### 4. **Scheduler** (Node.js + node-cron)
-**URL**: N/A (background worker Heroku dyno)  
-**Funzione**: Cron jobs automatici per cleanup e billing
+### 4. **Scheduler** (Node.js — manual job runner)
+**URL**: N/A — jobs eseguiti manualmente, nessun dyno Heroku continuo  
+**Funzione**: Job on-demand per cleanup, billing e campagne push
 
-**Jobs Attivi** (11 total):
+> **Architettura (2026-05-18)**: Lo scheduler cron continuo è stato rimosso.
+> I messaggi WhatsApp vengono ora inviati in modo sincrono da `WhatsAppDirectSendService`
+> al momento della chiamata — nessun job ad alta frequenza è più necessario.
+> I job rimasti sono giornalieri/mensili e si lanciano manualmente con:
+> `npx ts-node src/scripts/run-job.ts <job-name>`
 
-| Job Name | Frequency | Funzione |
-|----------|-----------|----------|
-| `whatsapp-channel-queue` | Every 5 seconds | 📤 Invia messaggi WhatsApp dalla coda |
-| `push-campaigns` | Every minute | 📢 Esegue campagne push schedulate |
-| `monthly-billing` | 1st of month 00:00 | 💳 Genera fatture mensili e addebita subscription |
-| `short-urls-cleanup` | Daily 03:00 | 🔗 Elimina short URLs scaduti |
-| `unused-images-cleanup` | Daily 04:00 | 🖼️ Rimuove immagini orfane da storage |
-| `messages-archive` | Daily 05:00 | 📦 Archivia messaggi >6 mesi in `messages_archive` |
-| `whatsapp-queue-cleanup` | Every hour | 🧹 Rimuove messaggi falliti/scaduti dalla queue |
-| `soft-delete-cleanup` | Daily 06:00 | 🗑️ Hard-delete entities soft-deleted >90 giorni |
-| `support-attachments-cleanup` | Daily 07:00 | 📎 Rimuove attachment support tickets chiusi >30 giorni |
-| `waapi-qr-cleanup` | Every 10 minutes | 📱 Rimuove QR code WaAPI scaduti (>5 minuti) |
-| `trial-expiration-check` | Daily 09:00 | ⏰ Blocca workspace con trial scaduto |
+**Jobs Disponibili** (esecuzione manuale):
+
+| Job Name | Quando usarlo | Funzione |
+|----------|---------------|----------|
+| `push-campaigns` | Quando ci sono campagne attive | 📢 Invia messaggi campagne push in coda |
+| `whatsapp-queue-cleanup` | Periodicamente | 🧹 Rimuove record push queue >7 giorni |
+| `monthly-billing` | 1° del mese | 💳 Genera fatture mensili e addebita subscription |
+| `short-urls-cleanup` | Giornaliero | 🔗 Elimina short URLs scaduti |
+| `unused-images-cleanup` | Giornaliero | 🖼️ Rimuove immagini orfane da storage |
+| `messages-archive` | Giornaliero | 📦 Archivia messaggi >6 mesi in `messages_archive` |
+| `soft-delete-cleanup` | Giornaliero | 🗑️ Hard-delete entities soft-deleted >90 giorni |
+| `support-attachments-cleanup` | Giornaliero | 📎 Rimuove attachment support tickets chiusi >30 giorni |
+| `wasender-qr-cleanup` | Periodicamente | 📱 Rimuove QR code Wasender scaduti (>5 minuti) |
+| `appointment-reminder` | Ogni 15 minuti (se attivi) | ⏰ Invia reminder appuntamenti 24h e 1h prima |
+| `conversation-messages-cleanup` | Giornaliero | 💬 Elimina messaggi LLM context >90 giorni |
+| `agent-logs-cleanup` | Giornaliero | 📋 Elimina agent audit logs >180 giorni |
+| `webhook-events-cleanup` | Giornaliero | 🔔 Elimina webhook dedup events >30 giorni |
+| `auth-attempts-cleanup` | Giornaliero | 🔐 Elimina login/2FA logs >90 giorni |
+| `reminder-locks-cleanup` | Giornaliero | 🔒 Elimina reminder dedup locks scaduti |
 
 **Stack Tecnologico**:
 - Node.js 18+ / TypeScript
-- node-cron (scheduling)
 - Prisma ORM (database access)
 - Shared logger and utilities
 
@@ -685,20 +694,17 @@ Step 8: Review & Create
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ 10. WhatsApp Queue + Billing                               │
-│     - Create WhatsAppQueue (status=pending)                │
-│     - Create BillingTransaction (type=MESSAGE, -€0.10)     │
+│ 10. Direct Send + Billing (2026-05-18)                     │
+│     - WhatsAppDirectSendService.send() chiamato inline     │
+│     - Security check (skipSecurityCheck per messaggi sys)  │
+│     - Provider API call (Meta/UltraMsg/WaAPI)              │
+│     - BillingTransaction (type=MESSAGE, -€0.10) on success │
 │     - Update User.creditBalance -= 0.10                    │
 │     - Check creditBalance < -10 → BLOCK workspace          │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│ 11. Scheduler Job (every 5 sec)                            │
-│     - WhatsAppChannelQueueJob picks pending messages       │
-│     - Sends via provider API (Meta/UltraMsg/WaAPI)         │
-│     - Update status: pending → sent / failed               │
-│     - Cooldown 6 sec tra messaggi                          │
+│     - Update timeline (deliveredAt)                        │
+│                                                            │
+│     NOTE: push campaigns usano ancora WhatsAppQueue        │
+│     (bulk delivery, rate-limited — comportamento corretto) │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -992,14 +998,14 @@ INPUT: customerMessage, customer, workspace, chatSession
    - Summary shown at TOP of notification (most important info first)
    
    - notification to target email (if operatorContactMethod='email')
-     OR add to WhatsApp queue for workspace.operatorWhatsappNumber
+     OR sent directly via WhatsAppDirectSendService to workspace.operatorWhatsappNumber
 5. Customer in queue → AI sends: "Sei in coda. Un operatore ti contatterà a breve."
 6. Operator panel (Frontend /operator-queue):
    - Shows list of customers sorted by operatorQueuePosition + operatorQueueEnteredAt
    - Operator clicks "Take" → customer.operatorQueuePosition=1 (currently served)
 7. Operator sends message manually:
    - Message.sentBy=operatorUserId
-   - Message queued to WhatsAppQueue
+   - Message sent via WhatsAppDirectSendService (sincrono, non più in coda)
 8. When operator done:
    - Clicks "Close" → customer.activeChatbot=true (re-enable AI)
    - customer.operatorQueuePosition=null
@@ -1088,7 +1094,7 @@ INPUT: customerMessage, customer, workspace, chatSession
       - Update recipient status=SENT
    d) When all done: campaign status=COMPLETED
 
-4. WhatsApp queue job (every 5 sec) sends messages
+4. WhatsApp queue job (push-campaigns job, run manually) sends messages
 
 5. Track results:
    - actualSent, actualFailed, actualSkipped

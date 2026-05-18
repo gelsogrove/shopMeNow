@@ -49,6 +49,12 @@ jest.mock("../../../src/utils/logger", () => ({
   },
 }))
 
+// NOTE: whatsAppQueue removed — WhatsApp notifications now sent via WhatsAppDirectSendService (2026-05)
+const mockDirectSend = { send: jest.fn().mockResolvedValue({ success: true }) }
+jest.mock("../../../src/services/whatsapp-direct-send.service", () => ({
+  WhatsAppDirectSendService: jest.fn().mockImplementation(() => mockDirectSend),
+}))
+
 const mockPrisma = {
   customers: {
     findFirst: jest.fn(),
@@ -60,9 +66,6 @@ const mockPrisma = {
   },
   conversationMessage: {
     findMany: jest.fn(),
-  },
-  whatsAppQueue: {
-    create: jest.fn(),
   },
   workspace: {
     findUnique: jest.fn(),
@@ -142,6 +145,7 @@ describe("ContactOperator Email Notifications", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockDirectSend.send.mockResolvedValue({ success: true })
 
     mockPrisma.customers.findFirst.mockResolvedValue(mockCustomer)
     mockPrisma.customers.update.mockResolvedValue(mockCustomer)
@@ -322,6 +326,7 @@ describe("ContactOperator Email Notifications", () => {
 
   describe("WhatsApp notification routing", () => {
     it("should send WhatsApp to assigned agent when available", async () => {
+      // RULE: Agent phone takes priority — sent via WhatsAppDirectSendService (not queue, 2026-05)
       const mockWorkspaceWhatsApp = {
         ...mockWorkspace,
         operatorContactMethod: "whatsapp",
@@ -337,12 +342,10 @@ describe("ContactOperator Email Notifications", () => {
 
       await contactOperator(request)
 
-      expect(mockPrisma.whatsAppQueue.create).toHaveBeenCalledTimes(1)
-      expect(mockPrisma.whatsAppQueue.create).toHaveBeenCalledWith(
+      expect(mockDirectSend.send).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            phoneNumber: mockSalesAgent.phone, // 🎯 agent phone
-          }),
+          phoneNumber: mockSalesAgent.phone, // 🎯 agent phone
+          skipSecurityCheck: true,
         })
       )
     })

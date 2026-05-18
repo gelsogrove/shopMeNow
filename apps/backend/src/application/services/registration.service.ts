@@ -1,7 +1,7 @@
 import { prisma, PrismaClient } from "@echatbot/database"
 import { MessageRepository } from "../../repositories/message.repository"
 import logger from "../../utils/logger"
-import { WhatsAppQueueService } from "../../services/whatsapp-queue.service"
+import { WhatsAppDirectSendService } from "../../services/whatsapp-direct-send.service"
 
 /**
  * Service for handling registration-related functionality
@@ -9,21 +9,12 @@ import { WhatsAppQueueService } from "../../services/whatsapp-queue.service"
 export class RegistrationService {
   private prisma: PrismaClient
   private messageRepository: MessageRepository
-  private whatsappQueueService: WhatsAppQueueService
 
   constructor() {
     this.prisma = prisma
     this.messageRepository = new MessageRepository()
-    this.whatsappQueueService = new WhatsAppQueueService(prisma)
   }
 
-  /**
-   * Send a WhatsApp message via Queue (NOT direct!)
-   * ✅ Passes through Security Agent
-   * ✅ Respects Debug Mode  
-   * ✅ Has billing tracking
-   * ✅ Has retry logic
-   */
   private async sendWhatsAppMessage(
     phoneNumber: string,
     message: string,
@@ -31,46 +22,26 @@ export class RegistrationService {
     customerId: string
   ): Promise<boolean> {
     try {
-      logger.info(
-        `[REGISTRATION-WA] 📤 Adding after-registration message to queue for ${phoneNumber}`
-      )
+      logger.info(`[REGISTRATION-WA] 📤 Sending after-registration message to ${phoneNumber}`)
 
-      // Validate workspace has WhatsApp configured
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: {
-          whatsappApiKey: true,
-          whatsappPhoneNumber: true,
-        },
-      })
-
-      if (!workspace || !workspace.whatsappApiKey) {
-        logger.error(
-          `[REGISTRATION-WA] WhatsApp settings not found for workspace ${workspaceId}`
-        )
-        return false
-      }
-
-      // 📤 ADD TO QUEUE instead of sending directly!
-      const queueEntry = await this.whatsappQueueService.enqueue({
+      const directSend = new WhatsAppDirectSendService(this.prisma)
+      const result = await directSend.send({
         workspaceId,
         customerId,
         phoneNumber,
         messageContent: message,
+        skipSecurityCheck: true,
       })
 
-      logger.info(
-        `[REGISTRATION-WA] ✅ Message added to queue`,
-        {
-          queueId: queueEntry.id,
-          phoneNumber,
-          status: "pending",
-        }
-      )
+      if (result.success) {
+        logger.info(`[REGISTRATION-WA] ✅ Message sent`, { phoneNumber })
+      } else {
+        logger.error(`[REGISTRATION-WA] ❌ Failed to send message`, { phoneNumber, error: result.error })
+      }
 
-      return true
+      return result.success
     } catch (error) {
-      logger.error(`[REGISTRATION-WA] Error adding message to queue:`, error)
+      logger.error(`[REGISTRATION-WA] Error sending message:`, error)
       return false
     }
   }
@@ -241,7 +212,7 @@ export class RegistrationService {
   /**
    * Send approval message to customer when admin approves their registration
    * ✅ USES Security & Translation layer (MANDATORY)
-   * ✅ Sends via WhatsAppQueueService (with dedup)
+   * ✅ Sends via WhatsAppDirectSendService
    * ✅ Saves to conversationMessage history
    *
    * Called when workspace has requireManualApproval=true and admin approves

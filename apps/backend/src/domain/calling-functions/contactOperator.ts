@@ -11,6 +11,7 @@ import logger from "../../utils/logger"
 import { prisma } from "@echatbot/database"
 import { TranslationAgent } from "../../application/agents/TranslationAgent"
 import { SecureTokenService } from "../../application/services/secure-token.service"
+import { WhatsAppDirectSendService } from "../../services/whatsapp-direct-send.service"
 
 const translationAgent = new TranslationAgent(prisma)
 const secureTokenService = new SecureTokenService()
@@ -501,24 +502,22 @@ Rispondi direttamente su WhatsApp.
 ✅ *Scrivi END quando hai finito per riattivare il chatbot.*
               `.trim()
 
-              await prisma.whatsAppQueue.create({
-                data: {
-                  workspaceId: request.workspaceId,
-                  customerId: customer.id, // System customer for billing
-                  phoneNumber: targetPhoneNumber, // 🎯 Operator/agent number
-                  messageContent: whatsappMessage,
-                  status: "pending",
-                  channel: "whatsapp",
-                },
+              const directSend = new WhatsAppDirectSendService(prisma)
+              await directSend.send({
+                workspaceId: request.workspaceId,
+                customerId: customer.id,
+                phoneNumber: targetPhoneNumber,
+                messageContent: whatsappMessage,
+                skipSecurityCheck: true,
               })
 
-              logger.info("✅ [contactOperator] WhatsApp message queued successfully", {
+              logger.info("✅ [contactOperator] WhatsApp message sent directly", {
                 targetPhoneNumber,
                 targetName,
                 customerName: customer.name,
               })
             } catch (whatsappError) {
-              logger.error("❌ [contactOperator] Failed to queue WhatsApp message:", whatsappError)
+              logger.error("❌ [contactOperator] Failed to send WhatsApp message:", whatsappError)
             }
           }
         }

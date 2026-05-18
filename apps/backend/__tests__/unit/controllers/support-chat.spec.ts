@@ -11,6 +11,15 @@ import { prisma } from "@echatbot/database"
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
+// NOTE: whatsAppQueue removed — operator replies now sent via WhatsAppDirectSendService (2026-05)
+const mockDirectSend = { send: jest.fn().mockResolvedValue({ success: true }) }
+jest.mock(
+  "../../../src/services/whatsapp-direct-send.service",
+  () => ({
+    WhatsAppDirectSendService: jest.fn().mockImplementation(() => mockDirectSend),
+  })
+)
+
 jest.mock("@echatbot/database", () => ({
   prisma: {
     customers: {
@@ -22,9 +31,6 @@ jest.mock("@echatbot/database", () => ({
     },
     conversationMessage: {
       findMany: jest.fn(),
-      create: jest.fn(),
-    },
-    whatsAppQueue: {
       create: jest.fn(),
     },
     secureToken: {
@@ -138,6 +144,7 @@ describe("SupportChatController", () => {
     // Initialize mocks here (after jest.clearAllMocks to clear previous calls)
     mockValidateToken = jest.fn()
     mockRevokeToken = jest.fn()
+    mockDirectSend.send.mockResolvedValue({ success: true })
     // Reset relay service mock (module-level jest.fn — must be cleared per test)
     mockReleaseCustomerAndProcessNext.mockReset()
     controller = new SupportChatController()
@@ -241,7 +248,7 @@ describe("SupportChatController", () => {
 
       await controller.reply(req, res)
 
-      // RULE: Widget path uses ConversationMessage, NOT WhatsAppQueue
+      // RULE: Widget path uses ConversationMessage, NOT WhatsApp send
       expect(prisma.conversationMessage.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -251,36 +258,32 @@ describe("SupportChatController", () => {
           }),
         })
       )
-      expect(prisma.whatsAppQueue.create).not.toHaveBeenCalled()
+      expect(mockDirectSend.send).not.toHaveBeenCalled()
       expect(res.json).toHaveBeenCalledWith({ success: true, channel: "widget" })
     })
 
-    it("should queue WhatsApp message when channel=whatsapp", async () => {
+    it("should send WhatsApp message directly when channel=whatsapp", async () => {
       // SCENARIO: Customer contacted from WhatsApp — operator replies
-      // RULE: WhatsApp replies → WhatsAppQueue (not ConversationMessage)
+      // RULE: WhatsApp replies → WhatsAppDirectSendService (refactored from queue, 2026-05)
+      // NOTE: previously used WhatsAppQueue — now direct send for lower latency
       mockValidateToken.mockResolvedValue(tokenValidationData)
       ;(prisma.customers.findFirst as jest.Mock).mockResolvedValue(mockWhatsAppCustomer)
-      ;(prisma.whatsAppQueue.create as jest.Mock).mockResolvedValue({ id: "queue-1" })
 
       const req = buildReq({ body: { token: VALID_TOKEN, message: "Risposta via WA" } })
       const res = buildRes()
 
       await controller.reply(req, res)
 
-      // RULE: WhatsApp path uses WhatsAppQueue, NOT ConversationMessage
-      expect(prisma.whatsAppQueue.create).toHaveBeenCalledWith(
+      // RULE: WhatsApp path uses WhatsAppDirectSendService (direct send, not queue)
+      expect(mockDirectSend.send).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({
-            workspaceId: WORKSPACE_ID,
-            customerId: CUSTOMER_ID,
-            phoneNumber: "+39123456789",
-            messageContent: "Risposta via WA",
-            status: "pending",
-            channel: "whatsapp",
-          }),
+          workspaceId: WORKSPACE_ID,
+          customerId: CUSTOMER_ID,
+          phoneNumber: "+39123456789",
+          messageContent: "Risposta via WA",
+          skipSecurityCheck: true,
         })
       )
-      expect(prisma.conversationMessage.create).not.toHaveBeenCalled()
       expect(res.json).toHaveBeenCalledWith({ success: true, channel: "whatsapp" })
     })
   })

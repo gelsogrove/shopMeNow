@@ -3,7 +3,6 @@ import { Request, Response } from "express"
 import { config } from "../../../config"
 import { MessageRepository } from "../../../repositories/message.repository"
 import { LLMRouterService } from "../../../services/llm-router.service"
-import { WhatsAppQueueService } from "../../../services/whatsapp-queue.service"
 import { usageService } from "../../../services/usage.service"
 import { websocketService } from "../../../services/websocket.service"
 import { SecurityAgent } from "../../../application/agents/SecurityAgent"
@@ -13,13 +12,11 @@ export class ChatController {
   private prisma: PrismaClient
   private messageRepository: MessageRepository
   private llmRouterService: LLMRouterService
-  private whatsappQueueService: WhatsAppQueueService
 
   constructor() {
     this.prisma = prisma
     this.messageRepository = new MessageRepository()
     this.llmRouterService = new LLMRouterService(this.prisma)
-    this.whatsappQueueService = new WhatsAppQueueService(this.prisma)
   }
 
   /**
@@ -693,25 +690,27 @@ export class ChatController {
       // 📤 STEP 5: CHANNEL-SPECIFIC DELIVERY (WhatsApp vs Widget)
       // 🔧 CRITICAL FIX: Route message based on channel, NOT blindly to WhatsApp
       if (chatSession.channel === "whatsapp") {
-        // WhatsApp customer: send via WhatsApp provider queue
+        // WhatsApp customer: send directly via provider
         try {
-          const queueEntry = await this.whatsappQueueService.enqueue({
+          const { WhatsAppDirectSendService } = require("../../../services/whatsapp-direct-send.service")
+          const directSend = new WhatsAppDirectSendService(this.prisma)
+          await directSend.send({
             workspaceId,
             customerId: chatSession.customerId,
             phoneNumber: chatSession.customer.phone || "",
-            messageContent: finalMessage, // Use validated/translated message
+            messageContent: finalMessage,
             conversationMessageId: conversationMessage.id,
+            skipSecurityCheck: true, // manual operator send — no LLM security needed
           })
-          logger.info(`[CHAT-SEND] ✅ Message added to WhatsApp queue (channel: whatsapp)`)
+          logger.info(`[CHAT-SEND] ✅ Message sent directly to WhatsApp (channel: whatsapp)`)
 
-          // 🆕 ADD WhatsApp queue debug step
           debugSteps.push({
             type: "function_call",
-            agent: "📤 Add to WhatsApp Queue",
+            agent: "📤 Send to WhatsApp",
             model: "N/A",
             temperature: 0,
             timestamp: new Date().toISOString(),
-            functionName: "enqueueWhatsAppMessage",
+            functionName: "sendWhatsAppDirect",
             input: {
               channel: "whatsapp",
               phoneNumber: chatSession.customer.phone || "",
@@ -721,9 +720,8 @@ export class ChatController {
             },
             output: {
               success: true,
-              messageId: queueEntry.id,
               conversationMessageId: conversationMessage.id,
-              queueStatus: "pending",
+              status: "sent",
               executionTimeMs: 10,
             },
             tokenUsage: {
@@ -732,21 +730,19 @@ export class ChatController {
               totalTokens: 0,
             },
           })
-        } catch (queueError) {
+        } catch (sendError) {
           logger.warn(
-            `[CHAT-SEND] ⚠️ Failed to add message to WhatsApp queue (message still saved):`,
-            queueError.message
+            `[CHAT-SEND] ⚠️ Failed to send message to WhatsApp (message still saved):`,
+            sendError instanceof Error ? sendError.message : sendError
           )
-          // Continue - message is saved even if queue fails
 
-          // 🆕 ADD WhatsApp queue error debug step
           debugSteps.push({
             type: "function_call",
-            agent: "📤 Add to WhatsApp Queue",
+            agent: "📤 Send to WhatsApp",
             model: "N/A",
             temperature: 0,
             timestamp: new Date().toISOString(),
-            functionName: "enqueueWhatsAppMessage",
+            functionName: "sendWhatsAppDirect",
             input: {
               channel: "whatsapp",
               phoneNumber: chatSession.customer.phone || "",
@@ -757,8 +753,8 @@ export class ChatController {
             output: {
               success: false,
               conversationMessageId: conversationMessage.id,
-              queueStatus: "failed",
-              error: queueError instanceof Error ? queueError.message : "Unknown error",
+              status: "failed",
+              error: sendError instanceof Error ? sendError.message : "Unknown error",
               executionTimeMs: 20,
             },
             tokenUsage: {
@@ -925,6 +921,6 @@ export class ChatController {
   }
 
   // 🗑️ REMOVED: sendWhatsAppMessage method (dead code)
-  // WhatsApp messages now go through whatsappQueueService.enqueue()
+  // WhatsApp messages sent directly via WhatsAppDirectSendService
   // This ensures: 1) Debug Mode is respected, 2) Security Agent validates, 3) Billing is tracked
 }

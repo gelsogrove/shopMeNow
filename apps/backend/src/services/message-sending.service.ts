@@ -13,7 +13,7 @@
 
 import { prisma, PrismaClient } from "@echatbot/database"
 import logger from "../utils/logger"
-import { WhatsAppQueueService } from "./whatsapp-queue.service"
+import { WhatsAppDirectSendService } from "./whatsapp-direct-send.service"
 import { config } from "../config"
 import { TranslationAgent } from "../application/agents/TranslationAgent"
 
@@ -56,11 +56,9 @@ export interface SendMessageResult {
  * La queue rispetta debugMode e applica Security Agent nello scheduler
  */
 export class MessageSendingService {
-  private whatsappQueueService: WhatsAppQueueService
   private translationAgent: TranslationAgent
 
   constructor(private prisma: PrismaClient) {
-    this.whatsappQueueService = new WhatsAppQueueService(prisma)
     this.translationAgent = new TranslationAgent(prisma)
   }
 
@@ -155,34 +153,29 @@ export class MessageSendingService {
         customerId = customer?.id
       }
 
-      const queueEntry = await this.whatsappQueueService.enqueue({
+      const directSend = new WhatsAppDirectSendService(this.prisma)
+      const sendResult = await directSend.send({
         workspaceId: options.workspaceId,
         customerId: customerId || "",
         phoneNumber: options.phoneNumber,
         messageContent: finalMessage,
         conversationMessageId: messageId,
+        skipSecurityCheck: securityChecked, // security already applied above if needed
       })
 
-      logger.info("✅ [MESSAGE-SEND] Message enqueued successfully", {
-        queueId: queueEntry.id,
-        status: queueEntry.status,
+      logger.info("✅ [MESSAGE-SEND] Message sent successfully", {
         sendType: options.sendType,
         securityChecked,
         duration: Date.now() - startTime,
       })
 
-      // 5. Update message status to queued (will be updated to sent by scheduler)
-      if (messageId) {
-        await this.updateMessageStatus(messageId, "pending", undefined, queueEntry.id)
-      }
-
       return {
-        success: true,
-        messageId: queueEntry.id, // Return queue ID instead of WhatsApp ID
-        blocked: false,
+        success: sendResult.success,
+        messageId: sendResult.messageId,
+        blocked: sendResult.blocked ?? false,
         securityChecked,
         translatedText: finalMessage,
-        status: "queued", // Indicate message is in queue, not yet sent
+        status: sendResult.success ? "sent" : "failed",
       }
     } catch (error) {
       logger.error("❌ [MESSAGE-SEND] Fatal error", {

@@ -47,6 +47,7 @@ import { whatsAppToMarkdown } from '../../../utils/whatsapp-formatter'
 import { buildPhoneVariants } from '../../../utils/phone'
 import { detectLanguageFromPhonePrefix } from '../../../utils/language-detector'
 import { OperatorRelayService } from '../../../application/services/operator-relay.service'
+import { WhatsAppDirectSendService } from '../../../services/whatsapp-direct-send.service'
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -497,17 +498,17 @@ export class UltraMsgWebhookController {
             })
 
             try {
-              const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
-              const queueService = new WhatsAppQueueService(prisma)
-              await queueService.enqueue({
+              const directSend = new WhatsAppDirectSendService(prisma)
+              await directSend.send({
                 workspaceId,
                 customerId: tempCustomer.id,
                 phoneNumber: tempCustomer.phone,
                 messageContent: wipMessage,
                 conversationMessageId: assistantMessage.id,
+                skipSecurityCheck: true,
               })
             } catch (error) {
-              logger.error('[ULTRAMSG] ❌ Failed to enqueue WIP message (new user)', {
+              logger.error('[ULTRAMSG] ❌ Failed to send WIP message (new user)', {
                 error,
                 workspaceId,
               })
@@ -755,24 +756,21 @@ export class UltraMsgWebhookController {
               messageId: welcomeResult.assistantMessageId,
             })
 
-            // 📤 CRITICAL: Queue welcome message for WhatsApp delivery
+            // 📤 Send welcome message directly
             try {
-              const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
-              const queueService = new WhatsAppQueueService(prisma)
-              await queueService.enqueue({
+              const directSend = new WhatsAppDirectSendService(prisma)
+              await directSend.send({
                 workspaceId: customer.workspaceId,
                 customerId: customer.id,
                 phoneNumber: customer.phone,
                 messageContent: welcomeResult.welcomeText,
                 conversationMessageId: welcomeResult.assistantMessageId,
-                isPlayground: false,
+                skipSecurityCheck: true,
               })
-              logger.info('[ULTRAMSG] ✅ Welcome message queued for WhatsApp delivery', {
-                customerId: customer.id,
-              })
-            } catch (queueError) {
-              logger.error('[ULTRAMSG] ❌ Failed to enqueue welcome message', {
-                error: queueError instanceof Error ? queueError.message : String(queueError),
+              logger.info('[ULTRAMSG] ✅ Welcome message sent directly', { customerId: customer.id })
+            } catch (sendError) {
+              logger.error('[ULTRAMSG] ❌ Failed to send welcome message', {
+                error: sendError instanceof Error ? sendError.message : String(sendError),
                 customerId: customer.id,
               })
             }
@@ -1029,19 +1027,19 @@ export class UltraMsgWebhookController {
             },
           })
 
-          // Queue WIP message
+          // Send WIP message directly
           try {
-            const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
-            const queueService = new WhatsAppQueueService(prisma)
-            await queueService.enqueue({
+            const directSend = new WhatsAppDirectSendService(prisma)
+            await directSend.send({
               workspaceId,
               customerId: customer.id,
               phoneNumber: customer.phone,
               messageContent: wipMessage,
               conversationMessageId: assistantMessage.id,
+              skipSecurityCheck: true,
             })
           } catch (error) {
-            logger.error('[ULTRAMSG] ❌ Failed to enqueue WIP message', { error })
+            logger.error('[ULTRAMSG] ❌ Failed to send WIP message', { error })
           }
           
           return res.status(200).json({
@@ -1432,19 +1430,17 @@ export class UltraMsgWebhookController {
 
         if (customOutput.reply) {
           try {
-            const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
-            const queueService = new WhatsAppQueueService(prisma)
-            await queueService.enqueue({
+            const directSend = new WhatsAppDirectSendService(prisma)
+            await directSend.send({
               workspaceId,
               customerId: customer.id,
               phoneNumber: customer.phone,
               messageContent: customOutput.reply,
               conversationMessageId: assistantMessageId,
-              isPlayground: false,
             })
-          } catch (queueError) {
-            logger.error('[ULTRAMSG] ❌ Failed to enqueue custom-ecolaundry response', {
-              error: queueError,
+          } catch (sendError) {
+            logger.error('[ULTRAMSG] ❌ Failed to send custom chatbot response', {
+              error: sendError,
               workspaceId,
               customerId: customer.id,
             })
@@ -1513,10 +1509,6 @@ export class UltraMsgWebhookController {
       })
 
       try {
-        const { WhatsAppQueueService } = require('../../../services/whatsapp-queue.service')
-        const queueService = new WhatsAppQueueService(prisma)
-        
-        // Find the assistant message created by ChatEngine
         const assistantMessage = await prisma.conversationMessage.findFirst({
           where: {
             conversationId: chatSession.id,
@@ -1526,21 +1518,19 @@ export class UltraMsgWebhookController {
           orderBy: { createdAt: 'desc' },
         })
 
-        await queueService.enqueue({
+        const directSend = new WhatsAppDirectSendService(prisma)
+        await directSend.send({
           workspaceId,
           customerId: customer.id,
           phoneNumber: customer.phone,
           messageContent: routerResult.response,
           conversationMessageId: assistantMessage?.id,
-          isPlayground: false,
         })
 
-        logger.info('[ULTRAMSG] ✅ Response queued for WhatsApp delivery', {
-          customerId: customer.id,
-        })
-      } catch (queueError) {
-        logger.error('[ULTRAMSG] ❌ Failed to enqueue WhatsApp response', {
-          error: queueError,
+        logger.info('[ULTRAMSG] ✅ Response sent directly to WhatsApp', { customerId: customer.id })
+      } catch (sendError) {
+        logger.error('[ULTRAMSG] ❌ Failed to send WhatsApp response', {
+          error: sendError,
           customerId: customer.id,
         })
       }

@@ -7,7 +7,29 @@
     "dev": "dotenv -e ../../.env -- tsx --watch src/index.ts",
     "build": "rm -rf dist && tsc -p ./tsconfig.json",
     "start": "node dist/index.js",
-    "test": "dotenv -e ../../.env -- jest --passWithNoTests"
+    "test": "dotenv -e ../../.env -- jest --passWithNoTests",
+
+    "job": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts",
+
+    "job:push-campaigns": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts push-campaigns",
+    "job:whatsapp-queue-cleanup": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts whatsapp-queue-cleanup",
+
+    "job:short-urls-cleanup": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts short-urls-cleanup",
+    "job:unused-images-cleanup": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts unused-images-cleanup",
+    "job:messages-archive": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts messages-archive",
+    "job:soft-delete-cleanup": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts soft-delete-cleanup",
+    "job:support-attachments-cleanup": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts support-attachments-cleanup",
+    "job:conversation-messages-cleanup": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts conversation-messages-cleanup",
+    "job:agent-logs-cleanup": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts agent-logs-cleanup",
+    "job:webhook-events-cleanup": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts webhook-events-cleanup",
+    "job:auth-attempts-cleanup": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts auth-attempts-cleanup",
+    "job:reminder-locks-cleanup": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts reminder-locks-cleanup",
+
+    "job:monthly-billing": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts monthly-billing",
+    "job:appointment-reminder": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts appointment-reminder",
+    "job:wasender-qr-cleanup": "dotenv -e ../../.env -- tsx src/scripts/run-job.ts wasender-qr-cleanup",
+
+    "jobs:cleanup-all": "npm run job:whatsapp-queue-cleanup && npm run job:short-urls-cleanup && npm run job:unused-images-cleanup && npm run job:messages-archive && npm run job:soft-delete-cleanup && npm run job:support-attachments-cleanup && npm run job:conversation-messages-cleanup && npm run job:agent-logs-cleanup && npm run job:webhook-events-cleanup && npm run job:auth-attempts-cleanup && npm run job:reminder-locks-cleanup"
   },
   "author": "Andrea Gelso",
   "license": "ISC",

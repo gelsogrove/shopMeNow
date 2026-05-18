@@ -765,10 +765,7 @@ export class CustomersController {
         },
       })
 
-      // Send approval message via RegistrationService
-      // ✅ Goes through WhatsAppQueueService (dedup check)
-      // ✅ Goes through Security & Translation layer
-      // ✅ Saves to conversationMessage history
+      // Send approval message via RegistrationService (direct send)
       this.registrationService.sendApprovalMessage(id).catch(error => {
         logger.error("Error sending approval message:", error)
       })

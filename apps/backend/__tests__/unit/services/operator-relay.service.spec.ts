@@ -39,6 +39,24 @@ jest.mock("../../../src/application/agents/TranslationAgent", () => ({
   })),
 }))
 
+// NOTE: mockDirectSend must use jest.fn() inline to avoid hoisting issues
+// (jest.mock() is hoisted before const declarations, so external refs would be undefined)
+jest.mock("../../../src/services/whatsapp-direct-send.service", () => ({
+  WhatsAppDirectSendService: jest.fn().mockImplementation(() => ({
+    send: jest.fn().mockResolvedValue({ success: true }),
+  })),
+}))
+
+// Access the mock instance after module load
+import { WhatsAppDirectSendService as MockWhatsAppDirectSendService } from "../../../src/services/whatsapp-direct-send.service"
+// Collect all send() calls across ALL WhatsAppDirectSendService instances created in a test
+// (the service creates a new instance per send operation)
+const getAllDirectSendCalls = () =>
+  (MockWhatsAppDirectSendService as jest.Mock).mock.results
+    .flatMap((r: any) => r.value?.send?.mock?.calls ?? [])
+
+const expectNoDirectSend = () => expect(getAllDirectSendCalls().length).toBe(0)
+
 // ============================================================================
 // MOCK PRISMA
 // ============================================================================
@@ -59,9 +77,8 @@ const mockPrisma = {
   },
   conversationMessage: {
     create: jest.fn(),
-  },
-  whatsAppQueue: {
-    create: jest.fn(),
+    findUnique: jest.fn().mockResolvedValue(null),
+    update: jest.fn().mockResolvedValue({}),
   },
 }
 
@@ -100,6 +117,12 @@ describe("OperatorRelayService", () => {
     // RULE: resetAllMocks (not clearAllMocks) — ensures spy .mockImplementation()
     // and .mockResolvedValueOnce() chains do not leak between tests.
     jest.resetAllMocks()
+    // Re-set WhatsAppDirectSendService mock implementation after resetAllMocks
+    ;(MockWhatsAppDirectSendService as jest.Mock).mockImplementation(() => ({
+      send: jest.fn().mockResolvedValue({ success: true }),
+    }))
+    mockPrisma.conversationMessage.findUnique.mockResolvedValue(null)
+    mockPrisma.conversationMessage.update.mockResolvedValue({})
     service = new OperatorRelayService(mockPrisma as unknown as PrismaClient)
   })
 
@@ -274,7 +297,6 @@ describe("OperatorRelayService", () => {
       // Queue is empty after release
       mockPrisma.customers.findMany.mockResolvedValue([])
       mockPrisma.customers.update.mockResolvedValue({})
-      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
       // sendMessageToOperator → workspace.findUnique (no operator number configured = silent skip)
       mockPrisma.workspace.findUnique.mockResolvedValue({ operatorWhatsappNumber: null })
       // relayToCustomer (farewell to customer) now always calls chatSession.findFirst
@@ -307,7 +329,6 @@ describe("OperatorRelayService", () => {
 
       mockPrisma.customers.findMany.mockResolvedValue([])
       mockPrisma.customers.update.mockResolvedValue({})
-      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
       mockPrisma.workspace.findUnique.mockResolvedValue({ operatorWhatsappNumber: null })
       // relayToCustomer (farewell to customer) now always calls chatSession.findFirst
       mockPrisma.chatSession.findFirst.mockResolvedValue(session)
@@ -315,16 +336,15 @@ describe("OperatorRelayService", () => {
 
       await service.processEndCommand(WORKSPACE_ID)
 
-      // ASSERT: farewell message enqueued to customer's phone
-      expect(mockPrisma.whatsAppQueue.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            phoneNumber: activeCustomer.phone,
-            workspaceId: WORKSPACE_ID,
-            customerId: activeCustomer.id,
-          }),
-        })
+      // ASSERT: farewell message sent directly to customer's phone
+      const farewellCall = getAllDirectSendCalls().find(
+        (c: any[]) => c[0].phoneNumber === activeCustomer.phone
       )
+      expect(farewellCall).toBeDefined()
+      expect(farewellCall?.[0]).toMatchObject({
+        workspaceId: WORKSPACE_ID,
+        customerId: activeCustomer.id,
+      })
     })
 
     it("should send 'all done' message to operator when queue is empty after END", async () => {
@@ -339,7 +359,6 @@ describe("OperatorRelayService", () => {
       // Queue is empty after release
       mockPrisma.customers.findMany.mockResolvedValue([])
       mockPrisma.customers.update.mockResolvedValue({})
-      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
       // relayToCustomer (farewell to customer) now always calls chatSession.findFirst
       mockPrisma.chatSession.findFirst.mockResolvedValue(session)
@@ -347,14 +366,13 @@ describe("OperatorRelayService", () => {
 
       await service.processEndCommand(WORKSPACE_ID)
 
-      // ASSERT: "all done" message sent to operator
-      const calls = mockPrisma.whatsAppQueue.create.mock.calls
-      const operatorMsg = calls.find(
-        (c) => c[0].data.phoneNumber === workspace.operatorWhatsappNumber
+      // ASSERT: "all done" message sent directly to operator
+      const operatorMsg = getAllDirectSendCalls().find(
+        (c: any[]) => c[0].phoneNumber === workspace.operatorWhatsappNumber
       )
       expect(operatorMsg).toBeDefined()
-      expect(operatorMsg?.[0].data.messageContent).toContain("All done")
-      expect(operatorMsg?.[0].data.messageContent).toContain("Queue empty")
+      expect(operatorMsg?.[0].messageContent).toContain("All done")
+      expect(operatorMsg?.[0].messageContent).toContain("Queue empty")
     })
 
     it("should send dashboard link to operator when queue still has customers after END", async () => {
@@ -380,22 +398,20 @@ describe("OperatorRelayService", () => {
       mockPrisma.customers.findMany.mockResolvedValue([customerB])
       mockPrisma.customers.update.mockResolvedValue({})
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
-      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
       // relayToCustomer (farewell to customer) now always calls chatSession.findFirst
       mockPrisma.chatSession.findFirst.mockResolvedValue(session)
       mockPrisma.conversationMessage.create.mockResolvedValue({ id: "conv-msg-farewell" })
 
       await service.processEndCommand(WORKSPACE_ID)
 
-      // ASSERT: dashboard link message sent to operator's number
-      const waCreateCalls = mockPrisma.whatsAppQueue.create.mock.calls
-      const operatorNotification = waCreateCalls.find(
-        (call) => call[0].data.phoneNumber === workspace.operatorWhatsappNumber
+      // ASSERT: dashboard link message sent directly to operator's number
+      const operatorNotification = getAllDirectSendCalls().find(
+        (call: any[]) => call[0].phoneNumber === workspace.operatorWhatsappNumber
       )
       expect(operatorNotification).toBeDefined()
       // ASSERT: message contains the dashboard URL (SecureTokenService generates the token — tested separately)
       // ASSERT: message indicates the next customer
-      expect(operatorNotification?.[0].data.messageContent).toContain("Next customer connected")
+      expect(operatorNotification?.[0].messageContent).toContain("Next customer connected")
     })
 
     it("should do nothing when queue is empty on END", async () => {
@@ -424,7 +440,6 @@ describe("OperatorRelayService", () => {
       const savedConvMsg = { id: "conv-msg-001" }
       mockPrisma.chatSession.findFirst.mockResolvedValue(session)
       mockPrisma.conversationMessage.create.mockResolvedValue(savedConvMsg)
-      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
 
       await service.relayToCustomer(customer, WORKSPACE_ID, "Hello from operator")
 
@@ -441,17 +456,16 @@ describe("OperatorRelayService", () => {
         select: { id: true },
       })
 
-      // ASSERT: WhatsApp queue entry created with conversationMessageId for delivery tracking
-      expect(mockPrisma.whatsAppQueue.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          workspaceId: WORKSPACE_ID,
-          customerId: customer.id,
-          phoneNumber: customer.phone,
-          messageContent: "Hello from operator",
-          channel: "whatsapp",
-          skipSecurityCheck: true,
-          conversationMessageId: savedConvMsg.id,
-        }),
+      // ASSERT: message sent directly to customer with conversationMessageId for delivery tracking
+      const sendCalls = getAllDirectSendCalls()
+      expect(sendCalls.length).toBeGreaterThan(0)
+      expect(sendCalls[0][0]).toMatchObject({
+        workspaceId: WORKSPACE_ID,
+        customerId: customer.id,
+        phoneNumber: customer.phone,
+        messageContent: "Hello from operator",
+        skipSecurityCheck: true,
+        conversationMessageId: savedConvMsg.id,
       })
     })
 
@@ -478,7 +492,8 @@ describe("OperatorRelayService", () => {
         }),
         select: { id: true },
       })
-      expect(mockPrisma.whatsAppQueue.create).not.toHaveBeenCalled()
+      // ASSERT: No WhatsApp send for widget channel — widget polls ConversationMessage directly
+      expectNoDirectSend()
     })
 
     it("should fall back to widget routing when originChannel is null", async () => {
@@ -492,7 +507,7 @@ describe("OperatorRelayService", () => {
       await service.relayToCustomer(customer, WORKSPACE_ID, "Message")
 
       expect(mockPrisma.conversationMessage.create).toHaveBeenCalled()
-      expect(mockPrisma.whatsAppQueue.create).not.toHaveBeenCalled()
+      expectNoDirectSend()
     })
 
     it("should do nothing when no active session exists for customer", async () => {
@@ -506,7 +521,7 @@ describe("OperatorRelayService", () => {
       ).resolves.not.toThrow()
 
       expect(mockPrisma.conversationMessage.create).not.toHaveBeenCalled()
-      expect(mockPrisma.whatsAppQueue.create).not.toHaveBeenCalled()
+      expectNoDirectSend()
     })
   })
 
@@ -522,24 +537,24 @@ describe("OperatorRelayService", () => {
       const workspace = { operatorWhatsappNumber: "+39111222333" }
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
       mockPrisma.customers.findUnique.mockResolvedValue({ salesId: null, sales: null })
-      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
 
       const customer = { id: "cust-001", name: "Mario", phone: "+393491234567" }
 
       await service.relayCustomerMessageToOperator(WORKSPACE_ID, customer, "Voglio un rimborso")
 
-      expect(mockPrisma.whatsAppQueue.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          workspaceId: WORKSPACE_ID,
-          customerId: customer.id,
-          phoneNumber: workspace.operatorWhatsappNumber,
-          skipSecurityCheck: true,
-        }),
+      // ASSERT: message sent directly to operator's phone
+      const calls = getAllDirectSendCalls()
+      expect(calls.length).toBeGreaterThan(0)
+      expect(calls[0][0]).toMatchObject({
+        workspaceId: WORKSPACE_ID,
+        customerId: customer.id,
+        phoneNumber: workspace.operatorWhatsappNumber,
+        skipSecurityCheck: true,
       })
       // ASSERT: message content includes customer name and their text
-      const call = mockPrisma.whatsAppQueue.create.mock.calls[0][0]
-      expect(call.data.messageContent).toContain("Mario")
-      expect(call.data.messageContent).toContain("Voglio un rimborso")
+      const call = calls[0][0]
+      expect(call.messageContent).toContain("Mario")
+      expect(call.messageContent).toContain("Voglio un rimborso")
     })
 
     it("should do nothing when operatorWhatsappNumber is not configured", async () => {
@@ -556,7 +571,7 @@ describe("OperatorRelayService", () => {
         service.relayCustomerMessageToOperator(WORKSPACE_ID, customer, "Hello")
       ).resolves.not.toThrow()
 
-      expect(mockPrisma.whatsAppQueue.create).not.toHaveBeenCalled()
+      expectNoDirectSend()
     })
   })
 
@@ -586,7 +601,6 @@ describe("OperatorRelayService", () => {
       mockPrisma.customers.findMany.mockResolvedValue([customerB])
       mockPrisma.customers.update.mockResolvedValue({})
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
-      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
       // relayToCustomer (farewell to customerA) now always calls chatSession.findFirst
       mockPrisma.chatSession.findFirst.mockResolvedValue(session)
       mockPrisma.conversationMessage.create.mockResolvedValue({ id: "conv-msg-farewell" })
@@ -601,19 +615,19 @@ describe("OperatorRelayService", () => {
         })
       )
 
-      // ASSERT: farewell message queued for customer A (whatsapp channel)
-      const farewell = mockPrisma.whatsAppQueue.create.mock.calls.find(
-        (c) => c[0].data.phoneNumber === customerA.phone
+      // ASSERT: farewell message sent directly to customer A
+      const farewell = getAllDirectSendCalls().find(
+        (c: any[]) => c[0].phoneNumber === customerA.phone
       )
       expect(farewell).toBeDefined()
 
-      // ASSERT: operator gets dashboard link (not old FIFO customer name notification)
-      const operatorMsg = mockPrisma.whatsAppQueue.create.mock.calls.find(
-        (c) => c[0].data.phoneNumber === workspace.operatorWhatsappNumber
+      // ASSERT: operator gets dashboard link sent directly
+      const operatorMsg = getAllDirectSendCalls().find(
+        (c: any[]) => c[0].phoneNumber === workspace.operatorWhatsappNumber
       )
       expect(operatorMsg).toBeDefined()
       // ASSERT: message references operator-dashboard (dashboard-based selection, not FIFO auto-notify)
-      expect(operatorMsg?.[0].data.messageContent).toContain("operator-dashboard")
+      expect(operatorMsg?.[0].messageContent).toContain("operator-dashboard")
     })
 
     it("should send 'all done' to operator when queue is empty after release", async () => {
@@ -629,20 +643,18 @@ describe("OperatorRelayService", () => {
       mockPrisma.customers.findMany.mockResolvedValue([])
       mockPrisma.customers.update.mockResolvedValue({})
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
-      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
       // relayToCustomer (farewell to customerA) now always calls chatSession.findFirst
       mockPrisma.chatSession.findFirst.mockResolvedValue(session)
       mockPrisma.conversationMessage.create.mockResolvedValue({ id: "conv-msg-farewell" })
 
       await service.releaseCustomerAndProcessNext(WORKSPACE_ID, customerA.id)
 
-      // ASSERT: "all done" message sent to operator
-      const calls = mockPrisma.whatsAppQueue.create.mock.calls
-      const operatorNotif = calls.find(
-        (c) => c[0].data.phoneNumber === workspace.operatorWhatsappNumber
+      // ASSERT: "all done" message sent directly to operator
+      const operatorNotif = getAllDirectSendCalls().find(
+        (c: any[]) => c[0].phoneNumber === workspace.operatorWhatsappNumber
       )
       expect(operatorNotif).toBeDefined()
-      expect(operatorNotif?.[0].data.messageContent).toContain("All done")
+      expect(operatorNotif?.[0].messageContent).toContain("All done")
     })
 
     it("should handle gracefully when customer is not found", async () => {
@@ -678,7 +690,6 @@ describe("OperatorRelayService", () => {
       mockPrisma.customers.findMany.mockResolvedValue([customerB, customerC])
       mockPrisma.customers.update.mockResolvedValue({})
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
-      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
       // relayToCustomer (farewell to customerA) now always calls chatSession.findFirst
       mockPrisma.chatSession.findFirst.mockResolvedValue(session)
       mockPrisma.conversationMessage.create.mockResolvedValue({ id: "conv-msg-farewell" })

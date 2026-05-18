@@ -40,10 +40,10 @@ jest.mock("@echatbot/database", () => {
   }
 })
 
-// Mock WhatsAppQueueService
-jest.mock("../../src/services/whatsapp-queue.service", () => ({
-  WhatsAppQueueService: jest.fn().mockImplementation(() => ({
-    enqueue: jest.fn().mockResolvedValue({ id: "queue-1" }),
+// Mock WhatsAppDirectSendService
+jest.mock("../../src/services/whatsapp-direct-send.service", () => ({
+  WhatsAppDirectSendService: jest.fn().mockImplementation(() => ({
+    send: jest.fn().mockResolvedValue({ success: true }),
   })),
 }))
 

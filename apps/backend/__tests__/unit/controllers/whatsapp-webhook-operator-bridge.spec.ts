@@ -16,6 +16,7 @@
 
 import { PrismaClient } from "@echatbot/database"
 import { OperatorRelayService } from "../../../src/application/services/operator-relay.service"
+import { WhatsAppDirectSendService as MockWhatsAppDirectSendService } from "../../../src/services/whatsapp-direct-send.service"
 
 // ============================================================================
 // MOCK SECURE TOKEN SERVICE
@@ -24,6 +25,14 @@ import { OperatorRelayService } from "../../../src/application/services/operator
 jest.mock("../../../src/application/services/secure-token.service", () => ({
   SecureTokenService: jest.fn().mockImplementation(() => ({
     createToken: jest.fn().mockResolvedValue("mock-dashboard-token"),
+  })),
+}))
+
+// NOTE: whatsAppQueue removed — messages now sent via WhatsAppDirectSendService (2026-05)
+// mock inline to avoid hoisting issues (jest.mock is hoisted before const declarations)
+jest.mock("../../../src/services/whatsapp-direct-send.service", () => ({
+  WhatsAppDirectSendService: jest.fn().mockImplementation(() => ({
+    send: jest.fn().mockResolvedValue({ success: true }),
   })),
 }))
 
@@ -47,9 +56,8 @@ const mockPrisma = {
   },
   conversationMessage: {
     create: jest.fn(),
-  },
-  whatsAppQueue: {
-    create: jest.fn(),
+    findUnique: jest.fn().mockResolvedValue(null),
+    update: jest.fn().mockResolvedValue({}),
   },
 }
 
@@ -68,8 +76,18 @@ const CUSTOMER_PHONE = "+393491234567"
 describe("WhatsApp Webhook — Operator Bridge Detection", () => {
   let service: OperatorRelayService
 
+  const getAllDirectSendCalls = () =>
+    (MockWhatsAppDirectSendService as jest.Mock).mock.results
+      .flatMap((r: any) => r.value?.send?.mock?.calls ?? [])
+  const expectNoDirectSend = () => expect(getAllDirectSendCalls().length).toBe(0)
+
   beforeEach(() => {
     jest.resetAllMocks()
+    ;(MockWhatsAppDirectSendService as jest.Mock).mockImplementation(() => ({
+      send: jest.fn().mockResolvedValue({ success: true }),
+    }))
+    mockPrisma.conversationMessage.findUnique.mockResolvedValue(null)
+    mockPrisma.conversationMessage.update.mockResolvedValue({})
     service = new OperatorRelayService(mockPrisma as unknown as PrismaClient)
   })
 
@@ -136,13 +154,12 @@ describe("WhatsApp Webhook — Operator Bridge Detection", () => {
   describe("relayCustomerMessageToOperator — customer in operator mode", () => {
     it("should relay customer message to operator when activeChatbot=false", async () => {
       // SCENARIO: Customer sends "I want a refund" after operator took over (activeChatbot=false)
-      // RULE: Message forwarded to operatorWhatsappNumber via WhatsAppQueue
+      // RULE: Message forwarded to operatorWhatsappNumber via WhatsAppDirectSendService
       //       (not sent to LLM — LLM is blocked when activeChatbot=false)
       // RULE: No sales agent assigned → uses workspace.operatorWhatsappNumber
       const workspace = { operatorWhatsappNumber: OPERATOR_PHONE }
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
       mockPrisma.customers.findUnique.mockResolvedValue({ salesId: null, sales: null })
-      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
 
       const customer = { id: "cust-001", name: "Mario Rossi", phone: CUSTOMER_PHONE }
 
@@ -152,24 +169,24 @@ describe("WhatsApp Webhook — Operator Bridge Detection", () => {
         "I want a full refund for my order"
       )
 
-      // ASSERT: message queued to operator's number
-      expect(mockPrisma.whatsAppQueue.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          workspaceId: WORKSPACE_ID,
-          phoneNumber: OPERATOR_PHONE,
-          skipSecurityCheck: true,
-        }),
+      // ASSERT: message sent directly to operator's number via WhatsAppDirectSendService
+      // (refactored from WhatsAppQueue to direct send — 2026-05 architecture change)
+      const calls = getAllDirectSendCalls()
+      expect(calls.length).toBeGreaterThan(0)
+      expect(calls[0][0]).toMatchObject({
+        workspaceId: WORKSPACE_ID,
+        phoneNumber: OPERATOR_PHONE,
+        skipSecurityCheck: true,
       })
 
       // ASSERT: message content identifies the customer
-      const call = mockPrisma.whatsAppQueue.create.mock.calls[0][0]
-      expect(call.data.messageContent).toContain("Mario Rossi")
-      expect(call.data.messageContent).toContain("I want a full refund for my order")
+      expect(calls[0][0].messageContent).toContain("Mario Rossi")
+      expect(calls[0][0].messageContent).toContain("I want a full refund for my order")
     })
 
     it("should skip relay when operatorWhatsappNumber is not configured", async () => {
       // SCENARIO: Workspace has no operator phone AND no sales agent — feature not set up
-      // RULE: Silent skip, no error thrown, no WhatsApp entry created
+      // RULE: Silent skip, no error thrown, no WhatsApp send attempted
       mockPrisma.workspace.findUnique.mockResolvedValue({ operatorWhatsappNumber: null })
       mockPrisma.customers.findUnique.mockResolvedValue({ salesId: null, sales: null })
 
@@ -179,7 +196,7 @@ describe("WhatsApp Webhook — Operator Bridge Detection", () => {
         service.relayCustomerMessageToOperator(WORKSPACE_ID, customer, "Hello")
       ).resolves.not.toThrow()
 
-      expect(mockPrisma.whatsAppQueue.create).not.toHaveBeenCalled()
+      expectNoDirectSend()
     })
 
     it("should relay multiple sequential messages from same customer to operator", async () => {
@@ -189,7 +206,6 @@ describe("WhatsApp Webhook — Operator Bridge Detection", () => {
       const workspace = { operatorWhatsappNumber: OPERATOR_PHONE }
       mockPrisma.workspace.findUnique.mockResolvedValue(workspace)
       mockPrisma.customers.findUnique.mockResolvedValue({ salesId: null, sales: null })
-      mockPrisma.whatsAppQueue.create.mockResolvedValue({})
 
       const customer = { id: "cust-001", name: "Mario", phone: CUSTOMER_PHONE }
       const messages = ["Message 1", "Message 2", "Message 3"]
@@ -198,7 +214,7 @@ describe("WhatsApp Webhook — Operator Bridge Detection", () => {
         await service.relayCustomerMessageToOperator(WORKSPACE_ID, customer, msg)
       }
 
-      expect(mockPrisma.whatsAppQueue.create).toHaveBeenCalledTimes(3)
+      expect(getAllDirectSendCalls().length).toBe(3)
     })
   })
 

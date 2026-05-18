@@ -21,7 +21,14 @@
 
 // ---- Mocks ----
 
-const mockCreate = jest.fn()
+// NOTE: whatsAppQueue removed — operator WhatsApp notifications now via WhatsAppDirectSendService (2026-05)
+const mockDirectSendFn = jest.fn().mockResolvedValue({ success: true })
+jest.mock("../../../src/services/whatsapp-direct-send.service", () => ({
+  WhatsAppDirectSendService: jest.fn().mockImplementation(() => ({
+    send: mockDirectSendFn,
+  })),
+}))
+
 const mockFindFirst = jest.fn()
 const mockFindUnique = jest.fn()
 const mockFindMany = jest.fn()
@@ -43,9 +50,6 @@ jest.mock("@echatbot/database", () => ({
     },
     workspace: {
       findUnique: (...args: any[]) => mockFindUnique(...args),
-    },
-    whatsAppQueue: {
-      create: (...args: any[]) => mockCreate(...args),
     },
     $disconnect: () => mockDisconnect(),
   },
@@ -157,8 +161,8 @@ describe("ContactOperator WhatsApp Summary Fix", () => {
       summary: "Il cliente Mario Rossi ha un problema con un ordine e richiede assistenza operatore.",
     })
 
-    // Default: queue create and update resolve
-    mockCreate.mockResolvedValue({ id: "queue-123" })
+    // Default: direct send and update resolve
+    mockDirectSendFn.mockResolvedValue({ success: true })
     mockUpdate.mockResolvedValue({})
     mockDisconnect.mockResolvedValue(undefined)
   })
@@ -175,12 +179,12 @@ describe("ContactOperator WhatsApp Summary Fix", () => {
 
     expect(result.success).toBe(true)
 
-    // ASSERT: WhatsApp queue was created
-    expect(mockCreate).toHaveBeenCalled()
+    // ASSERT: WhatsApp message sent directly (refactored from queue, 2026-05)
+    expect(mockDirectSendFn).toHaveBeenCalled()
 
     // ASSERT: The messageContent contains the AI summary, NOT empty
-    const createCall = mockCreate.mock.calls[0][0]
-    const messageContent = createCall.data.messageContent
+    const sendCall = mockDirectSendFn.mock.calls[0][0]
+    const messageContent = sendCall.messageContent
 
     // The message should contain the summary text
     expect(messageContent).toContain("Il cliente Mario Rossi ha un problema con un ordine")
@@ -206,10 +210,10 @@ describe("ContactOperator WhatsApp Summary Fix", () => {
     })
 
     expect(result.success).toBe(true)
-    expect(mockCreate).toHaveBeenCalled()
+    expect(mockDirectSendFn).toHaveBeenCalled()
 
-    const createCall = mockCreate.mock.calls[0][0]
-    const messageContent = createCall.data.messageContent
+    const sendCall = mockDirectSendFn.mock.calls[0][0]
+    const messageContent = sendCall.messageContent
 
     // Should contain fallback text (NOT message list)
     expect(messageContent).toContain("Riassunto non disponibile")
@@ -232,10 +236,10 @@ describe("ContactOperator WhatsApp Summary Fix", () => {
     })
 
     expect(result.success).toBe(true)
-    expect(mockCreate).toHaveBeenCalled()
+    expect(mockDirectSendFn).toHaveBeenCalled()
 
-    const createCall = mockCreate.mock.calls[0][0]
-    const messageContent = createCall.data.messageContent
+    const sendCall = mockDirectSendFn.mock.calls[0][0]
+    const messageContent = sendCall.messageContent
 
     // Should contain the "Riassunto non disponibile" fallback (consistent with failed summary)
     expect(messageContent).toContain("Riassunto non disponibile")
@@ -250,13 +254,13 @@ describe("ContactOperator WhatsApp Summary Fix", () => {
     })
 
     expect(result.success).toBe(true)
-    expect(mockCreate).toHaveBeenCalled()
+    expect(mockDirectSendFn).toHaveBeenCalled()
 
-    const createCall = mockCreate.mock.calls[0][0]
-    // Should be sent to the operator's number
-    expect(createCall.data.phoneNumber).toBe("+34654728753")
-    expect(createCall.data.workspaceId).toBe("ws-456")
-    expect(createCall.data.status).toBe("pending")
+    const sendCall = mockDirectSendFn.mock.calls[0][0]
+    // Should be sent to the operator's number via direct send (no queue)
+    expect(sendCall.phoneNumber).toBe("+34654728753")
+    expect(sendCall.workspaceId).toBe("ws-456")
+    expect(sendCall.skipSecurityCheck).toBe(true)
   })
 
   it("should send to agent phone when customer has assigned sales agent", async () => {
@@ -297,10 +301,10 @@ describe("ContactOperator WhatsApp Summary Fix", () => {
     })
 
     expect(result.success).toBe(true)
-    expect(mockCreate).toHaveBeenCalled()
+    expect(mockDirectSendFn).toHaveBeenCalled()
 
-    const createCall = mockCreate.mock.calls[0][0]
-    // Should be sent to AGENT's phone, not generic operator
-    expect(createCall.data.phoneNumber).toBe("+393339876543")
+    const sendCall = mockDirectSendFn.mock.calls[0][0]
+    // Should be sent to AGENT's phone, not generic operator (direct send, 2026-05)
+    expect(sendCall.phoneNumber).toBe("+393339876543")
   })
 })

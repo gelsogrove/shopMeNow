@@ -1,35 +1,24 @@
 import { prisma, PrismaClient } from "@echatbot/database"
 import { MessageRepository } from "../../repositories/message.repository"
 import logger from "../../utils/logger"
-import { WhatsAppQueueService } from "../../services/whatsapp-queue.service"
+import { WhatsAppDirectSendService } from "../../services/whatsapp-direct-send.service"
 
 /**
  * ProfileService - Handle profile update and deletion messaging
  *
  * Responsibilities:
- * 1. Send WhatsApp message after profile update ("Dati personali aggiornati")
- * 2. Send WhatsApp message after account soft delete ("Utente cancellato")
- *
- * Pattern: Same as RegistrationService - uses WhatsApp Queue + Security & Translation layer
+ * 1. Send WhatsApp message after profile update
+ * 2. Send WhatsApp message after account soft delete
  */
 export class ProfileService {
   private prisma: PrismaClient
   private messageRepository: MessageRepository
-  private whatsappQueueService: WhatsAppQueueService
 
   constructor() {
     this.prisma = prisma
     this.messageRepository = new MessageRepository()
-    this.whatsappQueueService = new WhatsAppQueueService(prisma)
   }
 
-  /**
-   * Send a WhatsApp message via Queue (NOT direct!)
-   * ✅ Passes through Security Agent
-   * ✅ Respects Debug Mode
-   * ✅ Has billing tracking
-   * ✅ Has retry logic
-   */
   private async sendWhatsAppMessage(
     phoneNumber: string,
     message: string,
@@ -37,43 +26,26 @@ export class ProfileService {
     customerId: string
   ): Promise<boolean> {
     try {
-      logger.info(
-        `[PROFILE-WA] 📤 Adding message to queue for ${phoneNumber}`
-      )
+      logger.info(`[PROFILE-WA] 📤 Sending message to ${phoneNumber}`)
 
-      // Validate workspace has WhatsApp configured
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: {
-          whatsappApiKey: true,
-          whatsappPhoneNumber: true,
-        },
-      })
-
-      if (!workspace || !workspace.whatsappApiKey) {
-        logger.error(
-          `[PROFILE-WA] WhatsApp settings not found for workspace ${workspaceId}`
-        )
-        return false
-      }
-
-      // 📤 ADD TO QUEUE instead of sending directly!
-      const queueEntry = await this.whatsappQueueService.enqueue({
+      const directSend = new WhatsAppDirectSendService(this.prisma)
+      const result = await directSend.send({
         workspaceId,
         customerId,
         phoneNumber,
         messageContent: message,
+        skipSecurityCheck: true,
       })
 
-      logger.info(`[PROFILE-WA] ✅ Message added to queue`, {
-        queueId: queueEntry.id,
-        phoneNumber,
-        status: "pending",
-      })
+      if (result.success) {
+        logger.info(`[PROFILE-WA] ✅ Message sent`, { phoneNumber })
+      } else {
+        logger.error(`[PROFILE-WA] ❌ Failed to send message`, { phoneNumber, error: result.error })
+      }
 
-      return true
+      return result.success
     } catch (error) {
-      logger.error(`[PROFILE-WA] Error adding message to queue:`, error)
+      logger.error(`[PROFILE-WA] Error sending message:`, error)
       return false
     }
   }

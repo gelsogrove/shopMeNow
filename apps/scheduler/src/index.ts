@@ -1,196 +1,52 @@
-import cron from 'node-cron'
 import { connectDatabase, disconnectDatabase } from './config/database'
-import { runJob } from './services/job-runner.service'
-import {
-  whatsappChannelQueueJob,
-  shortUrlsCleanupJob,
-  unusedImagesCleanupJob,
-  monthlyBillingJob,
-  messagesArchiveJob,
-  whatsappQueueCleanupJob,
-  softDeleteCleanupJob,
-  supportAttachmentsCleanupJob,
-  pushCampaignsJob,
-  wasenderQrCleanupJob,
-  appointmentReminderJob,
-  conversationMessagesCleanupJob,
-  agentLogsCleanupJob,
-  webhookEventsCleanupJob,
-  authAttemptsCleanupJob,
-  reminderLocksCleanupJob,
-} from './jobs'
 import logger from './utils/logger'
 
-// eChatbot Scheduler Microservice
+// eChatbot Scheduler — Manual Job Runner
 //
-// Cron Jobs (ordered by execution time):
-// 1. WhatsApp Channel Queue    - every 5 SECONDS (parallel send, with lock)
-// 2. Push Campaigns Runner     - every minute
-// 3. Wasender QR Cleanup       - every 10 minutes (clears expired QR codes)
-// 4. Short URLs Cleanup        - daily at 23:00
-// 5. Storage Cleanup           - daily at 23:05 (unused images + temp + invoices)
-// 6. Messages Archive          - daily at 23:10 (archive messages older than 6 months)
-// 7. WhatsApp Queue Cleanup    - daily at 23:15 (delete errors/sent older than 7 days)
-// 8. Soft Delete Cleanup       - daily at 23:20 (hard-delete records after retention period)
-// 9. Support Attachments Cleanup- daily at 23:25
-// 10. Monthly Billing          - 1st of month at 23:30
+// ARCHITECTURE (2026-05-18):
+// The continuous cron-based scheduler has been replaced by on-demand execution.
+// All jobs are now run manually via:
 //
-// HOW TO ENABLE/DISABLE JOBS:
-// - From Backoffice: /schedulers page → toggle isActive
-// - Jobs check isActive flag before running (skip if disabled)
+//   npx ts-node src/scripts/run-job.ts <job-name>
+//
+// or via the npm scripts in package.json (e.g. npm run job:monthly-billing).
+//
+// WHY:
+//   The only high-frequency job was whatsapp-channel-queue (every 5 sec) which
+//   delivered WhatsApp messages from the queue. That job was removed because
+//   messages are now sent synchronously via WhatsAppDirectSendService at call time.
+//   With no sub-minute jobs remaining, a continuously running Heroku dyno is
+//   wasteful — all remaining jobs are daily/monthly and can be triggered manually
+//   or via Heroku Scheduler one-off dynos.
+//
+// EXCEPTION — Push Campaigns:
+//   Push campaigns still write to WhatsAppQueue (bulk, rate-limited delivery).
+//   The push-campaigns job must be run periodically when campaigns are active.
+//   The whatsapp-queue-cleanup job should be run periodically to purge old records.
+//
+// Available jobs (run via: npx ts-node src/scripts/run-job.ts <name>):
+//
+//   push-campaigns              - Send pending push campaign messages
+//   whatsapp-queue-cleanup      - Purge push campaign queue entries older than 7 days
+//   short-urls-cleanup          - Delete expired short URLs
+//   unused-images-cleanup       - Remove orphaned images and temp files
+//   messages-archive            - Archive messages older than 6 months
+//   soft-delete-cleanup         - Hard-delete soft-deleted records after retention period
+//   support-attachments-cleanup - Delete attachments from old closed support tickets
+//   monthly-billing             - Generate billing records for the previous month
+//   conversation-messages-cleanup - Delete LLM context messages older than 90 days
+//   agent-logs-cleanup          - Delete agent audit logs older than 180 days
+//   webhook-events-cleanup      - Delete WhatsApp webhook dedup events older than 30 days
+//   auth-attempts-cleanup       - Delete login/2FA attempt logs older than 90 days
+//   reminder-locks-cleanup      - Delete expired appointment reminder dedup locks
+//   appointment-reminder        - Send 24h and 1h appointment reminder notifications
+//   wasender-qr-cleanup         - Clear expired Wasender QR codes
 
 async function main() {
-  logger.info('🚀 Starting eChatbot Scheduler...')
+  logger.info('eChatbot Scheduler — no continuous jobs configured.')
+  logger.info('Run jobs manually: npx ts-node src/scripts/run-job.ts <job-name>')
 
-  // Connect to database
   await connectDatabase()
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 1: WhatsApp Channel Queue - every 5 seconds
-  // Uses in-memory lock: if previous job is still running, skip
-  // Sends messages in PARALLEL (safe for different customers)
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('*/5 * * * * *', async () => {
-    await runJob('whatsapp-channel-queue', whatsappChannelQueueJob)
-  })
-
-  // Push Campaigns runner - every minute
-  cron.schedule('0 * * * * *', async () => {
-    await runJob('push-campaigns', pushCampaignsJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 2: Wasender QR Cleanup - every 10 minutes
-  // Clears expired Wasender QR codes (older than 5 minutes)
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('*/10 * * * *', async () => {
-    await runJob('wasender-qr-cleanup', wasenderQrCleanupJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 2: Short URLs Cleanup - daily at 23:00
-  // Deletes expired short URLs
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('0 23 * * *', async () => {
-    await runJob('short-urls-cleanup', shortUrlsCleanupJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 3: Storage Cleanup - daily at 23:05
-  // Removes orphaned images + temp files + cancelled invoices
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('5 23 * * *', async () => {
-    await runJob('unused-images-cleanup', unusedImagesCleanupJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 4: Messages Archive - daily at 23:10
-  // Archives messages older than 6 months to reduce main table size
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('10 23 * * *', async () => {
-    await runJob('messages-archive', messagesArchiveJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 5: WhatsApp Queue Cleanup - daily at 23:15
-  // Deletes error and sent messages older than 7 days
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('15 23 * * *', async () => {
-    await runJob('whatsapp-queue-cleanup', whatsappQueueCleanupJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 6: Soft Delete Cleanup - daily at 23:20
-  // Hard-deletes soft-deleted records after retention period (default 90 days)
-  // Feature 196 - Soft Delete System
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('20 23 * * *', async () => {
-    await runJob('soft-delete-cleanup', softDeleteCleanupJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 7: Support Attachments Cleanup - daily at 23:25
-  // Deletes attachments from closed support tickets older than retention period
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('25 23 * * *', async () => {
-    await runJob('support-attachments-cleanup', supportAttachmentsCleanupJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 8: Monthly Billing - 1st of each month at 23:30
-  // Generates billing records for the previous month
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('30 23 1 * *', async () => {
-    await runJob('monthly-billing', monthlyBillingJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 9: Appointment Reminders - every 15 minutes
-  // Sends 24h and 1h reminder notifications for confirmed appointments
-  // WhatsApp: €0.50/reminder | Email: free
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('*/15 * * * *', async () => {
-    await runJob('appointment-reminder', appointmentReminderJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 10: Conversation Messages Cleanup - daily at 23:32
-  // Deletes LLM context messages older than 90 days (batch)
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('32 23 * * *', async () => {
-    await runJob('conversation-messages-cleanup', conversationMessagesCleanupJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 11: Agent Conversation Logs Cleanup - daily at 23:35
-  // Deletes agent audit trail older than 180 days (batch)
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('35 23 * * *', async () => {
-    await runJob('agent-logs-cleanup', agentLogsCleanupJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 12: Webhook Events Cleanup - daily at 23:40
-  // Deletes WhatsApp webhook dedup events older than 30 days (batch)
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('40 23 * * *', async () => {
-    await runJob('webhook-events-cleanup', webhookEventsCleanupJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 13: Auth Attempts Cleanup - daily at 23:42
-  // Deletes login/2FA attempt logs older than 90 days (batch)
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('42 23 * * *', async () => {
-    await runJob('auth-attempts-cleanup', authAttemptsCleanupJob)
-  })
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // Job 14: Reminder Locks Cleanup - daily at 23:44
-  // Deletes expired appointment reminder dedup locks
-  // ═══════════════════════════════════════════════════════════════════════════
-  cron.schedule('44 23 * * *', async () => {
-    await runJob('reminder-locks-cleanup', reminderLocksCleanupJob)
-  })
-
-  logger.info('✅ Scheduler started successfully!')
-  logger.info('📋 Scheduled jobs:')
-  logger.info('   1. WhatsApp Channel Queue       - every 5 SECONDS')
-  logger.info('   2. Push Campaigns Runner        - every minute')
-  logger.info('   3. Wasender QR Cleanup          - every 10 minutes')
-  logger.info('   4. Short URLs Cleanup           - daily at 23:00')
-  logger.info('   5. Unused Images Cleanup        - daily at 23:05')
-  logger.info('   6. Messages Archive             - daily at 23:10')
-  logger.info('   7. WhatsApp Queue Cleanup       - daily at 23:15')
-  logger.info('   8. Soft Delete Cleanup          - daily at 23:20')
-  logger.info('   9. Support Attachments Cleanup  - daily at 23:25')
-  logger.info('   10. Monthly Billing            - 1st of month at 23:30')
-  logger.info('   11. Appointment Reminders      - every 15 minutes')
-  logger.info('   12. Conversation Msgs Cleanup  - daily at 23:32 (90d retention)')
-  logger.info('   13. Agent Logs Cleanup         - daily at 23:35 (180d retention)')
-  logger.info('   14. Webhook Events Cleanup     - daily at 23:40 (30d retention)')
-  logger.info('   15. Auth Attempts Cleanup      - daily at 23:42 (90d retention)')
-  logger.info('   16. Reminder Locks Cleanup     - daily at 23:44 (expired locks)')
 
   // Graceful shutdown
   process.on('SIGINT', async () => {

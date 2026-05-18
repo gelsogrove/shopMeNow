@@ -45,6 +45,7 @@ import { PrismaClient } from "@echatbot/database"
 // Internal
 import logger from "../../utils/logger"
 import { SecureTokenService } from "./secure-token.service"
+import { WhatsAppDirectSendService } from "../../services/whatsapp-direct-send.service"
 
 const secureTokenService = new SecureTokenService()
 
@@ -438,16 +439,13 @@ export class OperatorRelayService {
     // Format message so operator knows who is writing
     const relayMessage = `📩 *${customer.name}* (${customer.phone ?? "widget"}):\n\n${messageText}`
 
-    await this.prisma.whatsAppQueue.create({
-      data: {
-        workspaceId,
-        customerId: customer.id,        // used for billing reference
-        phoneNumber: targetPhone,
-        messageContent: relayMessage,
-        status: "pending",
-        channel: "whatsapp",
-        skipSecurityCheck: true,        // internal relay — no security checks needed
-      },
+    const directSend = new WhatsAppDirectSendService(this.prisma)
+    await directSend.send({
+      workspaceId,
+      customerId: customer.id,
+      phoneNumber: targetPhone,
+      messageContent: relayMessage,
+      skipSecurityCheck: true,
     })
 
     logger.info("[OperatorRelay] 📤 Customer message relayed to operator", {
@@ -512,22 +510,17 @@ export class OperatorRelayService {
 
     if (channel === "whatsapp" && customer.phone) {
       // ── WhatsApp customer ──────────────────────────────────────────────
-      // Link the queue entry to the conversationMessage so the scheduler
-      // can update deliveryStatus when the message is actually sent
-      await this.prisma.whatsAppQueue.create({
-        data: {
-          workspaceId,
-          customerId: customer.id,
-          phoneNumber: customer.phone,
-          messageContent: message,
-          status: "pending",
-          channel: "whatsapp",
-          skipSecurityCheck: true, // operator replies bypass security
-          conversationMessageId: savedConvMsg.id, // tracks delivery status in chat history
-        },
+      const directSend = new WhatsAppDirectSendService(this.prisma)
+      await directSend.send({
+        workspaceId,
+        customerId: customer.id,
+        phoneNumber: customer.phone,
+        messageContent: message,
+        conversationMessageId: savedConvMsg.id,
+        skipSecurityCheck: true, // operator replies bypass security
       })
 
-      logger.info("[OperatorRelay] 📨 Operator reply enqueued for WhatsApp customer", {
+      logger.info("[OperatorRelay] 📨 Operator reply sent directly to WhatsApp customer", {
         customerId: customer.id,
         phone: customer.phone,
         conversationMessageId: savedConvMsg.id,
@@ -647,16 +640,13 @@ export class OperatorRelayService {
       return
     }
 
-    await this.prisma.whatsAppQueue.create({
-      data: {
-        workspaceId,
-        customerId,
-        phoneNumber: workspace.operatorWhatsappNumber,
-        messageContent: message,
-        status: "pending",
-        channel: "whatsapp",
-        skipSecurityCheck: true,
-      },
+    const directSend = new WhatsAppDirectSendService(this.prisma)
+    await directSend.send({
+      workspaceId,
+      customerId,
+      phoneNumber: workspace.operatorWhatsappNumber,
+      messageContent: message,
+      skipSecurityCheck: true,
     })
 
     logger.info("[OperatorRelay] 📤 Message sent to operator", {

@@ -15,6 +15,7 @@
 // ============================================================================
 import { Request, Response } from "express"
 import { prisma } from "@echatbot/database"
+import { WhatsAppDirectSendService } from "../../../services/whatsapp-direct-send.service"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
 import logger from "../../../utils/logger"
 
@@ -182,18 +183,15 @@ export class SupportChatController {
           })
 
       if (channel === "whatsapp") {
-        // Route via WhatsApp queue → customer's phone
-        await prisma.whatsAppQueue.create({
-          data: {
-            workspaceId,
-            customerId,
-            phoneNumber: customer.phone,
-            messageContent: message.trim(),
-            status: "pending",
-            channel: "whatsapp",
-          },
+        const directSend = new WhatsAppDirectSendService(prisma)
+        await directSend.send({
+          workspaceId: workspaceId as string,
+          customerId,
+          phoneNumber: customer.phone,
+          messageContent: message.trim(),
+          skipSecurityCheck: true,
         })
-        logger.info("[SupportChat] reply queued via WhatsApp for customer:", customerId)
+        logger.info("[SupportChat] reply sent directly via WhatsApp for customer:", customerId)
       } else {
         // Route via ConversationMessage (widget polling picks it up)
         if (!session) {

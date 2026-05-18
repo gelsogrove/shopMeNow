@@ -75,20 +75,12 @@ jest.mock("../../src/services/llm.service", () => {
   }
 })
 
-// Mock WhatsAppQueueService
-jest.mock("../../src/services/whatsapp-queue.service", () => {
+// Mock WhatsAppDirectSendService
+// Default: success=true. Override per-test with mockDirectSend.send.mockResolvedValueOnce()
+const mockDirectSend = { send: jest.fn().mockResolvedValue({ success: true }) }
+jest.mock("../../src/services/whatsapp-direct-send.service", () => {
   return {
-    WhatsAppQueueService: jest.fn().mockImplementation(() => ({
-      enqueue: jest.fn().mockResolvedValue({
-        id: "queue-entry-1",
-        workspaceId: "ws1",
-        customerId: "cust1",
-        phoneNumber: "+393331234567",
-        messageContent: "Test message",
-        status: "pending",
-        createdAt: new Date(),
-      }),
-    })),
+    WhatsAppDirectSendService: jest.fn().mockImplementation(() => mockDirectSend),
   }
 })
 
@@ -136,6 +128,7 @@ describe("ProfileService - Unit Tests", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockDirectSend.send.mockResolvedValue({ success: true })
     service = new ProfileService()
     // Replace prisma instance with mock
     ;(service as any).prisma = mockPrisma
@@ -399,7 +392,7 @@ describe("ProfileService - Unit Tests", () => {
 
     it("should return false if WhatsApp API key is missing but still save message", async () => {
       // SCENARIO: Workspace has no WhatsApp configured
-      // RULE: WhatsApp send fails but message is still saved to conversationMessage
+      // RULE: WhatsApp send fails (DirectSendService returns success=false) but message still saved
 
       const mockCustomer = {
         id: "cust1",
@@ -421,6 +414,9 @@ describe("ProfileService - Unit Tests", () => {
         workspaceId: "ws1",
         status: "active",
       }
+
+      // OVERRIDE: DirectSendService returns failure (workspace not configured)
+      mockDirectSend.send.mockResolvedValueOnce({ success: false, error: "WhatsApp not configured" })
 
       mockPrisma.customers.findUnique = jest.fn().mockResolvedValue(mockCustomer)
       mockPrisma.workspace.findUnique = jest.fn().mockResolvedValue({
@@ -852,7 +848,7 @@ describe("ProfileService - Unit Tests", () => {
 
     it("should return false if WhatsApp API key is missing but still save message", async () => {
       // SCENARIO: Workspace has no WhatsApp configured
-      // RULE: WhatsApp send fails but message is still saved to conversationMessage
+      // RULE: WhatsApp send fails (DirectSendService returns success=false) but message still saved
 
       const mockCustomer = {
         id: "cust1",
@@ -874,6 +870,9 @@ describe("ProfileService - Unit Tests", () => {
         workspaceId: "ws1",
         status: "active",
       }
+
+      // OVERRIDE: DirectSendService returns failure (workspace not configured)
+      mockDirectSend.send.mockResolvedValueOnce({ success: false, error: "WhatsApp not configured" })
 
       mockPrisma.customers.findUnique = jest.fn().mockResolvedValue(mockCustomer)
       mockPrisma.workspace.findUnique = jest.fn().mockResolvedValue({

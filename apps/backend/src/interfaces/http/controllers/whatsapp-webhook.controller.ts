@@ -16,6 +16,7 @@ import logger from "../../../utils/logger"
 import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
 import { buildPhoneVariants } from "../../../utils/phone"
 import { verifyWhatsAppSignature } from "../../../utils/whatsapp-signature"
+import { WhatsAppDirectSendService } from "../../../services/whatsapp-direct-send.service"
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -920,17 +921,17 @@ export class WhatsAppWebhookController {
             })
 
             try {
-              const { WhatsAppQueueService } = require("../../../services/whatsapp-queue.service")
-              const queueService = new WhatsAppQueueService(prisma)
-              await queueService.enqueue({
+              const directSend = new WhatsAppDirectSendService(prisma)
+              await directSend.send({
                 workspaceId,
                 customerId: tempCustomer.id,
                 phoneNumber: tempCustomer.phone,
                 messageContent: finalWipMessage,
                 conversationMessageId: assistantMessage.id,
+                skipSecurityCheck: true,
               })
             } catch (error) {
-              logger.error("[WEBHOOK] ❌ Failed to enqueue WIP message (new user)", {
+              logger.error("[WEBHOOK] ❌ Failed to send WIP message (new user)", {
                 error,
                 workspaceId,
               })
@@ -2350,17 +2351,17 @@ export class WhatsAppWebhookController {
           }
 
           try {
-            const { WhatsAppQueueService } = require("../../../services/whatsapp-queue.service")
-            const queueService = new WhatsAppQueueService(prisma)
-            await queueService.enqueue({
+            const directSend = new WhatsAppDirectSendService(prisma)
+            await directSend.send({
               workspaceId: customer.workspaceId,
               customerId: customer.id,
               phoneNumber: customer.phone,
               messageContent: finalWipMessage,
               conversationMessageId: assistantMessage.id,
+              skipSecurityCheck: true,
             })
           } catch (error) {
-            logger.error("[WEBHOOK] ❌ Failed to enqueue WIP message", {
+            logger.error("[WEBHOOK] ❌ Failed to send WIP message", {
               error,
               workspaceId: customer.workspaceId,
               customerId: customer.id,
@@ -2600,19 +2601,17 @@ export class WhatsAppWebhookController {
 
         if (!isPlayground && customOutput.reply) {
           try {
-            const { WhatsAppQueueService } = require("../../../services/whatsapp-queue.service")
-            const queueService = new WhatsAppQueueService(prisma)
-            await queueService.enqueue({
+            const directSend = new WhatsAppDirectSendService(prisma)
+            await directSend.send({
               workspaceId: customer.workspaceId,
               customerId: customer.id,
               phoneNumber: customer.phone,
               messageContent: customOutput.reply,
               conversationMessageId: savedAssistantMessageId,
-              isPlayground,
             })
-          } catch (queueError) {
-            logger.error("[WEBHOOK] ❌ Failed to enqueue custom-ecolaundry response", {
-              error: queueError,
+          } catch (sendError) {
+            logger.error("[WEBHOOK] ❌ Failed to send custom chatbot response", {
+              error: sendError,
               workspaceId: customer.workspaceId,
               customerId: customer.id,
             })
@@ -2681,55 +2680,41 @@ export class WhatsAppWebhookController {
 
       // ✅ Messages already saved by ChatEngine.saveMessages() (INBOUND + OUTBOUND)
       // ✅ debugInfo already saved with timeline
-      // 💰 BILLING: Credit is deducted by WhatsApp Queue Cronjob when message is actually sent
-      //    (not here - we only check credit availability before processing)
 
-      // 📤 QUEUE: Save response to WhatsApp queue for delivery
-      logger.info("[WEBHOOK] 📤 Saving response to WhatsApp queue", {
+      // 📤 DIRECT SEND: Send response immediately via WhatsApp provider
+      logger.info("[WEBHOOK] 📤 Sending response directly via WhatsApp provider", {
         customerId: customer.id,
         workspaceId: customer.workspaceId,
         responseLength: routerResult.response.length,
       })
 
-      // 🧪 PLAYGROUND: Skip queue for playground messages (testing environment)
-      if (!isPlayground) {
-        try {
-          const { WhatsAppQueueService } = require("../../../services/whatsapp-queue.service")
-          const queueService = new WhatsAppQueueService(prisma)
-          
-          // Find the assistant message that was just created by ChatEngine
-          const assistantMessage = await prisma.conversationMessage.findFirst({
-            where: {
-              conversationId: chatSession.id,
-              role: "assistant",
-              content: routerResult.response,
-            },
-            orderBy: { createdAt: "desc" },
-          })
+      // 📤 DIRECT SEND (playground skipped inside DirectSendService)
+      try {
+        // Find the assistant message saved by ChatEngine
+        const assistantMessage = await prisma.conversationMessage.findFirst({
+          where: {
+            conversationId: chatSession.id,
+            role: "assistant",
+            content: routerResult.response,
+          },
+          orderBy: { createdAt: "desc" },
+        })
 
-          await queueService.enqueue({
-            workspaceId: customer.workspaceId,
-            customerId: customer.id,
-            phoneNumber: customer.phone,
-            messageContent: routerResult.response,
-            conversationMessageId: assistantMessage?.id,
-            isPlayground, // 🧪 Pass playground flag
-          })
+        const directSend = new WhatsAppDirectSendService(prisma)
+        await directSend.send({
+          workspaceId: customer.workspaceId,
+          customerId: customer.id,
+          phoneNumber: customer.phone,
+          messageContent: routerResult.response,
+          conversationMessageId: assistantMessage?.id,
+          isPlayground,
+        })
 
-          logger.info("[WEBHOOK] ✅ Response queued for WhatsApp delivery", {
-            customerId: customer.id,
-            queueStatus: "pending",
-          })
-        } catch (queueError) {
-          logger.error("[WEBHOOK] ❌ Failed to enqueue WhatsApp response", {
-            error: queueError,
-            workspaceId: customer.workspaceId,
-            customerId: customer.id,
-          })
-          // Don't fail the flow if queue fails - message is already saved in conversation
-        }
-      } else {
-        logger.info("[WEBHOOK] 🧪 Playground mode - skipping queue (no WhatsApp send)", {
+        logger.info("[WEBHOOK] ✅ Response sent directly to WhatsApp", { customerId: customer.id })
+      } catch (sendError) {
+        logger.error("[WEBHOOK] ❌ Failed to send WhatsApp response", {
+          error: sendError,
+          workspaceId: customer.workspaceId,
           customerId: customer.id,
         })
       }
