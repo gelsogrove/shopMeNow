@@ -25,6 +25,8 @@
     "invoice": "olga@alberwaz.net",
     "support": "service@alberwaz.net"
   },
+  "_section_human_message_notification": "Comma-separated list of email addresses that receive a notification (with chat history rendered as HTML) every time the bot generates a Human Support message (operator escalation). Leave empty or omit to disable.",
+  "notificationEmails": "gelsogrove@gmail.com",
   "refundFormUrl": "https://forms.gle/XFGPAd9581AhC9eu7",
   "allowedExternalLinks": "echatbot.ai, www.echatbot.ai, forms.gle, alberwaz.net",
 

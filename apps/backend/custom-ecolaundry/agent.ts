@@ -8,7 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { loadRuntime } from './utils/runtime.js'
 import { createInitialState } from './utils/state.js'
-import { extractEscalationContext, buildEscalationSummary } from './utils/escalation.js'
+import { extractEscalationContext, buildEscalationSummary, formatHandoverTimestamp } from './utils/escalation.js'
 import { sanitizeCustomerReply } from './utils/message-parsing.js'
 import { detectLanguageHeuristic } from './utils/intent.js'
 import { runGuardPipeline, type GuardOutcome } from './utils/guards/index.js'
@@ -44,6 +44,7 @@ import {
   collectInvokedSetTools,
   snapshotFacts,
 } from './utils/fact-call-audit.js'
+import { sendHumanMessageEmail } from './utils/human-message-email.js'
 
 import type { AgentMessage, AgentRuntime, AgentSession } from './models/index.js'
 
@@ -504,6 +505,20 @@ async function appendEscalationSummary(ar: AgentRuntime, reply: string, history:
   const summary = await generateOperatorBriefingFromHistory(ar, history, baseline)
   ar.pendingEscalation = null
   closeAsEscalated(ar)
+
+  // Fire-and-forget: send email notification to configured recipients.
+  // Never awaited in the critical path — email failure must not block the reply.
+  void sendHumanMessageEmail(
+    {
+      summary,
+      history,
+      customerName: customerName ?? 'Unknown',
+      companyName: ar.runtime.settings?.companyName ?? 'Chatbot',
+      timestamp: formatHandoverTimestamp(),
+    },
+    ar.runtime.settings?.notificationEmails
+  )
+
   // Determine output language: tenant lock first, fallback to state.language.
   const lang = resolveTenantLang(ar)
   const handoff = t('operatorHandoffFinal', lang)

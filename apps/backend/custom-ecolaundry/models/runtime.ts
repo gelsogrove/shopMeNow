@@ -68,6 +68,12 @@ export type Settings = {
   }
   /** Public refund-form URL, used inside FAQ replies for double-charge etc. */
   refundFormUrl?: string
+  /**
+   * Comma-separated list of email addresses that receive a notification
+   * (with HTML chat history) every time a Human Support message is generated.
+   * Multiple recipients: "a@x.com, b@x.com". Leave empty/omit to disable.
+   */
+  notificationEmails?: string
   /** Whitelisted external domains the bot is allowed to mention. */
   allowedExternalLinks?: string
   welcomeMessage?: Partial<Record<SupportedLanguage, string>>
