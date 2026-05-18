@@ -29,6 +29,8 @@
 
 import type { Guard } from '../../models/index.js'
 import { startFlow } from '../flow-engine.js'
+import { t } from '../localization.js'
+import type { TranslationKey } from '../localization.js'
 import { lang, RECOVERABLE_DISPLAYS, notInActiveSubFlow } from './helpers.js'
 
 /**
@@ -58,7 +60,8 @@ export const guardAutoStartMachineFlow: Guard = (ar) => {
   if (!RECOVERABLE_DISPLAYS.has(display)) return null
 
   try {
-    const result = startFlow(ar.runtime, ar.state, 'non_parte')
+    const translateFn = (key: string) => t(key as TranslationKey, lang(ar))
+    const result = startFlow(ar.runtime, ar.state, 'non_parte', translateFn)
     return {
       reply: result.prompt,
       reason: 'auto-start-machine-flow',
@@ -70,6 +73,3 @@ export const guardAutoStartMachineFlow: Guard = (ar) => {
   }
 }
 
-// Silence unused-import if `lang` ever stops being needed; today we don't
-// need it because the prompt is already in the tenant language.
-void lang

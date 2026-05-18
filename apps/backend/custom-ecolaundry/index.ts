@@ -11,6 +11,7 @@ import type {
   AgentSession,
   ChatbotInput,
   ChatbotOutput,
+  StatePatch,
   HistoryEntry,
 } from './models/index.js'
 
@@ -129,13 +130,16 @@ async function runChatbotTurn(input: ChatbotInput, agentChain: string[]): Promis
       session.ar.state.customerPhone = phoneNumber
     }
 
+    const snapshotBefore = snapshotPatchableFields(session)
     const reply = await agentTurn(session, input.userMessage)
+    const patches = buildPatches(snapshotBefore, session)
     const { shouldEscalate, escalationSummary } = buildEscalationOutcome(session)
 
     return {
       reply,
       shouldEscalate,
       escalationSummary,
+      patches,
       meta: { tokensUsed: 0, agentChain },
     }
   } catch (error) {
@@ -150,10 +154,56 @@ async function runChatbotTurn(input: ChatbotInput, agentChain: string[]): Promis
     return {
       reply: null,
       shouldEscalate: false,
+      patches: [],
       error: 'agent_error',
       meta: { tokensUsed: 0, agentChain },
     }
   }
+}
+
+// ── State patches ─────────────────────────────────────────────────────────────
+
+type PatchableSnapshot = {
+  name: string | null
+  language: string
+  phone: string | null
+  company: string
+  address: string
+  notes: string
+}
+
+function snapshotPatchableFields(session: AgentSession): PatchableSnapshot {
+  const { state } = session.ar
+  return {
+    name: state.customerName,
+    language: state.language,
+    phone: state.customerPhone,
+    company: state.invoiceData.razonSocial,
+    address: state.invoiceData.direccion,
+    notes: state.invoiceData.notes,
+  }
+}
+
+function buildPatches(before: PatchableSnapshot, session: AgentSession): StatePatch[] {
+  const { state } = session.ar
+  const after: PatchableSnapshot = {
+    name: state.customerName,
+    language: state.language,
+    phone: state.customerPhone,
+    company: state.invoiceData.razonSocial,
+    address: state.invoiceData.direccion,
+    notes: state.invoiceData.notes,
+  }
+  const patches: StatePatch[] = []
+  const keys = Object.keys(before) as (keyof PatchableSnapshot)[]
+  for (const key of keys) {
+    const prev = before[key] ?? ''
+    const curr = after[key] ?? ''
+    if (curr && curr !== prev) {
+      patches.push({ key: key as StatePatch['key'], value: curr })
+    }
+  }
+  return patches
 }
 
 function buildEscalationOutcome(session: AgentSession): {

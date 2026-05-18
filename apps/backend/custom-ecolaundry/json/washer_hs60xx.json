@@ -7,26 +7,26 @@
       "transitions": {
         "YES": "non_parte.display_check",
         "NO": "non_parte.pay_help"
-      }
+      },
+      "promptKey": "washerStep0Confirm"
     },
-
     "pay_help": {
       "type": "ACTION",
       "prompt": "No hay problema.\n\n1. Acércate a la central de pago.\n2. Introduce monedas o usa tu tarjeta.\n3. Selecciona el número de tu máquina.\n4. Pulsa el botón de programa.\n5. Cierra la puerta.",
       "transitions": {
         "default": "non_parte.pay_retry"
-      }
+      },
+      "promptKey": "washerPayHelp"
     },
-
     "pay_retry": {
       "type": "CONFIRMATION",
       "prompt": "¿Has podido completar el pago?",
       "transitions": {
         "YES": "non_parte.display_check",
         "NO": "non_parte.escalate_pay"
-      }
+      },
+      "promptKey": "washerPayRetry"
     },
-
     "display_check": {
       "type": "CHOICE",
       "strictMatching": true,
@@ -44,41 +44,41 @@
         "10": "non_parte.case_disponible",
         "other": "non_parte.escalate"
       },
-      "onInterruptFallback": "Gracias. Por favor, escribe solo el código exacto que aparece en la pantalla. Si no se reconoce, te paso con un operador."
+      "onInterruptFallback": "Gracias. Por favor, escribe solo el código exacto que aparece en la pantalla. Si no se reconoce, te paso con un operador.",
+      "promptKey": "washerDisplayCheckPrompt"
     },
-
     "case_blank_display": {
       "type": "ACTION",
       "prompt": "De acuerdo. Si no aparece nada en la pantalla, puede que la lavadora esté parada.\n\n1. Pulsa el programa que quieras.\n2. Dime si arranca o si no pasa nada.",
       "transitions": {
         "default": "non_parte.check_result"
-      }
+      },
+      "promptKey": "washerCaseBlankDisplay"
     },
-
     "case_sel": {
       "type": "ACTION",
       "prompt": "Ese mensaje indica que la máquina está pendiente de selección. Comprueba, por favor, que has pulsado bien el número de la máquina en la central de pago.\n\nDespués dime si la lavadora ha arrancado.",
       "transitions": {
         "default": "non_parte.check_result"
-      }
+      },
+      "promptKey": "washerCaseSel"
     },
-
     "case_price": {
       "type": "ACTION",
       "prompt": "La pantalla muestra el importe restante.\n\n1. Introduce monedas o usa tu tarjeta hasta que la pantalla cambie a **PUSH**.\n2. Dime si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
-      }
+      },
+      "promptKey": "washerCasePrice"
     },
-
     "case_push": {
       "type": "ACTION",
       "prompt": "Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.\n\nLos programas disponibles son:\n\n- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo\n- **40º** (templado) → perfecto para ropa normal (algodón, color)\n- **30º** (suave) → adecuado para ropa delicada o sintética\n- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)\n\nSelecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.",
       "transitions": {
         "default": "non_parte.check_result"
-      }
+      },
+      "promptKey": "washerCasePush"
     },
-
     "case_extra_button": {
       "type": "CONFIRMATION",
       "prompt": "Que un botón **EXTRA** se quede fijo suele significar que la opción EXTRA fue seleccionada antes, así que la máquina sigue esperando dinero adicional para esa opción.\n\n¿Quieres esa opción **EXTRA**? Responde **SÍ** si la quieres, **NO** si no la quieres.",
@@ -86,33 +86,33 @@
         "YES": "non_parte.case_extra_pay_more",
         "NO": "non_parte.case_extra_remove",
         "other": "non_parte.case_extra_remove"
-      }
+      },
+      "promptKey": "washerCaseExtraButton"
     },
-
     "case_extra_remove": {
       "type": "ACTION",
       "prompt": "Si **no** quieres la opción **EXTRA**:\n\n1. Pulsa el botón **EXTRA** o los botones que se hayan quedado fijos para que se apaguen.\n2. Después continúa con los pasos normales del lavado.\n3. Dime si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
-      }
+      },
+      "promptKey": "washerCaseExtraRemove"
     },
-
     "case_extra_pay_more": {
       "type": "ACTION",
       "prompt": "Si **sí** quieres la opción **EXTRA**:\n\n1. Añade el dinero que falta para esa opción **EXTRA**.\n2. Después continúa con los pasos normales del lavado.\n3. Dime si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
-      }
+      },
+      "promptKey": "washerCaseExtraPayMore"
     },
-
     "case_disponible": {
       "type": "ACTION",
       "prompt": "Entendido. El saldo está disponible pero el pago aún no se ha completado en la máquina. Por favor, presiona el botón de la máquina que has seleccionado, apreta firmemente durante unos segundos hasta que veas que el saldo disponible desaparece y te devuelve el cambio.\n\nUna vez completado, regresa a la lavadora y dime qué te pone en la pantalla.",
       "transitions": {
         "default": "non_parte.followup_disponible"
-      }
+      },
+      "promptKey": "washerCaseDisponible"
     },
-
     "followup_disponible": {
       "type": "CHOICE",
       "strictMatching": true,
@@ -120,17 +120,17 @@
       "transitions": {
         "3": "non_parte.case_push",
         "other": "non_parte.escalate"
-      }
+      },
+      "promptKey": "washerFollowupDisponible"
     },
-
     "case_door": {
       "type": "ACTION",
       "prompt": "La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez. Dime si la lavadora ha arrancado.",
       "transitions": {
         "default": "non_parte.check_result"
-      }
+      },
+      "promptKey": "washerCaseDoor"
     },
-
     "case_alm": {
       "type": "CHOICE",
       "strictMatching": true,
@@ -143,71 +143,71 @@
         "5": "non_parte.case_alm_unknown",
         "other": "non_parte.case_alm_unknown"
       },
-      "onInterruptFallback": "Gracias. Si el código de alarma no coincide con un caso documentado, no voy a suponer el diagnóstico. El caso necesita revisión manual por un operador."
+      "onInterruptFallback": "Gracias. Si el código de alarma no coincide con un caso documentado, no voy a suponer el diagnóstico. El caso necesita revisión manual por un operador.",
+      "promptKey": "washerCaseAlm"
     },
-
     "case_alm_a": {
       "type": "ACTION",
       "prompt": "**ALM/A** indica una alarma de entrada de agua.\n\n1. Pulsa **STOP** una sola vez con una pulsación corta, menos de un segundo.\n2. Esto le indica a la lavadora que intente reanudar el lavado desde el punto donde apareció la alarma.\n3. Prueba de nuevo el lavado.\n4. Dime si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
-      }
+      },
+      "promptKey": "washerCaseAlmA"
     },
-
     "case_alm_e": {
       "type": "ACTION",
       "prompt": "**ALM/E** indica una alarma de obstrucción en el desagüe.\n\n1. Pulsa **STOP** una sola vez con una pulsación corta, menos de un segundo.\n2. Espera unos minutos por si la lavadora aún está vaciando el agua.\n3. Prueba de nuevo el lavado.\n4. Dime si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
-      }
+      },
+      "promptKey": "washerCaseAlmE"
     },
-
     "case_alm_door": {
       "type": "ACTION",
       "prompt": "De acuerdo. Ese mensaje puede indicar un problema de cierre o que hay alguna prenda atrapada. Abre la puerta con cuidado, revisa si hay alguna prenda atrapada y vuelve a cerrarla bien.",
       "transitions": {
         "default": "non_parte.case_alm_door_check"
-      }
+      },
+      "promptKey": "washerCaseAlmDoor"
     },
-
     "case_alm_door_check": {
       "type": "CONFIRMATION",
       "prompt": "Perfecto. Dime, por favor, si el mensaje ha desaparecido.",
       "transitions": {
         "YES": "non_parte.ok",
         "NO": "non_parte.case_alm_door_persist"
-      }
+      },
+      "promptKey": "washerCaseAlmDoorCheck"
     },
-
     "case_alm_door_persist": {
       "type": "INFO",
       "prompt": "Gracias. Vamos a pasar tu caso a revisión para ayudarte de la manera más adecuada.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerCaseAlmDoorPersist"
     },
-
     "case_alm_var": {
       "type": "INFO",
       "prompt": "⚠️ **ALM/VAr** es una alarma del variador y normalmente requiere revisión técnica. Tenemos que notificar al operador para que revise la lavadora.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerCaseAlmVar"
     },
-
     "case_alm_unknown": {
       "type": "INFO",
       "prompt": "⚠️ Ese código no coincide con ningún caso documentado, así que necesita revisión manual. Tenemos que notificar al operador para que lo revise.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerCaseAlmUnknown"
     },
-
     "case_al001": {
       "type": "ACTION",
       "prompt": "**AL001** indica un error de secuencia.\n\nReinicia el proceso completo siguiendo este orden:\n1. Carga la lavadora.\n2. Cierra la puerta.\n3. Dirígete a la central de pago y paga.\n4. Selecciona el número de máquina y recoge el cambio si toca.\n5. Dirígete a la máquina seleccionada y elige el programa.\n6. Avísame si funciona.",
       "transitions": {
         "default": "non_parte.check_result"
-      }
+      },
+      "promptKey": "washerCaseAl001"
     },
-
     "case_end": {
       "type": "CHOICE",
       "strictMatching": true,
@@ -217,31 +217,31 @@
         "2": "non_parte.case_end_unknown",
         "other": "non_parte.case_end_only"
       },
-      "onInterruptFallback": "Gracias. Si la pantalla muestra solo END, elige la opción 1. Si END aparece con otro código, elige la opción 2 para que podamos verificarlo con seguridad."
+      "onInterruptFallback": "Gracias. Si la pantalla muestra solo END, elige la opción 1. Si END aparece con otro código, elige la opción 2 para que podamos verificarlo con seguridad.",
+      "promptKey": "washerCaseEnd"
     },
-
     "case_end_only": {
       "type": "INFO",
       "prompt": "Perfecto 👍 Veo que aparece **END** en la pantalla. Si la lavadora aún no arranca, pulsa el programa que quieras y dime si algo cambia.",
-      "isTerminal": true
+      "isTerminal": true,
+      "promptKey": "washerCaseEndOnly"
     },
-
     "case_end_unknown": {
       "type": "INFO",
       "prompt": "⚠️ Gracias por indicar el código adicional junto a **END**. Ese código no está en nuestra lista documentada de incidencias, así que no voy a suponer el diagnóstico. Tenemos que notificar al operador para una verificación manual.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerCaseEndUnknown"
     },
-
     "check_result": {
       "type": "CONFIRMATION",
       "prompt": "Una vez lo hayas hecho, dime si la máquina ha empezado a funcionar.",
       "transitions": {
         "YES": "non_parte.ok",
         "NO": "non_parte.followup_display"
-      }
+      },
+      "promptKey": "washerCheckResult"
     },
-
     "followup_display": {
       "type": "CHOICE",
       "strictMatching": true,
@@ -256,65 +256,65 @@
         "7": "non_parte.case_blank_followup",
         "other": "non_parte.escalate"
       },
-      "onInterruptFallback": "Gracias. Por favor, escribe el código exacto de la pantalla. Si sigue sin estar claro, lo paso a revisión manual."
+      "onInterruptFallback": "Gracias. Por favor, escribe el código exacto de la pantalla. Si sigue sin estar claro, lo paso a revisión manual.",
+      "promptKey": "washerFollowupDisplay"
     },
-
     "case_door_persist": {
       "type": "INFO",
       "prompt": "⚠️ La puerta sigue bloqueada incluso después de repetir los pasos. Esto indica un posible fallo mecánico en el cierre de la puerta. Tenemos que notificar al operador ahora para que revise la lavadora manualmente.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerCaseDoorPersist"
     },
-
     "case_sel_persist": {
       "type": "INFO",
       "prompt": "⚠️ La pantalla sigue mostrando SEL incluso después de repetir la selección. Tenemos que notificar al operador ahora para que revise la lavadora manualmente.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerCaseSelPersist"
     },
-
     "case_push_persist": {
       "type": "INFO",
       "prompt": "⚠️ La pantalla sigue mostrando PUSH incluso después de intentar presionar el botón de programa. Esto indica que la máquina no responde al comando. Tenemos que notificar al operador ahora para que revise la lavadora manualmente.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerCasePushPersist"
     },
-
     "case_al001_persist": {
       "type": "INFO",
       "prompt": "⚠️ La pantalla sigue mostrando **AL001** después de repetir la secuencia correctamente. Tenemos que notificar al operador para que revise el caso manualmente.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerCaseAl001Persist"
     },
-
     "case_blank_followup": {
       "type": "INFO",
       "prompt": "⚠️ La pantalla sigue en blanco y la lavadora sigue sin responder. Tenemos que notificar al operador para que lo revise manualmente.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerCaseBlankFollowup"
     },
-
     "escalate_pay": {
       "type": "INFO",
       "prompt": "⚠️ Tenemos que notificar al operador para ayudarte con el problema del pago.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerEscalatePay"
     },
-
     "escalate": {
       "type": "INFO",
       "prompt": "⚠️ ¿Permites que te llame un agente para poder ayudarte de forma rápida? Vamos a activarte otra lavadora para que puedas lavar. Tendrás que cambiar la ropa de lavadora; selecciona una que esté libre mientras te busco a un agente para que te ayude.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerEscalate"
     },
-
     "ok": {
       "type": "INFO",
       "prompt": "✅ Perfecto. La lavadora ha comenzado correctamente.",
-      "isTerminal": true
+      "isTerminal": true,
+      "promptKey": "washerOk"
     }
   },
-
   "stop_error": {
     "step_0": {
       "type": "CONFIRMATION",
@@ -322,38 +322,38 @@
       "transitions": {
         "YES": "stop_error.before_start",
         "NO": "stop_error.first_time_check"
-      }
+      },
+      "promptKey": "washerStopStep0"
     },
-
     "before_start": {
       "type": "INFO",
       "prompt": "Si el lavado aún no había arrancado realmente, puedes simplemente seleccionar de nuevo el programa correcto e iniciar la lavadora. En ese caso el lavado no se ha cancelado a mitad de ciclo.",
-      "isTerminal": true
+      "isTerminal": true,
+      "promptKey": "washerStopBeforeStart"
     },
-
     "first_time_check": {
       "type": "CONFIRMATION",
       "prompt": "¿Es la primera vez que te pasa?",
       "transitions": {
         "YES": "stop_error.first_time_escalate",
         "NO": "stop_error.repay_required"
-      }
+      },
+      "promptKey": "washerStopFirstTimeCheck"
     },
-
     "first_time_escalate": {
       "type": "INFO",
       "prompt": "Presionar **STOP** cancela el ciclo de lavado por completo y se pierde el pago de ese ciclo. Si es la primera vez que te pasa, **te lo reactivamos gratuitamente** y avisamos al operador para gestionarlo.\n\nImportante: desde la próxima vez, si pulsas **STOP** con el lavado ya iniciado, se pierde el pago y tendrás que pagar de nuevo.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerStopFirstTimeEscalate"
     },
-
     "repay_required": {
       "type": "INFO",
       "prompt": "Presionar **STOP** cancela el ciclo de lavado completamente y se pierde el pago por ese ciclo interrumpido. La única forma de reiniciar la lavadora es **pagar nuevamente**. La reactivación gratuita solo se aplica la primera vez que esto sucede.",
-      "isTerminal": true
+      "isTerminal": true,
+      "promptKey": "washerStopRepayRequired"
     }
   },
-
   "post_ciclo": {
     "step_0": {
       "type": "CHOICE",
@@ -365,73 +365,74 @@
         "4": "post_ciclo.foam",
         "5": "post_ciclo.escalate",
         "other": "post_ciclo.escalate"
-      }
+      },
+      "promptKey": "washerPostCicloStep0"
     },
-
     "wet": {
       "type": "CONFIRMATION",
       "prompt": "¿La pantalla mostraba **END** junto con otro código?",
       "transitions": {
         "YES": "post_ciclo.wet_balanced_issue",
         "NO": "post_ciclo.wet_overload_issue"
-      }
+      },
+      "promptKey": "washerPostCicloWet"
     },
-
     "wet_balanced_issue": {
       "type": "INFO",
       "prompt": "Gracias por indicar el detalle del código. Ese estado de pantalla no está en nuestra lista documentada de incidencias, así que no voy a suponer el diagnóstico. Tenemos que notificar al operador para una verificación manual.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerPostCicloWetBalanced"
     },
-
     "wet_overload_issue": {
       "type": "INFO",
       "prompt": "Probablemente la lavadora estaba sobrecargada o la ropa no estaba bien equilibrada dentro del tambor. Esto es habitual con edredones, almohadas, alfombras u otras prendas voluminosas que absorben mucha agua.\n\n1. Lava la ropa de nuevo, separando la carga en **dos lavadoras** y dejando espacio suficiente para que la ropa se pueda mover correctamente.\n2. **No** metas ropa empapada directamente en la secadora — no se secará bien y el filtro puede dañarse.\n3. Si vuelves a lavar la ropa separada porque este lavado no centrifugó, **esta vez te compensaremos el lavado que no centrifugó**.\n4. Por favor, evita sobrecargar la lavadora otra vez, porque puede que la próxima vez no podamos ayudarte.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerPostCicloWetOverload"
     },
-
     "door": {
       "type": "ACTION",
       "prompt": "La puerta puede tardar de 2 a 3 minutos en desbloquearse.\n\n1. Por favor, espera un momento.\n2. Inténtalo de nuevo.",
       "transitions": {
         "default": "post_ciclo.door_check"
-      }
+      },
+      "promptKey": "washerPostCicloDoor"
     },
-
     "door_check": {
       "type": "CONFIRMATION",
       "prompt": "¿Se ha abierto la puerta?",
       "transitions": {
         "YES": "post_ciclo.ok",
         "NO": "post_ciclo.escalate"
-      }
+      },
+      "promptKey": "washerPostCicloDoorCheck"
     },
-
     "damage": {
       "type": "INFO",
       "prompt": "Voy a notificar al operador. Revisarán el caso. La compensación no es automática.",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerPostCicloDamage"
     },
-
     "foam": {
       "type": "INFO",
       "prompt": "Que haya poca espuma es normal. El detergente industrial produce menos espuma visible pero lava igual de bien.",
-      "isTerminal": true
+      "isTerminal": true,
+      "promptKey": "washerPostCicloFoam"
     },
-
     "escalate": {
       "type": "INFO",
       "prompt": "Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?",
       "isTerminal": true,
-      "action": "escalate"
+      "action": "escalate",
+      "promptKey": "washerPostCicloEscalate"
     },
-
     "ok": {
       "type": "INFO",
       "prompt": "✅ Perfecto. Todo resuelto.",
-      "isTerminal": true
+      "isTerminal": true,
+      "promptKey": "washerPostCicloOk"
     }
   }
 }

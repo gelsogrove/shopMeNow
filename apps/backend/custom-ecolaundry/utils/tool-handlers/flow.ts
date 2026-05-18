@@ -5,7 +5,10 @@
 import { advanceActiveFlow, startFlow } from '../flow-engine.js'
 import { checkFlowCompatibility } from '../flow-compatibility.js'
 import { logger } from '../logger.js'
+import { t } from '../localization.js'
+import { lang } from '../guards/helpers.js'
 import { asTrimmedString } from './arg-coercion.js'
+import type { TranslationKey } from '../localization.js'
 import type { ToolHandler } from './types.js'
 
 export const startMachineFlow: ToolHandler = async (ar, args) => {
@@ -24,7 +27,8 @@ export const startMachineFlow: ToolHandler = async (ar, args) => {
     return { ok: false, error: compatibility.reason || 'flow not compatible' }
   }
   try {
-    const result = startFlow(ar.runtime, ar.state, flowId)
+    const translateFn = (key: string) => t(key as TranslationKey, lang(ar))
+    const result = startFlow(ar.runtime, ar.state, flowId, translateFn)
     return {
       ok: true,
       data: {
@@ -47,7 +51,8 @@ export const startMachineFlow: ToolHandler = async (ar, args) => {
 export const advanceMachineFlow: ToolHandler = async (ar, args) => {
   const userReply = asTrimmedString(args.userReply) ?? ''
   try {
-    const result = await advanceActiveFlow(ar.runtime, ar.state, userReply)
+    const translateFn = (key: string) => t(key as TranslationKey, lang(ar))
+    const result = await advanceActiveFlow(ar.runtime, ar.state, userReply, translateFn)
     return {
       ok: true,
       data: {

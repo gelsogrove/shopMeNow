@@ -28,7 +28,7 @@ import {
   WIDGET_PUSH_CONSENT_SCHEMA,
   type WidgetMessageInput,
 } from "../schemas/widget.schemas"
-import { CustomClientChatbotService } from "../../../application/services/custom-client-chatbot.service"
+import { CustomClientChatbotService, applyCustomerPatches } from "../../../application/services/custom-client-chatbot.service"
 
 const llmRouterService = new LLMRouterService(prisma)
 const translationAgent = new TranslationAgent(prisma)
@@ -1043,6 +1043,7 @@ export class WidgetChatController {
         if (customClientRegResult.handled && customClientRegResult.output) {
           customClientRegHandled = true
           const customOutput = customClientRegResult.output
+          await applyCustomerPatches(customOutput.patches, customer.id, resolvedWorkspaceId)
           llmResponse = customOutput.reply || llmResponse
           llmAgentUsed = AgentType.ROUTER
           llmTokensUsed = customOutput.meta?.tokensUsed || 0
@@ -1823,6 +1824,7 @@ export class WidgetChatController {
 
         if (customClientResult.handled && customClientResult.output) {
           const customOutput = customClientResult.output
+          await applyCustomerPatches(customOutput.patches, customer.id, resolvedWorkspaceId)
 
           if (customOutput.error) {
             logger.warn("[WIDGET-CUSTOM-CLIENT] ⚠️ custom-ecolaundry returned error", {

@@ -1,6 +1,8 @@
 import { prisma, PrismaClient } from "@echatbot/database"
 import { Request, Response } from "express"
+import axios from "axios"
 import { config } from "../../../config"
+import { getLLMConfig } from "../../../config/llm.config"
 import { MessageRepository } from "../../../repositories/message.repository"
 import { LLMRouterService } from "../../../services/llm-router.service"
 import { usageService } from "../../../services/usage.service"
@@ -458,9 +460,69 @@ export class ChatController {
 
       debugSteps.push(operatorDebugStep)
 
-      // 🚫 NO Translation for operator messages (Andrea's rule: operator writes in the language they choose)
-      // Only apply Widget Security Layer if needed
+      // 🌍 Translate operator message to customer's language when they differ
       let finalMessage = content
+      const customerLanguage = chatSession.customer.language || "en"
+      const translationSuffix: Record<string, string> = {
+        es: "*(traducido)*",
+        it: "*(tradotto)*",
+        en: "*(translated)*",
+        ca: "*(traduït)*",
+        pt: "*(traduzido)*",
+        fr: "*(traduit)*",
+      }
+      try {
+        const llmConfig = getLLMConfig("openai/gpt-4o-mini")
+        const detectResponse = await axios.post(
+          `${llmConfig.baseURL}/chat/completions`,
+          {
+            model: llmConfig.model,
+            temperature: 0,
+            messages: [
+              {
+                role: "system",
+                content: `Detect the language of the text and reply with ONLY the ISO 639-1 code (e.g. "es", "it", "en", "ca", "pt", "fr"). No other text.`,
+              },
+              { role: "user", content },
+            ],
+          },
+          { headers: { Authorization: `Bearer ${llmConfig.apiKey}`, "Content-Type": "application/json" } }
+        )
+        const detectedLang = detectResponse.data.choices?.[0]?.message?.content?.trim().toLowerCase() || "unknown"
+
+        if (detectedLang !== customerLanguage) {
+          const langNames: Record<string, string> = {
+            es: "Spanish", it: "Italian", en: "English",
+            ca: "Catalan", pt: "Portuguese", fr: "French",
+          }
+          const targetLangName = langNames[customerLanguage] || customerLanguage
+          const translateResponse = await axios.post(
+            `${llmConfig.baseURL}/chat/completions`,
+            {
+              model: llmConfig.model,
+              temperature: 0,
+              messages: [
+                {
+                  role: "system",
+                  content: `Translate the following text to ${targetLangName}. Reply with ONLY the translated text, no explanations.`,
+                },
+                { role: "user", content },
+              ],
+            },
+            { headers: { Authorization: `Bearer ${llmConfig.apiKey}`, "Content-Type": "application/json" } }
+          )
+          const translated = translateResponse.data.choices?.[0]?.message?.content?.trim()
+          if (translated) {
+            const suffix = translationSuffix[customerLanguage] || "*(translated)*"
+            finalMessage = `${translated}\n\n${suffix}`
+            logger.info(`[CHAT-SEND] 🌍 Operator message translated from ${detectedLang} to ${customerLanguage}`)
+          }
+        }
+      } catch (translateError) {
+        logger.warn(`[CHAT-SEND] ⚠️ Translation failed, using original message:`, translateError.message)
+        finalMessage = content
+      }
+
       const isWidgetChannel = chatSession.channel === "widget"
       try {
         if (isWidgetChannel) {

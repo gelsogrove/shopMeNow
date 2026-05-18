@@ -116,3 +116,21 @@ Examples:
 
   Customer: "¿Cuánto cuesta esta máquina?"
   → {"branch":"faq","language":"es","details":{"faqKey":"pricing"}}
+
+  Customer: "Hola, la rentadora no em funciona"
+  → {"branch":"trouble-machine","language":"ca","details":{"subCase":"none"}}
+
+  Customer: "la rentadora no arrenca"
+  → {"branch":"trouble-machine","language":"ca","details":{"subCase":"none"}}
+
+  Customer: "He pagat però la rentadora no s'ha activat"
+  → {"branch":"trouble-machine","language":"ca","details":{"subCase":"paid-not-activated"}}
+
+  Customer: "Em surt AL001 a la pantalla"
+  → {"branch":"trouble-machine","language":"ca","details":{"displayHint":"AL001","subCase":"display-driven"}}
+
+  Customer: "Quant costa rentar?"
+  → {"branch":"faq","language":"ca","details":{"faqKey":"pricing"}}
+
+  Customer: "Vull una factura"
+  → {"branch":"invoice","language":"ca","details":{}}

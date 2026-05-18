@@ -136,6 +136,17 @@ async function maybeDispatchBranch(ar: AgentRuntime, userMessage: string): Promi
   }
   // T1: classify and dispatch.
   const result = await dispatchTurnOne(ar, userMessage)
+  // The router's language detection is authoritative at T1 — it uses the
+  // full LLM model instead of the lightweight heuristic in resolveLanguageForTurn.
+  // Stamp it into state so subsequent turns (guards, i18n, welcome) use it.
+  if (result.decision?.language) {
+    const enabled = ar.runtime.settings.enabledLanguages || []
+    const routerLang = result.decision.language
+    if (enabled.includes(routerLang)) {
+      ar.state.language = routerLang
+      ar.state.preferredLanguage = routerLang
+    }
+  }
   return result.handled && result.output ? result.output.reply : null
 }
 

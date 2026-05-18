@@ -5,12 +5,18 @@ import type { NluPatternsFile } from './nlu-patterns.js'
 
 export type FlowNode = {
   type: 'ACTION' | 'CONFIRMATION' | 'CHOICE' | 'INFO' | 'ROUTER' | 'INPUT'
+  /** Inline Spanish prompt (legacy). Used by classifyChoiceViaLLM and mapChoiceDescriptions.
+   *  When promptKey is present, the translated string supersedes this for customer-facing output. */
   prompt: string
+  /** i18n key for the customer-facing prompt. When present, overrides `prompt` for output. */
+  promptKey?: string
   transitions?: Record<string, string>
   logic?: Record<string, string>
   isTerminal?: boolean
   action?: 'escalate'
   strictMatching?: boolean
+  /** i18n key for the CHOICE/CONFIRMATION fallback when the customer's reply is not recognised. */
+  onInterruptFallbackKey?: string
   onInterruptFallback?: string
 }
 

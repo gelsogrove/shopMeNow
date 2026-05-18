@@ -10,6 +10,7 @@ export type {
   ChatChannel,
   ChatbotInput,
   ChatbotOutput,
+  StatePatch,
   HistoryEntry,
 } from './chatbot-io.js'
 

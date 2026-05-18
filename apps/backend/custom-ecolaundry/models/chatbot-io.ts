@@ -35,12 +35,27 @@ export type ChatbotInput = {
   }
 }
 
+/**
+ * A single customer-profile field that changed during this turn.
+ * The app uses these to update the customer record without polling.
+ */
+export type StatePatch = {
+  key: 'name' | 'language' | 'phone' | 'company' | 'address' | 'notes'
+  value: string
+}
+
 export type ChatbotOutput = {
   reply: string | null
   wipMessage?: string
   shouldEscalate: boolean
   escalationSummary?: string
   error?: string
+  /**
+   * Customer-profile fields captured or updated during this turn.
+   * Empty array when nothing changed. The app should upsert these
+   * into the customer record on every response.
+   */
+  patches: StatePatch[]
   meta: {
     tokensUsed: number
     agentChain: string[]

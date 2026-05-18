@@ -2,6 +2,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { pathToFileURL } from "node:url"
 
+import { prisma as defaultPrisma, PrismaClient } from "@echatbot/database"
 import logger from "../../utils/logger"
 
 type ChatChannel = string
@@ -24,12 +25,18 @@ type ChatbotInput = {
   }
 }
 
+export type CustomerPatch = {
+  key: 'name' | 'language' | 'phone' | 'company' | 'address' | 'notes'
+  value: string
+}
+
 type ChatbotOutput = {
   reply: string | null
   wipMessage?: string
   shouldEscalate: boolean
   escalationSummary?: string
   error?: string
+  patches?: CustomerPatch[]
   meta: {
     tokensUsed: number
     agentChain: string[]
@@ -276,4 +283,38 @@ export class CustomClientChatbotService {
 
     return existing
   }
+}
+
+const PATCH_KEY_TO_DB: Record<CustomerPatch['key'], string> = {
+  name: 'name',
+  language: 'language',
+  phone: 'phone',
+  company: 'company',
+  address: 'address',
+  notes: 'notes',
+}
+
+/**
+ * Applies patches emitted by the custom chatbot to the Customers table.
+ * Call this immediately after a successful customClientResult.output is obtained.
+ * workspaceId is mandatory — enforces workspace isolation on every update.
+ */
+export async function applyCustomerPatches(
+  patches: CustomerPatch[] | undefined,
+  customerId: string,
+  workspaceId: string,
+  db: PrismaClient = defaultPrisma
+): Promise<void> {
+  if (!patches || patches.length === 0) return
+  const data: Record<string, string> = {}
+  for (const patch of patches) {
+    const dbField = PATCH_KEY_TO_DB[patch.key]
+    if (dbField) data[dbField] = patch.value
+  }
+  if (Object.keys(data).length === 0) return
+  await db.customers.updateMany({
+    where: { id: customerId, workspaceId },
+    data,
+  })
+  logger.info('[applyCustomerPatches] Customer profile updated', { customerId, workspaceId, fields: Object.keys(data) })
 }

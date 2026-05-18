@@ -12,6 +12,21 @@ import type {
   SessionState,
 } from '../models/index.js'
 
+// ── i18n resolution ──────────────────────────────────────────────────────────
+
+/**
+ * Resolve the customer-facing prompt for a flow node.
+ * If the node has a `promptKey`, the translate function is called and the
+ * result is used; falls back to `node.prompt` (inline Spanish legacy string).
+ */
+export function resolveNodePrompt(node: FlowNode, translateFn?: (key: string) => string): string {
+  if (node.promptKey && translateFn) {
+    const translated = translateFn(node.promptKey)
+    if (translated) return translated
+  }
+  return node.prompt
+}
+
 // ── Flow traversal ────────────────────────────────────────────────────────────
 
 export function currentFlowGroup(runtime: Runtime, state: SessionState): Record<string, FlowNode> | null {
@@ -26,7 +41,7 @@ export function currentFlowNode(runtime: Runtime, state: SessionState): FlowNode
   return flow[state.activeStepId] || null
 }
 
-export function startFlow(runtime: Runtime, state: SessionState, flowId: string): FlowEngineResult {
+export function startFlow(runtime: Runtime, state: SessionState, flowId: string, translateFn?: (key: string) => string): FlowEngineResult {
   const normalizedFlowId = flowId.trim()
   const source = state.machineType === 'dryer' ? runtime.flows.dryer : runtime.flows.washer
   const flow = source[normalizedFlowId]
@@ -47,7 +62,7 @@ export function startFlow(runtime: Runtime, state: SessionState, flowId: string)
   return {
     flowId: normalizedFlowId,
     stepId,
-    prompt: node.prompt,
+    prompt: resolveNodePrompt(node, translateFn),
     type: node.type,
     isTerminal: Boolean(node.isTerminal),
     action: node.action,
@@ -221,7 +236,7 @@ export async function classifyRouterLogic(logic: Record<string, string>, userInp
 
 // ── Main step advancement ─────────────────────────────────────────────────────
 
-export async function advanceActiveFlow(runtime: Runtime, state: SessionState, userInput: string): Promise<FlowEngineResult> {
+export async function advanceActiveFlow(runtime: Runtime, state: SessionState, userInput: string, translateFn?: (key: string) => string): Promise<FlowEngineResult> {
   const flowId = state.activeFlowId
   let node = currentFlowNode(runtime, state)
   if (!flowId || !node || !state.activeStepId) {
@@ -285,7 +300,7 @@ export async function advanceActiveFlow(runtime: Runtime, state: SessionState, u
         action: 'escalate',
       }
     }
-    return { flowId, stepId: state.activeStepId, prompt: node.prompt, type: node.type, isTerminal: false, action: node.action }
+    return { flowId, stepId: state.activeStepId, prompt: resolveNodePrompt(node, translateFn), type: node.type, isTerminal: false, action: node.action }
   }
 
   const nextRef = node.transitions?.[transitionKey] || node.transitions?.other
@@ -315,7 +330,7 @@ export async function advanceActiveFlow(runtime: Runtime, state: SessionState, u
             state.pendingClosure = 'resolved'
           }
         }
-        return { flowId, stepId: routeStepId, prompt: routeNode.prompt, type: routeNode.type, isTerminal: Boolean(routeNode.isTerminal), action: routeNode.action }
+        return { flowId, stepId: routeStepId, prompt: resolveNodePrompt(routeNode, translateFn), type: routeNode.type, isTerminal: Boolean(routeNode.isTerminal), action: routeNode.action }
       }
     }
     nextNode = currentFlowNode(runtime, state) ?? nextNode
@@ -328,7 +343,7 @@ export async function advanceActiveFlow(runtime: Runtime, state: SessionState, u
       state.pendingClosure = 'resolved'
     }
   }
-  return { flowId, stepId: nextStepId, prompt: nextNode.prompt, type: nextNode.type, isTerminal: Boolean(nextNode.isTerminal), action: nextNode.action }
+  return { flowId, stepId: nextStepId, prompt: resolveNodePrompt(nextNode, translateFn), type: nextNode.type, isTerminal: Boolean(nextNode.isTerminal), action: nextNode.action }
 }
 
 /**

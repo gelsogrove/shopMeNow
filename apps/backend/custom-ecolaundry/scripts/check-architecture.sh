@@ -99,6 +99,7 @@ ALLOWED_LARGE_FILES="
   utils/guards/payment-no-change.ts  # Caso 4 no-change multi-step flow (ask → no-cambio retry → confirmation → resolved/escalate). Single concern: drive the no-change flow end-to-end.
   utils/guards/invoice-flow.ts  # Caso 9 invoice multi-step flow (location → tipo → razón → dir → CIF → fecha → coste → email retry → notas → name → handover). F42 added coste step. Single concern: drive the factura flow end-to-end.
   utils/state-transitions.ts  # Named atomic state transitions (markResolved, escalate, markRefundFormPending, captureCustomerName, …). Single responsibility — splitting fragments the auditable surface that rule #4 protects.
+  utils/human-message-email.ts  # HTML email template + nodemailer sender for operator notifications. Single responsibility — the bulk is inline CSS/HTML which cannot be split meaningfully.
 "
 ALLOWED_LARGE_FILES=$(echo "$ALLOWED_LARGE_FILES" | sed 's/#.*$//' | tr -s ' \n' ' ')
 violations=""

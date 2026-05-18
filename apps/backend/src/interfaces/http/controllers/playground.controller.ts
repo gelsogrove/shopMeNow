@@ -3,7 +3,7 @@ import { Request, Response } from "express"
 import * as fs from "fs"
 import * as path from "path"
 import { getChatEngine } from "../../../application/chat-engine"
-import { CustomClientChatbotService } from "../../../application/services/custom-client-chatbot.service"
+import { CustomClientChatbotService, applyCustomerPatches } from "../../../application/services/custom-client-chatbot.service"
 import { detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
 import { buildPhoneVariants } from "../../../utils/phone"
 import logger from "../../../utils/logger"
@@ -363,6 +363,9 @@ export class PlaygroundController {
             history,
           })
 
+          if (customResult.handled && customResult.output) {
+            await applyCustomerPatches(customResult.output.patches, customer.id, workspaceId)
+          }
           if (customResult.handled && customResult.output?.reply) {
             botResponse = customResult.output.reply
           } else if (customResult.output?.error) {
