@@ -36,6 +36,9 @@ type ChatbotOutput = {
   wipMessage?: string
   shouldEscalate: boolean
   escalationSummary?: string
+  notificationEmails?: string
+  operatorContactMethod?: 'email' | 'whatsapp'
+  operatorWhatsappNumber?: string
   error?: string
   patches?: CustomerPatch[]
   meta: {

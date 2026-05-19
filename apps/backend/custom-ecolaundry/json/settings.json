@@ -2,7 +2,7 @@
   "_comment": "Tenant configuration for Ecolaundry / ecolaundry. Single source of truth for behaviour-tuning + business constants. See docs/settings.md for the full field reference.",
 
   "_section_languages": "Active languages for this tenant. defaultLanguage is the fallback when the customer's language can't be detected. enabledLanguages MUST contain defaultLanguage.",
-  "enabledLanguages": ["es", "it", "ca", "fr"],
+  "enabledLanguages": ["es", "it", "ca", "fr","en"],
   "defaultLanguage": "es",
 
   "_section_branding": "Tenant identity strings. Substituted into prompts (welcome, escalation summary, FAQ replies). Both are used by buildSystemPrompt + escalation.ts.",
@@ -22,8 +22,8 @@
 
   "_section_support_contacts": "Email addresses surfaced in FAQ + handover summaries. The 'invoice' inbox handles billing/factura cases (Caso 9); 'support' is the generic operator inbox.",
   "supportEmails": {
-    "invoice": "olga@alberwaz.net",
-    "support": "service@alberwaz.net"
+    "invoice": "gelsogrove@gmail.com",
+    "support": "gelsogrove@gmail.com"
   },
   "_section_human_message_notification": "Comma-separated list of email addresses that receive a notification (with chat history rendered as HTML) every time the bot generates a Human Support message (operator escalation). Leave empty or omit to disable. operatorContactMethod controls the notification channel: 'email' (default) sends to notificationEmails; 'whatsapp' sends to operatorWhatsappNumber instead.",
   "notificationEmails": "gelsogrove@gmail.com",
