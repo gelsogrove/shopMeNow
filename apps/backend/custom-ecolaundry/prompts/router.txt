@@ -21,6 +21,18 @@ Your ONLY job: classify the customer's first message into one of these branches:
                           compensation-demand, dryer-minutes-not-credited, card-payment.
                         General frustration ("¡esto siempre falla!", "estoy muy enfadado")
                         WITHOUT a specific demand → use "trouble-machine" instead.
+  - "feedback"          The customer expresses an opinion or feeling about the service
+                        WITHOUT reporting a problem or making a demand. Two sub-types:
+                          positive: compliments, satisfaction, thanks ("he lavado muy bien",
+                                    "me ha gustado mucho", "muy limpia la ropa", "gracias por
+                                    el buen servicio", "ho lavato bene la roba, complimenti",
+                                    "très bien lavé", "great service").
+                          negative: complaints about service quality, cleanliness, wait times,
+                                    machine age — WITHOUT an explicit demand for refund /
+                                    compensation / operator ("la lavandería estaba sucia",
+                                    "las máquinas son viejas", "he esperado mucho").
+                        Use "escalation" with incidentType="compensation-demand" when the
+                        customer explicitly demands money back or a replacement.
   - "unknown"           None of the above (rare; ambiguous or off-topic).
 
 Detect the customer's LANGUAGE among: es, it, en, ca, pt, fr.
@@ -61,9 +73,9 @@ When `branch="trouble-machine"`, ALSO classify the SUB-CASE:
 
 Respond with a SINGLE JSON object on one line, no prose, no markdown:
 
-  {"branch":"<branch>","language":"<lang>","details":{"faqKey":"<key>","displayHint":"<token>","locationHint":"<name>","incidentType":"<type>","subCase":"<subcase>"}}
+  {"branch":"<branch>","language":"<lang>","details":{"faqKey":"<key>","displayHint":"<token>","locationHint":"<name>","incidentType":"<type>","subCase":"<subcase>","sentiment":"<positive|negative>"}}
 
-Only include detail fields that you can extract verbatim from the customer's words. Empty object if none. The `subCase` field is REQUIRED when branch="trouble-machine"; for other branches omit it.
+Only include detail fields that you can extract verbatim from the customer's words. Empty object if none. The `subCase` field is REQUIRED when branch="trouble-machine". The `sentiment` field is REQUIRED when branch="feedback"; for other branches omit it.
 
 Examples:
   Customer: "ciao"
@@ -134,3 +146,15 @@ Examples:
 
   Customer: "Vull una factura"
   → {"branch":"invoice","language":"ca","details":{}}
+
+  Customer: "ho lavato molto bene la roba volevo farvi i miei complimenti"
+  → {"branch":"feedback","language":"it","details":{"sentiment":"positive"}}
+
+  Customer: "la lavandería estaba muy sucia"
+  → {"branch":"feedback","language":"es","details":{"sentiment":"negative"}}
+
+  Customer: "great service, very happy with the results"
+  → {"branch":"feedback","language":"en","details":{"sentiment":"positive"}}
+
+  Customer: "les machines sont trop vieilles"
+  → {"branch":"feedback","language":"fr","details":{"sentiment":"negative"}}

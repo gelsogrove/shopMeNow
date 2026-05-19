@@ -24,6 +24,7 @@ import { troubleMachineHandler } from '../../utils/branches/trouble-machine/hand
 import { invoiceHandler } from '../../utils/branches/invoice/handler.js'
 import { loyaltyHandler } from '../../utils/branches/loyalty/handler.js'
 import { escalationHandler } from '../../utils/branches/escalation/handler.js'
+import { feedbackHandler } from '../../utils/branches/feedback/handler.js'
 import { createInitialState } from '../../utils/state.js'
 import { setFaqs } from '../../utils/runtime.js'
 import type { AgentRuntime } from '../../models/index.js'
@@ -560,6 +561,81 @@ const cases: Case[] = [
         throw new Error(
           'invalid incidentType must NOT be stored — the validator rejects it',
         )
+      }
+    },
+  },
+
+  // ── feedbackHandler (Caso 33) ────────────────────────────────────────────
+  {
+    name: 'feedbackHandler: positive sentiment → feedbackPositive i18n key + handoff=resolved',
+    run: async () => {
+      const ar = makeAr()
+      const out = await feedbackHandler({
+        message: 'ho lavato molto bene la roba, complimenti',
+        ar,
+        routerDetails: { sentiment: 'positive' },
+        language: 'it',
+      })
+      if (out.handoff !== 'resolved') {
+        throw new Error(`expected handoff="resolved", got "${out.handoff}"`)
+      }
+      if (!out.reply || out.reply.trim() === '') {
+        throw new Error('feedbackHandler must return a non-empty reply')
+      }
+      // Must NOT ask for location, machine type, or escalate
+      if (/lavanderr|lavanderia|operador|operator|nombre|nome|escalat/i.test(out.reply)) {
+        throw new Error('feedbackHandler positive must not gather or escalate')
+      }
+    },
+  },
+  {
+    name: 'feedbackHandler: negative sentiment → feedbackNegative i18n key + handoff=resolved',
+    run: async () => {
+      const ar = makeAr()
+      const out = await feedbackHandler({
+        message: 'la lavandería estaba muy sucia',
+        ar,
+        routerDetails: { sentiment: 'negative' },
+        language: 'es',
+      })
+      if (out.handoff !== 'resolved') {
+        throw new Error(`expected handoff="resolved", got "${out.handoff}"`)
+      }
+      if (!out.reply || out.reply.trim() === '') {
+        throw new Error('feedbackHandler must return a non-empty reply')
+      }
+    },
+  },
+  {
+    name: 'feedbackHandler: missing sentiment defaults to positive',
+    run: async () => {
+      const ar = makeAr()
+      const out = await feedbackHandler({
+        message: 'great service',
+        ar,
+        routerDetails: {},
+        language: 'en',
+      })
+      if (out.handoff !== 'resolved') {
+        throw new Error(`expected handoff="resolved", got "${out.handoff}"`)
+      }
+    },
+  },
+  {
+    name: 'feedbackHandler: does NOT escalate or set operatorRequested',
+    run: async () => {
+      const ar = makeAr()
+      await feedbackHandler({
+        message: 'les machines sont trop vieilles',
+        ar,
+        routerDetails: { sentiment: 'negative' },
+        language: 'fr',
+      })
+      if (ar.state.operatorRequested) {
+        throw new Error('feedbackHandler must NOT set operatorRequested')
+      }
+      if (ar.state.customerNameRequested) {
+        throw new Error('feedbackHandler must NOT set customerNameRequested')
       }
     },
   },

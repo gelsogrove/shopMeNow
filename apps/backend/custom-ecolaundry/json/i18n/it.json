@@ -169,5 +169,7 @@
   "dryerGenericCase": "Per favore, riprova con un carico più piccolo e ben distribuito. Se il problema continua, usa un'altra asciugatrice.",
   "dryerErrorCheckResult": "Una volta fatto, dimmi se ha iniziato a funzionare.",
   "dryerErrorFallback": "Per favore, usa un'altra asciugatrice. Il caso sarà esaminato.",
-  "dryerErrorEndSuccess": "Perfetto, il problema è risolto."
+  "dryerErrorEndSuccess": "Perfetto, il problema è risolto.",
+  "feedbackPositive": "Grazie mille per il tuo messaggio! 😊 Siamo felici che tu sia soddisfatto.",
+  "feedbackNegative": "Grazie per il tuo feedback, ne prenderemo atto il prima possibile."
 }

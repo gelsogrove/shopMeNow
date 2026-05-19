@@ -49,6 +49,7 @@ export type SessionState = {
     | 'invoice'
     | 'loyalty'
     | 'escalation'
+    | 'feedback'
     | 'unknown'
     | null
   previousBranch:
@@ -58,6 +59,7 @@ export type SessionState = {
     | 'invoice'
     | 'loyalty'
     | 'escalation'
+    | 'feedback'
     | 'unknown'
     | null
   retryCount: number

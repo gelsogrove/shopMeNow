@@ -26,6 +26,7 @@ export type Branch =
   | 'invoice'
   | 'loyalty'
   | 'escalation'
+  | 'feedback'
   | 'unknown'
 
 export type TroubleSubCase =
@@ -59,6 +60,9 @@ export interface RouterDecision {
     /** For branch="escalation": the kind of non-troubleshooting incident
      *  (e.g. "datafono-wrong-amount", "cameras-or-ajax"). */
     incidentType?: string
+    /** For branch="feedback": sentiment of the customer's opinion.
+     *  "positive" → compliment / satisfaction; "negative" → complaint. */
+    sentiment?: 'positive' | 'negative'
   }
 }
 
@@ -130,6 +134,7 @@ function validateDecision(d: RouterDecision): RouterDecision {
     'invoice',
     'loyalty',
     'escalation',
+    'feedback',
     'unknown',
   ]
   const allowedLangs: SupportedLanguage[] = ['es', 'it', 'en', 'ca', 'pt', 'fr']

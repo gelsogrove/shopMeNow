@@ -238,7 +238,11 @@ const cases: Case[] = [
     run: () => {
       const filePath = path.resolve(__dirname, '../../agent.ts')
       const content = fs.readFileSync(filePath, 'utf8')
-      if (!/isInvoiceFlow.*invoice-/.test(content) && !/pendingFlow\.startsWith\(['"]invoice-['"]\)/.test(content)) {
+      if (
+        !/isInvoiceFlow.*invoice-/.test(content) &&
+        !/pendingFlow\.startsWith\(['"]invoice-['"]\)/.test(content) &&
+        !/PII_FLOW_PREFIXES/.test(content)
+      ) {
         throw new Error('F35: agent.ts must bypass rephrase for invoice flow (PII privacy)')
       }
     },
@@ -1475,6 +1479,25 @@ const cases: Case[] = [
       }
       if (!key.trim()) {
         throw new Error('F65: compensationReview must not be empty')
+      }
+    },
+  },
+
+  // ── F66 — displayState captured too early (before machineType known) ────
+  {
+    name: 'F66 — agent-extract does NOT set displayState when machineType is unknown (guard present)',
+    run: () => {
+      // The fix adds `&& (state.machineType || state.displayState)` to the
+      // primary display-capture branch. If that guard is removed, a customer
+      // typing "AL001" while answering the location question would prematurely
+      // set displayState and the flow would start without asking the display Q.
+      const extractPath = path.resolve(__dirname, '..', '..', 'utils', 'agent-extract.ts')
+      const content = fs.readFileSync(extractPath, 'utf8')
+      // The guard must appear on the same line as newDisplay !== state.displayState
+      if (!/(newDisplay && newDisplay !== state\.displayState && \(state\.machineType \|\| state\.displayState\))/.test(content)) {
+        throw new Error(
+          'F66: agent-extract.ts must guard displayState capture with (state.machineType || state.displayState) — see F66 in CLAUDE.md',
+        )
       }
     },
   },

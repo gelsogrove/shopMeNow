@@ -170,5 +170,7 @@
   "dryerGenericCase": "Por favor, inténtalo de nuevo con una carga más pequeña y bien repartida. Si el problema continúa, usa otra secadora.",
   "dryerErrorCheckResult": "Una vez lo hayas hecho, dime si ya ha empezado a funcionar.",
   "dryerErrorFallback": "Por favor, usa otra secadora. El caso será revisado.",
-  "dryerErrorEndSuccess": "Perfecto, la incidencia está resuelta."
+  "dryerErrorEndSuccess": "Perfecto, la incidencia está resuelta.",
+  "feedbackPositive": "¡Muchas gracias por tu comentario! 😊 Nos alegra mucho que estés satisfecho.",
+  "feedbackNegative": "Gracias por tu feedback, lo tendremos en cuenta lo antes posible."
 }

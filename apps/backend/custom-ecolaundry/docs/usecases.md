@@ -1606,3 +1606,40 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Usuario:** Marc  
 **Bot:** Gracias Marc. Un operador humano se encargará de tu caso. El chatbot será desactivado.
 
+
+---
+
+## Caso 33 — Feedback del cliente (positivo o negativo)
+
+**Semanticid**: `feedback`  
+**Branch**: `feedback`  
+**Handler**: `utils/branches/feedback/handler.ts`
+
+### Descripción
+
+El cliente expresa una opinión sobre el servicio (satisfacción, elogio, queja sobre calidad, limpieza, tiempos de espera, estado de las máquinas) SIN reportar un problema técnico ni hacer una demanda explícita.
+
+El bot responde con un mensaje de cierre y NO inicia ningún gather ni escalación.
+
+### Criterios de aceptación
+
+1. Si el sentimiento es **positivo**: el bot responde con `feedbackPositive` ("¡Muchas gracias por tu comentario! 😊 Nos alegra mucho que estés satisfecho.") en la lengua del cliente y cierra la conversación (`handoff: 'resolved'`).
+2. Si el sentimiento es **negativo**: el bot responde con `feedbackNegative` ("Gracias por tu feedback, lo tendremos en cuenta lo antes posible.") en la lengua del cliente y cierra.
+3. NO se pregunta la lavandería, el tipo de máquina ni ningún otro dato.
+4. NO se escala al operador.
+5. Si el cliente además de feedback hace una demanda explícita (reembolso, compensación) → el router clasifica como `escalation`, no `feedback`.
+
+### Conversación 33.1 — Feedback positivo (IT)
+
+**Usuario:** ho lavato molto bene la roba volevo farvi i miei complimenti  
+**Bot:** Grazie mille per il tuo messaggio! 😊 Siamo felici che tu sia soddisfatto.
+
+### Conversación 33.2 — Feedback negativo (ES)
+
+**Usuario:** la lavandería estaba muy sucia  
+**Bot:** Gracias por tu feedback, lo tendremos en cuenta lo antes posible.
+
+### Conversación 33.3 — Feedback negativo (FR)
+
+**Usuario:** les machines sont trop vieilles  
+**Bot:** Merci pour ton retour, nous en tiendrons compte le plus tôt possible.

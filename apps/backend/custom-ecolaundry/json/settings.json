@@ -2,7 +2,7 @@
   "_comment": "Tenant configuration for Ecolaundry / ecolaundry. Single source of truth for behaviour-tuning + business constants. See docs/settings.md for the full field reference.",
 
   "_section_languages": "Active languages for this tenant. defaultLanguage is the fallback when the customer's language can't be detected. enabledLanguages MUST contain defaultLanguage.",
-  "enabledLanguages": ["es", "it", "ca"],
+  "enabledLanguages": ["es", "it", "ca", "fr"],
   "defaultLanguage": "es",
 
   "_section_branding": "Tenant identity strings. Substituted into prompts (welcome, escalation summary, FAQ replies). Both are used by buildSystemPrompt + escalation.ts.",

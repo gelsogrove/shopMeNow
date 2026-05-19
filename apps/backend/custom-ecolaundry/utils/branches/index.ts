@@ -17,15 +17,13 @@ import { troubleMachineHandler } from './trouble-machine/handler.js'
 import { invoiceHandler } from './invoice/handler.js'
 import { loyaltyHandler } from './loyalty/handler.js'
 import { escalationHandler } from './escalation/handler.js'
+import { feedbackHandler } from './feedback/handler.js'
 import type { BranchHandler, BranchOutput } from './types.js'
 
-/** Map of implemented branches → handler. All 6 branches register a
- *  handler; the "thin" ones (trouble-machine, invoice, loyalty,
- *  escalation) seed sticky state from the router's details and then
- *  return `delegate-to-legacy` so the existing guard pipeline + LLM
- *  loop produces the actual reply. Migration of those branches to a
- *  fully self-contained state machine is tracked phase by phase in
- *  docs/branch-router-architecture.md. */
+/** Map of implemented branches → handler. The "thin" ones (trouble-machine,
+ *  invoice, loyalty, escalation) seed sticky state from the router's details
+ *  and return `delegate-to-legacy`. The "full" ones (greeting, faq, feedback)
+ *  produce the reply directly and close the branch. */
 const HANDLERS: Partial<Record<Branch, BranchHandler>> = {
   greeting: greetingHandler,
   faq: faqHandler,
@@ -33,6 +31,7 @@ const HANDLERS: Partial<Record<Branch, BranchHandler>> = {
   invoice: invoiceHandler,
   loyalty: loyaltyHandler,
   escalation: escalationHandler,
+  feedback: feedbackHandler,
 }
 
 export interface DispatchResult {

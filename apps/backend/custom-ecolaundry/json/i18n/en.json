@@ -169,5 +169,7 @@
   "dryerGenericCase": "Please try again with a smaller, well-spread load. If the problem continues, use another dryer.",
   "dryerErrorCheckResult": "Once you've done that, tell me if it has started working.",
   "dryerErrorFallback": "Please use another dryer. The case will be reviewed.",
-  "dryerErrorEndSuccess": "Great, the issue is resolved."
+  "dryerErrorEndSuccess": "Great, the issue is resolved.",
+  "feedbackPositive": "Thank you so much for your message! 😊 We're glad you're happy.",
+  "feedbackNegative": "Thank you for your feedback, we will take note of it as soon as possible."
 }

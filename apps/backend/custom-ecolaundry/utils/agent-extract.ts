@@ -439,7 +439,14 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   }
 
   const newDisplay = extractDisplayState(trimmed)
-  if (newDisplay && newDisplay !== state.displayState) {
+  // Guard: only capture a display code once machineType is known.
+  // Without this guard, a customer who types "AL001" while answering the
+  // location question (gather T2) would prematurely set displayState before
+  // the bot has asked "what appears on screen?" — the flow then fires at T6
+  // (machine-number answer) skipping the display-question entirely.
+  // DISPLAY-CHANGE (update to a different code mid-flow) is always allowed
+  // regardless of machineType — the customer is reporting a real state change.
+  if (newDisplay && newDisplay !== state.displayState && (state.machineType || state.displayState)) {
     // Preserve the customer-facing label (e.g. "PUSH PROG") for the operator
     // handover summary. Without this the operator reads the canonical token
     // ("PUSH") and loses the customer's exact wording.

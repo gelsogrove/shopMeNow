@@ -351,6 +351,16 @@
       "guardModule": "utils/guards/location.ts",
       "guards": ["guardForceMachineType", "guardForceMachineNumber"],
       "tests": ["__tests__/agent/33-mezcla.test.spec.ts"]
+    },
+    {
+      "docNumber": 33,
+      "title": "El cliente deja feedback positivo o negativo sobre el servicio",
+      "semanticId": "feedback",
+      "kind": "non-troubleshooting",
+      "guardModule": "utils/branches/feedback/handler.ts",
+      "guards": ["feedbackHandler"],
+      "i18nKeys": ["feedbackPositive", "feedbackNegative"],
+      "tests": ["__tests__/unit/branch-dispatcher.test.ts"]
     }
   ]
 }

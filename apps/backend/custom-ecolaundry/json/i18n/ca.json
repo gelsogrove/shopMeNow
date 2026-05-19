@@ -170,5 +170,7 @@
   "dryerGenericCase": "Si us plau, torna-ho a intentar amb una càrrega més petita i ben repartida. Si el problema continua, utilitza una altra assecadora.",
   "dryerErrorCheckResult": "Un cop ho hagis fet, digue'm si ja ha començat a funcionar.",
   "dryerErrorFallback": "Si us plau, utilitza una altra assecadora. El cas serà revisat.",
-  "dryerErrorEndSuccess": "Perfecte, la incidència està resolta."
+  "dryerErrorEndSuccess": "Perfecte, la incidència està resolta.",
+  "feedbackPositive": "Moltes gràcies pel teu missatge! 😊 Ens alegra molt que estiguis satisfet.",
+  "feedbackNegative": "Gràcies pel teu comentari, ho tindrem en compte el més aviat possible."
 }

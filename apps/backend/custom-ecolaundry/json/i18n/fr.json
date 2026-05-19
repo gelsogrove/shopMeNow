@@ -170,5 +170,7 @@
   "dryerGenericCase": "Merci de réessayer avec une charge plus petite et bien répartie. Si le problème continue, utilise un autre sèche-linge.",
   "dryerErrorCheckResult": "Une fois que tu l'as fait, dis-moi si ça a commencé à fonctionner.",
   "dryerErrorFallback": "Merci d'utiliser un autre sèche-linge. Le cas sera examiné.",
-  "dryerErrorEndSuccess": "Parfait, l'incident est résolu."
+  "dryerErrorEndSuccess": "Parfait, l'incident est résolu.",
+  "feedbackPositive": "Merci beaucoup pour ton message ! 😊 Nous sommes ravis que tu sois satisfait.",
+  "feedbackNegative": "Merci pour ton retour, nous en tiendrons compte le plus tôt possible."
 }
