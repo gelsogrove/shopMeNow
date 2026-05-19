@@ -125,9 +125,20 @@ export async function agentTurn(session: AgentSession, rawUserMessage: string): 
 async function maybeDispatchBranch(ar: AgentRuntime, userMessage: string): Promise<string | null> {
   // T2+ first: if the previous turn pinned a sticky branch, route there
   // directly without re-classifying.
+  // Exception: if the case was already resolved (pendingClosure='resolved'),
+  // release the sticky branch so the next message is treated as a fresh T1.
+  // Without this, a post-resolution message (e.g. "ottimo servizio") keeps
+  // the trouble-machine branch active and the guard pipeline asks "cosa vedi
+  // sullo schermo?" instead of routing the feedback to the feedback handler.
   if (ar.state.activeBranch && ar.state.activeBranch !== 'unknown') {
-    const result = await dispatchSubsequentTurn(ar, userMessage, ar.state.language as SupportedLanguage ?? 'es')
-    return result.handled && result.output ? result.output.reply : null
+    if (ar.state.pendingClosure === 'resolved') {
+      ar.state.previousBranch = ar.state.activeBranch
+      ar.state.activeBranch = null
+      // Fall through to T1 dispatch below.
+    } else {
+      const result = await dispatchSubsequentTurn(ar, userMessage, ar.state.language as SupportedLanguage ?? 'es')
+      return result.handled && result.output ? result.output.reply : null
+    }
   }
   // T1: classify and dispatch.
   const result = await dispatchTurnOne(ar, userMessage)
