@@ -2559,6 +2559,8 @@ export class WhatsAppWebhookController {
             customerName: customer.name || 'Unknown',
             customerPhone: customer.phone || undefined,
             notificationEmails: customOutput.notificationEmails,
+            operatorContactMethod: customOutput.operatorContactMethod,
+            operatorWhatsappNumber: customOutput.operatorWhatsappNumber,
           })
         }
 

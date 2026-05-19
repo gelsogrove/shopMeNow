@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Save, Trash2, Loader2, Power } from "lucide-react"
+import { Save, Trash2, Loader2, Power, Smartphone, Sparkles } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { ChatWidget } from "@/components/ChatWidget"
 import { IMG_BASE_URL } from "@/config"
@@ -72,10 +72,21 @@ const ALL_SECTIONS: SettingsSection[] = [
   { key: "functions", label: "Custom Tools", description: "External functions and webhooks" },
 ]
 
-// F50: Business Config also hidden in custom chatbot mode (the company info /
-// business type / currency / registration flags are not consumed by the
-// custom module — it has its own JSON config). Calendar + Custom Tools idem.
-const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = ["business", "calendar", "functions"]
+// For custom chatbot workspaces, everything is managed in settings.json inside
+// the custom module — the only relevant platform-level config is the WhatsApp
+// channel provider credentials (API key, phone number, webhook token).
+// All other sections are hidden: AI Personality, Business Config, Widget,
+// Human Support, Security, Calendar, Custom Tools are either unused or
+// already configured inside the custom module's own JSON.
+const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = [
+  "business",
+  "ai-personality",
+  "widget",
+  "widget-support",
+  "security",
+  "calendar",
+  "functions",
+]
 
 function getVisibleSections(isCustomChatbot: boolean): SettingsSection[] {
   if (!isCustomChatbot) return ALL_SECTIONS
@@ -154,7 +165,6 @@ interface FormData {
   address: string
   registrationPage: string
   requireManualApproval: boolean
-  hasHumanSupport: boolean
   hasProductCatalog: boolean
   hasCart: boolean
   hasOrderTracking: boolean
@@ -191,19 +201,32 @@ export function SettingsPage() {
   const isCustomChatbot = Boolean(currentWorkspace?.customChatbotId)
   const SECTIONS = getVisibleSections(isCustomChatbot)
 
-  // 🆕 Load last opened section from localStorage
+  // Load last opened section from localStorage; for custom chatbot workspaces
+  // fall back to 'whatsapp' (the only visible section) instead of 'business'.
   const getLastOpenedSection = (): SectionKey => {
+    const fallback: SectionKey = isCustomChatbot ? 'whatsapp' : 'business'
     try {
       const saved = localStorage.getItem('settings-last-section')
-      return (saved as SectionKey) || 'business'
+      if (!saved) return fallback
+      const candidate = saved as SectionKey
+      if (isCustomChatbot && HIDDEN_FOR_CUSTOM_CHATBOT.includes(candidate)) return fallback
+      return candidate
     } catch {
-      return 'business'
+      return fallback
     }
   }
 
   // State
   const [activeSection, setActiveSection] = useState<SectionKey>(getLastOpenedSection())
   const [activeHelpField, setActiveHelpField] = useState<string>("businessName")
+
+  // When the workspace loads async, ensure activeSection is valid for this workspace type.
+  // If the current section is hidden for custom chatbot, reset to 'whatsapp'.
+  useEffect(() => {
+    if (isCustomChatbot && HIDDEN_FOR_CUSTOM_CHATBOT.includes(activeSection)) {
+      setActiveSection('whatsapp')
+    }
+  }, [isCustomChatbot, activeSection])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isDirty, setIsDirty] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -913,15 +936,30 @@ export function SettingsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header with Dropdown */}
+        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-            <SettingsDropdown
-              sections={SECTIONS}
-              currentSection={activeSection}
-              onSectionChange={handleSectionChange}
-            />
+            {isCustomChatbot ? (
+              /* Custom chatbot: only WhatsApp Channel is configurable here —
+                 show a static pill instead of the section dropdown */
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 text-sm font-medium text-emerald-700">
+                  <Smartphone className="h-4 w-4" />
+                  WhatsApp Channel
+                </span>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-violet-200 bg-violet-50 text-xs font-medium text-violet-700">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Custom Chatbot — all other settings are managed in settings.json
+                </span>
+              </div>
+            ) : (
+              <SettingsDropdown
+                sections={SECTIONS}
+                currentSection={activeSection}
+                onSectionChange={handleSectionChange}
+              />
+            )}
           </div>
 
           {/* Right side: Channel Status + Debug Mode + Save */}

@@ -329,6 +329,10 @@ export interface EscalationNotificationParams {
   customerPhone?: string
   /** Comma-separated email list from chatbot settings.notificationEmails — takes precedence over workspace.operatorEmail for custom chatbot tenants. */
   notificationEmails?: string
+  /** Notification channel from chatbot settings.operatorContactMethod — takes precedence over workspace.operatorContactMethod for custom chatbot tenants. */
+  operatorContactMethod?: 'email' | 'whatsapp'
+  /** Operator WhatsApp number from chatbot settings.operatorWhatsappNumber — used when operatorContactMethod='whatsapp'. */
+  operatorWhatsappNumber?: string
 }
 
 /**
@@ -341,7 +345,7 @@ export async function applyEscalationNotification(
   params: EscalationNotificationParams,
   db: PrismaClient = defaultPrisma
 ): Promise<void> {
-  const { workspaceId, customerId, escalationSummary, history, customerName, customerPhone, notificationEmails } = params
+  const { workspaceId, customerId, escalationSummary, history, customerName, customerPhone, notificationEmails, operatorContactMethod: settingsContactMethod, operatorWhatsappNumber: settingsWhatsappNumber } = params
 
   const workspace = await db.workspace.findFirst({
     where: { id: workspaceId },
@@ -359,11 +363,13 @@ export async function applyEscalationNotification(
     return
   }
 
-  const method = workspace.operatorContactMethod || 'email'
+  // Settings from the chatbot module take precedence over the workspace DB record
+  // (custom chatbot tenants configure everything in settings.json, not in the DB)
+  const method = settingsContactMethod || workspace.operatorContactMethod || 'email'
   logger.info('[applyEscalationNotification] Dispatching escalation', { workspaceId, customerId, method })
 
   if (method === 'whatsapp') {
-    const operatorPhone = workspace.operatorWhatsappNumber
+    const operatorPhone = settingsWhatsappNumber || workspace.operatorWhatsappNumber
     if (!operatorPhone) {
       logger.warn('[applyEscalationNotification] WhatsApp method set but no operatorWhatsappNumber configured', { workspaceId })
       return

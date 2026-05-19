@@ -16,6 +16,7 @@ import {
   Package2,
   Percent,
   ShoppingCart,
+  Sparkles,
   UserCircle,
   Users,
   Wrench,
@@ -197,11 +198,13 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
         },
       ],
     }] : []),
-    {
+    // Campaigns — hidden in custom chatbot mode (broadcast campaigns are not
+    // supported by custom chatbot modules; only managed WhatsApp flows apply).
+    ...(!isCustomChatbot ? [{
       href: "/campaigns",
       label: t('nav.campaigns'),
       icon: Megaphone,
-    },
+    }] : []),
     {
       href: "/support/tickets",
       label: t('nav.support'),
@@ -241,9 +244,16 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps = {}) {
               <h2 className="text-base font-semibold text-gray-900 truncate">
                 {workspace?.name || 'Channel'}
               </h2>
-              <p className="text-xs text-gray-500">
-                {workspace?.channelMode === 'ECOMMERCE' ? 'E-commerce' : workspace?.channelMode === 'FLOW' ? 'Flow' : 'Info'}
-              </p>
+              {isCustomChatbot ? (
+                <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700">
+                  <Sparkles className="h-3 w-3" />
+                  Custom Chatbot
+                </span>
+              ) : (
+                <p className="text-xs text-gray-500">
+                  {workspace?.channelMode === 'ECOMMERCE' ? 'E-commerce' : workspace?.channelMode === 'FLOW' ? 'Flow' : 'Info'}
+                </p>
+              )}
             </div>
             {/* Mobile close button */}
             <button

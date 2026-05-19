@@ -51,6 +51,10 @@ export type ChatbotOutput = {
   escalationSummary?: string
   /** Comma-separated email list from settings.notificationEmails. Populated by the chatbot module so the host app can send the escalation email without reading settings itself. */
   notificationEmails?: string
+  /** Notification channel from settings.operatorContactMethod ('email' or 'whatsapp'). Populated so the host app does not need to read settings or DB for custom chatbot tenants. */
+  operatorContactMethod?: 'email' | 'whatsapp'
+  /** Operator WhatsApp number from settings.operatorWhatsappNumber. Used when operatorContactMethod='whatsapp'. */
+  operatorWhatsappNumber?: string
   error?: string
   /**
    * Customer-profile fields captured or updated during this turn.

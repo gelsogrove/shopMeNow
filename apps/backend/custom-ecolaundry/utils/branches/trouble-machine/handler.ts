@@ -24,7 +24,7 @@ import { resolveKnownLocation } from '../../message-parsing/locations.js'
 import { extractDisplayState } from '../../intent.js'
 import type { BranchHandler } from '../types.js'
 
-export const troubleMachineHandler: BranchHandler = async ({ ar, routerDetails }) => {
+export const troubleMachineHandler: BranchHandler = async ({ ar, routerDetails, message }) => {
   // Seed sticky state with hints captured by the router. Skip if the field
   // is already set (autoExtract or a previous turn beat us to it).
   const hintLocation = routerDetails.locationHint
@@ -33,7 +33,12 @@ export const troubleMachineHandler: BranchHandler = async ({ ar, routerDetails }
     if (known) ar.state.location = known
   }
 
-  const hintDisplay = routerDetails.displayHint
+  // T1: use the router's displayHint (already extracted by the LLM).
+  // T2+: routerDetails is empty — try extracting the display code from the
+  // raw message so that inline codes like "Em surt ALM" are recognised even
+  // when the customer does not type the code alone. Same extractDisplayState
+  // function, just applied to the full message string as a fallback.
+  const hintDisplay = routerDetails.displayHint || message
   if (hintDisplay && !ar.state.displayState) {
     const normalised = extractDisplayState(hintDisplay)
     if (normalised) ar.state.displayState = normalised

@@ -97,10 +97,7 @@ export async function agentTurn(session: AgentSession, rawUserMessage: string): 
   if (ar.runtime.settings?.useBranchRouter) {
     const dispatchResult = await maybeDispatchBranch(ar, userMessage)
     if (dispatchResult) {
-      history.push({ role: 'user', content: userMessage })
-      history.push({ role: 'assistant', content: dispatchResult })
-      const polished = polishReplyForTurn(ar, dispatchResult)
-      return appendEscalationSummary(ar, polished, history)
+      return applyGuardOutcome(session, { reply: dispatchResult, reason: 'branch-router' }, userMessage)
     }
   }
 
@@ -203,47 +200,31 @@ async function applyGuardOutcome(
     const welcome = renderWelcomeForTurn(ar)
     if (welcome) reply = mergeWelcomeWithReply(welcome, reply)
   }
-  // Natural-rephrase pass (opt-in). Skipped for T1 welcome (canonical
-  // greeting must stay stable) and for operator-only structured output
-  // (filter inside rephraseForTurn).
-  // F35 — Andrea 2026-05-10 (PII privacy): the invoice flow (Caso 9) carries
-  // sensitive personal data (CIF/NIF, dirección, email, razón social) entered
-  // turn-by-turn into ar.state.invoiceData. The history at every invoice turn
-  // contains those fields. The rephrase LLM forwards the full conversation
-  // history to a third-party API; that would leak PII outside the system.
-  // We deliberately SKIP rephrase for any pendingFlow starting with 'invoice-'.
-  // Customer sees the deterministic i18n reply unchanged.
-  const isInvoiceFlow = ar.state.pendingFlow.startsWith('invoice-')
-  // F41 — Andrea 2026-05-11: when the deterministic reply already contains
-  // a markdown bullet list with bold items (PUSH PROG 4-program list +
-  // descriptions, AL001 numbered education, etc.), the rephrase LLM
-  // consistently flattens the structure ("- **60º** (muy caliente) → ..."
-  // becomes inline "- 60º muy sucia/blanca - 40º normal -..."). The
-  // formatted reply IS the UX — no polish needed. Skip rephrase whenever
-  // we see the bullet+bold pattern. Detection: at least one line starting
-  // with "- **" (markdown bullet + bold marker).
+  // ── Rephrase bypass conditions ────────────────────────────────────────────
+  // The rephrase layer (utils/agent-rephrase.ts) passes the reply + full
+  // conversation history to a third-party LLM API. Any flow that collects PII
+  // in the history MUST bypass it. Add new PII flows to PII_FLOW_PREFIXES.
+  //
+  // F35 — invoice flow (Caso 9): CIF/NIF, dirección, razón social, email.
+  // Add future sensitive flows here (e.g. 'payment-card-', 'id-verify-').
+  const PII_FLOW_PREFIXES = ['invoice-'] as const
+  const isPrivateFlow = PII_FLOW_PREFIXES.some((p) =>
+    ar.state.pendingFlow.startsWith(p),
+  )
+  // F41 — markdown bullet+bold list: rephrase LLM flattens structure.
+  // The formatted reply IS the UX — no polish needed.
   const hasFormattedBulletList = /\n-\s+\*\*/.test(reply)
-  // F49 — Andrea 2026-05-12: bypass rephrase for the discount-code ask turn
-  // (`discount-code-ask`). Source i18n is `"¿Podrías indicarme, por favor, el
-  // código exacto tal como lo ves?"` (clean post-F46) but the rephrase LLM
-  // kept appending "incluyendo letras si las hay" autonomously — same F32-F41
-  // pattern where the rephrase "naturalizes" by adding invented detail.
-  // Deterministic bypass: when emitting the discount-code-ask reply, skip
-  // rephrase. The i18n source IS the UX.
+  // F49 — discount-code-ask: clean i18n is the UX; rephrase kept adding
+  // "incluyendo letras si las hay" autonomously.
   const isDiscountCodeAsk = outcome.reason === 'discount-code-ask'
-  // F56 — Andrea 2026-05-15: bypass rephrase when an active display flow is
-  // running (washer/dryer flow engine: case_push/case_sel/case_door; or
-  // JSON display flows: AL001, ALM-DOOR, C001, …). Those prompts come from
-  // carefully-vetted JSON files (washer_hs60xx.json, dryer_ed340.json,
-  // display-flows.json). The rephrase LLM keeps inventing operational
-  // details ("ropa en la goma", "hasta que encaje bien", "hasta oír un
-  // clic") that contradict the physical machine behaviour. Same pattern
-  // family as F32/F37/F38/F39/F41 — anti-pattern lists in the rephrase
-  // prompt are insufficient. Deterministic bypass is the only robust fix.
+  // F56 — active display flow (washer/dryer JSON prompts): PDF-vetted content;
+  // rephrase invented operational details ("ropa en la goma", "hasta oír un
+  // clic"). Deterministic bypass is the only robust fix.
   const isDisplayFlowActive = !!ar.state.activeFlowId
+
   if (
     !isT1Welcome &&
-    !isInvoiceFlow &&
+    !isPrivateFlow &&
     !hasFormattedBulletList &&
     !isDiscountCodeAsk &&
     !isDisplayFlowActive &&

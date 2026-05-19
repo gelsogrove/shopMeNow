@@ -121,7 +121,7 @@ export interface Workspace {
 
 interface WorkspaceContextType {
   workspace: Workspace | null
-  setCurrentWorkspace: (workspace: Workspace) => void
+  setCurrentWorkspace: React.Dispatch<React.SetStateAction<Workspace | null>>
   loading: boolean
   error: any
 }

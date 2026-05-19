@@ -53,7 +53,7 @@ import { Plus, Trash2, Calendar } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 export function BlackoutPeriodsPage() {
-  const { currentWorkspace } = useWorkspace();
+  const { workspace: currentWorkspace } = useWorkspace();
   const [blackoutPeriods, setBlackoutPeriods] = useState<BlackoutPeriod[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);

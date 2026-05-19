@@ -134,13 +134,16 @@ async function runChatbotTurn(input: ChatbotInput, agentChain: string[]): Promis
     const reply = await agentTurn(session, input.userMessage)
     const patches = buildPatches(snapshotBefore, session)
     const { shouldEscalate, escalationSummary } = buildEscalationOutcome(session)
-    const notificationEmails = session.ar.runtime.settings?.notificationEmails
+    const { notificationEmails, operatorContactMethod, operatorWhatsappNumber } =
+      session.ar.runtime.settings ?? {}
 
     return {
       reply,
       shouldEscalate,
       escalationSummary,
       notificationEmails,
+      operatorContactMethod,
+      operatorWhatsappNumber,
       patches,
       meta: { tokensUsed: 0, agentChain },
     }

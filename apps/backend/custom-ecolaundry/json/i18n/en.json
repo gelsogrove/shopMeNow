@@ -1,7 +1,7 @@
 {
   "_comment": "Localised strings for tenant ecolaundry (Ecolaundry). Lang: en. Source of truth: this file. ES is the base catalogue; every key here must mirror the keys in es.json.",
   "location": "Which laundry are you at right now?",
-  "greetingOpen": "Tell me, how can I help you? 🙂",
+  "greetingOpen": "Tell me, how can I help you?",
   "locationClarification": "Sorry, can you tell me where the laundry is?",
   "locationInsist": "I need to know where you are to help. Where is the laundry?",
   "mataroStreet": "We have two laundromats in Mataró: C/ Francisco de Goya 117 and C/ Alemanya 17. Which one are you at?",

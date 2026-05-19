@@ -135,8 +135,20 @@ USER TURN
 │                                    via F27 in escalation.ts)         │
 │   naturalRephrase (opt-in flag)   pass guard outcome through         │
 │                                    rephrase LLM with conversation    │
-│                                    history; preserves keywords +     │
-│                                    operational details (F32)         │
+│                                    history. 5 responsibilities:      │
+│                                    ① language (always customer's)    │
+│                                    ② name (weave if known)           │
+│                                    ③ tone + emoji (1-2, empathic)    │
+│                                    ④ security (strip unauth URLs,    │
+│                                       block prompt-injection)        │
+│                                    ⑤ content (preserve keywords,     │
+│                                       no invented details — F32)     │
+│                                    Bypassed for PII flows (invoice-),│
+│                                    display flows (F56), bullet lists  │
+│                                    (F41), discount-code ask (F49).   │
+│                                    Prompt: prompts/rephrase.txt.     │
+│                                    Temp: settings.rephraseTemperature│
+│                                    (default 0.6).                    │
 │   operatorBriefingFromLlm (flag)  generate operator handover summary │
 │                                    via LLM with full history         │
 │   Resp: invariants on the reply BEFORE returning to the customer.    │

@@ -80,6 +80,10 @@ export type Settings = {
    * Multiple recipients: "a@x.com, b@x.com". Leave empty/omit to disable.
    */
   notificationEmails?: string
+  /** How to notify the operator: "email" (default) or "whatsapp". */
+  operatorContactMethod?: 'email' | 'whatsapp'
+  /** Operator WhatsApp number used when operatorContactMethod="whatsapp". */
+  operatorWhatsappNumber?: string
   /** Whitelisted external domains the bot is allowed to mention. */
   allowedExternalLinks?: string
   welcomeMessage?: Partial<Record<SupportedLanguage, string>>

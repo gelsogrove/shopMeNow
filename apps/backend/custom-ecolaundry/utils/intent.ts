@@ -32,9 +32,10 @@ export function extractDisplayState(message: string): string | null {
   // or "100" don't false-match.
   if (/(?:^|\D)0*01(?:\D|$)/.test(trimmed) && !/\b\d{4,}\b/.test(trimmed)) return 'C001'
 
-  // Accept the sub-code separated by "/", whitespace, or nothing — "ALM DOOR",
-  // "ALM/DOOR", "ALMDOOR" should all collapse to the same display token.
-  const specificAlarmMatch = trimmed.match(/\b(ALM[\/\s]?A|ALM[\/\s]?E|ALM[\/\s]?DOOR|ALM[\/\s]?V(?:AR|Ar))\b/i)
+  // Accept the sub-code separated by "/" or nothing — "ALM/DOOR", "ALMDOOR".
+  // Whitespace is NOT accepted as separator: "ALM a la pantalla" (Catalan/Spanish
+  // preposition) would false-match as ALM/A. Only "/" or direct concatenation.
+  const specificAlarmMatch = trimmed.match(/\b(ALM\/?A|ALM\/?E|ALM\/?DOOR|ALM\/?V(?:AR|Ar))\b/i)
   if (specificAlarmMatch) return normalizeDisplayState(specificAlarmMatch[1])
 
   // ALN family ("ALN", "ALN A", "ALN N") is treated as an undocumented alarm —

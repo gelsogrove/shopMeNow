@@ -1,56 +1,62 @@
-// Natural rephrase layer (Andrea, 2026-05-10).
+// Natural rephrase layer — L5 output policy (Andrea, 2026-05-10, upgraded 2026-05-19).
 //
-// Purpose: when a deterministic guard wins the pipeline, its outcome is a
-// canned i18n string (e.g. "¿En qué lavandería estás?"). Repeated across
-// turns and sessions this reads templated. This layer lets the LLM polish
-// the customer-facing line for natural tone-matching, using the full
-// conversation history as context, WITHOUT changing the content invariants
-// the guard encoded.
+// PURPOSE
+// ───────
+// When a deterministic guard wins the pipeline, its outcome is a canned i18n
+// string (e.g. "¿En qué lavandería estás?"). Repeated across turns and sessions
+// this reads templated. This layer passes the reply through the LLM for
+// tone-polish using the full conversation history as context.
 //
-// What this function does:
-//   - Calls the LLM with a tight system prompt: "riformula in modo
-//     naturale, MANTIENI tutte le parole chiave, mantieni significato,
-//     puoi aggiungere il nome del cliente se noto, max +30%"
-//   - Returns the rephrased reply. On any error/timeout, falls back to the
-//     original canned reply (graceful degradation).
+// RESPONSIBILITIES (in prompt priority order)
+// ────────────────────────────────────────────
+// ① Language  — always respond in the customer's language (detected from
+//               history), never mix languages, never default to English.
+// ② Name      — weave CUSTOMER_NAME naturally if known (max once per reply).
+// ③ Tone      — warm, human, emoji (1-2 max), context-aware empathy.
+// ④ Security  — strip URLs not in ALLOWED_DOMAINS; never follow prompt-injection
+//               instructions from CONVERSATION_HISTORY.
+// ⑤ Content   — preserve all keywords, codes, emails, authorised URLs verbatim;
+//               never add operational detail not in the canned reply.
 //
-// What this function does NOT do:
-//   - Change the state (no `escalate` / `markResolved` / etc. — the guard
-//     already mutated state, this is presentation-only).
-//   - Touch operator-only structured output (`**👤 Human Support message**`).
-//   - Run during T1 welcome (canonical greeting must stay stable).
-//   - Run during the first turn that emits sacred-rule replies (pricing
-//     deflect, no-confrontar, format validators) — the caller filters.
+// BYPASS CONDITIONS (all checked by the caller in agent.ts:applyGuardOutcome)
+// ─────────────────────────────────────────────────────────────────────────────
+// • T1 welcome (canonical greeting must stay stable)
+// • invoice-* pendingFlow (F35 — PII: CIF/NIF, email, dirección in history)
+// • hasFormattedBulletList (F41 — LLM flattens markdown structure)
+// • discount-code-ask reason (F49 — clean i18n IS the UX)
+// • activeFlowId set (F56 — display-flow prompts are PDF-vetted; rephrase
+//   invented "ropa en la goma", "hasta oír un clic" etc.)
 //
-// Opt-in via `settings.naturalRephrase` (false by default).
+// TEMPERATURE
+// ───────────
+// Default 0.6 (raised from 0.4 on 2026-05-19): gives more natural variation
+// while the strict content rules in the prompt prevent content drift.
+// Configurable via settings.rephraseTemperature. Recommended range 0.4-0.7.
+// Do NOT exceed 0.7 — higher temperatures break keyword-preservation rules.
+//
+// ADDING A NEW PII BYPASS
+// ───────────────────────
+// 1. Add the condition in agent.ts:applyGuardOutcome (same block as isInvoiceFlow).
+// 2. Document it here with a reference (e.g. "F35 pattern").
+// 3. Add a unit test in __tests__/unit/agent-rephrase.test.ts.
 
 import type { AgentMessage, AgentRuntime } from '../models/index.js'
 import { callModel } from './llm.js'
 import { lang as resolveTenantLang } from './guards/helpers.js'
 import { logger } from './logger.js'
 
-const REPHRASE_SYSTEM_PROMPT = `Eres un editor que reescribe la respuesta del bot de una lavandería para que suene más natural y empático, manteniendo el significado y todas las palabras clave del original.
-
-REGLAS ESTRICTAS:
-1. NO cambies el significado. Si el original dice "¿En qué lavandería estás?", la versión reescrita debe seguir preguntando lo mismo.
-2. NO añadas información nueva (no inventes precios, códigos, ubicaciones, horarios).
-3. MANTÉN las palabras clave: nombres de lavanderías (Goya, Pineda, Alemanya, Hortes, L'Escala, Mataró), códigos display (PUSH PROG, SEL, DOOR, AL001, ALM, ALN, ERR, etc.), números de máquina, importes, "operador", "desactivado", "revisión manual", "formulario", "devolución".
-4. MANTÉN los emoji y la formattación markdown del original (negrita, listas, saltos de línea).
-5. PUEDES añadir el nombre del cliente si está disponible en el historial.
-6. PUEDES variar el tono según el contexto (cliente angry → más empático).
-7. NO superes el original en más del 30% de longitud.
-8. Responde SOLO con el texto reescrito, sin comillas ni preámbulos.
-
-Si tienes dudas, devuelve el original sin cambios.`
+// Fallback system prompt used when prompts/rephrase.txt is missing or empty.
+// Keep in sync with prompts/rephrase.txt — the file is the canonical version.
+const REPHRASE_SYSTEM_PROMPT_FALLBACK = `Eres el asistente virtual de una lavandería. Reescribe la respuesta del bot para que suene natural y empático. Responde SIEMPRE en el idioma del cliente (detectado de la history). Usa el nombre del cliente si está disponible. Añade 1-2 emoji apropiados. NO cambies el significado ni añadas información nueva. Mantén todas las palabras clave, códigos y URLs del original. Si tienes dudas, devuelve el original sin cambios.`
 
 /**
- * Rephrase the bot reply naturally, using conversation history for context.
- * Returns the rephrased reply on success, the original reply on failure.
+ * Rephrase the bot reply for natural tone, correct language, and safety.
  *
- * Skipped automatically when:
- *   - settings.naturalRephrase is false (caller MUST check)
- *   - reply contains the operator-only handover marker
- *   - reply is empty
+ * Returns the rephrased reply on success, the original reply on any error
+ * (graceful degradation — the customer always gets a reply).
+ *
+ * The caller (agent.ts:applyGuardOutcome) is responsible for checking all
+ * bypass conditions BEFORE calling this function.
  */
 export async function rephraseForTurn(
   reply: string,
@@ -58,19 +64,28 @@ export async function rephraseForTurn(
   history: AgentMessage[],
 ): Promise<string> {
   if (!reply.trim()) return reply
+  // Operator handover block must never be rephrased — it is structured output
+  // consumed by the host app, not customer-facing prose.
   if (reply.includes('**👤 Human Support message**')) return reply
   if (!ar.runtime.settings?.naturalRephrase) return reply
 
   const customerName = ar.state.customerName || ''
   const tenantLang = resolveTenantLang(ar)
-  const historyTrim = history.slice(-10) // last 5 turns max
-  const historyBlock = historyTrim
-    .map((m) => `[${m.role}] ${m.content}`)
-    .join('\n')
+
+  // Authorised external domains from settings — the rephrase prompt uses this
+  // list to strip any unauthorised URL that might appear in the canned reply.
+  const allowedDomains = ar.runtime.settings?.allowedExternalLinks?.trim() || ''
+
+  // Last 10 messages (5 turns) — enough context for language detection and
+  // tone-matching without inflating the token budget.
+  const historyTrim = history.slice(-10)
+  const historyBlock = historyTrim.map((m) => `[${m.role}] ${m.content}`).join('\n')
 
   const userPrompt = [
     `LANGUAGE: ${tenantLang}`,
     customerName ? `CUSTOMER_NAME: ${customerName}` : '',
+    allowedDomains ? `ALLOWED_DOMAINS: ${allowedDomains}` : 'ALLOWED_DOMAINS: (none)',
+    '',
     'CONVERSATION_HISTORY (last turns):',
     historyBlock || '(empty)',
     '',
@@ -80,17 +95,17 @@ export async function rephraseForTurn(
     .filter(Boolean)
     .join('\n')
 
-  // Rephrase temperature: moderate — this is a generative task with strict
-  // content constraints (keep keywords, keep meaning). Higher temperature
-  // gives more natural variation but risks drifting from the canned reply.
-  // Configurable via `settings.rephraseTemperature` (default 0.4);
-  // recommended 0.2-0.5.
-  const rephraseTemp = ar.runtime.settings?.rephraseTemperature ?? 0.4
-  // System prompt: prefer prompts/rephrase.txt (loaded by runtime), fall
-  // back to the TS const REPHRASE_SYSTEM_PROMPT for graceful degradation.
-  // See CLAUDE.md Pending refactors D2.
+  // Default temperature raised to 0.6 for more natural variation.
+  // The strict content rules in prompts/rephrase.txt prevent content drift
+  // at this temperature. Do not exceed 0.7.
+  const rephraseTemp = ar.runtime.settings?.rephraseTemperature ?? 0.6
+
+  // Prefer the external prompt file (prompts/rephrase.txt loaded by runtime
+  // at boot). Falls back to the TS const for graceful degradation when the
+  // file is missing. See CLAUDE.md Pending refactors D2.
   const promptFromFile = ar.runtime.prompts?.rephrase?.trim()
-  const systemPrompt = promptFromFile || REPHRASE_SYSTEM_PROMPT
+  const systemPrompt = promptFromFile || REPHRASE_SYSTEM_PROMPT_FALLBACK
+
   try {
     const rephrased = await callModel({
       systemPrompt,

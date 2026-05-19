@@ -54,7 +54,7 @@ import {
 import { Plus, Edit, Trash2, Clock, Euro } from 'lucide-react';
 
 export function AppointmentTypesPage() {
-  const { currentWorkspace } = useWorkspace();
+  const { workspace: currentWorkspace } = useWorkspace();
   const [appointmentTypes, setAppointmentTypes] = useState<AppointmentType[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);

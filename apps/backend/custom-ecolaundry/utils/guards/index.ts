@@ -60,6 +60,8 @@ import {
   guardDisplayFlowStart,
 } from './display-flow.js'
 
+import { guardAlmDisambiguation } from './alm-disambiguation.js'
+
 import {
   guardMataroStreet,
   guardUnknownLocation,
@@ -167,6 +169,9 @@ export const GUARD_PIPELINE: Guard[] = [
   // (resolved/persist) takes priority over re-detection of the display token.
   guardDisplayFlowFollowUp,
   guardDisplayFlowStart,
+  // ALM generic: show sub-type list so customer can identify the exact variant.
+  // Must come AFTER guardDisplayFlowStart (specific sub-type flows take priority).
+  guardAlmDisambiguation,
   // Post-instruction failure (Phase B/C re-ask + escalate) MUST run BEFORE
   // guardAdvanceMachineFlow. Reason: the washer flow's check_result node has
   // a special-case that routes any display-token reply to NO → followup_display

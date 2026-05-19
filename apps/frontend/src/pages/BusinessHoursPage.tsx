@@ -43,7 +43,7 @@ interface DaySchedule {
 }
 
 export function BusinessHoursPage() {
-  const { currentWorkspace } = useWorkspace();
+  const { workspace: currentWorkspace } = useWorkspace();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [schedule, setSchedule] = useState<DaySchedule[]>(

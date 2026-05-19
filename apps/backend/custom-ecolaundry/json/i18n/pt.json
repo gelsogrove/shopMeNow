@@ -1,7 +1,7 @@
 {
   "_comment": "Localised strings for tenant ecolaundry (Ecolaundry). Lang: pt. Source of truth: this file. ES is the base catalogue; every key here must mirror the keys in es.json.",
   "location": "Em que lavandaria estás agora mesmo?",
-  "greetingOpen": "Diz-me, em que te posso ajudar? 🙂",
+  "greetingOpen": "Diz-me, em que te posso ajudar?",
   "locationClarification": "Desculpa, podes dizer-me onde está a lavandaria?",
   "locationInsist": "Preciso de saber onde estás para te poder ajudar. Onde está a lavandaria?",
   "mataroStreet": "Em Mataró temos duas lavandarias: C/ Francisco de Goya 117 e C/ Alemanya 17. Em qual estás?",
