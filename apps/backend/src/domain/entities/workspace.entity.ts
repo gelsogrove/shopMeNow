@@ -68,6 +68,7 @@ export interface WorkspaceProps {
   hasOrderTracking?: boolean
   needRegistration?: boolean
   humanSupportInstructions?: string | null
+  translateOperatorMessages?: boolean
   operatorContactMethod?: string | null
   operatorEmail?: string | null
   operatorWhatsappNumber?: string | null
@@ -375,6 +376,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get humanSupportInstructions(): string | null | undefined {
     return this.props.humanSupportInstructions
+  }
+
+  get translateOperatorMessages(): boolean {
+    return this.props.translateOperatorMessages ?? true
   }
 
   get operatorContactMethod(): string | null | undefined {
