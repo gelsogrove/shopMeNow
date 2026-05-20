@@ -758,7 +758,7 @@ export function isPaidButNotActivatedCase(
 // Canonical vocabulary used by the fuzzy matcher below. Keep entries ≥ 6
 // chars so the distance threshold doesn't accidentally swallow short
 // unrelated words ("gato", "lavar", "goya", …).
-const WASHER_VOCAB = ['lavadora', 'lavatrice', 'washer', 'rentadora', 'lavelinge']
+const WASHER_VOCAB = ['lavadora', 'lavatrice', 'washer', 'rentadora', 'lavelinge', 'laundry']
 const DRYER_VOCAB = ['secadora', 'asciugatrice', 'dryer', 'assecadora', 'sechelinge']
 
 /** Levenshtein distance (in-place DP, tiny). Used only on short tokens. */
@@ -864,7 +864,7 @@ export function detectLanguageHeuristic(message: string): SessionState['language
     return 'ca'
   }
 
-  if (/(washer|dryer|laundromat|display shows|charged twice|double charge|step by step|card digits|screenshot|payment proof|did not start|does not start|i can'?t|hi|hello|my\s+(washer|dryer|machine))/i.test(normalized)) {
+  if (/(washer|dryer|laundromat|display shows|charged twice|double charge|step by step|card digits|screenshot|payment proof|did not start|does not start|doesn'?t work|doesn'?t start|not working|i can'?t|my\s+(washer|dryer|machine)|\bhi\b|\bhello\b|\bthe\s+laund|\blaundry\b|\bwashing\s+machine\b|\bthe\s+machine\b)/i.test(normalized)) {
     return 'en'
   }
 
