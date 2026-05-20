@@ -841,6 +841,10 @@ model ChatSession {
   expiresAt   DateTime? // Session expiry for anonymous visitors (24 hours)
   channel     String    @default("whatsapp") // "whatsapp" | "widget"
 
+  // 🧪 Playground Mode — true for sessions created via the public demo (echatbot.ai/demo/*)
+  // These sessions are hidden from the backoffice chat list.
+  isPlayground Boolean @default(false)
+
   // 🔒 CONCURRENCY SAFETY: Unique constraint prevents duplicate active sessions
   // Only ONE active session allowed per customer at any time
   @@unique([customerId, status], name: "unique_active_session")
