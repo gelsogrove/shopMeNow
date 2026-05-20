@@ -63,6 +63,17 @@ import { Textarea } from "../components/ui/textarea"
 
 import type { Chat, Message } from "@/types/chat"
 
+const HUMAN_SUPPORT_MARKER = "**👤 Human Support message**"
+
+function splitBotMessage(content: string): { customer: string; operator: string | null } {
+  const idx = content.indexOf(HUMAN_SUPPORT_MARKER)
+  if (idx === -1) return { customer: content, operator: null }
+  return {
+    customer: content.slice(0, idx).trimEnd(),
+    operator: content.slice(idx),
+  }
+}
+
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) {
     return "Data non disponibile"
@@ -1807,19 +1818,37 @@ export function ChatPage() {
                             </div>
                           )}
 
-                          <div
-                            className="break-words"
-                            style={{ lineHeight: "1.7", fontSize: "0.95rem" }}
-                          >
-                            <MessageRenderer
-                              content={message.content}
-                              variant="chat"
-                            />
-                          </div>
+                          {(() => {
+                            const { customer: customerText, operator: operatorText } = isAgentMessage
+                              ? splitBotMessage(message.content)
+                              : { customer: message.content, operator: null }
+                            return (
+                              <>
+                                <div
+                                  className="break-words"
+                                  style={{ lineHeight: "1.7", fontSize: "0.95rem" }}
+                                >
+                                  <MessageRenderer
+                                    content={customerText}
+                                    variant="chat"
+                                  />
+                                </div>
+
+                                {operatorText && (
+                                  <div className="mt-2 rounded-lg px-3 py-2 bg-orange-100 border border-orange-300 text-orange-900 text-sm">
+                                    <div className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide mb-1">
+                                      🔒 Internal — not sent to customer
+                                    </div>
+                                    <MessageRenderer content={operatorText} variant="chat" />
+                                  </div>
+                                )}
+                              </>
+                            )
+                          })()}
 
                           <div className="flex justify-end items-center mt-1">
                             <div className="flex items-center gap-1">
-                              {/* � View Flow Button - ONLY for bot messages with debugInfo */}
+                              {/* View Flow Button - ONLY for bot messages with debugInfo */}
                               {isAgentMessage &&
                                 message.metadata?.debugInfo && (
                                   <button

@@ -17,6 +17,7 @@ import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
 import { buildPhoneVariants } from "../../../utils/phone"
 import { verifyWhatsAppSignature } from "../../../utils/whatsapp-signature"
 import { WhatsAppDirectSendService } from "../../../services/whatsapp-direct-send.service"
+import { splitCustomChatbotReply } from "../../../utils/custom-chatbot-reply"
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -2617,11 +2618,12 @@ export class WhatsAppWebhookController {
         if (!isPlayground && customOutput.reply) {
           try {
             const directSend = new WhatsAppDirectSendService(prisma)
+            const { customerReply } = splitCustomChatbotReply(customOutput.reply)
             await directSend.send({
               workspaceId: customer.workspaceId,
               customerId: customer.id,
               phoneNumber: customer.phone,
-              messageContent: customOutput.reply,
+              messageContent: customerReply,
               conversationMessageId: savedAssistantMessageId,
             })
           } catch (sendError) {

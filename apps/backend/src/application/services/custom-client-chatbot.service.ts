@@ -361,7 +361,10 @@ export async function applyEscalationNotification(
     },
   })
 
-  if (!workspace || !workspace.hasHumanSupport) {
+  // For custom chatbot tenants, notificationEmails in settings.json is the source of truth.
+  // hasHumanSupport from the DB only gates standard (non-custom) tenants.
+  const hasCustomEmails = !!notificationEmails
+  if (!workspace || (!workspace.hasHumanSupport && !hasCustomEmails)) {
     logger.info('[applyEscalationNotification] Human support disabled or workspace not found', { workspaceId })
     return
   }
