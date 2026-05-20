@@ -32,10 +32,10 @@
   "_section_smtp": "SMTP credentials for escalation email notifications. These take precedence over the global SMTP_* env vars in .env — the custom chatbot is fully self-contained. host defaults to smtp.gmail.com, port to 587, secure to false. For Gmail use an App Password (Google Account → Security → 2-Step Verification → App passwords).",
   "smtp": {
     "user": "gelsogrove@gmail.com",
-    "pass": "SMTP_APP_PASSWORD_HERE",
+    "pass": "bhfg vynq uwqm jckm",
     "host": "smtp.gmail.com",
-    "port": 587,
-    "secure": false,
+    "port": 465,
+    "secure": true,
     "from": "gelsogrove@gmail.com"
   },
   "refundFormUrl": "https://forms.gle/XFGPAd9581AhC9eu7",

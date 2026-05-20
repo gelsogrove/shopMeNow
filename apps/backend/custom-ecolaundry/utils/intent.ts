@@ -856,7 +856,7 @@ export function detectLanguageHeuristic(message: string): SessionState['language
     return 'es'
   }
 
-  if (/(asciug|lavatrice|lavanderia|centrifug|bagnat|sportello|cosa devo fare|ho gia risposto|schermata|pagamento|carta|lavato|asciugato)/i.test(normalized)) {
+  if (/(asciug|lavatrice|lavanderia|centrifug|bagnat|sportello|cosa devo fare|ho gia risposto|schermata|pagamento|carta|lavato|asciugato|\bciao\b|buongiorno|buonasera|salve|non funziona|non si chiude|non parte|ho pagato|non lo so|dimmi|grazie)/i.test(normalized)) {
     return 'it'
   }
 
