@@ -1837,6 +1837,7 @@ export class WidgetChatController {
               notificationEmails: customOutput.notificationEmails,
               operatorContactMethod: customOutput.operatorContactMethod,
               operatorWhatsappNumber: customOutput.operatorWhatsappNumber,
+              smtpConfig: customOutput.smtpConfig,
             })
           }
 

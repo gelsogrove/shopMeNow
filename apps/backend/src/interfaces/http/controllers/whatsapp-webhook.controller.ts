@@ -2574,6 +2574,7 @@ export class WhatsAppWebhookController {
             notificationEmails: customOutput.notificationEmails,
             operatorContactMethod: customOutput.operatorContactMethod,
             operatorWhatsappNumber: customOutput.operatorWhatsappNumber,
+            smtpConfig: customOutput.smtpConfig,
           })
 
           // Disable chatbot so subsequent customer messages go to operator, not LLM

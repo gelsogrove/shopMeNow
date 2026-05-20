@@ -1396,6 +1396,7 @@ export class UltraMsgWebhookController {
             notificationEmails: customOutput.notificationEmails,
             operatorContactMethod: customOutput.operatorContactMethod,
             operatorWhatsappNumber: customOutput.operatorWhatsappNumber,
+            smtpConfig: customOutput.smtpConfig,
           })
         }
 
