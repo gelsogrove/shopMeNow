@@ -1624,8 +1624,8 @@ export class MessageRepository {
 
       // Get all chat sessions, including those with blacklisted customers
       // We want to show all chats but mark blacklisted ones visually
-      // @ts-ignore - Prisma types issue
-      const chatSessions = await this.prisma.chatSession.findMany({
+      // @ts-ignore - isPlayground not yet in generated Prisma types (schema exists, regenerate to fix)
+      const chatSessions = await (this.prisma.chatSession.findMany as any)({
         where: {
           workspaceId: workspaceId,
           isPlayground: { not: true },
@@ -1641,10 +1641,9 @@ export class MessageRepository {
               name: true,
               email: true,
               phone: true,
-              company: true, // Include company name for chat list display
-              activeChatbot: true, // Include activeChatbot for chat list icon
-              isBlacklisted: true, // Include to show blacklist status in UI
-              // Remove avatar as it doesn't exist in the schema
+              company: true,
+              activeChatbot: true,
+              isBlacklisted: true,
             },
           },
           workspace: {
@@ -1653,10 +1652,9 @@ export class MessageRepository {
               name: true,
             },
           },
-          // Include message count
           messages: {
             where: {
-              read: false, // Use 'read' instead of 'isRead'
+              read: false,
               direction: "INBOUND",
             },
             select: {
@@ -1668,17 +1666,15 @@ export class MessageRepository {
           updatedAt: "desc",
         },
         take: limit,
-      })
-      
+      }) as any[]
+
       logger.info(`[ChatSessions] ✅ Found ${chatSessions.length} sessions for workspace ${workspaceId}`)
 
-      // Return all sessions - we'll show blacklisted status in UI instead of hiding
-      // Map sessions to include unread count and activeChatbot
-      return chatSessions.map((session) => ({
+      return chatSessions.map((session: any) => ({
         ...session,
-        unreadCount: session.messages.length,
+        unreadCount: session.messages?.length ?? 0,
         activeChatbot: session.customer?.activeChatbot ?? true,
-        messages: undefined, // Remove messages array
+        messages: undefined,
       }))
     } catch (error) {
       logger.error("Error getting chat sessions with unread counts:", error)

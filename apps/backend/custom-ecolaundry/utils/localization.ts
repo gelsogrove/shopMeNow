@@ -72,7 +72,7 @@ export function tt(
 ): string {
   const text = t(key, lang)
   return Object.entries(vars).reduce(
-    (acc, [name, value]) => acc.replaceAll(`{${name}}`, String(value)),
+    (acc, [name, value]) => acc.split(`{${name}}`).join(String(value)),
     text,
   )
 }

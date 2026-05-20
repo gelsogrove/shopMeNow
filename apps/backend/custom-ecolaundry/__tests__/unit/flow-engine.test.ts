@@ -134,6 +134,40 @@ const cases: Case[] = [
       if (normalizeConfirmation('') !== null) throw new Error('expected null')
     },
   },
+  // Bug regression: long messages starting with "si" must NOT be classified as
+  // YES — the customer may be expressing doubt, not confirming.
+  // Regression from: "si mi sembra che sia chiusa bene devo fare qualcosa d'altro?"
+  // being misclassified as YES, causing the flow to skip to the ok node and
+  // reply in Spanish instead of following up in Italian.
+  {
+    name: 'normalizeConfirmation: long message starting with "si" → null (not a bare YES)',
+    run: () => {
+      const input = "si mi sembra che sia chiusa bene devo fare qualcosa d'altro?"
+      if (normalizeConfirmation(input) !== null) {
+        throw new Error(`long "si…" message must return null, got YES — would skip to ok node in wrong language`)
+      }
+    },
+  },
+  {
+    name: 'normalizeConfirmation: "si mi sembra" (3 words, ≤5) → YES (short, LLM will handle nuance)',
+    run: () => {
+      // 3 words is short enough for the deterministic guard — the rephrase LLM
+      // layer will handle any residual uncertainty in the tone of the reply.
+      if (normalizeConfirmation('si mi sembra') !== 'YES') throw new Error('expected YES for 3-word message')
+    },
+  },
+  {
+    name: 'normalizeConfirmation: "si" (single word) → YES (short bare affirmation preserved)',
+    run: () => {
+      if (normalizeConfirmation('si') !== 'YES') throw new Error('single "si" must still be YES')
+    },
+  },
+  {
+    name: 'normalizeConfirmation: "si ok" (2 words) → YES (short affirmation preserved)',
+    run: () => {
+      if (normalizeConfirmation('si ok') !== 'YES') throw new Error('expected YES')
+    },
+  },
 
   // ── mapChoiceDescriptions ─────────────────────────────────────────────────
   {

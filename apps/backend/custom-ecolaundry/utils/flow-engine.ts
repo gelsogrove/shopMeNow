@@ -148,8 +148,14 @@ export function mapChoiceDescriptions(node: FlowNode): Record<string, string> {
 export function normalizeConfirmation(input: string): 'YES' | 'NO' | null {
   const value = input.trim().toLowerCase()
   const nfd = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  if (/^(y|yes|yeah|yep|si|sì|ok|done|fatto|risolto)\b/i.test(nfd)) return 'YES'
-  if (/^si[^a-z]/i.test(nfd) || nfd === 'si') return 'YES'
+  const wordCount = value.split(/\s+/).length
+
+  // Short affirmations only (<=5 words) — longer messages that start with 'si'
+  // may express uncertainty ('si mi sembra ma non sono sicuro') and must fall
+  // through to the LLM instead of being classified as a hard YES.
+  if (wordCount <= 5 && /^(y|yes|yeah|yep|si|sì|ok|done|fatto|risolto)\b/i.test(nfd)) return 'YES'
+  if (wordCount <= 5 && (/^si[^a-z]/i.test(nfd) || nfd === 'si')) return 'YES'
+
   if (/\b(si pienso que si|creo que si|pienso que si|yes i think so|direi di si)\b/i.test(value)) return 'YES'
   if (/\b(ho gia'? detto di si|i paid already|already paid|ho pagato|pagato|payment completed|fatto il pagamento)\b/i.test(value)) return 'YES'
   if (/^(no|n|nope)\b/i.test(nfd)) return 'NO'

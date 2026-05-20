@@ -317,7 +317,8 @@ export class PlaygroundController {
           where: { customerId: customer.id, status: "active" },
         })
         if (!session) {
-          session = await prisma.chatSession.create({
+          // @ts-ignore - isPlayground not yet in generated Prisma types (schema exists, regenerate to fix)
+          session = await (prisma.chatSession.create as any)({
             data: {
               workspaceId,
               customerId: customer.id,

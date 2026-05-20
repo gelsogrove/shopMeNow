@@ -1,5 +1,6 @@
 import fs from "node:fs"
 import path from "node:path"
+import { pathToFileURL } from "node:url"
 
 import { prisma as defaultPrisma, PrismaClient } from "@echatbot/database"
 import logger from "../../utils/logger"
