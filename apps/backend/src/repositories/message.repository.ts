@@ -1624,8 +1624,7 @@ export class MessageRepository {
 
       // Get all chat sessions, including those with blacklisted customers
       // We want to show all chats but mark blacklisted ones visually
-      // @ts-ignore - isPlayground not yet in generated Prisma types (schema exists, regenerate to fix)
-      const chatSessions = await (this.prisma.chatSession.findMany as any)({
+      const chatSessions = await this.prisma.chatSession.findMany({
         where: {
           workspaceId: workspaceId,
           isPlayground: { not: true },
@@ -1666,13 +1665,13 @@ export class MessageRepository {
           updatedAt: "desc",
         },
         take: limit,
-      }) as any[]
+      })
 
       logger.info(`[ChatSessions] ✅ Found ${chatSessions.length} sessions for workspace ${workspaceId}`)
 
-      return chatSessions.map((session: any) => ({
+      return chatSessions.map((session) => ({
         ...session,
-        unreadCount: session.messages?.length ?? 0,
+        unreadCount: session.messages.length,
         activeChatbot: session.customer?.activeChatbot ?? true,
         messages: undefined,
       }))
