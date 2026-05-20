@@ -373,15 +373,16 @@ export class ChatController {
       )
 
       // Find the chat session and check if chatbot is active
-      const chatSession = await this.prisma.chatSession.findFirst({
-        where: {
-          id: sessionId,
-          workspaceId: workspaceId,
-        },
-        include: {
-          customer: true,
-        },
-      })
+      const [chatSession, workspace] = await Promise.all([
+        this.prisma.chatSession.findFirst({
+          where: { id: sessionId, workspaceId: workspaceId },
+          include: { customer: true },
+        }),
+        this.prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: { translateOperatorMessages: true },
+        }),
+      ])
 
       if (!chatSession) {
         res.status(404).json({
@@ -462,6 +463,8 @@ export class ChatController {
       debugSteps.push(operatorDebugStep)
 
       // 🌍 Translate operator message to customer's language when they differ
+      // Skipped when workspace.translateOperatorMessages=false
+      const translationEnabled = workspace?.translateOperatorMessages !== false
       let finalMessage = content
       const customerLanguage = chatSession.customer.language || "en"
       let operatorLanguage = customerLanguage // detected lang of the operator message
@@ -475,6 +478,7 @@ export class ChatController {
         fr: "*(traduit)*",
       }
       try {
+        if (!translationEnabled) throw new Error("translation_disabled")
         const llmConfig = getLLMConfig("openai/gpt-4o-mini")
         const detectResponse = await axios.post(
           `${llmConfig.baseURL}/chat/completions`,

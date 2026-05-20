@@ -1839,6 +1839,15 @@ export class WidgetChatController {
               operatorWhatsappNumber: customOutput.operatorWhatsappNumber,
               smtpConfig: customOutput.smtpConfig,
             })
+            // Disable chatbot so subsequent messages go to operator, not LLM (mirrors WhatsApp behavior)
+            await prisma.customers.update({
+              where: { id: customer.id },
+              data: { activeChatbot: false },
+            })
+            logger.info('[WIDGET-CUSTOM-CLIENT] Escalation triggered — chatbot disabled for customer', {
+              customerId: customer.id,
+              workspaceId: resolvedWorkspaceId,
+            })
           }
 
           if (customOutput.error) {

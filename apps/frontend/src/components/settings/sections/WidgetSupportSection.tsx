@@ -17,6 +17,7 @@ interface WidgetSupportSectionProps {
     operatorWhatsappNumber: string
     operatorEmail?: string // From Business Config or custom
     humanSupportInstructions: string
+    translateOperatorMessages: boolean
   }
   errors: Record<string, string>
   canEdit: boolean
@@ -202,6 +203,23 @@ export function WidgetSupportSection({
                   </div>
                 </>
               )}
+
+              {/* Translate operator messages to customer language */}
+              <div className="space-y-2 pt-4 border-t">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-medium">Auto-translate operator messages</Label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      When enabled, messages you write in the chat are automatically translated to the customer's language before being sent.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.translateOperatorMessages}
+                    onCheckedChange={(checked) => onFieldChange("translateOperatorMessages", checked)}
+                    disabled={!canEdit}
+                  />
+                </div>
+              </div>
 
               {/* Sales Agents Toggle — F50: only meaningful for ECOMMERCE
                   workspaces. Hidden for INFORMATIONAL and FLOW (custom chatbot). */}

@@ -72,6 +72,7 @@ model Workspace {
   operatorEmail                     String? // Email for human support notifications
   operatorWhatsappNumber            String? // WhatsApp number for human support (if method='whatsapp')
   toneOfVoice                       String?     @default("friendly") // 'formal' | 'friendly' | 'professional' | 'casual'
+  translateOperatorMessages         Boolean     @default(true) // Auto-translate operator messages to customer's language
   
   // 🆕 WhatsApp Provider Configuration (Multi-provider support)
   whatsappProvider      String  @default("wasender") // "meta" | "ultramsg" | "wasender" - selects which WhatsApp provider to use

@@ -269,6 +269,8 @@ app.use(
                 "'self'",
                 "https://accounts.google.com",
                 "https://www.google.com",
+                "https://echatbot.ai",
+                "https://www.echatbot.ai",
               ],
               upgradeInsecureRequests: [],
             },
