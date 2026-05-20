@@ -28,6 +28,26 @@ import remarkGfm from "remark-gfm"
 import "highlight.js/styles/github.css"
 
 const API_BASE = "/api/v1/playground"
+
+async function playFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const token = localStorage.getItem("playgroundToken")
+  const workspaceId = localStorage.getItem("playgroundWorkspaceId")
+  
+  if (token || workspaceId) {
+    const headers = new Headers(init?.headers)
+    if (token && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${token}`)
+    }
+    if (workspaceId && !headers.has("x-workspace-id")) {
+      headers.set("x-workspace-id", workspaceId)
+    }
+    return fetch(input, {
+      ...init,
+      headers,
+    })
+  }
+  return fetch(input, init)
+}
 // Background refresh: rare. The chat refetches explicitly after sending,
 // and the kanban refetches after a drag. The interval is just a safety net
 // for changes done in another tab (e.g. another collaborator edits a TODO).
@@ -219,12 +239,36 @@ function useAuth() {
       ? (saved as PlaygroundUser)
       : null
   })
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const token = params.get("token")
+    const workspaceId = params.get("workspaceId")
+
+    if (token && workspaceId) {
+      localStorage.setItem("playgroundToken", token)
+      localStorage.setItem("playgroundWorkspaceId", workspaceId)
+      localStorage.setItem("playgroundUser", "ANDREA")
+      setUser("ANDREA")
+    } else {
+      const isBasePath = window.location.pathname === "/demo/ecolaundry" || window.location.pathname === "/demo/ecolaundry/"
+      if (isBasePath && localStorage.getItem("playgroundToken")) {
+        localStorage.removeItem("playgroundToken")
+        localStorage.removeItem("playgroundWorkspaceId")
+        localStorage.removeItem("playgroundUser")
+        setUser(null)
+      }
+    }
+  }, [])
+
   const login = (u: PlaygroundUser) => {
     localStorage.setItem("playgroundUser", u)
     setUser(u)
   }
   const logout = () => {
     localStorage.removeItem("playgroundUser")
+    localStorage.removeItem("playgroundToken")
+    localStorage.removeItem("playgroundWorkspaceId")
     setUser(null)
   }
   return { user, login, logout }
@@ -346,7 +390,7 @@ function NewChatModal({
       // the conversation (e.g. "¿Cómo te llamas?" → user reply), never via a
       // form shortcut. We deliberately do NOT send `customerName` so the
       // backend falls back to its anonymous placeholder.
-      const res = await fetch(`${API_BASE}/chat`, {
+      const res = await playFetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -430,7 +474,7 @@ function CreateTodoModal({
     if (!title.trim()) return
     setSaving(true)
     try {
-      await fetch(`${API_BASE}/todos`, {
+      await playFetch(`${API_BASE}/todos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -537,7 +581,7 @@ function TodoDetailModal({
     if (next === todo.priority) return
     setSavingPriority(true)
     try {
-      await fetch(`${API_BASE}/todos/${todo.id}`, {
+      await playFetch(`${API_BASE}/todos/${todo.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ priority: next }),
@@ -557,7 +601,7 @@ function TodoDetailModal({
     }
     setSavingTitle(true)
     try {
-      await fetch(`${API_BASE}/todos/${todo.id}`, {
+      await playFetch(`${API_BASE}/todos/${todo.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ commentTitle: next }),
@@ -588,7 +632,7 @@ function TodoDetailModal({
     if (!comment.trim()) return
     setPosting(true)
     try {
-      await fetch(`${API_BASE}/todos/${todo.id}/comments`, {
+      await playFetch(`${API_BASE}/todos/${todo.id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -606,14 +650,14 @@ function TodoDetailModal({
 
   const remove = async () => {
     if (!confirm("Delete this TODO?")) return
-    await fetch(`${API_BASE}/todos/${todo.id}`, { method: "DELETE" })
+    await playFetch(`${API_BASE}/todos/${todo.id}`, { method: "DELETE" })
     onChanged()
     onClose()
   }
 
   const deleteComment = async (commentId: string) => {
     if (!confirm("Delete this comment?")) return
-    await fetch(`${API_BASE}/todos/${todo.id}/comments/${commentId}`, {
+    await playFetch(`${API_BASE}/todos/${todo.id}/comments/${commentId}`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ createdBy: user }),
@@ -993,8 +1037,8 @@ function ChatScreen({
 
   const fetchAll = useCallback(async () => {
     const [msgRes, todosRes] = await Promise.all([
-      fetch(`${API_BASE}/messages`).then((r) => r.json()),
-      fetch(`${API_BASE}/todos`).then((r) => r.json()),
+      playFetch(`${API_BASE}/messages`).then((r) => r.json()),
+      playFetch(`${API_BASE}/todos`).then((r) => r.json()),
     ])
     setSessions(msgRes.sessions || [])
     setTodos(todosRes.todos || [])
@@ -1002,7 +1046,7 @@ function ChatScreen({
 
   useEffect(() => {
     fetchAll()
-    fetch(`${API_BASE}/usecases`)
+    playFetch(`${API_BASE}/usecases`)
       .then((r) => r.text())
       .then(setUsecasesMd)
       .catch(() => setUsecasesMd("# Use Cases\n\nFile not found."))
@@ -1108,7 +1152,7 @@ function ChatScreen({
     setChatInput("")
     setPendingForSession({ sessionId: activeSession.id, userMessage: text })
     try {
-      const res = await fetch(`${API_BASE}/chat`, {
+      const res = await playFetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1205,7 +1249,7 @@ function ChatScreen({
       return
     }
     if (!confirm("Delete this chat? Messages will be lost.")) return
-    const res = await fetch(`${API_BASE}/sessions/${sessionId}`, {
+    const res = await playFetch(`${API_BASE}/sessions/${sessionId}`, {
       method: "DELETE",
     })
     const data = await res.json().catch(() => ({}))
@@ -1812,7 +1856,7 @@ function CreateStandaloneTaskModal({
     if (!title.trim() || saving) return
     setSaving(true)
     try {
-      const res = await fetch(`${API_BASE}/todos`, {
+      const res = await playFetch(`${API_BASE}/todos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1918,8 +1962,8 @@ function KanbanScreen({
 
   const fetchTodos = useCallback(async () => {
     const [todosRes, msgRes] = await Promise.all([
-      fetch(`${API_BASE}/todos`).then((r) => r.json()),
-      fetch(`${API_BASE}/messages`).then((r) => r.json()),
+      playFetch(`${API_BASE}/todos`).then((r) => r.json()),
+      playFetch(`${API_BASE}/messages`).then((r) => r.json()),
     ])
     setTodos(todosRes.todos || [])
     setSessions(msgRes.sessions || [])
@@ -1963,7 +2007,7 @@ function KanbanScreen({
     setTodos((prev) =>
       prev.map((t) => (t.id === draggableId ? { ...t, status: newStatus } : t))
     )
-    await fetch(`${API_BASE}/todos/${draggableId}`, {
+    await playFetch(`${API_BASE}/todos/${draggableId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus, position: destination.index }),

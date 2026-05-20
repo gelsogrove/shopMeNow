@@ -28,7 +28,6 @@ import {
   Check,
   ClipboardCopy,
   Eye,
-  Filter,
   Loader2,
   Lock,
   MessageSquare,
@@ -55,9 +54,7 @@ import {
 } from "../components/ui/alert-dialog"
 import { Button } from "../components/ui/button"
 import { Card } from "../components/ui/card"
-import { Checkbox } from "../components/ui/checkbox"
 import { Input } from "../components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover"
 import { Switch } from "../components/ui/switch"
 import { Textarea } from "../components/ui/textarea"
 
@@ -220,13 +217,6 @@ export function ChatPage() {
     searchParams.get("client") || ""
   )
   const [hideBlocked, setHideBlocked] = useState(true)
-  // Customer-name multi-select filter. URL param ?names=Andrea,Olga (CSV).
-  const [selectedCustomerNames, setSelectedCustomerNames] = useState<string[]>(
-    () => {
-      const raw = searchParams.get("names") || ""
-      return raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : []
-    }
-  )
   const initialLoadRef = useRef(true)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showBlockDialog, setShowBlockDialog] = useState(false)
@@ -406,25 +396,9 @@ export function ChatPage() {
       )
     : chats
 
-  // Apply customer-name multi-select filter (empty selection = no filter, show all).
-  const nameFilteredChats = selectedCustomerNames.length > 0
-    ? filteredChats.filter((chat: Chat) =>
-        chat.customerName ? selectedCustomerNames.includes(chat.customerName) : false
-      )
-    : filteredChats
-
   const visibleChats = hideBlocked
-    ? nameFilteredChats.filter((chat: Chat) => !chat.isBlacklisted)
-    : nameFilteredChats
-
-  // Unique customer names from full chat list (for the filter dropdown options).
-  const uniqueCustomerNames = Array.from(
-    new Set(
-      chats
-        .map((c: Chat) => c.customerName)
-        .filter((n): n is string => Boolean(n))
-    )
-  ).sort((a, b) => a.localeCompare(b))
+    ? filteredChats.filter((chat: Chat) => !chat.isBlacklisted)
+    : filteredChats
 
   // SMART SELECTION: Auto-select when appropriate, but DON'T update existing selection
   useEffect(() => {
@@ -1305,75 +1279,6 @@ export function ChatPage() {
             </div>
           </div>
 
-          {/* Customer-name multi-select filter — top-left, above search */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 w-full max-w-[calc(100%-50px)] justify-between text-sm font-normal"
-              >
-                <span className="flex items-center gap-2 truncate">
-                  <Filter className="h-3.5 w-3.5" />
-                  {selectedCustomerNames.length === 0
-                    ? "All customers"
-                    : selectedCustomerNames.length === 1
-                    ? selectedCustomerNames[0]
-                    : `${selectedCustomerNames.length} customers`}
-                </span>
-                {selectedCustomerNames.length > 0 && (
-                  <X
-                    className="h-3.5 w-3.5 opacity-60 hover:opacity-100"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      const newParams = new URLSearchParams(searchParams)
-                      newParams.delete("names")
-                      setSearchParams(newParams)
-                      setSelectedCustomerNames([])
-                    }}
-                  />
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[260px] p-2" align="start">
-              <div className="max-h-[280px] overflow-y-auto flex flex-col gap-1">
-                {uniqueCustomerNames.length === 0 ? (
-                  <p className="text-xs text-gray-500 px-2 py-1">
-                    No customers available
-                  </p>
-                ) : (
-                  uniqueCustomerNames.map((name) => {
-                    const isChecked = selectedCustomerNames.includes(name)
-                    return (
-                      <label
-                        key={name}
-                        className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-100 cursor-pointer text-sm"
-                      >
-                        <Checkbox
-                          checked={isChecked}
-                          onCheckedChange={(checked) => {
-                            const next = checked
-                              ? [...selectedCustomerNames, name]
-                              : selectedCustomerNames.filter((n) => n !== name)
-                            const newParams = new URLSearchParams(searchParams)
-                            if (next.length > 0) {
-                              newParams.set("names", next.join(","))
-                            } else {
-                              newParams.delete("names")
-                            }
-                            setSearchParams(newParams)
-                            setSelectedCustomerNames(next)
-                          }}
-                        />
-                        <span className="truncate">{name}</span>
-                      </label>
-                    )
-                  })
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-
           {/* Search Bar */}
           <Input
             type="search"
@@ -1848,6 +1753,39 @@ export function ChatPage() {
 
                           <div className="flex justify-end items-center mt-1">
                             <div className="flex items-center gap-1">
+                              {/* 🌐 Customer language flag — shown on bot messages to remind operator which language the customer speaks */}
+                              {isAgentMessage && !isOperatorMessage && !isBlockedMessage && (
+                                <span
+                                  className="text-sm"
+                                  title={`Customer language: ${selectedChat?.language || "unknown"}`}
+                                >
+                                  {getFlagForChat(selectedChat?.language, selectedChat?.customerPhone)}
+                                </span>
+                              )}
+
+                              {/* 🏳️ Operator translation flags — shown when operator message was translated */}
+                              {isOperatorMessage && (() => {
+                                const dbg = message.metadata?.debugInfo
+                                const info = dbg
+                                  ? typeof dbg === "string"
+                                    ? (() => { try { return JSON.parse(dbg) } catch { return null } })()
+                                    : dbg
+                                  : null
+                                if (!info?.wasTranslated) return null
+                                const opFlag = getFlagForChat(info.operatorLanguage)
+                                const custFlag = getFlagForChat(info.customerLanguage)
+                                return (
+                                  <span
+                                    className="text-sm flex items-center gap-0.5"
+                                    title={`Operator wrote in ${info.operatorLanguage?.toUpperCase() || "?"} → translated to ${info.customerLanguage?.toUpperCase() || "?"}`}
+                                  >
+                                    {opFlag}
+                                    <span className="text-[10px] text-blue-400 font-medium">→</span>
+                                    {custFlag}
+                                  </span>
+                                )
+                              })()}
+
                               {/* View Flow Button - ONLY for bot messages with debugInfo */}
                               {isAgentMessage &&
                                 message.metadata?.debugInfo && (
@@ -2085,16 +2023,13 @@ export function ChatPage() {
           </Button>
         </div>
       )}
-      <WhatsAppChatModal
-        isOpen={showPlaygroundDialog}
-        onClose={handleClosePlayground}
-        onMessageSent={refetchChats}
-        channelName="WhatsApp Chat"
-        phoneNumber={workspace?.whatsappPhoneNumber}
-        workspaceId={workspace?.id}
-        selectedChat={selectedChat as any}
-        logoUrl={workspace?.logoUrl}
-      />
+      {showPlaygroundDialog && (
+        <PlaygroundIframeModal
+          isOpen={showPlaygroundDialog}
+          onClose={handleClosePlayground}
+          workspaceId={workspace?.id}
+        />
+      )}
 
       {/* Message Flow Dialog */}
       {selectedFlowMessage?.metadata?.debugInfo && (
@@ -2111,3 +2046,51 @@ export function ChatPage() {
     </PageLayout>
   )
 }
+
+function PlaygroundIframeModal({
+  isOpen,
+  onClose,
+  workspaceId,
+}: {
+  isOpen: boolean
+  onClose: () => void
+  workspaceId?: string
+}) {
+  const [loading, setLoading] = useState(true)
+  const token = localStorage.getItem("token") || ""
+
+  if (!isOpen) return null
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-6 transition-all duration-300 animate-in fade-in">
+      <div className="relative w-[95vw] h-[90vh] md:w-[90vw] md:h-[90vh] bg-[#0b0f19] border border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 animate-in zoom-in-95">
+        
+        {/* Absolute header and close button overlaying the iframe top-right */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-[110] p-2 bg-gray-900/80 hover:bg-gray-800 text-gray-400 hover:text-white rounded-full border border-gray-800 transition-all shadow-md group"
+          title="Chiudi"
+        >
+          <X className="h-5 w-5 transition-transform group-hover:rotate-90 duration-300" />
+        </button>
+
+        {/* Loading Spinner */}
+        {loading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0b0f19] z-50 gap-3">
+            <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+            <span className="text-emerald-400 font-medium text-sm animate-pulse">Caricamento Playground...</span>
+          </div>
+        )}
+
+        {/* Iframe pointing to Ecolaundry with platform auth query params */}
+        <iframe
+          src={`/demo/ecolaundry?token=${encodeURIComponent(token)}&workspaceId=${encodeURIComponent(workspaceId || "")}`}
+          className="w-full h-full border-none bg-transparent"
+          title="Ecolaundry Playground"
+          onLoad={() => setLoading(false)}
+        />
+      </div>
+    </div>
+  )
+}
+

@@ -357,6 +357,7 @@ export class WhatsAppWebhookController {
                 slug: true,
                 name: true,
                 channelStatus: true,
+                enableWhatsapp: true,
                 deletedAt: true,
                 ownerId: true,
                 operatorWhatsappNumber: true, // 🔀 Relay tunnel: detect operator messages
@@ -379,6 +380,7 @@ export class WhatsAppWebhookController {
                 slug: true,
                 name: true,
                 channelStatus: true,
+                enableWhatsapp: true,
                 deletedAt: true,
                 ownerId: true,
                 operatorWhatsappNumber: true, // 🔀 Relay tunnel: detect operator messages
@@ -447,6 +449,16 @@ export class WhatsAppWebhookController {
           channelStatus: whatsappSettings.workspace.channelStatus,
         })
         res.status(200).json({ success: true, message: "Channel disabled" })
+        return
+      }
+
+      if (whatsappSettings.workspace.enableWhatsapp === false) {
+        logger.warn("[WEBHOOK] 🚫 WhatsApp channel disabled for this workspace", {
+          webhookId,
+          workspaceId: whatsappSettings.workspace.id,
+          enableWhatsapp: whatsappSettings.workspace.enableWhatsapp,
+        })
+        res.status(200).json({ success: true, message: "WhatsApp channel disabled" })
         return
       }
 

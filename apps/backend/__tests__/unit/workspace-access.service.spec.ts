@@ -210,15 +210,15 @@ describe("WorkspaceAccessService", () => {
     })
 
     describe("debug mode (WIP)", () => {
-      it("should block when debugMode is true (test mode)", async () => {
+      it("should ALLOW processing when debugMode is true", async () => {
         mockPrisma.workspace.findUnique.mockResolvedValue(
           createWorkspaceMock({ debugMode: true })
         )
 
         const result = await service.canProcessMessages(workspaceId)
 
-        expect(result.canProcess).toBe(false)
-        expect(result.blockReason).toBe("DEBUG_MODE")
+        expect(result.canProcess).toBe(true)
+        expect(result.blockReason).toBeUndefined()
       })
     })
 

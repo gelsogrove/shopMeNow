@@ -218,16 +218,8 @@ export class WorkspaceAccessService {
 
       if (!skipChannelCheck && workspace.debugMode === true) {
         logger.info(
-          `[ACCESS] 🛠️ Debug mode active for workspace: ${workspace.name} (debugMode=${workspace.debugMode})`
+          `[ACCESS] 🛠️ Debug mode active for workspace: ${workspace.name} (debugMode=${workspace.debugMode}) - allowing message processing as per user feedback`
         )
-        return {
-          canProcess: false,
-          blockReason: "DEBUG_MODE",
-          message: "Debug mode active (WIP message).",
-          details: {
-            ownerId: workspace.ownerId || undefined,
-          },
-        }
       }
 
       if (!skipChannelCheck && channelStatus === false) {

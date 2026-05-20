@@ -1,26 +1,61 @@
 import { Router } from "express"
 import { PlaygroundController } from "../controllers/playground.controller"
+import { authMiddleware } from "../middlewares/auth.middleware"
+import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 
 const controller = new PlaygroundController()
 const playgroundRouter = Router()
 
-// All endpoints public — auth handled in frontend (hardcoded ANDREA/OLGA login)
-// because this is a demo playground for a single workspace (Ecolaundry)
-playgroundRouter.get("/playground/usecases", (req, res) => controller.getUsecases(req, res))
-playgroundRouter.get("/playground/messages", (req, res) => controller.getMessages(req, res))
-playgroundRouter.get("/playground/todos", (req, res) => controller.getTodos(req, res))
-playgroundRouter.post("/playground/todos", (req, res) => controller.createTodo(req, res))
-playgroundRouter.patch("/playground/todos/:id", (req, res) => controller.updateTodo(req, res))
-playgroundRouter.delete("/playground/todos/:id", (req, res) => controller.deleteTodo(req, res))
-playgroundRouter.post("/playground/chat", (req, res) => controller.sendChat(req, res))
-playgroundRouter.delete("/playground/sessions/:id", (req, res) =>
+// Conditional middleware to enforce JWT and workspace authentication if active dashboard access headers/query params are supplied
+const optionalPlaygroundAuth = (req: any, res: any, next: any) => {
+  if (
+    req.headers.authorization ||
+    req.headers["x-workspace-id"] ||
+    req.query.workspaceId ||
+    req.query.token
+  ) {
+    // If token is supplied in query, put it in the Authorization header for authMiddleware to intercept
+    if (req.query.token && !req.headers.authorization) {
+      req.headers.authorization = `Bearer ${req.query.token}`
+    }
+
+    return authMiddleware(req, res, () => {
+      return workspaceValidationMiddleware(req, res, () => {
+        // Enforce workspace membership authorization check
+        const user = req.user
+        const workspaceId = req.workspaceId
+
+        const hasAccess =
+          user?.workspaces?.some((w: any) => w.id === workspaceId) ||
+          user?.isPlatformAdmin
+
+        if (!hasAccess) {
+          return res.status(403).json({ error: "Access denied to this workspace" })
+        }
+        next()
+      })
+    })
+  }
+  next()
+}
+
+// Optional auth wrapper applied to all endpoints
+playgroundRouter.get("/playground/usecases", optionalPlaygroundAuth, (req, res) => controller.getUsecases(req, res))
+playgroundRouter.get("/playground/messages", optionalPlaygroundAuth, (req, res) => controller.getMessages(req, res))
+playgroundRouter.get("/playground/todos", optionalPlaygroundAuth, (req, res) => controller.getTodos(req, res))
+playgroundRouter.post("/playground/todos", optionalPlaygroundAuth, (req, res) => controller.createTodo(req, res))
+playgroundRouter.patch("/playground/todos/:id", optionalPlaygroundAuth, (req, res) => controller.updateTodo(req, res))
+playgroundRouter.delete("/playground/todos/:id", optionalPlaygroundAuth, (req, res) => controller.deleteTodo(req, res))
+playgroundRouter.post("/playground/chat", optionalPlaygroundAuth, (req, res) => controller.sendChat(req, res))
+playgroundRouter.delete("/playground/sessions/:id", optionalPlaygroundAuth, (req, res) =>
   controller.deleteSession(req, res)
 )
-playgroundRouter.post("/playground/todos/:id/comments", (req, res) =>
+playgroundRouter.post("/playground/todos/:id/comments", optionalPlaygroundAuth, (req, res) =>
   controller.addComment(req, res)
 )
 playgroundRouter.delete(
   "/playground/todos/:todoId/comments/:commentId",
+  optionalPlaygroundAuth,
   (req, res) => controller.deleteComment(req, res)
 )
 

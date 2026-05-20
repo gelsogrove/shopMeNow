@@ -1628,7 +1628,7 @@ export class MessageRepository {
       const chatSessions = await this.prisma.chatSession.findMany({
         where: {
           workspaceId: workspaceId,
-          // Removed isBlacklisted filter - we want to show all chats
+          isPlayground: { not: true },
         },
         include: {
           customer: {

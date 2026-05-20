@@ -227,15 +227,15 @@ describe("Chatbot Blocking - Comprehensive Test Suite", () => {
   })
 
   describe("✅ SCENARIO 4: DEBUG_MODE - Workspace WIP mode", () => {
-    it("should BLOCK messages when debugMode is true", async () => {
+    it("should ALLOW messages when debugMode is true", async () => {
       mockPrisma.workspace.findUnique.mockResolvedValue(
         createWorkspaceMock({ debugMode: true })
       )
 
       const result = await service.canProcessMessages(workspaceId)
 
-      expect(result.canProcess).toBe(false)
-      expect(result.blockReason).toBe("DEBUG_MODE")
+      expect(result.canProcess).toBe(true)
+      expect(result.blockReason).toBeUndefined()
     })
   })
 

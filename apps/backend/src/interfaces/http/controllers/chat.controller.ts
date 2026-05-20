@@ -463,6 +463,8 @@ export class ChatController {
       // 🌍 Translate operator message to customer's language when they differ
       let finalMessage = content
       const customerLanguage = chatSession.customer.language || "en"
+      let operatorLanguage = customerLanguage // detected lang of the operator message
+      let wasTranslated = false
       const translationSuffix: Record<string, string> = {
         es: "*(traducido)*",
         it: "*(tradotto)*",
@@ -489,6 +491,7 @@ export class ChatController {
           { headers: { Authorization: `Bearer ${llmConfig.apiKey}`, "Content-Type": "application/json" } }
         )
         const detectedLang = detectResponse.data.choices?.[0]?.message?.content?.trim().toLowerCase() || "unknown"
+        operatorLanguage = detectedLang
 
         if (detectedLang !== customerLanguage) {
           const langNames: Record<string, string> = {
@@ -515,6 +518,7 @@ export class ChatController {
           if (translated) {
             const suffix = translationSuffix[customerLanguage] || "*(translated)*"
             finalMessage = `${translated}\n\n${suffix}`
+            wasTranslated = true
             logger.info(`[CHAT-SEND] 🌍 Operator message translated from ${detectedLang} to ${customerLanguage}`)
           }
         }
@@ -664,6 +668,9 @@ export class ChatController {
           debugInfo: JSON.stringify({
             isOperatorMessage: true,
             sentBy: "HUMAN_OPERATOR",
+            operatorLanguage,
+            customerLanguage,
+            wasTranslated,
             timestamp: new Date().toISOString(),
             steps: debugSteps, // Include all current debug steps
           }),

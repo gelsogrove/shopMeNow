@@ -28,6 +28,20 @@ async function getEcolaundryWorkspaceId(): Promise<string> {
   return ws.id
 }
 
+async function resolveWorkspaceId(req: Request): Promise<string> {
+  // If set by middleware, use it (standard secure dashboard routing)
+  if ((req as any).workspaceId) {
+    return (req as any).workspaceId
+  }
+  // Try to read from headers or query parameters if set
+  const wsId = (req.headers["x-workspace-id"] || req.query.workspaceId) as string
+  if (wsId) {
+    return wsId
+  }
+  // Otherwise, fallback to the default Ecolaundry workspace
+  return await getEcolaundryWorkspaceId()
+}
+
 const ALLOWED_USERS = ["ANDREA", "OLGA"] as const
 type PlaygroundUser = (typeof ALLOWED_USERS)[number]
 
@@ -50,10 +64,20 @@ function emit(req: Request, event: string, payload: any) {
 }
 
 export class PlaygroundController {
-  // GET /api/v1/playground/usecases — serves the markdown file content
-  async getUsecases(_req: Request, res: Response) {
+  // GET /api/v1/playground/usecases — serves the markdown file content dynamically
+  async getUsecases(req: Request, res: Response) {
     try {
+      const workspaceId = await resolveWorkspaceId(req)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { slug: true },
+      })
+      const slug = workspace?.slug || ECOLAUNDRY_SLUG
       const candidates = [
+        path.resolve(__dirname, `../../../../custom-${slug}/docs/usecases.md`),
+        path.resolve(process.cwd(), `custom-${slug}/docs/usecases.md`),
+        path.resolve(process.cwd(), `apps/backend/custom-${slug}/docs/usecases.md`),
+        // Fallback to Ecolaundry if custom workspace-specific files are not found
         path.resolve(__dirname, "../../../../custom-ecolaundry/docs/usecases.md"),
         path.resolve(process.cwd(), "custom-ecolaundry/docs/usecases.md"),
         path.resolve(process.cwd(), "apps/backend/custom-ecolaundry/docs/usecases.md"),
@@ -72,9 +96,9 @@ export class PlaygroundController {
   }
 
   // GET /api/v1/playground/messages
-  async getMessages(_req: Request, res: Response) {
+  async getMessages(req: Request, res: Response) {
     try {
-      const workspaceId = await getEcolaundryWorkspaceId()
+      const workspaceId = await resolveWorkspaceId(req)
       const sessions = await prisma.chatSession.findMany({
         where: { workspaceId },
         include: {
@@ -104,9 +128,9 @@ export class PlaygroundController {
   }
 
   // GET /api/v1/playground/todos
-  async getTodos(_req: Request, res: Response) {
+  async getTodos(req: Request, res: Response) {
     try {
-      const workspaceId = await getEcolaundryWorkspaceId()
+      const workspaceId = await resolveWorkspaceId(req)
       const todos = await prisma.playgroundTodo.findMany({
         where: { workspaceId },
         include: { comments: { orderBy: { createdAt: "desc" } } },
@@ -143,7 +167,7 @@ export class PlaygroundController {
         return res.status(400).json({ error: "Invalid priority" })
       }
 
-      const workspaceId = await getEcolaundryWorkspaceId()
+      const workspaceId = await resolveWorkspaceId(req)
       const lastInColumn = await prisma.playgroundTodo.findFirst({
         where: { workspaceId, status: "TODO" },
         orderBy: { position: "desc" },
@@ -191,6 +215,14 @@ export class PlaygroundController {
         return res.status(400).json({ error: "Invalid priority" })
       }
 
+      const workspaceId = await resolveWorkspaceId(req)
+      const existingTodo = await prisma.playgroundTodo.findFirst({
+        where: { id, workspaceId },
+      })
+      if (!existingTodo) {
+        return res.status(404).json({ error: "Todo not found in this workspace" })
+      }
+
       const todo = await prisma.playgroundTodo.update({
         where: { id },
         data: {
@@ -214,6 +246,14 @@ export class PlaygroundController {
   async deleteTodo(req: Request, res: Response) {
     try {
       const { id } = req.params
+      const workspaceId = await resolveWorkspaceId(req)
+      const existingTodo = await prisma.playgroundTodo.findFirst({
+        where: { id, workspaceId },
+      })
+      if (!existingTodo) {
+        return res.status(404).json({ error: "Todo not found in this workspace" })
+      }
+
       await prisma.playgroundTodo.delete({ where: { id } })
       emit(req, "todo:deleted", { id })
       return res.json({ success: true })
@@ -233,7 +273,7 @@ export class PlaygroundController {
         return res.status(400).json({ error: "message is required" })
       }
 
-      const workspaceId = await getEcolaundryWorkspaceId()
+      const workspaceId = await resolveWorkspaceId(req)
 
       let session: any = null
       if (sessionId) {
@@ -468,7 +508,7 @@ export class PlaygroundController {
         return res.status(400).json({ error: "session id required" })
       }
 
-      const workspaceId = await getEcolaundryWorkspaceId()
+      const workspaceId = await resolveWorkspaceId(req)
 
       const session = await prisma.chatSession.findFirst({
         where: { id, workspaceId },
@@ -530,9 +570,12 @@ export class PlaygroundController {
         return res.status(400).json({ error: "Missing commentText" })
       }
 
-      const todoExists = await prisma.playgroundTodo.findUnique({ where: { id } })
+      const workspaceId = await resolveWorkspaceId(req)
+      const todoExists = await prisma.playgroundTodo.findFirst({
+        where: { id, workspaceId },
+      })
       if (!todoExists) {
-        return res.status(404).json({ error: "Todo not found" })
+        return res.status(404).json({ error: "Todo not found in this workspace" })
       }
 
       const comment = await prisma.playgroundComment.create({
@@ -562,11 +605,13 @@ export class PlaygroundController {
         return res.status(401).json({ error: "Invalid user" })
       }
 
+      const workspaceId = await resolveWorkspaceId(req)
       const comment = await prisma.playgroundComment.findUnique({
         where: { id: commentId },
+        include: { todo: true },
       })
-      if (!comment || comment.todoId !== todoId) {
-        return res.status(404).json({ error: "Comment not found" })
+      if (!comment || comment.todoId !== todoId || comment.todo.workspaceId !== workspaceId) {
+        return res.status(404).json({ error: "Comment not found in this workspace" })
       }
       if (comment.createdBy !== createdBy) {
         return res.status(403).json({ error: "Cannot delete another user's comment" })

@@ -1124,8 +1124,8 @@ export class WidgetChatController {
         },
       })
 
-      // 12. Billing: deduct widget message credit — skip for playground
-      if (workspace.ownerId && !isPlayground) {
+      // 12. Billing: deduct widget message credit — skip for playground and debug mode
+      if (workspace.ownerId && !isPlayground && !workspace.debugMode) {
         try {
           const billingService = new SubscriptionBillingService(prisma)
           await billingService.deductOwnerWidgetMessageCredit(

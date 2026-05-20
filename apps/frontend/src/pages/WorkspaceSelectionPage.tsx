@@ -838,7 +838,7 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
 
   const loadChecklists = async (workspaceList: Workspace[]) => {
     const pending = workspaceList.filter(
-      (workspace) => !checklists[workspace.id] && !checklistLoading[workspace.id]
+      (workspace) => !workspace.customChatbotId && !checklists[workspace.id] && !checklistLoading[workspace.id]
     )
     if (pending.length === 0) return
 
@@ -1707,21 +1707,25 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                     {/* Bottom Row: Checklist + Toggles - ALWAYS at bottom */}
                     <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-3">
                       {/* Checklist - Clickable entire area */}
-                      <div
-                        onClick={(e) => handleOpenChecklist(workspace, e)}
-                        className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-                      >
-                        <ListTodo className="h-4 w-4" />
-                        <span>
-                          {checklist 
-                            ? `${checklist.completedCount}/${checklist.totalCount}` 
-                            : isChecklistLoading ? "..." : "Checklist"
-                          }
-                        </span>
-                        {checklist && checklist.percent === 100 && (
-                          <span className="text-green-500">✓</span>
-                        )}
-                      </div>
+                      {!workspace.customChatbotId ? (
+                        <div
+                          onClick={(e) => handleOpenChecklist(workspace, e)}
+                          className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                        >
+                          <ListTodo className="h-4 w-4" />
+                          <span>
+                            {checklist 
+                              ? `${checklist.completedCount}/${checklist.totalCount}` 
+                              : isChecklistLoading ? "..." : "Checklist"
+                            }
+                          </span>
+                          {checklist && checklist.percent === 100 && (
+                            <span className="text-green-500">✓</span>
+                          )}
+                        </div>
+                      ) : (
+                        <div />
+                      )}
                       
                       {/* Debug + Active Toggles */}
                       {isSuperAdmin && (
