@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react"
 
-type Language = "it" | "en" | "es" | "pt"
+type Language = "it" | "en" | "es" | "pt" | "fr" | "ca"
 
 interface LanguageContextType {
   language: Language
@@ -13,6 +13,8 @@ export const SUPPORTED_LANGUAGES = [
   { code: "en" as Language, name: "English", flag: "🇬🇧" },
   { code: "es" as Language, name: "Español", flag: "🇪🇸" },
   { code: "pt" as Language, name: "Português", flag: "🇵🇹" },
+  { code: "fr" as Language, name: "Français", flag: "🇫🇷" },
+  { code: "ca" as Language, name: "Català", flag: "🏴󠁥󠁳󠁣󠁴󠁿" },
 ]
 
 const LanguageContext = createContext<LanguageContextType | undefined>(

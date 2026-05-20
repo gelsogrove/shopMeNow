@@ -6,6 +6,7 @@ import { getLLMConfig } from "../../../config/llm.config"
 import { MessageRepository } from "../../../repositories/message.repository"
 import { LLMRouterService } from "../../../services/llm-router.service"
 import { usageService } from "../../../services/usage.service"
+import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
 import { websocketService } from "../../../services/websocket.service"
 import { SecurityAgent } from "../../../application/agents/SecurityAgent"
 import logger from "../../../utils/logger"
@@ -724,36 +725,32 @@ export class ChatController {
         // Continue - message is saved even if debug logging fails
       }
 
-      // 📤 STEP 4: Track usage (ONLY if debugMode=false)
+      // 📤 STEP 4: Deduct wallet credit (ONLY if debugMode=false)
       try {
-        // Check if workspace is in debug mode
-        const workspace = await this.prisma.workspace.findUnique({
+        const workspaceForBilling = await this.prisma.workspace.findUnique({
           where: { id: workspaceId },
-          select: { debugMode: true },
+          select: { debugMode: true, ownerId: true },
         })
 
-        if (workspace?.debugMode === true) {
-          logger.info(
-            `[CHAT-SEND] 🆓 DEBUG MODE: Skipping billing for Payload message (free)`
+        if (workspaceForBilling?.debugMode === true) {
+          logger.info(`[CHAT-SEND] 🆓 DEBUG MODE: Skipping billing for operator message (free)`)
+        } else if (workspaceForBilling?.ownerId) {
+          const billingService = new SubscriptionBillingService(this.prisma)
+          const messageId = `operator-${chatSession.id}-${Date.now()}`
+          const billingResult = await billingService.deductOwnerMessageCredit(
+            workspaceForBilling.ownerId,
+            workspaceId,
+            messageId
           )
-        } else {
-          // Track usage in Usage table
-          await usageService.trackUsage({
-            workspaceId: workspaceId,
-            clientId: chatSession.customer.id,
-            price: config.llm.defaultPrice,
-          })
-          logger.info(
-            `[CHAT-SEND] 💰 Usage tracked for operator response: $${config.llm.defaultPrice}`
-          )
-
+          if (billingResult.success) {
+            logger.info(`[CHAT-SEND] 💰 Operator message charged: $${config.llm.defaultPrice} deducted. New balance: $${billingResult.newBalance?.toFixed(3)}`)
+          } else {
+            logger.error(`[CHAT-SEND] ❌ Failed to deduct operator message credit: ${billingResult.error}`, { workspaceId })
+          }
         }
       } catch (usageError) {
-        logger.warn(
-          `[CHAT-SEND] ⚠️ Usage tracking failed (message still saved):`,
-          usageError.message
-        )
-        // Continue - message is saved even if usage tracking fails
+        logger.warn(`[CHAT-SEND] ⚠️ Billing failed (message still saved):`, usageError.message)
+        // Don't fail the response — billing failure shouldn't break UX
       }
 
       // 📤 STEP 5: CHANNEL-SPECIFIC DELIVERY (WhatsApp vs Widget)

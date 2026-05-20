@@ -99,7 +99,7 @@ function validatePassword(p: string): string | null {
 export function OnboardingWizardModal({ open, onClose }: Props) {
   const { language } = useLanguage()
   const { setCurrentWorkspace } = useWorkspace()
-  const lang: OWTLang = (['it', 'en', 'es', 'pt'] as const).includes(language as OWTLang)
+  const lang: OWTLang = (['it', 'en', 'es', 'pt', 'fr', 'ca'] as const).includes(language as OWTLang)
     ? (language as OWTLang) : 'en'
   const t = OWT[lang]
   const navigate = useNavigate()

@@ -22,7 +22,7 @@ export const WORKSPACE_TYPES = ['ecommerce', 'info', 'flow'] as const
 export type WorkspaceType = (typeof WORKSPACE_TYPES)[number]
 
 export const WORKSPACE_TYPE_EMOJI: Record<WorkspaceType, string> = {
-  ecommerce: '🛒', info: '💬', flow: '🔄',
+  ecommerce: '🛒', info: '💬', flow: '⚡',
 }
 
 export type ChannelTone = 'friendly' | 'professional' | 'formal' | 'casual'
@@ -68,7 +68,7 @@ export const OWT = {
       options: {
         ecommerce: { label: 'Vendo prodotti', desc: 'Catalogo prodotti, carrello e ordini online' },
         info: { label: 'Condivido informazioni', desc: 'Supporto clienti, FAQ e informazioni' },
-        flow: { label: 'Flussi guidati', desc: 'Chatbot a passi guidati: troubleshooting, onboarding, configurazioni' },
+        flow: { label: 'Custom chatbot', desc: 'Chatbot personalizzato: widget, WhatsApp, provider AI e messaggio WIP' },
       },
     },
     channelType: {
@@ -171,7 +171,7 @@ export const OWT = {
       options: {
         ecommerce: { label: 'Sell products', desc: 'Product catalog, cart and online orders' },
         info: { label: 'Share information', desc: 'Customer support, FAQ and information' },
-        flow: { label: 'Guided flows', desc: 'Step-by-step chatbot: troubleshooting, onboarding, configurations' },
+        flow: { label: 'Custom chatbot', desc: 'Custom chatbot: widget, WhatsApp, AI provider and WIP message' },
       },
     },
     channelType: {
@@ -274,7 +274,7 @@ export const OWT = {
       options: {
         ecommerce: { label: 'Vendo productos', desc: 'Catálogo, carrito y pedidos online' },
         info: { label: 'Comparto información', desc: 'Soporte al cliente, FAQ e información' },
-        flow: { label: 'Flujos guiados', desc: 'Chatbot paso a paso: troubleshooting, onboarding, configuraciones' },
+        flow: { label: 'Custom chatbot', desc: 'Chatbot personalizado: widget, WhatsApp, proveedor AI y mensaje WIP' },
       },
     },
     channelType: {
@@ -377,7 +377,7 @@ export const OWT = {
       options: {
         ecommerce: { label: 'Vendo produtos', desc: 'Catálogo, carrinho e pedidos online' },
         info: { label: 'Compartilho informações', desc: 'Suporte ao cliente, FAQ e informações' },
-        flow: { label: 'Fluxos guiados', desc: 'Chatbot passo a passo: troubleshooting, onboarding, configurações' },
+        flow: { label: 'Custom chatbot', desc: 'Chatbot personalizado: widget, WhatsApp, provedor de AI e mensagem WIP' },
       },
     },
     channelType: {
@@ -440,6 +440,212 @@ export const OWT = {
       phoneFormat: 'Use o formato internacional, ex. +553312345678',
       emailRequired: 'Email obrigatório', passwordRequired: 'Senha obrigatória',
       gdprRequired: 'Você deve aceitar os termos', invalidCode: 'Digite 6 dígitos',
+    },
+  },
+  fr: {
+    back: 'Retour',
+    next: 'Suivant',
+    intro: {
+      title: 'Bienvenue sur eChatbot',
+      subtitle: 'Configurez votre assistant WhatsApp\nen moins de 3 minutes',
+      benefits: ['✅ Configuration en 3 minutes', '✅ 14 jours gratuits', '✅ Aucune carte requise'],
+      cta: 'Commencer la configuration →',
+    },
+    industry: {
+      title: 'Dans quel secteur travaillez-vous ?',
+      subtitle: 'Nous choisirons les meilleures fonctionnalités\npour votre activité',
+    },
+    business: {
+      title: 'Quel est le nom de votre canal ?',
+      subtitle: 'Vos clients verront ce nom',
+      name: 'Nom du canal',
+      namePh: 'ex. Pizzeria Roma',
+    },
+    channelPersonality: {
+      title: 'Personnalité du canal',
+      subtitle: 'Définissez comment votre assistant AI se présente',
+      botName: "Nom de l'assistant AI",
+      botNamePh: 'ex. Sofia, Alex, Assistant...',
+      tone: 'Ton de voix',
+      tones: {
+        friendly:     { label: 'Amical',         desc: 'Chaleureux, accessible, empathique',   emoji: '😊' },
+        professional: { label: 'Professionnel',  desc: 'Clair, compétent, fiable',             emoji: '👔' },
+        formal:       { label: 'Formel',         desc: 'Précis, autoritaire, institutionnel',  emoji: '🎩' },
+        casual:       { label: 'Informel',       desc: 'Détendu, direct, conversationnel',     emoji: '😎' },
+      },
+    },
+    workspaceType: {
+      title: 'Comment utiliserez-vous eChatbot ?',
+      subtitle: 'Nous configurerons les bonnes fonctionnalités pour vous',
+      options: {
+        ecommerce: { label: 'Je vends des produits', desc: 'Catalogue, panier et commandes en ligne' },
+        info: { label: 'Je partage des informations', desc: 'Support client, FAQ et informations' },
+        flow: { label: 'Custom chatbot', desc: 'Chatbot personnalisé : widget, WhatsApp, fournisseur AI et message WIP' },
+      },
+    },
+    channelType: {
+      title: 'Comment voulez-vous recevoir les messages ?',
+      subtitle: 'Choisissez où votre chatbot interagira avec vos clients',
+      options: {
+        whatsapp: { label: 'WhatsApp seulement', desc: 'Le chatbot répond sur WhatsApp', emoji: '💬' },
+        widget: { label: 'Widget web seulement', desc: 'Chat intégré dans votre site web', emoji: '🌐' },
+        both: { label: 'Les deux', desc: 'WhatsApp + widget sur le site web', emoji: '🔗' },
+      },
+    },
+    humanSupport: {
+      title: 'Support humain',
+      subtitle: "L'un des atouts d'eChatbot est le transfert intelligent du chatbot à un agent humain, sans perdre le contexte. Voulez-vous cette fonctionnalité ?",
+      yes: { label: 'Oui, je veux le transfert vers un agent humain', emoji: '✅' },
+      no: { label: "L'automatisation complète me convient", emoji: '🤖' },
+    },
+    auth: {
+      title: 'Créez votre compte',
+      subtitle: 'Presque terminé — inscrivez-vous pour commencer',
+      fname: 'Prénom', lname: 'Nom',
+      email: 'Email', pass: 'Mot de passe',
+      gdpr: "J'accepte les Conditions d'utilisation et la Politique de confidentialité",
+      register: 'Créer un compte', or: 'ou',
+    },
+    totp: {
+      title: 'Sécurisez votre compte',
+      setupSubtitle: 'Scannez le QR avec Google Authenticator ou Authy',
+      setupInstructions: 'Ouvrir app → Ajouter compte → Scanner QR',
+      verifySubtitle: "Entrez le code de votre app d'authentification",
+      code: 'Code (6 chiffres)', verify: 'Vérifier et continuer',
+    },
+    creating: {
+      title: 'Configuration en cours...',
+      phasesWhatsapp: ['Création de votre workspace...', 'Configuration du canal WhatsApp...', 'Presque prêt...'],
+      phasesWidget: ['Création de votre workspace...', 'Configuration du widget...', 'Presque prêt...'],
+      phasesBoth: ['Création de votre workspace...', 'Configuration WhatsApp et widget...', 'Presque prêt...'],
+    },
+    qr: {
+      title: 'Connecter WhatsApp',
+      subtitle: 'WhatsApp → Appareils liés → Lier un appareil → Scanner',
+      expired: 'QR expiré', newQr: 'Nouveau QR', wait: 's',
+    },
+    done: {
+      title: 'Tout est prêt !',
+      subtitleWhatsapp: 'Votre workspace est configuré et WhatsApp est connecté.',
+      subtitleWidget: 'Votre workspace est configuré. Trouvez le code du widget dans les paramètres.',
+      subtitleBoth: 'Votre workspace est configuré. WhatsApp connecté et widget prêt.',
+      cta: 'Aller au tableau de bord',
+    },
+    industries: {
+      retail: 'Commerce', restaurant: 'Restauration', healthcare: 'Santé',
+      beauty: 'Beauté', education: 'Éducation', tourism: 'Tourisme',
+      fashion: 'Mode', fitness: 'Fitness', transport: 'Transport',
+      technology: 'Technologie', realestate: 'Immobilier', finance: 'Finance',
+      legal: 'Juridique', other: 'Autre',
+    },
+    errors: {
+      required: 'Champ obligatoire',
+      phoneFormat: 'Utilisez le format international, ex. +33612345678',
+      emailRequired: 'Email obligatoire', passwordRequired: 'Mot de passe obligatoire',
+      gdprRequired: 'Vous devez accepter les conditions', invalidCode: 'Entrez 6 chiffres',
+    },
+  },
+  ca: {
+    back: 'Enrere',
+    next: 'Següent',
+    intro: {
+      title: 'Benvingut a eChatbot',
+      subtitle: "Configura el teu assistent WhatsApp\nen menys de 3 minuts",
+      benefits: ['✅ Configuració en 3 minuts', '✅ 14 dies gratis', '✅ Sense targeta de crèdit'],
+      cta: 'Iniciar la configuració →',
+    },
+    industry: {
+      title: 'En quin sector treballes?',
+      subtitle: 'Triarem les millors funcionalitats\nper al teu negoci',
+    },
+    business: {
+      title: 'Com es diu el teu canal?',
+      subtitle: 'Els teus clients veuran aquest nom',
+      name: 'Nom del canal',
+      namePh: 'ex. Pizzeria Roma',
+    },
+    channelPersonality: {
+      title: 'Personalitat del canal',
+      subtitle: 'Defineix com es presenta el teu assistent AI',
+      botName: "Nom de l'assistent AI",
+      botNamePh: 'ex. Sofia, Àlex, Assistent...',
+      tone: 'To de veu',
+      tones: {
+        friendly:     { label: 'Amigable',      desc: 'Càlid, proper, empàtic',               emoji: '😊' },
+        professional: { label: 'Professional',  desc: 'Clar, competent, de confiança',        emoji: '👔' },
+        formal:       { label: 'Formal',        desc: 'Precís, autoritatiu, institucional',   emoji: '🎩' },
+        casual:       { label: 'Informal',      desc: 'Relaxat, directe, col·loquial',        emoji: '😎' },
+      },
+    },
+    workspaceType: {
+      title: 'Com faràs servir eChatbot?',
+      subtitle: 'Configurarem les funcionalitats adequades per a tu',
+      options: {
+        ecommerce: { label: 'Venc productes', desc: 'Catàleg, cistella i comandes en línia' },
+        info: { label: 'Comparteixo informació', desc: 'Suport al client, FAQ i informació' },
+        flow: { label: 'Custom chatbot', desc: 'Chatbot personalitzat: widget, WhatsApp, proveïdor AI i missatge WIP' },
+      },
+    },
+    channelType: {
+      title: 'Com vols rebre missatges?',
+      subtitle: 'Tria on el chatbot interactuarà amb els teus clients',
+      options: {
+        whatsapp: { label: 'Només WhatsApp', desc: 'El chatbot respon a WhatsApp', emoji: '💬' },
+        widget: { label: 'Només widget web', desc: 'Xat integrat al teu lloc web', emoji: '🌐' },
+        both: { label: 'Tots dos', desc: 'WhatsApp + widget al lloc web', emoji: '🔗' },
+      },
+    },
+    humanSupport: {
+      title: 'Suport humà',
+      subtitle: "Un dels punts forts d'eChatbot és el traspàs intel·ligent del chatbot a un agent humà, sense perdre el context. Vols aquesta funcionalitat integrada?",
+      yes: { label: 'Sí, vull el traspàs a agent humà', emoji: '✅' },
+      no: { label: "L'automatització completa em va bé", emoji: '🤖' },
+    },
+    auth: {
+      title: 'Crea el teu compte',
+      subtitle: 'Gairebé llest — registra\'t per començar',
+      fname: 'Nom', lname: 'Cognoms',
+      email: 'Correu electrònic', pass: 'Contrasenya',
+      gdpr: 'Accepto els Termes de Servei i la Política de Privacitat',
+      register: 'Crear compte', or: 'o',
+    },
+    totp: {
+      title: 'Protegeix el teu compte',
+      setupSubtitle: 'Escaneja el QR amb Google Authenticator o Authy',
+      setupInstructions: 'Obrir app → Afegir compte → Escanejar QR',
+      verifySubtitle: "Introdueix el codi de la teva app d'autenticació",
+      code: 'Codi (6 xifres)', verify: 'Verificar i continuar',
+    },
+    creating: {
+      title: 'Configurant-ho tot...',
+      phasesWhatsapp: ['Creant el teu workspace...', 'Configurant el canal WhatsApp...', 'Gairebé llest...'],
+      phasesWidget: ['Creant el teu workspace...', 'Configurant el widget...', 'Gairebé llest...'],
+      phasesBoth: ['Creant el teu workspace...', 'Configurant WhatsApp i widget...', 'Gairebé llest...'],
+    },
+    qr: {
+      title: 'Connectar WhatsApp',
+      subtitle: 'WhatsApp → Dispositius vinculats → Vincular dispositiu → Escanejar',
+      expired: 'QR caducat', newQr: 'Nou QR', wait: 's',
+    },
+    done: {
+      title: 'Tot llest!',
+      subtitleWhatsapp: 'El teu workspace està configurat i WhatsApp està connectat.',
+      subtitleWidget: 'El teu workspace està configurat. Troba el codi del widget als ajustos.',
+      subtitleBoth: 'El teu workspace està configurat. WhatsApp connectat i widget llest.',
+      cta: 'Anar al tauler',
+    },
+    industries: {
+      retail: 'Comerç', restaurant: 'Restauració', healthcare: 'Salut',
+      beauty: 'Bellesa', education: 'Educació', tourism: 'Turisme',
+      fashion: 'Moda', fitness: 'Fitness', transport: 'Transport',
+      technology: 'Tecnologia', realestate: 'Immobiliària', finance: 'Finances',
+      legal: 'Jurídic', other: 'Altre',
+    },
+    errors: {
+      required: 'Camp obligatori',
+      phoneFormat: 'Usa el format internacional, ex. +34612345678',
+      emailRequired: 'Correu electrònic obligatori', passwordRequired: 'Contrasenya obligatòria',
+      gdprRequired: 'Has d\'acceptar els termes', invalidCode: 'Introdueix 6 xifres',
     },
   },
 } as const

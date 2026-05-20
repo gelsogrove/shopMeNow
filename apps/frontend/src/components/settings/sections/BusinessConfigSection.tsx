@@ -287,7 +287,7 @@ export function BusinessConfigSection({
                 <SelectContent>
                   <SelectItem value="ECOMMERCE">E-commerce — sell products &amp; services</SelectItem>
                   <SelectItem value="INFORMATIONAL">Informational — FAQ &amp; customer support</SelectItem>
-                  <SelectItem value="FLOW">Flow — custom chatbot flow</SelectItem>
+                  <SelectItem value="FLOW">Custom — custom chatbot (widget, WhatsApp, AI provider)</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-amber-600">

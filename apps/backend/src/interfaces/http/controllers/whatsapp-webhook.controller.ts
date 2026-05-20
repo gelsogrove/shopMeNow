@@ -2575,6 +2575,16 @@ export class WhatsAppWebhookController {
             operatorContactMethod: customOutput.operatorContactMethod,
             operatorWhatsappNumber: customOutput.operatorWhatsappNumber,
           })
+
+          // Disable chatbot so subsequent customer messages go to operator, not LLM
+          await prisma.customers.update({
+            where: { id: customer.id },
+            data: { activeChatbot: false },
+          })
+          logger.info("[WEBHOOK] 👤 Escalation triggered — chatbot disabled for customer", {
+            workspaceId: customer.workspaceId,
+            customerId: customer.id,
+          })
         }
 
         if (customOutput.error) {

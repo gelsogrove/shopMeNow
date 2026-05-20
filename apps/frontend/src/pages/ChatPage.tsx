@@ -125,6 +125,8 @@ const getFlagForChat = (language?: string, phone?: string): string => {
     case "FR":
     case "FRA":
       return "🇫🇷"
+    case "CA":
+      return "🏴󠁥󠁳󠁣󠁴󠁿"
     case "DE":
     case "DEU":
       return "🇩🇪"
