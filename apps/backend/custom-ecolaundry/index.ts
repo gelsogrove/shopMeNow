@@ -134,7 +134,7 @@ async function runChatbotTurn(input: ChatbotInput, agentChain: string[]): Promis
     const reply = await agentTurn(session, input.userMessage)
     const patches = buildPatches(snapshotBefore, session)
     const { shouldEscalate, escalationSummary } = buildEscalationOutcome(session)
-    const { notificationEmails, operatorContactMethod, operatorWhatsappNumber } =
+    const { notificationEmails, operatorContactMethod, operatorWhatsappNumber, smtp } =
       session.ar.runtime.settings ?? {}
 
     return {
@@ -144,6 +144,7 @@ async function runChatbotTurn(input: ChatbotInput, agentChain: string[]): Promis
       notificationEmails,
       operatorContactMethod,
       operatorWhatsappNumber,
+      smtpConfig: smtp,
       patches,
       meta: { tokensUsed: 0, agentChain },
     }

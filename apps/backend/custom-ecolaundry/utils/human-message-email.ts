@@ -153,20 +153,32 @@ export function buildEmailHtml(data: HumanMessageEmailData): string {
 
 // ── Send ──────────────────────────────────────────────────────────────────────
 
+export interface SmtpConfig {
+  user: string
+  pass: string
+  host?: string
+  port?: number
+  secure?: boolean
+  from?: string
+}
+
 /**
  * Send the Human Support notification email to all configured recipients.
+ * SMTP config priority: smtpConfig (from settings.json) > SMTP_* env vars.
  * Silently skips if notificationEmails is empty or SMTP is not configured.
  * Never throws — email failure must not interrupt the main chat flow.
  */
 export async function sendHumanMessageEmail(
   data: HumanMessageEmailData,
-  notificationEmails: string | undefined
+  notificationEmails: string | undefined,
+  smtpConfig?: SmtpConfig
 ): Promise<void> {
   const recipients = parseRecipients(notificationEmails)
   if (!recipients.length) return
 
-  const smtpUser = process.env.SMTP_USER
-  const smtpPass = process.env.SMTP_PASS
+  // settings.json smtp block takes precedence over global .env vars
+  const smtpUser = smtpConfig?.user || process.env.SMTP_USER
+  const smtpPass = smtpConfig?.pass || process.env.SMTP_PASS
   if (!smtpUser || !smtpPass) {
     logger.warn('[HumanMessageEmail] SMTP not configured — skipping notification email')
     return
@@ -178,14 +190,14 @@ export async function sendHumanMessageEmail(
 
   try {
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true',
+      host: smtpConfig?.host || process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: smtpConfig?.port || parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: smtpConfig?.secure ?? process.env.SMTP_SECURE === 'true',
       auth: { user: smtpUser, pass: smtpPass },
     })
 
     await transporter.sendMail({
-      from: `"${data.companyName}" <${process.env.SMTP_FROM || smtpUser}>`,
+      from: `"${data.companyName}" <${smtpConfig?.from || process.env.SMTP_FROM || smtpUser}>`,
       to: recipients.join(', '),
       subject,
       text,

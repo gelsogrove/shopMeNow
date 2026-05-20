@@ -1,10 +1,10 @@
 import fs from "node:fs"
 import path from "node:path"
-import { pathToFileURL } from "node:url"
 
 import { prisma as defaultPrisma, PrismaClient } from "@echatbot/database"
 import logger from "../../utils/logger"
 import { WhatsAppDirectSendService } from "../../services/whatsapp-direct-send.service"
+import { sendEscalationEmail } from "./escalation-email.service"
 
 type ChatChannel = string
 
@@ -39,6 +39,7 @@ type ChatbotOutput = {
   notificationEmails?: string
   operatorContactMethod?: 'email' | 'whatsapp'
   operatorWhatsappNumber?: string
+  smtpConfig?: { user: string; pass: string; host?: string; port?: number; secure?: boolean; from?: string }
   error?: string
   patches?: CustomerPatch[]
   meta: {
@@ -336,6 +337,8 @@ export interface EscalationNotificationParams {
   operatorContactMethod?: 'email' | 'whatsapp'
   /** Operator WhatsApp number from chatbot settings.operatorWhatsappNumber — used when operatorContactMethod='whatsapp'. */
   operatorWhatsappNumber?: string
+  /** SMTP config from chatbot settings.smtp — takes precedence over global SMTP_* env vars. */
+  smtpConfig?: { user: string; pass: string; host?: string; port?: number; secure?: boolean; from?: string }
 }
 
 /**
@@ -348,7 +351,18 @@ export async function applyEscalationNotification(
   params: EscalationNotificationParams,
   db: PrismaClient = defaultPrisma
 ): Promise<void> {
-  const { workspaceId, customerId, escalationSummary, history, customerName, customerPhone, notificationEmails, operatorContactMethod: settingsContactMethod, operatorWhatsappNumber: settingsWhatsappNumber } = params
+  const {
+    workspaceId,
+    customerId,
+    escalationSummary,
+    history,
+    customerName,
+    customerPhone,
+    notificationEmails,
+    operatorContactMethod: settingsContactMethod,
+    operatorWhatsappNumber: settingsWhatsappNumber,
+    smtpConfig,
+  } = params
 
   const workspace = await db.workspace.findFirst({
     where: { id: workspaceId },
@@ -406,10 +420,7 @@ export async function applyEscalationNotification(
     return
   }
   try {
-    const { sendHumanMessageEmail } = await import(
-      /* webpackIgnore: true */ '../../../custom-ecolaundry/utils/human-message-email.js' as string
-    ) as { sendHumanMessageEmail: (data: any, emails: string) => Promise<void> }
-    await sendHumanMessageEmail(
+    await sendEscalationEmail(
       {
         summary: escalationSummary,
         history,
@@ -418,7 +429,8 @@ export async function applyEscalationNotification(
         companyName: workspace.name || 'Chatbot',
         timestamp: new Date().toISOString(),
       },
-      emailRecipients
+      emailRecipients,
+      smtpConfig
     )
     logger.info('[applyEscalationNotification] Email notification sent', { workspaceId, emailRecipients })
   } catch (err) {

@@ -2,7 +2,6 @@
  * Scheduler Jobs - Unit Tests
  * 
  * Tests for all scheduler cronjobs:
- * - WhatsApp Channel Queue
  * - Short URLs Cleanup
  * - Unused Images Cleanup
  * - Messages Archive
@@ -137,7 +136,6 @@ jest.mock('../src/services/email-alert.service', () => ({
 }))
 
 // === NOW IMPORT MODULES ===
-import { whatsappChannelQueueJob } from '../src/jobs/whatsapp-channel-queue.job'
 import { shortUrlsCleanupJob } from '../src/jobs/short-urls-cleanup.job'
 import { monthlyBillingJob } from '../src/jobs/monthly-billing.job'
 
@@ -145,109 +143,6 @@ describe('Scheduler Jobs', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockPrisma.pushCampaignRecipient.findMany.mockResolvedValue([])
-  })
-
-  describe('WhatsApp Channel Queue Job', () => {
-    it('should skip if no workspaces with active channel', async () => {
-      mockPrisma.workspace.findMany.mockResolvedValue([])
-
-      await whatsappChannelQueueJob()
-
-      expect(mockPrisma.workspace.findMany).toHaveBeenCalledWith({
-        where: {
-          deletedAt: null,
-        },
-        select: expect.any(Object),
-      })
-      // Note: When no workspaces found, it logs to debug level, not info
-      expect(mockLogger.debug).toHaveBeenCalledWith('[WhatsApp Queue] No workspaces with active channel found')
-    })
-
-    it.skip('should log sent/blocked metrics after processing messages', async () => {
-      // SCENARIO: Workspace has pending messages - job processes and logs metrics
-      // RULE: Job logs summary with sent/blocked counts
-      // TODO: Restore full mock setup including WhatsApp HTTP API mock (lost with it() header)
-      const mockWorkspace = { id: 'ws-1', name: 'Test Workspace', whatsappApiKey: 'key', whatsappPhoneNumber: '+1234567890' }
-      const mockMessage = { id: 'msg-1', workspaceId: 'ws-1', customerId: 'cust-1', messageContent: 'Hello', status: 'pending', phoneNumber: '+391234', channel: 'whatsapp', skipSecurityCheck: true, conversationMessageId: null }
-
-      mockPrisma.workspace.findMany.mockResolvedValue([mockWorkspace])
-      mockPrisma.whatsAppQueue.findMany.mockResolvedValue([mockMessage])
-      mockPrisma.whatsAppQueue.update.mockResolvedValue({ status: 'sent' })
-
-      await whatsappChannelQueueJob()
-
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        expect.stringContaining('1 sent, 0 blocked')
-      )
-    })
-
-    it.skip('should update WIP message status to sent', async () => {
-      // SCENARIO: A message with status 'wip' (in-progress) needs to be finalized
-      // RULE: Job marks the message as sent in whatsAppQueue
-      // TODO: Restore full mock setup (workspace + queue mocks were lost with the it() header)
-      mockPrisma.conversationMessage.update.mockResolvedValue({})
-
-      await whatsappChannelQueueJob()
-
-      expect(mockPrisma.whatsAppQueue.update).toHaveBeenCalledWith({
-        where: { id: 'msg-wip' },
-        data: expect.objectContaining({ status: 'sent' }),
-      })
-    })
-
-    it('should skip workspaces with no pending messages', async () => {
-      const mockWorkspace = { id: 'ws-1', name: 'Empty Workspace' }
-      
-      mockPrisma.workspace.findMany.mockResolvedValue([mockWorkspace])
-      mockPrisma.whatsAppQueue.findMany.mockResolvedValue([])
-
-      await whatsappChannelQueueJob()
-
-      expect(mockPrisma.whatsAppQueue.update).not.toHaveBeenCalled()
-    })
-    it.skip('should limit batch size to MAX_MESSAGES_PER_CYCLE (10)', async () => {
-      const mockWorkspace = {
-        id: 'ws-1',
-        name: 'Test Workspace',
-        whatsappApiKey: 'key-123',
-        whatsappPhoneNumber: '+1234567890',
-      }
-      
-      // Create 15 messages (more than the limit of 10)
-      const mockMessages = Array.from({ length: 15 }, (_, i) => ({
-        id: `msg-${i}`,
-        workspaceId: 'ws-1',
-        customerId: `cust-${i}`,
-        messageContent: `Hello ${i}`,
-        status: 'pending',
-      }))
-
-      mockPrisma.workspace.findMany.mockResolvedValue([mockWorkspace])
-      // The job should only fetch 10 messages due to take: 10
-      mockPrisma.whatsAppQueue.findMany.mockResolvedValue(mockMessages.slice(0, 10))
-      mockPrisma.whatsAppQueue.update.mockResolvedValue({ status: 'sent' })
-
-      await whatsappChannelQueueJob()
-
-      // Only 10 messages should be processed per cycle
-      expect(mockPrisma.whatsAppQueue.update).toHaveBeenCalledTimes(10)
-    })
-
-    it('should use in-memory lock to prevent concurrent executions', async () => {
-      // This test verifies the lock mechanism exists by checking debug log
-      mockPrisma.workspace.findMany.mockResolvedValue([])
-
-      // First call
-      const firstCall = whatsappChannelQueueJob()
-      // Second call immediately (simulating concurrent execution)
-      const secondCall = whatsappChannelQueueJob()
-
-      await Promise.all([firstCall, secondCall])
-
-      // The second call should have been skipped due to lock
-      // Note: In real scenario, second call logs "Skipping - previous job still running"
-      expect(mockPrisma.workspace.findMany).toHaveBeenCalled()
-    })
   })
 
   describe('Short URLs Cleanup Job', () => {

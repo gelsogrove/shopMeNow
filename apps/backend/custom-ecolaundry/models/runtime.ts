@@ -152,6 +152,17 @@ export type Settings = {
   routerTemperature?: number
   rephraseTemperature?: number
   operatorBriefingTemperature?: number
+  /** SMTP settings for escalation email notifications. When set, these take
+   *  precedence over the global SMTP_* env vars in .env. This keeps the custom
+   *  chatbot self-contained — no dependency on the host application's .env. */
+  smtp?: {
+    user: string
+    pass: string
+    host?: string
+    port?: number
+    secure?: boolean
+    from?: string
+  }
 }
 
 export type Runtime = {

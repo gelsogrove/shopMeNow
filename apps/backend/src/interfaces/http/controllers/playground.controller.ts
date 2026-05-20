@@ -322,6 +322,7 @@ export class PlaygroundController {
               workspaceId,
               customerId: customer.id,
               status: "active",
+              isPlayground: true,
             },
           })
         }

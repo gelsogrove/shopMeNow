@@ -1629,6 +1629,10 @@ export class MessageRepository {
         where: {
           workspaceId: workspaceId,
           isPlayground: { not: true },
+          customer: {
+            // Exclude legacy playground sessions created before isPlayground flag was set
+            name: { not: { startsWith: "playground_" } },
+          },
         },
         include: {
           customer: {

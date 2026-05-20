@@ -55,6 +55,8 @@ export type ChatbotOutput = {
   operatorContactMethod?: 'email' | 'whatsapp'
   /** Operator WhatsApp number from settings.operatorWhatsappNumber. Used when operatorContactMethod='whatsapp'. */
   operatorWhatsappNumber?: string
+  /** SMTP config from settings.smtp. Passed through so the host app sends the escalation email using the tenant's own credentials, not the global .env vars. */
+  smtpConfig?: { user: string; pass: string; host?: string; port?: number; secure?: boolean; from?: string }
   error?: string
   /**
    * Customer-profile fields captured or updated during this turn.
