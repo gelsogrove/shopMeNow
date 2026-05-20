@@ -1,2 +1,2 @@
 -- AddColumn: isPlayground on ChatSession
-ALTER TABLE "ChatSession" ADD COLUMN "isPlayground" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "chat_sessions" ADD COLUMN IF NOT EXISTS "isPlayground" BOOLEAN NOT NULL DEFAULT false;
