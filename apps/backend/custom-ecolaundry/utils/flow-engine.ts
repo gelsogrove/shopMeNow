@@ -5,6 +5,7 @@ import { normalizeDisplayState } from './display-state.js'
 import { isBlankDisplayReply, hasExtraButtonIssue, hasStopIntent } from './message-parsing.js'
 import { extractDisplayState, isPaidButNotActivatedCase, parsePaymentAnswer } from './intent.js'
 import { callModel } from './llm.js'
+import { sanitizeUserMessage } from './input-sanitize.js'
 import type {
   FlowEngineResult,
   FlowNode,
@@ -223,7 +224,7 @@ export async function classifyChoiceViaLLM(node: FlowNode, input: string): Promi
     ? '\nother: Customer cannot follow instructions or is asking for help (not a yes/no answer)'
     : ''
   const answer = await callModel({
-    userPrompt: `Which option best matches the customer reply? Reply with ONLY the key or NONE.\n\nNode prompt:\n${node.prompt}\n\nOptions:\n${optionLines}${otherLine}\n\nCustomer reply:\n${input}`,
+    userPrompt: `Which option best matches the customer reply? Reply with ONLY the key or NONE.\n\nNode prompt:\n${node.prompt}\n\nOptions:\n${optionLines}${otherLine}\n\nCustomer reply:\n${sanitizeUserMessage(input)}`,
     maxTokens: 20,
   })
   const normalized = answer.trim().replace(/^"|"$/g, '')
@@ -233,7 +234,7 @@ export async function classifyChoiceViaLLM(node: FlowNode, input: string): Promi
 export async function classifyRouterLogic(logic: Record<string, string>, userInput: string): Promise<string> {
   const keys = Object.keys(logic)
   const answer = await callModel({
-    userPrompt: `Classify this customer message into exactly one category. Reply with ONLY the key, nothing else.\n\nCategories: ${keys.join(', ')}\n\nCustomer message:\n${userInput}`,
+    userPrompt: `Classify this customer message into exactly one category. Reply with ONLY the key, nothing else.\n\nCategories: ${keys.join(', ')}\n\nCustomer message:\n${sanitizeUserMessage(userInput)}`,
     maxTokens: 15,
   })
   const normalized = answer.trim().toUpperCase()
