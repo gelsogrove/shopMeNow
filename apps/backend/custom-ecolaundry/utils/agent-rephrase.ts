@@ -321,6 +321,13 @@ export async function rephraseForTurn(
     logger.warn('rephraseForTurn failed, falling back to canned reply', {
       error: err instanceof Error ? err.message : String(err),
     })
+    // Even on LLM failure, build the deterministic recap if we're in a
+    // display flow — blocks 1/2/4 require no LLM; block 3 falls back to
+    // the original canned reply.
+    if (isDisplayFlowRecap) {
+      const recap = buildDisplayRecap(reply, ar, tenantLang)
+      if (recap) return recap
+    }
     return reply
   }
 }
