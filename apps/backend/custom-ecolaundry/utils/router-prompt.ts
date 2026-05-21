@@ -38,6 +38,30 @@ Examples:
   Customer: "che orari avete?"
   → {"branch":"faq","language":"it","details":{"faqKey":"openingHours"}}
 
+  Customer: "No veo jabón"
+  → {"branch":"faq","language":"es","details":{"faqKey":"detergents"}}
+
+  Customer: "¿hay detergente en las máquinas?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"detergents"}}
+
+  Customer: "do I need to bring my own soap?"
+  → {"branch":"faq","language":"en","details":{"faqKey":"detergents"}}
+
+  Customer: "¿Cómo se usa la lavandería?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"howToUse"}}
+
+  Customer: "come funziona la lavatrice?"
+  → {"branch":"faq","language":"it","details":{"faqKey":"howToUse"}}
+
+  Customer: "how do I use the washing machine?"
+  → {"branch":"faq","language":"en","details":{"faqKey":"howToUse"}}
+
+  Customer: "es mi primera vez, qué hago?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"howToUse"}}
+
+  Customer: "non vedo il sapone"
+  → {"branch":"faq","language":"it","details":{"faqKey":"detergents"}}
+
   Customer: "no funciona la lavadora 5 en Goya, sale PUSH PROG"
   → {"branch":"trouble-machine","language":"es","details":{"displayHint":"PUSH PROG","locationHint":"Goya"}}
 

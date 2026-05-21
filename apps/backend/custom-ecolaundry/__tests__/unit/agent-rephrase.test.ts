@@ -13,7 +13,7 @@
 // Run with:
 //   node --import tsx __tests__/unit/agent-rephrase.test.ts
 
-import { rephraseForTurn } from '../../utils/agent-rephrase.js'
+import { rephraseForTurn, buildDisplayRecap } from '../../utils/agent-rephrase.js'
 import { createInitialState } from '../../utils/state.js'
 import type { AgentRuntime, AgentMessage } from '../../models/index.js'
 import type { Runtime, Settings } from '../../models/runtime.js'
@@ -147,6 +147,124 @@ const cases: Case[] = [
       // Just verify it accepts the call without throwing for basic input.
       const result = await rephraseForTurn('Texto de prueba', ar, [])
       if (typeof result !== 'string') throw new Error('Expected string')
+    },
+  },
+
+  // ── buildDisplayRecap: 4-block deterministic recap ──────────────────────
+  {
+    name: 'F72 buildDisplayRecap ES: returns 4-block structure with bold facts',
+    run: async () => {
+      const ar = makeRuntime({ rephraseDisplayFlow: true })
+      ar.state.location = 'Goya'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '3'
+      ar.state.displayLabel = 'DOOR'
+      ar.state.activeFlowId = 'non_parte'
+      const recap = buildDisplayRecap('Ábrela y ciérrala bien.', ar, 'es')
+      if (!recap) throw new Error('Expected recap, got null')
+      if (!recap.includes('**Goya**')) throw new Error('Missing bold location')
+      if (!recap.includes('con la **lavadora 3**')) throw new Error('Missing ES machine connector + label')
+      if (!recap.includes('**DOOR**')) throw new Error('Missing bold display code')
+      if (!recap.includes('Ábrela y ciérrala bien.')) throw new Error('Missing canned instruction')
+      // 4 blocks separated by double newline
+      const blocks = recap.split('\n\n')
+      if (blocks.length !== 4) throw new Error(`Expected 4 blocks, got ${blocks.length}`)
+    },
+  },
+  {
+    name: 'F72 buildDisplayRecap IT: uses Italian connectors',
+    run: async () => {
+      const ar = makeRuntime({ rephraseDisplayFlow: true })
+      ar.state.location = 'Goya'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '5'
+      ar.state.displayLabel = 'SEL'
+      ar.state.activeFlowId = 'non_parte'
+      const recap = buildDisplayRecap('Premi il numero della macchina.', ar, 'it')
+      if (!recap) throw new Error('Expected recap, got null')
+      if (!recap.includes("e l'errore **SEL**")) throw new Error('Missing IT error connector')
+      if (!recap.includes('con la **lavatrice 5**')) throw new Error('Missing IT machine label')
+    },
+  },
+  {
+    name: 'F72 buildDisplayRecap EN: uses English connectors',
+    run: async () => {
+      const ar = makeRuntime({ rephraseDisplayFlow: true })
+      ar.state.location = 'Pineda'
+      ar.state.machineType = 'dryer'
+      ar.state.machineNumber = '2'
+      ar.state.displayLabel = 'AL001'
+      ar.state.activeFlowId = 'al001-sequence-error'
+      const recap = buildDisplayRecap('Please try the sequence again.', ar, 'en')
+      if (!recap) throw new Error('Expected recap, got null')
+      if (!recap.includes('showing error **AL001**')) throw new Error('Missing EN error connector')
+      if (!recap.includes('with **dryer 2**')) throw new Error('Missing EN machine label')
+    },
+  },
+  {
+    name: 'F72 buildDisplayRecap: returns null when location missing',
+    run: async () => {
+      const ar = makeRuntime({ rephraseDisplayFlow: true })
+      ar.state.location = ''
+      ar.state.displayLabel = 'DOOR'
+      ar.state.activeFlowId = 'non_parte'
+      const recap = buildDisplayRecap('Ábrela.', ar, 'es')
+      if (recap !== null) throw new Error('Expected null when location missing')
+    },
+  },
+  {
+    name: 'F72 buildDisplayRecap: returns null when displayLabel missing',
+    run: async () => {
+      const ar = makeRuntime({ rephraseDisplayFlow: true })
+      ar.state.location = 'Goya'
+      ar.state.displayLabel = ''
+      ar.state.displayState = ''
+      ar.state.activeFlowId = 'non_parte'
+      const recap = buildDisplayRecap('Prueba otra vez.', ar, 'es')
+      if (recap !== null) throw new Error('Expected null when displayLabel missing')
+    },
+  },
+  {
+    name: 'F72 buildDisplayRecap: unknown lang falls back to ES',
+    run: async () => {
+      const ar = makeRuntime({ rephraseDisplayFlow: true })
+      ar.state.location = 'Goya'
+      ar.state.displayLabel = 'SEL'
+      ar.state.activeFlowId = 'non_parte'
+      const recap = buildDisplayRecap('Prueba.', ar, 'xx')
+      if (!recap) throw new Error('Expected recap with fallback lang')
+      if (!recap.includes('Estás en')) throw new Error('Expected ES fallback problemIntro')
+    },
+  },
+  {
+    name: 'F72 buildDisplayRecap: works without machineType (only location+display)',
+    run: async () => {
+      const ar = makeRuntime({ rephraseDisplayFlow: true })
+      ar.state.location = 'Goya'
+      ar.state.machineType = ''
+      ar.state.machineNumber = ''
+      ar.state.displayLabel = 'AL001'
+      ar.state.activeFlowId = 'al001-sequence-error'
+      const recap = buildDisplayRecap('Sigue los pasos.', ar, 'es')
+      if (!recap) throw new Error('Expected recap without machine info')
+      if (!recap.includes('**Goya**')) throw new Error('Missing location')
+      if (!recap.includes('**AL001**')) throw new Error('Missing error code')
+    },
+  },
+  {
+    name: 'F72 buildDisplayRecap: greetings vary (random picks)',
+    run: async () => {
+      const ar = makeRuntime({ rephraseDisplayFlow: true })
+      ar.state.location = 'Goya'
+      ar.state.displayLabel = 'DOOR'
+      ar.state.activeFlowId = 'non_parte'
+      const seen = new Set<string>()
+      for (let i = 0; i < 40; i++) {
+        const recap = buildDisplayRecap('Test.', ar, 'es')
+        if (recap) seen.add(recap.split('\n\n')[0])
+      }
+      // After 40 picks from 4 options, expect at least 2 distinct greetings
+      if (seen.size < 2) throw new Error(`Expected variation in greetings, got only: ${[...seen].join(' | ')}`)
     },
   },
 

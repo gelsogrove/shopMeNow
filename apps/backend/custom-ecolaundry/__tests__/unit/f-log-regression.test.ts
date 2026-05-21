@@ -1501,6 +1501,198 @@ const cases: Case[] = [
       }
     },
   },
+
+  // ── F67 — "No veo jabón" classified as trouble-machine instead of faq ────
+  {
+    name: 'F67 — guardFaqDetergents exists and is registered in GUARD_PIPELINE',
+    run: () => {
+      const guardPath = path.resolve(__dirname, '..', '..', 'utils', 'guards', 'faq-detergents.ts')
+      if (!fs.existsSync(guardPath)) {
+        throw new Error('F67: utils/guards/faq-detergents.ts must exist')
+      }
+      const indexPath = path.resolve(__dirname, '..', '..', 'utils', 'guards', 'index.ts')
+      const idx = fs.readFileSync(indexPath, 'utf8')
+      if (!idx.includes('guardFaqDetergents')) {
+        throw new Error('F67: guardFaqDetergents must be imported and in GUARD_PIPELINE in guards/index.ts')
+      }
+    },
+  },
+  {
+    name: 'F67 — detectDetergentFaqIntent is exported from utils/intent.ts',
+    run: () => {
+      const intentPath = path.resolve(__dirname, '..', '..', 'utils', 'intent.ts')
+      const content = fs.readFileSync(intentPath, 'utf8')
+      if (!content.includes('export function detectDetergentFaqIntent')) {
+        throw new Error('F67: detectDetergentFaqIntent must be exported from utils/intent.ts')
+      }
+    },
+  },
+  {
+    name: 'F67 — router-prompt.ts has jabón/detergent examples for faq branch',
+    run: () => {
+      const routerPath = path.resolve(__dirname, '..', '..', 'utils', 'router-prompt.ts')
+      const content = fs.readFileSync(routerPath, 'utf8')
+      if (!content.includes('jab') || !content.includes('detergents')) {
+        throw new Error('F67: router-prompt.ts must contain jabón/detergent examples pointing to faqKey:detergents')
+      }
+    },
+  },
+  // ── F68 — loyalty-card-recharge: modal+infinitive + typo "targeta" ────────
+  // Real chat (Andrea, 2026-05-21): "Como puedo recargar la targeta de
+  // fidelización" → bot asked for lavadora/secadora instead of answering
+  // the recharge FAQ. Two gaps in RECARGA_TOPIC: (a) modal + infinitive
+  // pattern ("puedo recargar") not covered; (b) typo "targeta" (g/j swap)
+  // not covered.
+  {
+    name: 'F68 — RECARGA_TOPIC covers modal+infinitive "puedo recargar" pattern',
+    run: () => {
+      const guardPath = path.resolve(__dirname, '..', '..', 'utils', 'guards', 'loyalty-card-recharge.ts')
+      const content = fs.readFileSync(guardPath, 'utf8')
+      if (!/puedo\|quiero\|necesito\|quisiera/.test(content)) {
+        throw new Error('F68: loyalty-card-recharge.ts RECARGA_TOPIC must cover modal verbs (puedo|quiero|necesito|quisiera)')
+      }
+    },
+  },
+  {
+    name: 'F68 — RECARGA_TOPIC covers typo "targeta" (g/j swap)',
+    run: () => {
+      const guardPath = path.resolve(__dirname, '..', '..', 'utils', 'guards', 'loyalty-card-recharge.ts')
+      const content = fs.readFileSync(guardPath, 'utf8')
+      if (!/tar\[gj\]eta/.test(content)) {
+        throw new Error('F68: loyalty-card-recharge.ts RECARGA_TOPIC must use tar[gj]eta for typo tolerance')
+      }
+    },
+  },
+  // ── F69 — faq-how-to-use: Caso 35 guard + detector ───────────────────────
+  // Olga (2026-05-21): customers asking "how do I use the laundromat" must
+  // receive the canonical 7-step instructions directly, no location ask.
+  {
+    name: 'F69 — guardFaqHowToUse exists and is registered in GUARD_PIPELINE',
+    run: () => {
+      const guardsDir = path.resolve(__dirname, '..', '..', 'utils', 'guards')
+      if (!fs.existsSync(path.join(guardsDir, 'faq-how-to-use.ts'))) {
+        throw new Error('F69: utils/guards/faq-how-to-use.ts must exist')
+      }
+      const indexContent = fs.readFileSync(path.join(guardsDir, 'index.ts'), 'utf8')
+      if (!indexContent.includes('guardFaqHowToUse')) {
+        throw new Error('F69: guardFaqHowToUse must be registered in GUARD_PIPELINE')
+      }
+    },
+  },
+  {
+    name: 'F69 — detectHowToUseIntent is exported from utils/intent.ts',
+    run: () => {
+      const intentPath = path.resolve(__dirname, '..', '..', 'utils', 'intent.ts')
+      const content = fs.readFileSync(intentPath, 'utf8')
+      if (!content.includes('export function detectHowToUseIntent')) {
+        throw new Error('F69: detectHowToUseIntent must be exported from utils/intent.ts')
+      }
+    },
+  },
+  {
+    name: 'F69 — faqs.json has howToUse key with numbered steps',
+    run: () => {
+      const faqsPath = path.resolve(__dirname, '..', '..', 'json', 'faqs.json')
+      const faqs = JSON.parse(fs.readFileSync(faqsPath, 'utf8'))
+      if (!faqs.howToUse) {
+        throw new Error('F69: json/faqs.json must contain howToUse key')
+      }
+      if (!/1\.|2\.|3\./.test(faqs.howToUse)) {
+        throw new Error('F69: faqs.json:howToUse must contain numbered steps (1. 2. 3.)')
+      }
+    },
+  },
+  // ── F70 — loyalty FAQ bypass rephrase (buy + recharge) ───────────────────
+  // Rephrase LLM kept adding "¿En qué lavandería te encuentras?" to the
+  // loyalty-card-buy and loyalty-card-recharge turns, against usecases.md
+  // Caso 10 criterio 4 (no location ask for loyalty FAQ).
+  {
+    name: 'F70 — agent.ts has isLoyaltyFaq bypass for rephrase pipeline',
+    run: () => {
+      const agentPath = path.resolve(__dirname, '..', '..', 'agent.ts')
+      const content = fs.readFileSync(agentPath, 'utf8')
+      if (!/isLoyaltyFaq/.test(content)) {
+        throw new Error('F70: agent.ts must define isLoyaltyFaq bypass')
+      }
+      if (!/'loyalty-card-buy'/.test(content) || !/'loyalty-card-recharge'/.test(content)) {
+        throw new Error('F70: isLoyaltyFaq must check both loyalty-card-buy and loyalty-card-recharge reasons')
+      }
+      if (!/!isLoyaltyFaq/.test(content)) {
+        throw new Error('F70: rephrase guard must include !isLoyaltyFaq in its condition')
+      }
+    },
+  },
+  {
+    name: 'F69 — prompts/router.txt has howToUse key and examples',
+    run: () => {
+      const routerTxt = path.resolve(__dirname, '..', '..', 'prompts', 'router.txt')
+      const content = fs.readFileSync(routerTxt, 'utf8')
+      if (!content.includes('howToUse')) {
+        throw new Error('F69: prompts/router.txt must contain howToUse key and examples')
+      }
+    },
+  },
+  {
+    name: 'F71 — force-gather.ts imports hasGreetingIntent and defines isGreetingContext',
+    run: () => {
+      const content = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/guards/force-gather.ts'),
+        'utf8',
+      )
+      if (!content.includes('hasGreetingIntent')) {
+        throw new Error('F71: force-gather.ts must import hasGreetingIntent from intent.ts')
+      }
+      if (!content.includes('isGreetingContext')) {
+        throw new Error('F71: force-gather.ts must define isGreetingContext guard')
+      }
+      if (!content.includes('isGreetingContext(ar.state, userMessage)')) {
+        throw new Error('F71: guardForceMachineType must call isGreetingContext before isInFaqContext')
+      }
+    },
+  },
+  {
+    name: 'F72 — buildDisplayRecap is exported from utils/agent-rephrase.ts',
+    run: () => {
+      const content = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/agent-rephrase.ts'),
+        'utf8',
+      )
+      if (!content.includes('export function buildDisplayRecap')) {
+        throw new Error('F72: buildDisplayRecap must be exported for deterministic 4-block recap')
+      }
+      if (!content.includes('isDisplayFlowRecap')) {
+        throw new Error('F72: rephraseForTurn must check isDisplayFlowRecap before calling buildDisplayRecap')
+      }
+      if (!content.includes('RECAP_STRINGS')) {
+        throw new Error('F72: RECAP_STRINGS per-language table must be present')
+      }
+    },
+  },
+  {
+    name: 'F72 — RECAP_STRINGS covers all 6 supported languages',
+    run: () => {
+      const content = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/agent-rephrase.ts'),
+        'utf8',
+      )
+      for (const lang of ['es', 'it', 'en', 'ca', 'pt', 'fr']) {
+        if (!content.includes(`  ${lang}: {`)) {
+          throw new Error(`F72: RECAP_STRINGS missing language '${lang}'`)
+        }
+      }
+    },
+  },
+  {
+    name: 'F72 — settings.json has rephraseDisplayFlow toggle',
+    run: () => {
+      const settings = JSON.parse(
+        fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'json/settings.json'), 'utf8'),
+      )
+      if (typeof settings.rephraseDisplayFlow !== 'boolean') {
+        throw new Error('F72: settings.json must have rephraseDisplayFlow boolean toggle')
+      }
+    },
+  },
 ]
 
 async function main(): Promise<void> {

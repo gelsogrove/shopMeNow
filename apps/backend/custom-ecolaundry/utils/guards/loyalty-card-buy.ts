@@ -33,24 +33,15 @@ export const guardLoyaltyCardBuy: Guard = (ar, userMessage) => {
   const askedTarjeta = ar.state.faqTopic === 'buy-loyalty-card'
   if (!isTarjetaQuery && !askedTarjeta) return null
 
+  // usecases.md Caso 10 criterio 4: never ask for location proactively.
+  // Respond immediately with the global FAQ. If a per-location override
+  // exists (location already known), use it instead.
   const override = ar.state.location
     ? (ar.runtime.locations?.locations?.[ar.state.location] as { faqOverrides?: Record<string, string> } | undefined)?.faqOverrides?.['buy-loyalty-card']
     : null
-  const baseAnswer = t('loyaltyCardBuyBase', lang(ar))
-  const fullFaq = getFaqs()['loyaltyCard'] || baseAnswer
+  const fullFaq = getFaqs()['loyaltyCard'] || t('loyaltyCardBuyBase', lang(ar))
 
-  if (isTarjetaQuery && !ar.state.location) {
-    ar.state.faqTopic = 'buy-loyalty-card'
-    return { reply: baseAnswer, reason: 'loyalty-card-buy-base' }
-  }
-  if (askedTarjeta && ar.state.location) {
-    ar.state.faqTopic = ''
-    ar.state.lastResolvedIntent = 'faq'
-    return { reply: override || fullFaq, reason: 'loyalty-card-buy-override' }
-  }
-  if (isTarjetaQuery && ar.state.location && override) {
-    ar.state.lastResolvedIntent = 'faq'
-    return { reply: override, reason: 'loyalty-card-buy-override-direct' }
-  }
-  return null
+  ar.state.faqTopic = ''
+  ar.state.lastResolvedIntent = 'faq'
+  return { reply: override || fullFaq, reason: 'loyalty-card-buy' }
 }

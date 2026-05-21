@@ -228,10 +228,22 @@ async function applyGuardOutcome(
   // F49 — discount-code-ask: clean i18n is the UX; rephrase kept adding
   // "incluyendo letras si las hay" autonomously.
   const isDiscountCodeAsk = outcome.reason === 'discount-code-ask'
+  // F70 — loyalty FAQ (buy/recharge): usecases.md Caso 10 criterio 4 says
+  // bot must NOT ask for location — rephrase LLM kept adding "¿En qué
+  // lavandería te encuentras?" autonomously against the spec.
+  const isLoyaltyFaq =
+    outcome.reason === 'loyalty-card-buy' || outcome.reason === 'loyalty-card-recharge'
   // F56 — active display flow (washer/dryer JSON prompts): PDF-vetted content;
   // rephrase invented operational details ("ropa en la goma", "hasta oír un
   // clic"). Deterministic bypass is the only robust fix.
-  const isDisplayFlowActive = !!ar.state.activeFlowId
+  //
+  // ⚙️  TOGGLE: set "rephraseDisplayFlow": true in json/settings.json to
+  // re-enable rephrase for display flows and experiment with contextual
+  // recaps (e.g. "sigues en Goya con la lavadora 5 y el error DOOR 😕").
+  // Risk: rephrase may invent operational details — monitor carefully.
+  // Default: false (bypass active).
+  const isDisplayFlowActive =
+    !!ar.state.activeFlowId && !ar.runtime.settings?.rephraseDisplayFlow
 
   if (
     !isT1Welcome &&
@@ -239,6 +251,7 @@ async function applyGuardOutcome(
     !hasFormattedBulletList &&
     !isDiscountCodeAsk &&
     !isDisplayFlowActive &&
+    !isLoyaltyFaq &&
     ar.runtime.settings?.naturalRephrase
   ) {
     reply = await rephraseForTurn(reply, ar, history)

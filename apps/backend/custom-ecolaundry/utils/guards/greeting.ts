@@ -27,13 +27,17 @@ import { isPureGreeting } from '../greeting.js'
  *  only when the customer actually reports a machine incident. */
 export const guardPureGreeting: Guard = (ar, userMessage) => {
   if (
-    ar.state.location ||
     ar.state.operatorRequested ||
     ar.state.customerNameRequested
   ) {
     return null
   }
   if (!isPureGreeting(userMessage)) return null
+  // F71 — mark as greeting so force-gather guards skip on the next turn.
+  // A greeting+location message ("Hola, estoy en Pineda") sets state.location
+  // via autoExtractFacts, which would cause guardForceMachineType to fire on
+  // T2 before the customer has expressed any incident intent.
+  ar.state.lastResolvedIntent = 'greeting'
   return {
     reply: t('greetingOpen', lang(ar)),
     reason: 'pure-greeting',

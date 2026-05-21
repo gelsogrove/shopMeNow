@@ -12,6 +12,7 @@ import type { SessionState } from '../../models/index.js'
 import { isMataro, lang, notInActiveSubFlow } from './helpers.js'
 import { escalate, requireCustomerName } from '../state-transitions.js'
 import { nextRetryLadderStep } from './retry-ladder.js'
+import { hasGreetingIntent } from '../intent.js'
 
 /** F59 (Andrea 2026-05-15) — Gate semantico FAQ context.
  *
@@ -34,6 +35,19 @@ import { nextRetryLadderStep } from './retry-ladder.js'
  *  exception: boundary signal (topic switch), not intent classification. */
 const TROUBLE_SIGNAL_RE =
   /\b(?:no\s+funciona|no\s+arranca|no\s+va\b|est[áa]\s+rot[ao]|non\s+funziona|non\s+parte|non\s+va\b|non\s+arranca|doesn'?t\s+work|isn'?t\s+working|doesn'?t\s+start|broken|n[aã]o\s+funciona|n[aã]o\s+arranca|ne\s+fonctionne\s+pas|ne\s+marche\s+pas|ne\s+d[ée]marre\s+pas)/i
+
+// F71 — force-gather must not fire when the customer is in a greeting context.
+// Two cases:
+//   (a) pure greeting already resolved ("Hola" → greetingOpen): lastResolvedIntent='greeting'
+//   (b) greeting+location mixed ("Hola, estoy en Pineda"): guardPureGreeting skips
+//       (isPureGreeting = false), so lastResolvedIntent stays null, but the message
+//       itself contains a greeting signal — hasGreetingIntent catches this.
+// In both cases: no trouble intent expressed yet → force-gather must stay silent.
+function isGreetingContext(state: SessionState, userMessage: string): boolean {
+  if (state.lastResolvedIntent === 'greeting') return true
+  if (hasGreetingIntent(userMessage) && !TROUBLE_SIGNAL_RE.test(userMessage)) return true
+  return false
+}
 
 function isInFaqContext(state: SessionState, userMessage: string): boolean {
   if (state.lastResolvedIntent !== 'faq') return false
@@ -72,6 +86,7 @@ function isInFaqContext(state: SessionState, userMessage: string): boolean {
  *  detection is delegated to `notInActiveSubFlow(ar)` which is the
  *  authoritative signal. */
 export const guardForceMachineType: Guard = (ar, userMessage) => {
+  if (isGreetingContext(ar.state, userMessage)) return null
   if (isInFaqContext(ar.state, userMessage)) return null
   if (
     ar.state.location &&
@@ -136,6 +151,7 @@ export const guardForcePayment: Guard = (ar) => {
  *  resetMachineFacts and (implicitly) when displayState is set by
  *  autoExtractFacts on a recognised input. */
 export const guardForceDisplay: Guard = (ar, userMessage) => {
+  if (isGreetingContext(ar.state, userMessage)) return null
   if (isInFaqContext(ar.state, userMessage)) return null
   if (
     !ar.state.location ||
@@ -189,6 +205,7 @@ export const guardForceDisplay: Guard = (ar, userMessage) => {
  *  Counter is reset by resetMachineFacts and (implicitly) when
  *  machineNumber is captured by autoExtractFacts. */
 export const guardForceMachineNumber: Guard = (ar, userMessage) => {
+  if (isGreetingContext(ar.state, userMessage)) return null
   if (isInFaqContext(ar.state, userMessage)) return null
   if (
     !ar.state.location ||

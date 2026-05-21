@@ -17,6 +17,7 @@ import {
   type SupportedLanguage,
 } from '../../models/index.js'
 import { setI18nCatalogue } from '../../utils/localization.js'
+import { setFaqs } from '../../utils/runtime.js'
 
 const I18N_LANGS: SupportedLanguage[] = ['es', 'it', 'ca', 'en', 'pt', 'fr']
 
@@ -57,6 +58,10 @@ export async function loadTestRuntime(): Promise<Runtime> {
     }),
   )
   setI18nCatalogue(validateI18nCatalogue(i18nRaw))
+
+  // Load FAQ data so guards that read getFaqs() work in unit tests.
+  const faqsRaw = JSON.parse(await readFile(path.join(jsonDir, 'faqs.json'), 'utf8'))
+  setFaqs(faqsRaw)
 
   // Strip JSON-comment fields (`_principle`, etc.) so the FlowMap shape
   // is not polluted; they're documentation-only in the source files.

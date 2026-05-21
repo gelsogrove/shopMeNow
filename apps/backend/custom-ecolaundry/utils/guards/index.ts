@@ -76,6 +76,8 @@ import {
 import { guardLocationGatedMismatch } from './location-gated-mismatch.js'
 
 import { guardFaqClosure } from './faq-closure.js'
+import { guardFaqDetergents } from './faq-detergents.js'
+import { guardFaqHowToUse } from './faq-how-to-use.js'
 import { guardInvoiceFlow } from './invoice-flow.js'
 import { guardFaqHours, guardFaqHoursAwaitLocation } from './faq-hours.js'
 import {
@@ -113,6 +115,12 @@ export const GUARD_PIPELINE: Guard[] = [
   // T1 guards (intent + maybe-ask-location):
   guardFaqHours,
   guardFaqPrices,
+  // Caso 34 — FAQ detergente/jabón: single-turn, no gather needed.
+  // Runs early so mid-flow pivots ("¿hay jabón?" mid DOOR troubleshoot) work.
+  guardFaqDetergents,
+  // Caso 35 — FAQ how-to-use: single-turn, no gather needed.
+  // Runs early for same reason — mid-flow pivot ("¿cómo se usa?" mid DOOR) works.
+  guardFaqHowToUse,
   // T2 guards (location reply unlocks the answer):
   guardFaqHoursAwaitLocation,
   guardFaqPricesAwaitLocation,

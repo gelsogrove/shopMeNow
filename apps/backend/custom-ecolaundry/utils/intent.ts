@@ -684,6 +684,121 @@ export function detectMachineTypeMention(message: string): 'washer' | 'dryer' | 
   return null
 }
 
+// ── Detergent FAQ intent detection (Caso 34) ─────────────────────────────────
+//
+// Topic classifier (rule #6 tracked exemption — fast-path before the LLM).
+// Detects questions about soap, detergent, softener — the customer wants to
+// know if they need to bring their own or if the machines include it.
+//
+// Two semantic clusters, all 6 languages:
+//   A) "no veo / no hay jabón/detergente/suavizante" — can't see / no soap
+//   B) "¿hay jabón? / do I need to bring detergent?" — generic enquiry
+//
+// The foam/espuma post-cycle case ("poca espuma después del lavado") uses
+// faqKey noFoamNormal and is handled by the flow-engine (washer_hs60xx.json
+// post_ciclo.foam). This detector is strictly for PRE-cycle / general
+// questions about detergent availability. A combined "foam" + "after wash"
+// signal is excluded to avoid stealing from the post-cycle flow.
+//
+// Real bug evidence (F67, Andrea 2026-05-21): customer wrote "No veo jabón"
+// — router classified as trouble-machine, bot asked for the display.
+//
+// Tested in `__tests__/unit/intent.test.ts` (F67 section).
+export function detectDetergentFaqIntent(message: string): boolean {
+  const trimmed = message.toLowerCase().trim()
+  if (!trimmed) return false
+
+  // Exclude clear post-cycle foam complaint: "poca/no hay espuma después/tras el lavado"
+  // Those belong to post_ciclo.foam in the flow engine.
+  if (/despu[eé]s\s+del?\s+lavado|dopo\s+il\s+lavaggio|after\s+(?:the\s+)?wash|apr[eè]s\s+le\s+lavage/i.test(trimmed) &&
+      /espuma|schiuma|foam|mousse/i.test(trimmed)) return false
+
+  // Cluster A — visible absence report: "can't see / no soap/detergent/softener"
+  // Approach: check (negative-presence-marker) AND (detergent-product-word) anywhere
+  // in the message — keeping them as separate matches avoids complex chained regex
+  // that fails when the marker and product appear in different parts of a sentence.
+  //
+  // Negative markers (6 langs):
+  //   ES: no veo, no hay, no encuentro, no aparece
+  //   IT: non vedo, non c'è, non trovo
+  //   EN: no soap/detergent/softener (product IS the marker), can't see, can't find
+  //   PT: não vejo, não tem, não encontro
+  //   CA: no veig, no hi ha
+  //   FR: pas de ..., je ne vois pas
+  const negativeMarker = /no\s+(?:veo|hay|encuentro|aparece|veig|hi\s+ha)|non\s+(?:vedo|trovo)|non\s+c'[eè]|n[aã]o\s+(?:vejo|tem|encontro)|pas\s+de|je\s+ne\s+(?:vois|trouve)\s+pas|can'?t\s+(?:see|find)\s+(?:the\s+)?/i
+  // Detergent product words (6 langs):
+  const detergentWord = /jab[oó]n|detergente?|suavizante|suavitzant|sapone|detersivo|ammorbidente?|soap|detergent|softener|sab[aã]o|sab[oó]|savon|lessive|assouplissant/i
+  if (negativeMarker.test(trimmed) && detergentWord.test(trimmed)) return true
+  // EN shorthand "no soap" / "no detergent" / "no softener" (marker+word merged):
+  if (/\bno\s+(?:soap|detergent|softener)\b/i.test(trimmed)) return true
+
+  // Cluster B — generic enquiry: "¿hay jabón? / do I need detergent?"
+  // ES: ¿hay jabón?, ¿traigo detergente?, ¿viene incluido el jabón?
+  // IT: c'è il sapone?, devo portare il detersivo?, è incluso?
+  // EN: is there soap?, do I need to bring detergent?, is detergent included?
+  // PT: tem sabão?, preciso de trazer detergente?
+  // CA: hi ha sabó?, cal portar detergent?
+  // FR: y a-t-il du savon?, je dois apporter du savon?
+  if (/(hay\s+(?:jab[oó]n|detergente?|suavizante)|traigo\s+(?:jab[oó]n|detergente?|suavizante)|(?:jab[oó]n|detergente?|suavizante)\s+(?:incluido|viene|hay)|c'[eè]\s+(?:il\s+)?(?:sapone|detersivo|ammorbidente?)|(?:devo|bisogna|occorre)\s+portare\s+(?:il\s+)?(?:sapone|detersivo|ammorbidente?)|(?:sapone|detersivo|ammorbidente?)\s+(?:inclus[oa]|[eè]\s+compres[oa])|is\s+there\s+(?:soap|detergent|softener)|(?:soap|detergent|softener)\s+included|do\s+I\s+(?:need\s+to\s+bring|have\s+to\s+bring)\s+(?:soap|detergent)|tem\s+sab[aã]o|preciso\s+(?:de\s+)?trazer\s+(?:sab[aã]o|detergente?)|sab[aã]o\s+incluído|hi\s+ha\s+sab[oó]|cal\s+(?:portar|dur)\s+detergent|y\s+a[-\s]t[-\s]il\s+(?:du\s+)?(?:savon|lessive)|(?:apporter|amener)\s+(?:du\s+)?(?:savon|lessive|d[eé]tergent))/i.test(trimmed)) return true
+
+  // Cluster C — bare mention of the product in a question context
+  // Catches: "el jabón?" / "jabón?" / "¿jabón?" / "c'è sapone?" / "sapone?" / "soap?"
+  if (/^\s*[¿¡]?\s*(?:el?\s+|la\s+|lo\s+|il\s+|o\s+|les?\s+)?(?:jab[oó]n|detergente?|suavizante|sapone|detersivo|ammorbidente?|soap|detergent|softener|sab[aã]o|sab[oó]|savon|lessive|assouplissant)[?!.]*\s*$/.test(trimmed)) return true
+
+  return false
+}
+
+// ── How-to-use FAQ detector (Caso 35) ────────────────────────────────────────
+//
+// Fires when the customer asks HOW to use the laundromat / washing machine.
+// Covers 3 semantic clusters across 6 languages:
+//
+//   A — explicit "how do I use / how does it work"
+//       ES: cómo se usa, cómo funciona, cómo se lava, cómo lavarse la ropa
+//       IT: come si usa, come funziona, come si lava
+//       EN: how do I use, how does it work, how do I wash
+//       PT: como se usa, como funciona, como lavar
+//       CA: com s'usa, com funciona, com es renta
+//       FR: comment utiliser, comment ça marche, comment laver
+//
+//   B — "what do I do / what are the steps"
+//       ES: qué hago, qué pasos, qué tengo que hacer, instrucciones para lavar
+//       IT: cosa faccio, quali passi, cosa devo fare, istruzioni per lavare
+//       EN: what do I do, what are the steps, instructions for washing
+//       PT: o que faço, quais os passos, instruções para lavar
+//       CA: què faig, quins passos, instruccions per rentar
+//       FR: que dois-je faire, quelles étapes, mode d'emploi
+//
+//   C — first-timer / never used before
+//       ES: es mi primera vez, nunca he usado, no sé cómo usar
+//       IT: è la prima volta, non ho mai usato, non so come usare
+//       EN: first time, never used, don't know how to use
+//       PT: é a primeira vez, nunca usei, não sei como usar
+//       CA: és la primera vegada, mai he usat, no sé com usar
+//       FR: première fois, jamais utilisé, ne sais pas comment utiliser
+//
+// Iron rule #6 (tracked exemption): regex-based topic classifier, same
+// pattern as detectDetergentFaqIntent / detectHoursIntent / detectPriceIntent.
+//
+// EXCLUDED: troubleshooting contexts ("cómo funciona" the machine WITH a
+// display code already in the message) — those belong to display flows.
+// If extractDisplayState(message) returns a token, this detector stays silent.
+export function detectHowToUseIntent(message: string): boolean {
+  const trimmed = message.toLowerCase().trim()
+  if (!trimmed) return false
+
+  // Cluster A — how to use / how it works
+  if (/(c[oó]mo\s+(?:se\s+)?(?:usa|funciona|lava|lavarse|lavar\s+la\s+ropa|utiliza)|come\s+(?:si\s+)?(?:usa|funziona|si\s+lava|lavare)|how\s+(?:do\s+i\s+|does\s+it\s+|to\s+)?(?:use|work|wash)|como\s+(?:se\s+)?(?:usa|funciona|lavar)|com\s+(?:s'usa|funciona|es\s+renta|es\s+lava|rentar)|comment\s+(?:utiliser|[çc]a\s+march|fonctionne|laver|on\s+fait))/i.test(trimmed)) return true
+
+  // Cluster B — what do I do / steps / instructions
+  if (/(qu[eé]\s+(?:hago|pasos|tengo\s+que\s+hacer|debo\s+hacer|se\s+hace)|instrucciones\s+(?:para\s+lavar|de\s+uso|del?\s+lavado)|cosa\s+(?:faccio|devo\s+fare)|quali\s+(?:passi|sono\s+i\s+passi)|istruzioni\s+per\s+(?:lavare|usare)|what\s+(?:do\s+i\s+do|are\s+the\s+steps|should\s+i\s+do)|instructions?\s+(?:for\s+washing|to\s+use|to\s+wash)|steps?\s+(?:to\s+use|to\s+wash|for\s+using)|o\s+que\s+(?:fa[çc]o|devo\s+fazer)|quais\s+(?:os\s+passos|s[ãa]o\s+os\s+passos)|instru[çc][õo]es\s+para\s+(?:lavar|usar)|qu[eè]\s+(?:faig|he\s+de\s+fer)|quins\s+passos|instruccions\s+per\s+(?:rentar|usar)|que\s+dois[-\s]je\s+faire|quelles?\s+[eé]tapes|mode\s+d['']emploi|comment\s+(?:je\s+dois\s+proc[eé]der|utiliser\s+la))/i.test(trimmed)) return true
+
+  // Cluster C — first time / never used / don't know how
+  if (/(es\s+mi\s+primera\s+vez|nunca\s+he\s+(?:usado|lavado|venido)|no\s+s[eé]\s+(?:c[oó]mo\s+)?(?:usar|funciona|lavarlo?|usarlo?)|[eè]\s+la\s+(?:prima|mia\s+prima)\s+volta|non\s+ho\s+mai\s+(?:usato|lavato)|non\s+so\s+come\s+(?:usare|funziona)|(?:it'?s\s+my\s+)?first\s+time|never\s+used|don'?t\s+know\s+how\s+to\s+(?:use|wash)|[eé]\s+a\s+primeira\s+vez|nunca\s+(?:usei|lavei)|n[ãa]o\s+sei\s+como\s+(?:usar|funciona)|[eé]s\s+la\s+primera\s+vegada|mai\s+he\s+(?:usat|rentat)|no\s+s[eé]\s+com\s+(?:usar|funciona)|(?:c'est\s+la\s+)?premi[eè]re\s+fois|jamais\s+utilis[eé]|(?:je\s+)?ne\s+sais\s+pas\s+comment\s+(?:utiliser|[çc]a\s+marche))/i.test(trimmed)) return true
+
+  return false
+}
+
 // ── Topic-switch detection during pending escalation ─────────────────────────
 //
 // When the bot has already escalated (operatorRequested + customerNameRequested

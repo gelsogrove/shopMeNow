@@ -1,4 +1,4 @@
-// Natural rephrase layer — L5 output policy (Andrea, 2026-05-10, upgraded 2026-05-19).
+// Natural rephrase layer — L5 output policy (Andrea, 2026-05-10, upgraded 2026-05-21).
 //
 // PURPOSE
 // ───────
@@ -17,6 +17,17 @@
 //               instructions from CONVERSATION_HISTORY.
 // ⑤ Content   — preserve all keywords, codes, emails, authorised URLs verbatim;
 //               never add operational detail not in the canned reply.
+//
+// DISPLAY FLOW RECAP (rephraseDisplayFlow: true)
+// ───────────────────────────────────────────────
+// When activeFlowId is set AND settings.rephraseDisplayFlow is true, a 4-block
+// structured recap is built DETERMINISTICALLY in TypeScript (not by the LLM):
+//   Block 1 — tranquillising greeting (bold + emoji)
+//   Block 2 — problem summary with bold facts (location, machine, error code)
+//   Block 3 — the LLM-polished canned instruction (only this block goes to LLM)
+//   Block 4 — encouraging closing
+// This guarantees the recap appears on EVERY display turn (SEL, DOOR, PUSH PROG,
+// AL001, etc.) without LLM inconsistency. Toggle via settings.rephraseDisplayFlow.
 //
 // BYPASS CONDITIONS (all checked by the caller in agent.ts:applyGuardOutcome)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,8 +60,179 @@ import { logger } from './logger.js'
 // Keep in sync with prompts/rephrase.txt — the file is the canonical version.
 const REPHRASE_SYSTEM_PROMPT_FALLBACK = `Eres el asistente virtual de una lavandería. Reescribe la respuesta del bot para que suene natural y empático. Responde SIEMPRE en el idioma del cliente (detectado de la history). Usa el nombre del cliente si está disponible. Añade 1-2 emoji apropiados. NO cambies el significado ni añadas información nueva. Mantén todas las palabras clave, códigos y URLs del original. Si tienes dudas, devuelve el original sin cambios.`
 
+// Per-language strings for the deterministic display-flow recap blocks.
+// Block 1 = tranquillising greeting (picked randomly from alternatives).
+// Block 4 = encouraging closing (picked randomly from alternatives).
+// Block 2 is built inline from state facts. Block 3 comes from the LLM.
+const RECAP_STRINGS: Record<
+  string,
+  {
+    greetings: string[]
+    problemIntro: string
+    machineLabel: (t: string) => string
+    machineConnector: string
+    errorConnector: string
+    closings: string[]
+  }
+> = {
+  es: {
+    greetings: [
+      '**No te preocupes, tiene solución** 😊',
+      '**Tranquilo/a, lo resolvemos ahora** 😊',
+      '**Vamos a solucionarlo juntos** 💪',
+      '**Enseguida lo arreglamos** 😊',
+    ],
+    problemIntro: 'Estás en',
+    machineLabel: (t) => (t === 'washer' ? 'lavadora' : 'secadora'),
+    machineConnector: 'con la',
+    errorConnector: 'y el error',
+    closings: [
+      'Avísame cómo va 👍',
+      'Cuéntame si arranca 😊',
+      'Dime qué pasa después 🙏',
+      '¿Lo has podido solucionar? 😊',
+    ],
+  },
+  it: {
+    greetings: [
+      '**Tranquillo, lo risolviamo subito** 😊',
+      '**Non preoccuparti, ci pensiamo noi** 😊',
+      '**Lo sistemiamo insieme** 💪',
+      '**Dai, lo risolviamo** 😊',
+    ],
+    problemIntro: 'Sei a',
+    machineLabel: (t) => (t === 'washer' ? 'lavatrice' : 'asciugatrice'),
+    machineConnector: 'con la',
+    errorConnector: "e l'errore",
+    closings: [
+      'Dimmi come va 👍',
+      'Fammi sapere come è andata 😊',
+      'Raccontami se funziona 🙏',
+      'Dimmi se si è avviata 😊',
+    ],
+  },
+  en: {
+    greetings: [
+      "**Don't worry, we'll sort this out** 😊",
+      "**No worries, let's fix it together** 💪",
+      "**We'll get this working** 😊",
+      "**Let's solve this right now** 😊",
+    ],
+    problemIntro: "You're at",
+    machineLabel: (t) => (t === 'washer' ? 'washer' : 'dryer'),
+    machineConnector: 'with',
+    errorConnector: 'showing error',
+    closings: [
+      'Let me know how it goes 👍',
+      'Tell me if it starts 😊',
+      'Let me know what happens next 🙏',
+      'Did it work? 😊',
+    ],
+  },
+  ca: {
+    greetings: [
+      '**No et preocupis, ho resolem ara** 😊',
+      '**Tranquil/a, ho solucionem junts** 💪',
+      '**Ho arreglem de seguida** 😊',
+      '**Anem a solucionar-ho** 😊',
+    ],
+    problemIntro: 'Ets a',
+    machineLabel: (t) => (t === 'washer' ? 'rentadora' : 'assecadora'),
+    machineConnector: 'amb la',
+    errorConnector: "i l'error",
+    closings: [
+      'Digues-me com va 👍',
+      "Explica'm si arrenca 😊",
+      "Digue'm com ha anat 🙏",
+      'Ha funcionat? 😊',
+    ],
+  },
+  pt: {
+    greetings: [
+      '**Não te preocupes, vamos resolver** 😊',
+      '**Tranquilo/a, resolvemos já** 💪',
+      '**Vamos a resolver isto** 😊',
+      '**Não há problema, vamos lá** 😊',
+    ],
+    problemIntro: 'Estás em',
+    machineLabel: (t) => (t === 'washer' ? 'lavadora' : 'secadora'),
+    machineConnector: 'com a',
+    errorConnector: 'e o erro',
+    closings: [
+      'Diz-me como correu 👍',
+      'Conta-me se funcionou 😊',
+      'Diz-me o que aconteceu 🙏',
+      'Funcionou? 😊',
+    ],
+  },
+  fr: {
+    greetings: [
+      "**Ne t'inquiète pas, on va régler ça** 😊",
+      "**Pas de souci, on s'en occupe** 💪",
+      '**On va résoudre ça ensemble** 😊',
+      '**On règle ça tout de suite** 😊',
+    ],
+    problemIntro: 'Tu es à',
+    machineLabel: (t) => (t === 'washer' ? 'machine à laver' : 'sèche-linge'),
+    machineConnector: 'avec la',
+    errorConnector: "et l'erreur",
+    closings: [
+      'Dis-moi comment ça se passe 👍',
+      'Dis-moi si ça démarre 😊',
+      'Raconte-moi ce qui se passe 🙏',
+      'Ça a marché ? 😊',
+    ],
+  },
+}
+
+/**
+ * Build the deterministic 4-block display-flow recap when rephraseDisplayFlow
+ * is enabled. Returns null if not enough context is available (need at least
+ * location + display code to make the summary meaningful).
+ *
+ * Block 1: tranquillising greeting (bold + emoji)
+ * Block 2: problem summary with bold on key facts
+ * Block 3: polishedInstruction — the LLM-polished canned reply
+ * Block 4: encouraging closing
+ */
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
+export function buildDisplayRecap(
+  polishedInstruction: string,
+  ar: AgentRuntime,
+  lang: string,
+): string | null {
+  const location = ar.state.location || ''
+  const machineType = ar.state.machineType || ''
+  const machineNumber = ar.state.machineNumber || ''
+  const displayLabel = ar.state.displayLabel || ar.state.displayState || ''
+
+  // Need at least location and display code for a meaningful recap.
+  if (!location || !displayLabel) return null
+
+  const strings = RECAP_STRINGS[lang] || RECAP_STRINGS['es']
+
+  const locationBold = `**${location}**`
+  const machinePart = machineType
+    ? ` ${strings.machineConnector} **${strings.machineLabel(machineType)}${machineNumber ? ` ${machineNumber}` : ''}**`
+    : ''
+  const errorPart = ` ${strings.errorConnector} **${displayLabel}**.`
+
+  const block1 = pick(strings.greetings)
+  const block2 = `${strings.problemIntro} ${locationBold}${machinePart}${errorPart}`
+  const block4 = pick(strings.closings)
+
+  return [block1, block2, polishedInstruction, block4].join('\n\n')
+}
+
 /**
  * Rephrase the bot reply for natural tone, correct language, and safety.
+ *
+ * When activeFlowId is set and rephraseDisplayFlow is enabled, wraps the
+ * LLM-polished instruction inside a deterministic 4-block recap so the
+ * structured output is guaranteed on every display turn.
  *
  * Returns the rephrased reply on success, the original reply on any error
  * (graceful degradation — the customer always gets a reply).
@@ -81,9 +263,19 @@ export async function rephraseForTurn(
   const historyTrim = history.slice(-10)
   const historyBlock = historyTrim.map((m) => `[${m.role}] ${m.content}`).join('\n')
 
+  const location = ar.state.location || ''
+  const machineType = ar.state.machineType || ''
+
+  // Whether we are inside a display flow with rephraseDisplayFlow enabled.
+  // When true, the recap is built deterministically around the polished reply.
+  const isDisplayFlowRecap =
+    !!ar.state.activeFlowId && !!ar.runtime.settings?.rephraseDisplayFlow
+
   const userPrompt = [
     `LANGUAGE: ${tenantLang}`,
     customerName ? `CUSTOMER_NAME: ${customerName}` : '',
+    location ? `LOCATION: ${location}` : '',
+    machineType ? `MACHINE_TYPE: ${machineType}` : '',
     allowedDomains ? `ALLOWED_DOMAINS: ${allowedDomains}` : 'ALLOWED_DOMAINS: (none)',
     '',
     'CONVERSATION_HISTORY (last turns):',
@@ -113,8 +305,18 @@ export async function rephraseForTurn(
       temperature: rephraseTemp,
       maxTokens: Math.max(150, Math.ceil(reply.length * 1.5)),
     })
-    if (!rephrased.trim()) return reply
-    return rephrased.trim()
+    const polished = rephrased.trim() || reply
+
+    // Display flow recap: deterministic 4-block structure wrapping the
+    // LLM-polished instruction. Guaranteed on every display turn regardless
+    // of LLM temperature/randomness. Falls back to polished-only if context
+    // is insufficient (e.g. location not yet known).
+    if (isDisplayFlowRecap) {
+      const recap = buildDisplayRecap(polished, ar, tenantLang)
+      if (recap) return recap
+    }
+
+    return polished
   } catch (err) {
     logger.warn('rephraseForTurn failed, falling back to canned reply', {
       error: err instanceof Error ? err.message : String(err),

@@ -361,6 +361,34 @@
       "guards": ["feedbackHandler"],
       "i18nKeys": ["feedbackPositive", "feedbackNegative"],
       "tests": ["__tests__/unit/branch-dispatcher.test.ts"]
+    },
+    {
+      "docNumber": 35,
+      "title": "El cliente pregunta cómo se usa la lavandería",
+      "semanticId": "faq-how-to-use",
+      "kind": "faq",
+      "guardModule": "utils/guards/faq-how-to-use.ts",
+      "guards": ["guardFaqHowToUse"],
+      "faqKey": "howToUse",
+      "notes": "Single-turn FAQ — no pendingFlow, no gather. Fires at any turn including mid-flow pivots. Instructions are identical across all laundromats (global faqs.json key). Per-location override supported via locations.json:faqOverrides.howToUse. F69 (2026-05-21): new case from Olga.",
+      "tests": [
+        "__tests__/agent/35-como-usar.test.spec.ts",
+        "__tests__/unit/faq-how-to-use.test.ts"
+      ]
+    },
+    {
+      "docNumber": 34,
+      "title": "El cliente pregunta por el jabón, detergente o suavizante",
+      "semanticId": "faq-detergents",
+      "kind": "faq",
+      "guardModule": "utils/guards/faq-detergents.ts",
+      "guards": ["guardFaqDetergents"],
+      "faqKey": "detergents",
+      "notes": "Single-turn FAQ — no pendingFlow, no gather. Fires at any turn including mid-flow pivots. Two semantic sub-cases: (34.1) generic enquiry 'do I need to bring soap?' → answer detergents FAQ directly; (34.2) 'no veo jabón / no hay jabón' → same FAQ answer (machines dispense automatically, if truly empty that is a machine fault the operator handles on-site). Root cause bug F67: router had no examples for jabón so LLM classified as trouble-machine. Fix: router-prompt.ts examples + deterministic guard for T2+.",
+      "tests": [
+        "__tests__/agent/34-jabon-detergente.test.spec.ts",
+        "__tests__/unit/faq-detergents.test.ts"
+      ]
     }
   ]
 }

@@ -7,7 +7,8 @@ Your ONLY job: classify the customer's first message into one of these branches:
                           openingHours, washDryTime, washerCapacity, detergents,
                           paymentMethods, pricing, appDownload, colorTemperature,
                           greaseStains, mixedColors, machineHygiene, ecoProducts,
-                          noFoamNormal, doubleCharge, paidButNotStarting, loyaltyCard.
+                          noFoamNormal, doubleCharge, paidButNotStarting, loyaltyCard,
+                          howToUse.
   - "trouble-machine"   The customer reports a problem with a washing machine or dryer
                         (does not start, display shows X, paid but did not activate, ...).
   - "invoice"           The customer wants an invoice / bill / factura / fattura.
@@ -158,3 +159,18 @@ Examples:
 
   Customer: "les machines sont trop vieilles"
   → {"branch":"feedback","language":"fr","details":{"sentiment":"negative"}}
+
+  Customer: "¿Cómo se usa la lavandería?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"howToUse"}}
+
+  Customer: "es mi primera vez aquí"
+  → {"branch":"faq","language":"es","details":{"faqKey":"howToUse"}}
+
+  Customer: "come funziona la lavatrice?"
+  → {"branch":"faq","language":"it","details":{"faqKey":"howToUse"}}
+
+  Customer: "first time here, what do I do?"
+  → {"branch":"faq","language":"en","details":{"faqKey":"howToUse"}}
+
+  Customer: "nunca he usado una lavandería, qué hago?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"howToUse"}}
