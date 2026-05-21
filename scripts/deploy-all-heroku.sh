@@ -2,11 +2,10 @@
 
 # ============================================================
 # deploy-all-heroku.sh
-# Deploys the monorepo to all 3 Heroku apps in parallel.
+# Deploys the monorepo to Heroku apps in parallel.
 #
 # Apps:
 #   echatbot-app        → backend + frontend  (remote: heroku-app)
-#   echatbot-scheduler  → scheduler           (remote: heroku-scheduler)
 #   echatbot-backoffice → backoffice          (remote: heroku-backoffice)
 #
 # Usage:
@@ -27,8 +26,18 @@ if [ "$BRANCH" != "main" ]; then
 fi
 
 echo ""
-echo "🚀 Deploying all Heroku apps from branch: main"
+echo "🚀 Deploying Heroku apps from branch: main"
 echo "============================================================"
+
+# PRE-DEPLOY: Build check — fail fast before pushing broken code
+echo ""
+echo "🔨 Running build check..."
+if ! npm run build; then
+  echo ""
+  echo "❌ BUILD FAILED — deploy aborted. Fix the build before deploying."
+  exit 1
+fi
+echo "✅ Build succeeded"
 
 # PRE-DEPLOY: Generate Prisma client locally
 echo ""
@@ -54,15 +63,11 @@ heroku_push() {
   return 0
 }
 
-# Push to all 3 remotes in parallel
+# Push to both remotes in parallel
 echo ""
 echo "📦 Pushing to echatbot-app (backend + frontend)..."
 heroku_push heroku-app &
 PID_APP=$!
-
-echo "⚙️  Pushing to echatbot-scheduler..."
-heroku_push heroku-scheduler &
-PID_SCHEDULER=$!
 
 echo "🖥️  Pushing to echatbot-backoffice..."
 heroku_push heroku-backoffice &
@@ -77,14 +82,6 @@ if [ $? -ne 0 ]; then
   FAILED=1
 else
   echo "✅ echatbot-app deployed"
-fi
-
-wait $PID_SCHEDULER
-if [ $? -ne 0 ]; then
-  echo "❌ echatbot-scheduler deploy FAILED"
-  FAILED=1
-else
-  echo "✅ echatbot-scheduler deployed"
 fi
 
 wait $PID_BACKOFFICE
@@ -102,24 +99,16 @@ if [ $FAILED -eq 0 ]; then
   echo "============================================================"
   echo "🔄 Running post-deploy tasks on Heroku..."
   echo "============================================================"
-  
-  # POST-DEPLOY: Run Prisma migrate and generate on all apps
+
+  # POST-DEPLOY: Run Prisma migrate and generate on echatbot-app
   echo ""
   echo "📊 Running Prisma migrate on echatbot-app..."
   heroku run -a echatbot-app "cd packages/database && npx prisma migrate deploy" || echo "⚠️  Migrate failed (may be already applied)"
-  
+
   echo ""
   echo "🔧 Generating Prisma client on echatbot-app..."
   heroku run -a echatbot-app "cd packages/database && npx prisma generate" || echo "⚠️  Generate failed"
-  
-  echo ""
-  echo "📊 Running Prisma migrate on echatbot-scheduler..."
-  heroku run -a echatbot-scheduler "cd packages/database && npx prisma migrate deploy" || echo "⚠️  Migrate failed (may be already applied)"
-  
-  echo ""
-  echo "🔧 Generating Prisma client on echatbot-scheduler..."
-  heroku run -a echatbot-scheduler "cd packages/database && npx prisma generate" || echo "⚠️  Generate failed"
-  
+
   echo ""
   echo "✅ Post-deploy tasks completed!"
   echo ""
