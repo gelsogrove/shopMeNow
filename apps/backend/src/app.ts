@@ -255,11 +255,13 @@ app.use(
               objectSrc: ["'none'"],
               workerSrc: ["'self'", "blob:"],
               frameSrc: [
+                "'self'",
                 "https://accounts.google.com",
                 "https://accounts.google.com/gsi/",
                 "https://www.google.com",
               ],
               childSrc: [
+                "'self'",
                 "https://accounts.google.com",
                 "https://accounts.google.com/gsi/",
                 "https://www.google.com",
