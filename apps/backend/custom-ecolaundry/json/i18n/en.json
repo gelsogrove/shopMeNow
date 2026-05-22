@@ -74,6 +74,8 @@
   "refundAskData": "We'll review it with you. To process it, I need the last 4 digits of the card, a screenshot of the payment, and a brief summary.",
   "refundEscalateNoPromise": "I understand. We will pass the case for review to apply the most appropriate solution.",
   "insistLocationFollowUp": "To help you, I first need to know exactly which laundry you are at.",
+  "landmarkEnumerationAsk": "Look around you: do you see any of these nearby? {landmarks}",
+  "landmarkAck": "Got it, you're at **{location}** ({address}).",
   "pricingDeflect": "I need to check that before confirming the amount.",
   "openingHoursDefault": "General opening hours are 8:00 to 22:00 every day of the year.",
   "hoursAsk": "Which town or laundry are you at?",
@@ -86,6 +88,7 @@
   "operatorHandoffFinal": "A human operator will take over your case. Please wait a moment while they review the situation. The chatbot will be deactivated.",
   "refundFormFinal": "Thanks, {name}! 🙏 We have received all the information needed for your case. Here is the refund form, please complete it when you can: {refundFormUrl}\n\nWe will review your situation. If you need anything else, I'm here to help. 💚",
   "flowResumePrompt": "Shall we continue with the laundry issue?",
+  "flowEngineEscalate": "A human operator will take care of your case as soon as possible. 🙏 May I have your name, please?",
 
   "_section_washer_flow": "Prompts for washer_hs60xx.json machine flow nodes",
   "washerStep0Confirm": "No worries, let's sort it out. Have you already completed the payment at the payment unit?",

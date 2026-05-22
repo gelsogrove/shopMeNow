@@ -77,6 +77,8 @@
   "refundAskData": "Ho revisarem amb tu. Per tramitar-ho, necessito els últims 4 dígits de la targeta, una captura del pagament i un breu resum.",
   "refundEscalateNoPromise": "Entenc el que em dius. Passarem el cas a revisió per aplicar la solució més adequada.",
   "insistLocationFollowUp": "Per poder ajudar-te, necessito saber primer a quina bugaderia ets exactament.",
+  "landmarkEnumerationAsk": "Mira al teu voltant: veus algun d'aquests comerços a prop? {landmarks}",
+  "landmarkAck": "Entès, ets a **{location}** ({address}).",
   "pricingDeflect": "Ho he de revisar abans de confirmar-te aquest import.",
   "openingHoursDefault": "L'horari general d'atenció al públic és de 8:00 a 22:00 cada dia de l'any.",
   "hoursAsk": "A quin poble o bugaderia ets?",
@@ -87,6 +89,7 @@
   "unknownLocationList": "No reconec aquesta ubicació. Les nostres bugaderies són: {list}. A quina d'elles estàs?",
   "defaultHelp": "Digue'm el següent detall útil i t'ajudaré pas a pas.",
   "flowResumePrompt": "Continuem amb el problema de la bugaderia?",
+  "flowEngineEscalate": "Un operador humà s'encarregarà del teu cas el més aviat possible. 🙏 Com et dius, si us plau?",
 
   "_section_washer_flow": "Prompts for washer_hs60xx.json machine flow nodes",
   "washerStep0Confirm": "Tranquil, ho resolem. Ja has completat el pagament a la central?",

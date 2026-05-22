@@ -23,6 +23,7 @@ import {
   detectTopicSwitchDuringEscalation,
 } from './intent.js'
 import { resolveKnownLocation, resolveKnownLocationFuzzy, parseExplicitPaymentSignal } from './message-parsing.js'
+import { resolveLocationByLandmarks } from './locations.js'
 import { RECOVERABLE_DISPLAYS } from './guards/helpers.js'
 import { resetIncidentDetails, resetMachineFacts } from './state.js'
 import { pivotToNoChangeAsk, resetPostEscalationFlags } from './state-transitions.js'
@@ -356,6 +357,30 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
         state.location = inlineKnown
       }
     }
+
+    // F79 — Landmark-based fallback. Customer may identify the laundromat by
+    // a nearby reference point ("estoy cerca del Mercadona", "vicino al
+    // Carrefour", "junto al Aldi") instead of typing a pueblo name. Data
+    // lives in json/locations.json:metadata.landmarks — adding a new
+    // landmark is a JSON edit, no code change. Only fires when the previous
+    // resolvers didn't capture anything AND the landmark unambiguously
+    // identifies a single location. Ambiguous matches (e.g. "Carrefour" →
+    // Pineda + L'Escala + Platja d'Aro) leave state.location empty so
+    // guardForceLocation can ask the customer to disambiguate by pueblo.
+    if (!state.location) {
+      const landmarkMatch = resolveLocationByLandmarks(trimmed, ar.runtime.locations)
+      if (landmarkMatch.canonical) {
+        state.location = landmarkMatch.canonical
+        // F79 — Signal the L5 output layer to prepend an acknowledgment so the
+        // customer knows the deduction worked ("Entendido, estás en **Goya**
+        // (C/ Francisco de Goya 117)..."). One-shot turn-local flag —
+        // applyGuardOutcome consumes and clears it before returning.
+        // Direct canonical mentions (e.g. customer types "Goya") capture via
+        // resolveKnownLocation upstream and do NOT trigger this signal, so
+        // the bot stays terse when it has nothing surprising to acknowledge.
+        state.locationAckPending = landmarkMatch.canonical
+      }
+    }
   }
 
   // Mataró street — when the bot has just asked the street (locationStreetRequested),
@@ -439,14 +464,29 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
   }
 
   const newDisplay = extractDisplayState(trimmed)
-  // Guard: only capture a display code once machineType is known.
-  // Without this guard, a customer who types "AL001" while answering the
-  // location question (gather T2) would prematurely set displayState before
-  // the bot has asked "what appears on screen?" — the flow then fires at T6
-  // (machine-number answer) skipping the display-question entirely.
-  // DISPLAY-CHANGE (update to a different code mid-flow) is always allowed
-  // regardless of machineType — the customer is reporting a real state change.
-  if (newDisplay && newDisplay !== state.displayState && (state.machineType || state.displayState)) {
+  // F66 + MIX 1/5 widen — only capture a display code when there is at least
+  // one OTHER context fact that proves this is a troubleshooting turn, not a
+  // bare answer to a location ask. Acceptable signals (any one suffices):
+  //   • state.machineType set (FR demo F66 — prevents "AL001" answered to
+  //     location ask from being captured prematurely)
+  //   • state.displayState set (DISPLAY-CHANGE rule: customer updating the code)
+  //   • state.pendingFlow non-empty (MIX 1: topic-switch SEL mid-discount-code
+  //     flow — pendingFlow is still set when this branch runs)
+  //   • trimmed mentions a machine type explicitly (MIX 5: T1 "dryer + PUSH PROG")
+  //   • trimmed has a display-report verb pattern ("me sale X", "ahora me da X",
+  //     "appears X", "ora mi da X") — distinguishes a troubleshooting sentence
+  //     from a bare-token answer to a location ask (MIX 5: "me sale push prog").
+  // The bare "AL001" answer to a location-ask trips none of these.
+  const messageMentionsType = !!normalizeMachineType(trimmed)
+  const REPORT_VERB_RE = /\b(me\s+sale|me\s+aparece|me\s+da|ahora\s+me\s+sale|aparece|mi\s+da|ora\s+mi\s+da|ora\s+me\s+sale|now\s+(?:showing|shows|displays)|shows|i\s+see|sale\s+(?:el|la|en\s+la\s+pantalla))\b/i
+  const messageReportsDisplay = REPORT_VERB_RE.test(trimmed)
+  const canCaptureDisplay =
+    !!state.machineType ||
+    !!state.displayState ||
+    !!state.pendingFlow ||
+    messageMentionsType ||
+    messageReportsDisplay
+  if (newDisplay && newDisplay !== state.displayState && canCaptureDisplay) {
     // Preserve the customer-facing label (e.g. "PUSH PROG") for the operator
     // handover summary. Without this the operator reads the canonical token
     // ("PUSH") and loses the customer's exact wording.

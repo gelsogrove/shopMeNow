@@ -74,6 +74,8 @@
   "refundAskData": "Lo verifichiamo insieme. Per gestirlo, ho bisogno delle ultime 4 cifre della carta, una schermata del pagamento e un breve riassunto.",
   "refundEscalateNoPromise": "Capisco quello che mi dici. Passeremo il caso in revisione per trovare la soluzione più adatta.",
   "insistLocationFollowUp": "Per poterti aiutare, devo sapere prima in quale lavanderia ti trovi esattamente.",
+  "landmarkEnumerationAsk": "Guarda intorno: vedi qualcuno di questi negozi vicino? {landmarks}",
+  "landmarkAck": "Capito, sei alla lavanderia di **{location}** ({address}).",
   "pricingDeflect": "Devo verificarlo prima di confermarti quell'importo.",
   "openingHoursDefault": "L'orario generale di apertura al pubblico è dalle 8:00 alle 22:00 ogni giorno dell'anno.",
   "hoursAsk": "In quale lavanderia o paese ti trovi?",
@@ -86,6 +88,7 @@
   "operatorHandoffFinal": "Un operatore umano prenderà in carico il tuo caso. Attendi un momento mentre rivedono la situazione. Il chatbot sarà disattivato.",
   "refundFormFinal": "Grazie, {name}! 🙏 Abbiamo ricevuto tutte le informazioni necessarie per il tuo caso. Ecco il modulo di rimborso, compilalo quando puoi: {refundFormUrl}\n\nEsamineremo la tua situazione. Se ti serve altro, sono qui per aiutarti. 💚",
   "flowResumePrompt": "Riprendiamo con il problema della lavanderia?",
+  "flowEngineEscalate": "Un operatore umano si occuperà del tuo caso al più presto. 🙏 Come ti chiami, per favore?",
 
   "_section_washer_flow": "Prompts for washer_hs60xx.json machine flow nodes",
   "washerStep0Confirm": "Tranquillo, lo risolviamo insieme. Hai già completato il pagamento alla centrale?",

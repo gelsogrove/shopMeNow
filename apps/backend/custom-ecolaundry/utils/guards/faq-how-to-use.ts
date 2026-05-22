@@ -22,11 +22,14 @@
 
 import { getFaqs } from '../runtime.js'
 import type { Guard } from '../../models/index.js'
-import { detectHowToUseIntent } from '../intent.js'
+import { detectHowToUseIntent, detectDiscountCodeIntent } from '../intent.js'
 
 export const guardFaqHowToUse: Guard = (ar, userMessage) => {
   if (ar.state.operatorRequested || ar.state.customerNameRequested) return null
   if (!detectHowToUseIntent(userMessage)) return null
+  // Yield to discount-code flow: "tengo un código y no sé cómo usarlo"
+  // matches howToUse ("cómo usarlo") but is really a discount-code trigger.
+  if (detectDiscountCodeIntent(userMessage)) return null
 
   const answer = getFaqs()['howToUse']
   if (!answer) return null

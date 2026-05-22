@@ -8,6 +8,7 @@
 - [Caso 2 — DOOR](#caso-2--door)
   - [2.1 — Happy Path](#21--happy-path)
   - [2.2 — Escalación: puerta bloqueada tras repetir](#22--escalación-puerta-bloqueada-tras-repetir)
+  - [2.3 — Recap display flow: Phase A / Phase B / cadence N (F74 + F75)](#23--recap-display-flow-phase-a--phase-b--cadence-n-f74--f75)
 - [Caso 3 — SEL](#caso-3--sel)
   - [3.1 — Happy Path](#31--happy-path)
   - [3.2 — Escalación: SEL persiste](#32--escalación-sel-persiste)
@@ -188,6 +189,146 @@ variante — el approach de anti-pattern lists no escala.
   textuales son lotería. La secuencia F32→F37→F38→F39→F41→F56 demuestra el
   fracaso del approach textual.
 
+**F79 — Resolución de location vía landmarks (data-driven L3).**
+
+El cliente que entra en la conversación no siempre conoce el nombre canónico
+de la lavandería ni el pueblo. A menudo identifica el local por un **punto
+de referencia cercano** ("estoy cerca del Mercadona", "vicino al Carrefour",
+"junto al Aldi"). La fuente de datos es [`docs/csv/locals.csv`](csv/locals.csv)
+columna `Cerca de:`, copiada en `json/locations.json:metadata.landmarks: string[]`
+por cada local. Inventario actual (puede crecer):
+
+| Lavandería | Landmarks |
+|---|---|
+| Goya (Mataró) | Mercadona, Biblioteca |
+| Hortes (Granollers) | Plaça de les Hortes |
+| Pineda (Pineda de Mar) | Carrefour, Aldi, Bingo, Policia |
+| L'Escala | Carrefour |
+| Platja d'Aro | Carrefour |
+| Alemanya (Mataró) | (sin landmarks documentados) |
+
+**Comportamiento del bot:**
+
+1. **Match único** ("estoy cerca del Mercadona") → `state.location = 'Goya'`
+   determinístico + el reply prepende un **ack de confirmación**: *"Entendido,
+   estás en **Goya** (C/ Francisco de Goya 117).\n\n¿Cuál es el número de la
+   máquina?"*. El customer ve EXPLÍCITAMENTE que el bot ha deducido la
+   lavandería desde el landmark — no hay ambigüedad emocional ("¿me ha
+   entendido?"). El siguiente turn entra ya en el gather normal sin volver a
+   preguntar el pueblo.
+2. **Match ambiguo** ("estoy cerca del Carrefour" → 3 candidatos: Pineda /
+   L'Escala / Platja d'Aro) → `state.location` queda vacío, `guardForceLocation`
+   pregunta el pueblo en el siguiente turn (UX disambiguation). NO ack — no
+   hay deducción que confirmar.
+3. **Cliente dice "no lo sé / non lo so / je ne sais pas / …"** →
+   `guardInsistLocation` añade al reply el listado enumerado de landmarks
+   disponibles para que el cliente pueda señalar uno: *"Mira a tu alrededor:
+   ¿ves alguno de estos comercios cerca? Aldi, Biblioteca, Bingo, Carrefour,
+   Mercadona, Plaça de les Hortes, Policia"*. Si el tenant no tiene
+   landmarks configurados, el reply legacy (sin enumeración) se preserva
+   por compatibilidad.
+4. **Cliente escribe el nombre canónico directamente** ("Goya") →
+   `state.location = 'Goya'` capturado por `resolveKnownLocation` upstream del
+   resolver landmark. **NO ack** — el customer ya sabe lo que ha escrito,
+   confirmarlo sería verboso y robótico.
+
+**Reglas arquitectónicas:**
+
+- **Gate `!state.location`**: el resolver fires SOLO en cold-path (location
+  todavía vacía). Mid-flow location switch NO está cubierto por este branch
+  (decisión Andrea 2026-05-22) — los landmarks no provocan flip de location
+  ya capturada para evitar override accidental durante trouble flows
+  activos.
+- **Multi-language by design (Iron rule #8)**: los landmarks son **nombres
+  propios** ("Mercadona", "Carrefour") → match accent+case-insensitive
+  funciona idénticamente en las 6 lenguas soportadas, sin keyword lists
+  por idioma. Single-word landmarks usan `\b` para evitar false positives
+  ("Aldi" no matchea en "aldine"); multi-word ("Plaça de les Hortes") usan
+  substring tras normalización NFD.
+- **Data-driven, no hardcodes**: añadir un landmark a un local → editar
+  [`json/locations.json`](../json/locations.json). Añadir una 7ª
+  lavandería con sus propios landmarks → entry nuevo en el mismo JSON,
+  resolver lo recoge automáticamente. **CERO cambios en TypeScript**.
+- **Helpers L3 puros** en
+  [`utils/locations-landmarks.ts`](../utils/locations-landmarks.ts):
+  `listAllLandmarks`, `findLandmarksInMessage`, `resolveLocationByLandmarks`.
+  Re-exportado como `detectLandmarkMention` desde [`utils/intent.ts`](../utils/intent.ts)
+  para uniformidad con otros detectores intent-like.
+- **Wire-up extractor**: [`utils/agent-extract.ts`](../utils/agent-extract.ts)
+  añade el resolver como **último fallback** dentro del block existente
+  `if (!state.location)`, después de `extractExplicitLocation` / `resolveKnownLocation`
+  / `resolveKnownLocationFuzzy`. La precedencia es: pattern explícito > nombre
+  canónico > fuzzy > landmark. Esto previene matches inesperados (ej. cliente
+  dice "estoy en Goya, cerca del Carrefour" → "Goya" gana primero, el
+  landmark Carrefour no override).
+- **Enumeration UX** en [`utils/guards/location-resolution.ts:guardInsistLocation`](../utils/guards/location-resolution.ts):
+  la enumeración se construye dinámicamente con `listAllLandmarks(runtime.locations)`
+  + i18n template `landmarkEnumerationAsk` (en los 6 catálogos) con
+  placeholder `{landmarks}`. Orden alfabético para output estable y
+  predecible.
+- **Ack de deducción (consume-once turn-local signal)**: cuando el resolver
+  deduce un canonical único, el extractor setea
+  `state.locationAckPending = canonical` (turn-local, never cross-turn).
+  [`agent.ts:applyGuardOutcome`](../agent.ts) (L5) consume el signal DESPUÉS
+  del rephrase, prepend `tt('landmarkAck', lang, {location, address})` al
+  reply y limpia el field. El placeholder `{address}` se lee de
+  `runtime.locations[canonical].calle` (data-driven, zero hardcode). Dirección
+  + nombre canónico en bold se garantizan verbatim porque el prepend ocurre
+  POST-rephrase (el LLM habría flatten el bold y posibilmente accorciado
+  l'indirizzo). Mentions canóniche dirette ("Goya") NON setean ackPending —
+  reply queda terse. Tenant senza i18n key `landmarkAck` configurata: il
+  prepend gracefully skip (`tt` ritorna stringa vuota o template invariato).
+
+**Patrón aplicable a futuros datos operacionales CSV-curated:**
+
+El CSV `locals.csv` no es el único: hay también `instruccions-us.csv`,
+`alarmes-lavadora.csv`, `programes.csv`, `instruccions-pagament-*.csv` (ver
+[`docs/csv/tables.md`](csv/tables.md)). Cada vez que llegue nueva
+información per-pueblo, el patrón F79 debe replicarse:
+
+1. **Datos** en `json/locations.json:metadata.<field>` o
+   `faqOverrides.<key>` (no en TypeScript constants).
+2. **Helper L3 puro** que lea del runtime, NO hardcode de la información.
+3. **Wire-up en el layer correcto**: extractor (capture L3), guard
+   (enumeration UX L4), formatter (rendering for FAQ L3).
+4. **Tests parametrizados** sobre el JSON, NO hardcodes de los valores
+   específicos. Sentinels mínimos para detectar cambios significativos
+   de los datos (ej. "Mercadona unique to Goya" en
+   [`__tests__/unit/locations-landmarks.test.ts`](../__tests__/unit/locations-landmarks.test.ts)).
+5. **F-log entry + pin** en `f-log-regression.test.ts`.
+
+**Anti-patterns rechazados:**
+
+- ❌ `if (msg.includes("Mercadona")) state.location = 'Goya'` — hardcoded,
+  no escala, viola Iron rule #6 (no intent regex per topic).
+- ❌ Detector por landmark (`detectMercadonaMention`,
+  `detectCarrefourMention`) — anti-DRY, anti-data-driven.
+- ❌ Override mid-flow del `state.location` ya capturado por landmark
+  accidental mencionado en otro contexto — el gate `!state.location` lo
+  previene.
+- ❌ Listar landmarks hardcoded en el i18n (`"Mercadona, Carrefour, …"`
+  dentro del string template) — el placeholder `{landmarks}` se popula
+  runtime para mantener un único punto de evolución (el JSON).
+
+**Pin de regresión** en
+[`__tests__/unit/f-log-regression.test.ts`](../__tests__/unit/f-log-regression.test.ts):
+verifica que (a) las 3 funciones exportadas de `locations-landmarks.ts`
+existen; (b) `intent.ts` re-exporta `detectLandmarkMention`; (c)
+`agent-extract.ts` llama el resolver; (d) `guardInsistLocation` usa
+`listAllLandmarks` + la i18n key correcta; (e) los 6 catálogos tienen
+`landmarkEnumerationAsk` con el placeholder `{landmarks}`; (f) al menos
+una location en `locations.json` tiene `landmarks[]` no vacío; (g)
+`models/state.ts` declara `locationAckPending`, `utils/state.ts:createInitialState`
+lo inizializza a `null`, `agent-extract.ts` lo setta sul match unique, y
+`agent.ts:applyGuardOutcome` lo consuma con `tt('landmarkAck', ...)` y lo
+clearea; los 6 catálogos definen `landmarkAck` con placeholders dual
+`{location}` + `{address}`.
+
+Tests del comportamiento del ack en [`__tests__/unit/locations-landmarks.test.ts`](../__tests__/unit/locations-landmarks.test.ts)
+(3 pin F79 ack — sezione finale del file): unique match → location +
+ackPending entrambi settati; ambiguous match → location vuoto + ackPending
+null; canonical name diretto → location settata + ackPending NON settato.
+
 ---
 
 ## Caso 1 — PUSH PROG
@@ -329,6 +470,51 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 **Usuario:** Carlos  
 **Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+---
+
+### 2.3 — Recap display flow: Phase A / Phase B / cadence N (F74 + F75)
+
+**Criterios de aceptación:**
+1. **Phase A** (primera instrucción): el bot muestra 4 bloques — saludo tranquilizador (Block1) + resumen del problema en negrita (Block2) + instrucción (Block3) + closing (Block4).
+2. **Phase B turno 1…N-1**: el bot muestra solo la instrucción (Block3). Sin saludo ni closing — repetirlos en cada re-ask resulta irónico.
+3. **Phase B turno N** (configurable via `settings.rephraseDisplayFlowRecapInterval`, default 3): el bot muestra resumen del problema (Block2) + frase de ánimo (reassurance) + instrucción (Block3).
+4. El saludo tranquilizador ("No te preocupes, tiene solución 😊") y el closing ("Cuéntame si arranca 😊") aparecen ÚNICAMENTE en Phase A.
+5. El counter `displayPhaseBTurnCount` se resetea al cerrar el incidente.
+
+**Desviación documentada respecto al Playbook PDF**: el PDF no especifica la estructura de bloques del recap; esta es una decisión UX interna para evitar la repetición tonal que resulta irónica cuando el problema no se resuelve.
+
+**Conversación (Phase A + 3 turni Phase B con recap al turno 3):**
+
+**Usuario:** La lavadora no funciona  
+**Bot:** ¿En qué lavandería estás?
+
+**Usuario:** Goya  
+**Bot:** ¿Qué número tiene la máquina?
+
+**Usuario:** 5  
+**Bot:** ¿Qué aparece en la pantalla?
+
+**Usuario:** DOOR  
+**Bot:** [Phase A — 4 bloques]  
+**No te preocupes, tiene solución** 😊  
+Estás en **Goya** con la **lavadora 5** y el error **DOOR**.  
+La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez.  
+Cuéntame si arranca 😊
+
+**Usuario:** no funciona  
+**Bot:** [Phase B turno 1 — solo instrucción]  
+Por favor, escríbeme solo el código exacto que aparece en la pantalla en este momento.
+
+**Usuario:** no funciona  
+**Bot:** [Phase B turno 2 — solo instrucción]  
+Por favor, escríbeme solo el código exacto que aparece en la pantalla en este momento.
+
+**Usuario:** no funciona  
+**Bot:** [Phase B turno 3 — recap + ánimo + instrucción]  
+Estás en **Goya** con la **lavadora 5** y el error **DOOR**.  
+Seguimos intentándolo 💪  
+Por favor, escríbeme solo el código exacto que aparece en la pantalla en este momento.
 
 ---
 
@@ -1525,20 +1711,29 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 **Criterios de aceptación:**
 1. NO procede al gather de tipo/número/display sin location.
-2. Si dice «no lo sé» → re-ask con énfasis.
+2. Si dice «no lo sé» (o equivalente en IT/EN/CA/PT/FR) → re-ask con énfasis + lista de referencias (landmarks: Mercadona, Carrefour, Aldi…) para que el cliente identifique la lavandería.
 3. Si nombre desconocido (ej. «Girona») → lista las lavanderías reales.
 4. Tras 2-3 intentos sin location → escala.
+5. El detector cubre las 6 lenguas: ES «no lo sé / ni idea», IT «non lo so / non so», EN «I don't know / no idea», FR «je ne sais pas / pas sûr», PT «não sei / não me lembro», CA «no ho sé / no sap».
 
-**Conversación:**
+**Conversación 31.1 — ES:**
 
 **Usuario:** La secadora no funciona  
 **Bot:** Hola. Te ayudo. ¿En qué lavandería estás?
 
 **Usuario:** No lo sé  
-**Bot:** Para poder ayudarte, necesito saber primero en qué lavandería estás exactamente.
+**Bot:** Para poder ayudarte, necesito saber en qué lavandería estás. ¿Hay cerca un Mercadona, Carrefour, Aldi u otro punto de referencia?
 
 **Usuario:** Estoy en Goya  
 **Bot:** Perfecto. ¿Qué número tiene la máquina?
+
+**Conversación 31.2 — IT:**
+
+**Usuario:** non funziona la lavatrice  
+**Bot:** Ciao. ¿In quale lavanderia ti trovi?
+
+**Usuario:** non lo so  
+**Bot:** Per poterti aiutare ho bisogno di sapere in quale lavanderia sei. C'è vicino un Mercadona, Carrefour, Aldi o un altro punto di riferimento?
 
 ---
 

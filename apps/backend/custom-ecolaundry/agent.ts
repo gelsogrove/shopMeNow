@@ -30,7 +30,7 @@ import { API_KEY } from './utils/llm.js'
 import { logger } from './utils/logger.js'
 import { sanitizeUserMessage } from './utils/input-sanitize.js'
 import { dispatchSubsequentTurn, dispatchTurnOne } from './utils/branches/index.js'
-import { t } from './utils/localization.js'
+import { t, tt } from './utils/localization.js'
 import type { SupportedLanguage } from './models/index.js'
 import {
   detectResolutionEscalationContradiction,
@@ -255,6 +255,29 @@ async function applyGuardOutcome(
     ar.runtime.settings?.naturalRephrase
   ) {
     reply = await rephraseForTurn(reply, ar, history)
+  }
+  // F79 — Landmark ack (consume-once turn-local signal). When agent-extract
+  // resolved the location via a landmark deduction (e.g. "estoy cerca del
+  // Mercadona" → 'Goya'), prepend a confirmation so the customer knows the
+  // bot understood. Direct canonical mentions ("Goya") never set this
+  // signal, keeping replies terse when there is nothing surprising to ack.
+  // Runs AFTER rephrase so the canonical wording (with bold + address)
+  // reaches the customer verbatim — the rephrase polish would otherwise
+  // flatten the bold or drop the address.
+  if (ar.state.locationAckPending) {
+    const canonical = ar.state.locationAckPending
+    const override = ar.runtime.locations.locations[canonical]
+    if (override) {
+      const displayName = override.displayName || canonical
+      const address = override.calle || ''
+      const tenantLang = resolveTenantLang(ar)
+      const ack = tt('landmarkAck', tenantLang, {
+        location: displayName,
+        address,
+      })
+      reply = `${ack}\n\n${reply}`
+    }
+    ar.state.locationAckPending = null
   }
   history.push({ role: 'user', content: userMessage })
   history.push({ role: 'assistant', content: reply })

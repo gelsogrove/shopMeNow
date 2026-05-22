@@ -238,6 +238,96 @@ const cases: Case[] = [
       if (out !== null) throw new Error('insistLocation only fires on "no lo sé"-class replies')
     },
   },
+  // ── F79: landmark enumeration appended when customer says "no lo sé" ────
+  {
+    name: 'F79 insistLocation: "no lo sé" reply appends landmark enumeration (Mercadona, Carrefour, …)',
+    run: () => {
+      const ar = makeAr(2)
+      const out = guardInsistLocation(ar, 'no lo sé')
+      if (!out) throw new Error('expected reply, got null')
+      if (!/Mercadona/i.test(out.reply)) {
+        throw new Error(`expected reply to enumerate Mercadona landmark, got: ${out.reply}`)
+      }
+      if (!/Carrefour/i.test(out.reply)) {
+        throw new Error(`expected reply to enumerate Carrefour landmark, got: ${out.reply}`)
+      }
+    },
+  },
+  {
+    name: 'F79 insistLocation: enumeration preserves base followUp before landmarks',
+    run: () => {
+      const ar = makeAr(2)
+      const out = guardInsistLocation(ar, 'no lo sé')
+      if (!out) throw new Error('expected reply, got null')
+      // Base i18n followUp ("Para poder ayudarte…") MUST appear before the
+      // landmark list — semantically the followUp frames the question and
+      // the landmark line is the actionable hint.
+      const followUpIdx = out.reply.indexOf('Para poder ayudarte')
+      const landmarkIdx = out.reply.indexOf('Mercadona')
+      if (followUpIdx === -1 || landmarkIdx === -1) {
+        throw new Error(`expected both followUp and landmark, got: ${out.reply}`)
+      }
+      if (followUpIdx > landmarkIdx) {
+        throw new Error(`followUp must precede landmark enumeration, got: ${out.reply}`)
+      }
+    },
+  },
+  // ── F79: dontKnow regex covers all 6 languages ───────────────────────────
+  {
+    name: 'F79 insistLocation: IT "non lo so" → fires (was missing before F79)',
+    run: () => {
+      const ar = makeAr(2)
+      const out = guardInsistLocation(ar, 'non lo so')
+      if (!out) throw new Error('expected insist on "non lo so" (IT)')
+    },
+  },
+  {
+    name: 'F79 insistLocation: EN "I don\'t know" → fires',
+    run: () => {
+      const ar = makeAr(2)
+      const out = guardInsistLocation(ar, "i don't know")
+      if (!out) throw new Error("expected insist on \"i don't know\" (EN)")
+    },
+  },
+  {
+    name: 'F79 insistLocation: FR "je ne sais pas" → fires',
+    run: () => {
+      const ar = makeAr(2)
+      const out = guardInsistLocation(ar, 'je ne sais pas')
+      if (!out) throw new Error('expected insist on "je ne sais pas" (FR)')
+    },
+  },
+  {
+    name: 'F79 insistLocation: PT "não sei" → fires',
+    run: () => {
+      const ar = makeAr(2)
+      const out = guardInsistLocation(ar, 'não sei')
+      if (!out) throw new Error('expected insist on "não sei" (PT)')
+    },
+  },
+  {
+    name: 'F79 insistLocation: CA "no ho sé" → fires',
+    run: () => {
+      const ar = makeAr(2)
+      const out = guardInsistLocation(ar, 'no ho sé')
+      if (!out) throw new Error('expected insist on "no ho sé" (CA)')
+    },
+  },
+  {
+    name: 'F79 insistLocation: tenant with no landmarks → legacy single-sentence reply (no enumeration appended)',
+    run: () => {
+      const ar = makeAr(2)
+      // Override runtime.locations to empty so listAllLandmarks returns [].
+      // This exercises the graceful fallback when a future tenant ships
+      // without landmark data.
+      ar.runtime = { ...ar.runtime, locations: { locations: {} } }
+      const out = guardInsistLocation(ar, 'no lo sé')
+      if (!out) throw new Error('expected reply, got null')
+      if (/Mercadona|Carrefour|Aldi/i.test(out.reply)) {
+        throw new Error(`empty landmarks must NOT append enumeration, got: ${out.reply}`)
+      }
+    },
+  },
 ]
 
 async function main(): Promise<void> {

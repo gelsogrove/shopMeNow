@@ -63,6 +63,12 @@ export async function loadTestRuntime(): Promise<Runtime> {
   const faqsRaw = JSON.parse(await readFile(path.join(jsonDir, 'faqs.json'), 'utf8'))
   setFaqs(faqsRaw)
 
+  // F79 — Load locations.json so tests that consume runtime.locations
+  // (landmark resolver, faq-prices/hours formatters) see real data.
+  const locationsRaw = JSON.parse(
+    await readFile(path.join(jsonDir, 'locations.json'), 'utf8'),
+  ) as Runtime['locations']
+
   // Strip JSON-comment fields (`_principle`, etc.) so the FlowMap shape
   // is not polluted; they're documentation-only in the source files.
   const stripCommentKeys = (obj: Record<string, unknown>): Record<string, unknown> => {
@@ -80,7 +86,7 @@ export async function loadTestRuntime(): Promise<Runtime> {
       dryer: stripCommentKeys(dryerFlowsRaw) as Runtime['flows']['dryer'],
     },
     regressions: [],
-    locations: { locations: {} },
+    locations: locationsRaw,
     settings: {
       enabledLanguages: ['es'],
       defaultLanguage: 'es',

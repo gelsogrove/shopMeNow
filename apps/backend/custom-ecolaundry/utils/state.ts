@@ -12,6 +12,7 @@ export function createInitialState(): SessionState {
     locationStreet: '',
     locationStreetRequested: false,
     locationClarificationCount: 0,
+    locationAckPending: null,
     machineType: '',
     machineNumber: '',
     paymentCompleted: null,
@@ -43,6 +44,7 @@ export function createInitialState(): SessionState {
     turnCount: 0,
     lastUserMessage: '',
     lastPresentedStepId: null,
+    displayPhaseBTurnCount: 0,
     lastMissingFacts: [],
     pendingClosure: null,
     lastActivityAt: Date.now(),
@@ -127,6 +129,7 @@ export function resetIncidentDetails(state: SessionState): void {
   state.displayHistory = []
   state.faqPause = false
   state.discountCodeAskAttempts = 0
+  state.displayPhaseBTurnCount = 0
   state.mixedIncident = false
   state.nonTroubleshootingIncident = ''
   state.lastMissingFacts = []
@@ -169,6 +172,7 @@ export function resetMachineFacts(state: SessionState): void {
   state.displayHistory = []
   state.faqPause = false
   state.discountCodeAskAttempts = 0
+  state.displayPhaseBTurnCount = 0
   state.mixedIncident = false
   state.nonTroubleshootingIncident = ''
   state.lastMissingFacts = []

@@ -7,15 +7,10 @@
 import { t, tt } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { isMataro, lang } from './helpers.js'
-import { listLaundromatsForReply } from '../locations.js'
+import { listAllLandmarks, listLaundromatsForReply } from '../locations.js'
 
-/**
- * Set of `nonTroubleshootingIncident` values that allow escalation WITHOUT
- * a location. Most incidents need location for the operator handover; these
- * three are about customer demands (refund / compensation) or operations
- * (cameras / AJAX) where the operator will look up the customer's purchase
- * history rather than the laundromat.
- */
+// Escalations that skip location: operator handles via customer-account
+// history, not laundromat (refund / compensation demands, cameras / AJAX).
 const INCIDENTS_NO_LOCATION_REQUIRED: ReadonlySet<string> = new Set([
   'cameras-or-ajax',
   'refund-demand',
@@ -61,31 +56,16 @@ export const guardUnknownLocation: Guard = (ar) => {
   }
 }
 
-/**
- * Catch-all gather guard for location.
- *
- * Why this exists: gather guards (`guardForceMachineType`, `guardForceMachineNumber`,
- * `guardForceDisplay`) all gate on `!ar.state.displayState` so they can give
- * up the floor when a display flow is active. Display flows themselves
- * require `location + machineType + machineNumber` via `flow.requires`. If
- * the customer reports the display BEFORE the location, the result is a
- * pipeline hole:
- *
- *   - `guardForce*` skip (displayState set)
- *   - `guardDisplayFlowStart` skips (location missing)
- *   - `guardInsistLocation` / `guardUnknownLocation` skip (only fire on
- *     "no lo sé" or after a clarification round)
- *   → the LLM is on its own → it improvises → escalation cascade.
- *
- * This guard plugs that hole: whenever location is empty and the customer
- * has had a chance to provide it (turnCount ≥ 2), the bot ALWAYS asks for
- * the location before any other flow can take over. The only escape hatches
- * are escalations that genuinely don't need a location (refund / compensation /
- * cameras) and the explicit "no lo sé" branch (handled by guardInsistLocation).
- *
- * Pipeline placement: BEFORE every other gather / display-flow / escalation
- * guard. See `guards/index.ts:GUARD_PIPELINE`.
- */
+// Catch-all gather guard for location (Iron rule #10). When location is
+// empty and the customer has had a chance to provide it (turnCount ≥ 2),
+// the bot ALWAYS asks for the location before any other flow can take over.
+// Escape hatches: escalations that genuinely don't need a location
+// (INCIDENTS_NO_LOCATION_REQUIRED) and the explicit "no lo sé" branch
+// (handled by guardInsistLocation). Pipeline placement: BEFORE every other
+// gather / display-flow / escalation guard. See guards/index.ts:GUARD_PIPELINE.
+// REGRESSION 2026-05-09: customer T1 "me han cobrado dos veces" set
+// pendingFlow=double-charge-ask-used, no guard fired (location empty +
+// turnCount<2), LLM improvised an out-of-order "¿has podido lavar?".
 export const guardForceLocation: Guard = (ar) => {
   if (
     ar.state.location ||
@@ -103,18 +83,9 @@ export const guardForceLocation: Guard = (ar) => {
   ) {
     return null
   }
-  // NOTE: this guard intentionally fires from T1 (no `turnCount < 2`
-  // shortcut) so the LLM never has the chance to improvise a gather
-  // question while location is still empty. The welcome paragraph is
-  // prepended automatically by `applyGuardOutcome` →
-  // `shouldShowWelcome('force-location')` (the reason is not in the
-  // GUARD_REASONS_NO_WELCOME blacklist), so the customer still gets
-  // "Hola, soy el asistente..." before the location question.
-  // REGRESSION the bug closed (2026-05-09): customer T1 "me han cobrado
-  // dos veces" set pendingFlow=double-charge-ask-used, no guard fired
-  // (location empty + turnCount<2), the LLM improvised an out-of-order
-  // "¿has podido lavar?" ask, then the deterministic guard re-asked the
-  // same question once location arrived. Iron rule #10 again.
+  // Fires from T1 so the LLM never improvises a gather question while
+  // location is still empty. Welcome paragraph is prepended automatically
+  // by applyGuardOutcome → shouldShowWelcome('force-location').
   return {
     reply: t('location', lang(ar)),
     reason: 'force-location',
@@ -122,7 +93,14 @@ export const guardForceLocation: Guard = (ar) => {
 }
 
 /** Customer says "no lo sé / no me acuerdo / ni idea" — insist that we need
- *  the location before we can help. */
+ *  the location before we can help.
+ *
+ *  F79: when the tenant has landmarks configured in json/locations.json,
+ *  append the landmark enumeration so the customer can identify the
+ *  laundromat by a nearby reference point ("Mercadona, Carrefour, …"). The
+ *  list is generated dynamically from runtime.locations — adding a new
+ *  landmark is a JSON edit, no code change. When no landmarks are
+ *  configured the guard keeps the legacy single-sentence behaviour. */
 export const guardInsistLocation: Guard = (ar, userMessage) => {
   if (
     ar.state.location ||
@@ -133,10 +111,19 @@ export const guardInsistLocation: Guard = (ar, userMessage) => {
     return null
   }
   const reply = userMessage.trim().toLowerCase()
-  const dontKnow = /^(no\s+lo\s+s[eé]|no\s+s[eé]|no\s+me\s+acuerdo|ni\s+idea|no\s+tengo\s+idea)(?:\s|$|[.,!?])/i.test(reply)
+  const dontKnow = /^(no\s+lo\s+s[eé]|no\s+s[eé]|no\s+me\s+acuerdo|ni\s+idea|no\s+tengo\s+idea|non\s+lo\s+s[eo]|non\s+s[eo]|non\s+ricordo|non\s+mi\s+ricordo|i\s+don'?t\s+know|no\s+idea|not\s+sure|no\s+sé|no\s+ho\s+idea|no\s+sap|no\s+ho\s+s[eé]|je\s+(?:ne\s+)?sais\s+pas|j'?en\s+sais\s+pas|pas\s+s[uû]r|não\s+sei|não\s+me\s+lembro|não\s+tenho\s+ideia)(?:\s|$|[.,!?])/i.test(reply)
   if (!dontKnow) return null
+
+  const followUp = t('insistLocationFollowUp', lang(ar))
+  const landmarks = listAllLandmarks(ar.runtime.locations)
+  if (landmarks.length === 0) {
+    return { reply: followUp, reason: 'insist-location-followup' }
+  }
+  const enumeration = tt('landmarkEnumerationAsk', lang(ar), {
+    landmarks: landmarks.join(', '),
+  })
   return {
-    reply: t('insistLocationFollowUp', lang(ar)),
+    reply: `${followUp}\n\n${enumeration}`,
     reason: 'insist-location-followup',
   }
 }

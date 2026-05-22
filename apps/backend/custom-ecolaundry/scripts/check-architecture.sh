@@ -100,6 +100,7 @@ ALLOWED_LARGE_FILES="
   utils/guards/invoice-flow.ts  # Caso 9 invoice multi-step flow (location → tipo → razón → dir → CIF → fecha → coste → email retry → notas → name → handover). F42 added coste step. Single concern: drive the factura flow end-to-end.
   utils/state-transitions.ts  # Named atomic state transitions (markResolved, escalate, markRefundFormPending, captureCustomerName, …). Single responsibility — splitting fragments the auditable surface that rule #4 protects.
   utils/human-message-email.ts  # HTML email template + nodemailer sender for operator notifications. Single responsibility — the bulk is inline CSS/HTML which cannot be split meaningfully.
+  utils/agent-rephrase.ts       # L5 polish layer + F72/F74/F75 deterministic display-flow recap (RECAP_STRINGS × 6 languages × ~10 lines each + buildDisplayRecap + rephraseForTurn). Single concern — splitting would fragment the contract between determinism and LLM polish.
 "
 ALLOWED_LARGE_FILES=$(echo "$ALLOWED_LARGE_FILES" | sed 's/#.*$//' | tr -s ' \n' ' ')
 violations=""
@@ -125,7 +126,7 @@ fi
 
 # --- Rule #4 — inline state mutations ---------------------------------------
 echo -n "  [#4] state mutations only via state-transitions.ts... "
-inline=$(grep -rEn 'ar\.state\.(pendingClosure|operatorRequested|pendingEscalation|customerNameRequested|escalationReason)\s*=' \
+inline=$(grep -rEn 'ar\.state\.(pendingClosure|operatorRequested|pendingEscalation|customerNameRequested|escalationReason)\s*=[^=]' \
   "$ROOT/utils" "$ROOT/agent.ts" 2>/dev/null \
   | grep -v "state-transitions.ts" \
   | grep -v "^[^:]*://" || true)

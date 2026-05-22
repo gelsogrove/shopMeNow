@@ -1,0 +1,20 @@
+Código en pantalla,,Significado,,,,,,Respuesta base:
+,,,,,,,,
+SEL,,La máquina está pendiente de selección,,,,,,Preguntar si se ha realizado el pago. Si la respuesta es SÍ → ESCALAR; Si la respuesta es NO → Indica cierra la puerta y se dirija a la caja para realizar el pago
+,,,,,,,,
+ON,,"La máquina ha sido activada de forma correcta, espere que termine el ciclo para poder abrirla",,,,,,
+,,,,,,,,
+T-28 (minuts),,La máquina indica el tiempo aproximado que dura el ciclo seleccionado,,,,,,
+,,,,,,,,
+STOP:,,La máquina está desaguando,,,,,,Esperar unos segundos hasta que la pantalla ponga END
+,,,,,,,,
+END:,,La máquina ha terminado y está lista para abrir,,,,,,Puede abrir la puerta
+,,,,,,,,
+120,,Cuenta atrás para el fin del ciclo,,,,,,"La máquina está terminando su ciclo, espere a que la cuenta atrás termine i la pantalla señale las palabras END"
+DOOR:,,La puerta está mal cerrada,,,,,,"Abre la puerta con cuidado, revisa si hay alguna prenda atrapada y vuelve a cerrarla bien. Si el mensaje ha desaparecido, selecciona de nuevo el programa. Si no ha desaparecido volver a intentar con un golpecito más firme. Si no desaparece ESCALAR"
+,,,,,,,,
+ALM DOOR:,,Posible problema de cierre o prenda atrapada,,,,,,Primero tratar como DOOR. Si no desaparece ESCALAR i reportar a equipo Técnico
+,,,,,,,,
+001,,Selección del programa antes del pago,,,,,,¿Has apretado el programa antes de pagar? Sí → Por favor inicia el proceso de pago y sigue las instrucciones de pago
+,,,,,,,,
+ALM / ALN / similares,,Fallo técnico detectado de máquina,,,,,,"La máquina ha detectado una incidencia y tenemos que revisarlo. Por favor cambie su ropa a otra secadora, díganos en qué secadora la ha puesto y el programa que desea usar. Le vamos a activar la máquina de forma remota para que pueda secar. ESCALAR"

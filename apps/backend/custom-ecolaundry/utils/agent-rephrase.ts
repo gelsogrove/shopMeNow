@@ -73,6 +73,7 @@ const RECAP_STRINGS: Record<
     machineConnector: string
     errorConnector: string
     closings: string[]
+    reassurances: string[]
   }
 > = {
   es: {
@@ -90,7 +91,12 @@ const RECAP_STRINGS: Record<
       'Avísame cómo va 👍',
       'Cuéntame si arranca 😊',
       'Dime qué pasa después 🙏',
-      '¿Lo has podido solucionar? 😊',
+      '¿Lo has podido solucionar? 🤞',
+    ],
+    reassurances: [
+      'Seguimos intentándolo 💪',
+      'Vamos paso a paso 😊',
+      'No te rindas, lo conseguimos 👍',
     ],
   },
   it: {
@@ -110,6 +116,11 @@ const RECAP_STRINGS: Record<
       'Raccontami se funziona 🙏',
       'Dimmi se si è avviata 😊',
     ],
+    reassurances: [
+      'Continuiamo insieme 💪',
+      'Passo dopo passo ce la facciamo 😊',
+      'Non mollare, ci siamo quasi 👍',
+    ],
   },
   en: {
     greetings: [
@@ -127,6 +138,11 @@ const RECAP_STRINGS: Record<
       'Tell me if it starts 😊',
       'Let me know what happens next 🙏',
       'Did it work? 😊',
+    ],
+    reassurances: [
+      "Let's keep trying 💪",
+      'One step at a time 😊',
+      "We're almost there 👍",
     ],
   },
   ca: {
@@ -146,6 +162,11 @@ const RECAP_STRINGS: Record<
       "Digue'm com ha anat 🙏",
       'Ha funcionat? 😊',
     ],
+    reassurances: [
+      'Continuem intentant-ho 💪',
+      'Pas a pas ho aconseguim 😊',
+      'No et rendeixis, gairebé ho tenim 👍',
+    ],
   },
   pt: {
     greetings: [
@@ -164,6 +185,11 @@ const RECAP_STRINGS: Record<
       'Diz-me o que aconteceu 🙏',
       'Funcionou? 😊',
     ],
+    reassurances: [
+      'Continuamos a tentar 💪',
+      'Um passo de cada vez 😊',
+      'Estamos quase lá 👍',
+    ],
   },
   fr: {
     greetings: [
@@ -181,6 +207,11 @@ const RECAP_STRINGS: Record<
       'Dis-moi si ça démarre 😊',
       'Raconte-moi ce qui se passe 🙏',
       'Ça a marché ? 😊',
+    ],
+    reassurances: [
+      'On continue ensemble 💪',
+      'Un pas après l\'autre 😊',
+      'On y est presque 👍',
     ],
   },
 }
@@ -220,11 +251,39 @@ export function buildDisplayRecap(
     : ''
   const errorPart = ` ${strings.errorConnector} **${displayLabel}**.`
 
-  const block1 = pick(strings.greetings)
   const block2 = `${strings.problemIntro} ${locationBold}${machinePart}${errorPart}`
-  const block4 = pick(strings.closings)
 
-  return [block1, block2, polishedInstruction, block4].join('\n\n')
+  // F74 — greeting (block1) and closing (block4) only on the FIRST display
+  // turn (Phase A). On Phase B re-ask and escalation turns lastPresentedStepId
+  // is already set, meaning the customer has already received the initial
+  // reassurance. Repeating "No te preocupes 😊" + "¿Lo has podido solucionar?"
+  // after every failed attempt reads as tone-deaf and borders on mocking.
+  const isFirstDisplayTurn = !ar.state.lastPresentedStepId
+
+  if (isFirstDisplayTurn) {
+    const block1 = pick(strings.greetings)
+    const block4 = pick(strings.closings)
+    // Mark this turn as "Phase A presented" so next turn enters Phase B.
+    // Use activeFlowId as the sentinel (non-null, describes the flow).
+    ar.state.lastPresentedStepId = ar.state.activeFlowId || 'presented'
+    return [block1, block2, polishedInstruction, block4].join('\n\n')
+  }
+
+  // F75 — Phase B+: increment the per-turn counter and show the problem
+  // summary + a short reassurance only every N turns (turn N, 2N, 3N, …).
+  // N is configurable via settings.rephraseDisplayFlowRecapInterval (default 3).
+  // On other Phase B turns emit only the instruction (no recap noise).
+  ar.state.displayPhaseBTurnCount += 1
+  const recapInterval = ar.runtime.settings?.rephraseDisplayFlowRecapInterval ?? 3
+  const showRecap = ar.state.displayPhaseBTurnCount % recapInterval === 0
+
+  if (showRecap) {
+    const reassurance = pick(strings.reassurances)
+    return [block2, reassurance, polishedInstruction].join('\n\n')
+  }
+
+  // Plain Phase B turn: just the instruction.
+  return polishedInstruction
 }
 
 /**

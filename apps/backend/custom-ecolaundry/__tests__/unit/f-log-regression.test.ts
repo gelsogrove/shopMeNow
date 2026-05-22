@@ -53,6 +53,8 @@ import * as path from 'path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+// Root of the custom-ecolaundry module (two levels up from __tests__/unit/)
+const ECOLAUNDRY_ROOT = path.resolve(__dirname, '..', '..')
 
 function makeAr(): AgentRuntime {
   return {
@@ -1485,18 +1487,39 @@ const cases: Case[] = [
 
   // ── F66 — displayState captured too early (before machineType known) ────
   {
-    name: 'F66 — agent-extract does NOT set displayState when machineType is unknown (guard present)',
+    name: 'F66 — agent-extract guards displayState capture against bare-location-answer scenarios',
     run: () => {
-      // The fix adds `&& (state.machineType || state.displayState)` to the
-      // primary display-capture branch. If that guard is removed, a customer
-      // typing "AL001" while answering the location question would prematurely
-      // set displayState and the flow would start without asking the display Q.
+      // The guard prevents a customer typing "AL001" as a bare answer to the
+      // location question from prematurely setting displayState. Originally a
+      // narrow check (state.machineType || state.displayState); widened by the
+      // 2026-05-22 audit to also accept state.pendingFlow (MIX 1: topic-switch
+      // mid-discount-code) and an explicit machine-type mention in the message
+      // (MIX 5: "dryer + PUSH PROG" at T1). The named composite predicate is
+      // `canCaptureDisplay`; the bare "AL001" answer trips none of these.
       const extractPath = path.resolve(__dirname, '..', '..', 'utils', 'agent-extract.ts')
       const content = fs.readFileSync(extractPath, 'utf8')
-      // The guard must appear on the same line as newDisplay !== state.displayState
-      if (!/(newDisplay && newDisplay !== state\.displayState && \(state\.machineType \|\| state\.displayState\))/.test(content)) {
+      // Must reference all 4 acceptable signals AND wire them into the
+      // primary display-capture branch via the canCaptureDisplay name.
+      if (!/canCaptureDisplay\s*=/.test(content)) {
+        throw new Error('F66: agent-extract.ts must define canCaptureDisplay composite predicate')
+      }
+      const requiredSignals = [
+        /state\.machineType/,
+        /state\.displayState/,
+        /state\.pendingFlow/,
+        /messageMentionsType/,
+        /messageReportsDisplay/,
+      ]
+      for (const re of requiredSignals) {
+        if (!re.test(content)) {
+          throw new Error(
+            `F66: canCaptureDisplay must include signal matching ${re} — see F66 in CLAUDE.md`,
+          )
+        }
+      }
+      if (!/newDisplay && newDisplay !== state\.displayState && canCaptureDisplay/.test(content)) {
         throw new Error(
-          'F66: agent-extract.ts must guard displayState capture with (state.machineType || state.displayState) — see F66 in CLAUDE.md',
+          'F66: primary display-capture branch must gate on canCaptureDisplay',
         )
       }
     },
@@ -1716,6 +1739,287 @@ const cases: Case[] = [
         throw new Error(
           'F73: rephrase.txt must declare LANGUAGE as authoritative (autoritativo)',
         )
+      }
+    },
+  },
+  {
+    name: 'F75 — buildDisplayRecap: Phase B recap every N turns via displayPhaseBTurnCount + configurable interval',
+    run: () => {
+      const rephraseTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/agent-rephrase.ts'),
+        'utf8',
+      )
+      if (!rephraseTs.includes('displayPhaseBTurnCount')) {
+        throw new Error('F75: agent-rephrase.ts must use displayPhaseBTurnCount to track Phase B turns')
+      }
+      // F75 cadence is now configurable: reads recapInterval from settings
+      // (rephraseDisplayFlowRecapInterval ?? 3), then checks % recapInterval === 0.
+      if (!rephraseTs.includes('recapInterval')) {
+        throw new Error('F75: agent-rephrase.ts must use recapInterval variable (not hardcoded 3)')
+      }
+      if (!rephraseTs.includes('rephraseDisplayFlowRecapInterval')) {
+        throw new Error('F75: agent-rephrase.ts must read settings.rephraseDisplayFlowRecapInterval')
+      }
+      const stateTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'models/state.ts'),
+        'utf8',
+      )
+      if (!stateTs.includes('displayPhaseBTurnCount')) {
+        throw new Error('F75: models/state.ts must declare displayPhaseBTurnCount field')
+      }
+      // Settings field declared in models/runtime.ts
+      const runtimeTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'models/runtime.ts'),
+        'utf8',
+      )
+      if (!runtimeTs.includes('rephraseDisplayFlowRecapInterval')) {
+        throw new Error('F75: models/runtime.ts must declare rephraseDisplayFlowRecapInterval in Settings type')
+      }
+    },
+  },
+  {
+    name: 'F78 — guardInsistLocation dontKnow regex covers all 6 languages (IT/EN/FR/PT/CA added)',
+    run: () => {
+      const guardTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/guards/location-resolution.ts'),
+        'utf8',
+      )
+      // Must contain IT variant (accepts both "non lo so" and "non lo se" — no accent)
+      if (!guardTs.includes('non\\s+lo\\s+s[eo]')) {
+        throw new Error('F78: location-resolution.ts dontKnow regex must include IT "non lo so/se"')
+      }
+      // Must contain EN variant
+      if (!guardTs.includes("don'?t\\s+know")) {
+        throw new Error('F78: location-resolution.ts dontKnow regex must include EN "don\'t know"')
+      }
+      // Must contain FR variant
+      if (!guardTs.includes('sais\\s+pas')) {
+        throw new Error('F78: location-resolution.ts dontKnow regex must include FR "sais pas"')
+      }
+      // Must contain PT variant
+      if (!guardTs.includes('não\\s+sei')) {
+        throw new Error('F78: location-resolution.ts dontKnow regex must include PT "não sei"')
+      }
+      // Must contain CA variant
+      if (!guardTs.includes('no\\s+ho\\s+s')) {
+        throw new Error('F78: location-resolution.ts dontKnow regex must include CA "no ho sé"')
+      }
+    },
+  },
+  {
+    name: 'F77 — extractDisplayState: ALM DOOR (space-separated) collapses to ALM/DOOR',
+    run: () => {
+      // intent.ts specificAlarmMatch must use ALM[\/ ]?DOOR (space accepted for DOOR only)
+      const intentTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'),
+        'utf8',
+      )
+      // The old form ALM\/?DOOR did NOT accept space — if it's back, this pin fires.
+      if (!intentTs.includes('ALM[\\/') || !intentTs.includes(']?DOOR')) {
+        throw new Error('F77: intent.ts specificAlarmMatch must use ALM[\\/  ]?DOOR to accept space-separated variant')
+      }
+    },
+  },
+  {
+    name: 'F76 — flowEngineEscalate i18n key present in all 6 catalogues (no hardcoded ES string)',
+    run: () => {
+      const langs = ['es', 'it', 'en', 'ca', 'pt', 'fr']
+      for (const lang of langs) {
+        const catalogue = JSON.parse(
+          fs.readFileSync(
+            path.join(ECOLAUNDRY_ROOT, `json/i18n/${lang}.json`),
+            'utf8',
+          ),
+        )
+        if (!catalogue['flowEngineEscalate']) {
+          throw new Error(`F76: json/i18n/${lang}.json is missing the flowEngineEscalate key`)
+        }
+      }
+      // flow-engine.ts must use translateFn for the escalation prompt, not a hardcoded ES string
+      const flowEngineTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/flow-engine.ts'),
+        'utf8',
+      )
+      if (!flowEngineTs.includes('flowEngineEscalate')) {
+        throw new Error('F76: flow-engine.ts must use translateFn(\'flowEngineEscalate\') instead of hardcoded Spanish string')
+      }
+      // buildAmbiguousPuebloReply dead code must be removed from locations.ts
+      const locationsTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/locations.ts'),
+        'utf8',
+      )
+      if (locationsTs.includes('buildAmbiguousPuebloReply')) {
+        throw new Error('F76: buildAmbiguousPuebloReply dead code must be removed from locations.ts')
+      }
+      // faq-how-to-use guard must yield to discount-code intent
+      const guardTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/guards/faq-how-to-use.ts'),
+        'utf8',
+      )
+      if (!guardTs.includes('detectDiscountCodeIntent')) {
+        throw new Error('F76: faq-how-to-use.ts must gate on detectDiscountCodeIntent to avoid false-positive over discount-code triggers')
+      }
+    },
+  },
+  {
+    name: 'F74 — buildDisplayRecap: greeting+closing only on Phase A (lastPresentedStepId === null)',
+    run: () => {
+      const rephraseTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/agent-rephrase.ts'),
+        'utf8',
+      )
+      // The fix must check lastPresentedStepId to distinguish Phase A vs Phase B.
+      if (!rephraseTs.includes('lastPresentedStepId')) {
+        throw new Error(
+          'F74: agent-rephrase.ts must check lastPresentedStepId to determine Phase A vs Phase B',
+        )
+      }
+      // Phase B must emit only 2 blocks (problem summary + instruction), not 4.
+      if (!rephraseTs.includes('Phase B')) {
+        throw new Error(
+          'F74: agent-rephrase.ts must have a comment or branch for Phase B (re-ask/escalation turns)',
+        )
+      }
+      // The isFirstDisplayTurn flag (or equivalent) must gate the greeting/closing.
+      if (!rephraseTs.includes('isFirstDisplayTurn')) {
+        throw new Error(
+          'F74: agent-rephrase.ts must use isFirstDisplayTurn (or equivalent) to gate greeting+closing to Phase A only',
+        )
+      }
+    },
+  },
+  {
+    name: 'F79 — landmark-based location resolution: resolver exported, agent-extract wired, guardInsistLocation enriched, i18n key present',
+    run: () => {
+      // (a) Resolver helpers exist and are data-driven (read from runtime.locations).
+      const landmarksTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/locations-landmarks.ts'),
+        'utf8',
+      )
+      for (const sym of [
+        'export function resolveLocationByLandmarks',
+        'export function listAllLandmarks',
+        'export function findLandmarksInMessage',
+      ]) {
+        if (!landmarksTs.includes(sym)) {
+          throw new Error(`F79: utils/locations-landmarks.ts must declare ${sym}`)
+        }
+      }
+
+      // (b) intent.ts re-exports findLandmarksInMessage as detectLandmarkMention.
+      const intentTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'),
+        'utf8',
+      )
+      if (!intentTs.includes('findLandmarksInMessage as detectLandmarkMention')) {
+        throw new Error('F79: utils/intent.ts must re-export findLandmarksInMessage as detectLandmarkMention')
+      }
+
+      // (c) agent-extract.ts wires the landmark fallback for location capture.
+      const agentExtractTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/agent-extract.ts'),
+        'utf8',
+      )
+      if (!agentExtractTs.includes('resolveLocationByLandmarks')) {
+        throw new Error('F79: utils/agent-extract.ts must call resolveLocationByLandmarks for landmark-based location capture')
+      }
+
+      // (d) guardInsistLocation enumerates landmarks on "no lo sé" replies.
+      const guardTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/guards/location-resolution.ts'),
+        'utf8',
+      )
+      if (!guardTs.includes('listAllLandmarks')) {
+        throw new Error('F79: guards/location-resolution.ts must call listAllLandmarks to enumerate landmarks')
+      }
+      if (!guardTs.includes('landmarkEnumerationAsk')) {
+        throw new Error('F79: guards/location-resolution.ts must use the landmarkEnumerationAsk i18n key')
+      }
+
+      // (e) New i18n key present in all 6 catalogues WITH the {landmarks} placeholder.
+      const langs = ['es', 'it', 'en', 'ca', 'pt', 'fr']
+      for (const lang of langs) {
+        const catalogue = JSON.parse(
+          fs.readFileSync(
+            path.join(ECOLAUNDRY_ROOT, `json/i18n/${lang}.json`),
+            'utf8',
+          ),
+        )
+        const tmpl = catalogue['landmarkEnumerationAsk']
+        if (typeof tmpl !== 'string' || !tmpl.includes('{landmarks}')) {
+          throw new Error(
+            `F79: json/i18n/${lang}.json must define landmarkEnumerationAsk with the {landmarks} placeholder`,
+          )
+        }
+      }
+
+      // (f) locations.json has at least one location with non-empty landmarks[]
+      // (data-driven contract: adding/removing landmarks stays a JSON edit, not TS).
+      const locationsJson = JSON.parse(
+        fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'json/locations.json'), 'utf8'),
+      )
+      let foundLandmarks = false
+      for (const override of Object.values(
+        locationsJson.locations as Record<string, { metadata?: { landmarks?: unknown } }>,
+      )) {
+        const lms = override.metadata?.landmarks
+        if (Array.isArray(lms) && lms.length > 0) {
+          foundLandmarks = true
+          break
+        }
+      }
+      if (!foundLandmarks) {
+        throw new Error(
+          'F79: json/locations.json must have at least one location with a non-empty metadata.landmarks[] (resolver data source)',
+        )
+      }
+
+      // (g) landmark ack: state field + extractor signal + L5 prepend + i18n key.
+      const stateModelTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'models/state.ts'),
+        'utf8',
+      )
+      if (!stateModelTs.includes('locationAckPending')) {
+        throw new Error('F79: models/state.ts must declare locationAckPending field')
+      }
+      const stateUtilTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/state.ts'),
+        'utf8',
+      )
+      if (!stateUtilTs.includes('locationAckPending: null')) {
+        throw new Error('F79: utils/state.ts:createInitialState must initialise locationAckPending: null')
+      }
+      if (!agentExtractTs.includes('state.locationAckPending = landmarkMatch.canonical')) {
+        throw new Error(
+          'F79: agent-extract.ts must set state.locationAckPending = landmarkMatch.canonical on unique-match landmark resolution',
+        )
+      }
+      const agentTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'agent.ts'),
+        'utf8',
+      )
+      if (!agentTs.includes("tt('landmarkAck'") || !agentTs.includes('state.locationAckPending = null')) {
+        throw new Error(
+          'F79: agent.ts:applyGuardOutcome must prepend tt(\'landmarkAck\', ...) and clear state.locationAckPending (consume-once)',
+        )
+      }
+      for (const lang of langs) {
+        const catalogue = JSON.parse(
+          fs.readFileSync(
+            path.join(ECOLAUNDRY_ROOT, `json/i18n/${lang}.json`),
+            'utf8',
+          ),
+        )
+        const tmpl = catalogue['landmarkAck']
+        if (
+          typeof tmpl !== 'string' ||
+          !tmpl.includes('{location}') ||
+          !tmpl.includes('{address}')
+        ) {
+          throw new Error(
+            `F79: json/i18n/${lang}.json must define landmarkAck with {location} AND {address} placeholders`,
+          )
+        }
       }
     },
   },

@@ -33,9 +33,11 @@ export function extractDisplayState(message: string): string | null {
   if (/(?:^|\D)0*01(?:\D|$)/.test(trimmed) && !/\b\d{4,}\b/.test(trimmed)) return 'C001'
 
   // Accept the sub-code separated by "/" or nothing — "ALM/DOOR", "ALMDOOR".
-  // Whitespace is NOT accepted as separator: "ALM a la pantalla" (Catalan/Spanish
-  // preposition) would false-match as ALM/A. Only "/" or direct concatenation.
-  const specificAlarmMatch = trimmed.match(/\b(ALM\/?A|ALM\/?E|ALM\/?DOOR|ALM\/?V(?:AR|Ar))\b/i)
+  // Whitespace is NOT accepted as separator for A/E/VAR: "ALM a la pantalla"
+  // (Catalan/Spanish preposition) would false-match as ALM/A. DOOR is the
+  // exception — "ALM DOOR" is a real customer variant (F77), so it accepts
+  // space too via [\/ ]? instead of \/?. Other sub-codes stay slash/concat only.
+  const specificAlarmMatch = trimmed.match(/\b(ALM\/?A|ALM\/?E|ALM[\/ ]?DOOR|ALM\/?V(?:AR|Ar))\b/i)
   if (specificAlarmMatch) return normalizeDisplayState(specificAlarmMatch[1])
 
   // ALN family ("ALN", "ALN A", "ALN N") is treated as an undocumented alarm —
@@ -1096,3 +1098,17 @@ export function parsePaymentAnswer(message: string): boolean | null {
 
 // Re-export helpers from other modules so consumers can import from one place.
 export { hasExtraButtonIssue, hasStopIntent }
+
+// ── F79 — Landmark mention detection ──────────────────────────────────────────
+//
+// Thin facade over findLandmarksInMessage (utils/locations-landmarks.ts).
+// Lives here so consumers importing from intent.ts get a uniform surface for
+// "detect X in the message". The heavy lifting (case/accent-insensitive,
+// multi-word vs single-word matching) is in the landmark module.
+//
+// Returns the canonical landmark strings (as stored in json/locations.json)
+// mentioned by the customer. Empty array when nothing matches. Used by
+// resolveLocationByLandmarks (cold-path location capture) and by
+// guardForceLocation (enumeration on "I don't know" replies).
+
+export { findLandmarksInMessage as detectLandmarkMention } from './locations-landmarks.js'

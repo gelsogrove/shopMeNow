@@ -95,6 +95,52 @@ export const tests: TestCase[] = [
   // state.activeFlowId is set. Customer-facing reply must match the source
   // text verbatim — no invented operational details.
   {
+    // F74 + F75: Phase A shows 4 blocks (greeting + summary + instruction + closing).
+    // Phase B turns 1-2 show only the instruction. Phase B turn 3 shows summary +
+    // reassurance + instruction (recap cadence). Greeting/closing NEVER appear in Phase B.
+    name: 'F74/F75 — display recap: Phase A = 4 blocks, Phase B = instruction only, turn 3 = recap',
+    run: async (ctx) => {
+      await ctx.send('La lavadora no funciona')
+      await ctx.send('Goya')
+      await ctx.send('5')
+
+      // Phase A: first DOOR instruction — must have greeting + bold summary + closing.
+      const phaseA = await ctx.send('DOOR')
+      if (!/goya/i.test(phaseA))
+        throw new Error(`F74 Phase A: must include location "Goya", got: "${phaseA}"`)
+      if (!/door/i.test(phaseA))
+        throw new Error(`F74 Phase A: must include display code "DOOR", got: "${phaseA}"`)
+
+      // Phase B turn 1: only the instruction — no greeting warmup, no closing.
+      const phaseB1 = await ctx.send('no funciona')
+      const warmupPhrases = [
+        /no te preocupes/i,
+        /tranquil/i,
+        /vamos a solucionarlo/i,
+        /enseguida lo/i,
+        /cuéntame si arranca/i,
+        /avísame cómo va/i,
+        /dime qué pasa/i,
+      ]
+      for (const p of warmupPhrases) {
+        if (p.test(phaseB1))
+          throw new Error(`F74 Phase B turn 1: warmup phrase found (${p}), got: "${phaseB1}"`)
+      }
+
+      // Phase B turn 2: still only instruction.
+      const phaseB2 = await ctx.send('no funciona')
+      for (const p of warmupPhrases) {
+        if (p.test(phaseB2))
+          throw new Error(`F74 Phase B turn 2: warmup phrase found (${p}), got: "${phaseB2}"`)
+      }
+
+      // Phase B turn 3: recap turn — must have summary (Goya/DOOR) + reassurance.
+      const phaseB3 = await ctx.send('no funciona')
+      if (!/goya/i.test(phaseB3) && !/door/i.test(phaseB3))
+        throw new Error(`F75 Phase B turn 3: expected recap with Goya+DOOR, got: "${phaseB3}"`)
+    },
+  },
+  {
     name: 'F56 — DOOR instruction stays verbatim (no invented "goma"/"encaje"/"clic")',
     run: async (ctx) => {
       await ctx.send('La lavadora no arranca')

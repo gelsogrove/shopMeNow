@@ -301,7 +301,7 @@ export async function advanceActiveFlow(runtime: Runtime, state: SessionState, u
       return {
         flowId,
         stepId: 'escalate',
-        prompt: "Un operador humano se encargará de tu caso en la máxima brevedad posible. ¿Aceptas recibir una llamada telefónica por uno de nuestros agentes para que pueda ayudarte ahora?",
+        prompt: translateFn ? translateFn('flowEngineEscalate') : "Un operador humano se encargará de tu caso en la máxima brevedad posible. 🙏 ¿Cómo te llamas, por favor?",
         type: 'INFO',
         isTerminal: true,
         action: 'escalate',

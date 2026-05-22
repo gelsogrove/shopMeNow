@@ -1,7 +1,7 @@
 {
   "_principle": "Per-location overrides. Loaded at runtime when the customer's location (pueblo + calle) is identified by the Router. The active location override is injected into the system prompt of the Specialist and Conversation History as 'ACTIVE LOCATION CONTEXT'. A single LLM handles all locations; behavior varies because the prompt context varies. Anything per-location can be overridden: metadata, FAQ answers, flow node prompts, escalation rules, machine-specific notes. Anti-hardcode rule: never branch on location name in code; always read from this file.",
   "_overrideTypes": {
-    "metadata": "Static facts about the location (hours, prices, central type, returns change, has loyalty card, dryer filter self-service, AJAX restart possible, dryer minutes increase issue, self-start machine, needs street clarification, etc.). The ENTIRE metadata block is serialized into the system prompt of every LLM turn via buildLocationContext() (see utils/runtime.ts). The LLM reads these fields to give tenant-specific answers (price, hours, payment instructions, escalation triggers). Most fields are NOT referenced by TypeScript code — they are LLM knowledge, not dead code. Do NOT remove a metadata field just because grep finds zero references in *.ts files; always check the prompt injection path first.",
+    "metadata": "Static facts about the location (hours, prices, central type, returns change, has loyalty card, dryer filter self-service, AJAX restart possible, dryer minutes increase issue, self-start machine, needs street clarification, landmarks, etc.). The ENTIRE metadata block is serialized into the system prompt of every LLM turn via buildLocationContext() (see utils/runtime.ts). The LLM reads these fields to give tenant-specific answers (price, hours, payment instructions, escalation triggers). Most fields are NOT referenced by TypeScript code — they are LLM knowledge, not dead code. Do NOT remove a metadata field just because grep finds zero references in *.ts files; always check the prompt injection path first. The `landmarks: string[]` field lists nearby points of reference (Mercadona, Carrefour, Aldi, Biblioteca, etc.) the customer may mention to identify the laundromat. Source CSV: docs/csv/locals.csv. F79 — used by resolveLocationByLandmarks (utils/locations.ts) for deterministic location capture when the customer mentions a landmark instead of a pueblo name.",
     "machines": "Per-location inventory of physical machines (washers + dryers). Each entry has: number (e.g. 'L1', 'S5'), weightKg (capacity, null when unknown), fidelity (price with fidelity card), cash (price in cash). Dryers express price as 'X€/Nmin'. The LLM reads this list to answer 'cuánto cuesta la L3?' / 'qué máquinas hay aquí?' / 'cuál es la más grande?' without hardcoded branching. Source of truth: 'PESO/PRECIOS ALBERWAZ' table maintained by operations.",
     "extras": "Optional per-location surcharges (e.g. extraAclarado, extraLavado for L'Escala and Platja d'Aro).",
     "tpvCobra": "Optional fee charged by the TPV (card terminal) for non-fidelity payments, when applicable (e.g. Goya 7€, Pineda 8€).",
@@ -26,6 +26,7 @@
         "dryerMinutesIncreaseIssue": false,
         "selfStartMachine": true,
         "tpvCobra": "7€",
+        "landmarks": ["Mercadona", "Biblioteca"],
         "machines": {
           "washers": [
             { "number": "L4", "weightKg": 20, "fidelity": "6,5€", "cash": "7€" },
@@ -60,8 +61,8 @@
     },
     "Pineda": {
       "pueblo": "Pineda de Mar",
-      "calle": "Calle Pineda",
-      "displayName": "Calle Pineda (Pineda de Mar)",
+      "calle": "Crta. N-II 1, Centro Carrefour",
+      "displayName": "Pineda (Pineda de Mar)",
       "metadata": {
         "hours": "8:00-22:00",
         "centralType": "buttons",
@@ -74,6 +75,7 @@
         "dryerMinutesIncreaseIssue": true,
         "selfStartMachine": true,
         "tpvCobra": "8€",
+        "landmarks": ["Carrefour", "Aldi", "Bingo", "Policia"],
         "machines": {
           "washers": [
             { "number": "L1", "weightKg": 10, "fidelity": "4,5€", "cash": "5€" },
@@ -111,8 +113,8 @@
     },
     "L'Escala": {
       "pueblo": "L'Escala",
-      "calle": "Carrer de la Mar",
-      "displayName": "Carrer de la Mar (L'Escala)",
+      "calle": "Av. Girona, Carrefour",
+      "displayName": "L'Escala",
       "metadata": {
         "hours": "7:00-23:00",
         "centralType": "buttons",
@@ -124,6 +126,7 @@
         "ajaxRestartPossible": false,
         "dryerMinutesIncreaseIssue": false,
         "selfStartMachine": true,
+        "landmarks": ["Carrefour"],
         "machines": {
           "washers": [
             { "number": "L1", "weightKg": null, "fidelity": "6€", "cash": "6€" },
@@ -147,9 +150,9 @@
       }
     },
     "Alemanya": {
-      "pueblo": "Barcelona",
-      "calle": "Carrer d'Alemanya",
-      "displayName": "Carrer d'Alemanya (Barcelona)",
+      "pueblo": "Mataró",
+      "calle": "C/ Alemanya 17",
+      "displayName": "Alemanya (Mataró)",
       "metadata": {
         "hours": "8:00-22:00",
         "centralType": "buttons",
@@ -161,6 +164,7 @@
         "ajaxRestartPossible": true,
         "dryerMinutesIncreaseIssue": true,
         "selfStartMachine": true,
+        "landmarks": [],
         "machines": {
           "washers": [
             { "number": "L1", "weightKg": 20, "fidelity": "7€", "cash": "8€" },
@@ -190,9 +194,9 @@
       ]
     },
     "Hortes": {
-      "pueblo": "Sabadell",
-      "calle": "Carrer de les Hortes",
-      "displayName": "Carrer de les Hortes (Sabadell)",
+      "pueblo": "Granollers",
+      "calle": "Plaça de les Hortes 4",
+      "displayName": "Hortes (Granollers)",
       "metadata": {
         "hours": "8:00-22:00",
         "centralType": "buttons",
@@ -204,6 +208,7 @@
         "ajaxRestartPossible": true,
         "dryerMinutesIncreaseIssue": false,
         "selfStartMachine": true,
+        "landmarks": ["Plaça de les Hortes"],
         "machines": {
           "washers": [
             { "number": "L1", "weightKg": 8, "fidelity": "4€", "cash": "5€" },
@@ -248,7 +253,7 @@
     },
     "PlatjaDAro": {
       "pueblo": "Platja d'Aro",
-      "calle": "(consultar local)",
+      "calle": "Av. Castell d'Aro 37",
       "displayName": "Platja d'Aro",
       "metadata": {
         "hours": "8:00-22:00",
@@ -261,6 +266,7 @@
         "ajaxRestartPossible": false,
         "dryerMinutesIncreaseIssue": false,
         "selfStartMachine": true,
+        "landmarks": ["Carrefour"],
         "machines": {
           "washers": [
             { "number": "L1", "weightKg": 20, "fidelity": "10€", "cash": "10€" },

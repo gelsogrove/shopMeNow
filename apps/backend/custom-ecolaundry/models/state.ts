@@ -8,6 +8,14 @@ export type SessionState = {
   locationStreet: string
   locationStreetRequested: boolean
   locationClarificationCount: number
+  // F79 — Turn-local one-shot signal. When agent-extract resolves the
+  // location via a landmark mention ("estoy cerca del Mercadona" → Goya),
+  // this holds the canonical key so applyGuardOutcome (L5) can prepend a
+  // landmarkAck reply ("Entendido, estás en **Goya** (C/ ...)"). Cleared
+  // after consumption — never persists across turns. Customer who typed
+  // the canonical name directly ("Goya") does NOT trigger this signal
+  // (handled by resolveKnownLocation upstream of the landmark resolver).
+  locationAckPending: string | null
   machineType: '' | 'washer' | 'dryer'
   machineNumber: string
   paymentCompleted: boolean | null
@@ -98,6 +106,11 @@ export type SessionState = {
   // without threading it through every executeTool call.
   lastUserMessage: string
   lastPresentedStepId: string | null
+  // F75 (Andrea 2026-05-22) — counts Phase B+ turns inside a display flow.
+  // Used by buildDisplayRecap to show the problem summary + reassurance only
+  // every 3 turns (at turn 0=Phase A, 3, 6, …). Reset by resetMachineFacts
+  // and resetIncidentDetails when the display flow ends.
+  displayPhaseBTurnCount: number
   lastMissingFacts: string[]
   // 'resolved'    — case closed by markResolved (machine works).
   // 'escalated'   — case handed over to a human operator (operatorHandoffFinal appended).

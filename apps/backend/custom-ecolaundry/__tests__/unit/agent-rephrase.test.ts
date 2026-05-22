@@ -268,6 +268,91 @@ const cases: Case[] = [
     },
   },
 
+  // ── F74: greeting+closing only on first display turn (Phase A) ───────────
+  {
+    name: 'F74 buildDisplayRecap Phase A: 4 blocks when lastPresentedStepId is null',
+    run: async () => {
+      // Phase A = first display turn: lastPresentedStepId not yet set → full 4-block recap
+      const ar = makeRuntime({ rephraseDisplayFlow: true })
+      ar.state.location = 'Goya'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '3'
+      ar.state.displayLabel = 'DOOR'
+      ar.state.activeFlowId = 'non_parte'
+      ar.state.lastPresentedStepId = null  // first display turn
+      const recap = buildDisplayRecap('Ábrela y ciérrala bien.', ar, 'es')
+      if (!recap) throw new Error('Expected recap, got null')
+      const blocks = recap.split('\n\n')
+      if (blocks.length !== 4) throw new Error(`F74 Phase A: expected 4 blocks, got ${blocks.length}: ${JSON.stringify(blocks)}`)
+    },
+  },
+  {
+    name: 'F74/F75 buildDisplayRecap Phase B turn 1: instruction only (no recap)',
+    run: async () => {
+      // displayPhaseBTurnCount 0→1, 1%3≠0 → bare instruction, no recap
+      const ar = makeRuntime({ rephraseDisplayFlow: true })
+      ar.state.location = 'Goya'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '3'
+      ar.state.displayLabel = 'DOOR'
+      ar.state.activeFlowId = 'non_parte'
+      ar.state.lastPresentedStepId = 'step_1'
+      ar.state.displayPhaseBTurnCount = 0
+      const result = buildDisplayRecap('Vuelve a intentarlo con más fuerza.', ar, 'es')
+      if (result !== 'Vuelve a intentarlo con más fuerza.') {
+        throw new Error(`F74/F75 Phase B turn 1: expected bare instruction, got: ${result}`)
+      }
+      if (ar.state.displayPhaseBTurnCount !== 1) {
+        throw new Error(`F75: counter should be 1 after turn, got ${ar.state.displayPhaseBTurnCount}`)
+      }
+    },
+  },
+  {
+    name: 'F75 buildDisplayRecap Phase B turn 3: 3 blocks (recap + reassurance + instruction)',
+    run: async () => {
+      // displayPhaseBTurnCount 2→3, 3%3=0 → recap shown
+      const ar = makeRuntime({ rephraseDisplayFlow: true })
+      ar.state.location = 'Goya'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '3'
+      ar.state.displayLabel = 'DOOR'
+      ar.state.activeFlowId = 'non_parte'
+      ar.state.lastPresentedStepId = 'step_3'
+      ar.state.displayPhaseBTurnCount = 2
+      const result = buildDisplayRecap('Último intento.', ar, 'es')
+      if (!result) throw new Error('Expected string, got null')
+      const blocks = result.split('\n\n')
+      if (blocks.length !== 3) throw new Error(`F75 Phase B turn 3: expected 3 blocks, got ${blocks.length}: ${JSON.stringify(blocks)}`)
+      if (!result.includes('**Goya**')) throw new Error('F75: block2 must contain bold location')
+      if (!result.includes('Último intento.')) throw new Error('F75: instruction must be present')
+    },
+  },
+  {
+    name: 'F74 buildDisplayRecap Phase B: no greeting or closing in any Phase B turn',
+    run: async () => {
+      // No turn (1, 2, 3, 4, 5, 6) should ever contain greeting or closing strings
+      const ar = makeRuntime({ rephraseDisplayFlow: true })
+      ar.state.location = 'Pineda'
+      ar.state.displayLabel = 'AL001'
+      ar.state.activeFlowId = 'al001-sequence-error'
+      ar.state.lastPresentedStepId = 'step_1'
+      for (let i = 1; i <= 6; i++) {
+        ar.state.displayPhaseBTurnCount = i - 1
+        const result = buildDisplayRecap('Sigue los pasos en orden.', ar, 'es')
+        if (result === null) throw new Error(`F74: got null at Phase B turn ${i}`)
+        if (/preocupes|solucionarlo|arreglamos|juntos/i.test(result)) {
+          throw new Error(`F74 Phase B turn ${i}: must NOT contain greeting strings`)
+        }
+        if (/Av[ií]same|Cu[eé]ntame|podido\s+solucionar/i.test(result)) {
+          throw new Error(`F74 Phase B turn ${i}: must NOT contain closing strings`)
+        }
+        if (!result.includes('Sigue los pasos en orden.')) {
+          throw new Error(`F74 Phase B turn ${i}: instruction must always be present`)
+        }
+      }
+    },
+  },
+
   // ── Language field is always included ───────────────────────────────────
   {
     name: 'language passed to LLM prompt (IT customer)',

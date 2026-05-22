@@ -15,6 +15,7 @@ import {
   detectDiscountCodeIntent,
   detectDisplayUnreadableIntent,
   detectDoubleChargeIntent,
+  detectLandmarkMention,
   detectNumericCodeIntent,
   detectPaidNotActivatedIntent,
   detectIDontKnowReply,
@@ -34,6 +35,11 @@ import {
   parsePaymentAnswer,
 } from '../../utils/intent.js'
 import { createInitialState } from '../../utils/state.js'
+import { loadTestRuntime } from './_helpers.js'
+
+// F79 — preload runtime once so the landmark-mention pins below can read
+// real locations.json data without making each test async.
+const testRuntime = await loadTestRuntime()
 
 interface Case {
   name: string
@@ -1867,6 +1873,38 @@ const cases: Case[] = [
     run: () => {
       const r = detectMachineTypeMention('Pineda')
       if (r !== null) throw new Error(`bare location must not match a machine verb: got ${r}`)
+    },
+  },
+
+  // F79 — detectLandmarkMention is a thin re-export of findLandmarksInMessage
+  // from utils/locations-landmarks.ts. Detailed coverage of the resolver
+  // lives in __tests__/unit/locations-landmarks.test.ts (19 pins). The pins
+  // below verify the re-export is wired correctly and that the facade
+  // exposed via intent.ts behaves identically to the underlying helper.
+  {
+    name: 'F79 detectLandmarkMention: re-export is callable from intent.ts',
+    run: () => {
+      if (typeof detectLandmarkMention !== 'function') {
+        throw new Error('detectLandmarkMention is not exported from utils/intent.ts')
+      }
+    },
+  },
+  {
+    name: 'F79 detectLandmarkMention: returns landmark hits with real runtime data',
+    run: () => {
+      const hits = detectLandmarkMention('estoy cerca del Mercadona', testRuntime.locations)
+      if (!hits.includes('Mercadona')) {
+        throw new Error(`expected hits to include Mercadona, got [${hits.join(',')}]`)
+      }
+    },
+  },
+  {
+    name: 'F79 detectLandmarkMention: empty message returns empty array',
+    run: () => {
+      const hits = detectLandmarkMention('', testRuntime.locations)
+      if (hits.length !== 0) {
+        throw new Error(`expected [], got [${hits.join(',')}]`)
+      }
     },
   },
 

@@ -84,19 +84,6 @@ export const LAUNDROMATS: LaundromatLocation[] = [
 // typo dropped to unknown-location list because fuzzy couldn't pick one).
 export const AMBIGUOUS_PUEBLOES: ReadonlySet<string> = new Set(['Mataró'])
 
-/** Reply shown when the customer mentions an ambiguous pueblo. */
-export function buildAmbiguousPuebloReply(pueblo: string): string {
-  const inPueblo = LAUNDROMATS.filter(
-    (l) => l.pueblo.toLowerCase() === pueblo.toLowerCase(),
-  )
-  if (inPueblo.length < 2) {
-    // Defensive: shouldn't happen because AMBIGUOUS_PUEBLOES gates the call,
-    // but if it does we degrade gracefully to the generic ask.
-    return '¿En qué lavandería estás?'
-  }
-  const list = inPueblo.map((l) => l.address).join(' y ')
-  return `En ${pueblo} tenemos dos lavanderías: ${list}. ¿En cuál estás?`
-}
 
 /** Human-readable list used in the "unknown location" fallback reply. */
 export function listLaundromatsForReply(): string {
@@ -105,3 +92,14 @@ export function listLaundromatsForReply(): string {
   // most helpful thing.
   return LAUNDROMATS.map((l) => l.canonical).join(', ')
 }
+
+// F79 — Landmark-based location resolution lives in a sibling module to
+// keep this file under the 150-line architecture limit. The implementation
+// is data-driven from json/locations.json:metadata.landmarks. See
+// utils/locations-landmarks.ts for details and resolveLocationByLandmarks.
+export type { LandmarkResolution } from './locations-landmarks.js'
+export {
+  listAllLandmarks,
+  findLandmarksInMessage,
+  resolveLocationByLandmarks,
+} from './locations-landmarks.js'
