@@ -1693,6 +1693,32 @@ const cases: Case[] = [
       }
     },
   },
+  {
+    name: 'F73 — rephrase.txt: LANGUAGE is authoritative (not fallback)',
+    run: () => {
+      const rephraseTxt = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'prompts/rephrase.txt'),
+        'utf8',
+      )
+      // The rephrase must NOT instruct the LLM to follow conversation history language.
+      // LANGUAGE field must be authoritative (F73 fix for multi-language mixing bug).
+      if (/detecta el idioma de CONVERSATION_HISTORY/i.test(rephraseTxt)) {
+        throw new Error(
+          'F73: rephrase.txt must NOT instruct LLM to detect language from CONVERSATION_HISTORY — LANGUAGE field is authoritative',
+        )
+      }
+      if (/usa el valor de LANGUAGE solo como fallback/i.test(rephraseTxt)) {
+        throw new Error(
+          'F73: rephrase.txt must NOT use LANGUAGE only as fallback — it must be the authoritative language',
+        )
+      }
+      if (!/LANGUAGE.*autoritativo/i.test(rephraseTxt)) {
+        throw new Error(
+          'F73: rephrase.txt must declare LANGUAGE as authoritative (autoritativo)',
+        )
+      }
+    },
+  },
 ]
 
 async function main(): Promise<void> {
