@@ -3,7 +3,7 @@ import { Request, Response } from "express"
 import * as fs from "fs"
 import * as path from "path"
 import { getChatEngine } from "../../../application/chat-engine"
-import { CustomClientChatbotService, applyCustomerPatches } from "../../../application/services/custom-client-chatbot.service"
+import { CustomClientChatbotService, applyCustomerPatches, applyEscalationNotification } from "../../../application/services/custom-client-chatbot.service"
 import { detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
 import { buildPhoneVariants } from "../../../utils/phone"
 import logger from "../../../utils/logger"
@@ -406,6 +406,27 @@ export class PlaygroundController {
 
           if (customResult.handled && customResult.output) {
             await applyCustomerPatches(customResult.output.patches, customer.id, workspaceId)
+          }
+          // Dispatch escalation notification (email/WhatsApp) when the custom
+          // chatbot signals that the case must be handed over to a human
+          // operator. Same single-point pattern used by whatsapp-webhook,
+          // ultramsg-webhook and widget-chat controllers. Without this block
+          // the playground would never trigger the Human Support email, even
+          // when the bot reaches the "operator handoff" final reply.
+          const customOutput = customResult.output
+          if (customResult.handled && customOutput?.shouldEscalate && customOutput.escalationSummary) {
+            void applyEscalationNotification({
+              workspaceId,
+              customerId: customer.id,
+              escalationSummary: customOutput.escalationSummary,
+              history: history.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content || '' })),
+              customerName: customer.name || 'Unknown',
+              customerPhone: customer.phone || undefined,
+              notificationEmails: customOutput.notificationEmails,
+              operatorContactMethod: customOutput.operatorContactMethod,
+              operatorWhatsappNumber: customOutput.operatorWhatsappNumber,
+              smtpConfig: customOutput.smtpConfig,
+            })
           }
           if (customResult.handled && customResult.output?.reply) {
             botResponse = customResult.output.reply

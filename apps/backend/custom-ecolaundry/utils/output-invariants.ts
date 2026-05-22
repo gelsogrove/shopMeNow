@@ -13,10 +13,12 @@
 export { stripEvasivePhrases } from './output-invariants/evasive.js'
 export { stripLocationParroting } from './output-invariants/location-parrot.js'
 export { stripStandalonePaymentQuestion } from './output-invariants/payment-question.js'
+export { splitInlineNumberedList } from './output-invariants/numbered-list.js'
 
 import { stripEvasivePhrases } from './output-invariants/evasive.js'
 import { stripLocationParroting } from './output-invariants/location-parrot.js'
 import { stripStandalonePaymentQuestion } from './output-invariants/payment-question.js'
+import { splitInlineNumberedList } from './output-invariants/numbered-list.js'
 
 export interface OutputInvariantContext {
   location: string | null
@@ -30,5 +32,6 @@ export function applyOutputInvariants(
   r = stripEvasivePhrases(r)
   r = stripLocationParroting(r, ctx.location)
   r = stripStandalonePaymentQuestion(r)
+  r = splitInlineNumberedList(r)
   return r
 }

@@ -1858,6 +1858,30 @@ export class WidgetChatController {
             })
           }
 
+          // F85 — When OpenRouter is unreachable (auth/credits/rate/timeout/network
+          // exhausted), the module returns error='llm_unavailable' with reply=null.
+          // Serve the workspace WIP message to the customer as a graceful fallback
+          // and skip persistence + billing (no real conversation happened).
+          if (customOutput.error === "llm_unavailable") {
+            const wipText = customOutput.wipMessage || workspace.wipMessage || ""
+            return res.status(200).json({
+              success: true,
+              messageId: `widget-${visitorId}-${Date.now()}`,
+              sessionId: chatSession.id,
+              response: wipText,
+              wipMessage: wipText,
+              status: "wip",
+              suggestions: [],
+              language: customerLanguage || "en",
+              customerProfile: {
+                name: customer.name,
+                email: customer.email?.endsWith("@visitor.local") ? null : customer.email,
+                phone: customer.phone,
+                isActive: customer.isActive,
+              },
+            })
+          }
+
           // Save user message to conversation history
           await prisma.conversationMessage.create({
             data: {

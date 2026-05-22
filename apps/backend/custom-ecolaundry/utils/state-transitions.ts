@@ -241,3 +241,75 @@ export function clearFaqContextOnTroubleEntry(ar: AgentRuntime): void {
   ar.state.lastResolvedIntent = null
   ar.state.lastFaqKey = null
 }
+
+/**
+ * F86 — Pivot from any non-machine flow (invoice gather, discount-code gather,
+ * double-charge gather, etc.) to a trouble-machine flow.
+ *
+ * Triggered atomically by the L4 gather guards (invoice-flow, discount-code-
+ * flow, payment-double-charge) when the F86 detector
+ * `detectTroubleSwitchDuringFlow` matches the customer's turn.
+ *
+ * BEFORE this transition existed, the gather step would blindly accept the
+ * customer's turn as the canonical answer:
+ *   - "ah, ahora no funciona la lavadora" would be saved as machineNumber
+ *     in discount-code-await-machine
+ *   - "scusa, non parte la lavatrice" would be saved as razonSocial in
+ *     invoice-ask-company-name
+ *   - etc.
+ *
+ * State pollution was guaranteed for any gather step that ran `field = trimmed`
+ * without semantic validation.
+ *
+ * What this transition does:
+ *   - Clears the active non-machine flow's `pendingFlow` (the gather is
+ *     abandoned — the customer changed topic)
+ *   - Sets `activeBranch = 'trouble-machine'` so the next dispatch routes
+ *     to the trouble pipeline
+ *   - Clears `activeFlowId` (no display flow yet)
+ *   - Preserves sticky customer facts: `location`, `machineType`,
+ *     `machineNumber`, `customerName`, `customerPhone` (the customer is the
+ *     same; only the conversation topic changed)
+ *   - Clears partial gather data (`invoiceData`, `discountCodeData`,
+ *     `doubleChargeData`) since the abandoned flow is no longer relevant
+ *   - Clears `lastResolvedIntent` / `lastFaqKey` (the FAQ context, if any,
+ *     is also abandoned)
+ *   - Calls `resetPostEscalationFlags(ar)` for safety (no stale escalation
+ *     leaks into the new trouble flow)
+ *
+ * Iron rule #4 compliant: single atomic transition, all mutations live here.
+ *
+ * Tested in __tests__/unit/trouble-switch-during-flow.test.ts.
+ */
+export function pivotToTroubleMachine(ar: AgentRuntime): void {
+  ar.state.pendingFlow = ''
+  ar.state.activeBranch = 'trouble-machine'
+  ar.state.activeFlowId = null
+  ar.state.activeStepId = null
+  ar.state.lastPresentedStepId = null
+  ar.state.lastResolvedIntent = null
+  ar.state.lastFaqKey = null
+  // Clear partial gather data — the abandoned flow's fields are no longer
+  // meaningful. Shape per models/state.ts (verify before editing here).
+  ar.state.invoiceData = {
+    razonSocial: '',
+    direccion: '',
+    cif: '',
+    fecha: '',
+    fechaIso: '',
+    costeTotal: '',
+    email: '',
+    notes: '',
+  }
+  ar.state.discountCodeData = {
+    letters: '',
+    fechaIso: '',
+    importe: '',
+    doorClosed: null,
+  }
+  // Double-charge has inline fields in SessionState (no nested object).
+  // Clear them all so the next trouble-machine flow starts fresh.
+  ar.state.doubleChargeNarrativeProvided = false
+  ar.state.doubleChargeNarrativeText = ''
+  resetPostEscalationFlags(ar)
+}

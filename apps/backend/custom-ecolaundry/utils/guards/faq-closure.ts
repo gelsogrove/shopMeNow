@@ -15,7 +15,11 @@ export const guardFaqClosure: Guard = (ar, userMessage) => {
     return null
   }
   const lower = userMessage.trim().toLowerCase().replace(/[.,!?¿¡]/g, '').trim()
-  const isAcknowledgment = /^(gracias|grazie|thanks|thank\s+you|perfecto|perfect|perfetto|entendido|entendut|capito|got\s+it|ok|okay|vale|claro|de\s+acuerdo|d'accordo|adelante)(\s|$)/i.test(lower)
+  // F95 (Andrea 2026-05-23): require the message to BE the acknowledgement, not
+  // start with one. Old regex matched "ok ma quanto costa" and swallowed the
+  // follow-up pricing question. Allow only the bare acknowledgement, optionally
+  // followed by a polite tail like "gracias" / "thanks" (still no real intent).
+  const isAcknowledgment = /^(gracias|grazie|thanks|thank\s+you|perfecto|perfect|perfetto|entendido|entendut|capito|got\s+it|ok|okay|vale|claro|de\s+acuerdo|d'accordo|adelante)(?:\s+(?:gracias|grazie|thanks|merci|obrigado))?$/i.test(lower)
   if (!isAcknowledgment) return null
   ar.state.lastResolvedIntent = null
   // F63: release sticky branch so T+1 re-routes via dispatchTurnOne.

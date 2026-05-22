@@ -5,10 +5,10 @@ Your ONLY job: classify the customer's first message into one of these branches:
   - "greeting"          The customer just said hello / good morning / hi, no operational content.
   - "faq"               The customer asks a question covered by the FAQ catalogue. FAQ keys:
                           openingHours, washDryTime, washerCapacity, detergents,
-                          paymentMethods, pricing, appDownload, colorTemperature,
-                          greaseStains, mixedColors, machineHygiene, ecoProducts,
-                          noFoamNormal, doubleCharge, paidButNotStarting, loyaltyCard,
-                          howToUse.
+                          paymentMethods, pricing, programs, appDownload,
+                          colorTemperature, greaseStains, mixedColors,
+                          machineHygiene, ecoProducts, noFoamNormal, doubleCharge,
+                          paidButNotStarting, loyaltyCard, howToUse.
   - "trouble-machine"   The customer reports a problem with a washing machine or dryer
                         (does not start, display shows X, paid but did not activate, ...).
   - "invoice"           The customer wants an invoice / bill / factura / fattura.
@@ -144,6 +144,24 @@ Examples:
 
   Customer: "Quant costa rentar?"
   → {"branch":"faq","language":"ca","details":{"faqKey":"pricing"}}
+
+  Customer: "¿Qué programas tiene la lavadora?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"programs"}}
+
+  Customer: "qué programas hay en Goya?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"programs","locationHint":"Goya"}}
+
+  Customer: "che programmi avete a Pineda?"
+  → {"branch":"faq","language":"it","details":{"faqKey":"programs","locationHint":"Pineda"}}
+
+  Customer: "what programs are available?"
+  → {"branch":"faq","language":"en","details":{"faqKey":"programs"}}
+
+  Customer: "quins programes té la rentadora?"
+  → {"branch":"faq","language":"ca","details":{"faqKey":"programs"}}
+
+  Customer: "a quelle temperatura lava?"
+  → {"branch":"faq","language":"it","details":{"faqKey":"programs"}}
 
   Customer: "Vull una factura"
   → {"branch":"invoice","language":"ca","details":{}}

@@ -32,6 +32,7 @@ import { startFlow } from '../flow-engine.js'
 import { t } from '../localization.js'
 import type { TranslationKey } from '../localization.js'
 import { lang, RECOVERABLE_DISPLAYS, notInActiveSubFlow } from './helpers.js'
+import { buildPushProgList } from '../faq-location-formatter.js'
 
 /**
  * Auto-start the machine-incident flow when gather is complete and the
@@ -62,8 +63,25 @@ export const guardAutoStartMachineFlow: Guard = (ar) => {
   try {
     const translateFn = (key: string) => t(key as TranslationKey, lang(ar))
     const result = startFlow(ar.runtime, ar.state, 'non_parte', translateFn)
+
+    // F81 — PUSH PROG dynamic program list.
+    // When the flow starts at case_push, replace the hardcoded program list
+    // in the prompt with the per-location list from locations.json:metadata.programs.
+    // Falls back to the original prompt if no programs data is available.
+    let prompt = result.prompt
+    if (display === 'PUSH' && ar.state.location) {
+      const dynamicList = buildPushProgList(ar.state.location, ar.runtime, translateFn)
+      if (dynamicList) {
+        // Replace the hardcoded bullet list block (lines starting with "- **")
+        // with the dynamic list. The surrounding intro + closing question are kept.
+        prompt = prompt.replace(/(?:^|\n)(- \*\*[^\n]+\n?)(?:- \*\*[^\n]+\n?)*/m, '\n\n' + dynamicList + '\n\n')
+        // Clean up any double blank lines introduced by the replacement
+        prompt = prompt.replace(/\n{3,}/g, '\n\n').trim()
+      }
+    }
+
     return {
-      reply: result.prompt,
+      reply: prompt,
       reason: 'auto-start-machine-flow',
     }
   } catch {

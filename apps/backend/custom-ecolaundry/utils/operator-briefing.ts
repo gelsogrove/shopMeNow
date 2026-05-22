@@ -1,9 +1,9 @@
 // Operator briefing — LLM-generated handover summary (opt-in via
-// settings.operatorBriefingFromLlm). Falls back to the deterministic
-// `escalation.ts:buildEscalationSummary` on error / empty response.
-
+// settings.operatorBriefingFromLlm). Falls back to deterministic
+// `escalation.ts:buildEscalationSummary` on parse/empty errors.
 import type { AgentMessage, AgentRuntime, SessionState } from '../models/index.js'
 import { callModel } from './llm.js'
+import { LlmFetchError } from './llm-fetch.js'
 import { formatHandoverTimestamp } from './escalation.js'
 import { logger } from './logger.js'
 
@@ -140,6 +140,8 @@ export async function generateOperatorBriefingFromHistory(
     if (!briefing.trim()) return fallbackSummary
     return briefing.trim()
   } catch (err) {
+    // F85 — Network outages re-throw (host serves WIP); parse/schema keep fallback.
+    if (err instanceof LlmFetchError) throw err
     logger.warn('operator briefing LLM failed, falling back to deterministic summary', {
       error: err instanceof Error ? err.message : String(err),
     })

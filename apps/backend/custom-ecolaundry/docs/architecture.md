@@ -231,7 +231,15 @@ REPLY TO CUSTOMER
 
 ## 5. Run modes — same code in both
 
-- **CLI**: `npm run demo` → calls `agentTurn()` interactively.
+- **CLI REPL**: `npm run demo` → calls `agentTurn()` interactively
+  (stdin/stdout, human-driven).
+- **CLI batch** (added 2026-05-22): `npm run demo -- --batch '[...]'` →
+  calls `agentTurn()` programmatically over a pre-supplied JSON array of
+  scenarios. Each scenario is an array of turn strings; the literal
+  `"/reset"` marker creates a fresh session. Output includes per-turn
+  `[USER]`/`[BOT]` markers plus a `[STATE T-end]` snapshot per scenario.
+  Used by the `chatbot-eval` skill for diff-driven QA. Identical
+  `agentTurn()` codepath — no test-only branches.
 - **Web**: `index.ts:chatbotFn` wraps `agentTurn()` with the API shape
   `CustomClientChatbotService` expects. Identical behaviour.
 
@@ -243,9 +251,22 @@ REPLY TO CUSTOMER
   state transitions, contracts. No LLM. Run with `npm run test:unit`.
 - **Agent E2E** (`__tests__/agent/*.test.spec.ts`) — full conversation
   scenarios, require an LLM key. Run with `npm run test:agent`.
+- **Diff-driven eval** via the [`chatbot-eval` skill](../../../.claude/skills/chatbot-eval/SKILL.md)
+  — Andrea triggers it with "testa quello che abbiamo fatto"; the skill
+  reads `git diff main...HEAD`, picks 3-6 mirrored scenarios, runs
+  `npm run demo -- --batch`, evaluates each reply against iron rules +
+  F-log, STOPS on bug to type out the Bug intake protocol, applies the
+  layer-correct fix only after Andrea's OK, then re-runs verification
+  (typecheck + test:unit + check-architecture + f-log-regression). Costs
+  OpenRouter API calls; scenario count is proportional to diff scope.
 
 The unit suite is the safety net: every refactor MUST keep it green.
 The E2E suite catches LLM regressions; it is slower and not free.
+The skill complements the agent suite for ad-hoc cross-language /
+cross-flow scenarios that haven't yet been turned into permanent agent
+tests — when a skill run surfaces a new bug, the F-log entry pin in
+`f-log-regression.test.ts` is mandatory (it's a unit test, so it lives
+in the safety net immediately).
 
 ---
 

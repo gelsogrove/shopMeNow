@@ -77,7 +77,7 @@ import { guardLocationGatedMismatch } from './location-gated-mismatch.js'
 
 import { guardFaqClosure } from './faq-closure.js'
 import { guardFaqDetergents } from './faq-detergents.js'
-import { guardFaqHowToUse } from './faq-how-to-use.js'
+import { guardFaqHowToUse, guardFaqHowToUseAwaitLocation } from './faq-how-to-use.js'
 import { guardInvoiceFlow } from './invoice-flow.js'
 import { guardFaqHours, guardFaqHoursAwaitLocation } from './faq-hours.js'
 import {
@@ -86,6 +86,7 @@ import {
   guardFaqPricesAwaitDryerConfirm,
   guardFaqPricesAwaitWasherConfirm,
 } from './faq-prices.js'
+import { guardFaqPrograms, guardFaqProgramsAwaitLocation } from './faq-programs.js'
 import { guardAngryCustomerEmpathic, guardAngryCustomerEscalate, guardAngryCustomerExplicit } from './angry-customer.js'
 import { guardRefundOrCompensation } from './refund-and-compensation.js'
 import { guardContradictoryNarrative } from './contradictory-narrative.js'
@@ -108,13 +109,14 @@ export const GUARD_PIPELINE: Guard[] = [
   // who screams "muy enfadado, quiero un operador" doesn't get asked
   // "¿en qué lavandería estás?". See angry-customer.ts for rationale.
   guardAngryCustomerExplicit,
-  // Caso 12 — FAQ hours & prices (location-driven, data-aware).
-  // Must run EARLY: customer asking "¿cuánto cuesta?" / "¿qué horarios?"
-  // gets a concrete data-driven answer (or a location ask) BEFORE the
-  // generic gather/flow guards can derail the conversation.
+  // Caso 12 — FAQ hours, prices & programs (location-driven, data-aware).
+  // Must run EARLY: customer asking "¿cuánto cuesta?" / "¿qué horarios?" /
+  // "¿qué programas tiene?" gets a concrete data-driven answer (or a location
+  // ask) BEFORE the generic gather/flow guards can derail the conversation.
   // T1 guards (intent + maybe-ask-location):
   guardFaqHours,
   guardFaqPrices,
+  guardFaqPrograms,
   // Caso 34 — FAQ detergente/jabón: single-turn, no gather needed.
   // Runs early so mid-flow pivots ("¿hay jabón?" mid DOOR troubleshoot) work.
   guardFaqDetergents,
@@ -124,6 +126,8 @@ export const GUARD_PIPELINE: Guard[] = [
   // T2 guards (location reply unlocks the answer):
   guardFaqHoursAwaitLocation,
   guardFaqPricesAwaitLocation,
+  guardFaqProgramsAwaitLocation,
+  guardFaqHowToUseAwaitLocation,
   // T3: "sí" or "y la secadora" follow-up renders dryer prices.
   guardFaqPricesAwaitDryerConfirm,
   // T3 mirror (F58): "sí" or "y la lavadora" follow-up renders washer prices

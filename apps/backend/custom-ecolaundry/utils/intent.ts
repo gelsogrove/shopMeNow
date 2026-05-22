@@ -9,7 +9,8 @@ import {
   hasExtraButtonIssue,
   hasStopIntent,
 } from './message-parsing.js'
-import type { SessionState } from '../models/index.js'
+import { matchPattern } from './nlu.js'
+import type { SessionState, Runtime } from '../models/index.js'
 
 // ── Display state extraction ──────────────────────────────────────────────────
 
@@ -648,6 +649,25 @@ export function detectPriceIntent(message: string): boolean {
   return /(cu[aá]nto\s+(?:cuesta|costa)|qu[eé]\s+precio|cu[aá]l\s+es\s+el\s+precio|how\s+much\s+(?:does\s+it\s+)?cost|quanto\s+costa|qual\s+[èe]\s+il\s+prezzo|combien(?:\s+[a-zà-ÿ']+){0,2}\s+(?:co[ûu]te|coute)|qual\s+[ée]\s+o\s+pre[çc]o|quin\s+[ée]s\s+el\s+preu|\bprecios?\b|\bprezzi?\b|\bprice\b|\bpre[çc]o\b|\bpreu\b|\btarifa\b)/i.test(trimmed)
 }
 
+// ── Programs intent detection (Caso 12.4, F81) ───────────────────────────────
+//
+// Topic classifier (rule #6 tracked exemption — fast-path before the LLM).
+// Returns true when the customer asks about washer/dryer programs.
+// Multi-language coverage (es/it/en/pt/ca/fr).
+// Real-bug evidence: Andrea 2026-05-22 — CSV programes.csv integration.
+// Tested in `__tests__/unit/intent.test.ts`.
+export function detectProgramsIntent(message: string): boolean {
+  const trimmed = message.toLowerCase()
+  if (!trimmed) return false
+  // ES: programas, qué programas, qué temperatura
+  // IT: programmi, quali programmi, che temperatura
+  // EN: programs, what programs, what temperature
+  // CA: programes, quins programes, quina temperatura
+  // PT: programas, que programas, que temperatura
+  // FR: programmes, quels programmes, quelle température
+  return /\bprograma[s]?\b|\bprogramm[ai]\b|\bprograms?\b|\bprogrames?\b|\bprogramme[s]?\b|qu[eé]\s+(?:programa|temperatura|temp)|which\s+program|what\s+program|quins?\s+program|quels?\s+programme|que\s+(?:programa|temperatura)|quelle?\s+temp[eé]rature|\btemperatura[s]?\b|a\s+qu[eé]\s+temperatura|at\s+what\s+temp|qu[eé]\s+lavado|tipo\s+de\s+lavado|modes?\s+de\s+lavage/i.test(trimmed)
+}
+
 // ── Machine type mention in arbitrary message (used by Caso 12.2 guard) ──────
 //
 // Lightweight detector that returns 'washer' / 'dryer' / null based on the
@@ -1112,3 +1132,41 @@ export { hasExtraButtonIssue, hasStopIntent }
 // guardForceLocation (enumeration on "I don't know" replies).
 
 export { findLandmarksInMessage as detectLandmarkMention } from './locations-landmarks.js'
+
+// ── F86 — Trouble-machine switch detection during non-machine flows ─────────
+//
+// Customer is mid-flow (invoice gather, discount-code gather, double-charge
+// gather, factura, …) and suddenly pivots: "ah, ahora no funciona la
+// lavadora", "scusa, non mi parte la lavatrice", "wait, the dryer doesn't
+// work", "espera, no me anda la máquina". Before this detector, the gather
+// step blindly accepted the whole sentence as the canonical answer (e.g. as
+// `machineNumber`, `razonSocial`, `cif`, …) and proceeded as if the customer
+// had answered the previous question. State got polluted with a sentence
+// instead of a structured value.
+//
+// Architecture: pure boundary signal (rule #6 — boundary signals are
+// allowed). Uses the JSON-driven pattern `topicMachineTrouble` so all 6
+// languages share one source of truth (es/it/en/ca/pt/fr). The pattern is
+// intentionally restrictive: requires an explicit negation + functional
+// verb (no funciona, no me anda, non funziona, doesn't work, n[aã]o
+// funciona, ne fonctionne pas, broken, en panne, …). Neutral noun mentions
+// like "cuál lavadora es?" do NOT match.
+//
+// Consumers (per F84 architectural fix):
+//   - utils/guards/invoice-flow.ts        (any invoice-ask-* step)
+//   - utils/guards/discount-code-flow.ts  (any discount-code-await-* step)
+//   - utils/guards/payment-double-charge.ts (any flow gather step)
+//
+// When the detector fires, the guard calls `pivotToTroubleMachine` from
+// state-transitions.ts to clear the active non-machine flow atomically and
+// armes trouble-machine context. See F-log F84.
+//
+// Tested in __tests__/unit/trouble-switch-during-flow.test.ts (6 langs).
+export function detectTroubleSwitchDuringFlow(
+  runtime: Runtime,
+  message: string,
+): boolean {
+  const trimmed = message.trim()
+  if (!trimmed) return false
+  return matchPattern(runtime, 'topicMachineTrouble', trimmed)
+}

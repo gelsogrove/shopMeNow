@@ -16,6 +16,7 @@
 //     handler module under utils/branches/<branch>/.
 
 import { callModel, extractJson, resolveModel } from './llm.js'
+import { LlmFetchError } from './llm-fetch.js'
 import { ROUTER_SYSTEM_PROMPT } from './router-prompt.js'
 import type { Runtime, SupportedLanguage } from '../models/index.js'
 
@@ -111,9 +112,15 @@ export async function classifyMessageBranch(
       temperature: routerTemp,
       maxTokens: 200,
     })
-  } catch {
-    // Network / API error → fall back to "unknown" so the dispatcher can
-    // route to a safe default (re-ask in a neutral way).
+  } catch (err) {
+    // F85 — OpenRouter outages (auth/credits/rate/timeout/network) propagate
+    // up so chatbotFn returns error='llm_unavailable' and the widget serves
+    // the workspace WIP message. The historic "fall back to ROUTER_FALLBACK"
+    // path was masking outages as ordinary "unknown" classifications.
+    if (err instanceof LlmFetchError) throw err
+    // Non-network errors (JSON parse, validation, etc.) keep the safe-default
+    // behaviour so an isolated parsing glitch doesn't trigger WIP for the
+    // whole tenant.
     return ROUTER_FALLBACK
   }
 

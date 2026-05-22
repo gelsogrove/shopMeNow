@@ -23,7 +23,7 @@
 import { t } from '../localization.js'
 import { resolveKnownLocation, resolveKnownLocationFuzzy } from '../message-parsing.js'
 import type { AgentRuntime, Guard } from '../../models/index.js'
-import { lang } from './helpers.js'
+import { lang, pivotIfTroubleSwitch } from './helpers.js'
 import { buildEscalationSummary, extractEscalationContext } from '../escalation.js'
 import { validateCustomerName } from '../customer-name.js'
 import { parseDiscountCode } from '../discount-code-format.js'
@@ -122,6 +122,7 @@ export const guardDiscountCodeAwait: Guard = (ar, userMessage) => {
  *  escalates to a live operator who can collect the name by phone. */
 export const guardDiscountCodeAwaitName: Guard = (ar, userMessage) => {
   if (ar.state.pendingFlow !== 'discount-code-await-name') return null
+  if (pivotIfTroubleSwitch(ar, userMessage)) return null  // F86
   const validation = validateCustomerName(userMessage, {
     discountCodePrefix: discountCodePrefix(ar),
   })
@@ -158,6 +159,7 @@ export const guardDiscountCodeAwaitName: Guard = (ar, userMessage) => {
 /** Caso 8 step 4 — capture pueblo (or accept the raw text as location). */
 export const guardDiscountCodeAwaitLocation: Guard = (ar, userMessage) => {
   if (ar.state.pendingFlow !== 'discount-code-await-location') return null
+  if (pivotIfTroubleSwitch(ar, userMessage)) return null  // F86
   const raw = userMessage.trim()
   const matched = resolveKnownLocation(raw) || resolveKnownLocationFuzzy(raw) || raw
   ar.state.location = matched
@@ -172,6 +174,7 @@ export const guardDiscountCodeAwaitLocation: Guard = (ar, userMessage) => {
 /** Caso 8 step 5 — capture machine number. */
 export const guardDiscountCodeAwaitMachine: Guard = (ar, userMessage) => {
   if (ar.state.pendingFlow !== 'discount-code-await-machine') return null
+  if (pivotIfTroubleSwitch(ar, userMessage)) return null  // F86
   ar.state.machineNumber = userMessage.trim()
   ar.state.pendingFlow = 'discount-code-await-door'
   return { reply: t('discountCodeAskDoor', lang(ar)), reason: 'discount-code-ask-door' }
@@ -180,6 +183,7 @@ export const guardDiscountCodeAwaitMachine: Guard = (ar, userMessage) => {
 /** Caso 8 step 6 — door confirmation, then escalate to internal operator. */
 export const guardDiscountCodeAwaitDoor: Guard = (ar, userMessage) => {
   if (ar.state.pendingFlow !== 'discount-code-await-door') return null
+  if (pivotIfTroubleSwitch(ar, userMessage)) return null  // F86
   const reply = userMessage.trim().toLowerCase()
   // Permissive yes/no — store both yes and no, escalate either way (operator decides).
   ar.state.discountCodeData.doorClosed = !/^(no|nope|non|nada|nein|nao|n[aã]o)\b/i.test(reply)

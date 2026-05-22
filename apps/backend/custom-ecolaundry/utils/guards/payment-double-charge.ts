@@ -40,7 +40,7 @@
 
 import { t } from '../localization.js'
 import type { Guard } from '../../models/index.js'
-import { lang } from './helpers.js'
+import { lang, pivotIfTroubleSwitch } from './helpers.js'
 import {
   captureCustomerName,
   closeAsRefundForm,
@@ -84,6 +84,7 @@ export const guardDoubleChargeAskNarrative: Guard = (ar, userMessage) => {
   ) {
     return null
   }
+  if (pivotIfTroubleSwitch(ar, userMessage)) return null  // F86
   const reply = userMessage.trim().toLowerCase()
   // 6-language no-detection. Conservative: a bare "no" or "nada" or
   // "no he podido" suffices. Long phrasings ("la verdad es que no me
@@ -231,6 +232,7 @@ export const guardDoubleChargeAskCardDigits: Guard = (ar, userMessage) => {
   ) {
     return null
   }
+  if (pivotIfTroubleSwitch(ar, userMessage)) return null  // F86
   if (ar.state.issueSummary?.startsWith('double charge')) {
     ar.state.issueSummary = `${ar.state.issueSummary} — narrative: ${userMessage.trim()}`
   }
@@ -259,6 +261,7 @@ export const guardDoubleChargeAskReceipt: Guard = (ar, userMessage) => {
   ) {
     return null
   }
+  if (pivotIfTroubleSwitch(ar, userMessage)) return null  // F86
 
   // Look for an unambiguous 4-digit chunk: exactly 4 consecutive digits,
   // not part of a longer digit run. Multiple matches → ambiguous → invalid.
@@ -328,6 +331,7 @@ export const guardDoubleChargeAskReceipt: Guard = (ar, userMessage) => {
  */
 export const guardDoubleChargeAwaitName: Guard = (ar, userMessage) => {
   if (ar.state.pendingFlow !== 'double-charge-await-name') return null
+  if (pivotIfTroubleSwitch(ar, userMessage)) return null  // F86
   // F46 — same name validator path, parametrised with the tenant discount-code
   // prefix so a customer who accidentally types a code in the name field gets
   // rejected and re-asked.

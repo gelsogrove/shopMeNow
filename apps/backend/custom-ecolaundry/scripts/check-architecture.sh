@@ -101,6 +101,9 @@ ALLOWED_LARGE_FILES="
   utils/state-transitions.ts  # Named atomic state transitions (markResolved, escalate, markRefundFormPending, captureCustomerName, …). Single responsibility — splitting fragments the auditable surface that rule #4 protects.
   utils/human-message-email.ts  # HTML email template + nodemailer sender for operator notifications. Single responsibility — the bulk is inline CSS/HTML which cannot be split meaningfully.
   utils/agent-rephrase.ts       # L5 polish layer + F72/F74/F75 deterministic display-flow recap (RECAP_STRINGS × 6 languages × ~10 lines each + buildDisplayRecap + rephraseForTurn). Single concern — splitting would fragment the contract between determinism and LLM polish.
+  utils/guards/location-resolution.ts  # F82 added Mataró street-insist branch (MATARO_DONT_KNOW_RE + landmark lookup). Four related guards (mataroStreet, unknownLocation, forceLocation, insistLocation) share single concern: location resolution pipeline.
+  utils/faq-location-formatter.ts  # F87 — re-exports from faq-programs-formatter + faq-payment-formatter for backward compatibility; hours + prices formatters with payment signal appending. Single concern: format FAQ replies per location. Splitting prices into 3 files (hours/washer/dryer) would fragment a single coherent story.
+  utils/guards/faq-prices.ts  # F87 — Caso 12.2 multi-phase FAQ prices flow (T1 detect + T2 location reply + T3 dryer-confirm + T3 washer-confirm + renderPrices). Grew from ~150 to ~163 lines to add buildTranslateFn closure passed to formatters so they append paymentCardOnly + paymentTpvExact boundary signals. Single concern: drive the prices FAQ flow end-to-end.
 "
 ALLOWED_LARGE_FILES=$(echo "$ALLOWED_LARGE_FILES" | sed 's/#.*$//' | tr -s ' \n' ' ')
 violations=""
@@ -145,11 +148,20 @@ fi
 # --- Rule #5 — every detector has a sibling test ----------------------------
 echo -n "  [#5] every utils/<detector>.ts has a sibling unit test... "
 # These are infra/glue, not detectors — exempt from the test-sibling rule.
-EXEMPT="agent-llm cli llm-fetch logger runtime localization message-parsing locations agent-prompt agent-welcome agent-rephrase operator-briefing display-state llm relative-date agent-tools agent-extract router-prompt"
+EXEMPT="agent-llm cli llm-fetch logger runtime localization message-parsing locations agent-prompt agent-welcome agent-rephrase operator-briefing display-state llm relative-date agent-tools agent-extract router-prompt faq-location-formatter faq-programs-formatter faq-payment-formatter"
 # agent-tools: pure OpenAI tool schema declarations, no logic to test.
 # agent-extract: multi-language extractor cassette covered indirectly by
 #   __tests__/agent/* E2E tests; pure-unit tests would duplicate them.
 # router-prompt: pure prompt string constant for utils/router.ts, no logic.
+# faq-location-formatter: pure formatter helpers (prices+hours); tested
+#   indirectly by __tests__/unit/faq-location-formatter.test.ts (F50).
+# faq-programs-formatter: pure formatter for programs (Caso 12.4/F81);
+#   tested by __tests__/unit/faq-programs.test.ts which imports formatWasherPrograms
+#   and formatDryerPrograms directly (re-exported via faq-location-formatter.ts).
+# faq-payment-formatter: pure formatter for payment boundary signals (F87,
+#   Caso 12.2 cardOnly + tpvExact); tested by __tests__/unit/faq-location-formatter.test.ts
+#   which imports readPayment + tests the integration with formatWasherPrices /
+#   formatDryerPrices (re-exported via faq-location-formatter.ts).
 missing=""
 while IFS= read -r f; do
   base="$(basename "$f" .ts)"

@@ -142,10 +142,14 @@ async function maybeDispatchBranch(ar: AgentRuntime, userMessage: string): Promi
   }
   // T1: classify and dispatch.
   const result = await dispatchTurnOne(ar, userMessage)
-  // The router's language detection is authoritative at T1 — it uses the
-  // full LLM model instead of the lightweight heuristic in resolveLanguageForTurn.
-  // Stamp it into state so subsequent turns (guards, i18n, welcome) use it.
-  if (result.decision?.language) {
+  // F80 — Router language detection is authoritative ONLY at T1. The router
+  // LLM is more accurate than the heuristic in resolveLanguageForTurn, so we
+  // allow it to correct the just-set value while we're still in turn 1. From
+  // T2 onward the language is STRICT-STICKY: the router (or anything else)
+  // MUST NOT overwrite preferredLanguage mid-session — that's how the mixed-
+  // language regression of 2026-05-22 happened (welcome EN → "Policia" → ES
+  // → router flipped back to EN on a different turn).
+  if (ar.state.turnCount === 1 && result.decision?.language) {
     const enabled = ar.runtime.settings.enabledLanguages || []
     const routerLang = result.decision.language
     if (enabled.includes(routerLang)) {
@@ -176,18 +180,14 @@ function resolveLanguageForTurn(ar: AgentRuntime, userMessage: string): void {
     return
   }
 
-  // Subsequent turns: preferredLanguage is sticky — only update if the new
-  // message explicitly signals a different enabled language. Neutral messages
-  // (display codes, numbers, short replies) return null from detectLanguageHeuristic
-  // and must NOT reset the language to defaultLanguage.
-  const heuristic = detectLanguageHeuristic(userMessage)
-  if (heuristic && enabled.includes(heuristic) && heuristic !== ar.state.preferredLanguage) {
-    ar.state.language = heuristic
-    ar.state.preferredLanguage = heuristic
-    return
-  }
-
-  // Keep the locked language.
+  // F80 — Subsequent turns: preferredLanguage is STRICT-STICKY. Once locked
+  // at T1 (either by router LLM or by heuristic on the customer's first real
+  // message), it NEVER changes — not by heuristic, not by router. The mid-
+  // session flip-back (previous design) produced the mix observed in Andrea
+  // 2026-05-22 chat: welcome EN → "Policia" → ES → "no funciona" → ES kept,
+  // but T2/T3 oscillated between EN and ES based on per-turn heuristic.
+  // Sticky-T1 is the architectural contract: the customer's language is a
+  // session-level attribute, not a per-message attribute.
   ar.state.language = ar.state.preferredLanguage as typeof ar.state.language
 }
 
@@ -655,8 +655,70 @@ function isDirectExecution(): boolean {
   return import.meta.url === pathToFileURL(path.resolve(entryFile)).href
 }
 
+// ── Batch mode ────────────────────────────────────────────────────────────────
+//
+// Non-interactive driver for Claude / scripts. Accepts a JSON array of
+// scenarios on argv after `--batch`. Each entry is either:
+//   - string[]  → a sequence of user turns inside ONE session
+//   - "/reset"  → marker that resets the session before the next entry
+// Output is a markdown transcript on stdout (one block per scenario / turn)
+// so the caller can parse "[SCENARIO N]", "[USER]", "[BOT]" markers.
+
+async function runBatch(rawJson: string): Promise<void> {
+  if (!API_KEY) {
+    console.error('OPENROUTER_API_KEY missing. Export it before running the agent batch.')
+    process.exit(1)
+  }
+  let plan: Array<string[] | string>
+  try {
+    plan = JSON.parse(rawJson)
+    if (!Array.isArray(plan)) throw new Error('top-level must be an array')
+  } catch (err) {
+    console.error('Invalid --batch JSON:', err instanceof Error ? err.message : String(err))
+    process.exit(1)
+  }
+
+  let session = await createAgentSession()
+  let scenarioIdx = 0
+
+  for (const entry of plan) {
+    if (entry === '/reset') {
+      console.log('\n[RESET] ──────────────────────────────────────────────')
+      session = await createAgentSession()
+      continue
+    }
+    if (!Array.isArray(entry)) {
+      console.log(`\n[SKIP] non-array, non-reset entry: ${JSON.stringify(entry)}`)
+      continue
+    }
+    scenarioIdx += 1
+    console.log(`\n[SCENARIO ${scenarioIdx}] ═══════════════════════════════════`)
+    for (let i = 0; i < entry.length; i += 1) {
+      const turn = entry[i]
+      console.log(`\n[USER T${i + 1}] ${turn}`)
+      try {
+        const reply = await agentTurn(session, turn)
+        console.log(`[BOT T${i + 1}] ${reply}`)
+      } catch (err) {
+        console.log(`[ERROR T${i + 1}] ${err instanceof Error ? err.message : String(err)}`)
+      }
+    }
+    console.log(`\n[STATE T-end] language=${session.ar.state.language} preferredLanguage=${session.ar.state.preferredLanguage} pendingFlow=${session.ar.state.pendingFlow} activeBranch=${session.ar.state.activeBranch} activeFlowId=${session.ar.state.activeFlowId} location=${session.ar.state.location} machineType=${session.ar.state.machineType} machineNumber=${session.ar.state.machineNumber} displayState=${session.ar.state.displayState} lastResolvedIntent=${session.ar.state.lastResolvedIntent} lastFaqKey=${session.ar.state.lastFaqKey}`)
+  }
+  console.log('\n[BATCH DONE] ─────────────────────────────────────────────')
+}
+
+function findBatchArg(): string | null {
+  const i = process.argv.indexOf('--batch')
+  if (i === -1) return null
+  const v = process.argv[i + 1]
+  return v ?? null
+}
+
 if (isDirectExecution()) {
-  runInteractive().catch((err) => {
+  const batch = findBatchArg()
+  const runner = batch !== null ? runBatch(batch) : runInteractive()
+  runner.catch((err) => {
     console.error(err)
     process.exit(1)
   })

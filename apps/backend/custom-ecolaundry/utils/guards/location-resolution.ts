@@ -17,22 +17,47 @@ const INCIDENTS_NO_LOCATION_REQUIRED: ReadonlySet<string> = new Set([
   'compensation-demand',
 ])
 
+// F82 — "I don't know which Mataró laundromat" — 6 languages.
+const MATARO_DONT_KNOW_RE =
+  /^(no\s+lo\s+s[eé]|no\s+s[eé]|no\s+me\s+acuerdo|ni\s+idea|no\s+tengo\s+idea|non\s+lo\s+s[eo]|non\s+s[eo]|non\s+ricordo|non\s+mi\s+ricordo|i\s+don'?t\s+know|no\s+idea|not\s+sure|no\s+ho\s+s[eé]|no\s+ho\s+idea|no\s+sap|je\s+(?:ne\s+)?sais\s+pas|j'?en\s+sais\s+pas|pas\s+s[uû]r|não\s+sei|não\s+me\s+lembro|não\s+tenho\s+ideia)(?:\s|$|[.,!?])/i
+
 /** G2.5 — Mataró street: as soon as the customer names Mataró as location,
- *  ask the street BEFORE asking machine type/number/display. */
-export const guardMataroStreet: Guard = (ar) => {
+ *  ask the street BEFORE asking machine type/number/display.
+ *
+ *  F82: when the customer already received the Goya/Alemanya question
+ *  (`locationStreetRequested`) and replies "non lo so / no lo sé / …",
+ *  show the Goya-specific landmarks (Mercadona, Biblioteca) so the
+ *  customer can self-identify which laundromat they are in. */
+export const guardMataroStreet: Guard = (ar, userMessage) => {
   if (
-    isMataro(ar) &&
-    !ar.state.locationStreet &&
-    !ar.state.operatorRequested &&
-    !ar.state.customerNameRequested
+    !isMataro(ar) ||
+    ar.state.locationStreet ||
+    ar.state.operatorRequested ||
+    ar.state.customerNameRequested
   ) {
-    ar.state.locationStreetRequested = true
-    return {
-      reply: t('mataroStreet', lang(ar)),
-      reason: 'mataro-street',
-    }
+    return null
   }
-  return null
+
+  // F82: already asked → customer says "non lo so" → show Goya landmarks
+  if (ar.state.locationStreetRequested && MATARO_DONT_KNOW_RE.test(userMessage.trim())) {
+    const goyaMeta = ar.runtime.locations?.locations?.Goya?.metadata as
+      | { landmarks?: string[] }
+      | undefined
+    const landmarks = goyaMeta?.landmarks ?? []
+    if (landmarks.length > 0) {
+      return {
+        reply: tt('mataroStreetInsist', lang(ar), { landmarks: landmarks.join(', ') }),
+        reason: 'mataro-street-insist',
+      }
+    }
+    // No landmarks data → fall through to re-ask
+  }
+
+  ar.state.locationStreetRequested = true
+  return {
+    reply: t('mataroStreet', lang(ar)),
+    reason: 'mataro-street',
+  }
 }
 
 /** Customer mentioned a location that is not in our laundromat list — list

@@ -168,6 +168,14 @@ export class CustomClientChatbotService {
       if (params.debugChannel && params.wipMessage) {
         output.wipMessage = params.wipMessage
       }
+      // F85 — When the chatbot module signals `llm_unavailable` (OpenRouter
+      // failure after retries), attach the workspace WIP message regardless
+      // of debugChannel so the widget controller can serve a graceful WIP
+      // status instead of a generic error. No extra OpenRouter cost: the
+      // module has already exhausted its retry budget before returning.
+      if (output.error === 'llm_unavailable' && params.wipMessage) {
+        output.wipMessage = params.wipMessage
+      }
 
       return { handled: true, output }
     } catch (error) {

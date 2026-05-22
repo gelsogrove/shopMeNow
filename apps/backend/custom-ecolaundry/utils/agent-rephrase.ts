@@ -53,6 +53,7 @@
 
 import type { AgentMessage, AgentRuntime } from '../models/index.js'
 import { callModel } from './llm.js'
+import { LlmFetchError } from './llm-fetch.js'
 import { lang as resolveTenantLang } from './guards/helpers.js'
 import { logger } from './logger.js'
 
@@ -377,10 +378,23 @@ export async function rephraseForTurn(
 
     return polished
   } catch (err) {
+    // F85 — OpenRouter failures (auth/credits/rate/timeout/network) must
+    // propagate to the host app so the customer sees the workspace WIP
+    // message, not a silently-degraded canned reply. Andrea (2026-05-22):
+    // "WIP sempre quando OpenRouter fallisce" — no graceful fallback that
+    // hides the outage from the operator.
+    if (err instanceof LlmFetchError) {
+      logger.error('rephraseForTurn aborted: OpenRouter unavailable', {
+        category: err.category,
+        status: err.status,
+        attempts: err.attempts,
+      })
+      throw err
+    }
     logger.warn('rephraseForTurn failed, falling back to canned reply', {
       error: err instanceof Error ? err.message : String(err),
     })
-    // Even on LLM failure, build the deterministic recap if we're in a
+    // Even on non-LLM failure, build the deterministic recap if we're in a
     // display flow — blocks 1/2/4 require no LLM; block 3 falls back to
     // the original canned reply.
     if (isDisplayFlowRecap) {

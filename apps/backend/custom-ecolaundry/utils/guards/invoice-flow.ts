@@ -13,7 +13,7 @@
 
 import { t } from '../localization.js'
 import type { Guard } from '../../models/index.js'
-import { lang } from './helpers.js'
+import { lang, pivotIfTroubleSwitch } from './helpers.js'
 import { parseRelativeDate } from '../relative-date.js'
 import { buildEscalationSummary, extractEscalationContext } from '../escalation.js'
 import { captureCustomerName, closeAsEscalated, escalate, requireCustomerName } from '../state-transitions.js'
@@ -57,6 +57,11 @@ export const guardInvoiceFlow: Guard = (ar, userMessage) => {
     ar.state.pendingFlow = 'invoice-ask-company-name'
     return { reply: t('invoiceAskCompanyName', lang(ar)), reason: 'invoice' }
   }
+
+  // F86 — Pivot to trouble-machine if the customer signals a broken machine
+  // mid-gather. See helpers.ts:pivotIfTroubleSwitch for the architectural
+  // contract (6 languages via JSON pattern topicMachineTrouble).
+  if (pivotIfTroubleSwitch(ar, userMessage)) return null
 
   // In-flow: each step consumes the user message as the answer.
   switch (flow) {

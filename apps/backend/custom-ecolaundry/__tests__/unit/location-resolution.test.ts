@@ -22,6 +22,7 @@
 import {
   guardForceLocation,
   guardInsistLocation,
+  guardMataroStreet,
 } from '../../utils/guards/location-resolution.js'
 import { createInitialState } from '../../utils/state.js'
 import type { AgentRuntime } from '../../models/index.js'
@@ -326,6 +327,64 @@ const cases: Case[] = [
       if (/Mercadona|Carrefour|Aldi/i.test(out.reply)) {
         throw new Error(`empty landmarks must NOT append enumeration, got: ${out.reply}`)
       }
+    },
+  },
+
+  // ── F82 — guardMataroStreet: "non lo so" shows Goya landmarks ───────────────
+  {
+    name: 'F82 guardMataroStreet: first ask → emits mataroStreet question',
+    run: () => {
+      const ar = makeAr(2)
+      ar.state.location = 'Mataro'
+      // locationStreetRequested is NOT yet set → first ask
+      const out = guardMataroStreet(ar, 'Mataró')
+      if (!out) throw new Error('expected mataroStreet reply on first ask')
+      if (out.reason !== 'mataro-street') throw new Error(`expected reason=mataro-street, got "${out.reason}"`)
+      if (!ar.state.locationStreetRequested) throw new Error('locationStreetRequested must be set after first ask')
+    },
+  },
+  {
+    name: 'F82 guardMataroStreet: already asked + "non lo so" → show Goya landmarks (Mercadona/Biblioteca)',
+    run: () => {
+      const ar = makeAr(3)
+      ar.state.location = 'Mataro'
+      ar.state.locationStreetRequested = true  // already asked
+      const out = guardMataroStreet(ar, 'non lo so')
+      if (!out) throw new Error('expected landmark reply on "non lo so"')
+      if (out.reason !== 'mataro-street-insist') throw new Error(`expected reason=mataro-street-insist, got "${out.reason}"`)
+      if (!/Mercadona|Biblioteca/i.test(out.reply)) {
+        throw new Error(`F82: reply must mention Goya landmarks (Mercadona/Biblioteca), got: ${out.reply}`)
+      }
+    },
+  },
+  {
+    name: 'F82 guardMataroStreet: already asked + "no lo sé" (ES) → show Goya landmarks',
+    run: () => {
+      const ar = makeAr(3)
+      ar.state.location = 'Mataro'
+      ar.state.locationStreetRequested = true
+      const out = guardMataroStreet(ar, 'no lo sé')
+      if (!out) throw new Error('expected reply on ES "no lo sé"')
+      if (out.reason !== 'mataro-street-insist') throw new Error(`expected mataro-street-insist, got "${out.reason}"`)
+    },
+  },
+  {
+    name: 'F82 guardMataroStreet: locationStreet already known → null (guard skips)',
+    run: () => {
+      const ar = makeAr(3)
+      ar.state.location = 'Mataro'
+      ar.state.locationStreet = 'Goya'
+      const out = guardMataroStreet(ar, 'non lo so')
+      if (out !== null) throw new Error('must skip when locationStreet already known')
+    },
+  },
+  {
+    name: 'F82 guardMataroStreet: non-Mataro location → null',
+    run: () => {
+      const ar = makeAr(2)
+      ar.state.location = 'Hortes'
+      const out = guardMataroStreet(ar, 'non lo so')
+      if (out !== null) throw new Error('must skip for non-Mataro location')
     },
   },
 ]

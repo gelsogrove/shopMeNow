@@ -156,7 +156,10 @@ const cases: Case[] = [
         // documentada respecto al PDF" — UX priority over strict alignment).
         {
           user: 'PUSH PROG',
-          expectReplyContains: /\*\*60º\*\*.*\*\*40º\*\*.*\*\*30º\*\*.*\*\*FRÍO\*\*/s,
+          // F81: dynamic list format is "**N** — Name (60º)" (numbers in bold, temp in parens).
+          // Hardcoded fallback format is "**60º** Name" (temp in bold).
+          // Both formats must include all 4 temperature/name references.
+          expectReplyContains: /60[°º].*40[°º].*30[°º].*(frí[o]|frio)/is,
           assertState: (ar) => {
             if (ar.state.displayState !== 'PUSH') {
               throw new Error(`canonical must be "PUSH", got "${ar.state.displayState}"`)
@@ -186,7 +189,10 @@ const cases: Case[] = [
         // T4 — PUSH PROG → flow engine pushes program guidance (F40 — 4-program list with bold).
         {
           user: 'PUSH PROG',
-          expectReplyContains: /\*\*60º\*\*.*\*\*40º\*\*.*\*\*30º\*\*.*\*\*FRÍO\*\*/s,
+          // F81: dynamic list format is "**N** — Name (60º)" (numbers in bold, temp in parens).
+          // Hardcoded fallback format is "**60º** Name" (temp in bold).
+          // Both formats must include all 4 temperature/name references.
+          expectReplyContains: /60[°º].*40[°º].*30[°º].*(frí[o]|frio)/is,
         },
         // T5 — customer reports failure. Phase B should re-ask the display.
         {

@@ -57,6 +57,8 @@ export const faqHandler: BranchHandler = async ({ ar, routerDetails, language })
   if (
     pending === 'faq-prices-await-location' ||
     pending === 'faq-hours-await-location' ||
+    pending === 'faq-programs-await-location' ||
+    pending === 'faq-how-to-use-await-location' ||
     pending === 'faq-prices-await-dryer-confirm' ||
     pending === 'faq-prices-await-washer-confirm'
   ) {
@@ -76,12 +78,22 @@ export const faqHandler: BranchHandler = async ({ ar, routerDetails, language })
     return { reply: '', handoff: 'delegate-to-legacy' }
   }
 
-  // Caso 12 T1: pricing + openingHours are no longer static FAQ entries.
-  // They're handled by guardFaqPrices / guardFaqHours in the legacy
-  // pipeline, which read metadata.hours + metadata.machines from
-  // json/locations.json to produce a location-aware answer. Delegate so the
-  // guard pipeline takes over (same thin-handler pattern as loyalty / invoice).
-  if (faqKey === 'pricing' || faqKey === 'openingHours') {
+  // Caso 12 T1: pricing + openingHours + programs are no longer static FAQ
+  // entries. They're handled by guardFaqPrices / guardFaqHours /
+  // guardFaqPrograms in the legacy pipeline, which read metadata.hours +
+  // metadata.machines + metadata.programs from json/locations.json to
+  // produce a location-aware answer. Delegate so the guard pipeline takes
+  // over (same thin-handler pattern as loyalty / invoice).
+  // F95 (Andrea 2026-05-23): howToUse is now ALSO location-aware (instructions
+  // differ between the Hortes/Goya/Pineda group and the Alemanya/L'Escala/
+  // Platja d'Aro group — see docs/csv/instruccions-us.csv). guardFaqHowToUse
+  // owns the ask-location + per-location render flow, so delegate here too.
+  if (
+    faqKey === 'pricing' ||
+    faqKey === 'openingHours' ||
+    faqKey === 'programs' ||
+    faqKey === 'howToUse'
+  ) {
     return { reply: '', handoff: 'delegate-to-legacy' }
   }
 

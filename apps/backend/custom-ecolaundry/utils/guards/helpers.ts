@@ -2,6 +2,8 @@
 // GuardOutcome) live in ../../models/guards.ts.
 
 import type { AgentRuntime, SessionState, SupportedLanguage } from '../../models/index.js'
+import { detectTroubleSwitchDuringFlow } from '../intent.js'
+import { pivotToTroubleMachine } from '../state-transitions.js'
 
 export const RECOVERABLE_DISPLAYS = new Set([
   'SEL', 'PUSH', 'PR', 'DOOR', 'ALM/DOOR', 'PRICE', 'BLANK',
@@ -69,4 +71,38 @@ export function notInActiveSubFlow(ar: AgentRuntime): boolean {
     !ar.state.customerNameRequested &&
     !isAwaitingPendingFlow(ar.state)
   )
+}
+
+/**
+ * F86 — Shared gate for every gather step that does verbatim accept.
+ *
+ * If the customer pivots to a trouble-machine signal mid-gather (e.g.
+ * "ah, ahora no funciona la lavadora", "non parte la lavatrice",
+ * "the dryer doesn't work"), this helper:
+ *   - calls `pivotToTroubleMachine(ar)` atomically (clears the non-machine
+ *     flow data, arms `activeBranch='trouble-machine'`, preserves sticky
+ *     customer facts)
+ *   - returns `true` to signal the caller MUST `return null` so the trouble
+ *     pipeline takes over on the next pass / next turn
+ *
+ * Returns `false` when no pivot signal is detected — the caller proceeds
+ * with the normal gather step.
+ *
+ * Iron rule #16 respected: ONE helper, ONE place. Adding a new non-machine
+ * gather guard means importing this and calling it before the verbatim
+ * assignment — no copy-paste of the detect/pivot logic.
+ *
+ * Consumers (per F86 architectural fix):
+ *   - `utils/guards/invoice-flow.ts`        (in-flow switch block)
+ *   - `utils/guards/discount-code-flow.ts`  (4 await-* steps)
+ *   - `utils/guards/payment-double-charge.ts` (4 gather steps)
+ *
+ * Tested in __tests__/unit/trouble-switch-during-flow.test.ts.
+ */
+export function pivotIfTroubleSwitch(ar: AgentRuntime, userMessage: string): boolean {
+  if (detectTroubleSwitchDuringFlow(ar.runtime, userMessage)) {
+    pivotToTroubleMachine(ar)
+    return true
+  }
+  return false
 }

@@ -13,6 +13,8 @@ import {
   formatHours,
   formatWasherPrices,
   formatDryerPrices,
+  // F87 — helper not yet implemented (TDD red state)
+  readPayment,
 } from '../../utils/faq-location-formatter.js'
 import type { Runtime } from '../../models/runtime.js'
 
@@ -40,6 +42,7 @@ const runtime = {
               { number: 'S5', weightKg: null, fidelity: '3€/20min', cash: '3€/20min' },
             ],
           },
+          payment: { methods: ['card'], tpvExact: null },
         },
       },
       // F54 fixture: Pineda has 2 dryers with IDENTICAL specs → should collapse
@@ -72,8 +75,13 @@ const runtime = {
             washers: [
               { number: 'L1', weightKg: 18, fidelity: '9€', cash: '10€' }, // different prices
             ],
-            dryers: [],
+            // F87: at least one dryer so formatDryerPrices('LEscala') is non-null
+            // and the cardOnly signal can be verified.
+            dryers: [
+              { number: 'S5', weightKg: 20, fidelity: '3€/15min', cash: '4€/20min' },
+            ],
           },
+          payment: { methods: ['card'], tpvExact: null },
         },
       },
       MataroUmbrella: {
@@ -84,6 +92,50 @@ const runtime = {
           // No machines block — this is an umbrella (Goya/Alemanya have them)
         },
       },
+      // F87 — new locations for readPayment tests
+      Goya: {
+        pueblo: 'Mataró',
+        displayName: 'Goya',
+        metadata: {
+          hours: '8:00-22:00',
+          machines: {
+            washers: [
+              { number: 'L4', weightKg: 20, fidelity: '6,5€', cash: '7€' },
+            ],
+            dryers: [
+              { number: 'S1', weightKg: null, fidelity: '2€/15min', cash: '2€/15min' },
+            ],
+          },
+          payment: { methods: ['coins','bills','fidelity','card'], tpvExact: 7 },
+        },
+      },
+      Hortes: {
+        pueblo: 'Granollers',
+        displayName: 'Hortes',
+        metadata: {
+          hours: '8:00-22:00',
+          machines: {
+            washers: [
+              { number: 'L1', weightKg: 8, fidelity: '4€', cash: '5€' },
+            ],
+            dryers: [
+              { number: 'S6', weightKg: 17, fidelity: '3€/15min', cash: '3€/15min' },
+            ],
+          },
+          payment: { methods: ['coins','bills','fidelity','card'], tpvExact: null },
+        },
+      },
+      NoPaymentLoc: {
+        pueblo: 'Test',
+        displayName: 'NoPaymentLoc',
+        metadata: {
+          hours: '8:00-22:00',
+          machines: {
+            washers: [{ number: 'L1', weightKg: 10, fidelity: '5€', cash: '5€' }],
+          },
+          // NO payment field — graceful fallback test
+        },
+      },
     },
   },
 } as unknown as Runtime
@@ -91,6 +143,17 @@ const runtime = {
 interface Case {
   name: string
   run: () => void
+}
+
+// F87 — minimal ES translate fn for testing (mirrors es.json keys).
+// The real keys are loaded by t() at runtime; here we mock just the 2 F87
+// strings to keep the unit test offline-pure.
+const translateEsForTest = (key: string): string => {
+  const dict: Record<string, string> = {
+    paymentCardOnly: '⚠️ En esta lavandería solo se acepta tarjeta de crédito.',
+    paymentTpvExact: '💡 El TPV cobra el importe exacto de **{amount}€** (no devuelve cambio).',
+  }
+  return dict[key] ?? `[missing key: ${key}]`
 }
 
 const cases: Case[] = [
@@ -193,10 +256,14 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'formatDryerPrices: L\'Escala empty dryers array → null',
+    // F87: previously LEscala had dryers: [] in the fixture; F87 added a dryer
+    // to enable cardOnly signal test, so this assertion was moved to
+    // MataroUmbrella which has no machines block at all (covers both:
+    // dryers undefined OR dryers length 0).
+    name: 'formatDryerPrices: location with empty/missing dryers → null',
     run: () => {
-      const r = formatDryerPrices('LEscala', runtime)
-      if (r !== null) throw new Error(`expected null when dryers array empty, got "${r}"`)
+      const r = formatDryerPrices('MataroUmbrella', runtime)
+      if (r !== null) throw new Error(`expected null when no dryers, got "${r}"`)
     },
   },
   {
@@ -265,6 +332,165 @@ const cases: Case[] = [
       }
       const bulletCount = (r.match(/^- \*\*/gm) || []).length
       if (bulletCount !== 3) throw new Error(`F54: expected 3 lines, got ${bulletCount}`)
+    },
+  },
+
+  // ── F87 — readPayment helper (TDD red state — helper not yet implemented) ──
+  {
+    name: 'F87 — readPayment returns PaymentInfo for cardOnly location (PlatjaDAro)',
+    run: () => {
+      const result = readPayment(runtime, 'PlatjaDAro')
+      if (!result) throw new Error('F87: readPayment must return PaymentInfo, got null')
+      if (result.methods.length !== 1 || result.methods[0] !== 'card') {
+        throw new Error(`F87: PlatjaDAro must be cardOnly, got methods=${JSON.stringify(result.methods)}`)
+      }
+      if (result.tpvExact !== null) {
+        throw new Error(`F87: PlatjaDAro tpvExact must be null, got ${result.tpvExact}`)
+      }
+    },
+  },
+  {
+    name: 'F87 — readPayment returns tpvExact=7 for Goya',
+    run: () => {
+      const result = readPayment(runtime, 'Goya')
+      if (!result) throw new Error('F87: readPayment must return PaymentInfo, got null')
+      if (result.tpvExact !== 7) {
+        throw new Error(`F87: Goya tpvExact must be 7, got ${result.tpvExact}`)
+      }
+      if (!result.methods.includes('coins') || !result.methods.includes('card')) {
+        throw new Error(`F87: Goya methods must include coins+card, got ${JSON.stringify(result.methods)}`)
+      }
+    },
+  },
+  {
+    name: 'F87 — readPayment returns null when payment field missing (NoPaymentLoc)',
+    run: () => {
+      const result = readPayment(runtime, 'NoPaymentLoc')
+      if (result !== null) {
+        throw new Error(`F87: NoPaymentLoc has no payment field — readPayment must return null, got ${JSON.stringify(result)}`)
+      }
+    },
+  },
+  {
+    name: 'F87 — readPayment returns null for unknown location',
+    run: () => {
+      const result = readPayment(runtime, 'NonExistentLocation')
+      if (result !== null) {
+        throw new Error(`F87: unknown location must return null, got ${JSON.stringify(result)}`)
+      }
+    },
+  },
+
+  // ── F87 — formatPaymentSignals integration tests (TDD red state) ────────
+  // The formatters formatWasherPrices/formatDryerPrices must, when given an
+  // optional translateFn argument, append payment boundary signals to the
+  // base reply. Order: paymentCardOnly BEFORE paymentTpvExact.
+  {
+    name: 'F87 — formatWasherPrices appends cardOnly for PlatjaDAro',
+    run: () => {
+      const result = formatWasherPrices('PlatjaDAro', runtime, translateEsForTest)
+      if (!result) throw new Error('F87: formatWasherPrices must return non-null')
+      if (!result.includes('solo se acepta tarjeta de crédito')) {
+        throw new Error(`F87: PlatjaDAro reply must include cardOnly warning, got:\n${result}`)
+      }
+      if (result.includes('TPV cobra el importe exacto')) {
+        throw new Error(`F87: PlatjaDAro has no tpvExact, must NOT include TPV warning`)
+      }
+    },
+  },
+  {
+    name: 'F87 — formatWasherPrices appends tpvExact 7€ for Goya',
+    run: () => {
+      const result = formatWasherPrices('Goya', runtime, translateEsForTest)
+      if (!result) throw new Error('F87: formatWasherPrices must return non-null')
+      if (!result.includes('El TPV cobra el importe exacto de **7€**')) {
+        throw new Error(`F87: Goya reply must include tpvExact 7€, got:\n${result}`)
+      }
+      if (result.includes('solo se acepta tarjeta')) {
+        throw new Error(`F87: Goya is NOT cardOnly, must NOT include cardOnly warning`)
+      }
+    },
+  },
+  {
+    name: 'F87 — formatWasherPrices Hortes baseline (no signals)',
+    run: () => {
+      const result = formatWasherPrices('Hortes', runtime, translateEsForTest)
+      if (!result) throw new Error('F87: formatWasherPrices must return non-null')
+      if (result.includes('solo se acepta tarjeta') || result.includes('TPV cobra')) {
+        throw new Error(`F87: Hortes has neither cardOnly nor tpvExact, must NOT include signals, got:\n${result}`)
+      }
+    },
+  },
+  {
+    name: 'F87 — formatDryerPrices appends cardOnly for LEscala',
+    run: () => {
+      const result = formatDryerPrices('LEscala', runtime, translateEsForTest)
+      if (!result) throw new Error('F87: formatDryerPrices must return non-null')
+      if (!result.includes('solo se acepta tarjeta de crédito')) {
+        throw new Error(`F87: LEscala dryer reply must include cardOnly warning, got:\n${result}`)
+      }
+    },
+  },
+  {
+    name: 'F87 — formatDryerPrices appends tpvExact 7€ for Goya',
+    run: () => {
+      const result = formatDryerPrices('Goya', runtime, translateEsForTest)
+      if (!result) throw new Error('F87: formatDryerPrices must return non-null')
+      if (!result.includes('**7€**')) {
+        throw new Error(`F87: Goya dryer reply must mention 7€, got:\n${result}`)
+      }
+    },
+  },
+  {
+    name: 'F87 — backwards compat: formatWasherPrices without translateFn does not append signals',
+    run: () => {
+      const result = formatWasherPrices('Goya', runtime)
+      if (!result) throw new Error('F87: formatWasherPrices must return non-null')
+      if (result.includes('TPV cobra') || result.includes('solo se acepta tarjeta')) {
+        throw new Error(`F87: without translateFn, no signal must be appended (legacy behaviour), got:\n${result}`)
+      }
+    },
+  },
+  {
+    name: 'F87 — backwards compat: formatWasherPrices for location without payment does not crash',
+    run: () => {
+      const result = formatWasherPrices('NoPaymentLoc', runtime, translateEsForTest)
+      if (!result) throw new Error('F87: formatWasherPrices must return non-null')
+      if (result.includes('TPV cobra') || result.includes('solo se acepta tarjeta')) {
+        throw new Error(`F87: NoPaymentLoc has no payment field, no signal expected, got:\n${result}`)
+      }
+    },
+  },
+  {
+    name: 'F87 — append order: cardOnly BEFORE tpvExact when both present (synthetic edge)',
+    run: () => {
+      const syntheticRuntime = {
+        locations: {
+          locations: {
+            BothSignals: {
+              pueblo: 'Test',
+              displayName: 'BothSignals',
+              metadata: {
+                hours: '8:00-22:00',
+                machines: {
+                  washers: [{ number: 'L1', weightKg: 10, fidelity: '5€', cash: '5€' }],
+                },
+                payment: { methods: ['card'], tpvExact: 9 },
+              },
+            },
+          },
+        },
+      } as unknown as typeof runtime
+      const result = formatWasherPrices('BothSignals', syntheticRuntime, translateEsForTest)
+      if (!result) throw new Error('F87: formatWasherPrices must return non-null')
+      const idxCardOnly = result.indexOf('solo se acepta tarjeta')
+      const idxTpvExact = result.indexOf('TPV cobra el importe exacto')
+      if (idxCardOnly === -1 || idxTpvExact === -1) {
+        throw new Error(`F87: both signals must be present, got:\n${result}`)
+      }
+      if (idxCardOnly > idxTpvExact) {
+        throw new Error(`F87: cardOnly must come BEFORE tpvExact (gravity decreasing), got order reversed:\n${result}`)
+      }
     },
   },
 ]

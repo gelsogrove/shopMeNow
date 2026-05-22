@@ -4,6 +4,7 @@
 import { agentTurn, createAgentSession } from './agent.js'
 import { autoExtractFacts } from './utils/agent-extract.js'
 import { extractEscalationContext, buildEscalationSummary } from './utils/escalation.js'
+import { LlmFetchError } from './utils/llm-fetch.js'
 import { logger } from './utils/logger.js'
 import { sanitizePhoneNumber } from './utils/input-sanitize.js'
 
@@ -157,6 +158,21 @@ async function runChatbotTurn(input: ChatbotInput, agentChain: string[]): Promis
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
     })
+    // F85 — OpenRouter failures (auth/credits/rate/timeout/network) surface
+    // as LlmFetchError after the in-module retry+backoff has been exhausted.
+    // Signal the host app via `error: 'llm_unavailable'` so the widget can
+    // serve workspace.wipMessage instead of a generic error. No additional
+    // OpenRouter cost: we are already in the catch path, no retry beyond the
+    // 3 attempts in utils/llm-fetch.ts.
+    if (error instanceof LlmFetchError) {
+      return {
+        reply: null,
+        shouldEscalate: false,
+        patches: [],
+        error: 'llm_unavailable',
+        meta: { tokensUsed: 0, agentChain },
+      }
+    }
     return {
       reply: null,
       shouldEscalate: false,
@@ -318,11 +334,21 @@ function replayHistoryIntoSession(session: AgentSession, history: HistoryEntry[]
 }
 
 /**
- * Honour `settings.enabledLanguages`: even if the caller passes a language
- * (phone prefix, browser locale, widget selector), fall back to
- * `defaultLanguage` when the requested one is disabled. This prevents
- * deterministic guards from rendering replies in a language the tenant
- * explicitly disabled.
+ * Apply a fallback language so guards have a valid `state.language` value
+ * before the customer's first message arrives.
+ *
+ * F80 — Caller config (phone prefix, browser locale, widget selector) sets
+ * `state.language` ONLY as a transient fallback for guards that fire before
+ * any customer message has been processed. It does NOT set
+ * `state.preferredLanguage` — that field is reserved as the sticky-T1 lock
+ * which is decided exclusively from the customer's first real message
+ * (router LLM + heuristic in agent.ts:resolveLanguageForTurn). Caller config
+ * is data ABOUT the customer, not data FROM the customer; the contract is
+ * "tenant decides language from the customer's own words at T1".
+ *
+ * Tenant lock: even the fallback is forced into `enabledLanguages`; if the
+ * caller-supplied language is disabled (e.g. 'it' when enabled=['es','ca',
+ * 'en']) we fall back to `defaultLanguage`.
  */
 function applyTenantLanguage(
   session: AgentSession,
@@ -333,5 +359,5 @@ function applyTenantLanguage(
   const resolved = language && enabled.includes(language) ? language : defaultLanguage
   if (!resolved) return
   session.ar.state.language = resolved
-  session.ar.state.preferredLanguage = resolved
+  // Intentionally NOT setting preferredLanguage — see jsdoc above.
 }

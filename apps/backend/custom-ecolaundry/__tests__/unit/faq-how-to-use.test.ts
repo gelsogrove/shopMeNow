@@ -15,7 +15,10 @@
 
 import assert from 'node:assert/strict'
 import { detectHowToUseIntent } from '../../utils/intent.js'
-import { guardFaqHowToUse } from '../../utils/guards/faq-how-to-use.js'
+import {
+  guardFaqHowToUse,
+  guardFaqHowToUseAwaitLocation,
+} from '../../utils/guards/faq-how-to-use.js'
 import { createInitialState } from '../../utils/state.js'
 import { getCachedTestRuntime, loadTestRuntime } from './_helpers.js'
 import type { AgentRuntime } from '../../models/index.js'
@@ -197,14 +200,69 @@ test('Empty string → no match', () => {
 
 console.log('\n── Guard behaviour ──')
 
-test('Guard fires and sets lastResolvedIntent=faq', () => {
+// F95 — without location, guard asks for location first (instructions vary
+// per laundry; see CSV docs/csv/instruccions-us.csv).
+test('T1 without location → asks for location + arms pendingFlow', () => {
   const ar = makeAr()
   const out = guardFaqHowToUse(ar, '¿Cómo se usa la lavandería?')
   assert.ok(out !== null, 'guard must fire')
+  assert.equal(out!.reason, 'faq-how-to-use-ask-location')
   assert.ok(out!.reply.length > 0, 'reply must be non-empty')
-  assert.equal(out!.reason, 'faq-how-to-use')
-  assert.equal(ar.state.lastResolvedIntent, 'faq')
+  assert.equal(ar.state.pendingFlow, 'faq-how-to-use-await-location')
 })
+
+// F95 — once location is known, render per-location override.
+test('T1 with known location → renders per-location howToUse override (Goya)', () => {
+  const ar = makeAr()
+  ar.state.location = 'Goya'
+  const out = guardFaqHowToUse(ar, '¿Cómo se usa la lavandería?')
+  assert.ok(out !== null, 'guard must fire')
+  assert.equal(out!.reason, 'faq-how-to-use')
+  assert.match(out!.reply, /Goya/i, 'reply must mention the location (override)')
+  assert.match(out!.reply, /confirma el inicio/i, 'Goya is in the "confirm start" group')
+  assert.equal(ar.state.lastResolvedIntent, 'faq')
+  assert.equal(ar.state.lastFaqKey, 'howToUse')
+})
+
+// F95 — the two groups in the CSV have different step counts.
+test('T1 with L\'Escala → renders no-confirm-start override (5 steps)', () => {
+  const ar = makeAr()
+  ar.state.location = "L'Escala"
+  const out = guardFaqHowToUse(ar, '¿Cómo se usa la lavandería?')
+  assert.ok(out !== null)
+  assert.match(out!.reply, /L'Escala/i)
+  assert.ok(
+    !/confirma el inicio/i.test(out!.reply),
+    "L'Escala laundromats start automatically — no 'confirm start' step",
+  )
+})
+
+// F95 — T2: location supplied on follow-up turn.
+test('T2 with pendingFlow + location captured → renders override', () => {
+  const ar = makeAr()
+  ar.state.pendingFlow = 'faq-how-to-use-await-location'
+  ar.state.location = 'Pineda'
+  const out = guardFaqHowToUseAwaitLocation(ar, 'Pineda')
+  assert.ok(out !== null, 'await-location guard must fire')
+  assert.equal(out!.reason, 'faq-how-to-use')
+  assert.match(out!.reply, /Pineda/i)
+  assert.equal(ar.state.pendingFlow, '', 'pendingFlow must clear after render')
+})
+
+// F95 — T2 guard skips when pendingFlow is not the await-location marker.
+test('T2 skips when no pendingFlow marker', () => {
+  const ar = makeAr()
+  ar.state.location = 'Goya'
+  assert.equal(guardFaqHowToUseAwaitLocation(ar, 'Goya'), null)
+})
+
+// F95 — T2 guard skips when location still empty.
+test('T2 skips when pendingFlow set but location still empty', () => {
+  const ar = makeAr()
+  ar.state.pendingFlow = 'faq-how-to-use-await-location'
+  assert.equal(guardFaqHowToUseAwaitLocation(ar, 'no sé'), null)
+})
+
 test('Guard skips when operatorRequested', () => {
   const ar = makeAr()
   ar.state.operatorRequested = true
@@ -219,8 +277,9 @@ test('Guard skips on unrelated input', () => {
   const ar = makeAr()
   assert.equal(guardFaqHowToUse(ar, 'la lavadora no funciona'), null)
 })
-test('Guard reply contains step markers (numbered list)', () => {
+test('Per-location reply contains step markers (numbered list)', () => {
   const ar = makeAr()
+  ar.state.location = 'Hortes'
   const out = guardFaqHowToUse(ar, 'instrucciones para lavar la ropa')
   assert.ok(out !== null)
   assert.ok(/1\.|2\.|3\./.test(out!.reply), 'reply must contain numbered steps')

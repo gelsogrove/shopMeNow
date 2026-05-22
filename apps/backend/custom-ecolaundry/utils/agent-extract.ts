@@ -67,11 +67,37 @@ function isDisplayContextCode(runtime: Runtime, rawInput: string): boolean {
   return matchPattern(runtime, 'displayContextCode', compact)
 }
 
+// F83 — non-machine flow prefixes. When pendingFlow starts with one of these,
+// the customer is in a legitimate non-troubleshooting flow (invoice gather,
+// discount-code gather, loyalty FAQ, location-driven FAQ). Their per-turn
+// replies (e.g. "6€" as cost total, "B12345678" as tax id, "ana@ex.com" as
+// email) MUST NOT be classified as a topic-switch — they are the expected
+// answers to the previous canonical question. detectTopicSwitch only fires
+// when the customer is genuinely in a MACHINE context (trouble flow / display
+// flow / payment incident).
+const NON_MACHINE_PENDING_PREFIXES = [
+  'invoice-',
+  'discount-code-',
+  'loyalty-',
+  'faq-',
+] as const
+
+function isInNonMachineFlow(pendingFlow: string): boolean {
+  return NON_MACHINE_PENDING_PREFIXES.some((p) => pendingFlow.startsWith(p))
+}
+
 function detectTopicSwitch(
   runtime: Runtime,
   state: { displayState: string; machineNumber: string; pendingFlow: string },
   userMessage: string,
 ): boolean {
+  // F83 — non-machine flows (invoice, discount-code, loyalty, FAQ) collect
+  // structured PII or data answers that legitimately contain payment-shaped
+  // tokens (€, monetary amounts, "factura", …). They are NOT machine context
+  // and their answers MUST NOT trigger a topic-switch reset of machine facts
+  // / setting of nonTroubleshootingIncident. Reverting to the LLM here would
+  // be the wrong fix — the customer DID answer the canonical question.
+  if (isInNonMachineFlow(state.pendingFlow)) return false
   const hasMachineFacts = !!(state.displayState || state.machineNumber || state.pendingFlow)
   if (!hasMachineFacts) return false
   const text = userMessage.toLowerCase()

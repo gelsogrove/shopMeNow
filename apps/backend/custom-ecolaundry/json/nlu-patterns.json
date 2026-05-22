@@ -113,6 +113,14 @@
       "incidentTag": "contradictory-narrative",
       "regex": "(cobr[oó]\\s+dos\\s+veces|me\\s+han\\s+cobrad[oa]\\s+(?:dos|2)\\s+veces).*(creo|no\\s+s[eé]|aunque|tambi[eé]n\\s+pagu[eé]|no\\s+lo\\s+s[eé])",
       "flags": "i"
+    },
+    {
+      "id": "topicMachineTrouble",
+      "kind": "topic-switch",
+      "description": "Machine trouble trigger — customer signals a broken machine via 'no funciona' / 'non funziona' / 'doesn't work' / 'não funciona' / 'ne fonctionne pas' / 'no funciona' (6 lang). Used by F86 architectural guard to detect topic-switch from non-machine flows (invoice, discount-code, double-charge) toward trouble-machine. The pattern is intentionally restrictive: it requires an explicit negation + functional verb, NOT just the noun 'lavadora'/'lavatrice' (which would false-positive on neutral mentions like 'cuál lavadora es la 5?'). Covers also reflexive forms ('non mi va', 'no me funciona', 'no me anda').",
+      "incidentTag": "machine-trouble",
+      "regex": "\\b(no\\s+(?:me\\s+)?funciona|no\\s+me\\s+(?:va|anda|arranca)|non\\s+(?:mi\\s+)?funziona|non\\s+(?:mi\\s+)?va|doesn'?t\\s+work|isn'?t\\s+working|broken|not\\s+working|n[aã]o\\s+funciona|ne\\s+fonctionne\\s+pas|en\\s+panne|no\\s+arranca|non\\s+parte|won'?t\\s+start|si\\s+è\\s+rotta|s'?est\\s+cass[eé]e)\\b",
+      "flags": "i"
     }
   ]
 }

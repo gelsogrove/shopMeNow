@@ -73,13 +73,17 @@ const cases: Case[] = [
       if (!/pulsa.*programa/i.test(reply)) {
         throw new Error(`reply must ask the customer to press a program: ${reply}`)
       }
-      // F40 positive assertions: 4 programs in bold with descriptions
-      if (!/\*\*60º\*\*/.test(reply)) throw new Error('F40: missing **60º**')
-      if (!/\*\*40º\*\*/.test(reply)) throw new Error('F40: missing **40º**')
-      if (!/\*\*30º\*\*/.test(reply)) throw new Error('F40: missing **30º**')
-      if (!/\*\*FRÍO\*\*/.test(reply)) throw new Error('F40/F41: missing **FRÍO** (capital)')
-      if (!/muy caliente|templado|suave|delicad/i.test(reply)) {
-        throw new Error(`F40: missing program descriptions: ${reply}`)
+      // F40 positive assertions: 4 programs present (bold numbers OR bold names)
+      // F81 NOTE: when locations.json has metadata.programs for the location,
+      // buildPushProgList injects a dynamic list in format "**N** — Name (temp)".
+      // The hardcoded list in washer_hs60xx.json uses "**60º** Name" format.
+      // Either format must contain all 4 temperature references.
+      if (!/60[°º]/i.test(reply)) throw new Error('F40: missing 60º temperature')
+      if (!/40[°º]/i.test(reply)) throw new Error('F40: missing 40º temperature')
+      if (!/30[°º]/i.test(reply)) throw new Error('F40: missing 30º temperature')
+      if (!/frí[o]/i.test(reply) && !/frio/i.test(reply)) throw new Error('F40/F41: missing Frío / FRÍO')
+      if (!/muy caliente|caliente|templado|suave|delicad/i.test(reply)) {
+        throw new Error(`F40: missing program name descriptions: ${reply}`)
       }
       if (!/comenzado\s+a\s+funcionar|arrancad|funcion/i.test(reply)) {
         throw new Error(`reply must close with a loopback question: ${reply}`)

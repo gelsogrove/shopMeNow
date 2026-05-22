@@ -1,7 +1,31 @@
-// Pure formatters for Caso 12 (Horarios y precios por location). Iron rule
-// #7: data from json/locations.json, never invented. Missing data → null,
-// caller falls back to a generic i18n message.
+// Pure formatters for Caso 12.1/12.2 — Horarios y precios por location.
+// Iron rule #7: data from json/locations.json, never invented.
+// Missing data → null, caller falls back to a generic i18n message.
+//
+// Programs formatters (Caso 12.4 / F81) live in faq-programs-formatter.ts
+// (split for iron rule #3: file ≤ 150 lines).
+//
+// Re-exports from faq-programs-formatter.ts for backward compatibility:
+export {
+  formatWasherPrograms,
+  formatDryerPrograms,
+  buildPushProgList,
+  type ProgramTranslateFn,
+} from './faq-programs-formatter.js'
 
+// Re-exports from faq-payment-formatter.ts (F87) for backward compatibility:
+// readPayment + PaymentInfo + PaymentMethod are consumed by sibling tests
+// and any future caller that needs to inspect payment metadata.
+export {
+  readPayment,
+  formatPaymentSignals,
+  type PaymentInfo,
+  type PaymentMethod,
+} from './faq-payment-formatter.js'
+
+// F87 — internal imports for the price formatters below.
+import type { ProgramTranslateFn } from './faq-programs-formatter.js'
+import { readPayment as readPaymentInternal, formatPaymentSignals as formatPaymentSignalsInternal } from './faq-payment-formatter.js'
 import type { Runtime } from '../models/runtime.js'
 
 type Machine = {
@@ -66,23 +90,43 @@ export function formatHours(locationKey: string, runtime: Runtime): string | nul
 }
 
 // ── Washer prices formatter (Caso 12.2) — usecases.md §12.2 ──────────────────
-export function formatWasherPrices(locationKey: string, runtime: Runtime): string | null {
+export function formatWasherPrices(
+  locationKey: string,
+  runtime: Runtime,
+  translateFn?: ProgramTranslateFn,  // F87 — optional for backwards compat
+): string | null {
   const machines = readMachines(runtime, locationKey)
   if (!machines?.washers || machines.washers.length === 0) return null
   const displayName = readDisplayName(runtime, locationKey)
   const groups = groupBySpecs(machines.washers)
   const lines = groups.map((g) => formatGroupLine(g, 'Lavadoras'))
-  return `En ${displayName}, los precios de lavadora son:\n\n${lines.join('\n')}`
+  const base = `En ${displayName}, los precios de lavadora son:\n\n${lines.join('\n')}`
+  // F87 — append boundary payment signals when payment data + translateFn present.
+  if (translateFn) {
+    const payment = readPaymentInternal(runtime, locationKey)
+    if (payment) return base + formatPaymentSignalsInternal(payment, translateFn)
+  }
+  return base
 }
 
 // ── Dryer prices formatter (Caso 12.2) ───────────────────────────────────────
-export function formatDryerPrices(locationKey: string, runtime: Runtime): string | null {
+export function formatDryerPrices(
+  locationKey: string,
+  runtime: Runtime,
+  translateFn?: ProgramTranslateFn,  // F87
+): string | null {
   const machines = readMachines(runtime, locationKey)
   if (!machines?.dryers || machines.dryers.length === 0) return null
   const displayName = readDisplayName(runtime, locationKey)
   const groups = groupBySpecs(machines.dryers)
   const lines = groups.map((g) => formatGroupLine(g, 'Secadoras'))
-  return `En ${displayName}, los precios de secadora son:\n\n${lines.join('\n')}`
+  const base = `En ${displayName}, los precios de secadora son:\n\n${lines.join('\n')}`
+  // F87 — append boundary payment signals when payment data + translateFn present.
+  if (translateFn) {
+    const payment = readPaymentInternal(runtime, locationKey)
+    if (payment) return base + formatPaymentSignalsInternal(payment, translateFn)
+  }
+  return base
 }
 
 // F54 (Andrea 2026-05-14): collapse machines with identical specs into one
@@ -121,3 +165,4 @@ function formatGroupLine(g: Group, pluralLabel: string): string {
   if (price) return `- **${label}**${weightLabel}: ${price}`
   return `- **${label}**${weightLabel}`
 }
+

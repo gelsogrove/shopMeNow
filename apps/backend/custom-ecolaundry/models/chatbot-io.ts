@@ -57,7 +57,15 @@ export type ChatbotOutput = {
   operatorWhatsappNumber?: string
   /** SMTP config from settings.smtp. Passed through so the host app sends the escalation email using the tenant's own credentials, not the global .env vars. */
   smtpConfig?: { user: string; pass: string; host?: string; port?: number; secure?: boolean; from?: string }
-  error?: string
+  /**
+   * Discriminant for upstream failures the host app must handle differently.
+   * - `'agent_error'`  — generic unexpected exception in the chatbot module.
+   * - `'llm_unavailable'` — OpenRouter call failed (auth/credits/rate/network/timeout).
+   *   When this is set, the host app should serve the workspace WIP message to
+   *   the customer instead of the generic "something went wrong" message.
+   * Plain string still accepted for backward compatibility with older modules.
+   */
+  error?: 'agent_error' | 'llm_unavailable' | string
   /**
    * Customer-profile fields captured or updated during this turn.
    * Empty array when nothing changed. The app should upsert these

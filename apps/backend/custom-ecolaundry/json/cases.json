@@ -145,27 +145,30 @@
     },
     {
       "docNumber": 12,
-      "title": "Horarios y precios (location-driven FAQ)",
+      "title": "Horarios, precios y programas (location-driven FAQ)",
       "semanticId": "faq-location-context",
       "kind": "faq",
-      "guardModule": "utils/guards/faq-hours.ts, utils/guards/faq-prices.ts",
+      "guardModule": "utils/guards/faq-hours.ts, utils/guards/faq-prices.ts, utils/guards/faq-programs.ts",
       "guards": [
         "guardFaqHours",
         "guardFaqHoursAwaitLocation",
         "guardFaqPrices",
         "guardFaqPricesAwaitLocation",
         "guardFaqPricesAwaitDryerConfirm",
-        "guardFaqPricesAwaitWasherConfirm"
+        "guardFaqPricesAwaitWasherConfirm",
+        "guardFaqPrograms",
+        "guardFaqProgramsAwaitLocation"
       ],
       "pendingFlowPrefix": "faq-",
-      "i18nKeys": ["hoursAsk", "pricesAsk", "priceWarning", "pricesDryerHint", "pricesWasherHint", "openingHoursDefault"],
+      "i18nKeys": ["hoursAsk", "pricesAsk", "priceWarning", "pricesDryerHint", "pricesWasherHint", "openingHoursDefault", "programsAsk", "programsWasherTitle", "programsDryerTitle", "programsNoData", "programMuyCaliente", "programCaliente", "programTemplado", "programFrio", "programCentrifugado", "programAltaTemp", "programMediaTemp", "programBajaTemp"],
       "tests": [
         "__tests__/agent/12-horarios-precios.test.spec.ts",
         "__tests__/unit/faq-prices.test.ts",
+        "__tests__/unit/faq-programs.test.ts",
         "__tests__/unit/faq-location-rearm.test.ts",
         "__tests__/unit/faq-trouble-transition.test.ts"
       ],
-      "notes": "Replaces legacy guardPricingDeflect + guardOpeningHours (2026-05-14 rewrite). Data-driven: reads metadata.hours and metadata.machines.{washers,dryers} from json/locations.json. Two-phase flow per topic: T1 detects intent + asks location if missing; T2 (pendingFlow=faq-{prices,hours}-await-location) renders the answer once the location-extractor captures one. detectMachineTypeMention in utils/intent.ts decides washer/dryer render. F58 (2026-05-15): both type-specific T2 branches arm the opposite-type follow-up flag (`faq-prices-await-{dryer,washer}-confirm`) and append the corresponding hint, so the customer who asked one type can ask for the other without falling into guardForceMachineNumber. F60 (2026-05-15): FAQ→trouble-machine boundary clears `state.location + lastResolvedIntent + lastFaqKey` via `clearFaqContextOnTroubleEntry` (state-transitions.ts), called from dispatchTurnOne when router returns 'trouble-machine' AND prior lastResolvedIntent='faq' — avoids stale FAQ-comparison location bleeding into the trouble incident. F61 (2026-05-15): new `state.lastFaqKey: 'pricing' | 'openingHours' | null` marker set by renderPrices and faq-hours guards; agent-extract.ts F51 location-switch block uses it to re-arm `faq-{prices,hours}-await-location` so the deterministic guard renders the new location's data instead of falling through to LLM rephrase. The legacy pricingDeflect i18n key is retained for backwards-compat but no code path references it anymore."
+      "notes": "Replaces legacy guardPricingDeflect + guardOpeningHours (2026-05-14 rewrite). Data-driven: reads metadata.hours and metadata.machines.{washers,dryers} from json/locations.json. Two-phase flow per topic: T1 detects intent + asks location if missing; T2 (pendingFlow=faq-{prices,hours,programs}-await-location) renders the answer once the location-extractor captures one. detectMachineTypeMention in utils/intent.ts decides washer/dryer render. F58 (2026-05-15): both type-specific T2 branches arm the opposite-type follow-up flag. F60 (2026-05-15): FAQ→trouble-machine boundary clears `state.location + lastResolvedIntent + lastFaqKey` via `clearFaqContextOnTroubleEntry`. F61 (2026-05-15): new `state.lastFaqKey: 'pricing' | 'openingHours' | 'programs' | null` marker. F81 (2026-05-22): programs FAQ added — reads metadata.programs from json/locations.json; supports numbered (Goya/Pineda/LEscala/PlatjaDAro) and unnumbered (Hortes/Alemanya) washer layouts; all locations share 3 dryer programs (Alta/Media/Baja temperatura). PUSH PROG flow (Caso 1) also uses the dynamic list via buildPushProgList in faq-location-formatter.ts. Expanding to a new location = JSON edit only."
     },
     {
       "docNumber": 13,

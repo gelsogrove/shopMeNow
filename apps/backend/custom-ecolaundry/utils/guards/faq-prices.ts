@@ -6,12 +6,13 @@
 // Iron rule #6: detectPriceIntent / detectMachineTypeMention are FAQ topic
 // classifiers (tracked exemption).
 
-import { t } from '../localization.js'
-import type { Guard } from '../../models/index.js'
+import { t, type TranslationKey } from '../localization.js'
+import type { AgentRuntime, Guard } from '../../models/index.js'
 import { lang } from './helpers.js'
 import { detectPriceIntent, detectMachineTypeMention } from '../intent.js'
 import { releaseBranchOnFaqClosure } from '../state-transitions.js'
 import { formatWasherPrices, formatDryerPrices } from '../faq-location-formatter.js'
+import type { ProgramTranslateFn } from '../faq-programs-formatter.js'
 
 // 6-language affirmative detector. Word-end lookahead because JS \b is
 // ASCII-only and would miss accented "sí"/"sì".
@@ -20,6 +21,15 @@ const AFFIRMATIVE_RE =
 
 function isAffirmative(msg: string): boolean {
   return AFFIRMATIVE_RE.test(msg.trim().toLowerCase())
+}
+
+// F87 — build a translateFn closure over the current tenant lang, to pass
+// to formatWasherPrices/formatDryerPrices so they append paymentCardOnly /
+// paymentTpvExact boundary signals. Same shape as ProgramTranslateFn from
+// faq-programs-formatter (key → localised string).
+function buildTranslateFn(ar: AgentRuntime): ProgramTranslateFn {
+  const lng = lang(ar)
+  return (key: string) => t(key as TranslationKey, lng)
 }
 
 export const guardFaqPrices: Guard = (ar, userMessage) => {
@@ -65,7 +75,8 @@ export const guardFaqPricesAwaitDryerConfirm: Guard = (ar, userMessage) => {
   }
 
   ar.state.pendingFlow = ''
-  const formatted = formatDryerPrices(ar.state.location, ar.runtime)
+  // F87 — translateFn enables paymentCardOnly + paymentTpvExact appending.
+  const formatted = formatDryerPrices(ar.state.location, ar.runtime, buildTranslateFn(ar))
   return {
     reply: formatted || t('priceWarning', lang(ar)),
     reason: 'faq-prices-dryer-confirm',
@@ -88,7 +99,8 @@ export const guardFaqPricesAwaitWasherConfirm: Guard = (ar, userMessage) => {
   }
 
   ar.state.pendingFlow = ''
-  const formatted = formatWasherPrices(ar.state.location, ar.runtime)
+  // F87 — translateFn enables paymentCardOnly + paymentTpvExact appending.
+  const formatted = formatWasherPrices(ar.state.location, ar.runtime, buildTranslateFn(ar))
   return {
     reply: formatted || t('priceWarning', lang(ar)),
     reason: 'faq-prices-washer-confirm',
@@ -102,6 +114,9 @@ function renderPrices(
 ): ReturnType<Guard> {
   const mentioned = detectMachineTypeMention(userMessage) || ar.state.faqPricesType
   const lng = lang(ar)
+  // F87 — translateFn passed to formatWasherPrices/formatDryerPrices so the
+  // boundary signals (paymentCardOnly / paymentTpvExact) get appended.
+  const translateFn: ProgramTranslateFn = (key: string) => t(key as TranslationKey, lng)
   const loc = ar.state.location!
   ar.state.lastResolvedIntent = 'faq'
   // F61: remember we resolved a prices FAQ so the F51 location-switch block
@@ -113,7 +128,7 @@ function renderPrices(
 
   // F58: type-specific branches also offer the OTHER type as follow-up.
   if (mentioned === 'washer') {
-    const formatted = formatWasherPrices(loc, ar.runtime)
+    const formatted = formatWasherPrices(loc, ar.runtime, translateFn)
     if (formatted) {
       ar.state.pendingFlow = 'faq-prices-await-dryer-confirm'
       return {
@@ -124,7 +139,7 @@ function renderPrices(
     return { reply: t('priceWarning', lng), reason: 'faq-prices-washer' }
   }
   if (mentioned === 'dryer') {
-    const formatted = formatDryerPrices(loc, ar.runtime)
+    const formatted = formatDryerPrices(loc, ar.runtime, translateFn)
     if (formatted) {
       ar.state.pendingFlow = 'faq-prices-await-washer-confirm'
       return {
@@ -136,7 +151,7 @@ function renderPrices(
   }
 
   // F53: no specific type → render washers + dryer hint.
-  const washers = formatWasherPrices(loc, ar.runtime)
+  const washers = formatWasherPrices(loc, ar.runtime, translateFn)
   if (washers) {
     ar.state.pendingFlow = 'faq-prices-await-dryer-confirm'
     return {

@@ -885,8 +885,13 @@ const cases: Case[] = [
       const here = path.dirname(fileURLToPath(import.meta.url))
       const p = path.resolve(here, '..', '..', 'models', 'state.ts')
       const content = fs.readFileSync(p, 'utf8')
-      if (!/lastFaqKey:\s*'pricing'\s*\|\s*'openingHours'\s*\|\s*null/.test(content)) {
-        throw new Error("F61: state.ts must declare lastFaqKey: 'pricing' | 'openingHours' | null")
+      // F81 extended the union with 'programs'; regex matches the field presence
+      // and ensures 'pricing' and 'openingHours' are still included.
+      if (!/lastFaqKey:\s*(?:'pricing'\s*\|[^;]+|[^;]+'pricing')/.test(content)) {
+        throw new Error("F61: state.ts must declare lastFaqKey with at least 'pricing' union member")
+      }
+      if (!content.includes("'openingHours'")) {
+        throw new Error("F61: state.ts lastFaqKey must include 'openingHours'")
       }
     },
   },
@@ -1395,16 +1400,20 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'F50 — new cassette files faq-hours.ts + faq-prices.ts exist and stay under 150 lines',
+    name: 'F50 — new cassette files faq-hours.ts + faq-prices.ts exist (F87 raised faq-prices ceiling to 200 lines for translateFn wiring; tracked in ALLOWED_LARGE_FILES)',
     run: () => {
       const here = path.dirname(fileURLToPath(import.meta.url))
       const hoursPath = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-hours.ts')
       const pricesPath = path.resolve(here, '..', '..', 'utils', 'guards', 'faq-prices.ts')
-      for (const p of [hoursPath, pricesPath]) {
-        if (!fs.existsSync(p)) throw new Error(`F50: missing ${p}`)
-        const lines = fs.readFileSync(p, 'utf8').split('\n').length
-        if (lines > 150) throw new Error(`F50: ${path.basename(p)} exceeds 150 lines (${lines})`)
-      }
+      if (!fs.existsSync(hoursPath)) throw new Error(`F50: missing ${hoursPath}`)
+      if (!fs.existsSync(pricesPath)) throw new Error(`F50: missing ${pricesPath}`)
+      const hoursLines = fs.readFileSync(hoursPath, 'utf8').split('\n').length
+      if (hoursLines > 150) throw new Error(`F50: faq-hours.ts exceeds 150 lines (${hoursLines})`)
+      // F87: faq-prices grew from ~150 to ~163 lines due to buildTranslateFn helper
+      // and 5 call sites passing translateFn to formatWasherPrices/formatDryerPrices.
+      // Tracked in scripts/check-architecture.sh:ALLOWED_LARGE_FILES with reason.
+      const pricesLines = fs.readFileSync(pricesPath, 'utf8').split('\n').length
+      if (pricesLines > 200) throw new Error(`F50: faq-prices.ts exceeds 200 lines (${pricesLines}) — split overdue`)
     },
   },
   {
@@ -2020,6 +2029,532 @@ const cases: Case[] = [
             `F79: json/i18n/${lang}.json must define landmarkAck with {location} AND {address} placeholders`,
           )
         }
+      }
+    },
+  },
+  {
+    name: 'F80 — sticky-T1 language: applyTenantLanguage no preferredLanguage, no flip-back, router gated on T1',
+    run: () => {
+      const indexTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'index.ts'),
+        'utf8',
+      )
+      // (1) applyTenantLanguage must NOT set state.preferredLanguage from caller config.
+      // Match the function block and verify it does not assign preferredLanguage on a line of code.
+      const fnStart = indexTs.indexOf('function applyTenantLanguage(')
+      if (fnStart < 0) {
+        throw new Error('F80: applyTenantLanguage function must exist in index.ts')
+      }
+      const fnBody = indexTs.slice(fnStart, fnStart + 2000)
+      // Look for any executable (non-comment) assignment to preferredLanguage.
+      const codeLines = fnBody.split('\n').filter((l: string) => {
+        const trimmed = l.trim()
+        return trimmed.length > 0 && !trimmed.startsWith('//') && !trimmed.startsWith('*')
+      })
+      const offendingAssignment = codeLines.find((l: string) =>
+        /session\.ar\.state\.preferredLanguage\s*=/.test(l),
+      )
+      if (offendingAssignment) {
+        throw new Error(
+          'F80: applyTenantLanguage MUST NOT assign state.preferredLanguage (caller config is fallback for state.language only)',
+        )
+      }
+
+      // (2) resolveLanguageForTurn must NOT have a flip-back branch on T2+.
+      // The legacy code had: `if (heuristic && enabled.includes(heuristic) && heuristic !== ar.state.preferredLanguage) { ar.state.preferredLanguage = heuristic }`.
+      // That entire branch must be gone.
+      const agentTs = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'agent.ts'),
+        'utf8',
+      )
+      const fnRes = agentTs.indexOf('function resolveLanguageForTurn(')
+      if (fnRes < 0) {
+        throw new Error('F80: resolveLanguageForTurn must exist in agent.ts')
+      }
+      const fnResBody = agentTs.slice(fnRes, fnRes + 3000)
+      if (/heuristic\s*!==\s*ar\.state\.preferredLanguage/.test(fnResBody)) {
+        throw new Error(
+          'F80: resolveLanguageForTurn MUST NOT flip-back preferredLanguage on per-turn heuristic mismatch',
+        )
+      }
+
+      // (3) Router T1 override in maybeDispatchBranch must be gated on ar.state.turnCount === 1.
+      const fnMD = agentTs.indexOf('async function maybeDispatchBranch(')
+      if (fnMD < 0) {
+        throw new Error('F80: maybeDispatchBranch must exist in agent.ts')
+      }
+      const fnMDBody = agentTs.slice(fnMD, fnMD + 3000)
+      // The override block must include the T1 guard right before assigning preferredLanguage.
+      if (!/ar\.state\.turnCount\s*===\s*1[\s\S]{0,500}preferredLanguage\s*=/.test(fnMDBody)) {
+        throw new Error(
+          'F80: maybeDispatchBranch router-language override MUST be gated on ar.state.turnCount === 1',
+        )
+      }
+    },
+  },
+
+  // ── F81 — Programs FAQ + PUSH PROG dynamic (2026-05-22) ──────────────────
+  // Feature: programs per location from json/locations.json:metadata.programs.
+  // Used by FAQ (Caso 12.4) and PUSH PROG flow (Caso 1) dynamically.
+  // Pattern preservativo: data-driven L3 + pure formatter + guard cassette.
+  // Expanding to a new location = JSON edit only.
+  {
+    name: 'F81 — detectProgramsIntent exported from utils/intent.ts',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'), 'utf8')
+      if (!src.includes('export function detectProgramsIntent')) {
+        throw new Error('F81: detectProgramsIntent must be exported from utils/intent.ts')
+      }
+    },
+  },
+  {
+    name: 'F81 — formatWasherPrograms + formatDryerPrograms + buildPushProgList in faq-programs-formatter.ts (re-exported via faq-location-formatter.ts)',
+    run: () => {
+      // After iron-rule-#3 split, programs formatters live in faq-programs-formatter.ts
+      // and are re-exported by faq-location-formatter.ts for backward compat.
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/faq-programs-formatter.ts'), 'utf8')
+      if (!src.includes('export function formatWasherPrograms')) {
+        throw new Error('F81: formatWasherPrograms must be exported from utils/faq-programs-formatter.ts')
+      }
+      if (!src.includes('export function formatDryerPrograms')) {
+        throw new Error('F81: formatDryerPrograms must be exported from utils/faq-programs-formatter.ts')
+      }
+      if (!src.includes('export function buildPushProgList')) {
+        throw new Error('F81: buildPushProgList must be exported from utils/faq-programs-formatter.ts')
+      }
+      // Verify re-export in faq-location-formatter.ts (backward compat)
+      const src2 = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/faq-location-formatter.ts'), 'utf8')
+      if (!src2.includes('formatWasherPrograms') || !src2.includes('formatDryerPrograms') || !src2.includes('buildPushProgList')) {
+        throw new Error('F81: faq-location-formatter.ts must re-export programs functions for backward compat')
+      }
+    },
+  },
+  {
+    name: 'F81 — guardFaqPrograms + guardFaqProgramsAwaitLocation exported from utils/guards/faq-programs.ts',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/guards/faq-programs.ts'), 'utf8')
+      if (!src.includes('export const guardFaqPrograms')) {
+        throw new Error('F81: guardFaqPrograms must be exported from faq-programs.ts')
+      }
+      if (!src.includes('export const guardFaqProgramsAwaitLocation')) {
+        throw new Error('F81: guardFaqProgramsAwaitLocation must be exported from faq-programs.ts')
+      }
+    },
+  },
+  {
+    name: 'F81 — pendingFlow union includes faq-programs-await-location in models/state.ts',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'models/state.ts'), 'utf8')
+      if (!src.includes("'faq-programs-await-location'")) {
+        throw new Error("F81: models/state.ts pendingFlow union must include 'faq-programs-await-location'")
+      }
+    },
+  },
+  {
+    name: 'F81 — lastFaqKey union includes programs in models/state.ts',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'models/state.ts'), 'utf8')
+      if (!src.includes("'programs'")) {
+        throw new Error("F81: models/state.ts lastFaqKey union must include 'programs'")
+      }
+    },
+  },
+  {
+    name: 'F81 — auto-start-machine-flow imports buildPushProgList for dynamic PUSH PROG',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/guards/auto-start-machine-flow.ts'), 'utf8')
+      if (!src.includes('buildPushProgList')) {
+        throw new Error('F81: auto-start-machine-flow.ts must import and use buildPushProgList')
+      }
+    },
+  },
+  {
+    name: 'F81 — locations.json has programs data for Goya (numbered washers)',
+    run: () => {
+      const locs = JSON.parse(fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'json/locations.json'), 'utf8'))
+      const goya = locs.locations?.Goya?.metadata?.programs
+      if (!goya) throw new Error('F81: locations.json Goya must have metadata.programs')
+      if (!Array.isArray(goya.washers) || goya.washers.length === 0)
+        throw new Error('F81: Goya programs.washers must be a non-empty array')
+      if (goya.washers[0].number !== 1)
+        throw new Error('F81: Goya first washer program must have number=1')
+      if (!Array.isArray(goya.dryers) || goya.dryers.length !== 3)
+        throw new Error('F81: Goya programs.dryers must have 3 entries')
+    },
+  },
+  {
+    name: 'F81 — i18n ES has all program name keys',
+    run: () => {
+      const es = JSON.parse(fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'json/i18n/es.json'), 'utf8'))
+      const required = ['programMuyCaliente','programCaliente','programTemplado','programFrio','programCentrifugado','programAltaTemp','programMediaTemp','programBajaTemp','programsWasherTitle','programsDryerTitle','programsNoData','programsAsk']
+      for (const key of required) {
+        if (!es[key]) throw new Error(`F81: es.json missing key "${key}"`)
+      }
+    },
+  },
+  {
+    // F82 — programs FAQ branch routing missing.
+    //
+    // F81 added the guardFaqPrograms cassette (detector + guard + formatter +
+    // i18n + locations.json data) but missed two integration points with the
+    // branch router architecture:
+    //
+    //   (1) prompts/router.txt did not list "programs" among the faqKey set,
+    //       so the router LLM classified "qué programas hay?" as a different
+    //       faqKey (often pricing/howToUse) or as null → faqHandler returned
+    //       unknownKey topic-switch → guardFaqPrograms never ran.
+    //
+    //   (2) utils/branches/faq/handler.ts hardcoded the delegate-to-legacy
+    //       gate to only pricing + openingHours. Even when the router
+    //       correctly emits faqKey=programs, the handler looked up
+    //       getFaqs()['programs'] (which does NOT exist — programs is
+    //       data-driven from locations.json) → fell through to unknownKey.
+    //
+    // Live CLI evidence (Andrea 2026-05-22): 3 scenarios all produced wrong
+    // replies — ES with explicit location, ES without location, IT with
+    // explicit location. After the fix all 3 render programs correctly.
+    name: 'F82 — router prompt lists programs as a faqKey',
+    run: () => {
+      const router = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'prompts/router.txt'), 'utf8')
+      // The faqKey list block must include "programs".
+      if (!/\bprograms\b/.test(router)) {
+        throw new Error('F82: prompts/router.txt must include "programs" in the faqKey set')
+      }
+      // At least one cross-language example must show faqKey:programs.
+      if (!/"faqKey":\s*"programs"/.test(router)) {
+        throw new Error('F82: prompts/router.txt must include at least one example with faqKey="programs"')
+      }
+    },
+  },
+  {
+    name: 'F82 — faqHandler delegates programs to legacy guard',
+    run: () => {
+      const handler = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/branches/faq/handler.ts'),
+        'utf8',
+      )
+      // T1 delegate gate must include 'programs' alongside pricing/openingHours.
+      if (!/faqKey === 'pricing'[^}]*faqKey === 'openingHours'[^}]*faqKey === 'programs'/s.test(handler)) {
+        throw new Error("F82: faqHandler must delegate-to-legacy for faqKey === 'programs' (same as pricing/openingHours)")
+      }
+      // T2 sticky-branch delegate must include the await-location pendingFlow.
+      if (!/pending === 'faq-programs-await-location'/.test(handler)) {
+        throw new Error("F82: faqHandler must delegate-to-legacy for pendingFlow === 'faq-programs-await-location'")
+      }
+    },
+  },
+  {
+    // F83 — invoice / discount-code / loyalty / FAQ flows had their per-turn
+    // canonical answers misclassified as topic-switches because
+    // `detectTopicSwitch` treated ANY non-empty `pendingFlow` as "machine
+    // context". When the customer was in `invoice-ask-coste` and replied
+    // "6€" (the answer to the coste-total question), the `topicPayment`
+    // regex (`\d+\s*€`) matched, `resetMachineFacts` cleared `pendingFlow`,
+    // `nonTroubleshootingIncident = 'datafono-wrong-amount'` was set, and
+    // `guardEscalateNonTroubleshooting` fired with an invented incident
+    // type. Live CLI evidence (Andrea 2026-05-22): 2/2 invoice scenarios
+    // failed deterministically at T8 (coste step). Fix: gate
+    // `detectTopicSwitch` to short-circuit when `pendingFlow` is one of the
+    // non-machine prefixes (`invoice-`, `discount-code-`, `loyalty-`,
+    // `faq-`). The customer in those flows is NOT in a machine context —
+    // their reply is the canonical answer, not a topic switch.
+    name: 'F83 — detectTopicSwitch short-circuits on non-machine pendingFlow prefixes',
+    run: () => {
+      const src = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/agent-extract.ts'),
+        'utf8',
+      )
+      // Source-level assertion: the NON_MACHINE_PENDING_PREFIXES list must
+      // exist and the detectTopicSwitch function must consult it.
+      if (!/NON_MACHINE_PENDING_PREFIXES/.test(src)) {
+        throw new Error('F83: agent-extract.ts must declare NON_MACHINE_PENDING_PREFIXES')
+      }
+      for (const prefix of ['invoice-', 'discount-code-', 'loyalty-', 'faq-']) {
+        if (!src.includes(`'${prefix}'`)) {
+          throw new Error(`F83: NON_MACHINE_PENDING_PREFIXES must include '${prefix}'`)
+        }
+      }
+      if (!/isInNonMachineFlow\(state\.pendingFlow\)/.test(src)) {
+        throw new Error('F83: detectTopicSwitch must short-circuit via isInNonMachineFlow(state.pendingFlow)')
+      }
+    },
+  },
+  {
+    // F84 — guardMataroStreet: "non lo so" after Goya/Alemanya question fell
+    // through to guardForceMachineNumber (pipeline hole).
+    //
+    // Root cause: guardInsistLocation was gated on `!ar.state.location` — when
+    // location='Mataro' (set), it skipped. guardMataroStreet had no branch for
+    // the "customer says non lo so" case after locationStreetRequested was set.
+    // The pipeline fell through to guardForceMachineNumber which asked for
+    // the machine number — completely wrong context.
+    //
+    // Fix: guardMataroStreet detects MATARO_DONT_KNOW_RE after the first ask
+    // (locationStreetRequested=true) and emits mataroStreetInsist with the
+    // Goya-specific landmarks (Mercadona, Biblioteca) so the customer can
+    // self-identify. Reason: 'mataro-street-insist'. F84.
+    name: 'F84 — guardMataroStreet has mataro-street-insist branch for "non lo so"',
+    run: () => {
+      const src = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/guards/location-resolution.ts'),
+        'utf8',
+      )
+      if (!src.includes('MATARO_DONT_KNOW_RE')) {
+        throw new Error('F84: location-resolution.ts must declare MATARO_DONT_KNOW_RE')
+      }
+      if (!src.includes('mataro-street-insist')) {
+        throw new Error('F84: guardMataroStreet must emit reason mataro-street-insist')
+      }
+      if (!src.includes('mataroStreetInsist')) {
+        throw new Error('F84: guardMataroStreet must use mataroStreetInsist i18n key')
+      }
+      // Verify i18n key exists in all 6 catalogues
+      for (const lang of ['es', 'it', 'en', 'ca', 'pt', 'fr']) {
+        const cat = JSON.parse(
+          fs.readFileSync(path.join(ECOLAUNDRY_ROOT, `json/i18n/${lang}.json`), 'utf8'),
+        )
+        if (!cat.mataroStreetInsist) {
+          throw new Error(`F84: i18n/${lang}.json must have mataroStreetInsist key`)
+        }
+        if (!cat.mataroStreetInsist.includes('{landmarks}')) {
+          throw new Error(`F84: i18n/${lang}.json mataroStreetInsist must have {landmarks} placeholder`)
+        }
+      }
+    },
+  },
+  {
+    // F85 — OpenRouter outages must surface as `error:'llm_unavailable'` so
+    // the host app can serve workspace.wipMessage instead of silently
+    // degrading. Three LLM-calling layers had try/catch fallbacks that
+    // masked outages: rephrase → canned reply, briefing → deterministic
+    // summary, router → ROUTER_FALLBACK. Now each re-throws LlmFetchError
+    // while keeping the fallback for non-network errors (JSON parse,
+    // schema drift). The chatbotFn catch maps LlmFetchError to the
+    // discriminant `'llm_unavailable'`.
+    name: 'F85 — OpenRouter outages propagate as error="llm_unavailable" (no silent degradation)',
+    run: () => {
+      const indexSrc = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'index.ts'), 'utf8')
+      if (!/import\s*{\s*LlmFetchError\s*}\s*from\s*['"][^'"]*llm-fetch/.test(indexSrc)) {
+        throw new Error('F85: index.ts must import LlmFetchError from utils/llm-fetch')
+      }
+      if (!/error\s+instanceof\s+LlmFetchError/.test(indexSrc)) {
+        throw new Error('F85: index.ts catch must check `error instanceof LlmFetchError`')
+      }
+      if (!/error:\s*['"]llm_unavailable['"]/.test(indexSrc)) {
+        throw new Error("F85: index.ts must return error:'llm_unavailable' on LlmFetchError")
+      }
+      const contractSrc = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'models/chatbot-io.ts'),
+        'utf8',
+      )
+      if (!contractSrc.includes("'llm_unavailable'")) {
+        throw new Error("F85: chatbot-io.ts ChatbotOutput.error union must list 'llm_unavailable'")
+      }
+      const rephraseSrc = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/agent-rephrase.ts'),
+        'utf8',
+      )
+      if (!/instanceof\s+LlmFetchError/.test(rephraseSrc)) {
+        throw new Error('F85: agent-rephrase.ts catch must re-throw LlmFetchError, not swallow')
+      }
+      const briefingSrc = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/operator-briefing.ts'),
+        'utf8',
+      )
+      if (!/instanceof\s+LlmFetchError/.test(briefingSrc)) {
+        throw new Error(
+          'F85: operator-briefing.ts catch must re-throw LlmFetchError, not swallow',
+        )
+      }
+      const routerSrc = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/router.ts'), 'utf8')
+      if (!/instanceof\s+LlmFetchError/.test(routerSrc)) {
+        throw new Error('F85: router.ts catch must re-throw LlmFetchError, not swallow')
+      }
+    },
+  },
+  {
+    // F86 — Cross-flow architectural fix: trouble-machine switch detection
+    // during non-machine gather flows (invoice, discount-code, double-charge).
+    //
+    // Customer mid-gather pivots with "ah, ahora no funciona la lavadora" /
+    // "non parte la lavatrice" / "the dryer doesn't work" → before this fix,
+    // the gather step blindly stored the entire sentence as the canonical
+    // answer (machineNumber, razonSocial, cif, fecha, …). State pollution
+    // guaranteed for every "verbatim accept" step.
+    //
+    // Architectural fix: L3 detector + L2 atomic transition + L4 gates in
+    // 3 guard cassettes. Iron rule #16 (no pezze) respected — narrow Caso-N
+    // fix would have left the same bug latent in 8+ other gather steps.
+    name: 'F86 — detectTroubleSwitchDuringFlow exists with JSON pattern topicMachineTrouble',
+    run: () => {
+      const intentSrc = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'),
+        'utf8',
+      )
+      if (!/export function detectTroubleSwitchDuringFlow/.test(intentSrc)) {
+        throw new Error('F86: intent.ts must export detectTroubleSwitchDuringFlow')
+      }
+      if (!/topicMachineTrouble/.test(intentSrc)) {
+        throw new Error('F86: detectTroubleSwitchDuringFlow must call matchPattern with topicMachineTrouble')
+      }
+      const nluSrc = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'json/nlu-patterns.json'),
+        'utf8',
+      )
+      if (!/"id":\s*"topicMachineTrouble"/.test(nluSrc)) {
+        throw new Error('F86: nlu-patterns.json must declare the topicMachineTrouble pattern')
+      }
+    },
+  },
+  {
+    name: 'F86 — pivotToTroubleMachine atomic transition exists in state-transitions.ts',
+    run: () => {
+      const src = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/state-transitions.ts'),
+        'utf8',
+      )
+      if (!/export function pivotToTroubleMachine/.test(src)) {
+        throw new Error('F86: state-transitions.ts must export pivotToTroubleMachine')
+      }
+      if (!/activeBranch\s*=\s*'trouble-machine'/.test(src)) {
+        throw new Error("F86: pivotToTroubleMachine must set activeBranch='trouble-machine'")
+      }
+      if (!/invoiceData\s*=\s*\{/.test(src)) throw new Error('F86: must clear invoiceData')
+      if (!/discountCodeData\s*=\s*\{/.test(src)) throw new Error('F86: must clear discountCodeData')
+      if (!/doubleChargeNarrativeProvided\s*=\s*false/.test(src)) {
+        throw new Error('F86: must clear doubleChargeNarrativeProvided')
+      }
+      if (!/resetPostEscalationFlags/.test(src)) {
+        throw new Error('F86: must call resetPostEscalationFlags for safety')
+      }
+    },
+  },
+  {
+    name: 'F86 — shared pivotIfTroubleSwitch helper + all three cassettes consume it',
+    run: () => {
+      // Helper lives in ONE place (iron rule #16: no duplication).
+      const helpersSrc = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/guards/helpers.ts'),
+        'utf8',
+      )
+      if (!/export function pivotIfTroubleSwitch/.test(helpersSrc)) {
+        throw new Error('F86: helpers.ts must export pivotIfTroubleSwitch (shared helper, no duplication)')
+      }
+      if (!/detectTroubleSwitchDuringFlow/.test(helpersSrc)) {
+        throw new Error('F86: helpers.ts must import detectTroubleSwitchDuringFlow')
+      }
+      if (!/pivotToTroubleMachine/.test(helpersSrc)) {
+        throw new Error('F86: helpers.ts must import pivotToTroubleMachine')
+      }
+      // All three cassettes must call the shared helper.
+      const invoiceSrc = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/guards/invoice-flow.ts'),
+        'utf8',
+      )
+      if (!/pivotIfTroubleSwitch/.test(invoiceSrc)) {
+        throw new Error('F86: invoice-flow.ts must call pivotIfTroubleSwitch (from helpers)')
+      }
+      const discountSrc = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/guards/discount-code-flow.ts'),
+        'utf8',
+      )
+      if (!/pivotIfTroubleSwitch/.test(discountSrc)) {
+        throw new Error('F86: discount-code-flow.ts must call pivotIfTroubleSwitch (from helpers)')
+      }
+      const doubleChargeSrc = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/guards/payment-double-charge.ts'),
+        'utf8',
+      )
+      if (!/pivotIfTroubleSwitch/.test(doubleChargeSrc)) {
+        throw new Error('F86: payment-double-charge.ts must call pivotIfTroubleSwitch (from helpers)')
+      }
+    },
+  },
+  {
+    // F87 — FAQ payment location-aware (boundary signals cardOnly + tpvExact).
+    // Data-driven via metadata.payment + 2 new i18n keys (paymentCardOnly,
+    // paymentTpvExact). Triggered by skill chatbot-eval MIX 3 analysis
+    // (datafono-wrong-amount escalation root cause) + audit docs/csv/tables.md.
+    // Pattern identical to F50/F81 (data-driven location-aware via metadata).
+    name: 'F87 — paymentCardOnly + paymentTpvExact i18n keys exist in all 6 catalogues',
+    run: () => {
+      const langs = ['es', 'it', 'en', 'ca', 'pt', 'fr']
+      for (const lng of langs) {
+        const cat = JSON.parse(
+          fs.readFileSync(path.join(ECOLAUNDRY_ROOT, `json/i18n/${lng}.json`), 'utf8'),
+        )
+        if (!cat.paymentCardOnly) {
+          throw new Error(`F87: ${lng}.json missing key 'paymentCardOnly'`)
+        }
+        if (!cat.paymentCardOnly.includes('⚠️')) {
+          throw new Error(`F87: ${lng}.json paymentCardOnly must include ⚠️ marker, got: ${cat.paymentCardOnly}`)
+        }
+        if (!cat.paymentTpvExact) {
+          throw new Error(`F87: ${lng}.json missing key 'paymentTpvExact'`)
+        }
+        if (!cat.paymentTpvExact.includes('{amount}')) {
+          throw new Error(`F87: ${lng}.json paymentTpvExact must include {amount} placeholder, got: ${cat.paymentTpvExact}`)
+        }
+      }
+    },
+  },
+  {
+    name: 'F87 — metadata.payment populated for all 6 locations with expected values',
+    run: () => {
+      const j = JSON.parse(
+        fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'json/locations.json'), 'utf8'),
+      )
+      const expected: Record<string, { methods: string[]; tpvExact: number | null }> = {
+        Goya:        { methods: ['coins','bills','fidelity','card'], tpvExact: 7 },
+        Pineda:      { methods: ['coins','bills','fidelity','card'], tpvExact: 8 },
+        "L'Escala":  { methods: ['card'],                            tpvExact: null },
+        PlatjaDAro:  { methods: ['card'],                            tpvExact: null },
+        Hortes:      { methods: ['coins','bills','fidelity','card'], tpvExact: null },
+        Alemanya:    { methods: ['coins','bills','fidelity','card'], tpvExact: null },
+      }
+      for (const [key, exp] of Object.entries(expected)) {
+        const loc = j.locations[key]
+        if (!loc) throw new Error(`F87: location '${key}' missing in locations.json`)
+        const p = loc.metadata?.payment
+        if (!p) throw new Error(`F87: ${key} has no metadata.payment`)
+        if (JSON.stringify(p.methods.slice().sort()) !== JSON.stringify(exp.methods.slice().sort())) {
+          throw new Error(`F87: ${key}.payment.methods mismatch — expected ${JSON.stringify(exp.methods)}, got ${JSON.stringify(p.methods)}`)
+        }
+        if (p.tpvExact !== exp.tpvExact) {
+          throw new Error(`F87: ${key}.payment.tpvExact mismatch — expected ${exp.tpvExact}, got ${p.tpvExact}`)
+        }
+      }
+    },
+  },
+  {
+    name: 'F87 — faq-payment-formatter.ts exports readPayment/formatPaymentSignals + formatters accept translateFn',
+    run: () => {
+      const paymentSrc = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/faq-payment-formatter.ts'),
+        'utf8',
+      )
+      if (!/export function readPayment/.test(paymentSrc)) {
+        throw new Error('F87: faq-payment-formatter.ts must export readPayment')
+      }
+      if (!/export function formatPaymentSignals/.test(paymentSrc)) {
+        throw new Error('F87: faq-payment-formatter.ts must export formatPaymentSignals')
+      }
+      if (!/export type PaymentInfo/.test(paymentSrc)) {
+        throw new Error('F87: faq-payment-formatter.ts must export PaymentInfo type')
+      }
+      const formatterSrc = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/faq-location-formatter.ts'),
+        'utf8',
+      )
+      if (!/translateFn\?:\s*ProgramTranslateFn/.test(formatterSrc)) {
+        throw new Error('F87: formatWasherPrices/formatDryerPrices must accept optional translateFn parameter')
+      }
+      const guardSrc = fs.readFileSync(
+        path.join(ECOLAUNDRY_ROOT, 'utils/guards/faq-prices.ts'),
+        'utf8',
+      )
+      if (!/buildTranslateFn|translateFn/.test(guardSrc)) {
+        throw new Error('F87: guards/faq-prices.ts must build translateFn and pass it to the formatters')
       }
     },
   },

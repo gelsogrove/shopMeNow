@@ -90,7 +90,7 @@ export type SessionState = {
    * — without re-arm, the next guard pass falls through to the LLM and
    * improvises (Bug A in Andrea's 2026-05-15 mixed-flow chat).
    */
-  lastFaqKey: 'pricing' | 'openingHours' | null
+  lastFaqKey: 'pricing' | 'openingHours' | 'programs' | 'howToUse' | null
   escalationReason: string | null
   operatorRequested: boolean
   customerName: string | null
@@ -285,4 +285,6 @@ export type SessionState = {
     | 'faq-prices-await-location'
     | 'faq-prices-await-dryer-confirm'
     | 'faq-prices-await-washer-confirm'
+    | 'faq-programs-await-location'
+    | 'faq-how-to-use-await-location'
 }

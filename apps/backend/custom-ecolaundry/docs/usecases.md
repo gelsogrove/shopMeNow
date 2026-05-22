@@ -39,6 +39,7 @@
 - [Caso 10 — Comprar tarjeta fidelización](#caso-10--comprar-tarjeta-fidelización)
 - [Caso 11 — Recargar tarjeta fidelización](#caso-11--recargar-tarjeta-fidelización)
 - [Caso 12 — Horarios y precios](#caso-12--horarios-y-precios)
+  - [12.4 — Programas de lavadora y secadora por location (F81)](#124--programas-de-lavadora-y-secadora-por-location-f81)
 - [Caso 13 — Código de alarma o incoherencia](#caso-13--código-de-alarma-o-incoherencia)
 - [Caso 14 — ALM DOOR](#caso-14--alm-door)
 - [Caso 15 — 001](#caso-15--001)
@@ -1255,6 +1256,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 8. Cuando el cliente pide explícitamente UN tipo en T1 (verbo «lavar» / «asciugare» o sustantivo «lavadora» / «secadora»), el bot muestra solo ese tipo en T2 y añade el hint del opuesto («¿También quieres información de secadora?» tras lavadora, y simétrico). Un follow-up «y la secadora?» / «y la lavadora?» en T3 renderiza el otro tipo.
 9. Cuando el cliente, después de un render de precios/horarios, cambia de location en un mensaje de seguimiento («e a Pineda?», «en L'Escala?»), el bot actualiza la location y renderiza los precios/horarios de la nueva location de manera determinística (mismo formato que el render inicial).
 10. En la transición de FAQ a una incidencia (trouble-machine), el bot resetea la location capturada en contexto FAQ y vuelve a preguntar la lavandería para el caso actual — no arrastra la location de la comparación FAQ previa.
+11. **F87 — Boundary signals payment**: el bot DEBE incluir en el output de los precios (tanto lavadora como secadora) un aviso `⚠️ paymentCardOnly` cuando `metadata.payment.methods === ['card']` (L'Escala, Platja d'Aro), y un aviso `💡 paymentTpvExact` con `{amount}` sustituido cuando `metadata.payment.tpvExact !== null` (Goya 7€, Pineda 8€). Posición: después de la lista de precios, antes del dryer/washer follow-up hint. Orden: cardOnly ANTES de tpvExact (gravity decreasing — show-stopper primero, money-loss después). Cobertura: 6 idiomas vía i18n keys `paymentCardOnly` + `paymentTpvExact` con placeholder `{amount}`.
 
 **Conversación:**
 
@@ -1305,6 +1307,88 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 - **Secadoras** 20kg: 2€/15min
 
 > En lugar de listar `**S4** 20kg: 2€/15min` y `**S5** 20kg: 2€/15min` como dos líneas duplicadas, el formatter detecta que comparten specs (weightKg+fidelity+cash) y las colapsa bajo la etiqueta plural «Secadoras» sin enumerar los números individuales (el cliente no necesita saber qué número concreto para conocer el precio).
+
+**Ejemplo F87 — Goya con TPV importe exacto:**
+
+**Usuario:** ¿cuánto cuesta lavar?
+**Bot:** ¿En qué pueblo o lavandería estás?
+
+**Usuario:** Goya
+**Bot:** En Goya, los precios de lavadora son:
+
+- **Lavadoras** 20kg: 6,5€ (fidelidad) / 7€ (efectivo)
+- **Lavadoras** 10kg: 3,5€ (fidelidad) / 4€ (efectivo)
+
+💡 El TPV cobra el importe exacto de **7€** (no devuelve cambio).
+
+¿También quieres información de secadora?
+
+> El aviso `💡 paymentTpvExact` se inyecta porque `metadata.payment.tpvExact = 7` para Goya. El cliente sabe que pagando 8€ en monedas perdería 1€ (el TPV no restituye cambio).
+
+**Ejemplo F87 — L'Escala con solo tarjeta de crédito:**
+
+**Usuario:** ¿cuánto cuesta lavar?
+**Bot:** ¿En qué pueblo o lavandería estás?
+
+**Usuario:** L'Escala
+**Bot:** En L'Escala, los precios de lavadora son:
+
+- **Lavadoras** 10kg: 6€
+- **Lavadoras** 20kg: 9€
+
+⚠️ En esta lavandería solo se acepta tarjeta de crédito.
+
+¿También quieres información de secadora?
+
+> El aviso `⚠️ paymentCardOnly` se inyecta porque `metadata.payment.methods === ['card']` para L'Escala. Boundary signal critico: cliente con monete spreca il viaggio si no se entera antes.
+
+---
+
+### 12.4 — Programas de lavadora y secadora por location (F81)
+
+**Criterios de aceptación:**
+1. El bot detecta intent de programas en las 6 lenguas (ES/IT/EN/CA/PT/FR): "¿qué programas tiene?", "quali programmi?", "what programs?", "quins programes?", "que programas tem?", "quels programmes?".
+2. Si no se conoce la location: arma `pendingFlow=faq-programs-await-location` y pregunta "¿En qué pueblo o lavandería estás?".
+3. Si se conoce la location: renderiza directamente la lista de programas desde `json/locations.json:metadata.programs`.
+4. Lavadoras CON numeros (Goya/Pineda/L'Escala/PlatjaDAro): formato `**1** — Muy caliente (60º)`.
+5. Lavadoras SIN numeros (Hortes/Alemanya): formato `**Muy caliente** (60º)`.
+6. L'Escala tiene 5 programas, el primero es Frío (orden diferente al resto).
+7. Secadoras (todas las locations): 3 programas sin numero — `**Alta temperatura**`, `**Media temperatura**`, `**Baja temperatura**`.
+8. Los nombres de los programas se muestran en la lengua del cliente (6 lenguas vía i18n keys `programMuyCaliente`, `programCaliente`, etc.).
+9. El PUSH PROG flow (Caso 1) usa la misma lista dinámica — el guard `auto-start-machine-flow` inyecta los programas de la location del cliente.
+10. `state.lastResolvedIntent = 'faq'` y `state.lastFaqKey = 'programs'` tras resolver.
+
+**Ejemplo — T1 sin location:**
+
+**Usuario:** ¿qué programas tiene la lavadora?  
+**Bot:** ¿En qué pueblo o lavandería estás?  
+**Usuario:** Goya  
+**Bot:** Los programas disponibles para la lavadora son:
+
+- **1** — Muy caliente (60º)
+- **2** — Caliente (40º)
+- **3** — Templado (30º)
+- **4** — Frío (*)
+
+Los programas disponibles para la secadora son:
+
+- **Alta temperatura**
+- **Media temperatura**
+- **Baja temperatura**
+
+**Ejemplo — T1 con location ya conocida:**
+
+**Usuario:** cuáles son los programas aquí?  
+**Bot:** Los programas disponibles para la lavadora son:  
+*(lista de Goya directamente)*
+
+**Ejemplo — L'Escala (orden diferente, 5 programas):**
+
+- **1** — Frío (*)
+- **2** — Templado (30º)
+- **3** — Caliente (40º)
+- **4** — Muy caliente (60º)
+- **5** — Centrifugado
 
 ---
 
