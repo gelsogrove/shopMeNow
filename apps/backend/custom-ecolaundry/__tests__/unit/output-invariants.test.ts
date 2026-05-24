@@ -18,6 +18,13 @@ import {
   stripStandalonePaymentQuestion,
 } from '../../utils/output-invariants.js'
 
+// `process` is a Node.js global. Declared locally to avoid pulling
+// @types/node into this minimal test environment.
+declare const process: {
+  stderr: { write: (chunk: unknown) => boolean }
+  exit: (code?: number) => never
+}
+
 interface Case {
   name: string
   run: () => void
@@ -138,6 +145,66 @@ const cases: Case[] = [
       const r = stripEvasivePhrases(original)
       if (/no tengo la información/i.test(r)) throw new Error('evasive must be stripped')
       if (!/Pasamos tu caso a revisión/.test(r)) throw new Error('rest must survive')
+    },
+  },
+
+  {
+    // REGRESSION (Andrea, 2026-05-23 CLI demo): the warn
+    // `output-invariant: stripped evasive phrase from reply` used to
+    // fire whenever ANY mutation happened — including pure whitespace
+    // normalisation (e.g. " \n\n" → "\n\n"). That misled debugging by
+    // suggesting an evasive phrase had been detected when none had.
+    // The warn must scatter ONLY when one of the EVASIVE_PATTERNS
+    // actually matched something.
+    name: 'stripEvasivePhrases: whitespace-only normalisation does NOT log warn',
+    run: () => {
+      const lines: string[] = []
+      const origWrite = process.stderr.write.bind(process.stderr)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(process.stderr as any).write = (chunk: unknown): boolean => {
+        lines.push(typeof chunk === 'string' ? chunk : String(chunk))
+        return true
+      }
+      try {
+        const original =
+          "Entiendo, vamos a revisarlo juntos. Primero, abre y cierra bien la puerta. \n\nDime si arranca."
+        const r = stripEvasivePhrases(original)
+        if (r === original) {
+          throw new Error('precondition: this fixture must be whitespace-normalised')
+        }
+        const evasiveWarns = lines.filter((c) => /stripped evasive phrase/i.test(c))
+        if (evasiveWarns.length > 0) {
+          throw new Error(
+            `whitespace-only mutation must NOT log evasive warn; got: ${evasiveWarns.join(' | ')}`,
+          )
+        }
+      } finally {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(process.stderr as any).write = origWrite
+      }
+    },
+  },
+  {
+    // Complement of the above: a real evasive match MUST still log warn.
+    name: 'stripEvasivePhrases: real evasive match still logs warn',
+    run: () => {
+      const lines: string[] = []
+      const origWrite = process.stderr.write.bind(process.stderr)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(process.stderr as any).write = (chunk: unknown): boolean => {
+        lines.push(typeof chunk === 'string' ? chunk : String(chunk))
+        return true
+      }
+      try {
+        stripEvasivePhrases('No tengo la información. Vamos a revisar.')
+        const evasiveWarns = lines.filter((c) => /stripped evasive phrase/i.test(c))
+        if (evasiveWarns.length === 0) {
+          throw new Error('real evasive match must still log warn')
+        }
+      } finally {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ;(process.stderr as any).write = origWrite
+      }
     },
   },
 

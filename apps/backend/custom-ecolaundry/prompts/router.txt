@@ -8,7 +8,7 @@ Your ONLY job: classify the customer's first message into one of these branches:
                           paymentMethods, pricing, programs, appDownload,
                           colorTemperature, greaseStains, mixedColors,
                           machineHygiene, ecoProducts, noFoamNormal, doubleCharge,
-                          paidButNotStarting, loyaltyCard, howToUse.
+                          paidButNotStarting, loyaltyCard, howToUse, howToUseDryer.
   - "trouble-machine"   The customer reports a problem with a washing machine or dryer
                         (does not start, display shows X, paid but did not activate, ...).
   - "invoice"           The customer wants an invoice / bill / factura / fattura.
@@ -192,3 +192,39 @@ Examples:
 
   Customer: "nunca he usado una lavandería, qué hago?"
   → {"branch":"faq","language":"es","details":{"faqKey":"howToUse"}}
+
+  Customer: "¿Cómo se usa la secadora?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"howToUseDryer"}}
+
+  Customer: "Come si usa l'asciugatrice?"
+  → {"branch":"faq","language":"it","details":{"faqKey":"howToUseDryer"}}
+
+  Customer: "How do I use the dryer?"
+  → {"branch":"faq","language":"en","details":{"faqKey":"howToUseDryer"}}
+
+  Customer: "Com funciona l'assecadora?"
+  → {"branch":"faq","language":"ca","details":{"faqKey":"howToUseDryer"}}
+
+  Customer: "Como se usa a secadora?"
+  → {"branch":"faq","language":"pt","details":{"faqKey":"howToUseDryer"}}
+
+  Customer: "Comment utiliser le sèche-linge ?"
+  → {"branch":"faq","language":"fr","details":{"faqKey":"howToUseDryer"}}
+
+  Customer: "¿cómo funciona la tarjeta de fidelización?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"loyaltyCard"}}
+
+  Customer: "come funziona la tessera di fidelizzazione?"
+  → {"branch":"faq","language":"it","details":{"faqKey":"loyaltyCard"}}
+
+  Customer: "how does the loyalty card work?"
+  → {"branch":"faq","language":"en","details":{"faqKey":"loyaltyCard"}}
+
+  Customer: "com funciona la targeta de fidelització?"
+  → {"branch":"faq","language":"ca","details":{"faqKey":"loyaltyCard"}}
+
+  Customer: "como funciona o cartão de fidelidade?"
+  → {"branch":"faq","language":"pt","details":{"faqKey":"loyaltyCard"}}
+
+  Customer: "comment fonctionne la carte de fidélité?"
+  → {"branch":"faq","language":"fr","details":{"faqKey":"loyaltyCard"}}

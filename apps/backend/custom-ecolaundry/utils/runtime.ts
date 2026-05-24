@@ -176,7 +176,6 @@ async function buildRuntimeFromDisk(): Promise<Runtime> {
   //   - router: utils/router.ts:classifyMessageBranch (T1 branch classifier)
   //   - rephrase: utils/agent-rephrase.ts:rephraseForTurn (LLM polish layer)
   //   - operator-briefing: utils/operator-briefing.ts:generateOperatorBriefingFromHistory
-  // The other prompt files in prompts/ are reference material — see docs/prompts.md.
   // Each caller has a TS-const fallback if the file is missing (graceful degradation).
   const promptNames = ['language', 'router', 'rephrase', 'operator-briefing']
   // Safe-load: missing files become empty strings, so callers can fall back

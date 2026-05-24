@@ -330,6 +330,35 @@ const cases: Case[] = [
     },
   },
 
+  // ── F89: guardInsistLocation fires at T1 (no turnCount gate) ────────────────
+  // Regression: previously turnCount < 2 blocked the guard on the FIRST message.
+  // Customer writing "i dont know" as their very first message must get the
+  // landmark enumeration immediately, not the generic location ask.
+  {
+    name: 'F89 insistLocation: EN "i dont know" at T1 (no apostrophe) → fires',
+    run: () => {
+      const ar = makeAr(1)  // T1
+      const out = guardInsistLocation(ar, 'i dont know')
+      if (!out) throw new Error('F89: expected insist on "i dont know" at T1 (no apostrophe)')
+    },
+  },
+  {
+    name: "F89 insistLocation: EN \"i don't know\" at T1 (with apostrophe) → fires",
+    run: () => {
+      const ar = makeAr(1)  // T1
+      const out = guardInsistLocation(ar, "i don't know")
+      if (!out) throw new Error("F89: expected insist on \"i don't know\" at T1")
+    },
+  },
+  {
+    name: 'F89 insistLocation: ES "no lo sé" at T1 → fires',
+    run: () => {
+      const ar = makeAr(1)
+      const out = guardInsistLocation(ar, 'no lo sé')
+      if (!out) throw new Error('F89: expected insist on "no lo sé" at T1')
+    },
+  },
+
   // ── F82 — guardMataroStreet: "non lo so" shows Goya landmarks ───────────────
   {
     name: 'F82 guardMataroStreet: first ask → emits mataroStreet question',
@@ -385,6 +414,58 @@ const cases: Case[] = [
       ar.state.location = 'Hortes'
       const out = guardMataroStreet(ar, 'non lo so')
       if (out !== null) throw new Error('must skip for non-Mataro location')
+    },
+  },
+
+  // ── F100 — guardMataroStreet preserves loyalty topic across Mataró disambiguation ─
+  // Real bug: IT "ciao sono a Mataró posso usare una tessera di fidelizzazione
+  // comprata in un altra lavanderia?" + T2 "Goya" → bot improvised "no estoy
+  // seguro" instead of emitting the per-location loyalty reply.
+  // Root cause: guardMataroStreet won at T1 (Mataró ambiguous), pendingFlow and
+  // faqTopic were NOT set → loyalty context lost. At T2 "Goya", neither
+  // TARJETA_TOPIC.test("Goya") nor faqTopic matched → no guard fired.
+  // Fix: guardMataroStreet sets state.faqTopic='buy-loyalty-card' when
+  // TARJETA_TOPIC matches, so guardLoyaltyCardBuy fires at T2 via askedTarjeta.
+  {
+    name: 'F100 guardMataroStreet: loyalty message → sets faqTopic=buy-loyalty-card',
+    run: () => {
+      const ar = makeAr(2)
+      ar.state.location = 'Mataró'
+      const msg = 'posso usare una tessera di fidelizzazione comprata in un altra lavanderia?'
+      const out = guardMataroStreet(ar, msg)
+      if (!out) throw new Error('F100: expected mataroStreet reply on loyalty+Mataró message')
+      if (ar.state.faqTopic !== 'buy-loyalty-card') {
+        throw new Error(`F100: faqTopic must be 'buy-loyalty-card', got '${ar.state.faqTopic}'`)
+      }
+    },
+  },
+  {
+    name: 'F100 guardMataroStreet: real-bug phrase IT → sets faqTopic and emits street ask',
+    run: () => {
+      const ar = makeAr(2)
+      ar.state.location = 'Mataró'
+      const msg = 'ciao sono a Mataró posso usare una tessera di fidelizzazione comprata in un altra lavanderia?'
+      const out = guardMataroStreet(ar, msg)
+      if (!out) throw new Error('F100: expected mataroStreet reply')
+      if (out.reason !== 'mataro-street') throw new Error(`F100: expected reason mataro-street, got ${out.reason}`)
+      if (ar.state.faqTopic !== 'buy-loyalty-card') {
+        throw new Error(`F100: faqTopic must be preserved as 'buy-loyalty-card'`)
+      }
+      if (!ar.state.locationStreetRequested) {
+        throw new Error('F100: locationStreetRequested must be set')
+      }
+    },
+  },
+  {
+    name: 'F100 guardMataroStreet: non-loyalty Mataró message → faqTopic stays empty',
+    run: () => {
+      const ar = makeAr(2)
+      ar.state.location = 'Mataró'
+      const out = guardMataroStreet(ar, 'la lavadora no funciona')
+      if (!out) throw new Error('F100: expected mataroStreet reply for non-loyalty')
+      if (ar.state.faqTopic !== '') {
+        throw new Error(`F100: faqTopic must stay empty for non-loyalty message, got '${ar.state.faqTopic}'`)
+      }
     },
   },
 ]

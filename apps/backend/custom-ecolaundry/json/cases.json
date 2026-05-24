@@ -129,8 +129,10 @@
       "semanticId": "loyalty-card-buy",
       "kind": "faq",
       "guardModule": "utils/guards/loyalty-card-buy.ts",
-      "guards": ["guardLoyaltyCardBuy"],
-      "i18nKey": "loyaltyCardBuyBase",
+      "guards": ["guardLoyaltyCardBuy", "guardLoyaltyCardBuyAwaitLocation"],
+      "i18nKeys": ["loyaltyCardBuyBase", "loyaltyCardWrongLocation"],
+      "pendingFlowPrefix": "loyalty-card-",
+      "notes": "Sub-caso 10.2 (Caso 36): cross-location warning — guardLoyaltyCardBuy detecta si el mensaje menciona un local distinto al state.location via detectBuyLocationInMessage (resolveKnownLocation), emite i18n loyaltyCardWrongLocation con placeholders {buyLocation}/{currentLocation}. Determinístico, no LLM.",
       "tests": ["__tests__/agent/10-tarjeta-fidelizacion.test.spec.ts"]
     },
     {
@@ -391,6 +393,32 @@
       "tests": [
         "__tests__/agent/34-jabon-detergente.test.spec.ts",
         "__tests__/unit/faq-detergents.test.ts"
+      ]
+    },
+    {
+      "docNumber": 45,
+      "title": "El cliente pregunta cómo se usa la secadora",
+      "semanticId": "faq-how-to-use-dryer",
+      "kind": "faq",
+      "guardModule": "utils/guards/faq-how-to-use.ts",
+      "guards": ["guardFaqHowToUse"],
+      "faqKey": "howToUseDryer",
+      "notes": "Single-turn FAQ — no pendingFlow, no gather. Same guard as Caso 35 (guardFaqHowToUse), different faqKey (howToUseDryer vs howToUse). Per-location overrides in locations.json:faqOverrides.howToUseDryer for all 6 real locations (F103). L'Escala/PlatjaDAro: card-only payment steps. Other 4: efectivo+monedas+card. Fires at any turn including mid-flow pivots (faqPause F28). Router examples added to prompts/router.txt for 6 languages.",
+      "tests": [
+        "__tests__/unit/faq-how-to-use.test.ts"
+      ]
+    },
+    {
+      "docNumber": 46,
+      "title": "La máquina muestra '120' (cuenta atrás fin de ciclo)",
+      "semanticId": "countdown-display",
+      "kind": "display-flow",
+      "guardModule": "utils/branches/trouble-machine/display-flow.ts",
+      "guards": ["matchDisplayFlow"],
+      "i18nKey": "countdownGuidance",
+      "notes": "Display-flow wait-state — NO escalation. Code '120' (and other pure countdown numbers) = normal end-of-cycle countdown. Bot guides client to wait for END screen. Resolved when client confirms END/terminó/finito. Implemented as 'countdown-display' in display-flows.json (F101, 2026-05-24). countdownGuidance i18n key × 6 languages (es/it/en/ca/pt/fr). Shared between lavadora and dryer.",
+      "tests": [
+        "__tests__/unit/f-log-regression.test.ts"
       ]
     }
   ]

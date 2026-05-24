@@ -159,6 +159,23 @@ export function normalizeConfirmation(input: string): 'YES' | 'NO' | null {
 
   if (/\b(si pienso que si|creo que si|pienso que si|yes i think so|direi di si)\b/i.test(value)) return 'YES'
   if (/\b(ho gia'? detto di si|i paid already|already paid|ho pagato|pagato|payment completed|fatto il pagamento)\b/i.test(value)) return 'YES'
+  // 6-language "now it works / it's working" resolution markers — accept also
+  // when prefixed with the customer's action ("I pressed the number and now
+  // it works", "He apretado el número y ahora funciona"). The patterns
+  // themselves are tight (require explicit "now works"/"ya funciona"/etc.),
+  // so a wider wordCount cap is safe — false positives would need both a
+  // resolution verb + working-state in the same short phrase. Iron rule #8.
+  if (wordCount <= 12 && (
+    /\bnow\s+(?:it\s+)?works\b/i.test(value) ||
+    /\b(?:it\s+)?works\s+now\b/i.test(value) ||
+    /\bahora\s+(?:s[íi]\s+)?(?:funciona|arranca)\b/i.test(value) ||
+    /\bya\s+funciona\b/i.test(value) ||
+    /\bara\s+(?:s[íi]\s+)?(?:funciona|arrenca|marxa)\b/i.test(value) ||
+    /\bora\s+(?:funziona|parte|va)\b/i.test(value) ||
+    /\badesso\s+(?:funziona|parte)\b/i.test(value) ||
+    /\bmaintenant\s+(?:[çc]a\s+)?(?:fonctionne|marche|d[ée]marre)\b/i.test(value) ||
+    /\bagora\s+(?:funciona|liga|arranca)\b/i.test(value)
+  )) return 'YES'
   if (/^(no|n|nope)\b/i.test(nfd)) return 'NO'
   if (/\b(non ancora|ancora no|non funziona|not yet|not paid|non ho pagato|no hace nada|non fa niente|does nothing)\b/i.test(value)) return 'NO'
   return null

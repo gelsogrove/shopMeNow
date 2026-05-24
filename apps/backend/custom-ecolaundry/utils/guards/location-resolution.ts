@@ -8,6 +8,7 @@ import { t, tt } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { isMataro, lang } from './helpers.js'
 import { listAllLandmarks, listLaundromatsForReply } from '../locations.js'
+import { TARJETA_TOPIC } from './loyalty-card-buy.js'
 
 // Escalations that skip location: operator handles via customer-account
 // history, not laundromat (refund / compensation demands, cameras / AJAX).
@@ -53,6 +54,19 @@ export const guardMataroStreet: Guard = (ar, userMessage) => {
     // No landmarks data → fall through to re-ask
   }
 
+  // F100 — preserve loyalty card topic across the Mataró street disambiguation
+  // turn. When the customer's T1 message contains a loyalty card intent (e.g.
+  // "posso usare una tessera comprata in un'altra lavanderia?"), guardMataroStreet
+  // wins the pipeline and asks for the street sub-location. Without this line,
+  // the loyalty context is lost: at T2 ("Goya"), no guard fires because neither
+  // TARJETA_TOPIC.test("Goya") nor state.faqTopic matches. Setting faqTopic here
+  // arms guardLoyaltyCardBuy's askedTarjeta branch so it fires at T2 once the
+  // sub-location is known — same pattern as pendingFlow preservation across
+  // multi-step gather turns.
+  if (TARJETA_TOPIC.test(userMessage)) {
+    ar.state.faqTopic = 'buy-loyalty-card'
+  }
+
   ar.state.locationStreetRequested = true
   return {
     reply: t('mataroStreet', lang(ar)),
@@ -71,7 +85,19 @@ export const guardUnknownLocation: Guard = (ar) => {
     !ar.state.locationClarificationCount ||
     ar.state.turnCount < 2 ||
     ar.state.pendingFlow ||
-    ar.state.nonTroubleshootingIncident
+    ar.state.nonTroubleshootingIncident ||
+    // F106 (2026-05-24): display-flows with requires:[] (e.g. countdown-display)
+    // do not need location. autoExtractFacts may increment locationClarificationCount
+    // when the customer's reply (e.g. "ya terminó") looks like a failed standalone
+    // location attempt, but if an active no-location flow is running, the customer
+    // is answering the flow — not providing a location. Skip this guard so
+    // guardDisplayFlowFollowUp (later in the pipeline) can handle the reply.
+    // Same pattern as guardForceLocation F104 Phase B bypass.
+    ar.runtime.displayFlows.flows.some(
+      (f) =>
+        f.requires.length === 0 &&
+        f.id === ar.state.activeFlowId,
+    )
   ) {
     return null
   }
@@ -104,7 +130,21 @@ export const guardForceLocation: Guard = (ar) => {
     // Don't gate non-troubleshooting incidents that escalate without location
     // (cameras / refund / compensation — the operator handles them via
     // customer-account history, not laundromat).
-    INCIDENTS_NO_LOCATION_REQUIRED.has(ar.state.nonTroubleshootingIncident || '')
+    INCIDENTS_NO_LOCATION_REQUIRED.has(ar.state.nonTroubleshootingIncident || '') ||
+    // F104: display-flows with requires:[] (e.g. countdown-display) do not need
+    // location. Two cases:
+    //   Phase A (T1): displayState matches a no-location flow → let guardDisplayFlowStart fire.
+    //   Phase B (T2): activeFlowId is already a no-location flow → let guardDisplayFlowFollowUp fire.
+    ar.runtime.displayFlows.flows.some(
+      (f) =>
+        f.requires.length === 0 &&
+        (f.id === ar.state.activeFlowId ||
+          f.displayMatches.some(
+            (m) =>
+              m.toUpperCase().replace(/\s+/g, '') ===
+              (ar.state.displayState ?? '').toUpperCase().replace(/\s+/g, ''),
+          )),
+    )
   ) {
     return null
   }
@@ -130,8 +170,7 @@ export const guardInsistLocation: Guard = (ar, userMessage) => {
   if (
     ar.state.location ||
     ar.state.operatorRequested ||
-    ar.state.customerNameRequested ||
-    ar.state.turnCount < 2
+    ar.state.customerNameRequested
   ) {
     return null
   }

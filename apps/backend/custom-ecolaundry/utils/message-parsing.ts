@@ -8,6 +8,7 @@ export {
   normalizeLocationValue,
   resolveKnownLocation,
   resolveKnownLocationFuzzy,
+  resolveAllKnownLocations,
 } from './message-parsing/locations.js'
 export {
   hasExtraButtonIssue,

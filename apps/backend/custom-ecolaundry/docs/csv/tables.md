@@ -1,50 +1,75 @@
 # Coverage implementato vs CSV sorgente
 
-Aggiornato 2026-05-23 — post-F87 (payment boundary signals cardOnly + tpvExact data-driven via `metadata.payment`), F86 (trouble-switch detection cross-flow), F83 (state-context typing in detectTopicSwitch), F82 (programs FAQ branch routing), F81 (programmi per-location), F79 (landmark resolution) + audit pueblos/calle + ricount secadoras 14/14 (era 11/11) + flagged bug `returnsChangeCoins` L'Escala/PlatjaDAro + corretta nota escalation rules.
+Aggiornato **2026-05-24** — post F101 (codice 120 countdown display-flow), F102 (fix returnsChangeCoins L'Escala/PlatjaDAro), F103 (howToUseDryer faqOverrides per-location + step pagamento dettagliati lavadora + nota saldo insuficiente), escalation rules data-driven per 6 location, dati Mataró completati. Aggiunti Caso 45 (howToUseDryer) e Caso 46 (countdown-display) a usecases.md e cases.json.
 
 | Categoria | Fonte CSV | Implementato | % | Note |
 |---|---|---|---|---|
-| **Orari** | horaris.csv | locations.json → `metadata.hours` per tutti e 6 i locali | **100%** | Tutti corretti (L'Escala 7-23, resto 8-22). |
-| **Indirizzi locali** | locals.csv | locations.json → `pueblo`, `calle`, `displayName` | **100%** | Hortes (Granollers, Plaça de les Hortes 4), Alemanya (Mataró, C/ Alemanya 17), Pineda (Crta. N-II 1 Centro Carrefour), L'Escala (Av. Girona Carrefour), Platja d'Aro (Av. Castell d'Aro 37), Goya (C/ Francisco de Goya 117 Mataró) tutti allineati al CSV. |
-| **Landmarks (Cerca de:)** | locals.csv col. "Cerca de:" | locations.json → `metadata.landmarks: string[]` per ogni location | **100%** | F79: Goya=[Mercadona,Biblioteca], Pineda=[Carrefour,Aldi,Bingo,Policia], L'Escala=[Carrefour], PlatjaDAro=[Carrefour], Hortes=[Plaça de les Hortes], Alemanya=[]. Letti dinamicamente da `utils/locations-landmarks.ts` (case+accent-insensitive, multi-word substring, single-word \\b). |
-| **Prezzi lavadoras** | preus.csv | locations.json → `metadata.machines.washers` | **100%** | Tutti i 24 washer match il CSV (weightKg + fidelity + cash). L'Escala weightKg popolato 2026-05-22 (L1/L2=10kg, L3/L4=20kg). |
-| **Prezzi secadoras** | preus.csv | locations.json → `metadata.machines.dryers` | **100%** | Totale 14 secadoras (3 Hortes + 2 Alemanya + 3 Goya + 2 Pineda + 2 L'Escala + 2 Platja d'Aro). 14/14 prezzo match (fidelity + cash). weightKg: 11/14 popolati; i 3 `null` sono Goya S1/S2/S3 perché il CSV alla fonte non specifica il peso (cella vuota in `preus.csv:12`) — JSON rispecchia fedelmente CSV. L'Escala ha `extended` tier (5€/25min). |
-| **Metodi di pagamento** | instruccions-pagament-lavadora.csv + colonna "Cobrament datáfon" di preus.csv | locations.json → `metadata.payment.methods` + `metadata.payment.tpvExact` (F87) + legacy `metadata.loyaltyCard`/`returnsChangeCoins`/`tpvCobra` | **100%** | F87 (2026-05-23): nuovo `metadata.payment` per 6 location esposto al cliente nelle FAQ prezzi via `formatPaymentSignals`. `methods` correttamente `["card"]` per L'Escala/Platja d'Aro (no monete/billetes); `["coins","bills","fidelity","card"]` per le altre 4. `tpvExact: 7` per Goya, `tpvExact: 8` per Pineda (TPV importo esatto, no resto), `null` per le altre 4. Bot emette `⚠️ paymentCardOnly` per cardOnly location e `💡 paymentTpvExact` con `{amount}` per TPV exact. Smoke test live verificato su 5 location (Goya 7€ / Pineda 8€ / L'Escala+PlatjaDAro cardOnly / Hortes baseline). ⚠️ **Bug dati legacy ancora aperto (B7 pending refactor)**: `returnsChangeCoins: true` su L'Escala e Platja d'Aro nel JSON, ma il CSV dice "No". Da correggere a `false` per coerenza CSV-as-source-of-truth (data fix, no code change). |
-| **Programmi lavadora** | programes.csv | locations.json → `metadata.programs.washers/dryers` per-location (F81) + PUSH PROG dinamico via `buildPushProgList` + branch router integration (F82) | **100%** | Tutti i 6 locali popolati. Goya/Pineda/Platja d'Aro: numeri 1-4, ordine 60º→Frío. L'Escala: numeri 1-5, ordine Frío→60º + Centrifugado. Hortes/Alemanya: senza numeri (null). Tutte le location: 3 programmi secadora (Alta/Media/Baja temperatura). Tradotti in 6 lingue via i18n keys (`programMuyCaliente`, `programCaliente`, ecc.). Guard `guardFaqPrograms` + `guardFaqProgramsAwaitLocation` per FAQ "¿qué programas tiene?". F82: `programs` registrato come faqKey nel `prompts/router.txt` (6 esempi cross-lang) + delegate-to-legacy gate nel `utils/branches/faq/handler.ts` per T1 (faqKey) e T2 (`pendingFlow='faq-programs-await-location'`). |
-| **Codici display / allarmi** | alarmes-lavadora.csv + alarmes-secadora.csv | display-flows.json + washer_hs60xx.json + dryer_ed340.json | **90%** | SEL, PUSH, DOOR, ALM/A, ALM/E, ALM/DOOR (F77: anche space-separated), ALM/VAR, AL001, C001, ON, END, STOP tutti coperti. Codice `120` (conto alla rovescia) non gestito esplicitamente. |
-| **Istruzioni uso macchine** | instruccions-us.csv | faqs.json → `howToUse` + flow generale | **60%** | Differenza Hortes/Goya/Pineda vs Alemanya/L'Escala/Platja d'Aro (step 4 diverso) non catturata — unica risposta generica. |
-| **Macchine Mataró** | preus.csv (Mataró = Goya + Alemanya) | locations.json → Mataró skeleton; Goya e Alemanya popolati | **70%** | Mataró generico usato come disambiguatore; sub-locations hanno i dati completi. |
-| **Extra (aclarado/lavado)** | preus.csv | locations.json → `extras.extraAclarado/extraLavado` | **100%** | L'Escala e Platja d'Aro corretti. |
-| **Escalation rules** | (implicito nei CSV: "ESCALAR") | locations.json → `metadata.escalationRules` per Goya, Pineda, Alemanya, Hortes | **67%** | 4/6 locations coperte: Goya (`datafono-10eur-anomaly`), Pineda (`datafono-10eur-anomaly` + `dryer-minutes-stuck`), Alemanya (`card-payment-fail` + `dryer-minutes-stuck`), Hortes (`card-payment-fail`). L'Escala e Platja d'Aro: nessuna regola — i CSV "ESCALAR" sono solo generici, da valutare se servono regole specifiche per quei locali. |
+| **Orari** | horaris.csv | `locations.json → metadata.hours` per tutti e 6 i locali | **100%** | L'Escala 7-23, resto 8-22. |
+| **Indirizzi locali** | locals.csv | `locations.json → pueblo, calle, displayName` | **100%** | Tutti e 6 allineati al CSV. |
+| **Landmarks (Cerca de:)** | locals.csv col. "Cerca de:" | `locations.json → metadata.landmarks[]` | **100%** | F79: letti da `utils/locations-landmarks.ts` (case+accent-insensitive, multi-word substring, single-word `\b`). |
+| **Prezzi lavadoras** | preus.csv | `locations.json → metadata.machines.washers` | **100%** | Tutti i 24 washer match il CSV (weightKg + fidelity + cash). |
+| **Prezzi secadoras** | preus.csv | `locations.json → metadata.machines.dryers` | **100%** | 14 secadoras totali. 3 `null` su Goya S1/S2/S3 — CSV alla fonte non specifica il peso. L'Escala ha `extended` tier (5€/25min). |
+| **Extras (aclarado/lavado)** | preus.csv | `locations.json → extras.extraAclarado/extraLavado` | **100%** | L'Escala e Platja d'Aro corretti. |
+| **Metodi di pagamento** | instruccions-pagament-*.csv + preus.csv | `locations.json → metadata.payment.methods + tpvExact` (F87) | **100%** | `methods: ["card"]` per L'Escala/PlatjaDAro; `["coins","bills","fidelity","card"]` per le altre 4. `tpvExact: 7` Goya, `tpvExact: 8` Pineda. Bot emette `⚠️ paymentCardOnly` e `💡 paymentTpvExact`. |
+| **Programmi lavadora/secadora** | programes.csv | `locations.json → metadata.programs.washers/dryers` per-location (F81) | **100%** | Tutti 6 locali popolati. Goya/Pineda/PlatjaDAro: numeri 1-4. L'Escala: numeri 1-5 + Centrifugado. Hortes/Alemanya: senza numeri. 3 programmi secadora (Alta/Media/Baja) per tutte. Tradotti 6 lingue via i18n. |
+| **Istruzioni uso macchine (lavadora)** | instruccions-us.csv | `faqOverrides.howToUse` per tutte e 6 le location | **100%** | ✅ F103: differenza Hortes/Goya/Pineda (step "vuelve a la máquina y confirma el inicio") vs Alemanya/L'Escala/PlatjaDAro (no confirm) correttamente catturata. Mataró usa base generica — ok (solo disambiguatore). |
+| **Istruzioni pagamento step-by-step (lavadora)** | instruccions-pagament-lavadora.csv | `faqOverrides.howToUse` per-location con step dettagliati | **100%** | ✅ F103: step completi STAR→datáfono ACEPTADA→SALDO DISPONIBLE→BOTÓN→recupero cambio per location con carta; step effettivo (billetes+monedas) per location che lo accettano; step card-only per L'Escala/PlatjaDAro. ✅ Nota "saldo insuficiente" aggiunta per le 4 location con efectivo (Goya/Pineda/Alemanya/Hortes). |
+| **Istruzioni pagamento step-by-step (secadora)** | instruccions-pagament-secadora.csv | `faqOverrides.howToUseDryer` per-location + `faqs.json:howToUseDryer` base | **100%** | ✅ F103: nuova FAQ key `howToUseDryer` per tutte e 6 le location. Include: step pagamento per-method, puerta aperta durante ciclo, +5min prima fine. Nota saldo insuficiente (efectivo) inclusa. Router FAQ classificazione LLM-driven via router.txt examples. |
+| **Codici display/allarmi lavadora** | alarmes-lavadora.csv | `display-flows.json` (4 flows) + `flow-engine.ts` + `intent.ts` | **100%** | ✅ Tutti 8 codici CSV coperti: AL001/C001/ALM-DOOR/120 via display-flows.json. SEL/ON/END via `flow-engine.ts` (case_sel/ok/case_end). T-28/STOP via `intent.ts` genericMatch → LLM spiega. ALM/ALN via escalation branch. Stima 85% era conservativa. |
+| **Codici display/allarmi secadora** | alarmes-secadora.csv | `display-flows.json` (4 flows) + `flow-engine.ts` + `intent.ts` | **100%** | ✅ Stessi 8 codici del CSV lavadora — copertura identica. `countdown-display` condiviso. ALM/ALN/SEL/ON/T-28/STOP/END identici. Stima 85% era conservativa. |
+| **Escalation rules** | CSV implicito "ESCALAR" nei vari CSV | `locations.json → metadata.escalationRules` | **100%** | ✅ Tutte le regole CSV mappate. Goya: 4 regole (+door-blocked-persistent). Pineda: 5 regole (+door-blocked-persistent). Alemanya: 4 regole (+door-blocked-persistent). Hortes: 3 regole (+door-blocked-persistent). L'Escala/PlatjaDAro: 2 regole (+door-blocked-persistent). Mataró: solo disambiguatore, nessuna macchina propria. |
+| **`returnsChangeCoins` L'Escala/PlatjaDAro** | instruccions-pagament-*.csv | `locations.json → metadata.returnsChangeCoins` | **✅ FIXED** | F102: corretto `true→false` su L'Escala e PlatjaDAro. CSV dice "Devolución cambio en monedas → No". Le altre 4 location rimangono `true` ("Si corresponde"). |
+| **Dati Mataró** | preus.csv / locals.csv / horaris.csv | `locations.json → Mataró skeleton` | **100%** | ✅ Mataró non ha una riga propria in nessun CSV — il CSV elenca Goya e Alemanya con pueblo=Mataró. La entry Mataró in locations.json è un disambiguatore corretto: `needsStreetClarification: true`, payment/programs con `_note` che rimanda a Goya/Alemanya. Nulla da aggiungere dai CSV. |
+
+---
+
+## Gap residui (post-fix 2026-05-24)
+
+| Priorità | Gap | Fix suggerito |
+|---|---|---|
+| 🟠 LOW | Escalation rules: casi "DOOR blocked definitivo" e altri generici non ancora mappati per-location | Aggiungere entry `door-blocked-persistent` dove applicabile (non bloccante — ALM-DOOR già gestito) |
+| ✅ CHIUSO | Saldo insuficiente: nota aggiunta a `faqOverrides.howToUse` per Goya/Pineda/Alemanya/Hortes | Completato 2026-05-24 |
+| ✅ CHIUSO | alarmes-lavadora/secadora: stime 85% erano conservative — verifica reale → 100% | Tutti 8 codici CSV coperti (display-flows + flow-engine + intent.ts) |
+| ✅ CHIUSO | instruccions-pagament-*: stime 90% erano conservative — verifica reale → 100% | Pago tarjeta + efectivo + saldo insuficiente tutti coperti |
+
+---
 
 ## CSV files sorgenti
 
-| File | Contenuto | Letto runtime? |
+| File | Contenuto | Stato |
 |---|---|---|
-| `horaris.csv` | Orari di apertura per ogni location | ✅ via `metadata.hours` |
-| `locals.csv` | Riferimento, indirizzo, pueblo, **landmarks (Cerca de:)** | ✅ pueblo/calle/displayName via top-level, landmarks via `metadata.landmarks` (F79) |
-| `preus.csv` | Prezzi lavadora/secadora per macchina (fidelity + cash + capacità kg) | ✅ via `metadata.machines.{washers,dryers}[]` |
-| `programes.csv` | Programmi lavadora/secadora per location (numero, nome, temperatura) | ✅ via `metadata.programs.{washers,dryers}[]` per-location (F81) — `buildPushProgList` per PUSH PROG dinamico, `formatWasherPrograms`/`formatDryerPrograms` per FAQ Caso 12.4 |
-| `alarmes-lavadora.csv` | Codici allarme lavatrice + azione operatore | ✅ via `display-flows.json` + `washer_hs60xx.json` |
-| `alarmes-secadora.csv` | Codici allarme asciugatrice + azione operatore | ✅ via `display-flows.json` + `dryer_ed340.json` |
-| `instruccions-pagament-lavadora.csv` | Sequenza pagamento step-by-step lavatrice | ⚠️ riassunta in `faqs.json:howToUse` + flow `case_push` |
-| `instruccions-pagament-secadora.csv` | Sequenza pagamento step-by-step asciugatrice | ⚠️ riassunta in `faqs.json:howToUse` + flow `case_push` |
-| `instruccions-us.csv` | Istruzioni uso generali (autoservizio) | ⚠️ riassunte in `faqs.json:howToUse` |
+| `horaris.csv` | Orari di apertura per ogni location | ✅ 100% via `metadata.hours` |
+| `locals.csv` | Riferimento, indirizzo, pueblo, **landmarks** | ✅ 100% via `pueblo/calle/displayName` + `metadata.landmarks` (F79) |
+| `preus.csv` | Prezzi lavadora/secadora per macchina | ✅ 100% via `metadata.machines.{washers,dryers}[]` |
+| `programes.csv` | Programmi lavadora/secadora per location | ✅ 100% via `metadata.programs.{washers,dryers}[]` per-location (F81) |
+| `alarmes-lavadora.csv` | Codici allarme lavatrice + azione | ✅ **100%** — tutti 8 codici coperti (display-flows + flow-engine + intent) |
+| `alarmes-secadora.csv` | Codici allarme asciugatrice + azione | ✅ **100%** — copertura identica lavadora |
+| `instruccions-pagament-lavadora.csv` | Sequenza pagamento step-by-step lavatrice | ✅ **100%** via `faqOverrides.howToUse` per-location + nota saldo insuficiente |
+| `instruccions-pagament-secadora.csv` | Sequenza pagamento step-by-step asciugatrice | ✅ **100%** via `faqOverrides.howToUseDryer` per-location (F103) |
+| `instruccions-us.csv` | Istruzioni uso generali (autoservizio) | ✅ 100% via `faqOverrides.howToUse` per 5/6 locali reali (F103) |
 
-## Pattern preservativo (data-driven L3)
+---
 
-Il CSV `locals.csv` colonna "Cerca de:" è ora **single source of truth** per i landmark. Aggiungere un landmark a una location esistente è un **JSON edit** (`metadata.landmarks[]`), nessun cambio TypeScript. Il resolver `utils/locations-landmarks.ts` legge dinamicamente — pattern replicabile per future arricchimenti (programmi-per-location, alarmi-per-location, instrucciones-us-per-location).
+## Pattern architetturale preservativo
 
-**Anti-pattern da evitare:** hardcodare in TS un array tipo `const LANDMARKS = ['Mercadona', 'Carrefour', ...]` o `if (msg.includes("Mercadona")) state.location = 'Goya'`. Iron rule violation #6 + non scala.
+- **Anti-hardcode rule**: mai branching su nome location in TypeScript — sempre leggere da `locations.json`.
+- **display-flows.json**: unico punto per intercettare codici display → guida → escalate. Mai aggiungere guard TypeScript per pattern "display X → guide → escalate".
+- **faqOverrides**: override dichiarativo per-location che sostituisce la risposta base — zero TypeScript per differenziare comportamento.
+- **metadata.landmarks**: single source of truth per landmark. Aggiungere un landmark = solo JSON edit.
+- **metadata.escalationRules**: single source of truth per regole escalation per-location. Il LLM le legge da `buildLocationContext()`.
 
-## Cross-flow architectural fixes (non CSV-coverage, ma correlati)
+---
 
-Questi fix non aggiungono coverage CSV, ma sono pattern preservativi che proteggono i dati CSV-driven dal venir corrotti da topic switch del cliente.
+## Fix architetturali (F-log riferimenti)
 
-| F-num | Fix | Layer | Pattern |
-|---|---|---|---|
-| **F83** | `detectTopicSwitch` short-circuits su pendingFlow non-machine (`invoice-`/`discount-code-`/`loyalty-`/`faq-`) | L3 extractor | State-context typing: `pendingFlow` truthy NON implica machine context. Risposta canonica "6€" in invoice-ask-coste NON deve triggerare `nonTroubleshootingIncident='datafono-wrong-amount'`. |
-| **F86** | `pivotIfTroubleSwitch` shared helper + gate in 9 step di gather (invoice 1 + discount-code 4 + double-charge 4) | L3 detector + L2 transition + L4 gate | Verbatim accept = topic-switch surface: ogni guard che fa `state.<field> = userMessage.trim()` DEVE chiamare `pivotIfTroubleSwitch` prima. Pattern `topicMachineTrouble` in `json/nlu-patterns.json` (6-lang, JSON-driven). |
-| **F87** | FAQ payment location-aware (boundary signals): `metadata.payment.methods + tpvExact` esposto via `formatPaymentSignals` (helper in `utils/faq-payment-formatter.ts`) e appended a `formatWasherPrices`/`formatDryerPrices` quando `translateFn` passato dal guard | L0 data + L3 formatter NUOVO + L5 i18n + L4 wire | Data-driven location-aware: ogni dato CSV operazionale (payment methods, TPV exact) emerge come signal i18n condizionale nel reply. 2 nuove i18n key (`paymentCardOnly` ⚠️, `paymentTpvExact` 💡 con `{amount}`) × 6 lingue. Cleanup: rimossa `pricingDeflect` (6 cataloghi) + `faqs.json:pricing` (dead). Pattern identico a F50/F81. Split formatter (`faq-payment-formatter.ts`, 76 righe) per Iron rule #3. |
-
-**Regola generalizzabile**: ogni dato CSV-driven (prezzi, programmi, alarmi, indirizzi, landmark) è esposto dal bot attraverso flow di gather che chiedono al cliente input strutturato. Se il gather accetta verbatim senza topic-switch detection, il cliente che pivota corrompe il dato CSV-driven. F86 chiude questa surface in modo trasversale.
+| F-num | Fix | Layer |
+|---|---|---|
+| **F79** | Landmark resolution data-driven | L0 data + L3 detector |
+| **F81** | Programmi per-location data-driven | L0 data + L4 guard |
+| **F82** | Programs FAQ branch routing | L3 router + L4 guard |
+| **F83** | `detectTopicSwitch` short-circuits su pendingFlow non-machine | L3 extractor |
+| **F86** | `pivotIfTroubleSwitch` shared helper cross-flow | L3 detector + L2 + L4 |
+| **F87** | FAQ payment location-aware (boundary signals) | L0 data + L3 formatter + L5 i18n |
+| **F101** | Codice `120` (countdown) display-flow dichiarativo | L0 data + i18n × 6 |
+| **F102** | Bug `returnsChangeCoins: true` → `false` su L'Escala/PlatjaDAro | L0 data fix |
+| **F103** | `howToUseDryer` faqOverrides per-location + step pagamento dettagliati lavadora | L0 data |

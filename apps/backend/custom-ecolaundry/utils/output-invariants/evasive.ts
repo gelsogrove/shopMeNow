@@ -30,8 +30,11 @@ const EVASIVE_PATTERNS: RegExp[] = [
 
 export function stripEvasivePhrases(reply: string): string {
   let result = reply
+  let strippedEvasive = false
   for (const pattern of EVASIVE_PATTERNS) {
-    result = result.replace(pattern, '')
+    const next = result.replace(pattern, '')
+    if (next !== result) strippedEvasive = true
+    result = next
   }
   // Collapse multiple SPACES / TABS (but not newlines) into one space.
   // Paragraph breaks (`\n\n`) are intentional — they let the bot present
@@ -45,7 +48,10 @@ export function stripEvasivePhrases(reply: string): string {
     .replace(/\n{3,}/g, '\n\n')
     .replace(/^\s*[.,!?]\s*/, '')
     .trim()
-  if (result !== reply) {
+  // Only warn when a real evasive pattern matched. Whitespace
+  // normalisation alone must not trigger the alert — past false
+  // positives misled debugging during live CLI tests (2026-05-23).
+  if (strippedEvasive) {
     logger.warn('output-invariant: stripped evasive phrase from reply', {
       original: reply.slice(0, 200),
       result: result.slice(0, 200),

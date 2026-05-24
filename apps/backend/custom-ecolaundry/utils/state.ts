@@ -134,6 +134,12 @@ export function resetIncidentDetails(state: SessionState): void {
   state.nonTroubleshootingIncident = ''
   state.lastMissingFacts = []
   state.retryCount = 0
+  state.location = ''
+  state.locationStreet = ''
+  state.machineType = ''
+  state.machineNumber = ''
+  state.activeBranch = null
+  state.previousBranch = null
 }
 
 /**

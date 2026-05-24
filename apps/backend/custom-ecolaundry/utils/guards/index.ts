@@ -22,6 +22,7 @@ import type { AgentRuntime, Guard, GuardOutcome } from '../../models/index.js'
 import { guardPureGreeting } from './greeting.js'
 
 import {
+  guardNoChangePivotOnDisplay,
   guardNoChangeAsk,
   guardNoChangeNoCambio,
   guardNoChangeYesButBroken,
@@ -44,7 +45,7 @@ import {
   guardDiscountCodeAwaitMachine,
   guardDiscountCodeAwaitDoor,
 } from './discount-code-flow.js'
-import { guardLoyaltyCardBuy } from './loyalty-card-buy.js'
+import { guardLoyaltyCardBuy, guardLoyaltyCardBuyAwaitLocation } from './loyalty-card-buy.js'
 import { guardLoyaltyCardRecharge } from './loyalty-card-recharge.js'
 
 import {
@@ -134,6 +135,12 @@ export const GUARD_PIPELINE: Guard[] = [
   // after a dryer-only T2 render.
   guardFaqPricesAwaitWasherConfirm,
   guardFaqClosure,
+  // Caso 4 → Caso 3 pivot: when the customer is in the no-change flow and
+  // a recoverable display code (SEL/PUSH/DOOR/…) gets extracted, drop the
+  // no-change assumption so guardAutoStartMachineFlow can emit the
+  // canonical localised display reply. Must run BEFORE the other
+  // guardNoChange* so the pivot wins over the no-change ask/await steps.
+  guardNoChangePivotOnDisplay,
   guardNoChangeAsk,
   guardNoChangeNoCambio,
   guardNoChangeYesButBroken,
@@ -149,6 +156,11 @@ export const GUARD_PIPELINE: Guard[] = [
   guardInvoiceFlow,
   guardLoyaltyCardRecharge,
   guardLoyaltyCardBuy,
+  // T2 of Caso 10 — must run BEFORE guardForce* gather guards so the
+  // customer's location reply ("Estoy en Goya") is consumed by the loyalty
+  // flow and the per-location override is emitted, instead of being treated
+  // as a fresh trouble-machine incident asking for tipo/numero.
+  guardLoyaltyCardBuyAwaitLocation,
   // (legacy guardPricingDeflect + guardOpeningHours removed — replaced by
   // guardFaqPrices / guardFaqHours above with full location-aware behaviour.
   // See utils/guards/faq-location-context.ts and Caso 12 in usecases.md.)

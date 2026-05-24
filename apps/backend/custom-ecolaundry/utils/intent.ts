@@ -55,6 +55,15 @@ export function extractDisplayState(message: string): string | null {
   const genericMatch = trimmed.match(/\b(SEL|PUSH|PR|DOOR|ALM|AL001|END|ON|FILTRO|FALLO DE ROTACION|FALLO DE ASPIRACION|STOP|water)\b/i)
   if (genericMatch) return normalizeDisplayState(genericMatch[1])
 
+  // Countdown display: "120" (and variants like "119", "118"...) — end-of-cycle
+  // countdown timer shown on washer/dryer. display-flows.json matches on "120"
+  // exactly; other countdown numbers (119, 118...) are informational and the LLM
+  // handles them via context. We only extract the literal token "120" here because
+  // that is the only value documented in alarmes-lavadora/secadora.csv and wired
+  // to a display-flow. F104 (2026-05-24): was missing, causing the bot to gather
+  // location instead of emitting countdownGuidance.
+  if (/\b120\b/.test(trimmed)) return '120'
+
   // Fuzzy fallback for common typos: "USH PROG" (missing P) → PUSH PROG,
   // "DOR" → DOOR, "ALM01" → AL001, "selh" → SEL.
   // Only fires when the strict regexes above fail. Accepts edit distance ≤ 1
@@ -690,8 +699,18 @@ export function detectMachineTypeMention(message: string): 'washer' | 'dryer' | 
   // Nouns: secadora/asciugatrice/dryer/sèche-linge/assecadora/estenedor.
   // Verbs (infinitive + common conjugations): "asciugar(e/i)", "secar(la/lo)?",
   // "to dry / drying", "sécher", "secar" (PT), "assecar" (CA).
+  // F88.a (Andrea live 2026-05-23): typo tolerance for IT + CA dryer verbs.
+  //   - IT "asciurare" — consonant drop of 'g' ("asciugare" → "asciurare").
+  //     Real-bug evidence: customer typed "ciao prezzi per asciurare?" and
+  //     got washer prices instead of dryer prices. Regex: `asciu(?:g|r)ar[eio]?`.
+  //   - CA "asecar" — consonant drop of 1 's' ("assecar" → "asecar"). Same
+  //     consonant-drop pattern applied to the sister Catalan verb. Coverage
+  //     by symmetry (iron rule #8). Regex: `ass?ecar(?:la|lo)?` (the 2nd
+  //     's' is optional, so both `assecar` and `asecar` match).
+  // F16 pattern: narrow typo tolerance, NOT preventive — we ONLY add typo
+  // variants symmetric to a real bug seen live (no speculative coverage).
   const dryerNouns = /\b(?:secador[ae]s?|asciugat(?:rice|rici|ore|ori)|dryers?|sechag[eo]s?|s[eè]che[-\s]?linge|m[aá]quina[s]?\s+de\s+secar|assecadora|estenedor)\b/i
-  const dryerVerbs = /\b(?:asciugar[eio]?|secar(?:la|lo|los|las|me|se)?|to\s+dry|drying|s[eé]cher|s[eé]chage|assecar(?:la|lo)?|secar)\b/i
+  const dryerVerbs = /\b(?:asciu(?:g|r)ar[eio]?|secar(?:la|lo|los|las|me|se)?|to\s+dry|drying|s[eé]cher|s[eé]chage|ass?ecar(?:la|lo)?|secar)\b/i
   if (dryerNouns.test(trimmed) || dryerVerbs.test(trimmed)) {
     return 'dryer'
   }
@@ -741,15 +760,22 @@ export function detectDetergentFaqIntent(message: string): boolean {
   // that fails when the marker and product appear in different parts of a sentence.
   //
   // Negative markers (6 langs):
-  //   ES: no veo, no hay, no encuentro, no aparece
-  //   IT: non vedo, non c'è, non trovo
-  //   EN: no soap/detergent/softener (product IS the marker), can't see, can't find
-  //   PT: não vejo, não tem, não encontro
-  //   CA: no veig, no hi ha
-  //   FR: pas de ..., je ne vois pas
-  const negativeMarker = /no\s+(?:veo|hay|encuentro|aparece|veig|hi\s+ha)|non\s+(?:vedo|trovo)|non\s+c'[eè]|n[aã]o\s+(?:vejo|tem|encontro)|pas\s+de|je\s+ne\s+(?:vois|trouve)\s+pas|can'?t\s+(?:see|find)\s+(?:the\s+)?/i
-  // Detergent product words (6 langs):
-  const detergentWord = /jab[oó]n|detergente?|suavizante|suavitzant|sapone|detersivo|ammorbidente?|soap|detergent|softener|sab[aã]o|sab[oó]|savon|lessive|assouplissant/i
+  //   ES: no veo, no hay, no encuentro, no aparece, falta
+  //   IT: non vedo, non c'è, non c è (typo apostrofo), non trovo, manca, mi manca
+  //   EN: no soap/detergent/softener (product IS the marker), can't see, can't find, missing, lacks
+  //   PT: não vejo, não tem, não encontro, falta
+  //   CA: no veig, no hi ha, falta
+  //   FR: pas de ..., je ne vois pas, il manque, manque de
+  //
+  // F92 (Andrea 2026-05-23): real chat — customer typed "mi manca il sapone"
+  // and "manca il sapone"; the bot drifted into display-flow troubleshooting.
+  // Root cause: missing/falta/manca verbs were absent from negativeMarker.
+  const negativeMarker = /no\s+(?:veo|hay|encuentro|aparece|veig|hi\s+ha)|non\s+(?:vedo|trovo)|non\s+c['\s][eè]|n[aã]o\s+(?:vejo|tem|encontro)|pas\s+de|je\s+ne\s+(?:vois|trouve)\s+pas|can'?t\s+(?:see|find)\s+(?:the\s+)?|\b(?:mi\s+)?manca\b|\bfalta\b|\bmissing\b|\blacks?\b|\bil\s+manque\b|\bmanque\s+de\b/i
+  // Detergent product words (6 langs).
+  // F92: added "sapo\b" as a typo-tolerant variant of "sapone" (real-bug:
+  // "mi manca il sapo e" — customer typed half the word). Bounded by \b
+  // so it does not match "sapore"/"saponetta"/"sapodilla" etc.
+  const detergentWord = /jab[oó]n|detergente?|suavizante|suavitzant|sapone|\bsapo\b|detersivo|ammorbidente?|soap|detergent|softener|sab[aã]o|sab[oó]|savon|lessive|assouplissant/i
   if (negativeMarker.test(trimmed) && detergentWord.test(trimmed)) return true
   // EN shorthand "no soap" / "no detergent" / "no softener" (marker+word merged):
   if (/\bno\s+(?:soap|detergent|softener)\b/i.test(trimmed)) return true
@@ -989,31 +1015,49 @@ export function detectLanguageHeuristic(message: string): SessionState['language
   const normalized = message.trim().toLowerCase()
   if (!normalized) return null
 
-  if (/(¿|¡|secadora|lavadora|lavander[ií]a|arranc|otra vez|pantalla|centrifug|ropa|mojad|dinero|he pulsado|he premudo|como lo|autoservicio|cobrado|doble cobro|paso a paso|lavar|secar|captura|tarjeta|local|me sale|aparece en|sale en|no arranca|no funciona|no se activa|he pagado|he puesto|teneis|tenéis|ten[eé]is|qu[eé] horario|qu[eé] precio|cu[aá]nto cuesta|hola|estoy en|sí|por favor)/i.test(normalized)) {
-    return 'es'
-  }
+  // Score-based detection: count language-specific words, pick language with highest score.
+  let esScore = 0, caScore = 0, enScore = 0, itScore = 0, ptScore = 0, frScore = 0
 
-  if (/(asciug|lavatrice|lavanderia|centrifug|bagnat|sportello|cosa devo fare|ho gia risposto|schermata|pagamento|carta|lavato|asciugato|\bciao\b|buongiorno|buonasera|salve|non funziona|non si chiude|non parte|ho pagato|non lo so|dimmi|grazie)/i.test(normalized)) {
-    return 'it'
-  }
+  // ES: special punctuation ¿¡ is ES-only + strong discriminator
+  if (/(¿|¡)/.test(normalized)) esScore += 20
+  // ES common words + vocab (updated weights for disambiguation)
+  const esMatches = /(secadora|lavadora|lavander[ií]a|arranc|otra vez|pantalla|centrifug|ropa|mojad|dinero|he pulsado|he premudo|como lo|autoservicio|cobrado|doble cobro|paso a paso|lavar|secar|captura|tarjeta|local|me sale|aparece en|sale en|no arranca|no funciona|no se activa|he pagado|he puesto|teneis|tenéis|ten[eé]is|qu[eé] horario|qu[eé] precio|cu[aá]nto cuesta|hola|estoy en|sí|por favor|\bgracias\b|\bc[oó]mo\s+est[aá]s\b|\bqu[eé]\s+tal\b|\btodav[ií]a\s+no\b|\bya\s+est[eá]\b|\bvale\b|\bperd[oó]n\b|\blo\s+siento\b|\bd[oó]nde\b|\bcu[aá]ndo\b|\bpor\s+qu[eé]\b|\bqu[eé]\s+(es|hago|hacer)\b)/i
+  if (esMatches.test(normalized)) esScore += 8
+  // ES distinguisher: "no sé" or standalone "sé" with context
+  if (/\bno\s+sé\b|\bcómo\s+lo\b|\bqu[eé]\s+aparece\b/i.test(normalized)) esScore += 5
 
-  if (/(rentadora|assecadora|rentadora|rentar|assecar|carrer|localitat|cobrament|pantalla de la rentadora|no arrenca|ha cobrat|pas a pas)/i.test(normalized)) {
-    return 'ca'
-  }
+  // CA: strong markers (amb=con, és=is are CA-specific; avoid "quina" pattern in máquina)
+  if (/\bamb\b|\bès\b/i.test(normalized)) caScore += 20
+  // CA interrogatives: "quina" at start or after space/punctuation (not inside words)
+  if (/^quina|[,.\s!?]quina/i.test(normalized)) caScore += 20
+  // CA vocab (removed overlaps like "pantalla")
+  const caMatches = /(rentadora|assecadora|targeta|he\s+pagat|he\s+posat|no\s+veig|no\s+funciona|no\s+arrenca|per\s+favor|gràcies|com\s+(està|estàs|estais|estam)|on\s+est|a\s+on|talons|curs|horari|obrir|tancar|ha\s+cobrat|em\s+van\s+cobrar|dinars|diners|monedes|codi|cotxe|carrer|localitat|districte|provincia|preu|cost|mercat|catalan|català)/i
+  if (caMatches.test(normalized)) caScore += 8
 
-  if (/(washer|dryer|laundromat|display shows|charged twice|double charge|step by step|card digits|screenshot|payment proof|did not start|does not start|doesn'?t work|doesn'?t start|not working|i can'?t|my\s+(washer|dryer|machine)|\bhi\b|\bhello\b|\bthe\s+laund|\blaundry\b|\bwashing\s+machine\b|\bthe\s+machine\b)/i.test(normalized)) {
-    return 'en'
-  }
+  // EN markers: "washer", "dryer", common English phrasing
+  if (/(washer|dryer|laundromat|display\s+shows|charged\s+twice|double\s+charge|step\s+by\s+step|card\s+digits|screenshot|payment\s+proof|did\s+not\s+start|does\s+not\s+start|doesn'?t\s+work|doesn'?t\s+start|not\s+working|i\s+can'?t|my\s+(washer|dryer|machine)|don'?t\s+(know|see|understand)|\bi\s+paid\b|\bi\s+paid\s+twice\b|\bthe\s+machine\b|\bwashing\s+machine\b|\bhi\b|\bhello\b|\bhey\b|\bthe\s+laund|\blaundry\b|\bhow\s+(are|do)\s+you\b|\bwhat'?s\s+up\b|\bthank\s+(you|s)\b|\bthanks\b|\bplease\b|\bsorry\b|\bi\s+need\b|\bcan\s+you\b|\bcould\s+you\b|\bwhere\b|\bwhen\b|\bwhy\b|\bhow\b|\bi\s+(inserted|put|dropped|added)\s+(coins|money)\b)/i.test(normalized)) enScore += 5
 
-  // Portuguese: avoid matching Spanish "hola" as PT. Require explicit PT
-  // markers (accented olá, ã, ç, voce, etc.) or PT-only spellings.
-  if (/(\bolá\b|n[ãâ]o\s|lavandaria|m[áa]quina de lavar|m[áa]quina de secar|j[áa] paguei|comprovante|você|voce|estou em|obrigad[oa])/i.test(normalized)) {
-    return 'pt'
-  }
+  // IT: Italian markers. "Ciao", "Grazie", "Come stai", etc.
+  if (/(ciao|buongiorno|buonasera|grazie|prego|dimmi|come stai|cosa devo fare|lavarice|asciugatrice|lavatrice|macchina|ho pagato|due volte|mi hanno addebitato|il display|schermo|codice|numero|saldo|crediti|portafoglio)/i.test(normalized)) itScore += 5
 
-  if (/(bonjour|salut|lave-linge|s[èe]che-linge|laverie|ne marche pas|ne fonctionne pas|j'?ai pay[ée]|je n'?arrive pas|d[ée]j[àa] pay[ée]|machine [aà])/i.test(normalized)) {
-    return 'fr'
-  }
+  // Portuguese: avoid matching Spanish "hola" as PT. Require explicit PT markers.
+  if (/(\bolá\b|n[ãâ]o\s|lavandaria|m[áa]quina de lavar|m[áa]quina de secar|j[áa] paguei|comprovante|você|voce|estou em|obrigad[oa])/i.test(normalized)) ptScore += 5
+
+  // French
+  if (/(bonjour|salut|lave-linge|s[èe]che-linge|laverie|ne marche pas|ne fonctionne pas|j'?ai pay[ée]|je n'?arrive pas|d[ée]j[àa] pay[ée]|machine [aà])/i.test(normalized)) frScore += 5
+
+  // Pick language with highest score
+  const scores = { es: esScore, ca: caScore, en: enScore, it: itScore, pt: ptScore, fr: frScore }
+  const maxScore = Math.max(...Object.values(scores))
+  if (maxScore === 0) return null
+
+  // Return first language with max score (in priority order: ES, CA, EN, IT, PT, FR)
+  if (scores.es === maxScore) return 'es'
+  if (scores.ca === maxScore) return 'ca'
+  if (scores.en === maxScore) return 'en'
+  if (scores.it === maxScore) return 'it'
+  if (scores.pt === maxScore) return 'pt'
+  if (scores.fr === maxScore) return 'fr'
 
   return null
 }

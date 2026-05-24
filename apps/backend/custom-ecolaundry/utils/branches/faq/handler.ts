@@ -18,8 +18,10 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { getFaqs, getLocationOverride } from '../../runtime.js'
+import { getLocalisedFaqOverrideFromBlock } from '../../faq-overrides.js'
 import { pickLang, type BranchHandler, type BranchI18n } from '../types.js'
 import type { SupportedLanguage } from '../../../models/index.js'
+import { TARJETA_TOPIC } from '../../guards/loyalty-card-buy.js'
 
 interface FaqStrings {
   /** Returned when the router could not extract a faqKey OR the key is
@@ -41,27 +43,21 @@ const I18N: BranchI18n<FaqStrings> = {
   fr: loadLang('fr'),
 }
 
-export const faqHandler: BranchHandler = async ({ ar, routerDetails, language }) => {
+export const faqHandler: BranchHandler = async ({ message, ar, routerDetails, language }) => {
   const tenantLang = pickOutputLanguage(ar, language)
   const strings = pickLang(I18N, tenantLang)
 
-  // Caso 12 T2+ (Andrea 2026-05-14): when the FAQ branch is sticky from a
-  // previous turn (T1 armed `faq-prices-await-location` or
-  // `faq-hours-await-location`), the customer's next message is the location
-  // reply ("Goya", "Platja d'Aro"). T2+ does NOT re-run the router, so
-  // routerDetails is empty — without this delegation the handler would
-  // return unknownKey ("no estoy seguro de haber entendido"). Instead,
-  // delegate so guardFaqHoursAwaitLocation / guardFaqPricesAwaitLocation
-  // can capture the location-extracted state and render the data answer.
+  // Regola-A (F101 Fase 1 — Andrea 2026-05-24): any non-empty pendingFlow means
+  // a multi-step gather is already in progress — the turn belongs to the legacy
+  // guard that owns that flow (faq-prices-await-location, discount-code-await,
+  // loyalty-card-await-location, invoice-ask-*, no-change-*, double-charge-*,
+  // photo-await-decision, display-reask-pending, …). Delegating here is the
+  // single deterministic catch-all that replaces the previous two enumerated
+  // blocks (Caso 12 T2+ and F-Caso8). The legacy guard pipeline is the correct
+  // owner of every in-progress gather step — the FAQ handler has no business
+  // re-interpreting a mid-flow customer reply.
   const pending = ar.state.pendingFlow
-  if (
-    pending === 'faq-prices-await-location' ||
-    pending === 'faq-hours-await-location' ||
-    pending === 'faq-programs-await-location' ||
-    pending === 'faq-how-to-use-await-location' ||
-    pending === 'faq-prices-await-dryer-confirm' ||
-    pending === 'faq-prices-await-washer-confirm'
-  ) {
+  if (pending) {
     return { reply: '', handoff: 'delegate-to-legacy' }
   }
 
@@ -92,8 +88,45 @@ export const faqHandler: BranchHandler = async ({ ar, routerDetails, language })
     faqKey === 'pricing' ||
     faqKey === 'openingHours' ||
     faqKey === 'programs' ||
-    faqKey === 'howToUse'
+    faqKey === 'howToUse' ||
+    // Caso 10/11 (Andrea regression 2026-05-23): loyalty card "buy" and
+    // "recharge" intents have legacy guards that emit the per-language
+    // i18n base answer (loyaltyCardBuyBase / loyaltyCardRecharge) and arm
+    // a pendingFlow so the T2 location reply gets handled. Returning
+    // getFaqs()['loyaltyCard'] verbatim here would be wrong: it's ES-only
+    // and mixes the canonical answer with Goya-specific instructions,
+    // producing spanglish in EN/CA sessions and a trouble-machine drift
+    // when the customer says "estoy en Goya" on T2.
+    faqKey === 'loyaltyCard'
   ) {
+    return { reply: '', handoff: 'delegate-to-legacy' }
+  }
+
+  // F96 — loyalty card intent mid-FAQ-branch: when activeBranch='faq' is
+  // sticky but the customer's T2+ message is a loyalty card query (not
+  // re-classified by the router because T2+ skips LLM routing), routerDetails
+  // is empty → faqKey is undefined. Without this gate the handler returns
+  // unknownKey ("no estoy seguro de haber entendido") and the legacy guard
+  // guardLoyaltyCardBuy never gets a chance to run. Delegate so the guard
+  // can fire deterministically. Pattern symmetric to F93 (guardFaqHowToUse
+  // safety gate) and F-Caso8 (non-faq pendingFlow delegation above).
+  if (!faqKey && TARJETA_TOPIC.test(message)) {
+    return { reply: '', handoff: 'delegate-to-legacy' }
+  }
+
+  // F100 — Mataró loyalty-card T2 delegation: when the customer's T1 message
+  // was a loyalty card query at Mataró (guardMataroStreet fired and set
+  // state.faqTopic='buy-loyalty-card'), the T2 reply is the street sub-location
+  // ("Goya" / "Alemanya") — NOT a loyalty card phrase, so TARJETA_TOPIC.test()
+  // above returns false. Without this gate the handler falls through to the
+  // unknownKey reply ("no estoy seguro") and emits handoff='topic-switch' →
+  // activeBranch=null → guard pipeline never reached → guardLoyaltyCardBuy's
+  // askedTarjeta branch (which reads state.faqTopic) never fires.
+  // Fix: check state.faqTopic directly (the signal F100 armed on T1). This
+  // is the state-based complement to the message-based F96 gate — together
+  // they cover all T2+ turns where the loyalty context was preserved across
+  // a multi-step gather sequence (Mataró street disambiguation).
+  if (!faqKey && ar.state.faqTopic === 'buy-loyalty-card') {
     return { reply: '', handoff: 'delegate-to-legacy' }
   }
 
@@ -105,7 +138,12 @@ export const faqHandler: BranchHandler = async ({ ar, routerDetails, language })
   }
 
   const override = getLocationOverride(ar.runtime, ar.state.location)
-  const overrideAnswer = override?.faqOverrides?.[faqKey]
+  // F-Caso10 (Andrea 2026-05-23): faqOverrides values are either legacy ES
+  // strings or multi-lang objects {es,ca,en,...}. The helper resolves the
+  // session-language answer with ES fallback. Replaces the direct
+  // `.faqOverrides[faqKey]` read that returned an object verbatim for
+  // migrated entries (Goya.buy-loyalty-card) and crashed downstream.
+  const overrideAnswer = getLocalisedFaqOverrideFromBlock(override, faqKey, tenantLang)
   const baseAnswer = getFaqs()[faqKey]
   const answer = overrideAnswer || baseAnswer
 

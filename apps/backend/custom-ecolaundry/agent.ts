@@ -149,10 +149,22 @@ async function maybeDispatchBranch(ar: AgentRuntime, userMessage: string): Promi
   // MUST NOT overwrite preferredLanguage mid-session — that's how the mixed-
   // language regression of 2026-05-22 happened (welcome EN → "Policia" → ES
   // → router flipped back to EN on a different turn).
+  //
+  // F105 (2026-05-24) — heuristic takes precedence when confident. The router
+  // LLM can be confused by Spanish-sounding location names embedded in a
+  // non-ES message (e.g. "Come si usa l'asciugatrice? Sono a Goya" → router
+  // returns 'es' because "Goya" sounds Spanish). The deterministic heuristic
+  // detects 'it' via the 'asciug' pattern and is considered more reliable
+  // than the LLM for this case. Rule: router overwrites ONLY when the
+  // heuristic returned null (no confident match); if the heuristic already
+  // picked a non-null language, its result is preserved.
   if (ar.state.turnCount === 1 && result.decision?.language) {
     const enabled = ar.runtime.settings.enabledLanguages || []
     const routerLang = result.decision.language
-    if (enabled.includes(routerLang)) {
+    const heuristicLang = detectLanguageHeuristic(userMessage)
+    // Only let the router overwrite if the heuristic had no confident match.
+    // When heuristicLang is non-null, the deterministic pattern already won.
+    if (enabled.includes(routerLang) && heuristicLang === null) {
       ar.state.language = routerLang
       ar.state.preferredLanguage = routerLang
     }
@@ -224,15 +236,29 @@ async function applyGuardOutcome(
   )
   // F41 — markdown bullet+bold list: rephrase LLM flattens structure.
   // The formatted reply IS the UX — no polish needed.
-  const hasFormattedBulletList = /\n-\s+\*\*/.test(reply)
+  // Exception: howToUse / howToUseDryer FAQ overrides are ES source strings
+  // that need LLM translation for non-ES sessions (F105). These reasons are
+  // excluded from the bullet-list bypass so rephraseForTurn can translate them.
+  const FAQ_NEEDS_TRANSLATION = new Set(['faq-how-to-use', 'faq-how-to-use-dryer'])
+  const hasFormattedBulletList =
+    /\n-\s+\*\*/.test(reply) && !FAQ_NEEDS_TRANSLATION.has(outcome.reason ?? '')
   // F49 — discount-code-ask: clean i18n is the UX; rephrase kept adding
   // "incluyendo letras si las hay" autonomously.
   const isDiscountCodeAsk = outcome.reason === 'discount-code-ask'
   // F70 — loyalty FAQ (buy/recharge): usecases.md Caso 10 criterio 4 says
   // bot must NOT ask for location — rephrase LLM kept adding "¿En qué
   // lavandería te encuentras?" autonomously against the spec.
+  // F94 — also bypass for Caso 36 reasons: 'loyalty-card-wrong-location'
+  // (cross-location warning with {buyLocation}/{currentLocation} placeholders
+  // replaced deterministically) and 'loyalty-card-buy-with-location' (T2
+  // override after location reply). The rephrase LLM was adding unsolicited
+  // follow-up questions ("¿Te gustaría saber algo más?") causing the next
+  // customer "sì/sí/yes" to be misinterpreted as machine-flow confirmation.
   const isLoyaltyFaq =
-    outcome.reason === 'loyalty-card-buy' || outcome.reason === 'loyalty-card-recharge'
+    outcome.reason === 'loyalty-card-buy' ||
+    outcome.reason === 'loyalty-card-recharge' ||
+    outcome.reason === 'loyalty-card-wrong-location' ||
+    outcome.reason === 'loyalty-card-buy-with-location'
   // F56 — active display flow (washer/dryer JSON prompts): PDF-vetted content;
   // rephrase invented operational details ("ropa en la goma", "hasta oír un
   // clic"). Deterministic bypass is the only robust fix.
@@ -555,15 +581,25 @@ async function appendEscalationSummary(ar: AgentRuntime, reply: string, history:
   ar.pendingEscalation = null
   closeAsEscalated(ar)
 
-  // Use the language the LLM already used in the reply so handoff matches it.
-  // Falls back to resolveTenantLang (state.language / defaultLanguage) when
-  // the reply is too short to detect.
-  const detectedLang = detectLanguageHeuristic(reply)
-  const lang = (detectedLang && ar.runtime.settings.enabledLanguages?.includes(detectedLang))
-    ? detectedLang
-    : resolveTenantLang(ar)
+  // Handoff language: ALWAYS the locked tenant/state language, never an
+  // heuristic on `reply`. Reason: if the LLM drifts the reply to a wrong
+  // language (e.g. emits ES at T6 while state is EN), the heuristic would
+  // cascade the drift into the handoff and the briefing — producing a
+  // reply in ES + handoff in ES even though the customer has been speaking
+  // EN all session. Locking to resolveTenantLang(ar) guarantees the
+  // customer-facing handoff is in their session language regardless of
+  // LLM behaviour.
+  const lang = resolveTenantLang(ar)
+  // The empathic lead line ("Vamos a revisar tu caso, Andrea") is ALSO
+  // deterministic: the LLM-generated `reply` is replaced by the canned
+  // i18n key `escalationCaseReviewLead`. This makes the entire 3-block
+  // escalation handover language-coherent and immune to LLM drift at
+  // the name-capture turn — observed regression: state=en, LLM emitted
+  // ES at T6, producing a Spanish empathic line + handoff cascade.
+  // Iron rule #10: every required step has a deterministic catch-all.
+  const lead = t('escalationCaseReviewLead', lang).replace('{name}', ar.state.customerName || '')
   const handoff = t('operatorHandoffFinal', lang)
-  return `${reply}\n\n${handoff}\n\n**👤 Human Support message**\n${summary}`
+  return `${lead}\n\n${handoff}\n\n**👤 Human Support message**\n${summary}`
 }
 
 // ── Bootstrap ─────────────────────────────────────────────────────────────────

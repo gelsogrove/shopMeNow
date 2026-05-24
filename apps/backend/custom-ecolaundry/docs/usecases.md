@@ -37,6 +37,7 @@
   - [9.1 — Happy Path](#91--happy-path)
   - [9.2 — Email inválido (retry)](#92--email-inválido-retry)
 - [Caso 10 — Comprar tarjeta fidelización](#caso-10--comprar-tarjeta-fidelización)
+  - [10.2 — Tarjeta comprada en otro local (cross-location warning)](#caso-102--tarjeta-comprada-en-otro-local-cross-location-warning)
 - [Caso 11 — Recargar tarjeta fidelización](#caso-11--recargar-tarjeta-fidelización)
 - [Caso 12 — Horarios y precios](#caso-12--horarios-y-precios)
   - [12.4 — Programas de lavadora y secadora por location (F81)](#124--programas-de-lavadora-y-secadora-por-location-f81)
@@ -65,6 +66,8 @@
   - [32.3 — Marathon: FAQ pause mid-gather](#323--marathon-faq-pause-mid-gather)
 - [Caso 34 — El cliente pregunta por el jabón, detergente o suavizante](#caso-34--el-cliente-pregunta-por-el-jabón-detergente-o-suavizante)
 - [Caso 35 — El cliente pregunta cómo se usa la lavandería](#caso-35--el-cliente-pregunta-cómo-se-usa-la-lavandería)
+- [Caso 45 — El cliente pregunta cómo se usa la secadora](#caso-45--el-cliente-pregunta-cómo-se-usa-la-secadora)
+- [Caso 46 — La máquina muestra "120" (cuenta atrás fin de ciclo)](#caso-46--la-máquina-muestra-120-cuenta-atrás-fin-de-ciclo)
 
 ---
 
@@ -1194,6 +1197,70 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ---
 
+### Caso 10.2 — Tarjeta comprada en otro local (cross-location warning)
+
+**Contexto:** El cliente está en la lavandería X (state.location conocido) pero menciona que compró la tarjeta (o quiere comprar) en una lavandería Y distinta. La tarjeta de fidelización NO es intercambiable entre locales — debe advertirse de forma determinística, sin improvisación LLM.
+
+**Criterios de aceptación:**
+1. Si `state.location` está definido Y el mensaje menciona una location DISTINTA (detectada via `resolveKnownLocation` en `detectBuyLocationInMessage`), el bot emite la advertencia canónica: "La tarjeta comprada en {buyLocation} solo funciona en ese local. No es válida aquí en {currentLocation}. Si necesitas una tarjeta para esta lavandería, puedes comprarla aquí con 20€ en efectivo."
+2. La advertencia es determinística — NO delegada al LLM. Código en `utils/guards/loyalty-card-buy.ts:guardLoyaltyCardBuy` (cross-location branch).
+3. La detección de la location compra usa `resolveKnownLocation` (mismo resolver de `autoExtractFacts`) — multi-idioma sin regex adicional (Iron rule #8).
+4. Si el mensaje menciona la MISMA location del cliente, no se emite warning — es el flujo normal Caso 10.1.
+5. Si `state.location` no está definido, no hay warning — el bot sigue el flujo normal Caso 10.1 (pregunta location).
+6. Cubre los 6 idiomas con la i18n key `loyaltyCardWrongLocation` (con placeholders `{buyLocation}` y `{currentLocation}`).
+
+**Conversación ES:**
+
+**Bot:** ¿En qué lavandería estás?  
+**Usuario (en Mataró):** Tengo la tarjeta de Pineda, ¿la puedo usar aquí?  
+**Bot:** ⚠️ La tarjeta comprada en Pineda solo funciona en ese local. No es válida aquí en Mataró. Si necesitas una tarjeta para esta lavandería, puedes comprarla aquí con 20€ en efectivo.
+
+**Conversación IT:**
+
+**Bot:** In quale lavanderia sei?  
+**Usuario (a Goya):** Ho comprato la tessera a Pineda, funziona anche qui?  
+**Bot:** ⚠️ La tessera acquistata a Pineda funziona solo in quella sede. Non è valida qui a Goya. Se hai bisogno di una tessera per questa lavanderia, puoi acquistarla qui con 20€ in contanti.
+
+**Conversación EN:**
+
+**Bot:** Which laundry are you at?  
+**Usuario (at Goya):** I bought my loyalty card at Hortes, will it work here?  
+**Bot:** ⚠️ The card bought at Hortes only works at that location. It's not valid here at Goya. If you need a card for this laundry, you can buy one here for €20 in cash.
+
+**Conversación CA:**
+
+**Bot:** A quina bugaderia ets?  
+**Usuario (a Alemanya):** Vaig comprar la targeta a Pineda, funciona aquí?  
+**Bot:** ⚠️ La targeta comprada a Pineda només funciona en aquell local. No és vàlida aquí a Alemanya. Si necessites una targeta per a aquesta bugaderia, pots comprar-la aquí amb 20€ en efectiu.
+
+### Caso 10.3 — Mataró: pregunta loyalty card en T1 + sub-localización en T2 (F100)
+
+**Contexto (F100):** El cliente está en Mataró (location ambigua — dos lavanderías) y en el mismo T1 pregunta sobre la tarjeta de fidelización. `guardMataroStreet` gana el pipeline y pide la calle (Goya/Alemanya). El cliente responde la calle en T2. El bot debe responder con el override de loyalty card de esa sub-localización (Goya o Alemanya).
+
+**Criterios de aceptación:**
+1. T1: bot responde preguntando Goya/Alemanya (guardMataroStreet vence, guarda `state.faqTopic='buy-loyalty-card'`).
+2. T2: cliente responde "Goya" → bot emite el override loyalty card de Goya.
+3. NO se emite el aviso cross-location (flag `isMataroStreetReply` evita que "Goya" sea interpretado como un local-de-compra distinto).
+4. El helper `getLoyaltyOverride()` resuelve el override via `state.locationStreet` (fallback cuando `state.location='Mataró'` no tiene override directo).
+5. Cubre los 6 idiomas en el T1 (el detector `TARJETA_TOPIC` activa faqTopic preservation).
+6. `activeBranch` permanece sticky después del T2 (no se resetea a null).
+
+**Conversación IT:**
+
+**Usuario:** ciao sono a Mataró posso usare una tessera di fidelizzazione comprata in un altra lavanderia?  
+**Bot:** En Mataró tenemos dos lavanderías: C/ Francisco de Goya 117 y C/ Alemanya 17. ¿Podrías indicarme en cuál estás?  
+**Usuario:** Goya  
+**Bot:** En Goya, la tarjeta de fidelidad se compra con 20€ en efectivo y se activa pulsando el segundo botón de la fila derecha de la central. Solo funciona en este local.
+
+**Conversación ES:**
+
+**Usuario:** Estoy en Mataró y quiero comprar la tarjeta de fidelización  
+**Bot:** En Mataró tenemos dos lavanderías: C/ Francisco de Goya 117 y C/ Alemanya 17. ¿Podrías indicarme en cuál estás?  
+**Usuario:** Alemanya  
+**Bot:** [override loyalty card de Alemanya si disponible, o respuesta base con instrucción genérica]
+
+---
+
 ## Caso 11 — Recargar tarjeta fidelización
 
 **Criterios de aceptación:**
@@ -1940,11 +2007,15 @@ El bot responde con un mensaje de cierre y NO inicia ningún gather ni escalaci�
 **Kind**: FAQ (single-turn, no gather)  
 **Guard**: `utils/guards/faq-detergents.ts → guardFaqDetergents`  
 **FAQ key**: `detergents` (json/faqs.json)  
-**F-log**: F67 (2026-05-21)
+**F-log**: F67 (2026-05-21), F92 (2026-05-23)
 
 ### Trigger (frases típicas del cliente)
 
 - "No veo jabón" ← real-bug F67
+- "mi manca il sapone" / "manca il sapone" / "mi manca il sapo e" (typo) ← real-bug F92
+- "falta jabón" / "falta detergente" / "falta sabó" / "falta sabão"
+- "soap is missing" / "I'm missing soap" / "missing detergent"
+- "il manque du savon" / "manque de savon"
 - "¿hay detergente en las máquinas?"
 - "¿traigo jabón/detergente/suavizante?"
 - "el jabón viene incluido"
@@ -1962,6 +2033,8 @@ Respuesta: "No hace falta traer nada. Las máquinas dosifican automáticamente d
 
 **34.2 — "No veo jabón"**: el cliente reporta que no ve jabón en la máquina. Semánticamente podría ser un problema de la dosificadora, pero la respuesta correcta es la misma FAQ: las máquinas dosifican automáticamente y si el dosificador está vacío es un problema físico que el operador de la lavandería gestiona en local.
 
+**34.4 — "Manca / falta / missing + sapone" (F92, 2026-05-23)**: el cliente reporta la ausencia del jabón usando verbos de carencia ("manca il sapone" IT, "falta jabón" ES/CA/PT, "soap is missing" EN, "il manque du savon" FR). Misma respuesta canónica (FAQ `detergents`): las máquinas dosifican automáticamente. Incluye tolerancia a typo en italiano (palabra truncada "sapo" — real-bug: "mi manca il sapo e"). Si el cliente insiste tras la FAQ ("pero de verdad no hay jabón"), el LLM puede pivotar a escalación natural, pero el T1/T2 de "manca sapone" SIEMPRE recibe la FAQ deterministica.
+
 **Pivot mid-flow**: el guard dispara en cualquier turno, incluido cuando el cliente está en medio de un troubleshooting (e.g. DOOR flow activo). El guard responde la FAQ y el flow original continúa en el siguiente turno relevante.
 
 **Desviación documentada respecto al Playbook PDF**: el playbook no cubre explícitamente este caso. La respuesta se basa en `json/faqs.json:detergents`.
@@ -1974,6 +2047,7 @@ Respuesta: "No hace falta traer nada. Las máquinas dosifican automáticamente d
 4. Funciona en todos los turnos: T1 (cold start) y T2+ (mid-flow pivot).
 5. Funciona en los 6 idiomas (es/it/en/pt/ca/fr).
 6. No dispara cuando el cliente habla de espuma post-ciclo ("poca espuma después del lavado") — ese caso pertenece al flow `post_ciclo.foam` en `washer_hs60xx.json`.
+7. **F92** — reconoce verbos de carencia (manca/falta/missing/manque) en los 6 idiomas, no solo "no veo / no hay". Tolera el typo "sapo" (variante truncada de "sapone").
 
 ### Conversación 34.1 — Pregunta directa (ES, cold start)
 
@@ -2002,6 +2076,20 @@ Respuesta: "No hace falta traer nada. Las máquinas dosifican automáticamente d
 
 **Usuario (EN):** do I need to bring soap?  
 **Bot:** No, you don't need to bring anything. Ecolaundry machines automatically dispense…
+
+### Conversación 34.4 — "Manca/falta + sapone" (F92, real-bug Andrea CLI 2026-05-23)
+
+**Usuario (IT):** mi manca il sapone  
+**Bot:** No, no hace falta traer nada. Las máquinas Ecolaundry dosifican automáticamente detergente y suavizante ecológicos certificados, elaborados con ingredientes 100% naturales. Solo tienes que traer la ropa.
+
+**Usuario (IT, typo):** mi manca il sapo e  
+**Bot:** *(misma FAQ — "sapo" se reconoce como variante truncada de "sapone")*
+
+**Usuario (ES):** falta jabón en la máquina  
+**Bot:** *(misma FAQ en español)*
+
+**Usuario (EN):** soap is missing  
+**Bot:** *(misma FAQ en inglés)*
 
 ---
 
@@ -2074,3 +2162,567 @@ El detergente y el suavizante se dosifican automáticamente. No hace falta traer
 **Usuario (EN):** first time here, what do I do?  
 **Bot:** *(instrucciones en inglés)*
 
+---
+
+# 📚 Catálogo location-specific — Orarios, Precios, Temperatura, Programas, Instrucciones
+
+> **Propósito**: cada caso de esta sección usa **una lavandería distinta** como ejemplo concreto. El bot lee los datos desde `json/locations.json:metadata` (orari, prezzi, programas, payment, landmarks) o desde `json/locations.json:faqOverrides` (howToUse específico) o desde `json/faqs.json` (FAQ trasversali como `colorTemperature`/`greaseStains`). Estos casos son **plantillas de test** — se usan para verificar que la respuesta del bot refleja los datos reales de cada local, no que se aplica una respuesta genérica.
+
+---
+
+## Caso 36 — Orarios L'Escala (caso límite 7:00–23:00)
+
+**SemanticId**: `faq-hours-lescala`
+**Kind**: FAQ data-driven (per-location, F50 cassette)
+**Source**: `json/locations.json:L'Escala.metadata.hours = "7:00-23:00"`
+**Guard**: `utils/guards/faq-hours.ts → guardFaqHours / guardFaqHoursAwaitLocation`
+
+### Trigger (frases típicas del cliente)
+
+- "¿Qué horario tenéis en L'Escala?"
+- "¿A qué hora abrís en L'Escala?"
+- "che orari fate a L'Escala?"
+- "what are your opening hours in L'Escala?"
+- "horario de L'Escala"
+
+### Descripción
+
+L'Escala es la **única location con horario extendido** (7:00–23:00 todos los días, 365 días/año). Las otras 6 lavanderías abren 8:00–22:00. El bot debe leer `metadata.hours` desde `locations.json` y NO devolver la cadena genérica `8:00-22:00` (que es el default i18n `openingHoursDefault`, ya obsoleto post-F50).
+
+### Criterios de aceptación
+
+1. El bot responde con **7:00 a 23:00** (no 8:00-22:00) cuando la location resuelta es `L'Escala`.
+2. Si el cliente no especifica location, el bot pregunta primero (`hoursAsk` i18n) y arma `pendingFlow=faq-hours-await-location`.
+3. La respuesta menciona explícitamente el nombre del local (**L'Escala**) para que el cliente confirme.
+4. El último ciclo de lavado debe respetar la regla genérica (1h antes del cierre) — si el bot lo menciona, debe ser 22:00 para L'Escala, no 21:00.
+5. Funciona en los 6 idiomas (es/it/en/ca/pt/fr) — formato hora `7:00-23:00` es language-neutral.
+6. NUNCA inventa horarios — si `metadata.hours` está vacío, escala (no fallback a default).
+
+### Conversación 36.1 — Cliente pregunta explícito (ES)
+
+**Usuario:** ¿Qué horario tenéis en L'Escala?
+**Bot:** En **L'Escala** las máquinas se pueden utilizar de **7:00 a 23:00**, todos los días del año.
+
+### Conversación 36.2 — Cliente sin location (ES → 2 turnos)
+
+**Usuario:** ¿A qué hora abrís?
+**Bot:** ¿En qué lavandería estás?
+**Usuario:** L'Escala
+**Bot:** En **L'Escala** las máquinas se pueden utilizar de **7:00 a 23:00**, todos los días del año.
+
+### Conversación 36.3 — Multi-language (IT)
+
+**Usuario:** che orari fate a L'Escala?
+**Bot:** A **L'Escala** le macchine si possono utilizzare dalle **7:00 alle 23:00**, tutti i giorni dell'anno.
+
+---
+
+## Caso 37 — Precios lavadora Goya (lista L4-L7 desde metadata.machines)
+
+**SemanticId**: `faq-prices-washer-goya`
+**Kind**: FAQ data-driven (per-location, F50 cassette)
+**Source**: `json/locations.json:Goya.metadata.machines.washers[]`
+**Guard**: `utils/guards/faq-prices.ts → guardFaqPrices / guardFaqPricesAwaitLocation`
+
+### Trigger (frases típicas del cliente)
+
+- "¿Cuánto cuesta lavar en Goya?"
+- "precios lavadora Goya"
+- "quanto costa lavare a Goya?"
+- "how much is the washer at Goya?"
+- "quant val rentar a Goya?"
+
+### Descripción
+
+Goya tiene **4 lavadoras**: L4/L5 (20kg) y L6/L7 (10kg). El bot debe leer el array `metadata.machines.washers` y renderizar la lista con **bullet + bold**, agrupando por specs idénticas (F54 plural collapse: L4+L5 → "Lavadoras 20kg" si misma fidelity+cash). Datos Goya: L4/L5 = 6,5€ fidelidad / 7€ cash; L6/L7 = 3,5€ fidelidad / 4€ cash. Además F87: append automático del signal de pagamento (**TPV cobra 7€** porque Goya tiene `metadata.payment.tpvExact = 7`).
+
+### Criterios de aceptación
+
+1. La respuesta menciona explícitamente las **4 máquinas Goya** agrupadas por specs (F54): "Lavadoras 20kg" + "Lavadoras 10kg" (no 4 líneas separadas).
+2. Cada línea muestra peso, precio fidelidad, precio cash en formato `**XXkg**: Y€ (fidelidad) / Z€ (efectivo)`.
+3. Append F87 signal pago al final: `💡 ... 7€` (TPV exacto de Goya).
+4. Append F53 follow-up question: `¿También quieres información de secadora?` y arma `pendingFlow=faq-prices-await-dryer-confirm`.
+5. NUNCA inventa precios — si `machines.washers` está vacío o falta, escala (no fallback hardcoded).
+6. Funciona en los 6 idiomas — los números/precios son language-neutral, solo el wrapper i18n cambia.
+
+### Conversación 37.1 — Cliente pregunta directo (ES)
+
+**Usuario:** ¿Cuánto cuesta lavar en Goya?
+**Bot:** En **Goya** los precios de las lavadoras son:
+
+- **Lavadoras** 20kg: 6,5€ (fidelidad) / 7€ (efectivo)
+- **Lavadoras** 10kg: 3,5€ (fidelidad) / 4€ (efectivo)
+
+💡 El datáfono cobra el importe exacto de **7€**.
+
+¿También quieres información de secadora?
+
+### Conversación 37.2 — Cliente confirma "sí" para secadora (T3)
+
+**Usuario:** sí
+**Bot:** En **Goya** los precios de las secadoras son:
+
+- **Secadoras**: 2€/15min
+
+*(Goya dryers S1/S2/S3 tienen `weightKg: null` — pending refactor B7. El formatter omite el peso si null.)*
+
+---
+
+## Caso 38 — Precios secadora Pineda (S4-S5 con TPV 8€)
+
+**SemanticId**: `faq-prices-dryer-pineda`
+**Kind**: FAQ data-driven (per-location, F50 cassette)
+**Source**: `json/locations.json:Pineda.metadata.machines.dryers[]` + `metadata.payment.tpvExact = 8`
+**Guard**: `utils/guards/faq-prices.ts → guardFaqPrices`
+
+### Trigger (frases típicas del cliente)
+
+- "¿Cuánto cuesta secar en Pineda?"
+- "precios secadora Pineda"
+- "quanto costa asciugare a Pineda?"
+- "how much for the dryer at Pineda?"
+
+### Descripción
+
+Pineda tiene **2 secadoras** (S4 y S5, ambas 20kg, prezzo 2€/15min). El formatter F54 las colapsa en una línea plural "Secadoras 20kg". Append F87 signal pago: **TPV cobra 8€** (diferente de Goya). El cliente debe entender que la diferencia 7€ vs 8€ depende de la location, no del tipo de máquina.
+
+### Criterios de aceptación
+
+1. La respuesta muestra **1 sola línea "Secadoras"** (collapse F54 porque S4+S5 tienen specs idénticas).
+2. Formato: `**Secadoras** 20kg: 2€/15min`.
+3. Append F87: `💡 ... 8€` (TPV Pineda).
+4. Append F58 follow-up: `¿También quieres información de lavadora?` (simétrico a F53) y arma `pendingFlow=faq-prices-await-washer-confirm`.
+5. Si el cliente responde "sí" o "y la lavadora", renderiza precios lavadoras Pineda (L1 10kg 4,5€/5€, L2 15kg 6€/7€, L3 20kg 7€/8€).
+6. Mencionar Pineda explícitamente al inicio para evitar confusión cross-location.
+
+### Conversación 38.1 — Cliente pregunta directo (ES)
+
+**Usuario:** ¿Cuánto cuesta secar en Pineda?
+**Bot:** En **Pineda** los precios de las secadoras son:
+
+- **Secadoras** 20kg: 2€/15min
+
+💡 El datáfono cobra el importe exacto de **8€**.
+
+¿También quieres información de lavadora?
+
+### Conversación 38.2 — Cliente confirma "sí" para lavadora (T3, simétrico F58)
+
+**Usuario:** sí
+**Bot:** En **Pineda** los precios de las lavadoras son:
+
+- **L1** 10kg: 4,5€ (fidelidad) / 5€ (efectivo)
+- **L2** 15kg: 6€ (fidelidad) / 7€ (efectivo)
+- **L3** 20kg: 7€ (fidelidad) / 8€ (efectivo)
+
+💡 El datáfono cobra el importe exacto de **8€**.
+
+---
+
+## Caso 39 — Programas temperatura Alemanya (4 programas sin número pulsante)
+
+**SemanticId**: `faq-programs-alemanya`
+**Kind**: FAQ data-driven (per-location, F81 cassette)
+**Source**: `json/locations.json:Alemanya.metadata.programs.washers[]`
+**Guard**: `utils/guards/faq-programs.ts → guardFaqPrograms` (F81)
+
+### Trigger (frases típicas del cliente)
+
+- "¿Qué programas tiene la lavadora en Alemanya?"
+- "¿a qué temperaturas lava?"
+- "programi disponibili a Alemanya"
+- "what programs do you have at Alemanya?"
+- "quins programes té la rentadora?"
+
+### Descripción
+
+Alemanya es una **location edge case**: tiene los 4 programas estándar (60°/40°/30°/Frío) MA con `number: null` en `metadata.programs.washers[]` — el cliente NO ve un número de pulsante en la central, debe identificar el programa por su nombre/temperatura. Contrastar con Goya/Pineda/L'Escala/Platja d'Aro que tienen `number: 1/2/3/4` explícitos.
+
+### Criterios de aceptación
+
+1. La respuesta enumera los **4 programas Alemanya** con bullet+bold, sin el "Pulsa el botón N" porque `number: null`.
+2. Formato: `- **60º** (muy caliente) — ideal para ropa muy sucia` etc.
+3. NO menciona números de pulsante (sería falso para Alemanya).
+4. Contraste explicito con location con números (si el cliente pregunta cross-location): "En Alemanya no hay número de pulsante en la central — elige el programa por su nombre".
+5. Después de mostrar los 4 programas, append: "Después dime si la lavadora ha arrancado." (loopback F8/F13).
+6. F41 bypass rephrase (formato bullet+bold).
+
+### Conversación 39.1 — Cliente pregunta directo (ES)
+
+**Usuario:** ¿Qué programas tiene la lavadora en Alemanya?
+**Bot:** En **Alemanya** la lavadora tiene los siguientes programas:
+
+- **60º** (muy caliente) — ideal para ropa muy sucia
+- **40º** (caliente) — ropa normal
+- **30º** (templado) — colores delicados
+- **FRÍO** — lana, seda, prendas muy delicadas
+
+En Alemanya elige el programa por su nombre — no hay número de pulsante asignado.
+
+### Conversación 39.2 — Multi-language (IT)
+
+**Usuario:** che programmi avete a Alemanya?
+**Bot:** A **Alemanya** la lavatrice ha i seguenti programmi:
+
+- **60º** (molto caldo) — ideale per panni molto sporchi
+- **40º** (caldo) — panni normali
+- **30º** (tiepido) — colori delicati
+- **FRÍO** — lana, seta, capi molto delicati
+
+A Alemanya scegli il programma per nome — non c'è un numero di pulsante assegnato.
+
+---
+
+## Caso 40 — FAQ temperatura colores Hortes (colorTemperature trasversal)
+
+**SemanticId**: `faq-color-temperature`
+**Kind**: FAQ trasversal (no per-location override, default `json/faqs.json:colorTemperature`)
+**Source**: `json/faqs.json:colorTemperature`
+**Guard**: route via branch-router LLM (faqKey = `colorTemperature`)
+
+### Trigger (frases típicas del cliente)
+
+- "¿a qué temperatura lavo la ropa de color?"
+- "¿se desteñe la ropa con agua caliente?"
+- "temperatura colorati"
+- "what temperature for colored clothes?"
+- "à quelle température laver les couleurs?"
+
+### Descripción
+
+La FAQ `colorTemperature` es **trasversal** — la respuesta es la misma para cualquier location porque depende del tipo de tejido, no de la máquina. Hortes es solo el contexto narrativo del ejemplo (cliente en Hortes pregunta por temperatura colores). La respuesta es educacional: agua fría/tibia 20-30°C, dar la vuelta a las prendas.
+
+### Criterios de aceptación
+
+1. La respuesta es el contenido de `json/faqs.json:colorTemperature` (no hay override per-location).
+2. NUNCA pregunta "¿en qué lavandería estás?" — la temperatura no depende del local.
+3. NUNCA pregunta "¿lavadora o secadora?" — la pregunta es educacional sobre temperatura, no troubleshooting.
+4. Menciona el rango 20-30°C explícitamente.
+5. Menciona el tip de "dar la vuelta a las prendas" para proteger colores.
+6. Funciona en los 6 idiomas (rephrase LLM traduce dinámicamente).
+
+### Conversación 40.1 — Cliente en Hortes pregunta temperatura colores (ES)
+
+**Usuario:** Estoy en Hortes. ¿A qué temperatura lavo la ropa de color?
+**Bot:** Para ropa de color usa agua fría o tibia, entre **20 y 30°C**. El agua caliente abre las fibras y hace que el tinte se escape. También te recomendamos dar la vuelta a las prendas antes de meterlas al tambor para proteger los colores.
+
+### Conversación 40.2 — Multi-language (IT)
+
+**Usuario:** a che temperatura lavo i colorati?
+**Bot:** Per i panni colorati usa acqua fredda o tiepida, tra **20 e 30°C**. L'acqua calda apre le fibre e fa scolorire i tinti. Ti consigliamo anche di rovesciare i capi prima di metterli nel cestello per proteggere i colori.
+
+---
+
+## Caso 41 — FAQ macchie grasse Platja d'Aro (greaseStains)
+
+**SemanticId**: `faq-grease-stains`
+**Kind**: FAQ trasversal (no per-location override)
+**Source**: `json/faqs.json:greaseStains`
+**Guard**: route via branch-router LLM (faqKey = `greaseStains`)
+
+### Trigger (frases típicas del cliente)
+
+- "¿cómo quito una mancha de aceite?"
+- "tengo una mancha de grasa"
+- "macchia di olio sui vestiti"
+- "how to remove a grease stain?"
+- "j'ai une tache de graisse"
+
+### Descripción
+
+FAQ trasversal sobre cómo tratar manchas grasas — paso 1 absorber con papel sin frotar, paso 2 lavar a 60°C (tejidos resistentes) o 40°C (sintéticos/delicados). Platja d'Aro es solo el contexto narrativo (cliente en Platja d'Aro pregunta sobre mancha). La respuesta NO depende de la location.
+
+### Criterios de aceptación
+
+1. La respuesta es el contenido de `json/faqs.json:greaseStains`.
+2. Menciona los **2 pasos** explícitos: (1) absorber con papel sin frotar, (2) elegir temperatura según tejido.
+3. Menciona ambas temperaturas: **60°C resistentes** y **40°C sintéticos/delicados**.
+4. NUNCA pregunta location (la técnica no depende de la lavandería).
+5. NUNCA recomienda traer detergente extra — el bot debe recordar que el dispensador automático aplica el detergente (cross-FAQ con `detergents`).
+6. Funciona en los 6 idiomas.
+
+### Conversación 41.1 — Cliente en Platja d'Aro pregunta mancha (ES)
+
+**Usuario:** Estoy en Platja d'Aro. Tengo una mancha de aceite en una camisa, ¿qué hago?
+**Bot:** Absorbe primero el exceso con papel de cocina sin frotar. Luego usa este programa en nuestras lavadoras:
+- **Tejidos resistentes** (algodón): **60°C**
+- **Sintéticos o delicados**: **40°C**
+
+Nuestras máquinas aplican el detergente automáticamente para disolver la grasa.
+
+### Conversación 41.2 — Multi-language (FR)
+
+**Usuario:** j'ai une tache de graisse, comment l'enlever?
+**Bot:** Absorbe d'abord l'excès avec du papier essuie-tout sans frotter. Ensuite utilise ce programme dans nos machines :
+- **Tissus résistants** (coton) : **60°C**
+- **Synthétiques ou délicats** : **40°C**
+
+Nos machines appliquent le détergent automatiquement pour dissoudre la graisse.
+
+---
+
+## Caso 42 — Instrucciones howToUse Goya (faqOverride 5 pasos con central)
+
+**SemanticId**: `faq-howtouse-goya`
+**Kind**: FAQ per-location override
+**Source**: `json/locations.json:Goya.faqOverrides.howToUse` (5 pasos, sobrescribe `json/faqs.json:howToUse`)
+**Guard**: `utils/guards/faq-how-to-use.ts → guardFaqHowToUse` + `apply_faq_override(faqKey='howToUse')`
+
+### Trigger (frases típicas del cliente)
+
+- "¿Cómo se usa la lavandería en Goya?"
+- "primera vez en Goya, ¿qué hago?"
+- "come si usa a Goya?"
+- "how do I use the laundromat at Goya?"
+
+### Descripción
+
+Goya tiene un `faqOverride` específico para `howToUse` con **5 pasos** (vs los 4 pasos globales de `faqs.json:howToUse`): paso adicional "Vuelve a la máquina y confirma el inicio" porque Goya tiene `selfStartMachine: true` (el cliente debe pulsar confirm para iniciar el ciclo después del pago).
+
+### Criterios de aceptación
+
+1. La respuesta usa el contenido de `Goya.faqOverrides.howToUse` (NO la versión global de `faqs.json`).
+2. Lista exacta de **5 pasos** numerados en orden.
+3. Paso 3 menciona "**confirma el inicio**" (key diferencial Goya vs otros locales).
+4. Paso final menciona "deja la puerta abierta para que se ventile" (good practice).
+5. Si el cliente pregunta sin especificar location, el bot pregunta primero, luego aplica override.
+6. F41 bypass rephrase (formato bullet numerado + bold).
+
+### Conversación 42.1 — Cliente en Goya pregunta cómo usar (ES)
+
+**Usuario:** Es mi primera vez en Goya, ¿cómo funciona?
+**Bot:** En **Goya (Mataró)**, para usar la lavandería sigue estos pasos:
+
+1. **Mete la ropa en la máquina seleccionada** y cierra bien la puerta.
+2. **Dirígete a la centralita** y sigue las instrucciones de pago (o paga con la App).
+3. **Vuelve a la máquina y confirma el inicio**.
+4. **No abras la puerta** antes de que finalice el lavado.
+5. **Al terminar**, deja la puerta abierta para que se ventile.
+
+### Conversación 42.2 — Cliente sin location (2 turnos)
+
+**Usuario:** ¿Cómo se usa? Primera vez.
+**Bot:** ¿En qué lavandería estás?
+**Usuario:** Goya
+**Bot:** En **Goya (Mataró)**, para usar la lavandería sigue estos pasos: *(5 pasos override)*
+
+---
+
+## Caso 43 — Instrucciones howToUse L'Escala (faqOverride 4 pasos sin "confirma inicio")
+
+**SemanticId**: `faq-howtouse-lescala`
+**Kind**: FAQ per-location override
+**Source**: `json/locations.json:L'Escala.faqOverrides.howToUse` (4 pasos, simplificado)
+**Guard**: `utils/guards/faq-how-to-use.ts`
+
+### Trigger (frases típicas del cliente)
+
+- "¿Cómo se usa la lavandería en L'Escala?"
+- "primera vez en L'Escala"
+- "come si usa a L'Escala?"
+
+### Descripción
+
+L'Escala tiene un override `howToUse` con **4 pasos** (NO menciona "confirma el inicio" porque la central funciona diferente en L'Escala: `selfStartMachine: true` pero sin paso explícito de confirmación visible al cliente). Es la versión **simplificada** del flujo Goya.
+
+### Criterios de aceptación
+
+1. La respuesta usa `L'Escala.faqOverrides.howToUse` (NO la versión global ni la de Goya).
+2. Lista exacta de **4 pasos** (uno menos que Goya).
+3. NO menciona "confirma el inicio" — diferencial respecto Goya/Pineda/Hortes.
+4. Paso final: "deja la puerta abierta para que se ventile".
+5. Si el cliente pregunta cross-location ("¿es igual en L'Escala que en Goya?"), el bot puede mostrar las diferencias mencionando los 5 vs 4 pasos.
+6. F41 bypass rephrase.
+
+### Conversación 43.1 — Cliente en L'Escala pregunta cómo usar (ES)
+
+**Usuario:** Estoy en L'Escala, ¿cómo se usa?
+**Bot:** En **L'Escala**, para usar la lavandería sigue estos pasos:
+
+1. **Mete la ropa en la máquina seleccionada** y cierra bien la puerta.
+2. **Dirígete a la centralita** y sigue las instrucciones de pago (o paga con la App).
+3. **No abras la puerta** antes de que finalice el lavado.
+4. **Al terminar**, deja la puerta abierta para que se ventile.
+
+### Conversación 43.2 — Multi-language (FR)
+
+**Usuario:** comment utiliser la laverie à L'Escala?
+**Bot:** À **L'Escala**, pour utiliser la laverie suis ces étapes :
+
+1. **Mets le linge dans la machine** et ferme bien la porte.
+2. **Va à la centrale de paiement** et suis les instructions (ou paye avec l'App).
+3. **N'ouvre pas la porte** avant la fin du lavage.
+4. **À la fin**, laisse la porte ouverte pour aérer.
+
+---
+
+## Caso 44 — Combinatorio: cliente pregunta horario + precio en la misma sesión (Mataró → Goya)
+
+**SemanticId**: `faq-combo-hours-prices-mataro-goya`
+**Kind**: FAQ combinada multi-turn (sticky location + sub-flow chain)
+**Source**: combina Caso 36/37 (hours + prices) con `needsStreetClarification` de Mataró
+**Guard**: chain `guardFaqHours` → `guardFaqPrices` con location sticky
+
+### Trigger (frases típicas del cliente)
+
+- "Estoy en Mataró. ¿Qué horario y precio tenéis?"
+- "Mataró: orari e prezzi"
+- "what are your hours and prices in Mataró?"
+
+### Descripción
+
+**Caso edge: Mataró**. El cliente menciona "Mataró" como pueblo, pero hay **2 lavanderías en Mataró**: Goya (Carrer Francisco de Goya 117) y Alemanya (C/ Alemanya 17). El bot debe activar `needsStreetClarification: true` y pedir la calle antes de responder. Una vez clarificado (e.g. "Goya"), responde primero el horario, luego (si el cliente pregunta también precio) lo encadena con la location sticky.
+
+### Criterios de aceptación
+
+1. T1: cliente dice "Mataró" → bot detecta `needsStreetClarification` y pregunta "¿En cuál? Goya o Alemanya?".
+2. T2: cliente responde "Goya" → `state.location = 'Goya'`, `state.locationStreet = 'Carrer Francisco de Goya 117'`.
+3. T3: bot responde horario Goya (8:00-22:00).
+4. T4+: si el cliente sigue preguntando ("¿y los precios?"), el bot usa la location sticky (NO vuelve a preguntar location).
+5. Append F87 signal pago (TPV 7€) automático en la respuesta de precios.
+6. Si el cliente pivota a otra location ("¿y en Alemanya?"), F51 location switch + F61 re-arm pendingFlow.
+
+### Conversación 44.1 — Mataró ambiguo + clarificación + chain hours→prices (ES)
+
+**Usuario:** Estoy en Mataró. ¿A qué hora abrís y cuánto cuesta lavar?
+**Bot:** En Mataró tenemos 2 lavanderías: **Goya** (Carrer Francisco de Goya 117) y **Alemanya** (C/ Alemanya 17). ¿En cuál estás?
+**Usuario:** Goya
+**Bot:** En **Goya** abrimos de **8:00 a 22:00** todos los días del año.
+
+En **Goya** los precios de las lavadoras son:
+- **Lavadoras** 20kg: 6,5€ (fidelidad) / 7€ (efectivo)
+- **Lavadoras** 10kg: 3,5€ (fidelidad) / 4€ (efectivo)
+
+💡 El datáfono cobra el importe exacto de **7€**.
+
+¿También quieres información de secadora?
+
+### Conversación 44.2 — Cliente pivota a Alemanya (F51 location switch)
+
+**Usuario:** ¿y en Alemanya?
+**Bot:** En **Alemanya** abrimos de **8:00 a 22:00** todos los días del año.
+
+En **Alemanya** los precios de las lavadoras son:
+- **L1/L2** 20kg: 7€ (fidelidad) / 8€ (efectivo)
+- **L3/L4** 10kg: 4€ (fidelidad) / 4,5€ (efectivo)
+
+⚠️ En Alemanya a veces el pago con tarjeta puede fallar — si pasa, usa monedas o pide ayuda al operador.
+
+---
+
+## Caso 45 — El cliente pregunta cómo se usa la secadora
+
+**SemanticId**: `faq-how-to-use-dryer`  
+**Kind**: FAQ (single-turn, no gather)  
+**Guard**: `utils/guards/faq-how-to-use.ts → guardFaqHowToUse` (stesso guard di Caso 35, chiave FAQ distinta)  
+**FAQ key**: `howToUseDryer` (json/faqs.json)  
+**F-log**: F103 (2026-05-24)
+
+### Trigger (frases típicas del cliente)
+
+- "¿Cómo se usa la secadora?" / "¿Cómo funciona la secadora?"
+- "¿Qué hago para secar la ropa?" / "pasos secadora"
+- "no sé cómo usar la secadora"
+- "come si usa l'asciugatrice?" / "come funziona l'asciugatrice?"
+- "how do I use the dryer?" / "how does the dryer work?"
+- "comment utiliser le sèche-linge?" / "com s'usa l'assecadora?"
+- "como usar a secadora?"
+
+### Descripción
+
+El cliente no sabe cómo usar la secadora (primera visita, o simplemente no recuerda los pasos). El bot responde con las instrucciones de uso de la secadora, incluyendo el paso de pago y la nota sobre la puerta abierta durante el ciclo.
+
+**Per-location override**: instrucciones distintas por local configuradas en `json/locations.json:faqOverrides.howToUseDryer`. La variante principal es el método de pago (card-only para L'Escala/PlatjaDAro; efectivo+monedas para las otras 4). Sin override, se usa la entrada global `json/faqs.json:howToUseDryer`.
+
+**Mismo guard que Caso 35** (`guardFaqHowToUse`): el guard detecta tanto "lavadora" como "secadora" en el trigger, y distingue por la clave FAQ (`howToUse` vs `howToUseDryer`). Esto evita duplicar código de guard.
+
+**Pivot mid-flow**: igual que Caso 35, el guard dispara en cualquier turno via mecanismo `faqPause` (F28).
+
+### Criterios de aceptación
+
+1. El bot responde con instrucciones de la secadora de `json/faqs.json:howToUseDryer` (o el override per-location).
+2. Si la location del cliente está conocida, usa `faqOverrides.howToUseDryer` específico de ese local.
+3. Si la location NO está conocida, usa la entrada global de faqs.json.
+4. NUNCA pregunta "¿lavadora o secadora?" como primera respuesta — el cliente ya indicó "secadora".
+5. Incluye la nota sobre la puerta: la puerta puede abrirse durante el ciclo (a diferencia de la lavadora).
+6. Incluye el aviso de +5min antes del fin: cuando quedan ~5 minutos, el cliente puede añadir tiempo.
+7. Funciona en los 6 idiomas via rephrase LLM.
+
+### Conversación 45.1 — Cold start sin location (ES)
+
+**Usuario:** ¿Cómo se usa la secadora?  
+**Bot:** Para usar la secadora, sigue estos pasos:
+
+1. **Mete la ropa en la secadora** y cierra la puerta.
+2. **Dirígete a la central de pago** y efectúa el pago seleccionando el número de secadora.
+3. **Elige el programa**: Alta temperatura (para ropa resistente), Media (para ropa normal) o Baja (para ropa delicada).
+4. **Durante el ciclo** puedes abrir la puerta en cualquier momento si lo necesitas.
+5. **Consejo**: cuando queden ~5 minutos, puedes añadir más tiempo (+5 min) se ves que la ropa no está del todo seca.
+
+### Conversación 45.2 — Cliente en Goya (faqOverride location-specific)
+
+**Usuario:** Estoy en Goya. ¿Cómo funciona la secadora?  
+**Bot:** *(responde con el howToUseDryer override de Goya, incluyendo pasos específicos de pago con monedas/billetes/tarjeta y central)*
+
+### Conversación 45.3 — Cliente en L'Escala (card-only)
+
+**Usuario:** como se usa la secadora, estoy en L'Escala  
+**Bot:** *(responde con el howToUseDryer override de L'Escala, mencionando pago solo con tarjeta)*
+
+### Conversación 45.4 — Multi-language (IT)
+
+**Usuario (IT):** come si usa l'asciugatrice?  
+**Bot:** *(instrucciones en italiano)*
+
+---
+
+## Caso 46 — La máquina muestra "120" (cuenta atrás fin de ciclo)
+
+**SemanticId**: `countdown-display`  
+**Kind**: display-flow (wait-state, no escalación)  
+**Handler**: `display-flows.json → countdown-display`  
+**i18n key**: `countdownGuidance` (json/i18n/*.json × 6)  
+**F-log**: F101 (2026-05-24)
+
+### Trigger (frases típicas del cliente)
+
+- "La pantalla pone 120" / "Sale el número 120"
+- "Aparece 120 en la pantalla" / "La máquina dice 120"
+- "Schermo 120" / "120 sul display" / "il display fa 120"
+- "screen shows 120" / "display says 120"
+- "écran affiche 120" / "pantalla 120"
+
+### Descripción
+
+El display de la lavadora o secadora muestra "120" — esto es un **contador de cuenta atrás** (countdown) que indica los minutos restantes del ciclo. NO es un código de alarma ni un error. El cliente debe esperar a que el contador llegue a cero y la pantalla muestre "END" para abrir la puerta.
+
+**display-flows.json**: implementado como flow `countdown-display` sin escalación. El bot guía al cliente a esperar, y cuando el cliente confirma "END" o "ha terminado" el flow se resuelve (`markResolved`).
+
+**Diferencia con códigos de alarma**: los códigos de alarma (AL001, DOOR, SEL, C001) requieren acción del cliente. El código 120 (y cualquier número puro de 3 cifras en este rango) es informativo — el cliente simplemente espera.
+
+### Criterios de aceptación
+
+1. El bot reconoce "120" (y otros números puros de countdown) como cuenta atrás normal, NO como error.
+2. El bot explica que la máquina está terminando su ciclo y pide al cliente que espere a que aparezca "END".
+3. Cuando el cliente confirma "END" / "ya terminó" / "ha acabado", el flow se resuelve sin escalación.
+4. El flow NO escala a operador — es un estado normal de la máquina.
+5. Funciona en los 6 idiomas via `countdownGuidance` i18n key.
+
+### Conversación 46.1 — Happy path (ES)
+
+**Usuario:** La pantalla pone 120  
+**Bot:** La máquina está terminando su ciclo. Por favor, espera a que la cuenta atrás termine y la pantalla muestre END — en ese momento podrás abrir la puerta.  
+**Usuario:** Ya pone END  
+**Bot:** ¡Perfecto! Puedes abrir la puerta y recoger tu ropa. ¡Hasta pronto!
+
+### Conversación 46.2 — Display 120 (IT)
+
+**Usuario (IT):** il display fa 120  
+**Bot:** *(countdownGuidance in italiano: la macchina sta terminando il ciclo, aspetta END)*
+
+### Conversación 46.3 — Display 120 (EN)
+
+**Usuario (EN):** screen shows 120  
+**Bot:** *(countdownGuidance in English: machine is finishing its cycle, wait for END)*
+
+---

@@ -75,6 +75,57 @@ export function resolveKnownLocation(rawValue: string): string | null {
   return null
 }
 
+/**
+ * Resolve ALL known laundromat names mentioned in a free-text message.
+ *
+ * Unlike resolveKnownLocation (which stops at the first match), this function
+ * collects every distinct canonical name found — returning them in the order
+ * they appear (Pass 1 canonicals first, Pass 2 aliases afterwards).
+ *
+ * Use case: Caso 36 cross-location detection — "Estoy en Goya. Compré la
+ * tarjeta en Pineda" must find both 'Goya' AND 'Pineda', so the guard can
+ * compare each against state.location and pick the one that differs.
+ *
+ * Iron rule #8: same boundary rules as resolveKnownLocation — works for all
+ * 6 supported languages since LAUNDROMATS aliases cover all of them.
+ *
+ * Exported so unit tests can exercise it in isolation (Iron rule #5).
+ */
+export function resolveAllKnownLocations(rawValue: string): string[] {
+  const normalized = stripAccents(rawValue.toLowerCase())
+  const found = new Set<string>()
+  const result: string[] = []
+
+  // Pass 1: canonical names in priority order.
+  for (const known of KNOWN_LOCATIONS) {
+    const knownNormalized = stripAccents(known.toLowerCase())
+    const escaped = knownNormalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const pattern = new RegExp(`(?:^|[^a-z0-9'])${escaped}(?:$|[^a-z0-9'])`, 'i')
+    if (pattern.test(` ${normalized} `) && !found.has(known)) {
+      found.add(known)
+      result.push(known)
+    }
+  }
+
+  // Pass 2: aliases — resolve to canonical and deduplicate.
+  const aliases = Array.from(ALIAS_TO_CANONICAL.keys()).sort(
+    (a, b) => b.length - a.length,
+  )
+  for (const alias of aliases) {
+    const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const pattern = new RegExp(`(?:^|[^a-z0-9'])${escaped}(?:$|[^a-z0-9'])`, 'i')
+    if (pattern.test(` ${normalized} `)) {
+      const canonical = ALIAS_TO_CANONICAL.get(alias)
+      if (canonical && !found.has(canonical)) {
+        found.add(canonical)
+        result.push(canonical)
+      }
+    }
+  }
+
+  return result
+}
+
 // Damerau-Levenshtein distance (counts adjacent transpositions as 1 edit).
 function editDistance(a: string, b: string): number {
   const m = a.length, n = b.length

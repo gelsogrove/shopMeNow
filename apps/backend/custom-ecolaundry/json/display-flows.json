@@ -10,7 +10,7 @@
         "replyKey": "al001GuideRetry",
         "resolvedReplyKey": "al001Resolved"
       },
-      "resolvedRegex": "(ya\\s+funciona|^funciona\\b|^ok\\s+resuelto|^resuelto\\b|^perfecto\\b|^perfetto\\b|gi[aà]\\s+funziona|ora\\s+funziona)",
+      "resolvedRegex": "(ya\\s+funciona|^funciona\\b|^ok\\s+resuelto|^resuelto\\b|^perfecto\\b|^perfetto\\b|gi[aà]\\s+funziona|ora\\s+funziona|ja\\s+funciona|ara\\s+(?:ja\\s+)?funciona|now\\s+(?:it\\s+)?works|(?:it\\s+)?works\\s+now|it'?s\\s+working|now\\s+working|^perfect\\b)",
       "persistFailureRegex": "(sigue\\s+(?:igual|sin\\s+(?:arrancar|funcionar|responder|empezar)|saliendo)|sigue\\s+(?:sin|igual)|no\\s+(?:responde|arranca|empieza|funciona|desaparece)|todav[ií]a\\s+(?:no|sale|sigue)|aun\\s+(?:no|sale|sigue)|el\\s+mensaje\\s+(?:sigue|no\\s+desaparece)|^(no|nada)\\b)",
       "reaskBeforeEscalate": true,
       "escalationReason": "AL001 sequence error — guidance did not resolve",
@@ -24,7 +24,7 @@
         "replyKey": "almDoorGuidance",
         "resolvedReplyKey": "al001Resolved"
       },
-      "resolvedRegex": "(ya\\s+(?:funciona|no\\s+aparece)|^funciona\\b|^ok\\s+resuelto|^resuelto\\b|^perfecto\\b|^perfetto\\b|ha\\s+desaparecid|desaparecid|gi[aà]\\s+funziona|ora\\s+funziona)",
+      "resolvedRegex": "(ya\\s+(?:funciona|no\\s+aparece)|^funciona\\b|^ok\\s+resuelto|^resuelto\\b|^perfecto\\b|^perfetto\\b|ha\\s+desaparecid|desaparecid|gi[aà]\\s+funziona|ora\\s+funziona|ja\\s+funciona|ara\\s+(?:ja\\s+)?funciona|ha\\s+desaparegut|now\\s+(?:it\\s+)?works|(?:it\\s+)?works\\s+now|it'?s\\s+working|^perfect\\b|gone|disappeared)",
       "persistFailureRegex": "(no\\s+desaparece|sigue\\s+(?:igual|sin\\s+arrancar|saliendo)|continua|todav[ií]a\\s+sale|aun\\s+sale|^(no|nope)\\b)",
       "escalationReason": "ALM DOOR — persists after retry"
     },
@@ -38,6 +38,17 @@
       },
       "escalationReplyKey": "code001Escalate",
       "escalationReason": "Display 001 — always escalated"
+    },
+    {
+      "id": "countdown-display",
+      "displayMatches": ["120"],
+      "requires": [],
+      "step": {
+        "replyKey": "countdownGuidance"
+      },
+      "resolvedRegex": "(ya\\s+termin[oó]|ha\\s+terminado|END|^end\\b|^fin\\b|^fatto\\b|^done\\b|^terminat\\b|ja\\s+ha\\s+acabat|j'ai\\s+fini|j[aà]\\s+(?:ha\\s+)?acabado)",
+      "reaskBeforeEscalate": false,
+      "escalationReason": null
     }
   ]
 }

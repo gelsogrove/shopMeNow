@@ -502,6 +502,109 @@ const cases: Case[] = [
     },
   },
 
+  // ── F88 — incomprehensible / truncated messages repeat the question ──────
+  // Real-world bug (Andrea 2026-05-23): user typed "how muc" (truncated
+  // "how much does it cost?") while bot was waiting for dryer confirm.
+  // Guard interpreted it as a "no" → faqClosure "¡Genial! 👍". Fix: very
+  // short messages (< 4 chars) repeat the question instead of closing.
+  {
+    name: 'F88 — "how muc" (truncated) while awaiting dryer confirm → repeat question, NOT closure',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'faq-prices-await-dryer-confirm'
+      ar.state.location = 'PlatjaDAro'
+      const out = guardFaqPricesAwaitDryerConfirm(ar, 'how muc')
+      if (!out) throw new Error('F88: expected guard to fire (repeat), got null')
+      if (out.reason !== 'faq-prices-dryer-repeat') {
+        throw new Error(`F88: expected reason=faq-prices-dryer-repeat, got "${out.reason}"`)
+      }
+      // Must NOT emit faqClosure — "¡Genial! 👍" on a question attempt is wrong
+      if (/genial|perfecto|perfect|parfait|perfetto/i.test(out.reply)) {
+        throw new Error(`F88: must NOT emit closure reply on truncated message, got "${out.reply}"`)
+      }
+      // pendingFlow must stay armed so next turn still works
+      if (ar.state.pendingFlow !== 'faq-prices-await-dryer-confirm') {
+        throw new Error('F88: pendingFlow must remain armed after repeat (waiting for real answer)')
+      }
+    },
+  },
+  {
+    name: 'F88 — "muc" (3 chars) while awaiting dryer confirm → repeat question',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'faq-prices-await-dryer-confirm'
+      ar.state.location = 'PlatjaDAro'
+      const out = guardFaqPricesAwaitDryerConfirm(ar, 'muc')
+      if (!out) throw new Error('F88: expected repeat, got null')
+      if (out.reason !== 'faq-prices-dryer-repeat') throw new Error(`expected repeat reason, got "${out.reason}"`)
+      if (ar.state.pendingFlow !== 'faq-prices-await-dryer-confirm') throw new Error('pendingFlow must stay armed')
+    },
+  },
+  {
+    name: 'F88 — empty / whitespace while awaiting dryer confirm → repeat question',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'faq-prices-await-dryer-confirm'
+      ar.state.location = 'PlatjaDAro'
+      const out = guardFaqPricesAwaitDryerConfirm(ar, '   ')
+      if (!out) throw new Error('F88: expected repeat on whitespace, got null')
+      if (out.reason !== 'faq-prices-dryer-repeat') throw new Error(`expected repeat reason, got "${out.reason}"`)
+    },
+  },
+  {
+    name: 'F88 — "no" (explicit decline) → still emits faqClosure (not regression)',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'faq-prices-await-dryer-confirm'
+      ar.state.location = 'PlatjaDAro'
+      ar.state.lastResolvedIntent = 'faq'
+      ar.state.lastFaqKey = 'pricing'
+      const out = guardFaqPricesAwaitDryerConfirm(ar, 'no')
+      if (!out) throw new Error('explicit "no" must still emit closure')
+      if (out.reason !== 'faq-prices-dryer-decline') {
+        throw new Error(`expected decline reason, got "${out.reason}"`)
+      }
+      if (ar.state.pendingFlow !== '') throw new Error('pendingFlow must clear on explicit decline')
+    },
+  },
+  {
+    name: 'F88 — "how muc" (truncated) while awaiting washer confirm → repeat question, NOT closure',
+    run: () => {
+      const ar = makeAr()
+      ar.state.pendingFlow = 'faq-prices-await-washer-confirm'
+      ar.state.location = 'PlatjaDAro'
+      const out = guardFaqPricesAwaitWasherConfirm(ar, 'how muc')
+      if (!out) throw new Error('F88: expected repeat for washer confirm, got null')
+      if (out.reason !== 'faq-prices-washer-repeat') {
+        throw new Error(`F88: expected reason=faq-prices-washer-repeat, got "${out.reason}"`)
+      }
+      if (/genial|perfecto|perfect|parfait|perfetto/i.test(out.reply)) {
+        throw new Error('F88: must NOT emit closure on truncated message')
+      }
+      if (ar.state.pendingFlow !== 'faq-prices-await-washer-confirm') {
+        throw new Error('F88: pendingFlow must remain armed for washer confirm')
+      }
+    },
+  },
+  {
+    name: 'F88 — "volevo fare una domanda" (IT, long enough) while awaiting dryer → closure (not repeat)',
+    run: () => {
+      // Long messages (≥ 4 chars) are NOT incomprehensible — they are treated
+      // as a "no" / decline per the existing F62 logic. This test pins that
+      // the F88 fix does NOT change F62 behaviour for longer messages.
+      const ar = makeAr()
+      ar.state.pendingFlow = 'faq-prices-await-dryer-confirm'
+      ar.state.location = 'PlatjaDAro'
+      ar.state.lastResolvedIntent = 'faq'
+      ar.state.lastFaqKey = 'pricing'
+      const out = guardFaqPricesAwaitDryerConfirm(ar, 'volevo fare una domanda')
+      if (!out) throw new Error('expected guard to fire (closure), got null')
+      if (out.reason !== 'faq-prices-dryer-decline') {
+        throw new Error(`expected decline reason for long non-affirmative, got "${out.reason}"`)
+      }
+    },
+  },
+
   // ── F61 — renderPrices marks lastFaqKey for F51 re-arm ──────────────────
   {
     name: 'F61 — guardFaqPrices direct render sets lastFaqKey="pricing"',

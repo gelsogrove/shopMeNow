@@ -23,6 +23,37 @@ function isAffirmative(msg: string): boolean {
   return AFFIRMATIVE_RE.test(msg.trim().toLowerCase())
 }
 
+// 6-language negative detector — explicit "no" variants.
+const NEGATIVE_RE =
+  /^(no|nope|non|não|nein|nee|na|nah|pas|jamais|nul|no\s+gracias|no\s+gràcies|no\s+grazie|no\s+obrigado|no\s+merci)(?=\s|[!?.,;]|$)/i
+
+function isNegative(msg: string): boolean {
+  return NEGATIVE_RE.test(msg.trim().toLowerCase())
+}
+
+// F88 — detect incomprehensible / truncated messages that should trigger
+// a repeat-question instead of being treated as a "decline".
+// A message is incomprehensible (in the context of a yes/no confirm question)
+// when it is short AND not a recognisable yes/no/machine-type token.
+// Threshold: ≤ 8 chars after trim covers typical truncated messages like:
+//   "how muc" (7) — truncated "how much", "wo" (2) — typo, "hm" (2), etc.
+// Messages longer than 8 chars that are not affirmative/machine are treated
+// as a decline (existing F62 behaviour: "gracias, eso es todo" → faqClosure).
+function isIncomprehensible(msg: string): boolean {
+  const trimmed = msg.trim()
+  if (trimmed.length === 0) return true
+  // Short messages that are not a clear yes/no/machine-type → incomprehensible.
+  // "lavadora" (8 chars) is a valid machine mention → NOT incomprehensible.
+  if (
+    trimmed.length <= 8 &&
+    !isAffirmative(trimmed) &&
+    !isNegative(trimmed) &&
+    !detectMachineTypeMention(trimmed)
+  )
+    return true
+  return false
+}
+
 // F87 — build a translateFn closure over the current tenant lang, to pass
 // to formatWasherPrices/formatDryerPrices so they append paymentCardOnly /
 // paymentTpvExact boundary signals. Same shape as ProgramTranslateFn from
@@ -63,6 +94,13 @@ export const guardFaqPricesAwaitDryerConfirm: Guard = (ar, userMessage) => {
   if (!ar.state.location) return null
 
   const mentionsDryer = detectMachineTypeMention(userMessage) === 'dryer'
+
+  // F88: incomprehensible / truncated message → repeat the question
+  // instead of treating it as a decline. Avoids "how muc" → faqClosure.
+  if (isIncomprehensible(userMessage)) {
+    return { reply: t('faqConfirmRepeatDryer', lang(ar)), reason: 'faq-prices-dryer-repeat' }
+  }
+
   if (!isAffirmative(userMessage) && !mentionsDryer) {
     // F62: decline → polite closure (iron rule #10 catch-all).
     // F63: also release the sticky activeBranch so T+1 re-routes through
@@ -89,6 +127,12 @@ export const guardFaqPricesAwaitWasherConfirm: Guard = (ar, userMessage) => {
   if (!ar.state.location) return null
 
   const mentionsWasher = detectMachineTypeMention(userMessage) === 'washer'
+
+  // F88: incomprehensible / truncated message → repeat the question.
+  if (isIncomprehensible(userMessage)) {
+    return { reply: t('faqConfirmRepeatWasher', lang(ar)), reason: 'faq-prices-washer-repeat' }
+  }
+
   if (!isAffirmative(userMessage) && !mentionsWasher) {
     // F62+F63: mirror of dryer-confirm — polite closure + branch release.
     ar.state.pendingFlow = ''

@@ -23,12 +23,27 @@ export type FlowNode = {
 export type FlowMap = Record<string, Record<string, FlowNode>>
 export type FaqMap = Record<string, string>
 
+/**
+ * A FAQ override value can be either a plain string (legacy: ES-only, kept
+ * for backward compatibility during the multi-lang migration) or an object
+ * keyed by SupportedLanguage carrying the per-language answer.
+ *
+ * Readers MUST use `getLocalisedFaqOverride` (utils/faq-overrides.ts) to
+ * resolve the value — direct `as string` casts are unsafe under the new
+ * schema and will crash at runtime on object-shaped entries (regression
+ * seen 2026-05-23 in Caso 10 when Goya.buy-loyalty-card was migrated and
+ * the unmigrated readers called `.trim()` on the object).
+ */
+export type FaqOverrideValue =
+  | string
+  | Partial<Record<SupportedLanguage, string>>
+
 export type LocationOverride = {
   pueblo?: string
   calle?: string
   displayName?: string
   metadata?: Record<string, unknown>
-  faqOverrides?: Record<string, string>
+  faqOverrides?: Record<string, FaqOverrideValue>
   flowOverrides?: Record<string, { prompt?: string }>
   escalationRules?: Array<{ id: string; trigger: string; action: string; reason?: string }>
 }

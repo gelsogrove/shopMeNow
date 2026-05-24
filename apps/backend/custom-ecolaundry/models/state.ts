@@ -287,4 +287,5 @@ export type SessionState = {
     | 'faq-prices-await-washer-confirm'
     | 'faq-programs-await-location'
     | 'faq-how-to-use-await-location'
+    | 'loyalty-card-await-location'
 }

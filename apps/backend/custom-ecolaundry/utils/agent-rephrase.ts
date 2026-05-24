@@ -55,6 +55,7 @@ import type { AgentMessage, AgentRuntime } from '../models/index.js'
 import { callModel } from './llm.js'
 import { LlmFetchError } from './llm-fetch.js'
 import { lang as resolveTenantLang } from './guards/helpers.js'
+import { detectLanguageHeuristic } from './intent.js'
 import { logger } from './logger.js'
 
 // Fallback system prompt used when prompts/rephrase.txt is missing or empty.
@@ -366,6 +367,26 @@ export async function rephraseForTurn(
       maxTokens: Math.max(150, Math.ceil(reply.length * 1.5)),
     })
     const polished = rephrased.trim() || reply
+
+    // F91 — Post-rephrase language guard. The rephrase LLM at T=0.6 sometimes
+    // flips the reply to a different enabled language despite LANGUAGE being
+    // marked AUTORITATIVO in prompts/rephrase.txt (F73 textual rule is not a
+    // hard guarantee). When the heuristic detects a language different from
+    // the locked tenant language, discard the polish and return the canned
+    // reply — the customer sees a less natural but linguistically correct
+    // message instead of one in the wrong language.
+    const detected = detectLanguageHeuristic(polished)
+    if (detected && detected !== tenantLang) {
+      logger.warn('rephraseForTurn discarded: language drift', {
+        expected: tenantLang,
+        detected,
+      })
+      if (isDisplayFlowRecap) {
+        const recap = buildDisplayRecap(reply, ar, tenantLang)
+        if (recap) return recap
+      }
+      return reply
+    }
 
     // Display flow recap: deterministic 4-block structure wrapping the
     // LLM-polished instruction. Guaranteed on every display turn regardless

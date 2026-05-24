@@ -22,7 +22,46 @@
 import { t } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { escalate, markResolved, requireCustomerName } from '../state-transitions.js'
-import { lang } from './helpers.js'
+import { lang, RECOVERABLE_DISPLAYS } from './helpers.js'
+
+/** Caso 4 → Caso 3 pivot — the router sometimes classifies "He pagado pero
+ *  la lavadora no empieza" (Caso 3 trigger, usecases.md:534) as `paid-not-
+ *  activated` (Caso 4) because the wording overlaps with "He pagado y no
+ *  se ha activado" (usecases.md:596). When the gather then captures a
+ *  recoverable display code (SEL/PUSH/DOOR/…), the no-change assumption
+ *  is invalidated — the display tells us the real incident is display-
+ *  driven (Caso 3/Caso 1/Caso 2), not a missing-change problem.
+ *
+ *  This guard runs BEFORE every other no-change guard. It clears
+ *  `pendingFlow` and returns null so the pipeline continues in the same
+ *  turn — `guardAutoStartMachineFlow` (later in GUARD_PIPELINE) then
+ *  starts the right display flow (case_sel / case_push / case_door / …)
+ *  using the per-language promptKey, which is what fixes the CA/EN
+ *  language drift observed in the original bug (the LLM would otherwise
+ *  improvise in Spanish because the no-change flow had no recoverable-
+ *  display branch).
+ *
+ *  Iron rule #6 respected: we detect input TYPE (recoverable-display
+ *  code already extracted by autoExtractFacts), not a content/phrase
+ *  pattern in the user message. Iron rule #8: works for every language
+ *  because RECOVERABLE_DISPLAYS is language-agnostic. */
+export const guardNoChangePivotOnDisplay: Guard = (ar) => {
+  const flow = ar.state.pendingFlow
+  const isNoChangeFlow =
+    flow === 'no-change-ask' ||
+    flow === 'no-change-await-confirm' ||
+    flow === 'no-change-await-confirmation'
+  if (!isNoChangeFlow) return null
+  if (ar.state.operatorRequested || ar.state.customerNameRequested) return null
+  const display = String(ar.state.displayState || '').toUpperCase()
+  if (!display || !RECOVERABLE_DISPLAYS.has(display)) return null
+  // Pivot: drop the no-change assumption. activeBranch stays
+  // 'trouble-machine' (we're not changing topic — same incident, correct
+  // sub-case). Return null so guardAutoStartMachineFlow takes over in the
+  // same turn and emits the canonical localised display reply.
+  ar.state.pendingFlow = ''
+  return null
+}
 
 /** Caso 4 step 4 — after location + tipo + numero, ask
  *  "¿La central te ha devuelto el cambio?". */

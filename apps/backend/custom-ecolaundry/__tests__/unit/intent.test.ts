@@ -12,6 +12,7 @@
 //   node --import tsx __tests__/unit/intent.test.ts
 
 import {
+  detectDetergentFaqIntent,
   detectDiscountCodeIntent,
   detectDisplayUnreadableIntent,
   detectDoubleChargeIntent,
@@ -400,6 +401,64 @@ const cases: Case[] = [
     run: () => {
       const r = detectLanguageHeuristic('ok')
       if (r !== null) throw new Error(`expected null, got ${r}`)
+    },
+  },
+  // Regression — Andrea chat 2026-05-23 (T2 "how are you?" flipped to ES).
+  // Short conversational EN phrases without laundry-specific keywords used
+  // to fall through to `null` and ricade in defaultLanguage. They must now
+  // be detected as EN so sticky-T1 doesn't lock the wrong language on T1
+  // greetings + follow-ups.
+  {
+    name: 'detectLanguageHeuristic: "how are you?" → en',
+    run: () => {
+      const r = detectLanguageHeuristic('how are you?')
+      if (r !== 'en') throw new Error(`expected "en", got ${r}`)
+    },
+  },
+  {
+    name: 'detectLanguageHeuristic: "not yet" → en',
+    run: () => {
+      const r = detectLanguageHeuristic('not yet')
+      if (r !== 'en') throw new Error(`expected "en", got ${r}`)
+    },
+  },
+  {
+    name: 'detectLanguageHeuristic: "no yet" (typo) → en',
+    run: () => {
+      const r = detectLanguageHeuristic('no yet')
+      if (r !== 'en') throw new Error(`expected "en", got ${r}`)
+    },
+  },
+  {
+    name: 'detectLanguageHeuristic: "thanks" → en',
+    run: () => {
+      const r = detectLanguageHeuristic('thanks')
+      if (r !== 'en') throw new Error(`expected "en", got ${r}`)
+    },
+  },
+  // ES short forms — symmetry with EN regression above. A customer answering
+  // "gracias" or "no todavía" after the welcome must stay ES, not flip to
+  // defaultLanguage by accident.
+  {
+    name: 'detectLanguageHeuristic: "gracias" → es',
+    run: () => {
+      const r = detectLanguageHeuristic('gracias')
+      if (r !== 'es') throw new Error(`expected "es", got ${r}`)
+    },
+  },
+  {
+    name: 'detectLanguageHeuristic: "todavía no" → es',
+    run: () => {
+      const r = detectLanguageHeuristic('todavía no')
+      if (r !== 'es') throw new Error(`expected "es", got ${r}`)
+    },
+  },
+  // IT short forms — symmetry.
+  {
+    name: 'detectLanguageHeuristic: "non ancora" → it',
+    run: () => {
+      const r = detectLanguageHeuristic('non ancora')
+      if (r !== 'it') throw new Error(`expected "it", got ${r}`)
     },
   },
 
@@ -1876,6 +1935,67 @@ const cases: Case[] = [
     },
   },
 
+  // ── F88 — detectMachineTypeMention IT typo tolerance for "asciurare" ─────────
+  // Live evidence (Andrea, 2026-05-23): customer typed "ciao prezzi per
+  // asciurare?" and got washer prices instead of dryer prices. The IT verb
+  // had consonant-drop of 'g' ("asciugare" → "asciurare"). Same family as
+  // F16 (typo "acrivado" for "activado"). Fix: dryerVerbs regex extended
+  // from `asciugar[eio]?` to `asciu(?:g|r)ar[eio]?`.
+  {
+    name: 'F88 detectMachineTypeMention IT typo: "asciurare" (drop g) → dryer',
+    run: () => {
+      const r = detectMachineTypeMention('ciao prezzi per asciurare?')
+      if (r !== 'dryer') throw new Error(`F88: "asciurare" must map to dryer, got ${r}`)
+    },
+  },
+  {
+    name: 'F88 detectMachineTypeMention IT typo: canonical "asciugare" still works (no regression)',
+    run: () => {
+      const r = detectMachineTypeMention('quanto costa asciugare?')
+      if (r !== 'dryer') throw new Error(`F88: canonical "asciugare" must still map to dryer, got ${r}`)
+    },
+  },
+  {
+    name: 'F88 detectMachineTypeMention IT typo: "asciurar" stem (no final vowel) → dryer',
+    run: () => {
+      const r = detectMachineTypeMention('prezzi asciurar lavanderia')
+      if (r !== 'dryer') throw new Error(`F88: "asciurar" stem must map to dryer, got ${r}`)
+    },
+  },
+  // (Conditional "asciurarei" not tested: speculative coverage,
+  //  no real-bug evidence — would expand regex preventively.)
+  {
+    name: 'F88 detectMachineTypeMention safety: "asciu" alone (no verb stem) → null',
+    run: () => {
+      const r = detectMachineTypeMention('asciu')
+      if (r !== null) throw new Error(`F88: bare "asciu" without -ar suffix must not match, got ${r}`)
+    },
+  },
+  // F88.a — CA typo: "asecar" (consonant drop of 1 's' from canonical
+  // "assecar"). Symmetric to IT "asciurare" typo per iron rule #8 (6
+  // languages by design). Same consonant-drop pattern of typing error.
+  {
+    name: 'F88.a detectMachineTypeMention CA typo: "asecar" (drop 1 of ss) → dryer',
+    run: () => {
+      const r = detectMachineTypeMention('quants costa asecar a Pineda?')
+      if (r !== 'dryer') throw new Error(`F88.a: CA "asecar" typo must map to dryer, got ${r}`)
+    },
+  },
+  {
+    name: 'F88.a detectMachineTypeMention CA canonical: "assecar" still works (no regression)',
+    run: () => {
+      const r = detectMachineTypeMention('quants costa assecar?')
+      if (r !== 'dryer') throw new Error(`F88.a: CA canonical "assecar" must still map to dryer, got ${r}`)
+    },
+  },
+  {
+    name: 'F88.a detectMachineTypeMention CA safety: "asear" (clean/dress) must NOT match',
+    run: () => {
+      const r = detectMachineTypeMention('asear')
+      if (r !== null) throw new Error(`F88.a: bare "asear" must NOT over-match as dryer, got ${r}`)
+    },
+  },
+
   // F79 — detectLandmarkMention is a thin re-export of findLandmarksInMessage
   // from utils/locations-landmarks.ts. Detailed coverage of the resolver
   // lives in __tests__/unit/locations-landmarks.test.ts (19 pins). The pins
@@ -1905,6 +2025,105 @@ const cases: Case[] = [
       if (hits.length !== 0) {
         throw new Error(`expected [], got [${hits.join(',')}]`)
       }
+    },
+  },
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // F92 — "manca / falta / missing + sapone" must be detected (real-bug
+  // Andrea CLI 2026-05-23: customer typed "mi manca il sapone" → bot drifted
+  // into display-flow troubleshooting instead of answering the FAQ).
+  // ──────────────────────────────────────────────────────────────────────────
+  {
+    name: 'F92 detectDetergentFaqIntent: IT "mi manca il sapone" → true',
+    run: () => {
+      if (!detectDetergentFaqIntent('mi manca il sapone')) throw new Error('expected true')
+    },
+  },
+  {
+    name: 'F92 detectDetergentFaqIntent: IT "manca il sapone" → true',
+    run: () => {
+      if (!detectDetergentFaqIntent('manca il sapone')) throw new Error('expected true')
+    },
+  },
+  {
+    name: 'F92 detectDetergentFaqIntent: IT typo "mi manca il sapo e" → true (truncated "sapone")',
+    run: () => {
+      if (!detectDetergentFaqIntent('mi manca il sapo e')) throw new Error('expected true')
+    },
+  },
+  {
+    name: 'F92 detectDetergentFaqIntent: ES "falta jabón" → true',
+    run: () => {
+      if (!detectDetergentFaqIntent('falta jabón')) throw new Error('expected true')
+    },
+  },
+  {
+    name: 'F92 detectDetergentFaqIntent: EN "soap is missing" → true',
+    run: () => {
+      if (!detectDetergentFaqIntent('soap is missing')) throw new Error('expected true')
+    },
+  },
+  {
+    name: 'F92 detectDetergentFaqIntent: EN "I am missing soap" → true',
+    run: () => {
+      if (!detectDetergentFaqIntent('I am missing soap')) throw new Error('expected true')
+    },
+  },
+  {
+    name: 'F92 detectDetergentFaqIntent: CA "falta sabó" → true',
+    run: () => {
+      if (!detectDetergentFaqIntent('falta sabó')) throw new Error('expected true')
+    },
+  },
+  {
+    name: 'F92 detectDetergentFaqIntent: PT "falta sabão" → true',
+    run: () => {
+      if (!detectDetergentFaqIntent('falta sabão')) throw new Error('expected true')
+    },
+  },
+  {
+    name: 'F92 detectDetergentFaqIntent: FR "il manque du savon" → true',
+    run: () => {
+      if (!detectDetergentFaqIntent('il manque du savon')) throw new Error('expected true')
+    },
+  },
+  {
+    name: 'F92 detectDetergentFaqIntent: IT "non c è sapone" (apostrofo space typo) → true',
+    run: () => {
+      if (!detectDetergentFaqIntent('non c è sapone')) throw new Error('expected true')
+    },
+  },
+  // Negatives — verify F92 verbs do NOT false-positive without a detergent word.
+  {
+    name: 'F92 detectDetergentFaqIntent: "manca pochi minuti" (no detergent word) → false',
+    run: () => {
+      if (detectDetergentFaqIntent('manca pochi minuti per finire')) throw new Error('expected false')
+    },
+  },
+  {
+    name: 'F92 detectDetergentFaqIntent: "la falta de tiempo" (no detergent word) → false',
+    run: () => {
+      if (detectDetergentFaqIntent('la falta de tiempo')) throw new Error('expected false')
+    },
+  },
+  {
+    name: 'F92 detectDetergentFaqIntent: "something is missing" (no detergent word) → false',
+    run: () => {
+      if (detectDetergentFaqIntent('something is missing')) throw new Error('expected false')
+    },
+  },
+  // F67 regression — the original "no veo jabón" must still fire after F92 widening.
+  {
+    name: 'F67 regression: detectDetergentFaqIntent ES "no veo jabón" → true (unchanged after F92)',
+    run: () => {
+      if (!detectDetergentFaqIntent('no veo jabón')) throw new Error('expected true')
+    },
+  },
+  // Post-cycle foam exclusion still works (negative shouldn't be broken by F92).
+  {
+    name: 'F92 regression: "poca espuma después del lavado" still excluded (post-cycle foam)',
+    run: () => {
+      if (detectDetergentFaqIntent('poca espuma después del lavado')) throw new Error('expected false (post-cycle foam)')
     },
   },
 

@@ -65,6 +65,20 @@ for (const msg of [
   'd\'accordo',
   'ok gracias',
   'thanks merci',
+  // F-Caso11 — Catalan acknowledgements
+  'd\'acord',
+  'entès',
+  'entes',
+  'd\'acord gràcies',
+  // F-Caso11 — French standalone "merci" (was already accepted in polite tail)
+  'merci',
+  // F97 — bare affirmatives: after loyalty-card reply (no follow-up appended
+  // by F94+F95+F96), "si" means "understood", must close FAQ cleanly.
+  'si',
+  'sí',
+  'yes',
+  'sim',
+  'oui',
 ]) {
   test(`"${msg}" → closure fires`, () => {
     const ar = makeArAfterFaq()
@@ -88,6 +102,10 @@ for (const msg of [
   'thanks but how much',
   'ok la lavadora no funciona',
   'vale, tengo otra duda',
+  // F97 — bare affirmative + follow-up must NOT close (fall through to router)
+  'si ma quanto costa',
+  'yes but how much',
+  'sim mas quanto custa',
 ]) {
   test(`"${msg}" → closure does NOT fire (must fall through to FAQ router)`, () => {
     const ar = makeArAfterFaq()

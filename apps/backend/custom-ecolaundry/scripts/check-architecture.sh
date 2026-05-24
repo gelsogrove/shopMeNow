@@ -103,7 +103,9 @@ ALLOWED_LARGE_FILES="
   utils/agent-rephrase.ts       # L5 polish layer + F72/F74/F75 deterministic display-flow recap (RECAP_STRINGS × 6 languages × ~10 lines each + buildDisplayRecap + rephraseForTurn). Single concern — splitting would fragment the contract between determinism and LLM polish.
   utils/guards/location-resolution.ts  # F82 added Mataró street-insist branch (MATARO_DONT_KNOW_RE + landmark lookup). Four related guards (mataroStreet, unknownLocation, forceLocation, insistLocation) share single concern: location resolution pipeline.
   utils/faq-location-formatter.ts  # F87 — re-exports from faq-programs-formatter + faq-payment-formatter for backward compatibility; hours + prices formatters with payment signal appending. Single concern: format FAQ replies per location. Splitting prices into 3 files (hours/washer/dryer) would fragment a single coherent story.
-  utils/guards/faq-prices.ts  # F87 — Caso 12.2 multi-phase FAQ prices flow (T1 detect + T2 location reply + T3 dryer-confirm + T3 washer-confirm + renderPrices). Grew from ~150 to ~163 lines to add buildTranslateFn closure passed to formatters so they append paymentCardOnly + paymentTpvExact boundary signals. Single concern: drive the prices FAQ flow end-to-end.
+  utils/guards/faq-prices.ts  # F88 — Caso 12.2 multi-phase FAQ prices flow (T1 detect + T2 location reply + T3 dryer-confirm + T3 washer-confirm + renderPrices). F87 grew to ~163 lines for buildTranslateFn; F88 grew to ~202 lines for isIncomprehensible + isNegative helpers and repeat logic in both confirm guards (truncated messages repeat the question instead of closing). Single concern: drive the prices FAQ flow end-to-end.
+  utils/guards/loyalty-card-buy.ts  # Caso 36 — TARJETA_TOPIC regex (with 6-lang coverage + F25/F44/F93 extensions) + detectBuyLocationInMessage + guardLoyaltyCardBuy (T1, with cross-location branch) + guardLoyaltyCardBuyAwaitLocation (T2). T1 and T2 share TARJETA_TOPIC and helpers — splitting would require cross-import between sibling files, fragmenting the single-Caso contract. 171 lines, single concern.
+  utils/message-parsing/locations.ts  # Caso 36 — resolveKnownLocation + resolveAllKnownLocations (new: returns all matches in message for cross-location detection) + resolveKnownLocationFuzzy all share KNOWN_LOCATIONS + ALIAS_TO_CANONICAL module-level data structures. Splitting would require duplicating those maps across files. Single concern: location name resolution from free text. 189 lines.
 "
 ALLOWED_LARGE_FILES=$(echo "$ALLOWED_LARGE_FILES" | sed 's/#.*$//' | tr -s ' \n' ' ')
 violations=""
@@ -253,6 +255,81 @@ if [ -f CLAUDE.md ] && [ -f "$pin_file" ]; then
   fi
 else
   echo -e "${YELLOW}skipped (CLAUDE.md or pin file missing)${NC}"
+fi
+
+# --- Caso 1 contract — PUSH PROG dynamic program list per location ----------
+# The Caso 1 (PUSH PROG) reply is built dynamically per-location from
+# json/locations.json:metadata.programs.washers, formatted by
+# utils/faq-programs-formatter.ts:formatWasherPrograms, and injected into
+# the flow-engine prompt by utils/guards/auto-start-machine-flow.ts via
+# buildPushProgList. Changing any of these three pieces without discussion
+# breaks the Caso 1 contract documented in docs/usecases.md (Caso 1 §1.1)
+# and the CSV source-of-truth at docs/csv/programes.csv.
+#
+# This check is a tripwire: if Goya loses its `programs.washers` block,
+# or the guard stops calling `buildPushProgList`, or the formatter is
+# renamed/inlined elsewhere — the build fails and Andrea is asked first.
+echo -n "  [C1] Caso 1 PUSH PROG contract (locations.programs + formatter + guard)... "
+caso1_errors=""
+
+# C1.a — Every location currently defined in locations.json MUST keep its
+# metadata.programs.washers block. The list is derived from the file itself
+# (top-level object keys under "locations"), so adding a new laundry
+# automatically extends the guard. Source of truth for content:
+# docs/csv/programes.csv.
+location_keys=$(awk '
+  /^  "locations":/ { in_locs=1; next }
+  in_locs && /^    "[A-Za-z]+":[[:space:]]*\{/ {
+    match($0, /"[A-Za-z]+"/)
+    print substr($0, RSTART+1, RLENGTH-2)
+  }
+' json/locations.json)
+for loc in $location_keys; do
+  slice=$(awk -v key="\"$loc\":" '
+    $0 ~ key { capture=1 }
+    capture && /^    "[A-Za-z]+":[[:space:]]*\{/ && $0 !~ key { exit }
+    capture { print }
+  ' json/locations.json)
+  if ! echo "$slice" | grep -q '"programs"' || ! echo "$slice" | grep -q '"washers"'; then
+    caso1_errors="$caso1_errors\n      json/locations.json: location '$loc' missing metadata.programs.washers"
+  fi
+done
+
+# C1.b — formatWasherPrograms must stay in faq-programs-formatter.ts as
+# the SINGLE source of the bullet-list format. No hardcoded duplicate
+# bullet list with "**N** —" pattern elsewhere in utils/.
+duplicates=$(grep -rEn '^\s*-\s\*\*[0-9]+\*\*\s—' utils/ --include='*.ts' 2>/dev/null \
+  | grep -v 'faq-programs-formatter.ts' || true)
+if [ -n "$duplicates" ]; then
+  caso1_errors="$caso1_errors\n      hardcoded program bullet list outside faq-programs-formatter.ts:\n$(echo "$duplicates" | sed 's/^/        /')"
+fi
+
+# C1.c — auto-start-machine-flow.ts must keep calling buildPushProgList
+# for display=PUSH; without this call the per-location dynamic list is
+# lost and every laundry falls back to the generic hardcoded prompt.
+guard_file="utils/guards/auto-start-machine-flow.ts"
+if [ -f "$guard_file" ]; then
+  # Word-boundary match: `buildPushProgList(` as an actual call, not just
+  # a substring (so a rename like buildPushProgListDISABLED is caught).
+  if ! grep -qE '\bbuildPushProgList\s*\(' "$guard_file"; then
+    caso1_errors="$caso1_errors\n      $guard_file: missing call to buildPushProgList(...) (per-location PUSH PROG list disabled)"
+  fi
+  if ! grep -qE "['\"]PUSH['\"]" "$guard_file"; then
+    caso1_errors="$caso1_errors\n      $guard_file: missing 'PUSH' display check (dynamic list injection branch removed)"
+  fi
+else
+  caso1_errors="$caso1_errors\n      $guard_file missing (Caso 1 auto-start guard removed)"
+fi
+
+if [ -n "$caso1_errors" ]; then
+  echo -e "${RED}✗${NC}"
+  echo -e "    ${RED}Caso 1 contract violations:${NC}"
+  echo -e "$caso1_errors"
+  echo -e "    ${YELLOW}Each laundry has a custom program layout (docs/csv/programes.csv).${NC}"
+  echo -e "    ${YELLOW}Discuss with Andrea before changing the formatter, the guard, or the locations.json programs block.${NC}"
+  errors=$((errors + 1))
+else
+  echo -e "${GREEN}✓${NC}"
 fi
 
 # --- summary ----------------------------------------------------------------

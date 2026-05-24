@@ -50,8 +50,11 @@ export interface DisplayFlowDefinition {
   persistFailureRegex?: string
   /** Optional override for the escalation reply prefix (defaults to `reaffirmEscalate`). */
   escalationReplyKey?: TranslationKey
-  /** Stored in `state.escalationReason` and surfaced in the operator handover. */
-  escalationReason: string
+  /**
+   * Stored in `state.escalationReason` and surfaced in the operator handover.
+   * Null when the flow is a pure wait-state with no escalation path (e.g. countdown-display).
+   */
+  escalationReason: string | null
   /**
    * When true, Phase B asks the customer to confirm the current display code
    * before escalating. Only triggers re-ask when `persistFailureRegex` matches
@@ -150,8 +153,9 @@ export function validateDisplayFlowsFile(raw: unknown): DisplayFlowsFile {
     if (f.reaskBeforeEscalate !== undefined && typeof f.reaskBeforeEscalate !== 'boolean') {
       throw new Error(`${ctx}.reaskBeforeEscalate: must be a boolean when present`)
     }
-    if (typeof f.escalationReason !== 'string' || !f.escalationReason) {
-      throw new Error(`${ctx}.escalationReason: must be a non-empty string`)
+    // escalationReason: non-empty string OR null (pure wait-state, no escalation path).
+    if (f.escalationReason !== null && (typeof f.escalationReason !== 'string' || !f.escalationReason)) {
+      throw new Error(`${ctx}.escalationReason: must be a non-empty string or null`)
     }
 
     // Phase B reachability: a flow needs at least one exit (resolved, persist,
@@ -177,7 +181,7 @@ export function validateDisplayFlowsFile(raw: unknown): DisplayFlowsFile {
       resolvedRegex: f.resolvedRegex as string | undefined,
       persistFailureRegex: f.persistFailureRegex as string | undefined,
       escalationReplyKey: f.escalationReplyKey as TranslationKey | undefined,
-      escalationReason: f.escalationReason,
+      escalationReason: f.escalationReason as string | null,
       reaskBeforeEscalate: f.reaskBeforeEscalate === true,
     }
   })

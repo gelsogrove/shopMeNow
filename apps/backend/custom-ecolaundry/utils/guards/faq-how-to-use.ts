@@ -24,15 +24,20 @@
 // out of canonical order.
 
 import { getFaqs, getLocationOverride } from '../runtime.js'
+import { getLocalisedFaqOverrideFromBlock } from '../faq-overrides.js'
 import { t } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { lang } from './helpers.js'
 import { detectHowToUseIntent, detectDiscountCodeIntent } from '../intent.js'
+import { TARJETA_TOPIC } from './loyalty-card-buy.js'
 
 function renderHowToUse(ar: Parameters<Guard>[0]): ReturnType<Guard> {
   const loc = ar.state.location
   const override = loc ? getLocationOverride(ar.runtime, loc) : null
-  const perLocation = override?.faqOverrides?.howToUse
+  // F-Caso10 (Andrea 2026-05-23): faqOverrides values are either legacy ES
+  // strings or multi-lang objects. Use the helper to resolve the session-
+  // language answer with ES fallback (instead of casting to string).
+  const perLocation = getLocalisedFaqOverrideFromBlock(override, 'howToUse', lang(ar))
   const answer = perLocation || getFaqs()['howToUse']
   if (!answer) return null
   ar.state.lastResolvedIntent = 'faq'
@@ -46,6 +51,12 @@ export const guardFaqHowToUse: Guard = (ar, userMessage) => {
   // Yield to discount-code flow: "tengo un código y no sé cómo usarlo"
   // matches howToUse ("cómo usarlo") but is really a discount-code trigger.
   if (detectDiscountCodeIntent(userMessage)) return null
+  // F93 — Yield to loyalty-card flow: "come funziona la tessera di
+  // fidelizzazione?" matches howToUse ("come funziona") but is really a
+  // loyalty card trigger. Symmetric to the discount-code gate above.
+  // Defense-in-depth: even when the L2 router LLM misclassifies the message
+  // as howToUse, this L4 gate redirects to guardLoyaltyCardBuy downstream.
+  if (TARJETA_TOPIC.test(userMessage)) return null
 
   if (!ar.state.location) {
     ar.state.pendingFlow = 'faq-how-to-use-await-location'
