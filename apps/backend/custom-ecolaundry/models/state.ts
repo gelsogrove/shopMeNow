@@ -225,6 +225,14 @@ export type SessionState = {
   // REGRESSION (Andrea, 2026-05-09): the customer typed "xxjdse7" and the
   // bot escalated immediately without giving a chance to retype.
   discountCodeAskAttempts: number
+  // Counts how many times the bot has asked "¿en qué pueblo?" inside
+  // the discount-code flow without the customer typing a recognised location.
+  // The retry ladder mirrors discountCodeAskAttempts:
+  //   0 → first unrecognised → re-ask with hint (discountCodeLocationReask)
+  //   ≥1 → escalate to operator
+  // Reset to 0 on a successful location match.
+  // BUG (2026-05-24): `|| raw` stored garbage like "boh non lo so" as location.
+  discountCodeLocationAskAttempts: number
   // Counts how many times the bot has asked "¿lavadora o secadora?" inside
   // the double-charge YES branch without the customer providing a recognisable
   // type. Same 3-strikes ladder as displayAskAttempts.

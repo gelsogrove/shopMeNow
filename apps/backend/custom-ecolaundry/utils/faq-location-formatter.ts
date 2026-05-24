@@ -27,6 +27,8 @@ export {
 import type { ProgramTranslateFn } from './faq-programs-formatter.js'
 import { readPayment as readPaymentInternal, formatPaymentSignals as formatPaymentSignalsInternal } from './faq-payment-formatter.js'
 import type { Runtime } from '../models/runtime.js'
+import type { SupportedLanguage } from '../models/index.js'
+import { t } from './localization.js'
 
 type Machine = {
   number: string
@@ -79,28 +81,54 @@ function readHours(runtime: Runtime, locationKey: string): string | null {
 }
 
 // ── Hours formatter (Caso 12.1) ──────────────────────────────────────────────
-export function formatHours(locationKey: string, runtime: Runtime): string | null {
+function hoursTemplateBylang(lang: SupportedLanguage): (displayName: string, hoursRange: string) => string {
+  const templates: Record<SupportedLanguage, (displayName: string, hoursRange: string) => string> = {
+    es: (displayName, hoursRange) => `En ${displayName}, el horario es de ${hoursRange}, todos los días.`,
+    ca: (displayName, hoursRange) => `A ${displayName}, l'horari és de ${hoursRange}, tots els dies.`,
+    en: (displayName, hoursRange) => `At ${displayName}, the opening hours are ${hoursRange} every day.`,
+    it: (displayName, hoursRange) => `A ${displayName}, orari di apertura ${hoursRange}, tutti i giorni.`,
+    pt: (displayName, hoursRange) => `Em ${displayName}, horário é ${hoursRange}, todos os dias.`,
+    fr: (displayName, hoursRange) => `À ${displayName}, les heures d'ouverture sont ${hoursRange}, tous les jours.`,
+  }
+  return templates[lang] || templates.es
+}
+
+export function formatHours(locationKey: string, runtime: Runtime, lang: SupportedLanguage = 'es'): string | null {
   const hours = readHours(runtime, locationKey)
   if (!hours) return null
   const displayName = readDisplayName(runtime, locationKey)
   const parts = hours.split('-')
-  if (parts.length !== 2) return `En ${displayName}, el horario es de ${hours}, todos los días.`
-  const [open, close] = parts
-  return `En ${displayName}, el horario es de ${open} a ${close}, todos los días.`
+  const hoursRange = parts.length === 2 ? `${parts[0]} a ${parts[1]}` : hours
+  const template = hoursTemplateBylang(lang)
+  return template(displayName, hoursRange)
 }
 
 // ── Washer prices formatter (Caso 12.2) — usecases.md §12.2 ──────────────────
+function washerPricesTemplateBylang(lang: SupportedLanguage): (displayName: string) => string {
+  const templates: Record<SupportedLanguage, (displayName: string) => string> = {
+    es: (displayName) => `En ${displayName}, los precios de lavadora son:`,
+    ca: (displayName) => `A ${displayName}, els preus de rentadora són:`,
+    en: (displayName) => `At ${displayName}, washer prices are:`,
+    it: (displayName) => `A ${displayName}, i prezzi della lavatrice sono:`,
+    pt: (displayName) => `Em ${displayName}, os preços da máquina de lavar são:`,
+    fr: (displayName) => `À ${displayName}, les prix du lave-linge sont:`,
+  }
+  return templates[lang] || templates.es
+}
+
 export function formatWasherPrices(
   locationKey: string,
   runtime: Runtime,
   translateFn?: ProgramTranslateFn,  // F87 — optional for backwards compat
+  lang: SupportedLanguage = 'es',
 ): string | null {
   const machines = readMachines(runtime, locationKey)
   if (!machines?.washers || machines.washers.length === 0) return null
   const displayName = readDisplayName(runtime, locationKey)
   const groups = groupBySpecs(machines.washers)
   const lines = groups.map((g) => formatGroupLine(g, 'Lavadoras'))
-  const base = `En ${displayName}, los precios de lavadora son:\n\n${lines.join('\n')}`
+  const template = washerPricesTemplateBylang(lang)
+  const base = `${template(displayName)}\n\n${lines.join('\n')}`
   // F87 — append boundary payment signals when payment data + translateFn present.
   if (translateFn) {
     const payment = readPaymentInternal(runtime, locationKey)
@@ -110,17 +138,31 @@ export function formatWasherPrices(
 }
 
 // ── Dryer prices formatter (Caso 12.2) ───────────────────────────────────────
+function dryerPricesTemplateBylang(lang: SupportedLanguage): (displayName: string) => string {
+  const templates: Record<SupportedLanguage, (displayName: string) => string> = {
+    es: (displayName) => `En ${displayName}, los precios de secadora son:`,
+    ca: (displayName) => `A ${displayName}, els preus de secadora són:`,
+    en: (displayName) => `At ${displayName}, dryer prices are:`,
+    it: (displayName) => `A ${displayName}, i prezzi dell'asciugatrice sono:`,
+    pt: (displayName) => `Em ${displayName}, os preços da máquina de secar são:`,
+    fr: (displayName) => `À ${displayName}, les prix du sèche-linge sont:`,
+  }
+  return templates[lang] || templates.es
+}
+
 export function formatDryerPrices(
   locationKey: string,
   runtime: Runtime,
   translateFn?: ProgramTranslateFn,  // F87
+  lang: SupportedLanguage = 'es',
 ): string | null {
   const machines = readMachines(runtime, locationKey)
   if (!machines?.dryers || machines.dryers.length === 0) return null
   const displayName = readDisplayName(runtime, locationKey)
   const groups = groupBySpecs(machines.dryers)
   const lines = groups.map((g) => formatGroupLine(g, 'Secadoras'))
-  const base = `En ${displayName}, los precios de secadora son:\n\n${lines.join('\n')}`
+  const template = dryerPricesTemplateBylang(lang)
+  const base = `${template(displayName)}\n\n${lines.join('\n')}`
   // F87 — append boundary payment signals when payment data + translateFn present.
   if (translateFn) {
     const payment = readPaymentInternal(runtime, locationKey)

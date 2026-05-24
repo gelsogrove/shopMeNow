@@ -13,6 +13,7 @@ import { detectPriceIntent, detectMachineTypeMention } from '../intent.js'
 import { releaseBranchOnFaqClosure } from '../state-transitions.js'
 import { formatWasherPrices, formatDryerPrices } from '../faq-location-formatter.js'
 import type { ProgramTranslateFn } from '../faq-programs-formatter.js'
+import type { SupportedLanguage } from '../../models/index.js'
 
 // 6-language affirmative detector. Word-end lookahead because JS \b is
 // ASCII-only and would miss accented "sí"/"sì".
@@ -114,7 +115,7 @@ export const guardFaqPricesAwaitDryerConfirm: Guard = (ar, userMessage) => {
 
   ar.state.pendingFlow = ''
   // F87 — translateFn enables paymentCardOnly + paymentTpvExact appending.
-  const formatted = formatDryerPrices(ar.state.location, ar.runtime, buildTranslateFn(ar))
+  const formatted = formatDryerPrices(ar.state.location, ar.runtime, buildTranslateFn(ar), ar.state.language as SupportedLanguage)
   return {
     reply: formatted || t('priceWarning', lang(ar)),
     reason: 'faq-prices-dryer-confirm',
@@ -144,7 +145,7 @@ export const guardFaqPricesAwaitWasherConfirm: Guard = (ar, userMessage) => {
 
   ar.state.pendingFlow = ''
   // F87 — translateFn enables paymentCardOnly + paymentTpvExact appending.
-  const formatted = formatWasherPrices(ar.state.location, ar.runtime, buildTranslateFn(ar))
+  const formatted = formatWasherPrices(ar.state.location, ar.runtime, buildTranslateFn(ar), ar.state.language as SupportedLanguage)
   return {
     reply: formatted || t('priceWarning', lang(ar)),
     reason: 'faq-prices-washer-confirm',
@@ -172,7 +173,7 @@ function renderPrices(
 
   // F58: type-specific branches also offer the OTHER type as follow-up.
   if (mentioned === 'washer') {
-    const formatted = formatWasherPrices(loc, ar.runtime, translateFn)
+    const formatted = formatWasherPrices(loc, ar.runtime, translateFn, ar.state.language as SupportedLanguage)
     if (formatted) {
       ar.state.pendingFlow = 'faq-prices-await-dryer-confirm'
       return {
@@ -183,7 +184,7 @@ function renderPrices(
     return { reply: t('priceWarning', lng), reason: 'faq-prices-washer' }
   }
   if (mentioned === 'dryer') {
-    const formatted = formatDryerPrices(loc, ar.runtime, translateFn)
+    const formatted = formatDryerPrices(loc, ar.runtime, translateFn, ar.state.language as SupportedLanguage)
     if (formatted) {
       ar.state.pendingFlow = 'faq-prices-await-washer-confirm'
       return {
@@ -195,7 +196,7 @@ function renderPrices(
   }
 
   // F53: no specific type → render washers + dryer hint.
-  const washers = formatWasherPrices(loc, ar.runtime, translateFn)
+  const washers = formatWasherPrices(loc, ar.runtime, translateFn, ar.state.language as SupportedLanguage)
   if (washers) {
     ar.state.pendingFlow = 'faq-prices-await-dryer-confirm'
     return {

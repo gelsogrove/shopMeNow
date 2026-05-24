@@ -156,12 +156,38 @@ export const guardDiscountCodeAwaitName: Guard = (ar, userMessage) => {
   return { reply: t('discountCodeAskLocation', lang(ar)), reason: 'discount-code-ask-location' }
 }
 
-/** Caso 8 step 4 — capture pueblo (or accept the raw text as location). */
+/** Caso 8 step 4 — capture pueblo.
+ *
+ *  Retry ladder (Iron rule #10 corollary) — same pattern as discountCodeAwait:
+ *    - 0 invalid attempts → re-ask with explicit list hint (discountCodeLocationReask)
+ *    - ≥1 invalid in a row → escalate to operator
+ *  Counter: ar.state.discountCodeLocationAskAttempts. Reset to 0 on success.
+ *
+ *  BUG fixed (2026-05-24): previously `|| raw` stored any unrecognised text
+ *  (e.g. "boh non lo so") as ar.state.location. Downstream guards only check
+ *  truthiness, so garbage propagated silently to the operator escalation summary.
+ */
 export const guardDiscountCodeAwaitLocation: Guard = (ar, userMessage) => {
   if (ar.state.pendingFlow !== 'discount-code-await-location') return null
   if (pivotIfTroubleSwitch(ar, userMessage)) return null  // F86
   const raw = userMessage.trim()
-  const matched = resolveKnownLocation(raw) || resolveKnownLocationFuzzy(raw) || raw
+  const matched = resolveKnownLocation(raw) || resolveKnownLocationFuzzy(raw)
+  if (!matched) {
+    // Unrecognised location — retry once, then escalate.
+    const attempts = ar.state.discountCodeLocationAskAttempts || 0
+    if (attempts >= 1) {
+      ar.state.discountCodeLocationAskAttempts = 0
+      ar.state.pendingFlow = ''
+      escalate(ar, 'Discount code — no se pudo identificar la lavandería after 2 attempts')
+      requireCustomerName(ar)
+      const escalateText = t('reaffirmEscalate', lang(ar))
+      return { reply: escalateText, reason: 'discount-code-location-escalate' }
+    }
+    ar.state.discountCodeLocationAskAttempts = attempts + 1
+    return { reply: t('discountCodeLocationReask', lang(ar)), reason: 'discount-code-location-reask' }
+  }
+  // Valid location — reset counter and advance.
+  ar.state.discountCodeLocationAskAttempts = 0
   ar.state.location = matched
   if (ar.state.machineNumber) {
     ar.state.pendingFlow = 'discount-code-await-door'

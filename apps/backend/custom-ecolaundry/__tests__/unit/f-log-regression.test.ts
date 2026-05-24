@@ -3243,6 +3243,63 @@ const cases: Case[] = [
     },
   },
 
+  // ── F106 — discount-code location guard: no raw fallback, retry ladder ──
+  // F106 (2026-05-24): `|| raw` in guardDiscountCodeAwaitLocation stored any
+  // unrecognised text as ar.state.location. Downstream guards check only truthiness,
+  // so garbage propagated silently to the operator escalation summary.
+  // Fix: removed `|| raw`; added retry ladder on discountCodeLocationAskAttempts.
+  {
+    name: 'F106 — guardDiscountCodeAwaitLocation: no `|| raw` fallback in discount-code-flow.ts',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const src = fs.readFileSync(
+        path.join(here, '..', '..', 'utils', 'guards', 'discount-code-flow.ts'),
+        'utf8',
+      )
+      // Must NOT contain `|| raw` in the location guard context
+      if (/resolveKnownLocationFuzzy\([^)]+\)\s*\|\|\s*raw/.test(src)) {
+        throw new Error('F106: `|| raw` fallback must be removed from guardDiscountCodeAwaitLocation')
+      }
+      // Must use discountCodeLocationAskAttempts counter
+      if (!src.includes('discountCodeLocationAskAttempts')) {
+        throw new Error('F106: guardDiscountCodeAwaitLocation must use discountCodeLocationAskAttempts retry ladder')
+      }
+      // Must use discountCodeLocationReask i18n key
+      if (!src.includes('discountCodeLocationReask')) {
+        throw new Error('F106: guardDiscountCodeAwaitLocation must reply with discountCodeLocationReask on first invalid attempt')
+      }
+    },
+  },
+  {
+    name: 'F106 — discountCodeLocationAskAttempts field exists in models/state.ts',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const src = fs.readFileSync(
+        path.join(here, '..', '..', 'models', 'state.ts'),
+        'utf8',
+      )
+      if (!src.includes('discountCodeLocationAskAttempts')) {
+        throw new Error('F106: discountCodeLocationAskAttempts must be declared in models/state.ts')
+      }
+    },
+  },
+  {
+    name: 'F106 — discountCodeLocationReask i18n key present in all 6 catalogues',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const langs = ['es', 'it', 'en', 'ca', 'fr', 'pt']
+      for (const lang of langs) {
+        const src = fs.readFileSync(
+          path.join(here, '..', '..', 'json', 'i18n', `${lang}.json`),
+          'utf8',
+        )
+        if (!src.includes('discountCodeLocationReask')) {
+          throw new Error(`F106: discountCodeLocationReask missing in i18n/${lang}.json`)
+        }
+      }
+    },
+  },
+
   // ── F101-Regola-A — faqHandler: qualsiasi pendingFlow non-vuoto → delegate-to-legacy ──
   // F101 Fase 1 (Andrea 2026-05-24): il faqHandler aveva due blocchi enumerati che
   // delegavano solo pendingFlow specifici (faq-*-await-location, discount-code-*, ecc.).

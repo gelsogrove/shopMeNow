@@ -51,6 +51,7 @@
   "discountCodeAsk": "Te ayudo. ¿Podrías indicarme, por favor, el código exacto tal como lo ves?",
   "discountCodeAskName": "¡Gracias! 👍 ¿Cuál es tu nombre?",
   "discountCodeAskLocation": "¿En qué pueblo / lavandería quieres usarlo?",
+  "discountCodeLocationReask": "No reconozco ese nombre. Por favor indícame la lavandería exacta: Hortes, Goya, Alemanya, Pineda, L'Escala o Platja d'Aro.",
   "discountCodeAskMachineNumber": "¿Qué número de máquina deseas usar?",
   "discountCodeAskDoor": "¿La tienes cargada y con la puerta cerrada?",
   "discountCodeFinalEscalate": "Dame un minuto, hacemos las comprobaciones correspondientes. Si el código es correcto, te activaremos la máquina.",

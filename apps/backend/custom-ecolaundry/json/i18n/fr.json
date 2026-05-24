@@ -55,6 +55,7 @@
   "discountCodeFinalEscalate": "Donne-moi une minute, on fait les vérifications. Si le code est correct, on activera la machine. 🙂",
   "discountCodeFormatInvalid": "Le code ne correspond pas au format attendu, on va le vérifier manuellement.",
   "discountCodeFormatRetry": "Ce code ne correspond pas au format attendu. Pourrais-tu vérifier et le retaper, s'il te plaît ?",
+  "discountCodeLocationReask": "Je ne reconnais pas ce nom. Dis-moi la laverie exacte : Hortes, Goya, Alemanya, Pineda, L'Escala ou Platja d'Aro.",
   "al001GuideRetry": "Ce message apparaît généralement quand le processus n'a pas été fait dans le bon ordre. Je t'aide à le compléter : dis-moi ce que tu as fait juste avant qu'il apparaisse.",
   "al001Resolved": "Parfait, problème résolu. As-tu besoin d'autre chose ?",
   "noChangeResolved": "Parfait, c'est résolu. As-tu besoin d'autre chose ?",

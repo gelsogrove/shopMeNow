@@ -70,6 +70,7 @@ export function createInitialState(): SessionState {
     displayHistory: [],
     faqPause: false,
     discountCodeAskAttempts: 0,
+    discountCodeLocationAskAttempts: 0,
     pendingFlow: '',
     invoiceData: {
       razonSocial: '',

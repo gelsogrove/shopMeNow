@@ -91,6 +91,7 @@ import { guardFaqPrograms, guardFaqProgramsAwaitLocation } from './faq-programs.
 import { guardAngryCustomerEmpathic, guardAngryCustomerEscalate, guardAngryCustomerExplicit } from './angry-customer.js'
 import { guardRefundOrCompensation } from './refund-and-compensation.js'
 import { guardContradictoryNarrative } from './contradictory-narrative.js'
+import { guardDryerMinutesStuck } from './dryer-minutes-stuck.js'
 import { guardEscalateNonTroubleshooting } from './faq-non-troubleshooting.js'
 import { guardAutoStartMachineFlow } from './auto-start-machine-flow.js'
 import { guardAdvanceMachineFlow } from './advance-machine-flow.js'
@@ -167,6 +168,7 @@ export const GUARD_PIPELINE: Guard[] = [
   guardAngryCustomerEmpathic,
   guardAngryCustomerEscalate,
   guardContradictoryNarrative,
+  guardDryerMinutesStuck,
   // Refund-form name capture must run BEFORE forceLocation/forceDisplay
   // — when the customer replies with their name after the receipt step,
   // we must capture it deterministically and close as refund-form, NOT

@@ -19,6 +19,7 @@ import type { Guard } from '../../models/index.js'
 import { lang } from './helpers.js'
 import { detectHoursIntent } from '../intent.js'
 import { formatHours } from '../faq-location-formatter.js'
+import type { SupportedLanguage } from '../../models/index.js'
 
 export const guardFaqHours: Guard = (ar, userMessage) => {
   if (ar.state.operatorRequested || ar.state.customerNameRequested) return null
@@ -29,7 +30,7 @@ export const guardFaqHours: Guard = (ar, userMessage) => {
     return { reply: t('hoursAsk', lang(ar)), reason: 'faq-hours-ask-location' }
   }
 
-  const formatted = formatHours(ar.state.location, ar.runtime)
+  const formatted = formatHours(ar.state.location, ar.runtime, ar.state.language as SupportedLanguage)
   ar.state.lastResolvedIntent = 'faq'
   // F61: mark FAQ subtype so the F51 location-switch block re-arms the
   // correct hours flow on a subsequent location pivot.
@@ -47,7 +48,7 @@ export const guardFaqHoursAwaitLocation: Guard = (ar) => {
   ar.state.pendingFlow = ''
   ar.state.lastResolvedIntent = 'faq'
   ar.state.lastFaqKey = 'openingHours'
-  const formatted = formatHours(ar.state.location, ar.runtime)
+  const formatted = formatHours(ar.state.location, ar.runtime, ar.state.language as SupportedLanguage)
   return {
     reply: formatted || t('openingHoursDefault', lang(ar)),
     reason: 'faq-hours-resolved',

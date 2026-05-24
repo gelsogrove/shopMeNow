@@ -23,10 +23,22 @@ import { pickLang, type BranchHandler, type BranchI18n } from '../types.js'
 import type { SupportedLanguage } from '../../../models/index.js'
 import { TARJETA_TOPIC } from '../../guards/loyalty-card-buy.js'
 
+// Load i18n FAQ translations from json/i18n/*.json
+const i18nRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../..', 'json', 'i18n')
+function loadI18nFaqs(lang: string): Record<string, string> {
+  try {
+    return JSON.parse(readFileSync(path.join(i18nRoot, `${lang}.json`), 'utf8')) as Record<string, string>
+  } catch {
+    return {}
+  }
+}
+
 interface FaqStrings {
   /** Returned when the router could not extract a faqKey OR the key is
    *  not in json/faqs.json. The bot apologises and offers to clarify. */
   unknownKey: string
+  // Allow dynamic access to any FAQ key (e.g. openingHours, colorTemperature, etc.)
+  [key: string]: string
 }
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
@@ -144,7 +156,10 @@ export const faqHandler: BranchHandler = async ({ message, ar, routerDetails, la
   // `.faqOverrides[faqKey]` read that returned an object verbatim for
   // migrated entries (Goya.buy-loyalty-card) and crashed downstream.
   const overrideAnswer = getLocalisedFaqOverrideFromBlock(override, faqKey, tenantLang)
-  const baseAnswer = getFaqs()[faqKey]
+  // Try to fetch the FAQ in the customer's language from i18n (CA/EN/IT/PT/FR).
+  // Fallback to ES if not found (faqs.json is ES-first).
+  const i18nFaqs = tenantLang !== 'es' ? loadI18nFaqs(tenantLang) : {}
+  const baseAnswer = i18nFaqs[faqKey] || getFaqs()[faqKey]
   const answer = overrideAnswer || baseAnswer
 
   if (!answer) {
