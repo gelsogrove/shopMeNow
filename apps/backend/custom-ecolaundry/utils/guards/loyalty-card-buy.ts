@@ -12,6 +12,12 @@ import { getLocalisedFaqOverride, getLocalisedFaqOverrideFromBlock } from '../fa
 import { resolveAllKnownLocations } from '../message-parsing.js'
 import { TARJETA_TOPIC } from '../patterns.js'
 import type { Guard, SupportedLanguage } from '../../models/index.js'
+
+// Back-compat re-export: canonical home of TARJETA_TOPIC is utils/patterns.ts,
+// but historical callers + the F-log regression pin tests import it from here.
+// Re-exporting keeps both call sites valid without forcing a cross-cutting
+// import-path rename across 10+ files.
+export { TARJETA_TOPIC }
 import { lang } from './helpers.js'
 
 /**

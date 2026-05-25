@@ -57,6 +57,40 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // Root of the custom-ecolaundry module (two levels up from __tests__/unit/)
 const ECOLAUNDRY_ROOT = path.resolve(__dirname, '..', '..')
 
+/**
+ * Read the source of a barrel-split module as a single concatenated string.
+ *
+ * Pin tests use grep on source code to assert specific patterns (regex
+ * literals, exported function names, helper constants) exist. After the
+ * iron-rule #3 barrel-split, `utils/intent.ts` and `utils/agent-extract.ts`
+ * are 50/41-line barrels that re-export from sub-cassettes under
+ * `utils/intent/*.ts` and `utils/agent-extract/*.ts`. The assertion
+ * logic is unchanged — only the search surface widens to include the
+ * sub-cassettes where the bodies actually live now.
+ */
+function readBarrelModule(barrelRelPath: string): string {
+  const abs = path.join(ECOLAUNDRY_ROOT, barrelRelPath)
+  const subDirAbs = abs.replace(/\.ts$/, '')
+  const parts: string[] = [fs.readFileSync(abs, 'utf8')]
+  if (fs.existsSync(subDirAbs) && fs.statSync(subDirAbs).isDirectory()) {
+    for (const entry of fs.readdirSync(subDirAbs).sort()) {
+      if (entry.endsWith('.ts')) {
+        parts.push(fs.readFileSync(path.join(subDirAbs, entry), 'utf8'))
+      }
+    }
+  }
+  // Pin tests grep for regex literals (e.g. "\\bfalta\\b") that the barrel
+  // and its cassettes import from utils/patterns.ts (the centralized regex
+  // catalogue). Include patterns.ts in the search surface so assertions on
+  // regex bodies still pass after the centralization.
+  const patternsPath = path.join(ECOLAUNDRY_ROOT, 'utils/patterns.ts')
+  if (fs.existsSync(patternsPath) && !barrelRelPath.endsWith('patterns.ts')) {
+    parts.push(fs.readFileSync(patternsPath, 'utf8'))
+  }
+  return parts.join('\n')
+}
+
+
 function makeAr(): AgentRuntime {
   return {
     state: createInitialState(),
@@ -863,8 +897,8 @@ const cases: Case[] = [
     name: 'F64 — agent-extract F51 block accepts previousBranch="faq" as FAQ-context signal',
     run: () => {
       const here = path.dirname(fileURLToPath(import.meta.url))
-      const p = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')
-      const content = fs.readFileSync(p, 'utf8')
+        const p = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')  // path retained for readability; content read via readBarrelModule below
+      const content = readBarrelModule('utils/agent-extract.ts')
       // The F51 conditional must accept previousBranch === 'faq' as one of
       // the FAQ-context predicates (post-F62 closure / post-F63 release).
       if (!/state\.previousBranch\s*===\s*['"]faq['"]/.test(content)) {
@@ -925,8 +959,8 @@ const cases: Case[] = [
     name: 'F61 — agent-extract.ts F51 block re-arms faq-{prices,hours}-await-location',
     run: () => {
       const here = path.dirname(fileURLToPath(import.meta.url))
-      const p = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')
-      const content = fs.readFileSync(p, 'utf8')
+        const p = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')  // path retained for readability; content read via readBarrelModule below
+      const content = readBarrelModule('utils/agent-extract.ts')
       // Both re-arms must be present, gated by lastFaqKey.
       if (
         !/state\.lastFaqKey\s*===\s*['"]pricing['"][\s\S]*?state\.pendingFlow\s*=\s*['"]faq-prices-await-location['"]/.test(
@@ -1081,8 +1115,8 @@ const cases: Case[] = [
     name: 'F58 — agent-extract.ts F51 location switch includes washer-confirm flag',
     run: () => {
       const here = path.dirname(fileURLToPath(import.meta.url))
-      const p = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')
-      const content = fs.readFileSync(p, 'utf8')
+        const p = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')  // path retained for readability; content read via readBarrelModule below
+      const content = readBarrelModule('utils/agent-extract.ts')
       if (!/faq-prices-await-washer-confirm/.test(content)) {
         throw new Error('F58: agent-extract.ts must reference faq-prices-await-washer-confirm (F51 mirror)')
       }
@@ -1195,8 +1229,8 @@ const cases: Case[] = [
     name: 'F55 — autoExtractFacts allows machineType override gated by FAQ context',
     run: () => {
       const here = path.dirname(fileURLToPath(import.meta.url))
-      const fp = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')
-      const content = fs.readFileSync(fp, 'utf8')
+        const fp = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')  // path retained for readability; content read via readBarrelModule below
+      const content = readBarrelModule('utils/agent-extract.ts')
       if (!/cameFromFaq/.test(content)) {
         throw new Error('F55: agent-extract.ts must reference cameFromFaq guard')
       }
@@ -1369,8 +1403,8 @@ const cases: Case[] = [
     name: 'F51 — autoExtractFacts has FAQ-only location switch (narrow scope)',
     run: () => {
       const here = path.dirname(fileURLToPath(import.meta.url))
-      const extractPath = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')
-      const content = fs.readFileSync(extractPath, 'utf8')
+        const extractPath = path.resolve(here, '..', '..', 'utils', 'agent-extract.ts')  // path retained for readability; content read via readBarrelModule below
+      const content = readBarrelModule('utils/agent-extract.ts')
       // The location-switch block must be gated to FAQ contexts ONLY, not
       // broadened to all flows (Andrea's "narrow scope" decision 2026-05-14).
       if (!/state\.lastResolvedIntent\s*===\s*['"]faq['"]/.test(content)) {
@@ -1510,8 +1544,8 @@ const cases: Case[] = [
       // mid-discount-code) and an explicit machine-type mention in the message
       // (MIX 5: "dryer + PUSH PROG" at T1). The named composite predicate is
       // `canCaptureDisplay`; the bare "AL001" answer trips none of these.
-      const extractPath = path.resolve(__dirname, '..', '..', 'utils', 'agent-extract.ts')
-      const content = fs.readFileSync(extractPath, 'utf8')
+        const extractPath = path.resolve(__dirname, '..', '..', 'utils', 'agent-extract.ts')  // path retained for readability; content read via readBarrelModule below
+      const content = readBarrelModule('utils/agent-extract.ts')
       // Must reference all 4 acceptable signals AND wire them into the
       // primary display-capture branch via the canCaptureDisplay name.
       if (!/canCaptureDisplay\s*=/.test(content)) {
@@ -1557,8 +1591,8 @@ const cases: Case[] = [
   {
     name: 'F67 — detectDetergentFaqIntent is exported from utils/intent.ts',
     run: () => {
-      const intentPath = path.resolve(__dirname, '..', '..', 'utils', 'intent.ts')
-      const content = fs.readFileSync(intentPath, 'utf8')
+        const intentPath = path.resolve(__dirname, '..', '..', 'utils', 'intent.ts')  // path retained for readability; content read via readBarrelModule below
+      const content = readBarrelModule('utils/intent.ts')
       if (!content.includes('export function detectDetergentFaqIntent')) {
         throw new Error('F67: detectDetergentFaqIntent must be exported from utils/intent.ts')
       }
@@ -1619,8 +1653,8 @@ const cases: Case[] = [
   {
     name: 'F69 — detectHowToUseIntent is exported from utils/intent.ts',
     run: () => {
-      const intentPath = path.resolve(__dirname, '..', '..', 'utils', 'intent.ts')
-      const content = fs.readFileSync(intentPath, 'utf8')
+        const intentPath = path.resolve(__dirname, '..', '..', 'utils', 'intent.ts')  // path retained for readability; content read via readBarrelModule below
+      const content = readBarrelModule('utils/intent.ts')
       if (!content.includes('export function detectHowToUseIntent')) {
         throw new Error('F69: detectHowToUseIntent must be exported from utils/intent.ts')
       }
@@ -2055,10 +2089,7 @@ const cases: Case[] = [
     name: 'F77 — extractDisplayState: ALM DOOR (space-separated) collapses to ALM/DOOR',
     run: () => {
       // intent.ts specificAlarmMatch must use ALM[\/ ]?DOOR (space accepted for DOOR only)
-      const intentTs = fs.readFileSync(
-        path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'),
-        'utf8',
-      )
+      const intentTs = readBarrelModule('utils/intent.ts')
       // The old form ALM\/?DOOR did NOT accept space — if it's back, this pin fires.
       if (!intentTs.includes('ALM[\\/') || !intentTs.includes(']?DOOR')) {
         throw new Error('F77: intent.ts specificAlarmMatch must use ALM[\\/  ]?DOOR to accept space-separated variant')
@@ -2152,19 +2183,13 @@ const cases: Case[] = [
       }
 
       // (b) intent.ts re-exports findLandmarksInMessage as detectLandmarkMention.
-      const intentTs = fs.readFileSync(
-        path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'),
-        'utf8',
-      )
+      const intentTs = readBarrelModule('utils/intent.ts')
       if (!intentTs.includes('findLandmarksInMessage as detectLandmarkMention')) {
         throw new Error('F79: utils/intent.ts must re-export findLandmarksInMessage as detectLandmarkMention')
       }
 
       // (c) agent-extract.ts wires the landmark fallback for location capture.
-      const agentExtractTs = fs.readFileSync(
-        path.join(ECOLAUNDRY_ROOT, 'utils/agent-extract.ts'),
-        'utf8',
-      )
+      const agentExtractTs = readBarrelModule('utils/agent-extract.ts')
       if (!agentExtractTs.includes('resolveLocationByLandmarks')) {
         throw new Error('F79: utils/agent-extract.ts must call resolveLocationByLandmarks for landmark-based location capture')
       }
@@ -2337,7 +2362,7 @@ const cases: Case[] = [
   {
     name: 'F81 — detectProgramsIntent exported from utils/intent.ts',
     run: () => {
-      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'), 'utf8')
+      const src = readBarrelModule('utils/intent.ts')
       if (!src.includes('export function detectProgramsIntent')) {
         throw new Error('F81: detectProgramsIntent must be exported from utils/intent.ts')
       }
@@ -2497,10 +2522,7 @@ const cases: Case[] = [
     // their reply is the canonical answer, not a topic switch.
     name: 'F83 — detectTopicSwitch short-circuits on non-machine pendingFlow prefixes',
     run: () => {
-      const src = fs.readFileSync(
-        path.join(ECOLAUNDRY_ROOT, 'utils/agent-extract.ts'),
-        'utf8',
-      )
+      const src = readBarrelModule('utils/agent-extract.ts')
       // Source-level assertion: the NON_MACHINE_PENDING_PREFIXES list must
       // exist and the detectTopicSwitch function must consult it.
       if (!/NON_MACHINE_PENDING_PREFIXES/.test(src)) {
@@ -2624,10 +2646,7 @@ const cases: Case[] = [
     // fix would have left the same bug latent in 8+ other gather steps.
     name: 'F86 — detectTroubleSwitchDuringFlow exists with JSON pattern topicMachineTrouble',
     run: () => {
-      const intentSrc = fs.readFileSync(
-        path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'),
-        'utf8',
-      )
+      const intentSrc = readBarrelModule('utils/intent.ts')
       if (!/export function detectTroubleSwitchDuringFlow/.test(intentSrc)) {
         throw new Error('F86: intent.ts must export detectTroubleSwitchDuringFlow')
       }
@@ -2807,10 +2826,7 @@ const cases: Case[] = [
   {
     name: 'F88.a — detectMachineTypeMention recognises typo IT "asciurare" + CA "asecar" as dryer',
     run: () => {
-      const src = fs.readFileSync(
-        path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'),
-        'utf8',
-      )
+      const src = readBarrelModule('utils/intent.ts')
       // IT typo tolerance: regex must allow consonant drop 'g' → 'r'.
       if (!/asciu\(\?:g\|r\)ar\[eio\]\?/.test(src)) {
         throw new Error('F88.a: IT verb regex must support `asciu(?:g|r)ar[eio]?` (typo asciurare)')
@@ -2996,10 +3012,7 @@ const cases: Case[] = [
   {
     name: 'F92 — detectDetergentFaqIntent negativeMarker includes IT "manca" verb',
     run: () => {
-      const src = fs.readFileSync(
-        path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'),
-        'utf8',
-      )
+      const src = readBarrelModule('utils/intent.ts')
       if (!/\\b\(\?:mi\\s\+\)\?manca\\b/.test(src)) {
         throw new Error('F92: detectDetergentFaqIntent must include IT manca verb in negativeMarker')
       }
@@ -3008,10 +3021,7 @@ const cases: Case[] = [
   {
     name: 'F92 — detectDetergentFaqIntent negativeMarker includes ES/CA/PT "falta" verb',
     run: () => {
-      const src = fs.readFileSync(
-        path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'),
-        'utf8',
-      )
+      const src = readBarrelModule('utils/intent.ts')
       if (!/\\bfalta\\b/.test(src)) {
         throw new Error('F92: detectDetergentFaqIntent must include ES/CA/PT falta verb in negativeMarker')
       }
@@ -3020,10 +3030,7 @@ const cases: Case[] = [
   {
     name: 'F92 — detectDetergentFaqIntent negativeMarker includes EN "missing" verb',
     run: () => {
-      const src = fs.readFileSync(
-        path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'),
-        'utf8',
-      )
+      const src = readBarrelModule('utils/intent.ts')
       if (!/\\bmissing\\b/.test(src)) {
         throw new Error('F92: detectDetergentFaqIntent must include EN missing verb in negativeMarker')
       }
@@ -3032,10 +3039,7 @@ const cases: Case[] = [
   {
     name: 'F92 — detectDetergentFaqIntent detergentWord includes typo "sapo" (truncated sapone)',
     run: () => {
-      const src = fs.readFileSync(
-        path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'),
-        'utf8',
-      )
+      const src = readBarrelModule('utils/intent.ts')
       // The `\bsapo\b` token must be inside the detergentWord regex literal.
       if (!/detergentWord\s*=\s*\/[^/]*\\bsapo\\b/.test(src)) {
         throw new Error('F92: detergentWord must include \\bsapo\\b (typo-tolerant truncated sapone)')
@@ -3233,7 +3237,7 @@ const cases: Case[] = [
       // The heuristic must correctly detect IT for the canonical failing input.
       // Pattern 'asciug' is in the IT regex in intent.ts.
       const here = path.dirname(fileURLToPath(import.meta.url))
-      const intentTs = fs.readFileSync(path.join(here, '..', '..', 'utils', 'intent.ts'), 'utf8')
+      const intentTs = readBarrelModule('utils/intent.ts')
       // The IT branch must include 'asciug' to match 'asciugatrice'
       const itPatternMatch = intentTs.match(/return 'it'[\s\S]{0,20}$|\/\(.*asciug.*\)/m)
         || intentTs.match(/asciug/)
