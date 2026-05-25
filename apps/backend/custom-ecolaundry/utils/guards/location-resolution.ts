@@ -8,7 +8,8 @@ import { t, tt } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { isMataro, lang } from './helpers.js'
 import { listAllLandmarks, listLaundromatsForReply } from '../locations.js'
-import { TARJETA_TOPIC } from './loyalty-card-buy.js'
+import { TARJETA_TOPIC } from '../patterns.js'
+import { MATARO_DONT_KNOW_RE } from '../patterns.js'
 
 // Escalations that skip location: operator handles via customer-account
 // history, not laundromat (refund / compensation demands, cameras / AJAX).
@@ -17,10 +18,6 @@ const INCIDENTS_NO_LOCATION_REQUIRED: ReadonlySet<string> = new Set([
   'refund-demand',
   'compensation-demand',
 ])
-
-// F82 — "I don't know which Mataró laundromat" — 6 languages.
-const MATARO_DONT_KNOW_RE =
-  /^(no\s+lo\s+s[eé]|no\s+s[eé]|no\s+me\s+acuerdo|ni\s+idea|no\s+tengo\s+idea|non\s+lo\s+s[eo]|non\s+s[eo]|non\s+ricordo|non\s+mi\s+ricordo|i\s+don'?t\s+know|no\s+idea|not\s+sure|no\s+ho\s+s[eé]|no\s+ho\s+idea|no\s+sap|je\s+(?:ne\s+)?sais\s+pas|j'?en\s+sais\s+pas|pas\s+s[uû]r|não\s+sei|não\s+me\s+lembro|não\s+tenho\s+ideia)(?:\s|$|[.,!?])/i
 
 /** G2.5 — Mataró street: as soon as the customer names Mataró as location,
  *  ask the street BEFORE asking machine type/number/display.

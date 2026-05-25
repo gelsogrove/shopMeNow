@@ -47,10 +47,18 @@ export function undoResolved(ar: AgentRuntime): void {
  * Mark the current conversation as escalated to a human operator. The
  * actual handover summary is built later by `agent.ts:appendEscalationSummary`
  * using `ar.pendingEscalation` and `ar.state.customerName`.
+ *
+ * Also switches `activeBranch` to `'escalation'` so the state truthfully
+ * reflects WHERE the conversation is now (no longer in trouble-machine /
+ * payment / faq / wherever the router originally placed it). Mirrors the
+ * branch-router contract: every behavioural pivot updates activeBranch.
+ * Without this, downstream introspection (logs, tests, debug snapshots)
+ * would still report the pre-escalation branch.
  */
 export function escalate(ar: AgentRuntime, reason: string): void {
   ar.state.escalationReason = reason
   ar.state.operatorRequested = true
+  ar.state.activeBranch = 'escalation'
   ar.pendingEscalation = { reason }
 }
 

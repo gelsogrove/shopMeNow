@@ -15,6 +15,9 @@
 #       pendingEscalation / customerNameRequested / escalationReason
 #       outside utils/state-transitions.ts.
 #   #5  Every utils/<detector>.ts has a sibling __tests__/unit/<detector>.test.ts.
+#   #11 Every F-log entry in CLAUDE.md has a pin in f-log-regression.test.ts.
+#   #12 i18n parity: every json/i18n/<lang>.json exposes the same set of
+#       top-level keys as en.json (the baseline). Meta keys ("_*") ignored.
 #
 # Exit non-zero on any violation. Used by the root pre-commit hook.
 
@@ -106,6 +109,7 @@ ALLOWED_LARGE_FILES="
   utils/guards/faq-prices.ts  # F88 — Caso 12.2 multi-phase FAQ prices flow (T1 detect + T2 location reply + T3 dryer-confirm + T3 washer-confirm + renderPrices). F87 grew to ~163 lines for buildTranslateFn; F88 grew to ~202 lines for isIncomprehensible + isNegative helpers and repeat logic in both confirm guards (truncated messages repeat the question instead of closing). Single concern: drive the prices FAQ flow end-to-end.
   utils/guards/loyalty-card-buy.ts  # Caso 36 — TARJETA_TOPIC regex (with 6-lang coverage + F25/F44/F93 extensions) + detectBuyLocationInMessage + guardLoyaltyCardBuy (T1, with cross-location branch) + guardLoyaltyCardBuyAwaitLocation (T2). T1 and T2 share TARJETA_TOPIC and helpers — splitting would require cross-import between sibling files, fragmenting the single-Caso contract. 171 lines, single concern.
   utils/message-parsing/locations.ts  # Caso 36 — resolveKnownLocation + resolveAllKnownLocations (new: returns all matches in message for cross-location detection) + resolveKnownLocationFuzzy all share KNOWN_LOCATIONS + ALIAS_TO_CANONICAL module-level data structures. Splitting would require duplicating those maps across files. Single concern: location name resolution from free text. 189 lines.
+  utils/patterns.ts  # Centralized regex library (Iron rule #6 tracked exemption: FAQ topic classifiers + Iron rule #8 multi-lang heuristics). 40+ patterns organized by category (FAQ topic, yes/no, signal detection, display state, location/boundary, greetings, machine type, detergent FAQ, language detection × 6 langs, name validation, sanitization). Pure JSDoc-documented pattern definitions tested indirectly by all guard/intent unit tests.
 "
 ALLOWED_LARGE_FILES=$(echo "$ALLOWED_LARGE_FILES" | sed 's/#.*$//' | tr -s ' \n' ' ')
 violations=""
@@ -150,7 +154,7 @@ fi
 # --- Rule #5 — every detector has a sibling test ----------------------------
 echo -n "  [#5] every utils/<detector>.ts has a sibling unit test... "
 # These are infra/glue, not detectors — exempt from the test-sibling rule.
-EXEMPT="agent-llm cli llm-fetch logger runtime localization message-parsing locations agent-prompt agent-welcome agent-rephrase operator-briefing display-state llm relative-date agent-tools agent-extract router-prompt faq-location-formatter faq-programs-formatter faq-payment-formatter"
+EXEMPT="agent-llm cli llm-fetch logger runtime localization message-parsing locations agent-prompt agent-welcome agent-rephrase operator-briefing display-state llm relative-date agent-tools agent-extract router-prompt faq-location-formatter faq-programs-formatter faq-payment-formatter patterns"
 # agent-tools: pure OpenAI tool schema declarations, no logic to test.
 # agent-extract: multi-language extractor cassette covered indirectly by
 #   __tests__/agent/* E2E tests; pure-unit tests would duplicate them.
@@ -164,6 +168,9 @@ EXEMPT="agent-llm cli llm-fetch logger runtime localization message-parsing loca
 #   Caso 12.2 cardOnly + tpvExact); tested by __tests__/unit/faq-location-formatter.test.ts
 #   which imports readPayment + tests the integration with formatWasherPrices /
 #   formatDryerPrices (re-exported via faq-location-formatter.ts).
+# patterns: centralized regex library (Iron rule #6 tracked exemption). Pure
+#   pattern definitions with JSDoc — tested indirectly by all guard/intent unit
+#   tests that use these patterns (loyalty-card-buy.test.ts, faq-prices.test.ts, etc.).
 missing=""
 while IFS= read -r f; do
   base="$(basename "$f" .ts)"
@@ -255,6 +262,47 @@ if [ -f CLAUDE.md ] && [ -f "$pin_file" ]; then
   fi
 else
   echo -e "${YELLOW}skipped (CLAUDE.md or pin file missing)${NC}"
+fi
+
+# --- Rule #12 — i18n catalogue parity across enabled languages --------------
+# Every language file under json/i18n/*.json must expose the SAME set of
+# top-level keys (FAQ + state-machine strings). A missing key means a silent
+# fallback or runtime crash when the tenant switches language. EN is the
+# baseline (most complete). We diff each lang against EN and fail on any
+# delta. Meta keys starting with "_" (comments, sections) are ignored from
+# the diff because they document the file, not behaviour.
+echo -n "  [#12] i18n catalogue parity (es/it/en/ca/pt/fr)... "
+i18n_dir="json/i18n"
+baseline="$i18n_dir/en.json"
+if [ -d "$i18n_dir" ] && [ -f "$baseline" ]; then
+  if ! command -v jq >/dev/null 2>&1; then
+    echo -e "${YELLOW}skipped (jq not installed)${NC}"
+  else
+    baseline_keys=$(jq -r 'keys[] | select(startswith("_") | not)' "$baseline" | sort)
+    parity_errors=""
+    for f in "$i18n_dir"/*.json; do
+      lang=$(basename "$f" .json)
+      [ "$lang" = "en" ] && continue
+      lang_keys=$(jq -r 'keys[] | select(startswith("_") | not)' "$f" | sort)
+      missing=$(comm -23 <(echo "$baseline_keys") <(echo "$lang_keys"))
+      extra=$(comm -13 <(echo "$baseline_keys") <(echo "$lang_keys"))
+      if [ -n "$missing" ] || [ -n "$extra" ]; then
+        parity_errors="$parity_errors\n      ${lang}:"
+        [ -n "$missing" ] && parity_errors="$parity_errors\n        missing vs en: $(echo $missing | tr '\n' ' ')"
+        [ -n "$extra" ]   && parity_errors="$parity_errors\n        extra vs en:   $(echo $extra | tr '\n' ' ')"
+      fi
+    done
+    if [ -n "$parity_errors" ]; then
+      echo -e "${RED}✗${NC}"
+      echo -e "    ${RED}i18n parity violations (en.json is the baseline):${NC}$parity_errors"
+      echo -e "    ${YELLOW}Add the missing keys (or remove extra ones) so every language exposes the same set.${NC}"
+      errors=$((errors + 1))
+    else
+      echo -e "${GREEN}✓${NC}"
+    fi
+  fi
+else
+  echo -e "${YELLOW}skipped (json/i18n/en.json missing)${NC}"
 fi
 
 # --- Caso 1 contract — PUSH PROG dynamic program list per location ----------

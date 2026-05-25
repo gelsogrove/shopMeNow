@@ -1,5 +1,8 @@
 {
   "_comment": "Localised strings for tenant ecolaundry (Ecolaundry). Lang: en. Source of truth: this file. ES is the base catalogue; every key here must mirror the keys in es.json.",
+  "_section_washer_flow": "Prompts for washer_hs60xx.json machine flow nodes",
+  "_section_dryer_flow": "Prompts for dryer_ed340.json machine flow nodes",
+  "_emoji_policy": "Max 1 emoji per reply, at the end (or at the start for greetings). Use 👋 only on greetings/welcome. NEVER on technical gather questions (machineType/Number/display/etc.) or formal forms (customerNameAsk). 🙏 on escalation/handover, ✅+🎉 on resolution, 🔧 on hands-on instructions, 👍 on positive acknowledgements, 💚 on empathy. See prompts/agent.txt → 😊 EMOJI POLICY.",
   "location": "Which laundry are you at right now?",
   "greetingOpen": "Tell me, how can I help you?",
   "locationClarification": "Sorry, can you tell me where the laundry is?",
@@ -110,8 +113,6 @@
   "refundFormFinal": "Thanks, {name}! 🙏 We have received all the information needed for your case. Here is the refund form, please complete it when you can: {refundFormUrl}\n\nWe will review your situation. If you need anything else, I'm here to help. 💚",
   "flowResumePrompt": "Shall we continue with the laundry issue?",
   "flowEngineEscalate": "A human operator will take care of your case as soon as possible. 🙏 May I have your name, please?",
-
-  "_section_washer_flow": "Prompts for washer_hs60xx.json machine flow nodes",
   "washerStep0Confirm": "No worries, let's sort it out. Have you already completed the payment at the payment unit?",
   "washerPayHelp": "No problem.\n\n1. Go to the payment unit.\n2. Insert coins or use your card.\n3. Select your machine number.\n4. Press the programme button.\n5. Close the door.",
   "washerPayRetry": "Were you able to complete the payment?",
@@ -168,8 +169,6 @@
   "washerPostCicloFoam": "Little foam is normal. Industrial detergent produces less visible foam but cleans just as well.",
   "washerPostCicloEscalate": "A human operator will handle your case as soon as possible. Would you accept a phone call from one of our agents to help you now?",
   "washerPostCicloOk": "✅ Perfect. All sorted.",
-
-  "_section_dryer_flow": "Prompts for dryer_ed340.json machine flow nodes",
   "dryerStep0Confirm": "Have you already paid for the dryer and has the cycle started?",
   "dryerPayHelp": "Please complete the payment at the unit and select the dryer number to start the cycle.\n\nThen tell me if the dryer has started.",
   "dryerProblemCheck": "What exactly appears on the screen?",

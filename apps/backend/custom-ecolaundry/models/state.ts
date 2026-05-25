@@ -90,7 +90,7 @@ export type SessionState = {
    * — without re-arm, the next guard pass falls through to the LLM and
    * improvises (Bug A in Andrea's 2026-05-15 mixed-flow chat).
    */
-  lastFaqKey: 'pricing' | 'openingHours' | 'programs' | 'howToUse' | null
+  lastFaqKey: 'pricing' | 'openingHours' | 'programs' | 'howToUse' | 'paymentMethods' | null
   escalationReason: string | null
   operatorRequested: boolean
   customerName: string | null

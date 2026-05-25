@@ -14,19 +14,11 @@ import { releaseBranchOnFaqClosure } from '../state-transitions.js'
 import { formatWasherPrices, formatDryerPrices } from '../faq-location-formatter.js'
 import type { ProgramTranslateFn } from '../faq-programs-formatter.js'
 import type { SupportedLanguage } from '../../models/index.js'
-
-// 6-language affirmative detector. Word-end lookahead because JS \b is
-// ASCII-only and would miss accented "sí"/"sì".
-const AFFIRMATIVE_RE =
-  /^(yes|y|si|sì|sí|sim|oui|és|d'accord|claro|vale|ok|adelante|certo)(?=\s|[!?.,;]|$)/i
+import { AFFIRMATIVE_RE, NEGATIVE_RE } from '../patterns.js'
 
 function isAffirmative(msg: string): boolean {
   return AFFIRMATIVE_RE.test(msg.trim().toLowerCase())
 }
-
-// 6-language negative detector — explicit "no" variants.
-const NEGATIVE_RE =
-  /^(no|nope|non|não|nein|nee|na|nah|pas|jamais|nul|no\s+gracias|no\s+gràcies|no\s+grazie|no\s+obrigado|no\s+merci)(?=\s|[!?.,;]|$)/i
 
 function isNegative(msg: string): boolean {
   return NEGATIVE_RE.test(msg.trim().toLowerCase())

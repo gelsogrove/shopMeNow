@@ -228,3 +228,48 @@ Examples:
 
   Customer: "comment fonctionne la carte de fidélité?"
   → {"branch":"faq","language":"fr","details":{"faqKey":"loyaltyCard"}}
+
+  Customer: "¿Cómo se paga?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "Come si paga?"
+  → {"branch":"faq","language":"it","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "How can I pay?"
+  → {"branch":"faq","language":"en","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "Com es paga?"
+  → {"branch":"faq","language":"ca","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "Como se paga?"
+  → {"branch":"faq","language":"pt","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "Comment payer?"
+  → {"branch":"faq","language":"fr","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "¿Qué formas de pago aceptáis?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "Quali metodi di pagamento accettate?"
+  → {"branch":"faq","language":"it","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "Do you accept credit cards?"
+  → {"branch":"faq","language":"en","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "I don't have a credit card"
+  → {"branch":"faq","language":"en","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "¿Aceptáis tarjeta?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "No tengo tarjeta de crédito"
+  → {"branch":"faq","language":"es","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "No tengo efectivo"
+  → {"branch":"faq","language":"es","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "Acceptate contanti?"
+  → {"branch":"faq","language":"it","details":{"faqKey":"paymentMethods"}}
+
+  Customer: "¿Se puede pagar con móvil?"
+  → {"branch":"faq","language":"es","details":{"faqKey":"paymentMethods"}}

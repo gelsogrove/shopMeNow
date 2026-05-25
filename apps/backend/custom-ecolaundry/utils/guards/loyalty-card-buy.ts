@@ -10,6 +10,7 @@ import { t } from '../localization.js'
 import { getFaqs } from '../runtime.js'
 import { getLocalisedFaqOverride, getLocalisedFaqOverrideFromBlock } from '../faq-overrides.js'
 import { resolveAllKnownLocations } from '../message-parsing.js'
+import { TARJETA_TOPIC } from '../patterns.js'
 import type { Guard, SupportedLanguage } from '../../models/index.js'
 import { lang } from './helpers.js'
 
@@ -65,7 +66,7 @@ function getLoyaltyOverride(ar: Parameters<Guard>[0], language: SupportedLanguag
 // customer already has a card from another location and asks if it works here.
 // Pattern: (possession verb) + (optional article) + (card word) — covers all
 // 6 languages (Iron rule #8).
-export const TARJETA_TOPIC = /(tar[gj]eta\s+(?:de\s+)?(?:fidelizaci[oó]n|fidelitzaci[oó]|fidelidad|descuento)|tessera\s+(?:di\s+)?(?:fidelizzazione|fedelt[aà]|fidelizaci[oó]ne)|loyalty\s+card|carta\s+fedelt[aà]|carta\s+de\s+fidelidade|carte\s+de\s+fid[ée]lit[ée]|c[oó]mo\s+(?:consigo|comprar|recargar|saco|adquiero|tengo)\s+(?:la\s+|una\s+)?tarjeta|com\s+(?:aconsegueixo|comprar|adquirir|tinc)\s+(?:la\s+|una\s+)?tar[gj]eta|how\s+(?:do\s+i\s+)?(?:get|buy|obtain)\s+(?:the\s+|a\s+)?loyalty\s+card|(?:quiero|necesito|me\s+gustar[ií]a|quisiera|vull|voldria|necessito|i\s+want|i\s+need|i'd\s+like)\s+(?:comprar\s+|tener\s+|conseguir\s+|sacar\s+|adquirir\s+|to\s+(?:buy|get|obtain)\s+)?(?:una?\s+|la\s+|el\s+|mi\s+|otra\s+|the\s+|a\s+)?(?:nueva\s+|nuevita\s+|new\s+)?(?:tar[gj]eta|loyalty\s+card)|(?:tengo|tiene|tienen|tinc|té|j'ai|ho(?:\s+(?:comprato|preso))?|comprei|compré|i\s+(?:have|bought|got))\s+(?:una?\s+|la\s+|mi\s+|the\s+|ma\s+|une?\s+|o\s+)?(?:tar[gj]eta|tessera|targeta|loyalty\s+card|carte?\s+(?:de\s+fid[ée]lit[ée]|fedelt[aà]|fidelidade)?|cart[aã]o))/i
+// NOTE: TARJETA_TOPIC is now centralized in utils/patterns.ts
 
 /**
  * Caso 36 — Detect the "buy location" (i.e. a laundry different from the

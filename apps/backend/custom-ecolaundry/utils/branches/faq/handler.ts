@@ -21,7 +21,7 @@ import { getFaqs, getLocationOverride } from '../../runtime.js'
 import { getLocalisedFaqOverrideFromBlock } from '../../faq-overrides.js'
 import { pickLang, type BranchHandler, type BranchI18n } from '../types.js'
 import type { SupportedLanguage } from '../../../models/index.js'
-import { TARJETA_TOPIC } from '../../guards/loyalty-card-buy.js'
+import { TARJETA_TOPIC } from '../../patterns.js'
 
 // Load i18n FAQ translations from json/i18n/*.json
 const i18nRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../..', 'json', 'i18n')
@@ -75,13 +75,15 @@ export const faqHandler: BranchHandler = async ({ message, ar, routerDetails, la
 
   const faqKey = routerDetails.faqKey
 
-  // Post-FAQ closure (Andrea T4 fix 2026-05-14): after a data-driven FAQ
-  // rendered (hours / prices), state.lastResolvedIntent === 'faq'. The
-  // branch is still sticky and T2+ skips the router → routerDetails empty.
-  // If the customer sends a closure word ("gracias", "grazie", "thanks",
-  // "ok"…), the legacy `guardFaqClosure` handles it gracefully — but only
-  // when control reaches the legacy pipeline. Delegate so the closure
-  // guard can fire instead of returning the unknownKey reply.
+  // F102 fluidity gate (Andrea 2026-05-24): T2+ FAQ fluidity — when the
+  // previous turn already resolved a FAQ (`lastResolvedIntent === 'faq'`)
+  // and the current message arrives WITHOUT a routerDetails.faqKey (because
+  // T2+ dispatch skips the router LLM), delegate to the legacy guard pipeline
+  // so it can pick up closure words ("gracias", "sí") and topic-switch
+  // detectors. NARROW gate: delegating on every empty faqKey would short-
+  // circuit fresh "I don't know what they want" replies (regression caught
+  // by `faq-handler-delegation.test.ts` — empty pendingFlow + empty faqKey
+  // and NO prior FAQ → MUST fall through to unknownKey, not delegate).
   if (!faqKey && ar.state.lastResolvedIntent === 'faq') {
     return { reply: '', handoff: 'delegate-to-legacy' }
   }

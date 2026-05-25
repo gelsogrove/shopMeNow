@@ -13,6 +13,7 @@ import { isMataro, lang, notInActiveSubFlow } from './helpers.js'
 import { escalate, requireCustomerName } from '../state-transitions.js'
 import { nextRetryLadderStep } from './retry-ladder.js'
 import { hasGreetingIntent } from '../intent.js'
+import { TROUBLE_SIGNAL_RE } from '../patterns.js'
 
 /** F59 (Andrea 2026-05-15) — Gate semantico FAQ context.
  *
@@ -33,8 +34,6 @@ import { hasGreetingIntent } from '../intent.js'
  *  trigger guardForceMachineType normally — when the customer explicitly
  *  says "no funciona" they are leaving the FAQ topic. Iron rule #6
  *  exception: boundary signal (topic switch), not intent classification. */
-const TROUBLE_SIGNAL_RE =
-  /\b(?:no\s+funciona|no\s+arranca|no\s+va\b|est[áa]\s+rot[ao]|non\s+funziona|non\s+parte|non\s+va\b|non\s+arranca|doesn'?t\s+work|isn'?t\s+working|doesn'?t\s+start|broken|n[aã]o\s+funciona|n[aã]o\s+arranca|ne\s+fonctionne\s+pas|ne\s+marche\s+pas|ne\s+d[ée]marre\s+pas)/i
 
 // F71 — force-gather must not fire when the customer is in a greeting context.
 // Two cases:

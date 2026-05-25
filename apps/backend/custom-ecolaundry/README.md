@@ -1,214 +1,117 @@
 # Ecolaundry Chatbot
 
-LLM-first chatbot for **Ecolaundry** (self-service laundromat chain). Single codebase, multi-tenant ready, multilingual (es, it, ca, en, pt, fr).
+LLM-first chatbot per **Ecolaundry** (catena lavanderie self-service). Modulo isolato, caricato dinamicamente da `apps/backend` via `workspace.customChatbotId`. Multi-tenant ready, multilingua (es, ca, en, it, pt, fr).
 
-```
-USER msg
-   │
-   ├── autoExtractFacts        (deterministic — pure facts only)
-   │      • location, machineType (+ fuzzy), machineNumber, displayState,
-   │        payment signal
-   │      • post-resolution reset (only on pendingClosure='resolved')
-   │
-   ├── runGuardPipeline        (small set — non-classifying guards only)
-   │      • Mataró street, FAQ closure, opening multi-step flows,
-   │        hard escalation (unknown display, contradictory narrative,
-   │        refund demand, angry customer)
-   │
-   └── LLM (system prompt + tools)   ← 90% of intent decisions
-          • reads sticky facts + canonical answer tables
-          • calls set_*, mark_resolved, escalate_to_operator
-          • multi-language reply
+## Architettura in un colpo d'occhio
+
+```mermaid
+flowchart LR
+    U[User message] --> L1[L1 Input<br/>sanitize + lang detect]
+    L1 --> L2[L2 State<br/>session + sticky facts]
+    L2 --> L3[L3 Router<br/>LLM branch classify]
+    L3 --> L4[L4 Branch<br/>guards + tool handlers]
+    L4 --> L5[L5 Polish<br/>i18n + rephrase + invariants]
+    L5 --> R[Bot reply]
+
+    L4 -. tool calls .-> T[(LLM agent<br/>+ JSON flows)]
+    T -. validated .-> L4
 ```
 
-## Quick start
+- **Deterministic side** estrae fatti enumerabili (location, machineType, displayState, codici) e apre flussi multi-step.
+- **LLM side** classifica l'intent in 6 lingue, gestisce le tangenti FAQ, mantiene il dialogo fluido.
+- **State transitions atomiche** via [`utils/state-transitions.ts`](utils/state-transitions.ts) — niente mutazioni inline.
+- **10 iron rules** documentate in [`CLAUDE.md`](CLAUDE.md), enforced da [`scripts/check-architecture.sh`](scripts/check-architecture.sh).
 
-```bash
-cd apps/backend/custom-ecolaundry
-npm run demo            # interactive REPL (LLM live)
-npm run test:agent      # full LLM scenario suite (costs ~$0.10)
-
-# Deterministic unit tests (fast, no LLM)
-node --import tsx __tests__/unit/extract-facts.test.ts
-node --import tsx __tests__/unit/display-change-mid-flow.test.ts
-node --import tsx __tests__/unit/post-resolution-reset.test.ts
-node --import tsx __tests__/unit/machine-type-fuzzy.test.ts
-node --import tsx __tests__/unit/machine-switch.test.ts
-node --import tsx __tests__/unit/full-conversation-state.test.ts
-```
-
-You need `OPENROUTER_API_KEY` in `.env`.
-
-## What it does
-
-Handles 32 documented scenarios from [`docs/usecases.md`](./docs/usecases.md):
-- **Technical incidents**: PUSH PROG, DOOR, SEL, ALM/DOOR, ALN, AL001, ERR codes
-- **Payment**: double charge, datáfono wrong amount, refund demand
-- **Cross-cutting**: angry customer, contradictory narrative, unknown location
-- **FAQ**: hours, loyalty card, prices, invoice
-- **Multi-location overrides**: Goya, Pineda, Hortes, Mataró, Alemanya, L'Escala
-
-**Multi-incident sessions are supported** — the customer can chain problems on the same machine (SEL → DOOR → PUSH PROG = display advances), switch machines (washer → dryer), and ask FAQ tangents mid-flow without losing flow state.
-
-## Architecture in one paragraph
-
-**Deterministic side** does only two things: (1) **extract facts** that are enumerable (numbers, display codes, names from a closed list, machine types via fuzzy match against a vocabulary), and (2) **open multi-step flows** by setting `state.pendingFlow` markers. **Intent classification is delegated entirely to the LLM**: yes/no answers, resolution confirmations, FAQ tangents, machine switches, and topic changes are interpreted semantically across all 6 languages by reading sticky facts + the canonical-answer tables in the system prompt. The LLM mutates state via tools (`set_location`, `set_machine_facts`, `set_display_state`, `mark_resolved`, `escalate_to_operator`). Resolution flows through `mark_resolved` → `pendingClosure='resolved'` → next-turn reset of per-incident facts (preserving location/customerName/language).
-
-**Why LLM-first?** Multi-language regex for "the customer confirmed it works" is unmaintainable: each new language needs new patterns and edge cases keep slipping through. The LLM handles all 6 languages (and any future one) for free; we only pay regex complexity for things that are genuinely enumerable.
-
-See [`docs/architecture.md`](./docs/architecture.md) for the full design (principles, responsibility table, regex-vs-LLM rule).
-
-## Repo layout
+## Layout
 
 ```
-apps/backend/custom-ecolaundry/
-├── agent.ts                  # CLI entrypoint (npm run demo)
-├── index.ts                  # web entrypoint (chatbotFn) — reuses agent.ts
-├── prompts/
-│   └── agent.txt             # system prompt: GOLDEN RULE, mandatory
-│                             # tool rules, canonical-answer tables,
-│                             # PENDING-FLOW rules
-├── models/                   # type definitions only (no runtime)
-│   ├── agent.ts              # AgentRuntime, AgentMessage, AgentSession
-│   ├── chatbot-io.ts         # ChatbotInput / ChatbotOutput contract
-│   ├── runtime.ts            # Settings, Runtime, FlowNode, …
-│   ├── state.ts              # SessionState (sticky facts shape)
-│   ├── escalation.ts         # EscalationContext
-│   ├── flow.ts               # FlowEngineResult, LlmRequest, Route
-│   ├── guards.ts             # Guard, GuardOutcome
-│   └── index.ts              # barrel re-export
+custom-ecolaundry/
+├── index.ts                 # entrypoint web (chatbotFn) — caricato da custom-client-chatbot.service
+├── agent.ts                 # CLI demo (npm run demo)
+├── prompts/agent.txt        # system prompt
+├── models/                  # type definitions (no runtime)
 ├── docs/
-│   ├── usecases.md           # 32 customer scenarios — the spec
-│   ├── reglas.md             # business rules — INJECTED in prompt
-│   ├── architecture.md       # detailed design + principles
-│   ├── settings.md           # tenant config reference
-│   ├── prompts.md            # prompt assembly walkthrough
-│   ├── TESTING.md            # test strategy
-│   └── pdf/                  # operator playbooks (reference)
+│   ├── architecture.md      # design completo + 5 layers
+│   ├── usecases.md          # 32 scenari customer (la spec)
+│   ├── f-log.md             # regression catalogue (F1..F105)
+│   ├── contracts.md         # tool validators
+│   └── csv/                 # source-of-truth operativa (orari/prezzi/programmi)
 ├── json/
-│   ├── settings.json         # tenant: enabledLanguages, defaultLanguage,
-│   │                         # welcomeMessage, agentTemperature, …
-│   ├── locations.json        # per-laundry metadata + faqOverrides
-│   ├── faqs.json             # base FAQ catalogue
-│   ├── washer_hs60xx.json    # washer technical flows (case_push, …)
-│   └── dryer_ed340.json      # dryer technical flows
+│   ├── settings.json        # tenant config (lingue, model, SMTP, ...)
+│   ├── locations.json       # metadata per locale + faqOverrides
+│   ├── i18n/{es,ca,en,it,pt,fr}.json   # catalogo testi (parità enforced)
+│   ├── cases.json           # bridge "Caso N" doc ↔ semanticId codice
+│   ├── display-flows.json   # flussi alarm/display
+│   └── {washer,dryer}_*.json # flussi tecnici per modello macchina
 ├── utils/
-│   ├── agent-extract.ts      # deterministic fact extractor
-│   ├── agent-tools.ts        # LLM-callable tool dispatcher
-│   ├── agent-prompt.ts       # system prompt assembly
-│   ├── agent-llm.ts          # OpenRouter wrapper (timeout + retry +
-│   │                         # prompt-cache headers + agentMaxTokens)
-│   ├── agent-welcome.ts      # first-turn welcome rendering
-│   ├── intent.ts             # regex helpers + Levenshtein fuzzy match
-│   │                         # for machineType
-│   ├── flow-engine.ts        # JSON multi-step flow runner
-│   ├── localization.ts       # t() / tt() across 6 languages
-│   ├── runtime.ts            # loads JSON config once
-│   ├── state.ts              # createInitialState + resetMachineFacts
-│   ├── escalation.ts         # operator handover summary
-│   ├── message-parsing.ts    # closed-set helpers (location resolve, …)
-│   ├── display-state.ts      # display token normalizer
-│   ├── llm.ts                # language detection + model resolver
-│   ├── llm-fetch.ts          # resilient fetch (timeout + retry/backoff)
-│   ├── cli.ts                # CLI banner + message printer
-│   └── guards/               # ordered deterministic guards
-│       ├── helpers.ts        # shared helpers (lang, isMataro, …)
-│       ├── payment.ts        # cambio, pagado-no-usado, código, tarjeta
-│       ├── display.ts        # AL001, ALM/DOOR, C001, numeric codes,
-│       │                     # post-instruction failure, undocumented
-│       │                     # display escalation
-│       ├── location.ts       # Mataró street, force-gather, mismatch
-│       ├── faq.ts            # closure, factura, precio, horarios,
-│       │                     # angry, refund/compensation, contradictory
-│       └── index.ts          # GUARD_PIPELINE + runGuardPipeline
-└── __tests__/
-    ├── agent/                # LLM-live scenario tests
-    │   ├── run.ts            # recursive runner
-    │   ├── _helpers.ts       # TestCase + concept-based assertions
-    │   ├── *.test.spec.ts    # one per scenario
-    │   └── locations/        # location-specific tests
-    └── unit/                 # deterministic, no LLM, fast
-        ├── extract-facts.test.ts
-        ├── display-change-mid-flow.test.ts
-        ├── post-resolution-reset.test.ts
-        ├── machine-type-fuzzy.test.ts
-        ├── machine-switch.test.ts
-        └── full-conversation-state.test.ts
+│   ├── intent/              # detector per famiglia (display, payment, faq, ...)
+│   ├── agent-extract/       # fact extraction (location, machine, topic-switch)
+│   ├── guards/              # 28 guard ordinati (1 per Caso)
+│   ├── branches/            # branch handler post-router (faq, loyalty, invoice, ...)
+│   ├── tool-handlers/       # tool refuse-or-accept logic
+│   ├── output-invariants/   # post-processor checks
+│   └── state-transitions.ts # tutte le mutazioni atomiche
+└── __tests__/unit/          # 78 file, ~1600 test, no LLM, <1s
 ```
 
-## Code-read vs prompt-read knowledge ⚠️
+## Lingue
 
-The chatbot has TWO consumers of the JSON config:
+Sei lingue supportate, parità di chiavi enforced (rule #12):
 
-| Consumer | Reads |
-|---|---|
-| **TypeScript code** | A small subset of fields used by deterministic guards/flows (e.g. `cardPaymentUnreliable`, `dryerMinutesIncreaseIssue`). Find with `grep` on `.ts`. |
-| **LLM (system prompt)** | The **entire** active-location override is JSON-serialized and injected into the system prompt every turn (see [`utils/agent-prompt.ts:buildSystemPrompt`](./utils/agent-prompt.ts) → `locationContext`). The LLM reads it to give tenant-specific answers. |
+| Lang | enabledLanguages | Note |
+|------|------------------|------|
+| es | ✅ default tenant | base canonical |
+| ca | ✅ | full |
+| en | ✅ | full |
+| it / pt / fr | ⏸ disponibili, non attive sul tenant Ecolaundry | full |
 
-**Implication:** a metadata field with zero TS references is NOT dead code — it is LLM knowledge. Examples:
-- `cardUnitPrice: "7€"` → the LLM uses it to answer "¿cuánto cuesta?" without inventing prices.
-- `centralType: "buttons"` → the LLM tailors instructions ("pulsa el botón") vs a hypothetical touch central.
-- `selfStartMachine: true` → the LLM explains whether the machine starts automatically after payment.
-- `dryerFilterSelfService: false` → the LLM tells the customer NOT to clean the filter themselves at this location.
+Per attivare una lingua: aggiungila a `settings.json:enabledLanguages` — i18n + welcome sono già pronti.
 
-When auditing for dead code, always check the prompt injection path BEFORE removing a field. `_overrideTypes.metadata` in [`json/locations.json`](./json/locations.json) documents this.
+## Settings
 
-## Regex vs LLM — the rule
+`json/settings.json` è la fonte di verità. Campi essenziali:
 
-| Use **regex** for | Use **LLM** for |
-|---|---|
-| Enumerable values (numbers, codes) | Intent (yes/no, confirmation) |
-| Closed lexical sets (display tokens, location names) | Topic changes |
-| Vocabulary + Levenshtein fuzzy (washer/dryer typos) | FAQ tangents |
-| Structural patterns (price `\d+,\d{2}€`) | Multi-language semantic decisions |
+| Campo | Valore tenant Ecolaundry | Significato |
+|-------|--------------------------|-------------|
+| `enabledLanguages` | `["es","ca","en"]` | lingue ammesse per le risposte |
+| `defaultLanguage` | `"es"` | fallback quando lang detection è incerta |
+| `model` | `"openai/gpt-4o-mini"` | OpenRouter model id |
+| `agentTemperature` | `0.3` | tono LLM (basso = deterministico) |
+| `agentMaxTokens` | `800` | cap risposta singola |
+| `maxToolHops` | `6` | iterazioni tool per turn |
+| `chatbotName` / `companyName` | `"Eco"` / `"Ecolaundry"` | branding nei prompt |
+| `discountCodePrefix` | `"SAU"` | shape codice sconto (`SAU\d{6}\d+`) |
+| `historyResetTtlMs` | `3600000` | history drop se gap > 1h |
+| `smtp` | gmail + app password | credenziali per email escalation |
+| `notificationEmails` | csv operatori | destinatari handoff humano |
 
-Adding a new language? Add it to `enabledLanguages`, push 1 word per machine type to `WASHER_VOCAB`/`DRYER_VOCAB`, add translations to `localization.ts`. **No intent regex to update** — the LLM speaks the new language for free.
+Doc completa dei campi: [`docs/settings.md`](docs/settings.md).
 
-## Tenant config
-
-Edit [`json/settings.json`](./json/settings.json):
-
-```json
-{
-  "enabledLanguages": ["es"],
-  "defaultLanguage": "es",
-  "chatbotName": "Eco",
-  "companyName": "Ecolaundry",
-  "model": "openai/gpt-4o-mini",
-  "agentTemperature": 0.3,
-  "agentMaxTokens": 800,
-  "maxToolHops": 6,
-  "historyResetTtlMs": 3600000,
-  "sessionIdleTtlMs": 1800000,
-  "welcomeMessage": { "es": "¡Hola! Soy {{chatbotName}}, …" }
-}
-```
-
-`enabledLanguages` is a hard lock — even if the customer types in Italian, the bot replies in `defaultLanguage` when Italian isn't enabled.
-
-`historyResetTtlMs` controls how long (ms) the conversation history stays live: when the gap between the last history entry and the incoming message exceeds this value, the chatbot drops the history and starts a fresh session (welcome message again, no remembered location/machine). Default 1 h. `sessionIdleTtlMs` controls in-process session eviction (default 30 min). Both read from `settings.json` at runtime.
-
-## Running tests
-
-**Unit (deterministic, fast, free)** — run any of the files under `__tests__/unit/` directly with tsx; they return non-zero exit on failure.
-
-**LLM scenarios (live OpenRouter, ~$0.10 per full run)**:
+## Comandi
 
 ```bash
-npm run test:agent              # all
-npm run test:agent -- 08-sel    # filter by name
+npm run demo             # CLI REPL (richiede OPENROUTER_API_KEY in .env)
+npm run demo -- --batch '[["ciao","tengo PUSH PROG"]]'   # scenari programmatici
+npm run typecheck        # tsc --noEmit
+npm run test:unit        # 78 file, ~1600 test (no LLM, <30s)
+bash scripts/check-architecture.sh   # 8 check architetturali (rule 1/3/4/5/9/11/12 + C1)
 ```
 
-Concept-based assertions (`expectAsksForLocation`, `expectMentionsAll`, `expectStateHas`) keep tests resilient to LLM phrasing variations. See [`docs/TESTING.md`](./docs/TESTING.md).
+## Integrazione con l'app
 
-## Production rules
+L'app principale risolve `workspace.customChatbotId === "ecolaundry"` → carica dinamicamente `custom-ecolaundry/index.ts` via `tsImport` ([custom-client-chatbot.service.ts:255](../src/application/services/custom-client-chatbot.service.ts#L255)). Il modulo espone `chatbotFn` (validato runtime). Nessuna dipendenza npm condivisa — modulo realmente isolato.
 
-1. **`docs/usecases.md` is the spec** — when test ↔ doc disagree, doc wins.
-2. Prompts live in [`prompts/agent.txt`](./prompts/agent.txt), never inline in code.
-3. No hardcoded language detection — `settings.enabledLanguages` is the source of truth.
-4. **Never use regex to classify customer intent** (yes/no, confirmation, topic). That's what the LLM is for. Regex is for enumerable facts only.
-5. **`mark_resolved` is mandatory** when the customer confirms a fix. The deterministic post-resolution reset depends on it; the prompt rule documents this in detail.
-6. Multilingual: never hardcode deterministic reply strings — use `localization.ts` `t()` / `tt()` for all customer-facing text in guards.
-7. JSON for technical flows. Small set of guards for opening flows. `reglas.md` for tone/policy.
-8. **Location-specific data belongs in `locations.json`**, not in guard code. Use `faqOverrides` for per-location FAQ answers (e.g. `openingHours`) so guards can stay generic.
-9. **Business constants belong in `settings.json`** — timeouts (`historyResetTtlMs`, `sessionIdleTtlMs`), model, temperatures, emails. See [`docs/settings.md`](./docs/settings.md) for the full reference.
+## Rules da non dimenticare
+
+1. **No patches in `prompts/agent.txt`** — i bug si fixano in codice (guard, validator, post-processor).
+2. **Tool refuses, LLM corrects** — i tool validano args + semantica.
+3. **File ≤150 righe** (whitelist con motivazione in `scripts/check-architecture.sh`).
+4. **State transitions atomiche** via `utils/state-transitions.ts`.
+5. **Ogni detector ha sibling test** (`__tests__/unit/<detector>.test.ts`).
+6. **No hardcoded phrase detection per INTENT** — l'LLM gestisce le frasi.
+7. **Settings sono legge** — `runtime.ts:validateSettings` blocca fast on misconfig.
+8. **Multi-language by design** — copertura es/it/en/ca/pt/fr.
+9. **Naming semantico, mai ordinali** — niente `casoN` in codice, bridge via `cases.json`.
+10. **Ogni gather ha catch-all + ladder 3-strikes** (`forceLocation` pattern).
+
+Dettagli ed esempi: [`CLAUDE.md`](CLAUDE.md) + [`docs/architecture.md`](docs/architecture.md).

@@ -18,8 +18,7 @@ import { parseRelativeDate } from '../relative-date.js'
 import { buildEscalationSummary, extractEscalationContext } from '../escalation.js'
 import { captureCustomerName, closeAsEscalated, escalate, requireCustomerName } from '../state-transitions.js'
 import { detectInvoiceIntent } from '../intent.js'
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
+import { EMAIL_RE } from '../patterns.js'
 
 function nextCaso9Step(
   ar: { state: { location: string; machineType: string; pendingFlow: string } },

@@ -79,6 +79,7 @@ import { guardLocationGatedMismatch } from './location-gated-mismatch.js'
 import { guardFaqClosure } from './faq-closure.js'
 import { guardFaqDetergents } from './faq-detergents.js'
 import { guardFaqHowToUse, guardFaqHowToUseAwaitLocation } from './faq-how-to-use.js'
+import { guardFaqPayment } from './faq-payment.js'
 import { guardInvoiceFlow } from './invoice-flow.js'
 import { guardFaqHours, guardFaqHoursAwaitLocation } from './faq-hours.js'
 import {
@@ -125,6 +126,10 @@ export const GUARD_PIPELINE: Guard[] = [
   // Caso 35 — FAQ how-to-use: single-turn, no gather needed.
   // Runs early for same reason — mid-flow pivot ("¿cómo se usa?" mid DOOR) works.
   guardFaqHowToUse,
+  // F102 — FAQ pagamento mid-altro-FAQ: topic-switch support.
+  // When activeBranch='faq' sticky and customer asks "come pago?", serve payment FAQ
+  // without returning unknownKey. Runs early with other FAQ guards.
+  guardFaqPayment,
   // T2 guards (location reply unlocks the answer):
   guardFaqHoursAwaitLocation,
   guardFaqPricesAwaitLocation,

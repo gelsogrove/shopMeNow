@@ -29,7 +29,7 @@ import { t } from '../localization.js'
 import type { Guard } from '../../models/index.js'
 import { lang } from './helpers.js'
 import { detectHowToUseIntent, detectDiscountCodeIntent } from '../intent.js'
-import { TARJETA_TOPIC } from './loyalty-card-buy.js'
+import { TARJETA_TOPIC } from '../patterns.js'
 
 function renderHowToUse(ar: Parameters<Guard>[0]): ReturnType<Guard> {
   const loc = ar.state.location

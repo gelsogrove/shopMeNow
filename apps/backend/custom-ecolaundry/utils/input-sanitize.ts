@@ -7,6 +7,10 @@
 // than throw): the user must always get a reply, even if their input is weird.
 
 import { logger } from './logger.js'
+import {
+  PHONE_DISALLOWED_RE,
+  MARKDOWN_SPECIALS_RE,
+} from './patterns.js'
 
 /** Max characters accepted in a single user message before truncation. */
 export const MAX_USER_MESSAGE_LENGTH = 2000
@@ -47,8 +51,6 @@ const INVISIBLE_CHARS = new RegExp(
   '[\\u200B-\\u200F\\u202A-\\u202E\\u2066-\\u2069\\uFEFF]',
   'g',
 )
-const PHONE_DISALLOWED = /[^0-9+\s()\-.]/g
-const MARKDOWN_SPECIALS = /[\\`*_{}[\]()#+\-!<>|]/g
 
 /**
  * Strip control + invisible characters and cap length. Used on the customer
@@ -75,7 +77,7 @@ export function sanitizeUserMessage(raw: string): string {
  */
 export function sanitizePhoneNumber(raw: string | undefined | null): string | undefined {
   if (typeof raw !== 'string') return undefined
-  const cleaned = raw.replace(PHONE_DISALLOWED, '').trim()
+  const cleaned = raw.replace(PHONE_DISALLOWED_RE, '').trim()
   if (!cleaned) return undefined
   // Reject values that don't have enough digits to be a real phone — keeps
   // testing placeholders ("5", "123") out of operator-visible summaries.
@@ -101,7 +103,7 @@ export function sanitizeForDisplay(raw: string | undefined | null): string {
   const cleaned = raw
     .replace(CONTROL_CHARS, '')
     .replace(INVISIBLE_CHARS, '')
-    .replace(MARKDOWN_SPECIALS, '')
+    .replace(MARKDOWN_SPECIALS_RE, '')
     .trim()
   return cleaned.length > MAX_DISPLAY_LENGTH
     ? cleaned.slice(0, MAX_DISPLAY_LENGTH)

@@ -1,5 +1,8 @@
 {
   "_comment": "Localised strings for tenant ecolaundry (Ecolaundry). Lang: ca. Source of truth: this file. ES is the base catalogue; every key here must mirror the keys in es.json.",
+  "_section_washer_flow": "Prompts for washer_hs60xx.json machine flow nodes",
+  "_section_dryer_flow": "Prompts for dryer_ed340.json machine flow nodes",
+  "_emoji_policy": "Max 1 emoji per reply, at the end (or at the start for greetings). Use 👋 only on greetings/welcome. NEVER on technical gather questions (machineType/Number/display/etc.) or formal forms (customerNameAsk). 🙏 on escalation/handover, ✅+🎉 on resolution, 🔧 on hands-on instructions, 👍 on positive acknowledgements, 💚 on empathy. See prompts/agent.txt → 😊 EMOJI POLICY.",
   "location": "A quina bugaderia estàs ara mateix?",
   "greetingOpen": "Digues-me, en què et puc ajudar?",
   "locationClarification": "Disculpa, em pots dir on està la bugaderia?",
@@ -110,8 +113,6 @@
   "defaultHelp": "Digue'm el següent detall útil i t'ajudaré pas a pas.",
   "flowResumePrompt": "Continuem amb el problema de la bugaderia?",
   "flowEngineEscalate": "Un operador humà s'encarregarà del teu cas el més aviat possible. 🙏 Com et dius, si us plau?",
-
-  "_section_washer_flow": "Prompts for washer_hs60xx.json machine flow nodes",
   "washerStep0Confirm": "Tranquil, ho resolem. Ja has completat el pagament a la central?",
   "washerPayHelp": "Cap problema.\n\n1. Ves a la central de pagament.\n2. Introdueix monedes o utilitza la targeta.\n3. Selecciona el número de la teva màquina.\n4. Prem el botó de programa.\n5. Tanca la porta.",
   "washerPayRetry": "Has pogut completar el pagament?",
@@ -168,8 +169,6 @@
   "washerPostCicloFoam": "Que hi hagi poca escuma és normal. El detergent industrial produeix menys escuma visible però renta igual de bé.",
   "washerPostCicloEscalate": "Un operador humà s'encarregarà del teu cas en la màxima brevetat possible. Acceptes rebre una trucada telefònica d'un dels nostres agents per ajudar-te ara?",
   "washerPostCicloOk": "✅ Perfecte. Tot resolt.",
-
-  "_section_dryer_flow": "Prompts for dryer_ed340.json machine flow nodes",
   "dryerStep0Confirm": "Ja has pagat l'assecadora i ha arrencat el cicle?",
   "dryerPayHelp": "Si us plau, completa el pagament a la central i selecciona el número d'assecadora per iniciar el cicle.\n\nDesprés digue'm si l'assecadora ha arrencat.",
   "dryerProblemCheck": "Què apareix exactament a la pantalla?",
