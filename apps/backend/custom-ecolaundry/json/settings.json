@@ -2,7 +2,7 @@
   "_comment": "Tenant configuration for Ecolaundry / ecolaundry. Single source of truth for behaviour-tuning + business constants. See docs/settings.md for the full field reference.",
 
   "_section_languages": "Active languages for this tenant. defaultLanguage is the fallback when the customer's language can't be detected. enabledLanguages MUST contain defaultLanguage.",
-  "enabledLanguages": ["es", "ca", "en"],
+  "enabledLanguages": ["es", "ca", "en", "it", "fr", "pt"],
   "defaultLanguage": "es",
 
   "_section_branding": "Tenant identity strings. Substituted into prompts (welcome, escalation summary, FAQ replies). Both are used by buildSystemPrompt + escalation.ts.",
@@ -47,7 +47,8 @@
     "it": "👋 Ciao, sono l'assistente virtuale della lavanderia.",
     "en": "👋 Hi, I'm the laundry virtual assistant.",
     "ca": "👋 Hola, soc l'assistent virtual de la bugaderia.",
-    "fr": "👋 Bonjour, je suis l'assistant virtuel de la laverie."
+    "fr": "👋 Bonjour, je suis l'assistant virtuel de la laverie.",
+    "pt": "👋 Olá, sou o assistente virtual da lavandaria."
   },
 
   "_section_session_lifecycle": "historyResetTtlMs: when the gap between last assistant message and incoming user message exceeds this, the session is recreated fresh (welcome + re-ask location). Default 3 600 000 (1 hour). sessionIdleTtlMs: in-process session cache eviction (idle > this → evicted to bound memory). Default 1 800 000 (30 minutes). agentSessionCacheMax: hard cap on cached sessions (LRU eviction by lastUsedAt when over cap).",

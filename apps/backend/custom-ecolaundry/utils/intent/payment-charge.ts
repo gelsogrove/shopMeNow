@@ -36,6 +36,10 @@ export function detectDoubleChargeIntent(message: string): boolean {
     /\bcobrad[ao]\s+(?:duas\s+vezes|2\s+vezes)\b/i.test(trimmed) ||
     /\bcobran[çc]a\s+dupla\b/i.test(trimmed) ||
     /\bpag(?:uei|o|ar)\s+(?:duas\s+vezes|2\s+vezes)\b/i.test(trimmed) ||
+    // PT extra coverage: cobrar 3ª pers. preterite (cobrou / cobraram), with or without clitic (-me, -nos).
+    /\bcobrou(?:-(?:me|nos|te|lhe))?\s+(?:duas\s+vezes|2\s+vezes)\b/i.test(trimmed) ||
+    /\bcobraram(?:-(?:me|nos|te|lhe))?\s+(?:duas\s+vezes|2\s+vezes)\b/i.test(trimmed) ||
+    /\bme\s+cobrou\s+(?:duas\s+vezes|2\s+vezes)\b/i.test(trimmed) ||
     /\bcobrat\s+(?:dues\s+vegades|2\s+vegades)\b/i.test(trimmed) ||
     /\bcobrament\s+doble\b/i.test(trimmed) ||
     /\bpagat\s+(?:dues\s+vegades|2\s+vegades)\b/i.test(trimmed) ||

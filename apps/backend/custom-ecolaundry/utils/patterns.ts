@@ -1,6 +1,18 @@
 // Centralized regex patterns for intent detection, topic classification, and validators.
 // Single source of truth for all regex patterns in the codebase.
 // All patterns are multi-language (es, ca, en, it, pt, fr) where applicable.
+//
+// ⚠️ TODO (technical debt — Andrea, 2026-05-25):
+// Some regex were extracted from their original detector files (force-gather.ts,
+// loyalty-card-recharge.ts, faq-detergent.ts intent, etc.) during the iron-rule
+// #3 barrel-split refactor. This central file now serves as their home, but
+// pin tests in __tests__/unit/f-log-regression.test.ts still grep the original
+// per-detector files for the regex literals (F59, F68, F92, F93, F96, F99, F100)
+// — those pins are currently skipped with a reason ("regex centralized in
+// utils/patterns.ts"). To re-enable them: move each affected regex BACK INTO
+// its detector file (defined inline or imported from a small detector-local
+// constants block) and remove the corresponding `skip:` markers in the test.
+// Plan: do this in a dedicated refactor pass with full test re-validation.
 
 // ── FAQ Topic Classifiers (Iron Rule #6 tracked exemption) ──────────────────────────
 
@@ -276,7 +288,7 @@ export const LANG_CA_STRONG_RE = /\b(?:amb|ès|tinc|tens|tenim|teniu|tenen|vull|
 export const LANG_CA_QUINA_RE = /^quina|[,.\s!?]quina/i
 
 /** Catalan vocab: words unique to Catalan */
-export const LANG_CA_VOCAB_RE = /(rentadora|assecadora|targeta|he\s+pagat|he\s+posat|no\s+veig|no\s+funciona|no\s+arrenca|per\s+favor|gràcies|com\s+(està|estàs|estais|estam)|on\s+est|a\s+on|talons|curs|horari|obrir|tancar|ha\s+cobrat|em\s+van\s+cobrar|dinars|diners|monedes|codi|cotxe|carrer|localitat|districte|provincia|preu|cost|mercat|catalan|català)/i
+export const LANG_CA_VOCAB_RE = /(bon\s+dia|bona\s+(?:tarda|nit)|rentadora|assecadora|targeta|he\s+pagat|he\s+posat|no\s+veig|no\s+funciona|no\s+arrenca|per\s+favor|gràcies|com\s+(està|estàs|estais|estam)|on\s+est|a\s+on|talons|curs|horari|obrir|tancar|ha\s+cobrat|em\s+van\s+cobrar|dinars|diners|monedes|codi|cotxe|carrer|localitat|districte|provincia|preu|cost|mercat|catalan|català)/i
 
 /** English markers: washer, dryer, common English phrases */
 export const LANG_EN_MARKERS_RE = /(washer|dryer|laundromat|display\s+shows|charged\s+twice|double\s+charge|step\s+by\s+step|card\s+digits|screenshot|payment\s+proof|did\s+not\s+start|does\s+not\s+start|doesn'?t\s+work|doesn'?t\s+start|not\s+working|i\s+can'?t|my\s+(washer|dryer|machine)|don'?t\s+(know|see|understand)|\bi\s+paid\b|\bi\s+paid\s+twice\b|\bthe\s+machine\b|\bwashing\s+machine\b|\bhi\b|\bhello\b|\bhey\b|\bthe\s+laund|\blaundry\b|\bhow\s+(are|do)\s+you\b|\bwhat'?s\s+up\b|\bthank\s+(you|s)\b|\bthanks\b|\bplease\b|\bsorry\b|\bi\s+need\b|\bcan\s+you\b|\bcould\s+you\b|\bwhere\b|\bwhen\b|\bwhy\b|\bhow\b|\bi\s+(inserted|put|dropped|added)\s+(coins|money)\b)/i
@@ -284,11 +296,27 @@ export const LANG_EN_MARKERS_RE = /(washer|dryer|laundromat|display\s+shows|char
 /** Italian markers: ciao, grazie, come stai, etc. */
 export const LANG_IT_MARKERS_RE = /(ciao|buongiorno|buonasera|grazie|prego|dimmi|come stai|cosa devo fare|lavarice|asciugatrice|lavatrice|macchina|ho pagato|due volte|mi hanno addebitato|il display|schermo|codice|numero|saldo|crediti|portafoglio)/i
 
-/** Portuguese markers: olá, não, etc. (exclude Spanish "hola" overlap) */
-export const LANG_PT_MARKERS_RE = /(\bolá\b|n[ãâ]o\s|lavandaria|m[áa]quina de lavar|m[áa]quina de secar|j[áa] paguei|comprovante|você|voce|estou em|obrigad[oa])/i
+/**
+ * Portuguese markers: words/phrases distinctive of PT vs ES.
+ * - olá / oi / bom dia / boa tarde / boa noite — saluti PT
+ * - não / são / coração / informação — `ão/âo` ending unique to PT
+ * - quero / tenho / preciso — verbi comuni (3p sing/1p sing diversi da ES)
+ * - cartão / máquina / lavandaria / secadora — vocab macchine
+ * - obrigado / por favor / desculpa — cortesia
+ * - você / vocês — pronoun unique
+ */
+export const LANG_PT_MARKERS_RE = /(\bol[áa]\b|\boi\b|bom\s+dia|boa\s+(?:tarde|noite)|\bn[ãâ]o\b|[a-zçãâê]+[ãâ]o\b|\bquero\b|\btenho\b|\bpreciso\b|\bvocê\b|\bvoces?\b|\bobrigad[oa]\b|por\s+favor|desculpa|lavandaria|m[áa]quina\s+de\s+(?:lavar|secar)|cart[ãa]o|j[áa]\s+paguei|comprovante|estou\s+em|aqui\s+está|fidelidade)/i
 
-/** French markers: bonjour, lave-linge, etc. */
-export const LANG_FR_MARKERS_RE = /(bonjour|salut|lave-linge|s[èe]che-linge|laverie|ne marche pas|ne fonctionne pas|j'?ai pay[ée]|je n'?arrive pas|d[ée]j[àa] pay[ée]|machine [aà])/i
+/**
+ * French markers: words/phrases distinctive of FR.
+ * - bonjour / salut / bonsoir / coucou — saluti
+ * - je veux / je voudrais / j'aimerais — verbi modali
+ * - acheter / utiliser / fonctionne — verbi comuni
+ * - carte / fidélité / machine à laver / lave-linge / sèche-linge — vocab
+ * - une / des / les / mes — articoli e determiners
+ * - n'ai / n'est / ne...pas — negazione FR
+ */
+export const LANG_FR_MARKERS_RE = /(\bbonjour\b|\bsalut\b|\bbonsoir\b|\bcoucou\b|\bje\s+(?:veux|voudrais|peux|paye|paie|suis)\b|\bj[''’]\s*(?:ai|aimerais)\b|\bn[''’]?(?:ai|est|arrive)\b|\bne\s+\w+\s+pas\b|\bvouloir\b|acheter|utiliser|fonctionne|payer|carte\s+de\s+fid[ée]lit[ée]|machine\s+[àa]\s+laver|lave-linge|s[èe]che-linge|laverie|merci|s['']il\s+(?:vous|te)\s+pla[îi]t|je\s+suis\s+[àa]|d[ée]j[àa]\s+pay[ée])/i
 
 // ── Customer Name Validation (agent-extract.ts) ─────────────────────────────────
 
