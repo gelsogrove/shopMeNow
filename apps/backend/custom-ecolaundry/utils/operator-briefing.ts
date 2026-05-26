@@ -1,14 +1,22 @@
 // Operator briefing — LLM-generated handover summary (opt-in via
 // settings.operatorBriefingFromLlm). Falls back to deterministic
 // `escalation.ts:buildEscalationSummary` on parse/empty errors.
-import type { AgentMessage, AgentRuntime, SessionState } from '../models/index.js'
+//
+// F106 (2026-05-25) — language driven by settings.operatorBriefingLanguage.
+// The system prompt has a `{language}` placeholder substituted at runtime
+// with the localised language name (e.g. "español", "italiano", "English").
+// Internal-token leaks ("(single)", "(missing)") are eliminated: fact lines
+// without a value are simply omitted instead of being filled with a
+// placeholder the LLM could parrot back into the customer-visible briefing.
+import type { AgentMessage, AgentRuntime, SessionState, SupportedLanguage } from '../models/index.js'
 import { callModel } from './llm.js'
 import { LlmFetchError } from './llm-fetch.js'
 import { formatHandoverTimestamp } from './escalation.js'
+import { t } from './localization.js'
 import { logger } from './logger.js'
 
-// F57: scope STATE_FACTS to the current escalation category to prevent
-// pollution from abandoned flows. Mirror branches in `buildEscalationSummaryBody`.
+// F57: scope FACTS to the current escalation category to prevent pollution
+// from abandoned flows. Mirror branches in `buildEscalationSummaryBody`.
 export type EscalationCategory =
   | 'discount-code'
   | 'invoice'
@@ -36,18 +44,27 @@ export function getEscalationCategory(state: SessionState): EscalationCategory {
   return 'machine-trouble'
 }
 
-const BRIEFING_SYSTEM_PROMPT = `Eres un asistente que produce un briefing operativo en español para un operador humano de una lavandería de autoservicio. El briefing es UN MENSAJE INTERNO al operador, NO al cliente.
+// Fallback system prompt used when prompts/operator-briefing.txt is missing.
+// Production reads the file via runtime.prompts['operator-briefing'].
+// `{language}` is substituted at runtime via getLanguageName(briefingLang).
+const BRIEFING_SYSTEM_PROMPT = `You produce an operational briefing for a human operator of a self-service laundry. The briefing is an INTERNAL message TO the operator, NOT to the customer.
 
-REGLAS ESTRICTAS:
-1. SOLO HECHOS observables en la conversación. NO inventes detalles, códigos, ubicaciones, importes ni nombres no dichos por el cliente.
-2. Inicia con "Usuario [nombre] en [ubicación]..." si conoces ambos. Si falta un dato, usa "sin nombre" / "ubicación no especificada".
-3. Menciona explícitamente: tipo de máquina (lavadora/secadora) y número si presentes, código de pantalla EXACTO tal como lo escribió el cliente (PUSH PROG / SEL / DOOR / ALM DOOR / AL001 / ERR 52 / etc., sin reinterpretarlos), motivo de la escalación, narrativa del cliente si relevante.
-4. Lunghezza: 2-4 frasi. Conciso, factual, profesional. NO empático (es para el operador).
-5. Idioma: español, independientemente del idioma del cliente.
-6. NO uses markdown (no asteriscos, no listas).
-7. NO incluyas saludos, despedidas, ni instrucciones para el operador.
+STRICT RULES:
+1. ONLY observable facts from the conversation. Do NOT invent details, codes, locations, amounts or names.
+2. Start with "Customer [name] at [location]…" if both are known. If a fact is missing, skip it entirely — never write "(missing)", "(single)", "(unknown)" or any internal placeholder.
+3. Explicitly mention: machine type and number when present, display code EXACTLY as the customer wrote it (PUSH PROG / SEL / DOOR / AL001 / etc.), the escalation reason, and the customer narrative if relevant.
+4. Length: 2-4 sentences. Concise, factual, professional. NOT empathic.
+5. Language: {language}, regardless of the customer's language.
+6. NO markdown (no asterisks, no lists).
+7. NO greetings, closings, or instructions to the operator.
 
-Responde SOLO con el briefing, sin preámbulos.`
+Reply ONLY with the briefing, no preamble.`
+
+// Localised language names sourced from each i18n catalogue
+// (key `summaryLanguageName`). Falls back to the lang code when missing.
+function getLanguageName(lang: SupportedLanguage): string {
+  return t('summaryLanguageName', lang) || lang
+}
 
 // Generate the operator briefing from the conversation history. Falls back
 // to `fallbackSummary` on error / empty response. Never throws.
@@ -60,6 +77,7 @@ export async function generateOperatorBriefingFromHistory(
     return fallbackSummary
   }
 
+  const briefingLang: SupportedLanguage = ar.runtime.settings?.operatorBriefingLanguage ?? 'es'
   const temperature = ar.runtime.settings?.operatorBriefingTemperature ?? 0.2
   const customerName = ar.state.customerName || ''
   const location = ar.state.location || ''
@@ -68,7 +86,7 @@ export async function generateOperatorBriefingFromHistory(
   const machineNumber = ar.state.machineNumber || ''
   const displayLabel = ar.state.displayLabel || ar.state.displayState || ''
   const escalationReason = ar.state.escalationReason || ''
-  // F27 — chronological list of displays for the "Secuencia de pantallas vista" line.
+  // F27 — chronological list of displays. Only emitted when ≥2 distinct codes.
   const displayHistory = (ar.state.displayHistory || []).filter(Boolean)
   const displaySequence = displayHistory.length > 1 ? displayHistory.join(' → ') : ''
 
@@ -82,33 +100,32 @@ export async function generateOperatorBriefingFromHistory(
   const category = getEscalationCategory(ar.state)
   const isMachineTrouble = category === 'machine-trouble'
 
-  const factsLines: string[] = [
-    'STATE_FACTS:',
-    `  timestamp: ${formatHandoverTimestamp()}`,
-    `  customerName: ${customerName || '(missing)'}`,
-    `  location: ${location || '(missing)'}${locationStreet ? `, ${locationStreet}` : ''}`,
-    `  escalationCategory: ${category}`,
-    `  escalationReason: ${escalationReason || '(missing)'}`,
-  ]
+  // F106 — fact lines are emitted ONLY when the underlying value is present.
+  // No "(missing)" / "(single)" placeholders the LLM could leak verbatim
+  // into the customer-visible briefing.
+  const factsLines: string[] = ['FACTS:']
+  factsLines.push(`  timestamp: ${formatHandoverTimestamp(briefingLang)}`)
+  if (customerName) factsLines.push(`  customerName: ${customerName}`)
+  if (location) {
+    factsLines.push(`  location: ${location}${locationStreet ? `, ${locationStreet}` : ''}`)
+  }
+  factsLines.push(`  escalationCategory: ${category}`)
+  if (escalationReason) factsLines.push(`  escalationReason: ${escalationReason}`)
+
   if (isMachineTrouble) {
-    factsLines.push(
-      `  machineType: ${machineType || '(missing)'}`,
-      `  machineNumber: ${machineNumber || '(missing)'}`,
-      `  displayLabel: ${displayLabel || '(missing)'}`,
-      `  displaySequence: ${displaySequence || '(single)'}`,
-    )
+    if (machineType) factsLines.push(`  machineType: ${machineType}`)
+    if (machineNumber) factsLines.push(`  machineNumber: ${machineNumber}`)
+    if (displayLabel) factsLines.push(`  displayLabel: ${displayLabel}`)
+    if (displaySequence) factsLines.push(`  displaySequence: ${displaySequence}`)
   } else {
-    factsLines.push(
-      `  machineFacts: (not applicable for ${category} escalations — IGNORE machine/display details even if they appear in CONVERSATION_HISTORY)`,
-    )
     if (category === 'discount-code') {
       const code = ar.state.faqCodeValue || ''
-      factsLines.push(`  discountCode: ${code || '(missing)'}`)
+      if (code) factsLines.push(`  discountCode: ${code}`)
     }
     if (category === 'invoice' && ar.state.invoiceData?.email) {
       const inv = ar.state.invoiceData
       factsLines.push(
-        `  invoiceData: razonSocial=${inv.razonSocial}; cif=${inv.cif}; email=${inv.email}; fecha=${inv.fecha}; coste=${inv.costeTotal || '(missing)'}; notas=${inv.notes || '(none)'}`,
+        `  invoiceData: razonSocial=${inv.razonSocial}; cif=${inv.cif}; email=${inv.email}; fecha=${inv.fecha}; coste=${inv.costeTotal || '-'}; notas=${inv.notes || '-'}`,
       )
     }
     if (category === 'non-trouble' && ar.state.nonTroubleshootingIncident) {
@@ -122,20 +139,22 @@ export async function generateOperatorBriefingFromHistory(
     'CONVERSATION_HISTORY:',
     historyBlock || '(empty)',
     '',
-    'Produce el briefing operativo siguiendo las reglas del sistema.',
+    `Produce the operator briefing in ${getLanguageName(briefingLang)}, following the system rules.`,
   ].join('\n')
 
   // System prompt: prefer prompts/operator-briefing.txt (loaded by runtime),
-  // fall back to the TS const BRIEFING_SYSTEM_PROMPT for graceful degradation.
-  // See CLAUDE.md Pending refactors D2.
+  // fall back to the TS const for graceful degradation. CLAUDE.md D2.
+  // F106 — substitute {language} placeholder with the localised language name.
   const promptFromFile = ar.runtime.prompts?.['operator-briefing']?.trim()
-  const systemPrompt = promptFromFile || BRIEFING_SYSTEM_PROMPT
+  const rawSystemPrompt = promptFromFile || BRIEFING_SYSTEM_PROMPT
+  const systemPrompt = rawSystemPrompt.split('{language}').join(getLanguageName(briefingLang))
   try {
     const briefing = await callModel({
       systemPrompt,
       userPrompt,
       temperature,
       maxTokens: 250,
+      caller: 'operator-briefing',
     })
     if (!briefing.trim()) return fallbackSummary
     return briefing.trim()

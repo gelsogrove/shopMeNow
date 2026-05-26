@@ -346,6 +346,7 @@ export class CartManagementAgentLLM {
           : `❌ Errore: ${result.error || "Impossibile aggiungere al carrello"}`
         
         return {
+          success: result.success,
           output: `${successMessage}\n\n${formatted.formattedCart}`,
           success: true,
           executionTimeMs: 0,
@@ -354,7 +355,8 @@ export class CartManagementAgentLLM {
             arguments: { items: [{ code: context.selectedSku, quantity, type: isService ? "SERVICE" : "PRODUCT" }] },
             result: { success: result.success }
           }],
-          tokensUsed: 0, // No LLM call
+          tokensUsed: 0,
+          executionTimeMs: 0,
         }
       }
 

@@ -27,6 +27,15 @@ import {
 } from '../../utils/escalation.js'
 import { createInitialState } from '../../utils/state.js'
 import type { EscalationContext } from '../../models/index.js'
+import { loadTestRuntime } from './_helpers.js'
+
+// F106 — escalation.ts now reads summary strings from the i18n catalogue.
+// Load it once so the deterministic ES output matches the legacy hardcoded
+// strings asserted by the cases below. Without this load, t()/tt() return
+// the key names verbatim (e.g. "summaryDoubleChargeUsed") and every case
+// fails. The default lang argument of buildEscalationSummary is 'es', so
+// the existing assertions on Spanish vocabulary stay valid.
+await loadTestRuntime()
 
 function ctx(overrides: Partial<EscalationContext> = {}): EscalationContext {
   return {

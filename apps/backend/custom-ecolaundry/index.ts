@@ -244,7 +244,8 @@ function buildEscalationOutcome(session: AgentSession): {
   }
   try {
     const ctx = extractEscalationContext(ar.state, ar.state.customerName)
-    return { shouldEscalate, escalationSummary: buildEscalationSummary(ctx) }
+    const briefingLang = ar.runtime.settings?.operatorBriefingLanguage ?? 'es'
+    return { shouldEscalate, escalationSummary: buildEscalationSummary(ctx, briefingLang) }
   } catch (err) {
     logger.warn('Failed to build escalation summary', {
       error: err instanceof Error ? err.message : String(err),

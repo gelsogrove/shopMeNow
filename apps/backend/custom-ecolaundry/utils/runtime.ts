@@ -65,6 +65,19 @@ function validateSettings(settings: Settings): void {
   ) {
     errors.push('agentTemperature must be a number in [0, 2]')
   }
+  // F106 — operatorBriefingLanguage drives both the LLM briefing prompt and
+  // the deterministic escalation summary fallback. Must be in enabledLanguages
+  // so we never emit a briefing in a language the tenant hasn't approved.
+  if (settings.operatorBriefingLanguage !== undefined) {
+    if (
+      typeof settings.operatorBriefingLanguage !== 'string' ||
+      (Array.isArray(enabled) && !enabled.includes(settings.operatorBriefingLanguage))
+    ) {
+      errors.push(
+        `operatorBriefingLanguage "${settings.operatorBriefingLanguage}" must be one of enabledLanguages [${(enabled || []).join(', ')}]`,
+      )
+    }
+  }
   if (errors.length) {
     throw new Error(`Invalid settings.json:\n  - ${errors.join('\n  - ')}`)
   }

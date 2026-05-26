@@ -53,8 +53,12 @@ export interface DispatchResult {
 export async function dispatchTurnOne(
   ar: AgentRuntime,
   message: string,
+  lastAssistantMessage?: string,
 ): Promise<DispatchResult> {
-  const decision = await classifyMessageBranch(message, { runtime: ar.runtime })
+  const decision = await classifyMessageBranch(message, {
+    runtime: ar.runtime,
+    lastAssistantMessage,
+  })
 
   applyBranchEntryResets(ar, decision)
 
@@ -85,34 +89,48 @@ export async function dispatchTurnOne(
 }
 
 /**
- * T2+ dispatch: skip the router, go straight to the sticky branch
- * handler. If no handler is registered, fall back to the legacy
- * pipeline.
+ * T2+ dispatch: skip the router-for-branch decision (branch is sticky), go
+ * straight to the sticky branch handler. If no handler is registered, fall
+ * back to the legacy pipeline.
+ *
+ * F108 — Even on T2+ we re-classify the TURN MODE so the dispatcher knows
+ * whether this turn is a pure-closure (block gather/flow guards) or any
+ * other mode (run the full pipeline). The branch stays sticky; only the
+ * turnMode is recomputed per turn.
  */
 export async function dispatchSubsequentTurn(
   ar: AgentRuntime,
   message: string,
   inputLanguage: SupportedLanguage,
+  lastAssistantMessage?: string,
 ): Promise<DispatchResult> {
   const branch = ar.state.activeBranch
   if (!branch || branch === 'unknown') {
     return { handled: false }
   }
+  // F108 — Classify turnMode for this turn (branch field is ignored, the
+  // sticky branch wins). Used by the caller to compute blockedGuards when
+  // we fall through to the legacy pipeline.
+  const decision = await classifyMessageBranch(message, {
+    runtime: ar.runtime,
+    lastAssistantMessage,
+  })
+
   const handler = HANDLERS[branch]
   if (!handler) {
-    return { handled: false }
+    return { handled: false, decision }
   }
 
   const output = await handler({
     message,
     ar,
-    routerDetails: {},  // T2+ does not re-run the router
+    routerDetails: {},  // T2+ does not re-use the router branch/faqKey
     language: inputLanguage,
   })
 
   applyHandoff(ar, output)
   if (output.handoff === 'delegate-to-legacy') {
-    return { handled: false }
+    return { handled: false, decision }
   }
-  return { handled: true, output }
+  return { handled: true, output, decision }
 }

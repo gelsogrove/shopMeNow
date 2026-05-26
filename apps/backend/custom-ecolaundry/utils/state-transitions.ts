@@ -179,6 +179,30 @@ export function startNewFlow(ar: AgentRuntime, flowId: string): void {
 }
 
 /**
+ * F109 — Release an in-progress machine flow when the customer has clearly
+ * abandoned it (e.g. answered a FAQ pivot mid-flow). Clears `activeFlowId`,
+ * `activeStepId`, `lastPresentedStepId`, `retryCount` atomically.
+ *
+ * Sticky customer facts (location, machineType, machineNumber, displayState,
+ * customerName) are preserved on purpose — they describe the customer/incident
+ * snapshot, not the flow control. The next turn can either resume the same
+ * topic (re-arm the flow via guardAutoStartMachineFlow) or pivot definitively.
+ *
+ * Used by `agent.ts:applyGuardOutcome` as a single chokepoint: when the guard
+ * that just produced the reply marked `lastResolvedIntent === 'faq'` AND an
+ * `activeFlowId` was inherited from a previous trouble flow, release it so the
+ * next turn does not feed the user's follow-up question into the dead flow's
+ * CHOICE node (which would fall through to `"other": escalate` and emit a
+ * spurious washerEscalate reply — F109 root cause).
+ */
+export function releaseActiveFlow(ar: AgentRuntime): void {
+  ar.state.activeFlowId = null
+  ar.state.activeStepId = null
+  ar.state.lastPresentedStepId = null
+  ar.state.retryCount = 0
+}
+
+/**
  * F47 — Atomic pivot from a display-flow (e.g. AL001 sequence error) into the
  * Caso 4 "paid but not activated" gather. The customer was reporting a display
  * incident, but in their next turn they revealed they had already paid; that

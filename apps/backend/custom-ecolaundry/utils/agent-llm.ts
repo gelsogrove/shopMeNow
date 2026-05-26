@@ -74,6 +74,6 @@ export async function callAgentLLM(
       // prior behaviour.
       max_tokens: runtime?.settings?.agentMaxTokens ?? DEFAULT_MAX_TOKENS,
     }),
-  })
+  }, 'agent-main')
   return data.choices?.[0]?.message || { role: 'assistant', content: '' }
 }

@@ -232,10 +232,56 @@ export const GUARD_PIPELINE: Guard[] = [
 ]
 
 /**
- * Runs the pipeline. Returns the first non-null outcome, or null if no guard fired.
+ * F108 — Guards that may re-ask for operational gather facts (location,
+ * machine type, machine number, display, code) or restart a flow.
+ * When the router classifies the turn as `pure-closure`, the dispatcher
+ * blocks these so the bot does NOT ask "lavadora o secadora?" right
+ * after a customer's "ah vale, gracias" closure.
+ *
+ * The set is intentionally narrow: it covers ONLY the guards that emit a
+ * gather question or open/restart a flow. Closure/topic-switch/FAQ-answer
+ * guards stay free to fire.
  */
-export function runGuardPipeline(ar: AgentRuntime, userMessage: string): GuardOutcome | null {
+export const GATHER_AND_FLOW_GUARDS: ReadonlySet<string> = new Set([
+  'guardForceLocation',
+  'guardForceMachineType',
+  'guardForceMachineNumber',
+  'guardForceDisplay',
+  'guardForcePayment',
+  'guardDisplayFlowStart',
+  'guardDisplayFlowFollowUp',
+  'guardAlmDisambiguation',
+  'guardAutoStartMachineFlow',
+  'guardAdvanceMachineFlow',
+  'guardPostInstructionFailure',
+  'guardAskPhoto',
+  'guardNumericCodeAskLetters',
+  'guardNumericCodeNoLetters',
+  'guardNoChangeAsk',
+  'guardNoChangePivotOnDisplay',
+  'guardInsistLocation',
+  'guardUnknownLocation',
+  'guardLocationGatedMismatch',
+])
+
+/**
+ * Runs the pipeline. Returns the first non-null outcome, or null if no guard fired.
+ *
+ * @param blockedGuards optional set of guard function names to skip this turn.
+ *                      Used by the L3.5 router amplification: when the router
+ *                      classifies turnMode='pure-closure', the dispatcher
+ *                      passes GATHER_AND_FLOW_GUARDS so the bot does not
+ *                      re-ask for operational facts the customer never
+ *                      promised to provide. See F108 in docs/f-log.md.
+ *                      Empty/omitted = today's behaviour (no guard skipped).
+ */
+export function runGuardPipeline(
+  ar: AgentRuntime,
+  userMessage: string,
+  blockedGuards?: ReadonlySet<string>,
+): GuardOutcome | null {
   for (const guard of GUARD_PIPELINE) {
+    if (blockedGuards && blockedGuards.has(guard.name)) continue
     const outcome = guard(ar, userMessage)
     if (outcome) return outcome
   }

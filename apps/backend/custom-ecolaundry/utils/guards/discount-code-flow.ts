@@ -221,7 +221,8 @@ export const guardDiscountCodeAwaitDoor: Guard = (ar, userMessage) => {
 
   const closing = t('discountCodeFinalEscalate', lang(ar))
   const ctx = extractEscalationContext(ar.state, ar.state.customerName)
-  const summary = buildEscalationSummary(ctx)
+  const briefingLang = ar.runtime.settings?.operatorBriefingLanguage ?? 'es'
+  const summary = buildEscalationSummary(ctx, briefingLang)
   ar.pendingEscalation = null
   return { reply: `${closing}\n\n**👤 Human Support message**\n${summary}`, reason: 'discount-code-final' }
 }

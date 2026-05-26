@@ -832,3 +832,100 @@ When the doc grows a `## Caso 33 — XYZ` section, add a row to
 Then use the `semanticId` everywhere in code. **Never `caso33` in code.**
 If the doc later renumbers this to "Caso 28", update only `docNumber` in
 `cases.json` — code is unaffected.
+
+---
+
+## 23. Prompt caching (OpenRouter / Anthropic prefix cache)
+
+The agent makes several LLM calls per turn. Each system prompt is large
+and almost identical from one turn to the next, so we opt in to provider
+prefix caching to avoid re-paying input tokens.
+
+### Where it's wired
+
+| Call site | System prompt | Approx tokens | Cached? |
+|-----------|---------------|---------------|---------|
+| `utils/agent-llm.ts:callAgentLLM` (main agent loop, tools + history) | `prompts/agent.txt` + reglas + sticky state + settings | ~12.7k+ | ✅ (since project inception) |
+| `utils/router.ts:classifyMessageBranch` | `prompts/router.txt` | ~5.3k | ✅ |
+| `utils/agent-rephrase.ts:rephraseForTurn` | `prompts/rephrase.txt` | ~2.0k | ✅ |
+| `utils/operator-briefing.ts` | `prompts/operator-briefing.txt` | ~0.8k | ❌ (under threshold, runs only on escalation) |
+| `utils/flow-engine.ts:classifyChoiceViaLLM` / `classifyRouterLogic` | none (user prompt only) | n/a | ❌ |
+| `utils/llm.ts:detectLanguage` | `prompts/language.txt` | ~50 | ❌ (under threshold) |
+
+### How it works
+
+Two helpers, one per call shape:
+
+- `utils/agent-llm.ts:withSystemPromptCache` — wraps the system message in
+  the tool-calling payload of the main agent loop.
+- `utils/llm-messages.ts:buildMessages` — wraps the system message in the
+  single-shot `callOpenRouter` payload used by router + rephrase. Opt-in
+  via `LlmRequest.cacheSystemPrompt: true`.
+
+Both helpers emit the same wire format:
+
+```json
+{
+  "role": "system",
+  "content": [{ "type": "text", "text": "...", "cache_control": { "type": "ephemeral" } }]
+}
+```
+
+Providers that support prefix caching (Anthropic, Gemini, recent OpenAI)
+reuse the prefix across turns. Providers that ignore the field receive a
+still-valid chat-completions request — no-op, not an error.
+
+### Minimum prompt size
+
+Anthropic's prefix cache requires ~1024 tokens of cacheable prefix. Below
+that threshold `cache_control` is silently ignored and the wrapper would
+only add payload bytes without any cache hit. `buildMessages` gates on
+`PROMPT_CACHE_MIN_CHARS = 4000` (≈1000 tokens, char/4 heuristic conservative
+for Latin text) and falls back to a plain-string system message when the
+prompt is too short. This is unit-tested in
+[`__tests__/unit/llm-messages.test.ts`](../__tests__/unit/llm-messages.test.ts).
+
+### Opting in a new call site
+
+When adding a new `callModel` / `callOpenRouter` call with a large, stable
+system prompt, set `cacheSystemPrompt: true` on the `LlmRequest`:
+
+```ts
+const raw = await callModel({
+  systemPrompt,        // must be reused across many turns to be worth caching
+  userPrompt,
+  caller: 'my-subsystem',
+  cacheSystemPrompt: true,
+})
+```
+
+Do NOT enable it when:
+- the system prompt is composed inline per-turn (different every time);
+- the system prompt is under ~4000 chars (`buildMessages` skips the wrapper anyway);
+- the call site fires rarely (e.g. once per escalation) — the cache TTL is
+  short, the prefix won't survive between firings.
+
+### Observability — cacheRead / cacheCreated
+
+When `LLM_DEBUG=1` (or `npm run demo -- --debug`),
+`utils/llm-fetch-observability.ts:extractCacheUsage` reads the provider's
+`usage` block and surfaces cache stats in the `llm.call` log line under
+two stable keys:
+
+| Key | Source | Meaning |
+|-----|--------|---------|
+| `cacheRead` | Anthropic `cache_read_input_tokens` OR OpenAI `prompt_tokens_details.cached_tokens` | Tokens served from the provider's prefix cache (free or near-free, depending on plan) |
+| `cacheCreated` | Anthropic `cache_creation_input_tokens` only | Tokens written into the prefix cache this call (paid at the cache-write rate) |
+
+Sample real run (router system prompt ~5.3k tokens, gpt-4o-mini on OpenRouter):
+
+```jsonc
+// T1 (cold)
+{"caller":"router","latencyMs":2393,"cacheRead":0}
+// T2 (warm — prefix still in cache)
+{"caller":"router","latencyMs":579,"cacheRead":4224}
+```
+
+Both keys are absent when the provider doesn't surface cache usage. The
+keys are stable (renamed only via this module) so `jq` filters in transcripts
+and downstream cost analytics can rely on them.

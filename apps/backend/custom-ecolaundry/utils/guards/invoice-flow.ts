@@ -151,7 +151,8 @@ export const guardInvoiceFlow: Guard = (ar, userMessage) => {
       // summary is built deterministically here, NEVER passed through the
       // operator-briefing LLM (which would forward it to a third-party API).
       const ctx = extractEscalationContext(ar.state, ar.state.customerName)
-      const summary = buildEscalationSummary(ctx)
+      const briefingLang = ar.runtime.settings?.operatorBriefingLanguage ?? 'es'
+      const summary = buildEscalationSummary(ctx, briefingLang)
       ar.pendingEscalation = null
       const final = `${customerReply}\n\n**👤 Human Support message**\n${summary}`
       return { reply: final, reason: 'invoice-final' }

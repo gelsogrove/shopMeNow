@@ -243,6 +243,7 @@ export async function classifyChoiceViaLLM(node: FlowNode, input: string): Promi
   const answer = await callModel({
     userPrompt: `Which option best matches the customer reply? Reply with ONLY the key or NONE.\n\nNode prompt:\n${node.prompt}\n\nOptions:\n${optionLines}${otherLine}\n\nCustomer reply:\n${sanitizeUserMessage(input)}`,
     maxTokens: 20,
+    caller: 'flow-engine',
   })
   const normalized = answer.trim().replace(/^"|"$/g, '')
   return normalized && normalized.toUpperCase() !== 'NONE' ? normalized : null
@@ -253,6 +254,7 @@ export async function classifyRouterLogic(logic: Record<string, string>, userInp
   const answer = await callModel({
     userPrompt: `Classify this customer message into exactly one category. Reply with ONLY the key, nothing else.\n\nCategories: ${keys.join(', ')}\n\nCustomer message:\n${sanitizeUserMessage(userInput)}`,
     maxTokens: 15,
+    caller: 'flow-engine',
   })
   const normalized = answer.trim().toUpperCase()
   return keys.find((k) => k.toUpperCase() === normalized) || keys[keys.length - 1]
@@ -260,7 +262,7 @@ export async function classifyRouterLogic(logic: Record<string, string>, userInp
 
 // ── Main step advancement ─────────────────────────────────────────────────────
 
-export async function advanceActiveFlow(runtime: Runtime, state: SessionState, userInput: string, translateFn?: (key: string) => string): Promise<FlowEngineResult> {
+export async function advanceActiveFlow(runtime: Runtime, state: SessionState, userInput: string, translateFn: (key: string) => string): Promise<FlowEngineResult> {
   const flowId = state.activeFlowId
   let node = currentFlowNode(runtime, state)
   if (!flowId || !node || !state.activeStepId) {
@@ -318,7 +320,7 @@ export async function advanceActiveFlow(runtime: Runtime, state: SessionState, u
       return {
         flowId,
         stepId: 'escalate',
-        prompt: translateFn ? translateFn('flowEngineEscalate') : "Un operador humano se encargará de tu caso en la máxima brevedad posible. 🙏 ¿Cómo te llamas, por favor?",
+        prompt: translateFn('flowEngineEscalate'),
         type: 'INFO',
         isTerminal: true,
         action: 'escalate',

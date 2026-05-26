@@ -93,6 +93,7 @@ ALLOWED_LARGE_FILES="
   utils/agent-extract.ts        # Auto-fact extraction (multi-language detectors, single concern)
   utils/intent.ts               # Display token / intent classification (single concern)
   utils/escalation.ts           # Operator handover summary builder (single concern, branching by incident)
+  utils/operator-briefing.ts    # F57 + F107 — LLM briefing generator: category scoping (machine-trouble / discount-code / invoice / non-trouble) + multilingual via i18n catalogue + {language} placeholder substitution + fallback to deterministic summary. Single concern: produce one operator briefing per turn.
   utils/guards/display-flow.ts  # Phase A+B+C display-flow engine (single responsibility; Phase C re-ask added for Scenario 5.3/7.2)
   utils/guards/display.ts       # Display-state guards: no-photo, numeric codes, post-instruction failure, unknown-display (single concern)
   utils/guards/index.ts         # Pipeline assembly only — imports + ordered GUARD_PIPELINE array. Splitting hurts readability of the priority order.
@@ -191,6 +192,25 @@ if [ -n "$missing" ]; then
   errors=$((errors + 1))
 else
   echo -e "${GREEN}✓${NC}"
+fi
+
+# --- Rule #6 — phrase-intent detector exemptions capped --------------------
+# Iron rule #6 forbids hardcoded phrase detection for INTENT. The tracked
+# exemption (CLAUDE.md "FAQ topic guards") allows a small set of *_TOPIC
+# regexes in utils/patterns.ts as fast-path optimisation. This check caps
+# that exemption: if the cap is raised, do it deliberately by editing the
+# script AND the CLAUDE.md exemption note in the same change.
+echo -n "  [#6] phrase-intent exemptions (*_TOPIC) capped at ${RULE6_TOPIC_CAP:=6}... "
+topic_count=$(grep -cE "^export const [A-Z_]+_TOPIC " utils/patterns.ts 2>/dev/null || echo 0)
+if [ "$topic_count" -gt "$RULE6_TOPIC_CAP" ]; then
+  echo -e "${RED}✗${NC}"
+  echo -e "    ${RED}Found $topic_count *_TOPIC detectors, cap is $RULE6_TOPIC_CAP.${NC}"
+  echo -e "    ${YELLOW}Each new phrase-intent detector grows the rule #6 exemption.${NC}"
+  echo -e "    ${YELLOW}To raise the cap: edit RULE6_TOPIC_CAP in this script AND${NC}"
+  echo -e "    ${YELLOW}update the CLAUDE.md exemption note in the same commit.${NC}"
+  errors=$((errors + 1))
+else
+  echo -e "${GREEN}✓${NC} ($topic_count/$RULE6_TOPIC_CAP)"
 fi
 
 # --- Rule #9 — no `casoN` ordinal references in code -----------------------

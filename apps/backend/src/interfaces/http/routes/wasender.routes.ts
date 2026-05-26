@@ -16,7 +16,6 @@
 
 import { Router } from 'express'
 import { authMiddleware } from '../middlewares/auth.middleware'
-import { sessionValidationMiddleware } from '../middlewares/session-validation.middleware'
 import { workspaceValidationMiddleware } from '../middlewares/workspace-validation.middleware'
 import { WorkspaceController } from '../controllers/workspace.controller'
 import { WasenderWebhookController } from '../controllers/wasender-webhook.controller'
@@ -37,12 +36,11 @@ const webhookRateLimiter = rateLimit({
   },
 })
 
-// ─── Session Management (Protected) ──────────────────────────────────────────
+// ─── Session Management (Protected — JWT only, spec #183) ────────────────────
 
 router.post(
   '/workspaces/:workspaceId/wasender/initialize',
   authMiddleware,
-  sessionValidationMiddleware,
   workspaceValidationMiddleware,
   workspaceController.initializeWasenderSession.bind(workspaceController)
 )
@@ -50,7 +48,6 @@ router.post(
 router.post(
   '/workspaces/:workspaceId/wasender/disconnect',
   authMiddleware,
-  sessionValidationMiddleware,
   workspaceValidationMiddleware,
   workspaceController.disconnectWasenderSession.bind(workspaceController)
 )
@@ -58,7 +55,6 @@ router.post(
 router.post(
   '/workspaces/:workspaceId/wasender/delete',
   authMiddleware,
-  sessionValidationMiddleware,
   workspaceValidationMiddleware,
   workspaceController.deleteWasenderSession.bind(workspaceController)
 )
@@ -66,7 +62,6 @@ router.post(
 router.post(
   '/workspaces/:workspaceId/wasender/regenerate-qr',
   authMiddleware,
-  sessionValidationMiddleware,
   workspaceValidationMiddleware,
   workspaceController.regenerateWasenderQr.bind(workspaceController)
 )
@@ -74,7 +69,6 @@ router.post(
 router.post(
   '/workspaces/:workspaceId/wasender/restart',
   authMiddleware,
-  sessionValidationMiddleware,
   workspaceValidationMiddleware,
   workspaceController.restartWasenderSession.bind(workspaceController)
 )
@@ -82,7 +76,6 @@ router.post(
 router.post(
   '/workspaces/:workspaceId/wasender/sync-status',
   authMiddleware,
-  sessionValidationMiddleware,
   workspaceValidationMiddleware,
   workspaceController.syncWasenderStatus.bind(workspaceController)
 )

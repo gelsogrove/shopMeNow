@@ -165,6 +165,17 @@ export type Settings = {
    */
   operatorBriefingFromLlm?: boolean
   /**
+   * Operator briefing language. Drives BOTH the LLM-generated briefing
+   * (operator-briefing.ts:generateOperatorBriefingFromHistory) AND the
+   * deterministic fallback (escalation.ts:buildEscalationSummary +
+   * formatHandoverTimestamp). Defaults to 'es'. Must be one of
+   * enabledLanguages — validateSettings fails fast otherwise.
+   *
+   * The customer-facing reply ALWAYS stays in the customer's session
+   * language; only the operator-facing briefing is in this language.
+   */
+  operatorBriefingLanguage?: SupportedLanguage
+  /**
    * Per-LLM-call temperatures. Each call site has its own use case:
    *   - router = classification task → low T (default 0, max recommended 0.2).
    *     A hallucination here means routing the customer to the wrong branch.

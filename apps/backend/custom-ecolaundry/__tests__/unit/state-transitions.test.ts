@@ -15,6 +15,7 @@ import {
   closeAsEscalated,
   escalate,
   markResolved,
+  releaseActiveFlow,
   requireCustomerName,
   resetForNewIncident,
   resetPostEscalationFlags,
@@ -220,6 +221,105 @@ const cases: Case[] = [
       }
       if (ar.state.machineNumber !== null && ar.state.machineNumber !== '') {
         throw new Error('machineNumber must be wiped')
+      }
+    },
+  },
+  // F109 (Andrea CLI demo 2026-05-26) — releaseActiveFlow.
+  //
+  // WHAT: clears the 4 flow-control fields atomically.
+  // WHY: when a FAQ guard emits a reply mid-trouble-flow, the active flow
+  //      must be released so the next user turn does not get consumed by
+  //      guardAdvanceMachineFlow as a CHOICE input to the dead flow's
+  //      pending step (which would fall through to "other": escalate and
+  //      emit a spurious washerEscalate reply).
+  {
+    name: 'F109 releaseActiveFlow: clears activeFlowId / activeStepId / lastPresentedStepId / retryCount atomically',
+    run: () => {
+      const ar = makeAr()
+      ar.state.activeFlowId = 'non_parte'
+      ar.state.activeStepId = 'followup_display'
+      ar.state.lastPresentedStepId = 'check_result'
+      ar.state.retryCount = 2
+      releaseActiveFlow(ar)
+      if (ar.state.activeFlowId !== null) {
+        throw new Error(`activeFlowId must be null, got "${ar.state.activeFlowId}"`)
+      }
+      if (ar.state.activeStepId !== null) {
+        throw new Error(`activeStepId must be null, got "${ar.state.activeStepId}"`)
+      }
+      if (ar.state.lastPresentedStepId !== null) {
+        throw new Error(`lastPresentedStepId must be null, got "${ar.state.lastPresentedStepId}"`)
+      }
+      if (ar.state.retryCount !== 0) {
+        throw new Error(`retryCount must be 0, got ${ar.state.retryCount}`)
+      }
+    },
+  },
+  // F109 — sticky facts preservation. Customer-side facts describe the
+  // customer/incident snapshot, not the flow control — they must persist
+  // across a flow release so that a re-entry (via guardAutoStartMachineFlow)
+  // can resume without re-asking everything.
+  {
+    name: 'F109 releaseActiveFlow: preserves sticky facts (location / machineType / machineNumber / displayState / customerName)',
+    run: () => {
+      const ar = makeAr()
+      ar.state.activeFlowId = 'non_parte'
+      ar.state.activeStepId = 'followup_display'
+      ar.state.location = 'Mataró'
+      ar.state.locationStreet = 'Goya'
+      ar.state.machineType = 'washer'
+      ar.state.machineNumber = '5'
+      ar.state.displayState = 'DOOR'
+      ar.state.customerName = 'Andrea'
+      releaseActiveFlow(ar)
+      if (ar.state.location !== 'Mataró') throw new Error('location must persist')
+      if (ar.state.locationStreet !== 'Goya') throw new Error('locationStreet must persist')
+      if (ar.state.machineType !== 'washer') throw new Error('machineType must persist')
+      if (ar.state.machineNumber !== '5') throw new Error('machineNumber must persist')
+      if (ar.state.displayState !== 'DOOR') throw new Error('displayState must persist')
+      if (ar.state.customerName !== 'Andrea') throw new Error('customerName must persist')
+    },
+  },
+  // F109 — idempotency. Calling twice in a row must be a no-op (no error,
+  // same final state). Defends against future double-call regressions when
+  // the chokepoint logic is extended.
+  {
+    name: 'F109 releaseActiveFlow: idempotent (second call is a no-op)',
+    run: () => {
+      const ar = makeAr()
+      ar.state.activeFlowId = 'non_parte'
+      ar.state.activeStepId = 'followup_display'
+      releaseActiveFlow(ar)
+      releaseActiveFlow(ar)
+      if (ar.state.activeFlowId !== null) throw new Error('activeFlowId must stay null after second call')
+      if (ar.state.activeStepId !== null) throw new Error('activeStepId must stay null after second call')
+    },
+  },
+  // F109 — no side-effect on unrelated state fields. The transition must
+  // be narrow: only the 4 flow-control fields. Defends against scope creep
+  // (e.g. someone "while I'm here" clearing pendingClosure or
+  // operatorRequested would break escalation-mid-flow scenarios).
+  {
+    name: 'F109 releaseActiveFlow: does NOT touch pendingClosure / operatorRequested / escalationReason / pendingEscalation',
+    run: () => {
+      const ar = makeAr()
+      ar.state.activeFlowId = 'non_parte'
+      ar.state.pendingClosure = 'escalated'
+      ar.state.operatorRequested = true
+      ar.state.escalationReason = 'some prior reason'
+      ar.pendingEscalation = { reason: 'some prior reason' }
+      releaseActiveFlow(ar)
+      if (ar.state.pendingClosure !== 'escalated') {
+        throw new Error('pendingClosure must NOT be cleared by releaseActiveFlow')
+      }
+      if (ar.state.operatorRequested !== true) {
+        throw new Error('operatorRequested must NOT be cleared by releaseActiveFlow')
+      }
+      if (ar.state.escalationReason !== 'some prior reason') {
+        throw new Error('escalationReason must NOT be cleared by releaseActiveFlow')
+      }
+      if (ar.pendingEscalation === null) {
+        throw new Error('pendingEscalation must NOT be cleared by releaseActiveFlow')
       }
     },
   },

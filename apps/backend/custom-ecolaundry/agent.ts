@@ -30,6 +30,7 @@ import { API_KEY } from './utils/llm.js'
 import { logger } from './utils/logger.js'
 import { sanitizeUserMessage } from './utils/input-sanitize.js'
 import { dispatchSubsequentTurn, dispatchTurnOne } from './utils/branches/index.js'
+import { blockedGuardsForTurnMode } from './utils/router.js'
 import { t, tt } from './utils/localization.js'
 import type { SupportedLanguage } from './models/index.js'
 import {
@@ -37,7 +38,7 @@ import {
   replyContainsResolutionMarker,
   stripResolutionSentences,
 } from './utils/contradiction.js'
-import { closeAsEscalated, markResolved, undoResolved } from './utils/state-transitions.js'
+import { closeAsEscalated, markResolved, releaseActiveFlow, undoResolved } from './utils/state-transitions.js'
 import { applyOutputInvariants } from './utils/output-invariants.js'
 import {
   auditFactDiscipline,
@@ -94,14 +95,28 @@ export async function agentTurn(session: AgentSession, rawUserMessage: string): 
   // dispatch directly. Otherwise fall through to the legacy guard pipeline
   // so the bot keeps working while branches are migrated incrementally.
   // See docs/branch-router-architecture.md for the migration plan.
+  //
+  // F108 — maybeDispatchBranch also returns the per-turn router decision so
+  // we can compute blockedGuards for the legacy pipeline below. The router
+  // is run on EVERY turn (not just T1) to detect turnMode='pure-closure'
+  // and skip gather/flow guards that would otherwise re-ask the customer
+  // for facts they never promised to provide.
+  // F108 — last bot turn is passed to the router as context (so it can tell
+  // gather/pure-closure/new-incident apart from a bare "ok" / "merci"). null
+  // on T1 when history is empty.
+  const lastAssistantMessage = findLastAssistantMessage(history)
+  let blockedGuards: ReadonlySet<string> | undefined
   if (ar.runtime.settings?.useBranchRouter) {
-    const dispatchResult = await maybeDispatchBranch(ar, userMessage)
-    if (dispatchResult) {
-      return applyGuardOutcome(session, { reply: dispatchResult, reason: 'branch-router' }, userMessage)
+    const { reply, decision } = await maybeDispatchBranch(ar, userMessage, lastAssistantMessage)
+    if (reply) {
+      return applyGuardOutcome(session, { reply, reason: 'branch-router' }, userMessage)
+    }
+    if (decision) {
+      blockedGuards = blockedGuardsForTurnMode(decision.turnMode)
     }
   }
 
-  const guardOutcome = runGuardPipeline(ar, userMessage)
+  const guardOutcome = runGuardPipeline(ar, userMessage, blockedGuards)
   if (guardOutcome) {
     return applyGuardOutcome(session, guardOutcome, userMessage)
   }
@@ -116,13 +131,27 @@ export async function agentTurn(session: AgentSession, rawUserMessage: string): 
 
 /**
  * Branch-router dispatch (feature-flagged). Returns the handler reply
- * when the dispatcher was able to handle the turn, else null so the
- * caller falls through to the legacy pipeline. Pure side-effect-free
- * fall-back: when no handler exists for the chosen branch, no state
- * mutation persists across the dispatch (the dispatcher only stores
- * activeBranch when it actually invokes a handler).
+ * (when the dispatcher was able to handle the turn) AND the router
+ * decision (so the caller can derive blockedGuards for the legacy pipeline
+ * — F108). When no handler exists for the chosen branch, only the decision
+ * is returned and the caller falls through to the legacy pipeline. Pure
+ * side-effect-free fall-back: the dispatcher only stores activeBranch
+ * when it actually invokes a handler.
  */
-async function maybeDispatchBranch(ar: AgentRuntime, userMessage: string): Promise<string | null> {
+interface MaybeDispatchResult {
+  /** Handler-produced reply when handled, else null (fall through). */
+  reply: string | null
+  /** Router decision for THIS turn — used by the legacy pipeline to compute
+   *  blockedGuards (F108). null when the router was not consulted (e.g. the
+   *  sticky branch is resolved and we'd skip dispatch altogether). */
+  decision: { turnMode: import('./utils/router.js').TurnMode } | null
+}
+
+async function maybeDispatchBranch(
+  ar: AgentRuntime,
+  userMessage: string,
+  lastAssistantMessage?: string,
+): Promise<MaybeDispatchResult> {
   // T2+ first: if the previous turn pinned a sticky branch, route there
   // directly without re-classifying.
   // Exception: if the case was already resolved (pendingClosure='resolved'),
@@ -136,12 +165,20 @@ async function maybeDispatchBranch(ar: AgentRuntime, userMessage: string): Promi
       ar.state.activeBranch = null
       // Fall through to T1 dispatch below.
     } else {
-      const result = await dispatchSubsequentTurn(ar, userMessage, ar.state.language as SupportedLanguage ?? 'es')
-      return result.handled && result.output ? result.output.reply : null
+      const result = await dispatchSubsequentTurn(
+        ar,
+        userMessage,
+        ar.state.language as SupportedLanguage ?? 'es',
+        lastAssistantMessage,
+      )
+      return {
+        reply: result.handled && result.output ? result.output.reply : null,
+        decision: result.decision ?? null,
+      }
     }
   }
   // T1: classify and dispatch.
-  const result = await dispatchTurnOne(ar, userMessage)
+  const result = await dispatchTurnOne(ar, userMessage, lastAssistantMessage)
   // F80 — Router language detection is authoritative ONLY at T1. The router
   // LLM is more accurate than the heuristic in resolveLanguageForTurn, so we
   // allow it to correct the just-set value while we're still in turn 1. From
@@ -169,7 +206,25 @@ async function maybeDispatchBranch(ar: AgentRuntime, userMessage: string): Promi
       ar.state.preferredLanguage = routerLang
     }
   }
-  return result.handled && result.output ? result.output.reply : null
+  return {
+    reply: result.handled && result.output ? result.output.reply : null,
+    decision: result.decision ?? null,
+  }
+}
+
+/**
+ * F108 — Return the most recent assistant turn from history, or undefined
+ * if history is empty. Used to give the router conversation context so it
+ * can classify gather / pure-closure / new-incident correctly.
+ */
+function findLastAssistantMessage(history: AgentMessage[]): string | undefined {
+  for (let i = history.length - 1; i >= 0; i -= 1) {
+    const entry = history[i]
+    if (entry?.role === 'assistant' && typeof entry.content === 'string' && entry.content.trim()) {
+      return entry.content
+    }
+  }
+  return undefined
 }
 
 // ── Turn pipeline ─────────────────────────────────────────────────────────────
@@ -304,6 +359,27 @@ async function applyGuardOutcome(
       reply = `${ack}\n\n${reply}`
     }
     ar.state.locationAckPending = null
+  }
+  // F109 — Release a stale machine flow after a FAQ pivot.
+  //
+  // When a FAQ guard (loyalty-card-buy, faq-prices, faq-hours, faq-programs,
+  // faq-how-to-use, faq-payment, branch FAQ handler) emits a reply mid-flow,
+  // it sets `lastResolvedIntent='faq'` to mark the topic switch. If an
+  // `activeFlowId` from a previous trouble flow (e.g. `non_parte` after DOOR)
+  // is still set, the next user turn would be consumed by
+  // `guardAdvanceMachineFlow` as a CHOICE input to the dead flow's pending
+  // step (e.g. `followup_display`). Non-numeric replies fall through to
+  // `"other": escalate` and the bot emits a spurious `washerEscalate` reply
+  // — wholly out of context (Andrea chat 2026-05-26).
+  //
+  // Single chokepoint: every guard outcome passes through here. When the
+  // guard just resolved as FAQ, release any inherited machine flow. Sticky
+  // facts (location, machineType, machineNumber, displayState) are preserved
+  // — the customer is still the same; only the conversation control is
+  // released. If the customer returns to the trouble topic, the flow re-arms
+  // via `guardAutoStartMachineFlow`.
+  if (ar.state.lastResolvedIntent === 'faq' && ar.state.activeFlowId) {
+    releaseActiveFlow(ar)
   }
   history.push({ role: 'user', content: userMessage })
   history.push({ role: 'assistant', content: reply })
@@ -566,7 +642,8 @@ async function appendEscalationSummary(ar: AgentRuntime, reply: string, history:
     // Support message", no "operador") so Scenario 6.1 assertions stay green
     // (usecases.md §6.1 riga 627: "no es una escalación a un humano en vivo").
     const ctx = extractEscalationContext(ar.state, customerName)
-    const summary = await generateOperatorBriefingFromHistory(ar, history, buildEscalationSummary(ctx))
+    const briefingLang = ar.runtime.settings?.operatorBriefingLanguage ?? 'es'
+    const summary = await generateOperatorBriefingFromHistory(ar, history, buildEscalationSummary(ctx, briefingLang))
     ar.pendingEscalation = null
     return `${finalText}\n\n**📋 Resumen para tramitación:**\n${summary}`
   }
@@ -576,7 +653,9 @@ async function appendEscalationSummary(ar: AgentRuntime, reply: string, history:
   // for the LLM path, AND emitted directly when settings.operatorBriefingFromLlm
   // is false). Tests run with the flag OFF so assertions on summary content
   // stay reliable. See CLAUDE.md "Test deterministic vs production polished".
-  const baseline = buildEscalationSummary(ctx)
+  // F106 — language driven by settings.operatorBriefingLanguage (default 'es').
+  const briefingLang = ar.runtime.settings?.operatorBriefingLanguage ?? 'es'
+  const baseline = buildEscalationSummary(ctx, briefingLang)
   const summary = await generateOperatorBriefingFromHistory(ar, history, baseline)
   ar.pendingEscalation = null
   closeAsEscalated(ar)
@@ -751,7 +830,18 @@ function findBatchArg(): string | null {
   return v ?? null
 }
 
+/** Enable LLM call observability when `--debug` is passed on the CLI.
+ *  Sets LLM_DEBUG=1 so `utils/llm-fetch.ts` emits a `llm.call` log line
+ *  per OpenRouter request (caller, status, latencyMs, attempts). OFF by
+ *  default — production and tests stay silent. */
+function applyDebugFlag(): void {
+  if (process.argv.includes('--debug')) {
+    process.env.LLM_DEBUG = '1'
+  }
+}
+
 if (isDirectExecution()) {
+  applyDebugFlag()
   const batch = findBatchArg()
   const runner = batch !== null ? runBatch(batch) : runInteractive()
   runner.catch((err) => {

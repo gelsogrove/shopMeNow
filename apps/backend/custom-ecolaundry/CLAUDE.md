@@ -4,7 +4,7 @@ This file is auto-loaded when working under `apps/backend/custom-ecolaundry/`.
 Read it BEFORE every change. The rules below are non-negotiable.
 
 > **Long-form docs (consult on demand):**
-> - [`docs/architecture.md`](docs/architecture.md) — full layered design, detectors, gather orderings, allowed-large-files, pending refactors, test patterns
+> - [`docs/architecture.md`](docs/architecture.md) — full layered design, detectors, gather orderings, allowed-large-files, pending refactors, test patterns, prompt caching (§23)
 > - [`docs/f-log.md`](docs/f-log.md) — regression catalogue (F1→F105). Read the matching F-entry BEFORE any fix that resembles a past symptom
 > - [`docs/contracts.md`](docs/contracts.md) — per-tool validators
 > - [`docs/adding-use-cases.md`](docs/adding-use-cases.md) — recipes
@@ -27,13 +27,15 @@ Read it BEFORE every change. The rules below are non-negotiable.
 5. **Each detector ships with tests**. Pure helpers in `utils/<name>.ts` MUST have a sibling `__tests__/unit/<name>.test.ts` covering happy + edge cases. 100% coverage on the detector itself.
 
 6. **No hardcoded phrase detection for INTENT**. Phrase routing belongs in the LLM. Phrase detection in code is allowed ONLY for boundary signals (greeting, mixed-signal, contrast connectors).
-   **Tracked exemption — FAQ topic guards.** `HORARIOS_TOPIC`, `PRECIO_TOPIC`, `TARJETA_TOPIC`, `RECARGA_TOPIC`, `FACTURA_TOPIC` are intent classifiers kept as fast-path optimisation (6-lang coverage). Plan: route to LLM when ES is stable in production.
+   **Tracked exemption — FAQ topic guards (cap = 6).** `HORARIOS_TOPIC`, `PRECIO_TOPIC`, `TARJETA_TOPIC`, `RECARGA_TOPIC`, `FACTURA_TOPIC`, `DESCUENTO_TOPIC` (in `utils/patterns.ts`) are intent classifiers kept as fast-path optimisation (6-lang coverage). Plan: route to LLM when ES is stable in production. **Hard cap enforced** by `check-architecture.sh` Rule #6 — to grow the cap, raise `RULE6_TOPIC_CAP` in the script AND update this list in the same commit.
    **Tracked exemption — Language detection.** `detectLanguageHeuristic()` in `utils/intent.ts` uses scoring-based phrase matching to identify customer language before LLM routing (required architectural gate). 6-lang coverage with multi-language test suite.
 
 7. **Settings are law**. `json/settings.json` is the source of truth for tenant config. `runtime.ts:validateSettings` fails fast on misconfiguration. No code path may produce a reply in a non-allowed language.
 
-8. **Multi-language by design**. Every detector covers all 6 supported languages (es, it, en, ca, pt, fr).
-   **Current scope (Andrea, 2026-05-08): SPANISH FIRST.** The active tenant runs ES only. `utils/escalation.ts` keeps ~30 hardcoded ES phrases for operator handover — deliberate exemption until ES is stable. When extending to other languages, port `escalation.ts` to the i18n catalogue.
+8. **Multi-language by design**. Every detector and every operator-facing or customer-facing string covers all 6 supported languages (es, it, en, ca, pt, fr) via the i18n catalogue in `json/i18n/<lang>.json`. No hardcoded language phrases in code.
+   - **Customer reply language**: customer's session language (detected from message).
+   - **Operator briefing language**: `settings.operatorBriefingLanguage` (default `'es'`, validated against `enabledLanguages`). See `utils/escalation.ts` + `utils/operator-briefing.ts`.
+   - **Default tenant scope (Andrea, 2026-05-08)**: SPANISH FIRST for customer-facing text; the active tenant has `defaultLanguage: 'es'`.
 
 9. **Semantic naming, no ordinal references**. File names, pendingFlow markers, reason strings, i18n keys, display flow ids, escalation reasons MUST describe behaviour, not document order. Forbidden tokens in code: `caso\d+`, `case\d+`. The numeric "Caso N" labels in `docs/usecases.md` are documentation-only — bridge in `json/cases.json`. Enforced by `check-architecture.sh` Rule #9.
 
@@ -243,8 +245,10 @@ Rules are checked by [`scripts/check-architecture.sh`](scripts/check-architectur
 | #3 | `wc -l` on `utils/*.ts` vs 150 | Cassettes grown into mega-files |
 | #4 | grep `ar\.state\.<flag>\s*=` outside `state-transitions.ts` | Inline state mutations |
 | #5 | every `utils/<detector>.ts` has `__tests__/unit/<detector>.test.ts` | Detectors merged without tests |
+| #6 | count `*_TOPIC` exports in `utils/patterns.ts` <= `RULE6_TOPIC_CAP` (default 6) | Silent growth of the phrase-intent exemption |
 | #9 | grep `caso\d+\|case\d+` in code/json/prompts | Ordinal references to doc cases |
 | #11 | every F-number in `docs/f-log.md` has pin in `f-log-regression.test.ts` | F-log entries without regression pin |
+| #12 | every `json/i18n/<lang>.json` exposes the same top-level keys as `en.json` | Missing translations in a language |
 
 To run: `bash scripts/check-architecture.sh`. Exit code non-zero on any violation.
 
@@ -270,7 +274,7 @@ If a request asks me to do any of these, push back, propose the correct layer, a
 ## 📊 Useful commands
 
 ```bash
-bash scripts/check-architecture.sh  # 6 enforcement checks (rules 1/3/4/5/9/11)
+bash scripts/check-architecture.sh  # 8 enforcement checks (rules 1/3/4/5/6/9/11/12)
 npm run typecheck                    # tsc --noEmit
 npm run test:unit                    # all unit tests (~1600 tests, <1s)
 npm run demo                         # CLI agent REPL (needs OPENROUTER_API_KEY)

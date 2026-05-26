@@ -365,6 +365,8 @@ export async function rephraseForTurn(
       userPrompt,
       temperature: rephraseTemp,
       maxTokens: Math.max(150, Math.ceil(reply.length * 1.5)),
+      caller: 'rephrase',
+      cacheSystemPrompt: true,
     })
     const polished = rephrased.trim() || reply
 

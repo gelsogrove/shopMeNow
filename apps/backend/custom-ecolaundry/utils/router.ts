@@ -18,6 +18,7 @@
 import { callModel, extractJson, resolveModel } from './llm.js'
 import { LlmFetchError } from './llm-fetch.js'
 import { ROUTER_SYSTEM_PROMPT } from './router-prompt.js'
+import { GATHER_AND_FLOW_GUARDS } from './guards/index.js'
 import type { Runtime, SupportedLanguage } from '../models/index.js'
 
 export type Branch =
@@ -38,9 +39,31 @@ export type TroubleSubCase =
   | 'display-driven'         // Casi 1/2/3/5/13/14/15/16/30 — pantalla con código
   | 'none'                   // ambiguous / no clear sub-case
 
+/** F108 — Turn-aware mode emitted by the router on EVERY turn. The guard
+ *  dispatcher uses this to decide what the pipeline is allowed to do this
+ *  turn. Prevents the bot from re-asking for gather facts (location, type,
+ *  number, display) when the customer is closing a topic or pivoting.
+ *
+ *  - "new-incident"          fresh operational problem
+ *  - "gather"                customer is answering bot's previous question
+ *  - "respond-and-continue"  customer fired a quick FAQ mid-flow
+ *  - "pure-closure"          customer acknowledged / closed topic; bot must
+ *                            not ask any new operational question this turn
+ *  - "escalate"              customer explicitly demands operator
+ */
+export type TurnMode =
+  | 'new-incident'
+  | 'gather'
+  | 'respond-and-continue'
+  | 'pure-closure'
+  | 'escalate'
+
 export interface RouterDecision {
   branch: Branch
   language: SupportedLanguage
+  /** F108 — Required on every classification. Defaults to 'new-incident' if
+   *  the LLM omits it (safe default: behaves as today, no guards blocked). */
+  turnMode: TurnMode
   details: {
     /** For branch="faq": the matched FAQ key, when the message clearly
      *  maps to one of the entries in json/faqs.json. Empty string if not
@@ -70,6 +93,9 @@ export interface RouterDecision {
 const ROUTER_FALLBACK: RouterDecision = {
   branch: 'unknown',
   language: 'es',
+  // Safe default: 'new-incident' means the dispatcher blocks NO guards,
+  // so a router failure degrades to today's behaviour (full pipeline runs).
+  turnMode: 'new-incident',
   details: {},
 }
 
@@ -77,6 +103,10 @@ export interface ClassifyOptions {
   runtime?: Runtime
   /** Override model id for this call (defaults to runtime/env-resolved). */
   model?: string
+  /** F108 — Previous bot turn (last assistant message). Passed as context so
+   *  the router can distinguish `gather` (customer answering a bot question)
+   *  from `new-incident` and from `pure-closure`. Omitted on T1 (no history). */
+  lastAssistantMessage?: string
 }
 
 /**
@@ -104,13 +134,24 @@ export async function classifyMessageBranch(
     // missing. See CLAUDE.md Pending refactors D2.
     const promptFromFile = options.runtime?.prompts?.router?.trim()
     const systemPrompt = promptFromFile || ROUTER_SYSTEM_PROMPT
+    // F108 — Include the previous bot turn in the user prompt so the router
+    // can correctly classify `gather` / `pure-closure` / `new-incident`.
+    // Without this, a bare "ok merci" looks ambiguous; with the bot's
+    // previous question as context, the router sees "bot asked X, customer
+    // answered ok" → pure-closure or gather. The format is intentionally
+    // compact (single line) to keep router latency low.
+    const userPrompt = options.lastAssistantMessage
+      ? `Previous bot turn: ${options.lastAssistantMessage.slice(0, 400)}\nCustomer: ${trimmed}`
+      : trimmed
     raw = await callModel({
       model,
       systemPrompt,
-      userPrompt: trimmed,
+      userPrompt,
       json: true,
       temperature: routerTemp,
       maxTokens: 200,
+      caller: 'router',
+      cacheSystemPrompt: true,
     })
   } catch (err) {
     // F85 — OpenRouter outages (auth/credits/rate/timeout/network) propagate
@@ -153,12 +194,45 @@ function validateDecision(d: RouterDecision): RouterDecision {
     'display-driven',
     'none',
   ]
+  const allowedTurnModes: TurnMode[] = [
+    'new-incident',
+    'gather',
+    'respond-and-continue',
+    'pure-closure',
+    'escalate',
+  ]
   const branch: Branch = allowedBranches.includes(d.branch) ? d.branch : 'unknown'
   const language: SupportedLanguage = allowedLangs.includes(d.language) ? d.language : 'es'
+  // F108 — Safe default if LLM omits or returns drift: 'new-incident' (no
+  // guards blocked, pipeline behaves as today).
+  const turnMode: TurnMode = allowedTurnModes.includes(d.turnMode as TurnMode)
+    ? (d.turnMode as TurnMode)
+    : 'new-incident'
   const details = d.details && typeof d.details === 'object' ? { ...d.details } : {}
   // Defensive normalisation for subCase — fallback to 'none' if drift.
   if (details.subCase && !allowedSubCases.includes(details.subCase)) {
     details.subCase = 'none'
   }
-  return { branch, language, details }
+  return { branch, language, turnMode, details }
 }
+
+/**
+ * F108 — Map `turnMode` to the set of guards the dispatcher must SKIP for
+ * this turn.
+ *
+ * - `pure-closure` → block all gather/flow guards. The customer closed the
+ *   topic; the bot must NOT re-ask for location/type/number/display or
+ *   restart a display flow. Closure + FAQ + LLM-polish guards still fire.
+ * - `gather` / `new-incident` / `respond-and-continue` / `escalate` → block
+ *   nothing. The full pipeline runs as today.
+ *
+ * The empty set means "no guards blocked" — the safe default for any
+ * unknown turnMode and for router failures (fallback returns
+ * turnMode='new-incident').
+ */
+export function blockedGuardsForTurnMode(turnMode: TurnMode): ReadonlySet<string> {
+  if (turnMode === 'pure-closure') return GATHER_AND_FLOW_GUARDS
+  return EMPTY_SET
+}
+
+const EMPTY_SET: ReadonlySet<string> = new Set<string>()

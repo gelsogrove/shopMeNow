@@ -13,6 +13,7 @@ import type {
 } from '../models/index.js'
 import { detectLanguageHeuristic } from './intent.js'
 import { fetchLlmJson } from './llm-fetch.js'
+import { buildMessages } from './llm-messages.js'
 
 // Load .env from the demo directory (if present)
 try {
@@ -80,15 +81,12 @@ export async function callOpenRouter(params: LlmRequest): Promise<string> {
     },
     body: JSON.stringify({
       model: params.model || resolveModel(),
-      messages: [
-        ...(params.systemPrompt ? [{ role: 'system', content: params.systemPrompt }] : []),
-        { role: 'user', content: params.userPrompt },
-      ],
+      messages: buildMessages(params),
       temperature: params.temperature ?? 0.1,
       max_tokens: params.maxTokens ?? 300,
       ...(params.json ? { response_format: { type: 'json_object' } } : {}),
     }),
-  })
+  }, params.caller)
 
   return data.choices?.[0]?.message?.content?.trim() || ''
 }
@@ -111,6 +109,7 @@ export async function detectLanguage(runtime: Runtime, message: string): Promise
     userPrompt: `Customer message:\n${message}`,
     json: true,
     maxTokens: 30,
+    caller: 'language-detect',
   })
   const parsed = extractJson<{ language?: 'it' | 'es' | 'en' | 'pt' | 'ca' | 'fr' }>(result, { language: 'en' })
   return parsed.language || 'en'

@@ -726,11 +726,16 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'F48 — operator briefing still interpolates machineType from state (no regression)',
+    name: 'F48 — operator briefing still produces type-specific machine wording (post-F107 i18n)',
     run: () => {
       // The architectural guarantee: customer-facing is generic, BUT the
-      // operator briefing must still produce the type-specific term from
-      // state. The check below ensures escalation.ts keeps the interpolation.
+      // operator briefing MUST still produce a type-specific term (washer
+      // vs dryer / lavadora vs secadora / lavatrice vs asciugatrice / …).
+      //
+      // SUPERSEDED-BY: F107 (2026-05-25) replaced the hardcoded ES ternaries
+      // `machineType === 'dryer' ? 'secadora' : 'lavadora'` with i18n
+      // catalogue lookups t('summaryWasher'|'summaryDryer', lang). Same
+      // behavior, now multilingual. Pin updated to track the new contract.
       const escPath = path.resolve(
         path.dirname(fileURLToPath(import.meta.url)),
         '..',
@@ -739,10 +744,17 @@ const cases: Case[] = [
         'escalation.ts',
       )
       const content = fs.readFileSync(escPath, 'utf8')
-      const matches = content.match(/machineType\s*===\s*'dryer'\s*\?\s*'secadora'\s*:\s*'lavadora'/g) || []
-      if (matches.length < 4) {
+      // The dispatch on machineType MUST exist (washer vs dryer).
+      if (!/machineType\s*===\s*'dryer'/.test(content)) {
         throw new Error(
-          `F48: escalation.ts must keep at least 4 interpolations of machineType → 'lavadora'/'secadora' (operator briefing). Found ${matches.length}.`,
+          "F48: escalation.ts must still branch on `machineType === 'dryer'` to pick the type-specific word",
+        )
+      }
+      // The dispatch must resolve via the i18n keys (summaryWasher / summaryDryer)
+      // — the post-F107 mechanism that replaces the hardcoded ES ternaries.
+      if (!/summaryWasher/.test(content) || !/summaryDryer/.test(content)) {
+        throw new Error(
+          "F48: escalation.ts must read 'summaryWasher' and 'summaryDryer' i18n keys so the operator briefing stays type-specific in every language (post-F107)",
         )
       }
     },
@@ -1173,8 +1185,18 @@ const cases: Case[] = [
     },
   },
   {
-    name: 'F57 — STATE_FACTS payload omits machine facts for non-machine-trouble categories',
+    name: 'F57 — FACTS payload omits machine facts for non-machine-trouble categories (post-F107)',
     run: () => {
+      // The architectural guarantee: when escalationCategory != 'machine-trouble',
+      // the LLM briefing prompt must not see machine/display data — otherwise
+      // it pollutes the operator handover (Caso 8/9/non-trouble must NOT
+      // mention machine details from a previous abandoned flow).
+      //
+      // SUPERSEDED-BY: F107 (2026-05-25). Pre-F107 the prompt emitted
+      // `machineFacts: (not applicable for X — IGNORE …)` as a marker. The
+      // LLM occasionally parroted that marker verbatim into the briefing.
+      // Post-F107 the machine-fact lines are OMITTED entirely — strictly
+      // stronger guarantee (no leak surface at all).
       const here = path.dirname(fileURLToPath(import.meta.url))
       const fp = path.resolve(here, '..', '..', 'utils', 'operator-briefing.ts')
       const content = fs.readFileSync(fp, 'utf8')
@@ -1182,23 +1204,38 @@ const cases: Case[] = [
       if (!/isMachineTrouble/.test(content)) {
         throw new Error('F57: must guard machine facts via isMachineTrouble flag')
       }
-      // Marker for the LLM that machine facts are out of scope.
-      if (!/not applicable for/.test(content)) {
-        throw new Error('F57: STATE_FACTS must mark omitted facts as "(not applicable for ...)"')
+      // Post-F107: machine fact lines must be inside the `if (isMachineTrouble)`
+      // branch. We verify by checking that the lines `machineType:` /
+      // `machineNumber:` / `displayLabel:` only appear inside a conditional
+      // that includes isMachineTrouble.
+      const machineTroubleBlock = content.match(
+        /if\s*\(\s*isMachineTrouble\s*\)\s*\{[\s\S]*?\}\s*else\s*\{/,
+      )
+      if (!machineTroubleBlock || !/machineType/.test(machineTroubleBlock[0])) {
+        throw new Error(
+          "F57: machine fact lines (machineType/machineNumber/displayLabel) must live inside the `if (isMachineTrouble)` branch — never in the non-machine-trouble path",
+        )
       }
     },
   },
   {
-    name: 'F57 — prompts/operator-briefing.txt has the scoping rule (#10 ÁMBITO)',
+    name: 'F57 — prompts/operator-briefing.txt has the scoping rule (escalationCategory + forbid leak)',
     run: () => {
+      // SUPERSEDED-BY: F107. Pre-F107 the prompt referenced the
+      // "(not applicable ...)" marker because the FACTS block emitted it.
+      // Post-F107 the marker is gone (lines are omitted); the prompt must
+      // (a) still teach the LLM the escalationCategory scoping rule, and
+      // (b) explicitly forbid leaking placeholder tokens like '(single)',
+      //     '(missing)' into the customer-visible briefing.
       const here = path.dirname(fileURLToPath(import.meta.url))
       const fp = path.resolve(here, '..', '..', 'prompts', 'operator-briefing.txt')
       const content = fs.readFileSync(fp, 'utf8')
-      if (!/ÁMBITO DEL CASO|escalationCategory/.test(content)) {
-        throw new Error('F57: prompts/operator-briefing.txt must include the ÁMBITO/escalationCategory rule')
+      if (!/escalationCategory/.test(content)) {
+        throw new Error('F57: prompts/operator-briefing.txt must include the escalationCategory scoping rule')
       }
-      if (!/not applicable/.test(content)) {
-        throw new Error('F57: prompt must reference the "(not applicable ...)" marker')
+      // Post-F107: prompt MUST list the forbidden placeholder tokens.
+      if (!/\(missing\)/.test(content) || !/\(single\)/.test(content)) {
+        throw new Error("F57 (post-F107): prompt must explicitly forbid leaking '(missing)' / '(single)' placeholder tokens")
       }
     },
   },
@@ -3320,6 +3357,133 @@ const cases: Case[] = [
     },
   },
 
+  // ── F107 — operator briefing i18n + no '(single)' leak ─────────────────
+  // F107 (Andrea 2026-05-25): the operator-facing summary leaked internal
+  // tokens like "(single)" / "(missing)" and was hardcoded to Spanish even
+  // when the operator preferred another language. Fix: (1) all summary
+  // strings ported to the i18n catalogue (summary* keys), (2) new
+  // settings.operatorBriefingLanguage drives buildEscalationSummary +
+  // formatHandoverTimestamp, (3) FACTS lines are omitted instead of being
+  // filled with placeholder tokens the LLM could parrot back.
+  {
+    name: "F107 — operator-briefing.ts: no '(single)' / '(missing)' fallback in fact lines",
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const src = fs.readFileSync(
+        path.join(here, '..', '..', 'utils', 'operator-briefing.ts'),
+        'utf8',
+      )
+      // Negative: the legacy `|| '(single)'` / `|| '(missing)'` patterns
+      // MUST NOT reappear — they were the leak surface that produced the
+      // customer-visible "displaySequence: (single)" line.
+      if (/\|\|\s*'\(single\)'/.test(src)) {
+        throw new Error("F107: `|| '(single)'` fallback must NOT exist in operator-briefing.ts")
+      }
+      if (/\|\|\s*'\(missing\)'/.test(src)) {
+        throw new Error("F107: `|| '(missing)'` fallback must NOT exist in operator-briefing.ts")
+      }
+      // Positive: the fix must keep the {language} placeholder substitution
+      // path so the LLM prompt is localised per settings.
+      if (!src.includes('{language}')) {
+        throw new Error("F107: operator-briefing.ts must substitute the {language} placeholder in the system prompt")
+      }
+      if (!src.includes('operatorBriefingLanguage')) {
+        throw new Error('F107: operator-briefing.ts must read settings.operatorBriefingLanguage')
+      }
+    },
+  },
+  {
+    name: 'F107 — prompts/operator-briefing.txt forbids internal-token placeholders',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const src = fs.readFileSync(
+        path.join(here, '..', '..', 'prompts', 'operator-briefing.txt'),
+        'utf8',
+      )
+      // Must include the {language} placeholder for runtime substitution.
+      if (!src.includes('{language}')) {
+        throw new Error('F107: prompts/operator-briefing.txt must contain {language} placeholder')
+      }
+      // Must explicitly forbid leaking placeholders like '(missing)', '(single)'.
+      if (!/\(missing\)/.test(src) || !/\(single\)/.test(src)) {
+        throw new Error("F107: prompt must explicitly list '(missing)' and '(single)' as forbidden tokens so the LLM does not parrot them")
+      }
+    },
+  },
+  {
+    name: 'F107 — escalation.ts uses i18n catalogue (no hardcoded ES strings in branch builders)',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const src = fs.readFileSync(
+        path.join(here, '..', '..', 'utils', 'escalation.ts'),
+        'utf8',
+      )
+      // Must import t/tt from localization.
+      if (!/from\s+'\.\/localization\.js'/.test(src)) {
+        throw new Error("F107: escalation.ts must import from './localization.js' (t/tt)")
+      }
+      // Must accept a `lang` parameter on buildEscalationSummary.
+      if (!/buildEscalationSummary\([^)]*lang\s*:\s*SupportedLanguage/.test(src)) {
+        throw new Error('F107: buildEscalationSummary must accept a SupportedLanguage lang parameter')
+      }
+      // Must accept a `lang` parameter on formatHandoverTimestamp.
+      if (!/formatHandoverTimestamp\(\s*lang\s*:\s*SupportedLanguage/.test(src)) {
+        throw new Error('F107: formatHandoverTimestamp must accept a SupportedLanguage lang parameter')
+      }
+      // Hardcoded canonical ES sentences from the pre-F107 builder MUST be gone.
+      if (/'Usuario sin nombre'/.test(src)) {
+        throw new Error("F107: hardcoded ES string 'Usuario sin nombre' must be replaced with t('summaryUserAnonymous', lang)")
+      }
+      if (/'ubicación desconocida'/.test(src)) {
+        throw new Error("F107: hardcoded ES string 'ubicación desconocida' must be replaced with t('summaryLocationUnknown', lang)")
+      }
+    },
+  },
+  {
+    name: 'F107 — summary* i18n keys present in all 6 catalogues',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const langs = ['es', 'it', 'en', 'ca', 'fr', 'pt']
+      const requiredKeys = [
+        'summaryTimestampPrefix',
+        'summaryLanguageName',
+        'summaryUserAnonymous',
+        'summaryWasher',
+        'summaryDryer',
+        'summaryDoubleChargeUsed',
+        'summaryDiscountCodeValid',
+        'summaryMachineDefault',
+      ]
+      for (const lang of langs) {
+        const src = fs.readFileSync(
+          path.join(here, '..', '..', 'json', 'i18n', `${lang}.json`),
+          'utf8',
+        )
+        for (const key of requiredKeys) {
+          if (!src.includes(`"${key}"`)) {
+            throw new Error(`F107: i18n/${lang}.json missing key "${key}"`)
+          }
+        }
+      }
+    },
+  },
+  {
+    name: 'F107 — settings.operatorBriefingLanguage validated against enabledLanguages',
+    run: () => {
+      const here = path.dirname(fileURLToPath(import.meta.url))
+      const src = fs.readFileSync(
+        path.join(here, '..', '..', 'utils', 'runtime.ts'),
+        'utf8',
+      )
+      if (!/operatorBriefingLanguage/.test(src)) {
+        throw new Error('F107: validateSettings must check operatorBriefingLanguage')
+      }
+      if (!/enabledLanguages/.test(src) || !/operatorBriefingLanguage[\s\S]{0,500}enabledLanguages/.test(src)) {
+        throw new Error('F107: validateSettings must reject operatorBriefingLanguage not in enabledLanguages')
+      }
+    },
+  },
+
   // ── F101-Regola-A — faqHandler: qualsiasi pendingFlow non-vuoto → delegate-to-legacy ──
   // F101 Fase 1 (Andrea 2026-05-24): il faqHandler aveva due blocchi enumerati che
   // delegavano solo pendingFlow specifici (faq-*-await-location, discount-code-*, ecc.).
@@ -3350,6 +3514,171 @@ const cases: Case[] = [
       if (/pending\.startsWith\('discount-code-'\)/.test(src)) {
         throw new Error(
           "F101-Regola-A: il gate enumerato `pending.startsWith('discount-code-')` non deve più esistere — è coperto dal catch-all",
+        )
+      }
+    },
+  },
+
+  // ── F108 — L3.5 Router Amplification (turnMode + blockedGuards) ──────────
+  // Source-grep pins: ensure the L3.5 wiring stays in place. If a future
+  // refactor accidentally removes the turn-aware router amplification, these
+  // pins fail with the F108 cite so the dev knows to re-read this entry.
+  {
+    name: 'F108 — utils/router.ts exports TurnMode union with pure-closure',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/router.ts'), 'utf8')
+      if (!/export\s+type\s+TurnMode\s*=/.test(src)) {
+        throw new Error('F108: utils/router.ts must export `TurnMode` type union')
+      }
+      if (!/'pure-closure'/.test(src)) {
+        throw new Error("F108: TurnMode must include 'pure-closure' member")
+      }
+      if (!/blockedGuardsForTurnMode/.test(src)) {
+        throw new Error('F108: utils/router.ts must export `blockedGuardsForTurnMode()` helper')
+      }
+    },
+  },
+  {
+    name: 'F108 — RouterDecision interface includes turnMode field',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/router.ts'), 'utf8')
+      if (!/turnMode:\s*TurnMode/.test(src)) {
+        throw new Error('F108: RouterDecision interface must declare `turnMode: TurnMode` field')
+      }
+    },
+  },
+  {
+    name: 'F108 — utils/guards/index.ts exports GATHER_AND_FLOW_GUARDS set',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/guards/index.ts'), 'utf8')
+      if (!/export\s+const\s+GATHER_AND_FLOW_GUARDS/.test(src)) {
+        throw new Error('F108: utils/guards/index.ts must export `GATHER_AND_FLOW_GUARDS` set')
+      }
+      // The set MUST include the catch-all gather guards that caused the WhatsApp T8 bug.
+      for (const guardName of ['guardForceMachineType', 'guardForceMachineNumber', 'guardForceDisplay', 'guardForceLocation']) {
+        if (!src.includes(`'${guardName}'`)) {
+          throw new Error(`F108: GATHER_AND_FLOW_GUARDS must include '${guardName}' (caused T8 out-of-context bug)`)
+        }
+      }
+    },
+  },
+  {
+    name: 'F108 — runGuardPipeline accepts optional blockedGuards param',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/guards/index.ts'), 'utf8')
+      if (!/blockedGuards\?:\s*ReadonlySet<string>/.test(src)) {
+        throw new Error('F108: runGuardPipeline must accept `blockedGuards?: ReadonlySet<string>` parameter')
+      }
+      if (!/blockedGuards\.has\(guard\.name\)/.test(src)) {
+        throw new Error('F108: runGuardPipeline must skip guards whose .name is in blockedGuards')
+      }
+    },
+  },
+  {
+    name: 'F108 — blockedGuardsForTurnMode body: pure-closure returns GATHER_AND_FLOW_GUARDS, others EMPTY_SET',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/router.ts'), 'utf8')
+      if (!/turnMode\s*===\s*'pure-closure'\s*\)\s*return\s+GATHER_AND_FLOW_GUARDS/.test(src)) {
+        throw new Error('F108: blockedGuardsForTurnMode must return GATHER_AND_FLOW_GUARDS for pure-closure')
+      }
+      if (!/return\s+EMPTY_SET/.test(src)) {
+        throw new Error('F108: blockedGuardsForTurnMode must return EMPTY_SET as safe default for other modes')
+      }
+    },
+  },
+  {
+    name: 'F108 — agent.ts wires blockedGuardsForTurnMode into runGuardPipeline',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'agent.ts'), 'utf8')
+      if (!/blockedGuardsForTurnMode/.test(src)) {
+        throw new Error('F108: agent.ts must import `blockedGuardsForTurnMode`')
+      }
+      if (!/runGuardPipeline\(ar,\s*userMessage,\s*blockedGuards\)/.test(src)) {
+        throw new Error('F108: agent.ts must call `runGuardPipeline(ar, userMessage, blockedGuards)`')
+      }
+    },
+  },
+  {
+    name: 'F108 — prompts/router.txt documents turnMode classification',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'prompts/router.txt'), 'utf8')
+      if (!src.includes('turnMode')) {
+        throw new Error('F108: prompts/router.txt must mention `turnMode` field')
+      }
+      if (!src.includes('pure-closure')) {
+        throw new Error('F108: prompts/router.txt must define `pure-closure` mode')
+      }
+    },
+  },
+  {
+    name: 'F108 — classifyMessageBranch accepts lastAssistantMessage for conversation context',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/router.ts'), 'utf8')
+      if (!/lastAssistantMessage\?:\s*string/.test(src)) {
+        throw new Error('F108: ClassifyOptions must include `lastAssistantMessage?: string` field')
+      }
+      if (!/Previous bot turn:/.test(src)) {
+        throw new Error('F108: router must prepend "Previous bot turn:" prefix to userPrompt when context is provided')
+      }
+    },
+  },
+  {
+    name: 'F108 — agent.ts derives lastAssistantMessage from history before dispatch',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'agent.ts'), 'utf8')
+      if (!/findLastAssistantMessage\(history\)/.test(src)) {
+        throw new Error('F108: agent.ts must call findLastAssistantMessage(history) before dispatch')
+      }
+      if (!/maybeDispatchBranch\(ar,\s*userMessage,\s*lastAssistantMessage\)/.test(src)) {
+        throw new Error('F108: agent.ts must pass lastAssistantMessage to maybeDispatchBranch')
+      }
+    },
+  },
+
+  // ── F109 — releaseActiveFlow on FAQ pivot mid-flow ──────────────────────
+  // Source-grep pins: ensure the L2 transition + L4 chokepoint stay wired.
+  // Bug origin: Andrea CLI demo 2026-05-26 (IT). After resolving DOOR flow
+  // and pivoting to a loyalty FAQ at T8, the T9 follow-up question "quindi
+  // una di mataró non funziona qui?" was dragged into the dead non_parte
+  // followup_display CHOICE node and triggered the washerEscalate prompt.
+  // The fix releases activeFlowId/activeStepId at a single chokepoint in
+  // applyGuardOutcome whenever a FAQ guard just resolved.
+  {
+    name: 'F109 — utils/state-transitions.ts exports releaseActiveFlow',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/state-transitions.ts'), 'utf8')
+      if (!/export\s+function\s+releaseActiveFlow\s*\(/.test(src)) {
+        throw new Error('F109: utils/state-transitions.ts must export `releaseActiveFlow(ar)` named transition')
+      }
+      // Must clear the 4 flow-control fields atomically.
+      for (const field of ['activeFlowId', 'activeStepId', 'lastPresentedStepId', 'retryCount']) {
+        const re = new RegExp(`ar\\.state\\.${field}\\s*=`)
+        if (!re.test(src)) {
+          throw new Error(`F109: releaseActiveFlow must assign ar.state.${field}`)
+        }
+      }
+    },
+  },
+  {
+    name: 'F109 — agent.ts imports releaseActiveFlow from state-transitions',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'agent.ts'), 'utf8')
+      if (!/import\s*\{[^}]*\breleaseActiveFlow\b[^}]*\}\s*from\s*['"]\.\/utils\/state-transitions/.test(src)) {
+        throw new Error('F109: agent.ts must import `releaseActiveFlow` from utils/state-transitions')
+      }
+    },
+  },
+  {
+    name: 'F109 — agent.ts:applyGuardOutcome calls releaseActiveFlow when FAQ resolved with active flow',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'agent.ts'), 'utf8')
+      // The chokepoint MUST gate on both signals: lastResolvedIntent === 'faq'
+      // AND activeFlowId is set. Without the gate every guard outcome would
+      // wipe the active flow (regression: would break check_result mid-flow).
+      const chokepointRe = /ar\.state\.lastResolvedIntent\s*===\s*'faq'\s*&&\s*ar\.state\.activeFlowId[\s\S]{0,80}releaseActiveFlow\(ar\)/
+      if (!chokepointRe.test(src)) {
+        throw new Error(
+          "F109: agent.ts must gate releaseActiveFlow(ar) on `lastResolvedIntent === 'faq' && activeFlowId` to avoid wiping the active flow on every guard outcome",
         )
       }
     },

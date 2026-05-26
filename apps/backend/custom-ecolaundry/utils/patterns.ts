@@ -291,10 +291,10 @@ export const LANG_CA_QUINA_RE = /^quina|[,.\s!?]quina/i
 export const LANG_CA_VOCAB_RE = /(bon\s+dia|bona\s+(?:tarda|nit)|rentadora|assecadora|targeta|he\s+pagat|he\s+posat|no\s+veig|no\s+funciona|no\s+arrenca|per\s+favor|gràcies|com\s+(està|estàs|estais|estam)|on\s+est|a\s+on|talons|curs|horari|obrir|tancar|ha\s+cobrat|em\s+van\s+cobrar|dinars|diners|monedes|codi|cotxe|carrer|localitat|districte|provincia|preu|cost|mercat|catalan|català)/i
 
 /** English markers: washer, dryer, common English phrases */
-export const LANG_EN_MARKERS_RE = /(washer|dryer|laundromat|display\s+shows|charged\s+twice|double\s+charge|step\s+by\s+step|card\s+digits|screenshot|payment\s+proof|did\s+not\s+start|does\s+not\s+start|doesn'?t\s+work|doesn'?t\s+start|not\s+working|i\s+can'?t|my\s+(washer|dryer|machine)|don'?t\s+(know|see|understand)|\bi\s+paid\b|\bi\s+paid\s+twice\b|\bthe\s+machine\b|\bwashing\s+machine\b|\bhi\b|\bhello\b|\bhey\b|\bthe\s+laund|\blaundry\b|\bhow\s+(are|do)\s+you\b|\bwhat'?s\s+up\b|\bthank\s+(you|s)\b|\bthanks\b|\bplease\b|\bsorry\b|\bi\s+need\b|\bcan\s+you\b|\bcould\s+you\b|\bwhere\b|\bwhen\b|\bwhy\b|\bhow\b|\bi\s+(inserted|put|dropped|added)\s+(coins|money)\b)/i
+export const LANG_EN_MARKERS_RE = /(washer|dryer|laundromat|display\s+shows|charged\s+twice|double\s+charge|step\s+by\s+step|card\s+digits|screenshot|payment\s+proof|did\s+not\s+start|does\s+not\s+start|doesn'?t\s+work|doesn'?t\s+start|not\s+working|i\s+can'?t|my\s+(washer|dryer|machine)|don'?t\s+(know|see|understand)|\bi\s+paid\b|\bi\s+paid\s+twice\b|\bthe\s+machine\b|\bwashing\s+machine\b|\bhi\b|\bhello\b|\bhey\b|\bthe\s+laund|\blaundry\b|\bhow\s+(are|do)\s+you\b|\bwhat'?s\s+up\b|\bthank\s+(you|s)\b|\bthanks\b|\bplease\b|\bsorry\b|\bi\s+need\b|\bcan\s+you\b|\bcould\s+you\b|\bwhere\b|\bwhen\b|\bwhy\b|\bhow\b|\bi\s+(inserted|put|dropped|added)\s+(coins|money)\b|\bnot\s+yet\b|\bno\s+yet\b)/i
 
 /** Italian markers: ciao, grazie, come stai, etc. */
-export const LANG_IT_MARKERS_RE = /(ciao|buongiorno|buonasera|grazie|prego|dimmi|come stai|cosa devo fare|lavarice|asciugatrice|lavatrice|macchina|ho pagato|due volte|mi hanno addebitato|il display|schermo|codice|numero|saldo|crediti|portafoglio)/i
+export const LANG_IT_MARKERS_RE = /(ciao|buongiorno|buonasera|grazie|prego|dimmi|come stai|cosa devo fare|lavarice|asciugatrice|lavatrice|macchina|ho pagato|due volte|mi hanno addebitato|il display|schermo|codice|numero|saldo|crediti|portafoglio|\bnon\s+ancora\b)/i
 
 /**
  * Portuguese markers: words/phrases distinctive of PT vs ES.

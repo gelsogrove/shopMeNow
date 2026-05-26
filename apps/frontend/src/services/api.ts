@@ -64,6 +64,10 @@ api.interceptors.request.use(
   }
 )
 
+// Tracks whether an auth-expiry handler is already in flight, so cascading
+// 401s from in-flight requests don't re-trigger clearAuth() / toast / redirect.
+let isHandlingAuthExpiry = false
+
 // Add a response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
@@ -95,18 +99,21 @@ api.interceptors.response.use(
       }
 
       // 🆕 SKIP REDIRECT for 2FA verification pages (invalid code should show error, not redirect)
-      const is2FAPage = window.location.pathname === "/auth/verify-2fa" || 
+      const is2FAPage = window.location.pathname === "/auth/verify-2fa" ||
                         window.location.pathname === "/auth/verify-2fa-setup" ||
                         window.location.pathname === "/auth/setup-2fa"
-      
+
       if (is2FAPage) {
         // Let the page handle the 401 error (invalid code)
         return Promise.reject(error)
       }
 
-      // 🆕 CHECK IF IT'S A SESSION ERROR (vs JWT error)
-      const errorMessage = error.response?.data?.error || ""
-      const isSessionError = errorMessage.toLowerCase().includes("session")
+      // Cascading-401 guard: another 401 already started the logout flow.
+      // Reject silently so in-flight requests don't double-clear / double-toast / double-redirect.
+      if (isHandlingAuthExpiry) {
+        return Promise.reject(error)
+      }
+      isHandlingAuthExpiry = true
 
       // 🛡️ CRITICAL: Clear ALL auth data to prevent stale token issues
       storage.clearAuth()

@@ -91,11 +91,43 @@ Doc completa dei campi: [`docs/settings.md`](docs/settings.md).
 
 ```bash
 npm run demo             # CLI REPL (richiede OPENROUTER_API_KEY in .env)
+npm run demo -- --debug  # CLI REPL + log per ogni LLM call (caller/latency/status)
 npm run demo -- --batch '[["ciao","tengo PUSH PROG"]]'   # scenari programmatici
 npm run typecheck        # tsc --noEmit
 npm run test:unit        # 78 file, ~1600 test (no LLM, <30s)
 bash scripts/check-architecture.sh   # 8 check architetturali (rule 1/3/4/5/9/11/12 + C1)
 ```
+
+### `--debug` — observability delle LLM call
+
+Senza flag il bot è silenzioso come sempre. Con `--debug` (o `LLM_DEBUG=1`)
+ogni chiamata a OpenRouter emette una riga `llm.call` con:
+
+- `caller`: chi ha originato la call (`router`, `agent-main`, `rephrase`,
+  `operator-briefing`, `language-detect`, `flow-engine`)
+- `status`: HTTP status restituito da OpenRouter
+- `latencyMs`: ms totali per la call (incluso retry se transient error)
+- `attempts`: quanti tentativi sono serviti (1 se tutto liscio al primo colpo)
+
+Esempio di output (un turno con tool-call + rephrase):
+
+```
+[INFO] llm.call {"caller":"router","status":200,"latencyMs":234,"attempts":1}
+[INFO] llm.call {"caller":"agent-main","status":200,"latencyMs":1180,"attempts":1}
+[INFO] llm.call {"caller":"agent-main","status":200,"latencyMs":890,"attempts":1}
+[INFO] llm.call {"caller":"rephrase","status":200,"latencyMs":450,"attempts":1}
+```
+
+Output JSON puro (filtrabile via `jq`):
+
+```bash
+LOG_FORMAT=json LLM_DEBUG=1 npm run demo | jq 'select(.msg=="llm.call")'
+```
+
+I fallimenti emettono `llm.call.failed` (livello `warn`) con campo
+`category` (`timeout`, `network`, `auth`, `transient_upstream`,
+`permanent_upstream`). Implementazione in
+[utils/llm-fetch-observability.ts](utils/llm-fetch-observability.ts).
 
 ## Integrazione con l'app
 

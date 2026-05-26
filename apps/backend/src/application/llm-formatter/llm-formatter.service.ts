@@ -63,8 +63,6 @@ export interface FormatterOptions {
   customerName?: string          // Customer name for personalization
   isFirstMessage?: boolean       // If true, add greeting
   botName?: string               // Bot name (e.g., "BellItalia")
-  chatbotName?: string | null    // 🆕 Custom chatbot name (e.g., "Sofia", "Marco")
-  businessType?: string | null   // 🆕 Business sector for context (e.g., "food", "fashion", "tech")
 }
 
 // 🆕 Business Type Labels for LLM context
@@ -153,16 +151,10 @@ function buildSystemPrompt(options?: FormatterOptions): string {
   let prompt = BASE_SYSTEM_PROMPT
 
   // 🆕 Add chatbot name and business context
-  const chatbotName = options?.chatbotName || options?.botName || "Assistente"
-  const businessType = options?.businessType || "other"
-  const businessLabel = BUSINESS_TYPE_LABELS[businessType] || BUSINESS_TYPE_LABELS.other
   
   prompt += `
 
 ## 🏷️ IDENTITÀ E CONTESTO
-- Il tuo nome è: ${chatbotName}
-- Operi nel: ${businessLabel}
-- Quando ti presenti o ti viene chiesto chi sei, usa il tuo nome: "${chatbotName}"
 - Adatta il linguaggio e gli esempi al contesto del settore quando appropriato`
   
   // Add bot personality if set
@@ -184,7 +176,6 @@ Ricorda: Mantieni la personalità nel TONO, ma non modificare i DATI. Sii sempre
 ## 👋 SALUTO (Questo è il PRIMO messaggio!)
 Inizia con un saluto caloroso e personalizzato:
 - Rivolgiti al cliente per nome: "${options.customerName}"
-- Presentati brevemente (sei ${chatbotName})
 - Poi fornisci le informazioni richieste
 - Sii naturale, mai robotico!`
   }
@@ -1427,13 +1418,10 @@ CRITICAL:
     const businessInfo = response.data.businessInfo
     if (!businessInfo) return "Business information not available"
 
-    const businessLabel = BUSINESS_TYPE_LABELS[businessInfo.businessType] || BUSINESS_TYPE_LABELS.other
 
     const lines = [
       "BUSINESS INFORMATION:",
       `Business Name: ${businessInfo.workspaceName}`,
-      `Sector/Type: ${businessLabel}`,
-      `Assistant Name: ${businessInfo.chatbotName}`,
     ]
     
     if (businessInfo.description) {
@@ -1445,7 +1433,6 @@ CRITICAL:
 
     lines.push("")
     lines.push("INSTRUCTIONS: Respond naturally to the user's question about what type of business this is.")
-    lines.push(`Present yourself as ${businessInfo.chatbotName} and explain you work for a ${businessLabel}.`)
 
     return lines.join("\n")
   }

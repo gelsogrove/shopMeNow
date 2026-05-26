@@ -86,10 +86,12 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
       return
     }
 
+    let cancelled = false
+
     const loadStatus = async () => {
       try {
         const data = await getWasenderStatus(workspaceId)
-        const dbStatus = normalizeStatus(data.wasenderSessionStatus, data.wasenderIsActive)
+        if (cancelled) return
         if (data.wasenderPhoneNumber) {
           setSessionPhone(data.wasenderPhoneNumber)
         }
@@ -98,6 +100,7 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
         // Don't trust DB status — WasenderAPI is the single source of truth
         try {
           const synced = await syncWasenderStatus(workspaceId)
+          if (cancelled) return
           const realStatus = normalizeStatus(synced.wasenderSessionStatus, synced.wasenderIsActive)
           setStatus(realStatus)
 
@@ -112,6 +115,7 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
             setQrAge(0)
           }
         } catch {
+          if (cancelled) return
           // Sync failed → fall back to DB status
           const dbStatus = normalizeStatus(data.wasenderSessionStatus, data.wasenderIsActive)
           setStatus(dbStatus)
@@ -123,11 +127,15 @@ export function WasenderOnboarding({ onComplete, workspaceId: workspaceIdProp }:
       } catch {
         // No session yet — stay idle
       } finally {
-        setLoadingInitial(false)
+        if (!cancelled) setLoadingInitial(false)
       }
     }
 
-    loadStatus()
+    void loadStatus()
+
+    return () => {
+      cancelled = true
+    }
   }, [workspaceId])
 
   // ─── QR countdown timer ───────────────────────────────────────────────

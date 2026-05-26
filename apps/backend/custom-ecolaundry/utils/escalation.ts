@@ -1,39 +1,62 @@
 // Escalation to operator: collect customer name and generate summary for
 // operator. The EscalationContext type lives in ../models/escalation.ts.
-import type { EscalationContext, SessionState } from '../models/index.js'
+//
+// F106 (2026-05-25) — multilingual operator briefing. All customer-facing
+// summary strings are now keyed in `json/i18n/<lang>.json` under the
+// `summary*` namespace. `buildEscalationSummary(ctx, lang?)` accepts an
+// optional language override (defaults to 'es' for backwards-compat with
+// existing tests). The active tenant configures the language via
+// `settings.operatorBriefingLanguage`.
+import type { EscalationContext, SessionState, SupportedLanguage } from '../models/index.js'
 import { sanitizeForDisplay } from './input-sanitize.js'
+import { t, tt } from './localization.js'
+
+// Map operatorBriefingLanguage -> Intl locale used by formatHandoverTimestamp.
+// Adding a language requires both: an entry here AND parity in json/i18n/<lang>.json
+// (summary* keys). validateSettings in utils/runtime.ts ensures the language is
+// in enabledLanguages, so unknown values cannot reach here at runtime.
+const TIMESTAMP_LOCALE: Record<SupportedLanguage, string> = {
+  es: 'es-ES',
+  it: 'it-IT',
+  en: 'en-GB',
+  ca: 'ca-ES',
+  pt: 'pt-PT',
+  fr: 'fr-FR',
+}
 
 /**
- * Operator-facing timestamp prefix (Andrea, 2026-05-10): every handover
- * summary opens with "El [día] [fecha] a las [HH:MM]" so the operator
- * sees WHEN the case happened without parsing the dialog. Uses Europe/Madrid
- * timezone (tenant locale) and Spanish locale for day/month names.
+ * Operator-facing timestamp prefix. Every handover summary opens with the
+ * localised "el [day] [date] at [HH:MM]" so the operator sees WHEN the case
+ * happened without parsing the dialog.
  *
- * Example output: "El sábado 10 de mayo a las 02:33"
+ * Timezone is fixed to Europe/Madrid (tenant location). Locale follows
+ * `lang` (default 'es' for back-compat with the deterministic test suite).
  *
- * Exported so the LLM-generated briefing path
- * (`utils/operator-briefing.ts`) can pass the same timestamp into its
- * user prompt — both deterministic and LLM paths produce identically
+ * Exported so `utils/operator-briefing.ts` can pass the same timestamp into
+ * the LLM user prompt — both deterministic and LLM paths produce identically
  * stamped briefings.
  */
-export function formatHandoverTimestamp(): string {
+export function formatHandoverTimestamp(lang: SupportedLanguage = 'es'): string {
   const now = new Date()
-  const day = new Intl.DateTimeFormat('es-ES', {
+  const locale = TIMESTAMP_LOCALE[lang] || TIMESTAMP_LOCALE.es
+  const day = new Intl.DateTimeFormat(locale, {
     weekday: 'long',
     timeZone: 'Europe/Madrid',
   }).format(now)
-  const date = new Intl.DateTimeFormat('es-ES', {
+  const date = new Intl.DateTimeFormat(locale, {
     day: 'numeric',
     month: 'long',
     timeZone: 'Europe/Madrid',
   }).format(now)
-  const time = new Intl.DateTimeFormat('es-ES', {
+  const time = new Intl.DateTimeFormat(locale, {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
     timeZone: 'Europe/Madrid',
   }).format(now)
-  return `El ${day} ${date} a las ${time}`
+  // F106 — the prefix wording itself is localised via the
+  // `summaryTimestampPrefix` template (e.g. "El {day} {date} a las {time}").
+  return tt('summaryTimestampPrefix', lang, { day, date, time })
 }
 
 /**
@@ -55,43 +78,56 @@ function formatLocationDisplay(location: string, street: string): string {
   return `${location}, ${street}`
 }
 
-const NON_TROUBLE_LABEL: Record<string, string> = {
-  'datafono-wrong-amount': 'una incoherencia en el importe del datáfono',
-  'cameras-or-ajax': 'una incidencia que requiere revisión de cámaras o AJAX',
-  'dryer-minutes-not-credited': 'que ha añadido monedas a la secadora pero no se han sumado minutos',
-  'card-payment': 'que no ha podido pagar con la tarjeta',
-  'refund-demand': 'una solicitud de devolución',
-  'compensation-demand': 'una solicitud de compensación',
-  'contradictory-narrative': 'un relato contradictorio sobre un cobro',
-  'numeric-only-code': 'un código solo numérico que requiere revisión',
-  'undocumented-display': 'un código de pantalla no documentado',
+const NON_TROUBLE_KEY: Record<string, string> = {
+  'datafono-wrong-amount': 'summaryNonTroubleDatafono',
+  'cameras-or-ajax': 'summaryNonTroubleCameras',
+  'dryer-minutes-not-credited': 'summaryNonTroubleDryerMinutes',
+  'card-payment': 'summaryNonTroubleCardPayment',
+  'refund-demand': 'summaryNonTroubleRefund',
+  'compensation-demand': 'summaryNonTroubleCompensation',
+  'contradictory-narrative': 'summaryNonTroubleContradictory',
+  'numeric-only-code': 'summaryNonTroubleNumericCode',
+  'undocumented-display': 'summaryNonTroubleUndocumentedDisplay',
 }
 
-export function buildEscalationSummary(context: EscalationContext): string {
-  // Operator briefing format (Andrea, 2026-05-10): every handover summary
-  // opens with "El [día] [fecha] a las [HH:MM]," so the operator sees WHEN
-  // the case happened without parsing the dialog. The body (incident-specific
-  // narrative) follows.
-  const timestamp = formatHandoverTimestamp()
-  return `${timestamp}, ${buildEscalationSummaryBody(context)}`
+/**
+ * F106 — Optional `lang` argument. Defaults to 'es' so the existing test
+ * suite (27 calls without lang) keeps producing Spanish output identical to
+ * the pre-i18n behaviour. Production call sites pass
+ * `ar.runtime.settings.operatorBriefingLanguage ?? 'es'`.
+ */
+export function buildEscalationSummary(
+  context: EscalationContext,
+  lang: SupportedLanguage = 'es',
+): string {
+  const timestamp = formatHandoverTimestamp(lang)
+  return `${timestamp}, ${buildEscalationSummaryBody(context, lang)}`
 }
 
-function buildEscalationSummaryBody(context: EscalationContext): string {
+function machineWord(machineType: string, lang: SupportedLanguage): string {
+  return machineType === 'dryer' ? t('summaryDryer', lang) : t('summaryWasher', lang)
+}
+
+function machineLabel(machineType: string, machineNumber: string, lang: SupportedLanguage): string {
+  return tt('summaryMachineLabel', lang, {
+    machine: machineWord(machineType, lang),
+    number: machineNumber || t('summaryMachineNumberUnknown', lang),
+  })
+}
+
+function buildEscalationSummaryBody(context: EscalationContext, lang: SupportedLanguage): string {
   // Defence in depth: even if upstream sanitisers were skipped, strip markdown
   // delimiters here so an attacker-controlled customerName/customerPhone can't
   // break formatting or fake links in the operator handover note.
   const safeName = sanitizeForDisplay(context.customerName)
   const safePhone = sanitizeForDisplay(context.customerPhone)
-  const baseName = safeName ? `Usuario ${safeName}` : 'Usuario sin nombre'
+  const baseName = safeName
+    ? tt('summaryUserWith', lang, { name: safeName })
+    : t('summaryUserAnonymous', lang)
   const name = safePhone ? `${baseName} (${safePhone})` : baseName
-  const location = context.locationDisplay || 'ubicación desconocida'
+  const location = context.locationDisplay || t('summaryLocationUnknown', lang)
 
-  // Case 6: double charge. Two scenarios encoded in issueSummary:
-  //   - "used service: yes" → Scenario 6.1 (washed, refund only)
-  //   - "used service: no"  → Scenario 6.4 (didn't wash, refund + missing service)
-  // The issueSummary also carries the customer's literal yes/no reply
-  // ("customer reply: ...") and the narrative ("narrative: ...") so the
-  // operator gets a full picture without losing the original phrasing.
+  // Case 6: double charge.
   if (/double charge/i.test(context.issueSummary)) {
     const usedServiceNo = /used service:\s*no\b/i.test(context.issueSummary)
     const narrative = context.issueSummary.includes('narrative:')
@@ -103,198 +139,204 @@ function buildEscalationSummaryBody(context: EscalationContext): string {
           .replace(/\s*—\s*narrative:.*$/i, '')
           .trim()
       : null
-    const machineLabel = context.machineNumber
-      ? `${context.machineType === 'dryer' ? 'secadora' : 'lavadora'} número ${context.machineNumber}`
-      : null
-    const machinePart = machineLabel ? ` (${machineLabel})` : ''
-    const narrativePart = narrative ? ` Relato del cliente: ${narrative}` : ''
+    const mLabel = context.machineNumber
+      ? machineLabel(context.machineType, context.machineNumber, lang)
+      : ''
+    const narrativePart = narrative
+      ? tt('summaryDoubleChargeNarrativePart', lang, { narrative })
+      : ''
     const replyPart =
       customerReply && !narrative
-        ? ` Respuesta del cliente: "${customerReply}".`
+        ? tt('summaryDoubleChargeReplyPart', lang, { reply: customerReply })
         : ''
-
-    // F26 (Andrea 2026-05-10 audit): if the escalation reason flags a
-    // contradictory narrative within the double-charge flow (Caso 6.3 /
-    // Caso 28 mid-flow), surface BOTH facts so the operator knows the
-    // customer's report was inconsistent. usecases.md Caso 6.3 criterio:
-    // "Resumen al operador: nombre + 'relato contradictorio' o 'relato confuso'."
     const isContradictory = /contradictory|relato\s+contradictorio|relato\s+confuso/i.test(
       context.escalationReason || '',
     )
-    const contradictoryQualifier = isContradictory
-      ? ' El relato del cliente es contradictorio o confuso.'
-      : ''
+    const contradictoryPart = isContradictory ? t('summaryDoubleChargeContradictory', lang) : ''
 
     if (usedServiceNo) {
-      return `${name} en ${location}${machinePart} reporta doble cobro PERO NO ha podido usar el servicio.${replyPart}${narrativePart}${contradictoryQualifier} Requiere reembolso y revisión del servicio no prestado.`
+      return tt('summaryDoubleChargeNotUsed', lang, {
+        name,
+        location,
+        machineLabel: mLabel,
+        replyPart,
+        narrativePart,
+        contradictoryPart,
+      })
     }
-    return `${name} en ${location}${machinePart} reporta doble cobro habiendo podido usar el servicio.${narrativePart}${contradictoryQualifier} Requiere revisión y devolución del cargo duplicado.`
+    return tt('summaryDoubleChargeUsed', lang, {
+      name,
+      location,
+      machineLabel: mLabel,
+      narrativePart,
+      contradictoryPart,
+    })
   }
 
-  // Case 18: numeric-only code without letters — incoherence, escalate
-  // without confronting the customer. Detect via:
-  //   - reason starts with "Numeric-only code" (set by the deterministic guard)
-  //   - reason contains "código no documentado" or "incoherencia" (LLM rewrites)
-  //   - discountCode is purely numeric (≥3 digits, no letters)
-  // Detect this BEFORE the Caso 8 branch (which would otherwise grab the same
-  // faqCodeValue for purely-numeric codes).
+  // Case 18: numeric-only code.
   const reasonLower = context.escalationReason || ''
   const isCaso18 =
     /numeric-only\s+code|caso\s*18/i.test(reasonLower) ||
     (/c[oó]digo\s+no\s+documentado|incoherenc/i.test(reasonLower) && /^\d{3,}$/.test(context.discountCode)) ||
     (/^\d{3,}$/.test(context.discountCode) && !/importe|pendiente|completar/i.test(reasonLower))
   if (isCaso18 && context.discountCode) {
-    const code = context.discountCode
-    return `${name} en ${location} ha facilitado un código solo numérico (${code}) que no encaja con el formato esperado y requiere revisión manual.`
+    return tt('summaryNumericOnlyCode', lang, {
+      name,
+      location,
+      code: context.discountCode,
+    })
   }
 
-  // Case 8: discount code. Two branches:
-  //   (a) code matches SAU2904266 format → forward parsed data + machine info
-  //       so the operator can validate and remotely activate the machine.
-  //   (b) code format invalid → ask the operator to review manually.
+  // Case 8: discount code.
   if (context.discountCodeData && context.discountCodeData.letters) {
     const c = context.discountCodeData
-    const machineLabel = context.machineNumber ? `máquina nº ${context.machineNumber}` : 'máquina sin número'
-    const doorLabel = c.doorClosed === true ? 'puerta cerrada' : c.doorClosed === false ? 'puerta NO cerrada' : 'estado puerta desconocido'
-    // Importe parsing (Bug #12 Andrea-2026-05-09): the regex captures
-    // `\d+` after DDMMYY, which means a 1-digit trailing number is
-    // interpreted as importe (e.g. "SAU2904266" → importe="6"). For codes
-    // with importe < 10€ (single-digit) the value is ambiguous — the
-    // customer may have typed an incomplete code. We show the importe
-    // only when it has 2+ digits (≥10€); otherwise we tell the operator
-    // to confirm it manually instead of inventing "6€".
-    const importeIsAmbiguous = !c.importe || c.importe.length < 2
-    const importePart = importeIsAmbiguous
-      ? 'importe a confirmar manualmente'
-      : `importe ${c.importe}€`
-    return `${name} en ${location} ha facilitado un código válido (${context.discountCode}: letras ${c.letters}, fecha ${c.fechaIso}, ${importePart}) en la ${machineLabel} (${doorLabel}). Requiere validación y activación remota.`
+    const mLabel = context.machineNumber
+      ? tt('summaryDiscountCodeMachine', lang, { number: context.machineNumber })
+      : t('summaryDiscountCodeMachineUnknown', lang)
+    const doorLabel =
+      c.doorClosed === true
+        ? t('summaryDiscountCodeDoorClosed', lang)
+        : c.doorClosed === false
+        ? t('summaryDiscountCodeDoorOpen', lang)
+        : t('summaryDiscountCodeDoorUnknown', lang)
+    const importeAmbiguous = !c.importe || c.importe.length < 2
+    const importePart = importeAmbiguous
+      ? t('summaryDiscountCodeImporteUnknown', lang)
+      : tt('summaryDiscountCodeImporte', lang, { importe: c.importe })
+    return tt('summaryDiscountCodeValid', lang, {
+      name,
+      location,
+      code: context.discountCode,
+      letters: c.letters,
+      fechaIso: c.fechaIso,
+      importePart,
+      machineLabel: mLabel,
+      doorLabel,
+    })
   }
   if (context.discountCode || /caso\s*8/i.test(context.escalationReason || '')) {
-    const code = context.discountCode || 'no especificado'
-    return `${name} en ${location} ha facilitado el código ${code} con un formato no reconocido. Requiere revisión manual.`
+    const code = context.discountCode || t('summaryMachineNumberUnknown', lang)
+    return tt('summaryDiscountCodeInvalid', lang, { name, location, code })
   }
 
-  // Case 28: contradictory narrative — escalate without arguing.
+  // Case 28: contradictory narrative.
   if (/caso\s*28|contradictory|relato\s+contradictorio|relato\s+confuso/i.test(context.escalationReason || '')) {
-    return `${name} en ${location} ha presentado un relato contradictorio o confuso sobre un cobro/incidencia y requiere revisión manual.`
+    return tt('summaryContradictoryNarrative', lang, { name, location })
   }
 
-  // Case 25: cliente muy enfadado — escalado tras recogida de datos mínimos.
-  // F26 (Andrea 2026-05-10 audit): if the customer ALSO reported a double-
-  // charge intent before the angry escalation (Caso 6.2 — angry customer
-  // mid-doble-cobro), surface BOTH facts so the operator knows the original
-  // incident type. usecases.md Caso 6.2 criterio implicit: summary must
-  // mention "doble cobro con tarjeta" alongside the rage marker.
+  // Case 25: angry customer.
   if (/caso\s*25|muy\s+enfadado|cliente.*alterado|angry\s+customer/i.test(context.escalationReason || '')) {
-    const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
-    const numberLabel = context.machineNumber || 'desconocido'
     const machinePart =
       context.machineNumber || context.machineType
-        ? ` (${machineLabel} número ${numberLabel})`
+        ? ` (${machineLabel(context.machineType, context.machineNumber, lang)})`
         : ''
     const isDoubleCharge = /double-charge-/.test(context.pendingFlow || '')
-    if (isDoubleCharge) {
-      return `${name} en ${location}${machinePart} ha reportado un doble cobro con tarjeta y exige hablar con un operador. Requiere atención prioritaria.`
-    }
-    return `${name} en ${location}${machinePart} ha mostrado mucho malestar y exige una solución inmediata. Requiere atención prioritaria.`
+    const key = isDoubleCharge ? 'summaryAngryDoubleCharge' : 'summaryAngry'
+    return tt(key, lang, { name, location, machinePart })
   }
 
-  // Case 5: AL001 sequence error — escalate after the retry guidance failed
-  // (display still shows AL001 or another error code, customer can't follow
-  // the instructions).
+  // Case 5: AL001 sequence error.
   if (/caso\s*5/i.test(context.escalationReason || '')) {
-    const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
-    const numberLabel = context.machineNumber || 'desconocido'
     const display = context.displayLabel || context.displayState
-    const displayPart = display ? ` (pantalla: ${display})` : ''
-    return `${name} en ${location} sigue con AL001 en la ${machineLabel} número ${numberLabel}${displayPart}: la guía de secuencia correcta no ha resuelto el problema y requiere revisión técnica.`
+    const displayPart = display ? tt('summaryDisplayPart', lang, { display }) : ''
+    return tt('summaryAlarmCase5', lang, {
+      name,
+      location,
+      machineLabel: machineLabel(context.machineType, context.machineNumber, lang),
+      displayPart,
+    })
   }
 
   // No-change incident (paid + not activated + central did not return change).
-  // Detection uses the SINGLE deterministic signal `pendingFlow` (never
-  // LLM-text), because the LLM tool call `escalate_to_operator(reason="…")`
-  // accepts any string and the prompt suggests "No-change incident — …" as
-  // a template, which the LLM applies to non-caso-4 reasons too. The flow
-  // markers under `no-change-*` are set ONLY by the deterministic side
-  // (agent-extract.ts on "he pagado y no se activado" + payment-no-change.ts).
-  // Also match on escalationReason because pendingFlow is cleared by the
-  // guard BEFORE escalate() runs (so the context arrives empty here).
   const isNoChange =
     /^no-change-/i.test(context.pendingFlow || '') ||
     /no-change\s+incident/i.test(context.escalationReason || '')
   if (isNoChange) {
-    const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
-    const numberLabel = context.machineNumber || 'desconocido'
-    return `${name} en ${location} ha pagado pero la ${machineLabel} número ${numberLabel} no se ha activado tras corregir el número en la central. Requiere revisión manual.`
+    return tt('summaryNoChange', lang, {
+      name,
+      location,
+      machineLabel: machineLabel(context.machineType, context.machineNumber, lang),
+    })
   }
 
-  // Invoice request — include all collected billing data for the operator.
+  // Invoice request.
   if (/Invoice\s+request|invoice|factura/i.test(context.escalationReason || '') && context.invoiceData) {
     const inv = context.invoiceData
     const fechaLabel = inv.fechaIso ? `${inv.fecha} (${inv.fechaIso})` : inv.fecha
-    const machineLabel = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
-    // F42 — coste total del servicio (verbatim, customer-typed).
-    const costeLabel = inv.costeTotal ? `; coste: ${inv.costeTotal}` : ''
-    // F35 — append customer notes when present (free-text observations).
-    const notesLabel = inv.notes ? `; notas: ${inv.notes}` : ''
-    return `${name} en ${location} ha solicitado factura. Datos: razón social: ${inv.razonSocial}; dirección: ${inv.direccion}; CIF/NIF: ${inv.cif}; fecha de uso: ${fechaLabel}; máquina: ${machineLabel}${costeLabel}; email: ${inv.email}${notesLabel}.`
+    const machine = machineWord(context.machineType, lang)
+    const costePart = inv.costeTotal
+      ? tt('summaryInvoiceCostePart', lang, { coste: inv.costeTotal })
+      : ''
+    const notesPart = inv.notes ? tt('summaryInvoiceNotesPart', lang, { notes: inv.notes }) : ''
+    return tt('summaryInvoice', lang, {
+      name,
+      location,
+      razonSocial: inv.razonSocial,
+      direccion: inv.direccion,
+      cif: inv.cif,
+      fechaLabel,
+      machine,
+      costePart,
+      email: inv.email,
+      notesPart,
+    })
   }
 
-  // Non-troubleshooting incidents (datafono / cameras / refund / …) —
-  // no machine template, just the incident-specific label.
-  if (context.nonTroubleshootingIncident && NON_TROUBLE_LABEL[context.nonTroubleshootingIncident]) {
-    return `${name} en ${location} ha reportado ${NON_TROUBLE_LABEL[context.nonTroubleshootingIncident]}.`
+  // Non-troubleshooting incidents.
+  if (context.nonTroubleshootingIncident && NON_TROUBLE_KEY[context.nonTroubleshootingIncident]) {
+    const incidentLabel = t(NON_TROUBLE_KEY[context.nonTroubleshootingIncident], lang)
+    return tt('summaryNonTrouble', lang, { name, location, incidentLabel })
   }
 
-  // Default: machine-related incident (PUSH / DOOR / SEL / ALN / ALM / AL001 / 001 / ERR).
-  const machine = context.machineType === 'dryer' ? 'secadora' : 'lavadora'
-  const number = context.machineNumber || 'desconocido'
-  // Use the customer-facing label ("PUSH PROG") when available, falling back
-  // to the canonical token ("PUSH") only if the label was never captured.
-  // The bucket keys below still use the canonical form (`d`) for routing.
+  // Default: machine-related incident.
   const display = context.displayLabel || context.displayState
   const canonical = context.displayState
-  const paymentClause = context.paymentCompleted === true
-    ? 'ha efectuado el pago'
-    : context.paymentCompleted === false
-    ? 'no ha efectuado el pago'
-    : 'no ha podido completar la operación'
+  const paymentClause =
+    context.paymentCompleted === true
+      ? t('summaryPaymentDone', lang)
+      : context.paymentCompleted === false
+      ? t('summaryPaymentNotDone', lang)
+      : t('summaryPaymentUnknown', lang)
 
-  // Display-specific narrative. We pick the phrasing per known display family
-  // so the operator gets a meaningful one-liner instead of a generic one.
   let detail = ''
   if (display) {
     const d = canonical.toUpperCase().replace(/\s+/g, '')
     if (d.startsWith('PUSH')) {
-      detail = `La pantalla muestra ${display} y, tras pulsar el programa, la máquina no responde.`
+      detail = tt('summaryDisplayPush', lang, { display })
     } else if (d === 'DOOR' || d === 'ALM/DOOR' || d === 'ALMDOOR') {
-      detail = `La pantalla muestra ${display}: la puerta no cierra correctamente.`
+      detail = tt('summaryDisplayDoor', lang, { display })
     } else if (d === 'SEL') {
-      detail = `La pantalla muestra ${display}: el cliente debe seleccionar el programa pero el problema persiste.`
+      detail = tt('summaryDisplaySel', lang, { display })
     } else if (d === 'PR' || d.startsWith('PRICE')) {
-      detail = `La pantalla muestra ${display}: la máquina no acepta el pago.`
+      detail = tt('summaryDisplayPrice', lang, { display })
     } else if (d.startsWith('AL') || d === '001' || d.startsWith('ALM') || d.startsWith('ALN')) {
-      detail = `La pantalla muestra el código de alarma ${display} y requiere revisión técnica.`
+      detail = tt('summaryDisplayAlarm', lang, { display })
     } else if (d.startsWith('ERR')) {
-      detail = `La pantalla muestra el código de error ${display} y la máquina no funciona.`
+      detail = tt('summaryDisplayError', lang, { display })
     } else if (d === 'BLANK') {
-      detail = `La pantalla está en blanco y la máquina no responde.`
+      detail = t('summaryDisplayBlank', lang)
     } else {
-      detail = `La pantalla muestra ${display} y la máquina no responde correctamente.`
+      detail = tt('summaryDisplayGeneric', lang, { display })
     }
   } else {
-    detail = `Sin información clara de pantalla; se requiere revisión manual.`
+    detail = t('summaryDisplayNoInfo', lang)
   }
 
-  // F27 (Andrea 2026-05-10, Caso 32.1 RED-SPEC closure): when the customer
-  // has shown more than one distinct display during the incident (Marathon
-  // pattern), surface the full chronological sequence so the operator sees
-  // "SEL → PUSH PROG → DOOR → AL001" instead of only the last code.
+  // F27 — full display sequence when the customer has shown more than one.
   const history = context.displayHistory || []
   const historyPart =
-    history.length > 1 ? ` Secuencia de pantallas vista: ${history.join(' → ')}.` : ''
+    history.length > 1
+      ? tt('summaryHistorySequence', lang, { sequence: history.join(' → ') })
+      : ''
 
-  return `${name} en ${location} ${paymentClause} en la ${machine} número ${number}. ${detail}${historyPart}`
+  return tt('summaryMachineDefault', lang, {
+    name,
+    location,
+    paymentClause,
+    machineLabel: machineLabel(context.machineType, context.machineNumber, lang),
+    detail,
+    historyPart,
+  })
 }
 
 export function extractEscalationContext(state: SessionState, customerName: string | null): EscalationContext {
@@ -322,4 +364,3 @@ export function extractEscalationContext(state: SessionState, customerName: stri
     discountCodeData: state.discountCodeData?.letters ? { ...state.discountCodeData } : undefined,
   }
 }
-

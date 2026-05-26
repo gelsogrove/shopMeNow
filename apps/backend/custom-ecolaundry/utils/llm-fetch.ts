@@ -1,23 +1,18 @@
-// Resilient fetch helper for OpenRouter calls.
-//
-// Adds two safety nets the bare `fetch` does not have:
-//
-//  1. **Hard timeout** — Node's fetch has no default timeout, so a stalled
-//     OpenRouter connection would block the agent loop indefinitely. We
-//     abort after `LLM_TIMEOUT_MS` (default 20s, env-tunable).
-//
-//  2. **Retry on transient upstream errors** — OpenRouter regularly returns
-//     502/503/504 when an underlying provider is rate-limited or briefly
-//     unavailable. Without retries a single bad second wipes the whole turn.
-//     We retry up to `MAX_ATTEMPTS` times with exponential backoff (200ms,
-//     400ms, 800ms). Non-transient errors (4xx other than 408/429) are
-//     thrown immediately — no point retrying a malformed request.
-//
-// All errors are wrapped into `LlmFetchError` with a `category` flag so the
-// caller can decide whether to surface a graceful fallback to the user
-// vs. log the failure as a real bug.
+// Resilient fetch helper for OpenRouter: hard timeout (LLM_TIMEOUT_MS, 20s
+// default) + exponential-backoff retry on transient upstream (408/429/5xx)
+// up to MAX_ATTEMPTS. Errors wrap in `LlmFetchError`. Observability lives
+// in `llm-fetch-observability.ts`.
 
 import process from 'node:process'
+
+import {
+  extractCacheUsage,
+  logCallFailure,
+  logCallSuccess,
+  type LlmCaller,
+} from './llm-fetch-observability.js'
+
+export type { LlmCaller } from './llm-fetch-observability.js'
 
 const DEFAULT_TIMEOUT_MS = 20_000
 const MAX_ATTEMPTS = 3
@@ -58,17 +53,16 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/**
- * Run `fetch(url, init)` with timeout + retry on transient upstream errors.
- *
- * On success returns the parsed JSON body.
- * On failure throws `LlmFetchError`.
- */
+/** Run `fetch(url, init)` with timeout + retry; throws `LlmFetchError` on
+ *  failure. `caller` is logged when LLM_DEBUG=1. */
 export async function fetchLlmJson<T>(
   url: string,
   init: RequestInit,
+  caller?: LlmCaller,
 ): Promise<T> {
   const timeoutMs = getTimeoutMs()
+  const startedAt = Date.now()
+  const callerId: LlmCaller | 'unknown' = caller ?? 'unknown'
   let lastError: LlmFetchError | null = null
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
@@ -79,7 +73,15 @@ export async function fetchLlmJson<T>(
       clearTimeout(timer)
 
       if (response.ok) {
-        return (await response.json()) as T
+        const parsed = (await response.json()) as T
+        logCallSuccess({
+          caller: callerId,
+          status: response.status,
+          latencyMs: Date.now() - startedAt,
+          attempts: attempt,
+          ...extractCacheUsage(parsed),
+        })
+        return parsed
       }
 
       const body = await response.text().catch(() => '')
@@ -92,14 +94,21 @@ export async function fetchLlmJson<T>(
       )
 
       // Auth or schema bugs: do not retry.
-      if (category !== 'transient_upstream') {
-        throw lastError
-      }
+      if (category !== 'transient_upstream') throw lastError
     } catch (err) {
       clearTimeout(timer)
       if (err instanceof LlmFetchError) {
         // Permanent upstream error — bail without retry.
-        if (err.category !== 'transient_upstream') throw err
+        if (err.category !== 'transient_upstream') {
+          logCallFailure({
+            caller: callerId,
+            category: err.category,
+            status: err.status,
+            attempts: err.attempts ?? attempt,
+            latencyMs: Date.now() - startedAt,
+          })
+          throw err
+        }
         lastError = err
       } else if (err instanceof Error && err.name === 'AbortError') {
         lastError = new LlmFetchError(
@@ -126,8 +135,15 @@ export async function fetchLlmJson<T>(
   }
 
   // All attempts exhausted — re-throw the last error.
-  throw (
+  const finalError =
     lastError ||
     new LlmFetchError('OpenRouter call failed for unknown reason', 'network')
-  )
+  logCallFailure({
+    caller: callerId,
+    category: finalError.category,
+    status: finalError.status,
+    attempts: finalError.attempts ?? MAX_ATTEMPTS,
+    latencyMs: Date.now() - startedAt,
+  })
+  throw finalError
 }
