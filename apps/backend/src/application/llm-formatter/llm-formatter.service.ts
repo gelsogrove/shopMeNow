@@ -63,6 +63,8 @@ export interface FormatterOptions {
   customerName?: string          // Customer name for personalization
   isFirstMessage?: boolean       // If true, add greeting
   botName?: string               // Bot name (e.g., "BellItalia")
+  chatbotName?: string           // 🆕 Custom chatbot name override
+  businessType?: string          // 🆕 Business sector for contextual framing
 }
 
 // 🆕 Business Type Labels for LLM context

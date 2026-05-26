@@ -348,7 +348,6 @@ export class CartManagementAgentLLM {
         return {
           success: result.success,
           output: `${successMessage}\n\n${formatted.formattedCart}`,
-          success: true,
           executionTimeMs: 0,
           functionCalls: [{
             name: "addToCart",
@@ -356,7 +355,6 @@ export class CartManagementAgentLLM {
             result: { success: result.success }
           }],
           tokensUsed: 0,
-          executionTimeMs: 0,
         }
       }
 
