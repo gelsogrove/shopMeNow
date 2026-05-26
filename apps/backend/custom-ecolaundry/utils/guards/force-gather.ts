@@ -52,6 +52,14 @@ function isInFaqContext(state: SessionState, userMessage: string): boolean {
   if (state.lastResolvedIntent !== 'faq') return false
   if (state.pendingFlow && !state.pendingFlow.startsWith('faq-')) return false
   if (TROUBLE_SIGNAL_RE.test(userMessage)) {
+    // F109 Opt C — Question disqualification: if the message is a question
+    // (ends with `?`), the "no funciona" / "non funziona" mention is rhetorical
+    // (e.g. "quindi una di mataró non funziona qui?" — asking about loyalty
+    // card portability, NOT reporting trouble). Stay in FAQ context — the
+    // trouble keyword is part of the question, not a topic pivot.
+    if (/\?\s*$/.test(userMessage.trim())) {
+      return true
+    }
     // Boundary signal: customer pivots FAQ → trouble. Clear the FAQ marker
     // so subsequent turns ("6" as machine number, "PUSH" as display, …) are
     // not gated. Without this, T+1 in MIX 0 would fall through to LLM

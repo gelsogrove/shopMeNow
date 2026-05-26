@@ -3683,6 +3683,119 @@ const cases: Case[] = [
       }
     },
   },
+  // F109 Opt C — explicit resolution detector + autoExtractFacts wire-up.
+  {
+    name: 'F109 Opt C — utils/intent.ts re-exports detectTroubleResolution',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/intent.ts'), 'utf8')
+      if (!/export\s*\{[^}]*\bdetectTroubleResolution\b[^}]*\}\s*from\s*['"]\.\/intent\/trouble-resolution/.test(src)) {
+        throw new Error('F109 Opt C: utils/intent.ts must re-export detectTroubleResolution from intent/trouble-resolution.js')
+      }
+    },
+  },
+  {
+    name: 'F109 Opt C — autoExtractFacts pipeline runs extractTroubleResolution after post-resolution',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/agent-extract.ts'), 'utf8')
+      if (!/extractTroubleResolution\(ar,\s*trimmed\)/.test(src)) {
+        throw new Error('F109 Opt C: autoExtractFacts must call extractTroubleResolution(ar, trimmed)')
+      }
+      // Order matters: must run AFTER extractPostResolutionReset (to skip when
+      // pendingClosure is already 'resolved' from a previous turn) and BEFORE
+      // extractTopicSwitch (so resolution wins over a misclassified pivot).
+      const orderRe = /extractPostResolutionReset[\s\S]{0,400}extractTroubleResolution[\s\S]{0,400}extractTopicSwitch/
+      if (!orderRe.test(src)) {
+        throw new Error('F109 Opt C: pipeline order must be extractPostResolutionReset → extractTroubleResolution → extractTopicSwitch')
+      }
+    },
+  },
+  {
+    name: 'F109 Opt C — extractTroubleResolution fires markResolved + resetMachineFacts when detector matches',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/agent-extract/trouble-resolution.ts'), 'utf8')
+      if (!/detectTroubleResolution\(trimmed\)/.test(src)) {
+        throw new Error('F109 Opt C: extractTroubleResolution must call detectTroubleResolution(trimmed)')
+      }
+      if (!/markResolved\(ar\)/.test(src)) {
+        throw new Error('F109 Opt C: extractTroubleResolution must call markResolved(ar) on positive detection')
+      }
+      if (!/resetMachineFacts\(state\)/.test(src)) {
+        throw new Error('F109 Opt C: extractTroubleResolution must call resetMachineFacts(state) on positive detection')
+      }
+    },
+  },
+  {
+    name: 'F109 Opt C — isInFaqContext disqualifies trouble boundary signal when message is a question',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/guards/force-gather.ts'), 'utf8')
+      // The question-disqualification gate must be inside isInFaqContext and
+      // BEFORE the inline state.lastResolvedIntent=null clear. Without this,
+      // a rhetorical "non funziona?" in a FAQ follow-up would clear the FAQ
+      // marker and let guardForceMachineType ask "lavadora o secadora?"
+      // — out of context (Andrea CLI demo 2026-05-26 T9).
+      if (!/\/\\\?\\s\*\$\/\.test\(userMessage\.trim\(\)\)/.test(src)) {
+        throw new Error('F109 Opt C: isInFaqContext must check `/\\?\\s*$/.test(userMessage.trim())` to disqualify question-form trouble signals')
+      }
+    },
+  },
+
+  // ── F110 — Trouble-machine pivot during faq-prices-await-*-confirm ─────
+  // Bug origin: Andrea WhatsApp 2026-05-26 — after asking prices in Pineda,
+  // bot asked "¿También quieres información de secadora?" (armed pendingFlow=
+  // 'faq-prices-await-dryer-confirm'). Customer's T5 was "no me funziona la
+  // lavadora" (trouble report, NOT a yes/no answer). guardFaqPricesAwait
+  // DryerConfirm fell into the !isAffirmative && !mentionsDryer branch and
+  // emitted faqClosure ("¡Perfecto!" rephrased to "¡Genial! Si necesitas
+  // algo más..."). Andrea: *"errore !!! è da presa in giro lo capisci?"*.
+  //
+  // Root cause: guardFaqPricesAwait{Dryer,Washer}Confirm did not check for
+  // F86's topic-switch signal before treating non-yes/no as decline. F86
+  // already had the pattern (pivotIfTroubleSwitch helper) but only invoice/
+  // discount-code/double-charge guards used it. Plus the NLU pattern
+  // topicMachineTrouble missed 'funziona' (IT verb in ES context — code-
+  // switching), 'funzina' (typo), and 'me da DOOR / mi da X / sale X'
+  // (display code reports mid-FAQ).
+  {
+    name: 'F110 — guardFaqPricesAwaitDryerConfirm calls pivotIfTroubleSwitch before decline',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'utils/guards/faq-prices.ts'), 'utf8')
+      // pivotIfTroubleSwitch must be imported and called inside both await
+      // confirm guards BEFORE the decline branch. Without this, a trouble
+      // report ("no me funziona") is misread as "no, I don't want dryer info".
+      if (!/import\s*\{[^}]*\bpivotIfTroubleSwitch\b[^}]*\}\s*from\s*['"]\.\/helpers/.test(src)) {
+        throw new Error('F110: faq-prices.ts must import pivotIfTroubleSwitch from helpers.js')
+      }
+      // Both guards must call pivotIfTroubleSwitch before the decline check.
+      const dryerGuard = src.match(/guardFaqPricesAwaitDryerConfirm[\s\S]*?guardFaqPricesAwaitWasherConfirm/)?.[0] ?? ''
+      if (!/pivotIfTroubleSwitch\(ar,\s*userMessage\)/.test(dryerGuard)) {
+        throw new Error('F110: guardFaqPricesAwaitDryerConfirm must call pivotIfTroubleSwitch(ar, userMessage)')
+      }
+      const washerGuard = src.split('guardFaqPricesAwaitWasherConfirm')[1] ?? ''
+      if (!/pivotIfTroubleSwitch\(ar,\s*userMessage\)/.test(washerGuard)) {
+        throw new Error('F110: guardFaqPricesAwaitWasherConfirm must call pivotIfTroubleSwitch(ar, userMessage)')
+      }
+    },
+  },
+  {
+    name: 'F110 — topicMachineTrouble NLU pattern covers funziona/funzina + display-code reports',
+    run: () => {
+      const src = fs.readFileSync(path.join(ECOLAUNDRY_ROOT, 'json/nlu-patterns.json'), 'utf8')
+      // Must cover ES funciona, IT funziona, and the 'funzina' typo.
+      if (!/fun\(\?:ci\|zi\)ona/.test(src)) {
+        throw new Error('F110: topicMachineTrouble regex must include `fun(?:ci|zi)ona` to cover both ES funciona and IT funziona')
+      }
+      if (!/funzina/.test(src)) {
+        throw new Error('F110: topicMachineTrouble regex must include `funzina` (real-customer typo from Andrea WhatsApp 2026-05-26)')
+      }
+      // Must cover display-code reports like "me da DOOR" / "mi da X" / "sale X".
+      if (!/me\|mi\)\\\\s\+da\\\\s\+\(\?:DOOR/.test(src)) {
+        throw new Error('F110: topicMachineTrouble regex must cover "(me|mi) da DOOR/PUSH/SEL/AL/ALM/ALN/ERR" display-code reports')
+      }
+      if (!/sale\\\\s\+\(\?:DOOR/.test(src)) {
+        throw new Error('F110: topicMachineTrouble regex must cover "sale DOOR/PUSH/SEL/..." display-code reports')
+      }
+    },
+  },
 ]
 
 async function main(): Promise<void> {

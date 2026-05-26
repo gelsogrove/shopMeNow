@@ -300,10 +300,11 @@ const cases: Case[] = [
   // (e.g. someone "while I'm here" clearing pendingClosure or
   // operatorRequested would break escalation-mid-flow scenarios).
   {
-    name: 'F109 releaseActiveFlow: does NOT touch pendingClosure / operatorRequested / escalationReason / pendingEscalation',
+    name: 'F109 releaseActiveFlow: does NOT touch pendingClosure / operatorRequested / escalationReason / pendingEscalation / activeBranch',
     run: () => {
       const ar = makeAr()
       ar.state.activeFlowId = 'non_parte'
+      ar.state.activeBranch = 'trouble-machine'
       ar.state.pendingClosure = 'escalated'
       ar.state.operatorRequested = true
       ar.state.escalationReason = 'some prior reason'
@@ -320,6 +321,13 @@ const cases: Case[] = [
       }
       if (ar.pendingEscalation === null) {
         throw new Error('pendingEscalation must NOT be cleared by releaseActiveFlow')
+      }
+      // F109 is narrow: it does NOT touch activeBranch. The branch lifecycle
+      // is owned by applyHandoff() / dispatchSubsequentTurn(). Trouble resolution
+      // is detected explicitly by detectTroubleResolution + markResolved (F109
+      // Opt C) — not by silently widening releaseActiveFlow's blast radius.
+      if (ar.state.activeBranch !== 'trouble-machine') {
+        throw new Error('activeBranch must NOT be touched by releaseActiveFlow')
       }
     },
   },

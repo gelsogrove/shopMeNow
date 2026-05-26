@@ -9,6 +9,7 @@
 import type { AgentRuntime } from '../models/index.js'
 import { extractFaqPauseAndPaymentQuestion } from './agent-extract/faq-pause-and-payment-question.js'
 import { extractPostResolutionReset } from './agent-extract/post-resolution.js'
+import { extractTroubleResolution } from './agent-extract/trouble-resolution.js'
 import { extractTopicSwitch } from './agent-extract/topic-switch.js'
 import { extractNonTroubleIncident } from './agent-extract/non-trouble-incident.js'
 import { extractLocation } from './agent-extract/location.js'
@@ -32,6 +33,12 @@ export function autoExtractFacts(ar: AgentRuntime, userMessage: string): void {
 
   extractFaqPauseAndPaymentQuestion(ar, trimmed)
   extractPostResolutionReset(ar, trimmed)
+  // F109 Opt C — must run BEFORE topic-switch/non-trouble-incident/etc. so
+  // that an explicit "ora funziona" resolution wipes machine facts before
+  // any other extractor reads them. Runs AFTER post-resolution (which clears
+  // a stale pendingClosure='resolved' from a previous turn) and BEFORE the
+  // FAQ branch handler sees the message.
+  extractTroubleResolution(ar, trimmed)
   extractTopicSwitch(ar, trimmed, userMessage)
   extractNonTroubleIncident(ar, userMessage)
   extractLocation(ar, trimmed)

@@ -8,7 +8,7 @@
 
 import { t, type TranslationKey } from '../localization.js'
 import type { AgentRuntime, Guard } from '../../models/index.js'
-import { lang } from './helpers.js'
+import { lang, pivotIfTroubleSwitch } from './helpers.js'
 import { detectPriceIntent, detectMachineTypeMention } from '../intent.js'
 import { releaseBranchOnFaqClosure } from '../state-transitions.js'
 import { formatWasherPrices, formatDryerPrices } from '../faq-location-formatter.js'
@@ -86,6 +86,15 @@ export const guardFaqPricesAwaitDryerConfirm: Guard = (ar, userMessage) => {
   if (ar.state.pendingFlow !== 'faq-prices-await-dryer-confirm') return null
   if (!ar.state.location) return null
 
+  // F110 — Trouble-machine pivot during faq-prices-await-dryer-confirm.
+  // Without this, "no me funziona la lavadora" while pendingFlow is armed
+  // falls through to the !isAffirmative && !mentionsDryer branch and emits
+  // faqClosure ("¡Perfecto!" rephrased to "¡Genial!") — totally wrong reply
+  // to a trouble report. Mirror of F86 pattern (invoice/discount-code/double-
+  // charge gather guards) — uses the shared pivotIfTroubleSwitch helper so
+  // the detect/pivot logic stays in ONE place.
+  if (pivotIfTroubleSwitch(ar, userMessage)) return null
+
   const mentionsDryer = detectMachineTypeMention(userMessage) === 'dryer'
 
   // F88: incomprehensible / truncated message → repeat the question
@@ -118,6 +127,10 @@ export const guardFaqPricesAwaitDryerConfirm: Guard = (ar, userMessage) => {
 export const guardFaqPricesAwaitWasherConfirm: Guard = (ar, userMessage) => {
   if (ar.state.pendingFlow !== 'faq-prices-await-washer-confirm') return null
   if (!ar.state.location) return null
+
+  // F110 — Trouble-machine pivot during faq-prices-await-washer-confirm.
+  // Mirror of guardFaqPricesAwaitDryerConfirm above (F86 pattern).
+  if (pivotIfTroubleSwitch(ar, userMessage)) return null
 
   const mentionsWasher = detectMachineTypeMention(userMessage) === 'washer'
 

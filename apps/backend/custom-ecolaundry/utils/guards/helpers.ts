@@ -63,13 +63,21 @@ export function isAwaitingPendingFlow(state: SessionState): boolean {
  *   - `operatorRequested` (escalation already triggered)
  *   - `customerNameRequested` (waiting for the name)
  *   - `pendingFlow` in `-await-` phase (see `isAwaitingPendingFlow`)
+ *   - `pendingClosure === 'resolved'` (F110 part 2 — Andrea WhatsApp
+ *      2026-05-26: after `extractTroubleResolution` calls `markResolved` on
+ *      "ora funziona" mid-DOOR-flow, the gather guards would otherwise
+ *      re-fire from sticky `location` + empty `machineType` and ask
+ *      "¿lavadora o secadora?" on a just-resolved trouble. The closure
+ *      signal MUST block any further preemption — the bot says nothing
+ *      until the customer opens a new topic.)
  */
 export function notInActiveSubFlow(ar: AgentRuntime): boolean {
   return (
     !ar.state.activeFlowId &&
     !ar.state.operatorRequested &&
     !ar.state.customerNameRequested &&
-    !isAwaitingPendingFlow(ar.state)
+    !isAwaitingPendingFlow(ar.state) &&
+    ar.state.pendingClosure !== 'resolved'
   )
 }
 

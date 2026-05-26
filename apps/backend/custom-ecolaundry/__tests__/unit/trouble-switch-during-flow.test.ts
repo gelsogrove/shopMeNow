@@ -116,6 +116,21 @@ const detectorCases: DetectorCase[] = [
   { label: 'NEG — razon social',              message: 'ACME SL',               expected: false },
   { label: 'NEG — coste',                     message: '6€',                    expected: false },
   { label: 'NEG — date',                      message: 'Ayer',                  expected: false },
+  // F110 — code-switched and typo variants (Andrea WhatsApp 2026-05-26).
+  // Customer in ES session frequently types the IT verb 'funziona' instead of
+  // ES 'funciona'. Must be caught by the regex `fun(?:ci|zi)ona`.
+  { label: 'F110 — ES+IT code-switch (real chat)', message: 'no me funziona la lavadora',      expected: true },
+  { label: 'F110 — IT typo "funzina"',             message: 'non mi funzina la lavadora',      expected: true },
+  // F110 — display-code report mid-FAQ. The customer is in a FAQ confirm step
+  // ("¿quieres info de secadora?") but pivots with a display code report —
+  // the regex covers "me da DOOR" / "mi da PUSH PROG" / "sale AL001".
+  { label: 'F110 — "mi da DOOR"',                  message: 'mi da DOOR la lavadora',          expected: true },
+  { label: 'F110 — "me da PUSH PROG"',             message: 'me da PUSH PROG',                 expected: true },
+  { label: 'F110 — "sale AL001"',                  message: 'sale AL001',                      expected: true },
+  // F110 — sanity: the display-code clauses must NOT fire on neutral mentions
+  // of the same words in a non-trouble context.
+  { label: 'F110 NEG — "DOOR" alone (no verb)',    message: 'DOOR',                            expected: false },
+  { label: 'F110 NEG — "qué es PUSH PROG?"',       message: 'qué es PUSH PROG?',               expected: false },
 ]
 
 // ── B. Transition cases — pivotToTroubleMachine atomicity ─────────────────

@@ -38,6 +38,7 @@ export { detectIDontKnowReply } from './intent/dont-know.js'
 export { hasGreetingIntent } from './intent/greeting.js'
 export { isShortContextReply } from './intent/short-reply.js'
 export { detectTopicSwitchDuringEscalation } from './intent/topic-switch-escalation.js'
+export { detectTroubleResolution } from './intent/trouble-resolution.js'
 export { detectTroubleSwitchDuringFlow } from './intent/trouble-switch-flow.js'
 export {
   isAwaitingLocation,

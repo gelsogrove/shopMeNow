@@ -181,7 +181,11 @@ export function startNewFlow(ar: AgentRuntime, flowId: string): void {
 /**
  * F109 — Release an in-progress machine flow when the customer has clearly
  * abandoned it (e.g. answered a FAQ pivot mid-flow). Clears `activeFlowId`,
- * `activeStepId`, `lastPresentedStepId`, `retryCount` atomically.
+ * `activeStepId`, `lastPresentedStepId`, `retryCount` atomically. Also moves
+ * `activeBranch` into `previousBranch` so the next turn re-enters
+ * `dispatchTurnOne` and the router re-classifies the incoming message —
+ * symmetric to `releaseBranchOnFaqClosure` (F63) but driven by the FAQ
+ * resolution chokepoint instead of an explicit closure guard.
  *
  * Sticky customer facts (location, machineType, machineNumber, displayState,
  * customerName) are preserved on purpose — they describe the customer/incident
@@ -194,6 +198,11 @@ export function startNewFlow(ar: AgentRuntime, flowId: string): void {
  * next turn does not feed the user's follow-up question into the dead flow's
  * CHOICE node (which would fall through to `"other": escalate` and emit a
  * spurious washerEscalate reply — F109 root cause).
+ *
+ * F109 part 2 — also release `activeBranch` when it is `'trouble-machine'`,
+ * so the next turn re-routes via the router (loyalty / faq / etc.) instead of
+ * being dragged back into the trouble pipeline by sticky-branch dispatch +
+ * `guardAutoStartMachineFlow` re-arming the flow from sticky facts.
  */
 export function releaseActiveFlow(ar: AgentRuntime): void {
   ar.state.activeFlowId = null
