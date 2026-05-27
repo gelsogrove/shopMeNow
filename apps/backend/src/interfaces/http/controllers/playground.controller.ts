@@ -70,17 +70,22 @@ export class PlaygroundController {
       const workspaceId = await resolveWorkspaceId(req)
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { slug: true },
+        select: { slug: true, customChatbotId: true },
       })
-      const slug = workspace?.slug || ECOLAUNDRY_SLUG
+      const slug = workspace?.customChatbotId || workspace?.slug || ECOLAUNDRY_SLUG
       const candidates = [
+        // New layout (post-2026-05-27 cleanup): usecases.md in root of custom-<slug>/
+        path.resolve(__dirname, `../../../../custom-${slug}/usecases.md`),
+        path.resolve(process.cwd(), `custom-${slug}/usecases.md`),
+        path.resolve(process.cwd(), `apps/backend/custom-${slug}/usecases.md`),
+        // Legacy layout (custom-<slug>/docs/usecases.md) — kept for backwards-compat
         path.resolve(__dirname, `../../../../custom-${slug}/docs/usecases.md`),
         path.resolve(process.cwd(), `custom-${slug}/docs/usecases.md`),
         path.resolve(process.cwd(), `apps/backend/custom-${slug}/docs/usecases.md`),
         // Fallback to Ecolaundry if custom workspace-specific files are not found
-        path.resolve(__dirname, "../../../../custom-ecolaundry/docs/usecases.md"),
-        path.resolve(process.cwd(), "custom-ecolaundry/docs/usecases.md"),
-        path.resolve(process.cwd(), "apps/backend/custom-ecolaundry/docs/usecases.md"),
+        path.resolve(__dirname, "../../../../custom-ecolaundry/usecases.md"),
+        path.resolve(process.cwd(), "custom-ecolaundry/usecases.md"),
+        path.resolve(process.cwd(), "apps/backend/custom-ecolaundry/usecases.md"),
       ]
       const filePath = candidates.find((p) => fs.existsSync(p))
       if (!filePath) {

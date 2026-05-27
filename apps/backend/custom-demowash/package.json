@@ -1,18 +1,18 @@
 {
-  "name": "ecolaundry-v2-poc",
+  "name": "demowash-chatbot",
   "version": "0.1.0",
-  "description": "Ecolaundry v2 POC — statechart-based dialogue state management with XState",
+  "description": "Demowash chatbot — copy of demowash, prompt-driven LLM with cached system prompt, session state, escalation by email",
   "type": "module",
-  "private": true,
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "demo:trouble": "node --import tsx src/demo/trouble-machine-demo.ts"
+    "demo": "node --import tsx agent.ts",
+    "demo:contract": "node --import tsx test-contract.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "xstate": "^5.19.0",
-    "ts-pattern": "^5.5.0"
+    "nodemailer": "^6.9.16"
   },
   "devDependencies": {
+    "@types/nodemailer": "^6.4.17",
     "tsx": "^4.7.0",
     "typescript": "^5.4.0"
   }

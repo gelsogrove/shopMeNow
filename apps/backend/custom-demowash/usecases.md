@@ -1,844 +1,2081 @@
-# laundroDemo Chatbot — Casos de Uso
+# Demowash Chatbot — Usecases
 
-Especificación funcional del chatbot multilingüe de laundroDemo. Cada caso documenta los criterios de aceptación y la conversación de referencia.
+## Índice
 
-## Estructura
-
-Cada caso principal (`## Caso N — ...`) contiene dos secciones:
-
-1. **Overview** — 1-2 frases sintéticas: qué se prueba.
-2. **Conversación** — diálogo canónico.
-
-Las variantes adicionales se documentan como **sub-casos** (`### Caso N.1`, `### Caso N.2`, …) con solo el diálogo.
-
----
-
-## Mundo laundroDemo
-
-**6 lavanderías self-service**:
-
-| Canonical | Ciudad | Dirección |
-|---|---|---|
-| Sants | Barcelona | C/ Sants 145 |
-| Gràcia | Barcelona | C/ Gran de Gràcia 88 |
-| Born | Barcelona | C/ Princesa 22 |
-| Mar | Badalona | Av. del Mar 17 |
-| Vilanova | Sitges | Pg. Vilanova 5 |
-| Estació | Sant Cugat | Av. de l'Estació 30 |
-
-"Barcelona" es pueblo ambiguo (3 lavanderías). Idiomas: es / ca / en / it / fr / pt. Default: es.
-
-**Códigos de pantalla** (lavadora y secadora): `SELECT`, `CHOICE PROG`, `ERROR DOOR`, `ALARM`, `ALARM DOOR`, `ERR-001`, `T-28`, `STOP:`, `END:`, `ON`.
-
----
-
-## Caso 1 — Multilingüe en vivo
-
-**Overview** — El bot detecta el idioma del primer mensaje y responde en esa lengua durante toda la conversación. Soporta 6 idiomas: es / ca / en / it / fr / pt.
-
-**Conversación** (catalán)
-
-```
-Client: Quin horari teniu?
-Bot:    👋 Hola, sóc l'assistent virtual de laundroDemo. En quina bugaderia ets?
-
-Client: Born.
-Bot:    A Born (Barcelona), obrim de dilluns a dissabte de 8:00 a 23:00, i els diumenges de 9:00 a 22:00.
-```
-
-### Caso 1.1 — Italiano sin location → bot pregunta
-
-```
-Cliente: Quanto costa lavare la roba?
-Bot:     👋 Ciao, sono l'assistente virtuale di laundroDemo. In quale lavanderia ti trovi?
-
-Cliente: Vilanova.
-Bot:     A Vilanova (Sitges), il prezzo della lavatrice è:
-         • 8 kg → 5,50 €
-         • 14 kg → 9,00 €
-
-         Accettiamo carta, contanti e App laundroDemo.
-```
-
-### Caso 1.2 — Inglés (procedimiento estándar, no se pide sede)
-
-```
-Customer: How does it work?
-Bot:      To use the washing machine follow these steps:
-
-          1. Put your clothes in the machine and close the door firmly.
-          2. Go to the payment terminal and select the machine number.
-          3. Pay by card, cash or with the laundroDemo App.
-          4. Return to the machine and select the program.
-          5. When it's done, collect your clothes.
-
-          Detergent and softener are dispensed automatically.
-```
-
-### Caso 1.3 — Cliente cambia de idioma a mitad de conversación
-
-```
-Cliente: Hola, ¿qué horarios tenéis?
-Bot:     👋 Hola, soy el asistente virtual de laundroDemo. ¿En qué lavandería estás?
-
-Client:  Sorry, can you switch to English? I'm at Born.
-Bot:     Of course. At Born (Barcelona), we're open Monday to Saturday from 8:00 to 23:00, and Sundays from 9:00 to 22:00.
-```
+- [Caso 1 — SELECT](#caso-1--push-prog)
+  - [1.1 — Happy Path](#11--happy-path)
+  - [1.2 — Escalación: máquina no responde tras pulsar](#12--escalación-máquina-no-responde-tras-pulsar)
+- [Caso 2 — OPEN](#caso-2--door)
+  - [2.1 — Happy Path](#21--happy-path)
+  - [2.2 — Escalación: puerta bloqueada tras repetir](#22--escalación-puerta-bloqueada-tras-repetir)
+  - [2.3 — Recap display flow: Phase A / Phase B / cadence N (F74 + F75)](#23--recap-display-flow-phase-a--phase-b--cadence-n-f74--f75)
+- [Caso 3 — WAIT](#caso-3--sel)
+  - [3.1 — Happy Path](#31--happy-path)
+  - [3.2 — Escalación: WAIT persiste](#32--escalación-sel-persiste)
+- [Caso 4 — He pagado y no se ha activado](#caso-4--he-pagado-y-no-se-ha-activado)
+  - [4.1 — No-change Happy Path](#41--no-change-happy-path)
+  - [4.2 — Escalación: cambio devuelto pero no arranca](#42--escalación-cambio-devuelto-pero-no-arranca)
+- [Caso 5 — ERR-12](#caso-5--001)
+  - [5.1 — Happy Path](#51--happy-path)
+  - [5.2 — Escalación: cliente no puede seguir instrucciones](#52--escalación-cliente-no-puede-seguir-instrucciones)
+  - [5.3 — Escalación: ERR-12 persiste](#53--escalación-al001-persiste)
+  - [5.4 — Pivot ERR-12 → Caso 4 (cliente confirma pagamento)](#54--pivot-al001--caso-4-cliente-confirma-pagamento)
+- [Caso 6 — Doble cobro](#caso-6--doble-cobro)
+  - [6.1 — Servicio completado (Happy Path)](#61--servicio-completado-happy-path)
+  - [6.2 — Escalación: cliente muy molesto](#62--escalación-cliente-muy-molesto)
+  - [6.3 — Escalación: relato inconsistente](#63--escalación-relato-inconsistente)
+  - [6.4 — SIN haber usado el servicio](#64--sin-haber-usado-el-servicio)
+  - [6.5 — Validación 4 dígitos tarjeta](#65--validación-4-dígitos-tarjeta)
+- [Caso 7 — Pagado sin usar](#caso-7--pagado-sin-usar)
+  - [7.1 — Resuelto vía pantalla SELECT](#71--resuelto-vía-pantalla-push-prog)
+  - [7.2 — Escalación: máquina no responde tras paso indicado](#72--escalación-máquina-no-responde-tras-paso-indicado)
+- [Caso 8 — Código de descuento](#caso-8--código-de-descuento)
+  - [8.1 — Happy Path (formato válido)](#81--happy-path-formato-válido)
+  - [8.2 — Formato inválido (retry + escalate)](#82--formato-inválido-retry--escalate)
+  - [8.3 — Cliente repite un código en el campo nombre (rechazo + re-ask)](#83--cliente-repite-un-código-en-el-campo-nombre-rechazo--re-ask)
+- [Caso 9 — Factura](#caso-9--factura)
+  - [9.1 — Happy Path](#91--happy-path)
+  - [9.2 — Email inválido (retry)](#92--email-inválido-retry)
+- [Caso 10 — Comprar tarjeta fidelización](#caso-10--comprar-tarjeta-fidelización)
+  - [10.2 — Tarjeta comprada en otro local (cross-location warning)](#caso-102--tarjeta-comprada-en-otro-local-cross-location-warning)
+- [Caso 11 — Recargar tarjeta fidelización](#caso-11--recargar-tarjeta-fidelización)
+- [Caso 12 — Horarios y precios](#caso-12--horarios-y-precios)
+  - [12.4 — Programas de lavadora y secadora por location (F81)](#124--programas-de-lavadora-y-secadora-por-location-f81)
+- [Caso 13 — Código de alarma o incoherencia](#caso-13--código-de-alarma-o-incoherencia)
+- [Caso 14 — ALERT OPEN](#caso-14--alm-door)
+- [Caso 15 — ERR-01](#caso-15--001)
+- [Caso 16 — ALERT / BLOCK](#caso-16--alm--aln)
+- [Caso 17 — No sabe qué aparece en pantalla](#caso-17--no-sabe-qué-aparece-en-pantalla)
+- [Caso 18 — Código solo numérico](#caso-18--código-solo-numérico)
+- [Caso 19 — Datáfono 10€ en Mataró](#caso-19--datáfono-10-en-goya)
+- [Caso 20 — Datáfono 10€ en Rubí](#caso-20--datáfono-10-en-pineda)
+- [Caso 21 — Eixample: monedas secadora no suman](#caso-21--alemanya-monedas-secadora-no-suman)
+- [Caso 22 — Rubí: monedas secadora no suman](#caso-22--pineda-monedas-secadora-no-suman)
+- [Caso 23 — Eixample: no se puede pagar con tarjeta](#caso-23--alemanya-no-se-puede-pagar-con-tarjeta)
+- [Caso 24 — Sant Cugat: no se puede pagar con tarjeta](#caso-24--hortes-no-se-puede-pagar-con-tarjeta)
+- [Caso 25 — Cliente muy enfadado](#caso-25--cliente-muy-enfadado)
+- [Caso 26 — Devolución inmediata](#caso-26--devolución-inmediata)
+- [Caso 27 — Compensación concreta](#caso-27--compensación-concreta)
+- [Caso 28 — Relato contradictorio doble cobro](#caso-28--relato-contradictorio-doble-cobro)
+- [Caso 29 — Cámaras o revisión técnica](#caso-29--cámaras-o-revisión-técnica)
+- [Caso 30 — Código no documentado](#caso-30--código-no-documentado)
+- [Caso 31 — Cliente no indica local](#caso-31--cliente-no-indica-local)
+- [Caso 32 — Mezcla incidencia máquina y pago](#caso-32--mezcla-incidencia-máquina-y-pago)
+  - [32.1 — Marathon: display switching](#321--marathon-display-switching)
+  - [32.2 — Marathon: trouble resuelto → factura](#322--marathon-trouble-resuelto--factura)
+  - [32.3 — Marathon: FAQ pause mid-gather](#323--marathon-faq-pause-mid-gather)
+- [Caso 34 — El cliente pregunta por el jabón, detergente o suavizante](#caso-34--el-cliente-pregunta-por-el-jabón-detergente-o-suavizante)
+- [Caso 35 — El cliente pregunta cómo se usa la lavandería](#caso-35--el-cliente-pregunta-cómo-se-usa-la-lavandería)
+- [Caso 45 — El cliente pregunta cómo se usa la secadora](#caso-45--el-cliente-pregunta-cómo-se-usa-la-secadora)
+- [Caso 46 — La máquina muestra "120" (cuenta atrás fin de ciclo)](#caso-46--la-máquina-muestra-120-cuenta-atrás-fin-de-ciclo)
 
 ---
 
-## Caso 2 — Precios
+## Caso 1 — SELECT
 
-**Overview** — El bot devuelve el listado de precios correcto por sede. Los precios pueden variar entre lavanderías y Estació (Sant Cugat) ofrece además una lavadora XL de 18 kg que las demás no tienen.
+### 1.1 — Happy Path
 
-**Conversación**
+**Criterios de aceptación:**
+1. Gather: lavandería → número de máquina → pantalla. NO pregunta «¿has pagado?».
+2. Tras SELECT, el bot muestra los 4 programas disponibles (**60º**, **40º**, **30º**, **FRÍO**) con descripción y pide pulsar uno.
+3. Cuando el cliente confirma que funciona, el bot cierra como resuelto.
+4. No se escala a operador.
 
-```
-Cliente: ¿Cuánto cuesta?
-Bot:     ¿En qué lavandería estás?
+**Conversación:**
 
-Cliente: Mar.
-Bot:     En Mar (Badalona), estos son los precios:
+**Usuario:** La lavadora no funciona  
+**Bot:** Hola, soy el asistente virtual de Demowash. ¿En qué lavandería estás?
 
-         Lavadora
-         • 8 kg → 5,50 €
-         • 14 kg → 9,00 €
+**Usuario:** Mataró  
+**Bot:** Gracias. ¿Qué número tiene la máquina?
 
-         Secadora
-         • 12 min → 2,00 €
-         • 24 min → 4,00 €
-         • 36 min → 6,00 €
+**Usuario:** La 5  
+**Bot:** ¿Qué aparece en la pantalla?
 
-         Puedes pagar con tarjeta, efectivo o la App laundroDemo. ¿Te ayudo con algo más?
-```
+**Usuario:** SELECT  
+**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
 
-### Caso 2.1 — Estació con lavadora XL
+Los programas disponibles son:
 
-```
-Cliente: ¿Precio de la lavadora en Sant Cugat?
-Bot:     En Estació (Sant Cugat), el precio de la lavadora es:
-         • 8 kg → 5,50 €
-         • 14 kg → 9,00 €
-         • XL 18 kg → 12,00 €
+- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → perfecto para ropa normal (algodón, color)
+- **30º** (suave) → adecuado para ropa delicada o sintética
+- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
 
-         Aceptamos tarjeta, efectivo y App laundroDemo.
-```
+Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
 
----
-
-## Caso 3 — Horarios
-
-**Overview** — El bot responde con los horarios correctos según la sede. Los horarios varían entre lavanderías (Born abre hasta más tarde, Estació abre antes por proximidad a la estación de tren).
-
-**Conversación**
-
-```
-Cliente: ¿Qué horarios tienen?
-Bot:     ¿En qué lavandería estás?
-
-Cliente: Sants.
-Bot:     En Sants (Barcelona), abrimos todos los días de 8:00 a 22:00.
-```
-
-### Caso 3.1 — Pueblo ambiguo (Barcelona)
-
-```
-Cliente: ¿Qué horarios tenéis en Barcelona?
-Bot:     En Barcelona tenemos tres lavanderías: Sants, Gràcia y Born. ¿Cuál te interesa?
-
-Cliente: Born
-Bot:     En Born (Barcelona), abrimos de 8:00 a 23:00 entre semana, y los domingos de 9:00 a 22:00.
-```
+**Usuario:** Sí, ahora funciona  
+**Bot:** ✅ Perfecto, incidencia resuelta.
 
 ---
 
-## Caso 4 — Cómo funciona
+### 1.2 — Escalación: máquina no responde tras pulsar
 
-**Overview** — El bot explica el proceso operativo paso a paso. El procedimiento es **idéntico en todas las sedes** (red en franquicia), por eso el bot no necesita preguntar dónde está el cliente.
+**Criterios de aceptación:**
+1. Si el cliente dice «no responde» tras pulsar, el bot re-pregunta el código exacto.
+2. Confirmado SELECT de nuevo → escala y pide nombre.
+3. Mensaje final con «operador» + «desactivado».
+4. Resumen al operador: nombre, lavandería, número, código pantalla.
 
-**Conversación**
+**Conversación:**
 
-```
-Cliente: ¿Cómo funciona la lavandería?
-Bot:     Para usar la lavadora sigue estos pasos:
+**Usuario:** La lavadora no funciona  
+**Bot:** Hola, soy el asistente virtual de Demowash. ¿En qué lavandería estás?
 
-         1. Mete la ropa en la máquina y cierra bien la puerta.
-         2. Acércate al tótem de pago y selecciona el número de la máquina.
-         3. Paga con tarjeta, efectivo o App laundroDemo.
-         4. Vuelve a la máquina y selecciona el programa.
-         5. Cuando termine, recoge tu ropa.
+**Usuario:** Mataró  
+**Bot:** Gracias. ¿Qué número tiene la máquina?
 
-         El detergente y el suavizante se dosifican automáticamente. ¡No hace falta que traigas nada!
-```
+**Usuario:** La 5  
+**Bot:** ¿Qué aparece en la pantalla?
 
-### Caso 4.1 — Cómo funciona la secadora
+**Usuario:** SELECT  
+**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
 
-```
-Cliente: ¿Cómo se usa la secadora?
-Bot:     Para usar la secadora sigue estos pasos:
+Los programas disponibles son:
 
-         1. Mete la ropa ya lavada en la secadora y cierra la puerta.
-         2. Acércate al tótem de pago, selecciona el número de la secadora y elige los minutos (12, 24 o 36).
-         3. Paga con tarjeta, efectivo o App laundroDemo.
-         4. La secadora arranca automáticamente.
-         5. Cuando termine, recoge tu ropa seca.
-```
+- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → perfecto para ropa normal (algodón, color)
+- **30º** (suave) → adecuado para ropa delicada o sintética
+- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
 
----
+Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
 
-## Caso 5 — La lavadora no arranca (ERROR DOOR)
+**Usuario:** He pulsado pero no responde  
+**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora, incluso si es el mismo que antes.
 
-**Overview** — Flujo de diagnóstico cuando la máquina muestra `ERROR DOOR` (puerta mal cerrada). El bot solicita location y número de máquina, guía al cliente paso a paso y escala a un operador si el problema persiste. El procedimiento es idéntico en todas las sedes.
+**Usuario:** SELECT  
+**Bot:** ⚠️ Si nada ha funcionado, vamos a notificar al operador. ¿Cómo te llamas?
 
-**Conversación**
-
-```
-Cliente: La lavadora no arranca.
-Bot:     Lo siento. ¿En qué lavandería estás?
-
-Cliente: Sants.
-Bot:     ¿Qué número de lavadora has seleccionado?
-
-Cliente: La 4.
-Bot:     ¿Qué aparece exactamente en la pantalla?
-
-Cliente: ERROR DOOR.
-Bot:     Tranquilo, vamos a resolverlo. La puerta no está bien cerrada.
-
-         1. Abre la puerta con cuidado.
-         2. Revisa que no haya ninguna prenda enganchada en la goma.
-         3. Vuelve a cerrarla con un poco más de fuerza, hasta oír el clic.
-
-         ¿La pantalla sigue mostrando ERROR DOOR?
-
-Cliente: Ya no sale el mensaje, ha arrancado.
-Bot:     ¡Perfecto! Que tengas un buen lavado. 👋
-```
-
-### Caso 5.1 — La puerta sigue bloqueada → escalación
-
-```
-Cliente: La lavadora 7 de Gràcia sigue con ERROR DOOR. Ya he abierto y cerrado la puerta dos veces, no hay nada atrapado.
-Bot:     Lo siento. Intentemos una última cosa: cierra la puerta empujando con firmeza con las dos manos, hasta notar el clic claramente. ¿Ha desaparecido el mensaje?
-
-Cliente: No, sigue igual.
-Bot:     De acuerdo. Voy a avisar a un operador para que revise la máquina 7 de Gràcia (Barcelona). En unos minutos te contactará. Mientras tanto, te recomiendo cambiar tu ropa a otra lavadora. ¿Me confirmas tu nombre para el reporte?
-
-Cliente: Pere Roca.
-Bot:     Gracias Pere. Incidencia registrada.
-```
-
-**Human Message enviado al operador:**
-
-```
-👤 Mensaje para el operador
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🕒 Fecha: 26/05/2026 18:42
-📍 Sede: Gràcia (Barcelona)
-🔢 Lavadora: 7
-👤 Cliente: Pere Roca
-
-🚨 Incidencia
-La lavadora 7 muestra ERROR DOOR de forma persistente.
-El cliente ha intentado abrir y cerrar la puerta varias veces
-sin éxito. No hay prendas atrapadas en la goma.
-
-✅ Acción sugerida
-Revisar mecánicamente la goma y el cierre de la puerta.
-Activar otra lavadora en remoto si el cliente la elige.
-```
+**Usuario:** Andrea  
+**Bot:** Gracias, Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
 
 ---
 
-## Caso 6 — Ha saltado una alarma
+## Caso 2 — OPEN
 
-**Overview** — Flujo de diagnóstico cuando la máquina muestra un código de alarma (`ALARM`, `ALARM DOOR` o `ERR-001`). Las alarmas técnicas (`ALARM`, `ALARM DOOR`) escalan siempre a un operador para activación remota; el código de secuencia (`ERR-001`, programa pulsado antes del pago) tiene resolución guiada.
+### 2.1 — Happy Path
 
-**Conversación**
+**Criterios de aceptación:**
+1. Gather: lavandería → número → pantalla.
+2. Tras OPEN, el bot pide abrir y cerrar bien la puerta.
+3. Si el cliente confirma que funciona, cierra como resuelto.
+4. No se escala.
 
-```
-Cliente: Ha saltado una alarma.
-Bot:     Lo siento. ¿En qué lavandería estás?
+**Conversación:**
 
-Cliente: Sants.
-Bot:     ¿Es lavadora o secadora?
+**Usuario:** La lavadora no arranca  
+**Bot:** Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás?
 
-Cliente: Lavadora.
-Bot:     ¿Qué número de máquina?
+**Usuario:** Sant Cugat  
+**Bot:** ¿Qué número tiene la máquina?
 
-Cliente: La 7.
-Bot:     ¿Qué código exacto aparece en la pantalla?
+**Usuario:** 2  
+**Bot:** ¿Qué aparece en la pantalla?
 
-Cliente: Sale ALARM.
-Bot:     Tranquilo, lo solucionamos. La lavadora 7 ha detectado un fallo técnico y necesita revisión. Por favor, cambia tu ropa a otra lavadora libre y dime cuál es.
+**Usuario:** OPEN  
+**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez. Dime si la lavadora ha arrancado.
 
-Cliente: Paso a la 9.
-Bot:     Perfecto. Aviso al operador para activar la lavadora 9 en remoto sin coste adicional. En unos minutos te contactará para confirmar.
-```
-
-**Human Message enviado al operador:**
-
-```
-👤 Mensaje para el operador
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🕒 Fecha: 26/05/2026 19:10
-📍 Sede: Sants (Barcelona)
-🔢 Lavadora afectada: 7 (con ALARM)
-🔄 Lavadora alternativa: 9 (para activación remota)
-
-🚨 Incidencia
-La lavadora 7 muestra código ALARM (fallo técnico).
-El cliente ha movido la ropa a la lavadora 9.
-
-✅ Acción sugerida
-1. Activar lavadora 9 en remoto sin coste para el cliente.
-2. Marcar lavadora 7 fuera de servicio hasta revisión técnica.
-```
-
-### Caso 6.1 — ERR-001 (programa pulsado antes del pago)
-
-```
-Cliente: Sale ERR-001 en la lavadora 3 de Vilanova.
-Bot:     `ERR-001` aparece cuando se pulsa el programa antes de completar el pago. Vamos a reiniciar:
-
-         1. Carga la ropa y cierra bien la puerta.
-         2. Ve al tótem de pago, paga y selecciona el número 3.
-         3. Vuelve a la máquina y pulsa el programa.
-         4. Dime si arranca.
-
-Cliente: Listo, ahora ha arrancado.
-Bot:     ¡Perfecto! Buen lavado. 👋
-```
-
-### Caso 6.2 — ALARM DOOR
-
-```
-Cliente: Sale ALARM DOOR en la lavadora 5 de Estació.
-Bot:     `ALARM DOOR` indica un posible problema de cierre o una prenda atrapada. Abre la puerta con cuidado, revisa la goma y vuelve a cerrarla con firmeza. ¿Ha desaparecido el mensaje?
-
-Cliente: He revisado, no hay nada atrapado y sigue igual.
-Bot:     Lo siento. Aviso al técnico para revisar la máquina 5 de Estació (Sant Cugat). Cambia tu ropa a otra lavadora y dime cuál has elegido para activarla en remoto sin coste.
-
-Cliente: Paso a la 7.
-Bot:     Perfecto. Un operador activará la máquina 7 en breve.
-```
+**Usuario:** Sí  
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
 
 ---
 
-## Caso 7 — No sale jabón en la máquina
+### 2.2 — Escalación: puerta bloqueada tras repetir
 
-**Overview** — Flujo cuando el cliente reporta que la lavadora ha funcionado pero no ha dispensado detergente o suavizante. El bot tranquiliza, explica que el dispensador automático puede estar vacío o atascado, y escala a un operador para reposición.
+**Criterios de aceptación:**
+1. Si OPEN persiste, el bot re-pregunta el código exacto.
+2. Confirmado OPEN → escala y pide nombre.
+3. Mensaje final con «operador» + «desactivado».
+4. Resumen al operador: nombre, lavandería, número, estado OPEN.
 
-**Conversación**
+**Conversación:**
 
-```
-Cliente: La lavadora ha funcionado pero la ropa ha salido sin jabón, todavía huele a sucia.
-Bot:     Lo siento mucho. ¿En qué lavandería estás?
+**Usuario:** La lavadora no arranca  
+**Bot:** Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás?
 
-Cliente: Mar.
-Bot:     ¿Qué número de lavadora has usado?
+**Usuario:** Sant Cugat  
+**Bot:** ¿Qué número tiene la máquina?
 
-Cliente: La 6.
-Bot:     Entendido. En laundroDemo el detergente y el suavizante se dispensan automáticamente; si la ropa ha salido sin jabón, lo más probable es que el dispensador esté vacío o atascado.
+**Usuario:** 2  
+**Bot:** ¿Qué aparece en la pantalla?
 
-         Vamos a relanzar tu lavado sin coste adicional. Vuelve a meter la ropa en la lavadora 6 de Mar (Badalona) y cierra la puerta. Aviso a un operador para que active el nuevo ciclo en remoto. ¿Me confirmas tu nombre?
+**Usuario:** OPEN  
+**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez. Dime si la lavadora ha arrancado.
 
-Cliente: Adrià Camps.
-Bot:     Gracias Adrià. Incidencia registrada. Un operador relanzará el ciclo en unos minutos y revisará el dispensador.
-```
+**Usuario:** NO  
+**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora.
 
-**Human Message enviado al operador:**
+**Usuario:** OPEN  
+**Bot:** ⚠️ La puerta sigue bloqueada. Tenemos que notificar al operador. ¿Cómo te llamas?
 
-```
-👤 Mensaje para el operador
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🕒 Fecha: 26/05/2026 16:30
-📍 Sede: Mar (Badalona)
-🔢 Lavadora: 6
-👤 Cliente: Adrià Camps
-
-🚨 Incidencia
-El ciclo de lavado en la lavadora 6 ha terminado sin dispensar
-jabón. La ropa sigue oliendo a sucia. Posible dispensador vacío
-o atascado.
-
-✅ Acción sugerida
-1. Relanzar el ciclo en remoto sin coste para el cliente.
-2. Revisar el dispensador de detergente y suavizante de la lavadora 6.
-```
+**Usuario:** Carlos  
+**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. El chatbot será desactivado.
 
 ---
 
-## Caso 8 — La centrifugadora no ha arrancado
+### 2.3 — Recap display flow: Phase A / Phase B / cadence N (F74 + F75)
 
-**Overview** — Flujo cuando el cliente reporta que el lavado ha terminado pero la ropa ha salido empapada porque el centrifugado final no se ha activado. El bot diagnostica si hay un problema de carga desequilibrada (causa más común) y guía al cliente a relanzar el centrifugado; si persiste, escala.
+**Criterios de aceptación:**
+1. **Phase A** (primera instrucción): el bot muestra 4 bloques — saludo tranquilizador + resumen del problema en negrita + instrucción + closing.
+2. **Phase B turno 1…N-1**: el bot muestra solo la instrucción. Sin saludo ni closing.
+3. **Phase B turno N** (configurable via `settings.rephraseDisplayFlowRecapInterval`, default 3): el bot muestra resumen del problema + frase de ánimo + instrucción.
+4. El counter `displayPhaseBTurnCount` se resetea al cerrar el incidente.
 
-**Conversación**
+**Conversación (Phase A + 3 turni Phase B con recap al turno 3):**
 
-```
-Cliente: La lavadora ha terminado pero la ropa ha salido empapada, no ha centrifugado.
-Bot:     Lo siento. ¿En qué lavandería estás?
+**Usuario:** La lavadora no funciona  
+**Bot:** ¿En qué lavandería estás?
 
-Cliente: Gràcia.
-Bot:     ¿Qué número de lavadora has usado?
+**Usuario:** Mataró  
+**Bot:** ¿Qué número tiene la máquina?
 
-Cliente: La 4.
-Bot:     Entendido, lavadora 4 en Gràcia (Barcelona). Lo más habitual es que la carga estuviera desequilibrada y la máquina haya saltado el centrifugado por seguridad. Vamos a relanzar:
+**Usuario:** 5  
+**Bot:** ¿Qué aparece en la pantalla?
 
-         1. Abre la puerta de la lavadora 4 y redistribuye la ropa para repartir bien el peso.
-         2. Cierra la puerta.
-         3. Selecciona un programa corto (30º) y arráncalo. Esta vez sí centrifugará.
+**Usuario:** OPEN  
+**Bot:** [Phase A — 4 bloques]  
+**No te preocupes, tiene solución** 😊  
+Estás en **Mataró** con la **lavadora 5** y el error **OPEN**.  
+La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez.  
+Cuéntame si arranca 😊
 
-         ¿Te ha funcionado?
+**Usuario:** no funciona  
+**Bot:** [Phase B turno 1 — solo instrucción]  
+Por favor, escríbeme solo el código exacto que aparece en la pantalla en este momento.
 
-Cliente: Sí, ahora ha centrifugado bien.
-Bot:     ¡Perfecto! Buen día. 👋
-```
+**Usuario:** no funciona  
+**Bot:** [Phase B turno 2 — solo instrucción]  
+Por favor, escríbeme solo el código exacto que aparece en la pantalla en este momento.
 
-### Caso 8.1 — La centrifugadora sigue sin funcionar → escalación
-
-```
-Cliente: He redistribuido la ropa y relanzado en la lavadora 4 de Gràcia, pero sigue saliendo empapada.
-Bot:     Lo siento, parece un problema técnico de la máquina. Aviso a un operador para revisar la lavadora 4 de Gràcia (Barcelona) y compensarte por el inconveniente. ¿Me confirmas tu nombre?
-
-Cliente: Núria Vives.
-Bot:     Gracias Núria. Incidencia registrada. Un operador te contactará en breve.
-```
-
-**Human Message enviado al operador:**
-
-```
-👤 Mensaje para el operador
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🕒 Fecha: 26/05/2026 17:45
-📍 Sede: Gràcia (Barcelona)
-🔢 Lavadora: 4
-👤 Cliente: Núria Vives
-
-🚨 Incidencia
-La lavadora 4 no centrifuga. El cliente ya ha redistribuido
-la ropa y relanzado un programa corto sin éxito.
-Posible fallo técnico de la centrifugadora.
-
-✅ Acción sugerida
-1. Contactar al cliente para coordinar compensación.
-2. Revisar técnicamente la centrifugadora de la lavadora 4.
-```
+**Usuario:** no funciona  
+**Bot:** [Phase B turno 3 — recap + ánimo + instrucción]  
+Estás en **Mataró** con la **lavadora 5** y el error **OPEN**.  
+Seguimos intentándolo 💪  
+Por favor, escríbeme solo el código exacto que aparece en la pantalla en este momento.
 
 ---
 
-## Caso 9 — He pagado y la máquina no se ha activado
+## Caso 3 — WAIT
 
-**Overview** — Flujo cuando el cliente afirma haber pagado pero la máquina no ha arrancado. El bot pide location, número de máquina y diagnóstico de la pantalla, identifica la causa (selección pendiente, programa no pulsado) y escala si la activación remota no es posible.
+### 3.1 — Happy Path
 
-**Conversación**
+**Criterios de aceptación:**
+1. Gather: lavandería → número → pantalla.
+2. Tras WAIT, el bot pide comprobar el número en la central de pago.
+3. NO muestra los 4 programas (diferencia con Caso 1 SELECT).
+4. Si confirma que funciona, cierra como resuelto.
 
-```
-Cliente: He pagado y la lavadora no se ha activado.
-Bot:     Lo siento. ¿En qué lavandería estás?
+**Conversación:**
 
-Cliente: Born.
-Bot:     ¿Qué número de lavadora has seleccionado?
+**Usuario:** He pagado pero la lavadora no empieza  
+**Bot:** ¡Hola! ¿En qué lavandería estás?
 
-Cliente: La 6.
-Bot:     ¿Qué aparece en la pantalla?
+**Usuario:** Rubí  
+**Bot:** ¿Qué número tiene la máquina?
 
-Cliente: Sale SELECT.
-Bot:     `SELECT` significa que la máquina está esperando a que selecciones el número en el tótem. Vuelve al tótem y pulsa el número 6.
+**Usuario:** La 3  
+**Bot:** ¿Qué aparece en la pantalla?
 
-Cliente: Hecho. Ahora pone CHOICE PROG.
-Bot:     ¡Perfecto! Ya sólo falta elegir el programa (60º, 40º, 30º o FRÍO) y pulsar el botón en la máquina. ¿Arranca?
+**Usuario:** WAIT  
+**Bot:** La máquina está pendiente de selección. Comprueba que has pulsado bien el número de la máquina en la central de pago. Después dime si la lavadora ha arrancado.
 
-Cliente: Sí, gracias.
-Bot:     ¡Genial! Buen lavado. 👋
-```
-
-### Caso 9.1 — Activación remota necesaria
-
-```
-Cliente: He pagado en Mar máquina 4, me ha devuelto el cambio pero la lavadora no arranca y la pantalla está apagada.
-Bot:     Voy a pedir activación remota para la máquina 4 de Mar (Badalona). Un operador la pondrá en marcha en unos minutos. Si la máquina no arranca tras 5 minutos, vuelve a escribirme.
-```
-
-### Caso 9.2 — No arranca tras varios intentos → escalación
-
-```
-Cliente: He pagado en Estació, máquina 8, sale CHOICE PROG.
-Bot:     Sólo falta elegir el programa (60º, 40º, 30º o FRÍO) y pulsar el botón en la máquina. ¿Arranca?
-
-Cliente: He pulsado 40º pero sigue mostrando CHOICE PROG.
-Bot:     Prueba a pulsar el botón con un poco más de firmeza, hasta notar el clic. ¿Arranca ahora?
-
-Cliente: Nada, sigue igual.
-Bot:     Lo siento. Aviso a un operador para que active la máquina 8 de Estació (Sant Cugat) en remoto. ¿Me confirmas tu nombre para el reporte?
-
-Cliente: Marta Vidal.
-Bot:     Gracias Marta. Incidencia registrada. Un operador te contactará en breve.
-```
-
-**Human Message enviado al operador:**
-
-```
-👤 Mensaje para el operador
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🕒 Fecha: 26/05/2026 14:50
-📍 Sede: Estació (Sant Cugat)
-🔢 Lavadora: 8
-👤 Cliente: Marta Vidal
-
-🚨 Incidencia
-El cliente ha pagado y pulsado el programa (40º) varias veces,
-pero la lavadora 8 sigue mostrando CHOICE PROG sin arrancar.
-Posible fallo del botón de programa o de la electrónica.
-
-✅ Acción sugerida
-1. Activar lavadora 8 en remoto.
-2. Revisar el botón de programa de la lavadora 8.
-```
+**Usuario:** Ahora sí funciona  
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
 
 ---
 
-## Caso 10 — La máquina no devuelve el cambio
+### 3.2 — Escalación: WAIT persiste
 
-**Overview** — Flujo cuando el cliente paga en efectivo y el tótem no le devuelve el cambio correcto. Este caso siempre escala a un operador porque implica una incidencia económica que el bot no puede resolver de forma autónoma.
+**Criterios de aceptación:**
+1. Si WAIT persiste, el bot re-pregunta el código exacto.
+2. Confirmado WAIT → escala y pide nombre.
+3. Mensaje final con «operador» + «desactivado».
+4. Resumen al operador: nombre, lavandería, número, código WAIT.
 
-**Conversación**
+**Conversación:**
 
-```
-Cliente: La máquina no me ha devuelto el cambio.
-Bot:     Lo siento mucho. Para ayudarte necesito algunos datos. ¿En qué lavandería estás?
+**Usuario:** He pagado pero la lavadora no empieza  
+**Bot:** ¡Hola! ¿En qué lavandería estás?
 
-Cliente: Sants.
-Bot:     ¿Cuánto has introducido y cuánto deberías haber recibido de cambio?
+**Usuario:** Rubí  
+**Bot:** ¿Qué número tiene la máquina?
 
-Cliente: He metido 10 € y el lavado cuesta 5,50 €, no me ha devuelto los 4,50 €.
-Bot:     Entendido. Una diferencia de 4,50 € en Sants (Barcelona). Esto no lo puedo resolver yo desde el chat, voy a avisar a un operador para que te devuelva el importe. Te contactarán en breve. ¿Me confirmas tu nombre para el reporte?
+**Usuario:** La 3  
+**Bot:** ¿Qué aparece en la pantalla?
 
-Cliente: Carla Méndez.
-Bot:     Gracias Carla. He registrado la incidencia. Un operador te contactará en unos minutos.
-```
+**Usuario:** WAIT  
+**Bot:** La máquina está pendiente de selección. Comprueba que has pulsado bien el número de la máquina en la central de pago.
 
-**Human Message enviado al operador:**
+**Usuario:** Aun no arranca  
+**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora.
 
-```
-👤 Mensaje para el operador
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**Usuario:** WAIT  
+**Bot:** ⚠️ La pantalla sigue mostrando WAIT. Tenemos que notificar al operador. ¿Cómo te llamas?
 
-🕒 Fecha: 26/05/2026 12:15
-📍 Sede: Sants (Barcelona)
-👤 Cliente: Carla Méndez
-💰 Incidencia económica
-
-🚨 Incidencia
-El tótem no ha devuelto el cambio correcto.
-• Importe introducido: 10 €
-• Importe del lavado: 5,50 €
-• Diferencia adeudada al cliente: 4,50 €
-
-✅ Acción sugerida
-Contactar al cliente para devolver 4,50 €.
-Revisar la caja del tótem (posible falta de monedas o atasco).
-```
+**Usuario:** Luis  
+**Bot:** Gracias Luis. Un operador humano se encargará de tu caso.
 
 ---
 
-## Caso 11 — Doble cobro
+## Caso 4 — He pagado y no se ha activado
 
-**Overview** — Flujo cuando el cliente afirma que se le ha cobrado dos veces el mismo servicio. El bot recoge los datos estructurados (sede, completitud del servicio, últimos 4 dígitos de tarjeta, captura del cargo) y escala con un resumen completo. Si el servicio se completó, se envía el formulario de reembolso.
+### 4.1 — No-change Happy Path
 
-**Conversación**
+**Criterios de aceptación:**
+1. Gather: lavandería → tipo → número → «¿la central te ha devuelto el cambio?» (NO pantalla).
+2. Si responde «No», el bot pide revisar el saldo y marcar el número correcto.
+3. Si confirma que arranca, cierra como resuelto.
+4. No se escala.
 
-```
-Cliente: Me ha cobrado dos veces.
-Bot:     Lo siento mucho. Vamos a revisarlo paso a paso. ¿En qué lavandería estás?
+**Conversación:**
 
-Cliente: Vilanova.
-Bot:     Gracias. ¿Has completado el servicio (la ropa ya está lavada) o no llegaste a usar la máquina?
+**Usuario:** He pagado y no se ha activado  
+**Bot:** Hola, soy el asistente virtual de Demowash. ¿En qué local estás?
 
-Cliente: Sí, ya he lavado.
-Bot:     Entendido. ¿Me indicas los últimos 4 dígitos de la tarjeta con la que pagaste?
+**Usuario:** Mataró  
+**Bot:** ¿Es una lavadora o una secadora?
 
-Cliente: 4523.
-Bot:     Perfecto. Por último, ¿puedes pasarme una captura del cargo en tu banco o app?
+**Usuario:** Lavadora  
+**Bot:** ¿Qué número de máquina es?
 
-Cliente: Te paso la captura.
-Bot:     Gracias. Como has completado el servicio, te paso el formulario de reembolso:
+**Usuario:** La 4  
+**Bot:** ¿La central te ha devuelto el cambio?
 
-         👉 https://laundrodemo.demo/refund
+**Usuario:** No  
+**Bot:** Es posible que no se haya marcado bien el número de la máquina. Mira si todavía aparece saldo en la central y pulsa correctamente el botón correspondiente.
 
-         Rellénalo con los datos y la captura. He avisado al operador del caso (Vilanova, tarjeta ****4523), te contactará en cuanto reciba el formulario.
-```
-
-### Caso 11.1 — Servicio no completado
-
-```
-Cliente: He pagado dos veces en Sants pero no he llegado a lavar.
-Bot:     Entendido. Si no has completado el servicio, la próxima vez antes de volver a pagar contáctanos por aquí: te ayudamos al momento y evitamos el cargo doble.
-
-         Para gestionar el reembolso de los 2 pagos: necesito los últimos 4 dígitos de la tarjeta y la captura del cargo. Te paso luego al operador.
-```
+**Usuario:** Sí, ahora ya se ha puesto en marcha  
+**Bot:** Perfecto, ya estaría resuelto.
 
 ---
 
-## Caso 12 — Cambio de tema en mitad de un flujo
+### 4.2 — Escalación: cambio devuelto pero no arranca
 
-**Overview** — Durante un diagnóstico técnico el cliente puede preguntar por orarios o precios y el bot responde, manteniendo abierta la posibilidad de retomar el flujo anterior si el cliente lo desea.
+**Criterios de aceptación:**
+1. Cualquier «Sí» a «¿cambio devuelto?» → escala (el contexto del trigger ya indica que la máquina no se activó).
+2. Excepción: «Sí, ahora arranca / ya funciona» → resolved (corner case, no escala).
+3. El bot pide el nombre antes del cierre con «operador» + «desactivado».
+4. Resumen al operador: nombre, lavandería, número, tipo.
 
-**Conversación**
+**Conversación A — bare «Sí»:**
 
-```
-Cliente: Me ha cobrado dos veces.
-Bot:     Lo siento mucho. ¿En qué lavandería estás?
+**Usuario:** He pagado y no se ha activado  
+**Bot:** Hola, soy el asistente virtual de Demowash. ¿En qué local estás?
 
-Cliente: En Born. Antes de seguir, ¿qué precio tiene la lavadora aquí?
-Bot:     En Born (Barcelona), la lavadora cuesta 5,50 € (8 kg) o 9,00 € (14 kg). ¿Seguimos con el doble cobro?
+**Usuario:** Mataró  
+**Bot:** ¿Es una lavadora o una secadora?
 
-Cliente: Sí, ya he completado el servicio.
-Bot:     Entendido. ¿Me pasas los últimos 4 dígitos de la tarjeta y una captura del cargo para que el operador revise el caso?
-```
+**Usuario:** Lavadora  
+**Bot:** ¿Qué número de máquina es?
 
-### Caso 12.1 — Cliente abandona el flujo anterior
+**Usuario:** La 4  
+**Bot:** ¿La central te ha devuelto el cambio?
 
-```
-Cliente: Sale ALARM DOOR en la máquina 5 de Gràcia.
-Bot:     `ALARM DOOR` indica un posible problema de cierre. Abre la puerta y revisa que no haya nada atrapado en la goma. ¿Ha desaparecido el mensaje?
+**Usuario:** Sí  
+**Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
 
-Cliente: Olvídalo, ¿cuánto cuesta la secadora?
-Bot:     En Gràcia (Barcelona), el precio de la secadora es:
-         • 12 min → 2,00 €
-         • 24 min → 4,00 €
-         • 36 min → 6,00 €
+**Usuario:** Andrea  
+**Bot:** Gracias, Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
 
-         Aceptamos tarjeta, efectivo y App laundroDemo.
-```
+**Conversación B — «Sí, pero no arranca» (variante explícita):**
 
----
-
-## Caso 13 — Quiero la factura
-
-**Overview** — Flujo de solicitud de factura. El bot recoge los datos fiscales paso a paso (razón social, dirección, observaciones) y los guarda en el perfil del cliente para futuras facturas.
-
-**Conversación**
-
-```
-Cliente: Quiero la factura del lavado.
-Bot:     Por supuesto. Para emitirla necesito algunos datos fiscales. ¿Cuál es la razón social o tu nombre fiscal?
-
-Cliente: Tintorería Soler SL.
-Bot:     Gracias. ¿Dirección de facturación?
-
-Cliente: C/ Aragón 145, 08015 Barcelona.
-Bot:     Perfecto. ¿Alguna observación que quieras añadir (CIF, código de cliente, referencia)?
-
-Cliente: CIF B12345678.
-Bot:     Datos registrados:
-         • Razón social: Tintorería Soler SL
-         • Dirección: C/ Aragón 145, 08015 Barcelona
-         • Observación: CIF B12345678
-
-         Un operador emitirá la factura y te la enviará por email. La próxima vez no tendrás que repetir estos datos.
-```
-
-### Caso 13.1 — Datos ya guardados
-
-```
-Cliente: Necesito factura.
-Bot:     Tienes los siguientes datos guardados:
-
-         • Razón social: Tintorería Soler SL
-         • Dirección: C/ Aragón 145, 08015 Barcelona
-         • Observación: CIF B12345678
-
-         ¿Los confirmo así o quieres modificar algo?
-
-Cliente: Confírmalos.
-Bot:     Perfecto. Un operador emitirá la factura y te la enviará por email.
-```
+**Usuario:** Sí, pero la máquina no arranca  
+**Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
 
 ---
 
-## Caso 14 — Tarjeta de fidelización
+## Caso 5 — ERR-12
 
-**Overview** — Flujo de compra y recarga de la tarjeta de fidelización. La tarjeta cuesta 20 € en efectivo y **solo es válida en la sede donde se ha comprado** (no funciona en otras lavanderías laundroDemo).
+### 5.1 — Happy Path
 
-**Conversación**
+**Criterios de aceptación:**
+1. Gather: lavandería → tipo → número.
+2. El bot explica que es un error de secuencia y pide qué ha hecho antes.
+3. Si el cliente confirma que ya funciona, cierra como resuelto.
+4. Acepta variantes naturales del código (ERR-12 / AL ERR-01 / ALERT ERR-01 / alarm ERR-01 / alarma ERR-01).
 
-```
-Cliente: Quiero comprar una tarjeta de fidelización.
-Bot:     La tarjeta de fidelización cuesta 20 € en efectivo y solo funciona en la lavandería donde se compra. ¿En qué lavandería estás?
+**Conversación:**
 
-Cliente: Mar.
-Bot:     Perfecto. En Mar (Badalona), pulsa el segundo botón en el lado derecho del tótem de pago, introduce los 20 € en monedas y la máquina te entregará la tarjeta. La podrás usar solo aquí en Mar.
-```
+**Usuario:** Me sale ERR-12  
+**Bot:** ¡Hola! ¿En qué lavandería estás?
 
-### Caso 14.1 — Recarga de la tarjeta
+**Usuario:** Gràcia  
+**Bot:** ¿Es una lavadora o una secadora?
 
-```
-Cliente: Quiero recargar mi tarjeta en Sants.
-Bot:     En Sants (Barcelona), para recargar la tarjeta introdúcela en el tótem de pago y sigue las instrucciones de la pantalla. Si aparece algún mensaje extraño, dímelo y lo revisamos.
-```
+**Usuario:** Lavadora  
+**Bot:** ¿Cuál es el número de la máquina?
 
-### Caso 14.2 — Tarjeta comprada en otra sede
+**Usuario:** 3  
+**Bot:** Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Te ayudo a completarlo: dime qué has hecho justo antes de que apareciera.
 
-```
-Cliente: Tengo la tarjeta de Vilanova, ¿la puedo usar en Born?
-Bot:     ⚠️ La tarjeta comprada en Vilanova (Sitges) solo funciona en esa lavandería. No es válida aquí en Born (Barcelona). Si necesitas una tarjeta para esta sede, puedes comprarla aquí mismo con 20 € en efectivo.
-```
-
-### Caso 14.3 — Tarjeta de otra cadena
-
-```
-Cliente: Tengo una tarjeta de la lavandería de Tarragona, ¿vale aquí?
-Bot:     Lo siento, las tarjetas laundroDemo solo funcionan en nuestras 6 sedes (Barcelona, Badalona, Sitges y Sant Cugat). Si la tarjeta es de otra cadena, no es compatible.
-
-         Si quieres una tarjeta laundroDemo, puedes comprarla en el tótem de pago: cuesta 20 € en efectivo y será válida solo en esta sede.
-```
+**Usuario:** Sí, ya funciona  
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
 
 ---
 
-## Caso 15 — Mensaje al operador (Human Message)
+### 5.2 — Escalación: cliente no puede seguir instrucciones
 
-**Overview** — Cuando una incidencia se escala, el bot genera un **briefing estructurado** que se envía al operador humano por email (y opcionalmente WhatsApp). El briefing contiene toda la información relevante recopilada durante la conversación, en el idioma configurado por la sede (por defecto español), independientemente del idioma del cliente.
-**Conversación visible al cliente**
+**Criterios de aceptación:**
+1. Si el cliente dice que no entiende cómo hacerlo, el bot escala.
+2. El bot pide el nombre antes de cerrar.
+3. Mensaje final con «operador» + «desactivado».
+4. Resumen al operador: lavandería, número, pantalla ERR-12.
 
-```
-Cliente: Sigue sin arrancar la lavadora 7 de Sants, ya he probado todo.
-Bot:     Lo siento. Voy a avisar a un operador para que active manualmente la máquina o te ayude con el cambio a otra. ¿Me confirmas tu nombre para el reporte?
+**Conversación:**
 
-Cliente: Laura Méndez.
-Bot:     Gracias Laura. He registrado la incidencia. Un operador te contactará en unos minutos. 👋
-```
+**Usuario:** Me sale ERR-12  
+**Bot:** ¡Hola! ¿En qué lavandería estás?
 
-**Briefing que recibe el operador** (email / WhatsApp)
+**Usuario:** Gràcia  
+**Bot:** ¿Es una lavadora o una secadora?
 
-```
-👤 Mensaje para el operador
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+**Usuario:** Lavadora  
+**Bot:** ¿Cuál es el número de la máquina?
 
-🕒 Fecha: 26/05/2026 18:42
-📍 Sede: Sants (Barcelona)
-🔢 Máquina: 7
-👤 Cliente: Laura Méndez
-📞 Teléfono: +34 612 345 678
+**Usuario:** 3  
+**Bot:** Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Te ayudo a completarlo: dime qué has hecho justo antes de que apareciera.
 
-🚨 Incidencia
-La lavadora 7 no arranca tras varios intentos.
-La cliente confirma haber probado todo lo indicado por el bot
-sin éxito. La pantalla muestra ERROR DOOR repetidamente.
+**Usuario:** No entiendo cómo hacerlo  
+**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora.
 
-📋 Resumen de la conversación
-• Cliente reporta máquina 7 no arranca.
-• Pantalla muestra ERROR DOOR.
-• Cliente ha probado las instrucciones del bot sin éxito.
-• Solicitada activación remota o cambio a otra lavadora.
+**Usuario:** ERR-12  
+**Bot:** ⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador para que revise el caso y la posible compensación. ¿Cómo te llamas?
 
-✅ Acción sugerida
-Activar máquina 7 en remoto o asistir al cambio de lavadora.
-Posible revisión técnica de la goma de la puerta.
-```
-
-### Caso 15.1 — Briefing tras doble cobro
-
-Conversación visible al cliente:
-
-```
-Cliente: Me ha cobrado dos veces en Vilanova.
-Bot:     Lo siento mucho. ¿Has completado el servicio y me puedes pasar los últimos 4 dígitos de la tarjeta y una captura del cargo?
-
-Cliente: Sí, he lavado. Tarjeta ****4523, te paso la captura.
-Bot:     Gracias Carla. He registrado la incidencia y te paso el formulario de reembolso:
-         👉 https://laundrodemo.demo/refund
-
-         Un operador te contactará en cuanto reciba el formulario.
-```
-
-Briefing al operador:
-
-```
-👤 Mensaje para el operador
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🕒 Fecha: 26/05/2026 17:15
-📍 Sede: Vilanova (Sitges)
-👤 Cliente: Carla Soler
-📞 Teléfono: +34 654 987 654
-💳 Tarjeta: ****4523
-
-🚨 Incidencia
-Doble cobro confirmado por la cliente. Importe: 5,50 € × 2.
-Servicio completado.
-
-📋 Resumen de la conversación
-• Cliente reporta cargo duplicado en Vilanova.
-• Servicio completado correctamente.
-• Tarjeta acabada en 4523, captura del cargo recibida.
-• Cliente ha rellenado el formulario de reembolso.
-
-✅ Acción sugerida
-Revisar el segundo cargo de 5,50 € en la cuenta del TPV de Vilanova.
-Tramitar reembolso vía formulario recibido.
-```
-
-### Caso 15.2 — Briefing con cliente en inglés
-
-Conversación visible (en inglés):
-
-```
-Customer: My washing machine is broken at Born, machine 6.
-Bot:      Sorry to hear that. Let me escalate to an operator. Can I confirm your name?
-
-Customer: John Smith.
-Bot:      Thanks John. An operator will contact you shortly.
-```
-
-Briefing al operador (siempre en `es` según configuración):
-
-```
-👤 Mensaje para el operador
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-🕒 Fecha: 26/05/2026 19:03
-📍 Sede: Born (Barcelona)
-🔢 Máquina: 6
-👤 Cliente: John Smith
-🌐 Idioma de la conversación: Inglés
-
-🚨 Incidencia
-La lavadora 6 de Born presenta una avería según el cliente.
-No se ha aportado código de pantalla.
-
-✅ Acción sugerida
-Contactar al cliente en inglés y diagnosticar el problema.
-```
+**Usuario:** María  
+**Bot:** Gracias María. Un operador humano se encargará de tu caso. El chatbot será desactivado.
 
 ---
 
-## Caso 16 — Escenario no contemplado (cierre de la demo)
+### 5.3 — Escalación: ERR-12 persiste
 
-**Overview** — Cuando el cliente formula una pregunta o pide una funcionalidad que no está prevista en ninguno de los casos documentados de esta demo, el bot reconoce el límite con honestidad y deja la puerta abierta a ampliar la cobertura en una versión definitiva adaptada al negocio real del cliente.
+**Criterios de aceptación:**
+1. Si el cliente dice que el error persiste, el bot re-pregunta el código exacto.
+2. Confirmado ERR-12 → escala.
+3. Mensaje final con «operador» + «desactivado».
+4. Resumen al operador: lavandería, número, pantalla ERR-12.
 
-**Conversación**
+**Conversación:**
 
-```
-Cliente: ¿Puedo reservar una lavadora con antelación para esta tarde?
-Bot:     Aún no hemos contemplado este escenario. Esta es una demo que incluye los casos de uso que ves al lado del chat; en una versión definitiva adaptada a vuestra realidad podemos añadir muchos otros escenarios (reservas, programación, gestión de turnos, etc.) según vuestras necesidades.
-```
+**Usuario:** Me sale ERR-12  
+**Bot:** ¡Hola! ¿En qué lavandería estás?
 
-### Caso 16.1 — Pregunta sobre suscripciones / planes
+**Usuario:** Gràcia  
+**Bot:** ¿Es una lavadora o una secadora?
 
-```
-Cliente: ¿Tenéis algún plan mensual o suscripción para lavar varias veces a la semana?
-Bot:     Aún no hemos contemplado este escenario. Esta es una demo enfocada en los casos de uso que aparecen al lado del chat. En una versión definitiva podemos incluir planes de suscripción, paquetes y descuentos personalizados según vuestro modelo de negocio.
-```
+**Usuario:** Lavadora  
+**Bot:** ¿Cuál es el número de la máquina?
 
-### Caso 16.2 — Cliente en italiano
+**Usuario:** 3  
+**Bot:** Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Te ayudo a completarlo: dime qué has hecho justo antes de que apareciera.
 
-```
-Cliente: Posso prenotare il ritiro della biancheria a domicilio?
-Bot:     Non abbiamo ancora previsto questo scenario. Questa è una demo che include i casi d'uso che vedi a lato della chat; in una versione definitiva possiamo aggiungere molti altri scenari (ritiro a domicilio, consegna, gestione abbonamenti, ecc.) in base alle vostre esigenze.
-```
+**Usuario:** Lo he hecho bien pero sigue saliendo  
+**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora.
+
+**Usuario:** ERR-12  
+**Bot:** ⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador. ¿Cómo te llamas?
+
+**Usuario:** Carlos  
+**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+---
+
+### 5.4 — Pivot ERR-12 → Caso 4 (cliente confirma pagamento)
+
+**Criterios de aceptación:**
+1. El cliente entra con ERR-12 → bot hace gather (lavandería → tipo → número) y explica el error de secuencia.
+2. Si en el siguiente turno el cliente menciona que ha pagado, el bot **pivota deterministically al Caso 4**.
+3. A partir de ahí los guards de Caso 4 toman el control: la próxima pregunta es «¿La central te ha devuelto el cambio?».
+4. NO se acumulan instrucciones improvisadas por el LLM: el pivot deja el state machine en una rama documentada y deterministica.
+
+**Conversación:**
+
+**Usuario:** ERR-12  
+**Bot:** Hola, soy el asistente virtual de la lavandería. ¿En qué pueblo está la lavandería?
+
+**Usuario:** Rubí  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Cuál es el número de la máquina?
+
+**Usuario:** 3  
+**Bot:** Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Te ayudo a completarlo: dime qué has hecho justo antes de que apareciera.
+
+**Usuario:** He pagado y apretado el número de la lavadora  
+**Bot:** ¿La central te ha devuelto el cambio?
+
+**Usuario:** Sí  
+**Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** Gracias, Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+---
+
+## Caso 6 — Doble cobro
+
+### 6.1 — Servicio completado (Happy Path)
+
+**Criterios de aceptación:**
+1. Gather: lavandería → ¿has podido lavar/secar? → tipo → número → relato → 4 dígitos → captura → nombre.
+2. Validación 4 dígitos: exactamente 4 cifras; si no, re-ask; tras 2° fallo escala.
+3. Mensaje final NO menciona «operador» ni «desactivado» (trámite de devolución).
+4. El final incluye URL del formulario de reembolso.
+
+**Conversación:**
+
+**Usuario:** Me habéis cobrado dos veces con la tarjeta  
+**Bot:** ¡Hola! ¿En qué lavandería te encuentras?
+
+**Usuario:** Mataró  
+**Bot:** ¿Has podido lavar o secar la ropa?
+
+**Usuario:** Sí  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Qué número tiene la lavadora?
+
+**Usuario:** 5  
+**Bot:** De acuerdo. ¿Podrías explicarme paso a paso qué has hecho desde que has entrado? ¿Es posible que hayas pasado varias veces la tarjeta por el datáfono?
+
+**Usuario:** He pagado, no iba y volví a pasar la tarjeta  
+**Bot:** ¡Gracias! ¿Podrías indicarme los últimos 4 dígitos de la tarjeta?
+
+**Usuario:** 4821  
+**Bot:** ¡Perfecto! ¿Podrías enviarme una captura del pago? ¿Cómo te llamas?
+
+**Usuario:** Carlos  
+**Bot:** Gracias Carlos. Aquí tienes el formulario de reembolso: https://forms.gle/XFGPAd9581AhC9eu7. Vamos a revisar tu situación.
+
+---
+
+### 6.2 — Escalación: cliente muy molesto
+
+**Criterios de aceptación:**
+1. Si el cliente está muy enfadado y exige operador → escala inmediatamente.
+2. El bot pide el nombre antes de cerrar.
+3. Mensaje final con «operador» + «desactivado».
+4. NO sigue pidiendo relato, dígitos, captura.
+
+**Conversación:**
+
+**Usuario:** Me habéis cobrado dos veces, estoy muy enfadado y quiero hablar con un operador ahora mismo  
+**Bot:** ⚠️ Necesitamos derivar tu caso a un operador. ¿Cómo te llamas?
+
+**Usuario:** María  
+**Bot:** Gracias María. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+---
+
+### 6.3 — Escalación: relato inconsistente
+
+**Criterios de aceptación:**
+1. Si el relato es contradictorio o «no sé exactamente» → escala.
+2. NO sigue pidiendo dígitos ni captura.
+3. El bot pide el nombre antes de cerrar.
+4. Mensaje final con «operador» + «desactivado».
+
+**Conversación:**
+
+**Usuario:** Me habéis cobrado dos veces con la tarjeta  
+**Bot:** ¡Hola! ¿En qué lavandería te encuentras?
+
+**Usuario:** Mataró  
+**Bot:** ¿Has podido lavar o secar la ropa?
+
+**Usuario:** Sí  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Qué número tiene la lavadora?
+
+**Usuario:** 5  
+**Bot:** De acuerdo. ¿Podrías explicarme paso a paso qué has hecho?
+
+**Usuario:** No sé exactamente, creo que me han cobrado tres o cuatro veces, no me cuadra  
+**Bot:** ⚠️ Necesitamos derivar tu caso a un operador. ¿Cómo te llamas?
+
+**Usuario:** Carlos  
+**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso.
+
+---
+
+### 6.4 — SIN haber usado el servicio
+
+**Criterios de aceptación:**
+1. Gather mínimo: lavandería → ¿has podido? → escala si «No».
+2. NO pide tipo, número, relato, dígitos, captura.
+3. El bot pide el nombre antes de cerrar.
+4. Resumen al operador: indica explícitamente que NO ha podido usar el servicio.
+
+**Conversación:**
+
+**Usuario:** Me habéis cobrado dos veces con la tarjeta  
+**Bot:** Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás?
+
+**Usuario:** Mataró  
+**Bot:** ¿Has podido lavar o secar la ropa?
+
+**Usuario:** no, no he podido  
+**Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
+
+**Usuario:** Carlos  
+**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso.
+
+---
+
+### 6.5 — Validación 4 dígitos tarjeta
+
+**Criterios de aceptación:**
+1. Acepta exactamente 4 dígitos consecutivos.
+2. Si no, re-ask: «Necesito exactamente los 4 últimos dígitos de la tarjeta».
+3. Tras 2° intento inválido → escala.
+4. Si válido, continúa flujo 6.1 normalmente.
+
+**Conversación A — recuperado al segundo intento:**
+
+**Usuario:** 48215  
+**Bot:** Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?
+
+**Usuario:** 4821  
+**Bot:** ¡Perfecto! ¿Podrías enviarme una captura del pago?
+
+**Conversación B — escalada tras 2 intentos inválidos:**
+
+**Usuario:** 482  
+**Bot:** Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?
+
+**Usuario:** no me acuerdo  
+**Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+---
+
+## Caso 7 — Pagado sin usar
+
+### 7.1 — Resuelto vía pantalla SELECT
+
+**Criterios de aceptación:**
+1. Gather: lavandería → tipo → número → pantalla.
+2. Reconoce el código y da la indicación correspondiente.
+3. Si confirma que funciona, cierra como resuelto.
+4. No se escala.
+
+**Conversación:**
+
+**Usuario:** He pagado y no he podido usar la máquina  
+**Bot:** ¡Hola! ¿En qué lavandería estás?
+
+**Usuario:** Rubí  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Cuál es el número de la máquina?
+
+**Usuario:** 5  
+**Bot:** ¿Qué aparece en la pantalla?
+
+**Usuario:** SELECT  
+**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
+
+Los programas disponibles son:
+
+- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → perfecto para ropa normal (algodón, color)
+- **30º** (suave) → adecuado para ropa delicada o sintética
+- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
+
+Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
+
+**Usuario:** Ahora sí  
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
+
+---
+
+### 7.2 — Escalación: máquina no responde tras paso indicado
+
+**Criterios de aceptación:**
+1. Tras la instrucción, si no arranca el bot pide el código exacto.
+2. Si el cliente describe el bloqueo → escala.
+3. Mensaje final con «operador» + «desactivado».
+4. Resumen al operador: lavandería, número, código pantalla.
+
+**Conversación:**
+
+**Usuario:** He pagado y no he podido usar la máquina  
+**Bot:** ¡Hola! ¿En qué lavandería estás?
+
+**Usuario:** Rubí  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Cuál es el número de la máquina?
+
+**Usuario:** 5  
+**Bot:** ¿Qué aparece en la pantalla?
+
+**Usuario:** SELECT  
+**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
+
+Los programas disponibles son:
+
+- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → perfecto para ropa normal (algodón, color)
+- **30º** (suave) → adecuado para ropa delicada o sintética
+- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
+
+Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
+
+**Usuario:** no arranca  
+**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora.
+
+**Usuario:** se ha bloqueado  
+**Bot:** ⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador para que revise el caso y la posible compensación. ¿Cómo te llamas?
+
+**Usuario:** Luis  
+**Bot:** Gracias Luis. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+---
+
+## Caso 8 — Código de descuento
+
+### 8.1 — Happy Path (formato válido)
+
+**Criterios de aceptación:**
+1. El bot pide SOLO el código (no lavandería ni tipo en el mismo turno).
+2. Validación formato `^<prefix>(\d{2})(\d{2})(\d{2})(\d{1,2})$` (prefijo + DDMMYY + importe). Prefijo config-driven por tenant (`settings.discountCodePrefix`).
+3. Si formato válido, recoge: nombre → pueblo → número → puerta.
+4. Escala siempre al operador para activación remota.
+
+**Conversación:**
+
+**Usuario:** Tengo un código y no sé cómo usarlo  
+**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves?
+
+**Usuario:** SAU2904266  
+**Bot:** ¡Gracias! ¿Cuál es tu nombre?
+
+**Usuario:** Andrea  
+**Bot:** ¿En qué pueblo / lavandería quieres usarlo?
+
+**Usuario:** Mataró  
+**Bot:** ¿Qué número de máquina deseas usar?
+
+**Usuario:** 5  
+**Bot:** ¿La tienes cargada y con la puerta cerrada?
+
+**Usuario:** Sí  
+**Bot:** Dame un minuto, hacemos las comprobaciones. Si el código es correcto, te activaremos la máquina.
+
+---
+
+### 8.2 — Formato inválido (retry + escalate)
+
+**Criterios de aceptación:**
+1. Si formato no encaja, el bot pide reescribirlo (1° intento).
+2. Tras 2° intento inválido → escala (no escala al primer intento).
+3. El bot pide el nombre.
+4. Mensaje final con «operador» + «desactivado».
+
+**Conversación:**
+
+**Usuario:** Tengo un código y no sé cómo usarlo  
+**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves?
+
+**Usuario:** AB12345  
+**Bot:** Ese código no encaja con el formato que esperamos. ¿Podrías comprobarlo y escribírmelo de nuevo?
+
+**Usuario:** XYZ123  
+**Bot:** El código no encaja con el formato esperado, vamos a revisarlo manualmente. ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso.
+
+---
+
+### 8.3 — Cliente repite un código en el campo nombre (rechazo + re-ask)
+
+**Criterios de aceptación:**
+1. Tras un código válido, el bot pregunta `¿Cuál es tu nombre?`.
+2. Si el cliente responde con un token que coincide con el formato del código de descuento, el bot lo rechaza y vuelve a preguntar el nombre.
+3. El contador `awaitNameAskAttempts` se incrementa con cada intento no válido (3-strikes ladder): 1° y 2° → re-ask; 3° → escala.
+4. El rechazo es deterministico — vale en las 6 lenguas soportadas porque el detector solo mira el formato.
+
+**Conversación A — recuperado al re-ask:**
+
+**Usuario:** Tengo un código  
+**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves?
+
+**Usuario:** SAU2904266  
+**Bot:** ¡Gracias! ¿Cuál es tu nombre?
+
+**Usuario:** SAU2904266  
+**Bot:** ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** ¿En qué pueblo / lavandería quieres usarlo?
+
+**Conversación B — escalación tras 3 intentos no validos (ladder):**
+
+**Usuario:** Tengo un código  
+**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto?
+
+**Usuario:** SAU2904266  
+**Bot:** ¡Gracias! ¿Cuál es tu nombre?
+
+**Usuario:** SAU2904266  
+**Bot:** ¿Cómo te llamas?
+
+**Usuario:** sau2904266  
+**Bot:** ¿Cómo te llamas?
+
+**Usuario:** SAU2904266  
+**Bot:** Vamos a revisar tu caso manualmente.
+
+---
+
+## Caso 9 — Factura
+
+### 9.1 — Happy Path
+
+**Criterios de aceptación:**
+1. Gather: lavandería → tipo → razón social → dirección → CIF/NIF → fecha → coste → email → notas → nombre.
+2. Una pregunta por turno (NO listas combinadas). Coste total se acepta verbatim.
+3. Datos PII NO pasan por rephrase LLM ni operator-briefing LLM.
+4. Mensaje final incluye disclaimer de privacidad. Operator briefing incluye `coste: X`.
+
+**Conversación:**
+
+**Usuario:** Quiero una factura  
+**Bot:** Claro, te ayudo con la factura. ¿En qué lavandería estuviste?
+
+**Usuario:** Mataró  
+**Bot:** Gracias. ¿Utilizaste lavadora o secadora?
+
+**Usuario:** Lavadora  
+**Bot:** Perfecto. ¿Me indicas la razón social?
+
+**Usuario:** ACME SL  
+**Bot:** ¿Y la dirección?
+
+**Usuario:** Calle Mayor 1, Madrid  
+**Bot:** ¿Cuál es tu CIF/NIF/NIE?
+
+**Usuario:** B12345678  
+**Bot:** ¿Qué día utilizaste el servicio? (puedes decirme «hoy», «ayer» o una fecha)
+
+**Usuario:** Ayer  
+**Bot:** ¿Cuál fue el coste total del servicio?
+
+**Usuario:** 6€  
+**Bot:** ¿A qué correo electrónico te enviamos la factura?
+
+**Usuario:** ana@example.com  
+**Bot:** ¿Quieres añadir alguna nota u observación para la factura? Si no, escribe «no».
+
+**Usuario:** no  
+**Bot:** Por último, ¿cuál es tu nombre?
+
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea, te enviaremos pronto la factura del 2026-05-07 a tu correo: ana@example.com.
+
+🔒 Tus datos (razón social, CIF/NIF, dirección, correo) se usan únicamente para emitir la factura y no se comparten con terceros.
+
+---
+
+### 9.2 — Email inválido (retry)
+
+**Criterios de aceptación:**
+1. Email mal formado → reply contiene «no parece válido» y vuelve a pedirlo.
+2. El bot NO avanza al siguiente paso hasta recibir un email válido.
+3. Al segundo intento válido continúa al paso siguiente.
+4. Cierre canónico con disclaimer de privacidad.
+
+**Conversación:**
+
+[gather hasta coste → bot pide email]
+
+**Usuario:** ana  
+**Bot:** El correo no parece válido. ¿Puedes escribírmelo de nuevo, por favor?
+
+**Usuario:** ana@example.com  
+**Bot:** ¿Quieres añadir alguna nota u observación para la factura? Si no, escribe «no».
+
+[continúa hasta cierre 9.1]
+
+---
+
+## Caso 10 — Comprar tarjeta fidelización
+
+**Criterios de aceptación:**
+1. Respuesta canónica: 20€ en efectivo + solo funciona en la tienda donde se compró.
+2. Si el cliente da location, el bot añade instrucción específica del local.
+3. NO se inventa instrucción para locales sin override.
+4. No se piden tipo, número ni display (es una FAQ).
+
+**Conversación:**
+
+**Usuario:** ¿Cómo consigo la tarjeta de fidelización?  
+**Bot:** La tarjeta de fidelización se compra con 20€ en efectivo y solo funciona en la tienda donde se ha comprado.
+
+**Usuario:** Estoy en Mataró  
+**Bot:** Perfecto. En Mataró, en la central de botones, debes pulsar el segundo botón de la línea de la derecha.
+
+**Usuario:** Entendido  
+**Bot:** Perfecto.
+
+---
+
+### Caso 10.2 — Tarjeta comprada en otro local (cross-location warning)
+
+**Criterios de aceptación:**
+1. Si `state.location` está definido y el mensaje menciona una location DISTINTA, el bot emite la advertencia canónica de cross-location.
+2. La advertencia es determinística — NO delegada al LLM.
+3. Si el mensaje menciona la MISMA location del cliente, no se emite warning.
+4. Cubre los 6 idiomas con la i18n key `loyaltyCardWrongLocation`.
+
+**Conversación ES:**
+
+**Bot:** ¿En qué lavandería estás?  
+**Usuario (en Mataró):** Tengo la tarjeta de Rubí, ¿la puedo usar aquí?  
+**Bot:** ⚠️ La tarjeta comprada en Rubí solo funciona en ese local. No es válida aquí en Mataró. Si necesitas una tarjeta para esta lavandería, puedes comprarla aquí con 20€ en efectivo.
+
+**Conversación IT:**
+
+**Bot:** In quale lavanderia sei?  
+**Usuario (a Mataró):** Ho comprato la tessera a Rubí, funziona anche qui?  
+**Bot:** ⚠️ La tessera acquistata a Rubí funziona solo in quella sede. Non è valida qui a Mataró. Se hai bisogno di una tessera per questa lavanderia, puoi acquistarla qui con 20€ in contanti.
+
+**Conversación EN:**
+
+**Bot:** Which laundry are you at?  
+**Usuario (at Mataró):** I bought my loyalty card at Sant Cugat, will it work here?  
+**Bot:** ⚠️ The card bought at Sant Cugat only works at that location. It's not valid here at Mataró. If you need a card for this laundry, you can buy one here for €20 in cash.
+
+**Conversación CA:**
+
+**Bot:** A quina bugaderia ets?  
+**Usuario (a Eixample):** Vaig comprar la targeta a Rubí, funciona aquí?  
+**Bot:** ⚠️ La targeta comprada a Rubí només funciona en aquell local. No és vàlida aquí a Eixample. Si necessites una targeta per a aquesta bugaderia, pots comprar-la aquí amb 20€ en efectiu.
+
+### Caso 10.3 — Mataró: pregunta loyalty card en T1 + sub-localización en T2 (F100)
+
+**Criterios de aceptación:**
+1. T1: bot responde preguntando Mataró/Eixample (guardMataroStreet vence).
+2. T2: cliente responde "Mataró" → bot emite el override loyalty card de Mataró.
+3. NO se emite el aviso cross-location.
+4. Cubre los 6 idiomas en el T1.
+
+**Conversación IT:**
+
+**Usuario:** ciao sono a Mataró posso usare una tessera di fidelizzazione comprata in un altra lavanderia?  
+**Bot:** En Mataró tenemos dos lavanderías: C/ Francisco de Mataró 117 y C/ Eixample 17. ¿Podrías indicarme en cuál estás?  
+**Usuario:** Mataró  
+**Bot:** En Mataró, la tarjeta de fidelidad se compra con 20€ en efectivo y se activa pulsando el segundo botón de la fila derecha de la central. Solo funciona en este local.
+
+**Conversación ES:**
+
+**Usuario:** Estoy en Mataró y quiero comprar la tarjeta de fidelización  
+**Bot:** En Mataró tenemos dos lavanderías: C/ Francisco de Mataró 117 y C/ Eixample 17. ¿Podrías indicarme en cuál estás?  
+**Usuario:** Eixample  
+**Bot:** [override loyalty card de Eixample si disponible, o respuesta base con instrucción genérica]
+
+---
+
+## Caso 11 — Recargar tarjeta fidelización
+
+**Criterios de aceptación:**
+1. Respuesta corta: introduce la tarjeta y sigue las instrucciones de la central.
+2. NO pide location (operación estándar en todas las centrales).
+3. Cierre proactivo: invita a reportar si aparece mensaje extraño.
+4. Escala si el cliente reporta error o central no responde.
+
+**Conversación:**
+
+**Usuario:** ¿Cómo recargo la tarjeta?  
+**Bot:** Introduce la tarjeta y sigue las instrucciones de la central.
+
+**Usuario:** Vale  
+**Bot:** Perfecto. Si al hacerlo aparece algún mensaje extraño, dímelo y lo revisamos.
+
+**Conversación 11.2 (F68 — modal+infinitivo y typo «targeta»):**
+
+**Usuario:** Como puedo recargar la targeta de fidelización  
+**Bot:** Introduce la tarjeta y sigue las instrucciones de la central.
+
+---
+
+## Caso 12 — Horarios y precios
+
+### 12.1 — Horarios por location
+
+**Criterios de aceptación:**
+1. Bot pregunta: «¿En qué lavandería / pueblo estás?»
+2. Cliente responde con pueblo/calle → bot responde con `metadata.hours` de esa location.
+3. Si el cliente dice un pueblo con múltiples ubicaciones (ej. Mataró), bot pregunta calle/zona.
+4. No se inventa información de horarios.
+
+**Conversación:**
+
+**Usuario:** ¿Cuáles son los horarios?  
+**Bot:** ¿En qué lavandería o pueblo estás?
+
+**Usuario:** Terrassa  
+**Bot:** En Terrassa, el horario es de 8:00 a 22:00, todos los días del año.
+
+**Usuario:** Y en Gràcia  
+**Bot:** En Gràcia, las máquinas se pueden utilizar de 7:00 a 23:00, todos los días.
+
+---
+
+### 12.2 — Precios de lavadora por location y peso
+
+**Criterios de aceptación:**
+1. Bot pregunta el pueblo y muestra lista de máquinas en bold con peso y precios (fidelity/cash).
+2. Cuando el cliente pide precios sin especificar tipo, muestra lavadora y añade «¿También quieres información de secadora?».
+3. Cuando dos o más máquinas comparten specs, las colapsa en una sola línea plural («Lavadoras» / «Secadoras»).
+4. NO inventa precios — solo data de `locations.json:machines`. Incluye aviso `⚠️ paymentCardOnly` o `💡 paymentTpvExact` cuando aplica.
+
+**Conversación:**
+
+**Usuario:** ¿Cuánto cuesta la lavadora?  
+**Bot:** ¿En qué lavandería estás?
+
+**Usuario:** Terrassa  
+**Bot:** En Terrassa, los precios de lavadora son:
+
+- **L1** 20kg: 10€ (fidelidad) / 10€ (efectivo)
+- **L2** 15kg: 8€ / 8€
+- **L3** 15kg: 8€ / 8€
+- **L4** 13kg: 5€ / 5€
+
+¿También quieres información de secadora?
+
+**Usuario:** Sí  
+**Bot:** En Terrassa, los precios de secadora son:
+
+- **S5** 20min: 3€
+- **S6** 20min: 3€
+
+**Ejemplo F87 — Mataró con TPV importe exacto:**
+
+**Usuario:** ¿cuánto cuesta lavar?  
+**Bot:** ¿En qué pueblo o lavandería estás?
+
+**Usuario:** Mataró  
+**Bot:** En Mataró, los precios de lavadora son:
+
+- **Lavadoras** 20kg: 6,5€ (fidelidad) / 7€ (efectivo)
+- **Lavadoras** 10kg: 3,5€ (fidelidad) / 4€ (efectivo)
+
+💡 El TPV cobra el importe exacto de **7€** (no devuelve cambio).
+
+¿También quieres información de secadora?
+
+**Ejemplo F87 — Gràcia con solo tarjeta de crédito:**
+
+**Usuario:** ¿cuánto cuesta lavar?  
+**Bot:** ¿En qué pueblo o lavandería estás?
+
+**Usuario:** Gràcia  
+**Bot:** En Gràcia, los precios de lavadora son:
+
+- **Lavadoras** 10kg: 6€
+- **Lavadoras** 20kg: 9€
+
+⚠️ En esta lavandería solo se acepta tarjeta de crédito.
+
+¿También quieres información de secadora?
+
+---
+
+### 12.4 — Programas de lavadora y secadora por location (F81)
+
+**Criterios de aceptación:**
+1. El bot detecta intent de programas en las 6 lenguas.
+2. Si no se conoce la location: pide la lavandería; si se conoce, renderiza directamente la lista desde `metadata.programs`.
+3. Lavadoras CON números: formato `**1** — Muy caliente (60º)`. SIN números: `**Muy caliente** (60º)`.
+4. Secadoras: 3 programas sin número — Alta/Media/Baja temperatura. Nombres en la lengua del cliente.
+
+**Ejemplo — T1 sin location:**
+
+**Usuario:** ¿qué programas tiene la lavadora?  
+**Bot:** ¿En qué pueblo o lavandería estás?  
+**Usuario:** Mataró  
+**Bot:** Los programas disponibles para la lavadora son:
+
+- **1** — Muy caliente (60º)
+- **2** — Caliente (40º)
+- **3** — Templado (30º)
+- **4** — Frío (*)
+
+Los programas disponibles para la secadora son:
+
+- **Alta temperatura**
+- **Media temperatura**
+- **Baja temperatura**
+
+**Ejemplo — T1 con location ya conocida:**
+
+**Usuario:** cuáles son los programas aquí?  
+**Bot:** Los programas disponibles para la lavadora son:  
+*(lista de Mataró directamente)*
+
+**Ejemplo — Gràcia (orden diferente, 5 programas):**
+
+- **1** — Frío (*)
+- **2** — Templado (30º)
+- **3** — Caliente (40º)
+- **4** — Muy caliente (60º)
+- **5** — Centrifugado
+
+---
+
+## Caso 13 — Código de alarma o incoherencia
+
+**Criterios de aceptación:**
+1. Gather completo antes de escalar: location → tipo → número → display.
+2. Reply de escalación contiene «revisión manual» + petición del nombre.
+3. NO confronta al cliente.
+4. Caso «paraguas» para alarmas genéricas no cubiertas por 14-18.
+
+**Conversación:**
+
+**Usuario:** He pagado y ahora sale BLOCK  
+**Bot:** Hola, soy el asistente virtual de la lavandería. ¿Dónde está la lavandería?
+
+**Usuario:** Mataró  
+**Bot:** Gracias. ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Qué número tiene la máquina?
+
+**Usuario:** La 5  
+**Bot:** El código BLOCK requiere revisión manual. Pasaremos tu caso a revisión. ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso.
+
+---
+
+## Caso 14 — ALERT OPEN
+
+**Criterios de aceptación:**
+1. El bot intenta UNA vez la guía «abrir + revisar prendas + cerrar bien».
+2. Si el cliente confirma que el mensaje desaparece → resolved.
+3. Si NO desaparece → escala con resumen que incluye «ALERT OPEN» (no «OPEN» genérico).
+4. Acepta ALERT OPEN / ALERT/OPEN / ALMDOOR.
+
+**Conversación:**
+
+**Usuario:** La lavadora no funciona y pone ALERT OPEN  
+**Bot:** Tranquilo, te ayudo. ¿En qué lavandería estás?
+
+**Usuario:** Mataró  
+**Bot:** ¿Qué número tiene la máquina?
+
+**Usuario:** La 6  
+**Bot:** Ese mensaje puede indicar un problema de cierre o que hay alguna pieza atrapada. Abre la puerta con cuidado, revisa si hay alguna prenda atrapada y vuelve a cerrarla bien.
+
+**Usuario:** Ya lo he hecho  
+**Bot:** Perfecto. Dime si el mensaje ha desaparecido.
+
+**Usuario:** No  
+**Bot:** Vamos a pasar tu caso a revisión.
+
+---
+
+## Caso 15 — ERR-01
+
+**Criterios de aceptación:**
+1. Reconocimiento de «ERR-01» puro (sin AL/ALERT) → token canónico C001.
+2. Explicación educativa antes de escalar.
+3. Solo necesita location antes de escalar (NO display de nuevo, NO número obligatorio).
+4. Diferencia con Caso 5 ERR-12: este NO admite recovery — siempre escala.
+
+**Conversación:**
+
+**Usuario:** En la pantalla sale ERR-01  
+**Bot:** Gracias. ¿En qué lavandería estás?
+
+**Usuario:** Rubí  
+**Bot:** Ese mensaje puede aparecer cuando el programa se ha seleccionado antes del pago.
+
+**Usuario:** ¿Qué hago?  
+**Bot:** Vamos a revisarlo manualmente para ayudarte de la mejor manera posible.
+
+---
+
+## Caso 16 — ALERT / BLOCK
+
+**Criterios de aceptación:**
+1. Reconocimiento robusto: BLOCK, BLOCK A, BLOCK N, ALERT/A, ALERT/E, ALERT/VAr.
+2. Tras location + tipo + número → escala inmediata.
+3. NO pide abrir/cerrar nada (diferencia con Caso 14 ALERT OPEN).
+4. Resumen al operador incluye el código exacto, location, tipo y número.
+
+**Conversación:**
+
+**Usuario:** La secadora pone BLOCK  
+**Bot:** Tranquilo, te ayudo. ¿Dónde está la lavandería?
+
+**Usuario:** Eixample  
+**Bot:** Gracias. ¿Qué número tiene la máquina?
+
+**Usuario:** La 4  
+**Bot:** El código BLOCK requiere revisión manual. ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso.
+
+---
+
+## Caso 17 — No sabe qué aparece en pantalla
+
+**Criterios de aceptación:**
+1. Gather mínimo: location + tipo de máquina.
+2. Tras gather → escalación inmediata.
+3. NO se pide foto (feature no soportada hoy).
+4. Resumen al operador indica falta de información de pantalla.
+
+**Conversación:**
+
+**Usuario:** La máquina no va, pero no sé qué pone  
+**Bot:** Tranquilo, lo revisamos juntos. ¿En qué lavandería estás?
+
+**Usuario:** Sant Cugat  
+**Bot:** Gracias. ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** Vamos a revisarlo manualmente. ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** Pasamos tu caso a revisión. Un operador se pondrá en contacto contigo.
+
+---
+
+## Caso 18 — Código solo numérico
+
+**Criterios de aceptación:**
+1. Trigger: input que matche `^\d{3,}$` (3+ dígitos puros sin letras).
+2. Step 1: el bot pregunta «¿ves alguna letra delante?».
+3. «Sí» → reset al flujo Caso 8 (pide código completo).
+4. «No» → escalación, resumen indica «código solo numérico».
+
+**Conversación:**
+
+**Usuario:** Tengo un código: 23432023  
+**Bot:** Gracias. ¿Ves alguna letra delante de los números?
+
+**Usuario:** No  
+**Bot:** De acuerdo. Hay una información que necesitamos revisar manualmente.
+
+**Usuario:** ¿Por qué?  
+**Bot:** Vamos a pasarlo a revisión para ayudarte correctamente.
+
+---
+
+## Caso 19 — Datáfono 10€ en Mataró
+
+**Criterios de aceptación:**
+1. Trigger: mención datáfono + cifra atípica + location Mataró.
+2. NO se piden tipo ni número de máquina.
+3. El bot pregunta solo «¿has podido usar el servicio?» antes de escalar.
+4. Resumen al operador: Mataró + datáfono + importe incoherente.
+
+**Conversación:**
+
+**Usuario:** Estoy en Mataró y el datáfono me ha cobrado 10€  
+**Bot:** Gracias por indicarlo. Vamos a revisarlo. ¿Has podido usar el servicio?
+
+**Usuario:** No  
+**Bot:** De acuerdo. Hay una información que no coincide y necesitamos revisarla manualmente.
+
+**Usuario:** Vale  
+**Bot:** Pasaremos tu caso a revisión.
+
+---
+
+## Caso 20 — Datáfono 10€ en Rubí
+
+**Criterios de aceptación:**
+1. Mismo flujo del Caso 19 con location Rubí.
+2. En otras locations (no Mataró/Rubí) → mismatch.
+3. NO pide tipo ni número.
+4. Resumen al operador: Rubí + datáfono + importe incoherente.
+
+**Conversación:**
+
+**Usuario:** En Rubí me ha cobrado 10€  
+**Bot:** Gracias. Vamos a revisarlo. ¿Has podido lavar o secar la ropa?
+
+**Usuario:** No  
+**Bot:** De acuerdo. Hay una información que no coincide.
+
+**Usuario:** Vale  
+**Bot:** Lo pasaremos a revisión.
+
+---
+
+## Caso 21 — Eixample: monedas secadora no suman
+
+**Criterios de aceptación:**
+1. Trigger: minutos no añadidos + secadora + location Eixample.
+2. NO entra al gather de display.
+3. El bot confirma location antes de escalar.
+4. Resumen al operador: Eixample + secadora + monedas no sumadas.
+
+**Conversación:**
+
+**Usuario:** He puesto más dinero en la secadora y no suma minutos  
+**Bot:** Gracias. ¿Estás en la lavandería Eixample?
+
+**Usuario:** Sí  
+**Bot:** De acuerdo. Esa incidencia necesita revisión.
+
+**Usuario:** ¿No se puede arreglar ahora?  
+**Bot:** Vamos a pasarlo a revisión.
+
+---
+
+## Caso 22 — Rubí: monedas secadora no suman
+
+**Criterios de aceptación:**
+1. Mismo flujo del Caso 21 con location Rubí.
+2. En otras locations → mismatch.
+3. NO pide tipo ni número.
+4. Resumen al operador: Rubí + secadora + monedas no sumadas.
+
+**Conversación:**
+
+**Usuario:** He añadido tiempo a la secadora y no lo ha sumado  
+**Bot:** Gracias. ¿Estás en Rubí?
+
+**Usuario:** Sí  
+**Bot:** De acuerdo. Vamos a revisarlo manualmente.
+
+**Usuario:** Vale  
+**Bot:** Gracias. Pasaremos tu caso a revisión.
+
+---
+
+## Caso 23 — Eixample: no se puede pagar con tarjeta
+
+**Criterios de aceptación:**
+1. Trigger: no pago tarjeta + location Eixample.
+2. Mensaje de escalación menciona «soporte técnico».
+3. En otras locations (no Eixample/Sant Cugat) → mismatch.
+4. Resumen al operador: Eixample + tarjeta + no se puede pagar.
+
+**Conversación:**
+
+**Usuario:** No puedo pagar con tarjeta  
+**Bot:** Te ayudo. ¿En qué lavandería estás?
+
+**Usuario:** Eixample  
+**Bot:** Gracias. Vamos a revisarlo manualmente porque esa incidencia puede requerir soporte técnico.
+
+**Usuario:** Vale  
+**Bot:** Pasaremos tu caso a revisión.
+
+---
+
+## Caso 24 — Sant Cugat: no se puede pagar con tarjeta
+
+**Criterios de aceptación:**
+1. Mismo flujo del Caso 23 con location Sant Cugat.
+2. Confirmación de location proactiva.
+3. NO pide tipo ni número.
+4. Resumen al operador: Sant Cugat + tarjeta + no se puede pagar.
+
+**Conversación:**
+
+**Usuario:** La tarjeta no funciona para pagar  
+**Bot:** Gracias. ¿Estás en Sant Cugat?
+
+**Usuario:** Sí  
+**Bot:** De acuerdo. Vamos a revisar la incidencia manualmente.
+
+**Usuario:** Vale  
+**Bot:** Pasaremos tu caso a revisión.
+
+---
+
+## Caso 25 — Cliente muy enfadado
+
+**Criterios de aceptación:**
+1. T1: el bot abre con empatía explícita ANTES de cualquier pregunta.
+2. NUNCA se justifica, contradice ni minimiza.
+3. Si sigue alterado → escala con «atención prioritaria».
+4. Si colabora, sigue el flujo normal del problema reportado.
+
+**Conversación:**
+
+**Usuario:** ¡Esto siempre falla! ¡Quiero una solución ya!  
+**Bot:** Entiendo tu malestar y quiero ayudarte. Vamos a revisarlo lo antes posible. ¿En qué lavandería estás?
+
+**Usuario:** Mataró  
+**Bot:** Gracias. ¿Es una lavadora o una secadora?
+
+---
+
+## Caso 26 — Devolución inmediata
+
+**Criterios de aceptación:**
+1. NO promete devolución (la decisión es del operador).
+2. Recoge datos mínimos: 4 dígitos, captura, resumen.
+3. Reply menciona «revisión» + «devolución» pero NO «te lo devolvemos».
+4. Resumen al operador: nombre + «devolución» + datos.
+
+**Conversación:**
+
+**Usuario:** Quiero que me devolváis el dinero ahora mismo  
+**Bot:** Vamos a revisarlo contigo. Para tramitarlo, necesito los últimos 4 dígitos de la tarjeta, una captura del pago y un breve resumen.
+
+**Usuario:** Quiero la devolución ya  
+**Bot:** Entiendo. Vamos a pasar el caso a revisión.
+
+---
+
+## Caso 27 — Compensación concreta
+
+**Criterios de aceptación:**
+1. NO confirma activaciones gratuitas ni códigos nuevos.
+2. La primera respuesta incluye el wording `compensationReview` + `¿Cómo te llamas?` en un único mensaje (F65).
+3. Si el cliente insiste, mantiene la línea «no puedo confirmarlo desde aquí».
+4. Resumen al operador: nombre + «compensación» + descripción.
+
+**Conversación:**
+
+**Usuario:** Quiero una secadora gratis por las molestias  
+**Bot:** Vamos a echar un vistazo a tu caso para poder ofrecerte la mejor solución. 🙏 ¿Cómo te llamas, por favor?
+
+**Usuario:** Pero quiero que me lo confirmes ya  
+**Bot:** No puedo confirmarlo directamente desde aquí. Vamos a pasarlo a revisión.
+
+---
+
+## Caso 28 — Relato contradictorio doble cobro
+
+**Criterios de aceptación:**
+1. Trigger: «cobró dos veces» + «aunque/creo/no sé».
+2. NO intenta clarificar el relato (lo hace el operador).
+3. Reply menciona «revisar» sin acusar al cliente.
+4. Resumen al operador: nombre + «relato contradictorio».
+
+**Conversación:**
+
+**Usuario:** Me cobró dos veces, aunque creo que también pagué en efectivo  
+**Bot:** Gracias. Vamos a revisarlo contigo. ¿Has podido finalmente usar el servicio?
+
+**Usuario:** No lo sé bien  
+**Bot:** Para comprobarlo bien, vamos a revisar el caso manualmente.
+
+**Usuario:** Vale  
+**Bot:** Gracias. Pasaremos tu caso a revisión.
+
+---
+
+## Caso 29 — Cámaras o revisión técnica
+
+**Criterios de aceptación:**
+1. Trigger: cámaras / AJAX / soporte técnico.
+2. NO dice «vamos a mirarlo» como si pudiera ver las cámaras.
+3. Escalación inmediata, pide directamente el nombre.
+4. Resumen al operador: nombre + «cámaras» o «AJAX».
+
+**Conversación:**
+
+**Usuario:** Mirad las cámaras porque yo he pagado  
+**Bot:** Gracias por indicarlo. Vamos a revisar tu caso manualmente.
+
+**Usuario:** Vale  
+**Bot:** Lo pasaremos a revisión.
+
+---
+
+## Caso 30 — Código no documentado
+
+**Criterios de aceptación:**
+1. Acepta variantes con typos pequeños (USH PROG → SELECT, DOR → OPEN).
+2. Si no reconoce, pide comprobar nuevamente.
+3. Tras 2° intento sin reconocer → escala.
+4. Si código real no documentado (ERR 52) → resumen incluye el código exacto literal.
+
+**Conversación A — typo recuperado:**
+
+**Usuario:** asdf  
+**Bot:** No reconozco ese código exactamente. ¿Podrías comprobarlo nuevamente?
+
+**Usuario:** SELECT  
+**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
+
+Los programas disponibles son:
+
+- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → perfecto para ropa normal (algodón, color)
+- **30º** (suave) → adecuado para ropa delicada o sintética
+- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
+
+Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
+
+**Conversación B — código no documentado:**
+
+**Usuario:** En la pantalla sale ERR 52  
+**Bot:** Ese código no coincide con un caso documentado y necesitamos revisarlo manualmente. ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+---
+
+## Caso 31 — Cliente no indica local
+
+**Criterios de aceptación:**
+1. NO procede al gather de tipo/número/display sin location.
+2. Si dice «no lo sé» (o equivalente en IT/EN/CA/PT/FR) → re-ask con énfasis + lista de referencias (landmarks).
+3. Si nombre desconocido (ej. «Girona») → lista las lavanderías reales.
+4. Tras 2-3 intentos sin location → escala.
+
+**Conversación 31.1 — ES:**
+
+**Usuario:** La secadora no funciona  
+**Bot:** Hola. Te ayudo. ¿En qué lavandería estás?
+
+**Usuario:** No lo sé  
+**Bot:** Para poder ayudarte, necesito saber en qué lavandería estás. ¿Hay cerca un Mercadona, Carrefour, Aldi u otro punto de referencia?
+
+**Usuario:** Estoy en Mataró  
+**Bot:** Perfecto. ¿Qué número tiene la máquina?
+
+**Conversación 31.2 — IT:**
+
+**Usuario:** non funziona la lavatrice  
+**Bot:** Ciao. ¿In quale lavanderia ti trovi?
+
+**Usuario:** non lo so  
+**Bot:** Per poterti aiutare ho bisogno di sapere in quale lavanderia sei. C'è vicino un Mercadona, Carrefour, Aldi o un altro punto di riferimento?
+
+---
+
+## Caso 32 — Mezcla incidencia máquina y pago
+
+**Criterios de aceptación:**
+1. T1 pregunta location; NO entra al gather de pago.
+2. Canonical order: tipo → número → pantalla, una pregunta por turno.
+3. Si el cliente adelanta facts, el guard pregunta solo lo que falta.
+4. Si se aclara como Caso 4/7, reenruta sin reset de facts.
+
+**Conversación:**
+
+**Usuario:** He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro  
+**Bot:** Hola. Tranquilo, te ayudo. ¿En qué lavandería estás?
+
+**Usuario:** Rubí  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora 3  
+**Bot:** ¿Qué aparece en la pantalla?
+
+---
+
+### 32.1 — Marathon: display switching
+
+**Criterios de aceptación:**
+1. El bot NO re-pregunta location ni número tras primer gather.
+2. Cada nuevo display reescribe state y re-resuelve el flow engine.
+3. ERR-12 escala automáticamente.
+4. Resumen al operador lista TODOS los displays vistos en orden cronológico.
+
+**Conversación:**
+
+**Usuario:** ¡Hola! ¿Cómo va?  
+**Bot:** ¡Hola! Soy el asistente virtual de Demowash. ¿En qué puedo ayudarte?
+
+**Usuario:** ¿Qué horarios hacéis?  
+**Bot:** El horario general es de 8:00 a 22:00 cada día del año.
+
+**Usuario:** Tengo un problema con la lavadora  
+**Bot:** Lamento la incidencia. ¿En qué lavandería te encuentras?
+
+**Usuario:** Rubí  
+**Bot:** ¿Qué número tiene la lavadora?
+
+**Usuario:** La 3  
+**Bot:** ¿Qué aparece en la pantalla?
+
+**Usuario:** WAIT  
+**Bot:** La máquina está pendiente de selección. Comprueba que has pulsado bien el número en la central de pago.
+
+**Usuario:** No, ahora aparece SELECT  
+**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
+
+Los programas disponibles son:
+
+- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
+- **40º** (templado) → perfecto para ropa normal (algodón, color)
+- **30º** (suave) → adecuado para ropa delicada o sintética
+- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
+
+Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
+
+**Usuario:** No, ahora pone OPEN  
+**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez.
+
+**Usuario:** No, ahora aparece ERR-12  
+**Bot:** Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Te ayudo a completarlo.
+
+**Usuario:** sigo con el mismo error  
+**Bot:** ⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador. ¿Cómo te llamas?
+
+**Usuario:** Marc  
+**Bot:** Gracias Marc. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+---
+
+## Caso 33 — Feedback del cliente (positivo o negativo)
+
+**Criterios de aceptación:**
+1. Si el sentimiento es **positivo**: el bot responde con `feedbackPositive` y cierra (`handoff: 'resolved'`).
+2. Si el sentimiento es **negativo**: el bot responde con `feedbackNegative` y cierra.
+3. NO se pregunta lavandería, tipo de máquina ni ningún otro dato. NO se escala.
+4. Si el cliente además hace una demanda explícita (reembolso, compensación) → el router clasifica como `escalation`, no `feedback`.
+
+### Conversación 33.1 — Feedback positivo (IT)
+
+**Usuario:** ho lavato molto bene la roba volevo farvi i miei complimenti  
+**Bot:** Grazie mille per il tuo messaggio! 😊 Siamo felici che tu sia soddisfatto.
+
+### Conversación 33.2 — Feedback negativo (ES)
+
+**Usuario:** la lavandería estaba muy sucia  
+**Bot:** Gracias por tu feedback, lo tendremos en cuenta lo antes posible.
+
+### Conversación 33.3 — Feedback negativo (FR)
+
+**Usuario:** les machines sont trop vieilles  
+**Bot:** Merci pour ton retour, nous en tiendrons compte le plus tôt possible.
+
+---
+
+## Caso 34 — El cliente pregunta por el jabón, detergente o suavizante
+
+**Criterios de aceptación:**
+1. El bot responde con el contenido de `json/faqs.json:detergents` (dosificación automática).
+2. NUNCA pregunta «¿qué aparece en pantalla?» ni «¿lavadora o secadora?» como respuesta a una pregunta sobre jabón.
+3. Funciona en todos los turnos (T1 cold start y T2+ mid-flow pivot) y en los 6 idiomas.
+4. Reconoce verbos de carencia (manca/falta/missing/manque) además de «no veo / no hay». Tolera typo «sapo» (truncado de «sapone»).
+
+### Conversación 34.1 — Pregunta directa (ES, cold start)
+
+**Usuario:** No veo jabón  
+**Bot:** No, no hace falta traer nada. Las máquinas Demowash dosifican automáticamente detergente y suavizante ecológicos certificados, elaborados con ingredientes 100% naturales. Solo tienes que traer la ropa.
+
+### Conversación 34.2 — Pivot mid-OPEN-flow (ES)
+
+**Usuario:** La lavadora no funciona, sale OPEN  
+**Bot:** ¿En qué lavandería estás?  
+**Usuario:** Rubí  
+**Bot:** ¿Es una lavadora o una secadora?  
+**Usuario:** lavadora  
+**Bot:** ¿Qué número tiene la máquina?  
+**Usuario:** 5  
+**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez.  
+**Usuario:** ¿hay jabón en la máquina?  
+**Bot:** No, no hace falta traer nada. Las máquinas Demowash dosifican automáticamente detergente y suavizante ecológicos…  
+**Usuario:** ok, ahora la puerta cierra  
+**Bot:** *(flujo OPEN retoma)*
+
+### Conversación 34.3 — Multi-language
+
+**Usuario (IT):** non vedo il sapone  
+**Bot:** No, non è necessario portare niente. Le macchine Demowash dosificano automaticamente…
+
+**Usuario (EN):** do I need to bring soap?  
+**Bot:** No, you don't need to bring anything. Demowash machines automatically dispense…
+
+### Conversación 34.4 — "Manca/falta + sapone"
+
+**Usuario (IT):** mi manca il sapone  
+**Bot:** No, no hace falta traer nada. Las máquinas Demowash dosifican automáticamente detergente y suavizante ecológicos certificados, elaborados con ingredientes 100% naturales. Solo tienes que traer la ropa.
+
+**Usuario (IT, typo):** mi manca il sapo e  
+**Bot:** *(misma FAQ — "sapo" se reconoce como variante truncada de "sapone")*
+
+**Usuario (ES):** falta jabón en la máquina  
+**Bot:** *(misma FAQ en español)*
+
+**Usuario (EN):** soap is missing  
+**Bot:** *(misma FAQ en inglés)*
+
+---
+
+## Caso 35 — El cliente pregunta cómo se usa la lavandería
+
+**Criterios de aceptación:**
+1. El bot responde con los pasos numerados de `json/faqs.json:howToUse`.
+2. NUNCA pregunta «¿en qué lavandería estás?» ni «¿lavadora o secadora?» como respuesta — las instrucciones son globales.
+3. Funciona en todos los turnos (T1 cold start y T2+ mid-flow pivot) y en los 6 idiomas.
+4. La respuesta incluye los pasos numerados (1. colocar ropa, 2. cerrar puerta, 3. central de pago, 4. seleccionar programa, 5. recoger ropa).
+
+### Conversación 35.1 — Cold start (ES)
+
+**Usuario:** ¿Cómo se usa la lavandería? Es mi primera vez.  
+**Bot:** Para usar la lavandería, sigue estos pasos:
+
+1. **Coloca la ropa en la lavadora** y cierra la puerta.
+2. **Dirígete a la central de pago** y efectúa el pago seleccionando el número de máquina que deseas usar.
+3. **Vuelve a la máquina** y selecciona el programa y la temperatura que deseas.
+4. **Vuelve a recoger tu ropa** cuando la máquina indique que ha terminado.
+
+El detergente y el suavizante se dosifican automáticamente. No hace falta traer nada.
+
+### Conversación 35.2 — Pivot mid-flow (ES)
+
+**Usuario:** La lavadora no funciona, sale OPEN  
+**Bot:** ¿En qué lavandería estás?  
+**Usuario:** Mataró  
+**Bot:** ¿Qué número tiene la máquina?  
+**Usuario:** espera, ¿cómo se usa exactamente?  
+**Bot:** Para usar la lavandería, sigue estos pasos: *(instrucciones)*  
+**Bot:** *(al turno siguiente retoma el flow OPEN)*
+
+### Conversación 35.3 — Multi-language
+
+**Usuario (IT):** come si usa la lavatrice? è la prima volta  
+**Bot:** *(instrucciones en italiano)*
+
+**Usuario (EN):** first time here, what do I do?  
+**Bot:** *(instrucciones en inglés)*
+
+---
+
+## Caso 36 — Orarios Gràcia (caso límite 7:00–23:00)
+
+**Criterios de aceptación:**
+1. El bot responde con **7:00 a 23:00** (no 8:00-22:00) cuando la location resuelta es `Gràcia`.
+2. Si el cliente no especifica location, el bot pregunta primero y arma `pendingFlow=faq-hours-await-location`.
+3. La respuesta menciona explícitamente el nombre del local (**Gràcia**).
+4. NUNCA inventa horarios — si `metadata.hours` está vacío, escala.
+
+### Conversación 36.1 — Cliente pregunta explícito (ES)
+
+**Usuario:** ¿Qué horario tenéis en Gràcia?  
+**Bot:** En **Gràcia** las máquinas se pueden utilizar de **7:00 a 23:00**, todos los días del año.
+
+### Conversación 36.2 — Cliente sin location (ES → 2 turnos)
+
+**Usuario:** ¿A qué hora abrís?  
+**Bot:** ¿En qué lavandería estás?  
+**Usuario:** Gràcia  
+**Bot:** En **Gràcia** las máquinas se pueden utilizar de **7:00 a 23:00**, todos los días del año.
+
+### Conversación 36.3 — Multi-language (IT)
+
+**Usuario:** che orari fate a Gràcia?  
+**Bot:** A **Gràcia** le macchine si possono utilizzare dalle **7:00 alle 23:00**, tutti i giorni dell'anno.
+
+---
+
+## Caso 37 — Precios lavadora Mataró (lista L4-L7 desde metadata.machines)
+
+**Criterios de aceptación:**
+1. La respuesta menciona explícitamente las 4 máquinas Mataró agrupadas por specs: «Lavadoras 20kg» + «Lavadoras 10kg».
+2. Cada línea muestra peso, precio fidelidad, precio cash en formato `**XXkg**: Y€ (fidelidad) / Z€ (efectivo)`.
+3. Append F87 signal pago al final: `💡 ... 7€` (TPV exacto de Mataró).
+4. Append follow-up: `¿También quieres información de secadora?` y arma `pendingFlow=faq-prices-await-dryer-confirm`.
+
+### Conversación 37.1 — Cliente pregunta directo (ES)
+
+**Usuario:** ¿Cuánto cuesta lavar en Mataró?  
+**Bot:** En **Mataró** los precios de las lavadoras son:
+
+- **Lavadoras** 20kg: 6,5€ (fidelidad) / 7€ (efectivo)
+- **Lavadoras** 10kg: 3,5€ (fidelidad) / 4€ (efectivo)
+
+💡 El datáfono cobra el importe exacto de **7€**.
+
+¿También quieres información de secadora?
+
+### Conversación 37.2 — Cliente confirma "sí" para secadora (T3)
+
+**Usuario:** sí  
+**Bot:** En **Mataró** los precios de las secadoras son:
+
+- **Secadoras**: 2€/15min
+
+---
+
+## Caso 38 — Precios secadora Rubí (S4-S5 con TPV 8€)
+
+**Criterios de aceptación:**
+1. La respuesta muestra 1 sola línea «Secadoras» (collapse F54 porque S4+S5 tienen specs idénticas).
+2. Formato: `**Secadoras** 20kg: 2€/15min`. Append F87: `💡 ... 8€` (TPV Rubí).
+3. Append follow-up: `¿También quieres información de lavadora?` (simétrico a F53).
+4. Si el cliente responde «sí» o «y la lavadora», renderiza precios lavadoras Rubí.
+
+### Conversación 38.1 — Cliente pregunta directo (ES)
+
+**Usuario:** ¿Cuánto cuesta secar en Rubí?  
+**Bot:** En **Rubí** los precios de las secadoras son:
+
+- **Secadoras** 20kg: 2€/15min
+
+💡 El datáfono cobra el importe exacto de **8€**.
+
+¿También quieres información de lavadora?
+
+### Conversación 38.2 — Cliente confirma "sí" para lavadora (T3, simétrico F58)
+
+**Usuario:** sí  
+**Bot:** En **Rubí** los precios de las lavadoras son:
+
+- **L1** 10kg: 4,5€ (fidelidad) / 5€ (efectivo)
+- **L2** 15kg: 6€ (fidelidad) / 7€ (efectivo)
+- **L3** 20kg: 7€ (fidelidad) / 8€ (efectivo)
+
+💡 El datáfono cobra el importe exacto de **8€**.
+
+---
+
+## Caso 39 — Programas temperatura Eixample (4 programas sin número pulsante)
+
+**Criterios de aceptación:**
+1. La respuesta enumera los 4 programas Eixample con bullet+bold, sin «Pulsa el botón N» porque `number: null`.
+2. Formato: `- **60º** (muy caliente) — ideal para ropa muy sucia` etc. NO menciona números de pulsante.
+3. Contraste explícito: «En Eixample elige el programa por su nombre — no hay número de pulsante asignado».
+4. Después de mostrar los 4 programas, append: «Después dime si la lavadora ha arrancado.»
+
+### Conversación 39.1 — Cliente pregunta directo (ES)
+
+**Usuario:** ¿Qué programas tiene la lavadora en Eixample?  
+**Bot:** En **Eixample** la lavadora tiene los siguientes programas:
+
+- **60º** (muy caliente) — ideal para ropa muy sucia
+- **40º** (caliente) — ropa normal
+- **30º** (templado) — colores delicados
+- **FRÍO** — lana, seda, prendas muy delicadas
+
+En Eixample elige el programa por su nombre — no hay número de pulsante asignado.
+
+### Conversación 39.2 — Multi-language (IT)
+
+**Usuario:** che programmi avete a Eixample?  
+**Bot:** A **Eixample** la lavatrice ha i seguenti programmi:
+
+- **60º** (molto caldo) — ideale per panni molto sporchi
+- **40º** (caldo) — panni normali
+- **30º** (tiepido) — colori delicati
+- **FRÍO** — lana, seta, capi molto delicati
+
+A Eixample scegli il programma per nome — non c'è un numero di pulsante assegnato.
+
+---
+
+## Caso 40 — FAQ temperatura colores Sant Cugat (colorTemperature trasversal)
+
+**Criterios de aceptación:**
+1. La respuesta es el contenido de `json/faqs.json:colorTemperature` (no hay override per-location).
+2. NUNCA pregunta «¿en qué lavandería estás?» ni «¿lavadora o secadora?» — la temperatura no depende del local.
+3. Menciona el rango 20-30°C explícitamente y el tip de «dar la vuelta a las prendas».
+4. Funciona en los 6 idiomas (rephrase LLM traduce dinámicamente).
+
+### Conversación 40.1 — Cliente en Sant Cugat pregunta temperatura colores (ES)
+
+**Usuario:** Estoy en Sant Cugat. ¿A qué temperatura lavo la ropa de color?  
+**Bot:** Para ropa de color usa agua fría o tibia, entre **20 y 30°C**. El agua caliente abre las fibras y hace que el tinte se escape. También te recomendamos dar la vuelta a las prendas antes de meterlas al tambor para proteger los colores.
+
+### Conversación 40.2 — Multi-language (IT)
+
+**Usuario:** a che temperatura lavo i colorati?  
+**Bot:** Per i panni colorati usa acqua fredda o tiepida, tra **20 e 30°C**. L'acqua calda apre le fibre e fa scolorire i tinti. Ti consigliamo anche di rovesciare i capi prima di metterli nel cestello per proteggere i colori.
+
+---
+
+## Caso 41 — FAQ macchie grasse Terrassa (greaseStains)
+
+**Criterios de aceptación:**
+1. La respuesta es el contenido de `json/faqs.json:greaseStains`.
+2. Menciona los 2 pasos explícitos: (1) absorber con papel sin frotar, (2) elegir temperatura según tejido.
+3. Menciona ambas temperaturas: **60°C resistentes** y **40°C sintéticos/delicados**.
+4. NUNCA pregunta location ni recomienda traer detergente extra (cross-FAQ con `detergents`).
+
+### Conversación 41.1 — Cliente en Terrassa pregunta mancha (ES)
+
+**Usuario:** Estoy en Terrassa. Tengo una mancha de aceite en una camisa, ¿qué hago?  
+**Bot:** Absorbe primero el exceso con papel de cocina sin frotar. Luego usa este programa en nuestras lavadoras:
+- **Tejidos resistentes** (algodón): **60°C**
+- **Sintéticos o delicados**: **40°C**
+
+Nuestras máquinas aplican el detergente automáticamente para disolver la grasa.
+
+### Conversación 41.2 — Multi-language (FR)
+
+**Usuario:** j'ai une tache de graisse, comment l'enlever?  
+**Bot:** Absorbe d'abord l'excès avec du papier essuie-tout sans frotter. Ensuite utilise ce programme dans nos machines :
+- **Tissus résistants** (coton) : **60°C**
+- **Synthétiques ou délicats** : **40°C**
+
+Nos machines appliquent le détergent automatiquement pour dissoudre la graisse.
+
+---
+
+## Caso 42 — Instrucciones howToUse Mataró (faqOverride 5 pasos con central)
+
+**Criterios de aceptación:**
+1. La respuesta usa el contenido de `Mataró.faqOverrides.howToUse` (NO la versión global).
+2. Lista exacta de 5 pasos numerados en orden.
+3. Paso 3 menciona «**confirma el inicio**» (key diferencial Mataró vs otros locales).
+4. Si el cliente pregunta sin especificar location, el bot pregunta primero, luego aplica override.
+
+### Conversación 42.1 — Cliente en Mataró pregunta cómo usar (ES)
+
+**Usuario:** Es mi primera vez en Mataró, ¿cómo funciona?  
+**Bot:** En **Mataró (Mataró)**, para usar la lavandería sigue estos pasos:
+
+1. **Mete la ropa en la máquina seleccionada** y cierra bien la puerta.
+2. **Dirígete a la centralita** y sigue las instrucciones de pago (o paga con la App).
+3. **Vuelve a la máquina y confirma el inicio**.
+4. **No abras la puerta** antes de que finalice el lavado.
+5. **Al terminar**, deja la puerta abierta para que se ventile.
+
+### Conversación 42.2 — Cliente sin location (2 turnos)
+
+**Usuario:** ¿Cómo se usa? Primera vez.  
+**Bot:** ¿En qué lavandería estás?  
+**Usuario:** Mataró  
+**Bot:** En **Mataró (Mataró)**, para usar la lavandería sigue estos pasos: *(5 pasos override)*
+
+---
+
+## Caso 43 — Instrucciones howToUse Gràcia (faqOverride 4 pasos sin "confirma inicio")
+
+**Criterios de aceptación:**
+1. La respuesta usa `Gràcia.faqOverrides.howToUse` (NO la versión global ni la de Mataró).
+2. Lista exacta de 4 pasos (uno menos que Mataró).
+3. NO menciona «confirma el inicio» — diferencial respecto Mataró/Rubí/Sant Cugat.
+4. Paso final: «deja la puerta abierta para que se ventile».
+
+### Conversación 43.1 — Cliente en Gràcia pregunta cómo usar (ES)
+
+**Usuario:** Estoy en Gràcia, ¿cómo se usa?  
+**Bot:** En **Gràcia**, para usar la lavandería sigue estos pasos:
+
+1. **Mete la ropa en la máquina seleccionada** y cierra bien la puerta.
+2. **Dirígete a la centralita** y sigue las instrucciones de pago (o paga con la App).
+3. **No abras la puerta** antes de que finalice el lavado.
+4. **Al terminar**, deja la puerta abierta para que se ventile.
+
+### Conversación 43.2 — Multi-language (FR)
+
+**Usuario:** comment utiliser la laverie à Gràcia?  
+**Bot:** À **Gràcia**, pour utiliser la laverie suis ces étapes :
+
+1. **Mets le linge dans la machine** et ferme bien la porte.
+2. **Va à la centrale de paiement** et suis les instructions (ou paye avec l'App).
+3. **N'ouvre pas la porte** avant la fin du lavage.
+4. **À la fin**, laisse la porte ouverte pour aérer.
+
+---
+
+## Caso 44 — Combinatorio: cliente pregunta horario + precio en la misma sesión (Mataró → Mataró)
+
+**Criterios de aceptación:**
+1. T1: cliente dice «Mataró» → bot detecta `needsStreetClarification` y pregunta «¿En cuál? Mataró o Eixample?».
+2. T2: cliente responde «Mataró» → `state.location = 'Mataró'`, `state.locationStreet = 'Carrer Francisco de Mataró 117'`.
+3. T3: bot responde horario Mataró (8:00-22:00). Si el cliente sigue preguntando, usa la location sticky.
+4. Append F87 signal pago (TPV 7€) automático en la respuesta de precios.
+
+### Conversación 44.1 — Mataró ambiguo + clarificación + chain hours→prices (ES)
+
+**Usuario:** Estoy en Mataró. ¿A qué hora abrís y cuánto cuesta lavar?  
+**Bot:** En Mataró tenemos 2 lavanderías: **Mataró** (Carrer Francisco de Mataró 117) y **Eixample** (C/ Eixample 17). ¿En cuál estás?  
+**Usuario:** Mataró  
+**Bot:** En **Mataró** abrimos de **8:00 a 22:00** todos los días del año.
+
+En **Mataró** los precios de las lavadoras son:
+- **Lavadoras** 20kg: 6,5€ (fidelidad) / 7€ (efectivo)
+- **Lavadoras** 10kg: 3,5€ (fidelidad) / 4€ (efectivo)
+
+💡 El datáfono cobra el importe exacto de **7€**.
+
+¿También quieres información de secadora?
+
+### Conversación 44.2 — Cliente pivota a Eixample (F51 location switch)
+
+**Usuario:** ¿y en Eixample?  
+**Bot:** En **Eixample** abrimos de **8:00 a 22:00** todos los días del año.
+
+En **Eixample** los precios de las lavadoras son:
+- **L1/L2** 20kg: 7€ (fidelidad) / 8€ (efectivo)
+- **L3/L4** 10kg: 4€ (fidelidad) / 4,5€ (efectivo)
+
+⚠️ En Eixample a veces el pago con tarjeta puede fallar — si pasa, usa monedas o pide ayuda al operador.
+
+---
+
+## Caso 45 — El cliente pregunta cómo se usa la secadora
+
+**Criterios de aceptación:**
+1. El bot responde con instrucciones de la secadora de `json/faqs.json:howToUseDryer` (o el override per-location).
+2. NUNCA pregunta «¿lavadora o secadora?» como primera respuesta — el cliente ya indicó «secadora».
+3. Incluye la nota sobre la puerta: la puerta puede abrirse durante el ciclo (a diferencia de la lavadora).
+4. Incluye el aviso de +5min antes del fin: cuando quedan ~5 minutos, el cliente puede añadir tiempo.
+
+### Conversación 45.1 — Cold start sin location (ES)
+
+**Usuario:** ¿Cómo se usa la secadora?  
+**Bot:** Para usar la secadora, sigue estos pasos:
+
+1. **Mete la ropa en la secadora** y cierra la puerta.
+2. **Dirígete a la central de pago** y efectúa el pago seleccionando el número de secadora.
+3. **Elige el programa**: Alta temperatura (para ropa resistente), Media (para ropa normal) o Baja (para ropa delicada).
+4. **Durante el ciclo** puedes abrir la puerta en cualquier momento si lo necesitas.
+5. **Consejo**: cuando queden ~5 minutos, puedes añadir más tiempo (+5 min) si ves que la ropa no está del todo seca.
+
+### Conversación 45.2 — Cliente en Mataró (faqOverride location-specific)
+
+**Usuario:** Estoy en Mataró. ¿Cómo funciona la secadora?  
+**Bot:** *(responde con el howToUseDryer override de Mataró, incluyendo pasos específicos de pago con monedas/billetes/tarjeta y central)*
+
+### Conversación 45.3 — Cliente en Gràcia (card-only)
+
+**Usuario:** como se usa la secadora, estoy en Gràcia  
+**Bot:** *(responde con el howToUseDryer override de Gràcia, mencionando pago solo con tarjeta)*
+
+### Conversación 45.4 — Multi-language (IT)
+
+**Usuario (IT):** come si usa l'asciugatrice?  
+**Bot:** *(instrucciones en italiano)*
+
+---
+
+## Caso 46 — La máquina muestra "120" (cuenta atrás fin de ciclo)
+
+**Criterios de aceptación:**
+1. El bot reconoce «120» (y otros números puros de countdown) como cuenta atrás normal, NO como error.
+2. El bot explica que la máquina está terminando su ciclo y pide al cliente que espere a que aparezca «END».
+3. Cuando el cliente confirma «END» / «ya terminó» / «ha acabado», el flow se resuelve sin escalación.
+4. El flow NO escala a operador — es un estado normal de la máquina. Funciona en los 6 idiomas.
+
+### Conversación 46.1 — Happy path (ES)
+
+**Usuario:** La pantalla pone 120  
+**Bot:** La máquina está terminando su ciclo. Por favor, espera a que la cuenta atrás termine y la pantalla muestre END — en ese momento podrás abrir la puerta.  
+**Usuario:** Ya pone END  
+**Bot:** ¡Perfecto! Puedes abrir la puerta y recoger tu ropa. ¡Hasta pronto!
+
+### Conversación 46.2 — Display 120 (IT)
+
+**Usuario (IT):** il display fa 120  
+**Bot:** *(countdownGuidance in italiano: la macchina sta terminando il ciclo, aspetta END)*
+
+### Conversación 46.3 — Display 120 (EN)
+
+**Usuario (EN):** screen shows 120  
+**Bot:** *(countdownGuidance in English: machine is finishing its cycle, wait for END)*
+
+---
