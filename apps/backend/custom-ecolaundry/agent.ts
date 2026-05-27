@@ -1,789 +1,1058 @@
-// Orchestrator entry point — see `docs/orchestrator.md` for the full
-// step-by-step diagram of how `agentTurn()` routes each customer turn.
+// Ecolaundry chatbot — prompt-driven LLM with cached system prompt,
+// session state, escalation by email.
+//
+// Two entry points:
+//   - REPL/batch CLI (`npm run demo`) — local interactive testing
+//   - `chatbotFn(input): ChatbotOutput` — contract expected by the host
+//     Express backend when this module is loaded as `workspace.customChatbotId`
+//
+// The same core (assemble system prompt, call LLM, dispatch tools, persist
+// state, drain patches) backs both entry points. See architecture.md.
 
+import { readFile, readdir } from 'node:fs/promises'
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { createInterface } from 'node:readline/promises'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-import { loadRuntime } from './utils/runtime.js'
-import { createInitialState } from './utils/state.js'
-import { extractEscalationContext, buildEscalationSummary, formatHandoverTimestamp } from './utils/escalation.js'
-import { sanitizeCustomerReply } from './utils/message-parsing.js'
-import { detectLanguageHeuristic } from './utils/intent.js'
-import { runGuardPipeline, type GuardOutcome } from './utils/guards/index.js'
-import { lang as resolveTenantLang } from './utils/guards/helpers.js'
-import { autoExtractFacts } from './utils/agent-extract.js'
-import { executeTool } from './utils/agent-tools.js'
-import { loadPromptBundle, buildSystemPrompt } from './utils/agent-prompt.js'
-import { callAgentLLM } from './utils/agent-llm.js'
-import { rephraseForTurn } from './utils/agent-rephrase.js'
-import { generateOperatorBriefingFromHistory } from './utils/operator-briefing.js'
+import nodemailer from 'nodemailer'
+
 import {
-  mergeWelcomeWithReply,
-  renderWelcomeForTurn,
-  shouldShowWelcome,
-  stripWelcomeParagraphs,
-} from './utils/agent-welcome.js'
-import { printCliBanner, printCliMessage } from './utils/cli.js'
-import { API_KEY } from './utils/llm.js'
-import { logger } from './utils/logger.js'
-import { sanitizeUserMessage } from './utils/input-sanitize.js'
-import { dispatchSubsequentTurn, dispatchTurnOne } from './utils/branches/index.js'
-import { blockedGuardsForTurnMode } from './utils/router.js'
-import { t, tt } from './utils/localization.js'
-import type { SupportedLanguage } from './models/index.js'
-import {
-  detectResolutionEscalationContradiction,
-  replyContainsResolutionMarker,
-  stripResolutionSentences,
-} from './utils/contradiction.js'
-import { closeAsEscalated, markResolved, releaseActiveFlow, undoResolved } from './utils/state-transitions.js'
-import { applyOutputInvariants } from './utils/output-invariants.js'
-import {
-  auditFactDiscipline,
-  collectInvokedSetTools,
-  snapshotFacts,
-} from './utils/fact-call-audit.js'
-import type { AgentMessage, AgentRuntime, AgentSession } from './models/index.js'
+  type CustomerPatch,
+  type SessionState,
+  drainPatches,
+  formatStateForPrompt,
+  formatStateOneLine,
+  getState,
+  getTurnCount,
+  incrementTurn,
+  registerMessageTimestamp,
+  resetState,
+  seedLanguageIfNeeded,
+  updateState,
+} from './state.js'
+import { processIncomingMessage, substitutePlaceholders } from './pii.js'
 
-export type { AgentRuntime, AgentSession } from './models/index.js'
+// ── Config ────────────────────────────────────────────────────────────────────
 
-loadDotEnv()
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const PROMPTS_DIR = path.resolve(__dirname, 'prompts')
+const SETTINGS_PATH = path.resolve(__dirname, 'settings.json')
 
-// ── Public API ────────────────────────────────────────────────────────────────
-
-/** Build a fresh AgentSession with a clean state and a loaded prompt bundle. */
-export async function createAgentSession(): Promise<AgentSession> {
-  const runtime = await loadRuntime()
-  const ar: AgentRuntime = {
-    runtime,
-    state: createInitialState(),
-    pendingEscalation: null,
-    resolved: false,
-    photoRequested: false,
-  }
-  const bundle = await loadPromptBundle()
-  return { ar, history: [], bundle }
+interface Settings {
+  model: string
+  temperature: number
+  maxTokens: number
+  maxToolHops: number
+  operatorBriefingLanguage: string
+  operatorEmail: string
+  emailFrom: string
+  emailSubjectPrefix: string
+  maxMessageChars: number
+  maxMessagesPerMinute: number
+  maxTurnsPerSession: number
 }
 
-/** Process one customer turn and return the bot's reply. Same code path on CLI and Web. */
-export async function agentTurn(session: AgentSession, rawUserMessage: string): Promise<string> {
-  const { ar, history, bundle } = session
-  ar.state.turnCount = (ar.state.turnCount || 0) + 1
-  ar.state.lastActivityAt = Date.now()
+const DEFAULT_SETTINGS: Settings = {
+  model: 'anthropic/claude-haiku-4.5',
+  temperature: 0.3,
+  maxTokens: 800,
+  maxToolHops: 4,
+  operatorBriefingLanguage: 'es',
+  operatorEmail: '',
+  emailFrom: 'Ecolaundry Bot <noreply@ecolaundry.demo>',
+  emailSubjectPrefix: '[Ecolaundry] Incidencia',
+  maxMessageChars: 2000,
+  maxMessagesPerMinute: 30,
+  maxTurnsPerSession: 50,
+}
 
-  // Strip control + zero-width chars and cap length BEFORE the message reaches
-  // the LLM, the guards or the fact extractor. Defence in depth against
-  // prompt-stuffing and homograph/bidi-based prompt-injection payloads.
-  const userMessage = sanitizeUserMessage(rawUserMessage)
-  // Make the current-turn user message available to tool validators (e.g.
-  // mark_resolved checks for mixed signals).
-  ar.state.lastUserMessage = userMessage
-
-  resolveLanguageForTurn(ar, userMessage)
-  // Snapshot displayState BEFORE autoExtractFacts runs. Guards downstream
-  // (e.g. guardPostInstructionFailureReask Phase B) compare snapshot vs
-  // current displayState to detect when the customer volunteered a NEW
-  // display in the same message — pivot instead of re-ask. See
-  // utils/guards/display.ts and __tests__/unit/display-pivot-phase-b.test.ts.
-  ar.state.displayStateAtTurnStart = ar.state.displayState || ''
-  autoExtractFacts(ar, userMessage)
-
-  // Branch-router architecture (feature-flagged via settings.useBranchRouter).
-  // When enabled and we have a registered handler for the chosen branch,
-  // dispatch directly. Otherwise fall through to the legacy guard pipeline
-  // so the bot keeps working while branches are migrated incrementally.
-  // See docs/branch-router-architecture.md for the migration plan.
-  //
-  // F108 — maybeDispatchBranch also returns the per-turn router decision so
-  // we can compute blockedGuards for the legacy pipeline below. The router
-  // is run on EVERY turn (not just T1) to detect turnMode='pure-closure'
-  // and skip gather/flow guards that would otherwise re-ask the customer
-  // for facts they never promised to provide.
-  // F108 — last bot turn is passed to the router as context (so it can tell
-  // gather/pure-closure/new-incident apart from a bare "ok" / "merci"). null
-  // on T1 when history is empty.
-  const lastAssistantMessage = findLastAssistantMessage(history)
-  let blockedGuards: ReadonlySet<string> | undefined
-  if (ar.runtime.settings?.useBranchRouter) {
-    const { reply, decision } = await maybeDispatchBranch(ar, userMessage, lastAssistantMessage)
-    if (reply) {
-      return applyGuardOutcome(session, { reply, reason: 'branch-router' }, userMessage)
+function loadSettings(): Settings {
+  try {
+    const raw = readFileSync(SETTINGS_PATH, 'utf8')
+    const parsed = JSON.parse(raw) as Partial<Settings>
+    return { ...DEFAULT_SETTINGS, ...parsed }
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException)?.code
+    if (code !== 'ENOENT') {
+      console.warn(`[warn] failed to load settings.json: ${err instanceof Error ? err.message : String(err)}`)
     }
-    if (decision) {
-      blockedGuards = blockedGuardsForTurnMode(decision.turnMode)
+    return DEFAULT_SETTINGS
+  }
+}
+
+loadDotEnv(path.resolve(__dirname, '.env'))
+
+const SETTINGS = loadSettings()
+const BASE_URL = process.env.LLM_BASE_URL || 'https://openrouter.ai/api/v1'
+const MODEL = process.env.LLM_MODEL || SETTINGS.model
+const MAX_TOKENS = Number(process.env.LLM_MAX_TOKENS || SETTINGS.maxTokens)
+const TEMPERATURE = Number(process.env.LLM_TEMPERATURE || SETTINGS.temperature)
+const MAX_TOOL_HOPS = SETTINGS.maxToolHops
+const OPERATOR_BRIEFING_LANGUAGE = SETTINGS.operatorBriefingLanguage
+const OPERATOR_EMAIL = process.env.OPERATOR_EMAIL || SETTINGS.operatorEmail
+const EMAIL_FROM = SETTINGS.emailFrom
+const EMAIL_SUBJECT_PREFIX = SETTINGS.emailSubjectPrefix
+const MAX_MESSAGE_CHARS = SETTINGS.maxMessageChars
+const MAX_MESSAGES_PER_MINUTE = SETTINGS.maxMessagesPerMinute
+const MAX_TURNS_PER_SESSION = SETTINGS.maxTurnsPerSession
+
+const API_KEY = process.env.OPENROUTER_API_KEY || ''
+const GMAIL_USER = process.env.GMAIL_USER || ''
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD || ''
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+interface ToolCall {
+  id: string
+  type: 'function'
+  function: { name: string; arguments: string }
+}
+
+interface Message {
+  role: 'system' | 'user' | 'assistant' | 'tool'
+  content: string | null
+  tool_calls?: ToolCall[]
+  tool_call_id?: string
+  name?: string
+}
+
+// ── Concurrency: per-sessionId async lock ─────────────────────────────────────
+// Two messages from the same sessionId must be processed in series, never in
+// parallel. Otherwise tool dispatch and SessionState writes race. The lock is
+// a Map<sessionId, Promise> — each new turn chains onto the previous one.
+
+const sessionLocks = new Map<string, Promise<unknown>>()
+
+async function withSessionLock<T>(sessionId: string, fn: () => Promise<T>): Promise<T> {
+  const previous = sessionLocks.get(sessionId) ?? Promise.resolve()
+  const next = previous.catch(() => undefined).then(fn)
+  sessionLocks.set(sessionId, next)
+  try {
+    return await next
+  } finally {
+    if (sessionLocks.get(sessionId) === next) sessionLocks.delete(sessionId)
+  }
+}
+
+// ── Input sanitization (anti prompt-injection) ────────────────────────────────
+// Strip control chars, zero-width, bidi-override. Cap length. Defends against
+// prompt-stuffing and homograph/bidi injection payloads.
+
+const CONTROL_CHARS_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g
+const ZERO_WIDTH_RE = /[​-‍﻿]/g
+const BIDI_RE = /[\u202A-\u202E\u2066-\u2069]/g
+
+function sanitizeUserMessage(raw: string): string {
+  let s = (raw ?? '').toString()
+  s = s.replace(CONTROL_CHARS_RE, '')
+  s = s.replace(ZERO_WIDTH_RE, '')
+  s = s.replace(BIDI_RE, '')
+  s = s.trim()
+  if (s.length > MAX_MESSAGE_CHARS) {
+    s = s.slice(0, MAX_MESSAGE_CHARS)
+  }
+  return s
+}
+
+// ── Tool schema ───────────────────────────────────────────────────────────────
+
+const TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'remember',
+      description:
+        'Record facts about the customer so they are not re-asked. Call this WHENEVER the customer provides a new fact (name, location/laundromat, machine number, machine type, display code, language). Use merge semantics: only pass the fields that changed. Valid locations are documented in the prompt (LOCATIONS). Display codes are the exact strings the customer reads from the machine screen.',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'Customer full name (e.g. "Marco Rossi")' },
+          location: {
+            type: 'string',
+            description: 'Laundromat name (canonical: Hortes, Goya, Alemanya, Pineda, L\'Escala, Platja d\'Aro).',
+          },
+          machineType: {
+            type: 'string',
+            enum: ['washer', 'dryer'],
+            description: 'washer = lavadora/lavatrice. dryer = secadora/asciugatrice.',
+          },
+          machine: { type: 'integer', description: 'Machine number (e.g. 5)' },
+          displayCode: {
+            type: 'string',
+            description: 'Exact display string (e.g. "DOOR", "SEL", "PUSH PROG", "ALM"). Uppercase as shown.',
+          },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'request_invoice',
+      description:
+        'Submit a structured invoice request to the operator by email. Call this ONLY when you have collected ALL 5 fields from the customer (companyName, amount, serviceDate, email, note — note can be empty). The tool validates email format (RFC 5322) and serviceDate (accepts ISO date, DD/MM/YYYY, or natural language "oggi"/"ayer"/"today"/"yesterday"). If validation fails, the tool returns ok:false with a specific error — re-ask only the invalid field. After 3 failed attempts on the same field, escalate via escalate_to_operator with reason="invoice_request".',
+      parameters: {
+        type: 'object',
+        properties: {
+          companyName: { type: 'string', description: 'Company / business name (razón social / ragione sociale).' },
+          amount: { type: 'string', description: 'Amount paid in euros (e.g. "8.50", "8,50 €", "8 euros"). Free-form.' },
+          serviceDate: { type: 'string', description: 'When the service was used: ISO ("2026-05-27"), DD/MM/YYYY ("27/05/2026"), or natural ("oggi", "ayer", "today", "yesterday").' },
+          email: { type: 'string', description: 'Customer email for invoice delivery.' },
+          note: { type: 'string', description: 'Optional note (CIF, customer code, reference). Pass empty string if customer said "no".' },
+        },
+        required: ['companyName', 'amount', 'serviceDate', 'email', 'note'],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'escalate_to_operator',
+      description:
+        'Send a structured briefing to the human operator by email. Call this when the procedure documented in MACHINES says ESCALAR, when the customer explicitly asks for a human, or when a problem persists after the documented steps. The summary should be a self-contained operator briefing following the template in common.md. The host will substitute placeholder PII tokens with real values from SessionState before sending.',
+      parameters: {
+        type: 'object',
+        properties: {
+          reason: {
+            type: 'string',
+            enum: [
+              'machine_broken',
+              'door_persistent',
+              'alarm_technical',
+              'double_charge',
+              'no_change',
+              'invoice_request',
+              'loyalty_card',
+              'no_soap',
+              'no_spin',
+              'angry_customer',
+              'not_covered',
+              'other',
+            ],
+            description: 'High-level reason code for the escalation.',
+          },
+          summary: {
+            type: 'string',
+            description:
+              'Operator briefing in the language indicated by RUNTIME.operatorBriefingLanguage. Use the exact template from common.md (header, 🕒 Fecha, 📍 Sede, 🔢 Máquina, 👤 Cliente, 🌐 Idioma, 🚨 Incidencia, 📋 Resumen, ✅ Acción sugerida). Include all known facts from SESSION STATE.',
+          },
+        },
+        required: ['reason', 'summary'],
+        additionalProperties: false,
+      },
+    },
+  },
+] as const
+
+// ── Tool dispatcher ───────────────────────────────────────────────────────────
+
+interface ToolResult {
+  ok: boolean
+  [k: string]: unknown
+}
+
+interface ToolContext {
+  sessionId: string
+  customerName?: string
+  customerPhone?: string
+}
+
+async function executeTool(
+  ctx: ToolContext,
+  name: string,
+  args: Record<string, unknown>,
+): Promise<ToolResult> {
+  if (name === 'remember') {
+    const patch: Partial<SessionState> = {}
+    if (typeof args.name === 'string') patch.name = args.name
+    if (typeof args.location === 'string') patch.location = args.location
+    if (args.machineType === 'washer' || args.machineType === 'dryer') patch.machineType = args.machineType
+    if (typeof args.machine === 'number' && Number.isFinite(args.machine)) patch.machine = args.machine
+    if (typeof args.displayCode === 'string') patch.displayCode = args.displayCode
+    // NOTE: `language` is NOT accepted here anymore. Language is detected
+    // deterministically by `seedLanguageIfNeeded()` before each turn. See
+    // architecture.md §"T1 empty-reply fix".
+    const state = updateState(ctx.sessionId, patch)
+    return { ok: true, state }
+  }
+
+  if (name === 'request_invoice') {
+    const state = getState(ctx.sessionId)
+    // Substitute placeholders the LLM may have used (e.g. [COMPANY_NAME] if
+    // the customer's company was de-redacted in history). The real values
+    // live in SessionState. PII fields (email, cif, ...) are typically
+    // captured fresh in the current turn by the pre-scan, so they arrive
+    // here as literal values; placeholders are mostly a defense for
+    // non-PII profile fields (companyName, address) reused across turns.
+    const companyName = substitutePlaceholders(
+      typeof args.companyName === 'string' ? args.companyName.trim() : '',
+      state,
+    )
+    const amount = typeof args.amount === 'string' ? args.amount.trim() : ''
+    const serviceDate = typeof args.serviceDate === 'string' ? args.serviceDate.trim() : ''
+    const email = substitutePlaceholders(
+      typeof args.email === 'string' ? args.email.trim() : '',
+      state,
+    )
+    const note = substitutePlaceholders(
+      typeof args.note === 'string' ? args.note.trim() : '',
+      state,
+    )
+
+    // Persist customer's structured invoice profile into the state so the
+    // host can mirror it into Customers via patches.
+    const profilePatch: Partial<SessionState> = {}
+    if (companyName) profilePatch.companyName = companyName
+    if (note) profilePatch.notes = note
+    if (Object.keys(profilePatch).length > 0) {
+      updateState(ctx.sessionId, profilePatch)
     }
-  }
 
-  const guardOutcome = runGuardPipeline(ar, userMessage, blockedGuards)
-  if (guardOutcome) {
-    return applyGuardOutcome(session, guardOutcome, userMessage)
-  }
+    if (!companyName) return { ok: false, error: 'companyName is required' }
+    if (!amount) return { ok: false, error: 'amount is required' }
+    if (!serviceDate) return { ok: false, error: 'serviceDate is required' }
+    if (!email) return { ok: false, error: 'email is required' }
 
-  const assistantReply = await runLlmLoop(ar, history, bundle, userMessage)
-  history.push({ role: 'user', content: userMessage })
-  history.push({ role: 'assistant', content: assistantReply })
+    if (!isValidEmail(email)) {
+      return { ok: false, error: `email "${email}" is not valid. Re-ask the customer for a valid email.` }
+    }
 
-  const polished = polishReplyForTurn(ar, assistantReply)
-  return appendEscalationSummary(ar, polished, history)
-}
-
-/**
- * Branch-router dispatch (feature-flagged). Returns the handler reply
- * (when the dispatcher was able to handle the turn) AND the router
- * decision (so the caller can derive blockedGuards for the legacy pipeline
- * — F108). When no handler exists for the chosen branch, only the decision
- * is returned and the caller falls through to the legacy pipeline. Pure
- * side-effect-free fall-back: the dispatcher only stores activeBranch
- * when it actually invokes a handler.
- */
-interface MaybeDispatchResult {
-  /** Handler-produced reply when handled, else null (fall through). */
-  reply: string | null
-  /** Router decision for THIS turn — used by the legacy pipeline to compute
-   *  blockedGuards (F108). null when the router was not consulted (e.g. the
-   *  sticky branch is resolved and we'd skip dispatch altogether). */
-  decision: { turnMode: import('./utils/router.js').TurnMode } | null
-}
-
-async function maybeDispatchBranch(
-  ar: AgentRuntime,
-  userMessage: string,
-  lastAssistantMessage?: string,
-): Promise<MaybeDispatchResult> {
-  // T2+ first: if the previous turn pinned a sticky branch, route there
-  // directly without re-classifying.
-  // Exception: if the case was already resolved (pendingClosure='resolved'),
-  // release the sticky branch so the next message is treated as a fresh T1.
-  // Without this, a post-resolution message (e.g. "ottimo servizio") keeps
-  // the trouble-machine branch active and the guard pipeline asks "cosa vedi
-  // sullo schermo?" instead of routing the feedback to the feedback handler.
-  if (ar.state.activeBranch && ar.state.activeBranch !== 'unknown') {
-    if (ar.state.pendingClosure === 'resolved') {
-      ar.state.previousBranch = ar.state.activeBranch
-      ar.state.activeBranch = null
-      // Fall through to T1 dispatch below.
-    } else {
-      const result = await dispatchSubsequentTurn(
-        ar,
-        userMessage,
-        ar.state.language as SupportedLanguage ?? 'es',
-        lastAssistantMessage,
-      )
+    const normalizedDate = normalizeDate(serviceDate)
+    if (!normalizedDate) {
       return {
-        reply: result.handled && result.output ? result.output.reply : null,
-        decision: result.decision ?? null,
+        ok: false,
+        error: `serviceDate "${serviceDate}" is not recognized. Accept ISO ("2026-05-27"), DD/MM/YYYY, or "today"/"yesterday"/"oggi"/"ayer". Re-ask the customer.`,
       }
     }
-  }
-  // T1: classify and dispatch.
-  const result = await dispatchTurnOne(ar, userMessage, lastAssistantMessage)
-  // F80 — Router language detection is authoritative ONLY at T1. The router
-  // LLM is more accurate than the heuristic in resolveLanguageForTurn, so we
-  // allow it to correct the just-set value while we're still in turn 1. From
-  // T2 onward the language is STRICT-STICKY: the router (or anything else)
-  // MUST NOT overwrite preferredLanguage mid-session — that's how the mixed-
-  // language regression of 2026-05-22 happened (welcome EN → "Policia" → ES
-  // → router flipped back to EN on a different turn).
-  //
-  // F105 (2026-05-24) — heuristic takes precedence when confident. The router
-  // LLM can be confused by Spanish-sounding location names embedded in a
-  // non-ES message (e.g. "Come si usa l'asciugatrice? Sono a Goya" → router
-  // returns 'es' because "Goya" sounds Spanish). The deterministic heuristic
-  // detects 'it' via the 'asciug' pattern and is considered more reliable
-  // than the LLM for this case. Rule: router overwrites ONLY when the
-  // heuristic returned null (no confident match); if the heuristic already
-  // picked a non-null language, its result is preserved.
-  if (ar.state.turnCount === 1 && result.decision?.language) {
-    const enabled = ar.runtime.settings.enabledLanguages || []
-    const routerLang = result.decision.language
-    const heuristicLang = detectLanguageHeuristic(userMessage)
-    // Only let the router overwrite if the heuristic had no confident match.
-    // When heuristicLang is non-null, the deterministic pattern already won.
-    if (enabled.includes(routerLang) && heuristicLang === null) {
-      ar.state.language = routerLang
-      ar.state.preferredLanguage = routerLang
+
+    const invoiceId = `INV-${Date.now().toString(36).toUpperCase()}`
+
+    try {
+      await sendInvoiceEmail({
+        invoiceId,
+        companyName,
+        amount,
+        serviceDate: normalizedDate,
+        email,
+        note,
+        state,
+        customerName: ctx.customerName,
+        customerPhone: ctx.customerPhone,
+      })
+      return { ok: true, invoice_id: invoiceId, email_sent: !!GMAIL_USER }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[invoice_email_failed] ${msg}`)
+      // Return ok:true so the bot can still tell the customer the request
+      // is registered — operator will see the audit log entry.
+      return { ok: true, invoice_id: invoiceId, email_sent: false, email_error: msg }
     }
   }
-  return {
-    reply: result.handled && result.output ? result.output.reply : null,
-    decision: result.decision ?? null,
+
+  if (name === 'escalate_to_operator') {
+    const reason = typeof args.reason === 'string' ? args.reason : 'other'
+    const rawSummary = typeof args.summary === 'string' ? args.summary : ''
+    if (!rawSummary) {
+      return { ok: false, error: 'summary is required and must be a non-empty string' }
+    }
+    const state = getState(ctx.sessionId)
+
+    if (!state.name) {
+      return {
+        ok: false,
+        error: 'missing_customer_name',
+        instruction: 'Customer name is required before escalation. Ask the customer their name in their language, save it with remember({name: "..."}), then retry escalate_to_operator with the same summary.',
+      }
+    }
+
+    const ticketId = `TKT-${Date.now().toString(36).toUpperCase()}`
+
+    // Substitute placeholders ([CUSTOMER_NAME], [CIF], ...) with real values
+    // from SessionState before sending to the operator. The LLM-produced
+    // summary contains placeholders because the LLM never saw real PII.
+    const summary = substitutePlaceholders(rawSummary, state)
+
+    try {
+      await sendEscalationEmail({
+        ticketId,
+        reason,
+        summary,
+        state,
+        customerName: ctx.customerName,
+        customerPhone: ctx.customerPhone,
+      })
+      return { ok: true, ticket_id: ticketId, eta_minutes: 5, email_sent: !!GMAIL_USER }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[escalation_email_failed] ${msg}`)
+      // Still return ok:true so the bot can tell the customer the case has
+      // been registered — the briefing is logged for retry/audit even if
+      // email failed (e.g. SMTP down). The ticket exists.
+      return { ok: true, ticket_id: ticketId, eta_minutes: 5, email_sent: false, email_error: msg }
+    }
+  }
+
+  return { ok: false, error: `unknown tool: ${name}` }
+}
+
+// ── Validators (used by request_invoice tool) ────────────────────────────────
+
+const EMAIL_RE = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+
+function isValidEmail(email: string): boolean {
+  if (!email || email.length > 254) return false
+  return EMAIL_RE.test(email)
+}
+
+// Accept: ISO ("2026-05-27"), DD/MM/YYYY ("27/05/2026"), DD-MM-YYYY,
+// "today"/"yesterday"/"oggi"/"ieri"/"ayer"/"hoy"/"aujourd'hui"/"hier"/"hoje"/"ontem"/"avui"/"ahir".
+// Returns ISO date string ("YYYY-MM-DD") if recognized, null otherwise.
+function normalizeDate(input: string): string | null {
+  const s = input.trim().toLowerCase()
+  if (!s) return null
+
+  const TODAY = /^(today|oggi|hoy|aujourd'hui|hoje|avui)$/
+  const YESTERDAY = /^(yesterday|ieri|ayer|hier|ontem|ahir)$/
+
+  if (TODAY.test(s)) return new Date().toISOString().slice(0, 10)
+  if (YESTERDAY.test(s)) {
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    return d.toISOString().slice(0, 10)
+  }
+
+  // ISO: YYYY-MM-DD
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (iso) {
+    const d = new Date(`${iso[1]}-${iso[2]}-${iso[3]}T00:00:00Z`)
+    if (!Number.isNaN(d.getTime())) return `${iso[1]}-${iso[2]}-${iso[3]}`
+  }
+
+  // DD/MM/YYYY or DD-MM-YYYY
+  const eu = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/)
+  if (eu) {
+    const dd = eu[1].padStart(2, '0')
+    const mm = eu[2].padStart(2, '0')
+    const yyyy = eu[3]
+    const d = new Date(`${yyyy}-${mm}-${dd}T00:00:00Z`)
+    if (!Number.isNaN(d.getTime())) return `${yyyy}-${mm}-${dd}`
+  }
+
+  return null
+}
+
+// ── Email — invoice request ──────────────────────────────────────────────────
+
+interface InvoiceParams {
+  invoiceId: string
+  companyName: string
+  amount: string
+  serviceDate: string
+  email: string
+  note: string
+  state: SessionState
+  customerName?: string
+  customerPhone?: string
+}
+
+async function sendInvoiceEmail(params: InvoiceParams): Promise<void> {
+  const { invoiceId, companyName, amount, serviceDate, email, note, state, customerName, customerPhone } = params
+
+  console.error('\n══════ INVOICE REQUEST ══════')
+  console.error(`Invoice ID: ${invoiceId}`)
+  console.error(`To: ${OPERATOR_EMAIL || '(no operatorEmail configured)'}`)
+  console.error(`Company: ${companyName}`)
+  console.error(`Amount: ${amount}`)
+  console.error(`Service date: ${serviceDate}`)
+  console.error(`Customer email: ${email}`)
+  console.error(`Note: ${note || '(none)'}`)
+  console.error(`Customer (from state): ${state.name ?? customerName ?? '?'}`)
+  console.error(`Customer phone: ${customerPhone ?? '?'}`)
+  console.error(`Location (if known): ${state.location ?? '?'}`)
+  console.error('══════════════════════════════\n')
+
+  if (!OPERATOR_EMAIL) {
+    throw new Error('OPERATOR_EMAIL not configured (settings.json or env)')
+  }
+  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+    throw new Error('GMAIL_USER / GMAIL_APP_PASSWORD missing in .env (invoice request logged to console only)')
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+  })
+
+  const subject = `${EMAIL_SUBJECT_PREFIX.replace('Incidencia', 'Factura')} ${invoiceId} — ${companyName}`
+  const textBody = [
+    `Solicitud de factura: ${invoiceId}`,
+    '',
+    `Razón social: ${companyName}`,
+    `Importe: ${amount}`,
+    `Fecha del servicio: ${serviceDate}`,
+    `Email del cliente: ${email}`,
+    `Nota: ${note || '(ninguna)'}`,
+    '',
+    `Cliente: ${state.name ?? customerName ?? '?'}`,
+    `Teléfono: ${customerPhone ?? '?'}`,
+    `Sede (si se conoce): ${state.location ?? '?'}`,
+    '',
+    '— Ecolaundry Bot',
+  ].join('\n')
+
+  await transporter.sendMail({
+    from: EMAIL_FROM,
+    to: OPERATOR_EMAIL,
+    subject,
+    text: textBody,
+  })
+}
+
+// ── Email escalation ──────────────────────────────────────────────────────────
+// Real SMTP via Gmail App Password. Falls back to console-only briefing when
+// GMAIL_USER/GMAIL_APP_PASSWORD are not set (POC / first run).
+
+interface EscalationParams {
+  ticketId: string
+  reason: string
+  summary: string
+  state: SessionState
+  customerName?: string
+  customerPhone?: string
+}
+
+async function sendEscalationEmail(params: EscalationParams): Promise<void> {
+  const { ticketId, reason, summary, state, customerName, customerPhone } = params
+
+  // Always log the briefing — single source of truth for audit / fallback.
+  console.error('\n══════ ESCALATION BRIEFING ══════')
+  console.error(`Ticket: ${ticketId}`)
+  console.error(`Reason: ${reason}`)
+  console.error(`To: ${OPERATOR_EMAIL || '(no operatorEmail configured)'}`)
+  console.error(`Customer (from state): ${state.name ?? customerName ?? '?'}`)
+  console.error(`Phone: ${customerPhone ?? '?'}`)
+  console.error(`Location: ${state.location ?? '?'}`)
+  console.error(`Machine: ${state.machine ?? '?'} (${state.machineType ?? '?'})`)
+  console.error(`Display: ${state.displayCode ?? '?'}`)
+  console.error(`Language: ${state.language ?? '?'}`)
+  console.error('---')
+  console.error(summary)
+  console.error('══════════════════════════════════\n')
+
+  if (!OPERATOR_EMAIL) {
+    throw new Error('OPERATOR_EMAIL not configured (settings.json or env)')
+  }
+  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+    // Soft-fail in POC: log warning, don't crash. Production should make this hard.
+    throw new Error('GMAIL_USER / GMAIL_APP_PASSWORD missing in .env (briefing logged to console only)')
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+  })
+
+  const subject = `${EMAIL_SUBJECT_PREFIX} ${ticketId} — ${state.location ?? 'sede ?'} — ${reason}`
+  const textBody = [
+    `Ticket: ${ticketId}`,
+    `Razón: ${reason}`,
+    '',
+    summary,
+    '',
+    '— Ecolaundry Bot',
+  ].join('\n')
+
+  await transporter.sendMail({
+    from: EMAIL_FROM,
+    to: OPERATOR_EMAIL,
+    subject,
+    text: textBody,
+  })
+}
+
+// ── LLM call with system-prompt caching ───────────────────────────────────────
+
+interface LlmResponse {
+  content: string | null
+  tool_calls?: ToolCall[]
+  usage?: {
+    prompt_tokens?: number
+    completion_tokens?: number
   }
 }
 
-/**
- * F108 — Return the most recent assistant turn from history, or undefined
- * if history is empty. Used to give the router conversation context so it
- * can classify gather / pure-closure / new-incident correctly.
- */
-function findLastAssistantMessage(history: AgentMessage[]): string | undefined {
-  for (let i = history.length - 1; i >= 0; i -= 1) {
-    const entry = history[i]
-    if (entry?.role === 'assistant' && typeof entry.content === 'string' && entry.content.trim()) {
-      return entry.content
+async function callLLM(
+  cachedSystemPrompt: string,
+  state: SessionState,
+  history: Message[],
+): Promise<LlmResponse> {
+  if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
+
+  const stateBlock = formatStateForPrompt(state)
+  const runtimeBlock = formatRuntimeBlock()
+
+  // Cached block first (cache_control: ephemeral). State + runtime blocks are
+  // appended WITHOUT cache_control so they can change per turn / per day
+  // without invalidating the cache.
+  const systemContent: Array<Record<string, unknown>> = [
+    {
+      type: 'text',
+      text: cachedSystemPrompt,
+      cache_control: { type: 'ephemeral' },
+    },
+  ]
+  if (stateBlock) {
+    systemContent.push({ type: 'text', text: stateBlock })
+  }
+  systemContent.push({ type: 'text', text: runtimeBlock })
+
+  const payload = {
+    model: MODEL,
+    messages: [{ role: 'system', content: systemContent }, ...history],
+    tools: TOOLS,
+    tool_choice: 'auto',
+    temperature: TEMPERATURE,
+    max_tokens: MAX_TOKENS,
+  }
+
+  const res = await fetch(`${BASE_URL}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${API_KEY}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://echatbot.ai',
+      'X-Title': 'Ecolaundry',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`OpenRouter HTTP ${res.status}: ${body.slice(0, 500)}`)
+  }
+
+  const data = (await res.json()) as {
+    choices?: Array<{ message?: { content?: string | null; tool_calls?: ToolCall[] } }>
+    usage?: {
+      prompt_tokens?: number
+      completion_tokens?: number
+      prompt_tokens_details?: { cached_tokens?: number }
+      cache_creation_input_tokens?: number
+      cache_read_input_tokens?: number
     }
   }
-  return undefined
+
+  if (process.env.LLM_DEBUG === '1' && data.usage) {
+    const u = data.usage
+    const cached = u.cache_read_input_tokens ?? u.prompt_tokens_details?.cached_tokens ?? 0
+    const created = u.cache_creation_input_tokens ?? 0
+    console.error(
+      `[usage] prompt=${u.prompt_tokens ?? '?'} completion=${u.completion_tokens ?? '?'} cache_read=${cached} cache_write=${created}`,
+    )
+  }
+
+  const msg = data.choices?.[0]?.message
+  return {
+    content: msg?.content ?? null,
+    tool_calls: msg?.tool_calls,
+    usage: {
+      prompt_tokens: data.usage?.prompt_tokens,
+      completion_tokens: data.usage?.completion_tokens,
+    },
+  }
 }
 
 // ── Turn pipeline ─────────────────────────────────────────────────────────────
 
-/**
- * Lock state.language to a tenant-allowed value. Called every turn so a stale
- * or mutated value can never produce a reply in a disabled language.
- */
-function resolveLanguageForTurn(ar: AgentRuntime, userMessage: string): void {
-  const enabled = ar.runtime.settings.enabledLanguages || []
-
-  if (!ar.state.preferredLanguage) {
-    // First turn: detect language from message, fall back to defaultLanguage.
-    const heuristic = detectLanguageHeuristic(userMessage)
-    const candidate = heuristic && enabled.includes(heuristic)
-      ? heuristic
-      : ar.runtime.settings.defaultLanguage
-    ar.state.language = candidate
-    ar.state.preferredLanguage = candidate
-    return
-  }
-
-  // F80 — Subsequent turns: preferredLanguage is STRICT-STICKY. Once locked
-  // at T1 (either by router LLM or by heuristic on the customer's first real
-  // message), it NEVER changes — not by heuristic, not by router. The mid-
-  // session flip-back (previous design) produced the mix observed in Andrea
-  // 2026-05-22 chat: welcome EN → "Policia" → ES → "no funciona" → ES kept,
-  // but T2/T3 oscillated between EN and ES based on per-turn heuristic.
-  // Sticky-T1 is the architectural contract: the customer's language is a
-  // session-level attribute, not a per-message attribute.
-  ar.state.language = ar.state.preferredLanguage as typeof ar.state.language
+interface TurnResult {
+  reply: string
+  tokensUsed: number
+  escalated: boolean
 }
 
-/** Persist the guard reply in history, optionally prepending the welcome on T1.
- *
- *  When `settings.naturalRephrase=true`, the customer-facing reply is passed
- *  through `utils/agent-rephrase.ts` for LLM tone-polish before being
- *  stored in history. Operator-only structured output (handover summary)
- *  and T1 welcome are NOT rephrased — see `rephraseForTurn` for the
- *  filter. See CLAUDE.md Pending refactors D1.
- */
-async function applyGuardOutcome(
-  session: AgentSession,
-  outcome: GuardOutcome,
-  userMessage: string,
-): Promise<string> {
-  const { ar, history } = session
-  let reply = outcome.reply
-  const isT1Welcome = ar.state.turnCount === 1 && shouldShowWelcome(outcome.reason)
-  if (isT1Welcome) {
-    const welcome = renderWelcomeForTurn(ar)
-    if (welcome) reply = mergeWelcomeWithReply(welcome, reply)
+async function agentTurnInternal(
+  ctx: ToolContext,
+  cachedSystemPrompt: string,
+  history: Message[],
+  sanitizedMessage: string,
+): Promise<TurnResult> {
+  history.push({ role: 'user', content: sanitizedMessage })
+
+  let nudgedAfterEmpty = false
+  let tokensUsed = 0
+  let escalated = false
+
+  for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
+    const state = getState(ctx.sessionId)
+    const response = await callLLM(cachedSystemPrompt, state, history)
+    tokensUsed +=
+      (response.usage?.prompt_tokens ?? 0) + (response.usage?.completion_tokens ?? 0)
+
+    // No tool calls → final text reply.
+    if (!response.tool_calls || response.tool_calls.length === 0) {
+      const text = (response.content || '').trim()
+
+      // Empty-reply recovery (see architecture.md §7).
+      if (!text && !nudgedAfterEmpty && hop < MAX_TOOL_HOPS - 1) {
+        nudgedAfterEmpty = true
+        history.push({ role: 'assistant', content: '' })
+        history.push({
+          role: 'user',
+          content:
+            '[system] Your previous reply was empty. Please respond to the customer now, in their language, following the rules in the system prompt. Do not call any more tools unless strictly necessary.',
+        })
+        if (process.env.LLM_DEBUG === '1') {
+          console.error('[empty_reply_nudge] retrying with explicit instruction')
+        }
+        continue
+      }
+
+      history.push({ role: 'assistant', content: text })
+      if (process.env.LLM_DEBUG === '1') {
+        console.error(`[state] ${formatStateOneLine(getState(ctx.sessionId))}`)
+      }
+      return { reply: text, tokensUsed, escalated }
+    }
+
+    // Tool calls present → execute each, append results, loop.
+    history.push({
+      role: 'assistant',
+      content: response.content ?? null,
+      tool_calls: response.tool_calls,
+    })
+    for (const call of response.tool_calls) {
+      let args: Record<string, unknown> = {}
+      try {
+        args = call.function.arguments ? JSON.parse(call.function.arguments) : {}
+      } catch (err) {
+        args = {}
+        if (process.env.LLM_DEBUG === '1') {
+          console.error(
+            `[tool_call_parse_error] ${call.function.name}: ${err instanceof Error ? err.message : String(err)}`,
+          )
+        }
+      }
+      if (process.env.LLM_DEBUG === '1') {
+        console.error(`[tool_call] ${call.function.name}(${JSON.stringify(args)})`)
+      }
+      const result = await executeTool(ctx, call.function.name, args)
+      if (call.function.name === 'escalate_to_operator' && result.ok) {
+        escalated = true
+      }
+      history.push({
+        role: 'tool',
+        tool_call_id: call.id,
+        name: call.function.name,
+        content: JSON.stringify(result),
+      })
+    }
   }
-  // ── Rephrase bypass conditions ────────────────────────────────────────────
-  // The rephrase layer (utils/agent-rephrase.ts) passes the reply + full
-  // conversation history to a third-party LLM API. Any flow that collects PII
-  // in the history MUST bypass it. Add new PII flows to PII_FLOW_PREFIXES.
-  //
-  // F35 — invoice flow (Caso 9): CIF/NIF, dirección, razón social, email.
-  // Add future sensitive flows here (e.g. 'payment-card-', 'id-verify-').
-  const PII_FLOW_PREFIXES = ['invoice-'] as const
-  const isPrivateFlow = PII_FLOW_PREFIXES.some((p) =>
-    ar.state.pendingFlow.startsWith(p),
+
+  if (process.env.LLM_DEBUG === '1') {
+    console.error(`[warn] max tool hops (${MAX_TOOL_HOPS}) reached without text reply`)
+  }
+  return { reply: '', tokensUsed, escalated }
+}
+
+// Public per-turn entry point used by REPL/batch. Wraps with sanitize +
+// rate-limit + per-session lock + turn cap. The backend integration
+// (`chatbotFn`) calls this through the same wrapper.
+
+async function agentTurn(
+  ctx: ToolContext,
+  cachedSystemPrompt: string,
+  history: Message[],
+  rawMessage: string,
+): Promise<TurnResult> {
+  const sanitized = sanitizeUserMessage(rawMessage)
+  if (!sanitized) {
+    return { reply: '', tokensUsed: 0, escalated: false }
+  }
+
+  const now = Date.now()
+  const recentCount = registerMessageTimestamp(ctx.sessionId, now, 60_000)
+  if (recentCount > MAX_MESSAGES_PER_MINUTE) {
+    return {
+      reply:
+        'Has enviado muchos mensajes en poco tiempo. Por favor espera un momento antes de continuar.',
+      tokensUsed: 0,
+      escalated: false,
+    }
+  }
+
+  const turnNum = incrementTurn(ctx.sessionId)
+  if (turnNum > MAX_TURNS_PER_SESSION) {
+    return {
+      reply:
+        'Esta conversación es muy larga. Por favor inicia una nueva sesión o contacta directamente con un operador.',
+      tokensUsed: 0,
+      escalated: false,
+    }
+  }
+
+  // Deterministic language detection BEFORE the LLM turn. Eliminates the
+  // T1 empty-reply bug caused by `remember({language})` standalone tool calls.
+  seedLanguageIfNeeded(ctx.sessionId, sanitized)
+
+  // PII redaction (see pii.ts). Pre-scan extracts structured PII
+  // (email/CIF/NIF/IBAN/card/phone) into SessionState and replaces them
+  // with placeholders. De-redact uses already-known state to mask
+  // re-occurrences of name/address/companyName. The cleaned text is what
+  // goes into history and reaches the LLM.
+  const state = getState(ctx.sessionId)
+  const { cleanText, capturedKeys } = processIncomingMessage(ctx.sessionId, sanitized, state)
+  if (process.env.LLM_DEBUG === '1' && capturedKeys.length > 0) {
+    console.error(`[pii_redacted] ${capturedKeys.join(', ')}`)
+  }
+
+  return withSessionLock(ctx.sessionId, () =>
+    agentTurnInternal(ctx, cachedSystemPrompt, history, cleanText),
   )
-  // F41 — markdown bullet+bold list: rephrase LLM flattens structure.
-  // The formatted reply IS the UX — no polish needed.
-  // Exception: howToUse / howToUseDryer FAQ overrides are ES source strings
-  // that need LLM translation for non-ES sessions (F105). These reasons are
-  // excluded from the bullet-list bypass so rephraseForTurn can translate them.
-  const FAQ_NEEDS_TRANSLATION = new Set(['faq-how-to-use', 'faq-how-to-use-dryer'])
-  const hasFormattedBulletList =
-    /\n-\s+\*\*/.test(reply) && !FAQ_NEEDS_TRANSLATION.has(outcome.reason ?? '')
-  // F49 — discount-code-ask: clean i18n is the UX; rephrase kept adding
-  // "incluyendo letras si las hay" autonomously.
-  const isDiscountCodeAsk = outcome.reason === 'discount-code-ask'
-  // F70 — loyalty FAQ (buy/recharge): usecases.md Caso 10 criterio 4 says
-  // bot must NOT ask for location — rephrase LLM kept adding "¿En qué
-  // lavandería te encuentras?" autonomously against the spec.
-  // F94 — also bypass for Caso 36 reasons: 'loyalty-card-wrong-location'
-  // (cross-location warning with {buyLocation}/{currentLocation} placeholders
-  // replaced deterministically) and 'loyalty-card-buy-with-location' (T2
-  // override after location reply). The rephrase LLM was adding unsolicited
-  // follow-up questions ("¿Te gustaría saber algo más?") causing the next
-  // customer "sì/sí/yes" to be misinterpreted as machine-flow confirmation.
-  const isLoyaltyFaq =
-    outcome.reason === 'loyalty-card-buy' ||
-    outcome.reason === 'loyalty-card-recharge' ||
-    outcome.reason === 'loyalty-card-wrong-location' ||
-    outcome.reason === 'loyalty-card-buy-with-location'
-  // F56 — active display flow (washer/dryer JSON prompts): PDF-vetted content;
-  // rephrase invented operational details ("ropa en la goma", "hasta oír un
-  // clic"). Deterministic bypass is the only robust fix.
-  //
-  // ⚙️  TOGGLE: set "rephraseDisplayFlow": true in json/settings.json to
-  // re-enable rephrase for display flows and experiment with contextual
-  // recaps (e.g. "sigues en Goya con la lavadora 5 y el error DOOR 😕").
-  // Risk: rephrase may invent operational details — monitor carefully.
-  // Default: false (bypass active).
-  const isDisplayFlowActive =
-    !!ar.state.activeFlowId && !ar.runtime.settings?.rephraseDisplayFlow
-
-  if (
-    !isT1Welcome &&
-    !isPrivateFlow &&
-    !hasFormattedBulletList &&
-    !isDiscountCodeAsk &&
-    !isDisplayFlowActive &&
-    !isLoyaltyFaq &&
-    ar.runtime.settings?.naturalRephrase
-  ) {
-    reply = await rephraseForTurn(reply, ar, history)
-  }
-  // F79 — Landmark ack (consume-once turn-local signal). When agent-extract
-  // resolved the location via a landmark deduction (e.g. "estoy cerca del
-  // Mercadona" → 'Goya'), prepend a confirmation so the customer knows the
-  // bot understood. Direct canonical mentions ("Goya") never set this
-  // signal, keeping replies terse when there is nothing surprising to ack.
-  // Runs AFTER rephrase so the canonical wording (with bold + address)
-  // reaches the customer verbatim — the rephrase polish would otherwise
-  // flatten the bold or drop the address.
-  if (ar.state.locationAckPending) {
-    const canonical = ar.state.locationAckPending
-    const override = ar.runtime.locations.locations[canonical]
-    if (override) {
-      const displayName = override.displayName || canonical
-      const address = override.calle || ''
-      const tenantLang = resolveTenantLang(ar)
-      const ack = tt('landmarkAck', tenantLang, {
-        location: displayName,
-        address,
-      })
-      reply = `${ack}\n\n${reply}`
-    }
-    ar.state.locationAckPending = null
-  }
-  // F109 — Release a stale machine flow after a FAQ pivot.
-  //
-  // When a FAQ guard (loyalty-card-buy, faq-prices, faq-hours, faq-programs,
-  // faq-how-to-use, faq-payment, branch FAQ handler) emits a reply mid-flow,
-  // it sets `lastResolvedIntent='faq'` to mark the topic switch. If an
-  // `activeFlowId` from a previous trouble flow (e.g. `non_parte` after DOOR)
-  // is still set, the next user turn would be consumed by
-  // `guardAdvanceMachineFlow` as a CHOICE input to the dead flow's pending
-  // step (e.g. `followup_display`). Non-numeric replies fall through to
-  // `"other": escalate` and the bot emits a spurious `washerEscalate` reply
-  // — wholly out of context (Andrea chat 2026-05-26).
-  //
-  // Single chokepoint: every guard outcome passes through here. When the
-  // guard just resolved as FAQ, release any inherited machine flow. Sticky
-  // facts (location, machineType, machineNumber, displayState) are preserved
-  // — the customer is still the same; only the conversation control is
-  // released. If the customer returns to the trouble topic, the flow re-arms
-  // via `guardAutoStartMachineFlow`.
-  if (ar.state.lastResolvedIntent === 'faq' && ar.state.activeFlowId) {
-    releaseActiveFlow(ar)
-  }
-  history.push({ role: 'user', content: userMessage })
-  history.push({ role: 'assistant', content: reply })
-  return reply
 }
 
-/** Run the LLM tool-calling loop, capped at settings.maxToolHops iterations. */
-async function runLlmLoop(
-  ar: AgentRuntime,
-  history: AgentMessage[],
-  bundle: AgentSession['bundle'],
-  userMessage: string,
-): Promise<string> {
-  const messages: AgentMessage[] = [
-    { role: 'system', content: buildSystemPrompt(ar, bundle) },
-    ...history,
-    { role: 'user', content: userMessage },
-  ]
-  const maxToolHops = ar.runtime.settings.maxToolHops
-  // Snapshot facts before the LLM runs. autoExtractFacts (agent.ts:72) has
-  // already populated state; this baseline lets the audit detect new facts
-  // gained during the LLM turn vs sticky facts that were already present.
-  const beforeSnapshot = snapshotFacts(ar.state)
+// ── System prompt ─────────────────────────────────────────────────────────────
+// Assembled at boot from prompts/common.md + prompts/faqs.md +
+// prompts/machines/*.md + prompts/locations/*.md. Concatenated in deterministic
+// (alphabetical) order so the resulting blob is byte-identical across boots
+// → cache hit always.
 
-  for (let hops = 0; hops < maxToolHops; hops++) {
-    const response = await callAgentLLM(messages, ar.runtime)
-    messages.push(response)
+async function buildSystemPrompt(): Promise<string> {
+  const common = await readFile(path.join(PROMPTS_DIR, 'common.md'), 'utf8')
+  const faqs = await readFileOrEmpty(path.join(PROMPTS_DIR, 'faqs.md'))
+  const machines = await loadDir(path.join(PROMPTS_DIR, 'machines'))
+  const locations = await loadDir(path.join(PROMPTS_DIR, 'locations'))
 
-    const toolCalls = response.tool_calls || []
-    if (toolCalls.length === 0) {
-      auditFactDiscipline(beforeSnapshot, snapshotFacts(ar.state), collectInvokedSetTools(messages), {
-        turnCount: ar.state.turnCount,
-      })
-      return response.content || ''
-    }
-    await runToolCalls(ar, toolCalls, messages)
+  const parts: string[] = [common]
+
+  if (faqs) {
+    parts.push('', '════════ FAQS ════════', '', faqs)
   }
-  logger.warn('LLM loop exhausted maxToolHops without producing a text reply', {
-    maxToolHops,
-    sessionTurnCount: ar.state.turnCount,
+
+  if (machines.length > 0) {
+    parts.push('', '════════ MACHINES ════════', '')
+    for (const { name, content } of machines) {
+      parts.push(`## ${name}`, '', content, '')
+    }
+  }
+
+  if (locations.length > 0) {
+    parts.push('', '════════ LOCATIONS ════════', '')
+    for (const { name, content } of locations) {
+      parts.push(`## ${name}`, '', content, '')
+    }
+  }
+
+  return parts.join('\n')
+}
+
+function formatRuntimeBlock(): string {
+  const now = new Date()
+  const date = now.toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
   })
-  return ''
+  const time = now.toLocaleTimeString('es-ES', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+  return [
+    '',
+    '═══ RUNTIME ═══',
+    `Current date: ${date}`,
+    `Current time: ${time}`,
+    `Operator briefing language: ${OPERATOR_BRIEFING_LANGUAGE}`,
+    '',
+  ].join('\n')
 }
 
-/** Execute each tool_call in order and append its JSON result as a `role:'tool'` message. */
-async function runToolCalls(
-  ar: AgentRuntime,
-  toolCalls: NonNullable<AgentMessage['tool_calls']>,
-  messages: AgentMessage[],
-): Promise<void> {
-  for (const call of toolCalls) {
-    const args = parseToolArgs(call.function.name, call.function.arguments)
-    const result = await executeTool(ar, call.function.name, args)
-    messages.push({
-      role: 'tool',
-      tool_call_id: call.id,
-      name: call.function.name,
-      content: JSON.stringify(result),
-    })
-  }
-}
-
-function parseToolArgs(toolName: string, raw: string | undefined): Record<string, unknown> {
-  if (!raw) return {}
+async function readFileOrEmpty(filepath: string): Promise<string> {
   try {
-    return JSON.parse(raw)
+    return await readFile(filepath, 'utf8')
   } catch (err) {
-    logger.warn('LLM produced malformed tool arguments; defaulting to empty object', {
-      tool: toolName,
-      raw,
-      error: err instanceof Error ? err.message : String(err),
-    })
-    return {}
-  }
-}
-
-/**
- * Sanitize, enforce invariants, and adjust greetings:
- *   - turn 1 prepends the welcome (unless the LLM already greeted or the
- *     customer already gave operational facts)
- *   - turn 2+ strips any greeting paragraph the LLM may have re-introduced
- *   - in all turns: enforce the no-contradiction invariant (a single reply
- *     must NOT claim resolution AND announce an escalation)
- */
-function polishReplyForTurn(ar: AgentRuntime, rawReply: string): string {
-  const sanitized = sanitizeCustomerReply(rawReply)
-  const noContradiction = enforceNoContradiction(ar, sanitized)
-  enforceResolutionStateBackstop(ar, noContradiction)
-  // Output invariants — strip the bug surfaces previously patched in
-  // prompts/agent.txt (rule #1: no patches in prompt). See
-  // utils/output-invariants.ts for the catalogue + tests.
-  let reply = applyOutputInvariants(noContradiction, {
-    location: ar.state.location || null,
-  })
-  // F28 (Andrea 2026-05-10, Caso 32.3 RED-SPEC closure): if the customer
-  // paused an active trouble flow with a brief FAQ this turn, append the
-  // "¿Sigamos con tu problema?" prompt so they know the flow is paused,
-  // not lost. Skip on closure turns (escalated / resolved / refund-form)
-  // to avoid contradicting the closure message.
-  if (ar.state.faqPause && ar.state.pendingFlow && !ar.state.pendingClosure) {
-    const resume = t('resumeAfterFaq', ar.state.language)
-    if (resume && !reply.includes(resume)) {
-      reply = `${reply.trimEnd()}\n\n${resume}`
-    }
-  }
-  if (ar.state.turnCount !== 1) {
-    return stripWelcomeParagraphs(reply)
-  }
-  if (llmAlreadyGreeted(reply) || hasOperationalFacts(ar)) {
-    return reply
-  }
-  const welcome = renderWelcomeForTurn(ar)
-  return welcome ? mergeWelcomeWithReply(welcome, reply) : reply
-}
-
-/**
- * If the LLM produced a reply with both resolution and escalation markers,
- * the case is being escalated (the customer reported a NEW issue): drop the
- * resolution sentences AND undo any state mutation that might have come
- * from a `mark_resolved` tool call earlier in the same turn.
- */
-function enforceNoContradiction(ar: AgentRuntime, reply: string): string {
-  const report = detectResolutionEscalationContradiction(reply)
-  if (!report.detected) return reply
-  logger.warn('Resolution/escalation contradiction in LLM reply; stripping resolution sentences', {
-    resolutionPhrase: report.resolutionPhrase,
-    escalationPhrase: report.escalationPhrase,
-  })
-  undoResolved(ar)
-  return stripResolutionSentences(reply)
-}
-
-/**
- * Backstop: if the LLM emitted a closure phrase ("incidencia resuelta",
- * "issue resolved", ...) but FORGOT to call the `mark_resolved` tool,
- * set `state.pendingClosure='resolved'` deterministically so the state
- * matches the customer-facing message.
- *
- * REGRESSION (Andrea, 2026-05-09 Caso 1.1 LLM run): the bot replied
- * "✅ Perfecto, incidencia resuelta. ¡Gracias por tu paciencia! 🎉"
- * but `state.pendingClosure` stayed null because the LLM skipped the
- * tool call. The Scenario 1.1 test asserts `pendingClosure='resolved'`
- * after the closure reply — without this backstop the state and the
- * reply diverged.
- *
- * Architectural rationale (CLAUDE.md regla #2 corollary): "tool refuses,
- * LLM corrects" handles bad calls. This handles forgotten calls — the
- * post-processor compensates so the conversation state is consistent
- * regardless of LLM compliance.
- *
- * Skips when an escalation is in progress (operatorRequested /
- * customerNameRequested / pendingClosure already set) — those are
- * legitimate non-resolved closures.
- */
-function enforceResolutionStateBackstop(ar: AgentRuntime, reply: string): void {
-  if (ar.state.pendingClosure) return
-  if (ar.state.operatorRequested || ar.state.customerNameRequested) return
-  if (!replyContainsResolutionMarker(reply)) return
-  logger.info('Resolution backstop: setting pendingClosure="resolved" (LLM emitted closure without mark_resolved tool call)')
-  markResolved(ar)
-}
-
-/**
- * True when the LLM reply already opens with a greeting marker. Detection is
- * sentence-level (not paragraph-level) because the LLM often inlines the
- * greeting with the rest of the reply ("¡Hola! Soy Eco. ¿Dónde estás?") —
- * the paragraph-based stripper would not catch this and we'd double-greet.
- *
- * Patterns: opening "Hola/Ciao/Hi/Hello/Olá/Bonjour" OR a self-introduction
- * ("soy/sono/i'm/sou/je suis" + the chatbot name) anywhere in the reply.
- */
-function llmAlreadyGreeted(reply: string): boolean {
-  const trimmed = reply.trim()
-  if (!trimmed) return false
-  const startsWithGreeting =
-    /^(¡?hola[!,.\s]|ciao[!,.\s]|hi[!,.\s]|hello[!,.\s]|ol[áa][!,.\s]|bonjour[!,.\s])/i.test(
-      trimmed,
-    )
-  if (startsWithGreeting) return true
-  // Fallback: paragraph-level stripping changes the text → at least one
-  // greeting block was somewhere else in the reply.
-  return stripWelcomeParagraphs(reply) !== reply
-}
-
-function hasOperationalFacts(ar: AgentRuntime): boolean {
-  const { location, displayState, machineNumber } = ar.state
-  return Boolean(location && (displayState || machineNumber))
-}
-
-/** Append the operator handover summary when the pipeline marked an escalation.
- *
- *  The final reply has 3 parts (uniform across all escalation branches —
- *  Caso 1.2 / 5.2 / 5.3 / 7.2 / 13 / 17 / 18 / 25 / 26-27 / 28 / 29 / 30):
- *
- *    1. The LLM-generated empathic line ("Vamos a revisar tu caso, Andrea...")
- *       — varies in tone, language, phrasing.
- *    2. A FIXED handoff line from i18n key `operatorHandoffFinal` containing
- *       the customer-facing keywords "operador" + "desactivado" — uniform,
- *       deterministic, multilingual via the i18n catalogue.
- *    3. The operator-side "👤 Human Support message" summary.
- *
- *  Rule #8 (multi-language by design): the handoff line is in 6 languages
- *  in `json/i18n/<lang>.json:operatorHandoffFinal`. Adding a 7th language
- *  = adding 1 entry to each i18n file, no code change.
- *
- *  TODO (Andrea, 2026-05-09 — PII must not reach the LLM):
- *    Personal data flows into the LLM prompt today and that is not
- *    acceptable for privacy/GDPR. The customer's free-text messages are
- *    forwarded verbatim to the external model (OpenRouter / OpenAI) and
- *    they contain:
- *      - customer name (Caso 6 / 8 / every escalation that asks the name)
- *      - last 4 digits of the bank card (Caso 6 step 4-dígitos)
- *      - photo references / receipt hints (Caso 6 captura, Caso 17 foto)
- *      - location + machine number (less sensitive but still PII when
- *        combined with the rest)
- *    Fix direction:
- *      - Capture PII deterministically (already done for card digits via
- *        guardDoubleChargeAskCardDigits, and for the name via
- *        guardDoubleChargeAwaitName / guardDiscountCodeAwaitName).
- *      - Before forwarding the conversation history to the LLM, redact /
- *        mask the captured PII fields (e.g. replace card digits with
- *        "[REDACTED-CARD-4]", customer name with "[CUSTOMER]"). The state
- *        keeps the real values for the operator briefing, but the LLM
- *        only sees placeholders.
- *      - Audit every guard that asks the LLM for help on a turn that
- *        already contains PII in the user message and short-circuit it
- *        deterministically when possible.
- *    Tracking: search "PII must not reach the LLM" in this repo.
- */
-async function appendEscalationSummary(ar: AgentRuntime, reply: string, history: AgentMessage[]): Promise<string> {
-  // Refund-form path (Caso 6.1 Sí branch): customer used the service, the
-  // case is closed via refund trámite — no live operator, no handoff line,
-  // no Human Support summary. Triggered by markRefundFormPending() which
-  // sets pendingClosure='refund-form' atomically. See usecases.md §6.1
-  // riga 627.
-  //
-  // Why we REPLACE the LLM reply with a deterministic i18n string: without
-  // operatorRequested/pendingEscalation set, the LLM is not guided into a
-  // closure phrase and may improvise (e.g. ask "what's on the screen?"
-  // because the displayState slot is empty). The i18n key `refundFormFinal`
-  // is the canonical closure for this branch.
-  const { pendingClosure: closure, customerName } = ar.state
-  if (closure === 'refund-form') {
-    if (!customerName) return reply
-    const lang = resolveTenantLang(ar)
-    // F34 (Andrea 2026-05-10): the customer was getting the message
-    // "te enviaremos el formulario de reembolso" but never the actual URL
-    // → no clue when/how/where the form arrives. Inject `{refundFormUrl}`
-    // from settings so the customer sees the link directly in the close
-    // message and can fill it immediately. Empty string fallback if not
-    // configured (the message degrades gracefully without leaking braces).
-    const refundFormUrl = ar.runtime.settings?.refundFormUrl ?? ''
-    const finalText = t('refundFormFinal', lang)
-      .replace('{name}', customerName)
-      .replace('{refundFormUrl}', refundFormUrl)
-    // Append a compact incident summary under "📋 Resumen para tramitación" so
-    // the team processing the refund form can see location, machine, and
-    // incident details without reading the full conversation log. Uses a
-    // different section header than live-operator escalation (no "Human
-    // Support message", no "operador") so Scenario 6.1 assertions stay green
-    // (usecases.md §6.1 riga 627: "no es una escalación a un humano en vivo").
-    const ctx = extractEscalationContext(ar.state, customerName)
-    const briefingLang = ar.runtime.settings?.operatorBriefingLanguage ?? 'es'
-    const summary = await generateOperatorBriefingFromHistory(ar, history, buildEscalationSummary(ctx, briefingLang))
-    ar.pendingEscalation = null
-    return `${finalText}\n\n**📋 Resumen para tramitación:**\n${summary}`
-  }
-  if (!ar.pendingEscalation || !customerName) return reply
-  const ctx = extractEscalationContext(ar.state, ar.state.customerName)
-  // Deterministic baseline summary — always computed (used as the fallback
-  // for the LLM path, AND emitted directly when settings.operatorBriefingFromLlm
-  // is false). Tests run with the flag OFF so assertions on summary content
-  // stay reliable. See CLAUDE.md "Test deterministic vs production polished".
-  // F106 — language driven by settings.operatorBriefingLanguage (default 'es').
-  const briefingLang = ar.runtime.settings?.operatorBriefingLanguage ?? 'es'
-  const baseline = buildEscalationSummary(ctx, briefingLang)
-  const summary = await generateOperatorBriefingFromHistory(ar, history, baseline)
-  ar.pendingEscalation = null
-  closeAsEscalated(ar)
-
-  // Handoff language: ALWAYS the locked tenant/state language, never an
-  // heuristic on `reply`. Reason: if the LLM drifts the reply to a wrong
-  // language (e.g. emits ES at T6 while state is EN), the heuristic would
-  // cascade the drift into the handoff and the briefing — producing a
-  // reply in ES + handoff in ES even though the customer has been speaking
-  // EN all session. Locking to resolveTenantLang(ar) guarantees the
-  // customer-facing handoff is in their session language regardless of
-  // LLM behaviour.
-  const lang = resolveTenantLang(ar)
-  // The empathic lead line ("Vamos a revisar tu caso, Andrea") is ALSO
-  // deterministic: the LLM-generated `reply` is replaced by the canned
-  // i18n key `escalationCaseReviewLead`. This makes the entire 3-block
-  // escalation handover language-coherent and immune to LLM drift at
-  // the name-capture turn — observed regression: state=en, LLM emitted
-  // ES at T6, producing a Spanish empathic line + handoff cascade.
-  // Iron rule #10: every required step has a deterministic catch-all.
-  const lead = t('escalationCaseReviewLead', lang).replace('{name}', ar.state.customerName || '')
-  const handoff = t('operatorHandoffFinal', lang)
-  return `${lead}\n\n${handoff}\n\n**👤 Human Support message**\n${summary}`
-}
-
-// ── Bootstrap ─────────────────────────────────────────────────────────────────
-
-function loadDotEnv(): void {
-  const envFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '.env')
-  try {
-    process.loadEnvFile(envFile)
-  } catch (err) {
-    // ENOENT is expected (tests and prod set vars via the environment); other
-    // errors (permission, malformed file) deserve a warning so they aren't silent.
     const code = (err as NodeJS.ErrnoException)?.code
-    if (code === 'ENOENT') return
-    logger.warn('Failed to load .env file', {
-      envFile,
+    if (code === 'ENOENT') return ''
+    throw err
+  }
+}
+
+async function loadDir(dir: string): Promise<Array<{ name: string; content: string }>> {
+  const files = await readdir(dir)
+  const mdFiles = files.filter((f) => f.endsWith('.md')).sort()
+  const out: Array<{ name: string; content: string }> = []
+  for (const f of mdFiles) {
+    const content = await readFile(path.join(dir, f), 'utf8')
+    out.push({ name: f.replace(/\.md$/, ''), content })
+  }
+  return out
+}
+
+// ── Public API for backend integration ────────────────────────────────────────
+// Contract expected by apps/backend/src/application/services/
+// custom-client-chatbot.service.ts (CustomClientChatbotService.invoke).
+// The backend loads this module via `workspace.customChatbotId` and calls
+// `chatbotFn(input)`. See architecture.md §"Backend integration".
+
+export interface HistoryEntry {
+  role: 'user' | 'assistant'
+  content: string
+  timestamp?: string
+}
+
+export interface ChatbotInput {
+  userMessage: string
+  userName: string
+  channel: 'whatsapp' | 'widget' | 'playground'
+  config: {
+    workspaceId: string
+    debugChannel: boolean
+    isPlayground: boolean
+    language?: 'es' | 'ca' | 'en' | 'it' | 'fr' | 'pt'
+  }
+  context: {
+    sessionId: string
+    customerId?: string
+    phoneNumber?: string
+    history: HistoryEntry[]
+  }
+}
+
+export interface ChatbotOutput {
+  reply: string | null
+  shouldEscalate: boolean
+  escalationSummary?: string
+  notificationEmails?: string
+  /** When true, the host should close this chat session and stop forwarding
+   *  new customer messages to the bot. Set after the bot completes an
+   *  escalation flow (the operator now owns the conversation). */
+  closeChat: boolean
+  patches?: CustomerPatch[]
+  meta: {
+    tokensUsed: number
+    agentChain: string[]
+  }
+  error?: string
+}
+
+// Build the system prompt once at module load. Cached across all backend
+// invocations because the file content doesn't change at runtime.
+let cachedSystemPromptPromise: Promise<string> | null = null
+function getCachedSystemPrompt(): Promise<string> {
+  if (!cachedSystemPromptPromise) cachedSystemPromptPromise = buildSystemPrompt()
+  return cachedSystemPromptPromise
+}
+
+export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
+  try {
+    if (!API_KEY) {
+      return {
+        reply: null,
+        shouldEscalate: false,
+        closeChat: false,
+        meta: { tokensUsed: 0, agentChain: ['custom-ecolaundry'] },
+        error: 'llm_unavailable',
+      }
+    }
+
+    const systemPrompt = await getCachedSystemPrompt()
+    const sessionId = input.context.sessionId
+
+    // Seed state with any pre-known language from the host (customer.language
+    // already stored in DB). Only if not already in our in-RAM state.
+    if (input.config.language) {
+      const current = getState(sessionId)
+      if (!current.language) {
+        updateState(sessionId, { language: input.config.language })
+      }
+    }
+
+    // Convert backend history → our internal Message[]. The backend may
+    // have a richer history than what's in our RAM if this process just
+    // restarted; we rebuild the conversation context from their record.
+    const history: Message[] = input.context.history.map((h) => ({
+      role: h.role,
+      content: h.content,
+    }))
+
+    const ctx: ToolContext = {
+      sessionId,
+      customerName: input.userName,
+      customerPhone: input.context.phoneNumber,
+    }
+
+    const result = await agentTurn(ctx, systemPrompt, history, input.userMessage)
+    const patches = drainPatches(sessionId)
+
+    return {
+      reply: result.reply || null,
+      shouldEscalate: result.escalated,
+      escalationSummary: result.escalated ? `Ticket created for ${sessionId}` : undefined,
+      notificationEmails: result.escalated ? OPERATOR_EMAIL || undefined : undefined,
+      closeChat: result.escalated,
+      patches: patches.length > 0 ? patches : undefined,
+      meta: {
+        tokensUsed: result.tokensUsed,
+        agentChain: ['custom-ecolaundry'],
+      },
+    }
+  } catch (err) {
+    console.error(`[chatbotFn] error: ${err instanceof Error ? err.message : String(err)}`)
+    return {
+      reply: null,
+      shouldEscalate: false,
+      closeChat: false,
+      meta: { tokensUsed: 0, agentChain: ['custom-ecolaundry'] },
       error: err instanceof Error ? err.message : String(err),
-    })
+    }
   }
 }
 
 // ── CLI ───────────────────────────────────────────────────────────────────────
 
-async function runInteractive(): Promise<void> {
-  if (!API_KEY) {
-    console.error('OPENROUTER_API_KEY missing. Export it before running the agent demo.')
-    process.exit(1)
-  }
-  const session = await createAgentSession()
+async function runInteractive(systemPrompt: string): Promise<void> {
+  const sessionId = 'cli-interactive'
+  const history: Message[] = []
   const rl = createInterface({ input: process.stdin, output: process.stdout })
-  printCliBanner(
-    'Ecolaundry Agent Demo (Step X)',
-    'LLM-as-agent prototype. /exit to quit, /reset to restart.',
-  )
+  console.log('Ecolaundry chatbot — assembled prompt + state + tools + escalation.')
+  console.log('Commands: /exit /quit /reset /state')
+  console.log(`model=${MODEL} prompts=${PROMPTS_DIR}`)
+  if (OPERATOR_EMAIL) {
+    console.log(`operator email: ${OPERATOR_EMAIL} ${GMAIL_USER ? '(SMTP active)' : '(SMTP not configured — briefings logged to console)'}`)
+  }
+  console.log('')
+
+  const ctx: ToolContext = { sessionId, customerName: 'CLI User' }
 
   while (true) {
-    const command = await readCliInput(rl)
-    if (command === null) break
-    if (command === '') continue
-    if (command === '/exit' || command === '/quit') break
-    if (command === '/reset') {
-      await resetCliSession(session)
+    const input = (await rl.question('> ')).trim()
+    if (!input) continue
+    if (input === '/exit' || input === '/quit') break
+    if (input === '/reset') {
+      history.length = 0
+      resetState(sessionId)
+      console.log('[reset] history + state cleared')
       continue
     }
-    await handleCliTurn(session, command)
+    if (input === '/state') {
+      console.log(`[state] ${formatStateOneLine(getState(sessionId))} (turn ${getTurnCount(sessionId)})`)
+      continue
+    }
+    try {
+      const result = await agentTurn(ctx, systemPrompt, history, input)
+      console.log(`\n${result.reply}\n`)
+    } catch (err) {
+      console.error(`[error] ${err instanceof Error ? err.message : String(err)}`)
+      if (history.at(-1)?.role === 'user') history.pop()
+    }
   }
   rl.close()
 }
 
-async function readCliInput(rl: ReturnType<typeof createInterface>): Promise<string | null> {
-  try {
-    const input = await rl.question('')
-    return input.trim()
-  } catch (err) {
-    if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'ERR_USE_AFTER_CLOSE') {
-      return null
-    }
-    throw err
-  }
-}
-
-async function resetCliSession(session: AgentSession): Promise<void> {
-  const fresh = await createAgentSession()
-  session.ar = fresh.ar
-  session.history = fresh.history
-  session.bundle = fresh.bundle
-  printCliMessage('Info', 'Session reset.')
-}
-
-async function handleCliTurn(session: AgentSession, message: string): Promise<void> {
-  try {
-    const reply = await agentTurn(session, message)
-    printCliMessage('Bot', reply)
-  } catch (err) {
-    printCliMessage('Error', `Agent error: ${err instanceof Error ? err.message : String(err)}`)
-  }
-}
-
-/**
- * Test-only handles for internal helpers. Production code MUST go through
- * `agentTurn()` — direct access is reserved for unit tests.
- */
-export const __testing = {
-  llmAlreadyGreeted,
-}
-
-function isDirectExecution(): boolean {
-  const entryFile = process.argv[1]
-  if (!entryFile) return false
-  return import.meta.url === pathToFileURL(path.resolve(entryFile)).href
-}
-
-// ── Batch mode ────────────────────────────────────────────────────────────────
-//
-// Non-interactive driver for Claude / scripts. Accepts a JSON array of
-// scenarios on argv after `--batch`. Each entry is either:
-//   - string[]  → a sequence of user turns inside ONE session
-//   - "/reset"  → marker that resets the session before the next entry
-// Output is a markdown transcript on stdout (one block per scenario / turn)
-// so the caller can parse "[SCENARIO N]", "[USER]", "[BOT]" markers.
-
-async function runBatch(rawJson: string): Promise<void> {
-  if (!API_KEY) {
-    console.error('OPENROUTER_API_KEY missing. Export it before running the agent batch.')
-    process.exit(1)
-  }
+async function runBatch(systemPrompt: string, rawJson: string): Promise<void> {
   let plan: Array<string[] | string>
   try {
     plan = JSON.parse(rawJson)
@@ -793,13 +1062,18 @@ async function runBatch(rawJson: string): Promise<void> {
     process.exit(1)
   }
 
-  let session = await createAgentSession()
+  let sessionId = 'cli-batch-1'
+  let history: Message[] = []
   let scenarioIdx = 0
+  let ctx: ToolContext = { sessionId, customerName: 'Batch User' }
 
   for (const entry of plan) {
     if (entry === '/reset') {
       console.log('\n[RESET] ──────────────────────────────────────────────')
-      session = await createAgentSession()
+      history = []
+      resetState(sessionId)
+      sessionId = `cli-batch-${scenarioIdx + 1}`
+      ctx = { sessionId, customerName: 'Batch User' }
       continue
     }
     if (!Array.isArray(entry)) {
@@ -812,39 +1086,57 @@ async function runBatch(rawJson: string): Promise<void> {
       const turn = entry[i]
       console.log(`\n[USER T${i + 1}] ${turn}`)
       try {
-        const reply = await agentTurn(session, turn)
-        console.log(`[BOT T${i + 1}] ${reply}`)
+        const result = await agentTurn(ctx, systemPrompt, history, turn)
+        console.log(`[BOT T${i + 1}] ${result.reply}`)
       } catch (err) {
         console.log(`[ERROR T${i + 1}] ${err instanceof Error ? err.message : String(err)}`)
+        if (history.at(-1)?.role === 'user') history.pop()
       }
     }
-    console.log(`\n[STATE T-end] language=${session.ar.state.language} preferredLanguage=${session.ar.state.preferredLanguage} pendingFlow=${session.ar.state.pendingFlow} activeBranch=${session.ar.state.activeBranch} activeFlowId=${session.ar.state.activeFlowId} location=${session.ar.state.location} machineType=${session.ar.state.machineType} machineNumber=${session.ar.state.machineNumber} displayState=${session.ar.state.displayState} lastResolvedIntent=${session.ar.state.lastResolvedIntent} lastFaqKey=${session.ar.state.lastFaqKey}`)
   }
   console.log('\n[BATCH DONE] ─────────────────────────────────────────────')
+}
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+
+function loadDotEnv(envFile: string): void {
+  try {
+    process.loadEnvFile(envFile)
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException)?.code
+    if (code === 'ENOENT') return
+    console.warn(`[warn] failed to load ${envFile}: ${err instanceof Error ? err.message : String(err)}`)
+  }
 }
 
 function findBatchArg(): string | null {
   const i = process.argv.indexOf('--batch')
   if (i === -1) return null
-  const v = process.argv[i + 1]
-  return v ?? null
+  return process.argv[i + 1] ?? null
 }
 
-/** Enable LLM call observability when `--debug` is passed on the CLI.
- *  Sets LLM_DEBUG=1 so `utils/llm-fetch.ts` emits a `llm.call` log line
- *  per OpenRouter request (caller, status, latencyMs, attempts). OFF by
- *  default — production and tests stay silent. */
-function applyDebugFlag(): void {
-  if (process.argv.includes('--debug')) {
-    process.env.LLM_DEBUG = '1'
-  }
+function isDirectExecution(): boolean {
+  const entry = process.argv[1]
+  if (!entry) return false
+  return import.meta.url === pathToFileURL(path.resolve(entry)).href
 }
 
 if (isDirectExecution()) {
-  applyDebugFlag()
-  const batch = findBatchArg()
-  const runner = batch !== null ? runBatch(batch) : runInteractive()
-  runner.catch((err) => {
+  if (process.argv.includes('--debug')) process.env.LLM_DEBUG = '1'
+  if (!API_KEY) {
+    console.error('OPENROUTER_API_KEY missing. Set it in this folder\'s .env file.')
+    process.exit(1)
+  }
+  const main = async () => {
+    const systemPrompt = await buildSystemPrompt()
+    const batch = findBatchArg()
+    if (batch !== null) {
+      await runBatch(systemPrompt, batch)
+    } else {
+      await runInteractive(systemPrompt)
+    }
+  }
+  main().catch((err) => {
     console.error(err)
     process.exit(1)
   })

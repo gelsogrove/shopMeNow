@@ -1,0 +1,81 @@
+{
+  "_comment": "Tenant configuration for Ecolaundry / ecolaundry. Single source of truth for behaviour-tuning + business constants. See docs/settings.md for the full field reference.",
+
+  "_section_languages": "Active languages for this tenant. defaultLanguage is the fallback when the customer's language can't be detected. enabledLanguages MUST contain defaultLanguage.",
+  "enabledLanguages": ["es", "ca", "en", "it", "fr", "pt"],
+  "defaultLanguage": "es",
+
+  "_section_branding": "Tenant identity strings. Substituted into prompts (welcome, escalation summary, FAQ replies). Both are used by buildSystemPrompt + escalation.ts.",
+  "chatbotName": "Eco",
+  "companyName": "Ecolaundry",
+
+  "_section_llm": "LLM provider tuning. model is the OpenRouter id; agentMaxTokens caps output length per call; maxToolHops caps tool-call iterations per turn. Per-call temperatures are configured in _section_temperatures below.",
+  "model": "openai/gpt-4o-mini",
+  "agentMaxTokens": 800,
+  "maxToolHops": 6,
+
+  "_section_business_codes": "Tenant-specific code shapes. discountCodePrefix is the fixed uppercase prefix of the Caso 8 discount code (full shape `^<prefix>\\d{6}\\d+$` — prefix + DDMMYY + amount, e.g. SAU2904266). Required: validateSettings fails fast on missing/invalid prefix (F46). The same prefix is used by validateCustomerName to refuse code-shaped tokens as a customer name.",
+  "discountCodePrefix": "SAU",
+
+  "_section_tone": "Free-form tone descriptor injected into agent.txt. Reinforces the prompt's TONE & EMPATHY section. Keep short and concrete.",
+  "tone": "calm, reassuring, relaxed, warm, step-by-step",
+
+  "_section_support_contacts": "Email addresses surfaced in FAQ + handover summaries. The 'invoice' inbox handles billing/factura cases (Caso 9); 'support' is the generic operator inbox.",
+  "supportEmails": {
+    "invoice": "gelsogrove@gmail.com",
+    "support": "gelsogrove@gmail.com"
+  },
+  "_section_human_message_notification": "Comma-separated list of email addresses that receive a notification (with chat history rendered as HTML) every time the bot generates a Human Support message (operator escalation). Leave empty or omit to disable. operatorContactMethod controls the notification channel: 'email' (default) sends to notificationEmails; 'whatsapp' sends to operatorWhatsappNumber instead.",
+  "notificationEmails": "gelsogrove@gmail.com",
+  "operatorContactMethod": "email",
+  "operatorWhatsappNumber": "",
+  "_section_smtp": "SMTP credentials for escalation email notifications. These take precedence over the global SMTP_* env vars in .env — the custom chatbot is fully self-contained. host defaults to smtp.gmail.com, port to 587, secure to false. For Gmail use an App Password (Google Account → Security → 2-Step Verification → App passwords).",
+  "smtp": {
+    "user": "gelsogrove@gmail.com",
+    "pass": "bhfg vynq uwqm jckm",
+    "host": "smtp.gmail.com",
+    "port": 465,
+    "secure": true,
+    "from": "gelsogrove@gmail.com"
+  },
+  "refundFormUrl": "https://forms.gle/XFGPAd9581AhC9eu7",
+  "allowedExternalLinks": "echatbot.ai, www.echatbot.ai, forms.gle, alberwaz.net",
+
+  "_section_welcome": "Per-language welcome line shown only on T1 (rule #G2). Adding a language requires both an entry here AND parity in json/i18n/<lang>.json.",
+  "welcomeMessage": {
+    "es": "👋 Hola, soy el asistente virtual de la lavandería.",
+    "it": "👋 Ciao, sono l'assistente virtuale della lavanderia.",
+    "en": "👋 Hi, I'm the laundry virtual assistant.",
+    "ca": "👋 Hola, soc l'assistent virtual de la bugaderia.",
+    "fr": "👋 Bonjour, je suis l'assistant virtuel de la laverie.",
+    "pt": "👋 Olá, sou o assistente virtual da lavandaria."
+  },
+
+  "_section_session_lifecycle": "historyResetTtlMs: when the gap between last assistant message and incoming user message exceeds this, the session is recreated fresh (welcome + re-ask location). Default 3 600 000 (1 hour). sessionIdleTtlMs: in-process session cache eviction (idle > this → evicted to bound memory). Default 1 800 000 (30 minutes). agentSessionCacheMax: hard cap on cached sessions (LRU eviction by lastUsedAt when over cap).",
+  "historyResetTtlMs": 3600000,
+  "sessionIdleTtlMs": 1800000,
+  "agentSessionCacheMax": 10000,
+
+  "_section_branch_router": "When true, T1 messages are classified by utils/router.ts (LLM call) into a branch and dispatched to utils/branches/<branch>/handler.ts. T2+ stay deterministic via state.activeBranch. When false (default), the legacy guard pipeline runs unchanged. See docs/branch-router-architecture.md and TODO.md item #2.",
+  "useBranchRouter": true,
+
+  "_section_statechart_router": "When true (and useBranchRouter is also true), the statechart pipeline at machines/ takes the turn BEFORE the legacy branch dispatcher. The root-orchestrator routes to the right family machine (trouble/payment/discount-loyalty/invoice/faq/escalation) based on deterministic events. Reply rendering goes through the LLM polish layer (machines/llm-polish.ts) which receives the statechart's (i18nKey, vars, stage) and produces a natural reply in the customer's language. Default: false (opt-in). When false, behaviour is unchanged from useBranchRouter=true. See machines/PLAN.md.",
+  "useStatechartRouter": false,
+
+  "_section_natural_rephrase": "When true, every guard outcome that is NOT operator-only structured output is passed through utils/agent-rephrase.ts (LLM polish call) for natural tone-matching, using conversation history as context. Adds ~$0.0005 + ~1s latency per rephrased turn. Content invariants are preserved by the rephrase prompt (sacred rules, keywords, codes). Off by default — opt-in via this flag. See CLAUDE.md Pending refactors D1.",
+  "naturalRephrase": true,
+  "_comment_rephraseDisplayFlow": "When true, the rephrase LLM is also applied to display-flow turns (DOOR, PUSH PROG, AL001, etc.) which are normally bypassed (F56). Enables contextual recaps like 'sigues en Goya con la lavadora 5 y el error DOOR 😕 — prueba esto:'. Risk: rephrase may invent operational details not in the original JSON prompt. Monitor carefully and revert to false if hallucinations appear. Default: false.",
+  "rephraseDisplayFlow": true,
+  "_comment_rephraseDisplayFlowRecapInterval": "F75 (2026-05-22) — on Phase B+ display-flow turns (re-ask, escalation approach), the problem summary + reassurance are shown only every N turns (at turns N, 2N, 3N, …). Keeps the recap from feeling repetitive across multiple failed attempts. Must be a positive integer. Default: 3.",
+  "rephraseDisplayFlowRecapInterval": 3,
+
+  "_section_operator_briefing": "When operatorBriefingFromLlm=true, the operator handover summary (the '**👤 Human Support message**' block) is generated by utils/operator-briefing.ts using the conversation history instead of the deterministic template in utils/escalation.ts:buildEscalationSummary. Produces a more natural narrative for the operator. Adds ~$0.0005 + ~1s latency on the escalation-closure turn only. Strict system prompt forbids invented facts; falls back to the deterministic summary on any LLM error. operatorBriefingLanguage controls the LANGUAGE of the briefing (both LLM and deterministic fallback). Accepts any value from enabledLanguages (es/it/en/ca/pt/fr). Default 'es'. The customer-facing reply stays in the customer's session language; only the operator-facing briefing is in this configured language.",
+  "operatorBriefingFromLlm": true,
+  "operatorBriefingLanguage": "es",
+
+  "_section_temperatures": "Per-LLM-call temperatures. Each LLM call site has its own use case: router=classification (low T, anti-hallucination), agent=generation (medium T), rephrase=polish (medium T with strict content constraints), operatorBriefing=summarisation (low T, factual). agentTemperature is the legacy global setting consumed by utils/agent-llm.ts (main turn LLM). routerTemperature drives utils/router.ts (T1 branch classifier — recommended 0-0.2). rephraseTemperature drives utils/agent-rephrase.ts — L5 output policy, 5 responsibilities: language enforcement, name greeting, tone/emoji, security (URL stripping + prompt-injection defense), content preservation. Recommended 0.4-0.7; do NOT exceed 0.7 (breaks keyword-preservation rules). operatorBriefingTemperature drives utils/operator-briefing.ts (recommended 0-0.3 — keep low to avoid invented facts).",
+  "agentTemperature": 0.3,
+  "routerTemperature": 0.2,
+  "rephraseTemperature": 0.6,
+  "operatorBriefingTemperature": 0.2
+}

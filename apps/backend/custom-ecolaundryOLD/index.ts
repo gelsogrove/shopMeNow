@@ -1,0 +1,364 @@
+// Web entrypoint — wraps `agent.ts:agentTurn` in the ChatbotInput/Output shape
+// the CustomClientChatbotService expects. Behaviour stays identical to the CLI.
+
+import { agentTurn, createAgentSession } from './agent.js'
+import { autoExtractFacts } from './utils/agent-extract.js'
+import { extractEscalationContext, buildEscalationSummary } from './utils/escalation.js'
+import { LlmFetchError } from './utils/llm-fetch.js'
+import { logger } from './utils/logger.js'
+import { sanitizePhoneNumber } from './utils/input-sanitize.js'
+
+import type {
+  AgentSession,
+  ChatbotInput,
+  ChatbotOutput,
+  StatePatch,
+  HistoryEntry,
+} from './models/index.js'
+
+// Fallbacks used only when settings.json omits the corresponding field.
+const DEFAULT_HISTORY_RESET_TTL_MS = 60 * 60 * 1000
+const DEFAULT_SESSION_IDLE_TTL_MS = 30 * 60 * 1000
+
+const MAX_CACHED_SESSIONS = Math.max(
+  100,
+  parseInt(process.env.AGENT_SESSION_CACHE_MAX || '10000', 10) || 10000,
+)
+
+// Cap how many history entries we replay on cold start. Without this a malicious
+// or buggy caller could pass tens of thousands of entries and force O(n)
+// extraction work on the request thread (DoS).
+const MAX_HISTORY_REPLAY = Math.max(
+  10,
+  parseInt(process.env.AGENT_MAX_HISTORY_REPLAY || '200', 10) || 200,
+)
+
+/**
+ * Per-session cache keyed by sessionId. On multi-dyno deployments each process
+ * holds its own cache; sticky state lost across dynos is reconstructed from
+ * `input.context.history`. Production code MUST go through
+ * `getOrCreateSession()` so cache caps and locks are honoured — direct access
+ * is reserved for unit tests via the `__testing` export below.
+ */
+const sessionCache = new Map<
+  string,
+  { session: AgentSession; lastUsedAt: number }
+>()
+
+/**
+ * Test-only handle on the internal cache. The `__testing` prefix marks it as
+ * not part of the public API; production code must NOT import it.
+ */
+export const __testing = {
+  sessionCache,
+}
+
+// Updated by getOrCreateSession() to the tenant-configured TTL so that
+// evictIdleSessions() (which has no session context) honours it.
+let cachedIdleTtlMs = DEFAULT_SESSION_IDLE_TTL_MS
+
+const sessionLocks = new Map<string, Promise<unknown>>()
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
+  const agentChain: string[] = ['custom-ecolaundry']
+  return withSessionLock(input.context.sessionId, () =>
+    runChatbotTurn(input, agentChain),
+  )
+}
+
+/**
+ * Serialise turns of the SAME sessionId (different sessions still run in
+ * parallel). In-process only: on multi-dyno deployments use sticky sessions
+ * at the load balancer or a Postgres advisory lock for cross-process safety.
+ */
+export function withSessionLock<T>(sessionId: string, fn: () => Promise<T>): Promise<T> {
+  const previous = sessionLocks.get(sessionId) || Promise.resolve()
+  const next = previous.then(fn, fn)
+  const tracked: Promise<unknown> = next
+    .then(() => undefined, () => undefined)
+    .finally(() => {
+      if (sessionLocks.get(sessionId) === tracked) {
+        sessionLocks.delete(sessionId)
+      }
+    })
+  sessionLocks.set(sessionId, tracked)
+  return next
+}
+
+/** LRU-by-`lastUsedAt` eviction down to MAX_CACHED_SESSIONS. */
+export function enforceCacheCap(): void {
+  if (sessionCache.size < MAX_CACHED_SESSIONS) return
+  const overflow = sessionCache.size - MAX_CACHED_SESSIONS + 1
+  const entries = [...sessionCache.entries()].sort(
+    (a, b) => a[1].lastUsedAt - b[1].lastUsedAt,
+  )
+  for (let i = 0; i < overflow && i < entries.length; i++) {
+    sessionCache.delete(entries[i][0])
+  }
+}
+
+/**
+ * True when the most recent timestamped history entry is older than `resetTtlMs`,
+ * meaning we should drop the cached session and start a brand-new conversation.
+ * Returns false when timestamps are missing — in that case we keep replaying as-is.
+ */
+export function shouldResetHistory(history: HistoryEntry[], resetTtlMs: number): boolean {
+  if (!history.length) return false
+  for (let i = history.length - 1; i >= 0; i--) {
+    const ts = history[i].timestamp
+    if (!ts) continue
+    const parsed = Date.parse(ts)
+    if (Number.isNaN(parsed)) continue
+    return Date.now() - parsed > resetTtlMs
+  }
+  return false
+}
+
+// ── Turn execution ────────────────────────────────────────────────────────────
+
+async function runChatbotTurn(input: ChatbotInput, agentChain: string[]): Promise<ChatbotOutput> {
+  try {
+    const phoneNumber = sanitizePhoneNumber(input.context.phoneNumber)
+    const session = await getOrCreateSession(
+      input.context.sessionId,
+      input.context.history,
+      input.config.language,
+      phoneNumber,
+    )
+    if (phoneNumber) {
+      session.ar.state.customerPhone = phoneNumber
+    }
+
+    const snapshotBefore = snapshotPatchableFields(session)
+    const reply = await agentTurn(session, input.userMessage)
+    const patches = buildPatches(snapshotBefore, session)
+    const { shouldEscalate, escalationSummary } = buildEscalationOutcome(session)
+    const { notificationEmails, operatorContactMethod, operatorWhatsappNumber, smtp } =
+      session.ar.runtime.settings ?? {}
+
+    return {
+      reply,
+      shouldEscalate,
+      escalationSummary,
+      notificationEmails,
+      operatorContactMethod,
+      operatorWhatsappNumber,
+      smtpConfig: smtp,
+      patches,
+      meta: { tokensUsed: 0, agentChain },
+    }
+  } catch (error) {
+    // Log the full error internally for debugging, but return a generic
+    // message to the caller so we don't leak upstream details (API keys in
+    // headers, internal hostnames, stack fragments) into the response body.
+    logger.error('chatbot turn failed', {
+      sessionId: input.context.sessionId,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    })
+    // F85 — OpenRouter failures (auth/credits/rate/timeout/network) surface
+    // as LlmFetchError after the in-module retry+backoff has been exhausted.
+    // Signal the host app via `error: 'llm_unavailable'` so the widget can
+    // serve workspace.wipMessage instead of a generic error. No additional
+    // OpenRouter cost: we are already in the catch path, no retry beyond the
+    // 3 attempts in utils/llm-fetch.ts.
+    if (error instanceof LlmFetchError) {
+      return {
+        reply: null,
+        shouldEscalate: false,
+        patches: [],
+        error: 'llm_unavailable',
+        meta: { tokensUsed: 0, agentChain },
+      }
+    }
+    return {
+      reply: null,
+      shouldEscalate: false,
+      patches: [],
+      error: 'agent_error',
+      meta: { tokensUsed: 0, agentChain },
+    }
+  }
+}
+
+// ── State patches ─────────────────────────────────────────────────────────────
+
+type PatchableSnapshot = {
+  name: string | null
+  language: string
+  phone: string | null
+  company: string
+  address: string
+  notes: string
+}
+
+function snapshotPatchableFields(session: AgentSession): PatchableSnapshot {
+  const { state } = session.ar
+  return {
+    name: state.customerName,
+    language: state.language,
+    phone: state.customerPhone,
+    company: state.invoiceData.razonSocial,
+    address: state.invoiceData.direccion,
+    notes: state.invoiceData.notes,
+  }
+}
+
+function buildPatches(before: PatchableSnapshot, session: AgentSession): StatePatch[] {
+  const { state } = session.ar
+  const after: PatchableSnapshot = {
+    name: state.customerName,
+    language: state.language,
+    phone: state.customerPhone,
+    company: state.invoiceData.razonSocial,
+    address: state.invoiceData.direccion,
+    notes: state.invoiceData.notes,
+  }
+  const patches: StatePatch[] = []
+  const keys = Object.keys(before) as (keyof PatchableSnapshot)[]
+  for (const key of keys) {
+    // Language is managed by the session heuristic every turn and must NOT
+    // be persisted back to the customer DB record — doing so causes the detected
+    // language to flip the DB value on every message, making subsequent turns
+    // switch language based on stale DB data rather than the live conversation.
+    if (key === 'language') continue
+    const prev = before[key] ?? ''
+    const curr = after[key] ?? ''
+    if (curr && curr !== prev) {
+      patches.push({ key: key as StatePatch['key'], value: curr })
+    }
+  }
+  return patches
+}
+
+function buildEscalationOutcome(session: AgentSession): {
+  shouldEscalate: boolean
+  escalationSummary?: string
+} {
+  const { ar } = session
+  const shouldEscalate = !!ar.pendingEscalation || ar.state.pendingClosure === 'escalated'
+  if (!shouldEscalate || !ar.state.customerName) {
+    return { shouldEscalate }
+  }
+  try {
+    const ctx = extractEscalationContext(ar.state, ar.state.customerName)
+    const briefingLang = ar.runtime.settings?.operatorBriefingLanguage ?? 'es'
+    return { shouldEscalate, escalationSummary: buildEscalationSummary(ctx, briefingLang) }
+  } catch (err) {
+    logger.warn('Failed to build escalation summary', {
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return { shouldEscalate }
+  }
+}
+
+// ── Session lifecycle ─────────────────────────────────────────────────────────
+
+async function getOrCreateSession(
+  sessionId: string,
+  history: HistoryEntry[],
+  language: ChatbotInput['config']['language'],
+  phoneNumber?: string,
+): Promise<AgentSession> {
+  evictIdleSessions()
+
+  const probeSession = sessionCache.get(sessionId)?.session
+  const resetTtlMs =
+    probeSession?.ar.runtime.settings.historyResetTtlMs ?? DEFAULT_HISTORY_RESET_TTL_MS
+  const resetHistory = shouldResetHistory(history, resetTtlMs)
+  if (resetHistory) sessionCache.delete(sessionId)
+
+  if (!resetHistory) {
+    const cached = sessionCache.get(sessionId)
+    if (cached) {
+      cached.lastUsedAt = Date.now()
+      return cached.session
+    }
+  }
+
+  const session = await createAgentSession()
+  cachedIdleTtlMs = session.ar.runtime.settings.sessionIdleTtlMs ?? DEFAULT_SESSION_IDLE_TTL_MS
+
+  replayHistoryIntoSession(session, resetHistory ? [] : history)
+  if (phoneNumber) session.ar.state.customerPhone = phoneNumber
+  applyTenantLanguage(session, language)
+
+  enforceCacheCap()
+  sessionCache.set(sessionId, { session, lastUsedAt: Date.now() })
+  return session
+}
+
+function evictIdleSessions(): void {
+  const now = Date.now()
+  for (const [key, entry] of sessionCache) {
+    if (now - entry.lastUsedAt > cachedIdleTtlMs) {
+      sessionCache.delete(key)
+    }
+  }
+}
+
+/**
+ * Replay caller-provided history so the agent has full context on cold starts
+ * and multi-dyno failovers. We also re-run autoExtractFacts on each user
+ * message so deterministic sticky state (location, machineType, …) is rebuilt
+ * — without this, guards that depend on that state would never fire after a
+ * cold start and the LLM would escalate prematurely.
+ *
+ * `customerName` is INTENTIONALLY not seeded from `input.userName`: registration
+ * placeholders ("Unknown User-12345", "test1", phone numbers) are unsuitable
+ * for the operator handover summary. customerName is set ONLY when the
+ * customer types it in chat after the bot asks "¿Cómo te llamas?".
+ */
+function replayHistoryIntoSession(session: AgentSession, history: HistoryEntry[]): void {
+  const trimmed =
+    history.length > MAX_HISTORY_REPLAY ? history.slice(-MAX_HISTORY_REPLAY) : history
+  if (trimmed.length < history.length) {
+    logger.warn('History replay truncated to MAX_HISTORY_REPLAY', {
+      received: history.length,
+      kept: trimmed.length,
+      cap: MAX_HISTORY_REPLAY,
+    })
+  }
+  for (const entry of trimmed) {
+    session.history.push({ role: entry.role, content: entry.content })
+    if (entry.role !== 'user') continue
+    try {
+      autoExtractFacts(session.ar, entry.content)
+    } catch (err) {
+      logger.debug('autoExtractFacts threw during history replay; skipping entry', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
+  }
+}
+
+/**
+ * Apply a fallback language so guards have a valid `state.language` value
+ * before the customer's first message arrives.
+ *
+ * F80 — Caller config (phone prefix, browser locale, widget selector) sets
+ * `state.language` ONLY as a transient fallback for guards that fire before
+ * any customer message has been processed. It does NOT set
+ * `state.preferredLanguage` — that field is reserved as the sticky-T1 lock
+ * which is decided exclusively from the customer's first real message
+ * (router LLM + heuristic in agent.ts:resolveLanguageForTurn). Caller config
+ * is data ABOUT the customer, not data FROM the customer; the contract is
+ * "tenant decides language from the customer's own words at T1".
+ *
+ * Tenant lock: even the fallback is forced into `enabledLanguages`; if the
+ * caller-supplied language is disabled (e.g. 'it' when enabled=['es','ca',
+ * 'en']) we fall back to `defaultLanguage`.
+ */
+function applyTenantLanguage(
+  session: AgentSession,
+  language: ChatbotInput['config']['language'],
+): void {
+  const { enabledLanguages, defaultLanguage } = session.ar.runtime.settings
+  const enabled = enabledLanguages || []
+  const resolved = language && enabled.includes(language) ? language : defaultLanguage
+  if (!resolved) return
+  session.ar.state.language = resolved
+  // Intentionally NOT setting preferredLanguage — see jsdoc above.
+}

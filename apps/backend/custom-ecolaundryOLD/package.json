@@ -1,0 +1,27 @@
+{
+  "name": "ecolaundry-demo",
+  "version": "1.0.0",
+  "description": "Ecolaundry Chatbot — LLM-as-agent with deterministic guards",
+  "type": "module",
+  "scripts": {
+    "demo": "node --import tsx agent.ts",
+    "demo:debug": "node --import tsx machines/demo.ts -- --debug",
+    "demo:statechart": "node --import tsx machines/demo.ts",
+    "test:agent": "node --import tsx __tests__/agent/run.ts",
+    "test:unit": "for f in __tests__/unit/*.test.ts; do echo \"=== $(basename $f) ===\" && node --import tsx \"$f\" || exit 1; done",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "keywords": [
+    "chatbot",
+    "ecolaundry",
+    "ecolaundry",
+    "llm-agent"
+  ],
+  "dependencies": {
+    "xstate": "^5.19.0",
+    "ts-pattern": "^5.5.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0"
+  }
+}

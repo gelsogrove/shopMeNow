@@ -1,0 +1,425 @@
+# custom-ecolaundry — Orchestration rules (read every turn)
+
+This file is auto-loaded when working under `apps/backend/custom-ecolaundry/`.
+Read it BEFORE every change. The rules below are non-negotiable.
+
+> **🆕 ARCHITECTURE — statechart (XState) is THE pattern going forward (2026-05-27).**
+> All NEW work goes through `machines/`. The v1 guard pipeline is being
+> deprecated piece by piece. See `machines/PLAN.md` for the full roadmap and
+> [`docs/architecture.md`](docs/architecture.md) §Statechart for the design.
+>
+> **Iron rules v2 (3, replace the v1 8 contradictory ones — see below):**
+>   1. **Statechart is the sole authority on dialogue state** — only `assign(...)`
+>      inside a machine mutates context. No more state mutations sprinkled
+>      across guards.
+>   2. **Detectors emit events, never mutate state** — `machines/event-detector.ts`
+>      reads raw text and returns `TroubleEvent[]`. Phrase detection is
+>      ALLOWED here because the output is typed events, not state changes.
+>   3. **Cleanup is on-exit, never manual** — entering `resolved` runs
+>      `resetOperationalFacts` automatically. No more `releaseActiveFlow` /
+>      `resetMachineFacts` to remember to call.
+
+> **Long-form docs (consult on demand):**
+> - [`docs/architecture.md`](docs/architecture.md) — full layered design, detectors, gather orderings, allowed-large-files, pending refactors, test patterns, prompt caching (§23), **§Statechart pattern**
+> - [`machines/PLAN.md`](machines/PLAN.md) — statechart migration plan (6 families, 46 cases)
+> - [`docs/f-log.md`](docs/f-log.md) — regression catalogue (F1→F105). Read the matching F-entry BEFORE any fix that resembles a past symptom
+> - [`docs/contracts.md`](docs/contracts.md) — per-tool validators
+> - [`docs/adding-use-cases.md`](docs/adding-use-cases.md) — recipes
+> - [`docs/orchestrator.md`](docs/orchestrator.md) — turn pipeline
+> - [`json/cases.json`](json/cases.json) — bridge: doc "Caso N" ↔ code semanticId
+> - [`scripts/check-architecture.sh`](scripts/check-architecture.sh) — CI/pre-commit enforcement
+
+---
+
+## 🔒 The 10 iron rules — verify on every change
+
+1. **No patches in `prompts/agent.txt`**. If the LLM behaves wrong, fix it in code: a guard, a tool validator, or a post-processor invariant. ❌ Adding "DO NOT DO X" to the prompt is forbidden.
+
+2. **Tool refuses, LLM corrects**. Tools validate args + semantics and return actionable errors. The LLM reads the error and retries. ❌ Trusting the LLM to "remember a rule" is forbidden.
+
+3. **One file = one responsibility**. Files >150 lines mixing concerns must be split. Use the cassette structure (`tool-handlers/`, `guards/`, detectors, transitions). Escape hatch: `ALLOWED_LARGE_FILES` in `scripts/check-architecture.sh` (see `docs/architecture.md §15`).
+
+4. **State transitions are named & atomic**. All mutations of `pendingClosure`, `operatorRequested`, `pendingEscalation`, `escalationReason`, `customerNameRequested` go through [`utils/state-transitions.ts`](utils/state-transitions.ts) (`markResolved`, `escalate`, `requireCustomerName`, `captureCustomerName`, `closeAsEscalated`, `startNewFlow`, `resetPostEscalationFlags`, `resetForNewIncident`). ❌ Inline mutations outside that module are forbidden. Enforced by `check-architecture.sh` Rule #4.
+
+5. **Each detector ships with tests**. Pure helpers in `utils/<name>.ts` MUST have a sibling `__tests__/unit/<name>.test.ts` covering happy + edge cases. 100% coverage on the detector itself.
+
+6. **No hardcoded phrase detection for INTENT**. Phrase routing belongs in the LLM. Phrase detection in code is allowed ONLY for boundary signals (greeting, mixed-signal, contrast connectors).
+   **Tracked exemption — FAQ topic guards (cap = 6).** `HORARIOS_TOPIC`, `PRECIO_TOPIC`, `TARJETA_TOPIC`, `RECARGA_TOPIC`, `FACTURA_TOPIC`, `DESCUENTO_TOPIC` (in `utils/patterns.ts`) are intent classifiers kept as fast-path optimisation (6-lang coverage). Plan: route to LLM when ES is stable in production. **Hard cap enforced** by `check-architecture.sh` Rule #6 — to grow the cap, raise `RULE6_TOPIC_CAP` in the script AND update this list in the same commit.
+   **Tracked exemption — Language detection.** `detectLanguageHeuristic()` in `utils/intent.ts` uses scoring-based phrase matching to identify customer language before LLM routing (required architectural gate). 6-lang coverage with multi-language test suite.
+
+7. **Settings are law**. `json/settings.json` is the source of truth for tenant config. `runtime.ts:validateSettings` fails fast on misconfiguration. No code path may produce a reply in a non-allowed language.
+
+8. **Multi-language by design**. Every detector and every operator-facing or customer-facing string covers all 6 supported languages (es, it, en, ca, pt, fr) via the i18n catalogue in `json/i18n/<lang>.json`. No hardcoded language phrases in code.
+   - **Customer reply language**: customer's session language (detected from message).
+   - **Operator briefing language**: `settings.operatorBriefingLanguage` (default `'es'`, validated against `enabledLanguages`). See `utils/escalation.ts` + `utils/operator-briefing.ts`.
+   - **Default tenant scope (Andrea, 2026-05-08)**: SPANISH FIRST for customer-facing text; the active tenant has `defaultLanguage: 'es'`.
+
+9. **Semantic naming, no ordinal references**. File names, pendingFlow markers, reason strings, i18n keys, display flow ids, escalation reasons MUST describe behaviour, not document order. Forbidden tokens in code: `caso\d+`, `case\d+`. The numeric "Caso N" labels in `docs/usecases.md` are documentation-only — bridge in `json/cases.json`. Enforced by `check-architecture.sh` Rule #9.
+
+10. **Guard preconditions must not cancel each other out — every required fact has a catch-all asker**. For every fact the bot must collect, there is a catch-all guard that fires whenever that fact is empty AND no legit escape hatch applies. Today's instance: `guardForceLocation`. **Corollary**: every gather step has a 3-strikes retry+escalate ladder on `state.<fact>AskAttempts` (canonical ask → guidance reask → escalate + requireCustomerName).
+    ❌ Anti-pattern: a gather guard that gates on multiple unrelated state fields. The customer who fills two of three traps the third.
+
+---
+
+## 🆕 Statechart pattern (XState) — the new architecture (2026-05-27)
+
+**MANDATORY for all new work**. Andrea decided on 2026-05-27 that
+custom-ecolaundry must adopt the statechart pattern because the guard
+pipeline produced too many "pezze" (DOOR-sticky bug 2026-05-26 being the
+trigger).
+
+### Where it lives
+
+```
+custom-ecolaundry/
+├── machines/                          ← statechart layer (Phases 1-3 complete)
+│   ├── PLAN.md                        ← migration roadmap (read first)
+│   ├── types.ts                       ← all 6 family context + event types
+│   ├── trouble-machine.machine.ts     ← Family A (Caso 1-3, 13-18, 30, 46)
+│   ├── payment.machine.ts             ← Family B (Caso 4, 6, 7, 19-24, 26-28, 32)
+│   ├── discount-loyalty.machine.ts    ← Family C (Caso 8, 10, 11)
+│   ├── invoice.machine.ts             ← Family D (Caso 9)
+│   ├── faq.machine.ts                 ← Family E (Caso 12, 34-45)
+│   ├── escalation.machine.ts          ← Family F (Caso 25, 26, 29, 31, 33)
+│   ├── root-orchestrator.ts           ← coordinates 6 actors + FAQ pause/resume
+│   ├── family-detector.ts             ← multi-family event detector (deterministic)
+│   ├── llm-polish.ts                  ← (i18nKey, vars, stage) → natural reply
+│   ├── agent-bridge.ts                ← integration with agent.ts (Phase 3)
+│   ├── event-detector.ts              ← legacy Family A detector (kept for reference)
+│   ├── orchestrator.ts                ← legacy Family A orchestrator (kept)
+│   └── demo.ts                        ← 7 scenarios standalone NO-LLM
+└── utils/                              ← legacy v1 (active until Phase 4)
+    └── guards/                         ← being deprecated family by family
+```
+
+### How to ENABLE the statechart pipeline in production
+
+Set in `json/settings.json`:
+```json
+"useStatechartRouter": true
+```
+The flag is OFF by default. When ON, the statechart runs FIRST in agent.ts;
+on `null` return it falls back to the legacy pipeline. Both pipelines
+coexist during the migration.
+
+### How to add new behaviour with the statechart pattern
+
+1. **Identify the family** from `machines/PLAN.md`:
+   - A: machine-incident (display troubleshooting)
+   - B: payment-incident
+   - C: discount / loyalty
+   - D: invoice
+   - E: FAQ
+   - F: escalation triggers
+
+2. **For an EXISTING state**: add a transition in the corresponding
+   `*.machine.ts`. Example: a new display code → add to `DisplayCode`
+   in `types.ts` and to `fixKeyFor()` in the machine.
+
+3. **For a NEW state**: add a state node to the parent compound state
+   with explicit `on:` transitions. NEVER mutate state from outside.
+
+4. **For a NEW event**: add to `TroubleEvent` union in `types.ts`, then
+   in `event-detector.ts` add the detection. Detector emits events;
+   statechart consumes them.
+
+5. **For cleanup logic**: put it in an `entry` or `exit` action. Never
+   call a "reset" function from outside the machine.
+
+6. **For natural conversation**: trust the statechart to be the single
+   source of truth. The LLM polish layer receives `(i18nKey, vars, stage)`
+   and just renders. No more "the LLM might forget the rule".
+
+### How to verify
+
+```bash
+cd apps/backend/custom-ecolaundry
+npm run typecheck                       # must be green
+npm run demo:statechart -- --debug      # standalone, no LLM, prints all transitions
+npm run demo                            # full bot with LLM (needs OPENROUTER_API_KEY)
+```
+
+### What to never do under the new architecture
+
+- ❌ Add a guard that mutates `ar.state.<X>` in `utils/guards/` for new
+  behaviour — go through the statechart instead.
+- ❌ Add a new "sticky branch" exception in `agent.ts`.
+- ❌ Add a "release / reset" function and call it from many places —
+  put the logic in an `entry` action of the right state.
+- ❌ Patch the prompt to teach the LLM about a state — let the polish
+  layer receive the explicit state from the machine.
+- ❌ Add a new `pendingFlow` value — model that flow as a real state in
+  the corresponding machine instead.
+
+### Why the v1 iron rules (below) are kept but partially deprecated
+
+The 10 iron rules v1 below were written before the statechart pattern
+existed. They have internal contradictions (#1 forbids prompt patches,
+#6 sends phrase routing to the LLM, #14 forbids hardcoded phrase
+detection — together they trap us when reliable phrase detection is
+needed). The statechart pattern resolves this: phrase detection is OK
+in `machines/event-detector.ts` because it emits typed events, not state.
+
+**Migration policy**: the v1 rules stay in force for the parts of the
+codebase NOT yet migrated (legacy `utils/guards/`, agent.ts pipeline).
+For NEW work in `machines/`, follow the 3 iron rules v2 at the top.
+
+---
+
+## 🎯 Scope check — ask BEFORE any cross-Caso architectural change
+
+When fixing a bug or extending a feature, classify the scope BEFORE writing any code:
+
+| Scope | Definition | Default action |
+|-------|------------|----------------|
+| **Narrow** | Fix lives inside one Caso's files: its guards, its i18n keys, its JSON entry, its sibling unit test. No cross-Caso symbol touched. | Implement directly. |
+| **Cross-Caso architectural** | Fix touches a shared file (`agent-extract.ts`, `state-transitions.ts`, `runtime.ts`, `localization.ts`, `agent.ts`, `branches/index.ts`, `models/state.ts` union), OR adds a new transversal pattern. | **STOP. ASK Andrea**: "narrow X-line fix on Caso N only, or general Y-line architectural change touching Casi 1-32?" Wait for explicit pick. |
+
+**Forbidden anti-pattern**: silently widening the blast radius. Examples that MUST be flagged as cross-Caso: changing `autoExtractFacts` extraction logic, adding a `pendingFlow` value, modifying `runGuardPipeline` ordering, editing `state-transitions.ts`, updating a shared i18n key already used by multiple Casi, bypassing the branch-router for a new condition.
+
+When in doubt → ask. Cost of asking: 30 seconds. Cost of architecture regression: hours.
+
+---
+
+## 💬 Dialogo fluido — topic-switch può accadere a OGNI turno
+
+L'utente può abbandonare il percorso in qualsiasi momento (DOOR mid-flow → "che orari avete?"). Il bot deve riconoscere il nuovo topic, NON forzare l'utente a finire il percorso precedente.
+
+**Pattern attuale**:
+- **Router LLM al T1** classifica il branch (greeting, faq, trouble-machine, invoice, loyalty, escalation, feedback).
+- **`detectTopicSwitch` in `agent-extract.ts`** rileva mid-flow switch su un set ristretto (topicPayment, topicOps, topicDryerMinutes, topicCardFail, topicRefundDemand, topicCompensation).
+- **`detectFaqPause` in `intent.ts`** rileva pause FAQ → `state.faqPause = true` → L5 appende `resumeAfterFaq` prompt.
+- **Detectors** (`detectDiscountCodeIntent`, `detectInvoiceIntent`, `TARJETA_TOPIC`, etc.) scattano anche mid-flow se `pendingFlow` lo permette.
+
+Quando aggiungi un nuovo Caso/flow/guard, rispondi a 3 domande:
+- **A. Topic-switch IN**: se l'utente è in un altro flow e cambia verso il mio Caso, il mio detector scatta?
+- **B. Topic-switch OUT**: se l'utente è nel mio flow e cambia topic, il mio flow si rilascia o blocca l'altro?
+- **C. Pause + resume**: l'utente fa una FAQ veloce mid-flow e poi vuole continuare. Il mio flow è preservato?
+
+**Anti-patterns**: ❌ detector di topic-switch per coppia specifica (O(N²)); ❌ forzare completamento ignorando nuovo intent; ❌ hardcoded keyword detection (rule #6 violation).
+
+---
+
+## 🐛 Bug intake protocol — mandatory before touching code
+
+When Andrea reports a bug, type out this 7-step template IN MY RESPONSE BEFORE writing any code:
+
+```
+## 🐛 Bug intake — Caso N / F<N+1>
+
+1. **Sintomo**: <one sentence describing the WRONG output>
+2. **Layer**: L1 input / L2 state / L3 detector / L4 guard / L5 polish
+3. **4-source verification** (see docs/architecture.md §18):
+   - PDF Playbook §X.Y says: …
+   - docs/usecases.md Caso N says: …
+   - Code/JSON says: …
+   - Bot reality: …
+   - **Divergenza**: where the 4 disagree.
+4. **Iron rules trap check** (mandatory NO answers):
+   - Sto per patchare `prompts/agent.txt`?  → NO (rule #1)
+   - Sto per mutare `pendingClosure`/etc. inline?  → NO (rule #4)
+   - Sto per aggiungere intent-phrase detection senza real-bug evidence?  → NO (rule #6)
+   - Sto per saltare il test sibling del detector?  → NO (rule #5)
+   - Sto per usare `casoN` ordinal in codice?  → NO (rule #9)
+5. **Fix layer-correct**: <which file + function, at the identified layer>
+6. **F-log entry draft**: sintomo / root cause / fix architetturale (1 paragrafo)
+7. **Pin location**: `__tests__/unit/f-log-regression.test.ts` test name `F<N+1> — <canonical marker>`
+
+→ Procedo a codare SOLO dopo aver scritto tutti i 7 punti.
+```
+
+**Skip when**: feature additions (use Feature intake protocol below), doc-only changes, refactors with no behaviour change.
+
+---
+
+## ✨ Feature intake protocol — mandatory before implementing a new feature
+
+When Andrea requests a new feature (new Caso, gather step, language, detector, tool), type out this 8-step template BEFORE writing code:
+
+```
+## ✨ Feature intake — <feature name>
+
+1. **What**: <one sentence>
+2. **Layer impact**: L1 / L2 / L3 / L4 / L5 / 4 LLM calls — list which.
+3. **Scalability check** (CRITICAL — answer all 3):
+   - Scala a nuovi FLUSSI? (pattern modulare o ad-hoc?)
+   - Scala a nuovi CASI? (stesso pattern per Caso N+1?)
+   - Scala a nuove LINGUE? (6 langs con test? O ES-only oggi?)
+   - Se ANCHE UNA risposta è "no, ad-hoc" → riprogetta prima di codare.
+4. **Recipe match**: quale pattern da `docs/adding-use-cases.md` applico?
+5. **Architecture change?**: la feature richiede modifiche a CLAUDE.md / docs/architecture.md
+   architettura (iron rules, 5 layers, allowed-large-files, branch-router, F-log policy, pre-commit checklist)?
+   - Se NO → procedo
+   - Se SÌ → **STOP. Discuto con Andrea PRIMA di toccare architettura**.
+6. **Pin plan**: dove pinnare il test? (unit + agent E2E + cross-flow)
+7. **F-log relevance**: la feature chiude un bug noto o introduce un pattern che potrebbe regredire? Se SÌ → F-log entry + pin con F-number.
+8. **Docs to update**: usecases.md / contracts.md / cases.json / CLAUDE.md (solo se step 5 = SÌ)
+
+→ Procedo SOLO dopo aver scritto tutti gli 8 punti AND ottenuto go-ahead esplicito su step 5 (se applicabile).
+```
+
+**Skip when**: bug fixes (use Bug intake), doc-only changes, refactor invariante, estensione minore di un detector esistente (<20 righe, stesso file).
+
+**Regola di ferro su architecture changes**: io NON tocco silenziosamente le sezioni architetturali (iron rules, 5 layers, F-log policy, pre-commit checklist). Aggiungere una nuova F-log entry in `docs/f-log.md` è normale workflow. Cambiare la STRUTTURA delle regole è architectural change.
+
+---
+
+## ❓ Pre-edit checklist — chiediti SEMPRE prima di toccare codice
+
+**Before EVERY code edit, answer**:
+
+1. **"Sto facendo bene?"**
+   - Fix al layer architetturale giusto (L1..L5)?
+   - Address ROOT cause o symptom?
+   - Design espandibile a future Casi senza copy-paste?
+
+2. **"Sto rompendo qualcos'altro?"**
+   - `grep -rn` il symbol/file — chi altro chiama?
+   - Callers dipendono dalla OLD shape (signature, return type, JSON schema)?
+   - Unit test coprono il OLD behaviour che fallirebbe?
+   - Cambio contratto (i18n key, JSON schema, state field, function signature) → aggiornato TUTTI i call site?
+
+**After the edit**:
+- `npm run typecheck` — type-level breakage
+- `npm run test:unit` — behavioural breakage
+- Per non-trivial: re-run demo dei Casi precedentemente validati
+
+Quando incerto → **stop and ask Andrea**.
+
+---
+
+## 🚨 Niente pezze (Andrea, 2026-05-23)
+
+> "Niente pezze. Sistema espandibile. Segui architettura altrimenti perdiamo il controllo."
+
+- **Identify the layer first** (L1..L5). Name the contract being touched. Justify why this is the right layer.
+- **No symptom-level patches.** Fix the regex at its source, not a duplicate elsewhere. Find WHY a guard isn't running, don't duplicate it upstream. Don't bandaid downstream when (a) "shouldn't run, delegate", (b) "handler bug", (c) "upstream contract feeds wrong data".
+- **No backward-compat duplicates.** When changing a contract, update every call site. Don't leave the old path "just in case".
+- **Expandable design.** A fix that solves one Caso must not block future Casi.
+- When in doubt → **ASK Andrea** before applying.
+
+---
+
+## 🧭 Test-and-validate workflow
+
+When testing Casi 1..N from `docs/usecases.md`:
+
+1. **Run** `npm run demo -- --batch '[...]'` with customer-side input from the Caso section.
+2. **Validate** every bot reply against canonical sources, in this order:
+   - `docs/usecases.md` (Caso N → criterios + Conversación)
+   - All other files under `docs/` (architecture.md, contracts.md, `docs/csv/*.csv`). **CSVs are operational source of truth** for locations/programs/prices/hours/alarms — behaviour contradicting a CSV is a bug.
+   - `json/settings.json` for tenant config.
+3. **Check four axes**:
+   - **Lingua sticky**: every turn in customer's session language (no spanglish). `state.language` final value matches.
+   - **Contenuto vs contract**: usecases.md è **guideline, not literal-match**. Verifica concetti/keyword (es. "número" + "central" + "saldo" per Caso 4), accetta LLM phrasing variation.
+   - **Traduzioni qualità**: i18n key usate → verifica traduzione in `json/i18n/<lang>.json` naturale. Bad translation = bug, fix the i18n file.
+   - **Casi misti**: almeno uno scenario con typo, multi-info turn, partial answer. Bot estrae quel che c'è, chiede solo ciò che manca, mai loop.
+4. **State final**: `pendingFlow`, `activeBranch`, `activeFlowId`, `pendingClosure` coerenti con outcome.
+5. **Fix root-cause only** (no pezze). Run `bash scripts/check-architecture.sh` + `npm run test:unit` dopo ogni fix.
+
+---
+
+## ✅ Pre-commit checklist (mental, every change)
+
+- [ ] Touched `prompts/agent.txt`? Added behavioural "DO NOT DO X"? **Stop**: goes in code (rule #1).
+- [ ] Mutated `pendingClosure`/`operatorRequested`/`pendingEscalation`/`customerNameRequested`/`escalationReason` inline? **Stop**: use transition (rule #4).
+- [ ] Added phrase regex for INTENT? → LLM (rule #6).
+- [ ] Added detector? Wrote its tests? (rule #5)
+- [ ] **Trigger coverage rule (F29)**: every trigger phrase in `## Caso N` → unit test `→ true`? Never assert usecases-documented trigger as `→ false`.
+- [ ] Touched a tool? Updated [`docs/contracts.md`](docs/contracts.md)?
+- [ ] Files <150 lines? If not, split (rule #3) OR add to `ALLOWED_LARGE_FILES` with reason.
+- [ ] Wrote `casoN`/`caseN` in code/JSON? **Stop**: semantic id from `json/cases.json` (rule #9).
+- [ ] Added new case? Added row to `json/cases.json`?
+- [ ] Added guard with multiple `!ar.state.X` preconditions? Traced every combination has a catch-all (rule #10)?
+- [ ] `npm run typecheck` passes?
+- [ ] `npm run test:unit` passes (all suites)?
+- [ ] `bash scripts/check-architecture.sh` passes?
+- [ ] Multi-language: cover es/it/en/ca/pt/fr? (rule #8)
+- [ ] **Triple-update rule**: all three artefacts updated in lockstep? (see below)
+
+---
+
+## 🔺 Triple-update rule — every bug-fix and feature touches 3 artefacts
+
+**Mandatory** (Andrea, 2026-05-12): every change that closes a bug or adds a behaviour MUST update the THREE artefacts in the SAME PR.
+
+| # | Artefact | What goes in it | Failure mode if skipped |
+|---|----------|-----------------|--------------------------|
+| 1 | **`docs/usecases.md`** — add a sub-case (e.g. `5.4`, `8.3`) or new top-level case | Criterios de aceptación + Conversación. TOC update. | Future-Andrea looks at the doc, doesn't see the behaviour, assumes bug, reverts. |
+| 2 | **Unit test** (`__tests__/unit/<name>.test.ts`) — state-level pin, NO LLM | Detector / guard / state-transition assertions. Multi-language if change crosses lang boundaries. **F-log pin** in `f-log-regression.test.ts`. | check-architecture.sh #5 fails on detector without sibling. |
+| 3 | **Agent test** (`__tests__/agent/<NN>-<case>.test.spec.ts`) — LLM-driven, run with `npm run test:agent` | Scenario mirroring usecases conversation turn-by-turn. Asserts BOT'S OUTPUT (the LLM reply). | Bot passes unit tests but produces wrong customer-facing text (F32/F39/F41). |
+
+**Workflow**: usecases.md (write/update sub-case) → unit test (red → green) → agent test scenario (don't run, costs $) → implement code → F-log entry + pin → pre-commit checklist.
+
+**Sub-cases vs new top-level**: prefer sub-case (`5.4`, `8.3`) over new top-level Caso unless genuinely orthogonal. Sub-cases keep gather/trigger context coherent.
+
+**Anti-patterns**: "I'll add the usecase later" → No. "Unit test is enough, agent test is slow" → No. "Bug fix doesn't need sub-case" → If the bug surfaces a scenario the doc doesn't cover, the doc IS the bug.
+
+---
+
+## 🛡 Enforcement — what blocks a bad commit
+
+Rules are checked by [`scripts/check-architecture.sh`](scripts/check-architecture.sh) + test suite, both in the pre-commit hook.
+
+| Rule | Check | What it catches |
+|------|-------|-----------------|
+| #1 | grep `(DO NOT\|NEVER\|MUST NOT)` in `prompts/agent.txt` without `approved-by-andrea` marker | Behavioural patches that should be in code |
+| #3 | `wc -l` on `utils/*.ts` vs 150 | Cassettes grown into mega-files |
+| #4 | grep `ar\.state\.<flag>\s*=` outside `state-transitions.ts` | Inline state mutations |
+| #5 | every `utils/<detector>.ts` has `__tests__/unit/<detector>.test.ts` | Detectors merged without tests |
+| #6 | count `*_TOPIC` exports in `utils/patterns.ts` <= `RULE6_TOPIC_CAP` (default 6) | Silent growth of the phrase-intent exemption |
+| #9 | grep `caso\d+\|case\d+` in code/json/prompts | Ordinal references to doc cases |
+| #11 | every F-number in `docs/f-log.md` has pin in `f-log-regression.test.ts` | F-log entries without regression pin |
+| #12 | every `json/i18n/<lang>.json` exposes the same top-level keys as `en.json` | Missing translations in a language |
+
+To run: `bash scripts/check-architecture.sh`. Exit code non-zero on any violation.
+
+---
+
+## 🛑 Anti-patterns I must reject
+
+If a request asks me to do any of these, push back, propose the correct layer, and proceed only with explicit confirmation:
+
+- "Just add a rule to the prompt that says…" (rule #1)
+- "Set `state.operatorRequested = true` here directly" (rule #4)
+- "Add a regex to match 'ordine' / 'order' for routing" (rule #6)
+- "Skip the test, it's a small change" (rule #5)
+- "Hardcode this welcome string in the code" (rule #7)
+- "Just patch this one case, don't generalise" (rule #2)
+- "Call this flow `caso8-await-name`" (rule #9)
+- "Put the new case logic in `payment.ts` for now, split later" (rule #3)
+- "This guard skips when X is set, the LLM will handle the rest" (rule #10) — never let the LLM fill the gap.
+- "Let me extract this inline regex preventively, before a bug shows up." → STOP. Pattern-guessing is a pezza disguised as architecture (see `docs/architecture.md §14`).
+
+---
+
+## 📊 Useful commands
+
+```bash
+bash scripts/check-architecture.sh   # 8 enforcement checks (rules 1/3/4/5/6/9/11/12)
+npm run typecheck                    # tsc --noEmit
+npm run test:unit                    # all unit tests (~1600 tests, <1s)
+npm run demo                         # CLI agent REPL (needs OPENROUTER_API_KEY)
+npm run demo:statechart -- --debug   # statechart-only demo (NO LLM, offline)
+npm run test:agent                   # E2E with LLM (slow, costs $)
+
+# Programmatic batch mode (for chatbot-eval skill):
+npm run demo -- --batch '[["msg1","msg2"],"/reset",["scenario 2 turn 1"]]'
+# Each entry: array of turns (one session) OR "/reset" (new session).
+# Output: per-turn [USER]/[BOT] + per-scenario [STATE T-end] snapshot.
+```
+
+### chatbot-eval skill
+
+The skill at [`.claude/skills/chatbot-eval/SKILL.md`](../../../.claude/skills/chatbot-eval/SKILL.md) auto-activates when Andrea says "testa quello che abbiamo fatto" / "valuta il bot" / "fai un giro di test". Reads `git diff main...HEAD`, picks 3-6 diff-driven scenarios, runs them via `npm run demo -- --batch`, evaluates each reply against iron rules + F-log, STOPS to type the Bug intake protocol before any fix (waits for Andrea's OK), then applies the layer-correct fix, verifies all 4 gates (typecheck + test:unit + check-architecture + f-log-regression), produces a final markdown report.
+
+---
+
+## 🤝 What I always do, on every turn
+
+1. Re-read this file's iron rules.
+2. Identify the affected layer(s) before changing anything.
+3. Run typecheck + test:unit at the end. Never claim "done" without both green.
+4. Update `docs/contracts.md` when touching a tool.
+5. Add F-log entry to `docs/f-log.md` + pin in `f-log-regression.test.ts` for every architectural fix.
+6. When in doubt, ask Andrea — never invent rules.
