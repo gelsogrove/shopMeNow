@@ -1821,7 +1821,7 @@ function ChatScreen({
           <div className="px-4 py-2 bg-blue-600 text-white font-semibold shrink-0">
             Use Cases
           </div>
-          <div className="flex-1 overflow-y-auto p-6 prose prose-sm max-w-none">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 prose prose-sm max-w-none break-words">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeSlug, rehypeHighlight]}
@@ -1837,10 +1837,10 @@ function ChatScreen({
                         <>
                           <h1 {...props}>{children}</h1>
                           <div
-                            className="not-prose bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 px-7 py-5 my-5 text-[13px] text-slate-700 leading-relaxed shadow-sm"
+                            className="not-prose bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 px-7 py-5 my-5 text-[16px] text-orange-900 leading-relaxed shadow-sm"
                             style={{ borderRadius: 50 }}
                           >
-                            <strong className="text-emerald-800">DemoWash</strong> es una lavandería demo con varias sedes en franquicia repartidas por Cataluña. Cada sede tiene sus propios precios y horarios, y el chatbot adapta sus respuestas a la lavandería donde se encuentra el cliente. En cuanto a las máquinas, cada incidencia se identifica por un código en pantalla con su procedimiento documentado. A continuación tienes la lista de casos: el chatbot responde de forma autónoma y, cuando hace falta, escala a un operador humano que, desde el panel de administración, puede pausar el bot y chatear directamente con el cliente.
+                            <strong className="text-orange-700">DemoWash</strong> es una lavandería demo con varias sedes en franquicia repartidas por Cataluña. Cada sede tiene sus propios precios y horarios, y el chatbot adapta sus respuestas a la lavandería donde se encuentra el cliente. En cuanto a las máquinas, cada incidencia se identifica por un código en pantalla con su procedimiento documentado: <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">WAIT</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">SELECT</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">OPEN</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">ALERT OPEN</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">ERR-01</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">ALERT</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">BLOCK</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">STOP</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">END</code>. Además, el chatbot es <strong className="text-orange-700">multilingüe</strong> y responde en 6 idiomas (español, italiano, inglés, catalán, portugués y francés), detectando automáticamente el idioma del cliente. A continuación tienes la lista de casos: el chatbot responde de forma autónoma y, cuando hace falta, escala a un operador humano que, desde el panel de administración, puede pausar el bot y chatear directamente con el cliente.
                           </div>
                         </>
                       ),
