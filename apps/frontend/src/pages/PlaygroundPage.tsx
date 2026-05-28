@@ -1096,13 +1096,23 @@ function ChatScreen({
     setTodos(todosRes.todos || [])
   }, [])
 
-  // 🎯 Referrer check — done once on mount. We accept any URL whose origin
-  // is https://www.echatbot.ai AND whose path starts with /demo/demowash
-  // (so /demo/demowash, /demo/demowash/, /demo/demowash?utm=… all qualify).
+  // 🎯 Demo-link detection — done once on mount. We consider the visitor a
+  // DemoWash demo user in two cases:
+  //   1. They are currently on /demo/demowash (the public demo route).
+  //   2. They arrived from https://www.echatbot.ai/demo/demowash and then
+  //      navigated within the app (referrer-based fallback for the case
+  //      where the path no longer matches after in-app routing).
   // Once detected, we persist the flag in sessionStorage so subsequent
   // in-app navigation doesn't lose it.
   useEffect(() => {
     if (isFromDemoLink) return
+    const here = window.location.pathname
+    const onDemoPath = here === "/demo/demowash" || here.startsWith("/demo/demowash/")
+    if (onDemoPath) {
+      sessionStorage.setItem("playground:fromDemoLink", "1")
+      setIsFromDemoLink(true)
+      return
+    }
     try {
       const ref = document.referrer
       if (!ref) return
