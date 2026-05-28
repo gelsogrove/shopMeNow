@@ -1627,11 +1627,13 @@ export class MessageRepository {
       const chatSessions = await this.prisma.chatSession.findMany({
         where: {
           workspaceId: workspaceId,
-          isPlayground: { not: true },
-          customer: {
-            // Exclude legacy playground sessions created before isPlayground flag was set
-            name: { not: { startsWith: "playground_" } },
-          },
+          // 🚧 TEMP DEBUG (Andrea): playground/debugMode chats are ALLOWED into the
+          // app chat list for now. Re-enable the filter below when debugging is done.
+          // isPlayground: { not: true },
+          // customer: {
+          //   // Exclude legacy playground sessions created before isPlayground flag was set
+          //   name: { not: { startsWith: "playground_" } },
+          // },
         },
         include: {
           customer: {
