@@ -39,7 +39,20 @@ const optionalPlaygroundAuth = (req: any, res: any, next: any) => {
   next()
 }
 
+// Public endpoint: resolves chatbot slug → workspaceId for standalone demo
+// pages. No auth, no workspace header. Read-only on workspace metadata.
+playgroundRouter.get("/playground/resolve-demo/:slug", (req, res) => controller.resolveDemo(req, res))
+
+// Public endpoint: send a chat message to a demo workspace (customChatbotId set).
+// No auth required — workspaceId comes from body. Validation in the controller
+// enforces that the target workspace is a demo (customChatbotId present).
+playgroundRouter.post("/playground/demo-chat", (req, res) => controller.sendDemoChat(req, res))
+
+// Public endpoint: returns the usecases.md content for a demo chatbot slug.
+playgroundRouter.get("/playground/demo-usecases/:slug", (req, res) => controller.getDemoUsecases(req, res))
+
 // Optional auth wrapper applied to all endpoints
+playgroundRouter.get("/playground/workspace-info", optionalPlaygroundAuth, (req, res) => controller.getWorkspaceInfo(req, res))
 playgroundRouter.get("/playground/usecases", optionalPlaygroundAuth, (req, res) => controller.getUsecases(req, res))
 playgroundRouter.get("/playground/messages", optionalPlaygroundAuth, (req, res) => controller.getMessages(req, res))
 playgroundRouter.get("/playground/todos", optionalPlaygroundAuth, (req, res) => controller.getTodos(req, res))

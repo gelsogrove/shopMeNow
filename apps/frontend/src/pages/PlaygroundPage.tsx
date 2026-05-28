@@ -326,6 +326,72 @@ function LoginScreen({ onLogin }: { onLogin: (u: PlaygroundUser) => void }) {
 }
 
 // ----------------------------------------------------------------------------
+// DEMOWASH INFO BOX (shown above the Chats sidebar when workspace is demowash)
+// ----------------------------------------------------------------------------
+function DemowashInfoBox() {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-b border-emerald-200 shrink-0">
+      <div className="px-3 py-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-lg">🧺</span>
+            <h3 className="text-sm font-bold text-emerald-800 truncate">
+              Demowash · Demo
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="text-xs text-emerald-700 hover:text-emerald-900 font-medium shrink-0"
+            title={expanded ? "Collapse" : "Expand"}
+          >
+            {expanded ? "−" : "+"}
+          </button>
+        </div>
+        <p className="text-[11px] text-slate-700 leading-snug mt-1">
+          Lavanderías self-service en franquicia · 6 sedes en Cataluña
+        </p>
+        {expanded && (
+          <div className="mt-2 pt-2 border-t border-emerald-200 space-y-2">
+            <div>
+              <p className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wide mb-1">
+                Sedes
+              </p>
+              <p className="text-[11px] text-slate-700 leading-snug">
+                Mataró · Barcelona (Eixample, Gràcia) · Sant Cugat · Rubí · Terrassa
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wide mb-1">
+                Códigos de pantalla
+              </p>
+              <p className="text-[11px] text-slate-700 leading-snug font-mono">
+                WAIT · SELECT · OPEN · ERR-12 · ERR-01 · ALERT · ALERT OPEN · BLOCK
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wide mb-1">
+                Idiomas
+              </p>
+              <p className="text-[11px] text-slate-700 leading-snug">
+                ES · IT · EN · CA · FR · PT (detección automática)
+              </p>
+            </div>
+            <div className="pt-1.5 border-t border-emerald-200">
+              <p className="text-[11px] text-slate-600 italic leading-snug">
+                Cada sede aplica reglas locales: horarios, precios y métodos de
+                pago diferentes (p. ej. Gràcia solo acepta tarjeta, abre 7:00–23:00).
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
 // SHARED TOP BAR
 // ----------------------------------------------------------------------------
 function TopBar({
@@ -333,26 +399,32 @@ function TopBar({
   onLogout,
   rightSlot,
   leftSlot,
+  title,
+  hideUserChip,
 }: {
   user: PlaygroundUser
   onLogout: () => void
   rightSlot?: React.ReactNode
   leftSlot?: React.ReactNode
+  title?: string
+  hideUserChip?: boolean
 }) {
   return (
     <header className="bg-emerald-700 text-white px-6 py-3 flex justify-between items-center shadow shrink-0 z-10">
       <div className="flex items-center gap-4">
         {leftSlot}
-        <h1 className="text-xl font-bold">Ecolaundry Playground</h1>
+        <h1 className="text-xl font-bold">{title || "Ecolaundry"} Playground</h1>
       </div>
       <div className="flex items-center gap-3">
         {rightSlot}
-        <span
-          className="px-3 py-1 rounded-full text-sm font-medium"
-          style={{ background: ALLOWED_USERS[user].color }}
-        >
-          {user}
-        </span>
+        {!hideUserChip && (
+          <span
+            className="px-3 py-1 rounded-full text-sm font-medium"
+            style={{ background: ALLOWED_USERS[user].color }}
+          >
+            {user}
+          </span>
+        )}
         <button
           onClick={onLogout}
           title="Logout"
@@ -978,6 +1050,8 @@ function ChatScreen({
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [todos, setTodos] = useState<Todo[]>([])
   const [usecasesMd, setUsecasesMd] = useState("")
+  const [workspaceName, setWorkspaceName] = useState<string>("Ecolaundry")
+  const [customChatbotId, setCustomChatbotId] = useState<string | null>(null)
   const [commentingMessage, setCommentingMessage] = useState<ChatMessage | null>(null)
   const [showNewChat, setShowNewChat] = useState(false)
   const [chatInput, setChatInput] = useState("")
@@ -1050,6 +1124,13 @@ function ChatScreen({
       .then((r) => r.text())
       .then(setUsecasesMd)
       .catch(() => setUsecasesMd("# Use Cases\n\nFile not found."))
+    playFetch(`${API_BASE}/workspace-info`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.name) setWorkspaceName(data.name)
+        if (data?.chatbotId) setCustomChatbotId(data.chatbotId)
+      })
+      .catch(() => {/* keep default 'Ecolaundry' */})
     // Pause polling when the tab is hidden — saves backend traffic
     // for a playground that is left open in a background tab.
     let interval: ReturnType<typeof setInterval> | null = null
@@ -1334,6 +1415,8 @@ function ChatScreen({
       <TopBar
         user={user}
         onLogout={onLogout}
+        title={workspaceName}
+        hideUserChip={customChatbotId === "demowash"}
         rightSlot={
           <div className="flex items-center gap-2">
             <button
@@ -1362,6 +1445,7 @@ function ChatScreen({
       <div className="flex-1 grid grid-cols-12 gap-3 p-3 min-h-0">
         {/* CHAT LIST — wider column (+80px) for chat title visibility */}
         <aside className="col-span-3 bg-white rounded-xl shadow flex flex-col overflow-hidden min-h-0 min-w-[280px]">
+          {customChatbotId === "demowash" && <DemowashInfoBox />}
           <div className="px-3 py-2 bg-emerald-600 text-white shrink-0">
             <span className="font-semibold text-sm">Chats</span>
           </div>
@@ -1958,7 +2042,19 @@ function KanbanScreen({
   const [openTodo, setOpenTodo] = useState<Todo | null>(null)
   const [filter, setFilter] = useState<"" | Priority>("")
   const [showNewTask, setShowNewTask] = useState(false)
+  const [workspaceName, setWorkspaceName] = useState<string>("Ecolaundry")
+  const [customChatbotId, setCustomChatbotId] = useState<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
+
+  useEffect(() => {
+    playFetch(`${API_BASE}/workspace-info`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.name) setWorkspaceName(data.name)
+        if (data?.chatbotId) setCustomChatbotId(data.chatbotId)
+      })
+      .catch(() => {/* keep default */})
+  }, [])
 
   const fetchTodos = useCallback(async () => {
     const [todosRes, msgRes] = await Promise.all([
@@ -2025,6 +2121,8 @@ function KanbanScreen({
       <TopBar
         user={user}
         onLogout={onLogout}
+        title={workspaceName}
+        hideUserChip={customChatbotId === "demowash"}
         leftSlot={
           <Link
             to="/demo/ecolaundry"

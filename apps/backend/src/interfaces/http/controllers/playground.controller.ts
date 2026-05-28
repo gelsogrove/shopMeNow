@@ -100,6 +100,97 @@ export class PlaygroundController {
     }
   }
 
+  // GET /api/v1/playground/demo-usecases/:slug
+  // Public endpoint: returns the usecases.md content for a demo chatbot
+  // identified by slug (e.g. "demowash"). No auth required. Mirrors
+  // getUsecases but resolves the workspace via customChatbotId match
+  // instead of via auth header/session.
+  async getDemoUsecases(req: Request, res: Response) {
+    try {
+      const slug = String(req.params.slug || "").toLowerCase()
+      if (!/^[a-z0-9-]+$/.test(slug)) {
+        return res.status(400).json({ error: "Invalid slug format" })
+      }
+      // Whitelist check: only allow slugs that correspond to a real demo workspace
+      const workspace = await prisma.workspace.findFirst({
+        where: { customChatbotId: slug },
+        select: { id: true },
+      })
+      if (!workspace) {
+        return res.status(404).json({ error: `No demo workspace found for slug='${slug}'` })
+      }
+      const candidates = [
+        path.resolve(__dirname, `../../../../custom-${slug}/usecases.md`),
+        path.resolve(process.cwd(), `custom-${slug}/usecases.md`),
+        path.resolve(process.cwd(), `apps/backend/custom-${slug}/usecases.md`),
+      ]
+      const filePath = candidates.find((p) => fs.existsSync(p))
+      if (!filePath) {
+        return res.status(404).json({ error: "usecases.md not found" })
+      }
+      const content = fs.readFileSync(filePath, "utf-8")
+      res.setHeader("Content-Type", "text/markdown; charset=utf-8")
+      return res.send(content)
+    } catch (error: any) {
+      logger.error("Playground getDemoUsecases error:", error)
+      return res.status(500).json({ error: "Failed to load demo usecases", message: error.message })
+    }
+  }
+
+  // GET /api/v1/playground/workspace-info
+  // Returns minimal display info (name + chatbotId) about the current workspace.
+  // Used by the playground top bar to render a dynamic title that matches the
+  // active workspace (e.g. "Demowash Playground" instead of always "Ecolaundry").
+  async getWorkspaceInfo(req: Request, res: Response) {
+    try {
+      const workspaceId = await resolveWorkspaceId(req)
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { name: true, customChatbotId: true, slug: true },
+      })
+      if (!workspace) {
+        return res.status(404).json({ error: "Workspace not found" })
+      }
+      return res.json({
+        name: workspace.name,
+        chatbotId: workspace.customChatbotId,
+        slug: workspace.slug,
+      })
+    } catch (error: any) {
+      logger.error("Playground getWorkspaceInfo error:", error)
+      return res.status(500).json({ error: "Failed to load workspace info", message: error.message })
+    }
+  }
+
+  // GET /api/v1/playground/resolve-demo/:slug
+  // Public endpoint: given a chatbot slug (e.g. "demowash"), returns the
+  // workspaceId of the demo workspace whose customChatbotId matches. Used by
+  // standalone demo pages (no login required) to discover which workspace
+  // to talk to.
+  async resolveDemo(req: Request, res: Response) {
+    try {
+      const slug = String(req.params.slug || "").toLowerCase()
+      if (!/^[a-z0-9-]+$/.test(slug)) {
+        return res.status(400).json({ error: "Invalid slug format" })
+      }
+      const workspace = await prisma.workspace.findFirst({
+        where: { customChatbotId: slug },
+        select: { id: true, name: true, customChatbotId: true },
+      })
+      if (!workspace) {
+        return res.status(404).json({ error: `No workspace found with customChatbotId='${slug}'` })
+      }
+      return res.json({
+        workspaceId: workspace.id,
+        workspaceName: workspace.name,
+        chatbotId: workspace.customChatbotId,
+      })
+    } catch (error: any) {
+      logger.error("Playground resolveDemo error:", error)
+      return res.status(500).json({ error: "Failed to resolve demo", message: error.message })
+    }
+  }
+
   // GET /api/v1/playground/messages
   async getMessages(req: Request, res: Response) {
     try {
@@ -271,6 +362,39 @@ export class PlaygroundController {
   // POST /api/v1/playground/chat
   // Body: { customerPhone?, sessionId?, message }
   // Creates a customer/session if needed, runs ChatEngine and returns response
+  // POST /api/v1/playground/demo-chat
+  // Public no-auth endpoint for standalone demo pages (e.g. /demo/demowash).
+  // Accepts workspaceId in body, but ONLY allows workspaces with customChatbotId
+  // set (i.e. demo workspaces). For non-demo workspaces use sendChat (auth-protected).
+  async sendDemoChat(req: Request, res: Response) {
+    try {
+      const { workspaceId, message, customerPhone, sessionId, customerName } = req.body
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ error: "message is required" })
+      }
+      if (!workspaceId || typeof workspaceId !== "string") {
+        return res.status(400).json({ error: "workspaceId is required" })
+      }
+      // Whitelist check: only allow demo workspaces (customChatbotId set)
+      const ws = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { customChatbotId: true },
+      })
+      if (!ws?.customChatbotId) {
+        return res.status(403).json({ error: "demo-chat only allowed for workspaces with customChatbotId set" })
+      }
+      // Reuse the main sendChat logic by faking the request shape.
+      // We set req.workspaceId so resolveWorkspaceId (called inside sendChat)
+      // picks it up without needing JWT auth.
+      ;(req as any).workspaceId = workspaceId
+      ;(req as any).demoMode = true
+      return this.sendChat(req, res)
+    } catch (error: any) {
+      logger.error("Playground sendDemoChat error:", error)
+      return res.status(500).json({ error: "Failed to send demo chat", message: error.message })
+    }
+  }
+
   async sendChat(req: Request, res: Response) {
     try {
       const { customerPhone, sessionId, message, customerName } = req.body
