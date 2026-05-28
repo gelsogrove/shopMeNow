@@ -62,6 +62,8 @@ Algunos problemas se describen como **síntoma del cliente**, no como código en
 
 ### Síntoma "no centrifuga" / "la ropa salió empapada"
 
+Token canónico: **`no_centrifuga`** (úsalo en `remember({symptom: "no_centrifuga"})`).
+
 Frases típicas (en cualquier idioma):
 
 - it: *"non centrifuga"*, *"non fa la centrifuga"*, *"la lavatrice non centrifuga"*, *"i panni sono fradici/zuppi"*
@@ -71,13 +73,21 @@ Frases típicas (en cualquier idioma):
 - fr: *"ne essore pas"*, *"le linge est trempé"*
 - pt: *"não centrifuga"*, *"a roupa saiu encharcada"*
 
+**🚨 En el T1**, en cuanto reconozcas una de estas frases:
+1. Llama `remember({symptom: "no_centrifuga"})` en el mismo turno. Esto fija el síntoma en SESSION STATE y verás `Reported symptom: no_centrifuga` en cada turno siguiente.
+2. Empieza el gather pidiendo lo que te falta (location, luego machine — una cosa por turno).
+
 **Clasificación**: este NO es un problema de pantalla. La lavadora ha interrumpido la centrífuga (típicamente por carga desequilibrada que hace saltar el sensor de seguridad). **NO pidas displayCode** — el cliente no lo necesita decir.
 
 **Datos que SÍ necesitas antes de aplicar el procedimiento**:
-1. `location` — para el briefing si se escala.
-2. `machine` — número de la lavadora, para el briefing si se escala.
+1. `symptom: "no_centrifuga"` — guardado vía `remember` ya en T1.
+2. `location` — para el briefing si se escala.
+3. `machine` — número de la lavadora, para el briefing si se escala.
 
-Si te falta location, pregúntala. Si te falta machine, pregúntalo. **Una pregunta por turno** (regla general del prompt).
+**Cuándo aplicar el procedimiento de abajo** (no antes, no después):
+- Mira SESSION STATE: ¿tienes `Reported symptom: no_centrifuga` + `Active location` + `Machine`? → aplica YA el procedimiento, **sin un turno extra de "¿qué ves en pantalla?"**.
+- Si te falta location → pregúntala (una cosa por turno).
+- Si te falta machine → pregúntalo (una cosa por turno).
 
 **Procedimiento (adáptalo al idioma del cliente)**:
 

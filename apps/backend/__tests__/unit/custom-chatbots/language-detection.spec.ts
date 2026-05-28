@@ -131,7 +131,7 @@ describe.each(MODULES)(
     describe("scoreLanguages — exposed for transparency", () => {
       it("returns zero for all languages on empty input", () => {
         const s = score("")
-        expect(s).toEqual({ es: 0, it: 0, en: 0, ca: 0, fr: 0, pt: 0, de: 0, ar: 0, zh: 0 })
+        expect(s).toEqual({ es: 0, it: 0, en: 0, ca: 0, fr: 0, pt: 0, de: 0, ar: 0, zh: 0, da: 0, el: 0, fi: 0, pl: 0, tr: 0, uk: 0 })
       })
 
       it("on the Catalan bug-report message, ca beats es", () => {

@@ -164,14 +164,14 @@ const TOOLS = [
     function: {
       name: 'remember',
       description:
-        'Record facts about the customer so they are not re-asked. Call this WHENEVER the customer provides a new fact (name, location/laundromat, machine number, machine type, display code, language). Use merge semantics: only pass the fields that changed. Valid locations are documented in the prompt (LOCATIONS). Display codes are the exact strings the customer reads from the machine screen.',
+        'Record facts about the customer so they are not re-asked. Call this WHENEVER the customer provides a new fact (name, location/laundromat, machine number, machine type, display code, reported symptom). Use merge semantics: only pass the fields that changed. Valid locations are documented in the prompt (LOCATIONS). Display codes are the exact strings the customer reads from the machine screen. The `symptom` field is for documented Category-D symptoms (no display code) and MUST persist across the whole gather flow — set it as soon as the customer describes the problem.',
       parameters: {
         type: 'object',
         properties: {
           name: { type: 'string', description: 'Customer full name (e.g. "Marco Rossi")' },
           location: {
             type: 'string',
-            description: 'Laundromat name (canonical: Hortes, Goya, Alemanya, Pineda, L\'Escala, Platja d\'Aro).',
+            description: 'Laundromat name (canonical: Hortes, Goya, Alemanya, Pineda, L\'Escala, Platja d\'Aro). Do NOT pass a value the customer named that is not on this list — instead disambiguate in the reply.',
           },
           machineType: {
             type: 'string',
@@ -182,6 +182,11 @@ const TOOLS = [
           displayCode: {
             type: 'string',
             description: 'Exact display string (e.g. "DOOR", "SEL", "PUSH PROG", "ALM"). Uppercase as shown.',
+          },
+          symptom: {
+            type: 'string',
+            description:
+              'Canonical token for a documented Category-D symptom WITHOUT a display code. Use one of: "no_centrifuga" (clothes came out soaking wet / washer didn\'t spin), "ropa_humeda" (clothes still damp after dryer), "ropa_quemada" (clothes came out burnt/stained/with plastic). Call this AS SOON AS the customer reports the symptom (turn 1) so it survives the gather flow.',
           },
         },
         additionalProperties: false,
@@ -273,6 +278,7 @@ async function executeTool(
     if (args.machineType === 'washer' || args.machineType === 'dryer') patch.machineType = args.machineType
     if (typeof args.machine === 'number' && Number.isFinite(args.machine)) patch.machine = args.machine
     if (typeof args.displayCode === 'string') patch.displayCode = args.displayCode
+    if (typeof args.symptom === 'string' && args.symptom.trim()) patch.symptom = args.symptom.trim()
     // NOTE: `language` is NOT accepted here anymore. Language is detected
     // deterministically by `seedLanguageIfNeeded()` before each turn. See
     // architecture.md §"T1 empty-reply fix".

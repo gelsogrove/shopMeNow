@@ -137,7 +137,10 @@ export function registerMessageTimestamp(sessionId: string, now: number, windowM
 // detector below. `state.language` is intentionally wider (`string`) so
 // the LLM can detect and reply in ANY language Claude supports — the
 // prompt handles the long tail (Japanese, Russian, Hindi, etc.).
-type KnownLang = 'es' | 'ca' | 'en' | 'it' | 'fr' | 'pt' | 'de' | 'ar' | 'zh'
+type KnownLang =
+  | 'es' | 'ca' | 'en' | 'it' | 'fr' | 'pt' | 'de'
+  | 'ar' | 'zh'
+  | 'da' | 'uk' | 'pl' | 'fi' | 'el' | 'tr'
 
 const DEFAULT_LANGUAGE: KnownLang = 'es'
 
@@ -167,9 +170,33 @@ const LANG_MARKERS: Record<KnownLang, RegExp> = {
   de: /\b(der|die|das|den|dem|des|und|oder|nicht|ist|sind|war|waren|ich|du|wir|ihr|sie|es|was|wie|wo|wann|warum|heute|gestern|waschmaschine|waschsalon|seife|hallo|danke|ja|nein|für|fuer|ueber|über)\b/i,
   ar: /[؀-ۿ]+/,
   zh: /[一-鿿]+/,
+  // Danish: closed-class words distinctive vs Norwegian/Swedish where possible
+  // (hvad vs hva, hvornår vs når/när, sæbe vs såpe/tvål). Some overlap with
+  // Norwegian Bokmål is unavoidable — accept it for the POC.
+  da: /\b(jeg|ikke|hvad|hvordan|hvornår|tak|hej|også|sæbe|vaskemaskine|noget|meget|skal|vil|mig|dig|hvis|godt|sådan|hvor|må|får|går)\b/i,
+  // Ukrainian: distinctive Cyrillic letters that Russian does not use
+  // (і, ї, є, ґ). Any single occurrence is a strong signal.
+  uk: /[іїєґІЇЄҐ]/,
+  // Polish: closed-class words + Polish-specific diacritic letters
+  // (ą, ć, ę, ł, ń, ś, ź, ż). The diacritics alone are enough to
+  // distinguish from other Slavic Latin-script languages.
+  pl: /\b(jest|nie|tak|czy|jak|gdzie|kiedy|dziś|wczoraj|pralka|mydło|cześć|dziękuję|witaj|który|tylko|bardzo|dobrze|już|jeszcze|teraz|dzień|dobry|przepraszam)\b|[ąćęłńśźż]/i,
+  // Finnish: distinctive agglutinative words + ä/ö doublings. ei/on/joka
+  // are very high-frequency Finnish closed-class words.
+  fi: /\b(ei|on|olen|olet|joka|mitä|missä|milloin|miten|kuinka|tänään|eilen|pesukone|saippua|hei|kiitos|kyllä|minä|sinä|tämä|että|kun|jos|mutta|hyvä|paljon|jotain)\b/i,
+  // Greek: Greek + Greek Extended Unicode blocks. Greek script is
+  // exclusive — any run of these characters is a strong signal.
+  el: /[Ͱ-Ͽἀ-῿]+/,
+  // Turkish: high-frequency closed-class words + Turkish-specific letters
+  // (ş, ğ, dotless ı). Distinguishes from German which shares ö/ü/ä.
+  tr: /\b(ve|bir|bu|şu|değil|evet|hayır|nasıl|nerede|bugün|dün|çamaşır|sabun|merhaba|teşekkürler|lütfen|iyi|kötü|var|yok|istiyorum)\b|[şğı]/i,
 }
 
-const LANG_ORDER: KnownLang[] = ['es', 'it', 'en', 'ca', 'fr', 'pt', 'de', 'ar', 'zh']
+const LANG_ORDER: KnownLang[] = [
+  'es', 'it', 'en', 'ca', 'fr', 'pt', 'de',
+  'ar', 'zh',
+  'da', 'uk', 'pl', 'fi', 'el', 'tr',
+]
 
 /**
  * Score each language by counting marker matches in the text.
@@ -177,7 +204,11 @@ const LANG_ORDER: KnownLang[] = ['es', 'it', 'en', 'ca', 'fr', 'pt', 'de', 'ar',
  */
 export function scoreLanguages(text: string): Record<KnownLang, number> {
   const normalized = (text || '').toLowerCase()
-  const scores: Record<KnownLang, number> = { es: 0, it: 0, en: 0, ca: 0, fr: 0, pt: 0, de: 0, ar: 0, zh: 0 }
+  const scores: Record<KnownLang, number> = {
+    es: 0, it: 0, en: 0, ca: 0, fr: 0, pt: 0, de: 0,
+    ar: 0, zh: 0,
+    da: 0, uk: 0, pl: 0, fi: 0, el: 0, tr: 0,
+  }
   if (!normalized.trim()) return scores
   for (const lang of LANG_ORDER) {
     const re = new RegExp(LANG_MARKERS[lang].source, LANG_MARKERS[lang].flags + 'g')
