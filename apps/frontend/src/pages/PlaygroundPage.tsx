@@ -57,6 +57,7 @@ const MIN_BOT_LOADING_MS = 1400
 const ALLOWED_USERS = {
   ANDREA: { password: "Admin123", color: "#2563eb" },
   OLGA: { password: "Admin123", color: "#db2777" },
+  admin: { password: "Admin123", color: "#059669" },
 } as const
 type PlaygroundUser = keyof typeof ALLOWED_USERS
 
@@ -244,14 +245,28 @@ function useAuth() {
     const params = new URLSearchParams(window.location.search)
     const token = params.get("token")
     const workspaceId = params.get("workspaceId")
+    const path = window.location.pathname
 
     if (token && workspaceId) {
       localStorage.setItem("playgroundToken", token)
       localStorage.setItem("playgroundWorkspaceId", workspaceId)
       localStorage.setItem("playgroundUser", "ANDREA")
       setUser("ANDREA")
+    } else if (path.startsWith("/demo/demowash") && !localStorage.getItem("playgroundWorkspaceId")) {
+      // Public entry point for Demowash demo: resolve the workspace id from
+      // the backend so the user can log in with admin/Admin123 without
+      // needing token+workspaceId query params.
+      fetch(`/api/v1/playground/resolve-demo/demowash`)
+        .then((r) => r.json())
+        .then((data) => {
+          if (data?.workspaceId) {
+            localStorage.setItem("playgroundWorkspaceId", data.workspaceId)
+          }
+        })
+        .catch(() => {/* silent fail — login will still fail visibly */})
     } else {
-      const isBasePath = window.location.pathname === "/demo/ecolaundry" || window.location.pathname === "/demo/ecolaundry/"
+      const isBasePath =
+        path === "/demo/ecolaundry" || path === "/demo/ecolaundry/"
       if (isBasePath && localStorage.getItem("playgroundToken")) {
         localStorage.removeItem("playgroundToken")
         localStorage.removeItem("playgroundWorkspaceId")
@@ -281,11 +296,14 @@ function LoginScreen({ onLogin }: { onLogin: (u: PlaygroundUser) => void }) {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
-    const u = username.trim().toUpperCase() as PlaygroundUser
-    if (!ALLOWED_USERS[u]) return setError("Invalid username")
-    if (ALLOWED_USERS[u].password !== password) return setError("Invalid password")
+    const input = username.trim()
+    // Case-insensitive lookup: try exact match, then UPPER, then lower
+    const candidates = [input, input.toUpperCase(), input.toLowerCase()]
+    const match = candidates.find((c) => ALLOWED_USERS[c as PlaygroundUser]) as PlaygroundUser | undefined
+    if (!match) return setError("Invalid username")
+    if (ALLOWED_USERS[match].password !== password) return setError("Invalid password")
     setError("")
-    onLogin(u)
+    onLogin(match)
   }
 
   return (

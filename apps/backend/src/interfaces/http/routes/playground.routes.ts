@@ -1,3 +1,4 @@
+import { prisma } from "@echatbot/database"
 import { Router } from "express"
 import { PlaygroundController } from "../controllers/playground.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
@@ -8,15 +9,37 @@ const playgroundRouter = Router()
 
 // Conditional middleware to enforce JWT and workspace authentication if active dashboard access headers/query params are supplied
 const optionalPlaygroundAuth = (req: any, res: any, next: any) => {
-  if (
-    req.headers.authorization ||
-    req.headers["x-workspace-id"] ||
-    req.query.workspaceId ||
-    req.query.token
-  ) {
+  const hasAuthHeader = !!req.headers.authorization
+  const hasTokenQuery = !!req.query.token
+  const wsHeader = (req.headers["x-workspace-id"] || req.query.workspaceId) as
+    | string
+    | undefined
+
+  if (hasAuthHeader || hasTokenQuery || wsHeader) {
     // If token is supplied in query, put it in the Authorization header for authMiddleware to intercept
     if (req.query.token && !req.headers.authorization) {
       req.headers.authorization = `Bearer ${req.query.token}`
+    }
+
+    // Public demo bypass: workspaceId is supplied but NO token is present.
+    // If the target workspace is a demo (customChatbotId set), allow the
+    // request through without JWT — these workspaces are intentionally
+    // exposed for public-facing demo pages (e.g. /demo/demowash login admin).
+    if (!hasAuthHeader && !hasTokenQuery && wsHeader) {
+      return prisma.workspace
+        .findUnique({
+          where: { id: wsHeader },
+          select: { customChatbotId: true },
+        })
+        .then((ws) => {
+          if (ws?.customChatbotId) {
+            ;(req as any).workspaceId = wsHeader
+            ;(req as any).demoMode = true
+            return next()
+          }
+          return res.status(401).json({ error: "Unauthorized" })
+        })
+        .catch(() => res.status(500).json({ error: "Auth check failed" }))
     }
 
     return authMiddleware(req, res, () => {

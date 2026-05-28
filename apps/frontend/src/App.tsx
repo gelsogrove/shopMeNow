@@ -226,6 +226,24 @@ export function App() {
           }
         />
 
+        {/* Demowash Playground — same PlaygroundPage, public-facing entry.
+            Frontend login admin/Admin123, resolves workspaceId from backend
+            (no JWT required for demo workspaces). */}
+        <Route
+          path="/demo/demowash/*"
+          element={
+            <Suspense
+              fallback={
+                <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
+                  <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                </div>
+              }
+            >
+              <PlaygroundPage />
+            </Suspense>
+          }
+        />
+
         {/* ALL OTHER ROUTES (with providers) */}
         <Route path="*" element={<AppWithProviders />} />
       </Routes>
