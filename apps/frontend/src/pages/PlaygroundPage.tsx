@@ -1008,10 +1008,6 @@ function ChatScreen({
     "es" | "it" | "en" | "fr" | "pt" | "ca" | "de"
   >("es")
   const [usecasesLoading, setUsecasesLoading] = useState(false)
-  // 🎯 CTA gating: show Survey + Contact buttons only when the visitor
-  // arrived from the public demo page (https://www.echatbot.ai/demo/demowash).
-  // We persist the flag in sessionStorage so the buttons keep showing after
-  // an in-app navigation that wipes document.referrer.
   const [workspaceName, setWorkspaceName] = useState<string>("Ecolaundry")
   const [customChatbotId, setCustomChatbotId] = useState<string | null>(null)
   const [commentingMessage, setCommentingMessage] = useState<ChatMessage | null>(null)
