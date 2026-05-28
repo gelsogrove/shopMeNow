@@ -2034,6 +2034,102 @@ function ChatScreen({
 }
 
 // ----------------------------------------------------------------------------
+// FLAG SVGs — inline language-selector flags for the Use Cases header. We
+// render SVG (not emoji) because flag-emoji glyphs are inconsistently
+// supported across macOS / Chrome / Windows fonts: on systems without the
+// emoji font the button shows up as an empty rectangle. SVG is always
+// crisp, scales freely, and renders the same everywhere.
+// ----------------------------------------------------------------------------
+function FlagSvg({ code }: { code: "es" | "it" | "en" | "fr" | "pt" | "ca" }) {
+  // Common props: ~28×20 (3:2 ratio) — readable but compact.
+  const common = {
+    width: 28,
+    height: 20,
+    viewBox: "0 0 9 6",
+    preserveAspectRatio: "xMidYMid slice",
+    className: "rounded-[3px] shadow-sm block",
+    "aria-hidden": true as const,
+  }
+  switch (code) {
+    case "es":
+      // Spain: red / yellow (double-height) / red horizontal bands
+      return (
+        <svg {...common}>
+          <rect width="9" height="6" fill="#AA151B" />
+          <rect y="1.5" width="9" height="3" fill="#F1BF00" />
+        </svg>
+      )
+    case "it":
+      // Italy: green / white / red vertical bands
+      return (
+        <svg {...common}>
+          <rect width="3" height="6" fill="#009246" />
+          <rect x="3" width="3" height="6" fill="#fff" />
+          <rect x="6" width="3" height="6" fill="#CE2B37" />
+        </svg>
+      )
+    case "en":
+      // United Kingdom (Union Jack) — simplified but recognizable
+      return (
+        <svg {...common} viewBox="0 0 60 40">
+          <rect width="60" height="40" fill="#012169" />
+          {/* White diagonals */}
+          <path d="M0,0 L60,40 M60,0 L0,40" stroke="#fff" strokeWidth="8" />
+          {/* Red diagonals */}
+          <path
+            d="M0,0 L60,40 M60,0 L0,40"
+            stroke="#C8102E"
+            strokeWidth="4"
+            clipPath="url(#uk-clip)"
+          />
+          <defs>
+            <clipPath id="uk-clip">
+              <polygon points="0,0 30,20 60,0 60,8 38,20 60,32 60,40 30,20 0,40 0,32 22,20 0,8" />
+            </clipPath>
+          </defs>
+          {/* White cross */}
+          <rect x="25" width="10" height="40" fill="#fff" />
+          <rect y="15" width="60" height="10" fill="#fff" />
+          {/* Red cross */}
+          <rect x="27" width="6" height="40" fill="#C8102E" />
+          <rect y="17" width="60" height="6" fill="#C8102E" />
+        </svg>
+      )
+    case "fr":
+      // France: blue / white / red vertical bands
+      return (
+        <svg {...common}>
+          <rect width="3" height="6" fill="#0055A4" />
+          <rect x="3" width="3" height="6" fill="#fff" />
+          <rect x="6" width="3" height="6" fill="#EF4135" />
+        </svg>
+      )
+    case "pt":
+      // Portugal: green (2/5) + red (3/5) + yellow circle marker
+      return (
+        <svg {...common} viewBox="0 0 60 40">
+          <rect width="24" height="40" fill="#006600" />
+          <rect x="24" width="36" height="40" fill="#FF0000" />
+          <circle cx="24" cy="20" r="6" fill="#FFD700" stroke="#fff" strokeWidth="0.6" />
+          <circle cx="24" cy="20" r="3" fill="#fff" />
+          <circle cx="24" cy="20" r="2" fill="#003399" />
+        </svg>
+      )
+    case "ca":
+      // Catalonia (Senyera): yellow background with 4 red horizontal stripes
+      return (
+        <svg {...common} viewBox="0 0 9 6">
+          <rect width="9" height="6" fill="#FCDD09" />
+          <rect y="0.66" width="9" height="0.66" fill="#DA121A" />
+          <rect y="1.98" width="9" height="0.66" fill="#DA121A" />
+          <rect y="3.30" width="9" height="0.66" fill="#DA121A" />
+          <rect y="4.62" width="9" height="0.66" fill="#DA121A" />
+        </svg>
+      )
+  }
+}
+
+// ----------------------------------------------------------------------------
 // DEMOWASH INTRO CARD — multilingual presentation box shown above the Use
 // Cases markdown. Translations are hardcoded (short text, frequently read,
 // not worth an LLM round-trip). Machine codes (WAIT, SELECT, …) are real

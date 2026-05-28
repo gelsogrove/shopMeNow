@@ -75,8 +75,6 @@
 
 ### 1.1 — Happy Path
 
-**Conversación:**
-
 **Usuario:** La lavadora no funciona  
 **Bot:** Hola, soy el asistente virtual de Demowash. ¿En qué lavandería estás?
 
@@ -104,8 +102,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ### 1.2 — Escalación: máquina no responde tras pulsar
-
-**Conversación:**
 
 **Usuario:** La lavadora no funciona  
 **Bot:** Hola, soy el asistente virtual de Demowash. ¿En qué lavandería estás?
@@ -143,8 +139,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### 2.1 — Happy Path
 
-**Conversación:**
-
 **Usuario:** La lavadora no arranca  
 **Bot:** Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás?
 
@@ -163,8 +157,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ### 2.2 — Escalación: puerta bloqueada tras repetir
-
-**Conversación:**
 
 **Usuario:** La lavadora no arranca  
 **Bot:** Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás?
@@ -190,8 +182,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ### 2.3 — Recap display flow: Phase A / Phase B / cadence N (F74 + F75)
-
-**Conversación:**
 
 **Usuario:** La lavadora no funciona  
 **Bot:** ¿En qué lavandería estás?
@@ -225,8 +215,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 
 ### 3.1 — Happy Path
 
-**Conversación:**
-
 **Usuario:** He pagado pero la lavadora no empieza  
 **Bot:** ¡Hola! ¿En qué lavandería estás?
 
@@ -245,8 +233,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ---
 
 ### 3.2 — Escalación: WAIT persiste
-
-**Conversación:**
 
 **Usuario:** He pagado pero la lavadora no empieza  
 **Bot:** ¡Hola! ¿En qué lavandería estás?
@@ -275,8 +261,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 
 ### 4.1 — No-change Happy Path
 
-**Conversación:**
-
 **Usuario:** He pagado y no se ha activado  
 **Bot:** Hola, soy el asistente virtual de Demowash. ¿En qué local estás?
 
@@ -299,8 +283,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 
 ### 4.2 — Escalación: cambio devuelto pero no arranca
 
-**Conversación A — bare «Sí»:**
-
 **Usuario:** He pagado y no se ha activado  
 **Bot:** Hola, soy el asistente virtual de Demowash. ¿En qué local estás?
 
@@ -319,8 +301,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 **Usuario:** Andrea  
 **Bot:** Gracias, Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
 
-**Conversación B — «Sí, pero no arranca» (variante explícita):**
-
 **Usuario:** Sí, pero la máquina no arranca  
 **Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
 
@@ -329,8 +309,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ## Caso 5 — ERR-12
 
 ### 5.1 — Happy Path
-
-**Conversación:**
 
 **Usuario:** Me sale ERR-12  
 **Bot:** ¡Hola! ¿En qué lavandería estás?
@@ -350,8 +328,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ---
 
 ### 5.2 — Escalación: cliente no puede seguir instrucciones
-
-**Conversación:**
 
 **Usuario:** Me sale ERR-12  
 **Bot:** ¡Hola! ¿En qué lavandería estás?
@@ -378,8 +354,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 
 ### 5.3 — Escalación: ERR-12 persiste
 
-**Conversación:**
-
 **Usuario:** Me sale ERR-12  
 **Bot:** ¡Hola! ¿En qué lavandería estás?
 
@@ -404,8 +378,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ---
 
 ### 5.4 — Pivot ERR-12 → Caso 4 (cliente confirma pagamento)
-
-**Conversación:**
 
 **Usuario:** ERR-12  
 **Bot:** Hola, soy el asistente virtual de la lavandería. ¿En qué pueblo está la lavandería?
@@ -433,8 +405,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ## Caso 6 — Doble cobro
 
 ### 6.1 — Servicio completado (Happy Path)
-
-**Conversación:**
 
 **Usuario:** Me habéis cobrado dos veces con la tarjeta  
 **Bot:** ¡Hola! ¿En qué lavandería te encuentras?
@@ -464,8 +434,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 
 ### 6.2 — Escalación: cliente muy molesto
 
-**Conversación:**
-
 **Usuario:** Me habéis cobrado dos veces, estoy muy enfadado y quiero hablar con un operador ahora mismo  
 **Bot:** ⚠️ Necesitamos derivar tu caso a un operador. ¿Cómo te llamas?
 
@@ -475,8 +443,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ---
 
 ### 6.3 — Escalación: relato inconsistente
-
-**Conversación:**
 
 **Usuario:** Me habéis cobrado dos veces con la tarjeta  
 **Bot:** ¡Hola! ¿En qué lavandería te encuentras?
@@ -503,8 +469,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 
 ### 6.4 — SIN haber usado el servicio
 
-**Conversación:**
-
 **Usuario:** Me habéis cobrado dos veces con la tarjeta  
 **Bot:** Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás?
 
@@ -521,15 +485,11 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 
 ### 6.5 — Validación 4 dígitos tarjeta
 
-**Conversación A — recuperado al segundo intento:**
-
 **Usuario:** 48215  
 **Bot:** Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?
 
 **Usuario:** 4821  
 **Bot:** ¡Perfecto! ¿Podrías enviarme una captura del pago?
-
-**Conversación B — escalada tras 2 intentos inválidos:**
 
 **Usuario:** 482  
 **Bot:** Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?
@@ -545,8 +505,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ## Caso 7 — Pagado sin usar
 
 ### 7.1 — Resuelto vía pantalla SELECT
-
-**Conversación:**
 
 **Usuario:** He pagado y no he podido usar la máquina  
 **Bot:** ¡Hola! ¿En qué lavandería estás?
@@ -578,8 +536,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ### 7.2 — Escalación: máquina no responde tras paso indicado
-
-**Conversación:**
 
 **Usuario:** He pagado y no he podido usar la máquina  
 **Bot:** ¡Hola! ¿En qué lavandería estás?
@@ -620,8 +576,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### 8.1 — Happy Path (formato válido)
 
-**Conversación:**
-
 **Usuario:** Tengo un código y no sé cómo usarlo  
 **Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves?
 
@@ -644,8 +598,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### 8.2 — Formato inválido (retry + escalate)
 
-**Conversación:**
-
 **Usuario:** Tengo un código y no sé cómo usarlo  
 **Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves?
 
@@ -662,8 +614,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### 8.3 — Cliente repite un código en el campo nombre (rechazo + re-ask)
 
-**Conversación A — recuperado al re-ask:**
-
 **Usuario:** Tengo un código  
 **Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves?
 
@@ -675,8 +625,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 **Usuario:** Andrea  
 **Bot:** ¿En qué pueblo / lavandería quieres usarlo?
-
-**Conversación B — escalación tras 3 intentos no validos (ladder):**
 
 **Usuario:** Tengo un código  
 **Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto?
@@ -698,8 +646,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ## Caso 9 — Factura
 
 ### 9.1 — Happy Path
-
-**Conversación:**
 
 **Usuario:** Quiero una factura  
 **Bot:** Claro, te ayudo con la factura. ¿En qué lavandería estuviste?
@@ -740,8 +686,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### 9.2 — Email inválido (retry)
 
-**Conversación:**
-
 [gather hasta coste → bot pide email]
 
 **Usuario:** ana  
@@ -756,8 +700,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ## Caso 10 — Comprar tarjeta fidelización
 
-**Conversación:**
-
 **Usuario:** ¿Cómo consigo la tarjeta de fidelización?  
 **Bot:** La tarjeta de fidelización se compra con 20€ en efectivo y solo funciona en la tienda donde se ha comprado.
 
@@ -771,25 +713,17 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### Caso 10.2 — Tarjeta comprada en otro local (cross-location warning)
 
-**Conversación ES:**
-
 **Bot:** ¿En qué lavandería estás?  
 **Usuario (en Mataró):** Tengo la tarjeta de Rubí, ¿la puedo usar aquí?  
 **Bot:** ⚠️ La tarjeta comprada en Rubí solo funciona en ese local. No es válida aquí en Mataró. Si necesitas una tarjeta para esta lavandería, puedes comprarla aquí con 20€ en efectivo.
-
-**Conversación IT:**
 
 **Bot:** In quale lavanderia sei?  
 **Usuario (a Mataró):** Ho comprato la tessera a Rubí, funziona anche qui?  
 **Bot:** ⚠️ La tessera acquistata a Rubí funziona solo in quella sede. Non è valida qui a Mataró. Se hai bisogno di una tessera per questa lavanderia, puoi acquistarla qui con 20€ in contanti.
 
-**Conversación EN:**
-
 **Bot:** Which laundry are you at?  
 **Usuario (at Mataró):** I bought my loyalty card at Sant Cugat, will it work here?  
 **Bot:** ⚠️ The card bought at Sant Cugat only works at that location. It's not valid here at Mataró. If you need a card for this laundry, you can buy one here for €20 in cash.
-
-**Conversación CA:**
 
 **Bot:** A quina bugaderia ets?  
 **Usuario (a Eixample):** Vaig comprar la targeta a Rubí, funciona aquí?  
@@ -797,14 +731,10 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### Caso 10.3 — Mataró: pregunta loyalty card en T1 + sub-localización en T2 (F100)
 
-**Conversación IT:**
-
 **Usuario:** ciao sono a Mataró posso usare una tessera di fidelizzazione comprata in un altra lavanderia?  
 **Bot:** En Mataró tenemos dos lavanderías: C/ Francisco de Mataró 117 y C/ Eixample 17. ¿Podrías indicarme en cuál estás?  
 **Usuario:** Mataró  
 **Bot:** En Mataró, la tarjeta de fidelidad se compra con 20€ en efectivo y se activa pulsando el segundo botón de la fila derecha de la central. Solo funciona en este local.
-
-**Conversación ES:**
 
 **Usuario:** Estoy en Mataró y quiero comprar la tarjeta de fidelización  
 **Bot:** En Mataró tenemos dos lavanderías: C/ Francisco de Mataró 117 y C/ Eixample 17. ¿Podrías indicarme en cuál estás?  
@@ -815,15 +745,11 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ## Caso 11 — Recargar tarjeta fidelización
 
-**Conversación:**
-
 **Usuario:** ¿Cómo recargo la tarjeta?  
 **Bot:** Introduce la tarjeta y sigue las instrucciones de la central.
 
 **Usuario:** Vale  
 **Bot:** Perfecto. Si al hacerlo aparece algún mensaje extraño, dímelo y lo revisamos.
-
-**Conversación 11.2 (F68 — modal+infinitivo y typo «targeta»):**
 
 **Usuario:** Como puedo recargar la targeta de fidelización  
 **Bot:** Introduce la tarjeta y sigue las instrucciones de la central.
@@ -833,8 +759,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ## Caso 12 — Horarios y precios
 
 ### 12.1 — Horarios por location
-
-**Conversación:**
 
 **Usuario:** ¿Cuáles son los horarios?  
 **Bot:** ¿En qué lavandería o pueblo estás?
@@ -848,8 +772,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ### 12.2 — Precios de lavadora por location y peso
-
-**Conversación:**
 
 **Usuario:** ¿Cuánto cuesta la lavadora?  
 **Bot:** ¿En qué lavandería estás?
@@ -940,8 +862,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 13 — Código de alarma o incoherencia
 
-**Conversación:**
-
 **Usuario:** He pagado y ahora sale BLOCK  
 **Bot:** Hola, soy el asistente virtual de la lavandería. ¿Dónde está la lavandería?
 
@@ -960,8 +880,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 14 — ALERT OPEN
-
-**Conversación:**
 
 **Usuario:** La lavadora no funciona y pone ALERT OPEN  
 **Bot:** Tranquilo, te ayudo. ¿En qué lavandería estás?
@@ -982,8 +900,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 15 — ERR-01
 
-**Conversación:**
-
 **Usuario:** En la pantalla sale ERR-01  
 **Bot:** Gracias. ¿En qué lavandería estás?
 
@@ -996,8 +912,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 16 — ALERT / BLOCK
-
-**Conversación:**
 
 **Usuario:** La secadora pone BLOCK  
 **Bot:** Tranquilo, te ayudo. ¿Dónde está la lavandería?
@@ -1015,8 +929,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 17 — No sabe qué aparece en pantalla
 
-**Conversación:**
-
 **Usuario:** La máquina no va, pero no sé qué pone  
 **Bot:** Tranquilo, lo revisamos juntos. ¿En qué lavandería estás?
 
@@ -1033,8 +945,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 18 — Código solo numérico
 
-**Conversación:**
-
 **Usuario:** Tengo un código: 23432023  
 **Bot:** Gracias. ¿Ves alguna letra delante de los números?
 
@@ -1047,8 +957,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 19 — Datáfono 10€ en Mataró
-
-**Conversación:**
 
 **Usuario:** Estoy en Mataró y el datáfono me ha cobrado 10€  
 **Bot:** Gracias por indicarlo. Vamos a revisarlo. ¿Has podido usar el servicio?
@@ -1063,8 +971,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 20 — Datáfono 10€ en Rubí
 
-**Conversación:**
-
 **Usuario:** En Rubí me ha cobrado 10€  
 **Bot:** Gracias. Vamos a revisarlo. ¿Has podido lavar o secar la ropa?
 
@@ -1077,8 +983,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 21 — Eixample: monedas secadora no suman
-
-**Conversación:**
 
 **Usuario:** He puesto más dinero en la secadora y no suma minutos  
 **Bot:** Gracias. ¿Estás en la lavandería Eixample?
@@ -1093,8 +997,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 22 — Rubí: monedas secadora no suman
 
-**Conversación:**
-
 **Usuario:** He añadido tiempo a la secadora y no lo ha sumado  
 **Bot:** Gracias. ¿Estás en Rubí?
 
@@ -1107,8 +1009,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 23 — Eixample: no se puede pagar con tarjeta
-
-**Conversación:**
 
 **Usuario:** No puedo pagar con tarjeta  
 **Bot:** Te ayudo. ¿En qué lavandería estás?
@@ -1123,8 +1023,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 24 — Sant Cugat: no se puede pagar con tarjeta
 
-**Conversación:**
-
 **Usuario:** La tarjeta no funciona para pagar  
 **Bot:** Gracias. ¿Estás en Sant Cugat?
 
@@ -1138,8 +1036,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 25 — Cliente muy enfadado
 
-**Conversación:**
-
 **Usuario:** ¡Esto siempre falla! ¡Quiero una solución ya!  
 **Bot:** Entiendo tu malestar y quiero ayudarte. Vamos a revisarlo lo antes posible. ¿En qué lavandería estás?
 
@@ -1149,8 +1045,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 26 — Devolución inmediata
-
-**Conversación:**
 
 **Usuario:** Quiero que me devolváis el dinero ahora mismo  
 **Bot:** Vamos a revisarlo contigo. Para tramitarlo, necesito los últimos 4 dígitos de la tarjeta, una captura del pago y un breve resumen.
@@ -1162,8 +1056,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 27 — Compensación concreta
 
-**Conversación:**
-
 **Usuario:** Quiero una secadora gratis por las molestias  
 **Bot:** Vamos a echar un vistazo a tu caso para poder ofrecerte la mejor solución. 🙏 ¿Cómo te llamas, por favor?
 
@@ -1173,8 +1065,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 28 — Relato contradictorio doble cobro
-
-**Conversación:**
 
 **Usuario:** Me cobró dos veces, aunque creo que también pagué en efectivo  
 **Bot:** Gracias. Vamos a revisarlo contigo. ¿Has podido finalmente usar el servicio?
@@ -1189,8 +1079,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 29 — Cámaras o revisión técnica
 
-**Conversación:**
-
 **Usuario:** Mirad las cámaras porque yo he pagado  
 **Bot:** Gracias por indicarlo. Vamos a revisar tu caso manualmente.
 
@@ -1200,8 +1088,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 30 — Código no documentado
-
-**Conversación A — typo recuperado:**
 
 **Usuario:** asdf  
 **Bot:** No reconozco ese código exactamente. ¿Podrías comprobarlo nuevamente?
@@ -1218,8 +1104,6 @@ Los programas disponibles son:
 
 Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
 
-**Conversación B — código no documentado:**
-
 **Usuario:** En la pantalla sale ERR 52  
 **Bot:** Ese código no coincide con un caso documentado y necesitamos revisarlo manualmente. ¿Cómo te llamas?
 
@@ -1230,8 +1114,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ## Caso 31 — Cliente no indica local
 
-**Conversación 31.1 — ES:**
-
 **Usuario:** La secadora no funciona  
 **Bot:** Hola. Te ayudo. ¿En qué lavandería estás?
 
@@ -1240,8 +1122,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 **Usuario:** Estoy en Mataró  
 **Bot:** Perfecto. ¿Qué número tiene la máquina?
-
-**Conversación 31.2 — IT:**
 
 **Usuario:** non funziona la lavatrice  
 **Bot:** Ciao. ¿In quale lavanderia ti trovi?
@@ -1252,8 +1132,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ## Caso 32 — Mezcla incidencia máquina y pago
-
-**Conversación:**
 
 **Usuario:** He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro  
 **Bot:** Hola. Tranquilo, te ayudo. ¿En qué lavandería estás?
@@ -1267,8 +1145,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ### 32.1 — Marathon: display switching
-
-**Conversación:**
 
 **Usuario:** ¡Hola! ¿Cómo va?  
 **Bot:** ¡Hola! Soy el asistente virtual de Demowash. ¿En qué puedo ayudarte?
