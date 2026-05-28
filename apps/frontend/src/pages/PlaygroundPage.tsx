@@ -1881,8 +1881,15 @@ function ChatScreen({
               )
             })()}
             {!activeSession && (
-              <div className="text-center text-gray-500 mt-10">
-                Select a chat from the list, or click + to start a new one.
+              <div className="text-center text-gray-500 mt-10 flex flex-col items-center gap-4">
+                <span>Select a chat from the list, or click + to start a new one.</span>
+                <button
+                  onClick={() => setShowNewChat(true)}
+                  className="bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
+                >
+                  <Plus className="w-4 h-4" />
+                  New Chat
+                </button>
               </div>
             )}
             {activeSession &&

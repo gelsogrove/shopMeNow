@@ -1,73 +1,141 @@
 # Demowash Chatbot — Usecases
 
+## Casos demo destacados
+
+Selección de casos representativos usados en las demos en vivo. Cubren los flujos principales del chatbot: códigos de máquina, pagos, facturación, fidelización, información comercial y escalación a operador humano.
+
+- **[Caso 1 — SELECT](#caso-1--select)** → código en pantalla, guía de programa, happy path + escalación.
+- **[Caso 2 — OPEN](#caso-2--open)** → puerta no cerrada, recap multi-fase (F74 + F75).
+- **[Caso 3 — WAIT](#caso-3--wait)** → máquina pendiente de selección desde central de pago.
+- **[Caso 4 — He pagado y no se ha activado](#caso-4--he-pagado-y-no-se-ha-activado)** → triage cambio devuelto / no devuelto.
+- **[Caso 6 — Doble cobro](#caso-6--doble-cobro)** → validación 4 dígitos tarjeta + formulario refund.
+- **[Caso 8 — Código de descuento](#caso-8--código-de-descuento)** → validación formato código + retry/escalate.
+- **[Caso 9 — Factura](#caso-9--factura)** → gather completo (razón social, CIF, email) con validación email.
+- **[Caso 10 — Tarjeta fidelización](#caso-10--comprar-tarjeta-fidelización)** → info por location + cross-location warning (10.2) + sub-location (10.3).
+- **[Caso 12 — Horarios y precios](#caso-12--horarios-y-precios)** → precios por location/peso, TPV importe exacto, programas (F81 / F87).
+- **[Caso 25 — Cliente muy enfadado](#caso-25--cliente-muy-enfadado)** → escalación inmediata a operador humano.
+- **[Caso 31 — Cliente no indica local](#caso-31--cliente-no-indica-local)** → multilingüe (es/it) con detección automática de idioma.
+- **[Caso 32 — Mezcla incidencia máquina y pago](#caso-32--mezcla-incidencia-máquina-y-pago)** → Marathon: display switching, FAQ pause mid-gather.
+
+---
+
 ## Índice
 
-- [Caso 1 — SELECT](#caso-1--push-prog)
-  - [1.1 — Happy Path](#11--happy-path)
-  - [1.2 — Escalación: máquina no responde tras pulsar](#12--escalación-máquina-no-responde-tras-pulsar)
-- [Caso 2 — OPEN](#caso-2--door)
-  - [2.1 — Happy Path](#21--happy-path)
-  - [2.2 — Escalación: puerta bloqueada tras repetir](#22--escalación-puerta-bloqueada-tras-repetir)
-  - [2.3 — Recap display flow: Phase A / Phase B / cadence N (F74 + F75)](#23--recap-display-flow-phase-a--phase-b--cadence-n-f74--f75)
-- [Caso 3 — WAIT](#caso-3--sel)
-  - [3.1 — Happy Path](#31--happy-path)
-  - [3.2 — Escalación: WAIT persiste](#32--escalación-sel-persiste)
-- [Caso 4 — He pagado y no se ha activado](#caso-4--he-pagado-y-no-se-ha-activado)
-  - [4.1 — No-change Happy Path](#41--no-change-happy-path)
-  - [4.2 — Escalación: cambio devuelto pero no arranca](#42--escalación-cambio-devuelto-pero-no-arranca)
-- [Caso 5 — ERR-12](#caso-5--001)
-  - [5.1 — Happy Path](#51--happy-path)
-  - [5.2 — Escalación: cliente no puede seguir instrucciones](#52--escalación-cliente-no-puede-seguir-instrucciones)
-  - [5.3 — Escalación: ERR-12 persiste](#53--escalación-al001-persiste)
-  - [5.4 — Pivot ERR-12 → Caso 4 (cliente confirma pagamento)](#54--pivot-al001--caso-4-cliente-confirma-pagamento)
-- [Caso 6 — Doble cobro](#caso-6--doble-cobro)
-  - [6.1 — Servicio completado (Happy Path)](#61--servicio-completado-happy-path)
-  - [6.2 — Escalación: cliente muy molesto](#62--escalación-cliente-muy-molesto)
-  - [6.3 — Escalación: relato inconsistente](#63--escalación-relato-inconsistente)
-  - [6.4 — SIN haber usado el servicio](#64--sin-haber-usado-el-servicio)
-  - [6.5 — Validación 4 dígitos tarjeta](#65--validación-4-dígitos-tarjeta)
-- [Caso 7 — Pagado sin usar](#caso-7--pagado-sin-usar)
-  - [7.1 — Resuelto vía pantalla SELECT](#71--resuelto-vía-pantalla-push-prog)
-  - [7.2 — Escalación: máquina no responde tras paso indicado](#72--escalación-máquina-no-responde-tras-paso-indicado)
-- [Caso 8 — Código de descuento](#caso-8--código-de-descuento)
-  - [8.1 — Happy Path (formato válido)](#81--happy-path-formato-válido)
-  - [8.2 — Formato inválido (retry + escalate)](#82--formato-inválido-retry--escalate)
-  - [8.3 — Cliente repite un código en el campo nombre (rechazo + re-ask)](#83--cliente-repite-un-código-en-el-campo-nombre-rechazo--re-ask)
-- [Caso 9 — Factura](#caso-9--factura)
-  - [9.1 — Happy Path](#91--happy-path)
-  - [9.2 — Email inválido (retry)](#92--email-inválido-retry)
-- [Caso 10 — Comprar tarjeta fidelización](#caso-10--comprar-tarjeta-fidelización)
-  - [10.2 — Tarjeta comprada en otro local (cross-location warning)](#caso-102--tarjeta-comprada-en-otro-local-cross-location-warning)
-- [Caso 11 — Recargar tarjeta fidelización](#caso-11--recargar-tarjeta-fidelización)
-- [Caso 12 — Horarios y precios](#caso-12--horarios-y-precios)
-  - [12.4 — Programas de lavadora y secadora por location (F81)](#124--programas-de-lavadora-y-secadora-por-location-f81)
-- [Caso 13 — Código de alarma o incoherencia](#caso-13--código-de-alarma-o-incoherencia)
-- [Caso 14 — ALERT OPEN](#caso-14--alm-door)
-- [Caso 15 — ERR-01](#caso-15--001)
-- [Caso 16 — ALERT / BLOCK](#caso-16--alm--aln)
-- [Caso 17 — No sabe qué aparece en pantalla](#caso-17--no-sabe-qué-aparece-en-pantalla)
-- [Caso 18 — Código solo numérico](#caso-18--código-solo-numérico)
-- [Caso 19 — Datáfono 10€ en Mataró](#caso-19--datáfono-10-en-goya)
-- [Caso 20 — Datáfono 10€ en Rubí](#caso-20--datáfono-10-en-pineda)
-- [Caso 21 — Eixample: monedas secadora no suman](#caso-21--alemanya-monedas-secadora-no-suman)
-- [Caso 22 — Rubí: monedas secadora no suman](#caso-22--pineda-monedas-secadora-no-suman)
-- [Caso 23 — Eixample: no se puede pagar con tarjeta](#caso-23--alemanya-no-se-puede-pagar-con-tarjeta)
-- [Caso 24 — Sant Cugat: no se puede pagar con tarjeta](#caso-24--hortes-no-se-puede-pagar-con-tarjeta)
-- [Caso 25 — Cliente muy enfadado](#caso-25--cliente-muy-enfadado)
-- [Caso 26 — Devolución inmediata](#caso-26--devolución-inmediata)
-- [Caso 27 — Compensación concreta](#caso-27--compensación-concreta)
-- [Caso 28 — Relato contradictorio doble cobro](#caso-28--relato-contradictorio-doble-cobro)
-- [Caso 29 — Cámaras o revisión técnica](#caso-29--cámaras-o-revisión-técnica)
-- [Caso 30 — Código no documentado](#caso-30--código-no-documentado)
-- [Caso 31 — Cliente no indica local](#caso-31--cliente-no-indica-local)
-- [Caso 32 — Mezcla incidencia máquina y pago](#caso-32--mezcla-incidencia-máquina-y-pago)
-  - [32.1 — Marathon: display switching](#321--marathon-display-switching)
-  - [32.2 — Marathon: trouble resuelto → factura](#322--marathon-trouble-resuelto--factura)
-  - [32.3 — Marathon: FAQ pause mid-gather](#323--marathon-faq-pause-mid-gather)
-- [Caso 34 — El cliente pregunta por el jabón, detergente o suavizante](#caso-34--el-cliente-pregunta-por-el-jabón-detergente-o-suavizante)
-- [Caso 35 — El cliente pregunta cómo se usa la lavandería](#caso-35--el-cliente-pregunta-cómo-se-usa-la-lavandería)
-- [Caso 45 — El cliente pregunta cómo se usa la secadora](#caso-45--el-cliente-pregunta-cómo-se-usa-la-secadora)
-- [Caso 46 — La máquina muestra "120" (cuenta atrás fin de ciclo)](#caso-46--la-máquina-muestra-120-cuenta-atrás-fin-de-ciclo)
+- [Caso 1 — SELECT](#caso-1-select)
+  - [1.1 — Happy Path](#11-happy-path)
+  - [1.2 — Escalación: máquina no responde tras pulsar](#12-escalación-máquina-no-responde-tras-pulsar)
+- [Caso 2 — OPEN](#caso-2-open)
+  - [2.1 — Happy Path](#21-happy-path)
+  - [2.2 — Escalación: puerta bloqueada tras repetir](#22-escalación-puerta-bloqueada-tras-repetir)
+  - [2.3 — Recap display flow: Phase A / Phase B / cadence N (F74 + F75)](#23-recap-display-flow-phase-a-phase-b-cadence-n-f74-f75)
+- [Caso 3 — WAIT](#caso-3-wait)
+  - [3.1 — Happy Path](#31-happy-path)
+  - [3.2 — Escalación: WAIT persiste](#32-escalación-wait-persiste)
+- [Caso 4 — He pagado y no se ha activado](#caso-4-he-pagado-y-no-se-ha-activado)
+  - [4.1 — No-change Happy Path](#41-no-change-happy-path)
+  - [4.2 — Escalación: cambio devuelto pero no arranca](#42-escalación-cambio-devuelto-pero-no-arranca)
+- [Caso 5 — ERR-12](#caso-5-err-12)
+  - [5.1 — Happy Path](#51-happy-path)
+  - [5.2 — Escalación: cliente no puede seguir instrucciones](#52-escalación-cliente-no-puede-seguir-instrucciones)
+  - [5.3 — Escalación: ERR-12 persiste](#53-escalación-err-12-persiste)
+  - [5.4 — Pivot ERR-12 → Caso 4 (cliente confirma pagamento)](#54-pivot-err-12-caso-4-cliente-confirma-pagamento)
+- [Caso 6 — Doble cobro](#caso-6-doble-cobro)
+  - [6.1 — Servicio completado (Happy Path)](#61-servicio-completado-happy-path)
+  - [6.2 — Escalación: cliente muy molesto](#62-escalación-cliente-muy-molesto)
+  - [6.3 — Escalación: relato inconsistente](#63-escalación-relato-inconsistente)
+  - [6.4 — SIN haber usado el servicio](#64-sin-haber-usado-el-servicio)
+  - [6.5 — Validación 4 dígitos tarjeta](#65-validación-4-dígitos-tarjeta)
+- [Caso 7 — Pagado sin usar](#caso-7-pagado-sin-usar)
+  - [7.1 — Resuelto vía pantalla SELECT](#71-resuelto-vía-pantalla-select)
+  - [7.2 — Escalación: máquina no responde tras paso indicado](#72-escalación-máquina-no-responde-tras-paso-indicado)
+- [Caso 8 — Código de descuento](#caso-8-código-de-descuento)
+  - [8.1 — Happy Path (formato válido)](#81-happy-path-formato-válido)
+  - [8.2 — Formato inválido (retry + escalate)](#82-formato-inválido-retry-escalate)
+  - [8.3 — Cliente repite un código en el campo nombre (rechazo + re-ask)](#83-cliente-repite-un-código-en-el-campo-nombre-rechazo-re-ask)
+- [Caso 9 — Factura](#caso-9-factura)
+  - [9.1 — Happy Path](#91-happy-path)
+  - [9.2 — Email inválido (retry)](#92-email-inválido-retry)
+- [Caso 10 — Comprar tarjeta fidelización](#caso-10-comprar-tarjeta-fidelización)
+  - [Caso 10.2 — Tarjeta comprada en otro local (cross-location warning)](#caso-102-tarjeta-comprada-en-otro-local-cross-location-warning)
+  - [Caso 10.3 — Mataró: pregunta loyalty card en T1 + sub-localización en T2 (F100)](#caso-103-mataró-pregunta-loyalty-card-en-t1-sub-localización-en-t2-f100)
+- [Caso 11 — Recargar tarjeta fidelización](#caso-11-recargar-tarjeta-fidelización)
+- [Caso 12 — Horarios y precios](#caso-12-horarios-y-precios)
+  - [12.1 — Horarios por location](#121-horarios-por-location)
+  - [12.2 — Precios de lavadora por location y peso](#122-precios-de-lavadora-por-location-y-peso)
+  - [12.4 — Programas de lavadora y secadora por location (F81)](#124-programas-de-lavadora-y-secadora-por-location-f81)
+- [Caso 13 — Código de alarma o incoherencia](#caso-13-código-de-alarma-o-incoherencia)
+- [Caso 14 — ALERT OPEN](#caso-14-alert-open)
+- [Caso 15 — ERR-01](#caso-15-err-01)
+- [Caso 16 — ALERT / BLOCK](#caso-16-alert-block)
+- [Caso 17 — No sabe qué aparece en pantalla](#caso-17-no-sabe-qué-aparece-en-pantalla)
+- [Caso 18 — Código solo numérico](#caso-18-código-solo-numérico)
+- [Caso 19 — Datáfono 10€ en Mataró](#caso-19-datáfono-10-en-mataró)
+- [Caso 20 — Datáfono 10€ en Rubí](#caso-20-datáfono-10-en-rubí)
+- [Caso 21 — Eixample: monedas secadora no suman](#caso-21-eixample-monedas-secadora-no-suman)
+- [Caso 22 — Rubí: monedas secadora no suman](#caso-22-rubí-monedas-secadora-no-suman)
+- [Caso 23 — Eixample: no se puede pagar con tarjeta](#caso-23-eixample-no-se-puede-pagar-con-tarjeta)
+- [Caso 24 — Sant Cugat: no se puede pagar con tarjeta](#caso-24-sant-cugat-no-se-puede-pagar-con-tarjeta)
+- [Caso 25 — Cliente muy enfadado](#caso-25-cliente-muy-enfadado)
+- [Caso 26 — Devolución inmediata](#caso-26-devolución-inmediata)
+- [Caso 27 — Compensación concreta](#caso-27-compensación-concreta)
+- [Caso 28 — Relato contradictorio doble cobro](#caso-28-relato-contradictorio-doble-cobro)
+- [Caso 29 — Cámaras o revisión técnica](#caso-29-cámaras-o-revisión-técnica)
+- [Caso 30 — Código no documentado](#caso-30-código-no-documentado)
+- [Caso 31 — Cliente no indica local](#caso-31-cliente-no-indica-local)
+- [Caso 32 — Mezcla incidencia máquina y pago](#caso-32-mezcla-incidencia-máquina-y-pago)
+  - [32.1 — Marathon: display switching](#321-marathon-display-switching)
+  - [32.2 — Marathon: trouble resuelto → factura](#322-marathon-trouble-resuelto-factura)
+  - [32.3 — Marathon: FAQ pause mid-gather](#323-marathon-faq-pause-mid-gather)
+- [Caso 33 — Feedback del cliente (positivo o negativo)](#caso-33-feedback-del-cliente-positivo-o-negativo)
+  - [Conversación 33.1 — Feedback positivo (IT)](#conversación-331-feedback-positivo-it)
+  - [Conversación 33.2 — Feedback negativo (ES)](#conversación-332-feedback-negativo-es)
+  - [Conversación 33.3 — Feedback negativo (FR)](#conversación-333-feedback-negativo-fr)
+- [Caso 34 — El cliente pregunta por el jabón, detergente o suavizante](#caso-34-el-cliente-pregunta-por-el-jabón-detergente-o-suavizante)
+  - [Conversación 34.1 — Pregunta directa (ES, cold start)](#conversación-341-pregunta-directa-es-cold-start)
+  - [Conversación 34.2 — Pivot mid-OPEN-flow (ES)](#conversación-342-pivot-mid-open-flow-es)
+  - [Conversación 34.3 — Multi-language](#conversación-343-multi-language)
+  - [Conversación 34.4 — "Manca/falta + sapone"](#conversación-344-mancafalta-sapone)
+- [Caso 35 — El cliente pregunta cómo se usa la lavandería](#caso-35-el-cliente-pregunta-cómo-se-usa-la-lavandería)
+  - [Conversación 35.1 — Cold start (ES)](#conversación-351-cold-start-es)
+  - [Conversación 35.2 — Pivot mid-flow (ES)](#conversación-352-pivot-mid-flow-es)
+  - [Conversación 35.3 — Multi-language](#conversación-353-multi-language)
+- [Caso 36 — Orarios Gràcia (caso límite 7:00–23:00)](#caso-36-orarios-gràcia-caso-límite-700–2300)
+  - [Conversación 36.1 — Cliente pregunta explícito (ES)](#conversación-361-cliente-pregunta-explícito-es)
+  - [Conversación 36.2 — Cliente sin location (ES → 2 turnos)](#conversación-362-cliente-sin-location-es-2-turnos)
+  - [Conversación 36.3 — Multi-language (IT)](#conversación-363-multi-language-it)
+- [Caso 37 — Precios lavadora Mataró (lista L4-L7 desde metadata.machines)](#caso-37-precios-lavadora-mataró-lista-l4-l7-desde-metadatamachines)
+  - [Conversación 37.1 — Cliente pregunta directo (ES)](#conversación-371-cliente-pregunta-directo-es)
+  - [Conversación 37.2 — Cliente confirma "sí" para secadora (T3)](#conversación-372-cliente-confirma-sí-para-secadora-t3)
+- [Caso 38 — Precios secadora Rubí (S4-S5 con TPV 8€)](#caso-38-precios-secadora-rubí-s4-s5-con-tpv-8)
+  - [Conversación 38.1 — Cliente pregunta directo (ES)](#conversación-381-cliente-pregunta-directo-es)
+  - [Conversación 38.2 — Cliente confirma "sí" para lavadora (T3, simétrico F58)](#conversación-382-cliente-confirma-sí-para-lavadora-t3-simétrico-f58)
+- [Caso 39 — Programas temperatura Eixample (4 programas sin número pulsante)](#caso-39-programas-temperatura-eixample-4-programas-sin-número-pulsante)
+  - [Conversación 39.1 — Cliente pregunta directo (ES)](#conversación-391-cliente-pregunta-directo-es)
+  - [Conversación 39.2 — Multi-language (IT)](#conversación-392-multi-language-it)
+- [Caso 40 — FAQ temperatura colores Sant Cugat (colorTemperature trasversal)](#caso-40-faq-temperatura-colores-sant-cugat-colortemperature-trasversal)
+  - [Conversación 40.1 — Cliente en Sant Cugat pregunta temperatura colores (ES)](#conversación-401-cliente-en-sant-cugat-pregunta-temperatura-colores-es)
+  - [Conversación 40.2 — Multi-language (IT)](#conversación-402-multi-language-it)
+- [Caso 41 — FAQ macchie grasse Terrassa (greaseStains)](#caso-41-faq-macchie-grasse-terrassa-greasestains)
+  - [Conversación 41.1 — Cliente en Terrassa pregunta mancha (ES)](#conversación-411-cliente-en-terrassa-pregunta-mancha-es)
+  - [Conversación 41.2 — Multi-language (FR)](#conversación-412-multi-language-fr)
+- [Caso 42 — Instrucciones howToUse Mataró (faqOverride 5 pasos con central)](#caso-42-instrucciones-howtouse-mataró-faqoverride-5-pasos-con-central)
+  - [Conversación 42.1 — Cliente en Mataró pregunta cómo usar (ES)](#conversación-421-cliente-en-mataró-pregunta-cómo-usar-es)
+  - [Conversación 42.2 — Cliente sin location (2 turnos)](#conversación-422-cliente-sin-location-2-turnos)
+- [Caso 43 — Instrucciones howToUse Gràcia (faqOverride 4 pasos sin "confirma inicio")](#caso-43-instrucciones-howtouse-gràcia-faqoverride-4-pasos-sin-confirma-inicio)
+  - [Conversación 43.1 — Cliente en Gràcia pregunta cómo usar (ES)](#conversación-431-cliente-en-gràcia-pregunta-cómo-usar-es)
+  - [Conversación 43.2 — Multi-language (FR)](#conversación-432-multi-language-fr)
+- [Caso 44 — Combinatorio: cliente pregunta horario + precio en la misma sesión (Mataró → Mataró)](#caso-44-combinatorio-cliente-pregunta-horario-precio-en-la-misma-sesión-mataró-mataró)
+  - [Conversación 44.1 — Mataró ambiguo + clarificación + chain hours→prices (ES)](#conversación-441-mataró-ambiguo-clarificación-chain-hoursprices-es)
+  - [Conversación 44.2 — Cliente pivota a Eixample (F51 location switch)](#conversación-442-cliente-pivota-a-eixample-f51-location-switch)
+- [Caso 45 — El cliente pregunta cómo se usa la secadora](#caso-45-el-cliente-pregunta-cómo-se-usa-la-secadora)
+  - [Conversación 45.1 — Cold start sin location (ES)](#conversación-451-cold-start-sin-location-es)
+  - [Conversación 45.2 — Cliente en Mataró (faqOverride location-specific)](#conversación-452-cliente-en-mataró-faqoverride-location-specific)
+  - [Conversación 45.3 — Cliente en Gràcia (card-only)](#conversación-453-cliente-en-gràcia-card-only)
+  - [Conversación 45.4 — Multi-language (IT)](#conversación-454-multi-language-it)
+- [Caso 46 — La máquina muestra "120" (cuenta atrás fin de ciclo)](#caso-46-la-máquina-muestra-120-cuenta-atrás-fin-de-ciclo)
+  - [Conversación 46.1 — Happy path (ES)](#conversación-461-happy-path-es)
+  - [Conversación 46.2 — Display 120 (IT)](#conversación-462-display-120-it)
+  - [Conversación 46.3 — Display 120 (EN)](#conversación-463-display-120-en)
 
 ---
 
@@ -693,7 +761,29 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### 9.2 — Email inválido (retry)
 
-[gather hasta coste → bot pide email]
+**Usuario:** Quiero una factura  
+**Bot:** Claro, te ayudo con la factura. ¿En qué lavandería estuviste?
+
+**Usuario:** Mataró  
+**Bot:** Gracias. ¿Utilizaste lavadora o secadora?
+
+**Usuario:** Lavadora  
+**Bot:** Perfecto. ¿Me indicas la razón social?
+
+**Usuario:** ACME SL  
+**Bot:** ¿Y la dirección?
+
+**Usuario:** Calle Mayor 1, Madrid  
+**Bot:** ¿Cuál es tu CIF/NIF/NIE?
+
+**Usuario:** B12345678  
+**Bot:** ¿Qué día utilizaste el servicio?
+
+**Usuario:** Ayer  
+**Bot:** ¿Cuál fue el coste total del servicio?
+
+**Usuario:** 6€  
+**Bot:** ¿A qué correo electrónico te enviamos la factura?
 
 **Usuario:** ana  
 **Bot:** El correo no parece válido. ¿Puedes escribírmelo de nuevo, por favor?
@@ -701,7 +791,13 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Usuario:** ana@example.com  
 **Bot:** ¿Quieres añadir alguna nota u observación para la factura? Si no, escribe «no».
 
-[continúa hasta cierre 9.1]
+**Usuario:** no  
+**Bot:** Por último, ¿cuál es tu nombre?
+
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea, te enviaremos pronto la factura del 2026-05-27 a tu correo: ana@example.com.
+
+🔒 Tus datos (razón social, CIF/NIF, dirección, correo) se usan únicamente para emitir la factura y no se comparten con terceros.
 
 ---
 
@@ -746,7 +842,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Usuario:** Estoy en Mataró y quiero comprar la tarjeta de fidelización  
 **Bot:** En Mataró tenemos dos lavanderías: C/ Francisco de Mataró 117 y C/ Eixample 17. ¿Podrías indicarme en cuál estás?  
 **Usuario:** Eixample  
-**Bot:** [override loyalty card de Eixample si disponible, o respuesta base con instrucción genérica]
+**Bot:** En Eixample, la tarjeta de fidelidad se compra con 20€ en efectivo en la caja. Solo funciona en este local.
 
 ---
 
@@ -854,8 +950,18 @@ Los programas disponibles para la secadora son:
 **Ejemplo — T1 con location ya conocida:**
 
 **Usuario:** cuáles son los programas aquí?  
-**Bot:** Los programas disponibles para la lavadora son:  
-*(lista de Mataró directamente)*
+**Bot:** Los programas disponibles para la lavadora son:
+
+- **1** — Muy caliente (60º)
+- **2** — Caliente (40º)
+- **3** — Templado (30º)
+- **4** — Frío (*)
+
+Los programas disponibles para la secadora son:
+
+- **Alta temperatura**
+- **Media temperatura**
+- **Baja temperatura**
 
 **Ejemplo — Gràcia (orden diferente, 5 programas):**
 
@@ -1335,7 +1441,10 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Usuario:** ¿hay jabón en la máquina?  
 **Bot:** No, no hace falta traer nada. Las máquinas Demowash dosifican automáticamente detergente y suavizante ecológicos…  
 **Usuario:** ok, ahora la puerta cierra  
-**Bot:** *(flujo OPEN retoma)*
+**Bot:** Perfecto. Dime si la lavadora ha arrancado.
+
+**Usuario:** sí, ya funciona  
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
 
 ### Conversación 34.3 — Multi-language
 
@@ -1351,13 +1460,13 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Bot:** No, no hace falta traer nada. Las máquinas Demowash dosifican automáticamente detergente y suavizante ecológicos certificados, elaborados con ingredientes 100% naturales. Solo tienes que traer la ropa.
 
 **Usuario (IT, typo):** mi manca il sapo e  
-**Bot:** *(misma FAQ — "sapo" se reconoce como variante truncada de "sapone")*
+**Bot:** No, non è necessario portare niente. Le macchine Demowash dosano automaticamente detergente e ammorbidente ecologici certificati, prodotti con ingredienti 100% naturali. Devi solo portare i panni.
 
 **Usuario (ES):** falta jabón en la máquina  
-**Bot:** *(misma FAQ en español)*
+**Bot:** No, no hace falta traer nada. Las máquinas Demowash dosifican automáticamente detergente y suavizante ecológicos certificados, elaborados con ingredientes 100% naturales. Solo tienes que traer la ropa.
 
 **Usuario (EN):** soap is missing  
-**Bot:** *(misma FAQ en inglés)*
+**Bot:** No, you don't need to bring anything. Demowash machines automatically dispense certified eco-friendly detergent and softener, made with 100% natural ingredients. Just bring your clothes.
 
 ---
 
@@ -1382,16 +1491,39 @@ El detergente y el suavizante se dosifican automáticamente. No hace falta traer
 **Usuario:** Mataró  
 **Bot:** ¿Qué número tiene la máquina?  
 **Usuario:** espera, ¿cómo se usa exactamente?  
-**Bot:** Para usar la lavandería, sigue estos pasos: *(instrucciones)*  
-**Bot:** *(al turno siguiente retoma el flow OPEN)*
+**Bot:** Para usar la lavandería, sigue estos pasos:
+
+1. Coloca la ropa en la lavadora y cierra la puerta.
+2. Dirígete a la central de pago y efectúa el pago seleccionando el número de máquina.
+3. Vuelve a la máquina y selecciona el programa y la temperatura.
+4. Recoge tu ropa cuando termine.
+
+¿Qué número tiene la máquina?
+
+**Usuario:** 5  
+**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez.
 
 ### Conversación 35.3 — Multi-language
 
 **Usuario (IT):** come si usa la lavatrice? è la prima volta  
-**Bot:** *(instrucciones en italiano)*
+**Bot:** Per usare la lavanderia, segui questi passi:
+
+1. **Metti i panni nella lavatrice** e chiudi lo sportello.
+2. **Vai alla cassa centrale** e paga selezionando il numero di macchina.
+3. **Torna alla macchina** e seleziona il programma e la temperatura.
+4. **Ritira i panni** quando la macchina segnala la fine del ciclo.
+
+Detergente e ammorbidente vengono dosati automaticamente. Non serve portare nulla.
 
 **Usuario (EN):** first time here, what do I do?  
-**Bot:** *(instrucciones en inglés)*
+**Bot:** To use the laundry, follow these steps:
+
+1. **Place your clothes in the washing machine** and close the door.
+2. **Go to the central payment terminal** and pay by selecting the machine number.
+3. **Return to the machine** and select the program and temperature.
+4. **Collect your clothes** when the machine signals the cycle is done.
+
+Detergent and softener are dispensed automatically. You don't need to bring anything.
 
 ---
 
@@ -1547,7 +1679,13 @@ Nos machines appliquent le détergent automatiquement pour dissoudre la graisse.
 **Usuario:** ¿Cómo se usa? Primera vez.  
 **Bot:** ¿En qué lavandería estás?  
 **Usuario:** Mataró  
-**Bot:** En **Mataró (Mataró)**, para usar la lavandería sigue estos pasos: *(5 pasos override)*
+**Bot:** En **Mataró (Mataró)**, para usar la lavandería sigue estos pasos:
+
+1. **Mete la ropa en la máquina seleccionada** y cierra bien la puerta.
+2. **Dirígete a la centralita** y sigue las instrucciones de pago (o paga con la App).
+3. **Vuelve a la máquina y confirma el inicio**.
+4. **No abras la puerta** antes de que finalice el lavado.
+5. **Al terminar**, deja la puerta abierta para que se ventile.
 
 ---
 
@@ -1621,17 +1759,35 @@ En **Eixample** los precios de las lavadoras son:
 ### Conversación 45.2 — Cliente en Mataró (faqOverride location-specific)
 
 **Usuario:** Estoy en Mataró. ¿Cómo funciona la secadora?  
-**Bot:** *(responde con el howToUseDryer override de Mataró, incluyendo pasos específicos de pago con monedas/billetes/tarjeta y central)*
+**Bot:** En **Mataró**, para usar la secadora sigue estos pasos:
+
+1. **Mete la ropa en la secadora** y cierra la puerta.
+2. **Dirígete a la central de pago** y selecciona el número de secadora (puedes pagar con monedas, billetes o tarjeta).
+3. **Elige el programa**: Alta, Media o Baja temperatura.
+4. **Durante el ciclo** puedes abrir la puerta si lo necesitas.
+5. **Si la ropa no está del todo seca**, puedes añadir +5 min cuando queden ~5 minutos.
 
 ### Conversación 45.3 — Cliente en Gràcia (card-only)
 
 **Usuario:** como se usa la secadora, estoy en Gràcia  
-**Bot:** *(responde con el howToUseDryer override de Gràcia, mencionando pago solo con tarjeta)*
+**Bot:** En **Gràcia**, para usar la secadora sigue estos pasos:
+
+1. **Mete la ropa en la secadora** y cierra la puerta.
+2. **Dirígete a la central de pago** y selecciona el número de secadora. ⚠️ En Gràcia solo se acepta **pago con tarjeta**.
+3. **Elige el programa**: Alta, Media o Baja temperatura.
+4. **Durante el ciclo** puedes abrir la puerta si lo necesitas.
+5. **Si la ropa no está del todo seca**, puedes añadir +5 min cuando queden ~5 minutos.
 
 ### Conversación 45.4 — Multi-language (IT)
 
 **Usuario (IT):** come si usa l'asciugatrice?  
-**Bot:** *(instrucciones en italiano)*
+**Bot:** Per usare l'asciugatrice, segui questi passi:
+
+1. **Metti i panni nell'asciugatrice** e chiudi lo sportello.
+2. **Vai alla cassa centrale** e paga selezionando il numero di asciugatrice.
+3. **Scegli il programma**: Alta temperatura (panni resistenti), Media (panni normali) o Bassa (delicati).
+4. **Durante il ciclo** puoi aprire lo sportello quando vuoi.
+5. **Consiglio**: a ~5 minuti dalla fine puoi aggiungere +5 min se i panni non sono ancora asciutti.
 
 ---
 
