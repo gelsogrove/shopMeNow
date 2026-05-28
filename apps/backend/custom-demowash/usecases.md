@@ -283,6 +283,8 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 
 ### 4.2 — Escalación: cambio devuelto pero no arranca
 
+**Conversación A — bare «Sí»:**
+
 **Usuario:** He pagado y no se ha activado  
 **Bot:** Hola, soy el asistente virtual de Demowash. ¿En qué local estás?
 
@@ -301,8 +303,13 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 **Usuario:** Andrea  
 **Bot:** Gracias, Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
 
+**Conversación B — «Sí, pero no arranca» (variante explícita):**
+
 **Usuario:** Sí, pero la máquina no arranca  
 **Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** Gracias, Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
 
 ---
 
@@ -1042,6 +1049,15 @@ Los programas disponibles para la secadora son:
 **Usuario:** Mataró  
 **Bot:** Gracias. ¿Es una lavadora o una secadora?
 
+**Usuario:** Lavadora  
+**Bot:** ¿Qué número tiene la máquina?
+
+**Usuario:** La 3  
+**Bot:** ⚠️ Para resolverlo lo antes posible vamos a pasar tu caso a un operador humano. ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
 ---
 
 ## Caso 26 — Devolución inmediata
@@ -1142,6 +1158,12 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Usuario:** Lavadora 3  
 **Bot:** ¿Qué aparece en la pantalla?
 
+**Usuario:** WAIT  
+**Bot:** La máquina está pendiente de selección. Como además has pagado dos veces, vamos a revisar tu caso manualmente para verificar el cobro duplicado. ¿Cómo te llamas?
+
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso y comprobará el doble cobro. El chatbot será desactivado.
+
 ---
 
 ### 32.1 — Marathon: display switching
@@ -1187,6 +1209,90 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 **Usuario:** Marc  
 **Bot:** Gracias Marc. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+
+---
+
+### 32.2 — Marathon: trouble resuelto → factura
+
+**Criterios de aceptación:**
+1. Si el cliente confirma que la máquina arranca, el bot cierra el flow de incidencia.
+2. Si después pide factura, el bot pivota al flow de factura SIN volver a preguntar lavandería/máquina (los facts ya están en state).
+3. Resumen factura: lavandería, tipo de máquina, fecha por defecto = hoy.
+
+**Conversación:**
+
+**Usuario:** La lavadora no funciona  
+**Bot:** ¿En qué lavandería estás?
+
+**Usuario:** Rubí  
+**Bot:** ¿Qué número tiene la máquina?
+
+**Usuario:** La 3  
+**Bot:** ¿Qué aparece en la pantalla?
+
+**Usuario:** WAIT  
+**Bot:** La máquina está pendiente de selección. Comprueba que has pulsado bien el número en la central de pago.
+
+**Usuario:** Ahora sí, ya arranca  
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
+
+**Usuario:** Quiero una factura  
+**Bot:** Claro, te ayudo con la factura. Veo que has usado la **lavadora 3** en **Rubí**. ¿Me indicas la razón social?
+
+**Usuario:** ACME SL  
+**Bot:** ¿Y la dirección?
+
+**Usuario:** Calle Mayor 1, Madrid  
+**Bot:** ¿Cuál es tu CIF/NIF/NIE?
+
+**Usuario:** B12345678  
+**Bot:** ¿Cuál fue el coste total del servicio?
+
+**Usuario:** 6€  
+**Bot:** ¿A qué correo electrónico te enviamos la factura?
+
+**Usuario:** andrea@example.com  
+**Bot:** ¿Quieres añadir alguna nota u observación para la factura? Si no, escribe «no».
+
+**Usuario:** no  
+**Bot:** Por último, ¿cuál es tu nombre?
+
+**Usuario:** Andrea  
+**Bot:** Gracias Andrea, te enviaremos pronto la factura de hoy a tu correo: andrea@example.com.
+
+---
+
+### 32.3 — Marathon: FAQ pause mid-gather
+
+**Criterios de aceptación:**
+1. Si el cliente interrumpe el gather con una pregunta FAQ (ej. jabón, horarios), el bot responde la FAQ y RETOMA el gather donde se quedó.
+2. NO se pierden los facts ya recolectados (lavandería, tipo, número).
+3. Tras la FAQ, el bot repite la última pregunta pendiente.
+
+**Conversación:**
+
+**Usuario:** La lavadora no arranca  
+**Bot:** ¿En qué lavandería estás?
+
+**Usuario:** Rubí  
+**Bot:** ¿Es una lavadora o una secadora?
+
+**Usuario:** Lavadora  
+**Bot:** ¿Qué número tiene la máquina?
+
+**Usuario:** Espera, ¿hace falta llevar jabón?  
+**Bot:** No, no hace falta traer nada. Las máquinas Demowash dosifican automáticamente detergente y suavizante ecológicos certificados. Solo tienes que traer la ropa.
+
+¿Qué número tiene la máquina?
+
+**Usuario:** La 3  
+**Bot:** ¿Qué aparece en la pantalla?
+
+**Usuario:** OPEN  
+**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez.
+
+**Usuario:** Ya funciona  
+**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
 
 ---
 

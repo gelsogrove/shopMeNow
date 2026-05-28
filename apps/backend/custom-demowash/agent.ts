@@ -926,7 +926,7 @@ export interface ChatbotInput {
     workspaceId: string
     debugChannel: boolean
     isPlayground: boolean
-    language?: 'es' | 'ca' | 'en' | 'it' | 'fr' | 'pt' | 'de'
+    language?: 'es' | 'ca' | 'en' | 'it' | 'fr' | 'pt'
   }
   context: {
     sessionId: string

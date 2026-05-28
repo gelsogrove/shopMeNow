@@ -7,7 +7,7 @@ export interface SessionState {
   machineType?: 'washer' | 'dryer'
   machine?:     number
   displayCode?: string
-  language?:    'es' | 'ca' | 'en' | 'it' | 'fr' | 'pt' | 'de'
+  language?:    'es' | 'ca' | 'en' | 'it' | 'fr' | 'pt'
 
   // Profile (also mirrored to backend Customers via patches)
   companyName?: string
@@ -144,14 +144,9 @@ const LANG_MARKERS: Record<Lang, RegExp> = {
   ca: /\b(el|la|els|les|un|una|uns|unes|i|que|no|és|som|tenim|aquest|aquesta|aquests|aquestes|perquè|què|com|on|quan|avui|ahir|rentadora|sabó|hola)\b/i,
   pt: /\b(o|a|os|as|um|uma|uns|umas|e|que|não|é|são|está|estão|porque|como|onde|quando|hoje|ontem|máquina|sabão|olá|você|vocês)\b/i,
   fr: /\b(le|la|les|un|une|des|et|que|ne|pas|est|sont|j'ai|tu|nous|vous|ils|elles|pourquoi|comment|où|quand|aujourd'hui|hier|machine|savon|bonjour|merci|oui|non|qu'est-ce|c'est)\b/i,
-  // German markers: function words + auxiliary verbs + interrogatives +
-  // time adverbs + the domain noun "Waschmaschine" / "Seife". Includes both
-  // umlauted ("für", "können", "möchte") and ASCII-fallback ("fuer", "koennen")
-  // forms because customers on phone keyboards often skip diacritics.
-  de: /\b(der|die|das|den|dem|des|ein|eine|einen|einem|einer|und|nicht|ist|sind|war|waren|ich|du|wir|ihr|sie|es|was|wie|wo|wann|heute|gestern|waschmaschine|seife|hallo|guten|bitte|danke|ja|nein|fuer|für|koennen|können|moechte|möchte|ueber|über)\b/i,
 }
 
-const LANG_ORDER: Lang[] = ['es', 'it', 'en', 'ca', 'fr', 'pt', 'de']
+const LANG_ORDER: Lang[] = ['es', 'it', 'en', 'ca', 'fr', 'pt']
 
 /**
  * Score each language by counting marker matches in the text.
@@ -159,7 +154,7 @@ const LANG_ORDER: Lang[] = ['es', 'it', 'en', 'ca', 'fr', 'pt', 'de']
  */
 export function scoreLanguages(text: string): Record<Lang, number> {
   const normalized = (text || '').toLowerCase()
-  const scores: Record<Lang, number> = { es: 0, it: 0, en: 0, ca: 0, fr: 0, pt: 0, de: 0 }
+  const scores: Record<Lang, number> = { es: 0, it: 0, en: 0, ca: 0, fr: 0, pt: 0 }
   if (!normalized.trim()) return scores
   for (const lang of LANG_ORDER) {
     const re = new RegExp(LANG_MARKERS[lang].source, LANG_MARKERS[lang].flags + 'g')
