@@ -247,16 +247,38 @@ function useAuth() {
     const workspaceId = params.get("workspaceId")
     const path = window.location.pathname
 
+    // Each /demo/<slug> URL is a fully isolated tenant: its own workspaceId,
+    // its own chat history, its own usecases.md, its own users. The slug in
+    // the URL is the source of truth — we resolve the corresponding
+    // workspaceId from the backend on EVERY mount and overwrite localStorage
+    // unconditionally. Otherwise a visitor who first opens /demo/ecolaundry
+    // and then /demo/demowash would keep ecolaundry's workspaceId stuck in
+    // storage and see ecolaundry's data on the demowash page.
+    const demoMatch = path.match(/^\/demo\/([a-z0-9-]+)/)
+    const demoSlug = demoMatch?.[1] ?? null
+    const previousSlug = localStorage.getItem("playgroundDemoSlug")
+
     if (token && workspaceId) {
+      // Explicit override via query params (used by the dashboard "Open
+      // playground" link) — wins over the slug-based resolution.
       localStorage.setItem("playgroundToken", token)
       localStorage.setItem("playgroundWorkspaceId", workspaceId)
       localStorage.setItem("playgroundUser", "ANDREA")
+      if (demoSlug) localStorage.setItem("playgroundDemoSlug", demoSlug)
       setUser("ANDREA")
-    } else if (path.startsWith("/demo/demowash") && !localStorage.getItem("playgroundWorkspaceId")) {
-      // Public entry point for Demowash demo: resolve the workspace id from
-      // the backend so the user can log in with admin/Admin123 without
-      // needing token+workspaceId query params.
-      fetch(`/api/v1/playground/resolve-demo/demowash`)
+    } else if (demoSlug) {
+      // If we switched demo (or this is the first visit), drop the previous
+      // tenant's credentials before resolving the new workspaceId. The token
+      // is tied to a specific workspace and would never authenticate against
+      // a different one.
+      if (previousSlug !== demoSlug) {
+        localStorage.removeItem("playgroundToken")
+        localStorage.removeItem("playgroundWorkspaceId")
+        localStorage.removeItem("playgroundUser")
+        setUser(null)
+      }
+      localStorage.setItem("playgroundDemoSlug", demoSlug)
+      fetch(`/api/v1/playground/resolve-demo/${demoSlug}`)
         .then((r) => r.json())
         .then((data) => {
           if (data?.workspaceId) {
@@ -264,15 +286,6 @@ function useAuth() {
           }
         })
         .catch(() => {/* silent fail — login will still fail visibly */})
-    } else {
-      const isBasePath =
-        path === "/demo/ecolaundry" || path === "/demo/ecolaundry/"
-      if (isBasePath && localStorage.getItem("playgroundToken")) {
-        localStorage.removeItem("playgroundToken")
-        localStorage.removeItem("playgroundWorkspaceId")
-        localStorage.removeItem("playgroundUser")
-        setUser(null)
-      }
     }
   }, [])
 
