@@ -546,7 +546,7 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 **Bot:** ¡Perfecto! ¿Podrías enviarme una captura del pago? ¿Cómo te llamas?
 
 **Usuario:** Carlos  
-**Bot:** Gracias Carlos. Aquí tienes el formulario de reembolso: https://forms.gle/XFGPAd9581AhC9eu7. Vamos a revisar tu situación.
+**Bot:** Gracias Carlos. Aquí tienes el formulario de reembolso: https://demowash.demo/refund. Vamos a revisar tu situación.
 
 ---
 
