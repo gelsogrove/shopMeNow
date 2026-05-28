@@ -2,8 +2,10 @@ import { DragDropContext, Draggable, Droppable, DropResult } from "@hello-pangea
 import {
   ArrowLeft,
   Check,
+  ClipboardList,
   KanbanSquare,
   LogOut,
+  Mail,
   MessageCircle,
   Pencil,
   Plus,
@@ -13,7 +15,7 @@ import {
   Trash2,
   X,
 } from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import {
   Link,
@@ -1002,6 +1004,24 @@ function ChatScreen({
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [todos, setTodos] = useState<Todo[]>([])
   const [usecasesMd, setUsecasesMd] = useState("")
+  // 🌍 Selected language for the Use Cases panel (markdown + intro card).
+  // Default is Spanish since the source usecases.md is in Spanish.
+  const [usecasesLang, setUsecasesLang] = useState<
+    "es" | "it" | "en" | "fr" | "pt" | "ca"
+  >("es")
+  const [usecasesLoading, setUsecasesLoading] = useState(false)
+  // 🎯 CTA gating: show Survey + Contact buttons only when the visitor
+  // arrived from the public demo page (https://www.echatbot.ai/demo/demowash).
+  // We persist the flag in sessionStorage so the buttons keep showing after
+  // an in-app navigation that wipes document.referrer.
+  const [isFromDemoLink, setIsFromDemoLink] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false
+    try {
+      return sessionStorage.getItem("playground:fromDemoLink") === "1"
+    } catch {
+      return false
+    }
+  })
   const [workspaceName, setWorkspaceName] = useState<string>("Ecolaundry")
   const [customChatbotId, setCustomChatbotId] = useState<string | null>(null)
   const [commentingMessage, setCommentingMessage] = useState<ChatMessage | null>(null)
@@ -1070,12 +1090,53 @@ function ChatScreen({
     setTodos(todosRes.todos || [])
   }, [])
 
+  // 🎯 Referrer check — done once on mount. We accept any URL whose origin
+  // is https://www.echatbot.ai AND whose path starts with /demo/demowash
+  // (so /demo/demowash, /demo/demowash/, /demo/demowash?utm=… all qualify).
+  // Once detected, we persist the flag in sessionStorage so subsequent
+  // in-app navigation doesn't lose it.
+  useEffect(() => {
+    if (isFromDemoLink) return
+    try {
+      const ref = document.referrer
+      if (!ref) return
+      const u = new URL(ref)
+      const okOrigin = u.origin === "https://www.echatbot.ai"
+      const okPath = u.pathname === "/demo/demowash" || u.pathname.startsWith("/demo/demowash/")
+      if (okOrigin && okPath) {
+        sessionStorage.setItem("playground:fromDemoLink", "1")
+        setIsFromDemoLink(true)
+      }
+    } catch {
+      // Malformed referrer URL — ignore
+    }
+  }, [isFromDemoLink])
+
+  // 🌍 Fetch usecases markdown whenever the selected language changes.
+  // Backend handles ?lang=xx — translates (and caches) into target language.
+  useEffect(() => {
+    let cancelled = false
+    setUsecasesLoading(true)
+    playFetch(`${API_BASE}/usecases?lang=${usecasesLang}`)
+      .then((r) => r.text())
+      .then((text) => {
+        if (cancelled) return
+        setUsecasesMd(text)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setUsecasesMd("# Use Cases\n\nFile not found.")
+      })
+      .finally(() => {
+        if (!cancelled) setUsecasesLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [usecasesLang])
+
   useEffect(() => {
     fetchAll()
-    playFetch(`${API_BASE}/usecases`)
-      .then((r) => r.text())
-      .then(setUsecasesMd)
-      .catch(() => setUsecasesMd("# Use Cases\n\nFile not found."))
     playFetch(`${API_BASE}/workspace-info`)
       .then((r) => r.json())
       .then((data) => {
@@ -1371,6 +1432,41 @@ function ChatScreen({
         hideUserChip={customChatbotId === "demowash"}
         rightSlot={
           <div className="flex items-center gap-2">
+            {/* 🎯 Survey + Contact us — only shown when the visitor arrived
+                from https://www.echatbot.ai/demo/demowash. Both open in a
+                small popup window. */}
+            {isFromDemoLink && (
+              <>
+                <button
+                  onClick={() =>
+                    window.open(
+                      "https://www.echatbot.ai/survey",
+                      "echatbot-survey",
+                      "width=720,height=820,noopener,noreferrer",
+                    )
+                  }
+                  className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
+                  title="Take the demo survey"
+                >
+                  <ClipboardList className="w-4 h-4" />
+                  Survey
+                </button>
+                <button
+                  onClick={() =>
+                    window.open(
+                      "https://www.echatbot.ai/contact",
+                      "echatbot-contact",
+                      "width=720,height=820,noopener,noreferrer",
+                    )
+                  }
+                  className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
+                  title="Contact us"
+                >
+                  <Mail className="w-4 h-4" />
+                  Contact us
+                </button>
+              </>
+            )}
             <button
               onClick={() => setShowNewChat(true)}
               className="bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
@@ -1378,18 +1474,23 @@ function ChatScreen({
               <Plus className="w-4 h-4" />
               New Chat
             </button>
-            <button
-              onClick={() => navigate("/demo/ecolaundry/kanban")}
-              className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
-            >
-              <KanbanSquare className="w-4 h-4" />
-              Kanban Board
-              {todos.length > 0 && (
-                <span className="bg-emerald-100 text-emerald-700 text-xs px-1.5 py-0.5 rounded-full">
-                  {todos.length}
-                </span>
-              )}
-            </button>
+            {/* Kanban Board is for the operator-facing playground only.
+                The DemoWash public demo doesn't expose the todo workflow,
+                so we hide the entry-point button entirely. */}
+            {customChatbotId !== "demowash" && (
+              <button
+                onClick={() => navigate("/demo/ecolaundry/kanban")}
+                className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
+              >
+                <KanbanSquare className="w-4 h-4" />
+                Kanban Board
+                {todos.length > 0 && (
+                  <span className="bg-emerald-100 text-emerald-700 text-xs px-1.5 py-0.5 rounded-full">
+                    {todos.length}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
         }
       />
@@ -1689,8 +1790,10 @@ function ChatScreen({
                       <div className="text-[10px] text-gray-500 mt-1 flex justify-between items-center gap-3">
                         <span>{new Date(m.createdAt).toLocaleTimeString()}</span>
                         {/* Comment button only for chatbot (OUTBOUND) messages.
-                            Users don't comment on their own messages. */}
-                        {!isInbound && (
+                            Users don't comment on their own messages.
+                            Hidden on DemoWash — the public demo doesn't expose
+                            the operator todo workflow. */}
+                        {!isInbound && customChatbotId !== "demowash" && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation()
@@ -1818,21 +1921,64 @@ function ChatScreen({
 
         {/* MARKDOWN — hidden on smaller screens to give chat room */}
         <section className="hidden lg:flex col-span-4 bg-white rounded-xl shadow flex-col overflow-hidden min-h-0">
-          <div className="px-4 py-2 bg-blue-600 text-white font-semibold shrink-0">
-            Use Cases
+          <div className="px-4 py-2 bg-blue-600 text-white font-semibold shrink-0 flex items-center justify-between gap-3">
+            <span>Use Cases</span>
+            {/* 🌍 Language flags — click to translate the whole Use Cases
+                block (intro card + markdown content) into the target language.
+                Backend translates on first request and caches. */}
+            <div className="flex items-center gap-1">
+              {(
+                [
+                  { code: "es", flag: "🇪🇸", label: "ES" },
+                  { code: "it", flag: "🇮🇹", label: "IT" },
+                  { code: "en", flag: "🇬🇧", label: "EN" },
+                  { code: "fr", flag: "🇫🇷", label: "FR" },
+                  { code: "pt", flag: "🇵🇹", label: "PT" },
+                  { code: "ca", flag: "🏴󠁥󠁳󠁣󠁴󠁿", label: "CA" },
+                ] as const
+              ).map((opt) => {
+                const active = usecasesLang === opt.code
+                return (
+                  <button
+                    key={opt.code}
+                    type="button"
+                    onClick={() => setUsecasesLang(opt.code)}
+                    disabled={usecasesLoading && !active}
+                    title={opt.label}
+                    aria-label={`Translate to ${opt.label}`}
+                    className={
+                      "text-base leading-none px-1.5 py-0.5 rounded transition-all " +
+                      (active
+                        ? "bg-white/25 ring-1 ring-white/60 scale-110"
+                        : "opacity-70 hover:opacity-100 hover:bg-white/10")
+                    }
+                  >
+                    <span className="text-lg" aria-hidden="true">
+                      {opt.flag}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
-          <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 prose prose-sm max-w-none break-words">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 prose prose-sm max-w-none break-words relative">
+            {usecasesLoading && (
+              <div className="absolute top-2 right-3 text-xs text-slate-500 flex items-center gap-1.5">
+                <span className="w-3 h-3 border-2 border-slate-300 border-t-blue-600 rounded-full animate-spin" />
+                Translating…
+              </div>
+            )}
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeSlug, rehypeHighlight]}
               components={
                 customChatbotId === "demowash"
                   ? {
-                      // Inject a Spanish intro card right after the H1 of
+                      // Inject a multilingual intro card right after the H1 of
                       // the Use Cases markdown (demowash only). The card
-                      // explains in a glance what the demo is about — what
-                      // the chatbot covers, how the multi-sede pricing
-                      // works, and the human-operator escalation flow.
+                      // text follows the currently selected `usecasesLang` —
+                      // the codes (WAIT, SELECT, …) stay the same in every
+                      // language because they're real on-screen tokens.
                       h1: ({ children, ...props }) => (
                         <>
                           <h1 {...props}>{children}</h1>
@@ -1840,7 +1986,7 @@ function ChatScreen({
                             className="not-prose bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 px-7 py-5 my-5 text-[16px] text-orange-900 leading-relaxed shadow-sm"
                             style={{ borderRadius: 50 }}
                           >
-                            <strong className="text-orange-700">DemoWash</strong> es una lavandería demo con varias sedes en franquicia repartidas por Cataluña. Cada sede tiene sus propios precios y horarios, y el chatbot adapta sus respuestas a la lavandería donde se encuentra el cliente. En cuanto a las máquinas, cada incidencia se identifica por un código en pantalla con su procedimiento documentado: <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">WAIT</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">SELECT</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">OPEN</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">ALERT OPEN</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">ERR-01</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">ALERT</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">BLOCK</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">STOP</code>, <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">END</code>. Además, el chatbot es <strong className="text-orange-700">multilingüe</strong> y responde en 6 idiomas (español, italiano, inglés, catalán, portugués y francés), detectando automáticamente el idioma del cliente. A continuación tienes la lista de casos: el chatbot responde de forma autónoma y, cuando hace falta, escala a un operador humano que, desde el panel de administración, puede pausar el bot y chatear directamente con el cliente.
+                            <DemowashIntroCard lang={usecasesLang} />
                           </div>
                         </>
                       ),
@@ -1883,6 +2029,176 @@ function ChatScreen({
         />
       )}
     </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// DEMOWASH INTRO CARD — multilingual presentation box shown above the Use
+// Cases markdown. Translations are hardcoded (short text, frequently read,
+// not worth an LLM round-trip). Machine codes (WAIT, SELECT, …) are real
+// on-screen tokens so they're identical across languages.
+// ----------------------------------------------------------------------------
+type IntroLang = "es" | "it" | "en" | "fr" | "pt" | "ca"
+
+function DemowashIntroCard({ lang }: { lang: IntroLang }) {
+  const codes = [
+    "WAIT",
+    "SELECT",
+    "OPEN",
+    "ALERT OPEN",
+    "ERR-01",
+    "ALERT",
+    "BLOCK",
+    "STOP",
+    "END",
+  ]
+  const t: Record<
+    IntroLang,
+    {
+      brand: string
+      intro: string
+      codesLabel: string
+      multilingual: string
+      multilingualLabel: string
+      languages: string
+      footer: string
+      whatsappLine: string
+      customizationLine: string
+    }
+  > = {
+    es: {
+      brand: "DemoWash",
+      intro:
+        " es una lavandería demo con varias sedes en franquicia repartidas por Cataluña. Cada sede tiene sus propios precios y horarios, y el chatbot adapta sus respuestas a la lavandería donde se encuentra el cliente. En cuanto a las máquinas, cada incidencia se identifica por un código en pantalla con su procedimiento documentado: ",
+      codesLabel: "",
+      multilingual: ". Además, el chatbot es ",
+      multilingualLabel: "multilingüe",
+      languages:
+        " y responde en 6 idiomas (español, italiano, inglés, catalán, portugués y francés), detectando automáticamente el idioma del cliente.",
+      footer:
+        " A continuación tienes la lista de casos: el chatbot responde de forma autónoma y, cuando hace falta, escala a un operador humano que, desde el panel de administración, puede pausar el bot y chatear directamente con el cliente.",
+      whatsappLine: "Todo el servicio se ofrece a través de WhatsApp.",
+      customizationLine:
+        "Por supuesto, estamos abiertos a todas las personalizaciones necesarias, incluso conectarnos remotamente a la máquina para leer su estado o enviar comandos.",
+    },
+    it: {
+      brand: "DemoWash",
+      intro:
+        " è una lavanderia demo con diverse sedi in franchising sparse per la Catalogna. Ogni sede ha i propri prezzi e orari e il chatbot adatta le sue risposte alla lavanderia in cui si trova il cliente. Per quanto riguarda le macchine, ogni incidenza è identificata da un codice sul display con la propria procedura documentata: ",
+      codesLabel: "",
+      multilingual: ". Inoltre, il chatbot è ",
+      multilingualLabel: "multilingua",
+      languages:
+        " e risponde in 6 lingue (spagnolo, italiano, inglese, catalano, portoghese e francese), rilevando automaticamente la lingua del cliente.",
+      footer:
+        " Di seguito trovi l'elenco dei casi: il chatbot risponde in modo autonomo e, quando serve, scala a un operatore umano che, dal pannello di amministrazione, può mettere in pausa il bot e chattare direttamente con il cliente.",
+      whatsappLine: "Tutto il servizio è erogato tramite WhatsApp.",
+      customizationLine:
+        "Ovviamente siamo aperti a tutte le customizzazioni del caso, anche collegarci in remoto alla macchina per leggerne lo stato o lanciare comandi.",
+    },
+    en: {
+      brand: "DemoWash",
+      intro:
+        " is a demo laundromat chain with multiple franchise locations across Catalonia. Each location has its own prices and opening hours, and the chatbot adapts its replies to the laundry the customer is in. For the machines, each incident is identified by an on-screen code with its documented procedure: ",
+      codesLabel: "",
+      multilingual: ". On top of that, the chatbot is ",
+      multilingualLabel: "multilingual",
+      languages:
+        " and replies in 6 languages (Spanish, Italian, English, Catalan, Portuguese and French), automatically detecting the customer's language.",
+      footer:
+        " Below you'll find the list of use cases: the chatbot replies on its own and, when needed, escalates to a human operator who, from the admin panel, can pause the bot and chat directly with the customer.",
+      whatsappLine: "The whole service runs on WhatsApp.",
+      customizationLine:
+        "Of course, we're open to any customization you need — including connecting remotely to the machine to read its status or send commands.",
+    },
+    fr: {
+      brand: "DemoWash",
+      intro:
+        " est une laverie démo avec plusieurs établissements en franchise répartis dans toute la Catalogne. Chaque site a ses propres tarifs et horaires, et le chatbot adapte ses réponses à la laverie où se trouve le client. Pour les machines, chaque incident est identifié par un code à l'écran avec sa procédure documentée : ",
+      codesLabel: "",
+      multilingual: ". De plus, le chatbot est ",
+      multilingualLabel: "multilingue",
+      languages:
+        " et répond en 6 langues (espagnol, italien, anglais, catalan, portugais et français), en détectant automatiquement la langue du client.",
+      footer:
+        " Tu trouveras ci-dessous la liste des cas : le chatbot répond de façon autonome et, si nécessaire, transfère à un opérateur humain qui, depuis le panneau d'administration, peut mettre le bot en pause et discuter directement avec le client.",
+      whatsappLine: "L'ensemble du service est fourni via WhatsApp.",
+      customizationLine:
+        "Bien sûr, nous sommes ouverts à toutes les personnalisations nécessaires, y compris nous connecter à distance à la machine pour lire son état ou envoyer des commandes.",
+    },
+    pt: {
+      brand: "DemoWash",
+      intro:
+        " é uma lavandaria demo com várias sedes em franquia espalhadas pela Catalunha. Cada sede tem os seus próprios preços e horários, e o chatbot adapta as respostas à lavandaria onde o cliente está. Quanto às máquinas, cada incidência identifica-se por um código no ecrã com o seu procedimento documentado: ",
+      codesLabel: "",
+      multilingual: ". Além disso, o chatbot é ",
+      multilingualLabel: "multilingue",
+      languages:
+        " e responde em 6 idiomas (espanhol, italiano, inglês, catalão, português e francês), detetando automaticamente o idioma do cliente.",
+      footer:
+        " Em seguida tens a lista de casos: o chatbot responde de forma autónoma e, quando é preciso, escala para um operador humano que, a partir do painel de administração, pode pausar o bot e conversar diretamente com o cliente.",
+      whatsappLine: "Todo o serviço é prestado através do WhatsApp.",
+      customizationLine:
+        "Claro, estamos abertos a todas as personalizações necessárias, incluindo ligar-nos remotamente à máquina para ler o seu estado ou enviar comandos.",
+    },
+    ca: {
+      brand: "DemoWash",
+      intro:
+        " és una bugaderia demo amb diverses seus en franquícia repartides per Catalunya. Cada seu té els seus propis preus i horaris, i el chatbot adapta les respostes a la bugaderia on es troba el client. Pel que fa a les màquines, cada incidència s'identifica amb un codi a la pantalla amb el seu procediment documentat: ",
+      codesLabel: "",
+      multilingual: ". A més, el chatbot és ",
+      multilingualLabel: "multilingüe",
+      languages:
+        " i respon en 6 idiomes (espanyol, italià, anglès, català, portuguès i francès), detectant automàticament l'idioma del client.",
+      footer:
+        " A continuació tens la llista de casos: el chatbot respon de manera autònoma i, quan cal, escala a un operador humà que, des del panell d'administració, pot pausar el bot i xatejar directament amb el client.",
+      whatsappLine: "Tot el servei s'ofereix a través de WhatsApp.",
+      customizationLine:
+        "Per descomptat, estem oberts a totes les personalitzacions necessàries, fins i tot connectar-nos remotament a la màquina per llegir-ne l'estat o enviar comandes.",
+    },
+  }
+  const tr = t[lang]
+  // Split the WhatsApp sentence so we can render "WhatsApp" as a green
+  // inline pill (official brand color) right where it appears naturally
+  // in the sentence — no awkward leading badge.
+  const [waBefore, waAfter = ""] = tr.whatsappLine.split("WhatsApp")
+  const WhatsAppPill = (
+    <span className="inline-flex items-center gap-1 bg-[#25D366]/15 text-[#128C7E] px-2 py-0.5 rounded-full text-[13px] font-semibold ring-1 ring-[#25D366]/30 align-baseline">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        className="w-3.5 h-3.5"
+        fill="currentColor"
+        aria-hidden="true"
+      >
+        <path d="M19.05 4.91A9.82 9.82 0 0 0 12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.91-7.01zM12.05 20.15h-.01a8.2 8.2 0 0 1-4.18-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.27-4.38c0-4.54 3.7-8.24 8.25-8.24 2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 0 1 2.41 5.83c0 4.54-3.69 8.23-8.23 8.23zm4.51-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.12-.16.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.04-.38-1.99-1.22-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.12-.14.16-.25.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43-.14-.01-.31-.01-.48-.01a.92.92 0 0 0-.67.31c-.23.25-.87.85-.87 2.08 0 1.23.89 2.41 1.02 2.58.12.17 1.76 2.69 4.27 3.77.6.26 1.06.41 1.42.53.6.19 1.14.16 1.57.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.11-.23-.17-.48-.29z" />
+      </svg>
+      WhatsApp
+    </span>
+  )
+  return (
+    <>
+      <strong className="text-orange-700">{tr.brand}</strong>
+      {tr.intro}
+      {codes.map((c, i) => (
+        <Fragment key={c}>
+          <code className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded text-[14px]">
+            {c}
+          </code>
+          {i < codes.length - 1 ? ", " : ""}
+        </Fragment>
+      ))}
+      {tr.multilingual}
+      <strong className="text-orange-700">{tr.multilingualLabel}</strong>
+      {tr.languages}
+      {tr.footer}{" "}
+      {waBefore}
+      {WhatsAppPill}
+      {waAfter}
+      {/* Closing line — invitation to customization, including remote
+          machine control. Rendered as its own paragraph below for emphasis. */}
+      <div className="mt-3 italic text-orange-800">{tr.customizationLine}</div>
+    </>
   )
 }
 

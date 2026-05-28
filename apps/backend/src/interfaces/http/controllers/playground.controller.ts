@@ -1,4 +1,5 @@
 import { prisma } from "@echatbot/database"
+import axios from "axios"
 import { Request, Response } from "express"
 import * as fs from "fs"
 import * as path from "path"
@@ -7,6 +8,150 @@ import { CustomClientChatbotService, applyCustomerPatches, applyEscalationNotifi
 import { detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
 import { buildPhoneVariants } from "../../../utils/phone"
 import logger from "../../../utils/logger"
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Usecases markdown translation cache
+//
+// Source language for usecases.md is Spanish (es). When a non-source language
+// is requested via ?lang=xx, we translate via OpenRouter once and cache the
+// result both in-memory and on disk (usecases.<lang>.md next to the original
+// file). On subsequent requests we serve the cache directly.
+// ─────────────────────────────────────────────────────────────────────────────
+const SUPPORTED_USECASES_LANGS = ["es", "it", "en", "fr", "pt", "ca"] as const
+type UsecasesLang = (typeof SUPPORTED_USECASES_LANGS)[number]
+const USECASES_SOURCE_LANG: UsecasesLang = "es"
+const usecasesMemoryCache = new Map<string, string>() // key: `${filePath}:${lang}`
+
+const LANG_FULL_NAME: Record<UsecasesLang, string> = {
+  es: "Spanish",
+  it: "Italian",
+  en: "English",
+  fr: "French",
+  pt: "Portuguese",
+  ca: "Catalan",
+}
+
+function isSupportedUsecasesLang(value: unknown): value is UsecasesLang {
+  return (
+    typeof value === "string" &&
+    (SUPPORTED_USECASES_LANGS as readonly string[]).includes(value)
+  )
+}
+
+/**
+ * Translate the usecases markdown into the target language via OpenRouter.
+ * Preserves markdown structure (headings, lists, code blocks, bold, italics,
+ * links, emoji). Returns the original text if translation fails.
+ */
+async function translateUsecasesMarkdown(
+  source: string,
+  targetLang: UsecasesLang
+): Promise<string> {
+  const apiKey = process.env.OPENROUTER_API_KEY
+  if (!apiKey) {
+    logger.warn(
+      "[Usecases-i18n] OPENROUTER_API_KEY missing — returning source text"
+    )
+    return source
+  }
+  const model = process.env.OPENROUTER_TRANSLATION_MODEL || "openai/gpt-4o-mini"
+  const prompt = `You are a professional translator. Translate the following Markdown document from Spanish to ${LANG_FULL_NAME[targetLang]}.
+
+STRICT RULES:
+- Preserve ALL markdown syntax exactly: headings (#, ##, ###), bullets (-), bold (**...**), italics (*...*), code (\`...\`), blockquotes (>), tables, horizontal rules (---), links [text](url), images, emoji.
+- Keep code blocks, URLs, anchor hrefs (#caso-...), file paths, JSON keys, regex, command/keyword tokens (WAIT, SELECT, OPEN, ERR-01, ALERT, BLOCK, ERR-12, etc.), placeholders like {{var}} or [LINK_x] EXACTLY as they are — do NOT translate them.
+- Keep speaker labels exactly: "**Usuario:**" → translate the label to the target language ("**User:**" in en, "**Utente:**" in it, "**Usuari:**" in ca, "**Utilisateur:**" in fr, "**Utilizador:**" in pt). "**Bot:**" stays as "**Bot:**".
+- Keep proper nouns and brand names unchanged (Demowash, DemoWash, Mataró, Eixample, Rubí, Sant Cugat, Gràcia, Terrassa).
+- Output ONLY the translated markdown, no preamble, no fences, no explanation.
+
+DOCUMENT TO TRANSLATE:
+${source}`
+
+  try {
+    const response = await axios.post(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        model,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a professional markdown translator. Output only the translated markdown.",
+          },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 120_000,
+      }
+    )
+    const translated: string | undefined =
+      response.data?.choices?.[0]?.message?.content
+    if (!translated || translated.trim().length < 20) {
+      logger.warn(
+        `[Usecases-i18n] Empty/short translation for ${targetLang} — fallback to source`
+      )
+      return source
+    }
+    return translated
+  } catch (err: any) {
+    logger.error(
+      `[Usecases-i18n] OpenRouter translation failed for ${targetLang}:`,
+      err?.response?.data || err?.message || err
+    )
+    return source
+  }
+}
+
+/**
+ * Returns the usecases markdown for the requested language.
+ * Order: memory cache → disk cache (sibling file usecases.<lang>.md) → translate
+ * via OpenRouter and persist to both caches.
+ */
+async function getUsecasesMarkdownForLang(
+  sourcePath: string,
+  lang: UsecasesLang
+): Promise<string> {
+  // 1) Source language: serve original directly
+  if (lang === USECASES_SOURCE_LANG) {
+    return fs.readFileSync(sourcePath, "utf-8")
+  }
+  const cacheKey = `${sourcePath}:${lang}`
+  // 2) Memory cache
+  const memHit = usecasesMemoryCache.get(cacheKey)
+  if (memHit) return memHit
+  // 3) Disk cache: usecases.<lang>.md sibling
+  const dir = path.dirname(sourcePath)
+  const base = path.basename(sourcePath, ".md")
+  const diskCachePath = path.join(dir, `${base}.${lang}.md`)
+  if (fs.existsSync(diskCachePath)) {
+    const cached = fs.readFileSync(diskCachePath, "utf-8")
+    usecasesMemoryCache.set(cacheKey, cached)
+    return cached
+  }
+  // 4) Translate via OpenRouter
+  const source = fs.readFileSync(sourcePath, "utf-8")
+  logger.info(
+    `[Usecases-i18n] Translating ${sourcePath} → ${lang} via OpenRouter`
+  )
+  const translated = await translateUsecasesMarkdown(source, lang)
+  // Persist (best-effort)
+  try {
+    fs.writeFileSync(diskCachePath, translated, "utf-8")
+    logger.info(`[Usecases-i18n] Cached translation to ${diskCachePath}`)
+  } catch (writeErr: any) {
+    logger.warn(
+      `[Usecases-i18n] Could not persist disk cache ${diskCachePath}: ${writeErr?.message}`
+    )
+  }
+  usecasesMemoryCache.set(cacheKey, translated)
+  return translated
+}
 
 const customClientChatbotService = new CustomClientChatbotService()
 
@@ -91,7 +236,13 @@ export class PlaygroundController {
       if (!filePath) {
         return res.status(404).json({ error: "usecases.md not found" })
       }
-      const content = fs.readFileSync(filePath, "utf-8")
+      // 🌍 Optional ?lang=xx — translate (and cache) into one of the
+      // supported languages. Falls back to source (es) when unsupported.
+      const rawLang = (req.query.lang as string | undefined)?.toLowerCase()
+      const lang: UsecasesLang = isSupportedUsecasesLang(rawLang)
+        ? rawLang
+        : USECASES_SOURCE_LANG
+      const content = await getUsecasesMarkdownForLang(filePath, lang)
       res.setHeader("Content-Type", "text/markdown; charset=utf-8")
       return res.send(content)
     } catch (error: any) {
@@ -128,7 +279,12 @@ export class PlaygroundController {
       if (!filePath) {
         return res.status(404).json({ error: "usecases.md not found" })
       }
-      const content = fs.readFileSync(filePath, "utf-8")
+      // 🌍 Same ?lang=xx support as the auth'd endpoint
+      const rawLang = (req.query.lang as string | undefined)?.toLowerCase()
+      const lang: UsecasesLang = isSupportedUsecasesLang(rawLang)
+        ? rawLang
+        : USECASES_SOURCE_LANG
+      const content = await getUsecasesMarkdownForLang(filePath, lang)
       res.setHeader("Content-Type", "text/markdown; charset=utf-8")
       return res.send(content)
     } catch (error: any) {

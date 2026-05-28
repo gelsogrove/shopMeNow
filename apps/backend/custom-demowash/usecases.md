@@ -75,12 +75,6 @@
 
 ### 1.1 — Happy Path
 
-**Criterios de aceptación:**
-1. Gather: lavandería → número de máquina → pantalla. NO pregunta «¿has pagado?».
-2. Tras SELECT, el bot muestra los 4 programas disponibles (**60º**, **40º**, **30º**, **FRÍO**) con descripción y pide pulsar uno.
-3. Cuando el cliente confirma que funciona, el bot cierra como resuelto.
-4. No se escala a operador.
-
 **Conversación:**
 
 **Usuario:** La lavadora no funciona  
@@ -110,12 +104,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ### 1.2 — Escalación: máquina no responde tras pulsar
-
-**Criterios de aceptación:**
-1. Si el cliente dice «no responde» tras pulsar, el bot re-pregunta el código exacto.
-2. Confirmado SELECT de nuevo → escala y pide nombre.
-3. Mensaje final con «operador» + «desactivado».
-4. Resumen al operador: nombre, lavandería, número, código pantalla.
 
 **Conversación:**
 
@@ -155,12 +143,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### 2.1 — Happy Path
 
-**Criterios de aceptación:**
-1. Gather: lavandería → número → pantalla.
-2. Tras OPEN, el bot pide abrir y cerrar bien la puerta.
-3. Si el cliente confirma que funciona, cierra como resuelto.
-4. No se escala.
-
 **Conversación:**
 
 **Usuario:** La lavadora no arranca  
@@ -181,12 +163,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ### 2.2 — Escalación: puerta bloqueada tras repetir
-
-**Criterios de aceptación:**
-1. Si OPEN persiste, el bot re-pregunta el código exacto.
-2. Confirmado OPEN → escala y pide nombre.
-3. Mensaje final con «operador» + «desactivado».
-4. Resumen al operador: nombre, lavandería, número, estado OPEN.
 
 **Conversación:**
 
@@ -215,13 +191,7 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### 2.3 — Recap display flow: Phase A / Phase B / cadence N (F74 + F75)
 
-**Criterios de aceptación:**
-1. **Phase A** (primera instrucción): el bot muestra 4 bloques — saludo tranquilizador + resumen del problema en negrita + instrucción + closing.
-2. **Phase B turno 1…N-1**: el bot muestra solo la instrucción. Sin saludo ni closing.
-3. **Phase B turno N** (configurable via `settings.rephraseDisplayFlowRecapInterval`, default 3): el bot muestra resumen del problema + frase de ánimo + instrucción.
-4. El counter `displayPhaseBTurnCount` se resetea al cerrar el incidente.
-
-**Conversación (Phase A + 3 turni Phase B con recap al turno 3):**
+**Conversación:**
 
 **Usuario:** La lavadora no funciona  
 **Bot:** ¿En qué lavandería estás?
@@ -233,23 +203,19 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 **Bot:** ¿Qué aparece en la pantalla?
 
 **Usuario:** OPEN  
-**Bot:** [Phase A — 4 bloques]  
-**No te preocupes, tiene solución** 😊  
+**Bot:** **No te preocupes, tiene solución** 😊  
 Estás en **Mataró** con la **lavadora 5** y el error **OPEN**.  
 La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez.  
 Cuéntame si arranca 😊
 
 **Usuario:** no funciona  
-**Bot:** [Phase B turno 1 — solo instrucción]  
-Por favor, escríbeme solo el código exacto que aparece en la pantalla en este momento.
+**Bot:** Por favor, escríbeme solo el código exacto que aparece en la pantalla en este momento.
 
 **Usuario:** no funciona  
-**Bot:** [Phase B turno 2 — solo instrucción]  
-Por favor, escríbeme solo el código exacto que aparece en la pantalla en este momento.
+**Bot:** Por favor, escríbeme solo el código exacto que aparece en la pantalla en este momento.
 
 **Usuario:** no funciona  
-**Bot:** [Phase B turno 3 — recap + ánimo + instrucción]  
-Estás en **Mataró** con la **lavadora 5** y el error **OPEN**.  
+**Bot:** Estás en **Mataró** con la **lavadora 5** y el error **OPEN**.  
 Seguimos intentándolo 💪  
 Por favor, escríbeme solo el código exacto que aparece en la pantalla en este momento.
 
@@ -258,12 +224,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ## Caso 3 — WAIT
 
 ### 3.1 — Happy Path
-
-**Criterios de aceptación:**
-1. Gather: lavandería → número → pantalla.
-2. Tras WAIT, el bot pide comprobar el número en la central de pago.
-3. NO muestra los 4 programas (diferencia con Caso 1 SELECT).
-4. Si confirma que funciona, cierra como resuelto.
 
 **Conversación:**
 
@@ -285,12 +245,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ---
 
 ### 3.2 — Escalación: WAIT persiste
-
-**Criterios de aceptación:**
-1. Si WAIT persiste, el bot re-pregunta el código exacto.
-2. Confirmado WAIT → escala y pide nombre.
-3. Mensaje final con «operador» + «desactivado».
-4. Resumen al operador: nombre, lavandería, número, código WAIT.
 
 **Conversación:**
 
@@ -321,12 +275,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 
 ### 4.1 — No-change Happy Path
 
-**Criterios de aceptación:**
-1. Gather: lavandería → tipo → número → «¿la central te ha devuelto el cambio?» (NO pantalla).
-2. Si responde «No», el bot pide revisar el saldo y marcar el número correcto.
-3. Si confirma que arranca, cierra como resuelto.
-4. No se escala.
-
 **Conversación:**
 
 **Usuario:** He pagado y no se ha activado  
@@ -350,12 +298,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ---
 
 ### 4.2 — Escalación: cambio devuelto pero no arranca
-
-**Criterios de aceptación:**
-1. Cualquier «Sí» a «¿cambio devuelto?» → escala (el contexto del trigger ya indica que la máquina no se activó).
-2. Excepción: «Sí, ahora arranca / ya funciona» → resolved (corner case, no escala).
-3. El bot pide el nombre antes del cierre con «operador» + «desactivado».
-4. Resumen al operador: nombre, lavandería, número, tipo.
 
 **Conversación A — bare «Sí»:**
 
@@ -388,12 +330,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 
 ### 5.1 — Happy Path
 
-**Criterios de aceptación:**
-1. Gather: lavandería → tipo → número.
-2. El bot explica que es un error de secuencia y pide qué ha hecho antes.
-3. Si el cliente confirma que ya funciona, cierra como resuelto.
-4. Acepta variantes naturales del código (ERR-12 / AL ERR-01 / ALERT ERR-01 / alarm ERR-01 / alarma ERR-01).
-
 **Conversación:**
 
 **Usuario:** Me sale ERR-12  
@@ -414,12 +350,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ---
 
 ### 5.2 — Escalación: cliente no puede seguir instrucciones
-
-**Criterios de aceptación:**
-1. Si el cliente dice que no entiende cómo hacerlo, el bot escala.
-2. El bot pide el nombre antes de cerrar.
-3. Mensaje final con «operador» + «desactivado».
-4. Resumen al operador: lavandería, número, pantalla ERR-12.
 
 **Conversación:**
 
@@ -448,12 +378,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 
 ### 5.3 — Escalación: ERR-12 persiste
 
-**Criterios de aceptación:**
-1. Si el cliente dice que el error persiste, el bot re-pregunta el código exacto.
-2. Confirmado ERR-12 → escala.
-3. Mensaje final con «operador» + «desactivado».
-4. Resumen al operador: lavandería, número, pantalla ERR-12.
-
 **Conversación:**
 
 **Usuario:** Me sale ERR-12  
@@ -480,12 +404,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ---
 
 ### 5.4 — Pivot ERR-12 → Caso 4 (cliente confirma pagamento)
-
-**Criterios de aceptación:**
-1. El cliente entra con ERR-12 → bot hace gather (lavandería → tipo → número) y explica el error de secuencia.
-2. Si en el siguiente turno el cliente menciona que ha pagado, el bot **pivota deterministically al Caso 4**.
-3. A partir de ahí los guards de Caso 4 toman el control: la próxima pregunta es «¿La central te ha devuelto el cambio?».
-4. NO se acumulan instrucciones improvisadas por el LLM: el pivot deja el state machine en una rama documentada y deterministica.
 
 **Conversación:**
 
@@ -515,12 +433,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ## Caso 6 — Doble cobro
 
 ### 6.1 — Servicio completado (Happy Path)
-
-**Criterios de aceptación:**
-1. Gather: lavandería → ¿has podido lavar/secar? → tipo → número → relato → 4 dígitos → captura → nombre.
-2. Validación 4 dígitos: exactamente 4 cifras; si no, re-ask; tras 2° fallo escala.
-3. Mensaje final NO menciona «operador» ni «desactivado» (trámite de devolución).
-4. El final incluye URL del formulario de reembolso.
 
 **Conversación:**
 
@@ -552,12 +464,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 
 ### 6.2 — Escalación: cliente muy molesto
 
-**Criterios de aceptación:**
-1. Si el cliente está muy enfadado y exige operador → escala inmediatamente.
-2. El bot pide el nombre antes de cerrar.
-3. Mensaje final con «operador» + «desactivado».
-4. NO sigue pidiendo relato, dígitos, captura.
-
 **Conversación:**
 
 **Usuario:** Me habéis cobrado dos veces, estoy muy enfadado y quiero hablar con un operador ahora mismo  
@@ -569,12 +475,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ---
 
 ### 6.3 — Escalación: relato inconsistente
-
-**Criterios de aceptación:**
-1. Si el relato es contradictorio o «no sé exactamente» → escala.
-2. NO sigue pidiendo dígitos ni captura.
-3. El bot pide el nombre antes de cerrar.
-4. Mensaje final con «operador» + «desactivado».
 
 **Conversación:**
 
@@ -603,12 +503,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 
 ### 6.4 — SIN haber usado el servicio
 
-**Criterios de aceptación:**
-1. Gather mínimo: lavandería → ¿has podido? → escala si «No».
-2. NO pide tipo, número, relato, dígitos, captura.
-3. El bot pide el nombre antes de cerrar.
-4. Resumen al operador: indica explícitamente que NO ha podido usar el servicio.
-
 **Conversación:**
 
 **Usuario:** Me habéis cobrado dos veces con la tarjeta  
@@ -626,12 +520,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ---
 
 ### 6.5 — Validación 4 dígitos tarjeta
-
-**Criterios de aceptación:**
-1. Acepta exactamente 4 dígitos consecutivos.
-2. Si no, re-ask: «Necesito exactamente los 4 últimos dígitos de la tarjeta».
-3. Tras 2° intento inválido → escala.
-4. Si válido, continúa flujo 6.1 normalmente.
 
 **Conversación A — recuperado al segundo intento:**
 
@@ -657,12 +545,6 @@ Por favor, escríbeme solo el código exacto que aparece en la pantalla en este 
 ## Caso 7 — Pagado sin usar
 
 ### 7.1 — Resuelto vía pantalla SELECT
-
-**Criterios de aceptación:**
-1. Gather: lavandería → tipo → número → pantalla.
-2. Reconoce el código y da la indicación correspondiente.
-3. Si confirma que funciona, cierra como resuelto.
-4. No se escala.
 
 **Conversación:**
 
@@ -696,12 +578,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ### 7.2 — Escalación: máquina no responde tras paso indicado
-
-**Criterios de aceptación:**
-1. Tras la instrucción, si no arranca el bot pide el código exacto.
-2. Si el cliente describe el bloqueo → escala.
-3. Mensaje final con «operador» + «desactivado».
-4. Resumen al operador: lavandería, número, código pantalla.
 
 **Conversación:**
 
@@ -744,12 +620,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### 8.1 — Happy Path (formato válido)
 
-**Criterios de aceptación:**
-1. El bot pide SOLO el código (no lavandería ni tipo en el mismo turno).
-2. Validación formato `^<prefix>(\d{2})(\d{2})(\d{2})(\d{1,2})$` (prefijo + DDMMYY + importe). Prefijo config-driven por tenant (`settings.discountCodePrefix`).
-3. Si formato válido, recoge: nombre → pueblo → número → puerta.
-4. Escala siempre al operador para activación remota.
-
 **Conversación:**
 
 **Usuario:** Tengo un código y no sé cómo usarlo  
@@ -774,12 +644,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### 8.2 — Formato inválido (retry + escalate)
 
-**Criterios de aceptación:**
-1. Si formato no encaja, el bot pide reescribirlo (1° intento).
-2. Tras 2° intento inválido → escala (no escala al primer intento).
-3. El bot pide el nombre.
-4. Mensaje final con «operador» + «desactivado».
-
 **Conversación:**
 
 **Usuario:** Tengo un código y no sé cómo usarlo  
@@ -797,12 +661,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ### 8.3 — Cliente repite un código en el campo nombre (rechazo + re-ask)
-
-**Criterios de aceptación:**
-1. Tras un código válido, el bot pregunta `¿Cuál es tu nombre?`.
-2. Si el cliente responde con un token que coincide con el formato del código de descuento, el bot lo rechaza y vuelve a preguntar el nombre.
-3. El contador `awaitNameAskAttempts` se incrementa con cada intento no válido (3-strikes ladder): 1° y 2° → re-ask; 3° → escala.
-4. El rechazo es deterministico — vale en las 6 lenguas soportadas porque el detector solo mira el formato.
 
 **Conversación A — recuperado al re-ask:**
 
@@ -840,12 +698,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ## Caso 9 — Factura
 
 ### 9.1 — Happy Path
-
-**Criterios de aceptación:**
-1. Gather: lavandería → tipo → razón social → dirección → CIF/NIF → fecha → coste → email → notas → nombre.
-2. Una pregunta por turno (NO listas combinadas). Coste total se acepta verbatim.
-3. Datos PII NO pasan por rephrase LLM ni operator-briefing LLM.
-4. Mensaje final incluye disclaimer de privacidad. Operator briefing incluye `coste: X`.
 
 **Conversación:**
 
@@ -888,12 +740,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### 9.2 — Email inválido (retry)
 
-**Criterios de aceptación:**
-1. Email mal formado → reply contiene «no parece válido» y vuelve a pedirlo.
-2. El bot NO avanza al siguiente paso hasta recibir un email válido.
-3. Al segundo intento válido continúa al paso siguiente.
-4. Cierre canónico con disclaimer de privacidad.
-
 **Conversación:**
 
 [gather hasta coste → bot pide email]
@@ -910,12 +756,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ## Caso 10 — Comprar tarjeta fidelización
 
-**Criterios de aceptación:**
-1. Respuesta canónica: 20€ en efectivo + solo funciona en la tienda donde se compró.
-2. Si el cliente da location, el bot añade instrucción específica del local.
-3. NO se inventa instrucción para locales sin override.
-4. No se piden tipo, número ni display (es una FAQ).
-
 **Conversación:**
 
 **Usuario:** ¿Cómo consigo la tarjeta de fidelización?  
@@ -930,12 +770,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ### Caso 10.2 — Tarjeta comprada en otro local (cross-location warning)
-
-**Criterios de aceptación:**
-1. Si `state.location` está definido y el mensaje menciona una location DISTINTA, el bot emite la advertencia canónica de cross-location.
-2. La advertencia es determinística — NO delegada al LLM.
-3. Si el mensaje menciona la MISMA location del cliente, no se emite warning.
-4. Cubre los 6 idiomas con la i18n key `loyaltyCardWrongLocation`.
 
 **Conversación ES:**
 
@@ -963,12 +797,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### Caso 10.3 — Mataró: pregunta loyalty card en T1 + sub-localización en T2 (F100)
 
-**Criterios de aceptación:**
-1. T1: bot responde preguntando Mataró/Eixample (guardMataroStreet vence).
-2. T2: cliente responde "Mataró" → bot emite el override loyalty card de Mataró.
-3. NO se emite el aviso cross-location.
-4. Cubre los 6 idiomas en el T1.
-
 **Conversación IT:**
 
 **Usuario:** ciao sono a Mataró posso usare una tessera di fidelizzazione comprata in un altra lavanderia?  
@@ -986,12 +814,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ## Caso 11 — Recargar tarjeta fidelización
-
-**Criterios de aceptación:**
-1. Respuesta corta: introduce la tarjeta y sigue las instrucciones de la central.
-2. NO pide location (operación estándar en todas las centrales).
-3. Cierre proactivo: invita a reportar si aparece mensaje extraño.
-4. Escala si el cliente reporta error o central no responde.
 
 **Conversación:**
 
@@ -1012,12 +834,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### 12.1 — Horarios por location
 
-**Criterios de aceptación:**
-1. Bot pregunta: «¿En qué lavandería / pueblo estás?»
-2. Cliente responde con pueblo/calle → bot responde con `metadata.hours` de esa location.
-3. Si el cliente dice un pueblo con múltiples ubicaciones (ej. Mataró), bot pregunta calle/zona.
-4. No se inventa información de horarios.
-
 **Conversación:**
 
 **Usuario:** ¿Cuáles son los horarios?  
@@ -1032,12 +848,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ### 12.2 — Precios de lavadora por location y peso
-
-**Criterios de aceptación:**
-1. Bot pregunta el pueblo y muestra lista de máquinas en bold con peso y precios (fidelity/cash).
-2. Cuando el cliente pide precios sin especificar tipo, muestra lavadora y añade «¿También quieres información de secadora?».
-3. Cuando dos o más máquinas comparten specs, las colapsa en una sola línea plural («Lavadoras» / «Secadoras»).
-4. NO inventa precios — solo data de `locations.json:machines`. Incluye aviso `⚠️ paymentCardOnly` o `💡 paymentTpvExact` cuando aplica.
 
 **Conversación:**
 
@@ -1094,12 +904,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ### 12.4 — Programas de lavadora y secadora por location (F81)
 
-**Criterios de aceptación:**
-1. El bot detecta intent de programas en las 6 lenguas.
-2. Si no se conoce la location: pide la lavandería; si se conoce, renderiza directamente la lista desde `metadata.programs`.
-3. Lavadoras CON números: formato `**1** — Muy caliente (60º)`. SIN números: `**Muy caliente** (60º)`.
-4. Secadoras: 3 programas sin número — Alta/Media/Baja temperatura. Nombres en la lengua del cliente.
-
 **Ejemplo — T1 sin location:**
 
 **Usuario:** ¿qué programas tiene la lavadora?  
@@ -1136,12 +940,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 13 — Código de alarma o incoherencia
 
-**Criterios de aceptación:**
-1. Gather completo antes de escalar: location → tipo → número → display.
-2. Reply de escalación contiene «revisión manual» + petición del nombre.
-3. NO confronta al cliente.
-4. Caso «paraguas» para alarmas genéricas no cubiertas por 14-18.
-
 **Conversación:**
 
 **Usuario:** He pagado y ahora sale BLOCK  
@@ -1162,12 +960,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 14 — ALERT OPEN
-
-**Criterios de aceptación:**
-1. El bot intenta UNA vez la guía «abrir + revisar prendas + cerrar bien».
-2. Si el cliente confirma que el mensaje desaparece → resolved.
-3. Si NO desaparece → escala con resumen que incluye «ALERT OPEN» (no «OPEN» genérico).
-4. Acepta ALERT OPEN / ALERT/OPEN / ALMDOOR.
 
 **Conversación:**
 
@@ -1190,12 +982,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 15 — ERR-01
 
-**Criterios de aceptación:**
-1. Reconocimiento de «ERR-01» puro (sin AL/ALERT) → token canónico C001.
-2. Explicación educativa antes de escalar.
-3. Solo necesita location antes de escalar (NO display de nuevo, NO número obligatorio).
-4. Diferencia con Caso 5 ERR-12: este NO admite recovery — siempre escala.
-
 **Conversación:**
 
 **Usuario:** En la pantalla sale ERR-01  
@@ -1210,12 +996,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 16 — ALERT / BLOCK
-
-**Criterios de aceptación:**
-1. Reconocimiento robusto: BLOCK, BLOCK A, BLOCK N, ALERT/A, ALERT/E, ALERT/VAr.
-2. Tras location + tipo + número → escala inmediata.
-3. NO pide abrir/cerrar nada (diferencia con Caso 14 ALERT OPEN).
-4. Resumen al operador incluye el código exacto, location, tipo y número.
 
 **Conversación:**
 
@@ -1235,12 +1015,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 17 — No sabe qué aparece en pantalla
 
-**Criterios de aceptación:**
-1. Gather mínimo: location + tipo de máquina.
-2. Tras gather → escalación inmediata.
-3. NO se pide foto (feature no soportada hoy).
-4. Resumen al operador indica falta de información de pantalla.
-
 **Conversación:**
 
 **Usuario:** La máquina no va, pero no sé qué pone  
@@ -1259,12 +1033,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 18 — Código solo numérico
 
-**Criterios de aceptación:**
-1. Trigger: input que matche `^\d{3,}$` (3+ dígitos puros sin letras).
-2. Step 1: el bot pregunta «¿ves alguna letra delante?».
-3. «Sí» → reset al flujo Caso 8 (pide código completo).
-4. «No» → escalación, resumen indica «código solo numérico».
-
 **Conversación:**
 
 **Usuario:** Tengo un código: 23432023  
@@ -1279,12 +1047,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 19 — Datáfono 10€ en Mataró
-
-**Criterios de aceptación:**
-1. Trigger: mención datáfono + cifra atípica + location Mataró.
-2. NO se piden tipo ni número de máquina.
-3. El bot pregunta solo «¿has podido usar el servicio?» antes de escalar.
-4. Resumen al operador: Mataró + datáfono + importe incoherente.
 
 **Conversación:**
 
@@ -1301,12 +1063,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 20 — Datáfono 10€ en Rubí
 
-**Criterios de aceptación:**
-1. Mismo flujo del Caso 19 con location Rubí.
-2. En otras locations (no Mataró/Rubí) → mismatch.
-3. NO pide tipo ni número.
-4. Resumen al operador: Rubí + datáfono + importe incoherente.
-
 **Conversación:**
 
 **Usuario:** En Rubí me ha cobrado 10€  
@@ -1321,12 +1077,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 21 — Eixample: monedas secadora no suman
-
-**Criterios de aceptación:**
-1. Trigger: minutos no añadidos + secadora + location Eixample.
-2. NO entra al gather de display.
-3. El bot confirma location antes de escalar.
-4. Resumen al operador: Eixample + secadora + monedas no sumadas.
 
 **Conversación:**
 
@@ -1343,12 +1093,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 22 — Rubí: monedas secadora no suman
 
-**Criterios de aceptación:**
-1. Mismo flujo del Caso 21 con location Rubí.
-2. En otras locations → mismatch.
-3. NO pide tipo ni número.
-4. Resumen al operador: Rubí + secadora + monedas no sumadas.
-
 **Conversación:**
 
 **Usuario:** He añadido tiempo a la secadora y no lo ha sumado  
@@ -1363,12 +1107,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 23 — Eixample: no se puede pagar con tarjeta
-
-**Criterios de aceptación:**
-1. Trigger: no pago tarjeta + location Eixample.
-2. Mensaje de escalación menciona «soporte técnico».
-3. En otras locations (no Eixample/Sant Cugat) → mismatch.
-4. Resumen al operador: Eixample + tarjeta + no se puede pagar.
 
 **Conversación:**
 
@@ -1385,12 +1123,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 24 — Sant Cugat: no se puede pagar con tarjeta
 
-**Criterios de aceptación:**
-1. Mismo flujo del Caso 23 con location Sant Cugat.
-2. Confirmación de location proactiva.
-3. NO pide tipo ni número.
-4. Resumen al operador: Sant Cugat + tarjeta + no se puede pagar.
-
 **Conversación:**
 
 **Usuario:** La tarjeta no funciona para pagar  
@@ -1406,12 +1138,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 25 — Cliente muy enfadado
 
-**Criterios de aceptación:**
-1. T1: el bot abre con empatía explícita ANTES de cualquier pregunta.
-2. NUNCA se justifica, contradice ni minimiza.
-3. Si sigue alterado → escala con «atención prioritaria».
-4. Si colabora, sigue el flujo normal del problema reportado.
-
 **Conversación:**
 
 **Usuario:** ¡Esto siempre falla! ¡Quiero una solución ya!  
@@ -1423,12 +1149,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 26 — Devolución inmediata
-
-**Criterios de aceptación:**
-1. NO promete devolución (la decisión es del operador).
-2. Recoge datos mínimos: 4 dígitos, captura, resumen.
-3. Reply menciona «revisión» + «devolución» pero NO «te lo devolvemos».
-4. Resumen al operador: nombre + «devolución» + datos.
 
 **Conversación:**
 
@@ -1442,12 +1162,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 27 — Compensación concreta
 
-**Criterios de aceptación:**
-1. NO confirma activaciones gratuitas ni códigos nuevos.
-2. La primera respuesta incluye el wording `compensationReview` + `¿Cómo te llamas?` en un único mensaje (F65).
-3. Si el cliente insiste, mantiene la línea «no puedo confirmarlo desde aquí».
-4. Resumen al operador: nombre + «compensación» + descripción.
-
 **Conversación:**
 
 **Usuario:** Quiero una secadora gratis por las molestias  
@@ -1459,12 +1173,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 28 — Relato contradictorio doble cobro
-
-**Criterios de aceptación:**
-1. Trigger: «cobró dos veces» + «aunque/creo/no sé».
-2. NO intenta clarificar el relato (lo hace el operador).
-3. Reply menciona «revisar» sin acusar al cliente.
-4. Resumen al operador: nombre + «relato contradictorio».
 
 **Conversación:**
 
@@ -1481,12 +1189,6 @@ Los programas disponibles para la secadora son:
 
 ## Caso 29 — Cámaras o revisión técnica
 
-**Criterios de aceptación:**
-1. Trigger: cámaras / AJAX / soporte técnico.
-2. NO dice «vamos a mirarlo» como si pudiera ver las cámaras.
-3. Escalación inmediata, pide directamente el nombre.
-4. Resumen al operador: nombre + «cámaras» o «AJAX».
-
 **Conversación:**
 
 **Usuario:** Mirad las cámaras porque yo he pagado  
@@ -1498,12 +1200,6 @@ Los programas disponibles para la secadora son:
 ---
 
 ## Caso 30 — Código no documentado
-
-**Criterios de aceptación:**
-1. Acepta variantes con typos pequeños (USH PROG → SELECT, DOR → OPEN).
-2. Si no reconoce, pide comprobar nuevamente.
-3. Tras 2° intento sin reconocer → escala.
-4. Si código real no documentado (ERR 52) → resumen incluye el código exacto literal.
 
 **Conversación A — typo recuperado:**
 
@@ -1534,12 +1230,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ## Caso 31 — Cliente no indica local
 
-**Criterios de aceptación:**
-1. NO procede al gather de tipo/número/display sin location.
-2. Si dice «no lo sé» (o equivalente en IT/EN/CA/PT/FR) → re-ask con énfasis + lista de referencias (landmarks).
-3. Si nombre desconocido (ej. «Girona») → lista las lavanderías reales.
-4. Tras 2-3 intentos sin location → escala.
-
 **Conversación 31.1 — ES:**
 
 **Usuario:** La secadora no funciona  
@@ -1563,12 +1253,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ## Caso 32 — Mezcla incidencia máquina y pago
 
-**Criterios de aceptación:**
-1. T1 pregunta location; NO entra al gather de pago.
-2. Canonical order: tipo → número → pantalla, una pregunta por turno.
-3. Si el cliente adelanta facts, el guard pregunta solo lo que falta.
-4. Si se aclara como Caso 4/7, reenruta sin reset de facts.
-
 **Conversación:**
 
 **Usuario:** He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro  
@@ -1583,12 +1267,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ### 32.1 — Marathon: display switching
-
-**Criterios de aceptación:**
-1. El bot NO re-pregunta location ni número tras primer gather.
-2. Cada nuevo display reescribe state y re-resuelve el flow engine.
-3. ERR-12 escala automáticamente.
-4. Resumen al operador lista TODOS los displays vistos en orden cronológico.
 
 **Conversación:**
 
@@ -1638,12 +1316,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ## Caso 33 — Feedback del cliente (positivo o negativo)
 
-**Criterios de aceptación:**
-1. Si el sentimiento es **positivo**: el bot responde con `feedbackPositive` y cierra (`handoff: 'resolved'`).
-2. Si el sentimiento es **negativo**: el bot responde con `feedbackNegative` y cierra.
-3. NO se pregunta lavandería, tipo de máquina ni ningún otro dato. NO se escala.
-4. Si el cliente además hace una demanda explícita (reembolso, compensación) → el router clasifica como `escalation`, no `feedback`.
-
 ### Conversación 33.1 — Feedback positivo (IT)
 
 **Usuario:** ho lavato molto bene la roba volevo farvi i miei complimenti  
@@ -1662,12 +1334,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 ---
 
 ## Caso 34 — El cliente pregunta por el jabón, detergente o suavizante
-
-**Criterios de aceptación:**
-1. El bot responde con el contenido de `json/faqs.json:detergents` (dosificación automática).
-2. NUNCA pregunta «¿qué aparece en pantalla?» ni «¿lavadora o secadora?» como respuesta a una pregunta sobre jabón.
-3. Funciona en todos los turnos (T1 cold start y T2+ mid-flow pivot) y en los 6 idiomas.
-4. Reconoce verbos de carencia (manca/falta/missing/manque) además de «no veo / no hay». Tolera typo «sapo» (truncado de «sapone»).
 
 ### Conversación 34.1 — Pregunta directa (ES, cold start)
 
@@ -1715,12 +1381,6 @@ Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavad
 
 ## Caso 35 — El cliente pregunta cómo se usa la lavandería
 
-**Criterios de aceptación:**
-1. El bot responde con los pasos numerados de `json/faqs.json:howToUse`.
-2. NUNCA pregunta «¿en qué lavandería estás?» ni «¿lavadora o secadora?» como respuesta — las instrucciones son globales.
-3. Funciona en todos los turnos (T1 cold start y T2+ mid-flow pivot) y en los 6 idiomas.
-4. La respuesta incluye los pasos numerados (1. colocar ropa, 2. cerrar puerta, 3. central de pago, 4. seleccionar programa, 5. recoger ropa).
-
 ### Conversación 35.1 — Cold start (ES)
 
 **Usuario:** ¿Cómo se usa la lavandería? Es mi primera vez.  
@@ -1755,12 +1415,6 @@ El detergente y el suavizante se dosifican automáticamente. No hace falta traer
 
 ## Caso 36 — Orarios Gràcia (caso límite 7:00–23:00)
 
-**Criterios de aceptación:**
-1. El bot responde con **7:00 a 23:00** (no 8:00-22:00) cuando la location resuelta es `Gràcia`.
-2. Si el cliente no especifica location, el bot pregunta primero y arma `pendingFlow=faq-hours-await-location`.
-3. La respuesta menciona explícitamente el nombre del local (**Gràcia**).
-4. NUNCA inventa horarios — si `metadata.hours` está vacío, escala.
-
 ### Conversación 36.1 — Cliente pregunta explícito (ES)
 
 **Usuario:** ¿Qué horario tenéis en Gràcia?  
@@ -1781,12 +1435,6 @@ El detergente y el suavizante se dosifican automáticamente. No hace falta traer
 ---
 
 ## Caso 37 — Precios lavadora Mataró (lista L4-L7 desde metadata.machines)
-
-**Criterios de aceptación:**
-1. La respuesta menciona explícitamente las 4 máquinas Mataró agrupadas por specs: «Lavadoras 20kg» + «Lavadoras 10kg».
-2. Cada línea muestra peso, precio fidelidad, precio cash en formato `**XXkg**: Y€ (fidelidad) / Z€ (efectivo)`.
-3. Append F87 signal pago al final: `💡 ... 7€` (TPV exacto de Mataró).
-4. Append follow-up: `¿También quieres información de secadora?` y arma `pendingFlow=faq-prices-await-dryer-confirm`.
 
 ### Conversación 37.1 — Cliente pregunta directo (ES)
 
@@ -1810,12 +1458,6 @@ El detergente y el suavizante se dosifican automáticamente. No hace falta traer
 ---
 
 ## Caso 38 — Precios secadora Rubí (S4-S5 con TPV 8€)
-
-**Criterios de aceptación:**
-1. La respuesta muestra 1 sola línea «Secadoras» (collapse F54 porque S4+S5 tienen specs idénticas).
-2. Formato: `**Secadoras** 20kg: 2€/15min`. Append F87: `💡 ... 8€` (TPV Rubí).
-3. Append follow-up: `¿También quieres información de lavadora?` (simétrico a F53).
-4. Si el cliente responde «sí» o «y la lavadora», renderiza precios lavadoras Rubí.
 
 ### Conversación 38.1 — Cliente pregunta directo (ES)
 
@@ -1842,12 +1484,6 @@ El detergente y el suavizante se dosifican automáticamente. No hace falta traer
 ---
 
 ## Caso 39 — Programas temperatura Eixample (4 programas sin número pulsante)
-
-**Criterios de aceptación:**
-1. La respuesta enumera los 4 programas Eixample con bullet+bold, sin «Pulsa el botón N» porque `number: null`.
-2. Formato: `- **60º** (muy caliente) — ideal para ropa muy sucia` etc. NO menciona números de pulsante.
-3. Contraste explícito: «En Eixample elige el programa por su nombre — no hay número de pulsante asignado».
-4. Después de mostrar los 4 programas, append: «Después dime si la lavadora ha arrancado.»
 
 ### Conversación 39.1 — Cliente pregunta directo (ES)
 
@@ -1877,12 +1513,6 @@ A Eixample scegli il programma per nome — non c'è un numero di pulsante asseg
 
 ## Caso 40 — FAQ temperatura colores Sant Cugat (colorTemperature trasversal)
 
-**Criterios de aceptación:**
-1. La respuesta es el contenido de `json/faqs.json:colorTemperature` (no hay override per-location).
-2. NUNCA pregunta «¿en qué lavandería estás?» ni «¿lavadora o secadora?» — la temperatura no depende del local.
-3. Menciona el rango 20-30°C explícitamente y el tip de «dar la vuelta a las prendas».
-4. Funciona en los 6 idiomas (rephrase LLM traduce dinámicamente).
-
 ### Conversación 40.1 — Cliente en Sant Cugat pregunta temperatura colores (ES)
 
 **Usuario:** Estoy en Sant Cugat. ¿A qué temperatura lavo la ropa de color?  
@@ -1896,12 +1526,6 @@ A Eixample scegli il programma per nome — non c'è un numero di pulsante asseg
 ---
 
 ## Caso 41 — FAQ macchie grasse Terrassa (greaseStains)
-
-**Criterios de aceptación:**
-1. La respuesta es el contenido de `json/faqs.json:greaseStains`.
-2. Menciona los 2 pasos explícitos: (1) absorber con papel sin frotar, (2) elegir temperatura según tejido.
-3. Menciona ambas temperaturas: **60°C resistentes** y **40°C sintéticos/delicados**.
-4. NUNCA pregunta location ni recomienda traer detergente extra (cross-FAQ con `detergents`).
 
 ### Conversación 41.1 — Cliente en Terrassa pregunta mancha (ES)
 
@@ -1925,12 +1549,6 @@ Nos machines appliquent le détergent automatiquement pour dissoudre la graisse.
 
 ## Caso 42 — Instrucciones howToUse Mataró (faqOverride 5 pasos con central)
 
-**Criterios de aceptación:**
-1. La respuesta usa el contenido de `Mataró.faqOverrides.howToUse` (NO la versión global).
-2. Lista exacta de 5 pasos numerados en orden.
-3. Paso 3 menciona «**confirma el inicio**» (key diferencial Mataró vs otros locales).
-4. Si el cliente pregunta sin especificar location, el bot pregunta primero, luego aplica override.
-
 ### Conversación 42.1 — Cliente en Mataró pregunta cómo usar (ES)
 
 **Usuario:** Es mi primera vez en Mataró, ¿cómo funciona?  
@@ -1952,12 +1570,6 @@ Nos machines appliquent le détergent automatiquement pour dissoudre la graisse.
 ---
 
 ## Caso 43 — Instrucciones howToUse Gràcia (faqOverride 4 pasos sin "confirma inicio")
-
-**Criterios de aceptación:**
-1. La respuesta usa `Gràcia.faqOverrides.howToUse` (NO la versión global ni la de Mataró).
-2. Lista exacta de 4 pasos (uno menos que Mataró).
-3. NO menciona «confirma el inicio» — diferencial respecto Mataró/Rubí/Sant Cugat.
-4. Paso final: «deja la puerta abierta para que se ventile».
 
 ### Conversación 43.1 — Cliente en Gràcia pregunta cómo usar (ES)
 
@@ -1982,12 +1594,6 @@ Nos machines appliquent le détergent automatiquement pour dissoudre la graisse.
 ---
 
 ## Caso 44 — Combinatorio: cliente pregunta horario + precio en la misma sesión (Mataró → Mataró)
-
-**Criterios de aceptación:**
-1. T1: cliente dice «Mataró» → bot detecta `needsStreetClarification` y pregunta «¿En cuál? Mataró o Eixample?».
-2. T2: cliente responde «Mataró» → `state.location = 'Mataró'`, `state.locationStreet = 'Carrer Francisco de Mataró 117'`.
-3. T3: bot responde horario Mataró (8:00-22:00). Si el cliente sigue preguntando, usa la location sticky.
-4. Append F87 signal pago (TPV 7€) automático en la respuesta de precios.
 
 ### Conversación 44.1 — Mataró ambiguo + clarificación + chain hours→prices (ES)
 
@@ -2019,12 +1625,6 @@ En **Eixample** los precios de las lavadoras son:
 
 ## Caso 45 — El cliente pregunta cómo se usa la secadora
 
-**Criterios de aceptación:**
-1. El bot responde con instrucciones de la secadora de `json/faqs.json:howToUseDryer` (o el override per-location).
-2. NUNCA pregunta «¿lavadora o secadora?» como primera respuesta — el cliente ya indicó «secadora».
-3. Incluye la nota sobre la puerta: la puerta puede abrirse durante el ciclo (a diferencia de la lavadora).
-4. Incluye el aviso de +5min antes del fin: cuando quedan ~5 minutos, el cliente puede añadir tiempo.
-
 ### Conversación 45.1 — Cold start sin location (ES)
 
 **Usuario:** ¿Cómo se usa la secadora?  
@@ -2054,12 +1654,6 @@ En **Eixample** los precios de las lavadoras son:
 ---
 
 ## Caso 46 — La máquina muestra "120" (cuenta atrás fin de ciclo)
-
-**Criterios de aceptación:**
-1. El bot reconoce «120» (y otros números puros de countdown) como cuenta atrás normal, NO como error.
-2. El bot explica que la máquina está terminando su ciclo y pide al cliente que espere a que aparezca «END».
-3. Cuando el cliente confirma «END» / «ya terminó» / «ha acabado», el flow se resuelve sin escalación.
-4. El flow NO escala a operador — es un estado normal de la máquina. Funciona en los 6 idiomas.
 
 ### Conversación 46.1 — Happy path (ES)
 

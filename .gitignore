@@ -86,6 +86,11 @@ dump/
 # Uploaded files
 apps/backend/uploads/
 
+# Playground usecases.md auto-translated cache files
+# (e.g. usecases.it.md, usecases.en.md — regenerated on demand by OpenRouter)
+apps/backend/custom-*/usecases.*.md
+!apps/backend/custom-*/usecases.md
+
 # Prisma uploads backup
 apps/backend/prisma/uploads-backup/
 
