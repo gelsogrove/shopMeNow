@@ -1925,16 +1925,19 @@ function ChatScreen({
             <span>Use Cases</span>
             {/* 🌍 Language flags — click to translate the whole Use Cases
                 block (intro card + markdown content) into the target language.
-                Backend translates on first request and caches. */}
-            <div className="flex items-center gap-1">
+                Backend translates on first request and caches. Rendered as
+                inline SVG (not emoji) so they render consistently on every
+                OS/browser, including macOS Chrome which sometimes drops
+                flag-emoji glyphs. */}
+            <div className="flex items-center gap-1.5">
               {(
                 [
-                  { code: "es", flag: "🇪🇸", label: "ES" },
-                  { code: "it", flag: "🇮🇹", label: "IT" },
-                  { code: "en", flag: "🇬🇧", label: "EN" },
-                  { code: "fr", flag: "🇫🇷", label: "FR" },
-                  { code: "pt", flag: "🇵🇹", label: "PT" },
-                  { code: "ca", flag: "🏴󠁥󠁳󠁣󠁴󠁿", label: "CA" },
+                  { code: "es", label: "ES" },
+                  { code: "it", label: "IT" },
+                  { code: "en", label: "EN" },
+                  { code: "fr", label: "FR" },
+                  { code: "pt", label: "PT" },
+                  { code: "ca", label: "CA" },
                 ] as const
               ).map((opt) => {
                 const active = usecasesLang === opt.code
@@ -1947,15 +1950,13 @@ function ChatScreen({
                     title={opt.label}
                     aria-label={`Translate to ${opt.label}`}
                     className={
-                      "text-base leading-none px-1.5 py-0.5 rounded transition-all " +
+                      "leading-none p-1 rounded transition-all " +
                       (active
-                        ? "bg-white/25 ring-1 ring-white/60 scale-110"
-                        : "opacity-70 hover:opacity-100 hover:bg-white/10")
+                        ? "bg-white ring-2 ring-white shadow-md scale-110"
+                        : "opacity-80 hover:opacity-100 hover:bg-white/20")
                     }
                   >
-                    <span className="text-lg" aria-hidden="true">
-                      {opt.flag}
-                    </span>
+                    <FlagSvg code={opt.code} />
                   </button>
                 )
               })}
