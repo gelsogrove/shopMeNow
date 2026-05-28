@@ -1119,11 +1119,18 @@ function ChatScreen({
   }, [isFromDemoLink])
 
   // 🌍 Fetch usecases markdown whenever the selected language changes.
-  // Backend handles ?lang=xx — translates (and caches) into target language.
+  // For Demowash we hit the public slug-based endpoint so the loader looks
+  // inside custom-demowash/ (which ships pre-translated usecases.<lang>.md
+  // files) instead of falling back to the Ecolaundry workspace and asking
+  // OpenRouter to translate on the fly.
   useEffect(() => {
     let cancelled = false
     setUsecasesLoading(true)
-    playFetch(`${API_BASE}/usecases?lang=${usecasesLang}`)
+    const url =
+      customChatbotId === "demowash"
+        ? `${API_BASE}/demo-usecases/demowash?lang=${usecasesLang}`
+        : `${API_BASE}/usecases?lang=${usecasesLang}`
+    playFetch(url)
       .then((r) => r.text())
       .then((text) => {
         if (cancelled) return
@@ -1139,7 +1146,7 @@ function ChatScreen({
     return () => {
       cancelled = true
     }
-  }, [usecasesLang])
+  }, [usecasesLang, customChatbotId])
 
   useEffect(() => {
     fetchAll()
