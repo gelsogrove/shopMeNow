@@ -1825,6 +1825,28 @@ function ChatScreen({
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeSlug, rehypeHighlight]}
+              components={
+                customChatbotId === "demowash"
+                  ? {
+                      // Inject a Spanish intro card right after the H1 of
+                      // the Use Cases markdown (demowash only). The card
+                      // explains in a glance what the demo is about — what
+                      // the chatbot covers, how the multi-sede pricing
+                      // works, and the human-operator escalation flow.
+                      h1: ({ children, ...props }) => (
+                        <>
+                          <h1 {...props}>{children}</h1>
+                          <div
+                            className="not-prose bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 px-7 py-5 my-5 text-[13px] text-slate-700 leading-relaxed shadow-sm"
+                            style={{ borderRadius: 50 }}
+                          >
+                            <strong className="text-emerald-800">DemoWash</strong> es una lavandería demo con varias sedes en franquicia repartidas por Cataluña. Cada sede tiene sus propios precios y horarios, y el chatbot adapta sus respuestas a la lavandería donde se encuentra el cliente. En cuanto a las máquinas, cada incidencia se identifica por un código en pantalla con su procedimiento documentado. A continuación tienes la lista de casos: el chatbot responde de forma autónoma y, cuando hace falta, escala a un operador humano que, desde el panel de administración, puede pausar el bot y chatear directamente con el cliente.
+                          </div>
+                        </>
+                      ),
+                    }
+                  : undefined
+              }
             >
               {usecasesMd}
             </ReactMarkdown>

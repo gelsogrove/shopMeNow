@@ -18,6 +18,7 @@ import { buildPhoneVariants } from "../../../utils/phone"
 import { verifyWhatsAppSignature } from "../../../utils/whatsapp-signature"
 import { WhatsAppDirectSendService } from "../../../services/whatsapp-direct-send.service"
 import { splitCustomChatbotReply } from "../../../utils/custom-chatbot-reply"
+import { mdToWhatsApp } from "../../../utils/markdown-to-whatsapp"
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -2642,11 +2643,15 @@ export class WhatsAppWebhookController {
           try {
             const directSend = new WhatsAppDirectSendService(prisma)
             const { customerReply } = splitCustomChatbotReply(customOutput.reply)
+            // Custom chatbots produce rich Markdown for the web playground.
+            // WhatsApp supports a very limited subset (no tables, no `##`
+            // headers, only single-asterisk bold). Down-convert before send.
+            const whatsappReply = mdToWhatsApp(customerReply)
             await directSend.send({
               workspaceId: customer.workspaceId,
               customerId: customer.id,
               phoneNumber: customer.phone,
-              messageContent: customerReply,
+              messageContent: whatsappReply,
               conversationMessageId: savedAssistantMessageId,
             })
           } catch (sendError) {

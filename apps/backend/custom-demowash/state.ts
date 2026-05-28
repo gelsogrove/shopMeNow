@@ -115,68 +115,126 @@ export function registerMessageTimestamp(sessionId: string, now: number, windowM
 }
 
 // ── Deterministic language detection ─────────────────────────────────────────
-// Scoring heuristic over short distinctive words/articles per language.
-// Called by the orchestrator BEFORE the LLM turn so the model never has to
-// emit a `remember({language})` tool call — this used to cause the T1
-// empty-reply bug (model "completed the task" with the tool, then produced
-// empty text at hop 2).
+// Scoring heuristic over distinctive words per language. Called by the
+// orchestrator BEFORE the LLM turn so the model never has to emit a
+// `remember({language})` tool call — that used to cause the T1 empty-reply
+// bug (model "completed the task" with the tool, then produced empty text
+// at hop 2).
+//
+// Policy (decided 2026-05-28 with Andrea):
+//   1. Default language = 'es' (business operates in Spain).
+//   2. Re-evaluate on every turn (no permanent lock). This fixes the bug
+//      where "Hola" → es, then a Catalan reply stayed in Spanish forever.
+//   3. Sticky on 0-match: if the current turn has no marker hits and a
+//      language is already set, keep it (so "ok"/"👍" don't reset to es).
+//   4. Tie-break: if the current language ties with another at the top,
+//      keep the current one (sticky). Otherwise default to 'es'.
 
 type Lang = NonNullable<SessionState['language']>
 
-const LANG_MARKERS: Record<Lang, RegExp[]> = {
-  it: [
-    /\b(ciao|sono|non|lavatrice|asciugatrice|funziona|grazie|prego|però|già|qui|adesso|vorrei|posso|cosa|dove|quando|perché|tessera|fidelizzazione|trovo|che|mi|ti|si|della|delle|dei|degli|gli|gli|gli)\b/i,
-  ],
-  es: [
-    /\b(hola|gracias|por\s+favor|qué|cómo|dónde|cuándo|por\s+qué|estoy|estás|está|estamos|están|sí|no|también|aquí|ahora|necesito|quiero|puedo|cuánto|cuesta|dinero|tarjeta|fidelización|lavadora|secadora|funciona|en\s+qué|cómo\s+puedo)\b/i,
-  ],
-  en: [
-    /\b(hello|hi|thanks|thank\s+you|please|what|where|when|why|how|i\s+am|i'm|you\s+are|we\s+are|they\s+are|yes|no|also|here|now|need|want|can\s+i|how\s+much|washing|machine|dryer|loyalty|card|works)\b/i,
-  ],
-  ca: [
-    /\b(hola|bon\s+dia|gràcies|si\s+us\s+plau|què|com|on|quan|perquè|sóc|ets|és|som|sou|són|sí|no|també|aquí|ara|necessito|vull|puc|quant|costa|rentadora|assecadora|funciona|targeta|fidelització|bugaderia)\b/i,
-  ],
-  fr: [
-    /\b(bonjour|salut|merci|s'il\s+vous\s+plaît|quoi|comment|où|quand|pourquoi|je\s+suis|tu\s+es|nous\s+sommes|oui|non|aussi|ici|maintenant|besoin|veux|peux|combien|coûte|lave-linge|sèche-linge|fonctionne|carte|fidélité|laverie)\b/i,
-  ],
-  pt: [
-    /\b(olá|oi|obrigado|obrigada|por\s+favor|o\s+que|como|onde|quando|porquê|eu\s+sou|tu\s+és|nós\s+somos|sim|não|também|aqui|agora|preciso|quero|posso|quanto|custa|máquina\s+de\s+lavar|secadora|funciona|cartão|fidelização|lavandaria)\b/i,
-  ],
+const DEFAULT_LANGUAGE: Lang = 'es'
+
+// Each language has a single dense regex of distinctive words. Many tokens
+// overlap across Romance languages on purpose — the winner is whoever
+// accumulates more hits across the message. See language-detection.spec.ts.
+const LANG_MARKERS: Record<Lang, RegExp> = {
+  it: /\b(che|non|sono|della|dello|delle|degli|gli|le|un|una|uno|perché|cosa|come|dove|quando|oggi|ieri|lavatrice|sapone)\b/i,
+  es: /\b(hola|que|no|son|de|del|los|las|un|una|uno|porque|qué|cómo|dónde|cuándo|hoy|ayer|lavadora|jabón)\b/i,
+  en: /\b(the|and|is|are|was|were|you|i|we|they|it|what|how|where|when|today|yesterday|washing|machine|soap)\b/i,
+  ca: /\b(el|la|els|les|un|una|uns|unes|i|que|no|és|som|tenim|aquest|aquesta|aquests|aquestes|perquè|què|com|on|quan|avui|ahir|rentadora|sabó|hola)\b/i,
+  pt: /\b(o|a|os|as|um|uma|uns|umas|e|que|não|é|são|está|estão|porque|como|onde|quando|hoje|ontem|máquina|sabão|olá|você|vocês)\b/i,
+  fr: /\b(le|la|les|un|une|des|et|que|ne|pas|est|sont|j'ai|tu|nous|vous|ils|elles|pourquoi|comment|où|quand|aujourd'hui|hier|machine|savon|bonjour|merci|oui|non|qu'est-ce|c'est)\b/i,
 }
 
-export function detectLanguageHeuristic(text: string): Lang | null {
+const LANG_ORDER: Lang[] = ['es', 'it', 'en', 'ca', 'fr', 'pt']
+
+/**
+ * Score each language by counting marker matches in the text.
+ * Exposed for testing.
+ */
+export function scoreLanguages(text: string): Record<Lang, number> {
   const normalized = (text || '').toLowerCase()
-  if (!normalized.trim()) return null
-
   const scores: Record<Lang, number> = { es: 0, it: 0, en: 0, ca: 0, fr: 0, pt: 0 }
-  for (const lang of Object.keys(LANG_MARKERS) as Lang[]) {
-    for (const re of LANG_MARKERS[lang]) {
-      const matches = normalized.match(new RegExp(re.source, re.flags + 'g'))
-      if (matches) scores[lang] += matches.length
-    }
+  if (!normalized.trim()) return scores
+  for (const lang of LANG_ORDER) {
+    const re = new RegExp(LANG_MARKERS[lang].source, LANG_MARKERS[lang].flags + 'g')
+    const matches = normalized.match(re)
+    if (matches) scores[lang] = matches.length
   }
+  return scores
+}
 
+/**
+ * Stateless detection: returns the highest-scoring language, or null if
+ * nothing matches. Used internally by `updateLanguageOnTurn` and exposed
+ * for tests. Tie-break here is deterministic by LANG_ORDER (es first) —
+ * the sticky/default policy is applied one level up.
+ */
+export function detectLanguageHeuristic(text: string): Lang | null {
+  const scores = scoreLanguages(text)
   let best: Lang | null = null
   let bestScore = 0
-  for (const lang of Object.keys(scores) as Lang[]) {
+  for (const lang of LANG_ORDER) {
     if (scores[lang] > bestScore) {
       best = lang
       bestScore = scores[lang]
     }
   }
-  // Require at least 1 marker. Otherwise we don't know.
   return bestScore >= 1 ? best : null
 }
 
-export function seedLanguageIfNeeded(sessionId: string, text: string): Lang | null {
+/**
+ * Per-turn language update with the policy described in the file header.
+ * Returns the language that should be used for the current turn.
+ *
+ * - If the message has no marker hits: keep current (or default to 'es' if
+ *   no language was ever set).
+ * - If the message has hits: pick the top scorer. On tie with the current
+ *   language, stay sticky. Otherwise switch.
+ *
+ * `seedLanguageIfNeeded` is kept as a backward-compatible alias so callers
+ * in agent.ts don't need to change.
+ */
+export function updateLanguageOnTurn(sessionId: string, text: string): Lang {
   const state = getState(sessionId)
-  if (state.language) return state.language
-  const detected = detectLanguageHeuristic(text)
-  if (detected) {
-    updateState(sessionId, { language: detected })
-    return detected
+  const current = state.language
+
+  const scores = scoreLanguages(text)
+  const maxScore = Math.max(...LANG_ORDER.map((l) => scores[l]))
+
+  // No marker hits this turn → sticky on current, otherwise default.
+  if (maxScore === 0) {
+    const resolved: Lang = current ?? DEFAULT_LANGUAGE
+    if (!current) updateState(sessionId, { language: resolved })
+    return resolved
   }
-  return null
+
+  // Collect all languages tied at the top.
+  const topLangs = LANG_ORDER.filter((l) => scores[l] === maxScore)
+
+  // Tie-break: if the current language is among the top, keep it (sticky).
+  // Otherwise default to 'es' if it's in the top, else the first by LANG_ORDER.
+  let winner: Lang
+  if (current && topLangs.includes(current)) {
+    winner = current
+  } else if (topLangs.includes(DEFAULT_LANGUAGE)) {
+    winner = DEFAULT_LANGUAGE
+  } else {
+    winner = topLangs[0]
+  }
+
+  if (winner !== current) {
+    updateState(sessionId, { language: winner })
+  }
+  return winner
+}
+
+/**
+ * @deprecated Backward-compatible alias for `updateLanguageOnTurn`.
+ * Kept so agent.ts:814 keeps working without modification.
+ */
+export function seedLanguageIfNeeded(sessionId: string, text: string): Lang {
+  return updateLanguageOnTurn(sessionId, text)
 }
 
 export function formatStateForPrompt(state: SessionState): string {
