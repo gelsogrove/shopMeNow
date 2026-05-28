@@ -685,6 +685,11 @@ async function agentTurnInternal(
   let nudgedAfterEmpty = false
   let tokensUsed = 0
   let escalated = false
+  // Captured when escalate_to_operator runs successfully. Appended after the
+  // HUMAN_SUPPORT marker so the playground / backoffice can render the
+  // briefing in an internal orange balloon (host strips it before sending to
+  // the customer — see src/utils/custom-chatbot-reply.ts).
+  let operatorBriefing: string | null = null
 
   for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
     const state = getState(ctx.sessionId)
@@ -715,7 +720,10 @@ async function agentTurnInternal(
       if (process.env.LLM_DEBUG === '1') {
         console.error(`[state] ${formatStateOneLine(getState(ctx.sessionId))}`)
       }
-      return { reply: text, tokensUsed, escalated }
+      const finalReply = operatorBriefing
+        ? `${text}\n\n**👤 Human Support message**\n${operatorBriefing}`
+        : text
+      return { reply: finalReply, tokensUsed, escalated }
     }
 
     // Tool calls present → execute each, append results, loop.
