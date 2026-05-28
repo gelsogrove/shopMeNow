@@ -750,6 +750,13 @@ async function agentTurnInternal(
       const result = await executeTool(ctx, call.function.name, args)
       if (call.function.name === 'escalate_to_operator' && result.ok) {
         escalated = true
+        // Capture the substituted briefing for the internal-operator balloon.
+        // The LLM produced the summary against redacted PII placeholders;
+        // substitute against current SessionState before exposing it.
+        const rawSummary = typeof args.summary === 'string' ? args.summary : ''
+        if (rawSummary) {
+          operatorBriefing = substitutePlaceholders(rawSummary, getState(ctx.sessionId))
+        }
       }
       history.push({
         role: 'tool',
