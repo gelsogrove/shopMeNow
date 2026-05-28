@@ -17,7 +17,7 @@ import logger from "../../../utils/logger"
 // result both in-memory and on disk (usecases.<lang>.md next to the original
 // file). On subsequent requests we serve the cache directly.
 // ─────────────────────────────────────────────────────────────────────────────
-const SUPPORTED_USECASES_LANGS = ["es", "it", "en", "fr", "pt", "ca"] as const
+const SUPPORTED_USECASES_LANGS = ["es", "it", "en", "fr", "pt", "ca", "de"] as const
 type UsecasesLang = (typeof SUPPORTED_USECASES_LANGS)[number]
 const USECASES_SOURCE_LANG: UsecasesLang = "es"
 const usecasesMemoryCache = new Map<string, string>() // key: `${filePath}:${lang}`
@@ -29,6 +29,7 @@ const LANG_FULL_NAME: Record<UsecasesLang, string> = {
   fr: "French",
   pt: "Portuguese",
   ca: "Catalan",
+  de: "German",
 }
 
 function isSupportedUsecasesLang(value: unknown): value is UsecasesLang {
@@ -60,7 +61,7 @@ async function translateUsecasesMarkdown(
 STRICT RULES:
 - Preserve ALL markdown syntax exactly: headings (#, ##, ###), bullets (-), bold (**...**), italics (*...*), code (\`...\`), blockquotes (>), tables, horizontal rules (---), links [text](url), images, emoji.
 - Keep code blocks, URLs, anchor hrefs (#caso-...), file paths, JSON keys, regex, command/keyword tokens (WAIT, SELECT, OPEN, ERR-01, ALERT, BLOCK, ERR-12, etc.), placeholders like {{var}} or [LINK_x] EXACTLY as they are — do NOT translate them.
-- Keep speaker labels exactly: "**Usuario:**" → translate the label to the target language ("**User:**" in en, "**Utente:**" in it, "**Usuari:**" in ca, "**Utilisateur:**" in fr, "**Utilizador:**" in pt). "**Bot:**" stays as "**Bot:**".
+- Keep speaker labels exactly: "**Usuario:**" → translate the label to the target language ("**User:**" in en, "**Utente:**" in it, "**Usuari:**" in ca, "**Utilisateur:**" in fr, "**Utilizador:**" in pt, "**Benutzer:**" in de). "**Bot:**" stays as "**Bot:**".
 - Keep proper nouns and brand names unchanged (Demowash, DemoWash, Mataró, Eixample, Rubí, Sant Cugat, Gràcia, Terrassa).
 - Output ONLY the translated markdown, no preamble, no fences, no explanation.
 

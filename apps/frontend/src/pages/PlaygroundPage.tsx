@@ -1007,7 +1007,7 @@ function ChatScreen({
   // 🌍 Selected language for the Use Cases panel (markdown + intro card).
   // Default is Spanish since the source usecases.md is in Spanish.
   const [usecasesLang, setUsecasesLang] = useState<
-    "es" | "it" | "en" | "fr" | "pt" | "ca"
+    "es" | "it" | "en" | "fr" | "pt" | "ca" | "de"
   >("es")
   const [usecasesLoading, setUsecasesLoading] = useState(false)
   // 🎯 CTA gating: show Survey + Contact buttons only when the visitor
@@ -1432,10 +1432,13 @@ function ChatScreen({
         hideUserChip={customChatbotId === "demowash"}
         rightSlot={
           <div className="flex items-center gap-2">
-            {/* 🎯 Survey + Contact us — only shown when the visitor arrived
-                from https://www.echatbot.ai/demo/demowash. Both open in a
-                small popup window. */}
-            {isFromDemoLink && (
+            {/* 🎯 Survey + Contact us — DemoWash-only CTA. Both conditions
+                must hold: the workspace must be the DemoWash demo AND the
+                visitor must have arrived from https://www.echatbot.ai/demo/demowash.
+                This way internal users opening DemoWash directly don't see
+                them, and people landing on a different workspace from any
+                referrer don't see them either. Both open in a popup window. */}
+            {isFromDemoLink && customChatbotId === "demowash" && (
               <>
                 <button
                   onClick={() =>
@@ -1938,6 +1941,7 @@ function ChatScreen({
                   { code: "fr", label: "FR" },
                   { code: "pt", label: "PT" },
                   { code: "ca", label: "CA" },
+                  { code: "de", label: "DE" },
                 ] as const
               ).map((opt) => {
                 const active = usecasesLang === opt.code
@@ -2040,7 +2044,7 @@ function ChatScreen({
 // emoji font the button shows up as an empty rectangle. SVG is always
 // crisp, scales freely, and renders the same everywhere.
 // ----------------------------------------------------------------------------
-function FlagSvg({ code }: { code: "es" | "it" | "en" | "fr" | "pt" | "ca" }) {
+function FlagSvg({ code }: { code: "es" | "it" | "en" | "fr" | "pt" | "ca" | "de" }) {
   // Common props: ~28×20 (3:2 ratio) — readable but compact.
   const common = {
     width: 28,
@@ -2126,6 +2130,15 @@ function FlagSvg({ code }: { code: "es" | "it" | "en" | "fr" | "pt" | "ca" }) {
           <rect y="4.62" width="9" height="0.66" fill="#DA121A" />
         </svg>
       )
+    case "de":
+      // Germany: black (top) / red (middle) / gold (bottom) — equal horizontal bands
+      return (
+        <svg {...common}>
+          <rect width="9" height="2" fill="#000000" />
+          <rect y="2" width="9" height="2" fill="#DD0000" />
+          <rect y="4" width="9" height="2" fill="#FFCE00" />
+        </svg>
+      )
   }
 }
 
@@ -2135,7 +2148,7 @@ function FlagSvg({ code }: { code: "es" | "it" | "en" | "fr" | "pt" | "ca" }) {
 // not worth an LLM round-trip). Machine codes (WAIT, SELECT, …) are real
 // on-screen tokens so they're identical across languages.
 // ----------------------------------------------------------------------------
-type IntroLang = "es" | "it" | "en" | "fr" | "pt" | "ca"
+type IntroLang = "es" | "it" | "en" | "fr" | "pt" | "ca" | "de"
 
 function DemowashIntroCard({ lang }: { lang: IntroLang }) {
   const codes = [
@@ -2171,7 +2184,7 @@ function DemowashIntroCard({ lang }: { lang: IntroLang }) {
       multilingual: ". Además, el chatbot es ",
       multilingualLabel: "multilingüe",
       languages:
-        " y responde en 6 idiomas (español, italiano, inglés, catalán, portugués y francés), detectando automáticamente el idioma del cliente.",
+        " y responde en 7 idiomas (español, italiano, inglés, catalán, portugués, francés y alemán), detectando automáticamente el idioma del cliente.",
       footer:
         " A continuación tienes la lista de casos: el chatbot responde de forma autónoma y, cuando hace falta, escala a un operador humano que, desde el panel de administración, puede pausar el bot y chatear directamente con el cliente.",
       whatsappLine: "Todo el servicio se ofrece a través de WhatsApp.",
@@ -2186,7 +2199,7 @@ function DemowashIntroCard({ lang }: { lang: IntroLang }) {
       multilingual: ". Inoltre, il chatbot è ",
       multilingualLabel: "multilingua",
       languages:
-        " e risponde in 6 lingue (spagnolo, italiano, inglese, catalano, portoghese e francese), rilevando automaticamente la lingua del cliente.",
+        " e risponde in 7 lingue (spagnolo, italiano, inglese, catalano, portoghese, francese e tedesco), rilevando automaticamente la lingua del cliente.",
       footer:
         " Di seguito trovi l'elenco dei casi: il chatbot risponde in modo autonomo e, quando serve, scala a un operatore umano che, dal pannello di amministrazione, può mettere in pausa il bot e chattare direttamente con il cliente.",
       whatsappLine: "Tutto il servizio è erogato tramite WhatsApp.",
@@ -2201,7 +2214,7 @@ function DemowashIntroCard({ lang }: { lang: IntroLang }) {
       multilingual: ". On top of that, the chatbot is ",
       multilingualLabel: "multilingual",
       languages:
-        " and replies in 6 languages (Spanish, Italian, English, Catalan, Portuguese and French), automatically detecting the customer's language.",
+        " and replies in 7 languages (Spanish, Italian, English, Catalan, Portuguese, French and German), automatically detecting the customer's language.",
       footer:
         " Below you'll find the list of use cases: the chatbot replies on its own and, when needed, escalates to a human operator who, from the admin panel, can pause the bot and chat directly with the customer.",
       whatsappLine: "The whole service runs on WhatsApp.",
@@ -2216,7 +2229,7 @@ function DemowashIntroCard({ lang }: { lang: IntroLang }) {
       multilingual: ". De plus, le chatbot est ",
       multilingualLabel: "multilingue",
       languages:
-        " et répond en 6 langues (espagnol, italien, anglais, catalan, portugais et français), en détectant automatiquement la langue du client.",
+        " et répond en 7 langues (espagnol, italien, anglais, catalan, portugais, français et allemand), en détectant automatiquement la langue du client.",
       footer:
         " Tu trouveras ci-dessous la liste des cas : le chatbot répond de façon autonome et, si nécessaire, transfère à un opérateur humain qui, depuis le panneau d'administration, peut mettre le bot en pause et discuter directement avec le client.",
       whatsappLine: "L'ensemble du service est fourni via WhatsApp.",
@@ -2231,7 +2244,7 @@ function DemowashIntroCard({ lang }: { lang: IntroLang }) {
       multilingual: ". Além disso, o chatbot é ",
       multilingualLabel: "multilingue",
       languages:
-        " e responde em 6 idiomas (espanhol, italiano, inglês, catalão, português e francês), detetando automaticamente o idioma do cliente.",
+        " e responde em 7 idiomas (espanhol, italiano, inglês, catalão, português, francês e alemão), detetando automaticamente o idioma do cliente.",
       footer:
         " Em seguida tens a lista de casos: o chatbot responde de forma autónoma e, quando é preciso, escala para um operador humano que, a partir do painel de administração, pode pausar o bot e conversar diretamente com o cliente.",
       whatsappLine: "Todo o serviço é prestado através do WhatsApp.",
@@ -2246,12 +2259,27 @@ function DemowashIntroCard({ lang }: { lang: IntroLang }) {
       multilingual: ". A més, el chatbot és ",
       multilingualLabel: "multilingüe",
       languages:
-        " i respon en 6 idiomes (espanyol, italià, anglès, català, portuguès i francès), detectant automàticament l'idioma del client.",
+        " i respon en 7 idiomes (espanyol, italià, anglès, català, portuguès, francès i alemany), detectant automàticament l'idioma del client.",
       footer:
         " A continuació tens la llista de casos: el chatbot respon de manera autònoma i, quan cal, escala a un operador humà que, des del panell d'administració, pot pausar el bot i xatejar directament amb el client.",
       whatsappLine: "Tot el servei s'ofereix a través de WhatsApp.",
       customizationLine:
         "Per descomptat, estem oberts a totes les personalitzacions necessàries, fins i tot connectar-nos remotament a la màquina per llegir-ne l'estat o enviar comandes.",
+    },
+    de: {
+      brand: "DemoWash",
+      intro:
+        " ist eine Demo-Wäscherei mit mehreren Franchise-Standorten in Katalonien. Jeder Standort hat eigene Preise und Öffnungszeiten, und der Chatbot passt seine Antworten an die Wäscherei an, in der sich der Kunde befindet. Bei den Maschinen wird jeder Vorfall durch einen Bildschirmcode mit dokumentiertem Verfahren identifiziert: ",
+      codesLabel: "",
+      multilingual: ". Außerdem ist der Chatbot ",
+      multilingualLabel: "mehrsprachig",
+      languages:
+        " und antwortet in 7 Sprachen (Spanisch, Italienisch, Englisch, Katalanisch, Portugiesisch, Französisch und Deutsch) und erkennt die Sprache des Kunden automatisch.",
+      footer:
+        " Nachfolgend findest du die Liste der Fälle: Der Chatbot antwortet eigenständig und eskaliert bei Bedarf an einen menschlichen Operator, der vom Admin-Panel aus den Bot pausieren und direkt mit dem Kunden chatten kann.",
+      whatsappLine: "Der gesamte Service läuft über WhatsApp.",
+      customizationLine:
+        "Selbstverständlich sind wir offen für alle nötigen Anpassungen — auch die Fernsteuerung der Maschine, um den Status auszulesen oder Befehle zu senden.",
     },
   }
   const tr = t[lang]
