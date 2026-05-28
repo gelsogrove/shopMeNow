@@ -39,8 +39,8 @@ Primera frase típica del cliente. Cada item enlaza al caso documentado abajo (c
 - [He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro](#mezcla-incidencia-máquina-y-pago)
 - [Non c'è sapone nella lavatrice?](#el-cliente-pregunta-por-el-jabón-detergente-o-suavizante)
 - [Come si usa?](#el-cliente-pregunta-cómo-se-usa-la-lavandería)
-- Non centrifuga
-- Ho una camicia bianca macchiata, a quanti gradi la posso lavare per non rovinarla?
+- [Non centrifuga](#la-lavadora-no-centrifuga)
+- [Ho una camicia bianca macchiata, a quanti gradi la posso lavare per non rovinarla?](#faq-camisa-blanca-manchada-temperatura)
 
 ---
 
@@ -1714,5 +1714,63 @@ En **Eixample** los precios de las lavadoras son:
 
 **Usuario (EN):** screen shows 120  
 **Bot:** *(countdownGuidance in English: machine is finishing its cycle, wait for END)*
+
+---
+
+## La lavadora no centrifuga
+
+Problema técnico de la máquina: el ciclo termina pero la ropa sale empapada porque el tambor no centrifuga. Es un incidente que NO se resuelve desde el chat — el bot pide los datos mínimos y escala al operador.
+
+### Happy Path (ES)
+
+**Usuario:** La lavadora no centrifuga, la ropa sale empapada.  
+**Bot:** Lo siento, lo paso a un operador. ¿Me dices tu nombre, la localidad (Sants / Eixample / Gràcia / Sant Cugat / Hospitalet / Mataró / Terrassa / Rubí) y el número de la máquina?
+
+**Usuario:** Soy Marco, Sants, máquina 7.  
+**Bot:** *(escalate_to_operator({reason: "machine_no_spin", summary: "Cliente Marco en Sants, lavadora 7 no centrifuga, ropa sale empapada."}))*  
+He registrado el caso, Marco. Un operador te contactará en pocos minutos.
+
+### Multi-language (IT)
+
+**Usuario:** La lavatrice non centrifuga, i panni escono bagnati.  
+**Bot:** Mi dispiace, ti passo a un operatore. Mi dici il tuo nome, la sede (Sants / Eixample / Gràcia / Sant Cugat / Hospitalet / Mataró / Terrassa / Rubí) e il numero della macchina?
+
+### Multi-language (EN)
+
+**Usuario:** The washing machine doesn't spin, clothes come out soaked.  
+**Bot:** I'm sorry — I'll forward this to an operator. Can you tell me your name, the location (Sants / Eixample / Gràcia / Sant Cugat / Hospitalet / Mataró / Terrassa / Rubí), and the machine number?
+
+---
+
+## FAQ camisa blanca manchada temperatura
+
+Consejo de lavado puro (no requiere escalación ni tools): el cliente quiere saber a qué temperatura lavar una prenda blanca manchada sin estropearla. El bot responde con la recomendación textil estándar.
+
+### Happy Path (ES)
+
+**Usuario:** Tengo una camisa blanca manchada, ¿a qué temperatura la puedo lavar para no estropearla?  
+**Bot:** Para una camisa blanca con manchas:
+- **Algodón resistente**: **40°C** (máx. 60°C si la mancha es muy persistente)
+- **Tejidos delicados** (seda, lana, mezclas finas): **30°C**
+
+Por encima de 40°C en tejidos delicados arriesgas a fijar la mancha y amarillear la fibra. En nuestras lavadoras Demowash selecciona el programa correspondiente en el display de la máquina — el detergente se dosifica automáticamente.
+
+### Multi-language (IT)
+
+**Usuario:** Ho una camicia bianca macchiata, a quanti gradi la posso lavare per non rovinarla?  
+**Bot:** Per una camicia bianca con macchie:
+- **Cotone resistente**: **40°C** (max 60°C se la macchia è molto persistente)
+- **Tessuti delicati** (seta, lana, misti fini): **30°C**
+
+Sopra i 40°C su tessuti delicati rischi di fissare la macchia e ingiallire la fibra. Nelle nostre lavatrici Demowash seleziona il programma corrispondente sul display della macchina — il detersivo viene dosato automaticamente.
+
+### Multi-language (EN)
+
+**Usuario:** I have a stained white shirt — what temperature can I wash it at without ruining it?  
+**Bot:** For a stained white shirt:
+- **Sturdy cotton**: **40°C** (up to 60°C if the stain is stubborn)
+- **Delicate fabrics** (silk, wool, fine blends): **30°C**
+
+Above 40°C on delicate fabrics you risk setting the stain and yellowing the fiber. On our Demowash machines, pick the matching program on the machine display — detergent is dosed automatically.
 
 ---

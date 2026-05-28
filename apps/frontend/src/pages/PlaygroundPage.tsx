@@ -2,10 +2,8 @@ import { DragDropContext, Draggable, Droppable, DropResult } from "@hello-pangea
 import {
   ArrowLeft,
   Check,
-  ClipboardList,
   KanbanSquare,
   LogOut,
-  Mail,
   MessageCircle,
   Pencil,
   Plus,
@@ -1014,22 +1012,8 @@ function ChatScreen({
   // arrived from the public demo page (https://www.echatbot.ai/demo/demowash).
   // We persist the flag in sessionStorage so the buttons keep showing after
   // an in-app navigation that wipes document.referrer.
-  const [isFromDemoLink, setIsFromDemoLink] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false
-    try {
-      return sessionStorage.getItem("playground:fromDemoLink") === "1"
-    } catch {
-      return false
-    }
-  })
   const [workspaceName, setWorkspaceName] = useState<string>("Ecolaundry")
   const [customChatbotId, setCustomChatbotId] = useState<string | null>(null)
-  // 🎯 In-app survey + contact popup state. We render the routes inside
-  // an iframe overlay instead of using window.open() — the latter spawns
-  // a browser-level popup window that is frequently blocked by popup
-  // blockers and breaks the in-app UX.
-  const [showSurveyModal, setShowSurveyModal] = useState(false)
-  const [showContactModal, setShowContactModal] = useState(false)
   const [commentingMessage, setCommentingMessage] = useState<ChatMessage | null>(null)
   const [showNewChat, setShowNewChat] = useState(false)
   const [chatInput, setChatInput] = useState("")
@@ -1095,38 +1079,6 @@ function ChatScreen({
     setSessions(msgRes.sessions || [])
     setTodos(todosRes.todos || [])
   }, [])
-
-  // 🎯 Demo-link detection — done once on mount. We consider the visitor a
-  // DemoWash demo user in two cases:
-  //   1. They are currently on /demo/demowash (the public demo route).
-  //   2. They arrived from https://www.echatbot.ai/demo/demowash and then
-  //      navigated within the app (referrer-based fallback for the case
-  //      where the path no longer matches after in-app routing).
-  // Once detected, we persist the flag in sessionStorage so subsequent
-  // in-app navigation doesn't lose it.
-  useEffect(() => {
-    if (isFromDemoLink) return
-    const here = window.location.pathname
-    const onDemoPath = here === "/demo/demowash" || here.startsWith("/demo/demowash/")
-    if (onDemoPath) {
-      sessionStorage.setItem("playground:fromDemoLink", "1")
-      setIsFromDemoLink(true)
-      return
-    }
-    try {
-      const ref = document.referrer
-      if (!ref) return
-      const u = new URL(ref)
-      const okOrigin = u.origin === "https://www.echatbot.ai"
-      const okPath = u.pathname === "/demo/demowash" || u.pathname.startsWith("/demo/demowash/")
-      if (okOrigin && okPath) {
-        sessionStorage.setItem("playground:fromDemoLink", "1")
-        setIsFromDemoLink(true)
-      }
-    } catch {
-      // Malformed referrer URL — ignore
-    }
-  }, [isFromDemoLink])
 
   // 🌍 Fetch usecases markdown whenever the selected language changes.
   // For Demowash we hit the public slug-based endpoint so the loader looks
@@ -1463,32 +1415,6 @@ function ChatScreen({
         hideUserChip={customChatbotId === "demowash"}
         rightSlot={
           <div className="flex items-center gap-2">
-            {/* 🎯 Survey + Contact us — DemoWash-only CTA. Both conditions
-                must hold: the workspace must be the DemoWash demo AND the
-                visitor must have arrived from https://www.echatbot.ai/demo/demowash.
-                This way internal users opening DemoWash directly don't see
-                them, and people landing on a different workspace from any
-                referrer don't see them either. Both open in a popup window. */}
-            {isFromDemoLink && customChatbotId === "demowash" && (
-              <>
-                <button
-                  onClick={() => setShowSurveyModal(true)}
-                  className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
-                  title="Take the demo survey"
-                >
-                  <ClipboardList className="w-4 h-4" />
-                  Survey
-                </button>
-                <button
-                  onClick={() => setShowContactModal(true)}
-                  className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
-                  title="Contact us"
-                >
-                  <Mail className="w-4 h-4" />
-                  Contact us
-                </button>
-              </>
-            )}
             <button
               onClick={() => setShowNewChat(true)}
               className="bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
@@ -1966,29 +1892,33 @@ function ChatScreen({
                   // same cultural/linguistic neighborhood (most Catalan
                   // speakers also speak Spanish, and the demo tenant is in
                   // Catalonia). The rest follows EU-language conventions.
-                  { code: "es", label: "ES" },
-                  { code: "ca", label: "CA" },
-                  { code: "it", label: "IT" },
-                  { code: "en", label: "EN" },
-                  { code: "fr", label: "FR" },
-                  { code: "pt", label: "PT" },
-                  { code: "de", label: "DE" },
+                  // `name` is the language's name IN THAT language (endonym),
+                  // shown in the tooltip on hover.
+                  { code: "es", label: "ES", name: "Español" },
+                  { code: "ca", label: "CA", name: "Català" },
+                  { code: "it", label: "IT", name: "Italiano" },
+                  { code: "en", label: "EN", name: "English" },
+                  { code: "fr", label: "FR", name: "Français" },
+                  { code: "pt", label: "PT", name: "Português" },
+                  { code: "de", label: "DE", name: "Deutsch" },
                 ] as const
               ).map((opt) => {
                 const active = usecasesLang === opt.code
+                const disabled = usecasesLoading && !active
                 return (
                   <button
                     key={opt.code}
                     type="button"
                     onClick={() => setUsecasesLang(opt.code)}
-                    disabled={usecasesLoading && !active}
-                    title={opt.label}
-                    aria-label={`Translate to ${opt.label}`}
+                    disabled={disabled}
+                    title={opt.name}
+                    aria-label={`Switch to ${opt.name}`}
                     className={
                       "leading-none p-1 rounded transition-all " +
                       (active
-                        ? "bg-white ring-2 ring-white shadow-md scale-110"
-                        : "opacity-80 hover:opacity-100 hover:bg-white/20")
+                        ? "bg-white ring-2 ring-white shadow-md scale-110 cursor-default "
+                        : "opacity-80 hover:opacity-100 hover:bg-white/20 cursor-pointer ") +
+                      (disabled ? "cursor-wait" : "")
                     }
                   >
                     <FlagSvg code={opt.code} />
@@ -2001,7 +1931,7 @@ function ChatScreen({
             {usecasesLoading && (
               <div className="absolute top-2 right-3 text-xs text-slate-500 flex items-center gap-1.5">
                 <span className="w-3 h-3 border-2 border-slate-300 border-t-blue-600 rounded-full animate-spin" />
-                Translating…
+                Loading…
               </div>
             )}
             <ReactMarkdown
@@ -2064,89 +1994,6 @@ function ChatScreen({
           }}
         />
       )}
-      {/* 🎯 Survey + Contact modals — in-app popups that load the /survey
-          and /contact routes in an iframe. Closes on ESC, on click-outside,
-          or via the X button. Using an iframe (vs. embedding the route
-          components directly) keeps each panel self-contained and avoids
-          prop/state coupling with the playground. */}
-      {showSurveyModal && (
-        <IframeModal
-          src="/survey"
-          title="Survey"
-          icon={<ClipboardList className="w-4 h-4" />}
-          onClose={() => setShowSurveyModal(false)}
-        />
-      )}
-      {showContactModal && (
-        <IframeModal
-          src="/contact"
-          title="Contact us"
-          icon={<Mail className="w-4 h-4" />}
-          onClose={() => setShowContactModal(false)}
-        />
-      )}
-    </div>
-  )
-}
-
-// ----------------------------------------------------------------------------
-// IframeModal — generic in-app overlay that hosts an internal route inside
-// an iframe. Replaces the old window.open() approach which spawned a
-// browser-level popup window often blocked by popup blockers. Shared by
-// both Survey (/survey) and Contact us (/contact) buttons.
-// ----------------------------------------------------------------------------
-function IframeModal({
-  src,
-  title,
-  icon,
-  onClose,
-}: {
-  src: string
-  title: string
-  icon: React.ReactNode
-  onClose: () => void
-}) {
-  // Close on ESC for keyboard accessibility.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [onClose])
-
-  return (
-    <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-    >
-      <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-3xl h-[85vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
-          <div className="flex items-center gap-2 text-emerald-700 font-medium">
-            {icon}
-            {title}
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-800 p-1 rounded hover:bg-gray-200"
-            title="Close"
-            aria-label={`Close ${title}`}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <iframe
-          src={src}
-          title={title}
-          className="flex-1 w-full border-0"
-        />
-      </div>
     </div>
   )
 }
