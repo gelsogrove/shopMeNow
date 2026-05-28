@@ -1024,6 +1024,12 @@ function ChatScreen({
   })
   const [workspaceName, setWorkspaceName] = useState<string>("Ecolaundry")
   const [customChatbotId, setCustomChatbotId] = useState<string | null>(null)
+  // 🎯 In-app survey + contact popup state. We render the routes inside
+  // an iframe overlay instead of using window.open() — the latter spawns
+  // a browser-level popup window that is frequently blocked by popup
+  // blockers and breaks the in-app UX.
+  const [showSurveyModal, setShowSurveyModal] = useState(false)
+  const [showContactModal, setShowContactModal] = useState(false)
   const [commentingMessage, setCommentingMessage] = useState<ChatMessage | null>(null)
   const [showNewChat, setShowNewChat] = useState(false)
   const [chatInput, setChatInput] = useState("")
@@ -1252,6 +1258,14 @@ function ChatScreen({
         body: JSON.stringify({
           sessionId: activeSession.id,
           message: text,
+          // 🌍 Forward the language selected via the Use Cases flag panel.
+          // The backend uses this as the language hint for the LLM so the
+          // bot reply — and the operator "Human Support message" emitted on
+          // escalation — come back in the selected language. Default is
+          // Spanish (`usecasesLang` initial state is "es"); only the
+          // playground forwards this, real WhatsApp flows keep relying on
+          // `customer.language`.
+          lang: usecasesLang,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -1441,13 +1455,7 @@ function ChatScreen({
             {isFromDemoLink && customChatbotId === "demowash" && (
               <>
                 <button
-                  onClick={() =>
-                    window.open(
-                      "https://www.echatbot.ai/survey",
-                      "echatbot-survey",
-                      "width=720,height=820,noopener,noreferrer",
-                    )
-                  }
+                  onClick={() => setShowSurveyModal(true)}
                   className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
                   title="Take the demo survey"
                 >
@@ -1455,13 +1463,7 @@ function ChatScreen({
                   Survey
                 </button>
                 <button
-                  onClick={() =>
-                    window.open(
-                      "https://www.echatbot.ai/contact",
-                      "echatbot-contact",
-                      "width=720,height=820,noopener,noreferrer",
-                    )
-                  }
+                  onClick={() => setShowContactModal(true)}
                   className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
                   title="Contact us"
                 >
@@ -1931,7 +1933,7 @@ function ChatScreen({
 
         {/* MARKDOWN — hidden on smaller screens to give chat room */}
         <section className="hidden lg:flex col-span-4 bg-white rounded-xl shadow flex-col overflow-hidden min-h-0">
-          <div className="px-4 py-2 bg-blue-600 text-white font-semibold shrink-0 flex items-center justify-between gap-3">
+          <div className="px-4 py-2 bg-emerald-600 text-white font-semibold shrink-0 flex items-center justify-between gap-3">
             <span>Use Cases</span>
             {/* 🌍 Language flags — click to translate the whole Use Cases
                 block (intro card + markdown content) into the target language.
@@ -1942,12 +1944,17 @@ function ChatScreen({
             <div className="flex items-center gap-1.5">
               {(
                 [
+                  // 🇪🇸 Spanish first (default), 🇪🇸+🇦🇩 Catalan kept right
+                  // next to Spanish because the two languages live in the
+                  // same cultural/linguistic neighborhood (most Catalan
+                  // speakers also speak Spanish, and the demo tenant is in
+                  // Catalonia). The rest follows EU-language conventions.
                   { code: "es", label: "ES" },
+                  { code: "ca", label: "CA" },
                   { code: "it", label: "IT" },
                   { code: "en", label: "EN" },
                   { code: "fr", label: "FR" },
                   { code: "pt", label: "PT" },
-                  { code: "ca", label: "CA" },
                   { code: "de", label: "DE" },
                 ] as const
               ).map((opt) => {
@@ -2040,6 +2047,89 @@ function ChatScreen({
           }}
         />
       )}
+      {/* 🎯 Survey + Contact modals — in-app popups that load the /survey
+          and /contact routes in an iframe. Closes on ESC, on click-outside,
+          or via the X button. Using an iframe (vs. embedding the route
+          components directly) keeps each panel self-contained and avoids
+          prop/state coupling with the playground. */}
+      {showSurveyModal && (
+        <IframeModal
+          src="/survey"
+          title="Survey"
+          icon={<ClipboardList className="w-4 h-4" />}
+          onClose={() => setShowSurveyModal(false)}
+        />
+      )}
+      {showContactModal && (
+        <IframeModal
+          src="/contact"
+          title="Contact us"
+          icon={<Mail className="w-4 h-4" />}
+          onClose={() => setShowContactModal(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// IframeModal — generic in-app overlay that hosts an internal route inside
+// an iframe. Replaces the old window.open() approach which spawned a
+// browser-level popup window often blocked by popup blockers. Shared by
+// both Survey (/survey) and Contact us (/contact) buttons.
+// ----------------------------------------------------------------------------
+function IframeModal({
+  src,
+  title,
+  icon,
+  onClose,
+}: {
+  src: string
+  title: string
+  icon: React.ReactNode
+  onClose: () => void
+}) {
+  // Close on ESC for keyboard accessibility.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      <div
+        className="bg-white rounded-xl shadow-2xl w-full max-w-3xl h-[85vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-50">
+          <div className="flex items-center gap-2 text-emerald-700 font-medium">
+            {icon}
+            {title}
+          </div>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-800 p-1 rounded hover:bg-gray-200"
+            title="Close"
+            aria-label={`Close ${title}`}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <iframe
+          src={src}
+          title={title}
+          className="flex-1 w-full border-0"
+        />
+      </div>
     </div>
   )
 }

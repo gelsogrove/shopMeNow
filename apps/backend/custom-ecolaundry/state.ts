@@ -7,7 +7,10 @@ export interface SessionState {
   machineType?: 'washer' | 'dryer'
   machine?:     number
   displayCode?: string
-  language?:    'es' | 'ca' | 'en' | 'it' | 'fr' | 'pt'
+  // Open ISO 2-letter language code. The deterministic detector below
+  // only recognizes a handful of common languages — for everything else
+  // the prompt instructs the LLM to detect and respond natively.
+  language?:    string
 
   // Profile (also mirrored to backend Customers via patches)
   companyName?: string
@@ -130,31 +133,51 @@ export function registerMessageTimestamp(sessionId: string, now: number, windowM
 //   4. Tie-break: if the current language ties with another at the top,
 //      keep the current one (sticky). Otherwise default to 'es'.
 
-type Lang = NonNullable<SessionState['language']>
+// `KnownLang` is the closed set of languages with a deterministic regex
+// detector below. `state.language` is intentionally wider (`string`) so
+// the LLM can detect and reply in ANY language Claude supports — the
+// prompt handles the long tail (Japanese, Russian, Hindi, etc.).
+type KnownLang = 'es' | 'ca' | 'en' | 'it' | 'fr' | 'pt' | 'de' | 'ar' | 'zh'
 
-const DEFAULT_LANGUAGE: Lang = 'es'
+const DEFAULT_LANGUAGE: KnownLang = 'es'
 
 // Each language has a single dense regex of distinctive words. Many tokens
 // overlap across Romance languages on purpose — the winner is whoever
 // accumulates more hits across the message. See language-detection.spec.ts.
-const LANG_MARKERS: Record<Lang, RegExp> = {
+//
+// Arabic & Chinese use a different strategy: \b word boundary does not
+// work for non-Latin scripts in JS regex, so we match any run of script-
+// exclusive Unicode characters. Both scripts are exclusive — any run is a
+// strong signal of that language.
+//   - Arabic: ؀-ۿ block
+//   - Chinese: CJK Unified Ideographs 一-鿿. NB: this overlaps with
+//     Japanese kanji, but plain CJK ideograph runs (no hiragana/katakana)
+//     are overwhelmingly Chinese in our context.
+const LANG_MARKERS: Record<KnownLang, RegExp> = {
   it: /\b(che|non|sono|della|dello|delle|degli|gli|le|un|una|uno|perché|cosa|come|dove|quando|oggi|ieri|lavatrice|sapone)\b/i,
   es: /\b(hola|que|no|son|de|del|los|las|un|una|uno|porque|qué|cómo|dónde|cuándo|hoy|ayer|lavadora|jabón)\b/i,
   en: /\b(the|and|is|are|was|were|you|i|we|they|it|what|how|where|when|today|yesterday|washing|machine|soap)\b/i,
   ca: /\b(el|la|els|les|un|una|uns|unes|i|que|no|és|som|tenim|aquest|aquesta|aquests|aquestes|perquè|què|com|on|quan|avui|ahir|rentadora|sabó|hola)\b/i,
   pt: /\b(o|a|os|as|um|uma|uns|umas|e|que|não|é|são|está|estão|porque|como|onde|quando|hoje|ontem|máquina|sabão|olá|você|vocês)\b/i,
   fr: /\b(le|la|les|un|une|des|et|que|ne|pas|est|sont|j'ai|tu|nous|vous|ils|elles|pourquoi|comment|où|quand|aujourd'hui|hier|machine|savon|bonjour|merci|oui|non|qu'est-ce|c'est)\b/i,
+  // German: high-signal closed-class words + a few domain nouns (Waschmaschine
+  // / Waschsalon / Seife). Includes umlauts plus their ASCII fallbacks
+  // (ae/oe/ue/ss) because German text is frequently typed without diacritics
+  // on non-DE keyboards.
+  de: /\b(der|die|das|den|dem|des|und|oder|nicht|ist|sind|war|waren|ich|du|wir|ihr|sie|es|was|wie|wo|wann|warum|heute|gestern|waschmaschine|waschsalon|seife|hallo|danke|ja|nein|für|fuer|ueber|über)\b/i,
+  ar: /[؀-ۿ]+/,
+  zh: /[一-鿿]+/,
 }
 
-const LANG_ORDER: Lang[] = ['es', 'it', 'en', 'ca', 'fr', 'pt']
+const LANG_ORDER: KnownLang[] = ['es', 'it', 'en', 'ca', 'fr', 'pt', 'de', 'ar', 'zh']
 
 /**
  * Score each language by counting marker matches in the text.
  * Exposed for testing.
  */
-export function scoreLanguages(text: string): Record<Lang, number> {
+export function scoreLanguages(text: string): Record<KnownLang, number> {
   const normalized = (text || '').toLowerCase()
-  const scores: Record<Lang, number> = { es: 0, it: 0, en: 0, ca: 0, fr: 0, pt: 0 }
+  const scores: Record<KnownLang, number> = { es: 0, it: 0, en: 0, ca: 0, fr: 0, pt: 0, de: 0, ar: 0, zh: 0 }
   if (!normalized.trim()) return scores
   for (const lang of LANG_ORDER) {
     const re = new RegExp(LANG_MARKERS[lang].source, LANG_MARKERS[lang].flags + 'g')
@@ -170,9 +193,9 @@ export function scoreLanguages(text: string): Record<Lang, number> {
  * for tests. Tie-break here is deterministic by LANG_ORDER (es first) —
  * the sticky/default policy is applied one level up.
  */
-export function detectLanguageHeuristic(text: string): Lang | null {
+export function detectLanguageHeuristic(text: string): KnownLang | null {
   const scores = scoreLanguages(text)
-  let best: Lang | null = null
+  let best: KnownLang | null = null
   let bestScore = 0
   for (const lang of LANG_ORDER) {
     if (scores[lang] > bestScore) {
@@ -195,8 +218,13 @@ export function detectLanguageHeuristic(text: string): Lang | null {
  * `seedLanguageIfNeeded` is kept as a backward-compatible alias so callers
  * in agent.ts don't need to change.
  */
-export function updateLanguageOnTurn(sessionId: string, text: string): Lang {
+export function updateLanguageOnTurn(sessionId: string, text: string): string {
   const state = getState(sessionId)
+  // `current` is widened to `string` because state.language now accepts any
+  // ISO 2-letter code (the LLM can reply in languages outside the closed
+  // KnownLang set). When the current language is unknown to our regex
+  // detector, we still apply the sticky/default policy below using the
+  // string value verbatim.
   const current = state.language
 
   const scores = scoreLanguages(text)
@@ -204,7 +232,7 @@ export function updateLanguageOnTurn(sessionId: string, text: string): Lang {
 
   // No marker hits this turn → sticky on current, otherwise default.
   if (maxScore === 0) {
-    const resolved: Lang = current ?? DEFAULT_LANGUAGE
+    const resolved: string = current ?? DEFAULT_LANGUAGE
     if (!current) updateState(sessionId, { language: resolved })
     return resolved
   }
@@ -212,11 +240,12 @@ export function updateLanguageOnTurn(sessionId: string, text: string): Lang {
   // Collect all languages tied at the top.
   const topLangs = LANG_ORDER.filter((l) => scores[l] === maxScore)
 
-  // Tie-break: if the current language is among the top, keep it (sticky).
-  // Otherwise default to 'es' if it's in the top, else the first by LANG_ORDER.
-  let winner: Lang
-  if (current && topLangs.includes(current)) {
-    winner = current
+  // Tie-break: if the current language is one of the deterministic top
+  // candidates, keep it (sticky). Otherwise default to 'es' if it's in
+  // the top, else the first by LANG_ORDER.
+  let winner: KnownLang
+  if (current && (topLangs as readonly string[]).includes(current)) {
+    winner = current as KnownLang
   } else if (topLangs.includes(DEFAULT_LANGUAGE)) {
     winner = DEFAULT_LANGUAGE
   } else {
@@ -233,7 +262,7 @@ export function updateLanguageOnTurn(sessionId: string, text: string): Lang {
  * @deprecated Backward-compatible alias for `updateLanguageOnTurn`.
  * Kept so agent.ts:814 keeps working without modification.
  */
-export function seedLanguageIfNeeded(sessionId: string, text: string): Lang {
+export function seedLanguageIfNeeded(sessionId: string, text: string): string {
   return updateLanguageOnTurn(sessionId, text)
 }
 

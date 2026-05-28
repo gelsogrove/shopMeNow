@@ -21,13 +21,11 @@ A diferencia de la lavadora, en la secadora **se puede abrir la puerta durante e
 
 ## Problemas específicos de la secadora
 
-### "La ropa ha salido empapada" (no centrifugado)
+### "La ropa ha salido empapada" / "no centrifuga"
 
-Esto no es un problema de la secadora: la **lavadora** no ha centrifugado correctamente. Procedimiento:
+Esto NO es un problema de la secadora: la **lavadora** no ha centrifugado correctamente.
 
-> "La ropa muy mojada significa que la lavadora no centrifugó bien. Te recomiendo lavar la ropa de nuevo separando la carga en dos máquinas (la carga desequilibrada hace que la centrifugadora salte por seguridad). Hace falta un nuevo pago. Si quieres que revisemos manualmente el caso, te paso a un operador."
-
-Si el cliente quiere revisión manual → ESCALAR (briefing: lavadora N de <sede>, problema de centrifugado, cliente quiere compensación).
+👉 **Procedimiento completo documentado en `washer.md` → "Síntomas SIN código de pantalla → Síntoma "no centrifuga""**. Aplícalo desde allí (no preguntes displayCode, identifica location + machine y aplica el procedimiento del síntoma).
 
 ### "La ropa ha salido húmeda" (no muy mojada)
 

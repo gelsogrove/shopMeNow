@@ -554,10 +554,25 @@ export class PlaygroundController {
 
   async sendChat(req: Request, res: Response) {
     try {
-      const { customerPhone, sessionId, message, customerName } = req.body
+      const { customerPhone, sessionId, message, customerName, lang } = req.body
       if (!message || typeof message !== "string") {
         return res.status(400).json({ error: "message is required" })
       }
+
+      // 🌍 Playground language override:
+      // The playground UI lets the admin pick a flag (ES/CA/IT/EN/FR/PT/DE)
+      // from the Use Cases panel. That selection is forwarded as `lang` and
+      // overrides `customer.language` for this single turn, so the bot reply
+      // — and the "Human Support message" emitted on escalation — come back
+      // in the chosen language. Default is "es" (the Use Cases source lang)
+      // so a missing/invalid `lang` falls back to Spanish, matching the
+      // panel's initial state.
+      const SUPPORTED_LANGS = ["es", "it", "en", "fr", "pt", "ca", "de"] as const
+      const overrideLanguage =
+        typeof lang === "string" &&
+        (SUPPORTED_LANGS as readonly string[]).includes(lang.toLowerCase())
+          ? lang.toLowerCase()
+          : null
 
       const workspaceId = await resolveWorkspaceId(req)
 
@@ -683,7 +698,9 @@ export class PlaygroundController {
             channelActive: workspace.channelStatus !== false,
             debugChannel: workspace.debugMode === true,
             isPlayground: true,
-            language: customer.language || "es",
+            // 🌍 Prefer the per-turn override from the playground flag
+            // selector; fall back to customer.language, then to "es".
+            language: overrideLanguage || customer.language || "es",
             sessionId: session.id,
             customerId: customer.id,
             phoneNumber: customer.phone || undefined,

@@ -926,7 +926,9 @@ export interface ChatbotInput {
     workspaceId: string
     debugChannel: boolean
     isPlayground: boolean
-    language?: 'es' | 'ca' | 'en' | 'it' | 'fr' | 'pt'
+    /** Open ISO 2-letter language code. The bot replies in ANY language Claude supports;
+     *  the deterministic detector covers a handful of common ones, the rest flow through the prompt. */
+    language?: string
   }
   context: {
     sessionId: string
@@ -976,11 +978,26 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     const systemPrompt = await getCachedSystemPrompt()
     const sessionId = input.context.sessionId
 
-    // Seed state with any pre-known language from the host (customer.language
-    // already stored in DB). Only if not already in our in-RAM state.
+    // Seed state with any pre-known language from the host.
+    //
+    // WhatsApp/widget: `language` comes from `customer.language` (DB) and we
+    // only seed it ONCE — after that the conversational language detector
+    // owns the state so the bot keeps adapting to what the customer actually
+    // writes.
+    //
+    // Playground: the admin picks a flag in the Use Cases panel to drive the
+    // demo, and that selection is forwarded on every turn via
+    // `input.config.language`. We let it override the in-RAM state so the
+    // operator "Human Support message" (and bot replies) flip language as
+    // soon as the flag is clicked, instead of being locked to whatever was
+    // first detected. Default remains "es" upstream when no flag is sent.
     if (input.config.language) {
       const current = getState(sessionId)
-      if (!current.language) {
+      if (input.config.isPlayground) {
+        if (current.language !== input.config.language) {
+          updateState(sessionId, { language: input.config.language })
+        }
+      } else if (!current.language) {
         updateState(sessionId, { language: input.config.language })
       }
     }

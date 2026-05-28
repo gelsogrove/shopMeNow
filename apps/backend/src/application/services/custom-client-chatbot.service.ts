@@ -62,7 +62,7 @@ type HistoryEntry = {
   timestamp?: string
 }
 
-type SupportedLanguage = "it" | "es" | "pt" | "en" | "ca" | "fr"
+type SupportedLanguage = "it" | "es" | "pt" | "en" | "ca" | "fr" | "de"
 
 type InvokeParams = {
   workspaceId: string
@@ -238,6 +238,10 @@ export class CustomClientChatbotService {
       fra: "fr",
       français: "fr",
       french: "fr",
+      de: "de",
+      deu: "de",
+      deutsch: "de",
+      german: "de",
     }
 
     return map[normalized]
