@@ -54,10 +54,14 @@ async function playFetch(input: RequestInfo | URL, init?: RequestInit): Promise<
 const POLL_INTERVAL = 30000
 const MIN_BOT_LOADING_MS = 1400
 
+// Each playground user is bound to one demo workspace. On successful login
+// the LoginScreen redirects to that demo's URL (/demo/<slug>), where the
+// existing slug-based resolver picks up the right workspaceId from the
+// backend and rewrites localStorage.
 const ALLOWED_USERS = {
-  ANDREA: { password: "Admin123", color: "#2563eb" },
-  OLGA: { password: "Admin123", color: "#db2777" },
-  admin: { password: "Admin123", color: "#059669" },
+  ANDREA: { password: "Admin123", color: "#2563eb", demoSlug: "ecolaundry" },
+  OLGA: { password: "Admin123", color: "#db2777", demoSlug: "ecolaundry" },
+  demo: { password: "Admin123", color: "#059669", demoSlug: "demowash" },
 } as const
 type PlaygroundUser = keyof typeof ALLOWED_USERS
 
@@ -258,26 +262,45 @@ function useAuth() {
     const demoSlug = demoMatch?.[1] ?? null
     const previousSlug = localStorage.getItem("playgroundDemoSlug")
 
+    // Pick the default playground user for this demo. Each demo has one or
+    // more bound users (defined in ALLOWED_USERS via `demoSlug`); we pick
+    // the first one as the "anonymous visitor" identity.
+    const defaultUserForSlug = (slug: string | null): PlaygroundUser | null => {
+      if (!slug) return null
+      const entry = (Object.entries(ALLOWED_USERS) as [PlaygroundUser, { demoSlug: string }][])
+        .find(([, cfg]) => cfg.demoSlug === slug)
+      return entry?.[0] ?? null
+    }
+
     if (token && workspaceId) {
-      // Explicit override via query params (used by the dashboard "Open
-      // playground" link) — wins over the slug-based resolution.
+      // (a) Backoffice → playground via query params: dashboard "Open
+      //     playground" link. The token+workspaceId pair wins over the
+      //     slug-based resolution. The bound user follows the demo slug
+      //     (so demowash gets `demo`, not `ANDREA`).
+      const boundUser = defaultUserForSlug(demoSlug) ?? "ANDREA"
       localStorage.setItem("playgroundToken", token)
       localStorage.setItem("playgroundWorkspaceId", workspaceId)
-      localStorage.setItem("playgroundUser", "ANDREA")
+      localStorage.setItem("playgroundUser", boundUser)
       if (demoSlug) localStorage.setItem("playgroundDemoSlug", demoSlug)
-      setUser("ANDREA")
+      setUser(boundUser)
     } else if (demoSlug) {
-      // If we switched demo (or this is the first visit), drop the previous
-      // tenant's credentials before resolving the new workspaceId. The token
-      // is tied to a specific workspace and would never authenticate against
-      // a different one.
+      // (b) Visitor lands on /demo/<slug> directly (public demo URL).
+      //     We auto-sign-in as that demo's bound user so the visitor
+      //     skips the login screen, and resolve the workspaceId from the
+      //     backend.
       if (previousSlug !== demoSlug) {
+        // Coming from a different demo (or first visit): drop any stale
+        // token/workspaceId from the previous tenant — they are bound to
+        // a specific workspace and would not authenticate against this one.
         localStorage.removeItem("playgroundToken")
         localStorage.removeItem("playgroundWorkspaceId")
-        localStorage.removeItem("playgroundUser")
-        setUser(null)
       }
       localStorage.setItem("playgroundDemoSlug", demoSlug)
+      const boundUser = defaultUserForSlug(demoSlug)
+      if (boundUser) {
+        localStorage.setItem("playgroundUser", boundUser)
+        setUser(boundUser)
+      }
       fetch(`/api/v1/playground/resolve-demo/${demoSlug}`)
         .then((r) => r.json())
         .then((data) => {
@@ -285,7 +308,7 @@ function useAuth() {
             localStorage.setItem("playgroundWorkspaceId", data.workspaceId)
           }
         })
-        .catch(() => {/* silent fail — login will still fail visibly */})
+        .catch(() => {/* silent fail — UI will surface the missing data */})
     }
   }, [])
 
@@ -297,6 +320,7 @@ function useAuth() {
     localStorage.removeItem("playgroundUser")
     localStorage.removeItem("playgroundToken")
     localStorage.removeItem("playgroundWorkspaceId")
+    localStorage.removeItem("playgroundDemoSlug")
     setUser(null)
   }
   return { user, login, logout }
@@ -316,6 +340,25 @@ function LoginScreen({ onLogin }: { onLogin: (u: PlaygroundUser) => void }) {
     if (!match) return setError("Invalid username")
     if (ALLOWED_USERS[match].password !== password) return setError("Invalid password")
     setError("")
+
+    // Each user is bound to a specific demo. If the current URL is not on
+    // that demo's slug, drop any stale workspaceId/token from a previous
+    // demo and hard-navigate to the right /demo/<slug>. The mount-time
+    // effect on PlaygroundPage will then resolve the correct workspaceId.
+    const targetSlug = ALLOWED_USERS[match].demoSlug
+    const expectedPath = `/demo/${targetSlug}`
+    const currentPath = window.location.pathname
+    const alreadyOnDemo = currentPath === expectedPath || currentPath.startsWith(`${expectedPath}/`)
+
+    if (!alreadyOnDemo) {
+      localStorage.setItem("playgroundUser", match)
+      localStorage.removeItem("playgroundToken")
+      localStorage.removeItem("playgroundWorkspaceId")
+      localStorage.removeItem("playgroundDemoSlug")
+      window.location.href = expectedPath
+      return
+    }
+
     onLogin(match)
   }
 
@@ -1016,10 +1059,25 @@ function ChatScreen({
   const [todos, setTodos] = useState<Todo[]>([])
   const [usecasesMd, setUsecasesMd] = useState("")
   // 🌍 Selected language for the Use Cases panel (markdown + intro card).
-  // Default is Spanish since the source usecases.md is in Spanish.
+  // Persisted to localStorage so the choice survives reloads and demo
+  // switches. Default is Spanish since the source usecases.md is in Spanish.
   const [usecasesLang, setUsecasesLang] = useState<
     "es" | "it" | "en" | "fr" | "pt" | "ca" | "de"
-  >("es")
+  >(() => {
+    if (typeof window === "undefined") return "es"
+    const saved = localStorage.getItem("playgroundUsecasesLang")
+    const valid = ["es", "it", "en", "fr", "pt", "ca", "de"] as const
+    return (valid as readonly string[]).includes(saved || "")
+      ? (saved as (typeof valid)[number])
+      : "es"
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem("playgroundUsecasesLang", usecasesLang)
+    } catch {
+      // Storage full or disabled — ignore, state still works in-memory.
+    }
+  }, [usecasesLang])
   const [usecasesLoading, setUsecasesLoading] = useState(false)
   const [workspaceName, setWorkspaceName] = useState<string>("Ecolaundry")
   const [customChatbotId, setCustomChatbotId] = useState<string | null>(null)
@@ -1893,6 +1951,9 @@ function ChatScreen({
                 inline SVG (not emoji) so they render consistently on every
                 OS/browser, including macOS Chrome which sometimes drops
                 flag-emoji glyphs. */}
+            {/* Flags are only shown for the multilingual DemoWash demo —
+                Ecolaundry ships a single-language usecases file. */}
+            {customChatbotId === "demowash" && (
             <div className="flex items-center gap-1.5">
               {(
                 [
@@ -1935,6 +1996,7 @@ function ChatScreen({
                 )
               })}
             </div>
+            )}
           </div>
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 prose prose-sm max-w-none break-words relative">
             {usecasesLoading && (

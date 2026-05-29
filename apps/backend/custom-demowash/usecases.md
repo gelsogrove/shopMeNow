@@ -1,1458 +1,440 @@
-# Demowash Chatbot — Usecases
+## Índice
 
-## Casos demo destacados
+DemoWash es una red de lavanderías self-service en franquicia con 6 sedes en Cataluña: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** y **Terrassa**.
 
-Primera frase típica del cliente. Cada item enlaza al caso documentado abajo (cuando existe). Multilingüe (es / it / en / ca / pt / fr): el chatbot detecta automáticamente el idioma del cliente.
+Cada sede tiene sus propios horarios, máquinas, programas, precios y métodos de pago. El chatbot, antes de dar cualquier dato operativo, siempre identifica la sede del cliente. Para los problemas técnicos pide los 4 datos uno por uno: **sede → tipo → número → pantalla**.
 
-- [He pagado y no se ha activado](#he-pagado-y-no-se-ha-activado)
-- [He pagado y ahora sale BLOCK](#código-de-alarma-o-incoherencia)
-- [La máquina no va, pero no sé qué pone](#no-sabe-qué-aparece-en-pantalla)
-- [Non funziona la lavatrice](#cliente-no-indica-local)
-- [Me habéis cobrado dos veces con la tarjeta](#doble-cobro)
-- [He pagado y no he podido usar la máquina](#pagado-sin-usar)
-- [Estoy en Mataró y el datáfono me ha cobrado 10€](#datáfono-10-en-mataró)
-- [He puesto más dinero en la secadora y no suma minutos](#eixample-monedas-secadora-no-suman)
-- [No puedo pagar con tarjeta](#eixample-no-se-puede-pagar-con-tarjeta)
-- [Tengo un código y no sé cómo usarlo](#código-de-descuento)
-- [Quiero una factura](#factura)
-- [Vorrei la fattura](#factura)
-- [¿Cómo consigo la tarjeta de fidelización?](#comprar-tarjeta-fidelización)
-- [Sono a Mataró, posso usare una tessera di fidelizzazione comprata in un'altra lavanderia?](#mataró-pregunta-loyalty-card-en-t1--sub-localización-en-t2-f100)
-- [¿Cómo recargo la tarjeta?](#recargar-tarjeta-fidelización)
-- [¿Cuáles son los horarios?](#horarios-y-precios)
-- [Quins horaris feu?](#horarios-y-precios)
-- [¿Cuánto cuesta lavar?](#horarios-y-precios)
-- [¿Qué programas tiene la lavadora?](#horarios-y-precios)
-- [Quanto costa?](#horarios-y-precios)
-- [Che programmi avete?](#horarios-y-precios)
-- [A che temperatura lavo i colorati?](#faq-temperatura-colores-sant-cugat-colortemperature-trasversal)
-- [¡Esto siempre falla! ¡Quiero una solución ya!](#cliente-muy-enfadado)
-- [Quiero hablar con un operador ahora mismo](#cliente-muy-enfadado)
-- [Quiero que me devolváis el dinero ahora mismo](#devolución-inmediata)
-- [Mirad las cámaras porque yo he pagado](#cámaras-o-revisión-técnica)
-- [He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro](#mezcla-incidencia-máquina-y-pago)
-- [Non c'è sapone nella lavatrice?](#el-cliente-pregunta-por-el-jabón-detergente-o-suavizante)
-- [Come si usa?](#el-cliente-pregunta-cómo-se-usa-la-lavandería)
-- [Non centrifuga](#la-lavadora-no-centrifuga)
-- [Ho una camicia bianca macchiata, a quanti gradi la posso lavare per non rovinarla?](#faq-camisa-blanca-manchada-temperatura)
+### La máquina tiene un problema
+- [Mensaje OPEN en la pantalla (puerta mal cerrada)](#mensaje-open)
+- [Mensaje ERR-01 en la pantalla (programa antes del pago)](#mensaje-err-01)
+- [Mensaje ALERT o BLOCK (fallo técnico)](#mensaje-alert-o-block)
+- [La lavadora no arranca después de pagar (pantalla apagada)](#no-arranca-tras-pagar)
+- [La puerta no se desbloquea al terminar el ciclo](#puerta-no-se-desbloquea)
+- [La secadora no calienta](#secadora-no-calienta)
 
----
+### Pagos y reembolsos
+- [Doble cobro con tarjeta](#doble-cobro)
+- [He pagado pero la máquina no se ha activado](#pago-sin-activación)
+- [Monedas de la secadora no suman](#monedas-secadora-no-suman)
+- [La ropa salió mal lavada (sucia, mojada, con mal olor)](#ropa-mal-lavada)
+- [Quiero la factura](#factura)
 
+### Consejos de lavado (FAQ universal)
+- [¿A qué temperatura lavo una camisa blanca manchada?](#camisa-blanca-manchada)
+- [¿A qué temperatura lavo los colores?](#temperatura-colores)
+- [Tengo una mancha de grasa, ¿cómo la quito?](#mancha-de-grasa)
+- [¿Tengo que traer detergente?](#detergente-incluido)
+- [¿Puedo lavar edredones y mantas?](#edredones-y-mantas)
+- [¿Cuánto dura un lavado?](#duración-del-lavado)
 
-## He pagado y no se ha activado
-
-### No-change Happy Path
-
-**Usuario:** He pagado y no se ha activado  
-**Bot:** Hola, soy el asistente virtual de Demowash. ¿En qué local estás?
-
-**Usuario:** Mataró  
-**Bot:** ¿Es una lavadora o una secadora?
-
-**Usuario:** Lavadora  
-**Bot:** ¿Qué número de máquina es?
-
-**Usuario:** La 4  
-**Bot:** ¿La central te ha devuelto el cambio?
-
-**Usuario:** No  
-**Bot:** Es posible que no se haya marcado bien el número de la máquina. Mira si todavía aparece saldo en la central y pulsa correctamente el botón correspondiente.
-
-**Usuario:** Sí, ahora ya se ha puesto en marcha  
-**Bot:** Perfecto, ya estaría resuelto.
+### Datos por sede (franchising)
+- [¿Cuáles son los horarios?](#horarios)
+- [¿Cuánto cuesta lavar?](#precios)
+- [¿Se puede pagar con tarjeta?](#métodos-de-pago)
+- [¿Qué programas tiene la lavadora?](#programas)
+- [¿Cómo funciona la tarjeta de fidelización?](#tarjeta-de-fidelización)
+- [¿Cuánto ahorro con la tarjeta?](#ahorro-con-la-tarjeta)
+- [¿Dónde está la lavandería más cercana?](#lavandería-más-cercana)
 
 ---
 
-### Escalación: cambio devuelto pero no arranca
+## Mensaje OPEN
 
-**Conversación A — bare «Sí»:**
+> Problema técnico — flujo location → tipo → número → pantalla (1 dato por turno).
 
-**Usuario:** He pagado y no se ha activado  
-**Bot:** Hola, soy el asistente virtual de Demowash. ¿En qué local estás?
+**Cliente:** Mi lavadora no arranca.
+**Bot:** ¡Hola! 👋 Soy el asistente virtual de **Demowash**. ¿En qué lavandería estás?
 
-**Usuario:** Mataró  
-**Bot:** ¿Es una lavadora o una secadora?
+**Cliente:** Eixample.
+**Bot:** ¿Lavadora o secadora?
 
-**Usuario:** Lavadora  
-**Bot:** ¿Qué número de máquina es?
+**Cliente:** Lavadora.
+**Bot:** ¿Qué número tiene la máquina?
 
-**Usuario:** La 4  
-**Bot:** ¿La central te ha devuelto el cambio?
+**Cliente:** La 3.
+**Bot:** ¿Qué aparece en la pantalla?
 
-**Usuario:** Sí  
-**Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
+**Cliente:** OPEN.
+**Bot:** Abre la puerta con cuidado, revisa si hay alguna prenda atrapada en la goma y vuelve a cerrarla bien hasta que oigas el clic. ¿Ha desaparecido el mensaje?
 
-**Usuario:** Andrea  
-**Bot:** Gracias, Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
-
-**Conversación B — «Sí, pero no arranca» (variante explícita):**
-
-**Usuario:** Sí, pero la máquina no arranca  
-**Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
-
-**Usuario:** Andrea  
-**Bot:** Gracias, Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+**Cliente:** Sí, ahora ha desaparecido.
+**Bot:** Perfecto. Selecciona de nuevo el programa. ¡Buen lavado! 👋
 
 ---
 
+## Mensaje ERR-01
+
+**Cliente:** Estoy en Mataró, lavadora 6 con ERR-01.
+**Bot:** Has pulsado el programa antes de pagar. Vamos a reiniciar:
+
+1. Carga la ropa y cierra bien la puerta.
+2. Ve al tótem de pago, paga y selecciona el número de tu máquina.
+3. Vuelve a la máquina y pulsa el programa.
+
+Dime si arranca.
+
+**Cliente:** Ahora sí arranca.
+**Bot:** ¡Perfecto! Buen lavado 👋
+
+---
+
+## Mensaje ALERT o BLOCK
+
+**Cliente:** Sant Cugat, lavadora 4, sale ALERT.
+**Bot:** La máquina ha detectado una incidencia y necesita revisión. Por favor, cambia tu ropa a otra lavadora libre y dime cuál has elegido. Vamos a activarla en remoto para que puedas lavar sin coste adicional.
+
+**Cliente:** Ahora estoy en la lavadora 2.
+**Bot:** Gracias. ¿Cómo te llamas? Paso el caso a un operador para activarte la máquina 2 y registrar la incidencia de la 4.
+
+**Cliente:** Andrea.
+**Bot:** He registrado la incidencia, Andrea. Un operador te contactará en unos minutos.
+
+---
+
+## No arranca tras pagar
+
+> Caso particular: la pantalla está apagada o no muestra ningún código — el bot escala directamente porque sin código no hay procedimiento documentado.
+
+**Cliente:** He pagado pero la máquina no arranca.
+**Bot:** ¿En qué lavandería estás?
+
+**Cliente:** Rubí.
+**Bot:** ¿Lavadora o secadora?
+
+**Cliente:** Lavadora.
+**Bot:** ¿Qué número tiene la máquina?
+
+**Cliente:** La 3.
+**Bot:** ¿Qué aparece en la pantalla?
+
+**Cliente:** Nada, está apagada.
+**Bot:** Entendido. ¿Cómo te llamas? Paso el caso a un operador para que active la máquina en remoto.
+
+**Cliente:** Marta.
+**Bot:** He registrado la incidencia, Marta. Un operador te contactará en unos minutos.
+
+---
+
+## Puerta no se desbloquea
+
+**Cliente:** La puerta no se abre, el lavado ya ha terminado.
+**Bot:** Tranquila. Cuando el ciclo termina, la puerta tarda unos minutos en desbloquearse. ¿Cuánto hace que terminó el lavado?
+
+**Cliente:** Más de 5 minutos.
+**Bot:** ¿En qué lavandería estás?
+
+**Cliente:** Gràcia.
+**Bot:** ¿Qué número tiene la lavadora?
+
+**Cliente:** La 2.
+**Bot:** ¿Cómo te llamas? Paso el caso a un operador para desbloquear la puerta en remoto.
+
+**Cliente:** Luis.
+**Bot:** He registrado la incidencia, Luis. Un operador te contactará en unos minutos.
+
+---
+
+## Secadora no calienta
+
+**Cliente:** La secadora no calienta, los minutos pasan pero la ropa sigue mojada.
+**Bot:** Lo siento. ¿En qué lavandería estás?
+
+**Cliente:** Terrassa.
+**Bot:** ¿Qué número tiene la secadora?
+
+**Cliente:** La 5.
+**Bot:** ¿Cómo te llamas? Paso el caso a un operador para reembolsar el ciclo y revisar la máquina.
+
+**Cliente:** Anna.
+**Bot:** He registrado la incidencia, Anna. Un operador te contactará en unos minutos.
+
+---
 
 ## Doble cobro
 
-### Servicio completado (Happy Path)
+**Cliente:** Me habéis cobrado dos veces con la tarjeta.
+**Bot:** Lo siento. ¿En qué lavandería estás?
 
-**Usuario:** Me habéis cobrado dos veces con la tarjeta  
-**Bot:** ¡Hola! ¿En qué lavandería te encuentras?
+**Cliente:** Eixample.
+**Bot:** ¿Qué número tiene la máquina?
 
-**Usuario:** Mataró  
-**Bot:** ¿Has podido lavar o secar la ropa?
+**Cliente:** La 1.
+**Bot:** ¿Me dices las últimas 4 cifras de la tarjeta y tu nombre? Paso el caso a un operador para verificar el doble cobro.
 
-**Usuario:** Sí  
-**Bot:** ¿Es una lavadora o una secadora?
-
-**Usuario:** Lavadora  
-**Bot:** ¿Qué número tiene la lavadora?
-
-**Usuario:** 5  
-**Bot:** De acuerdo. ¿Podrías explicarme paso a paso qué has hecho desde que has entrado? ¿Es posible que hayas pasado varias veces la tarjeta por el datáfono?
-
-**Usuario:** He pagado, no iba y volví a pasar la tarjeta  
-**Bot:** ¡Gracias! ¿Podrías indicarme los últimos 4 dígitos de la tarjeta?
-
-**Usuario:** 4821  
-**Bot:** ¡Perfecto! ¿Podrías enviarme una captura del pago? ¿Cómo te llamas?
-
-**Usuario:** Carlos  
-**Bot:** Gracias Carlos. Aquí tienes el formulario de reembolso: https://demowash.demo/refund. Vamos a revisar tu situación.
+**Cliente:** Tarjeta 8821, soy Jordi.
+**Bot:** He registrado la incidencia, Jordi. Un operador te contactará en unos minutos.
 
 ---
 
-### Escalación: cliente muy molesto
+## Pago sin activación
 
-**Usuario:** Me habéis cobrado dos veces, estoy muy enfadado y quiero hablar con un operador ahora mismo  
-**Bot:** ⚠️ Necesitamos derivar tu caso a un operador. ¿Cómo te llamas?
+**Cliente:** He pagado pero la máquina no se ha activado y quiero el reembolso.
+**Bot:** Lo siento. ¿En qué lavandería estás?
 
-**Usuario:** María  
-**Bot:** Gracias María. Un operador humano se encargará de tu caso. El chatbot será desactivado.
+**Cliente:** Mataró.
+**Bot:** ¿Lavadora o secadora?
 
----
+**Cliente:** Lavadora, la 6.
+**Bot:** ¿Cómo has pagado: efectivo, tarjeta de fidelización o tarjeta bancaria?
 
-### Escalación: relato inconsistente
-
-**Usuario:** Me habéis cobrado dos veces con la tarjeta  
-**Bot:** ¡Hola! ¿En qué lavandería te encuentras?
-
-**Usuario:** Mataró  
-**Bot:** ¿Has podido lavar o secar la ropa?
-
-**Usuario:** Sí  
-**Bot:** ¿Es una lavadora o una secadora?
-
-**Usuario:** Lavadora  
-**Bot:** ¿Qué número tiene la lavadora?
-
-**Usuario:** 5  
-**Bot:** De acuerdo. ¿Podrías explicarme paso a paso qué has hecho?
-
-**Usuario:** No sé exactamente, creo que me han cobrado tres o cuatro veces, no me cuadra  
-**Bot:** ⚠️ Necesitamos derivar tu caso a un operador. ¿Cómo te llamas?
-
-**Usuario:** Carlos  
-**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso.
-
----
-
-### SIN haber usado el servicio
-
-**Usuario:** Me habéis cobrado dos veces con la tarjeta  
-**Bot:** Hola, soy el asistente virtual de la lavandería. ¿En qué lavandería estás?
-
-**Usuario:** Mataró  
-**Bot:** ¿Has podido lavar o secar la ropa?
-
-**Usuario:** no, no he podido  
-**Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
-
-**Usuario:** Carlos  
-**Bot:** Gracias Carlos. Un operador humano se encargará de tu caso.
-
----
-
-### Validación 4 dígitos tarjeta
-
-**Usuario:** 48215  
-**Bot:** Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?
-
-**Usuario:** 4821  
-**Bot:** ¡Perfecto! ¿Podrías enviarme una captura del pago?
-
-**Usuario:** 482  
-**Bot:** Necesito exactamente los 4 últimos dígitos de la tarjeta. ¿Podrías escribírmelos de nuevo?
-
-**Usuario:** no me acuerdo  
-**Bot:** Vamos a revisar tu caso manualmente. ¿Cómo te llamas?
-
-**Usuario:** Andrea  
-**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
-
----
-
-## Pagado sin usar
-
-### Resuelto vía pantalla SELECT
-
-**Usuario:** He pagado y no he podido usar la máquina  
-**Bot:** ¡Hola! ¿En qué lavandería estás?
-
-**Usuario:** Rubí  
-**Bot:** ¿Es una lavadora o una secadora?
-
-**Usuario:** Lavadora  
-**Bot:** ¿Cuál es el número de la máquina?
-
-**Usuario:** 5  
-**Bot:** ¿Qué aparece en la pantalla?
-
-**Usuario:** SELECT  
-**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
-
-Los programas disponibles son:
-
-- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
-- **40º** (templado) → perfecto para ropa normal (algodón, color)
-- **30º** (suave) → adecuado para ropa delicada o sintética
-- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
-
-Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
-
-**Usuario:** Ahora sí  
-**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
-
----
-
-### Escalación: máquina no responde tras paso indicado
-
-**Usuario:** He pagado y no he podido usar la máquina  
-**Bot:** ¡Hola! ¿En qué lavandería estás?
-
-**Usuario:** Rubí  
-**Bot:** ¿Es una lavadora o una secadora?
-
-**Usuario:** Lavadora  
-**Bot:** ¿Cuál es el número de la máquina?
-
-**Usuario:** 5  
-**Bot:** ¿Qué aparece en la pantalla?
-
-**Usuario:** SELECT  
-**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
-
-Los programas disponibles son:
-
-- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
-- **40º** (templado) → perfecto para ropa normal (algodón, color)
-- **30º** (suave) → adecuado para ropa delicada o sintética
-- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
-
-Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
-
-**Usuario:** no arranca  
-**Bot:** Por favor, escribe solo el código exacto que aparece en la pantalla ahora.
-
-**Usuario:** se ha bloqueado  
-**Bot:** ⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador para que revise el caso y la posible compensación. ¿Cómo te llamas?
-
-**Usuario:** Luis  
-**Bot:** Gracias Luis. Un operador humano se encargará de tu caso. El chatbot será desactivado.
-
----
-
-## Código de descuento
-
-### Happy Path (formato válido)
-
-**Usuario:** Tengo un código y no sé cómo usarlo  
-**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves?
-
-**Usuario:** SAU2904266  
-**Bot:** ¡Gracias! ¿Cuál es tu nombre?
-
-**Usuario:** Andrea  
-**Bot:** ¿En qué pueblo / lavandería quieres usarlo?
-
-**Usuario:** Mataró  
-**Bot:** ¿Qué número de máquina deseas usar?
-
-**Usuario:** 5  
-**Bot:** ¿La tienes cargada y con la puerta cerrada?
-
-**Usuario:** Sí  
-**Bot:** Dame un minuto, hacemos las comprobaciones. Si el código es correcto, te activaremos la máquina.
-
----
-
-### Formato inválido (retry + escalate)
-
-**Usuario:** Tengo un código y no sé cómo usarlo  
-**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves?
-
-**Usuario:** AB12345  
-**Bot:** Ese código no encaja con el formato que esperamos. ¿Podrías comprobarlo y escribírmelo de nuevo?
-
-**Usuario:** XYZ123  
-**Bot:** El código no encaja con el formato esperado, vamos a revisarlo manualmente. ¿Cómo te llamas?
-
-**Usuario:** Andrea  
-**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso.
-
----
-
-### Cliente repite un código en el campo nombre (rechazo + re-ask)
-
-**Usuario:** Tengo un código  
-**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto tal como lo ves?
-
-**Usuario:** SAU2904266  
-**Bot:** ¡Gracias! ¿Cuál es tu nombre?
-
-**Usuario:** SAU2904266  
+**Cliente:** Tarjeta bancaria, acaba en 4412.
 **Bot:** ¿Cómo te llamas?
 
-**Usuario:** Andrea  
-**Bot:** ¿En qué pueblo / lavandería quieres usarlo?
+**Cliente:** Carla.
+**Bot:** He registrado la incidencia, Carla. Un operador te contactará en unos minutos para procesar el reembolso.
 
-**Usuario:** Tengo un código  
-**Bot:** ¡Hola! Te ayudo. ¿Me dices el código exacto?
+---
 
-**Usuario:** SAU2904266  
-**Bot:** ¡Gracias! ¿Cuál es tu nombre?
+## Monedas secadora no suman
 
-**Usuario:** SAU2904266  
+**Cliente:** He puesto monedas en la secadora pero los minutos no aumentan.
+**Bot:** Lo siento. ¿En qué lavandería estás?
+
+**Cliente:** Rubí.
+**Bot:** ¿Qué número tiene la secadora?
+
+**Cliente:** La 3.
+**Bot:** ¿Cómo te llamas? Paso el caso a un operador para devolver el dinero y revisar la máquina.
+
+**Cliente:** Mireia.
+**Bot:** He registrado la incidencia, Mireia. Un operador te contactará en unos minutos.
+
+---
+
+## Ropa mal lavada
+
+> El cliente reporta un resultado de servicio defectuoso (ropa sucia tras el ciclo, todavía mojada después del secado completo, mal olor). El bot trata el caso como una incidencia de calidad, recoge sede + tipo + número de máquina + nombre y escala al operador para valorar el reembolso. El bot **no decide** el reembolso — eso lo gestiona el operador.
+
+**Cliente:** La ropa ha salido sucia y huele mal después del lavado, quiero un reembolso.
+**Bot:** Lo siento. ¿En qué lavandería estás?
+
+**Cliente:** Eixample.
+**Bot:** ¿Lavadora o secadora?
+
+**Cliente:** Lavadora, la 3.
 **Bot:** ¿Cómo te llamas?
 
-**Usuario:** sau2904266  
-**Bot:** ¿Cómo te llamas?
-
-**Usuario:** SAU2904266  
-**Bot:** Vamos a revisar tu caso manualmente.
+**Cliente:** Marta.
+**Bot:** He registrado la incidencia, Marta. Un operador te contactará en unos minutos para valorar el caso y el reembolso.
 
 ---
 
 ## Factura
 
-### Happy Path
+> El bot pide los datos uno a uno (regla "una pregunta por turno"): razón social → importe → fecha del servicio → email → nota opcional.
+>
+> 🔒 **Datos sensibles fuera del flujo LLM**: razón social, CIF/NIF, dirección, email y demás datos personales NO se envían al modelo de IA (OpenAI/OpenRouter). El bot recoge cada campo y nuestro código lo procesa de forma determinista — las respuestas a estos turnos están **cableadas en código**, no generadas por el LLM. De este modo los datos PII quedan excluidos del flujo estándar hacia la IA.
 
-**Usuario:** Quiero una factura  
-**Bot:** Claro, te ayudo con la factura. ¿En qué lavandería estuviste?
+**Cliente:** Quiero la factura del lavado.
+**Bot:** ¡Perfecto! Te preparo la factura. ¿Cuál es el nombre de la empresa o la razón social?
 
-**Usuario:** Mataró  
-**Bot:** Gracias. ¿Utilizaste lavadora o secadora?
+**Cliente:** Marta Ribas SL.
+**Bot:** Gracias. ¿Cuál es el importe que has pagado? (en euros)
 
-**Usuario:** Lavadora  
-**Bot:** Perfecto. ¿Me indicas la razón social?
+**Cliente:** 8 €.
+**Bot:** Perfecto. ¿Cuándo usaste el servicio? (ej. hoy, ayer, 29/05/2026)
 
-**Usuario:** ACME SL  
-**Bot:** ¿Y la dirección?
+**Cliente:** Hoy.
+**Bot:** Entendido. ¿A qué correo te mando la factura?
 
-**Usuario:** Calle Mayor 1, Madrid  
-**Bot:** ¿Cuál es tu CIF/NIF/NIE?
+**Cliente:** marta@example.com
+**Bot:** Gracias. ¿Quieres añadir una nota? (ej. CIF, código cliente, referencia) Si no, escribe "no".
 
-**Usuario:** B12345678  
-**Bot:** ¿Qué día utilizaste el servicio? (puedes decirme «hoy», «ayer» o una fecha)
-
-**Usuario:** Ayer  
-**Bot:** ¿Cuál fue el coste total del servicio?
-
-**Usuario:** 6€  
-**Bot:** ¿A qué correo electrónico te enviamos la factura?
-
-**Usuario:** ana@example.com  
-**Bot:** ¿Quieres añadir alguna nota u observación para la factura? Si no, escribe «no».
-
-**Usuario:** no  
-**Bot:** Por último, ¿cuál es tu nombre?
-
-**Usuario:** Andrea  
-**Bot:** Gracias Andrea, te enviaremos pronto la factura del 2026-05-07 a tu correo: ana@example.com.
-
-🔒 Tus datos (razón social, CIF/NIF, dirección, correo) se usan únicamente para emitir la factura y no se comparten con terceros.
+**Cliente:** CIF B12345678.
+**Bot:** Perfecto. He registrado la factura con los datos: Marta Ribas SL, 8 €, hoy, CIF B12345678. Te llegará a marta@example.com en pocos minutos.
 
 ---
 
-### Email inválido (retry)
+## Camisa blanca manchada
 
-**Usuario:** Quiero una factura  
-**Bot:** Claro, te ayudo con la factura. ¿En qué lavandería estuviste?
+> FAQ universal — no depende de sede.
 
-**Usuario:** Mataró  
-**Bot:** Gracias. ¿Utilizaste lavadora o secadora?
-
-**Usuario:** Lavadora  
-**Bot:** Perfecto. ¿Me indicas la razón social?
-
-**Usuario:** ACME SL  
-**Bot:** ¿Y la dirección?
-
-**Usuario:** Calle Mayor 1, Madrid  
-**Bot:** ¿Cuál es tu CIF/NIF/NIE?
-
-**Usuario:** B12345678  
-**Bot:** ¿Qué día utilizaste el servicio?
-
-**Usuario:** Ayer  
-**Bot:** ¿Cuál fue el coste total del servicio?
-
-**Usuario:** 6€  
-**Bot:** ¿A qué correo electrónico te enviamos la factura?
-
-**Usuario:** ana  
-**Bot:** El correo no parece válido. ¿Puedes escribírmelo de nuevo, por favor?
-
-**Usuario:** ana@example.com  
-**Bot:** ¿Quieres añadir alguna nota u observación para la factura? Si no, escribe «no».
-
-**Usuario:** no  
-**Bot:** Por último, ¿cuál es tu nombre?
-
-**Usuario:** Andrea  
-**Bot:** Gracias Andrea, te enviaremos pronto la factura del 2026-05-27 a tu correo: ana@example.com.
-
-🔒 Tus datos (razón social, CIF/NIF, dirección, correo) se usan únicamente para emitir la factura y no se comparten con terceros.
-
----
-
-## Comprar tarjeta fidelización
-
-**Usuario:** ¿Cómo consigo la tarjeta de fidelización?  
-**Bot:** La tarjeta de fidelización se compra con 20€ en efectivo y solo funciona en la tienda donde se ha comprado.
-
-**Usuario:** Estoy en Mataró  
-**Bot:** Perfecto. En Mataró, en la central de botones, debes pulsar el segundo botón de la línea de la derecha.
-
-**Usuario:** Entendido  
-**Bot:** Perfecto.
-
----
-
-### Tarjeta comprada en otro local (cross-location warning)
-
-**Bot:** ¿En qué lavandería estás?  
-**Usuario (en Mataró):** Tengo la tarjeta de Rubí, ¿la puedo usar aquí?  
-**Bot:** ⚠️ La tarjeta comprada en Rubí solo funciona en ese local. No es válida aquí en Mataró. Si necesitas una tarjeta para esta lavandería, puedes comprarla aquí con 20€ en efectivo.
-
-**Bot:** In quale lavanderia sei?  
-**Usuario (a Mataró):** Ho comprato la tessera a Rubí, funziona anche qui?  
-**Bot:** ⚠️ La tessera acquistata a Rubí funziona solo in quella sede. Non è valida qui a Mataró. Se hai bisogno di una tessera per questa lavanderia, puoi acquistarla qui con 20€ in contanti.
-
-**Bot:** Which laundry are you at?  
-**Usuario (at Mataró):** I bought my loyalty card at Sant Cugat, will it work here?  
-**Bot:** ⚠️ The card bought at Sant Cugat only works at that location. It's not valid here at Mataró. If you need a card for this laundry, you can buy one here for €20 in cash.
-
-**Bot:** A quina bugaderia ets?  
-**Usuario (a Eixample):** Vaig comprar la targeta a Rubí, funciona aquí?  
-**Bot:** ⚠️ La targeta comprada a Rubí només funciona en aquell local. No és vàlida aquí a Eixample. Si necessites una targeta per a aquesta bugaderia, pots comprar-la aquí amb 20€ en efectiu.
-
-### Mataró: pregunta loyalty card en T1 + sub-localización en T2 (F100)
-
-**Usuario:** ciao sono a Mataró posso usare una tessera di fidelizzazione comprata in un altra lavanderia?  
-**Bot:** En Mataró tenemos dos lavanderías: C/ Francisco de Mataró 117 y C/ Eixample 17. ¿Podrías indicarme en cuál estás?  
-**Usuario:** Mataró  
-**Bot:** En Mataró, la tarjeta de fidelidad se compra con 20€ en efectivo y se activa pulsando el segundo botón de la fila derecha de la central. Solo funciona en este local.
-
-**Usuario:** Estoy en Mataró y quiero comprar la tarjeta de fidelización  
-**Bot:** En Mataró tenemos dos lavanderías: C/ Francisco de Mataró 117 y C/ Eixample 17. ¿Podrías indicarme en cuál estás?  
-**Usuario:** Eixample  
-**Bot:** En Eixample, la tarjeta de fidelidad se compra con 20€ en efectivo en la caja. Solo funciona en este local.
-
----
-
-## Recargar tarjeta fidelización
-
-**Usuario:** ¿Cómo recargo la tarjeta?  
-**Bot:** Introduce la tarjeta y sigue las instrucciones de la central.
-
-**Usuario:** Vale  
-**Bot:** Perfecto. Si al hacerlo aparece algún mensaje extraño, dímelo y lo revisamos.
-
-**Usuario:** Como puedo recargar la targeta de fidelización  
-**Bot:** Introduce la tarjeta y sigue las instrucciones de la central.
-
----
-
-## Horarios y precios
-
-### Horarios por location
-
-**Usuario:** ¿Cuáles son los horarios?  
-**Bot:** ¿En qué lavandería o pueblo estás?
-
-**Usuario:** Terrassa  
-**Bot:** En Terrassa, el horario es de 8:00 a 22:00, todos los días del año.
-
-**Usuario:** Y en Gràcia  
-**Bot:** En Gràcia, las máquinas se pueden utilizar de 7:00 a 23:00, todos los días.
-
----
-
-### Precios de lavadora por location y peso
-
-**Usuario:** ¿Cuánto cuesta la lavadora?  
-**Bot:** ¿En qué lavandería estás?
-
-**Usuario:** Terrassa  
-**Bot:** En Terrassa, los precios de lavadora son:
-
-- **L1** 20kg: 10€ (fidelidad) / 10€ (efectivo)
-- **L2** 15kg: 8€ / 8€
-- **L3** 15kg: 8€ / 8€
-- **L4** 13kg: 5€ / 5€
-
-¿También quieres información de secadora?
-
-**Usuario:** Sí  
-**Bot:** En Terrassa, los precios de secadora son:
-
-- **S5** 20min: 3€
-- **S6** 20min: 3€
-
-**Ejemplo F87 — Mataró con TPV importe exacto:**
-
-**Usuario:** ¿cuánto cuesta lavar?  
-**Bot:** ¿En qué pueblo o lavandería estás?
-
-**Usuario:** Mataró  
-**Bot:** En Mataró, los precios de lavadora son:
-
-- **Lavadoras** 20kg: 6,5€ (fidelidad) / 7€ (efectivo)
-- **Lavadoras** 10kg: 3,5€ (fidelidad) / 4€ (efectivo)
-
-💡 El TPV cobra el importe exacto de **7€** (no devuelve cambio).
-
-¿También quieres información de secadora?
-
-**Ejemplo F87 — Gràcia con solo tarjeta de crédito:**
-
-**Usuario:** ¿cuánto cuesta lavar?  
-**Bot:** ¿En qué pueblo o lavandería estás?
-
-**Usuario:** Gràcia  
-**Bot:** En Gràcia, los precios de lavadora son:
-
-- **Lavadoras** 10kg: 6€
-- **Lavadoras** 20kg: 9€
-
-⚠️ En esta lavandería solo se acepta tarjeta de crédito.
-
-¿También quieres información de secadora?
-
----
-
-### Programas de lavadora y secadora por location (F81)
-
-**Ejemplo — T1 sin location:**
-
-**Usuario:** ¿qué programas tiene la lavadora?  
-**Bot:** ¿En qué pueblo o lavandería estás?  
-**Usuario:** Mataró  
-**Bot:** Los programas disponibles para la lavadora son:
-
-- **1** — Muy caliente (60º)
-- **2** — Caliente (40º)
-- **3** — Templado (30º)
-- **4** — Frío (*)
-
-Los programas disponibles para la secadora son:
-
-- **Alta temperatura**
-- **Media temperatura**
-- **Baja temperatura**
-
-**Ejemplo — T1 con location ya conocida:**
-
-**Usuario:** cuáles son los programas aquí?  
-**Bot:** Los programas disponibles para la lavadora son:
-
-- **1** — Muy caliente (60º)
-- **2** — Caliente (40º)
-- **3** — Templado (30º)
-- **4** — Frío (*)
-
-Los programas disponibles para la secadora son:
-
-- **Alta temperatura**
-- **Media temperatura**
-- **Baja temperatura**
-
-**Ejemplo — Gràcia (orden diferente, 5 programas):**
-
-- **1** — Frío (*)
-- **2** — Templado (30º)
-- **3** — Caliente (40º)
-- **4** — Muy caliente (60º)
-- **5** — Centrifugado
-
----
-
-## Código de alarma o incoherencia
-
-**Usuario:** He pagado y ahora sale BLOCK  
-**Bot:** Hola, soy el asistente virtual de la lavandería. ¿Dónde está la lavandería?
-
-**Usuario:** Mataró  
-**Bot:** Gracias. ¿Es una lavadora o una secadora?
-
-**Usuario:** Lavadora  
-**Bot:** ¿Qué número tiene la máquina?
-
-**Usuario:** La 5  
-**Bot:** El código BLOCK requiere revisión manual. Pasaremos tu caso a revisión. ¿Cómo te llamas?
-
-**Usuario:** Andrea  
-**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso.
-
----
-
-## ALERT / BLOCK
-
-**Usuario:** La secadora pone BLOCK  
-**Bot:** Tranquilo, te ayudo. ¿Dónde está la lavandería?
-
-**Usuario:** Eixample  
-**Bot:** Gracias. ¿Qué número tiene la máquina?
-
-**Usuario:** La 4  
-**Bot:** El código BLOCK requiere revisión manual. ¿Cómo te llamas?
-
-**Usuario:** Andrea  
-**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso.
-
----
-
-## No sabe qué aparece en pantalla
-
-**Usuario:** La máquina no va, pero no sé qué pone  
-**Bot:** Tranquilo, lo revisamos juntos. ¿En qué lavandería estás?
-
-**Usuario:** Sant Cugat  
-**Bot:** Gracias. ¿Es una lavadora o una secadora?
-
-**Usuario:** Lavadora  
-**Bot:** Vamos a revisarlo manualmente. ¿Cómo te llamas?
-
-**Usuario:** Andrea  
-**Bot:** Pasamos tu caso a revisión. Un operador se pondrá en contacto contigo.
-
----
-
-## Código solo numérico
-
-**Usuario:** Tengo un código: 23432023  
-**Bot:** Gracias. ¿Ves alguna letra delante de los números?
-
-**Usuario:** No  
-**Bot:** De acuerdo. Hay una información que necesitamos revisar manualmente.
-
-**Usuario:** ¿Por qué?  
-**Bot:** Vamos a pasarlo a revisión para ayudarte correctamente.
-
----
-
-## Datáfono 10€ en Mataró
-
-**Usuario:** Estoy en Mataró y el datáfono me ha cobrado 10€  
-**Bot:** Gracias por indicarlo. Vamos a revisarlo. ¿Has podido usar el servicio?
-
-**Usuario:** No  
-**Bot:** De acuerdo. Hay una información que no coincide y necesitamos revisarla manualmente.
-
-**Usuario:** Vale  
-**Bot:** Pasaremos tu caso a revisión.
-
----
-
-## Datáfono 10€ en Rubí
-
-**Usuario:** En Rubí me ha cobrado 10€  
-**Bot:** Gracias. Vamos a revisarlo. ¿Has podido lavar o secar la ropa?
-
-**Usuario:** No  
-**Bot:** De acuerdo. Hay una información que no coincide.
-
-**Usuario:** Vale  
-**Bot:** Lo pasaremos a revisión.
-
----
-
-## Eixample: monedas secadora no suman
-
-**Usuario:** He puesto más dinero en la secadora y no suma minutos  
-**Bot:** Gracias. ¿Estás en la lavandería Eixample?
-
-**Usuario:** Sí  
-**Bot:** De acuerdo. Esa incidencia necesita revisión.
-
-**Usuario:** ¿No se puede arreglar ahora?  
-**Bot:** Vamos a pasarlo a revisión.
-
----
-
-## Rubí: monedas secadora no suman
-
-**Usuario:** He añadido tiempo a la secadora y no lo ha sumado  
-**Bot:** Gracias. ¿Estás en Rubí?
-
-**Usuario:** Sí  
-**Bot:** De acuerdo. Vamos a revisarlo manualmente.
-
-**Usuario:** Vale  
-**Bot:** Gracias. Pasaremos tu caso a revisión.
-
----
-
-## Eixample: no se puede pagar con tarjeta
-
-**Usuario:** No puedo pagar con tarjeta  
-**Bot:** Te ayudo. ¿En qué lavandería estás?
-
-**Usuario:** Eixample  
-**Bot:** Gracias. Vamos a revisarlo manualmente porque esa incidencia puede requerir soporte técnico.
-
-**Usuario:** Vale  
-**Bot:** Pasaremos tu caso a revisión.
-
----
-
-## Sant Cugat: no se puede pagar con tarjeta
-
-**Usuario:** La tarjeta no funciona para pagar  
-**Bot:** Gracias. ¿Estás en Sant Cugat?
-
-**Usuario:** Sí  
-**Bot:** De acuerdo. Vamos a revisar la incidencia manualmente.
-
-**Usuario:** Vale  
-**Bot:** Pasaremos tu caso a revisión.
-
----
-
-## Cliente muy enfadado
-
-**Usuario:** ¡Esto siempre falla! ¡Quiero una solución ya!  
-**Bot:** Entiendo tu malestar y quiero ayudarte. Vamos a revisarlo lo antes posible. ¿En qué lavandería estás?
-
-**Usuario:** Mataró  
-**Bot:** Gracias. ¿Es una lavadora o una secadora?
-
-**Usuario:** Lavadora  
-**Bot:** ¿Qué número tiene la máquina?
-
-**Usuario:** La 3  
-**Bot:** ⚠️ Para resolverlo lo antes posible vamos a pasar tu caso a un operador humano. ¿Cómo te llamas?
-
-**Usuario:** Andrea  
-**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
-
----
-
-## Devolución inmediata
-
-**Usuario:** Quiero que me devolváis el dinero ahora mismo  
-**Bot:** Vamos a revisarlo contigo. Para tramitarlo, necesito los últimos 4 dígitos de la tarjeta, una captura del pago y un breve resumen.
-
-**Usuario:** Quiero la devolución ya  
-**Bot:** Entiendo. Vamos a pasar el caso a revisión.
-
----
-
-## Compensación concreta
-
-**Usuario:** Quiero una secadora gratis por las molestias  
-**Bot:** Vamos a echar un vistazo a tu caso para poder ofrecerte la mejor solución. 🙏 ¿Cómo te llamas, por favor?
-
-**Usuario:** Pero quiero que me lo confirmes ya  
-**Bot:** No puedo confirmarlo directamente desde aquí. Vamos a pasarlo a revisión.
-
----
-
-## Relato contradictorio doble cobro
-
-**Usuario:** Me cobró dos veces, aunque creo que también pagué en efectivo  
-**Bot:** Gracias. Vamos a revisarlo contigo. ¿Has podido finalmente usar el servicio?
-
-**Usuario:** No lo sé bien  
-**Bot:** Para comprobarlo bien, vamos a revisar el caso manualmente.
-
-**Usuario:** Vale  
-**Bot:** Gracias. Pasaremos tu caso a revisión.
-
----
-
-## Cámaras o revisión técnica
-
-**Usuario:** Mirad las cámaras porque yo he pagado  
-**Bot:** Gracias por indicarlo. Vamos a revisar tu caso manualmente.
-
-**Usuario:** Vale  
-**Bot:** Lo pasaremos a revisión.
-
----
-
-## Código no documentado
-
-**Usuario:** asdf  
-**Bot:** No reconozco ese código exactamente. ¿Podrías comprobarlo nuevamente?
-
-**Usuario:** SELECT  
-**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
-
-Los programas disponibles son:
-
-- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
-- **40º** (templado) → perfecto para ropa normal (algodón, color)
-- **30º** (suave) → adecuado para ropa delicada o sintética
-- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
-
-Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
-
-**Usuario:** En la pantalla sale ERR 52  
-**Bot:** Ese código no coincide con un caso documentado y necesitamos revisarlo manualmente. ¿Cómo te llamas?
-
-**Usuario:** Andrea  
-**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso. El chatbot será desactivado.
-
----
-
-## Cliente no indica local
-
-**Usuario:** La secadora no funciona  
-**Bot:** Hola. Te ayudo. ¿En qué lavandería estás?
-
-**Usuario:** No lo sé  
-**Bot:** Para poder ayudarte, necesito saber en qué lavandería estás. ¿Hay cerca un Mercadona, Carrefour, Aldi u otro punto de referencia?
-
-**Usuario:** Estoy en Mataró  
-**Bot:** Perfecto. ¿Qué número tiene la máquina?
-
-**Usuario:** non funziona la lavatrice  
-**Bot:** Ciao. ¿In quale lavanderia ti trovi?
-
-**Usuario:** non lo so  
-**Bot:** Per poterti aiutare ho bisogno di sapere in quale lavanderia sei. C'è vicino un Mercadona, Carrefour, Aldi o un altro punto di riferimento?
-
----
-
-## Mezcla incidencia máquina y pago
-
-**Usuario:** He pagado, no arrancaba, volví a pagar y ahora no sé si el problema es la máquina o el cobro  
-**Bot:** Hola. Tranquilo, te ayudo. ¿En qué lavandería estás?
-
-**Usuario:** Rubí  
-**Bot:** ¿Es una lavadora o una secadora?
-
-**Usuario:** Lavadora 3  
-**Bot:** ¿Qué aparece en la pantalla?
-
-**Usuario:** WAIT  
-**Bot:** La máquina está pendiente de selección. Como además has pagado dos veces, vamos a revisar tu caso manualmente para verificar el cobro duplicado. ¿Cómo te llamas?
-
-**Usuario:** Andrea  
-**Bot:** Gracias Andrea. Un operador humano se encargará de tu caso y comprobará el doble cobro. El chatbot será desactivado.
-
----
-
-### Marathon: display switching
-
-**Usuario:** ¡Hola! ¿Cómo va?  
-**Bot:** ¡Hola! Soy el asistente virtual de Demowash. ¿En qué puedo ayudarte?
-
-**Usuario:** ¿Qué horarios hacéis?  
-**Bot:** El horario general es de 8:00 a 22:00 cada día del año.
-
-**Usuario:** Tengo un problema con la lavadora  
-**Bot:** Lamento la incidencia. ¿En qué lavandería te encuentras?
-
-**Usuario:** Rubí  
-**Bot:** ¿Qué número tiene la lavadora?
-
-**Usuario:** La 3  
-**Bot:** ¿Qué aparece en la pantalla?
-
-**Usuario:** WAIT  
-**Bot:** La máquina está pendiente de selección. Comprueba que has pulsado bien el número en la central de pago.
-
-**Usuario:** No, ahora aparece SELECT  
-**Bot:** Para iniciar el lavado, por favor, pulsa un botón de programa en la máquina.
-
-Los programas disponibles son:
-
-- **60º** (muy caliente) → ideal para ropa muy sucia, blanca o de trabajo
-- **40º** (templado) → perfecto para ropa normal (algodón, color)
-- **30º** (suave) → adecuado para ropa delicada o sintética
-- **FRÍO** → recomendado para prendas muy delicadas (lana, seda, etc.)
-
-Selecciona uno y presiona el botón en la máquina. Luego, cuéntame si la lavadora ha comenzado a funcionar.
-
-**Usuario:** No, ahora pone OPEN  
-**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez.
-
-**Usuario:** No, ahora aparece ERR-12  
-**Bot:** Ese aviso suele aparecer cuando el proceso no se ha hecho en el orden correcto. Te ayudo a completarlo.
-
-**Usuario:** sigo con el mismo error  
-**Bot:** ⚠️ Si nada ha funcionado, por favor usa otra lavadora. Tenemos que notificar al operador. ¿Cómo te llamas?
-
-**Usuario:** Marc  
-**Bot:** Gracias Marc. Un operador humano se encargará de tu caso. El chatbot será desactivado.
-
----
-
-### Marathon: trouble resuelto → factura
-
-**Criterios de aceptación:**
-1. Si el cliente confirma que la máquina arranca, el bot cierra el flow de incidencia.
-2. Si después pide factura, el bot pivota al flow de factura SIN volver a preguntar lavandería/máquina (los facts ya están en state).
-3. Resumen factura: lavandería, tipo de máquina, fecha por defecto = hoy.
-
-**Conversación:**
-
-**Usuario:** La lavadora no funciona  
-**Bot:** ¿En qué lavandería estás?
-
-**Usuario:** Rubí  
-**Bot:** ¿Qué número tiene la máquina?
-
-**Usuario:** La 3  
-**Bot:** ¿Qué aparece en la pantalla?
-
-**Usuario:** WAIT  
-**Bot:** La máquina está pendiente de selección. Comprueba que has pulsado bien el número en la central de pago.
-
-**Usuario:** Ahora sí, ya arranca  
-**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
-
-**Usuario:** Quiero una factura  
-**Bot:** Claro, te ayudo con la factura. Veo que has usado la **lavadora 3** en **Rubí**. ¿Me indicas la razón social?
-
-**Usuario:** ACME SL  
-**Bot:** ¿Y la dirección?
-
-**Usuario:** Calle Mayor 1, Madrid  
-**Bot:** ¿Cuál es tu CIF/NIF/NIE?
-
-**Usuario:** B12345678  
-**Bot:** ¿Cuál fue el coste total del servicio?
-
-**Usuario:** 6€  
-**Bot:** ¿A qué correo electrónico te enviamos la factura?
-
-**Usuario:** andrea@example.com  
-**Bot:** ¿Quieres añadir alguna nota u observación para la factura? Si no, escribe «no».
-
-**Usuario:** no  
-**Bot:** Por último, ¿cuál es tu nombre?
-
-**Usuario:** Andrea  
-**Bot:** Gracias Andrea, te enviaremos pronto la factura de hoy a tu correo: andrea@example.com.
-
----
-
-### Marathon: FAQ pause mid-gather
-
-**Criterios de aceptación:**
-1. Si el cliente interrumpe el gather con una pregunta FAQ (ej. jabón, horarios), el bot responde la FAQ y RETOMA el gather donde se quedó.
-2. NO se pierden los facts ya recolectados (lavandería, tipo, número).
-3. Tras la FAQ, el bot repite la última pregunta pendiente.
-
-**Conversación:**
-
-**Usuario:** La lavadora no arranca  
-**Bot:** ¿En qué lavandería estás?
-
-**Usuario:** Rubí  
-**Bot:** ¿Es una lavadora o una secadora?
-
-**Usuario:** Lavadora  
-**Bot:** ¿Qué número tiene la máquina?
-
-**Usuario:** Espera, ¿hace falta llevar jabón?  
-**Bot:** No, no hace falta traer nada. Las máquinas Demowash dosifican automáticamente detergente y suavizante ecológicos certificados. Solo tienes que traer la ropa.
-
-¿Qué número tiene la máquina?
-
-**Usuario:** La 3  
-**Bot:** ¿Qué aparece en la pantalla?
-
-**Usuario:** OPEN  
-**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez.
-
-**Usuario:** Ya funciona  
-**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
-
----
-
-## Feedback del cliente (positivo o negativo)
-
-### Feedback positivo (IT)
-
-**Usuario:** ho lavato molto bene la roba volevo farvi i miei complimenti  
-**Bot:** Grazie mille per il tuo messaggio! 😊 Siamo felici che tu sia soddisfatto.
-
-### Feedback negativo (ES)
-
-**Usuario:** la lavandería estaba muy sucia  
-**Bot:** Gracias por tu feedback, lo tendremos en cuenta lo antes posible.
-
-### Feedback negativo (FR)
-
-**Usuario:** les machines sont trop vieilles  
-**Bot:** Merci pour ton retour, nous en tiendrons compte le plus tôt possible.
-
----
-
-## El cliente pregunta por el jabón, detergente o suavizante
-
-### Pregunta directa (ES, cold start)
-
-**Usuario:** No veo jabón  
-**Bot:** No, no hace falta traer nada. Las máquinas Demowash dosifican automáticamente detergente y suavizante ecológicos certificados, elaborados con ingredientes 100% naturales. Solo tienes que traer la ropa.
-
-### Pivot mid-OPEN-flow (ES)
-
-**Usuario:** La lavadora no funciona, sale OPEN  
-**Bot:** ¿En qué lavandería estás?  
-**Usuario:** Rubí  
-**Bot:** ¿Es una lavadora o una secadora?  
-**Usuario:** lavadora  
-**Bot:** ¿Qué número tiene la máquina?  
-**Usuario:** 5  
-**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez.  
-**Usuario:** ¿hay jabón en la máquina?  
-**Bot:** No, no hace falta traer nada. Las máquinas Demowash dosifican automáticamente detergente y suavizante ecológicos…  
-**Usuario:** ok, ahora la puerta cierra  
-**Bot:** Perfecto. Dime si la lavadora ha arrancado.
-
-**Usuario:** sí, ya funciona  
-**Bot:** ✅ Perfecto. La lavadora ha comenzado correctamente.
-
-### Multi-language
-
-**Usuario (IT):** non vedo il sapone  
-**Bot:** No, non è necessario portare niente. Le macchine Demowash dosificano automaticamente…
-
-**Usuario (EN):** do I need to bring soap?  
-**Bot:** No, you don't need to bring anything. Demowash machines automatically dispense…
-
-### "Manca/falta + sapone"
-
-**Usuario (IT):** mi manca il sapone  
-**Bot:** No, no hace falta traer nada. Las máquinas Demowash dosifican automáticamente detergente y suavizante ecológicos certificados, elaborados con ingredientes 100% naturales. Solo tienes que traer la ropa.
-
-**Usuario (IT, typo):** mi manca il sapo e  
-**Bot:** No, non è necessario portare niente. Le macchine Demowash dosano automaticamente detergente e ammorbidente ecologici certificati, prodotti con ingredienti 100% naturali. Devi solo portare i panni.
-
-**Usuario (ES):** falta jabón en la máquina  
-**Bot:** No, no hace falta traer nada. Las máquinas Demowash dosifican automáticamente detergente y suavizante ecológicos certificados, elaborados con ingredientes 100% naturales. Solo tienes que traer la ropa.
-
-**Usuario (EN):** soap is missing  
-**Bot:** No, you don't need to bring anything. Demowash machines automatically dispense certified eco-friendly detergent and softener, made with 100% natural ingredients. Just bring your clothes.
-
----
-
-## El cliente pregunta cómo se usa la lavandería
-
-### Cold start (ES)
-
-**Usuario:** ¿Cómo se usa la lavandería? Es mi primera vez.  
-**Bot:** Para usar la lavandería, sigue estos pasos:
-
-1. **Coloca la ropa en la lavadora** y cierra la puerta.
-2. **Dirígete a la central de pago** y efectúa el pago seleccionando el número de máquina que deseas usar.
-3. **Vuelve a la máquina** y selecciona el programa y la temperatura que deseas.
-4. **Vuelve a recoger tu ropa** cuando la máquina indique que ha terminado.
-
-El detergente y el suavizante se dosifican automáticamente. No hace falta traer nada.
-
-### Pivot mid-flow (ES)
-
-**Usuario:** La lavadora no funciona, sale OPEN  
-**Bot:** ¿En qué lavandería estás?  
-**Usuario:** Mataró  
-**Bot:** ¿Qué número tiene la máquina?  
-**Usuario:** espera, ¿cómo se usa exactamente?  
-**Bot:** Para usar la lavandería, sigue estos pasos:
-
-1. Coloca la ropa en la lavadora y cierra la puerta.
-2. Dirígete a la central de pago y efectúa el pago seleccionando el número de máquina.
-3. Vuelve a la máquina y selecciona el programa y la temperatura.
-4. Recoge tu ropa cuando termine.
-
-¿Qué número tiene la máquina?
-
-**Usuario:** 5  
-**Bot:** La puerta no está cerrada correctamente. Ábrela y ciérrala bien, y prueba otra vez.
-
-### Multi-language
-
-**Usuario (IT):** come si usa la lavatrice? è la prima volta  
-**Bot:** Per usare la lavanderia, segui questi passi:
-
-1. **Metti i panni nella lavatrice** e chiudi lo sportello.
-2. **Vai alla cassa centrale** e paga selezionando il numero di macchina.
-3. **Torna alla macchina** e seleziona il programma e la temperatura.
-4. **Ritira i panni** quando la macchina segnala la fine del ciclo.
-
-Detergente e ammorbidente vengono dosati automaticamente. Non serve portare nulla.
-
-**Usuario (EN):** first time here, what do I do?  
-**Bot:** To use the laundry, follow these steps:
-
-1. **Place your clothes in the washing machine** and close the door.
-2. **Go to the central payment terminal** and pay by selecting the machine number.
-3. **Return to the machine** and select the program and temperature.
-4. **Collect your clothes** when the machine signals the cycle is done.
-
-Detergent and softener are dispensed automatically. You don't need to bring anything.
-
----
-
-## Orarios Gràcia (caso límite 7:00–23:00)
-
-### Cliente pregunta explícito (ES)
-
-**Usuario:** ¿Qué horario tenéis en Gràcia?  
-**Bot:** En **Gràcia** las máquinas se pueden utilizar de **7:00 a 23:00**, todos los días del año.
-
-### Cliente sin location (ES → 2 turnos)
-
-**Usuario:** ¿A qué hora abrís?  
-**Bot:** ¿En qué lavandería estás?  
-**Usuario:** Gràcia  
-**Bot:** En **Gràcia** las máquinas se pueden utilizar de **7:00 a 23:00**, todos los días del año.
-
-### Multi-language (IT)
-
-**Usuario:** che orari fate a Gràcia?  
-**Bot:** A **Gràcia** le macchine si possono utilizzare dalle **7:00 alle 23:00**, tutti i giorni dell'anno.
-
----
-
-## Precios lavadora Mataró (lista L4-L7 desde metadata.machines)
-
-### Cliente pregunta directo (ES)
-
-**Usuario:** ¿Cuánto cuesta lavar en Mataró?  
-**Bot:** En **Mataró** los precios de las lavadoras son:
-
-- **Lavadoras** 20kg: 6,5€ (fidelidad) / 7€ (efectivo)
-- **Lavadoras** 10kg: 3,5€ (fidelidad) / 4€ (efectivo)
-
-💡 El datáfono cobra el importe exacto de **7€**.
-
-¿También quieres información de secadora?
-
-### Cliente confirma "sí" para secadora (T3)
-
-**Usuario:** sí  
-**Bot:** En **Mataró** los precios de las secadoras son:
-
-- **Secadoras**: 2€/15min
-
----
-
-## Precios secadora Rubí (S4-S5 con TPV 8€)
-
-### Cliente pregunta directo (ES)
-
-**Usuario:** ¿Cuánto cuesta secar en Rubí?  
-**Bot:** En **Rubí** los precios de las secadoras son:
-
-- **Secadoras** 20kg: 2€/15min
-
-💡 El datáfono cobra el importe exacto de **8€**.
-
-¿También quieres información de lavadora?
-
-### Cliente confirma "sí" para lavadora (T3, simétrico F58)
-
-**Usuario:** sí  
-**Bot:** En **Rubí** los precios de las lavadoras son:
-
-- **L1** 10kg: 4,5€ (fidelidad) / 5€ (efectivo)
-- **L2** 15kg: 6€ (fidelidad) / 7€ (efectivo)
-- **L3** 20kg: 7€ (fidelidad) / 8€ (efectivo)
-
-💡 El datáfono cobra el importe exacto de **8€**.
-
----
-
-## Programas temperatura Eixample (4 programas sin número pulsante)
-
-### Cliente pregunta directo (ES)
-
-**Usuario:** ¿Qué programas tiene la lavadora en Eixample?  
-**Bot:** En **Eixample** la lavadora tiene los siguientes programas:
-
-- **60º** (muy caliente) — ideal para ropa muy sucia
-- **40º** (caliente) — ropa normal
-- **30º** (templado) — colores delicados
-- **FRÍO** — lana, seda, prendas muy delicadas
-
-En Eixample elige el programa por su nombre — no hay número de pulsante asignado.
-
-### Multi-language (IT)
-
-**Usuario:** che programmi avete a Eixample?  
-**Bot:** A **Eixample** la lavatrice ha i seguenti programmi:
-
-- **60º** (molto caldo) — ideale per panni molto sporchi
-- **40º** (caldo) — panni normali
-- **30º** (tiepido) — colori delicati
-- **FRÍO** — lana, seta, capi molto delicati
-
-A Eixample scegli il programma per nome — non c'è un numero di pulsante assegnato.
-
----
-
-## FAQ temperatura colores Sant Cugat (colorTemperature trasversal)
-
-### Cliente en Sant Cugat pregunta temperatura colores (ES)
-
-**Usuario:** Estoy en Sant Cugat. ¿A qué temperatura lavo la ropa de color?  
-**Bot:** Para ropa de color usa agua fría o tibia, entre **20 y 30°C**. El agua caliente abre las fibras y hace que el tinte se escape. También te recomendamos dar la vuelta a las prendas antes de meterlas al tambor para proteger los colores.
-
-### Multi-language (IT)
-
-**Usuario:** a che temperatura lavo i colorati?  
-**Bot:** Per i panni colorati usa acqua fredda o tiepida, tra **20 e 30°C**. L'acqua calda apre le fibre e fa scolorire i tinti. Ti consigliamo anche di rovesciare i capi prima di metterli nel cestello per proteggere i colori.
-
----
-
-## FAQ macchie grasse Terrassa (greaseStains)
-
-### Cliente en Terrassa pregunta mancha (ES)
-
-**Usuario:** Estoy en Terrassa. Tengo una mancha de aceite en una camisa, ¿qué hago?  
-**Bot:** Absorbe primero el exceso con papel de cocina sin frotar. Luego usa este programa en nuestras lavadoras:
-- **Tejidos resistentes** (algodón): **60°C**
-- **Sintéticos o delicados**: **40°C**
-
-Nuestras máquinas aplican el detergente automáticamente para disolver la grasa.
-
-### Multi-language (FR)
-
-**Usuario:** j'ai une tache de graisse, comment l'enlever?  
-**Bot:** Absorbe d'abord l'excès avec du papier essuie-tout sans frotter. Ensuite utilise ce programme dans nos machines :
-- **Tissus résistants** (coton) : **60°C**
-- **Synthétiques ou délicats** : **40°C**
-
-Nos machines appliquent le détergent automatiquement pour dissoudre la graisse.
-
----
-
-## Instrucciones howToUse Mataró (faqOverride 5 pasos con central)
-
-### Cliente en Mataró pregunta cómo usar (ES)
-
-**Usuario:** Es mi primera vez en Mataró, ¿cómo funciona?  
-**Bot:** En **Mataró (Mataró)**, para usar la lavandería sigue estos pasos:
-
-1. **Mete la ropa en la máquina seleccionada** y cierra bien la puerta.
-2. **Dirígete a la centralita** y sigue las instrucciones de pago (o paga con la App).
-3. **Vuelve a la máquina y confirma el inicio**.
-4. **No abras la puerta** antes de que finalice el lavado.
-5. **Al terminar**, deja la puerta abierta para que se ventile.
-
-### Cliente sin location (2 turnos)
-
-**Usuario:** ¿Cómo se usa? Primera vez.  
-**Bot:** ¿En qué lavandería estás?  
-**Usuario:** Mataró  
-**Bot:** En **Mataró (Mataró)**, para usar la lavandería sigue estos pasos:
-
-1. **Mete la ropa en la máquina seleccionada** y cierra bien la puerta.
-2. **Dirígete a la centralita** y sigue las instrucciones de pago (o paga con la App).
-3. **Vuelve a la máquina y confirma el inicio**.
-4. **No abras la puerta** antes de que finalice el lavado.
-5. **Al terminar**, deja la puerta abierta para que se ventile.
-
----
-
-## Instrucciones howToUse Gràcia (faqOverride 4 pasos sin "confirma inicio")
-
-### Cliente en Gràcia pregunta cómo usar (ES)
-
-**Usuario:** Estoy en Gràcia, ¿cómo se usa?  
-**Bot:** En **Gràcia**, para usar la lavandería sigue estos pasos:
-
-1. **Mete la ropa en la máquina seleccionada** y cierra bien la puerta.
-2. **Dirígete a la centralita** y sigue las instrucciones de pago (o paga con la App).
-3. **No abras la puerta** antes de que finalice el lavado.
-4. **Al terminar**, deja la puerta abierta para que se ventile.
-
-### Multi-language (FR)
-
-**Usuario:** comment utiliser la laverie à Gràcia?  
-**Bot:** À **Gràcia**, pour utiliser la laverie suis ces étapes :
-
-1. **Mets le linge dans la machine** et ferme bien la porte.
-2. **Va à la centrale de paiement** et suis les instructions (ou paye avec l'App).
-3. **N'ouvre pas la porte** avant la fin du lavage.
-4. **À la fin**, laisse la porte ouverte pour aérer.
-
----
-
-## Combinatorio: cliente pregunta horario + precio en la misma sesión (Mataró → Mataró)
-
-### Mataró ambiguo + clarificación + chain hours→prices (ES)
-
-**Usuario:** Estoy en Mataró. ¿A qué hora abrís y cuánto cuesta lavar?  
-**Bot:** En Mataró tenemos 2 lavanderías: **Mataró** (Carrer Francisco de Mataró 117) y **Eixample** (C/ Eixample 17). ¿En cuál estás?  
-**Usuario:** Mataró  
-**Bot:** En **Mataró** abrimos de **8:00 a 22:00** todos los días del año.
-
-En **Mataró** los precios de las lavadoras son:
-- **Lavadoras** 20kg: 6,5€ (fidelidad) / 7€ (efectivo)
-- **Lavadoras** 10kg: 3,5€ (fidelidad) / 4€ (efectivo)
-
-💡 El datáfono cobra el importe exacto de **7€**.
-
-¿También quieres información de secadora?
-
-### Cliente pivota a Eixample (F51 location switch)
-
-**Usuario:** ¿y en Eixample?  
-**Bot:** En **Eixample** abrimos de **8:00 a 22:00** todos los días del año.
-
-En **Eixample** los precios de las lavadoras son:
-- **L1/L2** 20kg: 7€ (fidelidad) / 8€ (efectivo)
-- **L3/L4** 10kg: 4€ (fidelidad) / 4,5€ (efectivo)
-
-⚠️ En Eixample a veces el pago con tarjeta puede fallar — si pasa, usa monedas o pide ayuda al operador.
-
----
-
-## El cliente pregunta cómo se usa la secadora
-
-### Cold start sin location (ES)
-
-**Usuario:** ¿Cómo se usa la secadora?  
-**Bot:** Para usar la secadora, sigue estos pasos:
-
-1. **Mete la ropa en la secadora** y cierra la puerta.
-2. **Dirígete a la central de pago** y efectúa el pago seleccionando el número de secadora.
-3. **Elige el programa**: Alta temperatura (para ropa resistente), Media (para ropa normal) o Baja (para ropa delicada).
-4. **Durante el ciclo** puedes abrir la puerta en cualquier momento si lo necesitas.
-5. **Consejo**: cuando queden ~5 minutos, puedes añadir más tiempo (+5 min) si ves que la ropa no está del todo seca.
-
-### Cliente en Mataró (faqOverride location-specific)
-
-**Usuario:** Estoy en Mataró. ¿Cómo funciona la secadora?  
-**Bot:** En **Mataró**, para usar la secadora sigue estos pasos:
-
-1. **Mete la ropa en la secadora** y cierra la puerta.
-2. **Dirígete a la central de pago** y selecciona el número de secadora (puedes pagar con monedas, billetes o tarjeta).
-3. **Elige el programa**: Alta, Media o Baja temperatura.
-4. **Durante el ciclo** puedes abrir la puerta si lo necesitas.
-5. **Si la ropa no está del todo seca**, puedes añadir +5 min cuando queden ~5 minutos.
-
-### Cliente en Gràcia (card-only)
-
-**Usuario:** como se usa la secadora, estoy en Gràcia  
-**Bot:** En **Gràcia**, para usar la secadora sigue estos pasos:
-
-1. **Mete la ropa en la secadora** y cierra la puerta.
-2. **Dirígete a la central de pago** y selecciona el número de secadora. ⚠️ En Gràcia solo se acepta **pago con tarjeta**.
-3. **Elige el programa**: Alta, Media o Baja temperatura.
-4. **Durante el ciclo** puedes abrir la puerta si lo necesitas.
-5. **Si la ropa no está del todo seca**, puedes añadir +5 min cuando queden ~5 minutos.
-
-### Multi-language (IT)
-
-**Usuario (IT):** come si usa l'asciugatrice?  
-**Bot:** Per usare l'asciugatrice, segui questi passi:
-
-1. **Metti i panni nell'asciugatrice** e chiudi lo sportello.
-2. **Vai alla cassa centrale** e paga selezionando il numero di asciugatrice.
-3. **Scegli il programma**: Alta temperatura (panni resistenti), Media (panni normali) o Bassa (delicati).
-4. **Durante il ciclo** puoi aprire lo sportello quando vuoi.
-5. **Consiglio**: a ~5 minuti dalla fine puoi aggiungere +5 min se i panni non sono ancora asciutti.
-
----
-
-## La máquina muestra "120" (cuenta atrás fin de ciclo)
-
-### Happy path (ES)
-
-**Usuario:** La pantalla pone 120  
-**Bot:** La máquina está terminando su ciclo. Por favor, espera a que la cuenta atrás termine y la pantalla muestre END — en ese momento podrás abrir la puerta.  
-**Usuario:** Ya pone END  
-**Bot:** ¡Perfecto! Puedes abrir la puerta y recoger tu ropa. ¡Hasta pronto!
-
-### Display 120 (IT)
-
-**Usuario (IT):** il display fa 120  
-**Bot:** *(countdownGuidance in italiano: la macchina sta terminando il ciclo, aspetta END)*
-
-### Display 120 (EN)
-
-**Usuario (EN):** screen shows 120  
-**Bot:** *(countdownGuidance in English: machine is finishing its cycle, wait for END)*
-
----
-
-## La lavadora no centrifuga
-
-Problema técnico de la máquina: el ciclo termina pero la ropa sale empapada porque el tambor no centrifuga. Es un incidente que NO se resuelve desde el chat — el bot pide los datos mínimos y escala al operador.
-
-### Happy Path (ES)
-
-**Usuario:** La lavadora no centrifuga, la ropa sale empapada.  
-**Bot:** Lo siento, lo paso a un operador. ¿Me dices tu nombre, la localidad (Sants / Eixample / Gràcia / Sant Cugat / Hospitalet / Mataró / Terrassa / Rubí) y el número de la máquina?
-
-**Usuario:** Soy Marco, Sants, máquina 7.  
-**Bot:** *(escalate_to_operator({reason: "machine_no_spin", summary: "Cliente Marco en Sants, lavadora 7 no centrifuga, ropa sale empapada."}))*  
-He registrado el caso, Marco. Un operador te contactará en pocos minutos.
-
-### Multi-language (IT)
-
-**Usuario:** La lavatrice non centrifuga, i panni escono bagnati.  
-**Bot:** Mi dispiace, ti passo a un operatore. Mi dici il tuo nome, la sede (Sants / Eixample / Gràcia / Sant Cugat / Hospitalet / Mataró / Terrassa / Rubí) e il numero della macchina?
-
-### Multi-language (EN)
-
-**Usuario:** The washing machine doesn't spin, clothes come out soaked.  
-**Bot:** I'm sorry — I'll forward this to an operator. Can you tell me your name, the location (Sants / Eixample / Gràcia / Sant Cugat / Hospitalet / Mataró / Terrassa / Rubí), and the machine number?
-
----
-
-## FAQ camisa blanca manchada temperatura
-
-Consejo de lavado puro (no requiere escalación ni tools): el cliente quiere saber a qué temperatura lavar una prenda blanca manchada sin estropearla. El bot responde con la recomendación textil estándar.
-
-### Happy Path (ES)
-
-**Usuario:** Tengo una camisa blanca manchada, ¿a qué temperatura la puedo lavar para no estropearla?  
+**Cliente:** Tengo una camisa blanca manchada, ¿a qué temperatura la puedo lavar para no estropearla?
 **Bot:** Para una camisa blanca con manchas:
-- **Algodón resistente**: **40°C** (máx. 60°C si la mancha es muy persistente)
+- **Algodón resistente**: **40°C** (hasta 60°C si la mancha es muy persistente)
 - **Tejidos delicados** (seda, lana, mezclas finas): **30°C**
 
-Por encima de 40°C en tejidos delicados arriesgas a fijar la mancha y amarillear la fibra. En nuestras lavadoras Demowash selecciona el programa correspondiente en el display de la máquina — el detergente se dosifica automáticamente.
+Por encima de 40°C en tejidos delicados arriesgas a fijar la mancha. Selecciona el programa correspondiente en el display de la máquina — el detergente se dosifica automáticamente.
 
-### Multi-language (IT)
+---
 
-**Usuario:** Ho una camicia bianca macchiata, a quanti gradi la posso lavare per non rovinarla?  
-**Bot:** Per una camicia bianca con macchie:
-- **Cotone resistente**: **40°C** (max 60°C se la macchia è molto persistente)
-- **Tessuti delicati** (seta, lana, misti fini): **30°C**
+## Temperatura colores
 
-Sopra i 40°C su tessuti delicati rischi di fissare la macchia e ingiallire la fibra. Nelle nostre lavatrici Demowash seleziona il programma corrispondente sul display della macchina — il detersivo viene dosato automaticamente.
+**Cliente:** ¿A qué temperatura lavo los colores?
+**Bot:** Regla general para colores:
+- **Colores oscuros / negros**: **30°C** (evita la pérdida de color)
+- **Colores claros**: **30-40°C**
+- **Colores resistentes con manchas**: hasta **40°C**
 
-### Multi-language (EN)
+Nunca laves los colores por encima de 40°C la primera vez: el color suelta más cuando es nuevo.
 
-**Usuario:** I have a stained white shirt — what temperature can I wash it at without ruining it?  
-**Bot:** For a stained white shirt:
-- **Sturdy cotton**: **40°C** (up to 60°C if the stain is stubborn)
-- **Delicate fabrics** (silk, wool, fine blends): **30°C**
+---
 
-Above 40°C on delicate fabrics you risk setting the stain and yellowing the fiber. On our Demowash machines, pick the matching program on the machine display — detergent is dosed automatically.
+## Mancha de grasa
+
+**Cliente:** Tengo una mancha de grasa en una camisa, ¿cómo la quito?
+**Bot:** Primero absorbe el exceso con papel de cocina sin frotar (frotar extiende la mancha). Después selecciona:
+- **Algodón**: **60°C**
+- **Sintéticos o delicados**: **40°C**
+
+El detergente Demowash incluye un componente desengrasante que se dosifica automáticamente.
+
+---
+
+## Detergente incluido
+
+**Cliente:** ¿Tengo que traer detergente?
+**Bot:** ¡No, no hace falta traer nada! Las máquinas Demowash **dosifican automáticamente** detergente y suavizante ecológicos certificados, elaborados con ingredientes 100% naturales. Solo tienes que traer la ropa. 😊
+
+---
+
+## Edredones y mantas
+
+**Cliente:** ¿Puedo lavar edredones y mantas?
+**Bot:** ¡Sí, puedes lavarlos! Estos son los consejos:
+
+**Edredones y mantas en algodón o poliéster resistente:**
+- **Temperatura**: **40°C**
+- **Capacidad**: usa una lavadora de **20 kg** para edredones grandes
+- **Después del lavado**: secadora a temperatura **alta o media** para eliminar bien la humedad
+
+**Edredones delicados o con relleno sintético:**
+- **Temperatura**: **30°C**
+
+**Consejos**:
+- No sobrecargues la máquina — el edredón necesita espacio para moverse bien
+- Tras el lavado el edredón sale muy mojado: pasa por **secadora** para terminar
+
+Si quieres saber qué máquinas grandes hay y los precios exactos, dime en qué lavandería estás. 😊
+
+---
+
+## Duración del lavado
+
+**Cliente:** ¿Cuánto dura un lavado?
+**Bot:** La duración depende del **programa** que elijas:
+
+- **60°C** (muy caliente): **50-55 minutos**
+- **40°C** (caliente): **45-50 minutos**
+- **30°C** (templado): **40-45 minutos**
+- **Frío** (*): **35-40 minutos**
+
+Son tiempos aproximados. Durante el ciclo verás en la pantalla la cuenta atrás del tiempo restante (por ejemplo `T-28` significa 28 minutos). 😊
+
+---
+
+## Horarios
+
+> FAQ per-sede — el bot pregunta solo la sede.
+
+**Cliente:** ¿Cuáles son los horarios?
+**Bot:** ¿En qué lavandería estás?
+
+**Cliente:** Gràcia.
+**Bot:** En **Gràcia** estamos abiertos de **7:00 a 23:00**, todos los días.
+
+---
+
+## Precios
+
+**Cliente:** ¿Cuánto cuesta lavar?
+**Bot:** ¿En qué lavandería estás?
+
+**Cliente:** Eixample.
+**Bot:** En **Eixample** estos son los precios de lavadora:
+
+| Núm. | Peso  | Fidelización | Efectivo |
+|------|-------|--------------|----------|
+| 1    | 20 kg | 7 €          | 8 €      |
+| 2    | 20 kg | 7 €          | 8 €      |
+| 3    | 10 kg | 4 €          | 4,50 €   |
+| 4    | 10 kg | 4 €          | 4,50 €   |
+
+¿Quieres también los precios de secadora?
+
+---
+
+## Métodos de pago
+
+**Cliente:** ¿Se puede pagar con tarjeta?
+**Bot:** ¿En qué lavandería estás?
+
+**Cliente:** Gràcia.
+**Bot:** En **Gràcia** solo se acepta **tarjeta de crédito/débito**. No hay efectivo ni tarjeta de fidelización en esta sede.
+
+---
+
+## Programas
+
+**Cliente:** ¿Qué programas tiene la lavadora?
+**Bot:** ¿En qué lavandería estás?
+
+**Cliente:** Eixample.
+**Bot:** En **Eixample** la lavadora tiene 4 programas:
+
+| Botón | Programa     | Temperatura |
+|-------|--------------|-------------|
+| 1     | Muy caliente | 60°         |
+| 2     | Caliente     | 40°         |
+| 3     | Templado     | 30°         |
+| 4     | Frío         | *           |
+
+La secadora tiene 3: alta, media y baja temperatura.
+
+---
+
+## Tarjeta de fidelización
+
+> El bot confirma si la sede del cliente acepta la tarjeta y muestra los precios reducidos. Para la activación, recarga o consulta de saldo redirige al equipo de la lavandería — son ellos quienes gestionan la tarjeta físicamente. El bot lo presenta como un servicio del local, no como una limitación propia.
+
+**Cliente:** ¿Cómo funciona la tarjeta de fidelización?
+**Bot:** Con la tarjeta de fidelización pagas **menos** que con efectivo o tarjeta bancaria — el descuento se aplica automáticamente en cada lavado y secado.
+
+¿En qué lavandería estás? Te confirmo si la aceptamos allí y te paso los precios.
+
+**Cliente:** Eixample.
+**Bot:** En **Eixample** sí, aceptamos tarjeta de fidelización. Estos son los precios:
+
+| Máquina         | Capacidad | Fidelización |
+|-----------------|-----------|--------------|
+| Lavadora 1-2    | 20 kg     | 7 €          |
+| Lavadora 3-4    | 10 kg     | 4 €          |
+| Secadora 5-6    | 20 kg     | 2,50 €       |
+
+---
+
+## Ahorro con la tarjeta
+
+> El bot necesita la sede para mostrar el ahorro exacto — cada local tiene precios diferentes.
+
+**Cliente:** ¿Cuánto ahorro con la tarjeta?
+**Bot:** Para decirte el ahorro exacto, ¿en qué lavandería estás?
+
+**Cliente:** Rubí.
+**Bot:** En **Rubí** el ahorro con la tarjeta de fidelización es:
+
+**Lavadoras**:
+- Máquina 1 (10 kg): **0,50 € de ahorro** (4,50 € con tarjeta vs 5 € en efectivo)
+- Máquina 2 (15 kg): **1 € de ahorro** (6 € con tarjeta vs 7 € en efectivo)
+- Máquina 3 (20 kg): **1 € de ahorro** (7 € con tarjeta vs 8 € en efectivo)
+
+**Secadoras** (máquinas 4 y 5, 20 kg): **mismo precio** con tarjeta o en efectivo (2 € / 15 min).
+
+💡 Si usas la lavadora grande (máquina 3) habitualmente, la tarjeta se amortiza en pocos usos. 😊
+
+---
+
+## Lavandería más cercana
+
+**Cliente:** ¿Dónde está la lavandería más cercana?
+**Bot:** ¿En qué zona estás? Te paso los datos de la sede más cómoda.
+
+**Cliente:** Estoy en Barcelona.
+**Bot:** En Barcelona tenemos dos sedes Demowash:
+
+1. **Eixample** — C/ Aragó 286, cerca de Passeig de Gràcia. Horario: 8:00 — 22:00
+2. **Gràcia** — C/ Verdi 47, cerca de Plaça del Sol. Horario: 7:00 — 23:00
+
+¿En cuál de las dos estás, o cuál te interesa? 😊
 
 ---

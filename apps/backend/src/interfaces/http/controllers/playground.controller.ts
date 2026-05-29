@@ -1,5 +1,4 @@
 import { prisma } from "@echatbot/database"
-import axios from "axios"
 import { Request, Response } from "express"
 import * as fs from "fs"
 import * as path from "path"
@@ -22,91 +21,11 @@ type UsecasesLang = (typeof SUPPORTED_USECASES_LANGS)[number]
 const USECASES_SOURCE_LANG: UsecasesLang = "es"
 const usecasesMemoryCache = new Map<string, string>() // key: `${filePath}:${lang}`
 
-const LANG_FULL_NAME: Record<UsecasesLang, string> = {
-  es: "Spanish",
-  it: "Italian",
-  en: "English",
-  fr: "French",
-  pt: "Portuguese",
-  ca: "Catalan",
-  de: "German",
-}
-
 function isSupportedUsecasesLang(value: unknown): value is UsecasesLang {
   return (
     typeof value === "string" &&
     (SUPPORTED_USECASES_LANGS as readonly string[]).includes(value)
   )
-}
-
-/**
- * Translate the usecases markdown into the target language via OpenRouter.
- * Preserves markdown structure (headings, lists, code blocks, bold, italics,
- * links, emoji). Returns the original text if translation fails.
- */
-async function translateUsecasesMarkdown(
-  source: string,
-  targetLang: UsecasesLang
-): Promise<string> {
-  const apiKey = process.env.OPENROUTER_API_KEY
-  if (!apiKey) {
-    logger.warn(
-      "[Usecases-i18n] OPENROUTER_API_KEY missing — returning source text"
-    )
-    return source
-  }
-  const model = process.env.OPENROUTER_TRANSLATION_MODEL || "openai/gpt-4o-mini"
-  const prompt = `You are a professional translator. Translate the following Markdown document from Spanish to ${LANG_FULL_NAME[targetLang]}.
-
-STRICT RULES:
-- Preserve ALL markdown syntax exactly: headings (#, ##, ###), bullets (-), bold (**...**), italics (*...*), code (\`...\`), blockquotes (>), tables, horizontal rules (---), links [text](url), images, emoji.
-- Keep code blocks, URLs, anchor hrefs (#caso-...), file paths, JSON keys, regex, command/keyword tokens (WAIT, SELECT, OPEN, ERR-01, ALERT, BLOCK, ERR-12, etc.), placeholders like {{var}} or [LINK_x] EXACTLY as they are — do NOT translate them.
-- Keep speaker labels exactly: "**Usuario:**" → translate the label to the target language ("**User:**" in en, "**Utente:**" in it, "**Usuari:**" in ca, "**Utilisateur:**" in fr, "**Utilizador:**" in pt, "**Benutzer:**" in de). "**Bot:**" stays as "**Bot:**".
-- Keep proper nouns and brand names unchanged (Demowash, DemoWash, Mataró, Eixample, Rubí, Sant Cugat, Gràcia, Terrassa).
-- Output ONLY the translated markdown, no preamble, no fences, no explanation.
-
-DOCUMENT TO TRANSLATE:
-${source}`
-
-  try {
-    const response = await axios.post(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        model,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a professional markdown translator. Output only the translated markdown.",
-          },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0,
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        timeout: 120_000,
-      }
-    )
-    const translated: string | undefined =
-      response.data?.choices?.[0]?.message?.content
-    if (!translated || translated.trim().length < 20) {
-      logger.warn(
-        `[Usecases-i18n] Empty/short translation for ${targetLang} — fallback to source`
-      )
-      return source
-    }
-    return translated
-  } catch (err: any) {
-    logger.error(
-      `[Usecases-i18n] OpenRouter translation failed for ${targetLang}:`,
-      err?.response?.data || err?.message || err
-    )
-    return source
-  }
 }
 
 /**
@@ -126,32 +45,22 @@ async function getUsecasesMarkdownForLang(
   // 2) Memory cache
   const memHit = usecasesMemoryCache.get(cacheKey)
   if (memHit) return memHit
-  // 3) Disk cache: usecases.<lang>.md sibling
+  // 3) Disk: sibling file named usecases_<lang>.md. We DO NOT translate
+  // on-the-fly — every supported language must ship its own pre-written
+  // markdown file. If the file is missing we fall back to the source so
+  // the UI doesn't break, but the operator should add the missing file.
   const dir = path.dirname(sourcePath)
   const base = path.basename(sourcePath, ".md")
-  const diskCachePath = path.join(dir, `${base}.${lang}.md`)
-  if (fs.existsSync(diskCachePath)) {
-    const cached = fs.readFileSync(diskCachePath, "utf-8")
-    usecasesMemoryCache.set(cacheKey, cached)
-    return cached
+  const langFilePath = path.join(dir, `${base}_${lang}.md`)
+  if (fs.existsSync(langFilePath)) {
+    const content = fs.readFileSync(langFilePath, "utf-8")
+    usecasesMemoryCache.set(cacheKey, content)
+    return content
   }
-  // 4) Translate via OpenRouter
-  const source = fs.readFileSync(sourcePath, "utf-8")
-  logger.info(
-    `[Usecases-i18n] Translating ${sourcePath} → ${lang} via OpenRouter`
+  logger.warn(
+    `[Usecases-i18n] Missing translation file ${langFilePath} — serving source`
   )
-  const translated = await translateUsecasesMarkdown(source, lang)
-  // Persist (best-effort)
-  try {
-    fs.writeFileSync(diskCachePath, translated, "utf-8")
-    logger.info(`[Usecases-i18n] Cached translation to ${diskCachePath}`)
-  } catch (writeErr: any) {
-    logger.warn(
-      `[Usecases-i18n] Could not persist disk cache ${diskCachePath}: ${writeErr?.message}`
-    )
-  }
-  usecasesMemoryCache.set(cacheKey, translated)
-  return translated
+  return fs.readFileSync(sourcePath, "utf-8")
 }
 
 const customClientChatbotService = new CustomClientChatbotService()
@@ -188,7 +97,7 @@ async function resolveWorkspaceId(req: Request): Promise<string> {
   return await getEcolaundryWorkspaceId()
 }
 
-const ALLOWED_USERS = ["ANDREA", "OLGA"] as const
+const ALLOWED_USERS = ["ANDREA", "OLGA", "demo"] as const
 type PlaygroundUser = (typeof ALLOWED_USERS)[number]
 
 const ALLOWED_STATUSES = ["TODO", "IN_PROGRESS", "REVIEW", "DONE", "NICE_TO_HAVE"]
@@ -352,27 +261,57 @@ export class PlaygroundController {
   async getMessages(req: Request, res: Response) {
     try {
       const workspaceId = await resolveWorkspaceId(req)
-      const sessions = await prisma.chatSession.findMany({
+      // 1) Load the most recent sessions + their customers.
+      const rawSessions = await prisma.chatSession.findMany({
         where: { workspaceId },
         include: {
           customer: { select: { id: true, name: true, phone: true } },
-          messages: {
-            where: { deletedAt: null },
-            orderBy: { createdAt: "asc" },
-            select: {
-              id: true,
-              direction: true,
-              content: true,
-              type: true,
-              createdAt: true,
-              aiGenerated: true,
-              chatSessionId: true,
-            },
-          },
         },
         orderBy: { updatedAt: "desc" },
         take: 50,
       })
+      if (rawSessions.length === 0) {
+        return res.json({ sessions: [] })
+      }
+      // 2) Load conversationMessage rows for those sessions in a single query
+      //    (no FK relation: conversationMessage.conversationId is a plain
+      //    string that matches chatSession.id). Filter out "function" rows
+      //    — they are internal LLM tool calls, never part of the UI dialog.
+      const sessionIds = rawSessions.map((s) => s.id)
+      const rows = await prisma.conversationMessage.findMany({
+        where: {
+          conversationId: { in: sessionIds },
+          role: { in: ["user", "assistant"] },
+        },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          role: true,
+          content: true,
+          createdAt: true,
+          conversationId: true,
+        },
+      })
+      // 3) Group messages by session id, then attach to sessions in the
+      //    shape the frontend expects (direction/aiGenerated/type/chatSessionId).
+      const bySession = new Map<string, typeof rows>()
+      for (const r of rows) {
+        const arr = bySession.get(r.conversationId)
+        if (arr) arr.push(r)
+        else bySession.set(r.conversationId, [r])
+      }
+      const sessions = rawSessions.map((s) => ({
+        ...s,
+        messages: (bySession.get(s.id) || []).map((m) => ({
+          id: m.id,
+          direction: m.role === "user" ? "INBOUND" : "OUTBOUND",
+          content: m.content,
+          type: "TEXT",
+          createdAt: m.createdAt,
+          aiGenerated: m.role === "assistant",
+          chatSessionId: s.id,
+        })),
+      }))
       return res.json({ sessions })
     } catch (error: any) {
       logger.error("Playground getMessages error:", error)
@@ -629,15 +568,17 @@ export class PlaygroundController {
         }
       }
 
-      // 1) Persist inbound user message immediately so the UI always sees it
-      await prisma.message.create({
+      // 1) Persist inbound user message immediately so the UI always sees it.
+      //    Single source of truth: conversationMessage (the table the main
+      //    /chat app reads from). The legacy `message` table is no longer
+      //    written by playground.
+      await prisma.conversationMessage.create({
         data: {
-          chatSessionId: session.id,
-          direction: "INBOUND",
+          workspaceId,
+          customerId: customer.id,
+          conversationId: session.id,
+          role: "user",
           content: message,
-          type: "TEXT",
-          status: "received",
-          aiGenerated: false,
         },
       })
 
@@ -663,12 +604,17 @@ export class PlaygroundController {
 
       if (workspace?.customChatbotId) {
         try {
-          // Build conversation history for the custom chatbot
-          const recentMessages = await prisma.message.findMany({
-            where: { chatSessionId: session.id, deletedAt: null },
+          // Build conversation history for the custom chatbot from
+          // conversationMessage (single source of truth). We skip "function"
+          // rows (internal LLM tool calls — never part of dialog history).
+          const recentMessages = await prisma.conversationMessage.findMany({
+            where: {
+              conversationId: session.id,
+              role: { in: ["user", "assistant"] },
+            },
             orderBy: { createdAt: "desc" },
             take: 20,
-            select: { direction: true, content: true, createdAt: true },
+            select: { role: true, content: true, createdAt: true },
           })
           const history = recentMessages
             .reverse()
@@ -676,9 +622,7 @@ export class PlaygroundController {
             // expects the LATEST user message via `userMessage`, not in history).
             .slice(0, -1)
             .map((m) => ({
-              role: (m.direction === "INBOUND" ? "user" : "assistant") as
-                | "user"
-                | "assistant",
+              role: m.role as "user" | "assistant",
               content: m.content || "",
               timestamp: m.createdAt?.toISOString(),
             }))
@@ -779,26 +723,25 @@ export class PlaygroundController {
           : "[Playground debug] No response from chat engine"
       }
 
-      // 3) Persist outbound bot response so the UI shows the dialog
+      // 3) Persist outbound bot response so the UI shows the dialog.
       //    Note: the engine itself may also persist via MessagePersistenceService.
       //    We check that no identical assistant message was just saved to avoid duplicates.
-      const recentBotMsg = await prisma.message.findFirst({
+      const recentBotMsg = await prisma.conversationMessage.findFirst({
         where: {
-          chatSessionId: session.id,
-          direction: "OUTBOUND",
+          conversationId: session.id,
+          role: "assistant",
           createdAt: { gte: new Date(Date.now() - 30_000) },
         },
         orderBy: { createdAt: "desc" },
       })
       if (!recentBotMsg || recentBotMsg.content !== botResponse) {
-        await prisma.message.create({
+        await prisma.conversationMessage.create({
           data: {
-            chatSessionId: session.id,
-            direction: "OUTBOUND",
+            workspaceId,
+            customerId: customer.id,
+            conversationId: session.id,
+            role: "assistant",
             content: botResponse,
-            type: "TEXT",
-            status: "sent",
-            aiGenerated: !engineError,
           },
         })
       }
@@ -837,16 +780,19 @@ export class PlaygroundController {
 
       const session = await prisma.chatSession.findFirst({
         where: { id, workspaceId },
-        select: {
-          id: true,
-          messages: { where: { deletedAt: null }, select: { id: true } },
-        },
+        select: { id: true },
       })
       if (!session) {
         return res.status(404).json({ error: "Session not found" })
       }
 
-      const messageIds = session.messages.map((m) => m.id)
+      // Collect the message ids that may have TODOs attached. We check
+      // conversationMessage (the new source of truth).
+      const sessionMessages = await prisma.conversationMessage.findMany({
+        where: { conversationId: id, role: { in: ["user", "assistant"] } },
+        select: { id: true },
+      })
+      const messageIds = sessionMessages.map((m) => m.id)
       const blockingTodos = messageIds.length
         ? await prisma.playgroundTodo.findMany({
             where: { workspaceId, dialogId: { in: messageIds } },
@@ -865,10 +811,9 @@ export class PlaygroundController {
 
       // No blocking TODOs → safe to delete. We hard-delete the session and its
       // messages because the playground is a debug surface; production chat
-      // history isn't affected (the playground only handles the Ecolaundry
-      // demo workspace).
+      // history isn't affected (the playground only handles demo workspaces).
       await prisma.$transaction([
-        prisma.message.deleteMany({ where: { chatSessionId: id } }),
+        prisma.conversationMessage.deleteMany({ where: { conversationId: id } }),
         prisma.chatSession.delete({ where: { id } }),
       ])
 
