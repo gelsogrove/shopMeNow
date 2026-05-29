@@ -673,6 +673,12 @@ interface TurnResult {
   reply: string
   tokensUsed: number
   escalated: boolean
+  // When the LLM calls `escalate_to_operator`, this holds the briefing
+  // it produced (already post-substituted with real PII values from
+  // SessionState). Surfaced upward so the host can ship it to the
+  // operator email — replaces the meaningless "Ticket created for
+  // <uuid>" placeholder we used before.
+  operatorBriefing?: string | null
 }
 
 async function agentTurnInternal(
@@ -730,7 +736,7 @@ async function agentTurnInternal(
       const finalReply = operatorBriefing
         ? `${text}\n\n**👤 Human Support message**\n${operatorBriefing}`
         : text
-      return { reply: finalReply, tokensUsed, escalated }
+      return { reply: finalReply, tokensUsed, escalated, operatorBriefing }
     }
 
     // Tool calls present → execute each, append results, loop.
@@ -1049,7 +1055,15 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     return {
       reply: result.reply || null,
       shouldEscalate: result.escalated,
-      escalationSummary: result.escalated ? `Ticket created for ${sessionId}` : undefined,
+      // Ship the real operator briefing produced by the LLM (post-PII
+      // substitution) so the email shows the structured incident summary
+      // — customer name, location, machine, problem, ID — instead of an
+      // opaque ticket UUID. Falls back to a session reference only when
+      // the briefing is missing (defensive — should never happen if
+      // escalate_to_operator ran successfully).
+      escalationSummary: result.escalated
+        ? result.operatorBriefing || `Session ${sessionId} escalated (no briefing captured)`
+        : undefined,
       notificationEmails: result.escalated ? OPERATOR_EMAIL || undefined : undefined,
       closeChat: result.escalated,
       patches: patches.length > 0 ? patches : undefined,
