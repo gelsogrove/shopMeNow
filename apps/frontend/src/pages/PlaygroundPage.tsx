@@ -1196,6 +1196,13 @@ function ChatScreen({
   // Use Cases header AND auto-opened once after login for demowash visitors
   // (see effect below). Contents come from `ABOUT_DEMOWASH` keyed by language.
   const [showAboutPopup, setShowAboutPopup] = useState(false)
+  // Tracks whether the popup was auto-opened by the post-login welcome
+  // effect (true) or by an explicit click on the (i) button (false). On
+  // close, the auto-open variant triggers a window.location.reload() so
+  // the chat list is fetched with the freshly resolved workspaceId in
+  // localStorage — a belt-and-braces fix for the "no chats until I
+  // refresh" race after login.
+  const popupAutoOpenedRef = useRef(false)
   const [workspaceName, setWorkspaceName] = useState<string>("Ecolaundry")
   // Seed customChatbotId from the URL slug or from localStorage so the very
   // first render already knows which demo we're on. Without this the UI
@@ -1359,6 +1366,7 @@ function ChatScreen({
   useEffect(() => {
     if (customChatbotId !== "demowash") return
     if (localStorage.getItem("playgroundAboutSeen") === "1") return
+    popupAutoOpenedRef.current = true
     setShowAboutPopup(true)
     localStorage.setItem("playgroundAboutSeen", "1")
   }, [customChatbotId])
@@ -2099,7 +2107,10 @@ function ChatScreen({
               {customChatbotId === "demowash" && (
                 <button
                   type="button"
-                  onClick={() => setShowAboutPopup(true)}
+                  onClick={() => {
+                    popupAutoOpenedRef.current = false
+                    setShowAboutPopup(true)
+                  }}
                   title="About this demo"
                   aria-label="About this demo"
                   className="p-1 rounded hover:bg-white/20 cursor-pointer opacity-90 hover:opacity-100 transition"
@@ -2183,7 +2194,17 @@ function ChatScreen({
       {showAboutPopup && (
         <AboutDemowashPopup
           lang={usecasesLang}
-          onClose={() => setShowAboutPopup(false)}
+          onClose={() => {
+            setShowAboutPopup(false)
+            // After the auto-open welcome popup, do a hard reload so the
+            // chat list re-mounts with the workspaceId (resolved async
+            // during login) already in localStorage. Belt-and-braces fix
+            // for the "no chats until I refresh" race.
+            if (popupAutoOpenedRef.current) {
+              popupAutoOpenedRef.current = false
+              window.location.reload()
+            }
+          }}
         />
       )}
     </div>

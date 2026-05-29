@@ -65,3 +65,65 @@ A real unification is **not a rename**. It requires:
 - Don't change the rate-limiter behavior without re-testing the anti-spam rules Andrea defined ("max 5 messaggi ogni 10 secondi").
 
 ---
+
+## TD-002 — Persist message translations on the DB (shared, durable cache)
+
+**Added:** 2026-05-29
+**Owner:** Andrea
+**Status:** Open
+
+### Context
+
+The operator-side translation feature (global "Translate to…" combo on the Chat page) currently caches translations **only in the browser's `sessionStorage`** under `chat-translations-cache`, keyed by `${messageId}|${lang}`. Implementation lives in `apps/frontend/src/pages/ChatPage.tsx` around the `translations` state and the batch effect that POSTs missing entries to `/api/chat/translate-messages`.
+
+This works for a single operator on a single browser, but has three real problems:
+
+1. **No sharing across operators.** Operator A translates 100 messages into Italian → operator B opens the same chat and re-pays OpenRouter for the exact same translations.
+2. **Cache dies with the tab.** Close the browser, lose every translation. Re-opens cost money again.
+3. **Scaling risk.** With ~50 chats × ~30 messages × 2 languages we're already at ~360 KB in `sessionStorage` (Andrea raised this concern). Far from the 5 MB limit today but cache grows monotonically as long as the tab stays open — no eviction.
+
+Translations are **deterministic** (same input text + same target language ⇒ same output) so a DB cache is semantically correct, not just an optimization.
+
+### Suggested approach
+
+1. **Schema** — new table `MessageTranslation`:
+   ```
+   id            String  @id @default(cuid())
+   messageId     String  // FK to whichever table wins TD-001 (Message / ConversationMessage)
+   language      String  // ISO 639-1, lowercase: "it", "en", "ar", ...
+   content       String  // the translated text
+   createdAt     DateTime @default(now())
+
+   @@unique([messageId, language])
+   @@index([messageId])
+   ```
+   Keep `language` lowercase by convention; enforce at the service layer.
+
+2. **Backend** — refactor `chat.controller.translateMessages` (current batch endpoint):
+   - Receive `{ targetLanguage, messages: [{id, content}] }` as today.
+   - `findMany` on `MessageTranslation` where `messageId IN (ids) AND language = targetLanguage`.
+   - Compute the subset NOT yet translated.
+   - Call OpenRouter **only** for the missing ones (preserve current parallel `Promise.all`).
+   - `createMany` the new rows (skipDuplicates: true to absorb the race where two operators trigger the same batch simultaneously).
+   - Return the union (DB hits + new) in the same response shape the frontend expects today.
+
+3. **Frontend** — simplify `ChatPage.tsx`:
+   - Remove the `sessionStorage` cache + the persistence effect.
+   - Keep the in-memory `translations` state for the lifetime of the page, but stop persisting it.
+   - Every batch call now relies on the backend cache → instant for cache hits, no double translation across operators.
+   - Resetting `translateTo` on chat switch (already in place) stays as-is.
+
+4. **Invalidation** — message edit is the only case that would stale the cache. Today messages are immutable after creation in our model, so no invalidation needed at v1. If/when we add message editing, add a `MessageTranslation.deleteMany({ where: { messageId } })` to the edit path.
+
+5. **Migration** — no data migration needed: the cache starts empty and warms up as operators use the feature. Pre-translating historical messages is not worth the OpenRouter spend.
+
+### Blockers
+
+- Decide AFTER **TD-001** unification, OR pick the table to FK against now (`Message`) and accept a follow-up rename when TD-001 lands.
+- Ensure workspace isolation: even though `messageId` is globally unique, add a defensive filter or include `workspaceId` denormalized on `MessageTranslation` if we ever expose this table to admin tools.
+
+### Why not do it now
+
+It's a perfectly working feature on the demo today (single operator, single browser). The persistence + sharing win is real for multi-operator production tenants, but doesn't move the needle for the DemoWash demo where one operator drives the chat. Plan it alongside (or right after) TD-001 so we don't FK-rewrite twice.
+
+---
