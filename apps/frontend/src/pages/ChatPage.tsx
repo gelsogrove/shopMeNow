@@ -1617,6 +1617,16 @@ export function ChatPage() {
                     />
                   </div>
 
+                  {/* 🌍 Global translation toolbar — pick the language to
+                      show a translated panel under every message at once.
+                      Clicking X hides the panels (cache is preserved). */}
+                  <TranslationToolbar
+                    customerLanguage={selectedChat?.language || null}
+                    defaultLanguage={defaultTargetLang}
+                    value={translateTo}
+                    onChange={setTranslateTo}
+                  />
+
                   <Button
                     variant="ghost"
                     size="sm"
@@ -2177,6 +2187,122 @@ function PlaygroundIframeModal({
           onLoad={() => setLoading(false)}
         />
       </div>
+    </div>
+  )
+}
+
+// ── Translation toolbar + per-message panel ─────────────────────────────────
+// Rendered in the chat header. Picks a target language and broadcasts it via
+// `translateTo`; ChatPage handles the batch fetch + cache. The X button hides
+// the translated panels without flushing the cache, so re-enabling the same
+// language is instant.
+const TRANSLATION_LANG_OPTIONS = [
+  { code: "es", label: "Español" },
+  { code: "ca", label: "Català" },
+  { code: "it", label: "Italiano" },
+  { code: "en", label: "English" },
+  { code: "fr", label: "Français" },
+  { code: "pt", label: "Português" },
+  { code: "de", label: "Deutsch" },
+  { code: "ar", label: "العربية" },
+  { code: "zh", label: "中文" },
+] as const
+
+function TranslationToolbar({
+  customerLanguage,
+  defaultLanguage,
+  value,
+  onChange,
+}: {
+  customerLanguage: string | null
+  defaultLanguage: string
+  value: string | null
+  onChange: (v: string | null) => void
+}) {
+  const sourceLabel = (customerLanguage || "—").toUpperCase()
+  return (
+    <div className="flex items-center gap-1 mr-2 px-2 py-1 rounded-md bg-slate-50 border border-slate-200 text-xs">
+      <span className="text-slate-500 font-medium hidden md:inline">
+        {sourceLabel}
+      </span>
+      <span className="text-slate-400 hidden md:inline">→</span>
+      <select
+        value={value || ""}
+        onChange={(e) => {
+          const v = e.target.value
+          onChange(v ? v : defaultLanguage)
+        }}
+        onClick={(e) => {
+          // If the toolbar was off, clicking the select activates the
+          // default language (the dropdown then lets the user pick another).
+          if (!value) onChange(defaultLanguage)
+          e.stopPropagation()
+        }}
+        className="bg-transparent border-none text-slate-800 font-medium cursor-pointer focus:outline-none"
+        aria-label="Translate to"
+      >
+        {!value && (
+          <option value="" disabled hidden>
+            🌍 Translate to…
+          </option>
+        )}
+        {TRANSLATION_LANG_OPTIONS.map((opt) => (
+          <option key={opt.code} value={opt.code}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className="ml-1 text-slate-400 hover:text-slate-700 leading-none p-0.5 rounded hover:bg-slate-200"
+          aria-label="Hide translations"
+          title="Hide translations"
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  )
+}
+
+function TranslationPanel({
+  text,
+  targetLanguage,
+  loading,
+  variant,
+}: {
+  text: string | undefined
+  targetLanguage: string
+  loading: boolean
+  variant: "operator" | "customer"
+}) {
+  const isOperator = variant === "operator"
+  return (
+    <div
+      className={
+        "mt-2 rounded-md border p-2 text-sm " +
+        (isOperator
+          ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+          : "bg-blue-50 border-blue-200 text-blue-900")
+      }
+    >
+      <div
+        className={
+          "text-[10px] font-semibold uppercase tracking-wider mb-1 " +
+          (isOperator ? "text-emerald-700" : "text-blue-700")
+        }
+      >
+        Translation · {targetLanguage.toUpperCase()}
+      </div>
+      {text ? (
+        <div className="whitespace-pre-wrap break-words">{text}</div>
+      ) : loading ? (
+        <div className="italic opacity-70">Translating…</div>
+      ) : (
+        <div className="italic opacity-70">(empty)</div>
+      )}
     </div>
   )
 }
