@@ -1,7 +1,3 @@
-DemoWash ist ein Franchise-Netzwerk aus Selbstbedienungs-Waschsalons mit 6 Standorten in Katalonien: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** und **Terrassa**.
-
-Jeder Standort hat seine eigenen Öffnungszeiten, Maschinen, Programme, Preise und Zahlungsmethoden. Bevor der Chatbot betriebliche Daten herausgibt, identifiziert er stets den Standort des Kunden. Bei technischen Problemen fragt er die 4 Angaben einzeln ab: **Standort → Typ → Nummer → Anzeige**.
-
 ### Die Maschine hat ein Problem
 
 - [Meine Waschmaschine startet nicht](#meine-waschmaschine-startet-nicht)

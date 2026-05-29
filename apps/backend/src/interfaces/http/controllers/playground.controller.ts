@@ -642,9 +642,16 @@ export class PlaygroundController {
             channelActive: workspace.channelStatus !== false,
             debugChannel: workspace.debugMode === true,
             isPlayground: true,
-            // 🌍 Prefer the per-turn override from the playground flag
-            // selector; fall back to customer.language, then to "es".
-            language: overrideLanguage || customer.language || "es",
+            // 🌍 Reply language: only seed from customer.language (or "es").
+            //    The bot then adapts to whatever the customer writes via the
+            //    deterministic per-turn detector — the playground flag must
+            //    NOT force the reply language anymore.
+            language: customer.language || "es",
+            // 🚩 Per-turn override for the operator briefing language only
+            //    ("Human Support message" emitted on escalation). Driven by
+            //    the flag selected in the Use Cases panel; falls back to
+            //    settings.json when null.
+            operatorBriefingLanguageOverride: overrideLanguage,
             sessionId: session.id,
             customerId: customer.id,
             phoneNumber: customer.phone || undefined,

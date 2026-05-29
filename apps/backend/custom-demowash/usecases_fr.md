@@ -1,7 +1,3 @@
-DemoWash est un réseau de laveries self-service en franchise avec 6 implantations en Catalogne : **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** et **Terrassa**.
-
-Chaque implantation a ses propres horaires, machines, programmes, tarifs et moyens de paiement. Avant de donner toute donnée opérationnelle, le chatbot identifie toujours l'implantation du client. Pour les problèmes techniques il demande les 4 informations une par une : **implantation → type → numéro → écran**.
-
 ### La machine a un problème
 
 - [Ma machine ne démarre pas](#ma-machine-ne-démarre-pas)

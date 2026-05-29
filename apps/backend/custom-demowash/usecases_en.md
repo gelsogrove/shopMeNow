@@ -1,7 +1,3 @@
-DemoWash is a self-service laundromat franchise with 6 locations in Catalonia: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** and **Terrassa**.
-
-Each location has its own opening hours, machines, programs, prices and accepted payment methods. Before giving any operational data, the chatbot always identifies which location the customer is at. For technical issues it asks the 4 data points one at a time: **location → type → number → display**.
-
 ### The machine has a problem
 
 - [My washer won't start](#my-washer-wont-start)

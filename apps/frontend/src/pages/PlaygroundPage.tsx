@@ -2,6 +2,7 @@ import { DragDropContext, Draggable, Droppable, DropResult } from "@hello-pangea
 import {
   ArrowLeft,
   Check,
+  Info,
   KanbanSquare,
   LogOut,
   MessageCircle,
@@ -1087,6 +1088,9 @@ function ChatScreen({
     }
   }, [usecasesLang])
   const [usecasesLoading, setUsecasesLoading] = useState(false)
+  // 📘 "About this demo" popup — opened on click of the (i) button in the
+  // Use Cases header. Contents come from `DEMOWASH_ABOUT` keyed by language.
+  const [showAboutPopup, setShowAboutPopup] = useState(false)
   const [workspaceName, setWorkspaceName] = useState<string>("Ecolaundry")
   // Seed customChatbotId from the URL slug or from localStorage so the very
   // first render already knows which demo we're on. Without this the UI
@@ -1962,7 +1966,20 @@ function ChatScreen({
         {/* MARKDOWN — hidden on smaller screens to give chat room */}
         <section className="hidden lg:flex col-span-4 bg-white rounded-xl shadow flex-col overflow-hidden min-h-0">
           <div className="px-4 py-2 bg-emerald-600 text-white font-semibold shrink-0 flex items-center justify-between gap-3">
-            <span>Use Cases</span>
+            <div className="flex items-center gap-2">
+              <span>Use Cases</span>
+              {customChatbotId === "demowash" && (
+                <button
+                  type="button"
+                  onClick={() => setShowAboutPopup(true)}
+                  title="About this demo"
+                  aria-label="About this demo"
+                  className="p-1 rounded hover:bg-white/20 cursor-pointer opacity-90 hover:opacity-100 transition"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+              )}
+            </div>
             {/* 🌍 Language flags — click to translate the whole Use Cases
                 block (intro card + markdown content) into the target language.
                 Backend translates on first request and caches. Rendered as
@@ -2081,6 +2098,12 @@ function ChatScreen({
             setTimeout(fetchAll, 800)
             setTimeout(fetchAll, 2000)
           }}
+        />
+      )}
+      {showAboutPopup && (
+        <AboutDemowashPopup
+          lang={usecasesLang}
+          onClose={() => setShowAboutPopup(false)}
         />
       )}
     </div>
@@ -2374,6 +2397,282 @@ function DemowashIntroCard({ lang }: { lang: IntroLang }) {
           machine control. Rendered as its own paragraph below for emphasis. */}
       <div className="mt-3 italic text-orange-800">{tr.customizationLine}</div>
     </>
+  )
+}
+
+// ----------------------------------------------------------------------------
+// ABOUT DEMOWASH POPUP — 4-slide carousel triggered by the (i) button in the
+// Use Cases header. Slide 1: textual description. Slides 2-4: product
+// screenshots (sourced from /demowash/slide-N.png in the public folder —
+// Andrea ships the real assets later; until then we render a placeholder).
+// Close with X / Esc / backdrop. Navigate with ← / → / dot buttons or
+// keyboard arrow keys.
+// ----------------------------------------------------------------------------
+type AboutCopy = {
+  title: string
+  paragraphs: string[]
+  closeLabel: string
+  nextLabel: string
+  prevLabel: string
+  slideAria: (n: number, total: number) => string
+  imagePlaceholder: string
+}
+
+const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
+  es: {
+    title: "Sobre DemoWash",
+    paragraphs: [
+      "DemoWash es una red ficticia de lavanderías self-service en franquicia con 6 sedes en Cataluña: Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès y Terrassa.",
+      "Cada sede tiene sus propios horarios, máquinas, programas, precios y métodos de pago. Por eso el chatbot identifica siempre primero la sede del cliente, para ofrecer información correcta, actualizada y específica de ese punto de venta.",
+      "Esta organización encaja especialmente bien con una red en franquicia, porque permite gestionar las diferencias operativas entre los distintos puntos de venta manteniendo una asistencia centralizada, coherente y automatizada.",
+      "Si el problema no se puede resolver automáticamente, el sistema lo escala directamente al operador humano competente para esa sede. Una vez hecho el traspaso, la conversación sigue activa y el sistema traduce automáticamente en tiempo real los mensajes del operador: por ejemplo, un operador local puede escribir en catalán y el cliente recibe el mensaje en su idioma, sin barreras lingüísticas.",
+    ],
+    closeLabel: "Cerrar",
+    nextLabel: "Siguiente",
+    prevLabel: "Anterior",
+    slideAria: (n, total) => `Diapositiva ${n} de ${total}`,
+    imagePlaceholder: "Captura próximamente",
+  },
+  it: {
+    title: "Su DemoWash",
+    paragraphs: [
+      "DemoWash è una rete inventata di lavanderie self-service in franchising con 6 sedi in Catalogna: Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès e Terrassa.",
+      "Ogni sede ha i propri orari, macchine, programmi, prezzi e metodi di pagamento. Per questo il chatbot identifica sempre prima la sede del cliente, così da fornire informazioni corrette, aggiornate e specifiche per quel punto vendita.",
+      "Questa organizzazione è particolarmente adatta a una rete in franchising, perché consente di gestire differenze operative tra i vari punti vendita mantenendo un'assistenza centralizzata, coerente e automatizzata.",
+      "Se il problema non può essere risolto automaticamente, il sistema scala direttamente all'operatore umano competente per quella sede. Una volta avvenuto il passaggio, la conversazione resta attiva e il sistema traduce automaticamente in tempo reale i messaggi dell'operatore: ad esempio un operatore locale può scrivere in catalano e il cliente riceve il messaggio nella sua lingua, senza barriere linguistiche.",
+    ],
+    closeLabel: "Chiudi",
+    nextLabel: "Avanti",
+    prevLabel: "Indietro",
+    slideAria: (n, total) => `Diapositiva ${n} di ${total}`,
+    imagePlaceholder: "Screenshot in arrivo",
+  },
+  en: {
+    title: "About DemoWash",
+    paragraphs: [
+      "DemoWash is a fictional network of self-service laundromats in franchise with 6 locations in Catalonia: Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès and Terrassa.",
+      "Each location has its own opening hours, machines, programs, prices and payment methods. That's why the chatbot always identifies the customer's location first, so it can provide accurate, up-to-date, store-specific information.",
+      "This setup is a particularly good fit for a franchise network, because it lets you manage operational differences across stores while keeping support centralized, consistent and automated.",
+      "If the issue can't be solved automatically, the system escalates directly to the human operator in charge of that location. After the handoff, the conversation stays live and the system translates the operator's messages in real time: a local operator can write in Catalan and the customer reads the message in their own language, with no language barrier.",
+    ],
+    closeLabel: "Close",
+    nextLabel: "Next",
+    prevLabel: "Previous",
+    slideAria: (n, total) => `Slide ${n} of ${total}`,
+    imagePlaceholder: "Screenshot coming soon",
+  },
+  fr: {
+    title: "À propos de DemoWash",
+    paragraphs: [
+      "DemoWash est un réseau fictif de laveries self-service en franchise avec 6 implantations en Catalogne : Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès et Terrassa.",
+      "Chaque implantation a ses propres horaires, machines, programmes, tarifs et moyens de paiement. C'est pourquoi le chatbot identifie toujours d'abord l'implantation du client, afin de fournir des informations correctes, à jour et propres à ce point de vente.",
+      "Cette organisation est particulièrement adaptée à un réseau en franchise, car elle permet de gérer les différences opérationnelles entre les points de vente tout en gardant un support centralisé, cohérent et automatisé.",
+      "Si le problème ne peut pas être résolu automatiquement, le système l'escalade directement à l'opérateur humain en charge de cette implantation. Après le transfert, la conversation reste active et le système traduit automatiquement en temps réel les messages de l'opérateur : par exemple, un opérateur local peut écrire en catalan et le client reçoit le message dans sa langue, sans barrière linguistique.",
+    ],
+    closeLabel: "Fermer",
+    nextLabel: "Suivant",
+    prevLabel: "Précédent",
+    slideAria: (n, total) => `Diapositive ${n} sur ${total}`,
+    imagePlaceholder: "Capture à venir",
+  },
+  pt: {
+    title: "Sobre a DemoWash",
+    paragraphs: [
+      "A DemoWash é uma rede fictícia de lavandarias self-service em franchising com 6 unidades na Catalunha: Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès e Terrassa.",
+      "Cada unidade tem os seus próprios horários, máquinas, programas, preços e métodos de pagamento. Por isso o chatbot identifica sempre primeiro a unidade do cliente, para dar informação correta, atualizada e específica desse ponto de venda.",
+      "Esta organização adapta-se especialmente bem a uma rede em franchising, porque permite gerir as diferenças operacionais entre as várias unidades mantendo um apoio centralizado, coerente e automatizado.",
+      "Se o problema não puder ser resolvido automaticamente, o sistema escala diretamente para o operador humano responsável por essa unidade. Depois do encaminhamento, a conversa fica ativa e o sistema traduz automaticamente em tempo real as mensagens do operador: por exemplo, um operador local pode escrever em catalão e o cliente recebe a mensagem na sua língua, sem barreiras linguísticas.",
+    ],
+    closeLabel: "Fechar",
+    nextLabel: "Seguinte",
+    prevLabel: "Anterior",
+    slideAria: (n, total) => `Slide ${n} de ${total}`,
+    imagePlaceholder: "Captura em breve",
+  },
+  ca: {
+    title: "Sobre DemoWash",
+    paragraphs: [
+      "DemoWash és una xarxa fictícia de bugaderies self-service en franquícia amb 6 seus a Catalunya: Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès i Terrassa.",
+      "Cada seu té els seus propis horaris, màquines, programes, preus i mètodes de pagament. Per això el chatbot identifica sempre primer la seu del client, per oferir informació correcta, actualitzada i específica d'aquest punt de venda.",
+      "Aquesta organització s'adapta especialment bé a una xarxa en franquícia, perquè permet gestionar les diferències operatives entre els punts de venda mantenint un suport centralitzat, coherent i automatitzat.",
+      "Si el problema no es pot resoldre automàticament, el sistema l'escala directament a l'operador humà responsable d'aquella seu. Un cop fet el traspàs, la conversa segueix activa i el sistema tradueix automàticament en temps real els missatges de l'operador: per exemple, un operador local pot escriure en català i el client rep el missatge en la seva llengua, sense barreres lingüístiques.",
+    ],
+    closeLabel: "Tancar",
+    nextLabel: "Següent",
+    prevLabel: "Anterior",
+    slideAria: (n, total) => `Diapositiva ${n} de ${total}`,
+    imagePlaceholder: "Captura properament",
+  },
+  de: {
+    title: "Über DemoWash",
+    paragraphs: [
+      "DemoWash ist ein fiktives Franchise-Netzwerk aus Selbstbedienungs-Waschsalons mit 6 Standorten in Katalonien: Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès und Terrassa.",
+      "Jeder Standort hat seine eigenen Öffnungszeiten, Maschinen, Programme, Preise und Zahlungsmethoden. Deshalb ermittelt der Chatbot immer zuerst den Standort des Kunden, um korrekte, aktuelle und standortspezifische Informationen zu liefern.",
+      "Dieses Setup passt besonders gut zu einem Franchise-Netzwerk, weil es operative Unterschiede zwischen den Standorten managt, während der Support zentral, konsistent und automatisiert bleibt.",
+      "Lässt sich das Problem nicht automatisch lösen, leitet das System direkt an die für diesen Standort zuständige menschliche Servicekraft weiter. Nach der Übergabe bleibt die Konversation aktiv und das System übersetzt die Nachrichten des Mitarbeiters automatisch in Echtzeit: Ein lokaler Mitarbeiter kann z. B. auf Katalanisch schreiben und der Kunde liest die Nachricht in seiner eigenen Sprache — ohne Sprachbarriere.",
+    ],
+    closeLabel: "Schließen",
+    nextLabel: "Weiter",
+    prevLabel: "Zurück",
+    slideAria: (n, total) => `Folie ${n} von ${total}`,
+    imagePlaceholder: "Screenshot folgt",
+  },
+}
+
+// Slides 2-4 are screenshots. Andrea drops files at these paths later; the
+// component falls back to a styled placeholder until the assets exist.
+const ABOUT_DEMOWASH_SLIDE_IMAGES = [
+  "/demowash/slide-2.png",
+  "/demowash/slide-3.png",
+  "/demowash/slide-4.png",
+] as const
+
+function AboutDemowashPopup({
+  lang,
+  onClose,
+}: {
+  lang: IntroLang
+  onClose: () => void
+}) {
+  const [slide, setSlide] = useState(0)
+  const tr = ABOUT_DEMOWASH[lang] ?? ABOUT_DEMOWASH.es
+  const totalSlides = 1 + ABOUT_DEMOWASH_SLIDE_IMAGES.length
+  const isLast = slide === totalSlides - 1
+  const isFirst = slide === 0
+
+  // Close on Esc, navigate with ←/→.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose()
+      else if (e.key === "ArrowRight") setSlide((s) => Math.min(s + 1, totalSlides - 1))
+      else if (e.key === "ArrowLeft") setSlide((s) => Math.max(s - 1, 0))
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [onClose, totalSlides])
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={tr.title}
+    >
+      <div
+        className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-2xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-orange-200 shrink-0">
+          <h2 className="text-orange-900 font-semibold text-lg">{tr.title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-orange-700 hover:text-orange-900 p-1 rounded hover:bg-orange-100"
+            aria-label={tr.closeLabel}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Slide body */}
+        <div
+          className="flex-1 min-h-[320px] overflow-y-auto px-5 py-5"
+          aria-label={tr.slideAria(slide + 1, totalSlides)}
+        >
+          {slide === 0 ? (
+            <div className="space-y-3 text-[15px] text-orange-900 leading-relaxed">
+              {tr.paragraphs.map((p, idx) => (
+                <p key={idx}>{p}</p>
+              ))}
+            </div>
+          ) : (
+            <SlideImage
+              src={ABOUT_DEMOWASH_SLIDE_IMAGES[slide - 1]}
+              placeholder={tr.imagePlaceholder}
+            />
+          )}
+        </div>
+
+        {/* Footer: prev / dots / next */}
+        <div className="px-5 py-3 border-t border-orange-200 flex items-center justify-between gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={() => setSlide((s) => Math.max(s - 1, 0))}
+            disabled={isFirst}
+            className="text-orange-700 hover:text-orange-900 disabled:opacity-30 disabled:cursor-not-allowed text-sm font-medium px-3 py-1.5 rounded hover:bg-orange-100"
+            aria-label={tr.prevLabel}
+          >
+            ← {tr.prevLabel}
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: totalSlides }).map((_, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setSlide(i)}
+                aria-label={tr.slideAria(i + 1, totalSlides)}
+                aria-current={slide === i ? "true" : undefined}
+                className={
+                  "w-2 h-2 rounded-full transition-all " +
+                  (slide === i
+                    ? "bg-orange-600 w-6"
+                    : "bg-orange-300 hover:bg-orange-400")
+                }
+              />
+            ))}
+          </div>
+
+          {isLast ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium shadow"
+            >
+              {tr.closeLabel}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setSlide((s) => Math.min(s + 1, totalSlides - 1))}
+              className="text-orange-700 hover:text-orange-900 text-sm font-medium px-3 py-1.5 rounded hover:bg-orange-100"
+              aria-label={tr.nextLabel}
+            >
+              {tr.nextLabel} →
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SlideImage({
+  src,
+  placeholder,
+}: {
+  src: string
+  placeholder: string
+}) {
+  // Render a real <img> with onError fallback. While the asset doesn't exist
+  // yet (Andrea ships it later) the placeholder box shows instead.
+  const [failed, setFailed] = useState(false)
+  if (failed) {
+    return (
+      <div className="w-full aspect-video bg-orange-100 border-2 border-dashed border-orange-300 rounded-xl flex items-center justify-center text-orange-700 text-sm font-medium">
+        {placeholder}
+      </div>
+    )
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      onError={() => setFailed(true)}
+      className="w-full rounded-xl shadow border border-orange-200"
+    />
   )
 }
 

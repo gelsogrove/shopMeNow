@@ -1,7 +1,3 @@
-A DemoWash é uma rede de lavandarias self-service em franchising com 6 unidades na Catalunha: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** e **Terrassa**.
-
-Cada unidade tem os seus próprios horários, máquinas, programas, preços e métodos de pagamento. Antes de dar qualquer dado operacional, o chatbot identifica sempre a unidade onde está o cliente. Para os problemas técnicos, pede os 4 dados um de cada vez: **unidade → tipo → número → ecrã**.
-
 ### A máquina tem um problema
 
 - [A minha máquina não arranca](#a-minha-máquina-não-arranca)

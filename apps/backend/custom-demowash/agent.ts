@@ -589,11 +589,12 @@ async function callLLM(
   cachedSystemPrompt: string,
   state: SessionState,
   history: Message[],
+  operatorBriefingLanguageOverride?: string | null,
 ): Promise<LlmResponse> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
   const stateBlock = formatStateForPrompt(state)
-  const runtimeBlock = formatRuntimeBlock()
+  const runtimeBlock = formatRuntimeBlock(operatorBriefingLanguageOverride)
 
   // Cached block first (cache_control: ephemeral). State + runtime blocks are
   // appended WITHOUT cache_control so they can change per turn / per day
@@ -679,6 +680,7 @@ async function agentTurnInternal(
   cachedSystemPrompt: string,
   history: Message[],
   sanitizedMessage: string,
+  operatorBriefingLanguageOverride?: string | null,
 ): Promise<TurnResult> {
   history.push({ role: 'user', content: sanitizedMessage })
 
@@ -693,7 +695,12 @@ async function agentTurnInternal(
 
   for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
     const state = getState(ctx.sessionId)
-    const response = await callLLM(cachedSystemPrompt, state, history)
+    const response = await callLLM(
+      cachedSystemPrompt,
+      state,
+      history,
+      operatorBriefingLanguageOverride,
+    )
     tokensUsed +=
       (response.usage?.prompt_tokens ?? 0) + (response.usage?.completion_tokens ?? 0)
 
@@ -782,6 +789,7 @@ async function agentTurn(
   cachedSystemPrompt: string,
   history: Message[],
   rawMessage: string,
+  operatorBriefingLanguageOverride?: string | null,
 ): Promise<TurnResult> {
   const sanitized = sanitizeUserMessage(rawMessage)
   if (!sanitized) {
@@ -825,7 +833,13 @@ async function agentTurn(
   }
 
   return withSessionLock(ctx.sessionId, () =>
-    agentTurnInternal(ctx, cachedSystemPrompt, history, cleanText),
+    agentTurnInternal(
+      ctx,
+      cachedSystemPrompt,
+      history,
+      cleanText,
+      operatorBriefingLanguageOverride,
+    ),
   )
 }
 
@@ -864,7 +878,9 @@ async function buildSystemPrompt(): Promise<string> {
   return parts.join('\n')
 }
 
-function formatRuntimeBlock(): string {
+function formatRuntimeBlock(
+  operatorBriefingLanguageOverride?: string | null,
+): string {
   const now = new Date()
   const date = now.toLocaleDateString('es-ES', {
     day: '2-digit',
@@ -875,12 +891,15 @@ function formatRuntimeBlock(): string {
     hour: '2-digit',
     minute: '2-digit',
   })
+  const briefingLanguage =
+    (operatorBriefingLanguageOverride && operatorBriefingLanguageOverride.trim()) ||
+    OPERATOR_BRIEFING_LANGUAGE
   return [
     '',
     '═══ RUNTIME ═══',
     `Current date: ${date}`,
     `Current time: ${time}`,
-    `Operator briefing language: ${OPERATOR_BRIEFING_LANGUAGE}`,
+    `Operator briefing language: ${briefingLanguage}`,
     '',
   ].join('\n')
 }
@@ -929,6 +948,11 @@ export interface ChatbotInput {
     /** Open ISO 2-letter language code. The bot replies in ANY language Claude supports;
      *  the deterministic detector covers a handful of common ones, the rest flow through the prompt. */
     language?: string
+    /** Per-turn override for the operator briefing language only (not the
+     *  customer-facing reply). Used by the playground so the flag selected
+     *  in the Use Cases panel flips the language of the "Human Support
+     *  message" without dragging the bot's reply into the same language. */
+    operatorBriefingLanguageOverride?: string | null
   }
   context: {
     sessionId: string
@@ -980,24 +1004,21 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
 
     // Seed state with any pre-known language from the host.
     //
-    // WhatsApp/widget: `language` comes from `customer.language` (DB) and we
-    // only seed it ONCE — after that the conversational language detector
-    // owns the state so the bot keeps adapting to what the customer actually
-    // writes.
+    // For ALL channels (WhatsApp, widget, playground): the host's `language`
+    // is only used to SEED the in-RAM state ONCE, when no language is set
+    // yet. After that, the deterministic per-turn detector (called below
+    // before the LLM) owns the state, so the bot keeps adapting to what
+    // the customer actually writes.
     //
-    // Playground: the admin picks a flag in the Use Cases panel to drive the
-    // demo, and that selection is forwarded on every turn via
-    // `input.config.language`. We let it override the in-RAM state so the
-    // operator "Human Support message" (and bot replies) flip language as
-    // soon as the flag is clicked, instead of being locked to whatever was
-    // first detected. Default remains "es" upstream when no flag is sent.
+    // 🐛 Previously the playground branch forced the host language on EVERY
+    //    turn (operator picks the flag in the Use Cases panel). That meant
+    //    a customer typing in Spanish would still see the bot answer in
+    //    Catalan if the operator left the CA flag selected. The flag now
+    //    drives only the operator briefing (see `operatorBriefingLanguage`
+    //    used in buildRuntimeBlock).
     if (input.config.language) {
       const current = getState(sessionId)
-      if (input.config.isPlayground) {
-        if (current.language !== input.config.language) {
-          updateState(sessionId, { language: input.config.language })
-        }
-      } else if (!current.language) {
+      if (!current.language) {
         updateState(sessionId, { language: input.config.language })
       }
     }
@@ -1016,7 +1037,13 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       customerPhone: input.context.phoneNumber,
     }
 
-    const result = await agentTurn(ctx, systemPrompt, history, input.userMessage)
+    const result = await agentTurn(
+      ctx,
+      systemPrompt,
+      history,
+      input.userMessage,
+      input.config.operatorBriefingLanguageOverride ?? null,
+    )
     const patches = drainPatches(sessionId)
 
     return {

@@ -1,7 +1,3 @@
-DemoWash è una rete di lavanderie self-service in franchising con 6 sedi in Catalogna: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** e **Terrassa**.
-
-Ogni sede ha i suoi orari, le sue macchine, i suoi programmi, prezzi e metodi di pagamento. Il chatbot, prima di dare qualunque dato operativo, identifica sempre la sede del cliente. Per i problemi tecnici chiede i 4 dati uno alla volta: **sede → tipo → numero → schermo**.
-
 ### La macchina ha un problema
 
 - [La mia lavatrice non parte](#la-mia-lavatrice-non-parte)

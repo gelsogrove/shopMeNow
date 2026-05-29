@@ -18,6 +18,11 @@ type ChatbotInput = {
     debugChannel: boolean
     isPlayground: boolean
     language?: SupportedLanguage
+    // Per-turn override for the operator briefing language only. The
+    // playground forwards the flag selected in the Use Cases panel here so
+    // the "Human Support message" comes back in that language WITHOUT
+    // overriding the customer-facing reply language.
+    operatorBriefingLanguageOverride?: string | null
   }
   context: {
     sessionId: string
@@ -77,6 +82,12 @@ type InvokeParams = {
   debugChannel: boolean
   isPlayground: boolean
   language?: string | null
+  // Optional per-turn override for the operator briefing language only.
+  // The playground forwards the flag selected in the Use Cases panel here
+  // so the "Human Support message" comes back in that language, WITHOUT
+  // overriding the customer-facing reply language (which stays driven by
+  // the deterministic detector on the customer's own message).
+  operatorBriefingLanguageOverride?: string | null
   sessionId: string
   customerId?: string
   phoneNumber?: string
@@ -144,6 +155,9 @@ export class CustomClientChatbotService {
           debugChannel: params.debugChannel,
           isPlayground: params.isPlayground,
           language: this.normalizeLanguage(params.language),
+          operatorBriefingLanguageOverride:
+            this.normalizeLanguage(params.operatorBriefingLanguageOverride) ??
+            null,
         },
         context: {
           sessionId: params.sessionId,

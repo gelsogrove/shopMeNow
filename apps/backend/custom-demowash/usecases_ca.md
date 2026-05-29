@@ -1,7 +1,3 @@
-DemoWash és una xarxa de bugaderies self-service en franquícia amb 6 seus a Catalunya: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** i **Terrassa**.
-
-Cada seu té els seus propis horaris, màquines, programes, preus i mètodes de pagament. El chatbot, abans de donar qualsevol dada operativa, sempre identifica la seu del client. Per als problemes tècnics demana les 4 dades una a una: **seu → tipus → número → pantalla**.
-
 ### La màquina té un problema
 
 - [La meva rentadora no arrenca](#la-meva-rentadora-no-arrenca)
