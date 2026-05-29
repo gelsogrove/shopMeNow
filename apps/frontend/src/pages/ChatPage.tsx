@@ -1752,7 +1752,15 @@ export function ChatPage() {
                                 </div>
 
                                 {operatorText && (
-                                  <div className="mt-2 rounded-lg px-3 py-2 bg-orange-100 border border-orange-300 text-orange-900 text-sm">
+                                  <div
+                                    className="mt-2 rounded-lg px-3 py-2 bg-orange-100 border border-orange-300 text-orange-900 text-sm overflow-hidden"
+                                    // 🔧 `anywhere` lets the renderer break long
+                                    //    runs of un-spaced characters (e.g. the
+                                    //    `━━━━━` separator the briefing template
+                                    //    used to emit). Prevents the briefing
+                                    //    box from overflowing the chat column.
+                                    style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+                                  >
                                     <div className="text-[10px] font-semibold text-orange-600 uppercase tracking-wide mb-1">
                                       🔒 Internal — not sent to customer
                                     </div>

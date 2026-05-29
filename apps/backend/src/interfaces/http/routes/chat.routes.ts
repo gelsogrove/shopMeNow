@@ -449,6 +449,44 @@ export const chatRouter = (chatController: ChatController): express.Router => {
 
   /**
    * @swagger
+   * /api/chat/translate-messages:
+   *   post:
+   *     summary: Translate a batch of chat messages into a target language
+   *     description: |
+   *       Used by the global "Translate to" dropdown in the operator chat
+   *       UI. The whole timeline is sent in one POST and the translations
+   *       are returned together, so the UI can render them in one pass
+   *       instead of fan-out per message.
+   *     tags: [Chat]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [messages]
+   *             properties:
+   *               messages:
+   *                 type: array
+   *                 items:
+   *                   type: object
+   *                   properties:
+   *                     id: { type: string }
+   *                     content: { type: string }
+   *               targetLanguage: { type: string, description: "ISO 2-letter code (defaults to logged-in user's preferred language)" }
+   *     responses:
+   *       200:
+   *         description: Translations
+   */
+  router.post(
+    "/translate-messages",
+    asyncHandler(chatController.translateMessages.bind(chatController))
+  )
+
+  /**
+   * @swagger
    * /api/chat/{sessionId}:
    *   delete:
    *     summary: Delete a chat session and all its messages

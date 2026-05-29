@@ -463,7 +463,6 @@ Plantilla (rellena los `<...>` con valores reales del state + runtime):
 
 ```
 👤 Mensaje para el operador
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 🕒 Fecha: <Current date del bloque RUNTIME> <Current time>
 📍 Sede: <location> (<localidad de la sede>)

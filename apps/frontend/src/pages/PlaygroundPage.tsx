@@ -27,6 +27,12 @@ import rehypeHighlight from "rehype-highlight"
 import rehypeSlug from "rehype-slug"
 import remarkGfm from "remark-gfm"
 import "highlight.js/styles/github.css"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 const API_BASE = "/api/v1/playground"
 
@@ -289,6 +295,21 @@ function useAuth() {
       //     We auto-sign-in as that demo's bound user so the visitor
       //     skips the login screen, and resolve the workspaceId from the
       //     backend.
+      //
+      // 🚪 Exception: if the visitor explicitly logged out on this same
+      //    URL, DO NOT auto-sign them back in on refresh. The logout
+      //    handler sets `playgroundLoggedOut: "1"` to remember the
+      //    intent; we honour it here and show the login screen instead.
+      //    The flag is cleared by a successful login.
+      const loggedOutIntentionally =
+        localStorage.getItem("playgroundLoggedOut") === "1"
+      if (loggedOutIntentionally) {
+        // Make sure no stale identity sneaks back in via other tabs.
+        localStorage.removeItem("playgroundToken")
+        localStorage.removeItem("playgroundWorkspaceId")
+        localStorage.removeItem("playgroundUser")
+        return
+      }
       if (previousSlug !== demoSlug) {
         // Coming from a different demo (or first visit): drop any stale
         // token/workspaceId from the previous tenant — they are bound to
@@ -315,6 +336,9 @@ function useAuth() {
 
   const login = (u: PlaygroundUser) => {
     localStorage.setItem("playgroundUser", u)
+    // Explicit login clears the "logged out" flag so future refreshes auto-
+    // resume normally for this visitor.
+    localStorage.removeItem("playgroundLoggedOut")
     setUser(u)
   }
   const logout = () => {
@@ -322,6 +346,12 @@ function useAuth() {
     // clean. Includes auth (user/token/workspaceId), the URL slug binding,
     // the use-cases flag selection, and the per-chat overlays (titles,
     // feedback, custom order).
+    //
+    // 🚪 Sticky logout flag: on a public /demo/<slug> URL the mount effect
+    //    auto-signs the visitor back in after every refresh. We set
+    //    `playgroundLoggedOut` so that effect knows to honour the logout
+    //    intent until the visitor explicitly logs in again.
+    localStorage.setItem("playgroundLoggedOut", "1")
     localStorage.removeItem("playgroundUser")
     localStorage.removeItem("playgroundToken")
     localStorage.removeItem("playgroundWorkspaceId")
@@ -1989,48 +2019,59 @@ function ChatScreen({
             {/* Flags are only shown for the multilingual DemoWash demo —
                 Ecolaundry ships a single-language usecases file. */}
             {customChatbotId === "demowash" && (
-            <div className="flex items-center gap-1.5">
-              {(
-                [
-                  // 🇪🇸 Spanish first (default), 🇪🇸+🇦🇩 Catalan kept right
-                  // next to Spanish because the two languages live in the
-                  // same cultural/linguistic neighborhood (most Catalan
-                  // speakers also speak Spanish, and the demo tenant is in
-                  // Catalonia). The rest follows EU-language conventions.
-                  // `name` is the language's name IN THAT language (endonym),
-                  // shown in the tooltip on hover.
-                  { code: "es", label: "ES", name: "Español" },
-                  { code: "ca", label: "CA", name: "Català" },
-                  { code: "it", label: "IT", name: "Italiano" },
-                  { code: "en", label: "EN", name: "English" },
-                  { code: "fr", label: "FR", name: "Français" },
-                  { code: "pt", label: "PT", name: "Português" },
-                  { code: "de", label: "DE", name: "Deutsch" },
-                ] as const
-              ).map((opt) => {
-                const active = usecasesLang === opt.code
-                const disabled = usecasesLoading && !active
-                return (
-                  <button
-                    key={opt.code}
-                    type="button"
-                    onClick={() => setUsecasesLang(opt.code)}
-                    disabled={disabled}
-                    title={opt.name}
-                    aria-label={`Switch to ${opt.name}`}
-                    className={
-                      "leading-none p-1 rounded transition-all " +
-                      (active
-                        ? "bg-white ring-2 ring-white shadow-md scale-110 cursor-default "
-                        : "opacity-80 hover:opacity-100 hover:bg-white/20 cursor-pointer ") +
-                      (disabled ? "cursor-wait" : "")
-                    }
-                  >
-                    <FlagSvg code={opt.code} />
-                  </button>
-                )
-              })}
-            </div>
+            <TooltipProvider delayDuration={150}>
+              <div className="flex items-center gap-1.5">
+                {(
+                  [
+                    // 🇪🇸 Spanish first (default), 🇪🇸+🇦🇩 Catalan kept right
+                    // next to Spanish because the two languages live in the
+                    // same cultural/linguistic neighborhood (most Catalan
+                    // speakers also speak Spanish, and the demo tenant is in
+                    // Catalonia). The rest follows EU-language conventions.
+                    // `name` is the language's name IN THAT language
+                    // (endonym), shown in the tooltip on hover.
+                    { code: "es", label: "ES", name: "Español" },
+                    { code: "ca", label: "CA", name: "Català" },
+                    { code: "it", label: "IT", name: "Italiano" },
+                    { code: "en", label: "EN", name: "English" },
+                    { code: "fr", label: "FR", name: "Français" },
+                    { code: "pt", label: "PT", name: "Português" },
+                    { code: "de", label: "DE", name: "Deutsch" },
+                  ] as const
+                ).map((opt) => {
+                  const active = usecasesLang === opt.code
+                  const disabled = usecasesLoading && !active
+                  return (
+                    <Tooltip key={opt.code}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => setUsecasesLang(opt.code)}
+                          disabled={disabled}
+                          aria-label={`Switch to ${opt.name}`}
+                          className={
+                            "leading-none p-1 rounded transition-all " +
+                            (active
+                              ? "bg-white ring-2 ring-white shadow-md scale-110 cursor-default "
+                              : "opacity-80 hover:opacity-100 hover:bg-white/20 cursor-pointer ") +
+                            (disabled ? "cursor-wait" : "")
+                          }
+                        >
+                          <FlagSvg code={opt.code} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="bottom"
+                        sideOffset={6}
+                        className="bg-slate-900 text-white border-slate-900 px-2.5 py-1 text-xs font-medium shadow-lg"
+                      >
+                        {opt.name}
+                      </TooltipContent>
+                    </Tooltip>
+                  )
+                })}
+              </div>
+            </TooltipProvider>
             )}
           </div>
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 prose prose-sm max-w-none break-words relative">
@@ -2536,7 +2577,12 @@ function AboutDemowashPopup({
 }) {
   const [slide, setSlide] = useState(0)
   const tr = ABOUT_DEMOWASH[lang] ?? ABOUT_DEMOWASH.es
-  const totalSlides = 1 + ABOUT_DEMOWASH_SLIDE_IMAGES.length
+  // The popup shows the textual paragraphs across multiple slides (one per
+  // paragraph) followed by the screenshot slides. Splitting a 4-paragraph
+  // intro across 4 short slides reads much better than a single dense wall
+  // of text — the user can absorb one idea per slide.
+  const textSlides = tr.paragraphs.length
+  const totalSlides = textSlides + ABOUT_DEMOWASH_SLIDE_IMAGES.length
   const isLast = slide === totalSlides - 1
   const isFirst = slide === 0
 
@@ -2553,55 +2599,53 @@ function AboutDemowashPopup({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={tr.title}
     >
       <div
-        className="bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200 rounded-2xl shadow-2xl w-full max-w-xl flex flex-col max-h-[90vh]"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-orange-200 shrink-0">
-          <h2 className="text-orange-900 font-semibold text-lg">{tr.title}</h2>
+        {/* Header — Demowash green, white text. Clear hierarchy + brand color. */}
+        <div className="flex items-center justify-between px-6 py-4 bg-emerald-600 shrink-0">
+          <h2 className="text-white font-semibold text-xl">{tr.title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-orange-700 hover:text-orange-900 p-1 rounded hover:bg-orange-100"
+            className="text-white/90 hover:text-white p-1 rounded hover:bg-white/15"
             aria-label={tr.closeLabel}
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Slide body */}
+        {/* Slide body — white background, dark text for max legibility. */}
         <div
-          className="flex-1 min-h-[320px] overflow-y-auto px-5 py-5"
+          className="flex-1 min-h-[340px] overflow-y-auto px-7 py-6 bg-white"
           aria-label={tr.slideAria(slide + 1, totalSlides)}
         >
-          {slide === 0 ? (
-            <div className="space-y-3 text-[15px] text-orange-900 leading-relaxed">
-              {tr.paragraphs.map((p, idx) => (
-                <p key={idx}>{p}</p>
-              ))}
-            </div>
+          {slide < textSlides ? (
+            <p className="text-[17px] text-slate-800 leading-[1.7]">
+              {tr.paragraphs[slide]}
+            </p>
           ) : (
             <SlideImage
-              src={ABOUT_DEMOWASH_SLIDE_IMAGES[slide - 1]}
+              src={ABOUT_DEMOWASH_SLIDE_IMAGES[slide - textSlides]}
               placeholder={tr.imagePlaceholder}
             />
           )}
         </div>
 
         {/* Footer: prev / dots / next */}
-        <div className="px-5 py-3 border-t border-orange-200 flex items-center justify-between gap-3 shrink-0">
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
           <button
             type="button"
             onClick={() => setSlide((s) => Math.max(s - 1, 0))}
             disabled={isFirst}
-            className="text-orange-700 hover:text-orange-900 disabled:opacity-30 disabled:cursor-not-allowed text-sm font-medium px-3 py-1.5 rounded hover:bg-orange-100"
+            className="text-slate-700 hover:text-slate-900 disabled:opacity-30 disabled:cursor-not-allowed text-sm font-medium px-3 py-1.5 rounded hover:bg-slate-200"
             aria-label={tr.prevLabel}
           >
             ← {tr.prevLabel}
@@ -2616,10 +2660,10 @@ function AboutDemowashPopup({
                 aria-label={tr.slideAria(i + 1, totalSlides)}
                 aria-current={slide === i ? "true" : undefined}
                 className={
-                  "w-2 h-2 rounded-full transition-all " +
+                  "h-2 rounded-full transition-all " +
                   (slide === i
-                    ? "bg-orange-600 w-6"
-                    : "bg-orange-300 hover:bg-orange-400")
+                    ? "bg-emerald-600 w-6"
+                    : "bg-slate-300 hover:bg-slate-400 w-2")
                 }
               />
             ))}
@@ -2629,7 +2673,7 @@ function AboutDemowashPopup({
             <button
               type="button"
               onClick={onClose}
-              className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium shadow"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg text-sm font-medium shadow"
             >
               {tr.closeLabel}
             </button>
@@ -2637,7 +2681,7 @@ function AboutDemowashPopup({
             <button
               type="button"
               onClick={() => setSlide((s) => Math.min(s + 1, totalSlides - 1))}
-              className="text-orange-700 hover:text-orange-900 text-sm font-medium px-3 py-1.5 rounded hover:bg-orange-100"
+              className="text-emerald-700 hover:text-emerald-900 text-sm font-medium px-3 py-1.5 rounded hover:bg-emerald-100"
               aria-label={tr.nextLabel}
             >
               {tr.nextLabel} →
@@ -2661,7 +2705,7 @@ function SlideImage({
   const [failed, setFailed] = useState(false)
   if (failed) {
     return (
-      <div className="w-full aspect-video bg-orange-100 border-2 border-dashed border-orange-300 rounded-xl flex items-center justify-center text-orange-700 text-sm font-medium">
+      <div className="w-full aspect-video bg-slate-100 border-2 border-dashed border-slate-300 rounded-xl flex items-center justify-center text-slate-600 text-sm font-medium">
         {placeholder}
       </div>
     )

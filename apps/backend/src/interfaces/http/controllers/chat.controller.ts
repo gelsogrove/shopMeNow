@@ -469,13 +469,17 @@ export class ChatController {
       const customerLanguage = chatSession.customer.language || "en"
       let operatorLanguage = customerLanguage // detected lang of the operator message
       let wasTranslated = false
+      // Per-language "AI translation" suffix appended to operator messages
+      // that were auto-translated into the customer's language. Falls back
+      // to English when the customer language isn't in the map.
       const translationSuffix: Record<string, string> = {
-        es: "*(traducido)*",
-        it: "*(tradotto)*",
-        en: "*(translated)*",
-        ca: "*(traduït)*",
-        pt: "*(traduzido)*",
-        fr: "*(traduit)*",
+        es: "*(traducción IA)*",
+        it: "*(traduzione IA)*",
+        en: "*(AI translation)*",
+        ca: "*(traducció IA)*",
+        pt: "*(tradução IA)*",
+        fr: "*(traduction IA)*",
+        de: "*(KI-Übersetzung)*",
       }
       try {
         if (!translationEnabled) throw new Error("translation_disabled")
@@ -521,7 +525,7 @@ export class ChatController {
           )
           const translated = translateResponse.data.choices?.[0]?.message?.content?.trim()
           if (translated) {
-            const suffix = translationSuffix[customerLanguage] || "*(translated)*"
+            const suffix = translationSuffix[customerLanguage] || "*(AI translation)*"
             finalMessage = `${translated}\n\n${suffix}`
             wasTranslated = true
             logger.info(`[CHAT-SEND] 🌍 Operator message translated from ${detectedLang} to ${customerLanguage}`)
@@ -1083,6 +1087,99 @@ export class ChatController {
       res.status(500).json({
         success: false,
         error: "Translation failed",
+      })
+    }
+  }
+
+  /**
+   * Translate a batch of chat messages into a target language in a single
+   * request. Used by the global "Translate to" dropdown in the operator
+   * chat UI so the whole timeline can be retranslated in one round-trip.
+   *
+   * Body: { messages: [{id, content}], targetLanguage }
+   * Returns: { translations: [{id, translated}], targetLanguage }
+   */
+  async translateMessages(req: Request, res: Response): Promise<void> {
+    try {
+      const { messages, targetLanguage } = req.body as {
+        messages?: Array<{ id?: string; content?: string }>
+        targetLanguage?: string
+      }
+      const user = (req as any).user as { language?: string } | undefined
+
+      if (!Array.isArray(messages) || messages.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: "messages is required and must be a non-empty array",
+        })
+        return
+      }
+
+      const target =
+        (typeof targetLanguage === "string" && targetLanguage.trim()
+          ? targetLanguage.toLowerCase()
+          : null) ||
+        mapUserLangToIso(user?.language) ||
+        "es"
+
+      const langName = ISO_LANG_NAMES[target] || target
+      const llmConfig = getLLMConfig("openai/gpt-4o-mini")
+
+      // Run all translations in parallel — the gpt-4o-mini latency at 0
+      // temperature is low and stable enough that parallelizing 30 short
+      // messages takes about as long as a single 200-token reply.
+      const results = await Promise.all(
+        messages.map(async (m) => {
+          const id = String(m.id || "")
+          const content = (m.content || "").trim()
+          if (!id || !content) return { id, translated: "" }
+          try {
+            const response = await axios.post(
+              `${llmConfig.baseURL}/chat/completions`,
+              {
+                model: llmConfig.model,
+                temperature: 0,
+                messages: [
+                  {
+                    role: "system",
+                    content: `Translate the following text to ${langName}. Reply with ONLY the translated text, no explanations, no quotes.`,
+                  },
+                  { role: "user", content },
+                ],
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${llmConfig.apiKey}`,
+                  "Content-Type": "application/json",
+                },
+                timeout: 30_000,
+              }
+            )
+            const translated =
+              response.data.choices?.[0]?.message?.content?.trim() || ""
+            return { id, translated }
+          } catch (err: any) {
+            logger.warn("[CHAT-TRANSLATE-BATCH] one message failed", {
+              id,
+              error: err?.message,
+            })
+            return { id, translated: "" }
+          }
+        })
+      )
+
+      res.status(200).json({
+        success: true,
+        data: { translations: results, targetLanguage: target },
+      })
+    } catch (error: any) {
+      logger.error(
+        "[CHAT-TRANSLATE-BATCH] Failed:",
+        error?.message || error
+      )
+      res.status(500).json({
+        success: false,
+        error: "Batch translation failed",
       })
     }
   }
