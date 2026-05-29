@@ -8,9 +8,11 @@
 import nodemailer from "nodemailer"
 import logger from "../../utils/logger"
 
+type HistoryEntry = { role: "user" | "assistant"; content: string }
+
 export interface HumanMessageEmailData {
   summary: string
-  history: { role: 'user' | 'assistant'; content: string }[]
+  history: HistoryEntry[]
   customerName: string
   customerPhone?: string
   companyName: string
@@ -26,68 +28,41 @@ export interface SmtpConfig {
   from?: string
 }
 
-function buildHistoryHtml(
-  history: { role: 'user' | 'assistant'; content: string }[]
-): string {
-  if (!history.length) return '<p style="color:#888"><i>(no prior conversation)</i></p>'
-  return history
-    .filter((m) => m.content && m.content.trim().length > 0)
+const escapeHtml = (s: string): string =>
+  s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+
+const nonEmpty = (h: HistoryEntry[]): HistoryEntry[] =>
+  h.filter((m) => m.content && m.content.trim().length > 0)
+
+const speaker = (role: HistoryEntry["role"]): string =>
+  role === "user" ? "Customer" : "Bot"
+
+const buildHistoryHtml = (history: HistoryEntry[]): string => {
+  const rows = nonEmpty(history)
+  if (!rows.length) return '<p style="color:#888"><i>(no prior conversation)</i></p>'
+  return rows
     .map((m) => {
-      const who = m.role === 'user' ? 'Customer' : 'Bot'
-      const color = m.role === 'user' ? '#2563eb' : '#059669'
-      const safe = escapeHtml(m.content)
-      return `<div style="margin:6px 0"><b style="color:${color}">${who}:</b> ${safe}</div>`
+      const color = m.role === "user" ? "#2563eb" : "#059669"
+      return `<div style="margin:6px 0"><b style="color:${color}">${speaker(m.role)}:</b> ${escapeHtml(m.content)}</div>`
     })
-    .join('\n')
+    .join("\n")
 }
 
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
+const buildHistoryText = (history: HistoryEntry[]): string =>
+  nonEmpty(history)
+    .map((m) => `${speaker(m.role)}: ${m.content}`)
+    .join("\n")
 
-export async function sendEscalationEmail(
-  data: HumanMessageEmailData,
-  notificationEmails: string,
-  smtpConfig?: SmtpConfig
-): Promise<void> {
-  const host = smtpConfig?.host || process.env.SMTP_HOST || 'smtp.gmail.com'
-  const port = smtpConfig?.port ?? parseInt(process.env.SMTP_PORT || '587')
-  const secure =
-    smtpConfig?.secure ?? (process.env.SMTP_SECURE === 'true')
-  const user = smtpConfig?.user || process.env.SMTP_USER || ''
-  const pass = smtpConfig?.pass || process.env.SMTP_PASS || ''
-  const from =
-    smtpConfig?.from ||
-    process.env.SMTP_FROM ||
-    'noreply@echatbot.ai'
-
-  if (!user || !pass) {
-    logger.error('[escalation-email] SMTP credentials missing — set SMTP_USER and SMTP_PASS', {
-      to: notificationEmails,
-      customer: data.customerName,
-    })
-    throw new Error('SMTP credentials required for escalation email')
-  }
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure,
-    auth: { user, pass },
-  })
-
-  const subject = `🔔 Human Support — ${data.customerName} (${data.companyName})`
+const buildHtml = (data: HumanMessageEmailData): string => {
   const phoneLine = data.customerPhone
     ? `<div><b>Phone:</b> ${escapeHtml(data.customerPhone)}</div>`
-    : ''
-
-  const html = `
-<!doctype html>
+    : ""
+  return `<!doctype html>
 <html><body style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:680px;margin:0 auto;padding:16px">
   <h2 style="color:#c2410c;margin:0 0 4px 0">🔔 Human Support requested</h2>
   <div style="color:#666;font-size:12px;margin-bottom:16px">${escapeHtml(data.timestamp)}</div>
@@ -107,33 +82,67 @@ export async function sendEscalationEmail(
   </div>
 
   <div style="color:#888;font-size:11px;margin-top:16px">Sent automatically by eChatbot.</div>
-</body></html>`.trim()
+</body></html>`
+}
 
-  const text =
-    `🔔 Human Support requested\n${data.timestamp}\n\n` +
-    `Customer: ${data.customerName}\n` +
-    (data.customerPhone ? `Phone: ${data.customerPhone}\n` : '') +
-    `Workspace: ${data.companyName}\n\n` +
-    `--- Briefing ---\n${data.summary}\n\n` +
-    `--- Recent conversation ---\n` +
-    history(data.history)
+const buildText = (data: HumanMessageEmailData): string =>
+  [
+    `🔔 Human Support requested`,
+    data.timestamp,
+    ``,
+    `Customer: ${data.customerName}`,
+    data.customerPhone ? `Phone: ${data.customerPhone}` : null,
+    `Workspace: ${data.companyName}`,
+    ``,
+    `--- Briefing ---`,
+    data.summary,
+    ``,
+    `--- Recent conversation ---`,
+    buildHistoryText(data.history),
+  ]
+    .filter((line) => line !== null)
+    .join("\n")
 
-  function history(h: { role: string; content: string }[]) {
-    return h
-      .filter((m) => m.content && m.content.trim())
-      .map((m) => `${m.role === 'user' ? 'Customer' : 'Bot'}: ${m.content}`)
-      .join('\n')
+const resolveSmtp = (smtpConfig?: SmtpConfig) => ({
+  host: smtpConfig?.host || process.env.SMTP_HOST || "smtp.gmail.com",
+  port: smtpConfig?.port ?? parseInt(process.env.SMTP_PORT || "587"),
+  secure: smtpConfig?.secure ?? process.env.SMTP_SECURE === "true",
+  user: smtpConfig?.user || process.env.SMTP_USER || "",
+  pass: smtpConfig?.pass || process.env.SMTP_PASS || "",
+  from: smtpConfig?.from || process.env.SMTP_FROM || "noreply@echatbot.ai",
+})
+
+export async function sendEscalationEmail(
+  data: HumanMessageEmailData,
+  notificationEmails: string,
+  smtpConfig?: SmtpConfig
+): Promise<void> {
+  const smtp = resolveSmtp(smtpConfig)
+
+  if (!smtp.user || !smtp.pass) {
+    logger.error(
+      "[escalation-email] SMTP credentials missing — set SMTP_USER and SMTP_PASS",
+      { to: notificationEmails, customer: data.customerName }
+    )
+    throw new Error("SMTP credentials required for escalation email")
   }
 
-  await transporter.sendMail({
-    from: `"eChatbot" <${from}>`,
-    to: notificationEmails,
-    subject,
-    html,
-    text,
+  const transporter = nodemailer.createTransport({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    auth: { user: smtp.user, pass: smtp.pass },
   })
 
-  logger.info('[escalation-email] Email sent', {
+  await transporter.sendMail({
+    from: `"eChatbot" <${smtp.from}>`,
+    to: notificationEmails,
+    subject: `🔔 Human Support — ${data.customerName} (${data.companyName})`,
+    html: buildHtml(data),
+    text: buildText(data),
+  })
+
+  logger.info("[escalation-email] Email sent", {
     to: notificationEmails,
     customer: data.customerName,
     company: data.companyName,
