@@ -115,7 +115,6 @@ const iconMap: Record<string, LucideIcon> = {
 }
 
 // Get icon component from database icon name with colorful background
-// 🎨 ALIGNED WITH MessageFlowDialog colors
 const getAgentIcon = (iconName: string | undefined, agentType: string) => {
   // Normalize agent type
   const normalizedType = agentType.toLowerCase().replace(/_/g, "_")

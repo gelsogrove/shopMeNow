@@ -1399,6 +1399,21 @@ export class UltraMsgWebhookController {
             operatorWhatsappNumber: customOutput.operatorWhatsappNumber,
             smtpConfig: customOutput.smtpConfig,
           })
+
+          // Hand the conversation to the human operator: stop the bot from
+          // replying. Mirrors the same pattern in whatsapp-webhook and the
+          // playground controller.
+          try {
+            await prisma.customers.update({
+              where: { id: customer.id },
+              data: { activeChatbot: false },
+            })
+          } catch (err: any) {
+            logger.error('[Ultramsg] Failed to disable chatbot after escalation', {
+              customerId: customer.id,
+              error: err?.message,
+            })
+          }
         }
 
         if (!savedUserMessage) {

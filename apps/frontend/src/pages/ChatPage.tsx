@@ -2,7 +2,6 @@ import { IMG_BASE_URL } from "@/config"
 import { PageLayout } from "@/components/layout/PageLayout"
 import { ClientSheet } from "@/components/shared/ClientSheet"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import MessageFlowDialog from "@/components/shared/MessageFlowDialog"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
 import { NotificationDialog } from "@/components/shared/NotificationDialog"
 import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
@@ -27,7 +26,6 @@ import {
   Bot,
   Check,
   ClipboardCopy,
-  Eye,
   Loader2,
   Lock,
   MessageSquare,
@@ -223,9 +221,6 @@ export function ChatPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showBlockDialog, setShowBlockDialog] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
-  const [showFlowDialog, setShowFlowDialog] = useState(false)
-  const [selectedFlowMessage, setSelectedFlowMessage] =
-    useState<Message | null>(null)
 
   const {
     chats,
@@ -1788,22 +1783,6 @@ export function ChatPage() {
                                 )
                               })()}
 
-                              {/* View Flow Button - ONLY for bot messages with debugInfo */}
-                              {isAgentMessage &&
-                                message.metadata?.debugInfo && (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedFlowMessage(message)
-                                      setShowFlowDialog(true)
-                                    }}
-                                    className="text-[10px] font-medium bg-purple-100 hover:bg-purple-200 text-purple-800 px-2 py-0.5 rounded flex items-center gap-1 transition-colors"
-                                    title="View message flow through multi-agent system"
-                                  >
-                                    <Eye className="w-3 h-3" />
-                                    View Flow
-                                  </button>
-                                )}
-
                               {/* 📋 Manual Control Badge */}
                               {isOperatorControl && (
                                 <span className="text-[10px] font-medium bg-orange-200 text-orange-800 px-2 py-0.5 rounded ml-2">
@@ -2033,18 +2012,6 @@ export function ChatPage() {
         />
       )}
 
-      {/* Message Flow Dialog */}
-      {selectedFlowMessage?.metadata?.debugInfo && (
-        <MessageFlowDialog
-          isOpen={showFlowDialog}
-          onClose={() => setShowFlowDialog(false)}
-          debugInfo={
-            typeof selectedFlowMessage.metadata.debugInfo === "string"
-              ? JSON.parse(selectedFlowMessage.metadata.debugInfo)
-              : selectedFlowMessage.metadata.debugInfo
-          }
-        />
-      )}
     </PageLayout>
   )
 }

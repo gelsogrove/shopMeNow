@@ -594,7 +594,13 @@ export class ChatController {
         finalMessage = content
       }
 
-      // 💾 STEP 3: Save to History AFTER safety validation
+      // 💾 STEP 3: Save to History AFTER safety validation.
+      //
+      // `content` is what the customer sees on WhatsApp (translated into
+      // their language when the operator wrote in another language). We
+      // also persist `originalContent` + `originalLanguage` in metadata so
+      // the operator UI can render a "view original" toggle without going
+      // back to the LLM.
       const savedMessage = await this.prisma.message.create({
         data: {
           chatSessionId: sessionId,
@@ -606,6 +612,9 @@ export class ChatController {
             isOperatorMessage: true,
             sentBy: "HUMAN_OPERATOR",
             agentSelected: "MANUAL_OPERATOR",
+            originalContent: wasTranslated ? content : null,
+            originalLanguage: wasTranslated ? operatorLanguage : null,
+            translatedTo: wasTranslated ? customerLanguage : null,
           },
         },
       })
@@ -660,6 +669,10 @@ export class ChatController {
         // Ignore - default to not_queued
       }
 
+      // 🆕 Mirror in conversationMessage (the table the operator chat UI
+      //    reads from). Same content (customer-facing language) +
+      //    originalContent/originalLanguage in debugInfo for the upcoming
+      //    "view original" toggle in the operator UI.
       const conversationMessage = await this.prisma.conversationMessage.create({
         data: {
           workspaceId: workspaceId,
@@ -676,6 +689,9 @@ export class ChatController {
             operatorLanguage,
             customerLanguage,
             wasTranslated,
+            originalContent: wasTranslated ? content : null,
+            originalLanguage: wasTranslated ? operatorLanguage : null,
+            translatedTo: wasTranslated ? customerLanguage : null,
             timestamp: new Date().toISOString(),
             steps: debugSteps, // Include all current debug steps
           }),

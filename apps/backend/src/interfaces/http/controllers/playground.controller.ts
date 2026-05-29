@@ -582,6 +582,24 @@ export class PlaygroundController {
         },
       })
 
+      // 🚦 If the customer has been handed over to a human operator
+      //    (escalation flow already triggered for a previous message), do
+      //    NOT call the bot — the inbound message is just saved and the
+      //    operator will read it in the /chat UI. Mirrors the gate already
+      //    applied in the WhatsApp and widget webhooks.
+      if (customer.activeChatbot === false) {
+        await prisma.chatSession.update({
+          where: { id: session.id },
+          data: { updatedAt: new Date() },
+        })
+        return res.json({
+          sessionId: session.id,
+          customerId: customer.id,
+          response: null,
+          chatbotDisabled: true,
+        })
+      }
+
       // 2) If the workspace has a custom chatbot module (e.g. ecolaundry),
       //    call it DIRECTLY here — bypassing chat-engine + FlowWorkspaceStrategy.
       //    The default FlowWorkspaceStrategy ignores customChatbotId and falls
@@ -681,6 +699,28 @@ export class PlaygroundController {
               operatorWhatsappNumber: customOutput.operatorWhatsappNumber,
               smtpConfig: customOutput.smtpConfig,
             })
+
+            // 🚦 Hand the conversation to the human operator: stop the bot from
+            //    replying further. The widget/WhatsApp webhook gates on
+            //    `customer.activeChatbot` and now will save incoming messages
+            //    without invoking the LLM. The operator re-enables the chatbot
+            //    from the chat UI when they close the case.
+            try {
+              await prisma.customers.update({
+                where: { id: customer.id },
+                data: { activeChatbot: false },
+              })
+              await prisma.chatSession.update({
+                where: { id: session.id },
+                data: { escalatedAt: new Date() },
+              })
+            } catch (err: any) {
+              logger.error('[Playground] Failed to disable chatbot after escalation', {
+                customerId: customer.id,
+                sessionId: session.id,
+                error: err?.message,
+              })
+            }
           }
           if (customResult.handled && customResult.output?.reply) {
             botResponse = customResult.output.reply
