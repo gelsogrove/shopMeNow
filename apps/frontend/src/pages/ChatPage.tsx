@@ -337,6 +337,12 @@ export function ChatPage() {
       }
       // 🔧 FIX: Reset messages when switching customers to avoid showing wrong chat
       setMessages([])
+      // 🌍 Reset translation toolbar to OFF on chat switch. Otherwise the
+      // previously selected language would inherit on the new chat and
+      // immediately fire a batch translation of every message — expensive
+      // on long histories. The operator must opt-in per chat. Cache is
+      // kept (sessionStorage) so re-enabling the same lang stays instant.
+      setTranslateTo(null)
       logger.info(`🔄 Customer switched from ${prevSelectedChatIdRef.current} to ${selectedChat?.id}, messages cleared`)
       // Update ref
       prevSelectedChatIdRef.current = selectedChat?.id || null

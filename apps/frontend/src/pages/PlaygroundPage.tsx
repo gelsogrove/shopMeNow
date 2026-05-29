@@ -27,12 +27,6 @@ import rehypeHighlight from "rehype-highlight"
 import rehypeSlug from "rehype-slug"
 import remarkGfm from "remark-gfm"
 import "highlight.js/styles/github.css"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 
 const API_BASE = "/api/v1/playground"
 
@@ -251,6 +245,17 @@ function useAuth() {
       ? (saved as PlaygroundUser)
       : null
   })
+  // React-side mirror of `localStorage.playgroundWorkspaceId`. Held as state
+  // so screens depending on it (chat list, kanban) can re-render — and
+  // re-fetch — once the async `/resolve-demo` lookup completes after a
+  // login redirect. Without this, the first paint after login fires the
+  // initial fetchAll() with no workspaceId header and the user has to
+  // refresh to see their data.
+  const [workspaceId, setWorkspaceId] = useState<string | null>(() =>
+    typeof window === "undefined"
+      ? null
+      : localStorage.getItem("playgroundWorkspaceId"),
+  )
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -290,6 +295,7 @@ function useAuth() {
       localStorage.setItem("playgroundUser", boundUser)
       if (demoSlug) localStorage.setItem("playgroundDemoSlug", demoSlug)
       setUser(boundUser)
+      setWorkspaceId(workspaceId)
     } else if (demoSlug) {
       // (b) Visitor lands on /demo/<slug> directly (public demo URL).
       //     We auto-sign-in as that demo's bound user so the visitor
@@ -328,6 +334,10 @@ function useAuth() {
         .then((data) => {
           if (data?.workspaceId) {
             localStorage.setItem("playgroundWorkspaceId", data.workspaceId)
+            // Notify the rest of the app: this triggers a re-fetch in
+            // ChatScreen so the visitor sees their chats immediately,
+            // without having to refresh after the login redirect.
+            setWorkspaceId(data.workspaceId)
           }
         })
         .catch(() => {/* silent fail — UI will surface the missing data */})
@@ -342,32 +352,66 @@ function useAuth() {
     setUser(u)
   }
   const logout = () => {
-    // Wipe every demo-related localStorage key so the next visitor starts
-    // clean. Includes auth (user/token/workspaceId), the URL slug binding,
-    // the use-cases flag selection, and the per-chat overlays (titles,
-    // feedback, custom order).
+    // Nuke the entire localStorage so the next visitor starts from a fully
+    // clean slate — no stale tokens, no leftover chat overlays, no cached
+    // "About popup seen" flag, no language preference from the previous
+    // user. Anything we add later (analytics opt-in, feature flags, etc.)
+    // is wiped automatically without us having to remember to list it here.
     //
     // 🚪 Sticky logout flag: on a public /demo/<slug> URL the mount effect
-    //    auto-signs the visitor back in after every refresh. We set
-    //    `playgroundLoggedOut` so that effect knows to honour the logout
-    //    intent until the visitor explicitly logs in again.
+    //    auto-signs the visitor back in after every refresh. We re-set
+    //    `playgroundLoggedOut` AFTER the clear so that effect knows to
+    //    honour the logout intent until the visitor explicitly logs in
+    //    again.
+    localStorage.clear()
     localStorage.setItem("playgroundLoggedOut", "1")
-    localStorage.removeItem("playgroundUser")
-    localStorage.removeItem("playgroundToken")
-    localStorage.removeItem("playgroundWorkspaceId")
-    localStorage.removeItem("playgroundDemoSlug")
-    localStorage.removeItem("playgroundUsecasesLang")
-    localStorage.removeItem(TITLE_STORAGE_KEY)
-    localStorage.removeItem(FEEDBACK_STORAGE_KEY)
-    localStorage.removeItem(ORDER_STORAGE_KEY)
     setUser(null)
+    setWorkspaceId(null)
   }
-  return { user, login, logout }
+  return { user, workspaceId, login, logout }
+}
+
+// Supported usecases languages — kept in sync with the markdown files we
+// ship under custom-demowash/usecases_<lang>.md.
+const LOGIN_LANG_OPTIONS = [
+  { code: "es", label: "Español" },
+  { code: "ca", label: "Català" },
+  { code: "it", label: "Italiano" },
+  { code: "en", label: "English" },
+  { code: "fr", label: "Français" },
+  { code: "pt", label: "Português" },
+  { code: "de", label: "Deutsch" },
+] as const
+
+// Best-effort detect of the user's browser language. Returns one of the
+// supported codes above, falling back to Spanish (the demo's source lang)
+// when the navigator language isn't in the list.
+function detectBrowserLang(): (typeof LOGIN_LANG_OPTIONS)[number]["code"] {
+  if (typeof navigator === "undefined") return "es"
+  const raw = (navigator.language || "es").toLowerCase().slice(0, 2)
+  const supported = LOGIN_LANG_OPTIONS.map((o) => o.code) as string[]
+  return (supported.includes(raw)
+    ? raw
+    : "es") as (typeof LOGIN_LANG_OPTIONS)[number]["code"]
 }
 
 function LoginScreen({ onLogin }: { onLogin: (u: PlaygroundUser) => void }) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  const [lang, setLang] = useState<
+    (typeof LOGIN_LANG_OPTIONS)[number]["code"]
+  >(() => {
+    if (typeof window === "undefined") return "es"
+    // Prefer a previously chosen language if the visitor logged in before;
+    // otherwise default to the browser language. Either way the user can
+    // override it from the dropdown before clicking Login.
+    const saved = localStorage.getItem("playgroundUsecasesLang")
+    const valid = LOGIN_LANG_OPTIONS.map((o) => o.code) as string[]
+    if (saved && valid.includes(saved)) {
+      return saved as (typeof LOGIN_LANG_OPTIONS)[number]["code"]
+    }
+    return detectBrowserLang()
+  })
   const [error, setError] = useState("")
 
   const submit = (e: React.FormEvent) => {
@@ -379,6 +423,10 @@ function LoginScreen({ onLogin }: { onLogin: (u: PlaygroundUser) => void }) {
     if (!match) return setError("Invalid username")
     if (ALLOWED_USERS[match].password !== password) return setError("Invalid password")
     setError("")
+
+    // Persist the chosen usecases language so the panel renders in that
+    // language without the visitor having to flip a flag after login.
+    localStorage.setItem("playgroundUsecasesLang", lang)
 
     // Each user is bound to a specific demo. If the current URL is not on
     // that demo's slug, drop any stale workspaceId/token from a previous
@@ -426,6 +474,30 @@ function LoginScreen({ onLogin }: { onLogin: (u: PlaygroundUser) => void }) {
           onChange={(e) => setPassword(e.target.value)}
           className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-400 focus:outline-none"
         />
+        <div>
+          <label
+            htmlFor="playground-login-lang"
+            className="block text-xs font-medium text-gray-600 mb-1"
+          >
+            Language
+          </label>
+          <select
+            id="playground-login-lang"
+            value={lang}
+            onChange={(e) =>
+              setLang(
+                e.target.value as (typeof LOGIN_LANG_OPTIONS)[number]["code"]
+              )
+            }
+            className="w-full border rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-emerald-400 focus:outline-none"
+          >
+            {LOGIN_LANG_OPTIONS.map((opt) => (
+              <option key={opt.code} value={opt.code}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
         {error && <p className="text-red-600 text-sm">{error}</p>}
         <button
           type="submit"
@@ -1086,9 +1158,11 @@ function ChatTitleEdit({
 // ----------------------------------------------------------------------------
 function ChatScreen({
   user,
+  workspaceId,
   onLogout,
 }: {
   user: PlaygroundUser
+  workspaceId: string | null
   onLogout: () => void
 }) {
   const navigate = useNavigate()
@@ -1119,7 +1193,8 @@ function ChatScreen({
   }, [usecasesLang])
   const [usecasesLoading, setUsecasesLoading] = useState(false)
   // 📘 "About this demo" popup — opened on click of the (i) button in the
-  // Use Cases header. Contents come from `DEMOWASH_ABOUT` keyed by language.
+  // Use Cases header AND auto-opened once after login for demowash visitors
+  // (see effect below). Contents come from `ABOUT_DEMOWASH` keyed by language.
   const [showAboutPopup, setShowAboutPopup] = useState(false)
   const [workspaceName, setWorkspaceName] = useState<string>("Ecolaundry")
   // Seed customChatbotId from the URL slug or from localStorage so the very
@@ -1231,11 +1306,24 @@ function ChatScreen({
 
   useEffect(() => {
     fetchAll()
+    // The URL slug is the source of truth for which demo we're on. If we
+    // are on /demo/<slug>, never let `/workspace-info` override the
+    // chatbot id — at first paint after a login redirect that endpoint
+    // can still answer with the previous tenant's workspaceId (the new
+    // one is being resolved in parallel), and we don't want the right
+    // side panel to flash the wrong demo's usecases.
+    //
+    // `workspaceId` is a dependency: it changes from null → <id> right
+    // after the login-redirect `/resolve-demo` call resolves. Re-running
+    // fetchAll at that point is what makes chats appear immediately
+    // without a manual refresh.
+    const urlMatch = window.location.pathname.match(/^\/demo\/([a-z0-9-]+)/)
+    const urlSlug = urlMatch?.[1] ?? null
     playFetch(`${API_BASE}/workspace-info`)
       .then((r) => r.json())
       .then((data) => {
         if (data?.name) setWorkspaceName(data.name)
-        if (data?.chatbotId) setCustomChatbotId(data.chatbotId)
+        if (data?.chatbotId && !urlSlug) setCustomChatbotId(data.chatbotId)
       })
       .catch(() => {/* keep default 'Ecolaundry' */})
     // Pause polling when the tab is hidden — saves backend traffic
@@ -1263,7 +1351,17 @@ function ChatScreen({
       stop()
       document.removeEventListener("visibilitychange", onVisibility)
     }
-  }, [fetchAll])
+  }, [fetchAll, workspaceId])
+
+  // 📘 Auto-open the "About DemoWash" popup once per session for demowash
+  // visitors. Logout wipes localStorage so the next login re-opens it
+  // automatically — exactly the welcome flow Andrea wants for the demo.
+  useEffect(() => {
+    if (customChatbotId !== "demowash") return
+    if (localStorage.getItem("playgroundAboutSeen") === "1") return
+    setShowAboutPopup(true)
+    localStorage.setItem("playgroundAboutSeen", "1")
+  }, [customChatbotId])
 
   // Sort sessions by last message timestamp DESC (most recent activity on top).
   // Falls back to session creation/update time when there are no messages yet.
@@ -2010,69 +2108,10 @@ function ChatScreen({
                 </button>
               )}
             </div>
-            {/* 🌍 Language flags — click to translate the whole Use Cases
-                block (intro card + markdown content) into the target language.
-                Backend translates on first request and caches. Rendered as
-                inline SVG (not emoji) so they render consistently on every
-                OS/browser, including macOS Chrome which sometimes drops
-                flag-emoji glyphs. */}
-            {/* Flags are only shown for the multilingual DemoWash demo —
-                Ecolaundry ships a single-language usecases file. */}
-            {customChatbotId === "demowash" && (
-            <TooltipProvider delayDuration={150}>
-              <div className="flex items-center gap-1.5">
-                {(
-                  [
-                    // 🇪🇸 Spanish first (default), 🇪🇸+🇦🇩 Catalan kept right
-                    // next to Spanish because the two languages live in the
-                    // same cultural/linguistic neighborhood (most Catalan
-                    // speakers also speak Spanish, and the demo tenant is in
-                    // Catalonia). The rest follows EU-language conventions.
-                    // `name` is the language's name IN THAT language
-                    // (endonym), shown in the tooltip on hover.
-                    { code: "es", label: "ES", name: "Español" },
-                    { code: "ca", label: "CA", name: "Català" },
-                    { code: "it", label: "IT", name: "Italiano" },
-                    { code: "en", label: "EN", name: "English" },
-                    { code: "fr", label: "FR", name: "Français" },
-                    { code: "pt", label: "PT", name: "Português" },
-                    { code: "de", label: "DE", name: "Deutsch" },
-                  ] as const
-                ).map((opt) => {
-                  const active = usecasesLang === opt.code
-                  const disabled = usecasesLoading && !active
-                  return (
-                    <Tooltip key={opt.code}>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          onClick={() => setUsecasesLang(opt.code)}
-                          disabled={disabled}
-                          aria-label={`Switch to ${opt.name}`}
-                          className={
-                            "leading-none p-1 rounded transition-all " +
-                            (active
-                              ? "bg-white ring-2 ring-white shadow-md scale-110 cursor-default "
-                              : "opacity-80 hover:opacity-100 hover:bg-white/20 cursor-pointer ") +
-                            (disabled ? "cursor-wait" : "")
-                          }
-                        >
-                          <FlagSvg code={opt.code} />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent
-                        side="bottom"
-                        sideOffset={6}
-                        className="bg-slate-900 text-white border-slate-900 px-2.5 py-1 text-xs font-medium shadow-lg"
-                      >
-                        {opt.name}
-                      </TooltipContent>
-                    </Tooltip>
-                  )
-                })}
-              </div>
-            </TooltipProvider>
-            )}
+            {/* Language is chosen at login time (LoginScreen combo) and
+                persisted to localStorage; the header no longer offers a
+                runtime flag selector — Andrea found the flags confusing
+                next to the Info button. */}
           </div>
           <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 prose prose-sm max-w-none break-words relative">
             {usecasesLoading && (
@@ -2149,111 +2188,6 @@ function ChatScreen({
       )}
     </div>
   )
-}
-
-// ----------------------------------------------------------------------------
-// FLAG SVGs — inline language-selector flags for the Use Cases header. We
-// render SVG (not emoji) because flag-emoji glyphs are inconsistently
-// supported across macOS / Chrome / Windows fonts: on systems without the
-// emoji font the button shows up as an empty rectangle. SVG is always
-// crisp, scales freely, and renders the same everywhere.
-// ----------------------------------------------------------------------------
-function FlagSvg({ code }: { code: "es" | "it" | "en" | "fr" | "pt" | "ca" | "de" }) {
-  // Common props: ~28×20 (3:2 ratio) — readable but compact.
-  const common = {
-    width: 28,
-    height: 20,
-    viewBox: "0 0 9 6",
-    preserveAspectRatio: "xMidYMid slice",
-    className: "rounded-[3px] shadow-sm block",
-    "aria-hidden": true as const,
-  }
-  switch (code) {
-    case "es":
-      // Spain: red / yellow (double-height) / red horizontal bands
-      return (
-        <svg {...common}>
-          <rect width="9" height="6" fill="#AA151B" />
-          <rect y="1.5" width="9" height="3" fill="#F1BF00" />
-        </svg>
-      )
-    case "it":
-      // Italy: green / white / red vertical bands
-      return (
-        <svg {...common}>
-          <rect width="3" height="6" fill="#009246" />
-          <rect x="3" width="3" height="6" fill="#fff" />
-          <rect x="6" width="3" height="6" fill="#CE2B37" />
-        </svg>
-      )
-    case "en":
-      // United Kingdom (Union Jack) — simplified but recognizable
-      return (
-        <svg {...common} viewBox="0 0 60 40">
-          <rect width="60" height="40" fill="#012169" />
-          {/* White diagonals */}
-          <path d="M0,0 L60,40 M60,0 L0,40" stroke="#fff" strokeWidth="8" />
-          {/* Red diagonals */}
-          <path
-            d="M0,0 L60,40 M60,0 L0,40"
-            stroke="#C8102E"
-            strokeWidth="4"
-            clipPath="url(#uk-clip)"
-          />
-          <defs>
-            <clipPath id="uk-clip">
-              <polygon points="0,0 30,20 60,0 60,8 38,20 60,32 60,40 30,20 0,40 0,32 22,20 0,8" />
-            </clipPath>
-          </defs>
-          {/* White cross */}
-          <rect x="25" width="10" height="40" fill="#fff" />
-          <rect y="15" width="60" height="10" fill="#fff" />
-          {/* Red cross */}
-          <rect x="27" width="6" height="40" fill="#C8102E" />
-          <rect y="17" width="60" height="6" fill="#C8102E" />
-        </svg>
-      )
-    case "fr":
-      // France: blue / white / red vertical bands
-      return (
-        <svg {...common}>
-          <rect width="3" height="6" fill="#0055A4" />
-          <rect x="3" width="3" height="6" fill="#fff" />
-          <rect x="6" width="3" height="6" fill="#EF4135" />
-        </svg>
-      )
-    case "pt":
-      // Portugal: green (2/5) + red (3/5) + yellow circle marker
-      return (
-        <svg {...common} viewBox="0 0 60 40">
-          <rect width="24" height="40" fill="#006600" />
-          <rect x="24" width="36" height="40" fill="#FF0000" />
-          <circle cx="24" cy="20" r="6" fill="#FFD700" stroke="#fff" strokeWidth="0.6" />
-          <circle cx="24" cy="20" r="3" fill="#fff" />
-          <circle cx="24" cy="20" r="2" fill="#003399" />
-        </svg>
-      )
-    case "ca":
-      // Catalonia (Senyera): yellow background with 4 red horizontal stripes
-      return (
-        <svg {...common} viewBox="0 0 9 6">
-          <rect width="9" height="6" fill="#FCDD09" />
-          <rect y="0.66" width="9" height="0.66" fill="#DA121A" />
-          <rect y="1.98" width="9" height="0.66" fill="#DA121A" />
-          <rect y="3.30" width="9" height="0.66" fill="#DA121A" />
-          <rect y="4.62" width="9" height="0.66" fill="#DA121A" />
-        </svg>
-      )
-    case "de":
-      // Germany: black (top) / red (middle) / gold (bottom) — equal horizontal bands
-      return (
-        <svg {...common}>
-          <rect width="9" height="2" fill="#000000" />
-          <rect y="2" width="9" height="2" fill="#DD0000" />
-          <rect y="4" width="9" height="2" fill="#FFCE00" />
-        </svg>
-      )
-  }
 }
 
 // ----------------------------------------------------------------------------
@@ -2461,7 +2395,7 @@ type AboutCopy = {
 
 const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
   es: {
-    title: "Sobre DemoWash",
+    title: "DEMO INFO",
     paragraphs: [
       "DemoWash es una red ficticia de lavanderías self-service en franquicia con 6 sedes en Cataluña: Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès y Terrassa.",
       "Cada sede tiene sus propios horarios, máquinas, programas, precios y métodos de pago. Por eso el chatbot identifica siempre primero la sede del cliente, para ofrecer información correcta, actualizada y específica de ese punto de venta.",
@@ -2475,7 +2409,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
     imagePlaceholder: "Captura próximamente",
   },
   it: {
-    title: "Su DemoWash",
+    title: "DEMO INFO",
     paragraphs: [
       "DemoWash è una rete inventata di lavanderie self-service in franchising con 6 sedi in Catalogna: Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès e Terrassa.",
       "Ogni sede ha i propri orari, macchine, programmi, prezzi e metodi di pagamento. Per questo il chatbot identifica sempre prima la sede del cliente, così da fornire informazioni corrette, aggiornate e specifiche per quel punto vendita.",
@@ -2489,7 +2423,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
     imagePlaceholder: "Screenshot in arrivo",
   },
   en: {
-    title: "About DemoWash",
+    title: "DEMO INFO",
     paragraphs: [
       "DemoWash is a fictional network of self-service laundromats in franchise with 6 locations in Catalonia: Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès and Terrassa.",
       "Each location has its own opening hours, machines, programs, prices and payment methods. That's why the chatbot always identifies the customer's location first, so it can provide accurate, up-to-date, store-specific information.",
@@ -2503,7 +2437,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
     imagePlaceholder: "Screenshot coming soon",
   },
   fr: {
-    title: "À propos de DemoWash",
+    title: "DEMO INFO",
     paragraphs: [
       "DemoWash est un réseau fictif de laveries self-service en franchise avec 6 implantations en Catalogne : Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès et Terrassa.",
       "Chaque implantation a ses propres horaires, machines, programmes, tarifs et moyens de paiement. C'est pourquoi le chatbot identifie toujours d'abord l'implantation du client, afin de fournir des informations correctes, à jour et propres à ce point de vente.",
@@ -2517,7 +2451,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
     imagePlaceholder: "Capture à venir",
   },
   pt: {
-    title: "Sobre a DemoWash",
+    title: "DEMO INFO",
     paragraphs: [
       "A DemoWash é uma rede fictícia de lavandarias self-service em franchising com 6 unidades na Catalunha: Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès e Terrassa.",
       "Cada unidade tem os seus próprios horários, máquinas, programas, preços e métodos de pagamento. Por isso o chatbot identifica sempre primeiro a unidade do cliente, para dar informação correta, atualizada e específica desse ponto de venda.",
@@ -2531,7 +2465,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
     imagePlaceholder: "Captura em breve",
   },
   ca: {
-    title: "Sobre DemoWash",
+    title: "DEMO INFO",
     paragraphs: [
       "DemoWash és una xarxa fictícia de bugaderies self-service en franquícia amb 6 seus a Catalunya: Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès i Terrassa.",
       "Cada seu té els seus propis horaris, màquines, programes, preus i mètodes de pagament. Per això el chatbot identifica sempre primer la seu del client, per oferir informació correcta, actualitzada i específica d'aquest punt de venda.",
@@ -2545,7 +2479,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
     imagePlaceholder: "Captura properament",
   },
   de: {
-    title: "Über DemoWash",
+    title: "DEMO INFO",
     paragraphs: [
       "DemoWash ist ein fiktives Franchise-Netzwerk aus Selbstbedienungs-Waschsalons mit 6 Standorten in Katalonien: Eixample, Gràcia, Mataró, Rubí, Sant Cugat del Vallès und Terrassa.",
       "Jeder Standort hat seine eigenen Öffnungszeiten, Maschinen, Programme, Preise und Zahlungsmethoden. Deshalb ermittelt der Chatbot immer zuerst den Standort des Kunden, um korrekte, aktuelle und standortspezifische Informationen zu liefern.",
@@ -2567,6 +2501,25 @@ const ABOUT_DEMOWASH_SLIDE_IMAGES = [
   "/demowash/slide-3.png",
   "/demowash/slide-4.png",
 ] as const
+
+// Renders a paragraph string with every occurrence of "DemoWash" replaced
+// by a larger, bold, brand-coloured span. Keeps the surrounding text
+// untouched so the localised paragraphs above don't have to embed HTML.
+function renderWithBrand(text: string) {
+  const parts = text.split(/(DemoWash)/g)
+  return parts.map((part, i) =>
+    part === "DemoWash" ? (
+      <strong
+        key={i}
+        className="text-emerald-700 font-bold text-[22px] tracking-tight"
+      >
+        DemoWash
+      </strong>
+    ) : (
+      <Fragment key={i}>{part}</Fragment>
+    ),
+  )
+}
 
 function AboutDemowashPopup({
   lang,
@@ -2628,8 +2581,8 @@ function AboutDemowashPopup({
           aria-label={tr.slideAria(slide + 1, totalSlides)}
         >
           {slide < textSlides ? (
-            <p className="text-[17px] text-slate-800 leading-[1.7]">
-              {tr.paragraphs[slide]}
+            <p className="text-[18px] text-slate-800 leading-[1.7]">
+              {renderWithBrand(tr.paragraphs[slide])}
             </p>
           ) : (
             <SlideImage
@@ -2864,11 +2817,16 @@ function KanbanScreen({
   const [searchParams, setSearchParams] = useSearchParams()
 
   useEffect(() => {
+    // Same logic as PlaygroundLanding above: the URL slug wins over
+    // anything `/workspace-info` answers with, so a stale workspaceId
+    // in localStorage right after a login redirect can't flip the demo.
+    const urlMatch = window.location.pathname.match(/^\/demo\/([a-z0-9-]+)/)
+    const urlSlug = urlMatch?.[1] ?? null
     playFetch(`${API_BASE}/workspace-info`)
       .then((r) => r.json())
       .then((data) => {
         if (data?.name) setWorkspaceName(data.name)
-        if (data?.chatbotId) setCustomChatbotId(data.chatbotId)
+        if (data?.chatbotId && !urlSlug) setCustomChatbotId(data.chatbotId)
       })
       .catch(() => {/* keep default */})
   }, [])
@@ -3097,11 +3055,16 @@ function KanbanScreen({
 // ROOT
 // ----------------------------------------------------------------------------
 export default function PlaygroundPage() {
-  const { user, login, logout } = useAuth()
+  const { user, workspaceId, login, logout } = useAuth()
   if (!user) return <LoginScreen onLogin={login} />
   return (
     <Routes>
-      <Route index element={<ChatScreen user={user} onLogout={logout} />} />
+      <Route
+        index
+        element={
+          <ChatScreen user={user} workspaceId={workspaceId} onLogout={logout} />
+        }
+      />
       <Route
         path="kanban"
         element={<KanbanScreen user={user} onLogout={logout} />}
