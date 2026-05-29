@@ -317,10 +317,18 @@ function useAuth() {
     setUser(u)
   }
   const logout = () => {
+    // Wipe every demo-related localStorage key so the next visitor starts
+    // clean. Includes auth (user/token/workspaceId), the URL slug binding,
+    // the use-cases flag selection, and the per-chat overlays (titles,
+    // feedback, custom order).
     localStorage.removeItem("playgroundUser")
     localStorage.removeItem("playgroundToken")
     localStorage.removeItem("playgroundWorkspaceId")
     localStorage.removeItem("playgroundDemoSlug")
+    localStorage.removeItem("playgroundUsecasesLang")
+    localStorage.removeItem(TITLE_STORAGE_KEY)
+    localStorage.removeItem(FEEDBACK_STORAGE_KEY)
+    localStorage.removeItem(ORDER_STORAGE_KEY)
     setUser(null)
   }
   return { user, login, logout }
@@ -1080,7 +1088,17 @@ function ChatScreen({
   }, [usecasesLang])
   const [usecasesLoading, setUsecasesLoading] = useState(false)
   const [workspaceName, setWorkspaceName] = useState<string>("Ecolaundry")
-  const [customChatbotId, setCustomChatbotId] = useState<string | null>(null)
+  // Seed customChatbotId from the URL slug or from localStorage so the very
+  // first render already knows which demo we're on. Without this the UI
+  // briefly flashes the Ecolaundry layout (kanban button + Spanish usecases)
+  // every time the visitor arrives via login redirect, because
+  // `/workspace-info` is fetched async.
+  const [customChatbotId, setCustomChatbotId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+    const m = window.location.pathname.match(/^\/demo\/([a-z0-9-]+)/)
+    if (m) return m[1]
+    return localStorage.getItem("playgroundDemoSlug")
+  })
   const [commentingMessage, setCommentingMessage] = useState<ChatMessage | null>(null)
   const [showNewChat, setShowNewChat] = useState(false)
   const [chatInput, setChatInput] = useState("")
@@ -2489,7 +2507,17 @@ function KanbanScreen({
   const [filter, setFilter] = useState<"" | Priority>("")
   const [showNewTask, setShowNewTask] = useState(false)
   const [workspaceName, setWorkspaceName] = useState<string>("Ecolaundry")
-  const [customChatbotId, setCustomChatbotId] = useState<string | null>(null)
+  // Seed customChatbotId from the URL slug or from localStorage so the very
+  // first render already knows which demo we're on. Without this the UI
+  // briefly flashes the Ecolaundry layout (kanban button + Spanish usecases)
+  // every time the visitor arrives via login redirect, because
+  // `/workspace-info` is fetched async.
+  const [customChatbotId, setCustomChatbotId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+    const m = window.location.pathname.match(/^\/demo\/([a-z0-9-]+)/)
+    if (m) return m[1]
+    return localStorage.getItem("playgroundDemoSlug")
+  })
   const [searchParams, setSearchParams] = useSearchParams()
 
   useEffect(() => {
