@@ -3,7 +3,6 @@ import { PageLayout } from "@/components/layout/PageLayout"
 import { ClientSheet } from "@/components/shared/ClientSheet"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
-import { MessageTranslationToggle } from "@/components/shared/MessageTranslationToggle"
 import { NotificationDialog } from "@/components/shared/NotificationDialog"
 import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
 import { WhatsAppIcon } from "@/components/shared/WhatsAppIcon"
@@ -39,7 +38,8 @@ import {
   X,
 } from "lucide-react"
 import { parsePhoneNumberFromString } from "libphonenumber-js"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import {
   AlertDialog,
@@ -222,6 +222,49 @@ export function ChatPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showBlockDialog, setShowBlockDialog] = useState(false)
   const [showEditSheet, setShowEditSheet] = useState(false)
+
+  // 🌍 Global translation toolbar state. Setting `translateTo` to an ISO
+  //    code reveals a translated panel under every message; setting it
+  //    back to null hides them all (X button). Translations are cached in
+  //    sessionStorage keyed by `${messageId}|${lang}` so re-selecting a
+  //    previously chosen language is instant. Default lang is the logged
+  //    user's preferred language with "es" as the final fallback.
+  const [translateTo, setTranslateTo] = useState<string | null>(null)
+  const [translations, setTranslations] = useState<Record<string, string>>(
+    () => {
+      if (typeof window === "undefined") return {}
+      try {
+        const raw = sessionStorage.getItem("chat-translations-cache")
+        return raw ? JSON.parse(raw) : {}
+      } catch {
+        return {}
+      }
+    }
+  )
+  const [translatingBatch, setTranslatingBatch] = useState(false)
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(
+        "chat-translations-cache",
+        JSON.stringify(translations)
+      )
+    } catch {
+      // sessionStorage might be full or disabled — ignore.
+    }
+  }, [translations])
+
+  // Map the logged-in user's preferred language (stored as 3-letter codes
+  // in the DB: ENG/ITA/ESP/POR/FRA/DEU) to ISO 639-1 so we can use it as
+  // the default target for the global Translate dropdown.
+  const { data: currentUser } = useCurrentUser()
+  const defaultTargetLang = useMemo(() => {
+    const map: Record<string, string> = {
+      ENG: "en", ITA: "it", ESP: "es", POR: "pt",
+      FRA: "fr", DEU: "de", CAT: "ca",
+    }
+    const raw = (currentUser?.language || "").toUpperCase()
+    return map[raw] || (raw.length === 2 ? raw.toLowerCase() : "es")
+  }, [currentUser?.language])
 
   const {
     chats,
@@ -1640,19 +1683,15 @@ export function ChatPage() {
                     const isBlockedMessage =
                       message.deliveryStatus === "blocked"
 
-                    // Parse debugInfo once and reuse: drives the operator
-                    // translation tooltip (originalContent + originalLanguage
-                    // persisted at send time) and the language-flag pair.
+                    // Parse debugInfo once and reuse: drives the
+                    // language-flag pair shown next to translated operator
+                    // messages (CA → AR).
                     const debugInfo = (() => {
                       const dbg = message.metadata?.debugInfo
                       if (!dbg) return null
                       if (typeof dbg !== "string") return dbg as any
                       try { return JSON.parse(dbg) } catch { return null }
                     })()
-                    const originalContent: string | null =
-                      debugInfo?.originalContent || null
-                    const originalLanguage: string | null =
-                      debugInfo?.originalLanguage || null
 
                     const getMessageStyle = () => {
                       // 🛑 BLOCKED: Security Agent blocked this message
@@ -1771,32 +1810,17 @@ export function ChatPage() {
                             )
                           })()}
 
-                          {/* 🌍 Translation toggle:
-                              - Operator messages translated to the customer's
-                                language → reveal the original text the
-                                operator typed (no network call).
-                              - Other messages (customer/bot) → fetch the
-                                translation in the operator's preferred
-                                language on first open, then cache. */}
-                          {!isBlockedMessage && (
-                            isOperatorMessage && originalContent ? (
-                              <MessageTranslationToggle
-                                mode="original"
-                                messageId={message.id}
-                                content={message.content}
-                                originalContent={originalContent}
-                                sourceLanguage={originalLanguage}
-                                variant="operator"
-                              />
-                            ) : !isOperatorMessage ? (
-                              <MessageTranslationToggle
-                                mode="translate"
-                                messageId={message.id}
-                                content={message.content}
-                                sourceLanguage={selectedChat?.language || null}
-                                variant={isAgentMessage ? "operator" : "customer"}
-                              />
-                            ) : null
+                          {/* 🌍 When the global "Translate to" dropdown
+                              (in the chat header toolbar) is active, the
+                              translated content is rendered here inline.
+                              Cache lookup is by message id + target lang. */}
+                          {translateTo && !isBlockedMessage && (
+                            <TranslationPanel
+                              text={translations[`${message.id}|${translateTo}`]}
+                              targetLanguage={translateTo}
+                              loading={translatingBatch}
+                              variant={isAgentMessage ? "operator" : "customer"}
+                            />
                           )}
 
                           <div className="flex justify-end items-center mt-1">
