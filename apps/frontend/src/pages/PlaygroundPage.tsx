@@ -2444,7 +2444,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🌍",
         title: "Habla tu idioma",
-        body: "El bot **detecta automáticamente** el idioma del cliente y responde en **6+ idiomas**. Sin configurar nada.",
+        body: "El bot **detecta automáticamente** el idioma del cliente y responde en **más de 30 idiomas**. Sin configurar nada.",
       },
       {
         icon: "💬",
@@ -2454,12 +2454,12 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🔄",
         title: "Traducción en tiempo real",
-        body: "Cuando el caso pasa a un operador, sus mensajes se **traducen en directo** al idioma del cliente. Cero barreras.",
+        body: "Cuando el caso pasa a un operador, sus mensajes se **traducen en directo** al idioma del cliente. Sin barreras lingüísticas.",
       },
       {
         icon: "🏪",
-        title: "Pensado para franquicias",
-        body: "Cada sede tiene sus horarios, máquinas y precios. El bot **identifica la sede** y carga los datos correctos. **¡Pruébalo cambiando de sede!**",
+        title: "A medida para cada sede",
+        body: "Cada realidad local tiene sus **horarios, precios, procedimientos**. El bot **identifica la sede** y carga la información correcta.",
       },
       {
         icon: "🎯",
@@ -2469,7 +2469,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🚀",
         title: "¿Listo? ¡Pruébalo ahora!",
-        body: "Esto es una **simulación real** de cómo funcionaría tu chatbot **en WhatsApp**. Escríbele como si fueras un cliente y descubre la magia.",
+        body: "Esto es una **simulación** de cómo funcionaría tu chatbot **en WhatsApp**. DemoWash es una lavandería con **varias sedes en Cataluña**: escríbele como si fueras un cliente.",
       },
     ],
   },
@@ -2489,7 +2489,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🌍",
         title: "Parla la tua lingua",
-        body: "Il bot **riconosce in automatico** la lingua del cliente e risponde in **6+ lingue**. Senza configurazioni.",
+        body: "Il bot **riconosce in automatico** la lingua del cliente e risponde in **oltre 30 lingue**. Senza configurazioni.",
       },
       {
         icon: "💬",
@@ -2499,12 +2499,12 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🔄",
         title: "Traduzione in tempo reale",
-        body: "Quando il caso passa a un operatore, i suoi messaggi vengono **tradotti al volo** nella lingua del cliente. Zero barriere.",
+        body: "Quando il caso passa a un operatore, i suoi messaggi vengono **tradotti al volo** nella lingua del cliente. Senza barriere linguistiche.",
       },
       {
         icon: "🏪",
-        title: "Su misura per il franchising",
-        body: "Ogni sede ha orari, macchine e prezzi suoi. Il bot **riconosce la sede** e carica i dati giusti. **Provalo cambiando sede!**",
+        title: "Su misura per ogni sede",
+        body: "Ogni realtà locale ha i suoi **orari, prezzi, procedure**. Il bot **riconosce la sede** e carica le giuste informazioni.",
       },
       {
         icon: "🎯",
@@ -2514,7 +2514,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🚀",
         title: "Pronto? Provalo ora!",
-        body: "Questa è una **simulazione reale** di come funzionerebbe il tuo chatbot **su WhatsApp**. Scrivigli come se fossi un cliente e scopri la magia.",
+        body: "Questa è una **simulazione** di come funzionerebbe il tuo chatbot **su WhatsApp**. DemoWash è una lavanderia con **più sedi in Cataluña**: scrivigli come se fossi un cliente.",
       },
     ],
   },
@@ -2534,7 +2534,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🌍",
         title: "Speaks your language",
-        body: "The bot **auto-detects** the customer's language and replies in **6+ languages**. No setup needed.",
+        body: "The bot **auto-detects** the customer's language and replies in **30+ languages**. No setup needed.",
       },
       {
         icon: "💬",
@@ -2544,12 +2544,12 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🔄",
         title: "Real-time translation",
-        body: "When a case escalates, the operator's messages are **translated live** into the customer's language. Zero barriers.",
+        body: "When a case escalates, the operator's messages are **translated live** into the customer's language. No language barriers.",
       },
       {
         icon: "🏪",
-        title: "Built for franchises",
-        body: "Each location has its own hours, machines and prices. The bot **picks the right location** and loads the right data. **Try switching location!**",
+        title: "Tailored to each location",
+        body: "Every local site has its own **hours, prices, procedures**. The bot **identifies the location** and loads the right information.",
       },
       {
         icon: "🎯",
@@ -2559,7 +2559,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🚀",
         title: "Ready? Try it now!",
-        body: "This is a **real simulation** of how your chatbot would work **on WhatsApp**. Chat with it like a customer would — and see the magic.",
+        body: "This is a **simulation** of how your chatbot would work **on WhatsApp**. DemoWash is a laundromat with **multiple locations in Catalonia**: chat with it like a real customer would.",
       },
     ],
   },
@@ -2579,7 +2579,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🌍",
         title: "Parle votre langue",
-        body: "Le bot **détecte automatiquement** la langue du client et répond en **6+ langues**. Sans configuration.",
+        body: "Le bot **détecte automatiquement** la langue du client et répond en **plus de 30 langues**. Sans configuration.",
       },
       {
         icon: "💬",
@@ -2589,12 +2589,12 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🔄",
         title: "Traduction en temps réel",
-        body: "Quand un cas est escaladé, les messages de l'opérateur sont **traduits en direct** dans la langue du client. Zéro barrière.",
+        body: "Quand un cas est escaladé, les messages de l'opérateur sont **traduits en direct** dans la langue du client. Sans barrière linguistique.",
       },
       {
         icon: "🏪",
-        title: "Pensé pour la franchise",
-        body: "Chaque point de vente a ses horaires, machines et tarifs. Le bot **identifie le point de vente** et charge les bonnes données. **Essayez en changeant d'implantation !**",
+        title: "Sur mesure pour chaque site",
+        body: "Chaque réalité locale a ses **horaires, tarifs, procédures**. Le bot **identifie le site** et charge les bonnes informations.",
       },
       {
         icon: "🎯",
@@ -2604,7 +2604,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🚀",
         title: "Prêt ? Essayez-le !",
-        body: "C'est une **simulation réelle** de votre chatbot **sur WhatsApp**. Discutez avec lui comme le ferait un client — et découvrez la magie.",
+        body: "C'est une **simulation** de votre chatbot **sur WhatsApp**. DemoWash est une laverie avec **plusieurs sites en Catalogne** : discutez avec lui comme le ferait un client.",
       },
     ],
   },
@@ -2624,7 +2624,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🌍",
         title: "Fala a tua língua",
-        body: "O bot **deteta automaticamente** a língua do cliente e responde em **6+ línguas**. Sem configurações.",
+        body: "O bot **deteta automaticamente** a língua do cliente e responde em **mais de 30 línguas**. Sem configurações.",
       },
       {
         icon: "💬",
@@ -2634,12 +2634,12 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🔄",
         title: "Tradução em tempo real",
-        body: "Quando o caso passa para um operador, as mensagens dele são **traduzidas ao vivo** para a língua do cliente. Zero barreiras.",
+        body: "Quando o caso passa para um operador, as mensagens dele são **traduzidas ao vivo** para a língua do cliente. Sem barreiras linguísticas.",
       },
       {
         icon: "🏪",
-        title: "Feito para o franchising",
-        body: "Cada unidade tem horários, máquinas e preços próprios. O bot **identifica a unidade** e carrega os dados certos. **Experimenta mudando de unidade!**",
+        title: "Feito à medida de cada unidade",
+        body: "Cada realidade local tem os seus **horários, preços, procedimentos**. O bot **identifica a unidade** e carrega as informações certas.",
       },
       {
         icon: "🎯",
@@ -2649,7 +2649,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🚀",
         title: "Pronto? Experimenta agora!",
-        body: "Esta é uma **simulação real** de como funcionaria o teu chatbot **no WhatsApp**. Conversa com ele como faria um cliente — e descobre a magia.",
+        body: "Esta é uma **simulação** de como funcionaria o teu chatbot **no WhatsApp**. A DemoWash é uma lavandaria com **várias unidades na Catalunha**: conversa com ele como faria um cliente.",
       },
     ],
   },
@@ -2669,7 +2669,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🌍",
         title: "Parla la teva llengua",
-        body: "El bot **detecta automàticament** la llengua del client i respon en **6+ llengües**. Sense configurar res.",
+        body: "El bot **detecta automàticament** la llengua del client i respon en **més de 30 llengües**. Sense configurar res.",
       },
       {
         icon: "💬",
@@ -2679,12 +2679,12 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🔄",
         title: "Traducció en temps real",
-        body: "Quan el cas passa a un operador, els seus missatges es **tradueixen al vol** a la llengua del client. Zero barreres.",
+        body: "Quan el cas passa a un operador, els seus missatges es **tradueixen al vol** a la llengua del client. Sense barreres lingüístiques.",
       },
       {
         icon: "🏪",
-        title: "Pensat per a franquícies",
-        body: "Cada seu té els seus horaris, màquines i preus. El bot **identifica la seu** i carrega les dades correctes. **Prova-ho canviant de seu!**",
+        title: "A mida per a cada seu",
+        body: "Cada realitat local té els seus **horaris, preus, procediments**. El bot **identifica la seu** i carrega la informació correcta.",
       },
       {
         icon: "🎯",
@@ -2694,7 +2694,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🚀",
         title: "A punt? Prova'l ara!",
-        body: "Això és una **simulació real** de com funcionaria el teu chatbot **a WhatsApp**. Xerra-hi com ho faria un client i descobreix la màgia.",
+        body: "Això és una **simulació** de com funcionaria el teu chatbot **a WhatsApp**. DemoWash és una bugaderia amb **diverses seus a Catalunya**: xerra-hi com ho faria un client.",
       },
     ],
   },
@@ -2714,7 +2714,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🌍",
         title: "Spricht deine Sprache",
-        body: "Der Bot **erkennt automatisch** die Sprache des Kunden und antwortet in **6+ Sprachen**. Ohne Konfiguration.",
+        body: "Der Bot **erkennt automatisch** die Sprache des Kunden und antwortet in **über 30 Sprachen**. Ohne Konfiguration.",
       },
       {
         icon: "💬",
@@ -2724,12 +2724,12 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🔄",
         title: "Übersetzung in Echtzeit",
-        body: "Geht ein Fall an einen Mitarbeiter, werden seine Nachrichten **live übersetzt** — in die Sprache des Kunden. Keine Sprachbarrieren.",
+        body: "Geht ein Fall an einen Mitarbeiter, werden seine Nachrichten **live übersetzt** — in die Sprache des Kunden. Ohne Sprachbarrieren.",
       },
       {
         icon: "🏪",
-        title: "Für Franchise gemacht",
-        body: "Jeder Standort hat eigene Öffnungszeiten, Maschinen und Preise. Der Bot **erkennt den Standort** und lädt die richtigen Daten. **Probier's mit einem Standortwechsel!**",
+        title: "Maßgeschneidert für jeden Standort",
+        body: "Jeder lokale Standort hat eigene **Öffnungszeiten, Preise, Abläufe**. Der Bot **erkennt den Standort** und lädt die richtigen Informationen.",
       },
       {
         icon: "🎯",
@@ -2739,7 +2739,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🚀",
         title: "Bereit? Probier's aus!",
-        body: "Das ist eine **echte Simulation** deines Chatbots **auf WhatsApp**. Schreib ihm wie ein Kunde — und entdecke die Magie.",
+        body: "Das ist eine **Simulation**, wie dein Chatbot **auf WhatsApp** funktionieren würde. DemoWash ist ein Waschsalon mit **mehreren Standorten in Katalonien**: schreib ihm wie ein echter Kunde.",
       },
     ],
   },
