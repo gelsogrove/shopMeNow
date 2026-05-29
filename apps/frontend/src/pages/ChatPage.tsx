@@ -266,6 +266,49 @@ export function ChatPage() {
     return map[raw] || (raw.length === 2 ? raw.toLowerCase() : "es")
   }, [currentUser?.language])
 
+  // When the operator activates the global Translate dropdown, fetch in
+  // batch the translation for every visible message that isn't already in
+  // the cache. The single POST is much cheaper than fan-out per message.
+  useEffect(() => {
+    if (!translateTo) return
+    if (!messages.length) return
+    const missing = messages.filter(
+      (m) => m.content && !translations[`${m.id}|${translateTo}`]
+    )
+    if (missing.length === 0) return
+    let cancelled = false
+    setTranslatingBatch(true)
+    api
+      .post("/chat/translate-messages", {
+        targetLanguage: translateTo,
+        messages: missing.map((m) => ({ id: m.id, content: m.content })),
+      })
+      .then((res) => {
+        if (cancelled) return
+        const arr = (res.data?.data?.translations || []) as Array<{
+          id: string
+          translated: string
+        }>
+        if (!arr.length) return
+        setTranslations((prev) => {
+          const next = { ...prev }
+          for (const t of arr) {
+            if (t.translated) next[`${t.id}|${translateTo}`] = t.translated
+          }
+          return next
+        })
+      })
+      .catch((err) => {
+        logger.error("Batch translation failed", err)
+      })
+      .finally(() => {
+        if (!cancelled) setTranslatingBatch(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [translateTo, messages, translations])
+
   const {
     chats,
     isLoading: isLoadingChats,
