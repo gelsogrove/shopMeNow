@@ -2437,9 +2437,9 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
     slideAria: (n, total) => `Diapositiva ${n} de ${total}`,
     slides: [
       {
-        icon: "💬",
+        icon: "logo:demowash",
         title: "Pruébalo como un cliente",
-        body: "Esto es una **simulación en WhatsApp**. **DemoWash** es una **lavandería con varias sedes en Cataluña** — escribe al chatbot y mira qué pasa.",
+        body: "Esto es una **simulación en WhatsApp** del asistente virtual de **DemoWash**, una **red ficticia de lavanderías en franquicia** con varias sedes en Cataluña. Escribe al chatbot y pruébalo como si fueras un cliente.",
       },
       {
         icon: "⚙️",
@@ -2453,8 +2453,8 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       },
       {
         icon: "🔄",
-        title: "Cuando pasa la mano, traduce",
-        body: "Si hace falta un humano, el caso escala al **operador de la sede** que, gracias a la **traducción en tiempo real**, habla con el cliente en su idioma — sin barreras lingüísticas.",
+        title: "Escala al operador",
+        body: "Si hace falta un humano, el caso pasa al **operador de la sede** que, gracias a la **traducción en tiempo real**, habla con el cliente en su idioma — eliminando las barreras lingüísticas.",
       },
       {
         icon: "🎯",
@@ -2472,9 +2472,9 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
     slideAria: (n, total) => `Diapositiva ${n} di ${total}`,
     slides: [
       {
-        icon: "💬",
+        icon: "logo:demowash",
         title: "Provalo come se fossi un cliente",
-        body: "Questa è una **simulazione su WhatsApp**. **DemoWash** è una **lavanderia con più sedi in Cataluña** — scrivi al chatbot e vedi cosa succede.",
+        body: "Questa è una **simulazione su WhatsApp** dell'assistente virtuale di **DemoWash**, una **rete di lavanderie in franchising fittizia** con più sedi in Cataluña. Scrivi al chatbot e provalo come se fossi un cliente.",
       },
       {
         icon: "⚙️",
@@ -2488,8 +2488,8 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       },
       {
         icon: "🔄",
-        title: "Quando passa la mano, traduce",
-        body: "Se serve un umano, il caso scala all'**operatore della sede** che, grazie alla **traduzione in tempo reale**, comunica con il cliente nella sua lingua — senza barriere linguistiche.",
+        title: "Scala all'operatore",
+        body: "Se serve un umano, il caso passa all'**operatore della sede** che, grazie alla **traduzione in tempo reale**, parla con il cliente nella sua lingua — eliminando le barriere linguistiche.",
       },
       {
         icon: "🎯",
@@ -2507,9 +2507,9 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
     slideAria: (n, total) => `Slide ${n} of ${total}`,
     slides: [
       {
-        icon: "💬",
+        icon: "logo:demowash",
         title: "Try it like a customer would",
-        body: "This is a **WhatsApp simulation**. **DemoWash** is a **laundromat with several locations in Catalonia** — chat with the bot and see what happens.",
+        body: "This is a **WhatsApp simulation** of the virtual assistant of **DemoWash**, a **fictional franchise network of laundromats** with several locations in Catalonia. Chat with the bot and try it as if you were a real customer.",
       },
       {
         icon: "⚙️",
@@ -2523,8 +2523,8 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       },
       {
         icon: "🔄",
-        title: "When it hands off, it translates",
-        body: "If a human is needed, the case escalates to the **local operator** who, thanks to **real-time translation**, speaks to the customer in their own language — no language barriers.",
+        title: "Escalates to a human",
+        body: "If a human is needed, the case goes to the **local operator** who, thanks to **real-time translation**, talks to the customer in their own language — wiping out language barriers.",
       },
       {
         icon: "🎯",
@@ -2542,9 +2542,9 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
     slideAria: (n, total) => `Diapositive ${n} sur ${total}`,
     slides: [
       {
-        icon: "💬",
+        icon: "logo:demowash",
         title: "Essayez-le comme un client",
-        body: "C'est une **simulation sur WhatsApp**. **DemoWash** est une **laverie avec plusieurs sites en Catalogne** — discutez avec le chatbot et voyez ce qui se passe.",
+        body: "C'est une **simulation sur WhatsApp** de l'assistant virtuel de **DemoWash**, un **réseau fictif de laveries en franchise** avec plusieurs sites en Catalogne. Discutez avec le chatbot et essayez-le comme le ferait un vrai client.",
       },
       {
         icon: "⚙️",
@@ -2558,8 +2558,8 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       },
       {
         icon: "🔄",
-        title: "Quand il passe la main, il traduit",
-        body: "Si un humain est nécessaire, le cas est transmis à l'**opérateur local** qui, grâce à la **traduction en temps réel**, parle au client dans sa langue — sans barrière linguistique.",
+        title: "Transfert à l'opérateur",
+        body: "Si un humain est nécessaire, le cas passe à l'**opérateur local** qui, grâce à la **traduction en temps réel**, parle au client dans sa langue — supprimant les barrières linguistiques.",
       },
       {
         icon: "🎯",
@@ -2577,9 +2577,9 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
     slideAria: (n, total) => `Slide ${n} de ${total}`,
     slides: [
       {
-        icon: "💬",
+        icon: "logo:demowash",
         title: "Experimenta como um cliente",
-        body: "Esta é uma **simulação no WhatsApp**. A **DemoWash** é uma **lavandaria com várias unidades na Catalunha** — conversa com o chatbot e vê o que acontece.",
+        body: "Esta é uma **simulação no WhatsApp** do assistente virtual da **DemoWash**, uma **rede fictícia de lavandarias em franchising** com várias unidades na Catalunha. Conversa com o chatbot e experimenta como faria um cliente.",
       },
       {
         icon: "⚙️",
@@ -2593,8 +2593,8 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       },
       {
         icon: "🔄",
-        title: "Quando passa a mão, traduz",
-        body: "Se for preciso um humano, o caso é encaminhado ao **operador local** que, graças à **tradução em tempo real**, fala com o cliente na sua língua — sem barreiras linguísticas.",
+        title: "Encaminha ao operador",
+        body: "Se for preciso um humano, o caso passa ao **operador local** que, graças à **tradução em tempo real**, fala com o cliente na sua língua — eliminando as barreiras linguísticas.",
       },
       {
         icon: "🎯",
@@ -2612,9 +2612,9 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
     slideAria: (n, total) => `Diapositiva ${n} de ${total}`,
     slides: [
       {
-        icon: "💬",
+        icon: "logo:demowash",
         title: "Prova'l com un client",
-        body: "Això és una **simulació al WhatsApp**. **DemoWash** és una **bugaderia amb diverses seus a Catalunya** — escriu al chatbot i mira què passa.",
+        body: "Això és una **simulació al WhatsApp** de l'assistent virtual de **DemoWash**, una **xarxa fictícia de bugaderies en franquícia** amb diverses seus a Catalunya. Escriu al chatbot i prova'l com ho faria un client real.",
       },
       {
         icon: "⚙️",
@@ -2628,8 +2628,8 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       },
       {
         icon: "🔄",
-        title: "Quan passa la mà, tradueix",
-        body: "Si cal un humà, el cas s'escala a l'**operador de la seu** que, gràcies a la **traducció en temps real**, parla amb el client en la seva llengua — sense barreres lingüístiques.",
+        title: "Escala a l'operador",
+        body: "Si cal un humà, el cas passa a l'**operador de la seu** que, gràcies a la **traducció en temps real**, parla amb el client en la seva llengua — eliminant les barreres lingüístiques.",
       },
       {
         icon: "🎯",
@@ -2647,9 +2647,9 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
     slideAria: (n, total) => `Folie ${n} von ${total}`,
     slides: [
       {
-        icon: "💬",
+        icon: "logo:demowash",
         title: "Probier's wie ein Kunde",
-        body: "Das ist eine **WhatsApp-Simulation**. **DemoWash** ist ein **Waschsalon mit mehreren Standorten in Katalonien** — schreib dem Chatbot und schau, was passiert.",
+        body: "Das ist eine **WhatsApp-Simulation** des virtuellen Assistenten von **DemoWash**, einem **fiktiven Franchise-Netzwerk von Waschsalons** mit mehreren Standorten in Katalonien. Schreib dem Chatbot und probier ihn aus wie ein echter Kunde.",
       },
       {
         icon: "⚙️",
@@ -2663,8 +2663,8 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       },
       {
         icon: "🔄",
-        title: "Übergibt — und übersetzt dabei",
-        body: "Wird ein Mensch gebraucht, geht der Fall an den **lokalen Mitarbeiter**, der dank **Echtzeit-Übersetzung** mit dem Kunden in dessen Sprache spricht — ohne Sprachbarrieren.",
+        title: "Übergibt an den Mitarbeiter",
+        body: "Wird ein Mensch gebraucht, geht der Fall an den **lokalen Mitarbeiter**, der dank **Echtzeit-Übersetzung** mit dem Kunden in dessen Sprache spricht — Sprachbarrieren weg.",
       },
       {
         icon: "🎯",
@@ -2774,11 +2774,24 @@ function AboutDemowashPopup({
             {slide + 1} / {totalSlides}
           </div>
 
-          {/* Emoji "icon" inside a brand-green circle. Big enough to be the
-              focal point of the slide — what the eye lands on first. */}
-          <div className="mx-auto w-24 h-24 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border-2 border-emerald-200 flex items-center justify-center text-[56px] leading-none shadow-inner mb-5 select-none">
-            <span aria-hidden="true">{current.icon}</span>
-          </div>
+          {/* Focal point — emoji icon inside a brand-green circle on most
+              slides, OR a wordmark logo when `icon === "logo:demowash"`
+              (the opening slide). The wordmark presents the brand more
+              elegantly than any emoji would: "Demo" in slate-near-black
+              and "Wash" in brand emerald, sitting on a soft tile so it
+              matches the visual rhythm of the other slides' icon pills. */}
+          {current.icon === "logo:demowash" ? (
+            <div className="mx-auto w-fit px-7 py-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-white border-2 border-emerald-100 shadow-sm mb-5 select-none">
+              <div className="text-[40px] font-extrabold tracking-tight leading-none">
+                <span className="text-slate-900">Demo</span>
+                <span className="text-emerald-600">Wash</span>
+              </div>
+            </div>
+          ) : (
+            <div className="mx-auto w-24 h-24 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border-2 border-emerald-200 flex items-center justify-center text-[56px] leading-none shadow-inner mb-5 select-none">
+              <span aria-hidden="true">{current.icon}</span>
+            </div>
+          )}
 
           {/* Title — big, bold, brand colour. */}
           <h3 className="text-[26px] font-bold text-emerald-700 leading-tight tracking-tight mb-3 px-2">
