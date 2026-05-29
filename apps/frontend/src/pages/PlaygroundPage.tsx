@@ -2452,7 +2452,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         body: "Cada realidad local tiene sus **horarios, precios, procedimientos**. El bot **reconoce la sede** y usa la información correcta.",
       },
       {
-        icon: "🔄",
+        icon: "🤝",
         title: "Escala al operador",
         body: "Si hace falta un humano, el caso pasa al **operador de la sede** que, gracias a la **traducción en tiempo real**, habla con el cliente en su idioma — eliminando las barreras lingüísticas.",
       },
@@ -2487,7 +2487,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         body: "Ogni realtà locale ha i suoi **orari, prezzi, procedure**. Il bot **riconosce la sede** e usa le informazioni giuste.",
       },
       {
-        icon: "🔄",
+        icon: "🤝",
         title: "Scala all'operatore",
         body: "Se serve un umano, il caso passa all'**operatore della sede** che, grazie alla **traduzione in tempo reale**, parla con il cliente nella sua lingua — eliminando le barriere linguistiche.",
       },
@@ -2522,7 +2522,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         body: "Every local site has its own **hours, prices, procedures**. The bot **identifies the location** and uses the right information.",
       },
       {
-        icon: "🔄",
+        icon: "🤝",
         title: "Escalates to a human",
         body: "If a human is needed, the case goes to the **local operator** who, thanks to **real-time translation**, talks to the customer in their own language — wiping out language barriers.",
       },
@@ -2557,7 +2557,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         body: "Chaque réalité locale a ses **horaires, tarifs, procédures**. Le bot **identifie le site** et utilise les bonnes informations.",
       },
       {
-        icon: "🔄",
+        icon: "🤝",
         title: "Transfert à l'opérateur",
         body: "Si un humain est nécessaire, le cas passe à l'**opérateur local** qui, grâce à la **traduction en temps réel**, parle au client dans sa langue — supprimant les barrières linguistiques.",
       },
@@ -2592,7 +2592,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         body: "Cada realidade local tem os seus **horários, preços, procedimentos**. O bot **identifica a unidade** e usa as informações certas.",
       },
       {
-        icon: "🔄",
+        icon: "🤝",
         title: "Encaminha ao operador",
         body: "Se for preciso um humano, o caso passa ao **operador local** que, graças à **tradução em tempo real**, fala com o cliente na sua língua — eliminando as barreiras linguísticas.",
       },
@@ -2627,7 +2627,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         body: "Cada realitat local té els seus **horaris, preus, procediments**. El bot **reconeix la seu** i fa servir la informació correcta.",
       },
       {
-        icon: "🔄",
+        icon: "🤝",
         title: "Escala a l'operador",
         body: "Si cal un humà, el cas passa a l'**operador de la seu** que, gràcies a la **traducció en temps real**, parla amb el client en la seva llengua — eliminant les barreres lingüístiques.",
       },
@@ -2662,7 +2662,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         body: "Jeder lokale Standort hat eigene **Öffnungszeiten, Preise, Abläufe**. Der Bot **erkennt den Standort** und nutzt die richtigen Infos.",
       },
       {
-        icon: "🔄",
+        icon: "🤝",
         title: "Übergibt an den Mitarbeiter",
         body: "Wird ein Mensch gebraucht, geht der Fall an den **lokalen Mitarbeiter**, der dank **Echtzeit-Übersetzung** mit dem Kunden in dessen Sprache spricht — Sprachbarrieren weg.",
       },
