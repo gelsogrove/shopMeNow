@@ -1643,6 +1643,7 @@ export class MessageRepository {
               email: true,
               phone: true,
               company: true,
+              language: true,
               activeChatbot: true,
               isBlacklisted: true,
             },
