@@ -809,11 +809,20 @@ export class PlaygroundController {
         })
       }
 
-      // No blocking TODOs → safe to delete. We hard-delete the session and its
-      // messages because the playground is a debug surface; production chat
-      // history isn't affected (the playground only handles demo workspaces).
+      // No blocking TODOs → safe to delete. We hard-delete the session and
+      // its messages because the playground is a debug surface; production
+      // chat history isn't affected (the playground only handles demo
+      // workspaces).
+      //
+      // We delete from BOTH conversation_messages (new source of truth) and
+      // messages (legacy FK still alive — see TD-001 in docs/tech-debt.md).
+      // Old playground sessions created before the 2026-05-29 migration may
+      // still have rows in the legacy `Message` table; without dropping
+      // those first, the foreign-key constraint `messages_chatSessionId_fkey`
+      // blocks `chatSession.delete`.
       await prisma.$transaction([
         prisma.conversationMessage.deleteMany({ where: { conversationId: id } }),
+        prisma.message.deleteMany({ where: { chatSessionId: id } }),
         prisma.chatSession.delete({ where: { id } }),
       ])
 
