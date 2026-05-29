@@ -94,7 +94,7 @@ Dis-moi si elle démarre.
 
 **Client :** Andrea.
 
-**Bot :** J'ai enregistré ton cas, Andrea. Un opérateur te contactera dans quelques minutes.
+**Bot :** J'ai enregistré ton cas, Andrea. Un opérateur te contactera dans quelques minutes. Le chatbot reste en attente du support humain.
 
 ---
 
@@ -122,7 +122,7 @@ Dis-moi si elle démarre.
 
 **Client :** Marta.
 
-**Bot :** J'ai enregistré ton cas, Marta. Un opérateur te contactera dans quelques minutes.
+**Bot :** J'ai enregistré ton cas, Marta. Un opérateur te contactera dans quelques minutes. Le chatbot reste en attente du support humain.
 
 ---
 
@@ -146,7 +146,7 @@ Dis-moi si elle démarre.
 
 **Client :** Luis.
 
-**Bot :** J'ai enregistré ton cas, Luis. Un opérateur te contactera dans quelques minutes.
+**Bot :** J'ai enregistré ton cas, Luis. Un opérateur te contactera dans quelques minutes. Le chatbot reste en attente du support humain.
 
 ---
 
@@ -166,7 +166,7 @@ Dis-moi si elle démarre.
 
 **Client :** Anna.
 
-**Bot :** J'ai enregistré ton cas, Anna. Un opérateur te contactera dans quelques minutes.
+**Bot :** J'ai enregistré ton cas, Anna. Un opérateur te contactera dans quelques minutes. Le chatbot reste en attente du support humain.
 
 ---
 
@@ -186,7 +186,7 @@ Dis-moi si elle démarre.
 
 **Client :** Carte 8821, je suis Jordi.
 
-**Bot :** J'ai enregistré ton cas, Jordi. Un opérateur te contactera dans quelques minutes.
+**Bot :** J'ai enregistré ton cas, Jordi. Un opérateur te contactera dans quelques minutes. Le chatbot reste en attente du support humain.
 
 ---
 
@@ -230,7 +230,7 @@ Dis-moi si elle démarre.
 
 **Client :** Mireia.
 
-**Bot :** J'ai enregistré ton cas, Mireia. Un opérateur te contactera dans quelques minutes.
+**Bot :** J'ai enregistré ton cas, Mireia. Un opérateur te contactera dans quelques minutes. Le chatbot reste en attente du support humain.
 
 ---
 

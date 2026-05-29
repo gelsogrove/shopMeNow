@@ -94,7 +94,7 @@ Tell me if it starts.
 
 **Customer:** Andrea.
 
-**Bot:** I've logged your case, Andrea. An operator will contact you within a few minutes.
+**Bot:** I've logged your case, Andrea. An operator will contact you within a few minutes. The chatbot is now waiting for human support.
 
 ---
 
@@ -122,7 +122,7 @@ Tell me if it starts.
 
 **Customer:** Marta.
 
-**Bot:** I've logged your case, Marta. An operator will contact you within a few minutes.
+**Bot:** I've logged your case, Marta. An operator will contact you within a few minutes. The chatbot is now waiting for human support.
 
 ---
 
@@ -146,7 +146,7 @@ Tell me if it starts.
 
 **Customer:** Luis.
 
-**Bot:** I've logged your case, Luis. An operator will contact you within a few minutes.
+**Bot:** I've logged your case, Luis. An operator will contact you within a few minutes. The chatbot is now waiting for human support.
 
 ---
 
@@ -166,7 +166,7 @@ Tell me if it starts.
 
 **Customer:** Anna.
 
-**Bot:** I've logged your case, Anna. An operator will contact you within a few minutes.
+**Bot:** I've logged your case, Anna. An operator will contact you within a few minutes. The chatbot is now waiting for human support.
 
 ---
 
@@ -186,7 +186,7 @@ Tell me if it starts.
 
 **Customer:** Card 8821, I'm Jordi.
 
-**Bot:** I've logged your case, Jordi. An operator will contact you within a few minutes.
+**Bot:** I've logged your case, Jordi. An operator will contact you within a few minutes. The chatbot is now waiting for human support.
 
 ---
 
@@ -230,7 +230,7 @@ Tell me if it starts.
 
 **Customer:** Mireia.
 
-**Bot:** I've logged your case, Mireia. An operator will contact you within a few minutes.
+**Bot:** I've logged your case, Mireia. An operator will contact you within a few minutes. The chatbot is now waiting for human support.
 
 ---
 

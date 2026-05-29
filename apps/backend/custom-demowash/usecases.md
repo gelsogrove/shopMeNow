@@ -94,7 +94,7 @@ Dime si arranca.
 
 **Cliente:** Andrea.
 
-**Bot:** He registrado la incidencia, Andrea. Un operador te contactará en unos minutos.
+**Bot:** He registrado la incidencia, Andrea. Un operador te contactará en unos minutos. El chatbot queda en espera del soporte humano.
 
 ---
 
@@ -122,7 +122,7 @@ Dime si arranca.
 
 **Cliente:** Marta.
 
-**Bot:** He registrado la incidencia, Marta. Un operador te contactará en unos minutos.
+**Bot:** He registrado la incidencia, Marta. Un operador te contactará en unos minutos. El chatbot queda en espera del soporte humano.
 
 ---
 
@@ -146,7 +146,7 @@ Dime si arranca.
 
 **Cliente:** Luis.
 
-**Bot:** He registrado la incidencia, Luis. Un operador te contactará en unos minutos.
+**Bot:** He registrado la incidencia, Luis. Un operador te contactará en unos minutos. El chatbot queda en espera del soporte humano.
 
 ---
 
@@ -166,7 +166,7 @@ Dime si arranca.
 
 **Cliente:** Anna.
 
-**Bot:** He registrado la incidencia, Anna. Un operador te contactará en unos minutos.
+**Bot:** He registrado la incidencia, Anna. Un operador te contactará en unos minutos. El chatbot queda en espera del soporte humano.
 
 ---
 
@@ -186,7 +186,7 @@ Dime si arranca.
 
 **Cliente:** Tarjeta 8821, soy Jordi.
 
-**Bot:** He registrado la incidencia, Jordi. Un operador te contactará en unos minutos.
+**Bot:** He registrado la incidencia, Jordi. Un operador te contactará en unos minutos. El chatbot queda en espera del soporte humano.
 
 ---
 
@@ -230,7 +230,7 @@ Dime si arranca.
 
 **Cliente:** Mireia.
 
-**Bot:** He registrado la incidencia, Mireia. Un operador te contactará en unos minutos.
+**Bot:** He registrado la incidencia, Mireia. Un operador te contactará en unos minutos. El chatbot queda en espera del soporte humano.
 
 ---
 

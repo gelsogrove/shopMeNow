@@ -94,7 +94,7 @@ Digues-me si arrenca.
 
 **Client:** Andrea.
 
-**Bot:** He registrat la incidència, Andrea. Un operador et contactarà en uns minuts.
+**Bot:** He registrat la incidència, Andrea. Un operador et contactarà en uns minuts. El chatbot queda en espera del suport humà.
 
 ---
 
@@ -122,7 +122,7 @@ Digues-me si arrenca.
 
 **Client:** Marta.
 
-**Bot:** He registrat la incidència, Marta. Un operador et contactarà en uns minuts.
+**Bot:** He registrat la incidència, Marta. Un operador et contactarà en uns minuts. El chatbot queda en espera del suport humà.
 
 ---
 
@@ -146,7 +146,7 @@ Digues-me si arrenca.
 
 **Client:** Luis.
 
-**Bot:** He registrat la incidència, Luis. Un operador et contactarà en uns minuts.
+**Bot:** He registrat la incidència, Luis. Un operador et contactarà en uns minuts. El chatbot queda en espera del suport humà.
 
 ---
 
@@ -166,7 +166,7 @@ Digues-me si arrenca.
 
 **Client:** Anna.
 
-**Bot:** He registrat la incidència, Anna. Un operador et contactarà en uns minuts.
+**Bot:** He registrat la incidència, Anna. Un operador et contactarà en uns minuts. El chatbot queda en espera del suport humà.
 
 ---
 
@@ -186,7 +186,7 @@ Digues-me si arrenca.
 
 **Client:** Targeta 8821, sóc el Jordi.
 
-**Bot:** He registrat la incidència, Jordi. Un operador et contactarà en uns minuts.
+**Bot:** He registrat la incidència, Jordi. Un operador et contactarà en uns minuts. El chatbot queda en espera del suport humà.
 
 ---
 
@@ -230,7 +230,7 @@ Digues-me si arrenca.
 
 **Client:** Mireia.
 
-**Bot:** He registrat la incidència, Mireia. Un operador et contactarà en uns minuts.
+**Bot:** He registrat la incidència, Mireia. Un operador et contactarà en uns minuts. El chatbot queda en espera del suport humà.
 
 ---
 

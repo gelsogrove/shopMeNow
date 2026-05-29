@@ -94,7 +94,7 @@ Diz-me se arranca.
 
 **Cliente:** Andrea.
 
-**Bot:** Registei o teu caso, Andrea. Um operador vai contactar-te dentro de poucos minutos.
+**Bot:** Registei o teu caso, Andrea. Um operador vai contactar-te dentro de poucos minutos. O chatbot fica em espera do apoio humano.
 
 ---
 
@@ -122,7 +122,7 @@ Diz-me se arranca.
 
 **Cliente:** Marta.
 
-**Bot:** Registei o teu caso, Marta. Um operador vai contactar-te dentro de poucos minutos.
+**Bot:** Registei o teu caso, Marta. Um operador vai contactar-te dentro de poucos minutos. O chatbot fica em espera do apoio humano.
 
 ---
 
@@ -146,7 +146,7 @@ Diz-me se arranca.
 
 **Cliente:** Luis.
 
-**Bot:** Registei o teu caso, Luis. Um operador vai contactar-te dentro de poucos minutos.
+**Bot:** Registei o teu caso, Luis. Um operador vai contactar-te dentro de poucos minutos. O chatbot fica em espera do apoio humano.
 
 ---
 
@@ -166,7 +166,7 @@ Diz-me se arranca.
 
 **Cliente:** Anna.
 
-**Bot:** Registei o teu caso, Anna. Um operador vai contactar-te dentro de poucos minutos.
+**Bot:** Registei o teu caso, Anna. Um operador vai contactar-te dentro de poucos minutos. O chatbot fica em espera do apoio humano.
 
 ---
 
@@ -186,7 +186,7 @@ Diz-me se arranca.
 
 **Cliente:** Cartão 8821, sou o Jordi.
 
-**Bot:** Registei o teu caso, Jordi. Um operador vai contactar-te dentro de poucos minutos.
+**Bot:** Registei o teu caso, Jordi. Um operador vai contactar-te dentro de poucos minutos. O chatbot fica em espera do apoio humano.
 
 ---
 
@@ -230,7 +230,7 @@ Diz-me se arranca.
 
 **Cliente:** Mireia.
 
-**Bot:** Registei o teu caso, Mireia. Um operador vai contactar-te dentro de poucos minutos.
+**Bot:** Registei o teu caso, Mireia. Um operador vai contactar-te dentro de poucos minutos. O chatbot fica em espera do apoio humano.
 
 ---
 

@@ -3,6 +3,7 @@ import { PageLayout } from "@/components/layout/PageLayout"
 import { ClientSheet } from "@/components/shared/ClientSheet"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
+import { MessageTranslationToggle } from "@/components/shared/MessageTranslationToggle"
 import { NotificationDialog } from "@/components/shared/NotificationDialog"
 import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
 import { WhatsAppIcon } from "@/components/shared/WhatsAppIcon"
@@ -1639,6 +1640,20 @@ export function ChatPage() {
                     const isBlockedMessage =
                       message.deliveryStatus === "blocked"
 
+                    // Parse debugInfo once and reuse: drives the operator
+                    // translation tooltip (originalContent + originalLanguage
+                    // persisted at send time) and the language-flag pair.
+                    const debugInfo = (() => {
+                      const dbg = message.metadata?.debugInfo
+                      if (!dbg) return null
+                      if (typeof dbg !== "string") return dbg as any
+                      try { return JSON.parse(dbg) } catch { return null }
+                    })()
+                    const originalContent: string | null =
+                      debugInfo?.originalContent || null
+                    const originalLanguage: string | null =
+                      debugInfo?.originalLanguage || null
+
                     const getMessageStyle = () => {
                       // 🛑 BLOCKED: Security Agent blocked this message
                       if (isBlockedMessage) {
@@ -1747,6 +1762,34 @@ export function ChatPage() {
                               </>
                             )
                           })()}
+
+                          {/* 🌍 Translation toggle:
+                              - Operator messages translated to the customer's
+                                language → reveal the original text the
+                                operator typed (no network call).
+                              - Other messages (customer/bot) → fetch the
+                                translation in the operator's preferred
+                                language on first open, then cache. */}
+                          {!isBlockedMessage && (
+                            isOperatorMessage && originalContent ? (
+                              <MessageTranslationToggle
+                                mode="original"
+                                messageId={message.id}
+                                content={message.content}
+                                originalContent={originalContent}
+                                sourceLanguage={originalLanguage}
+                                variant="operator"
+                              />
+                            ) : !isOperatorMessage ? (
+                              <MessageTranslationToggle
+                                mode="translate"
+                                messageId={message.id}
+                                content={message.content}
+                                sourceLanguage={selectedChat?.language || null}
+                                variant={isAgentMessage ? "operator" : "customer"}
+                              />
+                            ) : null
+                          )}
 
                           <div className="flex justify-end items-center mt-1">
                             <div className="flex items-center gap-1">

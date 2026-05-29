@@ -417,6 +417,38 @@ export const chatRouter = (chatController: ChatController): express.Router => {
 
   /**
    * @swagger
+   * /api/chat/translate-message:
+   *   post:
+   *     summary: Translate a single message into the logged-in user's preferred language
+   *     description: |
+   *       Lazy translation for the message tooltip in the operator chat UI.
+   *       The operator hovers a customer/bot message, the UI calls this
+   *       endpoint, the translated text is rendered inline and cached
+   *       client-side (no need to retranslate on subsequent hovers).
+   *     tags: [Chat]
+   *     security:
+   *       - bearerAuth: []
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required: [content]
+   *             properties:
+   *               content: { type: string, description: "Raw message content" }
+   *               sourceLanguage: { type: string, description: "ISO 2-letter source language (optional — auto-detected when missing)" }
+   *     responses:
+   *       200:
+   *         description: Translated text
+   */
+  router.post(
+    "/translate-message",
+    asyncHandler(chatController.translateMessage.bind(chatController))
+  )
+
+  /**
+   * @swagger
    * /api/chat/{sessionId}:
    *   delete:
    *     summary: Delete a chat session and all its messages

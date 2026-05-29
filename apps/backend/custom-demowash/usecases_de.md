@@ -94,7 +94,7 @@ Sag mir, ob sie startet.
 
 **Kunde:** Andrea.
 
-**Bot:** Ich habe deinen Fall aufgenommen, Andrea. Ein Mitarbeiter wird dich in wenigen Minuten kontaktieren.
+**Bot:** Ich habe deinen Fall aufgenommen, Andrea. Ein Mitarbeiter wird dich in wenigen Minuten kontaktieren. Der Chatbot wartet jetzt auf den menschlichen Support.
 
 ---
 
@@ -122,7 +122,7 @@ Sag mir, ob sie startet.
 
 **Kunde:** Marta.
 
-**Bot:** Ich habe deinen Fall aufgenommen, Marta. Ein Mitarbeiter wird dich in wenigen Minuten kontaktieren.
+**Bot:** Ich habe deinen Fall aufgenommen, Marta. Ein Mitarbeiter wird dich in wenigen Minuten kontaktieren. Der Chatbot wartet jetzt auf den menschlichen Support.
 
 ---
 
@@ -146,7 +146,7 @@ Sag mir, ob sie startet.
 
 **Kunde:** Luis.
 
-**Bot:** Ich habe deinen Fall aufgenommen, Luis. Ein Mitarbeiter wird dich in wenigen Minuten kontaktieren.
+**Bot:** Ich habe deinen Fall aufgenommen, Luis. Ein Mitarbeiter wird dich in wenigen Minuten kontaktieren. Der Chatbot wartet jetzt auf den menschlichen Support.
 
 ---
 
@@ -166,7 +166,7 @@ Sag mir, ob sie startet.
 
 **Kunde:** Anna.
 
-**Bot:** Ich habe deinen Fall aufgenommen, Anna. Ein Mitarbeiter wird dich in wenigen Minuten kontaktieren.
+**Bot:** Ich habe deinen Fall aufgenommen, Anna. Ein Mitarbeiter wird dich in wenigen Minuten kontaktieren. Der Chatbot wartet jetzt auf den menschlichen Support.
 
 ---
 
@@ -186,7 +186,7 @@ Sag mir, ob sie startet.
 
 **Kunde:** Karte 8821, ich bin Jordi.
 
-**Bot:** Ich habe deinen Fall aufgenommen, Jordi. Ein Mitarbeiter wird dich in wenigen Minuten kontaktieren.
+**Bot:** Ich habe deinen Fall aufgenommen, Jordi. Ein Mitarbeiter wird dich in wenigen Minuten kontaktieren. Der Chatbot wartet jetzt auf den menschlichen Support.
 
 ---
 
@@ -230,7 +230,7 @@ Sag mir, ob sie startet.
 
 **Kunde:** Mireia.
 
-**Bot:** Ich habe deinen Fall aufgenommen, Mireia. Ein Mitarbeiter wird dich in wenigen Minuten kontaktieren.
+**Bot:** Ich habe deinen Fall aufgenommen, Mireia. Ein Mitarbeiter wird dich in wenigen Minuten kontaktieren. Der Chatbot wartet jetzt auf den menschlichen Support.
 
 ---
 

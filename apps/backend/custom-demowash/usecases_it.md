@@ -94,7 +94,7 @@ Dimmi se parte.
 
 **Cliente:** Andrea.
 
-**Bot:** Ho registrato il caso, Andrea. Un operatore ti contatterà entro pochi minuti.
+**Bot:** Ho registrato il caso, Andrea. Un operatore ti contatterà entro pochi minuti. Il chatbot rimane in attesa del supporto umano.
 
 ---
 
@@ -122,7 +122,7 @@ Dimmi se parte.
 
 **Cliente:** Marta.
 
-**Bot:** Ho registrato il caso, Marta. Un operatore ti contatterà entro pochi minuti.
+**Bot:** Ho registrato il caso, Marta. Un operatore ti contatterà entro pochi minuti. Il chatbot rimane in attesa del supporto umano.
 
 ---
 
@@ -146,7 +146,7 @@ Dimmi se parte.
 
 **Cliente:** Luis.
 
-**Bot:** Ho registrato il caso, Luis. Un operatore ti contatterà entro pochi minuti.
+**Bot:** Ho registrato il caso, Luis. Un operatore ti contatterà entro pochi minuti. Il chatbot rimane in attesa del supporto umano.
 
 ---
 
@@ -166,7 +166,7 @@ Dimmi se parte.
 
 **Cliente:** Anna.
 
-**Bot:** Ho registrato il caso, Anna. Un operatore ti contatterà entro pochi minuti.
+**Bot:** Ho registrato il caso, Anna. Un operatore ti contatterà entro pochi minuti. Il chatbot rimane in attesa del supporto umano.
 
 ---
 
@@ -186,7 +186,7 @@ Dimmi se parte.
 
 **Cliente:** Carta 8821, sono Jordi.
 
-**Bot:** Ho registrato il caso, Jordi. Un operatore ti contatterà entro pochi minuti.
+**Bot:** Ho registrato il caso, Jordi. Un operatore ti contatterà entro pochi minuti. Il chatbot rimane in attesa del supporto umano.
 
 ---
 
@@ -230,7 +230,7 @@ Dimmi se parte.
 
 **Cliente:** Mireia.
 
-**Bot:** Ho registrato il caso, Mireia. Un operatore ti contatterà entro pochi minuti.
+**Bot:** Ho registrato il caso, Mireia. Un operatore ti contatterà entro pochi minuti. Il chatbot rimane in attesa del supporto umano.
 
 ---
 

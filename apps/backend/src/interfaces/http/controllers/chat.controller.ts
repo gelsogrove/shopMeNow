@@ -1006,7 +1006,123 @@ export class ChatController {
     }
   }
 
+  /**
+   * Translate a single chat message into the logged-in operator's preferred
+   * language. Used by the chat UI as a lazy on-hover translation tooltip so
+   * the operator can read customer / bot messages written in a foreign
+   * language without changing the stored message itself.
+   *
+   * Body: { content: string, sourceLanguage?: string }
+   * Returns: { translated: string, targetLanguage: string }
+   */
+  async translateMessage(req: Request, res: Response): Promise<void> {
+    try {
+      const { content, sourceLanguage } = req.body as {
+        content?: string
+        sourceLanguage?: string
+      }
+      const user = (req as any).user as { language?: string } | undefined
+
+      if (!content || typeof content !== "string" || !content.trim()) {
+        res.status(400).json({ success: false, error: "content is required" })
+        return
+      }
+
+      // Map User.language (3-letter codes in the DB) → ISO 639-1.
+      const targetLanguage = mapUserLangToIso(user?.language) || "en"
+
+      // No-op if source matches target — return as-is so the client can
+      // still cache the response and skip future fetches for this message.
+      if (sourceLanguage && sourceLanguage.toLowerCase() === targetLanguage) {
+        res.status(200).json({
+          success: true,
+          data: { translated: content, targetLanguage, alreadyMatches: true },
+        })
+        return
+      }
+
+      const llmConfig = getLLMConfig("openai/gpt-4o-mini")
+      const langName = ISO_LANG_NAMES[targetLanguage] || targetLanguage
+      const response = await axios.post(
+        `${llmConfig.baseURL}/chat/completions`,
+        {
+          model: llmConfig.model,
+          temperature: 0,
+          messages: [
+            {
+              role: "system",
+              content: `Translate the following text to ${langName}. Reply with ONLY the translated text, no explanations, no quotes.`,
+            },
+            { role: "user", content },
+          ],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${llmConfig.apiKey}`,
+            "Content-Type": "application/json",
+          },
+        }
+      )
+      const translated =
+        response.data.choices?.[0]?.message?.content?.trim() || ""
+
+      if (!translated) {
+        res.status(502).json({
+          success: false,
+          error: "Translation upstream returned empty",
+        })
+        return
+      }
+
+      res.status(200).json({
+        success: true,
+        data: { translated, targetLanguage },
+      })
+    } catch (error: any) {
+      logger.error("[CHAT-TRANSLATE] Failed:", error?.message || error)
+      res.status(500).json({
+        success: false,
+        error: "Translation failed",
+      })
+    }
+  }
+
   // 🗑️ REMOVED: sendWhatsAppMessage method (dead code)
   // WhatsApp messages sent directly via WhatsAppDirectSendService
   // This ensures: 1) Debug Mode is respected, 2) Security Agent validates, 3) Billing is tracked
+}
+
+// ── Translation helpers ─────────────────────────────────────────────────────
+// User.language stores 3-letter codes (ENG/ITA/ESP/POR/FRA/DEU) but the rest
+// of the system speaks ISO 639-1 (en/it/es/pt/fr/de). One central mapping so
+// future endpoints stay consistent.
+const USER_LANG_TO_ISO: Record<string, string> = {
+  ENG: "en",
+  ITA: "it",
+  ESP: "es",
+  POR: "pt",
+  FRA: "fr",
+  DEU: "de",
+  CAT: "ca",
+}
+
+const ISO_LANG_NAMES: Record<string, string> = {
+  en: "English",
+  it: "Italian",
+  es: "Spanish",
+  pt: "Portuguese",
+  fr: "French",
+  de: "German",
+  ca: "Catalan",
+  ar: "Arabic",
+  zh: "Chinese",
+}
+
+function mapUserLangToIso(userLang: string | undefined | null): string | null {
+  if (!userLang) return null
+  const upper = userLang.toUpperCase().trim()
+  if (USER_LANG_TO_ISO[upper]) return USER_LANG_TO_ISO[upper]
+  // Fall back to the 2-letter form if the DB already stored an ISO code.
+  if (upper.length === 2) return upper.toLowerCase()
+  return null
 }

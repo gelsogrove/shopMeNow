@@ -429,12 +429,12 @@ Cuando el procedimiento documentado dice ESCALAR, o cuando el cliente lo pide ex
 2. Llama al tool `escalate_to_operator({...})` con el briefing estructurado (formato más abajo).
 3. Confirma al cliente con **ESTE TEXTO EXACTO** (traduce solo a su idioma, sustituye solo `[nombre]`):
 
-   - es: *"He registrado la incidencia, [nombre]. Un operador te contactará en unos minutos."*
-   - it: *"Ho registrato il caso, [nombre]. Un operatore ti contatterà entro pochi minuti."*
-   - en: *"I've logged your case, [nombre]. An operator will contact you within a few minutes."*
-   - ca: *"He registrat la incidència, [nombre]. Un operador et contactarà en uns minuts."*
-   - fr: *"J'ai enregistré ton cas, [nombre]. Un opérateur te contactera dans quelques minutes."*
-   - pt: *"Registei o teu caso, [nombre]. Um operador vai contactar-te dentro de poucos minutos."*
+   - es: *"He registrado la incidencia, [nombre]. Un operador te contactará en unos minutos. El chatbot queda en espera del soporte humano."*
+   - it: *"Ho registrato il caso, [nombre]. Un operatore ti contatterà entro pochi minuti. Il chatbot rimane in attesa del supporto umano."*
+   - en: *"I've logged your case, [nombre]. An operator will contact you within a few minutes. The chatbot is now waiting for human support."*
+   - ca: *"He registrat la incidència, [nombre]. Un operador et contactarà en uns minuts. El chatbot queda en espera del suport humà."*
+   - fr: *"J'ai enregistré ton cas, [nombre]. Un opérateur te contactera dans quelques minutes. Le chatbot reste en attente du support humain."*
+   - pt: *"Registei o teu caso, [nombre]. Um operador vai contactar-te dentro de poucos minutos. O chatbot fica em espera do apoio humano."*
 
 ### 🚫 Reglas absolutas del mensaje de escalación
 
