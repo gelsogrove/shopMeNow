@@ -2122,8 +2122,12 @@ export function LoginPage() {
                       <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                       Interactive Demo
                     </div>
-                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
-                      {t("demo.title")}
+                    {/* Brand wordmark — "Demo" in near-black, "Wash" in
+                        brand green. Not translated: it's the demo tenant
+                        name, same lockup used inside the playground popup. */}
+                    <h3 className="text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">
+                      <span className="text-slate-900">Demo</span>
+                      <span className="text-green-600">Wash</span>
                     </h3>
                     <p className="text-xl text-slate-600 leading-relaxed text-justify">
                       {t("demo.subtitle")}

@@ -520,6 +520,7 @@ function TopBar({
   leftSlot,
   title,
   hideUserChip,
+  customChatbotId,
 }: {
   user: PlaygroundUser
   onLogout: () => void
@@ -527,12 +528,38 @@ function TopBar({
   leftSlot?: React.ReactNode
   title?: string
   hideUserChip?: boolean
+  // When set to "demowash", the top-left "Playground" wordmark is
+  // replaced by the DemoWash brand lockup plus the public demo
+  // credentials underneath. This makes it obvious to a visitor on
+  // /demo/demowash that they're inside a sandbox tenant.
+  customChatbotId?: string | null
 }) {
+  const isDemowash = customChatbotId === "demowash"
   return (
     <header className="bg-emerald-700 text-white px-6 py-3 flex justify-between items-center shadow shrink-0 z-10">
       <div className="flex items-center gap-4">
         {leftSlot}
-        <h1 className="text-xl font-bold">Playground</h1>
+        {isDemowash ? (
+          <div className="flex flex-col leading-tight">
+            <div className="text-xl font-extrabold tracking-tight">
+              <span className="text-white">Demo</span>
+              <span className="text-emerald-200">Wash</span>
+            </div>
+            <div className="text-[10px] text-emerald-100/85 font-medium tracking-wide">
+              <span className="opacity-80">demo access ·</span>{" "}
+              <span className="opacity-80">user</span>{" "}
+              <code className="bg-emerald-900/40 px-1 rounded font-mono">
+                demo
+              </code>{" "}
+              <span className="opacity-80">pwd</span>{" "}
+              <code className="bg-emerald-900/40 px-1 rounded font-mono">
+                Admin123
+              </code>
+            </div>
+          </div>
+        ) : (
+          <h1 className="text-xl font-bold">Playground</h1>
+        )}
       </div>
       <div className="flex items-center gap-3">
         {rightSlot}
@@ -1638,6 +1665,7 @@ function ChatScreen({
         onLogout={onLogout}
         title={workspaceName}
         hideUserChip={customChatbotId === "demowash"}
+        customChatbotId={customChatbotId}
         rightSlot={
           <div className="flex items-center gap-2">
             <button
@@ -3094,6 +3122,7 @@ function KanbanScreen({
         onLogout={onLogout}
         title={workspaceName}
         hideUserChip={customChatbotId === "demowash"}
+        customChatbotId={customChatbotId}
         leftSlot={
           <Link
             to="/demo/ecolaundry"
