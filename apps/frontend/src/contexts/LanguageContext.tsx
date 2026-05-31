@@ -161,6 +161,7 @@ const translations = {
     "demo.title": "Demo live",
     "demo.subtitle": "DemoWash è una rete di lavanderie self-service in franchising fittizia, con più sedi in Cataluña. Prova il chatbot come se fossi un cliente: chiedi orari, prezzi o segnala un problema, e vedi come il caso scala all'operatore umano con traduzione in tempo reale.",
     "demo.button": "Prova la nostra demo",
+    "demo.accessHint": "Lasciaci i tuoi contatti: ti inviamo via email le credenziali per provare la demo.",
     
     // Integration Section
     "integration.crm.title": "Integrazione CRM personalizzata",
@@ -810,6 +811,7 @@ const translations = {
     "demo.title": "Live demo",
     "demo.subtitle": "DemoWash is a fictional franchise network of self-service laundromats with several locations in Catalonia. Try the chatbot like a real customer would: ask about opening hours, prices, report an issue, and see how the case escalates to a human operator with real-time translation.",
     "demo.button": "Try our demo",
+    "demo.accessHint": "Leave us your contact details and we'll email you the credentials to try the demo.",
     
     // Integration Section
     "integration.crm.title": "Custom CRM integration",
@@ -1345,6 +1347,7 @@ const translations = {
     "demo.title": "Demo en vivo",
     "demo.subtitle": "DemoWash es una red ficticia de lavanderías self-service en franquicia, con varias sedes en Cataluña. Prueba el chatbot como si fueras un cliente real: pregunta horarios, precios, reporta una incidencia, y mira cómo el caso escala a un operador humano con traducción en tiempo real.",
     "demo.button": "Prueba nuestra demo",
+    "demo.accessHint": "Déjanos tus datos de contacto y te enviaremos por email las credenciales para probar la demo.",
     
     // Integration Section
     "integration.crm.title": "Integración CRM personalizada",
