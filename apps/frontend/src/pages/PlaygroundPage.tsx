@@ -383,6 +383,21 @@ const LOGIN_LANG_OPTIONS = [
   { code: "de", label: "Deutsch" },
 ] as const
 
+// Localized label for the right-side panel header. Mirrors the 7 supported
+// usecases languages so the panel title tracks the language picked at login.
+const USE_CASES_LABEL: Record<
+  (typeof LOGIN_LANG_OPTIONS)[number]["code"],
+  string
+> = {
+  es: "Casos de uso",
+  ca: "Casos d'ús",
+  it: "Casi d'uso",
+  en: "Use Cases",
+  fr: "Cas d'usage",
+  pt: "Casos de uso",
+  de: "Anwendungsfälle",
+}
+
 // Best-effort detect of the user's browser language. Returns one of the
 // supported codes above, falling back to Spanish (the demo's source lang)
 // when the navigator language isn't in the list.
@@ -2131,7 +2146,7 @@ function ChatScreen({
         <section className="hidden lg:flex col-span-4 bg-white rounded-xl shadow flex-col overflow-hidden min-h-0">
           <div className="px-4 py-2 bg-emerald-600 text-white font-semibold shrink-0 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <span>Use Cases</span>
+              <span>{USE_CASES_LABEL[usecasesLang] ?? USE_CASES_LABEL.es}</span>
               {customChatbotId === "demowash" && (
                 <button
                   type="button"
@@ -2484,11 +2499,6 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         title: "Escala al operador",
         body: "Si hace falta un humano, el caso pasa al **operador de la sede** que, gracias a la **traducción en tiempo real**, habla con el cliente en su idioma — eliminando las barreras lingüísticas.",
       },
-      {
-        icon: "🎯",
-        title: "Vale para cualquier negocio",
-        body: "Autolavados · Centros estéticos · Gimnasios · Hoteles · Eventos · Coworkings · y mucho más.",
-      },
     ],
   },
   it: {
@@ -2518,11 +2528,6 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         icon: "🤝",
         title: "Scala all'operatore",
         body: "Se serve un umano, il caso passa all'**operatore della sede** che, grazie alla **traduzione in tempo reale**, parla con il cliente nella sua lingua — eliminando le barriere linguistiche.",
-      },
-      {
-        icon: "🎯",
-        title: "Adatto a qualsiasi business",
-        body: "Autolavaggi · Centri estetici · Palestre · Hotel · Eventi · Coworking · e molto altro.",
       },
     ],
   },
@@ -2554,11 +2559,6 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         title: "Escalates to a human",
         body: "If a human is needed, the case goes to the **local operator** who, thanks to **real-time translation**, talks to the customer in their own language — wiping out language barriers.",
       },
-      {
-        icon: "🎯",
-        title: "Fits any business",
-        body: "Car washes · Beauty salons · Gyms · Hotels · Events · Coworking · and many more.",
-      },
     ],
   },
   fr: {
@@ -2588,11 +2588,6 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         icon: "🤝",
         title: "Transfert à l'opérateur",
         body: "Si un humain est nécessaire, le cas passe à l'**opérateur local** qui, grâce à la **traduction en temps réel**, parle au client dans sa langue — supprimant les barrières linguistiques.",
-      },
-      {
-        icon: "🎯",
-        title: "S'adapte à tout métier",
-        body: "Lavages auto · Instituts de beauté · Salles de sport · Hôtels · Événements · Coworking · et bien plus.",
       },
     ],
   },
@@ -2624,11 +2619,6 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         title: "Encaminha ao operador",
         body: "Se for preciso um humano, o caso passa ao **operador local** que, graças à **tradução em tempo real**, fala com o cliente na sua língua — eliminando as barreiras linguísticas.",
       },
-      {
-        icon: "🎯",
-        title: "Serve para qualquer negócio",
-        body: "Lavagens auto · Estéticas · Ginásios · Hotéis · Eventos · Coworking · e muito mais.",
-      },
     ],
   },
   ca: {
@@ -2659,11 +2649,6 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         title: "Escala a l'operador",
         body: "Si cal un humà, el cas passa a l'**operador de la seu** que, gràcies a la **traducció en temps real**, parla amb el client en la seva llengua — eliminant les barreres lingüístiques.",
       },
-      {
-        icon: "🎯",
-        title: "Va bé per a qualsevol negoci",
-        body: "Bugaderies · Estètiques · Gimnasos · Hotels · Esdeveniments · Coworking · i molt més.",
-      },
     ],
   },
   de: {
@@ -2693,11 +2678,6 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
         icon: "🤝",
         title: "Übergibt an den Mitarbeiter",
         body: "Wird ein Mensch gebraucht, geht der Fall an den **lokalen Mitarbeiter**, der dank **Echtzeit-Übersetzung** mit dem Kunden in dessen Sprache spricht — Sprachbarrieren weg.",
-      },
-      {
-        icon: "🎯",
-        title: "Passt zu jedem Geschäft",
-        body: "Autowaschanlagen · Beauty-Salons · Fitnessstudios · Hotels · Events · Coworking · und vieles mehr.",
       },
     ],
   },
