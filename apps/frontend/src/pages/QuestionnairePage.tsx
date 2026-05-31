@@ -69,6 +69,12 @@ const QT: Record<Lang, Record<string, string>> = {
     reminders_opt1: "Sì, mi interessa",
     reminders_opt2: "No, non mi interessa",
 
+    // Step: Demo request — closing ask. "Sì" → vogliamo inviargli la demo.
+    demo_title: "Prova la nostra demo",
+    demo_q: "Vuoi che ti inviamo una demo per testare il nostro prodotto? Ti manderemo le credenziali di accesso via email, così potrai provare eChatbot in prima persona.",
+    demo_opt1: "Sì, inviatemi la demo",
+    demo_opt2: "No, per ora no",
+
     // Step 3: Widget
     widget_title: "Chat Widget",
     widget_q: "Il Widget di eChatbot permette di integrare una chat intelligente direttamente nel tuo sito web, utilizzando lo stesso chatbot che hai configurato per WhatsApp. I visitanti possono iniziare una conversazione senza lasciare il sito e il chatbot risponde in tempo reale.",
@@ -209,6 +215,12 @@ const QT: Record<Lang, Record<string, string>> = {
     reminders_opt1: "Yes, I'm interested",
     reminders_opt2: "No, not interested",
 
+    // Step: Demo request — closing ask. "Yes" → we want to send them the demo.
+    demo_title: "Try our demo",
+    demo_q: "Want us to send you a demo to test our product? We'll email you the access credentials so you can try eChatbot first-hand.",
+    demo_opt1: "Yes, send me the demo",
+    demo_opt2: "No, not for now",
+
     widget_title: "Chat Widget",
     widget_q: "eChatbot's Widget lets you integrate a smart chat directly into your website, using the same chatbot you've configured for WhatsApp. Visitors can start a conversation without leaving your site, and the chatbot responds in real time.",
     widget_opt1: "Yes, I want a widget on my website",
@@ -339,6 +351,12 @@ const QT: Record<Lang, Record<string, string>> = {
     reminders_opt1: "Sí, me interesa",
     reminders_opt2: "No, no me interesa",
 
+    // Step: Demo request — closing ask. "Sí" → queremos enviarle la demo.
+    demo_title: "Prueba nuestra demo",
+    demo_q: "¿Quieres que te enviemos una demo para probar nuestro producto? Te mandaremos las credenciales de acceso por email para que pruebes eChatbot en primera persona.",
+    demo_opt1: "Sí, envíame la demo",
+    demo_opt2: "No, por ahora no",
+
     widget_title: "Widget de Chat",
     widget_q: "El Widget de eChatbot permite integrar un chat inteligente directamente en tu sitio web, utilizando el mismo chatbot que has configurado para WhatsApp. Los visitantes pueden iniciar una conversación sin salir del sitio y el chatbot responde en tiempo real.",
     widget_opt1: "Sí, quiero el widget en mi web",
@@ -468,6 +486,12 @@ const QT: Record<Lang, Record<string, string>> = {
     reminders_q: "Precisa de configurar lembretes para os seus clientes? Como prazos de pagamento, reuniões ou compromissos? Com a funcionalidade de agendamento do eChatbot pode automatizar envios direcionados no WhatsApp no momento certo, para cada cliente.",
     reminders_opt1: "Sim, tenho interesse",
     reminders_opt2: "Não, não tenho interesse",
+
+    // Step: Demo request — closing ask. "Sim" → queremos enviar a demo.
+    demo_title: "Experimente a nossa demo",
+    demo_q: "Quer que enviemos uma demo para testar o nosso produto? Enviaremos as credenciais de acesso por email para que possa experimentar o eChatbot em primeira mão.",
+    demo_opt1: "Sim, enviem-me a demo",
+    demo_opt2: "Não, por agora não",
 
     widget_title: "Widget de Chat",
     widget_q: "O Widget do eChatbot permite integrar um chat inteligente diretamente no seu site, utilizando o mesmo chatbot que você configurou para o WhatsApp. Os visitantes podem iniciar uma conversa sem sair do site e o chatbot responde em tempo real.",
@@ -766,7 +790,23 @@ function buildSteps(T: Record<string, string>): StepDef[] {
       type: "textarea",
       image: "/survery-altro.png",
     },
-    // ── 13. Interesse ───────────────────────────────────────────────────
+    // ── 13. Demo request ────────────────────────────────────────────────
+    // Closing ask before the interest rating. A "yes" tells us the lead
+    // wants demo access; we read answers.stepDemo on the submitted survey
+    // and mail the credentials manually after qualifying.
+    {
+      id: "stepDemo",
+      icon: "🚀",
+      titleKey: "demo_title",
+      questionKey: "demo_q",
+      type: "radio",
+      image: "/demo.png",
+      options: [
+        { value: "yes", label: T.demo_opt1, emoji: "✅" },
+        { value: "no", label: T.demo_opt2, emoji: "❌" },
+      ],
+    },
+    // ── 14. Interesse ───────────────────────────────────────────────────
     {
       id: "stepInterest",
       icon: "⭐",

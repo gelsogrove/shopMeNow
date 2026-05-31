@@ -2184,6 +2184,7 @@ model OnboardingQuestionnaire {
   stepHelpful           String?  // "yes" | "maybe" | "exploring"
   stepInterest          String?  // "0" | "1" | "2" | "3" | "4" | "5" (stars rating)
   stepOther             String?  // free text
+  stepDemo              String?  // "yes" | "no" — lead wants demo credentials emailed
   lang                  String?  // "it" | "en" | "es" | "pt"
   wantsContact          Boolean  @default(false)
 

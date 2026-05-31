@@ -34,6 +34,7 @@ export class OnboardingQuestionnaireController {
         stepHelpful,
         stepInterest,
         stepOther,
+        stepDemo,
         wantsContact,
         lang,
       } = req.body
@@ -65,6 +66,7 @@ export class OnboardingQuestionnaireController {
           stepHelpful: stepHelpful || null,
           stepInterest: stepInterest || null,
           stepOther: stepOther || null,
+          stepDemo: stepDemo || null,
           lang: lang || null,
           wantsContact: wantsContact === true || wantsContact === "true",
           status: "NEW",
@@ -354,6 +356,7 @@ export class OnboardingQuestionnaireController {
       <tr><td>Will it help?</td><td>${record.stepHelpful || "—"}</td></tr>
       <tr><td>Interest (0-5 stars)</td><td>${record.stepInterest ? "⭐".repeat(parseInt(record.stepInterest)) + ` (${record.stepInterest}/5)` : "—"}</td></tr>
       <tr><td>Other notes</td><td>${record.stepOther || "—"}</td></tr>
+      <tr><td>Demo requested?</td><td>${record.stepDemo === "yes" ? "🚀 YES — send credentials by email" : "❌ NO"}</td></tr>
       <tr><td>Wants contact?</td><td>${record.wantsContact ? "✅ YES" : "❌ NO"}</td></tr>
     </table>
 
@@ -364,7 +367,7 @@ export class OnboardingQuestionnaireController {
 
     await this.emailService.sendContactEmail({
       to: adminEmail,
-      subject: `[eChatbot] New questionnaire from ${record.fullName || "anonymous"}`,
+      subject: `[eChatbot] New questionnaire from ${record.fullName || "anonymous"}${record.stepDemo === "yes" ? " — DEMO REQUESTED" : ""}`,
       message: `New questionnaire submission from ${record.fullName || "anonymous"}`,
       html,
     })

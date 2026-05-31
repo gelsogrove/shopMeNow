@@ -158,7 +158,7 @@ const DEFAULT_LANGUAGE: KnownLang = 'es'
 //     are overwhelmingly Chinese in our context.
 const LANG_MARKERS: Record<KnownLang, RegExp> = {
   it: /\b(che|non|sono|della|dello|delle|degli|gli|le|un|una|uno|perché|cosa|come|dove|quando|oggi|ieri|lavatrice|sapone|ciao|quanto|costa|lavare|panni|prezzo|prezzi|grazie|sto|aiuto|funziona|vorrei|posso)\b/i,
-  es: /\b(hola|que|no|son|de|del|los|las|un|una|uno|porque|qué|cómo|dónde|cuándo|hoy|ayer|lavadora|jabón|cuánto|cuesta|lavar|ropa|precio|precios|gracias|está|estoy|necesito|ayuda|puedo|tenéis|dónde|aquí)\b/i,
+  es: /\b(hola|que|no|son|de|del|los|las|un|una|uno|porque|qué|cómo|dónde|cuándo|hoy|ayer|lavadora|jabón|cuánto|cuesta|lavar|ropa|precio|precios|gracias|está|estoy|necesito|ayuda|puedo|tenéis|dónde|aquí|secadora|huele|quemado)\b/i,
   en: /\b(the|and|is|are|was|were|you|i|we|they|it|what|how|where|when|today|yesterday|washing|machine|soap)\b/i,
   ca: /\b(el|la|els|les|un|una|uns|unes|i|que|no|és|som|tenim|aquest|aquesta|aquests|aquestes|perquè|què|com|on|quan|avui|ahir|rentadora|sabó|hola)\b/i,
   pt: /\b(o|a|os|as|um|uma|uns|umas|e|que|não|é|são|está|estão|porque|como|onde|quando|hoje|ontem|máquina|sabão|olá|você|vocês)\b/i,
