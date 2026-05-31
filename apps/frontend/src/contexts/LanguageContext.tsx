@@ -1843,6 +1843,7 @@ const translations = {
     "demo.title": "Demo ao vivo",
     "demo.subtitle": "A DemoWash é uma rede fictícia de lavandarias self-service em franchising, com várias unidades na Catalunha. Experimenta o chatbot como faria um cliente real: pergunta horários, preços, reporta uma ocorrência e vê como o caso é encaminhado para um operador humano com tradução em tempo real.",
     "demo.button": "Experimente nossa demo",
+    "demo.accessHint": "Deixa-nos os teus contactos e enviamos-te por email as credenciais para experimentar a demo.",
     
     // Integration Section
     "integration.crm.title": "Integração CRM personalizada",
