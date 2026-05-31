@@ -314,7 +314,19 @@ export function formatStateForPrompt(state: SessionState): string {
     fields.push(`Machine type: ${state.machineType}`)
   }
   if (state.displayCode) fields.push(`Display: ${state.displayCode}`)
-  if (state.language) fields.push(`Language: ${state.language}`)
+  if (state.language) {
+    fields.push(`Language: ${state.language}`)
+    // Strong, explicit instruction: the language is already decided
+    // deterministically by the regex detector (seedLanguageIfNeeded). The LLM
+    // must NOT pick its own — it writes the ENTIRE reply in this language and
+    // never mixes languages, regardless of the language of any example /
+    // plantilla in the cached prompt (those are structural, translate them).
+    fields.push(
+      `🌐 REPLY LANGUAGE = ${state.language}. Write your ENTIRE reply in this language. ` +
+        `Never mix languages in one reply. The examples/plantillas in the prompt are ` +
+        `structural only — always translate them into ${state.language}.`,
+    )
+  }
   if (fields.length === 0) return ''
   return ['', '═══ SESSION STATE ═══', ...fields, ''].join('\n')
 }
