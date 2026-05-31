@@ -1407,9 +1407,8 @@ export function LoginPage() {
             </div>
           </div>
 
-          {showLoginCard && (
           <div
-            className="relative w-full max-w-sm lg:w-[24rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8 lg:order-2 min-h-[32rem] flex mx-auto lg:mx-0"
+            className={`relative w-full max-w-sm lg:w-[24rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8 lg:order-2 min-h-[32rem] flex mx-auto lg:mx-0 ${showLoginCard ? "" : "hidden"}`}
             onClickCapture={() => {
               if (isLoginViewDisabled) {
                 setWipFeature("login")
@@ -1894,7 +1893,6 @@ export function LoginPage() {
             </div>
         </div>
       </div>
-          )}
 
       {/* Smart Push AI Section */}
       <div className="py-20 bg-white">
@@ -2870,7 +2868,7 @@ export function LoginPage() {
       </div>
       </main>
 
-      <SiteFooter language={language} />
+      <SiteFooter language={language as "it" | "en" | "es" | "pt"} />
 
       {/* ⏸️ WhatsApp Floating Button - DISABLED (will reactivate later) */}
       {/* 
