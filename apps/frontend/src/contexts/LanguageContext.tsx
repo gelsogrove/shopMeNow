@@ -159,7 +159,7 @@ const translations = {
     
     // Demo Section
     "demo.title": "Demo live",
-    "demo.subtitle": "Bellitalia vende prodotti italiani. Prova il loro agente AI, chiedi dei prodotti e scopri come la conversazione ti guida verso gli articoli giusti. Puoi aggiungere prodotti al carrello e vivere un'esperienza completa end-to-end.",
+    "demo.subtitle": "DemoWash è una rete di lavanderie self-service in franchising fittizia, con più sedi in Cataluña. Prova il chatbot come se fossi un cliente: chiedi orari, prezzi o segnala un problema, e vedi come il caso scala all'operatore umano con traduzione in tempo reale.",
     "demo.button": "Prova la nostra demo",
     
     // Integration Section
@@ -808,7 +808,7 @@ const translations = {
     
     // Demo Section
     "demo.title": "Live demo",
-    "demo.subtitle": "Bellitalia sells Italian products. Try their AI agent, ask about products, and see how the conversation guides you to the right items. You can add products to the cart and experience a real end-to-end flow.",
+    "demo.subtitle": "DemoWash is a fictional franchise network of self-service laundromats with several locations in Catalonia. Try the chatbot like a real customer would: ask about opening hours, prices, report an issue, and see how the case escalates to a human operator with real-time translation.",
     "demo.button": "Try our demo",
     
     // Integration Section
@@ -1343,7 +1343,7 @@ const translations = {
     
     // Demo Section
     "demo.title": "Demo en vivo",
-    "demo.subtitle": "Bellitalia vende productos italianos. Prueba su agente IA, pregunta sobre productos y descubre cómo la conversación te guía hacia los artículos correctos. Puedes agregar productos al carrito y experimentar un flujo completo de principio a fin.",
+    "demo.subtitle": "DemoWash es una red ficticia de lavanderías self-service en franquicia, con varias sedes en Cataluña. Prueba el chatbot como si fueras un cliente real: pregunta horarios, precios, reporta una incidencia, y mira cómo el caso escala a un operador humano con traducción en tiempo real.",
     "demo.button": "Prueba nuestra demo",
     
     // Integration Section
@@ -1838,7 +1838,7 @@ const translations = {
     
     // Demo Section
     "demo.title": "Demo ao vivo",
-    "demo.subtitle": "Bellitalia vende produtos italianos. Experimente o agente IA deles, pergunte sobre produtos e veja como a conversa te guia para os itens certos. Você pode adicionar produtos ao carrinho e experimentar um fluxo completo de ponta a ponta.",
+    "demo.subtitle": "A DemoWash é uma rede fictícia de lavandarias self-service em franchising, com várias unidades na Catalunha. Experimenta o chatbot como faria um cliente real: pergunta horários, preços, reporta uma ocorrência e vê como o caso é encaminhado para um operador humano com tradução em tempo real.",
     "demo.button": "Experimente nossa demo",
     
     // Integration Section

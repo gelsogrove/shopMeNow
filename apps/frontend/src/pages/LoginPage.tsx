@@ -2130,7 +2130,7 @@ export function LoginPage() {
                     </p>
                   </div>
                   
-                  <div className="pt-4 flex justify-center lg:justify-start">
+                  <div className="pt-4 flex flex-col items-center lg:items-start gap-3">
                     <Button
                       type="button"
                       disabled={isDemoDisabled}
@@ -2141,7 +2141,17 @@ export function LoginPage() {
                           setShowWIPModal(true)
                           return
                         }
-                        window.open("https://wa.me/34602119358", "_blank", "noopener,noreferrer")
+                        // Open the DemoWash playground (public demo). The
+                        // /demo/<slug> URL auto-signs the visitor in as the
+                        // bound demo user — no manual login needed — but we
+                        // also surface the credentials below the button so
+                        // it's clear this is a demo environment, not a
+                        // production tenant.
+                        window.open(
+                          "https://www.echatbot.ai/demo/demowash",
+                          "_blank",
+                          "noopener,noreferrer",
+                        )
                       }}
                     >
                       <span className="flex items-center gap-3">
@@ -2156,6 +2166,25 @@ export function LoginPage() {
                         <span>{t("demo.button")}</span>
                       </span>
                     </Button>
+                    {!isDemoDisabled && (
+                      <div className="text-xs text-slate-500 flex items-center gap-3 flex-wrap">
+                        <span className="text-slate-400 uppercase tracking-wider font-semibold text-[10px]">
+                          Demo access
+                        </span>
+                        <span>
+                          <span className="text-slate-400">user</span>{" "}
+                          <code className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded font-mono text-[11px]">
+                            demo
+                          </code>
+                        </span>
+                        <span>
+                          <span className="text-slate-400">pwd</span>{" "}
+                          <code className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded font-mono text-[11px]">
+                            Admin123
+                          </code>
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
