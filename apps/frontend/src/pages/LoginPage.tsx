@@ -313,6 +313,9 @@ export function LoginPage() {
   // (`/`) we hide it — the landing should expose a CTA to the public
   // demo + the /request-access form, not a self-service login portal.
   const showLoginCard = location.pathname === "/login"
+  // The marketing homepage. Pricing is hidden here (sales-led pivot);
+  // it still renders on /login and any other route using this page.
+  const isHome = location.pathname === "/"
 
   // Prefill credentials only in development
   const isDev = import.meta.env.MODE === "development"
@@ -1027,13 +1030,19 @@ export function LoginPage() {
         <div className="max-w-7xl mx-auto px-4 lg:px-12">
           <div className="hidden lg:flex justify-end pt-3">
             <div className="flex items-center gap-4">
-              <a
-                href="#pricing"
-                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
-              >
-                {t("nav.pricing")}
-              </a>
-              <span className="text-slate-900 text-xs font-semibold">|</span>
+              {/* Pricing link hidden on the marketing home (`/`) — sales-led
+                  pivot. Still shown on /login and other routes. */}
+              {!isHome && (
+                <>
+                  <a
+                    href="#pricing"
+                    className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
+                  >
+                    {t("nav.pricing")}
+                  </a>
+                  <span className="text-slate-900 text-xs font-semibold">|</span>
+                </>
+              )}
               <a
                 href="/contact"
                 className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
@@ -1256,41 +1265,7 @@ export function LoginPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-              ) : (
-                <div className="flex items-center gap-2 md:gap-3">
-                  <Button
-                    variant="ghost"
-                    className="hidden sm:flex text-xs md:text-sm font-medium text-slate-700 hover:text-green-600 hover:bg-green-50 transition-colors px-2 md:px-3"
-                    onClick={() => {
-                      if (isAdminBypass || !workingInProgress) {
-                        setActiveTab('signin')
-                        // Scroll to login form and focus first input
-                        setTimeout(() => {
-                          const loginSection = document.querySelector('[data-form="signin"]')
-                          loginSection?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                          setTimeout(() => loginEmailInputRef.current?.focus(), 300)
-                        }, 100)
-                      } else {
-                        setWipFeature('login')
-                        setShowWIPModal(true)
-                      }
-                    }}
-                  >
-                    {t("nav.signin")}
-                  </Button>
-                  <Button
-                    className="bg-green-600 hover:bg-green-700 text-white font-medium text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 rounded-lg shadow-sm transition-all hover:shadow-md"
-                    onClick={() => {
-                      // Sales-led pivot: no more self-service onboarding
-                      // wizard. The primary CTA leads to the lead-capture
-                      // form; we follow up manually after qualifying.
-                      navigate("/request-access")
-                    }}
-                  >
-                    {t("nav.getStarted")}
-                  </Button>
-                </div>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -1327,8 +1302,8 @@ export function LoginPage() {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-stretch">
-          <div className="hidden lg:flex justify-center lg:justify-start items-center w-full lg:flex-1">
-            <div className="relative w-full max-w-3xl lg:mr-2">
+          <div className={`hidden lg:flex items-center w-full lg:flex-1 ${showLoginCard ? "justify-center lg:justify-start" : "justify-center"}`}>
+            <div className={`relative w-full ${showLoginCard ? "max-w-3xl lg:mr-2" : "max-w-4xl mx-auto"}`}>
               <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-2 scale-105" />
             <div className="relative rounded-[32px] shadow-2xl bg-transparent overflow-visible">
                 <div className="relative rounded-[28px] overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50">
@@ -2078,22 +2053,25 @@ export function LoginPage() {
         </div>
       </motion.section>
 
-      {/* Pricing Section */}
-      <div id="pricing" className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
-        <PricingPlans
-          currentPlan={currentPlanForPricing || null}
-          onChangePlan={() => navigate("/billing")}
-          onStartFreeTrial={() => {
-            if (isRegisterDisabled) {
-              setWipFeature('register')
-              setShowWIPModal(true)
-              return
-            }
-            setShowOnboardingWizard(true)
-          }}
-          disableTrial={isRegisterDisabled}
-        />
-      </div>
+      {/* Pricing Section — hidden on the marketing home (`/`) per
+          sales-led pivot; remains available on /login and elsewhere. */}
+      {!isHome && (
+        <div id="pricing" className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
+          <PricingPlans
+            currentPlan={currentPlanForPricing || null}
+            onChangePlan={() => navigate("/billing")}
+            onStartFreeTrial={() => {
+              if (isRegisterDisabled) {
+                setWipFeature('register')
+                setShowWIPModal(true)
+                return
+              }
+              setShowOnboardingWizard(true)
+            }}
+            disableTrial={isRegisterDisabled}
+          />
+        </div>
+      )}
 
       {/* FAQ Section */}
       <HomeFAQ />
@@ -2149,17 +2127,11 @@ export function LoginPage() {
                           setShowWIPModal(true)
                           return
                         }
-                        // Open the DemoWash playground (public demo). The
-                        // /demo/<slug> URL auto-signs the visitor in as the
-                        // bound demo user — no manual login needed — but we
-                        // also surface the credentials below the button so
-                        // it's clear this is a demo environment, not a
-                        // production tenant.
-                        window.open(
-                          "https://www.echatbot.ai/demo/demowash",
-                          "_blank",
-                          "noopener,noreferrer",
-                        )
+                        // Sales-led demo: instead of exposing shared
+                        // credentials, the visitor leaves their contact on
+                        // /request-access. We then send a personal demo
+                        // login by email after qualifying the lead.
+                        navigate("/request-access")
                       }}
                     >
                       <span className="flex items-center gap-3">
@@ -2175,23 +2147,9 @@ export function LoginPage() {
                       </span>
                     </Button>
                     {!isDemoDisabled && (
-                      <div className="text-xs text-slate-500 flex items-center gap-3 flex-wrap">
-                        <span className="text-slate-400 uppercase tracking-wider font-semibold text-[10px]">
-                          Demo access
-                        </span>
-                        <span>
-                          <span className="text-slate-400">user</span>{" "}
-                          <code className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded font-mono text-[11px]">
-                            demo
-                          </code>
-                        </span>
-                        <span>
-                          <span className="text-slate-400">pwd</span>{" "}
-                          <code className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded font-mono text-[11px]">
-                            Admin123
-                          </code>
-                        </span>
-                      </div>
+                      <p className="text-xs text-slate-500">
+                        {t("demo.accessHint")}
+                      </p>
                     )}
                   </div>
                 </div>
