@@ -268,6 +268,12 @@ export function updateLanguageOnTurn(sessionId: string, text: string): string {
     return resolved
   }
 
+  // Weak signal guard: a single marker hit on short/ambiguous input
+  // (e.g. "la 4" → matches `la` in ca/fr) is not enough to flip a sticky
+  // language. Require ≥2 hits to override. If no current language exists
+  // yet, fall through so we can seed from even a weak signal.
+  if (current && maxScore < 2) return current
+
   // Collect all languages tied at the top.
   const topLangs = LANG_ORDER.filter((l) => scores[l] === maxScore)
 
