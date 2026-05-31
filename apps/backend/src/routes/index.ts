@@ -109,6 +109,7 @@ import {
 import { faqsRouter } from "../interfaces/http/routes/faqs.routes"
 import { feedbackRoutes } from "../interfaces/http/routes/feedback.routes"
 import { contactRoutes } from "../interfaces/http/routes/contact.routes"
+import { requestAccessRoutes } from "../interfaces/http/routes/request-access.routes"
 import filesRoutes from "../interfaces/http/routes/files.routes"
 import { pushRoutes } from "../interfaces/http/routes/push.routes"
 import { whatsappQueueRoutes } from "../interfaces/http/routes/whatsapp-queue.routes"
@@ -649,6 +650,9 @@ logger.info(
 // IMPORTANT: Must be mounted BEFORE customersRouter to prevent auth middleware interception
 router.use(contactRoutes())
 logger.info("✅ Registered contact route: /api/contact (public)")
+
+router.use(requestAccessRoutes())
+logger.info("✅ Registered request-access route: /api/request-access (public)")
 
 // 🔓 Google Calendar OAuth callback (public — workspaceId encoded in state param)
 // IMPORTANT: Must be mounted BEFORE customersRouter which adds authMiddleware to ALL routes

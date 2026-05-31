@@ -46,7 +46,7 @@ import {
 import { useEffect, useState, useRef, type FormEvent } from "react"
 import { motion } from "framer-motion"
 import { useForm } from "react-hook-form"
-import { Link, useNavigate, useSearchParams } from "react-router-dom"
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import * as z from "zod"
 import whatsappIcon from "@/assets/whatsapp.svg"
 import { toast } from "../lib/toast"
@@ -307,6 +307,12 @@ export function LoginPage() {
   }, [recaptchaSiteKey])
   
   const navigate = useNavigate()
+  const location = useLocation()
+  // Sales-led pivot: the auth card on the right is rendered only when
+  // the visitor explicitly lands on /login. On the marketing homepage
+  // (`/`) we hide it — the landing should expose a CTA to the public
+  // demo + the /request-access form, not a self-service login portal.
+  const showLoginCard = location.pathname === "/login"
 
   // Prefill credentials only in development
   const isDev = import.meta.env.MODE === "development"
@@ -1275,12 +1281,10 @@ export function LoginPage() {
                   <Button
                     className="bg-green-600 hover:bg-green-700 text-white font-medium text-xs md:text-sm px-3 md:px-4 py-1.5 md:py-2 rounded-lg shadow-sm transition-all hover:shadow-md"
                     onClick={() => {
-                      if (isAdminBypass || !workingInProgress) {
-                        setShowOnboardingWizard(true)
-                      } else {
-                        setWipFeature('register')
-                        setShowWIPModal(true)
-                      }
+                      // Sales-led pivot: no more self-service onboarding
+                      // wizard. The primary CTA leads to the lead-capture
+                      // form; we follow up manually after qualifying.
+                      navigate("/request-access")
                     }}
                   >
                     {t("nav.getStarted")}
@@ -1403,6 +1407,7 @@ export function LoginPage() {
             </div>
           </div>
 
+          {showLoginCard && (
           <div
             className="relative w-full max-w-sm lg:w-[24rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8 lg:order-2 min-h-[32rem] flex mx-auto lg:mx-0"
             onClickCapture={() => {
@@ -1889,6 +1894,7 @@ export function LoginPage() {
             </div>
         </div>
       </div>
+          )}
 
       {/* Smart Push AI Section */}
       <div className="py-20 bg-white">

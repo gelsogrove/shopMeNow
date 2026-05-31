@@ -189,6 +189,35 @@ export const contactLimiter = rateLimit({
 })
 
 /**
+ * Request Access (sales-led demo request) - Protezione spam form
+ *
+ * Sales-led pivot: the public landing surfaces a "Request a demo" form
+ * instead of a self-service Sign Up. This limiter prevents bots from
+ * spamming the endpoint with fake leads. Tighter than the contact form
+ * because demo requests trigger a manual sales follow-up.
+ *
+ * Allows 3 submissions per hour per IP.
+ */
+export const requestAccessLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 ora
+  max: 3, // 3 richieste per IP all'ora
+  message: "Too many demo requests, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn("Rate limit exceeded for request-access form", {
+      ip: req.ip,
+      path: req.path,
+    })
+    res.status(429).json({
+      error: "Too many requests",
+      message: "Too many demo requests. Please try again in 1 hour.",
+      retryAfter: 3600,
+    })
+  },
+})
+
+/**
  * Cart Token - Protezione generazione token
  *
  * Prevents cart token abuse.

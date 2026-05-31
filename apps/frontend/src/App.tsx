@@ -15,6 +15,19 @@ import { TeamCollaborationPage } from "@/pages/TeamCollaborationPage"
 import { PrivacyByDesignPage } from "@/pages/PrivacyByDesignPage"
 import { PricingPage } from "@/pages/PricingPage"
 import { ContactPage } from "@/pages/ContactPage"
+import RequestAccessPage from "@/pages/RequestAccessPage"
+import { storage } from "@/lib/storage"
+
+// Sales-led pivot: /pricing is no longer a public marketing page.
+// Authenticated users can still see their plan inside the app (Settings /
+// Billing). Unauthenticated visitors get sent to /login — pricing is now
+// part of the manual sales conversation, not a public price list.
+function PricingGuard() {
+  if (storage.getToken()) {
+    return <PricingPage />
+  }
+  return <Navigate to="/" replace />
+}
 import { NeapolisPage } from "@/pages/NeapolisPage"
 import OnboardingPage from "@/pages/OnboardingPage"
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom"
@@ -266,8 +279,11 @@ function AppWithProviders() {
                 <Route path="/auth">
                   {/* ✅ Preserve query params (e.g., ?admin=true) during redirect */}
                   <Route path="login" element={<AuthLoginRedirect />} />
-                  <Route path="signup" element={<Navigate to="/onboarding" replace />} />
-                  <Route path="register" element={<Navigate to="/onboarding" replace />} />
+                  {/* Sales-led pivot: no more self-service signup. Both
+                      legacy auth/signup and auth/register paths funnel
+                      visitors to the lead-capture form instead. */}
+                  <Route path="signup" element={<Navigate to="/request-access" replace />} />
+                  <Route path="register" element={<Navigate to="/request-access" replace />} />
                   <Route path="setup-2fa" element={<Setup2FAPage />} />
                   <Route path="verify-2fa" element={<Verify2FAPage />} />
                   <Route path="2fa-reset/:token" element={<TwoFactorResetPage />} />
@@ -310,8 +326,9 @@ function AppWithProviders() {
                 <Route path="/crm-integration" element={<CrmIntegrationPage />} />
                 <Route path="/team-collaboration" element={<TeamCollaborationPage />} />
                 <Route path="/privacy-by-design" element={<PrivacyByDesignPage />} />
-                <Route path="/pricing" element={<PricingPage />} />
+                <Route path="/pricing" element={<PricingGuard />} />
                 <Route path="/contact" element={<ContactPage />} />
+                <Route path="/request-access" element={<RequestAccessPage />} />
                 <Route path="/neapolis" element={<NeapolisPage />} />
                 {/* Direct route for /forgot-password to avoid 404 */}
                 <Route
@@ -505,14 +522,16 @@ function AppWithProviders() {
                   }
                 />
 
-                {/* Legacy login redirect */}
-                <Route
-                  path="/login"
-                  element={<Navigate to="/" replace />}
-                />
+                {/* Sales-led pivot: /login serves the full LoginPage
+                    with the auth card visible (existing customers entry
+                    point + Andrea's dev access). / serves the SAME
+                    LoginPage but with the auth card hidden — landing
+                    only, leads flow through /request-access. The card
+                    visibility is decided inside LoginPage via useLocation. */}
+                <Route path="/login" element={<LoginPage />} />
 
-                <Route path="/register" element={<Navigate to="/onboarding" replace />} />
-                <Route path="/signup" element={<Navigate to="/onboarding" replace />} />
+                <Route path="/register" element={<Navigate to="/request-access" replace />} />
+                <Route path="/signup" element={<Navigate to="/request-access" replace />} />
                 <Route
                   path="/registration-success"
                   element={<RegistrationSuccess />}

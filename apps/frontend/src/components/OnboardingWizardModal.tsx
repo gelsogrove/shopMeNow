@@ -206,17 +206,20 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
         setCreatingPhase(2)
         await new Promise(r => setTimeout(r, 700))
 
-        if (needsWhatsApp) {
-          goTo('qr-scan')
-        } else {
-          goTo('done')
-        }
+        // Sales-led pivot: the qr-scan step has been removed from the
+        // public wizard. WhatsApp setup (QR / provider config) is now
+        // done from Settings → WhatsApp Channel after the workspace is
+        // created, under direct guidance from the sales team. We jump
+        // straight to 'done' regardless of needsWhatsApp.
+        goTo('done')
       } catch (err: any) {
         const msg = err.response?.data?.error || err.message || 'Failed to create workspace'
         logger.error('[OnboardingWizard] workspace creation failed:', err)
         toast.error(msg)
         setWasenderStatus('failed')
-        goTo('qr-scan')
+        // Errors no longer route to qr-scan (removed); land on 'done'
+        // and let the user retry from Settings if needed.
+        goTo('done')
       }
     }
     run()

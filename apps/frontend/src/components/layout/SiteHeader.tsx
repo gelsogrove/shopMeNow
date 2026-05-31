@@ -254,16 +254,11 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
     <header className="bg-white shadow-sm sticky top-0 z-[100] overflow-visible">
       <div className="max-w-7xl mx-auto px-4 lg:px-12">
 
-        {/* Mini top-bar — identical to homepage */}
+        {/* Mini top-bar — sales-led pivot: only Contact link surfaced
+            publicly. Pricing is no longer a public page: it's discussed
+            during the manual onboarding follow-up, not on the landing. */}
         <div className="hidden lg:flex justify-end pt-3">
           <div className="flex items-center gap-4">
-            <Link
-              to="/pricing"
-              className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
-            >
-              {t.pricing}
-            </Link>
-            <span className="text-slate-900 text-xs font-semibold">|</span>
             <Link
               to="/contact"
               className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
@@ -449,17 +444,11 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                 </DropdownMenu>
               </div>
             ) : (
-              <div className="hidden lg:flex items-center gap-3">
-                <Link to="/" className="text-slate-700 hover:text-green-600 font-medium text-sm transition-colors">
-                  {t.signIn}
-                </Link>
-                <Link
-                  to="/onboarding"
-                  className="bg-green-600 hover:bg-green-700 text-white font-semibold px-5 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-sm"
-                >
-                  {t.getStarted}
-                </Link>
-              </div>
+              // Sales-led pivot: no public "Sign In" or "Get Started"
+              // buttons on the marketing header. Existing customers use
+              // /login directly; new leads go through /request-access
+              // (see hero CTAs below).
+              <div className="hidden lg:flex items-center gap-3" />
             )}
 
             {/* Mobile Menu Button */}
@@ -478,7 +467,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
             <nav className="flex flex-col gap-4">
               <Link to="/" className="font-medium text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.home}</Link>
               <Link to="/features" className="font-medium text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.features}</Link>
-              <Link to="/pricing" className="font-medium text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.pricing}</Link>
+              {/* /pricing removed from public mobile menu — sales-led pivot. */}
               <Link to="/contact" className="font-medium text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.contact}</Link>
 
               <div className="border-t border-slate-200 pt-4 mt-2">
@@ -558,8 +547,10 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                     </button>
                   </div>
                 ) : (
+                  // Sales-led pivot: mobile CTA points to the lead-capture
+                  // form instead of the (now disabled) self-service wizard.
                   <Link
-                    to="/onboarding"
+                    to="/request-access"
                     className="block text-center bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 rounded-xl shadow-lg transition-all"
                     onClick={() => setIsMenuOpen(false)}
                   >
