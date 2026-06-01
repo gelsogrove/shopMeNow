@@ -1,12 +1,10 @@
 import { DragDropContext, Draggable, Droppable, DropResult } from "@hello-pangea/dnd"
 import {
   ArrowLeft,
-  Check,
   Info,
   KanbanSquare,
   LogOut,
   MessageCircle,
-  Pencil,
   Plus,
   Send,
   ThumbsDown,
@@ -126,7 +124,6 @@ type ChatSession = {
 
 type Feedback = "like" | "dislike"
 
-const TITLE_STORAGE_KEY = "ecolaundry-demo-chat-titles"
 const FEEDBACK_STORAGE_KEY = "ecolaundry-demo-chat-feedback"
 const ORDER_STORAGE_KEY = "ecolaundry-demo-chat-order"
 
@@ -1084,97 +1081,6 @@ function TodoDetailModal({
 }
 
 // ----------------------------------------------------------------------------
-// CHAT TITLE EDIT — inline editor for the chat list header
-// ----------------------------------------------------------------------------
-// Demo-only overlay. The chat session has no `title` field on the backend
-// today; the value is stored in localStorage by the parent component.
-// When backend support is added, swap the prop callback for an API call.
-function ChatTitleEdit({
-  fallbackLabel,
-  currentTitle,
-  onSave,
-}: {
-  fallbackLabel: string
-  currentTitle: string | null
-  onSave: (next: string) => void
-}) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(currentTitle || "")
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (!editing) setDraft(currentTitle || "")
-  }, [currentTitle, editing])
-
-  useEffect(() => {
-    if (editing) inputRef.current?.focus()
-  }, [editing])
-
-  const commit = () => {
-    onSave(draft)
-    setEditing(false)
-  }
-
-  const cancel = () => {
-    setDraft(currentTitle || "")
-    setEditing(false)
-  }
-
-  if (editing) {
-    return (
-      <div
-        className="flex items-center gap-1 mb-0.5"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") commit()
-            if (e.key === "Escape") cancel()
-          }}
-          placeholder={fallbackLabel}
-          className="flex-1 min-w-0 text-sm border rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-emerald-500"
-        />
-        <button
-          onClick={commit}
-          className="p-0.5 text-emerald-600 hover:bg-emerald-100 rounded"
-          title="Save title"
-        >
-          <Check className="w-3.5 h-3.5" />
-        </button>
-        <button
-          onClick={cancel}
-          className="p-0.5 text-gray-500 hover:bg-gray-100 rounded"
-          title="Cancel"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    )
-  }
-
-  return (
-    <div className="flex items-center gap-1 mb-0.5 group/title">
-      <div className="font-medium text-sm truncate flex-1 min-w-0">
-        {currentTitle || fallbackLabel}
-      </div>
-      <button
-        onClick={(e) => {
-          e.stopPropagation()
-          setEditing(true)
-        }}
-        className="p-0.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded opacity-0 group-hover/title:opacity-100 transition shrink-0"
-        title="Edit chat title"
-      >
-        <Pencil className="w-3 h-3" />
-      </button>
-    </div>
-  )
-}
-
-// ----------------------------------------------------------------------------
 // CHAT SCREEN — main page
 // ----------------------------------------------------------------------------
 function ChatScreen({
@@ -1248,12 +1154,8 @@ function ChatScreen({
   // effect below ignores this id so the new chat stays selected even
   // before the backend echoes it back.
   const justCreatedSessionRef = useRef<string | null>(null)
-  // Demo-only overlays persisted in localStorage (no backend column today).
-  // When backend support lands, these move to ChatSession.title +
-  // ChatSession.feedback respectively.
-  const [chatTitles, setChatTitles] = useState<Record<string, string>>(() =>
-    readJsonMap<string>(TITLE_STORAGE_KEY),
-  )
+  // Demo-only overlay persisted in localStorage (no backend column today).
+  // When backend support lands, this moves to ChatSession.feedback.
   const [chatFeedback, setChatFeedback] = useState<Record<string, Feedback>>(
     () => readJsonMap<Feedback>(FEEDBACK_STORAGE_KEY),
   )
@@ -1267,17 +1169,6 @@ function ChatScreen({
   const persistChatOrder = useCallback((next: string[]) => {
     setChatOrderState(next)
     writeJsonArray(ORDER_STORAGE_KEY, next)
-  }, [])
-
-  const setChatTitle = useCallback((sessionId: string, title: string) => {
-    setChatTitles((prev) => {
-      const next = { ...prev }
-      const trimmed = title.trim()
-      if (trimmed) next[sessionId] = trimmed
-      else delete next[sessionId]
-      writeJsonMap(TITLE_STORAGE_KEY, next)
-      return next
-    })
   }, [])
 
   const toggleChatFeedback = useCallback(
@@ -1687,7 +1578,7 @@ function ChatScreen({
         {/* CHAT LIST — wider column (+80px) for chat title visibility */}
         <aside className="col-span-3 bg-white rounded-xl shadow flex flex-col overflow-hidden min-h-0 min-w-[280px]">
           <div className="px-3 py-2 bg-emerald-600 text-white shrink-0 flex items-center justify-between gap-2">
-            <span className="font-semibold text-sm">Chats</span>
+            <span className="font-semibold text-sm">Pruebas</span>
             <button
               onClick={() => setShowNewChat(true)}
               className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg text-sm font-medium flex items-center gap-1.5 shadow-sm transition"
@@ -1739,7 +1630,6 @@ function ChatScreen({
                 0
               )
               const hasTodos = linkedTodos.length > 0
-              const customTitle = chatTitles[s.id] || null
               return (
                 <Draggable key={s.id} draggableId={s.id} index={idx}>
                   {(draggableProvided, draggableSnapshot) => (
@@ -1762,12 +1652,8 @@ function ChatScreen({
                     className="w-full text-left px-3 py-2 pr-9 cursor-pointer"
                   >
                     <div className="flex items-center gap-1 mb-0.5">
-                      <div className="flex-1 min-w-0">
-                        <ChatTitleEdit
-                          fallbackLabel={primary}
-                          currentTitle={customTitle}
-                          onSave={(next) => setChatTitle(s.id, next)}
-                        />
+                      <div className="font-medium text-sm truncate flex-1 min-w-0">
+                        {primary}
                       </div>
                       {hasTodos && (
                         <button
@@ -1785,11 +1671,6 @@ function ChatScreen({
                         </button>
                       )}
                     </div>
-                    {customTitle && (
-                      <div className="text-[10px] text-gray-500 truncate">
-                        {primary}
-                      </div>
-                    )}
                     {secondary && (
                       <div className="text-[10px] text-gray-500 truncate">
                         {secondary}
