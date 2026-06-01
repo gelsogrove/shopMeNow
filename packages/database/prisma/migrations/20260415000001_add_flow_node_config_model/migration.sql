@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE "flow_node_configs" (
+CREATE TABLE IF NOT EXISTS "flow_node_configs" (
     "id" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
     "flowKey" TEXT NOT NULL,
@@ -18,10 +18,11 @@ CREATE TABLE "flow_node_configs" (
 );
 
 -- CreateIndex
-CREATE INDEX "flow_node_configs_workspaceId_idx" ON "flow_node_configs"("workspaceId");
+CREATE INDEX IF NOT EXISTS "flow_node_configs_workspaceId_idx" ON "flow_node_configs"("workspaceId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "flow_node_configs_workspaceId_flowKey_key" ON "flow_node_configs"("workspaceId", "flowKey");
+CREATE UNIQUE INDEX IF NOT EXISTS "flow_node_configs_workspaceId_flowKey_key" ON "flow_node_configs"("workspaceId", "flowKey");
 
--- AddForeignKey
+-- AddForeignKey (drop-then-add so it is idempotent on a partially-pushed DB)
+ALTER TABLE "flow_node_configs" DROP CONSTRAINT IF EXISTS "flow_node_configs_workspaceId_fkey";
 ALTER TABLE "flow_node_configs" ADD CONSTRAINT "flow_node_configs_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;

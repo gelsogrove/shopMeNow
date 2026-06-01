@@ -15,17 +15,22 @@
 --
 -- NOTE: invoice_number_seq (old sequence) is intentionally NOT created.
 --       The new invoice_year_sequences table replaces it entirely.
+--
+-- This migration runs WITHOUT a wrapping transaction (directive below):
+-- PostgreSQL requires new enum values to be committed before a later
+-- statement can use them (the ISSUER_* seed uses 'TEXT'). The original
+-- version used an explicit COMMIT;/BEGIN; mid-script, which is illegal
+-- inside Prisma's migration transaction and left this migration failed and
+-- partially applied. Every statement here is idempotent (IF NOT EXISTS /
+-- ON CONFLICT) so re-running on a partially-applied database is safe.
+
+-- prisma:no-transaction
 
 -- 1. Enum: CANCELLED subscription status
 ALTER TYPE "SubscriptionStatus" ADD VALUE IF NOT EXISTS 'CANCELLED';
 
 -- 2. Enum: TEXT config type for free-text platform settings
 ALTER TYPE "ConfigType" ADD VALUE IF NOT EXISTS 'TEXT';
-
--- PostgreSQL requires new enum values to be committed before use in the same session.
--- COMMIT the current transaction so 'TEXT' becomes available, then start a new one.
-COMMIT;
-BEGIN;
 
 -- 3. Table: invoice_year_sequences (replaces invoice_number_seq sequence)
 CREATE TABLE IF NOT EXISTS "invoice_year_sequences" (

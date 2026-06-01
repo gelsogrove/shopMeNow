@@ -5,6 +5,11 @@
 -- 1. Products: drop global @unique on slug, add compound @@unique([slug, workspaceId])
 --    Remove unused @@index([certifications]), add @@index([workspaceId, status])
 DROP INDEX IF EXISTS "products_slug_key";
+-- Drift guard: a prior `db push` may have created this as a plain unique
+-- INDEX (not a table CONSTRAINT). Drop both forms before re-adding so the
+-- migration is idempotent on a partially-pushed database.
+ALTER TABLE "products" DROP CONSTRAINT IF EXISTS "products_slug_workspaceId_key";
+DROP INDEX IF EXISTS "products_slug_workspaceId_key";
 ALTER TABLE "products" ADD CONSTRAINT "products_slug_workspaceId_key" UNIQUE ("slug", "workspaceId");
 DROP INDEX IF EXISTS "products_certifications_idx";
 CREATE INDEX IF NOT EXISTS "products_workspaceId_status_idx" ON "products"("workspaceId", "status");
@@ -12,6 +17,9 @@ CREATE INDEX IF NOT EXISTS "products_workspaceId_status_idx" ON "products"("work
 -- 2. Services: drop global @unique on code, add compound @@unique([code, workspaceId])
 --    Also add @@index([workspaceId])
 DROP INDEX IF EXISTS "services_code_key";
+-- Drift guard: same as products above — may exist as a plain unique INDEX.
+ALTER TABLE "services" DROP CONSTRAINT IF EXISTS "services_code_workspaceId_key";
+DROP INDEX IF EXISTS "services_code_workspaceId_key";
 ALTER TABLE "services" ADD CONSTRAINT "services_code_workspaceId_key" UNIQUE ("code", "workspaceId");
 CREATE INDEX IF NOT EXISTS "services_workspaceId_idx" ON "services"("workspaceId");
 
