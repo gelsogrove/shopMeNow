@@ -313,9 +313,13 @@ export function LoginPage() {
   // (`/`) we hide it — the landing should expose a CTA to the public
   // demo + the /request-access form, not a self-service login portal.
   const showLoginCard = location.pathname === "/login"
-  // The marketing homepage. Pricing is hidden here (sales-led pivot);
-  // it still renders on /login and any other route using this page.
-  const isHome = location.pathname === "/"
+  // The auth card is effectively usable only on /login AND when at least one
+  // of login/register is enabled (or admin bypass). When it is NOT usable,
+  // we treat the page as a pure marketing view: hide pricing, hide the empty
+  // card, and center the hero image into the freed space. This makes `/` and
+  // a flag-disabled `/login` behave identically (the public landing).
+  const loginCardUsable = showLoginCard && (!(isLoginDisabled && isRegisterDisabled) || isAdminBypass)
+  const isMarketingView = !loginCardUsable
 
   // Prefill credentials only in development
   const isDev = import.meta.env.MODE === "development"
@@ -1032,7 +1036,7 @@ export function LoginPage() {
             <div className="flex items-center gap-4">
               {/* Pricing link hidden on the marketing home (`/`) — sales-led
                   pivot. Still shown on /login and other routes. */}
-              {!isHome && (
+              {!isMarketingView && (
                 <>
                   <a
                     href="#pricing"
@@ -1302,8 +1306,8 @@ export function LoginPage() {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-stretch">
-          <div className={`hidden lg:flex items-center w-full lg:flex-1 ${showLoginCard ? "justify-center lg:justify-start" : "justify-center"}`}>
-            <div className={`relative w-full ${showLoginCard ? "max-w-3xl lg:mr-2" : "max-w-4xl mx-auto"}`}>
+          <div className={`hidden lg:flex items-center w-full lg:flex-1 ${loginCardUsable ? "justify-center lg:justify-start" : "justify-center"}`}>
+            <div className={`relative w-full ${loginCardUsable ? "max-w-3xl lg:mr-2" : "max-w-4xl mx-auto"}`}>
               <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-2 scale-105" />
             <div className="relative rounded-[32px] shadow-2xl bg-transparent overflow-visible">
                 <div className="relative rounded-[28px] overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50">
@@ -1383,7 +1387,7 @@ export function LoginPage() {
           </div>
 
           <div
-            className={`relative w-full max-w-sm lg:w-[24rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8 lg:order-2 min-h-[32rem] flex mx-auto lg:mx-0 ${showLoginCard ? "" : "hidden"}`}
+            className={`relative w-full max-w-sm lg:w-[24rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8 lg:order-2 min-h-[32rem] flex mx-auto lg:mx-0 ${loginCardUsable ? "" : "hidden"}`}
             onClickCapture={() => {
               if (isLoginViewDisabled) {
                 setWipFeature("login")
@@ -2055,7 +2059,7 @@ export function LoginPage() {
 
       {/* Pricing Section — hidden on the marketing home (`/`) per
           sales-led pivot; remains available on /login and elsewhere. */}
-      {!isHome && (
+      {!isMarketingView && (
         <div id="pricing" className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
           <PricingPlans
             currentPlan={currentPlanForPricing || null}
