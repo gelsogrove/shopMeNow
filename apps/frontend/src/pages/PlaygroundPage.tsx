@@ -2331,7 +2331,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "logo:demowash",
         title: "Pruébalo como un cliente",
-        body: "Esto es una **simulación en WhatsApp** del asistente virtual de **DemoWash**, una **red ficticia de lavanderías en franquicia** con sedes en Cataluña:\n\n**TERRASSA · RUBÍ · SANT CUGAT · BARCELONA**\n\nEscribe al chatbot y pruébalo como si fueras un cliente.",
+        body: "Esto es una **simulación en WhatsApp** del asistente virtual de **DemoWash**, una **red ficticia de lavanderías en franquicia** con sedes en Cataluña:\n\n**TERRASSA · RUBÍ · SANT CUGAT · BARCELONA**\n\nEscribe al chatbot y pruébalo como si fueras un usuario.",
       },
       {
         icon: "⚙️",
