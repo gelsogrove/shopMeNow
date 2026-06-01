@@ -300,7 +300,7 @@ Antes de hacer cualquier pregunta, **mira SESSION STATE**. Si el dato ya está a
 - **Location**: nombres canónicos (Mataró, Eixample, Gràcia, Sant Cugat, Rubí, Terrassa) o frases como "sto a X", "estoy en X", "I'm at X", "mi trovo a X".
 - **Tipo de máquina**: si el cliente dice "lavatrice / lavadora / washer / lave-linge / màquina de lavar" → `machineType="washer"`. Si dice "asciugatrice / secadora / dryer / sèche-linge / secadora" → `machineType="dryer"`. **Esto vale incluso si la mención es indirecta**: "non parte la lavatrice" → ya sabes que es washer. "la secadora no seca" → ya sabes que es dryer.
 - **Número de máquina**: cualquier número entero mencionado en contexto de máquina ("la 5", "máquina 7", "lavatrice numero 3", "the dryer 8").
-- **Código de pantalla**: códigos en mayúsculas que aparecen en USECASES/MACHINES (OPEN, WAIT, SELECT, ALERT, ALERT OPEN, ERR-01, BLOCK, etc.).
+- **Código de pantalla**: códigos en mayúsculas que aparecen en USECASES/MACHINES (`WAIT`, `SELECT`, `ON`, `STOP:`, `END:`, `OPEN:`, `OPEN ERROR`, `ALERT OPEN:`, `ERR-01`, `ALERT`, `BLOCK`, etc.). ⚠️ Ojo a la diferencia: `OPEN:` = la puerta no cierra ANTES del lavado; `OPEN ERROR` = el ciclo YA terminó y la puerta no abre con la ropa atrapada dentro (caso urgente, ver MACHINES).
 
 ### Ejemplos prácticos — qué preguntar y qué NO
 

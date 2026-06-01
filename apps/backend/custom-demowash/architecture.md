@@ -69,8 +69,9 @@ custom-demowash/
 - Regole cross-cutting: tarjeta vale solo dove l'hai comprata, faq mid-flow → riprendi flow, ecc.
 
 **`machines/washer.md`** (~1k token) — tutto ciò che riguarda la lavatrice come hardware:
-- Lista codici display (`SELECT`, `CHOICE PROG`, `ERROR OPEN`, `ALARM`, `ALARM OPEN`, `ERR-001`)
+- Lista codici display (`WAIT`, `SELECT`, `ON`, `T-28`, `STOP:`, `END:`, `120`, `OPEN:`, `OPEN ERROR`, `ALERT OPEN:`, `ERR-01`, `ALERT`/`BLOCK`)
 - Per ogni codice: significato, procedura di diagnosi step-by-step, quando escalare
+- ⚠️ Due casi porta DISTINTI: `OPEN:` (non chiude PRIMA del lavaggio) vs `OPEN ERROR` (porta bloccata DOPO il ciclo, roba intrappolata → escalation URGENTE). Vale identico per la secadora (`dryer.md`)
 - Procedura standard di pagamento
 - Alarmi tecnici → sempre escalation
 
