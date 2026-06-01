@@ -45,6 +45,31 @@ const CARD_LAST4_CTX_RE =
 // Spanish phone: optional +34 prefix + 9 digits starting with 6/7/8/9.
 const PHONE_ES_RE = /(?:\+34\s?)?[6789]\d{2}[\s.-]?\d{3}[\s.-]?\d{3}/g
 
+// Canonical venue names. Venue names are always written in Latin script, even
+// inside a message in another script (Chinese, Greek, Cyrillic…). The LLM
+// reliably understands them but does NOT always call remember({location}) when
+// the name is embedded in non-Latin text and it can answer without saving it
+// (BUG L) — and not even the stronger model fixes this consistently. So we
+// detect the venue deterministically here, by matching one of these 6 fixed
+// proper nouns (NOT keyword/intent detection — same idea as the PII pre-scan),
+// and seed `location` if the model didn't. Works in every language.
+const CANONICAL_VENUES = ['Sant Cugat', 'Eixample', 'Mataró', 'Gràcia', 'Terrassa', 'Rubí'] as const
+
+// Match a venue accent-insensitively and as a whole word. "Sant Cugat" first so
+// the two-word name isn't shadowed. Returns the canonical spelling or null.
+function detectVenue(message: string): string | null {
+  const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  const haystack = norm(message)
+  for (const venue of CANONICAL_VENUES) {
+    const needle = norm(venue)
+    // Word-ish boundary: not preceded/followed by a Latin letter (so it still
+    // fires when glued to non-Latin script, e.g. "在Eixample洗").
+    const re = new RegExp(`(?<![a-z])${needle.replace(/ /g, '\\s+')}(?![a-z])`, 'i')
+    if (re.test(haystack)) return venue
+  }
+  return null
+}
+
 // Generic international phone (defensive, less specific). Skipped to avoid
 // false positives on machine numbers. We rely on PHONE_ES_RE only.
 
@@ -163,6 +188,13 @@ export function processIncomingMessage(
   if (captured.cardFull) patch.cardFull = captured.cardFull
   if (captured.cardLast4) patch.cardLast4 = captured.cardLast4
   if (captured.phone) patch.phone = captured.phone
+  // Backstop for BUG L: if the message names a venue and we don't have one yet,
+  // seed it deterministically (the LLM may have skipped remember({location})).
+  // Only when location is still unset — never override a venue already chosen.
+  if (!state.location) {
+    const venue = detectVenue(rawMessage)
+    if (venue) patch.location = venue
+  }
   if (Object.keys(patch).length > 0) {
     updateState(sessionId, patch)
   }

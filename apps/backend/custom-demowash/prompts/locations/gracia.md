@@ -25,7 +25,7 @@
 - ✅ **Solo tarjeta de crédito/débito** — NO acepta efectivo, NO acepta tarjeta de fidelización.
 - Cobro datáfono: **Precio exacto**
 
-⚠️ **Importante**: en Gràcia **no hay máquina de fidelización ni se pueden usar monedas/billetes**. Solo tarjeta bancaria.
+⚠️ **Importante**: aquí **no hay máquina de fidelización ni se pueden usar monedas/billetes**. Solo tarjeta bancaria.
 
 ## Programas lavadora
 

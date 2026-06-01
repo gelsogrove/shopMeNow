@@ -398,35 +398,14 @@ const USE_CASES_LABEL: Record<
   de: "Anwendungsfälle",
 }
 
-// Best-effort detect of the user's browser language. Returns one of the
-// supported codes above, falling back to Spanish (the demo's source lang)
-// when the navigator language isn't in the list.
-function detectBrowserLang(): (typeof LOGIN_LANG_OPTIONS)[number]["code"] {
-  if (typeof navigator === "undefined") return "es"
-  const raw = (navigator.language || "es").toLowerCase().slice(0, 2)
-  const supported = LOGIN_LANG_OPTIONS.map((o) => o.code) as string[]
-  return (supported.includes(raw)
-    ? raw
-    : "es") as (typeof LOGIN_LANG_OPTIONS)[number]["code"]
-}
-
 function LoginScreen({ onLogin }: { onLogin: (u: PlaygroundUser) => void }) {
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
+  // The login language dropdown always defaults to Spanish (the demo's source
+  // language). The visitor can still change it from the dropdown before Login.
   const [lang, setLang] = useState<
     (typeof LOGIN_LANG_OPTIONS)[number]["code"]
-  >(() => {
-    if (typeof window === "undefined") return "es"
-    // Prefer a previously chosen language if the visitor logged in before;
-    // otherwise default to the browser language. Either way the user can
-    // override it from the dropdown before clicking Login.
-    const saved = localStorage.getItem("playgroundUsecasesLang")
-    const valid = LOGIN_LANG_OPTIONS.map((o) => o.code) as string[]
-    if (saved && valid.includes(saved)) {
-      return saved as (typeof LOGIN_LANG_OPTIONS)[number]["code"]
-    }
-    return detectBrowserLang()
-  })
+  >("es")
   const [error, setError] = useState("")
 
   const submit = (e: React.FormEvent) => {
