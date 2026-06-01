@@ -128,11 +128,17 @@ Dis-moi si elle démarre.
 
 ## La porte ne s'ouvre pas, le lavage est terminé
 
+> Écran typique : `OPEN ERROR`. Différent de `OPEN:` (porte qui ne ferme pas AVANT le lavage). S'applique de façon identique au lave-linge et au sèche-linge : le linge est déjà traité et coincé à l'intérieur — ne jamais proposer de changer de machine ni de relaver/resécher. C'est URGENT.
+
 **Client :** La porte ne s'ouvre pas, le lavage est déjà fini.
 
 **Bot :** Pas de souci. Quand le cycle se termine, la porte met quelques minutes à se déverrouiller. Depuis combien de temps le lavage est-il fini ?
 
 **Client :** Plus de 5 minutes.
+
+**Bot :** Tire la poignée fermement, parfois il faut un peu plus de force. Est-ce qu'elle s'est ouverte ?
+
+**Client :** Non, toujours bloquée.
 
 **Bot :** Dans quelle laverie es-tu ?
 
@@ -142,7 +148,7 @@ Dis-moi si elle démarre.
 
 **Client :** La 2.
 
-**Bot :** Comment t'appelles-tu ? Je transfère le cas à un opérateur pour déverrouiller la porte à distance.
+**Bot :** Comment t'appelles-tu ? Je transfère le cas en priorité à un opérateur pour déverrouiller la porte à distance.
 
 **Client :** Luis.
 

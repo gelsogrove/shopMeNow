@@ -128,11 +128,17 @@ Digues-me si arrenca.
 
 ## La porta no s'obre, el rentat ja ha acabat
 
+> Pantalla típica: `OPEN ERROR`. Diferent de `OPEN:` (porta que no tanca ABANS del rentat). S'aplica igual a la rentadora i a l'assecadora: la roba ja està processada i atrapada a dins — mai proposar canviar de màquina ni tornar a rentar/assecar. És URGENT.
+
 **Client:** La porta no s'obre, el rentat ja ha acabat.
 
 **Bot:** Tranquil·la. Quan el cicle acaba, la porta tarda uns minuts a desbloquejar-se. Quan fa que ha acabat el rentat?
 
 **Client:** Més de 5 minuts.
+
+**Bot:** Estira la maneta amb fermesa, de vegades necessita una mica més de força. S'ha obert?
+
+**Client:** No, segueix bloquejada.
 
 **Bot:** En quina bugaderia ets?
 
@@ -142,7 +148,7 @@ Digues-me si arrenca.
 
 **Client:** La 2.
 
-**Bot:** Com et dius? Passo el cas a un operador per desbloquejar la porta en remot.
+**Bot:** Com et dius? Passo el cas amb prioritat a un operador per desbloquejar la porta en remot.
 
 **Client:** Luis.
 

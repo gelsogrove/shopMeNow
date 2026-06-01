@@ -128,11 +128,17 @@ Diz-me se arranca.
 
 ## A porta não abre, a lavagem já terminou
 
+> Ecrã típico: `OPEN ERROR`. Diferente de `OPEN:` (porta que não fecha ANTES da lavagem). Aplica-se de forma idêntica à máquina de lavar e de secar: a roupa já está processada e presa lá dentro — nunca propor trocar de máquina nem voltar a lavar/secar. É URGENTE.
+
 **Cliente:** A porta não abre, a lavagem já terminou.
 
 **Bot:** Tranquila. Quando o ciclo termina, a porta demora uns minutos a destrancar. Há quanto tempo terminou a lavagem?
 
 **Cliente:** Mais de 5 minutos.
+
+**Bot:** Puxa a pega com firmeza, às vezes precisa de um pouco mais de força. Abriu?
+
+**Cliente:** Não, continua trancada.
 
 **Bot:** Em que lavandaria estás?
 
@@ -142,7 +148,7 @@ Diz-me se arranca.
 
 **Cliente:** A 2.
 
-**Bot:** Como te chamas? Encaminho o caso para um operador para destrancar a porta à distância.
+**Bot:** Como te chamas? Encaminho o caso com prioridade para um operador para destrancar a porta à distância.
 
 **Cliente:** Luis.
 

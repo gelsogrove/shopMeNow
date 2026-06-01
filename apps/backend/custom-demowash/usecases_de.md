@@ -128,11 +128,17 @@ Sag mir, ob sie startet.
 
 ## Die Tür geht nicht auf, der Waschgang ist fertig
 
+> Typische Anzeige: `OPEN ERROR`. Anders als `OPEN:` (Tür, die VOR dem Waschgang nicht schließt). Gilt identisch für Waschmaschine und Trockner: die Wäsche ist bereits fertig und drinnen eingeschlossen — niemals anbieten, die Maschine zu wechseln oder erneut zu waschen/trocknen. Das ist DRINGEND.
+
 **Kunde:** Die Tür geht nicht auf, der Waschgang ist schon fertig.
 
 **Bot:** Kein Grund zur Sorge. Wenn der Zyklus endet, dauert es ein paar Minuten, bis die Tür entriegelt. Wie lange ist der Waschgang her?
 
 **Kunde:** Über 5 Minuten.
+
+**Bot:** Zieh den Griff kräftig, manchmal braucht es etwas mehr Kraft. Ist sie aufgegangen?
+
+**Kunde:** Nein, immer noch blockiert.
 
 **Bot:** In welchem Waschsalon bist du?
 
@@ -142,7 +148,7 @@ Sag mir, ob sie startet.
 
 **Kunde:** Die 2.
 
-**Bot:** Wie heißt du? Ich gebe den Fall an einen Mitarbeiter weiter, der die Tür aus der Ferne entriegelt.
+**Bot:** Wie heißt du? Ich gebe den Fall mit Priorität an einen Mitarbeiter weiter, der die Tür aus der Ferne entriegelt.
 
 **Kunde:** Luis.
 
