@@ -60,7 +60,19 @@ export function getState(sessionId: string): SessionState {
   return entry(sessionId).state
 }
 
-export function updateState(sessionId: string, patch: Partial<SessionState>): SessionState {
+export function updateState(
+  sessionId: string,
+  patch: Partial<SessionState>,
+  // When `mirror` is false the state is updated in RAM but NO backend patch is
+  // emitted. Use this for DEFAULTS / SEEDS that must not be persisted to the
+  // Customers table — e.g. seeding the language from the host's `customer.language`
+  // (itself only a phone-prefix guess) or the sticky-default fallback when a turn
+  // has no language markers. Only a REAL content detection should write the
+  // Customers.language column, otherwise an ambiguous message ("5", "Barcelona")
+  // would demote a correctly detected language back to the default.
+  opts: { mirror?: boolean } = {},
+): SessionState {
+  const { mirror = true } = opts
   const e = entry(sessionId)
   for (const k of Object.keys(patch) as Array<keyof SessionState>) {
     const v = patch[k]
@@ -78,7 +90,7 @@ export function updateState(sessionId: string, patch: Partial<SessionState>): Se
         const MIRRORED_KEYS: ReadonlyArray<keyof SessionState> = [
           'name', 'language', 'companyName', 'address', 'phone', 'notes',
         ]
-        if (MIRRORED_KEYS.includes(k)) {
+        if (mirror && MIRRORED_KEYS.includes(k)) {
           const patchKey = k as PatchKey
           e.patches = e.patches.filter((p) => p.key !== patchKey)
           e.patches.push({ key: patchKey, value: String(v) })
@@ -262,9 +274,13 @@ export function updateLanguageOnTurn(sessionId: string, text: string): string {
   const maxScore = Math.max(...LANG_ORDER.map((l) => scores[l]))
 
   // No marker hits this turn → sticky on current, otherwise default.
+  // This is a DEFAULT, not a real detection: do NOT mirror it to the
+  // Customers table. Otherwise an ambiguous message ("5", "Barcelona",
+  // "OPEN DOOR") would overwrite a previously detected language with the
+  // 'es' default in the DB (the original flag/language bug).
   if (maxScore === 0) {
     const resolved: string = current ?? DEFAULT_LANGUAGE
-    if (!current) updateState(sessionId, { language: resolved })
+    if (!current) updateState(sessionId, { language: resolved }, { mirror: false })
     return resolved
   }
 

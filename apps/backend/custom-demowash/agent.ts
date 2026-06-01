@@ -1025,7 +1025,12 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     if (input.config.language) {
       const current = getState(sessionId)
       if (!current.language) {
-        updateState(sessionId, { language: input.config.language })
+        // SEED ONLY — the host's `language` is itself just a phone-prefix
+        // guess (e.g. +34 → 'es'). It must NOT be mirrored back to the
+        // Customers table, or it would overwrite a real content detection.
+        // Only `updateLanguageOnTurn` (a true detection from message text)
+        // is allowed to persist Customers.language.
+        updateState(sessionId, { language: input.config.language }, { mirror: false })
       }
     }
 

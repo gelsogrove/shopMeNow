@@ -1683,13 +1683,6 @@ function ChatScreen({
         customChatbotId={customChatbotId}
         rightSlot={
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowNewChat(true)}
-              className="bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
-            >
-              <Plus className="w-4 h-4" />
-              New Chat
-            </button>
             {/* Kanban Board is for the operator-facing playground only.
                 The DemoWash public demo doesn't expose the todo workflow,
                 so we hide the entry-point button entirely. */}
@@ -1714,8 +1707,15 @@ function ChatScreen({
       <div className="flex-1 grid grid-cols-12 gap-3 p-3 min-h-0">
         {/* CHAT LIST — wider column (+80px) for chat title visibility */}
         <aside className="col-span-3 bg-white rounded-xl shadow flex flex-col overflow-hidden min-h-0 min-w-[280px]">
-          <div className="px-3 py-2 bg-emerald-600 text-white shrink-0">
+          <div className="px-3 py-2 bg-emerald-600 text-white shrink-0 flex items-center justify-between gap-2">
             <span className="font-semibold text-sm">Chats</span>
+            <button
+              onClick={() => setShowNewChat(true)}
+              className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg text-sm font-medium flex items-center gap-1.5 shadow-sm transition"
+            >
+              <Plus className="w-4 h-4" />
+              New Chat
+            </button>
           </div>
           <div
             className="flex-1 overflow-y-auto"
@@ -2497,7 +2497,17 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🤝",
         title: "Escala al operador",
-        body: "Si hace falta un humano, el caso pasa al **operador de la sede** que, gracias a la **traducción en tiempo real**, habla con el cliente en su idioma — eliminando las barreras lingüísticas.",
+        body: "Si hace falta un humano, el caso pasa al **operador de la sede**, que toma el control de la conversación cuando el bot no basta.",
+      },
+      {
+        icon: "🌍",
+        title: "Sin barreras lingüísticas",
+        body: "Gracias a la **traducción en tiempo real**, el operador habla con el cliente **en su propio idioma** — escribe como quiera, el cliente lo recibe en el suyo.",
+      },
+      {
+        icon: "🚀",
+        title: "¡Listo para empezar!",
+        body: "Pulsa **New Chat** para simular un cliente de WhatsApp. A la **izquierda** la lista de pruebas, en el **centro** la conversación y a la **derecha** algunos casos de uso con los que se ha entrenado el modelo — todo **personalizable**.",
       },
     ],
   },
@@ -2527,7 +2537,17 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🤝",
         title: "Scala all'operatore",
-        body: "Se serve un umano, il caso passa all'**operatore della sede** che, grazie alla **traduzione in tempo reale**, parla con il cliente nella sua lingua — eliminando le barriere linguistiche.",
+        body: "Se serve un umano, il caso passa all'**operatore della sede**, che prende in mano la conversazione quando il bot non basta.",
+      },
+      {
+        icon: "🌍",
+        title: "Niente barriere linguistiche",
+        body: "Grazie alla **traduzione in tempo reale**, l'operatore parla con il cliente **nella sua lingua** — scrive come preferisce e il cliente riceve tutto nella propria.",
+      },
+      {
+        icon: "🚀",
+        title: "Pronto per iniziare!",
+        body: "Clicca su **New Chat** per simulare un cliente WhatsApp. A **sinistra** la lista delle prove, al **centro** la chat e a **destra** alcuni casi d'uso su cui il modello è stato addestrato — tutto **personalizzabile**.",
       },
     ],
   },
@@ -2557,7 +2577,17 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🤝",
         title: "Escalates to a human",
-        body: "If a human is needed, the case goes to the **local operator** who, thanks to **real-time translation**, talks to the customer in their own language — wiping out language barriers.",
+        body: "If a human is needed, the case goes to the **local operator**, who takes over the conversation when the bot isn't enough.",
+      },
+      {
+        icon: "🌍",
+        title: "No language barriers",
+        body: "Thanks to **real-time translation**, the operator talks to the customer **in their own language** — type in whatever language you like, the customer reads it in theirs.",
+      },
+      {
+        icon: "🚀",
+        title: "Ready to start!",
+        body: "Click **New Chat** to simulate a WhatsApp customer. On the **left** the list of test chats, in the **center** the conversation, and on the **right** a few use cases the model was trained on — all of it **customizable**.",
       },
     ],
   },
@@ -2587,7 +2617,17 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🤝",
         title: "Transfert à l'opérateur",
-        body: "Si un humain est nécessaire, le cas passe à l'**opérateur local** qui, grâce à la **traduction en temps réel**, parle au client dans sa langue — supprimant les barrières linguistiques.",
+        body: "Si un humain est nécessaire, le cas passe à l'**opérateur local**, qui prend la main sur la conversation quand le bot ne suffit pas.",
+      },
+      {
+        icon: "🌍",
+        title: "Aucune barrière linguistique",
+        body: "Grâce à la **traduction en temps réel**, l'opérateur parle au client **dans sa propre langue** — écrivez dans la langue de votre choix, le client la reçoit dans la sienne.",
+      },
+      {
+        icon: "🚀",
+        title: "Prêt à commencer !",
+        body: "Cliquez sur **New Chat** pour simuler un client WhatsApp. À **gauche** la liste des essais, au **centre** la conversation et à **droite** quelques cas d'usage sur lesquels le modèle a été entraîné — le tout **personnalisable**.",
       },
     ],
   },
@@ -2617,7 +2657,17 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🤝",
         title: "Encaminha ao operador",
-        body: "Se for preciso um humano, o caso passa ao **operador local** que, graças à **tradução em tempo real**, fala com o cliente na sua língua — eliminando as barreiras linguísticas.",
+        body: "Se for preciso um humano, o caso passa ao **operador local**, que assume a conversa quando o bot não chega.",
+      },
+      {
+        icon: "🌍",
+        title: "Sem barreiras linguísticas",
+        body: "Graças à **tradução em tempo real**, o operador fala com o cliente **na sua própria língua** — escreve no idioma que quiseres, o cliente recebe no dele.",
+      },
+      {
+        icon: "🚀",
+        title: "Pronto para começar!",
+        body: "Clica em **New Chat** para simular um cliente de WhatsApp. À **esquerda** a lista de testes, ao **centro** a conversa e à **direita** alguns casos de uso com que o modelo foi treinado — tudo **personalizável**.",
       },
     ],
   },
@@ -2647,7 +2697,17 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🤝",
         title: "Escala a l'operador",
-        body: "Si cal un humà, el cas passa a l'**operador de la seu** que, gràcies a la **traducció en temps real**, parla amb el client en la seva llengua — eliminant les barreres lingüístiques.",
+        body: "Si cal un humà, el cas passa a l'**operador de la seu**, que pren el control de la conversa quan el bot no n'hi ha prou.",
+      },
+      {
+        icon: "🌍",
+        title: "Sense barreres lingüístiques",
+        body: "Gràcies a la **traducció en temps real**, l'operador parla amb el client **en la seva pròpia llengua** — escriu en l'idioma que vulguis, el client el rep en el seu.",
+      },
+      {
+        icon: "🚀",
+        title: "A punt per començar!",
+        body: "Clica **New Chat** per simular un client de WhatsApp. A l'**esquerra** la llista de proves, al **centre** la conversa i a la **dreta** alguns casos d'ús amb què s'ha entrenat el model — tot **personalitzable**.",
       },
     ],
   },
@@ -2677,7 +2737,17 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "🤝",
         title: "Übergibt an den Mitarbeiter",
-        body: "Wird ein Mensch gebraucht, geht der Fall an den **lokalen Mitarbeiter**, der dank **Echtzeit-Übersetzung** mit dem Kunden in dessen Sprache spricht — Sprachbarrieren weg.",
+        body: "Wird ein Mensch gebraucht, geht der Fall an den **lokalen Mitarbeiter**, der das Gespräch übernimmt, wenn der Bot nicht reicht.",
+      },
+      {
+        icon: "🌍",
+        title: "Keine Sprachbarrieren",
+        body: "Dank **Echtzeit-Übersetzung** spricht der Mitarbeiter mit dem Kunden **in dessen eigener Sprache** — schreib in der Sprache, die du willst, der Kunde liest sie in seiner.",
+      },
+      {
+        icon: "🚀",
+        title: "Bereit loszulegen!",
+        body: "Klick auf **New Chat**, um einen WhatsApp-Kunden zu simulieren. **Links** die Liste der Test-Chats, in der **Mitte** das Gespräch und **rechts** einige Anwendungsfälle, mit denen das Modell trainiert wurde — alles **anpassbar**.",
       },
     ],
   },

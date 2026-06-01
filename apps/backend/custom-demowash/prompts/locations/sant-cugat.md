@@ -26,9 +26,8 @@
 
 - ✅ Tarjeta de crédito/débito
 - ✅ Tarjeta de fidelización
-- ✅ Efectivo (monedas y billetes)
-- Devolución de cambio: **Sí, si corresponde**
-- Cobro datáfono: **Precio exacto** (paga el importe justo según máquina)
+- ✅ Efectivo (monedas y billetes) — **con devolución de cambio si corresponde**
+- Cobro con tarjeta (crédito/débito o datáfono): **importe exacto según máquina, sin cambio que devolver** (solo el efectivo da cambio)
 
 ## Programas lavadora
 

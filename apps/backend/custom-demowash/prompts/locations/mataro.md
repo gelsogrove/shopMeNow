@@ -25,10 +25,10 @@
 
 ## Métodos de pago
 
-- ✅ Tarjeta de crédito/débito (importe fijo 7 €)
+- ✅ Tarjeta de crédito/débito (importe fijo 7 €, **sin cambio que devolver**)
 - ✅ Tarjeta de fidelización
-- ✅ Efectivo (monedas y billetes)
-- Devolución de cambio: **Sí, si corresponde**
+- ✅ Efectivo (monedas y billetes) — **con devolución de cambio si corresponde**
+- Con tarjeta el cobro es por importe exacto: **solo el efectivo da cambio**
 
 ## Programas lavadora
 
