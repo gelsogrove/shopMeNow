@@ -321,14 +321,48 @@ npm run demo -- --batch '[["m1"],"/reset",["m2"]]'  # multi-session
 
 ---
 
+## 🔁 Regression test (buona pratica — esegui dopo ogni fix non banale)
+
+**Perché**: i fix sono prompt-driven o tocchi a tool/state condivisi. Un fix su un caso può romperne un altro (es. cambiare la sequenza slot-filling ha impatto su tutti i flussi di escalation). Prima di dire "fatto", riesegui il set di regressione e leggi l'output, non fidarti del singolo caso.
+
+**Set di regressione minimo** — copre i flussi-chiave del bot in lingue diverse. Salva i casi in un file e lancia in batch:
+
+```bash
+npm run demo -- --batch "$(cat regression.json)" --debug 2>&1 | grep -vE '^\[usage\]'
+```
+
+I 6 flussi da coprire (vary la lingua tra i casi per testare la copertura multilingua):
+
+| Flusso | Cosa verifica | Lingua suggerita |
+|--------|---------------|------------------|
+| Porta non chiude PRIMA (`OPEN`) | self-fix, no escalation, codice display non tradotto | de / ar (non-latina) |
+| Porta non apre DOPO (`OPEN ERROR`) | escalation door_persistent, slot-filling, no cambio macchina | it / ca |
+| `ALERT`/`BLOCK` | cambio macchina + escalation, una sola escalation (idempotency) | fr |
+| Fattura | PII redaction (email/CIF/NIF), `normalizeDate` multilingua | pt / de |
+| Doppio addebito | escalation senza chiedere machineType, escalar = chiamare il tool | es / de |
+| Prezzi/orari per sede | override locale (Gràcia/Terrassa: solo carta), no nome-sede ripetuto | zh / el (non-latina) |
+
+**Cosa controllare nell'output** (regressioni tipiche):
+- `[tool_call] escalate_to_operator` presente quando serve (mai escalation simulata solo a parole)
+- `[tool_call]` UNA sola escalation per turno (no doppioni)
+- `[state] location=...` popolato anche in lingue non-latine (backstop sede in `pii.ts`)
+- `[lang] declared=<lingua giusta>` e risposta nella lingua del cliente (no saluto/chiusura in spagnolo)
+- Codici display (`OPEN`, `ERR-01`, `ALERT`…) **verbatim**, mai tradotti
+- PII redatto in `[state]` (`email=[REDACTED]`, `cif=[REDACTED]`), valori veri solo nel briefing operatore
+
+**Residui noti accettati** (non bloccano): leak lessicale singolo (es. "unos minuti" in it), `empty_reply_nudge` occasionale (recuperato dal nudge).
+
+---
+
 ## 🤝 Cosa faccio sempre, su ogni modifica
 
 1. Rileggo le 13 iron rules.
 2. Identifico il layer (prompt / tool / state / handler) prima di toccare.
 3. Verifico con `npm run typecheck` + `npm run demo -- --debug` alla fine.
-4. Aggiorno `architecture.md` quando cambio l'architettura (non per ogni bug fix).
-5. In dubbio → chiedo ad Andrea, mai invento regole.
+4. **Eseguo il regression test** (sezione sopra) dopo ogni fix non banale, e leggo l'output.
+5. Aggiorno `architecture.md` quando cambio l'architettura (non per ogni bug fix).
+6. In dubbio → chiedo ad Andrea, mai invento regole.
 
 ---
 
-*Documento aggiornato: 2026-05-27*
+*Documento aggiornato: 2026-06-01*
