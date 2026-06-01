@@ -317,7 +317,7 @@ close_session({
 - **`validate_card_digits`** — è solo validazione di formato (4 cifre). Nessun side-effect. Gestito nella redaction PII (vedi §9).
 - **`save_invoice_data` / `save_loyalty_data`** — casi particolari di `escalate_to_operator({reason: 'invoice_request' | 'loyalty_card'})`. Il salvataggio strutturato lo fa il backend nel handler dell'escalation, non un tool LLM dedicato.
 - **`get_prices(location)` / `get_hours(location)`** — i dati sono già nel prompt cached. Il modello li pesca da lì.
-- **`detect_language(message)`** — il modello vede la lingua nel messaggio e la salva via `remember({language: ...})`.
+- **`detect_language(message)` / `set_language` / `remember({language})`** — VIETATI. Una tool call sulla lingua fa "considerare il task finito" al modello, che poi emette testo vuoto al hop successivo (il **bug T1 empty-reply**). La lingua viaggia invece come trailer di testo `⟦LANG:xx⟧` nella stessa risposta — niente tool, niente hop extra. Vedi §8.1.
 - **`mark_resolved`** — duplicato di `close_session({outcome: 'resolved'})`.
 
 ---
@@ -342,12 +342,38 @@ close_session({
        loop al punto 5 (max 3 hop, hard cap)
        
 6b. Se response.content è testo:
-       salva history (user + assistant)
+       extractLanguage(content) → { reply (senza trailer), lang }
+       commitLanguageFromReply(sessionId, lang)   ← persiste solo se valido
+       salva history (user + assistant) usando reply PULITA (senza ⟦LANG⟧)
        salva SessionState aggiornato
-       ritorna reply all'utente
+       ritorna reply (senza ⟦LANG⟧) all'utente
 ```
 
 **Cap a 3 hop di tool call** per evitare loop infiniti. Se viene raggiunto, log warning e ritorna stringa vuota.
+
+---
+
+## 8.1 Lingua — decisa dall'LLM, non da regex (sentinel trailer)
+
+**Principio (iron rule #1)**: niente detector regex sul testo utente. Il vecchio detector (liste di parole per lingua in `state.ts`) era accurato solo ~60-65% sui messaggi reali: le parole-funzione romanze (`la`, `no`, `un`, `que`…) collidono tra es/ca/it/pt/fr. Esempio reale: *"He pagado pero la máquina no arranca"* veniva classificato `ca` (catalano) invece di `es`, perché `la`+`no` matchavano i marker catalani. Rimosso del tutto.
+
+**Nuovo design**:
+
+1. Il system prompt (blocco `## LANGUAGE` + `## OUTPUT FORMAT` in `formatStateForPrompt`) istruisce l'LLM a:
+   - rispondere nella lingua dell'**ultimo** messaggio del cliente (la giudica nativamente);
+   - su input ambiguo (numero nudo, nome città, emoji, "ok") **non indovinare**: mantenere la lingua precedente (sticky);
+   - accodare alla risposta, su una riga propria, un marker di controllo: `⟦LANG:xx⟧` (codice ISO 639-1).
+2. `extractLanguage(raw)` (in `state.ts`) separa la risposta pulita dal codice lingua. Il marker viene **sempre rimosso** prima dell'invio al cliente (regex end-anchored + strip globale belt-and-suspenders).
+3. `commitLanguageFromReply(sessionId, lang)`:
+   - codice valido e diverso → `updateState({language}, mirror:true)` → fluisce via `MIRRORED_KEYS` → `drainPatches` → `applyCustomerPatches` → `Customers.language`;
+   - codice mancante/invalido (`isValidIso`) → **no-op**: la lingua precedente resta (sticky). Un messaggio ambiguo non declassa mai la lingua già nota.
+4. Il seed iniziale (`seedLanguageIfNeeded`, host hint da `customer.language`, solo una stima da prefisso telefonico) è `mirror:false` → non viene mai scritto nel DB.
+
+**Perché NON ricrea il bug T1 empty-reply**: il codice lingua è **testo** nella stessa completion, accodato DOPO la risposta — non è una tool call, quindi nessun hop extra e il modello non può "finire" prima di scrivere la risposta. Una completion solo-trailer dà `reply` vuota → intercettata dal recovery empty-reply esistente (re-prompt una volta).
+
+**Costo**: ZERO chiamate LLM aggiuntive. Il codice ISO è un sottoprodotto (~5 token) della call che già facciamo ogni turno. Meno codice eseguito di prima (niente scoring regex).
+
+**Verifica**: trap-set di 24 messaggi reali dal DB (vedi i commenti in `state.ts`); girare con `npm run demo -- --debug` e controllare che `[lang]`/`[state]` siano corretti e che `⟦LANG⟧` non compaia mai nel `[BOT]`. Accuratezza attesa ~90% sui casi decidibili; toponimi/numeri puri restano genuinamente indecidibili → comportamento corretto = astensione sticky, non detection.
 
 ---
 

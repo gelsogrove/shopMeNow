@@ -21,7 +21,9 @@ import nodemailer from 'nodemailer'
 import {
   type CustomerPatch,
   type SessionState,
+  commitLanguageFromReply,
   drainPatches,
+  extractLanguage,
   formatStateForPrompt,
   formatStateOneLine,
   getState,
@@ -273,9 +275,9 @@ async function executeTool(
     if (args.machineType === 'washer' || args.machineType === 'dryer') patch.machineType = args.machineType
     if (typeof args.machine === 'number' && Number.isFinite(args.machine)) patch.machine = args.machine
     if (typeof args.displayCode === 'string') patch.displayCode = args.displayCode
-    // NOTE: `language` is NOT accepted here anymore. Language is detected
-    // deterministically by `seedLanguageIfNeeded()` before each turn. See
-    // architecture.md §"T1 empty-reply fix".
+    // NOTE: `language` is NOT accepted here (would resurrect the T1 empty-reply
+    // bug — see iron rule #3). The LLM declares the language via the ⟦LANG:xx⟧
+    // reply trailer; commitLanguageFromReply persists it AFTER the turn.
     const state = updateState(ctx.sessionId, patch)
     return { ok: true, state }
   }
@@ -712,7 +714,11 @@ async function agentTurnInternal(
 
     // No tool calls → final text reply.
     if (!response.tool_calls || response.tool_calls.length === 0) {
-      const text = (response.content || '').trim()
+      // The LLM appends a ⟦LANG:xx⟧ control trailer (see state.ts). Split it
+      // off: `text` is the clean customer-facing reply (marker removed), `lang`
+      // is the language the model says it replied in. A trailer-only completion
+      // yields an empty `text` → handled by the empty-reply recovery below.
+      const { reply: text, lang } = extractLanguage(response.content || '')
 
       // Empty-reply recovery (see architecture.md §7).
       if (!text && !nudgedAfterEmpty && hop < MAX_TOOL_HOPS - 1) {
@@ -721,7 +727,7 @@ async function agentTurnInternal(
         history.push({
           role: 'user',
           content:
-            '[system] Your previous reply was empty. Please respond to the customer now, in their language, following the rules in the system prompt. Do not call any more tools unless strictly necessary.',
+            '[system] Your previous reply was empty. Please respond to the customer now, in their language, following the rules in the system prompt. Remember to append the ⟦LANG:xx⟧ marker on its own line after a real reply. Do not call any more tools unless strictly necessary.',
         })
         if (process.env.LLM_DEBUG === '1') {
           console.error('[empty_reply_nudge] retrying with explicit instruction')
@@ -729,6 +735,14 @@ async function agentTurnInternal(
         continue
       }
 
+      // Commit the LLM-declared language (no-op if missing/invalid → sticky).
+      commitLanguageFromReply(ctx.sessionId, lang)
+      if (process.env.LLM_DEBUG === '1') {
+        console.error(`[lang] declared=${lang ?? '(none → sticky)'}`)
+      }
+
+      // Persist the CLEAN reply (no trailer) to history so the marker never
+      // leaks into future context windows.
       history.push({ role: 'assistant', content: text })
       if (process.env.LLM_DEBUG === '1') {
         console.error(`[state] ${formatStateOneLine(getState(ctx.sessionId))}`)
@@ -823,9 +837,10 @@ async function agentTurn(
     }
   }
 
-  // Deterministic language detection BEFORE the LLM turn. Eliminates the
-  // T1 empty-reply bug caused by `remember({language})` standalone tool calls.
-  seedLanguageIfNeeded(ctx.sessionId, sanitized)
+  // Language is no longer detected here. The LLM judges the customer's
+  // language itself and appends a ⟦LANG:xx⟧ trailer to its reply, which is
+  // extracted + committed AFTER the turn (see agentTurnInternal). The host
+  // already seeded an initial language hint once (mirror:false) at invoke().
 
   // PII redaction (see pii.ts). Pre-scan extracts structured PII
   // (email/CIF/NIF/IBAN/card/phone) into SessionState and replaces them
@@ -1008,30 +1023,14 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     const systemPrompt = await getCachedSystemPrompt()
     const sessionId = input.context.sessionId
 
-    // Seed state with any pre-known language from the host.
-    //
-    // For ALL channels (WhatsApp, widget, playground): the host's `language`
-    // is only used to SEED the in-RAM state ONCE, when no language is set
-    // yet. After that, the deterministic per-turn detector (called below
-    // before the LLM) owns the state, so the bot keeps adapting to what
-    // the customer actually writes.
-    //
-    // 🐛 Previously the playground branch forced the host language on EVERY
-    //    turn (operator picks the flag in the Use Cases panel). That meant
-    //    a customer typing in Spanish would still see the bot answer in
-    //    Catalan if the operator left the CA flag selected. The flag now
-    //    drives only the operator briefing (see `operatorBriefingLanguage`
-    //    used in buildRuntimeBlock).
+    // Seed the session language ONCE from the host's hint (e.g.
+    // customer.language, itself only a phone-prefix guess). seedLanguageIfNeeded
+    // is a no-op if a language is already set, and seeds with mirror:false so
+    // this guess is never written back to Customers. From there on the LLM owns
+    // the language: it declares it via the ⟦LANG:xx⟧ trailer each turn and
+    // commitLanguageFromReply persists only real, confident detections.
     if (input.config.language) {
-      const current = getState(sessionId)
-      if (!current.language) {
-        // SEED ONLY — the host's `language` is itself just a phone-prefix
-        // guess (e.g. +34 → 'es'). It must NOT be mirrored back to the
-        // Customers table, or it would overwrite a real content detection.
-        // Only `updateLanguageOnTurn` (a true detection from message text)
-        // is allowed to persist Customers.language.
-        updateState(sessionId, { language: input.config.language }, { mirror: false })
-      }
+      seedLanguageIfNeeded(sessionId, input.config.language)
     }
 
     // Convert backend history → our internal Message[]. The backend may

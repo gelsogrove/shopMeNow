@@ -281,7 +281,16 @@ export function ChatPage() {
     api
       .post("/chat/translate-messages", {
         targetLanguage: translateTo,
-        messages: missing.map((m) => ({ id: m.id, content: m.content })),
+        // Translate ONLY the customer-facing part of each message. The
+        // internal operator briefing ("👤 Human Support message" block) is
+        // marked "Internal — not sent to customer" and must never be
+        // translated — it is written for the operator in their briefing
+        // language. splitBotMessage() drops the briefing tail so the
+        // translation panel shows just the reply the customer received.
+        messages: missing.map((m) => ({
+          id: m.id,
+          content: splitBotMessage(m.content || "").customer,
+        })),
       })
       .then((res) => {
         if (cancelled) return

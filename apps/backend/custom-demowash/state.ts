@@ -129,194 +129,96 @@ export function registerMessageTimestamp(sessionId: string, now: number, windowM
   return e.recentMessageTimestamps.length
 }
 
-// ── Deterministic language detection ─────────────────────────────────────────
-// Scoring heuristic over distinctive words per language. Called by the
-// orchestrator BEFORE the LLM turn so the model never has to emit a
-// `remember({language})` tool call — that used to cause the T1 empty-reply
-// bug (model "completed the task" with the tool, then produced empty text
-// at hop 2).
+// ── Language: decided by the LLM, not by regex ───────────────────────────────
+// Iron rule #1 (no regex detector on user text). The previous design scored
+// the message against per-language word lists; on real production messages it
+// was only ~60-65% accurate, because Romance function words (la, no, un, que…)
+// collide across es/ca/it/pt/fr. "He pagado pero la máquina no arranca" scored
+// ca > es purely on shared words. We removed that detector entirely.
 //
-// Policy (decided 2026-05-28 with Andrea):
-//   1. Default language = 'es' (business operates in Spain).
-//   2. Re-evaluate on every turn (no permanent lock). This fixes the bug
-//      where "Hola" → es, then a Catalan reply stayed in Spanish forever.
-//   3. Sticky on 0-match: if the current turn has no marker hits and a
-//      language is already set, keep it (so "ok"/"👍" don't reset to es).
-//   4. Tie-break: if the current language ties with another at the top,
-//      keep the current one (sticky). Otherwise default to 'es'.
-
-// `KnownLang` is the closed set of languages with a deterministic regex
-// detector below. `state.language` is intentionally wider (`string`) so
-// the LLM can detect and reply in ANY language Claude supports — the
-// prompt handles the long tail (Japanese, Russian, Hindi, etc.).
-type KnownLang =
-  | 'es' | 'ca' | 'en' | 'it' | 'fr' | 'pt' | 'de'
-  | 'ar' | 'zh'
-  | 'da' | 'uk' | 'pl' | 'fi' | 'el' | 'tr'
-
-const DEFAULT_LANGUAGE: KnownLang = 'es'
-
-// Each language has a single dense regex of distinctive words. Many tokens
-// overlap across Romance languages on purpose — the winner is whoever
-// accumulates more hits across the message. See language-detection.spec.ts.
+// New design (the "sentinel trailer"):
+//   • The LLM replies in the customer's language (it judges this natively) and
+//     appends a control marker `⟦LANG:xx⟧` on the last line of the SAME reply.
+//   • `extractLanguage` splits that marker off the reply text (the marker is
+//     NEVER shown to the customer).
+//   • `commitLanguageFromReply` writes the code to state — and only a real,
+//     valid code mirrors to the Customers table (mirror:true). A missing or
+//     invalid marker is a no-op: the prior language stays (sticky), so an
+//     ambiguous message ("5", "Barcelona", "ok") never demotes the language.
 //
-// Arabic & Chinese use a different strategy: \b word boundary does not
-// work for non-Latin scripts in JS regex, so we match any run of script-
-// exclusive Unicode characters. Both scripts are exclusive — any run is a
-// strong signal of that language.
-//   - Arabic: ؀-ۿ block
-//   - Chinese: CJK Unified Ideographs 一-鿿. NB: this overlaps with
-//     Japanese kanji, but plain CJK ideograph runs (no hiragana/katakana)
-//     are overwhelmingly Chinese in our context.
-const LANG_MARKERS: Record<KnownLang, RegExp> = {
-  it: /\b(che|non|sono|della|dello|delle|degli|gli|le|un|una|uno|perché|cosa|come|dove|quando|oggi|ieri|lavatrice|sapone|ciao|quanto|costa|lavare|panni|prezzo|prezzi|grazie|sto|aiuto|funziona|vorrei|posso)\b/i,
-  es: /\b(hola|que|no|son|de|del|los|las|un|una|uno|porque|qué|cómo|dónde|cuándo|hoy|ayer|lavadora|jabón|cuánto|cuesta|lavar|ropa|precio|precios|gracias|está|estoy|necesito|ayuda|puedo|tenéis|dónde|aquí|secadora|huele|quemado)\b/i,
-  en: /\b(the|and|is|are|was|were|you|i|we|they|it|what|how|where|when|today|yesterday|washing|machine|soap)\b/i,
-  ca: /\b(el|la|els|les|un|una|uns|unes|i|que|no|és|som|tenim|aquest|aquesta|aquests|aquestes|perquè|què|com|on|quan|avui|ahir|rentadora|sabó|hola)\b/i,
-  pt: /\b(o|a|os|as|um|uma|uns|umas|e|que|não|é|são|está|estão|porque|como|onde|quando|hoje|ontem|máquina|sabão|olá|você|vocês)\b/i,
-  fr: /\b(le|la|les|un|une|des|et|que|ne|pas|est|sont|j'ai|tu|nous|vous|ils|elles|pourquoi|comment|où|quand|aujourd'hui|hier|machine|savon|bonjour|merci|oui|non|qu'est-ce|c'est)\b/i,
-  // German: high-signal closed-class words + a few domain nouns (Waschmaschine
-  // / Waschsalon / Seife). Includes umlauts plus their ASCII fallbacks
-  // (ae/oe/ue/ss) because German text is frequently typed without diacritics
-  // on non-DE keyboards.
-  de: /\b(der|die|das|den|dem|des|und|oder|nicht|ist|sind|war|waren|ich|du|wir|ihr|sie|es|was|wie|wo|wann|warum|heute|gestern|waschmaschine|waschsalon|seife|hallo|danke|ja|nein|für|fuer|ueber|über)\b/i,
-  ar: /[؀-ۿ]+/,
-  zh: /[一-鿿]+/,
-  // Danish: closed-class words distinctive vs Norwegian/Swedish where possible
-  // (hvad vs hva, hvornår vs når/när, sæbe vs såpe/tvål). Some overlap with
-  // Norwegian Bokmål is unavoidable — accept it for the POC.
-  da: /\b(jeg|ikke|hvad|hvordan|hvornår|tak|hej|også|sæbe|vaskemaskine|noget|meget|skal|vil|mig|dig|hvis|godt|sådan|hvor|må|får|går)\b/i,
-  // Ukrainian: distinctive Cyrillic letters that Russian does not use
-  // (і, ї, є, ґ). Any single occurrence is a strong signal.
-  uk: /[іїєґІЇЄҐ]/,
-  // Polish: closed-class words + Polish-specific diacritic letters
-  // (ą, ć, ę, ł, ń, ś, ź, ż). The diacritics alone are enough to
-  // distinguish from other Slavic Latin-script languages.
-  pl: /\b(jest|nie|tak|czy|jak|gdzie|kiedy|dziś|wczoraj|pralka|mydło|cześć|dziękuję|witaj|który|tylko|bardzo|dobrze|już|jeszcze|teraz|dzień|dobry|przepraszam)\b|[ąćęłńśźż]/i,
-  // Finnish: distinctive agglutinative words + ä/ö doublings. ei/on/joka
-  // are very high-frequency Finnish closed-class words.
-  fi: /\b(ei|on|olen|olet|joka|mitä|missä|milloin|miten|kuinka|tänään|eilen|pesukone|saippua|hei|kiitos|kyllä|minä|sinä|tämä|että|kun|jos|mutta|hyvä|paljon|jotain)\b/i,
-  // Greek: Greek + Greek Extended Unicode blocks. Greek script is
-  // exclusive — any run of these characters is a strong signal.
-  el: /[Ͱ-Ͽἀ-῿]+/,
-  // Turkish: high-frequency closed-class words + Turkish-specific letters
-  // (ş, ğ, dotless ı). Distinguishes from German which shares ö/ü/ä.
-  tr: /\b(ve|bir|bu|şu|değil|evet|hayır|nasıl|nerede|bugün|dün|çamaşır|sabun|merhaba|teşekkürler|lütfen|iyi|kötü|var|yok|istiyorum)\b|[şğı]/i,
+// Why this does NOT bring back the T1 empty-reply bug: the language is plain
+// TEXT in the completion, appended AFTER the reply — it is not a tool call, so
+// it adds no extra hop and the model cannot "finish" via a tool before writing
+// the reply. ZERO extra LLM calls: the code rides along the reply we already
+// generate every turn.
+//
+// Policy: Spanish ('es') is the business default, used only as the seed when no
+// language has ever been set for the session.
+
+const DEFAULT_LANGUAGE = 'es'
+
+// ISO 639-1 two-letter codes we accept from the trailer. Kept permissive (the
+// LLM may legitimately reply in any of these); anything else is treated as a
+// hallucinated code and ignored (no-op, sticky).
+const VALID_ISO = new Set<string>([
+  'es', 'it', 'en', 'ca', 'pt', 'fr', 'de',
+  'ar', 'zh', 'da', 'uk', 'pl', 'fi', 'el', 'tr',
+  'nl', 'ru', 'ja', 'ko', 'hi', 'sv', 'no', 'cs', 'ro', 'hu',
+])
+
+function isValidIso(lang: string): boolean {
+  return VALID_ISO.has(lang.toLowerCase())
 }
 
-const LANG_ORDER: KnownLang[] = [
-  'es', 'it', 'en', 'ca', 'fr', 'pt', 'de',
-  'ar', 'zh',
-  'da', 'uk', 'pl', 'fi', 'el', 'tr',
-]
+// The control marker the LLM appends on its own line, e.g. `⟦LANG:es⟧`.
+// Anchored to end-of-string and built from rare glyphs (⟦ ⟧) so it can never
+// collide with real customer-facing text.
+const LANG_TRAILER = /⟦LANG:([a-z]{2})⟧\s*$/i
+// Belt-and-suspenders: strip ANY trailer occurrence before sending to the
+// customer, even a malformed/mid-text one.
+const LANG_TRAILER_GLOBAL = /⟦LANG:[a-z]{2}⟧/gi
 
 /**
- * Score each language by counting marker matches in the text.
- * Exposed for testing.
+ * Split the LLM completion into the customer-facing reply and the language
+ * code it declared. Returns `lang: null` when there is no valid trailer.
+ * The returned `reply` always has every trailer marker removed.
  */
-export function scoreLanguages(text: string): Record<KnownLang, number> {
-  const normalized = (text || '').toLowerCase()
-  const scores: Record<KnownLang, number> = {
-    es: 0, it: 0, en: 0, ca: 0, fr: 0, pt: 0, de: 0,
-    ar: 0, zh: 0,
-    da: 0, uk: 0, pl: 0, fi: 0, el: 0, tr: 0,
-  }
-  if (!normalized.trim()) return scores
-  for (const lang of LANG_ORDER) {
-    const re = new RegExp(LANG_MARKERS[lang].source, LANG_MARKERS[lang].flags + 'g')
-    const matches = normalized.match(re)
-    if (matches) scores[lang] = matches.length
-  }
-  return scores
+export function extractLanguage(raw: string): { reply: string; lang: string | null } {
+  const text = raw || ''
+  const m = text.match(LANG_TRAILER)
+  const lang = m ? m[1].toLowerCase() : null
+  // Remove the trailing marker (and any stray ones) so the customer never sees it.
+  const reply = text.replace(LANG_TRAILER_GLOBAL, '').trim()
+  return { reply, lang }
 }
 
 /**
- * Stateless detection: returns the highest-scoring language, or null if
- * nothing matches. Used internally by `updateLanguageOnTurn` and exposed
- * for tests. Tie-break here is deterministic by LANG_ORDER (es first) —
- * the sticky/default policy is applied one level up.
+ * Persist the language the LLM declared for this turn.
+ * - null / invalid code → no-op: the prior language stays (sticky). An
+ *   ambiguous message therefore never demotes a correctly known language.
+ * - a valid, changed code → updateState with mirroring ON, so it flows through
+ *   MIRRORED_KEYS → drainPatches → applyCustomerPatches → Customers.language.
  */
-export function detectLanguageHeuristic(text: string): KnownLang | null {
-  const scores = scoreLanguages(text)
-  let best: KnownLang | null = null
-  let bestScore = 0
-  for (const lang of LANG_ORDER) {
-    if (scores[lang] > bestScore) {
-      best = lang
-      bestScore = scores[lang]
-    }
-  }
-  return bestScore >= 1 ? best : null
-}
-
-/**
- * Per-turn language update with the policy described in the file header.
- * Returns the language that should be used for the current turn.
- *
- * - If the message has no marker hits: keep current (or default to 'es' if
- *   no language was ever set).
- * - If the message has hits: pick the top scorer. On tie with the current
- *   language, stay sticky. Otherwise switch.
- *
- * `seedLanguageIfNeeded` is kept as a backward-compatible alias so callers
- * in agent.ts don't need to change.
- */
-export function updateLanguageOnTurn(sessionId: string, text: string): string {
+export function commitLanguageFromReply(sessionId: string, lang: string | null): void {
+  if (!lang || !isValidIso(lang)) return
   const state = getState(sessionId)
-  // `current` is widened to `string` because state.language now accepts any
-  // ISO 2-letter code (the LLM can reply in languages outside the closed
-  // KnownLang set). When the current language is unknown to our regex
-  // detector, we still apply the sticky/default policy below using the
-  // string value verbatim.
-  const current = state.language
-
-  const scores = scoreLanguages(text)
-  const maxScore = Math.max(...LANG_ORDER.map((l) => scores[l]))
-
-  // No marker hits this turn → sticky on current, otherwise default.
-  // This is a DEFAULT, not a real detection: do NOT mirror it to the
-  // Customers table. Otherwise an ambiguous message ("5", "Barcelona",
-  // "OPEN DOOR") would overwrite a previously detected language with the
-  // 'es' default in the DB (the original flag/language bug).
-  if (maxScore === 0) {
-    const resolved: string = current ?? DEFAULT_LANGUAGE
-    if (!current) updateState(sessionId, { language: resolved }, { mirror: false })
-    return resolved
+  if (lang !== state.language) {
+    updateState(sessionId, { language: lang })
   }
-
-  // Weak signal guard: a single marker hit on short/ambiguous input
-  // (e.g. "la 4" → matches `la` in ca/fr) is not enough to flip a sticky
-  // language. Require ≥2 hits to override. If no current language exists
-  // yet, fall through so we can seed from even a weak signal.
-  if (current && maxScore < 2) return current
-
-  // Collect all languages tied at the top.
-  const topLangs = LANG_ORDER.filter((l) => scores[l] === maxScore)
-
-  // Tie-break: if the current language is one of the deterministic top
-  // candidates, keep it (sticky). Otherwise default to 'es' if it's in
-  // the top, else the first by LANG_ORDER.
-  let winner: KnownLang
-  if (current && (topLangs as readonly string[]).includes(current)) {
-    winner = current as KnownLang
-  } else if (topLangs.includes(DEFAULT_LANGUAGE)) {
-    winner = DEFAULT_LANGUAGE
-  } else {
-    winner = topLangs[0]
-  }
-
-  if (winner !== current) {
-    updateState(sessionId, { language: winner })
-  }
-  return winner
 }
 
 /**
- * @deprecated Backward-compatible alias for `updateLanguageOnTurn`.
- * Kept so agent.ts:814 keeps working without modification.
+ * Seed the session language from a host-provided hint (e.g. customer.language,
+ * itself only a phone-prefix guess). Seeds ONLY when nothing is set yet, and
+ * with mirror:false so this guess is never written back to the DB. The real
+ * value comes later from the LLM trailer via commitLanguageFromReply.
  */
-export function seedLanguageIfNeeded(sessionId: string, text: string): string {
-  return updateLanguageOnTurn(sessionId, text)
+export function seedLanguageIfNeeded(sessionId: string, seed?: string | null): string {
+  const state = getState(sessionId)
+  if (state.language) return state.language
+  const resolved = seed && isValidIso(seed) ? seed.toLowerCase() : DEFAULT_LANGUAGE
+  updateState(sessionId, { language: resolved }, { mirror: false })
+  return resolved
 }
 
 export function formatStateForPrompt(state: SessionState): string {
@@ -331,26 +233,48 @@ export function formatStateForPrompt(state: SessionState): string {
   }
   if (state.displayCode) fields.push(`Display: ${state.displayCode}`)
   if (state.language) {
-    fields.push(`Language: ${state.language}`)
-    // Strong, explicit instruction: the language is already decided
-    // deterministically by the regex detector (seedLanguageIfNeeded). The LLM
-    // must NOT pick its own — it writes the ENTIRE reply in this language and
-    // never mixes languages, regardless of the language of any example /
-    // plantilla in the cached prompt (those are structural, translate them).
-    fields.push(
-      `🌐 REPLY LANGUAGE = ${state.language}. Write your ENTIRE reply in this language. ` +
-        `Never mix languages in one reply. The examples/plantillas in the prompt are ` +
-        `structural only — always translate them into ${state.language}. ` +
-        `⚠️ The LOCATIONS data block is written in Catalan, but it is DATA only: ` +
-        `copy just the values (prices, hours, machine numbers) and ALWAYS write the ` +
-        `labels and surrounding text in ${state.language}. Specifically: if ` +
-        `REPLY LANGUAGE = es, reply in Spanish ("Los precios de la lavadora son", ` +
-        `"Horario"), NEVER in Catalan ("Els preus", "rentadora", "Horari") — es and ca ` +
-        `are sister languages, do not let the Catalan data pull your reply into Catalan.`,
-    )
+    // The CURRENT language is the one to KEEP when the new message has no
+    // language signal (a bare number, a place name, an emoji, "ok"). It is a
+    // hint, not a lock — the LLM re-judges the language from the customer's
+    // latest message each turn (see the LANGUAGE block below).
+    fields.push(`Current language: ${state.language} (keep this if the new message is too short/ambiguous to tell)`)
   }
-  if (fields.length === 0) return ''
-  return ['', '═══ SESSION STATE ═══', ...fields, ''].join('\n')
+
+  // Language is owned by the LLM now (no regex detector). These two blocks are
+  // ALWAYS injected (even before any language is set) so the model both replies
+  // in the right language AND emits the ⟦LANG:xx⟧ control trailer the host reads.
+  const seed = state.language ?? DEFAULT_LANGUAGE
+  const hasLang = !!state.language
+  const languageBlock = [
+    '## LANGUAGE',
+    hasLang
+      // Language already established → hysteresis: keep it unless the customer
+      // CLEARLY switches with a real sentence. A short/isolated token must NOT
+      // flip it. This is what stops "Gràcia" / "OPEN DOOR" / "5" from changing
+      // an Italian conversation into Spanish/Catalan/English.
+      ? `- The conversation language is already **${state.language}**. KEEP replying in ${state.language}.`
+      // First message (no language yet) → detect from whatever the customer
+      // wrote, even a single word. "Ciao" → it, "merci" → fr, "gracias" → es.
+      : `- No language is set yet (this is the first message). Detect the language from the customer's message — even a single word like "Ciao", "merci", "gracias" is enough. If the message carries NO language signal at all (a bare number "5", a name "Andrea", a place name "Barcelona", "ok", a machine/display code like "OPEN DOOR"), use ${seed}.`,
+    hasLang
+      ? `- ONLY switch away from ${state.language} if the customer's latest message is a REAL sentence (roughly 3+ meaningful words) clearly written in another language. A single word, a name, a place ("Gràcia"/"Eixample"), a number, an emoji, "ok", or a machine/display code ("OPEN DOOR", "ERR-01") is NOT enough to switch — keep ${state.language}.`
+      : `- Spanish ("es") is the business default when the very first message is genuinely undecidable.`,
+    '- A machine/display CODE the customer reads off the screen ("OPEN DOOR", "OPEN", "ERR-01", "ALERT", "BLOCK") is DATA, not language — it never changes the conversation language.',
+    '- ⚠️ The LOCATIONS / data blocks contain Catalan place names and labels used AS DATA. Judge the language ONLY from what the CUSTOMER wrote — never let Catalan data pull your reply into Catalan. Copy data values (prices, hours, machine numbers) but write all labels/sentences in the customer\'s language.',
+    '',
+    '## OUTPUT FORMAT (mandatory, every turn)',
+    '1. Write your normal reply to the customer, in the language chosen above.',
+    '2. Then, on a NEW LINE by itself after the reply, output exactly:',
+    '   ⟦LANG:xx⟧',
+    '   where xx is the ISO 639-1 code of the language you just replied in (es, it, en, ca, pt, fr, de, ar, zh, …).',
+    '- The ⟦LANG:xx⟧ line is a control marker: it is removed before the customer sees it. Never describe it, never translate it, never put anything after it.',
+    '- NEVER output ⟦LANG:xx⟧ on its own — it must always follow a real, non-empty reply.',
+  ].join('\n')
+
+  const stateBlock = fields.length > 0
+    ? ['', '═══ SESSION STATE ═══', ...fields].join('\n')
+    : ''
+  return [stateBlock, '', languageBlock, ''].join('\n')
 }
 
 export function formatStateOneLine(state: SessionState): string {

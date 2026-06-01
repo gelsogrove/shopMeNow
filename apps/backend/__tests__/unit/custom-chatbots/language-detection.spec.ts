@@ -29,13 +29,12 @@
  * Iron Rule #8: multi-language by design — every detector covers all 6 langs.
  */
 
-import {
-  detectLanguageHeuristic as detectDemowash,
-  resetState as resetDemowash,
-  scoreLanguages as scoreDemowash,
-  seedLanguageIfNeeded as seedDemowash,
-  updateLanguageOnTurn as updateDemowash,
-} from "../../../custom-demowash/state"
+// NOTE: custom-demowash no longer uses a regex language detector — language is
+// now decided by the LLM via a ⟦LANG:xx⟧ reply trailer (see custom-demowash
+// architecture.md §8.1). Its scoreLanguages/detectLanguageHeuristic/
+// updateLanguageOnTurn functions were removed, so the demowash arm of this
+// parameterized suite was dropped. custom-ecolaundry still ships the regex
+// detector and is still covered below.
 import {
   detectLanguageHeuristic as detectEcolaundry,
   resetState as resetEcolaundry,
@@ -44,17 +43,9 @@ import {
   updateLanguageOnTurn as updateEcolaundry,
 } from "../../../custom-ecolaundry/state"
 
-// Parameterize: run every test against both modules to guarantee the fix
-// is mirrored in both files (they're supposed to be byte-identical).
+// Only custom-ecolaundry still uses the regex detector. (custom-demowash was
+// migrated to LLM-owned language detection — see the import note above.)
 const MODULES = [
-  {
-    name: "custom-demowash",
-    detect: detectDemowash,
-    update: updateDemowash,
-    seed: seedDemowash,
-    score: scoreDemowash,
-    reset: resetDemowash,
-  },
   {
     name: "custom-ecolaundry",
     detect: detectEcolaundry,

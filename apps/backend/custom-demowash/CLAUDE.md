@@ -58,6 +58,8 @@ Tool autorizzati (3 + 1 PII):
 ❌ Forbidden: tool che duplicano cose che il prompt fa già (`mark_resolved`, `set_language`, `detect_intent`, `get_prices`, `get_hours`). Tool con argomenti opzionali esplosivi (10+ campi). Tool che fanno 2 cose (es. `save_and_escalate`).
 ✅ Allowed: aggiungere un tool nuovo SOLO se fa un side-effect che il prompt non può fare. Discuti prima di aggiungerlo.
 
+🌐 **Lingua**: NON è un tool (`set_language`/`remember({language})` ricreano il bug T1 empty-reply). L'LLM dichiara la lingua come trailer di testo `⟦LANG:xx⟧` accodato alla risposta; `extractLanguage` lo rimuove prima dell'invio e `commitLanguageFromReply` lo persiste (no-op se manca/invalido → sticky). Zero call extra. Vedi `architecture.md §8.1`.
+
 ### 4. API pubblica per consumer esterni. Funziona ovunque.
 
 `agent.ts` esporta:
@@ -241,6 +243,7 @@ Tabella di riferimento per non re-introdurre pattern di demowash:
 | Fact extractor deterministico | Iron rule #2: usa tool `remember`, non regex sul testo libero |
 | Rephrase layer (LLM polish) | Iron rule #6: tone nel prompt, modello produce output finale |
 | Language enforcer (LLM extra) | Claude 4.x rispetta la lingua nativamente |
+| Regex language detector (`LANG_MARKERS`/`scoreLanguages`) | ❌ RIMOSSO. Era ~60-65% accurato (collisioni es/ca/it). La lingua la dichiara l'LLM via trailer `⟦LANG:xx⟧` nella risposta → `extractLanguage` + `commitLanguageFromReply`. Vedi `architecture.md §8.1`. ZERO call extra |
 | `display-flows.json` (flow engine) | Codici display descritti in prosa in `machines/*.md` |
 | `faqs.json` separato | FAQ integrate in `common.md` |
 | `i18n/<lang>.json` × 6 | Una fonte (markdown), il modello traduce nativamente |
