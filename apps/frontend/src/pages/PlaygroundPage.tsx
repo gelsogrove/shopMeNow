@@ -2451,7 +2451,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "logo:demowash",
         title: "Essayez-le comme un client",
-        body: "C'est une **simulation sur WhatsApp** de l'assistant virtuel de **DemoWash**, un **réseau fictif de laveries en franchise** avec des sites en Catalogne : **TERRASSA · RUBÍ · SANT CUGAT · BARCELONA**. Discutez avec le chatbot et essayez-le comme le ferait un vrai client.",
+        body: "C'est une **simulation sur WhatsApp** de l'assistant virtuel de **DemoWash**, un **réseau fictif de laveries en franchise** avec des sites en Catalogne :\n\n**TERRASSA · RUBÍ · SANT CUGAT · BARCELONA**\n\nDiscutez avec le chatbot et essayez-le comme le ferait un vrai client.",
       },
       {
         icon: "⚙️",
@@ -2491,7 +2491,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "logo:demowash",
         title: "Experimenta como um cliente",
-        body: "Esta é uma **simulação no WhatsApp** do assistente virtual da **DemoWash**, uma **rede fictícia de lavandarias em franchising** com unidades na Catalunha: **TERRASSA · RUBÍ · SANT CUGAT · BARCELONA**. Conversa com o chatbot e experimenta como faria um cliente.",
+        body: "Esta é uma **simulação no WhatsApp** do assistente virtual da **DemoWash**, uma **rede fictícia de lavandarias em franchising** com unidades na Catalunha:\n\n**TERRASSA · RUBÍ · SANT CUGAT · BARCELONA**\n\nConversa com o chatbot e experimenta como faria um cliente.",
       },
       {
         icon: "⚙️",
@@ -2531,7 +2531,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "logo:demowash",
         title: "Prova'l com un client",
-        body: "Això és una **simulació al WhatsApp** de l'assistent virtual de **DemoWash**, una **xarxa fictícia de bugaderies en franquícia** amb seus a Catalunya: **TERRASSA · RUBÍ · SANT CUGAT · BARCELONA**. Escriu al chatbot i prova'l com ho faria un client real.",
+        body: "Això és una **simulació al WhatsApp** de l'assistent virtual de **DemoWash**, una **xarxa fictícia de bugaderies en franquícia** amb seus a Catalunya:\n\n**TERRASSA · RUBÍ · SANT CUGAT · BARCELONA**\n\nEscriu al chatbot i prova'l com ho faria un client real.",
       },
       {
         icon: "⚙️",
@@ -2571,7 +2571,7 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
       {
         icon: "logo:demowash",
         title: "Probier's wie ein Kunde",
-        body: "Das ist eine **WhatsApp-Simulation** des virtuellen Assistenten von **DemoWash**, einem **fiktiven Franchise-Netzwerk von Waschsalons** mit Standorten in Katalonien: **TERRASSA · RUBÍ · SANT CUGAT · BARCELONA**. Schreib dem Chatbot und probier ihn aus wie ein echter Kunde.",
+        body: "Das ist eine **WhatsApp-Simulation** des virtuellen Assistenten von **DemoWash**, einem **fiktiven Franchise-Netzwerk von Waschsalons** mit Standorten in Katalonien:\n\n**TERRASSA · RUBÍ · SANT CUGAT · BARCELONA**\n\nSchreib dem Chatbot und probier ihn aus wie ein echter Kunde.",
       },
       {
         icon: "⚙️",
