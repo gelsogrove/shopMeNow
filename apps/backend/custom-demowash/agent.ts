@@ -431,15 +431,17 @@ function isValidEmail(email: string): boolean {
   return EMAIL_RE.test(email)
 }
 
-// Accept: ISO ("2026-05-27"), DD/MM/YYYY ("27/05/2026"), DD-MM-YYYY,
-// "today"/"yesterday"/"oggi"/"ieri"/"ayer"/"hoy"/"aujourd'hui"/"hier"/"hoje"/"ontem"/"avui"/"ahir".
-// Returns ISO date string ("YYYY-MM-DD") if recognized, null otherwise.
+// Accept: ISO ("2026-05-27"), DD/MM/YYYY ("27/05/2026"), DD-MM-YYYY, and the
+// words "today"/"yesterday" in every supported language (es, ca, en, it, fr,
+// pt, de — must stay in sync with settings.enabledLanguages + de). Returns an
+// ISO date string ("YYYY-MM-DD") if recognized, null otherwise.
 function normalizeDate(input: string): string | null {
   const s = input.trim().toLowerCase()
   if (!s) return null
 
-  const TODAY = /^(today|oggi|hoy|aujourd'hui|hoje|avui)$/
-  const YESTERDAY = /^(yesterday|ieri|ayer|hier|ontem|ahir)$/
+  //          en     it    es   fr            pt    ca    de
+  const TODAY = /^(today|oggi|hoy|aujourd'hui|hoje|avui|heute)$/
+  const YESTERDAY = /^(yesterday|ieri|ayer|hier|ontem|ahir|gestern)$/
 
   if (TODAY.test(s)) return new Date().toISOString().slice(0, 10)
   if (YESTERDAY.test(s)) {
