@@ -592,11 +592,12 @@ async function callLLM(
   state: SessionState,
   history: Message[],
   operatorBriefingLanguageOverride?: string | null,
+  isFirstTurn = false,
 ): Promise<LlmResponse> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
   const stateBlock = formatStateForPrompt(state)
-  const runtimeBlock = formatRuntimeBlock(operatorBriefingLanguageOverride)
+  const runtimeBlock = formatRuntimeBlock(operatorBriefingLanguageOverride, isFirstTurn)
 
   // Cached block first (cache_control: ephemeral). State + runtime blocks are
   // appended WITHOUT cache_control so they can change per turn / per day
@@ -690,6 +691,14 @@ async function agentTurnInternal(
   sanitizedMessage: string,
   operatorBriefingLanguageOverride?: string | null,
 ): Promise<TurnResult> {
+  // FIRST-TURN detection for the welcome message. The prompt (common.md) opens
+  // every conversation with the localized greeting "when history.length == 0".
+  // We read it HERE, before pushing the incoming message, because the host
+  // rebuilds `history` from its DB each call — so the prior conversation length
+  // is the single reliable signal (the in-RAM turn counter is lost on process
+  // restart / cache eviction, which is exactly why the welcome was skipped).
+  const isFirstTurn = history.length === 0
+
   history.push({ role: 'user', content: sanitizedMessage })
 
   let nudgedAfterEmpty = false
@@ -708,6 +717,7 @@ async function agentTurnInternal(
       state,
       history,
       operatorBriefingLanguageOverride,
+      isFirstTurn,
     )
     tokensUsed +=
       (response.usage?.prompt_tokens ?? 0) + (response.usage?.completion_tokens ?? 0)
@@ -901,6 +911,7 @@ async function buildSystemPrompt(): Promise<string> {
 
 function formatRuntimeBlock(
   operatorBriefingLanguageOverride?: string | null,
+  isFirstTurn = false,
 ): string {
   const now = new Date()
   const date = now.toLocaleDateString('es-ES', {
@@ -920,6 +931,10 @@ function formatRuntimeBlock(
     '═══ RUNTIME ═══',
     `Current date: ${date}`,
     `Current time: ${time}`,
+    // The prompt (common.md) opens the conversation with the welcome greeting
+    // when Turn == 1. Emit it explicitly so the model never has to infer it
+    // from history (which the host rebuilds per call).
+    `Turn: ${isFirstTurn ? 1 : 2}`,
     `Operator briefing language: ${briefingLanguage}`,
     '',
   ].join('\n')

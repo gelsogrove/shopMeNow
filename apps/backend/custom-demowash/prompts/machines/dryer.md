@@ -4,9 +4,11 @@ Esta información es **común a todas las sedes**. Los códigos de la secadora s
 
 ## Códigos de pantalla
 
-Los mismos que la lavadora: `WAIT`, `SELECT`, `ON`, `T-28`, `STOP:`, `END:`, `120`, `OPEN:`, `ALERT OPEN:`, `ERR-01`, `ALERT`/`BLOCK`.
+Los mismos que la lavadora: `WAIT`, `SELECT`, `ON`, `T-28`, `STOP:`, `END:`, `120`, `OPEN:`, `OPEN ERROR`, `ALERT OPEN:`, `ERR-01`, `ALERT`/`BLOCK`.
 
 Aplica los mismos procedimientos descritos en `washer.md`, con dos diferencias:
+
+> ⚠️ **`OPEN ERROR` (puerta bloqueada al terminar, ropa atrapada dentro)** aplica EXACTAMENTE igual que en la lavadora: el secado ya terminó y la puerta no abre con la ropa (seca) dentro. Sigue el "Procedimiento PUERTA BLOQUEADA FIN DE CICLO" de `washer.md` — intento de apertura firme y, si no abre, ESCALAR con prioridad URGENTE. NUNCA ofrecer cambiar de máquina ni repetir el secado. Distinto de `OPEN:` (puerta que no cierra ANTES de empezar).
 
 ### Diferencia 1 — Alargar el tiempo de secado
 

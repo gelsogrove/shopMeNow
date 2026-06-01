@@ -128,11 +128,17 @@ Dime si arranca.
 
 ## La puerta no se abre, el lavado ya terminó
 
+> Pantalla típica: `OPEN ERROR`. Distinto de `OPEN:` (puerta que no cierra ANTES del lavado). Aquí la ropa ya está lavada y atrapada dentro: nunca se ofrece cambiar de máquina ni volver a lavar.
+
 **Cliente:** La puerta no se abre, el lavado ya ha terminado.
 
 **Bot:** Tranquila. Cuando el ciclo termina, la puerta tarda unos minutos en desbloquearse. ¿Cuánto hace que terminó el lavado?
 
 **Cliente:** Más de 5 minutos.
+
+**Bot:** Tira de la manija con firmeza, a veces necesita un poco más de fuerza. ¿Se ha abierto?
+
+**Cliente:** No, sigue bloqueada.
 
 **Bot:** ¿En qué lavandería estás?
 

@@ -128,11 +128,17 @@ Tell me if it starts.
 
 ## The door won't open, the wash already finished
 
+> Typical screen: `OPEN ERROR`. Different from `OPEN:` (door that won't close BEFORE the wash). Applies identically to washer and dryer: the laundry is already processed and trapped inside — never offer to switch machines or re-wash/re-dry. This is URGENT.
+
 **Customer:** The door won't open, the wash already finished.
 
 **Bot:** Don't worry. When the cycle ends, the door takes a few minutes to unlock. How long ago did the wash finish?
 
 **Customer:** Over 5 minutes ago.
+
+**Bot:** Pull the handle firmly, sometimes it needs a bit more force. Did it open?
+
+**Customer:** No, still locked.
 
 **Bot:** Which laundromat are you at?
 
@@ -142,7 +148,7 @@ Tell me if it starts.
 
 **Customer:** Number 2.
 
-**Bot:** What's your name? I'll forward the case to an operator to unlock the door remotely.
+**Bot:** What's your name? I'll forward the case to an operator, as a priority, to unlock the door remotely.
 
 **Customer:** Luis.
 

@@ -13,10 +13,11 @@ Esta información es **común a todas las sedes**. Los códigos exactos que apar
 | `STOP:`       | La máquina está desaguando                               | Pedir que espere unos segundos hasta `END`. |
 | `END:`        | Lavado terminado, puede abrir la puerta                  | Cierre amable: "Puede abrir la puerta". |
 | `120`         | Cuenta atrás final del ciclo                             | Indicar que el ciclo está terminando y esperar `END`. |
-| `OPEN:`       | La puerta no está bien cerrada                           | Procedimiento OPEN (ver abajo). |
+| `OPEN:`       | La puerta no cierra bien ANTES del lavado                | Procedimiento OPEN (ver abajo). |
+| `OPEN ERROR`  | El lavado YA TERMINÓ y la puerta NO se abre (ropa atrapada dentro) | Procedimiento PUERTA BLOQUEADA FIN DE CICLO (ver abajo). |
 | `ALERT OPEN:`   | Posible problema de cierre o prenda atrapada             | Primero tratar como OPEN. Si persiste → ESCALAR + reportar a técnico. |
 | `ERR-01`         | Selección del programa antes del pago                    | Procedimiento ERR-01 (ver abajo). |
-| `ALERT`/`BLOCK`   | Fallo técnico de la máquina                              | Procedimiento ALARMA TÉCNICA (ver abajo). ESCALAR siempre. |
+| `ALERT`/`BLOCK`   | Fallo técnico de la máquina DURANTE el uso (no arranca / se detiene) | Procedimiento ALARMA TÉCNICA (ver abajo). ESCALAR siempre. **NO** usar este procedimiento si el lavado ya terminó y solo la puerta no abre → ese caso es `OPEN ERROR`. |
 
 ## Procedimiento OPEN
 
@@ -25,6 +26,23 @@ Esta información es **común a todas las sedes**. Los códigos exactos que apar
 - Si dice que sí → "Selecciona de nuevo el programa". Cierre amable.
 - Si dice que no → "Inténtalo una vez más con un poco más de firmeza, asegurándote de que no haya nada atrapado."
 - Si tras 2 intentos sigue → ESCALAR (briefing: lavadora N de <sede> con OPEN persistente, cliente ya ha intentado cerrar 2 veces).
+
+## Procedimiento PUERTA BLOQUEADA FIN DE CICLO (`OPEN ERROR`)
+
+Caso DISTINTO de `OPEN:`. Aquí **el ciclo YA terminó** y la puerta no se abre, con la ropa atrapada dentro. NO se trata de reiniciar ni de cambiar de máquina ni de volver a lavar/secar — el ciclo ya terminó, solo hay que liberar la ropa.
+
+> Este procedimiento es **idéntico para lavadora y secadora** (ver `dryer.md`). En la lavadora la ropa atrapada está mojada; en la secadora está seca — el trato es el mismo, no menciones el estado de la ropa salvo que el cliente lo haga.
+
+1. Tranquiliza e indica esperar: cuando el ciclo termina, la puerta tarda unos minutos en desbloquearse por seguridad. Pregunta cuánto hace que terminó.
+   > "Tranquila. Al terminar el ciclo la puerta tarda unos minutos en desbloquearse. ¿Cuánto hace que terminó?"
+2. Si han pasado **menos de 2-3 minutos** → pedir que espere un poco más y reintente.
+3. Si han pasado **más de 2-3 minutos** (o ya esperó) → pedir un intento de apertura firme:
+   > "Tira de la manija con firmeza, a veces necesita un poco más de fuerza. ¿Se ha abierto?"
+4. Si **se abre** → cierre amable.
+5. Si **NO se abre** tras el intento → recoger location + número de máquina (si no se saben) → pedir el **nombre** → ESCALAR **con prioridad URGENTE** para desbloqueo remoto / técnico.
+   - Briefing: **🚨 URGENTE** — máquina N de <sede> con `OPEN ERROR`, ciclo terminado, **puerta bloqueada con ropa atrapada dentro**, cliente no puede recuperar su ropa y ya intentó abrir. Solicita desbloqueo remoto inmediato o intervención técnica prioritaria.
+
+**NUNCA** en este caso: ofrecer "cambia a otra máquina y lava/seca sin coste" (la ropa ya está procesada y atrapada), ni reiniciar el ciclo.
 
 ## Procedimiento ERR-01 (programa antes del pago)
 

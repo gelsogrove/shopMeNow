@@ -128,11 +128,17 @@ Dimmi se parte.
 
 ## La porta non si apre, il lavaggio è già finito
 
+> Schermo tipico: `OPEN ERROR`. Diverso da `OPEN:` (porta che non chiude PRIMA del lavaggio). Vale identico per lavatrice e asciugatrice: i panni sono già processati e intrappolati dentro — non si propone mai di cambiare macchina né di rilavare/riasciugare. È un caso URGENTE.
+
 **Cliente:** La porta non si apre, il lavaggio è già finito.
 
 **Bot:** Tranquilla. Quando il ciclo finisce, la porta impiega qualche minuto per sbloccarsi. Da quanto tempo è finito il lavaggio?
 
 **Cliente:** Più di 5 minuti.
+
+**Bot:** Tira la maniglia con decisione, a volte serve un po' più di forza. Si è aperta?
+
+**Cliente:** No, è ancora bloccata.
 
 **Bot:** In quale lavanderia ti trovi?
 
@@ -142,7 +148,7 @@ Dimmi se parte.
 
 **Cliente:** La 2.
 
-**Bot:** Come ti chiami? Passo il caso a un operatore per sbloccare la porta da remoto.
+**Bot:** Come ti chiami? Passo il caso con priorità a un operatore per sbloccare la porta da remoto.
 
 **Cliente:** Luis.
 
