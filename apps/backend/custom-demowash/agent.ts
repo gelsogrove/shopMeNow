@@ -29,6 +29,7 @@ import {
   getState,
   getTurnCount,
   incrementTurn,
+  markEscalationOnce,
   registerMessageTimestamp,
   resetState,
   seedLanguageIfNeeded,
@@ -272,7 +273,15 @@ async function executeTool(
     const patch: Partial<SessionState> = {}
     if (typeof args.name === 'string') patch.name = args.name
     if (typeof args.location === 'string') patch.location = args.location
-    if (args.machineType === 'washer' || args.machineType === 'dryer') patch.machineType = args.machineType
+    // Normalize machineType: some model completions leak tool-call markup into
+    // the value (e.g. "washer</machineType>\n</invoke>"). Match the canonical
+    // token inside the raw value instead of requiring exact equality, so a
+    // malformed-but-recoverable arg still sets the field (avoids losing the
+    // machine type in the operator briefing).
+    if (typeof args.machineType === 'string') {
+      if (/\bwasher\b/.test(args.machineType)) patch.machineType = 'washer'
+      else if (/\bdryer\b/.test(args.machineType)) patch.machineType = 'dryer'
+    }
     if (typeof args.machine === 'number' && Number.isFinite(args.machine)) patch.machine = args.machine
     if (typeof args.displayCode === 'string') patch.displayCode = args.displayCode
     // NOTE: `language` is NOT accepted here (would resurrect the T1 empty-reply
@@ -369,6 +378,18 @@ async function executeTool(
         error: 'missing_customer_name',
         instruction: 'Customer name is required before escalation. Ask the customer their name in their language, save it with remember({name: "..."}), then retry escalate_to_operator with the same summary.',
       }
+    }
+
+    // Idempotency: the LLM occasionally calls escalate_to_operator twice in the
+    // same turn (e.g. it retries after a missing_customer_name failure but also
+    // re-emits the original call). Fire the email exactly once per (session,
+    // reason). A duplicate returns ok:true with already_escalated so the bot
+    // still confirms to the customer, but no second operator email is sent.
+    if (!markEscalationOnce(ctx.sessionId, reason)) {
+      if (process.env.LLM_DEBUG === '1') {
+        console.error(`[escalation_skipped_duplicate] reason=${reason}`)
+      }
+      return { ok: true, already_escalated: true, eta_minutes: 5 }
     }
 
     const ticketId = `TKT-${Date.now().toString(36).toUpperCase()}`

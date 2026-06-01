@@ -43,6 +43,13 @@ interface SessionEntry {
   patches: CustomerPatch[]
   turnCount: number
   recentMessageTimestamps: number[]
+  // Reasons already escalated this session. Used to make escalate_to_operator
+  // idempotent: the LLM sometimes re-calls it in the same turn (e.g. after a
+  // missing_customer_name retry), which would fire a second operator email for
+  // the same incident. Tracked here (on the entry, not on SessionState) because
+  // it is internal bookkeeping that must never reach the LLM or the Customers
+  // mirror. Cleared automatically on resetState (the whole entry is dropped).
+  escalatedReasons: Set<string>
 }
 
 const sessions = new Map<string, SessionEntry>()
@@ -50,7 +57,7 @@ const sessions = new Map<string, SessionEntry>()
 function entry(sessionId: string): SessionEntry {
   let e = sessions.get(sessionId)
   if (!e) {
-    e = { state: {}, patches: [], turnCount: 0, recentMessageTimestamps: [] }
+    e = { state: {}, patches: [], turnCount: 0, recentMessageTimestamps: [], escalatedReasons: new Set() }
     sessions.set(sessionId, e)
   }
   return e
@@ -103,6 +110,16 @@ export function updateState(
 
 export function resetState(sessionId: string): void {
   sessions.delete(sessionId)
+}
+
+// Idempotency for escalate_to_operator. Returns true the FIRST time a given
+// reason is escalated in this session (and records it); returns false on any
+// repeat, so the caller can skip the duplicate side-effect (second email).
+export function markEscalationOnce(sessionId: string, reason: string): boolean {
+  const e = entry(sessionId)
+  if (e.escalatedReasons.has(reason)) return false
+  e.escalatedReasons.add(reason)
+  return true
 }
 
 export function drainPatches(sessionId: string): CustomerPatch[] {

@@ -23,6 +23,12 @@ A diferencia de la lavadora, en la secadora **se puede abrir la puerta durante e
 
 ## Problemas específicos de la secadora
 
+### "La secadora no calienta" (no genera calor — avería)
+
+El cliente dice que la secadora gira y los minutos pasan, pero **no genera calor** y la ropa sigue mojada al terminar. Esto es una **avería de la resistencia**, no un problema de uso: NO hay autoservicio que lo resuelva, NO pidas que repita el secado ni que reparta mejor la carga.
+
+**Es escalación DIRECTA** (no hagas troubleshooting): pide solo los datos de la recogida (sede → número de secadora → nombre) y escala con reason="dryer_no_heat". Briefing: *secadora N de <sede>, no calienta (resistencia), reembolsar el ciclo y revisar la máquina*.
+
 ### "La ropa ha salido empapada" (no centrifugado)
 
 Esto no es un problema de la secadora: la **lavadora** no ha centrifugado correctamente. Procedimiento:
