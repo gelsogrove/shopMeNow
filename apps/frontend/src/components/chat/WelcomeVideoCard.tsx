@@ -1,10 +1,13 @@
 /**
  * WelcomeVideoCard — the company presentation video shown ONLY on the chatbot's
  * first (welcome) reply. Renders a short localized intro line above the video.
- * Reuses the existing YouTube preview + modal player. The URL field is flexible:
- * a YouTube link renders the clickable thumbnail card; a direct .mp4 renders an
- * inline <video> player (so the same config field can later point to a
- * self-hosted video for native WhatsApp).
+ *
+ * Behaviour: YouTube → plays in the in-app modal player (YouTubePlayerModal);
+ * a direct .mp4 → inline <video> player. Reuses the existing shared components.
+ *
+ * NOTE: in-app playback requires the YouTube video to ALLOW embedding. If the
+ * owner disabled embedding (e.g. the current demo placeholder), the embed shows
+ * "This content is blocked" — in that case pick an embeddable video.
  */
 
 import { useState } from "react"
@@ -15,7 +18,6 @@ interface WelcomeVideoCardProps {
   url: string
   /** Conversation language (ISO 639-1) for the intro line. Falls back to es. */
   lang?: string | null
-  align?: "left" | "right"
   /** Show a "DEMO" badge over the thumbnail (placeholder video). Default true. */
   demoBadge?: boolean
 }
@@ -32,22 +34,15 @@ const INTRO: Record<string, string> = {
   de: "Bevor wir beginnen, hier eine kurze Präsentation 👇",
 }
 
-export function WelcomeVideoCard({
-  url,
-  lang,
-  align = "right",
-  demoBadge = true,
-}: WelcomeVideoCardProps) {
+export function WelcomeVideoCard({ url, lang, demoBadge = true }: WelcomeVideoCardProps) {
   const [videoId, setVideoId] = useState<string | null>(null)
   if (!url) return null
 
-  // Content is always left-aligned: it lives INSIDE a chat bubble where text
-  // flows left-to-right, regardless of which side the bubble is on.
   const isMp4 = /\.mp4(\?.*)?$/i.test(url)
   const intro = INTRO[(lang || "es").toLowerCase()] || INTRO.es
 
   return (
-    <div className="mt-2 flex flex-col items-start gap-1" data-testid="welcome-video-card">
+    <div className="my-3 flex flex-col items-start gap-2" data-testid="welcome-video-card">
       <p className="text-sm" style={{ lineHeight: "1.5" }}>{intro}</p>
       <div className="relative w-full max-w-[280px]">
         {/* "DEMO" badge — the presentation video is a placeholder. Hide by
