@@ -270,7 +270,14 @@ export class PlaygroundController {
         include: {
           customer: { select: { id: true, name: true, phone: true } },
         },
-        orderBy: { updatedAt: "desc" },
+        // Manual order first (sortOrder ascending, NULLs last via Prisma's
+        // nulls option), then most-recent activity. The frontend can still
+        // refine ordering, but this gives a stable server-side baseline that
+        // honours the user's drag-and-drop ordering after a reload.
+        orderBy: [
+          { sortOrder: { sort: "asc", nulls: "last" } },
+          { updatedAt: "desc" },
+        ],
         take: 50,
       })
       if (rawSessions.length === 0) {
@@ -1010,6 +1017,75 @@ export class PlaygroundController {
       logger.error("Playground deleteSession error:", error)
       return res.status(500).json({
         error: "Failed to delete session",
+        message: error.message,
+      })
+    }
+  }
+
+  // PATCH /api/v1/playground/sessions/:id
+  // Persist the playground UI overlays (title / feedback / sortOrder) on the
+  // chat session itself. Previously these lived in localStorage and were wiped
+  // by the logout's localStorage.clear(); storing them server-side makes them
+  // survive logout, browser changes and deploys. Workspace-scoped for tenant
+  // isolation.
+  async updateSession(req: Request, res: Response) {
+    try {
+      const { id } = req.params
+      if (!id) {
+        return res.status(400).json({ error: "session id required" })
+      }
+      const workspaceId = await resolveWorkspaceId(req)
+
+      const session = await prisma.chatSession.findFirst({
+        where: { id, workspaceId },
+        select: { id: true },
+      })
+      if (!session) {
+        return res.status(404).json({ error: "Session not found" })
+      }
+
+      // Build the patch from only the provided fields. Each field is
+      // independently optional so the frontend can update title, feedback or
+      // order in isolation. Passing null explicitly clears a field (e.g.
+      // un-liking a chat or removing a custom title).
+      const { title, feedback, sortOrder } = req.body ?? {}
+      const data: { title?: string | null; feedback?: string | null; sortOrder?: number | null } = {}
+
+      if (title !== undefined) {
+        if (title !== null && typeof title !== "string") {
+          return res.status(400).json({ error: "title must be a string or null" })
+        }
+        const trimmed = typeof title === "string" ? title.trim() : null
+        data.title = trimmed ? trimmed : null
+      }
+      if (feedback !== undefined) {
+        if (feedback !== null && feedback !== "like" && feedback !== "dislike") {
+          return res.status(400).json({ error: "feedback must be 'like', 'dislike' or null" })
+        }
+        data.feedback = feedback
+      }
+      if (sortOrder !== undefined) {
+        if (sortOrder !== null && typeof sortOrder !== "number") {
+          return res.status(400).json({ error: "sortOrder must be a number or null" })
+        }
+        data.sortOrder = sortOrder
+      }
+
+      if (Object.keys(data).length === 0) {
+        return res.status(400).json({ error: "No updatable fields provided (title, feedback, sortOrder)" })
+      }
+
+      const updated = await prisma.chatSession.update({
+        where: { id },
+        data,
+        select: { id: true, title: true, feedback: true, sortOrder: true },
+      })
+
+      return res.json({ ok: true, session: updated })
+    } catch (error: any) {
+      logger.error("Playground updateSession error:", error)
+      return res.status(500).json({
+        error: "Failed to update session",
         message: error.message,
       })
     }

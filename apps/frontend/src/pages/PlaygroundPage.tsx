@@ -128,6 +128,11 @@ type ChatSession = {
   id: string
   customer: { id: string; name: string | null; phone: string | null }
   messages: ChatMessage[]
+  // Server-persisted playground overlays (previously localStorage). Nullable
+  // because older sessions / fresh chats may not have them set yet.
+  title?: string | null
+  feedback?: Feedback | null
+  sortOrder?: number | null
 }
 
 // ── Local-only chat metadata (demo, not persisted to backend) ────────────────
@@ -1106,24 +1111,44 @@ function ChatTitleEdit({
   onSave: (next: string) => void
 }) {
   const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState(currentTitle || "")
+  // Seed the draft with the label currently shown in the list — the custom
+  // title if one is set, otherwise the fallback (the phone/name). Without
+  // this, editing a chat that has no custom title yet opens an empty field
+  // and the user has to retype the whole label from scratch (Andrea's bug).
+  const [draft, setDraft] = useState(currentTitle || fallbackLabel)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!editing) setDraft(currentTitle || "")
-  }, [currentTitle, editing])
+    if (!editing) setDraft(currentTitle || fallbackLabel)
+  }, [currentTitle, fallbackLabel, editing])
 
   useEffect(() => {
-    if (editing) inputRef.current?.focus()
+    if (editing) {
+      const el = inputRef.current
+      if (el) {
+        el.focus()
+        // Place the cursor at the end so the user can keep typing/editing
+        // the existing text instead of overwriting a selection.
+        el.setSelectionRange(el.value.length, el.value.length)
+      }
+    }
   }, [editing])
 
   const commit = () => {
-    onSave(draft)
+    const trimmed = draft.trim()
+    // If the field was left equal to the fallback label and no custom title
+    // existed before, treat it as "no override" — don't persist the phone as
+    // a redundant custom title. Otherwise save the (trimmed) draft.
+    if (!currentTitle && trimmed === fallbackLabel.trim()) {
+      setEditing(false)
+      return
+    }
+    onSave(trimmed)
     setEditing(false)
   }
 
   const cancel = () => {
-    setDraft(currentTitle || "")
+    setDraft(currentTitle || fallbackLabel)
     setEditing(false)
   }
 
@@ -1283,53 +1308,6 @@ function ChatScreen({
   // effect below ignores this id so the new chat stays selected even
   // before the backend echoes it back.
   const justCreatedSessionRef = useRef<string | null>(null)
-  // Demo-only overlays persisted in localStorage (no backend column today).
-  // When backend support lands, these move to ChatSession.title +
-  // ChatSession.feedback respectively. NOTE: a custom title only overrides the
-  // DISPLAY label; the real customer phone is always shown below it, so list
-  // and detail never diverge.
-  const [chatTitles, setChatTitles] = useState<Record<string, string>>(() =>
-    readJsonMap<string>(TITLE_STORAGE_KEY),
-  )
-  const [chatFeedback, setChatFeedback] = useState<Record<string, Feedback>>(
-    () => readJsonMap<Feedback>(FEEDBACK_STORAGE_KEY),
-  )
-  // Ordered list of session ids in user-preferred order. Sessions NOT in
-  // this list keep their natural (lastActivity) ordering AFTER the pinned
-  // ones. New sessions land at the top of the natural list.
-  const [chatOrder, setChatOrderState] = useState<string[]>(() =>
-    readJsonArray(ORDER_STORAGE_KEY),
-  )
-
-  const persistChatOrder = useCallback((next: string[]) => {
-    setChatOrderState(next)
-    writeJsonArray(ORDER_STORAGE_KEY, next)
-  }, [])
-
-  const setChatTitle = useCallback((sessionId: string, title: string) => {
-    setChatTitles((prev) => {
-      const next = { ...prev }
-      const trimmed = title.trim()
-      if (trimmed) next[sessionId] = trimmed
-      else delete next[sessionId]
-      writeJsonMap(TITLE_STORAGE_KEY, next)
-      return next
-    })
-  }, [])
-
-  const toggleChatFeedback = useCallback(
-    (sessionId: string, value: Feedback) => {
-      setChatFeedback((prev) => {
-        const next = { ...prev }
-        if (next[sessionId] === value) delete next[sessionId]
-        else next[sessionId] = value
-        writeJsonMap(FEEDBACK_STORAGE_KEY, next)
-        return next
-      })
-    },
-    [],
-  )
-
   const fetchAll = useCallback(async () => {
     const [msgRes, todosRes] = await Promise.all([
       playFetch(`${API_BASE}/messages`).then((r) => r.json()),
@@ -1338,6 +1316,67 @@ function ChatScreen({
     setSessions(msgRes.sessions || [])
     setTodos(todosRes.todos || [])
   }, [])
+
+  // 🏷️ Playground overlays (title / feedback / order) are persisted SERVER-SIDE
+  // on the chat session. They used to live in localStorage, but the logout's
+  // localStorage.clear() wiped them on every logout/login. Now they come from
+  // the DB via /messages and are mutated through PATCH /sessions/:id, so they
+  // survive logout, browser changes and deploys.
+  const patchSession = useCallback(
+    async (
+      sessionId: string,
+      patch: { title?: string | null; feedback?: Feedback | null; sortOrder?: number | null },
+    ) => {
+      // Optimistic update so the UI reacts immediately; fetchAll later
+      // reconciles with the authoritative server state.
+      setSessions((prev) =>
+        prev.map((s) => (s.id === sessionId ? { ...s, ...patch } : s)),
+      )
+      try {
+        const res = await playFetch(`${API_BASE}/sessions/${sessionId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        })
+        if (!res.ok) throw new Error(`PATCH failed (${res.status})`)
+      } catch {
+        // On failure, re-sync from the server so the UI doesn't keep a stale
+        // optimistic value.
+        fetchAll()
+      }
+    },
+    [fetchAll],
+  )
+
+  // Derived maps from the server sessions — keeps the existing render code
+  // (chatTitles[id] / chatFeedback[id]) working unchanged.
+  const chatTitles = useMemo(() => {
+    const m: Record<string, string> = {}
+    for (const s of sessions) if (s.title) m[s.id] = s.title
+    return m
+  }, [sessions])
+  const chatFeedback = useMemo(() => {
+    const m: Record<string, Feedback> = {}
+    for (const s of sessions) if (s.feedback) m[s.id] = s.feedback
+    return m
+  }, [sessions])
+
+  const setChatTitle = useCallback(
+    (sessionId: string, title: string) => {
+      const trimmed = title.trim()
+      patchSession(sessionId, { title: trimmed ? trimmed : null })
+    },
+    [patchSession],
+  )
+
+  const toggleChatFeedback = useCallback(
+    (sessionId: string, value: Feedback) => {
+      // Re-clicking the active feedback clears it (null); otherwise set it.
+      const current = sessions.find((s) => s.id === sessionId)?.feedback ?? null
+      patchSession(sessionId, { feedback: current === value ? null : value })
+    },
+    [patchSession, sessions],
+  )
 
   // 🌍 Fetch usecases markdown whenever the selected language changes.
   // For Demowash we hit the public slug-based endpoint so the loader looks
@@ -1429,15 +1468,24 @@ function ChatScreen({
     localStorage.setItem("playgroundAboutSeen", "1")
   }, [customChatbotId])
 
-  // Sort sessions by last message timestamp DESC (most recent activity on top).
-  // Falls back to session creation/update time when there are no messages yet.
+  // Order: sessions with a manual `sortOrder` (set via drag-and-drop, persisted
+  // server-side) come first in ascending order; the rest follow by last message
+  // timestamp DESC (most recent activity on top), falling back to update/create
+  // time when there are no messages yet.
   const sortedSessions = useMemo(() => {
     const getLastActivity = (s: ChatSession): number => {
       const last = s.messages[s.messages.length - 1]
       if (last?.createdAt) return new Date(last.createdAt).getTime()
       return new Date((s as any).updatedAt || (s as any).createdAt || 0).getTime()
     }
-    return [...sessions].sort((a, b) => getLastActivity(b) - getLastActivity(a))
+    return [...sessions].sort((a, b) => {
+      const ao = a.sortOrder ?? null
+      const bo = b.sortOrder ?? null
+      if (ao !== null && bo !== null) return ao - bo
+      if (ao !== null) return -1 // a is pinned, b is not → a first
+      if (bo !== null) return 1 // b is pinned, a is not → b first
+      return getLastActivity(b) - getLastActivity(a)
+    })
   }, [sessions])
 
   useEffect(() => {
@@ -1629,30 +1677,15 @@ function ChatScreen({
   }
 
   // Hide chats from the list when all linked TODOs are already in DONE.
-  // Chats with no linked TODOs stay visible. Then apply the user-defined
-  // drag-and-drop order: pinned sessions in `chatOrder` come first in
-  // that order; the rest keep their natural lastActivity order.
+  // Chats with no linked TODOs stay visible. Ordering (including the user's
+  // drag-and-drop order via `sortOrder`) is already applied by sortedSessions.
   const visibleSessions = useMemo(() => {
-    const filtered = sortedSessions.filter((s) => {
+    return sortedSessions.filter((s) => {
       const linkedTodos = todosBySession.get(s.id) || []
       if (linkedTodos.length === 0) return true
       return linkedTodos.some((t) => t.status !== "DONE")
     })
-    if (chatOrder.length === 0) return filtered
-    const byId = new Map(filtered.map((s) => [s.id, s]))
-    const pinned: ChatSession[] = []
-    for (const id of chatOrder) {
-      const s = byId.get(id)
-      if (s) {
-        pinned.push(s)
-        byId.delete(id)
-      }
-    }
-    // The remaining sessions (not in chatOrder) keep their original
-    // sortedSessions order, appended after the pinned ones.
-    const rest = filtered.filter((s) => byId.has(s.id))
-    return [...pinned, ...rest]
-  }, [sortedSessions, todosBySession, chatOrder])
+  }, [sortedSessions, todosBySession])
 
   // If the current chat becomes hidden by the DONE-only rule, switch to the
   // first visible chat (or clear selection if none is left).
@@ -2049,6 +2082,12 @@ function ChatScreen({
                       }`}
                     >
                       <MessageBody content={customerText} isInbound={isInbound} />
+                      {m.attachments && m.attachments.length > 0 && (
+                        <MessageAttachments
+                          attachments={m.attachments}
+                          align={isInbound ? "left" : "right"}
+                        />
+                      )}
                       <div className="text-[10px] text-gray-500 mt-1 flex justify-between items-center gap-3">
                         <span>{new Date(m.createdAt).toLocaleTimeString()}</span>
                         {/* Comment button only for chatbot (OUTBOUND) messages.

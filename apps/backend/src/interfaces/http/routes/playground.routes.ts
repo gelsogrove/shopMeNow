@@ -94,6 +94,9 @@ playgroundRouter.post(
   handleChatUploadError,
   (req, res) => controller.uploadAttachments(req, res)
 )
+playgroundRouter.patch("/playground/sessions/:id", optionalPlaygroundAuth, (req, res) =>
+  controller.updateSession(req, res)
+)
 playgroundRouter.delete("/playground/sessions/:id", optionalPlaygroundAuth, (req, res) =>
   controller.deleteSession(req, res)
 )
