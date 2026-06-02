@@ -96,9 +96,17 @@ export function MessageAttachments({ attachments, align = "left" }: MessageAttac
                   <Download className="h-4 w-4" /> Open
                 </a>
               </DialogTitle>
+              {/* PDFs uploaded to Cloudinary as `raw` are served with
+                  content-type application/octet-stream, which browsers refuse
+                  to render inline in an <iframe> (you get the broken-document
+                  icon). Embedding through Google's document viewer renders the
+                  PDF regardless of the origin content-type. If that ever fails,
+                  the "Open" link above still downloads/opens the file directly. */}
               <iframe
                 title={preview.filename || "PDF preview"}
-                src={preview.url}
+                src={`https://docs.google.com/viewer?embedded=true&url=${encodeURIComponent(
+                  preview.url
+                )}`}
                 className="h-[80vh] w-full rounded border-0"
               />
             </>
