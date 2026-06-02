@@ -655,8 +655,13 @@ async function callLLM(
   // Ollama's OpenAI-compatible endpoint doesn't support typed content blocks or
   // `cache_control` (an Anthropic/OpenRouter prompt-caching feature). In local
   // mode, flatten the system message to a plain string so the request is valid.
+  // We also append Qwen's `/no_think` soft-switch to disable the model's hidden
+  // reasoning trace (much faster for a customer-service bot). Re-enable with
+  // LLM_THINK=1. Harmless on non-Qwen models (treated as plain text).
+  const disableThinking = LOCAL_MODE && process.env.LLM_THINK !== '1'
   const systemMessageContent: unknown = LOCAL_MODE
-    ? systemContent.map((b) => (b as { text?: string }).text ?? '').join('\n\n')
+    ? systemContent.map((b) => (b as { text?: string }).text ?? '').join('\n\n') +
+      (disableThinking ? '\n\n/no_think' : '')
     : systemContent
 
   const payload = {

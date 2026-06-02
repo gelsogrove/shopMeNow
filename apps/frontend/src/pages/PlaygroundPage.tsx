@@ -2030,6 +2030,14 @@ function ChatScreen({
               const { customer: customerText, operator: operatorText } = isInbound
                 ? { customer: m.content, operator: null }
                 : splitBotMessage(m.content)
+              // 📺 Welcome video: split the bot's first reply into greeting
+              // (1st paragraph) + rest → greeting → intro+video → answer.
+              const isWelcomeWithVideo =
+                !!welcomeVideoUrl &&
+                msgIndex === visibleMessages.findIndex((mm) => mm.direction === "OUTBOUND")
+              const wBr = isWelcomeWithVideo ? customerText.indexOf("\n\n") : -1
+              const greetingPart = wBr !== -1 ? customerText.slice(0, wBr) : customerText
+              const restPart = wBr !== -1 ? customerText.slice(wBr + 2) : ""
               return (
                 <div key={m.id} id={`msg-${m.id}`} className="space-y-1">
                   <div
@@ -2048,22 +2056,22 @@ function ChatScreen({
                           : ""
                       }`}
                     >
-                      <MessageBody content={customerText} isInbound={isInbound} />
+                      <MessageBody content={greetingPart} isInbound={isInbound} />
+                      {isWelcomeWithVideo && (
+                        <WelcomeVideoCard
+                          url={welcomeVideoUrl as string}
+                          lang={activeSession?.customer?.language}
+                        />
+                      )}
+                      {isWelcomeWithVideo && restPart && (
+                        <MessageBody content={restPart} isInbound={isInbound} />
+                      )}
                       {m.attachments && m.attachments.length > 0 && (
                         <MessageAttachments
                           attachments={m.attachments}
                           align={isInbound ? "left" : "right"}
                         />
                       )}
-                      {welcomeVideoUrl &&
-                        msgIndex ===
-                          visibleMessages.findIndex((mm) => mm.direction === "OUTBOUND") && (
-                          <WelcomeVideoCard
-                            url={welcomeVideoUrl}
-                            lang={activeSession?.customer?.language}
-                            align="right"
-                          />
-                        )}
                       <div className="text-[10px] text-gray-500 mt-1 flex justify-between items-center gap-3">
                         <span>{new Date(m.createdAt).toLocaleTimeString()}</span>
                         {/* Comment button only for chatbot (OUTBOUND) messages.
