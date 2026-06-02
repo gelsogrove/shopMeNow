@@ -1929,9 +1929,14 @@ function ChatScreen({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold truncate">{primary}</div>
-                    {secondary && (
+                    {subPhone && (
                       <div className="text-xs opacity-80 truncate">
-                        {secondary}
+                        {subPhone}
+                      </div>
+                    )}
+                    {subName && (
+                      <div className="text-xs opacity-80 truncate">
+                        {subName}
                       </div>
                     )}
                   </div>
