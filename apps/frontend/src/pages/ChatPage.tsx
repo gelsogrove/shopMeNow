@@ -1929,14 +1929,17 @@ export function ChatPage() {
                             />
                           )}
 
-                          {/* 📺 Presentation video — ONLY on the first message
-                              of the conversation (the welcome greeting). */}
-                          {msgIndex === 0 && welcomeVideoUrl && (
-                            <WelcomeVideoCard
-                              url={welcomeVideoUrl}
-                              align={isAgentMessage ? "right" : "left"}
-                            />
-                          )}
+                          {/* 📺 Presentation video — ONLY on the chatbot's
+                              first reply (the welcome greeting), not on a
+                              customer message. */}
+                          {welcomeVideoUrl &&
+                            msgIndex === messages.findIndex((mm) => mm.sender === "user") && (
+                              <WelcomeVideoCard
+                                url={welcomeVideoUrl}
+                                lang={selectedChat?.language}
+                                align="right"
+                              />
+                            )}
 
                           {/* 🌍 When the global "Translate to" dropdown
                               (in the chat header toolbar) is active, the

@@ -127,7 +127,7 @@ type ChatMessage = {
 
 type ChatSession = {
   id: string
-  customer: { id: string; name: string | null; phone: string | null }
+  customer: { id: string; name: string | null; phone: string | null; language?: string | null }
   messages: ChatMessage[]
   // Server-persisted playground overlays (previously localStorage). Nullable
   // because older sessions / fresh chats may not have them set yet.
@@ -2055,12 +2055,15 @@ function ChatScreen({
                           align={isInbound ? "left" : "right"}
                         />
                       )}
-                      {msgIndex === 0 && welcomeVideoUrl && (
-                        <WelcomeVideoCard
-                          url={welcomeVideoUrl}
-                          align={isInbound ? "left" : "right"}
-                        />
-                      )}
+                      {welcomeVideoUrl &&
+                        msgIndex ===
+                          visibleMessages.findIndex((mm) => mm.direction === "OUTBOUND") && (
+                          <WelcomeVideoCard
+                            url={welcomeVideoUrl}
+                            lang={activeSession?.customer?.language}
+                            align="right"
+                          />
+                        )}
                       <div className="text-[10px] text-gray-500 mt-1 flex justify-between items-center gap-3">
                         <span>{new Date(m.createdAt).toLocaleTimeString()}</span>
                         {/* Comment button only for chatbot (OUTBOUND) messages.

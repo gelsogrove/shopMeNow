@@ -269,7 +269,7 @@ export class PlaygroundController {
       const rawSessions = await prisma.chatSession.findMany({
         where: { workspaceId },
         include: {
-          customer: { select: { id: true, name: true, phone: true } },
+          customer: { select: { id: true, name: true, phone: true, language: true } },
         },
         // Manual order first (sortOrder ascending, NULLs last via Prisma's
         // nulls option), then most-recent activity. The frontend can still
