@@ -1894,10 +1894,26 @@ function ChatScreen({
               const isGenericName =
                 !name ||
                 /^(new customer|test_|playground_|unknown)/i.test(name.trim())
+              // The detail header must show the SAME labels as the chat list
+              // card, otherwise the list shows the renamed title while the
+              // detail header shows the underlying phone and the two diverge
+              // (the bug Andrea hit). A user-edited custom title wins as the
+              // primary label; the real phone and the (non-generic) name are
+              // shown underneath so nothing is lost — exactly mirroring the
+              // list card (see the customTitle/secondary block above).
+              const customTitle = activeSession
+                ? chatTitles[activeSession.id] || null
+                : null
               const primary = activeSession
-                ? phone || (!isGenericName ? name : null) || "Chat"
+                ? customTitle || phone || (!isGenericName ? name : null) || "Chat"
                 : "Select a chat"
-              const secondary = !isGenericName && phone ? name : null
+              // Sub-lines under the primary: when a custom title is set we
+              // surface the real phone (otherwise hidden by the title); the
+              // name is shown whenever it is meaningful and not already the
+              // primary label.
+              const subPhone = customTitle ? phone : null
+              const subName =
+                !isGenericName && name && name !== primary ? name : null
               const initial = (primary[0] || "?").toUpperCase()
               const activeTodos = activeSession
                 ? todosBySession.get(activeSession.id) || []
