@@ -212,9 +212,22 @@ export class ChatController {
         logger.error("Failed to hydrate message attachments:", hydrationError)
       }
 
+      // 📺 Welcome video URL (shown only on the first message by the FE).
+      let welcomeVideoUrl: string | null = null
+      try {
+        const ws = await this.prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: { welcomeVideoUrl: true },
+        })
+        welcomeVideoUrl = ws?.welcomeVideoUrl || null
+      } catch {
+        /* non-fatal */
+      }
+
       // 📋 Return paginated response with metadata
       res.status(200).json({
         success: true,
+        welcomeVideoUrl,
         data: result.data,
         hasMore: result.hasMore,
         total: result.total,

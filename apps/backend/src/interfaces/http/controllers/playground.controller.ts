@@ -215,7 +215,7 @@ export class PlaygroundController {
       const workspaceId = await resolveWorkspaceId(req)
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { name: true, customChatbotId: true, slug: true },
+        select: { name: true, customChatbotId: true, slug: true, welcomeVideoUrl: true },
       })
       if (!workspace) {
         return res.status(404).json({ error: "Workspace not found" })
@@ -224,6 +224,7 @@ export class PlaygroundController {
         name: workspace.name,
         chatbotId: workspace.customChatbotId,
         slug: workspace.slug,
+        welcomeVideoUrl: workspace.welcomeVideoUrl || null,
       })
     } catch (error: any) {
       logger.error("Playground getWorkspaceInfo error:", error)
