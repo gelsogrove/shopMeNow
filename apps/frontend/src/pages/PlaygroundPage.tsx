@@ -1246,6 +1246,34 @@ function ChatScreen({
   const [showNewChat, setShowNewChat] = useState(false)
   const [chatInput, setChatInput] = useState("")
   const [sendingChat, setSendingChat] = useState(false)
+  const chatFileRef = useRef<HTMLInputElement | null>(null)
+
+  // 📎 Upload image/PDF AS THE CUSTOMER in the demo (renders on the left).
+  // Lets the playground test inbound media without a real WhatsApp message.
+  const handleChatAttachment = async (incoming: File[]) => {
+    if (!activeSession || incoming.length === 0) return
+    const { accepted, errors } = validateSelection(incoming, 0)
+    if (errors.length > 0) alert(errors.join("\n"))
+    if (accepted.length === 0) return
+    setSendingChat(true)
+    try {
+      const form = new FormData()
+      accepted.forEach((f) => form.append("files", f))
+      if (chatInput.trim()) form.append("caption", chatInput.trim())
+      form.append("chatSessionId", activeSession.id)
+      const res = await playFetch(`${API_BASE}/attachments`, { method: "POST", body: form })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.error || "Attachment upload failed")
+      }
+      setChatInput("")
+      await fetchAll()
+    } catch (e: any) {
+      alert(e?.message || "Attachment upload failed")
+    } finally {
+      setSendingChat(false)
+    }
+  }
   // Message id to highlight & scroll to (set when arriving from a kanban "Open in chat" click)
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null)
   const chatScrollRef = useRef<HTMLDivElement>(null)
