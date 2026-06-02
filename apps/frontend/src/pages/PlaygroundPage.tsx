@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react"
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { MessageAttachments } from "@/components/chat/MessageAttachments"
 import ReactMarkdown from "react-markdown"
 import {
   Link,
@@ -111,6 +112,14 @@ type ChatMessage = {
   createdAt: string
   aiGenerated: boolean
   chatSessionId: string
+  attachments?: Array<{
+    id: string
+    url: string
+    kind: "IMAGE" | "DOCUMENT"
+    mimeType: string
+    filename?: string | null
+    sizeBytes?: number
+  }>
 }
 
 type ChatSession = {
@@ -991,6 +1000,12 @@ function TodoDetailModal({
                       }`}
                     >
                       <MessageBody content={customerText} isInbound={isInbound} />
+                      {m.attachments && m.attachments.length > 0 && (
+                        <MessageAttachments
+                          attachments={m.attachments}
+                          align={isInbound ? "left" : "right"}
+                        />
+                      )}
                       <div className="text-[10px] text-gray-500 mt-1">
                         {new Date(m.createdAt).toLocaleTimeString()}
                         {isHighlighted && (

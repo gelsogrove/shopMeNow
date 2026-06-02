@@ -3,6 +3,9 @@ import { ICustomerRepository } from "../domain/repositories/customer.repository.
 import { prisma } from "../lib/prisma"
 import logger from "../utils/logger"
 import { normalizePhone } from "../utils/phone-normalizer"
+import { storageService } from "../services/storage.service"
+import { messageAttachmentRepository } from "./message-attachment.repository"
+import { purgeAttachmentBinaries } from "../services/attachment-lifecycle.service"
 
 /**
  * Implementation of Customer Repository using Prisma
@@ -425,6 +428,23 @@ export class CustomerRepository implements ICustomerRepository {
   async deleteRelatedRecords(id: string): Promise<void> {
     try {
       logger.info(`Starting to delete related records for customer ${id}`)
+
+      // 📎 Purge physical chat-attachment binaries FIRST — before any message
+      // deletion. The MessageAttachment rows cascade away with their parent
+      // ConversationMessage, but the stored files (Cloudinary/local) do not, so
+      // we must collect the storageKeys while the messages still exist and
+      // delete the binaries. Best-effort: a storage error must never abort the
+      // customer deletion (plan §9).
+      try {
+        const refs =
+          await messageAttachmentRepository.findStorageRefsByCustomerId(id)
+        if (refs.length > 0) {
+          await purgeAttachmentBinaries({ storage: storageService, logger }, refs)
+          logger.info(`Purged ${refs.length} chat attachment binaries for customer ${id}`)
+        }
+      } catch (err) {
+        logger.error(`Failed to purge chat attachment binaries for customer ${id}:`, err)
+      }
 
       // 🔧 CRITICAL: Delete WhatsAppQueue FIRST (has FK to ConversationMessage)
       const deletedQueue = await prisma.whatsAppQueue.deleteMany({

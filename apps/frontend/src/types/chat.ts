@@ -1,9 +1,19 @@
+export interface MessageAttachment {
+  id: string
+  url: string
+  kind: "IMAGE" | "DOCUMENT"
+  mimeType: string
+  filename?: string | null
+  sizeBytes?: number
+}
+
 export interface Message {
   id: string
   content: string
   sender: "user" | "customer"
   timestamp: string
   agentName?: string
+  attachments?: MessageAttachment[]
   deliveryStatus?: "not_queued" | "pending" | "sent" | "error" | "blocked"
   functionCalls?: Array<{
     functionName: string

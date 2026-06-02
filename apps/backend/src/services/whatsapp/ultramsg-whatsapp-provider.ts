@@ -11,6 +11,8 @@ import axios from 'axios'
 import querystring from 'querystring'
 import logger from '../../utils/logger'
 import {
+  InboundMediaRef,
+  InboundMediaResult,
   WhatsAppProvider,
   WhatsAppSendMessageResult,
 } from './whatsapp-provider.interface'
@@ -170,6 +172,33 @@ export class UltraMsgWhatsAppProvider implements WhatsAppProvider {
         error: error.response?.data?.error || error.message,
       }
     }
+  }
+
+  /**
+   * Download inbound media from UltraMsg.
+   * UltraMsg webhooks deliver a direct public media URL (data.media), so a
+   * single GET fetches the bytes. MIME comes from the response content-type.
+   */
+  async downloadInboundMedia(ref: InboundMediaRef): Promise<InboundMediaResult> {
+    if (!ref.mediaUrl) {
+      throw new Error('UltraMsg: mediaUrl is required to download inbound media')
+    }
+
+    const bin = await axios.get(ref.mediaUrl, {
+      responseType: 'arraybuffer',
+      timeout: 60000,
+    })
+
+    const buffer = Buffer.from(bin.data)
+    const mimeType =
+      (bin.headers?.['content-type'] as string) || 'application/octet-stream'
+
+    logger.info('📥 UltraMsg: Downloaded inbound media', {
+      mimeType,
+      sizeBytes: buffer.length,
+    })
+
+    return { buffer, mimeType: mimeType.split(';')[0].trim(), sizeBytes: buffer.length }
   }
 
   /**

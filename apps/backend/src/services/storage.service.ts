@@ -209,6 +209,40 @@ class StorageService {
     await this.deleteImage(key)
   }
 
+  /**
+   * Delete a stored file by its STORAGE KEY (not URL).
+   *
+   * The key is what `upload()` returns: on Cloudinary it is the `public_id`
+   * (e.g. "echatbot/chat-attachments/ws/sess/file"); locally it is the relative
+   * URL (e.g. "/uploads/...").
+   *
+   * Unlike `deleteImage()` (which expects a URL and assumes resource_type
+   * 'image'), this honours non-image resources: PDFs are uploaded with
+   * resource_type 'raw' and must be destroyed with the same resource_type, or
+   * Cloudinary silently no-ops. Used by the chat-attachment lifecycle service.
+   *
+   * @param key         storageKey returned by upload()
+   * @param options.raw true for non-image files (e.g. PDF) → resource_type 'raw'
+   */
+  async deleteByKey(key: string, options: { raw?: boolean } = {}): Promise<void> {
+    if (!key) return
+
+    if (this.storageType === 'cloudinary') {
+      try {
+        await cloudinary.uploader.destroy(key, {
+          resource_type: options.raw ? 'raw' : 'image',
+        })
+        logger.info(`🗑️ Deleted from Cloudinary by key: ${key} (raw=${!!options.raw})`)
+      } catch (error) {
+        logger.error(`❌ Cloudinary deleteByKey failed for ${key}:`, error)
+        // Do not throw — file may already be gone; lifecycle cleanup is best-effort.
+      }
+    } else {
+      // Local: the key is a relative /uploads URL.
+      await this.deleteFromLocal(key)
+    }
+  }
+
   // ==================== CLOUDINARY METHODS ====================
 
   private async uploadToCloudinary(file: Express.Multer.File, folder: Folder): Promise<string> {

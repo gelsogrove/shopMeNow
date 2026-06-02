@@ -7,6 +7,7 @@ import { CustomClientChatbotService, applyCustomerPatches, applyEscalationNotifi
 import { detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
 import { buildPhoneVariants } from "../../../utils/phone"
 import logger from "../../../utils/logger"
+import { messageAttachmentRepository } from "../../../repositories/message-attachment.repository"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Usecases markdown translation cache
@@ -300,6 +301,29 @@ export class PlaygroundController {
         if (arr) arr.push(r)
         else bySession.set(r.conversationId, [r])
       }
+
+      // 📎 Hydrate attachments for these messages (fail-safe).
+      const attByMessage: Record<string, any[]> = {}
+      try {
+        const msgIds = rows.map((r) => r.id)
+        if (msgIds.length > 0) {
+          const atts =
+            await messageAttachmentRepository.listByConversationMessageIds(msgIds)
+          for (const a of atts) {
+            ;(attByMessage[a.conversationMessageId] ||= []).push({
+              id: a.id,
+              url: a.url,
+              kind: a.kind,
+              mimeType: a.mimeType,
+              filename: a.filename,
+              sizeBytes: a.sizeBytes,
+            })
+          }
+        }
+      } catch (e: any) {
+        logger.error("Playground getMessages: attachment hydration failed:", e?.message)
+      }
+
       const sessions = rawSessions.map((s) => ({
         ...s,
         messages: (bySession.get(s.id) || []).map((m) => ({
@@ -310,6 +334,7 @@ export class PlaygroundController {
           createdAt: m.createdAt,
           aiGenerated: m.role === "assistant",
           chatSessionId: s.id,
+          attachments: attByMessage[m.id] || undefined,
         })),
       }))
       return res.json({ sessions })

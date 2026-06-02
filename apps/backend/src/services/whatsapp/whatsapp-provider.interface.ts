@@ -13,6 +13,24 @@ export interface WhatsAppSendMessageResult {
   error?: string
 }
 
+/**
+ * Reference to an inbound media item, as found in a provider's webhook payload.
+ * Meta delivers a `mediaId` (resolve → download with auth); UltraMsg/Wasender
+ * deliver a direct `mediaUrl`. Either may be present depending on the provider.
+ */
+export interface InboundMediaRef {
+  mediaId?: string
+  mediaUrl?: string
+}
+
+/** The downloaded binary plus what we could learn about it from the provider. */
+export interface InboundMediaResult {
+  buffer: Buffer
+  mimeType: string
+  filename?: string
+  sizeBytes: number
+}
+
 export interface WhatsAppProvider {
   /**
    * Send a text message
@@ -31,6 +49,14 @@ export interface WhatsAppProvider {
     caption?: string,
     mediaType?: 'image' | 'video' | 'document'
   ): Promise<WhatsAppSendMessageResult>
+
+  /**
+   * Download an inbound media item referenced in a webhook payload.
+   * Optional - implemented by providers that support receiving media.
+   * Returns the raw bytes + best-known MIME type so the ingestion pipeline can
+   * validate (magic-byte sniff + size) and re-archive it on our own storage.
+   */
+  downloadInboundMedia?(ref: InboundMediaRef): Promise<InboundMediaResult>
 
   /**
    * Send a template message (Meta Business API only)

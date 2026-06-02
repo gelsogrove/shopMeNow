@@ -9,6 +9,8 @@
 import axios from 'axios'
 import logger from '../../utils/logger'
 import {
+  InboundMediaRef,
+  InboundMediaResult,
   WhatsAppProvider,
   WhatsAppSendMessageResult,
 } from './whatsapp-provider.interface'
@@ -160,6 +162,46 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
         error: error.response?.data?.error?.message || error.message,
       }
     }
+  }
+
+  /**
+   * Download inbound media from Meta.
+   * Two steps: (1) GET /{media_id} → { url, mime_type, file_size }, then
+   * (2) GET that url with the Bearer token → binary. The media URL requires
+   * the same access token; it is NOT publicly fetchable.
+   * Meta stores inbound media for 14 days, so this must run promptly.
+   */
+  async downloadInboundMedia(ref: InboundMediaRef): Promise<InboundMediaResult> {
+    if (!ref.mediaId) {
+      throw new Error('Meta: mediaId is required to download inbound media')
+    }
+
+    const metaUrl = `${this.baseUrl}/${ref.mediaId}`
+    const meta = await axios.get(metaUrl, {
+      headers: { Authorization: `Bearer ${this.config.accessToken}` },
+      timeout: 30000,
+    })
+
+    const downloadUrl: string | undefined = meta.data?.url
+    const mimeType: string = meta.data?.mime_type || 'application/octet-stream'
+    if (!downloadUrl) {
+      throw new Error('Meta: media metadata did not include a download url')
+    }
+
+    const bin = await axios.get(downloadUrl, {
+      headers: { Authorization: `Bearer ${this.config.accessToken}` },
+      responseType: 'arraybuffer',
+      timeout: 60000,
+    })
+
+    const buffer = Buffer.from(bin.data)
+    logger.info('📥 Meta: Downloaded inbound media', {
+      mediaId: ref.mediaId,
+      mimeType,
+      sizeBytes: buffer.length,
+    })
+
+    return { buffer, mimeType, sizeBytes: buffer.length }
   }
 
   /**

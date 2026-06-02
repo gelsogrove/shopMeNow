@@ -1,9 +1,15 @@
 import { prisma, PrismaClient } from "@echatbot/database"
 import { Request, Response } from "express"
 import axios from "axios"
+import fs from "fs"
 import { config } from "../../../config"
 import { getLLMConfig } from "../../../config/llm.config"
 import { MessageRepository } from "../../../repositories/message.repository"
+import { storageService } from "../../../services/storage.service"
+import { messageAttachmentRepository } from "../../../repositories/message-attachment.repository"
+import { sniffMime, validateAttachment } from "../../../services/chat-attachment.validation"
+import { sendOperatorAttachment } from "../../../services/outbound-attachment.service"
+import { WhatsAppProviderFactory } from "../../../services/whatsapp/whatsapp-provider.factory"
 import { LLMRouterService } from "../../../services/llm-router.service"
 import { usageService } from "../../../services/usage.service"
 import { SubscriptionBillingService } from "../../../application/services/subscription-billing.service"
@@ -180,6 +186,32 @@ export class ChatController {
       // Mark messages as read when they are viewed
       await this.messageRepository.markMessagesAsRead(sessionId, workspaceId)
 
+      // 📎 Hydrate attachments onto each message (fail-safe: a hydration error
+      // must not break the messages response).
+      try {
+        const data = Array.isArray(result.data) ? result.data : []
+        const ids = data.map((m: any) => m.id).filter(Boolean)
+        if (ids.length > 0) {
+          const atts = await messageAttachmentRepository.listByConversationMessageIds(ids)
+          const byMessage: Record<string, any[]> = {}
+          for (const a of atts) {
+            ;(byMessage[a.conversationMessageId] ||= []).push({
+              id: a.id,
+              url: a.url,
+              kind: a.kind,
+              mimeType: a.mimeType,
+              filename: a.filename,
+              sizeBytes: a.sizeBytes,
+            })
+          }
+          for (const m of data) {
+            if (byMessage[m.id]) (m as any).attachments = byMessage[m.id]
+          }
+        }
+      } catch (hydrationError) {
+        logger.error("Failed to hydrate message attachments:", hydrationError)
+      }
+
       // 📋 Return paginated response with metadata
       res.status(200).json({
         success: true,
@@ -312,6 +344,151 @@ export class ChatController {
    * This is the HEART of the software - debug steps MUST match reality!
    * 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
    */
+  /**
+   * 📎 Upload one or more attachments (image/PDF) for a chat and send them.
+   *
+   * Multipart "files" (validated by chatAttachmentUpload middleware). For each
+   * file we: re-validate by magic bytes + size (never trust the client), upload
+   * to private storage, create an OUTBOUND Message + MessageAttachment, and —
+   * on the whatsapp channel — send via the workspace's active provider. Widget
+   * sessions persist only (rendered via polling). Best-effort send: a provider
+   * failure still stores the message so the operator sees it.
+   */
+  async uploadAttachments(req: Request, res: Response): Promise<void> {
+    const files = ((req as any).files as Express.Multer.File[]) || []
+    try {
+      const { sessionId } = req.params
+      const workspaceId = (req as any).workspaceId
+      const userId = (req as any).user?.userId || (req as any).user?.id
+      const caption = typeof req.body?.caption === "string" ? req.body.caption : ""
+
+      if (!sessionId || !workspaceId) {
+        res.status(400).json({ success: false, error: "Session ID and workspace are required" })
+        return
+      }
+      if (files.length === 0) {
+        res.status(400).json({ success: false, error: "No files provided" })
+        return
+      }
+
+      const chatSession = await this.prisma.chatSession.findFirst({
+        where: { id: sessionId, workspaceId },
+        include: { customer: true, workspace: true },
+      })
+      if (!chatSession) {
+        res.status(404).json({ success: false, error: "Chat session not found in this workspace" })
+        return
+      }
+
+      const channel: "whatsapp" | "widget" =
+        chatSession.channel === "widget" ? "widget" : "whatsapp"
+
+      // Resolve the active provider once (whatsapp channel only). If the channel
+      // is not active/configured, provider stays undefined → no send (Andrea's
+      // "if active is false it neither receives nor sends" rule).
+      let provider: any = undefined
+      if (channel === "whatsapp") {
+        try {
+          provider = WhatsAppProviderFactory.create(chatSession.workspace)
+        } catch (e) {
+          provider = undefined
+        }
+      }
+
+      const createdAttachments: any[] = []
+      for (const file of files) {
+        const buffer = fs.readFileSync(file.path)
+        const trueMime = sniffMime(buffer) || file.mimetype
+        const validation = validateAttachment({
+          mimeType: trueMime,
+          filename: file.originalname,
+          sizeBytes: buffer.length,
+        })
+        if (!validation.ok || !validation.kind) {
+          res.status(400).json({ success: false, error: validation.error || "Invalid file" })
+          return
+        }
+
+        const folder = `chat-attachments/${workspaceId}/${sessionId}`
+        const ext = trueMime === "application/pdf" ? "pdf" : trueMime === "image/png" ? "png" : "jpg"
+        const rand = Math.random().toString(36).slice(2, 8)
+        const uploaded = await storageService.upload(buffer, {
+          filename: `${Date.now()}_${rand}.${ext}`,
+          folder,
+          contentType: trueMime,
+          // v1: public + unguessable key so the provider can fetch it on send
+          // and the operator UI can render it. Production = signed URLs (§11).
+          isPublic: true,
+        })
+
+        // Persist into the LIVE conversation table (the chat UI reads this).
+        // role "assistant" → rendered on the operator/right side.
+        const message = await this.prisma.conversationMessage.create({
+          data: {
+            workspaceId,
+            customerId: chatSession.customerId,
+            conversationId: sessionId,
+            role: "assistant",
+            content: caption || "",
+            deliveryStatus: "sent",
+          },
+        })
+
+        const att = await messageAttachmentRepository.create({
+          conversationMessageId: message.id,
+          workspaceId,
+          kind: validation.kind,
+          url: uploaded.url,
+          storageKey: uploaded.key,
+          mimeType: trueMime,
+          filename: file.originalname,
+          sizeBytes: buffer.length,
+        })
+
+        const sendResult = await sendOperatorAttachment(
+          { provider, logger },
+          {
+            active: channel === "whatsapp" ? !!provider : true,
+            channel,
+            to: chatSession.customer.phone || "",
+            attachment: { kind: validation.kind, publicUrl: uploaded.url },
+            caption,
+          }
+        )
+
+        createdAttachments.push({
+          id: att.id,
+          messageId: message.id,
+          url: uploaded.url,
+          kind: validation.kind,
+          mimeType: trueMime,
+          filename: file.originalname,
+          sizeBytes: buffer.length,
+          sent: sendResult.sent,
+        })
+
+        try {
+          fs.unlinkSync(file.path)
+        } catch {
+          /* temp file cleanup best-effort */
+        }
+      }
+
+      res.status(200).json({ success: true, attachments: createdAttachments })
+    } catch (error: any) {
+      logger.error("[CHAT-ATTACH] ❌ Upload failed:", error)
+      // Best-effort temp cleanup on error.
+      for (const f of files) {
+        try {
+          fs.unlinkSync(f.path)
+        } catch {
+          /* ignore */
+        }
+      }
+      res.status(500).json({ success: false, error: "Failed to upload attachments" })
+    }
+  }
+
   async sendMessage(req: Request, res: Response): Promise<void> {
     try {
       const { sessionId } = req.params

@@ -3,6 +3,8 @@ import { PageLayout } from "@/components/layout/PageLayout"
 import { ClientSheet } from "@/components/shared/ClientSheet"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
+import { AttachmentButton } from "@/components/chat/AttachmentButton"
+import { MessageAttachments } from "@/components/chat/MessageAttachments"
 import { NotificationDialog } from "@/components/shared/NotificationDialog"
 import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
 import { WhatsAppIcon } from "@/components/shared/WhatsAppIcon"
@@ -203,6 +205,35 @@ export function ChatPage() {
   const { selectedChat, setSelectedChat } = useChat()
   const [messages, setMessages] = useState<Message[]>([])
   const [messageInput, setMessageInput] = useState("")
+  const [uploadingAttachment, setUploadingAttachment] = useState(false)
+
+  // 📎 Upload one or more attachments (image/PDF) for the current chat. Posts
+  // multipart to the dedicated endpoint; the backend stores them, creates the
+  // OUTBOUND message, and (on the whatsapp channel) sends via the provider.
+  // Kept separate from handleSubmit so the text-send path is untouched.
+  const handleAttachmentFiles = async (files: File[]) => {
+    const sessionIdToUse = selectedChat?.sessionId || selectedChat?.id
+    if (!sessionIdToUse || !workspace?.id || files.length === 0) return
+    try {
+      setUploadingAttachment(true)
+      const form = new FormData()
+      files.forEach((f) => form.append("files", f))
+      if (messageInput.trim()) form.append("caption", messageInput.trim())
+      await api.post(`/chat/${sessionIdToUse}/attachments`, form, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          "x-workspace-id": workspace.id,
+        },
+      })
+      setMessageInput("")
+      toast.success("Attachment sent", { duration: 1000 })
+    } catch (err: any) {
+      logger.error("❌ Attachment upload failed", { error: err?.message })
+      toast.error(err?.response?.data?.message || "Attachment upload failed", { duration: 2000 })
+    } finally {
+      setUploadingAttachment(false)
+    }
+  }
   const [loading, setLoading] = useState(false)
   const [loadingChat, setLoadingChat] = useState(false)
   const [isWorkspaceChanging, setIsWorkspaceChanging] = useState(false) // 🆕 Loading per workspace change
@@ -702,6 +733,7 @@ export function ChatPage() {
           timestamp: message.createdAt,
           agentName: message.metadata?.agentName || undefined,
           deliveryStatus: message.deliveryStatus,
+          attachments: message.attachments || undefined, // 📎 image/PDF attachments
           metadata: message.metadata, // 🔧 AGGIUNTO! Ora il metadata viene passato correttamente
         }))
 
@@ -1878,6 +1910,16 @@ export function ChatPage() {
                             )
                           })()}
 
+                          {/* 📎 Attachments (images / PDFs). Aligned to the
+                              same side as the bubble: operator/bot → right,
+                              customer → left. */}
+                          {message.attachments && message.attachments.length > 0 && (
+                            <MessageAttachments
+                              attachments={message.attachments}
+                              align={isAgentMessage ? "right" : "left"}
+                            />
+                          )}
+
                           {/* 🌍 When the global "Translate to" dropdown
                               (in the chat header toolbar) is active, the
                               translated content is rendered here inline.
@@ -1964,6 +2006,12 @@ export function ChatPage() {
               {/* Message Input: Only show if chatbot is disabled */}
               {!isChatbotActive && (
                 <div className="mt-2 flex gap-2">
+                  <AttachmentButton
+                    existingCount={0}
+                    disabled={loading || uploadingAttachment || selectedChat?.isBlacklisted}
+                    onFilesAccepted={handleAttachmentFiles}
+                    onErrors={(errs) => toast.error(errs.join("\n"), { duration: 2500 })}
+                  />
                   <Textarea
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}

@@ -4,6 +4,10 @@ import { asyncHandler } from "../middlewares/async.middleware"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
 import rateLimit from "express-rate-limit"
+import {
+  uploadChatAttachments,
+  handleChatUploadError,
+} from "../middlewares/chatAttachmentUpload"
 
 /**
  * @swagger
@@ -413,6 +417,40 @@ export const chatRouter = (chatController: ChatController): express.Router => {
     "/:sessionId/send",
     sendMessageLimiter, // 🔒 Rate limiting: max 10 msg/min
     asyncHandler(chatController.sendMessage.bind(chatController))
+  )
+
+  /**
+   * @swagger
+   * /api/chat/{sessionId}/attachments:
+   *   post:
+   *     summary: Upload one or more attachments (image/PDF) to a chat and send them
+   *     tags: [Chat]
+   *     parameters:
+   *       - in: path
+   *         name: sessionId
+   *         required: true
+   *         schema: { type: string }
+   *     requestBody:
+   *       content:
+   *         multipart/form-data:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               files:
+   *                 type: array
+   *                 items: { type: string, format: binary }
+   *               caption: { type: string }
+   *     responses:
+   *       200: { description: Attachments stored (and sent on the whatsapp channel) }
+   *       400: { description: Invalid file type/size or too many files }
+   *       404: { description: Chat session not found }
+   */
+  router.post(
+    "/:sessionId/attachments",
+    sendMessageLimiter, // 🔒 reuse the send rate limit
+    uploadChatAttachments,
+    handleChatUploadError,
+    asyncHandler(chatController.uploadAttachments.bind(chatController))
   )
 
   /**

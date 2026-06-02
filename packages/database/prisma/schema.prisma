@@ -902,6 +902,40 @@ model Message {
   @@map("messages")
 }
 
+// 📎 CHAT MESSAGE ATTACHMENTS - images / PDFs attached to a chat message.
+// Anchored to ConversationMessage (the LIVE table the chat UI reads/writes),
+// NOT the legacy Message model. Mirrors the SupportAttachment pattern (url +
+// storageKey + mimeType + size, onDelete: Cascade). The DB row is removed
+// automatically when the parent conversation message is deleted (and
+// conversation_messages themselves cascade from customer/workspace); the
+// physical binary on Cloudinary must be removed explicitly via `storageKey`
+// in the deletion/lifecycle service.
+model MessageAttachment {
+  id                    String              @id @default(uuid())
+  conversationMessageId String
+  conversationMessage   ConversationMessage @relation(fields: [conversationMessageId], references: [id], onDelete: Cascade)
+  workspaceId           String
+  kind                  AttachmentKind
+  url                   String // Cloudinary URL (or /uploads in dev)
+  storageKey            String // Cloudinary public_id — used for physical deletion
+  mimeType              String // "image/jpeg" | "image/png" | "application/pdf"
+  filename              String? // original file name (mostly for documents)
+  sizeBytes             Int
+  width                 Int? // images only
+  height                Int? // images only
+  waMediaId             String? // WhatsApp media id (audit / re-download within 14 days)
+  createdAt             DateTime            @default(now())
+
+  @@index([conversationMessageId])
+  @@index([workspaceId])
+  @@map("message_attachments")
+}
+
+enum AttachmentKind {
+  IMAGE
+  DOCUMENT
+}
+
 // 📦 ARCHIVED MESSAGES - Old messages moved here for performance
 // Messages older than 6 months are archived by scheduler job
 // ALL fields match Message table for easy restore if needed
@@ -1370,6 +1404,7 @@ model ConversationMessage {
   workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   customer          Customers       @relation(fields: [customerId], references: [id], onDelete: Cascade)
   whatsAppQueue     WhatsAppQueue[] // Inverse relation for queue tracking
+  attachments       MessageAttachment[] // 📎 image/PDF attachments
 
   @@index([conversationId, createdAt])
   @@index([workspaceId, customerId])

@@ -16,6 +16,8 @@
 import axios from 'axios'
 import logger from '../../utils/logger'
 import {
+  InboundMediaRef,
+  InboundMediaResult,
   WhatsAppProvider,
   WhatsAppSendMessageResult,
 } from './whatsapp-provider.interface'
@@ -149,6 +151,33 @@ export class WasenderWhatsAppProvider implements WhatsAppProvider {
         error: `WasenderAPI media send failed: ${errMsg}`,
       }
     }
+  }
+
+  /**
+   * Download inbound media from WasenderAPI.
+   * Wasender webhooks deliver a direct media URL; a single GET fetches the
+   * bytes. MIME comes from the response content-type.
+   */
+  async downloadInboundMedia(ref: InboundMediaRef): Promise<InboundMediaResult> {
+    if (!ref.mediaUrl) {
+      throw new Error('WasenderAPI: mediaUrl is required to download inbound media')
+    }
+
+    const bin = await axios.get(ref.mediaUrl, {
+      responseType: 'arraybuffer',
+      timeout: 60000,
+    })
+
+    const buffer = Buffer.from(bin.data)
+    const mimeType =
+      (bin.headers?.['content-type'] as string) || 'application/octet-stream'
+
+    logger.info('[Wasender-Provider] 📥 Downloaded inbound media:', {
+      mimeType,
+      sizeBytes: buffer.length,
+    })
+
+    return { buffer, mimeType: mimeType.split(';')[0].trim(), sizeBytes: buffer.length }
   }
 
   private maskPhone(phone: string): string {

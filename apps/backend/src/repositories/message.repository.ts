@@ -12,6 +12,9 @@ import { websocketService } from "../services/websocket.service"
 import logger from "../utils/logger"
 import { withOpenRouterRetry } from "../utils/llm-retry"
 import { getCurrencySymbol } from "../utils/currency"
+import { storageService } from "../services/storage.service"
+import { messageAttachmentRepository } from "./message-attachment.repository"
+import { purgeAttachmentBinaries } from "../services/attachment-lifecycle.service"
 
 /**
  * Apply Unicode strikethrough to text
@@ -2262,6 +2265,20 @@ export class MessageRepository {
           `deleteChat: Chat session ${chatSessionId} not found${workspaceId ? ` in workspace ${workspaceId}` : ""}`
         )
         return false
+      }
+
+      // 📎 Purge physical chat-attachment binaries BEFORE deleting messages.
+      // DB rows cascade with the message; the stored files do not. Best-effort:
+      // never abort the chat deletion on a storage error (plan §9).
+      try {
+        const refs =
+          await messageAttachmentRepository.findStorageRefsByChatSessionId(chatSessionId)
+        if (refs.length > 0) {
+          await purgeAttachmentBinaries({ storage: storageService, logger }, refs)
+          logger.info(`deleteChat: Purged ${refs.length} attachment binaries for session ${chatSessionId}`)
+        }
+      } catch (err) {
+        logger.error(`deleteChat: Failed to purge attachment binaries for session ${chatSessionId}:`, err)
       }
 
       // Delete all messages in the chat session (old Message model)
