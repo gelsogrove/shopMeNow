@@ -5,6 +5,7 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
 import { AttachmentButton } from "@/components/chat/AttachmentButton"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
+import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import { NotificationDialog } from "@/components/shared/NotificationDialog"
 import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
 import { WhatsAppIcon } from "@/components/shared/WhatsAppIcon"
@@ -241,6 +242,7 @@ export function ChatPage() {
   }
   const [loading, setLoading] = useState(false)
   const [loadingChat, setLoadingChat] = useState(false)
+  const [welcomeVideoUrl, setWelcomeVideoUrl] = useState<string | null>(null) // 📺 presentation video on first message
   const [isWorkspaceChanging, setIsWorkspaceChanging] = useState(false) // 🆕 Loading per workspace change
   const [, setSearchParams] = useSearchParams() // Only need setter, we read from searchParams above
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -729,6 +731,8 @@ export function ChatPage() {
       const sessionIdToUse = chat.sessionId || chat.id
       const response = await api.get(`/chat/${sessionIdToUse}/messages`)
       if (response.data.success) {
+        // 📺 Presentation video shown only on the first message
+        setWelcomeVideoUrl(response.data.welcomeVideoUrl || null)
         // Transform backend messages to frontend format
         const transformedMessages = response.data.data.map((message: any) => ({
           id: message.id,
@@ -1754,7 +1758,7 @@ export function ChatPage() {
                 )}
 
                 {messages.length > 0 ? (
-                  messages.map((message) => {
+                  messages.map((message, msgIndex) => {
                     // Using the sender field which is properly mapped from direction
                     const isAgentMessage = message.sender === "user"
                     const isCustomerMessage = message.sender === "customer"
@@ -1921,6 +1925,15 @@ export function ChatPage() {
                           {message.attachments && message.attachments.length > 0 && (
                             <MessageAttachments
                               attachments={message.attachments}
+                              align={isAgentMessage ? "right" : "left"}
+                            />
+                          )}
+
+                          {/* 📺 Presentation video — ONLY on the first message
+                              of the conversation (the welcome greeting). */}
+                          {msgIndex === 0 && welcomeVideoUrl && (
+                            <WelcomeVideoCard
+                              url={welcomeVideoUrl}
                               align={isAgentMessage ? "right" : "left"}
                             />
                           )}

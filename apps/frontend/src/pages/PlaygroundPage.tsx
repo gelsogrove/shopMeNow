@@ -17,6 +17,7 @@ import {
 } from "lucide-react"
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
+import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import { ACCEPTED_ACCEPT_ATTR, validateSelection } from "@/components/chat/attachment-utils"
 import ReactMarkdown from "react-markdown"
 import {
@@ -1216,6 +1217,7 @@ function ChatScreen({
   // refresh" race after login.
   const popupAutoOpenedRef = useRef(false)
   const [workspaceName, setWorkspaceName] = useState<string>("Ecolaundry")
+  const [welcomeVideoUrl, setWelcomeVideoUrl] = useState<string | null>(null) // 📺 presentation video on first message
   // Seed customChatbotId from the URL slug or from localStorage so the very
   // first render already knows which demo we're on. Without this the UI
   // briefly flashes the Ecolaundry layout (kanban button + Spanish usecases)
@@ -1387,6 +1389,7 @@ function ChatScreen({
       .then((data) => {
         if (data?.name) setWorkspaceName(data.name)
         if (data?.chatbotId && !urlSlug) setCustomChatbotId(data.chatbotId)
+        setWelcomeVideoUrl(data?.welcomeVideoUrl || null)
       })
       .catch(() => {/* keep default 'Ecolaundry' */})
     // Pause polling when the tab is hidden — saves backend traffic
@@ -2012,7 +2015,7 @@ function ChatScreen({
             className="flex-1 overflow-y-auto p-4 space-y-2"
             style={{ background: "#ece5dd" }}
           >
-            {visibleMessages.map((m) => {
+            {visibleMessages.map((m, msgIndex) => {
               const isInbound = m.direction === "INBOUND"
               const todoCount = todoCountByDialog.get(m.id) || 0
               const isHighlighted = m.id === highlightMessageId
@@ -2049,6 +2052,12 @@ function ChatScreen({
                       {m.attachments && m.attachments.length > 0 && (
                         <MessageAttachments
                           attachments={m.attachments}
+                          align={isInbound ? "left" : "right"}
+                        />
+                      )}
+                      {msgIndex === 0 && welcomeVideoUrl && (
+                        <WelcomeVideoCard
+                          url={welcomeVideoUrl}
                           align={isInbound ? "left" : "right"}
                         />
                       )}
