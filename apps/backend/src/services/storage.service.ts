@@ -130,24 +130,34 @@ class StorageService {
     const isImage = options.contentType.startsWith('image/')
     
     if (this.storageType === 'cloudinary') {
-      // For Cloudinary: save buffer to temp file, upload, then delete
-      const tempPath = path.join(this.localUploadDir, `temp_${Date.now()}_${options.filename}`)
-      fs.writeFileSync(tempPath, buffer)
-      
+      // Stream the buffer straight to Cloudinary — no temp file on disk.
+      //
+      // The previous implementation wrote the buffer to `dist/uploads/` first,
+      // but that directory only exists when storageType === 'local' (the
+      // constructor's ensureLocalDirectories() is skipped on Cloudinary). On
+      // Heroku that path is absent AND the filesystem is ephemeral, so the
+      // write failed with ENOENT and every chat-attachment upload returned 500.
+      // upload_stream takes the buffer directly, removing the disk dependency.
       try {
-        const result = await cloudinary.uploader.upload(tempPath, {
-          folder: `echatbot/${options.folder}`,
-          resource_type: isImage ? 'image' : 'raw', // Use 'image' for images, 'raw' for others
-          public_id: path.parse(options.filename).name,
-          use_filename: true,
+        const result = await new Promise<any>((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: `echatbot/${options.folder}`,
+              resource_type: isImage ? 'image' : 'raw', // 'image' for images, 'raw' for others (PDF, etc.)
+              public_id: path.parse(options.filename).name,
+              use_filename: true,
+            },
+            (error, uploadResult) => {
+              if (error) return reject(error)
+              resolve(uploadResult)
+            }
+          )
+          stream.end(buffer)
         })
-        
-        fs.unlinkSync(tempPath) // Cleanup temp file
-        
+
         logger.info(`☁️ Uploaded ${isImage ? 'image' : 'file'} to Cloudinary: ${result.secure_url}`)
         return { url: result.secure_url, key: result.public_id }
       } catch (error) {
-        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath)
         logger.error(`❌ Failed to upload to Cloudinary:`, error)
         throw error
       }
