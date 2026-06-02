@@ -2154,8 +2154,30 @@ function ChatScreen({
           {activeSession && (
             <form
               onSubmit={sendChatMessage}
-              className="border-t bg-white p-2 flex gap-2 shrink-0"
+              className="border-t bg-white p-2 flex gap-2 shrink-0 items-center"
             >
+              <button
+                type="button"
+                onClick={() => chatFileRef.current?.click()}
+                disabled={sendingChat}
+                title="Attach files"
+                aria-label="Attach files"
+                className="text-gray-500 hover:text-emerald-600 px-1 disabled:opacity-50"
+              >
+                <Paperclip className="w-5 h-5" />
+              </button>
+              <input
+                ref={chatFileRef}
+                type="file"
+                multiple
+                accept={ACCEPTED_ACCEPT_ATTR}
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? [])
+                  e.target.value = ""
+                  if (files.length > 0) handleChatAttachment(files)
+                }}
+              />
               <input
                 placeholder="Type a message..."
                 value={chatInput}
