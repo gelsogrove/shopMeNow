@@ -1570,8 +1570,15 @@ function ChatScreen({
     const out: typeof activeSession.messages = []
     for (const m of activeSession.messages) {
       const prev = out[out.length - 1]
+      // Dedup consecutive identical TEXT messages — but NEVER collapse messages
+      // that carry attachments. Image/PDF-only messages have empty content, so
+      // without this guard several of them (same direction, all "") would be
+      // dropped as "duplicates" and the attachments would vanish.
+      const hasAttachments =
+        (m.attachments?.length || 0) > 0 || (prev?.attachments?.length || 0) > 0
       if (
         prev &&
+        !hasAttachments &&
         prev.direction === m.direction &&
         prev.content.trim() === m.content.trim()
       ) {
