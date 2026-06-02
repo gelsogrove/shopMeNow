@@ -1954,18 +1954,6 @@ export function ChatPage() {
                             />
                           )}
 
-                          {/* 📺 Presentation video — ONLY on the chatbot's
-                              first reply (the welcome greeting), not on a
-                              customer message. */}
-                          {welcomeVideoUrl &&
-                            msgIndex === messages.findIndex((mm) => mm.sender === "user") && (
-                              <WelcomeVideoCard
-                                url={welcomeVideoUrl}
-                                lang={selectedChat?.language}
-                                align="right"
-                              />
-                            )}
-
                           {/* 🌍 When the global "Translate to" dropdown
                               (in the chat header toolbar) is active, the
                               translated content is rendered here inline.
