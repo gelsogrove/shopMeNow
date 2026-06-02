@@ -6,7 +6,6 @@ import {
   KanbanSquare,
   LogOut,
   MessageCircle,
-  Paperclip,
   Pencil,
   Plus,
   Send,
@@ -18,7 +17,6 @@ import {
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
-import { ACCEPTED_ACCEPT_ATTR, validateSelection } from "@/components/chat/attachment-utils"
 import ReactMarkdown from "react-markdown"
 import {
   Link,
@@ -1233,34 +1231,6 @@ function ChatScreen({
   const [showNewChat, setShowNewChat] = useState(false)
   const [chatInput, setChatInput] = useState("")
   const [sendingChat, setSendingChat] = useState(false)
-  const chatFileRef = useRef<HTMLInputElement | null>(null)
-
-  // 📎 Upload image/PDF AS THE CUSTOMER in the demo (renders on the left).
-  // Lets the playground test inbound media without a real WhatsApp message.
-  const handleChatAttachment = async (incoming: File[]) => {
-    if (!activeSession || incoming.length === 0) return
-    const { accepted, errors } = validateSelection(incoming, 0)
-    if (errors.length > 0) alert(errors.join("\n"))
-    if (accepted.length === 0) return
-    setSendingChat(true)
-    try {
-      const form = new FormData()
-      accepted.forEach((f) => form.append("files", f))
-      if (chatInput.trim()) form.append("caption", chatInput.trim())
-      form.append("chatSessionId", activeSession.id)
-      const res = await playFetch(`${API_BASE}/attachments`, { method: "POST", body: form })
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}))
-        throw new Error(j.error || "Attachment upload failed")
-      }
-      setChatInput("")
-      await fetchAll()
-    } catch (e: any) {
-      alert(e?.message || "Attachment upload failed")
-    } finally {
-      setSendingChat(false)
-    }
-  }
   // Message id to highlight & scroll to (set when arriving from a kanban "Open in chat" click)
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null)
   const chatScrollRef = useRef<HTMLDivElement>(null)
@@ -2188,28 +2158,6 @@ function ChatScreen({
               onSubmit={sendChatMessage}
               className="border-t bg-white p-2 flex gap-2 shrink-0 items-center"
             >
-              <button
-                type="button"
-                onClick={() => chatFileRef.current?.click()}
-                disabled={sendingChat}
-                title="Attach files"
-                aria-label="Attach files"
-                className="text-gray-500 hover:text-emerald-600 px-1 disabled:opacity-50"
-              >
-                <Paperclip className="w-5 h-5" />
-              </button>
-              <input
-                ref={chatFileRef}
-                type="file"
-                multiple
-                accept={ACCEPTED_ACCEPT_ATTR}
-                className="hidden"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files ?? [])
-                  e.target.value = ""
-                  if (files.length > 0) handleChatAttachment(files)
-                }}
-              />
               <input
                 placeholder="Type a message..."
                 value={chatInput}
@@ -2222,7 +2170,8 @@ function ChatScreen({
               <button
                 type="submit"
                 disabled={sendingChat || !chatInput.trim()}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 rounded-full disabled:opacity-50 min-w-[44px] flex items-center justify-center"
+                aria-label="Send message"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white w-10 h-10 rounded-full disabled:opacity-50 flex items-center justify-center shrink-0"
               >
                 {sendingChat ? (
                   <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />

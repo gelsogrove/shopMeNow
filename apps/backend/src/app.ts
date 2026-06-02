@@ -259,12 +259,16 @@ app.use(
                 "https://accounts.google.com",
                 "https://accounts.google.com/gsi/",
                 "https://www.google.com",
+                "https://www.youtube.com", // Welcome video embed (chat widget)
+                "https://www.youtube-nocookie.com",
               ],
               childSrc: [
                 "'self'",
                 "https://accounts.google.com",
                 "https://accounts.google.com/gsi/",
                 "https://www.google.com",
+                "https://www.youtube.com", // Welcome video embed (chat widget)
+                "https://www.youtube-nocookie.com",
                 "blob:",
               ],
               frameAncestors: [
