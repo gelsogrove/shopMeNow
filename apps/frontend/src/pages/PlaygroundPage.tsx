@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
+import { ACCEPTED_ACCEPT_ATTR, validateSelection } from "@/components/chat/attachment-utils"
 import ReactMarkdown from "react-markdown"
 import {
   Link,
