@@ -135,54 +135,13 @@ type ChatSession = {
   sortOrder?: number | null
 }
 
-// ── Local-only chat metadata (demo, not persisted to backend) ────────────────
-// Chat title overrides + per-CHAT feedback live in localStorage so the
-// playground can display them without a backend column. When the data model
-// graduates to production, these maps move to the ChatSession columns.
+// ── Per-chat metadata ────────────────────────────────────────────────────────
+// Chat title overrides, per-chat feedback and manual ordering are persisted
+// server-side on the ChatSession (title / feedback / sortOrder columns) and
+// mutated via PATCH /playground/sessions/:id. They previously lived in
+// localStorage but were wiped by the logout's localStorage.clear().
 
 type Feedback = "like" | "dislike"
-
-const TITLE_STORAGE_KEY = "ecolaundry-demo-chat-titles"
-const FEEDBACK_STORAGE_KEY = "ecolaundry-demo-chat-feedback"
-const ORDER_STORAGE_KEY = "ecolaundry-demo-chat-order"
-
-function readJsonArray(key: string): string[] {
-  try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : []
-  } catch {
-    return []
-  }
-}
-
-function writeJsonArray(key: string, value: string[]): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    /* quota exceeded — ignore, demo overlay */
-  }
-}
-
-function readJsonMap<T>(key: string): Record<string, T> {
-  try {
-    const raw = localStorage.getItem(key)
-    if (!raw) return {}
-    const parsed = JSON.parse(raw)
-    return parsed && typeof parsed === "object" ? (parsed as Record<string, T>) : {}
-  } catch {
-    return {}
-  }
-}
-
-function writeJsonMap<T>(key: string, value: Record<string, T>): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    /* quota exceeded or storage disabled — ignore, this is a demo overlay */
-  }
-}
 
 const PRIORITY_COLOR: Record<Priority, string> = {
   Alto: "bg-red-100 text-red-700 border-red-300",
@@ -1724,9 +1683,14 @@ function ChatScreen({
       const reordered = [...visibleSessions]
       const [moved] = reordered.splice(sourceIdx, 1)
       reordered.splice(destIdx, 0, moved)
-      persistChatOrder(reordered.map((s) => s.id))
+      // Assign a stable ascending sortOrder to every visible session and
+      // persist each one server-side (PATCH /sessions/:id). patchSession does
+      // an optimistic local update so the list reorders instantly.
+      reordered.forEach((s, idx) => {
+        if (s.sortOrder !== idx) patchSession(s.id, { sortOrder: idx })
+      })
     },
-    [visibleSessions, persistChatOrder],
+    [visibleSessions, patchSession],
   )
 
   return (
@@ -2329,12 +2293,10 @@ function ChatScreen({
             // does not race-reset our selection while fetchAll is in flight.
             justCreatedSessionRef.current = sid
             setActiveSessionId(sid)
-            // Pin the new chat at the very top of the list, above any
-            // user-reordered pinned chats. We prepend its id to chatOrder
-            // and dedupe in case the user re-creates a previously
-            // ordered session id (defensive — backend gives unique ids
-            // today).
-            persistChatOrder([sid, ...chatOrder.filter((id) => id !== sid)])
+            // Pin the new chat at the very top of the list. Manually-ordered
+            // chats use sortOrder >= 0, so -1 places this one above all of
+            // them. Persisted server-side via PATCH.
+            patchSession(sid, { sortOrder: -1 })
             fetchAll()
             setTimeout(fetchAll, 800)
             setTimeout(fetchAll, 2000)

@@ -846,6 +846,13 @@ model ChatSession {
   // These sessions are hidden from the backoffice chat list.
   isPlayground Boolean @default(false)
 
+  // 🏷️ Playground UI overlays — persisted server-side so they survive logout,
+  // browser changes and deploys (previously these lived in localStorage and
+  // were wiped by the logout's localStorage.clear()).
+  title     String? // Custom chat title shown in the playground list (overrides phone/name)
+  feedback  String? // Per-chat feedback: "like" | "dislike" | null
+  sortOrder Int? // Manual ordering position in the playground chat list (lower = higher)
+
   // 🔒 CONCURRENCY SAFETY: Unique constraint prevents duplicate active sessions
   // Only ONE active session allowed per customer at any time
   @@unique([customerId, status], name: "unique_active_session")
