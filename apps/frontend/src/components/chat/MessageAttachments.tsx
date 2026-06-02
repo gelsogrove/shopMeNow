@@ -1,8 +1,9 @@
 /**
  * MessageAttachments — renders the attachments attached to a chat message
- * bubble. Images show as thumbnails that open a fullscreen lightbox; PDFs show
- * as a card that opens an inline viewer. Reuses the shadcn Dialog (same pattern
- * as the existing YouTubePlayerModal). English UI.
+ * bubble. Behaviour per attachment type:
+ *   • image → thumbnail that opens a fullscreen lightbox (view)
+ *   • pdf   → card that DOWNLOADS the file (download)
+ * Reuses the shadcn Dialog for the image lightbox. English UI.
  *
  * Alignment (left/right) is decided by the PARENT bubble — this component only
  * renders the media; pass `align` so the thumbnails hug the correct side.
@@ -10,11 +11,7 @@
 
 import { Download, FileText } from "lucide-react"
 import { useState } from "react"
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { ChatAttachment, formatBytes, isImage } from "./attachment-utils"
 
 interface MessageAttachmentsProps {
@@ -34,6 +31,7 @@ export function MessageAttachments({ attachments, align = "left" }: MessageAttac
       <div className={`mt-1 flex flex-wrap gap-2 ${justify}`} data-testid="message-attachments">
         {attachments.map((att) =>
           isImage(att.kind || att.mimeType) ? (
+            // 🖼️ Image → open lightbox (view).
             <button
               key={att.id}
               type="button"
@@ -49,12 +47,15 @@ export function MessageAttachments({ attachments, align = "left" }: MessageAttac
               />
             </button>
           ) : (
-            <button
+            // 📄 PDF → download (anchor with download attribute).
+            <a
               key={att.id}
-              type="button"
-              onClick={() => setPreview(att)}
+              href={att.url}
+              download={att.filename || "document.pdf"}
+              target="_blank"
+              rel="noreferrer"
               className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-2 text-left transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-green-500"
-              title={att.filename || "Document"}
+              title={`Download ${att.filename || "document"}`}
             >
               <span className="flex h-9 w-9 items-center justify-center rounded bg-red-50 text-red-500">
                 <FileText className="h-5 w-5" />
@@ -63,18 +64,20 @@ export function MessageAttachments({ attachments, align = "left" }: MessageAttac
                 <span className="block truncate text-sm font-medium text-gray-700">
                   {att.filename || "Document.pdf"}
                 </span>
-                {att.sizeBytes ? (
-                  <span className="block text-xs text-gray-400">{formatBytes(att.sizeBytes)}</span>
-                ) : null}
+                <span className="flex items-center gap-1 text-xs text-gray-400">
+                  <Download className="h-3 w-3" />
+                  {att.sizeBytes ? formatBytes(att.sizeBytes) : "Download"}
+                </span>
               </span>
-            </button>
+            </a>
           )
         )}
       </div>
 
+      {/* Image lightbox (view) */}
       <Dialog open={!!preview} onOpenChange={(open) => !open && setPreview(null)}>
         <DialogContent className="max-w-3xl p-2">
-          {preview && isImage(preview.kind || preview.mimeType) ? (
+          {preview && (
             <>
               <DialogTitle className="sr-only">{preview.filename || "Image preview"}</DialogTitle>
               <img
@@ -83,34 +86,7 @@ export function MessageAttachments({ attachments, align = "left" }: MessageAttac
                 className="mx-auto max-h-[80vh] w-auto rounded"
               />
             </>
-          ) : preview ? (
-            <>
-              <DialogTitle className="flex items-center justify-between px-2 text-sm">
-                <span className="truncate">{preview.filename || "Document.pdf"}</span>
-                <a
-                  href={preview.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="ml-2 inline-flex items-center gap-1 text-green-600 hover:underline"
-                >
-                  <Download className="h-4 w-4" /> Open
-                </a>
-              </DialogTitle>
-              {/* PDFs uploaded to Cloudinary as `raw` are served with
-                  content-type application/octet-stream, which browsers refuse
-                  to render inline in an <iframe> (you get the broken-document
-                  icon). Embedding through Google's document viewer renders the
-                  PDF regardless of the origin content-type. If that ever fails,
-                  the "Open" link above still downloads/opens the file directly. */}
-              <iframe
-                title={preview.filename || "PDF preview"}
-                src={`https://docs.google.com/viewer?embedded=true&url=${encodeURIComponent(
-                  preview.url
-                )}`}
-                className="h-[80vh] w-full rounded border-0"
-              />
-            </>
-          ) : null}
+          )}
         </DialogContent>
       </Dialog>
     </>
