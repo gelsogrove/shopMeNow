@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "demo": "node --import tsx agent.ts",
+    "demo:local": "LLM_BASE_URL=${LLM_BASE_URL:-http://localhost:11434/v1} LLM_MODEL=${LLM_MODEL:-qwen3:14b} OPENROUTER_API_KEY=ollama node --import tsx agent.ts --local",
     "demo:contract": "node --import tsx test-contract.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

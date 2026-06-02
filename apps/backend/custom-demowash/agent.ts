@@ -87,6 +87,21 @@ function loadSettings(): Settings {
 
 loadDotEnv(path.resolve(__dirname, '.env'))
 
+// ── Local LLM mode (Ollama) ─────────────────────────────────────────────────
+// Enable with:  npm run demo --local   (npm sets npm_config_local=true)
+//          or:  npm run demo -- --local   /   node --import tsx agent.ts --local
+// In local mode we point at Ollama's OpenAI-compatible endpoint and use a local
+// model. Ollama ignores the bearer token, but the code paths below require a
+// non-empty key, so we set a placeholder.
+const LOCAL_MODE =
+  process.argv.includes('--local') || process.env.npm_config_local === 'true'
+
+if (LOCAL_MODE) {
+  process.env.LLM_BASE_URL = process.env.LLM_BASE_URL || 'http://localhost:11434/v1'
+  process.env.LLM_MODEL = process.env.LLM_MODEL || 'qwen3:14b'
+  process.env.OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || 'ollama'
+}
+
 const SETTINGS = loadSettings()
 const BASE_URL = process.env.LLM_BASE_URL || 'https://openrouter.ai/api/v1'
 const MODEL = process.env.LLM_MODEL || SETTINGS.model
@@ -637,9 +652,16 @@ async function callLLM(
   }
   systemContent.push({ type: 'text', text: runtimeBlock })
 
+  // Ollama's OpenAI-compatible endpoint doesn't support typed content blocks or
+  // `cache_control` (an Anthropic/OpenRouter prompt-caching feature). In local
+  // mode, flatten the system message to a plain string so the request is valid.
+  const systemMessageContent: unknown = LOCAL_MODE
+    ? systemContent.map((b) => (b as { text?: string }).text ?? '').join('\n\n')
+    : systemContent
+
   const payload = {
     model: MODEL,
-    messages: [{ role: 'system', content: systemContent }, ...history],
+    messages: [{ role: 'system', content: systemMessageContent }, ...history],
     tools: TOOLS,
     tool_choice: 'auto',
     temperature: TEMPERATURE,
@@ -659,7 +681,8 @@ async function callLLM(
 
   if (!res.ok) {
     const body = await res.text()
-    throw new Error(`OpenRouter HTTP ${res.status}: ${body.slice(0, 500)}`)
+    const provider = LOCAL_MODE ? 'Ollama' : 'OpenRouter'
+    throw new Error(`${provider} HTTP ${res.status}: ${body.slice(0, 500)}`)
   }
 
   const data = (await res.json()) as {
@@ -1134,7 +1157,7 @@ async function runInteractive(systemPrompt: string): Promise<void> {
   const rl = createInterface({ input: process.stdin, output: process.stdout })
   console.log('Demowash chatbot — assembled prompt + state + tools + escalation.')
   console.log('Commands: /exit /quit /reset /state')
-  console.log(`model=${MODEL} prompts=${PROMPTS_DIR}`)
+  console.log(`model=${MODEL} prompts=${PROMPTS_DIR}${LOCAL_MODE ? ` [LOCAL: ${BASE_URL}]` : ''}`)
   if (OPERATOR_EMAIL) {
     console.log(`operator email: ${OPERATOR_EMAIL} ${GMAIL_USER ? '(SMTP active)' : '(SMTP not configured — briefings logged to console)'}`)
   }

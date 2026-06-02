@@ -8,6 +8,8 @@ import { detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
 import { buildPhoneVariants } from "../../../utils/phone"
 import logger from "../../../utils/logger"
 import { messageAttachmentRepository } from "../../../repositories/message-attachment.repository"
+import { storageService } from "../../../services/storage.service"
+import { sniffMime, validateAttachment } from "../../../services/chat-attachment.validation"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Usecases markdown translation cache
@@ -341,6 +343,114 @@ export class PlaygroundController {
     } catch (error: any) {
       logger.error("Playground getMessages error:", error)
       return res.status(500).json({ error: "Failed to load messages", message: error.message })
+    }
+  }
+
+  // POST /api/v1/playground/attachments
+  // 📎 Upload image/PDF as the CUSTOMER side in the demo (role "user" → renders
+  // left). Lets the playground test inbound media without a real WhatsApp.
+  async uploadAttachments(req: Request, res: Response) {
+    const files = ((req as any).files as Express.Multer.File[]) || []
+    const cleanup = () => {
+      for (const f of files) {
+        try {
+          fs.unlinkSync(f.path)
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    try {
+      const workspaceId = await resolveWorkspaceId(req)
+      const chatSessionId = req.body?.chatSessionId
+      const caption = typeof req.body?.caption === "string" ? req.body.caption : ""
+      if (!chatSessionId) {
+        cleanup()
+        return res.status(400).json({ error: "chatSessionId is required" })
+      }
+      if (files.length === 0) {
+        cleanup()
+        return res.status(400).json({ error: "No files provided" })
+      }
+
+      const session = await prisma.chatSession.findFirst({
+        where: { id: chatSessionId, workspaceId },
+        select: { id: true, customerId: true },
+      })
+      if (!session) {
+        cleanup()
+        return res.status(404).json({ error: "Chat session not found" })
+      }
+
+      const created: any[] = []
+      for (const file of files) {
+        const buffer = fs.readFileSync(file.path)
+        const trueMime = sniffMime(buffer) || file.mimetype
+        const validation = validateAttachment({
+          mimeType: trueMime,
+          filename: file.originalname,
+          sizeBytes: buffer.length,
+        })
+        if (!validation.ok || !validation.kind) {
+          cleanup()
+          return res.status(400).json({ error: validation.error || "Invalid file" })
+        }
+
+        const ext =
+          trueMime === "application/pdf" ? "pdf" : trueMime === "image/png" ? "png" : "jpg"
+        const rand = Math.random().toString(36).slice(2, 8)
+        const uploaded = await storageService.upload(buffer, {
+          filename: `${Date.now()}_${rand}.${ext}`,
+          folder: `chat-attachments/${workspaceId}/${chatSessionId}`,
+          contentType: trueMime,
+          isPublic: true,
+        })
+
+        // role "user" → customer side (left), simulating an inbound media msg.
+        const msg = await prisma.conversationMessage.create({
+          data: {
+            workspaceId,
+            customerId: session.customerId,
+            conversationId: chatSessionId,
+            role: "user",
+            content: caption || "",
+            deliveryStatus: "sent",
+          },
+        })
+
+        const att = await messageAttachmentRepository.create({
+          conversationMessageId: msg.id,
+          workspaceId,
+          kind: validation.kind,
+          url: uploaded.url,
+          storageKey: uploaded.key,
+          mimeType: trueMime,
+          filename: file.originalname,
+          sizeBytes: buffer.length,
+        })
+
+        created.push({
+          id: att.id,
+          conversationMessageId: msg.id,
+          url: uploaded.url,
+          kind: validation.kind,
+          mimeType: trueMime,
+          filename: file.originalname,
+          sizeBytes: buffer.length,
+        })
+
+        try {
+          fs.unlinkSync(file.path)
+        } catch {
+          /* ignore */
+        }
+      }
+
+      return res.json({ success: true, attachments: created })
+    } catch (error: any) {
+      logger.error("Playground uploadAttachments error:", error)
+      cleanup()
+      return res.status(500).json({ error: "Failed to upload attachments", message: error.message })
     }
   }
 

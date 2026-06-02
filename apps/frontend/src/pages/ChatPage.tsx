@@ -227,6 +227,11 @@ export function ChatPage() {
       })
       setMessageInput("")
       toast.success("Attachment sent", { duration: 1000 })
+      // Refresh the thread so the just-sent attachment shows immediately
+      // (no manual page reload needed).
+      if (selectedChat) {
+        await fetchMessagesForChat(selectedChat)
+      }
     } catch (err: any) {
       logger.error("❌ Attachment upload failed", { error: err?.message })
       toast.error(err?.response?.data?.message || "Attachment upload failed", { duration: 2000 })
