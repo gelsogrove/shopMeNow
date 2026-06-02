@@ -1887,6 +1887,15 @@ export function ChatPage() {
                             const { customer: customerText, operator: operatorText } = isAgentMessage
                               ? splitBotMessage(message.content)
                               : { customer: message.content, operator: null }
+                            // 📺 Welcome video: split the first bot reply into
+                            // greeting (1st paragraph) + rest, so the order is
+                            // greeting → intro+video → answer (see mockup).
+                            const isWelcomeWithVideo =
+                              !!welcomeVideoUrl &&
+                              msgIndex === messages.findIndex((mm) => mm.sender === "user")
+                            const brIdx = isWelcomeWithVideo ? customerText.indexOf("\n\n") : -1
+                            const greetingPart = brIdx !== -1 ? customerText.slice(0, brIdx) : customerText
+                            const restPart = brIdx !== -1 ? customerText.slice(brIdx + 2) : ""
                             return (
                               <>
                                 <div
@@ -1894,10 +1903,26 @@ export function ChatPage() {
                                   style={{ lineHeight: "1.7", fontSize: "0.95rem" }}
                                 >
                                   <MessageRenderer
-                                    content={customerText}
+                                    content={greetingPart}
                                     variant="chat"
                                   />
                                 </div>
+
+                                {isWelcomeWithVideo && (
+                                  <WelcomeVideoCard
+                                    url={welcomeVideoUrl as string}
+                                    lang={selectedChat?.language}
+                                  />
+                                )}
+
+                                {isWelcomeWithVideo && restPart && (
+                                  <div
+                                    className="break-words"
+                                    style={{ lineHeight: "1.7", fontSize: "0.95rem" }}
+                                  >
+                                    <MessageRenderer content={restPart} variant="chat" />
+                                  </div>
+                                )}
 
                                 {operatorText && (
                                   <div

@@ -41,12 +41,13 @@ export function WelcomeVideoCard({
   const [videoId, setVideoId] = useState<string | null>(null)
   if (!url) return null
 
-  const items = align === "right" ? "items-end" : "items-start"
+  // Content is always left-aligned: it lives INSIDE a chat bubble where text
+  // flows left-to-right, regardless of which side the bubble is on.
   const isMp4 = /\.mp4(\?.*)?$/i.test(url)
   const intro = INTRO[(lang || "es").toLowerCase()] || INTRO.es
 
   return (
-    <div className={`mt-2 flex flex-col gap-1 ${items}`} data-testid="welcome-video-card">
+    <div className="mt-2 flex flex-col items-start gap-1" data-testid="welcome-video-card">
       <p className="text-sm" style={{ lineHeight: "1.5" }}>{intro}</p>
       <div className="relative w-full max-w-[280px]">
         {/* "DEMO" badge — the presentation video is a placeholder. Hide by
