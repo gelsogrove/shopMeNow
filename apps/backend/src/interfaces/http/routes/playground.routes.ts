@@ -3,6 +3,10 @@ import { Router } from "express"
 import { PlaygroundController } from "../controllers/playground.controller"
 import { authMiddleware } from "../middlewares/auth.middleware"
 import { workspaceValidationMiddleware } from "../middlewares/workspace-validation.middleware"
+import {
+  uploadChatAttachments,
+  handleChatUploadError,
+} from "../middlewares/chatAttachmentUpload"
 
 const controller = new PlaygroundController()
 const playgroundRouter = Router()
@@ -83,6 +87,13 @@ playgroundRouter.post("/playground/todos", optionalPlaygroundAuth, (req, res) =>
 playgroundRouter.patch("/playground/todos/:id", optionalPlaygroundAuth, (req, res) => controller.updateTodo(req, res))
 playgroundRouter.delete("/playground/todos/:id", optionalPlaygroundAuth, (req, res) => controller.deleteTodo(req, res))
 playgroundRouter.post("/playground/chat", optionalPlaygroundAuth, (req, res) => controller.sendChat(req, res))
+playgroundRouter.post(
+  "/playground/attachments",
+  optionalPlaygroundAuth,
+  uploadChatAttachments,
+  handleChatUploadError,
+  (req, res) => controller.uploadAttachments(req, res)
+)
 playgroundRouter.delete("/playground/sessions/:id", optionalPlaygroundAuth, (req, res) =>
   controller.deleteSession(req, res)
 )
