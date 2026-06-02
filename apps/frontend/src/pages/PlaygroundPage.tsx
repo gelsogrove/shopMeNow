@@ -6,6 +6,7 @@ import {
   KanbanSquare,
   LogOut,
   MessageCircle,
+  Paperclip,
   Pencil,
   Plus,
   Send,
