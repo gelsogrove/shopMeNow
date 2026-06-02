@@ -29,7 +29,7 @@ model Workspace {
   description               String?
   messageLimit              Int       @default(50)
   url                       String?
-  welcomeMessage            String?   @default("Welcome! I'm {{chatbotName}}, your digital assistant. I can help you discover Italian gourmet products, answer questions, and manage orders. How can I help you today?") @db.Text
+  welcomeMessage            String?   @default("Welcome! I'm {{chatbotName}}, your digital assistant. How can I help you today?") @db.Text
   enableWelcomeMessage      Boolean   @default(true) // Toggle to enable/disable welcome message (E0a - cross-cutting feature)
   welcomeVideoUrl           String?   // 📺 Presentation video (YouTube or .mp4) shown ONLY on the first welcome message. Null = no video.
   sessionResetTimeout       Int       @default(3600) // Seconds after escalation before auto-reset (E0b - cross-cutting feature)

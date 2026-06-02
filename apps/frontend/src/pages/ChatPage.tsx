@@ -1912,6 +1912,7 @@ export function ChatPage() {
                                   <WelcomeVideoCard
                                     url={welcomeVideoUrl as string}
                                     lang={selectedChat?.language}
+                                    greeting={greetingPart}
                                   />
                                 )}
 

@@ -2061,6 +2061,7 @@ function ChatScreen({
                         <WelcomeVideoCard
                           url={welcomeVideoUrl as string}
                           lang={activeSession?.customer?.language}
+                          greeting={greetingPart}
                         />
                       )}
                       {isWelcomeWithVideo && restPart && (
