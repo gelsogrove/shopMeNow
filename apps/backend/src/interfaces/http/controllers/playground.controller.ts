@@ -728,7 +728,12 @@ export class PlaygroundController {
               email: `${safeName.replace(/[^a-z0-9]/gi, "_")}@playground.local`,
               isActive: false,
               registrationStatus: "NEW",
-              language: detectLanguageFromPhonePrefix(customerPhone) || "es",
+              // 🌍 Do NOT seed language from the phone prefix. The language is
+              // detected by the bot from the customer's actual message (and then
+              // persisted via the ⟦LANG⟧ reply trailer). Seeding from the prefix
+              // wrongly locks the conversation language regardless of what the
+              // customer writes.
+              language: null,
             },
           })
         }
@@ -838,11 +843,13 @@ export class PlaygroundController {
             channelActive: workspace.channelStatus !== false,
             debugChannel: workspace.debugMode === true,
             isPlayground: true,
-            // 🌍 Reply language: only seed from customer.language (or "es").
-            //    The bot then adapts to whatever the customer writes via the
-            //    deterministic per-turn detector — the playground flag must
-            //    NOT force the reply language anymore.
-            language: customer.language || "es",
+            // 🌍 Reply language: pass the customer's KNOWN language only (set by
+            //    the bot on previous turns via the ⟦LANG⟧ trailer). On the FIRST
+            //    message it is null → we pass undefined so the bot detects the
+            //    language from what the customer actually wrote, instead of being
+            //    forced to a default. The prompt itself falls back to Spanish
+            //    only when the first message is genuinely undecidable.
+            language: customer.language || undefined,
             // 🚩 Per-turn override for the operator briefing language only
             //    ("Human Support message" emitted on escalation). Driven by
             //    the flag selected in the Use Cases panel; falls back to

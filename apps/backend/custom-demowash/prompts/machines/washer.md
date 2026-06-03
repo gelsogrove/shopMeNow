@@ -18,10 +18,11 @@ Esta información es **común a todas las sedes**. Los códigos exactos que apar
 | `ALERT OPEN:`   | Posible problema de cierre o prenda atrapada             | Primero tratar como OPEN. Si persiste → ESCALAR + reportar a técnico. |
 | `ERR-01`         | Selección del programa antes del pago                    | Procedimiento ERR-01 (ver abajo). |
 | `ALERT`/`BLOCK`   | Fallo técnico de la máquina DURANTE el uso (no arranca / se detiene) | Procedimiento ALARMA TÉCNICA (ver abajo). ESCALAR siempre. **NO** usar este procedimiento si el lavado ya terminó y solo la puerta no abre → ese caso es `OPEN ERROR`. |
+| `DOOR` / `OPEN DOOR` | Mensaje de puerta GENÉRICO: no indica si es antes o después del lavado | **Ambiguo** → NO asumas. Ve a "Desambiguación PUERTA": PREGUNTA primero si el ciclo ya terminó con la ropa dentro. |
 
-## Desambiguación PUERTA (`OPEN:` vs `OPEN ERROR`) — 🚨 PREGUNTA PRIMERO
+## Desambiguación PUERTA (`OPEN:` vs `OPEN ERROR` vs `DOOR`/`OPEN DOOR`) — 🚨 PREGUNTA PRIMERO
 
-Cuando el cliente dice de forma genérica que **«la puerta no se abre / no funciona»** SIN precisar el momento, NO asumas el código ni el procedimiento. Son dos casos opuestos:
+Cuando el cliente dice de forma genérica que **«la puerta no se abre / no funciona»** SIN precisar el momento, **o cuando el código que lee en pantalla es genérico de puerta (`DOOR`, `OPEN DOOR`, o `OPEN` sin más contexto)**, NO asumas el código ni el procedimiento. Son dos casos opuestos:
 
 - `OPEN:` → la puerta **no cierra ANTES** de lavar (la ropa aún NO se ha lavado). Se resuelve solo: cerrar bien y arrancar.
 - `OPEN ERROR` → el ciclo **YA TERMINÓ** y la puerta **no abre** con la ropa atrapada dentro. Escalación URGENTE para desbloqueo remoto; nunca cambiar de máquina ni repetir el ciclo.
