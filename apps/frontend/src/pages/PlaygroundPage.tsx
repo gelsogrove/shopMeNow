@@ -17,7 +17,6 @@ import {
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { EmojiPicker } from "@/components/EmojiPicker"
 import { ReactionPicker } from "@/components/ReactionPicker"
-import { composeReactionText } from "@/components/reactionText"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import ReactMarkdown from "react-markdown"
@@ -607,14 +606,22 @@ function NewChatModal({
           onChange={(e) => setPhone(e.target.value)}
           className="w-full border rounded-lg px-3 py-2"
         />
-        <textarea
-          required
-          placeholder="First message..."
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          rows={3}
-          className="w-full border rounded-lg px-3 py-2"
-        />
+        <div className="relative">
+          <textarea
+            required
+            placeholder="First message..."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={3}
+            className="w-full border rounded-lg px-3 py-2 pr-10"
+          />
+          <div className="absolute bottom-2 right-2">
+            <EmojiPicker
+              onSelect={(emoji) => setMessage((prev) => prev + emoji)}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+            />
+          </div>
+        </div>
         {error && <p className="text-red-600 text-sm">{error}</p>}
         <button
           type="submit"
@@ -1233,6 +1240,9 @@ function ChatScreen({
   const [commentingMessage, setCommentingMessage] = useState<ChatMessage | null>(null)
   const [showNewChat, setShowNewChat] = useState(false)
   const [chatInput, setChatInput] = useState("")
+  // 😀 WhatsApp-style reactions attached to a bubble: { [messageId]: emoji }.
+  // A reaction is a badge on the message (not a new message), exactly like WhatsApp.
+  const [reactions, setReactions] = useState<Record<string, string>>({})
   const [sendingChat, setSendingChat] = useState(false)
   // Message id to highlight & scroll to (set when arriving from a kanban "Open in chat" click)
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null)
@@ -1517,37 +1527,6 @@ function ChatScreen({
       // Server now has the bot reply persisted: refresh once, that's enough.
       // Clearing the optimistic state AFTER fetchAll resolves avoids a flash
       // where the user message disappears before the real one is rendered.
-      await fetchAll()
-    } finally {
-      setSendingChat(false)
-      setPendingForSession(null)
-    }
-  }
-
-  // 😀 Demo reaction: the visitor "reacts" to a (bot) message. The demo has no
-  // real WhatsApp, so we simulate it by sending the composed reaction text
-  // (emoji + quoted message) as a normal message — the bot interprets it just
-  // like a real inbound WhatsApp reaction would be interpreted server-side.
-  const sendReactionMessage = async (reactedText: string, emoji: string) => {
-    if (!activeSession || sendingChat) return
-    const text = composeReactionText(emoji, reactedText)
-    setSendingChat(true)
-    setPendingForSession({ sessionId: activeSession.id, userMessage: text })
-    try {
-      const res = await playFetch(`${API_BASE}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: activeSession.id,
-          message: text,
-          lang: usecasesLang,
-        }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        alert(data.message || data.error || "Failed to send reaction")
-        return
-      }
       await fetchAll()
     } finally {
       setSendingChat(false)
@@ -2061,15 +2040,31 @@ function ChatScreen({
                       }`}
                     >
                       {/* 😀 React to a bot message (WhatsApp-style bar on hover).
-                          Demo has no real WhatsApp, so the reaction is sent as a
-                          composed message the bot interprets in context. */}
+                          The reaction is attached to THIS bubble as a small badge
+                          (like WhatsApp), not sent as a new message. */}
                       {!isInbound && (
                         <div className="absolute -top-9 right-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto">
                           <ReactionPicker
-                            disabled={sendingChat}
-                            onReact={(emoji) => sendReactionMessage(m.content, emoji)}
+                            onReact={(emoji) =>
+                              setReactions((prev) => {
+                                // Tapping the same emoji removes it (WhatsApp behaviour).
+                                if (prev[m.id] === emoji) {
+                                  const next = { ...prev }
+                                  delete next[m.id]
+                                  return next
+                                }
+                                return { ...prev, [m.id]: emoji }
+                              })
+                            }
                           />
                         </div>
+                      )}
+                      {/* Reaction badge: small emoji overlapping the bubble's
+                          bottom edge, the way WhatsApp renders reactions. */}
+                      {reactions[m.id] && (
+                        <span className="absolute -bottom-3 right-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full border border-gray-200 bg-white px-1 text-sm shadow">
+                          {reactions[m.id]}
+                        </span>
                       )}
                       <MessageBody content={greetingPart} isInbound={isInbound} />
                       {isWelcomeWithVideo && (
