@@ -1242,7 +1242,22 @@ function ChatScreen({
   const [chatInput, setChatInput] = useState("")
   // 😀 WhatsApp-style reactions attached to a bubble: { [messageId]: emoji }.
   // A reaction is a badge on the message (not a new message), exactly like WhatsApp.
-  const [reactions, setReactions] = useState<Record<string, string>>({})
+  // Persisted in localStorage (keyed by message id) so it survives a page reload,
+  // the way a real WhatsApp reaction stays on the message.
+  const [reactions, setReactions] = useState<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("playgroundReactions") || "{}")
+    } catch {
+      return {}
+    }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem("playgroundReactions", JSON.stringify(reactions))
+    } catch {
+      /* ignore storage quota / serialization errors */
+    }
+  }, [reactions])
   const [sendingChat, setSendingChat] = useState(false)
   // Message id to highlight & scroll to (set when arriving from a kanban "Open in chat" click)
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null)

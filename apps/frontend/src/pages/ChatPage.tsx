@@ -5,6 +5,7 @@ import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
 import { AttachmentButton } from "@/components/chat/AttachmentButton"
 import { EmojiPicker } from "@/components/EmojiPicker"
+import { ReactionPicker } from "@/components/ReactionPicker"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import { NotificationDialog } from "@/components/shared/NotificationDialog"
@@ -207,6 +208,23 @@ export function ChatPage() {
   const { selectedChat, setSelectedChat } = useChat()
   const [messages, setMessages] = useState<Message[]>([])
   const [messageInput, setMessageInput] = useState("")
+  // 😀 WhatsApp-style reactions attached to a bubble: { [messageId]: emoji }.
+  // Persisted in localStorage (keyed by message id) so they survive a reload,
+  // like a real WhatsApp reaction that stays on the message.
+  const [reactions, setReactions] = useState<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("operatorChatReactions") || "{}")
+    } catch {
+      return {}
+    }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem("operatorChatReactions", JSON.stringify(reactions))
+    } catch {
+      /* ignore storage quota / serialization errors */
+    }
+  }, [reactions])
   const [uploadingAttachment, setUploadingAttachment] = useState(false)
 
   // 📎 Upload one or more attachments (image/PDF) for the current chat. Posts
@@ -1848,12 +1866,44 @@ export function ChatPage() {
                         }`}
                       >
                         <div
-                          className={`p-3 rounded-lg max-w-[75%] relative ${
+                          className={`p-3 rounded-lg max-w-[75%] relative group ${
                             isOperatorMessage || isOperatorControl || isManualOperator || isBlockedMessage
-                              ? 'pt-6' 
+                              ? 'pt-6'
                               : ''
                           } ${getMessageStyle()}`}
                         >
+                          {/* 😀 React to ANY message (operator can react to the
+                              customer or the bot). WhatsApp-style bar on hover;
+                              the chosen emoji becomes a badge on this bubble. */}
+                          <div
+                            className={`absolute -top-9 ${
+                              isAgentMessage ? "right-1" : "left-1"
+                            } z-30 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto`}
+                          >
+                            <ReactionPicker
+                              disabled={selectedChat?.isBlacklisted}
+                              onReact={(emoji) =>
+                                setReactions((prev) => {
+                                  // Tapping the same emoji removes it (WhatsApp behaviour).
+                                  if (prev[message.id] === emoji) {
+                                    const next = { ...prev }
+                                    delete next[message.id]
+                                    return next
+                                  }
+                                  return { ...prev, [message.id]: emoji }
+                                })
+                              }
+                            />
+                          </div>
+                          {reactions[message.id] && (
+                            <span
+                              className={`absolute -bottom-3 ${
+                                isAgentMessage ? "right-2" : "left-2"
+                              } z-10 flex h-6 min-w-6 items-center justify-center rounded-full border border-gray-200 bg-white px-1 text-sm shadow`}
+                            >
+                              {reactions[message.id]}
+                            </span>
+                          )}
                           {/* 🛑 SECURITY BLOCKED BADGE */}
                           {isBlockedMessage && (
                             <div className="absolute -top-2 -left-2">
@@ -2041,7 +2091,7 @@ export function ChatPage() {
 
               {/* Message Input: Only show if chatbot is disabled */}
               {!isChatbotActive && (
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex items-end gap-2">
                   <AttachmentButton
                     existingCount={0}
                     disabled={loading || uploadingAttachment || selectedChat?.isBlacklisted}
