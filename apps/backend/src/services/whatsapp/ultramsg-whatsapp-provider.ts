@@ -175,6 +175,62 @@ export class UltraMsgWhatsAppProvider implements WhatsAppProvider {
   }
 
   /**
+   * Send a reaction (emoji) to a previously exchanged message.
+   * UltraMsg: POST /{instance}/messages/reaction with `token`, `msgId`, `emoji`.
+   * Docs: https://docs.ultramsg.com/api/post/messages/reaction
+   *
+   * `messageId` is the UltraMsg `msgId` of the message being reacted to (the id
+   * delivered in inbound webhooks). An empty `emoji` removes a previous reaction.
+   * UltraMsg keys the reaction off the message id, so `to` is not needed by the
+   * API — it is kept only for interface compatibility.
+   */
+  async sendReaction(
+    _to: string,
+    messageId: string,
+    emoji: string
+  ): Promise<WhatsAppSendMessageResult> {
+    try {
+      if (!messageId) {
+        return { messageId: '', success: false, error: 'UltraMsg: messageId is required for reaction' }
+      }
+
+      const postData = querystring.stringify({
+        token: this.config.token,
+        msgId: messageId,
+        emoji: emoji || '', // empty string removes the reaction
+      })
+
+      const url = this.buildEndpoint('messages/reaction')
+
+      logger.info('📤 UltraMsg: Sending reaction', { messageId, emoji, url })
+
+      const response = await axios.post(url, postData, {
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        timeout: 30000,
+      })
+
+      logger.info('✅ UltraMsg: Reaction sent', { messageId, responseData: response.data })
+
+      return {
+        messageId: response.data?.id || response.data?.msgId || `ultramsg-react-${Date.now()}`,
+        success: true,
+      }
+    } catch (error: any) {
+      logger.error('❌ UltraMsg: Failed to send reaction', {
+        messageId,
+        emoji,
+        error: error.message,
+        response: error.response?.data,
+      })
+      return {
+        messageId: '',
+        success: false,
+        error: error.response?.data?.error || error.message,
+      }
+    }
+  }
+
+  /**
    * Download inbound media from UltraMsg.
    * UltraMsg webhooks deliver a direct public media URL (data.media), so a
    * single GET fetches the bytes. MIME comes from the response content-type.
