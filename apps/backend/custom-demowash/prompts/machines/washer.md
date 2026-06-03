@@ -33,7 +33,7 @@ Cuando el cliente dice de forma genérica que **«la puerta no se abre / no func
 - Responde "ya terminó / la ropa está dentro" → trátalo como `OPEN ERROR` → Procedimiento PUERTA BLOQUEADA FIN DE CICLO.
 - Responde "aún no / no cierra para empezar" → trátalo como `OPEN:` → Procedimiento OPEN.
 
-Si el cliente YA ha dejado claro el momento (p. ej. "ya terminó y no abre"), no repitas la pregunta. Una vez sepas el código correcto, llama a `query_machine_status` con él en cuanto tengas sede + tipo + número, y vuelve a llamarlo si tras los intentos el cliente dice que sigue sin funcionar.
+Si el cliente YA ha dejado claro el momento (p. ej. "ya terminó y no abre"), no repitas la pregunta. Una vez sepas el código correcto, guárdalo con `remember({displayCode})` y aplica el procedimiento; vuelve a pedir el código de pantalla si tras los intentos el cliente dice que sigue sin funcionar.
 
 ## Procedimiento OPEN
 

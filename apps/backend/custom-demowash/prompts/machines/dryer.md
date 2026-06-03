@@ -10,7 +10,7 @@ Aplica los mismos procedimientos descritos en `washer.md`, con dos diferencias:
 
 > ⚠️ **`OPEN ERROR` (puerta bloqueada al terminar, ropa atrapada dentro)** aplica EXACTAMENTE igual que en la lavadora: el secado ya terminó y la puerta no abre con la ropa (seca) dentro. Sigue el "Procedimiento PUERTA BLOQUEADA FIN DE CICLO" de `washer.md` — intento de apertura firme y, si no abre, ESCALAR con prioridad URGENTE. NUNCA ofrecer cambiar de máquina ni repetir el secado. Distinto de `OPEN:` (puerta que no cierra ANTES de empezar).
 >
-> 🚨 **Desambiguación**: si el cliente solo dice "la puerta no se abre" sin precisar, aplica la misma "Desambiguación PUERTA" de `washer.md` — pregunta PRIMERO si el secado ya terminó con la ropa dentro (sí → `OPEN ERROR`; aún no / no cierra para empezar → `OPEN:`) antes de elegir procedimiento y antes de `query_machine_status`. Una vez claro el código, llama a `query_machine_status` en cuanto tengas sede + tipo + número, y vuelve a llamarlo si tras los intentos el cliente dice que sigue sin funcionar.
+> 🚨 **Desambiguación**: si el cliente solo dice "la puerta no se abre" sin precisar, aplica la misma "Desambiguación PUERTA" de `washer.md` — pregunta PRIMERO si el secado ya terminó con la ropa dentro (sí → `OPEN ERROR`; aún no / no cierra para empezar → `OPEN:`) antes de elegir procedimiento. Una vez claro el código, guárdalo con `remember({displayCode})` y aplica el procedimiento; vuelve a pedir el código de pantalla si tras los intentos el cliente dice que sigue sin funcionar.
 
 ### Diferencia 1 — Alargar el tiempo de secado
 

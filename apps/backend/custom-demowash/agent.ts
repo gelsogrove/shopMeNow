@@ -208,36 +208,6 @@ const TOOLS = [
   {
     type: 'function',
     function: {
-      name: 'query_machine_status',
-      description:
-        'Read the CURRENT status of a specific machine from the remote laundromat system. Call this AS SOON AS you have location + machineType + machine number for a machine incident — register the machine status right away. Pass `status` = the display code the customer read on screen (or, if they cannot read it, the code that matches the symptom — pick from the codes documented in MACHINES). Call it AGAIN if the customer reports the machine still does not work after trying the documented steps, so the status reflects what the machine shows now. Call it BEFORE asking the customer their name and before escalate_to_operator. The tool returns the confirmed machine status; use THAT returned status as the single source of truth in the escalation briefing. NOT for payment-only issues (double charge, refund, invoice) or wash-advice questions.',
-      parameters: {
-        type: 'object',
-        properties: {
-          location: {
-            type: 'string',
-            description: 'Laundromat name (canonical: Mataró, Eixample, Gràcia, Sant Cugat, Rubí, Terrassa).',
-          },
-          machineType: {
-            type: 'string',
-            enum: ['washer', 'dryer'],
-            description: 'washer = lavadora. dryer = secadora.',
-          },
-          machine: { type: 'integer', description: 'Machine number (e.g. 4).' },
-          status: {
-            type: 'string',
-            description:
-              'Display code / machine status, uppercase as documented in MACHINES (e.g. "OPEN", "OPEN ERROR", "ERR-01", "ALERT", "BLOCK", "OFF").',
-          },
-        },
-        required: ['location', 'machineType', 'machine', 'status'],
-        additionalProperties: false,
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
       name: 'request_invoice',
       description:
         'Submit a structured invoice request to the operator by email. Call this ONLY when you have collected ALL 5 fields from the customer (companyName, amount, serviceDate, email, note — note can be empty). The tool validates email format (RFC 5322) and serviceDate (accepts ISO date, DD/MM/YYYY, or natural language "oggi"/"ayer"/"today"/"yesterday"). If validation fails, the tool returns ok:false with a specific error — re-ask only the invalid field. After 3 failed attempts on the same field, escalate via escalate_to_operator with reason="invoice_request".',
@@ -333,55 +303,6 @@ async function executeTool(
     // reply trailer; commitLanguageFromReply persists it AFTER the turn.
     const state = updateState(ctx.sessionId, patch)
     return { ok: true, state }
-  }
-
-  if (name === 'query_machine_status') {
-    // DEMO calling-function. There is NO real machine backend to attach to:
-    // we log the "remote read" (tenda > type > numero) and echo the status
-    // back as the confirmed machine state. That returned status is the SINGLE
-    // SOURCE OF TRUTH — the LLM uses it for the procedure + escalation, and the
-    // host injects the same line into the internal operator balloon (the
-    // customer never sees it; see runConversation reply assembly + iron rule #1:
-    // the invariant lives in code, not in the prompt).
-    const location = typeof args.location === 'string' ? args.location.trim() : ''
-    // Same defensive normalization as `remember`: tolerate tool-call markup
-    // leaking into the value (e.g. "washer</machineType>").
-    let machineType: 'washer' | 'dryer' | '' = ''
-    if (typeof args.machineType === 'string') {
-      if (/\bwasher\b/.test(args.machineType)) machineType = 'washer'
-      else if (/\bdryer\b/.test(args.machineType)) machineType = 'dryer'
-    }
-    const machine =
-      typeof args.machine === 'number' && Number.isFinite(args.machine) ? args.machine : NaN
-    const status = typeof args.status === 'string' ? args.status.trim().toUpperCase() : ''
-
-    // Tool refuses, LLM corrects (iron rule #2): never fabricate a reading from
-    // partial args. Each failure tells the LLM exactly which field to recover.
-    if (!location) {
-      return {
-        ok: false,
-        error: 'missing_location',
-        instruction: 'Ask the customer which laundromat (location), save it with remember, then retry query_machine_status.',
-      }
-    }
-    if (!machineType) {
-      return { ok: false, error: 'machineType is required (washer or dryer)' }
-    }
-    if (!Number.isFinite(machine) || machine <= 0) {
-      return { ok: false, error: 'machine must be a positive integer (the machine number)' }
-    }
-    if (!status) {
-      return { ok: false, error: 'status is required (the display code shown on the machine)' }
-    }
-
-    // Persist what we "read" so it is not re-asked and lands in the briefing.
-    updateState(ctx.sessionId, { location, machineType, machine, displayCode: status })
-
-    const machineLabel = machineType === 'washer' ? 'lavadora' : 'secadora'
-    const line = `${location} > ${machineLabel} > Núm ${machine} = ${status}`
-    console.log(`[machine_query] ${location} > ${machineType} > #${machine} → ${status}`)
-
-    return { ok: true, status, machine, machineType, location, line }
   }
 
   if (name === 'request_invoice') {
@@ -811,10 +732,6 @@ interface TurnResult {
   // operator email — replaces the meaningless "Ticket created for
   // <uuid>" placeholder we used before.
   operatorBriefing?: string | null
-  // When the LLM calls `query_machine_status`, this holds the formatted
-  // "<sede> > <lavadora|secadora> > Núm N = STATUS" line. The host renders it
-  // in the internal operator balloon; it is never sent to the customer.
-  machineStatusLine?: string | null
 }
 
 async function agentTurnInternal(
@@ -842,10 +759,6 @@ async function agentTurnInternal(
   // briefing in an internal orange balloon (host strips it before sending to
   // the customer — see src/utils/custom-chatbot-reply.ts).
   let operatorBriefing: string | null = null
-  // Captured when query_machine_status runs successfully. Injected into the
-  // HUMAN_SUPPORT block so the operator sees the machine read; the host strips
-  // that block before delivering to the customer (custom-chatbot-reply.ts).
-  let machineStatusLine: string | null = null
 
   for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
     const state = getState(ctx.sessionId)
@@ -894,17 +807,13 @@ async function agentTurnInternal(
       if (process.env.LLM_DEBUG === '1') {
         console.error(`[state] ${formatStateOneLine(getState(ctx.sessionId))}`)
       }
-      // Internal operator balloon: the machine read (if any) followed by the
-      // escalation briefing (if any). Both are stripped before the customer
-      // delivery by splitCustomChatbotReply (HUMAN_SUPPORT marker).
-      const operatorParts: string[] = []
-      if (machineStatusLine) operatorParts.push(`📟 Estado máquina: ${machineStatusLine}`)
-      if (operatorBriefing) operatorParts.push(operatorBriefing)
-      const finalReply =
-        operatorParts.length > 0
-          ? `${text}\n\n**👤 Human Support message**\n${operatorParts.join('\n\n')}`
-          : text
-      return { reply: finalReply, tokensUsed, escalated, operatorBriefing, machineStatusLine }
+      // Internal operator balloon: the escalation briefing (if any). Stripped
+      // before the customer delivery by splitCustomChatbotReply (HUMAN_SUPPORT
+      // marker).
+      const finalReply = operatorBriefing
+        ? `${text}\n\n**👤 Human Support message**\n${operatorBriefing}`
+        : text
+      return { reply: finalReply, tokensUsed, escalated, operatorBriefing }
     }
 
     // Tool calls present → execute each, append results, loop.
@@ -938,14 +847,6 @@ async function agentTurnInternal(
         if (rawSummary) {
           operatorBriefing = substitutePlaceholders(rawSummary, getState(ctx.sessionId))
         }
-      }
-      if (
-        call.function.name === 'query_machine_status' &&
-        result.ok &&
-        typeof result.line === 'string'
-      ) {
-        // Last successful read wins (one machine per conversation in practice).
-        machineStatusLine = result.line
       }
       history.push({
         role: 'tool',
