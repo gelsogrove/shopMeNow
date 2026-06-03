@@ -15,6 +15,9 @@ import {
   X,
 } from "lucide-react"
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { EmojiPicker } from "@/components/EmojiPicker"
+import { ReactionPicker } from "@/components/ReactionPicker"
+import { composeReactionText } from "@/components/reactionText"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import ReactMarkdown from "react-markdown"
@@ -1521,6 +1524,37 @@ function ChatScreen({
     }
   }
 
+  // 😀 Demo reaction: the visitor "reacts" to a (bot) message. The demo has no
+  // real WhatsApp, so we simulate it by sending the composed reaction text
+  // (emoji + quoted message) as a normal message — the bot interprets it just
+  // like a real inbound WhatsApp reaction would be interpreted server-side.
+  const sendReactionMessage = async (reactedText: string, emoji: string) => {
+    if (!activeSession || sendingChat) return
+    const text = composeReactionText(emoji, reactedText)
+    setSendingChat(true)
+    setPendingForSession({ sessionId: activeSession.id, userMessage: text })
+    try {
+      const res = await playFetch(`${API_BASE}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: activeSession.id,
+          message: text,
+          lang: usecasesLang,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        alert(data.message || data.error || "Failed to send reaction")
+        return
+      }
+      await fetchAll()
+    } finally {
+      setSendingChat(false)
+      setPendingForSession(null)
+    }
+  }
+
   const todoCountByDialog = useMemo(() => {
     const map = new Map<string, number>()
     todos.forEach((t) => map.set(t.dialogId, (map.get(t.dialogId) || 0) + 1))
@@ -2026,6 +2060,17 @@ function ChatScreen({
                           : ""
                       }`}
                     >
+                      {/* 😀 React to a bot message (WhatsApp-style bar on hover).
+                          Demo has no real WhatsApp, so the reaction is sent as a
+                          composed message the bot interprets in context. */}
+                      {!isInbound && (
+                        <div className="absolute -top-9 right-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto">
+                          <ReactionPicker
+                            disabled={sendingChat}
+                            onReact={(emoji) => sendReactionMessage(m.content, emoji)}
+                          />
+                        </div>
+                      )}
                       <MessageBody content={greetingPart} isInbound={isInbound} />
                       {isWelcomeWithVideo && (
                         <WelcomeVideoCard
@@ -2158,6 +2203,10 @@ function ChatScreen({
               onSubmit={sendChatMessage}
               className="border-t bg-white p-2 flex gap-2 shrink-0 items-center"
             >
+              <EmojiPicker
+                disabled={sendingChat}
+                onSelect={(emoji) => setChatInput((prev) => prev + emoji)}
+              />
               <input
                 placeholder="Type a message..."
                 value={chatInput}

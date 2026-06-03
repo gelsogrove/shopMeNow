@@ -32,6 +32,12 @@ import { prisma } from '@echatbot/database'
 import { WasenderClientService } from '../../../services/wasender-client.service'
 import { SecurityCheckService } from '../../../application/services/security-check.service'
 import { getChatEngine } from '../../../application/chat-engine'
+// 📎 Inbound media (image/PDF): extract the media ref from the payload + ingest
+import { extractWasenderMedia } from '../../../services/webhook-media.extract'
+import { ingestInboundWebhookMedia } from '../../../services/inbound-media-webhook.service'
+// 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
+import { extractWasenderReaction } from '../../../services/webhook-reaction.extract'
+import { buildReactionText } from '../../../services/reaction-context.service'
 import {
   whatsappMessageRateLimiter,
   whatsappWorkspaceRateLimiter,
@@ -352,6 +358,10 @@ export class WasenderWebhookController {
       return res.status(200).json({ status: 'ignored', reason: 'no_message' })
     }
     const { key, messageBody } = message
+    // 📎 image/document → media ref (direct URL); null for text/other types
+    const inboundMedia = extractWasenderMedia(message)
+    // 😀 reaction → emoji + reacted-to message id (null if none)
+    const inboundReaction = extractWasenderReaction(message)
 
     // Parse message data
     const rawPhone =
@@ -360,11 +370,17 @@ export class WasenderWebhookController {
       key.remoteJid?.replace(/@.*$/, '') ||
       ''
     const messageId = key.id
-    const rawMessageText =
+    let rawMessageText =
       messageBody ||
       message.message?.conversation ||
       message.message?.extendedTextMessage?.text ||
       ''
+    // 😀 Reaction (long-press emoji): use the emoji as text (enriched with the
+    // reacted-to message when available) so the LLM interprets it in context.
+    // No hardcoded emoji→intent mapping (rule #14).
+    if (!rawMessageText && inboundReaction) {
+      rawMessageText = await buildReactionText(prisma, workspaceId, inboundReaction)
+    }
 
     if (!rawPhone) {
       logger.error('[WASENDER] ❌ Missing phone number in payload', { workspaceId, messageId })
@@ -654,6 +670,17 @@ export class WasenderWebhookController {
       agentUsed: routerResult.agentUsed,
       tokensUsed: routerResult.tokensUsed,
     })
+
+    // 📎 Inbound media: if the customer sent an image/PDF, download it from
+    // WaSender and persist it linked to the user message just saved.
+    // Fail-safe: never blocks or breaks the text reply.
+    if (inboundMedia) {
+      await ingestInboundWebhookMedia({
+        workspaceId,
+        conversationId: chatSession.id,
+        media: inboundMedia,
+      })
+    }
 
     // Stop typing indicator
     if (workspace.wasenderApiKey && key.remoteJid) {

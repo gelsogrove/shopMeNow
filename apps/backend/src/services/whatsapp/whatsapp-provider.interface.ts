@@ -69,6 +69,18 @@ export interface WhatsAppProvider {
   ): Promise<WhatsAppSendMessageResult>
 
   /**
+   * Send a reaction (emoji) to a specific previously exchanged message.
+   * Optional - not all providers support reactions. `messageId` is the
+   * provider's id of the message being reacted to. An empty `emoji` removes a
+   * previously sent reaction (per the WhatsApp Cloud API contract).
+   */
+  sendReaction?(
+    to: string,
+    messageId: string,
+    emoji: string
+  ): Promise<WhatsAppSendMessageResult>
+
+  /**
    * Get provider name for logging/debugging
    */
   getProviderName(): string

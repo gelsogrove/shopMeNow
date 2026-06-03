@@ -4,6 +4,7 @@ import { ClientSheet } from "@/components/shared/ClientSheet"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
 import { AttachmentButton } from "@/components/chat/AttachmentButton"
+import { EmojiPicker } from "@/components/EmojiPicker"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import { NotificationDialog } from "@/components/shared/NotificationDialog"
@@ -2046,6 +2047,11 @@ export function ChatPage() {
                     disabled={loading || uploadingAttachment || selectedChat?.isBlacklisted}
                     onFilesAccepted={handleAttachmentFiles}
                     onErrors={(errs) => toast.error(errs.join("\n"), { duration: 2500 })}
+                  />
+                  <EmojiPicker
+                    disabled={loading || selectedChat?.isBlacklisted}
+                    onSelect={(emoji) => setMessageInput((prev) => prev + emoji)}
+                    className="self-end w-8 h-8 rounded-md flex items-center justify-center text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 transition-colors"
                   />
                   <Textarea
                     value={messageInput}

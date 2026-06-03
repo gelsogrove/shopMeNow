@@ -93,6 +93,63 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
   }
 
   /**
+   * Send a reaction (emoji) to a previously exchanged message.
+   * Meta Cloud API: POST /{phone-number-id}/messages with type "reaction".
+   * An empty emoji removes the reaction.
+   */
+  async sendReaction(
+    to: string,
+    messageId: string,
+    emoji: string
+  ): Promise<WhatsAppSendMessageResult> {
+    try {
+      const formattedPhone = to.replace(/[\s+]/g, '')
+      const url = `${this.baseUrl}/${this.config.phoneNumberId}/messages`
+
+      logger.info('📤 Meta: Sending reaction', {
+        to: formattedPhone,
+        messageId,
+        emoji,
+      })
+
+      const response = await axios.post(
+        url,
+        {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: formattedPhone,
+          type: 'reaction',
+          reaction: { message_id: messageId, emoji },
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.config.accessToken}`,
+          },
+          timeout: 30000,
+        }
+      )
+
+      return {
+        messageId: response.data.messages?.[0]?.id || `meta-react-${Date.now()}`,
+        success: true,
+      }
+    } catch (error: any) {
+      logger.error('❌ Meta: Failed to send reaction', {
+        to,
+        messageId,
+        error: error.message,
+        response: error.response?.data,
+      })
+      return {
+        messageId: '',
+        success: false,
+        error: error.response?.data?.error?.message || error.message,
+      }
+    }
+  }
+
+  /**
    * Send media message via Meta Business API
    */
   async sendMediaMessage(

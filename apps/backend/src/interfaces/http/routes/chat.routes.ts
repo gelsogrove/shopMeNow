@@ -421,6 +421,43 @@ export const chatRouter = (chatController: ChatController): express.Router => {
 
   /**
    * @swagger
+   * /api/chat/{sessionId}/messages/{messageId}/react:
+   *   post:
+   *     summary: Operator reacts to a customer message with an emoji (WhatsApp reaction)
+   *     tags: [Chat]
+   *     parameters:
+   *       - in: path
+   *         name: sessionId
+   *         required: true
+   *         schema: { type: string }
+   *       - in: path
+   *         name: messageId
+   *         required: true
+   *         schema: { type: string }
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               emoji: { type: string, example: "👍", description: "Reaction emoji; empty string removes it" }
+   *     responses:
+   *       200: { description: Reaction sent }
+   *       400: { description: Invalid request or message has no WhatsApp id }
+   *       403: { description: Access denied to this workspace }
+   *       404: { description: Chat session or message not found }
+   *       422: { description: Active provider does not support reactions }
+   *       502: { description: Provider failed to deliver the reaction }
+   */
+  router.post(
+    "/:sessionId/messages/:messageId/react",
+    sendMessageLimiter, // 🔒 reuse the send rate limit
+    asyncHandler(chatController.reactToMessage.bind(chatController))
+  )
+
+  /**
+   * @swagger
    * /api/chat/{sessionId}/attachments:
    *   post:
    *     summary: Upload one or more attachments (image/PDF) to a chat and send them

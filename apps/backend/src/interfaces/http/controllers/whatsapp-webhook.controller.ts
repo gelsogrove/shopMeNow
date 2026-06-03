@@ -19,6 +19,12 @@ import { verifyWhatsAppSignature } from "../../../utils/whatsapp-signature"
 import { WhatsAppDirectSendService } from "../../../services/whatsapp-direct-send.service"
 import { splitCustomChatbotReply } from "../../../utils/custom-chatbot-reply"
 import { mdToWhatsApp } from "../../../utils/markdown-to-whatsapp"
+// 📎 Inbound media (image/PDF): extract the media ref from the payload + ingest
+import { extractMetaMedia, ExtractedMedia } from "../../../services/webhook-media.extract"
+import { ingestInboundWebhookMedia } from "../../../services/inbound-media-webhook.service"
+// 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
+import { extractMetaReaction, ExtractedReaction } from "../../../services/webhook-reaction.extract"
+import { buildReactionText } from "../../../services/reaction-context.service"
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -234,6 +240,7 @@ export class WhatsAppWebhookController {
           if (caption) return caption
           return `[${msg.type} message]`
         }
+
         return ""
       }
 
@@ -249,6 +256,8 @@ export class WhatsAppWebhookController {
       let workspaceId: string | undefined
       let messageTimestamp: number | undefined
       let isPlayground: boolean = false // 🧪 Playground flag (only from frontend simulator)
+      let inboundMedia: ExtractedMedia | null = null // 📎 image/PDF sent by the customer (if any)
+      let inboundReaction: ExtractedReaction | null = null // 😀 reaction (like) on a message (if any)
 
       // Check if it's WhatsApp API format
       const entry = data.entry?.[0]
@@ -271,6 +280,13 @@ export class WhatsAppWebhookController {
         phoneVariants = buildPhoneVariants(message.from)
         phoneNumber = phoneVariants[0]
         messageText = extractMessageText(message)
+        inboundMedia = extractMetaMedia(message) // 📎 image/document → media ref (id); null otherwise
+        inboundReaction = extractMetaReaction(message) // 😀 reaction → emoji + reacted message id
+        if (!messageText && inboundReaction) {
+          // Reaction-only message: seed with the emoji so it isn't dropped as
+          // "no text"; it gets enriched with the reacted-to message below.
+          messageText = inboundReaction.emoji
+        }
         whatsappMessageId = message.id || `wa-${Date.now()}`
         workspaceId = value.workspaceId // ✅ Extract workspaceId from WhatsApp format
         isPlayground = value.isPlayground === true // 🧪 Extract playground flag from value (frontend simulator uses entry format)
@@ -396,6 +412,18 @@ export class WhatsAppWebhookController {
         logger.error("[WEBHOOK] ❌ Webhook not linked to active workspace", { webhookId, workspaceId })
         res.status(404).json({ error: "workspace_not_found_for_webhook" })
         return
+      }
+
+      // 😀 Reaction context: now that the workspace is known, enrich a reaction
+      // with the text of the message it reacted to (e.g. 👍 → "Confirm order €30?"),
+      // so the LLM interprets WHAT was confirmed. Degrades to emoji-only if the
+      // original can't be resolved. (rule #14 — the LLM does the interpreting.)
+      if (inboundReaction) {
+        messageText = await buildReactionText(
+          prisma,
+          whatsappSettings.workspace.id,
+          inboundReaction
+        )
       }
 
       // 🔒 SECURITY: Verify Meta signature (skip for playground — no HMAC header)
@@ -2709,6 +2737,17 @@ export class WhatsAppWebhookController {
         responseLength: routerResult.response?.length ?? 0,
         isBlocked: routerResult.isBlocked, // 🆕 P1: Log if customer was blocked
       })
+
+      // 📎 Inbound media: if the customer sent an image/PDF, download it from the
+      // provider and persist it linked to the user message just saved. Fail-safe:
+      // never blocks or breaks the text reply (the helper swallows its errors).
+      if (inboundMedia) {
+        await ingestInboundWebhookMedia({
+          workspaceId: customer.workspaceId,
+          conversationId: chatSession.id,
+          media: inboundMedia,
+        })
+      }
 
       // 🚫 P1: If customer is blocked, return 410 Gone WITHOUT sending message
       if (routerResult.isBlocked) {

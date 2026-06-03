@@ -39,6 +39,12 @@ import { prisma } from '@echatbot/database'
 import { SecurityCheckService } from '../../../application/services/security-check.service'
 import { CustomClientChatbotService, applyCustomerPatches, applyEscalationNotification } from '../../../application/services/custom-client-chatbot.service'
 import { getChatEngine } from '../../../application/chat-engine'
+// 📎 Inbound media (image/PDF): extract the media ref from the payload + ingest
+import { extractUltramsgMedia } from '../../../services/webhook-media.extract'
+import { ingestInboundWebhookMedia } from '../../../services/inbound-media-webhook.service'
+// 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
+import { extractUltramsgReaction } from '../../../services/webhook-reaction.extract'
+import { buildReactionText } from '../../../services/reaction-context.service'
 import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from '../../../middlewares/rateLimiter'
 import { platformConfigService } from '../../../services/platform-config.service'
 import { websocketService } from '../../../services/websocket.service'
@@ -153,6 +159,8 @@ export class UltraMsgWebhookController {
     // UltraMsg sends data in nested structure: { event_type, data: { id, from, body, ... } }
     const payload = req.body.data || req.body
     const { id, from, to, body, type, timestamp } = payload
+    // 📎 image/document → media ref (direct URL); null for text/other types
+    const inboundMedia = extractUltramsgMedia(payload)
 
     logger.info('📥 UltraMsg Webhook received', {
       webhookId,
@@ -281,6 +289,22 @@ export class UltraMsgWebhookController {
           type,
           placeholder: messageText,
         })
+      }
+
+      // 😀 Reaction (long-press emoji): surface the emoji as text (enriched with
+      // the reacted-to message when available) so the LLM interprets it in
+      // context. No hardcoded emoji→intent mapping (rule #14).
+      if (!messageText.trim()) {
+        const reaction = extractUltramsgReaction(payload)
+        if (reaction) {
+          messageText = workspaceId
+            ? await buildReactionText(prisma, workspaceId, reaction)
+            : reaction.emoji
+          logger.info('[ULTRAMSG] 😀 Reaction detected, using emoji as text', {
+            workspaceId,
+            emoji: reaction.emoji,
+          })
+        }
       }
 
       if (!messageText || messageText.trim() === '') {
@@ -1526,6 +1550,17 @@ export class UltraMsgWebhookController {
         tokensUsed: routerResult.tokensUsed,
         responseLength: routerResult.response?.length ?? 0,
       })
+
+      // 📎 Inbound media: if the customer sent an image/PDF, download it from
+      // UltraMsg and persist it linked to the user message just saved.
+      // Fail-safe: never blocks or breaks the text reply.
+      if (inboundMedia) {
+        await ingestInboundWebhookMedia({
+          workspaceId,
+          conversationId: chatSession.id,
+          media: inboundMedia,
+        })
+      }
 
       // 🚫 Check if customer is blocked
       if (routerResult.isBlocked) {

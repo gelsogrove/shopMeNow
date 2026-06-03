@@ -9,6 +9,7 @@ import { storageService } from "../../../services/storage.service"
 import { messageAttachmentRepository } from "../../../repositories/message-attachment.repository"
 import { sniffMime, validateAttachment } from "../../../services/chat-attachment.validation"
 import { sendOperatorAttachment } from "../../../services/outbound-attachment.service"
+import { sendOperatorReaction } from "../../../services/reaction-send.service"
 import { WhatsAppProviderFactory } from "../../../services/whatsapp/whatsapp-provider.factory"
 import { LLMRouterService } from "../../../services/llm-router.service"
 import { usageService } from "../../../services/usage.service"
@@ -499,6 +500,104 @@ export class ChatController {
         }
       }
       res.status(500).json({ success: false, error: "Failed to upload attachments" })
+    }
+  }
+
+  /**
+   * Operator reacts to a customer message with an emoji (WhatsApp reaction).
+   * POST /api/chat/:sessionId/messages/:messageId/react  body: { emoji }
+   * Secured by the chat router's auth middleware + a per-request IDOR check.
+   */
+  async reactToMessage(req: Request, res: Response): Promise<void> {
+    try {
+      const { sessionId, messageId } = req.params
+      const { emoji } = req.body
+      const workspaceId = (req as any).workspaceId
+      const userId = (req as any).user?.userId || (req as any).user?.id
+
+      if (!sessionId || !messageId) {
+        res.status(400).json({ success: false, error: "Session ID and message ID are required" })
+        return
+      }
+      if (typeof emoji !== "string" || !emoji.trim()) {
+        res.status(400).json({ success: false, error: "Emoji is required" })
+        return
+      }
+      if (!workspaceId) {
+        res.status(400).json({ success: false, error: "Workspace ID is required" })
+        return
+      }
+
+      // 🔒 IDOR protection: the user must belong to this workspace.
+      if (userId) {
+        const userWorkspace = await this.prisma.userWorkspace.findFirst({
+          where: { userId, workspaceId },
+        })
+        if (!userWorkspace) {
+          logger.warn(`🚫 SECURITY: User ${userId} tried to react in workspace ${workspaceId} without permission`)
+          res.status(403).json({ success: false, error: "Access denied to this workspace" })
+          return
+        }
+      }
+
+      // Session + customer (workspace-isolated).
+      const chatSession = await this.prisma.chatSession.findFirst({
+        where: { id: sessionId, workspaceId },
+        include: { customer: true },
+      })
+      if (!chatSession) {
+        res.status(404).json({ success: false, error: "Chat session not found in this workspace" })
+        return
+      }
+
+      // Target message must belong to THIS session (IDOR) and carry a WhatsApp id.
+      const target = await this.prisma.message.findFirst({
+        where: { id: messageId, chatSessionId: sessionId },
+        select: { id: true, whatsappMessageId: true },
+      })
+      if (!target) {
+        res.status(404).json({ success: false, error: "Message not found in this chat" })
+        return
+      }
+      if (!target.whatsappMessageId) {
+        res.status(400).json({
+          success: false,
+          error: "Message has no WhatsApp id; cannot react (not delivered over WhatsApp)",
+        })
+        return
+      }
+
+      const phoneNumber = chatSession.customer?.phone
+      if (!phoneNumber) {
+        res.status(400).json({ success: false, error: "Customer phone not available" })
+        return
+      }
+
+      const result = await sendOperatorReaction(this.prisma, {
+        workspaceId,
+        phoneNumber,
+        whatsappMessageId: target.whatsappMessageId,
+        emoji: emoji.trim(),
+      })
+
+      if (!result.ok) {
+        // 422 when the provider simply can't do reactions (e.g. UltraMsg);
+        // 502 when the provider accepted-then-failed or errored.
+        res.status(result.unsupported ? 422 : 502).json({
+          success: false,
+          error: result.error,
+          unsupported: !!result.unsupported,
+        })
+        return
+      }
+
+      res.json({
+        success: true,
+        data: { providerMessageId: result.providerMessageId, emoji: emoji.trim() },
+      })
+    } catch (error) {
+      logger.error("[CHAT-REACT] Failed to send reaction", { error })
+      res.status(500).json({ success: false, error: "Failed to send reaction" })
     }
   }
 
