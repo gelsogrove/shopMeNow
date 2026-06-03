@@ -60,7 +60,11 @@
 
 **Bot:** Abre la puerta con cuidado, revisa si hay alguna prenda atrapada en la goma y vuelve a cerrarla bien hasta que oigas el clic. ¿Ha desaparecido el mensaje?
 
-**Cliente:** Sí, ahora ha desaparecido.
+**Cliente:** No, sigue saliendo OPEN.
+
+**Bot:** A veces la puerta no cierra porque hay demasiada ropa. Saca algunas prendas y reparte bien la carga dentro del tambor, luego cierra la puerta. ¿Se ha cerrado?
+
+**Cliente:** Sí, ahora sí.
 
 **Bot:** Perfecto. Selecciona de nuevo el programa. ¡Buen lavado! 👋
 
@@ -134,7 +138,11 @@ Dime si arranca.
 >
 > 🚨 Desambiguación: si el cliente solo dice «no se abre» sin precisar, PREGUNTA primero si el ciclo ya terminó con la ropa dentro: sí → `OPEN ERROR`; aún no / no cierra para empezar → `OPEN:`.
 
-**Cliente:** La puerta no se abre, el lavado ya ha terminado.
+**Cliente:** La puerta no se abre.
+
+**Bot:** Para ayudarte mejor: ¿el lavado ya ha terminado y tienes la ropa dentro, o aún no has podido empezar?
+
+**Cliente:** Ya ha terminado, la ropa está dentro.
 
 **Bot:** Tranquila. Cuando el ciclo termina, la puerta tarda unos minutos en desbloquearse. ¿Cuánto hace que terminó el lavado?
 
@@ -151,6 +159,8 @@ Dime si arranca.
 **Bot:** ¿Qué número tiene la lavadora?
 
 **Cliente:** La 2.
+
+> 🔧 _Lectura interna de la máquina (no se muestra al cliente, va al operador):_ `📟 Gràcia > lavadora > Núm 2 = OPEN ERROR`
 
 **Bot:** ¿Cómo te llamas? Paso el caso a un operador para desbloquear la puerta en remoto.
 

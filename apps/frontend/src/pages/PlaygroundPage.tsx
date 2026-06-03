@@ -19,6 +19,7 @@ import { EmojiPicker } from "@/components/EmojiPicker"
 import { ReactionPicker } from "@/components/ReactionPicker"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
+import { WhatsAppIcon } from "@/components/shared/WhatsAppIcon"
 import ReactMarkdown from "react-markdown"
 import {
   Link,

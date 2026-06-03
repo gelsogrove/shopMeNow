@@ -60,7 +60,11 @@
 
 **Bot:** Obre la porta amb cura, revisa si hi ha alguna peça atrapada a la goma i torna-la a tancar bé fins a sentir el clic. Ha desaparegut el missatge?
 
-**Client:** Sí, ha desaparegut.
+**Client:** No, segueix sortint OPEN.
+
+**Bot:** De vegades la porta no tanca perquè hi ha massa roba. Treu algunes peces i reparteix bé la càrrega dins del tambor, després tanca la porta. S'ha tancat?
+
+**Client:** Sí, ara sí.
 
 **Bot:** Perfecte. Selecciona de nou el programa. Bon rentat! 👋
 
@@ -134,7 +138,11 @@ Digues-me si arrenca.
 >
 > 🚨 Desambiguació: si el client només diu «no s'obre» sense precisar, PREGUNTA primer si el cicle ja ha acabat amb la roba a dins: sí → `OPEN ERROR`; encara no / no tanca per començar → `OPEN:`.
 
-**Client:** La porta no s'obre, el rentat ja ha acabat.
+**Client:** La porta no s'obre.
+
+**Bot:** Per ajudar-te millor: el rentat ja ha acabat i tens la roba a dins, o encara no has pogut començar?
+
+**Client:** Ja ha acabat, la roba és a dins.
 
 **Bot:** Tranquil·la. Quan el cicle acaba, la porta tarda uns minuts a desbloquejar-se. Quan fa que ha acabat el rentat?
 
@@ -151,6 +159,8 @@ Digues-me si arrenca.
 **Bot:** Quin número té la rentadora?
 
 **Client:** La 2.
+
+> 🔧 _Lectura interna de la màquina (no es mostra al client, va a l'operador):_ `📟 Gràcia > lavadora > Núm 2 = OPEN ERROR`
 
 **Bot:** Com et dius? Passo el cas amb prioritat a un operador per desbloquejar la porta en remot.
 

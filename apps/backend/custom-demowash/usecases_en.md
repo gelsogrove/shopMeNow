@@ -60,7 +60,11 @@
 
 **Bot:** Open the door carefully, check if any clothing is caught in the seal, and close it firmly again until you hear the click. Has the message gone?
 
-**Customer:** Yes, it's gone.
+**Customer:** No, it still says OPEN.
+
+**Bot:** Sometimes the door won't close because there's too much laundry. Take out a few items and spread the load evenly in the drum, then close the door. Did it close?
+
+**Customer:** Yes, now it did.
 
 **Bot:** Perfect. Select the program again. Happy washing! 👋
 
@@ -134,7 +138,11 @@ Tell me if it starts.
 >
 > 🚨 Disambiguation: if the customer only says "it won't open" without specifying, ASK first whether the cycle already finished with the laundry inside: yes → `OPEN ERROR`; not yet / won't close to start → `OPEN:`.
 
-**Customer:** The door won't open, the wash already finished.
+**Customer:** The door won't open.
+
+**Bot:** To help you better: has the wash already finished with your laundry inside, or have you not been able to start yet?
+
+**Customer:** It already finished, the laundry is inside.
 
 **Bot:** Don't worry. When the cycle ends, the door takes a few minutes to unlock. How long ago did the wash finish?
 
@@ -151,6 +159,8 @@ Tell me if it starts.
 **Bot:** What's the washer number?
 
 **Customer:** Number 2.
+
+> 🔧 _Internal machine read (not shown to the customer, goes to the operator):_ `📟 Gràcia > lavadora > Núm 2 = OPEN ERROR`
 
 **Bot:** What's your name? I'll forward the case to an operator, as a priority, to unlock the door remotely.
 

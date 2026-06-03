@@ -60,7 +60,11 @@
 
 **Bot:** Öffne die Tür vorsichtig, prüfe, ob Kleidung in der Gummidichtung klemmt, und schließe sie fest, bis du das Klick hörst. Ist die Meldung weg?
 
-**Kunde:** Ja, weg.
+**Kunde:** Nein, es zeigt weiter OPEN.
+
+**Bot:** Manchmal schließt die Tür nicht, weil zu viel Wäsche drin ist. Nimm ein paar Teile heraus und verteile die Ladung gut in der Trommel, dann schließe die Tür. Hat sie geschlossen?
+
+**Kunde:** Ja, jetzt schon.
 
 **Bot:** Super. Wähle das Programm erneut aus. Viel Erfolg beim Waschen! 👋
 
@@ -134,7 +138,11 @@ Sag mir, ob sie startet.
 >
 > 🚨 Disambiguierung: Wenn der Kunde nur sagt „sie geht nicht auf" ohne Angabe, FRAGE zuerst, ob der Waschgang bereits beendet ist und die Wäsche drinnen liegt: ja → `OPEN ERROR`; noch nicht / schließt nicht zum Starten → `OPEN:`.
 
-**Kunde:** Die Tür geht nicht auf, der Waschgang ist schon fertig.
+**Kunde:** Die Tür geht nicht auf.
+
+**Bot:** Damit ich dir besser helfen kann: Ist der Waschgang schon fertig und deine Wäsche ist drinnen, oder konntest du noch nicht starten?
+
+**Kunde:** Schon fertig, die Wäsche ist drinnen.
 
 **Bot:** Kein Grund zur Sorge. Wenn der Zyklus endet, dauert es ein paar Minuten, bis die Tür entriegelt. Wie lange ist der Waschgang her?
 
@@ -151,6 +159,8 @@ Sag mir, ob sie startet.
 **Bot:** Welche Nummer hat die Waschmaschine?
 
 **Kunde:** Die 2.
+
+> 🔧 _Interne Maschinenauslesung (wird dem Kunden nicht gezeigt, geht an den Mitarbeiter):_ `📟 Gràcia > lavadora > Núm 2 = OPEN ERROR`
 
 **Bot:** Wie heißt du? Ich gebe den Fall mit Priorität an einen Mitarbeiter weiter, der die Tür aus der Ferne entriegelt.
 

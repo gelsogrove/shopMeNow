@@ -60,7 +60,11 @@
 
 **Bot :** Ouvre la porte avec précaution, vérifie qu'aucun vêtement ne soit coincé dans le joint et referme-la fermement jusqu'au clic. Le message a disparu ?
 
-**Client :** Oui, disparu.
+**Client :** Non, ça affiche toujours OPEN.
+
+**Bot :** Parfois la porte ne ferme pas parce qu'il y a trop de linge. Retire quelques pièces et répartis bien la charge dans le tambour, puis ferme la porte. Est-ce qu'elle s'est fermée ?
+
+**Client :** Oui, maintenant oui.
 
 **Bot :** Parfait. Sélectionne à nouveau le programme. Bon lavage ! 👋
 
@@ -134,7 +138,11 @@ Dis-moi si elle démarre.
 >
 > 🚨 Désambiguïsation : si le client dit seulement « elle ne s'ouvre pas » sans préciser, DEMANDE d'abord si le cycle est déjà terminé avec le linge à l'intérieur : oui → `OPEN ERROR` ; pas encore / ne ferme pas pour démarrer → `OPEN:`.
 
-**Client :** La porte ne s'ouvre pas, le lavage est déjà fini.
+**Client :** La porte ne s'ouvre pas.
+
+**Bot :** Pour mieux t'aider : le lavage est-il déjà terminé avec ton linge à l'intérieur, ou tu n'as pas encore pu démarrer ?
+
+**Client :** C'est déjà terminé, le linge est à l'intérieur.
 
 **Bot :** Pas de souci. Quand le cycle se termine, la porte met quelques minutes à se déverrouiller. Depuis combien de temps le lavage est-il fini ?
 
@@ -151,6 +159,8 @@ Dis-moi si elle démarre.
 **Bot :** Quel est le numéro de la machine ?
 
 **Client :** La 2.
+
+> 🔧 _Lecture interne de la machine (non montrée au client, transmise à l'opérateur) :_ `📟 Gràcia > lavadora > Núm 2 = OPEN ERROR`
 
 **Bot :** Comment t'appelles-tu ? Je transfère le cas en priorité à un opérateur pour déverrouiller la porte à distance.
 

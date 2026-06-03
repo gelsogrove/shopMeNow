@@ -60,7 +60,11 @@
 
 **Bot:** Abre a porta com cuidado, verifica se há alguma peça presa na borracha e fecha-a com firmeza até ouvires o clique. A mensagem desapareceu?
 
-**Cliente:** Sim, desapareceu.
+**Cliente:** Não, continua a aparecer OPEN.
+
+**Bot:** Às vezes a porta não fecha porque há demasiada roupa. Retira algumas peças e distribui bem a carga no tambor, depois fecha a porta. Fechou?
+
+**Cliente:** Sim, agora sim.
 
 **Bot:** Perfeito. Seleciona de novo o programa. Boa lavagem! 👋
 
@@ -134,7 +138,11 @@ Diz-me se arranca.
 >
 > 🚨 Desambiguação: se o cliente apenas disser «não abre» sem precisar, PERGUNTA primeiro se o ciclo já terminou com a roupa lá dentro: sim → `OPEN ERROR`; ainda não / não fecha para começar → `OPEN:`.
 
-**Cliente:** A porta não abre, a lavagem já terminou.
+**Cliente:** A porta não abre.
+
+**Bot:** Para te ajudar melhor: a lavagem já terminou e tens a roupa lá dentro, ou ainda não conseguiste começar?
+
+**Cliente:** Já terminou, a roupa está lá dentro.
 
 **Bot:** Tranquila. Quando o ciclo termina, a porta demora uns minutos a destrancar. Há quanto tempo terminou a lavagem?
 
@@ -151,6 +159,8 @@ Diz-me se arranca.
 **Bot:** Que número tem a máquina?
 
 **Cliente:** A 2.
+
+> 🔧 _Leitura interna da máquina (não é mostrada ao cliente, vai para o operador):_ `📟 Gràcia > lavadora > Núm 2 = OPEN ERROR`
 
 **Bot:** Como te chamas? Encaminho o caso com prioridade para um operador para destrancar a porta à distância.
 

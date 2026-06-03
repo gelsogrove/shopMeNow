@@ -60,7 +60,11 @@
 
 **Bot:** Apri la porta con cura, controlla se c'è qualche capo incastrato nella guarnizione e richiudila bene fino a sentire il clic. Il messaggio è sparito?
 
-**Cliente:** Sì, adesso è sparito.
+**Cliente:** No, continua a uscire OPEN.
+
+**Bot:** A volte la porta non chiude perché c'è troppa roba. Togli qualche capo e ridistribuisci bene il bucato nel cestello, poi chiudi la porta. Si è chiusa?
+
+**Cliente:** Sì, adesso sì.
 
 **Bot:** Perfetto. Seleziona di nuovo il programma. Buon lavaggio! 👋
 
@@ -134,7 +138,11 @@ Dimmi se parte.
 >
 > 🚨 Disambiguazione: se il cliente dice solo «non si apre» senza precisare, CHIEDI prima se il ciclo è già finito con i panni dentro: sì → `OPEN ERROR`; non ancora / non chiude per partire → `OPEN:`.
 
-**Cliente:** La porta non si apre, il lavaggio è già finito.
+**Cliente:** La porta non si apre.
+
+**Bot:** Per aiutarti meglio: il lavaggio è già finito e hai i panni dentro, oppure non sei ancora riuscita a iniziare?
+
+**Cliente:** Ha già finito, i panni sono dentro.
 
 **Bot:** Tranquilla. Quando il ciclo finisce, la porta impiega qualche minuto per sbloccarsi. Da quanto tempo è finito il lavaggio?
 
@@ -151,6 +159,8 @@ Dimmi se parte.
 **Bot:** Che numero ha la lavatrice?
 
 **Cliente:** La 2.
+
+> 🔧 _Lettura interna della macchina (non mostrata al cliente, va all'operatore):_ `📟 Gràcia > lavadora > Núm 2 = OPEN ERROR`
 
 **Bot:** Come ti chiami? Passo il caso con priorità a un operatore per sbloccare la porta da remoto.
 
