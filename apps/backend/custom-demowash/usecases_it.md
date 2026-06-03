@@ -38,6 +38,8 @@
 
 ## La mia lavatrice non parte
 
+> Schermo `OPEN` (la porta non chiude PRIMA di lavare). Se dopo aver risistemato i panni il messaggio persiste, di solito è **sovraccarico**: suggerire di togliere qualche capo e ridistribuire la carica prima di scalare. (NON vale per `OPEN ERROR`, dove il ciclo è già finito.)
+
 **Cliente:** La mia lavatrice non parte.
 
 **Bot:** Ciao! 👋 Sono l'assistente virtuale di **Demowash**. In quale lavanderia ti trovi?
@@ -129,6 +131,8 @@ Dimmi se parte.
 ## La porta non si apre, il lavaggio è già finito
 
 > Schermo tipico: `OPEN ERROR`. Diverso da `OPEN:` (porta che non chiude PRIMA del lavaggio). Vale identico per lavatrice e asciugatrice: i panni sono già processati e intrappolati dentro — non si propone mai di cambiare macchina né di rilavare/riasciugare. È un caso URGENTE.
+>
+> 🚨 Disambiguazione: se il cliente dice solo «non si apre» senza precisare, CHIEDI prima se il ciclo è già finito con i panni dentro: sì → `OPEN ERROR`; non ancora / non chiude per partire → `OPEN:`.
 
 **Cliente:** La porta non si apre, il lavaggio è già finito.
 

@@ -38,6 +38,8 @@
 
 ## A minha máquina não arranca
 
+> Ecrã `OPEN` (a porta não fecha ANTES da lavagem). Se após reposicionar a roupa a mensagem persistir, costuma ser **sobrecarga**: sugerir retirar algumas peças e redistribuir a carga antes de escalar. (Isto NÃO se aplica a `OPEN ERROR`, onde o ciclo já terminou.)
+
 **Cliente:** A minha máquina não arranca.
 
 **Bot:** Olá! 👋 Sou o assistente virtual da **Demowash**. Em que lavandaria estás?
@@ -129,6 +131,8 @@ Diz-me se arranca.
 ## A porta não abre, a lavagem já terminou
 
 > Ecrã típico: `OPEN ERROR`. Diferente de `OPEN:` (porta que não fecha ANTES da lavagem). Aplica-se de forma idêntica à máquina de lavar e de secar: a roupa já está processada e presa lá dentro — nunca propor trocar de máquina nem voltar a lavar/secar. É URGENTE.
+>
+> 🚨 Desambiguação: se o cliente apenas disser «não abre» sem precisar, PERGUNTA primeiro se o ciclo já terminou com a roupa lá dentro: sim → `OPEN ERROR`; ainda não / não fecha para começar → `OPEN:`.
 
 **Cliente:** A porta não abre, a lavagem já terminou.
 

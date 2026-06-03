@@ -38,6 +38,8 @@
 
 ## Ma machine ne démarre pas
 
+> Écran `OPEN` (la porte ne ferme pas AVANT le lavage). Si le message persiste après avoir replacé le linge, c'est généralement une **surcharge** : suggérer de retirer quelques pièces et de répartir la charge avant d'escalader. (Cela NE s'applique PAS à `OPEN ERROR`, où le cycle est déjà terminé.)
+
 **Client :** Ma machine ne démarre pas.
 
 **Bot :** Bonjour ! 👋 Je suis l'assistant virtuel de **Demowash**. Dans quelle laverie es-tu ?
@@ -129,6 +131,8 @@ Dis-moi si elle démarre.
 ## La porte ne s'ouvre pas, le lavage est terminé
 
 > Écran typique : `OPEN ERROR`. Différent de `OPEN:` (porte qui ne ferme pas AVANT le lavage). S'applique de façon identique au lave-linge et au sèche-linge : le linge est déjà traité et coincé à l'intérieur — ne jamais proposer de changer de machine ni de relaver/resécher. C'est URGENT.
+>
+> 🚨 Désambiguïsation : si le client dit seulement « elle ne s'ouvre pas » sans préciser, DEMANDE d'abord si le cycle est déjà terminé avec le linge à l'intérieur : oui → `OPEN ERROR` ; pas encore / ne ferme pas pour démarrer → `OPEN:`.
 
 **Client :** La porte ne s'ouvre pas, le lavage est déjà fini.
 

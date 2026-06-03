@@ -38,6 +38,8 @@
 
 ## La meva rentadora no arrenca
 
+> Pantalla `OPEN` (la porta no tanca ABANS de rentar). Si després de recol·locar la roba el missatge persisteix, sol ser **sobrecàrrega**: suggerir treure algunes peces i repartir la càrrega abans d'escalar. (Això NO s'aplica a `OPEN ERROR`, on el cicle ja ha acabat.)
+
 **Client:** La meva rentadora no arrenca.
 
 **Bot:** Hola! 👋 Sóc l'assistent virtual de **Demowash**. En quina bugaderia ets?
@@ -129,6 +131,8 @@ Digues-me si arrenca.
 ## La porta no s'obre, el rentat ja ha acabat
 
 > Pantalla típica: `OPEN ERROR`. Diferent de `OPEN:` (porta que no tanca ABANS del rentat). S'aplica igual a la rentadora i a l'assecadora: la roba ja està processada i atrapada a dins — mai proposar canviar de màquina ni tornar a rentar/assecar. És URGENT.
+>
+> 🚨 Desambiguació: si el client només diu «no s'obre» sense precisar, PREGUNTA primer si el cicle ja ha acabat amb la roba a dins: sí → `OPEN ERROR`; encara no / no tanca per començar → `OPEN:`.
 
 **Client:** La porta no s'obre, el rentat ja ha acabat.
 

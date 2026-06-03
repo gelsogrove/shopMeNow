@@ -19,13 +19,29 @@ Esta información es **común a todas las sedes**. Los códigos exactos que apar
 | `ERR-01`         | Selección del programa antes del pago                    | Procedimiento ERR-01 (ver abajo). |
 | `ALERT`/`BLOCK`   | Fallo técnico de la máquina DURANTE el uso (no arranca / se detiene) | Procedimiento ALARMA TÉCNICA (ver abajo). ESCALAR siempre. **NO** usar este procedimiento si el lavado ya terminó y solo la puerta no abre → ese caso es `OPEN ERROR`. |
 
+## Desambiguación PUERTA (`OPEN:` vs `OPEN ERROR`) — 🚨 PREGUNTA PRIMERO
+
+Cuando el cliente dice de forma genérica que **«la puerta no se abre / no funciona»** SIN precisar el momento, NO asumas el código ni el procedimiento. Son dos casos opuestos:
+
+- `OPEN:` → la puerta **no cierra ANTES** de lavar (la ropa aún NO se ha lavado). Se resuelve solo: cerrar bien y arrancar.
+- `OPEN ERROR` → el ciclo **YA TERMINÓ** y la puerta **no abre** con la ropa atrapada dentro. Escalación URGENTE para desbloqueo remoto; nunca cambiar de máquina ni repetir el ciclo.
+
+**Pregunta de desambiguación (hazla antes de elegir procedimiento):**
+> "Para ayudarte mejor: ¿el lavado ya ha terminado y tienes la ropa dentro, o aún no has podido empezar?"
+
+- Responde "ya terminó / la ropa está dentro" → `OPEN ERROR` → Procedimiento PUERTA BLOQUEADA FIN DE CICLO.
+- Responde "aún no / no cierra para empezar" → `OPEN:` → Procedimiento OPEN.
+
+Si el cliente YA ha dejado claro el momento (p. ej. "ya terminó y no abre"), no repitas la pregunta. Solo después de saber el código correcto, cuando proceda escalar, llama a `query_machine_status` con ese código.
+
 ## Procedimiento OPEN
 
 > "Abre la puerta con cuidado, revisa si hay alguna prenda atrapada en la goma y vuelve a cerrarla bien hasta que oigas el clic. ¿Ha desaparecido el mensaje?"
 
 - Si dice que sí → "Selecciona de nuevo el programa". Cierre amable.
 - Si dice que no → "Inténtalo una vez más con un poco más de firmeza, asegurándote de que no haya nada atrapado."
-- Si tras 2 intentos sigue → ESCALAR (briefing: lavadora N de <sede> con OPEN persistente, cliente ya ha intentado cerrar 2 veces).
+- Si sigue sin cerrar → suele ser **sobrecarga**: "A veces la puerta no cierra porque hay demasiada ropa. Saca algunas prendas y reparte bien la carga dentro del tambor, luego cierra la puerta. ¿Se ha cerrado?" Si cierra → "Selecciona de nuevo el programa". Cierre amable. (Esto aplica solo a `OPEN:` — puerta que no cierra ANTES de lavar; NUNCA en `OPEN ERROR`, donde el ciclo ya terminó y la ropa está atrapada.)
+- Si tras esos intentos (recolocar + reducir carga) sigue → ESCALAR (briefing: lavadora N de <sede> con OPEN persistente, cliente ya ha intentado cerrar y reducir la carga).
 
 ## Procedimiento PUERTA BLOQUEADA FIN DE CICLO (`OPEN ERROR`)
 

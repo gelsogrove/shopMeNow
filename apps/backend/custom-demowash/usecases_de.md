@@ -38,6 +38,8 @@
 
 ## Meine Waschmaschine startet nicht
 
+> Anzeige `OPEN` (Tür schließt VOR dem Waschgang nicht). Wenn die Meldung nach dem Neuanordnen der Wäsche bestehen bleibt, ist es meist **Überladung**: vorschlagen, einige Teile herauszunehmen und die Ladung zu verteilen, bevor eskaliert wird. (Gilt NICHT für `OPEN ERROR`, wo der Waschgang bereits beendet ist.)
+
 **Kunde:** Meine Waschmaschine startet nicht.
 
 **Bot:** Hallo! 👋 Ich bin der virtuelle Assistent von **Demowash**. In welchem Waschsalon bist du?
@@ -129,6 +131,8 @@ Sag mir, ob sie startet.
 ## Die Tür geht nicht auf, der Waschgang ist fertig
 
 > Typische Anzeige: `OPEN ERROR`. Anders als `OPEN:` (Tür, die VOR dem Waschgang nicht schließt). Gilt identisch für Waschmaschine und Trockner: die Wäsche ist bereits fertig und drinnen eingeschlossen — niemals anbieten, die Maschine zu wechseln oder erneut zu waschen/trocknen. Das ist DRINGEND.
+>
+> 🚨 Disambiguierung: Wenn der Kunde nur sagt „sie geht nicht auf" ohne Angabe, FRAGE zuerst, ob der Waschgang bereits beendet ist und die Wäsche drinnen liegt: ja → `OPEN ERROR`; noch nicht / schließt nicht zum Starten → `OPEN:`.
 
 **Kunde:** Die Tür geht nicht auf, der Waschgang ist schon fertig.
 

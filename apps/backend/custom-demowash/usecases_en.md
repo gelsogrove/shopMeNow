@@ -38,6 +38,8 @@
 
 ## My washer won't start
 
+> Screen `OPEN` (door won't close BEFORE the wash). If the message persists after reseating the laundry, it's usually **overload**: suggest removing a few items and redistributing the load before escalating. (This does NOT apply to `OPEN ERROR`, where the cycle has already finished.)
+
 **Customer:** My washer won't start.
 
 **Bot:** Hi! 👋 I'm the **Demowash** virtual assistant. Which laundromat are you at?
@@ -129,6 +131,8 @@ Tell me if it starts.
 ## The door won't open, the wash already finished
 
 > Typical screen: `OPEN ERROR`. Different from `OPEN:` (door that won't close BEFORE the wash). Applies identically to washer and dryer: the laundry is already processed and trapped inside — never offer to switch machines or re-wash/re-dry. This is URGENT.
+>
+> 🚨 Disambiguation: if the customer only says "it won't open" without specifying, ASK first whether the cycle already finished with the laundry inside: yes → `OPEN ERROR`; not yet / won't close to start → `OPEN:`.
 
 **Customer:** The door won't open, the wash already finished.
 
