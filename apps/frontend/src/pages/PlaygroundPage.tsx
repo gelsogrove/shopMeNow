@@ -1731,10 +1731,10 @@ function ChatScreen({
             <span className="font-semibold text-sm">Pruebas</span>
             <button
               onClick={() => setShowNewChat(true)}
-              className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded-lg text-sm font-medium flex items-center gap-1.5 shadow-sm transition"
+              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-base font-semibold flex items-center gap-2 shadow-md transition"
             >
-              <Plus className="w-4 h-4" />
-              New Chat
+              <Plus className="w-5 h-5" />
+              New Whatsapp simulation
             </button>
           </div>
           <div
@@ -2181,10 +2181,10 @@ function ChatScreen({
                 <span>Select a chat from the list, or click + to start a new one.</span>
                 <button
                   onClick={() => setShowNewChat(true)}
-                  className="bg-emerald-500 hover:bg-emerald-400 text-white px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-lg text-base font-semibold flex items-center gap-2 shadow-md"
                 >
-                  <Plus className="w-4 h-4" />
-                  New Chat
+                  <Plus className="w-5 h-5" />
+                  New Whatsapp simulation
                 </button>
               </div>
             )}
