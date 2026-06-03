@@ -32,7 +32,6 @@ import {
   markEscalationOnce,
   registerMessageTimestamp,
   resetState,
-  seedLanguageIfNeeded,
   updateState,
 } from './state.js'
 import { processIncomingMessage, substitutePlaceholders } from './pii.js'
@@ -1191,15 +1190,17 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     const systemPrompt = await getCachedSystemPrompt()
     const sessionId = input.context.sessionId
 
-    // Seed the session language ONCE from the host's hint (e.g.
-    // customer.language, itself only a phone-prefix guess). seedLanguageIfNeeded
-    // is a no-op if a language is already set, and seeds with mirror:false so
-    // this guess is never written back to Customers. From there on the LLM owns
-    // the language: it declares it via the ⟦LANG:xx⟧ trailer each turn and
-    // commitLanguageFromReply persists only real, confident detections.
-    if (input.config.language) {
-      seedLanguageIfNeeded(sessionId, input.config.language)
-    }
+    // 🌐 LANGUAGE = decided by the CUSTOMER'S MESSAGE, never by the phone
+    // prefix. We deliberately DO NOT seed the session language from
+    // input.config.language (a phone-prefix guess): seeding it makes the prompt
+    // treat the language as "already established" and the bot would keep that
+    // guessed language instead of detecting from what the customer actually
+    // wrote (e.g. a +33 French number writing in Spanish must get a Spanish
+    // reply, not English/French). With no seed, on the first turn the LLM
+    // detects the language from the message (even a single word) and falls back
+    // to Spanish only when the message is genuinely undecidable — see the
+    // ## LANGUAGE block in formatStateForPrompt. From there the ⟦LANG:xx⟧ reply
+    // trailer keeps it sticky.
 
     // Convert backend history → our internal Message[]. The backend may
     // have a richer history than what's in our RAM if this process just

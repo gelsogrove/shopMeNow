@@ -967,14 +967,12 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     const systemPrompt = await getCachedSystemPrompt()
     const sessionId = input.context.sessionId
 
-    // Seed state with any pre-known language from the host (customer.language
-    // already stored in DB). Only if not already in our in-RAM state.
-    if (input.config.language) {
-      const current = getState(sessionId)
-      if (!current.language) {
-        updateState(sessionId, { language: input.config.language })
-      }
-    }
+    // 🌐 LANGUAGE = decided by the CUSTOMER'S MESSAGE, never by the phone
+    // prefix. We deliberately DO NOT seed state.language from
+    // input.config.language (a phone-prefix / DB guess): doing so makes the bot
+    // keep the guessed language instead of detecting from what the customer
+    // actually wrote. Language is detected deterministically from the message
+    // by seedLanguageIfNeeded(sanitized) inside the turn.
 
     // Convert backend history → our internal Message[]. The backend may
     // have a richer history than what's in our RAM if this process just
