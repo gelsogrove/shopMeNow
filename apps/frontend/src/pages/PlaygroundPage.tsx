@@ -546,6 +546,23 @@ function TopBar({
 // ----------------------------------------------------------------------------
 // NEW CHAT MODAL
 // ----------------------------------------------------------------------------
+
+// Generate a random, made-up phone number for the WhatsApp simulation — rotates
+// across Spanish (+34), Italian (+39) and French (+33) mobile formats so each
+// new simulation starts with a different, realistic-looking number.
+function randomDemoPhone(): string {
+  const digits = (n: number) =>
+    Math.floor(Math.random() * Math.pow(10, n))
+      .toString()
+      .padStart(n, "0")
+  const variants = [
+    () => `+346${digits(8)}`, // Spain mobile  → +34 6XXXXXXXX
+    () => `+393${digits(9)}`, // Italy mobile  → +39 3XXXXXXXXX
+    () => `+336${digits(8)}`, // France mobile → +33 6XXXXXXXX
+  ]
+  return variants[Math.floor(Math.random() * variants.length)]()
+}
+
 function NewChatModal({
   onClose,
   onCreated,
@@ -553,7 +570,8 @@ function NewChatModal({
   onClose: () => void
   onCreated: (sessionId: string) => void
 }) {
-  const [phone, setPhone] = useState("")
+  // Pre-fill with a random made-up number (generated once when the modal opens).
+  const [phone, setPhone] = useState(randomDemoPhone)
   const [message, setMessage] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState("")
@@ -595,7 +613,7 @@ function NewChatModal({
         className="bg-white rounded-2xl p-6 w-[440px] shadow-2xl space-y-4"
       >
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold">New Chat</h2>
+          <h2 className="text-xl font-bold">New Whatsapp simulation</h2>
           <button type="button" onClick={onClose}>
             <X className="w-5 h-5 text-gray-500" />
           </button>
