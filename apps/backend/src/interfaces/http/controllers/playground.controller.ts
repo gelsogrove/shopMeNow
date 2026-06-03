@@ -301,6 +301,7 @@ export class PlaygroundController {
           content: true,
           createdAt: true,
           conversationId: true,
+          reaction: true, // 😀 server-synced reaction emoji
         },
       })
       // 3) Group messages by session id, then attach to sessions in the
@@ -345,12 +346,50 @@ export class PlaygroundController {
           aiGenerated: m.role === "assistant",
           chatSessionId: s.id,
           attachments: attByMessage[m.id] || undefined,
+          reaction: m.reaction || null, // 😀 server-synced reaction emoji
         })),
       }))
       return res.json({ sessions })
     } catch (error: any) {
       logger.error("Playground getMessages error:", error)
       return res.status(500).json({ error: "Failed to load messages", message: error.message })
+    }
+  }
+
+  // POST /api/v1/playground/messages/:messageId/reaction
+  // 😀 Set (emoji) or clear ("") the reaction on a message — demo/customer side.
+  // Persisted on ConversationMessage.reaction (same source the operator reads),
+  // so a reaction set here is visible in the operator chat and vice versa.
+  // ISOLATION (rule #2): the message MUST belong to the demo's bound workspace.
+  async setReaction(req: Request, res: Response) {
+    try {
+      const workspaceId = await resolveWorkspaceId(req)
+      const { messageId } = req.params
+      const { emoji } = req.body
+
+      if (!workspaceId) return res.status(401).json({ error: "no_workspace" })
+      if (!messageId) return res.status(400).json({ error: "messageId is required" })
+      if (typeof emoji !== "string") {
+        return res.status(400).json({ error: "emoji must be a string ('' clears it)" })
+      }
+
+      // The message must belong to THIS workspace — never react cross-workspace.
+      const msg = await prisma.conversationMessage.findFirst({
+        where: { id: messageId, workspaceId },
+        select: { id: true },
+      })
+      if (!msg) return res.status(404).json({ error: "message_not_found" })
+
+      const nextReaction = emoji.trim() ? emoji.trim() : null
+      await prisma.conversationMessage.update({
+        where: { id: msg.id },
+        data: { reaction: nextReaction },
+      })
+
+      return res.json({ success: true, messageId: msg.id, reaction: nextReaction })
+    } catch (error: any) {
+      logger.error("Playground setReaction error:", error)
+      return res.status(500).json({ error: "Failed to set reaction", message: error.message })
     }
   }
 

@@ -208,23 +208,6 @@ export function ChatPage() {
   const { selectedChat, setSelectedChat } = useChat()
   const [messages, setMessages] = useState<Message[]>([])
   const [messageInput, setMessageInput] = useState("")
-  // 😀 WhatsApp-style reactions attached to a bubble: { [messageId]: emoji }.
-  // Persisted in localStorage (keyed by message id) so they survive a reload,
-  // like a real WhatsApp reaction that stays on the message.
-  const [reactions, setReactions] = useState<Record<string, string>>(() => {
-    try {
-      return JSON.parse(localStorage.getItem("operatorChatReactions") || "{}")
-    } catch {
-      return {}
-    }
-  })
-  useEffect(() => {
-    try {
-      localStorage.setItem("operatorChatReactions", JSON.stringify(reactions))
-    } catch {
-      /* ignore storage quota / serialization errors */
-    }
-  }, [reactions])
   const [uploadingAttachment, setUploadingAttachment] = useState(false)
 
   // 📎 Upload one or more attachments (image/PDF) for the current chat. Posts
@@ -259,6 +242,29 @@ export function ChatPage() {
       setUploadingAttachment(false)
     }
   }
+
+  // 😀 Set/clear a reaction on a message, persisted server-side (so the customer
+  // / demo sees it too and it survives reload). Optimistic update + revert on
+  // error. Toggling the same emoji clears it. Workspace-isolated server-side.
+  const toggleReactionOperator = async (message: Message, emoji: string) => {
+    const sessionIdToUse = selectedChat?.sessionId || selectedChat?.id
+    if (!sessionIdToUse) return
+    const next = message.reaction === emoji ? "" : emoji
+    const previous = message.reaction ?? null
+    setMessages((prev) =>
+      prev.map((m) => (m.id === message.id ? { ...m, reaction: next || null } : m))
+    )
+    try {
+      await api.post(`/chat/${sessionIdToUse}/messages/${message.id}/react`, { emoji: next })
+    } catch (err: any) {
+      // Revert on failure.
+      setMessages((prev) =>
+        prev.map((m) => (m.id === message.id ? { ...m, reaction: previous } : m))
+      )
+      toast.error(err?.response?.data?.error || "Failed to set reaction", { duration: 2000 })
+    }
+  }
+
   const [loading, setLoading] = useState(false)
   const [loadingChat, setLoadingChat] = useState(false)
   const [welcomeVideoUrl, setWelcomeVideoUrl] = useState<string | null>(null) // 📺 presentation video on first message
@@ -761,6 +767,7 @@ export function ChatPage() {
           timestamp: message.createdAt,
           agentName: message.metadata?.agentName || undefined,
           deliveryStatus: message.deliveryStatus,
+          reaction: message.reaction ?? null, // 😀 server-synced reaction emoji
           attachments: message.attachments || undefined, // 📎 image/PDF attachments
           metadata: message.metadata, // 🔧 AGGIUNTO! Ora il metadata viene passato correttamente
         }))
@@ -1281,6 +1288,7 @@ export function ChatPage() {
           sender: message.direction === "INBOUND" ? "customer" : "user",
           timestamp: message.createdAt || new Date().toISOString(),
           agentName: message.metadata?.agentName,
+          reaction: message.reaction ?? null, // 😀 server-synced reaction emoji
           metadata: message.metadata, // Include full metadata for operator messages
         }))
 
@@ -1882,26 +1890,16 @@ export function ChatPage() {
                           >
                             <ReactionPicker
                               disabled={selectedChat?.isBlacklisted}
-                              onReact={(emoji) =>
-                                setReactions((prev) => {
-                                  // Tapping the same emoji removes it (WhatsApp behaviour).
-                                  if (prev[message.id] === emoji) {
-                                    const next = { ...prev }
-                                    delete next[message.id]
-                                    return next
-                                  }
-                                  return { ...prev, [message.id]: emoji }
-                                })
-                              }
+                              onReact={(emoji) => toggleReactionOperator(message, emoji)}
                             />
                           </div>
-                          {reactions[message.id] && (
+                          {message.reaction && (
                             <span
                               className={`absolute -bottom-3 ${
                                 isAgentMessage ? "right-2" : "left-2"
                               } z-10 flex h-6 min-w-6 items-center justify-center rounded-full border border-gray-200 bg-white px-1 text-sm shadow`}
                             >
-                              {reactions[message.id]}
+                              {message.reaction}
                             </span>
                           )}
                           {/* 🛑 SECURITY BLOCKED BADGE */}
@@ -2021,16 +2019,6 @@ export function ChatPage() {
 
                           <div className="flex justify-end items-center mt-1">
                             <div className="flex items-center gap-1">
-                              {/* 🌐 Customer language flag — shown on bot messages to remind operator which language the customer speaks */}
-                              {isAgentMessage && !isOperatorMessage && !isBlockedMessage && (
-                                <span
-                                  className="text-sm"
-                                  title={`Customer language: ${selectedChat?.language || "unknown"}`}
-                                >
-                                  {getFlagForChat(selectedChat?.language, selectedChat?.customerPhone)}
-                                </span>
-                              )}
-
                               {/* 🏳️ Operator translation flags — shown when operator message was translated */}
                               {isOperatorMessage && (() => {
                                 const dbg = message.metadata?.debugInfo

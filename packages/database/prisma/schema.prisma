@@ -1408,6 +1408,7 @@ model ConversationMessage {
   debugInfo         String? // ✅ Debug information as JSON string (for message flow tracking)
   deliveredAt       DateTime? // ✅ WhatsApp delivery timestamp (when message sent via queue)
   deliveryStatus    String          @default("not_queued") // "not_queued" (never sent), "pending" (in queue), "sent" (delivered), "error" (failed)
+  reaction          String? // 😀 WhatsApp-style reaction emoji on this message (single, server-synced between operator + demo). Null = no reaction.
   createdAt         DateTime        @default(now())
   workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   customer          Customers       @relation(fields: [customerId], references: [id], onDelete: Cascade)

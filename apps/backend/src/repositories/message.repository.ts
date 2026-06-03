@@ -247,6 +247,7 @@ export class MessageRepository {
           debugInfo: true, // ✅ Explicitly select debugInfo
           deliveryStatus: true, // ✅ Include delivery status for blocked badge in frontend
           deliveredAt: true, // ✅ Include delivery timestamp
+          reaction: true, // 😀 WhatsApp-style reaction emoji (server-synced)
         },
       })
 

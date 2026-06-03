@@ -82,6 +82,8 @@ playgroundRouter.get("/playground/demo-usecases/:slug", (req, res) => controller
 playgroundRouter.get("/playground/workspace-info", optionalPlaygroundAuth, (req, res) => controller.getWorkspaceInfo(req, res))
 playgroundRouter.get("/playground/usecases", optionalPlaygroundAuth, (req, res) => controller.getUsecases(req, res))
 playgroundRouter.get("/playground/messages", optionalPlaygroundAuth, (req, res) => controller.getMessages(req, res))
+// 😀 Set/clear the reaction on a message (demo/customer side) — workspace-isolated.
+playgroundRouter.post("/playground/messages/:messageId/reaction", optionalPlaygroundAuth, (req, res) => controller.setReaction(req, res))
 playgroundRouter.get("/playground/todos", optionalPlaygroundAuth, (req, res) => controller.getTodos(req, res))
 playgroundRouter.post("/playground/todos", optionalPlaygroundAuth, (req, res) => controller.createTodo(req, res))
 playgroundRouter.patch("/playground/todos/:id", optionalPlaygroundAuth, (req, res) => controller.updateTodo(req, res))

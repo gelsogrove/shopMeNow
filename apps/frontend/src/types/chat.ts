@@ -13,6 +13,7 @@ export interface Message {
   sender: "user" | "customer"
   timestamp: string
   agentName?: string
+  reaction?: string | null // 😀 server-synced reaction emoji on this message
   attachments?: MessageAttachment[]
   deliveryStatus?: "not_queued" | "pending" | "sent" | "error" | "blocked"
   functionCalls?: Array<{

@@ -115,6 +115,7 @@ type ChatMessage = {
   createdAt: string
   aiGenerated: boolean
   chatSessionId: string
+  reaction?: string | null // 😀 server-synced reaction emoji
   attachments?: Array<{
     id: string
     url: string
@@ -1240,24 +1241,6 @@ function ChatScreen({
   const [commentingMessage, setCommentingMessage] = useState<ChatMessage | null>(null)
   const [showNewChat, setShowNewChat] = useState(false)
   const [chatInput, setChatInput] = useState("")
-  // 😀 WhatsApp-style reactions attached to a bubble: { [messageId]: emoji }.
-  // A reaction is a badge on the message (not a new message), exactly like WhatsApp.
-  // Persisted in localStorage (keyed by message id) so it survives a page reload,
-  // the way a real WhatsApp reaction stays on the message.
-  const [reactions, setReactions] = useState<Record<string, string>>(() => {
-    try {
-      return JSON.parse(localStorage.getItem("playgroundReactions") || "{}")
-    } catch {
-      return {}
-    }
-  })
-  useEffect(() => {
-    try {
-      localStorage.setItem("playgroundReactions", JSON.stringify(reactions))
-    } catch {
-      /* ignore storage quota / serialization errors */
-    }
-  }, [reactions])
   const [sendingChat, setSendingChat] = useState(false)
   // Message id to highlight & scroll to (set when arriving from a kanban "Open in chat" click)
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null)
@@ -1546,6 +1529,22 @@ function ChatScreen({
     } finally {
       setSendingChat(false)
       setPendingForSession(null)
+    }
+  }
+
+  // 😀 Set/clear a reaction on a message, persisted server-side so the operator
+  // sees it too (and it survives reload). Toggling the same emoji clears it.
+  const toggleReaction = async (message: ChatMessage, emoji: string) => {
+    const next = message.reaction === emoji ? "" : emoji
+    try {
+      await playFetch(`${API_BASE}/messages/${message.id}/reaction`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emoji: next }),
+      })
+      await fetchAll()
+    } catch {
+      /* non-blocking: a reaction failure must not disrupt the chat */
     }
   }
 
@@ -2059,26 +2058,15 @@ function ChatScreen({
                           (like WhatsApp), not sent as a new message. */}
                       {!isInbound && (
                         <div className="absolute -top-9 right-1 z-20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto">
-                          <ReactionPicker
-                            onReact={(emoji) =>
-                              setReactions((prev) => {
-                                // Tapping the same emoji removes it (WhatsApp behaviour).
-                                if (prev[m.id] === emoji) {
-                                  const next = { ...prev }
-                                  delete next[m.id]
-                                  return next
-                                }
-                                return { ...prev, [m.id]: emoji }
-                              })
-                            }
-                          />
+                          <ReactionPicker onReact={(emoji) => toggleReaction(m, emoji)} />
                         </div>
                       )}
                       {/* Reaction badge: small emoji overlapping the bubble's
-                          bottom edge, the way WhatsApp renders reactions. */}
-                      {reactions[m.id] && (
+                          bottom edge, the way WhatsApp renders reactions.
+                          Source = server (m.reaction), so the operator sees it too. */}
+                      {m.reaction && (
                         <span className="absolute -bottom-3 right-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full border border-gray-200 bg-white px-1 text-sm shadow">
-                          {reactions[m.id]}
+                          {m.reaction}
                         </span>
                       )}
                       <MessageBody content={greetingPart} isInbound={isInbound} />
