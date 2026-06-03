@@ -260,7 +260,7 @@ const TOOLS = [
     function: {
       name: 'escalate_to_operator',
       description:
-        'Send a structured briefing to the human operator by email. Call this when the procedure documented in MACHINES says ESCALAR, when the customer explicitly asks for a human, or when a problem persists after the documented steps. The summary should be a self-contained operator briefing following the template in common.md. The host will substitute placeholder PII tokens with real values from SessionState before sending.',
+        'Send a structured briefing to the human operator by email. Call this when the procedure documented in MACHINES says ESCALAR, when the customer explicitly asks for a human, or when a problem persists after the documented steps. The summary should be a self-contained operator briefing following the template in common.md. The host will substitute placeholder PII tokens with real values from SessionState before sending. Call this EXACTLY ONCE per incident — never emit two escalate_to_operator calls in the same turn; one call is enough.',
       parameters: {
         type: 'object',
         properties: {

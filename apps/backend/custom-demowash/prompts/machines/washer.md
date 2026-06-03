@@ -20,20 +20,18 @@ Esta información es **común a todas las sedes**. Los códigos exactos que apar
 | `ALERT`/`BLOCK`   | Fallo técnico de la máquina DURANTE el uso (no arranca / se detiene) | Procedimiento ALARMA TÉCNICA (ver abajo). ESCALAR siempre. **NO** usar este procedimiento si el lavado ya terminó y solo la puerta no abre → ese caso es `OPEN ERROR`. |
 | `DOOR` / `OPEN DOOR` | La puerta no cierra bien ANTES del lavado (equivalente a `OPEN:`) | Procedimiento OPEN (ver abajo). NO preguntes "antes o después": el código ya indica que es antes de lavar. |
 
-## Desambiguación PUERTA (`OPEN:` vs `OPEN ERROR`) — 🚨 PREGUNTA PRIMERO
+## Puerta: elegir procedimiento por el código de pantalla
 
-Cuando el cliente dice de forma genérica que **«la puerta no se abre / no funciona»** SIN leer ningún código de pantalla, NO asumas el código ni el procedimiento. Son dos casos opuestos:
+Cuando el cliente dice de forma genérica que **«la puerta no se abre / no funciona»**, **PREGUNTA PRIMERO qué aparece en la pantalla** (*"¿qué código aparece en la pantalla de la máquina?"*) — el código identifica el caso sin ambigüedad:
 
-> Nota: `OPEN:`, `DOOR` y `OPEN DOOR` ya indican por sí mismos que es ANTES del lavado → aplica directamente Procedimiento OPEN, **sin** preguntar. `OPEN ERROR` ya indica fin de ciclo → Procedimiento PUERTA BLOQUEADA. Esta desambiguación es solo para cuando el cliente NO ha dado código alguno.
+- `OPEN:`, `DOOR`, `OPEN DOOR` → la puerta **no cierra ANTES** de lavar (la ropa aún NO se ha lavado). Se resuelve solo: cerrar bien y arrancar → **Procedimiento OPEN**.
+- `OPEN ERROR` → el ciclo **YA TERMINÓ** y la puerta **no abre** con la ropa atrapada dentro. Escalación URGENTE para desbloqueo remoto; nunca cambiar de máquina ni repetir el ciclo → **Procedimiento PUERTA BLOQUEADA FIN DE CICLO**.
 
-- `OPEN:` → la puerta **no cierra ANTES** de lavar (la ropa aún NO se ha lavado). Se resuelve solo: cerrar bien y arrancar.
-- `OPEN ERROR` → el ciclo **YA TERMINÓ** y la puerta **no abre** con la ropa atrapada dentro. Escalación URGENTE para desbloqueo remoto; nunca cambiar de máquina ni repetir el ciclo.
-
-**Pregunta de desambiguación (hazla antes de elegir procedimiento):**
+**Solo si el cliente NO sabe leer / no ve ningún código en pantalla**, desambigua preguntando por el momento:
 > "Para ayudarte mejor: ¿el lavado ya ha terminado y tienes la ropa dentro, o aún no has podido empezar?"
 
-- Responde "ya terminó / la ropa está dentro" → `OPEN ERROR` → Procedimiento PUERTA BLOQUEADA FIN DE CICLO.
-- Responde "aún no / no cierra para empezar" → `OPEN:` → Procedimiento OPEN.
+- Responde "ya terminó / la ropa está dentro" → trátalo como `OPEN ERROR` → Procedimiento PUERTA BLOQUEADA FIN DE CICLO.
+- Responde "aún no / no cierra para empezar" → trátalo como `OPEN:` → Procedimiento OPEN.
 
 Si el cliente YA ha dejado claro el momento (p. ej. "ya terminó y no abre"), no repitas la pregunta. Una vez sepas el código correcto, llama a `query_machine_status` con él en cuanto tengas sede + tipo + número, y vuelve a llamarlo si tras los intentos el cliente dice que sigue sin funcionar.
 
