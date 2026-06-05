@@ -17,6 +17,7 @@ import { whatsAppToMarkdown } from "../../../utils/whatsapp-formatter"
 import { buildPhoneVariants } from "../../../utils/phone"
 import { verifyWhatsAppSignature } from "../../../utils/whatsapp-signature"
 import { WhatsAppDirectSendService } from "../../../services/whatsapp-direct-send.service"
+import { WhatsAppProviderFactory } from "../../../services/whatsapp/whatsapp-provider.factory"
 import { splitCustomChatbotReply } from "../../../utils/custom-chatbot-reply"
 import { mdToWhatsApp } from "../../../utils/markdown-to-whatsapp"
 // 📎 Inbound media (image/PDF): extract the media ref from the payload + ingest
@@ -38,6 +39,62 @@ const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
  * See Constitution Principle VI: Chat Isolation & Concurrency Safety
  */
 const customerMessageLocks = new Map<string, Promise<void>>()
+
+/**
+ * 📺 Send the workspace presentation video to the customer — ONCE, on first contact.
+ *
+ * Sent as a TEXT message containing the URL: WhatsApp auto-generates a clickable
+ * link preview (thumbnail + title). This works with ANY link (YouTube, Vimeo, a
+ * direct .mp4, etc.) — no need for a directly-fetchable media file.
+ *
+ * Called from the webhook only when it's the customer's very first inbound message
+ * (messageCount === 0). Best-effort: never throws, logs failures, lets the normal
+ * text reply proceed regardless.
+ */
+async function sendWelcomeVideoIfConfigured(
+  workspaceId: string,
+  toPhone: string | null | undefined
+): Promise<void> {
+  if (!toPhone) return
+  try {
+    const ws = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        name: true,
+        welcomeVideoUrl: true,
+        whatsappProvider: true,
+        metaPhoneNumberId: true,
+        metaAccessToken: true,
+        ultraMsgInstanceId: true,
+        ultraMsgToken: true,
+        ultraMsgApiUrl: true,
+        wasenderApiKey: true,
+      },
+    })
+    if (!ws?.welcomeVideoUrl) return
+    if (!WhatsAppProviderFactory.isConfigured(ws)) {
+      logger.warn("[WEBHOOK] 📺 Welcome video skipped — provider not configured", { workspaceId })
+      return
+    }
+    const provider = WhatsAppProviderFactory.create(ws)
+    // Send the URL as plain text → WhatsApp renders the link preview/thumbnail.
+    const result = await provider.sendTextMessage(toPhone, ws.welcomeVideoUrl)
+    if (result.success) {
+      logger.info("[WEBHOOK] 📺 Welcome video link sent", { workspaceId, toPhone })
+    } else {
+      logger.warn("[WEBHOOK] 📺 Welcome video link send failed", {
+        workspaceId,
+        error: result.error,
+      })
+    }
+  } catch (err) {
+    logger.warn("[WEBHOOK] 📺 Welcome video send threw (best-effort, ignored)", {
+      workspaceId,
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+}
 
 /**
  * WhatsApp Webhook Controller
@@ -1453,6 +1510,12 @@ export class WhatsAppWebhookController {
         },
       })
 
+      // 📺 FIRST CONTACT → send presentation video once (before any reply path).
+      // Gated on messageCount===0 so it never repeats on later messages.
+      if (messageCount === 0) {
+        await sendWelcomeVideoIfConfigured(customer.workspaceId, customer.phone)
+      }
+
       // 🤖 CUSTOM CHATBOT BYPASS: Workspaces with a custom chatbot (FLOW mode) must process
       // ALL messages through the LLM pipeline — the chatbot generates its own greeting on turn 1.
       // The workspace welcomeMessage is for standard (non-custom) workspaces only.
@@ -1971,6 +2034,7 @@ export class WhatsAppWebhookController {
             content: messageMarkdown,
             agentType: "NONE", // No agent processing
             tokensUsed: 0,
+            whatsappMessageId, // 📲 inbound wamid → enables operator reaction forwarding
             debugInfo: JSON.stringify({
               chatbotDisabled: true,
               reason: "activeChatbot = false",
@@ -2224,6 +2288,7 @@ export class WhatsAppWebhookController {
               content: messageMarkdown,
               agentType: "NONE",
               tokensUsed: 0,
+              whatsappMessageId, // 📲 inbound wamid → enables operator reaction forwarding
               debugInfo: JSON.stringify({
                 channelDisabled: true,
                 reason: "workspace.channelStatus = false",
@@ -2343,6 +2408,7 @@ export class WhatsAppWebhookController {
               content: messageMarkdown,
               agentType: "NONE",
               tokensUsed: 0,
+              whatsappMessageId, // 📲 inbound wamid → enables operator reaction forwarding
               debugInfo: JSON.stringify({
                 channelDisabled: true,
                 reason: "workspace.channelStatus = false (WIP mode)",
@@ -2654,6 +2720,9 @@ export class WhatsAppWebhookController {
             agentType: "CUSTOMER",
             tokensUsed: 0,
             deliveryStatus: "delivered",
+            // 📲 Store inbound wamid so operator reactions on THIS customer
+            // message can be forwarded back to WhatsApp (sendReaction needs it).
+            whatsappMessageId,
             debugInfo: JSON.stringify({
               source: "whatsapp-webhook",
               pipeline: "custom-ecolaundry",
