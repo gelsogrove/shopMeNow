@@ -2765,16 +2765,11 @@ export class WhatsAppWebhookController {
             // WhatsApp supports a very limited subset (no tables, no `##`
             // headers, only single-asterisk bold). Down-convert before send.
             const whatsappReply = mdToWhatsApp(customerReply)
-            // 📺 First message: prepend welcome video URL so URL + greeting arrive as ONE WhatsApp message
-            const welcomeVideoUrl = (customer as any).workspace?.welcomeVideoUrl as string | null | undefined
-            const finalWhatsappReply = (messageCount === 0 && welcomeVideoUrl)
-              ? `${welcomeVideoUrl}\n\n${whatsappReply}`
-              : whatsappReply
             await directSend.send({
               workspaceId: customer.workspaceId,
               customerId: customer.id,
               phoneNumber: customer.phone,
-              messageContent: finalWhatsappReply,
+              messageContent: whatsappReply,
               conversationMessageId: savedAssistantMessageId,
               skipSecurityCheck: true, // bot-generated content, not user input
             })
