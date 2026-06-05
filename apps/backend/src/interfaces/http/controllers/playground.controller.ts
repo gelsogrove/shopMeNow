@@ -740,8 +740,9 @@ export class PlaygroundController {
       }
 
       if (!session) {
+        // 🧪 CRITICAL: Only reuse playground sessions — never attach to a real WhatsApp session
         session = await prisma.chatSession.findFirst({
-          where: { customerId: customer.id, status: "active" },
+          where: { customerId: customer.id, status: "active", isPlayground: true },
         })
         if (!session) {
           session = await prisma.chatSession.create({
