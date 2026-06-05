@@ -74,9 +74,10 @@ const ALL_SECTIONS: SettingsSection[] = [
 
 // For custom chatbot workspaces, everything is managed in settings.json inside
 // the custom module — the only relevant platform-level config is the WhatsApp
-// channel provider credentials (API key, phone number, webhook token).
+// channel provider credentials (API key, phone number, webhook token), plus
+// calendar settings for appointment reminders.
 // All other sections are hidden: AI Personality, Business Config, Widget,
-// Human Support, Security, Calendar, Custom Tools are either unused or
+// Human Support, Security, Custom Tools are either unused or
 // already configured inside the custom module's own JSON.
 const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = [
   "business",

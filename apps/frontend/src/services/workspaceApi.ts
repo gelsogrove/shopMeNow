@@ -218,6 +218,17 @@ export interface UpdateWorkspaceData {
   widgetPrimaryColor?: string
   widgetIcon?: string
   widgetUseChannelLogo?: boolean
+  // 📅 Calendar & Appointment Settings
+  enableCalendarBooking?: boolean
+  timezone?: string
+  appointmentReminder24hEnabled?: boolean
+  appointmentReminder24hMessage?: string | null
+  appointmentReminder1hEnabled?: boolean
+  appointmentReminder1hMessage?: string | null
+  appointmentReminder30mEnabled?: boolean
+  appointmentReminder30mMessage?: string | null
+  appointmentReminderChannel?: string
+  minBookingBufferHours?: number
 }
 
 const workspaceApi = {
