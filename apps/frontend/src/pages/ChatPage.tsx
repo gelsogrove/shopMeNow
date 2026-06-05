@@ -569,7 +569,7 @@ export function ChatPage() {
     )
   }
   if (filterBlocked) visibleChats = visibleChats.filter((c: Chat) => c.isBlacklisted)
-  if (filterNeedsSupport) visibleChats = visibleChats.filter((c: Chat) => c.activeChatbot === false)
+  if (filterNeedsSupport) visibleChats = visibleChats.filter((c: Chat) => c.activeChatbot !== false)
   if (filterPlayground) visibleChats = visibleChats.filter(
     (c: Chat) => c.isPlayground || c.customerName?.startsWith('playground_')
   )
@@ -667,6 +667,19 @@ export function ChatPage() {
       return
     }
   }, [chats, clientSearchTerm])
+
+  // Clear selected chat if it no longer passes active filters
+  useEffect(() => {
+    if (!selectedChat) return
+    const hiddenBySupport = filterNeedsSupport && selectedChat.activeChatbot === false
+    const hiddenByBlocked = filterBlocked && !selectedChat.isBlacklisted
+    const hiddenByPlayground = filterPlayground
+      ? (!selectedChat.isPlayground && !selectedChat.customerName?.startsWith('playground_'))
+      : (selectedChat.isPlayground || selectedChat.customerName?.startsWith('playground_'))
+    if (hiddenBySupport || hiddenByBlocked || hiddenByPlayground) {
+      setSelectedChat(null)
+    }
+  }, [selectedChat, filterNeedsSupport, filterBlocked, filterPlayground, setSelectedChat])
 
   // Reset new-chat tracking when workspace changes
   useEffect(() => {
