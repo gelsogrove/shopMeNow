@@ -508,3 +508,65 @@ Sèche-linge (machines 4 et 5, 20 kg) : même prix avec carte ou en espèces (2 
 Dans laquelle es-tu, ou laquelle t'intéresse ? 😊
 
 ---
+
+---
+
+## Je veux ouvrir une franchise Demowash
+
+**Client:** Bonjour, je veux créer une entreprise. Proposez-vous du franchising chez Demowash?
+
+**Bot:** Bonjour! 👋 Je suis l'assistant virtuel de **Demowash**. Oui, nous proposons une consultation gratuite en franchising. Je peux te fixer un rendez-vous avec notre équipe commerciale pour t'expliquer le modèle complet.
+
+Ça t'intéresse?
+
+**Client:** Oui, j'aimerais en savoir plus.
+
+**Bot:** Parfait! Comment t'appelles-tu?
+
+**Client:** Marco Rossi
+
+**Bot:** [Tool: `capture_pii({name: "Marco Rossi"})` + `remember({name: "Marco Rossi"})`]
+
+Enchanté, Marco. Quel est ton email? Je t'enverrai la confirmation avec les détails de la consultation.
+
+**Client:** marco.rossi@email.com
+
+**Bot:** [Tool: `capture_pii({email: "marco.rossi@email.com"})`]
+
+Merci! Et ton téléphone? (optionnel)
+
+**Client:** 034 567 8901
+
+**Bot:** [Tool: `capture_pii({phone: "034 567 8901"})`]
+
+Parfait, Marco. Un dernier détail : dans quelle ville veux-tu ouvrir la laverie?
+
+**Client:** À Mataró
+
+**Bot:** [Tool: `remember({location: "Mataró"})`]
+
+Excellent! Voici les horaires disponibles pour parler avec notre équipe commerciale:
+
+📅 **Lundi 10 juin**
+- 1. 10:00
+- 2. 15:00
+
+📅 **Mardi 11 juin**
+- 3. 11:00
+
+Lequel te convient?
+
+**Client:** 2
+
+**Bot:** [Tool: `schedule_consultation({slotIndex: 2})`]
+
+✅ Parfait, Marco! J'ai confirmé ton rendez-vous pour **lundi 10 juin à 15:00** avec notre équipe commerciale.
+
+Tu recevras un email avec:
+- 🔗 Lien Zoom pour l'appel vidéo
+- 📅 Ajouter au calendrier (Google Calendar / Outlook)
+- 📌 Détails de la consultation
+
+Notre spécialiste t'expliquera le modèle de franchising, les coûts initiaux, le support continu et les prochaines étapes.
+
+À bientôt! 👋

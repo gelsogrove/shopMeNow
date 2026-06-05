@@ -9,6 +9,9 @@
 import { PrismaClient } from '@echatbot/database';
 import { BusinessHoursRepository } from '../../repositories/business-hours.repository';
 import { BlackoutPeriodRepository } from '../../repositories/blackout-period.repository';
+import { zoomService } from '../../services/zoom.service';
+import { sendAppointmentConfirmationEmail } from '../../services/appointment-confirmation-email.service';
+import { generateGoogleCalendarUrl } from '../../utils/ics-generator';
 import logger from '../../utils/logger';
 
 export class AppointmentService {
@@ -423,8 +426,99 @@ export class AppointmentService {
       data: { lastAppointmentDate: new Date() },
     }).catch(() => {}); // Silently ignore if customer not found
 
+    // 🎥 Create Zoom meeting if workspace has Zoom enabled
+    let zoomLink: string | undefined;
+    let zoomMeetingId: string | undefined;
+    try {
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { zoomConnected: true, timezone: true },
+      });
+
+      if (workspace?.zoomConnected) {
+        const zoomResult = await zoomService.createMeeting({
+          workspaceId,
+          topic: `${service.name} - ${data.customerName || 'Guest'}`,
+          startTime: data.startTime,
+          duration: service.duration,
+          timezone: workspace.timezone || 'Europe/Rome',
+          attendeeEmail: data.customerEmail,
+        });
+
+        if (zoomResult) {
+          zoomLink = zoomResult.zoomLink;
+          zoomMeetingId = zoomResult.zoomMeetingId;
+
+          // Update appointment with Zoom link
+          await this.prisma.appointment.update({
+            where: { id: appointment.id },
+            data: {
+              zoomLink,
+              zoomMeetingId,
+            },
+          });
+        }
+      }
+    } catch (err) {
+      logger.error(`[APPOINTMENT] Failed to create Zoom meeting for ${appointment.id}:`, err);
+    }
+
+    // 📧 Send confirmation email if customer has email
+    if (data.customerEmail) {
+      try {
+        const workspace = await this.prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: { timezone: true },
+        });
+
+        // Format date/time for email (TODO: multi-language support)
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          timeZone: workspace?.timezone || 'Europe/Rome',
+        });
+        const timeFormatter = new Intl.DateTimeFormat('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: workspace?.timezone || 'Europe/Rome',
+        });
+
+        const appointmentDate = formatter.format(data.startTime);
+        const appointmentTime = timeFormatter.format(data.startTime);
+        const googleCalendarLink = generateGoogleCalendarUrl({
+          summary: `${service.name} - ${data.customerName || 'Guest'}`,
+          startTime: data.startTime,
+          endTime,
+          timezone: workspace?.timezone || 'Europe/Rome',
+          description: zoomLink ? `Zoom: ${zoomLink}` : undefined,
+        });
+
+        await sendAppointmentConfirmationEmail({
+          to: data.customerEmail,
+          customerName: data.customerName || 'Guest',
+          appointmentType: service.name,
+          appointmentDate,
+          appointmentTime,
+          startTime: data.startTime,
+          endTime,
+          timezone: workspace?.timezone || 'Europe/Rome',
+          zoomLink,
+          googleCalendarLink,
+          language: 'en', // TODO: use customer language
+        });
+      } catch (err) {
+        logger.error(`[APPOINTMENT] Failed to send confirmation email for ${appointment.id}:`, err);
+      }
+    }
+
     logger.info(`[APPOINTMENT] Created appointment ${appointment.id} for customer ${data.customerId} at ${data.startTime}`);
-    return appointment;
+    return {
+      ...appointment,
+      zoomLink,
+      zoomMeetingId,
+    };
   }
 
   /**

@@ -508,3 +508,65 @@ Assecadores (màquines 4 i 5, 20 kg): mateix preu amb targeta o en efectiu (2 �
 En quina de les dues ets, o quina t'interessa? 😊
 
 ---
+
+---
+
+## Vull obrir una Demowash en franquícia
+
+**Client:** Hola, vull començar un negoci. Teniu franquícia a Demowash?
+
+**Bot:** Hola! 👋 Sóc l'assistent virtual de **Demowash**. Sí, oferim consultoria gratuïta per a franquícia. Puc fixar-te una cita amb el nostre equip comercial per explicar-te el model complet.
+
+T'interessa?
+
+**Client:** Sí, m'agradaria saber més.
+
+**Bot:** Perfecte! Com et dius?
+
+**Client:** Marco Rossi
+
+**Bot:** [Tool: `capture_pii({name: "Marco Rossi"})` + `remember({name: "Marco Rossi"})`]
+
+Encantant, Marco. Quin és el teu email? T'enviaré la confirmació amb els detalls de la consulta.
+
+**Client:** marco.rossi@email.com
+
+**Bot:** [Tool: `capture_pii({email: "marco.rossi@email.com"})`]
+
+Gràcies! I el teu telèfon? (opcional)
+
+**Client:** 034 567 8901
+
+**Bot:** [Tool: `capture_pii({phone: "034 567 8901"})`]
+
+Perfecte, Marco. Un últim detall: en quina ciutat vols obrir la bugaderia?
+
+**Client:** A Mataró
+
+**Bot:** [Tool: `remember({location: "Mataró"})`]
+
+Excel·lent! Aquests són els horaris disponibles per parlar amb el nostre equip comercial:
+
+📅 **Dilluns 10 de juny**
+- 1. 10:00
+- 2. 15:00
+
+📅 **Dimarts 11 de juny**
+- 3. 11:00
+
+Quin et va bé?
+
+**Client:** 2
+
+**Bot:** [Tool: `schedule_consultation({slotIndex: 2})`]
+
+✅ Perfecte, Marco! He confirmat la teva cita per a **dilluns 10 de juny a les 15:00** amb el nostre equip comercial.
+
+Rebràs un email amb:
+- 🔗 Link Zoom per a la videotrucada
+- 📅 Afegir al calendari (Google Calendar / Outlook)
+- 📌 Detalls de la consultoria
+
+El nostre especialista et farà saber el model de franquícia, costos inicials, suport continu i propers passos.
+
+Fins aviat! 👋

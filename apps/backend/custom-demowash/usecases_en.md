@@ -508,3 +508,66 @@ Dryers (machines 4 and 5, 20 kg): same price with card or cash (€2 / 15 min).
 Which one are you at, or which one are you interested in? 😊
 
 ---
+
+
+## I want to open a Demowash franchise
+
+**Customer:** Hi, I want to start a business. Do you offer franchising at Demowash?
+
+**Bot:** Hi! 👋 I'm the **Demowash** virtual assistant. Yes, we offer free franchising consultation. I can book you an appointment with our commercial team to explain the complete model.
+
+Are you interested?
+
+**Customer:** Yes, I'd like to know more.
+
+**Bot:** Great! What's your name?
+
+**Customer:** Marco Rossi
+
+**Bot:** [Tool: capture_pii + remember]
+
+Nice to meet you, Marco. What's your email? I'll send you the confirmation with consultation details.
+
+**Customer:** marco.rossi@email.com
+
+**Bot:** [Tool: capture_pii + remember]
+
+Thanks! Your phone number? (optional)
+
+**Customer:** 034 567 8901
+
+**Bot:** [Tool: capture_pii + remember]
+
+Perfect! One last: which city do you want to open the laundromat in?
+
+**Customer:** Mataró
+
+**Bot:** [Tool: remember]
+
+Excellent! Here are available times to speak with our commercial team:
+
+📅 **Monday, June 10**
+- 10:00
+- 15:00
+
+📅 **Tuesday, June 11**
+- 11:00
+
+Which works for you?
+
+**Customer:** 2
+
+**Bot:** [Tool: schedule_consultation]
+
+✅ Perfect, Marco! I've confirmed your appointment for **Monday, June 10 at 3:00 PM** with our commercial team.
+
+You'll receive an email with:
+- 🔗 Zoom link for the video call
+- 📅 Add to your calendar (Google Calendar / Outlook)
+- 📌 Consultation details
+
+Our specialist will explain the franchising model, startup costs, ongoing support, and next steps.
+
+See you soon! 👋
+
+---

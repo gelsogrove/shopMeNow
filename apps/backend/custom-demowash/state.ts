@@ -12,6 +12,11 @@ export interface SessionState {
   // the prompt instructs the LLM to detect and respond natively.
   language?:    string
 
+  // Appointment scheduling (franchising consultation)
+  appointmentDate?:  string     // ISO format: YYYY-MM-DD
+  appointmentTime?:  string     // HH:MM format
+  appointmentType?:  string     // e.g. "franchising_consultation"
+
   // Profile (also mirrored to backend Customers via patches)
   companyName?: string
   address?:     string

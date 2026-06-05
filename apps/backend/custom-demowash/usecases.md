@@ -34,6 +34,10 @@
 - [¿Cuánto ahorro con la tarjeta?](#cuánto-ahorro-con-la-tarjeta)
 - [¿Dónde está la lavandería más cercana?](#dónde-está-la-lavandería-más-cercana)
 
+### Oportunidades & Franchising
+
+- [Quiero abrir una Demowash en franchising](#quiero-abrir-una-demowash-en-franchising)
+
 ---
 
 ## La lavadora no arranca
@@ -506,5 +510,67 @@ Secadoras (máquinas 4 y 5, 20 kg): mismo precio con tarjeta o en efectivo (2 �
 2. **Gràcia** — C/ Verdi 47, cerca de Plaça del Sol. Horario: 7:00 — 23:00
 
 ¿En cuál de las dos estás, o cuál te interesa? 😊
+
+---
+
+## Quiero abrir una Demowash en franchising
+
+**Cliente:** Hola, quiero empezar un negocio. ¿Tenéis franchising en Demowash?
+
+**Bot:** ¡Hola! 👋 Soy el asistente virtual de **Demowash**. Sí, ofrecemos consultoría gratuita para franchising. Puedo fijarte un appuntamento con nuestro equipo comercial para explicarte el modelo completo.
+
+¿Te interesa?
+
+**Cliente:** Sí, me gustaría saber más.
+
+**Bot:** ¡Perfecto! ¿Cómo te llamas?
+
+**Cliente:** Marco Rossi
+
+**Bot:** [Tool: `capture_pii({name: "Marco Rossi"})` + `remember({name: "Marco Rossi"})`]
+
+Encantado, Marco. ¿Y tu email? Te lo pediré para enviarte la confirmación con los detalles de la consulta.
+
+**Cliente:** marco.rossi@email.com
+
+**Bot:** [Tool: `capture_pii({email: "marco.rossi@email.com"})`]
+
+¡Gracias! ¿Y tu teléfono? (opcional)
+
+**Cliente:** 034 567 8901
+
+**Bot:** [Tool: `capture_pii({phone: "034 567 8901"})`]
+
+Perfecto, Marco. Un último dato: ¿En qué ciudad o zona quieres abrir la lavandería?
+
+**Cliente:** En Mataró
+
+**Bot:** [Tool: `remember({location: "Mataró"})`]
+
+¡Excelente! Ahora te muestro los horarios disponibles para hablar con nuestro equipo comercial:
+
+📅 **Lunes 10 de junio**
+- 1. 10:00
+- 2. 15:00
+
+📅 **Martes 11 de junio**
+- 3. 11:00
+
+¿Cuál te va bien?
+
+**Cliente:** 2
+
+**Bot:** [Tool: `schedule_consultation({slotIndex: 2})`]
+
+✅ ¡Perfecto, Marco! He confirmado tu cita para **lunes 10 de junio a las 15:00** con nuestro equipo comercial.
+
+Recibirás un email con:
+- 🔗 Enlace Zoom para la videollamada
+- 📅 Enlace de calendario (Google Calendar / Outlook)
+- 📌 Detalles de la consultoría
+
+Nuestro especialista te explicará el modelo de franchising, costos de inicio, apoyo continuo y próximos pasos.
+
+¡Nos vemos pronto! 👋
 
 ---

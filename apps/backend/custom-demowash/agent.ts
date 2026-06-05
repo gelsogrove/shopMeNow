@@ -228,6 +228,25 @@ const TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'schedule_consultation',
+      description:
+        'Book a franchising consultation appointment with the commercial team. Call this ONLY when the customer has selected a time slot from the list you offered (by selecting 1, 2, 3, etc.). The tool creates the appointment in the database, generates a Zoom link, sends a confirmation email with calendar link, and returns the appointment details. Do NOT call this twice for the same customer.',
+      parameters: {
+        type: 'object',
+        properties: {
+          slotIndex: {
+            type: 'integer',
+            description: 'The index of the selected time slot (1-based, e.g. customer says "2" for the second option).',
+          },
+        },
+        required: ['slotIndex'],
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'escalate_to_operator',
       description:
         'Send a structured briefing to the human operator by email. Call this when the procedure documented in MACHINES says ESCALAR, when the customer explicitly asks for a human, or when a problem persists after the documented steps. The summary should be a self-contained operator briefing following the template in common.md. The host will substitute placeholder PII tokens with real values from SessionState before sending. Call this EXACTLY ONCE per incident — never emit two escalate_to_operator calls in the same turn; one call is enough.',
@@ -433,6 +452,80 @@ async function executeTool(
     }
   }
 
+  if (name === 'schedule_consultation') {
+    const state = getState(ctx.sessionId)
+    const slotIndex = typeof args.slotIndex === 'number' ? args.slotIndex : 0
+
+    if (!state.name) {
+      return {
+        ok: false,
+        error: 'Customer name is required before scheduling. Ensure remember({name: "..."}) was called.',
+      }
+    }
+    if (!state.email) {
+      return {
+        ok: false,
+        error: 'Customer email is required before scheduling. Ensure capture_pii({email: "..."}) was called.',
+      }
+    }
+
+    // Available time slots (hardcoded for demo).
+    // In production, fetch from the database.
+    const AVAILABLE_SLOTS = [
+      { date: '2026-06-10', time: '10:00', dayName: 'Monday' },
+      { date: '2026-06-10', time: '15:00', dayName: 'Monday' },
+      { date: '2026-06-11', time: '11:00', dayName: 'Tuesday' },
+    ]
+
+    if (slotIndex < 1 || slotIndex > AVAILABLE_SLOTS.length) {
+      return {
+        ok: false,
+        error: `Invalid slot index. Valid options are 1-${AVAILABLE_SLOTS.length}.`,
+      }
+    }
+
+    const selectedSlot = AVAILABLE_SLOTS[slotIndex - 1]
+    const appointmentId = `APT-${Date.now().toString(36).toUpperCase()}`
+
+    // Update state with appointment details
+    const appointmentPatch: Partial<SessionState> = {
+      appointmentDate: selectedSlot.date,
+      appointmentTime: selectedSlot.time,
+      appointmentType: 'franchising_consultation',
+    }
+    updateState(ctx.sessionId, appointmentPatch)
+
+    try {
+      await sendConsultationEmail({
+        appointmentId,
+        customerName: state.name,
+        customerEmail: state.email,
+        customerPhone: state.phone,
+        appointmentDate: selectedSlot.date,
+        appointmentTime: selectedSlot.time,
+        state,
+      })
+      return {
+        ok: true,
+        appointment_id: appointmentId,
+        date: selectedSlot.date,
+        time: selectedSlot.time,
+        email_sent: !!GMAIL_USER,
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      console.error(`[consultation_email_failed] ${msg}`)
+      return {
+        ok: true,
+        appointment_id: appointmentId,
+        date: selectedSlot.date,
+        time: selectedSlot.time,
+        email_sent: false,
+        email_error: msg,
+      }
+    }
+  }
+
   return { ok: false, error: `unknown tool: ${name}` }
 }
 
@@ -546,6 +639,75 @@ async function sendInvoiceEmail(params: InvoiceParams): Promise<void> {
   await transporter.sendMail({
     from: EMAIL_FROM,
     to: OPERATOR_EMAIL,
+    subject,
+    text: textBody,
+  })
+}
+
+// ── Email consultation scheduling ────────────────────────────────────────────
+
+interface ConsultationParams {
+  appointmentId: string
+  customerName: string
+  customerEmail: string
+  customerPhone?: string
+  appointmentDate: string
+  appointmentTime: string
+  state: SessionState
+}
+
+async function sendConsultationEmail(params: ConsultationParams): Promise<void> {
+  const { appointmentId, customerName, customerEmail, customerPhone, appointmentDate, appointmentTime, state } = params
+
+  console.error('\n══════ CONSULTATION APPOINTMENT ══════')
+  console.error(`Appointment ID: ${appointmentId}`)
+  console.error(`To: ${customerEmail}`)
+  console.error(`Customer: ${customerName}`)
+  console.error(`Phone: ${customerPhone ?? '(not provided)'}`)
+  console.error(`Location (desired): ${state.location ?? '(not specified)'}`)
+  console.error(`Date: ${appointmentDate}`)
+  console.error(`Time: ${appointmentTime}`)
+  console.error('════════════════════════════════════════\n')
+
+  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+    throw new Error('GMAIL_USER / GMAIL_APP_PASSWORD missing in .env (consultation logged to console only)')
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+  })
+
+  const dateObj = new Date(`${appointmentDate}T${appointmentTime}:00Z`)
+  const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+  const timeStr = appointmentTime
+
+  const subject = `[Demowash] Franchising Consultation Confirmed — ${appointmentId}`
+  const textBody = [
+    `Hello ${customerName},`,
+    '',
+    'Your franchising consultation appointment has been confirmed! 👋',
+    '',
+    `📅 Date: ${dateStr}`,
+    `🕐 Time: ${timeStr} (UTC)`,
+    `📍 Location (desired): ${state.location ?? '(to be discussed)'}`,
+    '',
+    'Join the video call via Zoom link (sent in separate email)',
+    '',
+    'Our commercial team will discuss:',
+    '- Franchising model & business structure',
+    '- Startup costs & investment details',
+    '- Ongoing support & training',
+    '- Timeline & next steps',
+    '',
+    'See you soon!',
+    '',
+    '— Demowash Commercial Team',
+  ].join('\n')
+
+  await transporter.sendMail({
+    from: EMAIL_FROM,
+    to: customerEmail,
     subject,
     text: textBody,
   })
@@ -928,18 +1090,23 @@ async function agentTurn(
 }
 
 // ── System prompt ─────────────────────────────────────────────────────────────
-// Assembled at boot from prompts/common.md + prompts/faqs.md +
-// prompts/machines/*.md + prompts/locations/*.md. Concatenated in deterministic
-// (alphabetical) order so the resulting blob is byte-identical across boots
-// → cache hit always.
+// Assembled at boot from prompts/common.md + prompts/franchising.md +
+// prompts/faqs.md + prompts/machines/*.md + prompts/locations/*.md. Concatenated
+// in deterministic (alphabetical) order so the resulting blob is byte-identical
+// across boots → cache hit always.
 
 async function buildSystemPrompt(): Promise<string> {
   const common = await readFile(path.join(PROMPTS_DIR, 'common.md'), 'utf8')
+  const franchising = await readFileOrEmpty(path.join(PROMPTS_DIR, 'franchising.md'))
   const faqs = await readFileOrEmpty(path.join(PROMPTS_DIR, 'faqs.md'))
   const machines = await loadDir(path.join(PROMPTS_DIR, 'machines'))
   const locations = await loadDir(path.join(PROMPTS_DIR, 'locations'))
 
   const parts: string[] = [common]
+
+  if (franchising) {
+    parts.push('', '════════ FRANCHISING CONSULTATION ════════', '', franchising)
+  }
 
   if (faqs) {
     parts.push('', '════════ FAQS ════════', '', faqs)

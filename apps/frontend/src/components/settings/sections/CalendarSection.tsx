@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Calendar, Bell, DollarSign, Mail, MessageSquare, AlertCircle, ExternalLink, Loader2, CheckCircle, Unlink } from "lucide-react"
+import { Calendar, Bell, DollarSign, Mail, MessageSquare, AlertCircle, ExternalLink, Loader2, CheckCircle, Unlink, Video } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { calendarConnectionApi, CalendarConnectionStatus } from "@/services/appointmentApi"
@@ -278,6 +278,27 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
               </Button>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Zoom Connection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Video className="h-5 w-5" />
+            Zoom Integration
+          </CardTitle>
+          <CardDescription>
+            Connect Zoom to auto-generate meeting links for appointments
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Zoom integration is coming soon. Meetings will be auto-generated when customers book appointments.
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
 
