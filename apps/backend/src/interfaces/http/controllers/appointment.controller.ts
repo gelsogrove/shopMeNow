@@ -609,16 +609,19 @@ export class AppointmentController {
     } catch (error) {
       logger.error('Failed to handle Google Calendar OAuth callback:', error);
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const detail = (error instanceof Error ? error.message : String(error)).slice(0, 300);
+      const detailJson = JSON.stringify(detail);
+      const detailUri = encodeURIComponent(detail);
       return res.send(`<!DOCTYPE html>
 <html>
 <head><title>Connection Failed</title></head>
 <body>
 <script>
   if (window.opener) {
-    window.opener.postMessage({ type: 'GOOGLE_CALENDAR_ERROR', error: 'server_error' }, '*');
+    window.opener.postMessage({ type: 'GOOGLE_CALENDAR_ERROR', error: 'server_error', detail: ${detailJson} }, '*');
     window.close();
   } else {
-    window.location.href = '${frontendUrl}/settings?tab=calendar&error=server_error';
+    window.location.href = '${frontendUrl}/settings?tab=calendar&error=server_error&detail=${detailUri}';
   }
 </script>
 <p>Connection failed. You can close this window.</p>

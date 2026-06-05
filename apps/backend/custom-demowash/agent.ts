@@ -230,7 +230,7 @@ const TOOLS = [
     function: {
       name: 'schedule_consultation',
       description:
-        'Book a franchising consultation appointment with the commercial team. Call this ONLY when the customer has selected a time slot from the list you offered (by selecting 1, 2, 3, etc.). The tool creates the appointment in the database, generates a Zoom link, sends a confirmation email with calendar link, and returns the appointment details. Do NOT call this twice for the same customer.',
+        'Book a franchising consultation appointment with the commercial team. Call this ONLY when the customer has selected a time slot from the list you offered (by selecting 1, 2, 3, etc.). The tool creates a real Google Calendar event, a real Zoom meeting, and sends a confirmation email. It returns calendar_link and zoom_link when available — when present, include those exact links in your confirmation message to the customer. If they are null, simply confirm the appointment by date/time without inventing links. Do NOT call this twice for the same customer.',
       parameters: {
         type: 'object',
         properties: {
@@ -291,10 +291,42 @@ interface ToolResult {
   [k: string]: unknown
 }
 
+// ── Injectable side-effect handlers ──────────────────────────────────────────
+// The standalone module knows nothing about Prisma, Google Calendar or Zoom.
+// In production the host (CustomClientChatbotService) injects a real handler
+// that creates the calendar event + Zoom meeting using the workspace's stored
+// connections. In REPL/batch the handler is absent → console + email only.
+
+export interface ScheduleConsultationParams {
+  workspaceId: string
+  date: string // 'YYYY-MM-DD'
+  time: string // 'HH:MM' 24h, interpreted in the workspace timezone (host-side)
+  durationMinutes: number
+  topic: string
+  customerName: string
+  customerEmail: string
+  customerPhone?: string
+  location?: string
+}
+
+export interface ScheduleConsultationResult {
+  googleEventLink?: string | null
+  zoomLink?: string | null
+}
+
+export type ScheduleConsultationHandler = (
+  params: ScheduleConsultationParams,
+) => Promise<ScheduleConsultationResult>
+
 interface ToolContext {
   sessionId: string
   customerName?: string
   customerPhone?: string
+  /** Workspace running this session — needed to resolve the calendar/Zoom
+   *  connection. Present in production, absent in REPL/batch. */
+  workspaceId?: string
+  /** Real booking side-effect, injected by the host. Absent in REPL/batch. */
+  scheduleConsultation?: ScheduleConsultationHandler
 }
 
 async function executeTool(
@@ -495,6 +527,32 @@ async function executeTool(
     }
     updateState(ctx.sessionId, appointmentPatch)
 
+    // Real side-effects (Google Calendar event + Zoom meeting) run host-side
+    // through the injected handler. Absent in REPL/batch → links stay null and
+    // we fall back to a console + email confirmation without invented links.
+    let calendarLink: string | null = null
+    let zoomLink: string | null = null
+    if (ctx.scheduleConsultation && ctx.workspaceId) {
+      try {
+        const booking = await ctx.scheduleConsultation({
+          workspaceId: ctx.workspaceId,
+          date: selectedSlot.date,
+          time: selectedSlot.time,
+          durationMinutes: 30,
+          topic: `Consulta franchising — ${state.name}`,
+          customerName: state.name,
+          customerEmail: state.email,
+          customerPhone: state.phone,
+          location: state.location,
+        })
+        calendarLink = booking.googleEventLink ?? null
+        zoomLink = booking.zoomLink ?? null
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error(`[schedule_consultation_handler_failed] ${msg}`)
+      }
+    }
+
     try {
       await sendConsultationEmail({
         appointmentId,
@@ -504,12 +562,16 @@ async function executeTool(
         appointmentDate: selectedSlot.date,
         appointmentTime: selectedSlot.time,
         state,
+        calendarLink,
+        zoomLink,
       })
       return {
         ok: true,
         appointment_id: appointmentId,
         date: selectedSlot.date,
         time: selectedSlot.time,
+        calendar_link: calendarLink,
+        zoom_link: zoomLink,
         email_sent: !!GMAIL_USER,
       }
     } catch (err) {
@@ -520,6 +582,8 @@ async function executeTool(
         appointment_id: appointmentId,
         date: selectedSlot.date,
         time: selectedSlot.time,
+        calendar_link: calendarLink,
+        zoom_link: zoomLink,
         email_sent: false,
         email_error: msg,
       }
@@ -654,10 +718,14 @@ interface ConsultationParams {
   appointmentDate: string
   appointmentTime: string
   state: SessionState
+  /** Real Google Calendar event link, when the booking handler produced one. */
+  calendarLink?: string | null
+  /** Real Zoom join link, when the booking handler produced one. */
+  zoomLink?: string | null
 }
 
 async function sendConsultationEmail(params: ConsultationParams): Promise<void> {
-  const { appointmentId, customerName, customerEmail, customerPhone, appointmentDate, appointmentTime, state } = params
+  const { appointmentId, customerName, customerEmail, customerPhone, appointmentDate, appointmentTime, state, calendarLink, zoomLink } = params
 
   console.error('\n══════ CONSULTATION APPOINTMENT ══════')
   console.error(`Appointment ID: ${appointmentId}`)
@@ -667,6 +735,8 @@ async function sendConsultationEmail(params: ConsultationParams): Promise<void> 
   console.error(`Location (desired): ${state.location ?? '(not specified)'}`)
   console.error(`Date: ${appointmentDate}`)
   console.error(`Time: ${appointmentTime}`)
+  console.error(`Zoom: ${zoomLink ?? '(not created)'}`)
+  console.error(`Calendar: ${calendarLink ?? '(not created)'}`)
   console.error('════════════════════════════════════════\n')
 
   if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {

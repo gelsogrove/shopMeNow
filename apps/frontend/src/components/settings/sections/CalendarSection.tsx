@@ -73,7 +73,9 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
         invalid_state: "Invalid OAuth state",
         server_error: "Server error during OAuth flow",
       }
-      toast.error(messages[error] || "Failed to connect Google Calendar")
+      const detail = params.get("detail")
+      const base = messages[error] || "Failed to connect Google Calendar"
+      toast.error(detail ? `${base}: ${detail}` : base)
       window.history.replaceState({}, "", window.location.pathname + "?tab=calendar")
     }
   }, [workspaceId])
@@ -116,7 +118,8 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
           window.removeEventListener('message', onMessage)
           clearInterval(pollTimer)
         } else if (event.data?.type === 'GOOGLE_CALENDAR_ERROR') {
-          toast.error("Failed to connect Google Calendar")
+          const detail = event.data?.detail
+          toast.error(detail ? `Failed to connect Google Calendar: ${detail}` : "Failed to connect Google Calendar")
           setConnectingOAuth(false)
           window.removeEventListener('message', onMessage)
           clearInterval(pollTimer)
