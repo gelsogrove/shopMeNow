@@ -1,4 +1,5 @@
 import { Request, Response } from "express"
+import { prisma } from "@echatbot/database"
 import { ProductRepository } from "../../../repositories/product.repository"
 import logger from "../../../utils/logger"
 
@@ -63,6 +64,59 @@ export class DebugController {
       return res.status(500).json({
         success: false,
         error: "Search failed",
+        message: (error as any).message,
+      })
+    }
+  }
+
+  async fixPlaygroundFlags(req: Request, res: Response) {
+    try {
+      const { phoneNumber } = req.body
+
+      if (!phoneNumber || typeof phoneNumber !== "string") {
+        return res.status(400).json({
+          success: false,
+          error: "phoneNumber is required",
+        })
+      }
+
+      const customer = await prisma.customers.findFirst({
+        where: {
+          OR: [
+            { phone: phoneNumber },
+            { phone: { contains: phoneNumber.replace(/\D/g, "") } },
+          ],
+        },
+      })
+
+      if (!customer) {
+        return res.json({
+          success: false,
+          message: `Customer with phone ${phoneNumber} not found`,
+        })
+      }
+
+      const result = await prisma.chatSession.updateMany({
+        where: { customerId: customer.id },
+        data: { isPlayground: false },
+      })
+
+      logger.info("✅ Fixed playground flags", {
+        customerId: customer.id,
+        phoneNumber: customer.phone,
+        sessionsUpdated: result.count,
+      })
+
+      return res.json({
+        success: true,
+        customer: { id: customer.id, name: customer.name, phone: customer.phone },
+        sessionsUpdated: result.count,
+      })
+    } catch (error) {
+      logger.error("❌ Fix playground flags error:", error)
+      return res.status(500).json({
+        success: false,
+        error: "Fix failed",
         message: (error as any).message,
       })
     }

@@ -1499,6 +1499,7 @@ export class UltraMsgWebhookController {
               phoneNumber: customer.phone,
               messageContent: whatsappReply,
               conversationMessageId: assistantMessageId,
+              skipSecurityCheck: true, // bot-generated content, not user input
             })
           } catch (sendError) {
             logger.error('[ULTRAMSG] ❌ Failed to send custom chatbot response', {

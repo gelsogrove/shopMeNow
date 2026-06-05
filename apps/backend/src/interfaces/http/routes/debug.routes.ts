@@ -40,4 +40,9 @@ router.post(
   (req, res) => debugController.searchProducts(req, res)
 )
 
+router.post(
+  "/fix-playground-flags",
+  (req, res) => debugController.fixPlaygroundFlags(req, res)
+)
+
 export default router

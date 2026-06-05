@@ -2776,6 +2776,7 @@ export class WhatsAppWebhookController {
               phoneNumber: customer.phone,
               messageContent: finalWhatsappReply,
               conversationMessageId: savedAssistantMessageId,
+              skipSecurityCheck: true, // bot-generated content, not user input
             })
           } catch (sendError) {
             logger.error("[WEBHOOK] ❌ Failed to send custom chatbot response", {
