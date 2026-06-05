@@ -96,6 +96,7 @@ export function useRecentChats(
             isFavorite: false,
             activeChatbot: chat.customer?.activeChatbot ?? true,
             isBlacklisted: chat.customer?.isBlacklisted ?? false, // Include blacklist status
+            tags: chat.customer?.tags || [], // Customer tags (e.g. vip, critical) for card chips
           }))
 
           // Mark call as completed and cache the data

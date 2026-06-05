@@ -83,4 +83,5 @@ export interface Chat {
   language?: string
   channel?: "whatsapp" | "widget" // 🆕 Channel source (widget or whatsapp)
   isPlayground?: boolean
+  tags?: string[] // Customer tags (e.g. vip, critical) shown as chips on the card
 }

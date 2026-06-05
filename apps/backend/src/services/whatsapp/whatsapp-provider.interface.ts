@@ -47,7 +47,8 @@ export interface WhatsAppProvider {
     to: string,
     mediaUrl: string,
     caption?: string,
-    mediaType?: 'image' | 'video' | 'document'
+    mediaType?: 'image' | 'video' | 'document',
+    filename?: string
   ): Promise<WhatsAppSendMessageResult>
 
   /**

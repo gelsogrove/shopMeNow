@@ -157,12 +157,16 @@ export class WhatsAppDirectSendService {
       },
     })
 
-    // ✅ Update ConversationMessage delivery status
+    // ✅ Update ConversationMessage delivery status + wamid (for reaction forwarding)
     if (conversationMessageId) {
       try {
         await this.prisma.conversationMessage.update({
           where: { id: conversationMessageId },
-          data: { deliveryStatus: "sent", deliveredAt: new Date() },
+          data: {
+            deliveryStatus: "sent",
+            deliveredAt: new Date(),
+            ...(sendResult.messageId ? { whatsappMessageId: sendResult.messageId } : {}),
+          },
         })
       } catch (error) {
         logger.warn("[DirectSend] ⚠️ Failed to update delivery status", {

@@ -213,15 +213,17 @@ export class MessageRepository {
       
       const total = await this.prisma.conversationMessage.count({
         where: {
+          workspaceId: workspaceId, // 🔐 SECURITY: enforce workspace isolation on message read
           conversationId: chatSessionId,
           role: {
             not: "function",
           },
         },
       })
-      
+
       const messages = await this.prisma.conversationMessage.findMany({
         where: {
+          workspaceId: workspaceId, // 🔐 SECURITY: enforce workspace isolation on message read
           conversationId: chatSessionId,
           role: {
             not: "function", // ✅ Filter out function calls - users should never see these!
@@ -1631,13 +1633,8 @@ export class MessageRepository {
       const chatSessions = await this.prisma.chatSession.findMany({
         where: {
           workspaceId: workspaceId,
-          // 🚧 TEMP DEBUG (Andrea): playground/debugMode chats are ALLOWED into the
-          // app chat list for now. Re-enable the filter below when debugging is done.
-          // isPlayground: { not: true },
-          // customer: {
-          //   // Exclude legacy playground sessions created before isPlayground flag was set
-          //   name: { not: { startsWith: "playground_" } },
-          // },
+          // Playground sessions are returned and filtered client-side per tab selection.
+          // Frontend: All/Support/Blocked tabs exclude playground; Playground tab shows only playground.
         },
         include: {
           customer: {
@@ -1650,6 +1647,7 @@ export class MessageRepository {
               language: true,
               activeChatbot: true,
               isBlacklisted: true,
+              tags: true,
             },
           },
           workspace: {

@@ -799,7 +799,6 @@ export class WhatsAppWebhookController {
                 phone: phoneForStorage,
                 workspaceId: workspaceId,
                 name: contactName || "New Customer",
-                email: `temp_${phoneForStorage.replace(/[^0-9]/g, "")}@pending.com`,
                 language: customerLanguage, // 🌍 Detected from phone prefix or workspace default
                 isActive: false,
               },
@@ -908,7 +907,6 @@ export class WhatsAppWebhookController {
                   phone: phoneForStorage,
                   workspaceId: workspaceId,
                   name: contactName || "New Customer",
-                  email: `temp_${phoneForStorage.replace(/[^0-9]/g, "")}@pending.com`,
                   language: finalLanguage,
                   isActive: false,
                 },
@@ -1093,7 +1091,6 @@ export class WhatsAppWebhookController {
               phone: phoneForStorage,
               workspaceId,
               name: contactName || "New Customer",
-              email: `temp_${phoneForStorage.replace(/[^0-9]/g, "")}@pending.com`,
               language: finalLanguage,
               isActive: workspace.needRegistration === false ? true : false,
             },
@@ -1279,7 +1276,6 @@ export class WhatsAppWebhookController {
               phone: phoneForStorage, // Save sanitized/normalized value
               workspaceId: workspaceId,
               name: contactName || "New Customer", // Temporary name
-              email: `temp_${phoneForStorage.replace(/[^0-9]/g, "")}@pending.com`, // Temporary email (required field)
               language: finalLanguage,
               isActive: workspace.needRegistration === false ? true : false, // Active immediately if registration not required
             },
@@ -2055,17 +2051,39 @@ export class WhatsAppWebhookController {
           customerId: customer.id,
           workspaceId: customer.workspaceId,
         })
-        chatSession = await prisma.chatSession.create({
-          data: {
-            customerId: customer.id,
-            workspaceId: customer.workspaceId,
-            status: "active",
-            context: {
-              createdBy: "whatsapp-webhook",
-              phoneNumber,
+        try {
+          chatSession = await prisma.chatSession.create({
+            data: {
+              customerId: customer.id,
+              workspaceId: customer.workspaceId,
+              status: "active",
+              context: {
+                createdBy: "whatsapp-webhook",
+                phoneNumber,
+              },
             },
-          },
-        })
+          })
+        } catch (createErr: any) {
+          // 🔒 CONCURRENCY: unique_active_session (customerId, status) violated means a
+          // concurrent webhook already created the active session. Re-fetch it instead
+          // of crashing — guarantees the two racing messages share ONE session.
+          if (createErr?.code === "P2002") {
+            logger.warn("[WEBHOOK] 🔁 Active session created concurrently — re-fetching", {
+              customerId: customer.id,
+              workspaceId: customer.workspaceId,
+            })
+            chatSession = await prisma.chatSession.findFirst({
+              where: {
+                customerId: customer.id,
+                workspaceId: customer.workspaceId,
+                status: "active",
+              },
+            })
+            if (!chatSession) throw createErr
+          } else {
+            throw createErr
+          }
+        }
       }
 
       // 🔒 SECURITY CHECK: Validate message before processing with LLM

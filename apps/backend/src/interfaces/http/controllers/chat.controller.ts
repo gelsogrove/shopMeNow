@@ -464,10 +464,19 @@ export class ChatController {
             active: channel === "whatsapp" ? !!provider : true,
             channel,
             to: chatSession.customer.phone || "",
-            attachment: { kind: validation.kind, publicUrl: uploaded.url },
+            attachment: { kind: validation.kind, publicUrl: uploaded.url, filename: file.originalname },
             caption,
           }
         )
+
+        // Store the provider wamid on the ConversationMessage so operator reactions
+        // can be forwarded to WhatsApp later (sendReaction API needs the target wamid).
+        if (sendResult.sent && sendResult.providerMessageId) {
+          await this.prisma.conversationMessage.update({
+            where: { id: message.id },
+            data: { whatsappMessageId: sendResult.providerMessageId },
+          }).catch(() => {/* best-effort */})
+        }
 
         createdAttachments.push({
           id: att.id,
@@ -548,7 +557,7 @@ export class ChatController {
       // The message must belong to THIS conversation AND workspace (IDOR + isolation).
       const target = await this.prisma.conversationMessage.findFirst({
         where: { id: messageId, conversationId: sessionId, workspaceId },
-        select: { id: true },
+        select: { id: true, whatsappMessageId: true },
       })
       if (!target) {
         res.status(404).json({ success: false, error: "Message not found in this chat" })
@@ -560,6 +569,30 @@ export class ChatController {
         where: { id: target.id },
         data: { reaction: nextReaction },
       })
+
+      // Forward reaction to WhatsApp best-effort (needs wamid + customer phone).
+      // Silently skipped when wamid is missing (older messages pre-migration).
+      if (target.whatsappMessageId) {
+        try {
+          const chatSession = await this.prisma.chatSession.findFirst({
+            where: { id: sessionId, workspaceId },
+            select: { customer: { select: { phone: true } } },
+          })
+          if (chatSession?.customer?.phone) {
+            const { sendOperatorReaction } = require("../../../services/reaction-send.service")
+            await sendOperatorReaction(this.prisma, {
+              workspaceId,
+              phoneNumber: chatSession.customer.phone,
+              whatsappMessageId: target.whatsappMessageId,
+              emoji: nextReaction ?? "",
+            })
+          }
+        } catch (reactionErr) {
+          logger.warn("[CHAT-REACT] ⚠️ Failed to forward reaction to WhatsApp (DB persisted OK)", {
+            error: reactionErr instanceof Error ? reactionErr.message : reactionErr,
+          })
+        }
+      }
 
       res.json({ success: true, data: { messageId: target.id, reaction: nextReaction } })
     } catch (error) {
@@ -719,8 +752,9 @@ export class ChatController {
       debugSteps.push(operatorDebugStep)
 
       // 🌍 Translate operator message to customer's language when they differ
-      // Skipped when workspace.translateOperatorMessages=false
-      const translationEnabled = workspace?.translateOperatorMessages !== false
+      // Translation is OPT-IN: only when translateOperatorMessages=true (never by default).
+      // Short messages (<= 5 words) are translated silently — no "(traduzione IA)" suffix.
+      const translationEnabled = workspace?.translateOperatorMessages === true
       let finalMessage = content
       const customerLanguage = chatSession.customer.language || "en"
       let operatorLanguage = customerLanguage // detected lang of the operator message
@@ -739,6 +773,8 @@ export class ChatController {
       }
       try {
         if (!translationEnabled) throw new Error("translation_disabled")
+        // Skip translation for pure-emoji messages (reactions, stickers, emoji-only)
+        if (!/\p{L}/u.test(content)) throw new Error("translation_disabled")
         const llmConfig = getLLMConfig("openai/gpt-4o-mini")
         const detectResponse = await axios.post(
           `${llmConfig.baseURL}/chat/completions`,
@@ -781,10 +817,17 @@ export class ChatController {
           )
           const translated = translateResponse.data.choices?.[0]?.message?.content?.trim()
           if (translated) {
-            const suffix = translationSuffix[customerLanguage] || "*(AI translation)*"
-            finalMessage = `${translated}\n\n${suffix}`
+            // Only append "(traduzione IA)" label for messages longer than 5 words.
+            // Short phrases (YES/NO/OK/emoji/greetings) are translated silently.
+            const wordCount = content.trim().split(/\s+/).filter(Boolean).length
+            if (wordCount > 5) {
+              const suffix = translationSuffix[customerLanguage] || "*(AI translation)*"
+              finalMessage = `${translated}\n\n${suffix}`
+            } else {
+              finalMessage = translated
+            }
             wasTranslated = true
-            logger.info(`[CHAT-SEND] 🌍 Operator message translated from ${detectedLang} to ${customerLanguage}`)
+            logger.info(`[CHAT-SEND] 🌍 Operator message translated from ${detectedLang} to ${customerLanguage} (${wordCount} words, suffix: ${wordCount > 5})`)
           }
         }
       } catch (translateError) {

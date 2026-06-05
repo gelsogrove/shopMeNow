@@ -435,7 +435,7 @@ model WhatsappWebhookEvent {
 model Customers {
   id                            String                  @id @default(uuid())
   name                          String
-  email                         String
+  email                         String?                 // Nullable: WhatsApp customers have no email until they provide one (no more temp_…@pending.com placeholders)
   phone                         String?
   customId                      String?                 @unique // 🆕 Widget: visitor tracking ID (e.g., "webvisitor-abc123")
   address                       String?
@@ -1409,6 +1409,7 @@ model ConversationMessage {
   deliveredAt       DateTime? // ✅ WhatsApp delivery timestamp (when message sent via queue)
   deliveryStatus    String          @default("not_queued") // "not_queued" (never sent), "pending" (in queue), "sent" (delivered), "error" (failed)
   reaction          String? // 😀 WhatsApp-style reaction emoji on this message (single, server-synced between operator + demo). Null = no reaction.
+  whatsappMessageId String? // 📲 Provider message ID (wamid) — stored for operator-sent messages so reactions can be forwarded to WhatsApp.
   createdAt         DateTime        @default(now())
   workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   customer          Customers       @relation(fields: [customerId], references: [id], onDelete: Cascade)
@@ -1418,6 +1419,7 @@ model ConversationMessage {
   @@index([conversationId, createdAt])
   @@index([workspaceId, customerId])
   @@index([createdAt])
+  @@index([whatsappMessageId])
   @@map("conversation_messages")
 }
 

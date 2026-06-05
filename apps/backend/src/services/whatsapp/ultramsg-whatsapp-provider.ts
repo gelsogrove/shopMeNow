@@ -111,14 +111,15 @@ export class UltraMsgWhatsAppProvider implements WhatsAppProvider {
     to: string,
     mediaUrl: string,
     caption?: string,
-    mediaType: 'image' | 'video' | 'document' = 'image'
+    mediaType: 'image' | 'video' | 'document' = 'image',
+    filename?: string
   ): Promise<WhatsAppSendMessageResult> {
     try {
       const formattedPhone = to.replace(/[\s+]/g, '')
 
       // Different endpoint based on media type
-      const endpoint = mediaType === 'image' 
-        ? 'messages/image' 
+      const endpoint = mediaType === 'image'
+        ? 'messages/image'
         : mediaType === 'video'
         ? 'messages/video'
         : 'messages/document'
@@ -128,6 +129,8 @@ export class UltraMsgWhatsAppProvider implements WhatsAppProvider {
         to: formattedPhone,
         [mediaType]: mediaUrl, // "image", "video", or "document"
         caption: caption || '',
+        // Pass original filename for document messages so WhatsApp displays the real name
+        ...(mediaType === 'document' && filename ? { filename } : {}),
         priority: '1',
       })
 

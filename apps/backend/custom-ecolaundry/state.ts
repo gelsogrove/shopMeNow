@@ -31,7 +31,11 @@ export interface SessionState {
 // Patches that the backend should persist into the Customers table.
 // Accumulated during a turn (via `remember`) and drained by `chatbotFn`
 // to return to the host app.
-export type PatchKey = 'name' | 'language' | 'phone' | 'company' | 'address' | 'notes'
+// NOTE: 'email' is a PII field. It is NOT auto-mirrored by updateState (see
+// MIRRORED_KEYS). It is persisted ONLY when the customer explicitly requests
+// an invoice — pushed deliberately via `pushPatch` from the invoice handler
+// (consent-gated persistence, decided with Andrea 2026-06-05).
+export type PatchKey = 'name' | 'language' | 'phone' | 'company' | 'address' | 'notes' | 'email'
 
 export interface CustomerPatch {
   key: PatchKey
@@ -98,6 +102,19 @@ export function drainPatches(sessionId: string): CustomerPatch[] {
   const out = e.patches
   e.patches = []
   return out
+}
+
+/**
+ * Explicitly queue a Customers-table patch, bypassing the MIRRORED_KEYS gate.
+ * Used for consent-gated PII (e.g. the invoice email) that must NOT be mirrored
+ * automatically by updateState but SHOULD be persisted when the customer asks
+ * for an invoice. Last-write-wins per key.
+ */
+export function pushPatch(sessionId: string, key: PatchKey, value: string): void {
+  if (!value) return
+  const e = entry(sessionId)
+  e.patches = e.patches.filter((p) => p.key !== key)
+  e.patches.push({ key, value })
 }
 
 export function incrementTurn(sessionId: string): number {

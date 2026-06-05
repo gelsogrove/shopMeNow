@@ -25,6 +25,7 @@ function makeProvider(result = { messageId: "wamid.out1", success: true }): jest
 
 const imageAtt = { kind: "IMAGE" as const, publicUrl: "https://cdn/file.jpg" }
 const pdfAtt = { kind: "DOCUMENT" as const, publicUrl: "https://cdn/file.pdf" }
+const namedPdfAtt = { kind: "DOCUMENT" as const, publicUrl: "https://cdn/file.pdf", filename: "report.pdf" }
 
 describe("sendOperatorAttachment()", () => {
   it("does NOT send when the channel is inactive (active=false)", async () => {
@@ -58,7 +59,8 @@ describe("sendOperatorAttachment()", () => {
       "+34600",
       "https://cdn/file.jpg",
       "here",
-      "image"
+      "image",
+      undefined
     )
   })
 
@@ -72,7 +74,25 @@ describe("sendOperatorAttachment()", () => {
       "+34600",
       "https://cdn/file.pdf",
       undefined,
-      "document"
+      "document",
+      undefined
+    )
+  })
+
+  it("passes original filename to provider for named document messages", async () => {
+    // WHY: WhatsApp Cloud API requires the "filename" field in the document
+    // payload so the customer sees the real file name instead of "Untitled".
+    const provider = makeProvider()
+    await sendOperatorAttachment(
+      { provider, logger },
+      { active: true, channel: "whatsapp", to: "+34600", attachment: namedPdfAtt }
+    )
+    expect(provider.sendMediaMessage).toHaveBeenCalledWith(
+      "+34600",
+      "https://cdn/file.pdf",
+      undefined,
+      "document",
+      "report.pdf"
     )
   })
 

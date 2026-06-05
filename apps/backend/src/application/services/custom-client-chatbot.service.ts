@@ -33,7 +33,8 @@ type ChatbotInput = {
 }
 
 export type CustomerPatch = {
-  key: 'name' | 'language' | 'phone' | 'company' | 'address' | 'notes'
+  // 'email' is consent-gated PII: emitted only on explicit invoice request.
+  key: 'name' | 'language' | 'phone' | 'company' | 'address' | 'notes' | 'email'
   value: string
 }
 
@@ -324,6 +325,7 @@ const PATCH_KEY_TO_DB: Record<CustomerPatch['key'], string> = {
   company: 'company',
   address: 'address',
   notes: 'notes',
+  email: 'email', // consent-gated: persisted only when customer requests an invoice
 }
 
 /**

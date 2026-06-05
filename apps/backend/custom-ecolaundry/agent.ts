@@ -22,6 +22,7 @@ import {
   type CustomerPatch,
   type SessionState,
   drainPatches,
+  pushPatch,
   formatStateForPrompt,
   formatStateOneLine,
   getState,
@@ -243,7 +244,7 @@ const TOOLS = [
           summary: {
             type: 'string',
             description:
-              'Operator briefing in the language indicated by RUNTIME.operatorBriefingLanguage. Use the exact template from common.md (header, 🕒 Fecha, 📍 Sede, 🔢 Máquina, 👤 Cliente, 🌐 Idioma, 🚨 Incidencia, 📋 Resumen, ✅ Acción sugerida). Include all known facts from SESSION STATE.',
+              `CRITICAL: Write the ENTIRE briefing in ${OPERATOR_BRIEFING_LANGUAGE.toUpperCase()} (ISO code: ${OPERATOR_BRIEFING_LANGUAGE}). NEVER use the customer conversation language. Even if the customer spoke Italian, the briefing MUST be in ${OPERATOR_BRIEFING_LANGUAGE.toUpperCase()}. Use the exact template from common.md. Include all known facts from SESSION STATE.`,
           },
         },
         required: ['reason', 'summary'],
@@ -251,7 +252,7 @@ const TOOLS = [
       },
     },
   },
-] as const
+]
 
 // ── Tool dispatcher ───────────────────────────────────────────────────────────
 
@@ -334,6 +335,12 @@ async function executeTool(
         error: `serviceDate "${serviceDate}" is not recognized. Accept ISO ("2026-05-27"), DD/MM/YYYY, or "today"/"yesterday"/"oggi"/"ayer". Re-ask the customer.`,
       }
     }
+
+    // 🧾 Consent-gated PII persistence: the customer explicitly asked for an
+    // invoice, so persist their email into the Customers anagrafica (for future
+    // invoices). This is the ONLY path that writes email to the DB — PII is
+    // never auto-mirrored (iron rule #5). Decided with Andrea 2026-06-05.
+    pushPatch(ctx.sessionId, 'email', email)
 
     const invoiceId = `INV-${Date.now().toString(36).toUpperCase()}`
 
@@ -986,6 +993,18 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       sessionId,
       customerName: input.userName,
       customerPhone: input.context.phoneNumber,
+    }
+
+    // 👤 Pre-seed the name from the WhatsApp profile (input.userName) so the bot
+    // greets the customer by name and does NOT ask "how shall I call you?" again.
+    // Only seed when we don't already have a name in state and the profile name
+    // is a real one (not the "New Customer"/"Customer" placeholder).
+    const seededState = getState(sessionId)
+    const profileName = (input.userName || '').trim()
+    const isPlaceholderName =
+      !profileName || profileName === 'Customer' || profileName === 'New Customer'
+    if (!seededState.name && !isPlaceholderName) {
+      updateState(sessionId, { name: profileName })
     }
 
     const result = await agentTurn(ctx, systemPrompt, history, input.userMessage)

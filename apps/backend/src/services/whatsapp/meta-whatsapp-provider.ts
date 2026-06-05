@@ -156,7 +156,8 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
     to: string,
     mediaUrl: string,
     caption?: string,
-    mediaType: 'image' | 'video' | 'document' = 'image'
+    mediaType: 'image' | 'video' | 'document' = 'image',
+    filename?: string
   ): Promise<WhatsAppSendMessageResult> {
     try {
       const formattedPhone = to.replace(/[\s+]/g, '')
@@ -169,6 +170,12 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
 
       if (caption) {
         mediaPayload.caption = caption
+      }
+
+      // WhatsApp Cloud API requires "filename" for document messages to display
+      // the real file name instead of "Untitled" in the customer's chat.
+      if (mediaType === 'document' && filename) {
+        mediaPayload.filename = filename
       }
 
       logger.info('📤 Meta: Sending media message', {

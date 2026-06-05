@@ -32,7 +32,8 @@ export interface OutboundProvider {
     to: string,
     mediaUrl: string,
     caption?: string,
-    mediaType?: "image" | "video" | "document"
+    mediaType?: "image" | "video" | "document",
+    filename?: string
   ): Promise<WhatsAppSendMessageResult>
 }
 
@@ -40,6 +41,8 @@ export interface OutboundAttachment {
   kind: AttachmentKind
   /** A URL the provider can fetch (public or signed). For widget this is unused. */
   publicUrl: string
+  /** Original filename — passed to the provider for document messages so WhatsApp displays the real name. */
+  filename?: string
 }
 
 export interface SendOperatorAttachmentInput {
@@ -98,7 +101,8 @@ export async function sendOperatorAttachment(
       input.to,
       input.attachment.publicUrl,
       input.caption,
-      providerMediaType(input.attachment.kind)
+      providerMediaType(input.attachment.kind),
+      input.attachment.filename
     )
     if (!result.success) {
       return { ok: false, sent: false, error: result.error || "provider_send_failed" }

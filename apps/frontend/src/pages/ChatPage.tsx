@@ -562,9 +562,17 @@ export function ChatPage() {
     : chats
 
   let visibleChats = filteredChats
+  // Always hide playground sessions from non-playground tabs; show only when Playground tab active
+  if (!filterPlayground) {
+    visibleChats = visibleChats.filter(
+      (c: Chat) => !c.isPlayground && !c.customerName?.startsWith('playground_')
+    )
+  }
   if (filterBlocked) visibleChats = visibleChats.filter((c: Chat) => c.isBlacklisted)
   if (filterNeedsSupport) visibleChats = visibleChats.filter((c: Chat) => c.activeChatbot === false)
-  if (filterPlayground) visibleChats = visibleChats.filter((c: Chat) => c.isPlayground)
+  if (filterPlayground) visibleChats = visibleChats.filter(
+    (c: Chat) => c.isPlayground || c.customerName?.startsWith('playground_')
+  )
   if (timeRange !== 'all') {
     const now = Date.now()
     const ms = timeRange === '1h' ? 3600000 : timeRange === '24h' ? 86400000 : 604800000
@@ -790,7 +798,14 @@ export function ChatPage() {
             index === self.findIndex((m) => m.id === message.id)
         )
 
-        setMessages(uniqueMessages)
+        // 🧪 PLAYGROUND FILTER: Show only recent messages for playground chats
+        let finalMessages = uniqueMessages
+        if (chat.isPlayground && uniqueMessages.length > 0) {
+          // Show only last 20 messages to focus on simulation, hide old WhatsApp history
+          finalMessages = uniqueMessages.slice(Math.max(0, uniqueMessages.length - 20))
+        }
+
+        setMessages(finalMessages)
       }
     } catch (error) {
       logger.error("Error loading messages:", error)
@@ -1587,6 +1602,29 @@ export function ChatPage() {
                         {chat.companyName && (
                           <div className="text-xs text-gray-600 truncate mb-1">
                             {chat.companyName}
+                          </div>
+                        )}
+
+                        {/* Tag chips: highlight complicated customers (vip / critical) at a glance */}
+                        {chat.tags && chat.tags.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1 mb-1">
+                            {chat.tags.map((tag) => {
+                              const normalized = tag.trim().toLowerCase()
+                              const chipClass =
+                                normalized === "critical"
+                                  ? "bg-red-100 text-red-700 border border-red-200"
+                                  : normalized === "vip"
+                                  ? "bg-amber-100 text-amber-700 border border-amber-200"
+                                  : "bg-gray-100 text-gray-600 border border-gray-200"
+                              return (
+                                <span
+                                  key={tag}
+                                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium uppercase tracking-wide ${chipClass}`}
+                                >
+                                  {tag}
+                                </span>
+                              )
+                            })}
                           </div>
                         )}
 
