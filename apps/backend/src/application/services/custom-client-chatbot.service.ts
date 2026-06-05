@@ -6,8 +6,54 @@ import { prisma as defaultPrisma, PrismaClient } from "@echatbot/database"
 import logger from "../../utils/logger"
 import { WhatsAppDirectSendService } from "../../services/whatsapp-direct-send.service"
 import { sendEscalationEmail } from "./escalation-email.service"
+import { googleCalendarService } from "../../services/google-calendar.service"
+import { zoomService } from "../../services/zoom.service"
 
 type ChatChannel = string
+
+// Params/result for the injected schedule_consultation handler. Mirrors the
+// exported types in custom-demowash/agent.ts (structural typing across the
+// dynamic-import boundary).
+type ScheduleConsultationParams = {
+  workspaceId: string
+  date: string // 'YYYY-MM-DD'
+  time: string // 'HH:MM' 24h, wall-clock in the workspace timezone
+  durationMinutes: number
+  topic: string
+  customerName: string
+  customerEmail: string
+  customerPhone?: string
+  location?: string
+}
+type ScheduleConsultationResult = {
+  googleEventLink?: string | null
+  zoomLink?: string | null
+}
+
+// Resolve the UTC instant for a wall-clock time in an IANA timezone.
+// Single-iteration offset computation via Intl — accurate except at the rare
+// DST-transition minute, which never coincides with business booking slots.
+function zonedWallClockToUtc(dateStr: string, timeStr: string, timeZone: string): Date {
+  const [y, mo, d] = dateStr.split("-").map(Number)
+  const [h, mi] = timeStr.split(":").map(Number)
+  const utcGuess = Date.UTC(y, mo - 1, d, h, mi)
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  })
+  const parts = dtf.formatToParts(new Date(utcGuess))
+  const map: Record<string, string> = {}
+  for (const p of parts) map[p.type] = p.value
+  const asUtc = Date.UTC(+map.year, +map.month - 1, +map.day, +map.hour, +map.minute, +map.second)
+  const offset = asUtc - utcGuess
+  return new Date(utcGuess - offset)
+}
 
 type ChatbotInput = {
   userMessage: string
@@ -23,6 +69,11 @@ type ChatbotInput = {
     // the "Human Support message" comes back in that language WITHOUT
     // overriding the customer-facing reply language.
     operatorBriefingLanguageOverride?: string | null
+    // Real side-effect handlers injected by this host. The custom module
+    // stays free of Prisma/Google/Zoom imports and calls these when present.
+    handlers?: {
+      scheduleConsultation?: (params: ScheduleConsultationParams) => Promise<ScheduleConsultationResult>
+    }
   }
   context: {
     sessionId: string
@@ -159,6 +210,9 @@ export class CustomClientChatbotService {
           operatorBriefingLanguageOverride:
             this.normalizeLanguage(params.operatorBriefingLanguageOverride) ??
             null,
+          handlers: {
+            scheduleConsultation: (p) => this.scheduleConsultation(p),
+          },
         },
         context: {
           sessionId: params.sessionId,
@@ -201,6 +255,75 @@ export class CustomClientChatbotService {
       })
 
       return { handled: false }
+    }
+  }
+
+  /**
+   * Real schedule_consultation side-effect injected into custom chatbot modules.
+   * Creates a Google Calendar event + a Zoom meeting using the workspace's
+   * stored connections. Both underlying services return null gracefully when
+   * the workspace has not connected Calendar/Zoom, so a missing integration
+   * degrades to "no link" instead of throwing — the booking still confirms.
+   */
+  private async scheduleConsultation(
+    p: ScheduleConsultationParams
+  ): Promise<ScheduleConsultationResult> {
+    const workspace = await defaultPrisma.workspace.findUnique({
+      where: { id: p.workspaceId },
+      select: { timezone: true },
+    })
+    const timezone = workspace?.timezone || "Europe/Rome"
+
+    const startTime = zonedWallClockToUtc(p.date, p.time, timezone)
+    const endTime = new Date(startTime.getTime() + p.durationMinutes * 60_000)
+
+    const description = [
+      `Franchising consultation — ${p.customerName}`,
+      p.customerPhone ? `Phone: ${p.customerPhone}` : null,
+      p.location ? `Location: ${p.location}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n")
+
+    const [calendar, zoom] = await Promise.all([
+      googleCalendarService
+        .createEvent({
+          workspaceId: p.workspaceId,
+          summary: p.topic,
+          description,
+          startTime,
+          endTime,
+          timezone,
+          attendeeEmail: p.customerEmail,
+        })
+        .catch((err) => {
+          logger.error("[CustomClientChatbotService] calendar event failed", {
+            workspaceId: p.workspaceId,
+            error: err instanceof Error ? err.message : String(err),
+          })
+          return null
+        }),
+      zoomService
+        .createMeeting({
+          workspaceId: p.workspaceId,
+          topic: p.topic,
+          startTime,
+          duration: p.durationMinutes,
+          timezone,
+          attendeeEmail: p.customerEmail,
+        })
+        .catch((err) => {
+          logger.error("[CustomClientChatbotService] zoom meeting failed", {
+            workspaceId: p.workspaceId,
+            error: err instanceof Error ? err.message : String(err),
+          })
+          return null
+        }),
+    ])
+
+    return {
+      googleEventLink: calendar?.googleEventLink ?? null,
+      zoomLink: zoom?.zoomLink ?? null,
     }
   }
 

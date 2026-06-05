@@ -761,8 +761,8 @@ async function sendConsultationEmail(params: ConsultationParams): Promise<void> 
     `📅 Date: ${dateStr}`,
     `🕐 Time: ${timeStr} (UTC)`,
     `📍 Location (desired): ${state.location ?? '(to be discussed)'}`,
-    '',
-    'Join the video call via Zoom link (sent in separate email)',
+    ...(zoomLink ? ['', `🔗 Zoom: ${zoomLink}`] : []),
+    ...(calendarLink ? ['', `📆 Calendar: ${calendarLink}`] : []),
     '',
     'Our commercial team will discuss:',
     '- Franchising model & business structure',
@@ -1279,6 +1279,10 @@ export interface ChatbotInput {
      *  in the Use Cases panel flips the language of the "Human Support
      *  message" without dragging the bot's reply into the same language. */
     operatorBriefingLanguageOverride?: string | null
+    /** Real side-effect handlers injected by the host. Absent in REPL/batch. */
+    handlers?: {
+      scheduleConsultation?: ScheduleConsultationHandler
+    }
   }
   context: {
     sessionId: string
@@ -1352,6 +1356,8 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       sessionId,
       customerName: input.userName,
       customerPhone: input.context.phoneNumber,
+      workspaceId: input.config.workspaceId,
+      scheduleConsultation: input.config.handlers?.scheduleConsultation,
     }
 
     const result = await agentTurn(
