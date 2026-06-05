@@ -726,6 +726,7 @@ For privacy inquiries, please contact our support team.`
         deletedAt: true,
         whatsappProvider: true,
         wasenderSessionId: true,
+        customChatbotId: true,
       },
     })
 
@@ -763,8 +764,10 @@ For privacy inquiries, please contact our support team.`
     }
 
     // 🚨 CALENDAR BOOKING VALIDATION: Cannot enable booking without services
-    // This prevents state inconsistency where reminder job sends reminders for non-existent appointments
-    if (data.enableCalendarBooking === true) {
+    // This prevents state inconsistency where reminder job sends reminders for non-existent appointments.
+    // Custom chatbot workspaces are exempt: their services live in the module's
+    // settings.json, not the DB `services` table, so the DB count is always 0.
+    if (data.enableCalendarBooking === true && !currentWorkspace.customChatbotId) {
       // Check if workspace has at least one service
       const serviceCount = await this.prisma.services.count({
         where: {
