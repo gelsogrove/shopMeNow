@@ -471,15 +471,17 @@ logger.info("✅ Registered PUBLIC services endpoint at /api/services/public")
 // Google redirects here after OAuth consent — no JWT token available
 app.get("/api/v1/auth/google/calendar/callback", async (req, res) => {
   try {
-    const { PrismaClient } = await import("@echatbot/database")
     const { AppointmentController } = await import("./interfaces/http/controllers/appointment.controller")
-    const prismaInstance = new PrismaClient()
-    const controller = new AppointmentController(prismaInstance)
+    // Use the configured prisma singleton — `new PrismaClient()` with no options
+    // throws PrismaClientInitializationError under this repo's Prisma v7 setup,
+    // which surfaced to the user as an opaque "Server error during OAuth flow".
+    const controller = new AppointmentController(prisma)
     return controller.handleGoogleCalendarCallback(req, res)
   } catch (error) {
     logger.error("[CALENDAR] Fatal error in Google OAuth callback:", error)
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"
-    return res.redirect(`${frontendUrl}/settings?tab=calendar&error=server_error`)
+    const detail = encodeURIComponent((error instanceof Error ? error.message : String(error)).slice(0, 300))
+    return res.redirect(`${frontendUrl}/settings?tab=calendar&error=server_error&detail=${detail}`)
   }
 })
 logger.info("✅ Registered PUBLIC Google Calendar OAuth callback at /api/v1/auth/google/calendar/callback (direct, no auth)")

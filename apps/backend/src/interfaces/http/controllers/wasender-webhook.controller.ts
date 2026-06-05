@@ -37,7 +37,6 @@ import { extractWasenderMedia } from '../../../services/webhook-media.extract'
 import { ingestInboundWebhookMedia } from '../../../services/inbound-media-webhook.service'
 // 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
 import { extractWasenderReaction } from '../../../services/webhook-reaction.extract'
-import { buildReactionText } from '../../../services/reaction-context.service'
 import {
   whatsappMessageRateLimiter,
   whatsappWorkspaceRateLimiter,
@@ -363,6 +362,36 @@ export class WasenderWebhookController {
     // 😀 reaction → emoji + reacted-to message id (null if none)
     const inboundReaction = extractWasenderReaction(message)
 
+    // 😀 Inbound reaction handler: update original message's reaction field
+    // instead of creating a new message.
+    if (inboundReaction && inboundReaction.messageId) {
+      try {
+        const updatedMsg = await prisma.conversationMessage.updateMany({
+          where: {
+            whatsappMessageId: inboundReaction.messageId,
+            workspaceId: workspaceId,
+          },
+          data: { reaction: inboundReaction.emoji },
+        })
+
+        logger.info('[WASENDER] 😀 Reaction updated on original message', {
+          workspaceId,
+          emoji: inboundReaction.emoji,
+          whatsappMessageId: inboundReaction.messageId,
+          messagesUpdated: updatedMsg.count,
+        })
+
+        // Reaction handled — skip message creation
+        return res.status(200).json({ status: 'ok', type: 'reaction_updated' })
+      } catch (updateError) {
+        logger.warn('[WASENDER] ⚠️ Failed to update reaction on original message', {
+          error: updateError instanceof Error ? updateError.message : String(updateError),
+          whatsappMessageId: inboundReaction.messageId,
+        })
+        // Fall through to ignore (no new message for reaction-only input)
+      }
+    }
+
     // Parse message data
     const rawPhone =
       key.cleanedSenderPn ||
@@ -375,12 +404,6 @@ export class WasenderWebhookController {
       message.message?.conversation ||
       message.message?.extendedTextMessage?.text ||
       ''
-    // 😀 Reaction (long-press emoji): use the emoji as text (enriched with the
-    // reacted-to message when available) so the LLM interprets it in context.
-    // No hardcoded emoji→intent mapping (rule #14).
-    if (!rawMessageText && inboundReaction) {
-      rawMessageText = await buildReactionText(prisma, workspaceId, inboundReaction)
-    }
 
     if (!rawPhone) {
       logger.error('[WASENDER] ❌ Missing phone number in payload', { workspaceId, messageId })

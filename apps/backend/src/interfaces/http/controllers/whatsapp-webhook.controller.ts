@@ -25,7 +25,6 @@ import { extractMetaMedia, ExtractedMedia } from "../../../services/webhook-medi
 import { ingestInboundWebhookMedia } from "../../../services/inbound-media-webhook.service"
 // 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
 import { extractMetaReaction, ExtractedReaction } from "../../../services/webhook-reaction.extract"
-import { buildReactionText } from "../../../services/reaction-context.service"
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -472,16 +471,40 @@ export class WhatsAppWebhookController {
         return
       }
 
-      // 😀 Reaction context: now that the workspace is known, enrich a reaction
-      // with the text of the message it reacted to (e.g. 👍 → "Confirm order €30?"),
-      // so the LLM interprets WHAT was confirmed. Degrades to emoji-only if the
-      // original can't be resolved. (rule #14 — the LLM does the interpreting.)
-      if (inboundReaction) {
-        messageText = await buildReactionText(
-          prisma,
-          whatsappSettings.workspace.id,
-          inboundReaction
-        )
+      // 😀 Inbound reaction handler: update original message's reaction field
+      // instead of creating a new message. Only create a new message if we can't
+      // find the original (e.g., provider didn't send messageId).
+      if (inboundReaction && inboundReaction.messageId) {
+        try {
+          const updatedMsg = await prisma.conversationMessage.updateMany({
+            where: {
+              whatsappMessageId: inboundReaction.messageId,
+              workspaceId: whatsappSettings.workspace.id,
+            },
+            data: { reaction: inboundReaction.emoji },
+          })
+
+          logger.info("[WEBHOOK] 😀 Reaction updated on original message", {
+            workspaceId: whatsappSettings.workspace.id,
+            emoji: inboundReaction.emoji,
+            whatsappMessageId: inboundReaction.messageId,
+            messagesUpdated: updatedMsg.count,
+          })
+
+          // Reaction handled — skip message creation
+          res.status(200).json({ status: "ok", type: "reaction_updated" })
+          return
+        } catch (updateError) {
+          logger.warn("[WEBHOOK] ⚠️ Failed to update reaction on original message", {
+            error: updateError instanceof Error ? updateError.message : String(updateError),
+            whatsappMessageId: inboundReaction.messageId,
+          })
+          // Fall through to create a message with emoji-only content (degraded)
+          messageText = inboundReaction.emoji
+        }
+      } else if (inboundReaction) {
+        // Provider didn't send messageId — degrade to emoji-only message
+        messageText = inboundReaction.emoji
       }
 
       // 🔒 SECURITY: Verify Meta signature (skip for playground — no HMAC header)

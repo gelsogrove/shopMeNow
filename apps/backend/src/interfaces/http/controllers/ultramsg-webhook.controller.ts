@@ -44,7 +44,6 @@ import { extractUltramsgMedia } from '../../../services/webhook-media.extract'
 import { ingestInboundWebhookMedia } from '../../../services/inbound-media-webhook.service'
 // 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
 import { extractUltramsgReaction } from '../../../services/webhook-reaction.extract'
-import { buildReactionText } from '../../../services/reaction-context.service'
 import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from '../../../middlewares/rateLimiter'
 import { platformConfigService } from '../../../services/platform-config.service'
 import { websocketService } from '../../../services/websocket.service'
@@ -275,7 +274,39 @@ export class UltraMsgWebhookController {
       const phoneVariants = buildPhoneVariants(phoneWithPrefix)
       const phoneNumber = phoneVariants[0]
 
-      // 🎤 MEDIA HANDLING: For audio/image/video/document/sticker, UltraMSG sends body="" 
+      // 😀 Inbound reaction handler (early check before media/text processing)
+      const inboundReaction = extractUltramsgReaction(payload)
+      if (inboundReaction && inboundReaction.messageId) {
+        try {
+          const updatedMsg = await prisma.conversationMessage.updateMany({
+            where: {
+              whatsappMessageId: inboundReaction.messageId,
+              workspaceId: workspaceId,
+            },
+            data: { reaction: inboundReaction.emoji },
+          })
+
+          logger.info('[ULTRAMSG] 😀 Reaction updated on original message', {
+            workspaceId,
+            emoji: inboundReaction.emoji,
+            whatsappMessageId: inboundReaction.messageId,
+            messagesUpdated: updatedMsg.count,
+          })
+
+          // Reaction handled — skip message creation
+          return res.status(200).json({ status: 'ok', type: 'reaction_updated' })
+        } catch (updateError) {
+          logger.warn('[ULTRAMSG] ⚠️ Failed to update reaction on original message', {
+            error: updateError instanceof Error ? updateError.message : String(updateError),
+            whatsappMessageId: inboundReaction.messageId,
+          })
+          // Fall through to ignore (no new message for reaction-only input)
+          logger.warn('[ULTRAMSG] ⚠️ Ignoring reaction without valid messageId', { workspaceId })
+          return res.status(200).json({ status: 'ignored', reason: 'reaction_update_failed' })
+        }
+      }
+
+      // 🎤 MEDIA HANDLING: For audio/image/video/document/sticker, UltraMSG sends body=""
       // Instead of ignoring silently, pass a placeholder so LLM can respond appropriately
       // This matches WAAPI webhook behavior (whatsapp-webhook.controller.ts L237-242)
       const mediaTypes = ['audio', 'image', 'video', 'document', 'sticker', 'ptt']
@@ -289,22 +320,6 @@ export class UltraMsgWebhookController {
           type,
           placeholder: messageText,
         })
-      }
-
-      // 😀 Reaction (long-press emoji): surface the emoji as text (enriched with
-      // the reacted-to message when available) so the LLM interprets it in
-      // context. No hardcoded emoji→intent mapping (rule #14).
-      if (!messageText.trim()) {
-        const reaction = extractUltramsgReaction(payload)
-        if (reaction) {
-          messageText = workspaceId
-            ? await buildReactionText(prisma, workspaceId, reaction)
-            : reaction.emoji
-          logger.info('[ULTRAMSG] 😀 Reaction detected, using emoji as text', {
-            workspaceId,
-            emoji: reaction.emoji,
-          })
-        }
       }
 
       if (!messageText || messageText.trim() === '') {
