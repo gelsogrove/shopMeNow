@@ -213,6 +213,7 @@ export class WhatsAppWebhookController {
             "workspaceId",
             "chatInput",
             "entry",
+            "object", // Meta webhook top-level key — must NOT be treated as message
           ].includes(keys[0])
         ) {
           extractedMessage = keys[0] // "Ciao"
