@@ -267,7 +267,7 @@ export class PlaygroundController {
       const workspaceId = await resolveWorkspaceId(req)
       // 1) Load the most recent sessions + their customers.
       const rawSessions = await prisma.chatSession.findMany({
-        where: { workspaceId },
+        where: { workspaceId, isPlayground: true },
         include: {
           customer: { select: { id: true, name: true, phone: true, language: true } },
         },
