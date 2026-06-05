@@ -281,9 +281,9 @@ export function ChatPage() {
     searchParams.get("client") || ""
   )
   const [filterBlocked, setFilterBlocked] = useState(false)
-  const [filterNeedsSupport, setFilterNeedsSupport] = useState(false)
-  const [filterPlayground, setFilterPlayground] = useState(false)
-  const [timeRange, setTimeRange] = useState<'all' | '1h' | '24h' | 'week'>('all')
+  const [filterNeedsSupport, setFilterNeedsSupport] = useState(true)   // Default: Support ON
+  const [filterPlayground, setFilterPlayground] = useState(false)       // Default: Playground OFF
+  const [timeRange, setTimeRange] = useState<'all' | '1h' | '24h' | 'week'>('1h') // Default: last hour
   const initialLoadRef = useRef(true)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showBlockDialog, setShowBlockDialog] = useState(false)
@@ -1605,28 +1605,47 @@ export function ChatPage() {
                           </div>
                         )}
 
-                        {/* Tag chips: highlight complicated customers (vip / critical) at a glance */}
-                        {chat.tags && chat.tags.length > 0 && (
-                          <div className="flex flex-wrap items-center gap-1 mb-1">
-                            {chat.tags.map((tag) => {
-                              const normalized = tag.trim().toLowerCase()
-                              const chipClass =
-                                normalized === "critical"
-                                  ? "bg-red-100 text-red-700 border border-red-200"
-                                  : normalized === "vip"
-                                  ? "bg-amber-100 text-amber-700 border border-amber-200"
-                                  : "bg-gray-100 text-gray-600 border border-gray-200"
-                              return (
-                                <span
-                                  key={tag}
-                                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium uppercase tracking-wide ${chipClass}`}
-                                >
-                                  {tag}
-                                </span>
-                              )
-                            })}
-                          </div>
-                        )}
+                        {/* Status chips: quick-recognition badges for customer type */}
+                        <div className="flex flex-wrap items-center gap-1 mb-1">
+                          {chat.activeChatbot === false && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700 border border-orange-200">
+                              🎧 Support
+                            </span>
+                          )}
+                          {chat.isBlacklisted && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-red-100 text-red-700 border border-red-200">
+                              🚫 Blocked
+                            </span>
+                          )}
+                          {chat.isPlayground && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700 border border-purple-200">
+                              🧪 Playground
+                            </span>
+                          )}
+                          {chat.channel === "widget" && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                              🖥️ Widget
+                            </span>
+                          )}
+                          {/* Tag chips: vip / critical */}
+                          {chat.tags && chat.tags.map((tag) => {
+                            const normalized = tag.trim().toLowerCase()
+                            const chipClass =
+                              normalized === "critical"
+                                ? "bg-red-100 text-red-700 border border-red-200"
+                                : normalized === "vip"
+                                ? "bg-amber-100 text-amber-700 border border-amber-200"
+                                : "bg-gray-100 text-gray-600 border border-gray-200"
+                            return (
+                              <span
+                                key={tag}
+                                className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium uppercase tracking-wide ${chipClass}`}
+                              >
+                                {tag}
+                              </span>
+                            )
+                          })}
+                        </div>
 
                         {/* Terza riga: telefono */}
                         <div className="text-xs text-green-600 mb-1">

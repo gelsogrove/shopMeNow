@@ -180,6 +180,48 @@ export class WasenderWhatsAppProvider implements WhatsAppProvider {
     return { buffer, mimeType: mimeType.split(';')[0].trim(), sizeBytes: buffer.length }
   }
 
+  /**
+   * Send a reaction emoji onto a customer's WhatsApp message.
+   * WasenderAPI endpoint: POST /api/send-reaction
+   * Empty emoji removes the previous reaction.
+   *
+   * @param to          Customer phone in E.164 format
+   * @param messageId   Provider wamid of the message being reacted to
+   * @param emoji       Reaction emoji ('' to remove)
+   */
+  async sendReaction(to: string, messageId: string, emoji: string): Promise<WhatsAppSendMessageResult> {
+    try {
+      const formattedTo = to.replace(/^\+/, '') + '@s.whatsapp.net'
+      const response = await axios.post(
+        `${this.baseUrl}/api/send-reaction`,
+        { to: formattedTo, messageId, emoji },
+        {
+          headers: {
+            Authorization: `Bearer ${this.config.sessionApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 15000,
+        }
+      )
+      const id = response.data?.data?.id || response.data?.id || 'unknown'
+      logger.info('[Wasender-Provider] ✅ Reaction sent:', {
+        to: this.maskPhone(to),
+        emoji,
+        messageId,
+        id,
+      })
+      return { messageId: id, success: true }
+    } catch (error: any) {
+      const errMsg = error.response?.data?.message || error.message
+      logger.error('[Wasender-Provider] ❌ Failed to send reaction:', {
+        to: this.maskPhone(to),
+        emoji,
+        error: errMsg,
+      })
+      return { messageId: '', success: false, error: `WasenderAPI reaction failed: ${errMsg}` }
+    }
+  }
+
   private maskPhone(phone: string): string {
     if (!phone || phone.length <= 4) return '***'
     return phone.substring(0, 3) + '***' + phone.substring(phone.length - 4)

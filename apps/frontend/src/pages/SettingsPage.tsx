@@ -84,7 +84,6 @@ const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = [
   "widget",
   "widget-support",
   "security",
-  "calendar",
   "functions",
 ]
 

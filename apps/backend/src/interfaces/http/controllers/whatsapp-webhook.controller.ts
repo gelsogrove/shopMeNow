@@ -710,6 +710,7 @@ export class WhatsAppWebhookController {
             debugMode: true,
             needRegistration: true, // 🔧 Controls whether registration is required
             customChatbotId: true, // 🤖 Custom chatbot module for FLOW workspaces
+            welcomeVideoUrl: true, // 📺 Presentation video URL (combined into first reply)
           },
         },
       } as const
@@ -1510,17 +1511,18 @@ export class WhatsAppWebhookController {
         },
       })
 
-      // 📺 FIRST CONTACT → send presentation video once (before any reply path).
-      // Gated on messageCount===0 so it never repeats on later messages.
-      if (messageCount === 0) {
-        await sendWelcomeVideoIfConfigured(customer.workspaceId, customer.phone)
-      }
-
       // 🤖 CUSTOM CHATBOT BYPASS: Workspaces with a custom chatbot (FLOW mode) must process
       // ALL messages through the LLM pipeline — the chatbot generates its own greeting on turn 1.
       // The workspace welcomeMessage is for standard (non-custom) workspaces only.
       // Source of truth: customChatbotId in DB. No slug fallback.
       const hasCustomChatbot = !!(customer as any).workspace?.customChatbotId
+
+      // 📺 FIRST CONTACT → send presentation video once (before any reply path).
+      // Gated on messageCount===0 so it never repeats on later messages.
+      // 🎯 Custom chatbot: skip separate send — URL is prepended to first bot reply instead (one message).
+      if (messageCount === 0 && !hasCustomChatbot) {
+        await sendWelcomeVideoIfConfigured(customer.workspaceId, customer.phone)
+      }
 
       if (messageCount === 0 && hasCustomChatbot) {
         logger.info("[WEBHOOK] 🤖 Custom chatbot workspace — skipping welcome-only block, routing to LLM", {
@@ -2763,11 +2765,16 @@ export class WhatsAppWebhookController {
             // WhatsApp supports a very limited subset (no tables, no `##`
             // headers, only single-asterisk bold). Down-convert before send.
             const whatsappReply = mdToWhatsApp(customerReply)
+            // 📺 First message: prepend welcome video URL so URL + greeting arrive as ONE WhatsApp message
+            const welcomeVideoUrl = (customer as any).workspace?.welcomeVideoUrl as string | null | undefined
+            const finalWhatsappReply = (messageCount === 0 && welcomeVideoUrl)
+              ? `${welcomeVideoUrl}\n\n${whatsappReply}`
+              : whatsappReply
             await directSend.send({
               workspaceId: customer.workspaceId,
               customerId: customer.id,
               phoneNumber: customer.phone,
-              messageContent: whatsappReply,
+              messageContent: finalWhatsappReply,
               conversationMessageId: savedAssistantMessageId,
             })
           } catch (sendError) {

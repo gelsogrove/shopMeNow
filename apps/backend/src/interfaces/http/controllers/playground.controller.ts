@@ -725,7 +725,7 @@ export class PlaygroundController {
               workspaceId,
               phone: customerPhone,
               name: safeName,
-              email: `${safeName.replace(/[^a-z0-9]/gi, "_")}@playground.local`,
+              email: null,
               isActive: false,
               registrationStatus: "NEW",
               // 🌍 Do NOT seed language from the phone prefix. The language is
