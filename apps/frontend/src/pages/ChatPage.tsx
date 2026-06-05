@@ -569,7 +569,7 @@ export function ChatPage() {
     )
   }
   if (filterBlocked) visibleChats = visibleChats.filter((c: Chat) => c.isBlacklisted)
-  if (filterNeedsSupport) visibleChats = visibleChats.filter((c: Chat) => c.activeChatbot !== false)
+  if (filterNeedsSupport) visibleChats = visibleChats.filter((c: Chat) => c.activeChatbot === false)
   if (filterPlayground) visibleChats = visibleChats.filter(
     (c: Chat) => c.isPlayground || c.customerName?.startsWith('playground_')
   )
@@ -596,12 +596,22 @@ export function ChatPage() {
         const savedChat = chats.find((c) => c.sessionId === savedChatId)
 
         if (savedChat) {
+          // Only auto-restore if the saved chat still passes the active chip
+          // filters (Support / Blocked / Playground / time). If it's hidden by
+          // the current filters, leave the panel empty and keep the saved id so
+          // it can be restored later when filters allow it.
+          const isVisible = visibleChats.some((c) => c.sessionId === savedChatId)
+          if (isVisible) {
+            logger.info(
+              "[ChatPage] ✅ Chat trovata e ripristinata:",
+              savedChat.customerName
+            )
+            selectChat(savedChat)
+            return
+          }
           logger.info(
-            "[ChatPage] ✅ Chat trovata e ripristinata:",
-            savedChat.customerName
+            "[ChatPage] ⏸️ Chat salvata nascosta dai filtri attivi, nessuna selezione"
           )
-          selectChat(savedChat)
-          return
         } else {
           logger.warn(
             "[ChatPage] ⚠️ Chat salvata non trovata nella lista, rimuovo da storage"
@@ -657,29 +667,34 @@ export function ChatPage() {
       }
     }
 
-    // 🚀 PRIORITÀ 3: Fallback - seleziona il primo della lista solo se non c'è nulla di salvato
-    if (filteredChats.length > 0 && !selectedChat && !clientSearchTerm) {
+    // 🚀 PRIORITÀ 3: Fallback - seleziona la prima chat VISIBILE (che passa i
+    //    chip Support/Blocked/Playground/time) solo se non c'è nulla di salvato.
+    //    Se nessuna chat passa i filtri → nessuna selezione (pannello vuoto).
+    if (visibleChats.length > 0 && !selectedChat && !clientSearchTerm) {
       logger.info(
-        "[ChatPage] 📍 Nessuna chat salvata, seleziono il primo della lista:",
-        filteredChats[0].customerName
+        "[ChatPage] 📍 Nessuna chat salvata, seleziono la prima visibile:",
+        visibleChats[0].customerName
       )
-      selectChat(filteredChats[0])
+      selectChat(visibleChats[0])
       return
     }
   }, [chats, clientSearchTerm])
 
-  // Clear selected chat if it no longer passes active filters
+  // When chip filters change, keep the right panel in sync with the list:
+  // if the currently selected chat is no longer visible, select the first
+  // visible chat instead — or clear the panel if nothing passes the filters.
   useEffect(() => {
     if (!selectedChat) return
-    const hiddenBySupport = filterNeedsSupport && selectedChat.activeChatbot === false
-    const hiddenByBlocked = filterBlocked && !selectedChat.isBlacklisted
-    const hiddenByPlayground = filterPlayground
-      ? (!selectedChat.isPlayground && !selectedChat.customerName?.startsWith('playground_'))
-      : (selectedChat.isPlayground || selectedChat.customerName?.startsWith('playground_'))
-    if (hiddenBySupport || hiddenByBlocked || hiddenByPlayground) {
+    const stillVisible = visibleChats.some(
+      (c) => c.sessionId === selectedChat.sessionId
+    )
+    if (stillVisible) return
+    if (visibleChats.length > 0) {
+      selectChat(visibleChats[0])
+    } else {
       setSelectedChat(null)
     }
-  }, [selectedChat, filterNeedsSupport, filterBlocked, filterPlayground, setSelectedChat])
+  }, [selectedChat, filterNeedsSupport, filterBlocked, filterPlayground, timeRange])
 
   // Reset new-chat tracking when workspace changes
   useEffect(() => {

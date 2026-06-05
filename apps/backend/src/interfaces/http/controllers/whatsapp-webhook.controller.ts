@@ -2765,11 +2765,38 @@ export class WhatsAppWebhookController {
             // WhatsApp supports a very limited subset (no tables, no `##`
             // headers, only single-asterisk bold). Down-convert before send.
             const whatsappReply = mdToWhatsApp(customerReply)
+            // 📺 First message: mirror the playground's WelcomeVideoCard logic.
+            // Split at the first blank line, insert the localized intro + video URL
+            // between the greeting and the rest of the reply.
+            const welcomeVideoUrl = (customer as any).workspace?.welcomeVideoUrl as string | null | undefined
+            let finalWhatsappReply = whatsappReply
+            if (messageCount === 0 && welcomeVideoUrl) {
+              const INTRO: Record<string, string> = {
+                es: "Antes de empezar, te dejo una breve presentación 👇",
+                it: "Prima di iniziare, ecco una breve presentazione 👇",
+                en: "Before we start, here's a short presentation 👇",
+                ca: "Abans de començar, et deixo una breu presentació 👇",
+                pt: "Antes de começar, deixo-te uma breve apresentação 👇",
+                fr: "Avant de commencer, voici une brève présentation 👇",
+                de: "Bevor wir beginnen, hier eine kurze Präsentation 👇",
+                ar: "قبل أن نبدأ، إليك عرضًا تقديميًا موجزًا 👇",
+              }
+              const lang = customerLanguage ?? "en"
+              const introText = INTRO[lang] ?? INTRO["en"]
+              const breakIdx = whatsappReply.indexOf("\n\n")
+              if (breakIdx !== -1) {
+                const greeting = whatsappReply.slice(0, breakIdx)
+                const rest = whatsappReply.slice(breakIdx + 2)
+                finalWhatsappReply = `${greeting}\n\n${introText}\n${welcomeVideoUrl}\n\n${rest}`
+              } else {
+                finalWhatsappReply = `${whatsappReply}\n\n${introText}\n${welcomeVideoUrl}`
+              }
+            }
             await directSend.send({
               workspaceId: customer.workspaceId,
               customerId: customer.id,
               phoneNumber: customer.phone,
-              messageContent: whatsappReply,
+              messageContent: finalWhatsappReply,
               conversationMessageId: savedAssistantMessageId,
               skipSecurityCheck: true, // bot-generated content, not user input
             })
