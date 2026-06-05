@@ -1521,6 +1521,7 @@ export class MessageRepository {
             workspaceId: session.workspaceId,
             activeChatbot: session.customer?.activeChatbot ?? true,
             channel: session.channel || "whatsapp", // 🌐 Widget/WhatsApp channel indicator for admin UI
+            tags: session.customer?.tags || [],
           }
         })
       )

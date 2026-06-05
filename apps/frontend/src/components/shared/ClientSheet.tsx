@@ -435,7 +435,7 @@ export function ClientSheet({
 
     const customerData = {
       name,
-      email,
+      ...(email ? { email } : {}),
       company,
       phone,
       language: convertLanguageNameToCode(language),

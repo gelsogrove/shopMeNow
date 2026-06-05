@@ -347,7 +347,7 @@ Need anything else?"`,
   console.log("🏢 Creating/updating Informational workspace (BellItalia) for admin user...")
 
   let infoWorkspace = await prisma.workspace.findUnique({
-    where: { id: "bellitalia-info" }
+    where: { id: "bellitalia-info-workspace" }
   })
 
   if (!infoWorkspace) {
@@ -695,7 +695,6 @@ Would you like details about something specific?"`,
         temperature: config.temperature,
         maxTokens: config.maxTokens,
         order: config.order,
-        isActive: config.isActive,
         availableFunctions: config.availableFunctions || null,
       },
     })
@@ -741,7 +740,6 @@ Would you like details about something specific?"`,
         temperature: config.temperature,
         maxTokens: config.maxTokens,
         order: config.order,
-        isActive: config.isActive,
         availableFunctions: config.availableFunctions || null,
       },
     })
@@ -1008,7 +1006,6 @@ Can I help with anything else?"`,
         temperature: config.temperature,
         maxTokens: config.maxTokens,
         order: config.order,
-        isActive: config.isActive,
         availableFunctions: config.availableFunctions || null,
       },
     })
@@ -1671,7 +1668,6 @@ Can I help with anything else?"`,
         temperature: agentCfg.temperature,
         maxTokens: agentCfg.maxTokens,
         order: agentCfg.order,
-        isActive: agentCfg.isActive,
         availableFunctions: agentCfg.availableFunctions || null,
       },
     })
@@ -3637,6 +3633,7 @@ Confermi la tua presenza?`,
         customerId: englishCustomer.id,
         workspaceId: workspace.id,
         status: "active",
+        isPlayground: true,
         context: {
           language: "en",
           customerName: englishCustomer.name,
