@@ -82,4 +82,5 @@ export interface Chat {
   activeChatbot?: boolean
   language?: string
   channel?: "whatsapp" | "widget" // 🆕 Channel source (widget or whatsapp)
+  isPlayground?: boolean
 }

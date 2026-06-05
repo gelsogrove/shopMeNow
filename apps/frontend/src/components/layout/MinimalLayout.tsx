@@ -58,6 +58,7 @@ export function MinimalLayout() {
   const hasWorkspace = !!workspace?.id
   const hasSalesAgents = workspace?.hasSalesAgents ?? false
   const enableWhatsapp = (workspace as any)?.enableWhatsapp ?? false
+  const isCustomChatbot = Boolean(workspace?.customChatbotId)
 
   // Load user profile from localStorage
   useEffect(() => {
@@ -270,14 +271,18 @@ export function MinimalLayout() {
                         <Users className="mr-2 h-4 w-4 text-indigo-500" />
                         <span>Clients</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/faq")}>
-                        <HelpCircle className="mr-2 h-4 w-4 text-amber-500" />
-                        <span>FAQ</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/agents")}>
-                        <Bot className="mr-2 h-4 w-4 text-purple-500" />
-                        <span>Agents Configuration</span>
-                      </DropdownMenuItem>
+                      {!isCustomChatbot && (
+                        <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/faq")}>
+                          <HelpCircle className="mr-2 h-4 w-4 text-amber-500" />
+                          <span>FAQ</span>
+                        </DropdownMenuItem>
+                      )}
+                      {!isCustomChatbot && (
+                        <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/agents")}>
+                          <Bot className="mr-2 h-4 w-4 text-purple-500" />
+                          <span>Agents Configuration</span>
+                        </DropdownMenuItem>
+                      )}
                       {/* Flow Configs — managed from Agents Configuration graph */}
                       {workspace?.channelMode === 'ECOMMERCE' && (
                         <>

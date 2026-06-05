@@ -280,7 +280,10 @@ export function ChatPage() {
   const [clientSearchTerm, setClientSearchTerm] = useState(
     searchParams.get("client") || ""
   )
-  const [hideBlocked, setHideBlocked] = useState(true)
+  const [filterBlocked, setFilterBlocked] = useState(false)
+  const [filterNeedsSupport, setFilterNeedsSupport] = useState(false)
+  const [filterPlayground, setFilterPlayground] = useState(false)
+  const [timeRange, setTimeRange] = useState<'all' | '1h' | '24h' | 'week'>('all')
   const initialLoadRef = useRef(true)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showBlockDialog, setShowBlockDialog] = useState(false)
@@ -558,9 +561,18 @@ export function ChatPage() {
       )
     : chats
 
-  const visibleChats = hideBlocked
-    ? filteredChats.filter((chat: Chat) => !chat.isBlacklisted)
-    : filteredChats
+  let visibleChats = filteredChats
+  if (filterBlocked) visibleChats = visibleChats.filter((c: Chat) => c.isBlacklisted)
+  if (filterNeedsSupport) visibleChats = visibleChats.filter((c: Chat) => c.activeChatbot === false)
+  if (filterPlayground) visibleChats = visibleChats.filter((c: Chat) => c.isPlayground)
+  if (timeRange !== 'all') {
+    const now = Date.now()
+    const ms = timeRange === '1h' ? 3600000 : timeRange === '24h' ? 86400000 : 604800000
+    visibleChats = visibleChats.filter((c: Chat) => {
+      const t = c.lastMessageTime ? new Date(c.lastMessageTime).getTime() : 0
+      return t >= now - ms
+    })
+  }
 
   // SMART SELECTION: Auto-select when appropriate, but DON'T update existing selection
   useEffect(() => {
@@ -1464,25 +1476,46 @@ export function ChatPage() {
             }}
           />
 
-          {/* WebSocket Status + Blocked Filter */}
-          <div className="flex items-center justify-between text-xs text-gray-500 px-1">
-            <div className="flex items-center gap-2">
+          {/* WebSocket Status + Filters */}
+          <div className="flex flex-col gap-1 px-1">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
               <div
                 className={`w-2 h-2 rounded-full ${
                   isWebSocketConnected ? "bg-green-500" : "bg-red-500"
                 } ${isWebSocketConnected ? "animate-pulse" : ""}`}
               />
-              <span>
-                {isWebSocketConnected ? "Real-time" : "Connecting..."}
-              </span>
+              <span>{isWebSocketConnected ? "Real-time" : "Connecting..."}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <span>Hide blocked</span>
-              <Switch
-                checked={hideBlocked}
-                onCheckedChange={setHideBlocked}
-                className="scale-75"
-              />
+            <div className="flex items-center gap-1 flex-wrap">
+              <button
+                onClick={() => setFilterBlocked(v => !v)}
+                className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${filterBlocked ? "bg-red-100 border-red-400 text-red-700" : "bg-white border-gray-300 text-gray-500 hover:border-gray-400"}`}
+              >
+                🚫 Blocked
+              </button>
+              <button
+                onClick={() => setFilterNeedsSupport(v => !v)}
+                className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${filterNeedsSupport ? "bg-orange-100 border-orange-400 text-orange-700" : "bg-white border-gray-300 text-gray-500 hover:border-gray-400"}`}
+              >
+                🎧 Support
+              </button>
+              <button
+                onClick={() => setFilterPlayground(v => !v)}
+                className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${filterPlayground ? "bg-purple-100 border-purple-400 text-purple-700" : "bg-white border-gray-300 text-gray-500 hover:border-gray-400"}`}
+              >
+                🧪 Playground
+              </button>
+            </div>
+            <div className="flex items-center gap-1">
+              {([['All', 'all'], ['1h', '1h'], ['24h', '24h'], ['7d', 'week']] as [string, 'all' | '1h' | '24h' | 'week'][]).map(([label, value]) => (
+                <button
+                  key={value}
+                  onClick={() => setTimeRange(value)}
+                  className={`px-2 py-0.5 rounded text-xs border transition-colors ${timeRange === value ? "bg-green-100 border-green-400 text-green-700 font-medium" : "bg-white border-gray-300 text-gray-500 hover:border-gray-400"}`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
           </div>
           
