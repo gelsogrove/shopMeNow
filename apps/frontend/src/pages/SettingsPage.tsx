@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Save, Trash2, Loader2, Power, Smartphone, Sparkles, Calendar } from "lucide-react"
+import { Save, Trash2, Loader2, Power, Sparkles } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { ChatWidget } from "@/components/ChatWidget"
 import { IMG_BASE_URL } from "@/config"
@@ -949,36 +949,22 @@ export function SettingsPage() {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-            {isCustomChatbot ? (
-              /* Custom chatbot: only WhatsApp Channel is configurable here —
-                 show a static pill instead of the section dropdown */
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleSectionChange('whatsapp')}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${activeSection === 'whatsapp' ? 'border-emerald-300 bg-emerald-100 text-emerald-800' : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
-                >
-                  <Smartphone className="h-4 w-4" />
-                  WhatsApp Channel
-                </button>
-                <button
-                  onClick={() => handleSectionChange('calendar')}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${activeSection === 'calendar' ? 'border-slate-300 bg-slate-100 text-slate-800' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'}`}
-                >
-                  <Calendar className="h-4 w-4" />
-                  Calendar
-                </button>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-violet-200 bg-violet-50 text-xs font-medium text-violet-700">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Custom Chatbot — all other settings are managed in settings.json
-                </span>
-              </div>
-            ) : (
+            {/* Same section dropdown everywhere. For custom chatbot workspaces
+                SECTIONS is already filtered to WhatsApp Channel + Calendar, and
+                we add a pill clarifying the rest lives in settings.json. */}
+            <div className="flex items-center gap-2">
               <SettingsDropdown
                 sections={SECTIONS}
                 currentSection={activeSection}
                 onSectionChange={handleSectionChange}
               />
-            )}
+              {isCustomChatbot && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-violet-200 bg-violet-50 text-xs font-medium text-violet-700">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Custom Chatbot — all other settings are managed in settings.json
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Right side: Channel Status + Debug Mode + Save */}
