@@ -97,6 +97,7 @@ export interface WorkspaceProps {
   widgetAutoSuggestionsEnabled?: boolean | null
   widgetQuickReplies?: string[] | null
   widgetSuggestionsModel?: string | null
+  widgetWelcomeVideoUrl?: string | null
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean
@@ -472,6 +473,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get widgetSuggestionsModel(): string | null | undefined {
     return this.props.widgetSuggestionsModel
+  }
+
+  get widgetWelcomeVideoUrl(): string | null | undefined {
+    return this.props.widgetWelcomeVideoUrl
   }
 
   // 🆕 Translation Settings getters

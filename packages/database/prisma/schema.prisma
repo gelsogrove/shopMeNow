@@ -55,6 +55,7 @@ model Workspace {
   widgetAutoSuggestionsEnabled Boolean   @default(false) // Show quick reply suggestions in widget
   widgetQuickReplies           String[]  @default([])    // Up to 4 quick replies shown in widget
   widgetSuggestionsModel       String?               // Optional custom model for widget suggestions
+  widgetWelcomeVideoUrl        String?               // Optional welcome video (YouTube/Vimeo/.mp4) shown when widget opens
 
   // 🆕 Channel Configuration (from Wizard - Feature 199)
   channelType                       ChannelType @default(WHATSAPP) // WhatsApp or Widget
