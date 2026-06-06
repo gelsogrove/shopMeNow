@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
@@ -266,6 +267,10 @@ const securityIcon = (key: string) => {
 export function LaundryServicePage() {
   const { language } = useLanguage()
   const t = T[(language as Language) ?? "en"] ?? T.en
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
   return (
     <>
