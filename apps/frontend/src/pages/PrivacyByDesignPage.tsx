@@ -30,7 +30,6 @@ const T = {
       { icon: "✅", title: "Funzionalità completa, win-win", desc: "Privacy e funzionalità coesistono. Non sacrifichiamo features per la privacy, né la privacy per le features." },
       { icon: "📅", title: "Sicurezza end-to-end, ciclo di vita completo", desc: "I dati sono protetti dalla raccolta alla cancellazione. Retention policy configurabile, eliminazione sicura verificabile." },
       { icon: "👁️", title: "Visibilità e trasparenza", desc: "Log di accesso completi, audit trail per ogni operazione sui dati cliente. Il DPO ha accesso a tutto ciò che serve per i controlli." },
-      { icon: "👤", title: "Rispetto della privacy dell'utente", desc: "Diritto all'oblio implementato. Esportazione dati in formato machine-readable su richiesta del cliente." },
     ],
     complianceTitle: "Conformità Normativa",
     complianceItems: [
@@ -80,7 +79,6 @@ const T = {
       { icon: "✅", title: "Full functionality, positive-sum", desc: "Privacy and functionality coexist. We don't sacrifice features for privacy, nor privacy for features." },
       { icon: "📅", title: "End-to-end security, full lifecycle", desc: "Data is protected from collection to deletion. Configurable retention policy, verifiable secure deletion." },
       { icon: "👁️", title: "Visibility and transparency", desc: "Full access logs, audit trail for every operation on customer data. The DPO has access to everything needed for audits." },
-      { icon: "👤", title: "Respect for user privacy", desc: "Right to erasure implemented. Machine-readable data export available upon customer request." },
     ],
     complianceTitle: "Regulatory Compliance",
     complianceItems: [
