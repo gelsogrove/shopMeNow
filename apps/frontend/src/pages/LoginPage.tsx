@@ -1029,7 +1029,7 @@ export function LoginPage() {
         }}
       >
       {/* Header - Professional Design */}
-      <header className="bg-white shadow-sm sticky top-0 z-[100] overflow-hidden">
+      <header className={`bg-white shadow-sm sticky top-0 z-[100] overflow-hidden${showLoginCard ? ' hidden' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 lg:px-12">
           <div className="hidden lg:flex justify-end pt-3">
             <div className="flex items-center gap-4">
@@ -1275,10 +1275,10 @@ export function LoginPage() {
         </div>
       </header>
 
-      <main className="flex-1">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 relative z-20">
+      <main className={`flex-1${showLoginCard ? ' flex items-center justify-center' : ''}`}>
+      <div className={showLoginCard ? "w-full px-4 py-8" : "max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 relative z-20"}>
         
-        <div className="text-center mb-12 space-y-4 relative">
+        <div className={`text-center mb-12 space-y-4 relative${showLoginCard ? ' hidden' : ''}`}>
           <h1 className="text-4xl lg:text-5xl font-bold text-slate-900">
             {t("hero.title")}
           </h1>
@@ -1292,7 +1292,7 @@ export function LoginPage() {
         </div>
 
         {/* Mobile hero image — shown only on mobile/tablet, desktop has the carousel */}
-        <div className="block lg:hidden mb-8 px-2">
+        <div className={`${showLoginCard ? 'hidden' : 'block lg:hidden'} mb-8 px-2`}>
           <div className="relative mx-auto max-w-md">
             <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-3xl rotate-1 scale-105 opacity-80" />
             <img
@@ -1303,8 +1303,8 @@ export function LoginPage() {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-10 items-center lg:items-stretch">
-          <div className={`hidden lg:flex items-center w-full lg:flex-1 ${loginCardUsable ? "justify-center lg:justify-start" : "justify-center"}`}>
+        <div className={showLoginCard ? "flex justify-center" : "flex flex-col lg:flex-row gap-10 items-center lg:items-stretch"}>
+          <div className={showLoginCard ? "hidden" : `hidden lg:flex items-center w-full lg:flex-1 ${loginCardUsable ? "justify-center lg:justify-start" : "justify-center"}`}>
             <div className={`relative w-full ${loginCardUsable ? "max-w-3xl lg:mr-2" : "max-w-4xl mx-auto"}`}>
               <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-2 scale-105" />
             <div className="relative rounded-[32px] shadow-2xl bg-transparent overflow-visible">
@@ -1385,7 +1385,7 @@ export function LoginPage() {
           </div>
 
           <div
-            className={`relative w-full max-w-sm lg:w-[24rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8 lg:order-2 min-h-[32rem] flex mx-auto lg:mx-0 ${loginCardUsable ? "" : "hidden"}`}
+            className={`relative w-full max-w-sm lg:w-[24rem] bg-white rounded-2xl shadow-xl border border-slate-200 p-8 lg:order-2 min-h-[32rem] flex mx-auto ${loginCardUsable ? "" : "hidden"}`}
             onClickCapture={() => {
               if (isLoginViewDisabled) {
                 setWipFeature("login")
@@ -1871,7 +1871,8 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Smart Push AI Section */}
+      {!showLoginCard && (
+      <>{/* Smart Push AI Section */}
       <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
@@ -2869,9 +2870,10 @@ export function LoginPage() {
           </div>
         </div>
       </div>
+      </>)}
       </main>
 
-      <SiteFooter language={language as "it" | "en" | "es" | "pt"} />
+      {!showLoginCard && <SiteFooter language={language as "it" | "en" | "es" | "pt"} />}
 
       {/* ⏸️ WhatsApp Floating Button - DISABLED (will reactivate later) */}
       {/* 
