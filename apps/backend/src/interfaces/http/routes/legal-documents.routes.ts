@@ -40,8 +40,7 @@ router.get("/:type", async (req: any, res: any) => {
     const { type } = req.params
     const lang = (req.query.lang || "en") as string
     const doc = await legalDocumentStaticService.getLegalDocument(type, lang as any)
-    res.setHeader("Content-Type", "text/html; charset=utf-8")
-    res.send(doc.content)
+    res.json({ type: doc.type, language: doc.language, content: doc.content, title: doc.type, isActive: true })
   } catch (error) {
     logger.error("Error serving legal document:", error)
     res.status(404).json({

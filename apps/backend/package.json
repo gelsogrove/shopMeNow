@@ -5,9 +5,10 @@
   "main": "dist/src/index.js",
   "scripts": {
     "dev": "dotenv -e ../../.env -- tsx --watch --tsconfig ./tsconfig.json -r tsconfig-paths/register src/index.ts",
-    "build": "tsc -p ./tsconfig.json && npm run build:copy-templates && npm run build:fix-paths",
+    "build": "tsc -p ./tsconfig.json && npm run build:copy-templates && npm run build:copy-public && npm run build:fix-paths",
     "build:fix-paths": "mv dist/src/apps/backend/src/* dist/src/ 2>/dev/null || true && mv dist/src/apps/backend/prisma dist/prisma 2>/dev/null || true && mv dist/src/prisma dist/prisma 2>/dev/null || true && rm -rf dist/src/apps 2>/dev/null || true",
     "build:copy-templates": "cp -r src/templates dist/src/templates || echo '⚠️ Templates copy failed (maybe already there)'",
+    "build:copy-public": "cp -r public dist/public || echo '⚠️ Public copy failed (maybe already there)'",
     "start": "node dist/src/index.js",
     "seed": "dotenv -e ../../.env -- tsx scripts/seed-test-data.ts",
     "test": "npm run test:unit",
