@@ -869,7 +869,7 @@ export default function QuestionnairePage() {
     } else {
       // Last step is stepInterest (stars): show contact form only if rating >= 2
       const interestValue = answers["stepInterest"]
-      if (interestValue && parseInt(interestValue) >= 2) {
+      if (interestValue && parseInt(String(interestValue)) >= 2) {
         setView("contact_form")
       } else {
         submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })
@@ -1227,7 +1227,7 @@ export default function QuestionnairePage() {
                           >
                             <svg
                               className={`w-9 h-9 sm:w-12 sm:h-12 ${
-                                answers[step.id] !== undefined && parseInt(answers[step.id]) >= star
+                                answers[step.id] !== undefined && parseInt(String(answers[step.id])) >= star
                                   ? "text-yellow-400 fill-yellow-400"
                                   : "text-slate-300 fill-none hover:text-yellow-200"
                               } transition-colors`}

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom"
 
 interface SiteFooterProps {
-  language?: "it" | "en" | "es" | "pt"
+  language?: "it" | "en" | "es" | "pt" | "fr" | "ca"
 }
 
 const translations = {
@@ -17,6 +17,9 @@ const translations = {
     teamCollaboration: "Collaborazione Team",
     privacyDesign: "Privacy by Design",
     crmIntegration: "Integrazione CRM",
+    solutions: "Soluzioni",
+    laundryService: "Lavanderie",
+    franchising: "Franchising Multi-Sede",
     company: "Azienda",
     about: "Chi Siamo",
     contact: "Contatti",
@@ -40,6 +43,9 @@ const translations = {
     teamCollaboration: "Team Collaboration",
     privacyDesign: "Privacy by Design",
     crmIntegration: "CRM Integration",
+    solutions: "Solutions",
+    laundryService: "Laundry Franchises",
+    franchising: "Multi-Location Franchises",
     company: "Company",
     about: "About Us",
     contact: "Contact",
@@ -63,6 +69,9 @@ const translations = {
     teamCollaboration: "Colaboración en Equipo",
     privacyDesign: "Privacy by Design",
     crmIntegration: "Integración CRM",
+    solutions: "Soluciones",
+    laundryService: "Lavanderías",
+    franchising: "Franquicias Multi-Sede",
     company: "Empresa",
     about: "Sobre Nosotros",
     contact: "Contacto",
@@ -86,6 +95,9 @@ const translations = {
     teamCollaboration: "Colaboração em Equipe",
     privacyDesign: "Privacy by Design",
     crmIntegration: "Integração CRM",
+    solutions: "Soluções",
+    laundryService: "Lavandarias",
+    franchising: "Franquias Multi-Sede",
     company: "Empresa",
     about: "Sobre Nós",
     contact: "Contato",
@@ -100,7 +112,8 @@ const translations = {
 }
 
 export function SiteFooter({ language = "en" }: SiteFooterProps) {
-  const t = translations[language]
+  // fr/ca have no dedicated footer copy yet — fall back to English.
+  const t = translations[language as "it" | "en" | "es" | "pt"] ?? translations.en
   const currentYear = new Date().getFullYear()
   return (
     <footer className="bg-slate-900 text-slate-300">
@@ -136,6 +149,11 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
               <li><Link to="/crm-integration" className="text-sm hover:text-green-500 transition-colors">{t.crmIntegration}</Link></li>
               <li><Link to="/team-collaboration" className="text-sm hover:text-green-500 transition-colors">{t.teamCollaboration}</Link></li>
               <li><Link to="/privacy-by-design" className="text-sm hover:text-green-500 transition-colors">{t.privacyDesign}</Link></li>
+            </ul>
+            <h3 className="text-white font-semibold mt-6 mb-4">{t.solutions}</h3>
+            <ul className="space-y-3">
+              <li><Link to="/laundry-service" className="text-sm hover:text-green-500 transition-colors">{t.laundryService}</Link></li>
+              <li><Link to="/franchising" className="text-sm hover:text-green-500 transition-colors">{t.franchising}</Link></li>
             </ul>
           </div>
 

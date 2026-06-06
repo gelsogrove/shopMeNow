@@ -497,7 +497,7 @@ export function LaundryServicePage() {
         </section>
       </main>
 
-      <SiteFooter />
+      <SiteFooter language={language} />
     </>
   )
 }

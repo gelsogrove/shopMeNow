@@ -26,6 +26,9 @@ import {
   applyEscalationNotification,
 } from "../../application/services/custom-client-chatbot.service"
 import { SecurityCheckService } from "../../application/services/security-check.service"
+import { WorkspaceAccessService } from "../../application/services/workspace-access.service"
+import { SubscriptionBillingService } from "../../application/services/subscription-billing.service"
+import { websocketService } from "../websocket.service"
 import { splitCustomChatbotReply } from "../../utils/custom-chatbot-reply"
 import { buildWelcomeVideoSplit, WELCOME_VIDEO_INTRO } from "../../utils/welcome-video"
 import { detectLanguageFromPhonePrefix } from "../../utils/language-detector"
@@ -173,6 +176,339 @@ export class WhatsAppInboundPipeline {
     }
 
     logger.info("[PIPELINE] ✅ Security validation passed", { customerId })
+    return null
+  }
+
+  /**
+   * 💰 Shared billing/access guard. Run BEFORE generating a reply, identical for
+   * every provider. Returns null when the workspace may process the message;
+   * returns a PipelineResult when the caller must stop:
+   *   - CHANNEL_DISABLED → 200, message saved silently, no reply
+   *   - DEBUG_MODE       → 200, translated WIP message saved + sent
+   *   - PAUSED/PAYMENT_FAILED/CREDIT_EXHAUSTED → 402 silent block (no save)
+   *   - trial expired    → 402 TRIAL_EXPIRED (silent)
+   *   - insufficient credit → 402 INSUFFICIENT_CREDIT (silent)
+   * Playground skips access/trial/credit. Mirrors the canonical Meta controller.
+   */
+  async checkBillingAccess(input: {
+    customer: any
+    chatSession: any
+    messageMarkdown: string
+    whatsappMessageId: string
+    isPlayground: boolean
+  }): Promise<PipelineResult | null> {
+    const { customer, chatSession, messageMarkdown, whatsappMessageId, isPlayground } = input
+    const workspaceId = customer.workspaceId
+
+    const workspaceAccessService = new WorkspaceAccessService(prisma)
+
+    // RULE: debugMode=true → WIP message — but NOT for playground.
+    const accessResult: any = isPlayground
+      ? { canProcess: true, blockReason: null, message: null }
+      : await workspaceAccessService.canProcessMessages(workspaceId, false)
+
+    // 🛠️ DebugFlow: FLOW workspaces process normally in debugMode (strategy
+    // appends a debug trace to the response instead of blocking with WIP).
+    if (!accessResult.canProcess && accessResult.blockReason === "DEBUG_MODE") {
+      const wsMode = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { channelMode: true },
+      })
+      if (wsMode?.channelMode === "FLOW") {
+        logger.info("[PIPELINE] 🛠️ DebugFlow - FLOW workspace bypasses WIP, processing normally", {
+          workspaceId,
+          customerId: customer.id,
+        })
+        accessResult.canProcess = true
+        accessResult.blockReason = null
+      }
+    }
+
+    if (!accessResult.canProcess) {
+      // 🚫 CHANNEL_DISABLED → silent block (save message, no reply).
+      if (accessResult.blockReason === "CHANNEL_DISABLED") {
+        logger.info("[PIPELINE] 🚫 Channel disabled - saving message without response", {
+          workspaceId,
+          customerId: customer.id,
+        })
+
+        const savedMessage = await prisma.conversationMessage.create({
+          data: {
+            workspaceId,
+            customerId: customer.id,
+            conversationId: chatSession.id,
+            role: "user",
+            content: messageMarkdown,
+            agentType: "NONE",
+            tokensUsed: 0,
+            whatsappMessageId, // 📲 inbound wamid → operator reaction forwarding
+            debugInfo: JSON.stringify({
+              channelDisabled: true,
+              reason: "workspace.channelStatus = false",
+              timestamp: new Date().toISOString(),
+              source: "whatsapp-webhook",
+            }),
+          },
+        })
+
+        try {
+          websocketService.notifyNewMessage(workspaceId, {
+            id: savedMessage.id,
+            sessionId: chatSession.id,
+            content: messageMarkdown,
+            sender: "customer",
+            timestamp: savedMessage.createdAt.toISOString(),
+            workspaceId,
+            metadata: { channelDisabled: true, source: "whatsapp-webhook" },
+          })
+          websocketService.notifyChatUpdated(workspaceId, {
+            sessionId: chatSession.id,
+            lastMessage: messageMarkdown.substring(0, 100),
+            lastMessageAt: savedMessage.createdAt.toISOString(),
+            customerId: customer.id,
+          })
+        } catch (wsError) {
+          logger.warn("[PIPELINE] ⚠️ Failed to notify WebSocket for channel-disabled message", {
+            error: wsError,
+            workspaceId,
+            customerId: customer.id,
+          })
+        }
+
+        return {
+          statusCode: 200,
+          status: "channel_disabled",
+          code: "CHANNEL_DISABLED",
+          body: { status: "channel_disabled", code: "CHANNEL_DISABLED", message: "Channel is disabled." },
+        }
+      }
+
+      // 🚧 DEBUG_MODE → send a translated WIP "work in progress" message.
+      if (accessResult.blockReason === "DEBUG_MODE") {
+        logger.info("[PIPELINE] 🚧 Debug mode (WIP) - sending maintenance message", {
+          workspaceId,
+          customerId: customer.id,
+        })
+
+        const workspace = await prisma.workspace.findUnique({
+          where: { id: workspaceId },
+          select: {
+            wipMessage: true,
+            defaultLanguage: true,
+            ownerId: true,
+            owner: { select: { status: true } },
+          },
+        })
+
+        // 🚫 OWNER STATUS CHECK: block if owner is INACTIVE.
+        if (workspace?.owner?.status === "INACTIVE") {
+          logger.warn("[PIPELINE] ❌ WIP message blocked: Owner inactive", {
+            workspaceId,
+            ownerId: workspace.ownerId,
+          })
+          return {
+            statusCode: 200,
+            status: "ok",
+            body: { success: true, message: "Message received" },
+          }
+        }
+
+        const rawWipMessage = workspace?.wipMessage || "Work in progress. Please contact us later."
+        const customerLang =
+          customer.language ||
+          detectLanguageFromPhonePrefix(customer.phone) ||
+          workspace!.defaultLanguage
+
+        let finalWipMessage = rawWipMessage
+        let translationTokensUsed = 0
+        try {
+          const { TranslationAgent } = require("../../application/agents/TranslationAgent")
+          const translationAgent = new TranslationAgent(prisma)
+          const translationResult = await translationAgent.process({
+            workspaceId,
+            message: rawWipMessage,
+            targetLanguage: customerLang,
+            customerName: customer.name || "Customer",
+            customerId: customer.id,
+            channel: "whatsapp",
+          })
+          finalWipMessage = translationResult.message || rawWipMessage
+          translationTokensUsed = translationResult.tokensUsed || 0
+        } catch (translationError) {
+          logger.warn("[PIPELINE] ⚠️ WIP translation failed, using raw message", {
+            error: translationError,
+          })
+        }
+
+        // Save WIP exchange to history so the operator sees the contact attempt.
+        const userMessage = await prisma.conversationMessage.create({
+          data: {
+            workspaceId,
+            customerId: customer.id,
+            conversationId: chatSession.id,
+            role: "user",
+            content: messageMarkdown,
+            agentType: "NONE",
+            tokensUsed: 0,
+            whatsappMessageId,
+            debugInfo: JSON.stringify({
+              channelDisabled: true,
+              reason: "workspace.channelStatus = false (WIP mode)",
+              timestamp: new Date().toISOString(),
+              source: "whatsapp-webhook",
+            }),
+          },
+        })
+
+        const assistantMessage = await prisma.conversationMessage.create({
+          data: {
+            workspaceId,
+            customerId: customer.id,
+            conversationId: chatSession.id,
+            role: "assistant",
+            content: finalWipMessage,
+            agentType: "ROUTER",
+            tokensUsed: translationTokensUsed,
+            deliveryStatus: "pending",
+            debugInfo: JSON.stringify({
+              channelDisabled: true,
+              reason: "workspace.channelStatus = false (WIP mode)",
+              timestamp: new Date().toISOString(),
+              source: "whatsapp-webhook",
+            }),
+          },
+        })
+
+        try {
+          websocketService.notifyNewMessage(workspaceId, {
+            id: userMessage.id,
+            sessionId: chatSession.id,
+            content: messageMarkdown,
+            sender: "customer",
+            timestamp: userMessage.createdAt.toISOString(),
+            workspaceId,
+            metadata: { debugMode: true, source: "whatsapp-webhook" },
+          })
+          websocketService.notifyNewMessage(workspaceId, {
+            id: assistantMessage.id,
+            sessionId: chatSession.id,
+            content: finalWipMessage,
+            sender: "agent",
+            timestamp: assistantMessage.createdAt.toISOString(),
+            workspaceId,
+            metadata: { debugMode: true, source: "whatsapp-webhook" },
+          })
+          websocketService.notifyChatUpdated(workspaceId, {
+            sessionId: chatSession.id,
+            lastMessage: finalWipMessage.substring(0, 100),
+            lastMessageAt: assistantMessage.createdAt.toISOString(),
+            customerId: customer.id,
+          })
+        } catch (wsError) {
+          logger.warn("[PIPELINE] ⚠️ Failed to notify WebSocket for debug WIP message", {
+            error: wsError,
+            workspaceId,
+            customerId: customer.id,
+          })
+        }
+
+        try {
+          const directSend = new WhatsAppDirectSendService(prisma)
+          await directSend.send({
+            workspaceId,
+            customerId: customer.id,
+            phoneNumber: customer.phone,
+            messageContent: finalWipMessage,
+            conversationMessageId: assistantMessage.id,
+            skipSecurityCheck: true,
+          })
+        } catch (error) {
+          logger.error("[PIPELINE] ❌ Failed to send WIP message", {
+            error,
+            workspaceId,
+            customerId: customer.id,
+          })
+        }
+
+        return {
+          statusCode: 200,
+          status: "debug_wip",
+          code: "DEBUG_MODE",
+          body: {
+            status: "debug_wip",
+            code: "DEBUG_MODE",
+            message: "Channel is in maintenance mode. Your message has been saved.",
+            wipMessage: finalWipMessage,
+          },
+        }
+      }
+
+      // 🚫 Silent block for billing issues (PAUSED, PAYMENT_FAILED,
+      // CREDIT_EXHAUSTED, OWNER_DELETED) — DO NOT save, DO NOT respond.
+      logger.warn("[PIPELINE] 🚫 Workspace blocked - SILENT BLOCK", {
+        workspaceId,
+        customerId: customer.id,
+        blockReason: accessResult.blockReason,
+        message: accessResult.message,
+      })
+      return {
+        statusCode: 402,
+        status: "workspace_blocked",
+        code: accessResult.blockReason,
+        body: { status: "workspace_blocked", code: accessResult.blockReason, message: accessResult.message },
+      }
+    }
+
+    // 💰 BILLING: trial + credit (skip playground). Silent 402 blocks.
+    if (!isPlayground) {
+      const billingService = new SubscriptionBillingService(prisma)
+
+      const trialStatus = await billingService.isTrialValid(workspaceId)
+      if (trialStatus.isTrialPlan && !trialStatus.isValid) {
+        logger.warn("[PIPELINE] 💰 Trial expired - SILENT BLOCK (no save, no response)", {
+          workspaceId,
+          customerId: customer.id,
+        })
+        return {
+          statusCode: 402,
+          status: "billing_error",
+          code: "TRIAL_EXPIRED",
+          body: {
+            status: "billing_error",
+            code: "TRIAL_EXPIRED",
+            message: "Trial period has expired. Please upgrade your plan.",
+          },
+        }
+      }
+
+      const messageCost = await billingService.getOperationCost(workspaceId, "message")
+      const creditCheck = await billingService.checkCredit(workspaceId, messageCost)
+      if (!creditCheck.hasSufficientCredit) {
+        logger.warn("[PIPELINE] 💰 Insufficient credit - SILENT BLOCK (no save, no response)", {
+          workspaceId,
+          customerId: customer.id,
+          currentBalance: creditCheck.currentBalance,
+          requiredAmount: messageCost,
+        })
+        return {
+          statusCode: 402,
+          status: "billing_error",
+          code: "INSUFFICIENT_CREDIT",
+          body: {
+            status: "billing_error",
+            code: "INSUFFICIENT_CREDIT",
+            message: "Insufficient credit. Please recharge your account.",
+            details: {
+              currentBalance: creditCheck.currentBalance,
+              requiredAmount: messageCost,
+            },
+          },
+        }
+      }
+    } else {
+      logger.info("[PIPELINE] 🧪 Playground mode - skipping trial/credit checks")
+    }
+
     return null
   }
 

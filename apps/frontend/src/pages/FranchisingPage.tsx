@@ -414,7 +414,7 @@ export function FranchisingPage() {
         </section>
       </main>
 
-      <SiteFooter />
+      <SiteFooter language={language} />
     </>
   )
 }

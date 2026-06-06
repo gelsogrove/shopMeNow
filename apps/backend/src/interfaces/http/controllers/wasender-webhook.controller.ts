@@ -585,20 +585,9 @@ export class WasenderWebhookController {
       return res.status(200).json({ status: 'processed', source: 'customer_relay' })
     }
 
-    // 7. 💰 Workspace access check (billing, trial, channel limits)
-    const { WorkspaceAccessService } = await import(
-      '../../../application/services/workspace-access.service'
-    )
-    const workspaceAccessService = new WorkspaceAccessService(prisma)
-    const accessResult = await workspaceAccessService.canProcessMessages(workspaceId, false)
-
-    if (!accessResult.canProcess) {
-      logger.warn('[WASENDER] 🚫 Workspace access denied:', {
-        workspaceId,
-        reason: accessResult.blockReason,
-      })
-      return res.status(200).json({ status: 'denied', reason: accessResult.blockReason })
-    }
+    // 7. 💰 Workspace access/billing is enforced below (after chat session) by the
+    // shared pipeline guard — channel-disabled, debug WIP, trial and credit — so
+    // it behaves identically to Meta/UltraMsg.
 
     // 8. 🚦 Rate limiting
     const [customerPerMin, customerBurst, workspacePerMin, workspaceBurst] = await Promise.all([
@@ -670,6 +659,21 @@ export class WasenderWebhookController {
       return res
         .status(securityBlock.statusCode)
         .json(securityBlock.body ?? { status: securityBlock.status, code: securityBlock.code })
+    }
+
+    // 10.45. 💰 BILLING / ACCESS guard — shared pipeline (channel-disabled, debug
+    // WIP, PAUSED/credit-exhausted, trial, credit). Same result as Meta/UltraMsg.
+    const billingBlock = await whatsAppInboundPipeline.checkBillingAccess({
+      customer,
+      chatSession,
+      messageMarkdown,
+      whatsappMessageId: messageId || `wasender-${chatSession.id}`,
+      isPlayground: false,
+    })
+    if (billingBlock) {
+      return res
+        .status(billingBlock.statusCode)
+        .json(billingBlock.body ?? { status: billingBlock.status, code: billingBlock.code })
     }
 
     // 10.5. ⌨️  Typing indicator — show "composing" while LLM processes
