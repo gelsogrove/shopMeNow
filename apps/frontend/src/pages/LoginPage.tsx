@@ -2570,12 +2570,6 @@ export function LoginPage() {
                       >
                         {t("common.viewMore")}
                       </Link>
-                      <Link
-                        to="/team-collaboration"
-                        className="inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-900 hover:underline transition-colors"
-                      >
-                        {t("common.viewMore")}
-                      </Link>
                     </div>
                   </div>
                 </div>

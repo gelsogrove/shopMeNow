@@ -358,68 +358,6 @@ export function PrivacyByDesignPage() {
           </div>
         </section>
 
-        {/* 2FA */}
-        <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              className="text-center mb-14"
-            >
-              <div className="h-20 w-20 bg-green-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <QrCode className="h-10 w-10 text-green-600" />
-              </div>
-              <h2 className="text-4xl font-bold text-slate-900 mb-4">{t.twoFaTitle}</h2>
-              <p className="text-lg text-slate-600 max-w-3xl mx-auto leading-relaxed">{t.twoFaDesc}</p>
-            </motion.div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {t.twoFaFeatures.map((f, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.15 }}
-                  className="text-center p-8 bg-white rounded-2xl shadow-lg border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all"
-                >
-                  <div className="h-16 w-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                    <f.icon className="h-8 w-8 text-green-600" />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-3">{f.label}</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">{f.desc}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Rights */}
-        <section className="py-20 bg-gradient-to-b from-green-50 to-white">
-          <div className="max-w-5xl mx-auto px-6 lg:px-8">
-            <h2 className="text-4xl font-bold text-slate-900 text-center mb-12">{t.rightsTitle}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {t.rights.map((r, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.15 }}
-                  className="text-center p-8 bg-white rounded-2xl shadow-lg border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all"
-                >
-                  <div className="h-16 w-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                    <r.icon className="h-8 w-8 text-green-600" />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 mb-3">{r.label}</h3>
-                  <p className="text-slate-600 text-sm leading-relaxed">{r.desc}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* CTA */}
         <section className="py-20 bg-gradient-to-br from-green-600 to-slate-800">
           <div className="max-w-3xl mx-auto px-6 text-center">
