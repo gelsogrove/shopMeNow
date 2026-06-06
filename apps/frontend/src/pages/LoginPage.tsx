@@ -2852,20 +2852,14 @@ export function LoginPage() {
           
           {/* CTA Button */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <button
-              onClick={() => setShowOnboardingWizard(true)}
+            <Link
+              to="/contact"
               className="group px-10 py-5 bg-white text-green-600 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-white/50 hover:scale-105 transition-all duration-300 flex items-center gap-3"
             >
-              <span>{t("cta.button.start")}</span>
+              <span>{t("cta.button.contact")}</span>
               <svg className="w-6 h-6 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
-            </button>
-            <Link
-              to="/contact"
-              className="px-10 py-5 bg-emerald-600 text-white rounded-2xl font-bold text-lg hover:bg-emerald-700 shadow-lg transition-all duration-300"
-            >
-              {t("cta.button.contact")}
             </Link>
           </div>
         </div>
