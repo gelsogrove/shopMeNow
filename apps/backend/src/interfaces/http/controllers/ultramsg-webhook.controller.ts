@@ -804,7 +804,7 @@ export class UltraMsgWebhookController {
                 workspaceId: customer.workspaceId,
                 customerId: customer.id,
                 phoneNumber: customer.phone,
-                messageContent: welcomeResult.welcomeText,
+                messageContent: mdToWhatsApp(welcomeResult.welcomeText),
                 conversationMessageId: welcomeResult.assistantMessageId,
                 skipSecurityCheck: true,
               })
@@ -1612,7 +1612,7 @@ export class UltraMsgWebhookController {
           workspaceId,
           customerId: customer.id,
           phoneNumber: customer.phone,
-          messageContent: routerResult.response,
+          messageContent: mdToWhatsApp(routerResult.response),
           conversationMessageId: assistantMessage?.id,
         })
 
