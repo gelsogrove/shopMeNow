@@ -160,8 +160,9 @@ export function useLoadMoreMessages(
       }
     },
     enabled: !!sessionId && enabled,
-    staleTime: 60000, // Consider data fresh for 1 minute
+    staleTime: 0,
     gcTime: 300000, // Keep in cache for 5 minutes
+    refetchInterval: 10000, // Fallback polling every 10s when WebSocket misses events
     refetchOnWindowFocus: false,
   })
 

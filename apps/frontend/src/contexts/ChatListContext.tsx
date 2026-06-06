@@ -106,11 +106,11 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
         throw error
       }
     },
-    // 🚀 REMOVED: refetchInterval - WebSocket handles real-time updates
     retry: false, // 🔥 FIX: Don't retry on session errors (axios interceptor handles redirect)
-    staleTime: 0, // 🔥 FIX: Always consider data stale to allow immediate refetch on invalidation
+    staleTime: 0,
     gcTime: 300000, // Keep in cache for 5 minutes
-    refetchOnWindowFocus: false, // Don't refetch on window focus (WebSocket handles updates)
+    refetchInterval: 15000, // Fallback polling every 15s when WebSocket misses events
+    refetchOnWindowFocus: true, // Refetch when tab becomes active
   })
 
   const updateChat = useCallback(
