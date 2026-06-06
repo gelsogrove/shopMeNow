@@ -35,6 +35,7 @@ export default function WidgetSettingsPage() {
   const [primaryColor, setPrimaryColor] = useState<string>("#22c55e");
   const [icon, setIcon] = useState<string>("chat");
   const [useChannelLogo, setUseChannelLogo] = useState<boolean>(false);
+  const [welcomeVideoUrl, setWelcomeVideoUrl] = useState<string>("");
   const [copied, setCopied] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -48,6 +49,7 @@ export default function WidgetSettingsPage() {
       setPrimaryColor((workspace as any).widgetPrimaryColor || "#22c55e");
       setIcon((workspace as any).widgetIcon || "chat");
       setUseChannelLogo((workspace as any).widgetUseChannelLogo ?? false);
+      setWelcomeVideoUrl((workspace as any).widgetWelcomeVideoUrl || "");
     }
   }, [workspace]);
 
@@ -66,6 +68,7 @@ export default function WidgetSettingsPage() {
       icon,
       language,
       primaryColor,
+      welcomeVideoUrl: welcomeVideoUrl.trim() || "",
     };
   };
 
@@ -175,6 +178,7 @@ export default function WidgetSettingsPage() {
         widgetPrimaryColor: primaryColor,
         widgetIcon: icon,
         widgetUseChannelLogo: useChannelLogo,
+        widgetWelcomeVideoUrl: welcomeVideoUrl.trim() || null,
       });
       setCurrentWorkspace({
         ...workspace,
@@ -183,6 +187,7 @@ export default function WidgetSettingsPage() {
         widgetPrimaryColor: primaryColor,
         widgetIcon: icon,
         widgetUseChannelLogo: useChannelLogo,
+        widgetWelcomeVideoUrl: welcomeVideoUrl.trim() || undefined,
       } as any);
       toast.success("Widget configuration saved!");
     } catch (error: any) {
@@ -278,6 +283,20 @@ export default function WidgetSettingsPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="welcomeVideoUrl">Welcome Video URL</Label>
+                  <Input
+                    id="welcomeVideoUrl"
+                    type="url"
+                    placeholder="e.g. https://youtu.be/... or https://.../intro.mp4"
+                    value={welcomeVideoUrl}
+                    onChange={(e) => setWelcomeVideoUrl(e.target.value)}
+                    className="h-9"
+                  />
+                  <p className="text-xs text-slate-500">
+                    Optional. Shown when the widget opens. Supports YouTube, Vimeo, or a direct .mp4 link. Leave empty to disable.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label>Widget Icon</Label>

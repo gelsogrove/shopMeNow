@@ -123,6 +123,7 @@ interface ChatWidgetProps {
   icon?: string
   language?: string
   apiUrl?: string
+  welcomeVideoUrl?: string
   onOpenChange?: (isOpen: boolean) => void
   onConvert?: (customerId: string) => void
 }
@@ -142,6 +143,23 @@ const getApiUrl = () => {
 
 const DEFAULT_API_URL = getApiUrl()
 const DEFAULT_PRIMARY_COLOR = "#22c55e"
+
+// Convert a welcome-video URL (YouTube / Vimeo / direct file) into a renderable
+// form. Returns null for unrecognized URLs — no guessing, no broken embeds.
+function resolveWelcomeVideo(
+  url: string
+): { kind: "iframe" | "file"; src: string } | null {
+  const u = (url || "").trim()
+  if (!u) return null
+  const yt = u.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/
+  )
+  if (yt) return { kind: "iframe", src: `https://www.youtube.com/embed/${yt[1]}` }
+  const vm = u.match(/vimeo\.com\/(?:video\/)?(\d+)/)
+  if (vm) return { kind: "iframe", src: `https://player.vimeo.com/video/${vm[1]}` }
+  if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(u)) return { kind: "file", src: u }
+  return null
+}
 
 type LangCode = "it" | "en" | "es" | "pt" | "fr" | "de"
 
@@ -274,6 +292,7 @@ export function ChatWidget({
   icon,
   language,
   apiUrl,
+  welcomeVideoUrl,
   onOpenChange,
   onConvert,
 }: ChatWidgetProps) {
@@ -348,6 +367,9 @@ export function ChatWidget({
     useChannelLogo === true
   const resolvedIcon = widgetConfig?.icon || icon || "chat"
   const resolvedApiUrl = widgetConfig?.apiUrl || apiUrl || DEFAULT_API_URL
+  const resolvedWelcomeVideoUrl =
+    (widgetConfig as any)?.welcomeVideoUrl || welcomeVideoUrl || ""
+  const welcomeVideo = resolveWelcomeVideo(resolvedWelcomeVideoUrl)
   const resolvedAutoSuggestionsEnabled =
     (widgetConfig as any)?.autoSuggestionsEnabled === true
   const resolvedQuickReplies = Array.isArray((widgetConfig as any)?.quickReplies)
@@ -391,6 +413,7 @@ export function ChatWidget({
   // Registration form state
   // showRegistrationForm=true by default; set to false if customerId found in localStorage
   const [showRegistrationForm, setShowRegistrationForm] = useState(true)
+  const [welcomeVideoDismissed, setWelcomeVideoDismissed] = useState(false)
   const [formName, setFormName] = useState("")
   const [formPhone, setFormPhone] = useState("")
   const [formLanguage, setFormLanguage] = useState<LangCode>("en")
@@ -1297,6 +1320,36 @@ export function ChatWidget({
             /* ── Registration Form ── */
             <>
               <ScrollArea className="flex-1 bg-slate-50 px-5 py-5">
+                {!showTermsContent && welcomeVideo && !welcomeVideoDismissed && (
+                  <div className="mb-4 rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm relative">
+                    <button
+                      type="button"
+                      onClick={() => setWelcomeVideoDismissed(true)}
+                      aria-label="Close video"
+                      className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-black/55 hover:bg-black/75 text-white text-sm flex items-center justify-center transition-colors"
+                    >
+                      ×
+                    </button>
+                    <div className="aspect-video bg-black">
+                      {welcomeVideo.kind === "file" ? (
+                        <video
+                          src={welcomeVideo.src}
+                          controls
+                          playsInline
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <iframe
+                          src={welcomeVideo.src}
+                          title="Welcome video"
+                          className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
                 {showTermsContent ? (
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold text-slate-800">{ui.termsTitle}</h3>
