@@ -198,6 +198,134 @@ export class WhatsAppDirectSendService {
   }
 
   /**
+   * Send an image (with optional caption) directly via the workspace's provider.
+   *
+   * Same pipeline as send() — provider resolution, billing deduction, timeline —
+   * but uses provider.sendMediaMessage(..., 'image'). The caption is run through
+   * mdToWhatsApp so bold/links render correctly. Used for the welcome-video
+   * thumbnail (works identically across Meta, UltraMsg and Wasender).
+   */
+  async sendMedia(params: {
+    workspaceId: string
+    customerId: string
+    phoneNumber: string
+    mediaUrl: string
+    caption?: string
+    conversationMessageId?: string
+    skipSecurityCheck?: boolean
+    isPlayground?: boolean
+  }): Promise<DirectSendResult> {
+    const {
+      workspaceId,
+      customerId,
+      phoneNumber,
+      mediaUrl,
+      caption,
+      conversationMessageId,
+      skipSecurityCheck = false,
+      isPlayground = false,
+    } = params
+
+    if (isPlayground) {
+      logger.info("[DirectSend] 🧪 Playground mode - skipping media send", { workspaceId, customerId })
+      return { success: true }
+    }
+
+    if (!phoneNumber) {
+      logger.error("[DirectSend] ❌ Missing phone number (media)", { workspaceId, customerId })
+      return { success: false, error: "Missing destination phone number" }
+    }
+
+    // 🔒 SECURITY CHECK on the caption (skip for bot-generated content).
+    if (!skipSecurityCheck && caption) {
+      try {
+        const securityResult = await this.securityAgent.process({
+          workspaceId,
+          message: caption,
+          customerId,
+          customerName: undefined,
+        })
+        if (!securityResult.safe) {
+          logger.warn("[DirectSend] 🚫 Media caption blocked by security check", {
+            workspaceId,
+            customerId,
+            reason: securityResult.blockedReason,
+          })
+          return { success: false, blocked: true, error: securityResult.blockedReason }
+        }
+      } catch (error) {
+        logger.error("[DirectSend] ⚠️ Media security check failed - allowing", {
+          workspaceId,
+          customerId,
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+    }
+
+    const workspace = (await this.prisma.workspace.findUnique({ where: { id: workspaceId } })) as any
+    if (!workspace) {
+      return { success: false, error: "Workspace not found" }
+    }
+    if (!WhatsAppProviderFactory.isConfigured(workspace)) {
+      const providerName = WhatsAppProviderFactory.getProviderDisplayName(workspace)
+      return { success: false, error: `WhatsApp not configured (${providerName})` }
+    }
+
+    const provider = WhatsAppProviderFactory.create(workspace)
+    const formattedCaption = caption ? mdToWhatsApp(caption) : undefined
+
+    let sendResult: { success: boolean; messageId?: string; error?: string }
+    try {
+      sendResult = await provider.sendMediaMessage(phoneNumber, mediaUrl, formattedCaption, "image")
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      logger.error("[DirectSend] ❌ Provider media send failed", { workspaceId, customerId, error: errorMessage })
+      sendResult = { success: false, error: errorMessage }
+    }
+
+    if (!sendResult.success) {
+      logger.error("[DirectSend] ❌ Failed to send media", { workspaceId, customerId, error: sendResult.error })
+      return { success: false, error: sendResult.error }
+    }
+
+    logger.info("[DirectSend] ✅ Media sent", {
+      workspaceId,
+      customerId,
+      provider: provider.getProviderName(),
+      messageId: sendResult.messageId,
+    })
+
+    await this.appendTimelineStep(conversationMessageId, {
+      type: "sub_agent",
+      agent: "Send media to WhatsApp",
+      timestamp: new Date().toISOString(),
+      model: "WhatsApp Cloud API",
+      input: { phoneNumber, mediaUrl, caption: caption?.substring(0, 200) },
+      output: {
+        textResponse: `✅ Image delivered to ${phoneNumber}${sendResult.messageId ? ` (waId: ${sendResult.messageId})` : ""}`,
+      },
+    })
+
+    // 💰 BILLING: each delivered WhatsApp message is billable.
+    try {
+      const deductResult = await this.billingService.deductMessageCredit(workspaceId)
+      if (!deductResult.success) {
+        logger.warn("[DirectSend] ⚠️ Media billing failed after delivery — reconcile manually", {
+          workspaceId,
+          error: deductResult.error,
+        })
+      }
+    } catch (error) {
+      logger.warn("[DirectSend] ⚠️ Media billing exception after delivery", {
+        workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+
+    return { success: true, messageId: sendResult.messageId }
+  }
+
+  /**
    * Show the "typing…" indicator to the customer while the LLM composes a reply.
    *
    * Resolves the workspace's configured provider (same factory path as send())

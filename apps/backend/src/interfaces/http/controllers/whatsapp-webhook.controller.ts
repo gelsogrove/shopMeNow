@@ -1,13 +1,11 @@
 import { Request, Response } from "express"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
-import { SecurityCheckService } from "../../../application/services/security-check.service"
-import { CustomClientChatbotService, applyCustomerPatches, applyEscalationNotification } from "../../../application/services/custom-client-chatbot.service"
 import { UrlShortenerService } from "../../../application/services/url-shortener.service"
 import { platformConfigService } from "../../../services/platform-config.service"
 import { prisma } from "../../../lib/prisma"
 import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from "../../../middlewares/rateLimiter"
 // 🆕 Chat Engine - Main conversation processor
-import { ChatEngineService, getChatEngine } from "../../../application/chat-engine"
+import { ChatEngineService } from "../../../application/chat-engine"
 import { workspaceService } from "../../../services/workspace.service"
 import { websocketService } from "../../../services/websocket.service"
 import { getRegistrationText, detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
@@ -19,10 +17,8 @@ import { verifyWhatsAppSignature } from "../../../utils/whatsapp-signature"
 import { WhatsAppDirectSendService } from "../../../services/whatsapp-direct-send.service"
 import { WhatsAppProviderFactory } from "../../../services/whatsapp/whatsapp-provider.factory"
 import { whatsAppInboundPipeline } from "../../../services/whatsapp/whatsapp-inbound.pipeline"
-import { splitCustomChatbotReply } from "../../../utils/custom-chatbot-reply"
 // 📎 Inbound media (image/PDF): extract the media ref from the payload + ingest
 import { extractMetaMedia, ExtractedMedia } from "../../../services/webhook-media.extract"
-import { ingestInboundWebhookMedia } from "../../../services/inbound-media-webhook.service"
 // 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
 import { extractMetaReaction, ExtractedReaction } from "../../../services/webhook-reaction.extract"
 
@@ -118,7 +114,6 @@ async function sendWelcomeVideoIfConfigured(
  */
 
 export class WhatsAppWebhookController {
-  private readonly customClientChatbotService = new CustomClientChatbotService()
 
   /**
    * GET /api/whatsapp/webhook/:webhookId
@@ -2175,92 +2170,19 @@ export class WhatsAppWebhookController {
         }
       }
 
-      // 🔒 SECURITY CHECK: Validate message before processing with LLM
-      // Skip for playground (testing mode — no need to spend tokens on security checks)
-      let securityResults: any[] = []
-
-      if (isPlayground) {
-        logger.info("[WEBHOOK] 🧪 Playground mode - skipping security validation", {
-          customerId: customer.id,
-        })
-      } else {
-        logger.info("[WEBHOOK] 🔍 Starting security validation for WhatsApp message", {
-          customerId: customer.id,
-          workspaceId: customer.workspaceId,
-          phoneNumber: customer.phone,
-        })
-
-        try {
-          securityResults = await SecurityCheckService.validateMessage({
-            workspaceId: customer.workspaceId,
-            visitorId: customer.phone, // Use phone as visitorId for WhatsApp
-            message: messageMarkdown,
-            channel: "whatsapp",
-          })
-          logger.info("[WEBHOOK] ✅ Security validation completed", { 
-            resultsCount: securityResults.length,
-            customerId: customer.id,
-          })
-        } catch (securityError) {
-          logger.error("[WEBHOOK] ❌ Security validation error", {
-            error: securityError instanceof Error ? securityError.message : String(securityError),
-            stack: securityError instanceof Error ? securityError.stack : undefined,
-            customerId: customer.id,
-            workspaceId: customer.workspaceId,
-          })
-          
-          // Return 500 to prevent message processing
-          res.status(500).json({
-            status: "security_check_error",
-            code: "SECURITY_CHECK_ERROR",
-            message: "Failed to validate message security",
-          })
-          return
-        }
-      }
-
-      // Check if any security step failed
-      const failedStep = securityResults.find((result) => !result.passed)
-      if (failedStep) {
-        logger.warn("[WEBHOOK] 🚨 Security check failed - message blocked", {
-          customerId: customer.id,
-          workspaceId: customer.workspaceId,
-          phoneNumber: customer.phone,
-          step: failedStep.step,
-          reason: failedStep.reason,
-        })
-
-        // Save blocked message to history for admin review
-        await prisma.conversationMessage.create({
-          data: {
-            workspaceId: customer.workspaceId,
-            customerId: customer.id,
-            conversationId: chatSession.id,
-            role: "user",
-            content: messageMarkdown,
-            agentType: "NONE",
-            tokensUsed: 0,
-            debugInfo: JSON.stringify({
-              securityBlocked: true,
-              failedStep: failedStep.step,
-              reason: failedStep.reason,
-              timestamp: new Date().toISOString(),
-              source: "whatsapp-webhook",
-            }),
-          },
-        })
-
-        // Return 429 with retry information
-        res.status(429).json({
-          status: "security_blocked",
-          code: failedStep.step,
-          message: failedStep.reason || "Security check failed",
-          retryAfter: failedStep.retryAfter,
-        })
+      // 🔒 SECURITY CHECK — shared pipeline guard (same for all providers).
+      const securityBlock = await whatsAppInboundPipeline.checkSecurity({
+        workspaceId: customer.workspaceId,
+        customerId: customer.id,
+        customerPhone: customer.phone,
+        conversationId: chatSession.id,
+        messageMarkdown,
+        isPlayground,
+      })
+      if (securityBlock) {
+        res.status(securityBlock.statusCode).json(securityBlock.body ?? { status: securityBlock.status, code: securityBlock.code })
         return
       }
-
-      logger.info("[WEBHOOK] ✅ Security validation passed", { customerId: customer.id })
 
       // 🔒 Feature 197: Check workspace access BEFORE billing
       // This handles: PAUSED, PAYMENT_FAILED, CREDIT_EXHAUSTED (< -$10), DEBUG_MODE (WIP), CHANNEL_DISABLED (silent)

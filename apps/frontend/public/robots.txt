@@ -8,6 +8,7 @@ Allow: /contact
 Allow: /widget-to-whatsapp
 Allow: /human-support
 Allow: /laundry-service
+Allow: /franchising
 Allow: /appointment-booking
 Allow: /crm-integration
 Allow: /team-collaboration

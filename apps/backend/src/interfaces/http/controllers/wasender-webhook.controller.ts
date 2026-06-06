@@ -30,11 +30,8 @@
 import { Request, Response } from 'express'
 import { prisma } from '@echatbot/database'
 import { WasenderClientService } from '../../../services/wasender-client.service'
-import { SecurityCheckService } from '../../../application/services/security-check.service'
-import { getChatEngine } from '../../../application/chat-engine'
-// 📎 Inbound media (image/PDF): extract the media ref from the payload + ingest
+// 📎 Inbound media (image/PDF): extract the media ref from the payload
 import { extractWasenderMedia } from '../../../services/webhook-media.extract'
-import { ingestInboundWebhookMedia } from '../../../services/inbound-media-webhook.service'
 // 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
 import { extractWasenderReaction } from '../../../services/webhook-reaction.extract'
 import {
@@ -48,7 +45,7 @@ import { whatsAppToMarkdown } from '../../../utils/whatsapp-formatter'
 import { buildPhoneVariants } from '../../../utils/phone'
 import { detectLanguageFromPhonePrefix } from '../../../utils/language-detector'
 import { OperatorRelayService } from '../../../application/services/operator-relay.service'
-import { WhatsAppDirectSendService } from '../../../services/whatsapp-direct-send.service'
+import { whatsAppInboundPipeline } from '../../../services/whatsapp/whatsapp-inbound.pipeline'
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -660,6 +657,21 @@ export class WasenderWebhookController {
 
     // 10. 🔄 Already converted at step 6
 
+    // 10.4. 🔒 SECURITY CHECK — shared pipeline guard (same as Meta/UltraMsg).
+    const securityBlock = await whatsAppInboundPipeline.checkSecurity({
+      workspaceId,
+      customerId: customer.id,
+      customerPhone: customer.phone,
+      conversationId: chatSession.id,
+      messageMarkdown,
+      isPlayground: false,
+    })
+    if (securityBlock) {
+      return res
+        .status(securityBlock.statusCode)
+        .json(securityBlock.body ?? { status: securityBlock.status, code: securityBlock.code })
+    }
+
     // 10.5. ⌨️  Typing indicator — show "composing" while LLM processes
     if (workspace.wasenderApiKey && key.remoteJid) {
       this.wasenderClient
@@ -667,43 +679,43 @@ export class WasenderWebhookController {
         .catch(() => { /* non-critical */ })
     }
 
-    logger.info('[WASENDER] 🎯 Calling Chat Engine:', {
-      customerId: customer.id,
-      conversationId: chatSession.id,
+    // 11. 🤖 Shared provider-agnostic pipeline — same result as Meta/UltraMsg
+    // (custom-ecolaundry → chatEngine, typing, media ingest, direct send).
+    // processReply reads the full workspace off customer.workspace; the workspace
+    // loaded at step 1 has a limited select, so fetch the fields it needs.
+    const pipelineWorkspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        id: true,
+        slug: true,
+        customChatbotId: true,
+        welcomeMessage: true,
+        wipMessage: true,
+        channelStatus: true,
+        debugMode: true,
+        defaultLanguage: true,
+        welcomeVideoUrl: true,
+      },
+    })
+    ;(customer as any).workspace = pipelineWorkspace
+
+    // First-message welcome-video trigger: count prior real user messages.
+    const messageCount = await prisma.conversationMessage.count({
+      where: { conversationId: chatSession.id, role: 'user' },
     })
 
-    // 11. 🤖 Chat Engine
-    const chatEngine = getChatEngine(prisma)
-    const routerResult = await chatEngine.routeMessage({
-      workspaceId,
-      customerId: customer.id,
-      conversationId: chatSession.id,
-      message: messageMarkdown,
-      customerLanguage:
-        customer.language ||
-        detectLanguageFromPhonePrefix(customer.phone) ||
-        workspace.defaultLanguage,
-      customerName: customer.name,
-      customerDiscount: customer.discount || 0,
+    // Inbound media ingest happens inside the pipeline (chatEngine path), matching
+    // Meta — no separate ingest here (avoids double-ingestion of the same media).
+    const result = await whatsAppInboundPipeline.processReply({
+      customer,
+      chatSession,
+      messageMarkdown,
+      whatsappMessageId: messageId || `wasender-${chatSession.id}`,
+      inboundMedia,
       isPlayground: false,
-      channel: 'whatsapp',
+      messageCount,
+      registrationPromptLevel: 0,
     })
-
-    logger.info('[WASENDER] ✅ Chat Engine completed:', {
-      agentUsed: routerResult.agentUsed,
-      tokensUsed: routerResult.tokensUsed,
-    })
-
-    // 📎 Inbound media: if the customer sent an image/PDF, download it from
-    // WaSender and persist it linked to the user message just saved.
-    // Fail-safe: never blocks or breaks the text reply.
-    if (inboundMedia) {
-      await ingestInboundWebhookMedia({
-        workspaceId,
-        conversationId: chatSession.id,
-        media: inboundMedia,
-      })
-    }
 
     // Stop typing indicator
     if (workspace.wasenderApiKey && key.remoteJid) {
@@ -712,36 +724,8 @@ export class WasenderWebhookController {
         .catch(() => { /* non-critical */ })
     }
 
-    if (routerResult.isBlocked) {
-      logger.warn('[WASENDER] 🚫 Customer blocked:', { customerId: customer.id })
-      return res.status(410).json({ status: 'blocked' })
-    }
-
-    // 12. 📤 Direct send
-    try {
-      const assistantMessage = await prisma.conversationMessage.findFirst({
-        where: {
-          conversationId: chatSession.id,
-          role: 'assistant',
-          content: routerResult.response,
-        },
-        orderBy: { createdAt: 'desc' },
-      })
-
-      const directSend = new WhatsAppDirectSendService(prisma)
-      await directSend.send({
-        workspaceId,
-        customerId: customer.id,
-        phoneNumber: customer.phone,
-        messageContent: routerResult.response,
-        conversationMessageId: assistantMessage?.id,
-      })
-
-      logger.info('[WASENDER] ✅ Response sent directly to WhatsApp', { customerId: customer.id })
-    } catch (sendError) {
-      logger.error('[WASENDER] ❌ Failed to send response:', sendError)
-    }
-
-    return res.status(200).json({ status: 'processed' })
+    return res
+      .status(result.statusCode)
+      .json(result.body ?? { status: result.status, code: result.code })
   }
 }

@@ -54,6 +54,7 @@ import { detectLanguageFromPhonePrefix } from '../../../utils/language-detector'
 import { OperatorRelayService } from '../../../application/services/operator-relay.service'
 import { WhatsAppDirectSendService } from '../../../services/whatsapp-direct-send.service'
 import { splitCustomChatbotReply } from '../../../utils/custom-chatbot-reply'
+import { buildWelcomeVideoSplit, WELCOME_VIDEO_INTRO } from '../../../utils/welcome-video'
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -183,6 +184,7 @@ export class UltraMsgWebhookController {
               slug: true,
               name: true,
               welcomeMessage: true,
+              welcomeVideoUrl: true, // 📺 Presentation video URL (first-contact welcome)
               defaultLanguage: true,
               channelStatus: true,
               channelMode: true,
@@ -1503,16 +1505,61 @@ export class UltraMsgWebhookController {
           try {
             const directSend = new WhatsAppDirectSendService(prisma)
             const { customerReply } = splitCustomChatbotReply(customOutput.reply)
-            // WhatsAppDirectSendService.send() applies mdToWhatsApp internally —
-            // pass raw Markdown so there is exactly ONE conversion step.
-            await directSend.send({
-              workspaceId,
-              customerId: customer.id,
-              phoneNumber: customer.phone,
-              messageContent: customerReply,
-              conversationMessageId: assistantMessageId,
-              skipSecurityCheck: true, // bot-generated content, not user input
-            })
+            const welcomeVideoUrl = workspace.welcomeVideoUrl as string | null | undefined
+
+            // 📺 First message with a presentation video → mirror the playground's
+            // WelcomeVideoCard ORDER (greeting → intro → video → rest). Provider-
+            // agnostic: send()/sendMedia() resolve the workspace provider.
+            const videoSplit =
+              messageCount === 0 && welcomeVideoUrl
+                ? buildWelcomeVideoSplit(customerReply, welcomeVideoUrl, customerLanguage)
+                : null
+
+            if (videoSplit) {
+              // YouTube → two messages: (1) greeting + intro, then (2) the
+              // thumbnail as an image with the rest + clickable link as caption.
+              // Pass raw Markdown — send()/sendMedia() apply mdToWhatsApp.
+              await directSend.send({
+                workspaceId,
+                customerId: customer.id,
+                phoneNumber: customer.phone,
+                messageContent: videoSplit.textMessage,
+                skipSecurityCheck: true,
+              })
+              await directSend.sendMedia({
+                workspaceId,
+                customerId: customer.id,
+                phoneNumber: customer.phone,
+                mediaUrl: videoSplit.imageUrl,
+                caption: videoSplit.caption,
+                conversationMessageId: assistantMessageId,
+                skipSecurityCheck: true,
+              })
+            } else {
+              // No video, or non-YouTube video → single message. For a non-YouTube
+              // first-contact video, fall back to legacy inline intro + URL.
+              let finalReply = customerReply
+              if (messageCount === 0 && welcomeVideoUrl) {
+                const introText =
+                  WELCOME_VIDEO_INTRO[customerLanguage ?? 'en'] ?? WELCOME_VIDEO_INTRO.en
+                const breakIdx = customerReply.indexOf('\n\n')
+                if (breakIdx !== -1) {
+                  const greeting = customerReply.slice(0, breakIdx)
+                  const rest = customerReply.slice(breakIdx + 2)
+                  finalReply = `${greeting}\n\n${introText}\n${welcomeVideoUrl}\n\n${rest}`
+                } else {
+                  finalReply = `${customerReply}\n\n${introText}\n${welcomeVideoUrl}`
+                }
+              }
+              await directSend.send({
+                workspaceId,
+                customerId: customer.id,
+                phoneNumber: customer.phone,
+                messageContent: finalReply,
+                conversationMessageId: assistantMessageId,
+                skipSecurityCheck: true, // bot-generated content, not user input
+              })
+            }
           } catch (sendError) {
             logger.error('[ULTRAMSG] ❌ Failed to send custom chatbot response', {
               error: sendError,

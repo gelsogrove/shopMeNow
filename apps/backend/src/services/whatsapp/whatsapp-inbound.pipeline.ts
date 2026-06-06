@@ -25,7 +25,9 @@ import {
   applyCustomerPatches,
   applyEscalationNotification,
 } from "../../application/services/custom-client-chatbot.service"
+import { SecurityCheckService } from "../../application/services/security-check.service"
 import { splitCustomChatbotReply } from "../../utils/custom-chatbot-reply"
+import { buildWelcomeVideoSplit, WELCOME_VIDEO_INTRO } from "../../utils/welcome-video"
 import { detectLanguageFromPhonePrefix } from "../../utils/language-detector"
 import { ingestInboundWebhookMedia } from "../inbound-media-webhook.service"
 import { WhatsAppDirectSendService } from "../whatsapp-direct-send.service"
@@ -79,6 +81,100 @@ function normalizeLanguage(lang: string | null): string {
 
 export class WhatsAppInboundPipeline {
   private readonly customClientChatbotService = new CustomClientChatbotService()
+
+  /**
+   * 🔒 Shared security guard. Run BEFORE generating a reply, identical for every
+   * provider. Returns null when the message is safe (caller continues); returns a
+   * PipelineResult (429 blocked / 500 check-error) when the caller must stop and
+   * emit that response. Skipped in playground. On block, persists the rejected
+   * message for admin review — same behaviour as the canonical Meta controller.
+   */
+  async checkSecurity(input: {
+    workspaceId: string
+    customerId: string
+    customerPhone: string
+    conversationId: string
+    messageMarkdown: string
+    isPlayground: boolean
+  }): Promise<PipelineResult | null> {
+    const { workspaceId, customerId, customerPhone, conversationId, messageMarkdown, isPlayground } = input
+
+    if (isPlayground) {
+      logger.info("[PIPELINE] 🧪 Playground mode - skipping security validation", { customerId })
+      return null
+    }
+
+    let securityResults: any[] = []
+    try {
+      securityResults = await SecurityCheckService.validateMessage({
+        workspaceId,
+        visitorId: customerPhone, // phone is the visitorId for WhatsApp
+        message: messageMarkdown,
+        channel: "whatsapp",
+      })
+    } catch (securityError) {
+      logger.error("[PIPELINE] ❌ Security validation error", {
+        error: securityError instanceof Error ? securityError.message : String(securityError),
+        customerId,
+        workspaceId,
+      })
+      return {
+        statusCode: 500,
+        status: "security_check_error",
+        code: "SECURITY_CHECK_ERROR",
+        body: {
+          status: "security_check_error",
+          code: "SECURITY_CHECK_ERROR",
+          message: "Failed to validate message security",
+        },
+      }
+    }
+
+    const failedStep = securityResults.find((result) => !result.passed)
+    if (failedStep) {
+      logger.warn("[PIPELINE] 🚨 Security check failed - message blocked", {
+        customerId,
+        workspaceId,
+        step: failedStep.step,
+        reason: failedStep.reason,
+      })
+
+      // Save blocked message to history for admin review.
+      await prisma.conversationMessage.create({
+        data: {
+          workspaceId,
+          customerId,
+          conversationId,
+          role: "user",
+          content: messageMarkdown,
+          agentType: "NONE",
+          tokensUsed: 0,
+          debugInfo: JSON.stringify({
+            securityBlocked: true,
+            failedStep: failedStep.step,
+            reason: failedStep.reason,
+            timestamp: new Date().toISOString(),
+            source: "whatsapp-webhook",
+          }),
+        },
+      })
+
+      return {
+        statusCode: 429,
+        status: "security_blocked",
+        code: failedStep.step,
+        body: {
+          status: "security_blocked",
+          code: failedStep.step,
+          message: failedStep.reason || "Security check failed",
+          retryAfter: failedStep.retryAfter,
+        },
+      }
+    }
+
+    logger.info("[PIPELINE] ✅ Security validation passed", { customerId })
+    return null
+  }
 
   /**
    * Run the reply stage: language → typing → custom-ecolaundry (if mapped) or
@@ -250,43 +346,64 @@ export class WhatsAppInboundPipeline {
         try {
           const directSend = new WhatsAppDirectSendService(prisma)
           const { customerReply } = splitCustomChatbotReply(customOutput.reply)
-          // 📺 First message: mirror the playground's WelcomeVideoCard logic.
-          // Split at the first blank line, insert the localized intro + video URL
-          // between the greeting and the rest of the reply. Pass raw Markdown —
-          // WhatsAppDirectSendService.send() applies mdToWhatsApp internally so
-          // there is exactly ONE conversion step.
           const welcomeVideoUrl = (customer as any).workspace?.welcomeVideoUrl as string | null | undefined
-          let finalReply = customerReply
-          if (messageCount === 0 && welcomeVideoUrl) {
-            const INTRO: Record<string, string> = {
-              es: "Antes de empezar, te dejo una breve presentación 👇",
-              it: "Prima di iniziare, ecco una breve presentazione 👇",
-              en: "Before we start, here's a short presentation 👇",
-              ca: "Abans de començar, et deixo una breu presentació 👇",
-              pt: "Antes de começar, deixo-te uma breve apresentação 👇",
-              fr: "Avant de commencer, voici une brève présentation 👇",
-              de: "Bevor wir beginnen, hier eine kurze Präsentation 👇",
-              ar: "قبل أن نبدأ، إليك عرضًا تقديميًا موجزًا 👇",
+
+          // 📺 First message with a presentation video → mirror the playground's
+          // WelcomeVideoCard ORDER (greeting → intro → video → rest). Works the
+          // same on every provider (Meta/UltraMsg/Wasender) because it uses the
+          // provider-agnostic send()/sendMedia() of WhatsAppDirectSendService.
+          const videoSplit =
+            messageCount === 0 && welcomeVideoUrl
+              ? buildWelcomeVideoSplit(customerReply, welcomeVideoUrl, customerLanguage)
+              : null
+
+          if (videoSplit) {
+            // YouTube video → two messages: (1) greeting + intro text, then
+            // (2) the YouTube thumbnail as a real image with the rest of the
+            // reply + clickable link as caption. Pass raw Markdown — send()/
+            // sendMedia() apply mdToWhatsApp internally (one conversion step).
+            await directSend.send({
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              phoneNumber: customer.phone,
+              messageContent: videoSplit.textMessage,
+              skipSecurityCheck: true, // bot-generated content, not user input
+            })
+            await directSend.sendMedia({
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              phoneNumber: customer.phone,
+              mediaUrl: videoSplit.imageUrl,
+              caption: videoSplit.caption,
+              conversationMessageId: savedAssistantMessageId,
+              skipSecurityCheck: true,
+            })
+          } else {
+            // No video, or non-YouTube video (no resolvable thumbnail) → single
+            // message. For a non-YouTube first-contact video, fall back to the
+            // legacy inline intro + URL so the link still goes out.
+            let finalReply = customerReply
+            if (messageCount === 0 && welcomeVideoUrl) {
+              const introText =
+                WELCOME_VIDEO_INTRO[customerLanguage ?? "en"] ?? WELCOME_VIDEO_INTRO.en
+              const breakIdx = customerReply.indexOf("\n\n")
+              if (breakIdx !== -1) {
+                const greeting = customerReply.slice(0, breakIdx)
+                const rest = customerReply.slice(breakIdx + 2)
+                finalReply = `${greeting}\n\n${introText}\n${welcomeVideoUrl}\n\n${rest}`
+              } else {
+                finalReply = `${customerReply}\n\n${introText}\n${welcomeVideoUrl}`
+              }
             }
-            const lang = customerLanguage ?? "en"
-            const introText = INTRO[lang] ?? INTRO["en"]
-            const breakIdx = customerReply.indexOf("\n\n")
-            if (breakIdx !== -1) {
-              const greeting = customerReply.slice(0, breakIdx)
-              const rest = customerReply.slice(breakIdx + 2)
-              finalReply = `${greeting}\n\n${introText}\n${welcomeVideoUrl}\n\n${rest}`
-            } else {
-              finalReply = `${customerReply}\n\n${introText}\n${welcomeVideoUrl}`
-            }
+            await directSend.send({
+              workspaceId: customer.workspaceId,
+              customerId: customer.id,
+              phoneNumber: customer.phone,
+              messageContent: finalReply,
+              conversationMessageId: savedAssistantMessageId,
+              skipSecurityCheck: true, // bot-generated content, not user input
+            })
           }
-          await directSend.send({
-            workspaceId: customer.workspaceId,
-            customerId: customer.id,
-            phoneNumber: customer.phone,
-            messageContent: finalReply,
-            conversationMessageId: savedAssistantMessageId,
-            skipSecurityCheck: true, // bot-generated content, not user input
-          })
         } catch (sendError) {
           logger.error("[PIPELINE] ❌ Failed to send custom chatbot response", {
             error: sendError,
