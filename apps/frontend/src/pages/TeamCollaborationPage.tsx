@@ -180,7 +180,6 @@ export function TeamCollaborationPage() {
         {/* Hero */}
         <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-emerald-50">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <Breadcrumbs items={[{ label: t.breadcrumb }]} hideVisual />
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -188,9 +187,6 @@ export function TeamCollaborationPage() {
               className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
             >
               <div>
-                <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
-                  {t.badge}
-                </span>
                 <h1 className="text-4xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight whitespace-pre-line">
                   {t.heroTitle}
                 </h1>
