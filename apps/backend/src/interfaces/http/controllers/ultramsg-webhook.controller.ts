@@ -54,7 +54,6 @@ import { detectLanguageFromPhonePrefix } from '../../../utils/language-detector'
 import { OperatorRelayService } from '../../../application/services/operator-relay.service'
 import { WhatsAppDirectSendService } from '../../../services/whatsapp-direct-send.service'
 import { splitCustomChatbotReply } from '../../../utils/custom-chatbot-reply'
-import { mdToWhatsApp } from '../../../utils/markdown-to-whatsapp'
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -804,7 +803,7 @@ export class UltraMsgWebhookController {
                 workspaceId: customer.workspaceId,
                 customerId: customer.id,
                 phoneNumber: customer.phone,
-                messageContent: mdToWhatsApp(welcomeResult.welcomeText),
+                messageContent: welcomeResult.welcomeText,
                 conversationMessageId: welcomeResult.assistantMessageId,
                 skipSecurityCheck: true,
               })
@@ -1504,15 +1503,13 @@ export class UltraMsgWebhookController {
           try {
             const directSend = new WhatsAppDirectSendService(prisma)
             const { customerReply } = splitCustomChatbotReply(customOutput.reply)
-            // Custom chatbots produce rich Markdown for the web playground.
-            // WhatsApp supports a very limited subset (no tables, no `##`
-            // headers, only single-asterisk bold). Down-convert before send.
-            const whatsappReply = mdToWhatsApp(customerReply)
+            // WhatsAppDirectSendService.send() applies mdToWhatsApp internally —
+            // pass raw Markdown so there is exactly ONE conversion step.
             await directSend.send({
               workspaceId,
               customerId: customer.id,
               phoneNumber: customer.phone,
-              messageContent: whatsappReply,
+              messageContent: customerReply,
               conversationMessageId: assistantMessageId,
               skipSecurityCheck: true, // bot-generated content, not user input
             })
@@ -1612,7 +1609,7 @@ export class UltraMsgWebhookController {
           workspaceId,
           customerId: customer.id,
           phoneNumber: customer.phone,
-          messageContent: mdToWhatsApp(routerResult.response),
+          messageContent: routerResult.response,
           conversationMessageId: assistantMessage?.id,
         })
 

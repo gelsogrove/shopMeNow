@@ -24,6 +24,8 @@ export default function OnboardingPage() {
       <SEO
         title="Get Started — eChatbot.AI"
         description="Set up your AI chatbot in minutes. Choose your industry, channel, and preferences to get started with eChatbot."
+        keywords="get started whatsapp chatbot, setup ai chatbot, onboarding echatbot, create whatsapp bot"
+        url="/onboarding"
       />
       {/* The modal is always open — it fills the whole screen with its own header */}
       <OnboardingWizardModal open={true} onClose={handleClose} />

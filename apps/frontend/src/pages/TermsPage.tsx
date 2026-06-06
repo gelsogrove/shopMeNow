@@ -37,7 +37,9 @@ export function TermsPage() {
       <SEO
         title="Terms of Service | eChatbot"
         description="eChatbot Terms of Service. Rights and obligations of users of the eChatbot WhatsApp e-commerce platform."
+        keywords="echatbot terms of service, whatsapp chatbot terms, platform terms, user agreement"
         url="/terms"
+        lang={language}
       />
       <SiteHeader />
       <main className="pt-24 pb-20">

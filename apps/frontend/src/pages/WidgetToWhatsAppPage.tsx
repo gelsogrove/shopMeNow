@@ -171,7 +171,7 @@ export function WidgetToWhatsAppPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/widget-to-whatsapp" lang={language} />
+      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/widget-to-whatsapp" lang={language} serviceType="Website Widget to WhatsApp" />
       <SiteHeader />
 
       <main>

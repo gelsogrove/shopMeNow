@@ -143,7 +143,7 @@ export function PricingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/pricing" lang={language} />
+      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/pricing" lang={language} serviceType="WhatsApp AI Chatbot Pricing" />
       <SiteHeader />
 
       <main>

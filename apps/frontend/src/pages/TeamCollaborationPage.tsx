@@ -173,7 +173,7 @@ export function TeamCollaborationPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/team-collaboration" lang={language} />
+      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/team-collaboration" lang={language} serviceType="Team Collaboration" />
       <SiteHeader />
 
       <main>

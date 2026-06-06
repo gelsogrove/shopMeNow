@@ -93,6 +93,63 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
   }
 
   /**
+   * Show the "typing…" indicator while the LLM composes a reply.
+   *
+   * Meta Cloud API exposes the typing indicator ONLY as part of marking the
+   * inbound message as read: POST /{phone-number-id}/messages with
+   * { status:'read', message_id, typing_indicator:{type:'text'} }. So this one
+   * call also delivers the blue read ticks. The indicator stays up to 25s or
+   * until the next outbound message is sent (auto-clears on reply) — no refresh
+   * loop needed.
+   *
+   * Fire-and-forget: never throws, swallows its own errors so it can never
+   * block or break the reply path.
+   *
+   * @param to                recipient phone (unused by Meta — read/typing keys
+   *                          off message_id; kept for interface compatibility)
+   * @param inboundMessageId  wamid of the customer message being replied to
+   */
+  async sendTypingIndicator(
+    to: string,
+    inboundMessageId?: string
+  ): Promise<void> {
+    // Without the inbound wamid there is nothing to attach the indicator to.
+    if (!inboundMessageId) {
+      logger.debug('⌨️ Meta: skip typing indicator — no inbound message id')
+      return
+    }
+
+    try {
+      const url = `${this.baseUrl}/${this.config.phoneNumberId}/messages`
+
+      await axios.post(
+        url,
+        {
+          messaging_product: 'whatsapp',
+          status: 'read',
+          message_id: inboundMessageId,
+          typing_indicator: { type: 'text' },
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.config.accessToken}`,
+          },
+          timeout: 8000,
+        }
+      )
+
+      logger.debug('⌨️ Meta: typing indicator sent', { inboundMessageId })
+    } catch (error: any) {
+      // Non-critical — must never block the reply.
+      logger.debug('⌨️ Meta: typing indicator failed (non-critical)', {
+        error: error.message,
+        response: error.response?.data,
+      })
+    }
+  }
+
+  /**
    * Send a reaction (emoji) to a previously exchanged message.
    * Meta Cloud API: POST /{phone-number-id}/messages with type "reaction".
    * An empty emoji removes the reaction.

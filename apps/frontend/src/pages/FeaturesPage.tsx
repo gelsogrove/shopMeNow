@@ -223,6 +223,7 @@ export function FeaturesPage() {
         keywords={t.seoKeywords}
         url="/features"
         lang={language}
+        serviceType="WhatsApp AI Chatbot Platform"
       />
 
       <SiteHeader />

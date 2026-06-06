@@ -252,6 +252,7 @@ const QT: Record<Lang, Record<string, string>> = {
     integrations_opt2: "I don't use external systems",
 
     // Step 8: Privacy
+    privacy_title: "Privacy and Security",
     privacy_q: "We understand that your customers' privacy is paramount. eChatbot is designed with privacy at its core: we never send sensitive customer data to AI models. Personal information (contacts, orders, payments) always stays in your database. For sensitive operations we use time-limited token links, accessible only by the specific user.",
     privacy_opt1: "Yes, I'm convinced",
     privacy_opt2: "I still have some doubts",
@@ -388,6 +389,7 @@ const QT: Record<Lang, Record<string, string>> = {
     integrations_opt2: "No uso sistemas externos",
 
     // Step 8: Privacy
+    privacy_title: "Privacidad y Seguridad",
     privacy_q: "Entendemos que la privacidad de tus clientes es fundamental. eChatbot está diseñado con la privacidad en el centro: nunca enviamos datos sensibles de los clientes a los modelos de IA. La información personal (contactos, pedidos, pagos) siempre permanece en tu base de datos. Para operaciones sensibles usamos enlaces con tokens de tiempo limitado, accesibles solo por el usuario en cuestión.",
     privacy_opt1: "Sí, me convence",
     privacy_opt2: "Todavía tengo dudas",
@@ -524,6 +526,7 @@ const QT: Record<Lang, Record<string, string>> = {
     integrations_opt2: "Não uso sistemas externos",
 
     // Step 8: Privacy
+    privacy_title: "Privacidade e Segurança",
     privacy_q: "Entendemos que a privacidade dos seus clientes é fundamental. O eChatbot foi desenvolvido com a privacidade no centro: nunca enviamos dados sensíveis dos clientes para modelos de IA. As informações pessoais (contatos, pedidos, pagamentos) sempre ficam no seu banco de dados. Para operações sensíveis usamos links com tokens temporários, acessíveis apenas pelo usuário em questão.",
     privacy_opt1: "Sim, me convence",
     privacy_opt2: "Ainda tenho dúvidas",
@@ -1270,7 +1273,7 @@ export default function QuestionnairePage() {
                   </Button>
                   <Button
                     onClick={handleNext}
-                    className="flex-2 bg-green-600 hover:bg-green-700 text-white px-8"
+                    className="flex-[2] bg-green-600 hover:bg-green-700 text-white px-8"
                   >
                     {currentStep < totalSteps - 1 ? T.next : T.almost}
                   </Button>
@@ -1364,7 +1367,7 @@ export default function QuestionnairePage() {
                   <Button
                     type="submit"
                     disabled={isSubmitting || !contact.fullName.trim() || !contact.email.trim()}
-                    className="sm:flex-2 bg-green-600 hover:bg-green-700 text-white px-8 disabled:opacity-40"
+                    className="sm:flex-[2] bg-green-600 hover:bg-green-700 text-white px-8 disabled:opacity-40"
                   >
                     {isSubmitting ? T.form_submitting : T.form_submit}
                   </Button>

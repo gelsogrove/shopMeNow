@@ -223,7 +223,7 @@ export function PrivacyByDesignPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/privacy-by-design" lang={language} />
+      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/privacy-by-design" lang={language} serviceType="Privacy-by-Design Data Protection" />
       <SiteHeader />
 
       <main>

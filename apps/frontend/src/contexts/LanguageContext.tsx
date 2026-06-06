@@ -31,6 +31,7 @@ const translations = {
     "hero.title": "Crea il tuo agente di vendita AI",
     "hero.subtitle":
       "AI first: Automatizza vendite, supporto e campagne su WhatsApp — in un'unica piattaforma.",
+    "hero.slogan": "Il primo agente non si scorda mai.",
     "hero.subline": "",
     "hero.whyTitle": "Perché eChatbot?",
     "hero.useCasesTitle": "Progettato per vendite, supporto e crescita.",
@@ -95,10 +96,14 @@ const translations = {
       "La funzionalita human-in-the-loop e ora attiva: passa all'operatore quando serve e mantieni il contesto completo della conversazione.",
 
     // Appointment Booking Section
-    "appointment.badge": "Prenotazioni",
-    "appointment.title": "Prenotazione appuntamenti con AI",
+    "appointment.badge": "Prenotazioni via WhatsApp",
+    "appointment.title": "Il cliente prenota.\nTu non fai niente.",
     "appointment.subtitle":
-      "I tuoi clienti prenotano appuntamenti direttamente via WhatsApp o widget. L'AI gestisce disponibilità, conferme e promemoria automatici. Integrazione con Google Calendar per sincronizzare tutto.",
+      "Zero telefonate, zero email perse. Il chatbot gestisce disponibilità, conferme e promemoria automatici — direttamente su WhatsApp. Sincronizzazione Google Calendar in tempo reale.",
+    "appointment.cta": "Scopri come funziona",
+    "appointment.chip1": "Prenotazioni 24/7 via WhatsApp",
+    "appointment.chip2": "Promemoria automatici",
+    "appointment.chip3": "Sync Google Calendar",
 
     // Human-in-the-loop Section
     "humanLoop.title": "Supporto human-in-the-loop",
@@ -617,6 +622,7 @@ const translations = {
     "hero.title": "Build your AI sales agent",
     "hero.subtitle":
       "AI first: Automate sales, support, and campaigns on WhatsApp — in one platform.",
+    "hero.slogan": "You never forget your first agent.",
     "hero.subline": "",
     "hero.whyTitle": "Why eChatbot?",
     "hero.useCasesTitle": "Built for sales, support, and growth.",
@@ -677,10 +683,14 @@ const translations = {
       "Human-in-the-loop support is now live. Escalate to a human when needed and keep the full conversation context.",
 
     // Appointment Booking Section
-    "appointment.badge": "Bookings",
-    "appointment.title": "AI-powered appointment booking",
+    "appointment.badge": "WhatsApp Bookings",
+    "appointment.title": "Customer books.\nYou do nothing.",
     "appointment.subtitle":
-      "Your customers book appointments directly via WhatsApp or widget. AI manages availability, confirmations, and automatic reminders. Google Calendar integration to keep everything in sync.",
+      "Zero phone calls, zero missed emails. The chatbot handles availability, confirmations and automatic reminders — directly on WhatsApp. Google Calendar sync in real time.",
+    "appointment.cta": "See how it works",
+    "appointment.chip1": "24/7 bookings via WhatsApp",
+    "appointment.chip2": "Automatic reminders",
+    "appointment.chip3": "Google Calendar sync",
 
     // Human-in-the-loop Section
     "humanLoop.title": "Human-in-the-loop support",
@@ -1228,6 +1238,7 @@ const translations = {
     "hero.title": "Crea tu agente de ventas con IA",
     "hero.subtitle":
       "AI first: Automatiza ventas, soporte y campañas en WhatsApp — en una única plataforma.",
+    "hero.slogan": "El primer agente nunca se olvida.",
     "hero.subline": "",
     "hero.whyTitle": "¿Por qué eChatbot?",
     "hero.useCasesTitle": "Diseñado para ventas, soporte y crecimiento.",
@@ -1292,10 +1303,14 @@ const translations = {
       "La funcion human-in-the-loop ya esta activa. Escala a un humano cuando sea necesario y conserva todo el contexto de la conversacion.",
 
     // Appointment Booking Section
-    "appointment.badge": "Reservas",
-    "appointment.title": "Reserva de citas con IA",
+    "appointment.badge": "Reservas por WhatsApp",
+    "appointment.title": "El cliente reserva.\nTú no haces nada.",
     "appointment.subtitle":
-      "Tus clientes reservan citas directamente por WhatsApp o widget. La IA gestiona disponibilidad, confirmaciones y recordatorios automáticos. Integración con Google Calendar para sincronizar todo.",
+      "Cero llamadas, cero correos perdidos. El chatbot gestiona disponibilidad, confirmaciones y recordatorios automáticos — directamente en WhatsApp. Sincronización con Google Calendar en tiempo real.",
+    "appointment.cta": "Ver cómo funciona",
+    "appointment.chip1": "Reservas 24/7 por WhatsApp",
+    "appointment.chip2": "Recordatorios automáticos",
+    "appointment.chip3": "Sync Google Calendar",
 
     // Human-in-the-loop Section
     "humanLoop.title": "Soporte human-in-the-loop",
@@ -1708,6 +1723,7 @@ const translations = {
     "hero.title": "Crie seu agente de vendas com IA",
     "hero.subtitle":
       "AI first: Automatize vendas, suporte e campanhas no WhatsApp — em uma única plataforma.",
+    "hero.slogan": "O primeiro agente nunca se esquece.",
     "hero.subline": "",
     "hero.whyTitle": "Por que eChatbot?",
     "hero.useCasesTitle": "Projetado para vendas, suporte e crescimento.",
@@ -1772,10 +1788,14 @@ const translations = {
       "A funcionalidade human-in-the-loop ja esta ativa. Escale para um humano quando necessario e mantenha todo o contexto da conversa.",
 
     // Appointment Booking Section
-    "appointment.badge": "Agendamentos",
-    "appointment.title": "Agendamento de consultas com IA",
+    "appointment.badge": "Agendamentos no WhatsApp",
+    "appointment.title": "O cliente agenda.\nVocê não faz nada.",
     "appointment.subtitle":
-      "Seus clientes agendam consultas diretamente pelo WhatsApp ou widget. A IA gerencia disponibilidade, confirmações e lembretes automáticos. Integração com Google Calendar para sincronizar tudo.",
+      "Zero telefonemas, zero e-mails perdidos. O chatbot gere disponibilidade, confirmações e lembretes automáticos — directamente no WhatsApp. Sincronização com Google Calendar em tempo real.",
+    "appointment.cta": "Ver como funciona",
+    "appointment.chip1": "Agendamentos 24/7 no WhatsApp",
+    "appointment.chip2": "Lembretes automáticos",
+    "appointment.chip3": "Sync Google Calendar",
 
     // Human-in-the-loop Section
     "humanLoop.title": "Suporte human-in-the-loop",

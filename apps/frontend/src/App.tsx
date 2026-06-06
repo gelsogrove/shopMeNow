@@ -13,6 +13,7 @@ import { AppointmentBookingPage } from "@/pages/AppointmentBookingPage"
 import { CrmIntegrationPage } from "@/pages/CrmIntegrationPage"
 import { TeamCollaborationPage } from "@/pages/TeamCollaborationPage"
 import { PrivacyByDesignPage } from "@/pages/PrivacyByDesignPage"
+import { LaundryServicePage } from "@/pages/LaundryServicePage"
 import { PricingPage } from "@/pages/PricingPage"
 import { ContactPage } from "@/pages/ContactPage"
 import RequestAccessPage from "@/pages/RequestAccessPage"
@@ -322,6 +323,7 @@ function AppWithProviders() {
                 <Route path="/features" element={<FeaturesPage />} />
                 <Route path="/widget-to-whatsapp" element={<WidgetToWhatsAppPage />} />
                 <Route path="/human-support" element={<HumanSupportPage />} />
+                <Route path="/laundry-service" element={<LaundryServicePage />} />
                 <Route path="/appointment-booking" element={<AppointmentBookingPage />} />
                 <Route path="/crm-integration" element={<CrmIntegrationPage />} />
                 <Route path="/team-collaboration" element={<TeamCollaborationPage />} />

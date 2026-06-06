@@ -82,6 +82,20 @@ export interface WhatsAppProvider {
   ): Promise<WhatsAppSendMessageResult>
 
   /**
+   * Show a "typing…" indicator to the recipient while the bot composes a reply.
+   * Optional - not all providers support it. Implementations MUST be
+   * fire-and-forget safe (never throw, swallow their own errors).
+   *
+   * `inboundMessageId` is the provider's id of the message being replied to.
+   * Meta requires it (the indicator is attached to marking that message as read);
+   * presence-based providers ignore it.
+   */
+  sendTypingIndicator?(
+    to: string,
+    inboundMessageId?: string
+  ): Promise<void>
+
+  /**
    * Get provider name for logging/debugging
    */
   getProviderName(): string

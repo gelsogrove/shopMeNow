@@ -1288,6 +1288,10 @@ export function LoginPage() {
           <h1 className="text-4xl lg:text-5xl font-bold text-slate-900">
             {t("hero.title")}
           </h1>
+          {/* Brand slogan — wordplay on "you never forget your first love" */}
+          <p className="text-xl lg:text-2xl font-semibold italic bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent max-w-3xl mx-auto">
+            {t("hero.slogan")}
+          </p>
           <p className="text-lg text-slate-600 max-w-3xl mx-auto">
             {t("hero.subtitle")}
           </p>
@@ -2184,47 +2188,90 @@ export function LoginPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
             className="group relative"
-            initial={{ opacity: 0, x: 80 }}
+            initial={{ opacity: 0, x: -80 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.35 }}
             transition={{ duration: 0.65, ease: "easeOut" }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-violet-100 rounded-3xl rotate-0 sm:-rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:-rotate-2 transition-transform duration-500"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-violet-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
 
             <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-10 items-start">
-                <div className="space-y-6 text-center lg:text-left order-2 lg:order-1">
-                  <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
-                      <span>📅</span>
-                      {t("appointment.badge")}
+              <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-10 items-center">
+
+                {/* Left: Booking mockup */}
+                <div className="flex flex-col items-center lg:items-start gap-3 order-1">
+                  <div className="w-full max-w-[280px] bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl shadow-xl ring-4 ring-white group-hover:ring-purple-100 transition-all duration-300 p-4 space-y-3">
+                    {/* Calendar header */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-purple-700 uppercase tracking-wide">June 2025</span>
+                      <span className="text-lg">📅</span>
                     </div>
-                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
-                      {t("appointment.title")}
-                    </h3>
-                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
-                      {t("appointment.subtitle")}
-                    </p>
-                  </div>
-                  <div className="pt-4 flex justify-center lg:justify-start">
-                    <Link
-                      to="/appointment-booking"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-purple-700 hover:text-purple-900 hover:underline transition-colors"
-                    >
-                      {t("common.viewMore")}
-                    </Link>
+                    {/* Days grid */}
+                    <div className="grid grid-cols-7 gap-1 text-center">
+                      {["M","T","W","T","F","S","S"].map((d, i) => (
+                        <span key={i} className="text-[10px] font-semibold text-slate-400">{d}</span>
+                      ))}
+                      {[null,null,null,null,null,"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"].map((d, i) => (
+                        <span key={i} className={`text-[11px] h-5 w-5 flex items-center justify-center rounded-full mx-auto ${d === "14" ? "bg-purple-600 text-white font-bold" : d ? "text-slate-600 hover:bg-purple-100 cursor-pointer" : ""}`}>{d}</span>
+                      ))}
+                    </div>
+                    {/* Time slots */}
+                    <div className="space-y-1.5 pt-1">
+                      {[{t:"10:00",sel:true},{t:"11:00",sel:false},{t:"15:00",sel:false}].map((slot,i) => (
+                        <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${slot.sel ? "bg-purple-600 text-white shadow" : "bg-white text-slate-600 border border-slate-200"}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${slot.sel ? "bg-white" : "bg-slate-300"}`}></span>
+                          {slot.t}
+                          {slot.sel && <span className="ml-auto text-purple-200 text-[10px]">✓ selected</span>}
+                        </div>
+                      ))}
+                    </div>
+                    {/* WhatsApp confirmation */}
+                    <div className="bg-green-50 border border-green-200 rounded-xl p-2.5 flex items-start gap-2">
+                      <span className="text-base leading-none mt-0.5">✅</span>
+                      <div>
+                        <p className="text-[10px] font-bold text-green-800">Confirmed via WhatsApp</p>
+                        <p className="text-[10px] text-green-700">Jun 14 · 10:00 · Reminder set</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center lg:items-end gap-4 order-1 lg:order-2">
-                  <div className="relative">
-                    <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-purple-100 transition-all duration-300 bg-gradient-to-br from-purple-50 to-violet-50 flex items-center justify-center">
-                      <img
-                        src="/booking.png"
-                        alt="Appointment booking"
-                        className="w-full h-full object-cover"
-                      />
+                {/* Right: Content */}
+                <div className="space-y-5 text-center lg:text-left order-2">
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
+                      <span className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></span>
+                      {t("appointment.badge")}
                     </div>
+                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight whitespace-pre-line">
+                      {t("appointment.title")}
+                    </h3>
+                    <p className="text-lg text-slate-600 leading-relaxed">
+                      {t("appointment.subtitle")}
+                    </p>
+                  </div>
+                  {/* Feature chips */}
+                  <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
+                    {[t("appointment.chip1"), t("appointment.chip2"), t("appointment.chip3")].map((chip, i) => (
+                      <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-semibold border border-purple-100">
+                        <span className="text-purple-400">✓</span> {chip}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="pt-2 flex flex-col sm:flex-row items-center lg:items-start gap-3">
+                    <Link
+                      to="/appointment-booking"
+                      className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 text-sm"
+                    >
+                      {t("appointment.cta")}
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                    </Link>
+                    <Link
+                      to="/appointment-booking"
+                      className="text-sm text-slate-500 hover:text-purple-700 hover:underline transition-colors"
+                    >
+                      {t("common.viewMore")}
+                    </Link>
                   </div>
                 </div>
               </div>

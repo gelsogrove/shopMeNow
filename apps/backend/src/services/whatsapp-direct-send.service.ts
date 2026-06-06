@@ -1,6 +1,6 @@
 import { PrismaClient } from "@echatbot/database"
 import logger from "../utils/logger"
-import { markdownToWhatsApp } from "../utils/whatsapp-formatter"
+import { mdToWhatsApp } from "../utils/markdown-to-whatsapp"
 import { WhatsAppProviderFactory } from "./whatsapp/whatsapp-provider.factory"
 import { SecurityAgent } from "../application/agents/SecurityAgent"
 import { SubscriptionBillingService } from "../application/services/subscription-billing.service"
@@ -117,7 +117,7 @@ export class WhatsAppDirectSendService {
     }
 
     const provider = WhatsAppProviderFactory.create(workspace)
-    const formattedMessage = markdownToWhatsApp(messageContent)
+    const formattedMessage = mdToWhatsApp(messageContent)
 
     let sendResult: { success: boolean; messageId?: string; error?: string }
     try {
@@ -195,6 +195,43 @@ export class WhatsAppDirectSendService {
     }
 
     return { success: true, messageId: sendResult.messageId }
+  }
+
+  /**
+   * Show the "typing…" indicator to the customer while the LLM composes a reply.
+   *
+   * Resolves the workspace's configured provider (same factory path as send())
+   * and delegates to provider.sendTypingIndicator — a no-op for providers that
+   * don't implement it. Fully fire-and-forget: never throws, so callers can
+   * `void` it before the LLM call without risking the reply path.
+   *
+   * @param workspaceId       workspace whose provider config drives the send
+   * @param phoneNumber       customer phone in E.164 format
+   * @param inboundMessageId  provider id (wamid) of the message being replied to
+   */
+  async sendTypingIndicator(
+    workspaceId: string,
+    phoneNumber: string,
+    inboundMessageId?: string
+  ): Promise<void> {
+    try {
+      if (!phoneNumber) return
+
+      const workspace = (await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+      })) as any
+
+      if (!workspace || !WhatsAppProviderFactory.isConfigured(workspace)) return
+
+      const provider = WhatsAppProviderFactory.create(workspace)
+      await provider.sendTypingIndicator?.(phoneNumber, inboundMessageId)
+    } catch (error) {
+      // Non-critical — must never block the reply.
+      logger.debug("[DirectSend] ⌨️ Typing indicator failed (non-critical)", {
+        workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
   }
 
   private async appendTimelineStep(

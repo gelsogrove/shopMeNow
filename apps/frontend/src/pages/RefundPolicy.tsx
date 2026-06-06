@@ -37,7 +37,9 @@ export function RefundPolicy() {
       <SEO
         title="Refund Policy | eChatbot"
         description="eChatbot refund and cancellation policy. 14-day money back guarantee, cancellation terms and procedures."
+        keywords="echatbot refund policy, money back guarantee, cancellation policy, whatsapp chatbot refund"
         url="/refund"
+        lang={language}
       />
       <SiteHeader />
       <main className="pt-24 pb-20">

@@ -7,9 +7,15 @@ interface SEOProps {
   image?: string
   url?: string
   type?: "website" | "article"
-  lang?: "it" | "en" | "es" | "pt"
+  lang?: "it" | "en" | "es" | "pt" | "fr" | "ca"
   robots?: string
   hreflangs?: Array<{ lang: string; url: string }>
+  /**
+   * When set, emits a schema.org `Service` JSON-LD block for this page so
+   * Google can surface it as a distinct service offering. Pass a short
+   * service category, e.g. "Appointment Booking" or "CRM Integration".
+   */
+  serviceType?: string
 }
 
 export function SEO({
@@ -22,10 +28,31 @@ export function SEO({
   lang = "en",
   robots = "index, follow",
   hreflangs = [],
+  serviceType,
 }: SEOProps) {
   const siteUrl = "https://www.echatbot.ai"
   const fullUrl = url ? `${siteUrl}${url}` : siteUrl
-  const fullTitle = `${title} | eChatbot - AI WhatsApp Chatbot`
+  const cleanTitle = title.replace(/\s*\|\s*eChatbot.*$/i, "").trim()
+  const fullTitle = `${cleanTitle} | eChatbot - AI WhatsApp Chatbot`
+
+  // Per-page Service structured data. Truthful, derived from the page's own
+  // title/description — no invented ratings, prices, or review counts.
+  const serviceJsonLd = serviceType
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Service",
+        name: cleanTitle,
+        serviceType,
+        description,
+        url: fullUrl,
+        provider: {
+          "@type": "Organization",
+          name: "eChatbot",
+          url: siteUrl,
+        },
+        areaServed: { "@type": "Place", name: "Worldwide" },
+      }
+    : null
 
   return (
     <Helmet>
@@ -45,7 +72,8 @@ export function SEO({
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={image} />
-      <meta property="og:locale" content={lang === "it" ? "it_IT" : lang === "es" ? "es_ES" : lang === "pt" ? "pt_PT" : "en_US"} />
+      <meta property="og:site_name" content="eChatbot" />
+      <meta property="og:locale" content={lang === "it" ? "it_IT" : lang === "es" ? "es_ES" : lang === "pt" ? "pt_PT" : lang === "fr" ? "fr_FR" : lang === "ca" ? "ca_ES" : "en_US"} />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
@@ -72,6 +100,13 @@ export function SEO({
           />
         )
       })}
+
+      {/* Per-page Service structured data */}
+      {serviceJsonLd && (
+        <script type="application/ld+json">
+          {JSON.stringify(serviceJsonLd)}
+        </script>
+      )}
     </Helmet>
   )
 }

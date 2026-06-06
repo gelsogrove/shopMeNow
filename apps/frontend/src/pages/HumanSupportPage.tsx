@@ -199,7 +199,7 @@ export function HumanSupportPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/human-support" lang={language} />
+      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/human-support" lang={language} serviceType="Human-in-the-Loop Customer Support" />
       <SiteHeader />
 
       <main>

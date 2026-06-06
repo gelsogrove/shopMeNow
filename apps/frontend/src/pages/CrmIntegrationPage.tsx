@@ -179,7 +179,7 @@ export function CrmIntegrationPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/crm-integration" lang={language} />
+      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/crm-integration" lang={language} serviceType="CRM Integration" />
       <SiteHeader />
 
       <main>

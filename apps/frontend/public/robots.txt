@@ -7,6 +7,7 @@ Allow: /pricing
 Allow: /contact
 Allow: /widget-to-whatsapp
 Allow: /human-support
+Allow: /laundry-service
 Allow: /appointment-booking
 Allow: /crm-integration
 Allow: /team-collaboration
@@ -15,9 +16,9 @@ Allow: /privacy
 Allow: /terms
 Allow: /refund
 Allow: /onboarding
-Allow: /faq
 
 # Disallow app pages (authenticated, token-gated, utility)
+Disallow: /faq
 Disallow: /chat
 Disallow: /queue
 Disallow: /analytics

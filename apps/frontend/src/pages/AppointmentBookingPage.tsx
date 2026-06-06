@@ -199,7 +199,7 @@ export function AppointmentBookingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/appointment-booking" lang={language} />
+      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/appointment-booking" lang={language} serviceType="WhatsApp Appointment Booking" />
       <SiteHeader />
 
       <main>

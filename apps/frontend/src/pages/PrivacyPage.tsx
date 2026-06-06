@@ -38,7 +38,9 @@ export function PrivacyPage() {
       <SEO
         title="Privacy Policy | eChatbot"
         description="eChatbot privacy policy. How we collect, use and protect your personal data in compliance with GDPR, DSGVO and LGPD."
+        keywords="echatbot privacy policy, whatsapp chatbot gdpr, data protection, dsgvo, lgpd"
         url="/privacy"
+        lang={language}
       />
       <SiteHeader />
       <main className="pt-24 pb-20">

@@ -425,7 +425,7 @@ function LoginScreen({ onLogin }: { onLogin: (u: PlaygroundUser) => void }) {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-blue-50">
       <form
         onSubmit={submit}
-        className="bg-white p-8 rounded-2xl shadow-xl w-96 space-y-4"
+        className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl w-full max-w-sm mx-4 sm:mx-0 sm:w-96 space-y-4"
       >
         <h1 className="text-2xl font-bold text-center text-emerald-700">
           Playground
@@ -508,7 +508,7 @@ function TopBar({
 }) {
   const isDemowash = customChatbotId === "demowash"
   return (
-    <header className="bg-emerald-700 text-white px-6 py-3 flex justify-between items-center shadow shrink-0 z-10">
+    <header className="bg-emerald-700 text-white px-3 sm:px-6 py-3 flex justify-between items-center shadow shrink-0 z-10 min-w-0">
       <div className="flex items-center gap-4">
         {leftSlot}
         {isDemowash ? (
@@ -611,7 +611,7 @@ function NewChatModal({
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <form
         onSubmit={submit}
-        className="bg-white rounded-2xl p-6 w-[440px] shadow-2xl space-y-4"
+        className="bg-white rounded-2xl p-6 w-full max-w-[440px] mx-4 shadow-2xl space-y-4"
       >
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold">New Whatsapp simulation</h2>
@@ -704,7 +704,7 @@ function CreateTodoModal({
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
       <form
         onSubmit={submit}
-        className="bg-white rounded-2xl p-6 w-[480px] shadow-2xl space-y-4"
+        className="bg-white rounded-2xl p-6 w-full max-w-[480px] mx-4 shadow-2xl space-y-4"
       >
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold">New TODO</h2>
@@ -872,7 +872,7 @@ function TodoDetailModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-6 w-[560px] max-h-[85vh] overflow-y-auto shadow-2xl space-y-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-[560px] mx-4 max-h-[85vh] overflow-y-auto shadow-2xl space-y-4">
         <div className="flex justify-between items-start">
           <div className="flex-1 min-w-0 mr-2">
             {editingTitle ? (
@@ -1257,6 +1257,7 @@ function ChatScreen({
     if (m) return m[1]
     return localStorage.getItem("playgroundDemoSlug")
   })
+  const [mobileView, setMobileView] = useState<"list" | "chat">("list")
   const [commentingMessage, setCommentingMessage] = useState<ChatMessage | null>(null)
   const [showNewChat, setShowNewChat] = useState(false)
   const [chatInput, setChatInput] = useState("")
@@ -1728,10 +1729,10 @@ function ChatScreen({
             {customChatbotId !== "demowash" && (
               <button
                 onClick={() => navigate("/demo/ecolaundry/kanban")}
-                className="bg-white text-emerald-700 hover:bg-emerald-50 px-4 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
+                className="bg-white text-emerald-700 hover:bg-emerald-50 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 shadow"
               >
                 <KanbanSquare className="w-4 h-4" />
-                Kanban Board
+                <span className="hidden sm:inline">Kanban Board</span>
                 {todos.length > 0 && (
                   <span className="bg-emerald-100 text-emerald-700 text-xs px-1.5 py-0.5 rounded-full">
                     {todos.length}
@@ -1743,17 +1744,18 @@ function ChatScreen({
         }
       />
 
-      <div className="flex-1 grid grid-cols-12 gap-3 p-3 min-h-0">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 p-3 min-h-0">
         {/* CHAT LIST — wider column (+80px) for chat title visibility */}
-        <aside className="col-span-3 bg-white rounded-xl shadow flex flex-col overflow-hidden min-h-0 min-w-[280px]">
+        <aside className={`${mobileView === "chat" ? "hidden md:flex" : "flex"} flex-col md:col-span-3 bg-white rounded-xl shadow overflow-hidden min-h-0`}>
           <div className="px-3 py-2 bg-emerald-600 text-white shrink-0 flex items-center justify-between gap-2">
             <span className="font-semibold text-sm">Pruebas</span>
             <button
               onClick={() => setShowNewChat(true)}
-              className="bg-[#25D366] hover:bg-[#1da851] text-white px-4 py-2 rounded-lg text-base font-semibold flex items-center gap-2 shadow-md transition"
+              className="bg-[#25D366] hover:bg-[#1da851] text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 shadow-md transition"
             >
               <WhatsAppIcon className="w-5 h-5" />
-              New Whatsapp simulation
+              <span className="hidden sm:inline">New Whatsapp simulation</span>
+              <span className="sm:hidden">New</span>
             </button>
           </div>
           <div
@@ -1818,7 +1820,7 @@ function ChatScreen({
                   }`}
                 >
                   <div
-                    onClick={() => setActiveSessionId(s.id)}
+                    onClick={() => { setActiveSessionId(s.id); setMobileView("chat") }}
                     className="w-full text-left px-3 py-2 pr-9 cursor-pointer"
                   >
                     <div className="flex items-center gap-1 mb-0.5">
@@ -1954,8 +1956,15 @@ function ChatScreen({
         {/* CHAT — on lg screens reduced from col-span-6 to col-span-5
             because the chat list grew from col-span-2 to col-span-3 (the
             +80px requested). Total stays 12: 3 (chats) + 5 (chat) + 4 (use cases). */}
-        <section className="col-span-9 lg:col-span-5 bg-white rounded-xl shadow flex flex-col overflow-hidden min-h-0">
+        <section className={`${mobileView === "list" ? "hidden md:flex" : "flex"} flex-col md:col-span-5 bg-white rounded-xl shadow overflow-hidden min-h-0`}>
           <div className="px-4 py-3 bg-emerald-600 text-white shrink-0 flex items-center gap-3">
+            <button
+              onClick={() => setMobileView("list")}
+              className="md:hidden p-1 -ml-1 text-white hover:bg-white/20 rounded shrink-0"
+              aria-label="Back to chat list"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
             {(() => {
               const phone = activeSession?.customer?.phone
               const name = activeSession?.customer?.name

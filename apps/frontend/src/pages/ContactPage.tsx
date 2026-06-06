@@ -211,7 +211,7 @@ export function ContactPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/contact" lang={language} />
+      <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/contact" lang={language} serviceType="WhatsApp AI Chatbot Demo & Contact" />
       <SiteHeader />
 
       <main>
