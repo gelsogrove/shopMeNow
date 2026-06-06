@@ -857,6 +857,7 @@ export class WhatsAppInboundPipeline {
         conversationMessageId: assistantMessage?.id,
         isPlayground,
         replyAsAudio: inboundWasAudio,
+        customerLanguage,
       })
 
       logger.info("[PIPELINE] ✅ Response sent directly to WhatsApp", { customerId: customer.id })

@@ -16,6 +16,8 @@ export interface DirectSendParams {
   isPlayground?: boolean
   /** When true: attempt TTS reply; fall back to text if TTS fails. */
   replyAsAudio?: boolean
+  /** Customer language code (e.g. "it", "es") — selects TTS voice. */
+  customerLanguage?: string
 }
 
 export interface DirectSendResult {
@@ -54,6 +56,7 @@ export class WhatsAppDirectSendService {
       skipSecurityCheck = false,
       isPlayground = false,
       replyAsAudio = false,
+      customerLanguage,
     } = params
 
     if (isPlayground) {
@@ -127,7 +130,7 @@ export class WhatsAppDirectSendService {
     try {
       if (replyAsAudio && provider.sendAudioMessage) {
         // 🎤 TTS path: generate MP3 → upload → send as audio message
-        const tts = await generateSpeech(messageContent, workspaceId)
+        const tts = await generateSpeech(messageContent, workspaceId, customerLanguage)
         if (tts?.audioUrl) {
           logger.info("[DirectSend] 🎤 Sending audio reply via TTS", { workspaceId, customerId })
           sendResult = await provider.sendAudioMessage(phoneNumber, tts.audioUrl)

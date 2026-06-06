@@ -13,8 +13,23 @@ import logger from "../utils/logger"
 import { storageService } from "./storage.service"
 
 const ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/text-to-speech"
-const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM" // Rachel — multilingual
 const MODEL_ID = "eleven_multilingual_v2"
+
+// Female voices per language — all support eleven_multilingual_v2
+const VOICE_BY_LANGUAGE: Record<string, string> = {
+  en: "21m00Tcm4TlvDq8ikWAM", // Rachel — native English, clear and warm
+  it: "pFZP5JQG7iQjIQuC4Bku", // Lily — best Italian accent
+  es: "Xb7hH8MSUJpSbSDYk0k2", // Alice — natural Spanish
+  fr: "cgSgspJ2msm6clMCkdW9", // Jessica — French accent
+  pt: "pFZP5JQG7iQjIQuC4Bku", // Lily — works well for Portuguese
+  ca: "Xb7hH8MSUJpSbSDYk0k2", // Alice — closest to Catalan
+}
+const DEFAULT_VOICE_ID = "pFZP5JQG7iQjIQuC4Bku" // Lily — best multilingual fallback
+
+function voiceForLanguage(lang?: string): string {
+  if (!lang) return DEFAULT_VOICE_ID
+  return VOICE_BY_LANGUAGE[lang.toLowerCase().slice(0, 2)] ?? DEFAULT_VOICE_ID
+}
 const MAX_CHARS = 5000 // ElevenLabs free tier safe limit
 
 /** Strip markdown/emoji/URLs so TTS reads clean spoken text. */
@@ -40,7 +55,8 @@ export interface TTSResult {
  */
 export async function generateSpeech(
   text: string,
-  workspaceId: string
+  workspaceId: string,
+  customerLanguage?: string
 ): Promise<TTSResult | null> {
   const apiKey = process.env.ELEVENLABS_API_KEY
   if (!apiKey) {
@@ -49,17 +65,19 @@ export async function generateSpeech(
   }
 
   const trimmed = stripForAudio(text).slice(0, MAX_CHARS)
+  const voiceId = voiceForLanguage(customerLanguage)
 
   logger.info("[TTS] 🗣️ Generating speech", {
     chars: trimmed.length,
     workspaceId,
-    voiceId: DEFAULT_VOICE_ID,
+    voiceId,
+    language: customerLanguage,
   })
 
   let mp3Buffer: Buffer
   try {
     const res = await axios.post(
-      `${ELEVENLABS_API_URL}/${DEFAULT_VOICE_ID}`,
+      `${ELEVENLABS_API_URL}/${voiceId}`,
       {
         text: trimmed,
         model_id: MODEL_ID,
