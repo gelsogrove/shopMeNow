@@ -6,7 +6,6 @@ import { Zap, CheckCircle, Eye, Trash2, FileDown, QrCode, Smartphone, ShieldChec
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
-import { Breadcrumbs } from "@/components/Breadcrumbs"
 
 type Language = "it" | "en" | "es" | "pt"
 

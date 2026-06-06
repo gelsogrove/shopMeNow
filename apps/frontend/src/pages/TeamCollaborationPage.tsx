@@ -6,7 +6,6 @@ import { Zap, CheckCircle, UserCheck, MessageSquare } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
-import { Breadcrumbs } from "@/components/Breadcrumbs"
 
 type Language = "it" | "en" | "es" | "pt"
 

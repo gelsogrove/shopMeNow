@@ -6,7 +6,6 @@ import { ArrowRight, MapPin, Clock, Tag, FileText, Megaphone, Building2, CheckCi
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
-import { Breadcrumbs } from "@/components/Breadcrumbs"
 
 type Language = "it" | "en" | "es" | "pt"
 
