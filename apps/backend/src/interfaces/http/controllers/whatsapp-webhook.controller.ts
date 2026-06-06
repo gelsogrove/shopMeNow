@@ -17,8 +17,9 @@ import { verifyWhatsAppSignature } from "../../../utils/whatsapp-signature"
 import { WhatsAppDirectSendService } from "../../../services/whatsapp-direct-send.service"
 import { WhatsAppProviderFactory } from "../../../services/whatsapp/whatsapp-provider.factory"
 import { whatsAppInboundPipeline } from "../../../services/whatsapp/whatsapp-inbound.pipeline"
-// 📎 Inbound media (image/PDF): extract the media ref from the payload + ingest
-import { extractMetaMedia, ExtractedMedia } from "../../../services/webhook-media.extract"
+// 📎 Inbound media (image/PDF/audio): extract the media ref from the payload + ingest
+import { extractMetaMedia, extractMetaAudio, ExtractedMedia } from "../../../services/webhook-media.extract"
+import { transcribeAudio } from "../../../services/audio-transcription.service"
 // 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
 import { extractMetaReaction, ExtractedReaction } from "../../../services/webhook-reaction.extract"
 
@@ -338,6 +339,38 @@ export class WhatsAppWebhookController {
           // Reaction-only message: seed with the emoji so it isn't dropped as
           // "no text"; it gets enriched with the reacted-to message below.
           messageText = inboundReaction.emoji
+        }
+        // 🎤 Audio message: transcribe via Whisper and replace placeholder with actual text
+        if (message?.type === "audio" && !inboundReaction) {
+          const audioRef = extractMetaAudio(message)
+          if (audioRef?.ref?.mediaId && value.workspaceId) {
+            try {
+              const wsData = await prisma.workspace.findUnique({
+                where: { id: value.workspaceId },
+                select: { metaPhoneNumberId: true, metaAccessToken: true, whatsappProvider: true, ultraMsgInstanceId: true, ultraMsgToken: true, ultraMsgApiUrl: true, wasenderApiKey: true },
+              })
+              const wsProvider = WhatsAppProviderFactory.create(wsData)
+              const { buffer, mimeType } = await wsProvider.downloadInboundMedia(audioRef.ref)
+              const transcription = await transcribeAudio({
+                audioBuffer: buffer,
+                declaredMime: mimeType,
+                provider: "meta",
+                workspaceId: value.workspaceId,
+              })
+              if (transcription?.text) {
+                messageText = transcription.text
+                logger.info("[WEBHOOK] 🎤 Meta audio transcribed", {
+                  chars: transcription.text.length,
+                  workspaceId: value.workspaceId,
+                })
+              } else {
+                messageText = "[audio message]"
+              }
+            } catch (audioErr) {
+              logger.error("[WEBHOOK] ❌ Meta audio transcription failed", { error: audioErr })
+              messageText = "[audio message]"
+            }
+          }
         }
         whatsappMessageId = message.id || `wa-${Date.now()}`
         workspaceId = value.workspaceId // ✅ Extract workspaceId from WhatsApp format

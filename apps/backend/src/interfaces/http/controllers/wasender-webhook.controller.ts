@@ -30,8 +30,9 @@
 import { Request, Response } from 'express'
 import { prisma } from '@echatbot/database'
 import { WasenderClientService } from '../../../services/wasender-client.service'
-// 📎 Inbound media (image/PDF): extract the media ref from the payload
-import { extractWasenderMedia } from '../../../services/webhook-media.extract'
+// 📎 Inbound media (image/PDF/audio): extract the media ref from the payload
+import { extractWasenderMedia, extractWasenderAudio } from '../../../services/webhook-media.extract'
+import { transcribeAudio } from '../../../services/audio-transcription.service'
 // 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
 import { extractWasenderReaction } from '../../../services/webhook-reaction.extract'
 import {
@@ -408,8 +409,28 @@ export class WasenderWebhookController {
     }
 
     if (!rawMessageText || rawMessageText.trim() === '') {
-      logger.warn('[WASENDER] ⚠️ Empty message body - ignoring', { workspaceId })
-      return res.status(200).json({ status: 'ignored', reason: 'no_text' })
+      // 🎤 Check for audio message before ignoring
+      const audioRef = extractWasenderAudio(message)
+      if (audioRef?.ref?.mediaUrl) {
+        const transcription = await transcribeAudio({
+          audioUrl: audioRef.ref.mediaUrl,
+          declaredMime: audioRef.declaredMime,
+          provider: 'wasender',
+          workspaceId,
+        })
+        if (transcription?.text) {
+          rawMessageText = transcription.text
+          logger.info('[WASENDER] 🎤 Audio transcribed', {
+            chars: transcription.text.length,
+            workspaceId,
+          })
+        } else {
+          rawMessageText = '[audio message]'
+        }
+      } else {
+        logger.warn('[WASENDER] ⚠️ Empty message body - ignoring', { workspaceId })
+        return res.status(200).json({ status: 'ignored', reason: 'no_text' })
+      }
     }
 
     // 1. 🏠 Load workspace with owner

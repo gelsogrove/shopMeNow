@@ -39,8 +39,9 @@ import { prisma } from '@echatbot/database'
 import { SecurityCheckService } from '../../../application/services/security-check.service'
 import { CustomClientChatbotService, applyCustomerPatches, applyEscalationNotification } from '../../../application/services/custom-client-chatbot.service'
 import { getChatEngine } from '../../../application/chat-engine'
-// 📎 Inbound media (image/PDF): extract the media ref from the payload + ingest
-import { extractUltramsgMedia } from '../../../services/webhook-media.extract'
+// 📎 Inbound media (image/PDF/audio): extract the media ref from the payload + ingest
+import { extractUltramsgMedia, extractUltramsgAudio } from '../../../services/webhook-media.extract'
+import { transcribeAudio } from '../../../services/audio-transcription.service'
 import { ingestInboundWebhookMedia } from '../../../services/inbound-media-webhook.service'
 // 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
 import { extractUltramsgReaction } from '../../../services/webhook-reaction.extract'
@@ -308,19 +309,40 @@ export class UltraMsgWebhookController {
       }
 
       // 🎤 MEDIA HANDLING: For audio/image/video/document/sticker, UltraMSG sends body=""
-      // Instead of ignoring silently, pass a placeholder so LLM can respond appropriately
-      // This matches WAAPI webhook behavior (whatsapp-webhook.controller.ts L237-242)
       const mediaTypes = ['audio', 'image', 'video', 'document', 'sticker', 'ptt']
       let messageText = body || ''
       if (!messageText.trim() && type && mediaTypes.includes(type)) {
-        // Map 'ptt' (push-to-talk) to 'audio' for consistency
-        const displayType = type === 'ptt' ? 'audio' : type
-        messageText = `[${displayType} message]`
-        logger.info('[ULTRAMSG] 🎤 Media message detected, using placeholder', {
-          workspaceId,
-          type,
-          placeholder: messageText,
-        })
+        if (type === 'audio' || type === 'ptt') {
+          // 🎤 Audio/PTT: attempt Whisper transcription
+          const audioRef = extractUltramsgAudio(payload)
+          if (audioRef?.ref?.mediaUrl) {
+            const transcription = await transcribeAudio({
+              audioUrl: audioRef.ref.mediaUrl,
+              declaredMime: audioRef.declaredMime,
+              provider: 'ultramsg',
+              workspaceId,
+            })
+            if (transcription?.text) {
+              messageText = transcription.text
+              logger.info('[ULTRAMSG] 🎤 Audio transcribed', {
+                chars: transcription.text.length,
+                workspaceId,
+              })
+            } else {
+              messageText = '[audio message]'
+            }
+          } else {
+            messageText = '[audio message]'
+          }
+        } else {
+          const displayType = type === 'ptt' ? 'audio' : type
+          messageText = `[${displayType} message]`
+          logger.info('[ULTRAMSG] 📎 Media message detected, using placeholder', {
+            workspaceId,
+            type,
+            placeholder: messageText,
+          })
+        }
       }
 
       if (!messageText || messageText.trim() === '') {

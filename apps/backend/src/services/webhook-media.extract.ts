@@ -22,7 +22,7 @@
 import { InboundMediaRef } from "./whatsapp/whatsapp-provider.interface"
 
 export interface ExtractedMedia {
-  kind: "IMAGE" | "DOCUMENT"
+  kind: "IMAGE" | "DOCUMENT" | "AUDIO"
   ref: InboundMediaRef
   declaredMime?: string
   filename?: string
@@ -30,7 +30,7 @@ export interface ExtractedMedia {
   waMediaId?: string
 }
 
-const SUPPORTED_TYPES = ["image", "document"] as const
+const SUPPORTED_TYPES = ["image", "document", "audio"] as const
 
 function kindFromType(type: string): "IMAGE" | "DOCUMENT" | null {
   if (type === "image") return "IMAGE"
@@ -57,6 +57,19 @@ export function extractMetaMedia(message: any): ExtractedMedia | null {
   }
 }
 
+/** Meta Cloud API inbound audio message → media ref (uses media id). */
+export function extractMetaAudio(message: any): ExtractedMedia | null {
+  if (message?.type !== "audio") return null
+  const audio = message.audio
+  if (!audio?.id) return null
+  return {
+    kind: "AUDIO",
+    ref: { mediaId: audio.id },
+    declaredMime: audio.mime_type,
+    waMediaId: audio.id,
+  }
+}
+
 /** UltraMsg inbound payload (data.*) → media (uses direct URL). */
 export function extractUltramsgMedia(data: any): ExtractedMedia | null {
   const type = data?.type
@@ -71,6 +84,19 @@ export function extractUltramsgMedia(data: any): ExtractedMedia | null {
     ref: { mediaUrl: url },
     filename: data.filename,
     caption: data.caption,
+  }
+}
+
+/** UltraMsg inbound audio/ptt payload → media ref (direct URL). */
+export function extractUltramsgAudio(data: any): ExtractedMedia | null {
+  const type = data?.type
+  if (type !== "audio" && type !== "ptt") return null
+  const url = data.media || data.body
+  if (!url || typeof url !== "string" || !/^https?:\/\//.test(url)) return null
+  return {
+    kind: "AUDIO",
+    ref: { mediaUrl: url },
+    declaredMime: "audio/ogg",
   }
 }
 
@@ -99,4 +125,18 @@ export function extractWasenderMedia(message: any): ExtractedMedia | null {
   return null
 }
 
+/** Wasender inbound audio message → media ref (direct URL). */
+export function extractWasenderAudio(message: any): ExtractedMedia | null {
+  const inner = message?.message
+  if (!inner) return null
+  const audioMsg = inner.audioMessage
+  if (!audioMsg?.url) return null
+  return {
+    kind: "AUDIO",
+    ref: { mediaUrl: audioMsg.url },
+    declaredMime: audioMsg.mimetype || "audio/ogg",
+  }
+}
+
 export const SUPPORTED_MEDIA_TYPES = SUPPORTED_TYPES
+export const AUDIO_MIME_TYPES = ["audio/ogg", "audio/mpeg", "audio/mp4", "audio/amr", "audio/aac", "audio/webm"]
