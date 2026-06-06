@@ -558,6 +558,81 @@ router.delete(
 );
 
 /**
+ * @swagger
+ * /api/workspaces/{workspaceId}/zoom-connection:
+ *   get:
+ *     summary: Get Zoom connection status
+ *     tags: [Appointments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Zoom connection status
+ */
+router.get(
+  '/workspaces/:workspaceId/zoom-connection',
+  authMiddleware,
+  workspaceValidationMiddleware,
+  appointmentController.getZoomConnectionStatus.bind(appointmentController)
+);
+
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/zoom-connection/oauth-url:
+ *   get:
+ *     summary: Get Zoom OAuth URL for authorization
+ *     tags: [Appointments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: OAuth URL
+ */
+router.get(
+  '/workspaces/:workspaceId/zoom-connection/oauth-url',
+  authMiddleware,
+  workspaceValidationMiddleware,
+  appointmentController.getZoomOAuthUrl.bind(appointmentController)
+);
+
+/**
+ * @swagger
+ * /api/workspaces/{workspaceId}/zoom-connection:
+ *   delete:
+ *     summary: Disconnect Zoom
+ *     tags: [Appointments]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Disconnected successfully
+ */
+router.delete(
+  '/workspaces/:workspaceId/zoom-connection',
+  authMiddleware,
+  workspaceValidationMiddleware,
+  appointmentController.disconnectZoom.bind(appointmentController)
+);
+
+/**
  * GET /api/auth/google/calendar/callback
  * Public OAuth callback — registered globally in routes/index.ts
  * Exchanges authorization code for tokens and stores Google Calendar connection

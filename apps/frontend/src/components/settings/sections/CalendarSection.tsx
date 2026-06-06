@@ -24,7 +24,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Calendar, Bell, DollarSign, Mail, MessageSquare, AlertCircle, ExternalLink, Loader2, CheckCircle, Unlink, Video } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { calendarConnectionApi, CalendarConnectionStatus } from "@/services/appointmentApi"
+import { calendarConnectionApi, CalendarConnectionStatus, zoomConnectionApi, ZoomConnectionStatus } from "@/services/appointmentApi"
 import { toast } from "@/lib/toast"
 
 interface CalendarSectionProps {
@@ -50,18 +50,27 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
   const [loadingStatus, setLoadingStatus] = useState(true)
   const [connectingOAuth, setConnectingOAuth] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
+  const [zoomStatus, setZoomStatus] = useState<ZoomConnectionStatus | null>(null)
+  const [loadingZoom, setLoadingZoom] = useState(true)
+  const [connectingZoom, setConnectingZoom] = useState(false)
+  const [disconnectingZoom, setDisconnectingZoom] = useState(false)
 
   // Load real connection status from API
   useEffect(() => {
     if (!workspaceId) return
     loadConnectionStatus()
+    loadZoomStatus()
 
     // Handle OAuth redirect back: check URL params for ?connected=true or ?error=
     const params = new URLSearchParams(window.location.search)
     const connected = params.get("connected")
+    const zoomConnected = params.get("zoom_connected")
     const error = params.get("error")
 
-    if (connected === "true") {
+    if (zoomConnected === "true") {
+      toast.success("Zoom connected successfully!")
+      window.history.replaceState({}, "", window.location.pathname + "?tab=calendar")
+    } else if (connected === "true") {
       toast.success("Google Calendar connected successfully!")
       // Remove query params from URL without page reload
       window.history.replaceState({}, "", window.location.pathname + "?tab=calendar")
@@ -90,6 +99,76 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
       setConnectionStatus({ connected: false, email: null, calendarId: null, lastSyncAt: null, connectedAt: null })
     } finally {
       setLoadingStatus(false)
+    }
+  }
+
+  const loadZoomStatus = async () => {
+    try {
+      setLoadingZoom(true)
+      const status = await zoomConnectionApi.getStatus(workspaceId)
+      setZoomStatus(status)
+    } catch {
+      setZoomStatus({ connected: false, zoomUserId: null })
+    } finally {
+      setLoadingZoom(false)
+    }
+  }
+
+  const handleZoomConnect = async () => {
+    try {
+      setConnectingZoom(true)
+      const { url } = await zoomConnectionApi.getOAuthUrl(workspaceId)
+      const width = 600
+      const height = 700
+      const left = (window.screen.width - width) / 2
+      const top = (window.screen.height - height) / 2
+      const popup = window.open(
+        url,
+        "ZoomOAuth",
+        `width=${width},height=${height},top=${top},left=${left},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
+      )
+
+      const onMessage = (event: MessageEvent) => {
+        if (event.data?.type === 'ZOOM_CONNECTED') {
+          toast.success("Zoom connected successfully!")
+          setConnectingZoom(false)
+          loadZoomStatus()
+          window.removeEventListener('message', onMessage)
+          clearInterval(pollTimer)
+        } else if (event.data?.type === 'ZOOM_ERROR') {
+          const detail = event.data?.detail
+          toast.error(detail ? `Failed to connect Zoom: ${detail}` : "Failed to connect Zoom")
+          setConnectingZoom(false)
+          window.removeEventListener('message', onMessage)
+          clearInterval(pollTimer)
+        }
+      }
+      window.addEventListener('message', onMessage)
+
+      const pollTimer = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(pollTimer)
+          window.removeEventListener('message', onMessage)
+          setConnectingZoom(false)
+          loadZoomStatus()
+        }
+      }, 500)
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to start Zoom OAuth flow")
+      setConnectingZoom(false)
+    }
+  }
+
+  const handleZoomDisconnect = async () => {
+    try {
+      setDisconnectingZoom(true)
+      await zoomConnectionApi.disconnect(workspaceId)
+      setZoomStatus({ connected: false, zoomUserId: null })
+      toast.success("Zoom disconnected")
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Failed to disconnect Zoom")
+    } finally {
+      setDisconnectingZoom(false)
     }
   }
 
@@ -296,12 +375,58 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Zoom integration is coming soon. Meetings will be auto-generated when customers book appointments.
-            </AlertDescription>
-          </Alert>
+          {loadingZoom ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Checking connection status...</span>
+            </div>
+          ) : !zoomStatus?.connected ? (
+            <div className="space-y-3">
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Not connected. Appointments won't get a Zoom meeting link.
+                </AlertDescription>
+              </Alert>
+              <Button
+                onClick={handleZoomConnect}
+                className="w-full"
+                disabled={connectingZoom}
+              >
+                {connectingZoom ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Video className="mr-2 h-4 w-4" />
+                )}
+                {connectingZoom ? "Redirecting to Zoom..." : "Connect Zoom"}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <Badge variant="success">Connected</Badge>
+                {zoomStatus.zoomUserId && (
+                  <span className="text-sm text-muted-foreground">
+                    {zoomStatus.zoomUserId}
+                  </span>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleZoomDisconnect}
+                disabled={disconnectingZoom}
+              >
+                {disconnectingZoom ? (
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                ) : (
+                  <Unlink className="mr-2 h-3 w-3" />
+                )}
+                Disconnect
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

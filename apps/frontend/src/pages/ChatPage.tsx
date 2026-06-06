@@ -280,10 +280,42 @@ export function ChatPage() {
   const [clientSearchTerm, setClientSearchTerm] = useState(
     searchParams.get("client") || ""
   )
-  const [filterBlocked, setFilterBlocked] = useState(false)
-  const [filterNeedsSupport, setFilterNeedsSupport] = useState(true)   // Default: Support ON
-  const [filterPlayground, setFilterPlayground] = useState(false)       // Default: Playground OFF
-  const [timeRange, setTimeRange] = useState<'all' | '1h' | '24h' | 'week'>('1h') // Default: last hour
+
+  // Load filters from localStorage on mount, fallback to defaults
+  const [filterBlocked, setFilterBlocked] = useState(() => {
+    const saved = localStorage.getItem('chat-filters-blocked')
+    return saved !== null ? JSON.parse(saved) : false
+  })
+  const [filterNeedsSupport, setFilterNeedsSupport] = useState(() => {
+    const saved = localStorage.getItem('chat-filters-support')
+    return saved !== null ? JSON.parse(saved) : true
+  })
+  const [filterPlayground, setFilterPlayground] = useState(() => {
+    const saved = localStorage.getItem('chat-filters-playground')
+    return saved !== null ? JSON.parse(saved) : false
+  })
+  const [timeRange, setTimeRange] = useState<'all' | '1h' | '24h' | 'week'>(() => {
+    const saved = localStorage.getItem('chat-filters-timerange')
+    return (saved as 'all' | '1h' | '24h' | 'week') || '1h'
+  })
+
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('chat-filters-blocked', JSON.stringify(filterBlocked))
+  }, [filterBlocked])
+
+  useEffect(() => {
+    localStorage.setItem('chat-filters-support', JSON.stringify(filterNeedsSupport))
+  }, [filterNeedsSupport])
+
+  useEffect(() => {
+    localStorage.setItem('chat-filters-playground', JSON.stringify(filterPlayground))
+  }, [filterPlayground])
+
+  useEffect(() => {
+    localStorage.setItem('chat-filters-timerange', timeRange)
+  }, [timeRange])
+
   const initialLoadRef = useRef(true)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [showBlockDialog, setShowBlockDialog] = useState(false)

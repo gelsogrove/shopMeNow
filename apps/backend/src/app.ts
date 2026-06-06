@@ -486,6 +486,21 @@ app.get("/api/v1/auth/google/calendar/callback", async (req, res) => {
 })
 logger.info("✅ Registered PUBLIC Google Calendar OAuth callback at /api/v1/auth/google/calendar/callback (direct, no auth)")
 
+// 🔓 PUBLIC Zoom OAuth callback — called by Zoom servers, workspaceId in state param
+app.get("/api/v1/auth/zoom/callback", async (req, res) => {
+  try {
+    const { AppointmentController } = await import("./interfaces/http/controllers/appointment.controller")
+    const controller = new AppointmentController(prisma)
+    return controller.handleZoomCallback(req, res)
+  } catch (error) {
+    logger.error("[ZOOM] Fatal error in Zoom OAuth callback:", error)
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000"
+    const detail = encodeURIComponent((error instanceof Error ? error.message : String(error)).slice(0, 300))
+    return res.redirect(`${frontendUrl}/settings?tab=calendar&error=server_error&detail=${detail}`)
+  }
+})
+logger.info("✅ Registered PUBLIC Zoom OAuth callback at /api/v1/auth/zoom/callback (direct, no auth)")
+
 // 🔓 PUBLIC PayPal callback routes - MUST be BEFORE /api/v1 to bypass auth middlewares
 // These routes are called by PayPal servers, not by authenticated users
 app.get("/api/paypal/subscription/callback", async (req, res) => {

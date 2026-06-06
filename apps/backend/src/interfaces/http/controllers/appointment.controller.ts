@@ -629,4 +629,219 @@ export class AppointmentController {
 </html>`);
     }
   }
+
+  // ============================================
+  // ZOOM OAUTH CONNECTION
+  // ============================================
+
+  /**
+   * GET /api/workspaces/:workspaceId/zoom-connection
+   * Get Zoom connection status for workspace
+   */
+  async getZoomConnectionStatus(req: Request, res: Response) {
+    try {
+      const workspaceId = (req as any).workspaceId;
+      const ws = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { zoomConnected: true, zoomUserId: true },
+      });
+      return res.json({
+        connected: !!ws?.zoomConnected,
+        zoomUserId: ws?.zoomUserId || null,
+      });
+    } catch (error) {
+      logger.error('Failed to get Zoom connection status:', error);
+      return res.status(500).json({
+        error: 'Failed to get Zoom connection status',
+        message: (error as Error).message,
+      });
+    }
+  }
+
+  /**
+   * GET /api/workspaces/:workspaceId/zoom-connection/oauth-url
+   * Generate Zoom OAuth URL for authorization. Scopes are configured on the
+   * Zoom Marketplace app itself — the authorize URL only carries client/redirect/state.
+   */
+  async getZoomOAuthUrl(req: Request, res: Response) {
+    try {
+      const workspaceId = (req as any).workspaceId;
+      const clientId = process.env.ZOOM_CLIENT_ID;
+      if (!clientId) {
+        return res.status(503).json({
+          error: 'Zoom integration not configured',
+          message: 'ZOOM_CLIENT_ID is not set',
+        });
+      }
+
+      const redirectUri = process.env.ZOOM_REDIRECT_URI
+        || `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`}/api/v1/auth/zoom/callback`;
+
+      logger.info('[OAuth] Zoom redirect URI:', { redirectUri });
+
+      const state = Buffer.from(JSON.stringify({ workspaceId })).toString('base64');
+      const params = new URLSearchParams({
+        response_type: 'code',
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        state,
+      });
+
+      const oauthUrl = `https://zoom.us/oauth/authorize?${params.toString()}`;
+      return res.json({ url: oauthUrl });
+    } catch (error) {
+      logger.error('Failed to generate Zoom OAuth URL:', error);
+      return res.status(500).json({
+        error: 'Failed to generate OAuth URL',
+        message: (error as Error).message,
+      });
+    }
+  }
+
+  /**
+   * DELETE /api/workspaces/:workspaceId/zoom-connection
+   * Disconnect Zoom for workspace
+   */
+  async disconnectZoom(req: Request, res: Response) {
+    try {
+      const workspaceId = (req as any).workspaceId;
+      await this.prisma.workspace.update({
+        where: { id: workspaceId },
+        data: {
+          zoomConnected: false,
+          zoomAccessToken: null,
+          zoomRefreshToken: null,
+          zoomUserId: null,
+        },
+      });
+      logger.info(`[ZOOM] Disconnected Zoom for workspace ${workspaceId}`);
+      return res.json({ success: true, message: 'Zoom disconnected successfully' });
+    } catch (error) {
+      logger.error('Failed to disconnect Zoom:', error);
+      return res.status(500).json({
+        error: 'Failed to disconnect Zoom',
+        message: (error as Error).message,
+      });
+    }
+  }
+
+  /**
+   * GET /api/v1/auth/zoom/callback
+   * Public Zoom OAuth callback — workspaceId comes from the state param.
+   * Exchanges code for tokens, stores them on the Workspace record.
+   */
+  async handleZoomCallback(req: Request, res: Response) {
+    try {
+      const { code, state, error: oauthError } = req.query;
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+      if (oauthError) {
+        logger.warn(`[ZOOM] OAuth error: ${oauthError}`);
+        return res.redirect(`${frontendUrl}/settings?tab=calendar&error=oauth_denied`);
+      }
+      if (!code || !state) {
+        return res.redirect(`${frontendUrl}/settings?tab=calendar&error=missing_params`);
+      }
+
+      let workspaceId: string;
+      try {
+        const decoded = JSON.parse(Buffer.from(state as string, 'base64').toString());
+        workspaceId = decoded.workspaceId;
+      } catch {
+        return res.redirect(`${frontendUrl}/settings?tab=calendar&error=invalid_state`);
+      }
+      if (!workspaceId) {
+        return res.redirect(`${frontendUrl}/settings?tab=calendar&error=invalid_state`);
+      }
+
+      const clientId = process.env.ZOOM_CLIENT_ID!;
+      const clientSecret = process.env.ZOOM_CLIENT_SECRET!;
+      const redirectUri = process.env.ZOOM_REDIRECT_URI
+        || `${process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 3001}`}/api/v1/auth/zoom/callback`;
+
+      const tokenResponse = await fetch('https://zoom.us/oauth/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code: code as string,
+          redirect_uri: redirectUri,
+        }).toString(),
+      });
+
+      if (!tokenResponse.ok) {
+        const tokenError = await tokenResponse.text();
+        logger.error('[ZOOM] Token exchange failed:', tokenError);
+        return res.redirect(`${frontendUrl}/settings?tab=calendar&error=token_exchange_failed`);
+      }
+
+      const tokens = await tokenResponse.json() as {
+        access_token: string;
+        refresh_token: string;
+        expires_in: number;
+        scope?: string;
+      };
+
+      // Fetch Zoom user identity (id/email) for display + meeting host.
+      let zoomUserId: string | null = null;
+      const meResponse = await fetch('https://api.zoom.us/v2/users/me', {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+      if (meResponse.ok) {
+        const me = await meResponse.json() as { id?: string; email?: string };
+        zoomUserId = me.id || me.email || null;
+      }
+
+      await this.prisma.workspace.update({
+        where: { id: workspaceId },
+        data: {
+          zoomAccessToken: tokens.access_token,
+          zoomRefreshToken: tokens.refresh_token,
+          zoomConnected: true,
+          zoomUserId,
+        },
+      });
+
+      logger.info(`[ZOOM] Zoom connected for workspace ${workspaceId} (${zoomUserId})`);
+      return res.send(`<!DOCTYPE html>
+<html>
+<head><title>Zoom Connected</title></head>
+<body>
+<script>
+  if (window.opener) {
+    window.opener.postMessage({ type: 'ZOOM_CONNECTED' }, '*');
+    window.close();
+  } else {
+    window.location.href = '${frontendUrl}/settings?tab=calendar&zoom_connected=true';
+  }
+</script>
+<p>Zoom connected! You can close this window.</p>
+</body>
+</html>`);
+    } catch (error) {
+      logger.error('Failed to handle Zoom OAuth callback:', error);
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const detail = (error instanceof Error ? error.message : String(error)).slice(0, 300);
+      const detailJson = JSON.stringify(detail);
+      const detailUri = encodeURIComponent(detail);
+      return res.send(`<!DOCTYPE html>
+<html>
+<head><title>Connection Failed</title></head>
+<body>
+<script>
+  if (window.opener) {
+    window.opener.postMessage({ type: 'ZOOM_ERROR', error: 'server_error', detail: ${detailJson} }, '*');
+    window.close();
+  } else {
+    window.location.href = '${frontendUrl}/settings?tab=calendar&error=server_error&detail=${detailUri}';
+  }
+</script>
+<p>Connection failed. You can close this window.</p>
+</body>
+</html>`);
+    }
+  }
 }

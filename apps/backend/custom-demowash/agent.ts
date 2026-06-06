@@ -553,6 +553,22 @@ async function executeTool(
       }
     }
 
+    // Notify the admin/operator with a lead briefing (name, contacts, city,
+    // machine, slot, request). Independent of the customer email — a failure
+    // here must not block the booking confirmation.
+    try {
+      await sendConsultationOperatorBriefing({
+        appointmentId,
+        appointmentDate: selectedSlot.date,
+        appointmentTime: selectedSlot.time,
+        state,
+        calendarLink,
+        zoomLink,
+      })
+    } catch (err) {
+      console.error(`[consultation_operator_email_failed] ${err instanceof Error ? err.message : String(err)}`)
+    }
+
     try {
       await sendConsultationEmail({
         appointmentId,
@@ -778,6 +794,79 @@ async function sendConsultationEmail(params: ConsultationParams): Promise<void> 
   await transporter.sendMail({
     from: EMAIL_FROM,
     to: customerEmail,
+    subject,
+    text: textBody,
+  })
+}
+
+// ── Email consultation — admin/operator lead briefing ────────────────────────
+// Sent to OPERATOR_EMAIL whenever a franchising consultation is booked, so the
+// admin gets the full lead (contacts + context) without reading the chat.
+
+interface ConsultationBriefingParams {
+  appointmentId: string
+  appointmentDate: string
+  appointmentTime: string
+  state: SessionState
+  calendarLink?: string | null
+  zoomLink?: string | null
+}
+
+async function sendConsultationOperatorBriefing(params: ConsultationBriefingParams): Promise<void> {
+  const { appointmentId, appointmentDate, appointmentTime, state, calendarLink, zoomLink } = params
+
+  console.error('\n══════ CONSULTATION LEAD (operator) ══════')
+  console.error(`Appointment ID: ${appointmentId}`)
+  console.error(`To: ${OPERATOR_EMAIL || '(no operatorEmail configured)'}`)
+  console.error(`Customer: ${state.name ?? '?'}`)
+  console.error(`Email: ${state.email ?? '?'}`)
+  console.error(`Phone: ${state.phone ?? '?'}`)
+  console.error(`City/Location: ${state.location ?? '?'}`)
+  console.error(`Slot: ${appointmentDate} ${appointmentTime}`)
+  console.error('══════════════════════════════════════════\n')
+
+  if (!OPERATOR_EMAIL) {
+    throw new Error('OPERATOR_EMAIL not configured (settings.json or env)')
+  }
+  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+    throw new Error('GMAIL_USER / GMAIL_APP_PASSWORD missing in .env (lead briefing logged to console only)')
+  }
+
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+  })
+
+  const machineLine = state.machine
+    ? `🔢 Máquina: ${state.machineType ?? ''} ${state.machine}`.trim()
+    : null
+
+  const subject = `[Demowash] Nueva consulta franchising — ${appointmentId}`
+  const textBody = [
+    'Nueva solicitud de consulta de franchising.',
+    '',
+    `🆔 Cita: ${appointmentId}`,
+    `🗓️ Fecha/hora: ${appointmentDate} ${appointmentTime} (UTC)`,
+    '',
+    '— Cliente —',
+    `👤 Nombre: ${state.name ?? '(no facilitado)'}`,
+    `📧 Email: ${state.email ?? '(no facilitado)'}`,
+    `📞 Teléfono: ${state.phone ?? '(no facilitado)'}`,
+    `📍 Ciudad/Sede: ${state.location ?? '(no especificada)'}`,
+    ...(machineLine ? [machineLine] : []),
+    `🌐 Idioma: ${state.language ?? '(desconocido)'}`,
+    '',
+    '— Interés —',
+    'Consulta de franchising (apertura de lavandería).',
+    ...(zoomLink ? ['', `🔗 Zoom: ${zoomLink}`] : []),
+    ...(calendarLink ? [`📆 Calendar: ${calendarLink}`] : []),
+    '',
+    '— Demowash Bot',
+  ].join('\n')
+
+  await transporter.sendMail({
+    from: EMAIL_FROM,
+    to: OPERATOR_EMAIL,
     subject,
     text: textBody,
   })

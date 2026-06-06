@@ -222,3 +222,25 @@ export const calendarConnectionApi = {
     return data;
   },
 };
+
+export interface ZoomConnectionStatus {
+  connected: boolean;
+  zoomUserId: string | null;
+}
+
+export const zoomConnectionApi = {
+  async getStatus(workspaceId: string): Promise<ZoomConnectionStatus> {
+    const { data } = await api.get(`/workspaces/${workspaceId}/zoom-connection`);
+    return data;
+  },
+
+  async getOAuthUrl(workspaceId: string): Promise<{ url: string }> {
+    const { data } = await api.get(`/workspaces/${workspaceId}/zoom-connection/oauth-url`);
+    return data;
+  },
+
+  async disconnect(workspaceId: string): Promise<{ success: boolean; message: string }> {
+    const { data } = await api.delete(`/workspaces/${workspaceId}/zoom-connection`);
+    return data;
+  },
+};
