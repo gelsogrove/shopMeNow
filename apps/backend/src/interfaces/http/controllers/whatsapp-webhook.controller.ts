@@ -345,32 +345,38 @@ export class WhatsAppWebhookController {
         if (message?.type === "audio" && !inboundReaction) {
           inboundWasAudio = true
           const audioRef = extractMetaAudio(message)
-          if (audioRef?.ref?.mediaId && value.workspaceId) {
-            try {
-              const wsData = await prisma.workspace.findUnique({
-                where: { id: value.workspaceId },
-                select: { metaPhoneNumberId: true, metaAccessToken: true, whatsappProvider: true, ultraMsgInstanceId: true, ultraMsgToken: true, ultraMsgApiUrl: true, wasenderApiKey: true },
-              })
-              const wsProvider = WhatsAppProviderFactory.create(wsData)
-              const { buffer, mimeType } = await wsProvider.downloadInboundMedia(audioRef.ref)
-              const transcription = await transcribeAudio({
-                audioBuffer: buffer,
-                declaredMime: mimeType,
-                provider: "meta",
-                workspaceId: value.workspaceId,
-              })
-              if (transcription?.text) {
-                messageText = transcription.text
-                logger.info("[WEBHOOK] 🎤 Meta audio transcribed", {
-                  chars: transcription.text.length,
-                  workspaceId: value.workspaceId,
+          if (audioRef?.ref?.mediaId) {
+            // workspaceId may not be in value for real Meta webhooks — resolve from webhookId
+            const audioWorkspaceId = value.workspaceId || (webhookId
+              ? (await prisma.whatsappSettings.findUnique({ where: { webhookId }, select: { workspaceId: true } }))?.workspaceId
+              : undefined)
+            if (audioWorkspaceId) {
+              try {
+                const wsData = await prisma.workspace.findUnique({
+                  where: { id: audioWorkspaceId },
+                  select: { metaPhoneNumberId: true, metaAccessToken: true, whatsappProvider: true, ultraMsgInstanceId: true, ultraMsgToken: true, ultraMsgApiUrl: true, wasenderApiKey: true },
                 })
-              } else {
+                const wsProvider = WhatsAppProviderFactory.create(wsData)
+                const { buffer, mimeType } = await wsProvider.downloadInboundMedia(audioRef.ref)
+                const transcription = await transcribeAudio({
+                  audioBuffer: buffer,
+                  declaredMime: mimeType,
+                  provider: "meta",
+                  workspaceId: audioWorkspaceId,
+                })
+                if (transcription?.text) {
+                  messageText = transcription.text
+                  logger.info("[WEBHOOK] 🎤 Meta audio transcribed", {
+                    chars: transcription.text.length,
+                    workspaceId: audioWorkspaceId,
+                  })
+                } else {
+                  messageText = "[audio message]"
+                }
+              } catch (audioErr) {
+                logger.error("[WEBHOOK] ❌ Meta audio transcription failed", { error: audioErr })
                 messageText = "[audio message]"
               }
-            } catch (audioErr) {
-              logger.error("[WEBHOOK] ❌ Meta audio transcription failed", { error: audioErr })
-              messageText = "[audio message]"
             }
           }
         }
