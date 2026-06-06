@@ -161,6 +161,7 @@ export class UltraMsgWebhookController {
     const { id, from, to, body, type, timestamp } = payload
     // 📎 image/document → media ref (direct URL); null for text/other types
     const inboundMedia = extractUltramsgMedia(payload)
+    const inboundWasAudio = type === 'audio' || type === 'ptt'
 
     logger.info('📥 UltraMsg Webhook received', {
       webhookId,
@@ -1680,6 +1681,7 @@ export class UltraMsgWebhookController {
           phoneNumber: customer.phone,
           messageContent: routerResult.response,
           conversationMessageId: assistantMessage?.id,
+          replyAsAudio: inboundWasAudio,
         })
 
         logger.info('[ULTRAMSG] ✅ Response sent directly to WhatsApp', { customerId: customer.id })

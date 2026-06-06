@@ -4,6 +4,7 @@ import { mdToWhatsApp } from "../utils/markdown-to-whatsapp"
 import { WhatsAppProviderFactory } from "./whatsapp/whatsapp-provider.factory"
 import { SecurityAgent } from "../application/agents/SecurityAgent"
 import { SubscriptionBillingService } from "../application/services/subscription-billing.service"
+import { generateSpeech } from "./tts-elevenlabs.service"
 
 export interface DirectSendParams {
   workspaceId: string
@@ -13,6 +14,8 @@ export interface DirectSendParams {
   conversationMessageId?: string
   skipSecurityCheck?: boolean
   isPlayground?: boolean
+  /** When true: attempt TTS reply; fall back to text if TTS fails. */
+  replyAsAudio?: boolean
 }
 
 export interface DirectSendResult {
@@ -50,6 +53,7 @@ export class WhatsAppDirectSendService {
       conversationMessageId,
       skipSecurityCheck = false,
       isPlayground = false,
+      replyAsAudio = false,
     } = params
 
     if (isPlayground) {
@@ -121,8 +125,20 @@ export class WhatsAppDirectSendService {
 
     let sendResult: { success: boolean; messageId?: string; error?: string }
     try {
-      const result = await provider.sendTextMessage(phoneNumber, formattedMessage)
-      sendResult = result
+      if (replyAsAudio && provider.sendAudioMessage) {
+        // 🎤 TTS path: generate MP3 → upload → send as audio message
+        const tts = await generateSpeech(messageContent, workspaceId)
+        if (tts?.audioUrl) {
+          logger.info("[DirectSend] 🎤 Sending audio reply via TTS", { workspaceId, customerId })
+          sendResult = await provider.sendAudioMessage(phoneNumber, tts.audioUrl)
+        } else {
+          // TTS failed — fall back to text
+          logger.warn("[DirectSend] ⚠️ TTS failed — falling back to text reply", { workspaceId, customerId })
+          sendResult = await provider.sendTextMessage(phoneNumber, formattedMessage)
+        }
+      } else {
+        sendResult = await provider.sendTextMessage(phoneNumber, formattedMessage)
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       logger.error("[DirectSend] ❌ Provider send failed", { workspaceId, customerId, error: errorMessage })

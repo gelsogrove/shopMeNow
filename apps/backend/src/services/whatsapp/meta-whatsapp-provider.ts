@@ -285,6 +285,32 @@ export class MetaWhatsAppProvider implements WhatsAppProvider {
     }
   }
 
+  async sendAudioMessage(to: string, audioUrl: string): Promise<WhatsAppSendMessageResult> {
+    try {
+      const formattedPhone = to.replace(/[\s+]/g, '')
+      const url = `${this.baseUrl}/${this.config.phoneNumberId}/messages`
+      const response = await axios.post(
+        url,
+        {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: formattedPhone,
+          type: 'audio',
+          audio: { link: audioUrl },
+        },
+        {
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.config.accessToken}` },
+          timeout: 30000,
+        }
+      )
+      logger.info('✅ Meta: Audio sent', { to: formattedPhone, messageId: response.data.messages?.[0]?.id })
+      return { messageId: response.data.messages?.[0]?.id || `meta-${Date.now()}`, success: true }
+    } catch (error: any) {
+      logger.error('❌ Meta: Failed to send audio', { to, error: error.message, response: error.response?.data })
+      return { messageId: '', success: false, error: error.message }
+    }
+  }
+
   /**
    * Download inbound media from Meta.
    * Two steps: (1) GET /{media_id} → { url, mime_type, file_size }, then

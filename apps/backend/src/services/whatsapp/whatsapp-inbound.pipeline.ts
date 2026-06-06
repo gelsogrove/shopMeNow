@@ -55,6 +55,8 @@ export interface ProcessReplyInput {
   whatsappMessageId: string
   /** Inbound media reference or null. */
   inboundMedia: ExtractedMedia | null
+  /** True when the inbound message was an audio/voice message (triggers TTS reply). */
+  inboundWasAudio?: boolean
   /** Playground/test run — skip send + typing, ignore DB language. */
   isPlayground: boolean
   /** Count of prior real user messages (drives first-message welcome video). */
@@ -525,6 +527,7 @@ export class WhatsAppInboundPipeline {
       messageMarkdown,
       whatsappMessageId,
       inboundMedia,
+      inboundWasAudio = false,
       isPlayground,
       messageCount,
       registrationPromptLevel,
@@ -689,7 +692,7 @@ export class WhatsAppInboundPipeline {
           // same on every provider (Meta/UltraMsg/Wasender) because it uses the
           // provider-agnostic send()/sendMedia() of WhatsAppDirectSendService.
           const videoSplit =
-            messageCount === 0 && welcomeVideoUrl
+            messageCount === 0 && welcomeVideoUrl && !inboundWasAudio
               ? buildWelcomeVideoSplit(customerReply, welcomeVideoUrl, customerLanguage)
               : null
 
@@ -719,7 +722,7 @@ export class WhatsAppInboundPipeline {
             // message. For a non-YouTube first-contact video, fall back to the
             // legacy inline intro + URL so the link still goes out.
             let finalReply = customerReply
-            if (messageCount === 0 && welcomeVideoUrl) {
+            if (messageCount === 0 && welcomeVideoUrl && !inboundWasAudio) {
               const introText =
                 WELCOME_VIDEO_INTRO[customerLanguage ?? "en"] ?? WELCOME_VIDEO_INTRO.en
               const breakIdx = customerReply.indexOf("\n\n")
@@ -777,12 +780,17 @@ export class WhatsAppInboundPipeline {
       }
     }
 
+    // 🎤 Audio mode: append spoken-format instruction so LLM skips emoji/lists/links.
+    const messageForEngine = inboundWasAudio
+      ? `${messageMarkdown}\n\n[SYSTEM: Reply in spoken audio format — no emoji, no bullet lists, no markdown, no URLs, natural conversational sentences only.]`
+      : messageMarkdown
+
     // 🤖 Standard path: main chat engine routing (saves inbound + outbound).
     const routerResult = await chatEngine.routeMessage({
       workspaceId: customer.workspaceId,
       customerId: customer.id,
       conversationId: chatSession.id,
-      message: messageMarkdown,
+      message: messageForEngine,
       customerLanguage,
       customerName: customer.name,
       customerDiscount: customer.discount || 0,
@@ -848,6 +856,7 @@ export class WhatsAppInboundPipeline {
         messageContent: routerResult.response,
         conversationMessageId: assistantMessage?.id,
         isPlayground,
+        replyAsAudio: inboundWasAudio,
       })
 
       logger.info("[PIPELINE] ✅ Response sent directly to WhatsApp", { customerId: customer.id })

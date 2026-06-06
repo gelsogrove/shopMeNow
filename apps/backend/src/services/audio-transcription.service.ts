@@ -8,8 +8,8 @@
  * before entering the LLM chat pipeline.
  */
 
+import axios from "axios"
 import FormData from "form-data"
-import fetch from "node-fetch"
 import logger from "../utils/logger"
 
 const WHISPER_URL = "https://openrouter.ai/api/v1/audio/transcriptions"
@@ -59,17 +59,8 @@ export async function transcribeAudio(
       url: audioUrl.substring(0, 80),
     })
     try {
-      const dlRes = await fetch(audioUrl, { timeout: 15_000 } as any)
-      if (!dlRes.ok) {
-        logger.error("[AUDIO-TRANSCRIPTION] ❌ Download failed", {
-          status: dlRes.status,
-          provider,
-          workspaceId,
-        })
-        return null
-      }
-      const arrayBuf = await dlRes.arrayBuffer()
-      buffer = Buffer.from(arrayBuf)
+      const dlRes = await axios.get(audioUrl, { responseType: "arraybuffer", timeout: 15_000 })
+      buffer = Buffer.from(dlRes.data)
     } catch (err) {
       logger.error("[AUDIO-TRANSCRIPTION] ❌ Download error", { error: err, provider, workspaceId })
       return null
@@ -104,29 +95,15 @@ export async function transcribeAudio(
   })
 
   try {
-    const whisperRes = await fetch(WHISPER_URL, {
-      method: "POST",
+    const res = await axios.post(WHISPER_URL, form, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         ...form.getHeaders(),
       },
-      body: form,
       timeout: 30_000,
-    } as any)
+    })
 
-    if (!whisperRes.ok) {
-      const errBody = await whisperRes.text()
-      logger.error("[AUDIO-TRANSCRIPTION] ❌ Whisper API error", {
-        status: whisperRes.status,
-        body: errBody.substring(0, 300),
-        provider,
-        workspaceId,
-      })
-      return null
-    }
-
-    const json = (await whisperRes.json()) as { text?: string; usage?: { total_tokens?: number } }
-    const text = json.text?.trim()
+    const text = res.data?.text?.trim()
     if (!text) {
       logger.warn("[AUDIO-TRANSCRIPTION] ⚠️ Whisper returned empty text", { provider, workspaceId })
       return null
@@ -138,9 +115,15 @@ export async function transcribeAudio(
       workspaceId,
     })
 
-    return { text, tokensUsed: json.usage?.total_tokens }
-  } catch (err) {
-    logger.error("[AUDIO-TRANSCRIPTION] ❌ Whisper request error", { error: err, provider, workspaceId })
+    return { text, tokensUsed: res.data?.usage?.total_tokens }
+  } catch (err: any) {
+    logger.error("[AUDIO-TRANSCRIPTION] ❌ Whisper request error", {
+      error: err.message,
+      status: err.response?.status,
+      body: JSON.stringify(err.response?.data)?.substring(0, 300),
+      provider,
+      workspaceId,
+    })
     return null
   }
 }

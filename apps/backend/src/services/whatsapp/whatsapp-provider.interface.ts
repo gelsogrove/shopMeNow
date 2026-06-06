@@ -52,6 +52,15 @@ export interface WhatsAppProvider {
   ): Promise<WhatsAppSendMessageResult>
 
   /**
+   * Send an audio message (MP3/OGG public URL).
+   * Optional — providers that don't support it fall back to text.
+   */
+  sendAudioMessage?(
+    to: string,
+    audioUrl: string
+  ): Promise<WhatsAppSendMessageResult>
+
+  /**
    * Download an inbound media item referenced in a webhook payload.
    * Optional - implemented by providers that support receiving media.
    * Returns the raw bytes + best-known MIME type so the ingestion pipeline can

@@ -222,6 +222,27 @@ export class WasenderWhatsAppProvider implements WhatsAppProvider {
     }
   }
 
+  async sendAudioMessage(to: string, audioUrl: string): Promise<WhatsAppSendMessageResult> {
+    try {
+      const formattedTo = to.replace(/^\+/, '') + '@s.whatsapp.net'
+      const response = await axios.post(
+        `${this.baseUrl}/api/send-message`,
+        { to: formattedTo, audioUrl },
+        {
+          headers: { Authorization: `Bearer ${this.config.sessionApiKey}`, 'Content-Type': 'application/json' },
+          timeout: 30000,
+        }
+      )
+      const messageId = response.data?.data?.id || 'unknown'
+      logger.info('[Wasender-Provider] ✅ Audio sent', { to: this.maskPhone(to), messageId })
+      return { messageId, success: true }
+    } catch (error: any) {
+      const errMsg = error.response?.data?.message || error.message
+      logger.error('[Wasender-Provider] ❌ Failed to send audio', { to: this.maskPhone(to), error: errMsg })
+      return { messageId: '', success: false, error: `WasenderAPI audio send failed: ${errMsg}` }
+    }
+  }
+
   private maskPhone(phone: string): string {
     if (!phone || phone.length <= 4) return '***'
     return phone.substring(0, 3) + '***' + phone.substring(phone.length - 4)

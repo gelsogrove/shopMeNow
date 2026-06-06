@@ -731,12 +731,14 @@ export class WasenderWebhookController {
 
     // Inbound media ingest happens inside the pipeline (chatEngine path), matching
     // Meta — no separate ingest here (avoids double-ingestion of the same media).
+    const inboundWasAudio = !!((message?.message as any)?.audioMessage)
     const result = await whatsAppInboundPipeline.processReply({
       customer,
       chatSession,
       messageMarkdown,
       whatsappMessageId: messageId || `wasender-${chatSession.id}`,
       inboundMedia,
+      inboundWasAudio,
       isPlayground: false,
       messageCount,
       registrationPromptLevel: 0,

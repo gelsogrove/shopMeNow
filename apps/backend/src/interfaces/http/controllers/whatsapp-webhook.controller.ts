@@ -311,6 +311,7 @@ export class WhatsAppWebhookController {
       let isPlayground: boolean = false // 🧪 Playground flag (only from frontend simulator)
       let inboundMedia: ExtractedMedia | null = null // 📎 image/PDF sent by the customer (if any)
       let inboundReaction: ExtractedReaction | null = null // 😀 reaction (like) on a message (if any)
+      let inboundWasAudio = false // 🎤 true when inbound was a voice/audio message
 
       // Check if it's WhatsApp API format
       const entry = data.entry?.[0]
@@ -342,6 +343,7 @@ export class WhatsAppWebhookController {
         }
         // 🎤 Audio message: transcribe via Whisper and replace placeholder with actual text
         if (message?.type === "audio" && !inboundReaction) {
+          inboundWasAudio = true
           const audioRef = extractMetaAudio(message)
           if (audioRef?.ref?.mediaId && value.workspaceId) {
             try {
@@ -2267,6 +2269,7 @@ export class WhatsAppWebhookController {
         messageMarkdown,
         whatsappMessageId,
         inboundMedia,
+        inboundWasAudio,
         isPlayground,
         messageCount,
         registrationPromptLevel,

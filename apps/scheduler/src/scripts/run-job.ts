@@ -90,6 +90,10 @@ const JOB_MAP: Record<string, () => Promise<void>> = {
     const { wasenderQrCleanupJob } = await import('../jobs/wasender-qr-cleanup.job')
     await wasenderQrCleanupJob()
   },
+  'tts-audio-cleanup': async () => {
+    const { ttsAudioCleanupJob } = await import('../jobs/tts-audio-cleanup.job')
+    await ttsAudioCleanupJob()
+  },
 }
 
 async function main() {

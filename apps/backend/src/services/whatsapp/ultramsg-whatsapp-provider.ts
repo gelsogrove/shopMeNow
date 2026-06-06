@@ -260,6 +260,28 @@ export class UltraMsgWhatsAppProvider implements WhatsAppProvider {
     return { buffer, mimeType: mimeType.split(';')[0].trim(), sizeBytes: buffer.length }
   }
 
+  async sendAudioMessage(to: string, audioUrl: string): Promise<WhatsAppSendMessageResult> {
+    try {
+      const formattedPhone = to.replace(/[\s+]/g, '')
+      const postData = querystring.stringify({
+        token: this.config.token,
+        to: formattedPhone,
+        audio: audioUrl,
+        priority: '1',
+      })
+      const url = this.buildEndpoint('messages/audio')
+      const response = await axios.post(url, postData, {
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        timeout: 30000,
+      })
+      logger.info('✅ UltraMsg: Audio sent', { to: formattedPhone })
+      return { messageId: response.data?.id || response.data?.msgId || `ultramsg-${Date.now()}`, success: true }
+    } catch (error: any) {
+      logger.error('❌ UltraMsg: Failed to send audio', { to, error: error.message })
+      return { messageId: '', success: false, error: error.message }
+    }
+  }
+
   /**
    * UltraMsg does NOT support WhatsApp Business Template messages
    * This method is not implemented

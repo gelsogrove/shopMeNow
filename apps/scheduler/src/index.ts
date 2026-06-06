@@ -41,6 +41,7 @@ import logger from './utils/logger'
 //   reminder-locks-cleanup      - Delete expired appointment reminder dedup locks
 //   appointment-reminder        - Send 24h and 1h appointment reminder notifications
 //   wasender-qr-cleanup         - Clear expired Wasender QR codes
+//   tts-audio-cleanup           - Delete TTS MP3 files older than 4h from Cloudinary
 
 async function main() {
   logger.info('eChatbot Scheduler — no continuous jobs configured.')
