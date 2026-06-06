@@ -1720,7 +1720,7 @@ const translations = {
     "header.tagline": "Fale com seus clientes através do chat favorito deles",
 
     // Hero Section
-    "hero.title": "Crie seu agente no WhatsApp",
+    "hero.title": "O teu agente AI no WhatsApp",
     "hero.subtitle":
       "Uma IA à medida que responde aos teus clientes 24/7 no WhatsApp, passa ao operador com tradução em tempo real e envia campanhas. Para franquias, e-commerce e serviços.",
     "hero.slogan": "O primeiro agente nunca se esquece.",
