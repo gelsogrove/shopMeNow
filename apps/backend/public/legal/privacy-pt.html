@@ -1,353 +1,109 @@
-<h1>Política de Privacidade do eChatbot</h1>
-
-<p><strong>Última Atualização:</strong> Março de 2025<br>
-<strong>Versão:</strong> 3.0</p>
-
-<h2>1. Introdução</h2>
-
-<p>eChatbot SRL ("nós", "nosso", "Plataforma", "Serviço") é uma plataforma de chatbot de e-commerce baseada em WhatsApp que permite que as empresas gerenciem interações com clientes e pedidos através do WhatsApp. Esta Política de Privacidade explica como coletamos, utilizamos, divulgamos e processamos dados pessoais em relação aos nossos Serviços.</p>
-
-<p><strong>Controlador de Dados:</strong> eChatbot SRL<br>
-<strong>Sede Legal:</strong> Via Roma 1, 20100 Milão, Itália<br>
-<strong>NIF:</strong> IT12345678901<br>
-<strong>Email:</strong> privacy@echatbot.ai</p>
-
-<h2>2. Escopo e Partes Envolvidas</h2>
-
-<p>Esta Política de Privacidade se aplica a:</p>
-
-<ul>
-<li><strong>Usuários da Plataforma:</strong> Empresas (comerciantes, proprietários de lojas de e-commerce) que criam contas e gerenciam chatbots</li>
-<li><strong>Clientes Finais:</strong> Indivíduos que interagem com os chatbots dos comerciantes via WhatsApp</li>
-<li><strong>Processadores de Dados:</strong> Terceiros (WhatsApp, provedores de pagamento, serviços de LLM)</li>
-</ul>
-
-<p>Cada parte tem diferentes responsabilidades no processamento de dados, conforme descrito abaixo.</p>
-
-<h2>3. Dados que Coletamos</h2>
-
-<h3>3.1 Dos Comerciantes (Usuários da Plataforma)</h3>
-
-<ul>
-<li><strong>Dados da Conta:</strong> Nome, email, número de telefone, nome da empresa, endereço, NIF, hash de senha</li>
-<li><strong>Dados de Configuração:</strong> Informações de produtos, preços, ofertas promocionais, instruções de atendimento ao cliente, horários comerciais, chaves de API</li>
-<li><strong>Dados Operacionais:</strong> Transcrições de chat, números de telefone de clientes, registros de conversas, histórico de pedidos, registros de pagamento</li>
-<li><strong>Dados Técnicos:</strong> Endereço IP, tipo de navegador, informações do dispositivo, cookies de sessão, registros de acesso, métricas de uso de API</li>
-<li><strong>Dados de Faturamento:</strong> Informações de faturamento (NÃO armazenadas por nós—gerenciadas de forma segura por nosso processador de pagamento PayPal)</li>
-</ul>
-
-<h3>3.2 Dos Clientes Finais</h3>
-
-<ul>
-<li><strong>Dados de Identidade:</strong> Número de telefone (identificador do WhatsApp), nome do cliente (se fornecido no chat)</li>
-<li><strong>Dados de Conversa:</strong> Todas as mensagens enviadas/recebidas através do chatbot, arquivos de mídia (imagens, documentos), timestamps de interação</li>
-<li><strong>Dados de Transação:</strong> Histórico de pedidos, seleções de produtos, endereços, método de pagamento (gerenciado pelo provedor de pagamento do comerciante)</li>
-<li><strong>Dados Técnicos:</strong> Identificadores de sessão do WhatsApp, timestamps de entrega de mensagens, país do dispositivo (deduzido do prefixo do telefone)</li>
-</ul>
-
-<h3>3.3 Coleta Automática</h3>
-
-<ul>
-<li><strong>Cookies e Sessões:</strong> Utilizamos cookies técnicos para autenticação e gerenciamento de sessão</li>
-<li><strong>Registros do Servidor:</strong> Endereços IP, timestamps de solicitação, registros de erros, padrões de uso de API</li>
-<li><strong>Análises:</strong> Métricas de uso do espaço de trabalho (por exemplo, número de conversas, clientes, mensagens processadas)</li>
-</ul>
-
-<h2>4. Base Legal para Tratamento</h2>
-
-<p>Processamos dados pessoais com base em:</p>
-
-<ul>
-<li><strong>Execução do Contrato (Art. 6(1)(b) GDPR):</strong> Fornecimento da plataforma de chatbot e gerenciamento de pedidos/pagamentos</li>
-<li><strong>Interesse Legítimo (Art. 6(1)(f) GDPR):</strong> Melhoria da plataforma, prevenção de fraude, conformidade legal</li>
-<li><strong>Obrigação Legal (Art. 6(1)(c) GDPR):</strong> Conformidade fiscal, retenção de dados para disputas, requisitos regulatórios</li>
-<li><strong>Consentimento (Art. 6(1)(a) GDPR):</strong> Recursos opcionais como análises de marketing, modelos LLM avançados</li>
-</ul>
-
-<h2>5. Como Utilizamos Seus Dados</h2>
-
-<h3>5.1 Provedores de Entrega de Mensagens WhatsApp</h3>
-
-<p>Para integrações de canais do WhatsApp, os Usuários da Plataforma podem escolher entre múltiplos provedores de mensagens WhatsApp de terceiros. Cada provedor tem diferentes infraestruturas, certificações de conformidade e cobertura geográfica. Os usuários selecionam qual(is) provedor(es) usar durante a configuração do espaço de trabalho. Os provedores do WhatsApp atualmente suportados incluem:</p>
-
-<ul>
-<li><strong>Meta Platforms (API de Negócios do WhatsApp)</strong> — Integração direta com a API oficial da Meta, as mensagens são roteadas através da infraestrutura da Meta (UE / EUA)</li>
-<li><strong>WAAPI</strong> — Provedor europeu de entrega de mensagens WhatsApp, opera em centros de dados da UE (UE)</li>
-<li><strong>Parceiros adicionais</strong> — Outros provedores certificados de entrega de mensagens WhatsApp disponíveis nas configurações da plataforma</li>
-</ul>
-
-<p><strong>Chaves Secretas e Credenciais de API:</strong> Para cada provedor de WhatsApp selecionado, os Usuários da Plataforma devem fornecer chaves de API, tokens de acesso ou credenciais de autenticação. Esses segredos são:</p>
-
-<ul>
-<li><strong>Criptografados em repouso</strong> — armazenados usando criptografia AES-256 em nosso banco de dados</li>
-<li><strong>Nunca registrados ou transmitidos</strong> — as credenciais nunca são gravadas em registros, rastreamentos de erros ou sistemas de monitoramento externos</li>
-<li><strong>Controlados por acesso</strong> — apenas o administrador do espaço de trabalho que configurou o provedor pode visualizar ou rotacionar as credenciais</li>
-<li><strong>Rotacionados sob demanda</strong> — os usuários podem regenerar ou substituir as credenciais do provedor a qualquer momento através do painel da plataforma</li>
-<li><strong>Utilizados exclusivamente para comunicação do provedor</strong> — as credenciais são enviadas apenas aos servidores do provedor escolhido e em nenhum outro lugar</li>
-</ul>
-
-<h3>5.2 Processamento de LLM e Recursos de IA</h3>
-
-<p><strong>Provedor de LLM:</strong> A menos que configurado explicitamente de outra forma, usamos OpenRouter como nosso provedor de LLM. OpenRouter roteia solicitações para vários modelos de linguagem grande (GPT-4, Claude, etc.) dependendo da disponibilidade e configuração do usuário.</p>
-
-<p><strong>Dados Enviados para LLM:</strong> Para gerar respostas inteligentes do chatbot, enviamos o seguinte para o serviço de LLM:</p>
-
-<ul>
-<li>Mensagens de clientes e histórico de conversas (últimas N mensagens)</li>
-<li>Catálogo de produtos e informações de preços do comerciante</li>
-<li>Instruções personalizadas do comerciante e regras de negócio</li>
-<li>Contexto limitado do cliente (por exemplo, preferência de idioma declarada, intenção de conversa)</li>
-</ul>
-
-<p><strong>Retenção de Dados de LLM:</strong> OpenRouter pode reter entradas/saídas para melhoria de modelo e prevenção de fraude por até 30 dias. Consulte a política de privacidade da OpenRouter para detalhes. NÃO temos controle sobre retenção de dados de LLM.</p>
-
-<p><strong>Seu Direito de Exclusão:</strong> Os comerciantes podem desabilitar recursos de IA e usar apenas respostas baseadas em regras, embora isso limite as capacidades do chatbot.</p>
-
-<h3>5.3 Uso Geral de Dados</h3>
-
-<ul>
-<li><strong>Entrega de Serviço:</strong> Operação da plataforma de chatbot, gerenciamento de conversas, processamento de pedidos</li>
-<li><strong>Atendimento ao Cliente:</strong> Resposta a consultas, resolução de problemas</li>
-<li><strong>Faturamento e Pagamentos:</strong> Faturamento, gerenciamento de assinaturas, processamento de pagamentos</li>
-<li><strong>Análises e Melhoria:</strong> Métricas de uso agregadas, otimização de recursos (anonimizadas)</li>
-<li><strong>Conformidade Legal:</strong> Detecção de fraude, resolução de disputas, obrigações regulatórias</li>
-<li><strong>Segurança:</strong> Detecção de violações, prevenção de abuso, proteção contra atividades maliciosas</li>
-</ul>
-
-<h2>6. Compartilhamento de Dados e Terceiros</h2>
-
-<p>Compartilhamos dados com as seguintes categorias de destinatários:</p>
-
-<h3>6.1 Integrações Necessárias (Automáticas)</h3>
-
-<ul>
-<li><strong>WhatsApp / Meta:</strong> Enviamos números de telefone de clientes, conteúdo de mensagens e dados de interação para processar mensagens do WhatsApp (ou para seu provedor de WhatsApp escolhido). Isto é essencial para o funcionamento do Serviço.</li>
-<li><strong>Provedores de Pagamento (PayPal):</strong> Compartilhamos informações de faturamento e detalhes de subscrição para processar pagamentos. PayPal está em conformidade com padrões PCI DSS e PSD2. Localização: EUA (Cláusulas Contratuais Padrão se aplicam)</li>
-<li><strong>Serviços de LLM (OpenRouter, etc.):</strong> Enviamos contexto de conversa e dados de produtos para gerar respostas de IA (consulte a Seção 5.2).</li>
-<li><strong>Provedores de Email (SES, SendGrid):</strong> Enviamos emails de notificação através de serviços SMTP de terceiros.</li>
-<li><strong>Infraestrutura em Nuvem (AWS, Heroku):</strong> Hospedamos nossa plataforma em provedores em nuvem que têm acesso a dados criptografados.</li>
-</ul>
-
-<h3>6.2 Compartilhamento Opcional</h3>
-
-<ul>
-<li><strong>Plataformas de Análise:</strong> Podemos compartilhar métricas de uso anonimizadas com serviços de análise (opcional, o usuário pode optar por não participar).</li>
-<li><strong>Ferramentas de Suporte ao Cliente:</strong> Interações de suporte podem ser compartilhadas com plataformas de suporte para gerenciamento de tickets.</li>
-</ul>
-
-<h3>6.3 Requisitos Legais</h3>
-
-<p>Podemos divulgar dados pessoais se exigido por lei, ordem judicial ou solicitação governamental. Tentaremos notificá-lo sobre tais solicitações, a menos que proibido por lei.</p>
-
-<h3>6.4 Transferências de Negócios</h3>
-
-<p>No caso de fusão, aquisição ou falência, seus dados podem ser transferidos como parte dos ativos de negócios. Forneceremos notificação de qualquer mudança de controle.</p>
-
-<p><strong>Destinatários Localizados Fora da UE:</strong> Alguns destinatários (PayPal, Meta, OpenRouter) estão localizados fora da UE. Garantimos salvaguardas adequadas:</p>
-
-<ul>
-<li><strong>Cláusulas Contratuais Padrão (CCPs):</strong> Mecanismo de transferência de dados aprovado conforme a decisão de adequação da UE 2021/914</li>
-<li><strong>Regras Corporativas Vinculantes (RCVs):</strong> Para transferências corporativas internas (se aplicável)</li>
-<li><strong>Decisões de Adequação:</strong> Onde disponíveis (ex.: Reino Unido, Japão, Coreia do Sul)</li>
-</ul>
-
-<h2>7. Retenção de Dados</h2>
-
-<ul>
-<li><strong>Dados da Conta:</strong> Retidos pela duração da conta + 1 ano após a exclusão (para resolução de disputas)</li>
-<li><strong>Mensagens de Chat:</strong> Retidas por 90 dias (exclusão suave), depois permanentemente excluídas</li>
-<li><strong>Registros de Pedidos/Transações:</strong> 10 anos (necessário para conformidade fiscal/legal)</li>
-<li><strong>Registros Técnicos:</strong> 30 dias (segurança e depuração)</li>
-<li><strong>Dados de Cookies/Sessão:</strong> Até logout ou 30 dias de inatividade</li>
-<li><strong>Dados de Backup:</strong> Retidos por 30 dias; excluídos depois</li>
-</ul>
-
-<p>Esses períodos de retenção é conforme ao GDPR, lei de proteção de dados portuguesa e regulamentos internacionais de e-commerce.</p>
-
-<h2>8. Transferências Internacionais de Dados</h2>
-
-<p>Nossos servidores estão localizados na UE (Heroku, região AWS da UE). No entanto, alguns dados podem ser transferidos para países fora da UE:</p>
-
-<ul>
-<li><strong>WhatsApp / Meta:</strong> Empresa com sede nos EUA (as Cláusulas Contratuais Padrão se aplicam)</li>
-<li><strong>OpenRouter / Serviços de LLM:</strong> Pode rotear dados para EUA ou outros países (depende do provedor)</li>
-<li><strong>Provedores de Pagamento:</strong> Podem operar globalmente, mas usam Cláusulas Contratuais Padrão</li>
-</ul>
-
-<p>Para transferências fora da UE, garantimos salvaguardas adequadas (por exemplo, Cláusulas Contratuais Padrão, Regras Vinculantes Corporativas).</p>
-
-<h2>9. Segurança e Medidas de Proteção de Dados</h2>
-
-<h3>9.1 Autenticação de Dois Fatores (2FA — TOTP com Código QR)</h3>
-
-<p>Oferecemos e encorajamos fortemente o 2FA baseado em Senha Única baseada em Tempo (TOTP) para todas as contas de plataforma (compatível com Google Authenticator, Authy, Microsoft Authenticator, etc.). Durante a configuração de 2FA, os usuários dimensionam um código QR contendo seu segredo de 2FA criptografado. O código QR é gerado com segurança no dispositivo e nunca é transmitido para nossos servidores — apenas o hash do segredo é armazenado. Os códigos TOTP são verificados com uma janela de ±1 para levar em conta a deriva do relógio. Códigos QR são exibidos uma vez durante a configuração e não são armazenados em cache ou salvos.</p>
-
-<h3>9.2 Criptografia</h3>
-
-<ul>
-<li><strong>Em Trânsito:</strong> Todos os dados transmitidos via HTTPS/TLS 1.3 (criptografia mínima de 256 bits)</li>
-<li><strong>Em Repouso:</strong> Dados sensíveis (senhas, chaves de API, segredos) criptografados com AES-256</li>
-<li><strong>Criptografia de Banco de Dados:</strong> PostgreSQL com colunas criptografadas para segredos</li>
-</ul>
-
-<h3>9.3 Controle de Acesso</h3>
-
-<ul>
-<li>Princípio do privilégio mínimo — acesso do pessoal apenas aos dados necessários</li>
-<li>Controle de acesso baseado em função (RBAC) — funções de administrador, gerente, visualizador</li>
-<li>Isolamento de espaço de trabalho — os usuários não podem acessar dados de outros espaços de trabalho</li>
-<li>Registros de auditoria — todas as ações administrativas registradas e revisadas</li>
-</ul>
-
-<h3>9.4 Limite de Taxa e Proteção DDoS</h3>
-
-<ul>
-<li>Tentativas de login: Máximo de 5 tentativas com falha por 15 minutos → bloqueio de conta</li>
-<li>Solicitações de API: Limite de taxa por espaço de trabalho (por exemplo, 1000 req/min)</li>
-<li>Webhook do WhatsApp: Prevenção de mensagens duplicadas, aplicação de limite</li>
-</ul>
-
-<h3>9.5 Auditorias de Segurança Regulares</h3>
-
-<ul>
-<li>Varredura de segurança automatizada (SAST, DAST)</li>
-<li>Teste de penetração (avaliações anuais de terceiros)</li>
-<li>Patches de vulnerabilidades (dependências atualizadas semanalmente)</li>
-<li>Certificação SOC 2 Tipo II (em progresso)</li>
-</ul>
-
-<h3>9.6 Resposta a Incidentes</h3>
-
-<p>Em caso de violação de dados, faremos:</p>
-
-<ul>
-<li>Notificar usuários afetados dentro de 72 horas (requisito GDPR)</li>
-<li>Fornecer detalhes da violação e ações recomendadas</li>
-<li>Reportar às autoridades de proteção de dados se necessário</li>
-<li>Documentar e investigar a causa raiz</li>
-</ul>
-
-<h3>9.7 Treinamento do Pessoal</h3>
-
-<ul>
-<li>Treinamento em proteção de dados e privacidade para todos os funcionários</li>
-<li>Acordos de confidencialidade (NDAs) necessários</li>
-<li>Verificações de antecedentes para pessoal com acesso a dados</li>
-</ul>
-
-<h2>10. Seus Direitos Sob GDPR e Lei Local</h2>
-
-<p>Você tem os seguintes direitos sobre seus dados pessoais:</p>
-
-<h3>10.1 Direito de Acesso (Art. 15 GDPR)</h3>
-
-<p>Você pode solicitar uma cópia de todos os dados pessoais que temos sobre você em um formato padrão. Forneceremos isso dentro de 30 dias de sua solicitação.</p>
-
-<h3>10.2 Direito de Retificação (Art. 16 GDPR)</h3>
-
-<p>Você pode corrigir dados inexatos ou incompletos. Você pode atualizar a maioria das informações por si mesmo através das configurações de conta; entre em contato conosco para outros dados.</p>
-
-<h3>10.3 Direito ao Esquecimento (Art. 17 GDPR — "Direito ao Esquecimento")</h3>
-
-<p>Você pode solicitar a exclusão de seus dados, exceto quando temos uma obrigação legal de retê-los (por exemplo, registros fiscais). Nota: as mensagens de chat são excluídas mesmo após 90 dias.</p>
-
-<h3>10.4 Direito de Limitar Processamento (Art. 18 GDPR)</h3>
-
-<p>Você pode nos pedir para parar de processar seus dados enquanto verificamos sua precisão ou legalidade.</p>
-
-<h3>10.5 Direito à Portabilidade de Dados (Art. 20 GDPR)</h3>
-
-<p>Você pode solicitar seus dados em um formato legível por máquina (JSON/CSV) para transferência para outro serviço.</p>
-
-<h3>10.6 Direito de Objeção (Art. 21 GDPR)</h3>
-
-<p>Você pode se opor ao processamento baseado em interesse legítimo (por exemplo, análise de marketing). Pararemos de processar a menos que tenhamos razões prevalentes.</p>
-
-<h3>10.7 Tomada de Decisão Automatizada (Art. 22 GDPR)</h3>
-
-<p>NÃO usamos tomada de decisão completamente automatizada que produz efeitos legais sobre você (por exemplo, suspensão de conta sem revisão humana). Usamos detecção automatizada de fraude, mas humanos revisam casos sinalizados.</p>
-
-<h2>11. Criação de Perfil e Tomada de Decisão Automatizada</h2>
-
-<h3>11.1 O que é Criação de Perfil?</h3>
-
-<p>Criação de perfil é o processamento automatizado de dados pessoais para analisar e avaliar aspectos de sua personalidade, interesses, comportamento ou preferências. eChatbot usa criação de perfil apenas quando você consente em receber comunicações de marketing personalizadas.</p>
-
-<h3>11.2 Como Usamos Criação de Perfil</h3>
-
-<ul>
-<li><strong>Dados analisados:</strong> Localização geográfica (deduzida de IP/número de telefone), padrões de uso do serviço, interesses em produtos, histórico de compras</li>
-<li><strong>Finalidade:</strong> Enviar comunicações de marketing alinhadas com seus interesses demonstrados nos Serviços eChatbot</li>
-<li><strong>Consentimento:</strong> Baseado em sua caixa de opt-in explícita durante o registro ou nas configurações</li>
-<li><strong>Lógica:</strong> Análise estatística do comportamento agregado do usuário para criar categorias de interesses (por exemplo, "interessado em Chatbots de E-commerce", "usuários de alto volume")</li>
-</ul>
-
-<h3>11.3 Garantias de Segurança - O que Criação de Perfil NÃO Faz</h3>
-
-<p><strong>Criação de perfil em eChatbot NÃO:</strong></p>
-
-<ul>
-<li><strong>Produz decisões automatizadas legais/significativas:</strong> Criação de perfil NÃO resulta em decisões que têm efeitos legais ou significativos sobre você (Artigo 22 GDPR). Sem suspensão de conta, encerramento de serviço ou preços especiais baseados unicamente em criação de perfil.</li>
-<li><strong>Afeta sua capacidade de compra:</strong> Você recebe os mesmos recursos de plataforma e preços independentemente da categoria de perfil</li>
-<li><strong>Cria discriminação permanente:</strong> Dados de criação de perfil são atualizados periodicamente e podem ser corrigidos individualmente através das configurações da conta</li>
-<li><strong>Manipula seu comportamento:</strong> Comunicações de marketing são apenas informativas; você sempre controla suas decisões de compra</li>
-</ul>
-
-<h3>11.4 Seus Direitos de Criação de Perfil</h3>
-
-<ul>
-<li><strong>Optar por não participar a qualquer momento:</strong> Desabilite criação de perfil nas configurações da conta → receba apenas marketing não personalizado</li>
-<li><strong>Acesse seu perfil:</strong> Solicite detalhes de sua categoria de perfil e raciocínio (Seção 10.1)</li>
-<li><strong>Conteste decisões:</strong> Se você acredita que criação de perfil causou tratamento injusto, apresente uma reclamação (Seção 12)</li>
-</ul>
-
-<h2>11. Política de Cookies</h2>
-
-<p>Usamos os seguintes cookies:</p>
-
-<ul>
-<li><strong>Cookies Essenciais:</strong> Token de autenticação, ID de sessão (necessário para login)</li>
-<li><strong>Cookies de Preferência:</strong> Seleção de idioma, seleção de tema</li>
-<li><strong>Cookies de Análise:</strong> Métricas de uso (opcional, pode ser desabilitado)</li>
-</ul>
-
-<p>Você pode gerenciar preferências de cookies nas configurações do seu navegador. Desabilitar cookies essenciais impedirá o login.</p>
-
-<h2>13. Contato e Reclamações</h2>
-
-<p><strong>Dúvidas sobre esta política?</strong><br>
-Email: privacy@echatbot.ai<br>
-Endereço: Via Roma 1, 20100 Milão, Itália<br>
-Telefone: +39 02 1234567</p>
-
-<p><strong>Apresentar uma Reclamação:</strong><br>
-Se você acredita que estamos processando mal seus dados, você tem o direito de apresentar uma reclamação à sua autoridade local de proteção de dados. Em Portugal, isto é a Comissão Nacional de Proteção de Dados (CNPD).</p>
-
-<h2>14. Alterações nesta Política</h2>
-
-<p>Podemos atualizar esta Política de Privacidade para refletir mudanças em nossas práticas ou requisitos legais. Notificaremos você sobre alterações materiais por email ou notificação de plataforma. Seu uso contínuo do Serviço constitui aceitação da política atualizada.</p>
-
-<h2>15. Definições</h2>
-
-<ul>
-<li><strong>Dados Pessoais:</strong> Qualquer informação relacionada a uma pessoa física identificada ou identificável</li>
-<li><strong>Processamento:</strong> Coleta, uso, armazenamento, divulgação ou exclusão de dados pessoais</li>
-<li><strong>Titular dos Dados:</strong> A pessoa individual a quem os dados pessoais se relacionam</li>
-<li><strong>Espaço de Trabalho:</strong> Uma conta comercial separada em nossa plataforma</li>
-<li><strong>Cliente Final:</strong> Uma pessoa que interage com o chatbot de um comerciante via WhatsApp</li>
-</ul>
+<h1>Política de Privacidade</h1>
+<p><strong>Versão:</strong> 4.1 &nbsp;|&nbsp; <strong>Última atualização:</strong> Junho de 2026</p>
+
+<p>A eChatbot S.L. ("<strong>eChatbot</strong>", "<strong>nós</strong>"), com sede em Espanha, opera o <em>echatbot.ai</em>, uma plataforma de comércio conversacional baseada em inteligência artificial que combina processamento por chatbot LLM, integração com a API do WhatsApp Business (serviço gerido), um backend de e-commerce multi-inquilino e gestão automatizada de encomendas (em conjunto, a "<strong>Plataforma</strong>" ou "<strong>Serviço</strong>").</p>
+
+<p>Esta Política explica, em linguagem clara e simples (art. 12.º RGPD), que dados pessoais tratamos, porquê, como os protegemos e que direitos pode exercer. Aplica-se a:</p>
+<ol>
+  <li><strong>Utilizadores da Plataforma (Operadores / Comerciantes)</strong> — empresas e programadores que registam uma conta para gerir canais de venda e apoio com IA.</li>
+  <li><strong>Clientes finais</strong> — pessoas que interagem com o assistente de IA de um Operador através do WhatsApp ou de outros canais ligados.</li>
+  <li><strong>Visitantes do site</strong> — qualquer pessoa que visite echatbot.ai sem conta.</li>
+</ol>
 
 <hr>
 
-<p><strong>Histórico de Versões:</strong><br>
-v3.0 (Março de 2025): Adicionada segurança de Código QR em 2FA (9.1), seleção de provedor WhatsApp (5.1), gerenciamento de chaves secretas<br>
-v2.0 (2024): Conformidade GDPR inicial<br>
-v1.0 (2023): Lançamento</p>
+<h2>1. Responsável pelo tratamento, Funções e Contacto</h2>
+<p><strong>Responsável pelo tratamento:</strong> eChatbot S.L., Espanha. Contacto: <a href="mailto:info@echatbot.ai">info@echatbot.ai</a>.</p>
+<p>A eChatbot opera com uma <strong>estrutura de dois níveis</strong>:</p>
+<ul>
+  <li>Relativamente aos <strong>Utilizadores da Plataforma (Operadores)</strong>, a eChatbot atua como <strong>responsável autónomo pelo tratamento</strong> dos dados de conta, faturação e utilização.</li>
+  <li>Relativamente aos dados de conversa dos <strong>Clientes finais</strong>, a eChatbot atua como <strong>subcontratante nos termos do art. 28.º RGPD</strong> por conta do Operador, que é o responsável. O Operador determina as finalidades e os meios; a eChatbot trata apenas mediante instruções documentadas.</li>
+</ul>
 
-<hr>
+<h2>2. Descrição da Plataforma</h2>
+<p>A eChatbot não é um mero software SaaS. É uma <strong>Plataforma de comércio conversacional baseada em IA</strong> que integra: (a) processamento de IA através de Grandes Modelos de Linguagem; (b) integração com a API do WhatsApp Business como serviço gerido; (c) um backend de e-commerce multi-inquilino; e (d) a gestão automatizada de encomendas.</p>
 
-<p className="text-sm text-gray-500 mt-8">
-<strong>Documentos Legais Relacionados:</strong> 
-<a href="/terms">Termos de Serviço</a> | 
-<a href="/refund">Política de Reembolso e Cancelamento</a>
-</p>
+<h2>3. Categorias de dados pessoais tratados</h2>
+<h3>3.1 Utilizadores da Plataforma (Operadores)</h3>
+<ul>
+  <li><strong>Identidade e conta:</strong> nome, e-mail, nome da empresa/workspace, função.</li>
+  <li><strong>Autenticação:</strong> hash de palavra-passe bcrypt, semente 2FA TOTP (se ativa), tokens de sessão, chaves de API.</li>
+  <li><strong>Faturação:</strong> plano, histórico de faturas, identificadores PayPal, estado de faturação.</li>
+  <li><strong>Dados técnicos e de utilização:</strong> endereço IP, User-Agent, dispositivo/SO, eventos de utilização, registos de API e erros.</li>
+  <li><strong>Conteúdo empresarial:</strong> catálogos de produtos, preços, FAQ, modelos de prompt, documentos carregados.</li>
+</ul>
+<h3>3.2 Clientes finais (tratados por conta do Operador)</h3>
+<ul>
+  <li>Número de telefone e nome de perfil do WhatsApp, conteúdo das mensagens, histórico de conversas, dados de encomendas e qualquer informação partilhada voluntariamente com o assistente de IA.</li>
+</ul>
+
+<h2>4. Finalidades e bases jurídicas</h2>
+<ul>
+  <li><strong>Prestação do Serviço</strong> — execução de um contrato (art. 6.º(1)(b)).</li>
+  <li><strong>Segurança, prevenção de fraude, melhoria do serviço</strong> — interesse legítimo (art. 6.º(1)(f)).</li>
+  <li><strong>Faturação e cumprimento legal</strong> — obrigação legal (art. 6.º(1)(c)).</li>
+  <li><strong>Conversas de clientes finais</strong> — tratadas com base jurídica do Operador, responsável por obter os consentimentos necessários.</li>
+</ul>
+
+<h2>5. Processamento de IA e Aviso importante sobre IA</h2>
+<p>Em conformidade com as obrigações de transparência do <strong>Regulamento de IA da UE (Regulamento (UE) 2024/1689)</strong> e como declaração de responsabilidade, advertimos:</p>
+<ul>
+  <li>As respostas do chatbot são <strong>geradas por IA</strong> e podem conter erros, imprecisões ou informações desatualizadas.</li>
+  <li>A <strong>eChatbot não garante a exatidão</strong> das respostas geradas por IA.</li>
+  <li>Os <strong>Operadores são responsáveis</strong> por verificar as informações de produtos, preços e disponibilidade geradas por IA nos seus canais.</li>
+  <li>Os <strong>clientes finais devem verificar de forma independente</strong> informações críticas (preços, disponibilidade, questões médicas, jurídicas ou financeiras) diretamente com o comerciante antes de agir.</li>
+  <li>A eChatbot <strong>não é responsável</strong> por decisões comerciais tomadas com base em respostas geradas por IA.</li>
+  <li>Está a interagir com um sistema de IA automatizado, não com uma pessoa, salvo indicação expressa.</li>
+</ul>
+<p><strong>Sem treino de IA com dados de clientes:</strong> os dados de conversa nunca são usados para treinar modelos de IA. A inferência é executada através do OpenRouter em <strong>modo Zero Data Retention (ZDR)</strong>.</p>
+
+<h2>6. Subcontratantes e Transferências internacionais</h2>
+<ul>
+  <li><strong>Meta Platforms (API do WhatsApp Business):</strong> Quadro de Privacidade de Dados UE–EUA (DPF).</li>
+  <li><strong>WasenderAPI:</strong> Cláusulas Contratuais-Tipo (SCC).</li>
+  <li><strong>OpenRouter (inferência LLM):</strong> modo Zero Data Retention; SCC.</li>
+  <li><strong>PayPal:</strong> responsável autónomo pelo processamento de pagamentos.</li>
+  <li><strong>Google Calendar / Zoom:</strong> integrações opcionais, apenas se ativadas pelo Operador.</li>
+</ul>
+<p>As transferências para fora do EEE são protegidas pelo DPF ou pelas SCC, conforme indicado.</p>
+
+<h2>7. Conservação dos dados</h2>
+<ul>
+  <li>Mensagens de chat: <strong>90 dias</strong>.</li>
+  <li>Registos LLM: <strong>180 dias</strong>.</li>
+  <li>Registos de webhook: <strong>30 dias</strong>.</li>
+  <li>Arquivos: <strong>6 meses</strong>.</li>
+  <li>Eliminação definitiva após o encerramento da conta: no prazo de <strong>30 dias</strong>.</li>
+</ul>
+
+<h2>8. Medidas de segurança</h2>
+<ul>
+  <li>Hash de palavras-passe com <strong>bcrypt</strong>.</li>
+  <li>Cifragem de dados sensíveis com <strong>AES-256-GCM</strong>.</li>
+  <li><strong>Autenticação de dois fatores (2FA) baseada em TOTP</strong>.</li>
+  <li>Cifragem em trânsito com <strong>TLS 1.2+</strong>.</li>
+  <li><strong>Isolamento multi-inquilino rigoroso</strong> através de filtragem obrigatória por workspaceId em cada consulta.</li>
+  <li>Os códigos QR são usados exclusivamente para a configuração 2FA do administrador e nunca contêm dados de clientes.</li>
+</ul>
+
+<h2>9. Propriedade intelectual e Antipirataria</h2>
+<ul>
+  <li>A Plataforma, o seu código-fonte, a configuração dos modelos de IA, a arquitetura e toda a propriedade intelectual relacionada são <strong>propriedade exclusiva da eChatbot</strong>.</li>
+  <li>É estritamente proibida a <strong>cópia, engenharia inversa, descompilação, scraping ou clonagem</strong> não autorizadas da Plataforma.</li>
+  <li>A Plataforma incorpora <strong>medidas técnicas de proteção</strong>.</li>
+  <li>As violações podem resultar em <strong>responsabilidade civil e criminal</strong> nos termos do Direito da UE e espanhol.</li>
+  <li>Os dados acessíveis através da Plataforma (dados de clientes, dados de produtos) estão protegidos; a sua extração não autorizada constitui <strong>incumprimento contratual</strong> e pode constituir crime informático nos termos da <strong>Diretiva 2013/40/UE</strong> relativa a ataques contra sistemas de informação.</li>
+</ul>
+
+<h2>10. Os seus direitos</h2>
+<p>Nos termos do RGPD tem direito de acesso, retificação, apagamento, limitação, portabilidade, oposição e a não ficar sujeito a decisões baseadas unicamente no tratamento automatizado com efeitos jurídicos. Os clientes finais exercem os seus direitos através do respetivo Operador, que é o responsável; assistiremos os Operadores na resposta. Para exercer os seus direitos escreva para <a href="mailto:info@echatbot.ai">info@echatbot.ai</a>.</p>
+
+<h2>11. Autoridade de controlo e Reclamações</h2>
+<p>A nossa autoridade de controlo principal é a <strong>Agência Espanhola de Proteção de Dados — AEPD</strong> (Agencia Española de Protección de Datos, <a href="https://www.aepd.es" target="_blank" rel="noopener">www.aepd.es</a>), por a eChatbot ter sede em Espanha.</p>
+<p>Como a Plataforma serve utilizadores em toda a UE, <strong>cada titular dos dados também pode apresentar reclamação junto da sua autoridade de controlo local</strong> (por exemplo, a CNPD em Portugal ou o Garante em Itália). Sem prejuízo de qualquer outro recurso administrativo ou judicial.</p>
+
+<h2>12. Alterações a esta Política</h2>
+<p>Podemos atualizar esta Política. As alterações substanciais serão notificadas através do Serviço. A data de "Última atualização" reflete a versão em vigor.</p>
+
+<h2>13. Contacto</h2>
+<p>Questões sobre esta Política de Privacidade: <a href="mailto:info@echatbot.ai">info@echatbot.ai</a>.</p>

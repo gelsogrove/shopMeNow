@@ -176,7 +176,7 @@ export function WidgetToWhatsAppPage() {
 
       <main>
         {/* Hero */}
-        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-teal-50 via-white to-green-50 overflow-hidden">
+        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-green-50 overflow-hidden">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <Breadcrumbs items={[{ label: t.breadcrumb }]} hideVisual />
 
@@ -188,7 +188,7 @@ export function WidgetToWhatsAppPage() {
             >
               {/* Left: Text */}
               <div>
-                <span className="inline-block bg-teal-100 text-teal-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
+                <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
                   {t.badge}
                 </span>
                 <h1 className="text-4xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight whitespace-pre-line">
@@ -212,7 +212,7 @@ export function WidgetToWhatsAppPage() {
               {/* Right: New single illustration */}
               <div className="relative flex justify-center">
                 <div className="relative w-full max-w-xl">
-                  <div className="absolute -inset-6 bg-gradient-to-br from-emerald-200/40 via-white to-teal-200/40 rounded-[36px] blur-3xl" />
+                  <div className="absolute -inset-6 bg-gradient-to-br from-emerald-200/40 via-white to-green-200/40 rounded-[36px] blur-3xl" />
                   <img
                     src="/survey.png"
                     alt="Widget to WhatsApp illustration"
@@ -236,7 +236,7 @@ export function WidgetToWhatsAppPage() {
               {t.steps.map((step, index) => (
                 <div className="relative" key={index}>
                   <motion.div
-                    className="bg-gradient-to-br from-teal-50 to-green-50 rounded-2xl p-8 border-2 border-teal-100 h-full shadow-lg hover:shadow-xl transition-all duration-500 flex flex-col"
+                    className="bg-gradient-to-br from-green-50 to-green-50 rounded-2xl p-8 border-2 border-green-100 h-full shadow-lg hover:shadow-xl transition-all duration-500 flex flex-col"
                     initial={{ opacity: 0, y: 60 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, amount: 0.35 }}
@@ -298,7 +298,7 @@ export function WidgetToWhatsAppPage() {
               viewport={{ once: true, amount: 0.35 }}
               transition={{ duration: 0.65 }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-teal-100 rounded-3xl sm:rotate-1 scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-green-100 rounded-3xl sm:rotate-1 scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500" />
               <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:-translate-y-1 transition-all duration-500">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
                   <div className="space-y-6">
@@ -315,7 +315,7 @@ export function WidgetToWhatsAppPage() {
                   </div>
                   {/* Technical architecture */}
                   <div className="relative">
-                    <div className="absolute -inset-4 bg-gradient-to-br from-teal-100 to-green-100 rounded-2xl blur-xl opacity-40" />
+                    <div className="absolute -inset-4 bg-gradient-to-br from-green-100 to-green-100 rounded-2xl blur-xl opacity-40" />
                     <img src="/demo.png" alt="Technical Architecture" className="relative w-full h-auto rounded-2xl shadow-xl border border-white/60 object-contain" />
                   </div>
                 </div>
@@ -350,7 +350,7 @@ export function WidgetToWhatsAppPage() {
         </section>
 
         {/* CTA */}
-        <section className="py-20 bg-gradient-to-br from-green-600 to-teal-700">
+        <section className="py-20 bg-gradient-to-br from-green-600 to-green-700">
           <div className="max-w-3xl mx-auto px-6 text-center">
             <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
             <p className="text-xl text-green-100 mb-8">{t.ctaSub}</p>

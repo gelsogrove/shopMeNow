@@ -204,7 +204,7 @@ export function HumanSupportPage() {
 
       <main>
         {/* Hero */}
-        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-amber-50 via-white to-orange-50">
+        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-emerald-50">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <Breadcrumbs items={[{ label: t.breadcrumb }]} hideVisual />
             <motion.div
@@ -215,7 +215,7 @@ export function HumanSupportPage() {
             >
               {/* Hero image */}
               <div className="relative order-2 lg:order-1">
-                <div className="absolute -inset-4 bg-gradient-to-br from-amber-100 to-orange-100 rounded-3xl blur-xl opacity-40" />
+                <div className="absolute -inset-4 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl blur-xl opacity-40" />
                 <img
                   src="/humansupporto.png"
                   alt="Human support collaborating with AI"
@@ -223,7 +223,7 @@ export function HumanSupportPage() {
                 />
               </div>
               <div className="order-1 lg:order-2">
-                <span className="inline-block bg-amber-100 text-amber-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
+                <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
                   {t.badge}
                 </span>
                 <h1 className="text-4xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight whitespace-pre-line">
@@ -254,9 +254,9 @@ export function HumanSupportPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1 }}
-                  className="text-center p-6 bg-gradient-to-b from-amber-50 to-white rounded-2xl border border-amber-100"
+                  className="text-center p-6 bg-gradient-to-b from-green-50 to-white rounded-2xl border border-green-100"
                 >
-                  <div className="text-4xl font-bold text-amber-600 mb-2">{m.value}</div>
+                  <div className="text-4xl font-bold text-green-600 mb-2">{m.value}</div>
                   <div className="font-semibold text-slate-900 mb-1">{m.label}</div>
                   <div className="text-sm text-slate-500">{m.sub}</div>
                 </motion.div>
@@ -280,7 +280,7 @@ export function HumanSupportPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1 }}
-                  className="bg-white rounded-2xl p-6 shadow-lg border border-amber-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                  className="bg-white rounded-2xl p-6 shadow-lg border border-green-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
                 >
                   <div className="text-4xl mb-4">{step.icon}</div>
                   <h3 className="text-lg font-bold text-slate-900 mb-3">{step.title}</h3>
@@ -301,12 +301,12 @@ export function HumanSupportPage() {
               viewport={{ once: true, amount: 0.35 }}
               transition={{ duration: 0.65 }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-orange-100 rounded-3xl sm:rotate-1 scale-[1.01] group-hover:rotate-2 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl sm:rotate-1 scale-[1.01] group-hover:rotate-2 transition-transform duration-500" />
               <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:-translate-y-1 transition-all duration-500">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
                   {/* Operator dashboard image */}
                   <div className="relative order-2 lg:order-1">
-                    <div className="absolute -inset-4 bg-gradient-to-br from-amber-100 to-orange-100 rounded-2xl blur-xl opacity-40" />
+                    <div className="absolute -inset-4 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl blur-xl opacity-40" />
                     <img src="/survey-support.png" alt="Operator Dashboard" className="relative w-full h-auto rounded-2xl shadow-xl border border-white/60 object-contain" />
                   </div>
                   <div className="space-y-6 order-1 lg:order-2">
@@ -315,7 +315,7 @@ export function HumanSupportPage() {
                     <ul className="space-y-3">
                       {t.operatorFeatures.map((f, i) => (
                         <li key={i} className="flex items-center gap-3 text-slate-700">
-                          <CheckCircle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                          <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
                           {f}
                         </li>
                       ))}
@@ -353,11 +353,11 @@ export function HumanSupportPage() {
         </section>
 
         {/* CTA */}
-        <section className="py-20 bg-gradient-to-br from-amber-500 to-orange-600">
+        <section className="py-20 bg-gradient-to-br from-green-500 to-emerald-600">
           <div className="max-w-3xl mx-auto px-6 text-center">
             <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
-            <p className="text-xl text-amber-100 mb-8">{t.ctaSub}</p>
-            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-amber-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
+            <p className="text-xl text-green-100 mb-8">{t.ctaSub}</p>
+            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-green-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
               <Zap className="h-6 w-6" />
               {t.cta}
             </Link>

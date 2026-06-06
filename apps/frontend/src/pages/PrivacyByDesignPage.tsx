@@ -228,7 +228,7 @@ export function PrivacyByDesignPage() {
 
       <main>
         {/* Hero */}
-        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-slate-50 via-white to-indigo-50">
+        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-slate-50 via-white to-green-50">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <Breadcrumbs items={[{ label: t.breadcrumb }]} hideVisual />
             <motion.div
@@ -238,7 +238,7 @@ export function PrivacyByDesignPage() {
               className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
             >
               <div>
-                <span className="inline-block bg-indigo-100 text-indigo-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
+                <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
                   {t.badge}
                 </span>
                 <h1 className="text-4xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight whitespace-pre-line">
@@ -251,7 +251,7 @@ export function PrivacyByDesignPage() {
                 </Link>
               </div>
               <div className="relative">
-                <div className="absolute -inset-4 bg-gradient-to-br from-indigo-100 to-slate-100 rounded-3xl blur-xl opacity-40" />
+                <div className="absolute -inset-4 bg-gradient-to-br from-green-100 to-slate-100 rounded-3xl blur-xl opacity-40" />
                 <img src="/survery-secuiry.png" alt="Privacy Architecture" className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/60 object-contain" />
               </div>
             </motion.div>
@@ -270,7 +270,7 @@ export function PrivacyByDesignPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.09 }}
-                  className="p-6 bg-gradient-to-br from-slate-50 to-indigo-50 rounded-2xl border border-indigo-100 hover:shadow-lg hover:-translate-y-1 transition-all"
+                  className="p-6 bg-gradient-to-br from-slate-50 to-green-50 rounded-2xl border border-green-100 hover:shadow-lg hover:-translate-y-1 transition-all"
                 >
                   <div className="text-3xl mb-3">{p.icon}</div>
                   <h3 className="text-lg font-bold text-slate-900 mb-2">{p.title}</h3>
@@ -295,8 +295,8 @@ export function PrivacyByDesignPage() {
                 </p>
                 <div className="grid sm:grid-cols-2 gap-3">
                   {t.complianceItems[0].features.map((f, j) => (
-                    <div key={j} className="flex items-start gap-2 text-slate-700 text-sm bg-white/70 border border-indigo-50 rounded-xl px-3 py-2 shadow-sm">
-                      <CheckCircle className="h-4 w-4 text-indigo-500 mt-0.5" />
+                    <div key={j} className="flex items-start gap-2 text-slate-700 text-sm bg-white/70 border border-green-50 rounded-xl px-3 py-2 shadow-sm">
+                      <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
                       {f}
                     </div>
                   ))}
@@ -311,7 +311,7 @@ export function PrivacyByDesignPage() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.15 }}
-                    className="bg-white rounded-2xl p-8 shadow-xl border border-indigo-50 ring-1 ring-indigo-100/60 hover:-translate-y-1 hover:shadow-2xl transition-all"
+                    className="bg-white rounded-2xl p-8 shadow-xl border border-green-50 ring-1 ring-green-100/60 hover:-translate-y-1 hover:shadow-2xl transition-all"
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div>
@@ -323,7 +323,7 @@ export function PrivacyByDesignPage() {
                     <div className="mt-4 grid grid-cols-1 gap-2">
                       {c.features.map((f, j) => (
                         <div key={j} className="flex items-center gap-2 text-slate-700 text-sm">
-                          <CheckCircle className="h-4 w-4 text-indigo-500 flex-shrink-0" />
+                          <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
                           {f}
                         </div>
                       ))}
@@ -340,7 +340,7 @@ export function PrivacyByDesignPage() {
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="relative order-2 lg:order-1">
-                <div className="absolute -inset-4 bg-gradient-to-br from-indigo-100 to-slate-100 rounded-2xl blur-xl opacity-40" />
+                <div className="absolute -inset-4 bg-gradient-to-br from-green-100 to-slate-100 rounded-2xl blur-xl opacity-40" />
                 <img src="/survery-secuiry.png" alt="Security Architecture" className="relative w-full h-auto rounded-2xl shadow-xl border border-white/60 object-contain" />
               </div>
               <div className="order-1 lg:order-2">
@@ -348,7 +348,7 @@ export function PrivacyByDesignPage() {
                 <ul className="space-y-3">
                   {t.techFeatures.map((f, i) => (
                     <li key={i} className="flex items-start gap-3 text-slate-700">
-                      <CheckCircle className="h-5 w-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
                       {f}
                     </li>
                   ))}
@@ -368,8 +368,8 @@ export function PrivacyByDesignPage() {
               transition={{ duration: 0.5 }}
               className="text-center mb-14"
             >
-              <div className="h-20 w-20 bg-indigo-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <QrCode className="h-10 w-10 text-indigo-600" />
+              <div className="h-20 w-20 bg-green-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                <QrCode className="h-10 w-10 text-green-600" />
               </div>
               <h2 className="text-4xl font-bold text-slate-900 mb-4">{t.twoFaTitle}</h2>
               <p className="text-lg text-slate-600 max-w-3xl mx-auto leading-relaxed">{t.twoFaDesc}</p>
@@ -384,8 +384,8 @@ export function PrivacyByDesignPage() {
                   transition={{ delay: i * 0.15 }}
                   className="text-center p-8 bg-white rounded-2xl shadow-lg border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all"
                 >
-                  <div className="h-16 w-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                    <f.icon className="h-8 w-8 text-indigo-600" />
+                  <div className="h-16 w-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                    <f.icon className="h-8 w-8 text-green-600" />
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 mb-3">{f.label}</h3>
                   <p className="text-slate-600 text-sm leading-relaxed">{f.desc}</p>
@@ -396,7 +396,7 @@ export function PrivacyByDesignPage() {
         </section>
 
         {/* Rights */}
-        <section className="py-20 bg-gradient-to-b from-indigo-50 to-white">
+        <section className="py-20 bg-gradient-to-b from-green-50 to-white">
           <div className="max-w-5xl mx-auto px-6 lg:px-8">
             <h2 className="text-4xl font-bold text-slate-900 text-center mb-12">{t.rightsTitle}</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -409,8 +409,8 @@ export function PrivacyByDesignPage() {
                   transition={{ delay: i * 0.15 }}
                   className="text-center p-8 bg-white rounded-2xl shadow-lg border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all"
                 >
-                  <div className="h-16 w-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-                    <r.icon className="h-8 w-8 text-indigo-600" />
+                  <div className="h-16 w-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                    <r.icon className="h-8 w-8 text-green-600" />
                   </div>
                   <h3 className="text-lg font-bold text-slate-900 mb-3">{r.label}</h3>
                   <p className="text-slate-600 text-sm leading-relaxed">{r.desc}</p>
@@ -421,11 +421,11 @@ export function PrivacyByDesignPage() {
         </section>
 
         {/* CTA */}
-        <section className="py-20 bg-gradient-to-br from-indigo-600 to-slate-800">
+        <section className="py-20 bg-gradient-to-br from-green-600 to-slate-800">
           <div className="max-w-3xl mx-auto px-6 text-center">
             <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
-            <p className="text-xl text-indigo-200 mb-8">{t.ctaSub}</p>
-            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-indigo-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
+            <p className="text-xl text-green-200 mb-8">{t.ctaSub}</p>
+            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-green-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
               <Zap className="h-6 w-6" />
               {t.cta}
             </Link>

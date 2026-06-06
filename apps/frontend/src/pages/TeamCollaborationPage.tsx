@@ -158,8 +158,8 @@ const T = {
 }
 
 const roleColors: Record<string, string> = {
-  purple: "from-purple-50 to-purple-100 border-purple-200",
-  blue: "from-blue-50 to-blue-100 border-blue-200",
+  purple: "from-green-50 to-green-100 border-green-200",
+  blue: "from-green-50 to-green-100 border-green-200",
   green: "from-green-50 to-green-100 border-green-200",
 }
 
@@ -178,7 +178,7 @@ export function TeamCollaborationPage() {
 
       <main>
         {/* Hero */}
-        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-purple-50 via-white to-violet-50">
+        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-emerald-50">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <Breadcrumbs items={[{ label: t.breadcrumb }]} hideVisual />
             <motion.div
@@ -188,7 +188,7 @@ export function TeamCollaborationPage() {
               className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
             >
               <div>
-                <span className="inline-block bg-purple-100 text-purple-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
+                <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
                   {t.badge}
                 </span>
                 <h1 className="text-4xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight whitespace-pre-line">
@@ -201,7 +201,7 @@ export function TeamCollaborationPage() {
                 </Link>
               </div>
               <div className="relative flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-200 to-violet-100 rounded-3xl rotate-1 scale-105 opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-3xl rotate-1 scale-105 opacity-60" />
                 <img
                   src="/team.png"
                   alt="Team collaboration illustration"
@@ -224,9 +224,9 @@ export function TeamCollaborationPage() {
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1 }}
-                  className="text-center p-6 bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl border border-purple-100"
+                  className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-100"
                 >
-                  <div className="text-4xl font-extrabold text-purple-600 mb-2">{m.value}</div>
+                  <div className="text-4xl font-extrabold text-green-600 mb-2">{m.value}</div>
                   <div className="text-sm text-slate-600 leading-tight">{m.label}</div>
                 </motion.div>
               ))}
@@ -281,7 +281,7 @@ export function TeamCollaborationPage() {
                   transition={{ duration: 0.5, delay: i * 0.1 }}
                   className="relative p-8 bg-white rounded-2xl shadow-lg border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all"
                 >
-                  <div className="text-5xl font-extrabold text-purple-100 absolute top-4 right-6">{step.num}</div>
+                  <div className="text-5xl font-extrabold text-green-100 absolute top-4 right-6">{step.num}</div>
                   <h3 className="text-xl font-bold text-slate-900 mb-3 pr-12">{step.title}</h3>
                   <p className="text-slate-600 leading-relaxed">{step.desc}</p>
                 </motion.div>
@@ -291,7 +291,7 @@ export function TeamCollaborationPage() {
         </section>
 
         {/* Dashboard Section */}
-        <section className="py-20 bg-gradient-to-b from-purple-50 to-white">
+        <section className="py-20 bg-gradient-to-b from-green-50 to-white">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
@@ -300,14 +300,14 @@ export function TeamCollaborationPage() {
                 <ul className="space-y-3">
                   {t.dashFeatures.map((f, i) => (
                     <li key={i} className="flex items-center gap-3 text-slate-700">
-                      <CheckCircle className="h-5 w-5 text-purple-500 flex-shrink-0" />
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
                       {f}
                     </li>
                   ))}
                 </ul>
               </div>
               <div className="relative flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-200 to-violet-100 rounded-2xl rotate-1 scale-105 opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-2xl rotate-1 scale-105 opacity-60" />
                 <img
                   src="/panelcontro.png"
                   alt="Manager dashboard real-time view"
@@ -319,11 +319,11 @@ export function TeamCollaborationPage() {
         </section>
 
         {/* CTA */}
-        <section className="py-20 bg-gradient-to-br from-purple-600 to-violet-700">
+        <section className="py-20 bg-gradient-to-br from-green-600 to-emerald-700">
           <div className="max-w-3xl mx-auto px-6 text-center">
             <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
-            <p className="text-xl text-purple-100 mb-8">{t.ctaSub}</p>
-            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-purple-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
+            <p className="text-xl text-green-100 mb-8">{t.ctaSub}</p>
+            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-green-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
               <Zap className="h-6 w-6" />
               {t.cta}
             </Link>

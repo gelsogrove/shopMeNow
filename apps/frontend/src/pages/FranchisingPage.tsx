@@ -185,16 +185,16 @@ const T = {
 }
 
 const overrideIcon = (key: string) => {
-  if (key === "clock") return <Clock className="w-6 h-6 text-emerald-600" />
-  if (key === "tag") return <Tag className="w-6 h-6 text-emerald-600" />
-  if (key === "file") return <FileText className="w-6 h-6 text-emerald-600" />
-  return <Megaphone className="w-6 h-6 text-emerald-600" />
+  if (key === "clock") return <Clock className="w-6 h-6 text-green-600" />
+  if (key === "tag") return <Tag className="w-6 h-6 text-green-600" />
+  if (key === "file") return <FileText className="w-6 h-6 text-green-600" />
+  return <Megaphone className="w-6 h-6 text-green-600" />
 }
 
 const benefitIcon = (key: string) => {
-  if (key === "layers") return <Layers className="w-6 h-6 text-emerald-600" />
-  if (key === "building") return <Building2 className="w-6 h-6 text-emerald-600" />
-  return <MapPin className="w-6 h-6 text-emerald-600" />
+  if (key === "layers") return <Layers className="w-6 h-6 text-green-600" />
+  if (key === "building") return <Building2 className="w-6 h-6 text-green-600" />
+  return <MapPin className="w-6 h-6 text-green-600" />
 }
 
 export function FranchisingPage() {
@@ -215,50 +215,59 @@ export function FranchisingPage() {
 
       <main>
         {/* Hero */}
-        <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-emerald-950 via-gray-900 to-green-950 text-white overflow-hidden">
-          {/* Background photo — drop public/franchising-hero.jpg. Falls back to gradient if absent. */}
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: "url('/franchising-hero.jpg')" }}
-            aria-hidden="true"
-          />
-          {/* Dark overlay for text contrast */}
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/90 via-gray-900/85 to-green-950/90" aria-hidden="true" />
-          <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-green-50 overflow-hidden">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <Breadcrumbs items={[{ label: t.breadcrumb }]} />
-            <div className="mt-6">
-              <span className="inline-block bg-emerald-500 text-emerald-950 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide mb-6">
-                {t.badge}
-              </span>
-              <motion.h1
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="text-4xl lg:text-5xl font-bold leading-tight mb-6 whitespace-pre-line"
-              >
-                {t.heroTitle}
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-lg text-emerald-100 mb-8 max-w-2xl"
-              >
-                {t.heroSub}
-              </motion.p>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="flex flex-col sm:flex-row gap-4"
-              >
-                <Link
-                  to="/contact"
-                  className="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold px-8 py-4 rounded-xl transition-colors"
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+              {/* Left: text */}
+              <div>
+                <span className="inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide mb-6">
+                  {t.badge}
+                </span>
+                <motion.h1
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6 }}
+                  className="text-4xl lg:text-5xl font-bold leading-tight mb-6 whitespace-pre-line text-slate-900"
                 >
-                  {t.cta} <ArrowRight className="w-5 h-5" />
-                </Link>
-                <p className="self-center text-sm text-emerald-300">{t.ctaSub}</p>
+                  {t.heroTitle}
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  className="text-lg text-slate-600 mb-8 max-w-xl"
+                >
+                  {t.heroSub}
+                </motion.p>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="flex flex-col sm:flex-row gap-4"
+                >
+                  <Link
+                    to="/contact"
+                    className="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-xl transition-colors"
+                  >
+                    {t.cta} <ArrowRight className="w-5 h-5" />
+                  </Link>
+                  <p className="self-center text-sm text-slate-500">{t.ctaSub}</p>
+                </motion.div>
+              </div>
+              {/* Right: illustration — drop public/franchising.png (same style). Hidden until present. */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.15 }}
+                className="hidden lg:block"
+              >
+                <img
+                  src="/franchising.png"
+                  alt="eChatbot AI assistant for multi-location franchises"
+                  className="w-full h-auto rounded-3xl shadow-2xl border border-gray-100"
+                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
+                />
               </motion.div>
             </div>
           </div>
@@ -274,26 +283,26 @@ export function FranchisingPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               {/* Override panel mockup */}
-              <div className="bg-gray-900 rounded-2xl p-6 shadow-xl text-sm">
-                <div className="flex items-center gap-2 mb-4 text-emerald-400 font-semibold text-xs uppercase tracking-wide">
+              <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-sm">
+                <div className="flex items-center gap-2 mb-4 text-green-700 font-semibold text-xs uppercase tracking-wide">
                   <Building2 className="w-4 h-4" /> Brand · EcoWash
                 </div>
                 <div className="space-y-3">
-                  <div className="bg-white/5 rounded-xl p-3 border-l-2 border-gray-600">
-                    <p className="text-gray-400 text-xs mb-1">Default (all locations)</p>
-                    <p className="text-gray-200">Mon–Sat 08:00–20:00 · Wash €4.50</p>
+                  <div className="bg-gray-50 rounded-xl p-3 border-l-2 border-gray-300">
+                    <p className="text-gray-500 text-xs mb-1">Default (all locations)</p>
+                    <p className="text-gray-800">Mon–Sat 08:00–20:00 · Wash €4.50</p>
                   </div>
-                  <div className="bg-emerald-500/10 rounded-xl p-3 border-l-2 border-emerald-400">
-                    <p className="text-emerald-300 text-xs mb-1 flex items-center gap-1">
+                  <div className="bg-green-50 rounded-xl p-3 border-l-2 border-green-500">
+                    <p className="text-green-700 text-xs mb-1 flex items-center gap-1">
                       <MapPin className="w-3 h-3" /> Madrid Centro — override
                     </p>
-                    <p className="text-white">Mon–Sun 07:00–23:00 · Wash €5.00</p>
+                    <p className="text-gray-900 font-medium">Mon–Sun 07:00–23:00 · Wash €5.00</p>
                   </div>
-                  <div className="bg-emerald-500/10 rounded-xl p-3 border-l-2 border-emerald-400">
-                    <p className="text-emerald-300 text-xs mb-1 flex items-center gap-1">
+                  <div className="bg-green-50 rounded-xl p-3 border-l-2 border-green-500">
+                    <p className="text-green-700 text-xs mb-1 flex items-center gap-1">
                       <MapPin className="w-3 h-3" /> Sevilla Triana — override
                     </p>
-                    <p className="text-white">Mon–Sat 09:00–21:00 · Wash €4.00</p>
+                    <p className="text-gray-900 font-medium">Mon–Sat 09:00–21:00 · Wash €4.00</p>
                   </div>
                 </div>
               </div>
@@ -333,23 +342,23 @@ export function FranchisingPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: idx * 0.07 }}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-0 rounded-2xl overflow-hidden border border-gray-100 shadow-sm"
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start rounded-2xl border border-gray-100 shadow-sm bg-white p-6"
                 >
-                  <div className="flex items-center gap-4 bg-gray-900 text-white p-6">
-                    <span className="text-5xl font-black text-emerald-500 leading-none">{item.num}</span>
-                    <p className="text-base font-medium">{item.problem}</p>
+                  <div className="flex items-start gap-4">
+                    <span className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 text-green-700 font-bold flex items-center justify-center">{item.num}</span>
+                    <p className="text-base font-medium text-gray-800">{item.problem}</p>
                   </div>
-                  <div className="flex items-start gap-4 bg-emerald-50 p-6">
-                    <CheckCircle className="w-6 h-6 text-emerald-600 mt-0.5 shrink-0" />
+                  <div className="flex items-start gap-3 md:border-l md:border-gray-100 md:pl-6">
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
                     <div>
-                      <p className="font-bold text-emerald-800 mb-1">{item.solutionTitle}</p>
-                      <p className="text-sm text-gray-700">{item.solutionDesc}</p>
+                      <p className="font-bold text-gray-900 mb-1">{item.solutionTitle}</p>
+                      <p className="text-sm text-gray-600">{item.solutionDesc}</p>
                     </div>
                   </div>
                 </motion.div>
               ))}
             </div>
-            <div className="mt-10 bg-emerald-600 text-white rounded-2xl px-8 py-5 flex items-center gap-3">
+            <div className="mt-10 bg-green-600 text-white rounded-2xl px-8 py-5 flex items-center gap-3">
               <CheckCircle className="w-6 h-6 shrink-0" />
               <p className="font-semibold">{t.tagline}</p>
             </div>
@@ -408,13 +417,13 @@ export function FranchisingPage() {
         </section>
 
         {/* CTA */}
-        <section className="py-16 lg:py-24 bg-gradient-to-br from-emerald-950 via-gray-900 to-green-950 text-white">
+        <section className="py-16 lg:py-24 bg-gradient-to-br from-green-600 to-green-700 text-white">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-4xl font-bold mb-4">{t.ctaTitle}</h2>
-            <p className="text-emerald-200 text-lg mb-8">{t.ctaDesc}</p>
+            <p className="text-green-100 text-lg mb-8">{t.ctaDesc}</p>
             <Link
               to="/contact"
-              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold px-10 py-4 rounded-xl transition-colors text-lg"
+              className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-green-700 font-bold px-10 py-4 rounded-xl transition-colors text-lg"
             >
               {t.cta} <ArrowRight className="w-5 h-5" />
             </Link>

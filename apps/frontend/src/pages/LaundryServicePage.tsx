@@ -257,10 +257,10 @@ const T = {
 }
 
 const securityIcon = (key: string) => {
-  if (key === "shield") return <ShieldCheck className="w-6 h-6 text-emerald-600" />
-  if (key === "server") return <Server className="w-6 h-6 text-emerald-600" />
-  if (key === "puzzle") return <Puzzle className="w-6 h-6 text-emerald-600" />
-  return <Users className="w-6 h-6 text-emerald-600" />
+  if (key === "shield") return <ShieldCheck className="w-6 h-6 text-green-600" />
+  if (key === "server") return <Server className="w-6 h-6 text-green-600" />
+  if (key === "puzzle") return <Puzzle className="w-6 h-6 text-green-600" />
+  return <Users className="w-6 h-6 text-green-600" />
 }
 
 export function LaundryServicePage() {
@@ -281,50 +281,58 @@ export function LaundryServicePage() {
 
       <main>
         {/* Hero */}
-        <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-emerald-950 via-gray-900 to-green-950 text-white overflow-hidden">
-          {/* Background photo — drop public/laundry-hero.jpg. Falls back to gradient if absent. */}
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: "url('/laundry-hero.jpg')" }}
-            aria-hidden="true"
-          />
-          {/* Dark overlay for text contrast */}
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/90 via-gray-900/85 to-green-950/90" aria-hidden="true" />
-          <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-green-50 overflow-hidden">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <Breadcrumbs items={[{ label: t.breadcrumb }]} />
-            <div className="mt-6">
-              <span className="inline-block bg-emerald-500 text-emerald-950 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide mb-6">
-                {t.badge}
-              </span>
-              <motion.h1
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="text-4xl lg:text-5xl font-bold leading-tight mb-6 whitespace-pre-line"
-              >
-                {t.heroTitle}
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-lg text-emerald-100 mb-8 max-w-2xl"
-              >
-                {t.heroSub}
-              </motion.p>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="flex flex-col sm:flex-row gap-4"
-              >
-                <Link
-                  to="/contact"
-                  className="inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold px-8 py-4 rounded-xl transition-colors"
+            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+              {/* Left: text */}
+              <div>
+                <span className="inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide mb-6">
+                  {t.badge}
+                </span>
+                <motion.h1
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6 }}
+                  className="text-4xl lg:text-5xl font-bold leading-tight mb-6 whitespace-pre-line text-slate-900"
                 >
-                  {t.cta} <ArrowRight className="w-5 h-5" />
-                </Link>
-                <p className="self-center text-sm text-emerald-300">{t.ctaSub}</p>
+                  {t.heroTitle}
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  className="text-lg text-slate-600 mb-8 max-w-xl"
+                >
+                  {t.heroSub}
+                </motion.p>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="flex flex-col sm:flex-row gap-4"
+                >
+                  <Link
+                    to="/contact"
+                    className="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-xl transition-colors"
+                  >
+                    {t.cta} <ArrowRight className="w-5 h-5" />
+                  </Link>
+                  <p className="self-center text-sm text-slate-500">{t.ctaSub}</p>
+                </motion.div>
+              </div>
+              {/* Right: illustration */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.15 }}
+                className="hidden lg:block"
+              >
+                <img
+                  src="/laundry1.png"
+                  alt="eChatbot AI assistant for laundry services"
+                  className="w-full h-auto rounded-3xl shadow-2xl border border-gray-100"
+                />
               </motion.div>
             </div>
           </div>
@@ -342,23 +350,23 @@ export function LaundryServicePage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: idx * 0.07 }}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-0 rounded-2xl overflow-hidden border border-gray-100 shadow-sm"
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start rounded-2xl border border-gray-100 shadow-sm bg-white p-6"
                 >
-                  <div className="flex items-center gap-4 bg-gray-900 text-white p-6">
-                    <span className="text-5xl font-black text-emerald-500 leading-none">{item.num}</span>
-                    <p className="text-base font-medium">{item.problem}</p>
+                  <div className="flex items-start gap-4">
+                    <span className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 text-green-700 font-bold flex items-center justify-center">{item.num}</span>
+                    <p className="text-base font-medium text-gray-800">{item.problem}</p>
                   </div>
-                  <div className="flex items-start gap-4 bg-emerald-50 p-6">
-                    <CheckCircle className="w-6 h-6 text-emerald-600 mt-0.5 shrink-0" />
+                  <div className="flex items-start gap-3 md:border-l md:border-gray-100 md:pl-6">
+                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
                     <div>
-                      <p className="font-bold text-emerald-800 mb-1">{item.solutionTitle}</p>
-                      <p className="text-sm text-gray-700">{item.solutionDesc}</p>
+                      <p className="font-bold text-gray-900 mb-1">{item.solutionTitle}</p>
+                      <p className="text-sm text-gray-600">{item.solutionDesc}</p>
                     </div>
                   </div>
                 </motion.div>
               ))}
             </div>
-            <div className="mt-10 bg-emerald-600 text-white rounded-2xl px-8 py-5 flex items-center gap-3">
+            <div className="mt-10 bg-green-600 text-white rounded-2xl px-8 py-5 flex items-center gap-3">
               <CheckCircle className="w-6 h-6 shrink-0" />
               <p className="font-semibold">{t.tagline}</p>
             </div>
@@ -387,7 +395,7 @@ export function LaundryServicePage() {
                 </motion.div>
               ))}
             </div>
-            <div className="mt-10 bg-emerald-600 text-white rounded-2xl px-8 py-5 flex items-center gap-3">
+            <div className="mt-10 bg-green-600 text-white rounded-2xl px-8 py-5 flex items-center gap-3">
               <CheckCircle className="w-6 h-6 shrink-0" />
               <p className="font-semibold">{t.securityTagline}</p>
             </div>
@@ -401,25 +409,25 @@ export function LaundryServicePage() {
               <div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-4">
                   {t.translationTitle.split(" ").slice(0, -2).join(" ")}{" "}
-                  <span className="text-emerald-600">{t.translationTitle.split(" ").slice(-2).join(" ")}</span>
+                  <span className="text-green-600">{t.translationTitle.split(" ").slice(-2).join(" ")}</span>
                 </h2>
                 <p className="text-gray-600 leading-relaxed">{t.translationDesc}</p>
               </div>
-              <div className="bg-gray-900 rounded-2xl p-6 text-white text-sm shadow-xl">
-                <div className="flex items-center gap-2 mb-4 text-xs text-amber-400 font-medium">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
+              <div className="bg-white rounded-2xl p-6 border border-gray-100 text-sm shadow-xl">
+                <div className="flex items-center gap-2 mb-4 text-xs text-amber-600 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
                   Manual Operator Control
                 </div>
                 <div className="space-y-3">
-                  <div className="bg-emerald-900/50 rounded-xl p-3 ml-4">
-                    <p className="text-right text-xs text-gray-400 mb-1">AR → ES</p>
-                    <p className="text-right">ما رقم الغسالة التي لا تعمل؟</p>
-                    <p className="text-right text-xs text-gray-400 mt-1">¿Cuál es el número de la lavadora que no funciona?</p>
+                  <div className="bg-green-50 rounded-xl p-3 ml-4">
+                    <p className="text-right text-xs text-gray-500 mb-1">AR → ES</p>
+                    <p className="text-right text-gray-900">ما رقم الغسالة التي لا تعمل؟</p>
+                    <p className="text-right text-xs text-gray-500 mt-1">¿Cuál es el número de la lavadora que no funciona?</p>
                   </div>
-                  <div className="bg-gray-700 rounded-xl p-3 mr-4">
-                    <p className="text-xs text-emerald-400 font-medium mb-1">OPERATOR</p>
-                    <p className="text-xs text-gray-300">Hola, soy Ana, la operadora. Hemos tenido un problema técnico y he reiniciado el sistema. ¿Puedes intentarlo de nuevo, por favor?</p>
-                    <p className="text-xs text-gray-500 mt-1 italic">(Al translation)</p>
+                  <div className="bg-gray-100 rounded-xl p-3 mr-4">
+                    <p className="text-xs text-green-700 font-medium mb-1">OPERATOR</p>
+                    <p className="text-xs text-gray-700">Hola, soy Ana, la operadora. Hemos tenido un problema técnico y he reiniciado el sistema. ¿Puedes intentarlo de nuevo, por favor?</p>
+                    <p className="text-xs text-gray-400 mt-1 italic">(AI translation)</p>
                   </div>
                 </div>
               </div>
@@ -440,14 +448,14 @@ export function LaundryServicePage() {
                     </div>
                   </div>
                   <div className="flex gap-3 flex-row-reverse">
-                    <div className="bg-emerald-500 rounded-full w-8 h-8 shrink-0 flex items-center justify-center text-white text-xs font-bold">AI</div>
-                    <div className="bg-emerald-50 rounded-xl p-3 text-xs text-gray-700 max-w-xs shadow-sm space-y-1">
+                    <div className="bg-green-500 rounded-full w-8 h-8 shrink-0 flex items-center justify-center text-white text-xs font-bold">AI</div>
+                    <div className="bg-green-50 rounded-xl p-3 text-xs text-gray-700 max-w-xs shadow-sm space-y-1">
                       <p>Entendido. Estoy revisando la lavadora 4.</p>
-                      <p className="text-emerald-700 font-medium">¡Buenas noticias! La lavadora 4 ya se ha desbloqueado correctamente.</p>
+                      <p className="text-green-700 font-medium">¡Buenas noticias! La lavadora 4 ya se ha desbloqueado correctamente.</p>
                     </div>
                   </div>
                   <div className="flex gap-3 flex-row-reverse">
-                    <div className="bg-emerald-500 rounded-full w-8 h-8 shrink-0 flex items-center justify-center text-white text-xs font-bold">AI</div>
+                    <div className="bg-green-500 rounded-full w-8 h-8 shrink-0 flex items-center justify-center text-white text-xs font-bold">AI</div>
                     <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-xs text-gray-700 max-w-xs shadow-sm">
                       <p className="font-bold text-yellow-700 mb-1">¡NOVEDAD PARA TI!</p>
                       <p>Descubre nuestra tarjeta de fidelización y disfruta de beneficios exclusivos.</p>
@@ -458,7 +466,7 @@ export function LaundryServicePage() {
               <div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-4">
                   {t.actsTitle.split(":")[0]}:{" "}
-                  <span className="text-emerald-600">{t.actsTitle.split(":")[1]}</span>
+                  <span className="text-green-600">{t.actsTitle.split(":")[1]}</span>
                 </h2>
                 <p className="text-gray-600 leading-relaxed">{t.actsDesc}</p>
               </div>
@@ -473,16 +481,16 @@ export function LaundryServicePage() {
               <div>
                 <h2 className="text-3xl font-bold text-gray-900 mb-4">
                   {t.campaignsTitle.split(" ").slice(0, -2).join(" ")}{" "}
-                  <span className="text-emerald-600">{t.campaignsTitle.split(" ").slice(-2).join(" ")}</span>
+                  <span className="text-green-600">{t.campaignsTitle.split(" ").slice(-2).join(" ")}</span>
                 </h2>
                 <p className="text-gray-600 leading-relaxed">{t.campaignsDesc}</p>
               </div>
-              <div className="bg-gray-900 rounded-2xl p-6 shadow-xl">
-                <div className="bg-white/10 rounded-xl p-4 flex items-start gap-3">
+              <div className="bg-gray-50 rounded-2xl p-6 shadow-xl border border-gray-100">
+                <div className="bg-white rounded-xl p-4 flex items-start gap-3 shadow-sm">
                   <div className="bg-green-500 rounded-xl w-10 h-10 shrink-0 flex items-center justify-center text-white font-bold text-xs">WA</div>
                   <div>
-                    <p className="text-white text-xs font-semibold mb-1">John · EcoWash Bot</p>
-                    <p className="text-gray-300 text-xs">¡Haz que cada lavado cuente! Consigue nuestra tarjeta de fidelización y disfruta de descuentos exclusivos, regalos y más ventajas.</p>
+                    <p className="text-gray-900 text-xs font-semibold mb-1">John · EcoWash Bot</p>
+                    <p className="text-gray-600 text-xs">¡Haz que cada lavado cuente! Consigue nuestra tarjeta de fidelización y disfruta de descuentos exclusivos, regalos y más ventajas.</p>
                   </div>
                 </div>
               </div>
@@ -491,13 +499,13 @@ export function LaundryServicePage() {
         </section>
 
         {/* CTA */}
-        <section className="py-16 lg:py-24 bg-gradient-to-br from-emerald-950 via-gray-900 to-green-950 text-white">
+        <section className="py-16 lg:py-24 bg-gradient-to-br from-green-600 to-green-700 text-white">
           <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-4xl font-bold mb-4">{t.ctaTitle}</h2>
-            <p className="text-emerald-200 text-lg mb-8">{t.ctaDesc}</p>
+            <p className="text-green-100 text-lg mb-8">{t.ctaDesc}</p>
             <Link
               to="/contact"
-              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-bold px-10 py-4 rounded-xl transition-colors text-lg"
+              className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-green-700 font-bold px-10 py-4 rounded-xl transition-colors text-lg"
             >
               {t.cta} <ArrowRight className="w-5 h-5" />
             </Link>
