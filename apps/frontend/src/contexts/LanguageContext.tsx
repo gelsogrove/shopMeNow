@@ -28,7 +28,7 @@ const translations = {
       "Parla con i tuoi clienti attraverso la loro chat preferita",
 
     // Hero Section
-    "hero.title": "Crea il tuo agente di vendita AI",
+    "hero.title": "Crea il tuo agente su WhatsApp",
     "hero.subtitle":
       "AI first: Automatizza vendite, supporto e campagne su WhatsApp — in un'unica piattaforma.",
     "hero.slogan": "Il primo agente non si scorda mai.",
@@ -180,7 +180,7 @@ const translations = {
     // Team Collaboration Section
     "teamCollaboration.title": "Collaborazione in team",
     "teamCollaboration.subtitle": "Per chi ha un team di vendita, condividi l'accesso al backoffice con i tuoi colleghi. Lo stesso agente AI risponde ai clienti su WhatsApp, mentre il team può gestire ordini, prodotti e clienti dalla stessa piattaforma. Coordinamento perfetto tra AI e team umano.",
-    "teamCollaboration.button": "Inizia gratis",
+    "teamCollaboration.button": "Contattaci",
     
     // Privacy Section
     "privacy.sectionTitle": "Privacy by design",
@@ -238,7 +238,7 @@ const translations = {
     "pricing.simulator.suggestion.newCustomers": "~10% crescita",
     "pricing.simulator.suggestion.pushCampaigns": "campagne/mese",
     "pricing.simulator.price.perPushMessage": "per messaggio pubblicitario",
-    "pricing.simulator.cta.free": "Inizia Prova Gratuita",
+    "pricing.simulator.cta.free": "Contattaci",
     "pricing.simulator.cta.plan": "Scegli",
 
     // Billing Section
@@ -298,7 +298,7 @@ const translations = {
     "contact.title": "Pronto per Iniziare?",
     "contact.subtitle":
       "Unisciti a migliaia di aziende che vendono già su WhatsApp",
-    "contact.cta": "Inizia la Prova Gratuita",
+    "contact.cta": "Contattaci",
     "contact.form.title": "Inviaci un messaggio",
     "contact.form.subtitle": "Dicci di cosa hai bisogno. Rispondiamo velocemente.",
     "contact.form.success": "Messaggio inviato",
@@ -619,7 +619,7 @@ const translations = {
     "header.tagline": "Talk to your customers through their favorite chat",
 
     // Hero Section
-    "hero.title": "Build your AI sales agent",
+    "hero.title": "Build your agent on WhatsApp",
     "hero.subtitle":
       "AI first: Automate sales, support, and campaigns on WhatsApp — in one platform.",
     "hero.slogan": "You never forget your first agent.",
@@ -835,7 +835,7 @@ const translations = {
     // Team Collaboration Section
     "teamCollaboration.title": "Team collaboration",
     "teamCollaboration.subtitle": "For sales teams, share backoffice access with your colleagues. The same AI agent responds to customers on WhatsApp, while the team can manage orders, products, and customers from the same platform. Perfect coordination between AI and human team.",
-    "teamCollaboration.button": "Start free",
+    "teamCollaboration.button": "Contact Us",
     
     // Privacy Section
     "privacy.sectionTitle": "Privacy by design",
@@ -895,7 +895,7 @@ const translations = {
     "pricing.simulator.suggestion.newCustomers": "~10% growth",
     "pricing.simulator.suggestion.pushCampaigns": "campaigns/month",
     "pricing.simulator.price.perPushMessage": "per advertising message",
-    "pricing.simulator.cta.free": "Start Free Trial",
+    "pricing.simulator.cta.free": "Contact Us",
     "pricing.simulator.cta.plan": "Choose",
 
     // Billing Section
@@ -955,7 +955,7 @@ const translations = {
     "contact.title": "Ready to Get Started?",
     "contact.subtitle":
       "Join thousands of businesses already selling on WhatsApp",
-    "contact.cta": "Start Free Trial",
+    "contact.cta": "Contact Us",
     "contact.form.title": "Send us a message",
     "contact.form.subtitle": "Tell us what you need. We reply quickly.",
     "contact.form.success": "Message sent",
@@ -1235,7 +1235,7 @@ const translations = {
     "header.tagline": "Habla con tus clientes a través de la sua chat favorita",
 
     // Hero Section
-    "hero.title": "Crea tu agente de ventas con IA",
+    "hero.title": "Crea tu agente en WhatsApp",
     "hero.subtitle":
       "AI first: Automatiza ventas, soporte y campañas en WhatsApp — en una única plataforma.",
     "hero.slogan": "El primer agente nunca se olvida.",
@@ -1376,7 +1376,7 @@ const translations = {
     // Team Collaboration Section
     "teamCollaboration.title": "Colaboración en equipo",
     "teamCollaboration.subtitle": "Para equipos de ventas, comparte el acceso al backoffice con tus colegas. El mismo agente IA responde a los clientes en WhatsApp, mientras el equipo puede gestionar pedidos, productos y clientes desde la misma plataforma. Coordinación perfecta entre IA y equipo humano.",
-    "teamCollaboration.button": "Empieza gratis",
+    "teamCollaboration.button": "Contáctanos",
     
     // Privacy Section
     "privacy.sectionTitle": "Privacidad por diseño",
@@ -1434,13 +1434,13 @@ const translations = {
     "pricing.simulator.suggestion.newCustomers": "~10% crecimiento",
     "pricing.simulator.suggestion.pushCampaigns": "campañas/mes",
     "pricing.simulator.price.perPushMessage": "por mensaje publicitario",
-    "pricing.simulator.cta.free": "Iniciar Prueba Gratuita",
+    "pricing.simulator.cta.free": "Contáctanos",
     "pricing.simulator.cta.plan": "Elegir",
 
     // Contact
     "contact.title": "¿Listo para Comenzar?",
     "contact.subtitle": "Únete a miles de empresas que ya venden en WhatsApp",
-    "contact.cta": "Empezar Prueba Gratuita",
+    "contact.cta": "Contáctanos",
     "contact.form.title": "Envíanos un mensaje",
     "contact.form.subtitle": "Cuéntanos qué necesitas. Respondemos rápido.",
     "contact.form.success": "Mensaje enviado",
@@ -1720,7 +1720,7 @@ const translations = {
     "header.tagline": "Fale com seus clientes através do chat favorito deles",
 
     // Hero Section
-    "hero.title": "Crie seu agente de vendas com IA",
+    "hero.title": "Crie seu agente no WhatsApp",
     "hero.subtitle":
       "AI first: Automatize vendas, suporte e campanhas no WhatsApp — em uma única plataforma.",
     "hero.slogan": "O primeiro agente nunca se esquece.",
@@ -1877,7 +1877,7 @@ const translations = {
     // Team Collaboration Section
     "teamCollaboration.title": "Colaboração em equipe",
     "teamCollaboration.subtitle": "Para equipes de vendas, compartilhe o acesso ao backoffice com seus colegas. O mesmo agente IA responde aos clientes no WhatsApp, enquanto a equipe pode gerenciar pedidos, produtos e clientes da mesma plataforma. Coordenação perfeita entre IA e equipe humana.",
-    "teamCollaboration.button": "Comece grátis",
+    "teamCollaboration.button": "Fale Connosco",
     
     // Privacy Section
     "privacy.sectionTitle": "Privacidade por design",
@@ -1936,14 +1936,14 @@ const translations = {
     "pricing.simulator.suggestion.newCustomers": "~10% crescimento",
     "pricing.simulator.suggestion.pushCampaigns": "campanhas/mês",
     "pricing.simulator.price.perPushMessage": "por mensagem publicitária",
-    "pricing.simulator.cta.free": "Iniciar Teste Gratuito",
+    "pricing.simulator.cta.free": "Fale Connosco",
     "pricing.simulator.cta.plan": "Escolher",
 
     // Contact
     "contact.title": "Pronto para Começar?",
     "contact.subtitle":
       "Junte-se a milhares de empresas que já vendem no WhatsApp",
-    "contact.cta": "Começar Teste Gratuito",
+    "contact.cta": "Fale Connosco",
     "contact.form.title": "Envie-nos uma mensagem",
     "contact.form.subtitle": "Diga-nos o que você precisa. Respondemos rapidamente.",
     "contact.form.success": "Mensagem enviada",

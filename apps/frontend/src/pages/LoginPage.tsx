@@ -48,7 +48,6 @@ import { motion } from "framer-motion"
 import { useForm } from "react-hook-form"
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import * as z from "zod"
-import whatsappIcon from "@/assets/whatsapp.svg"
 import { toast } from "../lib/toast"
 import { auth, api } from "../services/api"
 import { workspaceApi } from "../services/workspaceApi"
@@ -1280,11 +1279,6 @@ export function LoginPage() {
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 relative z-20">
         
         <div className="text-center mb-12 space-y-4 relative">
-          {/* WhatsApp brand badge */}
-          <div className="inline-flex items-center gap-2 bg-green-50 border border-green-200 rounded-full px-4 py-1.5 mb-1">
-            <img src={whatsappIcon} alt="WhatsApp" className="w-5 h-5" />
-            <span className="text-green-700 text-sm font-semibold">WhatsApp AI Platform</span>
-          </div>
           <h1 className="text-4xl lg:text-5xl font-bold text-slate-900">
             {t("hero.title")}
           </h1>

@@ -39,8 +39,8 @@ const T: Record<Language, {
       { q: "Cosa succede se supero i limiti del piano?", a: "Il sistema ti notifica quando sei vicino ai limiti. Puoi fare upgrade in qualsiasi momento o acquistare credito aggiuntivo. Non vengono mai bloccati i messaggi senza preavviso." },
     ],
     ctaTitle: "Inizia oggi, gratis",
-    ctaSub: "Nessuna carta di credito richiesta per il trial.",
-    cta: "Inizia il Trial Gratuito",
+    ctaSub: "Nessun impegno, ti rispondiamo a breve.",
+    cta: "Contattaci",
   },
   en: {
     seoTitle: "Pricing Plans - eChatbot WhatsApp E-Commerce Chatbot",
@@ -62,8 +62,8 @@ const T: Record<Language, {
       { q: "What happens if I exceed plan limits?", a: "The system notifies you when you're close to limits. You can upgrade at any time or purchase additional credit. Messages are never blocked without notice." },
     ],
     ctaTitle: "Start today, free",
-    ctaSub: "No credit card required for the trial.",
-    cta: "Start Free Trial",
+    ctaSub: "No commitment — we will get back to you shortly.",
+    cta: "Contact Us",
   },
   es: {
     seoTitle: "Planes y Precios - eChatbot WhatsApp E-Commerce Chatbot",
@@ -85,8 +85,8 @@ const T: Record<Language, {
       { q: "¿Qué ocurre si supero los límites del plan?", a: "El sistema te notifica cuando estás cerca de los límites. Puedes hacer upgrade en cualquier momento o comprar crédito adicional. Nunca se bloquean mensajes sin previo aviso." },
     ],
     ctaTitle: "Empieza hoy, gratis",
-    ctaSub: "No se requiere tarjeta de crédito para el trial.",
-    cta: "Iniciar Trial Gratuito",
+    ctaSub: "Sin compromiso, te respondemos pronto.",
+    cta: "Contáctanos",
   },
   pt: {
     seoTitle: "Planos e Preços - eChatbot WhatsApp E-Commerce Chatbot",
@@ -108,8 +108,8 @@ const T: Record<Language, {
       { q: "O que acontece se eu exceder os limites do plano?", a: "O sistema notifica-o quando está perto dos limites. Pode fazer upgrade a qualquer momento ou comprar crédito adicional. As mensagens nunca são bloqueadas sem aviso prévio." },
     ],
     ctaTitle: "Comece hoje, grátis",
-    ctaSub: "Não é necessário cartão de crédito para o trial.",
-    cta: "Iniciar Trial Gratuito",
+    ctaSub: "Sem compromisso, respondemos em breve.",
+    cta: "Fale Connosco",
   },
 }
 

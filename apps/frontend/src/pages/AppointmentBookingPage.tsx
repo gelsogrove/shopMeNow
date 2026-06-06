@@ -19,8 +19,8 @@ const T = {
     badge: "Appointment Booking",
     heroTitle: "Prenota appuntamenti.\nDirettamente su WhatsApp.",
     heroSub: "I tuoi clienti prenotano, modificano e cancellano appuntamenti in modo naturale via chat. L'AI gestisce disponibilità, conferme e promemoria automatici. Tu ricevi tutto sincronizzato su Google Calendar.",
-    cta: "Prova Gratis 15 Giorni",
-    ctaSub: "Nessuna carta di credito",
+    cta: "Contattaci",
+    ctaSub: "Nessun impegno, ti rispondiamo a breve",
     ctaTitle: "Pronto ad automatizzare le prenotazioni?",
     howTitle: "Come funziona",
     howSub: "Dalla richiesta del cliente alla conferma, tutto automatico.",
@@ -63,8 +63,8 @@ const T = {
     badge: "Appointment Booking",
     heroTitle: "Book appointments.\nDirectly on WhatsApp.",
     heroSub: "Your customers book, modify, and cancel appointments naturally via chat. AI manages availability, confirmations, and automatic reminders. You get everything synced to Google Calendar.",
-    cta: "Try Free for 15 Days",
-    ctaSub: "No credit card required",
+    cta: "Contact Us",
+    ctaSub: "No commitment — we will get back to you shortly",
     ctaTitle: "Ready to automate your bookings?",
     howTitle: "How it works",
     howSub: "From customer request to confirmation, fully automatic.",
@@ -107,8 +107,8 @@ const T = {
     badge: "Reserva de Citas",
     heroTitle: "Reserva citas.\nDirectamente en WhatsApp.",
     heroSub: "Tus clientes reservan, modifican y cancelan citas de forma natural por chat. La IA gestiona disponibilidad, confirmaciones y recordatorios automáticos. Tú recibes todo sincronizado en Google Calendar.",
-    cta: "Prueba Gratis 15 Días",
-    ctaSub: "No se requiere tarjeta de crédito",
+    cta: "Contáctanos",
+    ctaSub: "Sin compromiso, te respondemos pronto",
     ctaTitle: "¿Listo para automatizar tus reservas?",
     howTitle: "Cómo funciona",
     howSub: "Desde la solicitud del cliente hasta la confirmación, todo automático.",
@@ -151,8 +151,8 @@ const T = {
     badge: "Agendamento",
     heroTitle: "Agende consultas.\nDiretamente no WhatsApp.",
     heroSub: "Seus clientes agendam, modificam e cancelam consultas de forma natural pelo chat. A IA gerencia disponibilidade, confirmações e lembretes automáticos. Você recebe tudo sincronizado no Google Calendar.",
-    cta: "Experimente Grátis 15 Dias",
-    ctaSub: "Não é necessário cartão de crédito",
+    cta: "Fale Connosco",
+    ctaSub: "Sem compromisso, respondemos em breve",
     ctaTitle: "Pronto para automatizar seus agendamentos?",
     howTitle: "Como funciona",
     howSub: "Da solicitação do cliente à confirmação, tudo automático.",
@@ -231,7 +231,7 @@ export function AppointmentBookingPage() {
                 </h1>
                 <p className="text-xl text-slate-600 mb-10 leading-relaxed">{t.heroSub}</p>
                 <Link
-                  to="/onboarding"
+                  to="/contact"
                   className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
                 >
                   <Zap className="h-5 w-5" />
@@ -357,7 +357,7 @@ export function AppointmentBookingPage() {
           <div className="max-w-3xl mx-auto px-6 text-center">
             <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
             <p className="text-xl text-purple-100 mb-8">{t.ctaSub}</p>
-            <Link to="/onboarding" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-purple-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
+            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-purple-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
               <Zap className="h-6 w-6" />
               {t.cta}
             </Link>

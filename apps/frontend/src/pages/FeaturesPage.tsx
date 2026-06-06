@@ -27,8 +27,8 @@ const translations = {
   it: {
     seoTitle: "Funzionalità - Piattaforma AI Chatbot WhatsApp",
     ctaTitle: "Pronto a trasformare il tuo business?",
-    ctaSub: "Inizia gratuitamente oggi. Nessuna carta di credito richiesta.",
-    ctaBtn: "Inizia Gratis",
+    ctaSub: "Raccontaci la tua attività, ti rispondiamo a breve.",
+    ctaBtn: "Contattaci",
     seoDescription: "Scopri tutte le funzionalità di eChatbot: automazione AI, supporto umano, marketing push, integrazione CRM, e-commerce, privacy e sicurezza. La piattaforma completa per chatbot WhatsApp.",
     seoKeywords: "chatbot whatsapp, ai chatbot, automazione customer service, marketing push, crm integration, ecommerce chatbot, human in the loop, privacy gdpr",
     breadcrumb: "Funzionalità",
@@ -36,7 +36,7 @@ const translations = {
       badge: "Piattaforma Completa",
       title: "Tutto ciò di cui hai bisogno per<br/>automatizzare il tuo business",
       subtitle: "eChatbot combina intelligenza artificiale, automazione e intervento umano per creare esperienze clienti eccezionali su WhatsApp e widget web.",
-      cta: "Prova Gratis per 15 Giorni",
+      cta: "Contattaci",
     },
     coreFeatures: {
       title: "Funzionalità Principali",
@@ -96,8 +96,8 @@ const translations = {
   en: {
     seoTitle: "Features - AI WhatsApp Chatbot Platform | eChatbot",
     ctaTitle: "Ready to transform your business?",
-    ctaSub: "Start for free today. No credit card required.",
-    ctaBtn: "Get Started Free",
+    ctaSub: "Tell us about your business — we will get back to you shortly.",
+    ctaBtn: "Contact Us",
     seoDescription: "Discover all eChatbot features: AI automation, human support, push marketing, CRM integration, e-commerce, privacy and security. The complete platform for WhatsApp chatbots.",
     seoKeywords: "whatsapp chatbot, ai chatbot, customer service automation, push marketing, crm integration, ecommerce chatbot, human in the loop, privacy gdpr",
     breadcrumb: "Features",
@@ -105,7 +105,7 @@ const translations = {
       badge: "Complete Platform",
       title: "Everything you need to<br/>automate your business",
       subtitle: "eChatbot combines artificial intelligence, automation and human intervention to create exceptional customer experiences on WhatsApp and web widgets.",
-      cta: "Try Free for 15 Days",
+      cta: "Contact Us",
     },
     coreFeatures: {
       title: "Core Features",
@@ -130,8 +130,8 @@ const translations = {
   es: {
     seoTitle: "Funcionalidades - Plataforma AI Chatbot WhatsApp | eChatbot",
     ctaTitle: "¿Listo para transformar tu negocio?",
-    ctaSub: "Empieza gratis hoy. No se requiere tarjeta de crédito.",
-    ctaBtn: "Iniciar Gratis",
+    ctaSub: "Cuéntanos tu negocio, te respondemos pronto.",
+    ctaBtn: "Contáctanos",
     seoDescription: "Descubre todas las funcionalidades de eChatbot: automatización IA, soporte humano, marketing push, integración CRM, e-commerce, privacidad y seguridad.",
     seoKeywords: "chatbot whatsapp, ai chatbot, automatización customer service, marketing push, integración crm, chatbot ecommerce, human in the loop, privacidad gdpr",
     breadcrumb: "Funcionalidades",
@@ -139,7 +139,7 @@ const translations = {
       badge: "Plataforma Completa",
       title: "Todo lo que necesitas para<br/>automatizar tu negocio",
       subtitle: "eChatbot combina inteligencia artificial, automatización e intervención humana para crear experiencias de cliente excepcionales en WhatsApp y widgets web.",
-      cta: "Prueba Gratis 15 Días",
+      cta: "Contáctanos",
     },
     coreFeatures: {
       title: "Funcionalidades Principales",
@@ -164,8 +164,8 @@ const translations = {
   pt: {
     seoTitle: "Funcionalidades - Plataforma IA Chatbot WhatsApp | eChatbot",
     ctaTitle: "Pronto para transformar o seu negócio?",
-    ctaSub: "Comece gratuitamente hoje. Não é necessário cartão de crédito.",
-    ctaBtn: "Começar Grátis",
+    ctaSub: "Conte-nos sobre o seu negócio, respondemos em breve.",
+    ctaBtn: "Fale Connosco",
     seoDescription: "Descubra todas as funcionalidades do eChatbot: automação IA, suporte humano, marketing push, integração CRM, e-commerce, privacidade e segurança.",
     seoKeywords: "chatbot whatsapp, ai chatbot, automatização customer service, marketing push, integração crm, chatbot ecommerce, human in the loop, privacidade gdpr",
     breadcrumb: "Funcionalidades",
@@ -173,7 +173,7 @@ const translations = {
       badge: "Plataforma Completa",
       title: "Tudo o que precisa para<br/>automatizar o seu negócio",
       subtitle: "O eChatbot combina inteligência artificial, automação e intervenção humana para criar experiências de cliente excecionais no WhatsApp e widgets web.",
-      cta: "Experimente Grátis 15 Dias",
+      cta: "Fale Connosco",
     },
     coreFeatures: {
       title: "Funcionalidades Principais",
@@ -257,7 +257,7 @@ export function FeaturesPage() {
               </p>
 
               <Link
-                to="/onboarding"
+                to="/contact"
                 className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold px-10 py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
               >
                 <Zap className="h-6 w-6" />
@@ -385,7 +385,7 @@ export function FeaturesPage() {
                 {t.ctaSub}
               </p>
               <Link
-                to="/onboarding"
+                to="/contact"
                 className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-green-600 font-semibold px-10 py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
               >
                 <Zap className="h-6 w-6" />

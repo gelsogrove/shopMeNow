@@ -20,8 +20,8 @@ const T = {
     badge: "Omnicanale",
     heroTitle: "Un chatbot, due canali,\nzero discontinuità",
     heroSub: "Il cliente inizia a chattare sul tuo sito web nel widget, poi continua su WhatsApp. La conversazione non si interrompe mai. Nessun dato perso, nessuna ripetizione.",
-    cta: "Prova Gratis",
-    ctaSub: "Nessuna carta di credito richiesta",
+    cta: "Contattaci",
+    ctaSub: "Nessun impegno, ti rispondiamo a breve",
     howTitle: "Come funziona",
     howSub: "Un'esperienza cliente senza precedenti in 3 semplici passaggi",
     steps: [
@@ -57,8 +57,8 @@ const T = {
     badge: "Omnichannel",
     heroTitle: "One chatbot, two channels,\nzero discontinuity",
     heroSub: "The customer starts chatting on your website widget, then continues on WhatsApp. The conversation never breaks. No lost data, no repetition.",
-    cta: "Try for Free",
-    ctaSub: "No credit card required",
+    cta: "Contact Us",
+    ctaSub: "No commitment — we will get back to you shortly",
     howTitle: "How It Works",
     howSub: "An unprecedented customer experience in 3 simple steps",
     steps: [
@@ -94,8 +94,8 @@ const T = {
     badge: "Omnicanal",
     heroTitle: "Un chatbot, dos canales,\ncero discontinuidad",
     heroSub: "El cliente empieza a chatear en el widget de tu sitio web, luego continúa en WhatsApp. La conversación nunca se interrumpe. Sin datos perdidos, sin repeticiones.",
-    cta: "Prueba Gratis",
-    ctaSub: "No se requiere tarjeta de crédito",
+    cta: "Contáctanos",
+    ctaSub: "Sin compromiso, te respondemos pronto",
     howTitle: "Cómo Funciona",
     howSub: "Una experiencia de cliente sin precedentes en 3 sencillos pasos",
     steps: [
@@ -131,8 +131,8 @@ const T = {
     badge: "Omnicanal",
     heroTitle: "Um chatbot, dois canais,\nzero descontinuidade",
     heroSub: "O cliente começa a conversar no widget do seu site, depois continua no WhatsApp. A conversa nunca se interrompe. Sem dados perdidos, sem repetições.",
-    cta: "Experimente Grátis",
-    ctaSub: "Não é necessário cartão de crédito",
+    cta: "Fale Connosco",
+    ctaSub: "Sem compromisso, respondemos em breve",
     howTitle: "Como Funciona",
     howSub: "Uma experiência de cliente sem precedentes em 3 simples passos",
     steps: [

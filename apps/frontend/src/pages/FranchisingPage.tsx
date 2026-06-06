@@ -215,8 +215,16 @@ export function FranchisingPage() {
 
       <main>
         {/* Hero */}
-        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-emerald-950 via-gray-900 to-green-950 text-white">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-emerald-950 via-gray-900 to-green-950 text-white overflow-hidden">
+          {/* Background photo — drop public/franchising-hero.jpg. Falls back to gradient if absent. */}
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: "url('/franchising-hero.jpg')" }}
+            aria-hidden="true"
+          />
+          {/* Dark overlay for text contrast */}
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/90 via-gray-900/85 to-green-950/90" aria-hidden="true" />
+          <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <Breadcrumbs items={[{ label: t.breadcrumb }]} />
             <div className="mt-6">
               <span className="inline-block bg-emerald-500 text-emerald-950 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide mb-6">

@@ -20,8 +20,8 @@ const T = {
     badge: "Human-in-the-Loop",
     heroTitle: "Il meglio dell'AI.\nIl meglio degli esseri umani.",
     heroSub: "eChatbot non sostituisce le persone — le potenzia. Il chatbot AI gestisce il 90% delle richieste automaticamente. Quando serve l'empatia e il giudizio umano, l'operatore prende il controllo in un clic.",
-    cta: "Prova Gratis 15 Giorni",
-    ctaSub: "Nessuna carta di credito",
+    cta: "Contattaci",
+    ctaSub: "Nessun impegno, ti rispondiamo a breve",
     howTitle: "Come funziona il sistema ibrido",
     howSub: "L'AI lavora instancabilmente 24/7. Gli operatori intervengono dove fanno davvero la differenza.",
     steps: [
@@ -64,8 +64,8 @@ const T = {
     badge: "Human-in-the-Loop",
     heroTitle: "The best of AI.\nThe best of humans.",
     heroSub: "eChatbot doesn't replace people — it empowers them. The AI chatbot handles 90% of requests automatically. When empathy and human judgment are needed, the operator takes control with one click.",
-    cta: "Try Free for 15 Days",
-    ctaSub: "No credit card required",
+    cta: "Contact Us",
+    ctaSub: "No commitment — we will get back to you shortly",
     howTitle: "How the hybrid system works",
     howSub: "AI works tirelessly 24/7. Human operators step in where they make a real difference.",
     steps: [
@@ -108,8 +108,8 @@ const T = {
     badge: "Human-in-the-Loop",
     heroTitle: "Lo mejor de la IA.\nLo mejor de los humanos.",
     heroSub: "eChatbot no reemplaza a las personas, las potencia. El chatbot AI gestiona el 90% de las solicitudes automáticamente. Cuando se necesita empatía y juicio humano, el operador toma el control con un clic.",
-    cta: "Prueba Gratis 15 Días",
-    ctaSub: "No se requiere tarjeta de crédito",
+    cta: "Contáctanos",
+    ctaSub: "Sin compromiso, te respondemos pronto",
     howTitle: "Cómo funciona el sistema híbrido",
     howSub: "La IA trabaja incansablemente 24/7. Los operadores humanos intervienen donde marcan la diferencia.",
     steps: [
@@ -152,8 +152,8 @@ const T = {
     badge: "Human-in-the-Loop",
     heroTitle: "O melhor da IA.\nO melhor dos humanos.",
     heroSub: "O eChatbot não substitui as pessoas — as potencializa. O chatbot AI lida com 90% das solicitações automaticamente. Quando empatia e julgamento humano são necessários, o operador assume o controle com um clique.",
-    cta: "Experimente Grátis 15 Dias",
-    ctaSub: "Não é necessário cartão de crédito",
+    cta: "Fale Connosco",
+    ctaSub: "Sem compromisso, respondemos em breve",
     howTitle: "Como funciona o sistema híbrido",
     howSub: "A IA trabalha incansavelmente 24/7. Os operadores humanos intervêm onde fazem a diferença real.",
     steps: [
@@ -231,7 +231,7 @@ export function HumanSupportPage() {
                 </h1>
                 <p className="text-xl text-slate-600 mb-10 leading-relaxed">{t.heroSub}</p>
                 <Link
-                  to="/onboarding"
+                  to="/contact"
                   className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
                 >
                   <Zap className="h-5 w-5" />
@@ -357,7 +357,7 @@ export function HumanSupportPage() {
           <div className="max-w-3xl mx-auto px-6 text-center">
             <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
             <p className="text-xl text-amber-100 mb-8">{t.ctaSub}</p>
-            <Link to="/onboarding" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-amber-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
+            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-amber-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
               <Zap className="h-6 w-6" />
               {t.cta}
             </Link>

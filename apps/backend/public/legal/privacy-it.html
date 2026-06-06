@@ -1,401 +1,138 @@
-<h1>eChatbot Politica sulla Privacy</h1>
-
-<p><strong>Ultimo Aggiornamento:</strong> Marzo 2025<br>
-<strong>Versione:</strong> 3.0</p>
+<h1>Informativa sulla Privacy</h1>
+<p><strong>eChatbot</strong> (echatbot.ai)</p>
+<p><strong>Versione 4.0</strong> &mdash; <strong>Ultimo aggiornamento: Giugno 2026</strong></p>
 
 <h2>1. Introduzione</h2>
+<p>La presente Informativa sulla Privacy spiega come eChatbot ("eChatbot", "noi") raccoglie, utilizza, conserva e protegge i dati personali in relazione alla piattaforma eChatbot disponibile all'indirizzo echatbot.ai (la "Piattaforma"). eChatbot &egrave; una piattaforma SaaS di chatbot per l'e-commerce basata su WhatsApp, che consente alle imprese di gestire negozi conversazionali potenziati dall'intelligenza artificiale tramite WhatsApp e un widget di chat integrabile.</p>
+<p>Ci impegniamo a trattare i dati personali in modo lecito, corretto e trasparente, in conformit&agrave; al Regolamento (UE) 2016/679 ("GDPR"), al Codice Privacy italiano (D.Lgs. 196/2003 e successive modifiche) e alla Legge italiana 132/2025 in materia di intelligenza artificiale. In linea con l'art. 12 GDPR, il presente documento &egrave; redatto in forma concisa, trasparente e intelligibile.</p>
 
-<p>eChatbot SRL ("noi", "nostro", "Piattaforma", "Servizio") è una piattaforma di chatbot e-commerce basata su WhatsApp che consente alle aziende di gestire le interazioni con i clienti e gli ordini tramite WhatsApp. Questa Politica sulla Privacy spiega come raccogliamo, utilizziamo, divulghiamo e altrimenti elaboriamo i dati personali in relazione ai nostri Servizi.</p>
+<h2>2. La Struttura a Due Livelli: Chi Controlla i Tuoi Dati</h2>
+<p>eChatbot opera su due livelli distinti e il nostro ruolo giuridico varia a seconda di chi siano i dati trattati. Ti invitiamo a leggere attentamente questa sezione, poich&eacute; determina quali parti dell'informativa si applicano a te.</p>
 
-<p><strong>Titolare del Trattamento:</strong> eChatbot SRL<br>
-<strong>Sede Legale:</strong> Via Roma 1, 20100 Milano, Italia<br>
-<strong>P.IVA:</strong> IT12345678901<br>
-<strong>Email:</strong> privacy@echatbot.ai</p>
+<h3>2.1 Operatori del Workspace (Esercenti) &mdash; eChatbot &egrave; il Titolare del Trattamento</h3>
+<p>Se sei un'impresa, un esercente o un professionista che si registra su echatbot.ai per gestire un chatbot WhatsApp per il proprio negozio ("Operatore del Workspace"), eChatbot agisce come <strong>titolare del trattamento</strong> dei dati di account, fatturazione e configurazione che ci fornisci. Le sezioni 4, 6 e 7 descrivono come trattiamo i tuoi dati in questo ruolo.</p>
 
-<h2>2. Ambito di Applicazione e Parti Coinvolte</h2>
+<h3>2.2 Clienti Finali &mdash; eChatbot &egrave; il Responsabile del Trattamento</h3>
+<p>Se sei una persona fisica che dialoga con il chatbot di un negozio tramite WhatsApp o il widget web ("Cliente Finale"), l'Operatore del Workspace (l'esercente che gestisce il negozio che stai contattando) &egrave; il <strong>titolare del trattamento</strong> dei tuoi dati personali. eChatbot agisce esclusivamente come <strong>responsabile del trattamento</strong> per conto di tale Operatore, ai sensi dell'art. 28 GDPR e di un Accordo sul Trattamento dei Dati (DPA). Trattiamo i dati dei Clienti Finali <strong>solo su istruzione documentata</strong> dell'Operatore del Workspace e solo per erogare il servizio di chatbot. Per richieste relative ai tuoi dati come Cliente Finale, il tuo referente principale &egrave; l'esercente con cui hai dialogato; tuttavia, assisteremo tale esercente nell'evasione dei tuoi diritti (vedi Sezione 10).</p>
 
-<p>Questa Politica sulla Privacy si applica a:</p>
-
+<h2>3. Definizioni</h2>
 <ul>
-<li><strong>Utenti della Piattaforma:</strong> Aziende (commercianti, proprietari di negozi e-commerce) che creano account e gestiscono chatbot</li>
-<li><strong>Clienti Finali:</strong> Persone che interagiscono con i chatbot dei commercianti tramite WhatsApp</li>
-<li><strong>Responsabili del Trattamento:</strong> Terze parti (WhatsApp, provider di pagamento, servizi LLM)</li>
+  <li><strong>Workspace</strong>: un ambiente isolato (tenant) appartenente a un singolo Operatore. Ogni query al database &egrave; filtrata da un <code>workspaceId</code> univoco, cos&igrave; che i dati di un Workspace non siano mai accessibili da un altro.</li>
+  <li><strong>Titolare del Trattamento</strong>: il soggetto che determina le finalit&agrave; e i mezzi del trattamento dei dati personali.</li>
+  <li><strong>Responsabile del Trattamento</strong>: il soggetto che tratta i dati personali per conto del titolare e secondo le sue istruzioni.</li>
+  <li><strong>Sub-responsabile</strong>: un terzo incaricato da eChatbot per trattare dati personali (vedi Sezione 8).</li>
 </ul>
 
-<p>Ciascuna parte ha diverse responsabilità nel trattamento dei dati, delineate di seguito.</p>
-
-<h2>3. Dati che Raccogliamo</h2>
-
-<h3>3.1 Dai Commercianti (Utenti della Piattaforma)</h3>
-
+<h2>4. Dati Raccolti dagli Operatori del Workspace (Siamo Titolari)</h2>
+<p>Quando crei e gestisci un account, raccogliamo:</p>
 <ul>
-<li><strong>Dati dell'Account:</strong> Nome, email, numero di telefono, nome azienda, indirizzo, P.IVA, hash della password</li>
-<li><strong>Dati di Configurazione:</strong> Informazioni sui prodotti, prezzi, offerte promozionali, istruzioni di servizio clienti, orari di apertura, chiavi API per servizi di terze parti</li>
-<li><strong>Dati Operativi:</strong> Trascrizioni chat, numeri di telefono dei clienti, log delle conversazioni, storico degli ordini, record dei pagamenti</li>
-<li><strong>Dati Tecnici:</strong> Indirizzo IP, tipo di browser, informazioni sul dispositivo, cookie di sessione, log di accesso, metriche di utilizzo API</li>
-<li><strong>Dati di Fatturazione:</strong> Informazioni di fatturazione (NON archiviate da noi—gestite in modo sicuro dal nostro processore di pagamento PayPal)</li>
+  <li><strong>Dati di account</strong>: nome, indirizzo email, password (conservata solo come hash bcrypt &mdash; mai in chiaro) e dati aziendali.</li>
+  <li><strong>Dati di fatturazione</strong>: credenziali PayPal e stato dell'abbonamento. I dati delle carte di pagamento sono gestiti da PayPal, non da noi.</li>
+  <li><strong>Configurazione WhatsApp</strong>: ID del numero di telefono e chiavi API, cifrate a riposo con AES-256-GCM.</li>
+  <li><strong>Dati di sessione amministrativa</strong>: indirizzo IP, user agent (browser/dispositivo) e token di sessione, raccolti per finalit&agrave; di autenticazione e sicurezza.</li>
 </ul>
 
-<h3>3.2 Dai Clienti Finali</h3>
-
+<h2>5. Dati Trattati sui Clienti Finali (Siamo Responsabili)</h2>
+<p>Per conto degli Operatori del Workspace, trattiamo le seguenti categorie di dati dei Clienti Finali, raccolti tramite conversazioni WhatsApp o il widget web:</p>
 <ul>
-<li><strong>Dati di Identità:</strong> Numero di telefono (identificatore WhatsApp), nome del cliente (se fornito in chat)</li>
-<li><strong>Dati delle Conversazioni:</strong> Tutti i messaggi inviati/ricevuti tramite il chatbot, file multimediali (immagini, documenti), timestamp delle interazioni</li>
-<li><strong>Dati delle Transazioni:</strong> Storico degli ordini, selezioni dei prodotti, indirizzi, metodo di pagamento (gestito dal provider di pagamento del commerciante)</li>
-<li><strong>Dati Tecnici:</strong> Identificatori di sessione WhatsApp, timestamp di consegna dei messaggi, paese del dispositivo (dedotto dal prefisso telefonico)</li>
+  <li><strong>Numero di telefono WhatsApp</strong> (obbligatorio, in formato E.164) &mdash; identificativo principale della conversazione.</li>
+  <li><strong>Nome</strong>, fornito durante la conversazione.</li>
+  <li><strong>Indirizzo email</strong> (facoltativo), fornito durante la conversazione.</li>
+  <li><strong>Indirizzi di spedizione e fatturazione</strong>, in caso di ordini.</li>
+  <li><strong>Cronologia delle conversazioni</strong>: tutti i messaggi scambiati con il chatbot.</li>
+  <li><strong>Dati degli ordini</strong>: prodotti, importi e tipo di metodo di pagamento (non conserviamo i dati delle carte).</li>
+  <li><strong>Prenotazioni di appuntamenti</strong>: data, ora e note.</li>
+  <li><strong>Preferenza linguistica</strong>, rilevata automaticamente dal prefisso telefonico.</li>
+  <li><strong>Consenso GDPR</strong>: data/ora e versione del consenso prestato.</li>
+  <li><strong>Metadati di sessione</strong> relativi alla conversazione.</li>
 </ul>
 
-<h3>3.3 Raccolta Automatica</h3>
-
+<h2>6. Come Utilizziamo i Dati e Basi Giuridiche</h2>
+<p>Trattiamo i dati personali solo in presenza di una valida base giuridica ai sensi dell'art. 6 GDPR:</p>
 <ul>
-<li><strong>Cookie e Sessioni:</strong> Utilizziamo cookie tecnici per l'autenticazione e la gestione delle sessioni</li>
-<li><strong>Log dei Server:</strong> Indirizzi IP, timestamp delle richieste, log degli errori, pattern di utilizzo API</li>
-<li><strong>Analitiche:</strong> Metriche di utilizzo dell'area di lavoro (ad es. numero di conversazioni, clienti, messaggi elaborati)</li>
+  <li><strong>Erogazione del servizio di chatbot</strong> (trattamento di messaggi, ordini e prenotazioni dei Clienti Finali): art. 6(1)(b) &mdash; esecuzione di un contratto.</li>
+  <li><strong>Trattamento AI/LLM dei messaggi</strong> per generare risposte: art. 6(1)(b) &mdash; necessario per erogare il servizio.</li>
+  <li><strong>Log di sicurezza e audit</strong> (autenticazione, prevenzione frodi, integrit&agrave; del sistema): art. 6(1)(f) &mdash; legittimo interesse.</li>
+  <li><strong>Analisi statistiche</strong> (aggregate, non individuali): art. 6(1)(f) &mdash; legittimo interesse.</li>
+  <li><strong>Elaborazione dei pagamenti</strong> per gli abbonamenti degli Operatori: art. 6(1)(b) &mdash; esecuzione di un contratto.</li>
+  <li><strong>Registri fiscali e contabili</strong>: art. 6(1)(c) &mdash; adempimento di un obbligo legale.</li>
+  <li><strong>Comunicazioni di marketing agli Operatori</strong>: art. 6(1)(a) &mdash; consenso.</li>
+  <li><strong>Messaggi WhatsApp opt-in / proattivi</strong>: art. 6(1)(a) &mdash; consenso, in combinato con l'art. 6(1)(b).</li>
 </ul>
 
-<h2>4. Base Legale per il Trattamento</h2>
-
-<p>Elaboriamo i dati personali sulla base di:</p>
-
+<h2>7. Intelligenza Artificiale e Trattamento Automatizzato</h2>
+<p>eChatbot utilizza modelli linguistici di grandi dimensioni (LLM) per comprendere e rispondere alle conversazioni. Vogliamo essere trasparenti su come ci&ograve; avviene:</p>
 <ul>
-<li><strong>Esecuzione del Contratto (Art. 6(1)(b) GDPR):</strong> Fornitura della piattaforma chatbot e gestione degli ordini/pagamenti</li>
-<li><strong>Interesse Legittimo (Art. 6(1)(f) GDPR):</strong> Miglioramento della piattaforma, prevenzione delle frodi, conformità legale</li>
-<li><strong>Obbligo Legale (Art. 6(1)(c) GDPR):</strong> Conformità fiscale, conservazione dei dati per controversie, requisiti normativi</li>
-<li><strong>Consenso (Art. 6(1)(a) GDPR):</strong> Funzionalità opzionali come analitiche di marketing, modelli LLM avanzati</li>
+  <li><strong>Principio del contesto minimo</strong>: l'LLM (a cui si accede tramite OpenRouter) riceve solo quanto necessario per produrre una risposta &mdash; tipicamente il contesto della conversazione, il nome del cliente, la preferenza linguistica ed eventuali sconti applicabili. Non riceve credenziali di account, dati di fatturazione o informazioni non pertinenti.</li>
+  <li><strong>Nessun addestramento sui tuoi dati</strong>: i dati personali dei Clienti Finali <strong>non</strong> vengono mai utilizzati per addestrare modelli di IA. Sono trattati esclusivamente, in tempo reale (tramite Promise asincrone), per erogare la risposta immediata.</li>
+  <li><strong>Trattamento in tempo reale</strong>: la piattaforma elabora i dati in modo asincrono e non li conserva oltre quanto necessario per il servizio e i periodi di conservazione indicati nella Sezione 9.</li>
+  <li><strong>Zero Data Retention (ZDR)</strong>: per impostazione predefinita, OpenRouter opera in modalit&agrave; ZDR e non conserva il contenuto dei prompt.</li>
+  <li><strong>Diritto di opposizione al trattamento basato sull'IA</strong>: in conformit&agrave; alla Legge italiana 132/2025 e agli artt. 21&ndash;22 GDPR, hai il diritto di opporti al trattamento effettuato con mezzi automatizzati e di richiedere l'intervento umano qualora le decisioni si basino unicamente su un trattamento automatizzato. Contatta noi o l'Operatore del Workspace pertinente per esercitare questo diritto.</li>
 </ul>
 
-<h2>5. Come Utilizziamo i Tuoi Dati</h2>
-
-<h3>5.1 Provider di Consegna dei Messaggi WhatsApp</h3>
-
-<p>Per le integrazioni del canale WhatsApp, gli Utenti della Piattaforma possono scegliere tra più provider di messaggi WhatsApp di terze parti. Ogni provider ha infrastrutture, certificazioni di conformità e copertura geografica diversi. Gli utenti selezionano quale provider utilizzare durante la configurazione dell'area di lavoro. I provider WhatsApp supportati attualmente includono:</p>
-
+<h2>8. Sub-responsabili e Trasferimenti Internazionali</h2>
+<p>Per erogare il servizio ci avvaliamo dei seguenti sub-responsabili. Laddove i dati siano trasferiti al di fuori dello Spazio Economico Europeo (SEE), il trasferimento &egrave; garantito dal Data Privacy Framework UE-USA (DPF), dalle Clausole Contrattuali Standard (SCC) o da un meccanismo equivalente ai sensi dell'art. 46 GDPR.</p>
 <ul>
-<li><strong>Meta Platforms (API WhatsApp Business)</strong> — Integrazione diretta con l'API ufficiale di Meta, i messaggi vengono instradati attraverso l'infrastruttura di Meta (UE / USA)</li>
-<li><strong>WAAPI</strong> — Provider europeo di messaggi WhatsApp, opera nei data center dell'UE (UE)</li>
-<li><strong>Partner aggiuntivi</strong> — Altri provider certificati di consegna messaggi WhatsApp disponibili nelle impostazioni della piattaforma</li>
+  <li><strong>Meta / WhatsApp Business API</strong> (USA) &mdash; riceve numeri di telefono e contenuto integrale dei messaggi per la consegna. I messaggi sono cifrati end-to-end in transito; Meta tratta separatamente i metadati (IP, info dispositivo, stato di consegna) ed &egrave; titolare autonomo per tali metadati. <em>Meccanismo di trasferimento: Data Privacy Framework UE-USA (certificato DPF).</em></li>
+  <li><strong>WasenderAPI</strong> &mdash; provider alternativo di connettivit&agrave; WhatsApp utilizzato da alcuni Workspace, che tratta le stesse categorie di dati. <em>Meccanismo di trasferimento: SCC ove applicabile.</em></li>
+  <li><strong>OpenRouter</strong> (USA) &mdash; instrada la cronologia delle conversazioni e il contesto cliente (nome, lingua, sconto) verso provider LLM come Anthropic Claude. Opera in modalit&agrave; Zero Data Retention per impostazione predefinita &mdash; il contenuto dei prompt non viene conservato. <em>Meccanismo di trasferimento: SCC / DPF.</em></li>
+  <li><strong>PayPal</strong> &mdash; elabora i pagamenti degli abbonamenti degli Operatori come <strong>titolare autonomo</strong> dei dati di pagamento. Vedi l'<a href="https://www.paypal.com/webapps/mpp/ua/privacy-full" target="_blank" rel="noopener">informativa privacy di PayPal</a>.</li>
+  <li><strong>Google Calendar / Zoom</strong> &mdash; integrazioni facoltative per la prenotazione di appuntamenti; i dati degli appuntamenti sono condivisi solo se l'Operatore del Workspace abilita tali integrazioni. <em>Meccanismo di trasferimento: DPF / SCC.</em></li>
+  <li><strong>Fornitore di hosting cloud</strong> &mdash; infrastruttura ospitata nell'UE e/o negli USA. <em>Meccanismo di trasferimento: DPF / SCC per eventuali trattamenti negli USA.</em></li>
+</ul>
+<p>Un elenco aggiornato dei sub-responsabili &egrave; disponibile su richiesta all'indirizzo <a href="mailto:info@echatbot.ai">info@echatbot.ai</a>.</p>
+
+<h2>9. Conservazione dei Dati</h2>
+<p>Conserviamo i dati personali solo per il tempo necessario alle finalit&agrave; sopra descritte, secondo il seguente schema:</p>
+<ul>
+  <li><strong>Messaggi delle conversazioni</strong>: 90 giorni, poi cancellati automaticamente da un processo schedulato.</li>
+  <li><strong>Log di esecuzione agente / LLM</strong>: 180 giorni, poi cancellati automaticamente.</li>
+  <li><strong>Coda messaggi WhatsApp</strong>: 90 giorni.</li>
+  <li><strong>Eventi webhook</strong>: 30 giorni.</li>
+  <li><strong>Log dei tentativi di autenticazione</strong>: 90 giorni.</li>
+  <li><strong>Archivi dei messaggi</strong>: 6 mesi, poi cancellati definitivamente.</li>
+  <li><strong>Profili cliente</strong>: conservati finch&eacute; il Workspace &egrave; attivo; soft-cancellati su richiesta, con cancellazione definitiva completata entro 30 giorni (un ciclo di backup).</li>
+  <li><strong>Registri fiscali e contabili</strong>: 10 anni, come richiesto dalla normativa italiana ed europea.</li>
+</ul>
+<p><strong>Impegno di cancellazione definitiva</strong>: quando i dati vengono cancellati &mdash; per scadenza dei termini o su richiesta &mdash; vengono prima soft-cancellati e poi cancellati in modo permanente e irreversibile entro 30 giorni, in linea con il nostro ciclo di rotazione dei backup.</p>
+
+<h2>10. I Tuoi Diritti</h2>
+<p>Ai sensi del GDPR, hai i seguenti diritti sui tuoi dati personali:</p>
+<ul>
+  <li><strong>Accesso</strong> &mdash; ottenere conferma e copia dei tuoi dati.</li>
+  <li><strong>Rettifica</strong> &mdash; correggere dati inesatti o incompleti.</li>
+  <li><strong>Cancellazione</strong> ("diritto all'oblio") &mdash; richiedere la cancellazione dei tuoi dati, fatti salvi gli obblighi legali di conservazione.</li>
+  <li><strong>Portabilit&agrave;</strong> &mdash; ricevere i tuoi dati in formato strutturato e leggibile da dispositivo automatico.</li>
+  <li><strong>Limitazione</strong> &mdash; limitare le modalit&agrave; di trattamento dei tuoi dati.</li>
+  <li><strong>Opposizione</strong> &mdash; opporti al trattamento basato sul legittimo interesse e al trattamento automatizzato/basato sull'IA (artt. 21&ndash;22 GDPR; Legge italiana 132/2025).</li>
+  <li><strong>Revoca del consenso</strong> &mdash; ove il trattamento si basi sul consenso, revocarlo in qualsiasi momento, senza pregiudicare i trattamenti precedenti.</li>
+</ul>
+<p><strong>Clienti Finali</strong>: poich&eacute; eChatbot agisce come responsabile per i tuoi dati, ti invitiamo a indirizzare le richieste di esercizio dei diritti all'Operatore del Workspace (esercente) con cui hai interagito. Supporteremo tale Operatore nel rispondere senza ingiustificato ritardo.</p>
+<p><strong>Operatori del Workspace</strong>: contattaci direttamente utilizzando i recapiti indicati nella Sezione 14.</p>
+
+<h2>11. Diritto di Reclamo</h2>
+<p>Se ritieni che i tuoi diritti in materia di protezione dei dati siano stati violati, hai il diritto di proporre reclamo a un'autorit&agrave; di controllo. In Italia, si tratta del <strong>Garante per la protezione dei dati personali</strong> (<a href="https://www.garanteprivacy.it" target="_blank" rel="noopener">www.garanteprivacy.it</a>). Puoi inoltre rivolgerti all'autorit&agrave; di controllo del tuo Paese di residenza nell'UE.</p>
+
+<h2>12. Sicurezza</h2>
+<p>Adottiamo misure tecniche e organizzative adeguate per proteggere i dati personali, tra cui:</p>
+<ul>
+  <li><strong>Sicurezza delle password</strong>: le password sono sottoposte ad hashing con bcrypt e mai conservate in chiaro.</li>
+  <li><strong>Cifratura a riposo</strong>: i token OAuth e le chiavi API di WhatsApp sono cifrati con AES-256-GCM.</li>
+  <li><strong>Autenticazione a due fattori (2FA)</strong>: gli amministratori possono attivare la 2FA basata su TOTP (es. Google Authenticator) o l'iscrizione tramite QR code. <em>Nota: questi QR code sono utilizzati esclusivamente per l'autenticazione degli amministratori &mdash; non raccolgono n&eacute; espongono dati dei clienti.</em></li>
+  <li><strong>QR code di connessione WhatsApp</strong>: scadono dopo 45 secondi e vengono rimossi automaticamente dal database.</li>
+  <li><strong>Cifratura in transito</strong>: tutto il traffico API utilizza TLS 1.2 o superiore; i messaggi WhatsApp si basano sull'infrastruttura di cifratura end-to-end di Meta.</li>
+  <li><strong>Isolamento multi-tenant</strong>: ogni query al database &egrave; filtrata da <code>workspaceId</code>, garantendo una separazione completa tra i Workspace.</li>
 </ul>
 
-<p><strong>Chiavi Segrete e Credenziali API:</strong> Per ogni provider WhatsApp selezionato, gli Utenti della Piattaforma devono fornire chiavi API, token di accesso o credenziali di autenticazione. Questi segreti sono:</p>
+<h2>13. Cookie e Tracciamento</h2>
+<p>eChatbot &egrave; una piattaforma SaaS e utilizza solo cookie minimi ed essenziali, necessari per l'autenticazione e la gestione delle sessioni. Non utilizziamo tecnologie pubblicitarie invasive o di tracciamento cross-site. Le eventuali analisi che effettuiamo sono aggregate e non tracciano i singoli individui. Per le sessioni degli amministratori, registriamo l'indirizzo IP e lo user agent del browser esclusivamente per finalit&agrave; di sicurezza e prevenzione delle frodi (art. 6(1)(f) GDPR).</p>
 
+<h2>14. Contatti e Protezione dei Dati</h2>
+<p>Per qualsiasi domanda sulla presente Informativa, per esercitare i tuoi diritti o per contattare il nostro referente per la protezione dei dati, scrivi a:</p>
 <ul>
-<li><strong>Crittografati a riposo</strong> — archiviati utilizzando la crittografia AES-256 nel nostro database</li>
-<li><strong>Mai registrati o trasmessi</strong> — le credenziali non vengono mai scritte nei log, nelle tracce di errore o nei sistemi di monitoraggio esterni</li>
-<li><strong>Controllati dall'accesso</strong> — solo l'amministratore dell'area di lavoro che ha configurato il provider può visualizzare o ruotare le credenziali</li>
-<li><strong>Ruotati su richiesta</strong> — gli utenti possono rigenerare o sostituire le credenziali del provider in qualsiasi momento tramite il dashboard della piattaforma</li>
-<li><strong>Utilizzati esclusivamente per la comunicazione del provider</strong> — le credenziali vengono inviate solo ai server del provider scelto e da nessun'altra parte</li>
+  <li><strong>Email</strong>: <a href="mailto:info@echatbot.ai">info@echatbot.ai</a></li>
+  <li><strong>Sito web</strong>: <a href="https://www.echatbot.ai" target="_blank" rel="noopener">www.echatbot.ai</a></li>
 </ul>
 
-<h3>5.2 Elaborazione LLM e Funzionalità AI</h3>
-
-<p><strong>Provider LLM:</strong> Se non diversamente configurato, utilizziamo OpenRouter come provider LLM. OpenRouter instrada le richieste a vari modelli di linguaggio di grandi dimensioni (GPT-4, Claude, ecc.) a seconda della disponibilità e della configurazione dell'utente.</p>
-
-<p><strong>Dati Inviati all'LLM:</strong> Per generare risposte intelligenti del chatbot, inviamo quanto segue al servizio LLM:</p>
-
-<ul>
-<li>Messaggi dei clienti e storico delle conversazioni (ultimi N messaggi)</li>
-<li>Catalogo dei prodotti e informazioni sui prezzi del commerciante</li>
-<li>Istruzioni personalizzate del commerciante e regole aziendali</li>
-<li>Contesto limitato del cliente (ad es. preferenza di lingua indicata, intento della conversazione)</li>
-</ul>
-
-<p><strong>Conservazione dei Dati LLM:</strong> OpenRouter potrebbe conservare input/output per il miglioramento del modello e la prevenzione delle frodi per un massimo di 30 giorni. Consulta la privacy policy di OpenRouter per i dettagli. NON abbiamo alcun controllo sulla conservazione dei dati LLM.</p>
-
-<p><strong>Tuo Diritto di Rinuncia:</strong> I commercianti possono disabilitare le funzionalità AI e utilizzare solo risposte basate su regole, anche se questo limita le capacità del chatbot.</p>
-
-<h3>5.3 Utilizzo Generale dei Dati</h3>
-
-<ul>
-<li><strong>Fornitura del Servizio:</strong> Gestione della piattaforma chatbot, gestione delle conversazioni, elaborazione degli ordini</li>
-<li><strong>Servizio Clienti:</strong> Risposta alle domande, risoluzione dei problemi</li>
-<li><strong>Fatturazione e Pagamenti:</strong> Fatturazione, gestione degli abbonamenti, elaborazione dei pagamenti</li>
-<li><strong>Analitiche e Miglioramento:</strong> Metriche di utilizzo aggregate, ottimizzazione delle funzionalità (anonimizzate)</li>
-<li><strong>Conformità Legale:</strong> Rilevamento delle frodi, risoluzione delle controversie, obblighi normativi</li>
-<li><strong>Sicurezza:</strong> Rilevamento delle violazioni, prevenzione dell'abuso, protezione da attività dannose</li>
-</ul>
-
-<h2>6. Condivisione dei Dati e Terze Parti</h2>
-
-<p>Condividiamo i dati con le seguenti categorie di destinatari:</p>
-
-<h3>6.1 Integrazioni Richieste (Automatiche)</h3>
-
-<ul>
-<li><strong>WhatsApp / Meta:</strong> Inviamo i numeri di telefono dei clienti, il contenuto dei messaggi e i dati di interazione per elaborare i messaggi WhatsApp (o al tuo provider WhatsApp scelto). Questo è essenziale per il funzionamento del Servizio.</li>
-<li><strong>Processore di Pagamento (PayPal):</strong> Condividiamo le informazioni di fatturazione e i dettagli della sottoscrizione per elaborare i pagamenti. PayPal rispetta gli standard PCI DSS e PSD2. Ubicazione: USA (si applicano le Clausole Contrattuali Standard)</li>
-<li><strong>Servizi LLM (OpenRouter, ecc.):</strong> Inviamo il contesto delle conversazioni e i dati dei prodotti per generare risposte AI (vedi Sezione 5.2).</li>
-<li><strong>Provider di Email (SES, SendGrid):</strong> Inviamo email di notifica tramite servizi SMTP di terze parti.</li>
-<li><strong>Infrastruttura Cloud (AWS, Heroku):</strong> Ospitiamo la nostra piattaforma su provider cloud che hanno accesso ai dati crittografati.</li>
-</ul>
-
-<h3>6.2 Condivisione Opzionale</h3>
-
-<ul>
-<li><strong>Piattaforme di Analitiche:</strong> Potremmo condividere metriche di utilizzo anonimizzate con servizi di analitiche (opzionale, l'utente può rinunciare).</li>
-<li><strong>Strumenti di Supporto Clienti:</strong> Le interazioni di supporto potrebbero essere condivise con piattaforme di supporto per la gestione dei ticket.</li>
-</ul>
-
-<h3>6.3 Requisiti Legali</h3>
-
-<p>Potremmo divulgare i dati personali se richiesto dalla legge, da un ordine del tribunale o da una richiesta governativa. Cercheremo di notificarti tali richieste a meno che non sia proibito dalla legge.</p>
-
-<h3>6.4 Trasferimenti Aziendali</h3>
-
-<p>In caso di fusione, acquisizione o fallimento, i tuoi dati potrebbe essere trasferiti come parte dei beni aziendali. Forniremo notifica di qualsiasi cambiamento nel controllo.</p>
-
-<p><strong>Destinatari Ubicati Fuori dall'UE:</strong> Alcuni destinatari (PayPal, Meta, OpenRouter) sono ubicati fuori dall'UE. Garantiamo salvaguardie adeguate:</p>
-
-<ul>
-<li><strong>Clausole Contrattuali Standard (SCC):</strong> Meccanismo di trasferimento dati approvato secondo la decisione di adeguatezza UE 2021/914</li>
-<li><strong>Regole Vincolanti d'Impresa (BCR):</strong> Per trasferimenti aziendali interni (se applicabile)</li>
-<li><strong>Decisioni di Adeguatezza:</strong> Dove disponibili (ad es. UK, Giappone, Corea del Sud)</li>
-</ul>
-
-<h2>7. Conservazione dei Dati</h2>
-
-<ul>
-<li><strong>Dati dell'Account:</strong> Conservati per la durata dell'account + 1 anno dopo l'eliminazione (per la risoluzione delle controversie)</li>
-<li><strong>Messaggi Chat:</strong> Conservati per 90 giorni (eliminazione soft), quindi eliminati permanentemente</li>
-<li><strong>Record di Ordini/Transazioni:</strong> 10 anni (richiesto per conformità fiscale/legale)</li>
-<li><strong>Log Tecnici:</strong> 30 giorni (sicurezza e debug)</li>
-<li><strong>Dati di Cookie/Sessione:</strong> Fino al logout o 30 giorni di inattività</li>
-<li><strong>Dati di Backup:</strong> Conservati per 30 giorni; eliminati dopo</li>
-</ul>
-
-<h3>7.10 Processo di Archiviazione e Cancellazione dei Dati</h3>
-
-<p><strong>Importante:</strong> La cancellazione dei dati segue un processo a tre stadi per garantire il recupero dei dati, la conformità ai controlli e la sicurezza:</p>
-
-<p><strong>Stadio 1 — Soft Delete Avviato dall'Utente (Immediatamente):</strong></p>
-<ul>
-<li>Quando elimini dati (messaggi, contenuti dell'account), i dati vengono contrassegnati come "eliminati" nel nostro database</li>
-<li>I dati sono <strong>nascosti dall'interfaccia del tuo account</strong> e da tutte le query</li>
-<li>I dati <strong>NON vengono rimossi fisicamente</strong> dall'archiviazione — solo contrassegnati come eliminati</li>
-<li>Non puoi recuperare o ripristinare i dati tramite l'interfaccia utente dopo questo punto</li>
-<li>Durata: <strong>90 giorni</strong> (recuperabili dal team di supporto di eChatbot in caso di controversie)</li>
-</ul>
-
-<p><strong>Stadio 2 — Archiviazione (Giorni 1-90):</strong></p>
-<ul>
-<li>I dati soft-deleted rimangono in <strong>archiviazione a freddo</strong> (sistema di backup database separato)</li>
-<li>I dati archiviati <strong>non vengono più utilizzati per analitiche, addestramento IA o funzionalità della piattaforma</strong></li>
-<li>I dati archiviati sono <strong>crittografati separatamente</strong> dai dati attivi</li>
-<li>Scopo: Risoluzione controversie, difesa dai chargeback, conformità normativa, recupero tecnico</li>
-<li>Timeline: <strong>Fino a 90 giorni dalla data di soft-delete</strong></li>
-</ul>
-
-<p><strong>Stadio 3 — Cancellazione Permanente (Dopo 90 Giorni):</strong></p>
-<ul>
-<li>Dopo 90 giorni, i dati archiviati vengono <strong>eliminati definitivamente e irreversibilmente</strong></li>
-<li>L'eliminazione include: Pulizia del database, pulizia dei backup, eliminazione dell'archivio</li>
-<li>L'eliminazione è <strong>automatizzata e non reversibile</strong> — nessun recupero manuale possibile</li>
-<li>Il materiale chiave crittografico viene distrutto, rendendo il recupero matematicamente impossibile</li>
-<li>Conformità: GDPR Articolo 17 (Diritto all'Oblio) pienamente soddisfatto</li>
-</ul>
-
-<p><strong>Periodi di Conservazione Per Eccezione (Non Soft-Deleted):</strong></p>
-<ul>
-<li>Record di ordini/transazioni: <strong>10 anni</strong> (obbligo legale, non compatibile con soft-delete)</li>
-<li>Record fiscali/contabili: <strong>7-10 anni</strong> per giurisdizione (obbligo legale)</li>
-<li>Record di controversie/contenzioso: <strong>Fino alla chiusura del caso + 2 anni</strong> (necessità legale)</li>
-</ul>
-
-<p><strong>Come Richiedere l'Eliminazione Immediata:</strong> Scrivi a privacy@echatbot.ai con i dettagli dell'account. Noi:</p>
-<ol>
-<li>Verifichiamo la tua identità (entro 72 ore)</li>
-<li>Avviamo il soft-delete di tutti i dati personali idonei</li>
-<li>Confermiamo la data di eliminazione e il periodo di archiviazione di 90 giorni</li>
-<li>Forniamo il ricevimento di archiviazione per i record di conformità</li>
-</ol>
-
-<p><strong>Eliminazione Automatica:</strong> Dopo la scadenza di ciascun periodo di conservazione, i dati transitano automaticamente attraverso gli Stadi 1-3. Non è richiesto alcun intervento manuale da parte tua — i nostri job di eliminazione vengono eseguiti secondo la programmazione.</p>
-
-<p>Questi periodi di conservazione sono conformi al GDPR (Articoli 5, 17 e 24), alla legge italiana sulla protezione dei dati e alle normative internazionali sul commercio elettronico.</p>
-
-<h2>8. Trasferimenti Internazionali dei Dati</h2>
-
-<p>I nostri server si trovano nell'UE (Heroku, AWS regione UE). Tuttavia, alcuni dati potrebbero essere trasferiti a paesi non UE:</p>
-
-<ul>
-<li><strong>WhatsApp / Meta:</strong> Azienda con sede negli USA (si applicano Clausole Contrattuali Standard)</li>
-<li><strong>OpenRouter / Servizi LLM:</strong> Potrebbe indirizzare i dati agli USA o ad altri paesi (dipende dal provider)</li>
-<li><strong>Provider di Pagamento:</strong> Potrebbero operare a livello globale ma utilizzare Clausole Contrattuali Standard</li>
-</ul>
-
-<p>Per i trasferimenti al di fuori dell'UE, ci assicuriamo adeguate salvaguardie (ad es. Clausole Contrattuali Standard, Regole Vincolanti d'Impresa).</p>
-
-<h2>9. Sicurezza e Misure di Protezione dei Dati</h2>
-
-<h3>9.1 Autenticazione a Due Fattori (2FA — TOTP con Codice QR)</h3>
-
-<p>Offriamo e consigliamo vivamente l'2FA basato su Password Monouso Temporali (TOTP) per tutti gli account della piattaforma (compatibile con Google Authenticator, Authy, Microsoft Authenticator, ecc.). Durante la configurazione di 2FA, gli utenti scansionano un codice QR contenente il loro segreto 2FA crittografato. Il codice QR viene generato in modo sicuro sul dispositivo e non viene mai trasmesso ai nostri server — solo l'hash del segreto viene archiviato. I codici TOTP vengono verificati con una finestra di ±1 per tenere conto della deriva dell'orologio. I codici QR vengono visualizzati una volta durante la configurazione e non vengono memorizzati nella cache o archiviati.</p>
-
-<h3>9.2 Crittografia</h3>
-
-<ul>
-<li><strong>In Transito:</strong> Tutti i dati trasmessi su HTTPS/TLS 1.3 (crittografia minima a 256 bit)</li>
-<li><strong>A Riposo:</strong> I dati sensibili (password, chiavi API, segreti) crittografati con AES-256</li>
-<li><strong>Crittografia del Database:</strong> PostgreSQL con colonne crittografate per i segreti</li>
-</ul>
-
-<h3>9.3 Controllo di Accesso</h3>
-
-<ul>
-<li>Principio del privilegio minimo — accesso dello staff solo ai dati necessari</li>
-<li>Controllo di accesso basato su ruoli (RBAC) — ruoli admin, manager, viewer</li>
-<li>Isolamento dell'area di lavoro — gli utenti non possono accedere ai dati di altre aree di lavoro</li>
-<li>Log di audit — tutte le azioni amministrative registrate e riviste</li>
-</ul>
-
-<h3>9.4 Limitazione del Tasso e Protezione DDoS</h3>
-
-<ul>
-<li>Tentativi di login: Max 5 tentativi falliti per 15 minuti → blocco dell'account</li>
-<li>Richieste API: Limitazione del tasso per area di lavoro (ad es. 1000 req/min)</li>
-<li>Webhook WhatsApp: Prevenzione dei messaggi duplicati, applicazione del limite</li>
-</ul>
-
-<h3>9.5 Audit di Sicurezza Regolari</h3>
-
-<ul>
-<li>Scansione della sicurezza automatizzata (SAST, DAST)</li>
-<li>Test di penetrazione (valutazioni annuali di terze parti)</li>
-<li>Patch delle vulnerabilità (dipendenze aggiornate settimanalmente)</li>
-<li>Certificazione SOC 2 Type II (in corso)</li>
-</ul>
-
-<h3>9.6 Risposta agli Incidenti</h3>
-
-<p>In caso di una violazione dei dati, faremo:</p>
-
-<ul>
-<li>Notificare gli utenti interessati entro 72 ore (requisito GDPR)</li>
-<li>Fornire dettagli della violazione e azioni consigliate</li>
-<li>Rapporto alle autorità di protezione dei dati se richiesto</li>
-<li>Documentare e indagare la causa principale</li>
-</ul>
-
-<h3>9.7 Formazione dello Staff</h3>
-
-<ul>
-<li>Formazione sulla protezione dei dati e privacy per tutti i dipendenti</li>
-<li>Accordi di riservatezza (NDA) richiesti</li>
-<li>Controlli del background per il personale con accesso ai dati</li>
-</ul>
-
-<h2>10. I Tuoi Diritti secondo il GDPR e la Legge Locale</h2>
-
-<p>Hai i seguenti diritti riguardanti i tuoi dati personali:</p>
-
-<h3>10.1 Diritto di Accesso (Art. 15 GDPR)</h3>
-
-<p>Puoi richiedere una copia di tutti i dati personali che abbiamo su di te in un formato standard. Forniremo questo entro 30 giorni dalla tua richiesta.</p>
-
-<h3>10.2 Diritto di Rettifica (Art. 16 GDPR)</h3>
-
-<p>Puoi correggere i dati inesatti o incompleti. Puoi aggiornare la maggior parte delle informazioni da solo tramite le impostazioni dell'account; contattaci per altri dati.</p>
-
-<h3>10.3 Diritto all'Oblio (Art. 17 GDPR — "Diritto all'Oblio")</h3>
-
-<p>Puoi richiedere l'eliminazione dei tuoi dati, fatta eccezione per quando abbiamo un obbligo legale di conservarli (ad es. record fiscali). Nota: i messaggi di chat vengono eliminati comunque dopo 90 giorni.</p>
-
-<h3>10.4 Diritto di Limitare il Trattamento (Art. 18 GDPR)</h3>
-
-<p>Puoi chiederci di smettere di elaborare i tuoi dati mentre verifichiamo la loro accuratezza o legalità.</p>
-
-<h3>10.5 Diritto alla Portabilità dei Dati (Art. 20 GDPR)</h3>
-
-<p>Puoi richiedere i tuoi dati in un formato leggibile da macchina (JSON/CSV) per il trasferimento a un altro servizio.</p>
-
-<h3>10.6 Diritto di Opposizione (Art. 21 GDPR)</h3>
-
-<p>Puoi opporti al trattamento basato su interesse legittimo (ad es. analitiche di marketing). Smetteremo di elaborare a meno che non abbiamo motivi prevalenti.</p>
-
-<h3>10.7 Processo Decisionale Automatizzato (Art. 22 GDPR)</h3>
-
-<p>NON utilizziamo processi decisionali completamente automatizzati che producono effetti legali su di te (ad es. sospensione dell'account senza revisione umana). Utilizziamo il rilevamento automatizzato delle frodi, ma gli umani rivedono i casi contrassegnati.</p>
-
-<h2>11. Profilazione e Decisioni Automatizzate</h2>
-
-<h3>11.1 Che cos'è la Profilazione?</h3>
-
-<p>La profilazione è l'elaborazione automatizzata di dati personali per analizzare e valutare aspetti della tua personalità, interessi, comportamento o preferenze. eChatbot utilizza la profilazione solo quando consenti di ricevere comunicazioni marketing personalizzate.</p>
-
-<h3>11.2 Come Utilizziamo la Profilazione</h3>
-
-<ul>
-<li><strong>Dati analizzati:</strong> Posizione geografica (dedotta da IP/numero di telefono), modelli di utilizzo del servizio, interessi per prodotti, storico degli acquisti</li>
-<li><strong>Scopo:</strong> Inviare comunicazioni marketing allineate agli interessi dimostrati nei Servizi eChatbot</li>
-<li><strong>Consenso:</strong> Basato sulla tua casella di opt-in esplicita durante la registrazione o nelle impostazioni</li>
-<li><strong>Logica:</strong> Analisi statistica del comportamento degli utenti aggregati per creare categorie di interessi (ad es. "interessato ai Chatbot E-commerce", "utenti ad alto volume")</li>
-</ul>
-
-<h3>11.3 Garanzie di Sicurezza - Cosa NON Fa la Profilazione</h3>
-
-<p><strong>La profilazione di eChatbot NON:</strong></p>
-
-<ul>
-<li><strong>Produce decisioni legali/significative automatizzate:</strong> La profilazione NON risulta in decisioni che hanno effetti legali o significativi su di te (Articolo 22 GDPR). Nessuna sospensione dell'account, interruzione del servizio o prezzi speciali basati unicamente sulla profilazione.</li>
-<li><strong>Influisce sulla tua capacità di acquisto:</strong> Ricevi le stesse funzionalità della piattaforma e prezzi indipendentemente dalla categoria di profilo</li>
-<li><strong>Crea discriminazione permanente:</strong> I dati di profilazione vengono aggiornati periodicamente e possono essere corretti individualmente tramite le impostazioni dell'account</li>
-<li><strong>Manipola il tuo comportamento:</strong> Le comunicazioni marketing sono solo informative; controlli sempre le tue decisioni di acquisto</li>
-</ul>
-
-<h3>11.4 I Tuoi Diritti di Profilazione</h3>
-
-<ul>
-<li><strong>Opt-out in qualsiasi momento:</strong> Disabilita la profilazione nelle impostazioni dell'account → ricevi solo marketing non personalizzato</li>
-<li><strong>Accedi al tuo profilo:</strong> Richiedi dettagli della tua categoria di profilo e motivazione (Sezione 10.1)</li>
-<li><strong>Contesta le decisioni:</strong> Se ritieni che la profilazione abbia causato un trattamento ingiusto, presenta un reclamo (Sezione 12)</li>
-</ul>
-
-<h2>12. Politica sui Cookie</h2>
-
-<p>Utilizziamo i seguenti cookie:</p>
-
-<ul>
-<li><strong>Cookie Essenziali:</strong> Token di autenticazione, ID di sessione (richiesto per il login)</li>
-<li><strong>Cookie di Preferenza:</strong> Selezione lingua, tema</li>
-<li><strong>Cookie di Analitiche:</strong> Metriche di utilizzo (opzionale, può essere disabilitato)</li>
-</ul>
-
-<p>Puoi gestire le preferenze dei cookie nelle impostazioni del tuo browser. La disabilitazione dei cookie essenziali impedirà il login.</p>
-
-<h2>13. Contatti e Reclami</h2>
-
-<p><strong>Domande su questa politica?</strong><br>
-Email: privacy@echatbot.ai<br>
-Indirizzo: Via Roma 1, 20100 Milano, Italia<br>
-Telefono: +39 02 1234567</p>
-
-<p><strong>Presenta un Reclamo:</strong><br>
-Se ritieni che stiamo gestendo male i tuoi dati, hai il diritto di presentare un reclamo alla tua autorità locale di protezione dei dati. In Italia, questo è il Garante per la Protezione dei Dati Personali.</p>
-
-<h2>14. Modifiche a Questa Politica</h2>
-
-<p>Potremmo aggiornare questa Politica sulla Privacy per riflettere i cambiamenti nelle nostre pratiche o nei requisiti legali. Ti notificheremo delle modifiche sostanziali via email o notifica della piattaforma. Il tuo continuo utilizzo del Servizio costituisce accettazione della politica aggiornata.</p>
-
-<h2>15. Definizioni</h2>
-
-<ul>
-<li><strong>Dati Personali:</strong> Qualsiasi informazione relativa a una persona fisica identificata o identificabile</li>
-<li><strong>Trattamento:</strong> Raccolta, utilizzo, archiviazione, divulgazione o eliminazione di dati personali</li>
-<li><strong>Interessato:</strong> L'individuo a cui si riferiscono i dati personali</li>
-<li><strong>Area di Lavoro:</strong> Un account aziendale separato sulla nostra piattaforma</li>
-<li><strong>Cliente Finale:</strong> Una persona che interagisce con il chatbot di un commerciante tramite WhatsApp</li>
-</ul>
-
-<hr>
-
-<p><strong>Storico delle Versioni:</strong><br>
-v3.0 (Marzo 2025): Aggiunto Codice QR per la sicurezza in 2FA (9.1), selezione del provider WhatsApp (5.1), gestione delle chiavi segrete<br>
-v2.0 (2024): Conformità GDPR iniziale<br>
-v1.0 (2023): Lancio</p>
-
-<hr>
-
-<p className="text-sm text-gray-500 mt-8">
-<strong>Documenti Legali Correlati:</strong> 
-<a href="/terms">Termini di Servizio</a> | 
-<a href="/refund">Politica di Rimborso e Annullamento</a>
-</p>
+<h2>15. Modifiche alla Presente Informativa</h2>
+<p>Potremmo aggiornare periodicamente la presente Informativa sulla Privacy. La data di "Ultimo aggiornamento" e il numero di versione in cima al documento indicano l'ultima revisione. Le modifiche sostanziali saranno comunicate agli Operatori del Workspace tramite la Piattaforma o via email. Il proseguimento nell'utilizzo della Piattaforma successivamente all'entrata in vigore di qualsiasi modifica costituisce accettazione dell'Informativa aggiornata.</p>
