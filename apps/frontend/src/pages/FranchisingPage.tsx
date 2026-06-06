@@ -222,13 +222,9 @@ export function FranchisingPage() {
         {/* Hero */}
         <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-green-50 overflow-hidden">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <Breadcrumbs items={[{ label: t.breadcrumb }]} />
             <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
               {/* Left: text */}
               <div>
-                <span className="inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide mb-6">
-                  {t.badge}
-                </span>
                 <motion.h1
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}

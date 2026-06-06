@@ -295,7 +295,7 @@ export class OrdersController {
       doc.text('123 Business Street')
       doc.text('City, State 12345')
       doc.text('Phone: +1 (555) 123-4567')
-      doc.text('Email: info@echatbot.ai')
+      doc.text('Email: echatbotai@gmail.com')
 
       // Right column - Customer Info
       doc.fontSize(12).font('Helvetica-Bold').text('BILL TO:', startX + colWidth, startY)
@@ -478,7 +478,7 @@ export class OrdersController {
       doc.text('123 Business Street')
       doc.text('City, State 12345')
       doc.text('Phone: +1 (555) 123-4567')
-      doc.text('Email: info@echatbot.ai')
+      doc.text('Email: echatbotai@gmail.com')
 
       // Right column - Customer Info
       doc.fontSize(12).font('Helvetica-Bold').text('DELIVER TO:', startX + colWidth, startY)
