@@ -28,9 +28,9 @@ const translations = {
       "Parla con i tuoi clienti attraverso la loro chat preferita",
 
     // Hero Section
-    "hero.title": "Crea il tuo agente su WhatsApp",
+    "hero.title": "Il tuo agente AI su WhatsApp",
     "hero.subtitle":
-      "AI first: Automatizza vendite, supporto e campagne su WhatsApp — in un'unica piattaforma.",
+      "Un'AI su misura che risponde ai tuoi clienti 24/7 su WhatsApp, passa all'operatore con traduzione in tempo reale e invia campagne. Per franchising, e-commerce e servizi.",
     "hero.slogan": "Il primo agente non si scorda mai.",
     "hero.subline": "",
     "hero.whyTitle": "Perché eChatbot?",
@@ -326,14 +326,14 @@ const translations = {
     "cta.button.contact": "Contatta le Vendite",
 
     // How It Works
-    "howItWorks.title": "Inizia in 3 Semplici Passaggi",
-    "howItWorks.subtitle": "Nessun codice, nessuna competenza tecnica richiesta. Inizia a vendere in pochi minuti.",
-    "howItWorks.step1.title": "Collega WhatsApp",
-    "howItWorks.step1.desc": "Collega il tuo account WhatsApp Business con pochi clic. Ti guidiamo attraverso la configurazione.",
-    "howItWorks.step2.title": "Configura Agente AI",
-    "howItWorks.step2.desc": "Carica il tuo catalogo prodotti, imposta le FAQ e personalizza la personalità del tuo chatbot. Ti guidiamo attraverso la configurazione.",
-    "howItWorks.step3.title": "Vai Live!",
-    "howItWorks.step3.desc": "Inizia a servire i clienti 24/7. Monitora le prestazioni e ottimizza con analisi in tempo reale.",
+    "howItWorks.title": "Come lavoriamo insieme",
+    "howItWorks.subtitle": "Niente prodotto preconfezionato: costruiamo il tuo assistente AI sulla tua attività e sui tuoi casi reali.",
+    "howItWorks.step1.title": "Ci racconti il tuo business",
+    "howItWorks.step1.desc": "Parliamo delle tue esigenze: settore, sedi, lingue, processi. Capiamo cosa serve davvero ai tuoi clienti.",
+    "howItWorks.step2.title": "Costruiamo l'AI su misura",
+    "howItWorks.step2.desc": "Addestriamo l'assistente sui tuoi casi reali, lo colleghiamo ai tuoi sistemi e lo affiniamo nel tempo. On-premise se vuoi.",
+    "howItWorks.step3.title": "Vai live su WhatsApp",
+    "howItWorks.step3.desc": "L'AI risponde ai clienti 24/7, passa all'operatore quando serve e invia campagne. Tu monitori tutto da un unico pannello.",
     
     // Work in Progress
     "wip.banner": "Lavori in Corso",
@@ -619,9 +619,9 @@ const translations = {
     "header.tagline": "Talk to your customers through their favorite chat",
 
     // Hero Section
-    "hero.title": "Build your agent on WhatsApp",
+    "hero.title": "Your AI agent on WhatsApp",
     "hero.subtitle":
-      "AI first: Automate sales, support, and campaigns on WhatsApp — in one platform.",
+      "A custom AI that answers your customers 24/7 on WhatsApp, hands off to an operator with real-time translation, and sends campaigns. For franchises, e-commerce and services.",
     "hero.slogan": "You never forget your first agent.",
     "hero.subline": "",
     "hero.whyTitle": "Why eChatbot?",
@@ -771,14 +771,14 @@ const translations = {
     "plan.credit": "Credit",
     
     // How It Works
-    "howItWorks.title": "Get Started in 3 Simple Steps",
-    "howItWorks.subtitle": "No code, no technical skills needed. Start selling in minutes.",
-    "howItWorks.step1.title": "Connect WhatsApp",
-    "howItWorks.step1.desc": "Link your WhatsApp Business account with a few clicks. We guide you through the setup.",
-    "howItWorks.step2.title": "Configure AI Agent",
-    "howItWorks.step2.desc": "Upload your product catalog, set up FAQs, and customize your chatbot's personality. We guide you through the setup.",
-    "howItWorks.step3.title": "Go Live!",
-    "howItWorks.step3.desc": "Start serving customers 24/7. Monitor performance and optimize with real-time analytics.",
+    "howItWorks.title": "How we work together",
+    "howItWorks.subtitle": "No off-the-shelf product: we build your AI assistant around your business and your real cases.",
+    "howItWorks.step1.title": "Tell us about your business",
+    "howItWorks.step1.desc": "We talk through your needs: industry, locations, languages, processes. We learn what your customers really need.",
+    "howItWorks.step2.title": "We build your custom AI",
+    "howItWorks.step2.desc": "We train the assistant on your real cases, connect it to your systems, and refine it over time. On-premise if you want.",
+    "howItWorks.step3.title": "Go live on WhatsApp",
+    "howItWorks.step3.desc": "The AI serves customers 24/7, hands off to an operator when needed, and sends campaigns. You monitor everything from one panel.",
     
     // Work in Progress
     "wip.banner": "Work in Progress",
@@ -1235,9 +1235,9 @@ const translations = {
     "header.tagline": "Habla con tus clientes a través de la sua chat favorita",
 
     // Hero Section
-    "hero.title": "Crea tu agente en WhatsApp",
+    "hero.title": "Tu agente con IA en WhatsApp",
     "hero.subtitle":
-      "AI first: Automatiza ventas, soporte y campañas en WhatsApp — en una única plataforma.",
+      "Una IA a medida que responde a tus clientes 24/7 en WhatsApp, pasa al operador con traducción en tiempo real y envía campañas. Para franquicias, e-commerce y servicios.",
     "hero.slogan": "El primer agente nunca se olvida.",
     "hero.subline": "",
     "hero.whyTitle": "¿Por qué eChatbot?",
@@ -1468,14 +1468,14 @@ const translations = {
     "cta.button.contact": "Contactar Ventas",
 
     // How It Works
-    "howItWorks.title": "Comienza en 3 Simples Pasos",
-    "howItWorks.subtitle": "Sin código, sin habilidades técnicas necesarias. Comienza a vender en minutos.",
-    "howItWorks.step1.title": "Conecta WhatsApp",
-    "howItWorks.step1.desc": "Vincula tu cuenta de WhatsApp Business con pocos clics. Te guiamos en la configuración.",
-    "howItWorks.step2.title": "Configura Agente AI",
-    "howItWorks.step2.desc": "Carga tu catálogo de productos, configura las preguntas frecuentes y personaliza la personalidad de tu chatbot. Te guiamos en la configuración.",
-    "howItWorks.step3.title": "¡En Vivo!",
-    "howItWorks.step3.desc": "Comienza a servir a los clientes 24/7. Monitorea el rendimiento y optimiza con análisis en tiempo real.",
+    "howItWorks.title": "Cómo trabajamos juntos",
+    "howItWorks.subtitle": "Nada prefabricado: construimos tu asistente de IA en torno a tu negocio y tus casos reales.",
+    "howItWorks.step1.title": "Cuéntanos tu negocio",
+    "howItWorks.step1.desc": "Hablamos de tus necesidades: sector, sedes, idiomas, procesos. Entendemos qué necesitan de verdad tus clientes.",
+    "howItWorks.step2.title": "Construimos tu IA a medida",
+    "howItWorks.step2.desc": "Entrenamos el asistente con tus casos reales, lo conectamos a tus sistemas y lo afinamos con el tiempo. On-premise si quieres.",
+    "howItWorks.step3.title": "Sal en vivo en WhatsApp",
+    "howItWorks.step3.desc": "La IA atiende a los clientes 24/7, pasa al operador cuando hace falta y envía campañas. Tú lo monitorizas todo desde un único panel.",
     
     // Work in Progress
     "wip.banner": "Trabajo en Progreso",
@@ -1722,7 +1722,7 @@ const translations = {
     // Hero Section
     "hero.title": "Crie seu agente no WhatsApp",
     "hero.subtitle":
-      "AI first: Automatize vendas, suporte e campanhas no WhatsApp — em uma única plataforma.",
+      "Uma IA à medida que responde aos teus clientes 24/7 no WhatsApp, passa ao operador com tradução em tempo real e envia campanhas. Para franquias, e-commerce e serviços.",
     "hero.slogan": "O primeiro agente nunca se esquece.",
     "hero.subline": "",
     "hero.whyTitle": "Por que eChatbot?",
@@ -1971,14 +1971,14 @@ const translations = {
     "cta.button.contact": "Contatar Vendas",
 
     // How It Works
-    "howItWorks.title": "Comece em 3 Passos Simples",
-    "howItWorks.subtitle": "Sem código, sem habilidades técnicas necessárias. Comece a vender em minutos.",
-    "howItWorks.step1.title": "Conecte WhatsApp",
-    "howItWorks.step1.desc": "Vincule sua conta WhatsApp Business com poucos cliques. Nós guiamos você na configuração.",
-    "howItWorks.step2.title": "Configure Agente AI",
-    "howItWorks.step2.desc": "Carregue seu catálogo de produtos, configure as perguntas frequentes e personalize a personalidade do seu chatbot. Nós guiamos você na configuração.",
-    "howItWorks.step3.title": "Vá ao Vivo!",
-    "howItWorks.step3.desc": "Comece a atender clientes 24/7. Monitore o desempenho e otimize com análises em tempo real.",
+    "howItWorks.title": "Como trabalhamos juntos",
+    "howItWorks.subtitle": "Nada pré-fabricado: construímos o teu assistente de IA em torno do teu negócio e dos teus casos reais.",
+    "howItWorks.step1.title": "Conta-nos o teu negócio",
+    "howItWorks.step1.desc": "Falamos das tuas necessidades: setor, unidades, idiomas, processos. Percebemos o que os teus clientes realmente precisam.",
+    "howItWorks.step2.title": "Construímos a tua IA à medida",
+    "howItWorks.step2.desc": "Treinamos o assistente com os teus casos reais, ligamo-lo aos teus sistemas e afinamo-lo ao longo do tempo. On-premise se quiseres.",
+    "howItWorks.step3.title": "Entra em direto no WhatsApp",
+    "howItWorks.step3.desc": "A IA atende os clientes 24/7, passa ao operador quando preciso e envia campanhas. Monitorizas tudo a partir de um único painel.",
     
     // Work in Progress
     "wip.banner": "Trabalho em Andamento",

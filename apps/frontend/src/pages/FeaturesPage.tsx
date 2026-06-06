@@ -332,7 +332,7 @@ export function FeaturesPage() {
               transition={{ duration: 0.65, ease: "easeOut" }}
             >
               {/* Decorative background frame */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500" />
 
               <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
@@ -359,7 +359,7 @@ export function FeaturesPage() {
                   {/* Right: Image placeholder */}
                   <div className="relative">
                     <div className="relative">
-                      <div className="absolute -inset-4 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-2xl blur-xl opacity-40" />
+                      <div className="absolute -inset-4 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl blur-xl opacity-40" />
                       <img src="/survey-ecommerce.png" alt="Integration Dashboard" className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/60 object-contain" />
                     </div>
                   </div>
