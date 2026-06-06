@@ -7,7 +7,6 @@ import WidgetEmbedPage from "@/pages/WidgetEmbedPage"
 import WidgetTestPage from "@/pages/WidgetTestPage"
 import { LegalDocumentPage } from "@/pages/LegalDocumentPage"
 import { FeaturesPage } from "@/pages/FeaturesPage"
-import { WidgetToWhatsAppPage } from "@/pages/WidgetToWhatsAppPage"
 import { HumanSupportPage } from "@/pages/HumanSupportPage"
 import { AppointmentBookingPage } from "@/pages/AppointmentBookingPage"
 import { CrmIntegrationPage } from "@/pages/CrmIntegrationPage"
@@ -15,7 +14,6 @@ import { TeamCollaborationPage } from "@/pages/TeamCollaborationPage"
 import { PrivacyByDesignPage } from "@/pages/PrivacyByDesignPage"
 import { LaundryServicePage } from "@/pages/LaundryServicePage"
 import { FranchisingPage } from "@/pages/FranchisingPage"
-import { PricingPage } from "@/pages/PricingPage"
 import { ContactPage } from "@/pages/ContactPage"
 import RequestAccessPage from "@/pages/RequestAccessPage"
 import { storage } from "@/lib/storage"
@@ -24,12 +22,6 @@ import { storage } from "@/lib/storage"
 // Authenticated users can still see their plan inside the app (Settings /
 // Billing). Unauthenticated visitors get sent to /login — pricing is now
 // part of the manual sales conversation, not a public price list.
-function PricingGuard() {
-  if (storage.getToken()) {
-    return <PricingPage />
-  }
-  return <Navigate to="/" replace />
-}
 import { NeapolisPage } from "@/pages/NeapolisPage"
 import OnboardingPage from "@/pages/OnboardingPage"
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom"
@@ -322,7 +314,7 @@ function AppWithProviders() {
 
                 {/* Public SEO Marketing Pages */}
                 <Route path="/features" element={<FeaturesPage />} />
-                <Route path="/widget-to-whatsapp" element={<WidgetToWhatsAppPage />} />
+                <Route path="/widget-to-whatsapp" element={<Navigate to="/" replace />} />
                 <Route path="/human-support" element={<HumanSupportPage />} />
                 <Route path="/laundry-service" element={<LaundryServicePage />} />
                 <Route path="/franchising" element={<FranchisingPage />} />
@@ -330,7 +322,7 @@ function AppWithProviders() {
                 <Route path="/crm-integration" element={<CrmIntegrationPage />} />
                 <Route path="/team-collaboration" element={<TeamCollaborationPage />} />
                 <Route path="/privacy-by-design" element={<PrivacyByDesignPage />} />
-                <Route path="/pricing" element={<PricingGuard />} />
+                <Route path="/pricing" element={<Navigate to="/" replace />} />
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/request-access" element={<RequestAccessPage />} />
                 <Route path="/neapolis" element={<NeapolisPage />} />

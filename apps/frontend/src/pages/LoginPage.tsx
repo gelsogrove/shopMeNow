@@ -1,7 +1,6 @@
 import { OnboardingWizardModal } from "@/components/OnboardingWizardModal"
 import { SiteFooter } from "@/components/layout/SiteFooter"
 import { NewsUpdates } from "@/components/landing/NewsUpdates"
-import { PricingPlans } from "@/components/landing/PricingPlans"
 import { HomeFAQ } from "@/components/landing/HomeFAQ"
 import { WIPModal } from "@/components/shared/WIPModal"
 import { SEO } from "@/components/SEO"
@@ -978,10 +977,6 @@ export function LoginPage() {
         })()
       : "--"
 
-  const VALID_PLAN_TYPES: PlanType[] = ["FREE_TRIAL", "BASIC", "PREMIUM", "ENTERPRISE"]
-  const currentPlanForPricing = userPlan?.planType && VALID_PLAN_TYPES.includes(userPlan.planType as PlanType)
-    ? (userPlan.planType as PlanType)
-    : undefined
 
   const howItWorksCards = [
     {
@@ -1033,19 +1028,6 @@ export function LoginPage() {
         <div className="max-w-7xl mx-auto px-4 lg:px-12">
           <div className="hidden lg:flex justify-end pt-3">
             <div className="flex items-center gap-4">
-              {/* Pricing link hidden on the marketing home (`/`) — sales-led
-                  pivot. Still shown on /login and other routes. */}
-              {!isMarketingView && (
-                <>
-                  <a
-                    href="#pricing"
-                    className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
-                  >
-                    {t("nav.pricing")}
-                  </a>
-                  <span className="text-slate-900 text-xs font-semibold">|</span>
-                </>
-              )}
               <a
                 href="/contact"
                 className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
@@ -2048,25 +2030,6 @@ export function LoginPage() {
         </div>
       </motion.section>
 
-      {/* Pricing Section — hidden on the marketing home (`/`) per
-          sales-led pivot; remains available on /login and elsewhere. */}
-      {!isMarketingView && (
-        <div id="pricing" className="py-16 bg-gradient-to-br from-blue-50 via-white to-green-50">
-          <PricingPlans
-            currentPlan={currentPlanForPricing || null}
-            onChangePlan={() => navigate("/billing")}
-            onStartFreeTrial={() => {
-              if (isRegisterDisabled) {
-                setWipFeature('register')
-                setShowWIPModal(true)
-                return
-              }
-              setShowOnboardingWizard(true)
-            }}
-            disableTrial={isRegisterDisabled}
-          />
-        </div>
-      )}
 
       {/* FAQ Section */}
       <HomeFAQ />
@@ -2337,143 +2300,6 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Widget to WhatsApp Section */}
-      <div className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <motion.div
-            className="group relative"
-            initial={{ opacity: 0, x: 80 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, amount: 0.35 }}
-            transition={{ duration: 0.65, ease: "easeOut" }}
-          >
-            {/* Green/teal decorative frame - WhatsApp theme */}
-            <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-teal-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
-
-            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr,300px] gap-10 items-center">
-
-                {/* Left: Content */}
-                <div className="space-y-6 text-center lg:text-left">
-                  <div className="space-y-4">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
-                      <span>📱</span>
-                      {t("widgetToWhatsapp.badge")}
-                    </div>
-                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
-                      {t("widgetToWhatsapp.title")}
-                    </h3>
-                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
-                      {t("widgetToWhatsapp.subtitle")}
-                    </p>
-                  </div>
-
-                  {/* Feature chips */}
-                  <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
-                    {(["chip1", "chip2", "chip3", "chip4"] as const).map((chip) => (
-                      <span
-                        key={chip}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium border border-green-200"
-                      >
-                        <svg className="w-3.5 h-3.5 text-green-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                        </svg>
-                        {t(`widgetToWhatsapp.${chip}`)}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="pt-2 flex justify-center lg:justify-start">
-                    <Link
-                      to="/widget-to-whatsapp"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-green-700 hover:text-green-900 hover:underline transition-colors"
-                    >
-                      {t("common.viewMore")}
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Right: Widget → WhatsApp illustration */}
-                <div className="flex items-center justify-center lg:justify-end">
-                  <div className="relative w-[260px] h-[200px] flex items-center justify-center select-none">
-
-                    {/* Widget mock – left */}
-                    <div className="absolute left-0 top-4 bg-white rounded-2xl shadow-xl border border-slate-200 w-[100px] p-3 z-10">
-                      <div className="text-[7px] text-slate-400 font-bold mb-2 tracking-widest uppercase">Widget</div>
-                      <div className="space-y-1.5">
-                        <div className="h-2 w-full bg-green-400 rounded-full opacity-80"></div>
-                        <div className="h-2 w-3/4 bg-slate-200 rounded-full ml-auto"></div>
-                        <div className="h-2 w-2/3 bg-green-400 rounded-full opacity-60"></div>
-                        <div className="h-2 w-4/5 bg-slate-200 rounded-full ml-auto"></div>
-                      </div>
-                      <div className="flex gap-1 mt-2.5 justify-end">
-                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce [animation-delay:0ms]"></div>
-                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce [animation-delay:150ms]"></div>
-                        <div className="w-1.5 h-1.5 bg-green-400 rounded-full animate-bounce [animation-delay:300ms]"></div>
-                      </div>
-                    </div>
-
-                    {/* Arrow + label – center */}
-                    <div className="absolute left-[88px] top-1/2 -translate-y-[55%] flex flex-col items-center gap-1 z-20">
-                      <div className="text-[9px] text-green-700 font-semibold bg-white px-2 py-0.5 rounded-full border border-green-200 shadow-sm whitespace-nowrap">
-                        operator
-                      </div>
-                      <svg width="50" height="20" viewBox="0 0 50 20" fill="none" className="text-green-500">
-                        <path d="M2 10 H40 M32 3 L40 10 L32 17" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    </div>
-
-                    {/* Smartphone with WhatsApp – right */}
-                    <div className="absolute right-0 top-0 w-[90px] h-[160px] bg-slate-800 rounded-[22px] shadow-2xl overflow-hidden ring-2 ring-slate-700 group-hover:ring-green-400 transition-all duration-300">
-                      {/* Status bar */}
-                      <div className="h-4 bg-slate-900 flex items-center justify-center">
-                        <div className="w-14 h-1.5 bg-slate-700 rounded-full"></div>
-                      </div>
-                      {/* WhatsApp header */}
-                      <div className="bg-[#075e54] px-2 py-1.5 flex items-center gap-1.5">
-                        <div className="w-5 h-5 bg-[#25d366] rounded-full flex items-center justify-center shrink-0">
-                            <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
-                          </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="h-1.5 w-full bg-white opacity-90 rounded-full"></div>
-                          <div className="h-1 w-2/3 bg-white opacity-50 rounded-full mt-0.5"></div>
-                        </div>
-                      </div>
-                      {/* Chat messages */}
-                      <div className="bg-[#ece5dd] p-1.5 space-y-1.5 h-[90px] overflow-hidden">
-                        <div className="bg-white rounded-lg rounded-tl-none px-1.5 py-1 w-4/5 shadow-sm">
-                          <div className="h-1 w-full bg-slate-200 rounded-full"></div>
-                          <div className="h-1 w-2/3 bg-slate-200 rounded-full mt-0.5"></div>
-                        </div>
-                        <div className="bg-[#dcf8c6] rounded-lg rounded-tr-none px-1.5 py-1 w-3/4 ml-auto shadow-sm">
-                          <div className="h-1 w-full bg-green-200 rounded-full"></div>
-                        </div>
-                        <div className="bg-white rounded-lg rounded-tl-none px-1.5 py-1 w-4/5 shadow-sm">
-                          <div className="h-1 w-full bg-slate-200 rounded-full"></div>
-                          <div className="h-1 w-1/2 bg-slate-200 rounded-full mt-0.5"></div>
-                        </div>
-                      </div>
-                      {/* Input bar */}
-                      <div className="bg-white px-1.5 py-1 flex gap-1 items-center border-t border-slate-100">
-                        <div className="flex-1 h-4 bg-slate-100 rounded-full"></div>
-                        <div className="w-4 h-4 bg-[#25d366] rounded-full flex items-center justify-center shrink-0">
-                          <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-                          </svg>
-                        </div>
-                      </div>
-                      {/* Notification badge */}
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-[#25d366] rounded-full flex items-center justify-center text-white text-[9px] font-bold shadow-lg animate-pulse ring-2 ring-white z-30">
-                        1
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </div>
 
       {/* Integration Section */}
       <div className="py-20 bg-white">
@@ -2538,103 +2364,6 @@ export function LoginPage() {
               </div>
             </div>
           </motion.div>
-        </div>
-      </div>
-
-      {/* Team Collaboration Section — bento grid */}
-      <div className="py-20 lg:py-28 bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-12"
-          >
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm font-semibold mb-4">
-              👥 Team Feature
-            </div>
-            <h3 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
-              {t("teamCollaboration.title")}
-            </h3>
-            <p className="mt-4 text-xl text-slate-500 max-w-2xl mx-auto">
-              {t("teamCollaboration.subtitle")}
-            </p>
-          </motion.div>
-
-          {/* Bento grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
-            {/* Big card — real-time monitoring */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.05 }}
-              className="md:col-span-2 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl p-8 text-white relative overflow-hidden"
-            >
-              <div className="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
-              <div className="relative z-10">
-                <div className="text-4xl mb-4">📊</div>
-                <h4 className="text-2xl font-bold mb-2">Real-time monitoring</h4>
-                <p className="text-purple-200 text-base leading-relaxed">Every conversation visible to the whole team. Intervene instantly when needed — full context, zero friction.</p>
-              </div>
-            </motion.div>
-
-            {/* Tall card — instant handoff */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden"
-            >
-              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl" />
-              <div className="relative z-10">
-                <div className="text-4xl mb-4">⚡</div>
-                <h4 className="text-xl font-bold mb-2">Instant handoff</h4>
-                <p className="text-slate-400 text-sm leading-relaxed">AI flags the moment a human touch is needed. One click — you're in.</p>
-                <div className="mt-6 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                  <span className="text-xs text-slate-400">Live</span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Small card — roles */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.15 }}
-              className="bg-purple-50 rounded-3xl p-8"
-            >
-              <div className="text-4xl mb-4">🎭</div>
-              <h4 className="text-xl font-bold text-slate-900 mb-2">Role-based access</h4>
-              <div className="flex flex-wrap gap-2 mt-3">
-                {["Admin", "Manager", "Agent"].map(r => (
-                  <span key={r} className="px-3 py-1 bg-white text-purple-700 rounded-full text-xs font-semibold shadow-sm border border-purple-100">{r}</span>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Medium card — shared inbox */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="md:col-span-2 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl p-8 flex items-center gap-8"
-            >
-              <div className="text-5xl">💬</div>
-              <div>
-                <h4 className="text-xl font-bold text-slate-900 mb-1">Shared inbox</h4>
-                <p className="text-slate-600 text-sm">All WhatsApp conversations in one panel. Assign, comment, resolve — without leaving the dashboard.</p>
-                <Link to="/team-collaboration" className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-purple-700 hover:text-purple-900 transition-colors">
-                  {t("common.viewMore")} →
-                </Link>
-              </div>
-            </motion.div>
-          </div>
         </div>
       </div>
 

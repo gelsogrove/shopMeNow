@@ -84,7 +84,6 @@ const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = [
   "ai-personality",
   "widget",
   "widget-support",
-  "security",
   "functions",
 ]
 

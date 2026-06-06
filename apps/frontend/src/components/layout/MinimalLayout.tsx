@@ -284,7 +284,7 @@ export function MinimalLayout() {
                         </DropdownMenuItem>
                       )}
                       {/* Flow Configs — managed from Agents Configuration graph */}
-                      {workspace?.channelMode === 'ECOMMERCE' && (
+                      {!isCustomChatbot && workspace?.channelMode === 'ECOMMERCE' && (
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuLabel>E-commerce</DropdownMenuLabel>
@@ -315,8 +315,8 @@ export function MinimalLayout() {
                           </DropdownMenuItem>
                         </>
                       )}
-                      {/* Services standalone - visible for informational workspaces OR when calendar booking is enabled */}
-                      {(workspace?.enableCalendarBooking === true || workspace?.channelMode !== 'ECOMMERCE') && (
+                      {/* Services standalone - visible for informational workspaces OR when calendar booking is enabled. Hidden for custom chatbot. */}
+                      {!isCustomChatbot && (workspace?.enableCalendarBooking === true || workspace?.channelMode !== 'ECOMMERCE') && (
                         <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/services")}>
                           <Briefcase className="mr-2 h-4 w-4 text-cyan-500" />
                           <span>Services</span>

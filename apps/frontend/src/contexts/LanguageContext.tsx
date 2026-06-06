@@ -97,7 +97,7 @@ const translations = {
 
     // Appointment Booking Section
     "appointment.badge": "Prenotazioni via WhatsApp",
-    "appointment.title": "Il cliente prenota.\nTu non fai niente.",
+    "appointment.title": "Prenotazioni automatiche\nsu WhatsApp",
     "appointment.subtitle":
       "Zero telefonate, zero email perse. Il chatbot gestisce disponibilità, conferme e promemoria automatici — direttamente su WhatsApp. Sincronizzazione Google Calendar in tempo reale.",
     "appointment.cta": "Scopri come funziona",
@@ -684,7 +684,7 @@ const translations = {
 
     // Appointment Booking Section
     "appointment.badge": "WhatsApp Bookings",
-    "appointment.title": "Customer books.\nYou do nothing.",
+    "appointment.title": "Automated bookings\nvia WhatsApp",
     "appointment.subtitle":
       "Zero phone calls, zero missed emails. The chatbot handles availability, confirmations and automatic reminders — directly on WhatsApp. Google Calendar sync in real time.",
     "appointment.cta": "See how it works",
@@ -1304,7 +1304,7 @@ const translations = {
 
     // Appointment Booking Section
     "appointment.badge": "Reservas por WhatsApp",
-    "appointment.title": "El cliente reserva.\nTú no haces nada.",
+    "appointment.title": "Reservas automáticas\npor WhatsApp",
     "appointment.subtitle":
       "Cero llamadas, cero correos perdidos. El chatbot gestiona disponibilidad, confirmaciones y recordatorios automáticos — directamente en WhatsApp. Sincronización con Google Calendar en tiempo real.",
     "appointment.cta": "Ver cómo funciona",
@@ -1789,7 +1789,7 @@ const translations = {
 
     // Appointment Booking Section
     "appointment.badge": "Agendamentos no WhatsApp",
-    "appointment.title": "O cliente agenda.\nVocê não faz nada.",
+    "appointment.title": "Agendamentos automáticos\nno WhatsApp",
     "appointment.subtitle":
       "Zero telefonemas, zero e-mails perdidos. O chatbot gere disponibilidade, confirmações e lembretes automáticos — directamente no WhatsApp. Sincronização com Google Calendar em tempo real.",
     "appointment.cta": "Ver como funciona",
