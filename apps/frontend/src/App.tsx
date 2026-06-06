@@ -178,7 +178,7 @@ function CustomChatbotGuard({ children }: { children: React.ReactNode }) {
 function GlobalChatWidget() {
   const location = useLocation()
   // Hide eChatbot HQ support widget on /chat (has its own playground when debugMode=true)
-  const EXCLUDED_PATHS = ["/survey", "/neapolis", "/onboarding", "/chat"]
+  const EXCLUDED_PATHS = ["/survey", "/neapolis", "/onboarding", "/chat", "/login"]
   if (EXCLUDED_PATHS.includes(location.pathname)) return null
   return (
     <ChatWidget

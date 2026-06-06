@@ -323,7 +323,7 @@ const translations = {
     "cta.title": "Pronto a trasformare l'esperienza dei tuoi clienti?",
     "cta.subtitle": "Unisciti a centinaia di aziende che usano eChatbot per automatizzare le vendite, aumentare le conversioni e deliziare i clienti 24/7.",
     "cta.button.start": "Inizia Gratis",
-    "cta.button.contact": "Contatta le Vendite",
+    "cta.button.contact": "Contattaci",
 
     // How It Works
     "howItWorks.title": "Come lavoriamo insieme",
@@ -1002,7 +1002,7 @@ const translations = {
     "cta.title": "Ready to Transform Your Customer Experience?",
     "cta.subtitle": "Join hundreds of businesses using eChatbot to automate sales, boost conversions, and delight customers 24/7.",
     "cta.button.start": "Get Started Free",
-    "cta.button.contact": "Contact Sales",
+    "cta.button.contact": "Contact Us",
 
     // Login
     "login.title": "Sign in to your account",
@@ -1465,7 +1465,7 @@ const translations = {
     "cta.title": "¿Listo para transformar la experiencia de tus clientes?",
     "cta.subtitle": "Únete a cientos de empresas que usan eChatbot para automatizar ventas, aumentar conversiones y deleitar a los clientes 24/7.",
     "cta.button.start": "Comenzar Gratis",
-    "cta.button.contact": "Contactar Ventas",
+    "cta.button.contact": "Contáctanos",
 
     // How It Works
     "howItWorks.title": "Cómo trabajamos juntos",
@@ -1968,7 +1968,7 @@ const translations = {
     "cta.title": "Pronto para transformar a experiência dos seus clientes?",
     "cta.subtitle": "Junte-se a centenas de empresas que usam o eChatbot para automatizar vendas, aumentar conversões e encantar clientes 24/7.",
     "cta.button.start": "Comece Grátis",
-    "cta.button.contact": "Contatar Vendas",
+    "cta.button.contact": "Fale Connosco",
 
     // How It Works
     "howItWorks.title": "Como trabalhamos juntos",

@@ -1279,13 +1279,10 @@ export function LoginPage() {
       <div className={showLoginCard ? "w-full px-4 py-8" : "max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 relative z-20"}>
         
         <div className={`text-center mb-12 space-y-4 relative${showLoginCard ? ' hidden' : ''}`}>
-          <h1 className="text-4xl lg:text-5xl font-bold text-slate-900">
-            {t("hero.title")}
-          </h1>
           {/* Brand slogan — wordplay on "you never forget your first love" */}
-          <p className="text-xl lg:text-2xl font-semibold italic bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent max-w-3xl mx-auto">
+          <h1 className="text-4xl lg:text-5xl font-bold italic bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent max-w-3xl mx-auto">
             {t("hero.slogan")}
-          </p>
+          </h1>
           <p className="text-lg text-slate-600 max-w-3xl mx-auto">
             {t("hero.subtitle")}
           </p>
@@ -1408,11 +1405,6 @@ export function LoginPage() {
                   <h3 className={`text-2xl font-bold text-slate-900 ${isLoginViewDisabled ? "opacity-60" : ""}`}>
                     {activeTab === "signin" ? t("auth.login") : t("auth.createAccount")}
                   </h3>
-                  <p className={`text-slate-600 ${isLoginViewDisabled ? "opacity-60" : ""}`}>
-                    {activeTab === "signin"
-                      ? t("auth.login.subtitle")
-                      : t("auth.register.subtitle")}
-                  </p>
                 </div>
 
                 {error && (
@@ -2275,57 +2267,73 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Human-in-the-loop Section */}
-      <div className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <motion.div
-            className="group relative"
-            initial={{ opacity: 0, x: -80 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, amount: 0.35 }}
-            transition={{ duration: 0.65, ease: "easeOut" }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-100 to-orange-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
+      {/* Human-in-the-loop Section — full-bleed dark spotlight */}
+      <div className="relative overflow-hidden bg-slate-900 py-20 lg:py-28">
+        {/* Ambient glow */}
+        <div className="absolute -top-32 -left-32 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -right-32 w-[400px] h-[400px] bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
-              <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-10 items-start">
-                <div className="flex flex-col items-center lg:items-start gap-4 order-1">
-                  <div className="relative">
-                    <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-amber-100 transition-all duration-300">
-                      <img
-                        src="/human.png"
-                        alt="Human-in-the-loop support"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-6 text-center lg:text-left order-2">
-                  <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 text-amber-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
-                      <span>🤝</span>
-                      Human-in-the-loop
-                    </div>
-                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
-                      {t("humanLoop.title")}
-                    </h3>
-                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
-                      {t("humanLoop.subtitle")}
-                    </p>
-                  </div>
-                  <div className="pt-4 flex justify-center lg:justify-start">
-                    <Link
-                      to="/human-support"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-amber-700 hover:text-amber-900 hover:underline transition-colors"
-                    >
-                      {t("common.viewMore")}
-                    </Link>
-                  </div>
-                </div>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
+            {/* Left: image with floating badge */}
+            <motion.div
+              initial={{ opacity: 0, x: -60 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7 }}
+              className="relative"
+            >
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+                <img src="/human.png" alt="Human-in-the-loop" className="w-full h-72 lg:h-96 object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent" />
               </div>
-            </div>
-          </motion.div>
+              {/* Floating stat pill */}
+              <div className="absolute -bottom-5 left-6 bg-amber-500 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3">
+                <span className="text-2xl font-black">{"<2min"}</span>
+                <span className="text-xs font-medium leading-tight opacity-90">avg.<br/>response</span>
+              </div>
+            </motion.div>
+
+            {/* Right: text + mini stats */}
+            <motion.div
+              initial={{ opacity: 0, x: 60 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.7, delay: 0.1 }}
+              className="space-y-8"
+            >
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-sm font-semibold">
+                🤝 Human-in-the-loop
+              </div>
+              <h3 className="text-4xl lg:text-5xl font-bold text-white leading-tight">
+                {t("humanLoop.title")}
+              </h3>
+              <p className="text-lg text-slate-300 leading-relaxed">
+                {t("humanLoop.subtitle")}
+              </p>
+
+              {/* Mini stat row */}
+              <div className="grid grid-cols-3 gap-4 pt-2">
+                {[
+                  { value: "100%", label: "context\npreserved" },
+                  { value: "0", label: "lost\nconversations" },
+                  { value: "24/7", label: "AI\ncoverage" },
+                ].map((s) => (
+                  <div key={s.value} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
+                    <div className="text-2xl font-black text-amber-400">{s.value}</div>
+                    <div className="text-xs text-slate-400 mt-1 whitespace-pre-line leading-tight">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              <Link
+                to="/human-support"
+                className="inline-flex items-center gap-2 text-amber-400 font-semibold hover:text-amber-300 transition-colors"
+              >
+                {t("common.viewMore")} →
+              </Link>
+            </motion.div>
+          </div>
         </div>
       </div>
 
@@ -2533,62 +2541,100 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Team Collaboration Section */}
-      <div className="py-20 bg-gradient-to-b from-white to-slate-50">
+      {/* Team Collaboration Section — bento grid */}
+      <div className="py-20 lg:py-28 bg-white">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
-            className="group relative"
-            initial={{ opacity: 0, x: -80 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, amount: 0.35 }}
-            transition={{ duration: 0.65, ease: "easeOut" }}
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-12"
           >
-            {/* Decorative rotated background frame - PURPLE for collaboration */}
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-3xl rotate-0 sm:-rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:-rotate-2 transition-transform duration-500"></div>
-            
-            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-10 items-start">
-                {/* Left: Content */}
-                  <div className="space-y-6 text-center lg:text-left">
-                  <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
-                      <span>👥</span>
-                      Team Feature
-                    </div>
-                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
-                      {t("teamCollaboration.title")}
-                    </h3>
-                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
-                      {t("teamCollaboration.subtitle")}
-                    </p>
-                  </div>
-                  <div className="pt-4 flex justify-center lg:justify-start">
-                    <div className="flex flex-wrap gap-3 items-center justify-center lg:justify-start">
-                      <Link
-                        to="/team-collaboration"
-                        className="w-full sm:w-[220px] sm:h-[48px] inline-flex justify-center items-center px-6 py-3 text-base font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
-                      >
-                        {t("common.viewMore")}
-                      </Link>
-                    </div>
-                  </div>
-                </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm font-semibold mb-4">
+              👥 Team Feature
+            </div>
+            <h3 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
+              {t("teamCollaboration.title")}
+            </h3>
+            <p className="mt-4 text-xl text-slate-500 max-w-2xl mx-auto">
+              {t("teamCollaboration.subtitle")}
+            </p>
+          </motion.div>
 
-                {/* Right: Image */}
-                <div className="flex flex-col items-center lg:items-end">
-                  <div className="relative">
-                    <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-purple-100 transition-all duration-300">
-                      <img
-                        src="/human.png"
-                        alt="Team collaboration"
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
-                    </div>
-                  </div>
+          {/* Bento grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
+            {/* Big card — real-time monitoring */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.05 }}
+              className="md:col-span-2 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-3xl p-8 text-white relative overflow-hidden"
+            >
+              <div className="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
+              <div className="relative z-10">
+                <div className="text-4xl mb-4">📊</div>
+                <h4 className="text-2xl font-bold mb-2">Real-time monitoring</h4>
+                <p className="text-purple-200 text-base leading-relaxed">Every conversation visible to the whole team. Intervene instantly when needed — full context, zero friction.</p>
+              </div>
+            </motion.div>
+
+            {/* Tall card — instant handoff */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="bg-slate-900 rounded-3xl p-8 text-white relative overflow-hidden"
+            >
+              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-purple-500/20 rounded-full blur-2xl" />
+              <div className="relative z-10">
+                <div className="text-4xl mb-4">⚡</div>
+                <h4 className="text-xl font-bold mb-2">Instant handoff</h4>
+                <p className="text-slate-400 text-sm leading-relaxed">AI flags the moment a human touch is needed. One click — you're in.</p>
+                <div className="mt-6 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-xs text-slate-400">Live</span>
                 </div>
               </div>
-            </div>
-          </motion.div>
+            </motion.div>
+
+            {/* Small card — roles */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.15 }}
+              className="bg-purple-50 rounded-3xl p-8"
+            >
+              <div className="text-4xl mb-4">🎭</div>
+              <h4 className="text-xl font-bold text-slate-900 mb-2">Role-based access</h4>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {["Admin", "Manager", "Agent"].map(r => (
+                  <span key={r} className="px-3 py-1 bg-white text-purple-700 rounded-full text-xs font-semibold shadow-sm border border-purple-100">{r}</span>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Medium card — shared inbox */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="md:col-span-2 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl p-8 flex items-center gap-8"
+            >
+              <div className="text-5xl">💬</div>
+              <div>
+                <h4 className="text-xl font-bold text-slate-900 mb-1">Shared inbox</h4>
+                <p className="text-slate-600 text-sm">All WhatsApp conversations in one panel. Assign, comment, resolve — without leaving the dashboard.</p>
+                <Link to="/team-collaboration" className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-purple-700 hover:text-purple-900 transition-colors">
+                  {t("common.viewMore")} →
+                </Link>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </div>
 
