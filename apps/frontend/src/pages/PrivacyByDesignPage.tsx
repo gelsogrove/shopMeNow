@@ -128,7 +128,6 @@ const T = {
       { icon: "✅", title: "Funcionalidad completa, suma positiva", desc: "Privacidad y funcionalidad coexisten. No sacrificamos funciones por la privacidad, ni la privacidad por las funciones." },
       { icon: "📅", title: "Seguridad de extremo a extremo, ciclo de vida completo", desc: "Los datos están protegidos desde la recopilación hasta la eliminación. Política de retención configurable, eliminación segura verificable." },
       { icon: "👁️", title: "Visibilidad y transparencia", desc: "Registros de acceso completos, rastro de auditoría para cada operación con datos del cliente. El DPO tiene acceso a todo lo necesario." },
-      { icon: "👤", title: "Respeto por la privacidad del usuario", desc: "Derecho al olvido implementado. Exportación de datos en formato machine-readable a solicitud del cliente." },
     ],
     complianceTitle: "Cumplimiento Normativo",
     complianceItems: [
@@ -178,7 +177,6 @@ const T = {
       { icon: "✅", title: "Funcionalidade completa, soma positiva", desc: "Privacidade e funcionalidade coexistem. Não sacrificamos recursos pela privacidade, nem a privacidade pelos recursos." },
       { icon: "📅", title: "Segurança ponta a ponta, ciclo de vida completo", desc: "Os dados são protegidos desde a coleta até a exclusão. Política de retenção configurável, exclusão segura verificável." },
       { icon: "👁️", title: "Visibilidade e transparência", desc: "Logs de acesso completos, trilha de auditoria para cada operação nos dados do cliente. O DPO tem acesso a tudo que precisa para auditorias." },
-      { icon: "👤", title: "Respeito pela privacidade do usuário", desc: "Direito ao esquecimento implementado. Exportação de dados em formato machine-readable disponível sob solicitação." },
     ],
     complianceTitle: "Conformidade Regulatória",
     complianceItems: [
