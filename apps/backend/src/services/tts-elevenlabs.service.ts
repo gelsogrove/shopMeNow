@@ -1,11 +1,12 @@
 /**
- * Text-to-Speech via OpenAI TTS API (through OpenRouter).
+ * Text-to-Speech via Kokoro-82M (through OpenRouter).
  *
  * Converts LLM reply text → MP3 buffer → uploads to Cloudinary → returns
  * a public URL that WhatsApp providers can send as an audio message.
  *
- * Uses openai/tts-1 model via OpenRouter (same API key as chat completions).
- * Voice: nova (warm female, multilingual). Fallback: shimmer.
+ * Uses hexgrad/kokoro-82m via OpenRouter (same OPENROUTER_API_KEY as chat).
+ * Kokoro is multilingual through language-specific voice prefixes — the voice
+ * is selected from the customer language (see LANG_VOICE). Output: mp3 direct.
  */
 
 import axios from "axios"
@@ -13,9 +14,28 @@ import logger from "../utils/logger"
 import { storageService } from "./storage.service"
 
 const TTS_URL = "https://openrouter.ai/api/v1/audio/speech"
-const TTS_MODEL = "tts-1"
-const TTS_VOICE = "nova" // warm female, works well in all languages
-const MAX_CHARS = 4096 // OpenAI TTS limit
+const TTS_MODEL = "hexgrad/kokoro-82m"
+const MAX_CHARS = 4096
+
+/**
+ * Kokoro voices are language-specific (prefix = language).
+ * Female voices chosen for a consistent warm tone across languages.
+ * Catalan (ca) has no native Kokoro voice → falls back to Spanish.
+ */
+const LANG_VOICE: Record<string, string> = {
+  it: "if_sara",
+  es: "ef_dora",
+  en: "af_bella",
+  pt: "pf_dora",
+  fr: "ff_siwis",
+  ca: "ef_dora", // no Catalan voice → Spanish fallback
+}
+const DEFAULT_VOICE = "if_sara" // Italian is the tenant base language
+
+function voiceForLanguage(lang?: string): string {
+  if (!lang) return DEFAULT_VOICE
+  return LANG_VOICE[lang.slice(0, 2).toLowerCase()] || DEFAULT_VOICE
+}
 
 /** Strip markdown/emoji/URLs so TTS reads clean spoken text. */
 function stripForAudio(text: string): string {
@@ -50,11 +70,12 @@ export async function generateSpeech(
   }
 
   const trimmed = stripForAudio(text).slice(0, MAX_CHARS)
+  const voice = voiceForLanguage(customerLanguage)
 
   logger.info("[TTS] 🗣️ Generating speech", {
     chars: trimmed.length,
     workspaceId,
-    voice: TTS_VOICE,
+    voice,
     language: customerLanguage,
   })
 
@@ -65,7 +86,8 @@ export async function generateSpeech(
       {
         model: TTS_MODEL,
         input: trimmed,
-        voice: TTS_VOICE,
+        voice,
+        response_format: "mp3",
       },
       {
         headers: {
