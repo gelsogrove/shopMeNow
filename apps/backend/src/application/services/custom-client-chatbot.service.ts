@@ -100,6 +100,9 @@ type ChatbotOutput = {
   smtpConfig?: { user: string; pass: string; host?: string; port?: number; secure?: boolean; from?: string }
   error?: string
   patches?: CustomerPatch[]
+  /** Tenant audio policy from the module's settings.json. When false the host
+   *  must always reply with text; when true it may mirror input modality. */
+  audioOutput?: boolean
   meta: {
     tokensUsed: number
     agentChain: string[]

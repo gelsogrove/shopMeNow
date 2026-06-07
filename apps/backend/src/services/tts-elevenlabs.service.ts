@@ -1,41 +1,26 @@
 /**
- * Text-to-Speech via Kokoro-82M (through OpenRouter).
+ * Text-to-Speech via ElevenLabs.
  *
  * Converts LLM reply text → MP3 buffer → uploads to Cloudinary → returns
  * a public URL that WhatsApp providers can send as an audio message.
  *
- * Uses hexgrad/kokoro-82m via OpenRouter (same OPENROUTER_API_KEY as chat).
- * Kokoro is multilingual through language-specific voice prefixes — the voice
- * is selected from the customer language (see LANG_VOICE). Output: mp3 direct.
+ * Uses the eleven_multilingual_v2 model: a single voice handles all customer
+ * languages with natural, fluid prosody — no per-language voice mapping needed.
+ *
+ * Config (env, no hardcoded secrets):
+ *   ELEVENLABS_API_KEY   — required, Creator plan or above (API access)
+ *   ELEVENLABS_VOICE_ID  — optional, defaults to a warm multilingual female voice
  */
 
 import axios from "axios"
 import logger from "../utils/logger"
 import { storageService } from "./storage.service"
 
-const TTS_URL = "https://openrouter.ai/api/v1/audio/speech"
-const TTS_MODEL = "hexgrad/kokoro-82m"
+const TTS_BASE_URL = "https://api.elevenlabs.io/v1/text-to-speech"
+const TTS_MODEL = "eleven_multilingual_v2"
+// Default voice "Rachel" — warm, neutral, works across all supported languages.
+const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
 const MAX_CHARS = 4096
-
-/**
- * Kokoro voices are language-specific (prefix = language).
- * Female voices chosen for a consistent warm tone across languages.
- * Catalan (ca) has no native Kokoro voice → falls back to Spanish.
- */
-const LANG_VOICE: Record<string, string> = {
-  it: "if_sara",
-  es: "ef_dora",
-  en: "af_bella",
-  pt: "pf_dora",
-  fr: "ff_siwis",
-  ca: "ef_dora", // no Catalan voice → Spanish fallback
-}
-const DEFAULT_VOICE = "if_sara" // Italian is the tenant base language
-
-function voiceForLanguage(lang?: string): string {
-  if (!lang) return DEFAULT_VOICE
-  return LANG_VOICE[lang.slice(0, 2).toLowerCase()] || DEFAULT_VOICE
-}
 
 /** Strip markdown/emoji/URLs so TTS reads clean spoken text. */
 function stripForAudio(text: string): string {
@@ -63,36 +48,42 @@ export async function generateSpeech(
   workspaceId: string,
   customerLanguage?: string
 ): Promise<TTSResult | null> {
-  const apiKey = process.env.OPENROUTER_API_KEY
+  const apiKey = process.env.ELEVENLABS_API_KEY
   if (!apiKey) {
-    logger.warn("[TTS] OPENROUTER_API_KEY not set — skipping audio reply", { workspaceId })
+    logger.warn("[TTS] ELEVENLABS_API_KEY not set — skipping audio reply", { workspaceId })
     return null
   }
 
+  const voiceId = process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID
   const trimmed = stripForAudio(text).slice(0, MAX_CHARS)
-  const voice = voiceForLanguage(customerLanguage)
 
   logger.info("[TTS] 🗣️ Generating speech", {
     chars: trimmed.length,
     workspaceId,
-    voice,
+    voiceId,
+    model: TTS_MODEL,
     language: customerLanguage,
   })
 
   let mp3Buffer: Buffer
   try {
     const res = await axios.post(
-      TTS_URL,
+      `${TTS_BASE_URL}/${voiceId}`,
       {
-        model: TTS_MODEL,
-        input: trimmed,
-        voice,
-        response_format: "mp3",
+        text: trimmed,
+        model_id: TTS_MODEL,
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+          style: 0.0,
+          use_speaker_boost: true,
+        },
       },
       {
         headers: {
-          Authorization: `Bearer ${apiKey}`,
+          "xi-api-key": apiKey,
           "Content-Type": "application/json",
+          Accept: "audio/mpeg",
         },
         responseType: "arraybuffer",
         timeout: 30_000,
@@ -100,10 +91,17 @@ export async function generateSpeech(
     )
     mp3Buffer = Buffer.from(res.data)
   } catch (err: any) {
-    logger.error("[TTS] ❌ OpenAI TTS request failed", {
+    // ElevenLabs error bodies arrive as arraybuffer — decode to text for the log.
+    let body: string | undefined
+    try {
+      body = err.response?.data ? Buffer.from(err.response.data).toString("utf8") : undefined
+    } catch {
+      body = undefined
+    }
+    logger.error("[TTS] ❌ ElevenLabs TTS request failed", {
       error: err.message,
       status: err.response?.status,
-      body: JSON.stringify(err.response?.data)?.substring(0, 300),
+      body: body?.substring(0, 300),
       workspaceId,
     })
     return null

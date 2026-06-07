@@ -54,6 +54,9 @@ interface Settings {
   maxMessageChars: number
   maxMessagesPerMinute: number
   maxTurnsPerSession: number
+  /** When true, the host may reply with audio if the customer sent audio.
+   *  When false, the host always replies with text regardless of input. */
+  audioOutput: boolean
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -68,6 +71,7 @@ const DEFAULT_SETTINGS: Settings = {
   maxMessageChars: 2000,
   maxMessagesPerMinute: 30,
   maxTurnsPerSession: 50,
+  audioOutput: false,
 }
 
 function loadSettings(): Settings {
@@ -114,6 +118,7 @@ const EMAIL_SUBJECT_PREFIX = SETTINGS.emailSubjectPrefix
 const MAX_MESSAGE_CHARS = SETTINGS.maxMessageChars
 const MAX_MESSAGES_PER_MINUTE = SETTINGS.maxMessagesPerMinute
 const MAX_TURNS_PER_SESSION = SETTINGS.maxTurnsPerSession
+const AUDIO_OUTPUT = SETTINGS.audioOutput
 
 const API_KEY = process.env.OPENROUTER_API_KEY || ''
 const GMAIL_USER = process.env.GMAIL_USER || ''
@@ -1391,6 +1396,9 @@ export interface ChatbotOutput {
    *  escalation flow (the operator now owns the conversation). */
   closeChat: boolean
   patches?: CustomerPatch[]
+  /** Tenant audio policy from settings.json. When false the host must always
+   *  reply with text; when true it may mirror the input modality (audio→audio). */
+  audioOutput: boolean
   meta: {
     tokensUsed: number
     agentChain: string[]
@@ -1413,6 +1421,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
         reply: null,
         shouldEscalate: false,
         closeChat: false,
+        audioOutput: AUDIO_OUTPUT,
         meta: { tokensUsed: 0, agentChain: ['custom-demowash'] },
         error: 'llm_unavailable',
       }
@@ -1473,6 +1482,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       notificationEmails: result.escalated ? OPERATOR_EMAIL || undefined : undefined,
       closeChat: result.escalated,
       patches: patches.length > 0 ? patches : undefined,
+      audioOutput: AUDIO_OUTPUT,
       meta: {
         tokensUsed: result.tokensUsed,
         agentChain: ['custom-demowash'],
@@ -1484,6 +1494,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       reply: null,
       shouldEscalate: false,
       closeChat: false,
+      audioOutput: AUDIO_OUTPUT,
       meta: { tokensUsed: 0, agentChain: ['custom-demowash'] },
       error: err instanceof Error ? err.message : String(err),
     }

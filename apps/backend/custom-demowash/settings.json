@@ -9,5 +9,6 @@
   "emailSubjectPrefix": "[Demowash] Incidencia",
   "maxMessageChars": 2000,
   "maxMessagesPerMinute": 30,
-  "maxTurnsPerSession": 50
+  "maxTurnsPerSession": 50,
+  "audioOutput": true
 }

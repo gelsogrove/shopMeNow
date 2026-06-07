@@ -753,7 +753,9 @@ export class WhatsAppInboundPipeline {
               messageContent: finalReply,
               conversationMessageId: savedAssistantMessageId,
               skipSecurityCheck: true, // bot-generated content, not user input
-              replyAsAudio: inboundWasAudio,
+              // Audio reply only when the customer sent audio AND the tenant's
+              // settings.json enables audioOutput (settings are law — iron rule 7).
+              replyAsAudio: inboundWasAudio && customOutput.audioOutput === true,
               customerLanguage,
             })
           }
