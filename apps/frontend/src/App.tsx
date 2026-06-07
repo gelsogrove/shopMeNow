@@ -180,10 +180,27 @@ function GlobalChatWidget() {
   )
 }
 
+// Public standalone routes that do NOT use the main-app JWT: demo
+// playgrounds authenticate with their own `playgroundToken`, and the
+// operator/support pages are token-in-URL. The expiry guard must skip them,
+// otherwise a visitor with no main-app token (isTokenExpired() === true) is
+// bounced to "/" the instant the page mounts.
+export const PUBLIC_PATH_PREFIXES = ["/demo/", "/support-chat", "/operator-dashboard"]
+
+// True when `path` is a public standalone route that must NOT be policed by
+// the main-app token-expiry guard. Exported so the regression test can pin the
+// exemption list directly without mounting the router.
+export function isPublicGuardExemptPath(path: string): boolean {
+  return PUBLIC_PATH_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(prefix)
+  )
+}
+
 function TokenExpiryGuard() {
   useEffect(() => {
     const checkExpiry = () => {
-      if (storage.isTokenExpired() && window.location.pathname !== "/") {
+      const path = window.location.pathname
+      if (storage.isTokenExpired() && path !== "/" && !isPublicGuardExemptPath(path)) {
         storage.clearAppState()
         window.location.href = "/"
       }
