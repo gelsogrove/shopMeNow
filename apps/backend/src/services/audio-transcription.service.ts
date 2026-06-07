@@ -90,16 +90,24 @@ export async function transcribeAudio(
     workspaceId,
   })
 
-  // OpenRouter's audio endpoint rejects multipart/form-data (all boundary formats).
-  // Send raw audio bytes with the declared MIME type + model as query param.
+  // OpenRouter audio transcription uses JSON + base64, NOT multipart/form-data.
+  const base64Audio = buffer.toString("base64")
+  const format = ext === "ogg" ? "ogg" : ext  // OpenRouter accepts: wav, mp3, flac, m4a, ogg, webm, aac
+
   try {
     const res = await axios.post(
-      `${WHISPER_URL}?model=${encodeURIComponent(WHISPER_MODEL)}`,
-      buffer,
+      WHISPER_URL,
+      {
+        model: WHISPER_MODEL,
+        input_audio: {
+          data: base64Audio,
+          format,
+        },
+      },
       {
         headers: {
           Authorization: `Bearer ${apiKey}`,
-          "Content-Type": mimeType,
+          "Content-Type": "application/json",
         },
         timeout: 30_000,
       }
