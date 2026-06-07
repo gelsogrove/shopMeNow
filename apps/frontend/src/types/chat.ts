@@ -1,7 +1,7 @@
 export interface MessageAttachment {
   id: string
   url: string
-  kind: "IMAGE" | "DOCUMENT"
+  kind: "IMAGE" | "DOCUMENT" | "AUDIO"
   mimeType: string
   filename?: string | null
   sizeBytes?: number

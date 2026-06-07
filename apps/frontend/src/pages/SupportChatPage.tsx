@@ -12,11 +12,21 @@ import { useSearchParams } from "react-router-dom"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface SessionAttachment {
+  id: string
+  url: string
+  kind: string
+  mimeType: string
+  filename: string
+  sizeBytes?: number
+}
+
 interface SessionMessage {
   id: string
   role: "user" | "assistant"
   content: string
   createdAt: string
+  attachments?: SessionAttachment[]
 }
 
 interface CustomerInfo {
@@ -54,12 +64,12 @@ async function fetchSession(token: string) {
   }>
 }
 
-async function sendReply(token: string, message: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/reply`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token, message }),
-  })
+async function sendReply(token: string, message: string, files: File[] = []): Promise<void> {
+  const form = new FormData()
+  form.append("token", token)
+  if (message.trim()) form.append("message", message.trim())
+  files.forEach((f) => form.append("files", f))
+  const res = await fetch(`${API_BASE}/reply`, { method: "POST", body: form })
   if (!res.ok) throw new Error(await res.text())
 }
 
@@ -84,10 +94,13 @@ export default function SupportChatPage() {
   const [channel, setChannel] = useState<string>("widget")
   const [messages, setMessages] = useState<SessionMessage[]>([])
   const [inputText, setInputText] = useState("")
+  const [stagedFiles, setStagedFiles] = useState<File[]>([])
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [done, setDone] = useState(false)
   const [tokenExpiry, setTokenExpiry] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // ── Load session ────────────────────────────────────────────────────────────
 
@@ -158,24 +171,44 @@ export default function SupportChatPage() {
   // ── Handlers ────────────────────────────────────────────────────────────────
 
   const handleSend = async () => {
-    if (!inputText.trim() || sending) return
+    if (!inputText.trim() && stagedFiles.length === 0) return
+    if (sending) return
     const text = inputText.trim()
+    const files = [...stagedFiles]
     setInputText("")
+    setStagedFiles([])
     setSending(true)
     try {
-      await sendReply(token, text)
-      // Optimistically add the message to the list
+      await sendReply(token, text, files)
+      // Optimistic update for text; attachments refreshed via poll
       const now = new Date().toISOString()
-      setMessages((prev) => [
-        ...prev,
-        { id: `local-${now}`, role: "assistant", content: text, createdAt: now },
-      ])
+      const optimisticAtts: SessionAttachment[] = files.map((f, i) => ({
+        id: `local-att-${now}-${i}`,
+        url: URL.createObjectURL(f),
+        kind: f.type.startsWith("image/") ? "IMAGE" : "DOCUMENT",
+        mimeType: f.type,
+        filename: f.name,
+        sizeBytes: f.size,
+      }))
+      if (text || optimisticAtts.length > 0) {
+        setMessages((prev) => [
+          ...prev,
+          { id: `local-${now}`, role: "assistant", content: text, createdAt: now, attachments: optimisticAtts },
+        ])
+      }
     } catch (e) {
       setInputText(text)
+      setStagedFiles(files)
       alert("Invio fallito. Riprova.")
     } finally {
       setSending(false)
     }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files ?? [])
+    e.target.value = ""
+    setStagedFiles((prev) => [...prev, ...picked].slice(0, 5))
   }
 
   const handleDone = async () => {
@@ -284,19 +317,94 @@ export default function SupportChatPage() {
                   : "bg-blue-600 text-white rounded-br-sm"
               }`}
             >
-              {msg.content}
+              {msg.content && <div>{msg.content}</div>}
+              {/* Attachments */}
+              {msg.attachments && msg.attachments.length > 0 && (
+                <div className={`mt-2 flex flex-wrap gap-2 ${msg.role === "user" ? "" : "justify-end"}`}>
+                  {msg.attachments.map((att) =>
+                    att.kind === "IMAGE" || att.mimeType?.startsWith("image/") ? (
+                      <button
+                        key={att.id}
+                        type="button"
+                        onClick={() => setLightboxUrl(att.url)}
+                        className="overflow-hidden rounded-lg border border-white/20 hover:opacity-90"
+                      >
+                        <img src={att.url} alt={att.filename || "image"} className="h-28 w-28 object-cover" loading="lazy" />
+                      </button>
+                    ) : (
+                      <a
+                        key={att.id}
+                        href={att.url}
+                        download={att.filename}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium ${
+                          msg.role === "user" ? "border-gray-200 bg-white text-gray-700" : "border-white/30 text-white"
+                        }`}
+                      >
+                        📄 {att.filename || "Document"}
+                      </a>
+                    )
+                  )}
+                </div>
+              )}
               <div className={`text-[10px] mt-1 ${msg.role === "user" ? "text-gray-400" : "text-blue-200"}`}>
                 {new Date(msg.createdAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
               </div>
             </div>
           </div>
         ))}
+
+        {/* Image lightbox */}
+        {lightboxUrl && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <img src={lightboxUrl} alt="preview" className="max-h-[90vh] max-w-full rounded shadow-xl" />
+          </div>
+        )}
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input area */}
       <div className="bg-white border-t border-gray-200 p-4 max-w-3xl mx-auto w-full">
-        <div className="flex gap-3 items-end">
+        {/* Staged files preview */}
+        {stagedFiles.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {stagedFiles.map((f, i) => (
+              <div key={i} className="flex items-center gap-1.5 bg-gray-100 rounded-full px-3 py-1 text-xs text-gray-700">
+                <span className="truncate max-w-[120px]">{f.name}</span>
+                <button
+                  type="button"
+                  onClick={() => setStagedFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                  className="text-gray-400 hover:text-red-500 leading-none"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2 items-end">
+          {/* Paperclip */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,application/pdf"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={sending || stagedFiles.length >= 5}
+            title="Allega file"
+            className="self-end h-10 w-10 flex items-center justify-center rounded-xl border border-gray-300 text-gray-500 hover:text-blue-600 hover:border-blue-400 disabled:opacity-40 transition-colors flex-shrink-0"
+          >
+            📎
+          </button>
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
@@ -313,8 +421,8 @@ export default function SupportChatPage() {
           />
           <button
             onClick={handleSend}
-            disabled={sending || !inputText.trim()}
-            className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors h-fit"
+            disabled={sending || (!inputText.trim() && stagedFiles.length === 0)}
+            className="px-4 py-2.5 bg-blue-600 text-white rounded-xl font-medium text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors h-fit self-end"
           >
             {sending ? "..." : "Invia"}
           </button>

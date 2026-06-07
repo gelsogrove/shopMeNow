@@ -669,6 +669,18 @@ export class WhatsAppInboundPipeline {
         },
       })
 
+      // 📎 Inbound media (image/PDF/audio): download from provider + persist
+      // linked to the inbound message we just saved. Fail-safe: never blocks or
+      // breaks the reply. Mirrors the standard chatEngine path below — the
+      // custom-ecolaundry branch needs it too so voice notes show in /chat.
+      if (inboundMedia) {
+        await ingestInboundWebhookMedia({
+          workspaceId: customer.workspaceId,
+          conversationId: chatSession.id,
+          media: inboundMedia,
+        })
+      }
+
       let savedAssistantMessageId: string | undefined
       if (customOutput.reply) {
         const savedAssistantMessage = await prisma.conversationMessage.create({

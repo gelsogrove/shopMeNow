@@ -20,6 +20,27 @@ jest.mock(
   })
 )
 
+jest.mock("../../../src/repositories/message-attachment.repository", () => ({
+  messageAttachmentRepository: { create: jest.fn(), listByConversationMessageIds: jest.fn().mockResolvedValue([]) },
+}))
+
+jest.mock("../../../src/services/storage.service", () => ({
+  storageService: { upload: jest.fn() },
+}))
+
+jest.mock("../../../src/services/outbound-attachment.service", () => ({
+  sendOperatorAttachment: jest.fn().mockResolvedValue({ sent: false }),
+}))
+
+jest.mock("../../../src/services/whatsapp/whatsapp-provider.factory", () => ({
+  WhatsAppProviderFactory: { create: jest.fn() },
+}))
+
+jest.mock("../../../src/services/chat-attachment.validation", () => ({
+  sniffMime: jest.fn().mockReturnValue(null),
+  validateAttachment: jest.fn().mockReturnValue({ ok: false }),
+}))
+
 jest.mock("@echatbot/database", () => ({
   prisma: {
     customers: {
@@ -32,6 +53,9 @@ jest.mock("@echatbot/database", () => ({
     conversationMessage: {
       findMany: jest.fn(),
       create: jest.fn(),
+    },
+    workspace: {
+      findUnique: jest.fn().mockResolvedValue(null),
     },
     secureToken: {
       findFirst: jest.fn(),

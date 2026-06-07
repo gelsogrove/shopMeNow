@@ -25,7 +25,7 @@
 import { WhatsAppSendMessageResult } from "./whatsapp/whatsapp-provider.interface"
 
 export type Channel = "whatsapp" | "widget" | "playground"
-export type AttachmentKind = "IMAGE" | "DOCUMENT"
+export type AttachmentKind = "IMAGE" | "DOCUMENT" | "AUDIO"
 
 export interface OutboundProvider {
   sendMediaMessage(

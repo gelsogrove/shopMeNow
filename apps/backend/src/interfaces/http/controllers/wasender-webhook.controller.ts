@@ -355,8 +355,10 @@ export class WasenderWebhookController {
       return res.status(200).json({ status: 'ignored', reason: 'no_message' })
     }
     const { key, messageBody } = message
-    // 📎 image/document → media ref (direct URL); null for text/other types
-    const inboundMedia = extractWasenderMedia(message)
+    // 📎 image/document/audio → media ref (direct URL); null for text/other types.
+    // Audio voice notes are stored + played back in /chat via the same pipeline;
+    // the Whisper transcription below still feeds the LLM as message text.
+    const inboundMedia = extractWasenderMedia(message) || extractWasenderAudio(message)
     // 😀 reaction → emoji + reacted-to message id (null if none)
     const inboundReaction = extractWasenderReaction(message)
 

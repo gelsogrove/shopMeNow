@@ -933,7 +933,7 @@ model MessageAttachment {
   kind                  AttachmentKind
   url                   String // Cloudinary URL (or /uploads in dev)
   storageKey            String // Cloudinary public_id — used for physical deletion
-  mimeType              String // "image/jpeg" | "image/png" | "application/pdf"
+  mimeType              String // "image/jpeg" | "image/png" | "application/pdf" | "audio/ogg" | "audio/mpeg"
   filename              String? // original file name (mostly for documents)
   sizeBytes             Int
   width                 Int? // images only
@@ -949,6 +949,7 @@ model MessageAttachment {
 enum AttachmentKind {
   IMAGE
   DOCUMENT
+  AUDIO
 }
 
 // 📦 ARCHIVED MESSAGES - Old messages moved here for performance

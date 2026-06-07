@@ -159,8 +159,10 @@ export class UltraMsgWebhookController {
     // UltraMsg sends data in nested structure: { event_type, data: { id, from, body, ... } }
     const payload = req.body.data || req.body
     const { id, from, to, body, type, timestamp } = payload
-    // 📎 image/document → media ref (direct URL); null for text/other types
-    const inboundMedia = extractUltramsgMedia(payload)
+    // 📎 image/document/audio → media ref (direct URL); null for text/other types.
+    // Audio voice notes are stored + played back in /chat via the same pipeline;
+    // the Whisper transcription below still feeds the LLM as message text.
+    const inboundMedia = extractUltramsgMedia(payload) || extractUltramsgAudio(payload)
     const inboundWasAudio = type === 'audio' || type === 'ptt'
 
     logger.info('📥 UltraMsg Webhook received', {

@@ -6,7 +6,7 @@
  * (never trust the client). All user-facing text is English (UI rule #15).
  */
 
-export type AttachmentKind = "IMAGE" | "DOCUMENT"
+export type AttachmentKind = "IMAGE" | "DOCUMENT" | "AUDIO"
 
 export const ACCEPTED_MIME = ["image/jpeg", "image/png", "application/pdf"]
 export const ACCEPTED_ACCEPT_ATTR = "image/jpeg,image/png,application/pdf"
@@ -32,6 +32,10 @@ export function kindOf(mime: string): AttachmentKind | null {
 
 export function isImage(mimeOrKind: string): boolean {
   return mimeOrKind === "IMAGE" || mimeOrKind.startsWith("image/")
+}
+
+export function isAudio(mimeOrKind: string): boolean {
+  return mimeOrKind === "AUDIO" || mimeOrKind.startsWith("audio/")
 }
 
 export function formatBytes(bytes?: number): string {

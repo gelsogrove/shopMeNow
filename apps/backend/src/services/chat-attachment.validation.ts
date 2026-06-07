@@ -14,14 +14,25 @@
  * See docs/media-attachments-plan.md.
  */
 
-export type AttachmentKind = "IMAGE" | "DOCUMENT"
+export type AttachmentKind = "IMAGE" | "DOCUMENT" | "AUDIO"
 
 // MIME whitelist. WhatsApp only accepts jpeg/png for images; we mirror that.
 export const ACCEPTED_IMAGE_MIME = ["image/jpeg", "image/png"] as const
 export const ACCEPTED_DOCUMENT_MIME = ["application/pdf"] as const
+// Audio: WhatsApp voice notes arrive as OGG/Opus (Meta) or ogg (UltraMsg/Wasender);
+// our TTS replies are MP3. We accept the common voice-note codecs.
+export const ACCEPTED_AUDIO_MIME = [
+  "audio/ogg",
+  "audio/mpeg",
+  "audio/mp4",
+  "audio/aac",
+  "audio/amr",
+  "audio/webm",
+] as const
 export const ACCEPTED_CHAT_MIME: readonly string[] = [
   ...ACCEPTED_IMAGE_MIME,
   ...ACCEPTED_DOCUMENT_MIME,
+  ...ACCEPTED_AUDIO_MIME,
 ]
 
 // Extension whitelist (defense in depth alongside MIME + magic-byte sniffing).
@@ -29,11 +40,18 @@ const EXTENSION_BY_MIME: Record<string, string[]> = {
   "image/jpeg": [".jpg", ".jpeg"],
   "image/png": [".png"],
   "application/pdf": [".pdf"],
+  "audio/ogg": [".ogg", ".oga", ".opus"],
+  "audio/mpeg": [".mp3"],
+  "audio/mp4": [".m4a", ".mp4"],
+  "audio/aac": [".aac"],
+  "audio/amr": [".amr"],
+  "audio/webm": [".webm"],
 }
 
 // Per-type size caps (bytes).
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024 // 5 MB (WhatsApp image limit)
 export const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024 // 20 MB (our cap; WA allows 100)
+export const MAX_AUDIO_BYTES = 16 * 1024 * 1024 // 16 MB (WhatsApp audio limit)
 
 // Max attachments per single message (a WhatsApp multi-file "bundle").
 export const MAX_ATTACHMENTS_PER_MESSAGE = 5
@@ -55,6 +73,7 @@ export function classifyKind(mimeType: string): AttachmentKind | null {
   const m = (mimeType || "").toLowerCase()
   if ((ACCEPTED_IMAGE_MIME as readonly string[]).includes(m)) return "IMAGE"
   if ((ACCEPTED_DOCUMENT_MIME as readonly string[]).includes(m)) return "DOCUMENT"
+  if ((ACCEPTED_AUDIO_MIME as readonly string[]).includes(m)) return "AUDIO"
   return null
 }
 
@@ -65,7 +84,9 @@ function extensionOf(filename?: string | null): string {
 }
 
 function maxBytesFor(kind: AttachmentKind): number {
-  return kind === "IMAGE" ? MAX_IMAGE_BYTES : MAX_DOCUMENT_BYTES
+  if (kind === "IMAGE") return MAX_IMAGE_BYTES
+  if (kind === "AUDIO") return MAX_AUDIO_BYTES
+  return MAX_DOCUMENT_BYTES
 }
 
 function humanMB(bytes: number): string {
@@ -82,7 +103,7 @@ export function validateAttachment(input: AttachmentInput): ValidationResult {
   if (!kind) {
     return {
       ok: false,
-      error: `Unsupported file type "${input.mimeType}". Allowed: JPEG, PNG, PDF.`,
+      error: `Unsupported file type "${input.mimeType}". Allowed: JPEG, PNG, PDF, audio.`,
     }
   }
 
@@ -101,7 +122,7 @@ export function validateAttachment(input: AttachmentInput): ValidationResult {
 
   const max = maxBytesFor(kind)
   if (input.sizeBytes > max) {
-    const label = kind === "IMAGE" ? "Image" : "Document"
+    const label = kind === "IMAGE" ? "Image" : kind === "AUDIO" ? "Audio" : "Document"
     return {
       ok: false,
       error: `${label} too large (${humanMB(input.sizeBytes)}). Maximum is ${humanMB(max)}.`,
@@ -158,6 +179,42 @@ export function sniffMime(buffer: Buffer): string | null {
     buffer[3] === 0x46
   ) {
     return "application/pdf"
+  }
+  // OGG (WhatsApp voice notes, Opus/Vorbis): "OggS" = 4F 67 67 53
+  if (
+    buffer[0] === 0x4f &&
+    buffer[1] === 0x67 &&
+    buffer[2] === 0x67 &&
+    buffer[3] === 0x53
+  ) {
+    return "audio/ogg"
+  }
+  // MP3 (our TTS replies + some voice notes):
+  //   ID3 tag: "ID3" = 49 44 33, or a raw MPEG frame sync: FF Ex/Fx.
+  if (buffer[0] === 0x49 && buffer[1] === 0x44 && buffer[2] === 0x33) {
+    return "audio/mpeg"
+  }
+  if (buffer[0] === 0xff && (buffer[1] & 0xe0) === 0xe0) {
+    return "audio/mpeg"
+  }
+  // MP4 / M4A: "ftyp" box at offset 4 = 66 74 79 70
+  if (
+    buffer.length >= 8 &&
+    buffer[4] === 0x66 &&
+    buffer[5] === 0x74 &&
+    buffer[6] === 0x79 &&
+    buffer[7] === 0x70
+  ) {
+    return "audio/mp4"
+  }
+  // WebM / Matroska (EBML): 1A 45 DF A3
+  if (
+    buffer[0] === 0x1a &&
+    buffer[1] === 0x45 &&
+    buffer[2] === 0xdf &&
+    buffer[3] === 0xa3
+  ) {
+    return "audio/webm"
   }
   return null
 }

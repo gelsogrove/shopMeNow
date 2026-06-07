@@ -7,6 +7,7 @@
 
 import { Router } from "express"
 import { supportChatController } from "../controllers/support-chat.controller"
+import { uploadChatAttachments, handleChatUploadError } from "../middlewares/chatAttachmentUpload"
 import rateLimit from "express-rate-limit"
 import logger from "../../../utils/logger"
 
@@ -38,6 +39,8 @@ router.get(
 router.post(
   "/reply",
   supportChatLimiter,
+  uploadChatAttachments,
+  handleChatUploadError,
   supportChatController.reply.bind(supportChatController)
 )
 

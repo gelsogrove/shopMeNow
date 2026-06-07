@@ -38,6 +38,10 @@ function stripForAudio(text: string): string {
 
 export interface TTSResult {
   audioUrl: string
+  /** Storage public_id — needed to persist + later purge the audio attachment. */
+  storageKey: string
+  /** MP3 byte length — stored on the attachment row. */
+  sizeBytes: number
 }
 
 /**
@@ -117,7 +121,7 @@ export async function generateSpeech(
 
   try {
     const filename = `tts-${workspaceId}-${Date.now()}.mp3`
-    const { url } = await storageService.upload(mp3Buffer, {
+    const { url, key } = await storageService.upload(mp3Buffer, {
       filename,
       folder: `tts/${workspaceId}`,
       contentType: "audio/mpeg",
@@ -125,7 +129,7 @@ export async function generateSpeech(
     })
 
     logger.info("[TTS] ✅ Audio ready", { url: url.substring(0, 80), workspaceId })
-    return { audioUrl: url }
+    return { audioUrl: url, storageKey: key, sizeBytes: mp3Buffer.byteLength }
   } catch (err) {
     logger.error("[TTS] ❌ Storage upload failed", { error: err, workspaceId })
     return null

@@ -345,6 +345,10 @@ export class WhatsAppWebhookController {
         if (message?.type === "audio" && !inboundReaction) {
           inboundWasAudio = true
           const audioRef = extractMetaAudio(message)
+          // 🎤 Store the voice note itself (download→store→attach) via the same
+          // media pipeline as images/PDFs, so /chat can play it back. The
+          // transcription below still feeds the LLM as message text.
+          if (audioRef) inboundMedia = audioRef
           if (audioRef?.ref?.mediaId) {
             // workspaceId may not be in value for real Meta webhooks — resolve from webhookId
             const audioWorkspaceId = value.workspaceId || (webhookId

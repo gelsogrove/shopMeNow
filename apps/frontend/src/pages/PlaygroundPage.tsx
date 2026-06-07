@@ -120,7 +120,7 @@ type ChatMessage = {
   attachments?: Array<{
     id: string
     url: string
-    kind: "IMAGE" | "DOCUMENT"
+    kind: "IMAGE" | "DOCUMENT" | "AUDIO"
     mimeType: string
     filename?: string | null
     sizeBytes?: number
@@ -2063,6 +2063,9 @@ function ChatScreen({
               const wBr = isWelcomeWithVideo ? customerText.indexOf("\n\n") : -1
               const greetingPart = wBr !== -1 ? customerText.slice(0, wBr) : customerText
               const restPart = wBr !== -1 ? customerText.slice(wBr + 2) : ""
+              // 🎤 Voice note → show ONLY the audio player, suppress the
+              // transcription / spoken text in the bubble (same as operator chat).
+              const hasAudio = !!m.attachments?.some((a) => a.kind === "AUDIO")
               return (
                 <div key={m.id} id={`msg-${m.id}`} className="space-y-1">
                   <div
@@ -2097,15 +2100,15 @@ function ChatScreen({
                           {m.reaction}
                         </span>
                       )}
-                      <MessageBody content={greetingPart} isInbound={isInbound} />
-                      {isWelcomeWithVideo && (
+                      {!hasAudio && <MessageBody content={greetingPart} isInbound={isInbound} />}
+                      {!hasAudio && isWelcomeWithVideo && (
                         <WelcomeVideoCard
                           url={welcomeVideoUrl as string}
                           lang={activeSession?.customer?.language}
                           greeting={greetingPart}
                         />
                       )}
-                      {isWelcomeWithVideo && restPart && (
+                      {!hasAudio && isWelcomeWithVideo && restPart && (
                         <MessageBody content={restPart} isInbound={isInbound} />
                       )}
                       {m.attachments && m.attachments.length > 0 && (

@@ -17,7 +17,7 @@
 
 import { prisma } from "@echatbot/database"
 
-export type AttachmentKind = "IMAGE" | "DOCUMENT"
+export type AttachmentKind = "IMAGE" | "DOCUMENT" | "AUDIO"
 
 export interface NewAttachmentRow {
   conversationMessageId: string

@@ -17,7 +17,7 @@
 
 export interface StorageRef {
   storageKey: string
-  kind: "IMAGE" | "DOCUMENT"
+  kind: "IMAGE" | "DOCUMENT" | "AUDIO"
 }
 
 export interface AttachmentLifecycleStorage {

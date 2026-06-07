@@ -13,10 +13,16 @@
 // ============================================================================
 // IMPORTS
 // ============================================================================
+import fs from "fs"
 import { Request, Response } from "express"
 import { prisma } from "@echatbot/database"
 import { WhatsAppDirectSendService } from "../../../services/whatsapp-direct-send.service"
 import { SecureTokenService } from "../../../application/services/secure-token.service"
+import { messageAttachmentRepository } from "../../../repositories/message-attachment.repository"
+import { storageService } from "../../../services/storage.service"
+import { sendOperatorAttachment } from "../../../services/outbound-attachment.service"
+import { WhatsAppProviderFactory } from "../../../services/whatsapp/whatsapp-provider.factory"
+import { sniffMime, validateAttachment } from "../../../services/chat-attachment.validation"
 import logger from "../../../utils/logger"
 
 const secureTokenService = new SecureTokenService()
@@ -97,14 +103,35 @@ export class SupportChatController {
             orderBy: { createdAt: "desc" },
           })
 
-      // Fetch last 50 messages
+      // Fetch last 50 messages (exclude function calls)
       const messages = session
         ? await prisma.conversationMessage.findMany({
-            where: { conversationId: session.id },
+            where: { conversationId: session.id, role: { not: "function" } },
             orderBy: { createdAt: "asc" },
             take: 50,
           })
         : []
+
+      // Hydrate attachments
+      const messageIds = messages.map((m) => m.id)
+      let attachmentsByMessage: Record<string, any[]> = {}
+      if (messageIds.length > 0) {
+        try {
+          const atts = await messageAttachmentRepository.listByConversationMessageIds(messageIds)
+          for (const a of atts) {
+            ;(attachmentsByMessage[a.conversationMessageId] ||= []).push({
+              id: a.id,
+              url: a.url,
+              kind: a.kind,
+              mimeType: a.mimeType,
+              filename: a.filename,
+              sizeBytes: a.sizeBytes,
+            })
+          }
+        } catch (e) {
+          logger.warn("[SupportChat] attachment hydration failed:", e)
+        }
+      }
 
       res.json({
         customer,
@@ -114,6 +141,7 @@ export class SupportChatController {
           role: m.role,
           content: m.content,
           createdAt: m.createdAt,
+          attachments: attachmentsByMessage[m.id] || [],
         })),
         channel: customer.originChannel || payload?.channel || "widget",
         tokenMeta: {
@@ -127,13 +155,18 @@ export class SupportChatController {
   }
 
   // ----------------------------------------------------------------
-  // POST /reply   body: { token, message }
+  // POST /reply   body: { token, message? }  + optional multipart files
   // ----------------------------------------------------------------
   async reply(req: Request, res: Response): Promise<void> {
+    const files = ((req as any).files as Express.Multer.File[]) || []
     const { token, message } = req.body as { token?: string; message?: string }
 
-    if (!token || !message?.trim()) {
-      res.status(400).json({ error: "token e message sono obbligatori" })
+    if (!token) {
+      res.status(400).json({ error: "token obbligatorio" })
+      return
+    }
+    if (!message?.trim() && files.length === 0) {
+      res.status(400).json({ error: "message o almeno un file obbligatorio" })
       return
     }
 
@@ -182,35 +215,114 @@ export class SupportChatController {
             orderBy: { createdAt: "desc" },
           })
 
+      // Resolve WhatsApp provider only when needed
+      let provider: any = undefined
       if (channel === "whatsapp") {
-        const directSend = new WhatsAppDirectSendService(prisma)
-        await directSend.send({
-          workspaceId: workspaceId as string,
-          customerId,
-          phoneNumber: customer.phone,
-          messageContent: message.trim(),
-          skipSecurityCheck: true,
-        })
-        logger.info("[SupportChat] reply sent directly via WhatsApp for customer:", customerId)
-      } else {
-        // Route via ConversationMessage (widget polling picks it up)
-        if (!session) {
-          res.status(404).json({ error: "Sessione non trovata" })
-          return
-        }
-        await prisma.conversationMessage.create({
-          data: {
-            conversationId: session.id,
-            customerId: customer.id,
-            workspaceId: workspaceId as string,
-            role: "assistant",
-            content: message.trim(),
-          },
-        })
-        logger.info("[SupportChat] reply saved to ConversationMessage for session:", session.id)
+        try {
+          const workspace = await prisma.workspace.findUnique({ where: { id: workspaceId as string } })
+          if (workspace) provider = WhatsAppProviderFactory.create(workspace)
+        } catch { /* not configured */ }
       }
 
-      res.json({ success: true, channel })
+      // 1. Send text message (if any)
+      if (message?.trim()) {
+        if (channel === "whatsapp") {
+          const directSend = new WhatsAppDirectSendService(prisma)
+          await directSend.send({
+            workspaceId: workspaceId as string,
+            customerId,
+            phoneNumber: customer.phone,
+            messageContent: message.trim(),
+            skipSecurityCheck: true,
+          })
+        } else {
+          if (!session) { res.status(404).json({ error: "Sessione non trovata" }); return }
+          await prisma.conversationMessage.create({
+            data: {
+              conversationId: session.id,
+              customerId: customer.id,
+              workspaceId: workspaceId as string,
+              role: "assistant",
+              agentType: "OPERATOR",
+              content: message.trim(),
+            },
+          })
+        }
+        logger.info("[SupportChat] text reply sent for customer:", customerId)
+      }
+
+      // 2. Upload and send files (if any)
+      const sentAttachments: any[] = []
+      for (const file of files) {
+        try {
+          const buffer = fs.readFileSync(file.path)
+          const trueMime = sniffMime(buffer) || file.mimetype
+          const validation = validateAttachment({ mimeType: trueMime, filename: file.originalname, sizeBytes: buffer.length })
+          if (!validation.ok || !validation.kind) {
+            logger.warn("[SupportChat] invalid file skipped:", validation.error)
+            continue
+          }
+
+          const sessionIdToUse = session?.id ?? payload?.sessionId ?? ""
+          const folder = `chat-attachments/${workspaceId}/${sessionIdToUse}`
+          const ext = trueMime === "application/pdf" ? "pdf" : trueMime === "image/png" ? "png" : "jpg"
+          const rand = Math.random().toString(36).slice(2, 8)
+          const uploaded = await storageService.upload(buffer, {
+            filename: `${Date.now()}_${rand}.${ext}`,
+            folder,
+            contentType: trueMime,
+            isPublic: true,
+          })
+
+          if (!session && !sessionIdToUse) continue
+
+          const convMsg = await prisma.conversationMessage.create({
+            data: {
+              workspaceId: workspaceId as string,
+              customerId: customer.id,
+              conversationId: sessionIdToUse,
+              role: "assistant",
+              agentType: "OPERATOR",
+              content: message?.trim() || "",
+              deliveryStatus: "sent",
+            },
+          })
+
+          const att = await messageAttachmentRepository.create({
+            conversationMessageId: convMsg.id,
+            workspaceId: workspaceId as string,
+            kind: validation.kind,
+            url: uploaded.url,
+            storageKey: uploaded.key,
+            mimeType: trueMime,
+            filename: file.originalname,
+            sizeBytes: buffer.length,
+          })
+
+          await sendOperatorAttachment(
+            { provider, logger },
+            {
+              active: channel === "whatsapp" ? !!provider : true,
+              channel: channel === "widget" ? "widget" : "whatsapp",
+              to: customer.phone || "",
+              attachment: { kind: validation.kind, publicUrl: uploaded.url, filename: file.originalname },
+              caption: message?.trim() || "",
+            }
+          )
+
+          sentAttachments.push({ id: att.id, url: uploaded.url, kind: validation.kind })
+        } catch (fileErr) {
+          logger.error("[SupportChat] file send error:", fileErr)
+        } finally {
+          try { fs.unlinkSync(file.path) } catch { /* ignore */ }
+        }
+      }
+
+      res.json({
+        success: true,
+        channel,
+        ...(sentAttachments.length > 0 ? { attachments: sentAttachments } : {}),
+      })
     } catch (error) {
       logger.error("[SupportChat] reply error:", error)
       res.status(500).json({ error: "Server error" })

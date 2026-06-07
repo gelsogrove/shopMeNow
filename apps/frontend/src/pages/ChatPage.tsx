@@ -2082,7 +2082,10 @@ export function ChatPage() {
                             </div>
                           )}
 
-                          {(() => {
+                          {/* 🎤 Voice note → show ONLY the audio player below;
+                              suppress the transcription / spoken text in the
+                              bubble (Andrea: "audio player only"). */}
+                          {!message.attachments?.some((a) => a.kind === "AUDIO") && (() => {
                             const { customer: customerText, operator: operatorText } = isAgentMessage
                               ? splitBotMessage(message.content)
                               : { customer: message.content, operator: null }
@@ -2144,9 +2147,9 @@ export function ChatPage() {
                             )
                           })()}
 
-                          {/* 📎 Attachments (images / PDFs). Aligned to the
-                              same side as the bubble: operator/bot → right,
-                              customer → left. */}
+                          {/* 📎 Attachments (images / PDFs / voice notes).
+                              Aligned to the same side as the bubble:
+                              operator/bot → right, customer → left. */}
                           {message.attachments && message.attachments.length > 0 && (
                             <MessageAttachments
                               attachments={message.attachments}

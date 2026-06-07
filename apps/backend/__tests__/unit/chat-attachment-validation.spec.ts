@@ -15,6 +15,7 @@
 import {
   ACCEPTED_CHAT_MIME,
   MAX_ATTACHMENTS_PER_MESSAGE,
+  MAX_AUDIO_BYTES,
   MAX_DOCUMENT_BYTES,
   MAX_IMAGE_BYTES,
   classifyKind,
@@ -33,6 +34,18 @@ describe("chat-attachment.validation", () => {
 
     it("maps application/pdf to DOCUMENT", () => {
       expect(classifyKind("application/pdf")).toBe("DOCUMENT")
+    })
+
+    it("maps WhatsApp voice-note codecs to AUDIO", () => {
+      // Meta voice notes are OGG/Opus; UltraMsg/Wasender send audio/ogg; our
+      // TTS replies are audio/mpeg. All must classify as AUDIO so the chat UI
+      // shows a player instead of dropping the voice note.
+      expect(classifyKind("audio/ogg")).toBe("AUDIO")
+      expect(classifyKind("audio/mpeg")).toBe("AUDIO")
+      expect(classifyKind("audio/mp4")).toBe("AUDIO")
+      expect(classifyKind("audio/aac")).toBe("AUDIO")
+      expect(classifyKind("audio/amr")).toBe("AUDIO")
+      expect(classifyKind("audio/webm")).toBe("AUDIO")
     })
 
     it("is case-insensitive on the MIME type", () => {
@@ -136,6 +149,23 @@ describe("chat-attachment.validation", () => {
       expect(r.error).toMatch(/Document too large/i)
     })
 
+    it("accepts an audio voice note up to the 16MB cap", () => {
+      const r = validateAttachment({
+        mimeType: "audio/ogg",
+        sizeBytes: MAX_AUDIO_BYTES,
+      })
+      expect(r).toEqual({ ok: true, kind: "AUDIO" })
+    })
+
+    it("rejects an audio voice note over the 16MB cap", () => {
+      const r = validateAttachment({
+        mimeType: "audio/ogg",
+        sizeBytes: MAX_AUDIO_BYTES + 1,
+      })
+      expect(r.ok).toBe(false)
+      expect(r.error).toMatch(/Audio too large/i)
+    })
+
     it("rejects zero or invalid sizes", () => {
       expect(validateAttachment({ mimeType: "image/png", sizeBytes: 0 }).ok).toBe(false)
       expect(
@@ -186,6 +216,31 @@ describe("chat-attachment.validation", () => {
       expect(sniffMime(buf)).toBe("application/pdf")
     })
 
+    it("detects OGG voice notes (OggS)", () => {
+      const buf = Buffer.from([0x4f, 0x67, 0x67, 0x53, 0x00, 0x02])
+      expect(sniffMime(buf)).toBe("audio/ogg")
+    })
+
+    it("detects MP3 with an ID3 tag (ID3)", () => {
+      const buf = Buffer.from([0x49, 0x44, 0x33, 0x03, 0x00, 0x00])
+      expect(sniffMime(buf)).toBe("audio/mpeg")
+    })
+
+    it("detects MP3 with a raw MPEG frame sync (FF Ex)", () => {
+      const buf = Buffer.from([0xff, 0xfb, 0x90, 0x00])
+      expect(sniffMime(buf)).toBe("audio/mpeg")
+    })
+
+    it("detects MP4/M4A (ftyp box at offset 4)", () => {
+      const buf = Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70])
+      expect(sniffMime(buf)).toBe("audio/mp4")
+    })
+
+    it("detects WebM/Matroska (1A 45 DF A3)", () => {
+      const buf = Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x01, 0x00])
+      expect(sniffMime(buf)).toBe("audio/webm")
+    })
+
     it("returns null for unknown / too-short content", () => {
       expect(sniffMime(Buffer.from([0x00, 0x01, 0x02, 0x03]))).toBeNull()
       expect(sniffMime(Buffer.from([0xff]))).toBeNull()
@@ -218,9 +273,19 @@ describe("chat-attachment.validation", () => {
   })
 
   describe("constants sanity", () => {
-    it("whitelist contains exactly jpeg, png, pdf", () => {
+    it("whitelist contains jpeg, png, pdf + the WhatsApp audio codecs", () => {
       expect([...ACCEPTED_CHAT_MIME].sort()).toEqual(
-        ["application/pdf", "image/jpeg", "image/png"].sort()
+        [
+          "application/pdf",
+          "audio/aac",
+          "audio/amr",
+          "audio/mp4",
+          "audio/mpeg",
+          "audio/ogg",
+          "audio/webm",
+          "image/jpeg",
+          "image/png",
+        ].sort()
       )
     })
 

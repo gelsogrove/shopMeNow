@@ -4,7 +4,8 @@ import { mdToWhatsApp } from "../utils/markdown-to-whatsapp"
 import { WhatsAppProviderFactory } from "./whatsapp/whatsapp-provider.factory"
 import { SecurityAgent } from "../application/agents/SecurityAgent"
 import { SubscriptionBillingService } from "../application/services/subscription-billing.service"
-import { generateSpeech } from "./tts-elevenlabs.service"
+import { generateSpeech, TTSResult } from "./tts-elevenlabs.service"
+import { messageAttachmentRepository } from "../repositories/message-attachment.repository"
 
 export interface DirectSendParams {
   workspaceId: string
@@ -130,6 +131,9 @@ export class WhatsAppDirectSendService {
     const formattedMessage = mdToWhatsApp(messageContent)
 
     let sendResult: { success: boolean; messageId?: string; error?: string }
+    // 🎤 Set when the reply went out as a voice note — persisted as an AUDIO
+    // attachment after a successful send so /chat can play the bot's reply back.
+    let sentAudio: TTSResult | null = null
     try {
       if (replyAsAudio && provider.sendAudioMessage) {
         // 🎤 TTS path: generate MP3 → upload → send as audio message
@@ -137,6 +141,7 @@ export class WhatsAppDirectSendService {
         if (tts?.audioUrl) {
           logger.info("[DirectSend] 🎤 Sending audio reply via TTS", { workspaceId, customerId })
           sendResult = await provider.sendAudioMessage(phoneNumber, tts.audioUrl)
+          if (sendResult.success) sentAudio = tts
         } else {
           // TTS failed — fall back to text
           logger.warn("[DirectSend] ⚠️ TTS failed — falling back to text reply", { workspaceId, customerId })
@@ -195,6 +200,28 @@ export class WhatsAppDirectSendService {
           conversationMessageId,
           error: error instanceof Error ? error.message : String(error),
         })
+      }
+
+      // 🎤 Persist the TTS voice note as an AUDIO attachment on the assistant
+      // message, so the operator can play the bot's spoken reply in /chat.
+      // Fail-safe: a persistence error must never break delivery.
+      if (sentAudio) {
+        try {
+          await messageAttachmentRepository.create({
+            conversationMessageId,
+            workspaceId,
+            kind: "AUDIO",
+            url: sentAudio.audioUrl,
+            storageKey: sentAudio.storageKey,
+            mimeType: "audio/mpeg",
+            sizeBytes: sentAudio.sizeBytes,
+          })
+        } catch (error) {
+          logger.warn("[DirectSend] ⚠️ Failed to persist TTS audio attachment", {
+            conversationMessageId,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
       }
     }
 
