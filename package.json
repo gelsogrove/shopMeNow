@@ -42,6 +42,7 @@
     "prisma:seed:production": "npm run seed:production -w @echatbot/database",
     "prisma:studio": "npm run studio -w @echatbot/database",
     "update:prompts": "npm run update:prompts -w @echatbot/database",
+    "clear:audio:cloudinary": "npm run clear:audio:cloudinary -w @echatbot/backend",
     "prisma:reset": "npm run migrate:reset -w @echatbot/database",
     "prisma:check:env": "npm run check:env -w @echatbot/database",
     "test": "run-s test:be test:fe test:scheduler test:backoffice test:db",

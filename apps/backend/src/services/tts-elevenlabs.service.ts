@@ -4,8 +4,9 @@
  * Converts LLM reply text → MP3 buffer → uploads to Cloudinary → returns
  * a public URL that WhatsApp providers can send as an audio message.
  *
- * Uses the eleven_multilingual_v2 model: a single voice handles all customer
+ * Uses the eleven_turbo_v2_5 model: a single voice handles all customer
  * languages with natural, fluid prosody — no per-language voice mapping needed.
+ * Turbo v2.5 is ~half the credit cost of multilingual_v2 and lower latency.
  *
  * Config (env, no hardcoded secrets):
  *   ELEVENLABS_API_KEY   — required, Creator plan or above (API access)
@@ -17,7 +18,7 @@ import logger from "../utils/logger"
 import { storageService } from "./storage.service"
 
 const TTS_BASE_URL = "https://api.elevenlabs.io/v1/text-to-speech"
-const TTS_MODEL = "eleven_multilingual_v2"
+const TTS_MODEL = "eleven_turbo_v2_5"
 // Default voice "Rachel" — warm, neutral, works across all supported languages.
 const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
 const MAX_CHARS = 4096

@@ -11,6 +11,7 @@
     "build:copy-public": "cp -r public dist/public || echo '⚠️ Public copy failed (maybe already there)'",
     "start": "node dist/src/index.js",
     "seed": "dotenv -e ../../.env -- tsx scripts/seed-test-data.ts",
+    "clear:audio:cloudinary": "dotenv -e ../../.env -- tsx scripts/clear-audio-cloudinary.ts",
     "test": "npm run test:unit",
     "test:unit": "dotenv -e ../../.env -- cross-env NODE_ENV=test jest --config jest.config.unit.js --passWithNoTests",
     "test:security": "dotenv -e ../../.env -- cross-env NODE_ENV=test INTEGRATION_TEST=true jest --config jest.config.security.js",
