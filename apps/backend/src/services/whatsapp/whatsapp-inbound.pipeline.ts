@@ -757,6 +757,10 @@ export class WhatsAppInboundPipeline {
               // settings.json enables audioOutput (settings are law — iron rule 7).
               replyAsAudio: inboundWasAudio && customOutput.audioOutput === true,
               customerLanguage,
+              // Per-language voice from settings.json (falls back to "default").
+              ttsVoiceId:
+                customOutput.audioVoices?.[customerLanguage ?? ""] ??
+                customOutput.audioVoices?.default,
             })
           }
         } catch (sendError) {

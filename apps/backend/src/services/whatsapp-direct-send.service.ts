@@ -18,6 +18,8 @@ export interface DirectSendParams {
   replyAsAudio?: boolean
   /** Customer language code (e.g. "it", "es") — selects TTS voice. */
   customerLanguage?: string
+  /** Explicit ElevenLabs voice ID (resolved from tenant settings.json per language). */
+  ttsVoiceId?: string
 }
 
 export interface DirectSendResult {
@@ -57,6 +59,7 @@ export class WhatsAppDirectSendService {
       isPlayground = false,
       replyAsAudio = false,
       customerLanguage,
+      ttsVoiceId,
     } = params
 
     if (isPlayground) {
@@ -130,7 +133,7 @@ export class WhatsAppDirectSendService {
     try {
       if (replyAsAudio && provider.sendAudioMessage) {
         // 🎤 TTS path: generate MP3 → upload → send as audio message
-        const tts = await generateSpeech(messageContent, workspaceId, customerLanguage)
+        const tts = await generateSpeech(messageContent, workspaceId, customerLanguage, ttsVoiceId)
         if (tts?.audioUrl) {
           logger.info("[DirectSend] 🎤 Sending audio reply via TTS", { workspaceId, customerId })
           sendResult = await provider.sendAudioMessage(phoneNumber, tts.audioUrl)

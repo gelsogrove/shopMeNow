@@ -103,6 +103,8 @@ type ChatbotOutput = {
   /** Tenant audio policy from the module's settings.json. When false the host
    *  must always reply with text; when true it may mirror input modality. */
   audioOutput?: boolean
+  /** Per-language ElevenLabs voice IDs from the module's settings.json. */
+  audioVoices?: Record<string, string>
   meta: {
     tokensUsed: number
     agentChain: string[]

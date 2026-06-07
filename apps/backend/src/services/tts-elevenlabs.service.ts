@@ -47,7 +47,10 @@ export interface TTSResult {
 export async function generateSpeech(
   text: string,
   workspaceId: string,
-  customerLanguage?: string
+  customerLanguage?: string,
+  /** Explicit voice ID (resolved by caller from settings.json per language).
+   *  Takes precedence over the ELEVENLABS_VOICE_ID env and the built-in default. */
+  voiceIdOverride?: string
 ): Promise<TTSResult | null> {
   const apiKey = process.env.ELEVENLABS_API_KEY
   if (!apiKey) {
@@ -55,7 +58,7 @@ export async function generateSpeech(
     return null
   }
 
-  const voiceId = process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID
+  const voiceId = voiceIdOverride || process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID
   const trimmed = stripForAudio(text).slice(0, MAX_CHARS)
 
   logger.info("[TTS] 🗣️ Generating speech", {
