@@ -126,9 +126,12 @@ class StorageService {
    * Used by support ticket attachments and invoice PDFs
    */
   async upload(buffer: Buffer, options: { filename: string; folder: string; contentType: string; isPublic?: boolean }): Promise<{ url: string; key: string }> {
-    // Determine if this is an image based on content type
+    // Determine resource kind from content type.
+    // Cloudinary serves audio under the 'video' resource_type — using 'raw'
+    // delivers application/octet-stream, which WhatsApp/Meta rejects.
     const isImage = options.contentType.startsWith('image/')
-    
+    const isAudio = options.contentType.startsWith('audio/')
+
     if (this.storageType === 'cloudinary') {
       // Stream the buffer straight to Cloudinary — no temp file on disk.
       //
@@ -143,7 +146,12 @@ class StorageService {
           const stream = cloudinary.uploader.upload_stream(
             {
               folder: `echatbot/${options.folder}`,
-              resource_type: isImage ? 'image' : 'raw', // 'image' for images, 'raw' for others (PDF, etc.)
+              // 'image' → images, 'video' → audio (Cloudinary serves audio as video,
+              // delivering audio/mpeg + .mp3 URL), 'raw' → everything else (PDF, etc.)
+              resource_type: isImage ? 'image' : isAudio ? 'video' : 'raw',
+              // For audio, force the delivery format so the URL ends in .mp3 and
+              // Cloudinary returns Content-Type audio/mpeg (Meta requires it).
+              ...(isAudio ? { format: 'mp3' } : {}),
               public_id: path.parse(options.filename).name,
               use_filename: true,
             },
