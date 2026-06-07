@@ -28,6 +28,10 @@ describe("isPublicGuardExemptPath — TokenExpiryGuard exemptions", () => {
     expect(isPublicGuardExemptPath("/operator-dashboard")).toBe(true)
   })
 
+  it("exempts /login — the login page has no main-app token yet, so the guard must not bounce it to /", () => {
+    expect(isPublicGuardExemptPath("/login")).toBe(true)
+  })
+
   it("does NOT exempt authenticated app routes — the guard must still police them", () => {
     expect(isPublicGuardExemptPath("/chat")).toBe(false)
     expect(isPublicGuardExemptPath("/analytics")).toBe(false)
@@ -43,6 +47,7 @@ describe("isPublicGuardExemptPath — TokenExpiryGuard exemptions", () => {
 
   it("keeps the exemption list to the known public route families", () => {
     expect(PUBLIC_PATH_PREFIXES).toEqual([
+      "/login",
       "/demo/",
       "/support-chat",
       "/operator-dashboard",
