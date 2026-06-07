@@ -83,7 +83,7 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production", // Only in HTTPS in production
       sameSite: "lax",
-      maxAge: 24 * 60 * 60 * 1000, // 1 day
+      maxAge: 60 * 60 * 1000, // 1 hour
     })
   }
 
@@ -459,6 +459,21 @@ export class AuthController {
         twoFactorEnabled: !!user.twoFactorEnabled,
       },
     })
+  }
+
+  async refresh(req: Request, res: Response): Promise<void> {
+    const userId = (req as any).user?.id
+    if (!userId) throw new AppError(401, "Unauthorized")
+
+    const user = await this.userService.getById(userId)
+    if (!user || user.deletedAt) {
+      throw new AppError(401, "User not found or inactive")
+    }
+
+    const newToken = this.generateToken(user)
+    this.setTokenCookie(res, newToken)
+
+    res.status(200).json({ token: newToken })
   }
 
   async logout(req: Request, res: Response): Promise<void> {

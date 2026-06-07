@@ -53,6 +53,12 @@ export const createAuthRouter = (authController: AuthController): Router => {
     asyncHandler(authController.logout.bind(authController))
   )
 
+  router.post(
+    "/refresh",
+    authMiddleware,
+    asyncHandler(authController.refresh.bind(authController))
+  )
+
   // OLD register route (kept for backwards compatibility)
   router.post(
     "/register-old",

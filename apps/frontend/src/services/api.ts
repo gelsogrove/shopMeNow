@@ -68,6 +68,26 @@ api.interceptors.request.use(
 // 401s from in-flight requests don't re-trigger clearAuth() / toast / redirect.
 let isHandlingAuthExpiry = false
 
+// Proactive token refresh: called when token is within 10 min of expiry.
+// Sliding window — keeps active users logged in without re-auth.
+let isRefreshing = false
+export const refreshTokenIfNeeded = async (): Promise<void> => {
+  if (isRefreshing || !storage.isTokenExpiringSoon()) return
+  isRefreshing = true
+  try {
+    const res = await api.post("/auth/refresh")
+    const newToken = res.data?.token
+    if (newToken) {
+      storage.setToken(newToken)
+      logger.debug("🔄 Token refreshed proactively")
+    }
+  } catch (err) {
+    logger.warn("⚠️ Token refresh failed", err)
+  } finally {
+    isRefreshing = false
+  }
+}
+
 // Add a response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
@@ -80,6 +100,10 @@ api.interceptors.response.use(
         status: response.status,
       }
     )
+    // Don't refresh on the refresh call itself to avoid infinite loop
+    if (response.config.url !== "/auth/refresh") {
+      refreshTokenIfNeeded()
+    }
     return response
   },
   (error) => {
@@ -136,15 +160,11 @@ api.interceptors.response.use(
 // API endpoints
 export const auth = {
   login: async (credentials: { email: string; password: string }) => {
-    // Pulisci la localStorage prima del login
     storage.clearWorkspace()
-
-    // Ora tenta il login con stato pulito
     return api.post("/auth/login", credentials)
   },
-  logout: () => {
-    return api.post("/auth/logout")
-  },
+  logout: () => api.post("/auth/logout"),
+  refresh: () => api.post("/auth/refresh"),
 }
 
 export const workspaces = {

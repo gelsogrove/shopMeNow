@@ -76,7 +76,7 @@ import { LanguagesPage } from "./pages/settings/LanguagesPage"
 
 import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
 
-import { Suspense, lazy } from "react"
+import { Suspense, lazy, useEffect } from "react"
 import { ChatWidget } from "@/components/ChatWidget"
 import { useWorkspaceRole } from "./hooks/useWorkspaceRole"
 import { useWorkspace } from "./hooks/use-workspace"
@@ -180,9 +180,25 @@ function GlobalChatWidget() {
   )
 }
 
+function TokenExpiryGuard() {
+  useEffect(() => {
+    const checkExpiry = () => {
+      if (storage.isTokenExpired() && window.location.pathname !== "/") {
+        storage.clearAppState()
+        window.location.href = "/"
+      }
+    }
+    checkExpiry()
+    document.addEventListener("visibilitychange", checkExpiry)
+    return () => document.removeEventListener("visibilitychange", checkExpiry)
+  }, [])
+  return null
+}
+
 export function App() {
   return (
     <BrowserRouter>
+      <TokenExpiryGuard />
       <Toaster position="top-right" duration={800} />
       <Routes>
         {/* Operator Support Chat — token-based, NO PROVIDERS (public, standalone) */}

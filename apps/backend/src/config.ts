@@ -46,7 +46,7 @@ export const config: Config = {
   port: parseInt(process.env.PORT || "3001", 10),
   jwt: {
     secret: getJwtSecret(),
-    expiresIn: "1d",
+    expiresIn: process.env.JWT_EXPIRES_IN || "1h",
   },
   jwtSecret: getJwtSecret(),
   database: {

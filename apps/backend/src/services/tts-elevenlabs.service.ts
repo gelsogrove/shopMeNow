@@ -1,47 +1,32 @@
 /**
- * Text-to-Speech via ElevenLabs API.
+ * Text-to-Speech via OpenAI TTS API (through OpenRouter).
  *
  * Converts LLM reply text → MP3 buffer → uploads to Cloudinary → returns
  * a public URL that WhatsApp providers can send as an audio message.
  *
- * Voice: Rachel (en) — multilingual v2 model handles Italian, Spanish, etc.
- * Fallback: if TTS fails for any reason, caller sends text message instead.
+ * Uses openai/tts-1 model via OpenRouter (same API key as chat completions).
+ * Voice: nova (warm female, multilingual). Fallback: shimmer.
  */
 
 import axios from "axios"
 import logger from "../utils/logger"
 import { storageService } from "./storage.service"
 
-const ELEVENLABS_API_URL = "https://api.elevenlabs.io/v1/text-to-speech"
-const MODEL_ID = "eleven_multilingual_v2"
-
-// Female voices per language — all support eleven_multilingual_v2
-const VOICE_BY_LANGUAGE: Record<string, string> = {
-  en: "21m00Tcm4TlvDq8ikWAM", // Rachel — native English, clear and warm
-  it: "pFZP5JQG7iQjIQuC4Bku", // Lily — best Italian accent
-  es: "Xb7hH8MSUJpSbSDYk0k2", // Alice — natural Spanish
-  fr: "cgSgspJ2msm6clMCkdW9", // Jessica — French accent
-  pt: "pFZP5JQG7iQjIQuC4Bku", // Lily — works well for Portuguese
-  ca: "Xb7hH8MSUJpSbSDYk0k2", // Alice — closest to Catalan
-}
-const DEFAULT_VOICE_ID = "pFZP5JQG7iQjIQuC4Bku" // Lily — best multilingual fallback
-
-function voiceForLanguage(lang?: string): string {
-  if (!lang) return DEFAULT_VOICE_ID
-  return VOICE_BY_LANGUAGE[lang.toLowerCase().slice(0, 2)] ?? DEFAULT_VOICE_ID
-}
-const MAX_CHARS = 5000 // ElevenLabs free tier safe limit
+const TTS_URL = "https://openrouter.ai/api/v1/audio/speech"
+const TTS_MODEL = "openai/tts-1"
+const TTS_VOICE = "nova" // warm female, works well in all languages
+const MAX_CHARS = 4096 // OpenAI TTS limit
 
 /** Strip markdown/emoji/URLs so TTS reads clean spoken text. */
 function stripForAudio(text: string): string {
   return text
-    .replace(/https?:\/\/\S+/g, '')                  // remove URLs
-    .replace(/[*_~`#>|]/g, '')                        // remove markdown symbols
-    .replace(/^\s*[-•]\s+/gm, '')                     // remove bullet points
-    .replace(/\p{Emoji_Presentation}/gu, '')          // remove emoji
-    .replace(/\p{Extended_Pictographic}/gu, '')       // remove pictographic emoji
-    .replace(/\[SYSTEM:[^\]]*\]/g, '')                // remove injected system tags
-    .replace(/\n{3,}/g, '\n\n')                       // collapse excess newlines
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/[*_~`#>|]/g, "")
+    .replace(/^\s*[-•]\s+/gm, "")
+    .replace(/\p{Emoji_Presentation}/gu, "")
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/\[SYSTEM:[^\]]*\]/g, "")
+    .replace(/\n{3,}/g, "\n\n")
     .trim()
 }
 
@@ -58,36 +43,34 @@ export async function generateSpeech(
   workspaceId: string,
   customerLanguage?: string
 ): Promise<TTSResult | null> {
-  const apiKey = process.env.ELEVENLABS_API_KEY
+  const apiKey = process.env.OPENROUTER_API_KEY
   if (!apiKey) {
-    logger.warn("[TTS] ELEVENLABS_API_KEY not set — skipping audio reply", { workspaceId })
+    logger.warn("[TTS] OPENROUTER_API_KEY not set — skipping audio reply", { workspaceId })
     return null
   }
 
   const trimmed = stripForAudio(text).slice(0, MAX_CHARS)
-  const voiceId = voiceForLanguage(customerLanguage)
 
   logger.info("[TTS] 🗣️ Generating speech", {
     chars: trimmed.length,
     workspaceId,
-    voiceId,
+    voice: TTS_VOICE,
     language: customerLanguage,
   })
 
   let mp3Buffer: Buffer
   try {
     const res = await axios.post(
-      `${ELEVENLABS_API_URL}/${voiceId}`,
+      TTS_URL,
       {
-        text: trimmed,
-        model_id: MODEL_ID,
-        voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+        model: TTS_MODEL,
+        input: trimmed,
+        voice: TTS_VOICE,
       },
       {
         headers: {
-          "xi-api-key": apiKey,
+          Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
-          Accept: "audio/mpeg",
         },
         responseType: "arraybuffer",
         timeout: 30_000,
@@ -95,9 +78,10 @@ export async function generateSpeech(
     )
     mp3Buffer = Buffer.from(res.data)
   } catch (err: any) {
-    logger.error("[TTS] ❌ ElevenLabs request failed", {
+    logger.error("[TTS] ❌ OpenAI TTS request failed", {
       error: err.message,
       status: err.response?.status,
+      body: JSON.stringify(err.response?.data)?.substring(0, 300),
       workspaceId,
     })
     return null

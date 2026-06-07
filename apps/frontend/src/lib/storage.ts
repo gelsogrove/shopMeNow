@@ -25,9 +25,32 @@ const safeParse = <T>(value: string | null, label: string): T | null => {
   }
 }
 
+const decodeJwtExp = (token: string): number | null => {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]))
+    return typeof payload.exp === "number" ? payload.exp : null
+  } catch {
+    return null
+  }
+}
+
 export const storage = {
   getToken(): string | null {
     return localStorage.getItem(STORAGE_KEYS.token)
+  },
+  isTokenExpired(): boolean {
+    const token = this.getToken()
+    if (!token) return true
+    const exp = decodeJwtExp(token)
+    if (exp === null) return true
+    return exp * 1000 < Date.now()
+  },
+  isTokenExpiringSoon(thresholdMs = 10 * 60 * 1000): boolean {
+    const token = this.getToken()
+    if (!token) return true
+    const exp = decodeJwtExp(token)
+    if (exp === null) return true
+    return exp * 1000 - Date.now() < thresholdMs
   },
   setToken(token: string) {
     localStorage.setItem(STORAGE_KEYS.token, token)
