@@ -72,6 +72,12 @@ let isHandlingAuthExpiry = false
 // Sliding window — keeps active users logged in without re-auth.
 let isRefreshing = false
 export const refreshTokenIfNeeded = async (): Promise<void> => {
+  // A refresh only slides an EXISTING session. With no token the visitor is
+  // not logged in (public landing / login page), so there is nothing to
+  // refresh — firing /auth/refresh here just produces a spurious 401.
+  // NOTE: isTokenExpiringSoon() returns true when the token is missing, so
+  // this guard MUST come first.
+  if (!storage.getToken()) return
   if (isRefreshing || !storage.isTokenExpiringSoon()) return
   isRefreshing = true
   try {
@@ -117,8 +123,14 @@ api.interceptors.response.use(
 
     // Handle authentication errors (401) - includes INVALID SESSION
     if (error.response && error.response.status === 401) {
-      // Skip if already on login page to avoid loops
-      if (window.location.pathname === "/") {
+      // Skip the clear/toast/redirect when already on a login surface, to
+      // avoid loops and to let those pages render their own auth error.
+      // "/" is the sales landing that also serves login; "/login" is the
+      // standalone login page. A 401 there must NOT bounce the visitor.
+      const onLoginSurface =
+        window.location.pathname === "/" ||
+        window.location.pathname === "/login"
+      if (onLoginSurface) {
         return Promise.reject(error)
       }
 
