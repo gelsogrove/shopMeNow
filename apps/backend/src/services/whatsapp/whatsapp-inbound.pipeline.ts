@@ -741,6 +741,8 @@ export class WhatsAppInboundPipeline {
               messageContent: finalReply,
               conversationMessageId: savedAssistantMessageId,
               skipSecurityCheck: true, // bot-generated content, not user input
+              replyAsAudio: inboundWasAudio,
+              customerLanguage,
             })
           }
         } catch (sendError) {
