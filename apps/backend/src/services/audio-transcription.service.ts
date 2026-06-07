@@ -13,7 +13,7 @@ import axios from "axios"
 import logger from "../utils/logger"
 
 const WHISPER_URL = "https://openrouter.ai/api/v1/audio/transcriptions"
-const WHISPER_MODEL = "openai/whisper-large-v3"
+const WHISPER_MODEL = "openai/whisper-1"
 const MAX_AUDIO_BYTES = 25 * 1024 * 1024 // 25 MB — Whisper hard limit
 
 export interface TranscribeAudioInput {
@@ -86,13 +86,16 @@ export async function transcribeAudio(
     model: WHISPER_MODEL,
     bytes: buffer.byteLength,
     ext,
+    format: mimeToOpenRouterFormat(declaredMime),
+    declaredMime,
     provider,
     workspaceId,
   })
 
   // OpenRouter audio transcription uses JSON + base64, NOT multipart/form-data.
   const base64Audio = buffer.toString("base64")
-  const format = ext === "ogg" ? "ogg" : ext  // OpenRouter accepts: wav, mp3, flac, m4a, ogg, webm, aac
+  // WhatsApp sends audio/ogg;codecs=opus — OpenRouter accepts "ogg" as format
+  const format = mimeToOpenRouterFormat(declaredMime)
 
   try {
     const res = await axios.post(
@@ -136,6 +139,19 @@ export async function transcribeAudio(
     })
     return null
   }
+}
+
+/** Map MIME type to OpenRouter-accepted format string. */
+function mimeToOpenRouterFormat(mime?: string): string {
+  if (!mime) return "ogg"
+  if (mime.includes("ogg")) return "ogg"
+  if (mime.includes("mpeg") || mime.includes("mp3")) return "mp3"
+  if (mime.includes("mp4") || mime.includes("m4a")) return "m4a"
+  if (mime.includes("wav")) return "wav"
+  if (mime.includes("aac")) return "aac"
+  if (mime.includes("webm")) return "webm"
+  if (mime.includes("flac")) return "flac"
+  return "ogg"
 }
 
 function mimeToExt(mime?: string): string {
