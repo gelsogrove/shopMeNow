@@ -38,6 +38,16 @@ import { ExtractedMedia } from "../webhook-media.extract"
 import { PipelineResult } from "./whatsapp-inbound.types"
 
 /**
+ * 🎤 Spoken-format instruction appended to the LLM input when the customer sent
+ * a voice message. Forces a conversational, TTS-friendly reply: no markdown,
+ * no lists, no parentheses, and a complete (not terse) spoken answer. Applied
+ * identically on both the custom-ecolaundry and the standard chatEngine path so
+ * "voice in → voice out" sounds natural on every workspace.
+ */
+const AUDIO_SPOKEN_INSTRUCTION =
+  `[SYSTEM: The customer sent a voice message. Reply as if you are speaking out loud — use natural spoken sentences. Never use emoji, bullet points, dashes, parentheses, or markdown. Never read out URLs. If something is in parentheses, integrate it naturally into the sentence instead. For example, do not say "Samsung (7kg, A+++)" — say "a Samsung washing machine, seven kilos, energy class triple A". Give a complete, helpful answer of a few flowing sentences — do not be terse or clipped. Keep a warm, polite, conversational tone.]`
+
+/**
  * Inputs the reply stage needs once the controller has resolved the customer +
  * chat session and run its guards. Mirrors exactly the locals the Meta
  * controller held at this point in the flow.
@@ -580,7 +590,9 @@ export class WhatsAppInboundPipeline {
       workspaceId: customer.workspaceId,
       workspaceSlug: customer.workspace?.slug,
       customChatbotId: customer.workspace?.customChatbotId,
-      userMessage: messageMarkdown,
+      userMessage: inboundWasAudio
+        ? `${messageMarkdown}\n\n${AUDIO_SPOKEN_INSTRUCTION}`
+        : messageMarkdown,
       userName: customer.name || "Customer",
       channel: isPlayground ? "playground" : "whatsapp",
       welcomeMessage: customer.workspace?.welcomeMessage || "",
@@ -784,7 +796,7 @@ export class WhatsAppInboundPipeline {
 
     // 🎤 Audio mode: append spoken-format instruction so LLM skips emoji/lists/links.
     const messageForEngine = inboundWasAudio
-      ? `${messageMarkdown}\n\n[SYSTEM: The customer sent a voice message. Reply as if you are speaking out loud — use natural spoken sentences. Never use emoji, bullet points, dashes, parentheses, or markdown. Never read out URLs. If something is in parentheses, integrate it naturally into the sentence instead. For example, do not say "Samsung (7kg, A+++)" — say "a Samsung washing machine, seven kilos, energy class triple A". Keep a warm, conversational tone.]`
+      ? `${messageMarkdown}\n\n${AUDIO_SPOKEN_INSTRUCTION}`
       : messageMarkdown
 
     // 🤖 Standard path: main chat engine routing (saves inbound + outbound).
