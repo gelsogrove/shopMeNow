@@ -77,9 +77,11 @@ export async function generateSpeech(
         text: trimmed,
         model_id: TTS_MODEL,
         voice_settings: {
-          stability: 0.5,
+          // Lower stability → more expressive, less monotone prosody.
+          stability: 0.3,
           similarity_boost: 0.75,
-          style: 0.0,
+          // Style exaggeration adds emotional inflection.
+          style: 0.3,
           use_speaker_boost: true,
         },
       },
