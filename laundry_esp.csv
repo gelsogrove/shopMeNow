@@ -1,1 +1,11 @@
-company_name,email,country,contact_name,role
+company_name,email,website,city,country,notes
+ILUNION TextilCare,lavanderia.madrid@ilunion.com,iluniontextilcare.com,Madrid,ES,Market leader; 6300 employees; hotels/hospitals; 200M kg/year
+Bardusch SAU,ventas@bardusch.es,bardusch.com,Meco (Madrid),ES,German group; workwear rental + industrial laundry; pharma/food
+Laundryempresas,info@laundryempresas.es,laundryempresas.es,Barcelona,ES,Pioneer 2012; hotels/restaurants/medical; already uses WhatsApp
+La Higiénica Lavandería,info@lahigienicalavanderia.com,lahigienicalavanderia.com,Madrid,ES,Est. 1995; hotels/hospitals/gyms/prisons
+Lavandería Industrial ASFAM,info@asfam.es,lavanderiaasfam.com,Daganzo de Arriba (Madrid),ES,Hotels + restaurants; linen renting; daily pickup/delivery
+Fundación Rey Ardid,flores@reyardid.org,reyardid.org,Zaragoza,ES,4 tons/day; hospital + hospitality; ISO 9001; social enterprise
+Lavandería Don Pepe,lavanderia@lavanderiadonpepe.com,lavanderiadonpepe.com,Sanxenxo (Pontevedra),ES,24h service; hotels/hospitals/restaurants; textile rental
+Lavandería Don Pepe (admin),administracion@lavanderiadonpepe.com,lavanderiadonpepe.com,Sanxenxo (Pontevedra),ES,Admin contact same company
+Lavandería Industrial Málaga,lavanderiaindustrialmalaga@gmail.com,lavanderiaindustrialmalaga.com,Málaga,ES,Hotels/restaurants/hospitals; per-piece and per-kg pricing
+Tintotex Industrial Laundry,info@tintotex.es,tintotex.es,Sevilla,ES,Industrial laundry + dry cleaning
