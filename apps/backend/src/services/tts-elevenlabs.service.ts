@@ -13,7 +13,7 @@ import logger from "../utils/logger"
 import { storageService } from "./storage.service"
 
 const TTS_URL = "https://openrouter.ai/api/v1/audio/speech"
-const TTS_MODEL = "openai/tts-1"
+const TTS_MODEL = "tts-1"
 const TTS_VOICE = "nova" // warm female, works well in all languages
 const MAX_CHARS = 4096 // OpenAI TTS limit
 
