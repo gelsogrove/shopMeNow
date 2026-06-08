@@ -1571,7 +1571,7 @@ Can I help with anything else?"`,
         needRegistration: false,
         customChatbotId: "ecolaundry",
         operatorContactMethod: "EMAIL",
-        notificationEmail: "gelsogrove@gmail.com",
+        notificationEmail: "echatbotai@gmail.com",
         humanSupportInstructions:
           "Hello {{nameUser}}, I'm connecting you with our maintenance team. Someone will assist you shortly (email: {{agentEmail}}). The chatbot is paused until they respond. Thank you for your patience! 🤝",
         enableWelcomeMessage: true,

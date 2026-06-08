@@ -5,7 +5,7 @@ import logger from "../../../utils/logger"
 // Where the inbound demo requests are delivered. Defaults to the project
 // owner's inbox when REQUEST_ACCESS_EMAIL is not set in the environment.
 const RECIPIENT =
-  process.env.REQUEST_ACCESS_EMAIL || "gelsogrove@gmail.com"
+  process.env.REQUEST_ACCESS_EMAIL || "echatbotai@gmail.com"
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 

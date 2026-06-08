@@ -4,7 +4,7 @@
   "maxTokens": 800,
   "maxToolHops": 4,
   "operatorBriefingLanguage": "es",
-  "operatorEmail": "gelsogrove@gmail.com",
+  "operatorEmail": "echatbotai@gmail.com",
   "emailFrom": "Demowash Bot <noreply@demowash.demo>",
   "emailSubjectPrefix": "[Demowash] Incidencia",
   "maxMessageChars": 2000,
