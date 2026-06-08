@@ -7,6 +7,7 @@ import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { DemowashShowcase } from "@/components/DemowashShowcase"
 
 type Language = "it" | "en" | "es" | "pt"
 
@@ -289,57 +290,52 @@ export function LaundryServicePage() {
         <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-green-50 overflow-hidden">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <Breadcrumbs items={[{ label: t.breadcrumb }]} />
-            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-              {/* Left: text */}
-              <div>
-                <span className="inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide mb-6">
-                  {t.badge}
-                </span>
-                <motion.h1
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6 }}
-                  className="text-4xl lg:text-5xl font-bold leading-tight mb-6 whitespace-pre-line text-slate-900"
-                >
-                  {t.heroTitle}
-                </motion.h1>
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.1 }}
-                  className="text-lg text-slate-600 mb-8 max-w-xl"
-                >
-                  {t.heroSub}
-                </motion.p>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="flex flex-col sm:flex-row gap-4"
-                >
-                  <Link
-                    to="/contact"
-                    className="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-xl transition-colors"
-                  >
-                    {t.cta} <ArrowRight className="w-5 h-5" />
-                  </Link>
-                  <p className="self-center text-sm text-slate-500">{t.ctaSub}</p>
-                </motion.div>
-              </div>
-              {/* Right: illustration */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.15 }}
-                className="hidden lg:block"
+            {/* Compact, centered headline — Andrea wants the animated demo to
+                be the star and take the full horizontal width below it. */}
+            <div className="mt-6 max-w-3xl mx-auto text-center">
+              <span className="inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide mb-4">
+                {t.badge}
+              </span>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="text-2xl lg:text-3xl font-bold leading-tight mb-3 whitespace-pre-line text-slate-900"
               >
-                <img
-                  src="/laundry1.png"
-                  alt="eChatbot AI assistant for laundry services"
-                  className="w-full h-auto rounded-3xl shadow-2xl border border-gray-100"
-                />
+                {t.heroTitle}
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="text-base text-slate-600 mb-5 max-w-2xl mx-auto"
+              >
+                {t.heroSub}
+              </motion.p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+              >
+                <Link
+                  to="/contact"
+                  className="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-xl transition-colors"
+                >
+                  {t.cta} <ArrowRight className="w-5 h-5" />
+                </Link>
+                <p className="self-center text-sm text-slate-500">{t.ctaSub}</p>
               </motion.div>
             </div>
+            {/* Full-width animated demo (shared with the DemoWash popup). */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.15 }}
+              className="mt-10 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden"
+            >
+              <DemowashShowcase lang={language} />
+            </motion.div>
           </div>
         </section>
 

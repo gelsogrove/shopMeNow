@@ -21,6 +21,7 @@ import { ReactionPicker } from "@/components/ReactionPicker"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import { WhatsAppIcon } from "@/components/shared/WhatsAppIcon"
+import { DemowashShowcase } from "@/components/DemowashShowcase"
 import ReactMarkdown from "react-markdown"
 import {
   Link,
@@ -3001,44 +3002,6 @@ const ABOUT_DEMOWASH: Record<IntroLang, AboutCopy> = {
   },
 }
 
-// Inline renderer for the slide body: parses **bold** markers and the
-// literal "DemoWash" brand. **bold** → emerald-700 semibold. "DemoWash"
-// → emerald-700 bold (kept slightly bigger as the brand mark). Plain
-// text passes through. Two passes, simple and robust.
-function renderSlideBody(text: string) {
-  // Split on the **bold** markers first, then within each plain segment
-  // also split on the brand name. This guarantees both work even when
-  // the brand is itself wrapped in bold (it stays bold + brand-colored).
-  const boldParts = text.split(/(\*\*[^*]+\*\*)/g)
-  return boldParts.map((part, i) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return (
-        <strong key={i} className="text-emerald-700 font-semibold">
-          {part.slice(2, -2)}
-        </strong>
-      )
-    }
-    // Plain segment — handle the brand mark inside it.
-    const brandParts = part.split(/(DemoWash)/g)
-    return (
-      <Fragment key={i}>
-        {brandParts.map((bp, j) =>
-          bp === "DemoWash" ? (
-            <strong
-              key={j}
-              className="text-emerald-700 font-bold tracking-tight"
-            >
-              DemoWash
-            </strong>
-          ) : (
-            <Fragment key={j}>{bp}</Fragment>
-          ),
-        )}
-      </Fragment>
-    )
-  })
-}
-
 function AboutDemowashPopup({
   lang,
   onClose,
@@ -3046,25 +3009,16 @@ function AboutDemowashPopup({
   lang: IntroLang
   onClose: () => void
 }) {
-  const [slide, setSlide] = useState(0)
   const tr = ABOUT_DEMOWASH[lang] ?? ABOUT_DEMOWASH.es
-  const slides = tr.slides
-  const totalSlides = slides.length
-  const isLast = slide === totalSlides - 1
-  const isFirst = slide === 0
-  const current = slides[slide]
 
-  // Keyboard nav: Esc closes, ←/→ navigate.
+  // Esc closes the popup.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose()
-      else if (e.key === "ArrowRight")
-        setSlide((s) => Math.min(s + 1, totalSlides - 1))
-      else if (e.key === "ArrowLeft") setSlide((s) => Math.max(s - 1, 0))
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [onClose, totalSlides])
+  }, [onClose])
 
   return (
     <div
@@ -3075,7 +3029,7 @@ function AboutDemowashPopup({
       aria-label={tr.title}
     >
       <div
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-xl flex flex-col max-h-[92vh] overflow-hidden relative"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[92vh] overflow-hidden relative"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Brand-tinted top stripe + close X (floats over the hero area). */}
@@ -3089,106 +3043,12 @@ function AboutDemowashPopup({
           <X className="w-4 h-4" />
         </button>
 
-        {/* HERO — emoji in a soft brand-green pillow + title + body. */}
-        <div
-          className="px-8 pt-10 pb-7 text-center bg-gradient-to-b from-emerald-50/60 via-white to-white"
-          aria-label={tr.slideAria(slide + 1, totalSlides)}
-        >
-          {/* Step counter chip — small, discreet, lets the user know
-              where they are without dominating the layout. */}
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[11px] font-semibold tracking-wider uppercase mb-5">
-            {slide + 1} / {totalSlides}
-          </div>
-
-          {/* Focal point — emoji icon inside a brand-green circle on most
-              slides, OR a wordmark logo when `icon === "logo:demowash"`
-              (the opening slide). The wordmark presents the brand more
-              elegantly than any emoji would: "Demo" in slate-near-black
-              and "Wash" in brand emerald, sitting on a soft tile so it
-              matches the visual rhythm of the other slides' icon pills. */}
-          {current.icon === "logo:demowash" ? (
-            <div className="mx-auto w-fit px-7 py-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-white border-2 border-emerald-100 shadow-sm mb-5 select-none">
-              <div className="text-[40px] font-extrabold tracking-tight leading-none">
-                <span className="text-slate-900">Demo</span>
-                <span className="text-emerald-600">Wash</span>
-              </div>
-            </div>
-          ) : (
-            <div className="mx-auto w-24 h-24 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border-2 border-emerald-200 flex items-center justify-center text-[56px] leading-none shadow-inner mb-5 select-none">
-              <span aria-hidden="true">{current.icon}</span>
-            </div>
-          )}
-
-          {/* Title — big, bold, brand colour. */}
-          <h3 className="text-[26px] font-bold text-emerald-700 leading-tight tracking-tight mb-3 px-2">
-            {current.title}
-          </h3>
-
-          {/* Body — readable size, inline **bold** highlights in green. */}
-          <p className="text-[17px] text-slate-700 leading-[1.65] max-w-md mx-auto">
-            {renderSlideBody(current.body)}
-          </p>
-
-          {/* Last slide gets a prominent CTA button — this is the
-              "now go try the bot" call to action Andrea wants to land
-              hard. Replaces the boring "Close" footer button. */}
-          {isLast && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-7 inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white px-7 py-3 rounded-full text-[16px] font-semibold shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 transition-all hover:-translate-y-0.5"
-            >
-              {tr.ctaLabel}
-              <span aria-hidden="true">→</span>
-            </button>
-          )}
-        </div>
-
-        {/* Footer — prev / dots / next. Hidden buttons (not dots) on the
-            last slide because the CTA above replaces them. */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/70 flex items-center justify-between gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={() => setSlide((s) => Math.max(s - 1, 0))}
-            disabled={isFirst}
-            className="text-slate-500 hover:text-slate-800 disabled:opacity-25 disabled:cursor-not-allowed text-sm font-medium px-2 py-1 rounded transition"
-            aria-label={tr.prevLabel}
-          >
-            ← {tr.prevLabel}
-          </button>
-
-          <div className="flex items-center gap-1.5">
-            {Array.from({ length: totalSlides }).map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setSlide(i)}
-                aria-label={tr.slideAria(i + 1, totalSlides)}
-                aria-current={slide === i ? "true" : undefined}
-                className={
-                  "h-2 rounded-full transition-all " +
-                  (slide === i
-                    ? "bg-emerald-600 w-6"
-                    : "bg-slate-300 hover:bg-slate-400 w-2")
-                }
-              />
-            ))}
-          </div>
-
-          {!isLast ? (
-            <button
-              type="button"
-              onClick={() => setSlide((s) => Math.min(s + 1, totalSlides - 1))}
-              className="text-emerald-700 hover:text-emerald-900 text-sm font-semibold px-3 py-1 rounded hover:bg-emerald-100 transition"
-              aria-label={tr.nextLabel}
-            >
-              {tr.nextLabel} →
-            </button>
-          ) : (
-            // Symmetry placeholder so the dot row stays perfectly
-            // centered when the CTA replaces the Next button.
-            <span className="w-[78px]" aria-hidden="true" />
-          )}
+        {/* Animated, tabbed WhatsApp demo — shared with the landing hero so
+            the two stay identical (Andrea: "deve essere uguale alla popup").
+            Replaces the old slide carousel. "Pruébalo ahora" closes the popup
+            and drops the visitor into the live playground behind it. */}
+        <div className="overflow-y-auto">
+          <DemowashShowcase lang={lang} onTryNow={onClose} />
         </div>
       </div>
     </div>

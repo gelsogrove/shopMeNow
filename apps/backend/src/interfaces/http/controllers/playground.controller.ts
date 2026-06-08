@@ -11,6 +11,7 @@ import { messageAttachmentRepository } from "../../../repositories/message-attac
 import { storageService } from "../../../services/storage.service"
 import { sniffMime, validateAttachment } from "../../../services/chat-attachment.validation"
 import { transcribeAudio } from "../../../services/audio-transcription.service"
+import { generateSpeech } from "../../../services/tts-elevenlabs.service"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Usecases markdown translation cache
@@ -1093,8 +1094,9 @@ export class PlaygroundController {
         },
         orderBy: { createdAt: "desc" },
       })
+      let assistantMsg = recentBotMsg
       if (!recentBotMsg || recentBotMsg.content !== botResponse) {
-        await prisma.conversationMessage.create({
+        assistantMsg = await prisma.conversationMessage.create({
           data: {
             workspaceId,
             customerId: customer.id,
@@ -1103,6 +1105,42 @@ export class PlaygroundController {
             content: botResponse,
           },
         })
+      }
+
+      // 🎤 Voice in → voice out (WhatsApp behaviour): if the customer sent a
+      //    voice note, synthesize the bot reply with TTS and attach it to the
+      //    assistant message so the bubble shows a player. Fail-safe: a TTS
+      //    failure leaves the text reply intact.
+      if (
+        inboundAudio &&
+        assistantMsg &&
+        botResponse &&
+        !botResponse.startsWith("[Playground debug]")
+      ) {
+        try {
+          const tts = await generateSpeech(
+            botResponse,
+            workspaceId,
+            customer.language || overrideLanguage || undefined
+          )
+          if (tts?.audioUrl) {
+            await messageAttachmentRepository.create({
+              conversationMessageId: assistantMsg.id,
+              workspaceId,
+              kind: "AUDIO",
+              url: tts.audioUrl,
+              storageKey: tts.storageKey,
+              mimeType: "audio/mpeg",
+              filename: "reply.mp3",
+              sizeBytes: tts.sizeBytes,
+            })
+          }
+        } catch (ttsErr: any) {
+          logger.error("[Playground] TTS reply failed", {
+            sessionId: session.id,
+            error: ttsErr?.message,
+          })
+        }
       }
 
       // Bump session.updatedAt so list ordering reflects activity
