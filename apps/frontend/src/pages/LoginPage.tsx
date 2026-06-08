@@ -1,4 +1,5 @@
 import { OnboardingWizardModal } from "@/components/OnboardingWizardModal"
+import { DemowashShowcase } from "@/components/DemowashShowcase"
 import { SiteFooter } from "@/components/layout/SiteFooter"
 import { NewsUpdates } from "@/components/landing/NewsUpdates"
 import { HomeFAQ } from "@/components/landing/HomeFAQ"
@@ -1274,95 +1275,19 @@ export function LoginPage() {
           </p>
         </div>
 
-        {/* Mobile hero image — shown only on mobile/tablet, desktop has the carousel */}
-        <div className={`${showLoginCard ? 'hidden' : 'block lg:hidden'} mb-8 px-2`}>
-          <div className="relative mx-auto max-w-md">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-3xl rotate-1 scale-105 opacity-80" />
-            <img
-              src={heroSlides[0].src}
-              alt={heroSlides[0].alt}
-              className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/50"
-            />
+        {/* Mobile hero — animated showcase (replaces the static image) */}
+        <div className={`${showLoginCard ? 'hidden' : 'block lg:hidden'} mb-8 px-1`}>
+          <div className="rounded-3xl overflow-hidden shadow-2xl border border-green-100 bg-white">
+            <DemowashShowcase variant="generic" lang={language} />
           </div>
         </div>
 
         <div className={showLoginCard ? "flex justify-center" : "flex flex-col lg:flex-row gap-10 items-center lg:items-stretch"}>
-          <div className={showLoginCard ? "hidden" : `hidden lg:flex items-center w-full lg:flex-1 ${loginCardUsable ? "justify-center lg:justify-start" : "justify-center"}`}>
-            <div className={`relative w-full ${loginCardUsable ? "max-w-3xl lg:mr-2" : "max-w-4xl mx-auto"}`}>
-              <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-2 scale-105" />
-            <div className="relative rounded-[32px] shadow-2xl bg-transparent overflow-visible">
-                <div className="relative rounded-[28px] overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50">
-                  <div 
-                    className="relative w-full"
-                    onTouchStart={onTouchStartHero}
-                    onTouchMove={onTouchMoveHero}
-                    onTouchEnd={onTouchEndHero}
-                    style={{ touchAction: "pan-x" }}
-                  >
-                    {isMobileView
-                      ? [-1, 0, 1].map((offset) => {
-                          const slideIndex =
-                            (currentSlide + offset + heroSlides.length) %
-                            heroSlides.length
-                          const slide = heroSlides[slideIndex]
-                          const isCenter = offset === 0
-                          return (
-                            <div
-                              key={`${slide.src}-${offset}`}
-                              className={`flex items-center justify-center ${
-                                offset === 0 ? "relative" : "absolute inset-0"
-                              }`}
-                              style={{
-                                transform: `translateX(${offset * 85}%) scale(${
-                                  isCenter ? 1 : 0.9
-                                })`,
-                                opacity: isCenter ? 1 : 0.55,
-                                zIndex: isCenter ? 2 : 1,
-                                transition: "transform 0.6s ease, opacity 0.6s ease",
-                              }}
-                            >
-                              <div className="w-full overflow-hidden rounded-[22px] aspect-[3/2]">
-                                <img
-                                  src={slide.src}
-                                  alt={slide.alt}
-                                  className="h-full w-full object-cover"
-                                />
-                              </div>
-                            </div>
-                          )
-                        })
-                      : heroSlides.map((slide, index) => (
-                          <div
-                            key={slide.src}
-                            className={`flex items-center justify-center transition-opacity duration-700 ease-in-out ${
-                              index === currentSlide ? "relative" : "absolute inset-0"
-                            }`}
-                            style={{
-                              opacity: index === currentSlide ? 1 : 0,
-                              zIndex: index === currentSlide ? 2 : 1,
-                            }}
-                          >
-                            <div className="w-full overflow-hidden rounded-[22px] aspect-[3/2]">
-                              <img
-                                src={slide.src}
-                                alt={slide.alt}
-                                className="h-full w-full object-cover"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                  </div>
-                </div>
-              </div>
-              <div className="flex justify-center gap-2 mt-5" aria-hidden="true">
-                {heroSlides.map((_, index) => (
-                  <span
-                    key={`slide-dot-${index}`}
-                    className={`h-2.5 rounded-full transition-all duration-300 ${
-                      index === currentSlide ? "w-8 bg-green-600" : "w-2.5 bg-slate-300"
-                    }`}
-                  />
-                ))}
+          <div className={showLoginCard ? "hidden" : "hidden lg:flex items-stretch w-full lg:flex-1"}>
+            <div className="relative w-full">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-1 scale-[1.03]" />
+              <div className="relative rounded-[28px] overflow-hidden shadow-2xl bg-white border border-green-100">
+                <DemowashShowcase variant="generic" lang={language} />
               </div>
             </div>
           </div>

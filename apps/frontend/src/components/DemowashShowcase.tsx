@@ -233,20 +233,193 @@ function buildLaundryScenes(lang: Lang): Scene[] {
   ]
 }
 
+// Generic (brand-agnostic "eChatbot") scenarios for the homepage hero.
+function buildGenericScenes(lang: Lang): Scene[] {
+  const L = (es: string, it: string, en: string, pt: string) =>
+    ({ es, it, en, pt }[lang] ?? es)
+
+  return [
+    {
+      id: "welcome",
+      label: "👋 " + L("Bienvenida", "Benvenuto", "Welcome", "Boas-vindas"),
+      caps: [
+        ["👋", L("Saludo automático", "Saluto automatico", "Auto greeting", "Saudação automática"), L("Recibe a cada cliente.", "Accoglie ogni cliente.", "Greets every customer.", "Recebe cada cliente.")],
+        ["🎬", L("Vídeo de presentación", "Video di presentazione", "Intro video", "Vídeo de apresentação"), L("Directo en el chat.", "Direttamente in chat.", "Right in the chat.", "Direto no chat.")],
+        ["🚀", L("Guía a la acción", "Guida all'azione", "Drives to action", "Leva à ação"), L("Lleva al siguiente paso.", "Porta al passo dopo.", "To the next step.", "Para o passo seguinte.")],
+      ],
+      s: [
+        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Hola, ¿qué ofrecéis?", "Ciao, cosa offrite?", "Hi, what do you offer?", "Olá, o que oferecem?") + time("12:53") },
+        { w: "in", cp: 0, ty: 1000, h: L("¡Hola! 👋 Soy el asistente de eChatbot 😊", "Ciao! 👋 Sono l'assistente di eChatbot 😊", "Hi! 👋 I'm the eChatbot assistant 😊", "Olá! 👋 Sou o assistente da eChatbot 😊") + time("12:53") },
+        { w: "in", cp: 1, ty: 800, h: L("Te dejo una breve presentación 👇", "Ti lascio una breve presentazione 👇", "Here's a quick intro 👇", "Deixo uma breve apresentação 👇") + time("12:53") },
+        { w: "in", cp: 1, ty: 1100, h: ytCard("eChatbot · WhatsApp AI") + time("12:54") },
+        { w: "in", cp: 2, ty: 1100, h: L("¿Cómo puedo ayudarte hoy? 🚀", "Come posso aiutarti oggi? 🚀", "How can I help you today? 🚀", "Como posso ajudar hoje? 🚀") + time("12:54") },
+      ],
+    },
+    {
+      id: "order",
+      label: "🛒 " + L("Pedidos", "Ordini", "Orders", "Pedidos"),
+      caps: [
+        ["🛒", L("Estado del pedido", "Stato dell'ordine", "Order status", "Estado do pedido"), L("Solo hay que preguntar.", "Basta chiedere.", "Just ask.", "Basta perguntar.")],
+        ["🔎", L("Lo encuentra", "Lo trova", "Finds it", "Encontra-o"), L("En el sistema.", "Nel gestionale.", "In the system.", "No sistema.")],
+        ["🚚", L("Seguimiento", "Tracciamento", "Tracking", "Rastreio"), L("Envío y entrega.", "Spedizione e consegna.", "Shipping & delivery.", "Envio e entrega.")],
+        ["✅", L("Sin esperas", "Senza attese", "No waiting", "Sem esperas"), L("Respuesta al instante.", "Risposta all'istante.", "Instant reply.", "Resposta imediata.")],
+      ],
+      s: [
+        { w: "out", cp: 0, pre: 300, ty: 900, h: L("¿Dónde está mi pedido?", "Dov'è il mio ordine?", "Where's my order?", "Onde está o meu pedido?") + time("10:11") },
+        { w: "in", cp: 1, ty: 800, h: L("¡Claro! Un momento… 🔎", "Certo! Un attimo… 🔎", "Sure! One sec… 🔎", "Claro! Um momento… 🔎") + time("10:11") },
+        { w: "psys", cp: 1, hold: 1300, h: L("Buscando pedido…", "Cerco l'ordine…", "Looking up the order…", "A procurar o pedido…") },
+        { w: "in", cp: 2, ty: 1200, h: L("📦 Pedido #1042: enviado ayer. Llega mañana 🚚", "📦 Ordine #1042: spedito ieri. Arriva domani 🚚", "📦 Order #1042: shipped yesterday. Arrives tomorrow 🚚", "📦 Pedido #1042: enviado ontem. Chega amanhã 🚚") + time("10:11") },
+        { w: "out", cp: 3, ty: 700, h: L("¡Genial, gracias!", "Ottimo, grazie!", "Great, thanks!", "Ótimo, obrigado!") + time("10:12") },
+      ],
+    },
+    {
+      id: "cita",
+      label: "🗓️ " + L("Pedir cita", "Prenota", "Book a call", "Agendar"),
+      caps: [
+        ["🗓️", L("Agenda citas solo", "Prenota da solo", "Books on its own", "Agenda sozinho"), L("Sin operador.", "Senza operatore.", "No operator.", "Sem operador.")],
+        ["📝", L("Recoge los datos", "Raccoglie i dati", "Collects the data", "Recolhe os dados"), L("Nombre y email.", "Nome ed email.", "Name & email.", "Nome e email.")],
+        ["📅", L("Conectado al calendario", "Collegato al calendario", "Calendar-connected", "Ligado ao calendário"), L("Crea el evento.", "Crea l'evento.", "Creates the event.", "Cria o evento.")],
+        ["🔗", L("Envía Zoom + email", "Invia Zoom + email", "Sends Zoom + email", "Envia Zoom + email"), L("Confirmación auto.", "Conferma automatica.", "Auto confirmation.", "Confirmação auto.")],
+      ],
+      s: [
+        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Quiero reservar una cita", "Voglio prenotare un appuntamento", "I'd like to book a call", "Quero marcar uma reunião") + time("12:53") },
+        { w: "in", cp: 1, ty: 900, h: L("¡Claro! ¿Tu nombre?", "Certo! Il tuo nome?", "Sure! Your name?", "Claro! O teu nome?") + time("12:53") },
+        { w: "out", cp: 1, ty: 700, h: "Marco Rossi" + time("12:54") },
+        { w: "in", cp: 1, ty: 700, h: L("¿Tu email?", "La tua email?", "Your email?", "O teu email?") + time("12:54") },
+        { w: "out", cp: 1, ty: 800, h: "marco.rossi@email.com" + time("12:54") },
+        { w: "in", cp: 2, ty: 1200, h: L("Horarios: 1) Lun 10:00 · 2) Mar 11:00 (1/2)", "Orari: 1) Lun 10:00 · 2) Mar 11:00 (1/2)", "Slots: 1) Mon 10:00 · 2) Tue 11:00 (1/2)", "Horários: 1) Seg 10:00 · 2) Ter 11:00 (1/2)") + time("12:54") },
+        { w: "out", cp: 2, ty: 500, h: "2" + time("12:55") },
+        { w: "psys", cp: 2, hold: 1500, h: L("Creando la cita…", "Creo l'appuntamento…", "Creating the appointment…", "A criar a marcação…") },
+        { w: "in", cp: 3, ty: 1300, h: L("✅ ¡Cita confirmada! Mar 11:00. Zoom + calendario por email 👋", "✅ Appuntamento confermato! Mar 11:00. Zoom + calendario via email 👋", "✅ Booked! Tue 11:00. Zoom + calendar by email 👋", "✅ Marcação confirmada! Ter 11:00. Zoom + calendário por email 👋") + time("12:55") },
+      ],
+    },
+    {
+      id: "invoice",
+      label: "🧾 " + L("Factura", "Fattura", "Invoice", "Fatura"),
+      caps: [
+        ["💬", L("Entiende la petición", "Capisce la richiesta", "Understands the ask", "Entende o pedido"), L("Solo hay que pedirla.", "Basta chiederla.", "Just ask for it.", "Basta pedir.")],
+        ["🔎", L("Encuentra el pedido", "Trova l'ordine", "Finds the order", "Encontra o pedido"), L("En el sistema.", "Nel gestionale.", "In the system.", "No sistema.")],
+        ["📄", L("Envía el PDF", "Invia il PDF", "Sends the PDF", "Envia o PDF"), L("Por WhatsApp.", "Su WhatsApp.", "Over WhatsApp.", "Por WhatsApp.")],
+        ["✅", L("Todo en el chat", "Tutto in chat", "All in chat", "Tudo no chat"), L("Sin emails.", "Senza email.", "No emails.", "Sem emails.")],
+      ],
+      s: [
+        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Necesito la factura de mi compra", "Mi serve la fattura del mio acquisto", "I need the invoice for my purchase", "Preciso da fatura da minha compra") + time("10:11") },
+        { w: "in", cp: 1, ty: 800, h: L("¡Claro! La busco…", "Certo! La cerco…", "Sure! Let me find it…", "Claro! Vou procurar…") + time("10:11") },
+        { w: "psys", cp: 1, hold: 1300, h: L("Buscando pedido…", "Cerco l'ordine…", "Looking up the order…", "A procurar o pedido…") },
+        { w: "in", cp: 1, ty: 1100, h: L("📦 Pedido #1042 — 49,90€", "📦 Ordine #1042 — 49,90€", "📦 Order #1042 — €49.90", "📦 Pedido #1042 — 49,90€") + time("10:11") },
+        { w: "in", cp: 2, ty: 1000, h: fileCard("factura-1042.pdf", "86 KB") + time("10:12") },
+        { w: "in", cp: 3, ty: 800, h: L("Aquí tienes ✅", "Eccola ✅", "Here it is ✅", "Aqui está ✅") + time("10:12") },
+        { w: "out", cp: 3, ty: 600, h: L("¡Gracias!", "Grazie!", "Thanks!", "Obrigado!") + time("10:12") },
+      ],
+    },
+    {
+      id: "pricing",
+      label: "💲 " + L("Precios", "Prezzi", "Pricing", "Preços"),
+      caps: [
+        ["💲", L("Conoce los planes", "Conosce i piani", "Knows the plans", "Conhece os planos"), L("Precios al día.", "Prezzi aggiornati.", "Up-to-date prices.", "Preços atualizados.")],
+        ["📋", L("Detalle claro", "Dettaglio chiaro", "Clear details", "Detalhe claro"), L("Qué incluye cada plan.", "Cosa include ogni piano.", "What each plan includes.", "O que cada plano inclui.")],
+        ["🌍", L("Multilingüe", "Multilingue", "Multilingual", "Multilíngue"), L("En su idioma.", "Nella sua lingua.", "In their language.", "No seu idioma.")],
+        ["📅", L("Listo para demo", "Pronto per la demo", "Ready to demo", "Pronto para demo"), L("Cierra en el chat.", "Chiude in chat.", "Closes in chat.", "Fecha no chat.")],
+      ],
+      s: [
+        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("¿Cuánto cuesta el plan Pro?", "Quanto costa il piano Pro?", "How much is the Pro plan?", "Quanto custa o plano Pro?") + time("12:30") },
+        { w: "in", cp: 1, ty: 1300, h: L("💲 Plan Pro: <b>49€/mes</b> — chats ilimitados, multilingüe y soporte.", "💲 Piano Pro: <b>49€/mese</b> — chat illimitate, multilingua e supporto.", "💲 Pro plan: <b>€49/mo</b> — unlimited chats, multilingual & support.", "💲 Plano Pro: <b>49€/mês</b> — chats ilimitados, multilíngue e suporte.") + time("12:30") },
+        { w: "in", cp: 3, ty: 900, h: L("¿Quieres una demo? 📅", "Vuoi una demo? 📅", "Want a demo? 📅", "Queres uma demo? 📅") + time("12:30") },
+        { w: "out", cp: 3, ty: 600, h: L("Sí", "Sì", "Yes", "Sim") + time("12:31") },
+        { w: "in", cp: 3, ty: 900, h: L("¡Genial! Te la agendo 👍", "Ottimo! Te la fisso 👍", "Great! I'll book it 👍", "Ótimo! Vou agendar 👍") + time("12:31") },
+      ],
+    },
+    {
+      id: "push",
+      label: "📣 " + L("Promo Push", "Promo Push", "Push promo", "Promo Push"),
+      caps: [
+        ["📣", L("Campañas push", "Campagne push", "Push campaigns", "Campanhas push"), L("Tú escribes primero.", "Scrivi tu per primo.", "You message first.", "Escreves tu primeiro.")],
+        ["🎯", L("Segmenta clientes", "Segmenta i clienti", "Segments customers", "Segmenta clientes"), L("Al público adecuado.", "Al pubblico giusto.", "The right audience.", "Ao público certo.")],
+        ["🎟️", L("Cupones y ofertas", "Coupon e offerte", "Coupons & offers", "Cupões e ofertas"), L("Directo en WhatsApp.", "Diretto su WhatsApp.", "Right in WhatsApp.", "Direto no WhatsApp.")],
+        ["📈", L("Reactiva ventas", "Riattiva le vendite", "Reactivates sales", "Reativa vendas"), L("Vuelven los dormidos.", "Tornano i dormienti.", "Win back dormant clients.", "Recupera clientes parados.")],
+      ],
+      s: [
+        { w: "in", cp: 0, pre: 300, ty: 1300, h: L("🎉 ¡Hola! Oferta de lanzamiento: -30% en el plan anual este mes 🚀", "🎉 Ciao! Offerta lancio: -30% sul piano annuale questo mese 🚀", "🎉 Hi! Launch offer: -30% on the annual plan this month 🚀", "🎉 Olá! Oferta de lançamento: -30% no plano anual este mês 🚀") + time("17:00") },
+        { w: "out", cp: 1, ty: 800, h: L("¿Cómo lo aprovecho?", "Come ne approfitto?", "How do I get it?", "Como aproveito?") + time("17:01") },
+        { w: "in", cp: 2, ty: 1300, h: L("Usa el código 🎟️ <b>LAUNCH30</b> al pagar. ¡Hasta fin de mes!", "Usa il codice 🎟️ <b>LAUNCH30</b> al pagamento. Fino a fine mese!", "Use code 🎟️ <b>LAUNCH30</b> at checkout. Until month end!", "Usa o código 🎟️ <b>LAUNCH30</b> no pagamento. Até ao fim do mês!") + time("17:01") },
+        { w: "out", cp: 3, ty: 600, h: L("¡Gracias! 🙌", "Grazie! 🙌", "Thanks! 🙌", "Obrigado! 🙌") + time("17:01") },
+      ],
+    },
+    {
+      id: "audio",
+      label: "🎤 Audio",
+      caps: [
+        ["🎤", L("El cliente habla", "Il cliente parla", "The customer speaks", "O cliente fala"), L("No escribe.", "Non scrive.", "No typing.", "Não escreve.")],
+        ["🎧", L("Entiende el audio", "Capisce l'audio", "Understands the audio", "Entende o áudio"), L("Escucha e interpreta.", "Ascolta e interpreta.", "Listens & interprets.", "Ouve e interpreta.")],
+        ["🔊", L("Responde con audio", "Risponde con audio", "Replies with audio", "Responde com áudio"), L("El bot manda voz.", "Il bot manda voce.", "The bot sends voice.", "O bot envia voz.")],
+        ["⚡", L("Cómodo y rápido", "Comodo e veloce", "Quick & easy", "Cómodo e rápido"), L("Como una llamada.", "Come una telefonata.", "Like a call.", "Como uma chamada.")],
+      ],
+      s: [
+        { w: "out", cp: 0, pre: 300, ty: 900, rec: true, h: voice("0:06") + time("16:40") },
+        { w: "in", cp: 1, ty: 1100, h: L("Lo he escuchado 🎧 Te confirmo: tu pedido llega mañana.", "L'ho ascoltato 🎧 Confermo: il tuo ordine arriva domani.", "Got your audio 🎧 Confirmed: your order arrives tomorrow.", "Ouvi 🎧 Confirmo: o teu pedido chega amanhã.") + time("16:40") },
+        { w: "in", cp: 2, ty: 1000, rec: true, h: voice("0:08") + time("16:41") },
+        { w: "out", cp: 3, ty: 700, h: L("¡Perfecto, gracias!", "Perfetto, grazie!", "Perfect, thanks!", "Perfeito, obrigado!") + time("16:41") },
+      ],
+    },
+    {
+      id: "human",
+      label: "🙋 " + L("Soporte humano", "Supporto umano", "Human support", "Suporte humano"),
+      caps: [
+        ["🧠", L("Detecta el caso", "Rileva il caso", "Spots the case", "Deteta o caso"), L("Sabe cuándo no basta.", "Sa quando non basta.", "Knows when it's not enough.", "Sabe quando não chega.")],
+        ["🙋", L("Avisa al agente", "Avvisa l'agente", "Alerts an agent", "Avisa o agente"), L("Al instante.", "All'istante.", "Instantly.", "Ao instante.")],
+        ["👩‍💼", L("Toma el control", "Prende il controllo", "Takes over", "Assume o controlo"), L("Pausa el bot.", "Mette in pausa il bot.", "Pauses the bot.", "Pausa o bot.")],
+        ["🤝", L("Continuidad total", "Continuità totale", "Seamless handover", "Continuidade total"), L("El cliente ni lo nota.", "Il cliente non se ne accorge.", "The customer never notices.", "O cliente nem nota.")],
+      ],
+      s: [
+        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Tengo un problema con mi pedido 😡", "Ho un problema con il mio ordine 😡", "I have a problem with my order 😡", "Tenho um problema com o meu pedido 😡") + time("19:05") },
+        { w: "in", cp: 0, ty: 1000, h: L("Lo siento 🙏 Te paso a un agente.", "Mi dispiace 🙏 Ti passo a un agente.", "So sorry 🙏 Passing you to an agent.", "Lamento 🙏 Passo-te a um agente.") + time("19:05") },
+        { w: "psysblue", cp: 1, hold: 1500, h: L("Un agente se está conectando…", "Un agente si sta collegando…", "An agent is connecting…", "Um agente está a ligar-se…") },
+        { w: "op", cp: 2, ty: 1100, name: L("Laura · Soporte", "Laura · Supporto", "Laura · Support", "Laura · Suporte"), h: L("Soy Laura, del equipo 😊", "Sono Laura, del team 😊", "I'm Laura, from the team 😊", "Sou a Laura, da equipa 😊") + time("19:06") },
+        { w: "op", cp: 3, ty: 1100, h: L("Lo soluciono ahora mismo + un cupón por las molestias.", "Lo risolvo subito + un buono per il disturbo.", "I'll fix it now + a coupon for the trouble.", "Resolvo já + um cupão pelo incómodo.") + time("19:06") },
+        { w: "out", cp: 3, ty: 600, h: L("¡Gracias!", "Grazie!", "Thanks!", "Obrigado!") + time("19:07") },
+      ],
+    },
+    {
+      id: "arabic",
+      label: "🌍 " + L("Multilingüe", "Multilingue", "Multilingual", "Multilíngue"),
+      caps: [
+        ["🌍", L("Detecta el idioma", "Rileva la lingua", "Detects the language", "Deteta o idioma"), L("Sin configurar nada.", "Senza configurare nulla.", "Zero setup.", "Sem configurar nada.")],
+        ["🗣️", L("Cualquier idioma", "Qualsiasi lingua", "Any language", "Qualquer idioma"), L("Entiende y responde.", "Capisce e risponde.", "Understands & replies.", "Entende e responde.")],
+        ["💬", L("Respuesta nativa", "Risposta nativa", "Native reply", "Resposta nativa"), L("Natural y local.", "Naturale e locale.", "Natural & local.", "Natural e local.")],
+        ["🤝", L("Sin barreras", "Senza barriere", "No barriers", "Sem barreiras"), L("Clientes de todo el mundo.", "Clienti da tutto il mondo.", "Customers worldwide.", "Clientes do mundo todo.")],
+      ],
+      s: [
+        { w: "out", cp: 0, pre: 300, ty: 1000, h: arabic("مرحبا، هل يمكنني الطلب أونلاين؟") + time("11:20") },
+        { w: "in", cp: 1, ty: 1200, h: arabic("مرحبا! 👋 نعم، يمكنك الطلب مباشرة من هنا 🛒") + time("11:20") },
+        { w: "out", cp: 1, ty: 800, h: arabic("كم تكلفة الشحن؟") + time("11:21") },
+        { w: "in", cp: 2, ty: 1000, h: arabic("🚚 الشحن مجاني للطلبات فوق <b>50€</b>") + time("11:21") },
+        { w: "out", cp: 3, ty: 600, h: arabic("شكرا! 🙏") + time("11:21") },
+        { w: "in", cp: 3, ty: 1000, h: arabic("على الرحب والسعة! 😊") + time("11:21") },
+      ],
+    },
+  ]
+}
+
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
 type Bubble = { w: Step["w"]; h: string; key: number; opName?: string }
 
 export function DemowashShowcase({
   lang = "es",
+  variant = "laundry",
   onTryNow,
   tryLabel,
 }: {
   lang?: string
+  variant?: "laundry" | "generic"
   onTryNow?: () => void
   tryLabel?: string
 }) {
   const L = norm(lang)
-  const scenes = useMemo(() => buildScenes(L), [L])
+  const brand = variant === "generic" ? "eChatbot" : "Demowash"
+  const scenes = useMemo(
+    () => (variant === "generic" ? buildGenericScenes(L) : buildLaundryScenes(L)),
+    [L, variant]
+  )
   const [active, setActive] = useState(0)
   const [bubbles, setBubbles] = useState<Bubble[]>([])
   const [typing, setTyping] = useState(false)
@@ -338,7 +511,7 @@ export function DemowashShowcase({
             <div className={"dws-ph" + (op ? " op" : "")}>
               <div className="dws-av">{op ? "👩‍💼" : "🧺"}</div>
               <div>
-                <div className="dws-nm">{op ?? "Demowash"}</div>
+                <div className="dws-nm">{op ?? brand}</div>
                 <div className="dws-st">{status}</div>
               </div>
             </div>
@@ -410,16 +583,16 @@ export function DemowashShowcase({
 
 // Scoped styles (dws- prefix) so the WhatsApp look is self-contained.
 const CSS = `
-.dws{--g600:#16a34a;--g700:#15803d;--g50:#f0fdf4;--g100:#dcfce7;--line:#e5e7eb;--mut:#6b7280;--wa-out:#d9fdd3;--wa-bg:#efeae2;font-family:-apple-system,"Segoe UI",Helvetica,sans-serif;color:#0b1220}
+.dws{--g600:#16a34a;--g700:#15803d;--g50:#f0fdf4;--g100:#dcfce7;--line:#e5e7eb;--mut:#6b7280;--wa-out:#d9fdd3;--wa-bg:#efeae2;font-family:-apple-system,"Segoe UI",Helvetica,sans-serif;color:#0b1220;container-type:inline-size}
 .dws-head{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px 16px 8px;background:linear-gradient(180deg,#ecfdf3,var(--g50))}
 .dws-title{text-align:center;font-size:23px;font-weight:800;letter-spacing:-.01em;background:linear-gradient(90deg,var(--g700),var(--g600));-webkit-background-clip:text;background-clip:text;color:transparent;animation:dws-slidein .45s cubic-bezier(.22,1,.36,1)}
 @keyframes dws-slidein{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
 .dws-nav{width:42px;height:42px;border-radius:999px;border:1.5px solid var(--g100);background:#fff;color:var(--g700);font-size:24px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:.18s;flex:0 0 auto;box-shadow:0 4px 12px -6px rgba(22,163,74,.3)}
 .dws-nav:hover{background:var(--g600);color:#fff;border-color:var(--g600);transform:scale(1.08)}
 .dws-nav:active{transform:scale(.95)}
-.dws-body{display:grid;grid-template-columns:360px 1fr;gap:38px;padding:18px 34px 24px;background:linear-gradient(180deg,var(--g50),#fff);align-items:center;animation:dws-fadein .5s ease}
+.dws-body{display:grid;grid-template-columns:1fr;gap:22px;padding:18px 20px 24px;background:linear-gradient(180deg,var(--g50),#fff);align-items:center;justify-items:center;animation:dws-fadein .5s ease}
+@container (min-width:760px){.dws-body{grid-template-columns:360px 1fr;gap:38px;padding:18px 34px 24px;justify-items:stretch}}
 @keyframes dws-fadein{from{opacity:0}to{opacity:1}}
-@media(max-width:760px){.dws-body{grid-template-columns:1fr;gap:22px}}
 .dws-phone{width:340px;height:660px;background:#0b1220;border-radius:46px;padding:12px;box-shadow:0 30px 60px -22px rgba(8,15,30,.55);position:relative;margin:0 auto}
 .dws-notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:110px;height:21px;background:#0b1220;border-radius:0 0 16px 16px;z-index:6}
 .dws-screen{width:100%;height:100%;border-radius:32px;overflow:hidden;display:flex;flex-direction:column;background:var(--wa-bg);background-image:radial-gradient(rgba(0,0,0,.04) 1px,transparent 1px);background-size:16px 16px}
