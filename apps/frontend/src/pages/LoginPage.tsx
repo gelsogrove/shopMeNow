@@ -41,6 +41,10 @@ import {
   Crown,
   CreditCard,
   ChevronDown,
+  ShieldCheck,
+  Clock,
+  Zap,
+  ArrowRight,
 } from "lucide-react"
 import { useEffect, useState, useRef, type FormEvent } from "react"
 import { motion } from "framer-motion"
