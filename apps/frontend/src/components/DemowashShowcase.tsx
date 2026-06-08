@@ -42,7 +42,7 @@ type Step = {
   cp?: number
 }
 type Cap = [string, string, string]
-type Scene = { id: string; label: string; caps: Cap[]; s: Step[] }
+type Scene = { id: string; label: string; sub?: string; caps: Cap[]; s: Step[] }
 
 // Per-language UI labels.
 const TRY: Record<Lang, string> = {
