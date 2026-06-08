@@ -137,11 +137,11 @@ function buildLaundryScenes(lang: Lang): Scene[] {
         ["🤝", L("Continuidad total", "Continuità totale", "Seamless handover", "Continuidade total"), L("El cliente ni lo nota.", "Il cliente non se ne accorge.", "The customer never notices.", "O cliente nem nota.")],
       ],
       s: [
-        { w: "out", cp: 0, pre: 300, ty: 1100, h: L("He pagado pero la lavadora no ha arrancado y he perdido el dinero 😡", "Ho pagato ma la lavatrice non è partita e ho perso i soldi 😡", "I paid but the washer didn't start and I lost my money 😡", "Paguei mas a máquina não arrancou e perdi o dinheiro 😡") + time("19:05") },
-        { w: "in", cp: 0, ty: 1000, h: L("Lo siento mucho 🙏 Paso tu caso a un operador ahora mismo.", "Mi dispiace molto 🙏 Passo subito il tuo caso a un operatore.", "I'm so sorry 🙏 I'll pass your case to an operator right away.", "Lamento muito 🙏 Passo já o teu caso a um operador.") + time("19:05") },
+        { w: "out", cp: 0, pre: 300, ty: 1100, h: L("Me habéis cobrado dos veces en la tarjeta 😟", "Mi avete addebitato due volte sulla carta 😟", "I've been charged twice on my card 😟", "Cobraram-me duas vezes no cartão 😟") + time("19:05") },
+        { w: "in", cp: 0, ty: 1000, h: L("¡Lo siento! Paso tu caso a un operador para revisar el doble cobro.", "Mi dispiace! Passo il tuo caso a un operatore per verificare il doppio addebito.", "So sorry! I'll pass your case to an operator to check the double charge.", "Lamento! Passo o teu caso a um operador para verificar a cobrança dupla.") + time("19:05") },
         { w: "psysblue", cp: 1, hold: 1500, h: L("Un operador se está conectando…", "Un operatore si sta collegando…", "An operator is connecting…", "Um operador está a ligar-se…") },
         { w: "op", cp: 2, ty: 1100, name: L("Giulia · Operadora", "Giulia · Operatrice", "Giulia · Operator", "Giulia · Operadora"), h: L("Soy Giulia, de Eixample 😊", "Sono Giulia, di Eixample 😊", "I'm Giulia, from Eixample 😊", "Sou a Giulia, de Eixample 😊") + time("19:06") },
-        { w: "op", cp: 3, ty: 1100, h: L("Te devuelvo el pago y te activo un lavado gratis en la máquina 4. ¿Te parece bien?", "Ti rimborso il pagamento e ti attivo un lavaggio gratis sulla macchina 4. Va bene?", "I'll refund you and start a free wash on machine 4. Sound good?", "Devolvo-te o pagamento e ativo uma lavagem grátis na máquina 4. Combinado?") + time("19:06") },
+        { w: "op", cp: 3, ty: 1300, h: L("Lo he verificado: te devuelvo el cobro duplicado, lo verás en 3-5 días. ¿Todo bien?", "Verificato: ti rimborso l'addebito doppio, lo vedrai in 3-5 giorni. Tutto ok?", "Checked it: I'll refund the duplicate charge, you'll see it in 3-5 days. All good?", "Verifiquei: devolvo a cobrança duplicada, verás em 3-5 dias. Tudo bem?") + time("19:06") },
         { w: "out", cp: 3, ty: 600, h: L("¡Gracias!", "Grazie!", "Thanks!", "Obrigado!") + time("19:07") },
       ],
     },
@@ -171,13 +171,14 @@ function buildLaundryScenes(lang: Lang): Scene[] {
         ["🏪", L("Datos de la sede", "Dati della sede", "Store details", "Dados da loja"), L("Dirección y horario reales.", "Indirizzo e orari reali.", "Real address & hours.", "Morada e horário reais.")],
         ["💲", L("Lista de precios", "Listino prezzi", "Price list", "Lista de preços"), L("Tarifa exacta del local.", "Tariffa esatta del locale.", "Exact store rates.", "Tarifa exata da loja.")],
         ["🕐", L("Horario al día", "Orari aggiornati", "Up-to-date hours", "Horário atualizado"), L("Siempre actualizado.", "Sempre aggiornato.", "Always current.", "Sempre atual.")],
-        ["🌍", L("Multilingüe", "Multilingue", "Multilingual", "Multilíngue"), L("En su idioma.", "Nella sua lingua.", "In their language.", "No seu idioma.")],
+        ["📣", L("Promociones", "Promozioni", "Promotions", "Promoções"), L("Ofertas de la sede.", "Offerte della sede.", "Store offers.", "Ofertas da loja.")],
       ],
       s: [
         { w: "out", cp: 0, pre: 300, ty: 1100, h: L("¿Me dices el horario y los precios de Demowash Eixample?", "Mi dici orari e prezzi della sede Demowash Eixample?", "Can you tell me the hours and prices for Demowash Eixample?", "Podes dizer-me o horário e os preços da Demowash Eixample?") + time("12:30") },
         { w: "in", cp: 0, ty: 1000, h: "🏪 <b>Demowash Eixample</b> — C/ Aragó 211" + time("12:30") },
         { w: "in", cp: 2, ty: 1000, h: L("🕐 Lun–Dom 8:00–22:00", "🕐 Lun–Dom 8:00–22:00", "🕐 Mon–Sun 8:00–22:00", "🕐 Seg–Dom 8:00–22:00") + time("12:30") },
         { w: "in", cp: 1, ty: 1300, h: L("💲 Lavado 8kg <b>6€</b> · Secado <b>4€</b> · Edredón <b>15€</b> · Detergente <b>1€</b>", "💲 Lavaggio 8kg <b>6€</b> · Asciugatura <b>4€</b> · Piumone <b>15€</b> · Detersivo <b>1€</b>", "💲 Wash 8kg <b>€6</b> · Dry <b>€4</b> · Duvet <b>€15</b> · Detergent <b>€1</b>", "💲 Lavagem 8kg <b>6€</b> · Secagem <b>4€</b> · Edredão <b>15€</b> · Detergente <b>1€</b>") + time("12:30") },
+        { w: "in", cp: 3, ty: 1200, h: L("📣 Esta semana: <b>2x1 en secadora</b> los martes 🎉", "📣 Questa settimana: <b>2x1 sull'asciugatrice</b> il martedì 🎉", "📣 This week: <b>2-for-1 on dryers</b> on Tuesdays 🎉", "📣 Esta semana: <b>2x1 na secadora</b> às terças 🎉") + time("12:30") },
         { w: "out", cp: 3, ty: 700, h: L("¡Perfecto, gracias!", "Perfetto, grazie!", "Perfect, thanks!", "Perfeito, obrigado!") + time("12:31") },
       ],
     },
@@ -588,7 +589,7 @@ export function DemowashShowcase({
 // Scoped styles (dws- prefix) so the WhatsApp look is self-contained.
 const CSS = `
 .dws{--g600:#16a34a;--g700:#15803d;--g50:#f0fdf4;--g100:#dcfce7;--line:#e5e7eb;--mut:#6b7280;--wa-out:#d9fdd3;--wa-bg:#efeae2;font-family:-apple-system,"Segoe UI",Helvetica,sans-serif;color:#0b1220;container-type:inline-size}
-.dws-head{display:flex;align-items:center;justify-content:center;gap:12px;padding:13px 16px 12px;background:#fff;border-bottom:1px solid var(--g100)}
+.dws-head{display:flex;align-items:center;justify-content:center;gap:12px;padding:13px 16px 12px;background:transparent}
 .dws-title{text-align:center;font-size:19px;font-weight:800;letter-spacing:-.01em;min-width:170px;background:linear-gradient(90deg,var(--g700),var(--g600));-webkit-background-clip:text;background-clip:text;color:transparent;animation:dws-slidein .4s cubic-bezier(.22,1,.36,1)}
 @keyframes dws-slidein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .dws-stage{position:relative}
@@ -601,7 +602,7 @@ const CSS = `
 .dws-arrow:hover .dws-arrow-ic{transform:scale(1.12);background:var(--g700)}
 .dws-arrow:active .dws-arrow-ic{transform:scale(.96)}
 @container (max-width:520px){.dws-arrow{width:46px}.dws-arrow-ic{width:40px;height:40px;font-size:24px}}
-.dws-body{display:grid;grid-template-columns:1fr;gap:20px;padding:18px 58px 20px;background:#fff;align-items:center;justify-items:center;animation:dws-fadein .45s ease}
+.dws-body{display:grid;grid-template-columns:1fr;gap:20px;padding:18px 58px 20px;background:transparent;align-items:center;justify-items:center;animation:dws-fadein .45s ease}
 @container (min-width:760px){.dws-body{grid-template-columns:320px 1fr;gap:30px;padding:22px 76px;justify-items:stretch}}
 @keyframes dws-fadein{from{opacity:0}to{opacity:1}}
 .dws-phone{width:300px;height:560px;background:#0b1220;border-radius:42px;padding:11px;box-shadow:0 28px 56px -22px rgba(8,15,30,.55);position:relative;margin:0 auto}
@@ -655,7 +656,7 @@ const CSS = `
 .dws-cap h4{font-size:15.5px;margin:0 0 2px}.dws-cap p{font-size:13px;color:var(--mut);margin:0}
 .dws-try{align-self:flex-start;background:var(--g600);color:#fff;border:none;font-weight:700;font-size:15px;border-radius:999px;padding:13px 26px;cursor:pointer;box-shadow:0 12px 26px -12px rgba(22,163,74,.7)}
 .dws-try:hover{background:var(--g700)}
-.dws-dots{display:flex;justify-content:center;align-items:center;gap:9px;padding:18px 16px 22px;background:#fff;flex-wrap:wrap}
+.dws-dots{display:flex;justify-content:center;align-items:center;gap:9px;padding:18px 16px 22px;background:transparent;flex-wrap:wrap}
 .dws-dot{width:10px;height:10px;border-radius:999px;background:#cbd5e1;border:none;cursor:pointer;transition:.25s;padding:0}
 .dws-dot:hover{background:#9ca3af}
 .dws-dot.on{background:var(--g600);width:30px}

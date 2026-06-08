@@ -1276,19 +1276,14 @@ export function LoginPage() {
         </div>
 
         {/* Mobile hero — animated showcase (replaces the static image) */}
-        <div className={`${showLoginCard ? 'hidden' : 'block lg:hidden'} mb-8 px-1`}>
-          <div className="rounded-3xl overflow-hidden shadow-2xl border border-green-100 bg-white">
-            <DemowashShowcase lang={language} />
-          </div>
+        <div className={`${showLoginCard ? 'hidden' : 'block lg:hidden'} mb-6`}>
+          <DemowashShowcase lang={language} />
         </div>
 
         <div className={showLoginCard ? "flex justify-center" : "flex flex-col lg:flex-row gap-10 items-center lg:items-stretch"}>
           <div className={showLoginCard ? "hidden" : "hidden lg:flex items-stretch w-full lg:flex-1"}>
             <div className="relative w-full">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-1 scale-[1.03]" />
-              <div className="relative rounded-[28px] overflow-hidden shadow-2xl bg-white border border-green-100">
-                <DemowashShowcase lang={language} />
-              </div>
+              <DemowashShowcase lang={language} />
             </div>
           </div>
 
@@ -2161,6 +2156,9 @@ export function LoginPage() {
 
       {/* Human-in-the-loop Section — full-bleed dark spotlight */}
       <div className="relative overflow-hidden bg-slate-900 py-20 lg:py-28">
+        {/* Full-width glowing divider — breaks the page rhythm into the dark band */}
+        <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
+        <div className="absolute bottom-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-400/40 to-transparent" />
         {/* Ambient glow */}
         <div className="absolute -top-32 -left-32 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-32 -right-32 w-[400px] h-[400px] bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
