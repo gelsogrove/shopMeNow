@@ -241,6 +241,11 @@ app.use(
                 "https://cdn.jsdelivr.net", // Monaco Editor styles
               ],
               imgSrc: ["'self'", "data:", "https:", "blob:"],
+              // 🎤 Audio/video players (voice notes + bot TTS) are served from
+              // Cloudinary. Without an explicit media-src the browser falls back
+              // to default-src 'self' and BLOCKS the <audio> source, so the
+              // player renders but shows 0:00 and never plays. Mirror imgSrc.
+              mediaSrc: ["'self'", "data:", "https:", "blob:"],
               connectSrc: [
                 "'self'",
                 "https://api.openrouter.ai",
