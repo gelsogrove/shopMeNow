@@ -1278,7 +1278,7 @@ export function LoginPage() {
         {/* Mobile hero — animated showcase (replaces the static image) */}
         <div className={`${showLoginCard ? 'hidden' : 'block lg:hidden'} mb-8 px-1`}>
           <div className="rounded-3xl overflow-hidden shadow-2xl border border-green-100 bg-white">
-            <DemowashShowcase variant="generic" lang={language} />
+            <DemowashShowcase lang={language} />
           </div>
         </div>
 
@@ -1287,7 +1287,7 @@ export function LoginPage() {
             <div className="relative w-full">
               <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-[32px] transform rotate-1 scale-[1.03]" />
               <div className="relative rounded-[28px] overflow-hidden shadow-2xl bg-white border border-green-100">
-                <DemowashShowcase variant="generic" lang={language} />
+                <DemowashShowcase lang={language} />
               </div>
             </div>
           </div>
