@@ -391,9 +391,10 @@ export function DemowashShowcase({
 // Scoped styles (dws- prefix) so the WhatsApp look is self-contained.
 const CSS = `
 .dws{--g600:#16a34a;--g700:#15803d;--g50:#f0fdf4;--g100:#dcfce7;--line:#e5e7eb;--mut:#6b7280;--wa-out:#d9fdd3;--wa-bg:#efeae2;font-family:-apple-system,"Segoe UI",Helvetica,sans-serif;color:#0b1220}
-.dws-tabs{display:flex;gap:7px;padding:12px 14px;background:#ecfdf3;border-bottom:1px solid var(--g100);overflow-x:auto}
+.dws-tabs{display:flex;gap:7px;padding:14px 22px;background:#ecfdf3;border-bottom:1px solid var(--g100);overflow-x:auto}
 .dws-tabs::-webkit-scrollbar{height:0}
-.dws-tab{border:1.5px solid var(--g100);background:#fff;color:#374151;padding:10px 15px;border-radius:999px;font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex:0 0 auto;transition:.15s}
+.dws-tab{border:1.5px solid var(--g100);background:#fff;color:#374151;padding:10px 15px;border-radius:999px;font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex:0 0 auto;transition:.15s;outline:none}
+.dws-tab:focus-visible{box-shadow:0 0 0 3px rgba(22,163,74,.35)}
 .dws-tab:hover{border-color:var(--g600);color:var(--g700)}
 .dws-tab.on{background:var(--g600);color:#fff;border-color:var(--g600);box-shadow:0 6px 16px -6px rgba(22,163,74,.7)}
 .dws-body{display:grid;grid-template-columns:360px 1fr;gap:38px;padding:28px 34px;background:linear-gradient(180deg,var(--g50),#fff);align-items:center}
@@ -440,12 +441,12 @@ const CSS = `
 .dws-inbox{flex:1;background:#fff;border-radius:999px;padding:7px 12px;color:#9aa3b2;font-size:11px}
 .dws-mic{width:30px;height:30px;border-radius:50%;background:var(--g600);color:#fff;display:grid;place-items:center;font-size:13px}
 .dws-side{display:flex;flex-direction:column;gap:14px}
-.dws-caps{display:flex;flex-direction:column;gap:10px}
-.dws-cap{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 16px;opacity:.45;filter:saturate(.4);transition:.4s}
-.dws-cap.on{opacity:1;filter:none;border-color:var(--g100);box-shadow:0 14px 30px -16px rgba(22,163,74,.45);transform:translateX(3px)}
-.dws-cap-ic{width:40px;height:40px;border-radius:12px;background:var(--g50);display:grid;place-items:center;font-size:20px;flex:0 0 auto}
+.dws-caps{display:flex;flex-direction:column;gap:14px}
+.dws-cap{display:flex;gap:15px;align-items:center;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:18px 22px;opacity:.7;transition:.4s}
+.dws-cap.on{opacity:1;border-color:var(--g600);box-shadow:0 18px 36px -16px rgba(22,163,74,.5);transform:translateX(4px)}
+.dws-cap-ic{width:52px;height:52px;border-radius:14px;background:var(--g50);display:grid;place-items:center;font-size:26px;flex:0 0 auto}
 .dws-cap.on .dws-cap-ic{background:var(--g100)}
-.dws-cap h4{font-size:14.5px;margin:0 0 2px}.dws-cap p{font-size:12.5px;color:var(--mut);margin:0}
+.dws-cap h4{font-size:17px;margin:0 0 3px}.dws-cap p{font-size:14px;color:var(--mut);margin:0}
 .dws-try{align-self:flex-start;background:var(--g600);color:#fff;border:none;font-weight:700;font-size:15px;border-radius:999px;padding:13px 26px;cursor:pointer;box-shadow:0 12px 26px -12px rgba(22,163,74,.7)}
 .dws-try:hover{background:var(--g700)}
 `

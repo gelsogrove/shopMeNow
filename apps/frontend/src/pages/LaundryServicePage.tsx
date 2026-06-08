@@ -290,12 +290,12 @@ export function LaundryServicePage() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             {/* Compact headline — title + sub on top, then the animated demo
                 (the star) full-width below. */}
-            <div className="max-w-3xl mx-auto text-center">
+            <div className="max-w-5xl mx-auto text-center">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="text-xl lg:text-[26px] font-bold leading-snug mb-2 whitespace-pre-line text-slate-900"
+                className="text-lg sm:text-xl lg:text-[25px] font-bold leading-snug mb-2 lg:whitespace-nowrap text-slate-900"
               >
                 {t.heroTitle}
               </motion.h1>
@@ -313,9 +313,11 @@ export function LaundryServicePage() {
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.15 }}
-              className="mt-6 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden"
+              className="mt-6 lg:-mx-12 xl:-mx-20 bg-green-200/60 rounded-[2.2rem] p-3 shadow-2xl shadow-green-600/15"
             >
-              <DemowashShowcase lang={language} />
+              <div className="bg-white rounded-[1.7rem] overflow-hidden border border-green-100">
+                <DemowashShowcase lang={language} />
+              </div>
             </motion.div>
           </div>
         </section>
@@ -334,11 +336,12 @@ export function LaundryServicePage() {
                   transition={{ duration: 0.5, delay: idx * 0.07 }}
                   className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start rounded-2xl border border-gray-100 shadow-sm bg-white p-6"
                 >
-                  <div className="flex items-start gap-4">
-                    <span className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 text-green-700 font-bold flex items-center justify-center">{item.num}</span>
+                  <div className="flex items-center gap-4">
+                    <span className="flex-shrink-0 w-14 h-14 rounded-full bg-green-100 text-green-700 font-extrabold text-2xl flex items-center justify-center">{item.num}</span>
                     <p className="text-base font-medium text-gray-800">{item.problem}</p>
                   </div>
                   <div className="flex items-start gap-3 md:border-l md:border-gray-100 md:pl-6">
+                    <ArrowRight className="hidden md:block w-6 h-6 text-green-500 mt-0.5 shrink-0" />
                     <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
                     <div>
                       <p className="font-bold text-gray-900 mb-1">{item.solutionTitle}</p>
@@ -348,9 +351,15 @@ export function LaundryServicePage() {
                 </motion.div>
               ))}
             </div>
-            <div className="mt-10 bg-green-600 text-white rounded-2xl px-8 py-5 flex items-center gap-3">
-              <CheckCircle className="w-6 h-6 shrink-0" />
-              <p className="font-semibold">{t.tagline}</p>
+            <div className="mt-12 relative overflow-hidden rounded-3xl bg-gradient-to-br from-green-600 to-green-700 text-white px-8 py-10 text-center shadow-xl shadow-green-600/20">
+              <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10" />
+              <div className="absolute -bottom-12 -left-8 w-32 h-32 rounded-full bg-white/10" />
+              <div className="relative">
+                <div className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8" />
+                </div>
+                <p className="text-xl lg:text-2xl font-bold max-w-2xl mx-auto leading-snug">{t.tagline}</p>
+              </div>
             </div>
           </div>
         </section>
@@ -377,9 +386,15 @@ export function LaundryServicePage() {
                 </motion.div>
               ))}
             </div>
-            <div className="mt-10 bg-green-600 text-white rounded-2xl px-8 py-5 flex items-center gap-3">
-              <CheckCircle className="w-6 h-6 shrink-0" />
-              <p className="font-semibold">{t.securityTagline}</p>
+            <div className="mt-12 relative overflow-hidden rounded-3xl bg-gradient-to-br from-green-600 to-green-700 text-white px-8 py-10 text-center shadow-xl shadow-green-600/20">
+              <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10" />
+              <div className="absolute -bottom-12 -left-8 w-32 h-32 rounded-full bg-white/10" />
+              <div className="relative">
+                <div className="mx-auto mb-4 w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8" />
+                </div>
+                <p className="text-xl lg:text-2xl font-bold max-w-2xl mx-auto leading-snug">{t.securityTagline}</p>
+              </div>
             </div>
           </div>
         </section>
