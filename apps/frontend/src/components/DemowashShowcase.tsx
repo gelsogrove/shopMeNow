@@ -55,9 +55,9 @@ const ONLINE: Record<Lang, string> = { es: "en línea", it: "online", en: "onlin
 const TYPING: Record<Lang, string> = { es: "escribiendo…", it: "sta scrivendo…", en: "typing…", pt: "a escrever…" }
 const RECORDING: Record<Lang, string> = { es: "grabando audio…", it: "registra audio…", en: "recording…", pt: "a gravar…" }
 
-// Builds the full scenario list translated into `lang`. One source of truth:
-// every string carries its 4 translations inline via L().
-function buildScenes(lang: Lang): Scene[] {
+// Builds the laundry scenario list translated into `lang`. One source of
+// truth: every string carries its 4 translations inline via L().
+function buildLaundryScenes(lang: Lang): Scene[] {
   const L = (es: string, it: string, en: string, pt: string) =>
     ({ es, it, en, pt }[lang] ?? es)
 
@@ -265,10 +265,9 @@ export function DemowashShowcase({
     let alive = true
     let key = 0
     const run = async () => {
-      while (alive) {
-        setBubbles([])
-        setOp(null)
-        setStatus(ONLINE[L])
+      setBubbles([])
+      setOp(null)
+      setStatus(ONLINE[L])
         for (const s of scene.s) {
           if (!alive) return
           if (s.cp != null) setLit(s.cp)
@@ -296,8 +295,8 @@ export function DemowashShowcase({
           if (!alive) return
           setBubbles((b) => [...b, { w: s.w, h: s.h, key: key++, opName: s.name }])
         }
-        await sleep(2200)
-      }
+      await sleep(2600)
+      if (alive) setActive((a) => (a + 1) % scenes.length)
     }
     run()
     return () => {
@@ -310,20 +309,29 @@ export function DemowashShowcase({
     <div className="dws">
       <style>{CSS}</style>
 
-      <div className="dws-tabs">
-        {scenes.map((sc, i) => (
-          <button
-            key={sc.id}
-            type="button"
-            onClick={() => setActive(i)}
-            className={"dws-tab" + (i === active ? " on" : "")}
-          >
-            {sc.label}
-          </button>
-        ))}
+      <div className="dws-head">
+        <button
+          type="button"
+          aria-label="prev"
+          className="dws-nav"
+          onClick={() => setActive((a) => (a - 1 + scenes.length) % scenes.length)}
+        >
+          ‹
+        </button>
+        <div className="dws-title" key={active}>
+          {scene.label}
+        </div>
+        <button
+          type="button"
+          aria-label="next"
+          className="dws-nav"
+          onClick={() => setActive((a) => (a + 1) % scenes.length)}
+        >
+          ›
+        </button>
       </div>
 
-      <div className="dws-body">
+      <div className="dws-body" key={active}>
         <div className="dws-phone">
           <div className="dws-notch" />
           <div className="dws-screen">
@@ -384,6 +392,18 @@ export function DemowashShowcase({
           )}
         </div>
       </div>
+
+      <div className="dws-dots">
+        {scenes.map((sc, i) => (
+          <button
+            key={sc.id}
+            type="button"
+            aria-label={sc.label}
+            onClick={() => setActive(i)}
+            className={"dws-dot" + (i === active ? " on" : "")}
+          />
+        ))}
+      </div>
     </div>
   )
 }
@@ -391,13 +411,14 @@ export function DemowashShowcase({
 // Scoped styles (dws- prefix) so the WhatsApp look is self-contained.
 const CSS = `
 .dws{--g600:#16a34a;--g700:#15803d;--g50:#f0fdf4;--g100:#dcfce7;--line:#e5e7eb;--mut:#6b7280;--wa-out:#d9fdd3;--wa-bg:#efeae2;font-family:-apple-system,"Segoe UI",Helvetica,sans-serif;color:#0b1220}
-.dws-tabs{display:flex;gap:7px;padding:14px 22px;background:#ecfdf3;border-bottom:1px solid var(--g100);overflow-x:auto}
-.dws-tabs::-webkit-scrollbar{height:0}
-.dws-tab{border:1.5px solid var(--g100);background:#fff;color:#374151;padding:10px 15px;border-radius:999px;font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex:0 0 auto;transition:.15s;outline:none}
-.dws-tab:focus-visible{box-shadow:0 0 0 3px rgba(22,163,74,.35)}
-.dws-tab:hover{border-color:var(--g600);color:var(--g700)}
-.dws-tab.on{background:var(--g600);color:#fff;border-color:var(--g600);box-shadow:0 6px 16px -6px rgba(22,163,74,.7)}
-.dws-body{display:grid;grid-template-columns:360px 1fr;gap:38px;padding:28px 34px;background:linear-gradient(180deg,var(--g50),#fff);align-items:center}
+.dws-head{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px 16px 8px;background:linear-gradient(180deg,#ecfdf3,var(--g50))}
+.dws-title{text-align:center;font-size:23px;font-weight:800;letter-spacing:-.01em;background:linear-gradient(90deg,var(--g700),var(--g600));-webkit-background-clip:text;background-clip:text;color:transparent;animation:dws-slidein .45s cubic-bezier(.22,1,.36,1)}
+@keyframes dws-slidein{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+.dws-nav{width:42px;height:42px;border-radius:999px;border:1.5px solid var(--g100);background:#fff;color:var(--g700);font-size:24px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:.18s;flex:0 0 auto;box-shadow:0 4px 12px -6px rgba(22,163,74,.3)}
+.dws-nav:hover{background:var(--g600);color:#fff;border-color:var(--g600);transform:scale(1.08)}
+.dws-nav:active{transform:scale(.95)}
+.dws-body{display:grid;grid-template-columns:360px 1fr;gap:38px;padding:18px 34px 24px;background:linear-gradient(180deg,var(--g50),#fff);align-items:center;animation:dws-fadein .5s ease}
+@keyframes dws-fadein{from{opacity:0}to{opacity:1}}
 @media(max-width:760px){.dws-body{grid-template-columns:1fr;gap:22px}}
 .dws-phone{width:340px;height:660px;background:#0b1220;border-radius:46px;padding:12px;box-shadow:0 30px 60px -22px rgba(8,15,30,.55);position:relative;margin:0 auto}
 .dws-notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:110px;height:21px;background:#0b1220;border-radius:0 0 16px 16px;z-index:6}
@@ -449,4 +470,8 @@ const CSS = `
 .dws-cap h4{font-size:17px;margin:0 0 3px}.dws-cap p{font-size:14px;color:var(--mut);margin:0}
 .dws-try{align-self:flex-start;background:var(--g600);color:#fff;border:none;font-weight:700;font-size:15px;border-radius:999px;padding:13px 26px;cursor:pointer;box-shadow:0 12px 26px -12px rgba(22,163,74,.7)}
 .dws-try:hover{background:var(--g700)}
+.dws-dots{display:flex;justify-content:center;align-items:center;gap:9px;padding:18px 16px 22px;background:#fff;flex-wrap:wrap}
+.dws-dot{width:10px;height:10px;border-radius:999px;background:#cbd5e1;border:none;cursor:pointer;transition:.25s;padding:0}
+.dws-dot:hover{background:#9ca3af}
+.dws-dot.on{background:var(--g600);width:30px}
 `

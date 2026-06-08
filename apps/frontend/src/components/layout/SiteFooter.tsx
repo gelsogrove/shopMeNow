@@ -151,7 +151,6 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
             </ul>
             <h3 className="text-white font-semibold mt-6 mb-4">{t.solutions}</h3>
             <ul className="space-y-3">
-              <li><Link to="/laundry-service" className="text-sm hover:text-green-500 transition-colors">{t.laundryService}</Link></li>
               <li><Link to="/franchising" className="text-sm hover:text-green-500 transition-colors">{t.franchising}</Link></li>
             </ul>
           </div>

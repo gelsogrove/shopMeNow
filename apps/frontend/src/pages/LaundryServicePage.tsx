@@ -6,7 +6,6 @@ import { ArrowRight, ShieldCheck, Server, Puzzle, Users, CheckCircle } from "luc
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
-import { DemowashShowcase } from "@/components/DemowashShowcase"
 
 type Language = "it" | "en" | "es" | "pt"
 
@@ -285,40 +284,55 @@ export function LaundryServicePage() {
       <SiteHeader />
 
       <main>
-        {/* Hero */}
-        <section className="relative pt-6 pb-12 lg:pt-8 lg:pb-16 bg-gradient-to-br from-green-50 via-white to-green-50 overflow-hidden">
+        {/* Hero — minimal: title + text + photo. */}
+        <section className="relative pt-16 pb-16 lg:pt-24 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-green-50 overflow-hidden">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Compact headline — title + sub on top, then the animated demo
-                (the star) full-width below. */}
-            <div className="max-w-5xl mx-auto text-center">
-              <motion.h1
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="text-lg sm:text-xl lg:text-[25px] font-bold leading-snug mb-2 lg:whitespace-nowrap text-slate-900"
-              >
-                {t.heroTitle}
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-sm lg:text-base text-slate-600 max-w-2xl mx-auto"
-              >
-                {t.heroSub}
-              </motion.p>
-            </div>
-            {/* Full-width animated demo (shared with the DemoWash popup). */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.15 }}
-              className="mt-6 lg:-mx-12 xl:-mx-20 bg-green-200/60 rounded-[2.2rem] p-3 shadow-2xl shadow-green-600/15"
-            >
-              <div className="bg-white rounded-[1.7rem] overflow-hidden border border-green-100">
-                <DemowashShowcase lang={language} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+              <div>
+                <motion.h1
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6 }}
+                  className="text-3xl lg:text-4xl font-bold leading-tight mb-5 text-slate-900"
+                >
+                  {t.heroTitle}
+                </motion.h1>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.1 }}
+                  className="text-lg text-slate-600 mb-8 max-w-xl"
+                >
+                  {t.heroSub}
+                </motion.p>
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.2 }}
+                  className="flex flex-col sm:flex-row gap-4"
+                >
+                  <Link
+                    to="/contact"
+                    className="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-xl transition-colors"
+                  >
+                    {t.cta} <ArrowRight className="w-5 h-5" />
+                  </Link>
+                  <p className="self-center text-sm text-slate-500">{t.ctaSub}</p>
+                </motion.div>
               </div>
-            </motion.div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.15 }}
+                className="hidden lg:block"
+              >
+                <img
+                  src="/laundry1.png"
+                  alt="eChatbot AI assistant for laundry services"
+                  className="w-full h-auto rounded-3xl shadow-2xl border border-gray-100"
+                />
+              </motion.div>
+            </div>
           </div>
         </section>
 
