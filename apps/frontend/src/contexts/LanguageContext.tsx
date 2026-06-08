@@ -30,7 +30,7 @@ const translations = {
     // Hero Section
     "hero.title": "Il tuo agente AI su WhatsApp",
     "hero.subtitle":
-      "L'AI su misura per la tua lavanderia in franchising su WhatsApp: risponde ai clienti 24/7, sblocca le macchine da remoto, prenota appuntamenti e invia promozioni — in ogni lingua.",
+      "L'AI su misura per la tua attività in franchising su WhatsApp: risponde ai clienti 24/7, si connette alle macchine da remoto, prenota appuntamenti e invia promozioni — in ogni lingua.",
     "hero.slogan": "Il primo agente non si scorda mai.",
     "hero.subline": "",
     "hero.whyTitle": "Perché eChatbot?",
@@ -623,7 +623,7 @@ const translations = {
     // Hero Section
     "hero.title": "Your AI agent on WhatsApp",
     "hero.subtitle":
-      "The custom AI for your laundry franchise on WhatsApp: answers customers 24/7, unlocks machines remotely, books appointments and sends promos — in any language.",
+      "The custom AI for your franchise business on WhatsApp: answers customers 24/7, connects to machines remotely, books appointments and sends promos — in any language.",
     "hero.slogan": "You never forget your first agent.",
     "hero.subline": "",
     "hero.whyTitle": "Why eChatbot?",
