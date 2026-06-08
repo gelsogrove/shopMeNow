@@ -50,6 +50,8 @@ const T = {
       { icon: "building", title: "Controllo del brand", desc: "Mantieni voce e qualità uniformi su tutta la rete, anche con decine di sedi e operatori diversi." },
       { icon: "pin", title: "Precisione locale", desc: "Mai più orari o prezzi sbagliati: ogni cliente riceve i dati della sua sede." },
     ],
+    langTitle: "Senza barriere linguistiche.",
+    langDesc: "I tuoi clienti scrivono nella loro lingua, i tuoi operatori rispondono nella propria. Ogni messaggio si traduce in entrambe le direzioni, in tempo reale — la stessa AI multilingue su tutte le sedi, dal turista alla clientela locale.",
     ctaTitle: "Hai una rete in franchising?",
     ctaDesc: "Ti mostriamo come gestire tutte le sedi con un'unica AI. Demo su misura per la tua catena.",
   },
@@ -93,6 +95,8 @@ const T = {
       { icon: "building", title: "Brand control", desc: "Keep voice and quality uniform across the whole network, even with dozens of locations and different operators." },
       { icon: "pin", title: "Local accuracy", desc: "No more wrong hours or prices: every customer gets their own location's data." },
     ],
+    langTitle: "No language barriers.",
+    langDesc: "Your customers write in their language, your operators reply in theirs. Every message is translated in both directions, in real time — the same multilingual AI across every location, from tourists to locals.",
     ctaTitle: "Run a franchise network?",
     ctaDesc: "We'll show you how to manage every location with a single AI. Demo tailored to your chain.",
   },
@@ -136,6 +140,8 @@ const T = {
       { icon: "building", title: "Control de marca", desc: "Mantén voz y calidad uniformes en toda la red, incluso con decenas de sedes y operadores distintos." },
       { icon: "pin", title: "Precisión local", desc: "Nunca más horarios o precios equivocados: cada cliente recibe los datos de su sede." },
     ],
+    langTitle: "Sin barreras idiomáticas.",
+    langDesc: "Tus clientes escriben en su idioma, tus operadores responden en el suyo. Cada mensaje se traduce en ambas direcciones, en tiempo real — la misma IA multilingüe en todas las sedes, del turista al cliente local.",
     ctaTitle: "¿Tienes una red de franquicias?",
     ctaDesc: "Te mostramos cómo gestionar todas las sedes con una sola IA. Demo a medida para tu cadena.",
   },
@@ -179,6 +185,8 @@ const T = {
       { icon: "building", title: "Controlo da marca", desc: "Mantém voz e qualidade uniformes em toda a rede, mesmo com dezenas de unidades e operadores diferentes." },
       { icon: "pin", title: "Precisão local", desc: "Nunca mais horários ou preços errados: cada cliente recebe os dados da sua unidade." },
     ],
+    langTitle: "Sem barreiras linguísticas.",
+    langDesc: "Os teus clientes escrevem na sua língua, os teus operadores respondem na deles. Cada mensagem é traduzida em ambas as direções, em tempo real — a mesma IA multilíngue em todas as unidades, do turista ao cliente local.",
     ctaTitle: "Tem uma rede de franquias?",
     ctaDesc: "Mostramos-lhe como gerir todas as unidades com uma única IA. Demo à medida da sua rede.",
   },
@@ -412,6 +420,59 @@ export function FranchisingPage() {
                   <p className="text-sm text-gray-600 leading-relaxed">{item.desc}</p>
                 </motion.div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Language barriers */}
+        <section className="py-16 lg:py-24 bg-white">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                  {t.langTitle.split(" ").slice(0, -2).join(" ")}{" "}
+                  <span className="text-green-600">{t.langTitle.split(" ").slice(-2).join(" ")}</span>
+                </h2>
+                <p className="text-gray-600 leading-relaxed mb-6">{t.langDesc}</p>
+                {/* Supported languages */}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { flag: "🇮🇹", label: "Italiano" },
+                    { flag: "🇬🇧", label: "English" },
+                    { flag: "🇪🇸", label: "Español" },
+                    { flag: "🇵🇹", label: "Português" },
+                    { flag: "🇫🇷", label: "Français" },
+                    { flag: "🇸🇦", label: "العربية" },
+                  ].map((l) => (
+                    <span
+                      key={l.label}
+                      className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 border border-green-100 rounded-full px-3 py-1 text-sm font-medium"
+                    >
+                      <span>{l.flag}</span>
+                      {l.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              {/* Translated chat demo */}
+              <div className="bg-white rounded-2xl p-6 border border-gray-100 text-sm shadow-xl">
+                <div className="flex items-center gap-2 mb-4 text-xs text-amber-600 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>
+                  Manual Operator Control · Milano Centro
+                </div>
+                <div className="space-y-3">
+                  <div className="bg-green-50 rounded-xl p-3 ml-4">
+                    <p className="text-right text-xs text-gray-500 mb-1">AR → IT</p>
+                    <p className="text-right text-gray-900">في أي وقت يفتح فرعكم في ميلانو؟</p>
+                    <p className="text-right text-xs text-gray-500 mt-1">A che ora apre la vostra sede di Milano?</p>
+                  </div>
+                  <div className="bg-gray-100 rounded-xl p-3 mr-4">
+                    <p className="text-xs text-green-700 font-medium mb-1">OPERATOR</p>
+                    <p className="text-xs text-gray-700">Ciao! La sede di Milano Centro apre alle 8:00 e chiude alle 21:00, tutti i giorni.</p>
+                    <p className="text-xs text-gray-400 mt-1 italic">(AI translation → AR)</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
