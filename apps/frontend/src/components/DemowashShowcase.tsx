@@ -591,11 +591,18 @@ const CSS = `
 .dws-head{display:flex;align-items:center;justify-content:center;gap:12px;padding:13px 16px 12px;background:#fff;border-bottom:1px solid var(--g100)}
 .dws-title{text-align:center;font-size:19px;font-weight:800;letter-spacing:-.01em;min-width:170px;background:linear-gradient(90deg,var(--g700),var(--g600));-webkit-background-clip:text;background-clip:text;color:transparent;animation:dws-slidein .4s cubic-bezier(.22,1,.36,1)}
 @keyframes dws-slidein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.dws-nav{width:34px;height:34px;border-radius:999px;border:1.5px solid var(--g100);background:#fff;color:var(--g700);font-size:19px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:.15s;flex:0 0 auto}
-.dws-nav:hover{background:var(--g600);color:#fff;border-color:var(--g600)}
-.dws-nav:active{transform:scale(.94)}
-.dws-body{display:grid;grid-template-columns:1fr;gap:20px;padding:18px 18px 20px;background:#fff;align-items:center;justify-items:center;animation:dws-fadein .45s ease}
-@container (min-width:760px){.dws-body{grid-template-columns:320px 1fr;gap:34px;padding:22px 30px;justify-items:stretch}}
+.dws-stage{position:relative}
+.dws-arrow{position:absolute;top:0;bottom:0;width:66px;border:none;cursor:pointer;z-index:5;display:grid;place-items:center;background:transparent;transition:.2s;padding:0}
+.dws-arrow.l{left:0;background:linear-gradient(90deg,rgba(15,23,42,.07),transparent)}
+.dws-arrow.r{right:0;background:linear-gradient(270deg,rgba(15,23,42,.07),transparent)}
+.dws-arrow.l:hover{background:linear-gradient(90deg,rgba(22,163,74,.18),transparent)}
+.dws-arrow.r:hover{background:linear-gradient(270deg,rgba(22,163,74,.18),transparent)}
+.dws-arrow-ic{width:50px;height:50px;border-radius:999px;background:var(--g600);color:#fff;display:grid;place-items:center;font-size:30px;line-height:1;box-shadow:0 10px 24px -8px rgba(22,163,74,.7);transition:.2s}
+.dws-arrow:hover .dws-arrow-ic{transform:scale(1.12);background:var(--g700)}
+.dws-arrow:active .dws-arrow-ic{transform:scale(.96)}
+@container (max-width:520px){.dws-arrow{width:46px}.dws-arrow-ic{width:40px;height:40px;font-size:24px}}
+.dws-body{display:grid;grid-template-columns:1fr;gap:20px;padding:18px 58px 20px;background:#fff;align-items:center;justify-items:center;animation:dws-fadein .45s ease}
+@container (min-width:760px){.dws-body{grid-template-columns:320px 1fr;gap:30px;padding:22px 76px;justify-items:stretch}}
 @keyframes dws-fadein{from{opacity:0}to{opacity:1}}
 .dws-phone{width:300px;height:560px;background:#0b1220;border-radius:42px;padding:11px;box-shadow:0 28px 56px -22px rgba(8,15,30,.55);position:relative;margin:0 auto}
 .dws-notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:110px;height:21px;background:#0b1220;border-radius:0 0 16px 16px;z-index:6}
