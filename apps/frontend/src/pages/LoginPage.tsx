@@ -1265,7 +1265,7 @@ export function LoginPage() {
       <main className={`flex-1${showLoginCard ? ' flex items-center justify-center' : ''}`}>
       <div className={showLoginCard ? "w-full px-4 py-8" : "max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 relative z-20"}>
         
-        <div className={`text-center mb-12 space-y-4 relative${showLoginCard ? ' hidden' : ''}`}>
+        <div className={`text-center mb-6 space-y-4 relative${showLoginCard ? ' hidden' : ''}`}>
           {/* Brand slogan — wordplay on "you never forget your first love" */}
           <h1 className="text-4xl lg:text-5xl font-bold italic bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent max-w-3xl mx-auto">
             {t("hero.slogan")}

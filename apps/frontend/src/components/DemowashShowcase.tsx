@@ -584,7 +584,7 @@ export function DemowashShowcase({
 // Scoped styles (dws- prefix) so the WhatsApp look is self-contained.
 const CSS = `
 .dws{--g600:#16a34a;--g700:#15803d;--g50:#f0fdf4;--g100:#dcfce7;--line:#e5e7eb;--mut:#6b7280;--wa-out:#d9fdd3;--wa-bg:#efeae2;font-family:-apple-system,"Segoe UI",Helvetica,sans-serif;color:#0b1220;container-type:inline-size}
-.dws-head{display:flex;align-items:center;justify-content:center;gap:16px;padding:20px 16px 8px;background:linear-gradient(180deg,#ecfdf3,var(--g50))}
+.dws-head{display:flex;align-items:center;justify-content:center;gap:16px;padding:14px 16px 6px;background:linear-gradient(180deg,#ecfdf3,var(--g50))}
 .dws-title{text-align:center;font-size:23px;font-weight:800;letter-spacing:-.01em;background:linear-gradient(90deg,var(--g700),var(--g600));-webkit-background-clip:text;background-clip:text;color:transparent;animation:dws-slidein .45s cubic-bezier(.22,1,.36,1)}
 @keyframes dws-slidein{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
 .dws-nav{width:42px;height:42px;border-radius:999px;border:1.5px solid var(--g100);background:#fff;color:var(--g700);font-size:24px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:.18s;flex:0 0 auto;box-shadow:0 4px 12px -6px rgba(22,163,74,.3)}
