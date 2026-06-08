@@ -137,11 +137,11 @@ function buildLaundryScenes(lang: Lang): Scene[] {
         ["🤝", L("Continuidad total", "Continuità totale", "Seamless handover", "Continuidade total"), L("El cliente ni lo nota.", "Il cliente non se ne accorge.", "The customer never notices.", "O cliente nem nota.")],
       ],
       s: [
-        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Me habéis estropeado la chaqueta, ¡es la segunda vez! 😡", "Mi avete rovinato la giacca, è la seconda volta! 😡", "You ruined my jacket — that's the second time! 😡", "Estragaram-me o casaco, é a segunda vez! 😡") + time("19:05") },
+        { w: "out", cp: 0, pre: 300, ty: 1100, h: L("He pagado pero la lavadora no ha arrancado y he perdido el dinero 😡", "Ho pagato ma la lavatrice non è partita e ho perso i soldi 😡", "I paid but the washer didn't start and I lost my money 😡", "Paguei mas a máquina não arrancou e perdi o dinheiro 😡") + time("19:05") },
         { w: "in", cp: 0, ty: 1000, h: L("Lo siento mucho 🙏 Paso tu caso a un operador ahora mismo.", "Mi dispiace molto 🙏 Passo subito il tuo caso a un operatore.", "I'm so sorry 🙏 I'll pass your case to an operator right away.", "Lamento muito 🙏 Passo já o teu caso a um operador.") + time("19:05") },
         { w: "psysblue", cp: 1, hold: 1500, h: L("Un operador se está conectando…", "Un operatore si sta collegando…", "An operator is connecting…", "Um operador está a ligar-se…") },
         { w: "op", cp: 2, ty: 1100, name: L("Giulia · Operadora", "Giulia · Operatrice", "Giulia · Operator", "Giulia · Operadora"), h: L("Soy Giulia, de Eixample 😊", "Sono Giulia, di Eixample 😊", "I'm Giulia, from Eixample 😊", "Sou a Giulia, de Eixample 😊") + time("19:06") },
-        { w: "op", cp: 3, ty: 1100, h: L("Te lo relavamos gratis y te damos un cupón del 20%. ¿Te parece bien?", "Lo rilaviamo gratis e ti diamo un buono del 20%. Va bene?", "We'll rewash it for free and give you a 20% coupon. Sound good?", "Voltamos a lavar grátis e damos-te um cupão de 20%. Combinado?") + time("19:06") },
+        { w: "op", cp: 3, ty: 1100, h: L("Te devuelvo el pago y te activo un lavado gratis en la máquina 4. ¿Te parece bien?", "Ti rimborso il pagamento e ti attivo un lavaggio gratis sulla macchina 4. Va bene?", "I'll refund you and start a free wash on machine 4. Sound good?", "Devolvo-te o pagamento e ativo uma lavagem grátis na máquina 4. Combinado?") + time("19:06") },
         { w: "out", cp: 3, ty: 600, h: L("¡Gracias!", "Grazie!", "Thanks!", "Obrigado!") + time("19:07") },
       ],
     },
