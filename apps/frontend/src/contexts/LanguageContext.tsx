@@ -30,7 +30,7 @@ const translations = {
     // Hero Section
     "hero.title": "Il tuo agente AI su WhatsApp",
     "hero.subtitle":
-      "Un'AI su misura che risponde ai tuoi clienti 24/7 su WhatsApp, passa all'operatore con traduzione in tempo reale e invia campagne. Per franchising, e-commerce e servizi.",
+      "L'AI su misura per la tua lavanderia in franchising su WhatsApp: risponde ai clienti 24/7, sblocca le macchine da remoto, prenota appuntamenti e invia promozioni — in ogni lingua.",
     "hero.slogan": "Il primo agente non si scorda mai.",
     "hero.subline": "",
     "hero.whyTitle": "Perché eChatbot?",
@@ -623,7 +623,7 @@ const translations = {
     // Hero Section
     "hero.title": "Your AI agent on WhatsApp",
     "hero.subtitle":
-      "A custom AI that answers your customers 24/7 on WhatsApp, hands off to an operator with real-time translation, and sends campaigns. For franchises, e-commerce and services.",
+      "The custom AI for your laundry franchise on WhatsApp: answers customers 24/7, unlocks machines remotely, books appointments and sends promos — in any language.",
     "hero.slogan": "You never forget your first agent.",
     "hero.subline": "",
     "hero.whyTitle": "Why eChatbot?",
@@ -1241,7 +1241,7 @@ const translations = {
     // Hero Section
     "hero.title": "Tu agente con IA en WhatsApp",
     "hero.subtitle":
-      "Una IA a medida que responde a tus clientes 24/7 en WhatsApp, pasa al operador con traducción en tiempo real y envía campañas. Para franquicias, e-commerce y servicios.",
+      "La IA a medida para tu lavandería en franquicia en WhatsApp: responde a clientes 24/7, desbloquea máquinas en remoto, agenda citas y envía promociones — en cualquier idioma.",
     "hero.slogan": "El primer agente nunca se olvida.",
     "hero.subline": "",
     "hero.whyTitle": "¿Por qué eChatbot?",
@@ -1728,7 +1728,7 @@ const translations = {
     // Hero Section
     "hero.title": "O teu agente AI no WhatsApp",
     "hero.subtitle":
-      "Uma IA à medida que responde aos teus clientes 24/7 no WhatsApp, passa ao operador com tradução em tempo real e envia campanhas. Para franquias, e-commerce e serviços.",
+      "A IA à medida para a tua lavandaria em franquia no WhatsApp: responde a clientes 24/7, desbloqueia máquinas remotamente, agenda marcações e envia promoções — em qualquer idioma.",
     "hero.slogan": "O primeiro agente nunca se esquece.",
     "hero.subline": "",
     "hero.whyTitle": "Por que eChatbot?",

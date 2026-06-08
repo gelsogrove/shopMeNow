@@ -54,6 +54,7 @@ const TRY: Record<Lang, string> = {
 const ONLINE: Record<Lang, string> = { es: "en línea", it: "online", en: "online", pt: "online" }
 const TYPING: Record<Lang, string> = { es: "escribiendo…", it: "sta scrivendo…", en: "typing…", pt: "a escrever…" }
 const RECORDING: Record<Lang, string> = { es: "grabando audio…", it: "registra audio…", en: "recording…", pt: "a gravar…" }
+const TODAY: Record<Lang, string> = { es: "Hoy", it: "Oggi", en: "Today", pt: "Hoje" }
 
 // Builds the laundry scenario list translated into `lang`. One source of
 // truth: every string carries its 4 translations inline via L().
@@ -71,7 +72,7 @@ function buildLaundryScenes(lang: Lang): Scene[] {
         ["🚀", L("Guía a la acción", "Guida all'azione", "Drives to action", "Leva à ação"), L("Lleva al siguiente paso.", "Porta al passo dopo.", "To the next step.", "Para o passo seguinte.")],
       ],
       s: [
-        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Hola, ¿tenéis franquicia?", "Ciao, avete il franchising?", "Hi, do you offer franchising?", "Olá, têm franquia?") + time("12:53") },
+        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Hola 👋 Me interesa abrir una lavandería en franquicia", "Ciao 👋 Vorrei aprire una lavanderia in franchising", "Hi 👋 I'd like to open a laundry franchise", "Olá 👋 Gostaria de abrir uma lavandaria em franquia") + time("12:53") },
         { w: "in", cp: 0, ty: 1000, h: L("¡Hola! 👋 Soy el asistente de Demowash 😊", "Ciao! 👋 Sono l'assistente di Demowash 😊", "Hi! 👋 I'm the Demowash assistant 😊", "Olá! 👋 Sou o assistente da Demowash 😊") + time("12:53") },
         { w: "in", cp: 1, ty: 800, h: L("Te dejo una breve presentación 👇", "Ti lascio una breve presentazione 👇", "Here's a quick intro 👇", "Deixo uma breve apresentação 👇") + time("12:53") },
         { w: "in", cp: 1, ty: 1100, h: ytCard(L("Demowash · Franquicia", "Demowash · Franchising", "Demowash · Franchise", "Demowash · Franquia")) + time("12:54") },
@@ -88,18 +89,18 @@ function buildLaundryScenes(lang: Lang): Scene[] {
         ["🔗", L("Envía Zoom + email", "Invia Zoom + email", "Sends Zoom + email", "Envia Zoom + email"), L("Confirmación auto.", "Conferma automatica.", "Auto confirmation.", "Confirmação auto.")],
       ],
       s: [
-        { w: "out", cp: 0, pre: 300, ty: 1100, h: L("Quiero abrir en Sitges. ¿Franquicia?", "Voglio aprire a Sitges. Franchising?", "I want to open in Sitges. Franchise?", "Quero abrir em Sitges. Franquia?") + time("12:53") },
-        { w: "in", cp: 0, ty: 1100, h: L("¡Claro! Consultoría gratuita. ¿Agendamos?", "Certo! Consulenza gratuita. Prenotiamo?", "Sure! Free consultation. Shall we book?", "Claro! Consultoria gratuita. Agendamos?") + time("12:54") },
-        { w: "out", cp: 1, ty: 500, h: L("Sí", "Sì", "Yes", "Sim") + time("12:54") },
-        { w: "in", cp: 1, ty: 700, h: L("¿Tu nombre?", "Il tuo nome?", "Your name?", "O teu nome?") + time("12:54") },
+        { w: "out", cp: 0, pre: 300, ty: 1100, h: L("Me gustaría abrir una lavandería en Sitges. ¿Tenéis franquicia?", "Vorrei aprire una lavanderia a Sitges. Avete il franchising?", "I'd like to open a laundry in Sitges. Do you offer a franchise?", "Gostaria de abrir uma lavandaria em Sitges. Têm franquia?") + time("12:53") },
+        { w: "in", cp: 0, ty: 1100, h: L("¡Claro! Ofrecemos una consultoría gratuita. ¿La agendamos?", "Certo! Offriamo una consulenza gratuita. La prenotiamo?", "Of course! We offer a free consultation. Shall we book it?", "Claro! Oferecemos uma consultoria gratuita. Agendamos?") + time("12:54") },
+        { w: "out", cp: 1, ty: 500, h: L("Sí, perfecto", "Sì, volentieri", "Yes, please", "Sim, claro") + time("12:54") },
+        { w: "in", cp: 1, ty: 700, h: L("Genial. ¿Cómo te llamas?", "Perfetto. Come ti chiami?", "Great. What's your name?", "Ótimo. Como te chamas?") + time("12:54") },
         { w: "out", cp: 1, ty: 700, h: "Marco Rossi" + time("12:54") },
-        { w: "in", cp: 1, ty: 700, h: L("¿Tu email?", "La tua email?", "Your email?", "O teu email?") + time("12:54") },
+        { w: "in", cp: 1, ty: 700, h: L("¿Cuál es tu email?", "Qual è la tua email?", "What's your email?", "Qual é o teu email?") + time("12:54") },
         { w: "out", cp: 1, ty: 800, h: "marco.rossi@email.com" + time("12:54") },
-        { w: "in", cp: 1, ty: 700, h: L("¿En qué ciudad?", "In che città?", "Which city?", "Em que cidade?") + time("12:54") },
+        { w: "in", cp: 1, ty: 700, h: L("¿En qué ciudad quieres abrir?", "In quale città vuoi aprire?", "Which city do you want to open in?", "Em que cidade queres abrir?") + time("12:54") },
         { w: "out", cp: 1, ty: 500, h: "Sitges" + time("12:54") },
-        { w: "in", cp: 2, ty: 1300, h: L("Horarios: 1) Lun 10:00 · 2) Lun 15:00 · 3) Mar 11:00 (1/2/3)", "Orari: 1) Lun 10:00 · 2) Lun 15:00 · 3) Mar 11:00 (1/2/3)", "Slots: 1) Mon 10:00 · 2) Mon 15:00 · 3) Tue 11:00 (1/2/3)", "Horários: 1) Seg 10:00 · 2) Seg 15:00 · 3) Ter 11:00 (1/2/3)") + time("12:54") },
+        { w: "in", cp: 2, ty: 1300, h: L("Estos son los horarios disponibles: 1) Lun 10:00 · 2) Lun 15:00 · 3) Mar 11:00. ¿Cuál prefieres? (1/2/3)", "Ecco gli orari disponibili: 1) Lun 10:00 · 2) Lun 15:00 · 3) Mar 11:00. Quale preferisci? (1/2/3)", "Here are the available slots: 1) Mon 10:00 · 2) Mon 15:00 · 3) Tue 11:00. Which do you prefer? (1/2/3)", "Estes são os horários disponíveis: 1) Seg 10:00 · 2) Seg 15:00 · 3) Ter 11:00. Qual preferes? (1/2/3)") + time("12:54") },
         { w: "out", cp: 2, ty: 500, h: "3" + time("12:55") },
-        { w: "psys", cp: 2, hold: 1500, h: L("Creando la cita…", "Creo l'appuntamento…", "Creating the appointment…", "A criar a marcação…") },
+        { w: "psys", cp: 2, hold: 1500, h: L("Creando la cita…", "Sto creando l'appuntamento…", "Creating the appointment…", "A criar a marcação…") },
         { w: "in", cp: 3, ty: 1300, h: L("✅ ¡Cita confirmada! Mar 11 jun · 11:00. Zoom + calendario por email 👋", "✅ Appuntamento confermato! Mar 11 giu · 11:00. Zoom + calendario via email 👋", "✅ Booked! Tue Jun 11 · 11:00. Zoom + calendar by email 👋", "✅ Marcação confirmada! Ter 11 jun · 11:00. Zoom + calendário por email 👋") + time("12:55") },
       ],
     },
@@ -114,12 +115,12 @@ function buildLaundryScenes(lang: Lang): Scene[] {
       ],
       s: [
         { w: "out", cp: 0, pre: 300, ty: 900, h: L("No consigo abrir la lavadora 😟", "Non riesco ad aprire la lavatrice 😟", "I can't open the washer 😟", "Não consigo abrir a máquina 😟") + time("18:02") },
-        { w: "in", cp: 1, ty: 1000, h: L("¡Vaya! ¿En qué lavandería estás?", "Mi dispiace! In quale lavanderia sei?", "Sorry! Which laundromat are you at?", "Que pena! Em que lavandaria estás?") + time("18:02") },
+        { w: "in", cp: 1, ty: 1000, h: L("¡Vaya! ¿En qué lavandería te encuentras?", "Mi dispiace! In quale lavanderia ti trovi?", "Oh no! Which laundromat are you at?", "Que pena! Em que lavandaria te encontras?") + time("18:02") },
         { w: "out", cp: 1, ty: 600, h: "Barcelona" + time("18:03") },
-        { w: "in", cp: 1, ty: 1100, h: L("Tenemos dos: 📍 Eixample y 📍 Gràcia. ¿Cuál?", "Ne abbiamo due: 📍 Eixample e 📍 Gràcia. Quale?", "We have two: 📍 Eixample and 📍 Gràcia. Which?", "Temos duas: 📍 Eixample e 📍 Gràcia. Qual?") + time("18:03") },
+        { w: "in", cp: 1, ty: 1100, h: L("Tenemos dos en Barcelona: 📍 Eixample y 📍 Gràcia. ¿En cuál estás?", "Ne abbiamo due a Barcellona: 📍 Eixample e 📍 Gràcia. In quale ti trovi?", "We have two in Barcelona: 📍 Eixample and 📍 Gràcia. Which one?", "Temos duas em Barcelona: 📍 Eixample e 📍 Gràcia. Em qual estás?") + time("18:03") },
         { w: "out", cp: 1, ty: 500, h: "Eixample" + time("18:03") },
-        { w: "in", cp: 2, ty: 900, h: L("¿Número de máquina?", "Numero macchina?", "Machine number?", "Número da máquina?") + time("18:03") },
-        { w: "out", cp: 2, ty: 900, h: L("La 4, ha terminado pero no abre", "La 4, ha finito ma non si apre", "No. 4, finished but won't open", "A 4, terminou mas não abre") + time("18:04") },
+        { w: "in", cp: 2, ty: 900, h: L("¿Qué número de máquina es?", "Qual è il numero della macchina?", "Which machine number is it?", "Qual é o número da máquina?") + time("18:03") },
+        { w: "out", cp: 2, ty: 900, h: L("La número 4, ha terminado pero no se abre", "La numero 4, ha finito ma non si apre", "Number 4, it's finished but won't open", "A número 4, terminou mas não abre") + time("18:04") },
         { w: "in", cp: 2, ty: 900, h: L("Me conecto a la máquina #4… 🔌", "Mi collego alla macchina #4… 🔌", "Connecting to machine #4… 🔌", "A ligar à máquina #4… 🔌") + time("18:04") },
         { w: "psys", cp: 2, hold: 1500, h: L("Comando de desbloqueo enviado", "Comando di sblocco inviato", "Unlock command sent", "Comando de desbloqueio enviado") },
         { w: "in", cp: 3, ty: 1000, h: L("✅ ¡Máquina #4 desbloqueada! 👕", "✅ Macchina #4 sbloccata! 👕", "✅ Machine #4 unlocked! 👕", "✅ Máquina #4 desbloqueada! 👕") + time("18:04") },
@@ -136,11 +137,11 @@ function buildLaundryScenes(lang: Lang): Scene[] {
         ["🤝", L("Continuidad total", "Continuità totale", "Seamless handover", "Continuidade total"), L("El cliente ni lo nota.", "Il cliente non se ne accorge.", "The customer never notices.", "O cliente nem nota.")],
       ],
       s: [
-        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Me habéis estropeado la chaqueta, 2ª vez 😡", "Mi avete rovinato la giacca, 2ª volta 😡", "You ruined my jacket, 2nd time 😡", "Estragaram o meu casaco, 2ª vez 😡") + time("19:05") },
-        { w: "in", cp: 0, ty: 1000, h: L("Lo siento mucho 🙏 Paso tu caso a un operador.", "Mi dispiace 🙏 Passo il caso a un operatore.", "So sorry 🙏 Passing you to an operator.", "Lamento muito 🙏 Passo o caso a um operador.") + time("19:05") },
+        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Me habéis estropeado la chaqueta, ¡es la segunda vez! 😡", "Mi avete rovinato la giacca, è la seconda volta! 😡", "You ruined my jacket — that's the second time! 😡", "Estragaram-me o casaco, é a segunda vez! 😡") + time("19:05") },
+        { w: "in", cp: 0, ty: 1000, h: L("Lo siento mucho 🙏 Paso tu caso a un operador ahora mismo.", "Mi dispiace molto 🙏 Passo subito il tuo caso a un operatore.", "I'm so sorry 🙏 I'll pass your case to an operator right away.", "Lamento muito 🙏 Passo já o teu caso a um operador.") + time("19:05") },
         { w: "psysblue", cp: 1, hold: 1500, h: L("Un operador se está conectando…", "Un operatore si sta collegando…", "An operator is connecting…", "Um operador está a ligar-se…") },
         { w: "op", cp: 2, ty: 1100, name: L("Giulia · Operadora", "Giulia · Operatrice", "Giulia · Operator", "Giulia · Operadora"), h: L("Soy Giulia, de Eixample 😊", "Sono Giulia, di Eixample 😊", "I'm Giulia, from Eixample 😊", "Sou a Giulia, de Eixample 😊") + time("19:06") },
-        { w: "op", cp: 3, ty: 1100, h: L("Te lo relavamos gratis + cupón 20%. ¿Ok?", "Lo rilaviamo gratis + buono 20%. Ok?", "We'll rewash it free + 20% coupon. Ok?", "Relavamos grátis + cupão 20%. Ok?") + time("19:06") },
+        { w: "op", cp: 3, ty: 1100, h: L("Te lo relavamos gratis y te damos un cupón del 20%. ¿Te parece bien?", "Lo rilaviamo gratis e ti diamo un buono del 20%. Va bene?", "We'll rewash it for free and give you a 20% coupon. Sound good?", "Voltamos a lavar grátis e damos-te um cupão de 20%. Combinado?") + time("19:06") },
         { w: "out", cp: 3, ty: 600, h: L("¡Gracias!", "Grazie!", "Thanks!", "Obrigado!") + time("19:07") },
       ],
     },
@@ -155,8 +156,8 @@ function buildLaundryScenes(lang: Lang): Scene[] {
       ],
       s: [
         { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Necesito la factura del último lavado", "Mi serve la fattura dell'ultimo lavaggio", "I need the invoice for my last wash", "Preciso da fatura da última lavagem") + time("10:11") },
-        { w: "in", cp: 1, ty: 800, h: L("¡Claro! La busco…", "Certo! La cerco…", "Sure! Let me find it…", "Claro! Vou procurar…") + time("10:11") },
-        { w: "psys", cp: 1, hold: 1300, h: L("Buscando pedido…", "Cerco l'ordine…", "Looking up the order…", "A procurar o pedido…") },
+        { w: "in", cp: 1, ty: 800, h: L("¡Claro! La busco enseguida…", "Certo! La cerco subito…", "Of course! Let me find it…", "Claro! Vou procurar já…") + time("10:11") },
+        { w: "psys", cp: 1, hold: 1300, h: L("Buscando el pedido…", "Sto cercando l'ordine…", "Looking up the order…", "A procurar o pedido…") },
         { w: "in", cp: 1, ty: 1100, h: L("📦 Pedido #A-1042 — 5 jun, 12,50€", "📦 Ordine #A-1042 — 5 giu, 12,50€", "📦 Order #A-1042 — Jun 5, €12.50", "📦 Pedido #A-1042 — 5 jun, 12,50€") + time("10:11") },
         { w: "in", cp: 2, ty: 1000, h: fileCard("factura-A1042.pdf", "86 KB") + time("10:12") },
         { w: "in", cp: 3, ty: 800, h: L("Aquí tienes ✅", "Eccola ✅", "Here it is ✅", "Aqui está ✅") + time("10:12") },
@@ -173,7 +174,7 @@ function buildLaundryScenes(lang: Lang): Scene[] {
         ["🌍", L("Multilingüe", "Multilingue", "Multilingual", "Multilíngue"), L("En su idioma.", "Nella sua lingua.", "In their language.", "No seu idioma.")],
       ],
       s: [
-        { w: "out", cp: 0, pre: 300, ty: 1100, h: L("¿Horario y precios de Demowash Eixample?", "Orari e prezzi di Demowash Eixample?", "Hours and prices for Demowash Eixample?", "Horário e preços da Demowash Eixample?") + time("12:30") },
+        { w: "out", cp: 0, pre: 300, ty: 1100, h: L("¿Me dices el horario y los precios de Demowash Eixample?", "Mi dici orari e prezzi della sede Demowash Eixample?", "Can you tell me the hours and prices for Demowash Eixample?", "Podes dizer-me o horário e os preços da Demowash Eixample?") + time("12:30") },
         { w: "in", cp: 0, ty: 1000, h: "🏪 <b>Demowash Eixample</b> — C/ Aragó 211" + time("12:30") },
         { w: "in", cp: 2, ty: 1000, h: L("🕐 Lun–Dom 8:00–22:00", "🕐 Lun–Dom 8:00–22:00", "🕐 Mon–Sun 8:00–22:00", "🕐 Seg–Dom 8:00–22:00") + time("12:30") },
         { w: "in", cp: 1, ty: 1300, h: L("💲 Lavado 8kg <b>6€</b> · Secado <b>4€</b> · Edredón <b>15€</b> · Detergente <b>1€</b>", "💲 Lavaggio 8kg <b>6€</b> · Asciugatura <b>4€</b> · Piumone <b>15€</b> · Detersivo <b>1€</b>", "💲 Wash 8kg <b>€6</b> · Dry <b>€4</b> · Duvet <b>€15</b> · Detergent <b>€1</b>", "💲 Lavagem 8kg <b>6€</b> · Secagem <b>4€</b> · Edredão <b>15€</b> · Detergente <b>1€</b>") + time("12:30") },
@@ -191,8 +192,8 @@ function buildLaundryScenes(lang: Lang): Scene[] {
       ],
       s: [
         { w: "in", cp: 0, pre: 300, ty: 1300, h: L("🎉 ¡Hola María! Promo flash en Demowash Gràcia: -30% en edredones este finde 🧺", "🎉 Ciao Maria! Promo flash da Demowash Gràcia: -30% sui piumoni questo weekend 🧺", "🎉 Hi María! Flash promo at Demowash Gràcia: -30% on duvets this weekend 🧺", "🎉 Olá Maria! Promo flash na Demowash Gràcia: -30% em edredões este fim de semana 🧺") + time("17:00") },
-        { w: "out", cp: 1, ty: 800, h: L("¡Genial! ¿Cómo lo uso?", "Forte! Come lo uso?", "Great! How do I use it?", "Boa! Como uso?") + time("17:01") },
-        { w: "in", cp: 2, ty: 1300, h: L("Enseña este cupón en caja 🎟️ <b>DUVET30</b>. ¡Válido hasta el domingo!", "Mostra questo coupon in cassa 🎟️ <b>DUVET30</b>. Valido fino a domenica!", "Show this coupon at checkout 🎟️ <b>DUVET30</b>. Valid until Sunday!", "Mostra este cupão na caixa 🎟️ <b>DUVET30</b>. Válido até domingo!") + time("17:01") },
+        { w: "out", cp: 1, ty: 800, h: L("¡Genial! ¿Cómo lo uso?", "Ottimo! Come lo uso?", "Great! How do I use it?", "Boa! Como o uso?") + time("17:01") },
+        { w: "in", cp: 2, ty: 1300, h: L("Enseña este cupón en caja 🎟️ <b>DUVET30</b>. ¡Válido hasta el domingo!", "Mostra questo coupon alla cassa 🎟️ <b>DUVET30</b>. Valido fino a domenica!", "Show this coupon at checkout 🎟️ <b>DUVET30</b>. Valid until Sunday!", "Mostra este cupão na caixa 🎟️ <b>DUVET30</b>. Válido até domingo!") + time("17:01") },
         { w: "out", cp: 3, ty: 600, h: L("¡Gracias! 🙌", "Grazie! 🙌", "Thanks! 🙌", "Obrigado! 🙌") + time("17:01") },
       ],
     },
@@ -207,7 +208,7 @@ function buildLaundryScenes(lang: Lang): Scene[] {
       ],
       s: [
         { w: "out", cp: 0, pre: 300, ty: 900, rec: true, h: voice("0:06") + time("16:40") },
-        { w: "in", cp: 1, ty: 1100, h: L("Lo he escuchado 🎧 Tu edredón está listo, recógelo desde mañana 17:00.", "L'ho ascoltato 🎧 Il piumone è pronto, ritiralo da domani 17:00.", "Got your audio 🎧 Your duvet is ready, pick it up from tomorrow 17:00.", "Ouvi 🎧 O edredão está pronto, levanta a partir de amanhã 17:00.") + time("16:40") },
+        { w: "in", cp: 1, ty: 1100, h: L("He escuchado tu audio 🎧 Tu edredón ya está listo, puedes recogerlo a partir de mañana a las 17:00.", "Ho ascoltato il tuo messaggio 🎧 Il piumone è pronto, puoi ritirarlo da domani alle 17:00.", "I've listened to your audio 🎧 Your duvet is ready, you can pick it up from tomorrow at 17:00.", "Ouvi o teu áudio 🎧 O edredão está pronto, podes levantá-lo a partir de amanhã às 17:00.") + time("16:40") },
         { w: "in", cp: 2, ty: 1000, rec: true, h: voice("0:08") + time("16:41") },
         { w: "out", cp: 3, ty: 700, h: L("¡Perfecto, gracias!", "Perfetto, grazie!", "Perfect, thanks!", "Perfeito, obrigado!") + time("16:41") },
       ],
@@ -516,6 +517,7 @@ export function DemowashShowcase({
               </div>
             </div>
             <div className="dws-msgs" ref={msgsRef}>
+              <div className="dws-date">{TODAY[L]}</div>
               {bubbles.map((b) => {
                 if (b.w === "psys" || b.w === "psysblue") {
                   return (
@@ -584,14 +586,14 @@ export function DemowashShowcase({
 // Scoped styles (dws- prefix) so the WhatsApp look is self-contained.
 const CSS = `
 .dws{--g600:#16a34a;--g700:#15803d;--g50:#f0fdf4;--g100:#dcfce7;--line:#e5e7eb;--mut:#6b7280;--wa-out:#d9fdd3;--wa-bg:#efeae2;font-family:-apple-system,"Segoe UI",Helvetica,sans-serif;color:#0b1220;container-type:inline-size}
-.dws-head{display:flex;align-items:center;justify-content:center;gap:16px;padding:14px 16px 6px;background:linear-gradient(180deg,#ecfdf3,var(--g50))}
-.dws-title{text-align:center;font-size:23px;font-weight:800;letter-spacing:-.01em;background:linear-gradient(90deg,var(--g700),var(--g600));-webkit-background-clip:text;background-clip:text;color:transparent;animation:dws-slidein .45s cubic-bezier(.22,1,.36,1)}
-@keyframes dws-slidein{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
-.dws-nav{width:42px;height:42px;border-radius:999px;border:1.5px solid var(--g100);background:#fff;color:var(--g700);font-size:24px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:.18s;flex:0 0 auto;box-shadow:0 4px 12px -6px rgba(22,163,74,.3)}
-.dws-nav:hover{background:var(--g600);color:#fff;border-color:var(--g600);transform:scale(1.08)}
-.dws-nav:active{transform:scale(.95)}
-.dws-body{display:grid;grid-template-columns:1fr;gap:22px;padding:18px 20px 24px;background:linear-gradient(180deg,var(--g50),#fff);align-items:center;justify-items:center;animation:dws-fadein .5s ease}
-@container (min-width:760px){.dws-body{grid-template-columns:360px 1fr;gap:38px;padding:18px 34px 24px;justify-items:stretch}}
+.dws-head{display:flex;align-items:center;justify-content:center;gap:12px;padding:13px 16px 12px;background:#fff;border-bottom:1px solid var(--g100)}
+.dws-title{text-align:center;font-size:19px;font-weight:800;letter-spacing:-.01em;min-width:170px;background:linear-gradient(90deg,var(--g700),var(--g600));-webkit-background-clip:text;background-clip:text;color:transparent;animation:dws-slidein .4s cubic-bezier(.22,1,.36,1)}
+@keyframes dws-slidein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.dws-nav{width:34px;height:34px;border-radius:999px;border:1.5px solid var(--g100);background:#fff;color:var(--g700);font-size:19px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:.15s;flex:0 0 auto}
+.dws-nav:hover{background:var(--g600);color:#fff;border-color:var(--g600)}
+.dws-nav:active{transform:scale(.94)}
+.dws-body{display:grid;grid-template-columns:1fr;gap:20px;padding:18px 18px 20px;background:linear-gradient(180deg,var(--g50),#fff);align-items:center;justify-items:center;animation:dws-fadein .45s ease}
+@container (min-width:760px){.dws-body{grid-template-columns:320px 1fr;gap:34px;padding:22px 30px;justify-items:stretch}}
 @keyframes dws-fadein{from{opacity:0}to{opacity:1}}
 .dws-phone{width:300px;height:560px;background:#0b1220;border-radius:42px;padding:11px;box-shadow:0 28px 56px -22px rgba(8,15,30,.55);position:relative;margin:0 auto}
 .dws-notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:110px;height:21px;background:#0b1220;border-radius:0 0 16px 16px;z-index:6}
@@ -601,7 +603,8 @@ const CSS = `
 .dws-ph .dws-av{width:32px;height:32px;border-radius:50%;background:#25d366;display:grid;place-items:center;font-size:15px}
 .dws-ph.op .dws-av{background:#fbbf24}
 .dws-nm{font-weight:600;font-size:13.5px}.dws-st{font-size:10.5px;opacity:.85}
-.dws-msgs{flex:1;overflow:hidden;padding:12px 11px;display:flex;flex-direction:column;gap:6px;justify-content:flex-end}
+.dws-msgs{flex:1;overflow:hidden;padding:12px 11px;display:flex;flex-direction:column;gap:6px;justify-content:flex-start}
+.dws-date{align-self:center;background:#fff;color:#54656f;font-size:10px;font-weight:500;padding:3px 10px;border-radius:7px;box-shadow:0 1px 1px rgba(0,0,0,.08);margin-bottom:4px}
 .dws-m{max-width:85%;padding:8px 12px;border-radius:8px;font-size:13.5px;line-height:1.42;box-shadow:0 1px 1px rgba(0,0,0,.08);animation:dws-pop .4s}
 @keyframes dws-pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .dws-in{background:#fff;align-self:flex-start;border-top-left-radius:2px}
