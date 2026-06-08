@@ -1,213 +1,110 @@
-import { useEffect } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Link } from "react-router-dom"
-import { motion } from "framer-motion"
-import { ArrowRight, MapPin, Clock, Tag, FileText, Megaphone, Building2, CheckCircle, Layers } from "lucide-react"
+import { AnimatePresence, motion } from "framer-motion"
+import {
+  ArrowRight,
+  MessageCircle,
+  Languages,
+  Megaphone,
+  MapPin,
+  Bot,
+  ShieldCheck,
+  Server,
+  Maximize2,
+  Users,
+  Check,
+  Zap,
+  Clock,
+  Tag,
+  Loader2,
+} from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
+import {
+  FRANCHISING_I18N,
+  type FranchisingCopy,
+  type FranchisingLang,
+} from "./franchising/franchising.i18n"
 
-type Language = "it" | "en" | "es" | "pt"
-
-const T = {
-  it: {
-    seoTitle: "Chatbot WhatsApp per Franchising Multi-Sede - eChatbot",
-    seoDesc: "Un'unica AI per tutte le tue sedi in franchising. Configurazione centrale del brand con override per sede di orari, prezzi, istruzioni e promozioni. L'AI riconosce da quale sede scrive il cliente e risponde sempre con i dati corretti.",
-    seoKeys: "chatbot franchising, whatsapp multi sede, chatbot multi negozio, assistente ia franchising, gestione sedi whatsapp, override prezzi orari sede",
-    breadcrumb: "Franchising Multi-Sede",
-    badge: "Per Catene e Franchising",
-    heroTitle: "Una sola AI.\nOgni sede. La risposta giusta, sempre.",
-    heroSub: "Il brand è uno, le sedi sono tante — ognuna con i suoi orari, prezzi e regole. eChatbot riconosce da quale punto vendita scrive il cliente e risponde con i dati esatti di quel locale. Tu governi tutto da un unico pannello.",
-    cta: "Parliamone",
-    ctaSub: "Demo personalizzata, nessun impegno",
-    overrideTitle: "Configurazione centrale, override per sede.",
-    overrideSub: "Imposti il brand una volta. Ogni sede eredita tutto e sovrascrive solo ciò che cambia. Zero duplicazioni, zero risposte sbagliate.",
-    overrideItems: [
-      { icon: "clock", title: "Orari", desc: "Ogni sede ha i suoi orari di apertura, festivi e chiusure straordinarie. L'AI risponde sempre con l'orario del locale corretto." },
-      { icon: "tag", title: "Prezzi", desc: "Listini diversi per sede o area. Promozioni locali senza toccare il listino nazionale." },
-      { icon: "file", title: "Istruzioni", desc: "Procedure, FAQ e istruzioni operative specifiche per punto vendita. Quello che vale per una sede non confonde le altre." },
-      { icon: "megaphone", title: "Promozioni", desc: "Campagne mirate per singola sede o gruppo di sedi, inviate via WhatsApp solo ai clienti di quell'area." },
-    ],
-    problemsTitle: "I problemi di chi gestisce più sedi",
-    problems: [
-      { num: "1", problem: "Ogni sede risponde in modo diverso e il cliente riceve informazioni sbagliate?", solutionTitle: "Risposte coerenti col brand", solutionDesc: "Una base di conoscenza centrale garantisce tono e contenuti uniformi. Ogni sede aggiunge solo i propri dettagli locali." },
-      { num: "2", problem: "Aggiornare orari e prezzi su decine di sedi è un incubo?", solutionTitle: "Un pannello, tutte le sedi", solutionDesc: "Modifichi al centro o per singola sede. Le modifiche sono immediate, senza ricaricare prompt o riaddestrare nulla." },
-      { num: "3", problem: "Il cliente non sa a quale sede rivolgersi o scrive a quella sbagliata?", solutionTitle: "Riconoscimento automatico della sede", solutionDesc: "L'AI identifica il punto vendita dal contesto e risponde con indirizzo, orari e contatti corretti — o chiede quale sede serve." },
-      { num: "4", problem: "Le promozioni locali si perdono o arrivano ai clienti sbagliati?", solutionTitle: "Campagne per sede", solutionDesc: "Invii offerte mirate solo ai clienti di una sede o area, dallo stesso canale di supporto WhatsApp." },
-    ],
-    tagline: "Un brand coerente al centro, dati corretti in ogni sede.",
-    howTitle: "Come funziona",
-    howSub: "Dalla configurazione centrale alla risposta locale, tutto automatico.",
-    steps: [
-      { icon: "🏢", title: "Configuri il brand", desc: "Definisci una volta tono, conoscenza di base, regole e contenuti comuni a tutte le sedi." },
-      { icon: "📍", title: "Aggiungi le sedi", desc: "Ogni punto vendita eredita la base e sovrascrive solo ciò che cambia: orari, prezzi, istruzioni, indirizzo." },
-      { icon: "💬", title: "Il cliente scrive", desc: "L'AI riconosce la sede dal contesto e risponde con i dati esatti di quel locale, nella lingua del cliente." },
-      { icon: "📊", title: "Governi tutto", desc: "Monitori conversazioni e performance per sede da un unico pannello. Modifiche immediate, ovunque." },
-    ],
-    benefitsTitle: "Perché le catene scelgono eChatbot",
-    benefits: [
-      { icon: "layers", title: "Scala senza caos", desc: "Aggiungi nuove sedi in minuti. La base centrale fa il lavoro pesante, la sede mette solo i dettagli." },
-      { icon: "building", title: "Controllo del brand", desc: "Mantieni voce e qualità uniformi su tutta la rete, anche con decine di sedi e operatori diversi." },
-      { icon: "pin", title: "Precisione locale", desc: "Mai più orari o prezzi sbagliati: ogni cliente riceve i dati della sua sede." },
-    ],
-    langTitle: "Senza barriere linguistiche.",
-    langDesc: "I tuoi clienti scrivono nella loro lingua, i tuoi operatori rispondono nella propria. Ogni messaggio si traduce in entrambe le direzioni, in tempo reale — la stessa AI multilingue su tutte le sedi, dal turista alla clientela locale.",
-    ctaTitle: "Hai una rete in franchising?",
-    ctaDesc: "Ti mostriamo come gestire tutte le sedi con un'unica AI. Demo su misura per la tua catena.",
-  },
-  en: {
-    seoTitle: "WhatsApp Chatbot for Multi-Location Franchises - eChatbot",
-    seoDesc: "One AI for all your franchise locations. Central brand setup with per-store override of hours, prices, instructions and promotions. The AI detects which location the customer is writing from and always answers with the correct data.",
-    seoKeys: "franchise chatbot, multi location whatsapp, multi store chatbot, franchise ai assistant, location management whatsapp, per store price hours override",
-    breadcrumb: "Multi-Location Franchises",
-    badge: "For Chains & Franchises",
-    heroTitle: "One AI.\nEvery location. The right answer, every time.",
-    heroSub: "One brand, many locations — each with its own hours, prices and rules. eChatbot detects which store the customer is writing from and replies with that location's exact data. You manage everything from a single panel.",
-    cta: "Let's Talk",
-    ctaSub: "Custom demo, no commitment",
-    overrideTitle: "Central setup, per-store override.",
-    overrideSub: "Configure the brand once. Each location inherits everything and overrides only what changes. Zero duplication, zero wrong answers.",
-    overrideItems: [
-      { icon: "clock", title: "Hours", desc: "Each location has its own opening hours, holidays and special closures. The AI always answers with the correct store's schedule." },
-      { icon: "tag", title: "Prices", desc: "Different price lists per location or area. Local promotions without touching the national list." },
-      { icon: "file", title: "Instructions", desc: "Procedures, FAQs and operating instructions specific to each store. What applies to one location never confuses the others." },
-      { icon: "megaphone", title: "Promotions", desc: "Targeted campaigns for a single location or group of stores, sent via WhatsApp only to customers in that area." },
-    ],
-    problemsTitle: "The pains of running multiple locations",
-    problems: [
-      { num: "1", problem: "Each location answers differently and customers get wrong information?", solutionTitle: "On-brand, consistent answers", solutionDesc: "A central knowledge base keeps tone and content uniform. Each location adds only its own local details." },
-      { num: "2", problem: "Updating hours and prices across dozens of stores is a nightmare?", solutionTitle: "One panel, all locations", solutionDesc: "Edit centrally or per location. Changes are instant — no reloading prompts or retraining anything." },
-      { num: "3", problem: "Customers don't know which location to ask, or write to the wrong one?", solutionTitle: "Automatic location detection", solutionDesc: "The AI identifies the store from context and replies with the correct address, hours and contacts — or asks which location is needed." },
-      { num: "4", problem: "Local promotions get lost or reach the wrong customers?", solutionTitle: "Per-location campaigns", solutionDesc: "Send targeted offers only to customers of one location or area, from the same WhatsApp support channel." },
-    ],
-    tagline: "A consistent brand at the center, correct data at every location.",
-    howTitle: "How it works",
-    howSub: "From central setup to local answer, all automatic.",
-    steps: [
-      { icon: "🏢", title: "Configure the brand", desc: "Define tone, base knowledge, rules and shared content once for all locations." },
-      { icon: "📍", title: "Add locations", desc: "Each store inherits the base and overrides only what changes: hours, prices, instructions, address." },
-      { icon: "💬", title: "Customer writes", desc: "The AI detects the location from context and answers with that store's exact data, in the customer's language." },
-      { icon: "📊", title: "Govern everything", desc: "Monitor conversations and performance per location from a single panel. Instant changes, everywhere." },
-    ],
-    benefitsTitle: "Why chains choose eChatbot",
-    benefits: [
-      { icon: "layers", title: "Scale without chaos", desc: "Add new locations in minutes. The central base does the heavy lifting, the store adds only the details." },
-      { icon: "building", title: "Brand control", desc: "Keep voice and quality uniform across the whole network, even with dozens of locations and different operators." },
-      { icon: "pin", title: "Local accuracy", desc: "No more wrong hours or prices: every customer gets their own location's data." },
-    ],
-    langTitle: "No language barriers.",
-    langDesc: "Your customers write in their language, your operators reply in theirs. Every message is translated in both directions, in real time — the same multilingual AI across every location, from tourists to locals.",
-    ctaTitle: "Run a franchise network?",
-    ctaDesc: "We'll show you how to manage every location with a single AI. Demo tailored to your chain.",
-  },
-  es: {
-    seoTitle: "Chatbot WhatsApp para Franquicias Multi-Sede - eChatbot",
-    seoDesc: "Una sola IA para todas las sedes de tu franquicia. Configuración central de la marca con override por local de horarios, precios, instrucciones y promociones. La IA detecta desde qué sede escribe el cliente y responde siempre con los datos correctos.",
-    seoKeys: "chatbot franquicia, whatsapp multi sede, chatbot multi tienda, asistente ia franquicia, gestión locales whatsapp, override precios horarios sede",
-    breadcrumb: "Franquicias Multi-Sede",
-    badge: "Para Cadenas y Franquicias",
-    heroTitle: "Una sola IA.\nCada sede. La respuesta correcta, siempre.",
-    heroSub: "Una marca, muchas sedes — cada una con sus horarios, precios y reglas. eChatbot detecta desde qué local escribe el cliente y responde con los datos exactos de esa sede. Tú lo gestionas todo desde un único panel.",
-    cta: "¿Lo hablamos?",
-    ctaSub: "Demo personalizada, sin compromiso",
-    overrideTitle: "Configuración central, override por sede.",
-    overrideSub: "Configuras la marca una vez. Cada sede hereda todo y sobrescribe solo lo que cambia. Cero duplicación, cero respuestas erróneas.",
-    overrideItems: [
-      { icon: "clock", title: "Horarios", desc: "Cada sede tiene sus horarios de apertura, festivos y cierres especiales. La IA responde siempre con el horario del local correcto." },
-      { icon: "tag", title: "Precios", desc: "Listas de precios distintas por sede o zona. Promociones locales sin tocar la lista nacional." },
-      { icon: "file", title: "Instrucciones", desc: "Procedimientos, FAQ e instrucciones operativas específicas por local. Lo que vale para una sede no confunde a las demás." },
-      { icon: "megaphone", title: "Promociones", desc: "Campañas dirigidas a una sede o grupo de sedes, enviadas por WhatsApp solo a los clientes de esa zona." },
-    ],
-    problemsTitle: "Los problemas de gestionar varias sedes",
-    problems: [
-      { num: "1", problem: "¿Cada sede responde de forma distinta y el cliente recibe información errónea?", solutionTitle: "Respuestas coherentes con la marca", solutionDesc: "Una base de conocimiento central garantiza tono y contenido uniformes. Cada sede añade solo sus detalles locales." },
-      { num: "2", problem: "¿Actualizar horarios y precios en decenas de sedes es una pesadilla?", solutionTitle: "Un panel, todas las sedes", solutionDesc: "Editas en el centro o por sede. Los cambios son inmediatos, sin recargar prompts ni reentrenar nada." },
-      { num: "3", problem: "¿El cliente no sabe a qué sede dirigirse o escribe a la equivocada?", solutionTitle: "Reconocimiento automático de sede", solutionDesc: "La IA identifica el local por el contexto y responde con dirección, horarios y contactos correctos — o pregunta qué sede necesita." },
-      { num: "4", problem: "¿Las promociones locales se pierden o llegan a los clientes equivocados?", solutionTitle: "Campañas por sede", solutionDesc: "Envías ofertas dirigidas solo a los clientes de una sede o zona, desde el mismo canal de soporte de WhatsApp." },
-    ],
-    tagline: "Una marca coherente en el centro, datos correctos en cada sede.",
-    howTitle: "Cómo funciona",
-    howSub: "De la configuración central a la respuesta local, todo automático.",
-    steps: [
-      { icon: "🏢", title: "Configuras la marca", desc: "Defines una vez tono, conocimiento base, reglas y contenido común a todas las sedes." },
-      { icon: "📍", title: "Añades las sedes", desc: "Cada local hereda la base y sobrescribe solo lo que cambia: horarios, precios, instrucciones, dirección." },
-      { icon: "💬", title: "El cliente escribe", desc: "La IA reconoce la sede por el contexto y responde con los datos exactos de ese local, en el idioma del cliente." },
-      { icon: "📊", title: "Lo gestionas todo", desc: "Monitorizas conversaciones y rendimiento por sede desde un único panel. Cambios inmediatos, en todas partes." },
-    ],
-    benefitsTitle: "Por qué las cadenas eligen eChatbot",
-    benefits: [
-      { icon: "layers", title: "Escala sin caos", desc: "Añade nuevas sedes en minutos. La base central hace el trabajo pesado, la sede solo pone los detalles." },
-      { icon: "building", title: "Control de marca", desc: "Mantén voz y calidad uniformes en toda la red, incluso con decenas de sedes y operadores distintos." },
-      { icon: "pin", title: "Precisión local", desc: "Nunca más horarios o precios equivocados: cada cliente recibe los datos de su sede." },
-    ],
-    langTitle: "Sin barreras idiomáticas.",
-    langDesc: "Tus clientes escriben en su idioma, tus operadores responden en el suyo. Cada mensaje se traduce en ambas direcciones, en tiempo real — la misma IA multilingüe en todas las sedes, del turista al cliente local.",
-    ctaTitle: "¿Tienes una red de franquicias?",
-    ctaDesc: "Te mostramos cómo gestionar todas las sedes con una sola IA. Demo a medida para tu cadena.",
-  },
-  pt: {
-    seoTitle: "Chatbot WhatsApp para Franquias Multi-Sede - eChatbot",
-    seoDesc: "Uma única IA para todas as unidades da sua franquia. Configuração central da marca com override por loja de horários, preços, instruções e promoções. A IA deteta de qual unidade o cliente está a escrever e responde sempre com os dados corretos.",
-    seoKeys: "chatbot franquia, whatsapp multi unidade, chatbot multi loja, assistente ia franquia, gestão unidades whatsapp, override preços horários unidade",
-    breadcrumb: "Franquias Multi-Sede",
-    badge: "Para Redes e Franquias",
-    heroTitle: "Uma única IA.\nCada unidade. A resposta certa, sempre.",
-    heroSub: "Uma marca, muitas unidades — cada uma com os seus horários, preços e regras. O eChatbot deteta de qual loja o cliente está a escrever e responde com os dados exatos dessa unidade. Você gere tudo a partir de um único painel.",
-    cta: "Vamos conversar",
-    ctaSub: "Demo personalizada, sem compromisso",
-    overrideTitle: "Configuração central, override por unidade.",
-    overrideSub: "Configura a marca uma vez. Cada unidade herda tudo e sobrescreve apenas o que muda. Zero duplicação, zero respostas erradas.",
-    overrideItems: [
-      { icon: "clock", title: "Horários", desc: "Cada unidade tem os seus horários de abertura, feriados e fechos especiais. A IA responde sempre com o horário da loja correta." },
-      { icon: "tag", title: "Preços", desc: "Tabelas de preços diferentes por unidade ou zona. Promoções locais sem tocar na tabela nacional." },
-      { icon: "file", title: "Instruções", desc: "Procedimentos, FAQ e instruções operacionais específicas por loja. O que vale para uma unidade não confunde as outras." },
-      { icon: "megaphone", title: "Promoções", desc: "Campanhas dirigidas a uma unidade ou grupo de lojas, enviadas por WhatsApp apenas aos clientes dessa zona." },
-    ],
-    problemsTitle: "Os problemas de gerir várias unidades",
-    problems: [
-      { num: "1", problem: "Cada unidade responde de forma diferente e o cliente recebe informação errada?", solutionTitle: "Respostas coerentes com a marca", solutionDesc: "Uma base de conhecimento central garante tom e conteúdo uniformes. Cada unidade adiciona apenas os seus detalhes locais." },
-      { num: "2", problem: "Atualizar horários e preços em dezenas de lojas é um pesadelo?", solutionTitle: "Um painel, todas as unidades", solutionDesc: "Edita no centro ou por unidade. As alterações são imediatas, sem recarregar prompts nem retreinar nada." },
-      { num: "3", problem: "O cliente não sabe a que unidade se dirigir ou escreve à errada?", solutionTitle: "Reconhecimento automático da unidade", solutionDesc: "A IA identifica a loja pelo contexto e responde com a morada, horários e contactos corretos — ou pergunta qual a unidade necessária." },
-      { num: "4", problem: "As promoções locais perdem-se ou chegam aos clientes errados?", solutionTitle: "Campanhas por unidade", solutionDesc: "Envia ofertas dirigidas apenas aos clientes de uma unidade ou zona, a partir do mesmo canal de suporte WhatsApp." },
-    ],
-    tagline: "Uma marca coerente no centro, dados corretos em cada unidade.",
-    howTitle: "Como funciona",
-    howSub: "Da configuração central à resposta local, tudo automático.",
-    steps: [
-      { icon: "🏢", title: "Configura a marca", desc: "Define uma vez o tom, conhecimento base, regras e conteúdo comum a todas as unidades." },
-      { icon: "📍", title: "Adiciona as unidades", desc: "Cada loja herda a base e sobrescreve apenas o que muda: horários, preços, instruções, morada." },
-      { icon: "💬", title: "O cliente escreve", desc: "A IA reconhece a unidade pelo contexto e responde com os dados exatos dessa loja, no idioma do cliente." },
-      { icon: "📊", title: "Gere tudo", desc: "Monitoriza conversas e desempenho por unidade a partir de um único painel. Alterações imediatas, em todo o lado." },
-    ],
-    benefitsTitle: "Porque as redes escolhem o eChatbot",
-    benefits: [
-      { icon: "layers", title: "Escala sem caos", desc: "Adiciona novas unidades em minutos. A base central faz o trabalho pesado, a loja coloca apenas os detalhes." },
-      { icon: "building", title: "Controlo da marca", desc: "Mantém voz e qualidade uniformes em toda a rede, mesmo com dezenas de unidades e operadores diferentes." },
-      { icon: "pin", title: "Precisão local", desc: "Nunca mais horários ou preços errados: cada cliente recebe os dados da sua unidade." },
-    ],
-    langTitle: "Sem barreiras linguísticas.",
-    langDesc: "Os teus clientes escrevem na sua língua, os teus operadores respondem na deles. Cada mensagem é traduzida em ambas as direções, em tempo real — a mesma IA multilíngue em todas as unidades, do turista ao cliente local.",
-    ctaTitle: "Tem uma rede de franquias?",
-    ctaDesc: "Mostramos-lhe como gerir todas as unidades com uma única IA. Demo à medida da sua rede.",
-  },
+// ---------------------------------------------------------------------------
+// Icon registry — string keys in i18n map to lucide icons here, so copy stays
+// data-only and the component owns presentation.
+// ---------------------------------------------------------------------------
+function solutionIcon(key: string) {
+  const cls = "w-6 h-6 text-green-400"
+  switch (key) {
+    case "whatsapp":
+      return <MessageCircle className={cls} />
+    case "translate":
+      return <Languages className={cls} />
+    case "megaphone":
+      return <Megaphone className={cls} />
+    case "pin":
+      return <MapPin className={cls} />
+    case "bot":
+      return <Bot className={cls} />
+    default:
+      return <MapPin className={cls} />
+  }
 }
 
-const overrideIcon = (key: string) => {
-  if (key === "clock") return <Clock className="w-6 h-6 text-green-600" />
-  if (key === "tag") return <Tag className="w-6 h-6 text-green-600" />
-  if (key === "file") return <FileText className="w-6 h-6 text-green-600" />
-  return <Megaphone className="w-6 h-6 text-green-600" />
+function dataIcon(key: string) {
+  const cls = "w-6 h-6 text-green-400"
+  switch (key) {
+    case "shield":
+      return <ShieldCheck className={cls} />
+    case "server":
+      return <Server className={cls} />
+    case "expand":
+      return <Maximize2 className={cls} />
+    case "together":
+      return <Users className={cls} />
+    default:
+      return <ShieldCheck className={cls} />
+  }
 }
 
-const benefitIcon = (key: string) => {
-  if (key === "layers") return <Layers className="w-6 h-6 text-green-600" />
-  if (key === "building") return <Building2 className="w-6 h-6 text-green-600" />
-  return <MapPin className="w-6 h-6 text-green-600" />
+// Reveal-on-scroll wrapper to keep motion props DRY across sections.
+const reveal = {
+  initial: { opacity: 0, y: 24 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, amount: 0.2 },
+  transition: { duration: 0.55, ease: "easeOut" as const },
+}
+
+// Above-the-fold variant: plays on mount (no scroll trigger needed).
+const intro = {
+  initial: { opacity: 0, y: 24 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.55, ease: "easeOut" as const },
+}
+
+// Left-aligned section heading (white lead + green accent), per Andrea's
+// request to put titles above the cards instead of centered.
+function SectionHeading({
+  title,
+  accent,
+  sub,
+}: {
+  title: string
+  accent?: string
+  sub?: string
+}) {
+  return (
+    <motion.div {...reveal} className="mb-10 lg:mb-14 max-w-3xl">
+      <h2 className="text-3xl lg:text-4xl font-bold text-white leading-tight">
+        {title} {accent && <span className="text-green-400">{accent}</span>}
+      </h2>
+      {sub && <p className="mt-3 text-lg text-slate-400 leading-relaxed">{sub}</p>}
+    </motion.div>
+  )
 }
 
 export function FranchisingPage() {
   const { language } = useLanguage()
-  const t = T[(language as Language) ?? "en"] ?? T.en
+  const t = FRANCHISING_I18N[(language as FranchisingLang) ?? "en"] ?? FRANCHISING_I18N.en
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -220,226 +117,184 @@ export function FranchisingPage() {
         description={t.seoDesc}
         keywords={t.seoKeys}
         url="/franchising"
-        lang={language as Language}
+        lang={language as FranchisingLang}
         serviceType="Multi-Location Franchise WhatsApp Chatbot"
       />
       <SiteHeader />
 
-      <main>
-        {/* Hero */}
-        <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-green-50 overflow-hidden">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-              {/* Left: text */}
+      <main className="bg-[#070d18] text-slate-200">
+        {/* ============================ HERO ============================ */}
+        <section className="relative overflow-hidden pt-24 pb-20 lg:pt-32 lg:pb-28">
+          {/* Ambient glows */}
+          <div className="pointer-events-none absolute -top-40 -left-40 h-[34rem] w-[34rem] rounded-full bg-green-500/15 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-32 -right-32 h-[28rem] w-[28rem] rounded-full bg-emerald-400/10 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:34px_34px] opacity-60" />
+
+          <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
+              {/* Left: copy */}
               <div>
-                <motion.h1
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6 }}
-                  className="text-5xl lg:text-7xl font-extrabold leading-[1.05] mb-8 whitespace-pre-line text-slate-900"
+                <motion.span
+                  {...intro}
+                  className="inline-flex items-center gap-2 rounded-full border border-green-400/30 bg-green-400/10 px-4 py-1.5 text-sm font-semibold uppercase tracking-wide text-green-300"
                 >
-                  {t.heroTitle}
+                  {t.badge}
+                </motion.span>
+                <motion.h1
+                  {...intro}
+                  transition={{ ...intro.transition, delay: 0.05 }}
+                  className="mt-6 text-4xl font-extrabold leading-[1.08] text-white sm:text-5xl lg:text-6xl"
+                >
+                  {t.heroTitleTop}
+                  <br />
+                  <span className="text-green-400">{t.heroTitleAccent}</span>
                 </motion.h1>
                 <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.1 }}
-                  className="text-lg text-slate-600 mb-8 max-w-xl"
+                  {...intro}
+                  transition={{ ...intro.transition, delay: 0.1 }}
+                  className="mt-6 max-w-xl text-lg leading-relaxed text-slate-300"
                 >
                   {t.heroSub}
                 </motion.p>
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="flex flex-col sm:flex-row gap-4"
+                  {...intro}
+                  transition={{ ...intro.transition, delay: 0.15 }}
+                  className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-5"
                 >
                   <Link
                     to="/contact"
-                    className="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-xl transition-colors"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-500 px-8 py-4 font-bold text-slate-950 shadow-lg shadow-green-500/20 transition-all hover:bg-green-400 hover:shadow-green-400/30"
                   >
-                    {t.cta} <ArrowRight className="w-5 h-5" />
+                    {t.cta} <ArrowRight className="h-5 w-5" />
                   </Link>
-                  <p className="self-center text-sm text-slate-500">{t.ctaSub}</p>
+                  <span className="text-sm text-slate-400">{t.ctaSub}</span>
                 </motion.div>
               </div>
-              {/* Right: illustration — drop public/franchising.png (same style). Hidden until present. */}
+
+              {/* Right: illustration */}
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.15 }}
-                className="hidden lg:block"
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="relative"
               >
+                <div className="absolute -inset-2 rounded-[2rem] bg-gradient-to-tr from-green-500/30 via-emerald-400/10 to-transparent blur-xl" />
                 <img
                   src="/franchising.png"
                   alt="eChatbot AI assistant for multi-location franchises"
-                  className="w-full h-auto rounded-3xl shadow-2xl border border-gray-100"
-                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none" }}
+                  className="relative w-full rounded-3xl border border-white/10 shadow-2xl"
+                  onError={(e) => {
+                    ;(e.currentTarget as HTMLImageElement).style.display = "none"
+                  }}
                 />
               </motion.div>
             </div>
           </div>
         </section>
 
-        {/* Override centerpiece */}
-        <section className="py-16 lg:py-24 bg-white">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">{t.overrideTitle}</h2>
-              <p className="text-gray-600 leading-relaxed">{t.overrideSub}</p>
+        {/* ========================= INDUSTRIES ========================= */}
+        <section className="border-y border-white/5 bg-white/[0.02] py-16 lg:py-20">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <SectionHeading
+              title={t.industriesTitle}
+              sub={t.industriesSub}
+            />
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {t.industries.map((ind, idx) => (
+                <motion.div
+                  key={ind.label}
+                  {...reveal}
+                  transition={{ ...reveal.transition, delay: idx * 0.04 }}
+                  className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/50 px-5 py-4 transition-colors hover:border-green-400/40 hover:bg-slate-900"
+                >
+                  <span className="text-2xl leading-none transition-transform group-hover:scale-110">
+                    {ind.icon}
+                  </span>
+                  <span className="font-semibold text-slate-200">{ind.label}</span>
+                </motion.div>
+              ))}
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              {/* Override panel mockup */}
-              <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-sm">
-                <div className="flex items-center gap-2 mb-4 text-green-700 font-semibold text-xs uppercase tracking-wide">
-                  <Building2 className="w-4 h-4" /> Brand · DemoWash
-                </div>
-                <div className="space-y-3">
-                  <div className="bg-gray-50 rounded-xl p-3 border-l-2 border-gray-300">
-                    <p className="text-gray-500 text-xs mb-1">Default (all locations)</p>
-                    <p className="text-gray-800">Mon–Sat 08:00–20:00 · Wash €4.50</p>
-                  </div>
-                  <div className="bg-green-50 rounded-xl p-3 border-l-2 border-green-500">
-                    <p className="text-green-700 text-xs mb-1 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" /> Madrid Centro — override
-                    </p>
-                    <p className="text-gray-900 font-medium">Mon–Sun 07:00–23:00 · Wash €5.00</p>
-                  </div>
-                  <div className="bg-green-50 rounded-xl p-3 border-l-2 border-green-500">
-                    <p className="text-green-700 text-xs mb-1 flex items-center gap-1">
-                      <MapPin className="w-3 h-3" /> Sevilla Triana — override
-                    </p>
-                    <p className="text-gray-900 font-medium">Mon–Sat 09:00–21:00 · Wash €4.00</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Override item grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                {t.overrideItems.map((item, idx) => (
-                  <motion.div
-                    key={idx}
-                    initial={{ opacity: 0, y: 16 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: idx * 0.08 }}
-                    className="bg-gray-50 rounded-2xl p-5 border border-gray-100"
-                  >
-                    <div className="flex items-center gap-3 mb-2">
-                      {overrideIcon(item.icon)}
-                      <h3 className="font-bold text-gray-900">{item.title}</h3>
-                    </div>
-                    <p className="text-sm text-gray-600 leading-relaxed">{item.desc}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
+            <p className="mt-6 text-sm italic text-slate-500">{t.industriesNote}</p>
           </div>
         </section>
 
-        {/* Problems → Solutions */}
-        <section className="py-16 lg:py-24 bg-gray-50">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">{t.problemsTitle}</h2>
-            <div className="space-y-6">
-              {t.problems.map((item, idx) => (
+        {/* ===================== PROBLEMS → SOLUTIONS ==================== */}
+        <section className="py-16 lg:py-24">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <SectionHeading title={t.problemsTitle} accent={t.problemsSub} />
+            <div className="space-y-5">
+              {t.problems.map((p, idx) => (
                 <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: idx * 0.07 }}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start rounded-2xl border border-gray-100 shadow-sm bg-white p-6"
+                  key={p.num}
+                  {...reveal}
+                  transition={{ ...reveal.transition, delay: idx * 0.05 }}
+                  className="grid grid-cols-1 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/40 md:grid-cols-2"
                 >
-                  <div className="flex items-start gap-4">
-                    <span className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 text-green-700 font-bold flex items-center justify-center">{item.num}</span>
-                    <p className="text-base font-medium text-gray-800">{item.problem}</p>
+                  {/* Problem */}
+                  <div className="flex items-start gap-5 p-6 lg:p-8">
+                    <span className="text-5xl font-black leading-none text-rose-400/70">
+                      {p.num}
+                    </span>
+                    <p className="pt-1 text-lg font-semibold text-slate-100">
+                      {p.problem}
+                    </p>
                   </div>
-                  <div className="flex items-start gap-3 md:border-l md:border-gray-100 md:pl-6">
-                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                  {/* Solution */}
+                  <div className="relative flex items-start gap-4 border-t border-white/10 bg-green-500/[0.04] p-6 md:border-l md:border-t-0 lg:p-8">
+                    {/* Connector arrow (desktop) */}
+                    <div className="absolute -left-4 top-1/2 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-green-400/30 bg-[#070d18] md:flex">
+                      <ArrowRight className="h-4 w-4 text-green-400" />
+                    </div>
+                    <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-green-400/10">
+                      {solutionIcon(p.icon)}
+                    </div>
                     <div>
-                      <p className="font-bold text-gray-900 mb-1">{item.solutionTitle}</p>
-                      <p className="text-sm text-gray-600">{item.solutionDesc}</p>
+                      <h3 className="text-lg font-bold text-green-300">
+                        {p.solutionTitle}
+                      </h3>
+                      <p className="mt-1.5 text-[15px] leading-relaxed text-slate-400">
+                        {p.solutionDesc}
+                      </p>
                     </div>
                   </div>
                 </motion.div>
               ))}
             </div>
-            <div className="mt-10 bg-green-600 text-white rounded-2xl px-8 py-5 flex items-center gap-3">
-              <CheckCircle className="w-6 h-6 shrink-0" />
-              <p className="font-semibold">{t.tagline}</p>
-            </div>
+
+            {/* Banner */}
+            <motion.div
+              {...reveal}
+              className="mt-8 flex items-center gap-4 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-500 px-6 py-5 shadow-lg shadow-green-900/30 lg:px-8"
+            >
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20">
+                <Check className="h-5 w-5 text-white" />
+              </span>
+              <p className="text-lg font-bold text-white">{t.problemsBanner}</p>
+            </motion.div>
           </div>
         </section>
 
-        {/* How it works */}
-        <section className="py-16 lg:py-24 bg-white">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center max-w-2xl mx-auto mb-12">
-              <h2 className="text-3xl font-bold text-gray-900 mb-3">{t.howTitle}</h2>
-              <p className="text-gray-600">{t.howSub}</p>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {t.steps.map((step, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: idx * 0.08 }}
-                  className="bg-gray-50 rounded-2xl p-6 border border-gray-100"
-                >
-                  <div className="text-3xl mb-3">{step.icon}</div>
-                  <h3 className="font-bold text-gray-900 mb-2">{step.title}</h3>
-                  <p className="text-sm text-gray-600 leading-relaxed">{step.desc}</p>
-                </motion.div>
-              ))}
-            </div>
+        {/* ===================== STORE DATA LOADER ====================== */}
+        <section className="border-y border-white/5 bg-white/[0.02] py-16 lg:py-24">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <SectionHeading title={t.storeTitle} accent={t.storeAccent} sub={t.storeSub} />
+            <StoreLoader t={t} />
           </div>
         </section>
 
-        {/* Benefits */}
-        <section className="py-16 lg:py-24 bg-gray-50">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">{t.benefitsTitle}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {t.benefits.map((item, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 16 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.4, delay: idx * 0.08 }}
-                  className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm"
-                >
-                  <div className="flex items-center gap-3 mb-3">
-                    {benefitIcon(item.icon)}
-                    <h3 className="font-bold text-gray-900">{item.title}</h3>
-                  </div>
-                  <p className="text-sm text-gray-600 leading-relaxed">{item.desc}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Language barriers */}
-        <section className="relative py-16 lg:py-24 overflow-hidden bg-gradient-to-br from-slate-50 via-white to-green-50">
-          <div className="absolute -top-24 -right-24 w-96 h-96 bg-green-200/30 rounded-full blur-3xl pointer-events-none" />
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        {/* ===================== LANGUAGE BARRIERS ====================== */}
+        <section className="py-16 lg:py-24">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
               <div>
-                <span className="inline-flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold mb-4">
-                  🌐 Real-time translation
+                <span className="mb-4 inline-flex items-center gap-2 rounded-full bg-green-400/10 px-3 py-1 text-sm font-semibold text-green-300">
+                  🌐 {t.langBadge}
                 </span>
-                <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-                  {t.langTitle.split(" ").slice(0, -2).join(" ")}{" "}
-                  <span className="text-green-600">{t.langTitle.split(" ").slice(-2).join(" ")}</span>
+                <h2 className="text-3xl font-bold text-white lg:text-4xl">
+                  {t.langTitle} <span className="text-green-400">{t.langTitleAccent}</span>
                 </h2>
-                <p className="text-gray-600 leading-relaxed mb-6">{t.langDesc}</p>
-                {/* Supported languages */}
-                <div className="flex flex-wrap gap-2">
+                <p className="mt-4 leading-relaxed text-slate-400">{t.langDesc}</p>
+                <div className="mt-6 flex flex-wrap gap-2">
                   {[
                     { flag: "🇮🇹", label: "Italiano" },
                     { flag: "🇬🇧", label: "English" },
@@ -450,7 +305,7 @@ export function FranchisingPage() {
                   ].map((l) => (
                     <span
                       key={l.label}
-                      className="inline-flex items-center gap-1.5 bg-white text-gray-700 border border-gray-200 shadow-sm rounded-full px-3 py-1.5 text-sm font-medium"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-slate-900/60 px-3 py-1.5 text-sm font-medium text-slate-200"
                     >
                       <span className="text-base leading-none">{l.flag}</span>
                       {l.label}
@@ -460,81 +315,402 @@ export function FranchisingPage() {
               </div>
 
               {/* WhatsApp-style translated chat */}
-              <div className="relative mx-auto w-full max-w-sm">
-                <div className="rounded-[2rem] bg-slate-900 p-3 shadow-2xl ring-1 ring-black/5">
-                  <div className="rounded-[1.5rem] overflow-hidden bg-[#ECE5DD]">
-                    {/* Header */}
-                    <div className="flex items-center gap-3 bg-[#075E54] text-white px-4 py-3">
-                      <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold">K</div>
-                      <div className="leading-tight">
-                        <p className="text-sm font-semibold">Karim</p>
-                        <p className="text-[11px] text-white/70 flex items-center gap-1">
-                          <MapPin className="w-3 h-3" /> Milano Centro · online
-                        </p>
-                      </div>
-                    </div>
-                    {/* Messages */}
-                    <div className="px-3 py-4 space-y-3 text-[13px] min-h-[260px]">
-                      {/* Customer (Arabic) */}
-                      <div className="flex justify-start">
-                        <div className="bg-white rounded-2xl rounded-tl-sm shadow-sm px-3 py-2 max-w-[80%]" dir="rtl">
-                          <p className="text-gray-900">في أي وقت يفتح فرعكم في ميلانو؟</p>
-                          <p className="mt-1 pt-1 border-t border-gray-100 text-[11px] text-gray-400 italic" dir="ltr">
-                            🌐 IT: A che ora apre la sede di Milano?
-                          </p>
-                        </div>
-                      </div>
-                      {/* Operator (Italian) */}
-                      <div className="flex justify-end">
-                        <div className="bg-[#DCF8C6] rounded-2xl rounded-tr-sm shadow-sm px-3 py-2 max-w-[80%]">
-                          <p className="text-[10px] font-semibold text-green-700 mb-0.5">OPERATORE</p>
-                          <p className="text-gray-900">Ciao! Milano Centro apre 8:00–21:00, tutti i giorni.</p>
-                          <p className="mt-1 pt-1 border-t border-green-200/60 text-[11px] text-gray-500 italic" dir="rtl">
-                            🌐 مترجم تلقائياً إلى العربية
-                          </p>
-                        </div>
-                      </div>
-                      {/* Customer reply */}
-                      <div className="flex justify-start">
-                        <div className="bg-white rounded-2xl rounded-tl-sm shadow-sm px-3 py-2 max-w-[80%]" dir="rtl">
-                          <p className="text-gray-900">شكراً! هل لديكم خدمة التوصيل؟</p>
-                          <p className="mt-1 pt-1 border-t border-gray-100 text-[11px] text-gray-400 italic" dir="ltr">
-                            🌐 IT: Grazie! Avete la consegna?
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Floating translation badge */}
-                <div className="absolute -bottom-4 -left-4 bg-white rounded-xl shadow-xl ring-1 ring-gray-100 px-4 py-2 flex items-center gap-2">
-                  <span className="flex h-2.5 w-2.5">
-                    <span className="absolute inline-flex h-2.5 w-2.5 rounded-full bg-green-400 opacity-75 animate-ping" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
-                  </span>
-                  <span className="text-xs font-semibold text-gray-700">AR ⇄ IT · live</span>
-                </div>
-              </div>
+              <PhoneChat t={t} />
             </div>
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="py-16 lg:py-24 bg-gradient-to-br from-green-600 to-green-700 text-white">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-4xl font-bold mb-4">{t.ctaTitle}</h2>
-            <p className="text-green-100 text-lg mb-8">{t.ctaDesc}</p>
-            <Link
-              to="/contact"
-              className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-green-700 font-bold px-10 py-4 rounded-xl transition-colors text-lg"
+        {/* ===================== ACTS & SELLS =========================== */}
+        <section className="py-16 lg:py-24">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <SectionHeading
+              title={t.actsTitle}
+              accent={t.actsTitleAccent}
+              sub={t.actsDesc}
+            />
+            <ActsChat t={t} />
+          </div>
+        </section>
+
+        {/* ===================== CAMPAIGNS / PUSH ======================= */}
+        <section className="border-y border-white/5 bg-white/[0.02] py-16 lg:py-24">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <SectionHeading
+              title={t.campaignsTitle}
+              accent={t.campaignsTitleAccent}
+              sub={t.campaignsDesc}
+            />
+            <PushMock t={t} />
+          </div>
+        </section>
+
+        {/* ===================== DATA CONTROL =========================== */}
+        <section className="py-16 lg:py-24">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <SectionHeading title={t.dataTitle} accent={t.dataTitleAccent} />
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              {t.dataCards.map((c, idx) => (
+                <motion.div
+                  key={c.title}
+                  {...reveal}
+                  transition={{ ...reveal.transition, delay: idx * 0.05 }}
+                  className="rounded-2xl border border-white/10 bg-slate-900/40 p-6 lg:p-7"
+                >
+                  <div className="mb-4 flex items-center gap-3">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-400/10">
+                      {dataIcon(c.icon)}
+                    </span>
+                    <h3 className="text-lg font-bold text-white">{c.title}</h3>
+                  </div>
+                  <p className="text-[15px] leading-relaxed text-slate-400">{c.desc}</p>
+                </motion.div>
+              ))}
+            </div>
+
+            <motion.div
+              {...reveal}
+              className="mt-8 flex items-center gap-4 rounded-2xl bg-gradient-to-r from-green-600 to-emerald-500 px-6 py-5 shadow-lg shadow-green-900/30 lg:px-8"
             >
-              {t.cta} <ArrowRight className="w-5 h-5" />
-            </Link>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20">
+                <Check className="h-5 w-5 text-white" />
+              </span>
+              <p className="text-lg font-bold text-white">{t.dataBanner}</p>
+            </motion.div>
+          </div>
+        </section>
+
+        {/* ========================== CTA ============================== */}
+        <section className="relative overflow-hidden py-20 lg:py-28">
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-green-600 to-emerald-600" />
+          <div className="pointer-events-none absolute -top-20 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-white/10 blur-3xl" />
+          <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
+            <motion.h2 {...reveal} className="text-4xl font-bold text-white lg:text-5xl">
+              {t.ctaTitle} 👋
+            </motion.h2>
+            <motion.p
+              {...reveal}
+              transition={{ ...reveal.transition, delay: 0.08 }}
+              className="mx-auto mt-4 max-w-xl text-lg text-green-50"
+            >
+              {t.ctaDesc}
+            </motion.p>
+            <motion.div {...reveal} transition={{ ...reveal.transition, delay: 0.16 }}>
+              <Link
+                to="/contact"
+                className="mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-10 py-4 text-lg font-bold text-green-700 shadow-xl transition-transform hover:scale-105"
+              >
+                {t.cta} <ArrowRight className="h-5 w-5" />
+              </Link>
+            </motion.div>
           </div>
         </section>
       </main>
 
       <SiteFooter language={language} />
     </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Demo mock components
+// ---------------------------------------------------------------------------
+
+/** Translated WhatsApp-style chat used in the language-barriers section.
+ *  The Arabic stays fixed (the foreign customer); every other line follows the
+ *  active UI language so the visual never contradicts the page copy. */
+function PhoneChat({ t }: { t: FranchisingCopy }) {
+  return (
+    <motion.div {...reveal} className="relative mx-auto w-full max-w-sm">
+      <div className="rounded-[2rem] bg-slate-950 p-3 shadow-2xl ring-1 ring-white/10">
+        <div className="overflow-hidden rounded-[1.5rem] bg-[#ECE5DD]">
+          <div className="flex items-center gap-3 bg-[#075E54] px-4 py-3 text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-sm font-bold">
+              K
+            </div>
+            <div className="leading-tight">
+              <p className="text-sm font-semibold">Karim</p>
+              <p className="flex items-center gap-1 text-[11px] text-white/70">
+                <MapPin className="h-3 w-3" /> Milano Centro · online
+              </p>
+            </div>
+          </div>
+          <div className="min-h-[260px] space-y-3 px-3 py-4 text-[13px]">
+            <div className="flex justify-start">
+              <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-white px-3 py-2 shadow-sm" dir="rtl">
+                <p className="text-gray-900">في أي وقت يفتح فرعكم في ميلانو؟</p>
+                <p className="mt-1 border-t border-gray-100 pt-1 text-[11px] italic text-gray-400" dir="ltr">
+                  🌐 {t.mockLiveLang}: {t.mockQ1Local}
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <div className="max-w-[80%] rounded-2xl rounded-tr-sm bg-[#DCF8C6] px-3 py-2 shadow-sm">
+                <p className="mb-0.5 text-[10px] font-semibold text-green-700">{t.mockOperator}</p>
+                <p className="text-gray-900">{t.mockReply}</p>
+                <p className="mt-1 border-t border-green-200/60 pt-1 text-[11px] italic text-gray-500" dir="rtl">
+                  🌐 مترجم تلقائياً إلى العربية
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-start">
+              <div className="max-w-[80%] rounded-2xl rounded-tl-sm bg-white px-3 py-2 shadow-sm" dir="rtl">
+                <p className="text-gray-900">شكراً! هل لديكم خدمة التوصيل؟</p>
+                <p className="mt-1 border-t border-gray-100 pt-1 text-[11px] italic text-gray-400" dir="ltr">
+                  🌐 {t.mockLiveLang}: {t.mockQ2Local}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="absolute -bottom-4 -left-4 flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 shadow-xl ring-1 ring-white/10">
+        <span className="flex h-2.5 w-2.5">
+          <span className="absolute inline-flex h-2.5 w-2.5 animate-ping rounded-full bg-green-400 opacity-75" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-500" />
+        </span>
+        <span className="text-xs font-semibold text-slate-200">AR ⇄ {t.mockLiveLang} · live</span>
+      </div>
+    </motion.div>
+  )
+}
+
+/** WhatsApp phone mock: AI unlocks a machine + upsells loyalty card. */
+function ActsChat({ t }: { t: FranchisingCopy }) {
+  return (
+    <motion.div {...reveal} className="mx-auto w-full max-w-md">
+      <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white shadow-2xl">
+        {/* WhatsApp header */}
+        <div className="flex items-center gap-3 bg-[#075E54] px-4 py-3 text-white">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-green-500 text-base">
+            🤖
+          </div>
+          <div className="leading-tight">
+            <p className="flex items-center gap-1 text-sm font-semibold">
+              {t.actsBot}
+              <Check className="h-3.5 w-3.5 rounded-full bg-sky-400 p-0.5 text-white" />
+            </p>
+            <p className="text-[11px] text-white/70">online</p>
+          </div>
+        </div>
+        {/* Chat body */}
+        <div className="space-y-2.5 bg-[#ECE5DD] px-3 py-4 text-[13px]">
+          <Bubble side="left">{t.actsCustomer1}</Bubble>
+          <Bubble side="right">{t.actsAi1}</Bubble>
+          <Bubble side="right">
+            <span className="font-medium text-green-700">{t.actsAi2}</span>
+          </Bubble>
+          <Bubble side="left">{t.actsCustomer2}</Bubble>
+          {/* Loyalty upsell */}
+          <Bubble side="right" tone="promo">
+            <p className="font-bold text-amber-700">{t.actsPromoTitle}</p>
+            <p className="mt-0.5">{t.actsPromoText}</p>
+            <div className="mt-2 flex items-center gap-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 p-2 text-white">
+              <Zap className="h-4 w-4" />
+              <span className="text-[11px] font-semibold">{t.actsPromoCard}</span>
+            </div>
+          </Bubble>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+function Bubble({
+  side,
+  tone,
+  children,
+}: {
+  side: "left" | "right"
+  tone?: "promo"
+  children: ReactNode
+}) {
+  const isRight = side === "right"
+  const base = isRight
+    ? "ml-auto rounded-tr-sm bg-[#DCF8C6]"
+    : "mr-auto rounded-tl-sm bg-white"
+  const promo = tone === "promo" ? "bg-amber-50" : ""
+  return (
+    <div
+      className={`max-w-[82%] rounded-2xl px-3 py-2 text-gray-800 shadow-sm ${base} ${promo}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+/** Lock-screen push-notification mock for the campaigns section. */
+function PushMock({ t }: { t: FranchisingCopy }) {
+  return (
+    <motion.div {...reveal} className="mx-auto w-full max-w-md">
+      <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 p-6 shadow-2xl">
+        {/* Clock */}
+        <div className="pt-6 text-center text-white">
+          <p className="text-6xl font-extralight tracking-tight">11:45</p>
+          <p className="mt-1 text-lg text-white/80">{t.pushDate}</p>
+        </div>
+        {/* Notification */}
+        <div className="mt-10 rounded-2xl bg-white/90 p-3.5 shadow-xl backdrop-blur">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-green-500 text-xl">
+              <MessageCircle className="h-5 w-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-bold text-gray-900">WhatsApp</p>
+                <span className="text-[11px] text-gray-400">now</span>
+              </div>
+              <p className="text-[13px] font-semibold text-gray-800">{t.actsBot} ✅</p>
+              <p className="mt-0.5 text-[13px] leading-snug text-gray-700">{t.pushText}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Animated per-location data loader — cycles through stores and "loads" each
+// store's hours, price list and address, so the visitor SEES that the AI
+// injects the right data per location.
+// ---------------------------------------------------------------------------
+interface StoreData {
+  name: string
+  flag: string
+  hours: string
+  wash: string
+  dry: string
+  address: string
+}
+
+const STORES: StoreData[] = [
+  { name: "Milano Centro", flag: "🇮🇹", hours: "8:00–21:00", wash: "€4,50", dry: "€3,00", address: "Via Roma 12" },
+  { name: "Roma Nord", flag: "🇮🇹", hours: "7:00–23:00", wash: "€5,00", dry: "€3,50", address: "Via Tiburtina 88" },
+  { name: "Sevilla Triana", flag: "🇪🇸", hours: "9:00–21:00", wash: "€4,00", dry: "€2,80", address: "Calle Betis 4" },
+  { name: "Lisboa Chiado", flag: "🇵🇹", hours: "8:30–22:00", wash: "€4,20", dry: "€3,10", address: "Rua Garrett 21" },
+]
+
+function StoreLoader({ t }: { t: FranchisingCopy }) {
+  const [active, setActive] = useState(0)
+
+  useEffect(() => {
+    const id = setInterval(() => setActive((a) => (a + 1) % STORES.length), 3600)
+    return () => clearInterval(id)
+  }, [])
+
+  const s = STORES[active]
+
+  const rowVariants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.12, delayChildren: 0.45 } },
+  }
+  const itemVariants = {
+    hidden: { opacity: 0, x: 12 },
+    show: { opacity: 1, x: 0 },
+  }
+
+  return (
+    <motion.div
+      {...reveal}
+      className="grid grid-cols-1 gap-5 lg:grid-cols-[260px_1fr]"
+    >
+      {/* Location selector */}
+      <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+        {STORES.map((st, i) => (
+          <button
+            key={st.name}
+            type="button"
+            onClick={() => setActive(i)}
+            className={`flex shrink-0 items-center gap-2 rounded-xl border px-4 py-3 text-left text-sm font-semibold transition-colors lg:w-full ${
+              i === active
+                ? "border-green-400/50 bg-green-400/10 text-white"
+                : "border-white/10 bg-slate-900/40 text-slate-400 hover:border-white/20 hover:text-slate-200"
+            }`}
+          >
+            <span className="text-base leading-none">{st.flag}</span>
+            <span className="flex items-center gap-2">
+              <MapPin className="h-3.5 w-3.5 text-green-400" />
+              {st.name}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Data panel */}
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 p-6 lg:p-8">
+        {/* Loading progress bar (re-runs on every location switch) */}
+        <motion.div
+          key={`bar-${active}`}
+          initial={{ width: "0%" }}
+          animate={{ width: "100%" }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+          className="absolute left-0 top-0 h-0.5 bg-green-400"
+        />
+        <div className="mb-5 flex items-center gap-2 text-xs font-medium text-green-300">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          {t.storeLoading}
+        </div>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={active}
+            variants={rowVariants}
+            initial="hidden"
+            animate="show"
+            exit={{ opacity: 0, transition: { duration: 0.15 } }}
+          >
+            <motion.h3
+              variants={itemVariants}
+              className="mb-5 flex items-center gap-2 text-xl font-bold text-white"
+            >
+              <span>{s.flag}</span> {s.name}
+            </motion.h3>
+
+            <div className="space-y-3">
+              {/* Hours */}
+              <motion.div
+                variants={itemVariants}
+                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
+              >
+                <Clock className="h-5 w-5 shrink-0 text-green-400" />
+                <span className="text-sm text-slate-400">{t.storeHoursLabel}</span>
+                <span className="ml-auto font-mono font-semibold text-white">{s.hours}</span>
+              </motion.div>
+
+              {/* Prices */}
+              <motion.div
+                variants={itemVariants}
+                className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
+              >
+                <div className="mb-2 flex items-center gap-3">
+                  <Tag className="h-5 w-5 shrink-0 text-green-400" />
+                  <span className="text-sm text-slate-400">{t.storePricesLabel}</span>
+                </div>
+                <div className="space-y-1.5 pl-8 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-300">{t.svcWash}</span>
+                    <span className="font-mono font-semibold text-green-300">{s.wash}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-300">{t.svcDry}</span>
+                    <span className="font-mono font-semibold text-green-300">{s.dry}</span>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Address */}
+              <motion.div
+                variants={itemVariants}
+                className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
+              >
+                <MapPin className="h-5 w-5 shrink-0 text-green-400" />
+                <span className="text-sm text-slate-400">{t.storeAddressLabel}</span>
+                <span className="ml-auto font-medium text-white">{s.address}</span>
+              </motion.div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </motion.div>
   )
 }
