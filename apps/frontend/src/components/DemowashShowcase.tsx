@@ -217,7 +217,7 @@ function buildScenes(lang: Lang): Scene[] {
       label: "🌍 " + L("Multilingüe", "Multilingue", "Multilingual", "Multilíngue"),
       caps: [
         ["🌍", L("Detecta el idioma", "Rileva la lingua", "Detects the language", "Deteta o idioma"), L("Sin configurar nada.", "Senza configurare nulla.", "Zero setup.", "Sem configurar nada.")],
-        ["🔤", L("Árabe y RTL", "Arabo e RTL", "Arabic & RTL", "Árabe e RTL"), L("Derecha a izquierda.", "Da destra a sinistra.", "Right to left.", "Direita para a esquerda.")],
+        ["🗣️", L("Cualquier idioma", "Qualsiasi lingua", "Any language", "Qualquer idioma"), L("Entiende y responde.", "Capisce e risponde.", "Understands & replies.", "Entende e responde.")],
         ["💬", L("Respuesta nativa", "Risposta nativa", "Native reply", "Resposta nativa"), L("Natural y local.", "Naturale e locale.", "Natural & local.", "Natural e local.")],
         ["🤝", L("Sin barreras", "Senza barriere", "No barriers", "Sem barreiras"), L("Clientes de todo el mundo.", "Clienti da tutto il mondo.", "Customers worldwide.", "Clientes do mundo todo.")],
       ],
@@ -391,13 +391,14 @@ export function DemowashShowcase({
 // Scoped styles (dws- prefix) so the WhatsApp look is self-contained.
 const CSS = `
 .dws{--g600:#16a34a;--g700:#15803d;--g50:#f0fdf4;--g100:#dcfce7;--line:#e5e7eb;--mut:#6b7280;--wa-out:#d9fdd3;--wa-bg:#efeae2;font-family:-apple-system,"Segoe UI",Helvetica,sans-serif;color:#0b1220}
-.dws-tabs{display:flex;gap:5px;padding:10px 12px 0;background:#f9fafb;border-bottom:1px solid var(--line);overflow-x:auto}
+.dws-tabs{display:flex;gap:7px;padding:12px 14px;background:#ecfdf3;border-bottom:1px solid var(--g100);overflow-x:auto}
 .dws-tabs::-webkit-scrollbar{height:0}
-.dws-tab{border:1px solid var(--line);border-bottom:none;background:#fff;color:var(--mut);padding:9px 13px;border-radius:11px 11px 0 0;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex:0 0 auto}
-.dws-tab.on{color:var(--g700);box-shadow:inset 0 -3px 0 var(--g600)}
-.dws-body{display:grid;grid-template-columns:320px 1fr;gap:34px;padding:26px 30px;background:linear-gradient(180deg,var(--g50),#fff);align-items:center}
-@media(max-width:760px){.dws-body{grid-template-columns:1fr;gap:20px}}
-.dws-phone{width:300px;height:580px;background:#0b1220;border-radius:42px;padding:11px;box-shadow:0 28px 56px -22px rgba(8,15,30,.55);position:relative;margin:0 auto}
+.dws-tab{border:1.5px solid var(--g100);background:#fff;color:#374151;padding:10px 15px;border-radius:999px;font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex:0 0 auto;transition:.15s}
+.dws-tab:hover{border-color:var(--g600);color:var(--g700)}
+.dws-tab.on{background:var(--g600);color:#fff;border-color:var(--g600);box-shadow:0 6px 16px -6px rgba(22,163,74,.7)}
+.dws-body{display:grid;grid-template-columns:360px 1fr;gap:38px;padding:28px 34px;background:linear-gradient(180deg,var(--g50),#fff);align-items:center}
+@media(max-width:760px){.dws-body{grid-template-columns:1fr;gap:22px}}
+.dws-phone{width:340px;height:660px;background:#0b1220;border-radius:46px;padding:12px;box-shadow:0 30px 60px -22px rgba(8,15,30,.55);position:relative;margin:0 auto}
 .dws-notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:110px;height:21px;background:#0b1220;border-radius:0 0 16px 16px;z-index:6}
 .dws-screen{width:100%;height:100%;border-radius:32px;overflow:hidden;display:flex;flex-direction:column;background:var(--wa-bg);background-image:radial-gradient(rgba(0,0,0,.04) 1px,transparent 1px);background-size:16px 16px}
 .dws-ph{background:#075e54;color:#fff;padding:30px 13px 10px;display:flex;align-items:center;gap:9px;flex:0 0 auto;transition:.3s}
@@ -406,7 +407,7 @@ const CSS = `
 .dws-ph.op .dws-av{background:#fbbf24}
 .dws-nm{font-weight:600;font-size:13.5px}.dws-st{font-size:10.5px;opacity:.85}
 .dws-msgs{flex:1;overflow:hidden;padding:12px 11px;display:flex;flex-direction:column;gap:6px;justify-content:flex-end}
-.dws-m{max-width:85%;padding:7px 11px;border-radius:8px;font-size:12.5px;line-height:1.4;box-shadow:0 1px 1px rgba(0,0,0,.08);animation:dws-pop .4s}
+.dws-m{max-width:85%;padding:8px 12px;border-radius:8px;font-size:13.5px;line-height:1.42;box-shadow:0 1px 1px rgba(0,0,0,.08);animation:dws-pop .4s}
 @keyframes dws-pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .dws-in{background:#fff;align-self:flex-start;border-top-left-radius:2px}
 .dws-out{background:var(--wa-out);align-self:flex-end;border-top-right-radius:2px}

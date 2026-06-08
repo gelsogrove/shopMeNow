@@ -6,7 +6,6 @@ import { ArrowRight, ShieldCheck, Server, Puzzle, Users, CheckCircle } from "luc
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
-import { Breadcrumbs } from "@/components/Breadcrumbs"
 import { DemowashShowcase } from "@/components/DemowashShowcase"
 
 type Language = "it" | "en" | "es" | "pt"
@@ -18,8 +17,8 @@ const T = {
     seoKeys: "chatbot lavanderia, whatsapp lavanderia, assistente ia lavanderia, supporto clienti lavanderia, franchising lavanderia ai",
     breadcrumb: "Lavanderie e Franchising",
     badge: "Per Franchising",
-    heroTitle: "I tuoi clienti chiamano a tutte le ore.\nChi risponde?",
-    heroSub: "Abbiamo identificato alcuni dettagli che potrebbero cambiare il tuo business.",
+    heroTitle: "La tua lavanderia in franchising risponde da sola, 24/7, su WhatsApp",
+    heroSub: "Risponde ai clienti, prenota consulenze di franchising, sblocca le macchine da remoto e passa a un operatore quando serve. In ogni lingua.",
     cta: "Parliamone",
     ctaSub: "Nessun impegno",
     problemsTitle: "I tuoi problemi, le nostre soluzioni",
@@ -79,8 +78,8 @@ const T = {
     seoKeys: "laundry chatbot, whatsapp laundry, ai laundry assistant, laundry customer support, laundry franchise ai",
     breadcrumb: "Laundry & Franchises",
     badge: "For Franchises",
-    heroTitle: "Your customers call at all hours.\nWho answers? Who unblocks the machine?",
-    heroSub: "We've identified some details that could turn your business around.",
+    heroTitle: "Your franchise laundromat answers on its own, 24/7, on WhatsApp",
+    heroSub: "Answers customers, books franchise consultations, unlocks machines remotely and hands off to an operator when needed. In any language.",
     cta: "Let's Talk",
     ctaSub: "No commitment",
     problemsTitle: "Your problems, our solutions",
@@ -140,8 +139,8 @@ const T = {
     seoKeys: "chatbot lavandería, whatsapp lavandería, asistente ia lavandería, atención al cliente lavandería, franquicia lavandería ia",
     breadcrumb: "Lavanderías y Franquicias",
     badge: "Para Franquicias",
-    heroTitle: "Tus clientes llaman a todas horas.\n¿Y quién responde? ¿Y quién desbloquea la máquina?",
-    heroSub: "Hemos identificado algunos detalles que podrían dar una vuelta a tu negocio.",
+    heroTitle: "Tu lavandería en franquicia atiende sola, 24/7, en WhatsApp",
+    heroSub: "Responde a clientes, agenda consultorías de franquicia, desbloquea máquinas en remoto y pasa a un operador cuando hace falta. En cualquier idioma.",
     cta: "¿Lo hablamos?",
     ctaSub: "Sin compromiso",
     problemsTitle: "Tus problemas, nuestras soluciones",
@@ -201,8 +200,8 @@ const T = {
     seoKeys: "chatbot lavanderia, whatsapp lavanderia, assistente ia lavanderia, atendimento lavanderia, franquia lavanderia ia",
     breadcrumb: "Lavanderias e Franquias",
     badge: "Para Franquias",
-    heroTitle: "Os seus clientes ligam a todas as horas.\nQuem responde? Quem desbloqueia a máquina?",
-    heroSub: "Identificámos alguns detalhes que podem mudar o seu negócio.",
+    heroTitle: "A tua lavandaria em franquia atende sozinha, 24/7, no WhatsApp",
+    heroSub: "Responde a clientes, agenda consultorias de franquia, desbloqueia máquinas remotamente e passa a um operador quando preciso. Em qualquer idioma.",
     cta: "Vamos conversar",
     ctaSub: "Sem compromisso",
     problemsTitle: "Os seus problemas, as nossas soluções",
@@ -287,20 +286,16 @@ export function LaundryServicePage() {
 
       <main>
         {/* Hero */}
-        <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-green-50 overflow-hidden">
+        <section className="relative pt-6 pb-12 lg:pt-8 lg:pb-16 bg-gradient-to-br from-green-50 via-white to-green-50 overflow-hidden">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <Breadcrumbs items={[{ label: t.breadcrumb }]} />
-            {/* Compact, centered headline — Andrea wants the animated demo to
-                be the star and take the full horizontal width below it. */}
-            <div className="mt-6 max-w-3xl mx-auto text-center">
-              <span className="inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide mb-4">
-                {t.badge}
-              </span>
+            {/* Compact headline — title + sub on top, then the animated demo
+                (the star) full-width below. */}
+            <div className="max-w-3xl mx-auto text-center">
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="text-2xl lg:text-3xl font-bold leading-tight mb-3 whitespace-pre-line text-slate-900"
+                className="text-xl lg:text-[26px] font-bold leading-snug mb-2 whitespace-pre-line text-slate-900"
               >
                 {t.heroTitle}
               </motion.h1>
@@ -308,31 +303,17 @@ export function LaundryServicePage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.1 }}
-                className="text-base text-slate-600 mb-5 max-w-2xl mx-auto"
+                className="text-sm lg:text-base text-slate-600 max-w-2xl mx-auto"
               >
                 {t.heroSub}
               </motion.p>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-              >
-                <Link
-                  to="/contact"
-                  className="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-xl transition-colors"
-                >
-                  {t.cta} <ArrowRight className="w-5 h-5" />
-                </Link>
-                <p className="self-center text-sm text-slate-500">{t.ctaSub}</p>
-              </motion.div>
             </div>
             {/* Full-width animated demo (shared with the DemoWash popup). */}
             <motion.div
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.15 }}
-              className="mt-10 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden"
+              className="mt-6 bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden"
             >
               <DemowashShowcase lang={language} />
             </motion.div>
