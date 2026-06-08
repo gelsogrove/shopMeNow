@@ -24,7 +24,7 @@ export interface TranscribeAudioInput {
   /** Declared MIME type from the provider (e.g. "audio/ogg; codecs=opus"). */
   declaredMime?: string
   /** Provider name for structured logging. */
-  provider: "meta" | "ultramsg" | "wasender"
+  provider: "meta" | "ultramsg" | "wasender" | "playground"
   workspaceId: string
 }
 

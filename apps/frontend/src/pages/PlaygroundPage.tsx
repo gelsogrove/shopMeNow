@@ -6,6 +6,7 @@ import {
   KanbanSquare,
   LogOut,
   MessageCircle,
+  Mic,
   Pencil,
   Plus,
   Send,
@@ -1262,6 +1263,14 @@ function ChatScreen({
   const [showNewChat, setShowNewChat] = useState(false)
   const [chatInput, setChatInput] = useState("")
   const [sendingChat, setSendingChat] = useState(false)
+  // 🎤 Voice-note recorder (demo composer). `recording` toggles the mic↔stop UI;
+  // `recordSecs` is the live elapsed timer. The MediaRecorder + chunks live in
+  // refs so re-renders don't recreate them mid-recording.
+  const [recording, setRecording] = useState(false)
+  const [recordSecs, setRecordSecs] = useState(0)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recordChunksRef = useRef<Blob[]>([])
+  const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   // Message id to highlight & scroll to (set when arriving from a kanban "Open in chat" click)
   const [highlightMessageId, setHighlightMessageId] = useState<string | null>(null)
   const chatScrollRef = useRef<HTMLDivElement>(null)
@@ -1549,6 +1558,82 @@ function ChatScreen({
     } finally {
       setSendingChat(false)
       setPendingForSession(null)
+    }
+  }
+
+  // 🎤 Upload a recorded voice note: transcribe + store + run the bot turn.
+  // The backend (/playground/chat-audio) transcribes the blob, links the audio
+  // to the inbound message (player in the bubble) and runs the bot on the text.
+  const sendVoiceNote = async (blob: Blob) => {
+    if (!activeSession || sendingChat) return
+    const startedAt = Date.now()
+    setSendingChat(true)
+    setPendingForSession({ sessionId: activeSession.id, userMessage: "🎤 …" })
+    try {
+      const ext = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "mp4" : "webm"
+      const form = new FormData()
+      form.append("audio", blob, `voice.${ext}`)
+      form.append("sessionId", activeSession.id)
+      form.append("lang", usecasesLang)
+      const res = await playFetch(`${API_BASE}/chat-audio`, { method: "POST", body: form })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        alert(data.message || data.error || "Failed to send voice note")
+        return
+      }
+      const elapsed = Date.now() - startedAt
+      if (elapsed < MIN_BOT_LOADING_MS) {
+        await new Promise((r) => setTimeout(r, MIN_BOT_LOADING_MS - elapsed))
+      }
+      await fetchAll()
+    } finally {
+      setSendingChat(false)
+      setPendingForSession(null)
+    }
+  }
+
+  // Start microphone capture via MediaRecorder. On stop, the chunks are joined
+  // into one blob and uploaded. Requires mic permission (browser prompts once).
+  const startRecording = async () => {
+    if (recording || sendingChat) return
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      recordChunksRef.current = []
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordChunksRef.current.push(e.data)
+      }
+      recorder.onstop = () => {
+        // Release the mic.
+        stream.getTracks().forEach((t) => t.stop())
+        if (recordTimerRef.current) {
+          clearInterval(recordTimerRef.current)
+          recordTimerRef.current = null
+        }
+        setRecording(false)
+        setRecordSecs(0)
+        const blob = new Blob(recordChunksRef.current, { type: recorder.mimeType || "audio/webm" })
+        if (blob.size > 0) void sendVoiceNote(blob)
+      }
+      mediaRecorderRef.current = recorder
+      recorder.start()
+      setRecording(true)
+      setRecordSecs(0)
+      recordTimerRef.current = setInterval(() => setRecordSecs((s) => s + 1), 1000)
+    } catch {
+      alert("Microphone access denied or unavailable.")
+    }
+  }
+
+  // Stop & send. Cancel discards without sending.
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop()
+  }
+  const cancelRecording = () => {
+    const recorder = mediaRecorderRef.current
+    if (recorder) {
+      recordChunksRef.current = [] // discard → onstop sends nothing
+      recorder.stop()
     }
   }
 
@@ -2232,31 +2317,77 @@ function ChatScreen({
               onSubmit={sendChatMessage}
               className="border-t bg-white p-2 flex gap-2 shrink-0 items-center"
             >
-              <EmojiPicker
-                disabled={sendingChat}
-                onSelect={(emoji) => setChatInput((prev) => prev + emoji)}
-              />
-              <input
-                placeholder="Type a message..."
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                autoComplete="off"
-                spellCheck={false}
-                name="chat-message"
-                className="flex-1 border rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
-              />
-              <button
-                type="submit"
-                disabled={sendingChat || !chatInput.trim()}
-                aria-label="Send message"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white w-10 h-10 rounded-full disabled:opacity-50 flex items-center justify-center shrink-0"
-              >
-                {sendingChat ? (
-                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-              </button>
+              {recording ? (
+                // 🎤 Recording state: live timer + cancel (discard) + stop (send).
+                <>
+                  <button
+                    type="button"
+                    onClick={cancelRecording}
+                    aria-label="Cancel recording"
+                    className="text-gray-400 hover:text-red-500 w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <div className="flex-1 flex items-center gap-2 px-4 text-sm text-red-600">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                    Recording… {Math.floor(recordSecs / 60)}:{String(recordSecs % 60).padStart(2, "0")}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={stopRecording}
+                    aria-label="Stop and send"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <EmojiPicker
+                    disabled={sendingChat}
+                    onSelect={(emoji) => setChatInput((prev) => prev + emoji)}
+                  />
+                  <input
+                    placeholder="Type a message..."
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    autoComplete="off"
+                    spellCheck={false}
+                    name="chat-message"
+                    className="flex-1 border rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                  />
+                  {/* 🎤 Mic when the input is empty, otherwise the Send button. */}
+                  {chatInput.trim() ? (
+                    <button
+                      type="submit"
+                      disabled={sendingChat}
+                      aria-label="Send message"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white w-10 h-10 rounded-full disabled:opacity-50 flex items-center justify-center shrink-0"
+                    >
+                      {sendingChat ? (
+                        <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={startRecording}
+                      disabled={sendingChat}
+                      aria-label="Record voice note"
+                      title="Record voice note"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white w-10 h-10 rounded-full disabled:opacity-50 flex items-center justify-center shrink-0"
+                    >
+                      {sendingChat ? (
+                        <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <Mic className="w-4 h-4" />
+                      )}
+                    </button>
+                  )}
+                </>
+              )}
             </form>
           )}
         </section>

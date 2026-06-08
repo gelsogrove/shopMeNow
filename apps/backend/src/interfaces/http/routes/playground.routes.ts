@@ -7,6 +7,10 @@ import {
   uploadChatAttachments,
   handleChatUploadError,
 } from "../middlewares/chatAttachmentUpload"
+import {
+  uploadChatAudio,
+  handleChatAudioUploadError,
+} from "../middlewares/chatAudioUpload"
 
 const controller = new PlaygroundController()
 const playgroundRouter = Router()
@@ -89,6 +93,14 @@ playgroundRouter.post("/playground/todos", optionalPlaygroundAuth, (req, res) =>
 playgroundRouter.patch("/playground/todos/:id", optionalPlaygroundAuth, (req, res) => controller.updateTodo(req, res))
 playgroundRouter.delete("/playground/todos/:id", optionalPlaygroundAuth, (req, res) => controller.deleteTodo(req, res))
 playgroundRouter.post("/playground/chat", optionalPlaygroundAuth, (req, res) => controller.sendChat(req, res))
+// 🎤 Voice note from the demo composer: transcribe → store audio → run bot turn.
+playgroundRouter.post(
+  "/playground/chat-audio",
+  optionalPlaygroundAuth,
+  uploadChatAudio,
+  handleChatAudioUploadError,
+  (req, res) => controller.sendChatAudio(req, res)
+)
 playgroundRouter.post(
   "/playground/attachments",
   optionalPlaygroundAuth,

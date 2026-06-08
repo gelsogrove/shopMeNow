@@ -10,6 +10,7 @@ import logger from "../../../utils/logger"
 import { messageAttachmentRepository } from "../../../repositories/message-attachment.repository"
 import { storageService } from "../../../services/storage.service"
 import { sniffMime, validateAttachment } from "../../../services/chat-attachment.validation"
+import { transcribeAudio } from "../../../services/audio-transcription.service"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Usecases markdown translation cache
@@ -501,6 +502,102 @@ export class PlaygroundController {
     }
   }
 
+  // POST /api/v1/playground/chat-audio
+  // 🎤 Voice note from the demo composer (browser MediaRecorder → blob).
+  // Pipeline: transcribe (Whisper) → store the audio as an AUDIO attachment →
+  // run the SAME bot turn as a text message (the transcription IS the message).
+  // The chat bubble shows the player; the bot reasons on the transcription.
+  // Reuses sendChat for the bot invocation — single source of truth.
+  async sendChatAudio(req: Request, res: Response) {
+    const file = (req as any).file as Express.Multer.File | undefined
+    const cleanup = () => {
+      if (file?.path) {
+        try {
+          fs.unlinkSync(file.path)
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    try {
+      if (!file) {
+        return res.status(400).json({ error: "audio file is required" })
+      }
+      const workspaceId = await resolveWorkspaceId(req)
+      const sessionId = req.body?.sessionId
+      if (!sessionId) {
+        cleanup()
+        return res.status(400).json({ error: "sessionId is required" })
+      }
+      const session = await prisma.chatSession.findFirst({
+        where: { id: sessionId, workspaceId },
+        select: { id: true },
+      })
+      if (!session) {
+        cleanup()
+        return res.status(404).json({ error: "Chat session not found" })
+      }
+
+      const buffer = fs.readFileSync(file.path)
+      const trueMime = sniffMime(buffer) || (file.mimetype || "").split(";")[0].trim()
+      const validation = validateAttachment({
+        mimeType: trueMime,
+        sizeBytes: buffer.length,
+      })
+      if (!validation.ok || validation.kind !== "AUDIO") {
+        cleanup()
+        return res.status(400).json({ error: validation.error || "Invalid audio file" })
+      }
+
+      // 1) Transcribe — the text becomes the message the bot reasons on.
+      const transcription = await transcribeAudio({
+        audioBuffer: buffer,
+        declaredMime: trueMime,
+        provider: "playground",
+        workspaceId,
+      })
+      if (!transcription?.text) {
+        cleanup()
+        return res.status(422).json({ error: "Could not transcribe audio" })
+      }
+
+      // 2) Store the audio so the bubble shows a player.
+      const EXT: Record<string, string> = {
+        "audio/ogg": "ogg",
+        "audio/mpeg": "mp3",
+        "audio/mp4": "m4a",
+        "audio/aac": "aac",
+        "audio/amr": "amr",
+        "audio/webm": "webm",
+      }
+      const ext = EXT[trueMime] || "bin"
+      const rand = Math.random().toString(36).slice(2, 8)
+      const uploaded = await storageService.upload(buffer, {
+        filename: `${Date.now()}_${rand}.${ext}`,
+        folder: `chat-attachments/${workspaceId}/${sessionId}`,
+        contentType: trueMime,
+        isPublic: true,
+      })
+
+      // 3) Hand off to the normal text turn: the transcription is the message,
+      //    the audio is linked to the inbound message inside sendChat.
+      req.body.message = transcription.text
+      ;(req as any)._inboundAudio = {
+        url: uploaded.url,
+        storageKey: uploaded.key,
+        mimeType: trueMime,
+        sizeBytes: buffer.length,
+        filename: file.originalname || `voice.${ext}`,
+      }
+      cleanup()
+      return this.sendChat(req, res)
+    } catch (error: any) {
+      logger.error("Playground sendChatAudio error:", error)
+      cleanup()
+      return res.status(500).json({ error: "Failed to process voice note", message: error.message })
+    }
+  }
+
   // GET /api/v1/playground/todos
   async getTodos(req: Request, res: Response) {
     try {
@@ -760,7 +857,7 @@ export class PlaygroundController {
       //    Single source of truth: conversationMessage (the table the main
       //    /chat app reads from). The legacy `message` table is no longer
       //    written by playground.
-      await prisma.conversationMessage.create({
+      const inboundMessage = await prisma.conversationMessage.create({
         data: {
           workspaceId,
           customerId: customer.id,
@@ -769,6 +866,34 @@ export class PlaygroundController {
           content: message,
         },
       })
+
+      // 🎤 Voice note: the recorder endpoint (sendChatAudio) stashes the already
+      //    uploaded audio on the request. Link it to the inbound message we just
+      //    created so the chat bubble shows the player (text = transcription is
+      //    kept as content for the bot, hidden in the UI). Fail-safe: a media
+      //    failure must never break the chat turn.
+      const inboundAudio = (req as any)._inboundAudio as
+        | { url: string; storageKey: string; mimeType: string; sizeBytes: number; filename?: string | null }
+        | undefined
+      if (inboundAudio) {
+        try {
+          await messageAttachmentRepository.create({
+            conversationMessageId: inboundMessage.id,
+            workspaceId,
+            kind: "AUDIO",
+            url: inboundAudio.url,
+            storageKey: inboundAudio.storageKey,
+            mimeType: inboundAudio.mimeType,
+            filename: inboundAudio.filename ?? null,
+            sizeBytes: inboundAudio.sizeBytes,
+          })
+        } catch (attErr: any) {
+          logger.error("[Playground] Failed to attach voice note", {
+            sessionId: session.id,
+            error: attErr?.message,
+          })
+        }
+      }
 
       // 🚦 If the customer has been handed over to a human operator (a
       //    previous turn triggered escalation), do NOT call the bot. The
