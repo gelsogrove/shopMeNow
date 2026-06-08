@@ -1,5 +1,5 @@
 import { OnboardingWizardModal } from "@/components/OnboardingWizardModal"
-import { DemowashShowcase } from "@/components/DemowashShowcase"
+import { HomeShowcase } from "@/components/HomeShowcase"
 import { SiteFooter } from "@/components/layout/SiteFooter"
 import { NewsUpdates } from "@/components/landing/NewsUpdates"
 import { HomeFAQ } from "@/components/landing/HomeFAQ"
@@ -988,24 +988,24 @@ export function LoginPage() {
       step: "1",
       title: t("howItWorks.step1.title"),
       description: t("howItWorks.step1.desc"),
-      gradient: "from-green-50 to-emerald-50",
-      border: "border-green-200",
+      gradient: "from-green-500/10 to-emerald-500/5",
+      border: "border-green-400/20",
       showArrow: true,
     },
     {
       step: "2",
       title: t("howItWorks.step2.title"),
       description: t("howItWorks.step2.desc"),
-      gradient: "from-blue-50 to-cyan-50",
-      border: "border-blue-200",
+      gradient: "from-blue-500/10 to-cyan-500/5",
+      border: "border-blue-400/20",
       showArrow: true,
     },
     {
       step: "3",
       title: t("howItWorks.step3.title"),
       description: t("howItWorks.step3.desc"),
-      gradient: "from-purple-50 to-pink-50",
-      border: "border-purple-200",
+      gradient: "from-purple-500/10 to-pink-500/5",
+      border: "border-purple-400/20",
       showArrow: false,
     },
   ]
@@ -1018,24 +1018,16 @@ export function LoginPage() {
         robots="noindex, nofollow"
       />
       <div
-        className="w-full min-h-screen"
-        style={{
-          backgroundImage:
-            "linear-gradient(to bottom right, rgba(248,250,252,0.95), rgba(226,232,240,0.95)), url('/background.png')",
-          backgroundRepeat: "no-repeat, no-repeat",
-          backgroundSize: "100% 100%, cover",
-          backgroundPosition: "top left, center top",
-          backgroundBlendMode: "normal, lighten",
-        }}
+        className={`w-full min-h-screen ${showLoginCard ? "bg-slate-100" : "bg-[#070d18] text-slate-200"}`}
       >
       {/* Header - Professional Design */}
-      <header className={`bg-white shadow-sm sticky top-0 z-[100] overflow-hidden${showLoginCard ? ' hidden' : ''}`}>
+      <header className={`${showLoginCard ? 'bg-white' : 'bg-[#070d18]/90 backdrop-blur border-b border-white/10'} shadow-sm sticky top-0 z-[100] overflow-hidden${showLoginCard ? ' hidden' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 lg:px-12">
           <div className="hidden lg:flex justify-end pt-3">
             <div className="flex items-center gap-4">
               <a
                 href="/contact"
-                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
+                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200 hover:text-white"
               >
                 {t("nav.contact")}
               </a>
@@ -1066,10 +1058,10 @@ export function LoginPage() {
                     <span className="text-xl">
                       {language === "it" ? "🇮🇹" : language === "en" ? "🇬🇧" : language === "es" ? "🇪🇸" : "🇵🇹"}
                     </span>
-                    <span className="hidden sm:inline text-sm font-medium text-slate-700">
+                    <span className="hidden sm:inline text-sm font-medium text-slate-200">
                       {language === "it" ? "IT" : language === "en" ? "EN" : language === "es" ? "ES" : "PT"}
                     </span>
-                    <ChevronDown className="h-4 w-4 text-slate-500" />
+                    <ChevronDown className="h-4 w-4 text-slate-400" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-48" align="end">
@@ -1270,20 +1262,20 @@ export function LoginPage() {
           <h1 className="text-4xl lg:text-5xl font-bold italic bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent max-w-3xl mx-auto">
             {t("hero.slogan")}
           </h1>
-          <p className="text-lg text-slate-600 max-w-3xl mx-auto">
+          <p className="text-lg text-slate-300 max-w-3xl mx-auto">
             {t("hero.subtitle")}
           </p>
         </div>
 
         {/* Mobile hero — animated showcase (replaces the static image) */}
         <div className={`${showLoginCard ? 'hidden' : 'block lg:hidden'} mb-6`}>
-          <DemowashShowcase lang={language} />
+          <HomeShowcase lang={language} />
         </div>
 
         <div className={showLoginCard ? "flex justify-center" : "flex flex-col lg:flex-row gap-10 items-center lg:items-stretch"}>
           <div className={showLoginCard ? "hidden" : "hidden lg:flex items-stretch w-full lg:flex-1"}>
             <div className="relative w-full">
-              <DemowashShowcase lang={language} />
+              <HomeShowcase lang={language} />
             </div>
           </div>
 
@@ -1771,7 +1763,7 @@ export function LoginPage() {
 
       {!showLoginCard && (
       <>{/* Smart Push AI Section */}
-      <div className="py-20 bg-white">
+      <div className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
             className="group relative"
@@ -1780,9 +1772,9 @@ export function LoginPage() {
             viewport={{ once: true, amount: 0.35 }}
             transition={{ duration: 0.65, ease: "easeOut" }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-green-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-green-500/10 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
 
-            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+            <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-white/10 hover:border-green-400/30 hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
               <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
                 <div className="flex flex-col items-center lg:items-start gap-4">
                   <div className="relative">
@@ -1802,10 +1794,10 @@ export function LoginPage() {
                       <Megaphone className="h-4 w-4" />
                       {t("pushAi.badge")}
                     </div>
-                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
+                    <h3 className="text-3xl lg:text-4xl font-bold text-white leading-tight">
                       {t("pushAi.title")}
                     </h3>
-                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
+                    <p className="text-xl text-slate-300 leading-relaxed text-justify">
                       {t("pushAi.subtitle")}
                     </p>
                   </div>
@@ -1852,7 +1844,7 @@ export function LoginPage() {
         const q = qMap[qLang] || qMap["en"]
 
         return (
-          <section className="py-24 bg-gradient-to-br from-emerald-50 via-white to-green-50 border-t border-emerald-100">
+          <section className="py-24 border-t border-white/10">
             <div className="max-w-7xl mx-auto px-6 lg:px-8">
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
@@ -1865,8 +1857,8 @@ export function LoginPage() {
                 <div className="lg:w-1/2 flex justify-center">
                   <div className="relative w-full max-w-md">
                     {/* Decorative background */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-300 rounded-3xl rotate-3 opacity-30" />
-                    <div className="relative bg-white rounded-3xl shadow-2xl p-4 sm:p-6 border border-green-100">
+                    <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl rotate-3" />
+                    <div className="relative bg-slate-900/50 rounded-3xl shadow-2xl p-4 sm:p-6 border border-white/10">
                       <img
                         src="https://www.echatbot.ai/survey.png"
                         alt="eChatbot survey illustration"
@@ -1882,10 +1874,10 @@ export function LoginPage() {
                   <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
                     Survey
                   </span>
-                  <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6 leading-tight">
+                  <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
                     {q.title}
                   </h2>
-                  <p className="text-lg text-slate-600 mb-10 leading-relaxed max-w-xl mx-auto lg:mx-0">
+                  <p className="text-lg text-slate-300 mb-10 leading-relaxed max-w-xl mx-auto lg:mx-0">
                     {q.desc}
                   </p>
                   <Link
@@ -1905,7 +1897,7 @@ export function LoginPage() {
       {/* How It Works Section */}
       <motion.section
         id="features"
-        className="py-16 bg-white"
+        className="py-16"
         initial={{ opacity: 0, y: 40 }}
         whileInView={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
@@ -1914,10 +1906,10 @@ export function LoginPage() {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="text-center mb-12">
             
-            <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-3">
+            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-3">
               {t("howItWorks.title")}
             </h2>
-            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+            <p className="text-lg text-slate-300 max-w-2xl mx-auto">
               {t("howItWorks.subtitle")}
             </p>
           </div>
@@ -1935,8 +1927,8 @@ export function LoginPage() {
                   <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6 shadow-lg shadow-emerald-200/40">
                     {card.step}
                   </div>
-                  <h3 className="text-2xl font-bold text-slate-900 mb-4">{card.title}</h3>
-                  <p className="text-slate-600 leading-relaxed flex-1">
+                  <h3 className="text-2xl font-bold text-white mb-4">{card.title}</h3>
+                  <p className="text-slate-300 leading-relaxed flex-1">
                     {card.description}
                   </p>
                 </motion.div>
@@ -1959,7 +1951,7 @@ export function LoginPage() {
       <HomeFAQ />
 
       {/* Contact Section (Demo highlight) */}
-      <div id="demo" className="py-20 bg-gradient-to-b from-slate-50 to-white">
+      <div id="demo" className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
             className="group relative"
@@ -1969,9 +1961,9 @@ export function LoginPage() {
             transition={{ duration: 0.65, ease: "easeOut" }}
           >
             {/* Decorative rotated background frame */}
-            <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
-              <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+              <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-white/10 hover:border-green-400/30 hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
               {workingInProgress && !isAdminBypass && (
                 <div className="absolute -right-6 top-[14px] rotate-12 bg-red-600 py-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white shadow-lg pl-[50px] pr-[45px] z-20">
                   {t("wip.banner")}
@@ -1993,7 +1985,7 @@ export function LoginPage() {
                       <span className="text-slate-900">Demo</span>
                       <span className="text-green-600">Wash</span>
                     </h3>
-                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
+                    <p className="text-xl text-slate-300 leading-relaxed text-justify">
                       {t("demo.subtitle")}
                     </p>
                   </div>
@@ -2058,7 +2050,7 @@ export function LoginPage() {
       </div>
 
       {/* Appointment Booking Section */}
-      <div className="py-20 bg-white">
+      <div className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
             className="group relative"
@@ -2067,9 +2059,9 @@ export function LoginPage() {
             viewport={{ once: true, amount: 0.35 }}
             transition={{ duration: 0.65, ease: "easeOut" }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-100 to-violet-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/15 to-violet-500/10 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
 
-            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+            <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-white/10 hover:border-green-400/30 hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
               <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-10 items-center">
 
                 {/* Left: Booking mockup */}
@@ -2117,10 +2109,10 @@ export function LoginPage() {
                       <span className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></span>
                       {t("appointment.badge")}
                     </div>
-                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight whitespace-pre-line">
+                    <h3 className="text-3xl lg:text-4xl font-bold text-white leading-tight whitespace-pre-line">
                       {t("appointment.title")}
                     </h3>
-                    <p className="text-lg text-slate-600 leading-relaxed">
+                    <p className="text-lg text-slate-300 leading-relaxed">
                       {t("appointment.subtitle")}
                     </p>
                   </div>
@@ -2253,7 +2245,7 @@ export function LoginPage() {
 
 
       {/* Integration Section */}
-      <div className="py-20 bg-white">
+      <div className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
             className="group relative"
@@ -2263,9 +2255,9 @@ export function LoginPage() {
             transition={{ duration: 0.65, ease: "easeOut" }}
           >
             {/* Decorative rotated background frame - BLU for enterprise */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/15 to-cyan-500/10 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
-            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+            <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-white/10 hover:border-green-400/30 hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
               <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-10 items-start">
                 {/* Left: Image with effects */}
                 <div className="flex flex-col items-center lg:items-start">
@@ -2287,10 +2279,10 @@ export function LoginPage() {
                       <span>🔗</span>
                       Enterprise Feature
                     </div>
-                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
+                    <h3 className="text-3xl lg:text-4xl font-bold text-white leading-tight">
                       {t("integration.crm.title")}
                     </h3>
-                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
+                    <p className="text-xl text-slate-300 leading-relaxed text-justify">
                       {t("integration.crm.subtitle")}
                     </p>
                   </div>
@@ -2319,7 +2311,7 @@ export function LoginPage() {
       </div>
 
       {/* Privacy Section */}
-      <div className="py-20 bg-gradient-to-b from-white to-slate-50">
+      <div className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
             className="group relative"
@@ -2329,9 +2321,9 @@ export function LoginPage() {
             transition={{ duration: 0.65, ease: "easeOut" }}
           >
             {/* Decorative rotated background frame */}
-            <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
             
-            <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+            <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-white/10 hover:border-green-400/30 hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
               <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-10 items-start">
                 {/* Left: Image with security badge */}
                 <div className="flex flex-col items-center lg:items-start gap-4">
@@ -2353,10 +2345,10 @@ export function LoginPage() {
                       <span>🛡️</span>
                       GDPR Compliant
                     </div>
-                    <h3 className="text-3xl lg:text-4xl font-bold text-slate-900 leading-tight">
+                    <h3 className="text-3xl lg:text-4xl font-bold text-white leading-tight">
                       {t("privacy.sectionTitle")}
                     </h3>
-                    <p className="text-xl text-slate-600 leading-relaxed text-justify">
+                    <p className="text-xl text-slate-300 leading-relaxed text-justify">
                       {t("privacy.subtitle")}
                     </p>
                   </div>
@@ -2377,12 +2369,12 @@ export function LoginPage() {
       </div>
 
       {/* Contact Form removed - see /contact page */}
-      {false && <div id="contact" className="py-16 bg-white border-t border-slate-200">
+      {false && <div id="contact" className="py-16 border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-8 items-stretch">
             {/* Form Section - 60% */}
             <div className="flex-1 lg:w-[60%] group relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-emerald-100 to-green-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg transition-transform duration-500"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-green-500/10 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg transition-transform duration-500"></div>
               <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 min-h-[320px]">
                 <div className="text-center space-y-3 mb-10">
                   <h3 className="text-3xl font-bold text-slate-900">{t("contact.form.title")}</h3>

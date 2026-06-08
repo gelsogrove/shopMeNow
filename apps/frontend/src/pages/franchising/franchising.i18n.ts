@@ -53,6 +53,9 @@ export interface FranchisingCopy {
   langTitle: string
   langTitleAccent: string
   langDesc: string
+  langEvery: string // "every language in the world" — no fixed flag list
+  // Zone names for the per-location data loader (kept country-neutral)
+  zones: string[]
   // Acts & sells
   actsTitle: string
   actsTitleAccent: string
@@ -106,8 +109,8 @@ export const FRANCHISING_I18N: Record<FranchisingLang, FranchisingCopy> = {
       "chatbot franchising, whatsapp multi sede, catene franchising, assistente ia franchising, chatbot palestre hotel cliniche, gestione sedi whatsapp",
     breadcrumb: "Franchising Multi-Sede",
     badge: "Per Franchising & Catene",
-    heroTitleTop: "I tuoi clienti scrivono a ogni ora.",
-    heroTitleAccent: "Chi risponde, per ogni sede?",
+    heroTitleTop: "Una sola AI per tutto il tuo franchising.",
+    heroTitleAccent: "Ogni negozio, la risposta giusta.",
     heroSub:
       "Un'unica AI su WhatsApp per tutta la tua rete in franchising: risponde 24/7, traduce in tempo reale, riconosce da quale sede scrive il cliente e passa all'operatore quando serve. Tu governi tutto da un solo pannello.",
     cta: "Parliamone",
@@ -213,6 +216,8 @@ export const FRANCHISING_I18N: Record<FranchisingLang, FranchisingCopy> = {
       },
     ],
     dataBanner: "Su misura. Sicuro, tuo, pensato per il tuo business.",
+    langEvery: "Parla ogni lingua del mondo, in automatico.",
+    zones: ["Centro", "Nord", "Sud", "Ovest"],
     storeTitle: "Carica i dati giusti,",
     storeAccent: "per ogni sede.",
     storeSub:
@@ -254,8 +259,8 @@ export const FRANCHISING_I18N: Record<FranchisingLang, FranchisingCopy> = {
       "franchise chatbot, multi location whatsapp, franchise chains, franchise ai assistant, gym hotel clinic chatbot, location management whatsapp",
     breadcrumb: "Multi-Location Franchises",
     badge: "For Franchises & Chains",
-    heroTitleTop: "Your customers write at every hour.",
-    heroTitleAccent: "Who answers, for every location?",
+    heroTitleTop: "One AI for your entire franchise.",
+    heroTitleAccent: "Every shop, the right answer.",
     heroSub:
       "One AI on WhatsApp for your whole franchise network: answers 24/7, translates in real time, detects which location the customer is writing from and hands off to an operator when needed. You run everything from a single panel.",
     cta: "Let's Talk",
@@ -361,6 +366,8 @@ export const FRANCHISING_I18N: Record<FranchisingLang, FranchisingCopy> = {
       },
     ],
     dataBanner: "Made to measure. Secure, yours, built for your business.",
+    langEvery: "Speaks every language in the world, automatically.",
+    zones: ["Downtown", "North", "South", "West"],
     storeTitle: "It loads the right data,",
     storeAccent: "for every location.",
     storeSub:
@@ -402,8 +409,8 @@ export const FRANCHISING_I18N: Record<FranchisingLang, FranchisingCopy> = {
       "chatbot franquicias, whatsapp multi sede, cadenas franquicia, asistente ia franquicia, chatbot gimnasios hoteles clinicas, gestion sedes whatsapp",
     breadcrumb: "Franquicias Multi-Sede",
     badge: "Para Franquicias y Cadenas",
-    heroTitleTop: "Tus clientes escriben a todas horas.",
-    heroTitleAccent: "¿Quién responde, en cada sede?",
+    heroTitleTop: "Una sola IA para toda tu franquicia.",
+    heroTitleAccent: "Cada tienda, la respuesta correcta.",
     heroSub:
       "Una sola IA en WhatsApp para toda tu red de franquicias: responde 24/7, traduce en tiempo real, reconoce desde qué sede escribe el cliente y pasa a un operador cuando hace falta. Tú lo gobiernas todo desde un único panel.",
     cta: "Hablemos",
@@ -509,6 +516,8 @@ export const FRANCHISING_I18N: Record<FranchisingLang, FranchisingCopy> = {
       },
     ],
     dataBanner: "Hecho a tu medida. Seguro, tuyo, y pensado para tu negocio.",
+    langEvery: "Habla todos los idiomas del mundo, en automático.",
+    zones: ["Centro", "Norte", "Sur", "Oeste"],
     storeTitle: "Carga los datos correctos,",
     storeAccent: "para cada sede.",
     storeSub:
@@ -550,8 +559,8 @@ export const FRANCHISING_I18N: Record<FranchisingLang, FranchisingCopy> = {
       "chatbot franquias, whatsapp multi sede, redes franquia, assistente ia franquia, chatbot ginasios hoteis clinicas, gestao unidades whatsapp",
     breadcrumb: "Franquias Multi-Sede",
     badge: "Para Franquias e Redes",
-    heroTitleTop: "Os teus clientes escrevem a toda a hora.",
-    heroTitleAccent: "Quem responde, em cada unidade?",
+    heroTitleTop: "Uma só IA para todo o teu franchising.",
+    heroTitleAccent: "Cada loja, a resposta certa.",
     heroSub:
       "Uma única IA no WhatsApp para toda a tua rede de franquias: responde 24/7, traduz em tempo real, reconhece de que unidade escreve o cliente e passa para um operador quando é preciso. Tu geres tudo a partir de um único painel.",
     cta: "Vamos falar",
@@ -657,6 +666,8 @@ export const FRANCHISING_I18N: Record<FranchisingLang, FranchisingCopy> = {
       },
     ],
     dataBanner: "Feito à tua medida. Seguro, teu, pensado para o teu negócio.",
+    langEvery: "Fala todas as línguas do mundo, automaticamente.",
+    zones: ["Centro", "Norte", "Sul", "Oeste"],
     storeTitle: "Carrega os dados certos,",
     storeAccent: "para cada unidade.",
     storeSub:

@@ -9,7 +9,6 @@ const translations = {
     tagline: "Piattaforma AI per chatbot WhatsApp. Automatizza vendite, supporto e marketing con conversazioni intelligenti.",
     product: "Prodotto",
     features: "Funzionalità",
-    pricing: "Prezzi",
     widgetToWhatsApp: "Widget → WhatsApp",
     humanSupport: "Supporto Umano",
     appointmentBooking: "Prenotazione Appuntamenti",
@@ -34,7 +33,6 @@ const translations = {
     tagline: "AI-powered WhatsApp chatbot platform for businesses. Automate customer support, sales, and marketing with intelligent conversations.",
     product: "Product",
     features: "Features",
-    pricing: "Pricing",
     widgetToWhatsApp: "Widget → WhatsApp",
     humanSupport: "Human Support",
     appointmentBooking: "Appointment Booking",
@@ -59,7 +57,6 @@ const translations = {
     tagline: "Plataforma de chatbot WhatsApp con IA para empresas. Automatiza soporte, ventas y marketing con conversaciones inteligentes.",
     product: "Producto",
     features: "Funcionalidades",
-    pricing: "Precios",
     widgetToWhatsApp: "Widget → WhatsApp",
     humanSupport: "Soporte Humano",
     appointmentBooking: "Reserva de Citas",
@@ -84,7 +81,6 @@ const translations = {
     tagline: "Plataforma de chatbot WhatsApp com IA para empresas. Automatize suporte, vendas e marketing com conversas inteligentes.",
     product: "Produto",
     features: "Funcionalidades",
-    pricing: "Preços",
     widgetToWhatsApp: "Widget → WhatsApp",
     humanSupport: "Suporte Humano",
     appointmentBooking: "Agendamento de Consultas",
@@ -130,7 +126,6 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
             <h3 className="text-white font-semibold mb-4">{t.product}</h3>
             <ul className="space-y-3">
               <li><Link to="/features" className="text-sm hover:text-green-500 transition-colors">{t.features}</Link></li>
-              <li><Link to="/pricing" className="text-sm hover:text-green-500 transition-colors">{t.pricing}</Link></li>
               <li><Link to="/widget-to-whatsapp" className="text-sm hover:text-green-500 transition-colors">{t.widgetToWhatsApp}</Link></li>
               <li><Link to="/human-support" className="text-sm hover:text-green-500 transition-colors">{t.humanSupport}</Link></li>
               <li><Link to="/appointment-booking" className="text-sm hover:text-green-500 transition-colors">{t.appointmentBooking}</Link></li>
