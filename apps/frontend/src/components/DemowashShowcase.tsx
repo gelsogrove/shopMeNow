@@ -484,28 +484,29 @@ export function DemowashShowcase({
       <style>{CSS}</style>
 
       <div className="dws-head">
-        <button
-          type="button"
-          aria-label="prev"
-          className="dws-nav"
-          onClick={() => setActive((a) => (a - 1 + scenes.length) % scenes.length)}
-        >
-          ‹
-        </button>
         <div className="dws-title" key={active}>
           {scene.label}
         </div>
+      </div>
+
+      <div className="dws-stage">
+        <button
+          type="button"
+          aria-label="prev"
+          className="dws-arrow l"
+          onClick={() => setActive((a) => (a - 1 + scenes.length) % scenes.length)}
+        >
+          <span className="dws-arrow-ic">‹</span>
+        </button>
         <button
           type="button"
           aria-label="next"
-          className="dws-nav"
+          className="dws-arrow r"
           onClick={() => setActive((a) => (a + 1) % scenes.length)}
         >
-          ›
+          <span className="dws-arrow-ic">›</span>
         </button>
-      </div>
-
-      <div className="dws-body" key={active}>
+        <div className="dws-body" key={active}>
         <div className="dws-phone">
           <div className="dws-notch" />
           <div className="dws-screen">
@@ -566,6 +567,7 @@ export function DemowashShowcase({
             </button>
           )}
         </div>
+        </div>
       </div>
 
       <div className="dws-dots">
@@ -592,7 +594,7 @@ const CSS = `
 .dws-nav{width:34px;height:34px;border-radius:999px;border:1.5px solid var(--g100);background:#fff;color:var(--g700);font-size:19px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:.15s;flex:0 0 auto}
 .dws-nav:hover{background:var(--g600);color:#fff;border-color:var(--g600)}
 .dws-nav:active{transform:scale(.94)}
-.dws-body{display:grid;grid-template-columns:1fr;gap:20px;padding:18px 18px 20px;background:linear-gradient(180deg,var(--g50),#fff);align-items:center;justify-items:center;animation:dws-fadein .45s ease}
+.dws-body{display:grid;grid-template-columns:1fr;gap:20px;padding:18px 18px 20px;background:#fff;align-items:center;justify-items:center;animation:dws-fadein .45s ease}
 @container (min-width:760px){.dws-body{grid-template-columns:320px 1fr;gap:34px;padding:22px 30px;justify-items:stretch}}
 @keyframes dws-fadein{from{opacity:0}to{opacity:1}}
 .dws-phone{width:300px;height:560px;background:#0b1220;border-radius:42px;padding:11px;box-shadow:0 28px 56px -22px rgba(8,15,30,.55);position:relative;margin:0 auto}
