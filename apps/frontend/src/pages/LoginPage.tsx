@@ -2239,10 +2239,12 @@ export function LoginPage() {
         {/* Ambient glow */}
         <div className="absolute -top-32 -left-32 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-32 -right-32 w-[400px] h-[400px] bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
+        {/* Subtle dotted grid */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:34px_34px] opacity-60 pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
-            {/* Left: image with floating badge */}
+            {/* Left: image with floating badges */}
             <motion.div
               initial={{ opacity: 0, x: -60 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -2250,14 +2252,31 @@ export function LoginPage() {
               transition={{ duration: 0.7 }}
               className="relative"
             >
+              {/* Gradient frame */}
+              <div className="absolute -inset-1 bg-gradient-to-tr from-amber-500/40 via-orange-500/20 to-transparent rounded-[28px] blur-sm" />
               <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10">
                 <img src="/human.png" alt="Human-in-the-loop" className="w-full h-72 lg:h-96 object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent" />
               </div>
-              {/* Floating stat pill */}
-              <div className="absolute -bottom-5 left-6 bg-amber-500 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3">
-                <span className="text-2xl font-black">{"<2min"}</span>
-                <span className="text-xs font-medium leading-tight opacity-90">avg.<br/>response</span>
+
+              {/* Floating "agent online" chip */}
+              <div className="absolute top-5 right-5 inline-flex items-center gap-2 bg-slate-900/80 backdrop-blur-md text-white px-3 py-1.5 rounded-full text-xs font-medium ring-1 ring-white/10 shadow-lg">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                </span>
+                {t("humanLoop.agentOnline")}
+              </div>
+
+              {/* Floating response-time pill */}
+              <div className="absolute -bottom-5 left-6 bg-gradient-to-br from-amber-500 to-orange-500 text-white pl-4 pr-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 ring-1 ring-white/20">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20">
+                  <Zap className="h-5 w-5" />
+                </span>
+                <span className="flex flex-col leading-none">
+                  <span className="text-2xl font-black">{"<2min"}</span>
+                  <span className="text-[11px] font-medium opacity-90 mt-0.5">{t("humanLoop.avgResponse")}</span>
+                </span>
               </div>
             </motion.div>
 
@@ -2267,9 +2286,9 @@ export function LoginPage() {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.7, delay: 0.1 }}
-              className="space-y-8"
+              className="space-y-7"
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-sm font-semibold">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-sm font-semibold ring-1 ring-amber-500/20">
                 🤝 Human-in-the-loop
               </div>
               <h3 className="text-4xl lg:text-5xl font-bold text-white leading-tight">
@@ -2280,14 +2299,18 @@ export function LoginPage() {
               </p>
 
               {/* Mini stat row */}
-              <div className="grid grid-cols-3 gap-4 pt-2">
+              <div className="grid grid-cols-3 gap-4 pt-1">
                 {[
-                  { value: "100%", label: "context\npreserved" },
-                  { value: "0", label: "lost\nconversations" },
-                  { value: "24/7", label: "AI\ncoverage" },
+                  { icon: ShieldCheck, value: "100%", label: "context\npreserved" },
+                  { icon: MessageSquare, value: "0", label: "lost\nconversations" },
+                  { icon: Clock, value: "24/7", label: "AI\ncoverage" },
                 ].map((s) => (
-                  <div key={s.value} className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center">
-                    <div className="text-2xl font-black text-amber-400">{s.value}</div>
+                  <div
+                    key={s.value}
+                    className="group bg-white/5 border border-white/10 rounded-2xl p-4 text-center hover:bg-white/10 hover:border-amber-500/30 transition-colors duration-300"
+                  >
+                    <s.icon className="h-5 w-5 mx-auto text-amber-400/80 group-hover:text-amber-400 transition-colors" />
+                    <div className="text-2xl font-black text-amber-400 mt-2">{s.value}</div>
                     <div className="text-xs text-slate-400 mt-1 whitespace-pre-line leading-tight">{s.label}</div>
                   </div>
                 ))}
@@ -2295,9 +2318,10 @@ export function LoginPage() {
 
               <Link
                 to="/human-support"
-                className="inline-flex items-center gap-2 text-amber-400 font-semibold hover:text-amber-300 transition-colors"
+                className="group inline-flex items-center gap-2 px-5 py-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-semibold rounded-xl ring-1 ring-amber-500/30 transition-colors"
               >
-                {t("common.viewMore")} →
+                {t("common.viewMore").replace(/\s*→\s*$/, "")}
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
               </Link>
             </motion.div>
           </div>

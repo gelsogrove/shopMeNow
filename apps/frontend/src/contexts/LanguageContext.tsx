@@ -107,6 +107,8 @@ const translations = {
 
     // Human-in-the-loop Section
     "humanLoop.title": "Supporto human-in-the-loop",
+    "humanLoop.agentOnline": "Operatore online",
+    "humanLoop.avgResponse": "risposta media",
     "humanLoop.subtitle":
       "Passa a un operatore quando serve mantenendo tutto il contesto. L'agente riceve una notifica WhatsApp per intervenire immediatamente. Il team resta in controllo, con l'AI che fa il lavoro pesante.",
 
@@ -694,6 +696,8 @@ const translations = {
 
     // Human-in-the-loop Section
     "humanLoop.title": "Human-in-the-loop support",
+    "humanLoop.agentOnline": "Agent online",
+    "humanLoop.avgResponse": "avg. response",
     "humanLoop.subtitle":
       "Escalate to a human when needed while keeping full context. The agent receives a WhatsApp notification to intervene immediately. Your team stays in control, with the AI doing the heavy lifting.",
 
@@ -1314,6 +1318,8 @@ const translations = {
 
     // Human-in-the-loop Section
     "humanLoop.title": "Soporte human-in-the-loop",
+    "humanLoop.agentOnline": "Agente en línea",
+    "humanLoop.avgResponse": "respuesta media",
     "humanLoop.subtitle":
       "Escala a un humano cuando sea necesario manteniendo todo el contexto. El agente recibe una notificación de WhatsApp para intervenir de inmediato. Tu equipo mantiene el control y la IA hace el trabajo pesado.",
 
@@ -1799,6 +1805,8 @@ const translations = {
 
     // Human-in-the-loop Section
     "humanLoop.title": "Suporte human-in-the-loop",
+    "humanLoop.agentOnline": "Agente online",
+    "humanLoop.avgResponse": "resposta média",
     "humanLoop.subtitle":
       "Escale para um humano quando necessário mantendo todo o contexto. O agente recebe uma notificação do WhatsApp para intervir imediatamente. Sua equipe fica no controle e a IA faz o trabalho pesado.",
 

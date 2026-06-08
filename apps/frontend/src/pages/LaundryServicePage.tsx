@@ -471,7 +471,7 @@ export function LaundryServicePage() {
                 <div className="bg-white rounded-xl p-4 flex items-start gap-3 shadow-sm">
                   <div className="bg-green-500 rounded-xl w-10 h-10 shrink-0 flex items-center justify-center text-white font-bold text-xs">WA</div>
                   <div>
-                    <p className="text-gray-900 text-xs font-semibold mb-1">John · EcoWash Bot</p>
+                    <p className="text-gray-900 text-xs font-semibold mb-1">John · DemoWash Bot</p>
                     <p className="text-gray-600 text-xs">¡Haz que cada lavado cuente! Consigue nuestra tarjeta de fidelización y disfruta de descuentos exclusivos, regalos y más ventajas.</p>
                   </div>
                 </div>

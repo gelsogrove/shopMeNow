@@ -285,7 +285,7 @@ export function FranchisingPage() {
               {/* Override panel mockup */}
               <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-100 text-sm">
                 <div className="flex items-center gap-2 mb-4 text-green-700 font-semibold text-xs uppercase tracking-wide">
-                  <Building2 className="w-4 h-4" /> Brand · EcoWash
+                  <Building2 className="w-4 h-4" /> Brand · DemoWash
                 </div>
                 <div className="space-y-3">
                   <div className="bg-gray-50 rounded-xl p-3 border-l-2 border-gray-300">
