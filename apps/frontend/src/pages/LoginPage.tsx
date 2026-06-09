@@ -1013,9 +1013,26 @@ export function LoginPage() {
   return (
     <>
       <SEO
-        title="Login"
-        description="Access eChatbot to sign in, register, or explore the platform with a mobile-friendly experience."
-        robots="noindex, nofollow"
+        title={
+          ({
+            it: "Chatbot WhatsApp AI per Franchising e Attività Multi-Sede",
+            en: "AI WhatsApp Chatbot for Franchises & Multi-Location Businesses",
+            es: "Chatbot WhatsApp con IA para Franquicias y Negocios Multi-Sede",
+            pt: "Chatbot WhatsApp com IA para Franchising e Negócios Multi-Sede",
+          } as Record<string, string>)[language as string] ||
+          "AI WhatsApp Chatbot for Franchises & Multi-Location Businesses"
+        }
+        description={
+          ({
+            it: "Un'unica AI su WhatsApp per tutta la tua rete in franchising: risponde 24/7, traduce in tempo reale, riconosce il negozio, prenota appuntamenti e invia promozioni.",
+            en: "One AI on WhatsApp for your whole franchise network: 24/7 replies, real-time translation, per-shop data, appointment booking and promo campaigns.",
+            es: "Una sola IA en WhatsApp para toda tu red de franquicias: responde 24/7, traduce en tiempo real, reconoce la tienda, agenda citas y envía promociones.",
+            pt: "Uma só IA no WhatsApp para toda a tua rede de franchising: responde 24/7, traduz em tempo real, reconhece a loja, marca consultas e envia promoções.",
+          } as Record<string, string>)[language as string] ||
+          "One AI on WhatsApp for your whole franchise network: 24/7 replies, real-time translation, per-shop data, appointment booking and promo campaigns."
+        }
+        keywords="chatbot whatsapp, chatbot franchising, whatsapp multi sede, ai whatsapp, assistente whatsapp, prenotazione appuntamenti whatsapp, campagne whatsapp"
+        robots={showLoginCard ? "noindex, nofollow" : "index, follow"}
       />
       <div
         className={`w-full min-h-screen ${showLoginCard ? "bg-slate-100" : "bg-[#070d18] text-slate-200"}`}
@@ -2035,17 +2052,6 @@ export function LoginPage() {
                 </span>
                 {t("humanLoop.agentOnline")}
               </div>
-
-              {/* Floating response-time pill */}
-              <div className="absolute -bottom-5 left-6 bg-gradient-to-br from-amber-500 to-orange-500 text-white pl-4 pr-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 ring-1 ring-white/20">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20">
-                  <Zap className="h-5 w-5" />
-                </span>
-                <span className="flex flex-col leading-none">
-                  <span className="text-2xl font-black">{"<2min"}</span>
-                  <span className="text-[11px] font-medium opacity-90 mt-0.5">{t("humanLoop.avgResponse")}</span>
-                </span>
-              </div>
             </motion.div>
 
             {/* Right: text + mini stats */}
@@ -2084,13 +2090,6 @@ export function LoginPage() {
                 ))}
               </div>
 
-              <Link
-                to="/human-support"
-                className="group inline-flex items-center gap-2 px-5 py-3 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 font-semibold rounded-xl ring-1 ring-amber-500/30 transition-colors"
-              >
-                {t("common.viewMore").replace(/\s*→\s*$/, "")}
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
             </motion.div>
           </div>
         </div>

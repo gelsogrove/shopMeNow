@@ -1098,6 +1098,15 @@ export function ChatWidget({
     "top-left": isEmbedded ? "top-2 left-2" : "top-4 left-4 sm:top-8 sm:left-8",
   }
 
+  // Open panel: full-screen on mobile (inset-0, no corner offset that would
+  // overflow with w-screen/h-screen), docked to the corner from sm+.
+  const openPanelPositionClasses = {
+    "bottom-right": isEmbedded ? "bottom-2 right-2" : "inset-0 sm:inset-auto sm:bottom-8 sm:right-8",
+    "bottom-left": isEmbedded ? "bottom-2 left-2" : "inset-0 sm:inset-auto sm:bottom-8 sm:left-8",
+    "top-right": isEmbedded ? "top-2 right-2" : "inset-0 sm:inset-auto sm:top-8 sm:right-8",
+    "top-left": isEmbedded ? "top-2 left-2" : "inset-0 sm:inset-auto sm:top-8 sm:left-8",
+  }
+
   const embeddedPopupSizeClasses = isEmbedded
     ? "w-full h-full rounded-[24px] shadow-none border-2"
     : "w-screen h-screen sm:w-[410px] sm:h-[680px] max-h-[800px] rounded-none sm:rounded-3xl shadow-2xl border-2 sm:border-2"
@@ -1240,7 +1249,7 @@ export function ChatWidget({
             "overflow-hidden overscroll-contain isolate",
             embeddedPopupSizeClasses,
             "animate-in slide-in-from-bottom-4 fade-in duration-300",
-            positionClasses[position]
+            openPanelPositionClasses[position]
           )}
           style={{ borderColor }}
           onWheel={(e) => e.stopPropagation()}
@@ -1718,7 +1727,7 @@ export function ChatWidget({
             "overflow-hidden overscroll-contain isolate",
             embeddedPopupSizeClasses,
             "animate-in slide-in-from-bottom-4 fade-in duration-300",
-            positionClasses[position]
+            openPanelPositionClasses[position]
           )}
           style={{ borderColor }}
           onWheel={(e) => e.stopPropagation()}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { motion } from "framer-motion"
-import { MapPin, Mic, Play } from "lucide-react"
+import { Loader2, MapPin, Mic, Play } from "lucide-react"
 
 // ---------------------------------------------------------------------------
 // HomeShowcase — dark marketing hero for the homepage.
@@ -47,6 +47,7 @@ interface Msg {
   image?: boolean // promo-image card above the text (campaign demo)
   file?: boolean // document/invoice attachment card above the text
   fileName?: string // shown on the document card
+  status?: boolean // centered system status pill (e.g. "connecting…")
   imgTitle?: string // promo banner: small caps title
   imgBig?: string // promo banner: big value (e.g. -20%)
   imgSmall?: string // promo banner: subtitle line
@@ -95,10 +96,10 @@ function buildContent(lang: Lang) {
       icon: "👋",
       title: p("Messaggio di benvenuto", "Welcome message", "Mensaje de bienvenida", "Mensagem de boas-vindas"),
       desc: p(
-        "Accoglie ogni nuovo cliente con un messaggio e un video, e lo guida subito.",
-        "Welcomes every new customer with a message and a video, guiding them instantly.",
-        "Da la bienvenida a cada cliente con un mensaje y un vídeo, y lo guía al instante.",
-        "Recebe cada novo cliente com uma mensagem e um vídeo, e orienta-o de imediato."
+        "Accoglie e guida ogni cliente, anche con un video.",
+        "Welcomes and guides every customer, video included.",
+        "Da la bienvenida y guía a cada cliente, con vídeo.",
+        "Recebe e orienta cada cliente, com vídeo."
       ),
     },
     {
@@ -115,70 +116,70 @@ function buildContent(lang: Lang) {
       icon: "🙋",
       title: p("Scala a operatore", "Human escalation", "Escala a operador", "Escala para operador"),
       desc: p(
-        "Passa a un umano quando serve, con tutto il contesto.",
-        "Hands off to a human when needed, with full context.",
-        "Pasa a un humano cuando hace falta, con todo el contexto.",
-        "Passa a um humano quando é preciso, com todo o contexto."
+        "Passa a un operatore, con tutto il contesto.",
+        "Hands off to a human, with full context.",
+        "Pasa a un humano, con todo el contexto.",
+        "Passa a um humano, com todo o contexto."
       ),
     },
     {
       icon: "🎙️",
       title: p("Messaggi audio", "Audio messages", "Mensajes de audio", "Mensagens de áudio"),
       desc: p(
-        "Capisce e risponde anche alle note vocali.",
-        "Understands and replies to voice notes too.",
-        "Entiende y responde también a las notas de voz.",
-        "Entende e responde também às notas de voz."
+        "Capisce e risponde alle note vocali.",
+        "Understands and replies to voice notes.",
+        "Entiende y responde a las notas de voz.",
+        "Entende e responde às notas de voz."
       ),
     },
     {
       icon: "📍",
       title: p("Dati del franchising", "Franchising data", "Datos de la franquicia", "Dados do franchising"),
       desc: p(
-        "Riconosce la sede del cliente e risponde con prezzi, orari, istruzioni e promozioni di quel negozio.",
-        "Detects the customer's location and replies with that shop's prices, hours, instructions and promos.",
-        "Reconoce la sede del cliente y responde con precios, horarios, instrucciones y promociones de esa tienda.",
-        "Reconhece a unidade do cliente e responde com preços, horários, instruções e promoções dessa loja."
+        "Prezzi, orari e promo giusti, per ogni sede.",
+        "The right prices, hours and promos, per location.",
+        "Precios, horarios y promos correctos, por sede.",
+        "Preços, horários e promos certos, por unidade."
       ),
     },
     {
       icon: "📅",
       title: p("Prenota appuntamenti", "Appointment booking", "Reserva de citas", "Marcação de consultas"),
       desc: p(
-        "Si collega al calendario e prenota, sposta o annulla appuntamenti via chat.",
-        "Connects to the calendar and books, reschedules or cancels appointments via chat.",
-        "Se conecta al calendario y reserva, cambia o cancela citas por chat.",
-        "Liga-se ao calendário e marca, remarca ou cancela consultas por chat."
+        "Prenota, sposta o annulla appuntamenti via chat.",
+        "Books, reschedules or cancels appointments in chat.",
+        "Reserva, cambia o cancela citas por chat.",
+        "Marca, remarca ou cancela consultas por chat."
       ),
     },
     {
       icon: "🌐",
       title: p("Operatore multilingua", "Multilingual operator", "Operador multilingüe", "Operador multilíngue"),
       desc: p(
-        "L'operatore scrive nella sua lingua, il cliente la riceve nella propria.",
-        "The operator writes in their language, the customer receives it in theirs.",
-        "El operador escribe en su idioma, el cliente lo recibe en el suyo.",
-        "O operador escreve na sua língua, o cliente recebe-a na dele."
+        "Operatore e cliente, ognuno nella sua lingua.",
+        "Operator and customer, each in their own language.",
+        "Operador y cliente, cada uno en su idioma.",
+        "Operador e cliente, cada um na sua língua."
       ),
     },
     {
       icon: "🧾",
       title: p("Invio fatture e file", "Invoices & files", "Facturas y archivos", "Faturas e ficheiros"),
       desc: p(
-        "Invia fatture, PDF e documenti direttamente nella chat.",
-        "Sends invoices, PDFs and documents straight into the chat.",
-        "Envía facturas, PDF y documentos directamente en el chat.",
-        "Envia faturas, PDF e documentos diretamente no chat."
+        "Invia fatture e documenti direttamente in chat.",
+        "Sends invoices and documents right in the chat.",
+        "Envía facturas y documentos en el chat.",
+        "Envia faturas e documentos no chat."
       ),
     },
     {
       icon: "📣",
       title: p("Notifiche push", "Push notifications", "Notificaciones push", "Notificações push"),
       desc: p(
-        "Invii campagne e promozioni a tutti i clienti su WhatsApp, con un clic.",
-        "Send campaigns and promos to all your customers on WhatsApp, in one click.",
-        "Envía campañas y promociones a todos los clientes en WhatsApp, con un clic.",
-        "Envia campanhas e promoções a todos os clientes no WhatsApp, com um clique."
+        "Campagne e promo a tutti i clienti, in un clic.",
+        "Campaigns and promos to all customers, in one click.",
+        "Campañas y promos a todos los clientes, en un clic.",
+        "Campanhas e promos a todos os clientes, num clique."
       ),
     },
   ]
@@ -200,6 +201,7 @@ function buildContent(lang: Lang) {
       msgs: [
         { role: "out", text: p("Qual è il numero della lavatrice?", "What's the washer number?", "¿Cuál es el número de la lavadora?", "Qual é o número da máquina?") },
         { role: "in", text: p("La numero 4", "Number 4", "La número 4", "A número 4") },
+        { role: "out", status: true, text: p("Connessione alla lavatrice 4…", "Connecting to washer 4…", "Conectando con la lavadora 4…", "A ligar à máquina 4…") },
         { role: "out", text: p("Fatto ✅ Lavatrice 4 sbloccata. Riprova pure!", "Done ✅ Washer 4 unlocked. Try again!", "Hecho ✅ Lavadora 4 desbloqueada. ¡Prueba de nuevo!", "Feito ✅ Máquina 4 desbloqueada. Tenta de novo!") },
       ],
     },
@@ -337,7 +339,7 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
       </div>
 
       {/* Phone + capability cards */}
-      <div className="relative grid grid-cols-1 items-start gap-8 lg:grid-cols-2">
+      <div className="relative grid grid-cols-1 items-start gap-10 lg:grid-cols-[24rem_34rem] lg:justify-center">
         {/* WhatsApp phone */}
         <div className="mx-auto w-full max-w-sm lg:sticky lg:top-24">
           <div className="rounded-[2.25rem] bg-slate-950 p-3 shadow-2xl ring-1 ring-white/10">
@@ -358,7 +360,7 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
                   context change (final Arabic exchange / loop restart) */}
               <div
                 ref={chatRef}
-                className="h-[640px] overflow-y-auto px-3 py-4 text-sm [&::-webkit-scrollbar]:hidden"
+                className="h-[685px] overflow-y-auto px-3 py-4 text-sm [&::-webkit-scrollbar]:hidden"
                 style={{ scrollbarWidth: "none" }}
               >
                 <div className="mt-auto flex min-h-full flex-col justify-end gap-2">
@@ -406,6 +408,22 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
 // One chat bubble. Bot/operator bubbles fade in after a short stagger, so the
 // conversation reads as if it's being written live.
 function ChatBubble({ m, opLabel, voiceLabel }: { m: Msg; opLabel: string; voiceLabel: string }) {
+  // Centered system status (e.g. "connecting to the machine…") with a spinner.
+  if (m.status) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex justify-center"
+      >
+        <span className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-[11px] font-medium text-gray-500 shadow-sm">
+          <Loader2 className="h-3 w-3 animate-spin" style={{ color: "#075E54" }} />
+          {m.text}
+        </span>
+      </motion.div>
+    )
+  }
   const align = m.role === "out" ? "justify-end" : "justify-start"
   const bubbleBase = "max-w-[85%] rounded-2xl px-3 py-2 shadow-sm text-gray-900"
   const skin =
