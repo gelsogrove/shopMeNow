@@ -274,7 +274,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
           {/* Left: Logo + Brand (identical to homepage) */}
           <Link to="/" className="flex items-center justify-start gap-1 hover:opacity-80 transition-opacity">
             <span className="py-2 md:py-[15px] px-2 md:px-0 text-2xl md:text-2xl lg:text-4xl font-bold tracking-tight leading-none" style={{ color: "#25D366" }}>
-              eChatbot
+              eChatbot<span className="text-white">.AI</span>
             </span>
           </Link>
 
@@ -461,17 +461,13 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
           <div className="lg:hidden py-4 border-t border-white/10">
             <nav className="flex flex-col gap-4">
               <Link to="/" className="font-medium text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.home}</Link>
-              <Link to="/features" className="font-medium text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.features}</Link>
-              {/* /pricing removed from public mobile menu — sales-led pivot. */}
               <Link to="/contact" className="font-medium text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.contact}</Link>
 
               <div className="border-t border-white/10 pt-4 mt-2">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">{t.resources}</p>
                 <div className="flex flex-col gap-3 ml-4">
-                  <Link to="/widget-to-whatsapp" className="text-sm text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.widgetToWhatsApp}</Link>
                   <Link to="/human-support" className="text-sm text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.humanSupport}</Link>
                   <Link to="/crm-integration" className="text-sm text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.crmIntegration}</Link>
-                  <Link to="/team-collaboration" className="text-sm text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.teamCollaboration}</Link>
                   <Link to="/privacy-by-design" className="text-sm text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.privacyDesign}</Link>
                 </div>
               </div>

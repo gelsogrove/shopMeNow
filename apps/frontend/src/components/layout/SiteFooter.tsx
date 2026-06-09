@@ -110,26 +110,15 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
   return (
     <footer className="bg-slate-900 text-slate-300">
       <div className="max-w-7xl mx-auto px-6 lg:px-8 py-12 lg:py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 lg:gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Logo + Description */}
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center gap-2 mb-4 hover:opacity-80 transition-opacity">
-              <span className="text-xl font-bold text-white">eChatbot</span>
+              <span className="text-xl font-bold" style={{ color: "#25D366" }}>eChatbot<span className="text-white">.AI</span></span>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed">
               {t.tagline}
             </p>
-          </div>
-
-          {/* Product */}
-          <div>
-            <h3 className="text-white font-semibold mb-4">{t.product}</h3>
-            <ul className="space-y-3">
-              <li><Link to="/features" className="text-sm hover:text-green-500 transition-colors">{t.features}</Link></li>
-              <li><Link to="/widget-to-whatsapp" className="text-sm hover:text-green-500 transition-colors">{t.widgetToWhatsApp}</Link></li>
-              <li><Link to="/human-support" className="text-sm hover:text-green-500 transition-colors">{t.humanSupport}</Link></li>
-              <li><Link to="/appointment-booking" className="text-sm hover:text-green-500 transition-colors">{t.appointmentBooking}</Link></li>
-            </ul>
           </div>
 
           {/* Resources */}
@@ -137,7 +126,6 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
             <h3 className="text-white font-semibold mb-4">{t.resources}</h3>
             <ul className="space-y-3">
               <li><Link to="/crm-integration" className="text-sm hover:text-green-500 transition-colors">{t.crmIntegration}</Link></li>
-              <li><Link to="/team-collaboration" className="text-sm hover:text-green-500 transition-colors">{t.teamCollaboration}</Link></li>
               <li><Link to="/privacy-by-design" className="text-sm hover:text-green-500 transition-colors">{t.privacyDesign}</Link></li>
             </ul>
             <h3 className="text-white font-semibold mt-6 mb-4">{t.solutions}</h3>

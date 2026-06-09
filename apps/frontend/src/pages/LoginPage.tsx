@@ -1024,13 +1024,12 @@ export function LoginPage() {
       <header className={`${showLoginCard ? 'bg-white' : 'bg-[#070d18]/90 backdrop-blur border-b border-white/10'} shadow-sm sticky top-0 z-[100] overflow-hidden${showLoginCard ? ' hidden' : ''}`}>
         <div className="max-w-7xl mx-auto px-4 lg:px-12">
           <div className="hidden lg:flex justify-end pt-3">
-            <div className="flex items-center gap-4">
-              <a
-                href="/contact"
-                className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200 hover:text-white"
-              >
-                {t("nav.contact")}
-              </a>
+            <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200">
+              <a href="/survey" className="hover:text-white transition-colors">Survey</a>
+              <span className="text-white/20">|</span>
+              <a href="#demo" className="hover:text-white transition-colors">Demo</a>
+              <span className="text-white/20">|</span>
+              <a href="/contact" className="hover:text-white transition-colors">{t("nav.contact")}</a>
             </div>
           </div>
 
@@ -1038,60 +1037,30 @@ export function LoginPage() {
           <div className="flex items-center justify-between py-1 md:py-1.5 max-h-[70px]">
             {/* Left: Logo + Brand */}
             <div className="flex items-center justify-start gap-1">
-              <span className="py-2 md:py-[15px] px-2 md:px-0 text-2xl md:text-2xl lg:text-4xl font-bold tracking-tight leading-none" style={{ color: "#25D366" }}>eChatbot</span>
+              <span className="py-2 md:py-[15px] px-2 md:px-0 text-2xl md:text-2xl lg:text-4xl font-bold tracking-tight leading-none" style={{ color: "#25D366" }}>eChatbot<span className="text-white">.AI</span></span>
             </div>
 
             {/* Right: Language Selector + Auth */}
             <div className="flex items-center justify-end gap-2 md:gap-6">
-              {/* Language Selector - Hidden on mobile */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="hidden lg:flex items-center gap-2 h-9 px-3 hover:bg-green-50 rounded-lg transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
+              {/* Language Selector — all flags inline (no dropdown) */}
+              <div className="hidden lg:flex items-center gap-1">
+                {([
+                  { code: "it", flag: "🇮🇹" },
+                  { code: "en", flag: "🇬🇧" },
+                  { code: "es", flag: "🇪🇸" },
+                  { code: "pt", flag: "🇵🇹" },
+                ] as const).map((l) => (
+                  <button
+                    key={l.code}
+                    type="button"
+                    onClick={() => setLanguage(l.code)}
+                    className={`flex items-center gap-1 rounded-lg px-2 py-1 transition-colors ${language === l.code ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"}`}
                   >
-                    <span className="text-xl">
-                      {language === "it" ? "🇮🇹" : language === "en" ? "🇬🇧" : language === "es" ? "🇪🇸" : "🇵🇹"}
-                    </span>
-                    <span className="hidden sm:inline text-sm font-medium text-slate-200">
-                      {language === "it" ? "IT" : language === "en" ? "EN" : language === "es" ? "ES" : "PT"}
-                    </span>
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-48" align="end">
-                  <DropdownMenuLabel className="text-xs text-slate-500 uppercase tracking-wider px-2 py-1.5">{t("nav.language")}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="flex items-center gap-3 cursor-pointer py-2.5 px-3"
-                    onClick={() => setLanguage("it")}
-                  >
-                    <span className="text-xl">🇮🇹</span>
-                    <span className="font-medium">Italiano</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="flex items-center gap-3 cursor-pointer py-2.5 px-3"
-                    onClick={() => setLanguage("en")}
-                  >
-                    <span className="text-xl">🇬🇧</span>
-                    <span className="font-medium">English</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="flex items-center gap-3 cursor-pointer py-2.5 px-3"
-                    onClick={() => setLanguage("es")}
-                  >
-                    <span className="text-xl">🇪🇸</span>
-                    <span className="font-medium">Español</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="flex items-center gap-3 cursor-pointer py-2.5 px-3"
-                    onClick={() => setLanguage("pt")}
-                  >
-                    <span className="text-xl">🇵🇹</span>
-                    <span className="font-medium">Português</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    <span className="text-lg leading-none">{l.flag}</span>
+                    <span className="text-xs font-semibold uppercase">{l.code}</span>
+                  </button>
+                ))}
+              </div>
 
               {isLoggedIn ? (
                 <div className="flex items-center gap-4">
@@ -1254,7 +1223,7 @@ export function LoginPage() {
         
         <div className={`text-center mb-6 space-y-4 relative${showLoginCard ? ' hidden' : ''}`}>
           {/* Brand slogan — wordplay on "you never forget your first love" */}
-          <h1 className="text-4xl lg:text-5xl font-bold italic max-w-3xl mx-auto" style={{ color: "#25D366" }}>
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold italic mx-auto lg:whitespace-nowrap" style={{ color: "#25D366" }}>
             {t("hero.slogan")}
           </h1>
           <p className="text-lg text-slate-300 max-w-3xl mx-auto">
@@ -1757,7 +1726,121 @@ export function LoginPage() {
       </div>
 
       {!showLoginCard && (
-      <>{/* Smart Push AI Section */}
+      <>
+      {/* How It Works Section */}
+      <motion.section
+        id="features"
+        className="py-16"
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        viewport={{ once: true, amount: 0.2 }}
+      >
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="text-center mb-12">
+            
+            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-3">
+              {t("howItWorks.title")}
+            </h2>
+            <p className="text-lg text-slate-300 max-w-2xl mx-auto">
+              {t("howItWorks.subtitle")}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {howItWorksCards.map((card, index) => (
+              <div className="relative" key={card.step}>
+                <motion.div
+                  className={`bg-gradient-to-br ${card.gradient} rounded-2xl p-8 border-2 ${card.border} h-full shadow-lg hover:shadow-xl transition-all duration-500 flex flex-col`}
+                  initial={{ opacity: 0, y: 60, scale: 0.98 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true, amount: 0.35 }}
+                  transition={{ duration: 0.65, ease: "easeOut", delay: index * 0.08 }}
+                >
+                  <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6 shadow-lg shadow-emerald-200/40">
+                    {card.step}
+                  </div>
+                  <h3 className="text-2xl font-bold text-white mb-4">{card.title}</h3>
+                  <p className="text-slate-300 leading-relaxed flex-1">
+                    {card.description}
+                  </p>
+                </motion.div>
+
+                {card.showArrow && (
+                  <div className="hidden md:block absolute -right-4 top-1/2 transform -translate-y-1/2 text-green-600 z-10">
+                    <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      {/* Survey CTA Section - MOVED BEFORE HOW IT WORKS */}
+      {(() => {
+        const qLang = language as string
+        const qMap: Record<string, { title: string; desc: string; cta: string }> = {
+          it: {
+            title: "Aiutaci a costruire il chatbot perfetto per te",
+            desc: "Il segreto di un buon chatbot è la qualità delle risposte. Rispondi a qualche domanda sulle tue esigenze — supporto umano, marketing push, widget, vendite, e-commerce e privacy — e ti mostreremo come eChatbot può fare la differenza. Circa 2 minuti, zero impegno.",
+            cta: "Avvia il survey →",
+          },
+          es: {
+            title: "Ayúdanos a construir el chatbot perfecto para ti",
+            desc: "El secreto de un buen chatbot son las respuestas de calidad. Responde algunas preguntas sobre tus necesidades — soporte humano, marketing push, widget, ventas, e-commerce y privacidad — y te mostraremos cómo eChatbot puede marcar la diferencia. Unos 2 minutos, sin compromiso.",
+            cta: "Iniciar el survey →",
+          },
+          pt: {
+            title: "Ajude-nos a construir o chatbot perfeito para você",
+            desc: "O segredo de um bom chatbot são as respostas de qualidade. Responda algumas perguntas sobre suas necessidades — suporte humano, marketing push, widget, vendas, e-commerce e privacidade — e mostraremos como o eChatbot pode fazer a diferença. Cerca de 2 minutos, sem compromisso.",
+            cta: "Iniciar o survey →",
+          },
+          en: {
+            title: "Help us build the perfect chatbot for you",
+            desc: "The secret to a great chatbot is quality responses. Answer a few questions about your needs — human support, push marketing, widget, sales, e-commerce, and privacy — and we'll show you how eChatbot can make a real difference. About 2 minutes, no commitment.",
+            cta: "Start the survey →",
+          },
+        }
+        const q = qMap[qLang] || qMap["en"]
+
+        return (
+          <section className="py-24 border-t border-white/10">
+            <div className="max-w-7xl mx-auto px-6 lg:px-8">
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="flex flex-col items-center text-center gap-2"
+              >
+                {/* Text + CTA */}
+                <div className="max-w-2xl">
+                  <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
+                    Survey
+                  </span>
+                  <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
+                    {q.title}
+                  </h2>
+                  <p className="text-lg text-slate-300 mb-10 leading-relaxed max-w-xl mx-auto lg:mx-0">
+                    {q.desc}
+                  </p>
+                  <Link
+                    to="/survey"
+                    className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold px-10 py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
+                  >
+                    <span className="text-2xl">📋</span>
+                    <span>{q.cta}</span>
+                  </Link>
+                </div>
+              </motion.div>
+            </div>
+          </section>
+        )
+      })()}
+
       <div className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
@@ -1811,135 +1894,7 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Survey CTA Section - MOVED BEFORE HOW IT WORKS */}
-      {(() => {
-        const qLang = language as string
-        const qMap: Record<string, { title: string; desc: string; cta: string }> = {
-          it: {
-            title: "Aiutaci a costruire il chatbot perfetto per te",
-            desc: "Il segreto di un buon chatbot è la qualità delle risposte. Rispondi a qualche domanda sulle tue esigenze — supporto umano, marketing push, widget, vendite, e-commerce e privacy — e ti mostreremo come eChatbot può fare la differenza. Circa 2 minuti, zero impegno.",
-            cta: "Avvia il survey →",
-          },
-          es: {
-            title: "Ayúdanos a construir el chatbot perfecto para ti",
-            desc: "El secreto de un buen chatbot son las respuestas de calidad. Responde algunas preguntas sobre tus necesidades — soporte humano, marketing push, widget, ventas, e-commerce y privacidad — y te mostraremos cómo eChatbot puede marcar la diferencia. Unos 2 minutos, sin compromiso.",
-            cta: "Iniciar el survey →",
-          },
-          pt: {
-            title: "Ajude-nos a construir o chatbot perfeito para você",
-            desc: "O segredo de um bom chatbot são as respostas de qualidade. Responda algumas perguntas sobre suas necessidades — suporte humano, marketing push, widget, vendas, e-commerce e privacidade — e mostraremos como o eChatbot pode fazer a diferença. Cerca de 2 minutos, sem compromisso.",
-            cta: "Iniciar o survey →",
-          },
-          en: {
-            title: "Help us build the perfect chatbot for you",
-            desc: "The secret to a great chatbot is quality responses. Answer a few questions about your needs — human support, push marketing, widget, sales, e-commerce, and privacy — and we'll show you how eChatbot can make a real difference. About 2 minutes, no commitment.",
-            cta: "Start the survey →",
-          },
-        }
-        const q = qMap[qLang] || qMap["en"]
 
-        return (
-          <section className="py-24 border-t border-white/10">
-            <div className="max-w-7xl mx-auto px-6 lg:px-8">
-              <motion.div
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-                className="flex flex-col lg:flex-row items-center gap-16"
-              >
-                {/* Left: Illustration */}
-                <div className="lg:w-1/2 flex justify-center">
-                  <div className="relative w-full max-w-md">
-                    {/* Decorative background */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl rotate-3" />
-                    <div className="relative bg-slate-900/50 rounded-3xl shadow-2xl p-4 sm:p-6 border border-white/10">
-                      <img
-                        src="https://www.echatbot.ai/survey.png"
-                        alt="eChatbot survey illustration"
-                        className="w-full h-full object-contain rounded-2xl"
-                        loading="lazy"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right: Text + CTA */}
-                <div className="lg:w-1/2 text-center lg:text-left">
-                  <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
-                    Survey
-                  </span>
-                  <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
-                    {q.title}
-                  </h2>
-                  <p className="text-lg text-slate-300 mb-10 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                    {q.desc}
-                  </p>
-                  <Link
-                    to="/survey"
-                    className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold px-10 py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
-                  >
-                    <span className="text-2xl">📋</span>
-                    <span>{q.cta}</span>
-                  </Link>
-                </div>
-              </motion.div>
-            </div>
-          </section>
-        )
-      })()}
-
-      {/* How It Works Section */}
-      <motion.section
-        id="features"
-        className="py-16"
-        initial={{ opacity: 0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        viewport={{ once: true, amount: 0.2 }}
-      >
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="text-center mb-12">
-            
-            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-3">
-              {t("howItWorks.title")}
-            </h2>
-            <p className="text-lg text-slate-300 max-w-2xl mx-auto">
-              {t("howItWorks.subtitle")}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {howItWorksCards.map((card, index) => (
-              <div className="relative" key={card.step}>
-                <motion.div
-                  className={`bg-gradient-to-br ${card.gradient} rounded-2xl p-8 border-2 ${card.border} h-full shadow-lg hover:shadow-xl transition-all duration-500 flex flex-col`}
-                  initial={{ opacity: 0, y: 60, scale: 0.98 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: true, amount: 0.35 }}
-                  transition={{ duration: 0.65, ease: "easeOut", delay: index * 0.08 }}
-                >
-                  <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold mb-6 shadow-lg shadow-emerald-200/40">
-                    {card.step}
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">{card.title}</h3>
-                  <p className="text-slate-300 leading-relaxed flex-1">
-                    {card.description}
-                  </p>
-                </motion.div>
-
-                {card.showArrow && (
-                  <div className="hidden md:block absolute -right-4 top-1/2 transform -translate-y-1/2 text-green-600 z-10">
-                    <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
 
 
       {/* FAQ Section */}
@@ -2036,103 +1991,6 @@ export function LoginPage() {
                     <div className="absolute -top-3 -right-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider animate-bounce">
                       Live
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Appointment Booking Section */}
-      <div className="py-20">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <motion.div
-            className="group relative"
-            initial={{ opacity: 0, x: -80 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true, amount: 0.35 }}
-            transition={{ duration: 0.65, ease: "easeOut" }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/15 to-violet-500/10 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
-
-            <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-white/10 hover:border-green-400/30 hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
-              <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-10 items-center">
-
-                {/* Left: Booking mockup */}
-                <div className="flex flex-col items-center lg:items-start gap-3 order-1">
-                  <div className="w-full max-w-[280px] bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl shadow-xl ring-4 ring-white group-hover:ring-purple-100 transition-all duration-300 p-4 space-y-3">
-                    {/* Calendar header */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-purple-700 uppercase tracking-wide">June 2025</span>
-                      <span className="text-lg">📅</span>
-                    </div>
-                    {/* Days grid */}
-                    <div className="grid grid-cols-7 gap-1 text-center">
-                      {["M","T","W","T","F","S","S"].map((d, i) => (
-                        <span key={i} className="text-[10px] font-semibold text-slate-400">{d}</span>
-                      ))}
-                      {[null,null,null,null,null,"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21"].map((d, i) => (
-                        <span key={i} className={`text-[11px] h-5 w-5 flex items-center justify-center rounded-full mx-auto ${d === "14" ? "bg-purple-600 text-white font-bold" : d ? "text-slate-600 hover:bg-purple-100 cursor-pointer" : ""}`}>{d}</span>
-                      ))}
-                    </div>
-                    {/* Time slots */}
-                    <div className="space-y-1.5 pt-1">
-                      {[{t:"10:00",sel:true},{t:"11:00",sel:false},{t:"15:00",sel:false}].map((slot,i) => (
-                        <div key={i} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium ${slot.sel ? "bg-purple-600 text-white shadow" : "bg-white text-slate-600 border border-slate-200"}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${slot.sel ? "bg-white" : "bg-slate-300"}`}></span>
-                          {slot.t}
-                          {slot.sel && <span className="ml-auto text-purple-200 text-[10px]">✓ selected</span>}
-                        </div>
-                      ))}
-                    </div>
-                    {/* WhatsApp confirmation */}
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-2.5 flex items-start gap-2">
-                      <span className="text-base leading-none mt-0.5">✅</span>
-                      <div>
-                        <p className="text-[10px] font-bold text-green-800">Confirmed via WhatsApp</p>
-                        <p className="text-[10px] text-green-700">Jun 14 · 10:00 · Reminder set</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right: Content */}
-                <div className="space-y-5 text-center lg:text-left order-2">
-                  <div className="space-y-3">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
-                      <span className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></span>
-                      {t("appointment.badge")}
-                    </div>
-                    <h3 className="text-3xl lg:text-4xl font-bold text-white leading-tight whitespace-pre-line">
-                      {t("appointment.title")}
-                    </h3>
-                    <p className="text-lg text-slate-300 leading-relaxed">
-                      {t("appointment.subtitle")}
-                    </p>
-                  </div>
-                  {/* Feature chips */}
-                  <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
-                    {[t("appointment.chip1"), t("appointment.chip2"), t("appointment.chip3")].map((chip, i) => (
-                      <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-xs font-semibold border border-purple-100">
-                        <span className="text-purple-400">✓</span> {chip}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="pt-2 flex flex-col sm:flex-row items-center lg:items-start gap-3">
-                    <Link
-                      to="/appointment-booking"
-                      className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 text-sm"
-                    >
-                      {t("appointment.cta")}
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                    </Link>
-                    <Link
-                      to="/appointment-booking"
-                      className="text-sm text-slate-500 hover:text-purple-700 hover:underline transition-colors"
-                    >
-                      {t("common.viewMore")}
-                    </Link>
                   </div>
                 </div>
               </div>
@@ -2290,12 +2148,6 @@ export function LoginPage() {
                       <span className="flex items-center gap-3">
                         <span>{t("integration.crm.button")}</span>
                       </span>
-                    </Link>
-                    <Link
-                      to="/crm-integration"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:text-blue-900 hover:underline transition-colors"
-                    >
-                      {t("common.viewMore")}
                     </Link>
                   </div>
                 </div>
