@@ -452,7 +452,7 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
                   context change (final Arabic exchange / loop restart) */}
               <div
                 ref={chatRef}
-                className="h-[460px] overflow-y-auto px-3 py-3 text-sm [&::-webkit-scrollbar]:hidden"
+                className="h-[560px] overflow-y-auto px-3 py-3 text-sm [&::-webkit-scrollbar]:hidden"
                 style={{ scrollbarWidth: "none" }}
               >
                 <div className="mt-auto flex min-h-full flex-col justify-end gap-2">
