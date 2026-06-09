@@ -139,6 +139,10 @@ export function DemoWidgetPage() {
           apiUrl={apiUrl}
           useWindowConfig={false}
           defaultOpen
+          instantChat
+          hideWorkspaceName
+          plainWhatsappNumber
+          icon="whatsapp"
           title={demo.workspaceName || "Chat with us 💬"}
           primaryColor="#059669"
           position="bottom-right"

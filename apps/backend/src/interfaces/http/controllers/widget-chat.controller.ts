@@ -337,6 +337,24 @@ export function buildWidgetSuggestions(responseText: string, quickReplies?: stri
   return get("fallback")
 }
 
+// 🛡️ Demo anti-abuse kill switch — only for demo workspaces (customChatbotId).
+// If a demo channel receives more than DEMO_RATE_LIMIT requests within
+// DEMO_RATE_WINDOW_MS, the channel is disabled (channelStatus=false) for the
+// WHOLE channel until an admin re-enables it manually. In-memory sliding window
+// keyed by workspaceId (resets on process restart — acceptable for a throttle).
+const DEMO_RATE_LIMIT = 10
+const DEMO_RATE_WINDOW_MS = 10_000
+const demoRequestWindows = new Map<string, number[]>()
+function demoRateLimitExceeded(workspaceId: string): boolean {
+  const now = Date.now()
+  const hits = (demoRequestWindows.get(workspaceId) || []).filter(
+    (t) => now - t < DEMO_RATE_WINDOW_MS
+  )
+  hits.push(now)
+  demoRequestWindows.set(workspaceId, hits)
+  return hits.length > DEMO_RATE_LIMIT
+}
+
 export class WidgetChatController {
   private readonly customClientChatbotService = new CustomClientChatbotService()
 
@@ -427,6 +445,7 @@ export class WidgetChatController {
           whatsappPhoneNumber: true,
           name: true,
           websiteUrl: true,
+          customChatbotId: true, // 🎮 demo workspaces bypass enableWidget/debugMode gates
           allowedExternalLinks: true, // reuse as allow-list for widget origins
         },
       })
@@ -511,7 +530,8 @@ export class WidgetChatController {
 
       // 🚫 CRITICAL: Check if widget is enabled (from backoffice toggle)
       // Only explicitly TRUE enables the widget (false/null/undefined = disabled)
-      if (workspace.enableWidget !== true) {
+      // 🎮 DEMO BYPASS: demo workspaces (customChatbotId) are always widget-enabled
+      if (workspace.enableWidget !== true && !workspace.customChatbotId) {
         return res.status(200).json({
           success: true,
           status: "disabled",
@@ -546,7 +566,8 @@ export class WidgetChatController {
         })
       }
 
-      if (workspace.debugMode === true) {
+      // 🎮 DEMO BYPASS: demo workspaces always serve the real bot (never WIP)
+      if (workspace.debugMode === true && !workspace.customChatbotId) {
         const wipMessage = await this.translateWipMessage(
           workspace.wipMessage as Record<string, string> | string | null,
           requestedLanguage,
@@ -705,7 +726,7 @@ export class WidgetChatController {
         })
       }
 
-      if (workspace.enableWidget !== true && !isPlayground) {
+      if (workspace.enableWidget !== true && !isPlayground && !workspace.customChatbotId) {
         return res.status(403).json({
           error: "WIDGET_DISABLED",
           message: "Widget chat is disabled for this workspace",
@@ -723,7 +744,7 @@ export class WidgetChatController {
       // NOTE: canProcessMessages below uses skipChannelCheck=true (avoids double channelStatus check),
       // which also skips debugMode. We must check it explicitly here.
       // 🧪 PLAYGROUND BYPASS: isPlayground=true skips WIP (admin testing)
-      if (workspace.debugMode === true && !isPlayground) {
+      if (workspace.debugMode === true && !isPlayground && !workspace.customChatbotId) {
         const lang = this.normalizeLanguage(language) || workspace.defaultLanguage || "en"
         const wipResponse = await this.translateWipMessage(
           workspace.wipMessage as Record<string, string> | string | null,
@@ -1317,7 +1338,7 @@ export class WidgetChatController {
 
       // 🚫 CRITICAL: Check if widget is enabled (from backoffice toggle)
       // 🧪 PLAYGROUND BYPASS: admin testing always allowed
-      if (workspace.enableWidget !== true && !isPlayground) {
+      if (workspace.enableWidget !== true && !isPlayground && !workspace.customChatbotId) {
         logger.warn("❌ Widget message blocked: Widget disabled in settings", {
           workspaceId,
           visitorId,
@@ -1338,6 +1359,25 @@ export class WidgetChatController {
         return res.status(403).json({
           error: "CHANNEL_DISABLED",
           message: "Channel is disabled",
+        })
+      }
+
+      // 🛡️ DEMO KILL SWITCH: throttle abuse on the public demo channel.
+      // >DEMO_RATE_LIMIT requests / DEMO_RATE_WINDOW_MS on a demo workspace
+      // (customChatbotId) disables the WHOLE channel (channelStatus=false) until
+      // an admin re-enables it manually. Anti-abuse safety for the public demo.
+      if (workspace.customChatbotId && demoRateLimitExceeded(workspace.id)) {
+        logger.warn("🛡️ Demo rate limit exceeded — disabling channel", {
+          workspaceId,
+          visitorId,
+        })
+        await prisma.workspace
+          .update({ where: { id: workspace.id }, data: { channelStatus: false } })
+          .catch((e) => logger.error("Failed to disable demo channel", { error: e }))
+        return res.status(429).json({
+          error: "RATE_LIMITED",
+          message: "Demo temporarily disabled due to high traffic.",
+          activeChatbot: false,
         })
       }
 
@@ -1455,7 +1495,7 @@ export class WidgetChatController {
 
       // 🛠️ DEBUG MODE (WIP) - after security checks, return WIP message
       // 🧪 PLAYGROUND BYPASS: isPlayground=true skips WIP so admin can test the full AI flow
-      if (workspace.debugMode === true && !isPlayground) {
+      if (workspace.debugMode === true && !isPlayground && !workspace.customChatbotId) {
         logger.info("🛠️ Widget WIP - debug mode", {
           workspaceId,
           visitorId,
