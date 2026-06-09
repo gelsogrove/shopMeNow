@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import axios from "axios"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { LanguageSelector } from "@/components/shared/LanguageSelector"
+import { SEO } from "@/components/SEO"
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
 
@@ -951,22 +952,39 @@ export default function QuestionnairePage() {
     : !!answers[step.id]) // radio + select
 
   return (
-    <div
-      className="min-h-screen"
-      style={{
-        background: "linear-gradient(135deg, rgba(248,250,252,0.97) 0%, rgba(236,253,245,0.95) 50%, rgba(240,253,244,0.97) 100%)",
-      }}
-    >
+    <div className="min-h-screen bg-[#070d18] text-slate-200">
+      <SEO
+        title={
+          ({
+            it: "Survey - Costruiamo insieme il chatbot perfetto",
+            en: "Survey - Let's build the perfect chatbot together",
+            es: "Survey - Construyamos juntos el chatbot perfecto",
+            pt: "Survey - Vamos construir juntos o chatbot perfeito",
+          } as Record<string, string>)[lang] ||
+          "Survey - Let's build the perfect chatbot together"
+        }
+        description={
+          ({
+            it: "Rispondi a qualche domanda sulle tue esigenze e ti mostriamo come eChatbot può trasformare il tuo business su WhatsApp. Circa 2 minuti, zero impegno.",
+            en: "Answer a few questions about your needs and we'll show how eChatbot can transform your business on WhatsApp. About 2 minutes, no commitment.",
+            es: "Responde unas preguntas sobre tus necesidades y te mostramos cómo eChatbot puede transformar tu negocio en WhatsApp. Unos 2 minutos, sin compromiso.",
+            pt: "Responde a algumas perguntas sobre as tuas necessidades e mostramos como o eChatbot pode transformar o teu negócio no WhatsApp. Cerca de 2 minutos, sem compromisso.",
+          } as Record<string, string>)[lang] ||
+          "Answer a few questions about your needs and we'll show how eChatbot can transform your business on WhatsApp."
+        }
+        keywords="echatbot survey, chatbot whatsapp survey, valutazione chatbot, demo chatbot whatsapp"
+        url="/survey"
+      />
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-50">
+      <header className="bg-slate-900/50 backdrop-blur border-b border-white/10 shadow-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-1 flex items-center justify-between gap-2">
           <Link to="/" className="flex items-center gap-1 shrink-0">
-            <span className="text-lg sm:text-xl font-bold text-green-600">{T.header_brand}</span>
+            <span className="text-lg sm:text-xl font-bold text-[#25D366]">{T.header_brand}<span className="text-white">.AI</span></span>
           </Link>
           <LanguageSelector />
           <Link
             to="/"
-            className="text-xs sm:text-sm font-medium text-slate-600 hover:text-green-600 transition-colors text-right"
+            className="text-xs sm:text-sm font-medium text-slate-400 hover:text-[#25D366] transition-colors text-right"
           >
             <span className="hidden sm:inline">{T.header_back}</span>
             <span className="sm:hidden">← Home</span>
@@ -984,10 +1002,10 @@ export default function QuestionnairePage() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="bg-white rounded-2xl shadow-xl overflow-hidden"
+              className="bg-slate-900/50 backdrop-blur rounded-2xl shadow-xl border border-white/10 overflow-hidden"
             >
               {/* Top banner */}
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-6 sm:px-8 py-6 sm:py-8 text-white text-center">
+              <div className="px-6 sm:px-8 py-6 sm:py-8 text-white text-center" style={{ background: "linear-gradient(to right, #25D366, #1ea952)" }}>
                 <h1 className="text-2xl sm:text-3xl font-bold">{T.intro_title}</h1>
               </div>
 
@@ -1006,18 +1024,19 @@ export default function QuestionnairePage() {
                       if (next) next.style.display = "flex"
                     }}
                   />
-                  <div className="hidden w-full h-48 bg-gradient-to-br from-green-50 to-emerald-100 border-b border-emerald-200 items-center justify-center">
+                  <div className="hidden w-full h-48 bg-gradient-to-br from-green-500/20 to-emerald-500/10 border-b border-white/10 items-center justify-center">
                     <span className="text-4xl opacity-30">🖼️</span>
                   </div>
                 </div>
 
-                <p className="text-slate-600 mb-8 leading-relaxed" style={{ fontSize: "1.15rem", whiteSpace: "pre-line" }}>
+                <p className="text-slate-300 mb-8 leading-relaxed" style={{ fontSize: "1.15rem", whiteSpace: "pre-line" }}>
                   {T.intro_desc}
                 </p>
 
                 <Button
                   size="lg"
-                  className="w-full bg-green-600 hover:bg-green-700 text-white py-7 text-xl rounded-xl shadow-lg"
+                  className="w-full text-white py-7 text-xl rounded-xl shadow-lg"
+                  style={{ background: "#25D366" }}
                   onClick={() => {
                     setView("steps")
                     setCurrentStep(0)
@@ -1031,11 +1050,12 @@ export default function QuestionnairePage() {
 
           {/* ── STEPS ── */}
           {view === "steps" && (
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+            <div className="bg-slate-900/50 backdrop-blur rounded-2xl shadow-xl border border-white/10 overflow-hidden">
               {/* Progress bar */}
-              <div className="h-1.5 bg-slate-100">
+              <div className="h-1.5 bg-white/10">
                 <motion.div
-                  className="h-full bg-green-500"
+                  className="h-full"
+                  style={{ background: "#25D366" }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.3 }}
                 />
@@ -1051,9 +1071,8 @@ export default function QuestionnairePage() {
                     {activeSteps.map((_, i) => (
                       <div
                         key={i}
-                        className={`h-1.5 w-5 rounded-full transition-colors ${
-                          i <= currentStep ? "bg-green-500" : "bg-slate-200"
-                        }`}
+                        className="h-1.5 w-5 rounded-full transition-colors"
+                        style={{ background: i <= currentStep ? "#25D366" : "rgba(255,255,255,0.1)" }}
                       />
                     ))}
                   </div>
@@ -1079,7 +1098,7 @@ export default function QuestionnairePage() {
                         />
                       </div>
                     ) : (
-                      <div className="-mx-4 sm:-mx-8 mb-6 w-[calc(100%+2rem)] sm:w-[calc(100%+4rem)] h-44 sm:h-52 bg-gradient-to-br from-green-50 to-emerald-100 border-b border-dashed border-emerald-200 flex items-center justify-center">
+                      <div className="-mx-4 sm:-mx-8 mb-6 w-[calc(100%+2rem)] sm:w-[calc(100%+4rem)] h-44 sm:h-52 bg-gradient-to-br from-green-500/20 to-emerald-500/10 border-b border-dashed border-white/10 flex items-center justify-center">
                         <span className="text-4xl opacity-30">🖼️</span>
                       </div>
                     )}
@@ -1087,9 +1106,9 @@ export default function QuestionnairePage() {
                     {/* Icon + Title */}
                     <div className="flex items-center gap-3 mb-2">
                       <span className="text-4xl">{step.icon}</span>
-                      <h2 className="text-xl font-bold text-slate-900">{T[step.titleKey]}</h2>
+                      <h2 className="text-xl font-bold text-white">{T[step.titleKey]}</h2>
                     </div>
-                    <p className="text-slate-500 mb-6 leading-relaxed" style={{ fontSize: "1.15rem", whiteSpace: "pre-line" }}>{T[step.questionKey]}</p>
+                    <p className="text-slate-400 mb-6 leading-relaxed" style={{ fontSize: "1.15rem", whiteSpace: "pre-line" }}>{T[step.questionKey]}</p>
 
                     {/* Radio options (single choice, auto-advance) */}
                     {step.type === "radio" && step.options && (
@@ -1105,13 +1124,13 @@ export default function QuestionnairePage() {
                               }}
                               className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
                                 selected
-                                  ? "border-green-500 bg-green-50 text-green-800"
-                                  : "border-slate-200 hover:border-green-300 text-slate-700"
+                                  ? "border-[#25D366] bg-[#25D366]/10 text-[#25D366]"
+                                  : "border-white/10 bg-slate-900/40 hover:border-white/20 text-slate-200"
                               }`}
                             >
                               <span
                                 className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                  selected ? "bg-green-500 border-green-500" : "border-slate-300"
+                                  selected ? "bg-[#25D366] border-[#25D366]" : "border-white/20"
                                 }`}
                               >
                                 {selected && <span className="w-2 h-2 rounded-full bg-white" />}
@@ -1138,13 +1157,13 @@ export default function QuestionnairePage() {
                               onClick={() => handleMultiAnswer(step.id, opt.value)}
                               className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
                                 selected
-                                  ? "border-green-500 bg-green-50 text-green-800"
-                                  : "border-slate-200 hover:border-green-300 text-slate-700"
+                                  ? "border-[#25D366] bg-[#25D366]/10 text-[#25D366]"
+                                  : "border-white/10 bg-slate-900/40 hover:border-white/20 text-slate-200"
                               }`}
                             >
                               <span
                                 className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                                  selected ? "bg-green-500 border-green-500" : "border-slate-300"
+                                  selected ? "bg-[#25D366] border-[#25D366]" : "border-white/20"
                                 }`}
                               >
                                 {selected && (
@@ -1176,7 +1195,7 @@ export default function QuestionnairePage() {
                               setIndustryOtherText("")
                             }
                           }}
-                          className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 text-sm text-slate-700 focus:border-green-500 focus:outline-none transition-colors bg-white appearance-none cursor-pointer"
+                          className="w-full border-2 border-white/10 rounded-xl px-4 py-3.5 text-sm text-slate-100 focus:border-[#25D366] focus:outline-none transition-colors bg-slate-900/60 appearance-none cursor-pointer"
                         >
                           <option value="" disabled>
                             — Select… —
@@ -1193,7 +1212,7 @@ export default function QuestionnairePage() {
                             placeholder={T.industry_other_placeholder || "Specify your industry…"}
                             value={industryOtherText}
                             onChange={(e) => setIndustryOtherText(e.target.value)}
-                            className="w-full border-2 border-slate-200 rounded-xl px-4 py-3.5 text-sm text-slate-700 focus:border-green-500 focus:outline-none transition-colors"
+                            className="w-full border-2 border-white/10 bg-slate-900/60 rounded-xl px-4 py-3.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-[#25D366] focus:outline-none transition-colors"
                             autoFocus
                           />
                         )}
@@ -1229,7 +1248,7 @@ export default function QuestionnairePage() {
                               className={`w-9 h-9 sm:w-12 sm:h-12 ${
                                 answers[step.id] !== undefined && parseInt(String(answers[step.id])) >= star
                                   ? "text-yellow-400 fill-yellow-400"
-                                  : "text-slate-300 fill-none hover:text-yellow-200"
+                                  : "text-slate-600 fill-none hover:text-yellow-200"
                               } transition-colors`}
                               viewBox="0 0 24 24"
                               stroke="currentColor"
@@ -1241,7 +1260,7 @@ export default function QuestionnairePage() {
                                 d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"
                               />
                             </svg>
-                            <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-slate-500 font-medium">
+                            <span className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-slate-400 font-medium">
                               {star}
                             </span>
                           </button>
@@ -1256,7 +1275,7 @@ export default function QuestionnairePage() {
                         placeholder={T.other_placeholder}
                         value={answers[step.id] || ""}
                         onChange={(e) => handleAnswer(step.id, e.target.value)}
-                        className="w-full border-2 border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:border-green-500 focus:outline-none resize-none transition-colors"
+                        className="w-full border-2 border-white/10 bg-slate-900/60 rounded-xl px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 focus:border-[#25D366] focus:outline-none resize-none transition-colors"
                       />
                     )}
                   </motion.div>
@@ -1267,13 +1286,14 @@ export default function QuestionnairePage() {
                   <Button
                     variant="outline"
                     onClick={handleBack}
-                    className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50"
+                    className="flex-1 border-white/10 bg-transparent text-slate-300 hover:bg-white/5"
                   >
                     {T.back}
                   </Button>
                   <Button
                     onClick={handleNext}
-                    className="flex-[2] bg-green-600 hover:bg-green-700 text-white px-8"
+                    className="flex-[2] text-white px-8"
+                    style={{ background: "#25D366" }}
                   >
                     {currentStep < totalSteps - 1 ? T.next : T.almost}
                   </Button>
@@ -1288,15 +1308,15 @@ export default function QuestionnairePage() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="bg-white rounded-2xl shadow-xl p-5 sm:p-8"
+              className="bg-slate-900/50 backdrop-blur rounded-2xl shadow-xl border border-white/10 p-5 sm:p-8"
             >
               <div className="text-5xl mb-3">👤</div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-1">{T.form_title}</h2>
-              <p className="text-slate-500 mb-6 text-sm">{T.form_desc}</p>
+              <h2 className="text-2xl font-bold text-white mb-1">{T.form_title}</h2>
+              <p className="text-slate-400 mb-6 text-sm">{T.form_desc}</p>
 
               <form onSubmit={handleContactSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
                     {T.form_fullName}
                   </label>
                   <Input
@@ -1304,11 +1324,11 @@ export default function QuestionnairePage() {
                     value={contact.fullName}
                     onChange={(e) => setContact((c) => ({ ...c, fullName: e.target.value }))}
                     required
-                    className="border-slate-200 focus:border-green-500"
+                    className="bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500 focus:border-[#25D366]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
                     {T.form_email}
                   </label>
                   <Input
@@ -1317,11 +1337,11 @@ export default function QuestionnairePage() {
                     value={contact.email}
                     onChange={(e) => setContact((c) => ({ ...c, email: e.target.value }))}
                     required
-                    className="border-slate-200 focus:border-green-500"
+                    className="bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500 focus:border-[#25D366]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
                     {T.form_phone}
                   </label>
                   <Input
@@ -1329,18 +1349,18 @@ export default function QuestionnairePage() {
                     placeholder="+39 333 1234567"
                     value={contact.phone}
                     onChange={(e) => setContact((c) => ({ ...c, phone: e.target.value }))}
-                    className="border-slate-200 focus:border-green-500"
+                    className="bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500 focus:border-[#25D366]"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">
                     {T.form_company}
                   </label>
                   <Input
                     placeholder="Acme Inc."
                     value={contact.company}
                     onChange={(e) => setContact((c) => ({ ...c, company: e.target.value }))}
-                    className="border-slate-200 focus:border-green-500"
+                    className="bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500 focus:border-[#25D366]"
                   />
                 </div>
 
@@ -1351,7 +1371,7 @@ export default function QuestionnairePage() {
                     type="button"
                     variant="outline"
                     onClick={() => { setView("steps"); setCurrentStep(totalSteps - 1) }}
-                    className="sm:flex-1 border-slate-200 text-slate-600"
+                    className="sm:flex-1 border-white/10 bg-transparent text-slate-300 hover:bg-white/5"
                   >
                     {T.back}
                   </Button>
@@ -1360,14 +1380,15 @@ export default function QuestionnairePage() {
                     variant="outline"
                     disabled={isSubmitting}
                     onClick={() => submitAnswers(false, { fullName: "", email: "", phone: "", company: "" })}
-                    className="sm:flex-1 border-green-300 text-green-700 hover:bg-green-50"
+                    className="sm:flex-1 border-[#25D366]/40 bg-transparent text-[#25D366] hover:bg-[#25D366]/10"
                   >
                     {T.contact_opt2}
                   </Button>
                   <Button
                     type="submit"
                     disabled={isSubmitting || !contact.fullName.trim() || !contact.email.trim()}
-                    className="sm:flex-[2] bg-green-600 hover:bg-green-700 text-white px-8 disabled:opacity-40"
+                    className="sm:flex-[2] text-white px-8 disabled:opacity-40"
+                    style={{ background: "#25D366" }}
                   >
                     {isSubmitting ? T.form_submitting : T.form_submit}
                   </Button>
@@ -1382,21 +1403,21 @@ export default function QuestionnairePage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
-              className="bg-white rounded-2xl shadow-xl p-10 text-center"
+              className="bg-slate-900/50 backdrop-blur rounded-2xl shadow-xl border border-white/10 p-10 text-center"
             >
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"
+                className="w-20 h-20 bg-[#25D366]/15 rounded-full flex items-center justify-center mx-auto mb-6"
               >
                 <span className="text-4xl">✅</span>
               </motion.div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">{T.success_title}</h2>
-              <p className="text-slate-500 mb-8 leading-relaxed">{T.success_desc}</p>
+              <h2 className="text-2xl font-bold text-white mb-2">{T.success_title}</h2>
+              <p className="text-slate-400 mb-8 leading-relaxed">{T.success_desc}</p>
 
               <Link to="/">
-                <Button className="bg-green-600 hover:bg-green-700 text-white px-8">
+                <Button className="text-white px-8" style={{ background: "#25D366" }}>
                   {T.success_cta}
                 </Button>
               </Link>
@@ -1409,21 +1430,21 @@ export default function QuestionnairePage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
-              className="bg-white rounded-2xl shadow-xl p-10 text-center"
+              className="bg-slate-900/50 backdrop-blur rounded-2xl shadow-xl border border-white/10 p-10 text-center"
             >
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6"
+                className="w-20 h-20 bg-blue-400/15 rounded-full flex items-center justify-center mx-auto mb-6"
               >
                 <span className="text-4xl">🙏</span>
               </motion.div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">{T.noContact_title}</h2>
-              <p className="text-slate-500 mb-8 leading-relaxed">{T.noContact_desc}</p>
+              <h2 className="text-2xl font-bold text-white mb-2">{T.noContact_title}</h2>
+              <p className="text-slate-400 mb-8 leading-relaxed">{T.noContact_desc}</p>
 
               <Link to="/">
-                <Button className="bg-green-600 hover:bg-green-700 text-white px-8">
+                <Button className="text-white px-8" style={{ background: "#25D366" }}>
                   {T.noContact_cta}
                 </Button>
               </Link>

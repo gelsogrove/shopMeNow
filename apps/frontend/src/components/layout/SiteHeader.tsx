@@ -258,13 +258,12 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
             publicly. Pricing is no longer a public page: it's discussed
             during the manual onboarding follow-up, not on the landing. */}
         <div className="hidden lg:flex justify-end pt-3">
-          <div className="flex items-center gap-4">
-            <Link
-              to="/contact"
-              className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200 hover:text-slate-300"
-            >
-              {t.contact}
-            </Link>
+          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200">
+            <a href="/survey" className="hover:text-white transition-colors">Survey</a>
+            <span className="text-white/20">|</span>
+            <a href="/#demo" className="hover:text-white transition-colors">Demo</a>
+            <span className="text-white/20">|</span>
+            <a href="/contact" className="hover:text-white transition-colors">{t.contact}</a>
           </div>
         </div>
 
@@ -285,38 +284,25 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
           <div className="flex items-center justify-end gap-2 md:gap-6">
 
             {/* Language Selector — Shadcn DropdownMenu, identical to homepage */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="hidden lg:flex items-center gap-2 h-9 px-3 hover:bg-white/10 rounded-lg transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
+            {/* Language Selector — all flags inline (no dropdown), like homepage */}
+            <div className="hidden lg:flex items-center gap-1">
+              {([
+                { code: "it", flag: "🇮🇹" },
+                { code: "en", flag: "🇬🇧" },
+                { code: "es", flag: "🇪🇸" },
+                { code: "pt", flag: "🇵🇹" },
+              ] as const).map((l) => (
+                <button
+                  key={l.code}
+                  type="button"
+                  onClick={() => setLanguage(l.code)}
+                  className={`flex items-center gap-1 rounded-lg px-2 py-1 transition-colors ${language === l.code ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"}`}
                 >
-                  <span className="text-xl">
-                    {language === "it" ? "🇮🇹" : language === "en" ? "🇬🇧" : language === "es" ? "🇪🇸" : "🇵🇹"}
-                  </span>
-                  <span className="hidden sm:inline text-sm font-medium text-slate-200">
-                    {language === "it" ? "IT" : language === "en" ? "EN" : language === "es" ? "ES" : "PT"}
-                  </span>
-                  <ChevronDown className="h-4 w-4 text-slate-500" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-48 bg-slate-900 border-white/10 text-slate-200" align="end">
-                <DropdownMenuLabel className="text-xs text-slate-500 uppercase tracking-wider px-2 py-1.5">{t.language}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="flex items-center gap-3 cursor-pointer py-2.5 px-3" onClick={() => setLanguage("it")}>
-                  <span className="text-xl">🇮🇹</span><span className="font-medium">Italiano</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-3 cursor-pointer py-2.5 px-3" onClick={() => setLanguage("en")}>
-                  <span className="text-xl">🇬🇧</span><span className="font-medium">English</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-3 cursor-pointer py-2.5 px-3" onClick={() => setLanguage("es")}>
-                  <span className="text-xl">🇪🇸</span><span className="font-medium">Español</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-3 cursor-pointer py-2.5 px-3" onClick={() => setLanguage("pt")}>
-                  <span className="text-xl">🇵🇹</span><span className="font-medium">Português</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <span className="text-lg leading-none">{l.flag}</span>
+                  <span className="text-xs font-semibold uppercase">{l.code}</span>
+                </button>
+              ))}
+            </div>
 
             {/* Auth Section — logged in or logged out */}
             {isLoggedIn ? (

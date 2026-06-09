@@ -152,7 +152,7 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
         {/* Bottom Bar */}
         <div className="border-t border-slate-800 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-slate-400">
-            © {currentYear} eChatbot. {t.allRightsReserved}
+            © {currentYear} eChatbot.AI. {t.allRightsReserved}
           </p>
         </div>
       </div>

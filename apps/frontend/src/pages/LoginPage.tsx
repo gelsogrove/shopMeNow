@@ -2054,9 +2054,6 @@ export function LoginPage() {
               transition={{ duration: 0.7, delay: 0.1 }}
               className="space-y-7"
             >
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-sm font-semibold ring-1 ring-amber-500/20">
-                🤝 Human-in-the-loop
-              </div>
               <h3 className="text-4xl lg:text-5xl font-bold text-white leading-tight">
                 {t("humanLoop.title")}
               </h3>

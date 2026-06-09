@@ -39,6 +39,8 @@ const T = {
     industryPlaceholder: "Es. lavanderie, palestre, e-commerce…",
     volume: "Volume stimato di messaggi/mese",
     volumePlaceholder: "Es. 1.000 / 5.000 / 20.000+",
+    notes: "Note (facoltativo)",
+    notesPlaceholder: "Raccontaci il tuo caso d'uso o le tue esigenze…",
     send: "Invia richiesta",
     sending: "Invio in corso…",
     successTitle: "Richiesta ricevuta!",
@@ -68,6 +70,8 @@ const T = {
     industryPlaceholder: "e.g. laundromats, gyms, e-commerce…",
     volume: "Estimated messages/month",
     volumePlaceholder: "e.g. 1,000 / 5,000 / 20,000+",
+    notes: "Notes (optional)",
+    notesPlaceholder: "Tell us about your use case or needs…",
     send: "Send request",
     sending: "Sending…",
     successTitle: "Request received!",
@@ -97,6 +101,8 @@ const T = {
     industryPlaceholder: "Ej. lavanderías, gimnasios, e-commerce…",
     volume: "Volumen estimado de mensajes/mes",
     volumePlaceholder: "Ej. 1.000 / 5.000 / 20.000+",
+    notes: "Notas (opcional)",
+    notesPlaceholder: "Cuéntanos tu caso de uso o tus necesidades…",
     send: "Enviar solicitud",
     sending: "Enviando…",
     successTitle: "¡Solicitud recibida!",
@@ -126,6 +132,8 @@ const T = {
     industryPlaceholder: "Ex. lavandarias, ginásios, e-commerce…",
     volume: "Volume estimado de mensagens/mês",
     volumePlaceholder: "Ex. 1.000 / 5.000 / 20.000+",
+    notes: "Notas (opcional)",
+    notesPlaceholder: "Conta-nos o teu caso de uso ou as tuas necessidades…",
     send: "Enviar pedido",
     sending: "A enviar…",
     successTitle: "Pedido recebido!",
@@ -145,6 +153,7 @@ export default function RequestAccessPage() {
     company: "",
     industry: "",
     monthlyVolume: "",
+    notes: "",
     // Honeypot — must remain empty. Hidden from real users via CSS and
     // aria-hidden; bots that auto-fill every input will give themselves
     // away by typing here.
@@ -176,47 +185,48 @@ export default function RequestAccessPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-emerald-50/40 via-white to-white">
+    <div className="min-h-screen flex flex-col bg-[#070d18] text-slate-200">
       <SEO
         title={t.seoTitle}
         description={t.seoDesc}
         keywords={t.seoKeys}
-        canonical="/request-access"
+        url="/request-access"
+        robots="index, follow"
       />
       <SiteHeader />
 
       <main className="flex-1">
         <section className="max-w-3xl mx-auto px-4 sm:px-6 pt-16 pb-12 text-center">
-          <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold tracking-wider uppercase mb-4">
+          <span className="inline-block px-3 py-1 rounded-full bg-[#25D366]/15 text-[#25D366] text-xs font-semibold tracking-wider uppercase mb-4">
             {t.badge}
           </span>
           <motion.h1
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
-            className="text-4xl sm:text-5xl font-extrabold text-slate-900 tracking-tight"
+            className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight"
           >
             {t.heroTitle}
           </motion.h1>
-          <p className="mt-4 text-lg text-slate-600 leading-relaxed max-w-2xl mx-auto">
+          <p className="mt-4 text-lg text-slate-400 leading-relaxed max-w-2xl mx-auto">
             {t.heroSub}
           </p>
         </section>
 
         <section className="max-w-xl mx-auto px-4 sm:px-6 pb-24">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-lg p-7 sm:p-9">
+          <div className="bg-slate-900/50 backdrop-blur border border-white/10 rounded-2xl shadow-2xl p-7 sm:p-9">
             {done ? (
               <div className="text-center py-6">
                 <CheckCircle className="w-14 h-14 text-emerald-500 mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                <h2 className="text-2xl font-bold text-white mb-2">
                   {t.successTitle}
                 </h2>
-                <p className="text-slate-600 leading-relaxed">{t.successDesc}</p>
+                <p className="text-slate-400 leading-relaxed">{t.successDesc}</p>
               </div>
             ) : (
               <>
                 <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-slate-900">
+                  <h2 className="text-2xl font-bold text-white">
                     {t.formTitle}
                   </h2>
                   <p className="text-sm text-slate-500 mt-1">
@@ -285,9 +295,22 @@ export default function RequestAccessPage() {
                     onChange={update("monthlyVolume")}
                     required
                   />
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-slate-300" htmlFor="ra-notes">
+                      {t.notes}
+                    </label>
+                    <textarea
+                      id="ra-notes"
+                      value={form.notes}
+                      onChange={update("notes")}
+                      placeholder={t.notesPlaceholder}
+                      rows={4}
+                      className="w-full resize-y rounded-md border border-white/10 bg-slate-900/60 px-3 py-2 text-base text-slate-100 placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]"
+                    />
+                  </div>
 
                   {error && (
-                    <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    <p className="text-sm text-rose-200 bg-rose-500/10 border border-rose-400/20 rounded-lg px-3 py-2.5">
                       {error}
                     </p>
                   )}
@@ -295,7 +318,7 @@ export default function RequestAccessPage() {
                   <Button
                     type="submit"
                     disabled={sending}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 text-base font-semibold rounded-xl shadow-md flex items-center justify-center gap-2"
+                    className="w-full bg-[#25D366] hover:bg-[#1fb855] text-slate-950 py-3 text-base font-semibold rounded-xl shadow-md flex items-center justify-center gap-2"
                   >
                     {sending ? (
                       t.sending
@@ -335,9 +358,9 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium text-slate-700">
+      <label className="text-sm font-medium text-slate-300">
         {label}
-        {required && <span className="text-emerald-600 ml-0.5">*</span>}
+        {required && <span className="text-[#25D366] ml-0.5">*</span>}
       </label>
       <Input
         type={type}
@@ -345,7 +368,7 @@ function Field({
         onChange={onChange}
         placeholder={placeholder}
         required={required}
-        className="h-11 text-base"
+        className="h-11 text-base bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500"
       />
     </div>
   )

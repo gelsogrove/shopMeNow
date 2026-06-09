@@ -245,7 +245,7 @@ export function ContactPage() {
                   transition={{ duration: 0.5 }}
                 >
                   <div className="rounded-2xl overflow-hidden shadow-xl mb-8">
-                    <img src="/contactus.png" alt="Contact us" className="w-full h-[400px] object-cover" />
+                    <img src="/team.png" alt="Contact us" className="w-full h-[400px] object-cover" />
                   </div>
 
                   <div className="space-y-4">
@@ -306,15 +306,9 @@ export function ContactPage() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-sm font-semibold text-slate-300" htmlFor="c-email">{t.email}</label>
-                          <Input id="c-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.emailPlaceholder} className="h-11 bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500" required />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-sm font-semibold text-slate-300" htmlFor="c-phone">{t.phone}</label>
-                          <Input id="c-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t.phonePlaceholder} className="h-11 bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500" />
-                        </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-slate-300" htmlFor="c-email">{t.email}</label>
+                        <Input id="c-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.emailPlaceholder} className="h-11 bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500" required />
                       </div>
 
                       <div className="space-y-1.5">

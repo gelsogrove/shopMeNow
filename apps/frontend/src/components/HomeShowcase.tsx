@@ -222,19 +222,20 @@ function buildContent(lang: Lang) {
         { role: "out", text: p("Ho ascoltato il tuo audio 🎙️ ti invieremo per email quanto richiesto.", "I've listened to your audio 🎙️ we'll email you what you requested.", "He escuchado tu audio 🎙️ te enviaremos por email lo solicitado.", "Ouvi o teu áudio 🎙️ enviaremos por email o que pediste.") },
       ],
     },
-    // 5 — Franchising data (reset: a clean demo of per-location data)
+    // 5 — Franchising data (asks the location first, then prices + loyalty card)
     {
       feature: 4,
-      reset: true,
       msgs: [
-        { role: "in", text: p("Quanto costa un lavaggio da voi a Barcellona?", "How much is a wash at your Barcelona shop?", "¿Cuánto cuesta un lavado en Barcelona?", "Quanto custa uma lavagem em Barcelona?") },
-        { role: "out", text: p("📍 Sede di Barcellona\n🕗 Aperto 8:00–21:00\n🏷️ Lavaggio 4,50 € · Asciugatura 3,00 €\n🎁 Oggi -10% sul primo lavaggio", "📍 Barcelona location\n🕗 Open 8:00–21:00\n🏷️ Wash €4.50 · Dry €3.00\n🎁 Today -10% on your first wash", "📍 Sede de Barcelona\n🕗 Abierto 8:00–21:00\n🏷️ Lavado 4,50 € · Secado 3,00 €\n🎁 Hoy -10% en el primer lavado", "📍 Unidade de Barcelona\n🕗 Aberto 8:00–21:00\n🏷️ Lavagem 4,50 € · Secagem 3,00 €\n🎁 Hoje -10% na primeira lavagem") },
+        { role: "in", text: p("Quanto costa un lavaggio?", "How much is a wash?", "¿Cuánto cuesta un lavado?", "Quanto custa uma lavagem?") },
+        { role: "out", text: p("Volentieri! In quale sede ti trovi?", "Sure! Which location are you at?", "¡Claro! ¿En qué sede estás?", "Com certeza! Em que unidade estás?") },
+        { role: "in", text: p("A Barcellona", "In Barcelona", "En Barcelona", "Em Barcelona") },
+        { role: "out", text: p("📍 Sede di Barcellona\n🕗 Aperto 8:00–21:00\n🧺 Lavaggio 4,50 € · Asciugatura 3,00 €", "📍 Barcelona location\n🕗 Open 8:00–21:00\n🧺 Wash €4.50 · Dry €3.00", "📍 Sede de Barcelona\n🕗 Abierto 8:00–21:00\n🧺 Lavado 4,50 € · Secado 3,00 €", "📍 Unidade de Barcelona\n🕗 Aberto 8:00–21:00\n🧺 Lavagem 4,50 € · Secagem 3,00 €") },
+        { role: "out", text: p("🎁 E con la carta fedeltà hai -10% sul primo lavaggio!", "🎁 And with the loyalty card you get -10% on your first wash!", "🎁 ¡Y con la tarjeta de fidelización tienes -10% en el primer lavado!", "🎁 E com o cartão de fidelização tens -10% na primeira lavagem!") },
       ],
     },
     // 6 — Appointment booking (reset: a clean booking demo)
     {
       feature: 5,
-      reset: true,
       msgs: [
         { role: "in", text: p("Vorrei una consulenza per aprire una sede a Sitges 📈", "I'd like a consultation to open a location in Sitges 📈", "Quiero una consultoría para abrir una sede en Sitges 📈", "Quero uma consultoria para abrir uma unidade em Sitges 📈") },
         { role: "out", text: p("Volentieri! 🎉 Ho questi orari disponibili 📅\n1️⃣ Mar 14 · 17:00\n2️⃣ Mer 15 · 10:00\n3️⃣ Gio 16 · 18:30", "Sure! 🎉 Here are the available slots 📅\n1️⃣ Tue 14 · 17:00\n2️⃣ Wed 15 · 10:00\n3️⃣ Thu 16 · 18:30", "¡Claro! 🎉 Tengo estos horarios disponibles 📅\n1️⃣ Mar 14 · 17:00\n2️⃣ Mié 15 · 10:00\n3️⃣ Jue 16 · 18:30", "Com certeza! 🎉 Tenho estes horários disponíveis 📅\n1️⃣ Ter 14 · 17:00\n2️⃣ Qua 15 · 10:00\n3️⃣ Qui 16 · 18:30") },
@@ -245,7 +246,6 @@ function buildContent(lang: Lang) {
     // 7 — Multilingual operator (reset: operator writes once, customer reads in their language)
     {
       feature: 6,
-      reset: true,
       msgs: [
         { role: "in", text: "مرحباً، هل طلبي جاهز للاستلام؟", sub: p("🌐 IT: Salve, il mio ordine è pronto per il ritiro?", "🌐 EN: Hi, is my order ready for pickup?", "🌐 ES: Hola, ¿mi pedido está listo para recoger?", "🌐 PT: Olá, o meu pedido está pronto para recolha?"), rtl: true },
         { role: "op", text: p("Buongiorno! Sì, il suo ordine è pronto per il ritiro 😊", "Good morning! Yes, your order is ready for pickup 😊", "¡Buenos días! Sí, su pedido está listo para recoger 😊", "Bom dia! Sim, o seu pedido está pronto para recolha 😊"), sub: p("🌐 inviato in arabo al cliente →", "🌐 sent to the customer in Arabic →", "🌐 enviado al cliente en árabe →", "🌐 enviado ao cliente em árabe →") },
@@ -254,7 +254,6 @@ function buildContent(lang: Lang) {
     // 8 — Invoices & files (reset: the AI sends a document)
     {
       feature: 7,
-      reset: true,
       msgs: [
         { role: "in", text: p("Posso avere la fattura del mio ultimo lavaggio?", "Can I get the invoice for my last wash?", "¿Me das la factura de mi último lavado?", "Podes dar-me a fatura da minha última lavagem?") },
         { role: "out", text: p("Certo! Mi dici ragione sociale e P.IVA per la fattura? 🧾", "Sure! What's the company name and VAT number for the invoice? 🧾", "¡Claro! ¿Razón social y CIF para la factura? 🧾", "Claro! Qual é a denominação social e o NIF para a fatura? 🧾") },
@@ -262,10 +261,9 @@ function buildContent(lang: Lang) {
         { role: "out", file: true, fileName: "Fattura-2026-0042.pdf", text: p("Fatto ✅ Ecco la tua fattura 🧾", "Done ✅ Here's your invoice 🧾", "Hecho ✅ Aquí tienes tu factura 🧾", "Feito ✅ Aqui está a tua fatura 🧾") },
       ],
     },
-    // 9 — Push notifications (reset: a clean campaign demo with a promo image)
+    // 9 — Push notifications (a campaign broadcast with a promo image + caption)
     {
       feature: 8,
-      reset: true,
       msgs: [
         {
           role: "out",
@@ -273,6 +271,7 @@ function buildContent(lang: Lang) {
           imgTitle: p("EcoWash · Promo della settimana", "EcoWash · Weekly promo", "EcoWash · Promo de la semana", "EcoWash · Promo da semana"),
           imgBig: "-20%",
           imgSmall: p("sul prossimo lavaggio 🧺", "on your next wash 🧺", "en tu próximo lavado 🧺", "na tua próxima lavagem 🧺"),
+          text: p("📣 La nostra promo della settimana, per te! Ti aspettiamo 💚", "📣 Our promo of the week, just for you! See you soon 💚", "📣 ¡Nuestra promo de la semana, para ti! Te esperamos 💚", "📣 A nossa promo da semana, para ti! Esperamos por ti 💚"),
         },
       ],
     },
@@ -283,38 +282,86 @@ function buildContent(lang: Lang) {
 
 export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
   const c = buildContent(lang)
-  const [step, setStep] = useState(0)
   const chatRef = useRef<HTMLDivElement>(null)
+  const iRef = useRef(0) // driver's current flat message index (mutable, clickable)
+  const [visible, setVisible] = useState(0) // number of revealed messages (flat)
+  const [typing, setTyping] = useState(false) // bot "typing…" indicator
+  const [activeFeature, setActiveFeature] = useState(0)
 
-  // Advance the story; each step highlights its feature card.
+  // Flatten the script into a single ordered list of messages.
+  const events = c.script.flatMap((stp) =>
+    stp.msgs.map((m, mi) => ({ m, feature: stp.feature, resetStart: !!stp.reset && mi === 0 }))
+  )
+
+  // Drive the conversation like a real chat: one message at a time, with a
+  // "typing…" pause before each reply and a 3s wait while "connecting".
   useEffect(() => {
-    const id = setInterval(() => setStep((s) => (s + 1) % c.script.length), 4200)
-    return () => clearInterval(id)
-  }, [c.script.length])
+    let cancelled = false
+    const timers: ReturnType<typeof setTimeout>[] = []
+    const wait = (ms: number) =>
+      new Promise<void>((res) => timers.push(setTimeout(res, ms)))
+    const evs = c.script.flatMap((stp) =>
+      stp.msgs.map((m, mi) => ({ m, feature: stp.feature, resetStart: !!stp.reset && mi === 0 }))
+    )
+    iRef.current = 0
+    ;(async function run() {
+      while (!cancelled) {
+        const i = iRef.current
+        if (i >= evs.length) {
+          await wait(2800)
+          if (cancelled) return
+          iRef.current = 0
+          setVisible(0)
+          continue
+        }
+        const { m, feature } = evs[i]
+        const isBot = m.role === "out" || m.role === "op"
+        // Pause before revealing (typing for replies, short beat for customer).
+        if (m.status) {
+          setTyping(false)
+        } else if (isBot) {
+          setTyping(true)
+          await wait(m.video || m.image || m.file ? 1400 : 1100)
+        } else {
+          setTyping(false)
+          await wait(800)
+        }
+        if (cancelled) return
+        if (iRef.current !== i) continue // a card click moved us — restart loop
+        // Reveal this message + highlight its card together (in sync).
+        setTyping(false)
+        setActiveFeature(feature)
+        setVisible(i + 1)
+        iRef.current = i + 1
+        // Hold: 3s while "connecting…", otherwise normal reading pace.
+        await wait(m.status ? 3000 : isBot ? 1600 : 1200)
+      }
+    })()
+    return () => {
+      cancelled = true
+      timers.forEach(clearTimeout)
+    }
+  }, [lang])
 
-  const activeFeature = c.script[step].feature
-
-  // The chat ACCUMULATES — bubbles stay on screen until the context resets
-  // (the final Arabic exchange, or the loop restarting at step 0).
+  // Show messages from the last reset boundary up to the revealed count.
   let start = 0
-  for (let i = step - 1; i >= 0; i--) {
-    if (c.script[i].reset) {
-      start = i + 1
+  for (let k = visible - 1; k >= 0; k--) {
+    if (events[k]?.resetStart) {
+      start = k
       break
     }
   }
-  const groupIdxs = c.script[step].reset
-    ? [step]
-    : Array.from({ length: step - start + 1 }, (_, k) => start + k)
-  const bubbles = groupIdxs.flatMap((gi) =>
-    c.script[gi].msgs.map((m, mi) => ({ key: `g${gi}-m${mi}`, m }))
-  )
+  const slice = events.slice(start, visible)
+  const bubbles = slice
+    .map((ev, idx) => ({ key: `e${start + idx}`, m: ev.m, last: idx === slice.length - 1 }))
+    // a "connecting…" status is transient: it vanishes once the result arrives
+    .filter((b) => !b.m.status || b.last)
 
-  // Keep the conversation scrolled to the latest message.
+  // Keep the conversation scrolled to the latest message / typing indicator.
   useEffect(() => {
     const el = chatRef.current
     if (el) el.scrollTop = el.scrollHeight
-  }, [step])
+  }, [visible, typing])
 
   return (
     <div className="relative w-full overflow-hidden rounded-3xl border border-white/10 bg-[#070d18] p-6 shadow-2xl sm:p-8 lg:p-10">
@@ -339,9 +386,9 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
       </div>
 
       {/* Phone + capability cards */}
-      <div className="relative grid grid-cols-1 items-start gap-10 lg:grid-cols-[24rem_34rem] lg:justify-center">
+      <div className="relative grid grid-cols-1 items-start gap-10 lg:grid-cols-[25rem_34rem] lg:justify-center">
         {/* WhatsApp phone */}
-        <div className="mx-auto w-full max-w-sm lg:sticky lg:top-24">
+        <div className="mx-auto w-full max-w-[400px] lg:sticky lg:top-24">
           <div className="rounded-[2.25rem] bg-slate-950 p-3 shadow-2xl ring-1 ring-white/10">
             <div className="overflow-hidden rounded-[1.5rem] bg-[#ECE5DD]">
               {/* header */}
@@ -367,6 +414,7 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
                   {bubbles.map(({ key, m }) => (
                     <ChatBubble key={key} m={m} opLabel={c.opLabel} voiceLabel={c.voiceLabel} />
                   ))}
+                  {typing && <TypingDots />}
                 </div>
               </div>
             </div>
@@ -379,7 +427,17 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
             <button
               key={f.title}
               type="button"
-              onClick={() => setStep(c.script.findIndex((s) => s.feature === i))}
+              onClick={() => {
+                const si = c.script.findIndex((s) => s.feature === i)
+                if (si < 0) return
+                const flatStart = c.script
+                  .slice(0, si)
+                  .reduce((n, s) => n + s.msgs.length, 0)
+                setTyping(false)
+                setActiveFeature(i)
+                setVisible(flatStart)
+                iRef.current = flatStart
+              }}
               className="flex w-full items-start gap-4 rounded-2xl border px-5 py-3.5 text-left transition-all duration-300"
               style={
                 i === activeFeature
@@ -407,6 +465,29 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
 
 // One chat bubble. Bot/operator bubbles fade in after a short stagger, so the
 // conversation reads as if it's being written live.
+// "typing…" indicator shown on the bot side before each reply.
+function TypingDots() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="flex justify-end"
+    >
+      <span className="flex items-center gap-1 rounded-2xl rounded-tr-sm px-3 py-2.5 shadow-sm" style={{ background: "#DCF8C6" }}>
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            className="h-1.5 w-1.5 rounded-full bg-gray-500"
+            animate={{ opacity: [0.3, 1, 0.3], y: [0, -2, 0] }}
+            transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15 }}
+          />
+        ))}
+      </span>
+    </motion.div>
+  )
+}
+
 function ChatBubble({ m, opLabel, voiceLabel }: { m: Msg; opLabel: string; voiceLabel: string }) {
   // Centered system status (e.g. "connecting to the machine…") with a spinner.
   if (m.status) {
