@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import axios from "axios"
 import { useLanguage } from "@/contexts/LanguageContext"
-import { LanguageSelector } from "@/components/shared/LanguageSelector"
+import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SEO } from "@/components/SEO"
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
@@ -159,10 +159,6 @@ const QT: Record<Lang, Record<string, string>> = {
     noContact_desc: "Apprezziamo il tempo che hai dedicato a rispondere. Le tue risposte ci aiuteranno a migliorare eChatbot. Se cambi idea, siamo sempre disponibili, trovi il link di contatto nella homepage.",
     noContact_cta: "Torna alla homepage",
 
-    // Header back link
-    header_back: "← Torna alla homepage",
-    header_brand: "eChatbot",
-
     // Try chatbot CTA
     try_chatbot: "Hai dubbi o domande? Prova il nostro chatbot su WhatsApp!",
     try_chatbot_button: "Chatta con noi",
@@ -296,9 +292,6 @@ const QT: Record<Lang, Record<string, string>> = {
     noContact_title: "Thank you so much!",
     noContact_desc: "We appreciate the time you took to respond. Your answers will help us improve eChatbot. If you change your mind, we're always here, find the contact link on the homepage.",
     noContact_cta: "Back to homepage",
-
-    header_back: "← Back to homepage",
-    header_brand: "eChatbot",
 
     // Try chatbot CTA
     try_chatbot: "Have doubts or questions? Try our chatbot on WhatsApp!",
@@ -434,9 +427,6 @@ const QT: Record<Lang, Record<string, string>> = {
     noContact_desc: "Apreciamos el tiempo que dedicaste a responder. Tus respuestas nos ayudarán a mejorar eChatbot. Si cambias de opinión, siempre estamos disponibles.",
     noContact_cta: "Volver a la página principal",
 
-    header_back: "← Volver a la página principal",
-    header_brand: "eChatbot",
-
     // Try chatbot CTA
     try_chatbot: "¿Tienes dudas o preguntas? ¡Prueba nuestro chatbot en WhatsApp!",
     try_chatbot_button: "Chatea con nosotros",
@@ -570,9 +560,6 @@ const QT: Record<Lang, Record<string, string>> = {
     noContact_title: "Muito obrigado!",
     noContact_desc: "Apreciamos o tempo que dedicou para responder. As suas respostas nos ajudarão a melhorar o eChatbot. Se mudar de ideia, estamos sempre disponíveis.",
     noContact_cta: "Voltar para a página inicial",
-
-    header_back: "← Voltar para a página inicial",
-    header_brand: "eChatbot",
 
     // Try chatbot CTA
     try_chatbot: "Tem dúvidas ou perguntas? Experimente nosso chatbot no WhatsApp!",
@@ -975,82 +962,74 @@ export default function QuestionnairePage() {
         keywords="echatbot survey, chatbot whatsapp survey, valutazione chatbot, demo chatbot whatsapp"
         url="/survey"
       />
-      {/* Header */}
-      <header className="bg-slate-900/50 backdrop-blur border-b border-white/10 shadow-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-1 flex items-center justify-between gap-2">
-          <Link to="/" className="flex items-center gap-1 shrink-0">
-            <span className="text-lg sm:text-xl font-bold text-[#25D366]">{T.header_brand}<span className="text-white">.AI</span></span>
-          </Link>
-          <LanguageSelector />
-          <Link
-            to="/"
-            className="text-xs sm:text-sm font-medium text-slate-400 hover:text-[#25D366] transition-colors text-right"
-          >
-            <span className="hidden sm:inline">{T.header_back}</span>
-            <span className="sm:hidden">← Home</span>
-          </Link>
-        </div>
-      </header>
+      {/* Header — shared site header for visual continuity with the rest of the site */}
+      <SiteHeader />
 
-      {/* Content */}
-      <div className="flex items-start sm:items-center justify-center min-h-[calc(100vh-52px)] sm:min-h-[calc(100vh-64px)] px-3 sm:px-4 py-6 sm:py-12">
+      {/* Content. The shared header is taller (~70px) than the old custom one,
+          so the min-height offset is recalibrated to keep cards clear of it. */}
+      <div className="flex items-start sm:items-center justify-center min-h-[calc(100vh-70px)] px-3 sm:px-4 py-6 sm:py-12">
         <div className="w-full max-w-[727px]">
 
           {/* ── INTRO ── */}
           {view === "intro" && (
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="bg-slate-900/50 backdrop-blur rounded-2xl shadow-xl border border-white/10 overflow-hidden"
-            >
-              {/* Top banner */}
-              <div className="px-6 sm:px-8 py-6 sm:py-8 text-white text-center" style={{ background: "linear-gradient(to right, #25D366, #1ea952)" }}>
-                <h1 className="text-2xl sm:text-3xl font-bold">{T.intro_title}</h1>
-              </div>
-
-              {/* Body */}
-              <div className="p-5 sm:p-10">
-                {/* Full-width intro image */}
-                <div className="-mx-5 sm:-mx-10 mb-8">
-                  <img
-                    src="/survey.png"
-                    alt="eChatbot survey"
-                    className="w-full h-48 object-cover"
-                    onError={(e) => {
-                      const el = e.currentTarget
-                      el.style.display = "none"
-                      const next = el.nextElementSibling as HTMLElement | null
-                      if (next) next.style.display = "flex"
-                    }}
-                  />
-                  <div className="hidden w-full h-48 bg-gradient-to-br from-green-500/20 to-emerald-500/10 border-b border-white/10 items-center justify-center">
-                    <span className="text-4xl opacity-30">🖼️</span>
+            <div className="relative">
+              {/* Soft green glow — matches the site's reference cards */}
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-50 -z-10" />
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="relative bg-slate-900/50 backdrop-blur rounded-3xl shadow-2xl border border-white/10 overflow-hidden"
+              >
+                {/* Body */}
+                <div className="p-5 sm:p-10">
+                  {/* Full-width intro image */}
+                  <div className="-mx-5 sm:-mx-10 mb-8">
+                    <img
+                      src="/survey.png"
+                      alt="eChatbot survey"
+                      className="w-full h-48 object-cover"
+                      onError={(e) => {
+                        const el = e.currentTarget
+                        el.style.display = "none"
+                        const next = el.nextElementSibling as HTMLElement | null
+                        if (next) next.style.display = "flex"
+                      }}
+                    />
+                    <div className="hidden w-full h-48 bg-gradient-to-br from-green-500/20 to-emerald-500/10 border-b border-white/10 items-center justify-center">
+                      <span className="text-4xl opacity-30">🖼️</span>
+                    </div>
                   </div>
+
+                  {/* Title — inside the card, no solid green banner */}
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white mb-4">{T.intro_title}</h1>
+
+                  <p className="text-slate-300 mb-8 leading-relaxed" style={{ fontSize: "1.15rem", whiteSpace: "pre-line" }}>
+                    {T.intro_desc}
+                  </p>
+
+                  <Button
+                    size="lg"
+                    className="w-full text-white py-7 text-xl rounded-xl shadow-lg"
+                    style={{ background: "#25D366" }}
+                    onClick={() => {
+                      setView("steps")
+                      setCurrentStep(0)
+                    }}
+                  >
+                    {T.intro_cta}
+                  </Button>
                 </div>
-
-                <p className="text-slate-300 mb-8 leading-relaxed" style={{ fontSize: "1.15rem", whiteSpace: "pre-line" }}>
-                  {T.intro_desc}
-                </p>
-
-                <Button
-                  size="lg"
-                  className="w-full text-white py-7 text-xl rounded-xl shadow-lg"
-                  style={{ background: "#25D366" }}
-                  onClick={() => {
-                    setView("steps")
-                    setCurrentStep(0)
-                  }}
-                >
-                  {T.intro_cta}
-                </Button>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           )}
 
           {/* ── STEPS ── */}
           {view === "steps" && (
-            <div className="bg-slate-900/50 backdrop-blur rounded-2xl shadow-xl border border-white/10 overflow-hidden">
+            <div className="relative">
+              {/* Soft green glow — matches the site's reference cards */}
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-50 -z-10" />
+              <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
               {/* Progress bar */}
               <div className="h-1.5 bg-white/10">
                 <motion.div
@@ -1122,9 +1101,9 @@ export default function QuestionnairePage() {
                                 handleAnswer(step.id, opt.value)
                                 setTimeout(() => handleNext(), 250)
                               }}
-                              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
+                              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-all ${
                                 selected
-                                  ? "border-[#25D366] bg-[#25D366]/10 text-[#25D366]"
+                                  ? "border-[#25D366]/60 bg-[#25D366]/[0.08] text-white"
                                   : "border-white/10 bg-slate-900/40 hover:border-white/20 text-slate-200"
                               }`}
                             >
@@ -1155,9 +1134,9 @@ export default function QuestionnairePage() {
                             <button
                               key={opt.value}
                               onClick={() => handleMultiAnswer(step.id, opt.value)}
-                              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border-2 text-left transition-all ${
+                              className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-all ${
                                 selected
-                                  ? "border-[#25D366] bg-[#25D366]/10 text-[#25D366]"
+                                  ? "border-[#25D366]/60 bg-[#25D366]/[0.08] text-white"
                                   : "border-white/10 bg-slate-900/40 hover:border-white/20 text-slate-200"
                               }`}
                             >
@@ -1300,16 +1279,20 @@ export default function QuestionnairePage() {
                 </div>
               </div>
             </div>
+            </div>
           )}
 
           {/* ── CONTACT FORM ── */}
           {view === "contact_form" && (
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="bg-slate-900/50 backdrop-blur rounded-2xl shadow-xl border border-white/10 p-5 sm:p-8"
-            >
+            <div className="relative">
+              {/* Soft green glow — matches the site's reference cards */}
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-50 -z-10" />
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="relative bg-slate-900/50 backdrop-blur rounded-3xl shadow-2xl border border-white/10 p-5 sm:p-8"
+              >
               <div className="text-5xl mb-3">👤</div>
               <h2 className="text-2xl font-bold text-white mb-1">{T.form_title}</h2>
               <p className="text-slate-400 mb-6 text-sm">{T.form_desc}</p>
@@ -1395,16 +1378,20 @@ export default function QuestionnairePage() {
                 </div>
               </form>
             </motion.div>
+            </div>
           )}
 
           {/* ── SUCCESS (with contact) ── */}
           {view === "success" && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4 }}
-              className="bg-slate-900/50 backdrop-blur rounded-2xl shadow-xl border border-white/10 p-10 text-center"
-            >
+            <div className="relative">
+              {/* Soft green glow — matches the site's reference cards */}
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-50 -z-10" />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+                className="relative bg-slate-900/50 backdrop-blur rounded-3xl shadow-2xl border border-white/10 p-10 text-center"
+              >
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -1422,16 +1409,20 @@ export default function QuestionnairePage() {
                 </Button>
               </Link>
             </motion.div>
+            </div>
           )}
 
           {/* ── NO CONTACT THANK YOU ── */}
           {view === "no_contact" && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4 }}
-              className="bg-slate-900/50 backdrop-blur rounded-2xl shadow-xl border border-white/10 p-10 text-center"
-            >
+            <div className="relative">
+              {/* Soft green glow — matches the site's reference cards */}
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-50 -z-10" />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4 }}
+                className="relative bg-slate-900/50 backdrop-blur rounded-3xl shadow-2xl border border-white/10 p-10 text-center"
+              >
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -1449,6 +1440,7 @@ export default function QuestionnairePage() {
                 </Button>
               </Link>
             </motion.div>
+            </div>
           )}
         </div>
       </div>

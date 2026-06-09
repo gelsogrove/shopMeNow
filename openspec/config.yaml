@@ -1,0 +1,52 @@
+schema: spec-driven
+
+# Project context (optional)
+# Shown to the AI every time it creates an artifact (proposal, design, tasks, specs).
+# These are the non-negotiable rules of the eChatbot project (see CLAUDE.md).
+context: |
+  Project: eChatbot — WhatsApp-based multi-tenant e-commerce platform with
+  multi-agent AI chatbot integration.
+  Stack: Node.js/Express + React/TypeScript + PostgreSQL + Prisma ORM + OpenRouter API.
+  Single source of truth for specs: docs/memory-bank/PRD.md.
+
+  ARCHITECTURE RULES (mandatory):
+  - Database-first: NEVER use hardcoded fallbacks, default values, or mock data.
+    All config (prompts, agent configs, prices, translations) comes from the DB.
+    If data is missing, return a proper error — do not invent defaults.
+  - Workspace isolation: EVERY DB query MUST filter by workspaceId
+    (where: { workspaceId, ...otherFilters }). Critical for multi-tenant security.
+  - Security: protected endpoints use the 3-layer middleware stack
+    authMiddleware -> sessionValidationMiddleware -> validateWorkspaceOperation.
+  - No patches in prompts: when an LLM-driven feature misbehaves, fix it in
+    deterministic code (guard, tool validator, post-processor), never via prompt rules.
+  - No hardcoded phrase/keyword detection on user text. Detect input TYPE
+    (number = list selection, text = reset). LLM handles all intent detection.
+  - 360-degree thinking: cover the full stack FE -> API -> middleware ->
+    controller -> service -> repository -> DB. No partial implementations.
+
+  CONVENTIONS:
+  - All UI text in English only.
+  - Data is stored in Italian (base language) in the DB; the LLM translates.
+  - Keep files under ~500 lines; one file = one responsibility.
+  - Update backend/src/swagger.yaml immediately after any API change.
+
+  TESTING:
+  - Only unit tests (npm run test:unit). NEVER integration tests.
+  - Tests define expected behavior — fix the implementation, not the test logic.
+
+# Per-artifact rules (optional)
+# Custom rules applied only to a specific artifact type.
+rules:
+  proposal:
+    - State the problem and the why before the how.
+    - Reference the relevant PRD section in docs/memory-bank/PRD.md when applicable.
+    - Include a "Non-goals" section to bound the change.
+  design:
+    - Trace the change across the full stack (FE -> API -> service -> repository -> DB).
+    - Call out workspaceId filtering and the 3-layer security middleware where relevant.
+    - No hardcoded values or fallbacks — all config must come from the database.
+  tasks:
+    - Break work into small, independently verifiable steps.
+    - Include a task to add/update unit tests (test:unit only — never integration).
+    - Include a task to update swagger.yaml whenever an API endpoint changes.
+    - Do NOT include git add/commit/push steps — Andrea does those manually.
