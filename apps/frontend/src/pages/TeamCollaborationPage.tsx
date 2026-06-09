@@ -157,9 +157,9 @@ const T = {
 }
 
 const roleColors: Record<string, string> = {
-  purple: "from-green-50 to-green-100 border-green-200",
-  blue: "from-green-50 to-green-100 border-green-200",
-  green: "from-green-50 to-green-100 border-green-200",
+  purple: "from-green-500/20 to-emerald-500/10 border-white/10",
+  blue: "from-green-500/20 to-emerald-500/10 border-white/10",
+  green: "from-green-500/20 to-emerald-500/10 border-white/10",
 }
 
 export function TeamCollaborationPage() {
@@ -171,13 +171,13 @@ export function TeamCollaborationPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#070d18] text-slate-200">
       <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/team-collaboration" lang={language} serviceType="Team Collaboration" />
       <SiteHeader />
 
       <main>
         {/* Hero */}
-        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-emerald-50">
+        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -186,21 +186,21 @@ export function TeamCollaborationPage() {
               className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
             >
               <div>
-                <h1 className="text-4xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight whitespace-pre-line">
+                <h1 className="text-4xl lg:text-6xl font-bold text-white mb-6 leading-tight whitespace-pre-line">
                   {t.heroTitle}
                 </h1>
-                <p className="text-xl text-slate-600 mb-10 leading-relaxed">{t.heroSub}</p>
-                <Link to="/contact" className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg">
+                <p className="text-xl text-slate-400 mb-10 leading-relaxed">{t.heroSub}</p>
+                <Link to="/contact" className="inline-flex items-center gap-3 bg-[#25D366] hover:bg-[#1fb855] text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg">
                   <Zap className="h-5 w-5" />
                   {t.cta}
                 </Link>
               </div>
               <div className="relative flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-3xl rotate-1 scale-105 opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl rotate-1 scale-105 opacity-60" />
                 <img
                   src="/team.png"
                   alt="Team collaboration illustration"
-                  className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/60 object-contain"
+                  className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/10 object-contain"
                 />
               </div>
             </motion.div>
@@ -208,9 +208,9 @@ export function TeamCollaborationPage() {
         </section>
 
         {/* Metrics */}
-        <section className="py-16 bg-white">
+        <section className="py-16">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-slate-900 text-center mb-12">{t.metricsTitle}</h2>
+            <h2 className="text-3xl font-bold text-white text-center mb-12">{t.metricsTitle}</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
               {t.metrics.map((m, i) => (
                 <motion.div
@@ -219,10 +219,10 @@ export function TeamCollaborationPage() {
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1 }}
-                  className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-100"
+                  className="text-center p-6 bg-slate-900/50 backdrop-blur rounded-2xl shadow-2xl border border-white/10"
                 >
-                  <div className="text-4xl font-extrabold text-green-600 mb-2">{m.value}</div>
-                  <div className="text-sm text-slate-600 leading-tight">{m.label}</div>
+                  <div className="text-4xl font-extrabold text-[#25D366] mb-2">{m.value}</div>
+                  <div className="text-sm text-slate-400 leading-tight">{m.label}</div>
                 </motion.div>
               ))}
             </div>
@@ -230,11 +230,11 @@ export function TeamCollaborationPage() {
         </section>
 
         {/* Roles */}
-        <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
+        <section className="py-20 bg-white/[0.02]">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="text-center mb-14">
-              <h2 className="text-4xl font-bold text-slate-900 mb-4">{t.rolesTitle}</h2>
-              <p className="text-xl text-slate-600">{t.rolesSub}</p>
+              <h2 className="text-4xl font-bold text-white mb-4">{t.rolesTitle}</h2>
+              <p className="text-xl text-slate-400">{t.rolesSub}</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {t.roles.map((role, i) => (
@@ -247,11 +247,11 @@ export function TeamCollaborationPage() {
                   className={`bg-gradient-to-br ${roleColors[role.color]} rounded-2xl p-8 border hover:shadow-lg transition-all`}
                 >
                   <div className="text-4xl mb-3">{role.icon}</div>
-                  <h3 className="text-2xl font-bold text-slate-900 mb-5">{role.name}</h3>
+                  <h3 className="text-2xl font-bold text-white mb-5">{role.name}</h3>
                   <ul className="space-y-2.5">
                     {role.perms.map((p, j) => (
-                      <li key={j} className="flex items-center gap-2.5 text-slate-700 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      <li key={j} className="flex items-center gap-2.5 text-slate-300 text-sm">
+                        <CheckCircle className="h-4 w-4 text-[#25D366] flex-shrink-0" />
                         {p}
                       </li>
                     ))}
@@ -263,9 +263,9 @@ export function TeamCollaborationPage() {
         </section>
 
         {/* Flow */}
-        <section className="py-20 bg-white">
+        <section className="py-20">
           <div className="max-w-5xl mx-auto px-6 lg:px-8">
-            <h2 className="text-4xl font-bold text-slate-900 text-center mb-14">{t.flowTitle}</h2>
+            <h2 className="text-4xl font-bold text-white text-center mb-14">{t.flowTitle}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {t.flowSteps.map((step, i) => (
                 <motion.div
@@ -274,11 +274,11 @@ export function TeamCollaborationPage() {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className="relative p-8 bg-white rounded-2xl shadow-lg border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all"
+                  className="relative p-8 bg-slate-900/50 backdrop-blur rounded-2xl shadow-2xl border border-white/10 hover:shadow-xl hover:-translate-y-1 transition-all"
                 >
-                  <div className="text-5xl font-extrabold text-green-100 absolute top-4 right-6">{step.num}</div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3 pr-12">{step.title}</h3>
-                  <p className="text-slate-600 leading-relaxed">{step.desc}</p>
+                  <div className="text-5xl font-extrabold text-[#25D366]/20 absolute top-4 right-6">{step.num}</div>
+                  <h3 className="text-xl font-bold text-white mb-3 pr-12">{step.title}</h3>
+                  <p className="text-slate-400 leading-relaxed">{step.desc}</p>
                 </motion.div>
               ))}
             </div>
@@ -286,27 +286,27 @@ export function TeamCollaborationPage() {
         </section>
 
         {/* Dashboard Section */}
-        <section className="py-20 bg-gradient-to-b from-green-50 to-white">
+        <section className="py-20 bg-white/[0.02]">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
-                <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-6">{t.dashTitle}</h2>
-                <p className="text-lg text-slate-600 mb-6 leading-relaxed">{t.dashDesc}</p>
+                <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">{t.dashTitle}</h2>
+                <p className="text-lg text-slate-400 mb-6 leading-relaxed">{t.dashDesc}</p>
                 <ul className="space-y-3">
                   {t.dashFeatures.map((f, i) => (
-                    <li key={i} className="flex items-center gap-3 text-slate-700">
-                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    <li key={i} className="flex items-center gap-3 text-slate-300">
+                      <CheckCircle className="h-5 w-5 text-[#25D366] flex-shrink-0" />
                       {f}
                     </li>
                   ))}
                 </ul>
               </div>
               <div className="relative flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-200 to-emerald-100 rounded-2xl rotate-1 scale-105 opacity-60" />
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-2xl rotate-1 scale-105 opacity-60" />
                 <img
                   src="/panelcontro.png"
                   alt="Manager dashboard real-time view"
-                  className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/60 object-contain"
+                  className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/10 object-contain"
                 />
               </div>
             </div>
@@ -318,7 +318,7 @@ export function TeamCollaborationPage() {
           <div className="max-w-3xl mx-auto px-6 text-center">
             <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
             <p className="text-xl text-green-100 mb-8">{t.ctaSub}</p>
-            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-green-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
+            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-[#25D366] font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
               <Zap className="h-6 w-6" />
               {t.cta}
             </Link>

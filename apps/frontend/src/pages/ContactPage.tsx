@@ -210,22 +210,22 @@ export function ContactPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#070d18] text-slate-200">
       <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/contact" lang={language} serviceType="WhatsApp AI Chatbot Demo & Contact" />
       <SiteHeader />
 
       <main>
         {/* Hero */}
-        <section className="pt-20 pb-12 bg-gradient-to-br from-green-50 via-white to-emerald-50">
+        <section className="pt-20 pb-12">
           <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
             <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-              <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
+              <span className="inline-block bg-green-400/10 text-green-300 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
                 {t.badge}
               </span>
-              <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-4 leading-tight">
+              <h1 className="text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
                 {t.heroTitle}
               </h1>
-              <p className="text-xl text-slate-600 leading-relaxed">
+              <p className="text-xl text-slate-400 leading-relaxed">
                 {t.heroSub}
               </p>
             </motion.div>
@@ -233,7 +233,7 @@ export function ContactPage() {
         </section>
 
         {/* Contact Section */}
-        <section className="py-16 bg-white">
+        <section className="py-16">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
 
@@ -249,23 +249,23 @@ export function ContactPage() {
                   </div>
 
                   <div className="space-y-4">
-                    <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
-                      <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Mail className="h-5 w-5 text-green-600" />
+                    <div className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/10">
+                      <div className="w-10 h-10 bg-green-400/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <Mail className="h-5 w-5 text-green-400" />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t.info1Title}</p>
-                        <p className="text-slate-900 font-medium">{t.infoEmail}</p>
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.info1Title}</p>
+                        <p className="text-white font-medium">{t.infoEmail}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100">
-                      <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Phone className="h-5 w-5 text-green-600" />
+                    <div className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/10">
+                      <div className="w-10 h-10 bg-green-400/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <Phone className="h-5 w-5 text-green-400" />
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{t.info2Title}</p>
-                        <p className="text-slate-900 font-medium">WhatsApp: +34602119358</p>
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.info2Title}</p>
+                        <p className="text-white font-medium">WhatsApp: +34602119358</p>
                       </div>
                     </div>
                   </div>
@@ -278,59 +278,59 @@ export function ContactPage() {
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.5, delay: 0.1 }}
-                  className="bg-white rounded-3xl p-8 shadow-2xl border border-slate-100"
+                  className="bg-slate-900/50 backdrop-blur rounded-3xl p-8 shadow-2xl border border-white/10"
                 >
                   <div className="text-center mb-8">
-                    <h2 className="text-2xl font-bold text-slate-900">{t.formTitle}</h2>
-                    <p className="text-slate-600 mt-2">{t.formSubtitle}</p>
+                    <h2 className="text-2xl font-bold text-white">{t.formTitle}</h2>
+                    <p className="text-slate-400 mt-2">{t.formSubtitle}</p>
                   </div>
 
                   {success ? (
-                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-10 text-center">
-                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-                        <CheckCircle className="h-8 w-8 text-emerald-600" />
+                    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-400/10 p-10 text-center">
+                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-400/10">
+                        <CheckCircle className="h-8 w-8 text-emerald-400" />
                       </div>
-                      <h3 className="text-2xl font-semibold text-slate-900">{t.successTitle}</h3>
-                      <p className="mt-2 text-slate-600">{t.successDesc}</p>
+                      <h3 className="text-2xl font-semibold text-white">{t.successTitle}</h3>
+                      <p className="mt-2 text-slate-400">{t.successDesc}</p>
                     </div>
                   ) : (
                     <form onSubmit={handleSubmit} className="space-y-5">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <label className="text-sm font-semibold text-slate-700" htmlFor="c-name">{t.name}</label>
-                          <Input id="c-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t.namePlaceholder} className="h-11" required />
+                          <label className="text-sm font-semibold text-slate-300" htmlFor="c-name">{t.name}</label>
+                          <Input id="c-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t.namePlaceholder} className="h-11 bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500" required />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-sm font-semibold text-slate-700" htmlFor="c-surname">{t.surname}</label>
-                          <Input id="c-surname" value={surname} onChange={(e) => setSurname(e.target.value)} placeholder={t.surnamePlaceholder} className="h-11" required />
+                          <label className="text-sm font-semibold text-slate-300" htmlFor="c-surname">{t.surname}</label>
+                          <Input id="c-surname" value={surname} onChange={(e) => setSurname(e.target.value)} placeholder={t.surnamePlaceholder} className="h-11 bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500" required />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <label className="text-sm font-semibold text-slate-700" htmlFor="c-email">{t.email}</label>
-                          <Input id="c-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.emailPlaceholder} className="h-11" required />
+                          <label className="text-sm font-semibold text-slate-300" htmlFor="c-email">{t.email}</label>
+                          <Input id="c-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t.emailPlaceholder} className="h-11 bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500" required />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-sm font-semibold text-slate-700" htmlFor="c-phone">{t.phone}</label>
-                          <Input id="c-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t.phonePlaceholder} className="h-11" />
+                          <label className="text-sm font-semibold text-slate-300" htmlFor="c-phone">{t.phone}</label>
+                          <Input id="c-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t.phonePlaceholder} className="h-11 bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500" />
                         </div>
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-slate-700" htmlFor="c-subject">{t.subject}</label>
-                        <Input id="c-subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t.subjectPlaceholder} className="h-11" required />
+                        <label className="text-sm font-semibold text-slate-300" htmlFor="c-subject">{t.subject}</label>
+                        <Input id="c-subject" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t.subjectPlaceholder} className="h-11 bg-slate-900/60 border-white/10 text-slate-100 placeholder:text-slate-500" required />
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="text-sm font-semibold text-slate-700" htmlFor="c-message">{t.message}</label>
+                        <label className="text-sm font-semibold text-slate-300" htmlFor="c-message">{t.message}</label>
                         <textarea
                           id="c-message"
                           value={message}
                           onChange={(e) => setMessage(e.target.value)}
                           placeholder={t.messagePlaceholder}
                           required
-                          className="min-h-[140px] w-full rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-900 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
+                          className="min-h-[140px] w-full rounded-md border border-white/10 bg-slate-900/60 p-3 text-sm text-slate-100 placeholder:text-slate-500 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
                         />
                       </div>
 
@@ -356,7 +356,7 @@ export function ContactPage() {
                         <Button
                           type="submit"
                           disabled={submitting}
-                          className="px-10 py-6 text-base font-semibold rounded-full bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200/70 flex items-center gap-2"
+                          className="px-10 py-6 text-base font-semibold rounded-full bg-[#25D366] hover:bg-[#1fb855] text-white shadow-lg shadow-green-500/20 flex items-center gap-2"
                         >
                           <Send className="h-5 w-5" />
                           {submitting ? t.sending : t.send}

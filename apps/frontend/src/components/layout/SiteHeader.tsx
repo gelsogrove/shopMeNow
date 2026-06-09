@@ -251,7 +251,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
   }, [])
 
   return (
-    <header className="bg-white shadow-sm sticky top-0 z-[100] overflow-visible">
+    <header className="bg-[#070d18]/90 backdrop-blur border-b border-white/10 shadow-sm sticky top-0 z-[100] overflow-visible">
       <div className="max-w-7xl mx-auto px-4 lg:px-12">
 
         {/* Mini top-bar — sales-led pivot: only Contact link surfaced
@@ -261,7 +261,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
           <div className="flex items-center gap-4">
             <Link
               to="/contact"
-              className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-900 hover:text-slate-600"
+              className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-200 hover:text-slate-300"
             >
               {t.contact}
             </Link>
@@ -273,12 +273,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
 
           {/* Left: Logo + Brand (identical to homepage) */}
           <Link to="/" className="flex items-center justify-start gap-1 hover:opacity-80 transition-opacity">
-            <img
-              src="/logo.png"
-              alt="eChatbot Logo"
-              className="hidden md:block w-[110px] h-[110px] mt-[-10px]"
-            />
-            <span className="py-2 md:py-[15px] px-2 md:px-0 relative md:left-[-25px] md:top-[-7px] text-2xl md:text-2xl lg:text-4xl font-bold text-green-600 tracking-tight leading-none">
+            <span className="py-2 md:py-[15px] px-2 md:px-0 text-2xl md:text-2xl lg:text-4xl font-bold tracking-tight leading-none" style={{ color: "#25D366" }}>
               eChatbot
             </span>
           </Link>
@@ -294,18 +289,18 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="hidden lg:flex items-center gap-2 h-9 px-3 hover:bg-green-50 rounded-lg transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
+                  className="hidden lg:flex items-center gap-2 h-9 px-3 hover:bg-white/10 rounded-lg transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:outline-none"
                 >
                   <span className="text-xl">
                     {language === "it" ? "🇮🇹" : language === "en" ? "🇬🇧" : language === "es" ? "🇪🇸" : "🇵🇹"}
                   </span>
-                  <span className="hidden sm:inline text-sm font-medium text-slate-700">
+                  <span className="hidden sm:inline text-sm font-medium text-slate-200">
                     {language === "it" ? "IT" : language === "en" ? "EN" : language === "es" ? "ES" : "PT"}
                   </span>
                   <ChevronDown className="h-4 w-4 text-slate-500" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-48" align="end">
+              <DropdownMenuContent className="w-48 bg-slate-900 border-white/10 text-slate-200" align="end">
                 <DropdownMenuLabel className="text-xs text-slate-500 uppercase tracking-wider px-2 py-1.5">{t.language}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="flex items-center gap-3 cursor-pointer py-2.5 px-3" onClick={() => setLanguage("it")}>
@@ -334,7 +329,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                         variant="ghost"
                         size="sm"
                         onClick={() => navigate("/support/tickets")}
-                        className="relative h-9 w-9 p-0 text-slate-600 hover:text-green-600 hover:bg-green-50"
+                        className="relative h-9 w-9 p-0 text-slate-300 hover:text-green-600 hover:bg-white/10"
                       >
                         <Mail className="h-5 w-5" />
                         {supportUnreadCount > 0 && (
@@ -392,7 +387,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                       )}
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuContent className="w-56 bg-slate-900 border-white/10 text-slate-200" align="end" forceMount>
                     <DropdownMenuLabel className="font-normal p-3">
                       <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none truncate">
@@ -454,7 +449,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="lg:hidden p-2 text-slate-700 hover:text-green-600 transition-colors"
+              className="lg:hidden p-2 text-slate-200 hover:text-green-600 transition-colors"
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
@@ -463,26 +458,26 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-slate-200">
+          <div className="lg:hidden py-4 border-t border-white/10">
             <nav className="flex flex-col gap-4">
-              <Link to="/" className="font-medium text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.home}</Link>
-              <Link to="/features" className="font-medium text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.features}</Link>
+              <Link to="/" className="font-medium text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.home}</Link>
+              <Link to="/features" className="font-medium text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.features}</Link>
               {/* /pricing removed from public mobile menu — sales-led pivot. */}
-              <Link to="/contact" className="font-medium text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.contact}</Link>
+              <Link to="/contact" className="font-medium text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.contact}</Link>
 
-              <div className="border-t border-slate-200 pt-4 mt-2">
+              <div className="border-t border-white/10 pt-4 mt-2">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">{t.resources}</p>
                 <div className="flex flex-col gap-3 ml-4">
-                  <Link to="/widget-to-whatsapp" className="text-sm text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.widgetToWhatsApp}</Link>
-                  <Link to="/human-support" className="text-sm text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.humanSupport}</Link>
-                  <Link to="/crm-integration" className="text-sm text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.crmIntegration}</Link>
-                  <Link to="/team-collaboration" className="text-sm text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.teamCollaboration}</Link>
-                  <Link to="/privacy-by-design" className="text-sm text-slate-700 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.privacyDesign}</Link>
+                  <Link to="/widget-to-whatsapp" className="text-sm text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.widgetToWhatsApp}</Link>
+                  <Link to="/human-support" className="text-sm text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.humanSupport}</Link>
+                  <Link to="/crm-integration" className="text-sm text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.crmIntegration}</Link>
+                  <Link to="/team-collaboration" className="text-sm text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.teamCollaboration}</Link>
+                  <Link to="/privacy-by-design" className="text-sm text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.privacyDesign}</Link>
                 </div>
               </div>
 
               {/* Mobile Language Switcher */}
-              <div className="border-t border-slate-200 pt-4 mt-2">
+              <div className="border-t border-white/10 pt-4 mt-2">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">{t.language}</p>
                 <div className="flex flex-col gap-1 ml-4">
                   {SUPPORTED_LANGUAGES.map((lang) => (
@@ -492,7 +487,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                       className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                         language === lang.code
                           ? "bg-green-50 text-green-700 font-semibold"
-                          : "text-slate-700 hover:bg-slate-50"
+                          : "text-slate-200 hover:bg-white/10"
                       }`}
                     >
                       <span className="text-xl">{lang.flag}</span>
@@ -503,7 +498,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
               </div>
 
               {/* Mobile Auth Section */}
-              <div className="border-t border-slate-200 pt-4 mt-2">
+              <div className="border-t border-white/10 pt-4 mt-2">
                 {isLoggedIn ? (
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center gap-3 px-1">
@@ -513,7 +508,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                           : loggedInUser?.email?.[0]?.toUpperCase() || "U"}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">
+                        <p className="text-sm font-medium text-slate-200 truncate">
                           {loggedInUser?.firstName && loggedInUser?.lastName
                             ? `${loggedInUser.firstName} ${loggedInUser.lastName}`
                             : "User"}
@@ -522,19 +517,19 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                       </div>
                     </div>
                     <button
-                      className="flex items-center gap-2 px-1 py-2 text-sm text-slate-700 hover:text-green-600 transition-colors"
+                      className="flex items-center gap-2 px-1 py-2 text-sm text-slate-200 hover:text-green-600 transition-colors"
                       onClick={() => { navigate("/workspace-selection"); setIsMenuOpen(false) }}
                     >
                       <MessageSquare className="h-4 w-4 text-green-500" fill="currentColor" />{t.yourChannels}
                     </button>
                     <button
-                      className="flex items-center gap-2 px-1 py-2 text-sm text-slate-700 hover:text-green-600 transition-colors"
+                      className="flex items-center gap-2 px-1 py-2 text-sm text-slate-200 hover:text-green-600 transition-colors"
                       onClick={() => { navigate("/profile"); setIsMenuOpen(false) }}
                     >
                       <User className="h-4 w-4 text-blue-500" />{t.profile}
                     </button>
                     <button
-                      className="flex items-center gap-2 px-1 py-2 text-sm text-slate-700 hover:text-green-600 transition-colors"
+                      className="flex items-center gap-2 px-1 py-2 text-sm text-slate-200 hover:text-green-600 transition-colors"
                       onClick={() => { navigate("/billing"); setIsMenuOpen(false) }}
                     >
                       <CreditCard className="h-4 w-4 text-emerald-500" />{t.billing}

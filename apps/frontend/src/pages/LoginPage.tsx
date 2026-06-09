@@ -1038,12 +1038,7 @@ export function LoginPage() {
           <div className="flex items-center justify-between py-1 md:py-1.5 max-h-[70px]">
             {/* Left: Logo + Brand */}
             <div className="flex items-center justify-start gap-1">
-              <img 
-                src="/logo.png" 
-                alt="eChatbot Logo" 
-                className="hidden md:block w-[110px] h-[110px] mt-[-10px]"
-              />
-              <span className="py-2 md:py-[15px] px-2 md:px-0 relative md:left-[-25px] md:top-[-7px] text-2xl md:text-2xl lg:text-4xl font-bold text-green-600 tracking-tight leading-none">eChatbot</span>
+              <span className="py-2 md:py-[15px] px-2 md:px-0 text-2xl md:text-2xl lg:text-4xl font-bold tracking-tight leading-none" style={{ color: "#25D366" }}>eChatbot</span>
             </div>
 
             {/* Right: Language Selector + Auth */}
@@ -1259,7 +1254,7 @@ export function LoginPage() {
         
         <div className={`text-center mb-6 space-y-4 relative${showLoginCard ? ' hidden' : ''}`}>
           {/* Brand slogan — wordplay on "you never forget your first love" */}
-          <h1 className="text-4xl lg:text-5xl font-bold italic bg-gradient-to-r from-green-600 to-emerald-500 bg-clip-text text-transparent max-w-3xl mx-auto">
+          <h1 className="text-4xl lg:text-5xl font-bold italic max-w-3xl mx-auto" style={{ color: "#25D366" }}>
             {t("hero.slogan")}
           </h1>
           <p className="text-lg text-slate-300 max-w-3xl mx-auto">
@@ -1982,8 +1977,8 @@ export function LoginPage() {
                         brand green. Not translated: it's the demo tenant
                         name, same lockup used inside the playground popup. */}
                     <h3 className="text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">
-                      <span className="text-slate-900">Demo</span>
-                      <span className="text-green-600">Wash</span>
+                      <span className="text-white">Demo</span>
+                      <span style={{ color: "#25D366" }}>Wash</span>
                     </h3>
                     <p className="text-xl text-slate-300 leading-relaxed text-justify">
                       {t("demo.subtitle")}
@@ -2170,7 +2165,7 @@ export function LoginPage() {
               {/* Gradient frame */}
               <div className="absolute -inset-1 bg-gradient-to-tr from-amber-500/40 via-orange-500/20 to-transparent rounded-[28px] blur-sm" />
               <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10">
-                <img src="/human.png" alt="Human-in-the-loop" className="w-full h-72 lg:h-96 object-cover" />
+                <img src="/humansupporto.png" alt="Human-in-the-loop" className="w-full h-72 lg:h-96 object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent" />
               </div>
 

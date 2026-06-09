@@ -257,10 +257,10 @@ const T = {
 }
 
 const securityIcon = (key: string) => {
-  if (key === "shield") return <ShieldCheck className="w-6 h-6 text-green-600" />
-  if (key === "server") return <Server className="w-6 h-6 text-green-600" />
-  if (key === "puzzle") return <Puzzle className="w-6 h-6 text-green-600" />
-  return <Users className="w-6 h-6 text-green-600" />
+  if (key === "shield") return <ShieldCheck className="w-6 h-6 text-[#25D366]" />
+  if (key === "server") return <Server className="w-6 h-6 text-[#25D366]" />
+  if (key === "puzzle") return <Puzzle className="w-6 h-6 text-[#25D366]" />
+  return <Users className="w-6 h-6 text-[#25D366]" />
 }
 
 export function LaundryServicePage() {
@@ -283,9 +283,9 @@ export function LaundryServicePage() {
       />
       <SiteHeader />
 
-      <main>
+      <main className="min-h-screen bg-[#070d18] text-slate-200">
         {/* Hero — minimal: title + text + photo. */}
-        <section className="relative pt-16 pb-16 lg:pt-24 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-green-50 overflow-hidden">
+        <section className="relative pt-16 pb-16 lg:pt-24 lg:pb-24 overflow-hidden">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
               <div>
@@ -293,7 +293,7 @@ export function LaundryServicePage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6 }}
-                  className="text-3xl lg:text-4xl font-bold leading-tight mb-5 text-slate-900"
+                  className="text-3xl lg:text-4xl font-bold leading-tight mb-5 text-white"
                 >
                   {t.heroTitle}
                 </motion.h1>
@@ -301,7 +301,7 @@ export function LaundryServicePage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.6, delay: 0.1 }}
-                  className="text-lg text-slate-600 mb-8 max-w-xl"
+                  className="text-lg text-slate-400 mb-8 max-w-xl"
                 >
                   {t.heroSub}
                 </motion.p>
@@ -317,7 +317,7 @@ export function LaundryServicePage() {
                   >
                     {t.cta} <ArrowRight className="w-5 h-5" />
                   </Link>
-                  <p className="self-center text-sm text-slate-500">{t.ctaSub}</p>
+                  <p className="self-center text-sm text-slate-400">{t.ctaSub}</p>
                 </motion.div>
               </div>
               <motion.div
@@ -329,7 +329,7 @@ export function LaundryServicePage() {
                 <img
                   src="/laundry1.png"
                   alt="eChatbot AI assistant for laundry services"
-                  className="w-full h-auto rounded-3xl shadow-2xl border border-gray-100"
+                  className="w-full h-auto rounded-3xl shadow-2xl border border-white/10"
                 />
               </motion.div>
             </div>
@@ -337,9 +337,9 @@ export function LaundryServicePage() {
         </section>
 
         {/* Problems → Solutions */}
-        <section className="py-16 lg:py-24 bg-white">
+        <section className="py-16 lg:py-24">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-gray-900 text-center mb-12">{t.problemsTitle}</h2>
+            <h2 className="text-3xl font-bold text-white text-center mb-12">{t.problemsTitle}</h2>
             <div className="space-y-6">
               {t.problems.map((item, idx) => (
                 <motion.div
@@ -348,18 +348,18 @@ export function LaundryServicePage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: idx * 0.07 }}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start rounded-2xl border border-gray-100 shadow-sm bg-white p-6"
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start rounded-2xl border border-white/10 shadow-2xl bg-slate-900/50 backdrop-blur p-6"
                 >
                   <div className="flex items-center gap-4">
-                    <span className="flex-shrink-0 w-14 h-14 rounded-full bg-green-100 text-green-700 font-extrabold text-2xl flex items-center justify-center">{item.num}</span>
-                    <p className="text-base font-medium text-gray-800">{item.problem}</p>
+                    <span className="flex-shrink-0 w-14 h-14 rounded-full bg-green-400/10 text-green-300 font-extrabold text-2xl flex items-center justify-center">{item.num}</span>
+                    <p className="text-base font-medium text-slate-100">{item.problem}</p>
                   </div>
-                  <div className="flex items-start gap-3 md:border-l md:border-gray-100 md:pl-6">
-                    <ArrowRight className="hidden md:block w-6 h-6 text-green-500 mt-0.5 shrink-0" />
-                    <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 shrink-0" />
+                  <div className="flex items-start gap-3 md:border-l md:border-white/10 md:pl-6">
+                    <ArrowRight className="hidden md:block w-6 h-6 text-[#25D366] mt-0.5 shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-[#25D366] mt-0.5 shrink-0" />
                     <div>
-                      <p className="font-bold text-gray-900 mb-1">{item.solutionTitle}</p>
-                      <p className="text-sm text-gray-600">{item.solutionDesc}</p>
+                      <p className="font-bold text-white mb-1">{item.solutionTitle}</p>
+                      <p className="text-sm text-slate-400">{item.solutionDesc}</p>
                     </div>
                   </div>
                 </motion.div>
@@ -379,9 +379,9 @@ export function LaundryServicePage() {
         </section>
 
         {/* Data & Security */}
-        <section className="py-16 lg:py-24 bg-gray-50">
+        <section className="py-16 lg:py-24 bg-white/[0.02]">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-12">{t.securityTitle}</h2>
+            <h2 className="text-3xl font-bold text-white mb-12">{t.securityTitle}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {t.securityItems.map((item, idx) => (
                 <motion.div
@@ -390,13 +390,13 @@ export function LaundryServicePage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: idx * 0.08 }}
-                  className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm"
+                  className="bg-slate-900/50 backdrop-blur rounded-2xl p-6 border border-white/10 shadow-2xl"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     {securityIcon(item.icon)}
-                    <h3 className="font-bold text-gray-900">{item.title}</h3>
+                    <h3 className="font-bold text-white">{item.title}</h3>
                   </div>
-                  <p className="text-sm text-gray-600 leading-relaxed">{item.desc}</p>
+                  <p className="text-sm text-slate-400 leading-relaxed">{item.desc}</p>
                 </motion.div>
               ))}
             </div>
@@ -414,15 +414,15 @@ export function LaundryServicePage() {
         </section>
 
         {/* Translation feature */}
-        <section className="py-16 lg:py-24 bg-white">
+        <section className="py-16 lg:py-24">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                <h2 className="text-3xl font-bold text-white mb-4">
                   {t.translationTitle.split(" ").slice(0, -2).join(" ")}{" "}
-                  <span className="text-green-600">{t.translationTitle.split(" ").slice(-2).join(" ")}</span>
+                  <span className="text-[#25D366]">{t.translationTitle.split(" ").slice(-2).join(" ")}</span>
                 </h2>
-                <p className="text-gray-600 leading-relaxed">{t.translationDesc}</p>
+                <p className="text-slate-400 leading-relaxed">{t.translationDesc}</p>
               </div>
               <div className="bg-white rounded-2xl p-6 border border-gray-100 text-sm shadow-xl">
                 <div className="flex items-center gap-2 mb-4 text-xs text-amber-600 font-medium">
@@ -447,7 +447,7 @@ export function LaundryServicePage() {
         </section>
 
         {/* Acts and sells */}
-        <section className="py-16 lg:py-24 bg-gray-50">
+        <section className="py-16 lg:py-24 bg-white/[0.02]">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-4 text-sm">
@@ -475,26 +475,26 @@ export function LaundryServicePage() {
                 </div>
               </div>
               <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                <h2 className="text-3xl font-bold text-white mb-4">
                   {t.actsTitle.split(":")[0]}:{" "}
-                  <span className="text-green-600">{t.actsTitle.split(":")[1]}</span>
+                  <span className="text-[#25D366]">{t.actsTitle.split(":")[1]}</span>
                 </h2>
-                <p className="text-gray-600 leading-relaxed">{t.actsDesc}</p>
+                <p className="text-slate-400 leading-relaxed">{t.actsDesc}</p>
               </div>
             </div>
           </div>
         </section>
 
         {/* Campaigns */}
-        <section className="py-16 lg:py-24 bg-white">
+        <section className="py-16 lg:py-24">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                <h2 className="text-3xl font-bold text-white mb-4">
                   {t.campaignsTitle.split(" ").slice(0, -2).join(" ")}{" "}
-                  <span className="text-green-600">{t.campaignsTitle.split(" ").slice(-2).join(" ")}</span>
+                  <span className="text-[#25D366]">{t.campaignsTitle.split(" ").slice(-2).join(" ")}</span>
                 </h2>
-                <p className="text-gray-600 leading-relaxed">{t.campaignsDesc}</p>
+                <p className="text-slate-400 leading-relaxed">{t.campaignsDesc}</p>
               </div>
               <div className="bg-gray-50 rounded-2xl p-6 shadow-xl border border-gray-100">
                 <div className="bg-white rounded-xl p-4 flex items-start gap-3 shadow-sm">

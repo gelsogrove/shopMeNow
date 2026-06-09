@@ -207,7 +207,7 @@ export function FeaturesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#070d18] text-slate-200">
       <SEO
         title={t.seoTitle}
         description={t.seoDescription}
@@ -221,9 +221,9 @@ export function FeaturesPage() {
 
       <main>
         {/* Hero Section */}
-        <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-emerald-50 via-white to-green-50 overflow-hidden">
+        <section className="relative pt-24 pb-16 lg:pt-32 lg:pb-24 overflow-hidden">
           {/* Background decoration */}
-          <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] -z-10" />
+          <div className="absolute inset-0 bg-grid-slate-100 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] opacity-[0.03] -z-10" />
           
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <Breadcrumbs items={[{ label: t.breadcrumb }]} hideVisual />
@@ -234,22 +234,22 @@ export function FeaturesPage() {
               transition={{ duration: 0.6 }}
               className="text-center max-w-4xl mx-auto"
             >
-              <span className="inline-block bg-green-100 text-green-700 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
+              <span className="inline-block bg-[#25D366]/10 text-[#25D366] text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
                 {t.hero.badge}
               </span>
-              
-              <h1 
-                className="text-4xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight"
+
+              <h1
+                className="text-4xl lg:text-6xl font-bold text-white mb-6 leading-tight"
                 dangerouslySetInnerHTML={{ __html: t.hero.title }}
               />
-              
-              <p className="text-xl text-slate-600 mb-10 leading-relaxed">
+
+              <p className="text-xl text-slate-400 mb-10 leading-relaxed">
                 {t.hero.subtitle}
               </p>
 
               <Link
                 to="/contact"
-                className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold px-10 py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
+                className="inline-flex items-center gap-3 bg-[#25D366] hover:bg-[#1ebe5a] text-white font-semibold px-10 py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
               >
                 <Zap className="h-6 w-6" />
                 <span>{t.hero.cta}</span>
@@ -259,13 +259,13 @@ export function FeaturesPage() {
         </section>
 
         {/* Core Features Section */}
-        <section className="py-20 bg-white">
+        <section className="py-20 border-y border-white/5 bg-white/[0.02]">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="text-center mb-16">
-              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
+              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">
                 {t.coreFeatures.title}
               </h2>
-              <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+              <p className="text-xl text-slate-400 max-w-3xl mx-auto">
                 {t.coreFeatures.subtitle}
               </p>
             </div>
@@ -281,26 +281,26 @@ export function FeaturesPage() {
                   className="group relative"
                 >
                   {/* Decorative background */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-1 scale-100 group-hover:rotate-2 group-hover:scale-105 transition-transform duration-500 opacity-50" />
-                  
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl rotate-1 scale-100 group-hover:rotate-2 group-hover:scale-105 transition-transform duration-500 opacity-50" />
+
                   {/* Card content */}
-                  <div className="relative bg-white rounded-3xl p-8 shadow-lg border border-slate-100 hover:shadow-xl transition-all duration-500 h-full flex flex-col">
-                    <div className="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg">
+                  <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 shadow-2xl border border-white/10 hover:shadow-xl transition-all duration-500 h-full flex flex-col">
+                    <div className="w-16 h-16 bg-[#25D366] rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg">
                       {iconMap[feature.icon as keyof typeof iconMap]}
                     </div>
 
-                    <h3 className="text-2xl font-bold text-slate-900 mb-4">
+                    <h3 className="text-2xl font-bold text-white mb-4">
                       {feature.title}
                     </h3>
 
-                    <p className="text-slate-600 leading-relaxed mb-6 flex-1">
+                    <p className="text-slate-400 leading-relaxed mb-6 flex-1">
                       {feature.description}
                     </p>
 
                     <ul className="space-y-2">
                       {feature.points.map((point, i) => (
-                        <li key={i} className="flex items-center gap-2 text-sm text-slate-700">
-                          <div className="w-1.5 h-1.5 bg-green-600 rounded-full" />
+                        <li key={i} className="flex items-center gap-2 text-sm text-slate-300">
+                          <div className="w-1.5 h-1.5 bg-[#25D366] rounded-full" />
                           {point}
                         </li>
                       ))}
@@ -313,7 +313,7 @@ export function FeaturesPage() {
         </section>
 
         {/* Integration Section */}
-        <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
+        <section className="py-20 border-y border-white/5 bg-white/[0.02]">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <motion.div
               className="group relative"
@@ -323,24 +323,24 @@ export function FeaturesPage() {
               transition={{ duration: 0.65, ease: "easeOut" }}
             >
               {/* Decorative background frame */}
-              <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500" />
 
-              <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500">
+              <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-white/10 hover:shadow-3xl hover:-translate-y-1 transition-all duration-500">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
                   {/* Left: Content */}
                   <div className="space-y-6">
-                    <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 leading-tight">
+                    <h2 className="text-4xl lg:text-5xl font-bold text-white leading-tight">
                       {t.integration.title}
                     </h2>
-                    <p className="text-xl text-slate-600 leading-relaxed">
+                    <p className="text-xl text-slate-400 leading-relaxed">
                       {t.integration.subtitle}
                     </p>
-                    <p className="text-lg text-slate-600 leading-relaxed">
+                    <p className="text-lg text-slate-400 leading-relaxed">
                       {t.integration.description}
                     </p>
                     <Link
                       to="/crm-integration"
-                      className="inline-flex items-center gap-2 text-green-600 hover:text-green-700 font-semibold text-lg group"
+                      className="inline-flex items-center gap-2 text-[#25D366] hover:text-[#1ebe5a] font-semibold text-lg group"
                     >
                       Scopri le integrazioni
                       <TrendingUp className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -350,8 +350,8 @@ export function FeaturesPage() {
                   {/* Right: Image placeholder */}
                   <div className="relative">
                     <div className="relative">
-                      <div className="absolute -inset-4 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl blur-xl opacity-40" />
-                      <img src="/survey-ecommerce.png" alt="Integration Dashboard" className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/60 object-contain" />
+                      <div className="absolute -inset-4 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-2xl blur-xl opacity-40" />
+                      <img src="/survey-ecommerce.png" alt="Integration Dashboard" className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/10 object-contain" />
                     </div>
                   </div>
                 </div>
@@ -377,7 +377,7 @@ export function FeaturesPage() {
               </p>
               <Link
                 to="/contact"
-                className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-green-600 font-semibold px-10 py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
+                className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-[#25D366] font-semibold px-10 py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
               >
                 <Zap className="h-6 w-6" />
                 <span>{t.ctaBtn}</span>

@@ -31,7 +31,7 @@ const translations = {
     "hero.title": "Il tuo agente AI su WhatsApp",
     "hero.subtitle":
       "L'AI su misura per la tua attività in franchising su WhatsApp: risponde ai clienti 24/7, si connette alle macchine da remoto, prenota appuntamenti e invia promozioni — in ogni lingua.",
-    "hero.slogan": "Il primo agente non si scorda mai.",
+    "hero.slogan": "Il primo agente non si scorda mai…",
     "hero.subline": "",
     "hero.whyTitle": "Perché eChatbot?",
     "hero.useCasesTitle": "Progettato per vendite, supporto e crescita.",
@@ -624,7 +624,7 @@ const translations = {
     "hero.title": "Your AI agent on WhatsApp",
     "hero.subtitle":
       "The custom AI for your franchise business on WhatsApp: answers customers 24/7, connects to machines remotely, books appointments and sends promos — in any language.",
-    "hero.slogan": "You never forget your first agent.",
+    "hero.slogan": "You never forget your first agent…",
     "hero.subline": "",
     "hero.whyTitle": "Why eChatbot?",
     "hero.useCasesTitle": "Built for sales, support, and growth.",
@@ -1242,7 +1242,7 @@ const translations = {
     "hero.title": "Tu agente con IA en WhatsApp",
     "hero.subtitle":
       "La IA a medida para tu negocio en franquicia en WhatsApp: responde a clientes 24/7, se conecta a las máquinas en remoto, agenda citas y envía promociones — en cualquier idioma.",
-    "hero.slogan": "El primer agente nunca se olvida.",
+    "hero.slogan": "El primer agente nunca se olvida…",
     "hero.subline": "",
     "hero.whyTitle": "¿Por qué eChatbot?",
     "hero.useCasesTitle": "Diseñado para ventas, soporte y crecimiento.",
@@ -1729,7 +1729,7 @@ const translations = {
     "hero.title": "O teu agente AI no WhatsApp",
     "hero.subtitle":
       "A IA à medida para o teu negócio em franquia no WhatsApp: responde a clientes 24/7, liga-se às máquinas remotamente, agenda marcações e envia promoções — em qualquer idioma.",
-    "hero.slogan": "O primeiro agente nunca se esquece.",
+    "hero.slogan": "O primeiro agente nunca se esquece…",
     "hero.subline": "",
     "hero.whyTitle": "Por que eChatbot?",
     "hero.useCasesTitle": "Projetado para vendas, suporte e crescimento.",

@@ -177,13 +177,13 @@ export function CrmIntegrationPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#070d18] text-slate-200">
       <SEO title={t.seoTitle} description={t.seoDesc} keywords={t.seoKeys} url="/crm-integration" lang={language} serviceType="CRM Integration" />
       <SiteHeader />
 
       <main>
         {/* Hero */}
-        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24 bg-gradient-to-br from-green-50 via-white to-emerald-50">
+        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -192,28 +192,28 @@ export function CrmIntegrationPage() {
               className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
             >
               <div>
-                <h1 className="text-4xl lg:text-6xl font-bold text-slate-900 mb-6 leading-tight whitespace-pre-line">
+                <h1 className="text-4xl lg:text-6xl font-bold text-white mb-6 leading-tight whitespace-pre-line">
                   {t.heroTitle}
                 </h1>
-                <p className="text-xl text-slate-600 mb-10 leading-relaxed">{t.heroSub}</p>
-                <Link to="/contact" className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg">
+                <p className="text-xl text-slate-400 mb-10 leading-relaxed">{t.heroSub}</p>
+                <Link to="/contact" className="inline-flex items-center gap-3 bg-[#25D366] hover:bg-[#1fb355] text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg">
                   <Zap className="h-5 w-5" />
                   {t.cta}
                 </Link>
               </div>
               {/* Hero image */}
               <div className="relative">
-                <div className="absolute -inset-4 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl blur-xl opacity-40" />
-                <img src="/CRM.png" alt="CRM Integration" className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/60 object-contain" />
+                <div className="absolute -inset-4 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-40" />
+                <img src="/CRM.png" alt="CRM Integration" className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/10 object-contain" />
               </div>
             </motion.div>
           </div>
         </section>
 
         {/* Benefits */}
-        <section className="py-20 bg-gradient-to-b from-slate-50 to-white">
+        <section className="py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <h2 className="text-4xl font-bold text-slate-900 text-center mb-12">{t.benefitsTitle}</h2>
+            <h2 className="text-4xl font-bold text-white text-center mb-12">{t.benefitsTitle}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {t.benefits.map((b, i) => (
                 <motion.div
@@ -222,12 +222,12 @@ export function CrmIntegrationPage() {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className="flex gap-6 p-6 bg-white rounded-2xl shadow-md border border-slate-100 hover:shadow-lg transition-all"
+                  className="flex gap-6 p-6 bg-slate-900/50 backdrop-blur rounded-2xl shadow-2xl border border-white/10 hover:shadow-lg transition-all"
                 >
                   <div className="text-4xl flex-shrink-0">{b.icon}</div>
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900 mb-2">{b.title}</h3>
-                    <p className="text-slate-600 leading-relaxed">{b.desc}</p>
+                    <h3 className="text-xl font-bold text-white mb-2">{b.title}</h3>
+                    <p className="text-slate-400 leading-relaxed">{b.desc}</p>
                   </div>
                 </motion.div>
               ))}
@@ -236,7 +236,7 @@ export function CrmIntegrationPage() {
         </section>
 
         {/* API Section */}
-        <section className="py-20 bg-white">
+        <section className="py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <motion.div
               className="group relative"
@@ -245,24 +245,24 @@ export function CrmIntegrationPage() {
               viewport={{ once: true }}
               transition={{ duration: 0.65 }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl sm:rotate-1 scale-[1.01] group-hover:rotate-2 transition-transform duration-500" />
-              <div className="relative bg-white rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-slate-100 hover:-translate-y-1 transition-all duration-500">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl sm:rotate-1 scale-[1.01] group-hover:rotate-2 transition-transform duration-500" />
+              <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-white/10 hover:-translate-y-1 transition-all duration-500">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
                   <div className="space-y-6">
-                    <h2 className="text-3xl lg:text-4xl font-bold text-slate-900">{t.apiTitle}</h2>
-                    <p className="text-lg text-slate-600 leading-relaxed">{t.apiDesc}</p>
+                    <h2 className="text-3xl lg:text-4xl font-bold text-white">{t.apiTitle}</h2>
+                    <p className="text-lg text-slate-400 leading-relaxed">{t.apiDesc}</p>
                     <ul className="space-y-3">
                       {t.apiFeatures.map((f, i) => (
-                        <li key={i} className="flex items-center gap-3 text-slate-700">
-                          <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                        <li key={i} className="flex items-center gap-3 text-slate-300">
+                          <CheckCircle className="h-5 w-5 text-[#25D366] flex-shrink-0" />
                           {f}
                         </li>
                       ))}
                     </ul>
                   </div>
                   <div className="relative">
-                    <div className="absolute -inset-4 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl blur-xl opacity-40" />
-                    <img src="/survery-crm.png" alt="API Documentation" className="relative w-full h-auto rounded-2xl shadow-xl border border-white/60 object-contain" />
+                    <div className="absolute -inset-4 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-2xl blur-xl opacity-40" />
+                    <img src="/survery-crm.png" alt="API Documentation" className="relative w-full h-auto rounded-2xl shadow-xl border border-white/10 object-contain" />
                   </div>
                 </div>
               </div>
