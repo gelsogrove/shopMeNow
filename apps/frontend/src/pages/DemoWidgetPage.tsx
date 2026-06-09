@@ -102,6 +102,17 @@ export function DemoWidgetPage() {
         ← Home
       </Link>
 
+      {/* eChatbot.AI brand logo */}
+      <a
+        href="https://www.echatbot.ai"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="absolute bottom-5 left-5 z-20 text-lg font-extrabold tracking-tight sm:bottom-6 sm:left-6"
+      >
+        <span className="text-white">eChatbot</span>
+        <span className="text-emerald-300">.AI</span>
+      </a>
+
       {/* Hero copy */}
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center sm:items-start sm:px-16 sm:text-left">
         <div className="max-w-xl">
@@ -134,7 +145,7 @@ export function DemoWidgetPage() {
 
           {demo && !loading && !error && (
             <p className="mt-8 hidden items-center gap-2 text-sm text-emerald-100/80 sm:flex">
-              The chat is open on the right — start by introducing yourself.
+              The chat is open on the right. 👉
             </p>
           )}
         </div>
@@ -152,7 +163,7 @@ export function DemoWidgetPage() {
           plainWhatsappNumber
           icon="whatsapp"
           title={demo.workspaceName || "Chat with us 💬"}
-          primaryColor="#059669"
+          primaryColor="#25D366"
           position="bottom-right"
         />
       )}
