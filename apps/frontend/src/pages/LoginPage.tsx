@@ -1244,7 +1244,7 @@ export function LoginPage() {
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold italic mx-auto lg:whitespace-nowrap" style={{ color: "#25D366" }}>
             {t("hero.slogan")}
           </h1>
-          <p className="text-lg text-slate-300 max-w-3xl mx-auto">
+          <p className="hidden sm:block text-lg text-slate-300 max-w-3xl mx-auto">
             {t("hero.subtitle")}
           </p>
         </div>

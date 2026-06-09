@@ -124,7 +124,7 @@ export function DemoWidgetPage() {
             <span className="text-white">Demo</span>
             <span className="text-emerald-300">Wash</span>
           </h1>
-          <p className="mt-4 text-lg leading-relaxed text-emerald-50/90 sm:text-xl">
+          <p className="mt-4 hidden text-lg leading-relaxed text-emerald-50/90 sm:block sm:text-xl">
             Try our WhatsApp AI assistant live — just start chatting, exactly
             like on WhatsApp. The bot detects your language automatically.
           </p>

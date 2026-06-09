@@ -1133,6 +1133,8 @@ export function ChatWidget({
 
   const embeddedPopupSizeClasses = isEmbedded
     ? "w-full h-full rounded-[24px] shadow-none border-2"
+    : instantChat
+    ? "w-screen h-screen sm:w-[480px] sm:h-[760px] sm:max-h-[92vh] rounded-none sm:rounded-3xl shadow-2xl border-2 sm:border-2"
     : "w-screen h-screen sm:w-[410px] sm:h-[680px] max-h-[800px] rounded-none sm:rounded-3xl shadow-2xl border-2 sm:border-2"
     
   // Generate light version of primary color for border
@@ -1715,9 +1717,10 @@ export function ChatWidget({
                         : resolvedPlaceholder
                     }
                     disabled={isLoading || (botDisabled && !operatorHasReplied)}
-                    rows={2}
+                    rows={instantChat ? 3 : 2}
                     className={cn(
                       "flex-1 resize-none px-3 sm:px-4 py-2 sm:py-3 rounded-2xl border border-gray-300",
+                      instantChat && "text-base leading-relaxed",
                       "focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600",
                       "text-sm sm:text-[15px] placeholder-gray-400 leading-relaxed",
                       "disabled:bg-gray-50 disabled:text-gray-400"

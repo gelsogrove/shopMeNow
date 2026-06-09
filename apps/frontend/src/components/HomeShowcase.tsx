@@ -402,18 +402,6 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
       <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full blur-3xl" style={{ background: `${WA_GREEN}26` }} />
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
 
-      {/* Try-the-demo CTA — WhatsApp-styled, links to the live demo widget */}
-      <Link
-        to="/demo/demowash"
-        className="z-20 mb-6 flex w-full items-center justify-center gap-2.5 rounded-2xl px-6 py-3.5 text-base font-bold text-white shadow-xl transition-all hover:scale-[1.03] hover:brightness-110 lg:absolute lg:right-8 lg:top-8 lg:mb-0 lg:inline-flex lg:w-auto"
-        style={{ background: WA_GREEN }}
-      >
-        <svg viewBox="0 0 32 32" className="h-6 w-6 fill-white" aria-hidden="true">
-          <path d="M16.003 3C9.38 3 4 8.38 4 15.003c0 2.117.553 4.187 1.605 6.01L4 29l8.184-1.55a11.94 11.94 0 0 0 3.819.626h.003C22.626 28.075 28 22.695 28 16.072 28 9.45 22.626 3 16.003 3Zm0 21.86h-.002a9.9 9.9 0 0 1-3.46-.62l-.248-.094-4.857.92.94-4.735-.16-.244a9.85 9.85 0 0 1-1.5-5.224c0-5.46 4.44-9.9 9.91-9.9 2.646 0 5.13 1.03 7 2.9a9.84 9.84 0 0 1 2.9 7c0 5.46-4.44 9.9-9.91 9.9Zm5.43-7.42c-.297-.15-1.758-.867-2.03-.967-.272-.099-.47-.148-.668.149-.198.297-.767.967-.94 1.166-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.76-1.653-2.057-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.496.099-.198.05-.372-.025-.521-.074-.149-.668-1.611-.916-2.206-.241-.58-.486-.501-.668-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.073.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.29.173-1.413-.074-.124-.272-.198-.57-.347Z" />
-        </svg>
-        {pick(lang, "Prova la nostra demo", "Try our demo", "Prueba nuestra demo", "Experimenta a nossa demo")} →
-      </Link>
-
       {/* Header — title + subtitle ABOVE the cards */}
       <div className="relative mb-8 max-w-2xl">
         <span
@@ -431,9 +419,21 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
       </div>
 
       {/* Phone + capability cards */}
+      {/* 📱 Mobile-only CTA — the phone is hidden on mobile, so surface the demo button here */}
+      <Link
+        to="/demo/demowash"
+        className="mb-8 flex w-full items-center justify-center gap-2.5 rounded-2xl px-6 py-3.5 text-base font-bold text-white shadow-xl transition-all hover:brightness-110 lg:hidden"
+        style={{ background: WA_GREEN }}
+      >
+        <svg viewBox="0 0 32 32" className="h-6 w-6 fill-white" aria-hidden="true">
+          <path d="M16.003 3C9.38 3 4 8.38 4 15.003c0 2.117.553 4.187 1.605 6.01L4 29l8.184-1.55a11.94 11.94 0 0 0 3.819.626h.003C22.626 28.075 28 22.695 28 16.072 28 9.45 22.626 3 16.003 3Zm0 21.86h-.002a9.9 9.9 0 0 1-3.46-.62l-.248-.094-4.857.92.94-4.735-.16-.244a9.85 9.85 0 0 1-1.5-5.224c0-5.46 4.44-9.9 9.91-9.9 2.646 0 5.13 1.03 7 2.9a9.84 9.84 0 0 1 2.9 7c0 5.46-4.44 9.9-9.91 9.9Zm5.43-7.42c-.297-.15-1.758-.867-2.03-.967-.272-.099-.47-.148-.668.149-.198.297-.767.967-.94 1.166-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.76-1.653-2.057-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.496.099-.198.05-.372-.025-.521-.074-.149-.668-1.611-.916-2.206-.241-.58-.486-.501-.668-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.073.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.29.173-1.413-.074-.124-.272-.198-.57-.347Z" />
+        </svg>
+        {pick(lang, "Prova la nostra demo", "Try our demo", "Prueba nuestra demo", "Experimenta a nossa demo")} →
+      </Link>
+
       <div className="relative grid grid-cols-1 items-start gap-10 lg:grid-cols-[25rem_34rem] lg:justify-center">
-        {/* WhatsApp phone */}
-        <div className="mx-auto w-full max-w-[400px] lg:sticky lg:top-24">
+        {/* WhatsApp phone — 📱 hidden on mobile (Andrea), animated only on desktop (lg+). */}
+        <div className="mx-auto hidden w-full max-w-[400px] lg:sticky lg:top-24 lg:block">
           <div className="rounded-[2.25rem] bg-slate-950 p-3 shadow-2xl ring-1 ring-white/10">
             <div className="overflow-hidden rounded-[1.5rem] bg-[#ECE5DD]">
               {/* header */}
@@ -452,7 +452,7 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
                   context change (final Arabic exchange / loop restart) */}
               <div
                 ref={chatRef}
-                className="h-[685px] overflow-y-auto px-3 py-4 text-sm [&::-webkit-scrollbar]:hidden"
+                className="h-[460px] overflow-y-auto px-3 py-3 text-sm [&::-webkit-scrollbar]:hidden"
                 style={{ scrollbarWidth: "none" }}
               >
                 <div className="mt-auto flex min-h-full flex-col justify-end gap-2">
@@ -460,6 +460,18 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
                     <ChatBubble key={key} m={m} opLabel={c.opLabel} voiceLabel={c.voiceLabel} />
                   ))}
                   {typing && <TypingDots />}
+                </div>
+              </div>
+              {/* Fake WhatsApp composer — makes the mockup read as a real chat */}
+              <div className="flex items-center gap-2 bg-[#F0F0F0] px-3 py-2.5">
+                <div className="flex-1 rounded-full bg-white px-4 py-2 text-sm text-gray-400 shadow-sm">
+                  {pick(lang, "Messaggio", "Message", "Mensaje", "Mensagem")}
+                </div>
+                <div
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-sm"
+                  style={{ background: WA_GREEN }}
+                >
+                  <Mic className="h-4 w-4" />
                 </div>
               </div>
             </div>
