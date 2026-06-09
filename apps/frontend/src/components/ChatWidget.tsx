@@ -124,6 +124,11 @@ interface ChatWidgetProps {
   language?: string
   apiUrl?: string
   welcomeVideoUrl?: string
+  // When true the popup is rendered already open on first mount (instead of the
+  // floating bubble). Used by the standalone /demo/<slug> try-it page so the
+  // visitor lands directly on the registration form. Defaults to false so the
+  // normal embedded-bubble behaviour is unchanged.
+  defaultOpen?: boolean
   onOpenChange?: (isOpen: boolean) => void
   onConvert?: (customerId: string) => void
 }
@@ -293,6 +298,7 @@ export function ChatWidget({
   language,
   apiUrl,
   welcomeVideoUrl,
+  defaultOpen = false,
   onOpenChange,
   onConvert,
 }: ChatWidgetProps) {
@@ -396,7 +402,7 @@ export function ChatWidget({
     apiUrl: resolvedApiUrl,
   })
   
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(defaultOpen)
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)

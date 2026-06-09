@@ -98,6 +98,7 @@ const RegisterPage = lazy(() => import("./pages/register"))
 const SupportChatPage = lazy(() => import("./pages/SupportChatPage"))
 const OperatorDashboardPage = lazy(() => import("./pages/OperatorDashboardPage"))
 const PlaygroundPage = lazy(() => import("./pages/PlaygroundPage"))
+const DemoWidgetPage = lazy(() => import("./pages/DemoWidgetPage"))
 
 function AuthLoginRedirect() {
   const location = useLocation()
@@ -267,9 +268,11 @@ export function App() {
           }
         />
 
-        {/* Demowash Playground — same PlaygroundPage, public-facing entry.
-            Frontend login admin/Admin123, resolves workspaceId from backend
-            (no JWT required for demo workspaces). */}
+        {/* Demowash public demo — renders the real embeddable ChatWidget so a
+            visitor can try the live chatbot (name + language + first message),
+            exactly like the production widget. Resolves the workspaceId from the
+            slug via the ABSOLUTE API base (works in production, unlike the
+            relative-path Playground). */}
         <Route
           path="/demo/demowash/*"
           element={
@@ -280,7 +283,7 @@ export function App() {
                 </div>
               }
             >
-              <PlaygroundPage />
+              <DemoWidgetPage />
             </Suspense>
           }
         />

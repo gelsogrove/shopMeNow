@@ -1999,11 +1999,11 @@ export function LoginPage() {
                           setShowWIPModal(true)
                           return
                         }
-                        // Sales-led demo: instead of exposing shared
-                        // credentials, the visitor leaves their contact on
-                        // /request-access. We then send a personal demo
-                        // login by email after qualifying the lead.
-                        navigate("/request-access")
+                        // "Try the demo" takes the visitor straight to the
+                        // public DemoWash widget, where they can talk to the
+                        // live chatbot right away (the widget itself asks for
+                        // name + language before the first message).
+                        navigate("/demo/demowash")
                       }}
                     >
                       <span className="flex items-center gap-3">
