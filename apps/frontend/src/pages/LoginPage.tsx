@@ -1896,14 +1896,6 @@ export function LoginPage() {
                       {t("pushAi.subtitle")}
                     </p>
                   </div>
-                  <div className="pt-4 flex justify-center lg:justify-start">
-                    <Link
-                      to="/push-notifications"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-700 hover:text-emerald-900 hover:underline transition-colors"
-                    >
-                      {t("common.viewMore")}
-                    </Link>
-                  </div>
                 </div>
               </div>
             </div>
