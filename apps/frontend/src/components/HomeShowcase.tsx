@@ -305,36 +305,46 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
     )
     iRef.current = 0
     ;(async function run() {
+      let prevFeature = -1
       while (!cancelled) {
         const i = iRef.current
         if (i >= evs.length) {
-          await wait(2800)
+          await wait(3500)
           if (cancelled) return
           iRef.current = 0
+          prevFeature = -1
           setVisible(0)
           continue
         }
         const { m, feature } = evs[i]
         const isBot = m.role === "out" || m.role === "op"
-        // Pause before revealing (typing for replies, short beat for customer).
+        // When the highlighted card changes, settle the highlight calmly first.
+        if (feature !== prevFeature && prevFeature !== -1) {
+          setActiveFeature(feature)
+          await wait(1000)
+          if (cancelled) return
+          if (iRef.current !== i) continue
+        }
+        prevFeature = feature
+        // Pause before revealing (typing for replies, a beat for the customer).
         if (m.status) {
           setTyping(false)
         } else if (isBot) {
           setTyping(true)
-          await wait(m.video || m.image || m.file ? 1400 : 1100)
+          await wait(m.video || m.image || m.file ? 1800 : 1500)
         } else {
           setTyping(false)
-          await wait(800)
+          await wait(1100)
         }
         if (cancelled) return
         if (iRef.current !== i) continue // a card click moved us — restart loop
-        // Reveal this message + highlight its card together (in sync).
+        // Reveal this message + highlight its card together.
         setTyping(false)
         setActiveFeature(feature)
         setVisible(i + 1)
         iRef.current = i + 1
-        // Hold: 3s while "connecting…", otherwise normal reading pace.
-        await wait(m.status ? 3000 : isBot ? 1600 : 1200)
+        // Hold: 3.5s while "connecting…", otherwise a calm reading pace.
+        await wait(m.status ? 3500 : isBot ? 2300 : 1700)
       }
     })()
     return () => {
@@ -438,7 +448,7 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
                 setVisible(flatStart)
                 iRef.current = flatStart
               }}
-              className="flex w-full items-start gap-4 rounded-2xl border px-5 py-3.5 text-left transition-all duration-300"
+              className="flex w-full items-start gap-4 rounded-2xl border px-5 py-3.5 text-left transition-all duration-500"
               style={
                 i === activeFeature
                   ? { borderColor: `${WA_GREEN}80`, background: `${WA_GREEN}14`, boxShadow: `0 10px 30px -12px ${WA_GREEN}55` }
