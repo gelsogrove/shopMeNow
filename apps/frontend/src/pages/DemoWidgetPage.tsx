@@ -16,7 +16,7 @@
  *   below, so it works the same in dev and in production.
  */
 import { useEffect, useMemo, useState } from "react"
-import { useParams } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
 import { ChatWidget } from "@/components/ChatWidget"
 
 // API base for both the slug resolution below and the widget it renders.
@@ -94,6 +94,14 @@ export function DemoWidgetPage() {
       <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-emerald-400/30 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-teal-300/20 blur-3xl" />
 
+      {/* Back to home */}
+      <Link
+        to="/"
+        className="absolute left-4 top-4 z-20 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-medium text-white backdrop-blur transition hover:bg-white/20 sm:left-6 sm:top-6"
+      >
+        ← Home
+      </Link>
+
       {/* Hero copy */}
       <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center sm:items-start sm:px-16 sm:text-left">
         <div className="max-w-xl">
@@ -106,8 +114,8 @@ export function DemoWidgetPage() {
             <span className="text-emerald-300">Wash</span>
           </h1>
           <p className="mt-4 text-lg leading-relaxed text-emerald-50/90 sm:text-xl">
-            Try our WhatsApp AI assistant live. Tell us your name, pick a
-            language and start chatting — just like a real customer.
+            Try our WhatsApp AI assistant live — just start chatting, exactly
+            like on WhatsApp. The bot detects your language automatically.
           </p>
 
           {loading && (

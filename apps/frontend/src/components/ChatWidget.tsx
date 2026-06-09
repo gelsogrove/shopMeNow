@@ -1330,7 +1330,7 @@ export function ChatWidget({
                   <User className="w-5 h-5" />
                 </button>
               )}
-              {workspaceConfig?.debugMode === true && (
+              {!instantChat && workspaceConfig?.debugMode === true && (
                 <button
                   onClick={() => setIsDebugPanelOpen(true)}
                   className="hover:brightness-95 p-2 rounded-lg transition-colors"
