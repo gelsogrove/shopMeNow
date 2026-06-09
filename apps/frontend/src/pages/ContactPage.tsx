@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { motion } from "framer-motion"
-import { Mail, Phone, MapPin, Send, CheckCircle } from "lucide-react"
+import { Mail, MessageCircle, MapPin, Send, CheckCircle } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
@@ -261,11 +261,11 @@ export function ContactPage() {
 
                     <div className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/10">
                       <div className="w-10 h-10 bg-green-400/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Phone className="h-5 w-5 text-green-400" />
+                        <MessageCircle className="h-5 w-5 text-green-400" />
                       </div>
                       <div>
                         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.info2Title}</p>
-                        <p className="text-white font-medium">WhatsApp: +34602119358</p>
+                        <p className="text-white font-medium">{t.infoPhone}</p>
                       </div>
                     </div>
                   </div>
