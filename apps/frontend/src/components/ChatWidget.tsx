@@ -1742,17 +1742,19 @@ export function ChatWidget({
                     )}
                   </button>
                 </div>
-                <div className="text-xs text-gray-400 text-center">
-                  Powered by{" "}
-                  <a
-                    href="https://www.echatbot.ai"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-green-600 hover:text-green-700 hover:underline"
-                  >
-                    echatbot.ai
-                  </a>
-                </div>
+                {!instantChat && (
+                  <div className="text-xs text-gray-400 text-center">
+                    Powered by{" "}
+                    <a
+                      href="https://www.echatbot.ai"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-600 hover:text-green-700 hover:underline"
+                    >
+                      echatbot.ai
+                    </a>
+                  </div>
+                )}
               </div>
             </>
           )}

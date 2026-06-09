@@ -106,7 +106,7 @@ const translations = {
     "appointment.chip3": "Sync Google Calendar",
 
     // Human-in-the-loop Section
-    "humanLoop.title": "Supporto human-in-the-loop",
+    "humanLoop.title": "Human-in-the-loop",
     "humanLoop.agentOnline": "Operatore online",
     "humanLoop.avgResponse": "risposta media",
     "humanLoop.subtitle":

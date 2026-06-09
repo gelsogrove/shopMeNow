@@ -167,18 +167,11 @@ function CustomChatbotGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
-// Renders the platform support widget on all pages except /survey and /neapolis
+// 🛑 eChatbot HQ support widget DISABLED everywhere (home, subpages, app) —
+// Andrea: "non serve il widget grazie". Kept as a no-op so the render site in
+// AppWithProviders stays valid; flip back to the ChatWidget render to restore.
 function GlobalChatWidget() {
-  const location = useLocation()
-  // Hide eChatbot HQ support widget on /chat (has its own playground when debugMode=true)
-  const EXCLUDED_PATHS = ["/survey", "/neapolis", "/onboarding", "/chat", "/login"]
-  if (EXCLUDED_PATHS.includes(location.pathname)) return null
-  return (
-    <ChatWidget
-      workspaceId="echatbot-hq-support"
-      position="bottom-right"
-    />
-  )
+  return null
 }
 
 // Public standalone routes that do NOT use the main-app JWT: the login page

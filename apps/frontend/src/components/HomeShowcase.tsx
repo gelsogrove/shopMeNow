@@ -291,6 +291,15 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
   const [visible, setVisible] = useState(0) // number of revealed messages (flat)
   const [typing, setTyping] = useState(false) // bot "typing…" indicator
   const [activeFeature, setActiveFeature] = useState(0)
+  // 📱 On mobile the auto-playing chat animation is heavy and the layout is
+  // cramped — we freeze it and show a static first-scene snapshot instead.
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768)
+    check()
+    window.addEventListener("resize", check)
+    return () => window.removeEventListener("resize", check)
+  }, [])
 
   // Flatten the script into a single ordered list of messages.
   const events = c.script.flatMap((stp) =>
@@ -300,6 +309,16 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
   // Drive the conversation like a real chat: one message at a time, with a
   // "typing…" pause before each reply and a 3s wait while "connecting".
   useEffect(() => {
+    // 📱 Mobile: no auto-play animation. Show the first scene fully revealed
+    // (static) with the first capability card highlighted — no loop, no timers.
+    if (isMobile) {
+      const firstStepLen = c.script[0]?.msgs.length ?? 0
+      setTyping(false)
+      setActiveFeature(0)
+      setVisible(firstStepLen)
+      iRef.current = firstStepLen
+      return
+    }
     let cancelled = false
     const timers: ReturnType<typeof setTimeout>[] = []
     const wait = (ms: number) =>
@@ -355,7 +374,7 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
       cancelled = true
       timers.forEach(clearTimeout)
     }
-  }, [lang])
+  }, [lang, isMobile])
 
   // Show messages from the last reset boundary up to the revealed count.
   let start = 0
@@ -386,7 +405,7 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
       {/* Try-the-demo CTA — WhatsApp-styled, links to the live demo widget */}
       <Link
         to="/demo/demowash"
-        className="absolute right-5 top-5 z-20 inline-flex items-center gap-2.5 rounded-2xl px-6 py-3.5 text-base font-bold text-white shadow-xl transition-all hover:scale-[1.03] hover:brightness-110 sm:right-8 sm:top-8"
+        className="z-20 mb-6 flex w-full items-center justify-center gap-2.5 rounded-2xl px-6 py-3.5 text-base font-bold text-white shadow-xl transition-all hover:scale-[1.03] hover:brightness-110 lg:absolute lg:right-8 lg:top-8 lg:mb-0 lg:inline-flex lg:w-auto"
         style={{ background: WA_GREEN }}
       >
         <svg viewBox="0 0 32 32" className="h-6 w-6 fill-white" aria-hidden="true">

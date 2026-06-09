@@ -1059,8 +1059,9 @@ export function LoginPage() {
 
             {/* Right: Language Selector + Auth */}
             <div className="flex items-center justify-end gap-2 md:gap-6">
-              {/* Language Selector — all flags inline (no dropdown) */}
-              <div className="hidden lg:flex items-center gap-1">
+              {/* Language Selector — all flags inline (no dropdown).
+                  📱 Visible on mobile too: flag-only on small screens, flag+code from sm. */}
+              <div className="flex items-center gap-0.5 sm:gap-1">
                 {([
                   { code: "it", flag: "🇮🇹" },
                   { code: "en", flag: "🇬🇧" },
@@ -1071,10 +1072,10 @@ export function LoginPage() {
                     key={l.code}
                     type="button"
                     onClick={() => setLanguage(l.code)}
-                    className={`flex items-center gap-1 rounded-lg px-2 py-1 transition-colors ${language === l.code ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"}`}
+                    className={`flex items-center gap-1 rounded-lg px-1.5 py-1 transition-colors sm:px-2 ${language === l.code ? "bg-white/10 text-white" : "text-slate-400 hover:text-white"}`}
                   >
                     <span className="text-lg leading-none">{l.flag}</span>
-                    <span className="text-xs font-semibold uppercase">{l.code}</span>
+                    <span className="hidden text-xs font-semibold uppercase sm:inline">{l.code}</span>
                   </button>
                 ))}
               </div>
