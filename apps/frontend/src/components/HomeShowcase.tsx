@@ -245,6 +245,7 @@ function buildContent(lang: Lang) {
     },
     // 7 — Multilingual operator (reset: operator writes once, customer reads in their language)
     {
+      reset: true,
       feature: 6,
       msgs: [
         { role: "in", text: "مرحباً، هل طلبي جاهز للاستلام؟", sub: p("🌐 IT: Salve, il mio ordine è pronto per il ritiro?", "🌐 EN: Hi, is my order ready for pickup?", "🌐 ES: Hola, ¿mi pedido está listo para recoger?", "🌐 PT: Olá, o meu pedido está pronto para recolha?"), rtl: true },
@@ -253,6 +254,7 @@ function buildContent(lang: Lang) {
     },
     // 8 — Invoices & files (reset: the AI sends a document)
     {
+      reset: true,
       feature: 7,
       msgs: [
         { role: "in", text: p("Posso avere la fattura del mio ultimo lavaggio?", "Can I get the invoice for my last wash?", "¿Me das la factura de mi último lavado?", "Podes dar-me a fatura da minha última lavagem?") },
@@ -261,17 +263,18 @@ function buildContent(lang: Lang) {
         { role: "out", file: true, fileName: "Fattura-2026-0042.pdf", text: p("Fatto ✅ Ecco la tua fattura 🧾", "Done ✅ Here's your invoice 🧾", "Hecho ✅ Aquí tienes tu factura 🧾", "Feito ✅ Aqui está a tua fatura 🧾") },
       ],
     },
-    // 9 — Push notifications (a campaign broadcast with a promo image + caption)
+    // 9 — Push notifications (reset: a standalone campaign broadcast, bot writes first)
     {
+      reset: true,
       feature: 8,
       msgs: [
         {
           role: "out",
           image: true,
-          imgTitle: p("EcoWash · Promo della settimana", "EcoWash · Weekly promo", "EcoWash · Promo de la semana", "EcoWash · Promo da semana"),
+          imgTitle: p("DemoWash · Promo del mese", "DemoWash · Monthly promo", "DemoWash · Promo del mes", "DemoWash · Promo do mês"),
           imgBig: "-20%",
           imgSmall: p("sul prossimo lavaggio 🧺", "on your next wash 🧺", "en tu próximo lavado 🧺", "na tua próxima lavagem 🧺"),
-          text: p("📣 La nostra promo della settimana, per te! Ti aspettiamo 💚", "📣 Our promo of the week, just for you! See you soon 💚", "📣 ¡Nuestra promo de la semana, para ti! Te esperamos 💚", "📣 A nossa promo da semana, para ti! Esperamos por ti 💚"),
+          text: p("📣 La nostra promo del mese, per te! Ti aspettiamo 💚", "📣 Our promo of the month, just for you! See you soon 💚", "📣 ¡Nuestra promo del mes, para ti! Te esperamos 💚", "📣 A nossa promo do mês, para ti! Esperamos por ti 💚"),
         },
       ],
     },
