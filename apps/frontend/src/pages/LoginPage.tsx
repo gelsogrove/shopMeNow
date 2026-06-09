@@ -1873,7 +1873,7 @@ export function LoginPage() {
               <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
                 <div className="flex flex-col items-center lg:items-start gap-4">
                   <div className="relative">
-                    <div className="w-72 h-72 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-emerald-100 transition-all duration-300">
+                    <div className="w-72 h-72 rounded-2xl overflow-hidden shadow-xl transition-all duration-300">
                       <img
                         src="/push.png"
                         alt="Smart AI push messaging"
@@ -1931,7 +1931,7 @@ export function LoginPage() {
                   </div>
                 </div>
                 <div className="flex flex-col items-center lg:items-end gap-4 order-1 lg:order-2">
-                  <div className="w-72 h-72 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-purple-100 transition-all duration-300">
+                  <div className="w-72 h-72 rounded-2xl overflow-hidden shadow-xl transition-all duration-300">
                     <img
                       src="/booking.png"
                       alt="Appointment booking on WhatsApp"
@@ -2142,7 +2142,7 @@ export function LoginPage() {
                 {/* Left: Image with effects */}
                 <div className="flex flex-col items-center lg:items-start">
                   <div className="relative">
-                    <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-blue-100 transition-all duration-300">
+                    <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden shadow-xl transition-all duration-300">
                       <img
                         src="/CRM.png"
                         alt="CRM integration preview"
@@ -2202,7 +2202,7 @@ export function LoginPage() {
                 {/* Left: Image with security badge */}
                 <div className="flex flex-col items-center lg:items-start gap-4">
                   <div className="relative">
-                    <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden shadow-xl ring-4 ring-white group-hover:ring-teal-100 transition-all duration-300">
+                    <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden shadow-xl transition-all duration-300">
                       <img
                         src="/privacy.png"
                         alt="Privacy by design"

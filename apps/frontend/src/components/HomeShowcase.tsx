@@ -227,7 +227,7 @@ function buildContent(lang: Lang) {
       feature: 4,
       msgs: [
         { role: "in", text: p("Quanto costa un lavaggio?", "How much is a wash?", "¿Cuánto cuesta un lavado?", "Quanto custa uma lavagem?") },
-        { role: "out", text: p("Volentieri! In quale sede ti trovi?", "Sure! Which location are you at?", "¡Claro! ¿En qué sede estás?", "Com certeza! Em que unidade estás?") },
+        { role: "out", text: p("In quale sede ti trovi?", "Which location are you at?", "¿En qué sede estás?", "Em que unidade estás?") },
         { role: "in", text: p("A Barcellona", "In Barcelona", "En Barcelona", "Em Barcelona") },
         { role: "out", text: p("📍 Sede di Barcellona\n🕗 Aperto 8:00–21:00\n🧺 Lavaggio 4,50 € · Asciugatura 3,00 €", "📍 Barcelona location\n🕗 Open 8:00–21:00\n🧺 Wash €4.50 · Dry €3.00", "📍 Sede de Barcelona\n🕗 Abierto 8:00–21:00\n🧺 Lavado 4,50 € · Secado 3,00 €", "📍 Unidade de Barcelona\n🕗 Aberto 8:00–21:00\n🧺 Lavagem 4,50 € · Secagem 3,00 €") },
         { role: "out", text: p("🎁 E con la carta fedeltà hai -10% sul primo lavaggio!", "🎁 And with the loyalty card you get -10% on your first wash!", "🎁 ¡Y con la tarjeta de fidelización tienes -10% en el primer lavado!", "🎁 E com o cartão de fidelização tens -10% na primeira lavagem!") },
@@ -238,7 +238,7 @@ function buildContent(lang: Lang) {
       feature: 5,
       msgs: [
         { role: "in", text: p("Vorrei una consulenza per aprire una sede a Sitges 📈", "I'd like a consultation to open a location in Sitges 📈", "Quiero una consultoría para abrir una sede en Sitges 📈", "Quero uma consultoria para abrir uma unidade em Sitges 📈") },
-        { role: "out", text: p("Volentieri! 🎉 Ho questi orari disponibili 📅\n1️⃣ Mar 14 · 17:00\n2️⃣ Mer 15 · 10:00\n3️⃣ Gio 16 · 18:30", "Sure! 🎉 Here are the available slots 📅\n1️⃣ Tue 14 · 17:00\n2️⃣ Wed 15 · 10:00\n3️⃣ Thu 16 · 18:30", "¡Claro! 🎉 Tengo estos horarios disponibles 📅\n1️⃣ Mar 14 · 17:00\n2️⃣ Mié 15 · 10:00\n3️⃣ Jue 16 · 18:30", "Com certeza! 🎉 Tenho estes horários disponíveis 📅\n1️⃣ Ter 14 · 17:00\n2️⃣ Qua 15 · 10:00\n3️⃣ Qui 16 · 18:30") },
+        { role: "out", text: p("🎉 Ho questi orari disponibili 📅\n1️⃣ Mar 14 · 17:00\n2️⃣ Mer 15 · 10:00\n3️⃣ Gio 16 · 18:30", "🎉 Here are the available slots 📅\n1️⃣ Tue 14 · 17:00\n2️⃣ Wed 15 · 10:00\n3️⃣ Thu 16 · 18:30", "🎉 Tengo estos horarios disponibles 📅\n1️⃣ Mar 14 · 17:00\n2️⃣ Mié 15 · 10:00\n3️⃣ Jue 16 · 18:30", "🎉 Tenho estes horários disponíveis 📅\n1️⃣ Ter 14 · 17:00\n2️⃣ Qua 15 · 10:00\n3️⃣ Qui 16 · 18:30") },
         { role: "in", text: p("Il 2️⃣ è perfetto", "Number 2️⃣ is perfect", "El 2️⃣ es perfecto", "O 2️⃣ é perfeito") },
         { role: "out", text: p("✅ Confermato: Mer 15 alle 10:00\n📅 Aggiunto al tuo Google Calendar\n🔔 Ti ricordo il giorno prima", "✅ Confirmed: Wed 15 at 10:00\n📅 Added to your Google Calendar\n🔔 I'll remind you the day before", "✅ Confirmado: Mié 15 a las 10:00\n📅 Añadido a tu Google Calendar\n🔔 Te recuerdo el día antes", "✅ Confirmado: Qua 15 às 10:00\n📅 Adicionado ao teu Google Calendar\n🔔 Lembro-te no dia anterior") },
       ],
