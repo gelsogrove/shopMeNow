@@ -325,29 +325,20 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
                   </p>
                 </div>
               </div>
-              {/* messages — re-typed on every step */}
-              <div className="flex min-h-[520px] flex-col justify-end px-3 py-4 text-sm">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={step}
-                    initial="hidden"
-                    animate="show"
-                    exit={{ opacity: 0, transition: { duration: 0.15 } }}
-                    variants={{ hidden: {}, show: { transition: { staggerChildren: 0.7 } } }}
-                    className="flex flex-col gap-2"
-                  >
-                    {current.msgs.map((m, i) => (
-                      <ChatBubble key={i} m={m} opLabel={c.opLabel} voiceLabel={c.voiceLabel} />
-                    ))}
-                  </motion.div>
-                </AnimatePresence>
+              {/* messages — accumulate and scroll to the latest; reset on a
+                  context change (final Arabic exchange / loop restart) */}
+              <div
+                ref={chatRef}
+                className="h-[560px] overflow-y-auto px-3 py-4 text-sm [&::-webkit-scrollbar]:hidden"
+                style={{ scrollbarWidth: "none" }}
+              >
+                <div className="mt-auto flex min-h-full flex-col justify-end gap-2">
+                  {bubbles.map(({ key, m }) => (
+                    <ChatBubble key={key} m={m} opLabel={c.opLabel} voiceLabel={c.voiceLabel} />
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-          {/* every language — no fixed flag list */}
-          <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-400">
-            <span className="text-base">🌍</span>
-            {c.everyLang}
           </div>
         </div>
 
@@ -386,10 +377,6 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
 // One chat bubble. Bot/operator bubbles fade in after a short stagger, so the
 // conversation reads as if it's being written live.
 function ChatBubble({ m, opLabel, voiceLabel }: { m: Msg; opLabel: string; voiceLabel: string }) {
-  const item = {
-    hidden: { opacity: 0, y: 8, scale: 0.98 },
-    show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3 } },
-  }
   const align = m.role === "out" ? "justify-end" : "justify-start"
   const bubbleBase = "max-w-[85%] rounded-2xl px-3 py-2 shadow-sm text-gray-900"
   const skin =
