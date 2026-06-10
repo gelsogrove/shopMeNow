@@ -86,6 +86,8 @@ import { EmojiPicker } from "@/components/EmojiPicker"
 import { ChatSurface } from "@/components/chat/ChatSurface"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
+import { MessageAttachments } from "@/components/chat/MessageAttachments"
+import type { ChatAttachment } from "@/components/chat/attachment-utils"
 import { WidgetProfilePanel } from "@/components/chat/WidgetProfilePanel"
 import { useLanguage } from "@/contexts/LanguageContext"
 import {
@@ -117,6 +119,7 @@ interface Message {
   audioUrl?: string // 🎤 voice note (user's local recording or bot TTS reply)
   welcomeVideoUrl?: string // 📺 presentation video on the first bot reply (parity with WhatsApp)
   welcomeRest?: string // 📺 reply text rendered AFTER the welcome video (greeting → video → rest)
+  attachments?: ChatAttachment[] // 📎 operator-sent images / PDFs / audio (handoff)
 }
 
 interface ChatWidgetProps {
@@ -714,11 +717,17 @@ export function ChatWidget({
         if (Array.isArray(data.messages) && data.messages.length > 0) {
           setOperatorHasReplied(true)
           const newMsgs = (
-            data.messages as { id: string; content: string; createdAt: string }[]
+            data.messages as {
+              id: string
+              content: string
+              createdAt: string
+              attachments?: ChatAttachment[]
+            }[]
           ).map((m) => ({
             role: "bot" as const,
             content: m.content,
             timestamp: m.createdAt,
+            attachments: m.attachments,
           }))
           setMessages((prev) => {
             const updated = [...prev, ...newMsgs]
@@ -1758,6 +1767,10 @@ export function ChatWidget({
                           src={msg.audioUrl}
                           className="mt-2 h-9 w-full min-w-[200px] max-w-[240px]"
                         />
+                      )}
+                      {/* 📎 Operator-sent media (images / PDFs / audio) after handoff. */}
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <MessageAttachments attachments={msg.attachments} align="left" />
                       )}
                     </>
                   )}

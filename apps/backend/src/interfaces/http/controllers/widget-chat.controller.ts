@@ -2335,7 +2335,9 @@ export class WidgetChatController {
         return res.json({ messages: [], activeChatbot: customer.activeChatbot })
       }
 
-      // Return new assistant messages since `since`
+      // Return new assistant messages since `since`, including any operator
+      // attachments (images / PDFs / audio) so the widget renders them — parity
+      // with WhatsApp, where the operator's media reaches the customer too.
       const sinceDate = since ? new Date(since) : new Date(0)
       const messages = await prisma.conversationMessage.findMany({
         where: {
@@ -2345,6 +2347,11 @@ export class WidgetChatController {
         },
         orderBy: { createdAt: "asc" },
         take: 20,
+        include: {
+          attachments: {
+            select: { id: true, url: true, kind: true, mimeType: true, filename: true, sizeBytes: true },
+          },
+        },
       })
 
       return res.json({
@@ -2352,6 +2359,7 @@ export class WidgetChatController {
           id: m.id,
           content: m.content,
           createdAt: m.createdAt,
+          attachments: m.attachments,
         })),
         activeChatbot: customer.activeChatbot,
       })
