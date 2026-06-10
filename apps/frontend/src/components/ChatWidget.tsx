@@ -839,10 +839,13 @@ export function ChatWidget({
    */
   const sendAudio = async (blob: Blob) => {
     if (!visitorId || !resolvedWorkspaceId || isLoading) return
+    // Local playable URL for the user's own recording (no upload needed for the player).
+    const localAudioUrl = URL.createObjectURL(blob)
     const userMessage: Message = {
       role: "user",
       content: "🎤 Voice message",
       timestamp: new Date().toISOString(),
+      audioUrl: localAudioUrl,
     }
     const updatedMessages = [...messages, userMessage]
     setMessages(updatedMessages)
