@@ -870,6 +870,7 @@ export function ChatWidget({
         content: data.response,
         timestamp: new Date().toISOString(),
         suggestions: data.suggestions,
+        audioUrl: data.audioUrl, // 🎤 bot voice reply (ElevenLabs)
       }
       const finalMessages = [...updatedMessages, botMessage]
       setMessages(finalMessages)
