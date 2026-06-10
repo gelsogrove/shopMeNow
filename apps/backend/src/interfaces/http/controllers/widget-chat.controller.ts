@@ -25,6 +25,7 @@ import { detectLanguageFromPhonePrefix } from "../../../utils/language-detector"
 import { registrationPromptService } from "../../../services/registration-prompt.service"
 import { TranslationAgent } from "../../../application/agents/TranslationAgent"
 import { WelcomeMessageHandler } from "../../../utils/welcome-message.handler"
+import { splitCustomChatbotReply } from "../../../utils/custom-chatbot-reply"
 import {
   WIDGET_MESSAGE_SCHEMA,
   WIDGET_REGISTER_SCHEMA,
@@ -1068,12 +1069,16 @@ export class WidgetChatController {
           customClientRegHandled = true
           const customOutput = customClientRegResult.output
           await applyCustomerPatches(customOutput.patches, customer.id, resolvedWorkspaceId)
+          // Keep the FULL reply in llmResponse for the DB save (so the backoffice
+          // shows the internal orange briefing); the customer-facing part is split
+          // out at the response/suggestions sites below.
           llmResponse = customOutput.reply || llmResponse
           llmAgentUsed = AgentType.ROUTER
           llmTokensUsed = customOutput.meta?.tokensUsed || 0
-          if (!customOutput.shouldEscalate && workspace.widgetAutoSuggestionsEnabled === true && customOutput.reply) {
+          const { customerReply: regCustomerReply } = splitCustomChatbotReply(customOutput.reply || "")
+          if (!customOutput.shouldEscalate && workspace.widgetAutoSuggestionsEnabled === true && regCustomerReply) {
             suggestions = await buildWidgetSuggestionsWithAI(
-              customOutput.reply,
+              regCustomerReply,
               normalizedLanguage || "en",
               workspace.widgetQuickReplies as any,
               resolvedWorkspaceId
@@ -1167,7 +1172,9 @@ export class WidgetChatController {
         success: true,
         customerId: customer.id,
         sessionId: chatSession.id,
-        response: llmResponse,
+        // 👤 Strip the internal operator briefing — the customer must NEVER see it
+        // (no-op for normal replies without the marker).
+        response: splitCustomChatbotReply(llmResponse).customerReply,
         isNewCustomer,
         suggestions,
         // 🌍 Return customer language — widget can sync its dropdown
@@ -2027,7 +2034,10 @@ export class WidgetChatController {
             },
           })
 
-          // Save assistant message if present
+          // Save assistant message if present. The FULL reply (including the
+          // "👤 Human Support message" operator briefing) is stored in the DB so
+          // the backoffice renders it as an internal orange balloon — but only
+          // the customer-facing part is sent to the widget (parity with WhatsApp).
           if (customOutput.reply) {
             await prisma.conversationMessage.create({
               data: {
@@ -2041,6 +2051,9 @@ export class WidgetChatController {
               },
             })
           }
+
+          // 👤 Strip the internal operator briefing — the customer must NEVER see it.
+          const { customerReply } = splitCustomChatbotReply(customOutput.reply || "")
 
           // Billing: deduct widget message credit — only when a reply was actually generated.
           // If reply is null (e.g. channel inactive guard), skip billing.
@@ -2063,7 +2076,7 @@ export class WidgetChatController {
             websocketService.notifyNewMessage(resolvedWorkspaceId, {
               id: `widget-custom-${Date.now()}`,
               sessionId: chatSession.id,
-              content: customOutput.reply || "",
+              content: customerReply,
               sender: "assistant",
               timestamp: new Date().toISOString(),
               workspaceId: resolvedWorkspaceId,
@@ -2074,9 +2087,9 @@ export class WidgetChatController {
 
           // AI suggestions (same as normal flow)
           const customSuggestions =
-            !customOutput.shouldEscalate && workspace.widgetAutoSuggestionsEnabled === true && customOutput.reply
+            !customOutput.shouldEscalate && workspace.widgetAutoSuggestionsEnabled === true && customerReply
               ? await buildWidgetSuggestionsWithAI(
-                  customOutput.reply,
+                  customerReply,
                   customerLanguage || "en",
                   workspace.widgetQuickReplies as any,
                   resolvedWorkspaceId
@@ -2094,7 +2107,7 @@ export class WidgetChatController {
             success: true,
             messageId: `widget-${visitorId}-${Date.now()}`,
             sessionId: chatSession.id,
-            response: customOutput.reply || "",
+            response: customerReply,
             status: "ready",
             suggestions: customSuggestions,
             language: customerLanguage || "en",

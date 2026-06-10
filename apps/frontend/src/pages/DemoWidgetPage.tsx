@@ -41,6 +41,7 @@ interface ResolvedDemo {
   workspaceId: string
   workspaceName: string
   chatbotId: string
+  welcomeVideoUrl?: string | null
 }
 
 export function DemoWidgetPage() {
@@ -165,6 +166,7 @@ export function DemoWidgetPage() {
           title={demo.workspaceName || "Chat with us 💬"}
           primaryColor="#25D366"
           position="bottom-right"
+          welcomeVideoUrl={demo.welcomeVideoUrl || undefined}
         />
       )}
     </div>

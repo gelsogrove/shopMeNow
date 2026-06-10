@@ -84,6 +84,8 @@ function TypingIndicator({ primaryColor }: { primaryColor: string }) {
 }
 import { EmojiPicker } from "@/components/EmojiPicker"
 import { ChatSurface } from "@/components/chat/ChatSurface"
+import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
+import { MessageRenderer } from "@/components/shared/MessageRenderer"
 import { WidgetProfilePanel } from "@/components/chat/WidgetProfilePanel"
 import { useLanguage } from "@/contexts/LanguageContext"
 import {
@@ -113,6 +115,8 @@ interface Message {
   timestamp?: string
   suggestions?: string[]
   audioUrl?: string // 🎤 voice note (user's local recording or bot TTS reply)
+  welcomeVideoUrl?: string // 📺 presentation video on the first bot reply (parity with WhatsApp)
+  welcomeRest?: string // 📺 reply text rendered AFTER the welcome video (greeting → video → rest)
 }
 
 interface ChatWidgetProps {
@@ -419,6 +423,27 @@ export function ChatWidget({
   
   const [isOpen, setIsOpen] = useState(defaultOpen)
   const [messages, setMessages] = useState<Message[]>([])
+
+  // 📺 Welcome presentation video — rendered on the FIRST bot message, exactly
+  // like the operator chat / playground (greeting → video card → rest). Computed at
+  // render time (not stored per-message) so it also shows for messages restored
+  // from localStorage. No-op when the workspace has no welcome video configured.
+  const displayMessages = useMemo<Message[]>(() => {
+    if (!resolvedWelcomeVideoUrl) return messages
+    const firstBotIdx = messages.findIndex((m) => m.role === "bot")
+    if (firstBotIdx === -1) return messages
+    return messages.map((m, i) => {
+      // Voice replies show only the audio player — never attach the video there.
+      if (i !== firstBotIdx || m.audioUrl) return m
+      const breakIdx = m.content.indexOf("\n\n")
+      return {
+        ...m,
+        content: breakIdx !== -1 ? m.content.slice(0, breakIdx) : m.content,
+        welcomeRest: breakIdx !== -1 ? m.content.slice(breakIdx + 2) : "",
+        welcomeVideoUrl: resolvedWelcomeVideoUrl,
+      }
+    })
+  }, [messages, resolvedWelcomeVideoUrl])
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   // 🎤 Voice recording (demo composer)
@@ -774,7 +799,9 @@ export function ChatWidget({
         return
       }
 
-      // Add bot message
+      // Add bot message. The welcome presentation video is rendered at display
+      // time on the FIRST bot message (see `displayMessages`), so it works even
+      // for messages restored from localStorage — no per-message flag needed.
       const botMessage: Message = {
         role: "bot",
         content: data.response,
@@ -867,7 +894,10 @@ export function ChatWidget({
       }
       const botMessage: Message = {
         role: "bot",
-        content: data.response,
+        // 🎤 Voice in → voice out: when the bot answers with audio, show ONLY
+        // the voice note (no text bubble). If TTS failed (no audioUrl), keep
+        // the text so the customer still gets the answer as a fallback.
+        content: data.audioUrl ? "" : data.response,
         timestamp: new Date().toISOString(),
         suggestions: data.suggestions,
         audioUrl: data.audioUrl, // 🎤 bot voice reply (ElevenLabs)
@@ -1681,7 +1711,7 @@ export function ChatWidget({
                   }
                 `}</style>
                 <ChatSurface
-                  messages={messages}
+                  messages={displayMessages}
                   endRef={messagesEndRef}
                   emptyState={
                     instantChat ? null : (
@@ -1706,15 +1736,31 @@ export function ChatWidget({
                   getContainerClassName={(msg) =>
                     msg.role === "user" ? "widget-user-message" : undefined
                   }
-                  renderFooter={(msg) =>
-                    msg.audioUrl ? (
-                      <audio
-                        controls
-                        src={msg.audioUrl}
-                        className="mt-2 h-9 w-full min-w-[200px] max-w-[240px]"
-                      />
-                    ) : null
-                  }
+                  renderFooter={(msg) => (
+                    <>
+                      {/* 📺 Welcome video on the first reply: greeting (in the
+                          bubble content) → video card → rest of the reply. */}
+                      {msg.welcomeVideoUrl && (
+                        <>
+                          <WelcomeVideoCard
+                            url={msg.welcomeVideoUrl}
+                            lang={resolvedLanguage}
+                            greeting={msg.content}
+                          />
+                          {msg.welcomeRest && (
+                            <MessageRenderer content={msg.welcomeRest} variant="chat" />
+                          )}
+                        </>
+                      )}
+                      {msg.audioUrl && (
+                        <audio
+                          controls
+                          src={msg.audioUrl}
+                          className="mt-2 h-9 w-full min-w-[200px] max-w-[240px]"
+                        />
+                      )}
+                    </>
+                  )}
                 />
                 {/* Show typing indicator when waiting for bot response */}
                 {isLoading && (
@@ -1850,8 +1896,15 @@ export function ChatWidget({
                     </button>
                   )}
                   <button
-                    onClick={handleSendMessage}
-                    disabled={isLoading || !inputValue.trim() || (botDisabled && !operatorHasReplied)}
+                    // 🎤 WhatsApp-style: while recording, the send button stops
+                    // the recorder and sends the voice note (onstop → sendAudio).
+                    // Otherwise it sends the typed text.
+                    onClick={recording ? stopRecording : handleSendMessage}
+                    disabled={
+                      isLoading ||
+                      (!recording && !inputValue.trim()) ||
+                      (botDisabled && !operatorHasReplied)
+                    }
                     className={cn(
                       "w-12 h-12 rounded-full flex items-center justify-center",
                       "disabled:bg-gray-300 hover:brightness-95",
@@ -1859,7 +1912,7 @@ export function ChatWidget({
                       "focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-green-600"
                     )}
                     style={{ backgroundColor: resolvedPrimaryColor }}
-                    aria-label="Send message"
+                    aria-label={recording ? "Send voice message" : "Send message"}
                   >
                     {isLoading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
