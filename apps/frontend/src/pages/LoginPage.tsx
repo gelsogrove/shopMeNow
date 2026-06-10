@@ -1908,12 +1908,15 @@ export function LoginPage() {
               <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
                 <div className="flex flex-col items-center lg:items-start gap-4">
                   <div className="relative">
-                    <div className="w-72 h-72 rounded-2xl overflow-hidden shadow-xl transition-all duration-300">
-                      <img
-                        src="/push1.png"
-                        alt="Smart AI push messaging"
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
+                    <div className="w-72 h-72 rounded-2xl bg-white p-2 shadow-xl transition-all duration-300">
+                      <div className="h-full w-full overflow-hidden rounded-xl">
+                        <img
+                          src="/push1.png"
+                          alt="Smart AI push messaging"
+                          style={{ filter: "hue-rotate(55deg) saturate(0.7) brightness(1.06)" }}
+                          className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1966,12 +1969,15 @@ export function LoginPage() {
                   </div>
                 </div>
                 <div className="flex flex-col items-center lg:items-end gap-4 order-1 lg:order-2">
-                  <div className="w-72 h-72 rounded-2xl overflow-hidden shadow-xl transition-all duration-300">
-                    <img
-                      src="/booking.png"
-                      alt="Appointment booking on WhatsApp"
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                    />
+                  <div className="w-72 h-72 rounded-2xl bg-white p-2 shadow-xl transition-all duration-300">
+                    <div className="h-full w-full overflow-hidden rounded-xl">
+                      <img
+                        src="/booking.png"
+                        alt="Appointment booking on WhatsApp"
+                        style={{ filter: "hue-rotate(55deg) saturate(0.7) brightness(1.06)" }}
+                        className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2069,6 +2075,7 @@ export function LoginPage() {
                         <img
                           src="/francising.png"
                           alt="DemoWash franchising"
+                          style={{ filter: "hue-rotate(55deg) saturate(0.7) brightness(1.06)" }}
                           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                       </div>
@@ -2183,6 +2190,7 @@ export function LoginPage() {
                       <img
                         src="/CRM.png"
                         alt="CRM integration preview"
+                        style={{ filter: "saturate(0.7) brightness(1.06)" }}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                     </div>
@@ -2243,6 +2251,7 @@ export function LoginPage() {
                       <img
                         src="/privacy.png"
                         alt="Privacy by design"
+                        style={{ filter: "saturate(0.7) brightness(1.06)" }}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                     </div>
