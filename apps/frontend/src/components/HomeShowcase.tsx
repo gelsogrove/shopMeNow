@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react"
-import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Loader2, MapPin, Mic, Play } from "lucide-react"
 
@@ -419,18 +418,6 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
       </div>
 
       {/* Phone + capability cards */}
-      {/* 📱 Mobile-only CTA — the phone is hidden on mobile, so surface the demo button here */}
-      <Link
-        to="/demo/demowash"
-        className="mb-8 flex w-full items-center justify-center gap-2.5 rounded-2xl px-6 py-3.5 text-base font-bold text-white shadow-xl transition-all hover:brightness-110 lg:hidden"
-        style={{ background: WA_GREEN }}
-      >
-        <svg viewBox="0 0 32 32" className="h-6 w-6 fill-white" aria-hidden="true">
-          <path d="M16.003 3C9.38 3 4 8.38 4 15.003c0 2.117.553 4.187 1.605 6.01L4 29l8.184-1.55a11.94 11.94 0 0 0 3.819.626h.003C22.626 28.075 28 22.695 28 16.072 28 9.45 22.626 3 16.003 3Zm0 21.86h-.002a9.9 9.9 0 0 1-3.46-.62l-.248-.094-4.857.92.94-4.735-.16-.244a9.85 9.85 0 0 1-1.5-5.224c0-5.46 4.44-9.9 9.91-9.9 2.646 0 5.13 1.03 7 2.9a9.84 9.84 0 0 1 2.9 7c0 5.46-4.44 9.9-9.91 9.9Zm5.43-7.42c-.297-.15-1.758-.867-2.03-.967-.272-.099-.47-.148-.668.149-.198.297-.767.967-.94 1.166-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.76-1.653-2.057-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.496.099-.198.05-.372-.025-.521-.074-.149-.668-1.611-.916-2.206-.241-.58-.486-.501-.668-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.073.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.29.173-1.413-.074-.124-.272-.198-.57-.347Z" />
-        </svg>
-        {pick(lang, "Prova la nostra demo", "Try our demo", "Prueba nuestra demo", "Experimenta a nossa demo")} →
-      </Link>
-
       <div className="relative grid grid-cols-1 items-start gap-10 lg:grid-cols-[25rem_34rem] lg:justify-center">
         {/* WhatsApp phone — 📱 hidden on mobile (Andrea), animated only on desktop (lg+). */}
         <div className="mx-auto hidden w-full max-w-[400px] lg:sticky lg:top-24 lg:block">

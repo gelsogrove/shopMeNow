@@ -9,6 +9,10 @@ import { Router } from "express"
 import { WidgetChatController } from "../controllers/widget-chat.controller"
 import rateLimit from "express-rate-limit"
 import logger from "../../../utils/logger"
+import {
+  uploadChatAudio,
+  handleChatAudioUploadError,
+} from "../middlewares/chatAudioUpload"
 
 const router = Router()
 const controller = new WidgetChatController()
@@ -153,6 +157,17 @@ router.post(
 )
 
 logger.info("🔧 Widget POST /chat/:workspaceId route registered")
+
+// 🎤 Voice note: transcribe (Whisper) → reuse the text chat turn.
+router.post(
+  "/chat-audio/:workspaceId",
+  widgetRateLimiter,
+  uploadChatAudio,
+  handleChatAudioUploadError,
+  controller.sendAudioMessage.bind(controller)
+)
+
+logger.info("🔧 Widget POST /chat-audio/:workspaceId route registered")
 
 /**
  * GET /api/v1/widget/status/:workspaceId

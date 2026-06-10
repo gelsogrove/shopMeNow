@@ -11,6 +11,8 @@ import { Request, Response } from "express"
 import axios from "axios"
 import { prisma, PrismaClient, AgentType } from "@echatbot/database"
 import logger from "../../../utils/logger"
+import fs from "fs"
+import { transcribeAudio } from "../../../services/audio-transcription.service"
 import { VisitorIdService } from "../../../application/services/visitor-id.service"
 import { SecurityCheckService } from "../../../application/services/security-check.service"
 import { LLMRouterService } from "../../../services/llm-router.service"
@@ -1187,6 +1189,53 @@ export class WidgetChatController {
         error: "INTERNAL_ERROR",
         message: "Registration failed",
       })
+    }
+  }
+
+  /**
+   * POST /api/v1/widget/chat-audio/:workspaceId
+   * 🎤 Voice note from the widget composer (MediaRecorder blob).
+   * Pipeline: transcribe (Whisper) → the transcription becomes the message →
+   * reuse sendMessage for the bot turn (single source of truth). The widget
+   * shows a "voice message" bubble; the bot reasons on the transcription.
+   */
+  async sendAudioMessage(req: Request, res: Response): Promise<Response> {
+    const file = (req as any).file as Express.Multer.File | undefined
+    const cleanup = () => {
+      if (file?.path) {
+        try {
+          fs.unlinkSync(file.path)
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    try {
+      if (!file) {
+        return res.status(400).json({ error: "audio file is required" })
+      }
+      const { workspaceId } = req.params
+      const buffer = fs.readFileSync(file.path)
+      const declaredMime = (file.mimetype || "audio/webm").split(";")[0].trim()
+
+      const transcription = await transcribeAudio({
+        audioBuffer: buffer,
+        declaredMime,
+        provider: "widget",
+        workspaceId,
+      })
+      cleanup()
+      if (!transcription?.text) {
+        return res.status(422).json({ error: "Could not transcribe audio" })
+      }
+
+      // Hand off to the normal text turn — the transcription IS the message.
+      req.body = { ...req.body, message: transcription.text }
+      return this.sendMessage(req, res)
+    } catch (error: any) {
+      cleanup()
+      logger.error("[WIDGET] audio message error", { error: error?.message })
+      return res.status(500).json({ error: "Failed to process audio message" })
     }
   }
 

@@ -31,6 +31,8 @@ import {
   Shield,
   Mail,
   Globe,
+  Mic,
+  Square,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -93,6 +95,7 @@ import {
   saveWidgetSessionId,
   saveCustomerId,
   sendWidgetMessage,
+  sendWidgetAudio,
   registerAndStartChat,
   getWidgetStatus,
   getWidgetProfile,
@@ -417,6 +420,10 @@ export function ChatWidget({
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  // 🎤 Voice recording (demo composer)
+  const [recording, setRecording] = useState(false)
+  const audioMediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
   const [visitorId, setVisitorId] = useState<string>("")
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [customerId, setCustomerId] = useState<string | null>(null)
@@ -823,6 +830,91 @@ export function ChatWidget({
 
   const handleSendMessage = async () => {
     await sendMessage(inputValue)
+  }
+
+  /**
+   * 🎤 Voice message: record via MediaRecorder → upload → transcribe (backend)
+   * → bot reply. Shows a "voice message" bubble for the user's note.
+   */
+  const sendAudio = async (blob: Blob) => {
+    if (!visitorId || !resolvedWorkspaceId || isLoading) return
+    const userMessage: Message = {
+      role: "user",
+      content: "🎤 Voice message",
+      timestamp: new Date().toISOString(),
+    }
+    const updatedMessages = [...messages, userMessage]
+    setMessages(updatedMessages)
+    if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updatedMessages)
+    setIsLoading(true)
+    try {
+      const data = await sendWidgetAudio({
+        apiUrl: resolvedApiUrl,
+        workspaceId: resolvedWorkspaceId,
+        visitorId,
+        audioBlob: blob,
+        language: resolvedLanguage,
+        sessionId,
+        customerId: customerId || undefined,
+      })
+      if (data.sessionId && resolvedWorkspaceId) {
+        setSessionId(data.sessionId)
+        saveWidgetSessionId(localStorage, resolvedWorkspaceId, data.sessionId)
+      }
+      const botMessage: Message = {
+        role: "bot",
+        content: data.response,
+        timestamp: new Date().toISOString(),
+        suggestions: data.suggestions,
+      }
+      const finalMessages = [...updatedMessages, botMessage]
+      setMessages(finalMessages)
+      if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, finalMessages)
+    } catch (error) {
+      console.error("Failed to send audio:", error)
+      const errorMessage: Message = {
+        role: "bot",
+        content: "Sorry, I couldn't process your voice message. Please try again.",
+        timestamp: new Date().toISOString(),
+      }
+      setMessages([...updatedMessages, errorMessage])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const startRecording = async () => {
+    if (recording || isLoading) return
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream)
+      audioChunksRef.current = []
+      mr.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data)
+      }
+      mr.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop())
+        const blob = new Blob(audioChunksRef.current, {
+          type: mr.mimeType || "audio/webm",
+        })
+        if (blob.size > 0) await sendAudio(blob)
+      }
+      audioMediaRecorderRef.current = mr
+      mr.start()
+      setRecording(true)
+    } catch (err) {
+      console.error("🎤 Microphone access failed:", err)
+      setRecording(false)
+    }
+  }
+
+  const stopRecording = () => {
+    try {
+      audioMediaRecorderRef.current?.stop()
+    } catch {
+      /* ignore */
+    }
+    setRecording(false)
   }
 
   /**
@@ -1726,6 +1818,23 @@ export function ChatWidget({
                       "disabled:bg-gray-50 disabled:text-gray-400"
                     )}
                   />
+                  {/* 🎤 Voice message button (demo) */}
+                  {instantChat && !(botDisabled && !operatorHasReplied) && (
+                    <button
+                      onClick={recording ? stopRecording : startRecording}
+                      disabled={isLoading}
+                      className={cn(
+                        "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
+                        "text-white transition-colors disabled:opacity-50",
+                        recording ? "bg-red-500 animate-pulse" : "hover:brightness-95"
+                      )}
+                      style={recording ? undefined : { backgroundColor: resolvedPrimaryColor }}
+                      aria-label={recording ? "Stop recording" : "Record voice message"}
+                      title={recording ? "Stop" : "Voice message"}
+                    >
+                      {recording ? <Square className="w-4 h-4" /> : <Mic className="w-5 h-5" />}
+                    </button>
+                  )}
                   <button
                     onClick={handleSendMessage}
                     disabled={isLoading || !inputValue.trim() || (botDisabled && !operatorHasReplied)}

@@ -1745,6 +1745,47 @@ export function LoginPage() {
 
       {!showLoginCard && (
       <>
+      {/* DemoWash live-demo card — first card below the phone animation, before How It Works */}
+      <section className="py-12">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="group relative">
+            {/* Decorative rotated background frame — green glow (same as CRM/Privacy) */}
+            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-emerald-500/15 to-green-500/10 shadow-lg transition-transform duration-500 group-hover:rotate-2 sm:rotate-1 sm:scale-[1.01]"></div>
+
+            <div className="relative rounded-3xl border border-white/10 bg-slate-900/50 p-8 text-center shadow-2xl backdrop-blur transition-all duration-500 hover:-translate-y-1 hover:border-green-400/30 sm:p-10 lg:p-12">
+              <div className="mx-auto mb-6 w-full max-w-md overflow-hidden rounded-2xl shadow-xl transition-all duration-300">
+                <img
+                  src="/francising.png"
+                  alt="DemoWash franchising"
+                  className="w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+              </div>
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#25D366]/15 px-4 py-1.5 text-sm font-semibold text-[#25D366]">
+                <span className="h-2 w-2 rounded-full bg-[#25D366]" /> Live demo
+              </div>
+              <h2 className="mx-auto max-w-3xl text-2xl font-bold text-white sm:text-3xl">
+                Try our WhatsApp AI assistant live for the laundry{" "}
+                <span className="text-[#25D366]">DemoWash</span>
+              </h2>
+              <p className="mx-auto mt-4 max-w-2xl text-slate-300">
+                {t("demo.subtitle")}
+              </p>
+            <button
+              type="button"
+              onClick={() => navigate("/demo/demowash")}
+              className="mt-7 inline-flex items-center gap-2.5 rounded-2xl px-7 py-3.5 text-base font-bold text-white shadow-xl transition-all hover:scale-[1.03] hover:brightness-110"
+              style={{ background: "#25D366" }}
+            >
+              <svg viewBox="0 0 32 32" className="h-6 w-6 fill-white" aria-hidden="true">
+                <path d="M16.003 3C9.38 3 4 8.38 4 15.003c0 2.117.553 4.187 1.605 6.01L4 29l8.184-1.55a11.94 11.94 0 0 0 3.819.626h.003C22.626 28.075 28 22.695 28 16.072 28 9.45 22.626 3 16.003 3Zm0 21.86h-.002a9.9 9.9 0 0 1-3.46-.62l-.248-.094-4.857.92.94-4.735-.16-.244a9.85 9.85 0 0 1-1.5-5.224c0-5.46 4.44-9.9 9.91-9.9 2.646 0 5.13 1.03 7 2.9a9.84 9.84 0 0 1 2.9 7c0 5.46-4.44 9.9-9.91 9.9Zm5.43-7.42c-.297-.15-1.758-.867-2.03-.967-.272-.099-.47-.148-.668.149-.198.297-.767.967-.94 1.166-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.76-1.653-2.057-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.496.099-.198.05-.372-.025-.521-.074-.149-.668-1.611-.916-2.206-.241-.58-.486-.501-.668-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.073.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.29.173-1.413-.074-.124-.272-.198-.57-.347Z" />
+              </svg>
+              {t("demo.button")} →
+            </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* How It Works Section */}
       <motion.section
         id="features"
@@ -1936,7 +1977,7 @@ export function LoginPage() {
                     <img
                       src="/booking.png"
                       alt="Appointment booking on WhatsApp"
-                      className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                     />
                   </div>
                 </div>

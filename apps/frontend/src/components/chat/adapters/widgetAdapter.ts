@@ -267,6 +267,45 @@ export const registerAndStartChat = async (input: WidgetRegisterInput) => {
   }
 }
 
+/**
+ * 🎤 Send a recorded voice note to the widget. The backend transcribes it
+ * (Whisper) and runs the same bot turn as a text message. Returns the bot reply.
+ */
+export const sendWidgetAudio = async (input: {
+  apiUrl: string
+  workspaceId: string
+  visitorId: string
+  audioBlob: Blob
+  language?: string
+  sessionId?: string | null
+  customerId?: string | null
+}) => {
+  const { apiUrl, workspaceId, visitorId, audioBlob, language, sessionId, customerId } = input
+  const form = new FormData()
+  form.append("audio", audioBlob, "voice.webm")
+  form.append("visitorId", visitorId)
+  if (language) form.append("language", language)
+  if (typeof sessionId === "string" && sessionId.length > 0) form.append("sessionId", sessionId)
+  if (customerId) form.append("customerId", customerId)
+
+  const response = await fetch(`${apiUrl}/widget/chat-audio/${workspaceId}`, {
+    method: "POST",
+    body: form,
+  })
+  const data = await response.json().catch(() => ({}))
+  if (!response.ok) {
+    throw new Error(data?.error || data?.message || "Audio message failed")
+  }
+  return {
+    response: (data.response as string) || "",
+    sessionId: data.sessionId as string | undefined,
+    suggestions: Array.isArray(data.suggestions)
+      ? (data.suggestions as string[]).slice(0, 4)
+      : undefined,
+    activeChatbot: data.activeChatbot as boolean | undefined,
+  }
+}
+
 export const getWidgetStatus = async (input: {
   apiUrl: string
   workspaceId: string
