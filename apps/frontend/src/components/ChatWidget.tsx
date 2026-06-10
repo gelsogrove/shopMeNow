@@ -112,6 +112,7 @@ interface Message {
   content: string
   timestamp?: string
   suggestions?: string[]
+  audioUrl?: string // 🎤 voice note (user's local recording or bot TTS reply)
 }
 
 interface ChatWidgetProps {

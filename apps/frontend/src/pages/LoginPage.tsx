@@ -1753,13 +1753,6 @@ export function LoginPage() {
             <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-emerald-500/15 to-green-500/10 shadow-lg transition-transform duration-500 group-hover:rotate-2 sm:rotate-1 sm:scale-[1.01]"></div>
 
             <div className="relative rounded-3xl border border-white/10 bg-slate-900/50 p-8 text-center shadow-2xl backdrop-blur transition-all duration-500 hover:-translate-y-1 hover:border-green-400/30 sm:p-10 lg:p-12">
-              <div className="mx-auto mb-6 w-full max-w-md overflow-hidden rounded-2xl shadow-xl transition-all duration-300">
-                <img
-                  src="/francising.png"
-                  alt="DemoWash franchising"
-                  className="w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
-              </div>
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#25D366]/15 px-4 py-1.5 text-sm font-semibold text-[#25D366]">
                 <span className="h-2 w-2 rounded-full bg-[#25D366]" /> Live demo
               </div>
@@ -1917,9 +1910,9 @@ export function LoginPage() {
                   <div className="relative">
                     <div className="w-72 h-72 rounded-2xl overflow-hidden shadow-xl transition-all duration-300">
                       <img
-                        src="/push.png"
+                        src="/push1.png"
                         alt="Smart AI push messaging"
-                        className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-700"
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                     </div>
                   </div>
@@ -2071,12 +2064,14 @@ export function LoginPage() {
                 {/* Right: Image with badge */}
                 <div className="flex flex-col items-center lg:items-end gap-4">
                   <div className="relative">
-                    <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden shadow-xl">
-                      <img
-                        src="/demo.png"
-                        alt="Demo Preview"
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="group w-64 h-64 sm:w-72 sm:h-72 rounded-2xl bg-white p-2 shadow-xl">
+                      <div className="h-full w-full overflow-hidden rounded-xl">
+                        <img
+                          src="/francising.png"
+                          alt="DemoWash franchising"
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                      </div>
                     </div>
                     <div className="absolute -top-3 -right-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider animate-bounce">
                       Live

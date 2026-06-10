@@ -13,6 +13,7 @@ import { prisma, PrismaClient, AgentType } from "@echatbot/database"
 import logger from "../../../utils/logger"
 import fs from "fs"
 import { transcribeAudio } from "../../../services/audio-transcription.service"
+import { generateSpeech } from "../../../services/tts-elevenlabs.service"
 import { VisitorIdService } from "../../../application/services/visitor-id.service"
 import { SecurityCheckService } from "../../../application/services/security-check.service"
 import { LLMRouterService } from "../../../services/llm-router.service"
@@ -1231,7 +1232,49 @@ export class WidgetChatController {
 
       // Hand off to the normal text turn — the transcription IS the message.
       req.body = { ...req.body, message: transcription.text }
-      return this.sendMessage(req, res)
+
+      // Capture sendMessage's JSON so we can enrich it with a spoken (TTS) reply
+      // without duplicating the chat pipeline.
+      let captured: { code: number; body: any } | null = null
+      const fakeRes: any = {
+        statusCode: 200,
+        status(code: number) {
+          this.statusCode = code
+          return this
+        },
+        json(body: any) {
+          captured = { code: this.statusCode || 200, body }
+          return this
+        },
+        setHeader() {
+          return this
+        },
+        send(body: any) {
+          captured = { code: this.statusCode || 200, body }
+          return this
+        },
+      }
+      await this.sendMessage(req, fakeRes as Response)
+      const out = captured || { code: 500, body: { error: "No response" } }
+      const body = out.body || {}
+
+      // 🎤 Voice in → voice out: synthesize the bot reply with ElevenLabs so the
+      // widget can show an audio player. A TTS failure leaves the text reply intact.
+      if (typeof body.response === "string" && body.response.trim()) {
+        try {
+          const tts = await generateSpeech(
+            body.response,
+            workspaceId,
+            typeof req.body.language === "string" ? req.body.language : undefined
+          )
+          if (tts?.audioUrl) {
+            body.audioUrl = tts.audioUrl
+          }
+        } catch (ttsErr: any) {
+          logger.error("[WIDGET] TTS reply failed", { error: ttsErr?.message })
+        }
+      }
+      return res.status(out.code).json(body)
     } catch (error: any) {
       cleanup()
       logger.error("[WIDGET] audio message error", { error: error?.message })

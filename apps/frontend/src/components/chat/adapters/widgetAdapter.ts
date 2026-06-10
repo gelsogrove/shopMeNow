@@ -303,6 +303,7 @@ export const sendWidgetAudio = async (input: {
       ? (data.suggestions as string[]).slice(0, 4)
       : undefined,
     activeChatbot: data.activeChatbot as boolean | undefined,
+    audioUrl: data.audioUrl as string | undefined, // 🎤 bot voice reply (ElevenLabs TTS)
   }
 }
 
