@@ -130,6 +130,21 @@ export function DemoWidgetPage() {
             like on WhatsApp. The bot detects your language automatically.
           </p>
 
+          {/* Suggested things to try in the demo — guides the visitor. */}
+          <div className="mt-6 hidden sm:block">
+            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-200">
+              Try, for example:
+            </p>
+            <ul className="mt-3 flex max-w-md flex-col gap-2 text-left text-base text-emerald-50/90">
+              <li className="flex items-center gap-2">📅 Book an appointment</li>
+              <li className="flex items-center gap-2">💶 Ask for prices and opening hours</li>
+              <li className="flex items-center gap-2">🧺 Report that a washing machine isn't working</li>
+              <li className="flex items-center gap-2">🎤 Send a voice message</li>
+              <li className="flex items-center gap-2">🙋 Ask to talk to a human operator</li>
+              <li className="flex items-center gap-2">🌍 Switch language mid-conversation</li>
+            </ul>
+          </div>
+
           {loading && (
             <div className="mt-8 flex items-center gap-3 text-emerald-50">
               <span className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-200 border-t-white" />
