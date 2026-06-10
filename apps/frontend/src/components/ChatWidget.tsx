@@ -1706,6 +1706,15 @@ export function ChatWidget({
                   getContainerClassName={(msg) =>
                     msg.role === "user" ? "widget-user-message" : undefined
                   }
+                  renderFooter={(msg) =>
+                    msg.audioUrl ? (
+                      <audio
+                        controls
+                        src={msg.audioUrl}
+                        className="mt-2 h-9 w-full min-w-[200px] max-w-[240px]"
+                      />
+                    ) : null
+                  }
                 />
                 {/* Show typing indicator when waiting for bot response */}
                 {isLoading && (
