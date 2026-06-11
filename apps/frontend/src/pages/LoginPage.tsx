@@ -1940,6 +1940,15 @@ export function LoginPage() {
                       {t("pushAi.subtitle")}
                     </p>
                   </div>
+
+                  <div className="pt-4 flex justify-center lg:justify-start">
+                    <Link
+                      to="/smart-push-ai"
+                      className="inline-flex items-center gap-2 w-full sm:w-auto sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 justify-center"
+                    >
+                      <span>{t("common.viewMore")}</span>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>

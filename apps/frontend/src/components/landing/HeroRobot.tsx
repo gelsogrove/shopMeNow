@@ -39,7 +39,7 @@ export default function HeroRobot({ className = "" }: HeroRobotProps) {
         <img
           src="/robot.png"
           alt="eChatbot mascot"
-          className="w-52 sm:w-64 lg:w-80 h-auto drop-shadow-[0_8px_24px_rgba(37,211,102,0.35)] select-none"
+          className="w-64 sm:w-64 lg:w-80 h-auto drop-shadow-[0_8px_24px_rgba(37,211,102,0.35)] select-none"
           draggable={false}
         />
       </div>

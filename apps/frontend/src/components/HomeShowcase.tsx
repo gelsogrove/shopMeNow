@@ -73,10 +73,10 @@ function buildContent(lang: Lang) {
     "Todo o teu franchising no WhatsApp."
   )
   const subtitle = p(
-    "Una sola AI che accoglie, traduce, passa all'operatore, conosce ogni negozio, prenota, si collega ai tuoi sistemi e capisce gli audio.",
-    "One AI that welcomes, translates, hands off to a human, knows every shop, books appointments, connects to your systems and understands voice notes.",
-    "Una sola IA que da la bienvenida, traduce, pasa a un humano, conoce cada tienda, agenda, se conecta a tus sistemas y entiende los audios.",
-    "Uma só IA que dá as boas-vindas, traduz, passa a um humano, conhece cada loja, marca, liga-se aos teus sistemas e entende áudios."
+    "Una sola AI che accoglie, traduce, si collega ai tuoi sistemi e si adatta alle specifiche di ogni franchising.",
+    "One AI that welcomes, translates, connects to your systems and adapts to the specifics of every franchise.",
+    "Una sola IA que da la bienvenida, traduce, se conecta a tus sistemas y se adapta a las particularidades de cada franquicia.",
+    "Uma só IA que dá as boas-vindas, traduz, liga-se aos teus sistemas e adapta-se às especificidades de cada franchising."
   )
   const everyLang = p(
     "Parla ogni lingua del mondo.",
@@ -85,7 +85,6 @@ function buildContent(lang: Lang) {
     "Fala todas as línguas do mundo."
   )
   const online = p("online", "online", "en línea", "online")
-  const liveLabel = p("dal vivo", "live", "en vivo", "ao vivo")
   const opLabel = p("OPERATORE", "OPERATOR", "OPERADOR", "OPERADOR")
   const voiceLabel = p("Messaggio vocale", "Voice message", "Mensaje de voz", "Mensagem de voz")
 
@@ -280,7 +279,7 @@ function buildContent(lang: Lang) {
     },
   ]
 
-  return { title, subtitle, everyLang, online, liveLabel, opLabel, voiceLabel, features, script }
+  return { title, subtitle, everyLang, online, opLabel, voiceLabel, features, script }
 }
 
 export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
@@ -403,30 +402,23 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
 
       {/* Header — title + subtitle ABOVE the cards */}
       <div className="relative mb-8 max-w-2xl">
-        <span
-          className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide"
-          style={{ background: `${WA_GREEN}1f`, color: WA_GREEN }}
-        >
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-2 w-2 animate-ping rounded-full opacity-75" style={{ background: WA_GREEN }} />
-            <span className="relative inline-flex h-2 w-2 rounded-full" style={{ background: WA_GREEN }} />
-          </span>
-          WhatsApp · {c.liveLabel}
-        </span>
-        <h2 className="mt-3 text-2xl font-bold leading-tight text-white sm:text-3xl">{c.title}</h2>
+        <h2 className="text-2xl font-bold leading-tight text-white sm:text-3xl">{c.title}</h2>
         <p className="mt-2 text-slate-400">{c.subtitle}</p>
       </div>
 
       {/* Phone + capability cards */}
       <div className="relative grid grid-cols-1 items-start gap-10 lg:grid-cols-[25rem_34rem] lg:justify-center">
-        {/* WhatsApp phone — 📱 hidden on mobile (Andrea), animated only on desktop (lg+). */}
-        <div className="mx-auto hidden w-full max-w-[400px] lg:sticky lg:top-24 lg:block">
+        {/* WhatsApp phone — shown on every size; static first-scene snapshot on
+            mobile (<768px), live auto-play animation on desktop. */}
+        <div className="mx-auto w-full max-w-[400px] lg:sticky lg:top-24">
           <div className="rounded-[2.25rem] bg-slate-950 p-3 shadow-2xl ring-1 ring-white/10">
             <div className="overflow-hidden rounded-[1.5rem] bg-[#ECE5DD]">
               {/* header */}
               <div className="flex items-center gap-3 px-4 py-3 text-white" style={{ background: "#075E54" }}>
-                <div className="flex h-9 w-9 items-center justify-center rounded-full text-base" style={{ background: WA_GREEN }}>
-                  🤖
+                {/* DW monogram logo — "D" white, "W" black */}
+                <div className="flex h-12 w-12 items-center justify-center rounded-full text-lg font-extrabold tracking-tight sm:h-9 sm:w-9 sm:text-sm" style={{ background: WA_GREEN }}>
+                  <span className="text-white">D</span>
+                  <span className="text-slate-900">W</span>
                 </div>
                 <div className="leading-tight">
                   <p className="text-sm font-semibold">DemoWash</p>

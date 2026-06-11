@@ -10,6 +10,7 @@ import { FeaturesPage } from "@/pages/FeaturesPage"
 import { HumanSupportPage } from "@/pages/HumanSupportPage"
 import { AppointmentBookingPage } from "@/pages/AppointmentBookingPage"
 import { CrmIntegrationPage } from "@/pages/CrmIntegrationPage"
+import { SmartPushAiPage } from "@/pages/SmartPushAiPage"
 import { TeamCollaborationPage } from "@/pages/TeamCollaborationPage"
 import { PrivacyByDesignPage } from "@/pages/PrivacyByDesignPage"
 import { LaundryServicePage } from "@/pages/LaundryServicePage"
@@ -349,6 +350,7 @@ function AppWithProviders() {
                 <Route path="/laundry-service" element={<LaundryServicePage />} />
                 <Route path="/franchising" element={<FranchisingPage />} />
                 <Route path="/appointment-booking" element={<AppointmentBookingPage />} />
+                <Route path="/smart-push-ai" element={<SmartPushAiPage />} />
                 <Route path="/crm-integration" element={<CrmIntegrationPage />} />
                 <Route path="/team-collaboration" element={<TeamCollaborationPage />} />
                 <Route path="/privacy-by-design" element={<PrivacyByDesignPage />} />

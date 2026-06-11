@@ -644,6 +644,12 @@ export function ChatWidget({
   useEffect(() => {
     const el = composerRef.current
     if (!el) return
+    // Empty → fall back to the rows=1 natural height. (A wrapping placeholder on
+    // narrow widths inflates scrollHeight, so we must NOT measure it when empty.)
+    if (!el.value) {
+      el.style.height = ""
+      return
+    }
     el.style.height = "auto"
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`
   }, [inputValue, isOpen])
@@ -684,11 +690,17 @@ export function ChatWidget({
           if (Array.isArray(data.messages) && data.messages.length > 0) {
             setOperatorHasReplied(true)
             const newMsgs = (
-              data.messages as { id: string; content: string; createdAt: string }[]
+              data.messages as {
+                id: string
+                content: string
+                createdAt: string
+                attachments?: ChatAttachment[]
+              }[]
             ).map((m) => ({
               role: "bot" as const,
               content: m.content,
               timestamp: m.createdAt,
+              attachments: m.attachments, // 📎 keep operator-sent image/PDF/audio
             }))
             setMessages((prev) => {
               // Deduplicate: skip messages already shown (by content + timestamp)
@@ -1972,110 +1984,118 @@ export function ChatWidget({
                 </div>
               )}
 
-              {/* Footer with Input */}
-              <div className="border-t border-gray-200 p-3 sm:p-5 space-y-2 sm:space-y-3">
-                <div className="flex items-end gap-2 sm:gap-3">
-                  {/* 🎮 Emoji picker — demo composer */}
-                  {instantChat && !(botDisabled && !operatorHasReplied) && (
-                    <EmojiPicker
-                      onSelect={(emoji) => setInputValue((prev) => prev + emoji)}
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
-                    />
-                  )}
-                  {/* 📎 Attach images / PDFs — demo composer (WhatsApp paperclip) */}
-                  {instantChat && !(botDisabled && !operatorHasReplied) && (
-                    <>
-                      <input
-                        ref={attachInputRef}
-                        type="file"
-                        accept={ACCEPTED_ACCEPT_ATTR}
-                        multiple
-                        className="hidden"
-                        onChange={(e) => {
-                          handleAttachFiles(e.target.files)
-                          e.target.value = "" // allow re-selecting the same file
-                        }}
+              {/* Footer with Input — WhatsApp-style: emoji + paperclip live INSIDE
+                  the rounded input pill, and a single round button on the right
+                  toggles mic ↔ send. Keeps the composer compact on narrow widths
+                  so nothing wraps to a second line. */}
+              <div className="border-t border-gray-200 p-2.5 sm:p-3 space-y-1.5">
+                <div className="flex items-end gap-2">
+                  {/* Input pill: emoji · textarea · paperclip */}
+                  <div className="flex flex-1 min-w-0 items-end gap-1 rounded-3xl border border-gray-300 bg-white px-1.5 py-1 transition-colors focus-within:border-green-600 focus-within:ring-1 focus-within:ring-green-600">
+                    {/* 🎮 Emoji picker — demo composer */}
+                    {instantChat && !(botDisabled && !operatorHasReplied) && (
+                      <EmojiPicker
+                        onSelect={(emoji) => setInputValue((prev) => prev + emoji)}
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
                       />
-                      <button
-                        type="button"
-                        onClick={() => attachInputRef.current?.click()}
-                        disabled={isLoading}
-                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
-                        aria-label="Attach image or file"
-                        title="Attach image or PDF"
-                      >
-                        <Paperclip className="w-5 h-5" />
-                      </button>
-                    </>
-                  )}
-                  <textarea
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault()
-                        handleSendMessage()
+                    )}
+                    <textarea
+                      ref={composerRef}
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault()
+                          handleSendMessage()
+                        }
+                      }}
+                      placeholder={
+                        botDisabled && !operatorHasReplied
+                          ? "Waiting for operator reply..."
+                          : botDisabled && operatorHasReplied
+                          ? "Reply to operator..."
+                          : resolvedPlaceholder
                       }
-                    }}
-                    placeholder={
-                      botDisabled && !operatorHasReplied
-                        ? "Waiting for operator reply..."
-                        : botDisabled && operatorHasReplied
-                        ? "Reply to operator..."
-                        : resolvedPlaceholder
-                    }
-                    disabled={isLoading || (botDisabled && !operatorHasReplied)}
-                    rows={instantChat ? 3 : 2}
-                    className={cn(
-                      "flex-1 resize-none px-3 sm:px-4 py-2 sm:py-3 rounded-2xl border border-gray-300",
-                      instantChat && "text-base leading-relaxed",
-                      "focus:outline-none focus:border-green-600 focus:ring-1 focus:ring-green-600",
-                      "text-sm sm:text-[15px] placeholder-gray-400 leading-relaxed",
-                      "disabled:bg-gray-50 disabled:text-gray-400"
-                    )}
-                  />
-                  {/* 🎤 Voice message button (demo) */}
-                  {instantChat && !(botDisabled && !operatorHasReplied) && (
-                    <button
-                      onClick={recording ? stopRecording : startRecording}
-                      disabled={isLoading}
+                      disabled={isLoading || (botDisabled && !operatorHasReplied)}
+                      rows={1}
                       className={cn(
-                        "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
-                        "text-white transition-colors disabled:opacity-50",
-                        recording ? "bg-red-500 animate-pulse" : "hover:brightness-95"
+                        "flex-1 min-w-0 resize-none border-none bg-transparent px-1.5 py-1.5",
+                        "focus:outline-none focus:ring-0",
+                        "text-sm sm:text-[15px] placeholder-gray-400 leading-relaxed",
+                        "disabled:text-gray-400"
                       )}
-                      style={recording ? undefined : { backgroundColor: resolvedPrimaryColor }}
-                      aria-label={recording ? "Stop recording" : "Record voice message"}
-                      title={recording ? "Stop" : "Voice message"}
-                    >
-                      {recording ? <Square className="w-4 h-4" /> : <Mic className="w-5 h-5" />}
-                    </button>
-                  )}
-                  <button
-                    // 🎤 WhatsApp-style: while recording, the send button stops
-                    // the recorder and sends the voice note (onstop → sendAudio).
-                    // Otherwise it sends the typed text.
-                    onClick={recording ? stopRecording : handleSendMessage}
-                    disabled={
-                      isLoading ||
-                      (!recording && !inputValue.trim()) ||
-                      (botDisabled && !operatorHasReplied)
-                    }
-                    className={cn(
-                      "w-12 h-12 rounded-full flex items-center justify-center",
-                      "disabled:bg-gray-300 hover:brightness-95",
-                      "text-white transition-colors",
-                      "focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-green-600"
+                    />
+                    {/* 📎 Attach images / PDFs — demo composer (WhatsApp paperclip) */}
+                    {instantChat && !(botDisabled && !operatorHasReplied) && (
+                      <>
+                        <input
+                          ref={attachInputRef}
+                          type="file"
+                          accept={ACCEPTED_ACCEPT_ATTR}
+                          multiple
+                          className="hidden"
+                          onChange={(e) => {
+                            handleAttachFiles(e.target.files)
+                            e.target.value = "" // allow re-selecting the same file
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => attachInputRef.current?.click()}
+                          disabled={isLoading}
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
+                          aria-label="Attach image or file"
+                          title="Attach image or PDF"
+                        >
+                          <Paperclip className="w-5 h-5" />
+                        </button>
+                      </>
                     )}
-                    style={{ backgroundColor: resolvedPrimaryColor }}
-                    aria-label={recording ? "Send voice message" : "Send message"}
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Send className="w-5 h-5" />
-                    )}
-                  </button>
+                  </div>
+                  {/* Single round action button — mic when empty, send when typing,
+                      stop-and-send while recording (WhatsApp behaviour). */}
+                  {(() => {
+                    const canRecord = instantChat && !(botDisabled && !operatorHasReplied)
+                    const hasText = inputValue.trim().length > 0
+                    const showMic = canRecord && !hasText && !recording
+                    return (
+                      <button
+                        onClick={
+                          recording ? stopRecording : showMic ? startRecording : handleSendMessage
+                        }
+                        disabled={
+                          isLoading ||
+                          (botDisabled && !operatorHasReplied) ||
+                          (!recording && !showMic && !hasText)
+                        }
+                        className={cn(
+                          "h-11 w-11 shrink-0 rounded-full flex items-center justify-center",
+                          "text-white transition-colors disabled:bg-gray-300 hover:brightness-95",
+                          "focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-green-600",
+                          recording && "bg-red-500 animate-pulse"
+                        )}
+                        style={recording ? undefined : { backgroundColor: resolvedPrimaryColor }}
+                        aria-label={
+                          recording
+                            ? "Send voice message"
+                            : showMic
+                            ? "Record voice message"
+                            : "Send message"
+                        }
+                        title={recording ? "Stop & send" : showMic ? "Voice message" : "Send"}
+                      >
+                        {isLoading ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : recording ? (
+                          <Square className="w-4 h-4" />
+                        ) : showMic ? (
+                          <Mic className="w-5 h-5" />
+                        ) : (
+                          <Send className="w-5 h-5" />
+                        )}
+                      </button>
+                    )
+                  })()}
                 </div>
                 {!instantChat && (
                   <div className="text-xs text-gray-400 text-center">
