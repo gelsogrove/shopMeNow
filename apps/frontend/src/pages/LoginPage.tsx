@@ -1773,7 +1773,7 @@ export function LoginPage() {
             <button
               type="button"
               onClick={() => navigate("/demo/demowash")}
-              className="mt-7 inline-flex items-center gap-2.5 rounded-2xl px-7 py-3.5 text-base font-bold text-white shadow-xl transition-all hover:scale-[1.03] hover:brightness-110"
+              className="mt-7 inline-flex items-center gap-2.5 rounded-2xl px-7 py-3.5 text-base font-bold text-white shadow-xl transition-all hover:scale-[1.03] hover:brightness-90 hover:shadow-2xl hover:shadow-emerald-500/50"
               style={{ background: "#25D366" }}
             >
               <svg viewBox="0 0 32 32" className="h-6 w-6 fill-white" aria-hidden="true">
@@ -1972,6 +1972,15 @@ export function LoginPage() {
                     <p className="text-xl text-slate-300 leading-relaxed text-justify">
                       {t("appointment.subtitle")}
                     </p>
+                  </div>
+
+                  <div className="pt-4 flex justify-center lg:justify-start">
+                    <Link
+                      to="/appointment-booking"
+                      className="inline-flex items-center gap-2 w-full sm:w-auto sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 justify-center"
+                    >
+                      <span>{t("common.viewMore")}</span>
+                    </Link>
                   </div>
                 </div>
                 <div className="flex flex-col items-center lg:items-end gap-4 order-1 lg:order-2">
