@@ -464,6 +464,8 @@ export function ChatWidget({
   // instantly (parity with WhatsApp); revoked on unmount to avoid leaks.
   const attachInputRef = useRef<HTMLInputElement | null>(null)
   const attachObjectUrls = useRef<string[]>([])
+  // WhatsApp-style composer: textarea grows with content up to a max, then scrolls
+  const composerRef = useRef<HTMLTextAreaElement | null>(null)
   const [visitorId, setVisitorId] = useState<string>("")
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [customerId, setCustomerId] = useState<string | null>(null)
@@ -635,6 +637,16 @@ export function ChatWidget({
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
     }
   }, [messages])
+
+  // WhatsApp-style auto-grow: resize the composer to fit its content (1 line →
+  // up to ~5 lines), then it scrolls. Runs on every inputValue change so it also
+  // shrinks back after sending or when an emoji is inserted programmatically.
+  useEffect(() => {
+    const el = composerRef.current
+    if (!el) return
+    el.style.height = "auto"
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`
+  }, [inputValue, isOpen])
 
   // Ensure widget opens at the latest message (even if no new messages were added)
   useEffect(() => {
