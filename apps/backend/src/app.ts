@@ -12,6 +12,7 @@ import { jsonFixMiddleware } from "./interfaces/http/middlewares/json-fix.middle
 import { sessionValidationMiddleware } from "./interfaces/http/middlewares/session-validation.middleware"
 import { loggingMiddleware } from "./middlewares/logging.middleware"
 import apiRouter from "./routes"
+import { injectMarketingHead } from "./seo/marketing-seo"
 import logger from "./utils/logger"
 import { prisma } from "@echatbot/database"
 
@@ -933,12 +934,19 @@ if (process.env.NODE_ENV === "production") {
   const frontendIndexPath = path.join(frontendDistPath, "index.html")
   
   if (fs.existsSync(frontendIndexPath)) {
+    // Read the built index.html once at boot. In production the frontend is
+    // already built before the server starts, so the template is stable for the
+    // dyno's lifetime — no need to hit disk per request.
+    const indexTemplate = fs.readFileSync(frontendIndexPath, "utf-8")
     app.get("*", (req, res, next) => {
       // Skip API routes
       if (req.path.startsWith("/api")) {
         return next()
       }
-      res.sendFile(frontendIndexPath)
+      // Inject per-route marketing SEO meta (no-op for non-marketing routes,
+      // which fall back to the homepage meta baked into the template).
+      const html = injectMarketingHead(indexTemplate, req.path)
+      res.set("Content-Type", "text/html; charset=utf-8").send(html)
     })
     logger.info(`[Production] SPA fallback enabled for frontend routes`)
   }

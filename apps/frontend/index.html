@@ -19,7 +19,11 @@
     <!-- End Google Tag Manager -->
     <!-- 🔐 FIX GOOGLE GSI: Required for token transformation in production -->
     <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <!-- SEO: Canonical URL -->
+    <!-- SEO: the block below is the DEFAULT (homepage) meta. The backend SPA
+         fallback swaps everything between the SEO:START and SEO:END markers per
+         marketing route at request time (apps/backend/src/seo/marketing-seo.ts).
+         Keep the two markers exactly as-is. -->
+    <!-- SEO:START -->
     <link rel="canonical" href="https://www.echatbot.ai/" />
     <title>eChatbot — Custom WhatsApp AI Chatbots for Your Business</title>
     <meta
@@ -51,6 +55,7 @@
       content="Custom WhatsApp AI chatbots tailored to your business — multilingua, multi-location, with real-time operator translation. Try the live demo or request a tailored setup."
     />
     <meta name="twitter:image" content="https://www.echatbot.ai/og-image.png" />
+    <!-- SEO:END -->
     <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
     {

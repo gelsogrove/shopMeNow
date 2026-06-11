@@ -49,6 +49,12 @@ function openInMobilePopup(url: string) {
   return popup
 }
 
+// Marker the chatbot appends before the operator briefing on escalation. The
+// text AFTER this marker is NOT meant for the customer — it is the internal
+// hand-off message the human operator receives. In the live widget we render
+// that tail inside a distinct boxed section so it's unmistakably internal.
+const HUMAN_SUPPORT_MARKER = "**👤 Human Support message**"
+
 interface MessageRendererProps {
   content: string
   className?: string
@@ -257,14 +263,48 @@ export function MessageRenderer({
 
   // Se e chat, splitta e renderizza con link
   if (variant === "chat") {
+    // Split off the internal operator briefing (everything from the marker on).
+    // The part before the marker is the real customer-facing reply; the part
+    // after is the hand-off message the operator receives — shown boxed below.
+    const markerIdx = content.indexOf(HUMAN_SUPPORT_MARKER)
+    const customerText =
+      markerIdx === -1 ? content : content.slice(0, markerIdx).trimEnd()
+    const operatorText =
+      markerIdx === -1
+        ? null
+        : content
+            .slice(markerIdx + HUMAN_SUPPORT_MARKER.length)
+            .replace(/^[\s\n]+/, "")
+
     return (
       <>
-        <div
-          className={`${baseClasses} ${variantClasses[variant]} ${className}`}
-          style={{ whiteSpace: "pre-wrap" }}
-        >
-          {renderWithLinks(content)}
-        </div>
+        {customerText && (
+          <div
+            className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+            style={{ whiteSpace: "pre-wrap" }}
+          >
+            {renderWithLinks(customerText)}
+          </div>
+        )}
+
+        {operatorText && (
+          // WhatsApp-style operator bubble (matches the homepage DemowashShowcase
+          // look): light bubble, blue operator label, WhatsApp top-left notch.
+          // The blue label makes it unmistakable this is the internal hand-off
+          // the operator receives — not a message shown to the customer.
+          <div className="mt-2 rounded-2xl rounded-tl-sm border border-blue-200 bg-blue-50/70 px-3 py-2.5 shadow-sm">
+            <div className="mb-1 flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-blue-700">
+              <span aria-hidden>🔒</span>
+              <span>Internal · message to the operator</span>
+            </div>
+            <div
+              className="text-[13px] leading-snug text-slate-800"
+              style={{ whiteSpace: "pre-wrap" }}
+            >
+              {renderWithLinks(operatorText)}
+            </div>
+          </div>
+        )}
 
         {/* YouTube Player Modal */}
         <YouTubePlayerModal
