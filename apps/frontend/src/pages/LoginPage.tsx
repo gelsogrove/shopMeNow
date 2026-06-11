@@ -2047,7 +2047,7 @@ export function LoginPage() {
                     <Button
                       type="button"
                       disabled={isDemoDisabled}
-                      className={`w-full sm:w-[220px] sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-green-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ${isDemoDisabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                      className={`w-full sm:w-[220px] sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-green-600 text-white shadow-xl hover:bg-green-700 hover:shadow-2xl hover:shadow-emerald-500/50 hover:scale-105 transition-all duration-300 ${isDemoDisabled ? 'cursor-not-allowed opacity-60' : ''}`}
                       onClick={() => {
                         if (isDemoDisabled) {
                           setWipFeature('demo')
@@ -2173,6 +2173,15 @@ export function LoginPage() {
                     <div className="text-xs text-slate-400 mt-1 whitespace-pre-line leading-tight">{s.label}</div>
                   </div>
                 ))}
+              </div>
+
+              <div className="pt-2">
+                <Link
+                  to="/human-support"
+                  className="inline-flex items-center gap-2 w-full sm:w-auto sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 justify-center"
+                >
+                  <span>{t("common.viewMore")}</span>
+                </Link>
               </div>
 
             </motion.div>

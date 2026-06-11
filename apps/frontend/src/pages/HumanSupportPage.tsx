@@ -53,6 +53,31 @@ const T = {
       { icon: "⚖️", title: "Gestione reclami", desc: "I reclami delicati vengono gestiti con l'empatia che solo un essere umano può offrire, salvaguardando la relazione con il cliente." },
       { icon: "🆘", title: "Situazioni eccezionali", desc: "Emergenze, richieste fuori standard, eccezioni alle policy: l'operatore interviene con il potere decisionale necessario." },
     ],
+    realTitle: "Come lavoriamo davvero",
+    realSub: "Non slide, ma il prodotto reale: ecco cosa vede l'operatore quando l'AI passa la mano.",
+    handoff: {
+      tag: "Dal bot all'operatore",
+      title: "Un riassunto strutturato, prima del passaggio",
+      desc: "Quando il caso richiede l'intervento umano, la conversazione passa a un operatore. Prima del passaggio, l'operatore riceve un riepilogo interno completo: tutto il contesto, già pronto. Il cliente continua a vedere solo le risposte normali.",
+      points: [
+        "Data, ora e sede del cliente",
+        "Macchina coinvolta e numero di serie",
+        "Lingua della conversazione",
+        "Riassunto del dialogo e azione suggerita",
+        "Interno — mai visibile al cliente",
+      ],
+    },
+    multilingual: {
+      tag: "Gestione multilingua",
+      title: "Operatore e cliente, lingue diverse, zero barriere",
+      desc: "Nell'esempio il cliente scrive in arabo mentre l'operatore lavora in spagnolo. Ogni messaggio viene tradotto automaticamente in entrambe le direzioni. Con il Controllo Manuale l'AI viene disattivata: i messaggi vengono salvati ma il bot non risponde più.",
+      points: [
+        "Traduzione automatica bidirezionale",
+        "L'operatore scrive nella sua lingua",
+        "Controllo manuale: AI disattivata su richiesta",
+        "Conversazione naturale anche tra lingue diverse",
+      ],
+    },
   },
   en: {
     seoTitle: "Human Support Human-in-the-Loop - AI + Human Agents in Synergy",
@@ -97,6 +122,31 @@ const T = {
       { icon: "⚖️", title: "Complaint management", desc: "Sensitive complaints are handled with the empathy only a human can offer, safeguarding the customer relationship." },
       { icon: "🆘", title: "Exceptional situations", desc: "Emergencies, out-of-standard requests, policy exceptions: the operator steps in with the necessary decision-making power." },
     ],
+    realTitle: "How we actually work",
+    realSub: "Not slides, but the real product: here's what the operator sees when the AI hands over.",
+    handoff: {
+      tag: "From bot to operator",
+      title: "A structured summary, before the handoff",
+      desc: "When a case requires human intervention, the conversation moves to an operator. Before the handoff, the operator receives a full internal summary: all the context, ready to go. The customer keeps seeing only the normal replies.",
+      points: [
+        "Date, time and customer location",
+        "Machine involved and serial number",
+        "Conversation language",
+        "Dialogue summary and suggested action",
+        "Internal — never visible to the customer",
+      ],
+    },
+    multilingual: {
+      tag: "Multilingual handling",
+      title: "Operator and customer, different languages, zero barriers",
+      desc: "In this example the customer writes in Arabic while the operator works in Spanish. Every message is automatically translated in both directions. With Manual Control the AI is disabled: messages are saved but the bot no longer replies.",
+      points: [
+        "Automatic two-way translation",
+        "The operator writes in their own language",
+        "Manual control: AI disabled on demand",
+        "Natural conversation even across languages",
+      ],
+    },
   },
   es: {
     seoTitle: "Soporte Humano Human-in-the-Loop - IA + Agentes Humanos en Sinergia",
@@ -141,6 +191,31 @@ const T = {
       { icon: "⚖️", title: "Gestión de reclamaciones", desc: "Las reclamaciones delicadas se gestionan con la empatía que solo un ser humano puede ofrecer, salvaguardando la relación con el cliente." },
       { icon: "🆘", title: "Situaciones excepcionales", desc: "Emergencias, solicitudes fuera de estándar, excepciones a las políticas: el operador interviene con el poder de decisión necesario." },
     ],
+    realTitle: "Cómo trabajamos de verdad",
+    realSub: "No son diapositivas, es el producto real: esto es lo que ve el operador cuando la IA cede el control.",
+    handoff: {
+      tag: "Del bot al operador",
+      title: "Un resumen estructurado, antes del traspaso",
+      desc: "Cuando el caso requiere intervención humana, la conversación pasa a un operador. Antes del traspaso, el operador recibe un resumen interno completo: todo el contexto, listo. El cliente sigue viendo únicamente las respuestas normales.",
+      points: [
+        "Fecha, hora y sede del cliente",
+        "Máquina implicada y número de serie",
+        "Idioma de la conversación",
+        "Resumen del diálogo y acción sugerida",
+        "Interno — nunca visible para el cliente",
+      ],
+    },
+    multilingual: {
+      tag: "Gestión multilingüe",
+      title: "Operador y cliente, idiomas distintos, cero barreras",
+      desc: "En el ejemplo el cliente escribe en árabe mientras el operador trabaja en español. Cada mensaje se traduce automáticamente en ambas direcciones. Con el Control Manual la IA se desactiva: los mensajes se guardan pero el bot ya no responde.",
+      points: [
+        "Traducción automática bidireccional",
+        "El operador escribe en su propio idioma",
+        "Control manual: IA desactivada bajo demanda",
+        "Conversación natural incluso entre idiomas distintos",
+      ],
+    },
   },
   pt: {
     seoTitle: "Suporte Humano Human-in-the-Loop - IA + Agentes Humanos em Sinergia",
@@ -185,6 +260,31 @@ const T = {
       { icon: "⚖️", title: "Gestão de reclamações", desc: "As reclamações delicadas são tratadas com a empatia que só um ser humano pode oferecer, salvaguardando o relacionamento com o cliente." },
       { icon: "🆘", title: "Situações excepcionais", desc: "Emergências, solicitações fora do padrão, exceções às políticas: o operador intervém com o poder de decisão necessário." },
     ],
+    realTitle: "Como trabalhamos de verdade",
+    realSub: "Não são slides, é o produto real: é isto que o operador vê quando a IA passa o controlo.",
+    handoff: {
+      tag: "Do bot ao operador",
+      title: "Um resumo estruturado, antes da passagem",
+      desc: "Quando o caso requer intervenção humana, a conversa passa para um operador. Antes da passagem, o operador recebe um resumo interno completo: todo o contexto, pronto. O cliente continua a ver apenas as respostas normais.",
+      points: [
+        "Data, hora e sede do cliente",
+        "Máquina envolvida e número de série",
+        "Idioma da conversa",
+        "Resumo do diálogo e ação sugerida",
+        "Interno — nunca visível para o cliente",
+      ],
+    },
+    multilingual: {
+      tag: "Gestão multilingue",
+      title: "Operador e cliente, idiomas diferentes, zero barreiras",
+      desc: "No exemplo o cliente escreve em árabe enquanto o operador trabalha em espanhol. Cada mensagem é traduzida automaticamente em ambas as direções. Com o Controlo Manual a IA é desativada: as mensagens são guardadas mas o bot já não responde.",
+      points: [
+        "Tradução automática bidirecional",
+        "O operador escreve no seu próprio idioma",
+        "Controlo manual: IA desativada sob pedido",
+        "Conversa natural mesmo entre idiomas diferentes",
+      ],
+    },
   },
 }
 
@@ -283,6 +383,82 @@ export function HumanSupportPage() {
                 </motion.div>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* Real product showcase — screenshots that show how we actually work */}
+        <section className="py-20 bg-white/[0.02] border-y border-white/10">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold text-white mb-4">{t.realTitle}</h2>
+              <p className="text-xl text-slate-400 max-w-3xl mx-auto">{t.realSub}</p>
+            </div>
+
+            {/* Handoff: bot → operator with structured internal summary */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{ duration: 0.6 }}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mb-24"
+            >
+              <div className="relative order-2 lg:order-1">
+                <div className="absolute -inset-4 bg-gradient-to-br from-amber-500/20 to-orange-500/10 rounded-3xl blur-xl opacity-50" />
+                <img
+                  src="/human-handoff.png"
+                  alt="WhatsApp handoff with structured Human Support message for the operator"
+                  className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/10 object-contain"
+                />
+              </div>
+              <div className="order-1 lg:order-2 space-y-6">
+                <span className="inline-block bg-amber-400/10 text-amber-300 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full">
+                  {t.handoff.tag}
+                </span>
+                <h3 className="text-3xl lg:text-4xl font-bold text-white leading-tight">{t.handoff.title}</h3>
+                <p className="text-lg text-slate-400 leading-relaxed">{t.handoff.desc}</p>
+                <ul className="space-y-3">
+                  {t.handoff.points.map((p, i) => (
+                    <li key={i} className="flex items-center gap-3 text-slate-300">
+                      <CheckCircle className="h-5 w-5 text-amber-400 flex-shrink-0" />
+                      {p}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </motion.div>
+
+            {/* Multilingual operator control */}
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{ duration: 0.6 }}
+              className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
+            >
+              <div className="space-y-6">
+                <span className="inline-block bg-emerald-400/10 text-emerald-300 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full">
+                  {t.multilingual.tag}
+                </span>
+                <h3 className="text-3xl lg:text-4xl font-bold text-white leading-tight">{t.multilingual.title}</h3>
+                <p className="text-lg text-slate-400 leading-relaxed">{t.multilingual.desc}</p>
+                <ul className="space-y-3">
+                  {t.multilingual.points.map((p, i) => (
+                    <li key={i} className="flex items-center gap-3 text-slate-300">
+                      <CheckCircle className="h-5 w-5 text-emerald-400 flex-shrink-0" />
+                      {p}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="relative">
+                <div className="absolute -inset-4 bg-gradient-to-br from-emerald-500/20 to-green-500/10 rounded-3xl blur-xl opacity-50" />
+                <img
+                  src="/operator-multilingual.png"
+                  alt="Manual operator control with automatic two-way translation between Arabic and Spanish"
+                  className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/10 object-contain"
+                />
+              </div>
+            </motion.div>
           </div>
         </section>
 
