@@ -329,6 +329,7 @@ export function DemoWidgetPage() {
           hideWorkspaceName
           plainWhatsappNumber
           icon="whatsapp"
+          monogram="DW"
           title={demo.workspaceName || "Chat with us 💬"}
           primaryColor="#25D366"
           position="bottom-right"

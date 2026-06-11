@@ -139,6 +139,9 @@ interface ChatWidgetProps {
   placeholder?: string
   primaryColor?: string
   icon?: string
+  // 🔤 Explicit 2-letter avatar monogram (WhatsApp-skin only). Overrides the
+  // initials auto-derived from the title — e.g. the /demo page forces "DW".
+  monogram?: string
   language?: string
   apiUrl?: string
   welcomeVideoUrl?: string
@@ -320,6 +323,7 @@ export function ChatWidget({
   placeholder = "Type a message...",
   primaryColor = DEFAULT_PRIMARY_COLOR,
   icon,
+  monogram,
   language,
   apiUrl,
   welcomeVideoUrl,
@@ -400,6 +404,25 @@ export function ChatWidget({
     resolvedUseChannelLogoRaw === "true" ||
     useChannelLogo === true
   const resolvedIcon = widgetConfig?.icon || icon || "chat"
+  // 🔤 Two-letter monogram derived from the title (WhatsApp-style avatar logo).
+  // "DemoWash" → "DW", "Demo Wash" → "DW", "eChatbot HQ" → "EH". Empty when we
+  // can't extract exactly two letters, so the avatar falls back to the icon glyph.
+  const titleMonogram = useMemo(() => {
+    // Explicit `monogram` prop wins (the /demo page forces "DW"); otherwise we
+    // derive the initials from the title. Both go through the same extractor.
+    const source = (monogram && monogram.trim()) || (resolvedTitle || "").trim()
+    if (!source) return ""
+    const words = source.split(/[\s_·.-]+/).filter(Boolean)
+    let letters = ""
+    if (words.length >= 2) {
+      letters = (words[0][0] || "") + (words[1][0] || "")
+    } else {
+      const caps = words[0].match(/[A-Z]/g)
+      letters = caps && caps.length >= 2 ? caps[0] + caps[1] : words[0].slice(0, 2)
+    }
+    letters = letters.replace(/[^A-Za-z]/g, "")
+    return letters.length === 2 ? letters.toUpperCase() : ""
+  }, [resolvedTitle, monogram])
   const resolvedApiUrl = widgetConfig?.apiUrl || apiUrl || DEFAULT_API_URL
   const resolvedWelcomeVideoUrl =
     (widgetConfig as any)?.welcomeVideoUrl || welcomeVideoUrl || ""
@@ -1514,11 +1537,17 @@ export function ChatWidget({
                 // 📱 WhatsApp-style avatar with online dot (parity with home phone).
                 <div className="relative flex-shrink-0">
                   <div
-                    className="flex h-10 w-10 items-center justify-center rounded-full text-lg shadow-inner"
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-base font-extrabold tracking-tight shadow-inner"
                     style={{ backgroundColor: resolvedPrimaryColor }}
                   >
                     {displayLogoUrl ? (
                       <img src={displayLogoUrl} alt="" className="h-full w-full rounded-full object-cover" />
+                    ) : titleMonogram ? (
+                      // 🔤 Monogram logo — first letter white, second black
+                      <>
+                        <span className="text-white">{titleMonogram[0]}</span>
+                        <span className="text-slate-900">{titleMonogram[1]}</span>
+                      </>
                     ) : (
                       renderIconGlyph(resolvedIcon)
                     )}

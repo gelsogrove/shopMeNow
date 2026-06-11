@@ -11,39 +11,41 @@ type Language = "it" | "en" | "es" | "pt"
 
 const T = {
   it: {
-    seoTitle: "Privacy by Design - GDPR Compliance e Sicurezza dei Dati | eChatbot",
+    seoTitle: "Privacy by Design - I tuoi dati al sicuro | eChatbot",
     ctaTitle: "La privacy dei tuoi clienti è al sicuro",
-    ctaSub: "Richiedi una demo e scopri come eChatbot gestisce i dati.",
-    seoDesc: "eChatbot è progettato con Privacy by Design. Conformità GDPR. Crittografia end-to-end, data retention configurabile, diritto all'oblio, esportazione dati su richiesta.",
-    seoKeys: "privacy by design gdpr whatsapp chatbot, gdpr compliance chatbot, protezione dati conversazioni whatsapp, sicurezza dati e-commerce",
+    ctaSub: "Richiedi una demo e ti mostriamo esattamente come trattiamo i dati.",
+    seoDesc: "On-premise su istanza dedicata, messaggi cifrati end-to-end da WhatsApp, AI disattivata sui dati sensibili, rate limiting anti-abuso e raccolta minima dei dati.",
+    seoKeys: "privacy whatsapp chatbot, on-premise chatbot, cifratura end-to-end whatsapp, rate limiting, minimizzazione dati, sicurezza dati e-commerce",
     breadcrumb: "Privacy by Design",
-    badge: "Privacy & GDPR",
-    heroTitle: "Privacy by Design\nnon come aggiunta",
-    heroSub: "eChatbot è stato progettato con la privacy al centro fin dal primo giorno. I dati dei tuoi clienti sono protetti da zero-knowledge architecture, crittografia end-to-end e controlli granulari di retention. Conformità GDPR inclusa.",
+    badge: "Privacy by Design",
+    heroTitle: "Privacy by design,\nnon a parole",
+    heroSub: "Niente promesse di marketing. I tuoi dati restano sulla tua istanza dedicata, i messaggi viaggiano cifrati end-to-end su WhatsApp e l'AI non tocca mai i dati sensibili. Raccogliamo solo ciò che serve per rispondere ai tuoi clienti.",
     cta: "Richiedi Demo",
-    principlesTitle: "I 7 principi Privacy by Design implementati",
+    principlesTitle: "Come proteggiamo i tuoi dati",
     principles: [
-      { icon: "🔒", title: "Proattivo, non reattivo", desc: "La privacy è integrata nel design dell'architettura, non aggiunta dopo. Ogni funzionalità è progettata con la protezione dei dati come requisito fondamentale." },
-      { icon: "🌐", title: "Privacy come impostazione predefinita", desc: "Le impostazioni predefinite garantiscono la massima privacy senza azione dell'utente. Nessun dato condiviso senza consenso esplicito." },
-      { icon: "🏗️", title: "Privacy integrata nell'architettura", desc: "Non un componente esterno — la privacy è parte integrante del sistema. Isolation workspace garantisce che nessun dato attraversi i confini del tenant." },
-      { icon: "✅", title: "Funzionalità completa, win-win", desc: "Privacy e funzionalità coesistono. Non sacrifichiamo features per la privacy, né la privacy per le features." },
-      { icon: "📅", title: "Sicurezza end-to-end, ciclo di vita completo", desc: "I dati sono protetti dalla raccolta alla cancellazione. Retention policy configurabile, eliminazione sicura verificabile." },
-      { icon: "👁️", title: "Visibilità e trasparenza", desc: "Log di accesso completi, audit trail per ogni operazione sui dati cliente. Il DPO ha accesso a tutto ciò che serve per i controlli." },
+      { icon: "🏠", title: "On-premise, istanza dedicata", desc: "Tutto resta sui tuoi server: anche la ricerca RAG sulla tua knowledge base gira sui tuoi sistemi. I dati non finiscono in un calderone condiviso né vengono venduti a terzi." },
+      { icon: "🔒", title: "Cifratura end-to-end di WhatsApp", desc: "I messaggi viaggiano sul canale peer-to-peer cifrato di WhatsApp: nessuno li intercetta in transito." },
+      { icon: "📲", title: "Connessione via QR code", desc: "Colleghi il tuo numero scansionando un QR code. Le credenziali del tuo WhatsApp non vengono memorizzate da noi." },
+      { icon: "🚦", title: "Rate limiting anti-abuso", desc: "Webhook, ordini e checkout sono protetti da limiti di frequenza contro spam, brute force e attacchi DoS." },
+      { icon: "🤖", title: "AI spenta sui dati sensibili", desc: "Quando si parla di fatture o si passa a un operatore, l'AI si disattiva: i dati sensibili non passano dal modello." },
+      { icon: "🧱", title: "Isolamento per workspace", desc: "Ogni attività è isolata: nessun dato attraversa i confini tra un cliente e l'altro." },
     ],
-    complianceTitle: "Conformità Normativa",
+    complianceTitle: "Meno dati, meno rischi",
+    complianceDesc: "Raccogliamo solo i dati necessari a far funzionare il servizio: il numero WhatsApp del cliente e la conversazione. La ricerca RAG sui tuoi documenti viene eseguita sui tuoi sistemi. Niente tracciamenti pubblicitari, niente profili venduti, niente dati usati per addestrare modelli AI di terzi.",
     complianceItems: [
-      { norm: "GDPR", region: "Unione Europea", status: "✅ Conforme", features: ["Consenso granulare", "Diritto all'oblio", "Portabilità dati", "DPA disponibile"] },
+      { norm: "On-premise", region: "La tua istanza dedicata", status: "✅ Attivo", features: ["Dati e knowledge base sul tuo ambiente", "Ricerca RAG eseguita sui tuoi sistemi", "Nessuna condivisione con terze parti", "Nessun dato usato per addestrare modelli", "Cancellazione su richiesta"] },
     ],
-    techTitle: "Misure Tecniche di Sicurezza",
+    techTitle: "Misure di sicurezza concrete",
     techFeatures: [
-      "Crittografia AES-256 per dati at-rest",
-      "TLS 1.3 per dati in transito",
-      "Zero-knowledge architecture: nemmeno il nostro staff vede i messaggi",
-      "Audit trail immutabile per ogni accesso",
-      "Data retention configurabile da 30 giorni a 7 anni",
-      "Right to erasure: cancellazione verificabile in <72h",
-      "Backup cifrati con chiavi separate per workspace",
-      "Penetration testing annuale da terze parti",
+      "Connessione a WhatsApp tramite QR code, senza memorizzare le credenziali del tuo numero",
+      "Messaggi cifrati end-to-end da WhatsApp (peer-to-peer)",
+      "Hosting on-premise su istanza dedicata: i dati restano nel tuo ambiente",
+      "Ricerca RAG eseguita on-premise: documenti ed embedding non lasciano i tuoi server",
+      "Isolamento per workspace: ogni query filtra per attività, nessun dato condiviso tra tenant",
+      "Rate limiting su webhook, ordini pubblici e checkout contro spam e DoS",
+      "AI disattivata automaticamente su fatture e passaggio a operatore",
+      "Raccolta minima dei dati: solo numero e conversazione, niente tracciamenti pubblicitari",
+      "Autenticazione a due fattori (2FA TOTP) per l'accesso alla dashboard",
     ],
     twoFaTitle: "Autenticazione a Due Fattori (2FA)",
     twoFaDesc: "Proteggi l'accesso alla dashboard con la verifica in due passaggi. Scansiona il QR code con la tua app di autenticazione (Google Authenticator, Authy, ecc.) per aggiungere un livello di sicurezza extra al tuo account.",
@@ -52,47 +54,49 @@ const T = {
       { icon: Smartphone, label: "App Authenticator compatibile", desc: "Compatibile con Google Authenticator, Authy, Microsoft Authenticator e tutte le app TOTP standard." },
       { icon: ShieldCheck, label: "Protezione accesso garantita", desc: "Anche se la password viene compromessa, il tuo account resta protetto. Codici temporanei a 6 cifre con scadenza di 30 secondi." },
     ],
-    rightsTitle: "Diritti degli Interessati",
+    rightsTitle: "I diritti dei tuoi clienti",
     rights: [
-      { icon: Eye, label: "Accesso ai dati", desc: "Il cliente può richiedere all'azienda l'export completo di tutte le sue conversazioni e dati." },
-      { icon: Trash2, label: "Cancellazione (Oblio)", desc: "Implementato: richiesta cancellazione eseguita entro 72h con log di avvenuta eliminazione." },
-      { icon: FileDown, label: "Portabilità", desc: "Esportazione in JSON, CSV o XML machine-readable. Compatibile con altri sistemi." },
+      { icon: Eye, label: "Accesso ai dati", desc: "Su richiesta puoi recuperare tutte le conversazioni e i dati di un cliente." },
+      { icon: Trash2, label: "Cancellazione", desc: "I dati di un cliente possono essere cancellati su richiesta, conversazioni incluse." },
+      { icon: FileDown, label: "Esportazione", desc: "Le conversazioni di un cliente possono essere esportate su richiesta." },
     ],
   },
   en: {
-    seoTitle: "Privacy by Design - GDPR Compliance and Data Security | eChatbot",
+    seoTitle: "Privacy by Design - Your Data Kept Safe | eChatbot",
     ctaTitle: "Your customers' privacy is protected",
-    ctaSub: "Request a demo and discover how eChatbot handles data.",
-    seoDesc: "eChatbot is built with Privacy by Design. GDPR compliance. End-to-end encryption, configurable data retention, right to erasure, data export on request.",
-    seoKeys: "privacy by design gdpr whatsapp chatbot, gdpr compliance chatbot, whatsapp conversation data protection, e-commerce data security",
+    ctaSub: "Request a demo and we'll show you exactly how we handle data.",
+    seoDesc: "On-premise on a dedicated instance, messages end-to-end encrypted by WhatsApp, AI disabled on sensitive data, anti-abuse rate limiting and minimal data collection.",
+    seoKeys: "privacy whatsapp chatbot, on-premise chatbot, whatsapp end-to-end encryption, rate limiting, data minimization, e-commerce data security",
     breadcrumb: "Privacy by Design",
-    badge: "Privacy & GDPR",
-    heroTitle: "Privacy by Design\nnot as an add-on",
-    heroSub: "eChatbot was designed with privacy at its core from day one. Your customers' data is protected by zero-knowledge architecture, end-to-end encryption and granular retention controls. GDPR compliance included.",
+    badge: "Privacy by Design",
+    heroTitle: "Privacy by design,\nnot just words",
+    heroSub: "No marketing promises. Your data stays on your dedicated instance, messages travel end-to-end encrypted on WhatsApp, and the AI never touches sensitive data. We only collect what's needed to answer your customers.",
     cta: "Request Demo",
-    principlesTitle: "The 7 Privacy by Design principles implemented",
+    principlesTitle: "How we protect your data",
     principles: [
-      { icon: "🔒", title: "Proactive, not reactive", desc: "Privacy is embedded in the architectural design, not bolted on. Every feature is designed with data protection as a core requirement." },
-      { icon: "🌐", title: "Privacy as the default", desc: "Default settings ensure maximum privacy without user action. No data shared without explicit consent." },
-      { icon: "🏗️", title: "Privacy embedded in design", desc: "Not an add-on — privacy is an integral part of the system. Workspace isolation ensures no data crosses tenant boundaries." },
-      { icon: "✅", title: "Full functionality, positive-sum", desc: "Privacy and functionality coexist. We don't sacrifice features for privacy, nor privacy for features." },
-      { icon: "📅", title: "End-to-end security, full lifecycle", desc: "Data is protected from collection to deletion. Configurable retention policy, verifiable secure deletion." },
-      { icon: "👁️", title: "Visibility and transparency", desc: "Full access logs, audit trail for every operation on customer data. The DPO has access to everything needed for audits." },
+      { icon: "🏠", title: "On-premise, dedicated instance", desc: "Everything stays on your servers: even the RAG search over your knowledge base runs on your systems. Data is never pooled with others or sold to third parties." },
+      { icon: "🔒", title: "WhatsApp end-to-end encryption", desc: "Messages travel on WhatsApp's encrypted peer-to-peer channel: no one intercepts them in transit." },
+      { icon: "📲", title: "QR code connection", desc: "You link your number by scanning a QR code. Your WhatsApp credentials are never stored by us." },
+      { icon: "🚦", title: "Anti-abuse rate limiting", desc: "Webhook, orders and checkout are protected by frequency limits against spam, brute force and DoS attacks." },
+      { icon: "🤖", title: "AI off on sensitive data", desc: "When invoices come up or a chat is handed to a human, the AI switches off: sensitive data never reaches the model." },
+      { icon: "🧱", title: "Per-workspace isolation", desc: "Every business is isolated: no data crosses the boundary from one customer to another." },
     ],
-    complianceTitle: "Regulatory Compliance",
+    complianceTitle: "Less data, less risk",
+    complianceDesc: "We only collect the data needed to run the service: the customer's WhatsApp number and the conversation. The RAG search over your documents runs on your own systems. No ad tracking, no profiles sold, no data used to train third-party AI models.",
     complianceItems: [
-      { norm: "GDPR", region: "European Union", status: "✅ Compliant", features: ["Granular consent", "Right to erasure", "Data portability", "DPA available"] },
+      { norm: "On-premise", region: "Your dedicated instance", status: "✅ Active", features: ["Data and knowledge base in your environment", "RAG search runs on your systems", "No sharing with third parties", "No data used to train models", "Deletion on request"] },
     ],
-    techTitle: "Technical Security Measures",
+    techTitle: "Concrete security measures",
     techFeatures: [
-      "AES-256 encryption for data at-rest",
-      "TLS 1.3 for data in transit",
-      "Zero-knowledge architecture: even our staff can't read messages",
-      "Immutable audit trail for every access",
-      "Configurable data retention from 30 days to 7 years",
-      "Right to erasure: verifiable deletion within 72h",
-      "Encrypted backups with separate keys per workspace",
-      "Annual third-party penetration testing",
+      "WhatsApp connection via QR code, without storing your number's credentials",
+      "Messages end-to-end encrypted by WhatsApp (peer-to-peer)",
+      "On-premise hosting on a dedicated instance: data stays in your environment",
+      "RAG search runs on-premise: documents and embeddings never leave your servers",
+      "Per-workspace isolation: every query filters by business, no data shared across tenants",
+      "Rate limiting on webhook, public orders and checkout against spam and DoS",
+      "AI automatically disabled on invoices and operator handoff",
+      "Minimal data collection: only number and conversation, no ad tracking",
+      "Two-factor authentication (2FA TOTP) for dashboard access",
     ],
     twoFaTitle: "Two-Factor Authentication (2FA)",
     twoFaDesc: "Protect dashboard access with two-step verification. Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.) to add an extra layer of security to your account.",
@@ -101,47 +105,49 @@ const T = {
       { icon: Smartphone, label: "Authenticator App Compatible", desc: "Works with Google Authenticator, Authy, Microsoft Authenticator and all standard TOTP apps." },
       { icon: ShieldCheck, label: "Guaranteed Access Protection", desc: "Even if your password is compromised, your account stays protected. 6-digit temporary codes with 30-second expiry." },
     ],
-    rightsTitle: "Data Subject Rights",
+    rightsTitle: "Your customers' rights",
     rights: [
-      { icon: Eye, label: "Data Access", desc: "Customers can request a complete export of all their conversations and data from the business." },
-      { icon: Trash2, label: "Erasure (Right to be Forgotten)", desc: "Implemented: deletion request executed within 72h with log of completed elimination." },
-      { icon: FileDown, label: "Portability", desc: "Export in machine-readable JSON, CSV or XML. Compatible with other systems." },
+      { icon: Eye, label: "Data access", desc: "On request you can retrieve all of a customer's conversations and data." },
+      { icon: Trash2, label: "Erasure", desc: "A customer's data can be deleted on request, conversations included." },
+      { icon: FileDown, label: "Export", desc: "A customer's conversations can be exported on request." },
     ],
   },
   es: {
-    seoTitle: "Privacy by Design - Cumplimiento GDPR y Seguridad de Datos | eChatbot",
+    seoTitle: "Privacy by Design - Tus datos a salvo | eChatbot",
     ctaTitle: "La privacidad de tus clientes está protegida",
-    ctaSub: "Solicita una demo y descubre cómo eChatbot gestiona los datos.",
-    seoDesc: "eChatbot está construido con Privacy by Design. Cumplimiento GDPR. Cifrado de extremo a extremo, retención de datos configurable, derecho al olvido, exportación de datos a pedido.",
-    seoKeys: "privacy by design gdpr chatbot whatsapp, cumplimiento gdpr chatbot, protección datos conversaciones whatsapp, seguridad datos e-commerce",
+    ctaSub: "Solicita una demo y te mostramos exactamente cómo tratamos los datos.",
+    seoDesc: "On-premise en una instancia dedicada, mensajes cifrados de extremo a extremo por WhatsApp, IA desactivada en datos sensibles, rate limiting anti-abuso y recogida mínima de datos.",
+    seoKeys: "privacidad chatbot whatsapp, chatbot on-premise, cifrado extremo a extremo whatsapp, rate limiting, minimización de datos, seguridad datos e-commerce",
     breadcrumb: "Privacy by Design",
-    badge: "Privacidad & GDPR",
-    heroTitle: "Privacy by Design\nno como añadido",
-    heroSub: "eChatbot fue diseñado con la privacidad en el centro desde el primer día. Los datos de tus clientes están protegidos por arquitectura zero-knowledge, cifrado de extremo a extremo y controles granulares de retención. Cumplimiento GDPR incluido.",
+    badge: "Privacy by Design",
+    heroTitle: "Privacy by design,\nno solo palabras",
+    heroSub: "Sin promesas de marketing. Tus datos quedan en tu instancia dedicada, los mensajes viajan cifrados de extremo a extremo en WhatsApp y la IA nunca toca datos sensibles. Solo recogemos lo necesario para responder a tus clientes.",
     cta: "Solicitar Demo",
-    principlesTitle: "Los 7 principios de Privacy by Design implementados",
+    principlesTitle: "Cómo protegemos tus datos",
     principles: [
-      { icon: "🔒", title: "Proactivo, no reactivo", desc: "La privacidad está integrada en el diseño arquitectónico, no añadida después. Cada funcionalidad se diseña con la protección de datos como requisito fundamental." },
-      { icon: "🌐", title: "Privacidad como configuración predeterminada", desc: "Las configuraciones predeterminadas garantizan la máxima privacidad sin acción del usuario. Ningún dato compartido sin consentimiento explícito." },
-      { icon: "🏗️", title: "Privacidad integrada en el diseño", desc: "No es un complemento — la privacidad es parte integral del sistema. El aislamiento de workspace garantiza que ningún dato cruce los límites del tenant." },
-      { icon: "✅", title: "Funcionalidad completa, suma positiva", desc: "Privacidad y funcionalidad coexisten. No sacrificamos funciones por la privacidad, ni la privacidad por las funciones." },
-      { icon: "📅", title: "Seguridad de extremo a extremo, ciclo de vida completo", desc: "Los datos están protegidos desde la recopilación hasta la eliminación. Política de retención configurable, eliminación segura verificable." },
-      { icon: "👁️", title: "Visibilidad y transparencia", desc: "Registros de acceso completos, rastro de auditoría para cada operación con datos del cliente. El DPO tiene acceso a todo lo necesario." },
+      { icon: "🏠", title: "On-premise, instancia dedicada", desc: "Todo queda en tus servidores: incluso la búsqueda RAG sobre tu knowledge base se ejecuta en tus sistemas. Los datos no se mezclan con otros ni se venden a terceros." },
+      { icon: "🔒", title: "Cifrado de extremo a extremo de WhatsApp", desc: "Los mensajes viajan por el canal cifrado peer-to-peer de WhatsApp: nadie los intercepta en tránsito." },
+      { icon: "📲", title: "Conexión por código QR", desc: "Conectas tu número escaneando un código QR. Nosotros no almacenamos las credenciales de tu WhatsApp." },
+      { icon: "🚦", title: "Rate limiting anti-abuso", desc: "Webhook, pedidos y checkout están protegidos por límites de frecuencia contra spam, fuerza bruta y ataques DoS." },
+      { icon: "🤖", title: "IA apagada en datos sensibles", desc: "Cuando se trata de facturas o se pasa a un operador, la IA se desactiva: los datos sensibles no pasan por el modelo." },
+      { icon: "🧱", title: "Aislamiento por workspace", desc: "Cada negocio está aislado: ningún dato cruza los límites de un cliente a otro." },
     ],
-    complianceTitle: "Cumplimiento Normativo",
+    complianceTitle: "Menos datos, menos riesgo",
+    complianceDesc: "Solo recogemos los datos necesarios para que el servicio funcione: el número de WhatsApp del cliente y la conversación. La búsqueda RAG sobre tus documentos se ejecuta en tus propios sistemas. Sin rastreo publicitario, sin perfiles vendidos, sin datos usados para entrenar modelos de IA de terceros.",
     complianceItems: [
-      { norm: "GDPR", region: "Unión Europea", status: "✅ Conforme", features: ["Consentimiento granular", "Derecho al olvido", "Portabilidad de datos", "DPA disponible"] },
+      { norm: "On-premise", region: "Tu instancia dedicada", status: "✅ Activo", features: ["Datos y knowledge base en tu entorno", "Búsqueda RAG ejecutada en tus sistemas", "Sin compartir con terceros", "Sin datos usados para entrenar modelos", "Eliminación a petición"] },
     ],
-    techTitle: "Medidas Técnicas de Seguridad",
+    techTitle: "Medidas de seguridad concretas",
     techFeatures: [
-      "Cifrado AES-256 para datos at-rest",
-      "TLS 1.3 para datos en tránsito",
-      "Arquitectura zero-knowledge: ni nuestro personal puede leer los mensajes",
-      "Rastro de auditoría inmutable para cada acceso",
-      "Retención de datos configurable de 30 días a 7 años",
-      "Derecho al olvido: eliminación verificable en <72h",
-      "Copias de seguridad cifradas con claves separadas por workspace",
-      "Pruebas de penetración anuales por terceros",
+      "Conexión a WhatsApp por código QR, sin almacenar las credenciales de tu número",
+      "Mensajes cifrados de extremo a extremo por WhatsApp (peer-to-peer)",
+      "Hosting on-premise en instancia dedicada: los datos quedan en tu entorno",
+      "Búsqueda RAG ejecutada on-premise: documentos y embeddings no salen de tus servidores",
+      "Aislamiento por workspace: cada consulta filtra por negocio, sin datos compartidos entre tenants",
+      "Rate limiting en webhook, pedidos públicos y checkout contra spam y DoS",
+      "IA desactivada automáticamente en facturas y paso a operador",
+      "Recogida mínima de datos: solo número y conversación, sin rastreo publicitario",
+      "Autenticación de dos factores (2FA TOTP) para el acceso al panel",
     ],
     twoFaTitle: "Autenticación de Dos Factores (2FA)",
     twoFaDesc: "Protege el acceso al panel de control con la verificación en dos pasos. Escanea el código QR con tu app de autenticación (Google Authenticator, Authy, etc.) para añadir una capa extra de seguridad a tu cuenta.",
@@ -150,60 +156,62 @@ const T = {
       { icon: Smartphone, label: "Compatible con apps Authenticator", desc: "Compatible con Google Authenticator, Authy, Microsoft Authenticator y todas las apps TOTP estándar." },
       { icon: ShieldCheck, label: "Protección de acceso garantizada", desc: "Incluso si tu contraseña se ve comprometida, tu cuenta permanece protegida. Códigos temporales de 6 dígitos con expiración de 30 segundos." },
     ],
-    rightsTitle: "Derechos del Interesado",
+    rightsTitle: "Los derechos de tus clientes",
     rights: [
-      { icon: Eye, label: "Acceso a los datos", desc: "El cliente puede solicitar a la empresa la exportación completa de todas sus conversaciones y datos." },
-      { icon: Trash2, label: "Supresión (Derecho al olvido)", desc: "Implementado: solicitud de eliminación ejecutada en 72h con registro de eliminación completada." },
-      { icon: FileDown, label: "Portabilidad", desc: "Exportación en JSON, CSV o XML machine-readable. Compatible con otros sistemas." },
+      { icon: Eye, label: "Acceso a los datos", desc: "A petición puedes recuperar todas las conversaciones y datos de un cliente." },
+      { icon: Trash2, label: "Supresión", desc: "Los datos de un cliente pueden eliminarse a petición, conversaciones incluidas." },
+      { icon: FileDown, label: "Exportación", desc: "Las conversaciones de un cliente pueden exportarse a petición." },
     ],
   },
   pt: {
-    seoTitle: "Privacy by Design - Conformidade GDPR e Segurança de Dados | eChatbot",
+    seoTitle: "Privacy by Design - Os teus dados em segurança | eChatbot",
     ctaTitle: "A privacidade dos seus clientes está protegida",
-    ctaSub: "Solicite uma demo e descubra como o eChatbot gere os dados.",
-    seoDesc: "O eChatbot é construído com Privacy by Design. Conformidade GDPR. Criptografia ponta a ponta, retenção de dados configurável, direito ao esquecimento, exportação de dados sob demanda.",
-    seoKeys: "privacy by design gdpr chatbot whatsapp, conformidade gdpr chatbot, proteção dados conversas whatsapp, segurança dados e-commerce",
+    ctaSub: "Solicite uma demo e mostramos-lhe exatamente como tratamos os dados.",
+    seoDesc: "On-premise numa instância dedicada, mensagens cifradas ponta a ponta pelo WhatsApp, IA desativada em dados sensíveis, rate limiting anti-abuso e recolha mínima de dados.",
+    seoKeys: "privacidade chatbot whatsapp, chatbot on-premise, cifragem ponta a ponta whatsapp, rate limiting, minimização de dados, segurança dados e-commerce",
     breadcrumb: "Privacy by Design",
-    badge: "Privacidade & GDPR",
-    heroTitle: "Privacy by Design\nnão como adicional",
-    heroSub: "O eChatbot foi projetado com a privacidade no centro desde o primeiro dia. Os dados dos seus clientes são protegidos por arquitetura zero-knowledge, criptografia ponta a ponta e controles granulares de retenção. Conformidade GDPR incluída.",
+    badge: "Privacy by Design",
+    heroTitle: "Privacy by design,\nnão só palavras",
+    heroSub: "Sem promessas de marketing. Os teus dados ficam na tua instância dedicada, as mensagens viajam cifradas ponta a ponta no WhatsApp e a IA nunca toca em dados sensíveis. Só recolhemos o necessário para responder aos teus clientes.",
     cta: "Solicitar Demo",
-    principlesTitle: "Os 7 princípios de Privacy by Design implementados",
+    principlesTitle: "Como protegemos os teus dados",
     principles: [
-      { icon: "🔒", title: "Proativo, não reativo", desc: "A privacidade está integrada no design arquitetural, não adicionada depois. Cada funcionalidade é projetada com proteção de dados como requisito fundamental." },
-      { icon: "🌐", title: "Privacidade como configuração padrão", desc: "As configurações padrão garantem máxima privacidade sem ação do usuário. Nenhum dado compartilhado sem consentimento explícito." },
-      { icon: "🏗️", title: "Privacidade incorporada no design", desc: "Não é um complemento — a privacidade é parte integrante do sistema. O isolamento do workspace garante que nenhum dado ultrapasse os limites do tenant." },
-      { icon: "✅", title: "Funcionalidade completa, soma positiva", desc: "Privacidade e funcionalidade coexistem. Não sacrificamos recursos pela privacidade, nem a privacidade pelos recursos." },
-      { icon: "📅", title: "Segurança ponta a ponta, ciclo de vida completo", desc: "Os dados são protegidos desde a coleta até a exclusão. Política de retenção configurável, exclusão segura verificável." },
-      { icon: "👁️", title: "Visibilidade e transparência", desc: "Logs de acesso completos, trilha de auditoria para cada operação nos dados do cliente. O DPO tem acesso a tudo que precisa para auditorias." },
+      { icon: "🏠", title: "On-premise, instância dedicada", desc: "Tudo fica nos teus servidores: até a pesquisa RAG sobre a tua knowledge base corre nos teus sistemas. Os dados não se misturam com outros nem são vendidos a terceiros." },
+      { icon: "🔒", title: "Cifragem ponta a ponta do WhatsApp", desc: "As mensagens viajam pelo canal cifrado peer-to-peer do WhatsApp: ninguém as interceta em trânsito." },
+      { icon: "📲", title: "Ligação por código QR", desc: "Ligas o teu número lendo um código QR. As credenciais do teu WhatsApp não são guardadas por nós." },
+      { icon: "🚦", title: "Rate limiting anti-abuso", desc: "Webhook, pedidos e checkout estão protegidos por limites de frequência contra spam, força bruta e ataques DoS." },
+      { icon: "🤖", title: "IA desligada em dados sensíveis", desc: "Quando se fala de faturas ou se passa a um operador, a IA desativa-se: os dados sensíveis não passam pelo modelo." },
+      { icon: "🧱", title: "Isolamento por workspace", desc: "Cada negócio está isolado: nenhum dado atravessa os limites de um cliente para outro." },
     ],
-    complianceTitle: "Conformidade Regulatória",
+    complianceTitle: "Menos dados, menos risco",
+    complianceDesc: "Só recolhemos os dados necessários para o serviço funcionar: o número de WhatsApp do cliente e a conversa. A pesquisa RAG sobre os teus documentos corre nos teus próprios sistemas. Sem rastreio publicitário, sem perfis vendidos, sem dados usados para treinar modelos de IA de terceiros.",
     complianceItems: [
-      { norm: "GDPR", region: "União Europeia", status: "✅ Conforme", features: ["Consentimento granular", "Direito ao esquecimento", "Portabilidade de dados", "DPA disponível"] },
+      { norm: "On-premise", region: "A tua instância dedicada", status: "✅ Ativo", features: ["Dados e knowledge base no teu ambiente", "Pesquisa RAG executada nos teus sistemas", "Sem partilha com terceiros", "Sem dados usados para treinar modelos", "Eliminação a pedido"] },
     ],
-    techTitle: "Medidas Técnicas de Segurança",
+    techTitle: "Medidas de segurança concretas",
     techFeatures: [
-      "Criptografia AES-256 para dados at-rest",
-      "TLS 1.3 para dados em trânsito",
-      "Arquitetura zero-knowledge: nem nossa equipe pode ler as mensagens",
-      "Trilha de auditoria imutável para cada acesso",
-      "Retenção de dados configurável de 30 dias a 7 anos",
-      "Direito ao esquecimento: exclusão verificável em <72h",
-      "Backups criptografados com chaves separadas por workspace",
-      "Testes de penetração anuais por terceiros",
+      "Ligação ao WhatsApp por código QR, sem guardar as credenciais do teu número",
+      "Mensagens cifradas ponta a ponta pelo WhatsApp (peer-to-peer)",
+      "Alojamento on-premise em instância dedicada: os dados ficam no teu ambiente",
+      "Pesquisa RAG executada on-premise: documentos e embeddings não saem dos teus servidores",
+      "Isolamento por workspace: cada consulta filtra por negócio, sem dados partilhados entre tenants",
+      "Rate limiting em webhook, pedidos públicos e checkout contra spam e DoS",
+      "IA desativada automaticamente em faturas e passagem para operador",
+      "Recolha mínima de dados: apenas número e conversa, sem rastreio publicitário",
+      "Autenticação de dois fatores (2FA TOTP) para o acesso ao painel",
     ],
     twoFaTitle: "Autenticação de Dois Fatores (2FA)",
-    twoFaDesc: "Proteja o acesso ao painel com a verificação em dois passos. Escaneie o código QR com seu app de autenticação (Google Authenticator, Authy, etc.) para adicionar uma camada extra de segurança à sua conta.",
+    twoFaDesc: "Proteja o acesso ao painel com a verificação em dois passos. Escaneie o código QR com o seu app de autenticação (Google Authenticator, Authy, etc.) para adicionar uma camada extra de segurança à sua conta.",
     twoFaFeatures: [
-      { icon: QrCode, label: "Configuração com QR Code", desc: "Configuração imediata: escaneie o código QR com seu app de autenticação preferido para ativar a 2FA em segundos." },
+      { icon: QrCode, label: "Configuração com QR Code", desc: "Configuração imediata: escaneie o código QR com o seu app de autenticação preferido para ativar a 2FA em segundos." },
       { icon: Smartphone, label: "Compatível com apps Authenticator", desc: "Compatível com Google Authenticator, Authy, Microsoft Authenticator e todos os apps TOTP padrão." },
-      { icon: ShieldCheck, label: "Proteção de acesso garantida", desc: "Mesmo que sua senha seja comprometida, sua conta permanece protegida. Códigos temporários de 6 dígitos com expiração de 30 segundos." },
+      { icon: ShieldCheck, label: "Proteção de acesso garantida", desc: "Mesmo que a sua senha seja comprometida, a sua conta permanece protegida. Códigos temporários de 6 dígitos com expiração de 30 segundos." },
     ],
-    rightsTitle: "Direitos dos Titulares dos Dados",
+    rightsTitle: "Os direitos dos teus clientes",
     rights: [
-      { icon: Eye, label: "Acesso aos dados", desc: "O cliente pode solicitar à empresa a exportação completa de todas as suas conversas e dados." },
-      { icon: Trash2, label: "Exclusão (Direito ao esquecimento)", desc: "Implementado: solicitação de exclusão executada em 72h com registro de exclusão concluída." },
-      { icon: FileDown, label: "Portabilidade", desc: "Exportação em JSON, CSV ou XML machine-readable. Compatível com outros sistemas." },
+      { icon: Eye, label: "Acesso aos dados", desc: "A pedido podes recuperar todas as conversas e dados de um cliente." },
+      { icon: Trash2, label: "Eliminação", desc: "Os dados de um cliente podem ser eliminados a pedido, conversas incluídas." },
+      { icon: FileDown, label: "Exportação", desc: "As conversas de um cliente podem ser exportadas a pedido." },
     ],
   },
 }
@@ -249,7 +257,7 @@ export function PrivacyByDesignPage() {
           </div>
         </section>
 
-        {/* 7 Principles */}
+        {/* Privacy pillars */}
         <section className="py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <h2 className="text-4xl font-bold text-white text-center mb-14">{t.principlesTitle}</h2>
@@ -272,7 +280,7 @@ export function PrivacyByDesignPage() {
           </div>
         </section>
 
-        {/* Compliance */}
+        {/* Data minimization / On-premise */}
         <section className="py-20 bg-white/[0.02]">
           <div className="max-w-6xl mx-auto px-6 lg:px-8">
             <div className="grid grid-cols-1 lg:grid-cols-[1.1fr,0.9fr] gap-12 items-center">
@@ -282,7 +290,7 @@ export function PrivacyByDesignPage() {
                 </div>
                 <h2 className="text-4xl font-bold text-white mb-4">{t.complianceTitle}</h2>
                 <p className="text-lg text-slate-400 leading-relaxed mb-6 max-w-2xl">
-                  {t.heroSub}
+                  {t.complianceDesc}
                 </p>
                 <div className="grid sm:grid-cols-2 gap-3">
                   {t.complianceItems[0].features.map((f, j) => (
@@ -345,6 +353,65 @@ export function PrivacyByDesignPage() {
                   ))}
                 </ul>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 2FA */}
+        <section className="py-20 bg-white/[0.02]">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl lg:text-4xl font-bold text-white mb-4">{t.twoFaTitle}</h2>
+              <p className="text-lg text-slate-400 max-w-3xl mx-auto leading-relaxed">{t.twoFaDesc}</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {t.twoFaFeatures.map((f, i) => {
+                const Icon = f.icon
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                    className="p-6 bg-slate-900/50 backdrop-blur rounded-2xl shadow-2xl border border-white/10 hover:-translate-y-1 transition-all"
+                  >
+                    <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-green-400/10 text-[#25D366] mb-4">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">{f.label}</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed">{f.desc}</p>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Data subject rights */}
+        <section className="py-20">
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <h2 className="text-4xl font-bold text-white text-center mb-14">{t.rightsTitle}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {t.rights.map((r, i) => {
+                const Icon = r.icon
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.1 }}
+                    className="p-6 bg-slate-900/50 backdrop-blur rounded-2xl shadow-2xl border border-white/10 hover:-translate-y-1 transition-all"
+                  >
+                    <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl bg-green-400/10 text-[#25D366] mb-4">
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <h3 className="text-lg font-bold text-white mb-2">{r.label}</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed">{r.desc}</p>
+                  </motion.div>
+                )
+              })}
             </div>
           </div>
         </section>

@@ -477,19 +477,29 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
               className="flex w-full items-start gap-4 rounded-2xl border px-5 py-3.5 text-left transition-all duration-500"
               style={
                 i === activeFeature
-                  ? { borderColor: `${WA_GREEN}80`, background: `${WA_GREEN}14`, boxShadow: `0 10px 30px -12px ${WA_GREEN}55` }
+                  ? { borderColor: WA_GREEN, background: WA_GREEN, boxShadow: `0 14px 34px -10px ${WA_GREEN}aa` }
                   : { borderColor: "rgba(255,255,255,0.10)", background: "rgba(15,23,42,0.40)" }
               }
             >
               <span
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-lg"
-                style={{ background: i === activeFeature ? `${WA_GREEN}33` : "rgba(255,255,255,0.05)" }}
+                style={{ background: i === activeFeature ? "rgba(7,94,84,0.14)" : "rgba(255,255,255,0.05)" }}
               >
                 {f.icon}
               </span>
               <span>
-                <span className={`block font-bold ${i === activeFeature ? "text-white" : "text-slate-200"}`}>{f.title}</span>
-                <span className="mt-0.5 block text-sm text-slate-400">{f.desc}</span>
+                <span
+                  className={`block font-bold ${i === activeFeature ? "" : "text-slate-200"}`}
+                  style={i === activeFeature ? { color: "#075E54" } : undefined}
+                >
+                  {f.title}
+                </span>
+                <span
+                  className={`mt-0.5 block text-sm ${i === activeFeature ? "" : "text-slate-400"}`}
+                  style={i === activeFeature ? { color: "#075E54" } : undefined}
+                >
+                  {f.desc}
+                </span>
               </span>
             </button>
           ))}
