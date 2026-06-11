@@ -182,6 +182,7 @@ export function FranchisingPage() {
                 <img
                   src="/franchising.png"
                   alt="eChatbot AI assistant for multi-location franchises"
+                  style={{ filter: "saturate(0.7) brightness(1.06)" }}
                   className="relative w-full rounded-3xl border border-white/10 shadow-2xl"
                   onError={(e) => {
                     ;(e.currentTarget as HTMLImageElement).style.display = "none"
