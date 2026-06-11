@@ -56,6 +56,7 @@ interface DemoIntroCopy {
   items: string[]
   loading: string
   unavailable: string
+  contact: string
 }
 
 const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
@@ -73,6 +74,7 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     ],
     loading: "Loading the assistant…",
     unavailable: "Demo unavailable",
+    contact: "Contact us",
   },
   it: {
     liveDemo: "Demo dal vivo",
@@ -88,6 +90,7 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     ],
     loading: "Caricamento dell'assistente…",
     unavailable: "Demo non disponibile",
+    contact: "Contattaci",
   },
   es: {
     liveDemo: "Demo en vivo",
@@ -103,6 +106,7 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     ],
     loading: "Cargando el asistente…",
     unavailable: "Demo no disponible",
+    contact: "Contáctanos",
   },
   fr: {
     liveDemo: "Démo en direct",
@@ -118,6 +122,7 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     ],
     loading: "Chargement de l'assistant…",
     unavailable: "Démo indisponible",
+    contact: "Contactez-nous",
   },
   pt: {
     liveDemo: "Demo ao vivo",
@@ -133,6 +138,7 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     ],
     loading: "A carregar o assistente…",
     unavailable: "Demo indisponível",
+    contact: "Contacte-nos",
   },
   ca: {
     liveDemo: "Demo en directe",

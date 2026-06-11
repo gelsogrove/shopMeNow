@@ -3,6 +3,7 @@ import { HomeShowcase } from "@/components/HomeShowcase"
 import { SiteFooter } from "@/components/layout/SiteFooter"
 import { NewsUpdates } from "@/components/landing/NewsUpdates"
 import { HomeFAQ } from "@/components/landing/HomeFAQ"
+import HeroRobot from "@/components/landing/HeroRobot"
 import { WIPModal } from "@/components/shared/WIPModal"
 import { SEO } from "@/components/SEO"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -1239,14 +1240,20 @@ export function LoginPage() {
       <main className={`flex-1${showLoginCard ? ' flex items-center justify-center' : ''}`}>
       <div className={showLoginCard ? "w-full px-4 py-8" : "max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 relative z-20"}>
         
-        <div className={`text-center mb-6 space-y-4 relative${showLoginCard ? ' hidden' : ''}`}>
-          {/* Brand slogan — wordplay on "you never forget your first love" */}
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold italic mx-auto lg:whitespace-nowrap" style={{ color: "#25D366" }}>
-            {t("hero.slogan")}
-          </h1>
-          <p className="hidden sm:block text-lg text-slate-300 max-w-3xl mx-auto">
-            {t("hero.subtitle")}
-          </p>
+        <div className={`mb-6 relative${showLoginCard ? ' hidden' : ''}`}>
+          {/* Mascot robot on the left introduces the slogan so the hero isn't all text */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 lg:gap-8">
+            <HeroRobot />
+            <div className="space-y-4 text-center sm:text-left">
+              {/* Brand slogan — wordplay on "you never forget your first love" */}
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold italic lg:whitespace-nowrap" style={{ color: "#25D366" }}>
+                {t("hero.slogan")}
+              </h1>
+              <p className="hidden sm:block text-lg text-slate-300 max-w-2xl">
+                {t("hero.subtitle")}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Mobile hero — animated showcase (replaces the static image) */}

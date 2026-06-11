@@ -33,6 +33,7 @@ import {
   Globe,
   Mic,
   Square,
+  Paperclip,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -87,7 +88,12 @@ import { ChatSurface } from "@/components/chat/ChatSurface"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
-import type { ChatAttachment } from "@/components/chat/attachment-utils"
+import {
+  ACCEPTED_ACCEPT_ATTR,
+  kindOf,
+  validateSelection,
+  type ChatAttachment,
+} from "@/components/chat/attachment-utils"
 import { WidgetProfilePanel } from "@/components/chat/WidgetProfilePanel"
 import { useLanguage } from "@/contexts/LanguageContext"
 import {
@@ -453,6 +459,11 @@ export function ChatWidget({
   const [recording, setRecording] = useState(false)
   const audioMediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+  // 📎 File attachments (demo composer): paperclip → pick image/PDF → render in
+  // the user's own bubble. Object URLs are created locally so the media shows
+  // instantly (parity with WhatsApp); revoked on unmount to avoid leaks.
+  const attachInputRef = useRef<HTMLInputElement | null>(null)
+  const attachObjectUrls = useRef<string[]>([])
   const [visitorId, setVisitorId] = useState<string>("")
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [customerId, setCustomerId] = useState<string | null>(null)
@@ -962,6 +973,51 @@ export function ChatWidget({
   }
 
   /**
+   * 📎 Attach images / PDFs from the demo composer (paperclip). Validates the
+   * selection with the same caps as the backend, renders each file inside the
+   * user's own bubble via a local object URL — WhatsApp parity, no upload needed
+   * for the demo. Multiple files land in a single message bubble.
+   */
+  const handleAttachFiles = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return
+    const { accepted, errors } = validateSelection(Array.from(fileList), 0)
+    if (errors.length > 0) {
+      setFormError(errors[0])
+    }
+    if (accepted.length === 0) return
+
+    const attachments: ChatAttachment[] = accepted.map((file, i) => {
+      const url = URL.createObjectURL(file)
+      attachObjectUrls.current.push(url)
+      return {
+        id: `local-${Date.now()}-${i}`,
+        url,
+        kind: kindOf(file.type) || "DOCUMENT",
+        mimeType: file.type,
+        filename: file.name,
+        sizeBytes: file.size,
+      }
+    })
+
+    const userMessage: Message = {
+      role: "user",
+      content: "",
+      timestamp: new Date().toISOString(),
+      attachments,
+    }
+    const updatedMessages = [...messages, userMessage]
+    setMessages(updatedMessages)
+    if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updatedMessages)
+  }
+
+  // 🧹 Revoke any object URLs created for attachment previews on unmount.
+  useEffect(() => {
+    return () => {
+      attachObjectUrls.current.forEach((url) => URL.revokeObjectURL(url))
+    }
+  }, [])
+
+  /**
    * Handle registration form submit
    * Creates/finds customer by phone, sends first message through LLM
    */
@@ -1285,7 +1341,16 @@ export function ChatWidget({
     return color
   }
   const borderColor = getBorderColor(resolvedPrimaryColor)
-  
+
+  // 📱 WhatsApp skin — applied ONLY in demo mode (instantChat) so branded embeds
+  // on customer sites keep their own primaryColor. Mirrors the home-page phone
+  // (HomeShowcase): dark-green header, cream chat canvas, light-green outgoing
+  // bubbles with a tail. Colours are the exact WhatsApp palette.
+  const waSkin = instantChat
+  const WA_HEADER = "#075E54" // WhatsApp dark green (header)
+  const WA_OUT_BUBBLE = "#DCF8C6" // outgoing bubble (light green)
+  const headerColor = waSkin ? WA_HEADER : resolvedPrimaryColor
+
   const embeddedButtonSizeClasses = isEmbedded
     ? "w-[56px] h-[56px]"
     : "w-[60px] h-[60px] sm:w-[68px] sm:h-[68px]"
@@ -1418,17 +1483,41 @@ export function ChatWidget({
         >
           {/* Header */}
           <div
-            className="text-white px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-3"
-            style={{ backgroundColor: resolvedPrimaryColor }}
+            className="text-white px-4 sm:px-5 py-3 flex items-center justify-between gap-2 sm:gap-3"
+            style={{ backgroundColor: headerColor }}
           >
-              <span
-                className={cn(
-                  "h-2.5 w-2.5 rounded-full shadow-sm transition-colors flex-shrink-0",
-                  workspaceConfig?.debugMode === true || workspaceConfig?.channelStatus === false
-                    ? "bg-red-400"
-                    : "bg-emerald-300"
-                )}
-              />
+              {waSkin ? (
+                // 📱 WhatsApp-style avatar with online dot (parity with home phone).
+                <div className="relative flex-shrink-0">
+                  <div
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-lg shadow-inner"
+                    style={{ backgroundColor: resolvedPrimaryColor }}
+                  >
+                    {displayLogoUrl ? (
+                      <img src={displayLogoUrl} alt="" className="h-full w-full rounded-full object-cover" />
+                    ) : (
+                      renderIconGlyph(resolvedIcon)
+                    )}
+                  </div>
+                  <span
+                    className={cn(
+                      "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#075E54]",
+                      workspaceConfig?.debugMode === true || workspaceConfig?.channelStatus === false
+                        ? "bg-red-400"
+                        : "bg-emerald-400"
+                    )}
+                  />
+                </div>
+              ) : (
+                <span
+                  className={cn(
+                    "h-2.5 w-2.5 rounded-full shadow-sm transition-colors flex-shrink-0",
+                    workspaceConfig?.debugMode === true || workspaceConfig?.channelStatus === false
+                      ? "bg-red-400"
+                      : "bg-emerald-300"
+                  )}
+                />
+              )}
               <div className="flex flex-col leading-tight flex-1">
                 <h2 className="font-semibold text-lg">
                   {resolvedTitle}
@@ -1438,6 +1527,9 @@ export function ChatWidget({
                     ? ` · ${workspaceConfig.name}`
                     : ""}
                 </h2>
+                {waSkin && !shouldShowWhatsappNumber(workspaceConfig) && (
+                  <p className="text-[11px] text-white/70">online</p>
+                )}
                 {shouldShowWhatsappNumber(workspaceConfig) && (
                   <div className="flex items-center gap-1 text-sm font-semibold text-white">
                     <span>WhatsApp:</span>
@@ -1694,7 +1786,10 @@ export function ChatWidget({
             <>
               {/* Messages Container */}
               <ScrollArea
-                className="flex-1 bg-slate-50 px-5 py-4 widget-scroll-area overscroll-contain"
+                className={cn(
+                  "flex-1 px-5 py-4 widget-scroll-area overscroll-contain",
+                  waSkin ? "bg-[#ECE5DD]" : "bg-slate-50"
+                )}
               >
                 <style>{`
                   .widget-scroll-area {
@@ -1735,12 +1830,18 @@ export function ChatWidget({
                       "rounded-2xl px-3 sm:px-4 py-2 sm:py-3 max-w-[88%] sm:max-w-[360px] mb-3 shadow-sm",
                       "word-wrap break-words overflow-wrap-anywhere relative text-sm sm:text-[15px] leading-relaxed",
                       msg.role === "user"
-                        ? "text-white rounded-br-md"
-                        : "bg-white text-slate-900 border border-slate-200 rounded-bl-md"
+                        ? waSkin
+                          ? "text-slate-900 rounded-tr-sm" // 📱 WhatsApp outgoing bubble (dark text, top-right tail)
+                          : "text-white rounded-br-md"
+                        : waSkin
+                          ? "bg-white text-slate-900 rounded-tl-sm" // 📱 WhatsApp incoming bubble (top-left tail)
+                          : "bg-white text-slate-900 border border-slate-200 rounded-bl-md"
                     )
                   }
                   getBubbleStyle={(msg) =>
-                    msg.role === "user" ? { backgroundColor: resolvedPrimaryColor } : undefined
+                    msg.role === "user"
+                      ? { backgroundColor: waSkin ? WA_OUT_BUBBLE : resolvedPrimaryColor }
+                      : undefined
                   }
                   getContainerClassName={(msg) =>
                     msg.role === "user" ? "widget-user-message" : undefined
@@ -1768,9 +1869,13 @@ export function ChatWidget({
                           className="mt-2 h-9 w-full min-w-[200px] max-w-[240px]"
                         />
                       )}
-                      {/* 📎 Operator-sent media (images / PDFs / audio) after handoff. */}
+                      {/* 📎 Media: operator-sent (left) or customer-attached via
+                          the paperclip (right). Aligns to the bubble's own side. */}
                       {msg.attachments && msg.attachments.length > 0 && (
-                        <MessageAttachments attachments={msg.attachments} align="left" />
+                        <MessageAttachments
+                          attachments={msg.attachments}
+                          align={msg.role === "user" ? "right" : "left"}
+                        />
                       )}
                     </>
                   )}
@@ -1864,6 +1969,32 @@ export function ChatWidget({
                       onSelect={(emoji) => setInputValue((prev) => prev + emoji)}
                       className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600"
                     />
+                  )}
+                  {/* 📎 Attach images / PDFs — demo composer (WhatsApp paperclip) */}
+                  {instantChat && !(botDisabled && !operatorHasReplied) && (
+                    <>
+                      <input
+                        ref={attachInputRef}
+                        type="file"
+                        accept={ACCEPTED_ACCEPT_ATTR}
+                        multiple
+                        className="hidden"
+                        onChange={(e) => {
+                          handleAttachFiles(e.target.files)
+                          e.target.value = "" // allow re-selecting the same file
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => attachInputRef.current?.click()}
+                        disabled={isLoading}
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:bg-emerald-50 hover:text-emerald-600 disabled:opacity-50"
+                        aria-label="Attach image or file"
+                        title="Attach image or PDF"
+                      >
+                        <Paperclip className="w-5 h-5" />
+                      </button>
+                    </>
                   )}
                   <textarea
                     value={inputValue}

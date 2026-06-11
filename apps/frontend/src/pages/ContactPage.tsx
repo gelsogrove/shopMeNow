@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { motion } from "framer-motion"
-import { Mail, MessageCircle, MapPin, Send, CheckCircle } from "lucide-react"
+import { Mail, MapPin, Send, CheckCircle } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
@@ -245,7 +245,7 @@ export function ContactPage() {
                   transition={{ duration: 0.5 }}
                 >
                   <div className="rounded-2xl overflow-hidden shadow-xl mb-8">
-                    <img src="/team.png" alt="Contact us" style={{ filter: "saturate(0.7) brightness(1.06)" }} className="w-full h-[400px] object-cover" />
+                    <img src="/team.png" alt="Contact us" style={{ filter: "grayscale(1) sepia(1) hue-rotate(75deg) saturate(0.9) brightness(1.15)" }} className="w-full h-[400px] object-cover" />
                   </div>
 
                   <div className="space-y-4">
@@ -256,16 +256,6 @@ export function ContactPage() {
                       <div>
                         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.info1Title}</p>
                         <p className="text-white font-medium">{t.infoEmail}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/10">
-                      <div className="w-10 h-10 bg-green-400/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <MessageCircle className="h-5 w-5 text-green-400" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.info2Title}</p>
-                        <p className="text-white font-medium">{t.infoPhone}</p>
                       </div>
                     </div>
                   </div>
