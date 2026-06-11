@@ -245,7 +245,7 @@ export function ContactPage() {
                   transition={{ duration: 0.5 }}
                 >
                   <div className="rounded-2xl overflow-hidden shadow-xl mb-8">
-                    <img src="/team.png" alt="Contact us" style={{ filter: "grayscale(1) sepia(1) hue-rotate(75deg) saturate(0.9) brightness(1.15)" }} className="w-full h-[400px] object-cover" />
+                    <img src="/team.png" alt="Contact us" className="w-full h-[400px] object-cover" />
                   </div>
 
                   <div className="space-y-4">

@@ -1242,14 +1242,14 @@ export function LoginPage() {
         
         <div className={`mb-6 relative${showLoginCard ? ' hidden' : ''}`}>
           {/* Mascot robot on the left introduces the slogan so the hero isn't all text */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 lg:gap-8">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 lg:gap-8 sm:-translate-x-16">
             <HeroRobot />
             <div className="space-y-4 text-center sm:text-left">
               {/* Brand slogan — wordplay on "you never forget your first love" */}
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold italic lg:whitespace-nowrap" style={{ color: "#25D366" }}>
                 {t("hero.slogan")}
               </h1>
-              <p className="hidden sm:block text-lg text-slate-300 max-w-2xl">
+              <p className="hidden sm:block text-lg text-slate-300 max-w-3xl text-center">
                 {t("hero.subtitle")}
               </p>
             </div>
@@ -1920,7 +1920,6 @@ export function LoginPage() {
                         <img
                           src="/push1.png"
                           alt="Smart AI push messaging"
-                          style={{ filter: "hue-rotate(55deg) saturate(0.7) brightness(1.06)" }}
                           className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700"
                         />
                       </div>
@@ -1981,7 +1980,6 @@ export function LoginPage() {
                       <img
                         src="/booking.png"
                         alt="Appointment booking on WhatsApp"
-                        style={{ filter: "hue-rotate(55deg) saturate(0.7) brightness(1.06)" }}
                         className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                     </div>
@@ -2082,7 +2080,6 @@ export function LoginPage() {
                         <img
                           src="/francising.png"
                           alt="DemoWash franchising"
-                          style={{ filter: "hue-rotate(55deg) saturate(0.7) brightness(1.06)" }}
                           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                       </div>
@@ -2197,7 +2194,6 @@ export function LoginPage() {
                       <img
                         src="/CRM.png"
                         alt="CRM integration preview"
-                        style={{ filter: "saturate(0.7) brightness(1.06)" }}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                     </div>
@@ -2258,7 +2254,6 @@ export function LoginPage() {
                       <img
                         src="/privacy.png"
                         alt="Privacy by design"
-                        style={{ filter: "saturate(0.7) brightness(1.06)" }}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       />
                     </div>

@@ -988,7 +988,6 @@ export default function QuestionnairePage() {
                     <img
                       src="/survey.png"
                       alt="eChatbot survey"
-                      style={{ filter: "grayscale(1) sepia(1) hue-rotate(75deg) saturate(0.9) brightness(1.15)" }}
                       className="w-full h-48 object-cover"
                       onError={(e) => {
                         const el = e.currentTarget
@@ -1074,7 +1073,6 @@ export default function QuestionnairePage() {
                         <img
                           src={step.image}
                           alt={T[step.titleKey]}
-                          style={{ filter: "grayscale(1) sepia(1) hue-rotate(75deg) saturate(0.9) brightness(1.15)" }}
                           className="w-full h-44 sm:h-52 object-cover"
                         />
                       </div>

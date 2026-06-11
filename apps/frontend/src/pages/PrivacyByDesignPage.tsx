@@ -243,7 +243,7 @@ export function PrivacyByDesignPage() {
               </div>
               <div className="relative">
                 <div className="absolute -inset-4 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-40" />
-                <img src="/survery-secuiry.png" alt="Privacy Architecture" style={{ filter: "grayscale(1) sepia(1) hue-rotate(75deg) saturate(0.9) brightness(1.15)" }} className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/10 object-contain" />
+                <img src="/survery-secuiry.png" alt="Privacy Architecture" className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/10 object-contain" />
               </div>
             </motion.div>
           </div>
@@ -332,7 +332,7 @@ export function PrivacyByDesignPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="relative order-2 lg:order-1">
                 <div className="absolute -inset-4 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-2xl blur-xl opacity-40" />
-                <img src="/survery-secuiry.png" alt="Security Architecture" style={{ filter: "grayscale(1) sepia(1) hue-rotate(75deg) saturate(0.9) brightness(1.15)" }} className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/10 object-contain" />
+                <img src="/survery-secuiry.png" alt="Security Architecture" className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/10 object-contain" />
               </div>
               <div className="order-1 lg:order-2">
                 <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">{t.techTitle}</h2>
