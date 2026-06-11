@@ -2190,12 +2190,14 @@ export function LoginPage() {
                 {/* Left: Image with effects */}
                 <div className="flex flex-col items-center lg:items-start">
                   <div className="relative">
-                    <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden shadow-xl transition-all duration-300">
-                      <img
-                        src="/CRM.png"
-                        alt="CRM integration preview"
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
+                    <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl bg-white p-2 shadow-xl transition-all duration-300">
+                      <div className="h-full w-full overflow-hidden rounded-xl">
+                        <img
+                          src="/CRM.png"
+                          alt="CRM integration preview"
+                          className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2250,12 +2252,14 @@ export function LoginPage() {
                 {/* Left: Image with security badge */}
                 <div className="flex flex-col items-center lg:items-start gap-4">
                   <div className="relative">
-                    <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden shadow-xl transition-all duration-300">
-                      <img
-                        src="/privacy.png"
-                        alt="Privacy by design"
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                      />
+                    <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl bg-white p-2 shadow-xl transition-all duration-300">
+                      <div className="h-full w-full overflow-hidden rounded-xl">
+                        <img
+                          src="/privacy.png"
+                          alt="Privacy by design"
+                          className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
