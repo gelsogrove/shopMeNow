@@ -154,6 +154,7 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     ],
     loading: "Carregant l'assistent…",
     unavailable: "Demo no disponible",
+    contact: "Contacta'ns",
   },
   de: {
     liveDemo: "Live-Demo",
@@ -169,6 +170,7 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     ],
     loading: "Assistent wird geladen…",
     unavailable: "Demo nicht verfügbar",
+    contact: "Kontaktiere uns",
   },
 }
 
@@ -230,7 +232,7 @@ export function DemoWidgetPage() {
   }, [apiUrl, slug])
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900">
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900">
       {/* Decorative blurred blobs */}
       <div className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-emerald-400/30 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-teal-300/20 blur-3xl" />
@@ -255,7 +257,7 @@ export function DemoWidgetPage() {
       </a>
 
       {/* Hero copy */}
-      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center sm:items-start sm:px-16 sm:text-left">
+      <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-24 text-center sm:items-start sm:px-16 sm:py-16 sm:text-left">
         <div className="max-w-xl">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-emerald-50 backdrop-blur">
             <span className="h-2 w-2 rounded-full bg-emerald-300" />
@@ -265,22 +267,33 @@ export function DemoWidgetPage() {
             <span className="text-white">Demo</span>
             <span className="text-emerald-300">Wash</span>
           </h1>
-          <p className="mt-4 hidden text-lg leading-relaxed text-emerald-50/90 sm:block sm:text-xl">
+          {/* Intro — visible on every screen size (mobile included). */}
+          <p className="mt-4 text-base leading-relaxed text-emerald-50/90 sm:text-xl">
             {t.intro}
           </p>
 
           {/* Suggested things to try in the demo — guides the visitor. */}
-          <div className="mt-6 hidden sm:block">
-            <p className="text-sm font-semibold uppercase tracking-wide text-emerald-200">
+          <div className="mt-6">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-200 sm:text-sm">
               {t.tryFor}
             </p>
-            <ul className="mt-3 flex max-w-md flex-col gap-2 text-left text-base text-emerald-50/90">
+            <ul className="mx-auto mt-3 flex max-w-md flex-col gap-2 text-left text-sm text-emerald-50/90 sm:mx-0 sm:text-base">
               {t.items.map((item, i) => (
                 <li key={i} className="flex items-center gap-2">
                   {item}
                 </li>
               ))}
             </ul>
+          </div>
+
+          {/* Contact us — always visible; routes to the contact form. */}
+          <div className="mt-7 flex justify-center sm:justify-start">
+            <Link
+              to="/contact"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-emerald-700 shadow-lg transition hover:bg-emerald-50 active:scale-[0.98]"
+            >
+              ✉️ {t.contact}
+            </Link>
           </div>
 
           {loading && (
