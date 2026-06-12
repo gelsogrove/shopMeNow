@@ -1,4 +1,5 @@
 import { IMG_BASE_URL } from "@/config"
+import { cn } from "@/lib/utils"
 import { containsYouTubeLink, extractYouTubeLinks } from "@/utils/youtubeUtils"
 import DOMPurify from "dompurify"
 import { useState } from "react"
@@ -54,6 +55,28 @@ function openInMobilePopup(url: string) {
 // hand-off message the human operator receives. In the live widget we render
 // that tail inside a distinct boxed section so it's unmistakably internal.
 const HUMAN_SUPPORT_MARKER = "**👤 Human Support message**"
+
+// WhatsApp shows messages made up of ONLY emoji much larger ("jumbo").
+// Returns true when the text is solely 1-6 emoji. Implemented with explicit
+// surrogate/symbol \u ranges (no \p{} or /u flag) so it type-checks on the ES5
+// target. Covers astral emoji (surrogate pairs), misc symbols / dingbats /
+// arrows, variation selector (FE0F), ZWJ (200D) and keycap (20E3).
+const EMOJI_STRIP =
+  /[\uD83C-\uDBFF][\uDC00-\uDFFF]|[←-⇿⌀-➿☀-➿⬀-⯿™ℹ️‍⃣]/g
+const EMOJI_COUNT =
+  /[\uD83C-\uDBFF][\uDC00-\uDFFF]|[←-⇿⌀-➿☀-➿⬀-⯿]/g
+function isEmojiOnlyMessage(text: string): boolean {
+  const t = text.trim()
+  if (!t) return false
+  // Strip every emoji token + whitespace; if anything visible remains, the
+  // message also has real text -> not emoji-only.
+  const stripped = t.replace(EMOJI_STRIP, "").replace(/\s/g, "")
+  if (stripped.length > 0) return false
+  // Count "real" emoji (not joiners / variation selectors): jumbo a few, but
+  // keep a long wall of emoji inline.
+  const count = (t.match(EMOJI_COUNT) || []).length
+  return count >= 1 && count <= 6
+}
 
 interface MessageRendererProps {
   content: string
@@ -276,11 +299,19 @@ export function MessageRenderer({
             .slice(markerIdx + HUMAN_SUPPORT_MARKER.length)
             .replace(/^[\s\n]+/, "")
 
+    // 📱 Emoji-only messages render "jumbo" like WhatsApp.
+    const emojiOnly = isEmojiOnlyMessage(customerText)
+
     return (
       <>
         {customerText && (
           <div
-            className={`${baseClasses} ${variantClasses[variant]} ${className}`}
+            className={cn(
+              baseClasses,
+              variantClasses[variant],
+              className,
+              emojiOnly && "!text-[2.1rem] !leading-[1.15]"
+            )}
             style={{ whiteSpace: "pre-wrap" }}
           >
             {renderWithLinks(customerText)}

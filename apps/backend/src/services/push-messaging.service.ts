@@ -1,6 +1,7 @@
 import { prisma } from "@echatbot/database"
 import logger from "../utils/logger"
 import { WhatsAppQueueService } from "./whatsapp-queue.service"
+import { WhatsAppProviderFactory } from "./whatsapp/whatsapp-provider.factory"
 
 // WhatsApp Queue Service instance
 const whatsappQueueService = new WhatsAppQueueService(prisma)
@@ -320,22 +321,31 @@ export const pushMessagingService = {
         `[PUSH-MESSAGING] 📤 Adding WhatsApp message to queue for ${phoneNumber}`
       )
 
-      // Validate workspace exists
+      // Validate workspace exists and the SELECTED provider is configured.
+      // Provider-agnostic: reads workspace.whatsappProvider and checks the right
+      // credentials (Meta / UltraMsg / Wasender) via the factory, instead of the
+      // legacy Meta-only whatsappApiKey/whatsappPhoneNumber fields — otherwise a
+      // workspace on UltraMsg/Wasender would be wrongly blocked here even though
+      // the real send (validateAndSend → factory) would succeed.
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
         select: {
           id: true,
           name: true,
-          whatsappApiKey: true,
-          whatsappPhoneNumber: true,
+          whatsappProvider: true,
+          metaPhoneNumberId: true,
+          metaAccessToken: true,
+          ultraMsgInstanceId: true,
+          ultraMsgToken: true,
+          wasenderApiKey: true,
         },
       })
 
-      if (!workspace || !workspace.whatsappApiKey || !workspace.whatsappPhoneNumber) {
+      if (!workspace || !WhatsAppProviderFactory.isConfigured(workspace)) {
         logger.error(
-          `[PUSH-MESSAGING] ❌ WhatsApp settings not configured for workspace ${workspaceId}`
+          `[PUSH-MESSAGING] ❌ WhatsApp provider not configured for workspace ${workspaceId}`
         )
-        return { success: false, error: "WhatsApp settings not configured" }
+        return { success: false, error: "WhatsApp provider not configured" }
       }
 
       // Get or create customer ID if not provided

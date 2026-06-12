@@ -87,38 +87,45 @@ export class WasenderWhatsAppProvider implements WhatsAppProvider {
 
   /**
    * Send a media message (image / video / document).
-   * WasenderAPI uses separate endpoints per media type.
-   * We send images via send-image-message, others as documents.
+   * WasenderAPI delivers every media kind via the single /api/send-message
+   * endpoint; the media TYPE is selected by which URL field is set
+   * (imageUrl | videoUrl | documentUrl), mirroring Meta/UltraMsg behaviour so a
+   * provider switch is transparent.
    *
    * @param to        Phone number in E.164 format
    * @param mediaUrl  Public URL of the media file
    * @param caption   Optional caption text
    * @param mediaType image | video | document
+   * @param filename  Original file name — sent for documents so WhatsApp shows
+   *                  the real name instead of "Untitled"
    */
   async sendMediaMessage(
     to: string,
     mediaUrl: string,
     caption?: string,
-    mediaType: 'image' | 'video' | 'document' = 'image'
+    mediaType: 'image' | 'video' | 'document' = 'image',
+    filename?: string
   ): Promise<WhatsAppSendMessageResult> {
     try {
       const formattedTo = to.replace(/^\+/, '') + '@s.whatsapp.net'
 
-      // Determine WasenderAPI endpoint by media type
-      const endpointMap: Record<string, string> = {
-        image: '/api/send-message',
-        video: '/api/send-message',
-        document: '/api/send-message',
-      }
-
-      // WasenderAPI accepts image via imageUrl in send-message
-      const payload =
+      // Pick the URL field by media kind. Video must go through videoUrl (NOT
+      // documentUrl) so it arrives as a playable video; documents carry the
+      // original fileName.
+      const payload: Record<string, any> =
         mediaType === 'image'
           ? { to: formattedTo, imageUrl: mediaUrl, caption }
-          : { to: formattedTo, documentUrl: mediaUrl, caption }
+          : mediaType === 'video'
+            ? { to: formattedTo, videoUrl: mediaUrl, caption }
+            : {
+                to: formattedTo,
+                documentUrl: mediaUrl,
+                caption,
+                ...(filename ? { fileName: filename } : {}),
+              }
 
       const response = await axios.post(
-        `${this.baseUrl}${endpointMap[mediaType]}`,
+        `${this.baseUrl}/api/send-message`,
         payload,
         {
           headers: {
