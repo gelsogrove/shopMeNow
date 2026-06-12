@@ -247,8 +247,8 @@ function buildContent(lang: Lang) {
       reset: true,
       feature: 6,
       msgs: [
-        { role: "in", text: "مرحباً، هل طلبي جاهز للاستلام؟", sub: p("🌐 IT: Salve, il mio ordine è pronto per il ritiro?", "🌐 EN: Hi, is my order ready for pickup?", "🌐 ES: Hola, ¿mi pedido está listo para recoger?", "🌐 PT: Olá, o meu pedido está pronto para recolha?"), rtl: true },
-        { role: "op", text: p("Buongiorno! Sì, il suo ordine è pronto per il ritiro 😊", "Good morning! Yes, your order is ready for pickup 😊", "¡Buenos días! Sí, su pedido está listo para recoger 😊", "Bom dia! Sim, o seu pedido está pronto para recolha 😊"), sub: p("🌐 inviato in arabo al cliente →", "🌐 sent to the customer in Arabic →", "🌐 enviado al cliente en árabe →", "🌐 enviado ao cliente em árabe →") },
+        { role: "in", text: "مرحباً، هل طلبي جاهز للاستلام؟", rtl: true },
+        { role: "op", text: "صباح الخير! نعم، طلبك جاهز للاستلام 😊", sub: "(AI TRANSLATION)", rtl: true },
       ],
     },
     // 8 — Invoices & files (reset: the AI sends a document)
@@ -289,15 +289,6 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
   const [visible, setVisible] = useState(0) // number of revealed messages (flat)
   const [typing, setTyping] = useState(false) // bot "typing…" indicator
   const [activeFeature, setActiveFeature] = useState(0)
-  // 📱 On mobile the auto-playing chat animation is heavy and the layout is
-  // cramped — we freeze it and show a static first-scene snapshot instead.
-  const [isMobile, setIsMobile] = useState(false)
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768)
-    check()
-    window.addEventListener("resize", check)
-    return () => window.removeEventListener("resize", check)
-  }, [])
 
   // Flatten the script into a single ordered list of messages.
   const events = c.script.flatMap((stp) =>
@@ -307,16 +298,6 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
   // Drive the conversation like a real chat: one message at a time, with a
   // "typing…" pause before each reply and a 3s wait while "connecting".
   useEffect(() => {
-    // 📱 Mobile: no auto-play animation. Show the first scene fully revealed
-    // (static) with the first capability card highlighted — no loop, no timers.
-    if (isMobile) {
-      const firstStepLen = c.script[0]?.msgs.length ?? 0
-      setTyping(false)
-      setActiveFeature(0)
-      setVisible(firstStepLen)
-      iRef.current = firstStepLen
-      return
-    }
     let cancelled = false
     const timers: ReturnType<typeof setTimeout>[] = []
     const wait = (ms: number) =>
@@ -372,7 +353,7 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
       cancelled = true
       timers.forEach(clearTimeout)
     }
-  }, [lang, isMobile])
+  }, [lang])
 
   // Show messages from the last reset boundary up to the revealed count.
   let start = 0
@@ -408,8 +389,8 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
 
       {/* Phone + capability cards */}
       <div className="relative grid grid-cols-1 items-start gap-10 lg:grid-cols-[25rem_34rem] lg:justify-center">
-        {/* WhatsApp phone — shown on every size; static first-scene snapshot on
-            mobile (<768px), live auto-play animation on desktop. */}
+        {/* WhatsApp phone — live auto-play conversation on every size (mobile
+            included), so the story plays the same as on desktop. */}
         <div className="mx-auto w-full max-w-[400px] lg:sticky lg:top-24">
           <div className="rounded-[2.25rem] bg-slate-950 p-3 shadow-2xl ring-1 ring-white/10">
             <div className="overflow-hidden rounded-[1.5rem] bg-[#ECE5DD]">

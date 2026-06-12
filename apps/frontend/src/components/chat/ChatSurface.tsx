@@ -80,7 +80,7 @@ export function ChatSurface<TMessage extends ChatSurfaceMessage = ChatSurfaceMes
               style={bubbleStyle}
             >
               {renderBadge?.(message)}
-              <div style={{ lineHeight: "1.7", fontSize: "0.95rem" }}>
+              <div style={{ lineHeight: "1.4", fontSize: "0.95rem" }}>
                 <MessageRenderer content={message.content} variant="chat" />
               </div>
               {renderFooter?.(message)}

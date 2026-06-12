@@ -39,7 +39,10 @@ export function MessageAttachments({ attachments, align = "left" }: MessageAttac
               src={att.url}
               controls
               preload="metadata"
-              className="h-10 w-64 max-w-full"
+              // No fixed height: native audio controls are taller on Android than
+              // iOS, and a fixed height clipped them on mobile. Full bubble width,
+              // capped so it stays tidy on desktop.
+              className="block w-full min-w-[200px] max-w-[260px]"
               title={att.filename || "Voice message"}
             >
               <a href={att.url} target="_blank" rel="noreferrer">

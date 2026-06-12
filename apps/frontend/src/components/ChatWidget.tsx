@@ -34,6 +34,7 @@ import {
   Mic,
   Square,
   Paperclip,
+  CheckCheck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -47,9 +48,20 @@ export const shouldShowWhatsappNumber = (config?: {
 /**
  * TypingIndicator - 3 bouncing dots animation (like Payload playground)
  */
-function TypingIndicator({ primaryColor }: { primaryColor: string }) {
+function TypingIndicator({ primaryColor, waSkin }: { primaryColor: string; waSkin?: boolean }) {
+  // 📱 WhatsApp typing bubble: white incoming bubble with a left tail and three
+  // grey pulsing dots. In branded (non-demo) mode keep the original look.
+  const dotColor = waSkin ? "#8696A0" : primaryColor
   return (
-    <div className="flex items-center gap-1 px-4 py-3 bg-white border border-slate-200 rounded-2xl rounded-bl-md max-w-[85px] shadow-sm mb-3">
+    <div
+      className={cn(
+        "relative flex items-center gap-1 shadow-sm",
+        waSkin
+          ? "bg-white rounded-[10px] rounded-tl-none px-3 py-2.5 max-w-[70px]"
+          : "bg-white border border-slate-200 rounded-2xl rounded-bl-md px-4 py-3 max-w-[85px] mb-3"
+      )}
+    >
+      {waSkin && <BubbleTail side="left" color="#ffffff" />}
       <style>{`
         @keyframes typingBounce {
           0%, 60%, 100% {
@@ -77,9 +89,9 @@ function TypingIndicator({ primaryColor }: { primaryColor: string }) {
           animation-delay: 0.4s;
         }
       `}</style>
-      <div className="typing-dot" style={{ backgroundColor: primaryColor }} />
-      <div className="typing-dot" style={{ backgroundColor: primaryColor }} />
-      <div className="typing-dot" style={{ backgroundColor: primaryColor }} />
+      <div className="typing-dot" style={{ backgroundColor: dotColor }} />
+      <div className="typing-dot" style={{ backgroundColor: dotColor }} />
+      <div className="typing-dot" style={{ backgroundColor: dotColor }} />
     </div>
   )
 }
@@ -113,6 +125,29 @@ import {
   clearWidgetSession,
   type WidgetStoredMessage,
 } from "@/components/chat/adapters/widgetAdapter"
+
+// 📱 WhatsApp message "tail" — the little beak at the top corner of the first
+// bubble of a turn. side="right" → outgoing bubble; side="left" → incoming.
+// Rendered just outside the bubble's squared corner; colour matches the bubble.
+function BubbleTail({ side, color }: { side: "left" | "right"; color: string }) {
+  return side === "right" ? (
+    <svg viewBox="0 0 8 13" width="8" height="13" aria-hidden="true" className="absolute -right-[7px] top-0">
+      <path d="M0 0 H8 L0 9 Z" fill={color} />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 8 13" width="8" height="13" aria-hidden="true" className="absolute -left-[7px] top-0">
+      <path d="M8 0 H0 L8 9 Z" fill={color} />
+    </svg>
+  )
+}
+
+// Bubble timestamp like WhatsApp: 24h HH:MM. Falls back to "now" when a message
+// carries no timestamp (e.g. an optimistic local send).
+function formatBubbleTime(ts?: string): string {
+  const d = ts ? new Date(ts) : new Date()
+  if (Number.isNaN(d.getTime())) return ""
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
+}
 
 // Supported language codes (browser language detection)
 const SUPPORTED_LANG_CODES = ["it", "en", "es", "pt", "fr", "de"]
@@ -476,6 +511,19 @@ export function ChatWidget({
       }
     })
   }, [messages, resolvedWelcomeVideoUrl])
+
+  // 📱 WhatsApp read receipts (demo): an outgoing message shows BLUE double-ticks
+  // once any later message from the bot exists (i.e. it has been "read"),
+  // otherwise grey double-ticks (delivered, not yet read).
+  const isReadDemo = (msg: Message): boolean => {
+    const idx = displayMessages.indexOf(msg)
+    if (idx === -1) return false
+    for (let i = idx + 1; i < displayMessages.length; i++) {
+      if (displayMessages[i].role === "bot") return true
+    }
+    return false
+  }
+
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   // 🎤 Voice recording (demo composer)
@@ -1373,8 +1421,8 @@ export function ChatWidget({
   const embeddedPopupSizeClasses = isEmbedded
     ? "w-full h-full rounded-[24px] shadow-none border-2"
     : instantChat
-    ? "w-screen h-screen sm:w-[480px] sm:h-[760px] sm:max-h-[92vh] rounded-none sm:rounded-3xl shadow-2xl border-2 sm:border-2"
-    : "w-screen h-screen sm:w-[410px] sm:h-[680px] max-h-[800px] rounded-none sm:rounded-3xl shadow-2xl border-2 sm:border-2"
+    ? "w-screen h-[100dvh] sm:w-[480px] sm:h-[760px] sm:max-h-[92vh] rounded-none sm:rounded-3xl shadow-2xl border-2 sm:border-2"
+    : "w-screen h-[100dvh] sm:w-[410px] sm:h-[680px] sm:max-h-[800px] rounded-none sm:rounded-3xl shadow-2xl border-2 sm:border-2"
     
   // Generate light version of primary color for border
   const getBorderColor = (color: string) => {
@@ -1580,10 +1628,15 @@ export function ChatWidget({
                     ? ` · ${workspaceConfig.name}`
                     : ""}
                 </h2>
-                {waSkin && !shouldShowWhatsappNumber(workspaceConfig) && (
+                {/* 📱 WhatsApp status line: "typing…" while the bot composes a
+                    reply, otherwise "online" (or the WhatsApp number CTA). */}
+                {waSkin && isLoading && (
+                  <p className="text-[11px] text-white/90">typing…</p>
+                )}
+                {waSkin && !isLoading && !shouldShowWhatsappNumber(workspaceConfig) && (
                   <p className="text-[11px] text-white/70">online</p>
                 )}
-                {shouldShowWhatsappNumber(workspaceConfig) && (
+                {shouldShowWhatsappNumber(workspaceConfig) && !(waSkin && isLoading) && (
                   <div className="flex items-center gap-1 text-sm font-semibold text-white">
                     <span>WhatsApp:</span>
                     {plainWhatsappNumber ? (
@@ -1879,17 +1932,23 @@ export function ChatWidget({
                   }
                   getAlignment={(msg) => (msg.role === "user" ? "right" : "left")}
                   getBubbleClassName={(msg) =>
-                    cn(
-                      "rounded-2xl px-3 sm:px-4 py-2 sm:py-3 max-w-[88%] sm:max-w-[360px] mb-3 shadow-sm",
-                      "word-wrap break-words overflow-wrap-anywhere relative text-sm sm:text-[15px] leading-relaxed",
-                      msg.role === "user"
-                        ? waSkin
-                          ? "text-slate-900 rounded-tr-sm" // 📱 WhatsApp outgoing bubble (dark text, top-right tail)
-                          : "text-white rounded-br-md"
-                        : waSkin
-                          ? "bg-white text-slate-900 rounded-tl-sm" // 📱 WhatsApp incoming bubble (top-left tail)
-                          : "bg-white text-slate-900 border border-slate-200 rounded-bl-md"
-                    )
+                    waSkin
+                      ? cn(
+                          // 📱 WhatsApp bubble: ~10px radius, squared corner where
+                          // the tail attaches, compact padding, subtle shadow.
+                          "relative max-w-[80%] sm:max-w-[340px] px-2.5 py-[6px] shadow-sm rounded-[10px]",
+                          "word-wrap break-words overflow-wrap-anywhere text-sm sm:text-[14.5px]",
+                          msg.role === "user"
+                            ? "text-slate-900 rounded-tr-none" // outgoing (green via style) — tail top-right
+                            : "bg-white text-slate-900 rounded-tl-none" // incoming (white) — tail top-left
+                        )
+                      : cn(
+                          "rounded-2xl px-3 sm:px-4 py-2 sm:py-3 max-w-[88%] sm:max-w-[360px] mb-3 shadow-sm",
+                          "word-wrap break-words overflow-wrap-anywhere relative text-sm sm:text-[15px] leading-relaxed",
+                          msg.role === "user"
+                            ? "text-white rounded-br-md"
+                            : "bg-white text-slate-900 border border-slate-200 rounded-bl-md"
+                        )
                   }
                   getBubbleStyle={(msg) =>
                     msg.role === "user"
@@ -1898,6 +1957,14 @@ export function ChatWidget({
                   }
                   getContainerClassName={(msg) =>
                     msg.role === "user" ? "widget-user-message" : undefined
+                  }
+                  renderBadge={(msg) =>
+                    waSkin ? (
+                      <BubbleTail
+                        side={msg.role === "user" ? "right" : "left"}
+                        color={msg.role === "user" ? WA_OUT_BUBBLE : "#ffffff"}
+                      />
+                    ) : null
                   }
                   renderFooter={(msg) => (
                     <>
@@ -1916,10 +1983,15 @@ export function ChatWidget({
                         </>
                       )}
                       {msg.audioUrl && (
+                        // 🎤 Voice note player. No fixed height — native audio
+                        // controls are taller on Android (~54px) than iOS (~31px),
+                        // so a fixed h-9/h-10 clipped them on mobile ("troncato").
+                        // Full width within the bubble, capped on desktop.
                         <audio
                           controls
+                          preload="metadata"
                           src={msg.audioUrl}
-                          className="mt-2 h-9 w-full min-w-[200px] max-w-[240px]"
+                          className="mt-2 block w-full max-w-[260px]"
                         />
                       )}
                       {/* 📎 Media: operator-sent (left) or customer-attached via
@@ -1930,13 +2002,30 @@ export function ChatWidget({
                           align={msg.role === "user" ? "right" : "left"}
                         />
                       )}
+                      {/* 📱 WhatsApp meta line: time + (outgoing) read receipts. */}
+                      {waSkin && (
+                        <div
+                          className={cn(
+                            "mt-0.5 -mb-0.5 flex items-center justify-end gap-1 text-[11px] leading-none",
+                            msg.role === "user" ? "text-gray-500/80" : "text-gray-400"
+                          )}
+                        >
+                          <span>{formatBubbleTime(msg.timestamp)}</span>
+                          {msg.role === "user" && (
+                            <CheckCheck
+                              className="h-3.5 w-3.5"
+                              style={{ color: isReadDemo(msg) ? "#53BDEB" : "#8696A0" }}
+                            />
+                          )}
+                        </div>
+                      )}
                     </>
                   )}
                 />
                 {/* Show typing indicator when waiting for bot response */}
                 {isLoading && (
                   <div className="flex items-start gap-2 mb-3">
-                    <TypingIndicator primaryColor={resolvedPrimaryColor} />
+                    <TypingIndicator primaryColor={resolvedPrimaryColor} waSkin={waSkin} />
                   </div>
                 )}
               </ScrollArea>

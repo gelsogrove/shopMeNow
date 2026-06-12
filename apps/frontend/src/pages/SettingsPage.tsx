@@ -72,15 +72,17 @@ const ALL_SECTIONS: SettingsSection[] = [
   { key: "functions", label: "Custom Tools", description: "External functions and webhooks" },
 ]
 
-// For custom chatbot workspaces, everything is managed in settings.json inside
-// the custom module — the only relevant platform-level config is the WhatsApp
-// channel provider credentials (API key, phone number, webhook token), plus
-// calendar settings for appointment reminders.
-// All other sections are hidden: AI Personality, Business Config, Widget,
-// Human Support, Security, Custom Tools are either unused or
-// already configured inside the custom module's own JSON.
+// For custom chatbot workspaces, the chatbot behaviour itself is managed in
+// settings.json inside the custom module. The platform-level config that still
+// applies through the UI is:
+//   - Business Config (company info stored on the workspace row in the DB —
+//     name, business type, email, address, currency, language: NOT in settings.json)
+//   - WhatsApp channel provider credentials (API key, phone number, webhook token)
+//   - Appointments & Calendar (reminders)
+// The remaining sections are hidden because they are either unused by the
+// custom flow or already configured inside the module's own JSON:
+// AI Personality, Widget, Human Support, Custom Tools.
 const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = [
-  "business",
   "ai-personality",
   "widget",
   "widget-support",
@@ -201,10 +203,10 @@ export function SettingsPage() {
   const isCustomChatbot = Boolean(currentWorkspace?.customChatbotId)
   const SECTIONS = getVisibleSections(isCustomChatbot)
 
-  // Load last opened section from localStorage; for custom chatbot workspaces
-  // fall back to 'whatsapp' (the only visible section) instead of 'business'.
+  // Load last opened section from localStorage. Business Config is visible for
+  // every workspace type, so it is the default landing section for all of them.
   const getLastOpenedSection = (): SectionKey => {
-    const fallback: SectionKey = isCustomChatbot ? 'whatsapp' : 'business'
+    const fallback: SectionKey = 'business'
     try {
       const saved = localStorage.getItem('settings-last-section')
       if (!saved) return fallback
@@ -221,10 +223,10 @@ export function SettingsPage() {
   const [activeHelpField, setActiveHelpField] = useState<string>("businessName")
 
   // When the workspace loads async, ensure activeSection is valid for this workspace type.
-  // If the current section is hidden for custom chatbot, reset to 'whatsapp'.
+  // If the current section is hidden for custom chatbot, reset to 'business' (visible for all).
   useEffect(() => {
     if (isCustomChatbot && HIDDEN_FOR_CUSTOM_CHATBOT.includes(activeSection)) {
-      setActiveSection('whatsapp')
+      setActiveSection('business')
     }
   }, [isCustomChatbot, activeSection])
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -960,7 +962,7 @@ export function SettingsPage() {
               {isCustomChatbot && (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-violet-200 bg-violet-50 text-xs font-medium text-violet-700">
                   <Sparkles className="h-3.5 w-3.5" />
-                  Custom Chatbot — all other settings are managed in settings.json
+                  Custom Chatbot — chatbot behaviour is managed in settings.json
                 </span>
               )}
             </div>

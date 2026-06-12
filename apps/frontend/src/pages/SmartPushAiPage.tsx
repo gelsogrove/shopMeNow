@@ -219,7 +219,7 @@ export function SmartPushAiPage() {
                 <img
                   src="/push1.png"
                   alt="Smart AI push messaging on WhatsApp"
-                  className="relative w-full max-h-[320px] rounded-3xl shadow-2xl border border-white/10 object-cover"
+                  className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/10 object-contain"
                 />
               </div>
               <div className="order-1 lg:order-2">
