@@ -31,8 +31,6 @@ import {
   Shield,
   Mail,
   Globe,
-  Mic,
-  Square,
   Paperclip,
   CheckCheck,
 } from "lucide-react"
@@ -117,7 +115,6 @@ import {
   saveWidgetSessionId,
   saveCustomerId,
   sendWidgetMessage,
-  sendWidgetAudio,
   registerAndStartChat,
   getWidgetStatus,
   getWidgetProfile,
@@ -157,7 +154,6 @@ interface Message {
   content: string
   timestamp?: string
   suggestions?: string[]
-  audioUrl?: string // 🎤 voice note (user's local recording or bot TTS reply)
   welcomeVideoUrl?: string // 📺 presentation video on the first bot reply (parity with WhatsApp)
   welcomeRest?: string // 📺 reply text rendered AFTER the welcome video (greeting → video → rest)
   attachments?: ChatAttachment[] // 📎 operator-sent images / PDFs / audio (handoff)
@@ -500,8 +496,7 @@ export function ChatWidget({
     const firstBotIdx = messages.findIndex((m) => m.role === "bot")
     if (firstBotIdx === -1) return messages
     return messages.map((m, i) => {
-      // Voice replies show only the audio player — never attach the video there.
-      if (i !== firstBotIdx || m.audioUrl) return m
+      if (i !== firstBotIdx) return m
       const breakIdx = m.content.indexOf("\n\n")
       return {
         ...m,
@@ -526,10 +521,6 @@ export function ChatWidget({
 
   const [inputValue, setInputValue] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  // 🎤 Voice recording (demo composer)
-  const [recording, setRecording] = useState(false)
-  const audioMediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const audioChunksRef = useRef<Blob[]>([])
   // 📎 File attachments (demo composer): paperclip → pick image/PDF → render in
   // the user's own bubble. Object URLs are created locally so the media shows
   // instantly (parity with WhatsApp); revoked on unmount to avoid leaks.
@@ -973,98 +964,6 @@ export function ChatWidget({
 
   const handleSendMessage = async () => {
     await sendMessage(inputValue)
-  }
-
-  /**
-   * 🎤 Voice message: record via MediaRecorder → upload → transcribe (backend)
-   * → bot reply. Shows a "voice message" bubble for the user's note.
-   */
-  const sendAudio = async (blob: Blob) => {
-    if (!visitorId || !resolvedWorkspaceId || isLoading) return
-    // Local playable URL for the user's own recording (no upload needed for the player).
-    const localAudioUrl = URL.createObjectURL(blob)
-    const userMessage: Message = {
-      role: "user",
-      content: "🎤 Voice message",
-      timestamp: new Date().toISOString(),
-      audioUrl: localAudioUrl,
-    }
-    const updatedMessages = [...messages, userMessage]
-    setMessages(updatedMessages)
-    if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updatedMessages)
-    setIsLoading(true)
-    try {
-      const data = await sendWidgetAudio({
-        apiUrl: resolvedApiUrl,
-        workspaceId: resolvedWorkspaceId,
-        visitorId,
-        audioBlob: blob,
-        language: resolvedLanguage,
-        sessionId,
-        customerId: customerId || undefined,
-      })
-      if (data.sessionId && resolvedWorkspaceId) {
-        setSessionId(data.sessionId)
-        saveWidgetSessionId(localStorage, resolvedWorkspaceId, data.sessionId)
-      }
-      const botMessage: Message = {
-        role: "bot",
-        // 🎤 Voice in → voice out: when the bot answers with audio, show ONLY
-        // the voice note (no text bubble). If TTS failed (no audioUrl), keep
-        // the text so the customer still gets the answer as a fallback.
-        content: data.audioUrl ? "" : data.response,
-        timestamp: new Date().toISOString(),
-        suggestions: data.suggestions,
-        audioUrl: data.audioUrl, // 🎤 bot voice reply (ElevenLabs)
-      }
-      const finalMessages = [...updatedMessages, botMessage]
-      setMessages(finalMessages)
-      if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, finalMessages)
-    } catch (error) {
-      console.error("Failed to send audio:", error)
-      const errorMessage: Message = {
-        role: "bot",
-        content: "Sorry, I couldn't process your voice message. Please try again.",
-        timestamp: new Date().toISOString(),
-      }
-      setMessages([...updatedMessages, errorMessage])
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const startRecording = async () => {
-    if (recording || isLoading) return
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mr = new MediaRecorder(stream)
-      audioChunksRef.current = []
-      mr.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunksRef.current.push(e.data)
-      }
-      mr.onstop = async () => {
-        stream.getTracks().forEach((t) => t.stop())
-        const blob = new Blob(audioChunksRef.current, {
-          type: mr.mimeType || "audio/webm",
-        })
-        if (blob.size > 0) await sendAudio(blob)
-      }
-      audioMediaRecorderRef.current = mr
-      mr.start()
-      setRecording(true)
-    } catch (err) {
-      console.error("🎤 Microphone access failed:", err)
-      setRecording(false)
-    }
-  }
-
-  const stopRecording = () => {
-    try {
-      audioMediaRecorderRef.current?.stop()
-    } catch {
-      /* ignore */
-    }
-    setRecording(false)
   }
 
   /**
@@ -1982,18 +1881,6 @@ export function ChatWidget({
                           )}
                         </>
                       )}
-                      {msg.audioUrl && (
-                        // 🎤 Voice note player. No fixed height — native audio
-                        // controls are taller on Android (~54px) than iOS (~31px),
-                        // so a fixed h-9/h-10 clipped them on mobile ("troncato").
-                        // Full width within the bubble, capped on desktop.
-                        <audio
-                          controls
-                          preload="metadata"
-                          src={msg.audioUrl}
-                          className="mt-2 block w-full max-w-[260px]"
-                        />
-                      )}
                       {/* 📎 Media: operator-sent (left) or customer-attached via
                           the paperclip (right). Aligns to the bubble's own side. */}
                       {msg.attachments && msg.attachments.length > 0 && (
@@ -2170,50 +2057,29 @@ export function ChatWidget({
                       </>
                     )}
                   </div>
-                  {/* Single round action button — mic when empty, send when typing,
-                      stop-and-send while recording (WhatsApp behaviour). */}
-                  {(() => {
-                    const canRecord = instantChat && !(botDisabled && !operatorHasReplied)
-                    const hasText = inputValue.trim().length > 0
-                    const showMic = canRecord && !hasText && !recording
-                    return (
-                      <button
-                        onClick={
-                          recording ? stopRecording : showMic ? startRecording : handleSendMessage
-                        }
-                        disabled={
-                          isLoading ||
-                          (botDisabled && !operatorHasReplied) ||
-                          (!recording && !showMic && !hasText)
-                        }
-                        className={cn(
-                          "h-11 w-11 shrink-0 rounded-full flex items-center justify-center",
-                          "text-white transition-colors disabled:bg-gray-300 hover:brightness-95",
-                          "focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-green-600",
-                          recording && "bg-red-500 animate-pulse"
-                        )}
-                        style={recording ? undefined : { backgroundColor: resolvedPrimaryColor }}
-                        aria-label={
-                          recording
-                            ? "Send voice message"
-                            : showMic
-                            ? "Record voice message"
-                            : "Send message"
-                        }
-                        title={recording ? "Stop & send" : showMic ? "Voice message" : "Send"}
-                      >
-                        {isLoading ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                        ) : recording ? (
-                          <Square className="w-4 h-4" />
-                        ) : showMic ? (
-                          <Mic className="w-5 h-5" />
-                        ) : (
-                          <Send className="w-5 h-5" />
-                        )}
-                      </button>
-                    )
-                  })()}
+                  {/* Single round Send button (WhatsApp-style green circle). */}
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={
+                      isLoading ||
+                      (botDisabled && !operatorHasReplied) ||
+                      inputValue.trim().length === 0
+                    }
+                    className={cn(
+                      "h-11 w-11 shrink-0 rounded-full flex items-center justify-center",
+                      "text-white transition-colors disabled:bg-gray-300 hover:brightness-95",
+                      "focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-green-600"
+                    )}
+                    style={{ backgroundColor: resolvedPrimaryColor }}
+                    aria-label="Send message"
+                    title="Send"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </button>
                 </div>
                 {!instantChat && (
                   <div className="text-xs text-gray-400 text-center">

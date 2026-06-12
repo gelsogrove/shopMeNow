@@ -97,7 +97,7 @@ export function EmojiPicker({ onSelect, disabled, className }: EmojiPickerProps)
         <div
           role="dialog"
           aria-label="Emoji picker"
-          className="absolute bottom-12 left-0 z-50 w-72 max-h-72 overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow-xl"
+          className="absolute bottom-12 left-0 z-50 w-[min(18rem,calc(100vw-2rem))] max-h-72 overflow-y-auto rounded-xl border border-gray-200 bg-white p-2 shadow-xl"
         >
           {EMOJI_GROUPS.map((group) => (
             <div key={group.label} className="mb-2 last:mb-0">
