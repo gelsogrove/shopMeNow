@@ -688,3 +688,17 @@
     }
   }
 }
+
+/* ♿ Accessibility: users who ask the OS to reduce motion get (near-)static
+   pages — decorative animations and transitions collapse to a single frame.
+   Functional spinners keep spinning (they communicate loading state). */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-spin),
+  *:not(.animate-spin)::before,
+  *:not(.animate-spin)::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

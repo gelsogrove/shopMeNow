@@ -85,6 +85,7 @@ const translations = {
       subtitle: "Connetti eChatbot con i tuoi strumenti di lavoro",
       description: "Integra facilmente il chatbot con CRM (Salesforce, HubSpot), piattaforme e-commerce (WooCommerce, PrestaShop, Magento), sistemi ERP, software di magazzino, strumenti di marketing automation e molto altro.",
       imagePlaceholder: "Placeholder immagine integr",
+      cta: "Scopri le integrazioni",
     },
   },
   en: {
@@ -118,6 +119,7 @@ const translations = {
       subtitle: "Connect eChatbot with your work tools",
       description: "Easily integrate the chatbot with CRMs (Salesforce, HubSpot), e-commerce platforms (WooCommerce, PrestaShop, Magento), ERP systems, warehouse software, marketing automation tools and much more.",
       imagePlaceholder: "Integration image placeholder",
+      cta: "Explore the integrations",
     },
   },
   es: {
@@ -151,6 +153,7 @@ const translations = {
       subtitle: "Conecta eChatbot con tus herramientas de trabajo",
       description: "Integra fácilmente el chatbot con CRMs (Salesforce, HubSpot), plataformas de e-commerce (WooCommerce, PrestaShop, Magento), sistemas ERP, software de almacén, herramientas de marketing automation y mucho más.",
       imagePlaceholder: "Imagen de integración",
+      cta: "Descubre las integraciones",
     },
   },
   pt: {
@@ -184,6 +187,7 @@ const translations = {
       subtitle: "Ligue o eChatbot às suas ferramentas de trabalho",
       description: "Integre facilmente o chatbot com CRMs (Salesforce, HubSpot), plataformas de e-commerce (WooCommerce, PrestaShop, Magento), sistemas ERP, software de armazém, ferramentas de marketing automation e muito mais.",
       imagePlaceholder: "Imagem de integração",
+      cta: "Descubra as integrações",
     },
   },
 }
@@ -342,7 +346,7 @@ export function FeaturesPage() {
                       to="/crm-integration"
                       className="inline-flex items-center gap-2 text-[#25D366] hover:text-[#1ebe5a] font-semibold text-lg group"
                     >
-                      Scopri le integrazioni
+                      {t.integration.cta}
                       <TrendingUp className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
                     </Link>
                   </div>

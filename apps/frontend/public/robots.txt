@@ -2,10 +2,10 @@ User-agent: *
 Allow: /
 
 # Public marketing pages - indexable
+# (/pricing and /widget-to-whatsapp redirect to / and are intentionally omitted)
 Allow: /features
-Allow: /pricing
 Allow: /contact
-Allow: /widget-to-whatsapp
+Allow: /smart-push-ai
 Allow: /human-support
 Allow: /laundry-service
 Allow: /franchising
@@ -70,9 +70,8 @@ Disallow: /impersonate
 Disallow: /verify-otp
 
 # Utility / internal
+# (/neapolis is a public partner page with SEO meta — intentionally crawlable)
 Disallow: /survey
-Disallow: /neapolis
-Disallow: /expired
 Disallow: /data-protection
 Disallow: /support-chat
 Disallow: /operator-dashboard

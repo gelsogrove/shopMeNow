@@ -72,6 +72,8 @@ export function SEO({
       <meta property="og:title" content={fullTitle} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={image} />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
       <meta property="og:site_name" content="eChatbot" />
       <meta property="og:locale" content={lang === "it" ? "it_IT" : lang === "es" ? "es_ES" : lang === "pt" ? "pt_PT" : lang === "fr" ? "fr_FR" : lang === "ca" ? "ca_ES" : "en_US"} />
 

@@ -32,8 +32,10 @@ import {
   Mail,
   Globe,
   Paperclip,
+  Check,
   CheckCheck,
   Mic,
+  SmilePlus,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -95,6 +97,7 @@ function TypingIndicator({ primaryColor, waSkin }: { primaryColor: string; waSki
   )
 }
 import { EmojiPicker } from "@/components/EmojiPicker"
+import { ReactionPicker } from "@/components/ReactionPicker"
 import { ChatSurface } from "@/components/chat/ChatSurface"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
@@ -116,6 +119,7 @@ import {
   saveWidgetSessionId,
   saveCustomerId,
   sendWidgetMessage,
+  setWidgetReaction,
   registerAndStartChat,
   getWidgetStatus,
   getWidgetProfile,
@@ -158,6 +162,8 @@ interface Message {
   welcomeVideoUrl?: string // 📺 presentation video on the first bot reply (parity with WhatsApp)
   welcomeRest?: string // 📺 reply text rendered AFTER the welcome video (greeting → video → rest)
   attachments?: ChatAttachment[] // 📎 operator-sent images / PDFs / audio (handoff)
+  serverId?: string // 😀 DB ConversationMessage id — needed to anchor a reaction server-side
+  reaction?: string | null // 😀 visitor's reaction emoji on this message (server-synced)
 }
 
 interface ChatWidgetProps {
@@ -366,8 +372,6 @@ export function ChatWidget({
   onOpenChange,
   onConvert,
 }: ChatWidgetProps) {
-  console.log("🚀 ChatWidget MOUNTED! workspaceId prop:", workspaceId)
-  
   // 🌍 Get language from LanguageContext (header dropdown)
   const { language: headerLanguage } = useLanguage()
   
@@ -476,15 +480,6 @@ export function ChatWidget({
     }[resolvedLangKey] ||
     "Type a message..."
   
-  console.log("✅ Resolved widget config:", {
-    workspaceId: resolvedWorkspaceId,
-    language: resolvedLanguage,
-    headerLanguage: headerLanguage,
-    widgetConfigLanguage: widgetConfig?.language,
-    title: resolvedTitle,
-    apiUrl: resolvedApiUrl,
-  })
-  
   const [isOpen, setIsOpen] = useState(defaultOpen)
   const [messages, setMessages] = useState<Message[]>([])
 
@@ -508,16 +503,18 @@ export function ChatWidget({
     })
   }, [messages, resolvedWelcomeVideoUrl])
 
-  // 📱 WhatsApp read receipts (demo): an outgoing message shows BLUE double-ticks
-  // once any later message from the bot exists (i.e. it has been "read"),
-  // otherwise grey double-ticks (delivered, not yet read).
-  const isReadDemo = (msg: Message): boolean => {
+  // 📱 WhatsApp read receipts (demo) — full tick progression:
+  //   ✓  sent      → the message just left and the bot hasn't replied yet
+  //   ✓✓ delivered → exchange settled but no later bot message (e.g. error)
+  //   ✓✓ read (blue) → any later bot message exists (it has been "read")
+  const tickStateDemo = (msg: Message): "sent" | "delivered" | "read" => {
     const idx = displayMessages.indexOf(msg)
-    if (idx === -1) return false
+    if (idx === -1) return "delivered"
     for (let i = idx + 1; i < displayMessages.length; i++) {
-      if (displayMessages[i].role === "bot") return true
+      if (displayMessages[i].role === "bot") return "read"
     }
-    return false
+    // No bot message after this one: single tick while the reply is in flight.
+    return isLoading ? "sent" : "delivered"
   }
 
   const [inputValue, setInputValue] = useState("")
@@ -527,6 +524,12 @@ export function ChatWidget({
   // instantly (parity with WhatsApp); revoked on unmount to avoid leaks.
   const attachInputRef = useRef<HTMLInputElement | null>(null)
   const attachObjectUrls = useRef<string[]>([])
+  // ⚠️ Transient composer error (e.g. rejected attachment) — visible in chat
+  // mode just above the input; auto-dismisses.
+  const [chatError, setChatError] = useState<string | null>(null)
+  // 😀 serverId of the message whose reaction picker is open. Tap-to-open so it
+  // also works on touch devices, where the old hover-only reveal was unreachable.
+  const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null)
   // WhatsApp-style composer: textarea grows with content up to a max, then scrolls
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
   // 🎤 Voice note recording (mirrors PlaygroundPage): mic when the field is empty.
@@ -683,13 +686,26 @@ export function ChatWidget({
     const normalizedLang = (resolvedLanguage?.slice(0, 2).toLowerCase() as LangCode) || "en"
     setFormLanguage(SUPPORTED_LANG_CODES.includes(normalizedLang) ? normalizedLang : "en")
 
-    // Load stored messages
-    const storedMessages = loadWidgetMessages(localStorage, resolvedWorkspaceId)
+    // Load stored messages. Local-preview attachments use blob: object URLs
+    // that die with the page — strip them so restored bubbles don't render
+    // broken players/thumbnails after a reload.
+    const storedMessages = (loadWidgetMessages(localStorage, resolvedWorkspaceId) as Message[]).map(
+      (m) => {
+        if (!m.attachments?.length) return m
+        const alive = m.attachments.filter((a) => !a.url.startsWith("blob:"))
+        if (alive.length > 0) return { ...m, attachments: alive }
+        // All attachments were local-only: fall back to a text label so the
+        // bubble doesn't render empty.
+        const wasAudio = m.attachments.some((a) => a.kind === "AUDIO")
+        return {
+          ...m,
+          attachments: undefined,
+          content: m.content || (wasAudio ? "🎤 Voice message" : "📎 Attachment"),
+        }
+      }
+    )
     if (storedMessages.length > 0) {
       setMessages(storedMessages)
-      console.log("📨 Loaded", storedMessages.length, "messages from localStorage")
-    } else {
-      console.log("📭 No messages in localStorage yet")
     }
 
     // Load session ID
@@ -770,6 +786,7 @@ export function ChatWidget({
               content: m.content,
               timestamp: m.createdAt,
               attachments: m.attachments, // 📎 keep operator-sent image/PDF/audio
+              serverId: m.id, // 😀 lets the visitor react to this operator message
             }))
             setMessages((prev) => {
               // Deduplicate: skip messages already shown (by content + timestamp)
@@ -832,6 +849,7 @@ export function ChatWidget({
             content: m.content,
             timestamp: m.createdAt,
             attachments: m.attachments,
+            serverId: m.id, // 😀 lets the visitor react to this operator message
           }))
           setMessages((prev) => {
             const updated = [...prev, ...newMsgs]
@@ -920,6 +938,7 @@ export function ChatWidget({
         content: data.response,
         timestamp: new Date().toISOString(),
         suggestions: data.suggestions,
+        serverId: data.assistantMessageId, // 😀 lets the visitor react to this reply
       }
       const finalMessages = [...updatedMessages, botMessage]
       setMessages(finalMessages)
@@ -980,11 +999,23 @@ export function ChatWidget({
   const sendVoiceNote = async (blob: Blob) => {
     if (!resolvedWorkspaceId || isLoading) return
 
-    // Show a "voice message" bubble immediately (parity with WhatsApp).
+    // Show the voice note as a playable audio bubble immediately (parity with
+    // WhatsApp): local object URL → instant player, no round-trip needed.
+    const voiceUrl = URL.createObjectURL(blob)
+    attachObjectUrls.current.push(voiceUrl)
     const userMessage: Message = {
       role: "user",
-      content: "🎤 Voice message",
+      content: "",
       timestamp: new Date().toISOString(),
+      attachments: [
+        {
+          id: `local-voice-${Date.now()}`,
+          url: voiceUrl,
+          kind: "AUDIO",
+          mimeType: blob.type || "audio/webm",
+          filename: "Voice message",
+        },
+      ],
     }
     const updatedMessages = [
       ...messages.map((m) => (m.role === "bot" && m.suggestions ? { ...m, suggestions: undefined } : m)),
@@ -1029,6 +1060,20 @@ export function ChatWidget({
         content: data.response,
         timestamp: new Date().toISOString(),
         suggestions: data.suggestions,
+        serverId: data.assistantMessageId, // 😀 lets the visitor react to this reply
+        // 🔊 Voice in → voice out: the backend synthesizes the reply (TTS) and
+        // returns audioUrl — render it as a playable audio bubble.
+        attachments: data.audioUrl
+          ? [
+              {
+                id: `tts-${Date.now()}`,
+                url: data.audioUrl as string,
+                kind: "AUDIO",
+                mimeType: "audio/mpeg",
+                filename: "Voice reply",
+              },
+            ]
+          : undefined,
       }
       const finalMessages = [...updatedMessages, botMessage]
       setMessages(finalMessages)
@@ -1104,7 +1149,7 @@ export function ChatWidget({
     if (!fileList || fileList.length === 0) return
     const { accepted, errors } = validateSelection(Array.from(fileList), 0)
     if (errors.length > 0) {
-      setFormError(errors[0])
+      setChatError(errors[0])
     }
     if (accepted.length === 0) return
 
@@ -1146,12 +1191,65 @@ export function ChatWidget({
     }
   }
 
+  /**
+   * 😀 Toggle the visitor's reaction on a bot/operator message (WhatsApp parity:
+   * same emoji again clears it). Optimistic local update + localStorage persist,
+   * then server sync so the operator sees the reaction too. Only messages with a
+   * serverId (a real DB row) can be reacted to — pure-local bubbles are skipped.
+   */
+  const toggleReaction = (target: Message, emoji: string) => {
+    if (!target.serverId) return
+    const next = target.reaction === emoji ? "" : emoji
+    setMessages((prev) => {
+      const updated = prev.map((m) =>
+        m.serverId === target.serverId ? { ...m, reaction: next || null } : m
+      )
+      if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updated)
+      return updated
+    })
+    if (resolvedWorkspaceId && sessionId) {
+      void setWidgetReaction({
+        apiUrl: resolvedApiUrl,
+        workspaceId: resolvedWorkspaceId,
+        sessionId,
+        messageId: target.serverId,
+        emoji: next,
+      }).catch((err) => {
+        // Non-blocking: a reaction failure must never disrupt the chat.
+        console.error("Failed to sync reaction:", err)
+      })
+    }
+  }
+
   // 🧹 Revoke any object URLs created for attachment previews on unmount.
   useEffect(() => {
     return () => {
       attachObjectUrls.current.forEach((url) => URL.revokeObjectURL(url))
     }
   }, [])
+
+  // ⚠️ Auto-dismiss the transient composer error after a few seconds.
+  useEffect(() => {
+    if (!chatError) return
+    const timer = setTimeout(() => setChatError(null), 5000)
+    return () => clearTimeout(timer)
+  }, [chatError])
+
+  // 😀 Close the open reaction picker when tapping/clicking anywhere outside it.
+  useEffect(() => {
+    if (!reactionPickerFor) return
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as HTMLElement | null
+      if (target?.closest?.("[data-reaction-ui]")) return
+      setReactionPickerFor(null)
+    }
+    document.addEventListener("mousedown", onDown)
+    document.addEventListener("touchstart", onDown)
+    return () => {
+      document.removeEventListener("mousedown", onDown)
+      document.removeEventListener("touchstart", onDown)
+    }
+  }, [reactionPickerFor])
 
   /**
    * Handle registration form submit
@@ -1977,14 +2075,15 @@ export function ChatWidget({
                       ? cn(
                           // 📱 WhatsApp bubble: ~10px radius, squared corner where
                           // the tail attaches, compact padding, subtle shadow.
-                          "relative max-w-[80%] sm:max-w-[340px] px-2.5 py-[6px] shadow-sm rounded-[10px]",
+                          // `group` → reveals the reaction picker on hover.
+                          "group relative max-w-[80%] sm:max-w-[340px] px-2.5 py-[6px] shadow-sm rounded-[10px]",
                           "word-wrap break-words overflow-wrap-anywhere text-sm sm:text-[14.5px]",
                           msg.role === "user"
                             ? "text-slate-900 rounded-tr-none" // outgoing (green via style) — tail top-right
                             : "bg-white text-slate-900 rounded-tl-none" // incoming (white) — tail top-left
                         )
                       : cn(
-                          "rounded-2xl px-3 sm:px-4 py-2 sm:py-3 max-w-[88%] sm:max-w-[360px] mb-3 shadow-sm",
+                          "group rounded-2xl px-3 sm:px-4 py-2 sm:py-3 max-w-[88%] sm:max-w-[360px] mb-3 shadow-sm",
                           "word-wrap break-words overflow-wrap-anywhere relative text-sm sm:text-[15px] leading-relaxed",
                           msg.role === "user"
                             ? "text-white rounded-br-md"
@@ -2009,6 +2108,52 @@ export function ChatWidget({
                   }
                   renderFooter={(msg) => (
                     <>
+                      {/* 😀 React to a bot/operator message. A small smiley
+                          trigger sits beside the bubble: always visible on touch
+                          devices (no hover there), hover-revealed on desktop.
+                          Tapping it opens the WhatsApp-style reaction bar. Only
+                          bubbles backed by a DB row (serverId) are reactable —
+                          the reaction syncs to the operator chat. */}
+                      {msg.role === "bot" && msg.serverId && (
+                        <>
+                          <button
+                            type="button"
+                            data-reaction-ui
+                            aria-label="React to this message"
+                            title="React"
+                            onClick={() =>
+                              setReactionPickerFor((cur) =>
+                                cur === msg.serverId ? null : msg.serverId!
+                              )
+                            }
+                            className={cn(
+                              "absolute -right-8 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center",
+                              "rounded-full border border-gray-200 bg-white text-gray-400 shadow-sm",
+                              "transition-opacity hover:text-emerald-600",
+                              "opacity-70 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+                            )}
+                          >
+                            <SmilePlus className="h-4 w-4" />
+                          </button>
+                          {reactionPickerFor === msg.serverId && (
+                            <div data-reaction-ui className="absolute -top-10 left-0 z-20">
+                              <ReactionPicker
+                                onReact={(emoji) => {
+                                  toggleReaction(msg, emoji)
+                                  setReactionPickerFor(null)
+                                }}
+                              />
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {/* Reaction badge: small emoji overlapping the bubble's
+                          bottom edge, the way WhatsApp renders reactions. */}
+                      {msg.reaction && (
+                        <span className="absolute -bottom-3 left-2 z-10 flex h-6 min-w-6 items-center justify-center rounded-full border border-gray-200 bg-white px-1 text-sm shadow">
+                          {msg.reaction}
+                        </span>
+                      )}
                       {/* 📺 Welcome video on the first reply: greeting (in the
                           bubble content) → video card → rest of the reply. */}
                       {msg.welcomeVideoUrl && (
@@ -2040,12 +2185,17 @@ export function ChatWidget({
                           )}
                         >
                           <span>{formatBubbleTime(msg.timestamp)}</span>
-                          {msg.role === "user" && (
-                            <CheckCheck
-                              className="h-3.5 w-3.5"
-                              style={{ color: isReadDemo(msg) ? "#53BDEB" : "#8696A0" }}
-                            />
-                          )}
+                          {msg.role === "user" &&
+                            (tickStateDemo(msg) === "sent" ? (
+                              <Check className="h-3.5 w-3.5" style={{ color: "#8696A0" }} />
+                            ) : (
+                              <CheckCheck
+                                className="h-3.5 w-3.5"
+                                style={{
+                                  color: tickStateDemo(msg) === "read" ? "#53BDEB" : "#8696A0",
+                                }}
+                              />
+                            ))}
                         </div>
                       )}
                     </>
@@ -2120,6 +2270,13 @@ export function ChatWidget({
                   </div>
                 )
               })()}
+
+              {/* ⚠️ Transient composer error (e.g. rejected attachment) */}
+              {chatError && (
+                <div className="mx-4 mb-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-center text-xs font-medium text-red-600">
+                  {chatError}
+                </div>
+              )}
 
               {/* Operator handoff banner — shown when chatbot is disabled */}
               {botDisabled && (

@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Stack**: Node.js/Express + React/TypeScript + PostgreSQL + Prisma ORM + OpenRouter API
 
 **Commands**: see `package.json` scripts (`dev:all`, `test:unit`, `prisma:migrate`, `build`, etc.)  
-**Architecture & specs**: see `docs/memory-bank/PRD.md` (single source of truth)
+**Architecture & specs**: see `docs/PRD.md` (single source of truth)
 
 ---
 

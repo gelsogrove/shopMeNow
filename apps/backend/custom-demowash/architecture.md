@@ -50,6 +50,7 @@ custom-demowash/
 ├── usecases_{it,en,ca,de,fr,pt}.md  ← traduzioni dei casi (riferimento QA multilingua)
 ├── prompts/
 │   ├── common.md                    ← comportamento del bot (casi, tono, escalation, template operatore)
+│   ├── franchising.md               ← flusso consulenza franchising (booking Calendar + Zoom)
 │   ├── faqs.md                      ← FAQ integrate nel prompt
 │   ├── machines/
 │   │   ├── washer.md                ← codici display lavadora + procedure + alarmi
@@ -111,12 +112,16 @@ custom-demowash/
 All'avvio (lazy, una sola volta per processo via `getCachedSystemPrompt`), `buildSystemPrompt()` costruisce il system prompt:
 
 1. Legge `prompts/common.md`
-2. Se presente, accoda `prompts/faqs.md` sotto header `════════ FAQS ════════`
-3. Scansiona `prompts/machines/` in ordine alfabetico → header `════════ MACHINES ════════`, poi `## <Nome>` per ogni file
-4. Scansiona `prompts/locations/` in ordine alfabetico → header `════════ LOCATIONS ════════`, poi `## <Nome>` per ogni file
+2. Se presente, accoda `prompts/franchising.md` sotto header `════════ FRANCHISING CONSULTATION ════════`
+3. Se presente, accoda `prompts/faqs.md` sotto header `════════ FAQS ════════`
+4. Scansiona `prompts/machines/` in ordine alfabetico → header `════════ MACHINES ════════`, poi `## <Nome>` per ogni file
+5. Scansiona `prompts/locations/` in ordine alfabetico → header `════════ LOCATIONS ════════`, poi `## <Nome>` per ogni file
 
 ```
 <contenuto common.md>
+
+════════ FRANCHISING CONSULTATION ════════
+<contenuto franchising.md>
 
 ════════ FAQS ════════
 <contenuto faqs.md>
@@ -244,7 +249,7 @@ Ogni `sessionId` (in prod = numero WhatsApp / id chat) ha il suo `SessionState`.
 
 ## 7. Tool (function calling)
 
-**Tre tool**, ognuno con una responsabilità. Non c'è `close_session`: la chiusura chat è gestita dall'host via `closeChat` nell'output (impostato dopo un'escalation).
+**Quattro tool**, ognuno con una responsabilità. Non c'è `close_session`: la chiusura chat è gestita dall'host via `closeChat` nell'output (impostato dopo un'escalation). Non c'è `capture_pii`: le PII sono catturate dal pre-scan deterministico di `pii.ts` (§9), non da un tool LLM.
 
 ### 7.1 `remember`
 
@@ -309,6 +314,22 @@ Il modello auto-corregge nel turno successivo. È **deterministico** (l'errore a
 
 **Lato host**: dopo un'escalation andata a buon fine, `chatbotFn` ritorna `shouldEscalate:true`, `escalationSummary` (briefing post-substitution PII), `notificationEmails` (operator email) e `closeChat:true`.
 
+### 7.4 `schedule_consultation`
+
+Prenota la consulenza franchising con il team commerciale (flusso in `prompts/franchising.md`).
+
+```typescript
+schedule_consultation({
+  slotIndex: number,          // 1-based, indice dello slot scelto dal cliente
+}) → { ok: true, appointment_id, date, time, calendar_link, zoom_link } | { ok: false, error }
+```
+
+**Note**:
+- Gli **slot disponibili sono generati a runtime** (`getConsultationSlots`: prossimo lunedì 10:00/15:00 + prossimo martedì 11:00, sempre nel futuro) e **iniettati nel blocco RUNTIME** — il modello offre esattamente quelli, mai date inventate. In produzione: fetch della disponibilità reale dal DB.
+- **Precondizioni** ("Tool refuses, LLM corrects"): `state.name` e `state.email` devono esistere. L'email arriva nello state via pre-scan PII (§9), non via tool.
+- I side-effect reali (evento Google Calendar + meeting Zoom) girano host-side via handler iniettato (`ctx.scheduleConsultation`); in REPL/batch i link restano `null` e il bot conferma solo data/ora.
+- **Idempotenza**: una seconda call nella stessa sessione ritorna `ok:false` (appuntamento già preso).
+
 ### Tool che NON aggiungo
 
 - **`close_session` / `mark_resolved`** — la chiusura la decide l'host via `closeChat`. Non serve un tool LLM.
@@ -331,7 +352,7 @@ Il modello auto-corregge nel turno successivo. È **deterministico** (l'errore a
 7. Loop max MAX_TOOL_HOPS (=4):
      state = getState(sessionId)
      response = callLLM(blobCached + SESSION STATE + RUNTIME, history)
-     se ci sono tool_calls → esegui (remember | request_invoice | escalate_to_operator),
+     se ci sono tool_calls → esegui (remember | request_invoice | schedule_consultation | escalate_to_operator),
                               appendi i tool_result, ripeti
      se è testo → extractLanguage(content) → { reply, lang }
                   empty-reply recovery: se reply vuota → un nudge esplicito, retry una volta
@@ -675,4 +696,4 @@ Prompt-driven + i punti prioritari della §14 (PII redaction ✅, cap costo + sl
 
 ---
 
-*Documento aggiornato: 2026-06-02 — allineato al codice (agent.ts, state.ts, pii.ts, settings.json, prompts/).*
+*Documento aggiornato: 2026-06-12 — allineato al codice (agent.ts, state.ts, pii.ts, settings.json, prompts/): 4 tool, blocco FRANCHISING CONSULTATION, slot consulenza dinamici.*

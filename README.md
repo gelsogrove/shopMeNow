@@ -263,8 +263,6 @@ cd backend && npm run update-pricing
 
 **Single Source of Truth**: `backend/prisma/data/pricingConfig.ts`
 
-For detailed pricing management guide, see: [`docs/memory-bank/05-guides/pricing-management.md`](docs/memory-bank/05-guides/pricing-management.md)
-
 **Pricing Types**:
 
 - **PLAN**: Monthly subscription costs (€0-€149)

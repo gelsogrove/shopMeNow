@@ -155,10 +155,10 @@ function buildContent(lang: Lang) {
       icon: "🌐",
       title: p("Operatore multilingua", "Multilingual operator", "Operador multilingüe", "Operador multilíngue"),
       desc: p(
-        "Operatore e cliente, ognuno nella sua lingua.",
-        "Operator and customer, each in their own language.",
-        "Operador y cliente, cada uno en su idioma.",
-        "Operador e cliente, cada um na sua língua."
+        "L'operatore scrive nella sua lingua, l'AI traduce in tempo reale.",
+        "The operator writes in their language, the AI translates live.",
+        "El operador escribe en su idioma, la IA traduce al instante.",
+        "O operador escreve na sua língua, a IA traduz em tempo real."
       ),
     },
     {
@@ -242,13 +242,40 @@ function buildContent(lang: Lang) {
         { role: "out", text: p("✅ Confermato: Mer 15 alle 10:00\n📧 Ti ho inviato l'invito per il calendario via email, con la chiamata Zoom\n🔔 Ti ricordo il giorno prima", "✅ Confirmed: Wed 15 at 10:00\n📧 I've emailed you the calendar invite, with the Zoom call\n🔔 I'll remind you the day before", "✅ Confirmado: Mié 15 a las 10:00\n📧 Te he enviado la invitación del calendario por email, con la llamada de Zoom\n🔔 Te recuerdo el día antes", "✅ Confirmado: Qua 15 às 10:00\n📧 Enviei-te o convite do calendário por email, com a chamada Zoom\n🔔 Lembro-te no dia anterior") },
       ],
     },
-    // 7 — Multilingual operator (reset: operator writes once, customer reads in their language)
+    // 7 — Multilingual operator (reset). The two-way magic must be VISIBLE:
+    // the customer writes Arabic (sub: what the operator reads, in the
+    // visitor's language), the operator types in the visitor's language
+    // (sub: the Arabic the customer actually receives). AI translates live.
     {
       reset: true,
       feature: 6,
       msgs: [
-        { role: "in", text: "مرحباً، هل طلبي جاهز للاستلام؟", rtl: true },
-        { role: "op", text: "صباح الخير! نعم، طلبك جاهز للاستلام 😊", sub: "(AI TRANSLATION)", rtl: true },
+        {
+          role: "in",
+          text: "مرحباً، هل طلبي جاهز للاستلام؟",
+          rtl: true,
+          sub: p(
+            "🌐 L'operatore legge: «Ciao, il mio ordine è pronto per il ritiro?»",
+            "🌐 The operator reads: “Hi, is my order ready for pickup?”",
+            "🌐 El operador lee: «Hola, ¿mi pedido está listo para recoger?»",
+            "🌐 O operador lê: «Olá, a minha encomenda está pronta para levantar?»"
+          ),
+        },
+        {
+          role: "op",
+          text: p(
+            "Buongiorno! Sì, il suo ordine è pronto. La aspettiamo 😊",
+            "Good morning! Yes, your order is ready. See you soon 😊",
+            "¡Buenos días! Sí, tu pedido está listo. Te esperamos 😊",
+            "Bom dia! Sim, a sua encomenda está pronta. Esperamos por si 😊"
+          ),
+          sub: p(
+            "🌐 Il cliente riceve in arabo: «صباح الخير! نعم، طلبك جاهز للاستلام 😊»",
+            "🌐 The customer receives it in Arabic: «صباح الخير! نعم، طلبك جاهز للاستلام 😊»",
+            "🌐 El cliente lo recibe en árabe: «صباح الخير! نعم، طلبك جاهز للاستلام 😊»",
+            "🌐 O cliente recebe em árabe: «صباح الخير! نعم، طلبك جاهز للاستلام 😊»"
+          ),
+        },
       ],
     },
     // 8 — Invoices & files (reset: the AI sends a document)

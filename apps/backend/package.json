@@ -15,7 +15,6 @@
     "test": "npm run test:unit",
     "test:unit": "dotenv -e ../../.env -- cross-env NODE_ENV=test jest --config jest.config.unit.js --passWithNoTests",
     "test:security": "dotenv -e ../../.env -- cross-env NODE_ENV=test INTEGRATION_TEST=true jest --config jest.config.security.js",
-    "test:integration": "dotenv -e ../../.env -- cross-env NODE_ENV=test INTEGRATION_TEST=true jest --config jest.config.integration.js",
     "test:coverage": "dotenv -e ../../.env -- cross-env NODE_ENV=test jest --coverage --config jest.config.unit.js"
   },
   "author": "Andrea Gelso",

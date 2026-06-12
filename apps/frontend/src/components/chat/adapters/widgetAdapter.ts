@@ -5,6 +5,8 @@ export type WidgetStoredMessage = {
   content: string
   timestamp?: string
   suggestions?: string[]
+  serverId?: string // 😀 DB ConversationMessage id — anchors reactions server-side
+  reaction?: string | null // 😀 visitor's reaction emoji on this message (server-synced)
 }
 
 type WidgetSendInput = {
@@ -197,6 +199,7 @@ export const sendWidgetMessage = async ({
       response: "",
       sessionId: undefined,
       messageId: undefined,
+      assistantMessageId: undefined,
       suggestions: undefined,
       activeChatbot: false as boolean | undefined,
       blocked: true, // 🆕 Preserve blocked flag for downstream handling
@@ -218,12 +221,36 @@ export const sendWidgetMessage = async ({
     response: data.response as string,
     sessionId: data.sessionId as string | undefined,
     messageId: data.messageId as string | undefined,
+    // 😀 DB id of the assistant reply — lets the widget anchor a reaction to it
+    assistantMessageId: data.assistantMessageId as string | undefined,
     suggestions: Array.isArray(data.suggestions)
       ? (data.suggestions as string[]).slice(0, 4)
       : undefined,
     // Operator handoff: backend sets activeChatbot=false when contactOperator CF was triggered
     activeChatbot: data.activeChatbot as boolean | undefined,
   }
+}
+
+/**
+ * 😀 Set (emoji) or clear ("") the visitor's reaction on a bot/operator message.
+ * Server-synced: the operator chat reads the same field, WhatsApp parity.
+ * Ownership is proven by sessionId — the backend rejects messages outside it.
+ */
+export const setWidgetReaction = async (input: {
+  apiUrl: string
+  workspaceId: string
+  sessionId: string
+  messageId: string
+  emoji: string
+}) => {
+  const { apiUrl, workspaceId, sessionId, messageId, emoji } = input
+  const response = await fetch(`${apiUrl}/widget/chat-reaction/${workspaceId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sessionId, messageId, emoji }),
+  })
+  if (!response.ok) throw new Error("Failed to set reaction")
+  return await response.json()
 }
 
 export const registerAndStartChat = async (input: WidgetRegisterInput) => {

@@ -191,7 +191,7 @@ const TOOLS = [
     function: {
       name: 'remember',
       description:
-        'Record facts about the customer so they are not re-asked. Call this WHENEVER the customer provides a new fact (name, location/laundromat, machine number, machine type, display code, language). Use merge semantics: only pass the fields that changed. Valid locations are documented in the prompt (LOCATIONS). Display codes are the exact strings the customer reads from the machine screen.',
+        'Record facts about the customer so they are not re-asked. Call this WHENEVER the customer provides a new fact (name, location/laundromat, machine number, machine type, display code). Use merge semantics: only pass the fields that changed. Valid locations are documented in the prompt (LOCATIONS). Display codes are the exact strings the customer reads from the machine screen. There is NO language field: the conversation language is declared via the ⟦LANG:xx⟧ output trailer, never via this tool.',
       parameters: {
         type: 'object',
         properties: {
@@ -269,6 +269,7 @@ const TOOLS = [
               'machine_broken',
               'door_persistent',
               'alarm_technical',
+              'dryer_no_heat',
               'double_charge',
               'no_change',
               'invoice_request',
@@ -498,6 +499,16 @@ async function executeTool(
     const state = getState(ctx.sessionId)
     const slotIndex = typeof args.slotIndex === 'number' ? args.slotIndex : 0
 
+    // Idempotency: one consultation per session. A second call must not
+    // create a duplicate Calendar event / Zoom meeting / email.
+    if (state.appointmentDate) {
+      return {
+        ok: false,
+        error: 'already_booked',
+        instruction: `The customer already has an appointment on ${state.appointmentDate} at ${state.appointmentTime}. Tell them to contact the team if they need to reschedule.`,
+      }
+    }
+
     if (!state.name) {
       return {
         ok: false,
@@ -507,17 +518,11 @@ async function executeTool(
     if (!state.email) {
       return {
         ok: false,
-        error: 'Customer email is required before scheduling. Ensure capture_pii({email: "..."}) was called.',
+        error: 'Customer email is required before scheduling. Ask the customer for their email address first (the system captures it automatically when they write it), then retry.',
       }
     }
 
-    // Available time slots (hardcoded for demo).
-    // In production, fetch from the database.
-    const AVAILABLE_SLOTS = [
-      { date: '2026-06-10', time: '10:00', dayName: 'Monday' },
-      { date: '2026-06-10', time: '15:00', dayName: 'Monday' },
-      { date: '2026-06-11', time: '11:00', dayName: 'Tuesday' },
-    ]
+    const AVAILABLE_SLOTS = getConsultationSlots(new Date())
 
     if (slotIndex < 1 || slotIndex > AVAILABLE_SLOTS.length) {
       return {
@@ -1298,6 +1303,40 @@ async function buildSystemPrompt(): Promise<string> {
   return parts.join('\n')
 }
 
+// Demo availability: next Monday 10:00 + 15:00 and next Tuesday 11:00,
+// always strictly in the future relative to `now`. In production, fetch
+// real availability from the database. Used both by the RUNTIME block (so
+// the model offers real dates) and by the schedule_consultation handler
+// (so slotIndex resolves to the same dates the model offered).
+interface ConsultationSlot {
+  date: string // YYYY-MM-DD
+  time: string // HH:MM
+  dayName: string
+}
+
+function getConsultationSlots(now: Date): ConsultationSlot[] {
+  const nextWeekday = (target: number): Date => {
+    const d = new Date(now)
+    let delta = (target - d.getDay() + 7) % 7
+    if (delta === 0) delta = 7
+    d.setDate(d.getDate() + delta)
+    return d
+  }
+  const iso = (d: Date): string => {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+  const monday = nextWeekday(1)
+  const tuesday = nextWeekday(2)
+  return [
+    { date: iso(monday), time: '10:00', dayName: 'Monday' },
+    { date: iso(monday), time: '15:00', dayName: 'Monday' },
+    { date: iso(tuesday), time: '11:00', dayName: 'Tuesday' },
+  ]
+}
+
 function formatRuntimeBlock(
   operatorBriefingLanguageOverride?: string | null,
   isFirstTurn = false,
@@ -1315,6 +1354,7 @@ function formatRuntimeBlock(
   const briefingLanguage =
     (operatorBriefingLanguageOverride && operatorBriefingLanguageOverride.trim()) ||
     OPERATOR_BRIEFING_LANGUAGE
+  const slots = getConsultationSlots(now)
   return [
     '',
     '═══ RUNTIME ═══',
@@ -1325,6 +1365,8 @@ function formatRuntimeBlock(
     // from history (which the host rebuilds per call).
     `Turn: ${isFirstTurn ? 1 : 2}`,
     `Operator briefing language: ${briefingLanguage}`,
+    'Franchising consultation slots (offer EXACTLY these, by index — see FRANCHISING CONSULTATION block):',
+    ...slots.map((s, i) => `  ${i + 1}. ${s.dayName} ${s.date} ${s.time}`),
     '',
   ].join('\n')
 }

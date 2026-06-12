@@ -227,6 +227,57 @@ router.post(
 logger.info("🔧 Widget POST /chat-attachments/:workspaceId route registered")
 
 /**
+ * @swagger
+ * /api/v1/widget/chat-reaction/{workspaceId}:
+ *   post:
+ *     summary: Set or clear an emoji reaction on a message from the widget (visitor side)
+ *     tags: [Widget]
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Workspace ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sessionId
+ *               - messageId
+ *               - emoji
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Widget chat session the message belongs to (proves ownership)
+ *               messageId:
+ *                 type: string
+ *                 description: ConversationMessage id to react to
+ *               emoji:
+ *                 type: string
+ *                 description: Reaction emoji; empty string clears the reaction
+ *     responses:
+ *       200:
+ *         description: Reaction persisted (visible operator-side too)
+ *       400:
+ *         description: Missing sessionId/messageId or emoji not a string
+ *       404:
+ *         description: Message not found in this session/workspace
+ */
+// 😀 Visitor reacts to a bot/operator message (WhatsApp parity).
+router.post(
+  "/chat-reaction/:workspaceId",
+  widgetRateLimiter,
+  controller.setReaction.bind(controller)
+)
+
+logger.info("🔧 Widget POST /chat-reaction/:workspaceId route registered")
+
+/**
  * GET /api/v1/widget/status/:workspaceId
  * Get widget availability status
  */

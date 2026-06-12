@@ -4,7 +4,6 @@ import {
   getOrCreateVisitorId,
   mapWidgetMessages,
 } from "@/components/chat/adapters/widgetAdapter"
-import { mapDebugMessage } from "@/components/chat/adapters/debugAdapter"
 
 const createStorage = () => {
   const store = new Map<string, string>()
@@ -40,27 +39,5 @@ describe("widgetAdapter", () => {
       { role: "user", content: "hello" },
       { role: "bot", content: "hi" },
     ])
-  })
-})
-
-describe("debugAdapter", () => {
-  it("maps customer messages to user role", () => {
-    const mapped = mapDebugMessage({
-      id: "msg-1",
-      content: "hi",
-      sender: "customer",
-    })
-    expect(mapped.role).toBe("user")
-    expect(mapped.sender).toBe("customer")
-  })
-
-  it("maps agent messages to bot role", () => {
-    const mapped = mapDebugMessage({
-      id: "msg-2",
-      content: "hello",
-      sender: "user",
-    })
-    expect(mapped.role).toBe("bot")
-    expect(mapped.sender).toBe("bot")
   })
 })

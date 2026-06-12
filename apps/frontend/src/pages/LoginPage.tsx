@@ -47,6 +47,7 @@ import {
   Clock,
   Zap,
   ArrowRight,
+  Languages,
 } from "lucide-react"
 import { useEffect, useState, useRef, type FormEvent } from "react"
 import { motion } from "framer-motion"
@@ -2169,7 +2170,7 @@ export function LoginPage() {
               <div className="grid grid-cols-3 gap-4 pt-1">
                 {[
                   { icon: ShieldCheck, value: "100%", label: "context\npreserved" },
-                  { icon: MessageSquare, value: "0", label: "lost\nconversations" },
+                  { icon: Languages, value: "30+", label: "languages\nlive-translated" },
                   { icon: Clock, value: "24/7", label: "AI\ncoverage" },
                 ].map((s) => (
                   <div

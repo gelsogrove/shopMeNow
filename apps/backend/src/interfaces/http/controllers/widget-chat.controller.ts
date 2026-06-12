@@ -1335,6 +1335,48 @@ export class WidgetChatController {
   }
 
   /**
+   * 😀 Set (emoji) or clear ("") a reaction from the PUBLIC widget — visitor
+   * reacts to a bot/operator message, WhatsApp parity. Persisted on
+   * ConversationMessage.reaction (the same field the operator chat and the
+   * playground read), so the reaction is visible operator-side too.
+   * SECURITY: public endpoint — ownership is proven by sessionId (same model
+   * as chat-attachments): the message must belong to THAT conversation in
+   * THAT workspace. Never reacts cross-session or cross-workspace (rule #2).
+   * POST /api/v1/widget/chat-reaction/:workspaceId  { sessionId, messageId, emoji }
+   */
+  async setReaction(req: Request, res: Response): Promise<Response> {
+    try {
+      const { workspaceId } = req.params
+      const { sessionId, messageId, emoji } = req.body || {}
+
+      if (!sessionId || !messageId) {
+        return res.status(400).json({ error: "sessionId and messageId are required" })
+      }
+      if (typeof emoji !== "string") {
+        return res.status(400).json({ error: "emoji must be a string ('' clears it)" })
+      }
+
+      // The message must belong to THIS visitor's conversation in THIS workspace.
+      const msg = await prisma.conversationMessage.findFirst({
+        where: { id: messageId, conversationId: sessionId, workspaceId },
+        select: { id: true },
+      })
+      if (!msg) return res.status(404).json({ error: "message_not_found" })
+
+      const nextReaction = emoji.trim() ? emoji.trim() : null
+      await prisma.conversationMessage.update({
+        where: { id: msg.id },
+        data: { reaction: nextReaction },
+      })
+
+      return res.json({ success: true, messageId: msg.id, reaction: nextReaction })
+    } catch (error: any) {
+      logger.error("[WIDGET] setReaction error", { error: error?.message })
+      return res.status(500).json({ error: "Failed to set reaction", message: error.message })
+    }
+  }
+
+  /**
    * POST /api/v1/widget/chat-audio/:workspaceId
    * 🎤 Voice note from the widget composer (MediaRecorder blob).
    * Pipeline: transcribe (Whisper) → the transcription becomes the message →
@@ -2355,10 +2397,25 @@ export class WidgetChatController {
         }
       }
 
+      // 😀 Reactions: the widget needs the DB id of the assistant message just
+      // saved by ChatEngine to anchor a reaction to it (WhatsApp parity).
+      let assistantMessageId: string | null = null
+      try {
+        const lastAssistant = await prisma.conversationMessage.findFirst({
+          where: { conversationId: chatSession.id, workspaceId, role: "assistant" },
+          orderBy: { createdAt: "desc" },
+          select: { id: true },
+        })
+        assistantMessageId = lastAssistant?.id || null
+      } catch {
+        /* non-critical — widget simply won't offer a reaction on this bubble */
+      }
+
       // Return response directly (immediate delivery, no WhatsApp queue)
       return res.status(200).json({
         success: true,
         messageId: `widget-${visitorId}-${Date.now()}`,
+        assistantMessageId,
         sessionId: chatSession.id,
         response: llmResult.response || "Sorry, I couldn't understand your request.",
         status: "ready",

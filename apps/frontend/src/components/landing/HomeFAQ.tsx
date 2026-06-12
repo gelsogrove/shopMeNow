@@ -1,6 +1,10 @@
+import { useLanguage } from "@/contexts/LanguageContext"
+import { motion } from "framer-motion"
 import {
   AlertOctagon,
+  Briefcase,
   CalendarClock,
+  ChevronDown,
   Headphones,
   PhoneCall,
   PlugZap,
@@ -8,82 +12,105 @@ import {
   Tag,
   Users,
   Workflow,
-  Briefcase,
 } from "lucide-react"
+import { useState } from "react"
+import { Helmet } from "react-helmet-async"
 
-const faqs = [
-  {
-    icon: ShieldCheck,
-    accent: "from-emerald-50 to-white",
-    question: "Come trattate la privacy e i dati sensibili?",
-    answer:
-      "I dati restano nel workspace: conserviamo le conversazioni in UE, cifriamo tutto in transito e puoi decidere per quanto tempo mantenere lo storico. Il modello usa solo il tuo dataset, nessun training esterno.",
-  },
-  {
-    icon: Users,
-    accent: "from-blue-50 to-white",
-    question: "Posso invitare colleghi nel mio workspace?",
-    answer:
-      "Certo. I piani Free e Basic includono 3 membri, Premium e Enterprise non hanno limiti. Ogni ruolo può avere permessi diversi (marketing, supporto, amministrazione).",
-  },
-  {
-    icon: Tag,
-    accent: "from-orange-50 to-white",
-    question: "Si possono creare offerte, bundle o coupon?",
-    answer:
-      "Puoi generare listini mirati, applicare coupon temporanei e pubblicarli direttamente in chat. Ogni offerta può avere lingue, canali e disponibilità personalizzate.",
-  },
-  {
-    icon: CalendarClock,
-    accent: "from-violet-50 to-white",
-    question: "Posso schedulare push o campagne WhatsApp?",
-    answer:
-      "Sì, pianifichi broadcast e follow-up automatici con regole su fuso orario, opt-in e prodotti disponibili. Il motore evita l'invio se l'utente sta già parlando con l'operatore.",
-  },
-  {
-    icon: Headphones,
-    accent: "from-green-50 to-white",
-    question: "Il cliente può parlare con un operatore umano?",
-    answer:
-      "In ogni momento. Il bot riconosce parole chiave o emozioni e passa la conversazione con tutto il contesto, allegati e carrello.",
-  },
-  {
-    icon: PhoneCall,
-    accent: "from-cyan-50 to-white",
-    question: "Come vengo avvisato quando serve un operatore?",
-    answer:
-      "Inviamo notifiche via email, push e WhatsApp interno. Puoi anche assegnare turni: il primo agente disponibile riceve un ping diretto.",
-  },
-  {
-    icon: Workflow,
-    accent: "from-amber-50 to-white",
-    question: "Posso decidere le regole di escalation?",
-    answer:
-      "Definisci trigger (parole, sentimenti, stato del carrello, VIP flag) e azioni: avviso umano, blocco pagamenti, richiesta di documenti o apertura ticket.",
-  },
-  {
-    icon: PlugZap,
-    accent: "from-indigo-50 to-white",
-    question: "Come integro il mio CRM o ERP?",
-    answer:
-      "Con il piano Enterprise creiamo un connettore dedicato (HubSpot, Salesforce, SAP, ecc.). Sincronizziamo contatti, offerte e pipeline senza toccare il tuo stack.",
-  },
-  {
-    icon: AlertOctagon,
-    accent: "from-rose-50 to-white",
-    question: "Cosa succede quando termino il credito?",
-    answer:
-      "Avvisiamo molto prima: email, badge in dashboard e messaggi su WhatsApp interno. È previsto un piccolo buffer negativo per non interrompere le chat attive.",
-  },
-  {
-    icon: Briefcase,
-    accent: "from-slate-50 to-white",
-    question: "Non ho un e-commerce, offro servizi: posso usare eChatbot?",
-    answer:
-      "Sì. Puoi raccogliere richieste, prenotazioni e preventivi usando form dinamici, allegati e pagamenti link-to-pay. Il bot costruisce ordini anche senza catalogo.",
-  },
+const FAQ_ITEMS = [
+  { key: 1, icon: ShieldCheck, accent: "bg-emerald-400/10 text-emerald-300" },
+  { key: 2, icon: Users, accent: "bg-blue-400/10 text-blue-300" },
+  { key: 3, icon: Tag, accent: "bg-orange-400/10 text-orange-300" },
+  { key: 4, icon: CalendarClock, accent: "bg-violet-400/10 text-violet-300" },
+  { key: 5, icon: Headphones, accent: "bg-green-400/10 text-green-300" },
+  { key: 6, icon: PhoneCall, accent: "bg-cyan-400/10 text-cyan-300" },
+  { key: 7, icon: Workflow, accent: "bg-amber-400/10 text-amber-300" },
+  { key: 8, icon: PlugZap, accent: "bg-indigo-400/10 text-indigo-300" },
+  { key: 9, icon: AlertOctagon, accent: "bg-rose-400/10 text-rose-300" },
+  { key: 10, icon: Briefcase, accent: "bg-slate-400/10 text-slate-300" },
 ]
 
 export function HomeFAQ() {
-  return null
+  const { t } = useLanguage()
+  const [openIndex, setOpenIndex] = useState<number | null>(0)
+
+  const faqs = FAQ_ITEMS.map((item) => ({
+    ...item,
+    question: t(`homeFaq.q${item.key}`),
+    answer: t(`homeFaq.a${item.key}`),
+  }))
+
+  // FAQPage structured data so Google can show these Q&As as rich results
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: { "@type": "Answer", text: faq.answer },
+    })),
+  }
+
+  return (
+    <section id="faq" className="py-20">
+      <Helmet>
+        <script type="application/ld+json">{JSON.stringify(faqJsonLd)}</script>
+      </Helmet>
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.65, ease: "easeOut" }}
+        >
+          <div className="text-center mb-12 space-y-3">
+            <h2 className="text-3xl lg:text-4xl font-bold text-white">
+              {t("homeFaq.title")}
+            </h2>
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
+              {t("homeFaq.subtitle")}
+            </p>
+          </div>
+
+          <div className="max-w-4xl mx-auto space-y-3">
+            {faqs.map((faq, index) => {
+              const Icon = faq.icon
+              const isOpen = openIndex === index
+              return (
+                <div
+                  key={faq.key}
+                  className="bg-slate-900/50 backdrop-blur rounded-2xl border border-white/10 hover:border-green-400/30 transition-colors duration-300"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setOpenIndex(isOpen ? null : index)}
+                    aria-expanded={isOpen}
+                    className="w-full flex items-center gap-4 px-6 py-5 text-left"
+                  >
+                    <span
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${faq.accent}`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <span className="flex-1 text-lg font-semibold text-white">
+                      {faq.question}
+                    </span>
+                    <ChevronDown
+                      className={`h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 ${
+                        isOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  {isOpen && (
+                    <div className="px-6 pb-5 pl-20 text-slate-300 leading-relaxed">
+                      {faq.answer}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  )
 }

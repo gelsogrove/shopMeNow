@@ -114,6 +114,13 @@ export const MARKETING_SEO: Readonly<Record<string, MarketingSeoMeta>> = {
       "Want to see eChatbot in action for your business? Tell us about your use case and we'll get back within 24 hours with a tailored demo.",
     keywords: "whatsapp chatbot demo, request demo echatbot, custom demo",
   },
+  "/smart-push-ai": {
+    title: "Smart Push AI - Intelligent WhatsApp Campaigns that Boost Conversions",
+    description:
+      "AI matches each customer's needs with available offers and decides what to send and when. Targeted WhatsApp messages, smart anti-spam, more conversions and fewer opt-outs.",
+    keywords:
+      "whatsapp push ai, whatsapp campaigns, targeted whatsapp messages, whatsapp marketing automation, smart push, ai customer segmentation, whatsapp anti-spam",
+  },
   "/neapolis": {
     title: "Neapolis × eChatbot.AI Partnership",
     description:

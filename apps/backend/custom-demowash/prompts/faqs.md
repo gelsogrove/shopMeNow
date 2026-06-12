@@ -131,9 +131,7 @@ Si el cliente ha dicho "secadora / asciugatrice / dryer" o ya está en SESSION S
 
 ---
 
----
-
-## FAQ 6 — Richiesta fattura (flow strutturato)
+## FAQ 5 — Richiesta fattura (flow strutturato)
 
 **Triggers** (multi-lingua):
 - it: *"vorrei la fattura"*, *"mi serve la fattura"*, *"posso avere la fattura?"*, *"fattura per favore"*, *"fattura intestata"*

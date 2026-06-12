@@ -27,6 +27,7 @@ dump/
 coverage/
 
 # Production - Build output (generated on Heroku during deploy)
+*.tsbuildinfo
 build/
 dist/
 apps/backend/dist/

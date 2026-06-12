@@ -48,12 +48,14 @@ interface SessionState {
 
 ### 3. Tool fanno side-effect, LLM parla.
 
-Tool autorizzati (3 + 1 PII):
+Tool autorizzati (4 — vedi `agent.ts` TOOLS, unica fonte di verità):
 
-- **`remember(fields)`** — aggiorna `SessionState` (merge). Tool interno, sempre disponibile.
-- **`capture_pii(fields)`** — variante di `remember` per i campi PII (cif, email, phone, cardLast4, address, companyName). Valida formato via regex, salva server-side. **Mai loggato, mai re-emesso.**
-- **`escalate_to_operator({reason, summary, attachments?})`** — invia briefing all'operatore (email/Slack/Monday). L'unico vero side-effect verso il mondo esterno.
-- **`close_session({outcome, notes?})`** — chiude sessione + analytics.
+- **`remember(fields)`** — aggiorna `SessionState` (merge): name, location, machineType, machine, displayCode. **Niente campo `language`** (vedi 🌐 sotto) e niente campi PII.
+- **`request_invoice({companyName, amount, serviceDate, email, note})`** — invia all'operatore la richiesta di fattura via email. Valida email/data ("Tool refuses, LLM corrects").
+- **`schedule_consultation({slotIndex})`** — prenota la consulenza franchising (Calendar + Zoom + email via handler host iniettato). Gli slot offerti arrivano dal blocco RUNTIME.
+- **`escalate_to_operator({reason, summary})`** — invia briefing all'operatore via email. Idempotente per (sessione, reason).
+
+**NON esiste un tool `capture_pii`**: le PII (email, telefono, CIF, carta…) vengono catturate automaticamente server-side dal pre-scan regex di `pii.ts` e salvate in `SessionState`. **Mai loggata, mai re-emesse.** Non esiste neanche `close_session`: la chiusura la decide l'host via `closeChat` nell'output.
 
 ❌ Forbidden: tool che duplicano cose che il prompt fa già (`mark_resolved`, `set_language`, `detect_intent`, `get_prices`, `get_hours`). Tool con argomenti opzionali esplosivi (10+ campi). Tool che fanno 2 cose (es. `save_and_escalate`).
 ✅ Allowed: aggiungere un tool nuovo SOLO se fa un side-effect che il prompt non può fare. Discuti prima di aggiungerlo.
@@ -111,7 +113,7 @@ export function resetAgentSession(session: AgentSession): void
      - carta 4cifre   → regex con contesto: parole "tarjeta|carta|card|últimas 4|terminada en"
      - telefono       → /(\+34\s?)?[6789]\d{2}[\s.-]?\d{3}[\s.-]?\d{3}/g
    Sostituisci match con placeholder ([EMAIL], [CIF], [NIF], [IBAN], [CARD_FULL], [CARD_4], [PHONE]).
-   Salva i valori veri in SessionState (capture_pii).
+   Salva i valori veri in SessionState (pre-scan deterministico in `pii.ts` — NON è un tool LLM).
 
 2. DE-REDACT con state già noto (per turni successivi):
      Sostituisci occorrenze di state.name, state.address, state.companyName, ecc.
@@ -365,4 +367,4 @@ I 6 flussi da coprire (vary la lingua tra i casi per testare la copertura multil
 
 ---
 
-*Documento aggiornato: 2026-06-01*
+*Documento aggiornato: 2026-06-12*
