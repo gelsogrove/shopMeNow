@@ -45,6 +45,9 @@ import { transcribeAudio } from '../../../services/audio-transcription.service'
 import { ingestInboundWebhookMedia } from '../../../services/inbound-media-webhook.service'
 // 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
 import { extractUltramsgReaction } from '../../../services/webhook-reaction.extract'
+// ✓✓ Delivery receipts (delivered/read): message_ack webhook → advance outbound status
+import { extractUltramsgStatusUpdates } from '../../../services/webhook-status.extract'
+import { applyManyStatusUpdates } from '../../../services/delivery-status.service'
 import { whatsappMessageRateLimiter, whatsappWorkspaceRateLimiter } from '../../../middlewares/rateLimiter'
 import { platformConfigService } from '../../../services/platform-config.service'
 import { websocketService } from '../../../services/websocket.service'
@@ -145,6 +148,22 @@ export class UltraMsgWebhookController {
   private async _handleWebhookLocked(req: Request, res: Response): Promise<Response> {
     const { webhookId } = req.params
     let workspaceId: string | undefined  // Declare at function scope
+
+    // ✓✓ DELIVERY RECEIPTS: UltraMsg emits `event_type: "message_ack"` with
+    // ack = pending|server|device|read|played. Handle it first and return — it
+    // is not a message. (Requires `webhook_message_ack` enabled on the instance.)
+    {
+      const updates = extractUltramsgStatusUpdates(req.body)
+      if (updates.length > 0) {
+        const statusWorkspaceId = webhookId
+          ? (await prisma.whatsappSettings.findUnique({ where: { webhookId }, select: { workspaceId: true } }))?.workspaceId
+          : undefined
+        if (statusWorkspaceId) {
+          await applyManyStatusUpdates(prisma, statusWorkspaceId, updates)
+        }
+        return res.status(200).json({ status: 'ok', handled: 'delivery_status' })
+      }
+    }
 
     // 🔍 DEBUG: Log RAW payload to understand UltraMsg format
     logger.info('🔍 [ULTRAMSG DEBUG] RAW WEBHOOK PAYLOAD', {

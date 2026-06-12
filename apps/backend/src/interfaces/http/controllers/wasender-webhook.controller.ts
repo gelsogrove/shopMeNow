@@ -35,6 +35,9 @@ import { extractWasenderMedia, extractWasenderAudio } from '../../../services/we
 import { transcribeAudio } from '../../../services/audio-transcription.service'
 // 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
 import { extractWasenderReaction } from '../../../services/webhook-reaction.extract'
+// ✓✓ Delivery receipts (delivered/read): messages.update webhook → advance outbound status
+import { extractWasenderStatusUpdates } from '../../../services/webhook-status.extract'
+import { applyManyStatusUpdates } from '../../../services/delivery-status.service'
 import {
   whatsappMessageRateLimiter,
   whatsappWorkspaceRateLimiter,
@@ -123,10 +126,18 @@ interface WasenderMessageReceivedPayload {
   }
 }
 
+/** Delivery/read status update for a previously sent message (double-tick). */
+interface WasenderMessageUpdatePayload {
+  event: 'messages.update'
+  sessionId?: string
+  data: any // shape: { key:{id}, update:{status} } or an array of such — parsed leniently in webhook-status.extract
+}
+
 type WasenderWebhookPayload =
   | WasenderSessionStatusPayload
   | WasenderQrcodeUpdatedPayload
   | WasenderMessageReceivedPayload
+  | WasenderMessageUpdatePayload
 
 // ─── Controller ───────────────────────────────────────────────────────────
 
@@ -154,6 +165,16 @@ export class WasenderWebhookController {
 
       case 'session.status':
         return await this.handleSessionStatus(workspaceId, payload, res)
+
+      // ✓✓ DELIVERY RECEIPTS: Wasender emits `messages.update` with the message
+      // status (delivered/read). Advance the matching outbound message.
+      case 'messages.update': {
+        const updates = extractWasenderStatusUpdates(payload)
+        if (updates.length > 0) {
+          await applyManyStatusUpdates(prisma, workspaceId, updates)
+        }
+        return res.status(200).json({ status: 'ok', handled: 'delivery_status' })
+      }
 
       case 'messages.received':
       case 'messages.upsert':

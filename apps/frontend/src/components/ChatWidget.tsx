@@ -33,6 +33,7 @@ import {
   Globe,
   Paperclip,
   CheckCheck,
+  Mic,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -528,6 +529,12 @@ export function ChatWidget({
   const attachObjectUrls = useRef<string[]>([])
   // WhatsApp-style composer: textarea grows with content up to a max, then scrolls
   const composerRef = useRef<HTMLTextAreaElement | null>(null)
+  // 🎤 Voice note recording (mirrors PlaygroundPage): mic when the field is empty.
+  const [recording, setRecording] = useState(false)
+  const [recordSecs, setRecordSecs] = useState(0)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const recordChunksRef = useRef<Blob[]>([])
+  const recordTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [visitorId, setVisitorId] = useState<string>("")
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [customerId, setCustomerId] = useState<string | null>(null)
@@ -966,11 +973,132 @@ export function ChatWidget({
     await sendMessage(inputValue)
   }
 
+  // 🎤 Upload a recorded voice note to the widget audio endpoint. The backend
+  // transcribes it (Whisper), runs the normal bot turn on the transcription and
+  // returns the same shape as a text send (+ optional TTS audioUrl). Mirrors the
+  // PlaygroundPage flow; reuses sendMessage's response handling.
+  const sendVoiceNote = async (blob: Blob) => {
+    if (!resolvedWorkspaceId || isLoading) return
+
+    // Show a "voice message" bubble immediately (parity with WhatsApp).
+    const userMessage: Message = {
+      role: "user",
+      content: "🎤 Voice message",
+      timestamp: new Date().toISOString(),
+    }
+    const updatedMessages = [
+      ...messages.map((m) => (m.role === "bot" && m.suggestions ? { ...m, suggestions: undefined } : m)),
+      userMessage,
+    ]
+    setMessages(updatedMessages)
+    if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updatedMessages)
+    setIsLoading(true)
+
+    try {
+      const ext = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "mp4" : "webm"
+      const form = new FormData()
+      form.append("audio", blob, `voice.${ext}`)
+      form.append("visitorId", visitorId)
+      if (sessionId) form.append("sessionId", sessionId)
+      form.append("language", resolvedLanguage)
+      if (customerId) form.append("customerId", customerId)
+
+      const resp = await fetch(`${resolvedApiUrl}/widget/chat-audio/${resolvedWorkspaceId}`, {
+        method: "POST",
+        body: form,
+      })
+      const data = await resp.json().catch(() => ({}))
+      if (!resp.ok) {
+        throw new Error(data?.message || data?.error || "Failed to send voice note")
+      }
+
+      if (data.sessionId && resolvedWorkspaceId) {
+        setSessionId(data.sessionId)
+        saveWidgetSessionId(localStorage, resolvedWorkspaceId, data.sessionId)
+      }
+
+      // Operator took over → no bot reply to show.
+      if (data.activeChatbot === false) {
+        setBotDisabled(true)
+        lastOperatorMsgAt.current = new Date().toISOString()
+        return
+      }
+
+      const botMessage: Message = {
+        role: "bot",
+        content: data.response,
+        timestamp: new Date().toISOString(),
+        suggestions: data.suggestions,
+      }
+      const finalMessages = [...updatedMessages, botMessage]
+      setMessages(finalMessages)
+      if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, finalMessages)
+    } catch (error) {
+      console.error("Failed to send voice note:", error)
+      const errorMessage: Message = {
+        role: "bot",
+        content: "Sorry, I couldn't process your voice message. Please try again.",
+        timestamp: new Date().toISOString(),
+      }
+      const errorMessages = [...updatedMessages, errorMessage]
+      setMessages(errorMessages)
+      if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, errorMessages)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Start microphone capture. On stop, the chunks are joined and uploaded.
+  // Requires mic permission (browser prompts once). Fire-safe: never throws.
+  const startRecording = async () => {
+    if (recording || isLoading) return
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const recorder = new MediaRecorder(stream)
+      recordChunksRef.current = []
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordChunksRef.current.push(e.data)
+      }
+      recorder.onstop = () => {
+        stream.getTracks().forEach((t) => t.stop()) // release the mic
+        if (recordTimerRef.current) {
+          clearInterval(recordTimerRef.current)
+          recordTimerRef.current = null
+        }
+        setRecording(false)
+        setRecordSecs(0)
+        const blob = new Blob(recordChunksRef.current, { type: recorder.mimeType || "audio/webm" })
+        if (blob.size > 0) void sendVoiceNote(blob)
+      }
+      mediaRecorderRef.current = recorder
+      recorder.start()
+      setRecording(true)
+      setRecordSecs(0)
+      recordTimerRef.current = setInterval(() => setRecordSecs((s) => s + 1), 1000)
+    } catch {
+      alert("Microphone access denied or unavailable.")
+    }
+  }
+
+  // Stop & send. Cancel discards the chunks before stopping (sends nothing).
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop()
+  }
+  const cancelRecording = () => {
+    const recorder = mediaRecorderRef.current
+    if (recorder) {
+      recordChunksRef.current = []
+      recorder.stop()
+    }
+  }
+
   /**
-   * 📎 Attach images / PDFs from the demo composer (paperclip). Validates the
-   * selection with the same caps as the backend, renders each file inside the
-   * user's own bubble via a local object URL — WhatsApp parity, no upload needed
-   * for the demo. Multiple files land in a single message bubble.
+   * 📎 Attach images / PDFs from the widget composer (paperclip). Validates the
+   * selection with the same caps as the backend, shows each file inside the
+   * user's own bubble via a local object URL (instant WhatsApp-style preview),
+   * then uploads them so the operator actually receives them. Upload needs an
+   * existing session — once the visitor has exchanged at least one message the
+   * widget holds a sessionId; before that the file is shown locally only.
    */
   const handleAttachFiles = (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return
@@ -1002,6 +1130,20 @@ export function ChatWidget({
     const updatedMessages = [...messages, userMessage]
     setMessages(updatedMessages)
     if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updatedMessages)
+
+    // Upload to the backend so the operator receives the media. Fire-and-forget:
+    // a failure leaves the local preview intact (never blocks the UI).
+    if (resolvedWorkspaceId && sessionId) {
+      const form = new FormData()
+      accepted.forEach((file) => form.append("files", file, file.name))
+      form.append("sessionId", sessionId)
+      void fetch(`${resolvedApiUrl}/widget/chat-attachments/${resolvedWorkspaceId}`, {
+        method: "POST",
+        body: form,
+      }).catch((err) => {
+        console.error("Failed to upload attachment(s):", err)
+      })
+    }
   }
 
   // 🧹 Revoke any object URLs created for attachment previews on unmount.
@@ -1994,6 +2136,32 @@ export function ChatWidget({
                   toggles mic ↔ send. Keeps the composer compact on narrow widths
                   so nothing wraps to a second line. */}
               <div className="border-t border-gray-200 p-2.5 sm:p-3 space-y-1.5">
+                {recording ? (
+                  /* 🎤 Recording state: cancel (discard) · live timer · stop (send) */
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={cancelRecording}
+                      aria-label="Cancel recording"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-red-500"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                    <div className="flex flex-1 items-center gap-2 px-4 text-sm text-red-600">
+                      <span className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse" />
+                      Recording… {Math.floor(recordSecs / 60)}:{String(recordSecs % 60).padStart(2, "0")}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={stopRecording}
+                      aria-label="Stop and send"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-colors hover:brightness-95"
+                      style={{ backgroundColor: resolvedPrimaryColor }}
+                    >
+                      <Send className="w-5 h-5" />
+                    </button>
+                  </div>
+                ) : (
                 <div className="flex items-end gap-2">
                   {/* Input pill: emoji · textarea · paperclip */}
                   <div className="flex flex-1 min-w-0 items-end gap-1 rounded-3xl border border-gray-300 bg-white px-1.5 py-1 transition-colors focus-within:border-green-600 focus-within:ring-1 focus-within:ring-green-600">
@@ -2057,30 +2225,57 @@ export function ChatWidget({
                       </>
                     )}
                   </div>
-                  {/* Single round Send button (WhatsApp-style green circle). */}
-                  <button
-                    onClick={handleSendMessage}
-                    disabled={
-                      isLoading ||
-                      (botDisabled && !operatorHasReplied) ||
-                      inputValue.trim().length === 0
-                    }
-                    className={cn(
-                      "h-11 w-11 shrink-0 rounded-full flex items-center justify-center",
-                      "text-white transition-colors disabled:bg-gray-300 hover:brightness-95",
-                      "focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-green-600"
-                    )}
-                    style={{ backgroundColor: resolvedPrimaryColor }}
-                    aria-label="Send message"
-                    title="Send"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Send className="w-5 h-5" />
-                    )}
-                  </button>
+                  {/* Right round button (WhatsApp-style): mic when the field is
+                      empty, send when there's text. Mic only in the live demo
+                      composer and not while waiting for an operator. */}
+                  {instantChat &&
+                  !(botDisabled && !operatorHasReplied) &&
+                  inputValue.trim().length === 0 ? (
+                    <button
+                      type="button"
+                      onClick={startRecording}
+                      disabled={isLoading}
+                      className={cn(
+                        "h-11 w-11 shrink-0 rounded-full flex items-center justify-center",
+                        "text-white transition-colors disabled:bg-gray-300 hover:brightness-95",
+                        "focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-green-600"
+                      )}
+                      style={{ backgroundColor: resolvedPrimaryColor }}
+                      aria-label="Record voice note"
+                      title="Record voice note"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Mic className="w-5 h-5" />
+                      )}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleSendMessage}
+                      disabled={
+                        isLoading ||
+                        (botDisabled && !operatorHasReplied) ||
+                        inputValue.trim().length === 0
+                      }
+                      className={cn(
+                        "h-11 w-11 shrink-0 rounded-full flex items-center justify-center",
+                        "text-white transition-colors disabled:bg-gray-300 hover:brightness-95",
+                        "focus:outline-none focus:ring-2 focus:ring-offset-0 focus:ring-green-600"
+                      )}
+                      style={{ backgroundColor: resolvedPrimaryColor }}
+                      aria-label="Send message"
+                      title="Send"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <Send className="w-5 h-5" />
+                      )}
+                    </button>
+                  )}
                 </div>
+                )}
                 {!instantChat && (
                   <div className="text-xs text-gray-400 text-center">
                     Powered by{" "}

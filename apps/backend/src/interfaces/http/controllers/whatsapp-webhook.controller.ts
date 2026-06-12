@@ -22,6 +22,9 @@ import { extractMetaMedia, extractMetaAudio, ExtractedMedia } from "../../../ser
 import { transcribeAudio } from "../../../services/audio-transcription.service"
 // 😀 Inbound reaction (long-press emoji) → emoji + reacted-to message context for the LLM
 import { extractMetaReaction, ExtractedReaction } from "../../../services/webhook-reaction.extract"
+// ✓✓ Delivery receipts (delivered/read): status webhook → advance outbound status
+import { extractMetaStatusUpdates } from "../../../services/webhook-status.extract"
+import { applyManyStatusUpdates } from "../../../services/delivery-status.service"
 
 const MINUTE_MS = 60_000
 const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
@@ -248,6 +251,26 @@ export class WhatsAppWebhookController {
     const { webhookId } = req.params
     try {
       logger.info("[WEBHOOK] 📨 Receiving message")
+
+      // ✓✓ DELIVERY RECEIPTS: Meta sends message status (sent/delivered/read) in
+      // `value.statuses` — NOT in `value.messages`. Handle it first and return,
+      // so it never falls through the message path.
+      {
+        const statusValue = req.body?.entry?.[0]?.changes?.[0]?.value
+        const updates = extractMetaStatusUpdates(statusValue)
+        if (updates.length > 0) {
+          const statusWorkspaceId =
+            statusValue?.workspaceId ||
+            (webhookId
+              ? (await prisma.whatsappSettings.findUnique({ where: { webhookId }, select: { workspaceId: true } }))?.workspaceId
+              : undefined)
+          if (statusWorkspaceId) {
+            await applyManyStatusUpdates(prisma, statusWorkspaceId, updates)
+          }
+          res.status(200).json({ status: "ok", handled: "delivery_status" })
+          return
+        }
+      }
 
       // ✅ FIX: Extract message from weird frontend format
       // Frontend sends: { "Ciao": { phoneNumber, workspaceId } }

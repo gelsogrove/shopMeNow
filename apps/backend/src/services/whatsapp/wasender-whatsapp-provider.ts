@@ -229,6 +229,39 @@ export class WasenderWhatsAppProvider implements WhatsAppProvider {
     }
   }
 
+  /**
+   * Show the "typing…" indicator to the customer while the bot composes a reply.
+   * WasenderAPI: POST /api/send-presence-update with presence "composing".
+   * Fire-and-forget: never throws, swallows its own errors so it can never block
+   * the reply path. WhatsApp auto-clears the indicator when the next message is
+   * sent, so no refresh loop is needed.
+   *
+   * @param to                customer phone in E.164 format
+   * @param _inboundMessageId unused (Wasender keys presence off the JID, not a
+   *                          message id) — kept for interface compatibility
+   */
+  async sendTypingIndicator(to: string, _inboundMessageId?: string): Promise<void> {
+    try {
+      if (!to) return
+      const formattedTo = to.replace(/^\+/, '') + '@s.whatsapp.net'
+      await axios.post(
+        `${this.baseUrl}/api/send-presence-update`,
+        { to: formattedTo, presence: 'composing' },
+        {
+          headers: { Authorization: `Bearer ${this.config.sessionApiKey}`, 'Content-Type': 'application/json' },
+          timeout: 8000,
+        }
+      )
+      logger.debug('[Wasender-Provider] ⌨️ Typing indicator sent', { to: this.maskPhone(to) })
+    } catch (error: any) {
+      // Non-critical — must never block the reply.
+      logger.debug('[Wasender-Provider] ⌨️ Typing indicator failed (non-critical)', {
+        to: this.maskPhone(to),
+        error: error.response?.data?.message || error.message,
+      })
+    }
+  }
+
   async sendAudioMessage(to: string, audioUrl: string): Promise<WhatsAppSendMessageResult> {
     try {
       const formattedTo = to.replace(/^\+/, '') + '@s.whatsapp.net'

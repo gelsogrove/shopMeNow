@@ -14,6 +14,11 @@ import logger from "../../../utils/logger"
 import fs from "fs"
 import { transcribeAudio } from "../../../services/audio-transcription.service"
 import { generateSpeech } from "../../../services/tts-elevenlabs.service"
+// 📎 Inbound attachments from the public widget (visitor sends image/PDF)
+import { messageAttachmentRepository } from "../../../repositories/message-attachment.repository"
+import { storageService } from "../../../services/storage.service"
+import { sniffMime, validateAttachment } from "../../../services/chat-attachment.validation"
+import { websocketService } from "../../../services/websocket.service"
 import { VisitorIdService } from "../../../application/services/visitor-id.service"
 import { SecurityCheckService } from "../../../application/services/security-check.service"
 import { LLMRouterService } from "../../../services/llm-router.service"
@@ -1197,6 +1202,135 @@ export class WidgetChatController {
         error: "INTERNAL_ERROR",
         message: "Registration failed",
       })
+    }
+  }
+
+  /**
+   * 📎 Inbound attachments from the PUBLIC widget (visitor sends image/PDF).
+   * Stores each file, attaches it to a NEW inbound conversation message
+   * (role "user") on the visitor's session, and notifies the operator in real
+   * time. Mirrors the playground uploadAttachments pattern. Requires an existing
+   * sessionId — the widget obtains one after its first text message.
+   * POST /api/v1/widget/chat-attachments/:workspaceId  (multipart "files")
+   */
+  async uploadAttachments(req: Request, res: Response): Promise<Response> {
+    const files = ((req as any).files as Express.Multer.File[]) || []
+    const cleanup = () => {
+      for (const f of files) {
+        try {
+          fs.unlinkSync(f.path)
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    try {
+      const { workspaceId } = req.params
+      const sessionId = req.body?.sessionId
+      const caption = typeof req.body?.caption === "string" ? req.body.caption : ""
+      if (!sessionId) {
+        cleanup()
+        return res.status(400).json({ error: "sessionId is required" })
+      }
+      if (files.length === 0) {
+        cleanup()
+        return res.status(400).json({ error: "No files provided" })
+      }
+
+      const session = await prisma.chatSession.findFirst({
+        where: { id: sessionId, workspaceId },
+        select: { id: true, customerId: true },
+      })
+      if (!session) {
+        cleanup()
+        return res.status(404).json({ error: "Chat session not found" })
+      }
+
+      const created: any[] = []
+      let firstMessageId: string | undefined
+      for (const file of files) {
+        const buffer = fs.readFileSync(file.path)
+        const trueMime = sniffMime(buffer) || file.mimetype
+        const validation = validateAttachment({
+          mimeType: trueMime,
+          filename: file.originalname,
+          sizeBytes: buffer.length,
+        })
+        if (!validation.ok || !validation.kind) {
+          cleanup()
+          return res.status(400).json({ error: validation.error || "Invalid file" })
+        }
+
+        const ext =
+          trueMime === "application/pdf" ? "pdf" : trueMime === "image/png" ? "png" : "jpg"
+        const rand = Math.random().toString(36).slice(2, 8)
+        const uploaded = await storageService.upload(buffer, {
+          filename: `${Date.now()}_${rand}.${ext}`,
+          folder: `chat-attachments/${workspaceId}/${sessionId}`,
+          contentType: trueMime,
+          isPublic: true,
+        })
+
+        // role "user" → customer side (inbound media message).
+        const msg = await prisma.conversationMessage.create({
+          data: {
+            workspaceId,
+            customerId: session.customerId,
+            conversationId: sessionId,
+            role: "user",
+            content: caption || "",
+            deliveryStatus: "delivered",
+          },
+        })
+        firstMessageId = firstMessageId || msg.id
+
+        const att = await messageAttachmentRepository.create({
+          conversationMessageId: msg.id,
+          workspaceId,
+          kind: validation.kind,
+          url: uploaded.url,
+          storageKey: uploaded.key,
+          mimeType: trueMime,
+          filename: file.originalname,
+          sizeBytes: buffer.length,
+        })
+
+        created.push({
+          id: att.id,
+          conversationMessageId: msg.id,
+          url: uploaded.url,
+          kind: validation.kind,
+          mimeType: trueMime,
+          filename: file.originalname,
+          sizeBytes: buffer.length,
+        })
+
+        try {
+          fs.unlinkSync(file.path)
+        } catch {
+          /* ignore */
+        }
+      }
+
+      // 🔔 Real-time: let the operator dashboard know the visitor sent media.
+      try {
+        websocketService.notifyNewMessage(workspaceId, {
+          id: firstMessageId || `widget-att-${Date.now()}`,
+          sessionId,
+          sender: "customer",
+          content: caption || "📎 Attachment",
+          timestamp: new Date().toISOString(),
+          workspaceId,
+        })
+      } catch (wsErr: any) {
+        logger.warn("[WIDGET] attachment WS notify failed (non-critical)", { error: wsErr?.message })
+      }
+
+      return res.json({ success: true, attachments: created })
+    } catch (error: any) {
+      logger.error("[WIDGET] uploadAttachments error", { error: error?.message })
+      cleanup()
+      return res.status(500).json({ error: "Failed to upload attachments", message: error.message })
     }
   }
 

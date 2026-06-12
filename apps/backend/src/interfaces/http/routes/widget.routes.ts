@@ -13,6 +13,10 @@ import {
   uploadChatAudio,
   handleChatAudioUploadError,
 } from "../middlewares/chatAudioUpload"
+import {
+  uploadChatAttachments,
+  handleChatUploadError,
+} from "../middlewares/chatAttachmentUpload"
 
 const router = Router()
 const controller = new WidgetChatController()
@@ -168,6 +172,59 @@ router.post(
 )
 
 logger.info("🔧 Widget POST /chat-audio/:workspaceId route registered")
+
+/**
+ * @swagger
+ * /api/v1/widget/chat-attachments/{workspaceId}:
+ *   post:
+ *     summary: Upload image/PDF attachments from the widget (visitor → operator)
+ *     tags: [Widget]
+ *     parameters:
+ *       - in: path
+ *         name: workspaceId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Workspace ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - sessionId
+ *               - files
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 format: uuid
+ *                 description: Existing widget chat session (obtained after the first message)
+ *               caption:
+ *                 type: string
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       200:
+ *         description: Attachments stored and surfaced to the operator
+ *       400:
+ *         description: Missing sessionId / no files / invalid file type or size
+ *       404:
+ *         description: Chat session not found
+ */
+// 📎 Inbound attachments: visitor sends image/PDF from the widget composer.
+router.post(
+  "/chat-attachments/:workspaceId",
+  widgetRateLimiter,
+  uploadChatAttachments,
+  handleChatUploadError,
+  controller.uploadAttachments.bind(controller)
+)
+
+logger.info("🔧 Widget POST /chat-attachments/:workspaceId route registered")
 
 /**
  * GET /api/v1/widget/status/:workspaceId

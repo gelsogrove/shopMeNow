@@ -7,6 +7,7 @@ import { AttachmentButton } from "@/components/chat/AttachmentButton"
 import { EmojiPicker } from "@/components/EmojiPicker"
 import { ReactionPicker } from "@/components/ReactionPicker"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
+import { MessageTicks } from "@/components/chat/MessageTicks"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import { NotificationDialog } from "@/components/shared/NotificationDialog"
 import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
@@ -2208,6 +2209,11 @@ export function ChatPage() {
                                   <ShieldX className="w-3 h-3" />
                                   Not sent to customer
                                 </span>
+                              )}
+
+                              {/* ✓/✓✓ Delivery ticks — outbound (operator/bot) only, not for blocked */}
+                              {isAgentMessage && !isBlockedMessage && (
+                                <MessageTicks status={message.deliveryStatus} className="ml-1" />
                               )}
                             </div>
                           </div>

@@ -15,7 +15,7 @@ export interface Message {
   agentName?: string
   reaction?: string | null // 😀 server-synced reaction emoji on this message
   attachments?: MessageAttachment[]
-  deliveryStatus?: "not_queued" | "pending" | "sent" | "error" | "blocked"
+  deliveryStatus?: "not_queued" | "pending" | "sent" | "delivered" | "read" | "error" | "blocked"
   functionCalls?: Array<{
     functionName: string
     toolCall?: {

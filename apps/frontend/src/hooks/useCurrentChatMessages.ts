@@ -9,7 +9,7 @@ interface Message {
   sender: "user" | "customer"
   timestamp: string
   agentName?: string
-  deliveryStatus?: "not_queued" | "pending" | "sent" | "error" | "blocked"
+  deliveryStatus?: "not_queued" | "pending" | "sent" | "delivered" | "read" | "error" | "blocked"
   metadata?: {
     isOperatorMessage?: boolean
     isOperatorControl?: boolean

@@ -19,6 +19,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { EmojiPicker } from "@/components/EmojiPicker"
 import { ReactionPicker } from "@/components/ReactionPicker"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
+import { MessageTicks } from "@/components/chat/MessageTicks"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import { WhatsAppIcon } from "@/components/shared/WhatsAppIcon"
 import { DemowashShowcase } from "@/components/DemowashShowcase"
@@ -2204,7 +2205,11 @@ function ChatScreen({
                         />
                       )}
                       <div className="text-[10px] text-gray-500 mt-1 flex justify-between items-center gap-3">
-                        <span>{new Date(m.createdAt).toLocaleTimeString()}</span>
+                        <span className="flex items-center gap-1">
+                          {new Date(m.createdAt).toLocaleTimeString()}
+                          {/* Demo has no real WhatsApp delivery → simulate ✓✓ on bot messages */}
+                          {!isInbound && <MessageTicks status="delivered" />}
+                        </span>
                         {/* Comment button only for chatbot (OUTBOUND) messages.
                             Users don't comment on their own messages.
                             Hidden on DemoWash — the public demo doesn't expose
