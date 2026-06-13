@@ -323,21 +323,38 @@ if (fs.existsSync(legalPath)) {
 
 logger.info(`[SECURITY] Private files require authentication via /api/v1/files/:key`)
 
-// 🌐 PRODUCTION: Serve frontend static files (from Vite build)
+// Host that serves the backoffice SPA (consolidated into this app — same dyno,
+// selected by Host header). Covers the custom domain and the Heroku fallback host.
+const isBackofficeHost = (host: string): boolean =>
+  host === "backoffice.echatbot.ai" || host.startsWith("echatbot-backoffice")
+
+// 🌐 PRODUCTION: Serve frontend + backoffice static files (host-based)
+// backoffice.echatbot.ai → apps/backoffice/dist, every other host → apps/frontend/dist.
+// Both bundles ship in the same dyno; the Host header selects which one is served,
+// so the backoffice no longer needs a separate Heroku app (see SPA fallback below).
 // Note: backendRoot = process.cwd() = monorepo root, so use apps/ path
 if (process.env.NODE_ENV === "production") {
   const frontendDistPath = path.join(backendRoot, "apps/frontend/dist")
-  if (fs.existsSync(frontendDistPath)) {
-    app.use(express.static(frontendDistPath))
-    logger.info(`[Production] Serving frontend from: ${frontendDistPath}`)
+  const backofficeDistPath = path.join(backendRoot, "apps/backoffice/dist")
+  const frontendStatic = express.static(frontendDistPath)
+  const backofficeStatic = express.static(backofficeDistPath)
+
+  if (fs.existsSync(backofficeDistPath)) {
+    logger.info(`[Production] Serving backoffice from: ${backofficeDistPath}`)
   } else {
-    logger.warn(
-      `[Production] Frontend dist not found at: ${frontendDistPath}`
-    )
+    logger.warn(`[Production] Backoffice dist not found at: ${backofficeDistPath}`)
   }
 
-  // 🔐 BACKOFFICE: Now deployed as separate app on backoffice.echatbot.ai
-  // No static serving needed - backoffice makes CORS API calls
+  if (fs.existsSync(frontendDistPath)) {
+    app.use((req, res, next) =>
+      isBackofficeHost(req.hostname)
+        ? backofficeStatic(req, res, next)
+        : frontendStatic(req, res, next)
+    )
+    logger.info(`[Production] Serving frontend from: ${frontendDistPath}`)
+  } else {
+    logger.warn(`[Production] Frontend dist not found at: ${frontendDistPath}`)
+  }
 }
 
 // Custom JSON parser middleware to handle potentially escaped JSON
@@ -932,7 +949,12 @@ app.use("/api/v1", apiRouter)
 if (process.env.NODE_ENV === "production") {
   const frontendDistPath = path.join(backendRoot, "apps/frontend/dist")
   const frontendIndexPath = path.join(frontendDistPath, "index.html")
-  
+  const backofficeIndexPath = path.join(backendRoot, "apps/backoffice/dist", "index.html")
+  // Backoffice SPA shell, served verbatim for backoffice.echatbot.ai (no SEO injection).
+  const backofficeIndexTemplate = fs.existsSync(backofficeIndexPath)
+    ? fs.readFileSync(backofficeIndexPath, "utf-8")
+    : null
+
   if (fs.existsSync(frontendIndexPath)) {
     // Read the built index.html once at boot. In production the frontend is
     // already built before the server starts, so the template is stable for the
@@ -943,12 +965,18 @@ if (process.env.NODE_ENV === "production") {
       if (req.path.startsWith("/api")) {
         return next()
       }
+      // Backoffice host → serve its SPA shell as-is (it has no marketing SEO).
+      if (backofficeIndexTemplate && isBackofficeHost(req.hostname)) {
+        return res
+          .set("Content-Type", "text/html; charset=utf-8")
+          .send(backofficeIndexTemplate)
+      }
       // Inject per-route marketing SEO meta (no-op for non-marketing routes,
       // which fall back to the homepage meta baked into the template).
       const html = injectMarketingHead(indexTemplate, req.path, req.headers["accept-language"])
       res.set("Content-Type", "text/html; charset=utf-8").send(html)
     })
-    logger.info(`[Production] SPA fallback enabled for frontend routes`)
+    logger.info(`[Production] SPA fallback enabled for frontend + backoffice routes`)
   }
 }
 

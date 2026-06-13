@@ -1760,6 +1760,11 @@ export function LoginPage() {
       <section className="py-12">
         <div className="max-w-5xl mx-auto px-6">
           <GlowCard lift accent="emerald" innerClassName="p-8 text-center sm:p-10 lg:p-12">
+              <img
+                src="/laundry.png"
+                alt="DemoWash"
+                className="mb-6 w-full rounded-2xl object-cover h-48 sm:h-56"
+              />
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#25D366]/15 px-4 py-1.5 text-sm font-semibold text-[#25D366]">
                 <span className="h-2 w-2 rounded-full bg-[#25D366]" /> Live demo
               </div>
@@ -1788,6 +1793,11 @@ export function LoginPage() {
       <section className="py-12">
         <div className="max-w-5xl mx-auto px-6">
           <GlowCard lift accent="emerald" innerClassName="p-8 text-center sm:p-10 lg:p-12">
+              <img
+                src="/democasa.png"
+                alt="DemoCasa"
+                className="mb-6 w-full rounded-2xl object-cover h-48 sm:h-56"
+              />
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#25D366]/15 px-4 py-1.5 text-sm font-semibold text-[#25D366]">
                 <span className="h-2 w-2 rounded-full bg-[#25D366]" /> Live demo
               </div>
