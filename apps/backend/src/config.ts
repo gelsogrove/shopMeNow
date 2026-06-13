@@ -58,7 +58,7 @@ export const config: Config = {
     origin: process.env.CORS_ORIGIN || "http://localhost:5173",
   },
   frontendUrl: process.env.FRONTEND_URL || "http://localhost:5173", // Fixed: Vite runs on 5173, not 3000
-  backofficeUrl: process.env.BACKOFFICE_URL || "http://localhost:3002", // Backoffice SPA (separate app)
+  backofficeUrl: process.env.BACKOFFICE_URL || "http://localhost:3002", // Backoffice SPA (separate port in dev; served by this app on backoffice.echatbot.ai in prod)
   appUrl: process.env.APP_URL || "http://localhost:3001", // Backend API URL for OpenRouter HTTP-Referer
   dhlTrackingBaseUrl:
     process.env.DHL_TRACKING_BASE_URL ||

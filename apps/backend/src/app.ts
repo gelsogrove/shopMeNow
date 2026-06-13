@@ -117,7 +117,6 @@ const corsOptions: cors.CorsOptions = {
             "https://api.echatbot.ai",
             process.env.BACKOFFICE_URL || "https://backoffice.echatbot.ai",
             "https://backoffice.echatbot.ai",
-            "https://echatbot-backoffice-3497e777ec08.herokuapp.com",
             "https://echatbot-app-1cba28556df2.herokuapp.com",
           ]
         : [
@@ -324,9 +323,9 @@ if (fs.existsSync(legalPath)) {
 logger.info(`[SECURITY] Private files require authentication via /api/v1/files/:key`)
 
 // Host that serves the backoffice SPA (consolidated into this app — same dyno,
-// selected by Host header). Covers the custom domain and the Heroku fallback host.
+// selected by Host header). Every other host gets the customer frontend.
 const isBackofficeHost = (host: string): boolean =>
-  host === "backoffice.echatbot.ai" || host.startsWith("echatbot-backoffice")
+  host === "backoffice.echatbot.ai"
 
 // 🌐 PRODUCTION: Serve frontend + backoffice static files (host-based)
 // backoffice.echatbot.ai → apps/backoffice/dist, every other host → apps/frontend/dist.

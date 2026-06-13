@@ -6,8 +6,8 @@
 # Deploys the monorepo to Heroku apps in parallel.
 #
 # Apps:
-#   echatbot-app        → backend + frontend  (remote: heroku-app)
-#   echatbot-backoffice → backoffice          (remote: heroku-backoffice)
+#   echatbot-app → backend + frontend + backoffice  (remote: heroku-app)
+#   (backoffice is served by echatbot-app via host-based routing on backoffice.echatbot.ai)
 #
 # Usage:
 #   npm run publish
@@ -66,13 +66,9 @@ heroku_push() {
 
 # Push to both remotes in parallel
 echo ""
-echo "📦 Pushing to echatbot-app (backend + frontend)..."
+echo "📦 Pushing to echatbot-app (backend + frontend + backoffice)..."
 heroku_push heroku-app &
 PID_APP=$!
-
-echo "🖥️  Pushing to echatbot-backoffice..."
-heroku_push heroku-backoffice &
-PID_BACKOFFICE=$!
 
 # Wait for all pushes and collect results
 FAILED=0
@@ -83,14 +79,6 @@ if [ $? -ne 0 ]; then
   FAILED=1
 else
   echo "✅ echatbot-app deployed"
-fi
-
-wait $PID_BACKOFFICE
-if [ $? -ne 0 ]; then
-  echo "❌ echatbot-backoffice deploy FAILED"
-  FAILED=1
-else
-  echo "✅ echatbot-backoffice deployed"
 fi
 
 echo ""

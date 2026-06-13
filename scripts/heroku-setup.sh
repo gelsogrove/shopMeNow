@@ -10,11 +10,9 @@ echo "🔧 Setting up Heroku git remotes..."
 # Remove existing if present (safe re-run)
 git remote remove heroku-app       2>/dev/null || true
 git remote remove heroku-scheduler 2>/dev/null || true
-git remote remove heroku-backoffice 2>/dev/null || true
 
 git remote add heroku-app       https://git.heroku.com/echatbot-app.git
 git remote add heroku-scheduler https://git.heroku.com/echatbot-scheduler.git
-git remote add heroku-backoffice https://git.heroku.com/echatbot-backoffice.git
 
 echo "✅ Heroku remotes configured:"
 git remote -v | grep heroku

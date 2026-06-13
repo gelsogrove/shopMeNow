@@ -37,7 +37,6 @@ const getAllowedOrigins = (): string[] => {
           process.env.FRONTEND_URL || "https://echatbot.ai",
           "https://www.echatbot.ai",
           process.env.BACKOFFICE_URL || "https://backoffice.echatbot.ai",
-          "https://echatbot-backoffice-3497e777ec08.herokuapp.com",
         ]
       : [
           "http://localhost:3000",

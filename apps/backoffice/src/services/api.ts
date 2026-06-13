@@ -5,7 +5,8 @@
  * Since we can't use Prisma directly in browser, we use the backend API
  */
 
-// 🌐 ALWAYS use VITE_API_URL in production (backoffice is standalone app)
+// 🌐 In production VITE_API_URL points to the API (www.echatbot.ai/api/v1); the
+// backoffice is served by echatbot-app on backoffice.echatbot.ai (CORS-allowed origin).
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/v1'
 
 interface PlatformConfig {

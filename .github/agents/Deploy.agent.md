@@ -79,8 +79,8 @@ heroku pg:backups:capture --app echatbot-app  # BACKUP FIRST
 heroku pg:reset DATABASE --app echatbot-app --confirm echatbot-app
 
 # STEP 6: Push to all Heroku apps (in order)
+# Note: backoffice is now built & served by echatbot-app (no separate app/push).
 git push heroku-app main
-git push heroku-backoffice main
 git push heroku-scheduler main
 
 # 🚨 STEP 7: MANDATORY DATABASE MIGRATION CHECK (January 26, 2026 Lesson)
@@ -184,9 +184,10 @@ heroku logs -n 200 --app echatbot-app | grep -E "error|Error|500"
 - **→ Seed deve essere eseguito in locale prima di reset**, o via prisma migration
 
 ### Multi-App Deploy Order Matters
-- App principale: `heroku-app` (backend + frontend + database) ← DEVE essere prima
-- App satellite: `heroku-backoffice`, `heroku-scheduler` ← dipendono da DB sync
-- **→ Non spammare tutti e 3 insieme, fai uno alla volta**
+- App principale: `heroku-app` (backend + frontend + **backoffice** + database) ← DEVE essere prima
+- App satellite: `heroku-scheduler` ← dipende da DB sync
+- Il backoffice non è più un'app separata: è servito da `echatbot-app` su `backoffice.echatbot.ai` (host-based routing)
+- **→ Fai uno alla volta, non spammare insieme**
 
 ### TypeScript Local vs Heroku Mismatch
 - Build locale può passare ma Heroku fallire se missing deps
@@ -558,8 +559,7 @@ If unsure whether schema changed: ASK ANDREA FIRST!
 - **Local build**: ~30 sec
 - **Local seed**: ~5 sec  
 - **Local tests**: ~3.4 sec (with skipped suites)
-- **Heroku compile (echatbot-app)**: ~40 sec
-- **Heroku compile (backoffice)**: ~15 sec
+- **Heroku compile (echatbot-app, incl. backoffice)**: ~55 sec
 - **Heroku compile (scheduler)**: ~10 sec
 - **Total deploy cycle**: ~8 min (build + test + commit + push + heroku builds)
 
@@ -570,9 +570,9 @@ If unsure whether schema changed: ASK ANDREA FIRST!
 ## 🔗 App URLs (Heroku Live)
 
 ```
-Main App:       https://echatbot-app-1cba28556df2.herokuapp.com/
-Backoffice:     https://echatbot-backoffice-3497e777ec08.herokuapp.com/
-Scheduler:      https://echatbot-scheduler-56cda430c2c4.herokuapp.com/ (worker, no UI)
+Main App:       https://www.echatbot.ai/  (https://echatbot-app-1cba28556df2.herokuapp.com/)
+Backoffice:     https://backoffice.echatbot.ai/  (served by echatbot-app, host-based routing)
+Scheduler:      worker, no UI
 ```
 
 ---
@@ -646,9 +646,9 @@ If you see:
    - Verify: `heroku run "cd packages/database && npx prisma migrate status" -a echatbot-app`
 8. **🚨 MANDATORY**: `heroku config --app echatbot-app | grep -E "GOOGLE_CLIENT_ID|OPENROUTER_API_KEY|DATABASE_URL|JWT_SECRET"`
    - If missing → `heroku config:set VARIABLE="value" -a echatbot-app`
-9. **`git push heroku-backoffice main`** (wait for success)
-10. **`git push heroku-scheduler main`** (wait for success)
-11. **Verify URLs alive** and check `heroku logs -n 50 --app echatbot-app | grep -E "error|Error|500"`
+9. **`git push heroku-scheduler main`** (wait for success)
+   - (backoffice is built & served by echatbot-app — no separate push)
+10. **Verify URLs alive** and check `heroku logs -n 50 --app echatbot-app | grep -E "error|Error|500"`
 
 **Total time**: ~10-12 minutes (including migration check). Non più di questo!
 
@@ -660,4 +660,4 @@ If you see:
 - Schema: `apps/backend/prisma/schema.prisma`
 - Seeds: `apps/backend/prisma/data/*.ts`
 - Config: `apps/backend/package.json` (scripts)
-- Heroku: `Procfile`, `Procfile.backoffice`, `Procfile.scheduler`
+- Heroku: `Procfile`, `Procfile.scheduler`

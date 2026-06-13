@@ -5,9 +5,11 @@
  * Root Cause: backoffice.echatbot.ai not properly configured in CORS allowed origins
  * 
  * This test ensures:
- * 1. Backoffice domain is ALWAYS in allowed origins
- * 2. Both HTTP and Heroku domains are allowed
- * 3. CORS config can't regress without test failing
+ * 1. Backoffice domain (backoffice.echatbot.ai) is ALWAYS in allowed origins
+ * 2. CORS config can't regress without test failing
+ *
+ * Note: the backoffice is now served by echatbot-app via host-based routing on
+ * backoffice.echatbot.ai; the old separate echatbot-backoffice Heroku app is gone.
  */
 
 import request from 'supertest'
@@ -18,7 +20,6 @@ describe('CORS Configuration - Backoffice', () => {
     'https://www.echatbot.ai',
     'https://api.echatbot.ai',
     'https://backoffice.echatbot.ai',
-    'https://echatbot-backoffice-3497e777ec08.herokuapp.com',
     'https://echatbot-app-1cba28556df2.herokuapp.com',
   ]
 
@@ -45,10 +46,6 @@ describe('CORS Configuration - Backoffice', () => {
       requiredDomains.forEach(domain => {
         expect(PRODUCTION_ORIGINS).toContain(domain)
       })
-    })
-
-    it('should include Heroku backoffice domain', () => {
-      expect(PRODUCTION_ORIGINS).toContain('https://echatbot-backoffice-3497e777ec08.herokuapp.com')
     })
 
     it('should include Heroku main app domain', () => {
@@ -142,7 +139,7 @@ describe('CORS Configuration - Backoffice', () => {
         origin.includes('backoffice')
       )
 
-      expect(backofficeOrigins.length).toBeGreaterThanOrEqual(2) // Main + Heroku
+      expect(backofficeOrigins.length).toBeGreaterThanOrEqual(1) // backoffice.echatbot.ai
     })
 
     it('should document the bug that was fixed', () => {
@@ -154,7 +151,6 @@ describe('CORS Configuration - Backoffice', () => {
        * 
        * FIX:
        * - Added explicit 'https://backoffice.echatbot.ai' to defaultOrigins
-       * - Added both custom domain and Heroku domain
        * - Added api.echatbot.ai for completeness
        * 
        * This test prevents regression by failing if backoffice is removed.
@@ -163,8 +159,8 @@ describe('CORS Configuration - Backoffice', () => {
     })
 
     it('should have minimum number of production origins', () => {
-      // Should have at least 6 origins (main, www, api, backoffice, 2x heroku)
-      expect(PRODUCTION_ORIGINS.length).toBeGreaterThanOrEqual(6)
+      // Should have at least 5 origins (main, www, api, backoffice, heroku app)
+      expect(PRODUCTION_ORIGINS.length).toBeGreaterThanOrEqual(5)
     })
   })
 
