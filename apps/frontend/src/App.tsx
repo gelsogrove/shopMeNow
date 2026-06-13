@@ -264,6 +264,23 @@ export function App() {
           }
         />
 
+        {/* DemoCasa — real-estate agency demo. Same DemoWidgetPage, branded by
+            slug ("democasa"). Resolves the workspace via customChatbotId="democasa". */}
+        <Route
+          path="/demo/democasa/*"
+          element={
+            <Suspense
+              fallback={
+                <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
+                  <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                </div>
+              }
+            >
+              <DemoWidgetPage />
+            </Suspense>
+          }
+        />
+
         {/* ALL OTHER ROUTES (with providers) */}
         <Route path="*" element={<AppWithProviders />} />
       </Routes>

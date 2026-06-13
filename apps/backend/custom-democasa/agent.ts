@@ -1411,7 +1411,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
         closeChat: false,
         audioOutput: AUDIO_OUTPUT,
         audioVoices: AUDIO_VOICES,
-        meta: { tokensUsed: 0, agentChain: ['custom-immob'] },
+        meta: { tokensUsed: 0, agentChain: ['custom-democasa'] },
         error: 'llm_unavailable',
       }
     }
@@ -1462,7 +1462,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       audioVoices: AUDIO_VOICES,
       meta: {
         tokensUsed: result.tokensUsed,
-        agentChain: ['custom-immob'],
+        agentChain: ['custom-democasa'],
       },
     }
   } catch (err) {
@@ -1473,7 +1473,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       closeChat: false,
       audioOutput: AUDIO_OUTPUT,
       audioVoices: AUDIO_VOICES,
-      meta: { tokensUsed: 0, agentChain: ['custom-immob'] },
+      meta: { tokensUsed: 0, agentChain: ['custom-democasa'] },
       error: err instanceof Error ? err.message : String(err),
     }
   }

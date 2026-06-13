@@ -225,20 +225,32 @@ export class WhatsAppDirectSendService {
       }
     }
 
-    // 💰 BILLING: Deduct credit after successful send
+    // 💰 BILLING: Deduct credit after successful send.
+    // Deliver-then-bill is intentional (a delivered WhatsApp message cannot be
+    // un-sent). The DB floor (-€10) caps the worst case, so a failed deduction
+    // here means a message was delivered without being charged and must be
+    // reconciled manually — hence the BILLING_RECONCILE error-level alert with
+    // the exact identifiers needed to find the message. The conversation message
+    // id is passed through so the billing transaction references the message.
     try {
-      const deductResult = await this.billingService.deductMessageCredit(workspaceId)
+      const deductResult = await this.billingService.deductMessageCredit(workspaceId, conversationMessageId)
       if (deductResult.success) {
         logger.info("[DirectSend] 💰 Credit deducted", { workspaceId, newBalance: deductResult.newBalance })
       } else {
-        logger.warn("[DirectSend] ⚠️ Billing failed after delivery — must be reconciled manually", {
+        logger.error("[DirectSend] 🚨 BILLING_RECONCILE: message delivered but NOT charged", {
           workspaceId,
+          customerId,
+          conversationMessageId,
+          whatsappMessageId: sendResult.messageId,
           error: deductResult.error,
         })
       }
     } catch (error) {
-      logger.warn("[DirectSend] ⚠️ Billing exception after delivery", {
+      logger.error("[DirectSend] 🚨 BILLING_RECONCILE: deduction threw after delivery", {
         workspaceId,
+        customerId,
+        conversationMessageId,
+        whatsappMessageId: sendResult.messageId,
         error: error instanceof Error ? error.message : String(error),
       })
     }

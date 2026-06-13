@@ -18,7 +18,7 @@ const turns: Array<{ msg: string; note?: string }> = [
 const session = {
   workspaceId: 'ws_test',
   sessionId: 'session_+34612345678',
-  customerId: 'cust_test_immob',
+  customerId: 'cust_test_democasa',
   phoneNumber: '+34612345678',
 }
 
