@@ -158,7 +158,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   5. Each detector ships with tests — 100% coverage on the detector itself
   6. No hardcoded phrase detection for INTENT — phrase routing belongs in the LLM
   7. Settings are law — `json/settings.json` is source of truth for tenant config
-  8. Multi-language by design — every detector covers all 6 languages (es, it, en, ca, pt, fr)
+  8. Multi-language by design — every detector covers all 6 languages (es, it, en, ca, fr, de)
 - **BUG INTAKE PROTOCOL** (🚨 MANDATORY): see `apps/backend/custom-ecolaundry/CLAUDE.md → 🐛 Bug intake protocol` — 7-step checklist BEFORE writing any fix code
 - **FEATURE INTAKE PROTOCOL** (🚨 MANDATORY): see `apps/backend/custom-ecolaundry/CLAUDE.md → ✨ Feature intake protocol` — 8-step checklist BEFORE implementing
 

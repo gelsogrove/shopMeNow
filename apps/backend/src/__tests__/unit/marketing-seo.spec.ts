@@ -21,6 +21,7 @@ import {
   buildFullTitle,
   injectMarketingHead,
   normalizePath,
+  pickSeoLang,
   renderMarketingHead,
   SITE_URL,
 } from "../../seo/marketing-seo"
@@ -52,6 +53,31 @@ describe("buildFullTitle — mirrors SEO.tsx exactly", () => {
     expect(buildFullTitle("Contact Us - eChatbot")).toBe(
       "Contact Us - eChatbot | eChatbot - AI WhatsApp Chatbot"
     )
+  })
+})
+
+describe("pickSeoLang", () => {
+  it("returns 'it' for Italian Accept-Language", () => {
+    expect(pickSeoLang("it-IT,it;q=0.9,en-US;q=0.8")).toBe("it")
+  })
+  it("returns 'es' for Spanish Accept-Language", () => {
+    expect(pickSeoLang("es-ES,es;q=0.9,en;q=0.8")).toBe("es")
+  })
+  it("returns 'de' for German Accept-Language", () => {
+    expect(pickSeoLang("de-DE,de;q=0.9,en;q=0.8")).toBe("de")
+  })
+  it("returns 'en' for English Accept-Language", () => {
+    expect(pickSeoLang("en-US,en;q=0.9")).toBe("en")
+  })
+  it("falls back to 'en' for unsupported language", () => {
+    expect(pickSeoLang("fr-FR,fr;q=0.9")).toBe("en")
+  })
+  it("falls back to 'en' when header is undefined", () => {
+    expect(pickSeoLang(undefined)).toBe("en")
+  })
+  it("picks highest-q supported language when first tag is unsupported", () => {
+    // fr not supported, it is → picks it
+    expect(pickSeoLang("fr;q=1.0,it;q=0.8")).toBe("it")
   })
 })
 
@@ -160,6 +186,29 @@ describe("injectMarketingHead", () => {
   it("returns the template unchanged when the markers are absent", () => {
     const noMarkers = "<head><title>x</title></head>"
     expect(injectMarketingHead(noMarkers, "/features")).toBe(noMarkers)
+  })
+})
+
+describe("multilingual injectMarketingHead", () => {
+  it("injects Italian meta when Accept-Language is it-IT", () => {
+    const out = injectMarketingHead(TEMPLATE, "/features", "it-IT,it;q=0.9,en;q=0.8")
+    expect(out).toContain("Funzionalità")
+    expect(out).toContain('content="it_IT"')
+  })
+  it("injects Spanish meta when Accept-Language is es-ES", () => {
+    const out = injectMarketingHead(TEMPLATE, "/features", "es-ES,es;q=0.9,en;q=0.8")
+    expect(out).toContain("Funcionalidades")
+    expect(out).toContain('content="es_ES"')
+  })
+  it("injects German meta when Accept-Language is de-DE", () => {
+    const out = injectMarketingHead(TEMPLATE, "/features", "de-DE,de;q=0.9,en;q=0.8")
+    expect(out).toContain("Funktionen")
+    expect(out).toContain('content="de_DE"')
+  })
+  it("falls back to English when Accept-Language is undefined", () => {
+    const out = injectMarketingHead(TEMPLATE, "/features", undefined)
+    expect(out).toContain("Features - AI WhatsApp Chatbot Platform")
+    expect(out).toContain('content="en_US"')
   })
 })
 

@@ -588,7 +588,6 @@ export class WhatsAppInboundPipeline {
 
     const customClientResult = await this.customClientChatbotService.invoke({
       workspaceId: customer.workspaceId,
-      workspaceSlug: customer.workspace?.slug,
       customChatbotId: customer.workspace?.customChatbotId,
       userMessage: inboundWasAudio
         ? `${messageMarkdown}\n\n${AUDIO_SPOKEN_INSTRUCTION}`
@@ -711,13 +710,19 @@ export class WhatsAppInboundPipeline {
           const { customerReply } = splitCustomChatbotReply(customOutput.reply)
           const welcomeVideoUrl = (customer as any).workspace?.welcomeVideoUrl as string | null | undefined
 
+          // 🌍 The welcome-video intro line is deterministic (not LLM-translated),
+          // so it must follow the SAME language the bot replied in — detected by
+          // the module from the message text — not `customerLanguage` (a phone/DB
+          // guess that can disagree with the reply on first contact).
+          const welcomeIntroLanguage = customOutput.language ?? customerLanguage
+
           // 📺 First message with a presentation video → mirror the playground's
           // WelcomeVideoCard ORDER (greeting → intro → video → rest). Works the
           // same on every provider (Meta/UltraMsg/Wasender) because it uses the
           // provider-agnostic send()/sendMedia() of WhatsAppDirectSendService.
           const videoSplit =
             messageCount === 0 && welcomeVideoUrl && !inboundWasAudio
-              ? buildWelcomeVideoSplit(customerReply, welcomeVideoUrl, customerLanguage)
+              ? buildWelcomeVideoSplit(customerReply, welcomeVideoUrl, welcomeIntroLanguage)
               : null
 
           if (videoSplit) {
@@ -748,7 +753,7 @@ export class WhatsAppInboundPipeline {
             let finalReply = customerReply
             if (messageCount === 0 && welcomeVideoUrl && !inboundWasAudio) {
               const introText =
-                WELCOME_VIDEO_INTRO[customerLanguage ?? "en"] ?? WELCOME_VIDEO_INTRO.en
+                WELCOME_VIDEO_INTRO[welcomeIntroLanguage ?? "en"] ?? WELCOME_VIDEO_INTRO.en
               const breakIdx = customerReply.indexOf("\n\n")
               if (breakIdx !== -1) {
                 const greeting = customerReply.slice(0, breakIdx)

@@ -2,13 +2,13 @@ import { useState, useRef, useEffect } from "react"
 import { ChevronDown } from "lucide-react"
 import { useLanguage } from "@/contexts/LanguageContext"
 
-type Language = "it" | "en" | "es" | "pt"
+type Language = "it" | "en" | "es" | "de"
 
 const LANGUAGES = [
   { code: "it" as Language, name: "Italiano", flag: "🇮🇹" },
   { code: "en" as Language, name: "English", flag: "🇬🇧" },
   { code: "es" as Language, name: "Español", flag: "🇪🇸" },
-  { code: "pt" as Language, name: "Português", flag: "🇵🇹" },
+  { code: "de" as Language, name: "Deutsch", flag: "🇩🇪" },
 ]
 
 export function LanguageSelector() {

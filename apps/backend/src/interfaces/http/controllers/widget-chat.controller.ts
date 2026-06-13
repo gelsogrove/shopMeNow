@@ -1053,7 +1053,6 @@ export class WidgetChatController {
 
         const customClientRegResult = await this.customClientChatbotService.invoke({
           workspaceId: resolvedWorkspaceId,
-          workspaceSlug: workspace.slug,
           customChatbotId: workspace.customChatbotId,
           userMessage: firstMessage,
           userName: customer.name,
@@ -2116,7 +2115,6 @@ export class WidgetChatController {
 
         const customClientResult = await this.customClientChatbotService.invoke({
           workspaceId: resolvedWorkspaceId,
-          workspaceSlug: workspace.slug,
           customChatbotId: workspace.customChatbotId,
           userMessage: message,
           userName: customer.name,

@@ -11,7 +11,6 @@ import { MessageTicks } from "@/components/chat/MessageTicks"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
 import { NotificationDialog } from "@/components/shared/NotificationDialog"
 import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
-import { WhatsAppIcon } from "@/components/shared/WhatsAppIcon"
 import { useChat } from "@/contexts/ChatContext"
 import { useChatList } from "@/contexts/ChatListContext"
 import { useCustomerEdit } from "@/contexts/CustomerEditContext"
@@ -36,12 +35,12 @@ import {
   Lock,
   MessageSquare,
   Pencil,
+  Search,
   Send,
   ShieldX,
   Trash2,
   MessageCircle,
   Square,
-  X,
 } from "lucide-react"
 import { parsePhoneNumberFromString } from "libphonenumber-js"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -149,6 +148,20 @@ const getFlagForChat = (language?: string, phone?: string): string => {
 
   // 3) Fallback
   return "🌐"
+}
+
+const formatTimeShort = (dateString: string | null | undefined): string => {
+  if (!dateString) return ""
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return ""
+    // WhatsApp-style footer: always show both date and time under each bubble
+    const day = date.toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "2-digit" })
+    const time = date.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })
+    return `${day} ${time}`
+  } catch {
+    return ""
+  }
 }
 
 export function ChatPage() {
@@ -476,7 +489,6 @@ export function ChatPage() {
     newDiscount: number
   } | null>(null)
 
-  const [showPlaygroundDialog, setShowPlaygroundDialog] = useState(false)
   const [copySuccess, setCopySuccess] = useState(false)
   const queryClient = useQueryClient()
 
@@ -565,15 +577,6 @@ export function ChatPage() {
   // Cross-tab sync disabled (using polling lock instead)
   const { notifyOtherTabs } = useChatSync()
 
-  // Playground handlers
-  const handlePlaygroundClick = () => setShowPlaygroundDialog(true)
-  const handleClosePlayground = () => {
-    setShowPlaygroundDialog(false)
-    // Invalidate queries to refresh chat list
-    queryClient.invalidateQueries({ queryKey: ["chats", userSessionId] })
-    // Notify other tabs about the update
-    notifyOtherTabs()
-  }
 
   // Filter chats based on search term
   const filteredChats = clientSearchTerm
@@ -1496,7 +1499,7 @@ export function ChatPage() {
   }
 
   return (
-    <PageLayout selectedChat={selectedChat}>
+    <PageLayout selectedChat={selectedChat} fullscreen>
       {/* 🔄 Loading Overlay durante cambio workspace */}
       {isWorkspaceChanging && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -1508,247 +1511,187 @@ export function ChatPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-12 gap-4 h-[calc(100vh-12rem)]">
-        {/* Chat List - Vertical Sidebar */}
-        <div className="col-span-3 flex flex-col gap-3 h-full min-h-0">
-          {/* Channel Logo & Name */}
-          <div className="flex items-center gap-3 pb-3 border-b border-gray-200">
+      <div className="flex h-full min-h-0">
+        {/* Chat List - WhatsApp-style Left Sidebar */}
+        <div className="w-[360px] flex-shrink-0 flex flex-col h-full bg-white border-r border-gray-200 overflow-hidden">
+          {/* Sidebar Header — WhatsApp green */}
+          <div className="bg-[#075E54] px-4 h-14 flex items-center gap-3 flex-shrink-0">
             {workspace?.logoUrl ? (
               <img
                 src={workspace.logoUrl.startsWith('http') ? workspace.logoUrl : `${IMG_BASE_URL}${workspace.logoUrl}`}
                 alt={workspace.name}
-                className="h-12 w-12 rounded-full object-cover border-2 border-white shadow-md"
+                className="h-9 w-9 rounded-full object-cover border-2 border-white/30 flex-shrink-0"
               />
             ) : (
-              <div className="h-12 w-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-xl shadow-md">
+              <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
                 {workspace?.name?.charAt(0).toUpperCase() || 'C'}
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h2 className="text-base font-semibold text-gray-900 truncate">
+              <h2 className="text-sm font-semibold text-white truncate">
                 {workspace?.name || 'Channel'}
               </h2>
-              <p className="text-xs text-gray-500">
-                {workspace?.channelMode === 'ECOMMERCE' ? 'E-commerce' : workspace?.channelMode === 'FLOW' ? 'Flow' : 'Info'}
-              </p>
+              <div className="flex items-center gap-1.5">
+                <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isWebSocketConnected ? "bg-green-300 animate-pulse" : "bg-red-400"}`} />
+                <p className="text-xs text-white/70">
+                  {isWebSocketConnected ? "Real-time" : "Connecting..."}
+                </p>
+              </div>
             </div>
           </div>
 
           {/* Search Bar */}
-          <Input
-            type="search"
-            placeholder="Search chats..."
-            value={clientSearchTerm}
-            className="h-8 text-sm w-full max-w-[calc(100%-50px)]"
-            onChange={(e) => {
-              const newParams = new URLSearchParams(searchParams)
-              if (e.target.value) {
-                newParams.set("client", e.target.value)
-              } else {
-                newParams.delete("client")
-              }
-              setSearchParams(newParams)
-              setClientSearchTerm(e.target.value)
-            }}
-          />
-
-          {/* WebSocket Status + Filters */}
-          <div className="flex flex-col gap-1 px-1">
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <div
-                className={`w-2 h-2 rounded-full ${
-                  isWebSocketConnected ? "bg-green-500" : "bg-red-500"
-                } ${isWebSocketConnected ? "animate-pulse" : ""}`}
+          <div className="px-3 py-2 bg-[#F0F2F5] flex-shrink-0">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="search"
+                placeholder="Search chats..."
+                value={clientSearchTerm}
+                className="pl-9 h-9 bg-white rounded-full text-sm border-0 shadow-sm"
+                onChange={(e) => {
+                  const newParams = new URLSearchParams(searchParams)
+                  if (e.target.value) {
+                    newParams.set("client", e.target.value)
+                  } else {
+                    newParams.delete("client")
+                  }
+                  setSearchParams(newParams)
+                  setClientSearchTerm(e.target.value)
+                }}
               />
-              <span>{isWebSocketConnected ? "Real-time" : "Connecting..."}</span>
             </div>
-            <div className="flex items-center gap-1 flex-wrap">
+          </div>
+
+          {/* Filters */}
+          <div className="px-3 py-1.5 bg-[#F0F2F5] border-b border-gray-200 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-wrap mb-1">
               <button
                 onClick={() => setFilterBlocked(v => !v)}
-                className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${filterBlocked ? "bg-red-100 border-red-400 text-red-700" : "bg-white border-gray-300 text-gray-500 hover:border-gray-400"}`}
+                className={`px-2 py-0.5 rounded-full text-[10px] border transition-colors ${filterBlocked ? "bg-red-100 border-red-400 text-red-700" : "bg-white border-gray-300 text-gray-500 hover:border-gray-400"}`}
               >
                 🚫 Blocked
               </button>
               <button
                 onClick={() => setFilterNeedsSupport(v => !v)}
-                className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${filterNeedsSupport ? "bg-orange-100 border-orange-400 text-orange-700" : "bg-white border-gray-300 text-gray-500 hover:border-gray-400"}`}
+                className={`px-2 py-0.5 rounded-full text-[10px] border transition-colors ${filterNeedsSupport ? "bg-orange-100 border-orange-400 text-orange-700" : "bg-white border-gray-300 text-gray-500 hover:border-gray-400"}`}
               >
                 🎧 Support
               </button>
               <button
                 onClick={() => setFilterPlayground(v => !v)}
-                className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${filterPlayground ? "bg-purple-100 border-purple-400 text-purple-700" : "bg-white border-gray-300 text-gray-500 hover:border-gray-400"}`}
+                className={`px-2 py-0.5 rounded-full text-[10px] border transition-colors ${filterPlayground ? "bg-purple-100 border-purple-400 text-purple-700" : "bg-white border-gray-300 text-gray-500 hover:border-gray-400"}`}
               >
                 🧪 Playground
               </button>
-            </div>
-            <div className="flex items-center gap-1">
-              {([['All', 'all'], ['1h', '1h'], ['24h', '24h'], ['7d', 'week']] as [string, 'all' | '1h' | '24h' | 'week'][]).map(([label, value]) => (
-                <button
-                  key={value}
-                  onClick={() => setTimeRange(value)}
-                  className={`px-2 py-0.5 rounded text-xs border transition-colors ${timeRange === value ? "bg-green-100 border-green-400 text-green-700 font-medium" : "bg-white border-gray-300 text-gray-500 hover:border-gray-400"}`}
-                >
-                  {label}
-                </button>
-              ))}
+              <div className="flex items-center gap-0.5 ml-auto">
+                {([['All', 'all'], ['1h', '1h'], ['24h', '24h'], ['7d', 'week']] as [string, 'all' | '1h' | '24h' | 'week'][]).map(([label, value]) => (
+                  <button
+                    key={value}
+                    onClick={() => setTimeRange(value)}
+                    className={`px-1.5 py-0.5 rounded text-[10px] border transition-colors ${timeRange === value ? "bg-green-100 border-green-400 text-green-700 font-medium" : "bg-white border-gray-200 text-gray-500 hover:border-gray-400"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           
           {/* Chat List */}
           <div className="flex-1 min-h-0 overflow-y-auto chat-scrollbar">
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col">
             {visibleChats.length > 0 ? (
               visibleChats.map((chat: Chat) => {
-                // Compare sessionId instead of id
                 const isSelected = selectedChat?.sessionId === chat.sessionId
 
+                // Avatar background color
+                const avatarBg = chat.isBlacklisted
+                  ? 'bg-red-400'
+                  : chat.activeChatbot === false
+                  ? 'bg-orange-400'
+                  : 'bg-[#00A884]'
+
                 return (
-                  <Card
+                  <div
                     key={chat.id}
-                    className={`p-3 cursor-pointer transition-all flex-shrink-0 w-64
-                      ${
-                        isSelected
-                          ? chat.activeChatbot === false
-                            ? "border-t-4 border-orange-500 bg-orange-100 text-orange-800 font-bold"
-                            : "border-t-4 border-green-600 bg-green-50 text-green-800 font-bold"
-                          : chat.activeChatbot === false
-                          ? "border-t-4 border-orange-300 bg-orange-50 text-orange-700"
-                          : "border-t-0 bg-white text-gray-900"
-                      }
-                      ${
-                        !isSelected
-                          ? chat.activeChatbot === false
-                            ? "hover:bg-orange-100"
-                            : "hover:bg-gray-50"
-                          : ""
-                      }
-                      ${
-                        loadingChat && isSelected
-                          ? "opacity-70 pointer-events-none"
-                          : ""
-                      }`}
+                    className={`flex items-center px-3 py-2.5 cursor-pointer border-b border-gray-100 transition-colors ${
+                      isSelected ? 'bg-[#F0F2F5]' : 'hover:bg-[#F5F5F5]'
+                    } ${loadingChat && isSelected ? 'opacity-70 pointer-events-none' : ''}`}
                     onClick={() => selectChat(chat)}
                   >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1 min-w-0">
-                        {/* Prima riga: bandiera + nome + icone stato */}
-                        <div className="flex items-center gap-2 mb-1">
-                          <span
-                            className="text-sm flex-shrink-0"
-                            title={`Language: ${chat.language || "Unknown"}`}
-                          >
+                    {/* Avatar */}
+                    <div className="relative flex-shrink-0 mr-3">
+                      <div className={`h-12 w-12 rounded-full flex items-center justify-center text-white text-lg font-semibold ${avatarBg}`}>
+                        {chat.customerName?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      {/* Channel badge */}
+                      <div className="absolute -bottom-0.5 -right-0.5 rounded-full bg-white p-px">
+                        {chat.channel === "widget" ? (
+                          <Square className="h-3 w-3 text-blue-500" />
+                        ) : (
+                          <MessageCircle className="h-3 w-3 text-green-500" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      {/* Row 1: name + time */}
+                      <div className="flex justify-between items-center mb-0.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-sm flex-shrink-0" title={`Language: ${chat.language || "Unknown"}`}>
                             {getFlagForChat(chat.language, chat.customerPhone)}
                           </span>
-                          <div className="font-semibold text-green-700 text-sm truncate">
+                          <span className={`font-semibold text-sm truncate ${isSelected ? 'text-[#075E54]' : 'text-gray-900'}`}>
                             {chat.customerName}
-                          </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            {/* Manual operator icon if chatbot is disabled */}
-                            {chat.activeChatbot === false && (
-                              <span title="Manual Operator Control">
-                                <Bot className="h-3 w-3 text-orange-500" />
-                              </span>
-                            )}
-                            {/* Blocked user indicator */}
-                            {chat.isBlacklisted && (
-                              <span title="Customer is blocked">
-                                <Ban className="h-3 w-3 text-red-500" />
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Seconda riga: azienda */}
-                        {chat.companyName && (
-                          <div className="text-xs text-gray-600 truncate mb-1">
-                            {chat.companyName}
-                          </div>
-                        )}
-
-                        {/* Status chips: quick-recognition badges for customer type */}
-                        <div className="flex flex-wrap items-center gap-1 mb-1">
+                          </span>
                           {chat.activeChatbot === false && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-orange-100 text-orange-700 border border-orange-200">
-                              🎧 Support
+                            <span title="Manual Operator Control" className="flex-shrink-0">
+                              <Bot className="h-3 w-3 text-orange-500" />
                             </span>
                           )}
                           {chat.isBlacklisted && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-red-100 text-red-700 border border-red-200">
-                              🚫 Blocked
+                            <span title="Customer is blocked" className="flex-shrink-0">
+                              <Ban className="h-3 w-3 text-red-500" />
                             </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-gray-400 ml-2 flex-shrink-0">
+                          {formatTimeShort(chat.lastMessageTime)}
+                        </span>
+                      </div>
+
+                      {/* Row 2: last message + unread count */}
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-gray-500 truncate flex-1 mr-2">
+                          {chat.companyName ? `${chat.companyName} · ` : ''}{chat.lastMessage}
+                        </p>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {/* Status badges */}
+                          {chat.activeChatbot === false && (
+                            <span className="text-[9px] px-1 rounded bg-orange-100 text-orange-600">🎧</span>
                           )}
                           {chat.isPlayground && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700 border border-purple-200">
-                              🧪 Playground
-                            </span>
+                            <span className="text-[9px] px-1 rounded bg-purple-100 text-purple-600">🧪</span>
                           )}
-                          {chat.channel === "widget" && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-blue-100 text-blue-700 border border-blue-200">
-                              🖥️ Widget
-                            </span>
-                          )}
-                          {/* Tag chips: vip / critical */}
-                          {chat.tags && chat.tags.map((tag) => {
-                            const normalized = tag.trim().toLowerCase()
-                            const chipClass =
-                              normalized === "critical"
-                                ? "bg-red-100 text-red-700 border border-red-200"
-                                : normalized === "vip"
-                                ? "bg-amber-100 text-amber-700 border border-amber-200"
-                                : "bg-gray-100 text-gray-600 border border-gray-200"
+                          {chat.tags?.map((tag) => {
+                            const n = tag.trim().toLowerCase()
                             return (
-                              <span
-                                key={tag}
-                                className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium uppercase tracking-wide ${chipClass}`}
-                              >
+                              <span key={tag} className={`text-[9px] px-1 rounded uppercase ${n === 'vip' ? 'bg-amber-100 text-amber-700' : n === 'critical' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>
                                 {tag}
                               </span>
                             )
                           })}
-                        </div>
-
-                        {/* Terza riga: telefono */}
-                        <div className="text-xs text-green-600 mb-1">
-                          {chat.customerPhone}
-                        </div>
-
-                        {/* Quarta riga: ultimo messaggio + timestamp */}
-                        <div className="flex justify-between items-center">
-                          <div
-                            className="text-xs text-gray-600 truncate flex-1 mr-2"
-                            style={{
-                              display: "-webkit-box",
-                              WebkitLineClamp: 1,
-                              WebkitBoxOrient: "vertical",
-                            }}
-                          >
-                            {chat.lastMessage}
-                          </div>
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            {/* 🆕 CHANNEL ICON: Shows if message came from WhatsApp or Widget */}
-                            {chat.channel === "widget" ? (
-                              <span title="Widget channel" className="flex-shrink-0">
-                                <Square className="h-3 w-3 text-blue-500" />
-                              </span>
-                            ) : (
-                              <span title="WhatsApp channel" className="flex-shrink-0">
-                                <MessageCircle className="h-3 w-3 text-green-500" />
-                              </span>
-                            )}
-                            <p className="text-[10px] text-gray-400">
-                              {formatDate(chat.lastMessageTime)}
-                            </p>
-                            {chat.unreadCount > 0 && (
-                              <span className="bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
-                                {chat.unreadCount}
-                              </span>
-                            )}
-                          </div>
+                          {chat.unreadCount > 0 && (
+                            <span className="h-5 min-w-[20px] flex items-center justify-center bg-[#25D366] text-white text-[10px] font-bold rounded-full px-1">
+                              {chat.unreadCount}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
-                  </Card>
+                  </div>
                 )
               })
             ) : (
@@ -1776,7 +1719,7 @@ export function ChatPage() {
         </div>
 
         {/* Chat Messages - Right Side */}
-        <Card className="col-span-9 p-4 flex flex-col h-full min-h-0">
+        <div className="flex-1 flex flex-col h-full min-h-0 bg-white overflow-hidden">
           {selectedChat ? (
             <>
               {/* 🚨 BANNERS ROW - Manual Control + Blocked Customer */}
@@ -1822,38 +1765,37 @@ export function ChatPage() {
                 </div>
               )}
 
-              {/* Chat Header - Nome + controlli (senza telefono e società) */}
-              <div className="flex justify-between items-center pb-2 border-b h-[60px]">
+              {/* Chat Header — WhatsApp-style green bar */}
+              <div className="bg-[#075E54] px-4 h-14 flex items-center justify-between flex-shrink-0">
                 <div
-                  className="flex items-center cursor-pointer group"
+                  className="flex items-center gap-3 cursor-pointer group"
                   onClick={handleEditCustomer}
                 >
-                  <h2 className="font-bold text-sm text-green-700">
-                    {selectedChat.customerName}
-                  </h2>
-                  <Pencil className="h-3 w-3 ml-1 text-green-600 group-hover:text-green-700 transition-colors" />
+                  <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
+                    {selectedChat.customerName?.charAt(0)?.toUpperCase() || '?'}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <h2 className="font-semibold text-sm text-white">
+                        {selectedChat.customerName}
+                      </h2>
+                      <Pencil className="h-3 w-3 text-white/50 group-hover:text-white/80 transition-colors" />
+                    </div>
+                    <p className="text-xs text-white/70">{selectedChat.customerPhone}</p>
+                  </div>
                 </div>
-                <div className="flex space-x-2 items-center">
+                <div className="flex items-center gap-1">
                   {/* ChatBot Toggle */}
-                  <div className="flex items-center mr-2">
-                    <Bot
-                      className={`h-4 w-4 mr-1 ${
-                        isChatbotActive ? "text-green-600" : "text-gray-400"
-                      }`}
-                    />
+                  <div className="flex items-center mr-1">
+                    <Bot className={`h-4 w-4 mr-1 ${isChatbotActive ? "text-white" : "text-white/40"}`} />
                     <Switch
-                      className="mr-1"
                       checked={isChatbotActive}
                       onCheckedChange={handleActiveChatbotToggle}
-                      title={
-                        isChatbotActive ? "Disable chatbot" : "Enable chatbot"
-                      }
+                      title={isChatbotActive ? "Disable chatbot" : "Enable chatbot"}
                     />
                   </div>
 
-                  {/* 🌍 Global translation toolbar — pick the language to
-                      show a translated panel under every message at once.
-                      Clicking X hides the panels (cache is preserved). */}
+                  {/* Translation toolbar */}
                   <TranslationToolbar
                     customerLanguage={selectedChat?.language || null}
                     defaultLanguage={defaultTargetLang}
@@ -1865,34 +1807,22 @@ export function ChatPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleCopyChat}
-                    className="hover:bg-blue-50 h-10 w-10 p-0"
+                    className="text-white/80 hover:text-white hover:bg-white/10 h-9 w-9 p-0"
                     title="Copy conversation as Markdown"
                   >
-                    {copySuccess ? (
-                      <Check className="h-5 w-5 text-green-600" />
-                    ) : (
-                      <ClipboardCopy className="h-5 w-5 text-blue-500" />
-                    )}
+                    {copySuccess ? <Check className="h-5 w-5" /> : <ClipboardCopy className="h-5 w-5" />}
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setShowBlockDialog(true)}
-                    className={
-                      selectedChat?.isBlacklisted
-                        ? "hover:bg-green-50 h-10 w-10 p-0"
-                        : "hover:bg-orange-50 h-10 w-10 p-0"
-                    }
-                    title={
-                      selectedChat?.isBlacklisted
-                        ? "Unblock User"
-                        : "Block User"
-                    }
+                    className="text-white/80 hover:text-white hover:bg-white/10 h-9 w-9 p-0"
+                    title={selectedChat?.isBlacklisted ? "Unblock User" : "Block User"}
                   >
                     {selectedChat?.isBlacklisted ? (
-                      <Lock className="h-5 w-5 text-green-600" />
+                      <Lock className="h-5 w-5" />
                     ) : (
-                      <Ban className="h-5 w-5 text-orange-600" />
+                      <Ban className="h-5 w-5" />
                     )}
                   </Button>
                   <Button
@@ -1900,10 +1830,10 @@ export function ChatPage() {
                     variant="ghost"
                     size="sm"
                     onClick={handleDeleteChat}
-                    className="hover:bg-red-50 h-10 w-10 p-0"
+                    className="text-white/80 hover:text-white hover:bg-white/10 h-9 w-9 p-0"
                     title="Delete Chat"
                   >
-                    <Trash2 className="h-5 w-5 text-red-600" />
+                    <Trash2 className="h-5 w-5" />
                   </Button>
                 </div>
               </div>
@@ -1911,7 +1841,7 @@ export function ChatPage() {
               {/* Chat Messages */}
               <div
                 ref={messagesScrollContainerRef}
-                className="chat-scrollbar flex-1 min-h-0 overflow-y-auto px-4 py-2 bg-white"
+                className="chat-scrollbar flex-1 min-h-0 overflow-y-auto px-4 py-3 bg-[#eae6df]"
               >
                 {/* 📋 Load Button - Shows when there are more messages available */}
                 {hasMore && messages.length > 0 && (
@@ -1983,16 +1913,16 @@ export function ChatPage() {
                     const getMessageStyle = () => {
                       // 🛑 BLOCKED: Security Agent blocked this message
                       if (isBlockedMessage) {
-                        return "bg-red-50 text-red-800 border-l-4 border-red-500 opacity-75"
+                        return "bg-red-50 text-red-800 opacity-75 border border-red-200"
                       }
 
                       if (!isAgentMessage) {
                         return isOperatorControl
-                          ? "bg-orange-50 text-orange-900 border-l-4 border-orange-400" // Customer under control
-                          : "bg-gray-100 text-gray-800" // Normal customer
+                          ? "bg-orange-50 text-orange-900" // Customer under control
+                          : "bg-white text-gray-900" // Normal customer — white bubble
                       }
 
-                      // SE C'È IL BADGE CHATBOT → VERDE (controllo anche agentName)
+                      // SE C'È IL BADGE CHATBOT → WhatsApp green bubble
                       if (
                         message.metadata?.agentSelected === "CHATBOT" ||
                         message.metadata?.agentSelected?.startsWith(
@@ -2002,30 +1932,35 @@ export function ChatPage() {
                         message.metadata?.agentSelected === "LLM" ||
                         message.agentName
                       ) {
-                        // Se ha agentName è un chatbot!
-                        return "bg-green-100 text-green-900 border-l-4 border-green-500" // CHATBOT → VERDE
+                        return "bg-[#DCF8C6] text-gray-900" // CHATBOT → WhatsApp green
                       }
 
                       if (
                         message.metadata?.agentSelected === "MANUAL_OPERATOR"
                       ) {
-                        return "bg-blue-100 text-blue-900 border-l-4 border-blue-500" // MANUAL_OPERATOR → BLU
+                        return "bg-[#C8E8FF] text-gray-900" // MANUAL_OPERATOR → blue
                       }
 
-                      // Default fallback
+                      // Default outgoing
+                      if (isAgentMessage) return "bg-[#DCF8C6] text-gray-900"
                       return "bg-gray-100 text-gray-800"
                     }
+
+                    // WhatsApp-style bubble radius
+                    const bubbleRadius = isAgentMessage
+                      ? "rounded-tl-2xl rounded-bl-2xl rounded-br-2xl rounded-tr-sm"
+                      : "rounded-tr-2xl rounded-br-2xl rounded-bl-2xl rounded-tl-sm"
 
                     return (
                       <div
                         key={message.id}
                         data-message-id={message.id}
-                        className={`flex mb-4 ${
+                        className={`flex mb-2 ${
                           isAgentMessage ? "justify-end" : "justify-start"
                         }`}
                       >
                         <div
-                          className={`p-3 rounded-lg max-w-[75%] relative group ${
+                          className={`p-2.5 max-w-[75%] relative group shadow-sm ${bubbleRadius} ${
                             isOperatorMessage || isOperatorControl || isManualOperator || isBlockedMessage
                               ? 'pt-6'
                               : ''
@@ -2211,9 +2146,14 @@ export function ChatPage() {
                                 </span>
                               )}
 
+                              {/* HH:mm timestamp */}
+                              <span className="text-[10px] text-gray-400 ml-1">
+                                {formatTimeShort(message.timestamp)}
+                              </span>
+
                               {/* ✓/✓✓ Delivery ticks — outbound (operator/bot) only, not for blocked */}
                               {isAgentMessage && !isBlockedMessage && (
-                                <MessageTicks status={message.deliveryStatus} className="ml-1" />
+                                <MessageTicks status={message.deliveryStatus} className="ml-0.5" />
                               )}
                             </div>
                           </div>
@@ -2236,9 +2176,9 @@ export function ChatPage() {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Message Input: Only show if chatbot is disabled */}
-              {!isChatbotActive && (
-                <div className="mt-2 flex items-end gap-2">
+              {/* Message Input — WhatsApp-style bar */}
+              {!isChatbotActive ? (
+                <div className="bg-[#F0F2F5] px-3 py-2 flex items-end gap-2 flex-shrink-0 border-t border-gray-200">
                   <AttachmentButton
                     existingCount={0}
                     disabled={loading || uploadingAttachment || selectedChat?.isBlacklisted}
@@ -2248,37 +2188,46 @@ export function ChatPage() {
                   <EmojiPicker
                     disabled={loading || selectedChat?.isBlacklisted}
                     onSelect={(emoji) => setMessageInput((prev) => prev + emoji)}
-                    className="self-end w-8 h-8 rounded-md flex items-center justify-center text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-50 transition-colors"
+                    className="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:text-emerald-600 hover:bg-emerald-100 disabled:opacity-50 transition-colors"
                   />
-                  <Textarea
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    placeholder={
-                      selectedChat?.isBlacklisted
-                        ? "Cannot send messages to blocked customer"
-                        : "Type your message..."
-                    }
-                    className="min-h-[40px] resize-none text-xs"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault()
-                        handleSubmit(e)
+                  <div className="flex-1 bg-white rounded-2xl px-4 py-2 flex items-center min-h-[40px] shadow-sm">
+                    <Textarea
+                      value={messageInput}
+                      onChange={(e) => setMessageInput(e.target.value)}
+                      placeholder={
+                        selectedChat?.isBlacklisted
+                          ? "Cannot send messages to blocked customer"
+                          : "Type a message..."
                       }
-                    }}
-                    disabled={loading || selectedChat?.isBlacklisted}
-                  />
+                      className="flex-1 min-h-0 resize-none text-sm bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 shadow-none"
+                      rows={1}
+                      style={{ maxHeight: '120px', overflowY: 'auto' }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault()
+                          handleSubmit(e)
+                        }
+                      }}
+                      disabled={loading || selectedChat?.isBlacklisted}
+                    />
+                  </div>
                   <Button
                     onClick={(e) => handleSubmit(e)}
-                    className="self-end h-8 w-8 p-0"
-                    size="sm"
+                    className="flex-shrink-0 h-10 w-10 rounded-full bg-[#00A884] hover:bg-[#017a62] p-0"
                     disabled={loading || selectedChat?.isBlacklisted}
                   >
                     {loading ? (
-                      <div className="h-3 w-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <Loader2 className="h-5 w-5 text-white animate-spin" />
                     ) : (
-                      <Send className="h-3 w-3" />
+                      <Send className="h-5 w-5 text-white" />
                     )}
                   </Button>
+                </div>
+              ) : (
+                /* When chatbot is active — subtle indicator */
+                <div className="bg-[#F0F2F5] px-4 py-2 flex items-center justify-center gap-2 flex-shrink-0 border-t border-gray-200">
+                  <Bot className="h-4 w-4 text-[#00A884]" />
+                  <span className="text-xs text-gray-500">AI chatbot is handling this conversation</span>
                 </div>
               )}
             </>
@@ -2306,7 +2255,7 @@ export function ChatPage() {
               )}
             </div>
           )}
-        </Card>
+        </div>
       </div>
 
       <ConfirmDialog
@@ -2417,78 +2366,8 @@ export function ChatPage() {
         }
       />
 
-      {/* WhatsApp Floating Button - stile OlaClick, solo su /chat e SOLO se debugMode=true */}
-      {workspace?.debugMode === true && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <Button
-            onClick={handlePlaygroundClick}
-            className="bg-[#25D366] hover:bg-[#128C7E] text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 h-16 w-16 p-0 flex items-center justify-center group relative"
-            title="Chat WhatsApp (Playground - Debug Mode)"
-          >
-            <WhatsAppIcon className="h-8 w-8 text-white transition-transform group-hover:scale-110" />
-            <div className="absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-20"></div>
-            <div className="absolute bottom-full right-0 mb-2 px-3 py-1 bg-gray-800 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
-              Playground (Debug Mode)
-            </div>
-          </Button>
-        </div>
-      )}
-      {showPlaygroundDialog && (
-        <PlaygroundIframeModal
-          isOpen={showPlaygroundDialog}
-          onClose={handleClosePlayground}
-          workspaceId={workspace?.id}
-        />
-      )}
 
     </PageLayout>
-  )
-}
-
-function PlaygroundIframeModal({
-  isOpen,
-  onClose,
-  workspaceId,
-}: {
-  isOpen: boolean
-  onClose: () => void
-  workspaceId?: string
-}) {
-  const [loading, setLoading] = useState(true)
-  const token = localStorage.getItem("token") || ""
-
-  if (!isOpen) return null
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-6 transition-all duration-300 animate-in fade-in">
-      <div className="relative w-[95vw] h-[90vh] md:w-[90vw] md:h-[90vh] bg-[#0b0f19] border border-gray-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 animate-in zoom-in-95">
-        
-        {/* Absolute header and close button overlaying the iframe top-right */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-[110] p-2 bg-gray-900/80 hover:bg-gray-800 text-gray-400 hover:text-white rounded-full border border-gray-800 transition-all shadow-md group"
-          title="Chiudi"
-        >
-          <X className="h-5 w-5 transition-transform group-hover:rotate-90 duration-300" />
-        </button>
-
-        {/* Loading Spinner */}
-        {loading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0b0f19] z-50 gap-3">
-            <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-            <span className="text-emerald-400 font-medium text-sm animate-pulse">Caricamento Playground...</span>
-          </div>
-        )}
-
-        {/* Iframe pointing to Ecolaundry with platform auth query params */}
-        <iframe
-          src={`/demo/ecolaundry?token=${encodeURIComponent(token)}&workspaceId=${encodeURIComponent(workspaceId || "")}`}
-          className="w-full h-full border-none bg-transparent"
-          title="Ecolaundry Playground"
-          onLoad={() => setLoading(false)}
-        />
-      </div>
-    </div>
   )
 }
 

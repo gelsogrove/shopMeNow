@@ -1,13 +1,16 @@
 import { useEffect } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
-import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Zap, CheckCircle, UserCheck, MessageSquare } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
+import { LandingHero } from "@/components/landing/LandingHero"
+import { MetricsSection } from "@/components/landing/MetricsSection"
+import { SectionHeader } from "@/components/landing/SectionHeader"
+import { FeatureChecklist } from "@/components/landing/FeatureChecklist"
+import { CtaSection } from "@/components/landing/CtaSection"
 
-type Language = "it" | "en" | "es" | "pt"
+type Language = "it" | "en" | "es" | "de"
 
 const T = {
   it: {
@@ -118,40 +121,40 @@ const T = {
       { value: "0", label: "conversaciones perdidas por overflow" },
     ],
   },
-  pt: {
-    seoTitle: "Team Collaboration - Gestão Multi-Agente para Atendimento ao Cliente",
-    ctaTitle: "Pronto para potencializar sua equipe?",
-    ctaSub: "Sem compromisso, respondemos em breve.",
-    seoDesc: "Coordene sua equipe de suporte com o eChatbot. Atribuição de conversas, funções e permissões, painel de analytics, escalação para supervisores, notificações em tempo real.",
-    seoKeys: "colaboração equipe chatbot, multi agente whatsapp, gestão equipe atendimento cliente, atribuição conversas, painel customer service",
+  de: {
+    seoTitle: "Team Collaboration - Multi-Agenten-Verwaltung für den Customer Service",
+    ctaTitle: "Bereit, dein Team zu stärken?",
+    ctaSub: "Unverbindlich, wir antworten dir in Kürze.",
+    seoDesc: "Koordiniere dein Support-Team mit eChatbot. Zuweisung von Konversationen, Rollen und Berechtigungen, Analytics-Dashboard, Eskalation an Supervisoren, Benachrichtigungen in Echtzeit.",
+    seoKeys: "team-zusammenarbeit chatbot, multi agent whatsapp, customer service team verwaltung, zuweisung konversationen, customer service dashboard",
     breadcrumb: "Team Collaboration",
-    badge: "Equipe",
-    heroTitle: "Uma equipe coordenada\npara cada cliente",
-    heroSub: "Com o eChatbot você pode gerenciar uma equipe completa de operadores no WhatsApp. A IA gerencia as solicitações simples e atribui automaticamente as conversas complexas ao operador certo, com o contexto já preparado.",
-    cta: "Fale Connosco",
-    rolesTitle: "Funções e permissões granulares",
-    rolesSub: "Cada membro da equipe tem acesso exatamente ao que precisa",
+    badge: "Team",
+    heroTitle: "Ein koordiniertes Team\nfür jeden Kunden",
+    heroSub: "Mit eChatbot kannst du ein komplettes Team von Operatoren auf WhatsApp verwalten. Die KI bearbeitet einfache Anfragen und weist komplexe Konversationen automatisch dem richtigen Operator zu, mit bereits vorbereitetem Kontext.",
+    cta: "Kontaktiere uns",
+    rolesTitle: "Granulare Rollen und Berechtigungen",
+    rolesSub: "Jedes Teammitglied erhält genau den Zugriff, den es braucht",
     roles: [
-      { name: "Admin", icon: "👑", color: "purple", perms: ["Configura workspace e canais", "Gerencia usuários e funções", "Acessa todos os analytics", "Configura regras de IA", "Gerencia assinatura e faturamento"] },
-      { name: "Manager", icon: "🎯", color: "blue", perms: ["Monitora todas as conversas", "Atribui e reatribui chats", "Acessa analytics da equipe", "Gerencia escalações", "Supervisiona qualidade"] },
-      { name: "Operator", icon: "💬", color: "green", perms: ["Gerencia conversas atribuídas", "Responde aos clientes", "Cria pedidos e orçamentos", "Atualiza dados do cliente", "Solicita escalação"] },
+      { name: "Admin", icon: "👑", color: "purple", perms: ["Workspace und Kanäle konfigurieren", "Benutzer und Rollen verwalten", "Auf alle Analytics zugreifen", "KI-Regeln konfigurieren", "Abonnement und Abrechnung verwalten"] },
+      { name: "Manager", icon: "🎯", color: "blue", perms: ["Alle Konversationen überwachen", "Chats zuweisen und neu zuweisen", "Auf Team-Analytics zugreifen", "Eskalationen verwalten", "Qualität überwachen"] },
+      { name: "Operator", icon: "💬", color: "green", perms: ["Zugewiesene Konversationen verwalten", "Kunden antworten", "Bestellungen und Angebote erstellen", "Kundendaten aktualisieren", "Eskalation anfordern"] },
     ],
-    flowTitle: "Como funciona a atribuição",
+    flowTitle: "So funktioniert die Zuweisung",
     flowSteps: [
-      { num: "01", title: "Cliente escreve no WhatsApp", desc: "A mensagem chega ao workspace do eChatbot. A IA analisa o conteúdo e a prioridade." },
-      { num: "02", title: "IA gerencia ou atribui", desc: "Se a solicitação é simples, a IA responde de forma autônoma. Caso contrário, avalia disponibilidade e habilidades dos operadores." },
-      { num: "03", title: "Notificação ao operador", desc: "O operador recebe notificação no navegador com o contexto completo: histórico do cliente, solicitação atual, prioridade." },
-      { num: "04", title: "Handoff com contexto", desc: "O operador vê toda a conversa anterior. O cliente não precisa repetir nada." },
+      { num: "01", title: "Kunde schreibt auf WhatsApp", desc: "Die Nachricht erreicht den eChatbot-Workspace. Die KI analysiert Inhalt und Priorität." },
+      { num: "02", title: "KI bearbeitet oder weist zu", desc: "Ist die Anfrage einfach, antwortet die KI eigenständig. Andernfalls prüft sie Verfügbarkeit und Fähigkeiten der Operatoren." },
+      { num: "03", title: "Benachrichtigung an den Operator", desc: "Der Operator erhält eine Browser-Benachrichtigung mit vollständigem Kontext: Kundenhistorie, aktuelle Anfrage, Priorität." },
+      { num: "04", title: "Handoff mit Kontext", desc: "Der Operator sieht die gesamte vorherige Konversation. Der Kunde muss nichts wiederholen." },
     ],
-    dashTitle: "Dashboard Manager em tempo real",
-    dashDesc: "O Manager ou Supervisor vê em uma única tela: conversas ativas, operadores disponíveis, fila de espera e notificações urgentes.",
-    dashFeatures: ["Fila de clientes aguardando com resumos de IA", "Atribuição de cliente a operador com um clique", "Histórico completo de cada conversa", "Contexto do cliente pronto para o operador", "Notificações de navegador para novas solicitações", "Escalação IA → operador sem interrupções"],
-    metricsTitle: "Resultados mensuráveis",
+    dashTitle: "Manager-Dashboard in Echtzeit",
+    dashDesc: "Der Manager oder Supervisor sieht auf einem einzigen Bildschirm: aktive Konversationen, verfügbare Operatoren, Warteschlange und dringende Benachrichtigungen.",
+    dashFeatures: ["Warteschlange wartender Kunden mit KI-Zusammenfassungen", "Kunde mit einem Klick einem Operator zuweisen", "Vollständige Historie jeder Konversation", "Kundenkontext bereit für den Operator", "Browser-Benachrichtigungen für neue Anfragen", "Eskalation KI → Operator ohne Unterbrechung"],
+    metricsTitle: "Messbare Ergebnisse",
     metrics: [
-      { value: "45%", label: "redução no tempo de primeira resposta" },
-      { value: "3×", label: "mais conversas gerenciadas por operador" },
-      { value: "92%", label: "satisfação média do cliente" },
-      { value: "0", label: "conversas perdidas por overflow" },
+      { value: "45%", label: "weniger Zeit bis zur ersten Antwort" },
+      { value: "3×", label: "mehr Konversationen pro Operator bearbeitet" },
+      { value: "92%", label: "durchschnittliche Kundenzufriedenheit" },
+      { value: "0", label: "durch Überlastung verlorene Konversationen" },
     ],
   },
 }
@@ -176,66 +179,22 @@ export function TeamCollaborationPage() {
       <SiteHeader />
 
       <main>
-        {/* Hero */}
-        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
-            >
-              <div>
-                <h1 className="text-4xl lg:text-6xl font-bold text-white mb-6 leading-tight whitespace-pre-line">
-                  {t.heroTitle}
-                </h1>
-                <p className="text-xl text-slate-400 mb-10 leading-relaxed">{t.heroSub}</p>
-                <Link to="/contact" className="inline-flex items-center gap-3 bg-[#25D366] hover:bg-[#1fb855] text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg">
-                  <Zap className="h-5 w-5" />
-                  {t.cta}
-                </Link>
-              </div>
-              <div className="relative flex items-center justify-center">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl rotate-1 scale-105 opacity-60" />
-                <img
-                  src="/team.png"
-                  alt="Team collaboration illustration"
-                  className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/10 object-contain"
-                />
-              </div>
-            </motion.div>
-          </div>
-        </section>
+        <LandingHero
+          title={t.heroTitle}
+          subtitle={t.heroSub}
+          ctaLabel={t.cta}
+          image={{ src: "/team.png", alt: "Team collaboration illustration" }}
+          imageSide="right"
+          glow="tilt"
+          buttonClassName="bg-[#25D366] hover:bg-[#1fb855]"
+        />
 
-        {/* Metrics */}
-        <section className="py-16">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-white text-center mb-12">{t.metricsTitle}</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              {t.metrics.map((m, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, scale: 0.85 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="text-center p-6 bg-slate-900/50 backdrop-blur rounded-2xl shadow-2xl border border-white/10"
-                >
-                  <div className="text-4xl font-extrabold text-[#25D366] mb-2">{m.value}</div>
-                  <div className="text-sm text-slate-400 leading-tight">{m.label}</div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <MetricsSection title={t.metricsTitle} metrics={t.metrics} variant="compact" />
 
         {/* Roles */}
         <section className="py-20 bg-white/[0.02]">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="text-center mb-14">
-              <h2 className="text-4xl font-bold text-white mb-4">{t.rolesTitle}</h2>
-              <p className="text-xl text-slate-400">{t.rolesSub}</p>
-            </div>
+            <SectionHeader title={t.rolesTitle} subtitle={t.rolesSub} className="mb-14" />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {t.roles.map((role, i) => (
                 <motion.div
@@ -248,14 +207,7 @@ export function TeamCollaborationPage() {
                 >
                   <div className="text-4xl mb-3">{role.icon}</div>
                   <h3 className="text-2xl font-bold text-white mb-5">{role.name}</h3>
-                  <ul className="space-y-2.5">
-                    {role.perms.map((p, j) => (
-                      <li key={j} className="flex items-center gap-2.5 text-slate-300 text-sm">
-                        <CheckCircle className="h-4 w-4 text-[#25D366] flex-shrink-0" />
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
+                  <FeatureChecklist items={role.perms} iconClassName="h-4 w-4 text-[#25D366]" />
                 </motion.div>
               ))}
             </div>
@@ -292,14 +244,7 @@ export function TeamCollaborationPage() {
               <div>
                 <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">{t.dashTitle}</h2>
                 <p className="text-lg text-slate-400 mb-6 leading-relaxed">{t.dashDesc}</p>
-                <ul className="space-y-3">
-                  {t.dashFeatures.map((f, i) => (
-                    <li key={i} className="flex items-center gap-3 text-slate-300">
-                      <CheckCircle className="h-5 w-5 text-[#25D366] flex-shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
+                <FeatureChecklist items={t.dashFeatures} />
               </div>
               <div className="relative flex items-center justify-center">
                 <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-2xl rotate-1 scale-105 opacity-60" />
@@ -313,17 +258,7 @@ export function TeamCollaborationPage() {
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="py-20 bg-gradient-to-br from-green-600 to-emerald-700">
-          <div className="max-w-3xl mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
-            <p className="text-xl text-green-100 mb-8">{t.ctaSub}</p>
-            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-[#25D366] font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
-              <Zap className="h-6 w-6" />
-              {t.cta}
-            </Link>
-          </div>
-        </section>
+        <CtaSection title={t.ctaTitle} subtitle={t.ctaSub} ctaLabel={t.cta} />
       </main>
 
       <SiteFooter language={language} />

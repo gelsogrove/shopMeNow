@@ -142,10 +142,6 @@ export class PlaygroundController {
         path.resolve(__dirname, `../../../../custom-${slug}/docs/usecases.md`),
         path.resolve(process.cwd(), `custom-${slug}/docs/usecases.md`),
         path.resolve(process.cwd(), `apps/backend/custom-${slug}/docs/usecases.md`),
-        // Fallback to Ecolaundry if custom workspace-specific files are not found
-        path.resolve(__dirname, "../../../../custom-ecolaundry/usecases.md"),
-        path.resolve(process.cwd(), "custom-ecolaundry/usecases.md"),
-        path.resolve(process.cwd(), "apps/backend/custom-ecolaundry/usecases.md"),
       ]
       const filePath = candidates.find((p) => fs.existsSync(p))
       if (!filePath) {
@@ -960,7 +956,6 @@ export class PlaygroundController {
 
           const customResult = await customClientChatbotService.invoke({
             workspaceId,
-            workspaceSlug: workspace.slug,
             customChatbotId: workspace.customChatbotId,
             userMessage: message,
             userName: customer.name,

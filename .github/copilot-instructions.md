@@ -330,17 +330,7 @@ eChatbot is a **WhatsApp-based e-commerce platform** with AI chatbot integration
 - **RATIONALE**: The platform is international. User-facing data (products, categories) comes from database in the customer's language, but UI chrome must be English.
 - **EXCEPTION**: LLM-generated responses to customers are dynamic and multilingual
 
-### 16. **FLOW Prompt Alignment — Always Keep 3 Sources in Sync** (🚨 MANDATORY)
-
-- **Rule**: When modifying the Ecolaundry router prompt (`ECOLAUNDRY_ROUTER_PROMPT` in `packages/database/prisma/seed.ts`), you MUST **immediately** sync these 3 sources:
-  1. `packages/database/prisma/seed.ts` — `ECOLAUNDRY_ROUTER_PROMPT` constant (source of truth)
-  2. `apps/backend/src/templates/flow/00-router.template.md` — template reference file (must mirror seed)
-  3. `packages/database/scripts/sync-ecolaundry-flow.ts` — if it has an inline prompt, update it too
-- **Also sync** `ECOLAUNDRY_SYSTEM_PROMPT` (sub-agent prompt) if that changes similarly
-- **After any prompt change**: run `packages/database/scripts/sync-ecolaundry-flow.ts` on Heroku to push to DB
-- **Violation**: Having 3 different versions causes silent bugs where DB has old prompt, seed has new, template has something else
-
-### 17. **LLM Architecture / AgentFlowDiagram / Debug View — Always Keep Aligned** (🚨 MANDATORY)
+### 16. **LLM Architecture / AgentFlowDiagram / Debug View — Always Keep Aligned** (🚨 MANDATORY)
 
 - **These 3 must always represent the same agent pipeline:**
   1. `docs/flow-engine-architecture.md` — written architecture spec (pipeline, steps, paths)

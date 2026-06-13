@@ -1,14 +1,18 @@
 import { useEffect } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
-import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Zap, CheckCircle } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
-import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { LandingHero } from "@/components/landing/LandingHero"
+import { MetricsSection } from "@/components/landing/MetricsSection"
+import { SectionHeader } from "@/components/landing/SectionHeader"
+import { StepCardGrid } from "@/components/landing/StepCardGrid"
+import { UseCaseGrid } from "@/components/landing/UseCaseGrid"
+import { FeatureChecklist } from "@/components/landing/FeatureChecklist"
+import { CtaSection } from "@/components/landing/CtaSection"
 
-type Language = "it" | "en" | "es" | "pt"
+type Language = "it" | "en" | "es" | "de"
 
 const T = {
   it: {
@@ -143,48 +147,48 @@ const T = {
       { icon: "🎟️", title: "Eventos y membresías", desc: "Renovaciones y plazas de última hora ofrecidas solo a quien está realmente interesado, en el momento en que dice sí." },
     ],
   },
-  pt: {
-    seoTitle: "Smart Push AI - Campanhas de WhatsApp Inteligentes que Aumentam as Conversões",
-    seoDesc: "A IA cruza as necessidades de cada cliente com as ofertas disponíveis e decide o que enviar e quando. Mensagens direcionadas no WhatsApp, anti-spam inteligente, mais conversões e menos cancelamentos.",
-    seoKeys: "push whatsapp ia, campanhas whatsapp, mensagens direcionadas whatsapp, automação marketing whatsapp, smart push, segmentação clientes ia, anti-spam whatsapp",
+  de: {
+    seoTitle: "Smart Push AI - Intelligente WhatsApp-Kampagnen, die deine Conversions steigern",
+    seoDesc: "Die KI gleicht die Bedürfnisse jedes Kunden mit den verfügbaren Angeboten ab und entscheidet, was wann gesendet wird. Gezielte WhatsApp-Nachrichten, intelligenter Anti-Spam, mehr Conversions und weniger Abmeldungen.",
+    seoKeys: "whatsapp push ki, whatsapp kampagnen, gezielte whatsapp nachrichten, whatsapp marketing automation, smart push, ki kundensegmentierung, whatsapp anti-spam",
     breadcrumb: "Smart Push AI",
     badge: "Smart Push AI",
-    heroTitle: "Venda mais.\nSem parecer spam.",
-    heroSub: "Os envios iguais para todos aborrecem e geram cancelamentos. A nossa IA faz o contrário: estuda cada cliente, escolhe a oferta que ele realmente quer e envia no momento exato em que está pronto para comprar. Uma mensagem, uma venda — nunca um incómodo.",
-    cta: "Fale Connosco",
-    ctaSub: "Sem compromisso, respondemos em breve",
-    ctaTitle: "Pronto para fazer cada mensagem render?",
-    howTitle: "Como transforma ofertas em vendas",
-    howSub: "Quatro passos automáticos, de entender o cliente ao clique em \"comprar\".",
+    heroTitle: "Verkaufe mehr.\nOhne wie Spam zu wirken.",
+    heroSub: "Einheitsnachrichten für alle langweilen und führen zu Abmeldungen. Unsere KI macht das Gegenteil: Sie studiert jeden Kunden, wählt das Angebot, das er wirklich will, und sendet es genau im richtigen Moment, in dem er bereit ist zu kaufen. Eine Nachricht, ein Verkauf — niemals eine Belästigung.",
+    cta: "Kontaktiere uns",
+    ctaSub: "Unverbindlich, wir melden uns in Kürze",
+    ctaTitle: "Bereit, jede Nachricht rentabel zu machen?",
+    howTitle: "So macht sie aus Angeboten Verkäufe",
+    howSub: "Vier automatische Schritte, vom Verstehen des Kunden bis zum Klick auf \"Kaufen\".",
     steps: [
-      { icon: "🧠", title: "Sabe com quem está a falar", desc: "Lê o histórico de compras, produtos vistos e conversas para saber o que cada cliente realmente quer. Acabaram-se as ofertas ao acaso." },
-      { icon: "🎯", title: "Escolhe a oferta que converte", desc: "Cruza cada perfil com o seu catálogo e propõe apenas o que tem real probabilidade de vender. Zero desperdício, zero mensagens fora do alvo." },
-      { icon: "⏰", title: "Espera o momento perfeito", desc: "Envia quando o cliente está ativo e recetivo, não quando lhe dá jeito. O timing certo pode duplicar as respostas." },
-      { icon: "🚫", title: "Protege a sua reputação", desc: "Limita frequência e volume por cliente: quem acabou de receber uma mensagem é deixado em paz. O seu WhatsApp continua a ser um canal que as pessoas querem ler." },
+      { icon: "🧠", title: "Sie weiß, mit wem sie spricht", desc: "Sie liest Kaufhistorie, angesehene Produkte und Gespräche, um zu wissen, was jeder Kunde wirklich will. Schluss mit zufällig verschickten Angeboten." },
+      { icon: "🎯", title: "Sie wählt das Angebot, das konvertiert", desc: "Sie gleicht jedes Profil mit deinem Katalog ab und schlägt nur vor, was eine echte Verkaufschance hat. Null Streuverlust, null Nachrichten am Ziel vorbei." },
+      { icon: "⏰", title: "Sie wartet auf den perfekten Moment", desc: "Sie sendet, wenn der Kunde aktiv und empfänglich ist, nicht wann es dir gerade passt. Das richtige Timing kann deine Antworten verdoppeln." },
+      { icon: "🚫", title: "Sie schützt deinen Ruf", desc: "Sie begrenzt Frequenz und Volumen pro Kunde: Wer gerade eine Nachricht bekommen hat, wird in Ruhe gelassen. Dein WhatsApp bleibt ein Kanal, den die Leute lesen wollen." },
     ],
-    featuresTitle: "Você manda, a IA trabalha",
-    featuresDesc: "Define o objetivo e a IA trata do resto. Você decide quanta liberdade dar: de uma proposta que aprova com um toque ao piloto automático total. Tudo registado, tudo sob controlo.",
+    featuresTitle: "Du hast das Sagen, die KI macht die Arbeit",
+    featuresDesc: "Du legst das Ziel fest, die KI kümmert sich um den Rest. Du entscheidest, wie viel Freiheit du ihr gibst: von einem Vorschlag, den du mit einem Tipp freigibst, bis zum vollen Autopiloten. Alles getrackt, alles unter Kontrolle.",
     features: [
-      "Segmentação automática: cada cliente no grupo certo, sem folhas de Excel",
-      "A IA sugere o que escrever a quem — você aprova e avança",
-      "Limite de frequência anti-spam: nunca mais clientes incomodados",
-      "Enviado à hora em que cada um abre mesmo o WhatsApp",
-      "Você decide: uma proposta para aprovar ou piloto automático",
-      "Aberturas, respostas e vendas medidas em tempo real",
+      "Automatische Segmentierung: jeder Kunde in der richtigen Gruppe, ohne Excel-Tabellen",
+      "Die KI schlägt vor, was du wem schreiben sollst — du gibst frei und los geht's",
+      "Anti-Spam-Frequenzlimit: nie wieder genervte Kunden",
+      "Gesendet zu der Uhrzeit, zu der jeder WhatsApp wirklich öffnet",
+      "Du entscheidest: ein Vorschlag zum Freigeben oder voller Autopilot",
+      "Öffnungen, Antworten und Verkäufe in Echtzeit gemessen",
     ],
-    metricsTitle: "Os números falam por si",
+    metricsTitle: "Die Zahlen sprechen für sich",
     metrics: [
-      { value: "+35%", label: "Conversões", sub: "vs. envios iguais para todos" },
-      { value: "-60%", label: "Cancelamentos", sub: "porque nunca parece spam" },
-      { value: "1:1", label: "À medida", sub: "uma oferta diferente para cada pessoa" },
-      { value: "0", label: "Spam", sub: "o travão automático trata disso por si" },
+      { value: "+35%", label: "Conversions", sub: "ggü. Einheitsnachrichten für alle" },
+      { value: "-60%", label: "Abmeldungen", sub: "weil es nie wie Spam wirkt" },
+      { value: "1:1", label: "Maßgeschneidert", sub: "ein anderes Angebot für jede Person" },
+      { value: "0", label: "Spam", sub: "der automatische Stopp erledigt das für dich" },
     ],
-    useCasesTitle: "Funciona para o seu negócio",
+    useCasesTitle: "Es funktioniert für dein Geschäft",
     useCases: [
-      { icon: "🛍️", title: "E-commerce e lojas", desc: "Recupere quem deixou o carrinho, com a oferta certa sobre o produto que já viu. Sem incomodar quem acabou de comprar." },
-      { icon: "🍽️", title: "Restaurantes e food", desc: "O menu do dia chega a quem tem fome exatamente àquela hora. Mais mesas, mais pedidos, zero mensagens ignoradas." },
-      { icon: "💇", title: "Serviços e salões", desc: "\"Está na hora de voltar\": o lembrete certo ao cliente certo, ajustado à frequência com que usa o seu serviço." },
-      { icon: "🎟️", title: "Eventos e assinaturas", desc: "Renovações e lugares de última hora oferecidos apenas a quem está realmente interessado, no momento em que diz sim." },
+      { icon: "🛍️", title: "E-Commerce & Shops", desc: "Hol dir Kunden zurück, die ihren Warenkorb verlassen haben, mit dem richtigen Angebot zum bereits angesehenen Produkt. Ohne die zu stören, die gerade bestellt haben." },
+      { icon: "🍽️", title: "Restaurants & Food", desc: "Das Tagesmenü erreicht genau die, die zu dieser Uhrzeit Hunger haben. Mehr Gäste, mehr Bestellungen, null ignorierte Nachrichten." },
+      { icon: "💇", title: "Dienstleistungen & Salons", desc: "\"Zeit für deinen nächsten Termin\": die richtige Erinnerung an den richtigen Kunden, abgestimmt darauf, wie oft er deinen Service nutzt." },
+      { icon: "🎟️", title: "Events & Mitgliedschaften", desc: "Verlängerungen und Last-Minute-Plätze nur denen angeboten, die wirklich interessiert sind, genau im Moment, in dem sie Ja sagen." },
     ],
   },
 }
@@ -203,92 +207,22 @@ export function SmartPushAiPage() {
       <SiteHeader />
 
       <main>
-        {/* Hero */}
-        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <Breadcrumbs items={[{ label: t.breadcrumb }]} hideVisual />
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
-            >
-              {/* Hero image */}
-              <div className="relative order-2 lg:order-1">
-                <div className="absolute -inset-4 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-40" />
-                <img
-                  src="/push1.png"
-                  alt="Smart AI push messaging on WhatsApp"
-                  className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/10 object-contain"
-                />
-              </div>
-              <div className="order-1 lg:order-2">
-                <span className="inline-block bg-green-400/10 text-green-300 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
-                  {t.badge}
-                </span>
-                <h1 className="text-4xl lg:text-6xl font-bold text-white mb-6 leading-tight whitespace-pre-line">
-                  {t.heroTitle}
-                </h1>
-                <p className="text-xl text-slate-400 mb-10 leading-relaxed">{t.heroSub}</p>
-                <Link
-                  to="/contact"
-                  className="inline-flex items-center gap-3 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
-                  style={{ background: '#25D366' }}
-                >
-                  <Zap className="h-5 w-5" />
-                  {t.cta}
-                </Link>
-              </div>
-            </motion.div>
-          </div>
-        </section>
+        <LandingHero
+          breadcrumb={t.breadcrumb}
+          badge={t.badge}
+          title={t.heroTitle}
+          subtitle={t.heroSub}
+          ctaLabel={t.cta}
+          image={{ src: "/push1.png", alt: "Smart AI push messaging on WhatsApp" }}
+        />
 
-        {/* Metrics */}
-        <section className="py-16 border-y border-white/10">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-white text-center mb-12">{t.metricsTitle}</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-              {t.metrics.map((m, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="text-center p-6 bg-slate-900/50 backdrop-blur rounded-2xl border border-white/10"
-                >
-                  <div className="text-4xl font-bold mb-2" style={{ color: '#25D366' }}>{m.value}</div>
-                  <div className="font-semibold text-white mb-1">{m.label}</div>
-                  <div className="text-sm text-slate-400">{m.sub}</div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <MetricsSection title={t.metricsTitle} metrics={t.metrics} />
 
         {/* How it Works */}
         <section className="py-20 bg-white/[0.02]">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-4">{t.howTitle}</h2>
-              <p className="text-xl text-slate-400 max-w-3xl mx-auto">{t.howSub}</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {t.steps.map((step, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="bg-slate-900/50 backdrop-blur rounded-2xl p-6 shadow-2xl border border-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                >
-                  <div className="text-4xl mb-4">{step.icon}</div>
-                  <h3 className="text-lg font-bold text-white mb-3">{step.title}</h3>
-                  <p className="text-sm text-slate-400 leading-relaxed">{step.desc}</p>
-                </motion.div>
-              ))}
-            </div>
+            <SectionHeader title={t.howTitle} subtitle={t.howSub} />
+            <StepCardGrid steps={t.steps} />
           </div>
         </section>
 
@@ -313,14 +247,7 @@ export function SmartPushAiPage() {
                   <div className="space-y-6 order-1 lg:order-2">
                     <h2 className="text-3xl lg:text-4xl font-bold text-white">{t.featuresTitle}</h2>
                     <p className="text-lg text-slate-400 leading-relaxed">{t.featuresDesc}</p>
-                    <ul className="space-y-3">
-                      {t.features.map((f, i) => (
-                        <li key={i} className="flex items-center gap-3 text-slate-300">
-                          <CheckCircle className="h-5 w-5 flex-shrink-0" style={{ color: '#25D366' }} />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
+                    <FeatureChecklist items={t.features} />
                   </div>
                 </div>
               </div>
@@ -332,38 +259,17 @@ export function SmartPushAiPage() {
         <section className="py-20 bg-white/[0.02]">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <h2 className="text-4xl font-bold text-white text-center mb-12">{t.useCasesTitle}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {t.useCases.map((uc, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: i % 2 === 0 ? -40 : 40 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className="flex gap-6 p-6 bg-slate-900/50 backdrop-blur rounded-2xl shadow-2xl border border-white/10 hover:shadow-lg transition-all"
-                >
-                  <div className="text-4xl flex-shrink-0">{uc.icon}</div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white mb-2">{uc.title}</h3>
-                    <p className="text-slate-400 leading-relaxed">{uc.desc}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+            <UseCaseGrid items={t.useCases} />
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="py-20 bg-gradient-to-br from-green-500 to-emerald-600">
-          <div className="max-w-3xl mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
-            <p className="text-xl text-green-100 mb-8">{t.ctaSub}</p>
-            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all" style={{ color: '#25D366' }}>
-              <Zap className="h-6 w-6" />
-              {t.cta}
-            </Link>
-          </div>
-        </section>
+        <CtaSection
+          title={t.ctaTitle}
+          subtitle={t.ctaSub}
+          ctaLabel={t.cta}
+          gradientClassName="from-green-500 to-emerald-600"
+          buttonClassName="text-[#25D366]"
+        />
       </main>
 
       <SiteFooter language={language} />

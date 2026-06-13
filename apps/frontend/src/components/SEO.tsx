@@ -7,7 +7,7 @@ interface SEOProps {
   image?: string
   url?: string
   type?: "website" | "article"
-  lang?: "it" | "en" | "es" | "pt" | "fr" | "ca"
+  lang?: "it" | "en" | "es" | "de" | "fr" | "ca"
   robots?: string
   hreflangs?: Array<{ lang: string; url: string }>
   /**
@@ -75,7 +75,7 @@ export function SEO({
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta property="og:site_name" content="eChatbot" />
-      <meta property="og:locale" content={lang === "it" ? "it_IT" : lang === "es" ? "es_ES" : lang === "pt" ? "pt_PT" : lang === "fr" ? "fr_FR" : lang === "ca" ? "ca_ES" : "en_US"} />
+      <meta property="og:locale" content={lang === "it" ? "it_IT" : lang === "es" ? "es_ES" : lang === "de" ? "de_DE" : lang === "fr" ? "fr_FR" : lang === "ca" ? "ca_ES" : "en_US"} />
 
       {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />

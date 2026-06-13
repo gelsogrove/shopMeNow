@@ -15,6 +15,7 @@
 
 import { PlanType, PrismaClient, TransactionType, Prisma, SubscriptionStatus } from "@echatbot/database"
 import logger from "../utils/logger"
+import { CREDIT_MIN_THRESHOLD } from "../application/services/workspace-access.service"
 
 export interface BillingInfo {
   planType: PlanType
@@ -265,8 +266,7 @@ export class SubscriptionBillingRepository {
     referenceType?: string
   ): Promise<{ success: boolean; newBalance: number; error?: string }> {
     // Feature 197: Credit can go negative up to -€10
-    const CREDIT_MIN_THRESHOLD = -10
-
+    // Single source of truth: imported from workspace-access.service (no local redefinition)
     try {
       return await this.prisma.$transaction(async (tx) => {
         // Get current balance with lock

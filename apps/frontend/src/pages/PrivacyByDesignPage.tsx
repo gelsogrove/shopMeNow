@@ -6,8 +6,11 @@ import { Zap, CheckCircle, Eye, Trash2, FileDown, QrCode, Smartphone, ShieldChec
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
+import { CtaSection } from "@/components/landing/CtaSection"
+import { PrivacyDataflowDiagram, type DataflowLabels } from "@/components/landing/PrivacyDataflowDiagram"
+import { SecurityLayersDiagram, type SecurityLayersLabels } from "@/components/landing/SecurityLayersDiagram"
 
-type Language = "it" | "en" | "es" | "pt"
+type Language = "it" | "en" | "es" | "de"
 
 const T = {
   it: {
@@ -62,6 +65,30 @@ const T = {
       { icon: Trash2, label: "Cancellazione", desc: "I dati di un cliente possono essere cancellati su richiesta, conversazioni incluse." },
       { icon: FileDown, label: "Esportazione", desc: "Le conversazioni di un cliente possono essere esportate su richiesta." },
     ],
+    dataflow: {
+      customer: "Cliente WhatsApp",
+      e2e: "Cifratura E2E",
+      channel: "canale cifrato",
+      instanceTitle: "La tua istanza dedicata",
+      instanceSub: "on-premise · i dati restano qui",
+      database: "Database",
+      knowledgeBase: "Knowledge base",
+      rag: "Ricerca RAG sui tuoi sistemi",
+      isolation: "Isolamento per workspace",
+      contextOut: "solo contesto necessario",
+      reply: "risposta",
+      llmTitle: "Provider LLM esterno",
+      noTraining: "no training",
+    },
+    layers: {
+      heading: "Difesa a più livelli",
+      layers: [
+        { title: "Trasporto cifrato", sub: "WhatsApp end-to-end", icon: "lock" },
+        { title: "Infrastruttura isolata", sub: "On-premise · per workspace", icon: "server" },
+        { title: "Accesso protetto", sub: "2FA · rate limiting", icon: "key" },
+        { title: "AI sotto controllo", sub: "Spenta sui dati sensibili", icon: "cpu" },
+      ],
+    },
   },
   en: {
     seoTitle: "Privacy by Design - Your Data Kept Safe | eChatbot",
@@ -115,6 +142,30 @@ const T = {
       { icon: Trash2, label: "Erasure", desc: "A customer's data can be deleted on request, conversations included." },
       { icon: FileDown, label: "Export", desc: "A customer's conversations can be exported on request." },
     ],
+    dataflow: {
+      customer: "WhatsApp customer",
+      e2e: "E2E encryption",
+      channel: "encrypted channel",
+      instanceTitle: "Your dedicated instance",
+      instanceSub: "on-premise · data stays here",
+      database: "Database",
+      knowledgeBase: "Knowledge base",
+      rag: "RAG search on your systems",
+      isolation: "Per-workspace isolation",
+      contextOut: "only necessary context",
+      reply: "reply",
+      llmTitle: "External LLM provider",
+      noTraining: "no training",
+    },
+    layers: {
+      heading: "Defense in depth",
+      layers: [
+        { title: "Encrypted transport", sub: "WhatsApp end-to-end", icon: "lock" },
+        { title: "Isolated infrastructure", sub: "On-premise · per workspace", icon: "server" },
+        { title: "Protected access", sub: "2FA · rate limiting", icon: "key" },
+        { title: "AI under control", sub: "Off on sensitive data", icon: "cpu" },
+      ],
+    },
   },
   es: {
     seoTitle: "Privacy by Design - Tus datos a salvo | eChatbot",
@@ -168,59 +219,107 @@ const T = {
       { icon: Trash2, label: "Supresión", desc: "Los datos de un cliente pueden eliminarse a petición, conversaciones incluidas." },
       { icon: FileDown, label: "Exportación", desc: "Las conversaciones de un cliente pueden exportarse a petición." },
     ],
+    dataflow: {
+      customer: "Cliente WhatsApp",
+      e2e: "Cifrado E2E",
+      channel: "canal cifrado",
+      instanceTitle: "Tu instancia dedicada",
+      instanceSub: "on-premise · los datos se quedan aquí",
+      database: "Base de datos",
+      knowledgeBase: "Knowledge base",
+      rag: "Búsqueda RAG en tus sistemas",
+      isolation: "Aislamiento por workspace",
+      contextOut: "solo el contexto necesario",
+      reply: "respuesta",
+      llmTitle: "Proveedor LLM externo",
+      noTraining: "sin training",
+    },
+    layers: {
+      heading: "Defensa en profundidad",
+      layers: [
+        { title: "Transporte cifrado", sub: "WhatsApp end-to-end", icon: "lock" },
+        { title: "Infraestructura aislada", sub: "On-premise · por workspace", icon: "server" },
+        { title: "Acceso protegido", sub: "2FA · rate limiting", icon: "key" },
+        { title: "IA bajo control", sub: "Apagada en datos sensibles", icon: "cpu" },
+      ],
+    },
   },
-  pt: {
-    seoTitle: "Privacy by Design - Os teus dados em segurança | eChatbot",
-    ctaTitle: "A privacidade dos seus clientes está protegida",
-    ctaSub: "Solicite uma demo e mostramos-lhe exatamente como tratamos os dados.",
-    seoDesc: "On-premise numa instância dedicada, mensagens cifradas ponta a ponta pelo WhatsApp, IA desativada em dados sensíveis, rate limiting anti-abuso e recolha mínima de dados.",
-    seoKeys: "privacidade chatbot whatsapp, chatbot on-premise, cifragem ponta a ponta whatsapp, rate limiting, minimização de dados, segurança dados e-commerce",
+  de: {
+    seoTitle: "Privacy by Design - Deine Daten sicher | eChatbot",
+    ctaTitle: "Die Privatsphäre deiner Kunden ist geschützt",
+    ctaSub: "Fordere eine Demo an und wir zeigen dir genau, wie wir mit Daten umgehen.",
+    seoDesc: "On-Premise auf einer dedizierten Instanz, Ende-zu-Ende-verschlüsselte Nachrichten über WhatsApp, KI bei sensiblen Daten deaktiviert, Anti-Missbrauch-Rate-Limiting und minimale Datenerfassung.",
+    seoKeys: "privacy whatsapp chatbot, on-premise chatbot, whatsapp ende-zu-ende-verschlüsselung, rate limiting, datenminimierung, datensicherheit e-commerce",
     breadcrumb: "Privacy by Design",
     badge: "Privacy by Design",
-    heroTitle: "Privacy by design,\nnão só palavras",
-    heroSub: "Sem promessas de marketing. Os teus dados ficam na tua instância dedicada, as mensagens viajam cifradas ponta a ponta no WhatsApp e a IA nunca toca em dados sensíveis. Só recolhemos o necessário para responder aos teus clientes.",
-    cta: "Solicitar Demo",
-    principlesTitle: "Como protegemos os teus dados",
+    heroTitle: "Privacy by Design,\nnicht nur Worte",
+    heroSub: "Keine Marketing-Versprechen. Deine Daten bleiben auf deiner dedizierten Instanz, die Nachrichten reisen Ende-zu-Ende-verschlüsselt über WhatsApp und die KI berührt niemals sensible Daten. Wir erfassen nur, was nötig ist, um deinen Kunden zu antworten.",
+    cta: "Demo anfordern",
+    principlesTitle: "Wie wir deine Daten schützen",
     principles: [
-      { icon: "🏠", title: "On-premise, instância dedicada", desc: "A tua base de dados e a tua knowledge base residem na tua instância dedicada. Para gerar as respostas, apenas o contexto necessário é enviado a um fornecedor LLM externo que não usa os teus dados para treinar os seus modelos. Os dados não se misturam com outros nem são vendidos a terceiros." },
-      { icon: "🔒", title: "Cifragem ponta a ponta do WhatsApp", desc: "As mensagens viajam pelo canal cifrado peer-to-peer do WhatsApp: ninguém as interceta em trânsito." },
-      { icon: "📲", title: "Ligação por código QR", desc: "Ligas o teu número lendo um código QR. As credenciais do teu WhatsApp não são guardadas por nós." },
-      { icon: "🚦", title: "Rate limiting anti-abuso", desc: "Webhook, pedidos e checkout estão protegidos por limites de frequência contra spam, força bruta e ataques DoS." },
-      { icon: "🤖", title: "IA desligada em dados sensíveis", desc: "Quando se fala de faturas ou se passa a um operador, a IA desativa-se: os dados sensíveis não passam pelo modelo." },
-      { icon: "🧱", title: "Isolamento por workspace", desc: "Cada negócio está isolado: nenhum dado atravessa os limites de um cliente para outro." },
-      { icon: "🖥️", title: "Opção 100% local", desc: "Se queres o máximo controlo, toda a IA pode correr localmente com modelos open-source como o Gemma através do Ollama: nenhum dado sai da tua infraestrutura. Requer servidores dedicados de alto desempenho." },
+      { icon: "🏠", title: "On-Premise, dedizierte Instanz", desc: "Deine Datenbank und deine Knowledge Base liegen auf deiner dedizierten Instanz. Um Antworten zu generieren, wird nur der notwendige Kontext an einen externen LLM-Anbieter gesendet, der deine Daten nicht zum Trainieren seiner Modelle nutzt. Die Daten landen weder in einem gemeinsamen Topf noch werden sie an Dritte verkauft." },
+      { icon: "🔒", title: "Ende-zu-Ende-Verschlüsselung von WhatsApp", desc: "Die Nachrichten reisen über den verschlüsselten Peer-to-Peer-Kanal von WhatsApp: niemand fängt sie unterwegs ab." },
+      { icon: "📲", title: "Verbindung per QR-Code", desc: "Du verbindest deine Nummer, indem du einen QR-Code scannst. Die Zugangsdaten deines WhatsApp werden von uns nicht gespeichert." },
+      { icon: "🚦", title: "Anti-Missbrauch-Rate-Limiting", desc: "Webhook, Bestellungen und Checkout sind durch Frequenzlimits gegen Spam, Brute Force und DoS-Angriffe geschützt." },
+      { icon: "🤖", title: "KI bei sensiblen Daten ausgeschaltet", desc: "Wenn es um Rechnungen geht oder an einen Operator übergeben wird, schaltet sich die KI ab: sensible Daten gelangen nicht zum Modell." },
+      { icon: "🧱", title: "Isolierung pro Workspace", desc: "Jedes Geschäft ist isoliert: kein Datum überschreitet die Grenze von einem Kunden zum anderen." },
+      { icon: "🖥️", title: "100%-lokale Option", desc: "Wenn du maximale Kontrolle willst, kann die gesamte KI lokal mit Open-Source-Modellen wie Gemma über Ollama laufen: kein Datum verlässt deine Infrastruktur. Erfordert dedizierte, leistungsstarke Server." },
     ],
-    complianceTitle: "Menos dados, menos risco",
-    complianceDesc: "Só recolhemos os dados necessários para o serviço funcionar: o número de WhatsApp do cliente e a conversa. A tua base de dados e knowledge base residem na tua instância; para gerar as respostas, o contexto necessário é enviado a um fornecedor LLM externo que não o usa para treinar os seus modelos. Sem rastreio publicitário, sem perfis vendidos.",
+    complianceTitle: "Weniger Daten, weniger Risiko",
+    complianceDesc: "Wir erfassen nur die Daten, die nötig sind, damit der Dienst funktioniert: die WhatsApp-Nummer des Kunden und das Gespräch. Deine Datenbank und Knowledge Base liegen auf deiner Instanz; um Antworten zu generieren, wird der notwendige Kontext an einen externen LLM-Anbieter gesendet, der ihn nicht zum Trainieren seiner Modelle nutzt. Kein Werbe-Tracking, keine verkauften Profile.",
     complianceItems: [
-      { norm: "On-premise", region: "A tua instância dedicada", status: "✅ Ativo", features: ["Dados e knowledge base no teu ambiente", "Pesquisa RAG executada nos teus sistemas", "Respostas geradas via um fornecedor LLM externo (sem treino com os teus dados)", "Sem perfis vendidos a terceiros", "Eliminação a pedido"] },
+      { norm: "On-Premise", region: "Deine dedizierte Instanz", status: "✅ Aktiv", features: ["Daten und Knowledge Base in deiner Umgebung", "RAG-Suche läuft auf deinen Systemen", "Antworten über einen externen LLM-Anbieter generiert (kein Training mit deinen Daten)", "Keine an Dritte verkauften Profile", "Löschung auf Anfrage"] },
     ],
-    techTitle: "Medidas de segurança concretas",
+    techTitle: "Konkrete Sicherheitsmaßnahmen",
     techFeatures: [
-      "Ligação ao WhatsApp por código QR, sem guardar as credenciais do teu número",
-      "Mensagens cifradas ponta a ponta pelo WhatsApp (peer-to-peer)",
-      "Alojamento on-premise em instância dedicada: os dados ficam no teu ambiente",
-      "Base de dados e knowledge base on-premise; as respostas de IA são geradas por um fornecedor LLM externo que recebe apenas o contexto necessário e não treina com os teus dados",
-      "Isolamento por workspace: cada consulta filtra por negócio, sem dados partilhados entre tenants",
-      "Rate limiting em webhook, pedidos públicos e checkout contra spam e DoS",
-      "IA desativada automaticamente em faturas e passagem para operador",
-      "Recolha mínima de dados: apenas número e conversa, sem rastreio publicitário",
-      "Autenticação de dois fatores (2FA TOTP) para o acesso ao painel",
-      "Opção 100% local: modelos open-source como o Gemma executados via Ollama na tua infraestrutura, sem dados para fornecedores externos (requer servidores de alto desempenho)",
+      "Verbindung zu WhatsApp per QR-Code, ohne die Zugangsdaten deiner Nummer zu speichern",
+      "Nachrichten Ende-zu-Ende-verschlüsselt durch WhatsApp (Peer-to-Peer)",
+      "On-Premise-Hosting auf einer dedizierten Instanz: die Daten bleiben in deiner Umgebung",
+      "Datenbank und Knowledge Base on-premise; die KI-Antworten werden von einem externen LLM-Anbieter generiert, der nur den notwendigen Kontext erhält und nicht mit deinen Daten trainiert",
+      "Isolierung pro Workspace: jede Abfrage filtert nach Geschäft, keine zwischen Tenants geteilten Daten",
+      "Rate Limiting bei Webhook, öffentlichen Bestellungen und Checkout gegen Spam und DoS",
+      "KI automatisch deaktiviert bei Rechnungen und Übergabe an einen Operator",
+      "Minimale Datenerfassung: nur Nummer und Gespräch, kein Werbe-Tracking",
+      "Zwei-Faktor-Authentifizierung (2FA TOTP) für den Zugang zum Dashboard",
+      "100%-lokale Option: Open-Source-Modelle wie Gemma über Ollama auf deiner Infrastruktur ausgeführt, keine Daten an externe Anbieter (erfordert leistungsstarke Server)",
     ],
-    twoFaTitle: "Autenticação de Dois Fatores (2FA)",
-    twoFaDesc: "Proteja o acesso ao painel com a verificação em dois passos. Escaneie o código QR com o seu app de autenticação (Google Authenticator, Authy, etc.) para adicionar uma camada extra de segurança à sua conta.",
+    twoFaTitle: "Zwei-Faktor-Authentifizierung (2FA)",
+    twoFaDesc: "Schütze den Zugang zum Dashboard mit der Verifizierung in zwei Schritten. Scanne den QR-Code mit deiner Authenticator-App (Google Authenticator, Authy usw.), um deinem Konto eine zusätzliche Sicherheitsebene hinzuzufügen.",
     twoFaFeatures: [
-      { icon: QrCode, label: "Configuração com QR Code", desc: "Configuração imediata: escaneie o código QR com o seu app de autenticação preferido para ativar a 2FA em segundos." },
-      { icon: Smartphone, label: "Compatível com apps Authenticator", desc: "Compatível com Google Authenticator, Authy, Microsoft Authenticator e todos os apps TOTP padrão." },
-      { icon: ShieldCheck, label: "Proteção de acesso garantida", desc: "Mesmo que a sua senha seja comprometida, a sua conta permanece protegida. Códigos temporários de 6 dígitos com expiração de 30 segundos." },
+      { icon: QrCode, label: "Einrichtung mit QR-Code", desc: "Sofortige Einrichtung: scanne den QR-Code mit deiner bevorzugten Authenticator-App, um die 2FA in Sekunden zu aktivieren." },
+      { icon: Smartphone, label: "Authenticator-App kompatibel", desc: "Kompatibel mit Google Authenticator, Authy, Microsoft Authenticator und allen Standard-TOTP-Apps." },
+      { icon: ShieldCheck, label: "Garantierter Zugangsschutz", desc: "Selbst wenn dein Passwort kompromittiert wird, bleibt dein Konto geschützt. Temporäre 6-stellige Codes mit 30 Sekunden Ablaufzeit." },
     ],
-    rightsTitle: "Os direitos dos teus clientes",
+    rightsTitle: "Die Rechte deiner Kunden",
     rights: [
-      { icon: Eye, label: "Acesso aos dados", desc: "A pedido podes recuperar todas as conversas e dados de um cliente." },
-      { icon: Trash2, label: "Eliminação", desc: "Os dados de um cliente podem ser eliminados a pedido, conversas incluídas." },
-      { icon: FileDown, label: "Exportação", desc: "As conversas de um cliente podem ser exportadas a pedido." },
+      { icon: Eye, label: "Datenzugriff", desc: "Auf Anfrage kannst du alle Gespräche und Daten eines Kunden abrufen." },
+      { icon: Trash2, label: "Löschung", desc: "Die Daten eines Kunden können auf Anfrage gelöscht werden, Gespräche inbegriffen." },
+      { icon: FileDown, label: "Export", desc: "Die Gespräche eines Kunden können auf Anfrage exportiert werden." },
     ],
+    dataflow: {
+      customer: "WhatsApp-Kunde",
+      e2e: "E2E-Verschlüsselung",
+      channel: "verschlüsselter Kanal",
+      instanceTitle: "Deine dedizierte Instanz",
+      instanceSub: "On-Premise · Daten bleiben hier",
+      database: "Datenbank",
+      knowledgeBase: "Knowledge Base",
+      rag: "RAG-Suche auf deinen Systemen",
+      isolation: "Isolierung pro Workspace",
+      contextOut: "nur nötiger Kontext",
+      reply: "Antwort",
+      llmTitle: "Externer LLM-Anbieter",
+      noTraining: "kein Training",
+    },
+    layers: {
+      heading: "Mehrschichtige Verteidigung",
+      layers: [
+        { title: "Verschlüsselter Transport", sub: "WhatsApp Ende-zu-Ende", icon: "lock" },
+        { title: "Isolierte Infrastruktur", sub: "On-Premise · pro Workspace", icon: "server" },
+        { title: "Geschützter Zugang", sub: "2FA · Rate Limiting", icon: "key" },
+        { title: "KI unter Kontrolle", sub: "Aus bei sensiblen Daten", icon: "cpu" },
+      ],
+    },
   },
 }
 
@@ -259,7 +358,9 @@ export function PrivacyByDesignPage() {
               </div>
               <div className="relative">
                 <div className="absolute -inset-4 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-40" />
-                <img src="/survery-secuiry.png" alt="Privacy Architecture" className="relative w-full h-auto rounded-3xl shadow-2xl border border-white/10 object-contain" />
+                <div className="relative rounded-3xl border border-white/10 bg-slate-900/40 p-4 shadow-2xl">
+                  <PrivacyDataflowDiagram labels={t.dataflow as DataflowLabels} />
+                </div>
               </div>
             </motion.div>
           </div>
@@ -269,7 +370,7 @@ export function PrivacyByDesignPage() {
         <section className="py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <h2 className="text-4xl font-bold text-white text-center mb-14">{t.principlesTitle}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {t.principles.map((p, i) => (
                 <motion.div
                   key={i}
@@ -277,7 +378,7 @@ export function PrivacyByDesignPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.09 }}
-                  className="p-6 bg-slate-900/50 backdrop-blur rounded-2xl shadow-2xl border border-white/10 hover:shadow-lg hover:-translate-y-1 transition-all"
+                  className="h-full p-6 bg-slate-900/50 backdrop-blur rounded-2xl shadow-2xl border border-white/10 hover:shadow-lg hover:-translate-y-1 transition-all"
                 >
                   <div className="text-3xl mb-3">{p.icon}</div>
                   <h3 className="text-lg font-bold text-white mb-2">{p.title}</h3>
@@ -348,13 +449,15 @@ export function PrivacyByDesignPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
               <div className="relative order-2 lg:order-1">
                 <div className="absolute -inset-4 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-2xl blur-xl opacity-40" />
-                <img src="/survery-secuiry.png" alt="Security Architecture" className="relative w-full h-auto rounded-2xl shadow-2xl border border-white/10 object-contain" />
+                <div className="relative rounded-2xl border border-white/10 bg-slate-900/40 p-4 shadow-2xl">
+                  <SecurityLayersDiagram labels={t.layers as SecurityLayersLabels} />
+                </div>
               </div>
               <div className="order-1 lg:order-2">
                 <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">{t.techTitle}</h2>
-                <ul className="space-y-3">
+                <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-3">
                   {t.techFeatures.map((f, i) => (
-                    <li key={i} className="flex items-start gap-3 text-slate-300">
+                    <li key={i} className="flex items-start gap-3 text-slate-300 text-sm leading-relaxed">
                       <CheckCircle className="h-5 w-5 text-[#25D366] flex-shrink-0 mt-0.5" />
                       {f}
                     </li>
@@ -424,17 +527,14 @@ export function PrivacyByDesignPage() {
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="py-20 bg-gradient-to-br from-green-600 to-emerald-600">
-          <div className="max-w-3xl mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
-            <p className="text-xl text-green-50 mb-8">{t.ctaSub}</p>
-            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-green-700 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
-              <Zap className="h-6 w-6" />
-              {t.cta}
-            </Link>
-          </div>
-        </section>
+        <CtaSection
+          title={t.ctaTitle}
+          subtitle={t.ctaSub}
+          ctaLabel={t.cta}
+          gradientClassName="from-green-600 to-emerald-600"
+          buttonClassName="text-green-700"
+          subtitleClassName="text-green-50"
+        />
       </main>
 
       <SiteFooter language={language} />

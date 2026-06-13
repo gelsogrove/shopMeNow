@@ -7,13 +7,14 @@ import { ReactNode, useState } from "react"
 interface PageLayoutProps {
   children: ReactNode
   selectedChat?: Chat | null
+  fullscreen?: boolean
 }
 
 /**
  * Standard layout wrapper for all main pages in the application
  * Ensures consistent page structure and spacing
  */
-export function PageLayout({ children, selectedChat }: PageLayoutProps) {
+export function PageLayout({ children, selectedChat, fullscreen = false }: PageLayoutProps) {
   const { workspace } = useWorkspace()
   const [showPlaygroundDialog, setShowPlaygroundDialog] =
     useState<boolean>(false)
@@ -31,7 +32,7 @@ export function PageLayout({ children, selectedChat }: PageLayoutProps) {
   }
 
   return (
-    <div className="container mx-auto px-4 pt-4 pb-4 relative">
+    <div className={fullscreen ? "flex flex-col h-full w-full relative" : "container mx-auto px-4 pt-4 pb-4 relative"}>
       {children}
 
       {/* Playground Chat Modal */}

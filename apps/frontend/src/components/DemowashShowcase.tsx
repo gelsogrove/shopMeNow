@@ -10,16 +10,16 @@
 // (real WhatsApp pattern) — EXCEPT the "Promo Push" tab, which is a business
 // initiated marketing campaign, so the bot writes first by design.
 //
-// LANGUAGE: fully translated to the public-site languages (it / en / es / pt),
+// LANGUAGE: fully translated to the public-site languages (it / en / es / de),
 // driven by the `lang` prop. Unsupported codes (fr / ca) fall back to Spanish.
 // The Arabic tab keeps its Arabic bubbles in every language (it is the live
 // proof that the bot speaks Arabic + RTL); only its labels/captions translate.
 // ----------------------------------------------------------------------------
 import { useEffect, useMemo, useRef, useState } from "react"
 
-type Lang = "it" | "en" | "es" | "pt"
+type Lang = "it" | "en" | "es" | "de"
 const norm = (l: string): Lang =>
-  (["it", "en", "es", "pt"].includes(l) ? l : "es") as Lang
+  (["it", "en", "es", "de"].includes(l) ? l : "es") as Lang
 
 // --- static HTML snippet builders (rendered as-is) -------------------------
 const time = (t: string) => `<span class="dws-t">${t}</span>`
@@ -49,188 +49,188 @@ const TRY: Record<Lang, string> = {
   es: "Pruébalo ahora →",
   it: "Provalo ora →",
   en: "Try it now →",
-  pt: "Experimenta agora →",
+  de: "Jetzt ausprobieren →",
 }
-const ONLINE: Record<Lang, string> = { es: "en línea", it: "online", en: "online", pt: "online" }
-const TYPING: Record<Lang, string> = { es: "escribiendo…", it: "sta scrivendo…", en: "typing…", pt: "a escrever…" }
-const RECORDING: Record<Lang, string> = { es: "grabando audio…", it: "registra audio…", en: "recording…", pt: "a gravar…" }
-const TODAY: Record<Lang, string> = { es: "Hoy", it: "Oggi", en: "Today", pt: "Hoje" }
+const ONLINE: Record<Lang, string> = { es: "en línea", it: "online", en: "online", de: "online" }
+const TYPING: Record<Lang, string> = { es: "escribiendo…", it: "sta scrivendo…", en: "typing…", de: "schreibt…" }
+const RECORDING: Record<Lang, string> = { es: "grabando audio…", it: "registra audio…", en: "recording…", de: "nimmt Audio auf…" }
+const TODAY: Record<Lang, string> = { es: "Hoy", it: "Oggi", en: "Today", de: "Heute" }
 
 // Builds the laundry scenario list translated into `lang`. One source of
 // truth: every string carries its 4 translations inline via L().
 function buildLaundryScenes(lang: Lang): Scene[] {
-  const L = (es: string, it: string, en: string, pt: string) =>
-    ({ es, it, en, pt }[lang] ?? es)
+  const L = (es: string, it: string, en: string, de: string) =>
+    ({ es, it, en, de }[lang] ?? es)
 
   return [
     {
       id: "welcome",
-      label: "👋 " + L("Bienvenida", "Benvenuto", "Welcome", "Boas-vindas"),
-      sub: L("Recibe a cada cliente nuevo y lo guía al instante", "Accoglie ogni nuovo cliente e lo guida da subito", "Greets every new customer and guides them instantly", "Recebe cada novo cliente e orienta-o de imediato"),
+      label: "👋 " + L("Bienvenida", "Benvenuto", "Welcome", "Willkommen"),
+      sub: L("Recibe a cada cliente nuevo y lo guía al instante", "Accoglie ogni nuovo cliente e lo guida da subito", "Greets every new customer and guides them instantly", "Begrüßt jeden neuen Kunden und führt ihn sofort"),
       caps: [
-        ["👋", L("Saludo automático", "Saluto automatico", "Auto greeting", "Saudação automática"), L("Recibe a cada cliente.", "Accoglie ogni cliente.", "Greets every customer.", "Recebe cada cliente.")],
-        ["🎬", L("Vídeo de presentación", "Video di presentazione", "Intro video", "Vídeo de apresentação"), L("Directo en el chat.", "Direttamente in chat.", "Right in the chat.", "Direto no chat.")],
-        ["🚀", L("Guía a la acción", "Guida all'azione", "Drives to action", "Leva à ação"), L("Lleva al siguiente paso.", "Porta al passo dopo.", "To the next step.", "Para o passo seguinte.")],
+        ["👋", L("Saludo automático", "Saluto automatico", "Auto greeting", "Automatische Begrüßung"), L("Recibe a cada cliente.", "Accoglie ogni cliente.", "Greets every customer.", "Begrüßt jeden Kunden.")],
+        ["🎬", L("Vídeo de presentación", "Video di presentazione", "Intro video", "Vorstellungsvideo"), L("Directo en el chat.", "Direttamente in chat.", "Right in the chat.", "Direkt im Chat.")],
+        ["🚀", L("Guía a la acción", "Guida all'azione", "Drives to action", "Führt zur Aktion"), L("Lleva al siguiente paso.", "Porta al passo dopo.", "To the next step.", "Zum nächsten Schritt.")],
       ],
       s: [
-        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Hola 👋 Me interesa abrir una lavandería en franquicia", "Ciao 👋 Vorrei aprire una lavanderia in franchising", "Hi 👋 I'd like to open a laundry franchise", "Olá 👋 Gostaria de abrir uma lavandaria em franquia") + time("12:53") },
-        { w: "in", cp: 0, ty: 1000, h: L("¡Hola! 👋 Soy el asistente de Demowash 😊", "Ciao! 👋 Sono l'assistente di Demowash 😊", "Hi! 👋 I'm the Demowash assistant 😊", "Olá! 👋 Sou o assistente da Demowash 😊") + time("12:53") },
-        { w: "in", cp: 1, ty: 800, h: L("Te dejo una breve presentación 👇", "Ti lascio una breve presentazione 👇", "Here's a quick intro 👇", "Deixo uma breve apresentação 👇") + time("12:53") },
-        { w: "in", cp: 1, ty: 1100, h: ytCard(L("Demowash · Franquicia", "Demowash · Franchising", "Demowash · Franchise", "Demowash · Franquia")) + time("12:54") },
-        { w: "in", cp: 2, ty: 1100, h: L("¿Quieres una consultoría gratuita? 🚀", "Vuoi una consulenza gratuita? 🚀", "Want a free consultation? 🚀", "Queres uma consultoria gratuita? 🚀") + time("12:54") },
+        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Hola 👋 Me interesa abrir una lavandería en franquicia", "Ciao 👋 Vorrei aprire una lavanderia in franchising", "Hi 👋 I'd like to open a laundry franchise", "Hallo 👋 Ich möchte einen Waschsalon als Franchise eröffnen") + time("12:53") },
+        { w: "in", cp: 0, ty: 1000, h: L("¡Hola! 👋 Soy el asistente de Demowash 😊", "Ciao! 👋 Sono l'assistente di Demowash 😊", "Hi! 👋 I'm the Demowash assistant 😊", "Hallo! 👋 Ich bin der Demowash-Assistent 😊") + time("12:53") },
+        { w: "in", cp: 1, ty: 800, h: L("Te dejo una breve presentación 👇", "Ti lascio una breve presentazione 👇", "Here's a quick intro 👇", "Hier eine kurze Vorstellung 👇") + time("12:53") },
+        { w: "in", cp: 1, ty: 1100, h: ytCard(L("Demowash · Franquicia", "Demowash · Franchising", "Demowash · Franchise", "Demowash · Franchise")) + time("12:54") },
+        { w: "in", cp: 2, ty: 1100, h: L("¿Quieres una consultoría gratuita? 🚀", "Vuoi una consulenza gratuita? 🚀", "Want a free consultation? 🚀", "Möchtest du eine kostenlose Beratung? 🚀") + time("12:54") },
       ],
     },
     {
       id: "cita",
-      label: "🗓️ " + L("Pedir cita", "Prenota", "Book a call", "Agendar"),
-      sub: L("Agenda una consultoría de franquicia sin operadores", "Prenota una consulenza di franchising senza operatori", "Books a franchise consultation with no operators", "Agenda uma consultoria de franquia sem operadores"),
+      label: "🗓️ " + L("Pedir cita", "Prenota", "Book a call", "Termin buchen"),
+      sub: L("Agenda una consultoría de franquicia sin operadores", "Prenota una consulenza di franchising senza operatori", "Books a franchise consultation with no operators", "Bucht eine Franchise-Beratung ganz ohne Mitarbeiter"),
       caps: [
-        ["🗓️", L("Agenda citas solo", "Prenota da solo", "Books on its own", "Agenda sozinho"), L("Sin operador.", "Senza operatore.", "No operator.", "Sem operador.")],
-        ["📝", L("Recoge los datos", "Raccoglie i dati", "Collects the data", "Recolhe os dados"), L("Nombre, email, ciudad.", "Nome, email, città.", "Name, email, city.", "Nome, email, cidade.")],
-        ["📅", L("Conectado al calendario", "Collegato al calendario", "Calendar-connected", "Ligado ao calendário"), L("Crea el evento.", "Crea l'evento.", "Creates the event.", "Cria o evento.")],
-        ["🔗", L("Envía Zoom + email", "Invia Zoom + email", "Sends Zoom + email", "Envia Zoom + email"), L("Confirmación auto.", "Conferma automatica.", "Auto confirmation.", "Confirmação auto.")],
+        ["🗓️", L("Agenda citas solo", "Prenota da solo", "Books on its own", "Bucht selbstständig"), L("Sin operador.", "Senza operatore.", "No operator.", "Ohne Mitarbeiter.")],
+        ["📝", L("Recoge los datos", "Raccoglie i dati", "Collects the data", "Erfasst die Daten"), L("Nombre, email, ciudad.", "Nome, email, città.", "Name, email, city.", "Name, E-Mail, Stadt.")],
+        ["📅", L("Conectado al calendario", "Collegato al calendario", "Calendar-connected", "Mit Kalender verbunden"), L("Crea el evento.", "Crea l'evento.", "Creates the event.", "Erstellt den Termin.")],
+        ["🔗", L("Envía Zoom + email", "Invia Zoom + email", "Sends Zoom + email", "Sendet Zoom + E-Mail"), L("Confirmación auto.", "Conferma automatica.", "Auto confirmation.", "Auto-Bestätigung.")],
       ],
       s: [
-        { w: "out", cp: 0, pre: 300, ty: 1100, h: L("Me gustaría abrir una lavandería en Sitges. ¿Tenéis franquicia?", "Vorrei aprire una lavanderia a Sitges. Avete il franchising?", "I'd like to open a laundry in Sitges. Do you offer a franchise?", "Gostaria de abrir uma lavandaria em Sitges. Têm franquia?") + time("12:53") },
-        { w: "in", cp: 0, ty: 1100, h: L("¡Claro! Ofrecemos una consultoría gratuita. ¿La agendamos?", "Certo! Offriamo una consulenza gratuita. La prenotiamo?", "Of course! We offer a free consultation. Shall we book it?", "Claro! Oferecemos uma consultoria gratuita. Agendamos?") + time("12:54") },
-        { w: "out", cp: 1, ty: 500, h: L("Sí, perfecto", "Sì, volentieri", "Yes, please", "Sim, claro") + time("12:54") },
-        { w: "in", cp: 1, ty: 700, h: L("Genial. ¿Cómo te llamas?", "Perfetto. Come ti chiami?", "Great. What's your name?", "Ótimo. Como te chamas?") + time("12:54") },
+        { w: "out", cp: 0, pre: 300, ty: 1100, h: L("Me gustaría abrir una lavandería en Sitges. ¿Tenéis franquicia?", "Vorrei aprire una lavanderia a Sitges. Avete il franchising?", "I'd like to open a laundry in Sitges. Do you offer a franchise?", "Ich möchte einen Waschsalon in Sitges eröffnen. Bietet ihr Franchise an?") + time("12:53") },
+        { w: "in", cp: 0, ty: 1100, h: L("¡Claro! Ofrecemos una consultoría gratuita. ¿La agendamos?", "Certo! Offriamo una consulenza gratuita. La prenotiamo?", "Of course! We offer a free consultation. Shall we book it?", "Klar! Wir bieten eine kostenlose Beratung an. Sollen wir einen Termin vereinbaren?") + time("12:54") },
+        { w: "out", cp: 1, ty: 500, h: L("Sí, perfecto", "Sì, volentieri", "Yes, please", "Ja, gerne") + time("12:54") },
+        { w: "in", cp: 1, ty: 700, h: L("Genial. ¿Cómo te llamas?", "Perfetto. Come ti chiami?", "Great. What's your name?", "Super. Wie heißt du?") + time("12:54") },
         { w: "out", cp: 1, ty: 700, h: "Marco Rossi" + time("12:54") },
-        { w: "in", cp: 1, ty: 700, h: L("¿Cuál es tu email?", "Qual è la tua email?", "What's your email?", "Qual é o teu email?") + time("12:54") },
+        { w: "in", cp: 1, ty: 700, h: L("¿Cuál es tu email?", "Qual è la tua email?", "What's your email?", "Wie lautet deine E-Mail?") + time("12:54") },
         { w: "out", cp: 1, ty: 800, h: "marco.rossi@email.com" + time("12:54") },
-        { w: "in", cp: 1, ty: 700, h: L("¿En qué ciudad quieres abrir?", "In quale città vuoi aprire?", "Which city do you want to open in?", "Em que cidade queres abrir?") + time("12:54") },
+        { w: "in", cp: 1, ty: 700, h: L("¿En qué ciudad quieres abrir?", "In quale città vuoi aprire?", "Which city do you want to open in?", "In welcher Stadt möchtest du eröffnen?") + time("12:54") },
         { w: "out", cp: 1, ty: 500, h: "Sitges" + time("12:54") },
-        { w: "in", cp: 2, ty: 1300, h: L("Estos son los horarios disponibles: 1) Lun 10:00 · 2) Lun 15:00 · 3) Mar 11:00. ¿Cuál prefieres? (1/2/3)", "Ecco gli orari disponibili: 1) Lun 10:00 · 2) Lun 15:00 · 3) Mar 11:00. Quale preferisci? (1/2/3)", "Here are the available slots: 1) Mon 10:00 · 2) Mon 15:00 · 3) Tue 11:00. Which do you prefer? (1/2/3)", "Estes são os horários disponíveis: 1) Seg 10:00 · 2) Seg 15:00 · 3) Ter 11:00. Qual preferes? (1/2/3)") + time("12:54") },
+        { w: "in", cp: 2, ty: 1300, h: L("Estos son los horarios disponibles: 1) Lun 10:00 · 2) Lun 15:00 · 3) Mar 11:00. ¿Cuál prefieres? (1/2/3)", "Ecco gli orari disponibili: 1) Lun 10:00 · 2) Lun 15:00 · 3) Mar 11:00. Quale preferisci? (1/2/3)", "Here are the available slots: 1) Mon 10:00 · 2) Mon 15:00 · 3) Tue 11:00. Which do you prefer? (1/2/3)", "Hier die verfügbaren Termine: 1) Mo 10:00 · 2) Mo 15:00 · 3) Di 11:00. Welcher passt dir? (1/2/3)") + time("12:54") },
         { w: "out", cp: 2, ty: 500, h: "3" + time("12:55") },
-        { w: "psys", cp: 2, hold: 1500, h: L("Creando la cita…", "Sto creando l'appuntamento…", "Creating the appointment…", "A criar a marcação…") },
-        { w: "in", cp: 3, ty: 1300, h: L("✅ ¡Cita confirmada! Mar 11 jun · 11:00. Zoom + calendario por email 👋", "✅ Appuntamento confermato! Mar 11 giu · 11:00. Zoom + calendario via email 👋", "✅ Booked! Tue Jun 11 · 11:00. Zoom + calendar by email 👋", "✅ Marcação confirmada! Ter 11 jun · 11:00. Zoom + calendário por email 👋") + time("12:55") },
+        { w: "psys", cp: 2, hold: 1500, h: L("Creando la cita…", "Sto creando l'appuntamento…", "Creating the appointment…", "Termin wird erstellt…") },
+        { w: "in", cp: 3, ty: 1300, h: L("✅ ¡Cita confirmada! Mar 11 jun · 11:00. Zoom + calendario por email 👋", "✅ Appuntamento confermato! Mar 11 giu · 11:00. Zoom + calendario via email 👋", "✅ Booked! Tue Jun 11 · 11:00. Zoom + calendar by email 👋", "✅ Termin bestätigt! Di 11. Juni · 11:00. Zoom + Kalender per E-Mail 👋") + time("12:55") },
       ],
     },
     {
       id: "machine",
-      label: "🔌 " + L("Desbloqueo", "Sblocco", "Unlock", "Desbloqueio"),
-      sub: L("Se conecta a la máquina y la desbloquea en remoto", "Si collega alla macchina e la sblocca da remoto", "Connects to the machine and unlocks it remotely", "Liga-se à máquina e desbloqueia-a remotamente"),
+      label: "🔌 " + L("Desbloqueo", "Sblocco", "Unlock", "Entsperrung"),
+      sub: L("Se conecta a la máquina y la desbloquea en remoto", "Si collega alla macchina e la sblocca da remoto", "Connects to the machine and unlocks it remotely", "Verbindet sich mit der Maschine und entsperrt sie aus der Ferne"),
       caps: [
-        ["💬", L("Entiende el problema", "Capisce il problema", "Understands the issue", "Entende o problema"), L("Como habla el cliente.", "Come parla il cliente.", "As the customer speaks.", "Como o cliente fala.")],
-        ["📍", L("Encuentra la sede", "Trova la sede", "Finds the location", "Encontra a sede"), L("Conoce los locales.", "Conosce i locali.", "Knows every store.", "Conhece os locais.")],
-        ["🔌", L("Se conecta a la máquina", "Si collega alla macchina", "Connects to the machine", "Liga-se à máquina"), L("Comandos en remoto.", "Comandi da remoto.", "Remote commands.", "Comandos remotos.")],
-        ["✅", L("Resuelve solo, 24/7", "Risolve da solo, 24/7", "Solves alone, 24/7", "Resolve sozinho, 24/7"), L("Sin operadores.", "Senza operatori.", "No operators.", "Sem operadores.")],
+        ["💬", L("Entiende el problema", "Capisce il problema", "Understands the issue", "Versteht das Problem"), L("Como habla el cliente.", "Come parla il cliente.", "As the customer speaks.", "So wie der Kunde spricht.")],
+        ["📍", L("Encuentra la sede", "Trova la sede", "Finds the location", "Findet den Standort"), L("Conoce los locales.", "Conosce i locali.", "Knows every store.", "Kennt alle Filialen.")],
+        ["🔌", L("Se conecta a la máquina", "Si collega alla macchina", "Connects to the machine", "Verbindet sich mit der Maschine"), L("Comandos en remoto.", "Comandi da remoto.", "Remote commands.", "Fernbefehle.")],
+        ["✅", L("Resuelve solo, 24/7", "Risolve da solo, 24/7", "Solves alone, 24/7", "Löst es allein, 24/7"), L("Sin operadores.", "Senza operatori.", "No operators.", "Ohne Mitarbeiter.")],
       ],
       s: [
-        { w: "out", cp: 0, pre: 300, ty: 900, h: L("No consigo abrir la lavadora 😟", "Non riesco ad aprire la lavatrice 😟", "I can't open the washer 😟", "Não consigo abrir a máquina 😟") + time("18:02") },
-        { w: "in", cp: 1, ty: 1000, h: L("¡Vaya! ¿En qué lavandería te encuentras?", "Mi dispiace! In quale lavanderia ti trovi?", "Oh no! Which laundromat are you at?", "Que pena! Em que lavandaria te encontras?") + time("18:02") },
+        { w: "out", cp: 0, pre: 300, ty: 900, h: L("No consigo abrir la lavadora 😟", "Non riesco ad aprire la lavatrice 😟", "I can't open the washer 😟", "Ich kann die Waschmaschine nicht öffnen 😟") + time("18:02") },
+        { w: "in", cp: 1, ty: 1000, h: L("¡Vaya! ¿En qué lavandería te encuentras?", "Mi dispiace! In quale lavanderia ti trovi?", "Oh no! Which laundromat are you at?", "Oh nein! In welchem Waschsalon bist du?") + time("18:02") },
         { w: "out", cp: 1, ty: 600, h: "Barcelona" + time("18:03") },
-        { w: "in", cp: 1, ty: 1100, h: L("Tenemos dos en Barcelona: 📍 Eixample y 📍 Gràcia. ¿En cuál estás?", "Ne abbiamo due a Barcellona: 📍 Eixample e 📍 Gràcia. In quale ti trovi?", "We have two in Barcelona: 📍 Eixample and 📍 Gràcia. Which one?", "Temos duas em Barcelona: 📍 Eixample e 📍 Gràcia. Em qual estás?") + time("18:03") },
+        { w: "in", cp: 1, ty: 1100, h: L("Tenemos dos en Barcelona: 📍 Eixample y 📍 Gràcia. ¿En cuál estás?", "Ne abbiamo due a Barcellona: 📍 Eixample e 📍 Gràcia. In quale ti trovi?", "We have two in Barcelona: 📍 Eixample and 📍 Gràcia. Which one?", "Wir haben zwei in Barcelona: 📍 Eixample und 📍 Gràcia. In welchem bist du?") + time("18:03") },
         { w: "out", cp: 1, ty: 500, h: "Eixample" + time("18:03") },
-        { w: "in", cp: 2, ty: 900, h: L("¿Qué número de máquina es?", "Qual è il numero della macchina?", "Which machine number is it?", "Qual é o número da máquina?") + time("18:03") },
-        { w: "out", cp: 2, ty: 900, h: L("La número 4, ha terminado pero no se abre", "La numero 4, ha finito ma non si apre", "Number 4, it's finished but won't open", "A número 4, terminou mas não abre") + time("18:04") },
-        { w: "in", cp: 2, ty: 900, h: L("Me conecto a la máquina #4… 🔌", "Mi collego alla macchina #4… 🔌", "Connecting to machine #4… 🔌", "A ligar à máquina #4… 🔌") + time("18:04") },
-        { w: "psys", cp: 2, hold: 1500, h: L("Comando de desbloqueo enviado", "Comando di sblocco inviato", "Unlock command sent", "Comando de desbloqueio enviado") },
-        { w: "in", cp: 3, ty: 1000, h: L("✅ ¡Máquina #4 desbloqueada! 👕", "✅ Macchina #4 sbloccata! 👕", "✅ Machine #4 unlocked! 👕", "✅ Máquina #4 desbloqueada! 👕") + time("18:04") },
-        { w: "out", cp: 3, ty: 600, h: L("¡Gracias! 🙏", "Grazie! 🙏", "Thanks! 🙏", "Obrigado! 🙏") + time("18:05") },
+        { w: "in", cp: 2, ty: 900, h: L("¿Qué número de máquina es?", "Qual è il numero della macchina?", "Which machine number is it?", "Welche Maschinennummer ist es?") + time("18:03") },
+        { w: "out", cp: 2, ty: 900, h: L("La número 4, ha terminado pero no se abre", "La numero 4, ha finito ma non si apre", "Number 4, it's finished but won't open", "Die Nummer 4, sie ist fertig, aber öffnet nicht") + time("18:04") },
+        { w: "in", cp: 2, ty: 900, h: L("Me conecto a la máquina #4… 🔌", "Mi collego alla macchina #4… 🔌", "Connecting to machine #4… 🔌", "Ich verbinde mich mit Maschine #4… 🔌") + time("18:04") },
+        { w: "psys", cp: 2, hold: 1500, h: L("Comando de desbloqueo enviado", "Comando di sblocco inviato", "Unlock command sent", "Entsperrbefehl gesendet") },
+        { w: "in", cp: 3, ty: 1000, h: L("✅ ¡Máquina #4 desbloqueada! 👕", "✅ Macchina #4 sbloccata! 👕", "✅ Machine #4 unlocked! 👕", "✅ Maschine #4 entsperrt! 👕") + time("18:04") },
+        { w: "out", cp: 3, ty: 600, h: L("¡Gracias! 🙏", "Grazie! 🙏", "Thanks! 🙏", "Danke! 🙏") + time("18:05") },
       ],
     },
     {
       id: "human",
-      label: "🙋 " + L("Soporte humano", "Supporto umano", "Human support", "Suporte humano"),
-      sub: L("Cuando hace falta, un operador toma el control", "Quando serve, un operatore prende il controllo", "When needed, a human operator takes over", "Quando é preciso, um operador assume o controlo"),
+      label: "🙋 " + L("Soporte humano", "Supporto umano", "Human support", "Menschlicher Support"),
+      sub: L("Cuando hace falta, un operador toma el control", "Quando serve, un operatore prende il controllo", "When needed, a human operator takes over", "Wenn nötig, übernimmt ein Mitarbeiter die Kontrolle"),
       caps: [
-        ["🧠", L("Detecta el caso", "Rileva il caso", "Spots the case", "Deteta o caso"), L("Sabe cuándo no basta.", "Sa quando non basta.", "Knows when it's not enough.", "Sabe quando não chega.")],
-        ["🙋", L("Avisa al operador", "Avvisa l'operatore", "Alerts an operator", "Avisa o operador"), L("Al instante.", "All'istante.", "Instantly.", "Ao instante.")],
-        ["👩‍💼", L("Toma el control", "Prende il controllo", "Takes over", "Assume o controlo"), L("Pausa el bot.", "Mette in pausa il bot.", "Pauses the bot.", "Pausa o bot.")],
-        ["🤝", L("Continuidad total", "Continuità totale", "Seamless handover", "Continuidade total"), L("El cliente ni lo nota.", "Il cliente non se ne accorge.", "The customer never notices.", "O cliente nem nota.")],
+        ["🧠", L("Detecta el caso", "Rileva il caso", "Spots the case", "Erkennt den Fall"), L("Sabe cuándo no basta.", "Sa quando non basta.", "Knows when it's not enough.", "Weiß, wann es nicht reicht.")],
+        ["🙋", L("Avisa al operador", "Avvisa l'operatore", "Alerts an operator", "Benachrichtigt den Mitarbeiter"), L("Al instante.", "All'istante.", "Instantly.", "Sofort.")],
+        ["👩‍💼", L("Toma el control", "Prende il controllo", "Takes over", "Übernimmt die Kontrolle"), L("Pausa el bot.", "Mette in pausa il bot.", "Pauses the bot.", "Pausiert den Bot.")],
+        ["🤝", L("Continuidad total", "Continuità totale", "Seamless handover", "Nahtlose Übergabe"), L("El cliente ni lo nota.", "Il cliente non se ne accorge.", "The customer never notices.", "Der Kunde merkt nichts.")],
       ],
       s: [
-        { w: "out", cp: 0, pre: 300, ty: 1100, h: L("Me habéis cobrado dos veces en la tarjeta 😟", "Mi avete addebitato due volte sulla carta 😟", "I've been charged twice on my card 😟", "Cobraram-me duas vezes no cartão 😟") + time("19:05") },
-        { w: "in", cp: 0, ty: 1000, h: L("¡Lo siento! Paso tu caso a un operador para revisar el doble cobro.", "Mi dispiace! Passo il tuo caso a un operatore per verificare il doppio addebito.", "So sorry! I'll pass your case to an operator to check the double charge.", "Lamento! Passo o teu caso a um operador para verificar a cobrança dupla.") + time("19:05") },
-        { w: "psysblue", cp: 1, hold: 1500, h: L("Un operador se está conectando…", "Un operatore si sta collegando…", "An operator is connecting…", "Um operador está a ligar-se…") },
-        { w: "op", cp: 2, ty: 1100, name: L("Giulia · Operadora", "Giulia · Operatrice", "Giulia · Operator", "Giulia · Operadora"), h: L("Soy Giulia, de Eixample 😊", "Sono Giulia, di Eixample 😊", "I'm Giulia, from Eixample 😊", "Sou a Giulia, de Eixample 😊") + time("19:06") },
-        { w: "op", cp: 3, ty: 1300, h: L("Lo he verificado: te devuelvo el cobro duplicado, lo verás en 3-5 días. ¿Todo bien?", "Verificato: ti rimborso l'addebito doppio, lo vedrai in 3-5 giorni. Tutto ok?", "Checked it: I'll refund the duplicate charge, you'll see it in 3-5 days. All good?", "Verifiquei: devolvo a cobrança duplicada, verás em 3-5 dias. Tudo bem?") + time("19:06") },
-        { w: "out", cp: 3, ty: 600, h: L("¡Gracias!", "Grazie!", "Thanks!", "Obrigado!") + time("19:07") },
+        { w: "out", cp: 0, pre: 300, ty: 1100, h: L("Me habéis cobrado dos veces en la tarjeta 😟", "Mi avete addebitato due volte sulla carta 😟", "I've been charged twice on my card 😟", "Mir wurde zweimal von der Karte abgebucht 😟") + time("19:05") },
+        { w: "in", cp: 0, ty: 1000, h: L("¡Lo siento! Paso tu caso a un operador para revisar el doble cobro.", "Mi dispiace! Passo il tuo caso a un operatore per verificare il doppio addebito.", "So sorry! I'll pass your case to an operator to check the double charge.", "Tut mir leid! Ich gebe deinen Fall an einen Mitarbeiter weiter, um die doppelte Abbuchung zu prüfen.") + time("19:05") },
+        { w: "psysblue", cp: 1, hold: 1500, h: L("Un operador se está conectando…", "Un operatore si sta collegando…", "An operator is connecting…", "Ein Mitarbeiter verbindet sich…") },
+        { w: "op", cp: 2, ty: 1100, name: L("Giulia · Operadora", "Giulia · Operatrice", "Giulia · Operator", "Giulia · Mitarbeiterin"), h: L("Soy Giulia, de Eixample 😊", "Sono Giulia, di Eixample 😊", "I'm Giulia, from Eixample 😊", "Ich bin Giulia, aus Eixample 😊") + time("19:06") },
+        { w: "op", cp: 3, ty: 1300, h: L("Lo he verificado: te devuelvo el cobro duplicado, lo verás en 3-5 días. ¿Todo bien?", "Verificato: ti rimborso l'addebito doppio, lo vedrai in 3-5 giorni. Tutto ok?", "Checked it: I'll refund the duplicate charge, you'll see it in 3-5 days. All good?", "Geprüft: Ich erstatte dir die doppelte Abbuchung, du siehst sie in 3-5 Tagen. Alles gut?") + time("19:06") },
+        { w: "out", cp: 3, ty: 600, h: L("¡Gracias!", "Grazie!", "Thanks!", "Danke!") + time("19:07") },
       ],
     },
     {
       id: "invoice",
-      label: "🧾 " + L("Factura", "Fattura", "Invoice", "Fatura"),
-      sub: L("Encuentra el pedido y envía la factura por WhatsApp", "Trova l'ordine e invia la fattura su WhatsApp", "Finds the order and sends the invoice on WhatsApp", "Encontra o pedido e envia a fatura no WhatsApp"),
+      label: "🧾 " + L("Factura", "Fattura", "Invoice", "Rechnung"),
+      sub: L("Encuentra el pedido y envía la factura por WhatsApp", "Trova l'ordine e invia la fattura su WhatsApp", "Finds the order and sends the invoice on WhatsApp", "Findet die Bestellung und sendet die Rechnung per WhatsApp"),
       caps: [
-        ["💬", L("Entiende la petición", "Capisce la richiesta", "Understands the ask", "Entende o pedido"), L("Solo hay que pedirla.", "Basta chiederla.", "Just ask for it.", "Basta pedir.")],
-        ["🔎", L("Encuentra el pedido", "Trova l'ordine", "Finds the order", "Encontra o pedido"), L("En el sistema.", "Nel gestionale.", "In the system.", "No sistema.")],
-        ["📄", L("Envía el PDF", "Invia il PDF", "Sends the PDF", "Envia o PDF"), L("Por WhatsApp.", "Su WhatsApp.", "Over WhatsApp.", "Por WhatsApp.")],
-        ["✅", L("Todo en el chat", "Tutto in chat", "All in chat", "Tudo no chat"), L("Sin emails.", "Senza email.", "No emails.", "Sem emails.")],
+        ["💬", L("Entiende la petición", "Capisce la richiesta", "Understands the ask", "Versteht die Anfrage"), L("Solo hay que pedirla.", "Basta chiederla.", "Just ask for it.", "Einfach danach fragen.")],
+        ["🔎", L("Encuentra el pedido", "Trova l'ordine", "Finds the order", "Findet die Bestellung"), L("En el sistema.", "Nel gestionale.", "In the system.", "Im System.")],
+        ["📄", L("Envía el PDF", "Invia il PDF", "Sends the PDF", "Sendet das PDF"), L("Por WhatsApp.", "Su WhatsApp.", "Over WhatsApp.", "Per WhatsApp.")],
+        ["✅", L("Todo en el chat", "Tutto in chat", "All in chat", "Alles im Chat"), L("Sin emails.", "Senza email.", "No emails.", "Ohne E-Mails.")],
       ],
       s: [
-        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Necesito la factura del último lavado", "Mi serve la fattura dell'ultimo lavaggio", "I need the invoice for my last wash", "Preciso da fatura da última lavagem") + time("10:11") },
-        { w: "in", cp: 1, ty: 800, h: L("¡Claro! La busco enseguida…", "Certo! La cerco subito…", "Of course! Let me find it…", "Claro! Vou procurar já…") + time("10:11") },
-        { w: "psys", cp: 1, hold: 1300, h: L("Buscando el pedido…", "Sto cercando l'ordine…", "Looking up the order…", "A procurar o pedido…") },
-        { w: "in", cp: 1, ty: 1100, h: L("📦 Pedido #A-1042 — 5 jun, 12,50€", "📦 Ordine #A-1042 — 5 giu, 12,50€", "📦 Order #A-1042 — Jun 5, €12.50", "📦 Pedido #A-1042 — 5 jun, 12,50€") + time("10:11") },
+        { w: "out", cp: 0, pre: 300, ty: 1000, h: L("Necesito la factura del último lavado", "Mi serve la fattura dell'ultimo lavaggio", "I need the invoice for my last wash", "Ich brauche die Rechnung für meine letzte Wäsche") + time("10:11") },
+        { w: "in", cp: 1, ty: 800, h: L("¡Claro! La busco enseguida…", "Certo! La cerco subito…", "Of course! Let me find it…", "Klar! Ich suche sie sofort…") + time("10:11") },
+        { w: "psys", cp: 1, hold: 1300, h: L("Buscando el pedido…", "Sto cercando l'ordine…", "Looking up the order…", "Bestellung wird gesucht…") },
+        { w: "in", cp: 1, ty: 1100, h: L("📦 Pedido #A-1042 — 5 jun, 12,50€", "📦 Ordine #A-1042 — 5 giu, 12,50€", "📦 Order #A-1042 — Jun 5, €12.50", "📦 Bestellung #A-1042 — 5. Juni, 12,50€") + time("10:11") },
         { w: "in", cp: 2, ty: 1000, h: fileCard("factura-A1042.pdf", "86 KB") + time("10:12") },
-        { w: "in", cp: 3, ty: 800, h: L("Aquí tienes ✅", "Eccola ✅", "Here it is ✅", "Aqui está ✅") + time("10:12") },
-        { w: "out", cp: 3, ty: 600, h: L("¡Gracias!", "Grazie!", "Thanks!", "Obrigado!") + time("10:12") },
+        { w: "in", cp: 3, ty: 800, h: L("Aquí tienes ✅", "Eccola ✅", "Here it is ✅", "Hier ist sie ✅") + time("10:12") },
+        { w: "out", cp: 3, ty: 600, h: L("¡Gracias!", "Grazie!", "Thanks!", "Danke!") + time("10:12") },
       ],
     },
     {
       id: "pricing",
-      label: "💲 " + L("Precios y horarios", "Prezzi e orari", "Prices & hours", "Preços e horários"),
-      sub: L("Precios, horarios y promociones de cada sede", "Prezzi, orari e promozioni di ogni sede", "Prices, hours and promotions for each location", "Preços, horários e promoções de cada loja"),
+      label: "💲 " + L("Precios y horarios", "Prezzi e orari", "Prices & hours", "Preise & Öffnungszeiten"),
+      sub: L("Precios, horarios y promociones de cada sede", "Prezzi, orari e promozioni di ogni sede", "Prices, hours and promotions for each location", "Preise, Öffnungszeiten und Aktionen jeder Filiale"),
       caps: [
-        ["🏪", L("Datos de la sede", "Dati della sede", "Store details", "Dados da loja"), L("Dirección y horario reales.", "Indirizzo e orari reali.", "Real address & hours.", "Morada e horário reais.")],
-        ["💲", L("Lista de precios", "Listino prezzi", "Price list", "Lista de preços"), L("Tarifa exacta del local.", "Tariffa esatta del locale.", "Exact store rates.", "Tarifa exata da loja.")],
-        ["🕐", L("Horario al día", "Orari aggiornati", "Up-to-date hours", "Horário atualizado"), L("Siempre actualizado.", "Sempre aggiornato.", "Always current.", "Sempre atual.")],
-        ["📣", L("Promociones", "Promozioni", "Promotions", "Promoções"), L("Ofertas de la sede.", "Offerte della sede.", "Store offers.", "Ofertas da loja.")],
+        ["🏪", L("Datos de la sede", "Dati della sede", "Store details", "Filialdaten"), L("Dirección y horario reales.", "Indirizzo e orari reali.", "Real address & hours.", "Echte Adresse & Zeiten.")],
+        ["💲", L("Lista de precios", "Listino prezzi", "Price list", "Preisliste"), L("Tarifa exacta del local.", "Tariffa esatta del locale.", "Exact store rates.", "Exakte Filialpreise.")],
+        ["🕐", L("Horario al día", "Orari aggiornati", "Up-to-date hours", "Aktuelle Öffnungszeiten"), L("Siempre actualizado.", "Sempre aggiornato.", "Always current.", "Immer aktuell.")],
+        ["📣", L("Promociones", "Promozioni", "Promotions", "Aktionen"), L("Ofertas de la sede.", "Offerte della sede.", "Store offers.", "Angebote der Filiale.")],
       ],
       s: [
-        { w: "out", cp: 0, pre: 300, ty: 1100, h: L("¿Me dices el horario y los precios de Demowash Eixample?", "Mi dici orari e prezzi della sede Demowash Eixample?", "Can you tell me the hours and prices for Demowash Eixample?", "Podes dizer-me o horário e os preços da Demowash Eixample?") + time("12:30") },
+        { w: "out", cp: 0, pre: 300, ty: 1100, h: L("¿Me dices el horario y los precios de Demowash Eixample?", "Mi dici orari e prezzi della sede Demowash Eixample?", "Can you tell me the hours and prices for Demowash Eixample?", "Kannst du mir die Öffnungszeiten und Preise von Demowash Eixample sagen?") + time("12:30") },
         { w: "in", cp: 0, ty: 1000, h: "🏪 <b>Demowash Eixample</b> — C/ Aragó 211" + time("12:30") },
-        { w: "in", cp: 2, ty: 1000, h: L("🕐 Lun–Dom 8:00–22:00", "🕐 Lun–Dom 8:00–22:00", "🕐 Mon–Sun 8:00–22:00", "🕐 Seg–Dom 8:00–22:00") + time("12:30") },
-        { w: "in", cp: 1, ty: 1300, h: L("💲 Lavado 8kg <b>6€</b> · Secado <b>4€</b> · Edredón <b>15€</b> · Detergente <b>1€</b>", "💲 Lavaggio 8kg <b>6€</b> · Asciugatura <b>4€</b> · Piumone <b>15€</b> · Detersivo <b>1€</b>", "💲 Wash 8kg <b>€6</b> · Dry <b>€4</b> · Duvet <b>€15</b> · Detergent <b>€1</b>", "💲 Lavagem 8kg <b>6€</b> · Secagem <b>4€</b> · Edredão <b>15€</b> · Detergente <b>1€</b>") + time("12:30") },
-        { w: "in", cp: 3, ty: 1200, h: L("📣 Esta semana: <b>2x1 en secadora</b> los martes 🎉", "📣 Questa settimana: <b>2x1 sull'asciugatrice</b> il martedì 🎉", "📣 This week: <b>2-for-1 on dryers</b> on Tuesdays 🎉", "📣 Esta semana: <b>2x1 na secadora</b> às terças 🎉") + time("12:30") },
-        { w: "out", cp: 3, ty: 700, h: L("¡Perfecto, gracias!", "Perfetto, grazie!", "Perfect, thanks!", "Perfeito, obrigado!") + time("12:31") },
+        { w: "in", cp: 2, ty: 1000, h: L("🕐 Lun–Dom 8:00–22:00", "🕐 Lun–Dom 8:00–22:00", "🕐 Mon–Sun 8:00–22:00", "🕐 Mo–So 8:00–22:00") + time("12:30") },
+        { w: "in", cp: 1, ty: 1300, h: L("💲 Lavado 8kg <b>6€</b> · Secado <b>4€</b> · Edredón <b>15€</b> · Detergente <b>1€</b>", "💲 Lavaggio 8kg <b>6€</b> · Asciugatura <b>4€</b> · Piumone <b>15€</b> · Detersivo <b>1€</b>", "💲 Wash 8kg <b>€6</b> · Dry <b>€4</b> · Duvet <b>€15</b> · Detergent <b>€1</b>", "💲 Waschen 8kg <b>6€</b> · Trocknen <b>4€</b> · Bettdecke <b>15€</b> · Waschmittel <b>1€</b>") + time("12:30") },
+        { w: "in", cp: 3, ty: 1200, h: L("📣 Esta semana: <b>2x1 en secadora</b> los martes 🎉", "📣 Questa settimana: <b>2x1 sull'asciugatrice</b> il martedì 🎉", "📣 This week: <b>2-for-1 on dryers</b> on Tuesdays 🎉", "📣 Diese Woche: <b>2-für-1 am Trockner</b> dienstags 🎉") + time("12:30") },
+        { w: "out", cp: 3, ty: 700, h: L("¡Perfecto, gracias!", "Perfetto, grazie!", "Perfect, thanks!", "Perfekt, danke!") + time("12:31") },
       ],
     },
     {
       id: "push",
       label: "📣 " + L("Promo Push", "Promo Push", "Push promo", "Promo Push"),
-      sub: L("Lanza campañas y ofertas a tus clientes", "Lancia campagne e offerte ai tuoi clienti", "Launches campaigns and offers to your customers", "Lança campanhas e ofertas aos teus clientes"),
+      sub: L("Lanza campañas y ofertas a tus clientes", "Lancia campagne e offerte ai tuoi clienti", "Launches campaigns and offers to your customers", "Startet Kampagnen und Angebote an deine Kunden"),
       caps: [
-        ["📣", L("Campañas push", "Campagne push", "Push campaigns", "Campanhas push"), L("Tú escribes primero.", "Scrivi tu per primo.", "You message first.", "Escreves tu primeiro.")],
-        ["🎯", L("Segmenta clientes", "Segmenta i clienti", "Segments customers", "Segmenta clientes"), L("Al público adecuado.", "Al pubblico giusto.", "The right audience.", "Ao público certo.")],
-        ["🎟️", L("Cupones y ofertas", "Coupon e offerte", "Coupons & offers", "Cupões e ofertas"), L("Directo en WhatsApp.", "Diretto su WhatsApp.", "Right in WhatsApp.", "Direto no WhatsApp.")],
-        ["📈", L("Reactiva ventas", "Riattiva le vendite", "Reactivates sales", "Reativa vendas"), L("Vuelven los dormidos.", "Tornano i clienti dormienti.", "Win back dormant clients.", "Recupera clientes parados.")],
+        ["📣", L("Campañas push", "Campagne push", "Push campaigns", "Push-Kampagnen"), L("Tú escribes primero.", "Scrivi tu per primo.", "You message first.", "Du schreibst zuerst.")],
+        ["🎯", L("Segmenta clientes", "Segmenta i clienti", "Segments customers", "Segmentiert Kunden"), L("Al público adecuado.", "Al pubblico giusto.", "The right audience.", "Die richtige Zielgruppe.")],
+        ["🎟️", L("Cupones y ofertas", "Coupon e offerte", "Coupons & offers", "Coupons & Angebote"), L("Directo en WhatsApp.", "Diretto su WhatsApp.", "Right in WhatsApp.", "Direkt in WhatsApp.")],
+        ["📈", L("Reactiva ventas", "Riattiva le vendite", "Reactivates sales", "Reaktiviert Verkäufe"), L("Vuelven los dormidos.", "Tornano i clienti dormienti.", "Win back dormant clients.", "Holt inaktive Kunden zurück.")],
       ],
       s: [
-        { w: "in", cp: 0, pre: 300, ty: 1300, h: L("🎉 ¡Hola María! Promo flash en Demowash Gràcia: -30% en edredones este finde 🧺", "🎉 Ciao Maria! Promo flash da Demowash Gràcia: -30% sui piumoni questo weekend 🧺", "🎉 Hi María! Flash promo at Demowash Gràcia: -30% on duvets this weekend 🧺", "🎉 Olá Maria! Promo flash na Demowash Gràcia: -30% em edredões este fim de semana 🧺") + time("17:00") },
-        { w: "out", cp: 1, ty: 800, h: L("¡Genial! ¿Cómo lo uso?", "Ottimo! Come lo uso?", "Great! How do I use it?", "Boa! Como o uso?") + time("17:01") },
-        { w: "in", cp: 2, ty: 1300, h: L("Enseña este cupón en caja 🎟️ <b>DUVET30</b>. ¡Válido hasta el domingo!", "Mostra questo coupon alla cassa 🎟️ <b>DUVET30</b>. Valido fino a domenica!", "Show this coupon at checkout 🎟️ <b>DUVET30</b>. Valid until Sunday!", "Mostra este cupão na caixa 🎟️ <b>DUVET30</b>. Válido até domingo!") + time("17:01") },
-        { w: "out", cp: 3, ty: 600, h: L("¡Gracias! 🙌", "Grazie! 🙌", "Thanks! 🙌", "Obrigado! 🙌") + time("17:01") },
+        { w: "in", cp: 0, pre: 300, ty: 1300, h: L("🎉 ¡Hola María! Promo flash en Demowash Gràcia: -30% en edredones este finde 🧺", "🎉 Ciao Maria! Promo flash da Demowash Gràcia: -30% sui piumoni questo weekend 🧺", "🎉 Hi María! Flash promo at Demowash Gràcia: -30% on duvets this weekend 🧺", "🎉 Hallo Maria! Flash-Aktion bei Demowash Gràcia: -30% auf Bettdecken dieses Wochenende 🧺") + time("17:00") },
+        { w: "out", cp: 1, ty: 800, h: L("¡Genial! ¿Cómo lo uso?", "Ottimo! Come lo uso?", "Great! How do I use it?", "Super! Wie löse ich sie ein?") + time("17:01") },
+        { w: "in", cp: 2, ty: 1300, h: L("Enseña este cupón en caja 🎟️ <b>DUVET30</b>. ¡Válido hasta el domingo!", "Mostra questo coupon alla cassa 🎟️ <b>DUVET30</b>. Valido fino a domenica!", "Show this coupon at checkout 🎟️ <b>DUVET30</b>. Valid until Sunday!", "Zeig diesen Coupon an der Kasse 🎟️ <b>DUVET30</b>. Gültig bis Sonntag!") + time("17:01") },
+        { w: "out", cp: 3, ty: 600, h: L("¡Gracias! 🙌", "Grazie! 🙌", "Thanks! 🙌", "Danke! 🙌") + time("17:01") },
       ],
     },
     {
       id: "audio",
       label: "🎤 Audio",
-      sub: L("Entiende los audios y responde con voz", "Capisce i vocali e risponde a voce", "Understands voice notes and replies by voice", "Entende áudios e responde por voz"),
+      sub: L("Entiende los audios y responde con voz", "Capisce i vocali e risponde a voce", "Understands voice notes and replies by voice", "Versteht Sprachnachrichten und antwortet mit Stimme"),
       caps: [
-        ["🎤", L("El cliente habla", "Il cliente parla", "The customer speaks", "O cliente fala"), L("No escribe.", "Non scrive.", "No typing.", "Não escreve.")],
-        ["🎧", L("Entiende el audio", "Capisce l'audio", "Understands the audio", "Entende o áudio"), L("Escucha e interpreta.", "Ascolta e interpreta.", "Listens & interprets.", "Ouve e interpreta.")],
-        ["🔊", L("Responde con audio", "Risponde con audio", "Replies with audio", "Responde com áudio"), L("El bot manda voz.", "Il bot manda voce.", "The bot sends voice.", "O bot envia voz.")],
-        ["⚡", L("Cómodo y rápido", "Comodo e veloce", "Quick & easy", "Cómodo e rápido"), L("Como una llamada.", "Come una telefonata.", "Like a call.", "Como uma chamada.")],
+        ["🎤", L("El cliente habla", "Il cliente parla", "The customer speaks", "Der Kunde spricht"), L("No escribe.", "Non scrive.", "No typing.", "Kein Tippen.")],
+        ["🎧", L("Entiende el audio", "Capisce l'audio", "Understands the audio", "Versteht das Audio"), L("Escucha e interpreta.", "Ascolta e interpreta.", "Listens & interprets.", "Hört zu und versteht.")],
+        ["🔊", L("Responde con audio", "Risponde con audio", "Replies with audio", "Antwortet mit Audio"), L("El bot manda voz.", "Il bot manda voce.", "The bot sends voice.", "Der Bot sendet Sprache.")],
+        ["⚡", L("Cómodo y rápido", "Comodo e veloce", "Quick & easy", "Bequem & schnell"), L("Como una llamada.", "Come una telefonata.", "Like a call.", "Wie ein Anruf.")],
       ],
       s: [
         { w: "out", cp: 0, pre: 300, ty: 900, rec: true, h: voice("0:06") + time("16:40") },
-        { w: "in", cp: 1, ty: 1100, h: L("He escuchado tu audio 🎧 Tu edredón ya está listo, puedes recogerlo a partir de mañana a las 17:00.", "Ho ascoltato il tuo messaggio 🎧 Il piumone è pronto, puoi ritirarlo da domani alle 17:00.", "I've listened to your audio 🎧 Your duvet is ready, you can pick it up from tomorrow at 17:00.", "Ouvi o teu áudio 🎧 O edredão está pronto, podes levantá-lo a partir de amanhã às 17:00.") + time("16:40") },
+        { w: "in", cp: 1, ty: 1100, h: L("He escuchado tu audio 🎧 Tu edredón ya está listo, puedes recogerlo a partir de mañana a las 17:00.", "Ho ascoltato il tuo messaggio 🎧 Il piumone è pronto, puoi ritirarlo da domani alle 17:00.", "I've listened to your audio 🎧 Your duvet is ready, you can pick it up from tomorrow at 17:00.", "Ich habe deine Sprachnachricht gehört 🎧 Deine Bettdecke ist fertig, du kannst sie ab morgen um 17:00 abholen.") + time("16:40") },
         { w: "in", cp: 2, ty: 1000, rec: true, h: voice("0:08") + time("16:41") },
-        { w: "out", cp: 3, ty: 700, h: L("¡Perfecto, gracias!", "Perfetto, grazie!", "Perfect, thanks!", "Perfeito, obrigado!") + time("16:41") },
+        { w: "out", cp: 3, ty: 700, h: L("¡Perfecto, gracias!", "Perfetto, grazie!", "Perfect, thanks!", "Perfekt, danke!") + time("16:41") },
       ],
     },
     {
       id: "arabic",
-      label: "🌍 " + L("Multilingüe", "Multilingue", "Multilingual", "Multilíngue"),
-      sub: L("Habla el idioma de cada cliente, en automático", "Parla la lingua di ogni cliente, in automatico", "Speaks every customer's language, automatically", "Fala o idioma de cada cliente, automaticamente"),
+      label: "🌍 " + L("Multilingüe", "Multilingue", "Multilingual", "Mehrsprachig"),
+      sub: L("Habla el idioma de cada cliente, en automático", "Parla la lingua di ogni cliente, in automatico", "Speaks every customer's language, automatically", "Spricht die Sprache jedes Kunden, automatisch"),
       caps: [
-        ["🌍", L("Detecta el idioma", "Rileva la lingua", "Detects the language", "Deteta o idioma"), L("Sin configurar nada.", "Senza configurare nulla.", "Zero setup.", "Sem configurar nada.")],
-        ["🗣️", L("Cualquier idioma", "Qualsiasi lingua", "Any language", "Qualquer idioma"), L("Entiende y responde.", "Capisce e risponde.", "Understands & replies.", "Entende e responde.")],
-        ["💬", L("Respuesta nativa", "Risposta nativa", "Native reply", "Resposta nativa"), L("Natural y local.", "Naturale e locale.", "Natural & local.", "Natural e local.")],
-        ["🤝", L("Sin barreras", "Senza barriere", "No barriers", "Sem barreiras"), L("Clientes de todo el mundo.", "Clienti da tutto il mondo.", "Customers worldwide.", "Clientes do mundo todo.")],
+        ["🌍", L("Detecta el idioma", "Rileva la lingua", "Detects the language", "Erkennt die Sprache"), L("Sin configurar nada.", "Senza configurare nulla.", "Zero setup.", "Ohne Konfiguration.")],
+        ["🗣️", L("Cualquier idioma", "Qualsiasi lingua", "Any language", "Jede Sprache"), L("Entiende y responde.", "Capisce e risponde.", "Understands & replies.", "Versteht und antwortet.")],
+        ["💬", L("Respuesta nativa", "Risposta nativa", "Native reply", "Muttersprachliche Antwort"), L("Natural y local.", "Naturale e locale.", "Natural & local.", "Natürlich & lokal.")],
+        ["🤝", L("Sin barreras", "Senza barriere", "No barriers", "Keine Barrieren"), L("Clientes de todo el mundo.", "Clienti da tutto il mondo.", "Customers worldwide.", "Kunden aus aller Welt.")],
       ],
       s: [
         { w: "out", cp: 0, pre: 300, ty: 1000, h: arabic("مرحبا، هل لديكم فرع في برشلونة؟") + time("11:20") },

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom"
 
 interface SiteFooterProps {
-  language?: "it" | "en" | "es" | "pt" | "fr" | "ca"
+  language?: "it" | "en" | "es" | "de" | "fr" | "ca"
 }
 
 const translations = {
@@ -77,35 +77,35 @@ const translations = {
     madeWith: "Hecho con",
     in: "en Italia",
   },
-  pt: {
-    tagline: "Plataforma de chatbot WhatsApp com IA para empresas. Automatize suporte, vendas e marketing com conversas inteligentes.",
-    product: "Produto",
-    features: "Funcionalidades",
+  de: {
+    tagline: "KI-gestützte WhatsApp-Chatbot-Plattform für Unternehmen. Automatisiere Support, Vertrieb und Marketing mit intelligenten Konversationen.",
+    product: "Produkt",
+    features: "Funktionen",
     widgetToWhatsApp: "Widget → WhatsApp",
-    humanSupport: "Suporte Humano",
-    appointmentBooking: "Agendamento de Consultas",
-    resources: "Recursos",
-    teamCollaboration: "Colaboração em Equipe",
+    humanSupport: "Menschlicher Support",
+    appointmentBooking: "Terminbuchung",
+    resources: "Ressourcen",
+    teamCollaboration: "Team-Zusammenarbeit",
     privacyDesign: "Privacy by Design",
-    crmIntegration: "Integração CRM",
-    solutions: "Soluções",
-    franchising: "Franquias Multi-Sede",
-    company: "Empresa",
-    about: "Sobre Nós",
-    contact: "Contato",
-    legal: "Legal",
-    privacy: "Política de Privacidade",
-    terms: "Termos de Serviço",
-    refund: "Política de Reembolso",
-    allRightsReserved: "Todos os direitos reservados.",
-    madeWith: "Feito com",
-    in: "na Itália",
+    crmIntegration: "CRM-Integration",
+    solutions: "Lösungen",
+    franchising: "Multi-Standort-Franchise",
+    company: "Unternehmen",
+    about: "Über uns",
+    contact: "Kontakt",
+    legal: "Rechtliches",
+    privacy: "Datenschutzerklärung",
+    terms: "Nutzungsbedingungen",
+    refund: "Rückerstattungsrichtlinie",
+    allRightsReserved: "Alle Rechte vorbehalten.",
+    madeWith: "Erstellt mit",
+    in: "in Italien",
   },
 }
 
 export function SiteFooter({ language = "en" }: SiteFooterProps) {
   // fr/ca have no dedicated footer copy yet — fall back to English.
-  const t = translations[language as "it" | "en" | "es" | "pt"] ?? translations.en
+  const t = translations[language as "it" | "en" | "es" | "de"] ?? translations.en
   const currentYear = new Date().getFullYear()
   return (
     <footer className="bg-slate-900 text-slate-300">

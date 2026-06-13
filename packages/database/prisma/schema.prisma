@@ -99,7 +99,7 @@ model Workspace {
   address                           String?     @db.Text // Physical address/location for "where are you?" questions
   chatbotName                       String?     @default("Assistente") // 🆕 Custom name for the chatbot (e.g., "Sofia", "Marco", "Assistant")
   businessType                      String?     @default("other") // 🆕 Business sector for LLM context (e.g., "food", "fashion", "tech")
-  customChatbotId                   String?     @db.Text // 🆕 Custom chatbot module identifier for FLOW workspaces (e.g., "ecolaundry")
+  customChatbotId                   String?     @db.Text // 🆕 Custom chatbot module identifier for FLOW workspaces (e.g., "demowash")
   registrationPage                  String?     @db.Text // 🆕 Custom registration page URL for customers (used by LINK_REGISTRATION)
   requireManualApproval             Boolean     @default(false) // 🆕 If true, new customers go to PENDING_APPROVAL after registration (admin must activate)
   approvalMessage                   String?     @db.Text // 🆕 Message sent to customer when admin approves their registration (default: "🎉 Your registration has been approved!")
@@ -2262,11 +2262,11 @@ model OnboardingQuestionnaire {
   @@map("onboarding_questionnaires")
 }
 
-// 🆕 PLAYGROUND - Ecolaundry demo (ecolaundry)
+// 🆕 PLAYGROUND - Demowash demo (demowash)
 // Collaborative TODO + comments layer over existing chat messages
 model PlaygroundTodo {
   id              String   @id @default(uuid())
-  workspaceId     String   // Always Ecolaundry workspace
+  workspaceId     String   // Always Demowash workspace
   dialogId        String   // Reference to Message.id (no FK - cross-workspace safety)
   messageType     String   // "chatbot" | "human"
   messageContent  String

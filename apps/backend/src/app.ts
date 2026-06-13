@@ -945,7 +945,7 @@ if (process.env.NODE_ENV === "production") {
       }
       // Inject per-route marketing SEO meta (no-op for non-marketing routes,
       // which fall back to the homepage meta baked into the template).
-      const html = injectMarketingHead(indexTemplate, req.path)
+      const html = injectMarketingHead(indexTemplate, req.path, req.headers["accept-language"])
       res.set("Content-Type", "text/html; charset=utf-8").send(html)
     })
     logger.info(`[Production] SPA fallback enabled for frontend routes`)

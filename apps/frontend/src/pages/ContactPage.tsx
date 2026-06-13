@@ -1,15 +1,15 @@
 import { useState, useEffect, type FormEvent } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { motion } from "framer-motion"
-import { Mail, MapPin, Send, CheckCircle } from "lucide-react"
+import { CheckCircle } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { GreenCtaButton } from "@/components/ui/green-cta-button"
 import { api } from "@/services/api"
 
-type Language = "it" | "en" | "es" | "pt"
+type Language = "it" | "en" | "es" | "de"
 
 const T = {
   it: {
@@ -38,12 +38,6 @@ const T = {
     successTitle: "Messaggio inviato!",
     successDesc: "Grazie per averci contattato. Ti risponderemo entro 24 ore.",
     captchaError: "Completa la verifica di sicurezza.",
-    infoEmail: "echatbotai@gmail.com",
-    infoPhone: "+34 602 119 358",
-    infoLocation: "Italia",
-    info1Title: "Email",
-    info2Title: "WhatsApp",
-    info3Title: "Sede",
   },
   en: {
     seoTitle: "Contact Us - eChatbot",
@@ -71,12 +65,6 @@ const T = {
     successTitle: "Message sent!",
     successDesc: "Thank you for reaching out. We'll reply within 24 hours.",
     captchaError: "Please complete the security check.",
-    infoEmail: "echatbotai@gmail.com",
-    infoPhone: "+34 602 119 358",
-    infoLocation: "Italy",
-    info1Title: "Email",
-    info2Title: "WhatsApp",
-    info3Title: "Location",
   },
   es: {
     seoTitle: "Contáctanos - eChatbot",
@@ -104,45 +92,33 @@ const T = {
     successTitle: "¡Mensaje enviado!",
     successDesc: "Gracias por ponerte en contacto. Te responderemos en 24 horas.",
     captchaError: "Por favor completa la verificación de seguridad.",
-    infoEmail: "echatbotai@gmail.com",
-    infoPhone: "+34 602 119 358",
-    infoLocation: "Italia",
-    info1Title: "Email",
-    info2Title: "WhatsApp",
-    info3Title: "Ubicación",
   },
-  pt: {
-    seoTitle: "Contacte-nos - eChatbot",
-    seoDesc: "Tem perguntas sobre o eChatbot? Contacte a nossa equipa. Estamos aqui para ajudá-lo a escolher o plano certo e começar com o seu chatbot WhatsApp.",
-    seoKeys: "contactar echatbot, suporte echatbot, ajuda chatbot whatsapp",
-    badge: "Contacto",
-    heroTitle: "Vamos falar sobre o seu projeto",
-    heroSub: "Perguntas sobre o eChatbot? Quer saber qual plano é o certo para si? A nossa equipa responde em 24 horas.",
-    formTitle: "Envie-nos uma mensagem",
-    formSubtitle: "Preencha o formulário e entraremos em contacto o mais brevemente possível.",
-    name: "Nome",
-    namePlaceholder: "O seu nome",
-    surname: "Apelido",
-    surnamePlaceholder: "O seu apelido",
-    email: "Email",
-    emailPlaceholder: "o.seu@email.com",
-    phone: "Telefone (opcional)",
-    phonePlaceholder: "+351 000 000 000",
-    subject: "Assunto",
-    subjectPlaceholder: "Coloque aqui o assunto…",
-    message: "Mensagem",
-    messagePlaceholder: "Conte-nos o seu caso de uso, necessidades ou perguntas...",
-    send: "Enviar Mensagem",
-    sending: "A enviar...",
-    successTitle: "Mensagem enviada!",
-    successDesc: "Obrigado por entrar em contacto. Responderemos em 24 horas.",
-    captchaError: "Por favor complete a verificação de segurança.",
-    infoEmail: "echatbotai@gmail.com",
-    infoPhone: "+34 602 119 358",
-    infoLocation: "Itália",
-    info1Title: "Email",
-    info2Title: "WhatsApp",
-    info3Title: "Localização",
+  de: {
+    seoTitle: "Kontakt - eChatbot",
+    seoDesc: "Hast du Fragen zu eChatbot? Kontaktiere unser Team. Wir helfen dir, den richtigen Plan zu wählen und mit deinem WhatsApp-Chatbot zu starten.",
+    seoKeys: "kontakt echatbot, echatbot support, whatsapp chatbot hilfe",
+    badge: "Kontakt",
+    heroTitle: "Sprechen wir über dein Projekt",
+    heroSub: "Fragen zu eChatbot? Willst du wissen, welcher Plan zu dir passt? Unser Team antwortet innerhalb von 24 Stunden.",
+    formTitle: "Schreib uns eine Nachricht",
+    formSubtitle: "Fülle das Formular aus und wir melden uns so schnell wie möglich bei dir.",
+    name: "Vorname",
+    namePlaceholder: "Dein Vorname",
+    surname: "Nachname",
+    surnamePlaceholder: "Dein Nachname",
+    email: "E-Mail",
+    emailPlaceholder: "deine@email.com",
+    phone: "Telefon (optional)",
+    phonePlaceholder: "+49 000 000 0000",
+    subject: "Betreff",
+    subjectPlaceholder: "Gib hier den Betreff ein…",
+    message: "Nachricht",
+    messagePlaceholder: "Erzähl uns von deinem Anwendungsfall, deinen Anforderungen oder deinen Fragen...",
+    send: "Nachricht senden",
+    sending: "Wird gesendet…",
+    successTitle: "Nachricht gesendet!",
+    successDesc: "Danke, dass du dich gemeldet hast. Wir antworten innerhalb von 24 Stunden.",
+    captchaError: "Bitte schließe die Sicherheitsprüfung ab.",
   },
 }
 
@@ -234,42 +210,21 @@ export function ContactPage() {
 
         {/* Contact Section */}
         <section className="py-16">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
-
-              {/* Info Cards */}
-              <div className="lg:col-span-2 flex flex-col gap-6 justify-start">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <div className="rounded-2xl overflow-hidden shadow-xl mb-8">
-                    <img src="/team.png" alt="Contact us" className="w-full h-[400px] object-cover" />
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4 p-4 rounded-xl bg-white/[0.02] border border-white/10">
-                      <div className="w-10 h-10 bg-green-400/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Mail className="h-5 w-5 text-green-400" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">{t.info1Title}</p>
-                        <p className="text-white font-medium">{t.infoEmail}</p>
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
+          <div className="max-w-6xl mx-auto px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="grid grid-cols-1 lg:grid-cols-5 overflow-hidden rounded-3xl border border-white/10 bg-slate-900/50 shadow-2xl backdrop-blur"
+            >
+              {/* Photo */}
+              <div className="relative lg:col-span-2 min-h-[280px]">
+                <img src="/team.png" alt="Contact us" className="absolute inset-0 h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#070d18]/70 via-transparent to-transparent" />
               </div>
 
               {/* Contact Form */}
-              <div className="lg:col-span-3">
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5, delay: 0.1 }}
-                  className="bg-slate-900/50 backdrop-blur rounded-3xl p-8 shadow-2xl border border-white/10"
-                >
+              <div className="lg:col-span-3 p-8 lg:p-10">
                   <div className="text-center mb-8">
                     <h2 className="text-2xl font-bold text-white">{t.formTitle}</h2>
                     <p className="text-slate-400 mt-2">{t.formSubtitle}</p>
@@ -322,35 +277,30 @@ export function ContactPage() {
                       <input type="text" name="website" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} className="hidden" tabIndex={-1} />
 
                       {/* reCAPTCHA */}
-                      <div>
-                        {recaptchaSiteKey ? (
-                          <div
-                            className="g-recaptcha"
-                            data-sitekey={recaptchaSiteKey}
-                            data-callback="onRecaptchaSuccess"
-                          />
-                        ) : (
-                          <p className="text-sm text-red-600">{t.captchaError}</p>
-                        )}
-                      </div>
+                      {recaptchaSiteKey && (
+                        <div
+                          className="g-recaptcha"
+                          data-sitekey={recaptchaSiteKey}
+                          data-callback="onRecaptchaSuccess"
+                        />
+                      )}
 
-                      {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+                      {error && <p className="text-sm text-red-500 text-center">{error}</p>}
 
                       <div className="flex justify-center pt-2">
-                        <Button
+                        <GreenCtaButton
                           type="submit"
-                          disabled={submitting}
-                          className="px-10 py-6 text-base font-semibold rounded-full bg-[#25D366] hover:bg-[#1fb855] text-white shadow-lg shadow-green-500/20 flex items-center gap-2"
+                          disabled={submitting || (!!recaptchaSiteKey && !captchaToken)}
+                          icon="📩"
+                          size="md"
                         >
-                          <Send className="h-5 w-5" />
                           {submitting ? t.sending : t.send}
-                        </Button>
+                        </GreenCtaButton>
                       </div>
                     </form>
                   )}
-                </motion.div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </section>
       </main>

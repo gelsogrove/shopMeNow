@@ -337,11 +337,11 @@ export function AIPersonalitySection({
                 id="customChatbotId"
                 value={formData.customChatbotId}
                 onChange={(e) => onFieldChange("customChatbotId", e.target.value)}
-                placeholder="e.g. ecolaundry"
+                placeholder="e.g. demowash"
                 disabled={!canEdit}
               />
               <p className="text-xs text-gray-500">
-                Module identifier for the custom chatbot used in FLOW mode (e.g. <code>ecolaundry</code>).
+                Module identifier for the custom chatbot used in FLOW mode (e.g. <code>demowash</code>).
                 Leave empty to use the standard AI agents.
               </p>
             </div>

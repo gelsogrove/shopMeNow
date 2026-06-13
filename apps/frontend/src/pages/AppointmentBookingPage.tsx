@@ -1,14 +1,18 @@
 import { useEffect } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
-import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
-import { Zap, CheckCircle } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
-import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { LandingHero } from "@/components/landing/LandingHero"
+import { MetricsSection } from "@/components/landing/MetricsSection"
+import { SectionHeader } from "@/components/landing/SectionHeader"
+import { StepCardGrid } from "@/components/landing/StepCardGrid"
+import { UseCaseGrid } from "@/components/landing/UseCaseGrid"
+import { FeatureChecklist } from "@/components/landing/FeatureChecklist"
+import { CtaSection } from "@/components/landing/CtaSection"
 
-type Language = "it" | "en" | "es" | "pt"
+type Language = "it" | "en" | "es" | "de"
 
 const T = {
   it: {
@@ -143,48 +147,48 @@ const T = {
       { icon: "🔧", title: "Servicios y consultoría", desc: "Fontaneros, electricistas, consultores: gestiona citas y visitas sin perder tiempo al teléfono." },
     ],
   },
-  pt: {
-    seoTitle: "Agendamento de Consultas com IA - Agende pelo WhatsApp com Lembretes Automáticos",
-    seoDesc: "O eChatbot permite que seus clientes agendem consultas diretamente no WhatsApp. Gestão automática de disponibilidade, confirmações instantâneas e lembretes pelo WhatsApp. Integração com Google Calendar.",
-    seoKeys: "agendamento consultas whatsapp, booking chatbot, agendamento ia, lembrete consulta whatsapp, google calendar chatbot, agendamento automático",
-    breadcrumb: "Agendamento de Consultas",
-    badge: "Agendamento",
-    heroTitle: "Agende consultas.\nDiretamente no WhatsApp.",
-    heroSub: "Seus clientes agendam, modificam e cancelam consultas de forma natural pelo chat. A IA gerencia disponibilidade, confirmações e lembretes automáticos. Você recebe tudo sincronizado no Google Calendar.",
-    cta: "Fale Connosco",
-    ctaSub: "Sem compromisso, respondemos em breve",
-    ctaTitle: "Pronto para automatizar seus agendamentos?",
-    howTitle: "Como funciona",
-    howSub: "Da solicitação do cliente à confirmação, tudo automático.",
+  de: {
+    seoTitle: "KI-Terminbuchung - Buche per WhatsApp mit automatischen Erinnerungen",
+    seoDesc: "eChatbot ermöglicht es deinen Kunden, Termine direkt über WhatsApp zu buchen. Automatische Verwaltung der Verfügbarkeit, sofortige Bestätigungen und Erinnerungen per WhatsApp. Google Calendar Integration.",
+    seoKeys: "whatsapp terminbuchung, booking chatbot, ki terminbuchung, terminerinnerung whatsapp, google calendar chatbot, automatische terminbuchung",
+    breadcrumb: "Terminbuchung",
+    badge: "Terminbuchung",
+    heroTitle: "Buche Termine.\nDirekt über WhatsApp.",
+    heroSub: "Deine Kunden buchen, ändern und stornieren Termine ganz natürlich per Chat. Die KI verwaltet Verfügbarkeit, Bestätigungen und automatische Erinnerungen. Du bekommst alles synchronisiert im Google Calendar.",
+    cta: "Kontaktiere uns",
+    ctaSub: "Unverbindlich, wir melden uns in Kürze bei dir",
+    ctaTitle: "Bereit, deine Terminbuchungen zu automatisieren?",
+    howTitle: "So funktioniert es",
+    howSub: "Von der Kundenanfrage bis zur Bestätigung, alles automatisch.",
     steps: [
-      { icon: "💬", title: "O cliente escreve no WhatsApp", desc: "\"Gostaria de agendar uma consulta para terça-feira\". A IA entende a intenção e mostra os horários disponíveis." },
-      { icon: "📅", title: "Escolha data e hora", desc: "O cliente seleciona dia e hora entre os disponíveis. A IA verifica em tempo real que o slot esteja livre e confirma imediatamente." },
-      { icon: "🔔", title: "Lembrete automático", desc: "24 horas antes (ou quando preferir), o cliente recebe um lembrete pelo WhatsApp. Pode confirmar, reagendar ou cancelar com uma mensagem." },
-      { icon: "✅", title: "Sincronização Calendar", desc: "Cada consulta aparece automaticamente no Google Calendar com todos os detalhes. Alterações e cancelamentos sincronizados em tempo real." },
+      { icon: "💬", title: "Der Kunde schreibt auf WhatsApp", desc: "\"Ich möchte einen Termin für Dienstag buchen\". Die KI versteht die Absicht und zeigt die verfügbaren Zeitfenster an." },
+      { icon: "📅", title: "Datum und Uhrzeit wählen", desc: "Der Kunde wählt Tag und Uhrzeit aus den verfügbaren Slots. Die KI prüft in Echtzeit, ob der Slot frei ist, und bestätigt sofort." },
+      { icon: "🔔", title: "Automatische Erinnerung", desc: "24 Stunden vorher (oder wann immer du möchtest) erhält der Kunde eine Erinnerung auf WhatsApp. Er kann mit einer Nachricht bestätigen, verschieben oder stornieren." },
+      { icon: "✅", title: "Calendar-Synchronisierung", desc: "Jeder Termin erscheint automatisch im Google Calendar mit allen Details. Änderungen und Stornierungen werden in Echtzeit synchronisiert." },
     ],
-    featuresTitle: "Dashboard de Consultas",
-    featuresDesc: "Gerencie todas as consultas pelo painel de controle. Visualize agendamentos, ajuste disponibilidade, configure lembretes e monitore estatísticas. Tudo em um só lugar.",
+    featuresTitle: "Termin-Dashboard",
+    featuresDesc: "Verwalte alle Termine über das Kontrollpanel. Sieh dir Buchungen an, passe die Verfügbarkeit an, konfiguriere Erinnerungen und überwache Statistiken. Alles an einem Ort.",
     features: [
-      "Calendário visual com todas as consultas",
-      "Configuração de horários de atendimento personalizados",
-      "Lembretes WhatsApp configuráveis (1h, 2h, 24h)",
-      "Gestão de cancelamentos e reagendamentos",
-      "Proteção anti-spam contra abusos",
-      "Estatísticas de agendamentos e no-show",
+      "Visueller Kalender mit allen Terminen",
+      "Konfiguration individueller Öffnungszeiten",
+      "Konfigurierbare WhatsApp-Erinnerungen (1h, 2h, 24h)",
+      "Verwaltung von Stornierungen und Verschiebungen",
+      "Anti-Spam-Schutz gegen Missbrauch",
+      "Statistiken zu Buchungen und No-Shows",
     ],
-    metricsTitle: "Resultados concretos",
+    metricsTitle: "Konkrete Ergebnisse",
     metrics: [
-      { value: "-70%", label: "No-shows", sub: "graças aos lembretes automáticos" },
-      { value: "24/7", label: "Disponibilidade", sub: "agendamentos mesmo fora do horário" },
-      { value: "< 30s", label: "Tempo de agendamento", sub: "da primeira mensagem à confirmação" },
-      { value: "+40%", label: "Consultas", sub: "aumento médio de agendamentos" },
+      { value: "-70%", label: "No-Shows", sub: "dank automatischer Erinnerungen" },
+      { value: "24/7", label: "Verfügbarkeit", sub: "Buchungen auch außerhalb der Öffnungszeiten" },
+      { value: "< 30s", label: "Buchungszeit", sub: "von der ersten Nachricht bis zur Bestätigung" },
+      { value: "+40%", label: "Termine", sub: "durchschnittlicher Anstieg der Buchungen" },
     ],
-    useCasesTitle: "Perfeito para",
+    useCasesTitle: "Perfekt für",
     useCases: [
-      { icon: "💇", title: "Cabeleireiros e salões", desc: "Os clientes agendam cortes, colorações e tratamentos diretamente no WhatsApp. Sem mais ligações para marcar um horário." },
-      { icon: "🏥", title: "Consultórios e profissionais", desc: "Gerencie consultas, atendimentos e retornos. O paciente recebe lembretes automáticos e pode reagendar facilmente." },
-      { icon: "🏋️", title: "Personal trainers e fitness", desc: "Sessões de treino, aulas em grupo e consultas nutricionais. Os clientes agendam quando quiserem." },
-      { icon: "🔧", title: "Serviços e consultoria", desc: "Encanadores, eletricistas, consultores: gerencie consultas e visitas sem perder tempo ao telefone." },
+      { icon: "💇", title: "Friseure und Salons", desc: "Kunden buchen Schnitte, Färbungen und Behandlungen direkt über WhatsApp. Keine Anrufe mehr, um einen Termin zu vereinbaren." },
+      { icon: "🏥", title: "Arztpraxen und Fachleute", desc: "Verwalte Besuche, Beratungen und Nachsorgen. Der Patient erhält automatische Erinnerungen und kann ganz einfach umbuchen." },
+      { icon: "🏋️", title: "Personal Trainer und Fitness", desc: "Trainingseinheiten, Gruppenkurse und Ernährungsberatungen. Die Kunden buchen, wann immer sie wollen." },
+      { icon: "🔧", title: "Dienstleistungen und Beratung", desc: "Klempner, Elektriker, Berater: Verwalte Termine und Vor-Ort-Besichtigungen, ohne Zeit am Telefon zu verlieren." },
     ],
   },
 }
@@ -203,92 +207,23 @@ export function AppointmentBookingPage() {
       <SiteHeader />
 
       <main>
-        {/* Hero */}
-        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <Breadcrumbs items={[{ label: t.breadcrumb }]} hideVisual />
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
-            >
-              {/* Hero image */}
-              <div className="relative order-2 lg:order-1">
-                <div className="absolute -inset-4 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-40" />
-                <img
-                  src="/booking.png"
-                  alt="AI appointment booking on WhatsApp"
-                  className="relative w-full max-h-[320px] rounded-3xl shadow-2xl border border-white/10 object-cover"
-                />
-              </div>
-              <div className="order-1 lg:order-2">
-                <span className="inline-block bg-green-400/10 text-green-300 text-sm font-semibold uppercase tracking-widest px-4 py-2 rounded-full mb-6">
-                  {t.badge}
-                </span>
-                <h1 className="text-4xl lg:text-6xl font-bold text-white mb-6 leading-tight whitespace-pre-line">
-                  {t.heroTitle}
-                </h1>
-                <p className="text-xl text-slate-400 mb-10 leading-relaxed">{t.heroSub}</p>
-                <Link
-                  to="/contact"
-                  className="inline-flex items-center gap-3 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
-                  style={{ background: '#25D366' }}
-                >
-                  <Zap className="h-5 w-5" />
-                  {t.cta}
-                </Link>
-              </div>
-            </motion.div>
-          </div>
-        </section>
+        <LandingHero
+          breadcrumb={t.breadcrumb}
+          badge={t.badge}
+          title={t.heroTitle}
+          subtitle={t.heroSub}
+          ctaLabel={t.cta}
+          image={{ src: "/booking.png", alt: "AI appointment booking on WhatsApp" }}
+          imageClassName="w-full max-h-[320px] rounded-3xl shadow-2xl border border-white/10 object-cover"
+        />
 
-        {/* Metrics */}
-        <section className="py-16 border-y border-white/10">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-white text-center mb-12">{t.metricsTitle}</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-              {t.metrics.map((m, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="text-center p-6 bg-slate-900/50 backdrop-blur rounded-2xl border border-white/10"
-                >
-                  <div className="text-4xl font-bold mb-2" style={{ color: '#25D366' }}>{m.value}</div>
-                  <div className="font-semibold text-white mb-1">{m.label}</div>
-                  <div className="text-sm text-slate-400">{m.sub}</div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <MetricsSection title={t.metricsTitle} metrics={t.metrics} />
 
         {/* How it Works */}
         <section className="py-20 bg-white/[0.02]">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-4">{t.howTitle}</h2>
-              <p className="text-xl text-slate-400 max-w-3xl mx-auto">{t.howSub}</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {t.steps.map((step, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="bg-slate-900/50 backdrop-blur rounded-2xl p-6 shadow-2xl border border-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                >
-                  <div className="text-4xl mb-4">{step.icon}</div>
-                  <h3 className="text-lg font-bold text-white mb-3">{step.title}</h3>
-                  <p className="text-sm text-slate-400 leading-relaxed">{step.desc}</p>
-                </motion.div>
-              ))}
-            </div>
+            <SectionHeader title={t.howTitle} subtitle={t.howSub} />
+            <StepCardGrid steps={t.steps} />
           </div>
         </section>
 
@@ -313,14 +248,7 @@ export function AppointmentBookingPage() {
                   <div className="space-y-6 order-1 lg:order-2">
                     <h2 className="text-3xl lg:text-4xl font-bold text-white">{t.featuresTitle}</h2>
                     <p className="text-lg text-slate-400 leading-relaxed">{t.featuresDesc}</p>
-                    <ul className="space-y-3">
-                      {t.features.map((f, i) => (
-                        <li key={i} className="flex items-center gap-3 text-slate-300">
-                          <CheckCircle className="h-5 w-5 flex-shrink-0" style={{ color: '#25D366' }} />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
+                    <FeatureChecklist items={t.features} />
                   </div>
                 </div>
               </div>
@@ -332,38 +260,17 @@ export function AppointmentBookingPage() {
         <section className="py-20 bg-white/[0.02]">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <h2 className="text-4xl font-bold text-white text-center mb-12">{t.useCasesTitle}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {t.useCases.map((uc, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: i % 2 === 0 ? -40 : 40 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className="flex gap-6 p-6 bg-slate-900/50 backdrop-blur rounded-2xl shadow-2xl border border-white/10 hover:shadow-lg transition-all"
-                >
-                  <div className="text-4xl flex-shrink-0">{uc.icon}</div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white mb-2">{uc.title}</h3>
-                    <p className="text-slate-400 leading-relaxed">{uc.desc}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+            <UseCaseGrid items={t.useCases} />
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="py-20 bg-gradient-to-br from-green-500 to-emerald-600">
-          <div className="max-w-3xl mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
-            <p className="text-xl text-green-100 mb-8">{t.ctaSub}</p>
-            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all" style={{ color: '#25D366' }}>
-              <Zap className="h-6 w-6" />
-              {t.cta}
-            </Link>
-          </div>
-        </section>
+        <CtaSection
+          title={t.ctaTitle}
+          subtitle={t.ctaSub}
+          ctaLabel={t.cta}
+          gradientClassName="from-green-500 to-emerald-600"
+          buttonClassName="text-[#25D366]"
+        />
       </main>
 
       <SiteFooter language={language} />

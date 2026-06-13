@@ -92,6 +92,10 @@ export type CustomerPatch = {
 type ChatbotOutput = {
   reply: string | null
   wipMessage?: string
+  /** ISO 2-letter code of the language the bot actually replied in (detected
+   *  from the customer's message by the module). The host uses this so the
+   *  deterministic welcome-video intro line matches the reply language. */
+  language?: string
   shouldEscalate: boolean
   escalationSummary?: string
   notificationEmails?: string
@@ -128,7 +132,6 @@ type SupportedLanguage = "it" | "es" | "pt" | "en" | "ca" | "fr" | "de"
 
 type InvokeParams = {
   workspaceId: string
-  workspaceSlug?: string | null
   customChatbotId?: string | null  // from workspace.customChatbotId (DB field)
   userMessage: string
   userName: string
@@ -168,18 +171,8 @@ type TsImportFn = (
 ) => Promise<any>
 
 export class CustomClientChatbotService {
-  private readonly customClient0WorkspaceIds: Set<string>
   // Cache per chatbotId → modulo caricato. Ogni custom-client-N ha il proprio modulo.
   private readonly moduleCache = new Map<string, Promise<ChatbotModule>>()
-
-  constructor() {
-    const configuredIds = (process.env.CUSTOM_CLIENT_0_WORKSPACE_IDS || "")
-      .split(",")
-      .map((id) => id.trim())
-      .filter(Boolean)
-
-    this.customClient0WorkspaceIds = new Set(configuredIds)
-  }
 
   async invoke(params: InvokeParams): Promise<InvokeResult> {
     const chatbotId = this.resolveChatbotId(params)
@@ -333,21 +326,13 @@ export class CustomClientChatbotService {
   }
 
   /**
-   * Resolve which custom chatbot to use, in priority order:
-   * 1. workspace.customChatbotId (DB field — authoritative, set in AI Personality settings)
-   * 2. workspace.slug === "ecolaundry" (legacy fallback for existing setup)
-   * 3. CUSTOM_CLIENT_0_WORKSPACE_IDS env var (legacy env var override)
-   * Returns null if no custom chatbot is configured.
+   * Resolve which custom chatbot to use from workspace.customChatbotId (DB field
+   * — authoritative, set in AI Personality settings). Returns null if no custom
+   * chatbot is configured.
    */
   private resolveChatbotId(params: InvokeParams): string | null {
     if (params.customChatbotId) {
       return params.customChatbotId.trim()
-    }
-    if (params.workspaceSlug?.toLowerCase() === "ecolaundry") {
-      return "ecolaundry"
-    }
-    if (this.customClient0WorkspaceIds.has(params.workspaceId)) {
-      return "ecolaundry"
     }
     return null
   }

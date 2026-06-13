@@ -1,16 +1,14 @@
 import { useLanguage } from "@/contexts/LanguageContext"
 import { motion } from "framer-motion"
 import {
-  AlertOctagon,
-  Briefcase,
   CalendarClock,
   ChevronDown,
+  Database,
   Headphones,
   PhoneCall,
   PlugZap,
   ShieldCheck,
-  Tag,
-  Users,
+  Video,
   Workflow,
 } from "lucide-react"
 import { useState } from "react"
@@ -18,15 +16,13 @@ import { Helmet } from "react-helmet-async"
 
 const FAQ_ITEMS = [
   { key: 1, icon: ShieldCheck, accent: "bg-emerald-400/10 text-emerald-300" },
-  { key: 2, icon: Users, accent: "bg-blue-400/10 text-blue-300" },
-  { key: 3, icon: Tag, accent: "bg-orange-400/10 text-orange-300" },
-  { key: 4, icon: CalendarClock, accent: "bg-violet-400/10 text-violet-300" },
-  { key: 5, icon: Headphones, accent: "bg-green-400/10 text-green-300" },
-  { key: 6, icon: PhoneCall, accent: "bg-cyan-400/10 text-cyan-300" },
-  { key: 7, icon: Workflow, accent: "bg-amber-400/10 text-amber-300" },
-  { key: 8, icon: PlugZap, accent: "bg-indigo-400/10 text-indigo-300" },
-  { key: 9, icon: AlertOctagon, accent: "bg-rose-400/10 text-rose-300" },
-  { key: 10, icon: Briefcase, accent: "bg-slate-400/10 text-slate-300" },
+  { key: 2, icon: CalendarClock, accent: "bg-violet-400/10 text-violet-300" },
+  { key: 3, icon: Headphones, accent: "bg-green-400/10 text-green-300" },
+  { key: 4, icon: PhoneCall, accent: "bg-cyan-400/10 text-cyan-300" },
+  { key: 5, icon: Workflow, accent: "bg-amber-400/10 text-amber-300" },
+  { key: 6, icon: PlugZap, accent: "bg-indigo-400/10 text-indigo-300" },
+  { key: 7, icon: Video, accent: "bg-blue-400/10 text-blue-300" },
+  { key: 8, icon: Database, accent: "bg-teal-400/10 text-teal-300" },
 ]
 
 export function HomeFAQ() {
@@ -39,7 +35,6 @@ export function HomeFAQ() {
     answer: t(`homeFaq.a${item.key}`),
   }))
 
-  // FAQPage structured data so Google can show these Q&As as rich results
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",

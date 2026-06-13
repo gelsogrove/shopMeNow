@@ -152,7 +152,7 @@ function formatBubbleTime(ts?: string): string {
 }
 
 // Supported language codes (browser language detection)
-const SUPPORTED_LANG_CODES = ["it", "en", "es", "pt", "fr", "de"]
+const SUPPORTED_LANG_CODES = ["it", "en", "es", "de", "fr", "ca"]
 
 interface Message {
   role: "user" | "bot"
@@ -195,6 +195,10 @@ interface ChatWidgetProps {
   hideWorkspaceName?: boolean
   // Render the WhatsApp number as plain text instead of a clickable wa.me link.
   plainWhatsappNumber?: boolean
+  // Show a small WhatsApp logo badge over the header avatar's bottom-right
+  // corner (white circle + green glyph), like the channel badge in the
+  // backoffice chat list. Used by the public /demo page to read as WhatsApp.
+  whatsappBadge?: boolean
   onOpenChange?: (isOpen: boolean) => void
   onConvert?: (customerId: string) => void
 }
@@ -232,7 +236,7 @@ function resolveWelcomeVideo(
   return null
 }
 
-type LangCode = "it" | "en" | "es" | "pt" | "fr" | "de"
+type LangCode = "it" | "en" | "es" | "de" | "fr" | "ca"
 
 const UI_STRINGS: Record<
   LangCode,
@@ -300,22 +304,6 @@ const UI_STRINGS: Record<
     termsBody:
       "Al aceptar, autorizas a eChatbot a contactarte por WhatsApp para soporte, notificaciones y ofertas. Puedes revocar el consentimiento en cualquier momento respondiendo STOP o escribiendo al soporte.",
   },
-  pt: {
-    intro: "Apresente-se para começar a conversar",
-    name: "Nome",
-    phone: "Telefone",
-    message: "Mensagem",
-    namePh: "Seu nome",
-    phonePh: "+55 11 91234-5678",
-    messagePh: "Como podemos ajudar?",
-    start: "Iniciar chat",
-    termsLabel: "Termos e Condições",
-    termsError: "Aceite os Termos e Condições para continuar",
-    back: "Voltar",
-    termsTitle: "Termos e Condições",
-    termsBody:
-      "Ao aceitar, você autoriza a eChatbot a contatá-lo pelo WhatsApp para suporte, notificações e ofertas. Você pode revogar a qualquer momento respondendo STOP ou falando com o suporte.",
-  },
   fr: {
     intro: "Présentez-vous pour commencer à discuter",
     name: "Nom",
@@ -348,6 +336,22 @@ const UI_STRINGS: Record<
     termsBody:
       "Mit der Zustimmung erlaubst du eChatbot, dich über WhatsApp für Support, Benachrichtigungen und Angebote zu kontaktieren. Du kannst dies jederzeit widerrufen, indem du STOP antwortest oder den Support kontaktierst.",
   },
+  ca: {
+    intro: "Presenta't per començar a xatejar",
+    name: "Nom",
+    phone: "Telèfon",
+    message: "Missatge",
+    namePh: "El teu nom",
+    phonePh: "+34 612 345 678",
+    messagePh: "Com podem ajudar-te?",
+    start: "Iniciar xat",
+    termsLabel: "Termes i Condicions",
+    termsError: "Accepta els Termes i Condicions per continuar",
+    back: "Enrere",
+    termsTitle: "Termes i Condicions",
+    termsBody:
+      "En acceptar, autoritzes eChatbot a contactar-te per WhatsApp per a suport, notificacions i ofertes. Pots revocar el consentiment en qualsevol moment responent STOP o contactant el suport.",
+  },
 }
 
 export function ChatWidget({
@@ -369,6 +373,7 @@ export function ChatWidget({
   instantChat = false,
   hideWorkspaceName = false,
   plainWhatsappNumber = false,
+  whatsappBadge = false,
   onOpenChange,
   onConvert,
 }: ChatWidgetProps) {
@@ -474,7 +479,6 @@ export function ChatWidget({
       it: "Scrivi un messaggio...",
       en: "Type a message...",
       es: "Escribe un mensaje...",
-      pt: "Digite uma mensagem...",
       fr: "Écrivez un message...",
       de: "Nachricht schreiben...",
     }[resolvedLangKey] ||
@@ -1055,15 +1059,18 @@ export function ChatWidget({
         return
       }
 
+      // 🔊 Voice in → voice out: the backend synthesizes the reply (TTS) and
+      // returns audioUrl. On WhatsApp a voice message is JUST audio — no text
+      // alongside it — so when we have audio we blank the bubble text and show
+      // only the player (Andrea's rule).
+      const hasTts = Boolean(data.audioUrl)
       const botMessage: Message = {
         role: "bot",
-        content: data.response,
+        content: hasTts ? "" : data.response,
         timestamp: new Date().toISOString(),
         suggestions: data.suggestions,
         serverId: data.assistantMessageId, // 😀 lets the visitor react to this reply
-        // 🔊 Voice in → voice out: the backend synthesizes the reply (TTS) and
-        // returns audioUrl — render it as a playable audio bubble.
-        attachments: data.audioUrl
+        attachments: hasTts
           ? [
               {
                 id: `tts-${Date.now()}`,
@@ -1497,7 +1504,7 @@ export function ChatWidget({
     switch (value) {
       case "whatsapp":
         return (
-          <svg viewBox="0 0 32 32" className="h-6 w-6 fill-white" aria-hidden="true">
+          <svg viewBox="0 0 32 32" className="h-9 w-9 fill-white" aria-hidden="true">
             <path d="M16.003 3C9.38 3 4 8.38 4 15.003c0 2.117.553 4.187 1.605 6.01L4 29l8.184-1.55a11.94 11.94 0 0 0 3.819.626h.003C22.626 28.075 28 22.695 28 16.072 28 9.45 22.626 3 16.003 3Zm0 21.86h-.002a9.9 9.9 0 0 1-3.46-.62l-.248-.094-4.857.92.94-4.735-.16-.244a9.85 9.85 0 0 1-1.5-5.224c0-5.46 4.44-9.9 9.91-9.9 2.646 0 5.13 1.03 7 2.9a9.84 9.84 0 0 1 2.9 7c0 5.46-4.44 9.9-9.91 9.9Zm5.43-7.42c-.297-.15-1.758-.867-2.03-.967-.272-.099-.47-.148-.668.149-.198.297-.767.967-.94 1.166-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.76-1.653-2.057-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.496.099-.198.05-.372-.025-.521-.074-.149-.668-1.611-.916-2.206-.241-.58-.486-.501-.668-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.073.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.29.173-1.413-.074-.124-.272-.198-.57-.347Z" />
           </svg>
         )
@@ -1739,14 +1746,24 @@ export function ChatWidget({
                       renderIconGlyph(resolvedIcon)
                     )}
                   </div>
-                  <span
-                    className={cn(
-                      "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#075E54]",
-                      workspaceConfig?.debugMode === true || workspaceConfig?.channelStatus === false
-                        ? "bg-red-400"
-                        : "bg-emerald-400"
-                    )}
-                  />
+                  {whatsappBadge ? (
+                    // 📲 WhatsApp channel badge — small white circle with the
+                    // green WhatsApp glyph, like the backoffice chat list badge.
+                    <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-black/5">
+                      <svg viewBox="0 0 32 32" className="h-3 w-3 fill-[#25D366]" aria-hidden="true">
+                        <path d="M16.003 3C9.38 3 4 8.38 4 15.003c0 2.117.553 4.187 1.605 6.01L4 29l8.184-1.55a11.94 11.94 0 0 0 3.819.626h.003C22.626 28.075 28 22.695 28 16.072 28 9.45 22.626 3 16.003 3Zm0 21.86h-.002a9.9 9.9 0 0 1-3.46-.62l-.248-.094-4.857.92.94-4.735-.16-.244a9.85 9.85 0 0 1-1.5-5.224c0-5.46 4.44-9.9 9.91-9.9 2.646 0 5.13 1.03 7 2.9a9.84 9.84 0 0 1 2.9 7c0 5.46-4.44 9.9-9.91 9.9Zm5.43-7.42c-.297-.15-1.758-.867-2.03-.967-.272-.099-.47-.148-.668.149-.198.297-.767.967-.94 1.166-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.76-1.653-2.057-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.496.099-.198.05-.372-.025-.521-.074-.149-.668-1.611-.916-2.206-.241-.58-.486-.501-.668-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.073.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.29.173-1.413-.074-.124-.272-.198-.57-.347Z" />
+                      </svg>
+                    </span>
+                  ) : (
+                    <span
+                      className={cn(
+                        "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#075E54]",
+                        workspaceConfig?.debugMode === true || workspaceConfig?.channelStatus === false
+                          ? "bg-red-400"
+                          : "bg-emerald-400"
+                      )}
+                    />
+                  )}
                 </div>
               ) : (
                 <span
@@ -1951,7 +1968,7 @@ export function ChatWidget({
                         <option value="en">🇬🇧 English</option>
                         <option value="it">🇮🇹 Italiano</option>
                         <option value="es">🇪🇸 Español</option>
-                        <option value="pt">🇧🇷 Português</option>
+                        <option value="ca">🏴󠁥󠁳󠁣󠁴󠁿 Català</option>
                         <option value="fr">🇫🇷 Français</option>
                         <option value="de">🇩🇪 Deutsch</option>
                       </select>
@@ -2516,7 +2533,7 @@ export function ChatWidget({
                   <option value="it">🇮🇹 Italiano</option>
                   <option value="en">🇬🇧 English</option>
                   <option value="es">🇪🇸 Español</option>
-                  <option value="pt">🇵🇹 Português</option>
+                  <option value="ca">🏴󠁥󠁳󠁣󠁴󠁿 Català</option>
                   <option value="fr">🇫🇷 Français</option>
                   <option value="de">🇩🇪 Deutsch</option>
                 </select>

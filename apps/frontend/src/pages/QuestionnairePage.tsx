@@ -2,6 +2,8 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import { GlowCard } from "@/components/ui/glow-card"
+import { GreenCtaButton } from "@/components/ui/green-cta-button"
 import { Input } from "@/components/ui/input"
 import axios from "axios"
 import { useLanguage } from "@/contexts/LanguageContext"
@@ -13,13 +15,13 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api/v1"
 // ─────────────────────────────────────────
 // Survey translations (self-contained, not in global LanguageContext)
 // ─────────────────────────────────────────
-type Lang = "it" | "en" | "es" | "pt"
+type Lang = "it" | "en" | "es" | "de"
 
 const QT: Record<Lang, Record<string, string>> = {
   it: {
     // Intro
-    intro_title: "Aiutaci a capire le tue esigenze",
-    intro_desc: "Rispondi a qualche domanda per aiutarci a capire come eChatbot può trasformare il tuo business. Il segreto di un buon chatbot è la qualità delle risposte: più capiamo il tuo contesto, meglio possiamo configurarlo per te. Parleremo di supporto clienti, marketing push, widget, vendite e molto altro.\nCirca 2 minuti, zero impegno.",
+    intro_title: "Aiutaci a costruire il chatbot perfetto per te",
+    intro_desc: "Il segreto di un buon chatbot è la qualità delle risposte. Rispondi a qualche domanda sulle tue esigenze — supporto umano, marketing push, widget, vendite, e-commerce e privacy — e ti mostreremo come eChatbot può fare la differenza.\nCirca 2 minuti, zero impegno.",
     intro_cta: "Avvia il survey →",
     back: "← Indietro",
     next: "Avanti →",
@@ -165,8 +167,8 @@ const QT: Record<Lang, Record<string, string>> = {
   },
 
   en: {
-    intro_title: "Help us understand your needs",
-    intro_desc: "Answer a few questions to help us understand how eChatbot can transform your business. The secret to a great chatbot is quality responses: the more we understand your context, the better we can configure it for you. We'll cover customer support, push marketing, widget, sales, and more.\nAbout 2 minutes, no commitment.",
+    intro_title: "Help us build the perfect chatbot for you",
+    intro_desc: "The secret to a great chatbot is the quality of its answers. Answer a few questions about your needs — human support, push marketing, widget, sales, e-commerce and privacy — and we'll show you how eChatbot can make the difference.\nAbout 2 minutes, no commitment.",
     intro_cta: "Start the survey →",
     back: "← Back",
     next: "Next →",
@@ -299,8 +301,8 @@ const QT: Record<Lang, Record<string, string>> = {
   },
 
   es: {
-    intro_title: "Ayúdanos a entender tus necesidades",
-    intro_desc: "Responde algunas preguntas para ayudarnos a entender cómo eChatbot puede transformar tu negocio. El secreto de un buen chatbot son las respuestas de calidad: cuanto más entendemos tu contexto, mejor podemos configurarlo. Hablaremos de soporte al cliente, marketing push, widget, ventas y mucho más.\nUnos 2 minutos, sin compromiso.",
+    intro_title: "Ayúdanos a construir el chatbot perfecto para ti",
+    intro_desc: "El secreto de un buen chatbot es la calidad de sus respuestas. Responde a algunas preguntas sobre tus necesidades — soporte humano, marketing push, widget, ventas, e-commerce y privacidad — y te mostraremos cómo eChatbot puede marcar la diferencia.\nUnos 2 minutos, sin compromiso.",
     intro_cta: "Iniciar el survey →",
     back: "← Atrás",
     next: "Siguiente →",
@@ -432,138 +434,138 @@ const QT: Record<Lang, Record<string, string>> = {
     try_chatbot_button: "Chatea con nosotros",
   },
 
-  pt: {
-    intro_title: "Ajude-nos a entender suas necessidades",
-    intro_desc: "Responda algumas perguntas para nos ajudar a entender como o eChatbot pode transformar o seu negócio. O segredo de um bom chatbot são as respostas de qualidade: quanto mais entendemos o seu contexto, melhor podemos configurá-lo. Falaremos sobre atendimento ao cliente, marketing push, widget, vendas e muito mais.\nCerca de 2 minutos, sem compromisso.",
-    intro_cta: "Iniciar o survey →",
-    back: "← Voltar",
-    next: "Próximo →",
-    almost: "Quase lá →",
-    step_of: "Passo {current} de {total}",
+  de: {
+    intro_title: "Hilf uns, den perfekten Chatbot für dich zu bauen",
+    intro_desc: "Das Geheimnis eines guten Chatbots ist die Qualität der Antworten. Beantworte ein paar Fragen zu deinen Anforderungen — menschlicher Support, Push-Marketing, Widget, Vertrieb, E-Commerce und Datenschutz — und wir zeigen dir, wie eChatbot den Unterschied macht.\nEtwa 2 Minuten, völlig unverbindlich.",
+    intro_cta: "Survey starten →",
+    back: "← Zurück",
+    next: "Weiter →",
+    almost: "Fast geschafft →",
+    step_of: "Schritt {current} von {total}",
 
-    industry_title: "O seu setor",
-    industry_q: "Em que setor atua o seu negócio? Ajuda-nos a perceber o contexto imediatamente e a personalizar a demo para si.",
-    industry_opt1: "Imobiliário",
-    industry_opt2: "Alimentação & Restauração",
-    industry_opt3: "Médico & Saúde",
-    industry_opt4: "Beleza & Bem-estar",
-    industry_opt5: "Formação",
-    industry_opt6: "Turismo",
-    industry_opt7: "Moda",
+    industry_title: "Deine Branche",
+    industry_q: "In welcher Branche ist dein Unternehmen tätig? Das hilft uns, deinen Kontext sofort zu verstehen und die Demo für dich anzupassen.",
+    industry_opt1: "Immobilien",
+    industry_opt2: "Lebensmittel & Gastronomie",
+    industry_opt3: "Medizin & Gesundheit",
+    industry_opt4: "Beauty & Wellness",
+    industry_opt5: "Bildung & Weiterbildung",
+    industry_opt6: "Tourismus",
+    industry_opt7: "Mode",
     industry_opt8: "Fitness",
-    industry_opt9: "Transporte",
-    industry_opt10: "Jurídico",
-    industry_opt11: "Outro",
-    industry_other_placeholder: "Especifique o seu setor…",
+    industry_opt9: "Transport",
+    industry_opt10: "Recht",
+    industry_opt11: "Andere",
+    industry_other_placeholder: "Gib deine Branche an…",
 
-    goal_title: "Objetivo principal",
-    goal_q: "Qual é o seu principal objetivo com um chatbot? Isso permite-nos mostrar-lhe imediatamente as funcionalidades mais relevantes.",
-    goal_opt1: "Reduzir pedidos de suporte ao cliente",
-    goal_opt2: "Gerar e qualificar leads",
-    goal_opt3: "Aumentar as vendas online",
-    goal_opt4: "Gerir reservas e agendamentos",
-    goal_opt5: "Enviar comunicações e lembretes aos clientes",
+    goal_title: "Hauptziel",
+    goal_q: "Was ist dein Hauptziel mit einem Chatbot? So können wir dir sofort die relevantesten Funktionen zeigen.",
+    goal_opt1: "Kundensupport-Anfragen reduzieren",
+    goal_opt2: "Leads generieren und qualifizieren",
+    goal_opt3: "Online-Verkäufe steigern",
+    goal_opt4: "Buchungen und Termine verwalten",
+    goal_opt5: "Mitteilungen und Erinnerungen an Kunden senden",
 
-    humanSupport_title: "Suporte Humano",
-    humanSupport_q: "Um dos pontos fortes do eChatbot é a transferência inteligente da IA para um agente humano, sem perder o contexto da conversa. Quando um cliente tem um problema complexo, o agente de IA transfere imediatamente o chat para um operador que recebe uma notificação no WhatsApp com todo o histórico. Gostaria de ter essa capacidade integrada no seu chatbot?",
-    humanSupport_opt1: "Sim, quero transferência para operador humano",
-    humanSupport_opt2: "Automação completa está ótimo para mim",
+    humanSupport_title: "Menschlicher Support",
+    humanSupport_q: "Eine der Stärken von eChatbot ist die intelligente Übergabe von der KI an einen menschlichen Agenten, ohne den Gesprächskontext zu verlieren. Wenn ein Kunde ein komplexes Anliegen hat, übergibt der KI-Agent den Chat sofort an einen Mitarbeiter, der eine WhatsApp-Benachrichtigung mit dem gesamten Gesprächsverlauf erhält. Möchtest du diese Funktion in deinen Chatbot integrieren?",
+    humanSupport_opt1: "Ja, ich möchte die Übergabe an einen menschlichen Agenten",
+    humanSupport_opt2: "Vollständige Automatisierung reicht mir",
 
-    pushMarketing_title: "Marketing Push",
-    pushMarketing_q: "As notificações push do WhatsApp têm uma taxa de abertura superior a 90%. Mas a verdadeira diferença é a personalização inteligente: a IA encarrega-se de enviar apenas o que cada cliente quer mesmo receber. Se por exemplo um cliente procura um estúdio em Barcelona, receberá apenas novos anúncios na sua zona ou atualizações de preço em imóveis semelhantes, nunca mensagens irrelevantes. Zero spam, máxima relevância.",
-    pushMarketing_opt1: "Sim, estou interessado",
-    pushMarketing_opt2: "Talvez mais tarde",
-    pushMarketing_opt3: "Não me interessa",
+    pushMarketing_title: "Push-Marketing",
+    pushMarketing_q: "WhatsApp-Push-Benachrichtigungen haben eine Öffnungsrate von über 90%. Aber der echte Unterschied ist die intelligente Personalisierung: Die KI sorgt dafür, dass nur das gesendet wird, was jeder Kunde wirklich erhalten möchte. Sucht ein Kunde zum Beispiel ein Studio-Apartment in Barcelona, erhält er nur neue Angebote in seiner Gegend oder Preissenkungen bei ähnlichen Objekten, niemals irrelevante Nachrichten. Null Spam, maximale Relevanz.",
+    pushMarketing_opt1: "Ja, ich bin interessiert",
+    pushMarketing_opt2: "Vielleicht später",
+    pushMarketing_opt3: "Kein Interesse",
 
-    reminders_title: "Lembretes e Agendamentos",
-    reminders_q: "Precisa de configurar lembretes para os seus clientes? Como prazos de pagamento, reuniões ou compromissos? Com a funcionalidade de agendamento do eChatbot pode automatizar envios direcionados no WhatsApp no momento certo, para cada cliente.",
-    reminders_opt1: "Sim, tenho interesse",
-    reminders_opt2: "Não, não tenho interesse",
+    reminders_title: "Erinnerungen & Termine",
+    reminders_q: "Musst du Erinnerungen für deine Kunden einrichten? Zum Beispiel Zahlungsfristen, Meetings oder Termine? Mit der Scheduling-Funktion von eChatbot kannst du gezielte WhatsApp-Nachrichten genau im richtigen Moment automatisieren, für jeden einzelnen Kunden.",
+    reminders_opt1: "Ja, ich bin interessiert",
+    reminders_opt2: "Nein, kein Interesse",
 
-    // Step: Demo request — closing ask. "Sim" → queremos enviar a demo.
-    demo_title: "Experimente a nossa demo",
-    demo_q: "Quer que enviemos uma demo para testar o nosso produto? Enviaremos as credenciais de acesso por email para que possa experimentar o eChatbot em primeira mão.",
-    demo_opt1: "Sim, enviem-me a demo",
-    demo_opt2: "Não, por agora não",
+    // Step: Demo request — closing ask. "Ja" → wir wollen die Demo senden.
+    demo_title: "Teste unsere Demo",
+    demo_q: "Möchtest du, dass wir dir eine Demo senden, um unser Produkt zu testen? Wir schicken dir die Zugangsdaten per E-Mail, damit du eChatbot selbst ausprobieren kannst.",
+    demo_opt1: "Ja, schickt mir die Demo",
+    demo_opt2: "Nein, im Moment nicht",
 
-    widget_title: "Widget de Chat",
-    widget_q: "O Widget do eChatbot permite integrar um chat inteligente diretamente no seu site, utilizando o mesmo chatbot que você configurou para o WhatsApp. Os visitantes podem iniciar uma conversa sem sair do site e o chatbot responde em tempo real.",
-    widget_opt1: "Sim, quero o widget no meu site",
-    widget_opt2: "Somente WhatsApp, sem widget",
-    widget_opt3: "Ambos: widget + WhatsApp",
+    widget_title: "Chat-Widget",
+    widget_q: "Das Widget von eChatbot ermöglicht es dir, einen smarten Chat direkt in deine Website einzubinden — mit demselben Chatbot, den du für WhatsApp konfiguriert hast. Besucher können eine Unterhaltung starten, ohne deine Seite zu verlassen, und der Chatbot antwortet in Echtzeit.",
+    widget_opt1: "Ja, ich möchte ein Widget auf meiner Website",
+    widget_opt2: "Nur WhatsApp, kein Widget nötig",
+    widget_opt3: "Beides: Website-Widget + WhatsApp",
 
-    salesAgents_title: "Equipe de Vendas",
-    salesAgents_q: "O eChatbot permite criar uma verdadeira equipe de vendas digital: pode registar os seus colaboradores como agentes de vendas, cada um com o seu próprio perfil e área de especialização. Quando um cliente está pronto para comprar ou precisa de assistência personalizada, a IA transfere o chat diretamente para o agente certo da sua equipe, que recebe uma notificação instantânea e intervém com todo o histórico da conversa. Esta funcionalidade é pensada para empresas com uma equipe comercial. Tem colaboradores dedicados a vendas?",
-    salesAgents_opt1: "Sim, tenho uma equipe de vendas",
-    salesAgents_opt2: "Não, faço tudo por conta própria",
+    salesAgents_title: "Vertriebsteam",
+    salesAgents_q: "Mit eChatbot kannst du ein echtes digitales Vertriebsteam aufbauen: Du kannst deine Mitarbeiter als Vertriebsagenten registrieren, jeder mit eigenem Profil und Fachgebiet. Wenn ein Kunde kaufbereit ist oder persönliche Unterstützung braucht, übergibt die KI den Chat direkt an den passenden Agenten in deinem Team, der eine sofortige Benachrichtigung erhält und mit dem gesamten Gesprächsverlauf einsteigt. Diese Funktion ist für Unternehmen mit einem Vertriebsteam gedacht. Hast du Mitarbeiter, die sich um den Vertrieb kümmern?",
+    salesAgents_opt1: "Ja, ich habe ein Vertriebsteam",
+    salesAgents_opt2: "Nein, ich mache alles selbst",
 
     ecommerce_title: "E-Commerce",
-    ecommerce_q: "O eChatbot tem um motor de e-commerce integrado que permite aos clientes navegar no catálogo, adicionar produtos ao carrinho e concluir pedidos diretamente no chat, no WhatsApp ou no widget. Se você já tem uma loja online ou está planejando criar uma, podemos integrá-la ou criar uma nova. O seu negócio vende produtos ou serviços online?",
-    ecommerce_opt1: "Sim, já tenho um e-commerce",
-    ecommerce_opt2: "Não, não vendo online",
-    ecommerce_opt3: "Estou planejando começar",
+    ecommerce_q: "eChatbot hat eine integrierte E-Commerce-Engine, mit der Kunden den Katalog durchstöbern, Produkte in den Warenkorb legen und Bestellungen direkt im Chat abschließen können — auf WhatsApp oder im Widget. Wenn du bereits einen Online-Shop hast oder planst, einen zu starten, können wir ihn integrieren oder einen neuen aufbauen. Verkauft dein Unternehmen Produkte oder Dienstleistungen online?",
+    ecommerce_opt1: "Ja, ich habe bereits einen E-Commerce",
+    ecommerce_opt2: "Nein, ich verkaufe nicht online",
+    ecommerce_opt3: "Ich plane, damit zu starten",
 
-    ecommercePlatform_title: "Plataforma E-Commerce",
-    ecommercePlatform_q: "Ótimo! O eChatbot integra-se com as principais plataformas de e-commerce: podemos importar o seu catálogo de produtos, preços e disponibilidade para que o chatbot os tenha acessíveis. Qual plataforma está a usar?",
+    ecommercePlatform_title: "E-Commerce-Plattform",
+    ecommercePlatform_q: "Super! eChatbot lässt sich mit allen wichtigen E-Commerce-Plattformen integrieren: Wir können deinen Produktkatalog, Preise und Verfügbarkeiten importieren, damit der Chatbot darauf zugreifen kann. Welche Plattform nutzt du?",
     ecommercePlatform_opt1: "WordPress / WooCommerce",
     ecommercePlatform_opt2: "PrestaShop",
     ecommercePlatform_opt3: "Magento / Adobe Commerce",
-    ecommercePlatform_opt4: "Outra plataforma",
+    ecommercePlatform_opt4: "Andere Plattform",
 
     // Step 7: External integrations
-    integrations_title: "Integrações Externas (RAG)",
-    integrations_q: "O seu negócio utiliza sistemas externos como um CRM (Salesforce, HubSpot), ERP, software de gestão ou outras ferramentas empresariais? O eChatbot pode integrar-se com esses sistemas através de desenvolvimento personalizado: importamos e mapeamos os seus dados para que o chatbot tenha sempre informações atualizadas.",
-    integrations_opt1: "Sim, tenho sistemas para integrar",
-    integrations_opt2: "Não uso sistemas externos",
+    integrations_title: "Externe Integrationen (RAG)",
+    integrations_q: "Nutzt dein Unternehmen externe Systeme wie ein CRM (Salesforce, HubSpot), ERP, eine Verwaltungssoftware oder andere Business-Tools? eChatbot kann sich durch individuelle Entwicklung mit diesen Systemen integrieren: Wir importieren und ordnen deine Daten zu, damit der Chatbot immer aktuelle Informationen hat.",
+    integrations_opt1: "Ja, ich habe Systeme zum Integrieren",
+    integrations_opt2: "Ich nutze keine externen Systeme",
 
     // Step 8: Privacy
-    privacy_title: "Privacidade e Segurança",
-    privacy_q: "Entendemos que a privacidade dos seus clientes é fundamental. O eChatbot foi desenvolvido com a privacidade no centro: nunca enviamos dados sensíveis dos clientes para modelos de IA. As informações pessoais (contatos, pedidos, pagamentos) sempre ficam no seu banco de dados. Para operações sensíveis usamos links com tokens temporários, acessíveis apenas pelo usuário em questão.",
-    privacy_opt1: "Sim, me convence",
-    privacy_opt2: "Ainda tenho dúvidas",
+    privacy_title: "Datenschutz & Sicherheit",
+    privacy_q: "Wir wissen, dass der Datenschutz deiner Kunden entscheidend ist. eChatbot ist mit Datenschutz im Kern entwickelt: Wir senden niemals sensible Kundendaten an KI-Modelle. Persönliche Informationen (Kontakte, Bestellungen, Zahlungen) bleiben immer in deiner Datenbank. Für sensible Vorgänge nutzen wir zeitlich begrenzte Token-Links, auf die nur der jeweilige Nutzer zugreifen kann.",
+    privacy_opt1: "Ja, das überzeugt mich",
+    privacy_opt2: "Ich habe noch ein paar Zweifel",
 
     // Step 9: On-Premise
     onPremise_title: "Service On-Premise",
-    onPremise_q: "O eChatbot também está disponível como solução on-premise: toda a plataforma, backend, base de dados e motor de IA, é instalada diretamente nos servidores do cliente ou na sua infraestrutura cloud privada. Ideal para organizações com requisitos de conformidade rigorosos (setor bancário, saúde, jurídico ou governamental), políticas de TI rígidas, ou para quem quer independência total de serviços externos.",
-    onPremise_opt1: "Sim, tenho interesse",
-    onPremise_opt2: "O serviço cloud no eChatbot.AI é suficiente",
-    onPremise_opt3: "Talvez mais tarde",
+    onPremise_q: "eChatbot ist auch als On-Premise-Lösung verfügbar: Die gesamte Plattform, Backend, Datenbank und KI-Engine, wird direkt auf den Servern des Kunden oder in einer privaten Cloud-Infrastruktur installiert. Ideal für Organisationen mit strengen Compliance-Anforderungen (Banken-, Gesundheits-, Rechts- oder Behördensektor), strikten IT-Richtlinien oder für alle, die völlige Unabhängigkeit von externen Diensten wünschen.",
+    onPremise_opt1: "Ja, ich bin interessiert",
+    onPremise_opt2: "Der Cloud-Service auf eChatbot.AI reicht aus",
+    onPremise_opt3: "Vielleicht später",
 
     // Step 10: Interest rating
-    interest_title: "Quanto você está interessado?",
-    interest_q: "Honestamente, quanto você está interessado no eChatBot para o seu negócio? Selecione de 0 (nada) a 5 (muito interessado).\n\nSe selecionar 0, não pediremos nenhum dado pessoal. Se estiver interessado, mostraremos um breve formulário de contato — entraremos em contato nos próximos dias para ver como podemos ajudar uns aos outros.",
+    interest_title: "Wie interessiert bist du?",
+    interest_q: "Ganz ehrlich, wie interessiert bist du an eChatBot für dein Unternehmen? Wähle von 0 (gar nicht) bis 5 (sehr interessiert).\n\nWenn du 0 wählst, fragen wir dich nach keinen persönlichen Daten. Wenn du interessiert bist, zeigen wir dir ein kurzes Kontaktformular — wir melden uns in den nächsten Tagen, um zu sehen, wie wir einander helfen können.",
 
     // Step 10: Other (textarea)
-    other_title: "Quase lá!",
-    other_q: "Entendemos! Criaremos um chatbot de IA sob medida para o seu negócio. Há mais alguma coisa que gostaria de nos comunicar? Uma integração específica, uma funcionalidade que você tem em mente, um caso de uso particular? Qualquer detalhe nos ajuda a criar algo realmente útil para você.",
-    other_placeholder: "Escreva suas ideias ou perguntas aqui… (opcional)",
+    other_title: "Fast geschafft!",
+    other_q: "Verstanden! Wir bauen einen maßgeschneiderten KI-Chatbot für dein Unternehmen. Gibt es noch etwas, das du uns mitteilen möchtest? Eine bestimmte Integration, eine Funktion, die du im Kopf hast, ein besonderer Anwendungsfall? Jedes Detail hilft uns, etwas wirklich Nützliches für dich zu schaffen.",
+    other_placeholder: "Schreibe deine Ideen oder Fragen hier… (optional)",
 
-    contact_title: "Vamos Conversar",
-    contact_q: "Obrigado por completar o survey! As suas respostas nos ajudarão a criar um chatbot sob medida para as suas necessidades. Você estaria disponível para uma breve ligação com a nossa equipe? Mostraríamos uma demo personalizada e responderíamos a todas as suas dúvidas, sem nenhum compromisso.",
-    contact_opt1: "Sim, por favor me contactem!",
-    contact_opt2: "Não, mas obrigado pelas informações",
+    contact_title: "Lass uns reden",
+    contact_q: "Danke, dass du den Survey ausgefüllt hast! Deine Antworten helfen uns, einen Chatbot ganz nach deinen Bedürfnissen zu bauen. Hättest du Zeit für ein kurzes Gespräch mit unserem Team? Wir würden dir eine persönliche Demo zeigen und alle deine Fragen beantworten, völlig unverbindlich.",
+    contact_opt1: "Ja, bitte kontaktiert mich!",
+    contact_opt2: "Nein, aber danke für die Informationen",
 
-    form_title: "Como podemos entrar em contato?",
-    form_desc: "Deixe seus dados e entraremos em contato em até 24 horas para organizar uma demo personalizada.",
-    form_fullName: "Nome completo *",
-    form_email: "Email *",
-    form_phone: "Telefone",
-    form_company: "Empresa",
-    form_submit: "Enviar →",
-    form_submitting: "Enviando…",
-    form_error: "Algo deu errado. Por favor, tente novamente.",
+    form_title: "Wie können wir dich erreichen?",
+    form_desc: "Hinterlasse deine Daten und wir melden uns innerhalb von 24 Stunden, um eine persönliche Demo zu vereinbaren.",
+    form_fullName: "Vor- und Nachname *",
+    form_email: "E-Mail *",
+    form_phone: "Telefon",
+    form_company: "Unternehmen",
+    form_submit: "Senden →",
+    form_submitting: "Wird gesendet…",
+    form_error: "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
 
-    success_title: "Obrigado!",
-    success_desc: "Recebemos as suas respostas. Nossa equipe entrará em contato em breve para uma demo personalizada do eChatbot.",
-    success_cta: "Voltar para a página inicial",
+    success_title: "Danke!",
+    success_desc: "Wir haben deine Antworten erhalten. Unser Team meldet sich in Kürze bei dir für eine persönliche eChatbot-Demo.",
+    success_cta: "Zurück zur Startseite",
 
-    noContact_title: "Muito obrigado!",
-    noContact_desc: "Apreciamos o tempo que dedicou para responder. As suas respostas nos ajudarão a melhorar o eChatbot. Se mudar de ideia, estamos sempre disponíveis.",
-    noContact_cta: "Voltar para a página inicial",
+    noContact_title: "Vielen Dank!",
+    noContact_desc: "Wir schätzen die Zeit, die du dir zum Antworten genommen hast. Deine Antworten helfen uns, eChatbot zu verbessern. Wenn du es dir anders überlegst, sind wir immer für dich da.",
+    noContact_cta: "Zurück zur Startseite",
 
     // Try chatbot CTA
-    try_chatbot: "Tem dúvidas ou perguntas? Experimente nosso chatbot no WhatsApp!",
-    try_chatbot_button: "Converse conosco",
+    try_chatbot: "Hast du Zweifel oder Fragen? Teste unseren Chatbot auf WhatsApp!",
+    try_chatbot_button: "Chatte mit uns",
   },
 }
 
@@ -823,7 +825,7 @@ const slideVariants = {
 // ─────────────────────────────────────────
 export default function QuestionnairePage() {
   const { language } = useLanguage()
-  const lang = (["it", "en", "es", "pt"].includes(language) ? language : "en") as Lang
+  const lang = (["it", "en", "es", "de"].includes(language) ? language : "en") as Lang
   const T = QT[lang]
 
   type View = "intro" | "steps" | "contact_form" | "success" | "no_contact"
@@ -946,7 +948,7 @@ export default function QuestionnairePage() {
             it: "Survey - Costruiamo insieme il chatbot perfetto",
             en: "Survey - Let's build the perfect chatbot together",
             es: "Survey - Construyamos juntos el chatbot perfecto",
-            pt: "Survey - Vamos construir juntos o chatbot perfeito",
+            de: "Survey - Lass uns gemeinsam den perfekten Chatbot bauen",
           } as Record<string, string>)[lang] ||
           "Survey - Let's build the perfect chatbot together"
         }
@@ -955,7 +957,7 @@ export default function QuestionnairePage() {
             it: "Rispondi a qualche domanda sulle tue esigenze e ti mostriamo come eChatbot può trasformare il tuo business su WhatsApp. Circa 2 minuti, zero impegno.",
             en: "Answer a few questions about your needs and we'll show how eChatbot can transform your business on WhatsApp. About 2 minutes, no commitment.",
             es: "Responde unas preguntas sobre tus necesidades y te mostramos cómo eChatbot puede transformar tu negocio en WhatsApp. Unos 2 minutos, sin compromiso.",
-            pt: "Responde a algumas perguntas sobre as tuas necessidades e mostramos como o eChatbot pode transformar o teu negócio no WhatsApp. Cerca de 2 minutos, sem compromisso.",
+            de: "Beantworte ein paar Fragen zu deinen Anforderungen und wir zeigen dir, wie eChatbot dein Geschäft auf WhatsApp verändern kann. Etwa 2 Minuten, völlig unverbindlich.",
           } as Record<string, string>)[lang] ||
           "Answer a few questions about your needs and we'll show how eChatbot can transform your business on WhatsApp."
         }
@@ -972,15 +974,12 @@ export default function QuestionnairePage() {
 
           {/* ── INTRO ── */}
           {view === "intro" && (
-            <div className="relative">
-              {/* Soft green glow — matches the site's reference cards */}
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-50 -z-10" />
-              <motion.div
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="relative bg-slate-900/50 backdrop-blur rounded-3xl shadow-2xl border border-white/10 overflow-hidden"
-              >
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <GlowCard innerClassName="overflow-hidden">
                 {/* Body */}
                 <div className="p-5 sm:p-10">
                   {/* Full-width intro image */}
@@ -1008,28 +1007,24 @@ export default function QuestionnairePage() {
                     {T.intro_desc}
                   </p>
 
-                  <Button
-                    size="lg"
-                    className="w-full text-white py-7 text-xl rounded-xl shadow-lg"
-                    style={{ background: "#25D366" }}
+                  <GreenCtaButton
+                    icon="📋"
+                    className="w-full"
                     onClick={() => {
                       setView("steps")
                       setCurrentStep(0)
                     }}
                   >
                     {T.intro_cta}
-                  </Button>
+                  </GreenCtaButton>
                 </div>
-              </motion.div>
-            </div>
+              </GlowCard>
+            </motion.div>
           )}
 
           {/* ── STEPS ── */}
           {view === "steps" && (
-            <div className="relative">
-              {/* Soft green glow — matches the site's reference cards */}
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-50 -z-10" />
-              <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl shadow-2xl border border-white/10 overflow-hidden">
+            <GlowCard innerClassName="overflow-hidden">
               {/* Progress bar */}
               <div className="h-1.5 bg-white/10">
                 <motion.div
@@ -1278,21 +1273,17 @@ export default function QuestionnairePage() {
                   </Button>
                 </div>
               </div>
-            </div>
-            </div>
+            </GlowCard>
           )}
 
           {/* ── CONTACT FORM ── */}
           {view === "contact_form" && (
-            <div className="relative">
-              {/* Soft green glow — matches the site's reference cards */}
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-50 -z-10" />
-              <motion.div
-                initial={{ opacity: 0, y: 24 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="relative bg-slate-900/50 backdrop-blur rounded-3xl shadow-2xl border border-white/10 p-5 sm:p-8"
-              >
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <GlowCard innerClassName="p-5 sm:p-8">
               <div className="text-5xl mb-3">👤</div>
               <h2 className="text-2xl font-bold text-white mb-1">{T.form_title}</h2>
               <p className="text-slate-400 mb-6 text-sm">{T.form_desc}</p>
@@ -1377,21 +1368,18 @@ export default function QuestionnairePage() {
                   </Button>
                 </div>
               </form>
+              </GlowCard>
             </motion.div>
-            </div>
           )}
 
           {/* ── SUCCESS (with contact) ── */}
           {view === "success" && (
-            <div className="relative">
-              {/* Soft green glow — matches the site's reference cards */}
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-50 -z-10" />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4 }}
-                className="relative bg-slate-900/50 backdrop-blur rounded-3xl shadow-2xl border border-white/10 p-10 text-center"
-              >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+            >
+              <GlowCard innerClassName="p-10 text-center">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -1408,21 +1396,18 @@ export default function QuestionnairePage() {
                   {T.success_cta}
                 </Button>
               </Link>
+              </GlowCard>
             </motion.div>
-            </div>
           )}
 
           {/* ── NO CONTACT THANK YOU ── */}
           {view === "no_contact" && (
-            <div className="relative">
-              {/* Soft green glow — matches the site's reference cards */}
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-50 -z-10" />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.4 }}
-                className="relative bg-slate-900/50 backdrop-blur rounded-3xl shadow-2xl border border-white/10 p-10 text-center"
-              >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+            >
+              <GlowCard innerClassName="p-10 text-center">
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -1439,8 +1424,8 @@ export default function QuestionnairePage() {
                   {T.noContact_cta}
                 </Button>
               </Link>
+              </GlowCard>
             </motion.div>
-            </div>
           )}
         </div>
       </div>

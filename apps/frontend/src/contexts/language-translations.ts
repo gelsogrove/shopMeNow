@@ -153,7 +153,7 @@ export const translations = {
     // Integration Section
     "integration.crm.title": "Integrazione CRM personalizzata",
     "integration.crm.subtitle": "Connetti il tuo chatbot al tuo CRM e ai dati esterni con accesso API sicuro. Sincronizza i profili dei clienti, recupera lo storico degli ordini e attiva flussi di lavoro basati su eventi in tempo reale. Integrati con le API del tuo spedizioniere per offrire tracking in tempo reale e sapere sempre dove si trova il tuo carico. Ogni risposta è basata sui tuoi dati.",
-    "integration.crm.button": "📋 Preventivo",
+    "integration.crm.button": "Scopri di più",
 
     "pushAi.badge": "Smart Push AI",
     "pushAi.title": "Push intelligente con AI",
@@ -599,37 +599,31 @@ export const translations = {
     // Home FAQ section (public landing)
     "homeFaq.title": "Domande frequenti",
     "homeFaq.subtitle":
-      "Privacy, team, campagne, escalation: le risposte alle domande che riceviamo più spesso prima di iniziare.",
-    "homeFaq.q1": "Come trattate la privacy e i dati sensibili?",
+      "Privacy, campagne, escalation, meeting: le risposte alle domande che riceviamo più spesso prima di iniziare.",
+    "homeFaq.q1": "Come gestite i dati personali dei clienti?",
     "homeFaq.a1":
-      "I dati restano nel workspace: conserviamo le conversazioni in UE, cifriamo tutto in transito e puoi decidere per quanto tempo mantenere lo storico. Il modello usa solo il tuo dataset, nessun training esterno.",
-    "homeFaq.q2": "Posso invitare colleghi nel mio workspace?",
+      "Quando l'utente condivide dati personali, l'elaborazione AI viene disattivata automaticamente. I dati personali sono conservati esclusivamente nei nostri database, al sicuro e accessibili solo a te.",
+    "homeFaq.q2": "Posso schedulare push o campagne WhatsApp?",
     "homeFaq.a2":
-      "Certo. I piani Free e Basic includono 3 membri, Premium e Enterprise non hanno limiti. Ogni ruolo può avere permessi diversi (marketing, supporto, amministrazione).",
-    "homeFaq.q3": "Si possono creare offerte, bundle o coupon?",
-    "homeFaq.a3":
-      "Puoi generare listini mirati, applicare coupon temporanei e pubblicarli direttamente in chat. Ogni offerta può avere lingue, canali e disponibilità personalizzate.",
-    "homeFaq.q4": "Posso schedulare push o campagne WhatsApp?",
-    "homeFaq.a4":
       "Sì, pianifichi broadcast e follow-up automatici con regole su fuso orario, opt-in e prodotti disponibili. Il motore evita l'invio se l'utente sta già parlando con l'operatore.",
-    "homeFaq.q5": "Il cliente può parlare con un operatore umano?",
-    "homeFaq.a5":
+    "homeFaq.q3": "Il cliente può parlare con un operatore umano?",
+    "homeFaq.a3":
       "In ogni momento. Il bot riconosce parole chiave o emozioni e passa la conversazione con tutto il contesto, allegati e carrello.",
-    "homeFaq.q6": "Come vengo avvisato quando serve un operatore?",
-    "homeFaq.a6":
+    "homeFaq.q4": "Come vengo avvisato quando serve un operatore?",
+    "homeFaq.a4":
       "Inviamo notifiche via email, push e WhatsApp interno. Puoi anche assegnare turni: il primo agente disponibile riceve un ping diretto.",
-    "homeFaq.q7": "Posso decidere le regole di escalation?",
-    "homeFaq.a7":
+    "homeFaq.q5": "Posso decidere le regole di escalation?",
+    "homeFaq.a5":
       "Definisci trigger (parole, sentimenti, stato del carrello, VIP flag) e azioni: avviso umano, blocco pagamenti, richiesta di documenti o apertura ticket.",
-    "homeFaq.q8": "Come integro il mio CRM o ERP?",
+    "homeFaq.q6": "Come integro il mio CRM o ERP?",
+    "homeFaq.a6":
+      "Creiamo un connettore dedicato per il tuo CRM o ERP (HubSpot, Salesforce, SAP, ecc.). Sincronizziamo contatti, offerte e pipeline senza toccare il tuo stack.",
+    "homeFaq.q7": "Può il chatbot fissare un meeting con una videochiamata di Zoom?",
+    "homeFaq.a7":
+      "Sì. Il chatbot guida il cliente nella scelta di data e ora, crea automaticamente il link Zoom e lo invia su WhatsApp. Tu ricevi una notifica immediata con tutti i dettagli del meeting.",
+    "homeFaq.q8": "Come carico i dati di ogni singolo negozio del mio franchising?",
     "homeFaq.a8":
-      "Con il piano Enterprise creiamo un connettore dedicato (HubSpot, Salesforce, SAP, ecc.). Sincronizziamo contatti, offerte e pipeline senza toccare il tuo stack.",
-    "homeFaq.q9": "Cosa succede quando termino il credito?",
-    "homeFaq.a9":
-      "Avvisiamo molto prima: email, badge in dashboard e messaggi su WhatsApp interno. È previsto un piccolo buffer negativo per non interrompere le chat attive.",
-    "homeFaq.q10": "Non ho un e-commerce, offro servizi: posso usare eChatbot?",
-    "homeFaq.a10":
-      "Sì. Puoi raccogliere richieste, prenotazioni e preventivi usando form dinamici, allegati e pagamenti link-to-pay. Il bot costruisce ordini anche senza catalogo.",
+      "Parla con i nostri operatori per dinamicizzare tutti i processi in base alle tue esigenze. Se hai i dati in un database, possiamo leggerli direttamente dalla tua API e integrarli nel chatbot in tempo reale.",
   },
   en: {
     // Header
@@ -639,7 +633,7 @@ export const translations = {
     "hero.title": "Your AI agent on WhatsApp",
     "hero.subtitle":
       "The custom AI for your franchise business on WhatsApp: answers customers 24/7 in any language, connects to machines remotely, books appointments and sends promos. And when a human steps in, the operator writes in their own language — the AI translates in real time.",
-    "hero.slogan": "You never forget your first agent…",
+    "hero.slogan": "Your best employee never sleeps.",
     "hero.subline": "",
     "hero.whyTitle": "Why eChatbot?",
     "hero.useCasesTitle": "Built for sales, support, and growth.",
@@ -845,7 +839,7 @@ export const translations = {
     // Integration Section
     "integration.crm.title": "Custom CRM integration",
     "integration.crm.subtitle": "Connect your chatbot to your CRM and external data with secure API access. Sync customer profiles, pull order history, and trigger workflows based on real-time events. Integrate with your carrier's API to offer real-time tracking and always know where your shipment is. Every reply is grounded in your data.",
-    "integration.crm.button": "📋 Quote",
+    "integration.crm.button": "Learn more",
 
     "pushAi.badge": "AI Smart Push",
     "pushAi.title": "AI‑driven Smart Push",
@@ -1252,37 +1246,31 @@ export const translations = {
     // Home FAQ section (public landing)
     "homeFaq.title": "Frequently asked questions",
     "homeFaq.subtitle":
-      "Privacy, team, campaigns, escalation: answers to the questions we hear most often before getting started.",
-    "homeFaq.q1": "How do you handle privacy and sensitive data?",
+      "Privacy, campaigns, escalation, meetings: answers to the questions we hear most often before getting started.",
+    "homeFaq.q1": "How do you handle customers' personal data?",
     "homeFaq.a1":
-      "Your data stays in your workspace: conversations are stored in the EU, everything is encrypted in transit and you decide how long to keep the history. The model only uses your dataset, no external training.",
-    "homeFaq.q2": "Can I invite colleagues to my workspace?",
+      "When a user shares personal data, AI processing is automatically disabled. Personal data is stored exclusively in our databases, kept secure and accessible only by you.",
+    "homeFaq.q2": "Can I schedule WhatsApp pushes or campaigns?",
     "homeFaq.a2":
-      "Of course. Free and Basic plans include 3 members, Premium and Enterprise have no limits. Each role can have different permissions (marketing, support, administration).",
-    "homeFaq.q3": "Can I create offers, bundles or coupons?",
-    "homeFaq.a3":
-      "You can generate targeted price lists, apply temporary coupons and publish them directly in chat. Each offer can have its own languages, channels and availability.",
-    "homeFaq.q4": "Can I schedule WhatsApp pushes or campaigns?",
-    "homeFaq.a4":
       "Yes, you can plan broadcasts and automatic follow-ups with rules for time zone, opt-in and product availability. The engine skips sending if the user is already talking to an operator.",
-    "homeFaq.q5": "Can customers talk to a human operator?",
-    "homeFaq.a5":
+    "homeFaq.q3": "Can customers talk to a human operator?",
+    "homeFaq.a3":
       "At any time. The bot recognizes keywords or emotions and hands over the conversation with full context, attachments and cart.",
-    "homeFaq.q6": "How am I notified when an operator is needed?",
-    "homeFaq.a6":
+    "homeFaq.q4": "How am I notified when an operator is needed?",
+    "homeFaq.a4":
       "We send notifications via email, push and internal WhatsApp. You can also assign shifts: the first available agent gets a direct ping.",
-    "homeFaq.q7": "Can I define the escalation rules?",
-    "homeFaq.a7":
+    "homeFaq.q5": "Can I define the escalation rules?",
+    "homeFaq.a5":
       "You define triggers (words, sentiment, cart status, VIP flag) and actions: human alert, payment block, document request or ticket creation.",
-    "homeFaq.q8": "How do I integrate my CRM or ERP?",
+    "homeFaq.q6": "How do I integrate my CRM or ERP?",
+    "homeFaq.a6":
+      "We build a dedicated connector for your CRM or ERP (HubSpot, Salesforce, SAP, etc.). We sync contacts, offers and pipelines without touching your stack.",
+    "homeFaq.q7": "Can the chatbot schedule a meeting with a Zoom video call?",
+    "homeFaq.a7":
+      "Yes. The chatbot guides the customer through choosing a date and time, automatically creates the Zoom link and sends it via WhatsApp. You receive an immediate notification with all the meeting details.",
+    "homeFaq.q8": "How do I load data for each store in my franchise?",
     "homeFaq.a8":
-      "With the Enterprise plan we build a dedicated connector (HubSpot, Salesforce, SAP, etc.). We sync contacts, offers and pipelines without touching your stack.",
-    "homeFaq.q9": "What happens when I run out of credit?",
-    "homeFaq.a9":
-      "We warn you well in advance: email, dashboard badge and internal WhatsApp messages. A small negative buffer keeps active chats running.",
-    "homeFaq.q10": "I don't have an e-commerce, I offer services: can I use eChatbot?",
-    "homeFaq.a10":
-      "Yes. You can collect requests, bookings and quotes using dynamic forms, attachments and link-to-pay payments. The bot builds orders even without a catalog.",
+      "Talk to our operators to dynamise all processes based on your needs. If you have the data in a database, we can read it directly from your API and integrate it into the chatbot in real time.",
   },
   es: {
     // Header
@@ -1292,7 +1280,7 @@ export const translations = {
     "hero.title": "Tu agente con IA en WhatsApp",
     "hero.subtitle":
       "La IA a medida para tu negocio en franquicia en WhatsApp: responde a clientes 24/7 en cualquier idioma, se conecta a las máquinas en remoto, agenda citas y envía promociones. Y cuando interviene un operador, escribe en su idioma: la IA traduce en tiempo real.",
-    "hero.slogan": "El primer agente nunca se olvida…",
+    "hero.slogan": "Tu mejor empleado no duerme nunca.",
     "hero.subline": "",
     "hero.whyTitle": "¿Por qué eChatbot?",
     "hero.useCasesTitle": "Diseñado para ventas, soporte y crecimiento.",
@@ -1423,7 +1411,7 @@ export const translations = {
     // Integration Section
     "integration.crm.title": "Integración CRM personalizada",
     "integration.crm.subtitle": "Conecta tu chatbot a tu CRM y datos externos con acceso API seguro. Sincroniza perfiles de clientes, obtén historial de pedidos y activa flujos de trabajo basados en eventos en tiempo real. Intégrate con la API de tu transportista para ofrecer seguimiento en tiempo real y saber siempre dónde está tu envío. Cada respuesta está fundamentada en tus datos.",
-    "integration.crm.button": "📋 Presupuesto",
+    "integration.crm.button": "Ver más",
 
     "pushAi.badge": "Push Inteligente IA",
     "pushAi.title": "Push inteligente con IA",
@@ -1774,578 +1762,703 @@ export const translations = {
     // Home FAQ section (public landing)
     "homeFaq.title": "Preguntas frecuentes",
     "homeFaq.subtitle":
-      "Privacidad, equipo, campañas, escalado: respuestas a las preguntas que más recibimos antes de empezar.",
-    "homeFaq.q1": "¿Cómo tratáis la privacidad y los datos sensibles?",
+      "Privacidad, campañas, escalado, meetings: respuestas a las preguntas que más recibimos antes de empezar.",
+    "homeFaq.q1": "¿Cómo gestionáis los datos personales de los clientes?",
     "homeFaq.a1":
-      "Tus datos permanecen en tu workspace: guardamos las conversaciones en la UE, ciframos todo en tránsito y tú decides cuánto tiempo conservar el historial. El modelo usa solo tu dataset, sin entrenamiento externo.",
-    "homeFaq.q2": "¿Puedo invitar a compañeros a mi workspace?",
+      "Cuando el usuario comparte datos personales, el procesamiento de IA se desactiva automáticamente. Los datos personales se almacenan exclusivamente en nuestras bases de datos, seguros y accesibles solo para ti.",
+    "homeFaq.q2": "¿Puedo programar push o campañas de WhatsApp?",
     "homeFaq.a2":
-      "Claro. Los planes Free y Basic incluyen 3 miembros, Premium y Enterprise no tienen límites. Cada rol puede tener permisos distintos (marketing, soporte, administración).",
-    "homeFaq.q3": "¿Se pueden crear ofertas, bundles o cupones?",
-    "homeFaq.a3":
-      "Puedes generar listas de precios específicas, aplicar cupones temporales y publicarlos directamente en el chat. Cada oferta puede tener idiomas, canales y disponibilidad personalizados.",
-    "homeFaq.q4": "¿Puedo programar push o campañas de WhatsApp?",
-    "homeFaq.a4":
       "Sí, planificas difusiones y seguimientos automáticos con reglas de zona horaria, opt-in y productos disponibles. El motor evita el envío si el usuario ya está hablando con el operador.",
-    "homeFaq.q5": "¿El cliente puede hablar con un operador humano?",
-    "homeFaq.a5":
+    "homeFaq.q3": "¿El cliente puede hablar con un operador humano?",
+    "homeFaq.a3":
       "En cualquier momento. El bot reconoce palabras clave o emociones y transfiere la conversación con todo el contexto, adjuntos y carrito.",
-    "homeFaq.q6": "¿Cómo se me avisa cuando se necesita un operador?",
-    "homeFaq.a6":
+    "homeFaq.q4": "¿Cómo se me avisa cuando se necesita un operador?",
+    "homeFaq.a4":
       "Enviamos notificaciones por email, push y WhatsApp interno. También puedes asignar turnos: el primer agente disponible recibe un aviso directo.",
-    "homeFaq.q7": "¿Puedo decidir las reglas de escalado?",
-    "homeFaq.a7":
+    "homeFaq.q5": "¿Puedo decidir las reglas de escalado?",
+    "homeFaq.a5":
       "Defines disparadores (palabras, sentimientos, estado del carrito, marca VIP) y acciones: aviso humano, bloqueo de pagos, solicitud de documentos o apertura de ticket.",
-    "homeFaq.q8": "¿Cómo integro mi CRM o ERP?",
+    "homeFaq.q6": "¿Cómo integro mi CRM o ERP?",
+    "homeFaq.a6":
+      "Creamos un conector dedicado para tu CRM o ERP (HubSpot, Salesforce, SAP, etc.). Sincronizamos contactos, ofertas y pipelines sin tocar tu stack.",
+    "homeFaq.q7": "¿Puede el chatbot fijar un meeting con videollamada de Zoom?",
+    "homeFaq.a7":
+      "Sí. El chatbot guía al cliente en la elección de fecha y hora, crea automáticamente el enlace de Zoom y lo envía por WhatsApp. Tú recibes una notificación inmediata con todos los detalles del meeting.",
+    "homeFaq.q8": "¿Cómo cargo los datos de cada tienda de mi franquicia?",
     "homeFaq.a8":
-      "Con el plan Enterprise creamos un conector dedicado (HubSpot, Salesforce, SAP, etc.). Sincronizamos contactos, ofertas y pipelines sin tocar tu stack.",
-    "homeFaq.q9": "¿Qué pasa cuando se me acaba el crédito?",
-    "homeFaq.a9":
-      "Te avisamos con mucha antelación: email, badge en el dashboard y mensajes por WhatsApp interno. Hay un pequeño margen negativo para no interrumpir los chats activos.",
-    "homeFaq.q10": "No tengo un e-commerce, ofrezco servicios: ¿puedo usar eChatbot?",
-    "homeFaq.a10":
-      "Sí. Puedes recoger solicitudes, reservas y presupuestos con formularios dinámicos, adjuntos y pagos link-to-pay. El bot construye pedidos incluso sin catálogo.",
+      "Habla con nuestros operadores para dinamizar todos los procesos según tus necesidades. Si tienes los datos en una base de datos, podemos leerlos directamente desde tu API e integrarlos en el chatbot en tiempo real.",
   },
   pt: {
-    // Header
-    "header.tagline": "Fale com seus clientes através do chat favorito deles",
-
-    // Hero Section
-    "hero.title": "O teu agente AI no WhatsApp",
-    "hero.subtitle":
-      "A IA à medida para o teu negócio em franquia no WhatsApp: responde a clientes 24/7 em qualquer idioma, liga-se às máquinas remotamente, agenda marcações e envia promoções. E quando intervém um operador, escreve na sua língua: a IA traduz em tempo real.",
-    "hero.slogan": "O primeiro agente nunca se esquece…",
-    "hero.subline": "",
-    "hero.whyTitle": "Por que eChatbot?",
-    "hero.useCasesTitle": "Projetado para vendas, suporte e crescimento.",
-    "hero.useCases.sales.title": "Agente de vendas IA",
-    "hero.useCases.sales.desc":
-      "Qualifique leads, recomende produtos e feche pedidos mais rápido.",
-    "hero.useCases.support.title": "Atendimento ao cliente",
-    "hero.useCases.support.desc":
-      "Responda perguntas frequentes, encaminhe para humanos e registre cada chat.",
-    "hero.useCases.ops.title": "Mensagens push inteligentes",
-    "hero.useCases.ops.desc":
-      "Envie campanhas WhatsApp direcionadas e recupere clientes.",
-
-    // Features
-    "features.pushNotifications": "Push Notifications",
-    "features.pushNotifications.desc":
-      "Campanhas automatizadas, reengajamentos e alertas de pedido via WhatsApp",
-    "features.24x7": "24/7 Availability",
-    "features.24x7.desc":
-      "Um concierge que nunca dorme: resolve dúvidas, encaminha para humanos e fecha pedidos 24/7",
-    "features.multiLanguage": "Multi-Language",
-    "features.multiLanguage.desc":
-      "Responda instantaneamente em mais de 30 idiomas com traduções naturais e tom local",
-    "features.ecommerce": "E-commerce Platform",
-    "features.ecommerce.desc":
-      "Controle catálogo, estoque, pedidos e clientes em um único painel pronto para WhatsApp",
-    "features.analytics": "Analytics",
-    "features.analytics.desc": "Monitore vendas e desempenho",
-
-    // News Section
-    "news.title": "Últimas Atualizações e Funcionalidades",
-    "news.subtitle": "Fique informado sobre as últimas melhorias do eChatbot",
-    "news.1.date": "15 de Outubro de 2025",
-    "news.1.title": "Suporte Multilíngue",
-    "news.1.category": "Idiomas",
-    "news.1.desc":
-      "Estamos entusiasmados em anunciar o suporte multilíngue aprimorado em nossa plataforma! Comunique-se com seus clientes em italiano, inglês, espanhol e português. Nosso chatbot de IA foi treinado para entender e responder naturalmente em vários idiomas, detectando automaticamente o idioma preferido do cliente e mantendo a mesma experiência conversacional de alta qualidade em todos os idiomas. Expanda seu negócio globalmente com comunicação multilíngue perfeita!",
-    "news.2.date": "8 de Outubro de 2025",
-    "news.2.title": "Análise de Busca de Produtos",
-    "news.2.category": "Análise",
-    "news.2.desc":
-      "Apresentando nossa nova funcionalidade de Análise de Busca de Produtos! Agora você pode analisar quais produtos seus clientes estão procurando com mais frequência. Esta poderosa percepção ajuda você a entender a demanda do cliente, otimizar seu estoque e identificar produtos em tendência. O painel de análise fornece gráficos e relatórios detalhados mostrando padrões de busca, palavras-chave populares e taxas de conversão.",
-    "news.3.date": "28 de Setembro de 2025",
-    "news.3.title": "Orquestração de Sell Agents",
-    "news.3.category": "Agentes de Venda",
-    "news.3.desc":
-      "Acabamos de lançar um orquestrador multiagente para o time comercial! Configure agentes dedicados para catálogo, carrinho, checkout e suporte humano, enquanto o eChatbot direciona cada conversa para o especialista certo. O contexto circula entre os agentes, tudo fica registrado e o cliente recebe o atendimento mais qualificado em cada etapa do funil.",
-    "news.4.date": "20 de Setembro de 2025",
-    "news.4.title": "Enviar Notificações Push",
-    "news.4.category": "Marketing",
-    "news.4.desc":
-      "Lance campanhas de marketing direcionadas com nossa nova funcionalidade de Notificações Push! Envie mensagens promocionais, ofertas especiais e atualizações diretamente para seus clientes via WhatsApp. Crie campanhas com mensagens personalizadas, agende envios para o momento ideal e rastreie taxas de entrega e engajamento do cliente. Perfeito para anunciar novos produtos, vendas relâmpago ou atualizações importantes para manter seus clientes informados e engajados.",
-    "news.5.date": "10 de Setembro de 2025",
-    "news.5.title": "Suporte para equipes informativas",
-    "news.5.category": "Suporte",
-    "news.5.desc":
-      "Nao vende online? Sem problema. Nosso chatbot de suporte ajuda as equipes a responder perguntas, compartilhar informacoes precisas e orientar clientes no WhatsApp com respostas sempre atualizadas.",
-    "news.6.date": "5 de Setembro de 2025",
-    "news.6.title": "Human-in-the-loop disponivel",
-    "news.6.category": "Suporte",
-    "news.6.desc":
-      "A funcionalidade human-in-the-loop ja esta ativa. Escale para um humano quando necessario e mantenha todo o contexto da conversa.",
-
-    // Appointment Booking Section
-    "appointment.badge": "Agendamentos no WhatsApp",
-    "appointment.title": "Agendamentos automáticos\nno WhatsApp",
-    "appointment.subtitle":
-      "Zero telefonemas, zero e-mails perdidos. O chatbot gere disponibilidade, confirmações e lembretes automáticos — directamente no WhatsApp. Sincronização com Google Calendar em tempo real.",
-    "appointment.cta": "Ver como funciona",
-    "appointment.chip1": "Agendamentos 24/7 no WhatsApp",
-    "appointment.chip2": "Lembretes automáticos",
-    "appointment.chip3": "Sync Google Calendar",
-
-    // Human-in-the-loop Section
-    "humanLoop.title": "Suporte human-in-the-loop",
-    "humanLoop.agentOnline": "Agente online",
-    "humanLoop.avgResponse": "resposta média",
-    "humanLoop.subtitle":
-      "Escale para um humano quando necessário mantendo todo o contexto. O operador recebe uma notificação do WhatsApp, intervém de imediato e responde na sua língua materna — a IA traduz em tempo real para o cliente. Sua equipe fica no controle e a IA faz o trabalho pesado.",
-
-    // Widget to WhatsApp Section
-    "widgetToWhatsapp.badge": "Nova função",
-    "widgetToWhatsapp.title": "Do Widget ao seu WhatsApp",
-    "widgetToWhatsapp.subtitle":
-      "O cliente começa no widget, o operador responde pelo seu WhatsApp pessoal. Quando o suporte humano é necessário, o operador recebe uma notificação com todo o contexto da conversa: sem novos apps, sem backoffice aberto. Responda de onde estiver, quando quiser.",
-    "widgetToWhatsapp.chip1": "Notificação em tempo real",
-    "widgetToWhatsapp.chip2": "Contexto completo compartilhado",
-    "widgetToWhatsapp.chip3": "Apenas o seu WhatsApp",
-    "widgetToWhatsapp.chip4": "Zero apps extras",
-
-    // Pricing
-    "pricing.title": "Escolha Seu Plano",
-    "pricing.subtitle": "Comece grátis e escale conforme você cresce",
-    "pricing.free.desc": "Para testar a plataforma",
-    "pricing.free.creditDesc":
-      "We offer you the first ${amount} to test the platform.",
-    "pricing.basic.desc": "Para empresas em crescimento",
-    "pricing.premium.desc": "Para empresas estabelecidas",
-    "pricing.enterprise.desc": "Para operações em grande escala",
-    "pricing.usage.title":
-      "As seguintes taxas por uso são adicionais e se aplicam a todos os planos",
-    "pricing.usage.message": "por Mensagem do WhatsApp",
-    "pricing.usage.message.desc":
-      "Descontado do seu crédito",
-    "pricing.usage.widget": "por Mensagem do Widget",
-    "pricing.usage.widget.desc":
-      "Descontada do seu crédito",
-    "pricing.usage.customer": "por Novo Cliente",
-    "pricing.usage.customer.desc": "Cada novo registro de cliente",
-    "pricing.usage.order": "por Novo Pedido",
-    "pricing.usage.order.desc": "Cada pedido concluído",
-    "pricing.usage.push": "por Mensagem Push de WhatsApp",
-    "pricing.usage.push.desc": "Será descontada do seu crédito",
-    "pricing.usage.reminder": "por Lembrete de Agendamento WhatsApp",
-    "pricing.usage.reminder.desc": "Será descontado do seu crédito",
-    "pricing.usage.info": "💡 Cada mensagem que você enviar deduzirá créditos da sua conta. Seu saldo de crédito diminui com base no uso real.",
-    "pricing.usage.transparent": "💡 Todos os custos de uso são transparentes e faturados mensalmente com base no consumo real",
-    
-    // Login/Register Forms
-    "auth.login.title": "Login",
-    "auth.login.subtitle": "Monitore conversas, automações e dados no dashboard do eChatbot.",
-    "auth.register.title": "Crie sua conta",
-    "auth.register.subtitle": "Comece a automatizar seu comércio WhatsApp com eChatbot",
-    
-    // Form Validation
-    "validation.email.invalid": "Endereço de e-mail inválido",
-    "validation.password.required": "Senha obrigatória",
-    "validation.password.minLength": "A senha deve ter pelo menos 8 caracteres",
-    "validation.password.uppercase": "A senha deve conter pelo menos uma letra maiúscula",
-    "validation.password.lowercase": "A senha deve conter pelo menos uma letra minúscula",
-    "validation.password.number": "A senha deve conter pelo menos um número",
-    "validation.password.special": "A senha deve conter pelo menos um caractere especial",
-    "validation.password.match": "As senhas não correspondem",
-    "validation.firstName.required": "Nome obrigatório",
-    "validation.lastName.required": "Sobrenome obrigatório",
-    "validation.gdpr.required": "Você deve aceitar os termos",
-    
-    // Demo Section
-    "demo.title": "Demo ao vivo",
-    "demo.subtitle": "A DemoWash é uma rede fictícia de lavandarias self-service em franchising, com várias unidades na Catalunha. Experimenta o chatbot como faria um cliente real: pergunta horários, preços, reporta uma ocorrência e vê como o caso é encaminhado para um operador humano com tradução em tempo real.",
-    "demo.button": "Experimente nossa demo",
-    "demo.accessHint": "Deixa-nos os teus contactos e enviamos-te por email as credenciais para experimentar a demo.",
-    
-    // Integration Section
-    "integration.crm.title": "Integração CRM personalizada",
-    "integration.crm.subtitle": "Conecte seu chatbot ao seu CRM e dados externos com acesso API seguro. Sincronize perfis de clientes, obtenha histórico de pedidos e acione fluxos de trabalho baseados em eventos em tempo real. Integre com a API da sua transportadora para oferecer rastreamento em tempo real e sempre saber onde está sua remessa. Cada resposta é fundamentada em seus dados.",
-    "integration.crm.button": "📋 Orçamento",
-
-    "pushAi.badge": "Smart Push IA",
-    "pushAi.title": "Push inteligente com IA",
-    "pushAi.subtitle": "A IA cruza as necessidades do cliente com ofertas relevantes e decide o que enviar e quando, com mensagens direcionadas no WhatsApp. Além disso, considera o histórico, o melhor momento e o nível de interesse para evitar spam e aumentar conversões.",
-    
-    // Team Collaboration Section
-    "teamCollaboration.title": "Colaboração em equipe",
-    "teamCollaboration.subtitle": "Para equipes de vendas, compartilhe o acesso ao backoffice com seus colegas. O mesmo agente IA responde aos clientes no WhatsApp, enquanto a equipe pode gerenciar pedidos, produtos e clientes da mesma plataforma. Coordenação perfeita entre IA e equipe humana.",
-    "teamCollaboration.button": "Fale Connosco",
-    
-    // Privacy Section
-    "privacy.sectionTitle": "Privacidade por design",
-    "privacy.subtitle": "Nenhum dado sensível é enviado para terceiros ou modelos de IA. O acesso é protegido com tokens de escopo limitado, criptografado em trânsito e limitado aos dados mínimos necessários para cada interação. Os dados dos seus clientes permanecem sob seu controle.",
-    "privacy.button": "Ir para GDPR",
-    "common.viewMore": "Ver mais →",
-    
-    "pricing.features.channels": "Canais WhatsApp",
-    "pricing.features.channel": "Canal WhatsApp",
-    "pricing.features.products": "Produtos",
-    "pricing.features.clients": "Leads",
-    "pricing.features.teamMembers": "Membros da equipe",
-    "pricing.features.support": "Suporte",
-    "pricing.features.analytics": "Análises Avançadas",
-    "pricing.features.branding": "Modelo IA Personalizado",
-    "pricing.features.integration": "Integração com CRM próprio (orçamento necessário)",
-    "pricing.features.unlimited": "Ilimitados",
-    "pricing.features.upto": "Até",
-    "pricing.features.priority": "Suporte Prioritário 24/7",
-    "pricing.features.dedicatedServer": "Servidor on-premise",
-    "pricing.button.start": "Começar",
-    "pricing.button.startWithCredit": "Comece com seu Crédito",
-    "pricing.button.contact": "Contatar Vendas",
-    "pricing.simulator.button": "Calcule seu Custo Mensal",
-    "pricing.simulator.description":
-      "Descubra quanto você gastaria com base no seu uso real",
-    "pricing.simulator.title": "Simulador de Preços",
-    "pricing.simulator.subtitle":
-      "Configure seu uso mensal e descubra o custo estimado",
-    "pricing.simulator.totalProducts": "Quantos produtos você tem?",
-    "pricing.simulator.totalProducts.help":
-      "📦 O número de produtos no seu catálogo",
-    "pricing.simulator.totalCustomers": "Quantos clientes você tem no total?",
-    "pricing.simulator.totalCustomers.help":
-      "📊 Este número ajuda a sugerir valores realistas para mensagens, novos clientes e suporte",
-    "pricing.simulator.channels": "Quantos canais WhatsApp você quer criar?",
-    "pricing.simulator.messages": "Estimativa de mensagens por mês",
-    "pricing.simulator.newCustomers": "Estimativa de novos clientes por mês",
-    "pricing.simulator.newOrders": "Estimativa de novos pedidos por mês",
-    "pricing.simulator.pushCampaigns": "Mensagens Publicitárias por mês",
-    "pricing.simulator.humanSupport": "Suporte Humano por mês",
-    "pricing.simulator.extras": "Extras",
-    "pricing.simulator.branding": "Personalização de Marca",
-    "pricing.simulator.branding.desc": "Seu logo e cores",
-    "pricing.simulator.dedicatedServer": "Servidor on-premise",
-    "pricing.simulator.dedicatedServer.desc": "Domínio personalizado",
-    "pricing.simulator.summary": "Resumo",
-    "pricing.simulator.plan": "Plano",
-    "pricing.simulator.usageCosts": "Custos por Uso",
-    "pricing.simulator.monthlyTotal": "Total Mensal",
-    "pricing.simulator.estimated": "estimado",
-    "pricing.simulator.transparent":
-      "💡 Custos transparentes baseados no consumo real",
-    "pricing.simulator.suggestion": "💡 Sugestão",
-    "pricing.simulator.suggestion.messages": "~30% dos clientes",
-    "pricing.simulator.suggestion.newCustomers": "~10% crescimento",
-    "pricing.simulator.suggestion.pushCampaigns": "campanhas/mês",
-    "pricing.simulator.price.perPushMessage": "por mensagem publicitária",
-    "pricing.simulator.cta.free": "Fale Connosco",
-    "pricing.simulator.cta.plan": "Escolher",
-
-    // Contact
-    "contact.title": "Pronto para Começar?",
-    "contact.subtitle":
-      "Junte-se a milhares de empresas que já vendem no WhatsApp",
-    "contact.cta": "Fale Connosco",
-    "contact.form.title": "Envie-nos uma mensagem",
-    "contact.form.subtitle": "Diga-nos o que você precisa. Respondemos rapidamente.",
-    "contact.form.success": "Mensagem enviada",
-    "contact.form.successMsg": "Obrigado por entrar em contato. Responderemos em breve.",
-    "contact.form.name": "Nome",
-    "contact.form.namePlaceholder": "Seu primeiro nome",
-    "contact.form.surname": "Sobrenome",
-    "contact.form.surnamePlaceholder": "Seu sobrenome",
-    "contact.form.email": "E-mail",
-    "contact.form.emailPlaceholder": "voce@email.com",
-    "contact.form.phone": "Telefone (opcional)",
-    "contact.form.phonePlaceholder": "+55 11 12345-6789",
-    "contact.form.subject": "Título",
-    "contact.form.subjectPlaceholder": "Coloque aqui o assunto…",
-    "contact.form.message": "Mensagem",
-    "contact.form.messagePlaceholder": "Escreva sua mensagem aqui...",
-    "contact.form.captchaError": "Configuração do Captcha ausente.",
-    "contact.form.sending": "Enviando...",
-    "contact.form.send": "Enviar Mensagem",
-
-    // CTA Section
-    "cta.title": "Pronto para transformar a experiência dos seus clientes?",
-    "cta.subtitle": "Junte-se a centenas de empresas que usam o eChatbot para automatizar vendas, aumentar conversões e encantar clientes 24/7.",
-    "cta.button.start": "Comece Grátis",
-    "cta.button.contact": "Fale Connosco",
-
-    // How It Works
-    "howItWorks.title": "Como trabalhamos juntos",
-    "howItWorks.subtitle": "Nada pré-fabricado: construímos o teu assistente de IA em torno do teu negócio e dos teus casos reais.",
-    "howItWorks.step1.title": "Conta-nos o teu negócio",
-    "howItWorks.step1.desc": "Falamos das tuas necessidades: setor, unidades, idiomas, processos. Percebemos o que os teus clientes realmente precisam.",
-    "howItWorks.step2.title": "Construímos a tua IA à medida",
-    "howItWorks.step2.desc": "Treinamos o assistente com os teus casos reais, ligamo-lo aos teus sistemas e afinamo-lo ao longo do tempo. On-premise se quiseres.",
-    "howItWorks.step3.title": "Entra em direto no WhatsApp",
-    "howItWorks.step3.desc": "A IA atende os clientes 24/7, passa ao operador quando preciso e envia campanhas. Monitorizas tudo a partir de um único painel.",
-    
-    // Work in Progress
-    "wip.banner": "Trabalho em Andamento",
-
-    // Navigation
-    "nav.demo": "Demo",
-    "nav.pricing": "Preços",
-    "nav.contact": "Contato",
-    "nav.contactUs": "Fale Conosco",
-    "nav.language": "Selecionar Idioma",
-    "nav.welcome": "Bem-vindo",
-    "nav.yourChannels": "Seus Canais",
-    "nav.profile": "Perfil",
-    "nav.billing": "Faturamento",
-    "nav.logout": "Sair",
-    "nav.logoutSuccess": "Logout realizado com sucesso",
-    "nav.signin": "Entrar",
-    "nav.getStarted": "Começar Agora",
-
-    // Footer
-    "footer.tagline": "Transforme o WhatsApp em sua loja online",
-    "footer.description": "Plataforma profissional de chatbot AI do WhatsApp para o sucesso do comércio eletrônico.",
-    "footer.quickLinks": "Links Rápidos",
-    "footer.features": "Recursos",
-    "footer.pricing": "Preços",
-    "footer.demo": "Demo",
-    "footer.contact": "Contato",
-    "footer.company": "Empresa",
-    "footer.about": "Sobre Nós",
-    "footer.careers": "Carreiras",
-    "footer.contactUs": "Fale Conosco",
-    "footer.support": "Suporte",
-    "footer.docs": "Documentação",
-    "footer.help": "Centro de Ajuda",
-    "footer.legal": "Legal",
-    "footer.privacy": "Política de Privacidade",
-    "footer.terms": "Termos de Serviço",
-    "footer.refund": "Política de Reembolso",
-    "footer.rights": "© 2025 eChatbot. Todos os direitos reservados.",
-    "footer.poweredBy": "Desenvolvido por",
-    "footer.whatsappApi": "WhatsApp Business API",
-
-    // Login
-    "login.title": "Entre na sua conta",
-    "login.email": "E-mail",
-    "login.password": "Senha",
-    "login.forgot": "Esqueceu a senha?",
-    "login.button": "Entrar",
-    "login.noAccount": "Não tem uma conta?",
-    "login.signup": "Cadastre-se",
-    "login.signin": "Login",
-    "login.register": "Cadastrar",
-    "login.welcomeBack": "Bem-vindo de Volta",
-    "login.forgotPassword": "Esqueceu a senha?",
-    "login.signingIn": "Entrando...",
-    "login.orContinueWith": "Ou continue com",
-
-    // Register
-    "register.createAccount": "Criar Conta",
-    "register.passwordHint": "Mín 8 caracteres, maiúscula, minúscula, número, caractere especial",
-    "register.creatingAccount": "Criando conta...",
-    "register.gdprAccept": "Aceito a",
-    "register.privacyPolicy": "Política de Privacidade",
-    "register.and": "e os",
-    "register.termsOfService": "Termos de Serviço",
-
-    // Form
-    "form.email": "E-mail",
-    "form.password": "Senha",
-    "form.firstName": "Nome",
-    "form.lastName": "Sobrenome",
-    "form.confirmPassword": "Confirmar Senha",
-    "form.error.invalidEmail": "Endereço de e-mail inválido",
-
-    // Forgot Password
-    "forgotPassword.title": "Redefinir Senha",
-    "forgotPassword.subtitle": "Digite seu e-mail para redefinir sua senha",
-    "forgotPassword.email.placeholder": "admin@echatbot.ai",
-    "forgotPassword.button": "Redefinir Senha",
-    "forgotPassword.backToLogin": "Voltar ao Login",
-    "forgotPassword.success": "Se este e-mail estiver registrado, instruções de redefinição de senha foram enviadas para sua caixa de entrada. Por favor, verifique seu e-mail e siga o link para redefinir sua senha.",
-    "forgotPassword.error": "Ocorreu um erro",
-
-    // Reset Password
-    "resetPassword.title": "Redefinir Senha",
-    "resetPassword.subtitle": "Digite sua nova senha",
-    "resetPassword.newPassword": "Nova Senha",
-    "resetPassword.newPassword.placeholder": "Digite nova senha",
-    "resetPassword.confirmPassword": "Confirmar Senha",
-    "resetPassword.confirmPassword.placeholder": "Confirme nova senha",
-    "resetPassword.button": "Redefinir Senha",
-    "resetPassword.button.loading": "Redefinindo...",
-    "resetPassword.success": "Senha redefinida com sucesso! Redirecionando para o login...",
-    "resetPassword.invalidLink": "Link de Redefinição Inválido",
-    "resetPassword.invalidLink.desc": "O link de redefinição de senha é inválido ou expirou",
-    "resetPassword.requestNew": "Solicitar um novo link de redefinição",
-    "resetPassword.error.mismatch": "As senhas não correspondem",
-    "resetPassword.error.minLength": "A senha deve ter pelo menos 8 caracteres",
-    "resetPassword.error.strength": "A senha deve conter pelo menos uma letra maiúscula, uma letra minúscula, um número e um caractere especial",
-
-    // Auth Errors
-    "auth.error.invalid6DigitCode": "Por favor insira um código válido de 6 dígitos",
-    "auth.error.invalidRecoveryCode": "Por favor insira um código de recuperação válido",
-    "auth.error.invalidVerificationLink": "Link de verificação inválido. Por favor faça login novamente.",
-    "auth.error.accountLocked": "Conta bloqueada devido a muitas tentativas falhadas",
-    "auth.error.invalidCode": "Código de verificação inválido",
-    "auth.error.accountInactive": "Conta desativada. Entre em contato com o suporte para reativar sua conta.",
-    "auth.error.accountDeleted": "Sua conta foi excluída e não pode ser acessada",
-
-    // Setup 2FA Page
-    "setup2fa.title": "Configurar Autenticação de Dois Fatores",
-    "setup2fa.scanDescription": "Escaneie o código QR com seu app de autenticação",
-    "setup2fa.useAuthenticatorApp": "Use um app de autenticação",
-    "setup2fa.recommended": "Recomendado: Google Authenticator, Microsoft Authenticator ou Authy",
-    "setup2fa.howToSetup": "Como configurar:",
-    "setup2fa.step1": "Abra seu app de autenticação",
-    "setup2fa.step2": "Toque em \"+\" ou \"Adicionar conta\"",
-    "setup2fa.step3": "Escaneie este código QR",
-    "setup2fa.step4": "Digite o código de 6 dígitos abaixo",
-    "setup2fa.scannedButton": "Eu escaneei o código",
-    "setup2fa.verifyTitle": "Verifique Sua Configuração",
-    "setup2fa.verifyDescription": "Digite o código de 6 dígitos do seu app de autenticação",
-    "setup2fa.verificationCode": "Código de Verificação",
-    "setup2fa.codeRefreshes": "O código se atualiza a cada 30 segundos. Digite o código atual do seu app.",
-    "setup2fa.verifying": "Verificando...",
-    "setup2fa.verifyAndContinue": "Verificar e Continuar",
-    "setup2fa.backToQR": "Voltar ao Código QR",
-    "setup2fa.saveRecoveryTitle": "Salve Seus Códigos de Recuperação",
-    "setup2fa.saveRecoveryDescription": "Guarde estes códigos em um lugar seguro. Você precisará deles para acessar sua conta se perder seu dispositivo de autenticação.",
-    "setup2fa.important": "Importante!",
-    "setup2fa.recoveryCodeWarning": "Cada código de recuperação só pode ser usado uma vez. Após o uso, o código será invalidado.",
-    "setup2fa.copyCodes": "Copiar Códigos",
-    "setup2fa.copied": "Copiado!",
-    "setup2fa.download": "Baixar",
-    "setup2fa.savedContinue": "Salvei Meus Códigos - Continuar",
-    "setup2fa.stepScan": "Escanear",
-    "setup2fa.stepVerify": "Verificar",
-    "setup2fa.stepSaveCodes": "Salvar Códigos",
-    "setup2fa.skipLogin": "Pular e fazer login depois",
-
-    // Privacy Policy
-    "privacy.title": "Política de Privacidade",
-    "privacy.lastUpdate": "Última atualização",
-    "privacy.intro": "eChatbot está comprometido em proteger sua privacidade. Esta Política de Privacidade explica como coletamos, usamos e protegemos seus dados pessoais.",
-    "privacy.collection.title": "1. Informações que Coletamos",
-    "privacy.collection.desc": "Coletamos informações que você nos fornece diretamente, incluindo nome, e-mail, número de telefone e detalhes comerciais quando você cria uma conta ou usa nossos serviços.",
-    "privacy.usage.title": "2. Como Usamos Suas Informações",
-    "privacy.usage.desc": "Usamos suas informações para fornecer e melhorar nossos serviços, processar transações, enviar comunicações importantes e personalizar sua experiência.",
-    "privacy.sharing.title": "3. Compartilhamento de Informações",
-    "privacy.sharing.desc": "Não vendemos seus dados pessoais. Podemos compartilhar informações com provedores de serviços confiáveis que nos ajudam a operar nossa plataforma, sempre em conformidade com esta política.",
-    "privacy.security.title": "4. Segurança de Dados",
-    "privacy.security.desc": "Implementamos medidas de segurança padrão da indústria para proteger seus dados pessoais de acesso não autorizado, alteração ou divulgação.",
-    "privacy.rights.title": "5. Seus Direitos",
-    "privacy.rights.desc": "Você tem o direito de acessar, corrigir ou excluir seus dados pessoais. Você também pode se opor a certo processamento de dados ou solicitar portabilidade de dados.",
-    "privacy.cookies.title": "6. Cookies e Tecnologias de Rastreamento",
-    "privacy.cookies.desc": "Usamos APENAS cookies essenciais para autenticação e gerenciamento de sessão do nosso serviço. NÃO utilizamos cookies de análise (Google Analytics), cookies publicitários, ou cookies de rastreamento de terceiros para perfilamento comportamental. Cookies essenciais não requerem consentimento prévio sob GDPR e regulamentações ePrivacy.",
-    "privacy.contact.title": "7. Entre em Contato",
-    "privacy.contact.desc": "Para perguntas sobre esta Política de Privacidade ou nossas práticas de tratamento de dados, entre em contato conosco em privacy@echatbot.ai",
-
-    // Terms of Service
-    "terms.title": "Termos de Serviço",
-    "terms.lastUpdate": "Última atualização",
-    "terms.intro": "Bem-vindo ao eChatbot. Ao usar nossos serviços, você concorda em estar vinculado a estes Termos de Serviço.",
-    "terms.acceptance.title": "1. Aceitação dos Termos",
-    "terms.acceptance.desc": "Ao acessar e usar o eChatbot, você concorda em estar vinculado a estes Termos de Serviço e nossa Política de Privacidade. Se você não concorda com estes termos, não use nossos serviços.",
-    "terms.services.title": "2. Descrição dos Serviços",
-    "terms.services.desc": "eChatbot fornece uma plataforma de comércio eletrônico integrada ao WhatsApp que permite às empresas gerenciar produtos, processar pedidos e se comunicar com clientes através de agentes de IA.",
-    "terms.account.title": "3. Contas de Usuário",
-    "terms.account.desc": "Você deve criar uma conta para usar o eChatbot. Você é responsável por manter a segurança de sua conta e senha. Você deve ter pelo menos 18 anos para usar nossos serviços.",
-    "terms.conduct.title": "4. Conduta do Usuário",
-    "terms.conduct.desc": "Você concorda em não usar o eChatbot para propósitos ilegais, violar direitos de terceiros ou descumprir leis aplicáveis. Reservamo-nos o direito de suspender ou encerrar contas que violem estes termos.",
-    "terms.payment.title": "5. Pagamento e Faturamento",
-    "terms.payment.desc": "Os preços são baseados em seu plano de assinatura e uso. Os pagamentos são processados mensalmente. Você pode cancelar sua assinatura a qualquer momento, mas reembolsos não estão disponíveis para períodos de serviço já faturados.",
-    "terms.ip.title": "6. Propriedade Intelectual",
-    "terms.ip.desc": "Todo o conteúdo e tecnologia do eChatbot são propriedade do eChatbot ou de seus licenciadores. Você mantém a propriedade de seu conteúdo, mas nos concede uma licença para usá-lo para fornecer nossos serviços.",
-    "terms.termination.title": "7. Rescisão",
-    "terms.termination.desc": "Podemos suspender ou encerrar seu acesso ao eChatbot a qualquer momento por violação destes termos ou outras razões legítimas. Você pode encerrar sua conta a qualquer momento nas configurações de sua conta.",
-    "terms.limitation.title": "8. Limitação de Responsabilidade",
-    "terms.limitation.desc": "eChatbot é fornecido 'como está'. Não fazemos garantias de qualquer tipo. Nossa responsabilidade é limitada ao valor que você pagou no último mês.",
-    "terms.changes.title": "9. Alterações nos Termos",
-    "terms.changes.desc": "Podemos atualizar estes termos periodicamente. Notificaremos você de mudanças significativas por e-mail ou notificação na plataforma. O uso continuado constitui aceitação dos termos atualizados.",
-    "terms.contact.title": "10. Entre em Contato",
-    "terms.contact.desc": "Para perguntas sobre estes Termos de Serviço, entre em contato conosco em legal@echatbot.ai",
-
-    // Support Tickets
-    "support.title": "Tickets de Suporte",
-    "support.description": "Obtenha ajuda com sua conta, faturamento ou problemas técnicos",
-    "support.newTicket": "Novo Ticket",
-    "support.noTickets": "Ainda não há tickets de suporte",
-    "support.noTicketsDesc": "Crie um novo ticket para obter ajuda com qualquer problema",
-    "support.createTicket": "Criar Ticket de Suporte",
-    "support.createTicketDesc": "Descreva seu problema e responderemos o mais rápido possível",
-    "support.issueType": "Tipo de Problema",
-    "support.subject": "Assunto",
-    "support.subjectPlaceholder": "Breve descrição do seu problema",
-    "support.message": "Mensagem",
-    "support.messagePlaceholder": "Descreva seu problema em detalhes...",
-    "support.submitTicket": "Enviar Ticket",
-    "support.ticketCreated": "Ticket de suporte criado com sucesso",
-    "support.messageSent": "Mensagem enviada",
-    "support.typeReply": "Digite sua resposta...",
-    "support.ticketClosed": "Este ticket foi encerrado. Crie um novo ticket se precisar de mais ajuda.",
-    "support.needHelp": "Precisa de Ajuda?",
-    "support.contactSupport": "Entre em contato com nossa equipe de suporte para assistência",
-    "support.issueTypes.accountIssue": "Problema de Conta",
-    "support.issueTypes.planAndBilling": "Plano e Faturamento",
-    "support.issueTypes.whatsapp": "WhatsApp",
-    "support.issueTypes.widget": "Widget",
-    "support.issueTypes.salesAgent": "Agente de Vendas",
-    "support.issueTypes.support": "Mensagem de Suporte",
-    "support.issueTypes.other": "Outro",
-    "support.status.pending": "Pendente",
-    "support.status.inProgress": "Em Andamento",
-    "support.status.closed": "Encerrado",
-
-    // Profile 2FA
-    "profile.2fa.title": "Autenticação de Dois Fatores",
-    "profile.2fa.description": "Adicione uma camada extra de segurança digitalizando um código QR com o seu aplicativo de aplicativo.",
-    "profile.2fa.enable": "Ativar 2FA",
-    "profile.2fa.enabled": "2FA Ativada",
-    "profile.2fa.generating": "Gerando QR...",
-    "profile.2fa.activeStatus": "A 2FA está ativa para o seu conta",
-
-    // Navigation
-    "nav.chatHistory": "Histórico de Chat",
-    "nav.clients": "Clientes",
-    "nav.faq": "Perguntas Frequentes",
-    "nav.agents": "Agentes AI",
-    "nav.ecommerce": "Comércio Eletrônico",
-    "nav.products": "Produtos",
-    "nav.services": "Serviços",
-    "nav.offers": "Ofertas",
-    "nav.sales": "Vendas",
-    "nav.suppliers": "Fornecedores",
-    "nav.orders": "Pedidos",
-    "nav.campaigns": "Campanhas",
-    "nav.support": "Suporte",
-    "nav.settings": "Configurações",
-    "nav.queue": "Fila",
-    "unread.messages": "mensagens não lidas",
-
     // Home FAQ section (public landing)
     "homeFaq.title": "Perguntas frequentes",
     "homeFaq.subtitle":
-      "Privacidade, equipa, campanhas, escalonamento: respostas às perguntas que mais recebemos antes de começar.",
-    "homeFaq.q1": "Como tratam a privacidade e os dados sensíveis?",
+      "Privacidade, campanhas, escalonamento, meetings: respostas às perguntas que mais recebemos antes de começar.",
+    "homeFaq.q1": "Como gerem os dados pessoais dos clientes?",
     "homeFaq.a1":
-      "Os teus dados ficam no teu workspace: guardamos as conversas na UE, ciframos tudo em trânsito e decides por quanto tempo manter o histórico. O modelo usa apenas o teu dataset, sem treino externo.",
-    "homeFaq.q2": "Posso convidar colegas para o meu workspace?",
+      "Quando o utilizador partilha dados pessoais, o processamento de IA é desativado automaticamente. Os dados pessoais são armazenados exclusivamente nas nossas bases de dados, seguros e acessíveis apenas por ti.",
+    "homeFaq.q2": "Posso agendar push ou campanhas de WhatsApp?",
     "homeFaq.a2":
-      "Claro. Os planos Free e Basic incluem 3 membros, Premium e Enterprise não têm limites. Cada papel pode ter permissões diferentes (marketing, suporte, administração).",
-    "homeFaq.q3": "É possível criar ofertas, bundles ou cupões?",
-    "homeFaq.a3":
-      "Podes gerar tabelas de preços específicas, aplicar cupões temporários e publicá-los diretamente no chat. Cada oferta pode ter idiomas, canais e disponibilidade personalizados.",
-    "homeFaq.q4": "Posso agendar push ou campanhas de WhatsApp?",
-    "homeFaq.a4":
       "Sim, planeias difusões e follow-ups automáticos com regras de fuso horário, opt-in e produtos disponíveis. O motor evita o envio se o utilizador já estiver a falar com o operador.",
-    "homeFaq.q5": "O cliente pode falar com um operador humano?",
-    "homeFaq.a5":
+    "homeFaq.q3": "O cliente pode falar com um operador humano?",
+    "homeFaq.a3":
       "A qualquer momento. O bot reconhece palavras-chave ou emoções e transfere a conversa com todo o contexto, anexos e carrinho.",
-    "homeFaq.q6": "Como sou avisado quando é preciso um operador?",
-    "homeFaq.a6":
+    "homeFaq.q4": "Como sou avisado quando é preciso um operador?",
+    "homeFaq.a4":
       "Enviamos notificações por email, push e WhatsApp interno. Também podes atribuir turnos: o primeiro agente disponível recebe um aviso direto.",
-    "homeFaq.q7": "Posso decidir as regras de escalonamento?",
-    "homeFaq.a7":
+    "homeFaq.q5": "Posso decidir as regras de escalonamento?",
+    "homeFaq.a5":
       "Defines gatilhos (palavras, sentimentos, estado do carrinho, marca VIP) e ações: aviso humano, bloqueio de pagamentos, pedido de documentos ou abertura de ticket.",
-    "homeFaq.q8": "Como integro o meu CRM ou ERP?",
+    "homeFaq.q6": "Como integro o meu CRM ou ERP?",
+    "homeFaq.a6":
+      "Criamos um conector dedicado para o teu CRM ou ERP (HubSpot, Salesforce, SAP, etc.). Sincronizamos contactos, ofertas e pipelines sem tocar no teu stack.",
+    "homeFaq.q7": "Pode o chatbot marcar um meeting com videochamada Zoom?",
+    "homeFaq.a7":
+      "Sim. O chatbot guia o cliente na escolha de data e hora, cria automaticamente o link do Zoom e envia-o por WhatsApp. Tu recebes uma notificação imediata com todos os detalhes do meeting.",
+    "homeFaq.q8": "Como carrego os dados de cada loja da minha franquia?",
     "homeFaq.a8":
-      "Com o plano Enterprise criamos um conector dedicado (HubSpot, Salesforce, SAP, etc.). Sincronizamos contactos, ofertas e pipelines sem tocar no teu stack.",
-    "homeFaq.q9": "O que acontece quando o crédito termina?",
-    "homeFaq.a9":
-      "Avisamos com muita antecedência: email, badge no dashboard e mensagens no WhatsApp interno. Há uma pequena margem negativa para não interromper os chats ativos.",
-    "homeFaq.q10": "Não tenho e-commerce, ofereço serviços: posso usar o eChatbot?",
-    "homeFaq.a10":
-      "Sim. Podes recolher pedidos, reservas e orçamentos com formulários dinâmicos, anexos e pagamentos link-to-pay. O bot constrói encomendas mesmo sem catálogo.",
+      "Fala com os nossos operadores para dinamizar todos os processos de acordo com as tuas necessidades. Se tens os dados numa base de dados, podemos lê-los diretamente da tua API e integrá-los no chatbot em tempo real.",
+  },
+  de: {
+    // Header
+    "header.tagline": "Sprich mit deinen Kunden über ihren liebsten Chat",
+
+    // Hero Section
+    "hero.title": "Dein KI-Agent auf WhatsApp",
+    "hero.subtitle":
+      "Die maßgeschneiderte KI für dein Franchise-Geschäft auf WhatsApp: antwortet deinen Kunden rund um die Uhr in jeder Sprache, verbindet sich aus der Ferne mit Maschinen, bucht Termine und verschickt Aktionen. Und wenn ein Mensch übernimmt, schreibt der Mitarbeiter in seiner eigenen Sprache — die KI übersetzt in Echtzeit.",
+    "hero.slogan": "Dein bester Mitarbeiter schläft nie.",
+    "hero.subline": "",
+    "hero.whyTitle": "Warum eChatbot?",
+    "hero.useCasesTitle": "Gemacht für Vertrieb, Support und Wachstum.",
+    "hero.useCases.sales.title": "KI-Vertriebsagent",
+    "hero.useCases.sales.desc":
+      "Qualifiziere Leads, empfiehl Produkte und schließe Bestellungen schneller ab.",
+    "hero.useCases.support.title": "Kundenbetreuung",
+    "hero.useCases.support.desc":
+      "Beantworte FAQs, leite an Menschen weiter und protokolliere jeden Chat.",
+    "hero.useCases.ops.title": "Smarte Push-Nachrichten",
+    "hero.useCases.ops.desc":
+      "Verschicke gezielte WhatsApp-Kampagnen und hol deine Kunden zurück.",
+
+    // Features
+    "features.pushNotifications": "Push-Benachrichtigungen",
+    "features.pushNotifications.desc": "Automatische Drops, Re-Engagement-Flows und Bestell-Hinweise direkt auf WhatsApp",
+    "features.24x7": "24/7-Verfügbarkeit",
+    "features.24x7.desc": "Ein Concierge, der nie schläft – löst FAQs, eskaliert an Menschen und schließt Bestellungen rund um die Uhr ab",
+    "features.multiLanguage": "Mehrsprachig",
+    "features.multiLanguage.desc": "Antworte sofort in über 30 Sprachen mit muttersprachlich klingenden Übersetzungen und lokalen Formulierungen",
+    "features.ecommerce": "E-Commerce-Plattform",
+    "features.ecommerce.desc": "Steuere Katalog, Lagerbestand, Bestellungen und Kunden-Verläufe über ein einziges WhatsApp-fähiges Dashboard",
+    "features.analytics": "Analytics",
+    "features.analytics.desc": "Überwache Umsatz und Leistung",
+
+    // News Section
+    "news.title": "Neueste Updates und Funktionen",
+    "news.subtitle": "Bleib über die neuesten eChatbot-Verbesserungen informiert",
+    "news.1.date": "15. Oktober 2025",
+    "news.1.title": "Mehrsprachige Unterstützung",
+    "news.1.category": "Sprachen",
+    "news.1.desc":
+      "Wir freuen uns, eine erweiterte mehrsprachige Unterstützung auf unserer Plattform anzukündigen! Kommuniziere mit deinen Kunden auf Italienisch, Englisch, Spanisch und Portugiesisch. Unser KI-Chatbot wurde darauf trainiert, mehrere Sprachen zu verstehen und natürlich darauf zu antworten, erkennt automatisch die bevorzugte Sprache des Kunden und behält dabei über alle Sprachen hinweg dasselbe hochwertige Gesprächserlebnis bei. Erweitere dein Geschäft weltweit mit nahtloser mehrsprachiger Kommunikation!",
+    "news.2.date": "5. Oktober 2025",
+    "news.2.title": "Produktsuche-Analytics",
+    "news.2.category": "Analytics",
+    "news.2.desc":
+      "Wir stellen die neue Funktion Produktsuche-Analytics vor! Jetzt kannst du analysieren, nach welchen Produkten deine Kunden am häufigsten suchen. Diese wertvollen Erkenntnisse helfen dir, die Kundennachfrage zu verstehen, deinen Lagerbestand zu optimieren und Trendprodukte zu erkennen. Das Analytics-Dashboard liefert detaillierte Diagramme und Berichte, die Suchmuster, beliebte Suchbegriffe und Konversionsraten zeigen.",
+    "news.3.date": "28. September 2025",
+    "news.3.title": "Orchestrierung von Vertriebsagenten-Teams",
+    "news.3.category": "Vertriebsagenten",
+    "news.3.desc":
+      "Lern unseren Multi-Agenten-Orchestrator für Vertriebsteams kennen! Richte dedizierte Agenten für Katalog-Entdeckung, Warenkorb-Verwaltung, Checkout und menschliche Unterstützung ein. eChatbot leitet jede Kundenanfrage an den richtigen Spezialisten weiter, teilt den Kontext zwischen den Agenten und protokolliert den gesamten Ablauf. Deine Kunden sprechen immer mit dem am besten geeigneten Experten, während sich dein Team darauf konzentriert, mehr Geschäfte abzuschließen.",
+    "news.4.date": "20. September 2025",
+    "news.4.title": "Push-Benachrichtigungen versenden",
+    "news.4.category": "Marketing",
+    "news.4.desc":
+      "Starte gezielte Marketingkampagnen mit unserer neuen Funktion für Push-Benachrichtigungen! Verschicke Werbenachrichten, Sonderangebote und Updates direkt über WhatsApp an deine Kunden. Erstelle Kampagnen mit individuellen Nachrichten, plane den Versand für den optimalen Zeitpunkt und verfolge Zustellraten und Kundenbindung. Perfekt, um neue Produkte, Blitzangebote oder wichtige Updates anzukündigen und deine Kunden informiert und engagiert zu halten.",
+    "news.5.date": "10. September 2025",
+    "news.5.title": "Support-orientierte Teams willkommen",
+    "news.5.category": "Support",
+    "news.5.desc":
+      "Du verkaufst nicht online? Kein Problem. Unser Support-Chatbot hilft Teams, Fragen zu beantworten, korrekte Informationen zu teilen und Kunden auf WhatsApp mit aktuellen Antworten zu begleiten.",
+    "news.6.date": "5. September 2025",
+    "news.6.title": "Human-in-the-loop jetzt verfügbar",
+    "news.6.category": "Support",
+    "news.6.desc":
+      "Human-in-the-loop-Support ist jetzt live. Eskaliere bei Bedarf an einen Menschen und behalte den vollständigen Gesprächskontext bei.",
+    // Appointment Booking Section
+    "appointment.badge": "WhatsApp-Buchungen",
+    "appointment.title": "Automatisierte Buchungen\nüber WhatsApp",
+    "appointment.subtitle":
+      "Keine Anrufe, keine verpassten E-Mails. Der Chatbot kümmert sich um Verfügbarkeiten, Bestätigungen und automatische Erinnerungen — direkt auf WhatsApp. Google Calendar-Synchronisierung in Echtzeit.",
+    "appointment.cta": "Sieh dir an, wie es funktioniert",
+    "appointment.chip1": "Buchungen rund um die Uhr über WhatsApp",
+    "appointment.chip2": "Automatische Erinnerungen",
+    "appointment.chip3": "Google Calendar-Synchronisierung",
+
+    // Human-in-the-loop Section
+    "humanLoop.title": "Human-in-the-loop-Support",
+    "humanLoop.agentOnline": "Agent online",
+    "humanLoop.avgResponse": "durchschn. Antwortzeit",
+    "humanLoop.subtitle":
+      "Übergib bei Bedarf an einen Menschen und behalte dabei den vollen Kontext. Der Mitarbeiter erhält eine WhatsApp-Benachrichtigung, schaltet sich sofort ein und antwortet in seiner eigenen Muttersprache — die KI übersetzt in Echtzeit für den Kunden. Dein Team behält die Kontrolle, während die KI die Schwerstarbeit übernimmt.",
+
+    // Widget to WhatsApp Section
+    "widgetToWhatsapp.badge": "Neue Funktion",
+    "widgetToWhatsapp.title": "Vom Widget zu deinem WhatsApp",
+    "widgetToWhatsapp.subtitle":
+      "Der Kunde startet im Widget, der Mitarbeiter antwortet von seinem WhatsApp. Wenn menschlicher Support nötig ist, erhält der Mitarbeiter eine Benachrichtigung auf seinem persönlichen WhatsApp mit dem vollständigen Chat-Kontext: keine neuen Apps, kein offenes Backoffice. Antworte, wo immer du bist, wann immer du willst.",
+    "widgetToWhatsapp.chip1": "Benachrichtigung in Echtzeit",
+    "widgetToWhatsapp.chip2": "Vollständiger Chat-Kontext geteilt",
+    "widgetToWhatsapp.chip3": "Nur dein WhatsApp",
+    "widgetToWhatsapp.chip4": "Keine zusätzlichen Apps",
+
+    // Pricing
+    "pricing.title": "Wähle deinen Plan",
+    "pricing.subtitle": "Starte kostenlos und wachse nach Bedarf",
+    "pricing.free.desc": "Zum Testen der Plattform",
+    "pricing.free.creditDesc":
+      "Wir schenken dir die ersten ${amount}, um die Plattform zu testen.",
+    "pricing.basic.desc": "Für wachsende Unternehmen",
+    "pricing.premium.desc": "Für etablierte Unternehmen",
+    "pricing.enterprise.desc": "Für groß angelegte Abläufe",
+    "pricing.usage.title":
+      "Die folgenden nutzungsbasierten Gebühren kommen zusätzlich hinzu und gelten für alle Pläne",
+    "pricing.usage.message": "pro WhatsApp-Nachricht",
+    "pricing.usage.message.desc": "Wird von deinem Guthaben abgezogen",
+    "pricing.usage.widget": "pro Widget-Nachricht",
+    "pricing.usage.widget.desc": "Wird von deinem Guthaben abgezogen",
+    "pricing.usage.customer": "pro Neukunde",
+    "pricing.usage.customer.desc": "Jede neue Kundenregistrierung",
+    "pricing.usage.order": "pro neuer Bestellung",
+    "pricing.usage.order.desc": "Jede abgeschlossene Bestellung",
+    "pricing.usage.push": "pro WhatsApp-Werbenachricht",
+    "pricing.usage.push.desc": "Wird von deinem Guthaben abgezogen",
+    "pricing.usage.reminder": "pro WhatsApp-Terminerinnerung",
+    "pricing.usage.reminder.desc": "Wird von deinem Guthaben abgezogen",
+    "pricing.usage.transparent": "💡 Jede Nachricht, die du sendest, zieht Guthaben von deinem Konto ab. Dein Guthaben verringert sich entsprechend der tatsächlichen Nutzung.",
+
+    // Login/Register Forms
+    "auth.login.title": "Anmelden",
+    "auth.login.subtitle": "Überwache Konversationen, Automatisierungen und Insights im eChatbot-Dashboard.",
+    "auth.register.title": "Erstelle dein Konto",
+    "auth.register.subtitle": "Starte mit der Automatisierung deines WhatsApp-Handels mit eChatbot",
+
+    // Form Validation
+    "validation.email.invalid": "Ungültige E-Mail-Adresse",
+    "validation.password.required": "Passwort ist erforderlich",
+    "validation.password.minLength": "Das Passwort muss mindestens 8 Zeichen lang sein",
+    "validation.password.uppercase": "Das Passwort muss mindestens einen Großbuchstaben enthalten",
+    "validation.password.lowercase": "Das Passwort muss mindestens einen Kleinbuchstaben enthalten",
+    "validation.password.number": "Das Passwort muss mindestens eine Zahl enthalten",
+    "validation.password.special": "Das Passwort muss mindestens ein Sonderzeichen enthalten",
+    "validation.password.match": "Die Passwörter stimmen nicht überein",
+    "validation.firstName.required": "Vorname ist erforderlich",
+    "validation.lastName.required": "Nachname ist erforderlich",
+    "validation.gdpr.required": "Du musst die Bedingungen akzeptieren",
+
+    // Navigation
+    "nav.demo": "Demo",
+    "nav.pricing": "Preise",
+    "nav.contact": "Kontaktiere uns",
+    "nav.language": "Sprache auswählen",
+    "nav.welcome": "Willkommen",
+    "nav.yourChannels": "Deine Kanäle",
+    "nav.logout": "Abmelden",
+    "nav.logoutSuccess": "Erfolgreich abgemeldet",
+    "nav.signin": "Anmelden",
+    "nav.getStarted": "Jetzt loslegen",
+
+    // Plan Names
+    "plan.free": "Kostenlose Testversion",
+    "plan.basic": "Basic",
+    "plan.premium": "Premium",
+    "plan.daysLeft": "Tage übrig",
+    "plan.credit": "Guthaben",
+
+    // How It Works
+    "howItWorks.title": "Wie wir zusammenarbeiten",
+    "howItWorks.subtitle": "Kein Produkt von der Stange: Wir bauen deinen KI-Assistenten rund um dein Unternehmen und deine echten Anwendungsfälle.",
+    "howItWorks.step1.title": "Erzähl uns von deinem Unternehmen",
+    "howItWorks.step1.desc": "Wir sprechen über deine Anforderungen: Branche, Standorte, Sprachen, Abläufe. Wir lernen, was deine Kunden wirklich brauchen.",
+    "howItWorks.step2.title": "Wir bauen deine maßgeschneiderte KI",
+    "howItWorks.step2.desc": "Wir trainieren den Assistenten anhand deiner echten Anwendungsfälle, verbinden ihn mit deinen Systemen und verfeinern ihn im Laufe der Zeit. On-Premise, wenn du möchtest.",
+    "howItWorks.step3.title": "Gehe auf WhatsApp live",
+    "howItWorks.step3.desc": "Die KI betreut Kunden rund um die Uhr, übergibt bei Bedarf an einen Mitarbeiter und versendet Kampagnen. Du überwachst alles über ein einziges Panel.",
+
+    // Work in Progress
+    "wip.banner": "In Arbeit",
+
+    // Auth Forms
+    "auth.login": "Anmelden",
+    "auth.createAccount": "Konto erstellen",
+    "auth.error.login": "Anmeldefehler",
+    "auth.error.registration": "Registrierungsfehler",
+    "auth.signedIn": "Du bist angemeldet",
+    "auth.loggedUser": "Angemeldeter Benutzer",
+    "auth.plan": "Plan",
+    "auth.goToBackoffice": "Zum Backoffice",
+    "auth.goToWorkspace": "Zum Workspace",
+    "auth.email.placeholder": "deine@email.com",
+    "auth.password.placeholder": "********",
+    "auth.rememberMe": "Angemeldet bleiben",
+    "auth.forgotPassword": "Passwort vergessen?",
+    "auth.signingIn": "Anmeldung läuft...",
+    "auth.signIn": "Anmelden",
+    "auth.orContinue": "Oder fortfahren mit",
+    "auth.google": "Mit Google registrieren",
+    "auth.noAccount": "Noch kein Konto?",
+    "auth.createOne": "Erstelle eines",
+    "auth.invitation.detected": "Einladung erkannt",
+    "auth.invitation.text": "hat dich eingeladen beizutreten",
+    "auth.firstName.placeholder": "Vorname",
+    "auth.lastName.placeholder": "Nachname",
+    "auth.email.preFilled": "Die E-Mail wird aus deiner Einladung vorausgefüllt",
+    "auth.confirmPassword.placeholder": "Passwort bestätigen",
+    "auth.gdpr.agree": "Ich stimme den",
+    "auth.gdpr.privacy": "Datenschutzrichtlinie",
+    "auth.gdpr.and": "und",
+    "auth.gdpr.terms": "Nutzungsbedingungen",
+    "auth.creatingAccount": "Konto wird erstellt...",
+    "auth.alreadyAccount": "Hast du schon ein Konto?",
+
+    // Demo Section
+    "demo.title": "Live-Demo",
+    "demo.subtitle": "DemoWash ist ein fiktives Franchise-Netzwerk von SB-Waschsalons mit mehreren Standorten in Katalonien. Probiere den Chatbot wie ein echter Kunde aus: frage nach Öffnungszeiten und Preisen, melde ein Problem und sieh, wie der Fall mit Echtzeit-Übersetzung an einen menschlichen Mitarbeiter eskaliert wird.",
+    "demo.button": "Probiere unsere Demo aus",
+    "demo.accessHint": "Hinterlasse uns deine Kontaktdaten und wir schicken dir per E-Mail die Zugangsdaten, um die Demo auszuprobieren.",
+
+    // Integration Section
+    "integration.crm.title": "Individuelle CRM-Integration",
+    "integration.crm.subtitle": "Verbinde deinen Chatbot über sicheren API-Zugriff mit deinem CRM und externen Daten. Synchronisiere Kundenprofile, rufe die Bestellhistorie ab und löse Workflows auf Basis von Echtzeit-Ereignissen aus. Integriere die API deines Versanddienstleisters, um Sendungsverfolgung in Echtzeit anzubieten und immer zu wissen, wo deine Lieferung ist. Jede Antwort basiert auf deinen Daten.",
+    "integration.crm.button": "Mehr erfahren",
+
+    "pushAi.badge": "KI Smart Push",
+    "pushAi.title": "KI‑gesteuerter Smart Push",
+    "pushAi.subtitle": "Die KI bringt Kundenbedürfnisse mit passenden Angeboten zusammen und entscheidet, was wann gesendet wird, indem sie gezielte WhatsApp-Nachrichten ausliefert. Sie lernt zudem aus vergangenen Interaktionen, priorisiert das Timing und reduziert Rauschen, damit sich jede Nachricht persönlich und nützlich anfühlt.",
+
+    // Team Collaboration Section
+    "teamCollaboration.title": "Team-Zusammenarbeit",
+    "teamCollaboration.subtitle": "Teile als Vertriebsteam den Backoffice-Zugang mit deinen Kollegen. Derselbe KI-Agent antwortet Kunden auf WhatsApp, während das Team Bestellungen, Produkte und Kunden über dieselbe Plattform verwaltet. Perfekte Koordination zwischen KI und menschlichem Team.",
+    "teamCollaboration.button": "Kontaktiere uns",
+
+    // Privacy Section
+    "privacy.sectionTitle": "Datenschutz von Anfang an",
+    "privacy.subtitle": "Es werden keine sensiblen Daten an Dritte oder KI-Modelle gesendet. Der Zugriff wird mit eingeschränkten Tokens abgesichert, bei der Übertragung verschlüsselt und auf das für jede Interaktion erforderliche Minimum an Daten beschränkt. Deine Kundendaten bleiben unter deiner Kontrolle.",
+    "privacy.button": "Zur DSGVO",
+    "common.viewMore": "Mehr erfahren →",
+
+    "pricing.features.channels": "WhatsApp-Kanäle",
+    "pricing.features.channel": "WhatsApp-Kanal",
+    "pricing.features.products": "Produkte",
+    "pricing.features.clients": "Leads",
+    "pricing.features.teamMembers": "Teammitglieder",
+    "pricing.features.support": "Support",
+    "pricing.features.analytics": "Erweiterte Analytics",
+    "pricing.features.branding": "Individuelles KI-Modell",
+    "pricing.features.integration": "Integration mit eigenem CRM (Angebot erforderlich)",
+    "pricing.features.unlimited": "Unbegrenzt",
+    "pricing.features.upto": "Bis zu",
+    "pricing.features.priority": "24/7-Priority-Support",
+    "pricing.features.dedicatedServer": "On-premise-Server",
+    "pricing.button.start": "Starten",
+    "pricing.button.startWithCredit": "Mit deinem Guthaben starten",
+    "pricing.button.contact": "Vertrieb kontaktieren",
+    "pricing.simulator.button": "Berechne deine monatlichen Kosten",
+    "pricing.simulator.description":
+      "Finde heraus, was du basierend auf deiner tatsächlichen Nutzung ausgeben würdest",
+    "pricing.simulator.title": "Preis-Simulator",
+    "pricing.simulator.subtitle":
+      "Konfiguriere deine monatliche Nutzung und entdecke die geschätzten Kosten",
+    "pricing.simulator.totalProducts": "Wie viele Produkte hast du?",
+    "pricing.simulator.totalProducts.help":
+      "📦 Die Anzahl der Produkte in deinem Katalog",
+    "pricing.simulator.totalCustomers":
+      "Wie viele Kunden hast du insgesamt?",
+    "pricing.simulator.totalCustomers.help":
+      "📊 Diese Zahl hilft dabei, realistische Werte für Nachrichten, neue Kunden und Support vorzuschlagen",
+    "pricing.simulator.channels":
+      "Wie viele WhatsApp-Kanäle möchtest du erstellen?",
+    "pricing.simulator.messages": "Geschätzte Nachrichten pro Monat",
+    "pricing.simulator.newCustomers": "Geschätzte neue Kunden pro Monat",
+    "pricing.simulator.newOrders": "Geschätzte neue Bestellungen pro Monat",
+    "pricing.simulator.pushCampaigns": "Werbenachrichten pro Monat",
+    "pricing.simulator.extras": "Extras",
+    "pricing.simulator.branding": "Markenanpassung",
+    "pricing.simulator.branding.desc": "Dein Logo und deine Farben",
+    "pricing.simulator.dedicatedServer": "On-premise-Server",
+    "pricing.simulator.dedicatedServer.desc": "Individuelle Domain",
+    "pricing.simulator.summary": "Zusammenfassung",
+    "pricing.simulator.plan": "Plan",
+    "pricing.simulator.usageCosts": "Nutzungskosten",
+    "pricing.simulator.monthlyTotal": "Monatliche Gesamtsumme",
+    "pricing.simulator.estimated": "geschätzt",
+    "pricing.simulator.transparent":
+      "💡 Transparente Kosten basierend auf dem tatsächlichen Verbrauch",
+    "pricing.simulator.suggestion": "💡 Vorschlag",
+    "pricing.simulator.suggestion.messages": "~30 % der Kunden",
+    "pricing.simulator.suggestion.newCustomers": "~10 % Wachstum",
+    "pricing.simulator.suggestion.pushCampaigns": "Kampagnen/Monat",
+    "pricing.simulator.price.perPushMessage": "pro Werbenachricht",
+    "pricing.simulator.cta.free": "Kontaktiere uns",
+    "pricing.simulator.cta.plan": "Auswählen",
+
+    // Billing Section
+    "billing.pageTitle": "Abonnement & Guthaben",
+    "billing.pageDescription": "Verwalte dein Abonnement und dein Guthaben",
+    "billing.sectionTitle": "Abonnement & Guthaben",
+    "billing.sectionDescription": "Verwalte dein Abonnement und dein Guthaben",
+    "billing.yourPlan": "Dein Plan",
+    "billing.availableCredit": "Verfügbares Guthaben",
+    "billing.lowCredit": "Niedriges Guthaben",
+    "billing.lowCreditWarning": "Niedriges Guthaben! Lade auf, um Unterbrechungen zu vermeiden.",
+    "billing.daysRemaining": "Tage in der Testphase verbleibend",
+    "billing.trialExpired": "Testphase abgelaufen",
+    "billing.trialExpiredWarning": "Testphase abgelaufen! Wähle einen Plan, um fortzufahren.",
+    "billing.trialExpiredMessage": "Deine Testphase ist abgelaufen",
+    "billing.trialExpiredAction": "Wähle einen Plan, um eChatbot weiterhin zu nutzen",
+    "billing.choosePlan": "Wähle einen Plan",
+    "billing.clickToManage": "Klicke, um die Abrechnung zu verwalten",
+    "billing.rechargeCredit": "Guthaben aufladen",
+    "billing.planDetails": "Plandetails",
+    "billing.subscription": "Abonnement",
+    "billing.free": "Kostenlos",
+    "billing.perMonth": "/Monat",
+    "billing.messageCost": "Nachrichtenkosten",
+    "billing.orderCost": "Bestellkosten",
+    "billing.nextRenewal": "Nächste Verlängerung",
+    "billing.upgradePlan": "Plan upgraden",
+    "billing.usage": "Nutzung",
+    "billing.usageDescription": "Limits deines {plan}-Plans",
+    "billing.products": "Produkte",
+    "billing.customers": "Kunden",
+    "billing.channels": "Kanäle",
+    "billing.transactionHistory": "Transaktionsverlauf",
+    "billing.rechargeTitle": "Guthaben aufladen",
+    "billing.rechargeDescription": "Wähle einen Betrag oder gib einen individuellen Betrag ein (min. €10, max. €1000)",
+    "billing.customAmount": "Individueller Betrag",
+    "billing.processing": "Wird verarbeitet...",
+    "billing.recharge": "Aufladen",
+    "billing.upgradeTitle": "Plan upgraden",
+    "billing.upgradeDescription": "Wähle einen Plan, der besser zu deinen Bedürfnissen passt",
+    "billing.currentPlan": "Aktueller Plan",
+    "billing.upgrade": "Upgraden",
+    "billing.upgrading": "Wird upgegradet...",
+    "billing.historyTitle": "Transaktionsverlauf",
+    "billing.historyDescription": "Aktuelle Transaktionen deines Kontos",
+    "billing.noTransactions": "Noch keine Transaktionen",
+    "billing.loadMore": "Mehr laden",
+    "billing.transactionTypes.MESSAGE": "Nachricht",
+    "billing.transactionTypes.PUSH_NOTIFICATION": "Push-Benachrichtigung",
+    "billing.transactionTypes.RECHARGE": "Aufladung",
+    "billing.transactionTypes.MONTHLY_FEE": "Monatsgebühr",
+    "billing.transactionTypes.UPGRADE_FEE": "Upgrade-Gebühr",
+    "billing.transactionTypes.ADJUSTMENT": "Anpassung",
+    "billing.transactionTypes.INITIAL_CREDIT": "Anfangsguthaben",
+
+    // Contact
+    "contact.title": "Bereit loszulegen?",
+    "contact.subtitle":
+      "Schließe dich Tausenden von Unternehmen an, die bereits auf WhatsApp verkaufen",
+    "contact.cta": "Kontaktiere uns",
+    "contact.form.title": "Schreib uns eine Nachricht",
+    "contact.form.subtitle": "Sag uns, was du brauchst. Wir antworten schnell.",
+    "contact.form.success": "Nachricht gesendet",
+    "contact.form.successMsg": "Danke für deine Nachricht. Wir melden uns bald bei dir.",
+    "contact.form.name": "Name",
+    "contact.form.namePlaceholder": "Dein Vorname",
+    "contact.form.surname": "Nachname",
+    "contact.form.surnamePlaceholder": "Dein Nachname",
+    "contact.form.email": "Email",
+    "contact.form.emailPlaceholder": "du@email.com",
+    "contact.form.phone": "Telefon (optional)",
+    "contact.form.phonePlaceholder": "+1 234 567 8900",
+    "contact.form.subject": "Titel",
+    "contact.form.subjectPlaceholder": "Trage hier deinen Betreff ein…",
+    "contact.form.message": "Nachricht",
+    "contact.form.messagePlaceholder": "Schreibe hier deine Nachricht...",
+    "contact.form.captchaError": "Captcha-Konfiguration fehlt.",
+    "contact.form.sending": "Wird gesendet...",
+    "contact.form.send": "Nachricht senden",
+    // Footer
+    "footer.tagline": "Verwandle WhatsApp in deinen Onlineshop",
+    "footer.description": "Professionelle WhatsApp-KI-Chatbot-Plattform für deinen E-Commerce-Erfolg.",
+    "footer.quickLinks": "Schnellzugriff",
+    "footer.features": "Funktionen",
+    "footer.pricing": "Preise",
+    "footer.demo": "Demo",
+    "footer.contact": "Kontakt",
+    "footer.company": "Unternehmen",
+    "footer.about": "Über uns",
+    "footer.careers": "Karriere",
+    "footer.support": "Support",
+    "footer.docs": "Dokumentation",
+    "footer.help": "Hilfecenter",
+    "footer.legal": "Rechtliches",
+    "footer.privacy": "Datenschutzerklärung",
+    "footer.terms": "Nutzungsbedingungen",
+    "footer.refund": "Rückerstattungsrichtlinie",
+    "footer.rights": "© 2025 eChatbot. Alle Rechte vorbehalten.",
+    "footer.poweredBy": "Bereitgestellt von",
+    "footer.whatsappApi": "WhatsApp Business API",
+
+    // CTA Section
+    "cta.title": "Bereit, dein Kundenerlebnis zu revolutionieren?",
+    "cta.subtitle": "Schließe dich Hunderten von Unternehmen an, die eChatbot nutzen, um Verkäufe zu automatisieren, Conversions zu steigern und Kunden rund um die Uhr zu begeistern.",
+    "cta.button.start": "Kostenlos loslegen",
+    "cta.button.contact": "Kontaktiere uns",
+
+    // Login
+    "login.title": "Melde dich bei deinem Konto an",
+    "login.email": "E-Mail",
+    "login.password": "Passwort",
+    "login.forgot": "Passwort vergessen?",
+    "login.button": "Anmelden",
+    "login.noAccount": "Du hast noch kein Konto?",
+    "login.signup": "Registrieren",
+    "login.signin": "Anmelden",
+    "login.register": "Registrieren",
+    "login.welcomeBack": "Anmelden",
+    "login.forgotPassword": "Passwort vergessen?",
+    "login.signingIn": "Anmeldung läuft...",
+    "login.orContinueWith": "Oder fahre fort mit",
+
+    // Register
+    "register.createAccount": "Konto erstellen",
+    "register.passwordHint": "Mind. 8 Zeichen, Groß- und Kleinbuchstaben, Zahl, Sonderzeichen",
+    "register.creatingAccount": "Konto wird erstellt...",
+    "register.gdprAccept": "Ich akzeptiere die",
+    "register.privacyPolicy": "Datenschutzerklärung",
+    "register.and": "und",
+    "register.termsOfService": "Nutzungsbedingungen",
+
+    // Form
+    "form.email": "E-Mail",
+    "form.password": "Passwort",
+    "form.firstName": "Vorname",
+    "form.lastName": "Nachname",
+    "form.confirmPassword": "Passwort bestätigen",
+    "form.error.invalidEmail": "Ungültige E-Mail-Adresse",
+
+    // Forgot Password
+    "forgotPassword.title": "Passwort zurücksetzen",
+    "forgotPassword.subtitle": "Gib deine E-Mail ein, um dein Passwort zurückzusetzen",
+    "forgotPassword.email.placeholder": "admin@echatbot.ai",
+    "forgotPassword.button": "Passwort zurücksetzen",
+    "forgotPassword.backToLogin": "Zurück zur Anmeldung",
+    "forgotPassword.success": "Wenn diese E-Mail registriert ist, wurden Anweisungen zum Zurücksetzen des Passworts an dein Postfach gesendet. Bitte überprüfe deine E-Mails und folge dem Link, um dein Passwort zurückzusetzen.",
+    "resetPassword.error": "Ein Fehler ist aufgetreten",
+
+    // Reset Password
+    "resetPassword.title": "Passwort zurücksetzen",
+    "resetPassword.subtitle": "Gib dein neues Passwort ein",
+    "resetPassword.newPassword": "Neues Passwort",
+    "resetPassword.newPassword.placeholder": "Neues Passwort eingeben",
+    "resetPassword.confirmPassword": "Passwort bestätigen",
+    "resetPassword.confirmPassword.placeholder": "Neues Passwort bestätigen",
+    "resetPassword.button": "Passwort zurücksetzen",
+    "resetPassword.button.loading": "Wird zurückgesetzt...",
+    "resetPassword.success": "Passwort erfolgreich zurückgesetzt! Weiterleitung zur Anmeldung...",
+    "resetPassword.invalidLink": "Ungültiger Zurücksetzen-Link",
+    "resetPassword.invalidLink.desc": "Der Link zum Zurücksetzen des Passworts ist ungültig oder abgelaufen",
+    "resetPassword.requestNew": "Einen neuen Zurücksetzen-Link anfordern",
+    "resetPassword.error.mismatch": "Die Passwörter stimmen nicht überein",
+    "resetPassword.error.minLength": "Das Passwort muss mindestens 8 Zeichen lang sein",
+    "resetPassword.error.strength": "Das Passwort muss mindestens einen Großbuchstaben, einen Kleinbuchstaben, eine Zahl und ein Sonderzeichen enthalten",
+
+    // Auth Errors
+    "auth.error.invalid6DigitCode": "Bitte gib einen gültigen 6-stelligen Code ein",
+    "auth.error.invalidRecoveryCode": "Bitte gib einen gültigen Wiederherstellungscode ein",
+    "auth.error.invalidVerificationLink": "Ungültiger Bestätigungslink. Bitte melde dich erneut an.",
+    "auth.error.accountLocked": "Konto wegen zu vieler fehlgeschlagener Versuche gesperrt",
+    "auth.error.invalidCode": "Ungültiger Bestätigungscode",
+    "auth.error.accountInactive": "Konto deaktiviert. Bitte kontaktiere den Support, um dein Konto wieder zu aktivieren.",
+    "auth.error.accountDeleted": "Dein Konto wurde gelöscht und kann nicht aufgerufen werden",
+
+    // Setup 2FA Page
+    "setup2fa.title": "Zwei-Faktor-Authentifizierung einrichten",
+    "setup2fa.scanDescription": "Scanne den QR-Code mit deiner Authenticator-App",
+    "setup2fa.useAuthenticatorApp": "Verwende eine Authenticator-App",
+    "setup2fa.recommended": "Empfohlen: Google Authenticator, Microsoft Authenticator oder Authy",
+    "setup2fa.howToSetup": "So richtest du es ein:",
+    "setup2fa.step1": "Öffne deine Authenticator-App",
+    "setup2fa.step2": "Tippe auf \"+\" oder \"Konto hinzufügen\"",
+    "setup2fa.step3": "Scanne diesen QR-Code",
+    "setup2fa.step4": "Gib den 6-stelligen Code unten ein",
+    "setup2fa.scannedButton": "Ich habe den Code gescannt",
+    "setup2fa.verifyTitle": "Bestätige deine Einrichtung",
+    "setup2fa.verifyDescription": "Gib den 6-stelligen Code aus deiner Authenticator-App ein",
+    "setup2fa.verificationCode": "Bestätigungscode",
+    "setup2fa.codeRefreshes": "Der Code wird alle 30 Sekunden aktualisiert. Gib den aktuellen Code aus deiner App ein.",
+    "setup2fa.verifying": "Wird überprüft...",
+    "setup2fa.verifyAndContinue": "Überprüfen und fortfahren",
+    "setup2fa.backToQR": "Zurück zum QR-Code",
+    "setup2fa.saveRecoveryTitle": "Speichere deine Wiederherstellungscodes",
+    "setup2fa.saveRecoveryDescription": "Bewahre diese Codes an einem sicheren Ort auf. Du benötigst sie, um auf dein Konto zuzugreifen, falls du dein Authenticator-Gerät verlierst.",
+    "setup2fa.important": "Wichtig!",
+    "setup2fa.recoveryCodeWarning": "Jeder Wiederherstellungscode kann nur einmal verwendet werden. Nach der Verwendung wird ein Code ungültig.",
+    "setup2fa.copyCodes": "Codes kopieren",
+    "setup2fa.copied": "Kopiert!",
+    "setup2fa.download": "Herunterladen",
+    "setup2fa.savedContinue": "Ich habe meine Codes gespeichert – Fortfahren",
+    "setup2fa.stepScan": "Scannen",
+    "setup2fa.stepVerify": "Überprüfen",
+    "setup2fa.stepSaveCodes": "Codes speichern",
+    "setup2fa.skipLogin": "Überspringen und später anmelden",
+
+    // Privacy Policy
+    "privacy.title": "Datenschutzerklärung",
+    "privacy.lastUpdate": "Zuletzt aktualisiert",
+    "privacy.intro": "eChatbot respektiert deine Privatsphäre und verpflichtet sich zu transparenten Datenpraktiken. Diese Datenschutzerklärung erläutert, wie wir deine personenbezogenen Daten in Übereinstimmung mit internationalen Vorschriften, einschließlich GDPR und CCPA, erheben, verwenden, schützen und verarbeiten.",
+    "privacy.collection.title": "1. Welche Informationen wir erheben",
+    "privacy.collection.desc": "Wir erheben Informationen, die du uns direkt bereitstellst, einschließlich Name, E-Mail, Telefonnummer, Workspace-Details und Geschäftsinformationen, wenn du ein Konto erstellst oder unsere Dienste nutzt. Wir erheben nur die Daten, die für den Betrieb unserer Plattform und die Bereitstellung von Kundensupport erforderlich sind.",
+    "privacy.usage.title": "2. Wie wir deine Informationen verwenden",
+    "privacy.usage.desc": "Deine Daten werden ausschließlich verwendet, um: (1) die eChatbot-Dienste bereitzustellen und zu pflegen, (2) Transaktionen abzuwickeln und Abrechnungsinformationen zu versenden, (3) auf deine Anfragen zu reagieren und Kundensupport zu leisten, (4) unsere Plattform zu verbessern und zu optimieren, (5) gesetzliche Verpflichtungen zu erfüllen. Wir verwenden deine Daten NIEMALS, um KI-Modelle zu trainieren, oder für irgendeinen Zweck außerhalb deines ausdrücklichen geschäftlichen Bedarfs.",
+    "privacy.sharing.title": "3. Datenweitergabe & Dritte",
+    "privacy.sharing.desc": "WICHTIG: Deine Kundendaten werden NIEMALS an Dritte, KI-Trainingssysteme, Marketingunternehmen oder externe Dienste weitergegeben. Deine Geschäftsinformationen bleiben unter deiner vollständigen Kontrolle. Wir geben Daten nur an wesentliche Dienstleister (Zahlungsabwickler, Hosting-Anbieter) im Rahmen strenger Vertraulichkeitsvereinbarungen und Auftragsverarbeitungsverträge (DPA) weiter. Alle Verarbeiter erfüllen die GDPR und vertragliche Datenschutzanforderungen.",
+    "privacy.security.title": "4. Datensicherheit & Schutz vor Hackern",
+    "privacy.security.desc": "eChatbot setzt Sicherheitsmaßnahmen auf Unternehmensniveau ein, einschließlich AES-256-Verschlüsselung für gespeicherte Daten, TLS 1.3 für Daten während der Übertragung, regelmäßiger Sicherheitsaudits und der Einhaltung der ISO 27001-Standards. WICHTIGER HAFTUNGSAUSSCHLUSS: Obwohl wir branchenführende Sicherheit gewährleisten, können wir keine absolute Immunität gegen sämtliche Cyberangriffe oder unbefugten Zugriff durch böswillige Dritte garantieren. eChatbot ist NICHT verantwortlich für Verluste, die sich ergeben aus: (1) externen Hackerangriffen oder Datenschutzverletzungen durch Dritte, (2) kompromittierten Kundenzugangsdaten oder Authentifizierungssystemen, (3) Zero-Day-Schwachstellen oder (4) Ereignissen höherer Gewalt. Du bist dafür verantwortlich, sichere Passwörter zu verwenden und deine Kontozugangsdaten zu schützen.",
+    "privacy.rights.title": "5. Deine Rechte (GDPR/CCPA)",
+    "privacy.rights.desc": "Du hast das Recht: (1) auf deine personenbezogenen Daten zuzugreifen, (2) unrichtige Informationen zu korrigieren oder zu aktualisieren, (3) deine Daten zu löschen (Recht auf Vergessenwerden), (4) bestimmten Verarbeitungsaktivitäten zu widersprechen, (5) Datenübertragbarkeit in einem strukturierten Format anzufordern, (6) Beschwerden bei deiner lokalen Datenschutzbehörde einzureichen. WICHTIG: Nach Kontolöschung oder Beendigung des Dienstes bewahren wir Daten nur so lange auf, wie es gesetzlich vorgeschrieben ist (Steuern, Betrugsprävention, Streitbeilegung). Kontaktiere privacy@echatbot.ai, um deine Rechte mit gültigem Identitätsnachweis innerhalb von 30 Tagen auszuüben.",
+    "privacy.cookies.title": "6. Cookies & Tracking",
+    "privacy.cookies.desc": "Wir verwenden NUR essenzielle Cookies für die Authentifizierung und Sitzungsverwaltung unseres Dienstes. Wir verwenden KEINE Analyse-Cookies (Google Analytics), Werbe-Cookies oder Tracking-Cookies von Drittanbietern zur Verhaltensprofilierung. Essenzielle Cookies erfordern nach GDPR und ePrivacy-Vorschriften keine vorherige Einwilligung.",
+    "privacy.retention.title": "7. Datenspeicherung",
+    "privacy.retention.desc": "Kundendaten werden nur so lange gespeichert, wie es für die Diensterbringung erforderlich ist: (1) Daten aktiver Konten: gespeichert, solange das Konto aktiv ist, (2) gelöschte Konten: 90 Tage lang zu Datenwiederherstellungszwecken gespeichert, danach dauerhaft gelöscht, (3) Transaktionsaufzeichnungen: 7 Jahre lang gespeichert, um Finanzvorschriften zu erfüllen, (4) Chat-Verläufe: gespeichert gemäß den Aufbewahrungseinstellungen deines Workspace. Backups können archivierte Daten enthalten, sind jedoch verschlüsselt und gesichert.",
+    "privacy.contact.title": "8. Kontakt & Datenschutzbehörde",
+    "privacy.contact.desc": "Für Datenschutzfragen: privacy@echatbot.ai. Um Datenzugriff oder -löschung anzufordern: dpo@echatbot.ai. Wenn du der Ansicht bist, dass deine Rechte verletzt wurden, kontaktiere deine lokale Datenschutzbehörde. Antwortzeit: maximal 30 Tage.",
+
+    // Terms of Service
+    "terms.title": "Nutzungsbedingungen",
+    "terms.lastUpdate": "Zuletzt aktualisiert",
+    "terms.intro": "Willkommen bei eChatbot. Diese Nutzungsbedingungen (nachfolgend 'Bedingungen') regeln deine Nutzung unserer Plattform und stellen eine rechtsverbindliche Vereinbarung zwischen dir und eChatbot dar. Indem du auf eChatbot zugreifst oder es nutzt, akzeptierst du diese Bedingungen in vollem Umfang.",
+    "terms.acceptance.title": "1. Annahme & verbindliche Vereinbarung",
+    "terms.acceptance.desc": "Indem du auf eChatbot zugreifst, dich registrierst oder es nutzt, bestätigst du: (1) Du hast diese Bedingungen und die Datenschutzerklärung gelesen und verstanden, (2) du akzeptierst alle Bedingungen ohne Änderung, (3) du bist rechtlich befugt, deine Organisation zu binden, (4) wenn du nicht einverstanden bist, nutze unsere Dienste nicht. Die fortgesetzte Nutzung gilt als Annahme. Wir behalten uns das Recht vor, die Bedingungen mit einer Frist von 30 Tagen zu ändern. Wesentliche Änderungen erfordern deine ausdrückliche Zustimmung.",
+    "terms.services.title": "2. Leistungsbeschreibung",
+    "terms.services.desc": "eChatbot bietet eine WhatsApp-integrierte, KI-gestützte E-Commerce-Plattform, die es Unternehmen ermöglicht: (1) Produktkataloge und Lagerbestände zu verwalten, (2) Kundenbestellungen über WhatsApp-Konversationen abzuwickeln, (3) Kundenserviceinteraktionen über KI-Agenten zu automatisieren, (4) gezielte Marketingkampagnen zu versenden. Der Dienst wird wie besehen ('as-is') ohne Garantie einer unterbrechungsfreien Verfügbarkeit bereitgestellt. Geplante Wartungsarbeiten können zu vorübergehender Nichtverfügbarkeit führen, nach Möglichkeit mit einer Vorankündigung von 24 Stunden.",
+    "terms.account.title": "3. Konto & Nutzerpflichten",
+    "terms.account.desc": "Du bist verantwortlich für: (1) die Bereitstellung korrekter, aktueller Informationen, (2) die Aufrechterhaltung der Kontosicherheit und vertraulicher Zugangsdaten, (3) die unverzügliche Benachrichtigung über unbefugten Zugriff, (4) die Einhaltung aller geltenden Gesetze in deiner Jurisdiktion, (5) die Nicht-Nutzung von eChatbot für illegalen Handel, Geldwäsche oder Sanktionsverstöße. Nutzer müssen mindestens 18 Jahre alt sein oder ein registriertes Unternehmen vertreten. Wir können Konten bei Verstößen ohne Haftung sperren.",
+    "terms.data.title": "4. Deine Daten & geistiges Eigentum",
+    "terms.data.desc": "Du behältst das volle Eigentum an: (1) Kundendaten, Produktinformationen und Geschäftsunterlagen, (2) von dir erstellten und hochgeladenen Inhalten. Du gewährst eChatbot eine nicht-exklusive, weltweite Lizenz, um: (1) deine Daten zur Bereitstellung der Dienste zu speichern und zu verarbeiten, (2) Backups zur Notfallwiederherstellung zu erstellen, (3) anonymisierte Analyseberichte zu generieren. Du kannst deine Daten jederzeit abrufen. Die Plattform, Technologie und KI-Modelle von eChatbot sind unser ausschließliches Eigentum und urheberrechtlich geschützt.",
+    "terms.payment.title": "5. Abrechnung, Preise & Rückerstattungen",
+    "terms.payment.desc": "Abonnementgebühren werden monatlich im Voraus auf Grundlage deines gewählten Tarifs abgerechnet. Nutzungsbasierte Gebühren (pro Nachricht, pro Kunde, pro Bestellung) werden zum Monatsende abgerechnet. Die Preise können mit einer Frist von 30 Tagen geändert werden. Du kannst jederzeit kündigen; für bereits abgerechnete Zeiträume werden keine Rückerstattungen gewährt. Details zur Rückerstattungsrichtlinie: Siehe unsere Seite zur Rückerstattungsrichtlinie.",
+    "terms.liability.title": "6. Haftungsbeschränkung – WICHTIGER HAFTUNGSAUSSCHLUSS",
+    "terms.liability.desc": "AUSGENOMMEN VERLETZUNGEN DER VERTRAULICHKEIT: (1) Die maximale Haftung von eChatbot ist auf die in den vorangegangenen 12 Monaten gezahlten Gebühren BEGRENZT, (2) wir haften NICHT für indirekte, Folge-, Begleit-, Sonder- oder Strafschäden, einschließlich entgangener Gewinne, verlorener Daten oder Geschäftsunterbrechungen, (3) wir sind NICHT verantwortlich für Dienste Dritter, Zahlungsabwickler, Ausfälle der WhatsApp-Plattform oder Hackerangriffe/Datenschutzverletzungen, (4) wir sind NICHT verantwortlich für deine Einhaltung lokaler Gesetze oder Vorschriften in deinem Land, (5) die Dienstverfügbarkeit wird wie besehen ('as-is') ohne garantierte Verfügbarkeits-SLA bereitgestellt. SCHUTZ VOR HACKERN/VERLETZUNGEN: eChatbot kann keine Immunität gegen ausgeklügelte Cyberangriffe garantieren. Du bist allein dafür verantwortlich, zusätzliche Sicherheitsmaßnahmen umzusetzen (2FA, regelmäßige Backups) und eine Cyber-Versicherung aufrechtzuerhalten.",
+    "terms.security.title": "7. Sicherheit & Haftung bei Hackerangriffen",
+    "terms.security.desc": "eChatbot setzt branchenübliche Sicherheit ein (Verschlüsselung, Firewalls, Zugriffskontrollen). JEDOCH: (1) Wir lehnen die Verantwortung für Hackerangriffe, Datenschutzverletzungen oder unbefugten Zugriff durch böswillige Dritte ab, (2) wir haften nicht für Verluste durch kompromittierte Kundenpasswörter oder Zugangsdaten, (3) obwohl wir regelmäßige Sicherheitsaudits durchführen, können wir nicht ALLE Cyberangriffe verhindern, (4) du musst deine eigenen Sicherheitspraktiken umsetzen: starke Passwörter, Zwei-Faktor-Authentifizierung, regelmäßige Datensicherungen, (5) ziehe eine Cyber-Haftpflichtversicherung für dein Unternehmen in Betracht. Im Falle einer vermuteten Verletzung kontaktiere unverzüglich security@echatbot.ai.",
+    "terms.compliance.title": "8. Compliance & rechtliche Zuständigkeit",
+    "terms.compliance.desc": "Du bist verantwortlich für: (1) die Einhaltung aller lokalen, nationalen und internationalen Gesetze in deiner Jurisdiktion, (2) die Einhaltung der Nutzungsbedingungen von WhatsApp, (3) Datenschutzgesetze (GDPR bei EU-Kunden, CCPA bei Kalifornien, LGPD bei Brasilien), (4) Verbraucherschutzgesetze und E-Commerce-Vorschriften, (5) Exportkontroll- und Sanktionsvorschriften. eChatbot bietet keine Rechtsberatung. Die Streitbeilegung erfolgt durch: (1) informelle Beilegung: gutgläubige Verhandlung (30 Tage), (2) Mediation: verbindliches Schiedsverfahren nach den Regeln der internationalen Handelsschiedsgerichtsbarkeit, (3) Zuständigkeit: Gerichtsstand ist ausschließlich am eingetragenen Sitz des Unternehmens (EU-Jurisdiktion bevorzugt). Du verzichtest auf das Recht auf ein Geschworenenverfahren.",
+    "terms.termination.title": "9. Sperrung & Kündigung",
+    "terms.termination.desc": "eChatbot kann deinen Zugang sofort sperren oder beenden bei: (1) Verstoß gegen diese Bedingungen, (2) illegaler Aktivität, (3) wiederholten Zahlungsausfällen, (4) Betrug oder Missbrauch, (5) Gerichtsbeschluss oder behördlicher Anordnung. Du kannst dein Konto jederzeit über die Kontoeinstellungen kündigen. Nach der Kündigung: (1) werden deine Daten gemäß unserer Aufbewahrungsrichtlinie gespeichert, (2) bleibst du für unbezahlte Gebühren haftbar, (3) verlierst du innerhalb von 24 Stunden den Zugang zur Plattform.",
+    "terms.changes.title": "10. Änderungen & Salvatorische Klausel",
+    "terms.changes.desc": "Wir können diese Bedingungen jederzeit mit einer Frist von 30 Tagen ändern (wesentliche Änderungen erfordern eine Opt-in-Zustimmung). Die fortgesetzte Nutzung nach Änderungen gilt als Annahme. Sollte eine Bestimmung als nicht durchsetzbar befunden werden, bleiben die übrigen Bestimmungen vollumfänglich in Kraft. Diese Bedingungen ersetzen alle vorherigen Vereinbarungen.",
+    "terms.contact.title": "11. Kontakt & Support",
+    "terms.contact.desc": "Rechtliche Anfragen: legal@echatbot.ai. Sicherheitsvorfälle: security@echatbot.ai. Kundensupport: support@echatbot.ai. Antwortzeit: 2 Werktage. Für europäische Kunden, Datenschutzkontakt: dpo@echatbot.ai.",
+    // Refund Policy
+    "refund.title": "Rückerstattungs- und Stornierungsrichtlinie",
+    "refund.lastUpdate": "Zuletzt aktualisiert",
+    "refund.intro": "Diese Rückerstattungs- und Stornierungsrichtlinie beschreibt deine Rechte und unsere Verfahren zur Bearbeitung von Rückerstattungen, Stornierungen und Rückbuchungen für eChatbot-Abonnements und -Dienste.",
+    "refund.eligibility.title": "1. Anspruch auf Rückerstattung",
+    "refund.eligibility.desc": "Rückerstattungen werden NUR unter folgenden Umständen gewährt: (1) Testzeitraum: Erste 30 Tage deines Kontos – wenn kein kostenpflichtiges Abonnement aktiviert wurde und du innerhalb von 30 Tagen die Stornierung beantragst, wird nicht genutztes Testguthaben auf dein ursprüngliches Zahlungsmittel zurückerstattet, (2) Abrechnungsfehler: Wenn dir derselbe Zeitraum doppelt oder ein falscher Betrag berechnet wurde, erstatten wir die Differenz innerhalb von 14 Tagen, (3) Dienstausfall: Wenn eChatbot einen kritischen Ausfall von 24+ Stunden erleidet, der dein Geschäft beeinträchtigt, kannst du ein anteiliges Guthaben für künftige Monate beantragen (keine vollständige Rückerstattung). KEINE RÜCKERSTATTUNGEN werden gewährt für: (1) Bereits in Anspruch genommene Abonnementzeiträume, (2) Vollständig erbrachte Dienste, (3) Freiwillige Stornierung nach aktiver Nutzung, (4) Meinungsänderungen oder Unzufriedenheit mit Plattformfunktionen.",
+    "refund.process.title": "2. Ablauf der Rückerstattungsanfrage",
+    "refund.process.desc": "So beantragst du eine Rückerstattung: (1) Reiche die Anfrage per E-Mail ein: refunds@echatbot.ai mit deiner Rechnungsnummer und dem Grund, (2) Füge einen Zahlungs- und Autorisierungsnachweis bei, (3) Wir prüfen die Anfrage und antworten innerhalb von 7 Werktagen, (4) Bei Genehmigung werden Rückerstattungen je nach deiner Bank innerhalb von 5–10 Werktagen auf dein ursprüngliches Zahlungsmittel verarbeitet. Unvollständige oder betrügerische Anfragen werden abgelehnt. Einsprüche können innerhalb von 30 Tagen nach Ablehnung eingelegt werden.",
+    "refund.proration.title": "3. Anteilige Guthaben",
+    "refund.proration.desc": "Wenn du mitten im Monat stornierst, nachdem du für einen vollen Monat bezahlt hast, erhältst du KEINE Barerstattung. Stattdessen erhältst du ein anteiliges Guthaben (anteiliger Betrag) für deinen nächsten Abrechnungszyklus, sofern du innerhalb von 90 Tagen erneut abonnierst. Die Guthabenberechnung: (Verbleibende Tage ÷ Tage im Abrechnungszeitraum) × Gezahlter Betrag = Erstattungsfähiges Guthaben. Guthaben verfällt 90 Tage nach der Stornierung.",
+    "refund.nonrefundable.title": "4. Nicht erstattungsfähige Posten",
+    "refund.nonrefundable.desc": "Folgende Posten sind NICHT ERSTATTUNGSFÄHIG: (1) Einrichtungsgebühren oder Onboarding-Kosten, (2) Drittanbieter-Integrationen oder kundenspezifische Entwicklung, (3) Premium-Support-Pakete, (4) Bereits verbrauchte Nutzungsüberschreitungen (Gebühren pro Nachricht, Gebühren pro Kunde), (5) Zahlungen für bereits erbrachte Dienste, (6) Jahresabonnements nach dem ersten Monat.",
+    "refund.cancellation.title": "5. Stornierungsrichtlinie",
+    "refund.cancellation.desc": "Du kannst dein Abonnement jederzeit kündigen: (1) Über die Kontoeinstellungen: Besuche dein Workspace-Dashboard → Abrechnung → Abonnement kündigen, (2) E-Mail: Sende eine Kündigungsanfrage an support@echatbot.ai mit deiner Workspace-ID, (3) Wirksamkeitsdatum: Die Kündigung wird zum Ende deines aktuellen Abrechnungszyklus wirksam (du behältst den Zugang bis zum Monatsende), (4) Keine Kündigungsfrist: Kündigungen werden sofort verarbeitet. Dein Konto und deine Daten werden 90 Tage lang aufbewahrt; danach werden die Daten gemäß unserer Datenaufbewahrungsrichtlinie endgültig gelöscht.",
+    "refund.chargeback.title": "6. Rückbuchungs- und Streitfallrichtlinie",
+    "refund.chargeback.desc": "Wenn du eine Belastung über deine Bank oder dein Kreditkartenunternehmen anfechtest (Rückbuchung): (1) Wir verteidigen die Belastung mit einem Nachweis der Diensterbringung, (2) Wenn eine Rückbuchung eingeleitet wird, ohne zuvor eine Klärung mit eChatbot zu versuchen, behalten wir uns das Recht vor: dein Konto sofort zu sperren, die Wiedereinziehung von Rückbuchungsgebühren ($15-€25 pro Streitfall) zu verfolgen, rechtliche Schritte bei betrügerischen Streitfällen einzuleiten, (3) Wiederholte Rückbuchungen können zur dauerhaften Kontoschließung und zur Weitergabe an Inkassobüros führen, (4) ERFORDERLICH: Kontaktiere support@echatbot.ai BEVOR du eine Rückbuchung einleitest. Die meisten Streitfälle werden innerhalb von 48 Stunden gelöst.",
+    "refund.data.title": "7. Datenlöschung bei Rückerstattung",
+    "refund.data.desc": "Wenn deine Rückerstattung genehmigt wird: (1) Kontosperrung: Dein Zugang wird unmittelbar nach der Anfrage gesperrt, (2) Datenaufbewahrung: Deine Geschäftsdaten werden 90 Tage lang verschlüsselt aufbewahrt, um eine Kontowiederherstellung zu ermöglichen, falls du es dir anders überlegst, (3) Endgültige Löschung: Nach 90 Tagen werden alle Daten endgültig gelöscht und KÖNNEN NICHT wiederhergestellt werden, (4) Kundendaten: Wenn du deine Kundendaten vor der Löschung exportieren möchtest, hast du dafür 7 Tage nach Genehmigung der Rückerstattung Zeit (GDPR-Konformität). Zum Exportieren: Kontaktiere dpo@echatbot.ai.",
+    "refund.appeal.title": "8. Rückerstattungseinsprüche und Streitfälle",
+    "refund.appeal.desc": "Wenn deine Rückerstattungsanfrage abgelehnt wurde: (1) Du hast 30 Tage Zeit, gegen die Entscheidung Einspruch einzulegen, (2) Reiche deinen Einspruch mit zusätzlichen Unterlagen ein an: legal@echatbot.ai, (3) Wir führen innerhalb von 10 Werktagen eine abschließende Prüfung durch, (4) Die Entscheidung ist endgültig und bindend. Bei Streitfällen über €500 ist ein Schiedsverfahren möglich.",
+    "refund.contact.title": "9. Kontaktiere uns",
+    "refund.contact.desc": "Rückerstattungsanfragen: refunds@echatbot.ai. Abrechnungsfragen: billing@echatbot.ai. Streitfälle: legal@echatbot.ai. Zahlungsprobleme: support@echatbot.ai. Antwortzeit: 2 Werktage. Für Datenlöschungsanfragen: dpo@echatbot.ai.",
+
+    // Support Tickets
+    "support.title": "Support-Tickets",
+    "support.description": "Erhalte Hilfe zu deinem Konto, deiner Abrechnung oder technischen Problemen",
+    "support.newTicket": "Neues Ticket",
+    "support.noTickets": "Noch keine Support-Tickets",
+    "support.noTicketsDesc": "Erstelle ein neues Ticket, um Hilfe bei Problemen zu erhalten",
+    "support.createTicket": "Support-Ticket erstellen",
+    "support.createTicketDesc": "Beschreibe dein Problem und wir melden uns so schnell wie möglich bei dir",
+    "support.issueType": "Art des Problems",
+    "support.subject": "Betreff",
+    "support.subjectPlaceholder": "Kurze Beschreibung deines Problems",
+    "support.message": "Nachricht",
+    "support.messagePlaceholder": "Beschreibe dein Problem im Detail...",
+    "support.submitTicket": "Ticket absenden",
+    "support.ticketCreated": "Support-Ticket erfolgreich erstellt",
+    "support.messageSent": "Nachricht gesendet",
+    "support.typeReply": "Gib deine Antwort ein...",
+    "support.ticketClosed": "Dieses Ticket wurde geschlossen. Erstelle ein neues Ticket, wenn du weitere Hilfe benötigst.",
+    "support.needHelp": "Brauchst du Hilfe?",
+    "support.contactSupport": "Kontaktiere unser Support-Team für Unterstützung",
+    "support.issueTypes.accountIssue": "Kontoproblem",
+    "support.issueTypes.planAndBilling": "Tarif & Abrechnung",
+    "support.issueTypes.whatsapp": "WhatsApp",
+    "support.issueTypes.widget": "Widget",
+    "support.issueTypes.salesAgent": "Vertriebsagent",
+    "support.issueTypes.support": "Support-Nachricht",
+    "support.issueTypes.other": "Sonstiges",
+    "support.status.pending": "Ausstehend",
+    "support.status.inProgress": "In Bearbeitung",
+    "support.status.closed": "Geschlossen",
+
+    // Profile 2FA
+    "profile.2fa.title": "Zwei-Faktor-Authentifizierung",
+    "profile.2fa.description": "Füge eine zusätzliche Sicherheitsebene hinzu, indem du einen QR-Code mit deiner Authenticator-App scannst.",
+    "profile.2fa.enable": "2FA aktivieren",
+    "profile.2fa.enabled": "2FA aktiviert",
+    "profile.2fa.generating": "QR wird generiert...",
+    "profile.2fa.activeStatus": "2FA ist für dein Konto aktiv",
+
+    // Navigation
+    "nav.chatHistory": "Chatverlauf",
+    "nav.clients": "Kunden",
+    "nav.faq": "FAQ",
+    "nav.agents": "Agenten",
+    "nav.ecommerce": "E-Commerce",
+    "nav.products": "Produkte",
+    "nav.services": "Dienstleistungen",
+    "nav.offers": "Angebote",
+    "nav.sales": "Verkäufe",
+    "nav.suppliers": "Lieferanten",
+    "nav.orders": "Bestellungen",
+    "nav.campaigns": "Kampagnen",
+    "nav.support": "Support",
+    "nav.settings": "Einstellungen",
+    "nav.queue": "Warteschlange",
+    "unread.messages": "ungelesene Nachrichten",
+
+    // Home FAQ section (public landing)
+    "homeFaq.title": "Häufig gestellte Fragen",
+    "homeFaq.subtitle":
+      "Datenschutz, Kampagnen, Eskalation, Meetings: Antworten auf die Fragen, die wir vor dem Start am häufigsten hören.",
+    "homeFaq.q1": "Wie geht ihr mit persönlichen Daten der Kunden um?",
+    "homeFaq.a1":
+      "Wenn ein Nutzer persönliche Daten teilt, wird die KI-Verarbeitung automatisch deaktiviert. Persönliche Daten werden ausschließlich in unseren Datenbanken gespeichert, sicher und nur für dich zugänglich.",
+    "homeFaq.q2": "Kann ich WhatsApp-Pushes oder Kampagnen planen?",
+    "homeFaq.a2":
+      "Ja, du kannst Broadcasts und automatische Follow-ups mit Regeln für Zeitzone, Opt-in und Produktverfügbarkeit planen. Die Engine überspringt den Versand, wenn der Nutzer bereits mit einem Mitarbeiter spricht.",
+    "homeFaq.q3": "Können Kunden mit einem menschlichen Mitarbeiter sprechen?",
+    "homeFaq.a3":
+      "Jederzeit. Der Bot erkennt Schlüsselwörter oder Emotionen und übergibt die Konversation mit vollständigem Kontext, Anhängen und Warenkorb.",
+    "homeFaq.q4": "Wie werde ich benachrichtigt, wenn ein Mitarbeiter benötigt wird?",
+    "homeFaq.a4":
+      "Wir senden Benachrichtigungen per E-Mail, Push und internem WhatsApp. Du kannst auch Schichten zuweisen: Der erste verfügbare Agent erhält einen direkten Ping.",
+    "homeFaq.q5": "Kann ich die Eskalationsregeln festlegen?",
+    "homeFaq.a5":
+      "Du definierst Auslöser (Wörter, Stimmung, Warenkorbstatus, VIP-Flag) und Aktionen: menschliche Benachrichtigung, Zahlungssperre, Dokumentenanforderung oder Ticketerstellung.",
+    "homeFaq.q6": "Wie integriere ich mein CRM oder ERP?",
+    "homeFaq.a6":
+      "Wir erstellen einen dedizierten Connector für dein CRM oder ERP (HubSpot, Salesforce, SAP usw.). Wir synchronisieren Kontakte, Angebote und Pipelines, ohne deinen Stack anzutasten.",
+    "homeFaq.q7": "Kann der Chatbot ein Meeting mit einem Zoom-Videoanruf vereinbaren?",
+    "homeFaq.a7":
+      "Ja. Der Chatbot führt den Kunden durch die Wahl von Datum und Uhrzeit, erstellt automatisch den Zoom-Link und sendet ihn per WhatsApp. Du erhältst sofort eine Benachrichtigung mit allen Meeting-Details.",
+    "homeFaq.q8": "Wie lade ich die Daten jedes einzelnen Shops meines Franchises?",
+    "homeFaq.a8":
+      "Sprich mit unseren Operatoren, um alle Prozesse nach deinen Bedürfnissen zu dynamisieren. Wenn du die Daten in einer Datenbank hast, können wir sie direkt über deine API lesen und in Echtzeit in den Chatbot integrieren.",
   },
 }

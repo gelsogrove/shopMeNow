@@ -22,6 +22,7 @@ import {
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
+import { CtaSection } from "@/components/landing/CtaSection"
 import {
   FRANCHISING_I18N,
   type FranchisingCopy,
@@ -365,31 +366,13 @@ export function FranchisingPage() {
           </div>
         </section>
 
-        {/* ========================== CTA ============================== */}
-        <section className="relative overflow-hidden py-20 lg:py-28">
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-green-600 to-emerald-600" />
-          <div className="pointer-events-none absolute -top-20 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-white/10 blur-3xl" />
-          <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8">
-            <motion.h2 {...reveal} className="text-4xl font-bold text-white lg:text-5xl">
-              {t.ctaTitle} 👋
-            </motion.h2>
-            <motion.p
-              {...reveal}
-              transition={{ ...reveal.transition, delay: 0.08 }}
-              className="mx-auto mt-4 max-w-xl text-lg text-green-50"
-            >
-              {t.ctaDesc}
-            </motion.p>
-            <motion.div {...reveal} transition={{ ...reveal.transition, delay: 0.16 }}>
-              <Link
-                to="/contact"
-                className="mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-10 py-4 text-lg font-bold text-green-700 shadow-xl transition-transform hover:scale-105"
-              >
-                {t.cta} <ArrowRight className="h-5 w-5" />
-              </Link>
-            </motion.div>
-          </div>
-        </section>
+        <CtaSection
+          title={`${t.ctaTitle} 👋`}
+          subtitle={t.ctaDesc}
+          ctaLabel={t.cta}
+          animated
+          wide
+        />
       </main>
 
       <SiteFooter language={language} />

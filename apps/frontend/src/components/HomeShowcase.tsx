@@ -16,21 +16,21 @@ import { Loader2, MapPin, Mic, Play } from "lucide-react"
 //   Welcome(+video) · Human escalation · Live translation · Franchising data ·
 //   API connect · Audio · Push · Appointment booking.
 // WhatsApp green (#25D366). No fixed language list — it speaks every language.
-// Translated to it / en / es / pt; fr / ca fall back to English.
+// Translated to it / en / es / de; fr / ca fall back to English.
 // ---------------------------------------------------------------------------
 
-type Lang = "it" | "en" | "es" | "pt" | "fr" | "ca"
+type Lang = "it" | "en" | "es" | "de" | "fr" | "ca"
 
 const WA_GREEN = "#25D366"
 
-function pick(lang: Lang, it: string, en: string, es: string, pt: string): string {
+function pick(lang: Lang, it: string, en: string, es: string, de: string): string {
   switch (lang) {
     case "it":
       return it
     case "es":
       return es
-    case "pt":
-      return pt
+    case "de":
+      return de
     default:
       return en
   }
@@ -64,121 +64,121 @@ interface Step {
 }
 
 function buildContent(lang: Lang) {
-  const p = (it: string, en: string, es: string, pt: string) => pick(lang, it, en, es, pt)
+  const p = (it: string, en: string, es: string, de: string) => pick(lang, it, en, es, de)
 
   const title = p(
     "Tutto il tuo franchising su WhatsApp.",
     "Your whole franchise on WhatsApp.",
     "Toda tu franquicia en WhatsApp.",
-    "Todo o teu franchising no WhatsApp."
+    "Dein ganzes Franchise auf WhatsApp."
   )
   const subtitle = p(
     "Una sola AI che accoglie, traduce, si collega ai tuoi sistemi e si adatta alle specifiche di ogni franchising.",
     "One AI that welcomes, translates, connects to your systems and adapts to the specifics of every franchise.",
     "Una sola IA que da la bienvenida, traduce, se conecta a tus sistemas y se adapta a las particularidades de cada franquicia.",
-    "Uma só IA que dá as boas-vindas, traduz, liga-se aos teus sistemas e adapta-se às especificidades de cada franchising."
+    "Eine einzige KI, die begrüßt, übersetzt, sich mit deinen Systemen verbindet und sich an die Besonderheiten jedes Franchise anpasst."
   )
   const everyLang = p(
     "Parla ogni lingua del mondo.",
     "Speaks every language in the world.",
     "Habla todos los idiomas del mundo.",
-    "Fala todas as línguas do mundo."
+    "Spricht jede Sprache der Welt."
   )
   const online = p("online", "online", "en línea", "online")
-  const opLabel = p("OPERATORE", "OPERATOR", "OPERADOR", "OPERADOR")
-  const voiceLabel = p("Messaggio vocale", "Voice message", "Mensaje de voz", "Mensagem de voz")
+  const opLabel = p("OPERATORE", "OPERATOR", "OPERADOR", "MITARBEITER")
+  const voiceLabel = p("Messaggio vocale", "Voice message", "Mensaje de voz", "Sprachnachricht")
 
   // 8 capability cards — ordered to match the story flow, so the highlight
   // moves top→bottom as the conversation plays. Indices referenced by script.
   const features: Feature[] = [
     {
       icon: "👋",
-      title: p("Messaggio di benvenuto", "Welcome message", "Mensaje de bienvenida", "Mensagem de boas-vindas"),
+      title: p("Messaggio di benvenuto", "Welcome message", "Mensaje de bienvenida", "Willkommensnachricht"),
       desc: p(
         "Accoglie e guida ogni cliente, anche con un video.",
         "Welcomes and guides every customer, video included.",
         "Da la bienvenida y guía a cada cliente, con vídeo.",
-        "Recebe e orienta cada cliente, com vídeo."
+        "Begrüßt und begleitet jeden Kunden, mit Video."
       ),
     },
     {
       icon: "🔗",
-      title: p("Connessione API", "API connect", "Conexión API", "Ligação API"),
+      title: p("Connessione API", "API connect", "Conexión API", "API-Anbindung"),
       desc: p(
         "Si collega ai tuoi sistemi: sblocca, fattura, traccia.",
         "Connects to your systems: unlock, invoice, track.",
         "Se conecta a tus sistemas: desbloquea, factura, rastrea.",
-        "Liga-se aos teus sistemas: desbloqueia, fatura, rastreia."
+        "Verbindet sich mit deinen Systemen: entsperren, fakturieren, tracken."
       ),
     },
     {
       icon: "🙋",
-      title: p("Scala a operatore", "Human escalation", "Escala a operador", "Escala para operador"),
+      title: p("Scala a operatore", "Human escalation", "Escala a operador", "Übergabe an Mitarbeiter"),
       desc: p(
         "Passa a un operatore, con tutto il contesto.",
         "Hands off to a human, with full context.",
         "Pasa a un humano, con todo el contexto.",
-        "Passa a um humano, com todo o contexto."
+        "Übergibt an einen Menschen, mit vollem Kontext."
       ),
     },
     {
       icon: "🎙️",
-      title: p("Messaggi audio", "Audio messages", "Mensajes de audio", "Mensagens de áudio"),
+      title: p("Messaggi audio", "Audio messages", "Mensajes de audio", "Audionachrichten"),
       desc: p(
         "Capisce e risponde alle note vocali.",
         "Understands and replies to voice notes.",
         "Entiende y responde a las notas de voz.",
-        "Entende e responde às notas de voz."
+        "Versteht und beantwortet Sprachnachrichten."
       ),
     },
     {
       icon: "📍",
-      title: p("Dati del franchising", "Franchising data", "Datos de la franquicia", "Dados do franchising"),
+      title: p("Dati del franchising", "Franchising data", "Datos de la franquicia", "Franchise-Daten"),
       desc: p(
         "Prezzi, orari e promo giusti, per ogni sede.",
         "The right prices, hours and promos, per location.",
         "Precios, horarios y promos correctos, por sede.",
-        "Preços, horários e promos certos, por unidade."
+        "Die richtigen Preise, Zeiten und Aktionen, pro Standort."
       ),
     },
     {
       icon: "📅",
-      title: p("Prenota appuntamenti", "Appointment booking", "Reserva de citas", "Marcação de consultas"),
+      title: p("Prenota appuntamenti", "Appointment booking", "Reserva de citas", "Terminbuchung"),
       desc: p(
         "Prenota, sposta o annulla appuntamenti via chat.",
         "Books, reschedules or cancels appointments in chat.",
         "Reserva, cambia o cancela citas por chat.",
-        "Marca, remarca ou cancela consultas por chat."
+        "Bucht, verschiebt oder storniert Termine im Chat."
       ),
     },
     {
       icon: "🌐",
-      title: p("Operatore multilingua", "Multilingual operator", "Operador multilingüe", "Operador multilíngue"),
+      title: p("Operatore multilingua", "Multilingual operator", "Operador multilingüe", "Mehrsprachiger Mitarbeiter"),
       desc: p(
         "L'operatore scrive nella sua lingua, l'AI traduce in tempo reale.",
         "The operator writes in their language, the AI translates live.",
         "El operador escribe en su idioma, la IA traduce al instante.",
-        "O operador escreve na sua língua, a IA traduz em tempo real."
+        "Der Mitarbeiter schreibt in seiner Sprache, die KI übersetzt in Echtzeit."
       ),
     },
     {
       icon: "🧾",
-      title: p("Invio fatture e file", "Invoices & files", "Facturas y archivos", "Faturas e ficheiros"),
+      title: p("Invio fatture e file", "Invoices & files", "Facturas y archivos", "Rechnungen & Dateien"),
       desc: p(
         "Invia fatture e documenti direttamente in chat.",
         "Sends invoices and documents right in the chat.",
         "Envía facturas y documentos en el chat.",
-        "Envia faturas e documentos no chat."
+        "Sendet Rechnungen und Dokumente direkt im Chat."
       ),
     },
     {
       icon: "📣",
-      title: p("Notifiche push", "Push notifications", "Notificaciones push", "Notificações push"),
+      title: p("Notifiche push", "Push notifications", "Notificaciones push", "Push-Benachrichtigungen"),
       desc: p(
         "Campagne e promo a tutti i clienti, in un clic.",
         "Campaigns and promos to all customers, in one click.",
         "Campañas y promos a todos los clientes, en un clic.",
-        "Campanhas e promos a todos os clientes, num clique."
+        "Kampagnen und Aktionen an alle Kunden, mit einem Klick."
       ),
     },
   ]
@@ -189,28 +189,28 @@ function buildContent(lang: Lang) {
     {
       feature: 0,
       msgs: [
-        { role: "in", text: p("Ciao, non mi funziona la lavatrice 😩", "Hi, my washer isn't working 😩", "Hola, mi lavadora no funciona 😩", "Olá, a minha máquina não funciona 😩") },
-        { role: "out", text: p("Ciao e benvenuto in DemoWash! 👋 Sono il tuo assistente e sono qui per aiutarti 24/7 😊", "Hi and welcome to DemoWash! 👋 I'm your assistant, here to help you 24/7 😊", "¡Hola y bienvenido a DemoWash! 👋 Soy tu asistente y estoy aquí para ayudarte 24/7 😊", "Olá e bem-vindo à DemoWash! 👋 Sou o teu assistente e estou aqui para te ajudar 24/7 😊") },
-        { role: "out", video: true, text: p("Ti mando una nostra presentazione 🎥 Guarda come funziona DemoWash", "I'll send you a quick presentation 🎥 See how DemoWash works", "Te envío una presentación 🎥 Mira cómo funciona DemoWash", "Envio-te uma apresentação 🎥 Vê como funciona a DemoWash") },
+        { role: "in", text: p("Ciao, non mi funziona la lavatrice 😩", "Hi, my washer isn't working 😩", "Hola, mi lavadora no funciona 😩", "Hallo, meine Waschmaschine funktioniert nicht 😩") },
+        { role: "out", text: p("Ciao e benvenuto in DemoWash! 👋 Sono il tuo assistente e sono qui per aiutarti 24/7 😊", "Hi and welcome to DemoWash! 👋 I'm your assistant, here to help you 24/7 😊", "¡Hola y bienvenido a DemoWash! 👋 Soy tu asistente y estoy aquí para ayudarte 24/7 😊", "Hallo und willkommen bei DemoWash! 👋 Ich bin dein Assistent und helfe dir rund um die Uhr 😊") },
+        { role: "out", video: true, text: p("Ti mando una nostra presentazione 🎥 Guarda come funziona DemoWash", "I'll send you a quick presentation 🎥 See how DemoWash works", "Te envío una presentación 🎥 Mira cómo funciona DemoWash", "Ich schicke dir eine kurze Präsentation 🎥 Sieh dir an, wie DemoWash funktioniert") },
       ],
     },
     // 2 — API connect (unlock the machine)
     {
       feature: 1,
       msgs: [
-        { role: "out", text: p("Qual è il numero della lavatrice?", "What's the washer number?", "¿Cuál es el número de la lavadora?", "Qual é o número da máquina?") },
-        { role: "in", text: p("La numero 4", "Number 4", "La número 4", "A número 4") },
-        { role: "out", status: true, text: p("Connessione alla lavatrice 4…", "Connecting to washer 4…", "Conectando con la lavadora 4…", "A ligar à máquina 4…") },
-        { role: "out", text: p("Fatto ✅ Lavatrice 4 sbloccata. Riprova pure!", "Done ✅ Washer 4 unlocked. Try again!", "Hecho ✅ Lavadora 4 desbloqueada. ¡Prueba de nuevo!", "Feito ✅ Máquina 4 desbloqueada. Tenta de novo!") },
+        { role: "out", text: p("Qual è il numero della lavatrice?", "What's the washer number?", "¿Cuál es el número de la lavadora?", "Welche Nummer hat die Waschmaschine?") },
+        { role: "in", text: p("La numero 4", "Number 4", "La número 4", "Die Nummer 4") },
+        { role: "out", status: true, text: p("Connessione alla lavatrice 4…", "Connecting to washer 4…", "Conectando con la lavadora 4…", "Verbinde mit Waschmaschine 4…") },
+        { role: "out", text: p("Fatto ✅ Lavatrice 4 sbloccata. Riprova pure!", "Done ✅ Washer 4 unlocked. Try again!", "Hecho ✅ Lavadora 4 desbloqueada. ¡Prueba de nuevo!", "Erledigt ✅ Waschmaschine 4 entsperrt. Versuch's nochmal!") },
       ],
     },
     // 3 — Human escalation
     {
       feature: 2,
       msgs: [
-        { role: "in", text: p("Però voglio un rimborso per ieri.", "But I want a refund for yesterday.", "Pero quiero un reembolso de ayer.", "Mas quero um reembolso de ontem.") },
-        { role: "out", text: p("Ti passo Ana, la nostra operatrice 🙋", "Connecting you to Ana, our agent 🙋", "Te paso con Ana, nuestra operadora 🙋", "Passo-te à Ana, a nossa operadora 🙋") },
-        { role: "op", text: p("Ciao, sono Ana del team 👋 Ho letto tutta la tua richiesta e mi dispiace per il disagio.", "Hi, I'm Ana from the team 👋 I've read your whole request and I'm sorry for the trouble.", "Hola, soy Ana del equipo 👋 He leído toda tu solicitud y siento las molestias.", "Olá, sou a Ana da equipa 👋 Li todo o teu pedido e lamento o incómodo.") },
+        { role: "in", text: p("Però voglio un rimborso per ieri.", "But I want a refund for yesterday.", "Pero quiero un reembolso de ayer.", "Aber ich möchte eine Rückerstattung für gestern.") },
+        { role: "out", text: p("Ti passo Ana, la nostra operatrice 🙋", "Connecting you to Ana, our agent 🙋", "Te paso con Ana, nuestra operadora 🙋", "Ich verbinde dich mit Ana, unserer Mitarbeiterin 🙋") },
+        { role: "op", text: p("Ciao, sono Ana del team 👋 Ho letto tutta la tua richiesta e mi dispiace per il disagio.", "Hi, I'm Ana from the team 👋 I've read your whole request and I'm sorry for the trouble.", "Hola, soy Ana del equipo 👋 He leído toda tu solicitud y siento las molestias.", "Hallo, ich bin Ana aus dem Team 👋 Ich habe deine ganze Anfrage gelesen und die Umstände tun mir leid.") },
       ],
     },
     // 4 — Audio
@@ -218,28 +218,28 @@ function buildContent(lang: Lang) {
       feature: 3,
       msgs: [
         { role: "in", audio: true },
-        { role: "out", text: p("Ho ascoltato il tuo audio 🎙️ ti invieremo per email quanto richiesto.", "I've listened to your audio 🎙️ we'll email you what you requested.", "He escuchado tu audio 🎙️ te enviaremos por email lo solicitado.", "Ouvi o teu áudio 🎙️ enviaremos por email o que pediste.") },
+        { role: "out", text: p("Ho ascoltato il tuo audio 🎙️ ti invieremo per email quanto richiesto.", "I've listened to your audio 🎙️ we'll email you what you requested.", "He escuchado tu audio 🎙️ te enviaremos por email lo solicitado.", "Ich habe deine Sprachnachricht angehört 🎙️ wir schicken dir das Gewünschte per E-Mail.") },
       ],
     },
     // 5 — Franchising data (asks the location first, then prices + loyalty card)
     {
       feature: 4,
       msgs: [
-        { role: "in", text: p("Quanto costa un lavaggio?", "How much is a wash?", "¿Cuánto cuesta un lavado?", "Quanto custa uma lavagem?") },
-        { role: "out", text: p("In quale sede ti trovi?", "Which location are you at?", "¿En qué sede estás?", "Em que unidade estás?") },
-        { role: "in", text: p("A Barcellona", "In Barcelona", "En Barcelona", "Em Barcelona") },
-        { role: "out", text: p("📍 Sede di Barcellona\n🕗 Aperto 8:00–21:00\n🧺 Lavaggio 4,50 € · Asciugatura 3,00 €", "📍 Barcelona location\n🕗 Open 8:00–21:00\n🧺 Wash €4.50 · Dry €3.00", "📍 Sede de Barcelona\n🕗 Abierto 8:00–21:00\n🧺 Lavado 4,50 € · Secado 3,00 €", "📍 Unidade de Barcelona\n🕗 Aberto 8:00–21:00\n🧺 Lavagem 4,50 € · Secagem 3,00 €") },
-        { role: "out", text: p("🎁 E con la carta fedeltà hai -10% sul primo lavaggio!", "🎁 And with the loyalty card you get -10% on your first wash!", "🎁 ¡Y con la tarjeta de fidelización tienes -10% en el primer lavado!", "🎁 E com o cartão de fidelização tens -10% na primeira lavagem!") },
+        { role: "in", text: p("Quanto costa un lavaggio?", "How much is a wash?", "¿Cuánto cuesta un lavado?", "Was kostet eine Wäsche?") },
+        { role: "out", text: p("In quale sede ti trovi?", "Which location are you at?", "¿En qué sede estás?", "An welchem Standort bist du?") },
+        { role: "in", text: p("A Barcellona", "In Barcelona", "En Barcelona", "In Barcelona") },
+        { role: "out", text: p("📍 Sede di Barcellona\n🕗 Aperto 8:00–21:00\n🧺 Lavaggio 4,50 € · Asciugatura 3,00 €", "📍 Barcelona location\n🕗 Open 8:00–21:00\n🧺 Wash €4.50 · Dry €3.00", "📍 Sede de Barcelona\n🕗 Abierto 8:00–21:00\n🧺 Lavado 4,50 € · Secado 3,00 €", "📍 Standort Barcelona\n🕗 Geöffnet 8:00–21:00\n🧺 Waschen 4,50 € · Trocknen 3,00 €") },
+        { role: "out", text: p("🎁 E con la carta fedeltà hai -10% sul primo lavaggio!", "🎁 And with the loyalty card you get -10% on your first wash!", "🎁 ¡Y con la tarjeta de fidelización tienes -10% en el primer lavado!", "🎁 Und mit der Treuekarte bekommst du -10% auf die erste Wäsche!") },
       ],
     },
     // 6 — Appointment booking (reset: a clean booking demo)
     {
       feature: 5,
       msgs: [
-        { role: "in", text: p("Vorrei una consulenza per aprire una sede a Sitges 📈", "I'd like a consultation to open a location in Sitges 📈", "Quiero una consultoría para abrir una sede en Sitges 📈", "Quero uma consultoria para abrir uma unidade em Sitges 📈") },
-        { role: "out", text: p("🎉 Ho questi orari disponibili 📅\n1️⃣ Mar 14 · 17:00\n2️⃣ Mer 15 · 10:00\n3️⃣ Gio 16 · 18:30", "🎉 Here are the available slots 📅\n1️⃣ Tue 14 · 17:00\n2️⃣ Wed 15 · 10:00\n3️⃣ Thu 16 · 18:30", "🎉 Tengo estos horarios disponibles 📅\n1️⃣ Mar 14 · 17:00\n2️⃣ Mié 15 · 10:00\n3️⃣ Jue 16 · 18:30", "🎉 Tenho estes horários disponíveis 📅\n1️⃣ Ter 14 · 17:00\n2️⃣ Qua 15 · 10:00\n3️⃣ Qui 16 · 18:30") },
-        { role: "in", text: p("Il 2️⃣ è perfetto", "Number 2️⃣ is perfect", "El 2️⃣ es perfecto", "O 2️⃣ é perfeito") },
-        { role: "out", text: p("✅ Confermato: Mer 15 alle 10:00\n📧 Ti ho inviato l'invito per il calendario via email, con la chiamata Zoom\n🔔 Ti ricordo il giorno prima", "✅ Confirmed: Wed 15 at 10:00\n📧 I've emailed you the calendar invite, with the Zoom call\n🔔 I'll remind you the day before", "✅ Confirmado: Mié 15 a las 10:00\n📧 Te he enviado la invitación del calendario por email, con la llamada de Zoom\n🔔 Te recuerdo el día antes", "✅ Confirmado: Qua 15 às 10:00\n📧 Enviei-te o convite do calendário por email, com a chamada Zoom\n🔔 Lembro-te no dia anterior") },
+        { role: "in", text: p("Vorrei una consulenza per aprire una sede a Sitges 📈", "I'd like a consultation to open a location in Sitges 📈", "Quiero una consultoría para abrir una sede en Sitges 📈", "Ich hätte gern eine Beratung, um einen Standort in Sitges zu eröffnen 📈") },
+        { role: "out", text: p("🎉 Ho questi orari disponibili 📅\n1️⃣ Mar 14 · 17:00\n2️⃣ Mer 15 · 10:00\n3️⃣ Gio 16 · 18:30", "🎉 Here are the available slots 📅\n1️⃣ Tue 14 · 17:00\n2️⃣ Wed 15 · 10:00\n3️⃣ Thu 16 · 18:30", "🎉 Tengo estos horarios disponibles 📅\n1️⃣ Mar 14 · 17:00\n2️⃣ Mié 15 · 10:00\n3️⃣ Jue 16 · 18:30", "🎉 Diese Termine sind verfügbar 📅\n1️⃣ Di 14 · 17:00\n2️⃣ Mi 15 · 10:00\n3️⃣ Do 16 · 18:30") },
+        { role: "in", text: p("Il 2️⃣ è perfetto", "Number 2️⃣ is perfect", "El 2️⃣ es perfecto", "Nummer 2️⃣ ist perfekt") },
+        { role: "out", text: p("✅ Confermato: Mer 15 alle 10:00\n📧 Ti ho inviato l'invito per il calendario via email, con la chiamata Zoom\n🔔 Ti ricordo il giorno prima", "✅ Confirmed: Wed 15 at 10:00\n📧 I've emailed you the calendar invite, with the Zoom call\n🔔 I'll remind you the day before", "✅ Confirmado: Mié 15 a las 10:00\n📧 Te he enviado la invitación del calendario por email, con la llamada de Zoom\n🔔 Te recuerdo el día antes", "✅ Bestätigt: Mi 15 um 10:00\n📧 Ich habe dir die Kalendereinladung per E-Mail geschickt, mit dem Zoom-Call\n🔔 Ich erinnere dich am Tag davor") },
       ],
     },
     // 7 — Multilingual operator (reset). The two-way magic must be VISIBLE:
@@ -258,7 +258,7 @@ function buildContent(lang: Lang) {
             "🌐 L'operatore legge: «Ciao, il mio ordine è pronto per il ritiro?»",
             "🌐 The operator reads: “Hi, is my order ready for pickup?”",
             "🌐 El operador lee: «Hola, ¿mi pedido está listo para recoger?»",
-            "🌐 O operador lê: «Olá, a minha encomenda está pronta para levantar?»"
+            "🌐 Der Mitarbeiter liest: «Hallo, ist meine Bestellung abholbereit?»"
           ),
         },
         {
@@ -267,13 +267,13 @@ function buildContent(lang: Lang) {
             "Buongiorno! Sì, il suo ordine è pronto. La aspettiamo 😊",
             "Good morning! Yes, your order is ready. See you soon 😊",
             "¡Buenos días! Sí, tu pedido está listo. Te esperamos 😊",
-            "Bom dia! Sim, a sua encomenda está pronta. Esperamos por si 😊"
+            "Guten Morgen! Ja, deine Bestellung ist fertig. Bis gleich 😊"
           ),
           sub: p(
             "🌐 Il cliente riceve in arabo: «صباح الخير! نعم، طلبك جاهز للاستلام 😊»",
             "🌐 The customer receives it in Arabic: «صباح الخير! نعم، طلبك جاهز للاستلام 😊»",
             "🌐 El cliente lo recibe en árabe: «صباح الخير! نعم، طلبك جاهز للاستلام 😊»",
-            "🌐 O cliente recebe em árabe: «صباح الخير! نعم، طلبك جاهز للاستلام 😊»"
+            "🌐 Der Kunde erhält es auf Arabisch: «صباح الخير! نعم، طلبك جاهز للاستلام 😊»"
           ),
         },
       ],
@@ -283,10 +283,10 @@ function buildContent(lang: Lang) {
       reset: true,
       feature: 7,
       msgs: [
-        { role: "in", text: p("Posso avere la fattura del mio ultimo lavaggio?", "Can I get the invoice for my last wash?", "¿Me das la factura de mi último lavado?", "Podes dar-me a fatura da minha última lavagem?") },
-        { role: "out", text: p("Certo! Mi dici ragione sociale e P.IVA per la fattura? 🧾", "Sure! What's the company name and VAT number for the invoice? 🧾", "¡Claro! ¿Razón social y CIF para la factura? 🧾", "Claro! Qual é a denominação social e o NIF para a fatura? 🧾") },
+        { role: "in", text: p("Posso avere la fattura del mio ultimo lavaggio?", "Can I get the invoice for my last wash?", "¿Me das la factura de mi último lavado?", "Kann ich die Rechnung für meine letzte Wäsche bekommen?") },
+        { role: "out", text: p("Certo! Mi dici ragione sociale e P.IVA per la fattura? 🧾", "Sure! What's the company name and VAT number for the invoice? 🧾", "¡Claro! ¿Razón social y CIF para la factura? 🧾", "Klar! Wie lauten Firmenname und USt-IdNr. für die Rechnung? 🧾") },
         { role: "in", text: "Marta Ribas SRL · B12345678" },
-        { role: "out", file: true, fileName: "Fattura-2026-0042.pdf", text: p("Fatto ✅ Ecco la tua fattura 🧾", "Done ✅ Here's your invoice 🧾", "Hecho ✅ Aquí tienes tu factura 🧾", "Feito ✅ Aqui está a tua fatura 🧾") },
+        { role: "out", file: true, fileName: "Fattura-2026-0042.pdf", text: p("Fatto ✅ Ecco la tua fattura 🧾", "Done ✅ Here's your invoice 🧾", "Hecho ✅ Aquí tienes tu factura 🧾", "Erledigt ✅ Hier ist deine Rechnung 🧾") },
       ],
     },
     // 9 — Push notifications (reset: a standalone campaign broadcast, bot writes first)
@@ -297,10 +297,10 @@ function buildContent(lang: Lang) {
         {
           role: "out",
           image: true,
-          imgTitle: p("DemoWash · Promo del mese", "DemoWash · Monthly promo", "DemoWash · Promo del mes", "DemoWash · Promo do mês"),
+          imgTitle: p("DemoWash · Promo del mese", "DemoWash · Monthly promo", "DemoWash · Promo del mes", "DemoWash · Aktion des Monats"),
           imgBig: "-20%",
-          imgSmall: p("sul prossimo lavaggio 🧺", "on your next wash 🧺", "en tu próximo lavado 🧺", "na tua próxima lavagem 🧺"),
-          text: p("📣 La nostra promo del mese, per te! Ti aspettiamo 💚", "📣 Our promo of the month, just for you! See you soon 💚", "📣 ¡Nuestra promo del mes, para ti! Te esperamos 💚", "📣 A nossa promo do mês, para ti! Esperamos por ti 💚"),
+          imgSmall: p("sul prossimo lavaggio 🧺", "on your next wash 🧺", "en tu próximo lavado 🧺", "auf deine nächste Wäsche 🧺"),
+          text: p("📣 La nostra promo del mese, per te! Ti aspettiamo 💚", "📣 Our promo of the month, just for you! See you soon 💚", "📣 ¡Nuestra promo del mes, para ti! Te esperamos 💚", "📣 Unsere Aktion des Monats, nur für dich! Wir freuen uns auf dich 💚"),
         },
       ],
     },
@@ -452,7 +452,7 @@ export function HomeShowcase({ lang = "en" }: { lang?: Lang }) {
               {/* Fake WhatsApp composer — makes the mockup read as a real chat */}
               <div className="flex items-center gap-2 bg-[#F0F0F0] px-3 py-2.5">
                 <div className="flex-1 rounded-full bg-white px-4 py-2 text-sm text-gray-400 shadow-sm">
-                  {pick(lang, "Messaggio", "Message", "Mensaje", "Mensagem")}
+                  {pick(lang, "Messaggio", "Message", "Mensaje", "Nachricht")}
                 </div>
                 <div
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white shadow-sm"

@@ -17,7 +17,7 @@ import { workspaceApi } from "@/services/workspaceApi"
 import { getBillingOverview, PlanType } from "@/services/subscriptionBillingApi"
 import { logger } from "@/lib/logger"
 
-type Language = "it" | "en" | "es" | "pt"
+type Language = "it" | "en" | "es" | "de"
 
 // Props kept for backward compatibility — language is driven by global context
 interface SiteHeaderProps {
@@ -86,25 +86,25 @@ const translations = {
     support: "Soporte",
     logout: "Cerrar sesión",
   },
-  pt: {
-    home: "Início",
-    features: "Funcionalidades",
-    pricing: "Preços",
-    resources: "Recursos",
-    contact: "Contato",
-    humanSupport: "Suporte Humano",
-    crmIntegration: "Integração CRM",
-    teamCollaboration: "Colaboração em Equipe",
+  de: {
+    home: "Startseite",
+    features: "Funktionen",
+    pricing: "Preise",
+    resources: "Ressourcen",
+    contact: "Kontakt",
+    humanSupport: "Menschlicher Support",
+    crmIntegration: "CRM-Integration",
+    teamCollaboration: "Team-Zusammenarbeit",
     privacyDesign: "Privacy by Design",
     widgetToWhatsApp: "Widget → WhatsApp",
-    getStarted: "Começar Grátis",
-    signIn: "Entrar",
-    language: "Idioma",
-    yourChannels: "Seus canais",
-    profile: "Perfil",
-    billing: "Faturamento",
-    support: "Suporte",
-    logout: "Sair",
+    getStarted: "Kostenlos starten",
+    signIn: "Anmelden",
+    language: "Sprache",
+    yourChannels: "Deine Kanäle",
+    profile: "Profil",
+    billing: "Abrechnung",
+    support: "Support",
+    logout: "Abmelden",
   },
 }
 
@@ -291,7 +291,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
                 { code: "it", flag: "🇮🇹" },
                 { code: "en", flag: "🇬🇧" },
                 { code: "es", flag: "🇪🇸" },
-                { code: "pt", flag: "🇵🇹" },
+                { code: "de", flag: "🇩🇪" },
               ] as const).map((l) => (
                 <button
                   key={l.code}
@@ -543,3 +543,4 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
     </header>
   )
 }
+

@@ -97,7 +97,6 @@ const FeedbackPage = lazy(() => import("./pages/feedback"))
 const RegisterPage = lazy(() => import("./pages/register"))
 const SupportChatPage = lazy(() => import("./pages/SupportChatPage"))
 const OperatorDashboardPage = lazy(() => import("./pages/OperatorDashboardPage"))
-const PlaygroundPage = lazy(() => import("./pages/PlaygroundPage"))
 const DemoWidgetPage = lazy(() => import("./pages/DemoWidgetPage"))
 
 function AuthLoginRedirect() {
@@ -245,22 +244,6 @@ export function App() {
           }
         />
         
-        {/* Ecolaundry Playground — hardcoded login (ANDREA/OLGA), no providers */}
-        <Route
-          path="/demo/ecolaundry/*"
-          element={
-            <Suspense
-              fallback={
-                <div className="min-h-screen bg-emerald-50 flex items-center justify-center p-4">
-                  <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
-                </div>
-              }
-            >
-              <PlaygroundPage />
-            </Suspense>
-          }
-        />
-
         {/* Demowash public demo — renders the real embeddable ChatWidget so a
             visitor can try the live chatbot (name + language + first message),
             exactly like the production widget. Resolves the workspaceId from the

@@ -99,7 +99,7 @@ function validatePassword(p: string): string | null {
 export function OnboardingWizardModal({ open, onClose }: Props) {
   const { language } = useLanguage()
   const { setCurrentWorkspace } = useWorkspace()
-  const lang: OWTLang = (['it', 'en', 'es', 'pt', 'fr', 'ca'] as const).includes(language as OWTLang)
+  const lang: OWTLang = (['it', 'en', 'es', 'de', 'fr', 'ca'] as const).includes(language as OWTLang)
     ? (language as OWTLang) : 'en'
   const t = OWT[lang]
   const navigate = useNavigate()
@@ -737,12 +737,12 @@ export function OnboardingWizardModal({ open, onClose }: Props) {
                   {' '}y la{' '}
                   <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Política de Privacidad</a>
                 </>}
-                {lang === 'pt' && <>Aceito os{' '}
-                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Termos de Serviço</a>
-                  {' '}e a{' '}
-                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Política de Privacidade</a>
+                {lang === 'de' && <>Ich akzeptiere die{' '}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Nutzungsbedingungen</a>
+                  {' '}und die{' '}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Datenschutzerklärung</a>
                 </>}
-                {(lang === 'en' || !['it','es','pt'].includes(lang)) && <>I agree to the{' '}
+                {(lang === 'en' || !['it','es','de'].includes(lang)) && <>I agree to the{' '}
                   <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Terms of Service</a>
                   {' '}and{' '}
                   <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-green-600 underline hover:text-green-700">Privacy Policy</a>

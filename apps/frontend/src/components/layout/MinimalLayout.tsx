@@ -128,7 +128,7 @@ export function MinimalLayout() {
   const isUserLevelPage = location.pathname === "/profile" || location.pathname === "/billing"
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className={`${isChatPage ? 'h-screen overflow-hidden' : 'min-h-screen'} bg-gray-50 flex flex-col`}>
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -399,16 +399,22 @@ export function MinimalLayout() {
       </header>
 
       {/* Main Content */}
-      <main className="w-full py-8 px-4 sm:px-6 lg:px-8 flex-1">
-        <div className="max-w-7xl mx-auto w-full">
+      <main className={isChatPage ? "flex-1 overflow-hidden flex flex-col" : "w-full py-8 px-4 sm:px-6 lg:px-8 flex-1"}>
+        {isChatPage ? (
           <Outlet />
-        </div>
+        ) : (
+          <div className="max-w-7xl mx-auto w-full">
+            <Outlet />
+          </div>
+        )}
       </main>
 
-      {/* Footer */}
-      <footer className="py-4 text-center text-sm text-gray-500 border-t border-gray-200 bg-white">
-        <p>© 2025 eChatbot. All rights reserved.</p>
-      </footer>
+      {/* Footer — hidden on chat page to maximize space */}
+      {!isChatPage && (
+        <footer className="py-4 text-center text-sm text-gray-500 border-t border-gray-200 bg-white">
+          <p>© 2025 eChatbot. All rights reserved.</p>
+        </footer>
+      )}
     </div>
   )
 }

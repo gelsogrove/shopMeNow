@@ -1435,6 +1435,11 @@ export interface ChatbotInput {
 
 export interface ChatbotOutput {
   reply: string | null
+  /** ISO 2-letter code of the language the bot actually replied in (declared by
+   *  the LLM via the ⟦LANG:xx⟧ trailer and committed to session state). The host
+   *  uses this so the deterministic welcome-video intro line matches the reply
+   *  language exactly. Undefined only when no turn ran (early returns). */
+  language?: string
   shouldEscalate: boolean
   escalationSummary?: string
   notificationEmails?: string
@@ -1520,6 +1525,11 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
 
     return {
       reply: result.reply || null,
+      // Language the bot replied in — declared by the LLM via ⟦LANG:xx⟧ and
+      // committed to state by commitLanguageFromReply. The host uses this for
+      // the welcome-video intro so it matches the reply, instead of a phone/DB
+      // guess (which can disagree on first contact).
+      language: getState(sessionId).language,
       shouldEscalate: result.escalated,
       // Ship the real operator briefing produced by the LLM (post-PII
       // substitution) so the email shows the structured incident summary

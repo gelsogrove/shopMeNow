@@ -5,7 +5,7 @@
  * Used when canLogin or canRegister flags are false.
  *
  * Features:
- * - Multilingual support (IT, EN, ES, PT)
+ * - Multilingual support (IT, EN, ES, DE)
  * - Auto-detects browser language
  * - Customizable feature name
  * - Optional onClose callback
@@ -55,12 +55,12 @@ const translations = {
     close: "Cerrar",
     backHome: "Volver al Inicio",
   },
-  pt: {
+  de: {
     title: "Work in Progress",
     description:
-      "Estamos implementando novas funcionalidades. Volte em breve!",
-    close: "Fechar",
-    backHome: "Voltar para Home",
+      "Wir arbeiten gerade an neuen Funktionen. Schau bald wieder vorbei!",
+    close: "Schließen",
+    backHome: "Zurück zur Startseite",
   },
 }
 
@@ -150,10 +150,10 @@ export function MaintenanceModal({ isOpen }: { isOpen: boolean }) {
       description:
         "El sistema está actualmente en mantenimiento. ¡Volveremos en línea lo antes posible!",
     },
-    pt: {
-      title: "Manutenção em Andamento",
+    de: {
+      title: "Wartung läuft",
       description:
-        "O sistema está atualmente em manutenção. Voltaremos online o mais rápido possível!",
+        "Das System wird gerade gewartet. Wir sind so schnell wie möglich wieder online!",
     },
   }
 

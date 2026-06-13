@@ -14,7 +14,7 @@ import { api } from "@/services/api"
 // fill in 5 fields, the backend mails the lead to the sales inbox and
 // a manual onboarding follows. No account is created from this page.
 
-type Language = "it" | "en" | "es" | "pt"
+type Language = "it" | "en" | "es" | "de"
 
 const T = {
   it: {
@@ -110,36 +110,36 @@ const T = {
       "Gracias. Te respondemos en 24 horas laborables con los siguientes pasos.",
     genericError: "Algo ha ido mal. Inténtalo de nuevo en un momento.",
   },
-  pt: {
-    seoTitle: "Solicita uma demo - eChatbot",
+  de: {
+    seoTitle: "Demo anfragen - eChatbot",
     seoDesc:
-      "Queres ver o eChatbot em ação no teu negócio? Conta-nos o teu caso de uso e respondemos em 24 horas com uma demo personalizada.",
-    seoKeys: "demo chatbot whatsapp, pedir demo echatbot, demo personalizada",
-    badge: "Solicita uma demo",
-    heroTitle: "Falemos do teu negócio",
+      "Willst du eChatbot in Aktion für dein Business sehen? Erzähl uns von deinem Anwendungsfall und wir melden uns innerhalb von 24 Stunden mit einer maßgeschneiderten Demo.",
+    seoKeys: "whatsapp chatbot demo, demo anfragen echatbot, individuelle demo",
+    badge: "Demo anfragen",
+    heroTitle: "Sprechen wir über dein Business",
     heroSub:
-      "Sem registo self-service: cada cliente começa com uma análise à medida. Deixa-nos algumas informações e organizamos uma demo dedicada.",
-    formTitle: "Pedir acesso",
+      "Keine Self-Service-Registrierung: Jeder Kunde startet mit einer maßgeschneiderten Analyse. Hinterlass uns ein paar Infos und wir organisieren eine eigene Demo für dich.",
+    formTitle: "Zugang anfragen",
     formSubtitle:
-      "Cinco campos rápidos. Respondemos em 24 horas úteis.",
-    name: "Nome completo",
-    namePlaceholder: "Ex. Mario Rossi",
-    email: "Email empresarial",
-    emailPlaceholder: "nome@empresa.com",
-    company: "Empresa",
-    companyPlaceholder: "Nome da empresa",
-    industry: "Setor",
-    industryPlaceholder: "Ex. lavandarias, ginásios, e-commerce…",
-    volume: "Volume estimado de mensagens/mês",
-    volumePlaceholder: "Ex. 1.000 / 5.000 / 20.000+",
-    notes: "Notas (opcional)",
-    notesPlaceholder: "Conta-nos o teu caso de uso ou as tuas necessidades…",
-    send: "Enviar pedido",
-    sending: "A enviar…",
-    successTitle: "Pedido recebido!",
+      "Fünf schnelle Felder. Wir antworten innerhalb von 24 Werkstunden.",
+    name: "Vor- und Nachname",
+    namePlaceholder: "z. B. Mario Rossi",
+    email: "Geschäftliche E-Mail",
+    emailPlaceholder: "name@unternehmen.com",
+    company: "Unternehmen",
+    companyPlaceholder: "Name des Unternehmens",
+    industry: "Branche",
+    industryPlaceholder: "z. B. Wäschereien, Fitnessstudios, E-Commerce…",
+    volume: "Geschätztes Nachrichtenvolumen/Monat",
+    volumePlaceholder: "z. B. 1.000 / 5.000 / 20.000+",
+    notes: "Notizen (optional)",
+    notesPlaceholder: "Erzähl uns von deinem Anwendungsfall oder deinen Anforderungen…",
+    send: "Anfrage senden",
+    sending: "Wird gesendet…",
+    successTitle: "Anfrage erhalten!",
     successDesc:
-      "Obrigado. Respondemos em 24 horas úteis com os próximos passos.",
-    genericError: "Algo correu mal. Tenta novamente daqui a pouco.",
+      "Danke. Wir melden uns innerhalb von 24 Werkstunden mit den nächsten Schritten.",
+    genericError: "Etwas ist schiefgelaufen. Versuch es gleich noch einmal.",
   },
 } as const
 

@@ -1,5 +1,0 @@
--- NO-OP MIGRATION
--- The platform_config table (and its indexes) was already created in the initial
--- 20260116000000_init migration. This migration is kept for history but does
--- not execute any SQL to avoid P3006 errors ("relation already exists") when
--- applying migrations to databases that already contain the table.

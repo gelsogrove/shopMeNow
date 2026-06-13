@@ -3,11 +3,12 @@ import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { SEO } from "@/components/SEO"
 import { ArrowRight } from "lucide-react"
+import { GreenCtaButton } from "@/components/ui/green-cta-button"
 
 // ─────────────────────────────────────────
 // Translations
 // ─────────────────────────────────────────
-type Lang = "it" | "en" | "es" | "pt"
+type Lang = "it" | "en" | "es" | "de"
 
 const T: Record<Lang, {
   seoTitle: string
@@ -86,31 +87,31 @@ const T: Record<Lang, {
     cta_btn: "Iniciar el survey →",
     footer_back: "← Volver a la página principal",
   },
-  pt: {
-    seoTitle: "Parceria Neapolis × eChatbot.AI",
-    seoDesc: "eChatbot.AI procura parceiros na rede Neapolis. Chatbot AI personalizado: desenvolvimento e integração sempre gratuitos, só paga plano e uso de LLM.",
-    badge: "Oferta exclusiva para a comunidade Neapolis",
-    greeting: "Olá, bem-vindo ao eChatbot.AI",
-    introPart1: "Desenvolvemos chatbots personalizados integrados com os sistemas do cliente (CRM, ERP, API, etc.). Transformamos a conversa numa ferramenta estratégica: respostas precisas em tempo real baseadas em dados corporativos, e notificações push para ações de marketing conversacional dirigido.",
-    introPart2: "Para crescer precisamos do nosso Cliente 0, uma startup da rede Neàpolis com quem fazer a nossa primeira DEMO. Este é o nosso modelo de negócio: desenvolvimento, integração e análise são sempre gratuitos. Só paga o plano de subscrição e o uso de LLM.",
-    offer: "Desenvolvimento e integração sempre gratuitos.",
-    offerFreeWord: "gratuitos",
+  de: {
+    seoTitle: "Partnerschaft Neapolis × eChatbot.AI",
+    seoDesc: "eChatbot.AI sucht Partner im Neapolis-Netzwerk. Maßgeschneiderter AI-Chatbot: Entwicklung und Integration immer kostenlos, du zahlst nur Plan und LLM-Nutzung.",
+    badge: "Exklusives Angebot für die Neapolis-Community",
+    greeting: "Hallo, willkommen bei eChatbot.AI",
+    introPart1: "Wir entwickeln maßgeschneiderte Chatbots, integriert in die Unternehmenssysteme des Kunden (CRM, ERP, API usw.). Wir machen aus dem Gespräch ein strategisches Werkzeug: präzise Antworten in Echtzeit auf Basis der Unternehmensdaten und Push-Benachrichtigungen für gezieltes konversationelles Marketing.",
+    introPart2: "Um zu wachsen, brauchen wir unseren Kunden 0, ein Startup aus dem Neàpolis-Netzwerk, mit dem wir unsere erste DEMO machen. Das ist unser Geschäftsmodell: Entwicklung, Integration und Analyse sind immer kostenlos. Du zahlst nur den Abo-Plan und die LLM-Nutzung.",
+    offer: "Entwicklung und Integration immer kostenlos.",
+    offerFreeWord: "kostenlos",
     offerItems: [
-      "Todo o desenvolvimento e integração com os seus sistemas (CRM, ERP, API, etc.) é sempre gratuito",
-      "Suporte e análise contínuos sempre incluídos sem custos adicionais",
+      "Die gesamte Entwicklung und Integration mit deinen Systemen (CRM, ERP, API usw.) ist immer kostenlos",
+      "Laufender Support und laufende Analyse immer inklusive, ohne Zusatzkosten",
     ],
-    offerExclusion: "Só paga o plano de subscrição e o uso de LLM (ex. OpenAI, WhatsApp Business).",
-    goal: "O objetivo é colaborar com um parceiro que nos permita demonstrar concretamente o valor da plataforma e tornarmo-nos conhecidos dentro da comunidade.",
-    cta_title: "Parece interessante?",
-    cta_desc: "Responda a algumas perguntas rápidas para entender como o eChatbot pode transformar o seu negócio. Cerca de 2 minutos, sem compromisso.",
-    cta_btn: "Iniciar o survey →",
-    footer_back: "← Voltar à página inicial",
+    offerExclusion: "Du zahlst nur den Abo-Plan und die LLM-Nutzung (z. B. OpenAI, WhatsApp Business).",
+    goal: "Ziel ist es, mit einem Partner zusammenzuarbeiten, der es uns ermöglicht, den Wert der Plattform konkret zu zeigen und uns innerhalb der Community bekannt zu machen.",
+    cta_title: "Klingt das interessant?",
+    cta_desc: "Beantworte ein paar kurze Fragen, damit wir verstehen, wie eChatbot dein Business verändern kann. Etwa 2 Minuten, völlig unverbindlich.",
+    cta_btn: "Survey starten →",
+    footer_back: "← Zurück zur Startseite",
   },
 }
 
 export function NeapolisPage() {
   const { language, setLanguage } = useLanguage()
-  const lang: Lang = (["it", "en", "es", "pt"].includes(language) ? language : "it") as Lang
+  const lang: Lang = (["it", "en", "es", "de"].includes(language) ? language : "it") as Lang
   const setLang = (l: Lang) => setLanguage(l)
 
   const t = T[lang]
@@ -140,7 +141,7 @@ export function NeapolisPage() {
               <span className="text-base sm:text-xl font-bold text-green-600">eChatbot.AI</span>
             </Link>
             <div className="flex items-center gap-0.5 sm:gap-1">
-              {(["it", "en", "es", "pt"] as Lang[]).map((l) => (
+              {(["it", "en", "es", "de"] as Lang[]).map((l) => (
                 <button
                   key={l}
                   onClick={() => setLang(l)}
@@ -213,12 +214,9 @@ export function NeapolisPage() {
 
               {/* Survey CTA */}
               <div className="text-center pt-2 pb-1">
-                <Link
-                  to="/survey"
-                  className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 text-base"
-                >
+                <GreenCtaButton to="/survey" icon="📋" size="md">
                   {t.cta_btn}
-                </Link>
+                </GreenCtaButton>
               </div>
 
             </div>

@@ -1,13 +1,18 @@
 import { useEffect } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
-import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
-import { ArrowRight, Zap, CheckCircle, Clock, Star } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
+import { LandingHero } from "@/components/landing/LandingHero"
+import { MetricsSection } from "@/components/landing/MetricsSection"
+import { SectionHeader } from "@/components/landing/SectionHeader"
+import { StepCardGrid } from "@/components/landing/StepCardGrid"
+import { UseCaseGrid } from "@/components/landing/UseCaseGrid"
+import { FeatureChecklist } from "@/components/landing/FeatureChecklist"
+import { CtaSection } from "@/components/landing/CtaSection"
 
-type Language = "it" | "en" | "es" | "pt"
+type Language = "it" | "en" | "es" | "de"
 
 const T = {
   it: {
@@ -217,72 +222,72 @@ const T = {
       ],
     },
   },
-  pt: {
-    seoTitle: "Suporte Humano Human-in-the-Loop - IA + Agentes Humanos em Sinergia",
-    ctaTitle: "Pronto para adicionar o toque humano?",
-    seoDesc: "O eChatbot combina IA e operadores humanos para oferecer suporte ao cliente excepcional. O chatbot lida com 90% das solicitações, os operadores intervêm quando realmente necessário.",
-    seoKeys: "human in the loop, suporte humano chatbot, chatbot agente humano, handoff whatsapp, suporte cliente ai, live chat whatsapp",
-    breadcrumb: "Suporte Humano",
+  de: {
+    seoTitle: "Menschlicher Support Human-in-the-Loop - KI + menschliche Agenten im Zusammenspiel",
+    ctaTitle: "Bereit, die menschliche Note hinzuzufügen?",
+    seoDesc: "eChatbot kombiniert KI und menschliche Mitarbeiter für außergewöhnlichen Kundensupport. Der Chatbot bearbeitet 90% der Anfragen, die Mitarbeiter greifen ein, wenn es wirklich nötig ist.",
+    seoKeys: "human in the loop, menschlicher chatbot support, chatbot menschlicher agent, whatsapp handoff, kundensupport ai, live chat whatsapp",
+    breadcrumb: "Menschlicher Support",
     badge: "Human-in-the-Loop",
-    heroTitle: "O melhor da IA.\nO melhor dos humanos.",
-    heroSub: "O eChatbot não substitui as pessoas — as potencializa. O chatbot AI lida com 90% das solicitações automaticamente. Quando empatia e julgamento humano são necessários, o operador assume o controle com um clique.",
-    cta: "Fale Connosco",
-    ctaSub: "Sem compromisso, respondemos em breve",
-    howTitle: "Como funciona o sistema híbrido",
-    howSub: "A IA trabalha incansavelmente 24/7. Os operadores humanos intervêm onde fazem a diferença real.",
+    heroTitle: "Das Beste der KI.\nDas Beste der Menschen.",
+    heroSub: "eChatbot ersetzt Menschen nicht — er stärkt sie. Der KI-Chatbot bearbeitet 90% der Anfragen automatisch. Wenn Empathie und menschliches Urteilsvermögen gefragt sind, übernimmt der Mitarbeiter mit einem Klick die Kontrolle.",
+    cta: "Kontaktiere uns",
+    ctaSub: "Unverbindlich — wir melden uns in Kürze bei dir",
+    howTitle: "So funktioniert das hybride System",
+    howSub: "Die KI arbeitet unermüdlich rund um die Uhr. Menschliche Mitarbeiter greifen dort ein, wo sie einen echten Unterschied machen.",
     steps: [
-      { icon: "🤖", title: "IA responde automaticamente", desc: "O chatbot lida com FAQs, pedidos, reservas e solicitações padrão. Resposta imediata, sempre disponível, nunca cansado." },
-      { icon: "🔍", title: "Monitora em tempo real", desc: "O sistema analisa cada conversa e detecta quando um cliente precisa de atenção humana: frustração, perguntas complexas, situações delicadas." },
-      { icon: "🤝", title: "Handoff inteligente", desc: "O operador humano recebe a conversa completa com todo o contexto. Zero repetições para o cliente, máxima eficiência para a equipe." },
-      { icon: "⭐", title: "Feedback e melhoria", desc: "Cada intervenção humana melhora o modelo de IA. O sistema aprende com seus operadores para lidar com situações semelhantes de forma autônoma no futuro." },
+      { icon: "🤖", title: "KI antwortet automatisch", desc: "Der Chatbot bearbeitet FAQs, Bestellungen, Buchungen und Standardanfragen. Sofortige Antwort, immer verfügbar, nie müde." },
+      { icon: "🔍", title: "Überwacht in Echtzeit", desc: "Das System analysiert jede Konversation und erkennt, wann ein Kunde menschliche Aufmerksamkeit braucht: Frustration, komplexe Fragen, heikle Situationen." },
+      { icon: "🤝", title: "Intelligente Übergabe", desc: "Der menschliche Mitarbeiter erhält die vollständige Konversation mit dem gesamten Kontext. Keine Wiederholungen für den Kunden, maximale Effizienz für das Team." },
+      { icon: "⭐", title: "Feedback und Verbesserung", desc: "Jeder menschliche Eingriff verbessert das KI-Modell. Das System lernt von deinen Mitarbeitern, um ähnliche Situationen künftig eigenständig zu bewältigen." },
     ],
-    operatorTitle: "Dashboard do Operador",
-    operatorDesc: "Um dashboard intuitivo para sua equipe de suporte. Veja todas as conversas em andamento, as que aguardam intervenção e as gerenciadas pela IA. Assuma o controle quando quiser, onde quer que esteja.",
+    operatorTitle: "Mitarbeiter-Dashboard",
+    operatorDesc: "Ein intuitives Dashboard für dein Support-Team. Sieh alle laufenden Konversationen, jene, die auf einen Eingriff warten, und jene, die von der KI bearbeitet werden. Übernimm die Kontrolle, wann immer du willst, wo immer du bist.",
     operatorFeatures: [
-      "Visão unificada de todas as conversas",
-      "Notificações em tempo real para handoffs",
-      "Contexto completo da sessão",
-      "Resposta rápida de templates",
-      "Atribuição de conversas à equipe",
-      "Analytics por operador",
+      "Einheitliche Übersicht aller Konversationen",
+      "Echtzeit-Benachrichtigungen für Übergaben",
+      "Vollständiger Sitzungskontext",
+      "Schnelle Antwort aus Vorlagen",
+      "Zuweisung von Konversationen an das Team",
+      "Analytics pro Mitarbeiter",
     ],
-    metricsTitle: "Resultados que falam por si",
+    metricsTitle: "Ergebnisse, die für sich sprechen",
     metrics: [
-      { value: "90%", label: "Solicitações gerenciadas pela IA", sub: "sem intervenção humana" },
-      { value: "< 2s", label: "Tempo resposta IA", sub: "24 horas por dia, 7 dias por semana" },
-      { value: "-60%", label: "Custo de suporte", sub: "comparado ao suporte apenas humano" },
-      { value: "+35%", label: "Satisfação do cliente", sub: "comparado a bots ou humanos isolados" },
+      { value: "90%", label: "Von der KI bearbeitete Anfragen", sub: "ohne menschlichen Eingriff" },
+      { value: "< 2s", label: "KI-Antwortzeit", sub: "24 Stunden am Tag, 7 Tage die Woche" },
+      { value: "-60%", label: "Support-Kosten", sub: "im Vergleich zu rein menschlichem Support" },
+      { value: "+35%", label: "Kundenzufriedenheit", sub: "im Vergleich zu Bots oder Menschen allein" },
     ],
-    useCasesTitle: "Quando o operador humano faz a diferença",
+    useCasesTitle: "Wann ein menschlicher Mitarbeiter den Unterschied macht",
     useCases: [
-      { icon: "😰", title: "Cliente frustrado", desc: "O sistema detecta sinais de frustração e alerta o operador antes que o cliente abandone a conversa." },
-      { icon: "💰", title: "Venda complexa", desc: "Para pedidos de alto valor ou orçamentos personalizados, um consultor humano fecha a venda com mais eficácia." },
-      { icon: "⚖️", title: "Gestão de reclamações", desc: "As reclamações delicadas são tratadas com a empatia que só um ser humano pode oferecer, salvaguardando o relacionamento com o cliente." },
-      { icon: "🆘", title: "Situações excepcionais", desc: "Emergências, solicitações fora do padrão, exceções às políticas: o operador intervém com o poder de decisão necessário." },
+      { icon: "😰", title: "Frustrierter Kunde", desc: "Das System erkennt Anzeichen von Frustration und alarmiert den Mitarbeiter, bevor der Kunde die Konversation abbricht." },
+      { icon: "💰", title: "Komplexer Verkauf", desc: "Bei hochwertigen Bestellungen oder individuellen Angeboten schließt ein menschlicher Berater den Verkauf wirkungsvoller ab." },
+      { icon: "⚖️", title: "Beschwerdemanagement", desc: "Heikle Beschwerden werden mit der Empathie behandelt, die nur ein Mensch bieten kann, und wahren so die Kundenbeziehung." },
+      { icon: "🆘", title: "Außergewöhnliche Situationen", desc: "Notfälle, ungewöhnliche Anfragen, Ausnahmen von Richtlinien: Der Mitarbeiter greift mit der nötigen Entscheidungsbefugnis ein." },
     ],
-    realTitle: "Como trabalhamos de verdade",
-    realSub: "Não são slides, é o produto real: é isto que o operador vê quando a IA passa o controlo.",
+    realTitle: "Wie wir wirklich arbeiten",
+    realSub: "Keine Folien, sondern das echte Produkt: Das sieht der Mitarbeiter, wenn die KI übergibt.",
     handoff: {
-      tag: "Do bot ao operador",
-      title: "Um resumo estruturado, antes da passagem",
-      desc: "Quando o caso requer intervenção humana, a conversa passa para um operador. Antes da passagem, o operador recebe um resumo interno completo: todo o contexto, pronto. O cliente continua a ver apenas as respostas normais.",
+      tag: "Vom Bot zum Mitarbeiter",
+      title: "Eine strukturierte Zusammenfassung, vor der Übergabe",
+      desc: "Wenn ein Fall menschliches Eingreifen erfordert, geht die Konversation an einen Mitarbeiter über. Vor der Übergabe erhält der Mitarbeiter eine vollständige interne Zusammenfassung: der gesamte Kontext, sofort einsatzbereit. Der Kunde sieht weiterhin nur die normalen Antworten.",
       points: [
-        "Data, hora e sede do cliente",
-        "Máquina envolvida e número de série",
-        "Idioma da conversa",
-        "Resumo do diálogo e ação sugerida",
-        "Interno — nunca visível para o cliente",
+        "Datum, Uhrzeit und Standort des Kunden",
+        "Betroffene Maschine und Seriennummer",
+        "Sprache der Konversation",
+        "Zusammenfassung des Dialogs und vorgeschlagene Aktion",
+        "Intern — für den Kunden niemals sichtbar",
       ],
     },
     multilingual: {
-      tag: "Gestão multilingue",
-      title: "Operador e cliente, idiomas diferentes, zero barreiras",
-      desc: "No exemplo o cliente escreve em árabe enquanto o operador trabalha em espanhol. Cada mensagem é traduzida automaticamente em ambas as direções. Com o Controlo Manual a IA é desativada: as mensagens são guardadas mas o bot já não responde.",
+      tag: "Mehrsprachige Bearbeitung",
+      title: "Mitarbeiter und Kunde, verschiedene Sprachen, null Barrieren",
+      desc: "In diesem Beispiel schreibt der Kunde auf Arabisch, während der Mitarbeiter auf Spanisch arbeitet. Jede Nachricht wird automatisch in beide Richtungen übersetzt. Mit der manuellen Steuerung wird die KI deaktiviert: Nachrichten werden gespeichert, aber der Bot antwortet nicht mehr.",
       points: [
-        "Tradução automática bidirecional",
-        "O operador escreve no seu próprio idioma",
-        "Controlo manual: IA desativada sob pedido",
-        "Conversa natural mesmo entre idiomas diferentes",
+        "Automatische Übersetzung in beide Richtungen",
+        "Der Mitarbeiter schreibt in seiner eigenen Sprache",
+        "Manuelle Steuerung: KI auf Wunsch deaktiviert",
+        "Natürliche Konversation auch über Sprachen hinweg",
       ],
     },
   },
@@ -302,97 +307,29 @@ export function HumanSupportPage() {
       <SiteHeader />
 
       <main>
-        {/* Hero */}
-        <section className="pt-24 pb-16 lg:pt-32 lg:pb-24">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
-            >
-              {/* Hero image */}
-              <div className="relative order-2 lg:order-1">
-                <div className="absolute -inset-4 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl opacity-40" />
-                <img
-                  src="/humansupporto.png"
-                  alt="Human support collaborating with AI"
-                  className="relative w-full max-h-[320px] rounded-3xl shadow-2xl border border-white/60 object-cover"
-                />
-              </div>
-              <div className="order-1 lg:order-2">
-                <h1 className="text-4xl lg:text-6xl font-bold text-white mb-6 leading-tight whitespace-pre-line">
-                  {t.heroTitle}
-                </h1>
-                <p className="text-xl text-slate-400 mb-10 leading-relaxed">{t.heroSub}</p>
-                <Link
-                  to="/contact"
-                  className="inline-flex items-center gap-3 bg-green-600 hover:bg-green-700 text-white font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
-                >
-                  <Zap className="h-5 w-5" />
-                  {t.cta}
-                </Link>
-              </div>
-            </motion.div>
-          </div>
-        </section>
+        <LandingHero
+          title={t.heroTitle}
+          subtitle={t.heroSub}
+          ctaLabel={t.cta}
+          image={{ src: "/humansupporto.png", alt: "Human support collaborating with AI" }}
+          imageClassName="w-full max-h-[320px] rounded-3xl shadow-2xl border border-white/60 object-cover"
+          buttonClassName="bg-green-600 hover:bg-green-700"
+        />
 
-        {/* Metrics */}
-        <section className="py-16 border-y border-white/10">
-          <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-white text-center mb-12">{t.metricsTitle}</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-              {t.metrics.map((m, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="text-center p-6 bg-slate-900/40 rounded-2xl border border-white/10"
-                >
-                  <div className="text-4xl font-bold text-green-600 mb-2">{m.value}</div>
-                  <div className="font-semibold text-white mb-1">{m.label}</div>
-                  <div className="text-sm text-slate-500">{m.sub}</div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
+        <MetricsSection title={t.metricsTitle} metrics={t.metrics} variant="green" />
 
         {/* How it Works */}
         <section className="py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-4">{t.howTitle}</h2>
-              <p className="text-xl text-slate-400 max-w-3xl mx-auto">{t.howSub}</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {t.steps.map((step, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  className="bg-slate-900/50 rounded-2xl p-6 shadow-lg border border-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
-                >
-                  <div className="text-4xl mb-4">{step.icon}</div>
-                  <h3 className="text-lg font-bold text-white mb-3">{step.title}</h3>
-                  <p className="text-sm text-slate-400 leading-relaxed">{step.desc}</p>
-                </motion.div>
-              ))}
-            </div>
+            <SectionHeader title={t.howTitle} subtitle={t.howSub} />
+            <StepCardGrid steps={t.steps} variant="plain" />
           </div>
         </section>
 
         {/* Real product showcase — screenshots that show how we actually work */}
         <section className="py-20 bg-white/[0.02] border-y border-white/10">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-white mb-4">{t.realTitle}</h2>
-              <p className="text-xl text-slate-400 max-w-3xl mx-auto">{t.realSub}</p>
-            </div>
+            <SectionHeader title={t.realTitle} subtitle={t.realSub} />
 
             {/* Handoff: bot → operator with structured internal summary */}
             <motion.div
@@ -416,14 +353,7 @@ export function HumanSupportPage() {
                 </span>
                 <h3 className="text-3xl lg:text-4xl font-bold text-white leading-tight">{t.handoff.title}</h3>
                 <p className="text-lg text-slate-400 leading-relaxed">{t.handoff.desc}</p>
-                <ul className="space-y-3">
-                  {t.handoff.points.map((p, i) => (
-                    <li key={i} className="flex items-center gap-3 text-slate-300">
-                      <CheckCircle className="h-5 w-5 text-amber-400 flex-shrink-0" />
-                      {p}
-                    </li>
-                  ))}
-                </ul>
+                <FeatureChecklist items={t.handoff.points} iconClassName="text-amber-400" />
               </div>
             </motion.div>
 
@@ -441,14 +371,7 @@ export function HumanSupportPage() {
                 </span>
                 <h3 className="text-3xl lg:text-4xl font-bold text-white leading-tight">{t.multilingual.title}</h3>
                 <p className="text-lg text-slate-400 leading-relaxed">{t.multilingual.desc}</p>
-                <ul className="space-y-3">
-                  {t.multilingual.points.map((p, i) => (
-                    <li key={i} className="flex items-center gap-3 text-slate-300">
-                      <CheckCircle className="h-5 w-5 text-emerald-400 flex-shrink-0" />
-                      {p}
-                    </li>
-                  ))}
-                </ul>
+                <FeatureChecklist items={t.multilingual.points} iconClassName="text-emerald-400" />
               </div>
               <div className="relative">
                 <div className="absolute -inset-4 bg-gradient-to-br from-emerald-500/20 to-green-500/10 rounded-3xl blur-xl opacity-50" />
@@ -483,14 +406,7 @@ export function HumanSupportPage() {
                   <div className="space-y-6 order-1 lg:order-2">
                     <h2 className="text-3xl lg:text-4xl font-bold text-white">{t.operatorTitle}</h2>
                     <p className="text-lg text-slate-400 leading-relaxed">{t.operatorDesc}</p>
-                    <ul className="space-y-3">
-                      {t.operatorFeatures.map((f, i) => (
-                        <li key={i} className="flex items-center gap-3 text-slate-300">
-                          <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
+                    <FeatureChecklist items={t.operatorFeatures} iconClassName="text-green-500" />
                   </div>
                 </div>
               </div>
@@ -502,38 +418,16 @@ export function HumanSupportPage() {
         <section className="py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <h2 className="text-4xl font-bold text-white text-center mb-12">{t.useCasesTitle}</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {t.useCases.map((uc, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: i % 2 === 0 ? -40 : 40 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
-                  className="flex gap-6 p-6 bg-slate-900/50 rounded-2xl shadow-md border border-white/10 hover:shadow-lg transition-all"
-                >
-                  <div className="text-4xl flex-shrink-0">{uc.icon}</div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white mb-2">{uc.title}</h3>
-                    <p className="text-slate-400 leading-relaxed">{uc.desc}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
+            <UseCaseGrid items={t.useCases} variant="plain" />
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="py-20 bg-gradient-to-br from-green-500 to-emerald-600">
-          <div className="max-w-3xl mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold text-white mb-6">{t.ctaTitle}</h2>
-            <p className="text-xl text-green-100 mb-8">{t.ctaSub}</p>
-            <Link to="/contact" className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-green-600 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all">
-              <Zap className="h-6 w-6" />
-              {t.cta}
-            </Link>
-          </div>
-        </section>
+        <CtaSection
+          title={t.ctaTitle}
+          subtitle={t.ctaSub}
+          ctaLabel={t.cta}
+          gradientClassName="from-green-500 to-emerald-600"
+        />
       </main>
 
       <SiteFooter language={language} />

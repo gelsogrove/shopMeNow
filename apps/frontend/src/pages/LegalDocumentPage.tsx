@@ -30,7 +30,7 @@ export function LegalDocumentPage({ docType }: LegalDocumentPageProps) {
     it: { backToHome: "Torna alla home", notFound: "Documento non trovato", notAvailable: "Il documento richiesto non è disponibile.", loading: "Caricamento..." },
     en: { backToHome: "Back to home", notFound: "Document not found", notAvailable: "The requested document is not available.", loading: "Loading..." },
     es: { backToHome: "Volver al inicio", notFound: "Documento no encontrado", notAvailable: "El documento solicitado no está disponible.", loading: "Cargando..." },
-    pt: { backToHome: "Voltar ao início", notFound: "Documento não encontrado", notAvailable: "O documento solicitado não está disponível.", loading: "Carregando..." },
+    de: { backToHome: "Zurück zur Startseite", notFound: "Dokument nicht gefunden", notAvailable: "Das angeforderte Dokument ist nicht verfügbar.", loading: "Wird geladen..." },
   }
 
   const t = translations[language as keyof typeof translations] || translations.en

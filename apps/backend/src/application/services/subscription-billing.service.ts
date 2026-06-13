@@ -207,8 +207,7 @@ export class SubscriptionBillingService {
     userId: string,
     requiredAmount: number
   ): Promise<CreditCheckResult> {
-    const CREDIT_MIN_THRESHOLD = -10
-
+    // Single source of truth: imported from workspace-access.service (no local redefinition)
     const currentBalance = await this.repository.getOwnerCreditBalance(userId)
     const balanceAfterDeduction = currentBalance - requiredAmount
 
@@ -231,8 +230,7 @@ export class SubscriptionBillingService {
     workspaceId: string,
     requiredAmount: number
   ): Promise<CreditCheckResult> {
-    const CREDIT_MIN_THRESHOLD = -10
-
+    // Single source of truth: imported from workspace-access.service (no local redefinition)
     const currentBalance = await this.repository.getCreditBalance(workspaceId)
     const balanceAfterDeduction = currentBalance - requiredAmount
 

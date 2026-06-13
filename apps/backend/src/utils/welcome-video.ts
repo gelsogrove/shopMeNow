@@ -1,7 +1,7 @@
 /**
  * Welcome-video helper.
  *
- * Custom chatbots (demowash, ecolaundry, …) can show a presentation video on the
+ * Custom chatbots (demowash, …) can show a presentation video on the
  * customer's first message. On the web playground this renders as a rich
  * WelcomeVideoCard (greeting → intro line → video card → rest of the reply).
  *

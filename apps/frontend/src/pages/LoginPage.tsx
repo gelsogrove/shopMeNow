@@ -9,6 +9,7 @@ import { SEO } from "@/components/SEO"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { GlowCard } from "@/components/ui/glow-card"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -202,7 +203,7 @@ export function LoginPage() {
 
   // Dynamic hero slides based on language
   const getHeroSlides = (lang: string) => {
-    const validLang = ["it", "en", "es", "pt"].includes(lang) ? lang : "en"
+    const validLang = ["it", "en", "es", "de"].includes(lang) ? lang : "en"
     return [
       { src: new URL(`../assets/hero/${validLang}/home_1.png`, import.meta.url).href, alt: "WhatsApp AI agent dashboard view 1" },
       { src: new URL(`../assets/hero/${validLang}/home_2.png`, import.meta.url).href, alt: "WhatsApp AI agent dashboard view 2" },
@@ -1020,7 +1021,7 @@ export function LoginPage() {
             it: "Chatbot WhatsApp AI per Franchising e Attività Multi-Sede",
             en: "AI WhatsApp Chatbot for Franchises & Multi-Location Businesses",
             es: "Chatbot WhatsApp con IA para Franquicias y Negocios Multi-Sede",
-            pt: "Chatbot WhatsApp com IA para Franchising e Negócios Multi-Sede",
+            de: "KI-WhatsApp-Chatbot für Franchise- und Multi-Standort-Unternehmen",
           } as Record<string, string>)[language as string] ||
           "AI WhatsApp Chatbot for Franchises & Multi-Location Businesses"
         }
@@ -1029,7 +1030,7 @@ export function LoginPage() {
             it: "Un'unica AI su WhatsApp per tutta la tua rete in franchising: risponde 24/7, traduce in tempo reale, riconosce il negozio, prenota appuntamenti e invia promozioni.",
             en: "One AI on WhatsApp for your whole franchise network: 24/7 replies, real-time translation, per-shop data, appointment booking and promo campaigns.",
             es: "Una sola IA en WhatsApp para toda tu red de franquicias: responde 24/7, traduce en tiempo real, reconoce la tienda, agenda citas y envía promociones.",
-            pt: "Uma só IA no WhatsApp para toda a tua rede de franchising: responde 24/7, traduz em tempo real, reconhece a loja, marca consultas e envia promoções.",
+            de: "Eine einzige KI auf WhatsApp für dein gesamtes Franchise-Netzwerk: antwortet rund um die Uhr, übersetzt in Echtzeit, erkennt den Standort, bucht Termine und versendet Aktionen.",
           } as Record<string, string>)[language as string] ||
           "One AI on WhatsApp for your whole franchise network: 24/7 replies, real-time translation, per-shop data, appointment booking and promo campaigns."
         }
@@ -1068,7 +1069,7 @@ export function LoginPage() {
                   { code: "it", flag: "🇮🇹" },
                   { code: "en", flag: "🇬🇧" },
                   { code: "es", flag: "🇪🇸" },
-                  { code: "pt", flag: "🇵🇹" },
+                  { code: "de", flag: "🇩🇪" },
                 ] as const).map((l) => (
                   <button
                     key={l.code}
@@ -1246,7 +1247,9 @@ export function LoginPage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 lg:gap-8 sm:-translate-x-16">
             <HeroRobot />
             <div className="space-y-4 text-center sm:text-left">
-              {/* Brand slogan — wordplay on "you never forget your first love" */}
+              {/* Brand slogan — IT keeps the "primo amore non si scorda mai"
+                  wordplay; EN/ES/DE use a benefit-led line ("best employee
+                  never sleeps") that lands without the Italian reference. */}
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold italic lg:whitespace-nowrap" style={{ color: "#25D366" }}>
                 {t("hero.slogan")}
               </h1>
@@ -1756,11 +1759,7 @@ export function LoginPage() {
       {/* DemoWash live-demo card — first card below the phone animation, before How It Works */}
       <section className="py-12">
         <div className="max-w-5xl mx-auto px-6">
-          <div className="group relative">
-            {/* Decorative rotated background frame — green glow (same as CRM/Privacy) */}
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-emerald-500/15 to-green-500/10 shadow-lg transition-transform duration-500 group-hover:rotate-2 sm:rotate-1 sm:scale-[1.01]"></div>
-
-            <div className="relative rounded-3xl border border-white/10 bg-slate-900/50 p-8 text-center shadow-2xl backdrop-blur transition-all duration-500 hover:-translate-y-1 hover:border-green-400/30 sm:p-10 lg:p-12">
+          <GlowCard lift accent="emerald" innerClassName="p-8 text-center sm:p-10 lg:p-12">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#25D366]/15 px-4 py-1.5 text-sm font-semibold text-[#25D366]">
                 <span className="h-2 w-2 rounded-full bg-[#25D366]" /> Live demo
               </div>
@@ -1781,8 +1780,7 @@ export function LoginPage() {
               </svg>
               {t("demo.button")} →
             </button>
-            </div>
-          </div>
+          </GlowCard>
         </div>
       </section>
 
@@ -1852,10 +1850,10 @@ export function LoginPage() {
             desc: "El secreto de un buen chatbot son las respuestas de calidad. Responde algunas preguntas sobre tus necesidades — soporte humano, marketing push, widget, ventas, e-commerce y privacidad — y te mostraremos cómo eChatbot puede marcar la diferencia. Unos 2 minutos, sin compromiso.",
             cta: "Iniciar el survey →",
           },
-          pt: {
-            title: "Ajude-nos a construir o chatbot perfeito para você",
-            desc: "O segredo de um bom chatbot são as respostas de qualidade. Responda algumas perguntas sobre suas necessidades — suporte humano, marketing push, widget, vendas, e-commerce e privacidade — e mostraremos como o eChatbot pode fazer a diferença. Cerca de 2 minutos, sem compromisso.",
-            cta: "Iniciar o survey →",
+          de: {
+            title: "Hilf uns, den perfekten Chatbot für dich zu bauen",
+            desc: "Das Geheimnis eines guten Chatbots ist die Qualität der Antworten. Beantworte ein paar Fragen zu deinen Anforderungen — menschlicher Support, Push-Marketing, Widget, Vertrieb, E-Commerce und Datenschutz — und wir zeigen dir, wie eChatbot den Unterschied macht. Etwa 2 Minuten, völlig unverbindlich.",
+            cta: "Survey starten →",
           },
           en: {
             title: "Help us build the perfect chatbot for you",
@@ -1903,15 +1901,12 @@ export function LoginPage() {
       <div className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
-            className="group relative"
             initial={{ opacity: 0, x: 80 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.35 }}
             transition={{ duration: 0.65, ease: "easeOut" }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-green-500/10 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
-
-            <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-white/10 hover:border-green-400/30 hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+            <GlowCard lift accent="emerald" innerClassName="p-8 sm:p-10 lg:p-12 min-h-[320px]">
               <div className="grid grid-cols-1 lg:grid-cols-[280px,1fr] gap-10 items-start">
                 <div className="flex flex-col items-center lg:items-start gap-4">
                   <div className="relative">
@@ -1951,7 +1946,7 @@ export function LoginPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </GlowCard>
           </motion.div>
         </div>
       </div>
@@ -1960,15 +1955,12 @@ export function LoginPage() {
       <div className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
-            className="group relative"
             initial={{ opacity: 0, x: -80 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.35 }}
             transition={{ duration: 0.65, ease: "easeOut" }}
           >
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/15 to-violet-500/10 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
-
-            <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-white/10 hover:border-green-400/30 hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+            <GlowCard lift accent="purple" innerClassName="p-8 sm:p-10 lg:p-12 min-h-[320px]">
               <div className="grid grid-cols-1 lg:grid-cols-[1fr,280px] gap-10 items-start">
                 <div className="space-y-6 text-center lg:text-left order-2 lg:order-1">
                   <div className="space-y-3">
@@ -2004,7 +1996,7 @@ export function LoginPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </GlowCard>
           </motion.div>
         </div>
       </div>
@@ -2016,16 +2008,12 @@ export function LoginPage() {
       <div id="demo" className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
-            className="group relative"
             initial={{ opacity: 0, x: 80 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.35 }}
             transition={{ duration: 0.65, ease: "easeOut" }}
           >
-            {/* Decorative rotated background frame */}
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
-            
-              <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-white/10 hover:border-green-400/30 hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+            <GlowCard lift accent="green" innerClassName="p-8 sm:p-10 lg:p-12 min-h-[320px]">
               {workingInProgress && !isAdminBypass && (
                 <div className="absolute -right-6 top-[14px] rotate-12 bg-red-600 py-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white shadow-lg pl-[50px] pr-[45px] z-20">
                   {t("wip.banner")}
@@ -2108,7 +2096,7 @@ export function LoginPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </GlowCard>
           </motion.div>
         </div>
       </div>
@@ -2203,16 +2191,12 @@ export function LoginPage() {
       <div className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
-            className="group relative"
             initial={{ opacity: 0, x: 80 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.35 }}
             transition={{ duration: 0.65, ease: "easeOut" }}
           >
-            {/* Decorative rotated background frame - BLU for enterprise */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/15 to-cyan-500/10 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
-            
-            <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-white/10 hover:border-green-400/30 hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+            <GlowCard lift accent="blue" innerClassName="p-8 sm:p-10 lg:p-12 min-h-[320px]">
               <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-10 items-start">
                 {/* Left: Image with effects */}
                 <div className="flex flex-col items-center lg:items-start">
@@ -2256,7 +2240,7 @@ export function LoginPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </GlowCard>
           </motion.div>
         </div>
       </div>
@@ -2265,16 +2249,12 @@ export function LoginPage() {
       <div className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
-            className="group relative"
             initial={{ opacity: 0, x: 80 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.35 }}
             transition={{ duration: 0.65, ease: "easeOut" }}
           >
-            {/* Decorative rotated background frame */}
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl rotate-0 sm:rotate-1 scale-100 sm:scale-[1.01] shadow-lg group-hover:rotate-2 transition-transform duration-500"></div>
-            
-            <div className="relative bg-slate-900/50 backdrop-blur rounded-3xl p-8 sm:p-10 lg:p-12 shadow-2xl border border-white/10 hover:border-green-400/30 hover:-translate-y-1 transition-all duration-500 min-h-[320px]">
+            <GlowCard lift accent="green" innerClassName="p-8 sm:p-10 lg:p-12 min-h-[320px]">
               <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-10 items-start">
                 {/* Left: Image with security badge */}
                 <div className="flex flex-col items-center lg:items-start gap-4">
@@ -2316,7 +2296,7 @@ export function LoginPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </GlowCard>
           </motion.div>
         </div>
       </div>
@@ -2532,7 +2512,7 @@ export function LoginPage() {
       </>)}
       </main>
 
-      {!showLoginCard && <SiteFooter language={language as "it" | "en" | "es" | "pt"} />}
+      {!showLoginCard && <SiteFooter language={language} />}
 
       {/* ⏸️ WhatsApp Floating Button - DISABLED (will reactivate later) */}
       {/* 

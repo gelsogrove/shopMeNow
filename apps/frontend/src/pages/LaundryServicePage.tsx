@@ -6,8 +6,11 @@ import { ArrowRight, ShieldCheck, Server, Puzzle, Users, CheckCircle } from "luc
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
+import { LandingHero } from "@/components/landing/LandingHero"
+import { SectionHeader } from "@/components/landing/SectionHeader"
+import { CtaSection } from "@/components/landing/CtaSection"
 
-type Language = "it" | "en" | "es" | "pt"
+type Language = "it" | "en" | "es" | "de"
 
 const T = {
   it: {
@@ -193,66 +196,66 @@ const T = {
     ctaTitle: "¿Lo hablamos?",
     ctaDesc: "Descubre cómo eChatbot puede transformar tu franquicia de lavanderías.",
   },
-  pt: {
-    seoTitle: "Chatbot WhatsApp para Lavanderias e Franquias - eChatbot",
-    seoDesc: "eChatbot é a solução de IA personalizada para lavanderias e franquias: suporte 24/7, tradução em tempo real, integração com máquinas e campanhas de marketing pelo WhatsApp.",
-    seoKeys: "chatbot lavanderia, whatsapp lavanderia, assistente ia lavanderia, atendimento lavanderia, franquia lavanderia ia",
-    breadcrumb: "Lavanderias e Franquias",
-    badge: "Para Franquias",
-    heroTitle: "A tua lavandaria em franquia atende sozinha, 24/7, no WhatsApp",
-    heroSub: "Responde a clientes, agenda consultorias de franquia, desbloqueia máquinas remotamente e passa a um operador quando preciso. Em qualquer idioma.",
-    cta: "Vamos conversar",
-    ctaSub: "Sem compromisso",
-    problemsTitle: "Os seus problemas, as nossas soluções",
+  de: {
+    seoTitle: "WhatsApp Chatbot für Wäschereien und Franchises - eChatbot",
+    seoDesc: "eChatbot ist die maßgeschneiderte KI-Lösung für Wäschereien und Franchises: Support rund um die Uhr, Echtzeit-Übersetzung, Maschinen-Integration und Marketing-Kampagnen über WhatsApp.",
+    seoKeys: "wäscherei chatbot, whatsapp wäscherei, ki wäscherei assistent, wäscherei kundenservice, wäscherei franchise ki",
+    breadcrumb: "Wäschereien & Franchises",
+    badge: "Für Franchises",
+    heroTitle: "Deine Franchise-Wäscherei antwortet von allein, rund um die Uhr, auf WhatsApp",
+    heroSub: "Sie antwortet Kunden, bucht Franchise-Beratungen, entsperrt Maschinen aus der Ferne und übergibt bei Bedarf an einen Mitarbeiter. In jeder Sprache.",
+    cta: "Sprechen wir darüber",
+    ctaSub: "Unverbindlich",
+    problemsTitle: "Deine Probleme, unsere Lösungen",
     problems: [
       {
         num: "1",
-        problem: "Dúvidas, incidentes e reclamações chegam a qualquer hora e ficam sem resposta?",
-        solutionTitle: "Suporte 24/7",
-        solutionDesc: "O assistente responde sozinho à maioria dos casos no WhatsApp. O operador intervém apenas quando necessário, com um resumo já preparado: sede, máquina e incidente.",
+        problem: "Fragen, Störungen und Beschwerden treffen zu jeder Uhrzeit ein und bleiben unbeantwortet?",
+        solutionTitle: "Support rund um die Uhr",
+        solutionDesc: "Der Assistent bearbeitet die meisten Fälle auf WhatsApp ganz allein. Der Mitarbeiter greift nur ein, wenn es nötig ist, mit einer fertigen Zusammenfassung: Standort, Maschine und Störung.",
       },
       {
         num: "2",
-        problem: "Clientes estrangeiros que não entendem as instruções nem sabem como pedir ajuda?",
-        solutionTitle: "Tradução em tempo real",
-        solutionDesc: "O cliente escreve no seu idioma, você responde no seu. A conversa é traduzida em ambas as direções, instantaneamente. Zero barreiras.",
+        problem: "Ausländische Kunden, die die Anleitungen nicht verstehen und nicht wissen, wie sie um Hilfe bitten sollen?",
+        solutionTitle: "Echtzeit-Übersetzung",
+        solutionDesc: "Der Kunde schreibt in seiner Sprache, du antwortest in deiner. Das Gespräch wird in beide Richtungen übersetzt, sofort. Null Barrieren.",
       },
       {
         num: "3",
-        problem: "Sem forma de contactar os seus clientes para lhes oferecer uma promoção?",
-        solutionTitle: "Campanhas e avisos pelo WhatsApp",
-        solutionDesc: "Envie ofertas e lembretes por sede diretamente para o telemóvel do cliente. O mesmo canal de suporte torna-se um canal que gera vendas.",
+        problem: "Keine Möglichkeit, deine Kunden zu erreichen, um ihnen eine Aktion anzubieten?",
+        solutionTitle: "WhatsApp-Kampagnen & Benachrichtigungen",
+        solutionDesc: "Sende Angebote und Erinnerungen pro Standort direkt auf das Handy des Kunden. Derselbe Support-Kanal wird zu einem Kanal, der Verkäufe erzeugt.",
       },
       {
         num: "4",
-        problem: "Cada sede tem os seus próprios preços e horários e a gestão torna-se complicada?",
-        solutionTitle: "Respostas personalizadas",
-        solutionDesc: "A IA identifica de qual sede o cliente está a escrever e responde com os dados corretos: preços, horários e informações desse local.",
+        problem: "Jeder Standort hat eigene Preise und Öffnungszeiten und die Verwaltung wird kompliziert?",
+        solutionTitle: "Personalisierte Antworten",
+        solutionDesc: "Die KI erkennt, von welchem Standort der Kunde schreibt, und antwortet mit den richtigen Daten: Preisen, Öffnungszeiten und Informationen zu dieser Filiale.",
       },
       {
         num: "5",
-        problem: "Demasiadas coisas para orquestrar ao mesmo tempo: responder, traduzir, faturar, avisar…?",
-        solutionTitle: "Uma IA que orquestra tudo",
-        solutionDesc: "Não é apenas um chatbot: é uma IA feita à medida que responde, envia faturas, áudios e vídeos, traduz, escala para um operador e, acima de tudo, conecta-se às suas máquinas.",
+        problem: "Zu viele Dinge gleichzeitig zu koordinieren: antworten, übersetzen, abrechnen, benachrichtigen…?",
+        solutionTitle: "Eine KI, die alles orchestriert",
+        solutionDesc: "Es ist nicht nur ein Chatbot: Es ist eine maßgeschneiderte KI, die antwortet, Rechnungen, Audio und Video versendet, übersetzt, an einen Mitarbeiter eskaliert und sich vor allem mit deinen Maschinen verbindet.",
       },
     ],
-    tagline: "Uma única solução: menos trabalho, clientes atendidos, mais vendas.",
-    securityTitle: "Os seus dados, sob o seu controlo.",
+    tagline: "Eine einzige Lösung: weniger Arbeit, betreute Kunden, mehr Umsatz.",
+    securityTitle: "Deine Daten, unter deiner Kontrolle.",
     securityItems: [
-      { icon: "shield", title: "Segurança dos dados", desc: "A IA dialoga de forma natural, mas não está sempre ativa. Quando há que recolher dados pessoais do cliente, o sistema passa automaticamente do modo IA para um fluxo controlado. As informações pessoais nunca são enviadas a serviços de IA externos." },
-      { icon: "server", title: "On-premise: tudo em sua casa", desc: "O sistema é instalado nos seus servidores. Todo o software corre dentro da empresa, que mantém o controlo total das conversas e da informação, sem que os dados passem por terceiros." },
-      { icon: "puzzle", title: "Expansível às suas necessidades", desc: "As funcionalidades crescem consigo: novas integrações, ligação aos seus sistemas e funções autónomas, conforme o que o seu negócio precisar em cada momento." },
-      { icon: "users", title: "Um projeto que construímos juntos", desc: "Não se adaptam a um produto rígido: construímos o sistema em torno da sua realidade. Treinamos a IA com os seus casos reais e afinamo-la ao longo do tempo." },
+      { icon: "shield", title: "Datensicherheit", desc: "Die KI führt natürliche Gespräche, ist aber nicht immer aktiv. Sobald personenbezogene Daten des Kunden erfasst werden müssen, wechselt das System automatisch vom KI-Modus in einen kontrollierten Ablauf. Persönliche Informationen werden niemals an externe KI-Dienste gesendet." },
+      { icon: "server", title: "On-Premise: alles im eigenen Haus", desc: "Das System wird auf deinen Servern installiert. Die gesamte Software läuft innerhalb des Unternehmens, das die volle Kontrolle über Gespräche und Informationen behält, ohne dass Daten an Dritte gelangen." },
+      { icon: "puzzle", title: "Erweiterbar nach deinen Bedürfnissen", desc: "Die Funktionen wachsen mit dir: neue Integrationen, Anbindungen an deine Systeme und autonome Funktionen, je nachdem, was dein Unternehmen gerade braucht." },
+      { icon: "users", title: "Ein Projekt, das wir gemeinsam aufbauen", desc: "Du passt dich nicht an ein starres Produkt an: Wir bauen das System rund um deine Realität. Wir trainieren die KI mit deinen echten Fällen und verfeinern sie mit der Zeit." },
     ],
-    securityTagline: "Feito à sua medida. Seguro, seu, e pensado para o seu negócio.",
-    translationTitle: "Sem barreiras de idioma.",
-    translationDesc: "O cliente escreve em árabe, o operador trabalha em português. Cada mensagem é traduzida em ambas as direções, em tempo real — uma conversa natural mesmo que falem idiomas diferentes.",
-    actsTitle: "Não só responde: age e vende.",
-    actsDesc: "O cliente avisa que a máquina de lavar não abre. A IA liga-se à máquina, desbloqueia-a e confirma. E na mesma conversa, apresenta o cartão de fidelidade.",
-    campaignsTitle: "Converta avisos em vendas.",
-    campaignsDesc: "Com um clique envia uma campanha a todos os seus clientes pelo WhatsApp: uma promoção para as horas calmas, uma novidade ou o cartão de fidelidade. O canal de suporte torna-se a sua melhor ferramenta de marketing.",
-    ctaTitle: "Vamos conversar?",
-    ctaDesc: "Descubra como o eChatbot pode transformar a sua franquia de lavanderias.",
+    securityTagline: "Auf dich zugeschnitten. Sicher, deins, und für dein Unternehmen gemacht.",
+    translationTitle: "Keine Sprachbarrieren.",
+    translationDesc: "Der Kunde schreibt auf Arabisch, der Mitarbeiter arbeitet auf Deutsch. Jede Nachricht wird in beide Richtungen übersetzt, in Echtzeit — ein natürliches Gespräch, auch wenn sie verschiedene Sprachen sprechen.",
+    actsTitle: "Antwortet nicht nur: handelt und verkauft.",
+    actsDesc: "Der Kunde meldet, dass die Waschmaschine nicht aufgeht. Die KI verbindet sich mit der Maschine, entsperrt sie und bestätigt. Und im selben Gespräch präsentiert sie die Treuekarte.",
+    campaignsTitle: "Verwandle Benachrichtigungen in Verkäufe.",
+    campaignsDesc: "Mit einem Klick sendest du eine Kampagne an alle deine Kunden auf WhatsApp: eine Aktion für ruhige Zeiten, ein neues Angebot oder die Treuekarte. Der Support-Kanal wird zu deinem besten Marketing-Werkzeug.",
+    ctaTitle: "Sprechen wir darüber?",
+    ctaDesc: "Entdecke, wie eChatbot deine Wäscherei-Franchise transformieren kann.",
   },
 }
 
@@ -284,62 +287,20 @@ export function LaundryServicePage() {
       <SiteHeader />
 
       <main className="min-h-screen bg-[#070d18] text-slate-200">
-        {/* Hero — minimal: title + text + photo. */}
-        <section className="relative pt-16 pb-16 lg:pt-24 lg:pb-24 overflow-hidden">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-              <div>
-                <motion.h1
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6 }}
-                  className="text-3xl lg:text-4xl font-bold leading-tight mb-5 text-white"
-                >
-                  {t.heroTitle}
-                </motion.h1>
-                <motion.p
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.1 }}
-                  className="text-lg text-slate-400 mb-8 max-w-xl"
-                >
-                  {t.heroSub}
-                </motion.p>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.2 }}
-                  className="flex flex-col sm:flex-row gap-4"
-                >
-                  <Link
-                    to="/contact"
-                    className="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-4 rounded-xl transition-colors"
-                  >
-                    {t.cta} <ArrowRight className="w-5 h-5" />
-                  </Link>
-                  <p className="self-center text-sm text-slate-400">{t.ctaSub}</p>
-                </motion.div>
-              </div>
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.15 }}
-                className="hidden lg:block"
-              >
-                <img
-                  src="/laundry1.png"
-                  alt="eChatbot AI assistant for laundry services"
-                  className="w-full h-auto rounded-3xl shadow-2xl border border-white/10"
-                />
-              </motion.div>
-            </div>
-          </div>
-        </section>
+        <LandingHero
+          title={t.heroTitle}
+          subtitle={t.heroSub}
+          ctaLabel={t.cta}
+          image={{ src: "/laundry1.png", alt: "eChatbot AI assistant for laundry services" }}
+          imageSide="right"
+          buttonClassName="bg-green-600 hover:bg-green-700"
+          note={t.ctaSub}
+        />
 
         {/* Problems → Solutions */}
         <section className="py-16 lg:py-24">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-white text-center mb-12">{t.problemsTitle}</h2>
+            <SectionHeader title={t.problemsTitle} className="mb-12" titleClassName="text-3xl" />
             <div className="space-y-6">
               {t.problems.map((item, idx) => (
                 <motion.div
@@ -509,19 +470,13 @@ export function LaundryServicePage() {
           </div>
         </section>
 
-        {/* CTA */}
-        <section className="py-16 lg:py-24 bg-gradient-to-br from-green-600 to-green-700 text-white">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-4xl font-bold mb-4">{t.ctaTitle}</h2>
-            <p className="text-green-100 text-lg mb-8">{t.ctaDesc}</p>
-            <Link
-              to="/contact"
-              className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-green-700 font-bold px-10 py-4 rounded-xl transition-colors text-lg"
-            >
-              {t.cta} <ArrowRight className="w-5 h-5" />
-            </Link>
-          </div>
-        </section>
+        <CtaSection
+          title={t.ctaTitle}
+          subtitle={t.ctaDesc}
+          ctaLabel={t.cta}
+          gradientClassName="from-green-600 to-green-700"
+          buttonClassName="text-green-700"
+        />
       </main>
 
       <SiteFooter language={language} />

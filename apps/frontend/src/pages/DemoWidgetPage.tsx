@@ -120,21 +120,6 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     unavailable: "Démo indisponible",
     contact: "Contactez-nous",
   },
-  pt: {
-    liveDemo: "Demo ao vivo",
-    intro:
-      "Experimente ao vivo o nosso assistente de IA no WhatsApp — comece a escrever, tal como no WhatsApp. O bot deteta o seu idioma automaticamente.",
-    tryFor: "Experimente, por exemplo:",
-    items: [
-      "📅 Marcar um agendamento",
-      "💶 Perguntar preços e horários de funcionamento",
-      "🧺 Avisar que uma máquina de lavar não funciona",
-      "🙋 Pedir para falar com um operador",
-    ],
-    loading: "A carregar o assistente…",
-    unavailable: "Demo indisponível",
-    contact: "Contacte-nos",
-  },
   ca: {
     liveDemo: "Demo en directe",
     intro:
@@ -321,9 +306,10 @@ export function DemoWidgetPage() {
           instantChat
           hideWorkspaceName
           plainWhatsappNumber
+          whatsappBadge
           icon="whatsapp"
           monogram="DW"
-          title={demo.workspaceName || "Chat with us 💬"}
+          title="DemoWash"
           primaryColor="#25D366"
           position="bottom-right"
           welcomeVideoUrl={demo.welcomeVideoUrl || undefined}

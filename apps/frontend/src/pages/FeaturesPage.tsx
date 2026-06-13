@@ -2,12 +2,12 @@ import { useEffect } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
-import { 
-  Bot, 
-  MessageSquare, 
-  Users, 
-  ShoppingCart, 
-  Lock, 
+import {
+  Bot,
+  MessageSquare,
+  Users,
+  ShoppingCart,
+  Lock,
   Zap,
   Globe,
   Smartphone,
@@ -20,8 +20,10 @@ import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
 import { Breadcrumbs } from "@/components/Breadcrumbs"
+import { SectionHeader } from "@/components/landing/SectionHeader"
+import { CtaSection } from "@/components/landing/CtaSection"
 
-type Language = "it" | "en" | "es" | "pt"
+type Language = "it" | "en" | "es" | "de"
 
 const translations = {
   it: {
@@ -156,38 +158,38 @@ const translations = {
       cta: "Descubre las integraciones",
     },
   },
-  pt: {
-    seoTitle: "Funcionalidades - Plataforma IA Chatbot WhatsApp | eChatbot",
-    ctaTitle: "Pronto para transformar o seu negócio?",
-    ctaSub: "Conte-nos sobre o seu negócio, respondemos em breve.",
-    ctaBtn: "Fale Connosco",
-    seoDescription: "Descubra todas as funcionalidades do eChatbot: automação IA, suporte humano, marketing push, integração CRM, e-commerce, privacidade e segurança.",
-    seoKeywords: "chatbot whatsapp, ai chatbot, automatização customer service, marketing push, integração crm, chatbot ecommerce, human in the loop, privacidade gdpr",
-    breadcrumb: "Funcionalidades",
+  de: {
+    seoTitle: "Funktionen - KI WhatsApp Chatbot Plattform | eChatbot",
+    ctaTitle: "Bereit, dein Business zu transformieren?",
+    ctaSub: "Erzähl uns von deinem Business, wir melden uns in Kürze.",
+    ctaBtn: "Kontaktiere uns",
+    seoDescription: "Entdecke alle Funktionen von eChatbot: KI-Automatisierung, menschlicher Support, Push-Marketing, CRM-Integration, E-Commerce, Datenschutz und Sicherheit.",
+    seoKeywords: "whatsapp chatbot, ki chatbot, customer service automatisierung, push-marketing, crm integration, ecommerce chatbot, human in the loop, datenschutz dsgvo",
+    breadcrumb: "Funktionen",
     hero: {
-      badge: "Plataforma Completa",
-      title: "Tudo o que precisa para<br/>automatizar o seu negócio",
-      subtitle: "O eChatbot combina inteligência artificial, automação e intervenção humana para criar experiências de cliente excecionais no WhatsApp e widgets web.",
-      cta: "Fale Connosco",
+      badge: "Komplette Plattform",
+      title: "Alles, was du brauchst, um<br/>dein Business zu automatisieren",
+      subtitle: "eChatbot verbindet künstliche Intelligenz, Automatisierung und menschliches Eingreifen, um auf WhatsApp und Web-Widgets außergewöhnliche Kundenerlebnisse zu schaffen.",
+      cta: "Kontaktiere uns",
     },
     coreFeatures: {
-      title: "Funcionalidades Principais",
-      subtitle: "As capacidades que tornam o eChatbot a escolha ideal para o seu negócio",
+      title: "Kernfunktionen",
+      subtitle: "Die Fähigkeiten, die eChatbot zur idealen Wahl für dein Business machen",
       features: [
-        { icon: "Bot", title: "Automação IA Avançada", description: "Chatbot inteligente baseado em GPT-4 que compreende linguagem natural, responde a perguntas complexas e aprende com as conversas.", points: ["Compreensão do contexto", "Respostas personalizadas", "Aprendizagem contínua"] },
-        { icon: "Users", title: "Suporte Human-in-the-Loop", description: "Mude facilmente da IA para um operador humano quando necessário. O chatbot sabe quando pedir ajuda e transfere a conversa sem interrupções.", points: ["Handoff inteligente", "Dashboard operadores", "Continuidade da conversa"] },
-        { icon: "MessageSquare", title: "Marketing Push Proativo", description: "Envie campanhas de marketing direcionadas no WhatsApp. Segmente o público, personalize mensagens e meça resultados em tempo real.", points: ["Segmentação avançada", "A/B testing", "Analytics detalhados"] },
-        { icon: "ShoppingCart", title: "E-Commerce Integrado", description: "Venda produtos diretamente no WhatsApp. Catálogo de produtos, carrinho, pagamentos e rastreamento de pedidos tudo no chat.", points: ["Catálogo IA", "Pagamentos seguros", "Gestão de pedidos"] },
-        { icon: "Globe", title: "Widget → WhatsApp", description: "Um único chatbot para site e WhatsApp. Os clientes começam no widget e continuam no WhatsApp sem repetir informações.", points: ["Sessão unificada", "Continuidade de dados", "Zero fricção"] },
-        { icon: "CalendarCheck", title: "Agendamento de Consultas", description: "Sistema de agendamento de consultas integrado com o chatbot. Os clientes podem agendar, modificar e cancelar consultas diretamente no chat.", points: ["Slots disponíveis em tempo real", "Lembretes automáticos WhatsApp", "Gestão de horários e bloqueios"] },
+        { icon: "Bot", title: "Fortschrittliche KI-Automatisierung", description: "Intelligenter Chatbot auf Basis von GPT-4, der natürliche Sprache versteht, komplexe Fragen beantwortet und aus den Gesprächen lernt.", points: ["Kontextverständnis", "Personalisierte Antworten", "Kontinuierliches Lernen"] },
+        { icon: "Users", title: "Human-in-the-Loop Support", description: "Wechsle bei Bedarf mühelos von der KI zu einem menschlichen Mitarbeiter. Der Chatbot weiß, wann er um Hilfe bitten muss, und übergibt das Gespräch nahtlos.", points: ["Intelligente Übergabe", "Mitarbeiter-Dashboard", "Gesprächskontinuität"] },
+        { icon: "MessageSquare", title: "Proaktives Push-Marketing", description: "Versende gezielte Marketingkampagnen auf WhatsApp. Segmentiere dein Publikum, personalisiere Nachrichten und miss die Ergebnisse in Echtzeit.", points: ["Erweiterte Segmentierung", "A/B-Testing", "Detaillierte Analytics"] },
+        { icon: "ShoppingCart", title: "Integriertes E-Commerce", description: "Verkaufe Produkte direkt auf WhatsApp. Produktkatalog, Warenkorb, Zahlungen und Bestellverfolgung alles im Chat.", points: ["KI-Produktkatalog", "Sichere Zahlungen", "Bestellverwaltung"] },
+        { icon: "Globe", title: "Widget → WhatsApp", description: "Ein einziger Chatbot für Website und WhatsApp. Kunden starten im Widget und machen auf WhatsApp weiter, ohne Informationen zu wiederholen.", points: ["Einheitliche Session", "Datenkontinuität", "Null Reibung"] },
+        { icon: "CalendarCheck", title: "Terminbuchung", description: "Integriertes Terminbuchungssystem mit dem Chatbot. Kunden können Termine direkt im Chat buchen, ändern und stornieren.", points: ["Verfügbare Slots in Echtzeit", "Automatische WhatsApp-Erinnerungen", "Verwaltung von Öffnungszeiten & Sperrzeiten"] },
       ],
     },
     integration: {
-      title: "Integrações Poderosas",
-      subtitle: "Ligue o eChatbot às suas ferramentas de trabalho",
-      description: "Integre facilmente o chatbot com CRMs (Salesforce, HubSpot), plataformas de e-commerce (WooCommerce, PrestaShop, Magento), sistemas ERP, software de armazém, ferramentas de marketing automation e muito mais.",
-      imagePlaceholder: "Imagem de integração",
-      cta: "Descubra as integrações",
+      title: "Leistungsstarke Integrationen",
+      subtitle: "Verbinde eChatbot mit deinen Arbeitstools",
+      description: "Integriere den Chatbot mühelos mit CRMs (Salesforce, HubSpot), E-Commerce-Plattformen (WooCommerce, PrestaShop, Magento), ERP-Systemen, Warehouse-Software, Marketing-Automation-Tools und vielem mehr.",
+      imagePlaceholder: "Platzhalter für Integrationsbild",
+      cta: "Entdecke die Integrationen",
     },
   },
 }
@@ -265,14 +267,11 @@ export function FeaturesPage() {
         {/* Core Features Section */}
         <section className="py-20 border-y border-white/5 bg-white/[0.02]">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">
-                {t.coreFeatures.title}
-              </h2>
-              <p className="text-xl text-slate-400 max-w-3xl mx-auto">
-                {t.coreFeatures.subtitle}
-              </p>
-            </div>
+            <SectionHeader
+              title={t.coreFeatures.title}
+              subtitle={t.coreFeatures.subtitle}
+              titleClassName="lg:text-5xl"
+            />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {t.coreFeatures.features.map((feature, index) => (
@@ -364,31 +363,13 @@ export function FeaturesPage() {
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="py-20 bg-gradient-to-br from-green-600 to-emerald-700">
-          <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
-                {t.ctaTitle}
-              </h2>
-              <p className="text-xl text-green-100 mb-10">
-                {t.ctaSub}
-              </p>
-              <Link
-                to="/contact"
-                className="inline-flex items-center gap-3 bg-white hover:bg-slate-50 text-[#25D366] font-semibold px-10 py-5 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
-              >
-                <Zap className="h-6 w-6" />
-                <span>{t.ctaBtn}</span>
-              </Link>
-            </motion.div>
-          </div>
-        </section>
+        <CtaSection
+          title={t.ctaTitle}
+          subtitle={t.ctaSub}
+          ctaLabel={t.ctaBtn}
+          animated
+          wide
+        />
       </main>
 
       <SiteFooter language={language} />

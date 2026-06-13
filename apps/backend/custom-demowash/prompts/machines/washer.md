@@ -18,21 +18,18 @@ Esta información es **común a todas las sedes**. Los códigos exactos que apar
 | `ALERT OPEN:`   | Posible problema de cierre o prenda atrapada             | Primero tratar como OPEN. Si persiste → ESCALAR + reportar a técnico. |
 | `ERR-01`         | Selección del programa antes del pago                    | Procedimiento ERR-01 (ver abajo). |
 | `ALERT`/`BLOCK`   | Fallo técnico de la máquina DURANTE el uso (no arranca / se detiene) | Procedimiento ALARMA TÉCNICA (ver abajo). ESCALAR siempre. **NO** usar este procedimiento si el lavado ya terminó y solo la puerta no abre → ese caso es `OPEN ERROR`. |
-| `DOOR` / `OPEN DOOR` | La puerta no cierra bien ANTES del lavado (equivalente a `OPEN:`) | Procedimiento OPEN (ver abajo). NO preguntes "antes o después": el código ya indica que es antes de lavar. |
+| `DOOR` / `OPEN DOOR` | La puerta no cierra bien ANTES del lavado (equivalente a `OPEN:`), **siempre que la puerta se pueda abrir** | Procedimiento OPEN (ver abajo). Si el cliente dice que NO consigue abrir la puerta → es ropa atrapada → `OPEN ERROR` (ver "criterio decisivo" abajo). |
 
-## Puerta: elegir procedimiento por el código de pantalla
+## Puerta: el criterio decisivo es si la puerta SE PUEDE ABRIR
 
-Cuando el cliente dice de forma genérica que **«la puerta no se abre / no funciona»**, **PREGUNTA PRIMERO qué aparece en la pantalla** (*"¿qué código aparece en la pantalla de la máquina?"*) — el código identifica el caso sin ambigüedad:
+Cuando el cliente dice de forma genérica que **«la puerta no se abre / no funciona»**, lo que decide el procedimiento **NO es el código de pantalla** (el cliente puede leerlo mal, y `OPEN` / `OPEN DOOR` son ambiguos), sino **si consigue abrir la puerta**:
 
-- `OPEN:`, `DOOR`, `OPEN DOOR` → la puerta **no cierra ANTES** de lavar (la ropa aún NO se ha lavado). Se resuelve solo: cerrar bien y arrancar → **Procedimiento OPEN**.
-- `OPEN ERROR` → el ciclo **YA TERMINÓ** y la puerta **no abre** con la ropa atrapada dentro. Escalación URGENTE para desbloqueo remoto; nunca cambiar de máquina ni repetir el ciclo → **Procedimiento PUERTA BLOQUEADA FIN DE CICLO**.
+- **La puerta NO se abre** (bloqueada, con la ropa dentro) → la ropa está atrapada → `OPEN ERROR` → **Procedimiento PUERTA BLOQUEADA FIN DE CICLO**. Aplica **pase lo que pase en la pantalla**, incluso si el cliente lee `OPEN` / `OPEN DOOR`: si la puerta no se abre, el Procedimiento OPEN (abrir y volver a cerrar) es imposible.
+- **La puerta SÍ se abre pero no cierra / no engancha para arrancar** (la ropa aún NO se ha lavado) → `OPEN:` → **Procedimiento OPEN**.
 
-**Solo si el cliente NO sabe leer / no ve ningún código en pantalla**, desambigua preguntando por el momento: pregúntale, para orientarte mejor, si el lavado ya ha terminado y tiene la ropa dentro, o si aún no ha podido empezar.
+Si no está claro cuál de los dos es, pregunta directamente: *"¿consigues abrir la puerta, o está bloqueada con la ropa dentro?"*. **No** te bases en "¿ha terminado el lavado?": un lavado "no terminado" con la ropa dentro y la puerta bloqueada es ropa atrapada (`OPEN ERROR`), no una puerta que no cierra para empezar.
 
-- Responde "ya terminó / la ropa está dentro" → trátalo como `OPEN ERROR` → Procedimiento PUERTA BLOQUEADA FIN DE CICLO.
-- Responde "aún no / no cierra para empezar" → trátalo como `OPEN:` → Procedimiento OPEN.
-
-Si el cliente YA ha dejado claro el momento (p. ej. "ya terminó y no abre"), no repitas la pregunta. Una vez sepas el código correcto, guárdalo con `remember({displayCode})` y aplica el procedimiento; vuelve a pedir el código de pantalla si tras los intentos el cliente dice que sigue sin funcionar.
+Pide el código de pantalla solo como **confirmación secundaria**, nunca como criterio único. Una vez claro el caso, guárdalo con `remember({displayCode})` y aplica el procedimiento; vuelve a pedir el código si tras los intentos el cliente dice que sigue sin funcionar.
 
 ## Procedimiento OPEN
 
