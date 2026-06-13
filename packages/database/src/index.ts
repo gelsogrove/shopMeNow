@@ -36,7 +36,7 @@ import { Pool } from 'pg'
 
 const pool = new Pool({
   connectionString: DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' || DATABASE_URL.includes('amazonaws.com')
+  ssl: process.env.NODE_ENV === 'production' || DATABASE_URL.includes('amazonaws.com') || DATABASE_URL.includes('supabase')
     ? { rejectUnauthorized: false }
     : undefined,
 })

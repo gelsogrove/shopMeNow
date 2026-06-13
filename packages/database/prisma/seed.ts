@@ -33,7 +33,7 @@ import { workspaceSettings } from "./data/workspaceSettings"
 // 🔧 HEROKU FIX: Always use adapter (direct connection causes initialization error in production build)
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL?.includes('heroku') || process.env.DATABASE_URL?.includes('amazonaws')
+  ssl: process.env.DATABASE_URL?.includes('heroku') || process.env.DATABASE_URL?.includes('amazonaws') || process.env.DATABASE_URL?.includes('supabase')
     ? { rejectUnauthorized: false }
     : false
 })
