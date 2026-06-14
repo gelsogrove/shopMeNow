@@ -1794,7 +1794,7 @@ export function LoginPage() {
         <div className="max-w-5xl mx-auto px-6">
           <GlowCard lift accent="emerald" innerClassName="p-8 text-center sm:p-10 lg:p-12">
               <img
-                src="/democasa.png"
+                src="/real-estate.png"
                 alt="DemoCasa"
                 className="mb-6 w-full rounded-2xl object-cover h-48 sm:h-56"
               />
