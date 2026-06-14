@@ -265,10 +265,10 @@ export function App() {
           }
         />
 
-        {/* DemoCasa — real-estate agency demo. Same DemoWidgetPage, branded by
-            slug ("democasa"). Resolves the workspace via customChatbotId="democasa". */}
+        {/* DemoHouse — real-estate agency demo. Same DemoWidgetPage, branded by
+            slug ("demohouse"). Resolves the workspace via customChatbotId="demohouse". */}
         <Route
-          path="/demo/democasa/*"
+          path="/demo/demohouse/*"
           element={
             <Suspense
               fallback={

@@ -1,32 +1,32 @@
 /**
- * Duplicate the demowash demo Workspace as "DemoCasa" (real-estate) so
- * /demo/democasa resolves, owned by a given user.
+ * Duplicate the demowash demo Workspace as "DemoHouse" (real-estate) so
+ * /demo/demohouse resolves, owned by a given user.
  *
  * The public demo page (apps/frontend/src/pages/DemoWidgetPage.tsx) calls
  * GET /api/v1/playground/resolve-demo/:slug, which looks up the workspace whose
- * `customChatbotId` equals the URL slug. So for /demo/democasa to work, ONE
- * workspace must exist with customChatbotId="democasa". The custom chatbot module
- * (apps/backend/custom-democasa/) is standalone and prompt-driven — it needs no
+ * `customChatbotId` equals the URL slug. So for /demo/demohouse to work, ONE
+ * workspace must exist with customChatbotId="demohouse". The custom chatbot module
+ * (apps/backend/custom-demohouse/) is standalone and prompt-driven — it needs no
  * AgentConfig / FlowNodeConfig rows, only the workspace to exist.
  *
  * What it does: clone the demowash workspace's behaviour/display config, but
  * NEVER copy channel credentials (WhatsApp / Meta / UltraMsg / Wasender / API
  * keys / webhook secrets / storage keys) — the demo runs through the widget /
- * demo-chat endpoint, not a real WhatsApp channel. Sets name="DemoCasa",
- * slug="democasa", customChatbotId="democasa", owner = the --owner user, and
+ * demo-chat endpoint, not a real WhatsApp channel. Sets name="DemoHouse",
+ * slug="demohouse", customChatbotId="demohouse", owner = the --owner user, and
  * links that user via UserWorkspace so it shows under their account.
  *
  * SAFE BY DEFAULT: dry-run. Prints exactly what it would create. Pass --apply to
- * write. Idempotent: if a workspace with customChatbotId="democasa" already
+ * write. Idempotent: if a workspace with customChatbotId="demohouse" already
  * exists, it reports it and exits without creating a duplicate.
  *
  * Run (LOCAL, from project root):
- *   dotenv -e .env -- tsx apps/backend/scripts/create-democasa-demo-workspace.ts
- *   dotenv -e .env -- tsx apps/backend/scripts/create-democasa-demo-workspace.ts --apply
+ *   dotenv -e .env -- tsx apps/backend/scripts/create-demohouse-demo-workspace.ts
+ *   dotenv -e .env -- tsx apps/backend/scripts/create-demohouse-demo-workspace.ts --apply
  *
  * Run against a specific DB (e.g. Heroku) — pass DATABASE_URL inline, do NOT print it:
  *   DATABASE_URL="$(heroku config:get DATABASE_URL -a echatbot-app)" \
- *     tsx apps/backend/scripts/create-democasa-demo-workspace.ts --owner gelsogrove@gmail.com
+ *     tsx apps/backend/scripts/create-demohouse-demo-workspace.ts --owner gelsogrove@gmail.com
  *   (add --apply to actually write)
  */
 
@@ -39,10 +39,10 @@ function flag(name: string): string | undefined {
   return i === -1 ? undefined : args[i + 1]
 }
 
-// Defaults create DemoCasa; override via flags to create any custom-chatbot demo
+// Defaults create DemoHouse; override via flags to create any custom-chatbot demo
 // (e.g. --chatbot demowash --name DemoWash --slug demowash --business laundry).
-const CHATBOT_ID = flag("chatbot") || "democasa"
-const NAME = flag("name") || "DemoCasa"
+const CHATBOT_ID = flag("chatbot") || "demohouse"
+const NAME = flag("name") || "DemoHouse"
 const SLUG = (flag("slug") || CHATBOT_ID).toLowerCase()
 const BUSINESS = flag("business") || "real_estate"
 const SOURCE_CHATBOT_ID = flag("source") || "__none__" // workspace to clone config from (if present)
@@ -65,7 +65,7 @@ const DO_NOT_COPY = new Set<string>([
 ])
 
 async function main() {
-  // Idempotency: never create a second DemoCasa workspace.
+  // Idempotency: never create a second DemoHouse workspace.
   const existing = await (prisma as any).workspace.findFirst({
     where: { customChatbotId: CHATBOT_ID },
     select: { id: true, name: true, slug: true, customChatbotId: true, ownerId: true },
@@ -79,7 +79,7 @@ async function main() {
 
   // Source workspace to clone (demowash). Optional: when it isn't present
   // (e.g. a freshly-seeded production DB), we fall back to sensible defaults so
-  // DemoCasa is still created standalone.
+  // DemoHouse is still created standalone.
   const source = await (prisma as any).workspace.findFirst({
     where: { customChatbotId: SOURCE_CHATBOT_ID },
   })

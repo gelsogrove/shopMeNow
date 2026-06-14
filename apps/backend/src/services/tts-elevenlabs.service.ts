@@ -8,6 +8,11 @@
  * languages with natural, fluid prosody — no per-language voice mapping needed.
  * Turbo v2.5 is ~half the credit cost of multilingual_v2 and lower latency.
  *
+ * The spoken language is LOCKED via the `language_code` request param (derived
+ * from the language the bot actually replied in), NOT inferred from the text.
+ * Without it, turbo v2.5's auto-detection is unreliable on short or
+ * code-switched replies and tends to fall back to the tenant base language.
+ *
  * Config (env, no hardcoded secrets):
  *   ELEVENLABS_API_KEY   — required, Creator plan or above (API access)
  *   ELEVENLABS_VOICE_ID  — optional, defaults to a warm multilingual female voice
@@ -65,6 +70,14 @@ export async function generateSpeech(
   const voiceId = voiceIdOverride || process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID
   const trimmed = stripForAudio(text).slice(0, MAX_CHARS)
 
+  // 🌍 Lock the spoken language to the reply language (ISO 639-1). Without this,
+  // turbo v2.5 guesses from the text and frequently mis-speaks short/code-switched
+  // replies as the tenant base language. Only forward a clean 2-letter code.
+  const languageCode =
+    customerLanguage && /^[a-z]{2}$/i.test(customerLanguage)
+      ? customerLanguage.toLowerCase()
+      : undefined
+
   logger.info("[TTS] 🗣️ Generating speech", {
     chars: trimmed.length,
     workspaceId,
@@ -80,6 +93,7 @@ export async function generateSpeech(
       {
         text: trimmed,
         model_id: TTS_MODEL,
+        ...(languageCode ? { language_code: languageCode } : {}),
         voice_settings: {
           // Lower stability → more expressive, less monotone prosody.
           stability: 0.3,

@@ -47,7 +47,7 @@ const CARD_LAST4_CTX_RE =
 // Spanish phone: optional +34 prefix + 9 digits starting with 6/7/8/9.
 const PHONE_ES_RE = /(?:\+34\s?)?[6789]\d{2}[\s.-]?\d{3}[\s.-]?\d{3}/g
 
-// Canonical office/city names. The DemoCasa agency has one branch office per
+// Canonical office/city names. The DemoHouse agency has one branch office per
 // city; the customer tells us which area they're interested in. Names are
 // always written in Latin script, even inside a message in another script
 // (Chinese, Greek, Cyrillic…). The LLM reliably understands them but does NOT

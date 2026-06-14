@@ -1,4 +1,4 @@
-// DemoCasa chatbot — real-estate agency assistant. Prompt-driven LLM with a
+// DemoHouse chatbot — real-estate agency assistant. Prompt-driven LLM with a
 // cached system prompt, session state, appointment booking (property viewings
 // and franchising consultations), valuation requests, and escalation by email.
 //
@@ -73,8 +73,8 @@ const DEFAULT_SETTINGS: Settings = {
   maxToolHops: 4,
   operatorBriefingLanguage: 'es',
   operatorEmail: '',
-  emailFrom: 'DemoCasa Bot <noreply@democasa.demo>',
-  emailSubjectPrefix: '[DemoCasa] Incidencia',
+  emailFrom: 'DemoHouse Bot <noreply@demohouse.demo>',
+  emailSubjectPrefix: '[DemoHouse] Incidencia',
   maxMessageChars: 2000,
   maxMessagesPerMinute: 30,
   maxTurnsPerSession: 50,
@@ -249,7 +249,7 @@ const TOOLS = [
     function: {
       name: 'schedule_appointment',
       description:
-        'Book an appointment. Three purposes: "viewing" = an in-person visit to a property the customer is interested in; "franchising" = a video consultation about opening a DemoCasa agency; "office_consultation" = an in-person meeting with an agent at a specific office (general buying/renting advice, not tied to one property). Call this ONLY when the customer has selected a time slot from the list you offered (by selecting 1, 2, 3, etc.). The tool creates a real Calendar event (and, for franchising, a Zoom meeting) and sends a confirmation email. It returns calendar_link and zoom_link when available — when present, include those exact links in your confirmation message. If they are null, simply confirm by date/time without inventing links. Do NOT call this twice for the same customer.',
+        'Book an appointment. Three purposes: "viewing" = an in-person visit to a property the customer is interested in; "franchising" = a video consultation about opening a DemoHouse agency; "office_consultation" = an in-person meeting with an agent at a specific office (general buying/renting advice, not tied to one property). Call this ONLY when the customer has selected a time slot from the list you offered (by selecting 1, 2, 3, etc.). The tool creates a real Calendar event (and, for franchising, a Zoom meeting) and sends a confirmation email. It returns calendar_link and zoom_link when available — when present, include those exact links in your confirmation message. If they are null, simply confirm by date/time without inventing links. Do NOT call this twice for the same customer.',
       parameters: {
         type: 'object',
         properties: {
@@ -550,10 +550,10 @@ async function executeTool(
     if (ctx.scheduleAppointment && ctx.workspaceId) {
       try {
         const topic = purpose === 'franchising'
-          ? `DemoCasa franchising consultation — ${state.name}`
+          ? `DemoHouse franchising consultation — ${state.name}`
           : purpose === 'office_consultation'
-          ? `DemoCasa office consultation${state.location ? ` (${state.location})` : ''} — ${state.name}`
-          : `DemoCasa property viewing${state.propertyRef ? ` ${state.propertyRef}` : ''} — ${state.name}`
+          ? `DemoHouse office consultation${state.location ? ` (${state.location})` : ''} — ${state.name}`
+          : `DemoHouse property viewing${state.propertyRef ? ` ${state.propertyRef}` : ''} — ${state.name}`
         const booking = await ctx.scheduleAppointment({
           workspaceId: ctx.workspaceId,
           date: selectedSlot.date,
@@ -699,7 +699,7 @@ async function sendValuationEmail(params: ValuationParams): Promise<void> {
     `Teléfono: ${customerPhone ?? '?'}`,
     `Oficina (si se conoce): ${state.location ?? '?'}`,
     '',
-    '— DemoCasa Bot',
+    '— DemoHouse Bot',
   ].join('\n')
 
   await transporter.sendMail({
@@ -759,7 +759,7 @@ async function sendAppointmentEmail(params: AppointmentParams): Promise<void> {
   let textBody: string
 
   if (purpose === 'franchising') {
-    subject = `[DemoCasa] Franchising Consultation Confirmed — ${appointmentId}`
+    subject = `[DemoHouse] Franchising Consultation Confirmed — ${appointmentId}`
     textBody = [
       `Hello ${customerName},`,
       '',
@@ -778,10 +778,10 @@ async function sendAppointmentEmail(params: AppointmentParams): Promise<void> {
       '',
       'See you soon!',
       '',
-      '— DemoCasa Team',
+      '— DemoHouse Team',
     ].join('\n')
   } else if (purpose === 'office_consultation') {
-    subject = `[DemoCasa] Office Appointment Confirmed — ${appointmentId}`
+    subject = `[DemoHouse] Office Appointment Confirmed — ${appointmentId}`
     textBody = [
       `Hello ${customerName},`,
       '',
@@ -797,10 +797,10 @@ async function sendAppointmentEmail(params: AppointmentParams): Promise<void> {
       '',
       'See you soon!',
       '',
-      '— DemoCasa Team',
+      '— DemoHouse Team',
     ].join('\n')
   } else {
-    subject = `[DemoCasa] Property Viewing Confirmed — ${appointmentId}`
+    subject = `[DemoHouse] Property Viewing Confirmed — ${appointmentId}`
     textBody = [
       `Hello ${customerName},`,
       '',
@@ -817,7 +817,7 @@ async function sendAppointmentEmail(params: AppointmentParams): Promise<void> {
       '',
       'See you soon!',
       '',
-      '— DemoCasa Team',
+      '— DemoHouse Team',
     ].join('\n')
   }
 
@@ -871,10 +871,10 @@ async function sendAppointmentOperatorBriefing(params: AppointmentBriefingParams
   const isFranchising = purpose === 'franchising'
   const isOffice = purpose === 'office_consultation'
   const subject = isFranchising
-    ? `[DemoCasa] Nueva consulta franchising — ${appointmentId}`
+    ? `[DemoHouse] Nueva consulta franchising — ${appointmentId}`
     : isOffice
-    ? `[DemoCasa] Nueva cita en oficina — ${appointmentId}`
-    : `[DemoCasa] Nueva visita de inmueble — ${appointmentId}`
+    ? `[DemoHouse] Nueva cita en oficina — ${appointmentId}`
+    : `[DemoHouse] Nueva visita de inmueble — ${appointmentId}`
   const textBody = [
     isFranchising
       ? 'Nueva solicitud de consulta de franchising.'
@@ -896,14 +896,14 @@ async function sendAppointmentOperatorBriefing(params: AppointmentBriefingParams
     '',
     '— Interés —',
     isFranchising
-      ? 'Consulta de franchising (apertura de agencia DemoCasa).'
+      ? 'Consulta de franchising (apertura de agencia DemoHouse).'
       : isOffice
       ? 'Cita en oficina con un agente (asesoramiento de compra/alquiler).'
       : 'Visita a inmueble.',
     ...(zoomLink ? ['', `🔗 Zoom: ${zoomLink}`] : []),
     ...(calendarLink ? [`📆 Calendar: ${calendarLink}`] : []),
     '',
-    '— DemoCasa Bot',
+    '— DemoHouse Bot',
   ].join('\n')
 
   await transporter.sendMail({
@@ -964,7 +964,7 @@ async function sendEscalationEmail(params: EscalationParams): Promise<void> {
     '',
     summary,
     '',
-    '— DemoCasa Bot',
+    '— DemoHouse Bot',
   ].join('\n')
 
   await transporter.sendMail({
@@ -1037,7 +1037,7 @@ async function callLLM(
       Authorization: `Bearer ${API_KEY}`,
       'Content-Type': 'application/json',
       'HTTP-Referer': 'https://echatbot.ai',
-      'X-Title': 'DemoCasa',
+      'X-Title': 'DemoHouse',
     },
     body: JSON.stringify(payload),
   })
@@ -1453,7 +1453,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
         closeChat: false,
         audioOutput: AUDIO_OUTPUT,
         audioVoices: AUDIO_VOICES,
-        meta: { tokensUsed: 0, agentChain: ['custom-democasa'] },
+        meta: { tokensUsed: 0, agentChain: ['custom-demohouse'] },
         error: 'llm_unavailable',
       }
     }
@@ -1504,7 +1504,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       audioVoices: AUDIO_VOICES,
       meta: {
         tokensUsed: result.tokensUsed,
-        agentChain: ['custom-democasa'],
+        agentChain: ['custom-demohouse'],
       },
     }
   } catch (err) {
@@ -1515,7 +1515,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       closeChat: false,
       audioOutput: AUDIO_OUTPUT,
       audioVoices: AUDIO_VOICES,
-      meta: { tokensUsed: 0, agentChain: ['custom-democasa'] },
+      meta: { tokensUsed: 0, agentChain: ['custom-demohouse'] },
       error: err instanceof Error ? err.message : String(err),
     }
   }
@@ -1527,7 +1527,7 @@ async function runInteractive(systemPrompt: string): Promise<void> {
   const sessionId = 'cli-interactive'
   const history: Message[] = []
   const rl = createInterface({ input: process.stdin, output: process.stdout })
-  console.log('DemoCasa chatbot — assembled prompt + state + tools + escalation.')
+  console.log('DemoHouse chatbot — assembled prompt + state + tools + escalation.')
   console.log('Commands: /exit /quit /reset /state')
   console.log(`model=${MODEL} prompts=${PROMPTS_DIR}${LOCAL_MODE ? ` [LOCAL: ${BASE_URL}]` : ''}`)
   if (OPERATOR_EMAIL) {

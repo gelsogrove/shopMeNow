@@ -1444,11 +1444,16 @@ export class WidgetChatController {
       // widget can show an audio player. A TTS failure leaves the text reply intact.
       if (typeof body.response === "string" && body.response.trim()) {
         try {
-          const tts = await generateSpeech(
-            body.response,
-            workspaceId,
-            typeof req.body.language === "string" ? req.body.language : undefined
-          )
+          // 🌍 Prefer the language the bot actually replied in (surfaced by
+          // sendMessage as body.language) so the spoken audio matches the reply,
+          // not the widget's configured/guessed language.
+          const ttsLanguage =
+            typeof body.language === "string"
+              ? body.language
+              : typeof req.body.language === "string"
+              ? req.body.language
+              : undefined
+          const tts = await generateSpeech(body.response, workspaceId, ttsLanguage)
           if (tts?.audioUrl) {
             body.audioUrl = tts.audioUrl
           }
@@ -2284,7 +2289,10 @@ export class WidgetChatController {
             response: customerReply,
             status: "ready",
             suggestions: customSuggestions,
-            language: customerLanguage || "en",
+            // 🌍 Surface the language the bot ACTUALLY replied in (⟦LANG:xx⟧),
+            // not the widget/phone guess — the audio (voice-in→voice-out) path
+            // reads this to synthesize TTS in the correct spoken language.
+            language: customOutput.language || customerLanguage || "en",
             ...(customOutput.shouldEscalate && { activeChatbot: false }),
             customerProfile: {
               name: customer.name,

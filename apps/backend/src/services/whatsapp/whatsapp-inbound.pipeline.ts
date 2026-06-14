@@ -710,11 +710,12 @@ export class WhatsAppInboundPipeline {
           const { customerReply } = splitCustomChatbotReply(customOutput.reply)
           const welcomeVideoUrl = (customer as any).workspace?.welcomeVideoUrl as string | null | undefined
 
-          // 🌍 The welcome-video intro line is deterministic (not LLM-translated),
-          // so it must follow the SAME language the bot replied in — detected by
-          // the module from the message text — not `customerLanguage` (a phone/DB
-          // guess that can disagree with the reply on first contact).
-          const welcomeIntroLanguage = customOutput.language ?? customerLanguage
+          // 🌍 The language the bot ACTUALLY replied in — declared by the module
+          // via the ⟦LANG:xx⟧ trailer (committed to session state), detected from
+          // the message text. Use this (NOT `customerLanguage`, a phone/DB guess
+          // that can disagree on first contact) for both the deterministic
+          // welcome-video intro line AND the TTS spoken language/voice.
+          const replyLanguage = customOutput.language ?? customerLanguage
 
           // 📺 First message with a presentation video → mirror the playground's
           // WelcomeVideoCard ORDER (greeting → intro → video → rest). Works the
@@ -722,7 +723,7 @@ export class WhatsAppInboundPipeline {
           // provider-agnostic send()/sendMedia() of WhatsAppDirectSendService.
           const videoSplit =
             messageCount === 0 && welcomeVideoUrl && !inboundWasAudio
-              ? buildWelcomeVideoSplit(customerReply, welcomeVideoUrl, welcomeIntroLanguage)
+              ? buildWelcomeVideoSplit(customerReply, welcomeVideoUrl, replyLanguage)
               : null
 
           if (videoSplit) {
@@ -753,7 +754,7 @@ export class WhatsAppInboundPipeline {
             let finalReply = customerReply
             if (messageCount === 0 && welcomeVideoUrl && !inboundWasAudio) {
               const introText =
-                WELCOME_VIDEO_INTRO[welcomeIntroLanguage ?? "en"] ?? WELCOME_VIDEO_INTRO.en
+                WELCOME_VIDEO_INTRO[replyLanguage ?? "en"] ?? WELCOME_VIDEO_INTRO.en
               const breakIdx = customerReply.indexOf("\n\n")
               if (breakIdx !== -1) {
                 const greeting = customerReply.slice(0, breakIdx)
@@ -773,10 +774,11 @@ export class WhatsAppInboundPipeline {
               // Audio reply only when the customer sent audio AND the tenant's
               // settings.json enables audioOutput (settings are law — iron rule 7).
               replyAsAudio: inboundWasAudio && customOutput.audioOutput === true,
-              customerLanguage,
+              // 🌍 Speak in the language the bot replied in, not the phone guess.
+              customerLanguage: replyLanguage,
               // Per-language voice from settings.json (falls back to "default").
               ttsVoiceId:
-                customOutput.audioVoices?.[customerLanguage ?? ""] ??
+                customOutput.audioVoices?.[replyLanguage ?? ""] ??
                 customOutput.audioVoices?.default,
             })
           }

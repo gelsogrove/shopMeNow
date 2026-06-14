@@ -1,7 +1,7 @@
 {
-  "name": "democasa-chatbot",
+  "name": "demohouse-chatbot",
   "version": "0.1.0",
-  "description": "DemoCasa chatbot — real-estate agency assistant, prompt-driven LLM with cached system prompt, session state, viewing/franchising appointments, valuation requests, escalation by email. Twin architecture of custom-demowash.",
+  "description": "DemoHouse chatbot — real-estate agency assistant, prompt-driven LLM with cached system prompt, session state, viewing/franchising appointments, valuation requests, escalation by email. Twin architecture of custom-demowash.",
   "type": "module",
   "scripts": {
     "demo": "node --import tsx agent.ts",

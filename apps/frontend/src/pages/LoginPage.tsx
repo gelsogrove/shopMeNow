@@ -1789,13 +1789,13 @@ export function LoginPage() {
         </div>
       </section>
 
-      {/* DemoCasa live-demo card — real-estate agency demo, same WhatsApp-green styling */}
+      {/* DemoHouse live-demo card — real-estate agency demo, same WhatsApp-green styling */}
       <section className="py-12">
         <div className="max-w-5xl mx-auto px-6">
           <GlowCard lift accent="emerald" innerClassName="p-8 text-center sm:p-10 lg:p-12">
               <img
                 src="/real-estate.png"
-                alt="DemoCasa"
+                alt="DemoHouse"
                 className="mb-6 w-full rounded-2xl object-cover h-48 sm:h-56"
               />
               <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#25D366]/15 px-4 py-1.5 text-sm font-semibold text-[#25D366]">
@@ -1803,15 +1803,15 @@ export function LoginPage() {
               </div>
               <h2 className="mx-auto max-w-3xl text-2xl font-bold text-white sm:text-3xl">
                 Try our WhatsApp AI assistant live for the real-estate agency{" "}
-                <span className="text-[#25D366]">DemoCasa</span>
+                <span className="text-[#25D366]">DemoHouse</span>
               </h2>
               <p className="mx-auto mt-4 max-w-2xl text-slate-300">
-                {t("democasa.subtitle")}
+                {t("demohouse.subtitle")}
               </p>
             <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <button
               type="button"
-              onClick={() => navigate("/demo/democasa")}
+              onClick={() => navigate("/demo/demohouse")}
               className="inline-flex items-center gap-2.5 rounded-2xl px-7 py-3.5 text-base font-bold text-white bg-gradient-to-r from-green-600 to-emerald-600 shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl"
             >
               <svg viewBox="0 0 32 32" className="h-6 w-6 fill-white" aria-hidden="true">
@@ -2147,7 +2147,7 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Contact Section (DemoCasa highlight) — twin of the DemoWash card
+      {/* Contact Section (DemoHouse highlight) — twin of the DemoWash card
           above, mirrored so the image sits on the LEFT (Andrea). */}
       <div className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -2172,7 +2172,7 @@ export function LoginPage() {
                       <div className="h-full w-full overflow-hidden rounded-xl">
                         <img
                           src="/real-estate.png"
-                          alt="DemoCasa real estate"
+                          alt="DemoHouse real estate"
                           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                       </div>
@@ -2197,7 +2197,7 @@ export function LoginPage() {
                       <span style={{ color: "#25D366" }}>Casa</span>
                     </h3>
                     <p className="text-xl text-slate-300 leading-relaxed text-justify">
-                      {t("democasa.subtitle")}
+                      {t("demohouse.subtitle")}
                     </p>
                   </div>
 
@@ -2212,7 +2212,7 @@ export function LoginPage() {
                           setShowWIPModal(true)
                           return
                         }
-                        navigate("/demo/democasa")
+                        navigate("/demo/demohouse")
                       }}
                     >
                       <span className="flex items-center gap-3">

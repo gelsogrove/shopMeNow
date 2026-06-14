@@ -917,6 +917,9 @@ export class PlaygroundController {
       //    The widget controller already does this same direct invocation.
       let botResponse = ""
       let engineError: any = null
+      // 🌍 Language the custom chatbot actually replied in (⟦LANG:xx⟧) — used to
+      // synthesize TTS in the correct spoken language for voice-in→voice-out.
+      let replyLanguage: string | undefined = undefined
 
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
@@ -1035,6 +1038,7 @@ export class PlaygroundController {
           }
           if (customResult.handled && customResult.output?.reply) {
             botResponse = customResult.output.reply
+            replyLanguage = customResult.output.language || undefined
           } else if (customResult.output?.error) {
             engineError = new Error(
               `custom-client-${workspace.customChatbotId} error: ${customResult.output.error}`
@@ -1119,7 +1123,7 @@ export class PlaygroundController {
           const tts = await generateSpeech(
             botResponse,
             workspaceId,
-            customer.language || overrideLanguage || undefined
+            replyLanguage || customer.language || overrideLanguage || undefined
           )
           if (tts?.audioUrl) {
             await messageAttachmentRepository.create({
