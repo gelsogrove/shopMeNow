@@ -76,7 +76,7 @@ export class WidgetEmbedController {
         widgetAutoSuggestionsEnabled: true,
         widgetQuickReplies: true,
         widgetSuggestionsModel: true,
-        widgetWelcomeVideoUrl: true,
+        welcomeVideoUrl: true,
         channelMode: true,
       },
     })
@@ -105,7 +105,7 @@ export class WidgetEmbedController {
       ? workspace!.widgetQuickReplies.slice(0, 4)
       : []
     const suggestionsModel = workspace?.widgetSuggestionsModel || ""
-    const welcomeVideoUrl = workspace?.widgetWelcomeVideoUrl || ""
+    const welcomeVideoUrl = workspace?.welcomeVideoUrl || ""
 
     return `<!-- eChatbot Widget - Embed this code on your website -->
 <script>

@@ -49,7 +49,7 @@ export default function WidgetSettingsPage() {
       setPrimaryColor((workspace as any).widgetPrimaryColor || "#22c55e");
       setIcon((workspace as any).widgetIcon || "chat");
       setUseChannelLogo((workspace as any).widgetUseChannelLogo ?? false);
-      setWelcomeVideoUrl((workspace as any).widgetWelcomeVideoUrl || "");
+      setWelcomeVideoUrl((workspace as any).welcomeVideoUrl || "");
     }
   }, [workspace]);
 
@@ -178,7 +178,7 @@ export default function WidgetSettingsPage() {
         widgetPrimaryColor: primaryColor,
         widgetIcon: icon,
         widgetUseChannelLogo: useChannelLogo,
-        widgetWelcomeVideoUrl: welcomeVideoUrl.trim() || null,
+        welcomeVideoUrl: welcomeVideoUrl.trim() || null,
       });
       setCurrentWorkspace({
         ...workspace,
@@ -187,7 +187,7 @@ export default function WidgetSettingsPage() {
         widgetPrimaryColor: primaryColor,
         widgetIcon: icon,
         widgetUseChannelLogo: useChannelLogo,
-        widgetWelcomeVideoUrl: welcomeVideoUrl.trim() || undefined,
+        welcomeVideoUrl: welcomeVideoUrl.trim() || undefined,
       } as any);
       toast.success("Widget configuration saved!");
     } catch (error: any) {

@@ -118,7 +118,7 @@ export class WorkspaceController {
         widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
         widgetAutoSuggestionsEnabled: workspace.widgetAutoSuggestionsEnabled ?? false,
         widgetQuickReplies: workspace.widgetQuickReplies ?? [],
-        widgetWelcomeVideoUrl: workspace.widgetWelcomeVideoUrl ?? null,
+        welcomeVideoUrl: workspace.welcomeVideoUrl ?? null,
         // 📅 Calendar & Appointment Settings
         enableCalendarBooking: workspace.enableCalendarBooking ?? false,
         // 🆕 Multi-Provider WhatsApp Support
@@ -244,7 +244,7 @@ export class WorkspaceController {
           widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
           widgetAutoSuggestionsEnabled: workspace.widgetAutoSuggestionsEnabled ?? false,
           widgetQuickReplies: workspace.widgetQuickReplies ?? [],
-          widgetWelcomeVideoUrl: workspace.widgetWelcomeVideoUrl ?? null,
+          welcomeVideoUrl: workspace.welcomeVideoUrl ?? null,
           // 🆕 Translation Settings
           translateProductNames: workspace.translateProductNames,
           translateCategoryNames: workspace.translateCategoryNames,
@@ -519,7 +519,7 @@ export class WorkspaceController {
         widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
         widgetAutoSuggestionsEnabled: workspace.widgetAutoSuggestionsEnabled ?? false,
         widgetQuickReplies: workspace.widgetQuickReplies ?? [],
-        widgetWelcomeVideoUrl: workspace.widgetWelcomeVideoUrl ?? null,
+        welcomeVideoUrl: workspace.welcomeVideoUrl ?? null,
         translateProductNames: workspace.translateProductNames,
         translateCategoryNames: workspace.translateCategoryNames,
         translateServiceNames: workspace.translateServiceNames,
@@ -715,7 +715,7 @@ export class WorkspaceController {
         widgetUseChannelLogo: workspace.widgetUseChannelLogo ?? false,
         widgetAutoSuggestionsEnabled: workspace.widgetAutoSuggestionsEnabled ?? false,
         widgetQuickReplies: workspace.widgetQuickReplies ?? [],
-        widgetWelcomeVideoUrl: workspace.widgetWelcomeVideoUrl ?? null,
+        welcomeVideoUrl: workspace.welcomeVideoUrl ?? null,
         // 🆕 Translation Settings
         translateProductNames: workspace.translateProductNames,
         translateCategoryNames: workspace.translateCategoryNames,

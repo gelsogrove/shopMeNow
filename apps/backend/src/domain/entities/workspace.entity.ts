@@ -47,6 +47,7 @@ export interface WorkspaceProps {
   websiteUrl?: string | null
   assistantPhone?: string | null
   welcomeMessage?: any
+  welcomeVideoUrl?: string | null // 📺 Presentation video shown on the first welcome message
   enableWelcomeMessage?: boolean // E0a
   sessionResetTimeout?: number // E0b
   wipMessage?: any
@@ -97,7 +98,6 @@ export interface WorkspaceProps {
   widgetAutoSuggestionsEnabled?: boolean | null
   widgetQuickReplies?: string[] | null
   widgetSuggestionsModel?: string | null
-  widgetWelcomeVideoUrl?: string | null
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean
@@ -475,8 +475,8 @@ export class Workspace extends Entity<WorkspaceProps> {
     return this.props.widgetSuggestionsModel
   }
 
-  get widgetWelcomeVideoUrl(): string | null | undefined {
-    return this.props.widgetWelcomeVideoUrl
+  get welcomeVideoUrl(): string | null | undefined {
+    return this.props.welcomeVideoUrl
   }
 
   // 🆕 Translation Settings getters
