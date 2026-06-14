@@ -1344,7 +1344,7 @@ export function LoginPage() {
                                   import.meta.env.VITE_BACKOFFICE_URL ||
                                   (window.location.hostname === "localhost"
                                     ? "http://localhost:3002"
-                                    : "https://backoffice.echatbot.ai")
+                                    : "https://www.echatbot.ai/backoffice")
                                 const destination = token
                                   ? `${backofficeUrl}/auth/callback?token=${token}`
                                   : `${backofficeUrl}/access-denied`

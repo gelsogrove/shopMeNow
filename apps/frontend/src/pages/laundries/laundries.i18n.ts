@@ -1,10 +1,10 @@
-// i18n strings for the Franchising landing page.
+// i18n strings for the Laundries landing page.
 // Base language is Italian; the others mirror it 1:1.
-// Positioning: ONE AI for any multi-location franchise network.
-// DemoWash (laundry) is only the running EXAMPLE — the product fits
-// gyms, hotels, clinics, car washes, restaurants, retail, etc.
+// Positioning: ONE AI for a multi-location laundry network.
+// DemoWash (self-service laundry) is the running example; the same AI fits
+// every kind of laundry — self-service, dry cleaning, industrial, B2B, etc.
 
-export type FranchisingLang = "it" | "en" | "es" | "de"
+export type LaundriesLang = "it" | "en" | "es" | "de"
 
 export interface IndustryItem {
   icon: string
@@ -25,7 +25,7 @@ export interface DataCard {
   desc: string
 }
 
-export interface FranchisingCopy {
+export interface LaundriesCopy {
   // SEO
   seoTitle: string
   seoDesc: string
@@ -100,35 +100,35 @@ export interface FranchisingCopy {
   ctaDesc: string
 }
 
-export const FRANCHISING_I18N: Record<FranchisingLang, FranchisingCopy> = {
+export const LAUNDRIES_I18N: Record<LaundriesLang, LaundriesCopy> = {
   it: {
-    seoTitle: "Chatbot WhatsApp per Franchising e Catene Multi-Sede - eChatbot",
+    seoTitle: "Chatbot WhatsApp per Lavanderie Multi-Sede - eChatbot",
     seoDesc:
-      "Un'unica AI su WhatsApp per tutta la tua rete in franchising. Risponde 24/7, traduce in tempo reale, riconosce la sede e passa all'operatore. Per lavanderie, palestre, hotel, cliniche, autolavaggi e qualsiasi catena multi-sede.",
+      "Un'unica AI su WhatsApp per tutta la tua rete di lavanderie. Risponde 24/7, traduce in tempo reale, riconosce la sede, sblocca le macchine e passa all'operatore. Per lavanderie self-service, lavasecco e industriali.",
     seoKeys:
-      "chatbot franchising, whatsapp multi sede, catene franchising, assistente ia franchising, chatbot palestre hotel cliniche, gestione sedi whatsapp",
-    breadcrumb: "Franchising Multi-Sede",
-    badge: "Per Franchising & Catene",
-    heroTitleTop: "Una sola AI per tutto il tuo franchising.",
-    heroTitleAccent: "Ogni negozio, la risposta giusta.",
+      "chatbot lavanderia, whatsapp lavanderia, lavanderia self service ai, assistente lavanderia, lavanderie multi sede, rete lavanderie",
+    breadcrumb: "Lavanderie",
+    badge: "Per Reti di Lavanderie",
+    heroTitleTop: "Una sola AI per tutta la tua rete di lavanderie.",
+    heroTitleAccent: "Ogni lavanderia, la risposta giusta.",
     heroSub:
-      "Un'unica AI su WhatsApp per tutta la tua rete in franchising: risponde 24/7, traduce in tempo reale, riconosce da quale sede scrive il cliente e passa all'operatore quando serve. Tu governi tutto da un solo pannello.",
+      "Un'unica AI su WhatsApp per tutta la tua rete di lavanderie: risponde 24/7, traduce in tempo reale, riconosce da quale sede scrive il cliente, sblocca le macchine e passa all'operatore quando serve. Tu governi tutto da un solo pannello.",
     cta: "Parliamone",
     ctaSub: "Demo su misura, nessun impegno",
-    industriesTitle: "Una soluzione, ogni rete in franchising",
+    industriesTitle: "Una soluzione, ogni tipo di lavanderia",
     industriesSub:
-      "L'esempio che vedi è DemoWash, una rete di lavanderie. Ma la stessa AI lavora per qualunque catena multi-sede.",
+      "L'esempio che vedi è DemoWash, una rete di lavanderie self-service. La stessa AI gestisce ogni sede del tuo marchio, qualunque servizio offra.",
     industries: [
-      { icon: "🧺", label: "Lavanderie" },
-      { icon: "🏋️", label: "Palestre" },
-      { icon: "🏨", label: "Hotel" },
-      { icon: "🏥", label: "Cliniche" },
-      { icon: "🚗", label: "Autolavaggi" },
-      { icon: "🍽️", label: "Ristoranti" },
-      { icon: "💆", label: "Beauty & SPA" },
-      { icon: "🛍️", label: "Retail" },
+      { icon: "🧺", label: "Self-service" },
+      { icon: "👔", label: "Lavasecco" },
+      { icon: "🚚", label: "Ritiro & consegna" },
+      { icon: "🏭", label: "Industriale" },
+      { icon: "🏨", label: "Hotel & B2B" },
+      { icon: "🪙", label: "A gettoni" },
+      { icon: "♻️", label: "Eco-friendly" },
+      { icon: "🛏️", label: "Biancheria & tessuti" },
     ],
-    industriesNote: "…e ogni altra attività con più sedi.",
+    industriesNote: "…self-service, tradizionale o industriale: ogni lavanderia, un solo assistente.",
     problemsTitle: "Abbiamo individuato alcuni dettagli",
     problemsSub: "che potrebbero dare una svolta al tuo business.",
     problems: [
@@ -248,37 +248,37 @@ export const FRANCHISING_I18N: Record<FranchisingLang, FranchisingCopy> = {
       "Fai contare ogni lavaggio! 💚 Scopri la carta fedeltà: sconti esclusivi, regali e altri vantaggi. Chiedi la tua alla prossima visita! ⭐",
     ctaTitle: "Ne parliamo?",
     ctaDesc:
-      "Ti mostriamo come gestire tutta la rete con un'unica AI. Demo su misura per la tua catena, nessun impegno.",
+      "Ti mostriamo come gestire tutta la rete di lavanderie con un'unica AI. Demo su misura per la tua catena, nessun impegno.",
   },
 
   en: {
-    seoTitle: "WhatsApp Chatbot for Franchises & Multi-Location Chains - eChatbot",
+    seoTitle: "WhatsApp Chatbot for Multi-Location Laundries - eChatbot",
     seoDesc:
-      "One AI on WhatsApp for your whole franchise network. Answers 24/7, translates in real time, detects the location and hands off to an operator. For laundries, gyms, hotels, clinics, car washes and any multi-location chain.",
+      "One AI on WhatsApp for your whole laundry network. Answers 24/7, translates in real time, detects the location, unlocks machines and hands off to an operator. For self-service, full-service and dry-cleaning laundries.",
     seoKeys:
-      "franchise chatbot, multi location whatsapp, franchise chains, franchise ai assistant, gym hotel clinic chatbot, location management whatsapp",
-    breadcrumb: "Multi-Location Franchises",
-    badge: "For Franchises & Chains",
-    heroTitleTop: "One AI for your entire franchise.",
-    heroTitleAccent: "Every shop, the right answer.",
+      "laundry chatbot, whatsapp laundry, self service laundry ai, laundromat chatbot, multi location laundry, laundromat assistant",
+    breadcrumb: "Laundries",
+    badge: "For Laundry Networks",
+    heroTitleTop: "One AI for your entire laundry network.",
+    heroTitleAccent: "Every location, the right answer.",
     heroSub:
-      "One AI on WhatsApp for your whole franchise network: answers 24/7, translates in real time, detects which location the customer is writing from and hands off to an operator when needed. You run everything from a single panel.",
+      "One AI on WhatsApp for your whole laundry network: answers 24/7, translates in real time, detects which location the customer is writing from, unlocks machines and hands off to an operator when needed. You run everything from a single panel.",
     cta: "Let's Talk",
     ctaSub: "Tailored demo, no commitment",
-    industriesTitle: "One solution, every franchise network",
+    industriesTitle: "One solution, every kind of laundry",
     industriesSub:
-      "The example you see is DemoWash, a laundry network. But the same AI works for any multi-location chain.",
+      "The example you see is DemoWash, a self-service laundry network. The same AI runs every location of your brand, whatever service it offers.",
     industries: [
-      { icon: "🧺", label: "Laundries" },
-      { icon: "🏋️", label: "Gyms" },
-      { icon: "🏨", label: "Hotels" },
-      { icon: "🏥", label: "Clinics" },
-      { icon: "🚗", label: "Car Washes" },
-      { icon: "🍽️", label: "Restaurants" },
-      { icon: "💆", label: "Beauty & SPA" },
-      { icon: "🛍️", label: "Retail" },
+      { icon: "🧺", label: "Self-service" },
+      { icon: "👔", label: "Dry cleaning" },
+      { icon: "🚚", label: "Pickup & delivery" },
+      { icon: "🏭", label: "Industrial" },
+      { icon: "🏨", label: "Hotel & B2B" },
+      { icon: "🪙", label: "Coin-op" },
+      { icon: "♻️", label: "Eco-friendly" },
+      { icon: "🛏️", label: "Linen & textiles" },
     ],
-    industriesNote: "…and any other business with multiple locations.",
+    industriesNote: "…self-service, full-service or industrial: every laundry, one assistant.",
     problemsTitle: "We spotted a few details",
     problemsSub: "that could turn your business around.",
     problems: [
@@ -398,37 +398,37 @@ export const FRANCHISING_I18N: Record<FranchisingLang, FranchisingCopy> = {
       "Make every wash count! 💚 Discover the loyalty card: exclusive discounts, gifts and more perks. Ask for yours on your next visit! ⭐",
     ctaTitle: "Shall we talk?",
     ctaDesc:
-      "We'll show you how to run the whole network with a single AI. Demo tailored to your chain, no commitment.",
+      "We'll show you how to run your whole laundry network with a single AI. Demo tailored to your chain, no commitment.",
   },
 
   es: {
-    seoTitle: "Chatbot WhatsApp para Franquicias y Cadenas Multi-Sede - eChatbot",
+    seoTitle: "Chatbot WhatsApp para Lavanderías Multi-Sede - eChatbot",
     seoDesc:
-      "Una sola IA en WhatsApp para toda tu red de franquicias. Responde 24/7, traduce en tiempo real, reconoce la sede y pasa a un operador. Para lavanderías, gimnasios, hoteles, clínicas, autolavados y cualquier cadena multi-sede.",
+      "Una sola IA en WhatsApp para toda tu red de lavanderías. Responde 24/7, traduce en tiempo real, reconoce la sede, desbloquea las máquinas y pasa a un operador. Para lavanderías self-service, tintorerías e industriales.",
     seoKeys:
-      "chatbot franquicias, whatsapp multi sede, cadenas franquicia, asistente ia franquicia, chatbot gimnasios hoteles clinicas, gestion sedes whatsapp",
-    breadcrumb: "Franquicias Multi-Sede",
-    badge: "Para Franquicias y Cadenas",
-    heroTitleTop: "Una sola IA para toda tu franquicia.",
-    heroTitleAccent: "Cada tienda, la respuesta correcta.",
+      "chatbot lavandería, whatsapp lavandería, lavandería self service ia, chatbot lavandería autoservicio, lavanderías multi sede, red lavanderías ia",
+    breadcrumb: "Lavanderías",
+    badge: "Para Redes de Lavanderías",
+    heroTitleTop: "Una sola IA para toda tu red de lavanderías.",
+    heroTitleAccent: "Cada lavandería, la respuesta correcta.",
     heroSub:
-      "Una sola IA en WhatsApp para toda tu red de franquicias: responde 24/7, traduce en tiempo real, reconoce desde qué sede escribe el cliente y pasa a un operador cuando hace falta. Tú lo gobiernas todo desde un único panel.",
+      "Una sola IA en WhatsApp para toda tu red de lavanderías: responde 24/7, traduce en tiempo real, reconoce desde qué sede escribe el cliente, desbloquea las máquinas y pasa a un operador cuando hace falta. Tú lo gobiernas todo desde un único panel.",
     cta: "Hablemos",
     ctaSub: "Demo a medida, sin compromiso",
-    industriesTitle: "Una solución, cada red de franquicias",
+    industriesTitle: "Una solución, cada tipo de lavandería",
     industriesSub:
-      "El ejemplo que ves es DemoWash, una red de lavanderías. Pero la misma IA funciona para cualquier cadena multi-sede.",
+      "El ejemplo que ves es DemoWash, una red de lavanderías self-service. La misma IA gestiona cada sede de tu marca, sea cual sea el servicio que ofrezca.",
     industries: [
-      { icon: "🧺", label: "Lavanderías" },
-      { icon: "🏋️", label: "Gimnasios" },
-      { icon: "🏨", label: "Hoteles" },
-      { icon: "🏥", label: "Clínicas" },
-      { icon: "🚗", label: "Autolavados" },
-      { icon: "🍽️", label: "Restaurantes" },
-      { icon: "💆", label: "Belleza & SPA" },
-      { icon: "🛍️", label: "Retail" },
+      { icon: "🧺", label: "Autoservicio" },
+      { icon: "👔", label: "Tintorería" },
+      { icon: "🚚", label: "Recogida y entrega" },
+      { icon: "🏭", label: "Industrial" },
+      { icon: "🏨", label: "Hotel & B2B" },
+      { icon: "🪙", label: "De monedas" },
+      { icon: "♻️", label: "Eco-friendly" },
+      { icon: "🛏️", label: "Ropa & textiles" },
     ],
-    industriesNote: "…y cualquier otro negocio con varias sedes.",
+    industriesNote: "…autoservicio, tradicional o industrial: cada lavandería, un solo asistente.",
     problemsTitle: "Hemos identificado algunos detalles",
     problemsSub: "que podrían dar una vuelta a tu negocio.",
     problems: [
@@ -548,37 +548,37 @@ export const FRANCHISING_I18N: Record<FranchisingLang, FranchisingCopy> = {
       "¡Haz que cada lavado cuente! 💚 Descubre la tarjeta de fidelización: descuentos exclusivos, regalos y más ventajas. ¡Pide la tuya en tu próxima visita! ⭐",
     ctaTitle: "¿Lo hablamos?",
     ctaDesc:
-      "Te mostramos cómo gestionar toda la red con una sola IA. Demo a medida para tu cadena, sin compromiso.",
+      "Te mostramos cómo gestionar toda tu red de lavanderías con una sola IA. Demo a medida para tu cadena, sin compromiso.",
   },
 
   de: {
-    seoTitle: "WhatsApp-Chatbot für Franchising und Multi-Standort-Ketten - eChatbot",
+    seoTitle: "WhatsApp-Chatbot für Multi-Standort-Wäschereien - eChatbot",
     seoDesc:
-      "Eine einzige KI auf WhatsApp für dein gesamtes Franchise-Netzwerk. Antwortet 24/7, übersetzt in Echtzeit, erkennt den Standort und übergibt an einen Mitarbeiter. Für Wäschereien, Fitnessstudios, Hotels, Kliniken, Autowaschanlagen und jede Multi-Standort-Kette.",
+      "Eine einzige KI auf WhatsApp für dein gesamtes Wäscherei-Netzwerk. Antwortet 24/7, übersetzt in Echtzeit, erkennt den Standort, entriegelt die Maschinen und übergibt an einen Mitarbeiter. Für Self-Service-, Voll-Service- und Reinigungs-Wäschereien.",
     seoKeys:
-      "franchising chatbot, whatsapp multi standort, franchise ketten, ki assistent franchise, chatbot fitnessstudio hotel klinik, standortverwaltung whatsapp",
-    breadcrumb: "Multi-Standort-Franchise",
-    badge: "Für Franchising & Ketten",
-    heroTitleTop: "Eine einzige KI für dein gesamtes Franchising.",
+      "wäscherei chatbot, whatsapp wäscherei, self service wäscherei ki, waschsalon chatbot, multi standort wäscherei, waschsalon assistent",
+    breadcrumb: "Wäschereien",
+    badge: "Für Wäscherei-Netzwerke",
+    heroTitleTop: "Eine einzige KI für dein gesamtes Wäscherei-Netzwerk.",
     heroTitleAccent: "Jeder Standort, die richtige Antwort.",
     heroSub:
-      "Eine einzige KI auf WhatsApp für dein gesamtes Franchise-Netzwerk: antwortet 24/7, übersetzt in Echtzeit, erkennt, von welchem Standort der Kunde schreibt, und übergibt bei Bedarf an einen Mitarbeiter. Du steuerst alles über ein einziges Panel.",
+      "Eine einzige KI auf WhatsApp für dein gesamtes Wäscherei-Netzwerk: antwortet 24/7, übersetzt in Echtzeit, erkennt, von welchem Standort der Kunde schreibt, entriegelt die Maschinen und übergibt bei Bedarf an einen Mitarbeiter. Du steuerst alles über ein einziges Panel.",
     cta: "Sprechen wir darüber",
     ctaSub: "Maßgeschneiderte Demo, unverbindlich",
-    industriesTitle: "Eine Lösung, jedes Franchise-Netzwerk",
+    industriesTitle: "Eine Lösung, jede Art von Wäscherei",
     industriesSub:
-      "Das Beispiel, das du siehst, ist DemoWash, ein Wäscherei-Netzwerk. Aber dieselbe KI funktioniert für jede Multi-Standort-Kette.",
+      "Das Beispiel, das du siehst, ist DemoWash, ein Self-Service-Wäscherei-Netzwerk. Dieselbe KI steuert jeden Standort deiner Marke, welchen Service sie auch bietet.",
     industries: [
-      { icon: "🧺", label: "Wäschereien" },
-      { icon: "🏋️", label: "Fitnessstudios" },
-      { icon: "🏨", label: "Hotels" },
-      { icon: "🏥", label: "Kliniken" },
-      { icon: "🚗", label: "Autowaschanlagen" },
-      { icon: "🍽️", label: "Restaurants" },
-      { icon: "💆", label: "Beauty & SPA" },
-      { icon: "🛍️", label: "Retail" },
+      { icon: "🧺", label: "Self-Service" },
+      { icon: "👔", label: "Reinigung" },
+      { icon: "🚚", label: "Abholung & Lieferung" },
+      { icon: "🏭", label: "Industrie" },
+      { icon: "🏨", label: "Hotel & B2B" },
+      { icon: "🪙", label: "Münzbetrieb" },
+      { icon: "♻️", label: "Umweltfreundlich" },
+      { icon: "🛏️", label: "Wäsche & Textilien" },
     ],
-    industriesNote: "…und jedes andere Unternehmen mit mehreren Standorten.",
+    industriesNote: "…Self-Service, Voll-Service oder Industrie: jede Wäscherei, ein Assistent.",
     problemsTitle: "Wir haben ein paar Details entdeckt",
     problemsSub: "die deinem Business eine Wende geben könnten.",
     problems: [
@@ -698,6 +698,6 @@ export const FRANCHISING_I18N: Record<FranchisingLang, FranchisingCopy> = {
       "Lass jeden Waschgang zählen! 💚 Entdecke die Treuekarte: exklusive Rabatte, Geschenke und weitere Vorteile. Frag bei deinem nächsten Besuch nach deiner! ⭐",
     ctaTitle: "Sprechen wir darüber?",
     ctaDesc:
-      "Wir zeigen dir, wie du das gesamte Netzwerk mit einer einzigen KI steuerst. Maßgeschneiderte Demo für deine Kette, unverbindlich.",
+      "Wir zeigen dir, wie du dein gesamtes Wäscherei-Netzwerk mit einer einzigen KI steuerst. Maßgeschneiderte Demo für deine Kette, unverbindlich.",
   },
 }

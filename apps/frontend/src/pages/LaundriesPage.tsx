@@ -24,10 +24,10 @@ import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
 import { CtaSection } from "@/components/landing/CtaSection"
 import {
-  FRANCHISING_I18N,
-  type FranchisingCopy,
-  type FranchisingLang,
-} from "./franchising/franchising.i18n"
+  LAUNDRIES_I18N,
+  type LaundriesCopy,
+  type LaundriesLang,
+} from "./laundries/laundries.i18n"
 
 // ---------------------------------------------------------------------------
 // Icon registry — string keys in i18n map to lucide icons here, so copy stays
@@ -103,9 +103,9 @@ function SectionHeading({
   )
 }
 
-export function FranchisingPage() {
+export function LaundriesPage() {
   const { language } = useLanguage()
-  const t = FRANCHISING_I18N[(language as FranchisingLang) ?? "en"] ?? FRANCHISING_I18N.en
+  const t = LAUNDRIES_I18N[(language as LaundriesLang) ?? "en"] ?? LAUNDRIES_I18N.en
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -117,9 +117,9 @@ export function FranchisingPage() {
         title={t.seoTitle}
         description={t.seoDesc}
         keywords={t.seoKeys}
-        url="/franchising"
-        lang={language as FranchisingLang}
-        serviceType="Multi-Location Franchise WhatsApp Chatbot"
+        url="/laundries"
+        lang={language as LaundriesLang}
+        serviceType="Multi-Location Laundry WhatsApp Chatbot"
       />
       <SiteHeader />
 
@@ -181,8 +181,8 @@ export function FranchisingPage() {
               >
                 <div className="absolute -inset-2 rounded-[2rem] bg-gradient-to-tr from-green-500/30 via-emerald-400/10 to-transparent blur-xl" />
                 <img
-                  src="/franchising.png"
-                  alt="eChatbot AI assistant for multi-location franchises"
+                  src="/laundry.png"
+                  alt="eChatbot AI assistant for multi-location laundries"
                   className="relative w-full rounded-3xl border border-white/10 shadow-2xl"
                   onError={(e) => {
                     ;(e.currentTarget as HTMLImageElement).style.display = "none"
@@ -387,7 +387,7 @@ export function FranchisingPage() {
 /** Translated WhatsApp-style chat used in the language-barriers section.
  *  The Arabic stays fixed (the foreign customer); every other line follows the
  *  active UI language so the visual never contradicts the page copy. */
-function PhoneChat({ t }: { t: FranchisingCopy }) {
+function PhoneChat({ t }: { t: LaundriesCopy }) {
   return (
     <motion.div {...reveal} className="relative mx-auto w-full max-w-sm">
       <div className="rounded-[2rem] bg-slate-950 p-3 shadow-2xl ring-1 ring-white/10">
@@ -444,7 +444,7 @@ function PhoneChat({ t }: { t: FranchisingCopy }) {
 }
 
 /** WhatsApp phone mock: AI unlocks a machine + upsells loyalty card. */
-function ActsChat({ t }: { t: FranchisingCopy }) {
+function ActsChat({ t }: { t: LaundriesCopy }) {
   return (
     <motion.div {...reveal} className="mx-auto w-full max-w-md">
       <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white shadow-2xl">
@@ -508,7 +508,7 @@ function Bubble({
 }
 
 /** Lock-screen push-notification mock for the campaigns section. */
-function PushMock({ t }: { t: FranchisingCopy }) {
+function PushMock({ t }: { t: LaundriesCopy }) {
   return (
     <motion.div {...reveal} className="mx-auto w-full max-w-md">
       <div className="relative overflow-hidden rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 p-6 shadow-2xl">
@@ -558,7 +558,7 @@ const STORE_DATA: StoreData[] = [
   { hours: "8:30–22:00", wash: "€4,20", dry: "€3,10" },
 ]
 
-function StoreLoader({ t }: { t: FranchisingCopy }) {
+function StoreLoader({ t }: { t: LaundriesCopy }) {
   const [active, setActive] = useState(0)
   const zones = t.zones
 

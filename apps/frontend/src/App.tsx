@@ -14,7 +14,7 @@ import { SmartPushAiPage } from "@/pages/SmartPushAiPage"
 import { TeamCollaborationPage } from "@/pages/TeamCollaborationPage"
 import { PrivacyByDesignPage } from "@/pages/PrivacyByDesignPage"
 import { LaundryServicePage } from "@/pages/LaundryServicePage"
-import { FranchisingPage } from "@/pages/FranchisingPage"
+import { LaundriesPage } from "@/pages/LaundriesPage"
 import { RealEstatePage } from "@/pages/RealEstatePage"
 import { ContactPage } from "@/pages/ContactPage"
 import RequestAccessPage from "@/pages/RequestAccessPage"
@@ -348,7 +348,7 @@ function AppWithProviders() {
                 <Route path="/widget-to-whatsapp" element={<Navigate to="/" replace />} />
                 <Route path="/human-support" element={<HumanSupportPage />} />
                 <Route path="/laundry-service" element={<LaundryServicePage />} />
-                <Route path="/franchising" element={<FranchisingPage />} />
+                <Route path="/laundries" element={<LaundriesPage />} />
                 <Route path="/real-estate" element={<RealEstatePage />} />
                 <Route path="/appointment-booking" element={<AppointmentBookingPage />} />
                 <Route path="/smart-push-ai" element={<SmartPushAiPage />} />

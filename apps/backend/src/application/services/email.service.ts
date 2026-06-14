@@ -1006,7 +1006,7 @@ startxref
             </div>
             
             <p style="text-align: center;">
-                <a href="${process.env.BACKOFFICE_URL || "https://backoffice.echatbot.ai"}/support-tickets" class="btn">
+                <a href="${process.env.BACKOFFICE_URL || "https://www.echatbot.ai/backoffice"}/support-tickets" class="btn">
                     View in Backoffice →
                 </a>
             </p>

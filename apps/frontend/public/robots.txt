@@ -8,7 +8,7 @@ Allow: /contact
 Allow: /smart-push-ai
 Allow: /human-support
 Allow: /laundry-service
-Allow: /franchising
+Allow: /laundries
 Allow: /appointment-booking
 Allow: /crm-integration
 Allow: /team-collaboration

@@ -18,9 +18,10 @@ import SupportTicketsAdminPage from '@/pages/SupportTicketsAdminPage'
 import QuestionnaireAdminPage from '@/pages/QuestionnairePage'
 import { BackupPage } from '@/pages/BackupPage'
 
-// 🌐 Base path for production deployment
-// Standalone SPA - no basename needed (served from root)
-const basename = ''
+// 🌐 Base path: matches the Vite `base`. In production echatbot-app serves the
+// backoffice under /backoffice; in dev it's at the root of :3002. Strip the
+// trailing slash because React Router expects a basename without it.
+const basename = import.meta.env.BASE_URL.replace(/\/$/, "")
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()

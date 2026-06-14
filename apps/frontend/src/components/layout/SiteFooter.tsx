@@ -17,7 +17,7 @@ const translations = {
     privacyDesign: "Privacy by Design",
     crmIntegration: "Integrazione CRM",
     solutions: "Soluzioni",
-    franchising: "Franchising Multi-Sede",
+    laundries: "Lavanderie",
     realEstate: "Agenzie Immobiliari",
     company: "Azienda",
     about: "Chi Siamo",
@@ -42,7 +42,7 @@ const translations = {
     privacyDesign: "Privacy by Design",
     crmIntegration: "CRM Integration",
     solutions: "Solutions",
-    franchising: "Multi-Location Franchises",
+    laundries: "Laundries",
     realEstate: "Real Estate Agencies",
     company: "Company",
     about: "About Us",
@@ -67,7 +67,7 @@ const translations = {
     privacyDesign: "Privacy by Design",
     crmIntegration: "Integración CRM",
     solutions: "Soluciones",
-    franchising: "Franquicias Multi-Sede",
+    laundries: "Lavanderías",
     realEstate: "Agencias Inmobiliarias",
     company: "Empresa",
     about: "Sobre Nosotros",
@@ -92,7 +92,7 @@ const translations = {
     privacyDesign: "Privacy by Design",
     crmIntegration: "CRM-Integration",
     solutions: "Lösungen",
-    franchising: "Multi-Standort-Franchise",
+    laundries: "Wäschereien",
     realEstate: "Immobilienagenturen",
     company: "Unternehmen",
     about: "Über uns",
@@ -134,7 +134,7 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
             </ul>
             <h3 className="text-white font-semibold mt-6 mb-4">{t.solutions}</h3>
             <ul className="space-y-3">
-              <li><Link to="/franchising" className="text-sm hover:text-green-500 transition-colors">{t.franchising}</Link></li>
+              <li><Link to="/laundries" className="text-sm hover:text-green-500 transition-colors">{t.laundries}</Link></li>
               <li><Link to="/real-estate" className="text-sm hover:text-green-500 transition-colors">{t.realEstate}</Link></li>
             </ul>
           </div>
