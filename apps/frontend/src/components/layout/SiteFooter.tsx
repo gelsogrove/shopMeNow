@@ -18,6 +18,7 @@ const translations = {
     crmIntegration: "Integrazione CRM",
     solutions: "Soluzioni",
     franchising: "Franchising Multi-Sede",
+    realEstate: "Agenzie Immobiliari",
     company: "Azienda",
     about: "Chi Siamo",
     contact: "Contatti",
@@ -42,6 +43,7 @@ const translations = {
     crmIntegration: "CRM Integration",
     solutions: "Solutions",
     franchising: "Multi-Location Franchises",
+    realEstate: "Real Estate Agencies",
     company: "Company",
     about: "About Us",
     contact: "Contact",
@@ -66,6 +68,7 @@ const translations = {
     crmIntegration: "Integración CRM",
     solutions: "Soluciones",
     franchising: "Franquicias Multi-Sede",
+    realEstate: "Agencias Inmobiliarias",
     company: "Empresa",
     about: "Sobre Nosotros",
     contact: "Contacto",
@@ -90,6 +93,7 @@ const translations = {
     crmIntegration: "CRM-Integration",
     solutions: "Lösungen",
     franchising: "Multi-Standort-Franchise",
+    realEstate: "Immobilienagenturen",
     company: "Unternehmen",
     about: "Über uns",
     contact: "Kontakt",
@@ -131,6 +135,7 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
             <h3 className="text-white font-semibold mt-6 mb-4">{t.solutions}</h3>
             <ul className="space-y-3">
               <li><Link to="/franchising" className="text-sm hover:text-green-500 transition-colors">{t.franchising}</Link></li>
+              <li><Link to="/real-estate" className="text-sm hover:text-green-500 transition-colors">{t.realEstate}</Link></li>
             </ul>
           </div>
 
