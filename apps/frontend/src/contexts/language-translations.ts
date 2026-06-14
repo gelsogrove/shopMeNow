@@ -2028,7 +2028,7 @@ export const translations = {
     "demo.title": "Live-Demo",
     "demo.subtitle": "DemoWash ist ein fiktives Franchise-Netzwerk von SB-Waschsalons mit mehreren Standorten in Katalonien. Probiere den Chatbot wie ein echter Kunde aus: frage nach Öffnungszeiten und Preisen, melde ein Problem und sieh, wie der Fall mit Echtzeit-Übersetzung an einen menschlichen Mitarbeiter eskaliert wird.",
     "democasa.subtitle": "DemoCasa ist eine fiktive Immobilienagentur mit mehreren Niederlassungen in Katalonien. Probiere den Chatbot wie ein echter Kunde aus: frage, welche Wohnungen in deiner Gegend verfügbar sind, buche eine Besichtigung, fordere eine kostenlose Bewertung an und sieh, wie der Fall mit Echtzeit-Übersetzung an einen menschlichen Makler eskaliert wird.",
-    "demo.button": "Probiere unsere Demo aus",
+    "demo.button": "Demo ausprobieren",
     "demo.accessHint": "Hinterlasse uns deine Kontaktdaten und wir schicken dir per E-Mail die Zugangsdaten, um die Demo auszuprobieren.",
 
     // Integration Section
