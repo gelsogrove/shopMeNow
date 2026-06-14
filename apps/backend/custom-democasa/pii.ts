@@ -53,10 +53,10 @@ const PHONE_ES_RE = /(?:\+34\s?)?[6789]\d{2}[\s.-]?\d{3}[\s.-]?\d{3}/g
 // (Chinese, Greek, Cyrillic…). The LLM reliably understands them but does NOT
 // always call remember({location}) when the name is embedded in non-Latin text
 // and it can answer without saving it. So we detect the city deterministically
-// here, by matching one of these 6 fixed proper nouns (NOT keyword/intent
+// here, by matching one of these 8 fixed proper nouns (NOT keyword/intent
 // detection — same idea as the PII pre-scan), and seed `location` if the model
 // didn't. Works in every language.
-const CANONICAL_VENUES = ['Sant Cugat', 'Eixample', 'Mataró', 'Gràcia', 'Terrassa', 'Rubí'] as const
+const CANONICAL_VENUES = ['Sant Cugat', 'Eixample', 'Mataró', 'Gràcia', 'Terrassa', 'Rubí', 'Madrid', 'Valencia'] as const
 
 // Match a city accent-insensitively and as a whole word. "Sant Cugat" first so
 // the two-word name isn't shadowed. Returns the canonical spelling or null.

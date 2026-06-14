@@ -199,7 +199,7 @@ const TOOLS = [
           name: { type: 'string', description: 'Customer full name (e.g. "Marco Rossi")' },
           location: {
             type: 'string',
-            description: 'City / office the customer is interested in (canonical: Mataró, Eixample, Gràcia, Sant Cugat, Rubí, Terrassa).',
+            description: 'City / office the customer is interested in (canonical: Mataró, Eixample, Gràcia, Sant Cugat, Rubí, Terrassa, Madrid, Valencia).',
           },
           operation: {
             type: 'string',

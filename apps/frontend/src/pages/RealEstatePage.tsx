@@ -182,7 +182,7 @@ export function RealEstatePage() {
               >
                 <div className="absolute -inset-2 rounded-[2rem] bg-gradient-to-tr from-green-500/30 via-emerald-400/10 to-transparent blur-xl" />
                 <img
-                  src="/democasa.png"
+                  src="/real-estate.png"
                   alt="eChatbot AI assistant for real estate agencies"
                   className="relative w-full rounded-3xl border border-white/10 shadow-2xl"
                   onError={(e) => {
