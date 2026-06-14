@@ -4,13 +4,19 @@
 
 **Oficina**: C/ de Barcelona 18, Mataró · **Cerca de**: La Riera (centro) · **Horario**: 9:00 — 19:30 (lunes a viernes), 10:00 — 13:30 (sábados) · **Teléfono**: 93 100 20 32
 
+🔗 **Más inmuebles reales de esta zona en Idealista**: https://www.idealista.com/alquiler-viviendas/mataro-barcelona/
+
 ## Inmuebles en alquiler
 
-🏠 **MAT-303** — Piso · 2 hab. · 65 m² · Eixample (Mataró) · **850 €/mes**
-   _Piso acogedor y asequible, cerca de todos los servicios._
+🏠 **MAT-303** · Piso en alquiler
+📍 Eixample (Mataró) · 🛏️ 2 hab · 🚿 1 baño · 📐 65 m² · 💶 **850 €/mes**
+_Piso acogedor y asequible, cerca de todos los servicios._
+✨ Terraza: no · Parking: no · Ascensor: sí · Amueblado: sí
 
-🏠 **MAT-305** — Casa · 4 hab. · 175 m² · Vista Alegre · **1.500 €/mes**
-   _Amplia casa con jardín, perfecta para familias._
+🏠 **MAT-305** · Casa en alquiler
+📍 Vista Alegre · 🛏️ 4 hab · 🚿 2 baños · 📐 175 m² · 💶 **1.500 €/mes**
+_Amplia casa con jardín, perfecta para familias._
+✨ Terraza: no · Parking: sí · Ascensor: no · Amueblado: no
 
 ## Notas de la zona
 

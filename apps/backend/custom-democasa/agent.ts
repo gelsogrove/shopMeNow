@@ -192,7 +192,7 @@ const TOOLS = [
     function: {
       name: 'remember',
       description:
-        'Record facts about the customer so they are not re-asked. Call this WHENEVER the customer provides a new fact (name, city/office, operation buy/rent, property type, listing reference, bedrooms, budget, preferred zone). Use merge semantics: only pass the fields that changed. Valid offices/cities are documented in the prompt (LOCATIONS). There is NO language field: the conversation language is declared via the ⟦LANG:xx⟧ output trailer, never via this tool.',
+        'Record facts about the customer so they are not re-asked. Call this WHENEVER the customer provides a new fact (name, city/office, operation buy/rent, property type, listing reference, bedrooms, bathrooms, budget, preferred zone, must-have features). Use merge semantics: only pass the fields that changed. Valid offices/cities are documented in the prompt (LOCATIONS). There is NO language field: the conversation language is declared via the ⟦LANG:xx⟧ output trailer, never via this tool.',
       parameters: {
         type: 'object',
         properties: {
@@ -215,8 +215,10 @@ const TOOLS = [
             description: 'Listing reference the customer is interested in, exactly as written in LOCATIONS (e.g. "EIX-101"). Uppercase as shown.',
           },
           bedrooms: { type: 'integer', description: 'Desired number of bedrooms (e.g. 3)' },
+          bathrooms: { type: 'integer', description: 'Desired number of bathrooms (e.g. 2)' },
           budget: { type: 'string', description: 'Customer budget, free-form (e.g. "hasta 300.000 €", "1.200 €/mes").' },
           zone: { type: 'string', description: 'Preferred neighbourhood / area inside the city, free-form.' },
+          mustHaves: { type: 'string', description: 'Desired must-have features as a free-form list of canonical English keywords: "terrace", "parking", "elevator", "furnished" (e.g. "terrace, parking"). Accumulate: pass the full updated list when the customer adds more.' },
         },
         additionalProperties: false,
       },
@@ -247,7 +249,7 @@ const TOOLS = [
     function: {
       name: 'schedule_appointment',
       description:
-        'Book an appointment. Two purposes: "viewing" = an in-person visit to a property the customer is interested in; "franchising" = a video consultation about opening a DemoCasa agency. Call this ONLY when the customer has selected a time slot from the list you offered (by selecting 1, 2, 3, etc.). The tool creates a real Calendar event (and, for franchising, a Zoom meeting) and sends a confirmation email. It returns calendar_link and zoom_link when available — when present, include those exact links in your confirmation message. If they are null, simply confirm by date/time without inventing links. Do NOT call this twice for the same customer.',
+        'Book an appointment. Three purposes: "viewing" = an in-person visit to a property the customer is interested in; "franchising" = a video consultation about opening a DemoCasa agency; "office_consultation" = an in-person meeting with an agent at a specific office (general buying/renting advice, not tied to one property). Call this ONLY when the customer has selected a time slot from the list you offered (by selecting 1, 2, 3, etc.). The tool creates a real Calendar event (and, for franchising, a Zoom meeting) and sends a confirmation email. It returns calendar_link and zoom_link when available — when present, include those exact links in your confirmation message. If they are null, simply confirm by date/time without inventing links. Do NOT call this twice for the same customer.',
       parameters: {
         type: 'object',
         properties: {
@@ -257,8 +259,8 @@ const TOOLS = [
           },
           purpose: {
             type: 'string',
-            enum: ['viewing', 'franchising'],
-            description: 'viewing = property visit (in person). franchising = consultation about opening an agency (video call).',
+            enum: ['viewing', 'franchising', 'office_consultation'],
+            description: 'viewing = property visit (in person). franchising = consultation about opening an agency (video call). office_consultation = in-person meeting with an agent at a specific office (general advice, not tied to one property).',
           },
         },
         required: ['slotIndex', 'purpose'],
@@ -323,8 +325,8 @@ export interface ScheduleAppointmentParams {
   date: string // 'YYYY-MM-DD'
   time: string // 'HH:MM' 24h, interpreted in the workspace timezone (host-side)
   durationMinutes: number
-  /** 'viewing' (in-person property visit) | 'franchising' (video consultation). */
-  purpose: 'viewing' | 'franchising'
+  /** 'viewing' (in-person property visit) | 'franchising' (video consultation) | 'office_consultation' (in-person agent meeting at an office). */
+  purpose: 'viewing' | 'franchising' | 'office_consultation'
   topic: string
   customerName: string
   customerEmail: string
@@ -369,8 +371,10 @@ async function executeTool(
     if (typeof args.propertyType === 'string') patch.propertyType = args.propertyType
     if (typeof args.propertyRef === 'string') patch.propertyRef = args.propertyRef
     if (typeof args.bedrooms === 'number' && Number.isFinite(args.bedrooms)) patch.bedrooms = args.bedrooms
+    if (typeof args.bathrooms === 'number' && Number.isFinite(args.bathrooms)) patch.bathrooms = args.bathrooms
     if (typeof args.budget === 'string') patch.budget = args.budget
     if (typeof args.zone === 'string') patch.zone = args.zone
+    if (typeof args.mustHaves === 'string') patch.mustHaves = args.mustHaves
     // NOTE: `language` is NOT accepted here. The LLM declares the language via
     // the ⟦LANG:xx⟧ reply trailer; commitLanguageFromReply persists it AFTER
     // the turn.
@@ -485,7 +489,12 @@ async function executeTool(
   if (name === 'schedule_appointment') {
     const state = getState(ctx.sessionId)
     const slotIndex = typeof args.slotIndex === 'number' ? args.slotIndex : 0
-    const purpose: 'viewing' | 'franchising' = args.purpose === 'franchising' ? 'franchising' : 'viewing'
+    const purpose: 'viewing' | 'franchising' | 'office_consultation' =
+      args.purpose === 'franchising'
+        ? 'franchising'
+        : args.purpose === 'office_consultation'
+        ? 'office_consultation'
+        : 'viewing'
 
     // Idempotency: one appointment per session.
     if (state.appointmentDate) {
@@ -524,7 +533,12 @@ async function executeTool(
     const appointmentPatch: Partial<SessionState> = {
       appointmentDate: selectedSlot.date,
       appointmentTime: selectedSlot.time,
-      appointmentType: purpose === 'franchising' ? 'franchising_consultation' : 'viewing',
+      appointmentType:
+        purpose === 'franchising'
+          ? 'franchising_consultation'
+          : purpose === 'office_consultation'
+          ? 'office_consultation'
+          : 'viewing',
     }
     updateState(ctx.sessionId, appointmentPatch)
 
@@ -537,6 +551,8 @@ async function executeTool(
       try {
         const topic = purpose === 'franchising'
           ? `DemoCasa franchising consultation — ${state.name}`
+          : purpose === 'office_consultation'
+          ? `DemoCasa office consultation${state.location ? ` (${state.location})` : ''} — ${state.name}`
           : `DemoCasa property viewing${state.propertyRef ? ` ${state.propertyRef}` : ''} — ${state.name}`
         const booking = await ctx.scheduleAppointment({
           workspaceId: ctx.workspaceId,
@@ -698,7 +714,7 @@ async function sendValuationEmail(params: ValuationParams): Promise<void> {
 
 interface AppointmentParams {
   appointmentId: string
-  purpose: 'viewing' | 'franchising'
+  purpose: 'viewing' | 'franchising' | 'office_consultation'
   customerName: string
   customerEmail: string
   customerPhone?: string
@@ -764,6 +780,25 @@ async function sendAppointmentEmail(params: AppointmentParams): Promise<void> {
       '',
       '— DemoCasa Team',
     ].join('\n')
+  } else if (purpose === 'office_consultation') {
+    subject = `[DemoCasa] Office Appointment Confirmed — ${appointmentId}`
+    textBody = [
+      `Hello ${customerName},`,
+      '',
+      'Your appointment at our office has been confirmed! 🏢',
+      '',
+      `📅 Date: ${dateStr}`,
+      `🕐 Time: ${timeStr} (UTC)`,
+      `📍 Office: ${state.location ?? '(to be confirmed)'}`,
+      ...(calendarLink ? ['', `📆 Calendar: ${calendarLink}`] : []),
+      '',
+      'An agent will be waiting to help you in person.',
+      'If anything changes, just reply to this email.',
+      '',
+      'See you soon!',
+      '',
+      '— DemoCasa Team',
+    ].join('\n')
   } else {
     subject = `[DemoCasa] Property Viewing Confirmed — ${appointmentId}`
     textBody = [
@@ -798,7 +833,7 @@ async function sendAppointmentEmail(params: AppointmentParams): Promise<void> {
 
 interface AppointmentBriefingParams {
   appointmentId: string
-  purpose: 'viewing' | 'franchising'
+  purpose: 'viewing' | 'franchising' | 'office_consultation'
   appointmentDate: string
   appointmentTime: string
   state: SessionState
@@ -834,12 +869,17 @@ async function sendAppointmentOperatorBriefing(params: AppointmentBriefingParams
   })
 
   const isFranchising = purpose === 'franchising'
+  const isOffice = purpose === 'office_consultation'
   const subject = isFranchising
     ? `[DemoCasa] Nueva consulta franchising — ${appointmentId}`
+    : isOffice
+    ? `[DemoCasa] Nueva cita en oficina — ${appointmentId}`
     : `[DemoCasa] Nueva visita de inmueble — ${appointmentId}`
   const textBody = [
     isFranchising
       ? 'Nueva solicitud de consulta de franchising.'
+      : isOffice
+      ? 'Nueva solicitud de cita en oficina con un agente.'
       : 'Nueva solicitud de visita a un inmueble.',
     '',
     `🆔 Cita: ${appointmentId}`,
@@ -857,6 +897,8 @@ async function sendAppointmentOperatorBriefing(params: AppointmentBriefingParams
     '— Interés —',
     isFranchising
       ? 'Consulta de franchising (apertura de agencia DemoCasa).'
+      : isOffice
+      ? 'Cita en oficina con un agente (asesoramiento de compra/alquiler).'
       : 'Visita a inmueble.',
     ...(zoomLink ? ['', `🔗 Zoom: ${zoomLink}`] : []),
     ...(calendarLink ? [`📆 Calendar: ${calendarLink}`] : []),

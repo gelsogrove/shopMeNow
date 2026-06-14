@@ -9,7 +9,11 @@ import { ShieldX, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export function AccessDeniedPage() {
-  const frontendUrl = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:3000'
+  const frontendUrl =
+    import.meta.env.VITE_FRONTEND_URL ||
+    (window.location.hostname === 'localhost'
+      ? 'http://localhost:3000'
+      : 'https://www.echatbot.ai')
 
   const handleGoToFrontend = () => {
     window.location.href = frontendUrl

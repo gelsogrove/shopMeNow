@@ -4,13 +4,19 @@
 
 **Oficina**: C/ Aragó 286, Barcelona · **Cerca de**: Passeig de Gràcia · **Horario**: 9:00 — 20:00 (lunes a viernes), 10:00 — 14:00 (sábados) · **Teléfono**: 93 100 20 30
 
+🔗 **Más inmuebles reales de esta zona en Idealista**: https://www.idealista.com/alquiler-viviendas/barcelona/eixample/
+
 ## Inmuebles en alquiler
 
-🏠 **EIX-103** — Piso · 2 hab. · 70 m² · Sagrada Família · **1.450 €/mes**
-   _Piso reformado junto a la Sagrada Família, listo para entrar._
+🏠 **EIX-103** · Piso en alquiler
+📍 Sagrada Família · 🛏️ 2 hab · 🚿 1 baño · 📐 70 m² · 💶 **1.450 €/mes**
+_Piso reformado junto a la Sagrada Família, listo para entrar._
+✨ Terraza: no · Parking: no · Ascensor: sí · Amueblado: sí
 
-🏠 **EIX-104** — Estudio · 1 hab. · 42 m² · Fort Pienc · **980 €/mes**
-   _Estudio funcional y bien comunicado, ideal para una persona._
+🏠 **EIX-104** · Estudio en alquiler
+📍 Fort Pienc · 🛏️ 1 hab · 🚿 1 baño · 📐 42 m² · 💶 **980 €/mes**
+_Estudio funcional y bien comunicado, ideal para una persona._
+✨ Terraza: no · Parking: no · Ascensor: no · Amueblado: sí
 
 ## Notas de la zona
 

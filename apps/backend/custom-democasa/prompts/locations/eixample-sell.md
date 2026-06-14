@@ -4,16 +4,24 @@
 
 **Oficina**: C/ Aragó 286, Barcelona · **Cerca de**: Passeig de Gràcia · **Horario**: 9:00 — 20:00 (lunes a viernes), 10:00 — 14:00 (sábados) · **Teléfono**: 93 100 20 30
 
+🔗 **Más inmuebles reales de esta zona en Idealista**: https://www.idealista.com/venta-viviendas/barcelona/eixample/
+
 ## Inmuebles en venta
 
-🏠 **EIX-101** — Piso · 3 hab. · 95 m² · Dreta de l'Eixample · **420.000 €**
-   _Piso modernista con techos altos y balcón, en zona céntrica._
+🏠 **EIX-101** · Piso en venta
+📍 Dreta de l'Eixample · 🛏️ 3 hab · 🚿 2 baños · 📐 95 m² · 💶 **420.000 €**
+_Piso modernista con techos altos y balcón, en zona céntrica._
+✨ Terraza: no · Parking: no · Ascensor: sí · Amueblado: no
 
-🏠 **EIX-102** — Ático · 2 hab. · 78 m² · Esquerra de l'Eixample · **510.000 €**
-   _Ático con terraza de 20 m² y mucha luz natural._
+🏠 **EIX-102** · Ático en venta
+📍 Esquerra de l'Eixample · 🛏️ 2 hab · 🚿 1 baño · 📐 78 m² · 💶 **510.000 €**
+_Ático con terraza de 20 m² y mucha luz natural._
+✨ Terraza: sí · Parking: no · Ascensor: sí · Amueblado: no
 
-🏠 **EIX-105** — Piso · 4 hab. · 130 m² · Dreta de l'Eixample · **690.000 €**
-   _Amplio piso reformado con plaza de parking incluida._
+🏠 **EIX-105** · Piso en venta
+📍 Dreta de l'Eixample · 🛏️ 4 hab · 🚿 2 baños · 📐 130 m² · 💶 **690.000 €**
+_Amplio piso reformado con plaza de parking incluida._
+✨ Terraza: no · Parking: sí · Ascensor: sí · Amueblado: no
 
 ## Notas de la zona
 

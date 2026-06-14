@@ -8,8 +8,10 @@ export interface SessionState {
   propertyType?: string            // apartment, house, studio, penthouse, commercial, …
   propertyRef?:  string            // listing reference the customer is interested in (e.g. "EIX-101")
   bedrooms?:     number            // desired bedrooms
+  bathrooms?:    number            // desired bathrooms
   budget?:       string            // free-form budget (e.g. "hasta 300.000 €", "1.200 €/mes")
   zone?:         string            // preferred neighbourhood / area inside the city
+  mustHaves?:    string            // desired features, free-form canonical EN list (e.g. "terrace, parking, elevator, furnished")
   // Open ISO 2-letter language code. The deterministic detector below
   // only recognizes a handful of common languages — for everything else
   // the prompt instructs the LLM to detect and respond natively.
@@ -254,8 +256,10 @@ export function formatStateForPrompt(state: SessionState): string {
   if (state.propertyType) fields.push(`Property type: ${state.propertyType}`)
   if (state.propertyRef) fields.push(`Property of interest: ${state.propertyRef}`)
   if (state.bedrooms !== undefined) fields.push(`Bedrooms wanted: ${state.bedrooms}`)
+  if (state.bathrooms !== undefined) fields.push(`Bathrooms wanted: ${state.bathrooms}`)
   if (state.budget) fields.push(`Budget: ${state.budget}`)
   if (state.zone) fields.push(`Preferred zone: ${state.zone}`)
+  if (state.mustHaves) fields.push(`Must-have features: ${state.mustHaves}`)
   if (state.language) {
     // The CURRENT language is the one to KEEP when the new message has no
     // language signal (a bare number, a place name, an emoji, "ok"). It is a
