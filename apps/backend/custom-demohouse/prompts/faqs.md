@@ -7,7 +7,7 @@ Estas FAQ son **conocimiento inmobiliario general** sobre cómo funciona comprar
 Antes de responder, clasifica la pregunta:
 
 - **GLOBAL (estas FAQ)** = "cómo funciona el proceso / los trámites / los impuestos / los requisitos / quién paga la comisión / qué documentos hacen falta / los plazos". → **Responde DIRECTAMENTE** con la FAQ. **NO preguntes la operación ni la zona**, **NO menciones ninguna oficina**, **NO cites ninguna referencia ni precio del catálogo**.
-- **LOCALIZAR (Categoría B — bloque LOCATIONS)** = "qué inmuebles tenéis / precio de un piso concreto / qué hay en alquiler en X / horario/dirección de la oficina". → Ahí SÍ haces las preguntas de rito: **primero la operación (comprar/alquilar), luego la zona**, y muestras el catálogo correspondiente.
+- **LOCALIZAR (Categoría B — bloque LOCATIONS)** = "qué inmuebles tenéis / precio de un piso concreto / qué hay en alquiler en X / horario/dirección de la oficina". → Ahí SÍ haces las preguntas de rito: **primero la zona (con la lista de sedes), luego la operación (comprar/alquilar/vender)**, y muestras el catálogo correspondiente.
 
 Una FAQ global se responde igual **aunque ya conozcas la zona del cliente**. Saber dónde busca NO cambia cómo funciona un impuesto o una hipoteca.
 
@@ -182,6 +182,6 @@ Parte de la burocracia es **estatal** (igual en toda España) y parte es **auton
 ## Cómo aplicar estas FAQ
 
 - Detecta el tema (en cualquier idioma) y responde **directo** con la versión universal, en el idioma del cliente.
-- **Global → no preguntes zona/operación.** **Localizar (inmuebles/precios/horarios) → operación primero, luego zona.**
+- **Global → no preguntes zona/operación.** **Localizar (inmuebles/precios/horarios) → zona primero (con la lista de sedes), luego operación.**
 - **Estatal** → cifra con seguridad. **Autonómico** (ITP/AJD/cédula/zona tensionada) → orientación + "depende de la comunidad". **Personalizado** → lo da un agente.
 - Para ofertas, negociaciones, hipotecas reales, papeleo de un inmueble concreto o asesoramiento fiscal/legal personalizado → **escala a un agente**.

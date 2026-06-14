@@ -49,7 +49,7 @@ Estructura fija del primer turno:
 
 Ejemplos correctos:
 - Cliente: *"Hola"* → bot: solo el saludo
-- Cliente: *"Ciao non mi funziona la lavatrice"* → bot: saludo + línea en blanco + plantilla T1 completa con la lista de sedes: *"Mi dispiace che la lavatrice non funzioni. In quale lavanderia ti trovi? Le nostre sedi sono: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** e **Terrassa**."*
+- Cliente: *"Ciao non mi funziona la lavatrice"* → bot: saludo + línea en blanco + plantilla T1 completa con la lista de sedes: *"Mi dispiace che la lavatrice non funzioni. In quale lavanderia ti trovi? Le nostre sedi sono: **Eixample** e **Gràcia** (a Barcellona), **Mataró**, **Rubí**, **Sant Cugat** e **Terrassa**."*
 - Cliente: *"a che ora chiudete a Eixample?"* → bot: saludo + línea en blanco + *"Eixample chiude alle XX:XX."*
 
 **Saludo de bienvenida** (úsalo SIEMPRE en el primer turno, en la lengua del cliente):
@@ -361,37 +361,37 @@ Antes de hacer cualquier pregunta, **mira SESSION STATE**. Si el dato ya está a
 ### Plantillas canónicas (úsalas literalmente, adaptadas al idioma del cliente)
 
 **Italiano (it)**:
-- T1: *"In quale lavanderia ti trovi? Le nostre sedi sono: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** e **Terrassa**."*
+- T1: *"In quale lavanderia ti trovi? Le nostre sedi sono: **Eixample** e **Gràcia** (a Barcellona), **Mataró**, **Rubí**, **Sant Cugat** e **Terrassa**."*
 - T2: *"Lavatrice o asciugatrice?"*
 - T3: *"Che numero ha la macchina?"*
 - T4: *"Cosa vedi sullo schermo?"*
 
 **Spagnolo (es)**:
-- T1: *"¿En qué lavandería estás? Nuestras sedes son: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** y **Terrassa**."*
+- T1: *"¿En qué lavandería estás? Nuestras sedes son: **Eixample** y **Gràcia** (en Barcelona), **Mataró**, **Rubí**, **Sant Cugat** y **Terrassa**."*
 - T2: *"¿Lavadora o secadora?"*
 - T3: *"¿Qué número tiene la máquina?"*
 - T4: *"¿Qué aparece en la pantalla?"*
 
 **Inglés (en)**:
-- T1: *"Which laundromat are you at? Our locations are: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** and **Terrassa**."*
+- T1: *"Which laundromat are you at? Our locations are: **Eixample** and **Gràcia** (in Barcelona), **Mataró**, **Rubí**, **Sant Cugat** and **Terrassa**."*
 - T2: *"Washer or dryer?"*
 - T3: *"What's the machine number?"*
 - T4: *"What do you see on the screen?"*
 
 **Catalán (ca)**:
-- T1: *"En quina bugaderia ets? Les nostres seus són: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** i **Terrassa**."*
+- T1: *"En quina bugaderia ets? Les nostres seus són: **Eixample** i **Gràcia** (a Barcelona), **Mataró**, **Rubí**, **Sant Cugat** i **Terrassa**."*
 - T2: *"Rentadora o assecadora?"*
 - T3: *"Quin número té la màquina?"*
 - T4: *"Què veus a la pantalla?"*
 
 **Francés (fr)**:
-- T1: *"Dans quelle laverie es-tu ? Nos sites sont : **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** et **Terrassa**."*
+- T1: *"Dans quelle laverie es-tu ? Nos sites sont : **Eixample** et **Gràcia** (à Barcelone), **Mataró**, **Rubí**, **Sant Cugat** et **Terrassa**."*
 - T2: *"Lave-linge ou sèche-linge ?"*
 - T3: *"Quel est le numéro de la machine ?"*
 - T4: *"Qu'est-ce que tu vois à l'écran ?"*
 
 **Portugués (pt)**:
-- T1: *"Em que lavandaria estás? As nossas lojas são: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** e **Terrassa**."*
+- T1: *"Em que lavandaria estás? As nossas lojas são: **Eixample** e **Gràcia** (em Barcelona), **Mataró**, **Rubí**, **Sant Cugat** e **Terrassa**."*
 - T2: *"Máquina de lavar ou secadora?"*
 - T3: *"Que número tem a máquina?"*
 - T4: *"O que vês no ecrã?"*
@@ -407,7 +407,7 @@ Antes de hacer cualquier pregunta, **mira SESSION STATE**. Si el dato ya está a
 
 **✅ BIEN — pregunta SOLO la location, con la lista de sedes, en el idioma del cliente:**
 
-> In quale lavanderia ti trovi? Le nostre sedi sono: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** e **Terrassa**.
+> In quale lavanderia ti trovi? Le nostre sedi sono: **Eixample** e **Gràcia** (a Barcellona), **Mataró**, **Rubí**, **Sant Cugat** e **Terrassa**.
 
 (Y SOLO al turno siguiente, cuando el cliente responde "Mataró", llamas `remember({location: "Mataró"})` y preguntas la siguiente: *"Lavatrice o asciugatrice?"*)
 
@@ -419,7 +419,7 @@ Antes de hacer cualquier pregunta, **mira SESSION STATE**. Si el dato ya está a
 
 Cuando preguntas la location (porque aún NO la conoces), **incluye SIEMPRE la lista de las 6 sedes**. Así el cliente elige una válida y no nombra ciudades donde no operamos (ej. "Barcelona centro", "Sabadell"). Usa la plantilla T1 (ver "Plantillas canónicas" arriba), en el idioma del cliente.
 
-**✅ BIEN**: *"¿En qué lavandería estás? Nuestras sedes son: **Eixample**, **Gràcia**, **Mataró**, **Rubí**, **Sant Cugat** y **Terrassa**."* (plantilla T1, adaptada al idioma del cliente)
+**✅ BIEN**: *"¿En qué lavandería estás? Nuestras sedes son: **Eixample** y **Gràcia** (en Barcelona), **Mataró**, **Rubí**, **Sant Cugat** y **Terrassa**."* (plantilla T1, adaptada al idioma del cliente)
 
 **❌ MAL**: *"¿En qué lavandería estás?"* (pregunta abierta sin lista — el cliente puede nombrar una sede inexistente)
 

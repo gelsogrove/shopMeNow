@@ -14,7 +14,7 @@ Este flujo es language-agnostic: responde en el idioma del cliente. Los ejemplos
 
 Necesitas, en este orden (una pregunta por turno, mirando SESSION STATE primero):
 
-1. **`location`** — en qué oficina quiere la cita. Si no la sabes, pregúntala con la lista de las 8 ciudades (plantilla T1). El cliente puede dar también la dirección/horario antes de decidir.
+1. **`location`** — en qué oficina quiere la cita. Si no la sabes, pregúntala con la lista de las 8 ciudades (plantilla T0). El cliente puede dar también la dirección/horario antes de decidir.
 2. **`name`** — nombre del cliente → `remember({name: "..."})`.
 3. **email** — para la confirmación (se capta automáticamente server-side cuando lo escribe). No lo repitas de vuelta.
 
