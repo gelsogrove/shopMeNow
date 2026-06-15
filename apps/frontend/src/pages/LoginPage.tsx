@@ -2116,11 +2116,11 @@ export function LoginPage() {
                       <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                       Interactive Demo
                     </div>
-                    {/* Brand wordmark — "Demo" in white, "Casa" in brand
+                    {/* Brand wordmark — "Demo" in white, "RealEstate" in brand
                         green. Not translated: it's the demo tenant name. */}
                     <h3 className="text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">
                       <span className="text-white">Demo</span>
-                      <span style={{ color: "#25D366" }}>Casa</span>
+                      <span style={{ color: "#25D366" }}>RealEstate</span>
                     </h3>
                     <p className="text-xl text-slate-300 leading-relaxed text-justify">
                       {t("demohouse.subtitle")}

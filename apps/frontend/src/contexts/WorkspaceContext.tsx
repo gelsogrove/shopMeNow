@@ -84,7 +84,6 @@ export interface Workspace {
   widgetUseChannelLogo?: boolean
   widgetAutoSuggestionsEnabled?: boolean
   widgetQuickReplies?: string[]
-  welcomeVideoUrl?: string
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean

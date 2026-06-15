@@ -45,7 +45,6 @@ interface ResolvedDemo {
   workspaceId: string
   workspaceName: string
   chatbotId: string
-  welcomeVideoUrl?: string | null
 }
 
 // ── Per-brand visual theme (keyed by slug) ───────────────────────────────────
@@ -442,7 +441,6 @@ export function DemoWidgetPage() {
           title={`${brand.titleA}${brand.titleB}`}
           primaryColor={brand.primaryColor}
           position="bottom-right"
-          welcomeVideoUrl={demo.welcomeVideoUrl || undefined}
         />
       )}
     </div>

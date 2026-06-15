@@ -78,9 +78,6 @@ export function WidgetEmbedPage() {
       apiUrl:
         decodeParam(params.get("apiUrl")) ||
         (window as any)?.eChatbotConfig?.apiUrl,
-      welcomeVideoUrl:
-        decodeParam(params.get("welcomeVideoUrl")) ||
-        (window as any)?.eChatbotConfig?.welcomeVideoUrl,
     }
   }, [])
 
@@ -100,7 +97,6 @@ export function WidgetEmbedPage() {
         useChannelLogo={config.useChannelLogo === true || config.useChannelLogo === "true"}
         useWindowConfig={false}
         apiUrl={config.apiUrl}
-        welcomeVideoUrl={config.welcomeVideoUrl}
         onOpenChange={(open) => {
           window.parent?.postMessage(
             {
