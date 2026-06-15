@@ -311,6 +311,112 @@ function resolveDemoItems(slug: string, lang: string): string[] {
   return brand[lang] || brand.en
 }
 
+// 📣 Simulated PROMOTIONAL push messages, per brand × language. Clicking the
+// demo "push" button injects these (one per click, cycling) as incoming bot
+// bubbles with a beep — so a visitor sees what a proactive promo feels like.
+//
+// IMPORTANT (image rendering): the <img> is written with `alt` BEFORE `src` on
+// purpose. MessageRenderer routes `<img src="..." alt="..."/>` (src first) to a
+// "product card" layout that rewrites the URL through the BACKEND base (:3001),
+// which would 404 our /public assets. With `alt` first it stays on the normal
+// path, keeping the src as-is so the image loads from the frontend origin, and
+// also keeps **bold** + clickable links working.
+const PUSH_CASES_I18N: Record<string, Record<string, string[]>> = {
+  demowash: {
+    en: [
+      `**📣 PROMO · DemoWash**\n🎫 Loyalty card: -20% on every wash. Activate it today at your store!\n<img alt="Loyalty card" src="/laundry.png"/>`,
+      `**📣 PROMO · DemoWash**\n🧺 -30% on duvets this weekend at your store!`,
+      `**📣 PROMO · DemoWash**\n🎁 Bring a friend and you both get a free wash!`,
+      `**📣 PROMO · DemoWash**\n⭐ You have 50 points: a free wash is waiting for you!`,
+      `**📣 PROMO · DemoWash**\n📣 New store in Sants! Come try it with a free dry.`,
+    ],
+    it: [
+      `**📣 PROMO · DemoWash**\n🎫 Tessera fedeltà: -20% su ogni lavaggio. Attivala oggi nella tua sede!\n<img alt="Tessera fedeltà" src="/laundry.png"/>`,
+      `**📣 PROMO · DemoWash**\n🧺 -30% sui piumoni questo weekend nella tua sede!`,
+      `**📣 PROMO · DemoWash**\n🎁 Porta un amico e avete entrambi un lavaggio gratis!`,
+      `**📣 PROMO · DemoWash**\n⭐ Hai 50 punti: ti aspetta un lavaggio gratis!`,
+      `**📣 PROMO · DemoWash**\n📣 Nuova sede a Sants! Vieni a provarla con un'asciugatura gratis.`,
+    ],
+    es: [
+      `**📣 PROMO · DemoWash**\n🎫 Tarjeta de fidelización: -20% en cada lavado. ¡Actívala hoy en tu sede!\n<img alt="Tarjeta de fidelización" src="/laundry.png"/>`,
+      `**📣 PROMO · DemoWash**\n🧺 ¡-30% en edredones este fin de semana en tu sede!`,
+      `**📣 PROMO · DemoWash**\n🎁 ¡Trae a un amigo y los dos tenéis un lavado gratis!`,
+      `**📣 PROMO · DemoWash**\n⭐ Tienes 50 puntos: ¡te espera un lavado gratis!`,
+      `**📣 PROMO · DemoWash**\n📣 ¡Nueva sede en Sants! Ven a probarla con un secado gratis.`,
+    ],
+    fr: [
+      `**📣 PROMO · DemoWash**\n🎫 Carte de fidélité : -20% sur chaque lavage. Activez-la aujourd'hui dans votre point !\n<img alt="Carte de fidélité" src="/laundry.png"/>`,
+      `**📣 PROMO · DemoWash**\n🧺 -30% sur les couettes ce week-end dans votre point !`,
+      `**📣 PROMO · DemoWash**\n🎁 Amenez un ami et profitez chacun d'un lavage gratuit !`,
+      `**📣 PROMO · DemoWash**\n⭐ Vous avez 50 points : un lavage gratuit vous attend !`,
+      `**📣 PROMO · DemoWash**\n📣 Nouveau point à Sants ! Venez l'essayer avec un séchage gratuit.`,
+    ],
+    ca: [
+      `**📣 PROMO · DemoWash**\n🎫 Targeta de fidelització: -20% en cada rentat. Activa-la avui a la teva seu!\n<img alt="Targeta de fidelització" src="/laundry.png"/>`,
+      `**📣 PROMO · DemoWash**\n🧺 -30% en edredons aquest cap de setmana a la teva seu!`,
+      `**📣 PROMO · DemoWash**\n🎁 Porta un amic i tots dos teniu un rentat gratis!`,
+      `**📣 PROMO · DemoWash**\n⭐ Tens 50 punts: t'espera un rentat gratis!`,
+      `**📣 PROMO · DemoWash**\n📣 Nova seu a Sants! Vine a provar-la amb un assecat gratis.`,
+    ],
+    de: [
+      `**📣 PROMO · DemoWash**\n🎫 Treuekarte: -20% auf jede Wäsche. Aktiviere sie heute in deiner Filiale!\n<img alt="Treuekarte" src="/laundry.png"/>`,
+      `**📣 PROMO · DemoWash**\n🧺 -30% auf Bettdecken dieses Wochenende in deiner Filiale!`,
+      `**📣 PROMO · DemoWash**\n🎁 Bring einen Freund mit und ihr bekommt beide eine Gratis-Wäsche!`,
+      `**📣 PROMO · DemoWash**\n⭐ Du hast 50 Punkte: eine Gratis-Wäsche wartet auf dich!`,
+      `**📣 PROMO · DemoWash**\n📣 Neue Filiale in Sants! Komm und teste sie mit einem Gratis-Trocknen.`,
+    ],
+  },
+  demorealestate: {
+    en: [
+      `**📣 PROMO · DemoRealEstate**\n🏡 New home in Gràcia — 3 rooms · 85 m² · bright · €320,000\n<img alt="Home in Gràcia" src="/demohouse.png"/>\nhttps://demo.echatbot.ai/g123`,
+      `**📣 PROMO · DemoRealEstate**\n📉 Price drop! The penthouse you viewed is now €280,000.`,
+      `**📣 PROMO · DemoRealEstate**\n🔔 5 new homes just listed in your area. Want to see them?`,
+      `**📣 PROMO · DemoRealEstate**\n🔑 New rental in Sant Cugat — 2 rooms · 70 m² · €1,200/month\n<img alt="Flat in Sant Cugat" src="/demohouse.png"/>\nhttps://demo.echatbot.ai/sc456`,
+      `**📣 PROMO · DemoRealEstate**\n📈 Your area is in high demand. Get a free valuation of your home!`,
+    ],
+    it: [
+      `**📣 PROMO · DemoRealEstate**\n🏡 Nuova casa a Gràcia — 3 locali · 85 m² · luminosa · 320.000 €\n<img alt="Casa a Gràcia" src="/demohouse.png"/>\nhttps://demo.echatbot.ai/g123`,
+      `**📣 PROMO · DemoRealEstate**\n📉 Ribasso di prezzo! L'attico che hai visto ora a 280.000 €.`,
+      `**📣 PROMO · DemoRealEstate**\n🔔 5 nuove case appena pubblicate nella tua zona. Vuoi vederle?`,
+      `**📣 PROMO · DemoRealEstate**\n🔑 Nuovo affitto a Sant Cugat — 2 locali · 70 m² · 1.200 €/mese\n<img alt="Appartamento a Sant Cugat" src="/demohouse.png"/>\nhttps://demo.echatbot.ai/sc456`,
+      `**📣 PROMO · DemoRealEstate**\n📈 La tua zona è molto richiesta. Valuta la tua casa gratis!`,
+    ],
+    es: [
+      `**📣 PROMO · DemoRealEstate**\n🏡 Nueva casa en Gràcia — 3 hab · 85 m² · luminosa · 320.000 €\n<img alt="Casa en Gràcia" src="/demohouse.png"/>\nhttps://demo.echatbot.ai/g123`,
+      `**📣 PROMO · DemoRealEstate**\n📉 ¡Bajada de precio! El ático que viste ahora a 280.000 €.`,
+      `**📣 PROMO · DemoRealEstate**\n🔔 5 casas nuevas recién publicadas en tu zona. ¿Quieres verlas?`,
+      `**📣 PROMO · DemoRealEstate**\n🔑 Nuevo alquiler en Sant Cugat — 2 hab · 70 m² · 1.200 €/mes\n<img alt="Piso en Sant Cugat" src="/demohouse.png"/>\nhttps://demo.echatbot.ai/sc456`,
+      `**📣 PROMO · DemoRealEstate**\n📈 Tu zona está muy solicitada. ¡Valora tu casa gratis!`,
+    ],
+    fr: [
+      `**📣 PROMO · DemoRealEstate**\n🏡 Nouveau logement à Gràcia — 3 pièces · 85 m² · lumineux · 320 000 €\n<img alt="Logement à Gràcia" src="/demohouse.png"/>\nhttps://demo.echatbot.ai/g123`,
+      `**📣 PROMO · DemoRealEstate**\n📉 Baisse de prix ! Le penthouse que vous avez vu est maintenant à 280 000 €.`,
+      `**📣 PROMO · DemoRealEstate**\n🔔 5 nouveaux logements publiés dans votre quartier. Voulez-vous les voir ?`,
+      `**📣 PROMO · DemoRealEstate**\n🔑 Nouvelle location à Sant Cugat — 2 pièces · 70 m² · 1 200 €/mois\n<img alt="Appartement à Sant Cugat" src="/demohouse.png"/>\nhttps://demo.echatbot.ai/sc456`,
+      `**📣 PROMO · DemoRealEstate**\n📈 Votre quartier est très demandé. Estimez votre logement gratuitement !`,
+    ],
+    ca: [
+      `**📣 PROMO · DemoRealEstate**\n🏡 Nou habitatge a Gràcia — 3 habitacions · 85 m² · lluminós · 320.000 €\n<img alt="Habitatge a Gràcia" src="/demohouse.png"/>\nhttps://demo.echatbot.ai/g123`,
+      `**📣 PROMO · DemoRealEstate**\n📉 Baixada de preu! L'àtic que vas veure ara a 280.000 €.`,
+      `**📣 PROMO · DemoRealEstate**\n🔔 5 habitatges nous acabats de publicar a la teva zona. Els vols veure?`,
+      `**📣 PROMO · DemoRealEstate**\n🔑 Nou lloguer a Sant Cugat — 2 habitacions · 70 m² · 1.200 €/mes\n<img alt="Pis a Sant Cugat" src="/demohouse.png"/>\nhttps://demo.echatbot.ai/sc456`,
+      `**📣 PROMO · DemoRealEstate**\n📈 La teva zona està molt sol·licitada. Valora casa teva gratis!`,
+    ],
+    de: [
+      `**📣 PROMO · DemoRealEstate**\n🏡 Neue Wohnung in Gràcia — 3 Zimmer · 85 m² · hell · 320.000 €\n<img alt="Wohnung in Gràcia" src="/demohouse.png"/>\nhttps://demo.echatbot.ai/g123`,
+      `**📣 PROMO · DemoRealEstate**\n📉 Preissenkung! Das Penthouse, das du gesehen hast, jetzt für 280.000 €.`,
+      `**📣 PROMO · DemoRealEstate**\n🔔 5 neue Wohnungen in deiner Gegend veröffentlicht. Möchtest du sie sehen?`,
+      `**📣 PROMO · DemoRealEstate**\n🔑 Neue Mietwohnung in Sant Cugat — 2 Zimmer · 70 m² · 1.200 €/Monat\n<img alt="Wohnung in Sant Cugat" src="/demohouse.png"/>\nhttps://demo.echatbot.ai/sc456`,
+      `**📣 PROMO · DemoRealEstate**\n📈 Deine Gegend ist sehr gefragt. Bewerte dein Zuhause kostenlos!`,
+    ],
+  },
+}
+
+function resolveDemoPushCases(slug: string, lang: string): string[] {
+  const brand = PUSH_CASES_I18N[slug] ?? PUSH_CASES_I18N.demowash
+  return brand[lang] || brand.en
+}
+
 export function DemoWidgetPage() {
   // Slug comes from the route param. The route is declared as /demo/<slug>/*
   // so we also fall back to parsing the pathname for nested matches.
@@ -328,6 +434,7 @@ export function DemoWidgetPage() {
   const lang = useMemo(() => resolveLang(), [])
   const t = useMemo(() => resolveDemoIntro(lang), [lang])
   const items = useMemo(() => resolveDemoItems(slug, lang), [slug, lang])
+  const pushCases = useMemo(() => resolveDemoPushCases(slug, lang), [slug, lang])
 
   const [demo, setDemo] = useState<ResolvedDemo | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -465,6 +572,7 @@ export function DemoWidgetPage() {
           title={`${brand.titleA}${brand.titleB}`}
           primaryColor={brand.primaryColor}
           position="bottom-right"
+          pushDemoCases={pushCases}
         />
       )}
     </div>

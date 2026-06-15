@@ -2339,6 +2339,23 @@ export function ChatWidget({
                   toggles mic ↔ send. Keeps the composer compact on narrow widths
                   so nothing wraps to a second line. */}
               <div className="border-t border-gray-200 p-2.5 sm:p-3 space-y-1.5">
+                {/* 📣 Demo-only: simulate a promotional push. Injects an incoming
+                    promo bubble + a WhatsApp-like beep. Dashed/amber so it reads
+                    as a demo control, never shown in the real client widget. */}
+                {instantChat && pushDemoCases && pushDemoCases.length > 0 && (
+                  <div className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={firePushDemo}
+                      className="w-full rounded-xl border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100"
+                    >
+                      {ui.pushBtn}
+                    </button>
+                    <p className="px-1 text-center text-[10px] leading-tight text-gray-400">
+                      {ui.pushHint}
+                    </p>
+                  </div>
+                )}
                 {recording ? (
                   /* 🎤 Recording state: cancel (discard) · live timer · stop (send) */
                   <div className="flex items-center gap-2">
