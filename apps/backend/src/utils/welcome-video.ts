@@ -3,35 +3,29 @@
  *
  * Custom chatbots (demowash, …) can show a presentation video on the
  * customer's first message. On the web playground this renders as a rich
- * WelcomeVideoCard (greeting → intro line → video card → rest of the reply).
+ * WelcomeVideoCard (text before the video → video card → text after).
+ *
+ * The intro line ("ecco una breve presentazione 👇") is NOT injected here:
+ * it is authored by the LLM as part of the welcome message, in the SAME
+ * language as the rest of the reply (see each module's prompts/common.md).
+ * This guarantees a single language per message — no hardcoded translation
+ * map to keep in sync, no language field to plumb through.
  *
  * WhatsApp cannot render a custom card and cannot place an image in the MIDDLE
  * of a text message (the image always sits at the top of its bubble). To mirror
  * the playground ORDER on WhatsApp — and to work identically across ALL
  * providers (Meta, UltraMsg, Wasender) — we split the welcome into two messages:
  *
- *   1. text  : greeting + intro line ("here's a short presentation 👇")
- *   2. media : the YouTube thumbnail as a real image, with the rest of the reply
- *              + the clickable video link as the caption.
+ *   1. text  : everything authored BEFORE the video URL (greeting + intro line)
+ *   2. media : the YouTube thumbnail as a real image, with everything authored
+ *              AFTER the URL + the clickable video link as the caption.
  *
  * This produces, on WhatsApp: a text bubble, then a bubble with the thumbnail
  * image and the closing question — the same visual order as the playground.
  *
  * When the video is NOT a YouTube URL (no resolvable thumbnail), this returns
- * null and the caller falls back to the legacy single-message inline-URL format.
+ * an `inline` message and the caller sends a single message with the URL inline.
  */
-
-/** Localized "here's a short presentation 👇" intro line, per language. */
-export const WELCOME_VIDEO_INTRO: Record<string, string> = {
-  es: "Antes de empezar, te dejo una breve presentación 👇",
-  it: "Prima di iniziare, ecco una breve presentazione 👇",
-  en: "Before we start, here's a short presentation 👇",
-  ca: "Abans de començar, et deixo una breu presentació 👇",
-  pt: "Antes de começar, deixo-te uma breve apresentação 👇",
-  fr: "Avant de commencer, voici une brève présentation 👇",
-  de: "Bevor wir beginnen, hier eine kurze Präsentation 👇",
-  ar: "قبل أن نبدأ، إليك عرضًا تقديميًا موجزًا 👇",
-}
 
 /**
  * Extract the 11-char YouTube video id from any common YouTube URL shape
@@ -64,8 +58,10 @@ export function youtubeThumbnail(url: string): string | null {
 
 /**
  * Find the FIRST video URL (YouTube or direct .mp4) inside free text and return
- * it together with the text stripped of that URL (surrounding blank lines
- * collapsed). Returns null when the text contains no video URL.
+ * it together with the authored text BEFORE and AFTER the URL (trimmed). The
+ * URL position is the split point so the video lands exactly where the author
+ * put it: text before → above the video, text after → below it. Returns null
+ * when the text contains no video URL.
  *
  * The welcome video is authored INSIDE the welcome message itself (the custom
  * module's greeting in `prompts/common.md`). The rendering layer extracts it
@@ -74,7 +70,7 @@ export function youtubeThumbnail(url: string): string | null {
  */
 export function extractVideoUrl(
   text: string
-): { url: string; text: string } | null {
+): { url: string; before: string; after: string } | null {
   if (!text) return null
   const matches = text.match(/https?:\/\/[^\s<>()]+/gi)
   if (!matches) return null
@@ -84,12 +80,10 @@ export function extractVideoUrl(
     const isVideo =
       youtubeVideoId(url) !== null || /\.mp4(\?[^\s]*)?$/i.test(url)
     if (!isVideo) continue
-    const cleaned = text
-      .replace(raw, "")
-      .replace(/[ \t]+$/gm, "") // trailing spaces left on the line
-      .replace(/\n{3,}/g, "\n\n") // collapse the gap the URL left behind
-      .trim()
-    return { url, text: cleaned }
+    const idx = text.indexOf(raw)
+    const before = text.slice(0, idx).replace(/[ \t]+$/gm, "").trim()
+    const after = text.slice(idx + raw.length).replace(/[ \t]+$/gm, "").trim()
+    return { url, before, after }
   }
   return null
 }
@@ -106,36 +100,29 @@ export type WelcomeVideoMessage =
 /**
  * Format a custom-chatbot first-turn reply whose welcome message embeds a video
  * URL. Extracts the URL from the reply text and produces the channel-agnostic
- * layout (greeting → intro line → video → rest). Returns null when the reply
+ * layout (text before → video → text after). Returns null when the reply
  * contains no video URL (caller sends the reply unchanged).
  *
- * @param customerReply  the bot reply (Markdown). Expected shape: "greeting\n\nrest".
- * @param language       customer language (for the intro line); falls back to en.
+ * @param customerReply  the bot reply (Markdown). The intro line is already
+ *                       authored (in the reply language) right before the URL.
  */
 export function formatWelcomeReply(
-  customerReply: string,
-  language?: string | null
+  customerReply: string
 ): WelcomeVideoMessage | null {
   const found = extractVideoUrl(customerReply)
   if (!found) return null
 
-  const intro = WELCOME_VIDEO_INTRO[language ?? "en"] ?? WELCOME_VIDEO_INTRO.en
-  const reply = found.text
-  const breakIdx = reply.indexOf("\n\n")
-  const greeting = breakIdx !== -1 ? reply.slice(0, breakIdx) : reply
-  const rest = breakIdx !== -1 ? reply.slice(breakIdx + 2) : ""
-
   const imageUrl = youtubeThumbnail(found.url)
   if (imageUrl) {
     // YouTube → two messages (mirrors the playground WelcomeVideoCard order).
-    const textMessage = `${greeting}\n\n${intro}`
-    const caption = [rest, found.url].filter(Boolean).join("\n\n")
+    const textMessage = found.before
+    const caption = [found.after, found.url].filter(Boolean).join("\n\n")
     return { type: "split", textMessage, imageUrl, caption }
   }
 
-  // Non-YouTube (.mp4) → single message, URL inline under the intro line.
-  const text = rest
-    ? `${greeting}\n\n${intro}\n${found.url}\n\n${rest}`
-    : `${greeting}\n\n${intro}\n${found.url}`
+  // Non-YouTube (.mp4) → single message, URL inline where the author put it.
+  const text = found.after
+    ? `${found.before}\n${found.url}\n\n${found.after}`
+    : `${found.before}\n${found.url}`
   return { type: "inline", text }
 }

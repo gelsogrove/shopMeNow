@@ -1548,20 +1548,14 @@ export class UltraMsgWebhookController {
             const directSend = new WhatsAppDirectSendService(prisma)
             const { customerReply } = splitCustomChatbotReply(customOutput.reply)
 
-            // 🌍 The welcome-video intro line is deterministic (not LLM-translated),
-            // so it must follow the SAME language the bot replied in — detected by
-            // the module from the message text — not `customerLanguage` (a phone/DB
-            // guess that can disagree with the reply on first contact).
-            const welcomeIntroLanguage =
-              (customOutput as { language?: string }).language ?? customerLanguage
-
             // 📺 First message whose welcome text embeds a presentation video URL
-            // → mirror the playground's WelcomeVideoCard ORDER (greeting → intro →
-            // video → rest). The URL is authored INSIDE the module greeting;
-            // formatWelcomeReply extracts it. Provider-agnostic: send()/sendMedia().
+            // → mirror the playground's WelcomeVideoCard ORDER (text before →
+            // video → text after). The URL AND the intro line are authored INSIDE
+            // the module greeting (in the reply language); formatWelcomeReply just
+            // splits at the URL. Provider-agnostic: send()/sendMedia().
             const welcome =
               messageCount === 0
-                ? formatWelcomeReply(customerReply, welcomeIntroLanguage)
+                ? formatWelcomeReply(customerReply)
                 : null
 
             if (welcome?.type === 'split') {

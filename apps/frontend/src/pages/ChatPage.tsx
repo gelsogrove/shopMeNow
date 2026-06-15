@@ -2024,19 +2024,17 @@ export function ChatPage() {
                               ? splitBotMessage(message.content)
                               : { customer: message.content, operator: null }
                             // 📺 Welcome video: the URL is authored INSIDE the bot
-                            // reply (module greeting). Extract it from the message,
-                            // strip it from the visible text, and render the card
-                            // between greeting and rest (greeting → intro+video →
-                            // answer). Content-driven: no separate workspace field.
+                            // reply (module greeting). Extract it and render the card
+                            // at the URL position (text before → video → text after).
+                            // The intro line is authored in the reply language right
+                            // before the URL — no hardcoded intro, no language field.
                             const foundVideo = isAgentMessage
                               ? extractVideoUrl(rawCustomerText)
                               : null
                             const isWelcomeWithVideo = !!foundVideo
-                            const customerText = foundVideo ? foundVideo.text : rawCustomerText
+                            const greetingPart = foundVideo ? foundVideo.before : rawCustomerText
+                            const restPart = foundVideo ? foundVideo.after : ""
                             const welcomeVideoUrl = foundVideo?.url
-                            const brIdx = isWelcomeWithVideo ? customerText.indexOf("\n\n") : -1
-                            const greetingPart = brIdx !== -1 ? customerText.slice(0, brIdx) : customerText
-                            const restPart = brIdx !== -1 ? customerText.slice(brIdx + 2) : ""
                             return (
                               <>
                                 <div
@@ -2050,11 +2048,7 @@ export function ChatPage() {
                                 </div>
 
                                 {isWelcomeWithVideo && (
-                                  <WelcomeVideoCard
-                                    url={welcomeVideoUrl as string}
-                                    lang={selectedChat?.language}
-                                    greeting={greetingPart}
-                                  />
+                                  <WelcomeVideoCard url={welcomeVideoUrl as string} />
                                 )}
 
                                 {isWelcomeWithVideo && restPart && (

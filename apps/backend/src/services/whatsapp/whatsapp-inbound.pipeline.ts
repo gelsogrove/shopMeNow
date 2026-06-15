@@ -712,18 +712,18 @@ export class WhatsAppInboundPipeline {
           // 🌍 The language the bot ACTUALLY replied in — declared by the module
           // via the ⟦LANG:xx⟧ trailer (committed to session state), detected from
           // the message text. Use this (NOT `customerLanguage`, a phone/DB guess
-          // that can disagree on first contact) for both the deterministic
-          // welcome-video intro line AND the TTS spoken language/voice.
+          // that can disagree on first contact) for the TTS spoken language/voice.
           const replyLanguage = customOutput.language ?? customerLanguage
 
           // 📺 First message whose welcome text embeds a presentation video URL
-          // → mirror the playground's WelcomeVideoCard ORDER (greeting → intro →
-          // video → rest). The URL is authored INSIDE the module greeting;
-          // formatWelcomeReply extracts it. Works the same on every provider
-          // (Meta/UltraMsg/Wasender) via the provider-agnostic send()/sendMedia().
+          // → mirror the playground's WelcomeVideoCard ORDER (text before → video
+          // → text after). The URL AND the intro line are authored INSIDE the
+          // module greeting (in the reply language); formatWelcomeReply just
+          // splits at the URL. Works the same on every provider (Meta/UltraMsg/
+          // Wasender) via the provider-agnostic send()/sendMedia().
           const welcome =
             messageCount === 0 && !inboundWasAudio
-              ? formatWelcomeReply(customerReply, replyLanguage)
+              ? formatWelcomeReply(customerReply)
               : null
 
           if (welcome?.type === "split") {

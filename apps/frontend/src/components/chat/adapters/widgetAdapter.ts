@@ -203,7 +203,6 @@ export const sendWidgetMessage = async ({
       suggestions: undefined,
       activeChatbot: false as boolean | undefined,
       blocked: true, // 🆕 Preserve blocked flag for downstream handling
-      language: undefined as string | undefined,
     }
   }
 
@@ -229,8 +228,6 @@ export const sendWidgetMessage = async ({
       : undefined,
     // Operator handoff: backend sets activeChatbot=false when contactOperator CF was triggered
     activeChatbot: data.activeChatbot as boolean | undefined,
-    // 🌍 Language the bot actually replied in — drives the welcome-video intro line
-    language: data.language as string | undefined,
     // 🔊 Optional TTS reply (audioOutput tenants): URL of the spoken reply MP3.
     audioUrl: data.audioUrl as string | undefined,
   }

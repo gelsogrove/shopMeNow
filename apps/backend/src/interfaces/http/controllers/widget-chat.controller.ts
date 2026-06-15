@@ -1035,11 +1035,6 @@ export class WidgetChatController {
       let llmAgentUsed: string = AgentType.ROUTER
       let llmTokensUsed = 0
       let suggestions: string[] = []
-      // 🌍 The language the bot ACTUALLY replied in (declared by the custom
-      // module via customOutput.language, detected from the message text). Used
-      // for the welcome-video intro line — must match the reply, NOT the widget
-      // selector. Mirrors the main chat path (line ~2295) and WhatsApp pipeline.
-      let replyLanguage: string | undefined = normalizedLanguage || undefined
 
       // 🎯 CUSTOM CLIENT: Try custom chatbot first (e.g. ecolaundry)
       // Pass history: [] because this is the first message of a new session.
@@ -1084,9 +1079,6 @@ export class WidgetChatController {
           llmResponse = customOutput.reply || llmResponse
           llmAgentUsed = AgentType.ROUTER
           llmTokensUsed = customOutput.meta?.tokensUsed || 0
-          // 🌍 Surface the real reply language so the welcome-video intro line
-          // matches the bot's reply (e.g. customer wrote IT → intro in IT).
-          replyLanguage = customOutput.language || replyLanguage
           const { customerReply: regCustomerReply } = splitCustomChatbotReply(customOutput.reply || "")
           if (!customOutput.shouldEscalate && workspace.widgetAutoSuggestionsEnabled === true && regCustomerReply) {
             suggestions = await buildWidgetSuggestionsWithAI(
@@ -1189,10 +1181,8 @@ export class WidgetChatController {
         response: splitCustomChatbotReply(llmResponse).customerReply,
         isNewCustomer,
         suggestions,
-        // 🌍 Return the language the bot actually replied in (falls back to the
-        // requested/normalized language) so the widget's welcome-video intro
-        // line matches the reply — parity with the main chat path & WhatsApp.
-        language: replyLanguage,
+        // 🌍 Return customer language — widget can sync its dropdown
+        language: normalizedLanguage,
         // 👤 Profile data — widget saves this in localStorage to show profile badge in header
         customerProfile: {
           name: customer.name,

@@ -161,8 +161,7 @@ interface Message {
   timestamp?: string
   suggestions?: string[]
   welcomeVideoUrl?: string // 📺 presentation video on the first bot reply (parity with WhatsApp)
-  welcomeRest?: string // 📺 reply text rendered AFTER the welcome video (greeting → video → rest)
-  replyLanguage?: string // 🌍 language the bot actually replied in (backend customOutput.language) — drives the welcome-video intro line, NOT the UI selector
+  welcomeRest?: string // 📺 reply text rendered AFTER the welcome video (text before → video → text after)
   attachments?: ChatAttachment[] // 📎 operator-sent images / PDFs / audio (handoff)
   serverId?: string // 😀 DB ConversationMessage id — needed to anchor a reaction server-side
   reaction?: string | null // 😀 visitor's reaction emoji on this message (server-synced)
@@ -479,11 +478,10 @@ export function ChatWidget({
     if (!found) return messages
     return messages.map((m, i) => {
       if (i !== firstBotIdx) return m
-      const breakIdx = found.text.indexOf("\n\n")
       return {
         ...m,
-        content: breakIdx !== -1 ? found.text.slice(0, breakIdx) : found.text,
-        welcomeRest: breakIdx !== -1 ? found.text.slice(breakIdx + 2) : "",
+        content: found.before, // greeting + intro line (authored in the reply language)
+        welcomeRest: found.after, // the rest of the reply, below the video
         welcomeVideoUrl: found.url,
       }
     })
@@ -924,7 +922,6 @@ export function ChatWidget({
         timestamp: new Date().toISOString(),
         suggestions: data.suggestions,
         serverId: data.assistantMessageId, // 😀 lets the visitor react to this reply
-        replyLanguage: data.language, // 🌍 actual reply language → welcome-video intro line
         // 🔊 audioOutput tenants (demos): backend speaks every reply. Keep the text
         // readable AND attach a voice-note player so visitors see the bot sends audio.
         attachments: data.audioUrl
@@ -2140,14 +2137,7 @@ export function ChatWidget({
                           bubble content) → video card → rest of the reply. */}
                       {msg.welcomeVideoUrl && (
                         <>
-                          <WelcomeVideoCard
-                            // 🌍 Prefer the language the bot ACTUALLY replied in
-                            // (backend customOutput.language); fall back to the UI
-                            // selector only when the backend didn't declare one.
-                            url={msg.welcomeVideoUrl}
-                            lang={msg.replyLanguage || resolvedLanguage}
-                            greeting={msg.content}
-                          />
+                          <WelcomeVideoCard url={msg.welcomeVideoUrl} />
                           {msg.welcomeRest && (
                             <MessageRenderer content={msg.welcomeRest} variant="chat" />
                           )}
