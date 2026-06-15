@@ -38,6 +38,7 @@ export interface RealEstateCopy {
   heroSub: string
   cta: string
   ctaSub: string
+  tryDemo: string
   // Property types (industries grid)
   industriesTitle: string
   industriesSub: string
@@ -113,6 +114,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
       "Un'unica AI su WhatsApp per la tua agenzia: risponde 24/7, qualifica i potenziali clienti, traduce in tempo reale, prenota le visite e passa all'agente quando serve. Tu governi tutto da un solo pannello.",
     cta: "Parliamone",
     ctaSub: "Demo su misura, nessun impegno",
+    tryDemo: "Prova la nostra demo →",
     industriesTitle: "Una soluzione, ogni tipo di immobile",
     industriesSub:
       "L'esempio che vedi è DemoRealEstate, un'agenzia immobiliare. Ma la stessa AI lavora con qualsiasi tipologia di immobile.",
@@ -261,6 +263,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
       "One AI on WhatsApp for your agency: answers 24/7, qualifies prospects, translates in real time, books viewings and hands off to an agent when needed. You run everything from a single panel.",
     cta: "Let's Talk",
     ctaSub: "Tailored demo, no commitment",
+    tryDemo: "Try our demo →",
     industriesTitle: "One solution, every type of property",
     industriesSub:
       "The example you see is DemoRealEstate, a real estate agency. But the same AI works for any type of property.",
@@ -409,6 +412,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
       "Una sola IA en WhatsApp para tu agencia: responde 24/7, cualifica a los interesados, traduce en tiempo real, agenda las visitas y pasa al agente cuando hace falta. Tú lo gobiernas todo desde un único panel.",
     cta: "Hablemos",
     ctaSub: "Demo a medida, sin compromiso",
+    tryDemo: "Prueba nuestra demo →",
     industriesTitle: "Una solución, cada tipo de inmueble",
     industriesSub:
       "El ejemplo que ves es DemoRealEstate, una agencia inmobiliaria. Pero la misma IA funciona con cualquier tipo de inmueble.",
@@ -557,6 +561,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
       "Eine einzige KI auf WhatsApp für deine Agentur: antwortet 24/7, qualifiziert Interessenten, übersetzt in Echtzeit, bucht Besichtigungen und übergibt bei Bedarf an einen Makler. Du steuerst alles über ein einziges Panel.",
     cta: "Sprechen wir darüber",
     ctaSub: "Maßgeschneiderte Demo, unverbindlich",
+    tryDemo: "Demo ausprobieren →",
     industriesTitle: "Eine Lösung, jede Art von Immobilie",
     industriesSub:
       "Das Beispiel, das du siehst, ist DemoRealEstate, eine Immobilienagentur. Aber dieselbe KI funktioniert für jede Art von Immobilie.",

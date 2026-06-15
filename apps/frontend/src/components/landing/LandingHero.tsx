@@ -26,6 +26,10 @@ interface LandingHeroProps {
   buttonClassName?: string
   /** Small note rendered below the CTA button (e.g. "No commitment") */
   note?: string
+  /** Optional secondary "try our demo" link destination */
+  demoTo?: string
+  /** Label for the secondary demo link (required when demoTo is set) */
+  demoLabel?: string
 }
 
 /**
@@ -45,6 +49,8 @@ export function LandingHero({
   glow = "blur",
   buttonClassName = "bg-[#25D366]",
   note,
+  demoTo,
+  demoLabel,
 }: LandingHeroProps) {
   const imageBlock = (
     <div
@@ -87,6 +93,14 @@ export function LandingHero({
           <Zap className="h-5 w-5" />
           {ctaLabel}
         </Link>
+        {demoTo && demoLabel && (
+          <Link
+            to={demoTo}
+            className="inline-flex items-center gap-2 text-white font-semibold px-8 py-4 rounded-2xl border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all duration-300 text-lg"
+          >
+            {demoLabel}
+          </Link>
+        )}
         {note && <p className="text-sm text-slate-400">{note}</p>}
       </div>
     </div>

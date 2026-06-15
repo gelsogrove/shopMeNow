@@ -29,6 +29,10 @@ interface ChatSurfaceProps<TMessage extends ChatSurfaceMessage = ChatSurfaceMess
   renderBadge?: (message: TMessage) => React.ReactNode
   renderFooter?: (message: TMessage) => React.ReactNode
   renderDebug?: (message: TMessage) => React.ReactNode
+  // Optional per-message content override. When it returns a non-null node, it
+  // replaces the default <MessageRenderer> for that message (used for rich
+  // cards like promo pushes). Returning null/undefined → default rendering.
+  renderContent?: (message: TMessage) => React.ReactNode
 }
 
 const defaultAlignment = (message: ChatSurfaceMessage): Alignment => {
@@ -49,6 +53,7 @@ export function ChatSurface<TMessage extends ChatSurfaceMessage = ChatSurfaceMes
   renderBadge,
   renderFooter,
   renderDebug,
+  renderContent,
 }: ChatSurfaceProps<TMessage>) {
   if (!messages.length && emptyState) {
     return <div className={cn("flex items-center justify-center", className)}>{emptyState}</div>
@@ -80,9 +85,15 @@ export function ChatSurface<TMessage extends ChatSurfaceMessage = ChatSurfaceMes
               style={bubbleStyle}
             >
               {renderBadge?.(message)}
-              <div style={{ lineHeight: "1.7", fontSize: "0.95rem" }}>
-                <MessageRenderer content={message.content} variant="chat" />
-              </div>
+              {(() => {
+                const custom = renderContent?.(message)
+                if (custom != null && custom !== false) return custom
+                return (
+                  <div style={{ lineHeight: "1.7", fontSize: "0.95rem" }}>
+                    <MessageRenderer content={message.content} variant="chat" />
+                  </div>
+                )
+              })()}
               {renderFooter?.(message)}
               {renderDebug?.(message)}
             </div>

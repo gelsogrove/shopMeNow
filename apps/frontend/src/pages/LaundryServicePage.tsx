@@ -23,6 +23,7 @@ const T = {
     heroSub: "Risponde ai clienti, prenota consulenze di franchising, sblocca le macchine da remoto e passa a un operatore quando serve. In ogni lingua.",
     cta: "Parliamone",
     ctaSub: "Nessun impegno",
+    tryDemo: "Prova la nostra demo →",
     problemsTitle: "I tuoi problemi, le nostre soluzioni",
     problems: [
       {
@@ -84,6 +85,7 @@ const T = {
     heroSub: "Answers customers, books franchise consultations, unlocks machines remotely and hands off to an operator when needed. In any language.",
     cta: "Let's Talk",
     ctaSub: "No commitment",
+    tryDemo: "Try our demo →",
     problemsTitle: "Your problems, our solutions",
     problems: [
       {
@@ -145,6 +147,7 @@ const T = {
     heroSub: "Responde a clientes, agenda consultorías de franquicia, desbloquea máquinas en remoto y pasa a un operador cuando hace falta. En cualquier idioma.",
     cta: "¿Lo hablamos?",
     ctaSub: "Sin compromiso",
+    tryDemo: "Prueba nuestra demo →",
     problemsTitle: "Tus problemas, nuestras soluciones",
     problems: [
       {
@@ -206,6 +209,7 @@ const T = {
     heroSub: "Sie antwortet Kunden, bucht Franchise-Beratungen, entsperrt Maschinen aus der Ferne und übergibt bei Bedarf an einen Mitarbeiter. In jeder Sprache.",
     cta: "Sprechen wir darüber",
     ctaSub: "Unverbindlich",
+    tryDemo: "Demo ausprobieren →",
     problemsTitle: "Deine Probleme, unsere Lösungen",
     problems: [
       {
@@ -295,6 +299,8 @@ export function LaundryServicePage() {
           imageSide="right"
           buttonClassName="bg-green-600 hover:bg-green-700"
           note={t.ctaSub}
+          demoTo="/demo/demowash"
+          demoLabel={t.tryDemo}
         />
 
         {/* Problems → Solutions */}

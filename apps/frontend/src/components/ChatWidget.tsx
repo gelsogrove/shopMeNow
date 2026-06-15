@@ -155,6 +155,16 @@ function formatBubbleTime(ts?: string): string {
 // Supported language codes (browser language detection)
 const SUPPORTED_LANG_CODES = ["it", "en", "es", "de", "fr", "ca"]
 
+// 📣 A simulated promotional push (demo only). Rendered as a rich card: bold
+// badge, body text, optional big image, optional link/CTA.
+export interface PushDemoCase {
+  badge: string // e.g. "📣 PROMO · DemoWash"
+  body: string // promo text (may contain newlines)
+  image?: string // optional image URL (served from the frontend origin)
+  link?: string // optional URL
+  cta?: string // optional localized CTA label for the link button
+}
+
 interface Message {
   role: "user" | "bot"
   content: string
@@ -165,6 +175,7 @@ interface Message {
   attachments?: ChatAttachment[] // 📎 operator-sent images / PDFs / audio (handoff)
   serverId?: string // 😀 DB ConversationMessage id — needed to anchor a reaction server-side
   reaction?: string | null // 😀 visitor's reaction emoji on this message (server-synced)
+  pushCard?: PushDemoCase // 📣 demo promo push → rendered as a rich card
 }
 
 interface ChatWidgetProps {
@@ -201,11 +212,11 @@ interface ChatWidgetProps {
   whatsappBadge?: boolean
   onOpenChange?: (isOpen: boolean) => void
   onConvert?: (customerId: string) => void
-  // 📣 Demo-only: ready-to-render (already localized + branded) promotional push
-  // messages. When provided AND instantChat is on, the widget shows a "Simulate a
-  // promo push" button that injects these as incoming bot messages (with a beep),
-  // cycling through them. Empty/undefined → no button (normal client widget).
-  pushDemoCases?: string[]
+  // 📣 Demo-only: localized + branded promotional push cards. When provided AND
+  // instantChat is on, the widget shows a "Simulate a promo push" button that
+  // injects these as incoming bot messages (with a beep), cycling through them.
+  // Empty/undefined → no button (normal client widget).
+  pushDemoCases?: PushDemoCase[]
 }
 
 // Determine API URL based on environment
@@ -910,9 +921,12 @@ export function ChatWidget({
     if (!pushDemoCases || pushDemoCases.length === 0) return
     const idx = pushDemoIndexRef.current % pushDemoCases.length
     pushDemoIndexRef.current = idx + 1
+    const card = pushDemoCases[idx]
     const pushMessage: Message = {
       role: "bot",
-      content: pushDemoCases[idx],
+      // Plain-text fallback (used for persistence / if the card renderer is bypassed).
+      content: `${card.badge}\n${card.body}`,
+      pushCard: card,
       timestamp: new Date().toISOString(),
       serverId: `demo-push-${Date.now()}`,
     }
@@ -2147,6 +2161,37 @@ export function ChatWidget({
                   }
                   getContainerClassName={(msg) =>
                     msg.role === "user" ? "widget-user-message" : undefined
+                  }
+                  renderContent={(msg) =>
+                    msg.pushCard ? (
+                      <div className="flex flex-col gap-2 py-0.5">
+                        <div className="text-[13.5px] font-bold leading-snug text-slate-800">
+                          {msg.pushCard.badge}
+                        </div>
+                        <div className="whitespace-pre-wrap text-[14.5px] leading-snug text-slate-800">
+                          {msg.pushCard.body}
+                        </div>
+                        {msg.pushCard.image && (
+                          <img
+                            src={msg.pushCard.image}
+                            alt=""
+                            loading="lazy"
+                            className="mt-1 w-full max-w-[300px] rounded-xl object-cover shadow-sm"
+                            style={{ aspectRatio: "3 / 2" }}
+                          />
+                        )}
+                        {msg.pushCard.link && (
+                          <a
+                            href={msg.pushCard.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-0.5 inline-block text-[13px] font-semibold text-emerald-600 hover:underline"
+                          >
+                            {msg.pushCard.cta || msg.pushCard.link} →
+                          </a>
+                        )}
+                      </div>
+                    ) : null
                   }
                   renderBadge={(msg) =>
                     waSkin ? (
