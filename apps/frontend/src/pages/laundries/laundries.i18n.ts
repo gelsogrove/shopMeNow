@@ -117,7 +117,7 @@ export const LAUNDRIES_I18N: Record<LaundriesLang, LaundriesCopy> = {
     ctaSub: "Demo su misura, nessun impegno",
     industriesTitle: "Una soluzione, ogni tipo di lavanderia",
     industriesSub:
-      "L'esempio che vedi è DemoWash, una rete di lavanderie self-service. La stessa AI gestisce ogni sede del tuo marchio, qualunque servizio offra.",
+      "L'esempio che vedi è DemoWash, una rete di lavanderie self-service che offre anche il servizio di tintoria. La stessa AI gestisce ogni sede del tuo marchio, qualunque servizio offra.",
     industries: [
       { icon: "🧺", label: "Self-service" },
       { icon: "👔", label: "Lavasecco" },
@@ -267,7 +267,7 @@ export const LAUNDRIES_I18N: Record<LaundriesLang, LaundriesCopy> = {
     ctaSub: "Tailored demo, no commitment",
     industriesTitle: "One solution, every kind of laundry",
     industriesSub:
-      "The example you see is DemoWash, a self-service laundry network. The same AI runs every location of your brand, whatever service it offers.",
+      "The example you see is DemoWash, a self-service laundry network that also offers a dry-cleaning service. The same AI runs every location of your brand, whatever service it offers.",
     industries: [
       { icon: "🧺", label: "Self-service" },
       { icon: "👔", label: "Dry cleaning" },
@@ -417,7 +417,7 @@ export const LAUNDRIES_I18N: Record<LaundriesLang, LaundriesCopy> = {
     ctaSub: "Demo a medida, sin compromiso",
     industriesTitle: "Una solución, cada tipo de lavandería",
     industriesSub:
-      "El ejemplo que ves es DemoWash, una red de lavanderías self-service. La misma IA gestiona cada sede de tu marca, sea cual sea el servicio que ofrezca.",
+      "El ejemplo que ves es DemoWash, una red de lavanderías self-service que también ofrece servicio de tintorería. La misma IA gestiona cada sede de tu marca, sea cual sea el servicio que ofrezca.",
     industries: [
       { icon: "🧺", label: "Autoservicio" },
       { icon: "👔", label: "Tintorería" },
@@ -567,7 +567,7 @@ export const LAUNDRIES_I18N: Record<LaundriesLang, LaundriesCopy> = {
     ctaSub: "Maßgeschneiderte Demo, unverbindlich",
     industriesTitle: "Eine Lösung, jede Art von Wäscherei",
     industriesSub:
-      "Das Beispiel, das du siehst, ist DemoWash, ein Self-Service-Wäscherei-Netzwerk. Dieselbe KI steuert jeden Standort deiner Marke, welchen Service sie auch bietet.",
+      "Das Beispiel, das du siehst, ist DemoWash, ein Self-Service-Wäscherei-Netzwerk, das auch eine Textilreinigung anbietet. Dieselbe KI steuert jeden Standort deiner Marke, welchen Service sie auch bietet.",
     industries: [
       { icon: "🧺", label: "Self-Service" },
       { icon: "👔", label: "Reinigung" },

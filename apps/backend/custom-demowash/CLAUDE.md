@@ -48,12 +48,13 @@ interface SessionState {
 
 ### 3. Tool fanno side-effect, LLM parla.
 
-Tool autorizzati (4 — vedi `agent.ts` TOOLS, unica fonte di verità):
+Tool autorizzati (5 — vedi `agent.ts` TOOLS, unica fonte di verità):
 
 - **`remember(fields)`** — aggiorna `SessionState` (merge): name, location, machineType, machine, displayCode. **Niente campo `language`** (vedi 🌐 sotto) e niente campi PII.
 - **`request_invoice({companyName, amount, serviceDate, email, note})`** — invia all'operatore la richiesta di fattura via email. Valida email/data ("Tool refuses, LLM corrects").
+- **`check_order_status({orderNumber?})`** — consulta lo stato di un ordine di **tintorería** (read-only). Chiave primaria = **telefono** del cliente (no codice); `orderNumber` opzionale solo per ritiro di terzi. Handler iniettabile (produzione = backend/POS reale; demo/REPL = store `orders.ts`). Dato dinamico per-ordine → legittimo come tool (non è nel prompt).
 - **`schedule_consultation({slotIndex})`** — prenota la consulenza franchising (Calendar + Zoom + email via handler host iniettato). Gli slot offerti arrivano dal blocco RUNTIME.
-- **`escalate_to_operator({reason, summary})`** — invia briefing all'operatore via email. Idempotente per (sessione, reason).
+- **`escalate_to_operator({reason, summary})`** — invia briefing all'operatore via email. Idempotente per (sessione, reason). Reason tintorería: `garment_damaged`, `garment_lost`.
 
 **NON esiste un tool `capture_pii`**: le PII (email, telefono, CIF, carta…) vengono catturate automaticamente server-side dal pre-scan regex di `pii.ts` e salvate in `SessionState`. **Mai loggata, mai re-emesse.** Non esiste neanche `close_session`: la chiusura la decide l'host via `closeChat` nell'output.
 

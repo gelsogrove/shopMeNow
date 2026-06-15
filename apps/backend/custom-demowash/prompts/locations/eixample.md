@@ -22,6 +22,22 @@
 
 (Secadora con temperaturas: Alta / Media / Baja.)
 
+## Precios tintorería
+
+| Prenda | Precio |
+|--------|--------|
+| Camisa / blusa | 4,50 € |
+| Pantalón | 6 € |
+| Chaqueta / americana | 8,50 € |
+| Abrigo de lana | 13 € |
+| Traje (2 piezas) | 15 € |
+| Vestido | 11 € |
+| Vestido de novia | 95 € |
+| Cortinas (por m²) | 7 € |
+| Alfombra (por m²) | 10 € |
+
+Exprés 24 h: **+50 %**. Piel/ante, plumas, mantas, tapicería y prendas especiales: precio a consultar en la sede. Se paga **al recoger**.
+
 ## Métodos de pago
 
 - ✅ Tarjeta de crédito/débito

@@ -22,6 +22,22 @@
 | 7            | 17 kg     | 3 € / 25 min       | 4 € / 25 min       |
 | 8            | 17 kg     | 3 € / 25 min       | 4 € / 25 min       |
 
+## Precios tintorería
+
+| Prenda | Precio |
+|--------|--------|
+| Camisa / blusa | 4 € |
+| Pantalón | 5,50 € |
+| Chaqueta / americana | 8 € |
+| Abrigo de lana | 12 € |
+| Traje (2 piezas) | 14 € |
+| Vestido | 10 € |
+| Vestido de novia | 90 € |
+| Cortinas (por m²) | 6 € |
+| Alfombra (por m²) | 9 € |
+
+Exprés 24 h: **+50 %**. Piel/ante, plumas, mantas, tapicería y prendas especiales: precio a consultar en la sede. Se paga **al recoger**.
+
 ## Métodos de pago
 
 - ✅ Tarjeta de crédito/débito

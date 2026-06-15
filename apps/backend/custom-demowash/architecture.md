@@ -55,14 +55,16 @@ custom-demowash/
 │   ├── machines/
 │   │   ├── washer.md                ← codici display lavadora + procedure + alarmi
 │   │   └── dryer.md                 ← idem secadora
+│   ├── tintoria.md                  ← 2ª linea: tintorería (servizi, tempi, macchie, pagamento, tracking, fuori scope)
 │   └── locations/
-│       ├── eixample.md              ← Barcelona, Passeig de Gràcia
+│       ├── eixample.md              ← Barcelona, Passeig de Gràcia (incl. tabella Precios tintorería)
 │       ├── gracia.md
 │       ├── mataro.md
 │       ├── rubi.md
 │       ├── sant-cugat.md
 │       └── terrassa.md
 ├── agent.ts                         ← orchestratore: assembly prompt, tool dispatch, turn loop, REPL/batch, chatbotFn (entry host)
+├── orders.ts                        ← store demo ordini tintorería (lookup per telefono / per numero) — fallback quando l'host non inietta un handler reale
 ├── state.ts                         ← SessionState, patches, lingua (sentinel trailer), rate-limit/turn counters
 ├── pii.ts                           ← redaction PII (pre-scan, de-redact, substitute) + detect venue
 ├── index.ts                         ← re-export di chatbotFn per l'import dinamico del backend
@@ -115,7 +117,8 @@ All'avvio (lazy, una sola volta per processo via `getCachedSystemPrompt`), `buil
 2. Se presente, accoda `prompts/franchising.md` sotto header `════════ FRANCHISING CONSULTATION ════════`
 3. Se presente, accoda `prompts/faqs.md` sotto header `════════ FAQS ════════`
 4. Scansiona `prompts/machines/` in ordine alfabetico → header `════════ MACHINES ════════`, poi `## <Nome>` per ogni file
-5. Scansiona `prompts/locations/` in ordine alfabetico → header `════════ LOCATIONS ════════`, poi `## <Nome>` per ogni file
+5. Se presente, accoda `prompts/tintoria.md` sotto header `════════ TINTORERÍA ════════` (seconda linea di servizio: limpieza profesional al banco)
+6. Scansiona `prompts/locations/` in ordine alfabetico → header `════════ LOCATIONS ════════`, poi `## <Nome>` per ogni file
 
 ```
 <contenuto common.md>
@@ -132,12 +135,17 @@ All'avvio (lazy, una sola volta per processo via `getCachedSystemPrompt`), `buil
 ## Dryer
 <contenuto machines/dryer.md>
 
+════════ TINTORERÍA ════════
+<contenuto tintoria.md>
+
 ════════ LOCATIONS ════════
 ## Eixample
-<contenuto locations/eixample.md>
+<contenuto locations/eixample.md>   (incl. tabella "Precios tintorería" per sede)
 ## Gracia
 ...tutte le 6 in ordine alfabetico...
 ```
+
+**Due linee di servizio, un prompt:** lavandería autoservicio (MACHINES) e tintorería (TINTORERÍA) convivono nello stesso blob cached. `common.md` descrive le due linee e l'LLM instrada in modo semantico (no router, no regex — 1 sola call/turno). I prezzi tintoria sono **per sede** (tabella in ogni `locations/*.md`), come già lavatrice/asciugatrice.
 
 Questo blob (~28k token a 6 sedi) è **il system prompt cached**. Non cambia mai tra turni della stessa sessione, né tra sessioni diverse, finché i file su disco non vengono editati.
 
@@ -329,6 +337,23 @@ schedule_consultation({
 - **Precondizioni** ("Tool refuses, LLM corrects"): `state.name` e `state.email` devono esistere. L'email arriva nello state via pre-scan PII (§9), non via tool.
 - I side-effect reali (evento Google Calendar + meeting Zoom) girano host-side via handler iniettato (`ctx.scheduleConsultation`); in REPL/batch i link restano `null` e il bot conferma solo data/ora.
 - **Idempotenza**: una seconda call nella stessa sessione ritorna `ok:false` (appuntamento già preso).
+
+### 7.5 `check_order_status`
+
+Consulta lo stato di un ordine di **tintorería** (read-only, nessuna mutazione di state). Il cliente è identificato dal **telefono** (già noto su WhatsApp / form del demo) → **niente codice da chiedere**.
+
+```typescript
+check_order_status({
+  orderNumber?: string,       // OPZIONALE — solo per ritiro di terzi (chi ha il resguardo)
+}) → { ok: true, orders: [{ order_number, status: 'ready'|'in_progress', ready_date, location, items }] }
+  | { ok: false, error: 'order_not_found' | 'no_orders_for_customer' }
+```
+
+**Note**:
+- **Phone-first**: nel caso normale il modello chiama il tool **senza argomenti**; l'handler cerca per telefono. `orderNumber` si passa solo quando ritira un'altra persona.
+- Dato **dinamico per-ordine** → non sta nel prompt (a differenza di prezzi/orari): un tool è legittimo (≠ `get_prices`).
+- **Handler iniettabile** (`ctx.checkOrderStatus`): in produzione interroga il backend/POS reale per telefono+workspace; in REPL/batch/**demo sito** è assente e si usa lo store seedato `orders.ts` (per telefono ritorna un set demo, così la demo trova sempre qualcosa; per numero usa gli ordini seedati). Stesso pattern di `schedule_consultation` (iron rule #4).
+- `found:false` → il bot NON inventa lo stato: per numero chiede di ricontrollare il resguardo, per telefono rimanda alla sede.
 
 ### Tool che NON aggiungo
 

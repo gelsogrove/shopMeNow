@@ -35,6 +35,11 @@ import {
   updateState,
 } from './state.js'
 import { processIncomingMessage, substitutePlaceholders } from './pii.js'
+import {
+  type CheckOrderStatusResult,
+  lookupDemoOrderByNumber,
+  lookupDemoOrdersByPhone,
+} from './orders.js'
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
@@ -265,6 +270,24 @@ const TOOLS = [
   {
     type: 'function',
     function: {
+      name: 'check_order_status',
+      description:
+        'Look up the customer\'s TINTORERÍA (dry-cleaning) order(s) to tell them the status and when/where to pick up. The customer is identified by their PHONE automatically — do NOT ask for an order number. Call this whenever the customer asks about picking up or the status of their dry-cleaning (e.g. "when can I pick up my trousers?", "is my coat ready?"); pass NO arguments. Pass `orderNumber` ONLY in the third-party case (someone picking up for someone else, who has the receipt number). Returns { found, orders: [{ order_number, status: "ready"|"in_progress", ready_date, location, items }] }. If several orders come back, match by the garment the customer mentioned. found:false → no order: tell them to check at the sede. NEVER invent a status. Tintorería only, never laundry machines.',
+      parameters: {
+        type: 'object',
+        properties: {
+          orderNumber: {
+            type: 'string',
+            description: 'OPTIONAL. Only for third-party pickup: the receipt order number exactly as written (e.g. "1234", "#2001"). Omit for the normal phone-based lookup.',
+          },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
       name: 'escalate_to_operator',
       description:
         'Send a structured briefing to the human operator by email. Call this when the procedure documented in MACHINES says ESCALAR, when the customer explicitly asks for a human, or when a problem persists after the documented steps. The summary should be a self-contained operator briefing following the template in common.md. The host will substitute placeholder PII tokens with real values from SessionState before sending. Call this EXACTLY ONCE per incident — never emit two escalate_to_operator calls in the same turn; one call is enough.',
@@ -284,6 +307,8 @@ const TOOLS = [
               'loyalty_card',
               'no_soap',
               'no_spin',
+              'garment_damaged',
+              'garment_lost',
               'angry_customer',
               'not_covered',
               'other',
@@ -337,6 +362,15 @@ export type ScheduleConsultationHandler = (
   params: ScheduleConsultationParams,
 ) => Promise<ScheduleConsultationResult>
 
+// Tintorería order lookup. Primary key is the customer PHONE (already known on
+// WhatsApp / the demo form) → no order code needed. An order NUMBER is optional,
+// only for third-party pickup. In production the host injects a real handler that
+// queries the backend/POS; in REPL/batch/website-demo it is absent and
+// executeTool falls back to the seeded demo store (orders.ts).
+export type CheckOrderStatusHandler = (
+  params: { workspaceId?: string; phone?: string; orderNumber?: string; location?: string },
+) => Promise<CheckOrderStatusResult>
+
 interface ToolContext {
   sessionId: string
   customerName?: string
@@ -346,6 +380,9 @@ interface ToolContext {
   workspaceId?: string
   /** Real booking side-effect, injected by the host. Absent in REPL/batch. */
   scheduleConsultation?: ScheduleConsultationHandler
+  /** Real tintorería order lookup, injected by the host. Absent in REPL/batch
+   *  → falls back to the seeded demo store. */
+  checkOrderStatus?: CheckOrderStatusHandler
 }
 
 async function executeTool(
@@ -500,6 +537,44 @@ async function executeTool(
       // been registered — the briefing is logged for retry/audit even if
       // email failed (e.g. SMTP down). The ticket exists.
       return { ok: true, ticket_id: ticketId, eta_minutes: 5, email_sent: false, email_error: msg }
+    }
+  }
+
+  if (name === 'check_order_status') {
+    const orderNumber = typeof args.orderNumber === 'string' ? args.orderNumber.trim() : ''
+    const state = getState(ctx.sessionId)
+    // Read-only side-effect (no state mutation). Real lookup injected by the host
+    // in production; REPL/batch/website-demo falls back to the seeded demo store.
+    // Primary key is the customer phone (no code); orderNumber only for third-party.
+    const lookup: CheckOrderStatusResult = ctx.checkOrderStatus
+      ? await ctx.checkOrderStatus({
+          workspaceId: ctx.workspaceId,
+          phone: ctx.customerPhone,
+          orderNumber: orderNumber || undefined,
+          location: state.location,
+        })
+      : orderNumber
+        ? lookupDemoOrderByNumber(orderNumber, new Date())
+        : lookupDemoOrdersByPhone(new Date(), state.location)
+
+    if (!lookup.found || lookup.orders.length === 0) {
+      return {
+        ok: false,
+        error: orderNumber ? 'order_not_found' : 'no_orders_for_customer',
+        instruction: orderNumber
+          ? `No order matches "${orderNumber}". Ask the customer to re-check the receipt number. Do NOT invent a status.`
+          : 'No tintorería order found for this customer. Tell them to check directly at the sede. Do NOT invent a status.',
+      }
+    }
+    return {
+      ok: true,
+      orders: lookup.orders.map((o) => ({
+        order_number: o.orderNumber,
+        status: o.status,
+        ready_date: o.readyDate,
+        location: o.location,
+        items: o.items,
+      })),
     }
   }
 
@@ -1273,14 +1348,15 @@ async function agentTurn(
 
 // ── System prompt ─────────────────────────────────────────────────────────────
 // Assembled at boot from prompts/common.md + prompts/franchising.md +
-// prompts/faqs.md + prompts/machines/*.md + prompts/locations/*.md. Concatenated
-// in deterministic (alphabetical) order so the resulting blob is byte-identical
-// across boots → cache hit always.
+// prompts/faqs.md + prompts/machines/*.md + prompts/tintoria.md +
+// prompts/locations/*.md. Concatenated in a fixed, deterministic order so the
+// resulting blob is byte-identical across boots → cache hit always.
 
 async function buildSystemPrompt(): Promise<string> {
   const common = await readFile(path.join(PROMPTS_DIR, 'common.md'), 'utf8')
   const franchising = await readFileOrEmpty(path.join(PROMPTS_DIR, 'franchising.md'))
   const faqs = await readFileOrEmpty(path.join(PROMPTS_DIR, 'faqs.md'))
+  const tintoria = await readFileOrEmpty(path.join(PROMPTS_DIR, 'tintoria.md'))
   const machines = await loadDir(path.join(PROMPTS_DIR, 'machines'))
   const locations = await loadDir(path.join(PROMPTS_DIR, 'locations'))
 
@@ -1299,6 +1375,10 @@ async function buildSystemPrompt(): Promise<string> {
     for (const { name, content } of machines) {
       parts.push(`## ${name}`, '', content, '')
     }
+  }
+
+  if (tintoria) {
+    parts.push('', '════════ TINTORERÍA ════════', '', tintoria)
   }
 
   if (locations.length > 0) {
@@ -1432,6 +1512,7 @@ export interface ChatbotInput {
     /** Real side-effect handlers injected by the host. Absent in REPL/batch. */
     handlers?: {
       scheduleConsultation?: ScheduleConsultationHandler
+      checkOrderStatus?: CheckOrderStatusHandler
     }
   }
   context: {
@@ -1521,6 +1602,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       customerPhone: input.context.phoneNumber,
       workspaceId: input.config.workspaceId,
       scheduleConsultation: input.config.handlers?.scheduleConsultation,
+      checkOrderStatus: input.config.handlers?.checkOrderStatus,
     }
 
     const result = await agentTurn(
