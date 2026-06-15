@@ -62,7 +62,8 @@ interface Settings {
   audioVoices: Record<string, string>
   /** Public URL of the legal/privacy notice ("aviso legal") shown in the
    *  first-turn GDPR disclaimer. Environment-dependent: production points to
-   *  https://echatbot.ai/aviso-legal, local dev to http://localhost:3000/aviso-legal.
+   *  https://www.echatbot.ai/aviso-legal (note: the www subdomain is required —
+   *  the bare echatbot.ai host 404s), local dev to http://localhost:3000/aviso-legal.
    *  Overridable at runtime via the PRIVACY_POLICY_URL env var. */
   privacyPolicyUrl: string
 }
@@ -81,7 +82,7 @@ const DEFAULT_SETTINGS: Settings = {
   maxTurnsPerSession: 50,
   audioOutput: false,
   audioVoices: {},
-  privacyPolicyUrl: 'https://echatbot.ai/aviso-legal',
+  privacyPolicyUrl: 'https://www.echatbot.ai/aviso-legal',
 }
 
 function loadSettings(): Settings {
