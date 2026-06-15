@@ -263,7 +263,7 @@ const UI_STRINGS: Record<
     termsBody:
       "Accettando, autorizzi eChatbot a contattarti su WhatsApp per assistenza, notifiche e offerte. Puoi revocare il consenso in qualsiasi momento rispondendo STOP o scrivendo al supporto.",
     pushBtn: "📣 Simula un push promozionale",
-    pushHint: "Così il cliente riceve un messaggio pubblicitario che invii tu.",
+    pushHint: "Lo invii una volta — ogni cliente lo riceve nella sua lingua, in automatico.",
   },
   en: {
     intro: "Introduce yourself to start chatting",
@@ -281,7 +281,7 @@ const UI_STRINGS: Record<
     termsBody:
       "By accepting you allow eChatbot to message you on WhatsApp for support, notifications, and offers. You can revoke anytime by replying STOP or contacting support.",
     pushBtn: "📣 Simulate a promo push",
-    pushHint: "This is how your customer receives a promotional message you send.",
+    pushHint: "You send it once — each customer receives it in their own language, automatically.",
   },
   es: {
     intro: "Preséntate para comenzar a chatear",
@@ -299,7 +299,7 @@ const UI_STRINGS: Record<
     termsBody:
       "Al aceptar, autorizas a eChatbot a contactarte por WhatsApp para soporte, notificaciones y ofertas. Puedes revocar el consentimiento en cualquier momento respondiendo STOP o escribiendo al soporte.",
     pushBtn: "📣 Simula un push promocional",
-    pushHint: "Así recibe tu cliente un mensaje publicitario que tú envías.",
+    pushHint: "Lo envías una vez — cada cliente lo recibe en su idioma, automáticamente.",
   },
   fr: {
     intro: "Présentez-vous pour commencer à discuter",
@@ -317,7 +317,7 @@ const UI_STRINGS: Record<
     termsBody:
       "En acceptant, vous autorisez eChatbot à vous contacter sur WhatsApp pour support, notifications et offres. Vous pouvez retirer votre consentement à tout moment en répondant STOP ou en contactant le support.",
     pushBtn: "📣 Simuler un push promo",
-    pushHint: "Voici comment votre client reçoit un message publicitaire que vous envoyez.",
+    pushHint: "Vous l'envoyez une fois — chaque client le reçoit dans sa langue, automatiquement.",
   },
   de: {
     intro: "Stell dich vor, um zu chatten",
@@ -335,7 +335,7 @@ const UI_STRINGS: Record<
     termsBody:
       "Mit der Zustimmung erlaubst du eChatbot, dich über WhatsApp für Support, Benachrichtigungen und Angebote zu kontaktieren. Du kannst dies jederzeit widerrufen, indem du STOP antwortest oder den Support kontaktierst.",
     pushBtn: "📣 Promo-Push simulieren",
-    pushHint: "So erhält dein Kunde eine Werbenachricht, die du sendest.",
+    pushHint: "Du sendest es einmal — jeder Kunde erhält es automatisch in seiner Sprache.",
   },
   ca: {
     intro: "Presenta't per començar a xatejar",
@@ -353,7 +353,7 @@ const UI_STRINGS: Record<
     termsBody:
       "En acceptar, autoritzes eChatbot a contactar-te per WhatsApp per a suport, notificacions i ofertes. Pots revocar el consentiment en qualsevol moment responent STOP o contactant el suport.",
     pushBtn: "📣 Simula un push promocional",
-    pushHint: "Així rep el teu client un missatge publicitari que tu envies.",
+    pushHint: "L'envies un cop — cada client el rep en el seu idioma, automàticament.",
   },
 }
 

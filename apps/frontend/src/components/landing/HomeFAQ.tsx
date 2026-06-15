@@ -4,6 +4,7 @@ import {
   CalendarClock,
   ChevronDown,
   Database,
+  FolderSync,
   Headphones,
   PhoneCall,
   PlugZap,
@@ -23,6 +24,7 @@ const FAQ_ITEMS = [
   { key: 6, icon: PlugZap, accent: "bg-indigo-400/10 text-indigo-300" },
   { key: 7, icon: Video, accent: "bg-blue-400/10 text-blue-300" },
   { key: 8, icon: Database, accent: "bg-teal-400/10 text-teal-300" },
+  { key: 9, icon: FolderSync, accent: "bg-rose-400/10 text-rose-300" },
 ]
 
 export function HomeFAQ() {

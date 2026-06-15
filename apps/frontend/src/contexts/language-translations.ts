@@ -625,6 +625,9 @@ export const translations = {
     "homeFaq.q8": "Come carico i dati di ogni singolo negozio del mio franchising?",
     "homeFaq.a8":
       "Parla con i nostri operatori per dinamicizzare tutti i processi in base alle tue esigenze. Se hai i dati in un database, possiamo leggerli direttamente dalla tua API e integrarli nel chatbot in tempo reale.",
+    "homeFaq.q9": "Posso leggere o scrivere su Google Drive?",
+    "homeFaq.a9":
+      "Certamente. Il chatbot si integra con Google Drive: può leggere documenti e file dalle tue cartelle e scrivere o aggiornare file direttamente, così i tuoi dati restano sempre sincronizzati con i tuoi processi.",
   },
   en: {
     // Header
@@ -1273,6 +1276,9 @@ export const translations = {
     "homeFaq.q8": "How do I load data for each store in my franchise?",
     "homeFaq.a8":
       "Talk to our operators to dynamise all processes based on your needs. If you have the data in a database, we can read it directly from your API and integrate it into the chatbot in real time.",
+    "homeFaq.q9": "Can I read or write to Google Drive?",
+    "homeFaq.a9":
+      "Absolutely. The chatbot integrates with Google Drive: it can read documents and files from your folders and write or update files directly, keeping your data always in sync with your workflows.",
   },
   es: {
     // Header
@@ -1790,6 +1796,9 @@ export const translations = {
     "homeFaq.q8": "¿Cómo cargo los datos de cada tienda de mi franquicia?",
     "homeFaq.a8":
       "Habla con nuestros operadores para dinamizar todos los procesos según tus necesidades. Si tienes los datos en una base de datos, podemos leerlos directamente desde tu API e integrarlos en el chatbot en tiempo real.",
+    "homeFaq.q9": "¿Puedo leer o escribir en Google Drive?",
+    "homeFaq.a9":
+      "Por supuesto. El chatbot se integra con Google Drive: puede leer documentos y archivos de tus carpetas y escribir o actualizar archivos directamente, manteniendo tus datos siempre sincronizados con tus procesos.",
   },
   pt: {
     // Home FAQ section (public landing)
@@ -1820,6 +1829,9 @@ export const translations = {
     "homeFaq.q8": "Como carrego os dados de cada loja da minha franquia?",
     "homeFaq.a8":
       "Fala com os nossos operadores para dinamizar todos os processos de acordo com as tuas necessidades. Se tens os dados numa base de dados, podemos lê-los diretamente da tua API e integrá-los no chatbot em tempo real.",
+    "homeFaq.q9": "Posso ler ou escrever no Google Drive?",
+    "homeFaq.a9":
+      "Com certeza. O chatbot integra-se com o Google Drive: pode ler documentos e ficheiros das tuas pastas e escrever ou atualizar ficheiros diretamente, mantendo os teus dados sempre sincronizados com os teus processos.",
   },
   de: {
     // Header
@@ -2464,5 +2476,8 @@ export const translations = {
     "homeFaq.q8": "Wie lade ich die Daten jedes einzelnen Shops meines Franchises?",
     "homeFaq.a8":
       "Sprich mit unseren Operatoren, um alle Prozesse nach deinen Bedürfnissen zu dynamisieren. Wenn du die Daten in einer Datenbank hast, können wir sie direkt über deine API lesen und in Echtzeit in den Chatbot integrieren.",
+    "homeFaq.q9": "Kann ich in Google Drive lesen oder schreiben?",
+    "homeFaq.a9":
+      "Selbstverständlich. Der Chatbot lässt sich in Google Drive integrieren: Er kann Dokumente und Dateien aus deinen Ordnern lesen und Dateien direkt schreiben oder aktualisieren, sodass deine Daten stets mit deinen Prozessen synchron bleiben.",
   },
 }
