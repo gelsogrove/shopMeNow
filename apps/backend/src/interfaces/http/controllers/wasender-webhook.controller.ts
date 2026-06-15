@@ -742,7 +742,6 @@ export class WasenderWebhookController {
         channelStatus: true,
         debugMode: true,
         defaultLanguage: true,
-        welcomeVideoUrl: true,
       },
     })
     ;(customer as any).workspace = pipelineWorkspace

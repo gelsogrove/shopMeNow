@@ -213,7 +213,7 @@ export class PlaygroundController {
       const workspaceId = await resolveWorkspaceId(req)
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
-        select: { name: true, customChatbotId: true, slug: true, welcomeVideoUrl: true },
+        select: { name: true, customChatbotId: true, slug: true },
       })
       if (!workspace) {
         return res.status(404).json({ error: "Workspace not found" })
@@ -222,7 +222,6 @@ export class PlaygroundController {
         name: workspace.name,
         chatbotId: workspace.customChatbotId,
         slug: workspace.slug,
-        welcomeVideoUrl: workspace.welcomeVideoUrl || null,
       })
     } catch (error: any) {
       logger.error("Playground getWorkspaceInfo error:", error)
@@ -243,7 +242,7 @@ export class PlaygroundController {
       }
       const workspace = await prisma.workspace.findFirst({
         where: { customChatbotId: slug },
-        select: { id: true, name: true, customChatbotId: true, welcomeVideoUrl: true },
+        select: { id: true, name: true, customChatbotId: true },
       })
       if (!workspace) {
         return res.status(404).json({ error: `No workspace found with customChatbotId='${slug}'` })
@@ -252,9 +251,6 @@ export class PlaygroundController {
         workspaceId: workspace.id,
         workspaceName: workspace.name,
         chatbotId: workspace.customChatbotId,
-        // 📺 Presentation video shown on the first bot reply (same field the
-        // operator chat / playground use). Null = no video.
-        welcomeVideoUrl: workspace.welcomeVideoUrl || null,
       })
     } catch (error: any) {
       logger.error("Playground resolveDemo error:", error)

@@ -40,62 +40,6 @@ const buildTokenBucketConfig = (limitPerMin: number, burst: number) => ({
 const customerMessageLocks = new Map<string, Promise<void>>()
 
 /**
- * 📺 Send the workspace presentation video to the customer — ONCE, on first contact.
- *
- * Sent as a TEXT message containing the URL: WhatsApp auto-generates a clickable
- * link preview (thumbnail + title). This works with ANY link (YouTube, Vimeo, a
- * direct .mp4, etc.) — no need for a directly-fetchable media file.
- *
- * Called from the webhook only when it's the customer's very first inbound message
- * (messageCount === 0). Best-effort: never throws, logs failures, lets the normal
- * text reply proceed regardless.
- */
-async function sendWelcomeVideoIfConfigured(
-  workspaceId: string,
-  toPhone: string | null | undefined
-): Promise<void> {
-  if (!toPhone) return
-  try {
-    const ws = await prisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: {
-        id: true,
-        name: true,
-        welcomeVideoUrl: true,
-        whatsappProvider: true,
-        metaPhoneNumberId: true,
-        metaAccessToken: true,
-        ultraMsgInstanceId: true,
-        ultraMsgToken: true,
-        ultraMsgApiUrl: true,
-        wasenderApiKey: true,
-      },
-    })
-    if (!ws?.welcomeVideoUrl) return
-    if (!WhatsAppProviderFactory.isConfigured(ws)) {
-      logger.warn("[WEBHOOK] 📺 Welcome video skipped — provider not configured", { workspaceId })
-      return
-    }
-    const provider = WhatsAppProviderFactory.create(ws)
-    // Send the URL as plain text → WhatsApp renders the link preview/thumbnail.
-    const result = await provider.sendTextMessage(toPhone, ws.welcomeVideoUrl)
-    if (result.success) {
-      logger.info("[WEBHOOK] 📺 Welcome video link sent", { workspaceId, toPhone })
-    } else {
-      logger.warn("[WEBHOOK] 📺 Welcome video link send failed", {
-        workspaceId,
-        error: result.error,
-      })
-    }
-  } catch (err) {
-    logger.warn("[WEBHOOK] 📺 Welcome video send threw (best-effort, ignored)", {
-      workspaceId,
-      error: err instanceof Error ? err.message : String(err),
-    })
-  }
-}
-
-/**
  * WhatsApp Webhook Controller
  *
  * Single Responsibility: Handle INBOUND messages from WhatsApp
@@ -796,7 +740,6 @@ export class WhatsAppWebhookController {
             debugMode: true,
             needRegistration: true, // 🔧 Controls whether registration is required
             customChatbotId: true, // 🤖 Custom chatbot module for FLOW workspaces
-            welcomeVideoUrl: true, // 📺 Presentation video URL (combined into first reply)
           },
         },
       } as const
@@ -1602,13 +1545,6 @@ export class WhatsAppWebhookController {
       // The workspace welcomeMessage is for standard (non-custom) workspaces only.
       // Source of truth: customChatbotId in DB. No slug fallback.
       const hasCustomChatbot = !!(customer as any).workspace?.customChatbotId
-
-      // 📺 FIRST CONTACT → send presentation video once (before any reply path).
-      // Gated on messageCount===0 so it never repeats on later messages.
-      // 🎯 Custom chatbot: skip separate send — URL is prepended to first bot reply instead (one message).
-      if (messageCount === 0 && !hasCustomChatbot) {
-        await sendWelcomeVideoIfConfigured(customer.workspaceId, customer.phone)
-      }
 
       if (messageCount === 0 && hasCustomChatbot) {
         logger.info("[WEBHOOK] 🤖 Custom chatbot workspace — skipping welcome-only block, routing to LLM", {

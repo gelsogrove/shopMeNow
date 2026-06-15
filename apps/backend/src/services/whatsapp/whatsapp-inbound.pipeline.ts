@@ -30,7 +30,7 @@ import { WorkspaceAccessService } from "../../application/services/workspace-acc
 import { SubscriptionBillingService } from "../../application/services/subscription-billing.service"
 import { websocketService } from "../websocket.service"
 import { splitCustomChatbotReply } from "../../utils/custom-chatbot-reply"
-import { buildWelcomeVideoSplit, WELCOME_VIDEO_INTRO } from "../../utils/welcome-video"
+import { formatWelcomeReply } from "../../utils/welcome-video"
 import { detectLanguageFromPhonePrefix } from "../../utils/language-detector"
 import { ingestInboundWebhookMedia } from "../inbound-media-webhook.service"
 import { WhatsAppDirectSendService } from "../whatsapp-direct-send.service"
@@ -54,8 +54,8 @@ const AUDIO_SPOKEN_INSTRUCTION =
  */
 export interface ProcessReplyInput {
   /** Customer row WITH `.workspace` relation loaded (slug, customChatbotId,
-   *  welcomeMessage, wipMessage, channelStatus, debugMode, defaultLanguage,
-   *  welcomeVideoUrl). Also uses id, workspaceId, phone, name, language, discount. */
+   *  welcomeMessage, wipMessage, channelStatus, debugMode, defaultLanguage).
+   *  Also uses id, workspaceId, phone, name, language, discount. */
   customer: any
   /** Active chat session ({ id }). */
   chatSession: any
@@ -708,7 +708,6 @@ export class WhatsAppInboundPipeline {
         try {
           const directSend = new WhatsAppDirectSendService(prisma)
           const { customerReply } = splitCustomChatbotReply(customOutput.reply)
-          const welcomeVideoUrl = (customer as any).workspace?.welcomeVideoUrl as string | null | undefined
 
           // 🌍 The language the bot ACTUALLY replied in — declared by the module
           // via the ⟦LANG:xx⟧ trailer (committed to session state), detected from
@@ -717,16 +716,17 @@ export class WhatsAppInboundPipeline {
           // welcome-video intro line AND the TTS spoken language/voice.
           const replyLanguage = customOutput.language ?? customerLanguage
 
-          // 📺 First message with a presentation video → mirror the playground's
-          // WelcomeVideoCard ORDER (greeting → intro → video → rest). Works the
-          // same on every provider (Meta/UltraMsg/Wasender) because it uses the
-          // provider-agnostic send()/sendMedia() of WhatsAppDirectSendService.
-          const videoSplit =
-            messageCount === 0 && welcomeVideoUrl && !inboundWasAudio
-              ? buildWelcomeVideoSplit(customerReply, welcomeVideoUrl, replyLanguage)
+          // 📺 First message whose welcome text embeds a presentation video URL
+          // → mirror the playground's WelcomeVideoCard ORDER (greeting → intro →
+          // video → rest). The URL is authored INSIDE the module greeting;
+          // formatWelcomeReply extracts it. Works the same on every provider
+          // (Meta/UltraMsg/Wasender) via the provider-agnostic send()/sendMedia().
+          const welcome =
+            messageCount === 0 && !inboundWasAudio
+              ? formatWelcomeReply(customerReply, replyLanguage)
               : null
 
-          if (videoSplit) {
+          if (welcome?.type === "split") {
             // YouTube video → two messages: (1) greeting + intro text, then
             // (2) the YouTube thumbnail as a real image with the rest of the
             // reply + clickable link as caption. Pass raw Markdown — send()/
@@ -735,40 +735,28 @@ export class WhatsAppInboundPipeline {
               workspaceId: customer.workspaceId,
               customerId: customer.id,
               phoneNumber: customer.phone,
-              messageContent: videoSplit.textMessage,
+              messageContent: welcome.textMessage,
               skipSecurityCheck: true, // bot-generated content, not user input
             })
             await directSend.sendMedia({
               workspaceId: customer.workspaceId,
               customerId: customer.id,
               phoneNumber: customer.phone,
-              mediaUrl: videoSplit.imageUrl,
-              caption: videoSplit.caption,
+              mediaUrl: welcome.imageUrl,
+              caption: welcome.caption,
               conversationMessageId: savedAssistantMessageId,
               skipSecurityCheck: true,
             })
           } else {
-            // No video, or non-YouTube video (no resolvable thumbnail) → single
-            // message. For a non-YouTube first-contact video, fall back to the
-            // legacy inline intro + URL so the link still goes out.
-            let finalReply = customerReply
-            if (messageCount === 0 && welcomeVideoUrl && !inboundWasAudio) {
-              const introText =
-                WELCOME_VIDEO_INTRO[replyLanguage ?? "en"] ?? WELCOME_VIDEO_INTRO.en
-              const breakIdx = customerReply.indexOf("\n\n")
-              if (breakIdx !== -1) {
-                const greeting = customerReply.slice(0, breakIdx)
-                const rest = customerReply.slice(breakIdx + 2)
-                finalReply = `${greeting}\n\n${introText}\n${welcomeVideoUrl}\n\n${rest}`
-              } else {
-                finalReply = `${customerReply}\n\n${introText}\n${welcomeVideoUrl}`
-              }
-            }
+            // No video, or non-YouTube video (.mp4, no resolvable thumbnail) →
+            // single message. For a non-YouTube first-contact video, `inline`
+            // carries the intro + URL so the link still goes out.
             await directSend.send({
               workspaceId: customer.workspaceId,
               customerId: customer.id,
               phoneNumber: customer.phone,
-              messageContent: finalReply,
+              messageContent:
+                welcome?.type === "inline" ? welcome.text : customerReply,
               conversationMessageId: savedAssistantMessageId,
               skipSecurityCheck: true, // bot-generated content, not user input
               // Audio reply only when the customer sent audio AND the tenant's

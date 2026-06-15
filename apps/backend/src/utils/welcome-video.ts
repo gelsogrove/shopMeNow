@@ -62,40 +62,80 @@ export function youtubeThumbnail(url: string): string | null {
   return id ? `https://img.youtube.com/vi/${id}/hqdefault.jpg` : null
 }
 
-export interface WelcomeVideoSplit {
-  /** Message 1 — greeting + intro line. */
-  textMessage: string
-  /** Message 2 — image URL (YouTube thumbnail). */
-  imageUrl: string
-  /** Message 2 — caption: rest of the reply + clickable video link. */
-  caption: string
+/**
+ * Find the FIRST video URL (YouTube or direct .mp4) inside free text and return
+ * it together with the text stripped of that URL (surrounding blank lines
+ * collapsed). Returns null when the text contains no video URL.
+ *
+ * The welcome video is authored INSIDE the welcome message itself (the custom
+ * module's greeting in `prompts/common.md`). The rendering layer extracts it
+ * here so the same authored message drives both widget and WhatsApp — there is
+ * no separate workspace field.
+ */
+export function extractVideoUrl(
+  text: string
+): { url: string; text: string } | null {
+  if (!text) return null
+  const matches = text.match(/https?:\/\/[^\s<>()]+/gi)
+  if (!matches) return null
+  for (const raw of matches) {
+    // Trim trailing markdown/sentence punctuation that isn't part of the URL.
+    const url = raw.replace(/[)\].,;:!?]+$/, "")
+    const isVideo =
+      youtubeVideoId(url) !== null || /\.mp4(\?[^\s]*)?$/i.test(url)
+    if (!isVideo) continue
+    const cleaned = text
+      .replace(raw, "")
+      .replace(/[ \t]+$/gm, "") // trailing spaces left on the line
+      .replace(/\n{3,}/g, "\n\n") // collapse the gap the URL left behind
+      .trim()
+    return { url, text: cleaned }
+  }
+  return null
 }
 
 /**
- * Split a custom-chatbot reply into the two-message welcome-video layout.
+ * Result of formatting a first-turn reply that embeds a presentation video.
+ *  - `split`  : YouTube — two messages (text + thumbnail image with caption).
+ *  - `inline` : non-YouTube (.mp4) — single message with the URL inline.
+ */
+export type WelcomeVideoMessage =
+  | { type: "split"; textMessage: string; imageUrl: string; caption: string }
+  | { type: "inline"; text: string }
+
+/**
+ * Format a custom-chatbot first-turn reply whose welcome message embeds a video
+ * URL. Extracts the URL from the reply text and produces the channel-agnostic
+ * layout (greeting → intro line → video → rest). Returns null when the reply
+ * contains no video URL (caller sends the reply unchanged).
  *
  * @param customerReply  the bot reply (Markdown). Expected shape: "greeting\n\nrest".
- * @param videoUrl       the workspace welcome video URL.
  * @param language       customer language (for the intro line); falls back to en.
- * @returns the split, or null when no YouTube thumbnail can be resolved (caller
- *          should then fall back to the legacy inline-URL single message).
  */
-export function buildWelcomeVideoSplit(
+export function formatWelcomeReply(
   customerReply: string,
-  videoUrl: string,
   language?: string | null
-): WelcomeVideoSplit | null {
-  const imageUrl = youtubeThumbnail(videoUrl)
-  if (!imageUrl) return null
+): WelcomeVideoMessage | null {
+  const found = extractVideoUrl(customerReply)
+  if (!found) return null
 
   const intro = WELCOME_VIDEO_INTRO[language ?? "en"] ?? WELCOME_VIDEO_INTRO.en
+  const reply = found.text
+  const breakIdx = reply.indexOf("\n\n")
+  const greeting = breakIdx !== -1 ? reply.slice(0, breakIdx) : reply
+  const rest = breakIdx !== -1 ? reply.slice(breakIdx + 2) : ""
 
-  const breakIdx = customerReply.indexOf("\n\n")
-  const greeting = breakIdx !== -1 ? customerReply.slice(0, breakIdx) : customerReply
-  const rest = breakIdx !== -1 ? customerReply.slice(breakIdx + 2) : ""
+  const imageUrl = youtubeThumbnail(found.url)
+  if (imageUrl) {
+    // YouTube → two messages (mirrors the playground WelcomeVideoCard order).
+    const textMessage = `${greeting}\n\n${intro}`
+    const caption = [rest, found.url].filter(Boolean).join("\n\n")
+    return { type: "split", textMessage, imageUrl, caption }
+  }
 
-  const textMessage = `${greeting}\n\n${intro}`
-  const caption = [rest, videoUrl].filter(Boolean).join("\n\n")
-
-  return { textMessage, imageUrl, caption }
+  // Non-YouTube (.mp4) → single message, URL inline under the intro line.
+  const text = rest
+    ? `${greeting}\n\n${intro}\n${found.url}\n\n${rest}`
+    : `${greeting}\n\n${intro}\n${found.url}`
+  return { type: "inline", text }
 }
