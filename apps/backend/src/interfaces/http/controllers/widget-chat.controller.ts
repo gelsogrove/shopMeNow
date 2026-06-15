@@ -1035,6 +1035,11 @@ export class WidgetChatController {
       let llmAgentUsed: string = AgentType.ROUTER
       let llmTokensUsed = 0
       let suggestions: string[] = []
+      // 🌍 The language the bot ACTUALLY replied in (declared by the custom
+      // module via customOutput.language, detected from the message text). Used
+      // for the welcome-video intro line — must match the reply, NOT the widget
+      // selector. Mirrors the main chat path (line ~2295) and WhatsApp pipeline.
+      let replyLanguage: string | undefined = normalizedLanguage || undefined
 
       // 🎯 CUSTOM CLIENT: Try custom chatbot first (e.g. ecolaundry)
       // Pass history: [] because this is the first message of a new session.
@@ -1079,6 +1084,9 @@ export class WidgetChatController {
           llmResponse = customOutput.reply || llmResponse
           llmAgentUsed = AgentType.ROUTER
           llmTokensUsed = customOutput.meta?.tokensUsed || 0
+          // 🌍 Surface the real reply language so the welcome-video intro line
+          // matches the bot's reply (e.g. customer wrote IT → intro in IT).
+          replyLanguage = customOutput.language || replyLanguage
           const { customerReply: regCustomerReply } = splitCustomChatbotReply(customOutput.reply || "")
           if (!customOutput.shouldEscalate && workspace.widgetAutoSuggestionsEnabled === true && regCustomerReply) {
             suggestions = await buildWidgetSuggestionsWithAI(
@@ -1181,8 +1189,10 @@ export class WidgetChatController {
         response: splitCustomChatbotReply(llmResponse).customerReply,
         isNewCustomer,
         suggestions,
-        // 🌍 Return customer language — widget can sync its dropdown
-        language: normalizedLanguage,
+        // 🌍 Return the language the bot actually replied in (falls back to the
+        // requested/normalized language) so the widget's welcome-video intro
+        // line matches the reply — parity with the main chat path & WhatsApp.
+        language: replyLanguage,
         // 👤 Profile data — widget saves this in localStorage to show profile badge in header
         customerProfile: {
           name: customer.name,
@@ -1442,7 +1452,9 @@ export class WidgetChatController {
 
       // 🎤 Voice in → voice out: synthesize the bot reply with ElevenLabs so the
       // widget can show an audio player. A TTS failure leaves the text reply intact.
-      if (typeof body.response === "string" && body.response.trim()) {
+      // Skip if sendMessage already produced audio (audioOutput tenants synthesize
+      // every reply there) — avoids a duplicate, billable TTS call.
+      if (!body.audioUrl && typeof body.response === "string" && body.response.trim()) {
         try {
           // 🌍 Prefer the language the bot actually replied in (surfaced by
           // sendMessage as body.language) so the spoken audio matches the reply,
@@ -2282,12 +2294,38 @@ export class WidgetChatController {
             shouldEscalate: customOutput.shouldEscalate,
           })
 
+          // 🔊 Demo audio: when the tenant enables audioOutput (settings.json),
+          // speak EVERY widget reply so visitors hear the bot can send voice
+          // notes — not only when they record a voice note. WhatsApp stays
+          // voice-in → voice-out (see whatsapp-inbound.pipeline); the widget
+          // demos proactively showcase it. TTS failure leaves text intact.
+          let customAudioUrl: string | undefined
+          if (customOutput.audioOutput === true && customerReply.trim()) {
+            try {
+              // 🌍 Speak in the language the bot replied in; pick the per-language
+              // voice from settings.json (falls back to "default", then env voice).
+              const replyLang = customOutput.language || customerLanguage || undefined
+              const ttsVoiceId =
+                customOutput.audioVoices?.[replyLang ?? ""] ?? customOutput.audioVoices?.default
+              const tts = await generateSpeech(
+                customerReply,
+                resolvedWorkspaceId,
+                replyLang,
+                ttsVoiceId
+              )
+              if (tts?.audioUrl) customAudioUrl = tts.audioUrl
+            } catch (ttsErr: any) {
+              logger.error("[WIDGET-CUSTOM-CLIENT] TTS reply failed", { error: ttsErr?.message })
+            }
+          }
+
           return res.status(200).json({
             success: true,
             messageId: `widget-${visitorId}-${Date.now()}`,
             sessionId: chatSession.id,
             response: customerReply,
             status: "ready",
+            ...(customAudioUrl ? { audioUrl: customAudioUrl } : {}),
             suggestions: customSuggestions,
             // 🌍 Surface the language the bot ACTUALLY replied in (⟦LANG:xx⟧),
             // not the widget/phone guess — the audio (voice-in→voice-out) path
