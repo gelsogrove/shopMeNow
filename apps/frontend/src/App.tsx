@@ -17,6 +17,7 @@ import { LaundryServicePage } from "@/pages/LaundryServicePage"
 import { LaundriesPage } from "@/pages/LaundriesPage"
 import { RealEstatePage } from "@/pages/RealEstatePage"
 import { ContactPage } from "@/pages/ContactPage"
+import { AvisoLegalPage } from "@/pages/AvisoLegalPage"
 import RequestAccessPage from "@/pages/RequestAccessPage"
 import { storage } from "@/lib/storage"
 
@@ -337,6 +338,7 @@ function AppWithProviders() {
                 <Route path="/terms" element={<LegalDocumentPage docType="TERMS_OF_SERVICE" />} />
                 <Route path="/refund" element={<LegalDocumentPage docType="REFUND_POLICY" />} />
                 <Route path="/gdpr" element={<LegalDocumentPage docType="GDPR" />} />
+                <Route path="/aviso-legal" element={<AvisoLegalPage />} />
                 {/* Legacy URLs - redirect to new paths */}
                 <Route path="/privacy-policy" element={<Navigate to="/privacy" replace />} />
                 <Route path="/terms-of-service" element={<Navigate to="/terms" replace />} />
