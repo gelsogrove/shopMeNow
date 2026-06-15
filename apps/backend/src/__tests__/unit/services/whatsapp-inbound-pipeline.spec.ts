@@ -75,8 +75,7 @@ jest.mock("../../../utils/custom-chatbot-reply", () => ({
   splitCustomChatbotReply: (r: string) => ({ customerReply: r }),
 }))
 jest.mock("../../../utils/welcome-video", () => ({
-  buildWelcomeVideoSplit: jest.fn((r: string) => r),
-  WELCOME_VIDEO_INTRO: {},
+  formatWelcomeReply: jest.fn(() => null),
 }))
 jest.mock("../../../utils/language-detector", () => ({
   detectLanguageFromPhonePrefix: () => "it",
@@ -111,7 +110,6 @@ const customer = {
     channelStatus: true,
     debugMode: false,
     defaultLanguage: "it",
-    welcomeVideoUrl: null,
   },
 }
 const chatSession = { id: "sess-1" }

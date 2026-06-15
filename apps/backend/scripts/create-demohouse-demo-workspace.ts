@@ -50,7 +50,7 @@ const OWNER_EMAIL = (flag("owner") || "gelsogrove@gmail.com").toLowerCase()
 
 // Identity / unique / credential / channel-state fields that must NOT be copied
 // from the source workspace. Everything else (behaviour + display config, incl.
-// welcomeVideoUrl, widget styling, locale, operator settings) is cloned.
+// widget styling, locale, operator settings) is cloned.
 const DO_NOT_COPY = new Set<string>([
   "id", "slug", "name", "customChatbotId", "createdAt", "updatedAt", "deletedAt", "ownerId",
   // WhatsApp / Meta / UltraMsg / Wasender credentials + session state
@@ -113,7 +113,6 @@ async function main() {
     hasHumanSupport: true,
     operatorContactMethod: "email",
     operatorEmail: "echatbotai@gmail.com",
-    welcomeVideoUrl: null,
   }
 
   // Build the payload: clone every source field except the blocklist (when a
@@ -143,7 +142,7 @@ async function main() {
       : `🏢 No "${SOURCE_CHATBOT_ID}" source found — will CREATE FRESH "${NAME}" with defaults`,
   )
   console.log(`   owner: ${owner.email} (id=${owner.id})`)
-  console.log(`   customChatbotId=${CHATBOT_ID}  slug=${SLUG}  welcomeVideoUrl=${(data as any).welcomeVideoUrl ?? "—"}`)
+  console.log(`   customChatbotId=${CHATBOT_ID}  slug=${SLUG}`)
   console.log(`   config fields (${copiedKeys.length}): ${copiedKeys.join(", ")}`)
 
   if (!APPLY) {

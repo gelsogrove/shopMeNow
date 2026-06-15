@@ -31,7 +31,6 @@ model Workspace {
   url                       String?
   welcomeMessage            String?   @default("Welcome! I'm {{chatbotName}}, your digital assistant. How can I help you today?") @db.Text
   enableWelcomeMessage      Boolean   @default(true) // Toggle to enable/disable welcome message (E0a - cross-cutting feature)
-  welcomeVideoUrl           String?   // 📺 Presentation video (YouTube or .mp4) shown ONLY on the first welcome message. Null = no video.
   sessionResetTimeout       Int       @default(3600) // Seconds after escalation before auto-reset (E0b - cross-cutting feature)
   wipMessage                String?   @default("Work in progress. Please contact us later.") @db.Text
   afterRegistrationMessages String?   @default("Thank you for registering, {{customerName}}! How can I help you today? Would you like to see your orders? The offers? Or do you need other information?") @db.Text
