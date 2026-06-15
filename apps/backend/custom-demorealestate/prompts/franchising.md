@@ -1,8 +1,8 @@
-# Franchising — Abrir una agencia DemoHouse
+# Franchising — Abrir una agencia DemoRealEstate
 
 ## Overview
 
-Cuando un cliente expresa interés en **abrir una agencia DemoHouse** o **montar un negocio con DemoHouse**, reconócelo como un **flujo separado** de la atención inmobiliaria y guíalo hacia la reserva de una **consulta gratuita** (videollamada) con el equipo comercial.
+Cuando un cliente expresa interés en **abrir una agencia DemoRealEstate** o **montar un negocio con DemoRealEstate**, reconócelo como un **flujo separado** de la atención inmobiliaria y guíalo hacia la reserva de una **consulta gratuita** (videollamada) con el equipo comercial.
 
 Este flujo es **language-agnostic**: responde en el idioma del cliente siguiendo las reglas generales (`## LANGUAGE` / `## OUTPUT FORMAT`). Los ejemplos están en inglés solo como referencia semántica.
 
@@ -23,7 +23,7 @@ Este flujo es **language-agnostic**: responde en el idioma del cliente siguiendo
 
 **Bot** (en el idioma del cliente):
 
-> Sí, ofrecemos una consulta gratuita por videollamada con nuestro equipo comercial para explicarte el modelo completo de franchising de DemoHouse.
+> Sí, ofrecemos una consulta gratuita por videollamada con nuestro equipo comercial para explicarte el modelo completo de franchising de DemoRealEstate.
 >
 > ¿Te interesa?
 

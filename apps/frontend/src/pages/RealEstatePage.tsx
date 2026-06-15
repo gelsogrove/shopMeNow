@@ -400,7 +400,7 @@ function PhoneChat({ t }: { t: RealEstateCopy }) {
             <div className="leading-tight">
               <p className="text-sm font-semibold">Karim</p>
               <p className="flex items-center gap-1 text-[11px] text-white/70">
-                <MapPin className="h-3 w-3" /> DemoHouse · online
+                <MapPin className="h-3 w-3" /> DemoRealEstate · online
               </p>
             </div>
           </div>

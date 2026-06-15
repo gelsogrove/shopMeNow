@@ -1,7 +1,7 @@
 // i18n strings for the Real Estate Agencies landing page.
 // Base language is Italian; the others mirror it 1:1.
 // Positioning: ONE AI for any real estate agency.
-// DemoHouse is only the running EXAMPLE — the product fits residential,
+// DemoRealEstate is only the running EXAMPLE — the product fits residential,
 // commercial, vacation rentals, new builds, luxury, property management, etc.
 
 export type RealEstateLang = "it" | "en" | "es" | "de"
@@ -115,7 +115,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
     ctaSub: "Demo su misura, nessun impegno",
     industriesTitle: "Una soluzione, ogni tipo di immobile",
     industriesSub:
-      "L'esempio che vedi è DemoHouse, un'agenzia immobiliare. Ma la stessa AI lavora con qualsiasi tipologia di immobile.",
+      "L'esempio che vedi è DemoRealEstate, un'agenzia immobiliare. Ma la stessa AI lavora con qualsiasi tipologia di immobile.",
     industries: [
       { icon: "🏠", label: "Residenziale" },
       { icon: "🏢", label: "Commerciale" },
@@ -229,7 +229,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
     mockQ1Local: "Il trilocale in centro è ancora disponibile?",
     mockQ2Local: "Grazie! Posso visitarlo?",
     mockLiveLang: "IT",
-    actsBot: "DemoHouse Bot",
+    actsBot: "DemoRealEstate Bot",
     actsCustomer1: "Vorrei visitare l'appartamento in Via Roma. È ancora disponibile?",
     actsAi1: "Sì, è disponibile! Sto controllando il calendario dell'agente. Un momento, per favore.",
     actsAi2:
@@ -238,7 +238,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
     actsPromoTitle: "🎉 ANCHE PER TE!",
     actsPromoText:
       "Scopri la nostra consulenza mutuo gratuita e trova il finanziamento giusto per il tuo acquisto.",
-    actsPromoCard: "DemoHouse · Consulenza mutuo",
+    actsPromoCard: "DemoRealEstate · Consulenza mutuo",
     pushDate: "Martedì, 14 maggio",
     pushText:
       "Nuovo sul mercato! 🏡 Trilocale con terrazzo nella tua zona di ricerca, €245.000. Vuoi prenotare una visita? Rispondi qui! ⭐",
@@ -263,7 +263,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
     ctaSub: "Tailored demo, no commitment",
     industriesTitle: "One solution, every type of property",
     industriesSub:
-      "The example you see is DemoHouse, a real estate agency. But the same AI works for any type of property.",
+      "The example you see is DemoRealEstate, a real estate agency. But the same AI works for any type of property.",
     industries: [
       { icon: "🏠", label: "Residential" },
       { icon: "🏢", label: "Commercial" },
@@ -377,7 +377,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
     mockQ1Local: "Is the downtown 3-room apartment still available?",
     mockQ2Local: "Thanks! Can I visit it?",
     mockLiveLang: "EN",
-    actsBot: "DemoHouse Bot",
+    actsBot: "DemoRealEstate Bot",
     actsCustomer1: "I'd like to visit the apartment on Via Roma. Is it still available?",
     actsAi1: "Yes, it's available! I'm checking the agent's calendar. One moment, please.",
     actsAi2:
@@ -386,7 +386,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
     actsPromoTitle: "🎉 ALSO FOR YOU!",
     actsPromoText:
       "Discover our free mortgage consultation and find the right financing for your purchase.",
-    actsPromoCard: "DemoHouse · Mortgage advisor",
+    actsPromoCard: "DemoRealEstate · Mortgage advisor",
     pushDate: "Tuesday, May 14",
     pushText:
       "New on the market! 🏡 3-room apartment with terrace in your search zone, €245,000. Want to book a viewing? Reply here! ⭐",
@@ -411,7 +411,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
     ctaSub: "Demo a medida, sin compromiso",
     industriesTitle: "Una solución, cada tipo de inmueble",
     industriesSub:
-      "El ejemplo que ves es DemoHouse, una agencia inmobiliaria. Pero la misma IA funciona con cualquier tipo de inmueble.",
+      "El ejemplo que ves es DemoRealEstate, una agencia inmobiliaria. Pero la misma IA funciona con cualquier tipo de inmueble.",
     industries: [
       { icon: "🏠", label: "Residencial" },
       { icon: "🏢", label: "Comercial" },
@@ -525,7 +525,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
     mockQ1Local: "¿El piso de 3 habitaciones en el centro sigue disponible?",
     mockQ2Local: "¡Gracias! ¿Puedo visitarlo?",
     mockLiveLang: "ES",
-    actsBot: "DemoHouse Bot",
+    actsBot: "DemoRealEstate Bot",
     actsCustomer1: "Me gustaría visitar el piso de Via Roma. ¿Sigue disponible?",
     actsAi1: "¡Sí, está disponible! Estoy consultando el calendario del agente. Un momento, por favor.",
     actsAi2:
@@ -534,7 +534,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
     actsPromoTitle: "🎉 ¡TAMBIÉN PARA TI!",
     actsPromoText:
       "Descubre nuestra asesoría hipotecaria gratuita y encuentra la financiación adecuada para tu compra.",
-    actsPromoCard: "DemoHouse · Asesor hipotecario",
+    actsPromoCard: "DemoRealEstate · Asesor hipotecario",
     pushDate: "Martes, 14 de mayo",
     pushText:
       "¡Nuevo en el mercado! 🏡 Piso de 3 habitaciones con terraza en tu zona de búsqueda, 245.000 €. ¿Quieres agendar una visita? ¡Responde aquí! ⭐",
@@ -559,7 +559,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
     ctaSub: "Maßgeschneiderte Demo, unverbindlich",
     industriesTitle: "Eine Lösung, jede Art von Immobilie",
     industriesSub:
-      "Das Beispiel, das du siehst, ist DemoHouse, eine Immobilienagentur. Aber dieselbe KI funktioniert für jede Art von Immobilie.",
+      "Das Beispiel, das du siehst, ist DemoRealEstate, eine Immobilienagentur. Aber dieselbe KI funktioniert für jede Art von Immobilie.",
     industries: [
       { icon: "🏠", label: "Wohnimmobilien" },
       { icon: "🏢", label: "Gewerbe" },
@@ -673,7 +673,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
     mockQ1Local: "Ist die 3-Zimmer-Wohnung im Zentrum noch verfügbar?",
     mockQ2Local: "Danke! Kann ich sie besichtigen?",
     mockLiveLang: "DE",
-    actsBot: "DemoHouse Bot",
+    actsBot: "DemoRealEstate Bot",
     actsCustomer1: "Ich würde gern die Wohnung in der Via Roma besichtigen. Ist sie noch verfügbar?",
     actsAi1: "Ja, sie ist verfügbar! Ich prüfe gerade den Kalender des Maklers. Einen Moment, bitte.",
     actsAi2:
@@ -682,7 +682,7 @@ export const REAL_ESTATE_I18N: Record<RealEstateLang, RealEstateCopy> = {
     actsPromoTitle: "🎉 AUCH FÜR DICH!",
     actsPromoText:
       "Entdecke unsere kostenlose Finanzierungsberatung und finde die passende Finanzierung für deinen Kauf.",
-    actsPromoCard: "DemoHouse · Finanzierungsberater",
+    actsPromoCard: "DemoRealEstate · Finanzierungsberater",
     pushDate: "Dienstag, 14. Mai",
     pushText:
       "Neu auf dem Markt! 🏡 3-Zimmer-Wohnung mit Terrasse in deiner Suchzone, 245.000 €. Möchtest du eine Besichtigung buchen? Antworte hier! ⭐",

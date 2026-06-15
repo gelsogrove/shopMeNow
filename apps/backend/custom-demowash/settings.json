@@ -10,6 +10,7 @@
   "maxMessageChars": 2000,
   "maxMessagesPerMinute": 30,
   "maxTurnsPerSession": 50,
+  "privacyPolicyUrl": "https://echatbot.ai/aviso-legal",
   "audioOutput": true,
   "audioVoices": {
     "default": "EXAVITQu4vr4xnSDxMaL",

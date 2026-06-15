@@ -60,6 +60,11 @@ interface Settings {
   /** Per-language ElevenLabs voice IDs. Key = language code (it/es/en/…),
    *  plus a "default" used when the customer language has no entry. */
   audioVoices: Record<string, string>
+  /** Public URL of the legal/privacy notice ("aviso legal") shown in the
+   *  first-turn GDPR disclaimer. Environment-dependent: production points to
+   *  https://echatbot.ai/aviso-legal, local dev to http://localhost:3000/aviso-legal.
+   *  Overridable at runtime via the PRIVACY_POLICY_URL env var. */
+  privacyPolicyUrl: string
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -76,6 +81,7 @@ const DEFAULT_SETTINGS: Settings = {
   maxTurnsPerSession: 50,
   audioOutput: false,
   audioVoices: {},
+  privacyPolicyUrl: 'https://echatbot.ai/aviso-legal',
 }
 
 function loadSettings(): Settings {
@@ -124,6 +130,7 @@ const MAX_MESSAGES_PER_MINUTE = SETTINGS.maxMessagesPerMinute
 const MAX_TURNS_PER_SESSION = SETTINGS.maxTurnsPerSession
 const AUDIO_OUTPUT = SETTINGS.audioOutput
 const AUDIO_VOICES = SETTINGS.audioVoices
+const PRIVACY_POLICY_URL = process.env.PRIVACY_POLICY_URL || SETTINGS.privacyPolicyUrl
 
 const API_KEY = process.env.OPENROUTER_API_KEY || ''
 const GMAIL_USER = process.env.GMAIL_USER || ''
@@ -1364,6 +1371,7 @@ function formatRuntimeBlock(
     // when Turn == 1. Emit it explicitly so the model never has to infer it
     // from history (which the host rebuilds per call).
     `Turn: ${isFirstTurn ? 1 : 2}`,
+    `Privacy policy URL: ${PRIVACY_POLICY_URL}`,
     `Operator briefing language: ${briefingLanguage}`,
     'Franchising consultation slots (offer EXACTLY these, by index — see FRANCHISING CONSULTATION block):',
     ...slots.map((s, i) => `  ${i + 1}. ${s.dayName} ${s.date} ${s.time}`),

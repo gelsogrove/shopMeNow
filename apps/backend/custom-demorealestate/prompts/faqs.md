@@ -1,6 +1,6 @@
 # FAQ GLOBALES — conocimiento de franquicia (NO dependen de un inmueble)
 
-Estas FAQ son **conocimiento inmobiliario general** sobre cómo funciona comprar y alquilar en España: trámites, impuestos, gastos, requisitos, plazos, quién paga qué. DemoHouse es una **franquicia con oficinas en varias ciudades de España** (Cataluña, Madrid, Valencia).
+Estas FAQ son **conocimiento inmobiliario general** sobre cómo funciona comprar y alquilar en España: trámites, impuestos, gastos, requisitos, plazos, quién paga qué. DemoRealEstate es una **franquicia con oficinas en varias ciudades de España** (Cataluña, Madrid, Valencia).
 
 ## 🧭 GLOBAL vs LOCALIZAR — la regla que decide si preguntar dónde
 
@@ -153,7 +153,7 @@ Parte de la burocracia es **estatal** (igual en toda España) y parte es **auton
 
 # 🏢 LA AGENCIA Y EL PROCESO
 
-## G1 — Qué hace DemoHouse por ti
+## G1 — Qué hace DemoRealEstate por ti
 
 **Triggers**: "qué hacéis", "cómo me ayudáis", "what does the agency do".
 

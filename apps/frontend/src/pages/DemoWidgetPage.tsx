@@ -2,13 +2,13 @@
  * DemoWidgetPage
  *
  * Public, standalone "try it" page served at /demo/<slug> (e.g. /demo/demowash,
- * /demo/demohouse). It resolves the demo workspace from the chatbot slug and
+ * /demo/demorealestate). It resolves the demo workspace from the chatbot slug and
  * renders the real embeddable ChatWidget pointed at that workspace, so a visitor
  * can talk to the live chatbot exactly as a customer would — including the
  * registration form that asks for name, phone and language before the first message.
  *
- * Branding is per-slug (see BRAND_THEMES below): demowash = laundry, demohouse =
- * DemoHouse real-estate agency — both use the same WhatsApp-green styling. The
+ * Branding is per-slug (see BRAND_THEMES below): demowash = laundry, demorealestate =
+ * DemoRealEstate real-estate agency — both use the same WhatsApp-green styling. The
  * slug also drives the resolve-demo lookup (workspace.customChatbotId === slug).
  *
  * Why this exists / production note:
@@ -49,7 +49,7 @@ interface ResolvedDemo {
 
 // ── Per-brand visual theme (keyed by slug) ───────────────────────────────────
 // Tailwind class strings are kept as full literals so the JIT compiler keeps
-// them. demowash reproduces the original green branding exactly; demohouse shares
+// them. demowash reproduces the original green branding exactly; demorealestate shares
 // the same WhatsApp-green branding (only the wordmark + monogram differ).
 interface BrandTheme {
   titleA: string // first half of the H1 (kept white)
@@ -92,9 +92,9 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     loadingText: "text-emerald-50",
     openHint: "text-emerald-100/80",
   },
-  // DemoHouse shares the WhatsApp-green branding of demowash (Andrea's choice) —
+  // DemoRealEstate shares the WhatsApp-green branding of demowash (Andrea's choice) —
   // only the wordmark ("Casa") and monogram ("DC") differ.
-  demohouse: {
+  demorealestate: {
     titleA: "Demo",
     titleB: "Casa",
     monogram: "DC",
@@ -231,7 +231,7 @@ const DEMO_ITEMS_I18N: Record<string, Record<string, string[]>> = {
       "🙋 Mit einem Mitarbeiter sprechen",
     ],
   },
-  demohouse: {
+  demorealestate: {
     en: [
       "🏠 Ask which homes are available",
       "📅 Book a property viewing",

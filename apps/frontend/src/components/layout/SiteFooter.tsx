@@ -26,6 +26,7 @@ const translations = {
     privacy: "Privacy Policy",
     terms: "Termini di Servizio",
     refund: "Politica di Rimborso",
+    legalNotice: "Note Legali",
     allRightsReserved: "Tutti i diritti riservati.",
     madeWith: "Fatto con",
     in: "in Italia",
@@ -51,6 +52,7 @@ const translations = {
     privacy: "Privacy Policy",
     terms: "Terms of Service",
     refund: "Refund Policy",
+    legalNotice: "Legal Notice",
     allRightsReserved: "All rights reserved.",
     madeWith: "Made with",
     in: "in Italy",
@@ -76,6 +78,7 @@ const translations = {
     privacy: "Política de Privacidad",
     terms: "Términos de Servicio",
     refund: "Política de Reembolso",
+    legalNotice: "Aviso Legal",
     allRightsReserved: "Todos los derechos reservados.",
     madeWith: "Hecho con",
     in: "en Italia",
@@ -101,6 +104,7 @@ const translations = {
     privacy: "Datenschutzerklärung",
     terms: "Nutzungsbedingungen",
     refund: "Rückerstattungsrichtlinie",
+    legalNotice: "Impressum",
     allRightsReserved: "Alle Rechte vorbehalten.",
     madeWith: "Erstellt mit",
     in: "in Italien",
@@ -150,6 +154,7 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
               <li><Link to="/privacy" className="text-sm hover:text-green-500 transition-colors">{t.privacy}</Link></li>
               <li><Link to="/terms" className="text-sm hover:text-green-500 transition-colors">{t.terms}</Link></li>
               <li><Link to="/refund" className="text-sm hover:text-green-500 transition-colors">{t.refund}</Link></li>
+              <li><Link to="/aviso-legal" className="text-sm hover:text-green-500 transition-colors">{t.legalNotice}</Link></li>
             </ul>
           </div>
         </div>

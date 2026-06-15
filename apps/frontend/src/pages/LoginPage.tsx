@@ -2073,7 +2073,7 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* Contact Section (DemoHouse highlight) — twin of the DemoWash card
+      {/* Contact Section (DemoRealEstate highlight) — twin of the DemoWash card
           above, mirrored so the image sits on the LEFT (Andrea). */}
       <div className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -2098,7 +2098,7 @@ export function LoginPage() {
                       <div className="h-full w-full overflow-hidden rounded-xl">
                         <img
                           src="/real-estate.png"
-                          alt="DemoHouse real estate"
+                          alt="DemoRealEstate real estate"
                           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                         />
                       </div>
@@ -2123,7 +2123,7 @@ export function LoginPage() {
                       <span style={{ color: "#25D366" }}>RealEstate</span>
                     </h3>
                     <p className="text-xl text-slate-300 leading-relaxed text-justify">
-                      {t("demohouse.subtitle")}
+                      {t("demorealestate.subtitle")}
                     </p>
                   </div>
 
@@ -2138,7 +2138,7 @@ export function LoginPage() {
                           setShowWIPModal(true)
                           return
                         }
-                        navigate("/demo/demohouse")
+                        navigate("/demo/demorealestate")
                       }}
                     >
                       <span className="flex items-center gap-3">
