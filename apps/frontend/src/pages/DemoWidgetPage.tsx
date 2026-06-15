@@ -93,11 +93,11 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     openHint: "text-emerald-100/80",
   },
   // DemoRealEstate shares the WhatsApp-green branding of demowash (Andrea's choice) —
-  // only the wordmark ("Casa") and monogram ("DC") differ.
+  // only the wordmark ("RealEstate") and monogram ("DR") differ.
   demorealestate: {
     titleA: "Demo",
-    titleB: "Casa",
-    monogram: "DC",
+    titleB: "RealEstate",
+    monogram: "DR",
     primaryColor: "#25D366",
     pageGradient: "from-emerald-600 via-emerald-700 to-emerald-900",
     blob1: "bg-emerald-400/30",
