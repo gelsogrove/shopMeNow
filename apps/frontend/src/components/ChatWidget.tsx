@@ -201,6 +201,11 @@ interface ChatWidgetProps {
   whatsappBadge?: boolean
   onOpenChange?: (isOpen: boolean) => void
   onConvert?: (customerId: string) => void
+  // 📣 Demo-only: ready-to-render (already localized + branded) promotional push
+  // messages. When provided AND instantChat is on, the widget shows a "Simulate a
+  // promo push" button that injects these as incoming bot messages (with a beep),
+  // cycling through them. Empty/undefined → no button (normal client widget).
+  pushDemoCases?: string[]
 }
 
 // Determine API URL based on environment
@@ -237,6 +242,9 @@ const UI_STRINGS: Record<
     back: string
     termsTitle: string
     termsBody: string
+    // 📣 Demo-only "try a push" control (simulated promotional push message).
+    pushBtn: string
+    pushHint: string
   }
 > = {
   it: {
@@ -254,6 +262,8 @@ const UI_STRINGS: Record<
     termsTitle: "Termini e Condizioni",
     termsBody:
       "Accettando, autorizzi eChatbot a contattarti su WhatsApp per assistenza, notifiche e offerte. Puoi revocare il consenso in qualsiasi momento rispondendo STOP o scrivendo al supporto.",
+    pushBtn: "📣 Simula un push promozionale",
+    pushHint: "Così il cliente riceve un messaggio pubblicitario che invii tu.",
   },
   en: {
     intro: "Introduce yourself to start chatting",
@@ -270,6 +280,8 @@ const UI_STRINGS: Record<
     termsTitle: "Terms & Conditions",
     termsBody:
       "By accepting you allow eChatbot to message you on WhatsApp for support, notifications, and offers. You can revoke anytime by replying STOP or contacting support.",
+    pushBtn: "📣 Simulate a promo push",
+    pushHint: "This is how your customer receives a promotional message you send.",
   },
   es: {
     intro: "Preséntate para comenzar a chatear",
@@ -286,6 +298,8 @@ const UI_STRINGS: Record<
     termsTitle: "Términos y Condiciones",
     termsBody:
       "Al aceptar, autorizas a eChatbot a contactarte por WhatsApp para soporte, notificaciones y ofertas. Puedes revocar el consentimiento en cualquier momento respondiendo STOP o escribiendo al soporte.",
+    pushBtn: "📣 Simula un push promocional",
+    pushHint: "Así recibe tu cliente un mensaje publicitario que tú envías.",
   },
   fr: {
     intro: "Présentez-vous pour commencer à discuter",
@@ -302,6 +316,8 @@ const UI_STRINGS: Record<
     termsTitle: "Conditions Générales",
     termsBody:
       "En acceptant, vous autorisez eChatbot à vous contacter sur WhatsApp pour support, notifications et offres. Vous pouvez retirer votre consentement à tout moment en répondant STOP ou en contactant le support.",
+    pushBtn: "📣 Simuler un push promo",
+    pushHint: "Voici comment votre client reçoit un message publicitaire que vous envoyez.",
   },
   de: {
     intro: "Stell dich vor, um zu chatten",
@@ -318,6 +334,8 @@ const UI_STRINGS: Record<
     termsTitle: "Allgemeine Bedingungen",
     termsBody:
       "Mit der Zustimmung erlaubst du eChatbot, dich über WhatsApp für Support, Benachrichtigungen und Angebote zu kontaktieren. Du kannst dies jederzeit widerrufen, indem du STOP antwortest oder den Support kontaktierst.",
+    pushBtn: "📣 Promo-Push simulieren",
+    pushHint: "So erhält dein Kunde eine Werbenachricht, die du sendest.",
   },
   ca: {
     intro: "Presenta't per començar a xatejar",
@@ -334,6 +352,8 @@ const UI_STRINGS: Record<
     termsTitle: "Termes i Condicions",
     termsBody:
       "En acceptar, autoritzes eChatbot a contactar-te per WhatsApp per a suport, notificacions i ofertes. Pots revocar el consentiment en qualsevol moment responent STOP o contactant el suport.",
+    pushBtn: "📣 Simula un push promocional",
+    pushHint: "Així rep el teu client un missatge publicitari que tu envies.",
   },
 }
 
@@ -358,6 +378,7 @@ export function ChatWidget({
   whatsappBadge = false,
   onOpenChange,
   onConvert,
+  pushDemoCases,
 }: ChatWidgetProps) {
   // 🌍 Get language from LanguageContext (header dropdown)
   const { language: headerLanguage } = useLanguage()
@@ -852,6 +873,56 @@ export function ChatWidget({
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [botDisabled, visitorId, resolvedWorkspaceId, resolvedApiUrl])
+
+  // 📣 Demo push: cycle through the provided promo cases, play a WhatsApp-like
+  // beep, and inject the promo as an incoming bot bubble. Demo-only (gated on
+  // instantChat + pushDemoCases at the call site).
+  const pushDemoIndexRef = useRef(0)
+
+  const playPushBeep = () => {
+    try {
+      const Ctx =
+        window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+      if (!Ctx) return
+      const ctx = new Ctx()
+      const beep = (startAt: number, freq: number) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = "sine"
+        osc.frequency.value = freq
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        gain.gain.setValueAtTime(0.0001, startAt)
+        gain.gain.exponentialRampToValueAtTime(0.25, startAt + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.18)
+        osc.start(startAt)
+        osc.stop(startAt + 0.2)
+      }
+      const t0 = ctx.currentTime
+      beep(t0, 880) // first tone
+      beep(t0 + 0.16, 1320) // higher second tone → WhatsApp-style "bip-bip"
+    } catch {
+      // Audio is a nicety; never break the demo if it fails (autoplay policy).
+    }
+  }
+
+  const firePushDemo = () => {
+    if (!pushDemoCases || pushDemoCases.length === 0) return
+    const idx = pushDemoIndexRef.current % pushDemoCases.length
+    pushDemoIndexRef.current = idx + 1
+    const pushMessage: Message = {
+      role: "bot",
+      content: pushDemoCases[idx],
+      timestamp: new Date().toISOString(),
+      serverId: `demo-push-${Date.now()}`,
+    }
+    setMessages((prev) => {
+      const updated = [...prev, pushMessage]
+      if (resolvedWorkspaceId) saveWidgetMessages(localStorage, resolvedWorkspaceId, updated)
+      return updated
+    })
+    playPushBeep()
+  }
 
   /**
    * Send message to API
