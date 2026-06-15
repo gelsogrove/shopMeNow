@@ -100,6 +100,7 @@ import { EmojiPicker } from "@/components/EmojiPicker"
 import { ReactionPicker } from "@/components/ReactionPicker"
 import { ChatSurface } from "@/components/chat/ChatSurface"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
+import { extractVideoUrl } from "@/lib/welcome-video"
 import { MessageRenderer } from "@/components/shared/MessageRenderer"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
 import {
@@ -182,7 +183,6 @@ interface ChatWidgetProps {
   monogram?: string
   language?: string
   apiUrl?: string
-  welcomeVideoUrl?: string
   // When true the popup is rendered already open on first mount (instead of the
   // floating bubble). Used by the standalone /demo/<slug> try-it page so the
   // visitor lands directly on the registration form. Defaults to false so the
@@ -218,23 +218,6 @@ const getApiUrl = () => {
 
 const DEFAULT_API_URL = getApiUrl()
 const DEFAULT_PRIMARY_COLOR = "#22c55e"
-
-// Convert a welcome-video URL (YouTube / Vimeo / direct file) into a renderable
-// form. Returns null for unrecognized URLs — no guessing, no broken embeds.
-function resolveWelcomeVideo(
-  url: string
-): { kind: "iframe" | "file"; src: string } | null {
-  const u = (url || "").trim()
-  if (!u) return null
-  const yt = u.match(
-    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/
-  )
-  if (yt) return { kind: "iframe", src: `https://www.youtube.com/embed/${yt[1]}` }
-  const vm = u.match(/vimeo\.com\/(?:video\/)?(\d+)/)
-  if (vm) return { kind: "iframe", src: `https://player.vimeo.com/video/${vm[1]}` }
-  if (/\.(mp4|webm|ogg)(\?.*)?$/i.test(u)) return { kind: "file", src: u }
-  return null
-}
 
 type LangCode = "it" | "en" | "es" | "de" | "fr" | "ca"
 
@@ -368,7 +351,6 @@ export function ChatWidget({
   monogram,
   language,
   apiUrl,
-  welcomeVideoUrl,
   defaultOpen = false,
   instantChat = false,
   hideWorkspaceName = false,
@@ -465,9 +447,6 @@ export function ChatWidget({
     return letters.length === 2 ? letters.toUpperCase() : ""
   }, [resolvedTitle, monogram])
   const resolvedApiUrl = widgetConfig?.apiUrl || apiUrl || DEFAULT_API_URL
-  const resolvedWelcomeVideoUrl =
-    (widgetConfig as any)?.welcomeVideoUrl || welcomeVideoUrl || ""
-  const welcomeVideo = resolveWelcomeVideo(resolvedWelcomeVideoUrl)
   const resolvedAutoSuggestionsEnabled =
     (widgetConfig as any)?.autoSuggestionsEnabled === true
   const resolvedQuickReplies = Array.isArray((widgetConfig as any)?.quickReplies)
@@ -487,25 +466,27 @@ export function ChatWidget({
   const [isOpen, setIsOpen] = useState(defaultOpen)
   const [messages, setMessages] = useState<Message[]>([])
 
-  // 📺 Welcome presentation video — rendered on the FIRST bot message, exactly
-  // like the operator chat / playground (greeting → video card → rest). Computed at
-  // render time (not stored per-message) so it also shows for messages restored
-  // from localStorage. No-op when the workspace has no welcome video configured.
+  // 📺 Welcome presentation video — the URL is authored INSIDE the first bot
+  // reply (the module greeting). Extract it from that message, strip it from the
+  // visible text, and render it as a card (greeting → video card → rest), exactly
+  // like the operator chat / playground. Computed at render time (not stored
+  // per-message) so it also shows for messages restored from localStorage.
   const displayMessages = useMemo<Message[]>(() => {
-    if (!resolvedWelcomeVideoUrl) return messages
     const firstBotIdx = messages.findIndex((m) => m.role === "bot")
     if (firstBotIdx === -1) return messages
+    const found = extractVideoUrl(messages[firstBotIdx].content)
+    if (!found) return messages
     return messages.map((m, i) => {
       if (i !== firstBotIdx) return m
-      const breakIdx = m.content.indexOf("\n\n")
+      const breakIdx = found.text.indexOf("\n\n")
       return {
         ...m,
-        content: breakIdx !== -1 ? m.content.slice(0, breakIdx) : m.content,
-        welcomeRest: breakIdx !== -1 ? m.content.slice(breakIdx + 2) : "",
-        welcomeVideoUrl: resolvedWelcomeVideoUrl,
+        content: breakIdx !== -1 ? found.text.slice(0, breakIdx) : found.text,
+        welcomeRest: breakIdx !== -1 ? found.text.slice(breakIdx + 2) : "",
+        welcomeVideoUrl: found.url,
       }
     })
-  }, [messages, resolvedWelcomeVideoUrl])
+  }, [messages])
 
   // 📱 WhatsApp read receipts (demo) — full tick progression:
   //   ✓  sent      → the message just left and the bot hasn't replied yet
@@ -556,7 +537,6 @@ export function ChatWidget({
   // showRegistrationForm=true by default; set to false if customerId found in localStorage.
   // 🎮 instantChat (demo) opens straight into the chat — no registration form.
   const [showRegistrationForm, setShowRegistrationForm] = useState(!instantChat)
-  const [welcomeVideoDismissed, setWelcomeVideoDismissed] = useState(false)
   const [formName, setFormName] = useState("")
   const [formPhone, setFormPhone] = useState("")
   const [formLanguage, setFormLanguage] = useState<LangCode>("en")
@@ -1854,36 +1834,6 @@ export function ChatWidget({
             /* ── Registration Form ── */
             <>
               <ScrollArea className="flex-1 bg-slate-50 px-5 py-5">
-                {!showTermsContent && welcomeVideo && !welcomeVideoDismissed && (
-                  <div className="mb-4 rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-sm relative">
-                    <button
-                      type="button"
-                      onClick={() => setWelcomeVideoDismissed(true)}
-                      aria-label="Close video"
-                      className="absolute top-2 right-2 z-10 w-7 h-7 rounded-full bg-black/55 hover:bg-black/75 text-white text-sm flex items-center justify-center transition-colors"
-                    >
-                      ×
-                    </button>
-                    <div className="aspect-video bg-black">
-                      {welcomeVideo.kind === "file" ? (
-                        <video
-                          src={welcomeVideo.src}
-                          controls
-                          playsInline
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <iframe
-                          src={welcomeVideo.src}
-                          title="Welcome video"
-                          className="w-full h-full"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
-                      )}
-                    </div>
-                  </div>
-                )}
                 {showTermsContent ? (
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold text-slate-800">{ui.termsTitle}</h3>

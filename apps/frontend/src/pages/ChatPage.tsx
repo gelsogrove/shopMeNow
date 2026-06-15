@@ -9,6 +9,7 @@ import { ReactionPicker } from "@/components/ReactionPicker"
 import { MessageAttachments } from "@/components/chat/MessageAttachments"
 import { MessageTicks } from "@/components/chat/MessageTicks"
 import { WelcomeVideoCard } from "@/components/chat/WelcomeVideoCard"
+import { extractVideoUrl } from "@/lib/welcome-video"
 import { NotificationDialog } from "@/components/shared/NotificationDialog"
 import { WhatsAppChatModal } from "@/components/shared/WhatsAppChatModal"
 import { useChat } from "@/contexts/ChatContext"
@@ -281,7 +282,6 @@ export function ChatPage() {
 
   const [loading, setLoading] = useState(false)
   const [loadingChat, setLoadingChat] = useState(false)
-  const [welcomeVideoUrl, setWelcomeVideoUrl] = useState<string | null>(null) // 📺 presentation video on first message
   const [isWorkspaceChanging, setIsWorkspaceChanging] = useState(false) // 🆕 Loading per workspace change
   const [, setSearchParams] = useSearchParams() // Only need setter, we read from searchParams above
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -840,8 +840,6 @@ export function ChatPage() {
       const sessionIdToUse = chat.sessionId || chat.id
       const response = await api.get(`/chat/${sessionIdToUse}/messages`)
       if (response.data.success) {
-        // 📺 Presentation video shown only on the first message
-        setWelcomeVideoUrl(response.data.welcomeVideoUrl || null)
         // Transform backend messages to frontend format
         const transformedMessages = response.data.data.map((message: any) => ({
           id: message.id,
@@ -2022,15 +2020,20 @@ export function ChatPage() {
                               suppress the transcription / spoken text in the
                               bubble (Andrea: "audio player only"). */}
                           {!message.attachments?.some((a) => a.kind === "AUDIO") && (() => {
-                            const { customer: customerText, operator: operatorText } = isAgentMessage
+                            const { customer: rawCustomerText, operator: operatorText } = isAgentMessage
                               ? splitBotMessage(message.content)
                               : { customer: message.content, operator: null }
-                            // 📺 Welcome video: split the first bot reply into
-                            // greeting (1st paragraph) + rest, so the order is
-                            // greeting → intro+video → answer (see mockup).
-                            const isWelcomeWithVideo =
-                              !!welcomeVideoUrl &&
-                              msgIndex === messages.findIndex((mm) => mm.sender === "user")
+                            // 📺 Welcome video: the URL is authored INSIDE the bot
+                            // reply (module greeting). Extract it from the message,
+                            // strip it from the visible text, and render the card
+                            // between greeting and rest (greeting → intro+video →
+                            // answer). Content-driven: no separate workspace field.
+                            const foundVideo = isAgentMessage
+                              ? extractVideoUrl(rawCustomerText)
+                              : null
+                            const isWelcomeWithVideo = !!foundVideo
+                            const customerText = foundVideo ? foundVideo.text : rawCustomerText
+                            const welcomeVideoUrl = foundVideo?.url
                             const brIdx = isWelcomeWithVideo ? customerText.indexOf("\n\n") : -1
                             const greetingPart = brIdx !== -1 ? customerText.slice(0, brIdx) : customerText
                             const restPart = brIdx !== -1 ? customerText.slice(brIdx + 2) : ""
