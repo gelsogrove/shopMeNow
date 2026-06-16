@@ -1440,10 +1440,11 @@ export class WidgetChatController {
       const out = captured || { code: 500, body: { error: "No response" } }
       const body = out.body || {}
 
-      // 🎤 Voice in → voice out: synthesize the bot reply with ElevenLabs so the
-      // widget can show an audio player. A TTS failure leaves the text reply intact.
-      // Skip if sendMessage already produced audio (audioOutput tenants synthesize
-      // every reply there) — avoids a duplicate, billable TTS call.
+      // 🎤 Voice in → voice out: the customer sent a voice note, so synthesize the
+      // bot reply with ElevenLabs and attach an audio player. This is the ONLY
+      // place the widget produces audio — the text path never does. A TTS failure
+      // leaves the text reply intact. (The `!body.audioUrl` guard is defensive; the
+      // text turn no longer attaches audio, so it normally won't be set.)
       if (!body.audioUrl && typeof body.response === "string" && body.response.trim()) {
         try {
           // 🌍 Prefer the language the bot actually replied in (surfaced by
@@ -2284,30 +2285,13 @@ export class WidgetChatController {
             shouldEscalate: customOutput.shouldEscalate,
           })
 
-          // 🔊 Demo audio: when the tenant enables audioOutput (settings.json),
-          // speak EVERY widget reply so visitors hear the bot can send voice
-          // notes — not only when they record a voice note. WhatsApp stays
-          // voice-in → voice-out (see whatsapp-inbound.pipeline); the widget
-          // demos proactively showcase it. TTS failure leaves text intact.
-          let customAudioUrl: string | undefined
-          if (customOutput.audioOutput === true && customerReply.trim()) {
-            try {
-              // 🌍 Speak in the language the bot replied in; pick the per-language
-              // voice from settings.json (falls back to "default", then env voice).
-              const replyLang = customOutput.language || customerLanguage || undefined
-              const ttsVoiceId =
-                customOutput.audioVoices?.[replyLang ?? ""] ?? customOutput.audioVoices?.default
-              const tts = await generateSpeech(
-                customerReply,
-                resolvedWorkspaceId,
-                replyLang,
-                ttsVoiceId
-              )
-              if (tts?.audioUrl) customAudioUrl = tts.audioUrl
-            } catch (ttsErr: any) {
-              logger.error("[WIDGET-CUSTOM-CLIENT] TTS reply failed", { error: ttsErr?.message })
-            }
-          }
+          // 🔊 Audio rule: ONE rule only — the bot replies with a voice note
+          // ONLY when the customer sent a voice note. That voice-in → voice-out
+          // path is handled by sendAudioMessage (transcribe → sendMessage →
+          // TTS) and by the WhatsApp inbound pipeline. This text path therefore
+          // never synthesizes audio: a text message (including the first-turn
+          // welcome) must stay text-only. Do NOT add a "speak every reply" demo
+          // here — it attaches audio to the welcome message, which is wrong.
 
           return res.status(200).json({
             success: true,
@@ -2315,7 +2299,6 @@ export class WidgetChatController {
             sessionId: chatSession.id,
             response: customerReply,
             status: "ready",
-            ...(customAudioUrl ? { audioUrl: customAudioUrl } : {}),
             suggestions: customSuggestions,
             // 🌍 Surface the language the bot ACTUALLY replied in (⟦LANG:xx⟧),
             // not the widget/phone guess — the audio (voice-in→voice-out) path

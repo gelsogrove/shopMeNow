@@ -38,6 +38,7 @@ export interface LaundriesCopy {
   heroSub: string
   cta: string
   ctaSub: string
+  tryDemo: string
   // Industries
   industriesTitle: string
   industriesSub: string
@@ -115,6 +116,7 @@ export const LAUNDRIES_I18N: Record<LaundriesLang, LaundriesCopy> = {
       "Un'unica AI su WhatsApp per tutta la tua rete di lavanderie: risponde 24/7, traduce in tempo reale, riconosce da quale sede scrive il cliente, sblocca le macchine e passa all'operatore quando serve. Tu governi tutto da un solo pannello.",
     cta: "Parliamone",
     ctaSub: "Demo su misura, nessun impegno",
+    tryDemo: "Prova la demo →",
     industriesTitle: "Una soluzione, ogni tipo di lavanderia",
     industriesSub:
       "L'esempio che vedi è DemoWash, una rete di lavanderie self-service che offre anche il servizio di tintoria. La stessa AI gestisce ogni sede del tuo marchio, qualunque servizio offra.",
@@ -265,6 +267,7 @@ export const LAUNDRIES_I18N: Record<LaundriesLang, LaundriesCopy> = {
       "One AI on WhatsApp for your whole laundry network: answers 24/7, translates in real time, detects which location the customer is writing from, unlocks machines and hands off to an operator when needed. You run everything from a single panel.",
     cta: "Let's Talk",
     ctaSub: "Tailored demo, no commitment",
+    tryDemo: "Try the demo →",
     industriesTitle: "One solution, every kind of laundry",
     industriesSub:
       "The example you see is DemoWash, a self-service laundry network that also offers a dry-cleaning service. The same AI runs every location of your brand, whatever service it offers.",
@@ -415,6 +418,7 @@ export const LAUNDRIES_I18N: Record<LaundriesLang, LaundriesCopy> = {
       "Una sola IA en WhatsApp para toda tu red de lavanderías: responde 24/7, traduce en tiempo real, reconoce desde qué sede escribe el cliente, desbloquea las máquinas y pasa a un operador cuando hace falta. Tú lo gobiernas todo desde un único panel.",
     cta: "Hablemos",
     ctaSub: "Demo a medida, sin compromiso",
+    tryDemo: "Prueba la demo →",
     industriesTitle: "Una solución, cada tipo de lavandería",
     industriesSub:
       "El ejemplo que ves es DemoWash, una red de lavanderías self-service que también ofrece servicio de tintorería. La misma IA gestiona cada sede de tu marca, sea cual sea el servicio que ofrezca.",
@@ -565,6 +569,7 @@ export const LAUNDRIES_I18N: Record<LaundriesLang, LaundriesCopy> = {
       "Eine einzige KI auf WhatsApp für dein gesamtes Wäscherei-Netzwerk: antwortet 24/7, übersetzt in Echtzeit, erkennt, von welchem Standort der Kunde schreibt, entriegelt die Maschinen und übergibt bei Bedarf an einen Mitarbeiter. Du steuerst alles über ein einziges Panel.",
     cta: "Sprechen wir darüber",
     ctaSub: "Maßgeschneiderte Demo, unverbindlich",
+    tryDemo: "Demo testen →",
     industriesTitle: "Eine Lösung, jede Art von Wäscherei",
     industriesSub:
       "Das Beispiel, das du siehst, ist DemoWash, ein Self-Service-Wäscherei-Netzwerk, das auch eine Textilreinigung anbietet. Dieselbe KI steuert jeden Standort deiner Marke, welchen Service sie auch bietet.",

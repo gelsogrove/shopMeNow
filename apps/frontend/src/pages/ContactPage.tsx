@@ -37,7 +37,6 @@ const T = {
     sending: "Invio in corso...",
     successTitle: "Messaggio inviato!",
     successDesc: "Grazie per averci contattato. Ti risponderemo entro 24 ore.",
-    captchaError: "Completa la verifica di sicurezza.",
   },
   en: {
     seoTitle: "Contact Us - eChatbot",
@@ -64,7 +63,6 @@ const T = {
     sending: "Sending...",
     successTitle: "Message sent!",
     successDesc: "Thank you for reaching out. We'll reply within 24 hours.",
-    captchaError: "Please complete the security check.",
   },
   es: {
     seoTitle: "Contáctanos - eChatbot",
@@ -91,7 +89,6 @@ const T = {
     sending: "Enviando...",
     successTitle: "¡Mensaje enviado!",
     successDesc: "Gracias por ponerte en contacto. Te responderemos en 24 horas.",
-    captchaError: "Por favor completa la verificación de seguridad.",
   },
   de: {
     seoTitle: "Kontakt - eChatbot",
@@ -118,11 +115,8 @@ const T = {
     sending: "Wird gesendet…",
     successTitle: "Nachricht gesendet!",
     successDesc: "Danke, dass du dich gemeldet hast. Wir antworten innerhalb von 24 Stunden.",
-    captchaError: "Bitte schließe die Sicherheitsprüfung ab.",
   },
 }
-
-const recaptchaSiteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY || ""
 
 export function ContactPage() {
   const { language } = useLanguage()
@@ -134,7 +128,6 @@ export function ContactPage() {
   const [phone, setPhone] = useState("")
   const [subject, setSubject] = useState("")
   const [message, setMessage] = useState("")
-  const [captchaToken, setCaptchaToken] = useState("")
   const [honeypot, setHoneypot] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -142,37 +135,6 @@ export function ContactPage() {
 
   useEffect(() => {
     window.scrollTo(0, 0)
-  }, [])
-
-  useEffect(() => {
-    if (!recaptchaSiteKey) {
-      return
-    }
-
-    // Inject the Google reCAPTCHA script so the widget actually renders.
-    // Without it the `g-recaptcha` div stays empty, captchaToken is never set,
-    // and the Send button remains disabled forever.
-    const existingScript = document.querySelector(
-      'script[src="https://www.google.com/recaptcha/api.js"]'
-    )
-
-    if (!existingScript) {
-      const script = document.createElement("script")
-      script.src = "https://www.google.com/recaptcha/api.js"
-      script.async = true
-      script.defer = true
-      document.head.appendChild(script)
-    }
-
-    // reCAPTCHA callback
-    ;(window as any).onRecaptchaSuccess = (token: string) => {
-      setCaptchaToken(token)
-      setError("")
-    }
-
-    return () => {
-      delete (window as any).onRecaptchaSuccess
-    }
   }, [])
 
   const handleSubmit = async (e: FormEvent) => {
@@ -183,7 +145,6 @@ export function ContactPage() {
     if (!surname.trim() || surname.trim().length < 2) { setError("Please enter your surname."); return }
     if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) { setError("Please enter a valid email."); return }
     if (phone.trim() && !/^[+()0-9\s.-]{7,20}$/.test(phone.trim())) { setError("Please enter a valid phone number."); return }
-    if (recaptchaSiteKey && !captchaToken) { setError(t.captchaError); return }
     if (!subject.trim() || subject.trim().length < 3) { setError("Please enter a subject."); return }
     if (!message.trim() || message.trim().length < 10) { setError("Please enter a longer message."); return }
 
@@ -196,13 +157,11 @@ export function ContactPage() {
         title: subject.trim(),
         message: message.trim(),
         phone: phone.trim() || undefined,
-        captchaToken,
         website: honeypot,
       })
       setSuccess(true)
       setName(""); setSurname(""); setEmail(""); setPhone("")
-      setSubject(""); setMessage(""); setCaptchaToken(""); setHoneypot("")
-      ;(window as any).grecaptcha?.reset?.()
+      setSubject(""); setMessage(""); setHoneypot("")
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to send message. Please try again.")
     } finally {
@@ -300,15 +259,6 @@ export function ContactPage() {
 
                       {/* Honeypot */}
                       <input type="text" name="website" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} className="hidden" tabIndex={-1} />
-
-                      {/* reCAPTCHA */}
-                      {recaptchaSiteKey && (
-                        <div
-                          className="g-recaptcha"
-                          data-sitekey={recaptchaSiteKey}
-                          data-callback="onRecaptchaSuccess"
-                        />
-                      )}
 
                       {error && <p className="text-sm text-red-500 text-center">{error}</p>}
 

@@ -263,7 +263,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
             <span className="text-white/20">|</span>
             <a href="/#demo" className="hover:text-white transition-colors">Demo</a>
             <span className="text-white/20">|</span>
-            <a href="/contact" className="hover:text-white transition-colors">{t.contact}</a>
+            <Link to="/contact" className="hover:text-white transition-colors">{t.contact}</Link>
           </div>
         </div>
 

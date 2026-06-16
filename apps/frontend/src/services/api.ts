@@ -15,6 +15,36 @@ const getCurrentWorkspaceId = (): string | null => {
   return workspace?.id || null
 }
 
+// Public pages reachable without authentication (marketing, legal, contact,
+// survey, password recovery). A background 401 on these must NOT bounce the
+// visitor to "/" — otherwise direct/bookmarked/SEO links to them break for
+// logged-out users. "/" and "/login" are handled separately as login surfaces.
+const PUBLIC_PATHS = [
+  "/contact",
+  "/features",
+  "/human-support",
+  "/laundry-service",
+  "/laundries",
+  "/real-estate",
+  "/appointment-booking",
+  "/smart-push-ai",
+  "/crm-integration",
+  "/team-collaboration",
+  "/privacy-by-design",
+  "/survey",
+  "/request-access",
+  "/neapolis",
+  "/privacy",
+  "/terms",
+  "/refund",
+  "/gdpr",
+  "/aviso-legal",
+  "/forgot-password",
+]
+
+const isPublicPath = (pathname: string): boolean =>
+  PUBLIC_PATHS.includes(pathname)
+
 // Add a request interceptor to handle authentication
 api.interceptors.request.use(
   (config) => {
@@ -131,6 +161,12 @@ api.interceptors.response.use(
         window.location.pathname === "/" ||
         window.location.pathname === "/login"
       if (onLoginSurface) {
+        return Promise.reject(error)
+      }
+
+      // Public marketing/legal pages: a 401 from a background call must not
+      // bounce a logged-out visitor to home. Let the page keep rendering.
+      if (isPublicPath(window.location.pathname)) {
         return Promise.reject(error)
       }
 

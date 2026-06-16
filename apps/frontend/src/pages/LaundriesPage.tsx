@@ -168,6 +168,12 @@ export function LaundriesPage() {
                   >
                     {t.cta} <ArrowRight className="h-5 w-5" />
                   </Link>
+                  <Link
+                    to="/demo/demowash"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 px-8 py-4 font-semibold text-white transition-all hover:border-white/40 hover:bg-white/5"
+                  >
+                    {t.tryDemo}
+                  </Link>
                   <span className="text-sm text-slate-400">{t.ctaSub}</span>
                 </motion.div>
               </div>

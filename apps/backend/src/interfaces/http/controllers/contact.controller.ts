@@ -5,7 +5,7 @@ import { EmailService } from "../../../application/services/email.service"
 export class ContactController {
   async submitContact(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, surname, title, message, phone, captchaToken, website } = req.body
+      const { name, surname, title, message, phone, website } = req.body
 
       // Honeypot field for bots
       if (website && typeof website === "string" && website.trim().length > 0) {
@@ -26,38 +26,6 @@ export class ContactController {
 
       if (!message || typeof message !== "string" || message.trim().length < 10) {
         return res.status(400).json({ error: "Message is required" })
-      }
-
-      if (!captchaToken || typeof captchaToken !== "string") {
-        return res.status(400).json({ error: "Captcha token is required" })
-      }
-
-      const secret = process.env.RECAPTCHA_SECRET_KEY
-      if (!secret) {
-        logger.error("RECAPTCHA_SECRET_KEY is not configured")
-        return res.status(500).json({ error: "Captcha configuration missing" })
-      }
-
-      const verifyResponse = await fetch(
-        "https://www.google.com/recaptcha/api/siteverify",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            secret,
-            response: captchaToken,
-            remoteip: req.ip || "",
-          }),
-        }
-      )
-
-      const verifyResult = await verifyResponse.json()
-      if (!verifyResult.success) {
-        logger.warn("reCAPTCHA verification failed", {
-          ip: req.ip,
-          errors: verifyResult["error-codes"],
-        })
-        return res.status(400).json({ error: "Captcha verification failed" })
       }
 
       const emailService = new EmailService()
