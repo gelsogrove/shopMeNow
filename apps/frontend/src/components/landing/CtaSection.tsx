@@ -9,6 +9,10 @@ interface CtaSectionProps {
   ctaLabel: string
   /** Link destination, defaults to the contact page */
   to?: string
+  /** Optional secondary demo link destination (renders a second button when set together with demoLabel) */
+  demoTo?: string
+  /** Optional secondary demo button label */
+  demoLabel?: string
   /** Tailwind gradient stops for the section background */
   gradientClassName?: string
   /** Text color of the white CTA button */
@@ -30,6 +34,8 @@ export function CtaSection({
   subtitle,
   ctaLabel,
   to = "/contact",
+  demoTo,
+  demoLabel,
   gradientClassName = "from-green-600 to-emerald-700",
   buttonClassName = "text-green-600",
   subtitleClassName = "text-green-100",
@@ -40,17 +46,27 @@ export function CtaSection({
     <>
       <h2 className={cn("text-4xl font-bold text-white mb-6", wide && "lg:text-5xl")}>{title}</h2>
       <p className={cn("text-xl mb-8", wide && "mb-10", subtitleClassName)}>{subtitle}</p>
-      <Link
-        to={to}
-        className={cn(
-          "inline-flex items-center gap-3 bg-white hover:bg-slate-50 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all",
-          wide && "hover:shadow-xl duration-300",
-          buttonClassName
+      <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+        <Link
+          to={to}
+          className={cn(
+            "inline-flex items-center gap-3 bg-white hover:bg-slate-50 font-semibold px-10 py-5 rounded-2xl shadow-lg text-lg transition-all",
+            wide && "hover:shadow-xl duration-300",
+            buttonClassName
+          )}
+        >
+          <Zap className="h-6 w-6" />
+          {ctaLabel}
+        </Link>
+        {demoTo && demoLabel && (
+          <Link
+            to={demoTo}
+            className="inline-flex items-center gap-2 border border-white/40 text-white font-semibold px-10 py-5 rounded-2xl text-lg transition-all hover:bg-white/10"
+          >
+            {demoLabel}
+          </Link>
         )}
-      >
-        <Zap className="h-6 w-6" />
-        {ctaLabel}
-      </Link>
+      </div>
     </>
   )
 

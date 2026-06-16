@@ -376,6 +376,8 @@ export function LaundriesPage() {
           title={`${t.ctaTitle} 👋`}
           subtitle={t.ctaDesc}
           ctaLabel={t.cta}
+          demoTo="/demo/demowash"
+          demoLabel={t.tryDemo}
           animated
           wide
         />
