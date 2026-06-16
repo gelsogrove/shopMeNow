@@ -131,6 +131,7 @@ interface DemoIntroCopy {
   loading: string
   unavailable: string
   contact: string
+  pushBtn: string
 }
 
 const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
@@ -142,6 +143,7 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     loading: "Loading the assistant…",
     unavailable: "Demo unavailable",
     contact: "Contact us",
+    pushBtn: "📣 Push message (in the customer's language)",
   },
   it: {
     liveDemo: "Demo dal vivo",
@@ -151,6 +153,7 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     loading: "Caricamento dell'assistente…",
     unavailable: "Demo non disponibile",
     contact: "Contattaci",
+    pushBtn: "📣 Push message (nella lingua del cliente)",
   },
   es: {
     liveDemo: "Demo en vivo",
@@ -160,6 +163,7 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     loading: "Cargando el asistente…",
     unavailable: "Demo no disponible",
     contact: "Contáctanos",
+    pushBtn: "📣 Push message (en el idioma del cliente)",
   },
   fr: {
     liveDemo: "Démo en direct",
@@ -169,6 +173,7 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     loading: "Chargement de l'assistant…",
     unavailable: "Démo indisponible",
     contact: "Contactez-nous",
+    pushBtn: "📣 Push message (dans la langue du client)",
   },
   ca: {
     liveDemo: "Demo en directe",
@@ -178,6 +183,7 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     loading: "Carregant l'assistent…",
     unavailable: "Demo no disponible",
     contact: "Contacta'ns",
+    pushBtn: "📣 Push message (en l'idioma del client)",
   },
   de: {
     liveDemo: "Live-Demo",
@@ -187,6 +193,7 @@ const DEMO_INTRO_I18N: Record<string, DemoIntroCopy> = {
     loading: "Assistent wird geladen…",
     unavailable: "Demo nicht verfügbar",
     contact: "Kontaktiere uns",
+    pushBtn: "📣 Push message (in der Sprache des Kunden)",
   },
 }
 
@@ -439,6 +446,9 @@ export function DemoWidgetPage() {
   const [demo, setDemo] = useState<ResolvedDemo | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  // 📣 Each click increments this → the ChatWidget fires the next promo push
+  // (and shows a clickable notification above its icon when closed).
+  const [pushTrigger, setPushTrigger] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -525,13 +535,27 @@ export function DemoWidgetPage() {
           </div>
 
           {/* Contact us — always visible; routes to the contact form. */}
-          <div className="mt-7 flex justify-center sm:justify-start">
+          <div className="mt-7 flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:justify-start">
             <Link
               to="/contact"
               className={`inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold ${brand.contactBtn} shadow-lg transition active:scale-[0.98]`}
             >
               ✉️ {t.contact}
             </Link>
+
+            {/* 📣 Demo-only: simulate a promotional push. Lives OUTSIDE the chat
+                on purpose — clicking it makes a clickable notification pop above
+                the WhatsApp icon (close the chat first to see it), proving the
+                push arrives from outside the conversation. */}
+            {demo && pushCases.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setPushTrigger((n) => n + 1)}
+                className="inline-flex items-center gap-2 rounded-full border border-dashed border-amber-300 bg-amber-50/95 px-6 py-3 text-sm font-semibold text-amber-700 shadow-lg transition hover:bg-amber-100 active:scale-[0.98]"
+              >
+                {t.pushBtn}
+              </button>
+            )}
           </div>
 
           {loading && (
@@ -573,6 +597,7 @@ export function DemoWidgetPage() {
           primaryColor={brand.primaryColor}
           position="bottom-right"
           pushDemoCases={pushCases}
+          pushTrigger={pushTrigger}
         />
       )}
     </div>

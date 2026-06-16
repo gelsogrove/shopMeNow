@@ -212,11 +212,14 @@ interface ChatWidgetProps {
   whatsappBadge?: boolean
   onOpenChange?: (isOpen: boolean) => void
   onConvert?: (customerId: string) => void
-  // 📣 Demo-only: localized + branded promotional push cards. When provided AND
-  // instantChat is on, the widget shows a "Simulate a promo push" button that
-  // injects these as incoming bot messages (with a beep), cycling through them.
-  // Empty/undefined → no button (normal client widget).
+  // 📣 Demo-only: localized + branded promotional push cards. Cycled through as
+  // incoming bot messages each time `pushTrigger` increments (fired by an
+  // EXTERNAL button on the page). Empty/undefined → feature off.
   pushDemoCases?: PushDemoCase[]
+  // 📣 Signal from the external "Push message" button: each increment fires the
+  // next push (inject card + beep; when the chat is closed, a clickable
+  // notification appears above the launcher icon).
+  pushTrigger?: number
 }
 
 // Determine API URL based on environment
@@ -253,9 +256,6 @@ const UI_STRINGS: Record<
     back: string
     termsTitle: string
     termsBody: string
-    // 📣 Demo-only "try a push" control (simulated promotional push message).
-    pushBtn: string
-    pushHint: string
   }
 > = {
   it: {
@@ -273,8 +273,6 @@ const UI_STRINGS: Record<
     termsTitle: "Termini e Condizioni",
     termsBody:
       "Accettando, autorizzi eChatbot a contattarti su WhatsApp per assistenza, notifiche e offerte. Puoi revocare il consenso in qualsiasi momento rispondendo STOP o scrivendo al supporto.",
-    pushBtn: "📣 Simula un push promozionale",
-    pushHint: "Lo invii una volta — ogni cliente lo riceve nella sua lingua, in automatico.",
   },
   en: {
     intro: "Introduce yourself to start chatting",
@@ -291,8 +289,6 @@ const UI_STRINGS: Record<
     termsTitle: "Terms & Conditions",
     termsBody:
       "By accepting you allow eChatbot to message you on WhatsApp for support, notifications, and offers. You can revoke anytime by replying STOP or contacting support.",
-    pushBtn: "📣 Simulate a promo push",
-    pushHint: "You send it once — each customer receives it in their own language, automatically.",
   },
   es: {
     intro: "Preséntate para comenzar a chatear",
@@ -309,8 +305,6 @@ const UI_STRINGS: Record<
     termsTitle: "Términos y Condiciones",
     termsBody:
       "Al aceptar, autorizas a eChatbot a contactarte por WhatsApp para soporte, notificaciones y ofertas. Puedes revocar el consentimiento en cualquier momento respondiendo STOP o escribiendo al soporte.",
-    pushBtn: "📣 Simula un push promocional",
-    pushHint: "Lo envías una vez — cada cliente lo recibe en su idioma, automáticamente.",
   },
   fr: {
     intro: "Présentez-vous pour commencer à discuter",
@@ -327,8 +321,6 @@ const UI_STRINGS: Record<
     termsTitle: "Conditions Générales",
     termsBody:
       "En acceptant, vous autorisez eChatbot à vous contacter sur WhatsApp pour support, notifications et offres. Vous pouvez retirer votre consentement à tout moment en répondant STOP ou en contactant le support.",
-    pushBtn: "📣 Simuler un push promo",
-    pushHint: "Vous l'envoyez une fois — chaque client le reçoit dans sa langue, automatiquement.",
   },
   de: {
     intro: "Stell dich vor, um zu chatten",
@@ -345,8 +337,6 @@ const UI_STRINGS: Record<
     termsTitle: "Allgemeine Bedingungen",
     termsBody:
       "Mit der Zustimmung erlaubst du eChatbot, dich über WhatsApp für Support, Benachrichtigungen und Angebote zu kontaktieren. Du kannst dies jederzeit widerrufen, indem du STOP antwortest oder den Support kontaktierst.",
-    pushBtn: "📣 Promo-Push simulieren",
-    pushHint: "Du sendest es einmal — jeder Kunde erhält es automatisch in seiner Sprache.",
   },
   ca: {
     intro: "Presenta't per començar a xatejar",
@@ -363,8 +353,6 @@ const UI_STRINGS: Record<
     termsTitle: "Termes i Condicions",
     termsBody:
       "En acceptar, autoritzes eChatbot a contactar-te per WhatsApp per a suport, notificacions i ofertes. Pots revocar el consentiment en qualsevol moment responent STOP o contactant el suport.",
-    pushBtn: "📣 Simula un push promocional",
-    pushHint: "L'envies un cop — cada client el rep en el seu idioma, automàticament.",
   },
 }
 
@@ -390,6 +378,7 @@ export function ChatWidget({
   onOpenChange,
   onConvert,
   pushDemoCases,
+  pushTrigger,
 }: ChatWidgetProps) {
   // 🌍 Get language from LanguageContext (header dropdown)
   const { language: headerLanguage } = useLanguage()
@@ -496,6 +485,9 @@ export function ChatWidget({
     "Type a message..."
   
   const [isOpen, setIsOpen] = useState(defaultOpen)
+  // 📣 Last promo push to preview above the launcher icon while the chat is
+  // closed (demo only). Cleared when the chat opens.
+  const [pushNotif, setPushNotif] = useState<PushDemoCase | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
 
   // 📺 Welcome presentation video — the URL is authored INSIDE the first bot
@@ -936,7 +928,32 @@ export function ChatWidget({
       return updated
     })
     playPushBeep()
+    // When the chat is closed, surface a clickable notification above the
+    // launcher icon (this is what makes it read as a real "push" arriving from
+    // outside). Opening the chat clears it (see the isOpen effect below).
+    if (!isOpen) setPushNotif(card)
   }
+
+  // 📣 External "Push message" button → each increment of `pushTrigger` fires the
+  // next push. Skip the initial mount (undefined / first value).
+  const lastPushTriggerRef = useRef<number | undefined>(undefined)
+  useEffect(() => {
+    if (pushTrigger === undefined) return
+    if (lastPushTriggerRef.current === undefined) {
+      lastPushTriggerRef.current = pushTrigger
+      return
+    }
+    if (pushTrigger !== lastPushTriggerRef.current) {
+      lastPushTriggerRef.current = pushTrigger
+      firePushDemo()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pushTrigger])
+
+  // Opening the chat consumes the push notification badge/preview.
+  useEffect(() => {
+    if (isOpen) setPushNotif(null)
+  }, [isOpen])
 
   /**
    * Send message to API
@@ -1632,6 +1649,15 @@ export function ChatWidget({
     "top-left": isEmbedded ? "top-2 left-2" : "top-4 left-4 sm:top-8 sm:left-8",
   }
 
+  // 📣 Push notification preview — sits just ABOVE the launcher icon while the
+  // chat is closed (demo only).
+  const notifPositionClasses = {
+    "bottom-right": isEmbedded ? "bottom-16 right-2" : "bottom-24 right-4 sm:bottom-28 sm:right-8",
+    "bottom-left": isEmbedded ? "bottom-16 left-2" : "bottom-24 left-4 sm:bottom-28 sm:left-8",
+    "top-right": isEmbedded ? "top-16 right-2" : "top-24 right-4 sm:top-28 sm:right-8",
+    "top-left": isEmbedded ? "top-16 left-2" : "top-24 left-4 sm:top-28 sm:left-8",
+  }
+
   // Open panel: full-screen on mobile (inset-0, no corner offset that would
   // overflow with w-screen/h-screen), docked to the corner from sm+.
   const openPanelPositionClasses = {
@@ -1781,6 +1807,40 @@ export function ChatWidget({
             </div>
           )}
           </button>
+
+          {/* 📣 Demo push notification — appears above the icon when a promo push
+              arrives while the chat is closed. Clicking it opens the chat (the
+              message is already in the list). This is what makes it read as a
+              real "push" coming from outside the conversation. */}
+          {pushNotif && (
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(true)
+                onOpenChange?.(true)
+              }}
+              className={cn(
+                isEmbedded ? "absolute" : "fixed",
+                "z-[2147483647] w-[min(78vw,280px)] text-left",
+                "rounded-2xl bg-white p-3 shadow-2xl ring-1 ring-black/5",
+                "animate-in fade-in slide-in-from-bottom-2 duration-300",
+                notifPositionClasses[position]
+              )}
+              aria-label="Open push message"
+            >
+              <div className="flex items-start gap-2">
+                <span className="mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-full bg-red-500" />
+                <div className="min-w-0">
+                  <div className="truncate text-[12.5px] font-bold text-slate-800">
+                    {pushNotif.badge}
+                  </div>
+                  <div className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-slate-600">
+                    {pushNotif.body.replace(/\n/g, " ")}
+                  </div>
+                </div>
+              </div>
+            </button>
+          )}
         </>
       )}
 
@@ -2384,23 +2444,6 @@ export function ChatWidget({
                   toggles mic ↔ send. Keeps the composer compact on narrow widths
                   so nothing wraps to a second line. */}
               <div className="border-t border-gray-200 p-2.5 sm:p-3 space-y-1.5">
-                {/* 📣 Demo-only: simulate a promotional push. Injects an incoming
-                    promo bubble + a WhatsApp-like beep. Dashed/amber so it reads
-                    as a demo control, never shown in the real client widget. */}
-                {instantChat && pushDemoCases && pushDemoCases.length > 0 && (
-                  <div className="space-y-1">
-                    <button
-                      type="button"
-                      onClick={firePushDemo}
-                      className="w-full rounded-xl border border-dashed border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-100"
-                    >
-                      {ui.pushBtn}
-                    </button>
-                    <p className="px-1 text-center text-[10px] leading-tight text-gray-400">
-                      {ui.pushHint}
-                    </p>
-                  </div>
-                )}
                 {recording ? (
                   /* 🎤 Recording state: cancel (discard) · live timer · stop (send) */
                   <div className="flex items-center gap-2">
