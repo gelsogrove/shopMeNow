@@ -142,11 +142,36 @@ export function ContactPage() {
 
   useEffect(() => {
     window.scrollTo(0, 0)
+  }, [])
+
+  useEffect(() => {
+    if (!recaptchaSiteKey) {
+      return
+    }
+
+    // Inject the Google reCAPTCHA script so the widget actually renders.
+    // Without it the `g-recaptcha` div stays empty, captchaToken is never set,
+    // and the Send button remains disabled forever.
+    const existingScript = document.querySelector(
+      'script[src="https://www.google.com/recaptcha/api.js"]'
+    )
+
+    if (!existingScript) {
+      const script = document.createElement("script")
+      script.src = "https://www.google.com/recaptcha/api.js"
+      script.async = true
+      script.defer = true
+      document.head.appendChild(script)
+    }
 
     // reCAPTCHA callback
     ;(window as any).onRecaptchaSuccess = (token: string) => {
       setCaptchaToken(token)
       setError("")
+    }
+
+    return () => {
+      delete (window as any).onRecaptchaSuccess
     }
   }, [])
 
@@ -158,7 +183,7 @@ export function ContactPage() {
     if (!surname.trim() || surname.trim().length < 2) { setError("Please enter your surname."); return }
     if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim())) { setError("Please enter a valid email."); return }
     if (phone.trim() && !/^[+()0-9\s.-]{7,20}$/.test(phone.trim())) { setError("Please enter a valid phone number."); return }
-    if (!captchaToken) { setError(t.captchaError); return }
+    if (recaptchaSiteKey && !captchaToken) { setError(t.captchaError); return }
     if (!subject.trim() || subject.trim().length < 3) { setError("Please enter a subject."); return }
     if (!message.trim() || message.trim().length < 10) { setError("Please enter a longer message."); return }
 
@@ -290,7 +315,7 @@ export function ContactPage() {
                       <div className="flex justify-center pt-2">
                         <GreenCtaButton
                           type="submit"
-                          disabled={submitting || (!!recaptchaSiteKey && !captchaToken)}
+                          disabled={submitting}
                           icon="📩"
                           size="md"
                         >

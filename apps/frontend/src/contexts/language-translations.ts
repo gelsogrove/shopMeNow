@@ -147,7 +147,7 @@ export const translations = {
     // Demo Section
     "demo.title": "Demo live",
     "demo.subtitle": "DemoWash è una rete di lavanderie self-service in franchising fittizia, con più sedi in Catalogna, che offre anche il servizio di tintoria. Prova il chatbot come se fossi un cliente: chiedi orari, prezzi, segnala un problema o chiedi quando ritirare un capo in tintoria, e vedi come il caso scala all'operatore umano con traduzione in tempo reale.",
-    "demorealestate.subtitle": "DemoRealEstate è un'agenzia immobiliare fittizia con più filiali. Prova il chatbot come se fossi un cliente: chiedi quali case sono disponibili nella tua zona, prenota una visita, richiedi una valutazione gratuita, e vedi come il caso scala all'agente umano con traduzione in tempo reale.",
+    "demorealestate.subtitle": "DemoRealEstate è un'agenzia immobiliare fittizia in franchising con più filiali. Prova il chatbot come se fossi un cliente: chiedi quali case sono disponibili nella tua zona, prenota una visita, richiedi una valutazione gratuita, e vedi come il caso scala all'agente umano con traduzione in tempo reale.",
     "demo.button": "Prova la demo",
     "demo.accessHint": "Lasciaci i tuoi contatti: ti inviamo via email le credenziali per provare la demo.",
     
@@ -837,7 +837,7 @@ export const translations = {
     // Demo Section
     "demo.title": "Live demo",
     "demo.subtitle": "DemoWash is a fictional franchise network of self-service laundromats with several locations in Catalonia, which also offers a dry-cleaning service. Try the chatbot like a real customer would: ask about opening hours, prices, report an issue or ask when your dry-cleaning will be ready, and see how the case escalates to a human operator with real-time translation.",
-    "demorealestate.subtitle": "DemoRealEstate is a fictional real-estate agency with several branches. Try the chatbot like a real client would: ask which homes are available in your area, book a viewing, request a free valuation, and see how the case escalates to a human agent with real-time translation.",
+    "demorealestate.subtitle": "DemoRealEstate is a fictional real-estate franchise with several branches. Try the chatbot like a real client would: ask which homes are available in your area, book a viewing, request a free valuation, and see how the case escalates to a human agent with real-time translation.",
     "demo.button": "Try our demo",
     "demo.accessHint": "Leave us your contact details and we'll email you the credentials to try the demo.",
     
@@ -1413,7 +1413,7 @@ export const translations = {
     // Demo Section
     "demo.title": "Demo en vivo",
     "demo.subtitle": "DemoWash es una red ficticia de lavanderías self-service en franquicia, con varias sedes en Cataluña, que también ofrece servicio de tintorería. Prueba el chatbot como si fueras un cliente real: pregunta horarios, precios, reporta una incidencia o pregunta cuándo recoger una prenda de tintorería, y mira cómo el caso escala a un operador humano con traducción en tiempo real.",
-    "demorealestate.subtitle": "DemoRealEstate es una agencia inmobiliaria ficticia con varias oficinas. Prueba el chatbot como si fueras un cliente real: pregunta qué viviendas hay disponibles en tu zona, reserva una visita, pide una valoración gratuita, y mira cómo el caso escala a un agente humano con traducción en tiempo real.",
+    "demorealestate.subtitle": "DemoRealEstate es una agencia inmobiliaria ficticia en franquicia con varias oficinas. Prueba el chatbot como si fueras un cliente real: pregunta qué viviendas hay disponibles en tu zona, reserva una visita, pide una valoración gratuita, y mira cómo el caso escala a un agente humano con traducción en tiempo real.",
     "demo.button": "Prueba nuestra demo",
     "demo.accessHint": "Déjanos tus datos de contacto y te enviaremos por email las credenciales para probar la demo.",
     
@@ -2039,7 +2039,7 @@ export const translations = {
     // Demo Section
     "demo.title": "Live-Demo",
     "demo.subtitle": "DemoWash ist ein fiktives Franchise-Netzwerk von SB-Waschsalons mit mehreren Standorten in Katalonien, das auch eine Textilreinigung anbietet. Probiere den Chatbot wie ein echter Kunde aus: frage nach Öffnungszeiten und Preisen, melde ein Problem oder frage, wann deine Reinigung fertig ist, und sieh, wie der Fall mit Echtzeit-Übersetzung an einen menschlichen Mitarbeiter eskaliert wird.",
-    "demorealestate.subtitle": "DemoRealEstate ist eine fiktive Immobilienagentur mit mehreren Niederlassungen. Probiere den Chatbot wie ein echter Kunde aus: frage, welche Wohnungen in deiner Gegend verfügbar sind, buche eine Besichtigung, fordere eine kostenlose Bewertung an und sieh, wie der Fall mit Echtzeit-Übersetzung an einen menschlichen Makler eskaliert wird.",
+    "demorealestate.subtitle": "DemoRealEstate ist eine fiktive Immobilien-Franchiseagentur mit mehreren Niederlassungen. Probiere den Chatbot wie ein echter Kunde aus: frage, welche Wohnungen in deiner Gegend verfügbar sind, buche eine Besichtigung, fordere eine kostenlose Bewertung an und sieh, wie der Fall mit Echtzeit-Übersetzung an einen menschlichen Makler eskaliert wird.",
     "demo.button": "Demo ausprobieren",
     "demo.accessHint": "Hinterlasse uns deine Kontaktdaten und wir schicken dir per E-Mail die Zugangsdaten, um die Demo auszuprobieren.",
 
