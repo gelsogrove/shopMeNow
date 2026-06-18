@@ -113,6 +113,27 @@ const BRAND_THEMES: Record<string, BrandTheme> = {
     loadingText: "text-emerald-50",
     openHint: "text-emerald-100/80",
   },
+  // Demobeauty — beauty-center franchise. Same WhatsApp-green branding; only the
+  // wordmark ("beauty") and monogram ("DB") differ.
+  demobeauty: {
+    titleA: "Demo",
+    titleB: "beauty",
+    monogram: "DB",
+    primaryColor: "#25D366",
+    pageGradient: "from-emerald-600 via-emerald-700 to-emerald-900",
+    blob1: "bg-emerald-400/30",
+    blob2: "bg-teal-300/20",
+    accentText: "text-emerald-300",
+    badge: "bg-white/10 text-emerald-50",
+    dot: "bg-emerald-300",
+    introText: "text-emerald-50/90",
+    tryLabel: "text-emerald-200",
+    itemsText: "text-emerald-50/90",
+    contactBtn: "text-emerald-700 hover:bg-emerald-50",
+    spinner: "border-emerald-200 border-t-white",
+    loadingText: "text-emerald-50",
+    openHint: "text-emerald-100/80",
+  },
 }
 
 function resolveBrand(slug: string): BrandTheme {
@@ -300,6 +321,56 @@ const DEMO_ITEMS_I18N: Record<string, Record<string, string[]>> = {
       "🙋 Mit einem Makler sprechen",
     ],
   },
+  demobeauty: {
+    en: [
+      "💆‍♀️ Ask which treatments and prices are available",
+      "📍 Choose a center (Navigli, Isola, Monza)",
+      "📅 Book a facial and a manicure for Friday",
+      "💅 Add gel polish and see the new total",
+      "🛍️ Add a product to your cart for pickup",
+      "🙋 Ask to talk to a human operator",
+    ],
+    it: [
+      "💆‍♀️ Chiedi quali trattamenti e prezzi sono disponibili",
+      "📍 Scegli un centro (Navigli, Isola, Monza)",
+      "📅 Prenota pulizia viso e manicure per venerdì",
+      "💅 Aggiungi il semipermanente e guarda il nuovo totale",
+      "🛍️ Aggiungi un prodotto al carrello da ritirare",
+      "🙋 Chiedi di parlare con un operatore",
+    ],
+    es: [
+      "💆‍♀️ Pregunta qué tratamientos y precios hay",
+      "📍 Elige un centro (Navigli, Isola, Monza)",
+      "📅 Reserva una limpieza facial y una manicura para el viernes",
+      "💅 Añade el semipermanente y mira el nuevo total",
+      "🛍️ Añade un producto al carrito para recoger",
+      "🙋 Pide hablar con un operador",
+    ],
+    fr: [
+      "💆‍♀️ Demande quels soins et tarifs sont disponibles",
+      "📍 Choisis un centre (Navigli, Isola, Monza)",
+      "📅 Réserve un soin du visage et une manucure pour vendredi",
+      "💅 Ajoute le vernis semi-permanent et vois le nouveau total",
+      "🛍️ Ajoute un produit au panier à retirer",
+      "🙋 Demande à parler à un opérateur",
+    ],
+    ca: [
+      "💆‍♀️ Pregunta quins tractaments i preus hi ha",
+      "📍 Tria un centre (Navigli, Isola, Monza)",
+      "📅 Reserva una neteja facial i una manicura per divendres",
+      "💅 Afegeix el semipermanent i mira el nou total",
+      "🛍️ Afegeix un producte al carret per recollir",
+      "🙋 Demana parlar amb un operador",
+    ],
+    de: [
+      "💆‍♀️ Frag nach Behandlungen und Preisen",
+      "📍 Wähle ein Studio (Navigli, Isola, Monza)",
+      "📅 Buche eine Gesichtsbehandlung und Maniküre für Freitag",
+      "💅 Füge Gel-Lack hinzu und sieh die neue Summe",
+      "🛍️ Lege ein Produkt zum Abholen in den Warenkorb",
+      "🙋 Mit einem Mitarbeiter sprechen",
+    ],
+  },
 }
 
 // Resolve the browser language (e.g. "it-IT" → "it"), English fallback.
@@ -327,6 +398,7 @@ function resolveDemoItems(slug: string, lang: string): string[] {
 // frontend origin (/public): /house-1.jpg, /house-2.jpg, /laundry.png.
 const WASH_BADGE = "📣 PROMO · DemoWash"
 const RE_BADGE = "📣 PROMO · DemoRealEstate"
+const BEAUTY_BADGE = "📣 PROMO · Demobeauty"
 
 const PUSH_CASES_I18N: Record<string, Record<string, PushDemoCase[]>> = {
   demowash: {
@@ -415,6 +487,50 @@ const PUSH_CASES_I18N: Record<string, Record<string, PushDemoCase[]>> = {
       { badge: RE_BADGE, body: "🔔 5 neue Wohnungen in deiner Gegend veröffentlicht. Möchtest du sie sehen?" },
       { badge: RE_BADGE, body: "🔑 Neue Mietwohnung in Sant Cugat\n2 Zimmer · 70 m² · 1.200 €/Monat", image: "/house-2.jpg" },
       { badge: RE_BADGE, body: "📈 Deine Gegend ist sehr gefragt. Bewerte dein Zuhause kostenlos!" },
+    ],
+  },
+  demobeauty: {
+    en: [
+      { badge: BEAUTY_BADGE, body: "✨ New treatment at Navigli: cryolipolysis. First session €120!" },
+      { badge: BEAUTY_BADGE, body: "💅 New product: Night Retinol Serum 30ml — launch price €42, this week only." },
+      { badge: BEAUTY_BADGE, body: "🗓️ Reminder: tomorrow at 5:30pm, facial + gel manicure with Elena (Navigli)." },
+      { badge: BEAUTY_BADGE, body: "🎁 Bring a friend: you both get -20% on your next treatment!" },
+      { badge: BEAUTY_BADGE, body: "📣 New center now open in Monza! Come try it with a free skin check-up." },
+    ],
+    it: [
+      { badge: BEAUTY_BADGE, body: "✨ Nuovo trattamento a Navigli: criolipolisi. Prima seduta 120€!" },
+      { badge: BEAUTY_BADGE, body: "💅 Nuovo prodotto: Siero Retinolo Notte 30ml — prezzo lancio 42€, solo questa settimana." },
+      { badge: BEAUTY_BADGE, body: "🗓️ Promemoria: domani alle 17:30, pulizia viso + semipermanente con Elena (Navigli)." },
+      { badge: BEAUTY_BADGE, body: "🎁 Porta un'amica: per entrambe -20% sul prossimo trattamento!" },
+      { badge: BEAUTY_BADGE, body: "📣 Nuova sede a Monza! Vieni a provarla con un check-up cutaneo gratuito." },
+    ],
+    es: [
+      { badge: BEAUTY_BADGE, body: "✨ Nuevo tratamiento en Navigli: criolipólisis. ¡Primera sesión 120€!" },
+      { badge: BEAUTY_BADGE, body: "💅 Nuevo producto: Sérum de Retinol Noche 30ml — precio de lanzamiento 42€, solo esta semana." },
+      { badge: BEAUTY_BADGE, body: "🗓️ Recordatorio: mañana a las 17:30, limpieza facial + semipermanente con Elena (Navigli)." },
+      { badge: BEAUTY_BADGE, body: "🎁 Trae a una amiga: ¡las dos tenéis -20% en el próximo tratamiento!" },
+      { badge: BEAUTY_BADGE, body: "📣 ¡Nuevo centro en Monza! Ven a probarlo con un chequeo cutáneo gratis." },
+    ],
+    fr: [
+      { badge: BEAUTY_BADGE, body: "✨ Nouveau soin à Navigli : cryolipolyse. Première séance 120 € !" },
+      { badge: BEAUTY_BADGE, body: "💅 Nouveau produit : Sérum Rétinol Nuit 30ml — prix de lancement 42 €, cette semaine seulement." },
+      { badge: BEAUTY_BADGE, body: "🗓️ Rappel : demain à 17h30, soin du visage + vernis semi-permanent avec Elena (Navigli)." },
+      { badge: BEAUTY_BADGE, body: "🎁 Amenez une amie : -20% chacune sur votre prochain soin !" },
+      { badge: BEAUTY_BADGE, body: "📣 Nouveau centre à Monza ! Venez l'essayer avec un bilan de peau gratuit." },
+    ],
+    ca: [
+      { badge: BEAUTY_BADGE, body: "✨ Nou tractament a Navigli: criolipòlisi. Primera sessió 120€!" },
+      { badge: BEAUTY_BADGE, body: "💅 Nou producte: Sèrum de Retinol Nit 30ml — preu de llançament 42€, només aquesta setmana." },
+      { badge: BEAUTY_BADGE, body: "🗓️ Recordatori: demà a les 17:30, neteja facial + semipermanent amb Elena (Navigli)." },
+      { badge: BEAUTY_BADGE, body: "🎁 Porta una amiga: totes dues teniu -20% al pròxim tractament!" },
+      { badge: BEAUTY_BADGE, body: "📣 Nou centre a Monza! Vine a provar-lo amb un check-up cutani gratuït." },
+    ],
+    de: [
+      { badge: BEAUTY_BADGE, body: "✨ Neue Behandlung in Navigli: Kryolipolyse. Erste Sitzung 120 €!" },
+      { badge: BEAUTY_BADGE, body: "💅 Neues Produkt: Nacht-Retinol-Serum 30ml — Einführungspreis 42 €, nur diese Woche." },
+      { badge: BEAUTY_BADGE, body: "🗓️ Erinnerung: morgen um 17:30 Uhr, Gesichtsbehandlung + Gel-Maniküre mit Elena (Navigli)." },
+      { badge: BEAUTY_BADGE, body: "🎁 Bring eine Freundin mit: ihr bekommt beide -20% auf die nächste Behandlung!" },
+      { badge: BEAUTY_BADGE, body: "📣 Neues Studio in Monza! Komm vorbei mit einem kostenlosen Haut-Check-up." },
     ],
   },
 }

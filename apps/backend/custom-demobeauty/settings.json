@@ -1,0 +1,24 @@
+{
+  "model": "anthropic/claude-haiku-4.5",
+  "temperature": 0.3,
+  "maxTokens": 800,
+  "maxToolHops": 4,
+  "operatorBriefingLanguage": "it",
+  "operatorEmail": "echatbotai@gmail.com",
+  "emailFrom": "Demobeauty Bot <noreply@demobeauty.demo>",
+  "emailSubjectPrefix": "[Demobeauty] Richiesta",
+  "maxMessageChars": 2000,
+  "maxMessagesPerMinute": 30,
+  "maxTurnsPerSession": 50,
+  "privacyPolicyUrl": "https://www.echatbot.ai/aviso-legal",
+  "audioOutput": true,
+  "audioVoices": {
+    "default": "EXAVITQu4vr4xnSDxMaL",
+    "it": "EXAVITQu4vr4xnSDxMaL",
+    "es": "FGY2WhTYpPnrIDTdsKH5",
+    "en": "Xb7hH8MSUJpSbSDYk0k2",
+    "pt": "XB0fDUnXU5powFXDhCwa",
+    "fr": "FGY2WhTYpPnrIDTdsKH5",
+    "ca": "FGY2WhTYpPnrIDTdsKH5"
+  }
+}

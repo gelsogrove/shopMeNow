@@ -94,7 +94,55 @@
       ></iframe
     ></noscript>
     <!-- End Google Tag Manager (noscript) -->
-    <div id="root"></div>
+    <div id="root">
+      <!--
+        STATIC SEO / NO-JS FALLBACK CONTENT
+        This is a Vite + React SPA: every page is rendered client-side by JavaScript.
+        Crawlers and AI agents that do NOT execute JS (ChatGPT/OAI-SearchBot,
+        link-preview bots, search robustness) would otherwise see an EMPTY <body>
+        and conclude the site is a placeholder / "under construction".
+        The markup below gives them real, readable content describing eChatbot.
+        React (createRoot in src/main.tsx) wipes and replaces #root on mount, so
+        real users never see this — it only renders for the split second before the
+        bundle executes, and for non-JS agents it IS the page.
+        Keep this in sync with the homepage hero copy and og:description above.
+      -->
+      <div id="seo-fallback" style="max-width:760px;margin:0 auto;padding:48px 24px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:#0f172a;line-height:1.6;text-align:center">
+        <div style="font-size:26px;font-weight:800;color:#059669;letter-spacing:-0.5px">eChatbot<span style="color:#10b981">.AI</span></div>
+        <h1 style="font-size:30px;font-weight:800;margin:24px 0 12px;letter-spacing:-0.6px">Custom WhatsApp AI Chatbots for Your Business</h1>
+        <p style="font-size:18px;color:#475569;margin:0 auto 8px;max-width:620px">
+          One AI on WhatsApp for your whole franchise network: 24/7 replies, real-time
+          translation, per-shop data, appointment booking and promo campaigns.
+        </p>
+        <p style="font-size:15px;color:#64748b;margin:0 auto 28px;max-width:620px">
+          eChatbot is a production WhatsApp AI platform for franchises and multi-location
+          businesses — laundries, gyms, hotels, clinics, car washes and more. It answers
+          customers automatically, recognizes which shop they belong to, and hands off to a
+          human operator with full context when needed.
+        </p>
+        <ul style="list-style:none;padding:0;margin:0 auto 32px;max-width:560px;text-align:left;display:grid;gap:10px">
+          <li>✅ <strong>24/7 AI replies</strong> on WhatsApp, in the customer's own language</li>
+          <li>✅ <strong>Human-in-the-loop</strong> handoff with real-time operator translation (30+ languages)</li>
+          <li>✅ <strong>Multi-location &amp; franchise</strong> support — each shop sets its own data</li>
+          <li>✅ <strong>Appointment booking</strong> with automatic WhatsApp reminders</li>
+          <li>✅ <strong>CRM &amp; ERP integration</strong> with real-time data sync</li>
+          <li>✅ <strong>Smart Push AI</strong> marketing campaigns that boost conversions</li>
+          <li>✅ <strong>Privacy by design</strong> — GDPR compliant, end-to-end encrypted</li>
+        </ul>
+        <p style="margin:0 0 28px">
+          <a href="/request-access" style="display:inline-block;background:#059669;color:#fff;text-decoration:none;font-weight:700;padding:13px 28px;border-radius:10px;margin:4px">Request a demo</a>
+          <a href="/features" style="display:inline-block;background:#ecfdf5;color:#059669;text-decoration:none;font-weight:700;padding:13px 28px;border-radius:10px;margin:4px">Explore features</a>
+        </p>
+        <nav aria-label="Site sections" style="font-size:14px;color:#64748b">
+          <a href="/features" style="color:#059669;margin:0 8px">Features</a>
+          <a href="/human-support" style="color:#059669;margin:0 8px">Human Support</a>
+          <a href="/appointment-booking" style="color:#059669;margin:0 8px">Appointment Booking</a>
+          <a href="/crm-integration" style="color:#059669;margin:0 8px">CRM Integration</a>
+          <a href="/privacy-by-design" style="color:#059669;margin:0 8px">Privacy</a>
+          <a href="/contact" style="color:#059669;margin:0 8px">Contact</a>
+        </nav>
+      </div>
+    </div>
     <script type="module" src="./src/main.tsx"></script>
   </body>
 </html>

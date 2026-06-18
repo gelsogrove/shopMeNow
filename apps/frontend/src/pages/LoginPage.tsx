@@ -1268,10 +1268,20 @@ export function LoginPage() {
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold italic lg:whitespace-nowrap" style={{ color: "#25D366" }}>
                 {t("hero.slogan")}
               </h1>
-              <p className="hidden sm:block text-lg text-slate-300 max-w-3xl text-center">
-                {t("hero.subtitle")}
-              </p>
             </div>
+          </div>
+        </div>
+
+        {/* Value proposition — condensed pitch shown on web and mobile,
+            right under the hero slogan (hidden in login-card mode). */}
+        <div className={`mb-6${showLoginCard ? ' hidden' : ''}`}>
+          <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-white/5 px-5 py-4 sm:px-6 sm:py-5 text-center">
+            <p className="text-base sm:text-lg font-semibold" style={{ color: "#25D366" }}>
+              Not just using AI — engineering it right.
+            </p>
+            <p className="mt-2 text-sm sm:text-base text-slate-300">
+              Every implementation is different. The best approach depends on your use case, data quality, risk, and goals. We analyze these variables, validate outputs across multiple AI models, and build optimized workflows that boost accuracy, cut costs, and deliver results you can trust.
+            </p>
           </div>
         </div>
 
@@ -2173,6 +2183,102 @@ export function LoginPage() {
                         {t("demo.accessHint")}
                       </p>
                     )}
+                  </div>
+                </div>
+              </div>
+            </GlowCard>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Contact Section (Demobeauty highlight) — third demo card, mirrored like
+          the DemoWash card so the image sits on the RIGHT. */}
+      <div className="py-20">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, x: 80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
+            <GlowCard lift accent="green" innerClassName="p-8 sm:p-10 lg:p-12 min-h-[320px]">
+              {workingInProgress && !isAdminBypass && (
+                <div className="absolute -right-6 top-[14px] rotate-12 bg-red-600 py-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white shadow-lg pl-[50px] pr-[45px] z-20">
+                  {t("wip.banner")}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-10 items-start">
+                {/* Left: Content */}
+                <div className="space-y-6 text-center lg:text-left">
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                      Interactive Demo
+                    </div>
+                    {/* Brand wordmark — "Demo" in white, "beauty" in brand green.
+                        Not translated: it's the demo tenant name. */}
+                    <h3 className="text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">
+                      <span className="text-white">Demo</span>
+                      <span style={{ color: "#25D366" }}>beauty</span>
+                    </h3>
+                    <p className="text-xl text-slate-300 leading-relaxed text-justify">
+                      {t("demobeauty.subtitle")}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 flex flex-col items-center lg:items-start gap-3">
+                    <Button
+                      type="button"
+                      disabled={isDemoDisabled}
+                      className={`w-full sm:w-[220px] sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 ${isDemoDisabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                      onClick={() => {
+                        if (isDemoDisabled) {
+                          setWipFeature('demo')
+                          setShowWIPModal(true)
+                          return
+                        }
+                        navigate("/demo/demobeauty")
+                      }}
+                    >
+                      <span className="flex items-center gap-3">
+                        <svg
+                          aria-hidden="true"
+                          className="h-5 w-5"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M12 2a10 10 0 0 0-8.67 15.02L2 22l5.08-1.33a10 10 0 1 0 4.92-18.67zm0 1.8a8.2 8.2 0 0 1 0 16.4c-1.4 0-2.74-.36-3.93-1.05l-.28-.16-2.98.78.8-2.9-.18-.3A8.2 8.2 0 0 1 12 3.8zm-2.1 4.2c-.2 0-.5.08-.75.36-.25.27-.96.94-.96 2.3s.98 2.67 1.12 2.85c.14.18 1.9 3.05 4.7 4.15.9.36 1.57.58 2.1.47.48-.1 1.57-.65 1.8-1.28.22-.63.22-1.17.16-1.29-.07-.12-.26-.19-.55-.33-.29-.14-1.72-.85-1.99-.94-.27-.1-.46-.14-.65.14-.19.27-.75.94-.92 1.13-.17.19-.34.22-.63.08-.29-.14-1.2-.44-2.28-1.4-.84-.75-1.4-1.67-1.57-1.96-.17-.29 0-.44.13-.58.13-.13.29-.34.43-.5.14-.16.19-.28.29-.46.1-.18.05-.35-.02-.49-.07-.14-.63-1.52-.87-2.07-.23-.56-.46-.48-.63-.49h-.54z" />
+                        </svg>
+                        <span>{t("demo.button")}</span>
+                      </span>
+                    </Button>
+                    {!isDemoDisabled && (
+                      <p className="mt-4 text-xs text-slate-500">
+                        {t("demo.accessHint")}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Right: Image with badge */}
+                <div className="flex flex-col items-center lg:items-end gap-4">
+                  <div className="relative">
+                    <div className="group w-64 h-64 sm:w-72 sm:h-72 rounded-2xl bg-white p-2 shadow-xl">
+                      <div className="h-full w-full overflow-hidden rounded-xl">
+                        <img
+                          src="/beauty.png"
+                          alt="Demobeauty beauty center"
+                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          onError={(e) => {
+                            ;(e.currentTarget as HTMLImageElement).style.visibility = "hidden"
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="absolute -top-3 -right-3 bg-gradient-to-br from-green-500 to-emerald-600 text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider animate-bounce">
+                      Live
+                    </div>
                   </div>
                 </div>
               </div>

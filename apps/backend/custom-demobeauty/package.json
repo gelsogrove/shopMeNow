@@ -1,0 +1,19 @@
+{
+  "name": "demobeauty-chatbot",
+  "version": "0.1.0",
+  "description": "Demobeauty chatbot — beauty-center franchise (multi-sede, per-sede services & prices), prompt-driven LLM with cached system prompt, session state, appointment booking + escalation by email",
+  "type": "module",
+  "scripts": {
+    "demo": "node --import tsx agent.ts",
+    "demo:local": "LLM_BASE_URL=${LLM_BASE_URL:-http://localhost:11434/v1} LLM_MODEL=${LLM_MODEL:-qwen3:14b} OPENROUTER_API_KEY=ollama node --import tsx agent.ts --local",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.16"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^6.4.17",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}
