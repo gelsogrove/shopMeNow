@@ -540,6 +540,13 @@ function resolveDemoPushCases(slug: string, lang: string): PushDemoCase[] {
   return brand[lang] || brand.en
 }
 
+// Full per-language push map for a brand. Passed to ChatWidget so the promo is
+// shown in the language the BOT is replying in (the conversation language),
+// not the browser language.
+function resolveDemoPushCasesByLang(slug: string): Record<string, PushDemoCase[]> {
+  return PUSH_CASES_I18N[slug] ?? PUSH_CASES_I18N.demowash
+}
+
 export function DemoWidgetPage() {
   // Slug comes from the route param. The route is declared as /demo/<slug>/*
   // so we also fall back to parsing the pathname for nested matches.
@@ -558,6 +565,7 @@ export function DemoWidgetPage() {
   const t = useMemo(() => resolveDemoIntro(lang), [lang])
   const items = useMemo(() => resolveDemoItems(slug, lang), [slug, lang])
   const pushCases = useMemo(() => resolveDemoPushCases(slug, lang), [slug, lang])
+  const pushCasesByLang = useMemo(() => resolveDemoPushCasesByLang(slug), [slug])
 
   const [demo, setDemo] = useState<ResolvedDemo | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -713,6 +721,7 @@ export function DemoWidgetPage() {
           primaryColor={brand.primaryColor}
           position="bottom-right"
           pushDemoCases={pushCases}
+          pushDemoCasesByLang={pushCasesByLang}
           pushTrigger={pushTrigger}
         />
       )}

@@ -216,6 +216,10 @@ interface ChatWidgetProps {
   // incoming bot messages each time `pushTrigger` increments (fired by an
   // EXTERNAL button on the page). Empty/undefined → feature off.
   pushDemoCases?: PushDemoCase[]
+  // 📣 Same cards keyed by language. When present, the push is picked in the
+  // language the BOT is actually replying in (from `data.language`), not the
+  // browser language — so the promo always matches the conversation.
+  pushDemoCasesByLang?: Record<string, PushDemoCase[]>
   // 📣 Signal from the external "Push message" button: each increment fires the
   // next push (inject card + beep; when the chat is closed, a clickable
   // notification appears above the launcher icon).
@@ -378,10 +382,14 @@ export function ChatWidget({
   onOpenChange,
   onConvert,
   pushDemoCases,
+  pushDemoCasesByLang,
   pushTrigger,
 }: ChatWidgetProps) {
   // 🌍 Get language from LanguageContext (header dropdown)
   const { language: headerLanguage } = useLanguage()
+  // 📣 Language the BOT is actually replying in (from `data.language`). Drives
+  // the demo push language so the promo matches the conversation, not the browser.
+  const conversationLangRef = useRef<string | null>(null)
   
   // ⚠️ PRIORITY: Read from window.eChatbotConfig first (set by WidgetLoader)
   const [configVersion, setConfigVersion] = useState(0)
@@ -910,10 +918,18 @@ export function ChatWidget({
   }
 
   const firePushDemo = () => {
-    if (!pushDemoCases || pushDemoCases.length === 0) return
-    const idx = pushDemoIndexRef.current % pushDemoCases.length
+    // Pick the push set in the language the bot is actually replying in (falls
+    // back to the widget language, then English, then the legacy flat list).
+    const lang = (conversationLangRef.current || resolvedLanguage || "en")
+      .slice(0, 2)
+      .toLowerCase()
+    const cases =
+      (pushDemoCasesByLang && (pushDemoCasesByLang[lang] || pushDemoCasesByLang.en)) ||
+      pushDemoCases
+    if (!cases || cases.length === 0) return
+    const idx = pushDemoIndexRef.current % cases.length
     pushDemoIndexRef.current = idx + 1
-    const card = pushDemoCases[idx]
+    const card = cases[idx]
     const pushMessage: Message = {
       role: "bot",
       // Plain-text fallback (used for persistence / if the card renderer is bypassed).
@@ -1013,6 +1029,12 @@ export function ChatWidget({
           saveWidgetMessages(localStorage, resolvedWorkspaceId, updatedMessages)
         }
         return
+      }
+
+      // 📣 Remember the language the bot replied in → drives the demo push.
+      const replyLang = (data as { language?: string }).language
+      if (typeof replyLang === "string" && replyLang) {
+        conversationLangRef.current = replyLang
       }
 
       // Add bot message. The welcome presentation video is rendered at display
@@ -1151,6 +1173,12 @@ export function ChatWidget({
         setBotDisabled(true)
         lastOperatorMsgAt.current = new Date().toISOString()
         return
+      }
+
+      // 📣 Remember the language the bot replied in → drives the demo push.
+      const replyLang = (data as { language?: string }).language
+      if (typeof replyLang === "string" && replyLang) {
+        conversationLangRef.current = replyLang
       }
 
       // 🔊 Voice in → voice out: the backend synthesizes the reply (TTS) and
