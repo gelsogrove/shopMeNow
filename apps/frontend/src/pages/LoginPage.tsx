@@ -537,6 +537,21 @@ export function LoginPage() {
     setActiveTab("signin")
   }, [canLogin, canRegister, isAdminBypass, registerFirst])
 
+  // 🔗 Hash-anchor scroll (e.g. /#demo from the SiteHeader on other pages).
+  // On a full reload to "/", the page first renders the session-validation
+  // spinner, so the target element (#demo) is not yet in the DOM and the
+  // browser's native hash scroll is lost — leaving the visitor at the top.
+  // Once validation clears and the real content mounts, re-run the scroll.
+  useEffect(() => {
+    if (isValidatingSession) return
+    const hash = location.hash
+    if (!/^#[\w-]+$/.test(hash)) return
+    const frame = requestAnimationFrame(() => {
+      document.querySelector(hash)?.scrollIntoView({ behavior: "smooth", block: "start" })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [isValidatingSession, location.hash])
+
   // 🆕 Session check is now done in the first useEffect above
   // No auto-redirect - we show avatar instead if user is logged in
 
