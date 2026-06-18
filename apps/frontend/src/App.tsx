@@ -196,7 +196,13 @@ function TokenExpiryGuard() {
   useEffect(() => {
     const checkExpiry = () => {
       const path = window.location.pathname
-      if (storage.isTokenExpired() && path !== "/" && !isPublicGuardExemptPath(path)) {
+      // Only police a session that genuinely EXPIRED — i.e. a token exists but
+      // is past its exp. A public visitor with no main-app token at all
+      // (isTokenExpired() === true) must NOT be bounced off public pages like
+      // /contact or /aviso-legal. Protected routes stay secured by
+      // ProtectedRoute, which redirects no-token users on its own.
+      const token = storage.getToken()
+      if (token && storage.isTokenExpired() && path !== "/" && !isPublicGuardExemptPath(path)) {
         storage.clearAppState()
         window.location.href = "/"
       }
