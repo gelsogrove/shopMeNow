@@ -1277,10 +1277,10 @@ export function LoginPage() {
         <div className={`mb-6${showLoginCard ? ' hidden' : ''}`}>
           <div className="mx-auto max-w-3xl rounded-2xl border border-white/10 bg-white/5 px-5 py-4 sm:px-6 sm:py-5 text-center">
             <p className="text-base sm:text-lg font-semibold" style={{ color: "#25D366" }}>
-              Not just using AI — engineering it right.
+              {t("hero.valueProp.title")}
             </p>
             <p className="mt-2 text-sm sm:text-base text-slate-300">
-              Every implementation is different. The best approach depends on your use case, data quality, risk, and goals. We analyze these variables, validate outputs across multiple AI models, and build optimized workflows that boost accuracy, cut costs, and deliver results you can trust.
+              {t("hero.valueProp.body")}
             </p>
           </div>
         </div>

@@ -85,7 +85,11 @@ export function ChatListProvider({ children }: { children: ReactNode }) {
             language: chat.customer?.language || undefined,
             companyName: chat.customer?.company || null,
             lastMessage: chat.lastMessage || "",
-            lastMessageTime: chat.updatedAt || chat.createdAt,
+            // Prefer the real last-message time (from ConversationMessage) so the
+            // time filter and ordering reflect actual activity, not the (often
+            // stale) session.updatedAt. Fall back for any legacy payloads.
+            lastMessageTime:
+              chat.lastMessageTime || chat.updatedAt || chat.createdAt,
             unreadCount: chat.unreadCount || 0,
             isActive: true,
             isFavorite: false,

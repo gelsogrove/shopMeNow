@@ -1580,7 +1580,7 @@ export class MessageRepository {
           id: chatSessionId,
           workspaceId: workspaceId,
         },
-        select: { id: true },
+        select: { id: true, context: true },
       })
 
       if (!session) {
@@ -1590,6 +1590,7 @@ export class MessageRepository {
         return false
       }
 
+      // Legacy Message table (kept for chats that predate the ConversationMessage pipeline).
       await this.prisma.message.updateMany({
         where: {
           chatSessionId,
@@ -1599,6 +1600,17 @@ export class MessageRepository {
         data: {
           read: true,
           updatedAt: new Date(),
+        },
+      })
+
+      // 🔥 ConversationMessage has no `read` flag, so we track the operator's read
+      // position on the session context. getChatSessionsWithUnreadCounts() counts
+      // customer messages created after this timestamp as unread.
+      const context = (session.context as any) || {}
+      await this.prisma.chatSession.update({
+        where: { id: chatSessionId },
+        data: {
+          context: { ...context, lastReadAt: new Date().toISOString() },
         },
       })
 
@@ -1657,15 +1669,6 @@ export class MessageRepository {
               name: true,
             },
           },
-          messages: {
-            where: {
-              read: false,
-              direction: "INBOUND",
-            },
-            select: {
-              id: true,
-            },
-          },
         },
         orderBy: {
           updatedAt: "desc",
@@ -1675,12 +1678,57 @@ export class MessageRepository {
 
       logger.info(`[ChatSessions] ✅ Found ${chatSessions.length} sessions for workspace ${workspaceId}`)
 
-      return chatSessions.map((session) => ({
-        ...session,
-        unreadCount: session.messages.length,
-        activeChatbot: session.customer?.activeChatbot ?? true,
-        messages: undefined,
-      }))
+      // 🔥 SOURCE OF TRUTH: inbound/outbound messages live in ConversationMessage,
+      // NOT the legacy Message table. Derive the preview, the last-activity time and
+      // the unread badge from ConversationMessage so chats created by the custom
+      // chatbot pipeline surface correctly (and aren't hidden by the time filter,
+      // which keys off lastMessageTime).
+      const enriched = await Promise.all(
+        chatSessions.map(async (session) => {
+          // Most recent real message (exclude internal function calls) → preview + freshness.
+          const lastMessage = await this.prisma.conversationMessage.findFirst({
+            where: {
+              conversationId: session.id,
+              role: { not: "function" },
+            },
+            orderBy: { createdAt: "desc" },
+            select: { content: true, createdAt: true },
+          })
+
+          // Unread = customer ("user") messages newer than the operator's last read.
+          // lastReadAt is stamped on the session context by markMessagesAsRead().
+          const context = (session.context as any) || {}
+          const lastReadAt = context.lastReadAt
+            ? new Date(context.lastReadAt)
+            : null
+          const unreadCount = await this.prisma.conversationMessage.count({
+            where: {
+              conversationId: session.id,
+              role: "user",
+              ...(lastReadAt ? { createdAt: { gt: lastReadAt } } : {}),
+            },
+          })
+
+          return {
+            ...session,
+            context: undefined, // don't leak internal read markers to the client
+            lastMessage: lastMessage?.content ?? null,
+            lastMessageTime: lastMessage?.createdAt ?? session.updatedAt,
+            unreadCount,
+            activeChatbot: session.customer?.activeChatbot ?? true,
+          }
+        })
+      )
+
+      // Sort by REAL last-message time so the freshest conversations are on top,
+      // regardless of the (often stale) session.updatedAt used for the DB prefilter.
+      enriched.sort(
+        (a, b) =>
+          new Date(b.lastMessageTime).getTime() -
+          new Date(a.lastMessageTime).getTime()
+      )
+
+      return enriched
     } catch (error) {
       logger.error("Error getting chat sessions with unread counts:", error)
       return []

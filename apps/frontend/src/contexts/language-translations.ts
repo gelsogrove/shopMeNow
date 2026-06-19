@@ -13,6 +13,9 @@ export const translations = {
       "L'AI su misura per la tua attività in franchising su WhatsApp: risponde ai clienti 24/7 in ogni lingua, si connette alle macchine da remoto, prenota appuntamenti e invia promozioni. E quando interviene un operatore, scrive nella sua lingua: l'AI traduce in tempo reale.",
     "hero.slogan": "Il primo agente non si scorda mai…",
     "hero.subline": "",
+    "hero.valueProp.title": "Non solo usare l'AI — costruirla a regola d'arte.",
+    "hero.valueProp.body":
+      "Ogni implementazione è diversa. L'approccio migliore dipende dal tuo caso d'uso, dalla qualità dei dati, dai rischi e dagli obiettivi. Analizziamo queste variabili, validiamo i risultati su più modelli AI e costruiamo workflow ottimizzati che aumentano l'accuratezza, riducono i costi e generano risultati di cui ti puoi fidare — mantenendo sempre i tuoi dati al sicuro e la privacy dei tuoi clienti protetta in ogni fase.",
     "hero.whyTitle": "Perché eChatbot?",
     "hero.useCasesTitle": "Progettato per vendite, supporto e crescita.",
     "hero.useCases.sales.title": "Agente di vendita AI",
@@ -640,6 +643,9 @@ export const translations = {
       "The custom AI for your franchise business on WhatsApp: answers customers 24/7 in any language, connects to machines remotely, books appointments and sends promos. And when a human steps in, the operator writes in their own language — the AI translates in real time.",
     "hero.slogan": "Your best employee never sleeps.",
     "hero.subline": "",
+    "hero.valueProp.title": "Not just using AI — engineering it right.",
+    "hero.valueProp.body":
+      "Every implementation is different. The best approach depends on your use case, data quality, risk, and goals. We analyze these variables, validate outputs across multiple AI models, and build optimized workflows that boost accuracy, cut costs, and deliver results you can trust — all while keeping your data secure and your customers' privacy protected at every step.",
     "hero.whyTitle": "Why eChatbot?",
     "hero.useCasesTitle": "Built for sales, support, and growth.",
     "hero.useCases.sales.title": "AI sales agent",
@@ -1292,6 +1298,9 @@ export const translations = {
       "La IA a medida para tu negocio en franquicia en WhatsApp: responde a clientes 24/7 en cualquier idioma, se conecta a las máquinas en remoto, agenda citas y envía promociones. Y cuando interviene un operador, escribe en su idioma: la IA traduce en tiempo real.",
     "hero.slogan": "Tu mejor empleado no duerme nunca.",
     "hero.subline": "",
+    "hero.valueProp.title": "No solo usar la IA — diseñarla bien.",
+    "hero.valueProp.body":
+      "Cada implementación es distinta. El mejor enfoque depende de tu caso de uso, la calidad de los datos, el riesgo y los objetivos. Analizamos estas variables, validamos los resultados en varios modelos de IA y construimos flujos de trabajo optimizados que aumentan la precisión, reducen costes y ofrecen resultados en los que puedes confiar, manteniendo siempre tus datos seguros y la privacidad de tus clientes protegida en cada paso.",
     "hero.whyTitle": "¿Por qué eChatbot?",
     "hero.useCasesTitle": "Diseñado para ventas, soporte y crecimiento.",
     "hero.useCases.sales.title": "Agente de ventas IA",
@@ -1846,6 +1855,9 @@ export const translations = {
       "Die maßgeschneiderte KI für dein Franchise-Geschäft auf WhatsApp: antwortet deinen Kunden rund um die Uhr in jeder Sprache, verbindet sich aus der Ferne mit Maschinen, bucht Termine und verschickt Aktionen. Und wenn ein Mensch übernimmt, schreibt der Mitarbeiter in seiner eigenen Sprache — die KI übersetzt in Echtzeit.",
     "hero.slogan": "Dein bester Mitarbeiter schläft nie.",
     "hero.subline": "",
+    "hero.valueProp.title": "KI nicht nur nutzen — sie richtig entwickeln.",
+    "hero.valueProp.body":
+      "Jede Implementierung ist anders. Der beste Ansatz hängt von Ihrem Anwendungsfall, der Datenqualität, dem Risiko und den Zielen ab. Wir analysieren diese Variablen, validieren die Ergebnisse über mehrere KI-Modelle hinweg und bauen optimierte Workflows, die die Genauigkeit steigern, Kosten senken und Ergebnisse liefern, denen Sie vertrauen können — und halten dabei Ihre Daten sicher und die Privatsphäre Ihrer Kunden in jedem Schritt geschützt.",
     "hero.whyTitle": "Warum eChatbot?",
     "hero.useCasesTitle": "Gemacht für Vertrieb, Support und Wachstum.",
     "hero.useCases.sales.title": "KI-Vertriebsagent",
