@@ -17,6 +17,7 @@ import { LaundryServicePage } from "@/pages/LaundryServicePage"
 import { LaundriesPage } from "@/pages/LaundriesPage"
 import { RealEstatePage } from "@/pages/RealEstatePage"
 import { BeautyPage } from "@/pages/BeautyPage"
+import { Industry40Page } from "@/pages/Industry40Page"
 import { ContactPage } from "@/pages/ContactPage"
 import { AvisoLegalPage } from "@/pages/AvisoLegalPage"
 import RequestAccessPage from "@/pages/RequestAccessPage"
@@ -377,6 +378,9 @@ function AppWithProviders() {
                 <Route path="/laundries" element={<LaundriesPage />} />
                 <Route path="/real-estate" element={<RealEstatePage />} />
                 <Route path="/beauty" element={<BeautyPage />} />
+                {/* Industry 4.0 — standalone marketing page, linked from the
+                    homepage footer "Solutions" section. */}
+                <Route path="/industry-40" element={<Industry40Page />} />
                 <Route path="/appointment-booking" element={<AppointmentBookingPage />} />
                 <Route path="/smart-push-ai" element={<SmartPushAiPage />} />
                 <Route path="/crm-integration" element={<CrmIntegrationPage />} />

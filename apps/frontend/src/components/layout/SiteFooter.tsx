@@ -20,6 +20,7 @@ const translations = {
     laundries: "Lavanderie",
     realEstate: "Agenzie Immobiliari",
     beauty: "Centri Estetici",
+    industry40: "Industria 4.0",
     company: "Azienda",
     about: "Chi Siamo",
     contact: "Contatti",
@@ -47,6 +48,7 @@ const translations = {
     laundries: "Laundries",
     realEstate: "Real Estate Agencies",
     beauty: "Beauty Centers",
+    industry40: "Industry 4.0",
     company: "Company",
     about: "About Us",
     contact: "Contact",
@@ -74,6 +76,7 @@ const translations = {
     laundries: "Lavanderías",
     realEstate: "Agencias Inmobiliarias",
     beauty: "Centros de Estética",
+    industry40: "Industria 4.0",
     company: "Empresa",
     about: "Sobre Nosotros",
     contact: "Contacto",
@@ -101,6 +104,7 @@ const translations = {
     laundries: "Wäschereien",
     realEstate: "Immobilienagenturen",
     beauty: "Kosmetikstudios",
+    industry40: "Industrie 4.0",
     company: "Unternehmen",
     about: "Über uns",
     contact: "Kontakt",
@@ -145,6 +149,7 @@ export function SiteFooter({ language = "en" }: SiteFooterProps) {
               <li><Link to="/laundries" className="text-sm hover:text-green-500 transition-colors">{t.laundries}</Link></li>
               <li><Link to="/real-estate" className="text-sm hover:text-green-500 transition-colors">{t.realEstate}</Link></li>
               <li><Link to="/beauty" className="text-sm hover:text-green-500 transition-colors">{t.beauty}</Link></li>
+              <li><Link to="/industry-40" className="text-sm hover:text-green-500 transition-colors">{t.industry40}</Link></li>
             </ul>
           </div>
 
