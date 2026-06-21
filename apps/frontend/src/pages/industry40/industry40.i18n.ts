@@ -22,6 +22,38 @@ export interface SolutionBlock {
   bullets: string[]
 }
 
+export interface FlowStep {
+  icon: string
+  title: string
+  desc: string
+}
+
+export interface FlowCopy {
+  eyebrow: string
+  title: string
+  lead: string
+  steps: FlowStep[]
+}
+
+export interface EdgePoint {
+  icon: string
+  title: string
+  desc: string
+}
+
+export interface EdgeStat {
+  value: string
+  label: string
+}
+
+export interface EdgeAICopy {
+  eyebrow: string
+  title: string
+  lead: string
+  points: EdgePoint[]
+  stats: EdgeStat[]
+}
+
 export interface Industry40Copy {
   // SEO
   seoTitle: string
@@ -46,6 +78,10 @@ export interface Industry40Copy {
   chatName: string
   chatMsg: string
   chatReply: string
+  // "From data to action" — ML pipeline flow
+  flow: FlowCopy
+  // Edge AI — a look to the future
+  edgeai: EdgeAICopy
   // "Our approach"
   approachEyebrow: string
   approachTitle: string
@@ -82,7 +118,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       {
         icon: "bot",
         eyebrow: "Soluzione 01",
-        title: "Custom Chatbots",
+        title: "Custom WhatsApp Chatbots",
         lead: "L'assistente AI centralizzato: tutte le informazioni del reparto in un unico punto.",
         paragraph:
           "Un chatbot addestrato sui tuoi macchinari, manuali e procedure. Parla con gli operatori nella loro lingua, risponde sul campo in tempo reale e fa arrivare le informazioni giuste alle persone giuste. Ogni implementazione è diversa: il chatbot giusto nasce dalle scelte giuste su modello, prompt, validazione e integrazione con i tuoi sistemi.",
@@ -120,11 +156,55 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
     chatMsg: "Come resetto la macchina 3?",
     chatReply: "Tieni premuto STOP per 5s, poi riavvia dal pannello…",
     approachEyebrow: "Il nostro approccio",
-    approachTitle: "Non basta usare l'AI: va progettata bene",
+    approachTitle: "Ogni progetto AI è diverso, e va progettato su misura",
     approachParagraphs: [
       "Ogni implementazione di AI è diversa. La soluzione ottimale dipende dal caso d'uso, dalla qualità dei dati, dai requisiti tecnici, dal livello di rischio, dalla compliance e dai risultati attesi.",
       "La vera sfida non è semplicemente usare l'AI, ma progettare una soluzione che produca risultati accurati, affidabili ed economicamente sostenibili. Per questo analizziamo le variabili in gioco, validiamo gli output su più modelli e costruiamo workflow ottimizzati che aumentano la precisione, riducono i costi e danno fiducia nei risultati generati dall'AI.",
     ],
+    flow: {
+      eyebrow: "Come funziona",
+      title: "Dal dato all'azione",
+      lead: "Ogni soluzione di Computer Vision nasce da un percorso chiaro: dai tuoi dati fino all'azione automatica sulla linea.",
+      steps: [
+        { icon: "dataset", title: "Dataset", desc: "Raccogliamo le immagini dei tuoi pezzi, prodotti e processi." },
+        { icon: "labelling", title: "Labelling", desc: "Etichettiamo difetti e oggetti per insegnare al modello cosa cercare." },
+        { icon: "training", title: "Training", desc: "Addestriamo il modello sui tuoi casi reali fino alla precisione richiesta." },
+        { icon: "inference", title: "Inference", desc: "Il modello gira a bordo linea e rileva in tempo reale." },
+        { icon: "actions", title: "Actions", desc: "Scatta l'azione: alert, scarto del pezzo, registrazione nel database." },
+      ],
+    },
+    edgeai: {
+      eyebrow: "Uno sguardo al futuro",
+      title: "Edge AI: la tecnologia che guida l'Industry 4.0",
+      lead: "I modelli di Computer Vision non girano nel cloud, ma direttamente su un piccolo dispositivo a bordo linea, accanto alla telecamera. Questo è l'Edge AI: l'inferenza accade dove nascono i dati, in tempo reale.",
+      points: [
+        {
+          icon: "latency",
+          title: "Latenza minima",
+          desc: "Inferenza in pochi millisecondi sul dispositivo: la linea reagisce all'istante, senza il viaggio andata e ritorno verso il cloud.",
+        },
+        {
+          icon: "offline",
+          title: "Funziona offline",
+          desc: "Nessuna dipendenza da internet: se la connessione cade, il sistema continua a ispezionare e decidere.",
+        },
+        {
+          icon: "privacy",
+          title: "I dati restano in fabbrica",
+          desc: "Le immagini vengono elaborate sul posto: privacy e know-how non escono mai dallo stabilimento.",
+        },
+        {
+          icon: "cost",
+          title: "Costi e banda ridotti",
+          desc: "Niente streaming video continuo verso il cloud; gira su hardware da poche decine di euro.",
+        },
+      ],
+      stats: [
+        { value: "8–29 ms", label: "inferenza a bordo linea" },
+        { value: "−20–30%", label: "fermi non pianificati" },
+        { value: "100%", label: "elaborato sul dispositivo" },
+      ],
+    },
     cta: "Contattaci",
     ctaSub: "Ti mostriamo cosa è possibile con i tuoi dati.",
     ctaTitle: "Contattaci per maggiori informazioni",
@@ -156,7 +236,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       {
         icon: "bot",
         eyebrow: "Solution 01",
-        title: "Custom Chatbots",
+        title: "Custom WhatsApp Chatbots",
         lead: "The centralized AI assistant: all your shop-floor information in one place.",
         paragraph:
           "A chatbot trained on your machines, manuals and procedures. It talks to operators in their own language, answers on the floor in real time and gets the right information to the right people. Every implementation is different: the right chatbot comes from the right choices on model, prompts, validation and integration with your systems.",
@@ -194,11 +274,55 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
     chatMsg: "How do I reset machine 3?",
     chatReply: "Hold STOP for 5s, then restart from the panel…",
     approachEyebrow: "Our approach",
-    approachTitle: "Using AI is not enough: it has to be designed well",
+    approachTitle: "Every AI project is different, and must be designed to measure",
     approachParagraphs: [
       "Every AI implementation is different. The optimal solution depends on the use case, data quality, engineering requirements, risk level, compliance needs and expected outcomes.",
       "The challenge is not simply using AI, but designing a solution that delivers accurate, reliable and cost-effective results. That's why we analyze these variables, validate outputs across multiple AI models and build optimized workflows that improve accuracy, reduce operational costs and increase confidence in AI-generated results.",
     ],
+    flow: {
+      eyebrow: "How it works",
+      title: "From data to action",
+      lead: "Every computer vision solution follows a clear path: from your data to automatic action on the line.",
+      steps: [
+        { icon: "dataset", title: "Dataset", desc: "We collect images of your parts, products and processes." },
+        { icon: "labelling", title: "Labelling", desc: "We label defects and objects to teach the model what to look for." },
+        { icon: "training", title: "Training", desc: "We train the model on your real cases up to the required accuracy." },
+        { icon: "inference", title: "Inference", desc: "The model runs on the line and detects in real time." },
+        { icon: "actions", title: "Actions", desc: "The action fires: alert, scrap the part, register in the database." },
+      ],
+    },
+    edgeai: {
+      eyebrow: "A look ahead",
+      title: "Edge AI technology: driving Industry 4.0",
+      lead: "Computer vision models don't run in the cloud — they run directly on a small device right on the line, next to the camera. That's Edge AI: inference happens where the data is born, in real time.",
+      points: [
+        {
+          icon: "latency",
+          title: "Minimal latency",
+          desc: "Inference in a few milliseconds on the device: the line reacts instantly, with no round-trip to the cloud.",
+        },
+        {
+          icon: "offline",
+          title: "Works offline",
+          desc: "No internet dependency: if the connection drops, the system keeps inspecting and deciding.",
+        },
+        {
+          icon: "privacy",
+          title: "Data stays in the factory",
+          desc: "Images are processed on-site: privacy and know-how never leave the plant.",
+        },
+        {
+          icon: "cost",
+          title: "Lower cost and bandwidth",
+          desc: "No continuous video streaming to the cloud; runs on hardware costing a few tens of euros.",
+        },
+      ],
+      stats: [
+        { value: "8–29 ms", label: "on-device inference" },
+        { value: "~4 MB", label: "optimized model" },
+        { value: "100%", label: "processed on the device" },
+      ],
+    },
     cta: "Contact us",
     ctaSub: "We'll show you what's possible with your data.",
     ctaTitle: "Contact us for more information",
@@ -230,7 +354,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       {
         icon: "bot",
         eyebrow: "Solución 01",
-        title: "Chatbots a Medida",
+        title: "Chatbots de WhatsApp a Medida",
         lead: "El asistente IA centralizado: toda la información de la planta en un único lugar.",
         paragraph:
           "Un chatbot entrenado con tus máquinas, manuales y procedimientos. Habla con los operarios en su idioma, responde en planta en tiempo real y hace llegar la información correcta a las personas adecuadas. Cada implementación es diferente: el chatbot correcto nace de las decisiones correctas sobre modelo, prompts, validación e integración con tus sistemas.",
@@ -268,11 +392,55 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
     chatMsg: "¿Cómo reinicio la máquina 3?",
     chatReply: "Mantén STOP 5s y reinicia desde el panel…",
     approachEyebrow: "Nuestro enfoque",
-    approachTitle: "Usar la IA no basta: hay que diseñarla bien",
+    approachTitle: "Cada proyecto de IA es diferente, y debe diseñarse a medida",
     approachParagraphs: [
       "Cada implementación de IA es diferente. La solución óptima depende del caso de uso, la calidad de los datos, los requisitos técnicos, el nivel de riesgo, las necesidades de cumplimiento y los resultados esperados.",
       "El reto no es simplemente usar la IA, sino diseñar una solución que ofrezca resultados precisos, fiables y rentables. Por eso analizamos estas variables, validamos las salidas en varios modelos de IA y construimos flujos de trabajo optimizados que mejoran la precisión, reducen los costes y aumentan la confianza en los resultados generados por la IA.",
     ],
+    flow: {
+      eyebrow: "Cómo funciona",
+      title: "Del dato a la acción",
+      lead: "Cada solución de visión por computador sigue un camino claro: de tus datos a la acción automática en la línea.",
+      steps: [
+        { icon: "dataset", title: "Dataset", desc: "Recopilamos imágenes de tus piezas, productos y procesos." },
+        { icon: "labelling", title: "Labelling", desc: "Etiquetamos defectos y objetos para enseñar al modelo qué buscar." },
+        { icon: "training", title: "Training", desc: "Entrenamos el modelo con tus casos reales hasta la precisión necesaria." },
+        { icon: "inference", title: "Inference", desc: "El modelo se ejecuta en la línea y detecta en tiempo real." },
+        { icon: "actions", title: "Actions", desc: "Se dispara la acción: alerta, descarte de la pieza, registro en la base de datos." },
+      ],
+    },
+    edgeai: {
+      eyebrow: "Una mirada al futuro",
+      title: "Tecnología Edge AI: impulsando la Industria 4.0",
+      lead: "Los modelos de visión por computador no se ejecutan en la nube, sino directamente en un pequeño dispositivo en la propia línea, junto a la cámara. Eso es Edge AI: la inferencia ocurre donde nacen los datos, en tiempo real.",
+      points: [
+        {
+          icon: "latency",
+          title: "Latencia mínima",
+          desc: "Inferencia en pocos milisegundos en el dispositivo: la línea reacciona al instante, sin el viaje de ida y vuelta a la nube.",
+        },
+        {
+          icon: "offline",
+          title: "Funciona sin conexión",
+          desc: "Sin dependencia de internet: si la conexión cae, el sistema sigue inspeccionando y decidiendo.",
+        },
+        {
+          icon: "privacy",
+          title: "Los datos se quedan en la fábrica",
+          desc: "Las imágenes se procesan in situ: la privacidad y el know-how nunca salen de la planta.",
+        },
+        {
+          icon: "cost",
+          title: "Menos coste y ancho de banda",
+          desc: "Sin streaming de vídeo continuo a la nube; funciona en hardware de pocas decenas de euros.",
+        },
+      ],
+      stats: [
+        { value: "8–29 ms", label: "inferencia en el dispositivo" },
+        { value: "~4 MB", label: "modelo optimizado" },
+        { value: "100%", label: "procesado en el dispositivo" },
+      ],
+    },
     cta: "Contáctanos",
     ctaSub: "Te mostramos lo que es posible con tus datos.",
     ctaTitle: "Contáctanos para más información",
@@ -304,7 +472,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       {
         icon: "bot",
         eyebrow: "Lösung 01",
-        title: "Custom Chatbots",
+        title: "Custom WhatsApp Chatbots",
         lead: "Der zentrale KI-Assistent: alle Informationen der Produktion an einem Ort.",
         paragraph:
           "Ein Chatbot, trainiert auf deine Maschinen, Handbücher und Abläufe. Er spricht mit den Mitarbeitern in ihrer Sprache, antwortet in Echtzeit vor Ort und bringt die richtigen Informationen zu den richtigen Personen. Jede Umsetzung ist anders: Der richtige Chatbot entsteht aus den richtigen Entscheidungen zu Modell, Prompts, Validierung und Integration in deine Systeme.",
@@ -342,11 +510,55 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
     chatMsg: "Wie setze ich Maschine 3 zurück?",
     chatReply: "STOP 5s gedrückt halten, dann über das Panel neu starten…",
     approachEyebrow: "Unser Ansatz",
-    approachTitle: "KI zu nutzen reicht nicht: Sie muss gut entworfen sein",
+    approachTitle: "Jedes KI-Projekt ist anders und muss maßgeschneidert entworfen werden",
     approachParagraphs: [
       "Jede KI-Umsetzung ist anders. Die optimale Lösung hängt vom Anwendungsfall, der Datenqualität, den technischen Anforderungen, dem Risikoniveau, den Compliance-Anforderungen und den erwarteten Ergebnissen ab.",
       "Die Herausforderung ist nicht, KI einfach zu nutzen, sondern eine Lösung zu entwerfen, die genaue, zuverlässige und kosteneffiziente Ergebnisse liefert. Deshalb analysieren wir diese Variablen, validieren Ausgaben über mehrere KI-Modelle und bauen optimierte Workflows, die die Genauigkeit erhöhen, Kosten senken und das Vertrauen in KI-Ergebnisse stärken.",
     ],
+    flow: {
+      eyebrow: "So funktioniert es",
+      title: "Vom Datum zur Aktion",
+      lead: "Jede Computer-Vision-Lösung folgt einem klaren Weg: von deinen Daten bis zur automatischen Aktion an der Linie.",
+      steps: [
+        { icon: "dataset", title: "Dataset", desc: "Wir sammeln Bilder deiner Teile, Produkte und Prozesse." },
+        { icon: "labelling", title: "Labelling", desc: "Wir labeln Defekte und Objekte, um dem Modell beizubringen, worauf es achten soll." },
+        { icon: "training", title: "Training", desc: "Wir trainieren das Modell mit deinen realen Fällen bis zur geforderten Genauigkeit." },
+        { icon: "inference", title: "Inference", desc: "Das Modell läuft an der Linie und erkennt in Echtzeit." },
+        { icon: "actions", title: "Actions", desc: "Die Aktion wird ausgelöst: Alert, Teil aussortieren, in der Datenbank erfassen." },
+      ],
+    },
+    edgeai: {
+      eyebrow: "Ein Blick in die Zukunft",
+      title: "Edge-AI-Technologie: Treiber der Industrie 4.0",
+      lead: "Computer-Vision-Modelle laufen nicht in der Cloud, sondern direkt auf einem kleinen Gerät an der Linie, neben der Kamera. Das ist Edge AI: Die Inferenz passiert dort, wo die Daten entstehen, in Echtzeit.",
+      points: [
+        {
+          icon: "latency",
+          title: "Minimale Latenz",
+          desc: "Inferenz in wenigen Millisekunden auf dem Gerät: Die Linie reagiert sofort, ohne den Weg in die Cloud und zurück.",
+        },
+        {
+          icon: "offline",
+          title: "Funktioniert offline",
+          desc: "Keine Internetabhängigkeit: Fällt die Verbindung aus, prüft und entscheidet das System weiter.",
+        },
+        {
+          icon: "privacy",
+          title: "Daten bleiben in der Fabrik",
+          desc: "Bilder werden vor Ort verarbeitet: Datenschutz und Know-how verlassen nie das Werk.",
+        },
+        {
+          icon: "cost",
+          title: "Weniger Kosten und Bandbreite",
+          desc: "Kein kontinuierliches Video-Streaming in die Cloud; läuft auf Hardware für wenige Dutzend Euro.",
+        },
+      ],
+      stats: [
+        { value: "8–29 ms", label: "Inferenz auf dem Gerät" },
+        { value: "~4 MB", label: "optimiertes Modell" },
+        { value: "100%", label: "auf dem Gerät verarbeitet" },
+      ],
+    },
     cta: "Kontaktiere uns",
     ctaSub: "Wir zeigen dir, was mit deinen Daten möglich ist.",
     ctaTitle: "Kontaktiere uns für mehr Informationen",
@@ -378,7 +590,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       {
         icon: "bot",
         eyebrow: "Solution 01",
-        title: "Chatbots sur Mesure",
+        title: "Chatbots WhatsApp sur Mesure",
         lead: "L'assistant IA centralisé : toutes les informations de l'atelier au même endroit.",
         paragraph:
           "Un chatbot entraîné sur tes machines, tes manuels et tes procédures. Il parle aux opérateurs dans leur langue, répond sur le terrain en temps réel et achemine la bonne information aux bonnes personnes. Chaque mise en œuvre est différente : le bon chatbot naît des bons choix sur le modèle, les prompts, la validation et l'intégration avec tes systèmes.",
@@ -416,11 +628,55 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
     chatMsg: "Comment réinitialiser la machine 3 ?",
     chatReply: "Maintiens STOP 5s, puis redémarre depuis le panneau…",
     approachEyebrow: "Notre approche",
-    approachTitle: "Utiliser l'IA ne suffit pas : il faut bien la concevoir",
+    approachTitle: "Chaque projet d'IA est différent, et doit être conçu sur mesure",
     approachParagraphs: [
       "Chaque mise en œuvre d'IA est différente. La solution optimale dépend du cas d'usage, de la qualité des données, des exigences techniques, du niveau de risque, des besoins de conformité et des résultats attendus.",
       "Le défi n'est pas simplement d'utiliser l'IA, mais de concevoir une solution qui produit des résultats précis, fiables et rentables. C'est pourquoi nous analysons ces variables, validons les sorties sur plusieurs modèles d'IA et construisons des workflows optimisés qui améliorent la précision, réduisent les coûts et renforcent la confiance dans les résultats générés par l'IA.",
     ],
+    flow: {
+      eyebrow: "Comment ça marche",
+      title: "De la donnée à l'action",
+      lead: "Chaque solution de vision par ordinateur suit un parcours clair : de tes données à l'action automatique sur la ligne.",
+      steps: [
+        { icon: "dataset", title: "Dataset", desc: "Nous collectons les images de tes pièces, produits et procédés." },
+        { icon: "labelling", title: "Labelling", desc: "Nous étiquetons défauts et objets pour apprendre au modèle quoi chercher." },
+        { icon: "training", title: "Training", desc: "Nous entraînons le modèle sur tes cas réels jusqu'à la précision requise." },
+        { icon: "inference", title: "Inference", desc: "Le modèle tourne sur la ligne et détecte en temps réel." },
+        { icon: "actions", title: "Actions", desc: "L'action se déclenche : alerte, rebut de la pièce, enregistrement en base." },
+      ],
+    },
+    edgeai: {
+      eyebrow: "Un regard vers l'avenir",
+      title: "La technologie Edge AI : moteur de l'Industrie 4.0",
+      lead: "Les modèles de vision par ordinateur ne tournent pas dans le cloud, mais directement sur un petit appareil sur la ligne, à côté de la caméra. C'est l'Edge AI : l'inférence se produit là où naissent les données, en temps réel.",
+      points: [
+        {
+          icon: "latency",
+          title: "Latence minimale",
+          desc: "Inférence en quelques millisecondes sur l'appareil : la ligne réagit instantanément, sans aller-retour vers le cloud.",
+        },
+        {
+          icon: "offline",
+          title: "Fonctionne hors ligne",
+          desc: "Aucune dépendance à internet : si la connexion tombe, le système continue d'inspecter et de décider.",
+        },
+        {
+          icon: "privacy",
+          title: "Les données restent à l'usine",
+          desc: "Les images sont traitées sur place : la confidentialité et le savoir-faire ne quittent jamais le site.",
+        },
+        {
+          icon: "cost",
+          title: "Moins de coûts et de bande passante",
+          desc: "Pas de streaming vidéo continu vers le cloud ; fonctionne sur du matériel à quelques dizaines d'euros.",
+        },
+      ],
+      stats: [
+        { value: "8–29 ms", label: "inférence sur l'appareil" },
+        { value: "~4 MB", label: "modèle optimisé" },
+        { value: "100%", label: "traité sur l'appareil" },
+      ],
+    },
     cta: "Contactez-nous",
     ctaSub: "On te montre ce qui est possible avec tes données.",
     ctaTitle: "Contactez-nous pour plus d'informations",
@@ -452,7 +708,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       {
         icon: "bot",
         eyebrow: "Solució 01",
-        title: "Chatbots a Mida",
+        title: "Chatbots de WhatsApp a Mida",
         lead: "L'assistent IA centralitzat: tota la informació de la planta en un únic lloc.",
         paragraph:
           "Un chatbot entrenat amb les teves màquines, manuals i procediments. Parla amb els operaris en la seva llengua, respon a planta en temps real i fa arribar la informació correcta a les persones adequades. Cada implementació és diferent: el chatbot adequat neix de les decisions correctes sobre model, prompts, validació i integració amb els teus sistemes.",
@@ -490,11 +746,55 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
     chatMsg: "Com reinicio la màquina 3?",
     chatReply: "Mantén STOP 5s i reinicia des del panell…",
     approachEyebrow: "El nostre enfocament",
-    approachTitle: "Usar la IA no n'hi ha prou: cal dissenyar-la bé",
+    approachTitle: "Cada projecte d'IA és diferent, i s'ha de dissenyar a mida",
     approachParagraphs: [
       "Cada implementació d'IA és diferent. La solució òptima depèn del cas d'ús, la qualitat de les dades, els requisits tècnics, el nivell de risc, les necessitats de compliment i els resultats esperats.",
       "El repte no és simplement usar la IA, sinó dissenyar una solució que ofereixi resultats precisos, fiables i rendibles. Per això analitzem aquestes variables, validem les sortides en diversos models d'IA i construïm fluxos de treball optimitzats que milloren la precisió, redueixen els costos i augmenten la confiança en els resultats generats per la IA.",
     ],
+    flow: {
+      eyebrow: "Com funciona",
+      title: "De la dada a l'acció",
+      lead: "Cada solució de visió per computador segueix un camí clar: de les teves dades a l'acció automàtica a la línia.",
+      steps: [
+        { icon: "dataset", title: "Dataset", desc: "Recollim imatges de les teves peces, productes i processos." },
+        { icon: "labelling", title: "Labelling", desc: "Etiquetem defectes i objectes per ensenyar al model què ha de buscar." },
+        { icon: "training", title: "Training", desc: "Entrenem el model amb els teus casos reals fins a la precisió requerida." },
+        { icon: "inference", title: "Inference", desc: "El model s'executa a la línia i detecta en temps real." },
+        { icon: "actions", title: "Actions", desc: "Es dispara l'acció: alerta, descart de la peça, registre a la base de dades." },
+      ],
+    },
+    edgeai: {
+      eyebrow: "Una mirada al futur",
+      title: "Tecnologia Edge AI: impulsant la Indústria 4.0",
+      lead: "Els models de visió per computador no s'executen al núvol, sinó directament en un petit dispositiu a la mateixa línia, al costat de la càmera. Això és l'Edge AI: la inferència passa on neixen les dades, en temps real.",
+      points: [
+        {
+          icon: "latency",
+          title: "Latència mínima",
+          desc: "Inferència en pocs mil·lisegons al dispositiu: la línia reacciona a l'instant, sense el viatge d'anada i tornada al núvol.",
+        },
+        {
+          icon: "offline",
+          title: "Funciona sense connexió",
+          desc: "Sense dependència d'internet: si la connexió cau, el sistema continua inspeccionant i decidint.",
+        },
+        {
+          icon: "privacy",
+          title: "Les dades es queden a la fàbrica",
+          desc: "Les imatges es processen in situ: la privacitat i el know-how mai no surten de la planta.",
+        },
+        {
+          icon: "cost",
+          title: "Menys cost i amplada de banda",
+          desc: "Sense streaming de vídeo continu al núvol; funciona en maquinari de poques desenes d'euros.",
+        },
+      ],
+      stats: [
+        { value: "8–29 ms", label: "inferència al dispositiu" },
+        { value: "~4 MB", label: "model optimitzat" },
+        { value: "100%", label: "processat al dispositiu" },
+      ],
+    },
     cta: "Contacta'ns",
     ctaSub: "Et mostrem què és possible amb les teves dades.",
     ctaTitle: "Contacta'ns per a més informació",

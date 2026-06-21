@@ -1,13 +1,31 @@
 import { useEffect, useState, type ReactNode } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { motion } from "framer-motion"
-import { Bot, Check, Cpu, Eye, MessageCircle } from "lucide-react"
+import { Fragment } from "react"
+import {
+  ArrowRight,
+  Bot,
+  Brain,
+  Check,
+  Cpu,
+  Eye,
+  Image,
+  Lock,
+  MessageCircle,
+  ScanLine,
+  Tags,
+  Wallet,
+  WifiOff,
+  Zap,
+} from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
 import { CtaSection } from "@/components/landing/CtaSection"
 import {
   INDUSTRY40_I18N,
+  type EdgeAICopy,
+  type FlowCopy,
   type Industry40Copy,
   type Industry40Lang,
 } from "./industry40/industry40.i18n"
@@ -165,6 +183,12 @@ export function Industry40Page() {
           </div>
         </section>
 
+        {/* ===================== FLOW (DATA → ACTION) ================= */}
+        <FlowSection f={t.flow} />
+
+        {/* ===================== EDGE AI (FUTURE) ===================== */}
+        <EdgeAISection e={t.edgeai} />
+
         {/* ===================== OUR APPROACH ========================= */}
         <section className="py-16 lg:py-24">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
@@ -206,6 +230,155 @@ export function Industry40Page() {
 
       <SiteFooter language={language} />
     </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// FlowSection — the ML pipeline as an editorial stepper:
+// Dataset → Labelling → Training → Inference → Actions.
+// ---------------------------------------------------------------------------
+function flowIcon(key: string) {
+  const cls = "w-6 h-6 text-green-400"
+  switch (key) {
+    case "dataset":
+      return <Image className={cls} />
+    case "labelling":
+      return <Tags className={cls} />
+    case "training":
+      return <Brain className={cls} />
+    case "inference":
+      return <ScanLine className={cls} />
+    case "actions":
+      return <Zap className={cls} />
+    default:
+      return <Cpu className={cls} />
+  }
+}
+
+function FlowSection({ f }: { f: FlowCopy }) {
+  return (
+    <section className="py-16 lg:py-24">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <motion.div {...reveal} className="mb-10 max-w-3xl lg:mb-14">
+          <span className="text-sm font-semibold uppercase tracking-wide text-green-400">
+            {f.eyebrow}
+          </span>
+          <h2 className="mt-3 text-3xl font-bold leading-tight text-white lg:text-4xl">
+            {f.title}
+          </h2>
+          <p className="mt-3 text-lg leading-relaxed text-slate-400">{f.lead}</p>
+        </motion.div>
+
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
+          {f.steps.map((s, i) => (
+            <Fragment key={s.title}>
+              <motion.div
+                {...reveal}
+                transition={{ ...reveal.transition, delay: i * 0.08 }}
+                className="flex-1 rounded-2xl border border-white/10 bg-slate-900/50 p-5 transition-colors hover:border-green-400/40"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-green-400/10">
+                    {flowIcon(s.icon)}
+                  </span>
+                  <span className="text-xs font-bold text-slate-600">
+                    {i + 1}
+                  </span>
+                </div>
+                <h3 className="text-base font-bold text-white">{s.title}</h3>
+                <p className="mt-1.5 text-[13px] leading-relaxed text-slate-400">
+                  {s.desc}
+                </p>
+              </motion.div>
+              {i < f.steps.length - 1 && (
+                <div className="flex shrink-0 items-center justify-center">
+                  <ArrowRight className="h-5 w-5 rotate-90 text-green-400/60 lg:rotate-0" />
+                </div>
+              )}
+            </Fragment>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// EdgeAISection — "a look ahead": the vision model runs ON the line (edge
+// device), not in the cloud. Low latency, offline, data stays in the factory,
+// low cost. Stats band + benefit cards + technology chips.
+// ---------------------------------------------------------------------------
+function edgeIcon(key: string) {
+  const cls = "w-6 h-6 text-green-400"
+  switch (key) {
+    case "latency":
+      return <Zap className={cls} />
+    case "offline":
+      return <WifiOff className={cls} />
+    case "privacy":
+      return <Lock className={cls} />
+    case "cost":
+      return <Wallet className={cls} />
+    default:
+      return <Cpu className={cls} />
+  }
+}
+
+function EdgeAISection({ e }: { e: EdgeAICopy }) {
+  return (
+    <section className="relative overflow-hidden border-y border-white/5 bg-white/[0.02] py-16 lg:py-24">
+      <div className="pointer-events-none absolute -top-32 right-0 h-[26rem] w-[26rem] rounded-full bg-green-500/10 blur-3xl" />
+      <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <motion.div {...reveal} className="mb-10 max-w-3xl lg:mb-14">
+          <span className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-green-400">
+            <Cpu className="h-4 w-4" />
+            {e.eyebrow}
+          </span>
+          <h2 className="mt-3 text-3xl font-bold leading-tight text-white lg:text-4xl">
+            {e.title}
+          </h2>
+          <p className="mt-3 text-lg leading-relaxed text-slate-400">{e.lead}</p>
+        </motion.div>
+
+        {/* Stat band */}
+        <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {e.stats.map((s, idx) => (
+            <motion.div
+              key={s.label}
+              {...reveal}
+              transition={{ ...reveal.transition, delay: idx * 0.06 }}
+              className="rounded-2xl border border-green-400/20 bg-green-400/[0.04] p-6 text-center"
+            >
+              <p className="text-3xl font-extrabold text-green-400 lg:text-4xl">
+                {s.value}
+              </p>
+              <p className="mt-1.5 text-sm text-slate-400">{s.label}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Benefit cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {e.points.map((p, idx) => (
+            <motion.div
+              key={p.title}
+              {...reveal}
+              transition={{ ...reveal.transition, delay: idx * 0.05 }}
+              className="group rounded-2xl border border-white/10 bg-slate-900/50 p-6 transition-colors hover:border-green-400/40 hover:bg-slate-900"
+            >
+              <span className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-green-400/10 transition-transform group-hover:scale-110">
+                {edgeIcon(p.icon)}
+              </span>
+              <h3 className="text-lg font-bold text-white">{p.title}</h3>
+              <p className="mt-1.5 text-[15px] leading-relaxed text-slate-400">
+                {p.desc}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+
+      </div>
+    </section>
   )
 }
 
