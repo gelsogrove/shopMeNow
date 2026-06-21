@@ -692,7 +692,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         title: "Chatbots de WhatsApp a Mida",
         lead: "L'assistent IA centralitzat: tota la informació de la planta en un únic lloc.",
         paragraph:
-          "Un chatbot de referència per a tota l'empresa: parla amb els operaris en la seva llengua i fa arribar la informació correcta a les persones adequades.",
+          "El punt de referència per a tota l'empresa: parla la llengua de cada operari, respon a planta en temps real i porta la informació correcta, a la persona correcta, en el moment correcte.",
         bullets: [
           "Respon les preguntes dels operaris sobre màquines i procediments",
           "Detecta avaries i anomalies obrint tiquets automàtics",
