@@ -76,7 +76,7 @@ export function Industry40Page() {
         title={t.seoTitle}
         description={t.seoDesc}
         keywords={t.seoKeys}
-        url="/industry-40"
+        url="/edgeai"
         lang={language as Industry40Lang}
         type="article"
         serviceType="AI for Industry 4.0 Manufacturing"

@@ -378,9 +378,9 @@ function AppWithProviders() {
                 <Route path="/laundries" element={<LaundriesPage />} />
                 <Route path="/real-estate" element={<RealEstatePage />} />
                 <Route path="/beauty" element={<BeautyPage />} />
-                {/* Industry 4.0 — standalone marketing page, linked from the
-                    homepage footer "Solutions" section. */}
-                <Route path="/industry-40" element={<Industry40Page />} />
+                {/* Edge AI / Industry 4.0 — standalone marketing page,
+                    reachable by URL only (not linked from header/footer/menu). */}
+                <Route path="/edgeai" element={<Industry40Page />} />
                 <Route path="/appointment-booking" element={<AppointmentBookingPage />} />
                 <Route path="/smart-push-ai" element={<SmartPushAiPage />} />
                 <Route path="/crm-integration" element={<CrmIntegrationPage />} />
