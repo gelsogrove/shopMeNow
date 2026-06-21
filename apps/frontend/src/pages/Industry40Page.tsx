@@ -172,12 +172,14 @@ export function Industry40Page() {
 
             <div className="space-y-16 lg:space-y-24">
               {t.solutions.map((sol, idx) => (
-                <SolutionRow
-                  key={sol.title}
-                  sol={sol}
-                  reversed={idx % 2 === 1}
-                  visual={idx === 0 ? <ChatMockup t={t} /> : <ScanMockup t={t} />}
-                />
+                <Fragment key={sol.title}>
+                  <SolutionRow
+                    sol={sol}
+                    reversed={idx % 2 === 1}
+                    visual={idx === 0 ? <ChatMockup t={t} /> : <ScanMockup t={t} />}
+                  />
+                  {idx === 0 && <BridgeBand text={t.bridge} />}
+                </Fragment>
               ))}
             </div>
           </div>
