@@ -145,6 +145,8 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         ],
       },
     ],
+    bridge:
+      "L'operatore manda una foto sul chatbot e la Computer Vision la analizza e risponde all'istante.",
     scanLabel: "Computer Vision",
     scanStatus: "Difetto rilevato",
     scanConfidence: "affidabilità 99,2%",
@@ -258,6 +260,8 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         ],
       },
     ],
+    bridge:
+      "The operator sends a photo on the chatbot and Computer Vision analyzes it and replies instantly.",
     scanLabel: "Computer Vision",
     scanStatus: "Defect detected",
     scanConfidence: "99.2% confidence",
@@ -371,6 +375,8 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         ],
       },
     ],
+    bridge:
+      "El operario envía una foto en el chatbot y la Computer Vision la analiza y responde al instante.",
     scanLabel: "Computer Vision",
     scanStatus: "Defecto detectado",
     scanConfidence: "99,2% de confianza",
@@ -484,6 +490,8 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         ],
       },
     ],
+    bridge:
+      "Der Mitarbeiter sendet ein Foto im Chatbot und Computer Vision analysiert es und antwortet sofort.",
     scanLabel: "Computer Vision",
     scanStatus: "Defekt erkannt",
     scanConfidence: "99,2 % Zuverlässigkeit",
@@ -597,6 +605,8 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         ],
       },
     ],
+    bridge:
+      "L'opérateur envoie une photo sur le chatbot et la Computer Vision l'analyse et répond instantanément.",
     scanLabel: "Computer Vision",
     scanStatus: "Défaut détecté",
     scanConfidence: "99,2 % de fiabilité",
@@ -710,6 +720,8 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         ],
       },
     ],
+    bridge:
+      "L'operari envia una foto al chatbot i la Computer Vision l'analitza i respon a l'instant.",
     scanLabel: "Computer Vision",
     scanStatus: "Defecte detectat",
     scanConfidence: "99,2 % de fiabilitat",
