@@ -41,17 +41,11 @@ export interface EdgePoint {
   desc: string
 }
 
-export interface EdgeStat {
-  value: string
-  label: string
-}
-
 export interface EdgeAICopy {
   eyebrow: string
   title: string
   lead: string
   points: EdgePoint[]
-  stats: EdgeStat[]
 }
 
 export interface Industry40Copy {
@@ -199,11 +193,6 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
           desc: "Niente streaming video continuo verso il cloud; gira su hardware da poche decine di euro.",
         },
       ],
-      stats: [
-        { value: "8–29 ms", label: "inferenza a bordo linea" },
-        { value: "−20–30%", label: "fermi non pianificati" },
-        { value: "100%", label: "elaborato sul dispositivo" },
-      ],
     },
     cta: "Contattaci",
     ctaSub: "Ti mostriamo cosa è possibile con i tuoi dati.",
@@ -317,11 +306,6 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
           desc: "No continuous video streaming to the cloud; runs on hardware costing a few tens of euros.",
         },
       ],
-      stats: [
-        { value: "8–29 ms", label: "on-device inference" },
-        { value: "−20–30%", label: "unplanned downtime" },
-        { value: "100%", label: "processed on the device" },
-      ],
     },
     cta: "Contact us",
     ctaSub: "We'll show you what's possible with your data.",
@@ -371,7 +355,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       {
         icon: "vision",
         eyebrow: "Solución 02",
-        title: "Visión por Computador",
+        title: "Computer Vision",
         lead: "Control de calidad automático en el 100% de la producción.",
         paragraph:
           "Modelos de visión artificial que inspeccionan cada pieza en la línea en tiempo real y detectan defectos y anomalías que el ojo humano no ve — sin frenar la producción. El descarte se intercepta de inmediato, antes de que avance en la línea.",
@@ -385,7 +369,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         ],
       },
     ],
-    scanLabel: "Visión por Computador",
+    scanLabel: "Computer Vision",
     scanStatus: "Defecto detectado",
     scanConfidence: "99,2% de confianza",
     chatName: "Asistente IA",
@@ -434,11 +418,6 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
           title: "Menos coste y ancho de banda",
           desc: "Sin streaming de vídeo continuo a la nube; funciona en hardware de pocas decenas de euros.",
         },
-      ],
-      stats: [
-        { value: "8–29 ms", label: "inferencia en el dispositivo" },
-        { value: "−20–30%", label: "paradas no planificadas" },
-        { value: "100%", label: "procesado en el dispositivo" },
       ],
     },
     cta: "Contáctanos",
@@ -553,11 +532,6 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
           desc: "Kein kontinuierliches Video-Streaming in die Cloud; läuft auf Hardware für wenige Dutzend Euro.",
         },
       ],
-      stats: [
-        { value: "8–29 ms", label: "Inferenz auf dem Gerät" },
-        { value: "−20–30%", label: "ungeplante Stillstände" },
-        { value: "100%", label: "auf dem Gerät verarbeitet" },
-      ],
     },
     cta: "Kontaktiere uns",
     ctaSub: "Wir zeigen dir, was mit deinen Daten möglich ist.",
@@ -607,7 +581,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       {
         icon: "vision",
         eyebrow: "Solution 02",
-        title: "Vision par Ordinateur",
+        title: "Computer Vision",
         lead: "Contrôle qualité automatique sur 100 % de la production.",
         paragraph:
           "Des modèles de vision par ordinateur qui inspectent chaque pièce sur la ligne en temps réel et repèrent les défauts et anomalies que l'œil humain ne voit pas — sans ralentir la production. Le rebut est intercepté immédiatement, avant qu'il ne descende la ligne.",
@@ -621,7 +595,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         ],
       },
     ],
-    scanLabel: "Vision par Ordinateur",
+    scanLabel: "Computer Vision",
     scanStatus: "Défaut détecté",
     scanConfidence: "99,2 % de fiabilité",
     chatName: "Assistant IA",
@@ -670,11 +644,6 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
           title: "Moins de coûts et de bande passante",
           desc: "Pas de streaming vidéo continu vers le cloud ; fonctionne sur du matériel à quelques dizaines d'euros.",
         },
-      ],
-      stats: [
-        { value: "8–29 ms", label: "inférence sur l'appareil" },
-        { value: "−20–30%", label: "arrêts non planifiés" },
-        { value: "100%", label: "traité sur l'appareil" },
       ],
     },
     cta: "Contactez-nous",
@@ -725,7 +694,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       {
         icon: "vision",
         eyebrow: "Solució 02",
-        title: "Visió per Computador",
+        title: "Computer Vision",
         lead: "Control de qualitat automàtic al 100 % de la producció.",
         paragraph:
           "Models de visió artificial que inspeccionen cada peça a la línia en temps real i detecten defectes i anomalies que l'ull humà no veu — sense frenar la producció. El rebuig s'intercepta de seguida, abans que avanci per la línia.",
@@ -739,7 +708,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         ],
       },
     ],
-    scanLabel: "Visió per Computador",
+    scanLabel: "Computer Vision",
     scanStatus: "Defecte detectat",
     scanConfidence: "99,2 % de fiabilitat",
     chatName: "Assistent IA",
@@ -788,11 +757,6 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
           title: "Menys cost i amplada de banda",
           desc: "Sense streaming de vídeo continu al núvol; funciona en maquinari de poques desenes d'euros.",
         },
-      ],
-      stats: [
-        { value: "8–29 ms", label: "inferència al dispositiu" },
-        { value: "−20–30%", label: "aturades no planificades" },
-        { value: "100%", label: "processat al dispositiu" },
       ],
     },
     cta: "Contacta'ns",

@@ -340,23 +340,6 @@ function EdgeAISection({ e }: { e: EdgeAICopy }) {
           <p className="mt-3 text-lg leading-relaxed text-slate-400">{e.lead}</p>
         </motion.div>
 
-        {/* Stat band */}
-        <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {e.stats.map((s, idx) => (
-            <motion.div
-              key={s.label}
-              {...reveal}
-              transition={{ ...reveal.transition, delay: idx * 0.06 }}
-              className="rounded-2xl border border-green-400/20 bg-green-400/[0.04] p-6 text-center"
-            >
-              <p className="text-3xl font-extrabold text-green-400 lg:text-4xl">
-                {s.value}
-              </p>
-              <p className="mt-1.5 text-sm text-slate-400">{s.label}</p>
-            </motion.div>
-          ))}
-        </div>
-
         {/* Benefit cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {e.points.map((p, idx) => (
