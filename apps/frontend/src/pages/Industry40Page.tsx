@@ -369,33 +369,6 @@ function EdgeAISection({ e }: { e: EdgeAICopy }) {
 }
 
 // ---------------------------------------------------------------------------
-// BridgeBand — connects the two solutions: an operator sends a photo on the
-// WhatsApp chatbot and the computer vision model analyzes it. Shows the two
-// solutions are one flow, not separate silos.
-// ---------------------------------------------------------------------------
-function BridgeBand({ text }: { text: string }) {
-  return (
-    <motion.div
-      {...reveal}
-      className="flex flex-col items-center gap-4 rounded-2xl border border-green-400/20 bg-green-400/[0.04] px-6 py-5 text-center sm:flex-row sm:text-left lg:px-8"
-    >
-      <div className="flex shrink-0 items-center gap-3">
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-400/10">
-          <MessageCircle className="h-5 w-5 text-green-400" />
-        </span>
-        <ArrowRight className="h-5 w-5 text-green-400/60" />
-        <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-green-400/10">
-          <Eye className="h-5 w-5 text-green-400" />
-        </span>
-      </div>
-      <p className="text-[15px] font-medium leading-relaxed text-slate-200">
-        {text}
-      </p>
-    </motion.div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // SolutionRow — editorial two-column block: visual on one side, copy on the
 // other, alternating sides per index for a blog rhythm. Copy comes first in
 // the DOM so that when the grid collapses to one column (mobile) the heading

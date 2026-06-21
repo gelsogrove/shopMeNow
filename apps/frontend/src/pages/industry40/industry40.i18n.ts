@@ -65,8 +65,6 @@ export interface Industry40Copy {
   solutionsTitle: string
   solutionsLead: string
   solutions: SolutionBlock[]
-  // Bridge between the two solutions (WhatsApp photo → computer vision)
-  bridge: string
   // Mockup labels (chat + scan)
   scanLabel: string
   scanStatus: string
