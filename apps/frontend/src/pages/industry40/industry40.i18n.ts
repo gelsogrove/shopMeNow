@@ -156,7 +156,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
     chatMsg: "Come resetto la macchina 3?",
     chatReply: "Tieni premuto STOP per 5s, poi riavvia dal pannello…",
     approachEyebrow: "Il nostro approccio",
-    approachTitle: "Ogni progetto AI è diverso, e va progettato su misura",
+    approachTitle: "Progettiamo su misura",
     approachParagraphs: [
       "Ogni implementazione di AI è diversa. La soluzione ottimale dipende dal caso d'uso, dalla qualità dei dati, dai requisiti tecnici, dal livello di rischio, dalla compliance e dai risultati attesi.",
       "La vera sfida non è semplicemente usare l'AI, ma progettare una soluzione che produca risultati accurati, affidabili ed economicamente sostenibili. Per questo analizziamo le variabili in gioco, validiamo gli output su più modelli e costruiamo workflow ottimizzati che aumentano la precisione, riducono i costi e danno fiducia nei risultati generati dall'AI.",
@@ -274,7 +274,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
     chatMsg: "How do I reset machine 3?",
     chatReply: "Hold STOP for 5s, then restart from the panel…",
     approachEyebrow: "Our approach",
-    approachTitle: "Every AI project is different, and must be designed to measure",
+    approachTitle: "We design to measure",
     approachParagraphs: [
       "Every AI implementation is different. The optimal solution depends on the use case, data quality, engineering requirements, risk level, compliance needs and expected outcomes.",
       "The challenge is not simply using AI, but designing a solution that delivers accurate, reliable and cost-effective results. That's why we analyze these variables, validate outputs across multiple AI models and build optimized workflows that improve accuracy, reduce operational costs and increase confidence in AI-generated results.",
@@ -319,7 +319,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       ],
       stats: [
         { value: "8–29 ms", label: "on-device inference" },
-        { value: "~4 MB", label: "optimized model" },
+        { value: "−20–30%", label: "unplanned downtime" },
         { value: "100%", label: "processed on the device" },
       ],
     },
@@ -392,7 +392,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
     chatMsg: "¿Cómo reinicio la máquina 3?",
     chatReply: "Mantén STOP 5s y reinicia desde el panel…",
     approachEyebrow: "Nuestro enfoque",
-    approachTitle: "Cada proyecto de IA es diferente, y debe diseñarse a medida",
+    approachTitle: "Diseñamos a medida",
     approachParagraphs: [
       "Cada implementación de IA es diferente. La solución óptima depende del caso de uso, la calidad de los datos, los requisitos técnicos, el nivel de riesgo, las necesidades de cumplimiento y los resultados esperados.",
       "El reto no es simplemente usar la IA, sino diseñar una solución que ofrezca resultados precisos, fiables y rentables. Por eso analizamos estas variables, validamos las salidas en varios modelos de IA y construimos flujos de trabajo optimizados que mejoran la precisión, reducen los costes y aumentan la confianza en los resultados generados por la IA.",
@@ -437,7 +437,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       ],
       stats: [
         { value: "8–29 ms", label: "inferencia en el dispositivo" },
-        { value: "~4 MB", label: "modelo optimizado" },
+        { value: "−20–30%", label: "paradas no planificadas" },
         { value: "100%", label: "procesado en el dispositivo" },
       ],
     },
@@ -510,7 +510,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
     chatMsg: "Wie setze ich Maschine 3 zurück?",
     chatReply: "STOP 5s gedrückt halten, dann über das Panel neu starten…",
     approachEyebrow: "Unser Ansatz",
-    approachTitle: "Jedes KI-Projekt ist anders und muss maßgeschneidert entworfen werden",
+    approachTitle: "Wir entwerfen maßgeschneidert",
     approachParagraphs: [
       "Jede KI-Umsetzung ist anders. Die optimale Lösung hängt vom Anwendungsfall, der Datenqualität, den technischen Anforderungen, dem Risikoniveau, den Compliance-Anforderungen und den erwarteten Ergebnissen ab.",
       "Die Herausforderung ist nicht, KI einfach zu nutzen, sondern eine Lösung zu entwerfen, die genaue, zuverlässige und kosteneffiziente Ergebnisse liefert. Deshalb analysieren wir diese Variablen, validieren Ausgaben über mehrere KI-Modelle und bauen optimierte Workflows, die die Genauigkeit erhöhen, Kosten senken und das Vertrauen in KI-Ergebnisse stärken.",
@@ -555,7 +555,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       ],
       stats: [
         { value: "8–29 ms", label: "Inferenz auf dem Gerät" },
-        { value: "~4 MB", label: "optimiertes Modell" },
+        { value: "−20–30%", label: "ungeplante Stillstände" },
         { value: "100%", label: "auf dem Gerät verarbeitet" },
       ],
     },
@@ -628,7 +628,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
     chatMsg: "Comment réinitialiser la machine 3 ?",
     chatReply: "Maintiens STOP 5s, puis redémarre depuis le panneau…",
     approachEyebrow: "Notre approche",
-    approachTitle: "Chaque projet d'IA est différent, et doit être conçu sur mesure",
+    approachTitle: "Nous concevons sur mesure",
     approachParagraphs: [
       "Chaque mise en œuvre d'IA est différente. La solution optimale dépend du cas d'usage, de la qualité des données, des exigences techniques, du niveau de risque, des besoins de conformité et des résultats attendus.",
       "Le défi n'est pas simplement d'utiliser l'IA, mais de concevoir une solution qui produit des résultats précis, fiables et rentables. C'est pourquoi nous analysons ces variables, validons les sorties sur plusieurs modèles d'IA et construisons des workflows optimisés qui améliorent la précision, réduisent les coûts et renforcent la confiance dans les résultats générés par l'IA.",
@@ -673,7 +673,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       ],
       stats: [
         { value: "8–29 ms", label: "inférence sur l'appareil" },
-        { value: "~4 MB", label: "modèle optimisé" },
+        { value: "−20–30%", label: "arrêts non planifiés" },
         { value: "100%", label: "traité sur l'appareil" },
       ],
     },
@@ -746,7 +746,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
     chatMsg: "Com reinicio la màquina 3?",
     chatReply: "Mantén STOP 5s i reinicia des del panell…",
     approachEyebrow: "El nostre enfocament",
-    approachTitle: "Cada projecte d'IA és diferent, i s'ha de dissenyar a mida",
+    approachTitle: "Dissenyem a mida",
     approachParagraphs: [
       "Cada implementació d'IA és diferent. La solució òptima depèn del cas d'ús, la qualitat de les dades, els requisits tècnics, el nivell de risc, les necessitats de compliment i els resultats esperats.",
       "El repte no és simplement usar la IA, sinó dissenyar una solució que ofereixi resultats precisos, fiables i rendibles. Per això analitzem aquestes variables, validem les sortides en diversos models d'IA i construïm fluxos de treball optimitzats que milloren la precisió, redueixen els costos i augmenten la confiança en els resultats generats per la IA.",
@@ -791,7 +791,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
       ],
       stats: [
         { value: "8–29 ms", label: "inferència al dispositiu" },
-        { value: "~4 MB", label: "model optimitzat" },
+        { value: "−20–30%", label: "aturades no planificades" },
         { value: "100%", label: "processat al dispositiu" },
       ],
     },
