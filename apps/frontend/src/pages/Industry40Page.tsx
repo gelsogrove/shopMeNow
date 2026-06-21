@@ -329,7 +329,7 @@ function EdgeAISection({ e }: { e: EdgeAICopy }) {
     <section className="relative overflow-hidden border-y border-white/5 bg-white/[0.02] py-16 lg:py-24">
       <div className="pointer-events-none absolute -top-32 right-0 h-[26rem] w-[26rem] rounded-full bg-green-500/10 blur-3xl" />
       <div className="relative mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <motion.div {...reveal} className="mb-10 max-w-3xl lg:mb-14">
+        <motion.div {...reveal} className="mb-10 lg:mb-14">
           <span className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-green-400">
             <Cpu className="h-4 w-4" />
             {e.eyebrow}
@@ -337,7 +337,9 @@ function EdgeAISection({ e }: { e: EdgeAICopy }) {
           <h2 className="mt-3 text-3xl font-bold leading-tight text-white lg:text-4xl">
             {e.title}
           </h2>
-          <p className="mt-3 text-lg leading-relaxed text-slate-400">{e.lead}</p>
+          <p className="mt-3 max-w-3xl text-lg leading-relaxed text-slate-400">
+            {e.lead}
+          </p>
         </motion.div>
 
         {/* Benefit cards */}
