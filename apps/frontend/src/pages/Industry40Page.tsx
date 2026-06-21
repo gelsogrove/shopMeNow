@@ -79,6 +79,7 @@ export function Industry40Page() {
         url="/edgeai"
         lang={language as Industry40Lang}
         type="article"
+        robots="noindex, nofollow"
         serviceType="AI for Industry 4.0 Manufacturing"
       />
       <SiteHeader />

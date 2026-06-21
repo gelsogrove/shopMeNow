@@ -117,7 +117,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         title: "Custom WhatsApp Chatbots",
         lead: "L'assistente AI centralizzato: tutte le informazioni del reparto in un unico punto.",
         paragraph:
-          "Un chatbot addestrato sui tuoi macchinari, manuali e procedure. Parla con gli operatori nella loro lingua, risponde sul campo in tempo reale e fa arrivare le informazioni giuste alle persone giuste. Ogni implementazione è diversa: il chatbot giusto nasce dalle scelte giuste su modello, prompt, validazione e integrazione con i tuoi sistemi.",
+          "Il punto di riferimento per tutta l'azienda: parla la lingua di ogni operatore, risponde sul campo in tempo reale e porta l'informazione giusta, alla persona giusta, nel momento giusto.",
         bullets: [
           "Risponde a domande degli operatori su macchinari e procedure",
           "Segnala guasti e anomalie aprendo ticket automatici",
@@ -232,7 +232,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         title: "Custom WhatsApp Chatbots",
         lead: "The centralized AI assistant: all your shop-floor information in one place.",
         paragraph:
-          "A chatbot trained on your machines, manuals and procedures. It talks to operators in their own language, answers on the floor in real time and gets the right information to the right people. Every implementation is different: the right chatbot comes from the right choices on model, prompts, validation and integration with your systems.",
+          "The single point of reference for the whole company: it speaks every operator's language, answers on the floor in real time, and brings the right information, to the right person, at the right moment.",
         bullets: [
           "Answers operator questions about machines and procedures",
           "Reports faults and anomalies, opening tickets automatically",
@@ -347,7 +347,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         title: "Chatbots de WhatsApp a Medida",
         lead: "El asistente IA centralizado: toda la información de la planta en un único lugar.",
         paragraph:
-          "Un chatbot entrenado con tus máquinas, manuales y procedimientos. Habla con los operarios en su idioma, responde en planta en tiempo real y hace llegar la información correcta a las personas adecuadas. Cada implementación es diferente: el chatbot correcto nace de las decisiones correctas sobre modelo, prompts, validación e integración con tus sistemas.",
+          "El punto de referencia para toda la empresa: habla el idioma de cada operario, responde en planta en tiempo real y lleva la información correcta, a la persona correcta, en el momento correcto.",
         bullets: [
           "Responde a las dudas de los operarios sobre máquinas y procedimientos",
           "Señala averías y anomalías abriendo tickets automáticos",
@@ -462,7 +462,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         title: "Custom WhatsApp Chatbots",
         lead: "Der zentrale KI-Assistent: alle Informationen der Produktion an einem Ort.",
         paragraph:
-          "Ein Chatbot, trainiert auf deine Maschinen, Handbücher und Abläufe. Er spricht mit den Mitarbeitern in ihrer Sprache, antwortet in Echtzeit vor Ort und bringt die richtigen Informationen zu den richtigen Personen. Jede Umsetzung ist anders: Der richtige Chatbot entsteht aus den richtigen Entscheidungen zu Modell, Prompts, Validierung und Integration in deine Systeme.",
+          "Der zentrale Bezugspunkt für das ganze Unternehmen: Er spricht die Sprache jedes Mitarbeiters, antwortet in Echtzeit vor Ort und bringt die richtige Information, zur richtigen Person, im richtigen Moment.",
         bullets: [
           "Beantwortet Fragen der Mitarbeiter zu Maschinen und Abläufen",
           "Meldet Störungen und Anomalien und öffnet automatisch Tickets",
@@ -577,7 +577,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         title: "Chatbots WhatsApp sur Mesure",
         lead: "L'assistant IA centralisé : toutes les informations de l'atelier au même endroit.",
         paragraph:
-          "Un chatbot entraîné sur tes machines, tes manuels et tes procédures. Il parle aux opérateurs dans leur langue, répond sur le terrain en temps réel et achemine la bonne information aux bonnes personnes. Chaque mise en œuvre est différente : le bon chatbot naît des bons choix sur le modèle, les prompts, la validation et l'intégration avec tes systèmes.",
+          "Le point de référence pour toute l'entreprise : il parle la langue de chaque opérateur, répond sur le terrain en temps réel et apporte la bonne information, à la bonne personne, au bon moment.",
         bullets: [
           "Répond aux questions des opérateurs sur les machines et les procédures",
           "Signale les pannes et anomalies en ouvrant des tickets automatiques",
@@ -692,7 +692,7 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         title: "Chatbots de WhatsApp a Mida",
         lead: "L'assistent IA centralitzat: tota la informació de la planta en un únic lloc.",
         paragraph:
-          "Un chatbot entrenat amb les teves màquines, manuals i procediments. Parla amb els operaris en la seva llengua, respon a planta en temps real i fa arribar la informació correcta a les persones adequades. Cada implementació és diferent: el chatbot adequat neix de les decisions correctes sobre model, prompts, validació i integració amb els teus sistemes.",
+          "Un chatbot de referència per a tota l'empresa: parla amb els operaris en la seva llengua i fa arribar la informació correcta a les persones adequades.",
         bullets: [
           "Respon les preguntes dels operaris sobre màquines i procediments",
           "Detecta avaries i anomalies obrint tiquets automàtics",
