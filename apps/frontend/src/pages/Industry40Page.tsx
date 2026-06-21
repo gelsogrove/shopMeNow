@@ -1,40 +1,15 @@
 import { useEffect, useState, type ReactNode } from "react"
 import { useLanguage } from "@/contexts/LanguageContext"
 import { motion } from "framer-motion"
-import {
-  AlertTriangle,
-  Ban,
-  BadgeCheck,
-  BarChart3,
-  Bot,
-  Camera,
-  Check,
-  Cpu,
-  Database,
-  Eye,
-  Factory,
-  HardHat,
-  Info,
-  MessageCircle,
-  Monitor,
-  PackageCheck,
-  Ruler,
-  Users,
-  Warehouse,
-  Wrench,
-} from "lucide-react"
+import { Bot, Check, Cpu, Eye, MessageCircle } from "lucide-react"
 import { SEO } from "@/components/SEO"
 import { SiteHeader } from "@/components/layout/SiteHeader"
 import { SiteFooter } from "@/components/layout/SiteFooter"
 import { CtaSection } from "@/components/landing/CtaSection"
 import {
   INDUSTRY40_I18N,
-  type ActionStep,
-  type DecisionScenario,
-  type ExampleCopy,
   type Industry40Copy,
   type Industry40Lang,
-  type ProcessesCopy,
 } from "./industry40/industry40.i18n"
 
 // ---------------------------------------------------------------------------
@@ -190,12 +165,6 @@ export function Industry40Page() {
           </div>
         </section>
 
-        {/* ============ REAL EXAMPLE: DEFECT → DECISION → ACTION ======= */}
-        <ExampleSection ex={t.example} />
-
-        {/* ============ AUTOMATE PROCESSES ACROSS YOUR BUSINESS ======== */}
-        <ProcessesSection p={t.processes} />
-
         {/* ===================== OUR APPROACH ========================= */}
         <section className="py-16 lg:py-24">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
@@ -223,23 +192,6 @@ export function Industry40Page() {
                 </motion.p>
               ))}
             </div>
-
-            <motion.div {...reveal} className="mt-10">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                {t.approachFactorsLabel}
-              </p>
-              <div className="flex flex-wrap gap-2.5">
-                {t.approachFactors.map((f) => (
-                  <span
-                    key={f}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-green-400/20 bg-green-400/5 px-3 py-1.5 text-sm font-medium text-green-200"
-                  >
-                    <Check className="h-3.5 w-3.5 text-green-400" />
-                    {f}
-                  </span>
-                ))}
-              </div>
-            </motion.div>
           </div>
         </section>
 
@@ -254,76 +206,6 @@ export function Industry40Page() {
 
       <SiteFooter language={language} />
     </>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// ProcessesSection — "Automate processes across your business": a grid of
-// use-case cards (icon + title + 3 bullets) spanning the whole production
-// chain, from raw materials to workforce.
-// ---------------------------------------------------------------------------
-function processIcon(key: string) {
-  const cls = "w-5 h-5 text-green-400"
-  switch (key) {
-    case "material":
-      return <Ruler className={cls} />
-    case "production":
-      return <Factory className={cls} />
-    case "quality":
-      return <BadgeCheck className={cls} />
-    case "packaging":
-      return <PackageCheck className={cls} />
-    case "distribution":
-      return <Warehouse className={cls} />
-    case "maintenance":
-      return <Wrench className={cls} />
-    case "safety":
-      return <HardHat className={cls} />
-    case "workforce":
-      return <Users className={cls} />
-    default:
-      return <Cpu className={cls} />
-  }
-}
-
-function ProcessesSection({ p }: { p: ProcessesCopy }) {
-  return (
-    <section className="py-16 lg:py-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <motion.div {...reveal} className="mb-10 max-w-3xl lg:mb-14">
-          <h2 className="text-3xl font-bold leading-tight text-white lg:text-4xl">
-            {p.title}
-          </h2>
-          <p className="mt-3 text-lg leading-relaxed text-slate-400">{p.lead}</p>
-        </motion.div>
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {p.cards.map((card, idx) => (
-            <motion.div
-              key={card.title}
-              {...reveal}
-              transition={{ ...reveal.transition, delay: (idx % 4) * 0.05 }}
-              className="rounded-2xl border border-white/10 bg-slate-900/40 p-6 transition-colors hover:border-green-400/40 hover:bg-slate-900"
-            >
-              <span className="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-green-400/10">
-                {processIcon(card.icon)}
-              </span>
-              <h3 className="text-lg font-bold text-white">{card.title}</h3>
-              <ul className="mt-4 space-y-2.5">
-                {card.items.map((item) => (
-                  <li key={item} className="flex items-start gap-2.5">
-                    <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-green-400" />
-                    <span className="text-[14px] leading-relaxed text-slate-400">
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </motion.div>
-          ))}
-        </div>
-      </div>
-    </section>
   )
 }
 
@@ -381,262 +263,6 @@ function SolutionRow({
 
       {/* Visual (second in DOM → shows below its heading on mobile) */}
       <div className={reversed ? "lg:order-2" : "lg:order-1"}>{visual}</div>
-    </motion.div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// ExampleSection — real-world story: a detected defect is triaged (stop vs
-// flag vs log, by severity + frequency + confidence) and then acted upon
-// (monitor → stats → snapshot → DB → remove). Closes with an animated chart
-// of defects by time of day.
-// ---------------------------------------------------------------------------
-function actionIcon(key: string) {
-  const cls = "w-5 h-5 text-green-400"
-  switch (key) {
-    case "monitor":
-      return <Monitor className={cls} />
-    case "stats":
-      return <BarChart3 className={cls} />
-    case "camera":
-      return <Camera className={cls} />
-    case "database":
-      return <Database className={cls} />
-    case "robot":
-      return <Bot className={cls} />
-    default:
-      return <Cpu className={cls} />
-  }
-}
-
-// Illustrative defect distribution by time of day — the night shift spikes.
-const DEFECTS_BY_HOUR = [
-  { label: "06–10", value: 4, night: false },
-  { label: "10–14", value: 6, night: false },
-  { label: "14–18", value: 5, night: false },
-  { label: "18–22", value: 9, night: false },
-  { label: "22–02", value: 18, night: true },
-  { label: "02–06", value: 22, night: true },
-]
-
-function ExampleSection({ ex }: { ex: ExampleCopy }) {
-  return (
-    <section className="border-y border-white/5 bg-white/[0.02] py-16 lg:py-24">
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <motion.div {...reveal} className="mb-10 max-w-3xl lg:mb-14">
-          <span className="text-sm font-semibold uppercase tracking-wide text-green-400">
-            {ex.eyebrow}
-          </span>
-          <h2 className="mt-3 text-3xl font-bold leading-tight text-white lg:text-4xl">
-            {ex.title}
-          </h2>
-          <p className="mt-3 text-lg leading-relaxed text-slate-400">{ex.intro}</p>
-          <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-900/60 px-4 py-2 text-sm font-medium text-slate-200">
-            <Eye className="h-4 w-4 text-green-400" />
-            {ex.cameraLabel}
-          </span>
-        </motion.div>
-
-        {/* Decision logic */}
-        <motion.h3
-          {...reveal}
-          className="mb-6 text-xl font-bold text-white lg:text-2xl"
-        >
-          {ex.decisionTitle}
-        </motion.h3>
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-          {ex.scenarios.map((s, idx) => (
-            <ScenarioCard key={s.title} s={s} delay={idx * 0.08} />
-          ))}
-        </div>
-        <motion.p
-          {...reveal}
-          className="mt-5 flex items-start gap-2 text-sm italic text-slate-400"
-        >
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
-          {ex.thresholdNote}
-        </motion.p>
-
-        {/* Action pipeline */}
-        <motion.h3
-          {...reveal}
-          className="mb-6 mt-14 text-xl font-bold text-white lg:text-2xl"
-        >
-          {ex.actionsTitle}
-        </motion.h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {ex.actions.map((a, idx) => (
-            <ActionCard key={a.title} a={a} step={idx + 1} delay={idx * 0.08} />
-          ))}
-        </div>
-
-        {/* Statistics chart */}
-        <DefectChart ex={ex} />
-      </div>
-    </section>
-  )
-}
-
-// Severity → palette map for the decision cards.
-const SEVERITY = {
-  critical: {
-    ring: "border-rose-400/40",
-    glow: "bg-rose-500/10",
-    tag: "bg-rose-500 text-white",
-    bar: "bg-rose-400",
-    text: "text-rose-300",
-    icon: <Ban className="h-5 w-5 text-rose-400" />,
-  },
-  warning: {
-    ring: "border-amber-400/40",
-    glow: "bg-amber-500/10",
-    tag: "bg-amber-400 text-slate-950",
-    bar: "bg-amber-400",
-    text: "text-amber-300",
-    icon: <AlertTriangle className="h-5 w-5 text-amber-400" />,
-  },
-  low: {
-    ring: "border-white/15",
-    glow: "bg-slate-500/10",
-    tag: "bg-slate-600 text-white",
-    bar: "bg-slate-400",
-    text: "text-slate-300",
-    icon: <Info className="h-5 w-5 text-slate-300" />,
-  },
-} as const
-
-function ScenarioCard({ s, delay }: { s: DecisionScenario; delay: number }) {
-  const c = SEVERITY[s.severity]
-  return (
-    <motion.div
-      {...reveal}
-      transition={{ ...reveal.transition, delay }}
-      className={`relative overflow-hidden rounded-2xl border ${c.ring} bg-slate-900/40 p-6`}
-    >
-      <div className={`pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full ${c.glow} blur-2xl`} />
-      <div className="relative">
-        <div className="mb-4 flex items-center justify-between gap-2">
-          <span className="flex items-center gap-2">
-            {c.icon}
-            <span
-              className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${c.tag}`}
-            >
-              {s.tag}
-            </span>
-          </span>
-        </div>
-        <h4 className="text-lg font-bold text-white">{s.title}</h4>
-        <p className="mt-1.5 text-[14px] leading-relaxed text-slate-400">
-          {s.desc}
-        </p>
-
-        {/* Confidence meter */}
-        <div className="mt-5">
-          <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium uppercase tracking-wide text-slate-500">
-            <span>Confidence</span>
-            <span className={c.text}>{s.confidence}%</span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-white/10">
-            <motion.div
-              initial={{ width: 0 }}
-              whileInView={{ width: `${s.confidence}%` }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.9, delay: delay + 0.2, ease: "easeOut" }}
-              className={`h-full rounded-full ${c.bar}`}
-            />
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  )
-}
-
-function ActionCard({
-  a,
-  step,
-  delay,
-}: {
-  a: ActionStep
-  step: number
-  delay: number
-}) {
-  return (
-    <motion.div
-      {...reveal}
-      transition={{ ...reveal.transition, delay }}
-      className="relative rounded-2xl border border-white/10 bg-slate-900/50 p-5"
-    >
-      <span className="absolute right-3 top-3 text-xs font-bold text-slate-600">
-        {step}
-      </span>
-      <span className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-green-400/10">
-        {actionIcon(a.icon)}
-      </span>
-      <h4 className="text-[15px] font-bold text-white">{a.title}</h4>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-slate-400">{a.desc}</p>
-    </motion.div>
-  )
-}
-
-function DefectChart({ ex }: { ex: ExampleCopy }) {
-  const max = Math.max(...DEFECTS_BY_HOUR.map((d) => d.value))
-  return (
-    <motion.div
-      {...reveal}
-      className="mt-14 rounded-3xl border border-white/10 bg-slate-900/40 p-6 lg:p-8"
-    >
-      <div className="mb-1 flex items-center gap-2">
-        <BarChart3 className="h-5 w-5 text-green-400" />
-        <h3 className="text-xl font-bold text-white lg:text-2xl">
-          {ex.chartTitle}
-        </h3>
-      </div>
-      <p className="text-[15px] leading-relaxed text-slate-400">
-        {ex.chartSubtitle}
-      </p>
-
-      {/* Legend */}
-      <div className="mt-4 flex items-center gap-5 text-xs text-slate-400">
-        <span className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-sm bg-green-400" />
-          {ex.chartLegendDay}
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-sm bg-rose-400" />
-          {ex.chartLegendNight}
-        </span>
-        <span className="ml-auto font-mono uppercase tracking-wide text-slate-500">
-          n° {ex.chartUnit}
-        </span>
-      </div>
-
-      {/* Bars */}
-      <div className="mt-6 flex h-56 items-end gap-2 sm:gap-4">
-        {DEFECTS_BY_HOUR.map((d, i) => (
-          <div
-            key={d.label}
-            className="flex h-full flex-1 flex-col items-center justify-end gap-2"
-          >
-            <span className="text-xs font-bold text-slate-300">{d.value}</span>
-            <motion.div
-              initial={{ height: 0 }}
-              whileInView={{ height: `${(d.value / max) * 100}%` }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: i * 0.08, ease: "easeOut" }}
-              className={`w-full rounded-t-lg ${d.night ? "bg-rose-400" : "bg-green-400"}`}
-            />
-            <span className="text-[11px] text-slate-500">{d.label}</span>
-          </div>
-        ))}
-      </div>
-
-      <p className="mt-6 flex items-start gap-2 text-[15px] leading-relaxed text-slate-300">
-        <BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-green-400" />
-        <span>
-          <span className="font-semibold text-green-300">Insight — </span>
-          {ex.chartInsight}
-        </span>
-      </p>
     </motion.div>
   )
 }
