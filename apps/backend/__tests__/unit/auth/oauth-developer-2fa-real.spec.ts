@@ -122,7 +122,7 @@ describe('OAuth Controller - Real Unit Test', () => {
         getPayload: () => ({
           email: 'gelsogrove@gmail.com',
           given_name: 'Andrea',
-          family_name: 'Gelsomino',
+          family_name: 'Zelsomini',
           picture: 'https://example.com/photo.jpg',
           sub: 'google-user-id-123',
         }),
@@ -133,7 +133,7 @@ describe('OAuth Controller - Real Unit Test', () => {
         id: 'user-andrea-123',
         email: 'gelsogrove@gmail.com',
         firstName: 'Andrea',
-        lastName: 'Gelsomino',
+        lastName: 'Zelsomini',
         role: 'ADMIN',
         status: 'ACTIVE',
         isPlatformAdmin: true,  // ✅ Platform Admin

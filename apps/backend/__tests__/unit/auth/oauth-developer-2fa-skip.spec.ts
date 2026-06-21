@@ -144,7 +144,7 @@ describe('OAuth Controller - Developer User 2FA Skip', () => {
       id: 'user-123',
       email: 'gelsogrove@gmail.com',
       firstName: 'Andrea',
-      lastName: 'Gelsomino',
+      lastName: 'Zelsomini',
       role: 'ADMIN',
       status: 'ACTIVE',
       isPlatformAdmin: true,

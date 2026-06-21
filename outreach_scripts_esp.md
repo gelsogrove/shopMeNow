@@ -18,6 +18,7 @@ Perfecto. En 10 minutos le puedo mostrar cómo automatizarlo completamente.
 ```
 
 **Se dice "no tenemos WhatsApp":**
+
 > "Muchos de nuestros clientes tampoco lo tenían — ahora es su canal principal.
 > ¿Le parece si le mando un video de 2 minutos para que lo vea primero?"
 
@@ -42,6 +43,7 @@ Andrea
 ```
 
 **Follow-up si no responde (día 5):**
+
 ```
 Hola [nombre], solo un seguimiento rápido.
 Tengo un caso de una lavandería en [ciudad similar] que redujo el tiempo de
@@ -87,8 +89,7 @@ Una lavandería en Madrid redujo el 70% del tiempo dedicado a atención al clien
 
 ¿Tiene 10 minutos esta semana para una demo rápida?
 
-Un saludo,
-Andrea Gelsomino
+
 eChatbot
 ```
 
@@ -96,12 +97,12 @@ eChatbot
 
 ## PRIORITÀ OUTREACH
 
-| Canale | Tasso risposta | Quando usare |
-|--------|---------------|--------------|
-| Telefono | Alto (30-40%) | Prima scelta sempre |
-| LinkedIn DM | Medio (10-20%) | Se trovi il responsabile |
-| WhatsApp | Alto (40%+) | Solo se hanno numero pubblico |
-| Email | Basso (1-3%) | Ultima opzione |
+| Canale      | Tasso risposta | Quando usare                  |
+| ----------- | -------------- | ----------------------------- |
+| Telefono    | Alto (30-40%)  | Prima scelta sempre           |
+| LinkedIn DM | Medio (10-20%) | Se trovi il responsabile      |
+| WhatsApp    | Alto (40%+)    | Solo se hanno numero pubblico |
+| Email       | Basso (1-3%)   | Ultima opzione                |
 
 ## TOP 5 TARGET (inizia da questi)
 

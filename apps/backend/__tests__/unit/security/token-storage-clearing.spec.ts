@@ -197,7 +197,7 @@ describe('🔒 Token Storage Clearing - Security Requirements', () => {
     it('should test scenario: User A logs in, then User B logs in', () => {
       // SCENARIO (Andrea's Bug):
       // 1. User A (admin@echatbot.ai) logs in → token_A saved
-      // 2. User B (andrea.gelsomino@code.seat) logs in
+      // 2. User B logs in
       // 3. WITHOUT localStorage.clear():
       //    - token_A still in storage
       //    - localStorage.setItem('token', token_B) overwrites
