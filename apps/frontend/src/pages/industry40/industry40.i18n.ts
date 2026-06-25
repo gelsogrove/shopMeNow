@@ -41,6 +41,31 @@ export interface EdgePoint {
   desc: string
 }
 
+export interface CVBox {
+  x: number   // % from left
+  y: number   // % from top
+  w: number   // % width
+  h: number   // % height
+  label: string
+  conf: number  // 0-100
+  color?: "green" | "red" | "amber"
+}
+
+export interface IndustryCase {
+  image: string
+  industry: string
+  title: string
+  desc?: string
+  tags: string[]
+  boxes?: CVBox[]
+}
+
+export interface ImpactStat {
+  value: string
+  label: string
+  sub: string
+}
+
 export interface EdgeAICopy {
   eyebrow: string
   title: string
@@ -80,6 +105,13 @@ export interface Industry40Copy {
   approachEyebrow: string
   approachTitle: string
   approachParagraphs: string[]
+  // Impact stats band
+  impactStats: ImpactStat[]
+  // Industry cases
+  casesSectionEyebrow: string
+  casesSectionTitle: string
+  casesSectionLead: string
+  cases: IndustryCase[]
   // CTA
   cta: string
   ctaSub: string
@@ -194,6 +226,30 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         },
       ],
     },
+    impactStats: [
+      { value: "−40%", label: "Costi di rilavorazione", sub: "Media su linee di produzione con Computer Vision attiva" },
+      { value: "100%", label: "Copertura ispezione", sub: "Ogni pezzo ispezionato — nessuno sfugge al controllo qualità" },
+      { value: "< 15 ms", label: "Tempo di inferenza", sub: "Decisioni in tempo reale direttamente sul bordo linea" },
+    ],
+    casesSectionEyebrow: "Casi d'uso per settore",
+    casesSectionTitle: "Computer Vision: già al lavoro nel manufacturing",
+    casesSectionLead:
+      "Dalla catena di montaggio al frigorifero della grande distribuzione: ecco come le aziende usano computer vision e chatbot AI per tagliare i costi e aumentare la qualità.",
+    cases: [
+      { image: "/industry40/cases/defect-line.png", industry: "Quality Control", title: "Rilevamento difetti su linea di produzione", desc: "Rileva automaticamente crepe, inclusioni e difetti su componenti in uscita dalla linea, a ogni ciclo.", tags: ["Defect Detection", "Computer Vision", "Manufacturing"] },
+      { image: "/industry40/cases/dimension-defect.png", industry: "Precision Parts", title: "Analisi difetti dimensionali su componenti di precisione", desc: "Rileva imperfezioni geometriche e difetti superficiali su cuscinetti, flange e componenti torniti in pochi millisecondi.", tags: ["Dimensional Analysis", "Defect Detection", "Precision Parts"] },
+      { image: "/industry40/cases/scratch-detection.png", industry: "Surface Inspection", title: "Rilevamento graffi, ammaccature e imperfezioni su superfici", desc: "Identifica graffi e imperfezioni sulla carrozzeria con precisione sub-millimetrica, a qualsiasi velocità.", tags: ["Scratch Detection", "Paint Inspection", "Automotive"] },
+      { image: "/industry40/cases/weld-inspection.png", industry: "Welding", title: "Ispezione di saldature e giunture", desc: "Analizza porosità, cricche e discontinuità di saldatura prima che il pezzo avanzi sulla linea.", tags: ["Weld Inspection", "Computer Vision", "Quality"] },
+      { image: "/industry40/cases/label-warning.webp", industry: "Automotive", title: "Verifica etichette di sicurezza e marcature su componenti", desc: "Rileva etichette mancanti, illeggibili o non conformi su veicoli, macchinari e componenti.", tags: ["Label Verification", "Safety Labels", "Automotive"] },
+      { image: "/industry40/cases/unit-counting.jpg", industry: "Automotive", title: "Conteggio automatico", desc: "Verifica la presenza e la posizione di ogni componente sul prodotto finito, a 60 fps.", tags: ["Unit Counting", "Bolt Detection", "Automotive"] },
+      { image: "/industry40/cases/ocr-reading.png", industry: "OCR", title: "Lettura automatica di codici, seriali e ID su qualsiasi superficie", desc: "Legge VIN, seriali, targhe e QR code su qualsiasi superficie, anche in condizioni di illuminazione difficile.", tags: ["OCR", "Barcode", "Serial Reading"] },
+      { image: "/industry40/cases/safety-monitoring.jpg", industry: "Safety", title: "Monitoraggio e accessi in zona pericolosa del personale", desc: "Monitora in tempo reale la presenza di personale in zone a rischio e verifica il corretto uso dei DPI.", tags: ["Safety Monitoring", "PPE", "Access Control"],
+        boxes: [
+          { x: 46, y: 5, w: 48, h: 82, label: "Person 2 ⚠", conf: 97, color: "red" },
+        ],
+      },
+      { image: "/industry40/cases/warehouse-logistics.webp", industry: "Logistics", title: "Tracciamento merci, pallet e mezzi in magazzino", desc: "Traccia merci, pallet e mezzi di movimentazione nel magazzino e aggiorna l'inventario in automatico.", tags: ["Warehouse", "Forklift Detection", "Logistics"] },
+    ],
     cta: "Contattaci",
     ctaSub: "Ti mostriamo cosa è possibile con i tuoi dati.",
     ctaTitle: "Contattaci per maggiori informazioni",
@@ -307,6 +363,26 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         },
       ],
     },
+    impactStats: [
+      { value: "−40%", label: "Rework Costs", sub: "Average across production lines running Computer Vision" },
+      { value: "100%", label: "Inspection Coverage", sub: "Every part inspected — nothing escapes quality control" },
+      { value: "< 15 ms", label: "Inference Time", sub: "Real-time decisions directly at the line edge" },
+    ],
+    casesSectionEyebrow: "Use Cases by Industry",
+    casesSectionTitle: "Computer Vision: already at work in manufacturing",
+    casesSectionLead:
+      "From assembly lines to distribution center fridges: see how companies are using computer vision and AI chatbots to cut costs and boost quality.",
+    cases: [
+      { image: "/industry40/cases/defect-line.png", industry: "Quality Control", title: "Defect detection on production line", desc: "Automatically detects cracks, inclusions and defects on components as they leave the line, every cycle.", tags: ["Defect Detection", "Computer Vision", "Manufacturing"] },
+      { image: "/industry40/cases/dimension-defect.png", industry: "Precision Parts", title: "Dimensional defect analysis on precision components", desc: "Detects geometric imperfections and surface defects on bearings, flanges and machined parts in milliseconds.", tags: ["Dimensional Analysis", "Defect Detection", "Precision Parts"] },
+      { image: "/industry40/cases/scratch-detection.png", industry: "Surface Inspection", title: "Scratch, dent and surface imperfection detection", desc: "Identifies scratches and imperfections on painted surfaces to sub-millimetre precision, at any line speed.", tags: ["Scratch Detection", "Paint Inspection", "Automotive"] },
+      { image: "/industry40/cases/weld-inspection.png", industry: "Welding", title: "Weld and joint inspection", desc: "Analyses weld porosity, cracks and discontinuities before the part moves downstream.", tags: ["Weld Inspection", "Computer Vision", "Quality"] },
+      { image: "/industry40/cases/label-warning.webp", industry: "Automotive", title: "Safety label and marking verification on components", desc: "Detects missing, illegible or non-compliant labels on vehicles, machinery and components.", tags: ["Label Verification", "Safety Labels", "Automotive"] },
+      { image: "/industry40/cases/unit-counting.jpg", industry: "Automotive", title: "Automatic counting", desc: "Verifies the presence and position of every bolt and component on the finished product, at 60 fps.", tags: ["Unit Counting", "Bolt Detection", "Automotive"] },
+      { image: "/industry40/cases/ocr-reading.png", industry: "OCR", title: "Automatic reading of codes, serials and IDs on any surface", desc: "Reads VINs, serial numbers, plates and QR codes on any surface — even under poor lighting conditions.", tags: ["OCR", "Barcode", "Serial Reading"] },
+      { image: "/industry40/cases/safety-monitoring.jpg", industry: "Safety", title: "Personnel monitoring and access in hazardous zones", desc: "Monitors personnel presence in hazardous zones and verifies correct use of PPE in real time.", tags: ["Safety Monitoring", "PPE", "Access Control"], boxes: [{ x: 46, y: 5, w: 48, h: 82, label: "Person 2 ⚠", conf: 97, color: "red" }] },
+      { image: "/industry40/cases/warehouse-logistics.webp", industry: "Logistics", title: "Tracking goods, pallets and vehicles in warehouse", desc: "Tracks goods, pallets and handling vehicles across the warehouse and updates inventory automatically.", tags: ["Warehouse", "Forklift Detection", "Logistics"] },
+    ],
     cta: "Contact us",
     ctaSub: "We'll show you what's possible with your data.",
     ctaTitle: "Contact us for more information",
@@ -420,6 +496,26 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         },
       ],
     },
+    impactStats: [
+      { value: "−40%", label: "Costos de retrabajo", sub: "Media en líneas de producción con Computer Vision activa" },
+      { value: "100%", label: "Cobertura de inspección", sub: "Cada pieza inspeccionada — ninguna escapa al control de calidad" },
+      { value: "< 15 ms", label: "Tiempo de inferencia", sub: "Decisiones en tiempo real directamente en el borde de línea" },
+    ],
+    casesSectionEyebrow: "Casos de uso por sector",
+    casesSectionTitle: "Computer Vision: ya trabajando en la industria manufacturera",
+    casesSectionLead:
+      "Desde la cadena de montaje hasta el almacén: así usan las empresas la visión artificial y los chatbots AI para reducir costes y mejorar la calidad.",
+    cases: [
+      { image: "/industry40/cases/defect-line.png", industry: "Control de Calidad", title: "Detección de defectos en línea de producción", desc: "Detecta automáticamente grietas, inclusiones y defectos en los componentes al salir de la línea, en cada ciclo.", tags: ["Defect Detection", "Computer Vision", "Manufacturing"] },
+      { image: "/industry40/cases/dimension-defect.png", industry: "Precision Parts", title: "Análisis de defectos dimensionales en componentes de precisión", desc: "Detecta imperfecciones geométricas y defectos superficiales en rodamientos, bridas y piezas mecanizadas en milisegundos.", tags: ["Dimensional Analysis", "Defect Detection", "Precision Parts"] },
+      { image: "/industry40/cases/scratch-detection.png", industry: "Inspección de Superficie", title: "Detección de arañazos, abolladuras e imperfecciones en superficies", desc: "Identifica arañazos e imperfecciones en la carrocería con precisión sub-milimétrica, a cualquier velocidad.", tags: ["Scratch Detection", "Paint Inspection", "Automotive"] },
+      { image: "/industry40/cases/weld-inspection.png", industry: "Soldadura", title: "Inspección de soldaduras y juntas", desc: "Analiza la porosidad, grietas y discontinuidades de la soldadura antes de que la pieza avance en la línea.", tags: ["Weld Inspection", "Computer Vision", "Quality"] },
+      { image: "/industry40/cases/label-warning.webp", industry: "Automotriz", title: "Verificación de etiquetas de seguridad y marcas en componentes", desc: "Detecta etiquetas faltantes, ilegibles o no conformes en vehículos, maquinaria y componentes.", tags: ["Label Verification", "Safety Labels", "Automotive"] },
+      { image: "/industry40/cases/unit-counting.jpg", industry: "Automotriz", title: "Conteo automático", desc: "Verifica la presencia y posición de cada tornillo y componente en el producto acabado, a 60 fps.", tags: ["Unit Counting", "Bolt Detection", "Automotive"] },
+      { image: "/industry40/cases/ocr-reading.png", industry: "OCR", title: "Lectura automática de códigos, series e IDs en cualquier superficie", desc: "Lee VIN, números de serie, matrículas y códigos QR en cualquier superficie, incluso con iluminación difícil.", tags: ["OCR", "Barcode", "Serial Reading"] },
+      { image: "/industry40/cases/safety-monitoring.jpg", industry: "Seguridad", title: "Monitoreo de personal y accesos en zonas peligrosas", desc: "Monitorea en tiempo real la presencia de personal en zonas de riesgo y verifica el uso correcto de los EPP.", tags: ["Safety Monitoring", "PPE", "Access Control"], boxes: [{ x: 46, y: 5, w: 48, h: 82, label: "Person 2 ⚠", conf: 97, color: "red" }] },
+      { image: "/industry40/cases/warehouse-logistics.webp", industry: "Logística", title: "Seguimiento de mercancías, palés y vehículos en almacén", desc: "Rastrea mercancías, palés y vehículos de manutención en el almacén y actualiza el inventario automáticamente.", tags: ["Warehouse", "Forklift Detection", "Logistics"] },
+    ],
     cta: "Contáctanos",
     ctaSub: "Te mostramos lo que es posible con tus datos.",
     ctaTitle: "Contáctanos para más información",
@@ -533,6 +629,26 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         },
       ],
     },
+    impactStats: [
+      { value: "−40%", label: "Nacharbeitskosten", sub: "Durchschnitt über Produktionslinien mit aktiver Computer Vision" },
+      { value: "100%", label: "Inspektionsabdeckung", sub: "Jedes Teil geprüft — keines entgeht der Qualitätskontrolle" },
+      { value: "< 15 ms", label: "Inferenzzeit", sub: "Echtzeit-Entscheidungen direkt an der Linienkante" },
+    ],
+    casesSectionEyebrow: "Anwendungsfälle nach Branche",
+    casesSectionTitle: "Computer Vision: bereits im Einsatz in der Fertigungsindustrie",
+    casesSectionLead:
+      "Von der Montagelinie bis zum Lager: So nutzen Unternehmen Computer Vision und KI-Chatbots, um Kosten zu senken und Qualität zu steigern.",
+    cases: [
+      { image: "/industry40/cases/defect-line.png", industry: "Qualitätskontrolle", title: "Fehlererkennung an der Produktionslinie", desc: "Erkennt automatisch Risse, Einschlüsse und Fehler an Bauteilen am Linienausgang, bei jedem Zyklus.", tags: ["Defect Detection", "Computer Vision", "Manufacturing"] },
+      { image: "/industry40/cases/dimension-defect.png", industry: "Precision Parts", title: "Dimensionsfehleranalyse an Präzisionsbauteilen", desc: "Erkennt geometrische Unvollkommenheiten und Oberflächenfehler an Lagern, Flanschen und gedrehten Teilen in Millisekunden.", tags: ["Dimensional Analysis", "Defect Detection", "Precision Parts"] },
+      { image: "/industry40/cases/scratch-detection.png", industry: "Oberflächenprüfung", title: "Erkennung von Kratzern, Dellen und Oberflächenfehlern", desc: "Identifiziert Kratzer und Oberflächenfehler auf Karosserieteilen mit Sub-Millimeter-Präzision, bei jeder Liniengeschwindigkeit.", tags: ["Scratch Detection", "Paint Inspection", "Automotive"] },
+      { image: "/industry40/cases/weld-inspection.png", industry: "Schweißen", title: "Inspektion von Schweißnähten und Verbindungen", desc: "Analysiert Porosität, Risse und Unstetigkeiten in Schweißnähten, bevor das Teil die Linie verlässt.", tags: ["Weld Inspection", "Computer Vision", "Quality"] },
+      { image: "/industry40/cases/label-warning.webp", industry: "Automotive", title: "Prüfung von Sicherheitsetiketten und Kennzeichnungen an Bauteilen", desc: "Erkennt fehlende, unleserliche oder nicht konforme Etiketten an Fahrzeugen, Maschinen und Bauteilen.", tags: ["Label Verification", "Safety Labels", "Automotive"] },
+      { image: "/industry40/cases/unit-counting.jpg", industry: "Automotive", title: "Automatisches Zählen", desc: "Prüft Vorhandensein und Position jeder Schraube und jedes Bauteils am Fertigprodukt, mit 60 fps.", tags: ["Unit Counting", "Bolt Detection", "Automotive"] },
+      { image: "/industry40/cases/ocr-reading.png", industry: "OCR", title: "Automatisches Lesen von Codes, Seriennummern und IDs auf beliebigen Oberflächen", desc: "Liest VIN, Seriennummern, Kennzeichen und QR-Codes auf beliebigen Oberflächen — auch bei schlechten Lichtverhältnissen.", tags: ["OCR", "Barcode", "Serial Reading"] },
+      { image: "/industry40/cases/safety-monitoring.jpg", industry: "Sicherheit", title: "Personalüberwachung und Zugangskontrolle in Gefahrenbereichen", desc: "Überwacht die Anwesenheit von Personal in Gefahrenbereichen und prüft den korrekten Einsatz von PSA in Echtzeit.", tags: ["Safety Monitoring", "PPE", "Access Control"], boxes: [{ x: 46, y: 5, w: 48, h: 82, label: "Person 2 ⚠", conf: 97, color: "red" }] },
+      { image: "/industry40/cases/warehouse-logistics.webp", industry: "Logistik", title: "Verfolgung von Waren, Paletten und Fahrzeugen im Lager", desc: "Verfolgt Waren, Paletten und Flurförderfahrzeuge im Lager und aktualisiert den Bestand automatisch.", tags: ["Warehouse", "Forklift Detection", "Logistics"] },
+    ],
     cta: "Kontaktiere uns",
     ctaSub: "Wir zeigen dir, was mit deinen Daten möglich ist.",
     ctaTitle: "Kontaktiere uns für mehr Informationen",
@@ -646,6 +762,26 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         },
       ],
     },
+    impactStats: [
+      { value: "−40%", label: "Coûts de retouche", sub: "Moyenne sur les lignes de production avec Computer Vision active" },
+      { value: "100%", label: "Couverture d'inspection", sub: "Chaque pièce inspectée — aucune n'échappe au contrôle qualité" },
+      { value: "< 15 ms", label: "Temps d'inférence", sub: "Décisions en temps réel directement en bord de ligne" },
+    ],
+    casesSectionEyebrow: "Cas d'usage par secteur",
+    casesSectionTitle: "Computer Vision : déjà au travail dans l'industrie manufacturière",
+    casesSectionLead:
+      "De la chaîne de montage à l'entrepôt : comment les entreprises utilisent la vision par ordinateur et les chatbots IA pour réduire les coûts et améliorer la qualité.",
+    cases: [
+      { image: "/industry40/cases/defect-line.png", industry: "Contrôle Qualité", title: "Détection de défauts sur ligne de production", desc: "Détecte automatiquement fissures, inclusions et défauts sur les composants en sortie de ligne, à chaque cycle.", tags: ["Defect Detection", "Computer Vision", "Manufacturing"] },
+      { image: "/industry40/cases/dimension-defect.png", industry: "Precision Parts", title: "Analyse des défauts dimensionnels sur composants de précision", desc: "Détecte les imperfections géométriques et défauts de surface sur roulements, brides et pièces usinées en quelques millisecondes.", tags: ["Dimensional Analysis", "Defect Detection", "Precision Parts"] },
+      { image: "/industry40/cases/scratch-detection.png", industry: "Inspection Surface", title: "Détection de rayures, bosses et imperfections de surface", desc: "Identifie rayures et imperfections de carrosserie avec une précision sub-millimétrique, à toute vitesse de ligne.", tags: ["Scratch Detection", "Paint Inspection", "Automotive"] },
+      { image: "/industry40/cases/weld-inspection.png", industry: "Soudure", title: "Inspection des soudures et assemblages", desc: "Analyse porosité, fissures et discontinuités de soudure avant que la pièce n'avance sur la ligne.", tags: ["Weld Inspection", "Computer Vision", "Quality"] },
+      { image: "/industry40/cases/label-warning.webp", industry: "Automotive", title: "Vérification des étiquettes de sécurité et marquages sur composants", desc: "Détecte les étiquettes manquantes, illisibles ou non conformes sur véhicules, machines et composants.", tags: ["Label Verification", "Safety Labels", "Automotive"] },
+      { image: "/industry40/cases/unit-counting.jpg", industry: "Automotive", title: "Comptage automatique", desc: "Vérifie la présence et la position de chaque vis et composant sur le produit fini, à 60 fps.", tags: ["Unit Counting", "Bolt Detection", "Automotive"] },
+      { image: "/industry40/cases/ocr-reading.png", industry: "OCR", title: "Lecture automatique de codes, numéros de série et IDs sur toute surface", desc: "Lit VIN, numéros de série, plaques et QR codes sur toute surface — même en conditions d'éclairage difficiles.", tags: ["OCR", "Barcode", "Serial Reading"] },
+      { image: "/industry40/cases/safety-monitoring.jpg", industry: "Sécurité", title: "Surveillance du personnel et accès en zones dangereuses", desc: "Surveille en temps réel la présence de personnel en zones à risque et vérifie le port correct des EPI.", tags: ["Safety Monitoring", "PPE", "Access Control"], boxes: [{ x: 46, y: 5, w: 48, h: 82, label: "Person 2 ⚠", conf: 97, color: "red" }] },
+      { image: "/industry40/cases/warehouse-logistics.webp", industry: "Logistique", title: "Suivi des marchandises, palettes et véhicules en entrepôt", desc: "Suit marchandises, palettes et engins de manutention dans l'entrepôt et met l'inventaire à jour automatiquement.", tags: ["Warehouse", "Forklift Detection", "Logistics"] },
+    ],
     cta: "Contactez-nous",
     ctaSub: "On te montre ce qui est possible avec tes données.",
     ctaTitle: "Contactez-nous pour plus d'informations",
@@ -759,6 +895,26 @@ export const INDUSTRY40_I18N: Record<Industry40Lang, Industry40Copy> = {
         },
       ],
     },
+    impactStats: [
+      { value: "−40%", label: "Costos de retreball", sub: "Mitjana en línies de producció amb Computer Vision activa" },
+      { value: "100%", label: "Cobertura d'inspecció", sub: "Cada peça inspeccionada — cap escapa al control de qualitat" },
+      { value: "< 15 ms", label: "Temps d'inferència", sub: "Decisions en temps real directament a la vora de línia" },
+    ],
+    casesSectionEyebrow: "Casos d'ús per sector",
+    casesSectionTitle: "Computer Vision: ja treballant a la indústria manufacturera",
+    casesSectionLead:
+      "De la cadena de muntatge al magatzem: com les empreses utilitzen la visió artificial i els chatbots IA per reduir costos i millorar la qualitat.",
+    cases: [
+      { image: "/industry40/cases/defect-line.png", industry: "Control Qualitat", title: "Detecció de defectes en línia de producció", desc: "Detecta automàticament esquerdes, inclusions i defectes en components en sortir de la línia, a cada cicle.", tags: ["Defect Detection", "Computer Vision", "Manufacturing"] },
+      { image: "/industry40/cases/dimension-defect.png", industry: "Precision Parts", title: "Anàlisi de defectes dimensionals en components de precisió", desc: "Detecta imperfeccions geomètriques i defectes de superfície en coixinets, brides i peces tornejades en mil·lisegons.", tags: ["Dimensional Analysis", "Defect Detection", "Precision Parts"] },
+      { image: "/industry40/cases/scratch-detection.png", industry: "Inspecció Superfície", title: "Detecció de ratllades, bonys i imperfeccions en superfícies", desc: "Identifica ratllades i imperfeccions en la carrosseria amb precisió sub-mil·limètrica, a qualsevol velocitat.", tags: ["Scratch Detection", "Paint Inspection", "Automotive"] },
+      { image: "/industry40/cases/weld-inspection.png", industry: "Soldadura", title: "Inspecció de soldadures i unions", desc: "Analitza la porositat, esquerdes i discontinuïtats de soldadura abans que la peça avanci per la línia.", tags: ["Weld Inspection", "Computer Vision", "Quality"] },
+      { image: "/industry40/cases/label-warning.webp", industry: "Automotive", title: "Verificació d'etiquetes de seguretat i marcatures en components", desc: "Detecta etiquetes que falten, il·legibles o no conformes en vehicles, maquinària i components.", tags: ["Label Verification", "Safety Labels", "Automotive"] },
+      { image: "/industry40/cases/unit-counting.jpg", industry: "Automotive", title: "Recompte automàtic", desc: "Verifica la presència i posició de cada cargol i component en el producte acabat, a 60 fps.", tags: ["Unit Counting", "Bolt Detection", "Automotive"] },
+      { image: "/industry40/cases/ocr-reading.png", industry: "OCR", title: "Lectura automàtica de codis, números de sèrie i IDs en qualsevol superfície", desc: "Llegeix VIN, números de sèrie, matrícules i codis QR en qualsevol superfície, fins i tot amb il·luminació difícil.", tags: ["OCR", "Barcode", "Serial Reading"] },
+      { image: "/industry40/cases/safety-monitoring.jpg", industry: "Seguretat", title: "Monitoratge de personal i accessos en zones perilloses", desc: "Monitora en temps real la presència de personal en zones de risc i verifica l'ús correcte dels EPI.", tags: ["Safety Monitoring", "PPE", "Access Control"], boxes: [{ x: 46, y: 5, w: 48, h: 82, label: "Person 2 ⚠", conf: 97, color: "red" }] },
+      { image: "/industry40/cases/warehouse-logistics.webp", industry: "Logística", title: "Seguiment de mercaderies, palets i vehicles al magatzem", desc: "Fa el seguiment de mercaderies, palets i vehicles de manutenció al magatzem i actualitza l'inventari automàticament.", tags: ["Warehouse", "Forklift Detection", "Logistics"] },
+    ],
     cta: "Contacta'ns",
     ctaSub: "Et mostrem què és possible amb les teves dades.",
     ctaTitle: "Contacta'ns per a més informació",

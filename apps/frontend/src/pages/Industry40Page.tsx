@@ -28,6 +28,9 @@ import {
   type FlowCopy,
   type Industry40Copy,
   type Industry40Lang,
+  type IndustryCase,
+  type ImpactStat,
+  type CVBox,
 } from "./industry40/industry40.i18n"
 
 // ---------------------------------------------------------------------------
@@ -135,6 +138,9 @@ export function Industry40Page() {
           </motion.div>
         </section>
 
+        {/* ===================== IMPACT STATS BAND ==================== */}
+        <ImpactStatsBand stats={t.impactStats} />
+
         {/* ================ A DUO THAT CHANGES THE RULES =============== */}
         <section className="py-16 lg:py-20">
           <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
@@ -177,7 +183,7 @@ export function Industry40Page() {
                   key={sol.title}
                   sol={sol}
                   reversed={idx % 2 === 1}
-                  visual={idx === 0 ? <ChatMockup t={t} /> : <ScanMockup t={t} />}
+                  visual={idx === 0 ? <ChatMockup t={t} /> : <CVPhotoMockup t={t} />}
                 />
               ))}
             </div>
@@ -189,6 +195,14 @@ export function Industry40Page() {
 
         {/* ===================== EDGE AI (FUTURE) ===================== */}
         <EdgeAISection e={t.edgeai} />
+
+        {/* ===================== INDUSTRY CASES ======================= */}
+        <IndustryCasesSection
+          eyebrow={t.casesSectionEyebrow}
+          title={t.casesSectionTitle}
+          lead={t.casesSectionLead}
+          cases={t.cases}
+        />
 
         {/* ===================== OUR APPROACH ========================= */}
         <section className="py-16 lg:py-24">
@@ -528,100 +542,184 @@ function ChatBubble({
 }
 
 // ---------------------------------------------------------------------------
-// ScanMockup — Computer Vision inspection frame with a sweeping scan line and
-// a live "defect detected" bounding box over a grid of parts.
-// Swap-in: drop /industry40/vision.jpg to replace it with a real photo.
+// CVPhotoMockup — real automotive / CV photo for the Solutions section.
+// Uses unit-counting (engine with bolt detection) as primary; falls back to
+// defect-detection if the file is missing.
 // ---------------------------------------------------------------------------
-const VISION_PHOTOS = ["/industry40/vision.jpg"]
-
-function ScanMockup({ t }: { t: Industry40Copy }) {
-  const [failed, setFailed] = useState<string[]>([])
-  const parts = Array.from({ length: 12 })
-  const defectIndex = 6
-  const visible = VISION_PHOTOS.filter((src) => !failed.includes(src))
-
-  // Real defect-detection / counting photos stacked as a gallery. Each image
-  // hides itself on error; only when ALL are missing do we fall back to the
-  // animated scan panel below.
-  if (visible.length > 0) {
-    const alt = t.solutions[1]?.title ?? "Computer Vision"
-    return (
-      <div className="relative mx-auto w-full max-w-md space-y-4">
-        <div className="pointer-events-none absolute -inset-2 rounded-[2rem] bg-gradient-to-tr from-green-500/25 via-emerald-400/10 to-transparent blur-xl" />
-        {visible.map((src) => (
-          <img
-            key={src}
-            src={src}
-            alt={alt}
-            loading="lazy"
-            onError={() => setFailed((f) => [...f, src])}
-            className="relative w-full rounded-3xl border border-white/10 object-cover shadow-2xl"
-          />
-        ))}
-      </div>
-    )
-  }
-
+function CVPhotoMockup({ t }: { t: Industry40Copy }) {
   return (
     <div className="relative mx-auto w-full max-w-md">
       <div className="absolute -inset-2 rounded-[2rem] bg-gradient-to-tr from-green-500/25 via-emerald-400/10 to-transparent blur-xl" />
-      <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-950/80 shadow-2xl backdrop-blur">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-          <span className="flex items-center gap-2 text-sm font-semibold text-slate-200">
-            <Eye className="h-4 w-4 text-green-400" />
-            {t.scanLabel}
-          </span>
-          <span className="flex items-center gap-1.5 text-[11px] font-medium text-green-300">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-green-400" />
-            LIVE
-          </span>
-        </div>
+      <SwapImage
+        src="/industry40/cases/defect-detection.jpg"
+        fallbackSrc="/industry40/cases/unit-counting.jpg"
+        alt={t.solutions[1]?.title ?? "Computer Vision"}
+        className="relative w-full rounded-3xl border border-white/10 object-cover shadow-2xl"
+      />
+    </div>
+  )
+}
 
-        <div className="relative p-5">
-          <div className="grid grid-cols-4 gap-3">
-            {parts.map((_, i) => {
-              const isDefect = i === defectIndex
-              return (
-                <div
-                  key={i}
-                  className={`relative aspect-square rounded-lg border ${
-                    isDefect
-                      ? "border-rose-400/70 bg-rose-500/10"
-                      : "border-white/10 bg-white/[0.03]"
-                  }`}
-                >
-                  {isDefect && (
-                    <>
-                      <motion.span
-                        initial={{ opacity: 0.4 }}
-                        animate={{ opacity: [0.4, 1, 0.4] }}
-                        transition={{ duration: 1.4, repeat: Infinity }}
-                        className="absolute inset-0 rounded-lg ring-2 ring-rose-400"
-                      />
-                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-rose-500 px-2 py-0.5 text-[9px] font-bold text-white shadow">
-                        {t.scanStatus}
-                      </span>
-                    </>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-
-          <motion.div
-            initial={{ top: "8%" }}
-            animate={{ top: ["8%", "88%", "8%"] }}
-            transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
-            className="pointer-events-none absolute left-5 right-5 h-0.5 bg-green-400 shadow-[0_0_12px_2px_rgba(74,222,128,0.6)]"
-          />
-        </div>
-
-        <div className="flex items-center justify-between border-t border-white/10 px-4 py-3 text-[11px]">
-          <span className="font-mono text-slate-500">cam_01 · 60 fps</span>
-          <span className="font-semibold text-green-300">{t.scanConfidence}</span>
+// ---------------------------------------------------------------------------
+// ImpactStatsBand — full-width dark band with 3 large metric callouts,
+// inspired by Roboflow's "impact metrics" section.
+// ---------------------------------------------------------------------------
+function ImpactStatsBand({ stats }: { stats: ImpactStat[] }) {
+  return (
+    <section className="border-y border-white/5 bg-white/[0.03]">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 divide-y divide-white/5 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          {stats.map((s, i) => (
+            <motion.div
+              key={i}
+              {...reveal}
+              transition={{ ...reveal.transition, delay: i * 0.08 }}
+              className="px-8 py-10 text-center"
+            >
+              <p className="text-4xl font-extrabold text-green-400 lg:text-5xl">
+                {s.value}
+              </p>
+              <p className="mt-2 text-lg font-semibold text-white">{s.label}</p>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500">
+                {s.sub}
+              </p>
+            </motion.div>
+          ))}
         </div>
       </div>
-    </div>
+    </section>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// CVOverlay — renders bounding-box detection frames on top of an image,
+// mimicking real computer-vision output (label chip + confidence score).
+// ---------------------------------------------------------------------------
+const BOX_COLORS = {
+  green: { border: "border-green-400", bg: "bg-green-400", text: "text-green-400" },
+  red:   { border: "border-rose-400",  bg: "bg-rose-400",  text: "text-rose-400"  },
+  amber: { border: "border-amber-400", bg: "bg-amber-400", text: "text-amber-400" },
+}
+
+function CVOverlay({ boxes }: { boxes: CVBox[] }) {
+  return (
+    <>
+      {boxes.map((b, i) => {
+        const c = BOX_COLORS[b.color ?? "green"]
+        return (
+          <div
+            key={i}
+            className={`pointer-events-none absolute border-2 ${c.border}`}
+            style={{ left: `${b.x}%`, top: `${b.y}%`, width: `${b.w}%`, height: `${b.h}%` }}
+          >
+            {/* corner accents */}
+            <span className={`absolute -left-px -top-px h-2 w-2 ${c.bg}`} />
+            <span className={`absolute -right-px -top-px h-2 w-2 ${c.bg}`} />
+            <span className={`absolute -bottom-px -left-px h-2 w-2 ${c.bg}`} />
+            <span className={`absolute -bottom-px -right-px h-2 w-2 ${c.bg}`} />
+            {/* label chip */}
+            <span
+              className={`absolute -top-5 left-0 whitespace-nowrap rounded-sm ${c.bg} px-1.5 py-0.5 text-[9px] font-bold text-slate-900 leading-none`}
+            >
+              {b.label} {b.conf}%
+            </span>
+          </div>
+        )
+      })}
+      {/* live indicator */}
+      <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-slate-900/80 px-2 py-0.5 text-[10px] font-semibold text-green-300 backdrop-blur-sm">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-400" />
+        LIVE
+      </span>
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// IndustryCasesSection — 3-column card grid with CV bounding-box overlays,
+// metric callout, and tag pills. Style inspired by Roboflow's use-case cards.
+// ---------------------------------------------------------------------------
+function IndustryCasesSection({
+  eyebrow,
+  title,
+  lead,
+  cases,
+}: {
+  eyebrow: string
+  title: string
+  lead: string
+  cases: IndustryCase[]
+}) {
+  return (
+    <section className="py-16 lg:py-24">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <motion.div {...reveal} className="mb-12 max-w-3xl lg:mb-16">
+          <span className="text-sm font-semibold uppercase tracking-wide text-green-400">
+            {eyebrow}
+          </span>
+          <h2 className="mt-3 text-3xl font-bold leading-tight text-white lg:text-4xl">
+            {title}
+          </h2>
+          <p className="mt-3 text-lg leading-relaxed text-slate-400">{lead}</p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {cases.map((c, idx) => (
+            <motion.div
+              key={idx}
+              {...reveal}
+              transition={{ ...reveal.transition, delay: idx * 0.06 }}
+              className="group relative overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 transition-all hover:border-green-400/40 hover:shadow-[0_0_32px_rgba(74,222,128,0.08)]"
+            >
+              {/* Image + CV overlay */}
+              <div className="relative h-52 overflow-hidden">
+                <img
+                  src={c.image}
+                  alt={c.title}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                {/* dark overlay so boxes stand out */}
+                <div className="absolute inset-0 bg-slate-900/30" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+                {/* CV bounding boxes */}
+                {c.boxes && c.boxes.length > 0 && (
+                  <CVOverlay boxes={c.boxes} />
+                )}
+                {/* Industry pill */}
+                <span className="absolute left-3 bottom-3 rounded-full border border-green-400/30 bg-slate-900/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-green-300 backdrop-blur-sm">
+                  {c.industry}
+                </span>
+              </div>
+
+              {/* Body */}
+              <div className="p-5">
+                <h3 className="text-base font-bold leading-snug text-white">
+                  {c.title}
+                </h3>
+                {c.desc && (
+                  <p className="mt-2 text-[13px] leading-relaxed text-slate-400">
+                    {c.desc}
+                  </p>
+                )}
+
+                {/* Tags */}
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {c.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-white/5 px-2.5 py-0.5 text-[11px] font-medium text-slate-400"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
   )
 }
 
