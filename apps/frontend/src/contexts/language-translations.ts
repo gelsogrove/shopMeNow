@@ -178,9 +178,9 @@ export const translations = {
     // About Me Section
     "about.name": "Andrea Gelsomino",
     "about.role": "AI Engineer & Senior Full-Stack Developer",
-    "about.bio": "Ingegnere AI appassionato e Senior Full-Stack Developer, dedicato alla progettazione e allo sviluppo di soluzioni di intelligenza artificiale innovative. Sviluppo chatbot personalizzati basati su fine-tuning, embeddings e Retrieval-Augmented Generation (RAG), realizzo applicazioni di Edge AI e computer vision utilizzando workflow di Active Learning e Human-in-the-Loop e realizzo agenti AI e automazioni con n8n, integrando modelli linguistici, API e servizi aziendali in flussi intelligenti.",
+    "about.bio": "Ingegnere AI appassionato e Senior Full-Stack Developer, dedicato alla progettazione e allo sviluppo di soluzioni AI intelligenti. Sviluppo chatbot personalizzati basati su fine-tuning, embeddings e Retrieval-Augmented Generation (RAG), applicando le migliori pratiche di AI engineering, evaluation frameworks e LLM architecture patterns per costruire sistemi AI affidabili e scalabili.",
     "about.languages": "Inglese, Italiano, Spagnolo.",
-    "about.cta": "Sempre disponibile a connettermi, condividere idee e presentare demo già sviluppate.",
+    "about.cta": "Sempre disponibile a connettermi, condividere idee e parlare di tecnologia.",
 
     "pricing.features.channels": "Canali WhatsApp",
     "pricing.features.channel": "Canale WhatsApp",
@@ -881,9 +881,9 @@ export const translations = {
     // About Me Section
     "about.name": "Andrea Gelsomino",
     "about.role": "AI Engineer & Senior Full-Stack Developer",
-    "about.bio": "Passionate AI Engineer and Senior Full-Stack Developer, dedicated to designing and developing innovative artificial intelligence solutions. I build custom chatbots based on fine-tuning, embeddings and Retrieval-Augmented Generation (RAG), develop Edge AI and computer vision applications using Active Learning and Human-in-the-Loop workflows, and build AI agents and automations with n8n, integrating language models, APIs and business services into intelligent flows.",
+    "about.bio": "Passionate AI Engineer & Senior Full-Stack Developer dedicated to designing and building intelligent AI solutions. I develop custom chatbots powered by fine-tuning, embeddings, and Retrieval-Augmented Generation (RAG), applying AI engineering best practices, evaluation frameworks, and LLM architecture patterns to build reliable and scalable AI systems.",
     "about.languages": "English, Italian, Spanish.",
-    "about.cta": "Always open to connect, share ideas, and present demos I've already developed.",
+    "about.cta": "Always open to connect, share ideas, and talk about technologies.",
 
     "pricing.features.channels": "WhatsApp Channels",
     "pricing.features.channel": "WhatsApp Channel",
@@ -1468,9 +1468,9 @@ export const translations = {
     // About Me Section
     "about.name": "Andrea Gelsomino",
     "about.role": "AI Engineer & Senior Full-Stack Developer",
-    "about.bio": "Ingeniero de IA apasionado y Senior Full-Stack Developer, dedicado al diseño y desarrollo de soluciones de inteligencia artificial innovadoras. Desarrollo chatbots personalizados basados en fine-tuning, embeddings y Retrieval-Augmented Generation (RAG), creo aplicaciones de Edge AI y computer vision utilizando workflows de Active Learning y Human-in-the-Loop, y desarrollo agentes de IA y automatizaciones con n8n, integrando modelos de lenguaje, APIs y servicios empresariales en flujos inteligentes.",
+    "about.bio": "Ingeniero de IA apasionado y Senior Full-Stack Developer, dedicado al diseño y desarrollo de soluciones de IA inteligentes. Desarrollo chatbots personalizados basados en fine-tuning, embeddings y Retrieval-Augmented Generation (RAG), aplicando las mejores prácticas de AI engineering, evaluation frameworks y LLM architecture patterns para construir sistemas de IA fiables y escalables.",
     "about.languages": "Inglés, Italiano, Español.",
-    "about.cta": "Siempre abierto a conectar, compartir ideas y presentar demos que ya he desarrollado.",
+    "about.cta": "Siempre abierto a conectar, compartir ideas y hablar de tecnología.",
 
     "pricing.features.channels": "Canales WhatsApp",
     "pricing.features.channel": "Canal WhatsApp",
@@ -2107,9 +2107,9 @@ export const translations = {
     // About Me Section
     "about.name": "Andrea Gelsomino",
     "about.role": "AI Engineer & Senior Full-Stack Developer",
-    "about.bio": "Leidenschaftlicher AI Engineer und Senior Full-Stack Developer, der sich der Konzeption und Entwicklung innovativer Lösungen für künstliche Intelligenz widmet. Ich entwickle maßgeschneiderte Chatbots auf Basis von Fine-Tuning, Embeddings und Retrieval-Augmented Generation (RAG), realisiere Edge-AI- und Computer-Vision-Anwendungen mit Active-Learning- und Human-in-the-Loop-Workflows und entwickle KI-Agenten und Automatisierungen mit n8n, indem ich Sprachmodelle, APIs und Unternehmensdienste in intelligente Abläufe integriere.",
+    "about.bio": "Leidenschaftlicher AI Engineer und Senior Full-Stack Developer, der sich der Konzeption und Entwicklung intelligenter KI-Lösungen widmet. Ich entwickle maßgeschneiderte Chatbots auf Basis von Fine-Tuning, Embeddings und Retrieval-Augmented Generation (RAG) und wende dabei AI-Engineering-Best-Practices, evaluation frameworks und LLM architecture patterns an, um zuverlässige und skalierbare KI-Systeme zu bauen.",
     "about.languages": "Englisch, Italienisch, Spanisch.",
-    "about.cta": "Immer offen für Vernetzung, den Austausch von Ideen und die Präsentation bereits entwickelter Demos.",
+    "about.cta": "Immer offen für Vernetzung, den Austausch von Ideen und Gespräche über Technologien.",
 
     "pricing.features.channels": "WhatsApp-Kanäle",
     "pricing.features.channel": "WhatsApp-Kanal",
