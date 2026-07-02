@@ -176,7 +176,7 @@ export const translations = {
     "common.viewMore": "Scopri di più →",
 
     // About Me Section
-    "about.name": "Andrea Gelsomino",
+    "about.name": "Andrea Gelsomino 🇮🇹",
     "about.role": "AI Engineer & Senior Full-Stack Developer",
     "about.bio": "Ingegnere AI appassionato e Senior Full-Stack Developer, dedicato alla progettazione e allo sviluppo di soluzioni AI intelligenti. Sviluppo chatbot personalizzati basati su fine-tuning, embeddings e Retrieval-Augmented Generation (RAG), applicando le migliori pratiche di AI engineering, evaluation frameworks e LLM architecture patterns per costruire sistemi AI affidabili e scalabili.",
     "about.languages": "Inglese, Italiano, Spagnolo.",
@@ -879,7 +879,7 @@ export const translations = {
     "common.viewMore": "Learn more →",
 
     // About Me Section
-    "about.name": "Andrea Gelsomino",
+    "about.name": "Andrea Gelsomino 🇮🇹",
     "about.role": "AI Engineer & Senior Full-Stack Developer",
     "about.bio": "Passionate AI Engineer & Senior Full-Stack Developer dedicated to designing and building intelligent AI solutions. I develop custom chatbots powered by fine-tuning, embeddings, and Retrieval-Augmented Generation (RAG), applying AI engineering best practices, evaluation frameworks, and LLM architecture patterns to build reliable and scalable AI systems.",
     "about.languages": "English, Italian, Spanish.",
@@ -1466,7 +1466,7 @@ export const translations = {
     "common.viewMore": "Ver más →",
 
     // About Me Section
-    "about.name": "Andrea Gelsomino",
+    "about.name": "Andrea Gelsomino 🇮🇹",
     "about.role": "AI Engineer & Senior Full-Stack Developer",
     "about.bio": "Ingeniero de IA apasionado y Senior Full-Stack Developer, dedicado al diseño y desarrollo de soluciones de IA inteligentes. Desarrollo chatbots personalizados basados en fine-tuning, embeddings y Retrieval-Augmented Generation (RAG), aplicando las mejores prácticas de AI engineering, evaluation frameworks y LLM architecture patterns para construir sistemas de IA fiables y escalables.",
     "about.languages": "Inglés, Italiano, Español.",
@@ -2105,7 +2105,7 @@ export const translations = {
     "common.viewMore": "Mehr erfahren →",
 
     // About Me Section
-    "about.name": "Andrea Gelsomino",
+    "about.name": "Andrea Gelsomino 🇮🇹",
     "about.role": "AI Engineer & Senior Full-Stack Developer",
     "about.bio": "Leidenschaftlicher AI Engineer und Senior Full-Stack Developer, der sich der Konzeption und Entwicklung intelligenter KI-Lösungen widmet. Ich entwickle maßgeschneiderte Chatbots auf Basis von Fine-Tuning, Embeddings und Retrieval-Augmented Generation (RAG) und wende dabei AI-Engineering-Best-Practices, evaluation frameworks und LLM architecture patterns an, um zuverlässige und skalierbare KI-Systeme zu bauen.",
     "about.languages": "Englisch, Italienisch, Spanisch.",
