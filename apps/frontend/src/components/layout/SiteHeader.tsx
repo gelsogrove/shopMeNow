@@ -264,6 +264,8 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
             <a href="/#demo" className="hover:text-white transition-colors">Demo</a>
             <span className="text-white/20">|</span>
             <Link to="/contact" className="hover:text-white transition-colors">{t.contact}</Link>
+            <span className="text-white/20">|</span>
+            <a href="https://www.echatbot.ai/login" className="hover:text-white transition-colors">{t.signIn}</a>
           </div>
         </div>
 
@@ -449,6 +451,7 @@ export function SiteHeader({ language: _language, onLanguageChange: _onLanguageC
             <nav className="flex flex-col gap-4">
               <Link to="/" className="font-medium text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.home}</Link>
               <Link to="/contact" className="font-medium text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.contact}</Link>
+              <a href="https://www.echatbot.ai/login" className="font-medium text-slate-200 hover:text-green-600 transition-colors" onClick={() => setIsMenuOpen(false)}>{t.signIn}</a>
 
               <div className="border-t border-white/10 pt-4 mt-2">
                 <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">{t.resources}</p>

@@ -2487,6 +2487,75 @@ export function LoginPage() {
         </div>
       </div>
 
+      {/* About Me Section */}
+      <div className="py-20">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, x: -80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.35 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
+            <GlowCard lift accent="green" innerClassName="p-8 sm:p-10 lg:p-12 min-h-[320px]">
+              <div className="grid grid-cols-1 lg:grid-cols-[320px,1fr] gap-10 items-start">
+                {/* Left: Round photo linking to LinkedIn */}
+                <div className="flex flex-col items-center lg:items-start gap-4">
+                  <a
+                    href="https://www.linkedin.com/in/gelsomino/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group relative"
+                  >
+                    <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-full bg-white p-2 shadow-xl transition-all duration-300 group-hover:shadow-2xl group-hover:scale-105">
+                      <div className="h-full w-full overflow-hidden rounded-full">
+                        <img
+                          src="https://media.licdn.com/dms/image/v2/C4D03AQH2mRau-p4xGw/profile-displayphoto-shrink_400_400/profile-displayphoto-shrink_400_400/0/1556032005185?e=1784764800&v=beta&t=LhVftgFH9aJZha0mSUmWAFWJ3F3q5IwHyTVr-_3MtGU"
+                          alt={t("about.name")}
+                          className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-700"
+                        />
+                      </div>
+                    </div>
+                  </a>
+                </div>
+
+                {/* Right: Content */}
+                <div className="space-y-6 text-center lg:text-left">
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 text-teal-700 rounded-full text-sm font-medium mx-auto lg:mx-0">
+                      <span>👋</span>
+                      {t("about.role")}
+                    </div>
+                    <h3 className="text-3xl lg:text-4xl font-bold text-white leading-tight">
+                      {t("about.name")}
+                    </h3>
+                    <p className="text-xl text-slate-300 leading-relaxed text-justify">
+                      {t("about.bio")}
+                    </p>
+                    <p className="text-lg text-slate-400">
+                      {t("about.languages")}
+                    </p>
+                    <p className="text-lg text-slate-300 italic">
+                      {t("about.cta")}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 flex justify-center lg:justify-start">
+                    <a
+                      href="https://www.linkedin.com/in/gelsomino/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 w-full sm:w-auto sm:h-[52px] px-8 py-4 text-base sm:text-lg font-semibold rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300 justify-center"
+                    >
+                      <span>LinkedIn →</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </GlowCard>
+          </motion.div>
+        </div>
+      </div>
+
       {/* Contact Form removed - see /contact page */}
       {false && <div id="contact" className="py-16 border-t border-slate-200">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">

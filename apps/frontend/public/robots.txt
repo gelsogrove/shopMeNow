@@ -56,6 +56,9 @@ Disallow: /gdpr
 # Disallow: /checkout  <- intentionally omitted
 # Disallow: /feedback  <- intentionally omitted
 
+# Hidden / stealth pages (noindex + disallow = double protection)
+Disallow: /edgeai
+
 # Utility pages that are clearly not for indexing
 Disallow: /checkout-success
 Disallow: /paypal-result

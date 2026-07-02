@@ -174,7 +174,14 @@ export const translations = {
     "privacy.subtitle": "Nessun dato sensibile viene inviato a terze parti o modelli AI. L'accesso è protetto con token con ambito limitato, crittografato in transito e limitato ai dati minimi richiesti per ogni interazione. I dati dei tuoi clienti restano sotto il tuo controllo.",
     "privacy.button": "Vai al GDPR",
     "common.viewMore": "Scopri di più →",
-    
+
+    // About Me Section
+    "about.name": "Andrea Gelsomino",
+    "about.role": "AI Engineer & Senior Full-Stack Developer",
+    "about.bio": "AI Engineer & Senior Full-Stack Developer with expertise in Node.js. I create custom chatbots, apply fine-tuning and embeddings, deliver Edge AI and computer vision solutions using Active Learning and Human-in-the-Loop concepts, n8n, and protect sensitive data with responsible AI practices.",
+    "about.languages": "English, Italian, Spanish.",
+    "about.cta": "Always open to connect, share ideas, and present demos I've already developed.",
+
     "pricing.features.channels": "Canali WhatsApp",
     "pricing.features.channel": "Canale WhatsApp",
     "pricing.features.products": "Prodotti",
@@ -868,7 +875,14 @@ export const translations = {
     "privacy.subtitle": "No sensitive data is sent to third parties or AI models. Access is secured with scoped tokens, encrypted in transit, and limited to the minimum data required for each interaction. Your customer data stays under your control.",
     "privacy.button": "Go to GDPR",
     "common.viewMore": "Learn more →",
-    
+
+    // About Me Section
+    "about.name": "Andrea Gelsomino",
+    "about.role": "AI Engineer & Senior Full-Stack Developer",
+    "about.bio": "AI Engineer & Senior Full-Stack Developer with expertise in Node.js. I create custom chatbots, apply fine-tuning and embeddings, deliver Edge AI and computer vision solutions using Active Learning and Human-in-the-Loop concepts, n8n, and protect sensitive data with responsible AI practices.",
+    "about.languages": "English, Italian, Spanish.",
+    "about.cta": "Always open to connect, share ideas, and present demos I've already developed.",
+
     "pricing.features.channels": "WhatsApp Channels",
     "pricing.features.channel": "WhatsApp Channel",
     "pricing.features.products": "Products",
@@ -1448,7 +1462,14 @@ export const translations = {
     "privacy.subtitle": "Ningún dato sensible se envía a terceros o modelos de IA. El acceso está protegido con tokens de alcance limitado, cifrado en tránsito y limitado a los datos mínimos requeridos para cada interacción. Los datos de tus clientes permanecen bajo tu control.",
     "privacy.button": "Ir al GDPR",
     "common.viewMore": "Ver más →",
-    
+
+    // About Me Section
+    "about.name": "Andrea Gelsomino",
+    "about.role": "AI Engineer & Senior Full-Stack Developer",
+    "about.bio": "AI Engineer & Senior Full-Stack Developer with expertise in Node.js. I create custom chatbots, apply fine-tuning and embeddings, deliver Edge AI and computer vision solutions using Active Learning and Human-in-the-Loop concepts, n8n, and protect sensitive data with responsible AI practices.",
+    "about.languages": "English, Italian, Spanish.",
+    "about.cta": "Always open to connect, share ideas, and present demos I've already developed.",
+
     "pricing.features.channels": "Canales WhatsApp",
     "pricing.features.channel": "Canal WhatsApp",
     "pricing.features.products": "Productos",
@@ -2078,6 +2099,13 @@ export const translations = {
     "privacy.subtitle": "Es werden keine sensiblen Daten an Dritte oder KI-Modelle gesendet. Der Zugriff wird mit eingeschränkten Tokens abgesichert, bei der Übertragung verschlüsselt und auf das für jede Interaktion erforderliche Minimum an Daten beschränkt. Deine Kundendaten bleiben unter deiner Kontrolle.",
     "privacy.button": "Zur DSGVO",
     "common.viewMore": "Mehr erfahren →",
+
+    // About Me Section
+    "about.name": "Andrea Gelsomino",
+    "about.role": "AI Engineer & Senior Full-Stack Developer",
+    "about.bio": "AI Engineer & Senior Full-Stack Developer with expertise in Node.js. I create custom chatbots, apply fine-tuning and embeddings, deliver Edge AI and computer vision solutions using Active Learning and Human-in-the-Loop concepts, n8n, and protect sensitive data with responsible AI practices.",
+    "about.languages": "English, Italian, Spanish.",
+    "about.cta": "Always open to connect, share ideas, and present demos I've already developed.",
 
     "pricing.features.channels": "WhatsApp-Kanäle",
     "pricing.features.channel": "WhatsApp-Kanal",
