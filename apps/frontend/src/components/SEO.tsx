@@ -26,7 +26,7 @@ export function SEO({
   url,
   type = "website",
   lang = "en",
-  robots = "index, follow",
+  robots = "noindex, nofollow",
   hreflangs = [],
   serviceType,
 }: SEOProps) {

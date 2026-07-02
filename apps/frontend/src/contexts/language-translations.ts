@@ -178,9 +178,9 @@ export const translations = {
     // About Me Section
     "about.name": "Andrea Gelsomino",
     "about.role": "AI Engineer & Senior Full-Stack Developer",
-    "about.bio": "AI Engineer & Senior Full-Stack Developer with expertise in Node.js. I create custom chatbots, apply fine-tuning and embeddings, deliver Edge AI and computer vision solutions using Active Learning and Human-in-the-Loop concepts, n8n, and protect sensitive data with responsible AI practices.",
-    "about.languages": "English, Italian, Spanish.",
-    "about.cta": "Always open to connect, share ideas, and present demos I've already developed.",
+    "about.bio": "Ingegnere AI appassionato e Senior Full-Stack Developer, dedicato alla progettazione e allo sviluppo di soluzioni di intelligenza artificiale innovative. Sviluppo chatbot personalizzati basati su fine-tuning, embeddings e Retrieval-Augmented Generation (RAG), realizzo applicazioni di Edge AI e computer vision utilizzando workflow di Active Learning e Human-in-the-Loop e realizzo agenti AI e automazioni con n8n, integrando modelli linguistici, API e servizi aziendali in flussi intelligenti.",
+    "about.languages": "Inglese, Italiano, Spagnolo.",
+    "about.cta": "Sempre disponibile a connettermi, condividere idee e presentare demo già sviluppate.",
 
     "pricing.features.channels": "Canali WhatsApp",
     "pricing.features.channel": "Canale WhatsApp",
@@ -337,6 +337,7 @@ export const translations = {
     "nav.pricing": "Prezzi",
     "nav.contact": "Contatti",
     "nav.contactUs": "Contattaci",
+    "nav.signIn": "Accedi",
     "nav.language": "Seleziona Lingua",
     "nav.welcome": "Benvenuto",
     "nav.yourChannels": "I Tuoi Canali",
@@ -786,6 +787,7 @@ export const translations = {
     "nav.demo": "Demo",
     "nav.pricing": "Pricing",
     "nav.contact": "Contact us",
+    "nav.signIn": "Sign In",
     "nav.language": "Select Language",
     "nav.welcome": "Welcome",
     "nav.yourChannels": "Your Channels",
@@ -879,7 +881,7 @@ export const translations = {
     // About Me Section
     "about.name": "Andrea Gelsomino",
     "about.role": "AI Engineer & Senior Full-Stack Developer",
-    "about.bio": "AI Engineer & Senior Full-Stack Developer with expertise in Node.js. I create custom chatbots, apply fine-tuning and embeddings, deliver Edge AI and computer vision solutions using Active Learning and Human-in-the-Loop concepts, n8n, and protect sensitive data with responsible AI practices.",
+    "about.bio": "Passionate AI Engineer and Senior Full-Stack Developer, dedicated to designing and developing innovative artificial intelligence solutions. I build custom chatbots based on fine-tuning, embeddings and Retrieval-Augmented Generation (RAG), develop Edge AI and computer vision applications using Active Learning and Human-in-the-Loop workflows, and build AI agents and automations with n8n, integrating language models, APIs and business services into intelligent flows.",
     "about.languages": "English, Italian, Spanish.",
     "about.cta": "Always open to connect, share ideas, and present demos I've already developed.",
 
@@ -1466,9 +1468,9 @@ export const translations = {
     // About Me Section
     "about.name": "Andrea Gelsomino",
     "about.role": "AI Engineer & Senior Full-Stack Developer",
-    "about.bio": "AI Engineer & Senior Full-Stack Developer with expertise in Node.js. I create custom chatbots, apply fine-tuning and embeddings, deliver Edge AI and computer vision solutions using Active Learning and Human-in-the-Loop concepts, n8n, and protect sensitive data with responsible AI practices.",
-    "about.languages": "English, Italian, Spanish.",
-    "about.cta": "Always open to connect, share ideas, and present demos I've already developed.",
+    "about.bio": "Ingeniero de IA apasionado y Senior Full-Stack Developer, dedicado al diseño y desarrollo de soluciones de inteligencia artificial innovadoras. Desarrollo chatbots personalizados basados en fine-tuning, embeddings y Retrieval-Augmented Generation (RAG), creo aplicaciones de Edge AI y computer vision utilizando workflows de Active Learning y Human-in-the-Loop, y desarrollo agentes de IA y automatizaciones con n8n, integrando modelos de lenguaje, APIs y servicios empresariales en flujos inteligentes.",
+    "about.languages": "Inglés, Italiano, Español.",
+    "about.cta": "Siempre abierto a conectar, compartir ideas y presentar demos que ya he desarrollado.",
 
     "pricing.features.channels": "Canales WhatsApp",
     "pricing.features.channel": "Canal WhatsApp",
@@ -1571,6 +1573,7 @@ export const translations = {
     "nav.pricing": "Precios",
     "nav.contact": "Contacto",
     "nav.contactUs": "Contáctanos",
+    "nav.signIn": "Iniciar Sesión",
     "nav.language": "Seleccionar Idioma",
     "nav.welcome": "Bienvenido",
     "nav.yourChannels": "Tus Canales",
@@ -2011,6 +2014,7 @@ export const translations = {
     "nav.demo": "Demo",
     "nav.pricing": "Preise",
     "nav.contact": "Kontaktiere uns",
+    "nav.signIn": "Anmelden",
     "nav.language": "Sprache auswählen",
     "nav.welcome": "Willkommen",
     "nav.yourChannels": "Deine Kanäle",
@@ -2103,9 +2107,9 @@ export const translations = {
     // About Me Section
     "about.name": "Andrea Gelsomino",
     "about.role": "AI Engineer & Senior Full-Stack Developer",
-    "about.bio": "AI Engineer & Senior Full-Stack Developer with expertise in Node.js. I create custom chatbots, apply fine-tuning and embeddings, deliver Edge AI and computer vision solutions using Active Learning and Human-in-the-Loop concepts, n8n, and protect sensitive data with responsible AI practices.",
-    "about.languages": "English, Italian, Spanish.",
-    "about.cta": "Always open to connect, share ideas, and present demos I've already developed.",
+    "about.bio": "Leidenschaftlicher AI Engineer und Senior Full-Stack Developer, der sich der Konzeption und Entwicklung innovativer Lösungen für künstliche Intelligenz widmet. Ich entwickle maßgeschneiderte Chatbots auf Basis von Fine-Tuning, Embeddings und Retrieval-Augmented Generation (RAG), realisiere Edge-AI- und Computer-Vision-Anwendungen mit Active-Learning- und Human-in-the-Loop-Workflows und entwickle KI-Agenten und Automatisierungen mit n8n, indem ich Sprachmodelle, APIs und Unternehmensdienste in intelligente Abläufe integriere.",
+    "about.languages": "Englisch, Italienisch, Spanisch.",
+    "about.cta": "Immer offen für Vernetzung, den Austausch von Ideen und die Präsentation bereits entwickelter Demos.",
 
     "pricing.features.channels": "WhatsApp-Kanäle",
     "pricing.features.channel": "WhatsApp-Kanal",

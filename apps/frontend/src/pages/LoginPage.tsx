@@ -120,7 +120,11 @@ export function LoginPage() {
   const [isValidatingSession, setIsValidatingSession] = useState(true)
   const [activeTab, setActiveTab] = useState<'signin' | 'register'>('signin')
   const [showOnboardingWizard, setShowOnboardingWizard] = useState(false)
-  
+  // About Me section is mounted client-side only, so it's excluded from
+  // the HTML search engines crawl (kept out of the indexable homepage content).
+  const [showAboutMe, setShowAboutMe] = useState(false)
+  useEffect(() => { setShowAboutMe(true) }, [])
+
   // 👤 Logged-in user state (for showing avatar instead of login/register buttons)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [loggedInUser, setLoggedInUser] = useState<{ 
@@ -1050,7 +1054,7 @@ export function LoginPage() {
           "One AI on WhatsApp for your whole franchise network: 24/7 replies, real-time translation, per-shop data, appointment booking and promo campaigns."
         }
         keywords="chatbot whatsapp, chatbot franchising, whatsapp multi sede, ai whatsapp, assistente whatsapp, prenotazione appuntamenti whatsapp, campagne whatsapp"
-        robots={showLoginCard ? "noindex, nofollow" : "index, follow"}
+        robots="noindex, nofollow"
       />
       <div
         className={`w-full min-h-screen ${showLoginCard ? "bg-slate-100" : "bg-[#070d18] text-slate-200"}`}
@@ -1065,6 +1069,8 @@ export function LoginPage() {
               <a href="#demo" className="hover:text-white transition-colors">Demo</a>
               <span className="text-white/20">|</span>
               <a href="/contact" className="hover:text-white transition-colors">{t("nav.contact")}</a>
+              <span className="text-white/20">|</span>
+              <a href="https://www.echatbot.ai/login" className="hover:text-white transition-colors">{t("nav.signIn")}</a>
             </div>
           </div>
 
@@ -2487,7 +2493,8 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* About Me Section */}
+      {/* About Me Section — client-side mounted only, kept out of crawlable HTML */}
+      {showAboutMe && (
       <div className="py-20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <motion.div
@@ -2555,6 +2562,7 @@ export function LoginPage() {
           </motion.div>
         </div>
       </div>
+      )}
 
       {/* Contact Form removed - see /contact page */}
       {false && <div id="contact" className="py-16 border-t border-slate-200">

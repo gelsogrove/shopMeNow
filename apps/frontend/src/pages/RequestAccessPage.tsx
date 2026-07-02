@@ -191,7 +191,7 @@ export default function RequestAccessPage() {
         description={t.seoDesc}
         keywords={t.seoKeys}
         url="/request-access"
-        robots="index, follow"
+        robots="noindex, nofollow"
       />
       <SiteHeader />
 
