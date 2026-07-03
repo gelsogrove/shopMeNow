@@ -1288,6 +1288,28 @@ export function LoginPage() {
             <p className="mt-2 text-sm sm:text-base text-slate-300">
               {t("hero.valueProp.body")}
             </p>
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {[
+                "MCP",
+                "SDD",
+                "FineTuning",
+                "Embedding",
+                "Rag",
+                "N8N",
+                "HarnessEngineering",
+                "AgenticWorkflow",
+                "PromptEngineering",
+                "ContextEngineering",
+                "LoopEngineering",
+              ].map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-green-400/20 bg-green-400/10 px-3 py-1 text-xs font-medium text-green-300"
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 
