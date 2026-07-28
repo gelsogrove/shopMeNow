@@ -36,7 +36,6 @@ import {
   CheckCheck,
   Mic,
   SmilePlus,
-  RotateCcw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -2026,12 +2025,12 @@ export function ChatWidget({
               {instantChat && (
                 <button
                   onClick={handleNewChat}
-                  className="hover:brightness-95 p-2 rounded-lg transition-colors"
-                  style={{ backgroundColor: "transparent" }}
+                  className="hover:brightness-95 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium"
+                  style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
                   title="New chat"
                   aria-label="New chat"
                 >
-                  <RotateCcw className="w-5 h-5" />
+                  New chat
                 </button>
               )}
               <button
