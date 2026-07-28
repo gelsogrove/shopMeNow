@@ -43,6 +43,12 @@ const CARD_LAST4_CTX_RE =
 // Italian mobile: optional +39 prefix + a 3xx number, 9-10 digits total.
 const PHONE_IT_RE = /(?:\+39\s?)?3\d{2}[\s.-]?\d{3}[\s.-]?\d{3,4}/g
 
+// Generic international phone: a leading + and 7-15 digits (E.164-ish),
+// optionally with spaces/dots/dashes as separators. Falls back here only
+// when PHONE_IT_RE doesn't match, so Italian numbers keep the stricter,
+// more precise pattern above.
+const PHONE_INTL_RE = /\+\d[\d\s.-]{6,14}\d/g
+
 // Canonical venue names. Venue names are always written in Latin script, even
 // inside a message in another script (Chinese, Greek, Cyrillic…). The LLM
 // reliably understands them but does NOT always call remember({location}) when
@@ -67,9 +73,6 @@ function detectVenue(message: string): string | null {
   }
   return null
 }
-
-// Generic international phone (defensive, less specific). Skipped to avoid
-// false positives on plain numbers. We rely on PHONE_IT_RE only.
 
 // ── Pre-scan: extract PII from raw message, replace with placeholders ────────
 
@@ -119,11 +122,21 @@ export function preScanAndRedact(input: string): RedactionResult {
     return '[CODICE_FISCALE]'
   })
 
-  // Phone (Italian)
+  // Phone (Italian mobile, most common case)
   s = s.replace(PHONE_IT_RE, (m) => {
     if (!captured.phone) captured.phone = m
     return '[PHONE]'
   })
+
+  // Phone (generic international, e.g. non-Italian test/customer numbers).
+  // Requires a leading + so it doesn't false-positive on plain digit runs
+  // (prices, durations) elsewhere in the message.
+  if (!captured.phone) {
+    s = s.replace(PHONE_INTL_RE, (m) => {
+      if (!captured.phone) captured.phone = m
+      return '[PHONE]'
+    })
+  }
 
   return { redacted: s, captured }
 }

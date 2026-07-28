@@ -36,6 +36,7 @@ import {
   CheckCheck,
   Mic,
   SmilePlus,
+  RotateCcw,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -126,6 +127,7 @@ import {
   getWidgetProfile,
   updateWidgetProfile,
   clearWidgetSession,
+  buildWidgetStorageKeys,
   type WidgetStoredMessage,
 } from "@/components/chat/adapters/widgetAdapter"
 
@@ -1540,6 +1542,25 @@ export function ChatWidget({
     setShowRegistrationForm(true)
   }
 
+  /**
+   * New chat (demo/instantChat only): clear session + visitor identity so the
+   * next message starts a brand-new customer/session server-side, and stay
+   * in the anonymous instant-chat flow (no registration form).
+   */
+  const handleNewChat = () => {
+    if (resolvedWorkspaceId) {
+      clearWidgetSession(localStorage, resolvedWorkspaceId)
+      const keys = buildWidgetStorageKeys(resolvedWorkspaceId)
+      localStorage.removeItem(keys.visitorId)
+      const newVisitorId = getOrCreateVisitorId(localStorage, resolvedWorkspaceId)
+      setVisitorId(newVisitorId)
+    }
+    setCustomerId(null)
+    setSessionId(null)
+    setMessages([])
+    setShowProfilePanel(false)
+  }
+
   const handleQuickReply = async (reply: string) => {
     // sendMessage already clears all bot suggestions before adding the user message
     await sendMessage(reply)
@@ -1998,6 +2019,19 @@ export function ChatWidget({
                   aria-label="Debug mode"
                 >
                   <span className="text-xl">🐛</span>
+                </button>
+              )}
+              {/* New chat button - demo (instantChat) only: start a fresh
+                  conversation without closing the widget. */}
+              {instantChat && (
+                <button
+                  onClick={handleNewChat}
+                  className="hover:brightness-95 p-2 rounded-lg transition-colors"
+                  style={{ backgroundColor: "transparent" }}
+                  title="New chat"
+                  aria-label="New chat"
+                >
+                  <RotateCcw className="w-5 h-5" />
                 </button>
               )}
               <button
