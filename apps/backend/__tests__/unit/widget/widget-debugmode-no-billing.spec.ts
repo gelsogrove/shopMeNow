@@ -39,6 +39,7 @@ jest.mock("@echatbot/database", () => {
     chatSession: {
       findFirst: jest.fn(),
       create: jest.fn(),
+      update: jest.fn(),
     },
     conversationMessage: {
       create: jest.fn(),
@@ -156,6 +157,14 @@ describe("Widget Debug Mode - NO Billing", () => {
     mockWorkspaceAccessService.canProcessMessages.mockResolvedValue({
       canProcess: true,
       blockReason: null,
+    })
+
+    // Default: touching an existing session's updatedAt succeeds (see
+    // widget-chat.controller.ts "Touch updatedAt on every turn"). Must include
+    // `id` — the controller validates `chatSession.id` right after this call.
+    ;(mockPrisma.chatSession.update as jest.Mock).mockResolvedValue({
+      id: "session-123",
+      status: "active",
     })
 
     mockReq = {

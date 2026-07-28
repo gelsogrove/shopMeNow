@@ -1007,6 +1007,12 @@ export class WidgetChatController {
         logger.info("[WIDGET-REGISTER] 💬 Created chat session", {
           sessionId: chatSession.id,
         })
+      } else {
+        // 🔥 Touch updatedAt — see the matching comment in sendMessage() for why.
+        chatSession = await prisma.chatSession.update({
+          where: { id: chatSession.id },
+          data: { updatedAt: new Date() },
+        })
       }
 
       // 9. Save user's first message to conversation history
@@ -1999,6 +2005,18 @@ export class WidgetChatController {
         logger.info("💬 Created widget chat session", {
           sessionId: chatSession.id,
           visitorId,
+        })
+      } else {
+        // 🔥 Touch updatedAt on every turn of an existing session. Without
+        // this, a long-lived widget session's updatedAt freezes at creation
+        // time — the backoffice's `/chat/recent` query orders + LIMITs by
+        // updatedAt DESC, so an active conversation can get pushed past the
+        // page size and silently vanish from "No conversations yet" despite
+        // real messages existing (BUG: custom-chatbot tenants only, since
+        // the standard flow already touches the session on every message).
+        chatSession = await prisma.chatSession.update({
+          where: { id: chatSession.id },
+          data: { updatedAt: new Date() },
         })
       }
       logger.info("✅ Chat session ready", { sessionId: chatSession?.id, customerId: customer.id })

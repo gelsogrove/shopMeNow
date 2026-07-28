@@ -28,7 +28,7 @@ jest.mock("@echatbot/database", () => {
       create: jest.fn(),
       update: jest.fn(),
     },
-    chatSession: { findFirst: jest.fn(), create: jest.fn() },
+    chatSession: { findFirst: jest.fn(), create: jest.fn(), update: jest.fn() },
     conversationMessage: { count: jest.fn(), create: jest.fn() },
   }
   return {
@@ -162,6 +162,13 @@ describe("Widget sendMessage — Operator Handoff Guard", () => {
 
     // Owner is active
     ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ status: "ACTIVE" })
+
+    // Default: touching an existing session's updatedAt succeeds (see
+    // widget-chat.controller.ts "Touch updatedAt on every turn").
+    ;(mockPrisma.chatSession.update as jest.Mock).mockResolvedValue({
+      id: "session-111",
+      status: "active",
+    })
 
     mockRouteMessage = jest.fn()
     mockChatEngineRouteMessage = jest.fn().mockResolvedValue({
