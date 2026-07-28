@@ -1186,10 +1186,15 @@ export function ChatWidget({
       // returns audioUrl. On WhatsApp a voice message is JUST audio — no text
       // alongside it — so when we have audio we blank the bubble text and show
       // only the player (Andrea's rule).
+      // 📺 EXCEPT the very first bot reply: the welcome + presentation video
+      // must always show as text/video, even if the customer's first message
+      // was a voice note. Keep the text (and thus the embedded video URL) for
+      // that one reply; audio still plays alongside it.
+      const isFirstBotReply = !messages.some((m) => m.role === "bot")
       const hasTts = Boolean(data.audioUrl)
       const botMessage: Message = {
         role: "bot",
-        content: hasTts ? "" : data.response,
+        content: hasTts && !isFirstBotReply ? "" : data.response,
         timestamp: new Date().toISOString(),
         suggestions: data.suggestions,
         serverId: data.assistantMessageId, // 😀 lets the visitor react to this reply
