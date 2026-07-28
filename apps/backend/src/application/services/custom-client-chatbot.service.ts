@@ -30,6 +30,33 @@ type ScheduleConsultationResult = {
   zoomLink?: string | null
 }
 
+// Params/result for the injected book_appointment handler. Mirrors the
+// exported types in custom-demobeauty/agent.ts (structural typing across the
+// dynamic-import boundary).
+type BookAppointmentCartItem = {
+  kind: "service" | "product"
+  name: string
+  price: number
+  durationMin?: number
+  qty?: number
+}
+type BookAppointmentParams = {
+  workspaceId: string
+  date: string // 'YYYY-MM-DD'
+  time: string // 'HH:MM' 24h, wall-clock in the workspace timezone
+  durationMinutes: number
+  topic: string
+  customerName: string
+  customerEmail: string
+  customerPhone?: string
+  location?: string
+  services: BookAppointmentCartItem[]
+  products: BookAppointmentCartItem[]
+}
+type BookAppointmentResult = {
+  googleEventLink?: string | null
+}
+
 // Resolve the UTC instant for a wall-clock time in an IANA timezone.
 // Single-iteration offset computation via Intl — accurate except at the rare
 // DST-transition minute, which never coincides with business booking slots.
@@ -73,6 +100,7 @@ type ChatbotInput = {
     // stays free of Prisma/Google/Zoom imports and calls these when present.
     handlers?: {
       scheduleConsultation?: (params: ScheduleConsultationParams) => Promise<ScheduleConsultationResult>
+      bookAppointment?: (params: BookAppointmentParams) => Promise<BookAppointmentResult>
     }
   }
   context: {
@@ -210,6 +238,7 @@ export class CustomClientChatbotService {
             null,
           handlers: {
             scheduleConsultation: (p) => this.scheduleConsultation(p),
+            bookAppointment: (p) => this.bookAppointment(p),
           },
         },
         context: {
@@ -322,6 +351,67 @@ export class CustomClientChatbotService {
     return {
       googleEventLink: calendar?.googleEventLink ?? null,
       zoomLink: zoom?.zoomLink ?? null,
+    }
+  }
+
+  /**
+   * Real book_appointment side-effect injected into custom chatbot modules
+   * (currently custom-demobeauty). Creates a Google Calendar event on the
+   * workspace's connected calendar, tagged with sede/services/products in the
+   * description. Degrades to "no link" (never throws) when the workspace has
+   * not connected a calendar — the booking still confirms without an event.
+   */
+  private async bookAppointment(
+    p: BookAppointmentParams
+  ): Promise<BookAppointmentResult> {
+    const workspace = await defaultPrisma.workspace.findUnique({
+      where: { id: p.workspaceId },
+      select: { timezone: true },
+    })
+    const timezone = workspace?.timezone || "Europe/Rome"
+
+    const startTime = zonedWallClockToUtc(p.date, p.time, timezone)
+    const endTime = new Date(startTime.getTime() + p.durationMinutes * 60_000)
+
+    const formatItem = (item: BookAppointmentCartItem) => {
+      const qtyOrDuration = item.durationMin
+        ? ` (${item.durationMin} min)`
+        : item.qty && item.qty > 1
+          ? ` x${item.qty}`
+          : ""
+      return `${item.name}${qtyOrDuration} — ${item.price}€`
+    }
+
+    const description = [
+      `Appointment — ${p.customerName}`,
+      p.location ? `Sede: ${p.location}` : null,
+      p.customerPhone ? `Phone: ${p.customerPhone}` : null,
+      p.services.length > 0 ? `Services: ${p.services.map(formatItem).join(", ")}` : null,
+      p.products.length > 0 ? `Products: ${p.products.map(formatItem).join(", ")}` : null,
+    ]
+      .filter(Boolean)
+      .join("\n")
+
+    const calendar = await googleCalendarService
+      .createEvent({
+        workspaceId: p.workspaceId,
+        summary: p.topic,
+        description,
+        startTime,
+        endTime,
+        timezone,
+        attendeeEmail: p.customerEmail,
+      })
+      .catch((err) => {
+        logger.error("[CustomClientChatbotService] appointment calendar event failed", {
+          workspaceId: p.workspaceId,
+          error: err instanceof Error ? err.message : String(err),
+        })
+        return null
+      })
+
+    return {
+      googleEventLink: calendar?.googleEventLink ?? null,
     }
   }
 
