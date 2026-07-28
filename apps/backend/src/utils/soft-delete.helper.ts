@@ -69,7 +69,7 @@ export function getDaysUntilPermanentDelete(deletedAt: Date, retentionDays: numb
   const expiryDate = new Date(deletedAt)
   expiryDate.setDate(expiryDate.getDate() + retentionDays)
 
-  const daysRemaining = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+  const daysRemaining = Math.floor((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
   return Math.max(0, daysRemaining)
 }
 
