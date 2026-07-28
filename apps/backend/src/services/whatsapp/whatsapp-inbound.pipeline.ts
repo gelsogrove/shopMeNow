@@ -721,8 +721,11 @@ export class WhatsAppInboundPipeline {
           // module greeting (in the reply language); formatWelcomeReply just
           // splits at the URL. Works the same on every provider (Meta/UltraMsg/
           // Wasender) via the provider-agnostic send()/sendMedia().
+          // Always shown on turn 1 as text/image — even when the customer's
+          // FIRST message was audio — so the video is never skipped. Audio
+          // replies otherwise mirror the input modality from turn 2 onward.
           const welcome =
-            messageCount === 0 && !inboundWasAudio
+            messageCount === 0
               ? formatWelcomeReply(customerReply)
               : null
 
@@ -761,7 +764,12 @@ export class WhatsAppInboundPipeline {
               skipSecurityCheck: true, // bot-generated content, not user input
               // Audio reply only when the customer sent audio AND the tenant's
               // settings.json enables audioOutput (settings are law — iron rule 7).
-              replyAsAudio: inboundWasAudio && customOutput.audioOutput === true,
+              // Never on turn 1: the welcome (text/video) always goes out as
+              // text there, even if the customer's first message was audio.
+              replyAsAudio:
+                messageCount !== 0 &&
+                inboundWasAudio &&
+                customOutput.audioOutput === true,
               // 🌍 Speak in the language the bot replied in, not the phone guess.
               customerLanguage: replyLanguage,
               // Per-language voice from settings.json (falls back to "default").
