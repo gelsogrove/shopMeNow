@@ -2260,14 +2260,32 @@ export class WidgetChatController {
           if (!workspace.debugMode && !isPlayground && workspace.ownerId && customOutput.reply) {
             try {
               const billingService = new SubscriptionBillingService(prisma)
-              await billingService.deductOwnerWidgetMessageCredit(
+              const billingResult = await billingService.deductOwnerWidgetMessageCredit(
                 workspace.ownerId,
                 resolvedWorkspaceId,
                 `widget-custom-${visitorId}-${Date.now()}`
               )
+              if (!billingResult.success) {
+                logger.warn("[WIDGET-CUSTOM-CLIENT] ⚠️ Billing deduction returned failure", {
+                  workspaceId: resolvedWorkspaceId,
+                  ownerId: workspace.ownerId,
+                  error: billingResult.error,
+                })
+              }
             } catch (billingError) {
               logger.error("[WIDGET-CUSTOM-CLIENT] ❌ Billing error (non-fatal):", billingError)
             }
+          } else {
+            // 🔍 Diagnostic: the guard above is silent on skip — log WHY billing
+            // didn't even attempt, so a missing ownerId/debugMode misconfig on a
+            // tenant is visible instead of looking like a billing bug.
+            logger.info("[WIDGET-CUSTOM-CLIENT] ⏭️ Billing skipped (guard not met)", {
+              workspaceId: resolvedWorkspaceId,
+              debugMode: workspace.debugMode,
+              isPlayground: Boolean(isPlayground),
+              hasOwnerId: Boolean(workspace.ownerId),
+              hasReply: Boolean(customOutput.reply),
+            })
           }
 
           // WebSocket notification for admin dashboard
