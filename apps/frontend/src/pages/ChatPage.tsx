@@ -302,7 +302,7 @@ export function ChatPage() {
   })
   const [filterNeedsSupport, setFilterNeedsSupport] = useState(() => {
     const saved = localStorage.getItem('chat-filters-support')
-    return saved !== null ? JSON.parse(saved) : true
+    return saved !== null ? JSON.parse(saved) : false
   })
   const [filterPlayground, setFilterPlayground] = useState(() => {
     const saved = localStorage.getItem('chat-filters-playground')
@@ -310,7 +310,7 @@ export function ChatPage() {
   })
   const [timeRange, setTimeRange] = useState<'all' | '1h' | '24h' | 'week'>(() => {
     const saved = localStorage.getItem('chat-filters-timerange')
-    return (saved as 'all' | '1h' | '24h' | 'week') || '1h'
+    return (saved as 'all' | '1h' | '24h' | 'week') || 'all'
   })
 
   // Save filters to localStorage whenever they change
