@@ -349,11 +349,14 @@ function FlowEditorInner() {
         data={selectedNode ? (selectedNode.data as FlowQuestionNodeData) : null}
         availableAssets={assets}
         attachedAssetIds={attachedAssetIds}
+        allNodes={nodes.map((n) => ({ id: n.id, question: n.data.question }))}
+        edgeTargets={Object.fromEntries(edges.map((e) => [e.id, e.target]))}
         onChange={handleNodeDataChange}
         onAddAnswer={handleAddAnswer}
         onRemoveAnswer={handleRemoveAnswer}
         onToggleAnswerEscalation={handleToggleAnswerEscalation}
         onToggleAttachment={handleToggleAttachment}
+        onRetargetAnswer={handleRetargetAnswer}
       />
     </div>
   )
