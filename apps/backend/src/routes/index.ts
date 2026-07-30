@@ -724,9 +724,9 @@ logger.info(
   "✅ Registered PROTECTED team management routes: /api/workspaces/:workspaceId/invitations, /api/workspaces/:workspaceId/members"
 )
 
-router.use("/api", createDemoRobotRoutes())
+router.use(createDemoRobotRoutes())
 logger.info(
-  "✅ Registered PROTECTED demoRobot routes: /api/workspaces/:workspaceId/demorobot/*"
+  "✅ Registered PROTECTED demoRobot routes: /api/v1/workspaces/:workspaceId/demorobot/*"
 )
 
 // Push Campaigns v2 (WhatsApp only)
