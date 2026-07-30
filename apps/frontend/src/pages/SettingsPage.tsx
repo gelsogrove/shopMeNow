@@ -538,7 +538,7 @@ export function SettingsPage() {
     if (defaultField) {
       setActiveHelpField(defaultField)
     }
-  }, [])
+  }, [navigate])
 
   const pendingFocusRef = useRef<string | null>(null)
 
