@@ -650,10 +650,13 @@ For privacy inquiries, please contact our support team.`
 
           if (existingOwnerWorkspaces.length > 0) {
             // Get all unique ADMINs from owner's other workspaces
+            // Exclude createdBy: already inserted as SUPER_ADMIN above, would violate the
+            // composite PK (userId, workspaceId) if re-inserted here
             const existingAdmins = await tx.userWorkspace.findMany({
               where: {
                 workspaceId: { in: existingOwnerWorkspaces.map(w => w.id) },
                 role: 'ADMIN',
+                userId: { not: createdBy },
               },
               select: { userId: true },
               distinct: ['userId'],
