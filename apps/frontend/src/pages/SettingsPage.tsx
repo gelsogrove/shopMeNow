@@ -89,9 +89,20 @@ const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = [
   "functions",
 ]
 
+// "Manage Flows" (demorobot) only makes sense once a custom chatbot module
+// is running — it's added, not filtered out, unlike HIDDEN_FOR_CUSTOM_CHATBOT.
+const DEMOROBOT_SECTION: SettingsSection = {
+  key: "demorobot",
+  label: "Manage Flows",
+  description: "Visual flow-builder for this chatbot's diagnostic conversations",
+}
+
 function getVisibleSections(isCustomChatbot: boolean): SettingsSection[] {
   if (!isCustomChatbot) return ALL_SECTIONS
-  return ALL_SECTIONS.filter((s) => !HIDDEN_FOR_CUSTOM_CHATBOT.includes(s.key as SectionKey))
+  return [
+    ...ALL_SECTIONS.filter((s) => !HIDDEN_FOR_CUSTOM_CHATBOT.includes(s.key as SectionKey)),
+    DEMOROBOT_SECTION,
+  ]
 }
 
 // Default help content for each section
@@ -973,15 +984,6 @@ export function SettingsPage() {
                   <Sparkles className="h-3.5 w-3.5" />
                   Custom Chatbot — chatbot behaviour is managed in settings.json
                 </span>
-              )}
-              {/* Flow-builder editor: available to any custom chatbot workspace,
-                  not just demoRobot — the compiler/retrieval layer is
-                  parametrized by workspaceId, not tied to one client. */}
-              {isCustomChatbot && (
-                <Button variant="outline" size="sm" onClick={() => navigate("/settings/demorobot")}>
-                  <Bot className="h-4 w-4 mr-1.5" />
-                  Manage Flows
-                </Button>
               )}
             </div>
           </div>
