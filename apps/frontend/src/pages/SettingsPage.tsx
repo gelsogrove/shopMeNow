@@ -825,6 +825,7 @@ export function SettingsPage() {
               hasCart: formData.hasCart,
               hasOrderTracking: formData.hasOrderTracking,
               needRegistration: formData.needRegistration,
+              customChatbotId: formData.customChatbotId,
             }}
             errors={errors}
             canEdit={canEdit}
