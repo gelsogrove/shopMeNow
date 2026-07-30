@@ -519,6 +519,13 @@ export function SettingsPage() {
 
   // Handle section change - update help field to section default
   const handleSectionChange = useCallback((sectionKey: string) => {
+    // "demorobot" navigates away to its own dedicated pages (RobotModel/Flow
+    // list + full-screen canvas) instead of rendering inline like the other
+    // sections — it doesn't fit the two-column settings layout.
+    if (sectionKey === "demorobot") {
+      navigate("/settings/demorobot")
+      return
+    }
     setActiveSection(sectionKey as SectionKey)
     // 🆕 Save to localStorage for next visit
     try {
