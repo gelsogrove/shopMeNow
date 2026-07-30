@@ -67,7 +67,7 @@ function FlowEditorInner() {
   const { robotModelId, flowId } = useParams<{ robotModelId: string; flowId: string }>()
   const navigate = useNavigate()
   const workspaceId = workspace?.id || ""
-  const { addNodes, addEdges: rfAddEdges } = useReactFlow()
+  const { addEdges: rfAddEdges } = useReactFlow()
 
   const [flow, setFlow] = useState<Flow | null>(null)
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FlowQuestionNodeData>>([])
@@ -122,27 +122,36 @@ function FlowEditorInner() {
         position: { x: parent.position.x + 280, y: parent.position.y + answerIndex * 120 },
         data: { question: "", answers: [], attachmentCount: 0, terminalType: null } as FlowQuestionNodeData,
       }
-      addNodes(childNode)
 
-      const newEdge: Edge = {
-        id: edgeId,
-        source: nodeId,
-        target: childId,
-        sourceHandle: edgeId,
-        label,
-        data: { triggersEscalation: false, label },
-      }
-      rfAddEdges(newEdge)
-
-      setNodes((prev) =>
-        prev.map((n) =>
+      // The child node's <Handle id={edgeId}> only exists in the DOM once
+      // the parent's `answers` array includes this edgeId (FlowQuestionNode
+      // renders one Handle per answer). The edge must be added AFTER that
+      // state update lands, or React Flow can't resolve sourceHandle and the
+      // connecting line never attaches. Both node updates happen in one
+      // setNodes call so they commit in the same render; the edge is added
+      // only after, via a microtask, so it observes the already-rendered handle.
+      setNodes((prev) => [
+        ...prev.map((n) =>
           n.id === nodeId
             ? { ...n, data: { ...n.data, answers: [...n.data.answers, { edgeId, label, triggersEscalation: false }] } }
             : n,
         ),
-      )
+        childNode,
+      ])
+
+      queueMicrotask(() => {
+        const newEdge: Edge = {
+          id: edgeId,
+          source: nodeId,
+          target: childId,
+          sourceHandle: edgeId,
+          label,
+          data: { triggersEscalation: false, label },
+        }
+        rfAddEdges(newEdge)
+      })
     },
-    [addNodes, rfAddEdges, setNodes],
+    [rfAddEdges, setNodes],
   )
 
   const handleRemoveAnswer = useCallback(
