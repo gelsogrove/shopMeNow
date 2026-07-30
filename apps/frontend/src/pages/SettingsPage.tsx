@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Save, Trash2, Loader2, Power, Sparkles, Bot } from "lucide-react"
+import { Save, Trash2, Loader2, Power, Sparkles } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { ChatWidget } from "@/components/ChatWidget"
 import { IMG_BASE_URL } from "@/config"
