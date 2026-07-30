@@ -211,6 +211,30 @@ function FlowEditorInner() {
     [setEdges],
   )
 
+  // "Go to" dropdown in the side panel — an alternative to canvas drag for
+  // pointing an answer at an existing node, or creating a brand new one.
+  // targetNodeId === "__new__" creates a fresh empty node (same placement
+  // logic as handleAddAnswer) and retargets the edge to it.
+  const handleRetargetAnswer = useCallback(
+    (nodeId: string, edgeId: string, targetNodeId: string) => {
+      if (targetNodeId === "__new__") {
+        const parent = nodesRef.current.find((n) => n.id === nodeId)
+        const childId = newId("node")
+        const childNode: Node<FlowQuestionNodeData> = {
+          id: childId,
+          type: "question",
+          position: parent ? { x: parent.position.x + 280, y: parent.position.y } : { x: 0, y: 0 },
+          data: { question: "", answers: [], attachmentCount: 0, terminalType: null } as FlowQuestionNodeData,
+        }
+        setNodes((prev) => [...prev, childNode])
+        setEdges((prev) => prev.map((e) => (e.id === edgeId ? { ...e, target: childId } : e)))
+        return
+      }
+      setEdges((prev) => prev.map((e) => (e.id === edgeId ? { ...e, target: targetNodeId } : e)))
+    },
+    [setNodes, setEdges],
+  )
+
   const selectedNode = panelNodeId ? nodes.find((n) => n.id === panelNodeId) ?? null : null
   const attachedAssetIds = selectedNode ? ((selectedNode.data as any).attachedAssetIds as string[]) ?? [] : []
 
