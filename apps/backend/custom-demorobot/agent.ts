@@ -105,6 +105,16 @@ export type RetrievalHandler = (params: {
   query: string
 }) => Promise<RetrievalHandlerResult>
 
+// FAQs are a small, fixed set per workspace (unlike Flows, which scale to
+// hundreds and need retrieval) — always injected as a prompt block, never
+// searched semantically. Fetched fresh each turn (not cached with
+// commonPrompt) so an admin edit is visible on the very next turn.
+export interface FaqEntry {
+  question: string
+  answer: string
+}
+export type GetFaqsHandler = (params: { workspaceId: string }) => Promise<FaqEntry[]>
+
 export interface ChatbotInput {
   userMessage: string
   userName: string
@@ -117,6 +127,7 @@ export interface ChatbotInput {
     operatorBriefingLanguageOverride?: string | null
     handlers?: {
       retrieveFlow?: RetrievalHandler
+      getFaqs?: GetFaqsHandler
     }
   }
   context: {

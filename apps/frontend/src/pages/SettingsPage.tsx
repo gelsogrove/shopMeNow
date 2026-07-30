@@ -49,7 +49,7 @@ import { CallingFunctionsSection } from "@/components/settings/sections/CallingF
 import { CalendarSection } from "@/components/settings/sections/CalendarSection"
 
 // Types
-type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "functions" | "calendar" | "demorobot"
+type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "functions" | "calendar" | "demorobot" | "faqs"
 
 // Section definitions for dropdown.
 //
@@ -79,13 +79,14 @@ const ALL_SECTIONS: SettingsSection[] = [
 //     name, business type, email, address, currency, language: NOT in settings.json)
 //   - WhatsApp channel provider credentials (API key, phone number, webhook token)
 //   - Appointments & Calendar (reminders)
+//   - Human Support (operatorEmail/operatorContactMethod, read by the custom
+//     chatbot runtime via ChatbotInput — see custom-demorobot/agent.ts)
 // The remaining sections are hidden because they are either unused by the
 // custom flow or already configured inside the module's own JSON:
-// AI Personality, Widget, Human Support, Custom Tools.
+// AI Personality, Widget, Custom Tools.
 const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = [
   "ai-personality",
   "widget",
-  "widget-support",
   "functions",
 ]
 
@@ -97,11 +98,21 @@ const DEMOROBOT_SECTION: SettingsSection = {
   description: "Visual flow-builder for this chatbot's diagnostic conversations",
 }
 
+// FAQs are injected as a fixed prompt block for custom chatbots (see
+// custom-demorobot/agent.ts) — same "added, not filtered" treatment as
+// Manage Flows, always visible for custom chatbot workspaces.
+const FAQS_SECTION: SettingsSection = {
+  key: "faqs",
+  label: "FAQs",
+  description: "Quick answers always included in the chatbot's prompt",
+}
+
 function getVisibleSections(isCustomChatbot: boolean): SettingsSection[] {
   if (!isCustomChatbot) return ALL_SECTIONS
   return [
     ...ALL_SECTIONS.filter((s) => !HIDDEN_FOR_CUSTOM_CHATBOT.includes(s.key as SectionKey)),
     DEMOROBOT_SECTION,
+    FAQS_SECTION,
   ]
 }
 
@@ -114,6 +125,7 @@ const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
   "widget-support": "humanSupportEnabled",
   "calendar": "appointmentReminder24hEnabled",
   "demorobot": "customChatbotId",
+  "faqs": "customChatbotId",
   "security": "allowedDomains",
   "functions": "webhookUrl",
 }
@@ -537,6 +549,10 @@ export function SettingsPage() {
       navigate("/settings/demorobot")
       return
     }
+    if (sectionKey === "faqs") {
+      navigate("/faq")
+      return
+    }
     setActiveSection(sectionKey as SectionKey)
     // 🆕 Save to localStorage for next visit
     try {
@@ -844,6 +860,7 @@ export function SettingsPage() {
               hasOrderTracking: formData.hasOrderTracking,
               needRegistration: formData.needRegistration,
               customChatbotId: formData.customChatbotId,
+              welcomeMessage: formData.welcomeMessage,
             }}
             errors={errors}
             canEdit={canEdit}

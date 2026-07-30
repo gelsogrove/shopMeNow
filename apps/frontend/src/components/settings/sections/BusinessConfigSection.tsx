@@ -4,6 +4,7 @@
  */
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
@@ -38,6 +39,7 @@ interface BusinessConfigSectionProps {
     hasOrderTracking: boolean
     needRegistration: boolean
     customChatbotId: string
+    welcomeMessage: string
   }
   errors: Record<string, string>
   canEdit: boolean
@@ -311,6 +313,25 @@ export function BusinessConfigSection({
               <p className="text-xs text-gray-500">
                 Identifies which custom chatbot module (<code>apps/backend/custom-&lt;id&gt;</code>) handles
                 conversations for this workspace. Leave empty to use the standard AI agents.
+              </p>
+            </div>
+
+            {/* Welcome Message — for custom chatbot workspaces this is not yet
+                read by the runtime (the module generates its own greeting
+                dynamically per language, see custom-demorobot/prompts/common.md).
+                Exposed here for future use; not wired into the chatbot yet. */}
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="welcomeMessage">Welcome Message</Label>
+              <Textarea
+                id="welcomeMessage"
+                value={formData.welcomeMessage}
+                onChange={(e) => onFieldChange("welcomeMessage", e.target.value)}
+                rows={4}
+                disabled={!canEdit}
+              />
+              <p className="text-xs text-gray-500">
+                Shown on the first message of a conversation. For custom chatbot workspaces this field is
+                not yet used by the running module — the module currently generates its own greeting.
               </p>
             </div>
           </div>

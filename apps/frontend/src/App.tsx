@@ -477,7 +477,10 @@ function AppWithProviders() {
                     <Route index element={<BlackoutPeriodsPage />} />
                   </Route>
 
-                  <Route path="/faq" element={<CustomChatbotGuard><MinimalLayout /></CustomChatbotGuard>}>
+                  {/* FAQs are usable by custom chatbot workspaces too (injected
+                      as a fixed prompt block, see custom-demorobot/agent.ts) —
+                      no CustomChatbotGuard here, unlike most other platform pages. */}
+                  <Route path="/faq" element={<MinimalLayout />}>
                     <Route index element={<FAQPage />} />
                   </Route>
 

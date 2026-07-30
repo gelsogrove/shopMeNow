@@ -57,6 +57,30 @@ type BookAppointmentResult = {
   googleEventLink?: string | null
 }
 
+// Params/result for the injected retrieve_flow handler (currently
+// custom-demorobot/agent.ts). Mirrors RetrievalHandler/RetrievalHandlerResult
+// there — structural typing across the dynamic-import boundary.
+type RetrieveFlowParams = {
+  workspaceId: string
+  conversationId: string
+  serialNumber?: string
+  query: string
+}
+type RetrieveFlowResult = {
+  selectedFlowId?: string
+  compiledPrompt?: string
+  hash?: string
+  robotModelId?: string
+  reason?: "unknown_model" | "no_matching_flow"
+}
+
+// Params/result for the injected get_faqs handler. FAQs are a small, fixed
+// set per workspace — always injected as a prompt block, never searched
+// semantically (unlike Flows). Mirrors GetFaqsHandler/FaqEntry in
+// custom-demorobot/agent.ts.
+type GetFaqsParams = { workspaceId: string }
+type FaqEntry = { question: string; answer: string }
+
 // Resolve the UTC instant for a wall-clock time in an IANA timezone.
 // Single-iteration offset computation via Intl — accurate except at the rare
 // DST-transition minute, which never coincides with business booking slots.
