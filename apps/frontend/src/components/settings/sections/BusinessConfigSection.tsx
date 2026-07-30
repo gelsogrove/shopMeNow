@@ -37,6 +37,7 @@ interface BusinessConfigSectionProps {
     hasCart: boolean
     hasOrderTracking: boolean
     needRegistration: boolean
+    customChatbotId: string
   }
   errors: Record<string, string>
   canEdit: boolean
@@ -292,6 +293,24 @@ export function BusinessConfigSection({
               </Select>
               <p className="text-xs text-amber-600">
                 Channel mode is set at creation and cannot be changed. To switch mode, delete this workspace and create a new one.
+              </p>
+            </div>
+
+            {/* Custom Chatbot ID — resolves to the apps/backend/custom-<id>/
+                module this workspace's chatbot logic runs from. Empty means
+                the workspace uses the standard platform AI agents instead. */}
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="customChatbotId">Custom Chatbot ID</Label>
+              <Input
+                id="customChatbotId"
+                value={formData.customChatbotId}
+                onChange={(e) => onFieldChange("customChatbotId", e.target.value)}
+                placeholder="e.g. demorobot, demowash"
+                disabled={!canEdit}
+              />
+              <p className="text-xs text-gray-500">
+                Identifies which custom chatbot module (<code>apps/backend/custom-&lt;id&gt;</code>) handles
+                conversations for this workspace. Leave empty to use the standard AI agents.
               </p>
             </div>
           </div>

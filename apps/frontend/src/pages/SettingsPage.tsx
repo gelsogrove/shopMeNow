@@ -102,6 +102,7 @@ const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
   "widget": "widgetTitle",
   "widget-support": "humanSupportEnabled",
   "calendar": "appointmentReminder24hEnabled",
+  "demorobot": "customChatbotId",
   "security": "allowedDomains",
   "functions": "webhookUrl",
 }
