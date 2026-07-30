@@ -31,6 +31,7 @@ const SECTION_ICONS: Record<string, React.ReactNode> = {
   "widget": <Monitor className="h-5 w-5 text-indigo-500" />,
   "widget-support": <Headphones className="h-5 w-5 text-purple-600" />,
   "calendar": <Calendar className="h-5 w-5 text-slate-600" />,
+  "demorobot": <Bot className="h-5 w-5 text-violet-500" />,
   "security": <Shield className="h-5 w-5 text-red-500" />,
   "functions": <Wrench className="h-5 w-5 text-blue-600" />,
   "subscription": <CreditCard className="h-5 w-5 text-amber-500" />,
