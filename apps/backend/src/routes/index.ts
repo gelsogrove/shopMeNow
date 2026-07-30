@@ -89,6 +89,7 @@ import { categoriesRouter } from "../interfaces/http/routes/categories.routes"
 import certificationRoutes from "../interfaces/http/routes/certification.routes"
 import { createCallingFunctionsRouter } from "../interfaces/http/routes/calling-functions.routes"
 import { createEnvironmentVariableRoutes } from "../interfaces/http/routes/environment-variable.routes"
+import { createDemoRobotRoutes } from "../interfaces/http/routes/demorobot.routes"
 import creditNoteRoutes from "../interfaces/http/routes/credit-note.routes"
 import typeRoutes from "../interfaces/http/routes/type.routes"
 import flowNodeConfigRoutes from "../interfaces/http/routes/flow-node-config.routes"
@@ -721,6 +722,11 @@ router.use(
 )
 logger.info(
   "✅ Registered PROTECTED team management routes: /api/workspaces/:workspaceId/invitations, /api/workspaces/:workspaceId/members"
+)
+
+router.use("/api", createDemoRobotRoutes())
+logger.info(
+  "✅ Registered PROTECTED demoRobot routes: /api/workspaces/:workspaceId/demorobot/*"
 )
 
 // Push Campaigns v2 (WhatsApp only)

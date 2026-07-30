@@ -27,6 +27,4 @@ rules:
     - Include a task to add/update unit tests (test:unit only — never integration).
     - Include a task to update swagger.yaml whenever an API endpoint changes.
     - Do NOT include git add/commit/push steps — Andrea does those manually.
-    - The FINAL task of every change is: run `npm run test:unit`, and only if it
-      passes, run `npm run publish` (Heroku production deploy). If tests fail,
-      stop and do NOT deploy.
+    - The FINAL task of every change is run `npm run test:unit`, and only if it passes, run `npm run publish` (Heroku production deploy). If tests fail, stop and do NOT deploy.

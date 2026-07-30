@@ -79,6 +79,9 @@ import { ChannelTypesPage } from "./pages/settings/ChannelTypesPage"
 import { LanguagesPage } from "./pages/settings/LanguagesPage"
 
 import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
+import { RobotModelsPage as DemoRobotModelsPage } from "./pages/settings/demorobot/RobotModelsPage"
+import { FlowsPage as DemoRobotFlowsPage } from "./pages/settings/demorobot/FlowsPage"
+import { FlowEditorPage as DemoRobotFlowEditorPage } from "./pages/settings/demorobot/FlowEditorPage"
 
 import { Suspense, lazy, useEffect } from "react"
 import { ChatWidget } from "@/components/ChatWidget"
@@ -503,6 +506,11 @@ function AppWithProviders() {
                       element={<SettingsCategoriesPage />}
                     />
                     <Route path="products" element={<SettingsProductsPage />} />
+                    <Route path="demorobot" element={<DemoRobotModelsPage />} />
+                    <Route path="demorobot/:robotModelId/flows" element={<DemoRobotFlowsPage />} />
+                  </Route>
+                  <Route path="/settings/demorobot/:robotModelId/flows/:flowId/edit" element={<MinimalLayout />}>
+                    <Route index element={<DemoRobotFlowEditorPage />} />
                   </Route>
                   <Route path="/gdpr" element={<MinimalLayout />}>
                     <Route index element={<GdprPage />} />

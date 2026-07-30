@@ -1,0 +1,24 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`compileFlow compiles a valid graph deterministically (snapshot) 1`] = `
+"## FLOW: Rumore strano
+
+### Q: Il robot è acceso?
+- If "Sì" → continue to: "Il wifi è connesso?"
+
+### Q: Il wifi è connesso?
+(collect as: wifiStatus, type: boolean)
+- If "Sì" → continue to: "Check falliti, serve un tecnico."
+
+### Q: Check falliti, serve un tecnico.
+(terminal: ESCALATE, allowed tools: remember, escalate_to_operator)
+"
+`;
+
+exports[`compileFlow compiles a valid graph deterministically (snapshot) 2`] = `
+"Rumore strano
+vibra, cigola
+Il robot è acceso?
+Il wifi è connesso?
+Check falliti, serve un tecnico."
+`;

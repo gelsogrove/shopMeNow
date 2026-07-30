@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Save, Trash2, Loader2, Power, Sparkles } from "lucide-react"
+import { Save, Trash2, Loader2, Power, Sparkles, Bot } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { ChatWidget } from "@/components/ChatWidget"
 import { IMG_BASE_URL } from "@/config"
@@ -964,6 +964,15 @@ export function SettingsPage() {
                   <Sparkles className="h-3.5 w-3.5" />
                   Custom Chatbot — chatbot behaviour is managed in settings.json
                 </span>
+              )}
+              {/* Flow-builder editor: available to any custom chatbot workspace,
+                  not just demoRobot — the compiler/retrieval layer is
+                  parametrized by workspaceId, not tied to one client. */}
+              {isCustomChatbot && (
+                <Button variant="outline" size="sm" onClick={() => navigate("/settings/demorobot")}>
+                  <Bot className="h-4 w-4 mr-1.5" />
+                  Manage Flows
+                </Button>
               )}
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { prisma, PrismaClient } from "@echatbot/database"
+import { prisma, Prisma, PrismaClient } from "@echatbot/database"
 import { Workspace, WorkspaceProps } from "../domain/entities/workspace.entity"
 import { WorkspaceRepositoryInterface } from "../domain/repositories/workspace.repository.interface"
 import logger from "../utils/logger"
@@ -478,14 +478,16 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
 
   /**
    * Create a new workspace
+   * @param tx - Optional transaction client so the insert participates in a caller's transaction
    */
-  async create(workspace: Workspace): Promise<Workspace> {
+  async create(workspace: Workspace, tx?: Prisma.TransactionClient): Promise<Workspace> {
     logger.debug(`Creating new workspace: ${workspace.name}`)
 
     try {
       const data = this.mapToDatabase(workspace)
+      const client = tx || this.prisma
 
-      const createdWorkspace = await this.prisma.workspace.create({
+      const createdWorkspace = await client.workspace.create({
         data,
       })
 

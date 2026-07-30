@@ -35,6 +35,9 @@ export function MinimalLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const isChatPage = location.pathname.startsWith("/chat")
+  // demoRobot flow canvas needs the full viewport height, same treatment as chat.
+  const isDemoRobotEditorPage = /^\/settings\/demorobot\/[^/]+\/flows\/[^/]+\/edit$/.test(location.pathname)
+  const isFullHeightPage = isChatPage || isDemoRobotEditorPage
   const supportUnreadCount = useSupportUnreadCount(isChatPage)
   
   // Get workspace from context (reactive to changes)
@@ -128,7 +131,7 @@ export function MinimalLayout() {
   const isUserLevelPage = location.pathname === "/profile" || location.pathname === "/billing"
 
   return (
-    <div className={`${isChatPage ? 'h-screen overflow-hidden' : 'min-h-screen'} bg-gray-50 flex flex-col`}>
+    <div className={`${isFullHeightPage ? 'h-screen overflow-hidden' : 'min-h-screen'} bg-gray-50 flex flex-col`}>
       {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -399,8 +402,8 @@ export function MinimalLayout() {
       </header>
 
       {/* Main Content */}
-      <main className={isChatPage ? "flex-1 overflow-hidden flex flex-col" : "w-full py-8 px-4 sm:px-6 lg:px-8 flex-1"}>
-        {isChatPage ? (
+      <main className={isFullHeightPage ? "flex-1 overflow-hidden flex flex-col" : "w-full py-8 px-4 sm:px-6 lg:px-8 flex-1"}>
+        {isFullHeightPage ? (
           <Outlet />
         ) : (
           <div className="max-w-7xl mx-auto w-full">
@@ -409,8 +412,8 @@ export function MinimalLayout() {
         )}
       </main>
 
-      {/* Footer — hidden on chat page to maximize space */}
-      {!isChatPage && (
+      {/* Footer — hidden on chat/canvas pages to maximize space */}
+      {!isFullHeightPage && (
         <footer className="py-4 text-center text-sm text-gray-500 border-t border-gray-200 bg-white">
           <p>© 2025 eChatbot. All rights reserved.</p>
         </footer>

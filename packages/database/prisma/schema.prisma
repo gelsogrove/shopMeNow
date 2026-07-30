@@ -181,8 +181,12 @@ model Workspace {
   zoomConnected                Boolean   @default(false) // Whether Zoom is successfully connected
   zoomUserId                   String?   // Zoom user ID
 
-  // 🔄 FLOW workspace configs (E1)
+  // 🔄 FLOW workspace configs (E1) — deprecated, see CLAUDE.md §17
   flowNodeConfigs FlowNodeConfig[] // FLOW chatbot configurations (machine-specific flows)
+
+  // 🤖 demoRobot — visual flow-builder chatbot (compiler + retrieval)
+  robotModels RobotModel[]
+  demoRobotFlows Flow[]
 
   @@index([ownerId])
   @@index([deletedAt])
@@ -2295,4 +2299,131 @@ model PlaygroundComment {
 
   @@index([todoId, createdAt])
   @@map("playground_comments")
+}
+
+// ============================================================
+// DEMOROBOT — Visual flow-builder chatbot (compiler + retrieval)
+// NOT related to the deprecated F50 Visual Flow Builder (FlowNodeConfig
+// above). See apps/backend/custom-demorobot/docs/analisi.md for the spec.
+// ============================================================
+
+model RobotModel {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name         String // e.g. "RoboCut X200"
+  slug         String
+  manufacturer String?
+  description  String?  @db.Text
+  lookupRules  Json     @default("{}") // pluggable serialNumber -> RobotModel matching config (TBD, see analisi.md §13)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  flows  Flow[]
+  assets Asset[]
+
+  @@unique([workspaceId, slug])
+  @@index([workspaceId])
+  @@map("robot_models")
+}
+
+model Flow {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  robotModelId String? // null = workspace-generic fallback flow (analisi.md §6)
+  robotModel   RobotModel? @relation(fields: [robotModelId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String? @db.Text
+  keywords    String[] @default([]) // optional synonyms not necessarily present in the graph text
+
+  retrievalDocument String    @db.Text // dense text used only to compute the embedding
+  embedding         Float[]   @default([]) // cosine similarity computed in Node, not in Postgres (see design.md)
+  compiledPrompt    String    @db.Text // verbose markdown injected into the LLM prompt at runtime
+  hash              String // sha256(compiledPrompt), for determinism/versioning checks
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  nodes FlowNode[]
+
+  @@index([workspaceId])
+  @@index([robotModelId])
+  @@map("demorobot_flows")
+}
+
+model FlowNode {
+  id     String @id @default(cuid())
+  flowId String
+  flow   Flow   @relation(fields: [flowId], references: [id], onDelete: Cascade)
+
+  question  String @db.Text // base language (Italian), LLM translates natively at runtime
+  positionX Float  @default(0)
+  positionY Float  @default(0)
+
+  fieldKey  String? // slug under which the collected value lands in SessionState.collectedData
+  fieldType String? // "string" | "number" | "boolean" | "date" | "enum"
+
+  terminalType String? // null | "SELF_SERVICE" | "ESCALATE" | "END" | "LOOP"
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  outgoingEdges FlowEdge[]        @relation("EdgeSource")
+  attachments   FlowNodeAttachment[]
+
+  @@index([flowId])
+  @@map("demorobot_flow_nodes")
+}
+
+model FlowEdge {
+  id             String   @id @default(cuid())
+  sourceNodeId   String
+  sourceNode     FlowNode @relation("EdgeSource", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNodeId   String? // null = dead end (should not survive compiler validation)
+
+  label              String // e.g. "Yes"/"No", or free text
+  triggersEscalation Boolean @default(false) // this specific answer escalates immediately, regardless of node terminalType
+
+  createdAt DateTime @default(now())
+
+  @@index([sourceNodeId])
+  @@index([targetNodeId])
+  @@map("demorobot_flow_edges")
+}
+
+model Asset {
+  id           String   @id @default(cuid())
+  robotModelId String // lives at model level, not node level — deduplicated across nodes
+  robotModel   RobotModel @relation(fields: [robotModelId], references: [id], onDelete: Cascade)
+
+  type     String // "document" | "image" | "video" | "link"
+  url      String
+  title    String
+  summary  String? @db.Text // routing metadata only — NEVER indexed/embedded as LLM knowledge (analisi.md §8)
+  language String? // for translated document variants
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attachments FlowNodeAttachment[]
+
+  @@index([robotModelId])
+  @@map("demorobot_assets")
+}
+
+model FlowNodeAttachment {
+  nodeId  String
+  node    FlowNode @relation(fields: [nodeId], references: [id], onDelete: Cascade)
+  assetId String
+  asset   Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([nodeId, assetId])
+  @@index([nodeId])
+  @@index([assetId])
+  @@map("demorobot_flow_node_attachments")
 }

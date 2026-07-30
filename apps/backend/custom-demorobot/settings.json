@@ -1,0 +1,18 @@
+{
+  "model": "anthropic/claude-haiku-4.5",
+  "temperature": 0.3,
+  "maxTokens": 800,
+  "maxToolHops": 4,
+  "operatorBriefingLanguage": "en",
+  "operatorEmail": "echatbotai@gmail.com",
+  "emailFrom": "DemoRobot Bot <noreply@demorobot.demo>",
+  "emailSubjectPrefix": "[DemoRobot] Incident",
+  "maxMessageChars": 2000,
+  "maxMessagesPerMinute": 30,
+  "maxTurnsPerSession": 50,
+  "privacyPolicyUrl": "https://www.echatbot.ai/privacy-policy",
+  "similarityThreshold": 0.7,
+  "topK": 3,
+  "audioOutput": false,
+  "audioVoices": {}
+}

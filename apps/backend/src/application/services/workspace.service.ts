@@ -412,8 +412,8 @@ For privacy inquiries, please contact our support team.`
 
     // Use transaction to create workspace and related records
     return await prisma.$transaction(async (tx) => {
-      // 1. Create the workspace
-      const createdWorkspace = await this.repository.create(workspace)
+      // 1. Create the workspace (uses tx so a downstream failure rolls this back too)
+      const createdWorkspace = await this.repository.create(workspace, tx)
 
       logger.info(
         `Created workspace ${createdWorkspace.id}, now importing default agents`
@@ -583,12 +583,15 @@ For privacy inquiries, please contact our support team.`
           )
 
           // Create UserWorkspace relation with SUPER_ADMIN role
-          await tx.userWorkspace.create({
-            data: {
+          // upsert guards against retried/double-submitted requests hitting the composite unique constraint
+          await tx.userWorkspace.upsert({
+            where: { userId_workspaceId: { userId: createdBy, workspaceId: createdWorkspace.id } },
+            create: {
               userId: createdBy,
               workspaceId: createdWorkspace.id,
               role: 'SUPER_ADMIN', // Creator is SUPER_ADMIN (Feature 184)
             },
+            update: {},
           })
           logger.info(
             `✅ Created UserWorkspace relation: user ${createdBy} → workspace ${createdWorkspace.id} (SUPER_ADMIN)`
@@ -665,12 +668,14 @@ For privacy inquiries, please contact our support team.`
             // Add each ADMIN to the new workspace
             let adminsAdded = 0
             for (const admin of existingAdmins) {
-              await tx.userWorkspace.create({
-                data: {
+              await tx.userWorkspace.upsert({
+                where: { userId_workspaceId: { userId: admin.userId, workspaceId: createdWorkspace.id } },
+                create: {
                   userId: admin.userId,
                   workspaceId: createdWorkspace.id,
                   role: 'ADMIN',
                 },
+                update: {},
               })
               adminsAdded++
             }

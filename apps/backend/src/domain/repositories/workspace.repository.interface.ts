@@ -1,3 +1,4 @@
+import { Prisma } from '@echatbot/database';
 import { Workspace, WorkspaceProps } from '../entities/workspace.entity';
 
 export interface WorkspaceRepositoryInterface {
@@ -23,8 +24,9 @@ export interface WorkspaceRepositoryInterface {
 
   /**
    * Create a new workspace
+   * @param tx - Optional transaction client so the insert participates in a caller's transaction
    */
-  create(workspace: Workspace): Promise<Workspace>;
+  create(workspace: Workspace, tx?: Prisma.TransactionClient): Promise<Workspace>;
 
   /**
    * Update an existing workspace
