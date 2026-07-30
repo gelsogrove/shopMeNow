@@ -16,55 +16,58 @@ export interface FlowQuestionNodeData extends Record<string, unknown> {
 }
 
 const TERMINAL_ICON: Record<NonNullable<FlowQuestionNodeData["terminalType"]>, React.ReactNode> = {
-  SELF_SERVICE: <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />,
-  ESCALATE: <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />,
-  END: <XCircle className="h-3.5 w-3.5 text-gray-400" />,
-  LOOP: <RotateCcw className="h-3.5 w-3.5 text-blue-500" />,
+  SELF_SERVICE: <CheckCircle2 className="h-3 w-3 text-green-600 shrink-0" />,
+  ESCALATE: <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" />,
+  END: <XCircle className="h-3 w-3 text-gray-400 shrink-0" />,
+  LOOP: <RotateCcw className="h-3 w-3 text-blue-500 shrink-0" />,
 }
-
-// React Flow does not auto-position multiple handles on the same side
-// (design.md Decision 12) — explicit vertical spacing per answer, id ===
-// FlowEdge.id so sourceHandle on the resulting edge IS the FlowEdge id.
-const HANDLE_TOP_OFFSET = 16
-const HANDLE_SPACING = 28
 
 export const FlowQuestionNode = memo(function FlowQuestionNode({ data, selected }: NodeProps) {
   const nodeData = data as FlowQuestionNodeData
   return (
     <div
       className={cn(
-        "rounded-lg border bg-white shadow-sm min-w-[220px] max-w-[260px] px-3 py-2.5",
+        "rounded-lg border bg-white shadow-sm min-w-[180px] max-w-[220px] px-2 py-1.5",
         selected ? "border-primary ring-2 ring-primary/30" : "border-gray-200",
         nodeData.hasValidationError && "border-red-400 ring-2 ring-red-200",
       )}
     >
       <Handle type="target" position={Position.Left} />
 
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium text-gray-900 line-clamp-3">{nodeData.question || "(empty question)"}</p>
+      <div className="flex items-start justify-between gap-1.5">
+        <p className="text-xs font-medium text-gray-900 leading-snug line-clamp-3">{nodeData.question || "(empty question)"}</p>
         {nodeData.terminalType && TERMINAL_ICON[nodeData.terminalType]}
       </div>
 
-      <div className="mt-1.5 flex items-center gap-2 text-xs text-gray-500">
-        <span>{nodeData.answers.length} answer{nodeData.answers.length === 1 ? "" : "s"}</span>
-        {nodeData.attachmentCount > 0 && (
-          <span className="flex items-center gap-0.5">
-            <Paperclip className="h-3 w-3" />
-            {nodeData.attachmentCount}
-          </span>
-        )}
-      </div>
+      {nodeData.attachmentCount > 0 && (
+        <div className="mt-1 flex items-center gap-0.5 text-[10px] text-gray-500">
+          <Paperclip className="h-2.5 w-2.5" />
+          {nodeData.attachmentCount}
+        </div>
+      )}
 
-      {nodeData.answers.map((answer, index) => (
-        <Handle
-          key={answer.edgeId}
-          type="source"
-          position={Position.Right}
-          id={answer.edgeId}
-          style={{ top: HANDLE_TOP_OFFSET + index * HANDLE_SPACING }}
-          className={cn(answer.triggersEscalation && "!bg-amber-500")}
-        />
-      ))}
+      {/* Each answer is its own row, in normal document flow — the Handle is
+          positioned relative to THIS row (not an absolute offset from the
+          node's top), so it never overlaps the question text regardless of
+          how many lines it wraps to. This is the pattern React Flow itself
+          recommends for handles whose count/position depends on variable
+          content. */}
+      {nodeData.answers.length > 0 && (
+        <div className="mt-1.5 border-t border-gray-100 pt-1 space-y-0.5">
+          {nodeData.answers.map((answer) => (
+            <div key={answer.edgeId} className="relative flex items-center py-0.5 pr-1">
+              <span className="text-[10px] text-gray-600 truncate">{answer.label || "(empty)"}</span>
+              <Handle
+                type="source"
+                position={Position.Right}
+                id={answer.edgeId}
+                style={{ position: "absolute", right: -11, top: "50%" }}
+                className={cn(answer.triggersEscalation && "!bg-amber-500")}
+              />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 })
