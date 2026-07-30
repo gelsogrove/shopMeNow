@@ -12,7 +12,7 @@ import multer from 'multer'
 import { DemoRobotController } from '../controllers/demorobot.controller'
 import { authMiddleware } from '../middlewares/auth.middleware'
 import { sessionValidationMiddleware } from '../middlewares/session-validation.middleware'
-import { validateWorkspaceId } from '../middlewares/workspace-validation.middleware'
+import { workspaceValidationMiddleware } from '../middlewares/workspace-validation.middleware'
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -23,7 +23,7 @@ export function createDemoRobotRoutes(): Router {
   const router = Router()
   const controller = new DemoRobotController()
 
-  const middlewares = [authMiddleware, sessionValidationMiddleware, validateWorkspaceId]
+  const middlewares = [authMiddleware, sessionValidationMiddleware, workspaceValidationMiddleware]
 
   /**
    * @swagger
