@@ -49,7 +49,7 @@ import { CallingFunctionsSection } from "@/components/settings/sections/CallingF
 import { CalendarSection } from "@/components/settings/sections/CalendarSection"
 
 // Types
-type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "functions" | "calendar"
+type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "functions" | "calendar" | "demorobot"
 
 // Section definitions for dropdown.
 //
