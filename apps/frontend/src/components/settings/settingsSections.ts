@@ -20,6 +20,7 @@ export type SectionKey =
   | "demorobot"
   | "faqs"
   | "system-prompt"
+  | "terms-conditions"
 
 // F50 — Andrea 2026-05-13: when the workspace runs a custom chatbot module
 // (`customChatbotId` set, e.g. "ecolaundry"), sections that are not used by
@@ -40,6 +41,7 @@ export const ALL_SECTIONS: SettingsSection[] = [
   { key: "calendar", label: "Appointments & Calendar", description: "Google Calendar, reminders" },
   { key: "security", label: "Security", description: "Access control and domains" },
   { key: "functions", label: "Custom Tools", description: "External functions and webhooks" },
+  { key: "terms-conditions", label: "Terms & Conditions", description: "Terms & Conditions text for this workspace" },
 ]
 
 export const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = ["functions"]

@@ -49,6 +49,7 @@ import { WidgetSupportSection } from "@/components/settings/sections/WidgetSuppo
 import { CallingFunctionsSection } from "@/components/settings/sections/CallingFunctionsSection"
 import { CalendarSection } from "@/components/settings/sections/CalendarSection"
 import { SystemPromptSection } from "@/components/settings/sections/SystemPromptSection"
+import { TermsConditionsSection } from "@/components/settings/sections/TermsConditionsSection"
 
 // Default help content for each section
 const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
@@ -63,6 +64,7 @@ const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
   "system-prompt": "customChatbotSystemPrompt",
   "security": "allowedDomains",
   "functions": "webhookUrl",
+  "terms-conditions": "termsAndConditions",
 }
 
 // Default messages
@@ -119,6 +121,7 @@ interface FormData {
   enableWelcomeMessage: boolean // E0a
   sessionResetTimeout: number // E0b (seconds, 0 = never)
   wipMessage: string
+  termsAndConditions: string
   // Security
   allowedExternalLinks: string
   hasHumanSupport: boolean
@@ -267,6 +270,7 @@ export function SettingsPage() {
     enableWelcomeMessage: true,
     sessionResetTimeout: 3600,
     wipMessage: defaultWipMessage,
+    termsAndConditions: "",
     allowedExternalLinks: "",
     hasHumanSupport: true,
     hasSalesAgents: false,
@@ -362,6 +366,7 @@ export function SettingsPage() {
         enableWelcomeMessage: currentWorkspace.enableWelcomeMessage ?? true,
         sessionResetTimeout: currentWorkspace.sessionResetTimeout ?? 3600,
         wipMessage: currentWorkspace.wipMessage || defaultWipMessage,
+        termsAndConditions: currentWorkspace.termsAndConditions || "",
         allowedExternalLinks: Array.isArray(currentWorkspace.allowedExternalLinks)
           ? currentWorkspace.allowedExternalLinks.join(", ")
           : currentWorkspace.allowedExternalLinks || "",
@@ -912,6 +917,17 @@ export function SettingsPage() {
           <SystemPromptSection
             formData={{
               customChatbotSystemPrompt: formData.customChatbotSystemPrompt,
+            }}
+            canEdit={canEdit}
+            onFieldChange={handleFieldChange}
+            onFieldFocus={handleFieldFocus}
+          />
+        )
+      case "terms-conditions":
+        return (
+          <TermsConditionsSection
+            formData={{
+              termsAndConditions: formData.termsAndConditions,
             }}
             canEdit={canEdit}
             onFieldChange={handleFieldChange}
