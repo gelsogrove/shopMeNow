@@ -51,6 +51,7 @@ export interface WorkspaceProps {
   enableWelcomeMessage?: boolean // E0a
   sessionResetTimeout?: number // E0b
   wipMessage?: any
+  termsAndConditions?: string | null
   afterRegistrationMessages?: any
   debugMode: boolean
   adminEmail?: string | null
@@ -322,6 +323,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get wipMessage(): any {
     return this.props.wipMessage
+  }
+
+  get termsAndConditions(): string | null | undefined {
+    return this.props.termsAndConditions
   }
 
   get afterRegistrationMessages(): any {

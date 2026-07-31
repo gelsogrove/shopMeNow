@@ -13,13 +13,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { GitBranch, Plus, ArrowLeft } from "lucide-react"
+import { GitBranch, Plus, ArrowLeft, Copy } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
 import { flowApi, Flow } from "@/services/flowBuilderApi"
 import { ChatWidget } from "@/components/ChatWidget"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
+
+function newId(prefix: string): string {
+  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`
+}
 
 // categoryId param is "generic" for the workspace-generic fallback flow
 // list (Flow.flowCategoryId: null, analisi.md §6), otherwise a real FlowCategory id.
@@ -37,6 +41,7 @@ export function FlowsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [newTitle, setNewTitle] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<Flow | null>(null)
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!workspaceId) return
@@ -64,6 +69,56 @@ export function FlowsPage() {
     }
   }
 
+  // Duplicates title + full node/edge graph: reads the source graph, creates
+  // a new flow, then remaps every node/edge id (new flow, so ids can't be
+  // reused) before writing the copy via the same saveGraph the editor uses.
+  const handleDuplicate = async (flow: Flow) => {
+    setDuplicatingId(flow.id)
+    try {
+      const graph = await flowApi.getGraph(workspaceId, flow.id)
+      const created = await flowApi.create(workspaceId, {
+        title: `${flow.title} (copy)`,
+        robotModelId: resolvedCategoryId,
+        description: flow.description || undefined,
+      })
+
+      const idMap = new Map(graph.nodes.map((n) => [n.id, newId("node")]))
+      const newNodes = graph.nodes.map((n) => ({
+        id: idMap.get(n.id)!,
+        flowId: created.id,
+        question: n.question,
+        positionX: n.positionX,
+        positionY: n.positionY,
+        fieldKey: n.fieldKey,
+        fieldType: n.fieldType,
+        terminalType: n.terminalType,
+        attachmentAssetIds: n.attachments.map((a) => a.assetId),
+      }))
+      const newEdges = graph.edges.map((e) => ({
+        id: newId("edge"),
+        sourceNodeId: idMap.get(e.sourceNodeId)!,
+        targetNodeId: e.targetNodeId ? idMap.get(e.targetNodeId) ?? null : null,
+        label: e.label,
+        triggersEscalation: e.triggersEscalation,
+      }))
+
+      await flowApi.saveGraph(workspaceId, created.id, {
+        nodes: newNodes,
+        edges: newEdges,
+        title: created.title,
+        description: created.description || undefined,
+        keywords: graph.flow.keywords,
+      })
+
+      setFlows((prev) => [...prev, { ...created, description: flow.description, keywords: graph.flow.keywords }])
+      toast.success("Flow duplicated")
+    } catch (err: any) {
+      toast.error(err.message || "Failed to duplicate flow")
+    } finally {
+      setDuplicatingId(null)
+    }
+  }
+
   const handleDelete = async () => {
     if (!deleteTarget) return
     try {
@@ -80,7 +135,6 @@ export function FlowsPage() {
   const columns: ColumnDef<Flow>[] = [
     { header: "Title", accessorKey: "title" },
     { header: "Description", accessorKey: "description", cell: ({ getValue }) => (getValue() as string) || "—" },
-    { header: "Keywords", accessorKey: "keywords", cell: ({ getValue }) => ((getValue() as string[]) || []).join(", ") || "—" },
   ]
 
   const filtered = flows.filter((f) => `${f.title} ${f.description ?? ""}`.toLowerCase().includes(searchValue.toLowerCase()))
@@ -118,6 +172,18 @@ export function FlowsPage() {
         isLoading={isLoading}
         onEdit={(flow) => navigate(`/settings/demorobot/${categoryId}/flows/${flow.id}/edit`)}
         onDelete={(flow) => setDeleteTarget(flow)}
+        actionButtons={(flow) => (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 p-0"
+            disabled={duplicatingId === flow.id}
+            onClick={() => handleDuplicate(flow)}
+            title="Duplicate"
+          >
+            <Copy className="h-4 w-4 text-gray-500" />
+          </Button>
+        )}
       />
 
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>

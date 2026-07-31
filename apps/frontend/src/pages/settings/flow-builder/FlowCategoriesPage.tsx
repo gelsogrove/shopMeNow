@@ -111,7 +111,6 @@ export function FlowCategoriesPage() {
 
   const columns: ColumnDef<FlowCategory>[] = [
     { header: "Name", accessorKey: "name" },
-    { header: "Slug", accessorKey: "slug" },
   ]
 
   const filtered = categories.filter((c) =>

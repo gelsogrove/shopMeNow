@@ -57,6 +57,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       blocklist: data.blocklist,
       welcomeMessage: data.welcomeMessage,
       wipMessage: data.wipMessage,
+      termsAndConditions: data.termsAndConditions,
       enableWelcomeMessage: data.enableWelcomeMessage ?? true, // E0a
       sessionResetTimeout: data.sessionResetTimeout ?? 3600, // E0b
       channelStatus: data.channelStatus,
@@ -172,6 +173,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       blocklist: workspace.blocklist,
       welcomeMessage: workspace.welcomeMessage,
       wipMessage: workspace.wipMessage,
+      termsAndConditions: workspace.termsAndConditions,
       channelStatus: workspace.channelStatus,
       createdAt: workspace.createdAt,
       updatedAt: workspace.updatedAt,
@@ -350,6 +352,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             url: null,
             welcomeMessage: null,
             wipMessage: null,
+            termsAndConditions: null,
             afterRegistrationMessages: null,
             debugMode: true,
             adminEmail: null,
@@ -849,6 +852,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
           enableWelcomeMessage: true, // E0a
           sessionResetTimeout: true, // E0b
           wipMessage: true,
+          termsAndConditions: true,
           afterRegistrationMessages: true,
           channelStatus: true, // ✅ CRITICAL: Include channelStatus
           deletedAt: true,
@@ -975,6 +979,7 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
             url: null,
             welcomeMessage: null,
             wipMessage: null,
+            termsAndConditions: null,
             afterRegistrationMessages: null,
             debugMode: true,
             adminEmail: null,
