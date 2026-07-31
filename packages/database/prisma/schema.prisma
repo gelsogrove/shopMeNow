@@ -103,6 +103,14 @@ model Workspace {
   businessType                      String?     @default("other") // 🆕 Business sector for LLM context (e.g., "food", "fashion", "tech")
   customChatbotId                   String?     @db.Text // 🆕 Custom chatbot module identifier for FLOW workspaces (e.g., "demowash")
   customChatbotSystemPrompt         String?     @db.Text // 🆕 Editable main/system prompt for custom chatbot modules (e.g. demorobot), with {{variables}} processed by PromptProcessorService. Falls back to the module's own static prompt file (e.g. common.md) when empty.
+  customChatbotModel                String?     @db.Text // 🆕 LLM model override for custom chatbot modules (e.g. "anthropic/claude-haiku-4.5"). Falls back to the module's settings.json when empty.
+  customChatbotTemperature          Float?      // 🆕 LLM temperature override for custom chatbot modules. Falls back to the module's settings.json when empty.
+  customChatbotOperatorBriefingLanguage String? @db.Text // 🆕 Language the operator escalation briefing email is written in (e.g. "es"). Falls back to the module's settings.json when empty.
+  customChatbotOperatorEmail        String?     @db.Text // 🆕 Operator email override for custom chatbot escalations. Falls back to the module's settings.json when empty.
+  customChatbotEmailFrom            String?     @db.Text // 🆕 "From" header override for custom chatbot escalation emails (e.g. "Demowash Bot <noreply@demowash.demo>"). Falls back to the module's settings.json when empty.
+  customChatbotEmailSubjectPrefix   String?     @db.Text // 🆕 Subject-line prefix override for custom chatbot escalation emails (e.g. "[Demowash] Incidencia"). Falls back to the module's settings.json when empty.
+  customChatbotAudioOutput          Boolean?    // 🆕 When true, the custom chatbot module may reply with audio (TTS) if the customer sent audio. Falls back to the module's settings.json when null.
+  customChatbotAudioVoices          Json?       // 🆕 Per-language ElevenLabs voice IDs for custom chatbot TTS (key = ISO language code, plus "default"). Falls back to the module's settings.json when empty.
   registrationPage                  String?     @db.Text // 🆕 Custom registration page URL for customers (used by LINK_REGISTRATION)
   requireManualApproval             Boolean     @default(false) // 🆕 If true, new customers go to PENDING_APPROVAL after registration (admin must activate)
   approvalMessage                   String?     @db.Text // 🆕 Message sent to customer when admin approves their registration (default: "🎉 Your registration has been approved!")
