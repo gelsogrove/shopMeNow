@@ -58,6 +58,9 @@ interface FlowNodePanelProps {
   // Uploads a new asset for the current category. Absent when the flow is the
   // workspace-generic one (no category to attach assets to).
   onUploadAsset?: (file: File) => Promise<void>
+  // Permanently deletes an uploaded asset (DB row + stored file). Absent for the
+  // workspace-generic flow, same as onUploadAsset.
+  onDeleteAsset?: (assetId: string) => Promise<void>
   canUploadAssets: boolean
 }
 
@@ -286,14 +289,27 @@ export function FlowNodePanel({
 
             <div className="space-y-1.5">
               {availableAssets.map((asset) => (
-                <label key={asset.id} className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    checked={attachedAssetIds.includes(asset.id)}
-                    onCheckedChange={(checked) => onToggleAttachment(nodeId, asset.id, !!checked)}
-                  />
-                  <span className="flex-1 truncate">{asset.title}</span>
-                  <span className="text-xs text-muted-foreground shrink-0">({asset.type})</span>
-                </label>
+                <div key={asset.id} className="group flex items-center gap-2 text-sm">
+                  <label className="flex flex-1 items-center gap-2 min-w-0 cursor-pointer">
+                    <Checkbox
+                      checked={attachedAssetIds.includes(asset.id)}
+                      onCheckedChange={(checked) => onToggleAttachment(nodeId, asset.id, !!checked)}
+                    />
+                    <span className="flex-1 truncate">{asset.title}</span>
+                    <span className="text-xs text-muted-foreground shrink-0">({asset.type})</span>
+                  </label>
+                  {onDeleteAsset && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 shrink-0 text-red-500 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:bg-red-50"
+                      title={`Delete "${asset.title}"`}
+                      onClick={() => setAssetToDelete(asset)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               ))}
             </div>
           </div>

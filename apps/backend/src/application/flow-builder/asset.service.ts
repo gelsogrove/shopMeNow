@@ -1,5 +1,6 @@
 import { prisma } from '@echatbot/database'
 import { storageService } from '../../services/storage.service'
+import logger from '../../utils/logger'
 
 // Asset upload: reuses the existing storageService (Cloudinary in
 // production, local filesystem in dev) rather than inventing a new storage
@@ -72,6 +73,22 @@ export async function deleteAsset(workspaceId: string, flowCategoryId: string, a
     where: { id: assetId, flowCategoryId, flowCategory: { workspaceId } },
   })
   if (!asset) return false
+
+  // Andrea 2026-07-31: deleting the row alone used to orphan the uploaded file
+  // forever (Cloudinary object in prod, file on disk in dev). Remove the stored
+  // file too — except for 'link' assets, whose url points at someone else's site.
+  //
+  // Storage removal runs BEFORE the delete but never blocks it: if the file is
+  // already gone (or the provider errors), the user still gets their attachment
+  // removed rather than a failed request they can't act on.
+  if (asset.type !== 'link' && asset.url) {
+    try {
+      await storageService.deleteImage(asset.url)
+    } catch (error) {
+      logger.warn(`[flow-builder] Could not delete stored file for asset ${assetId} (${asset.url}):`, error)
+    }
+  }
+
   await prisma.asset.delete({ where: { id: assetId } })
   return true
 }
