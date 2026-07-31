@@ -874,6 +874,7 @@ export function SettingsPage() {
         return (
           <OtherSection
             formData={{
+              customChatbotId: formData.customChatbotId,
               allowedExternalLinks: formData.allowedExternalLinks,
               termsAndConditions: formData.termsAndConditions,
               wipMessage: formData.wipMessage,

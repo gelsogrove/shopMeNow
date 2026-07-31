@@ -6,13 +6,15 @@
  *   CardHeader  -> gradient background + colored icon + title + subtitle
  *   CardContent -> field(s), each with a plain-language helper line underneath
  */
+import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield, FileText, Clock } from "lucide-react"
+import { Bot, Shield, FileText, Clock } from "lucide-react"
 
 interface OtherSectionProps {
   formData: {
+    customChatbotId: string
     allowedExternalLinks: string
     termsAndConditions: string
     wipMessage: string
@@ -40,6 +42,36 @@ export function OtherSection({
           Security, legal text, and maintenance message
         </p>
       </div>
+
+      {/* Custom Chatbot Module — which code module answers on this channel */}
+      <Card>
+        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Bot className="h-5 w-5 text-blue-600" />
+            Custom Chatbot Module
+          </CardTitle>
+          <p className="text-sm text-gray-500">
+            Which chatbot module handles conversations on this channel
+          </p>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="space-y-2" onFocus={() => onFieldFocus?.("customChatbotId")}>
+            <Label htmlFor="customChatbotId">Custom Chatbot ID</Label>
+            <Input
+              id="customChatbotId"
+              value={formData.customChatbotId}
+              onChange={(e) => onFieldChange("customChatbotId", e.target.value)}
+              placeholder="e.g. demowash"
+              disabled={!canEdit}
+            />
+            <p className="text-xs text-gray-500">
+              Name of the custom module that answers on this channel (e.g.{" "}
+              <code className="rounded bg-gray-100 px-1 py-0.5 text-[11px]">demowash</code>).
+              Leave empty to use the standard AI agents.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Security */}
       <Card>

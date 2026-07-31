@@ -383,46 +383,39 @@ export function AIPersonalitySection({
         )}
       </Card>
 
-      {/* Behavior Card — override rules (F50: hidden in custom chatbot mode, see below) */}
-      <Card>
-        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
-          <CardTitle className="text-base font-semibold flex items-center gap-2">
-            <Clock className="h-5 w-5 text-blue-600" />
-            Behavior
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-6 space-y-6">
-          {/* F50: Override Rules — hidden in custom chatbot mode (rephrase LLM rules
-              live in the module's own prompts/rephrase.txt and its rephrase config). */}
-          {!hideModuleOwnedFields && (
-          <div className="space-y-2" onFocus={() => onFieldFocus?.("agentSystemPrompt")}>
-            <Label htmlFor="customAiRules">Override Rules</Label>
-            <div className="border rounded-md overflow-hidden">
-              <Editor
-                height="200px"
-                defaultLanguage="markdown"
-                theme="vs-light"
+      {/* Behavior — Override Rules only. F50: the whole card is hidden in custom
+          chatbot mode (rephrase LLM rules live in the module's own
+          prompts/rephrase.txt), otherwise it would render as an empty box. */}
+      {!hideModuleOwnedFields && (
+        <Card>
+          <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Clock className="h-5 w-5 text-blue-600" />
+              Behavior
+            </CardTitle>
+            <p className="text-sm text-gray-500">
+              Extra rules the bot must follow in every reply
+            </p>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-2" onFocus={() => onFieldFocus?.("agentSystemPrompt")}>
+              <Label htmlFor="customAiRules">Override Rules</Label>
+              <Textarea
+                id="customAiRules"
                 value={formData.customAiRules}
-                onChange={(value) => onFieldChange("customAiRules", value || "")}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  lineNumbers: "on",
-                  wordWrap: "on",
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  folding: true,
-                  renderLineHighlight: "all",
-                  tabSize: 2,
-                  padding: { top: 8, bottom: 8 },
-                  readOnly: !canEdit,
-                }}
+                onChange={(e) => onFieldChange("customAiRules", e.target.value)}
+                placeholder={"Never promise delivery dates.\nAlways suggest the newsletter at the end."}
+                disabled={!canEdit}
+                className="min-h-[140px]"
               />
+              <p className="text-xs text-gray-500">
+                One rule per line. These are added on top of the bot's normal behaviour —
+                use them for things it must always or never do.
+              </p>
             </div>
-          </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Model — LLM used by this chatbot */}
       <Card>
@@ -508,33 +501,6 @@ export function AIPersonalitySection({
         </CardContent>
       </Card>
 
-      {/* Custom Chatbot ID Card — only relevant for FLOW workspaces */}
-      {formData.channelMode === 'FLOW' && (
-        <Card>
-          <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Bot className="h-5 w-5 text-blue-600" />
-              Custom Chatbot Module
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="space-y-2">
-              <Label htmlFor="customChatbotId">Custom Chatbot ID</Label>
-              <Input
-                id="customChatbotId"
-                value={formData.customChatbotId}
-                onChange={(e) => onFieldChange("customChatbotId", e.target.value)}
-                placeholder="e.g. demowash"
-                disabled={!canEdit}
-              />
-              <p className="text-xs text-gray-500">
-                Module identifier for the custom chatbot used in FLOW mode (e.g. <code>demowash</code>).
-                Leave empty to use the standard AI agents.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }
