@@ -42,7 +42,7 @@ interface CalendarSectionProps {
     minBookingBufferHours?: number
   }
   onChange: (field: string, value: any) => void
-  onFocus: (field: string) => void
+  onFocus?: (field: string) => void
 }
 
 export function CalendarSection({ workspaceId, formData, onChange, onFocus }: CalendarSectionProps) {
@@ -250,25 +250,12 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
     <div className="space-y-6">
       {/* Enable Calendar Booking */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            Calendar Booking
-          </CardTitle>
-          <CardDescription>
-            Enable or disable appointment booking for this workspace
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-white">
           <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="enableCalendarBooking" className="text-base">
-                Enable Appointment Booking
-              </Label>
-              <p className="text-sm text-muted-foreground mt-1">
-                Allow customers to book appointments via chat
-              </p>
-            </div>
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-slate-600" />
+              Calendar Booking
+            </CardTitle>
             <Switch
               id="enableCalendarBooking"
               checked={formData.enableCalendarBooking || false}
@@ -278,6 +265,11 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
               }}
             />
           </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <p className="text-sm text-muted-foreground">
+            Allow customers to book appointments via chat
+          </p>
         </CardContent>
       </Card>
 

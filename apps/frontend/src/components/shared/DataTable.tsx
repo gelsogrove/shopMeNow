@@ -82,6 +82,7 @@ export function DataTable<TData>({
   isLoading = false,
   getRowClassName,
   disablePagination = false,
+  onRowClick,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -267,7 +268,10 @@ export function DataTable<TData>({
 
                     return (
                       <React.Fragment key={row.id}>
-                        <TableRow className={rowClassName}>
+                        <TableRow
+                          className={onRowClick ? `${rowClassName} cursor-pointer` : rowClassName}
+                          onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                        >
                           {row.getVisibleCells().map((cell) => (
                             <TableCell
                               key={cell.id}

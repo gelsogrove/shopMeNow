@@ -17,7 +17,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { useSupportUnreadCount } from "@/hooks/useSupportUnreadCount"
 import { storage } from "@/lib/storage"
-import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, Settings, ListTodo, Mail } from "lucide-react"
+import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, ListTodo, Mail } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
 import { WidgetLoader } from "@/components/WidgetLoader"
@@ -197,26 +197,6 @@ export function MinimalLayout() {
                 </Tooltip>
               </TooltipProvider>
 
-              {/* Settings Icon - Only shown when workspace is active */}
-              {workspace && (
-                <TooltipProvider delayDuration={100}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate("/settings")}
-                        className="p-2 text-gray-600 hover:text-gray-900"
-                      >
-                        <Settings className="h-5 w-5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Settings</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
 
               {/* Plan Badge - Only shown when NOT in a workspace */}
               {!workspace && (
@@ -298,13 +278,6 @@ export function MinimalLayout() {
                             <Package className="mr-2 h-4 w-4 text-orange-500" />
                             <span>Products</span>
                           </DropdownMenuItem>
-                          {/* Services inside E-commerce only when calendar booking is NOT enabled */}
-                          {!workspace?.enableCalendarBooking && (
-                            <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/services")}>
-                              <Briefcase className="mr-2 h-4 w-4 text-cyan-500" />
-                              <span>Services</span>
-                            </DropdownMenuItem>
-                          )}
                           <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/offers")}>
                             <Tag className="mr-2 h-4 w-4 text-pink-500" />
                             <span>Offers</span>
@@ -320,13 +293,6 @@ export function MinimalLayout() {
                             <span>Orders</span>
                           </DropdownMenuItem>
                         </>
-                      )}
-                      {/* Services standalone - visible for informational workspaces OR when calendar booking is enabled. Hidden for custom chatbot. */}
-                      {!isCustomChatbot && (workspace?.enableCalendarBooking === true || workspace?.channelMode !== 'ECOMMERCE') && (
-                        <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/services")}>
-                          <Briefcase className="mr-2 h-4 w-4 text-cyan-500" />
-                          <span>Services</span>
-                        </DropdownMenuItem>
                       )}
                       {/* Sales standalone - for informational workspaces with sales agents */}
                       {workspace?.channelMode !== 'ECOMMERCE' && hasSalesAgents && (

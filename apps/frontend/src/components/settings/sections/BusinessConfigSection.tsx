@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Store, Trash2, Loader2, AlertTriangle, Power } from "lucide-react"
+import { Store, Trash2, Loader2, AlertTriangle, Radio } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SUPPORTED_CURRENCIES } from "@/utils/format"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -93,7 +93,10 @@ export function BusinessConfigSection({
 
       <Card>
         <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-white">
-          <CardTitle className="text-base font-semibold">Company Information</CardTitle>
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Store className="h-5 w-5 text-purple-600" />
+            Company Information
+          </CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid gap-6 md:grid-cols-2">
@@ -168,27 +171,19 @@ export function BusinessConfigSection({
 
       {/* Channel — currency + immutable channel mode */}
       <Card>
-        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-white flex flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-base font-semibold">Channel</CardTitle>
-          {canEdit && (
-            <div
-              data-focus-key="channelStatus"
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${formData.channelStatus
-                  ? "bg-green-50 border-green-200"
-                  : "bg-gray-100 border-gray-200"
-                }`}
-            >
-              <Power className={`h-4 w-4 ${formData.channelStatus ? "text-green-600" : "text-gray-400"}`} />
-              <span className={`text-sm font-medium ${formData.channelStatus ? "text-green-700" : "text-gray-500"}`}>
-                {formData.channelStatus ? "Active" : "Inactive"}
-              </span>
+        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-white">
+          <div className="flex items-center justify-between" data-focus-key="channelStatus">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Radio className="h-5 w-5 text-purple-600" />
+              Channel
+            </CardTitle>
+            {canEdit && (
               <Switch
                 checked={formData.channelStatus}
                 onCheckedChange={(checked) => onFieldChange("channelStatus", checked)}
-                className="ml-1"
               />
-            </div>
-          )}
+            )}
+          </div>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid gap-6 md:grid-cols-2">
@@ -258,18 +253,18 @@ export function BusinessConfigSection({
 
       {/* Danger Zone - Delete Workspace (Super Admin only) */}
       {isSuperAdmin && (
-        <div className="border-t pt-6">
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-start gap-2 mb-3">
-              <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
-              <div>
-                <p className="font-semibold text-sm text-red-900">Danger Zone</p>
-                <p className="text-xs text-red-700 mt-1">
-                  Delete this workspace and all data. Recoverable within 90 days.
-                </p>
-              </div>
-            </div>
-            <div className="flex justify-center">
+        <Card className="border-red-200">
+          <CardHeader className="border-b bg-gradient-to-r from-red-50 to-white">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              Danger Zone
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-gray-600">
+                Delete this workspace and all data. Recoverable within 90 days.
+              </p>
               <Button
                 variant="outline"
                 className="text-red-600 border-red-300 hover:bg-red-100 hover:text-red-700"
@@ -290,8 +285,8 @@ export function BusinessConfigSection({
                 )}
               </Button>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

@@ -33,8 +33,6 @@ import { updateWorkspace, deleteWorkspace, getWorkspaceById } from "@/services/w
 
 // Settings components
 import { SettingsDropdown } from "@/components/settings/SettingsDropdown"
-import { SettingsLayout } from "@/components/settings/SettingsLayout"
-import { HelpPanel, HELP_CONTENT } from "@/components/settings/HelpPanel"
 import { getVisibleSections, SectionKey, HIDDEN_FOR_CUSTOM_CHATBOT, SECTION_ROUTES } from "@/components/settings/settingsSections"
 
 // Section components
@@ -47,21 +45,6 @@ import { WidgetSupportSection } from "@/components/settings/sections/WidgetSuppo
 import { CallingFunctionsSection } from "@/components/settings/sections/CallingFunctionsSection"
 import { CalendarSection } from "@/components/settings/sections/CalendarSection"
 import { SystemPromptSection } from "@/components/settings/sections/SystemPromptSection"
-
-// Default help content for each section
-const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
-  "ai-personality": "botName",
-  "business": "businessName",
-  "whatsapp": "whatsappPhoneNumber",
-  "widget": "widgetTitle",
-  "widget-support": "humanSupportEnabled",
-  "calendar": "appointmentReminder24hEnabled",
-  "demorobot": "customChatbotId",
-  "faqs": "customChatbotId",
-  "system-prompt": "customChatbotSystemPrompt",
-  "functions": "webhookUrl",
-  "other": "allowedDomains",
-}
 
 // Default messages
 const defaultWelcomeMessage = "👋 Welcome! I'm your digital assistant. How can I help you today?"
@@ -124,6 +107,7 @@ interface FormData {
   hasSalesAgents: boolean
   operatorContactMethod: "email" | "whatsapp"
   operatorWhatsappNumber: string
+  operatorEmail: string
   humanSupportInstructions: string
   frustrationTriggers: string
   translateOperatorMessages: boolean
@@ -191,7 +175,6 @@ export function SettingsPage() {
 
   // State
   const [activeSection, setActiveSection] = useState<SectionKey>(getLastOpenedSection())
-  const [activeHelpField, setActiveHelpField] = useState<string>("businessName")
 
   // When the workspace loads async, ensure activeSection is valid for this workspace type.
   // If the current section is hidden for custom chatbot, reset to 'business' (visible for all).
@@ -272,6 +255,7 @@ export function SettingsPage() {
     hasSalesAgents: false,
     operatorContactMethod: "email",
     operatorWhatsappNumber: "",
+    operatorEmail: "",
     humanSupportInstructions: "",
     frustrationTriggers: "",
     translateOperatorMessages: true,
@@ -371,6 +355,7 @@ export function SettingsPage() {
         operatorContactMethod:
           (currentWorkspace.operatorContactMethod as "email" | "whatsapp") || "email",
         operatorWhatsappNumber: currentWorkspace.operatorWhatsappNumber || "",
+        operatorEmail: currentWorkspace.operatorEmail || "",
         humanSupportInstructions: currentWorkspace.humanSupportInstructions || "",
         frustrationTriggers: currentWorkspace.frustrationTriggers || "",
         translateOperatorMessages: currentWorkspace.translateOperatorMessages ?? true,
@@ -469,10 +454,6 @@ export function SettingsPage() {
     })
   }, []) // No dependency on errors — functional update reads latest state
 
-  // Handle field focus for help panel
-  const handleFieldFocus = useCallback((fieldKey: string) => {
-    setActiveHelpField(fieldKey)
-  }, [])
 
   // Handle section change - update help field to section default
   const handleSectionChange = useCallback((sectionKey: string) => {
@@ -491,11 +472,6 @@ export function SettingsPage() {
       localStorage.setItem('settings-last-section', sectionKey)
     } catch (error) {
       // Ignore localStorage errors
-    }
-    // Update help to section's default field
-    const defaultField = SECTION_DEFAULT_HELP[sectionKey as SectionKey]
-    if (defaultField) {
-      setActiveHelpField(defaultField)
     }
   }, [navigate])
 
@@ -740,12 +716,6 @@ export function SettingsPage() {
     deleteWorkspaceMutation.mutate()
   }
 
-  // Get current help content
-  const currentHelp = HELP_CONTENT[activeHelpField] || HELP_CONTENT["default"] || {
-    title: "Settings Help",
-    description: "Select a field to see detailed information.",
-  }
-
   // Render active section content
   const renderSectionContent = () => {
     switch (activeSection) {
@@ -761,7 +731,6 @@ export function SettingsPage() {
               enableWelcomeMessage: formData.enableWelcomeMessage,
               sessionResetTimeout: formData.sessionResetTimeout,
               customAiRules: formData.customAiRules,
-              wipMessage: formData.wipMessage,
               customChatbotId: formData.customChatbotId,
               defaultLanguage: formData.defaultLanguage,
               enabledLanguages: formData.enabledLanguages,
@@ -774,7 +743,6 @@ export function SettingsPage() {
             errors={errors}
             canEdit={canEdit}
             onFieldChange={handleFieldChange}
-            onFieldFocus={handleFieldFocus}
           />
         )
       case "business":
@@ -800,7 +768,6 @@ export function SettingsPage() {
             isSuperAdmin={isSuperAdmin}
             isDeleting={deleteWorkspaceMutation.isPending}
             onFieldChange={handleFieldChange}
-            onFieldFocus={handleFieldFocus}
             onDeleteWorkspace={handleDeleteWorkspace}
           />
         )
@@ -827,7 +794,6 @@ export function SettingsPage() {
             errors={errors}
             canEdit={canEdit}
             onFieldChange={handleFieldChange}
-            onFieldFocus={handleFieldFocus}
           />
         )
       case "widget":
@@ -849,7 +815,6 @@ export function SettingsPage() {
             canEdit={canEdit}
             channelMode={formData.channelMode}
             onFieldChange={handleFieldChange}
-            onFieldFocus={handleFieldFocus}
           />
         )
       case "widget-support":
@@ -860,7 +825,7 @@ export function SettingsPage() {
               hasSalesAgents: formData.hasSalesAgents,
               operatorContactMethod: formData.operatorContactMethod,
               operatorWhatsappNumber: formData.operatorWhatsappNumber,
-              operatorEmail: formData.adminEmail, // Use business email as default
+              operatorEmail: formData.operatorEmail,
               humanSupportInstructions: formData.humanSupportInstructions,
               frustrationTriggers: formData.frustrationTriggers,
               translateOperatorMessages: formData.translateOperatorMessages,
@@ -868,7 +833,6 @@ export function SettingsPage() {
             errors={errors}
             canEdit={canEdit}
             onFieldChange={handleFieldChange}
-            onFieldFocus={handleFieldFocus}
           />
         )
       case "functions":
@@ -894,7 +858,6 @@ export function SettingsPage() {
               appointmentReminderChannel: formData.appointmentReminderChannel,
             }}
             onChange={handleFieldChange}
-            onFocus={handleFieldFocus}
           />
         )
       case "system-prompt":
@@ -905,7 +868,6 @@ export function SettingsPage() {
             }}
             canEdit={canEdit}
             onFieldChange={handleFieldChange}
-            onFieldFocus={handleFieldFocus}
           />
         )
       case "other":
@@ -919,7 +881,6 @@ export function SettingsPage() {
             errors={errors}
             canEdit={canEdit}
             onFieldChange={handleFieldChange}
-            onFieldFocus={handleFieldFocus}
           />
         )
       default:
@@ -961,24 +922,8 @@ export function SettingsPage() {
           </div>
         </div>
 
-        {/* Main Content with Layout */}
-        <SettingsLayout
-          helpPanel={
-            <HelpPanel
-              title={currentHelp.title}
-              description={currentHelp.description}
-              examples={currentHelp.examples}
-              tips={currentHelp.tips}
-              showVariables={
-                activeSection === "ai-personality" ||
-                ["welcomeMessage", "agentSystemPrompt", "botDescription"].includes(activeHelpField)
-              }
-              isEcommerce={formData.channelMode === 'ECOMMERCE'}
-            />
-          }
-        >
-          {renderSectionContent()}
-        </SettingsLayout>
+        {/* Main Content — full width, guidance lives inline under each field */}
+        <div className="space-y-6">{renderSectionContent()}</div>
       </div>
 
       {/* Delete Workspace Confirmation Dialog */}
@@ -1059,7 +1004,6 @@ export function SettingsPage() {
           useChannelLogo={formData.widgetUseChannelLogo}
           useWindowConfig={false}
           language={formData.widgetLanguage}
-          position="bottom-left"
         />
       )}
     </div>

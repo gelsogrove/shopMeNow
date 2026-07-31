@@ -70,17 +70,20 @@ export const SYSTEM_PROMPT_SECTION: SettingsSection = {
   description: "Edit the fixed system prompt this chatbot reads every turn",
 }
 
-export function getVisibleSections(isCustomChatbot: boolean): SettingsSection[] {
-  if (!isCustomChatbot) return ALL_SECTIONS
-  // Requested order: Business Config -> Main Prompt -> Manage Flows -> FAQs
-  // -> everything else (WhatsApp/Human Support/Calendar/Security etc).
+// Andrea 2026-07-31: Main Prompt / Flows / FAQs are now visible for EVERY
+// workspace, not just channelMode === 'FLOW' ones — the previous conditional
+// made the menu change shape between workspaces. Custom Tools is hidden
+// everywhere for the same reason.
+// Order: Preferences -> AI Personality -> Main Prompt -> Flows -> FAQs -> rest.
+export function getVisibleSections(_isCustomChatbot: boolean): SettingsSection[] {
   const business = ALL_SECTIONS.find((s) => s.key === "business")!
-  const rest = ALL_SECTIONS.filter(
-    (s) => s.key !== "business" && !HIDDEN_FOR_CUSTOM_CHATBOT.includes(s.key as SectionKey),
-  )
-  // AI Personality is pinned second, right after Preferences.
   const aiPersonality = ALL_SECTIONS.find((s) => s.key === "ai-personality")!
-  const remaining = rest.filter((s) => s.key !== "ai-personality")
+  const remaining = ALL_SECTIONS.filter(
+    (s) =>
+      s.key !== "business" &&
+      s.key !== "ai-personality" &&
+      !HIDDEN_FOR_CUSTOM_CHATBOT.includes(s.key as SectionKey),
+  )
   return [business, aiPersonality, SYSTEM_PROMPT_SECTION, DEMOROBOT_SECTION, FAQS_SECTION, ...remaining]
 }
 

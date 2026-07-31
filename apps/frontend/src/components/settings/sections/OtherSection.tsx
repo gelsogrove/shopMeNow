@@ -4,9 +4,8 @@
  */
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Shield, Trash2, Loader2, AlertTriangle, FileText, Clock } from "lucide-react"
+import { Shield, FileText, Clock } from "lucide-react"
 import Editor from "@monaco-editor/react"
 
 interface OtherSectionProps {

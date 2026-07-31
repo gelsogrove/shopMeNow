@@ -139,6 +139,8 @@ export function FlowCategoriesPage() {
         data={filtered}
         columns={columns}
         isLoading={isLoading}
+        disablePagination
+        onRowClick={(category) => navigate(`/settings/demorobot/${category.id}/flows`)}
         onEdit={(category) => {
           setEditTarget(category)
           setEditName(category.name)
