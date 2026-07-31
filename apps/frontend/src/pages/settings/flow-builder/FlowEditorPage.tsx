@@ -398,10 +398,43 @@ function FlowEditorInner() {
       }
       toast.success("Flow saved and online")
       if (result.flow) setFlow(result.flow)
+
+      // The graph is saved and valid at this point, so the prompt is generated
+      // from what is actually stored. Failing to generate never undoes the save:
+      // the dialog just reports it, and the flow stays online either way.
+      setIsPromptDialogOpen(true)
+      setIsGeneratingPrompt(true)
+      setPromptError(null)
+      try {
+        const generated = await flowApi.generatePrompt(workspaceId, flowId)
+        setGeneratedPrompt(generated)
+      } catch (err: any) {
+        setPromptError(
+          err?.response?.data?.error || "Could not generate the prompt. Your flow is saved.",
+        )
+      } finally {
+        setIsGeneratingPrompt(false)
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to save flow")
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  // Keeps the reviewed prompt. Closing without saving simply discards it — the
+  // flow itself is already saved, so nothing is lost either way.
+  const handleSavePrompt = async () => {
+    if (!workspaceId || !flowId) return
+    setIsSavingPrompt(true)
+    try {
+      await flowApi.savePrompt(workspaceId, flowId, generatedPrompt)
+      toast.success("Prompt saved")
+      setIsPromptDialogOpen(false)
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to save the prompt")
+    } finally {
+      setIsSavingPrompt(false)
     }
   }
 

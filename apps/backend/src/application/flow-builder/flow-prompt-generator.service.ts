@@ -39,9 +39,13 @@ export interface GenerateFlowPromptInput {
   flowTitle: string
 }
 
+/**
+ * Discriminated union: `ok` is a literal type, which is what lets callers narrow
+ * to `prompt` or `error` without casts.
+ */
 export type GenerateFlowPromptResult =
-  | { ok: true; prompt: string }
-  | { ok: false; error: string }
+  | { ok: true; prompt: string; error?: never }
+  | { ok: false; prompt?: never; error: string }
 
 export async function generateFlowPrompt(
   input: GenerateFlowPromptInput

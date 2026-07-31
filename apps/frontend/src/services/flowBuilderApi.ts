@@ -125,6 +125,17 @@ export const flowApi = {
     const response = await api.post(`/workspaces/${workspaceId}/demorobot/flows/${flowId}/duplicate`)
     return response.data?.flow
   },
+  /** Rewrites the saved graph as plain-language instructions. Does not persist. */
+  generatePrompt: async (workspaceId: string, flowId: string): Promise<string> => {
+    const response = await api.post(
+      `/workspaces/${workspaceId}/demorobot/flows/${flowId}/prompt/generate`,
+    )
+    return response.data?.prompt ?? ""
+  },
+  /** Stores the prompt after the user reviewed it. Empty string clears it. */
+  savePrompt: async (workspaceId: string, flowId: string, humanPrompt: string): Promise<void> => {
+    await api.put(`/workspaces/${workspaceId}/demorobot/flows/${flowId}/prompt`, { humanPrompt })
+  },
   getGraph: async (workspaceId: string, flowId: string): Promise<FlowGraph> => {
     const response = await api.get(`/workspaces/${workspaceId}/demorobot/flows/${flowId}/graph`)
     return response.data
