@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Trash2, Paperclip, ArrowRight } from "lucide-react"
+import { Plus, Trash2, Paperclip, ArrowRight, Upload, Loader2 } from "lucide-react"
 import type { FlowQuestionNodeData } from "./FlowQuestionNode"
 import type { Asset } from "@/services/flowBuilderApi"
 
@@ -15,6 +15,24 @@ export interface EditableAnswer {
   label: string
   triggersEscalation: boolean
 }
+
+// Everything except video: manuals, spec sheets, spreadsheets, photos.
+const ACCEPTED_FILE_TYPES = [
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".csv",
+  ".txt",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".gif",
+].join(",")
+
+const IMAGE_EXTENSIONS = /\.(png|jpe?g|webp|gif)$/i
 
 interface FlowNodePanelProps {
   open: boolean
@@ -36,6 +54,11 @@ interface FlowNodePanelProps {
   onToggleAnswerEscalation: (nodeId: string, edgeId: string, value: boolean) => void
   onToggleAttachment: (nodeId: string, assetId: string, attached: boolean) => void
   onRetargetAnswer: (nodeId: string, edgeId: string, targetNodeId: string) => void
+  onDeleteNode: (nodeId: string) => void
+  // Uploads a new asset for the current category. Absent when the flow is the
+  // workspace-generic one (no category to attach assets to).
+  onUploadAsset?: (file: File) => Promise<void>
+  canUploadAssets: boolean
 }
 
 const DEBOUNCE_MS = 400
@@ -55,20 +78,20 @@ export function FlowNodePanel({
   onToggleAnswerEscalation,
   onToggleAttachment,
   onRetargetAnswer,
+  onDeleteNode,
+  onUploadAsset,
+  canUploadAssets,
 }: FlowNodePanelProps) {
   const [question, setQuestion] = useState("")
-  const [fieldKey, setFieldKey] = useState("")
-  const [fieldType, setFieldType] = useState<string>("")
   const [terminalType, setTerminalType] = useState<string>("")
   const [newAnswerLabel, setNewAnswerLabel] = useState("")
+  const [isUploading, setIsUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!data) return
     setQuestion(data.question)
     setTerminalType(data.terminalType ?? "")
-    // fieldKey/fieldType are carried on data via the same object (see FlowEditorPage mapping)
-    setFieldKey((data as any).fieldKey ?? "")
-    setFieldType((data as any).fieldType ?? "")
   }, [nodeId, data])
 
   useEffect(() => {
@@ -81,9 +104,20 @@ export function FlowNodePanel({
 
   if (!data || !nodeId) return null
 
+  const handleFilePicked = async (file: File | undefined) => {
+    if (!file || !onUploadAsset) return
+    setIsUploading(true)
+    try {
+      await onUploadAsset(file)
+    } finally {
+      setIsUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[420px] sm:w-[480px] overflow-y-auto">
+      <SheetContent side="right" className="w-[480px] sm:w-[560px] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>Edit Question</SheetTitle>
         </SheetHeader>
@@ -91,45 +125,14 @@ export function FlowNodePanel({
         <div className="space-y-5 py-4">
           <div className="space-y-2">
             <Label htmlFor="node-question">Question</Label>
-            <Textarea id="node-question" value={question} onChange={(e) => setQuestion(e.target.value)} rows={3} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="node-field-key">Field key (optional)</Label>
-              <Input
-                id="node-field-key"
-                value={fieldKey}
-                onChange={(e) => {
-                  setFieldKey(e.target.value)
-                  onChange(nodeId, { fieldKey: e.target.value } as any)
-                }}
-                placeholder="wifiStatus"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Field type</Label>
-              <Select
-                value={fieldType || "none"}
-                onValueChange={(v) => {
-                  const value = v === "none" ? "" : v
-                  setFieldType(value)
-                  onChange(nodeId, { fieldType: value || null } as any)
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">—</SelectItem>
-                  <SelectItem value="string">string</SelectItem>
-                  <SelectItem value="number">number</SelectItem>
-                  <SelectItem value="boolean">boolean</SelectItem>
-                  <SelectItem value="date">date</SelectItem>
-                  <SelectItem value="enum">enum</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Textarea
+              id="node-question"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              rows={10}
+              className="min-h-[220px] resize-y"
+              placeholder="What should the assistant ask or say at this step?"
+            />
           </div>
 
           {/* Two plain checkboxes instead of a 5-option technical dropdown.
@@ -239,14 +242,48 @@ export function FlowNodePanel({
           </div>
           )}
 
-          <div className="space-y-2">
-            <Label className="flex items-center gap-1.5">
-              <Paperclip className="h-3.5 w-3.5" />
-              Attachments
-            </Label>
-            {availableAssets.length === 0 && (
-              <p className="text-xs text-muted-foreground">No assets uploaded for this robot model yet.</p>
+          <div className="space-y-2 pt-2 border-t">
+            <div className="flex items-center justify-between pt-2">
+              <Label className="flex items-center gap-1.5">
+                <Paperclip className="h-3.5 w-3.5" />
+                Attachments
+              </Label>
+              {canUploadAssets && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isUploading}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {isUploading ? (
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  ) : (
+                    <Upload className="h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  Upload
+                </Button>
+              )}
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={ACCEPTED_FILE_TYPES}
+              className="hidden"
+              onChange={(e) => handleFilePicked(e.target.files?.[0])}
+            />
+
+            {!canUploadAssets && (
+              <p className="text-xs text-muted-foreground">
+                Attachments are only available for flows that belong to a category.
+              </p>
             )}
+            {canUploadAssets && availableAssets.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                No files yet. Upload PDF, Word, Excel or images.
+              </p>
+            )}
+
             <div className="space-y-1.5">
               {availableAssets.map((asset) => (
                 <label key={asset.id} className="flex items-center gap-2 text-sm">
@@ -254,11 +291,31 @@ export function FlowNodePanel({
                     checked={attachedAssetIds.includes(asset.id)}
                     onCheckedChange={(checked) => onToggleAttachment(nodeId, asset.id, !!checked)}
                   />
-                  <span>{asset.title}</span>
-                  <span className="text-xs text-muted-foreground">({asset.type})</span>
+                  <span className="flex-1 truncate">{asset.title}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">({asset.type})</span>
                 </label>
               ))}
             </div>
+          </div>
+
+          {/* Node deletion — applied to the canvas immediately, persisted only
+              when the flow is saved, same as every other edit here. */}
+          <div className="pt-4 border-t">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 border-red-200 hover:bg-red-50"
+              onClick={() => {
+                onDeleteNode(nodeId)
+                onOpenChange(false)
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Delete question
+            </Button>
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Removed from the canvas now — click Save to persist.
+            </p>
           </div>
         </div>
       </SheetContent>

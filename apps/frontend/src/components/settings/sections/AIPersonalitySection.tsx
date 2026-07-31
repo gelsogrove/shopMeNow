@@ -2,6 +2,7 @@
  * AIPersonalitySection - AI Personality & Configuration
  * Merged: chatbotName, botIdentityResponse, toneOfVoice, welcomeMessage, customAiRules, wipMessage, channelMode
  */
+import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
@@ -25,6 +26,19 @@ const SESSION_RESET_OPTIONS = [
   { value: 259200, label: "72 hours" },
   { value: 0, label: "Never" },
 ] as const
+
+// OpenRouter model ids offered in the dropdown. Free-text entry ("Custom...")
+// stays available since customChatbotModel is a plain string in the DB.
+const LLM_MODEL_OPTIONS = [
+  { value: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet" },
+  { value: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5" },
+  { value: "openai/gpt-4o", label: "GPT-4o" },
+  { value: "openai/gpt-4o-mini", label: "GPT-4o Mini" },
+  { value: "google/gemini-2.0-flash-001", label: "Gemini 2.0 Flash" },
+  { value: "meta-llama/llama-3.3-70b-instruct", label: "Llama 3.3 70B" },
+] as const
+
+const CUSTOM_MODEL_VALUE = "__custom__"
 
 // Languages a client can request. `enabledLanguages` is documentation for the
 // team (see Workspace.enabledLanguages) — the chatbot detects the customer's
@@ -94,6 +108,12 @@ export function AIPersonalitySection({
   const { workspace } = useWorkspace()
   const isCustomChatbot = Boolean(workspace?.customChatbotId)
   const hideModuleOwnedFields = isCustomChatbot
+  // LLM Model field: dropdown of well-known OpenRouter models + a "Custom..."
+  // escape hatch, since customChatbotModel is a free-text string in the DB.
+  const isKnownModel = LLM_MODEL_OPTIONS.some((opt) => opt.value === formData.customChatbotModel)
+  const [isCustomModelMode, setIsCustomModelMode] = useState(
+    () => Boolean(formData.customChatbotModel) && !isKnownModel,
+  )
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -422,7 +442,7 @@ export function AIPersonalitySection({
             onFocus={() => onFieldFocus?.("maintenanceMessage")}
             data-focus-key="maintenanceMessage"
           >
-            <Label htmlFor="wipMessage">Maintenance Message</Label>
+            <Label htmlFor="wipMessage">Maintenance</Label>
             <div className="border rounded-md overflow-hidden">
               <Editor
                 height="200px"
@@ -491,13 +511,40 @@ export function AIPersonalitySection({
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="customChatbotModel">LLM Model</Label>
-              <Input
-                id="customChatbotModel"
-                value={formData.customChatbotModel || ""}
-                onChange={(e) => onFieldChange("customChatbotModel", e.target.value)}
-                placeholder="anthropic/claude-haiku-4.5"
+              <Select
+                value={isCustomModelMode ? CUSTOM_MODEL_VALUE : formData.customChatbotModel || ""}
+                onValueChange={(value) => {
+                  if (value === CUSTOM_MODEL_VALUE) {
+                    setIsCustomModelMode(true)
+                    return
+                  }
+                  setIsCustomModelMode(false)
+                  onFieldChange("customChatbotModel", value)
+                }}
                 disabled={!canEdit}
-              />
+              >
+                <SelectTrigger id="customChatbotModel">
+                  <SelectValue placeholder="Module default" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LLM_MODEL_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value={CUSTOM_MODEL_VALUE}>Custom...</SelectItem>
+                </SelectContent>
+              </Select>
+              {isCustomModelMode && (
+                <Input
+                  value={formData.customChatbotModel || ""}
+                  onChange={(e) => onFieldChange("customChatbotModel", e.target.value)}
+                  placeholder="openrouter/vendor/model-id"
+                  disabled={!canEdit}
+                  className="mt-2"
+                  autoFocus
+                />
+              )}
               <p className="text-xs text-gray-500">
                 OpenRouter model id. Leave empty to use the module default.
               </p>

@@ -201,6 +201,27 @@ function FlowEditorInner() {
     [setNodes],
   )
 
+  // Removes the node from the canvas and every edge touching it (as source or
+  // target), so no dangling edge survives. Not persisted until Save.
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      setNodes((prev) => prev.filter((n) => n.id !== nodeId))
+      setEdges((prev) => prev.filter((e) => e.source !== nodeId && e.target !== nodeId))
+      setPanelNodeId((prev) => (prev === nodeId ? null : prev))
+    },
+    [setNodes, setEdges],
+  )
+
+  // React Flow's default delete key (Backspace/Delete) on a selected node —
+  // same cleanup as the panel's "Delete question" button, so no path leaves
+  // dangling edges.
+  const handleNodesDelete = useCallback(
+    (deleted: Node[]) => {
+      deleted.forEach((n) => handleDeleteNode(n.id))
+    },
+    [handleDeleteNode],
+  )
+
   const handleToggleAttachment = useCallback(
     (nodeId: string, assetId: string, attached: boolean) => {
       setNodes((prev) =>
@@ -213,6 +234,28 @@ function FlowEditorInner() {
       )
     },
     [setNodes],
+  )
+
+  // Uploads a new asset for the flow's category, then attaches it to the
+  // currently open node. Absent (no-op) for the workspace-generic flow, which
+  // has no category to own assets.
+  const handleUploadAsset = useCallback(
+    async (file: File) => {
+      if (!workspaceId || !categoryId || categoryId === "generic" || !panelNodeId) return
+      const isImage = /\.(png|jpe?g|webp|gif)$/i.test(file.name)
+      try {
+        const asset = await assetApi.uploadFile(workspaceId, categoryId, {
+          type: isImage ? "image" : "document",
+          file,
+          title: file.name,
+        })
+        setAssets((prev) => [...prev, asset])
+        handleToggleAttachment(panelNodeId, asset.id, true)
+      } catch (err: any) {
+        toast.error(err.message || "Failed to upload file")
+      }
+    },
+    [workspaceId, categoryId, panelNodeId, handleToggleAttachment],
   )
 
   // Manual reconnect-to-existing-node (specs/flow-graph-editor): native React
@@ -314,7 +357,7 @@ function FlowEditorInner() {
             <ArrowLeft className="h-4 w-4 mr-1.5" />
             Back
           </Button>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} className="w-64 font-medium" />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} className="w-[420px] font-medium" />
         </div>
         <div className="flex items-center gap-2">
           {validationErrors.length > 0 && (
@@ -355,6 +398,7 @@ function FlowEditorInner() {
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
+            onNodesDelete={handleNodesDelete}
             onConnect={onConnect}
             onNodeClick={(_, node) => setPanelNodeId(node.id)}
             nodeTypes={nodeTypes}
@@ -382,6 +426,9 @@ function FlowEditorInner() {
         onToggleAnswerEscalation={handleToggleAnswerEscalation}
         onToggleAttachment={handleToggleAttachment}
         onRetargetAnswer={handleRetargetAnswer}
+        onDeleteNode={handleDeleteNode}
+        onUploadAsset={categoryId && categoryId !== "generic" ? handleUploadAsset : undefined}
+        canUploadAssets={!!categoryId && categoryId !== "generic"}
       />
     </div>
   )

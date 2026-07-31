@@ -224,9 +224,6 @@ export function BusinessConfigSection({
                   <SelectItem value="FLOW">Flow</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-xs text-amber-600">
-                Set at creation and cannot be changed.
-              </p>
             </div>
           </div>
         </CardContent>
