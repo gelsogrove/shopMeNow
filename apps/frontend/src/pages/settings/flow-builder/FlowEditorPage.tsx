@@ -258,6 +258,23 @@ function FlowEditorInner() {
     [workspaceId, categoryId, panelNodeId, handleToggleAttachment],
   )
 
+  // Deletes the asset for the whole category (DB row + stored file), then drops
+  // it from local state so every node that referenced it stops showing it. The
+  // panel confirms with the user before calling this.
+  const handleDeleteAsset = useCallback(
+    async (assetId: string) => {
+      if (!workspaceId || !categoryId || categoryId === "generic") return
+      try {
+        await assetApi.delete(workspaceId, categoryId, assetId)
+        setAssets((prev) => prev.filter((a) => a.id !== assetId))
+        toast.success("Attachment deleted")
+      } catch (err: any) {
+        toast.error(err.message || "Failed to delete attachment")
+      }
+    },
+    [workspaceId, categoryId],
+  )
+
   // Manual reconnect-to-existing-node (specs/flow-graph-editor): native React
   // Flow drag, sourceHandle carries the FlowEdge id already.
   const onConnect = useCallback(
@@ -428,6 +445,7 @@ function FlowEditorInner() {
         onRetargetAnswer={handleRetargetAnswer}
         onDeleteNode={handleDeleteNode}
         onUploadAsset={categoryId && categoryId !== "generic" ? handleUploadAsset : undefined}
+        onDeleteAsset={categoryId && categoryId !== "generic" ? handleDeleteAsset : undefined}
         canUploadAssets={!!categoryId && categoryId !== "generic"}
       />
     </div>
