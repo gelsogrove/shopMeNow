@@ -96,6 +96,10 @@ interface FormData {
   enabledLanguages: string[]
   customChatbotModel: string
   customChatbotTemperature: number | null
+  customChatbotMaxTokens: number | null
+  // Voice replies (ElevenLabs): audioVoices maps a language code to a voice id.
+  audioOutput: boolean
+  audioVoices: Record<string, string>
   welcomeMessage: string
   enableWelcomeMessage: boolean // E0a
   sessionResetTimeout: number // E0b (seconds, 0 = never)
@@ -245,6 +249,9 @@ export function SettingsPage() {
     enabledLanguages: [],
     customChatbotModel: "",
     customChatbotTemperature: null,
+    customChatbotMaxTokens: null,
+    audioOutput: false,
+    audioVoices: {},
     welcomeMessage: defaultWelcomeMessage,
     enableWelcomeMessage: true,
     sessionResetTimeout: 3600,
@@ -342,6 +349,9 @@ export function SettingsPage() {
         enabledLanguages: currentWorkspace.enabledLanguages || [],
         customChatbotModel: currentWorkspace.customChatbotModel || "",
         customChatbotTemperature: currentWorkspace.customChatbotTemperature ?? null,
+        customChatbotMaxTokens: (currentWorkspace as any).customChatbotMaxTokens ?? null,
+        audioOutput: (currentWorkspace as any).audioOutput ?? false,
+        audioVoices: ((currentWorkspace as any).audioVoices as Record<string, string>) ?? {},
         welcomeMessage: currentWorkspace.welcomeMessage || defaultWelcomeMessage,
         enableWelcomeMessage: currentWorkspace.enableWelcomeMessage ?? true,
         sessionResetTimeout: currentWorkspace.sessionResetTimeout ?? 3600,
@@ -739,6 +749,9 @@ export function SettingsPage() {
               requireManualApproval: formData.requireManualApproval,
               customChatbotModel: formData.customChatbotModel,
               customChatbotTemperature: formData.customChatbotTemperature,
+              customChatbotMaxTokens: formData.customChatbotMaxTokens,
+              audioOutput: formData.audioOutput,
+              audioVoices: formData.audioVoices,
             }}
             errors={errors}
             canEdit={canEdit}
