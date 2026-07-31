@@ -1,0 +1,3 @@
+
+# Generated from the database on every Settings save (see chatbot-settings-json.service.ts)
+apps/backend/custom-*/settings.generated.json

@@ -12,6 +12,7 @@ import logger from "../../utils/logger"
 import { dynamicAgents } from "../../../prisma/data/dynamicAgents"
 import { initialFAQs } from "../../../prisma/data/initialFAQs"
 import { WasenderClientService } from "../../services/wasender-client.service"
+import { writeChatbotSettingsJson } from "./chatbot-settings-json.service"
 import { invalidateWorkspaceConfig } from "../chat-engine/chat-engine.service"
 import {
   ALWAYS_AVAILABLE_FUNCTIONS,
@@ -857,6 +858,7 @@ For privacy inquiries, please contact our support team.`
           logger.info(`✅ Allowing settings edit for FREE_TRIAL user (not changing channel toggles)`)
           const updated = await this.repository.update(id, data)
           invalidateWorkspaceConfig(id)
+          await this.syncChatbotSettingsJson(id)
           return updated
         }
 
@@ -896,7 +898,32 @@ For privacy inquiries, please contact our support team.`
 
     const updated = await this.repository.update(id, data)
     invalidateWorkspaceConfig(id)
+    await this.syncChatbotSettingsJson(id)
     return updated
+  }
+
+  /**
+   * Regenerates `custom-<module>/settings.generated.json` from the saved
+   * workspace row, so the custom chatbot module runs with what the user
+   * configured in the Settings UI. The database stays authoritative — this only
+   * mirrors it to disk, and never throws: a failed write must not fail a save.
+   */
+  private async syncChatbotSettingsJson(id: string): Promise<void> {
+    try {
+      const w = await this.prisma.workspace.findUnique({
+        where: { id },
+        select: {
+          customChatbotId: true,
+          customChatbotModel: true,
+          customChatbotTemperature: true,
+          operatorEmail: true,
+          defaultLanguage: true,
+        },
+      })
+      if (w?.customChatbotId) await writeChatbotSettingsJson(w)
+    } catch (err) {
+      logger.warn("[Workspace] settings.json sync skipped:", err)
+    }
   }
 
   /**
