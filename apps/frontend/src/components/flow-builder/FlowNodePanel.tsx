@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ConfirmDialog } from "@/components/shared/ConfirmDialog"
-import { Plus, Trash2, Paperclip, ArrowRight, Upload, Loader2, Copy } from "lucide-react"
+import { Plus, Trash2, Paperclip, ArrowRight, Upload, Loader2 } from "lucide-react"
 import type { FlowQuestionNodeData } from "./FlowQuestionNode"
 import type { Asset } from "@/services/flowBuilderApi"
 
@@ -56,7 +56,6 @@ interface FlowNodePanelProps {
   onToggleAttachment: (nodeId: string, assetId: string, attached: boolean) => void
   onRetargetAnswer: (nodeId: string, edgeId: string, targetNodeId: string) => void
   onDeleteNode: (nodeId: string) => void
-  onDuplicateNode: (nodeId: string) => void
   // Uploads a new asset for the current category. Absent when the flow is the
   // workspace-generic one (no category to attach assets to).
   onUploadAsset?: (file: File) => Promise<void>
@@ -84,7 +83,6 @@ export function FlowNodePanel({
   onToggleAttachment,
   onRetargetAnswer,
   onDeleteNode,
-  onDuplicateNode,
   onUploadAsset,
   onDeleteAsset,
   canUploadAssets,
@@ -336,32 +334,20 @@ export function FlowNodePanel({
           {/* Node deletion — applied to the canvas immediately, persisted only
               when the flow is saved, same as every other edit here. */}
           <div className="pt-4 border-t">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDuplicateNode(nodeId)}
-                title="Create a copy of this question"
-              >
-                <Copy className="h-3.5 w-3.5 mr-1.5" />
-                Duplicate
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-red-600 border-red-200 hover:bg-red-50"
-                onClick={() => {
-                  onDeleteNode(nodeId)
-                  onOpenChange(false)
-                }}
-              >
-                <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-                Delete question
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600 border-red-200 hover:bg-red-50"
+              onClick={() => {
+                onDeleteNode(nodeId)
+                onOpenChange(false)
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Delete question
+            </Button>
             <p className="text-xs text-muted-foreground mt-1.5">
-              Applied to the canvas now — click Save to persist. A duplicated question
-              keeps its answers, but you need to re-point them to the next question.
+              Removed from the canvas now — click Save to persist.
             </p>
           </div>
         </div>
