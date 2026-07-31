@@ -455,9 +455,16 @@ function FlowEditorInner() {
   }
 
   const errorNodeIds = new Set(validationErrors.map((e) => e.nodeId).filter(Boolean))
+  // Validation state and the duplicate handler are injected at render time
+  // rather than stored on the node: they are presentation concerns, and keeping
+  // them out of `nodes` means they never end up in the save payload.
   const displayNodes = nodes.map((n) => ({
     ...n,
-    data: { ...n.data, hasValidationError: errorNodeIds.has(n.id) },
+    data: {
+      ...n.data,
+      hasValidationError: errorNodeIds.has(n.id),
+      onDuplicate: handleDuplicateNode,
+    },
   }))
 
   if (isLoading) {
@@ -546,7 +553,6 @@ function FlowEditorInner() {
         onToggleAttachment={handleToggleAttachment}
         onRetargetAnswer={handleRetargetAnswer}
         onDeleteNode={handleDeleteNode}
-        onDuplicateNode={handleDuplicateNode}
         onUploadAsset={categoryId && categoryId !== "generic" ? handleUploadAsset : undefined}
         onDeleteAsset={categoryId && categoryId !== "generic" ? handleDeleteAsset : undefined}
         canUploadAssets={!!categoryId && categoryId !== "generic"}

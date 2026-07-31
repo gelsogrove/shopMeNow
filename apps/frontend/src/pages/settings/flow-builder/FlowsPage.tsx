@@ -138,18 +138,72 @@ export function FlowsPage() {
         onEdit={(flow) => navigate(`/settings/demorobot/${categoryId}/flows/${flow.id}/edit`)}
         onDelete={(flow) => setDeleteTarget(flow)}
         actionButtons={(flow) => (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 p-0"
-            disabled={duplicatingId === flow.id}
-            onClick={() => handleDuplicate(flow)}
-            title="Duplicate"
-          >
-            <Copy className="h-4 w-4 text-gray-500" />
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 p-0"
+              onClick={() => setPromptTarget(flow)}
+              title={flow.humanPrompt ? "View prompt" : "No prompt generated yet"}
+            >
+              <FileText
+                className={`h-4 w-4 ${flow.humanPrompt ? "text-blue-500" : "text-gray-300"}`}
+              />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 p-0"
+              disabled={duplicatingId === flow.id}
+              onClick={() => handleDuplicate(flow)}
+              title="Duplicate"
+            >
+              <Copy className="h-4 w-4 text-gray-500" />
+            </Button>
+          </>
         )}
       />
+
+      {/* Read-only view of the stored prompt. Editing happens in the flow
+          editor after a save, so this dialog only shows what is there. */}
+      <Dialog open={!!promptTarget} onOpenChange={(open) => !open && setPromptTarget(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{promptTarget?.title}</DialogTitle>
+            <DialogDescription>
+              The instructions the assistant follows for this flow.
+            </DialogDescription>
+          </DialogHeader>
+
+          {promptTarget?.humanPrompt ? (
+            <>
+              <div className="rounded-md border bg-slate-50 px-3 py-2 text-xs text-gray-600">
+                <span className="font-medium">Source:</span>{" "}
+                <code className="font-mono">
+                  {resolvedCategoryId
+                    ? `flows/${resolvedCategoryId}/${promptTarget.id}`
+                    : `flows/generic/${promptTarget.id}`}
+                </code>
+              </div>
+              <pre className="max-h-[420px] overflow-auto whitespace-pre-wrap rounded-md border bg-white p-4 text-sm leading-relaxed">
+                {promptTarget.humanPrompt}
+              </pre>
+            </>
+          ) : (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              No prompt has been generated for this flow yet.
+              <br />
+              Open the flow and click Save to generate one.
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPromptTarget(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent>
