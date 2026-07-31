@@ -1,18 +1,18 @@
 /**
  * Chatbot settings.json generator
  *
- * Andrea 2026-07-31: when a workspace is saved from the Settings UI, the values
- * live in the database (source of truth — Heroku's filesystem is ephemeral, so
- * a file could never be one). This service renders the subset of those values
- * that the custom chatbot module actually consumes at runtime into the exact
- * shape of `custom-<module>/settings.json`.
+ * Andrea 2026-07-31: the Settings UI writes to the database (source of truth),
+ * and every save re-renders `custom-<module>/settings.json` from it so the
+ * running chatbot picks the values up — the module already reads that file, so
+ * nothing else has to change.
  *
  * Deliberately EXCLUDED: anything the runtime never reads — widget look & feel
- * (colors, icon, title, quick replies), WhatsApp provider credentials, calendar
- * reminders, billing. Those are platform concerns, not chatbot config.
+ * (colors, icon, title, quick replies), WhatsApp credentials, calendar,
+ * billing. Those are platform concerns, not chatbot config.
  *
- * The file on disk stays in git as the DEFAULT: values missing from the DB fall
- * back to it, so an unconfigured workspace behaves exactly as before.
+ * Keys the UI does not expose (maxToolHops, rate limits, similarityThreshold…)
+ * are preserved from the file as-is: the generator merges onto what is there,
+ * it never rewrites the file from scratch.
  */
 import { readFile, writeFile } from "fs/promises"
 import path from "path"
@@ -43,60 +43,93 @@ export interface WorkspaceChatbotSource {
   customChatbotId?: string | null
   customChatbotModel?: string | null
   customChatbotTemperature?: number | null
+  customChatbotMaxTokens?: number | null
+  customChatbotOperatorEmail?: string | null
+  customChatbotEmailFrom?: string | null
+  customChatbotEmailSubjectPrefix?: string | null
   operatorEmail?: string | null
   defaultLanguage?: string | null
+  audioOutput?: boolean | null
+  audioVoices?: unknown
 }
 
 function moduleDir(customChatbotId: string): string {
   return path.join(__dirname, "..", "..", "..", `custom-${customChatbotId}`)
 }
 
-/**
- * Reads the module's committed settings.json — the defaults every generated
- * config is layered on top of. Throws if absent: per CLAUDE.md §1 there is no
- * hardcoded fallback, a missing module file is a real error.
- */
-async function readModuleDefaults(customChatbotId: string): Promise<ChatbotSettingsJson> {
-  const file = path.join(moduleDir(customChatbotId), "settings.json")
-  const raw = await readFile(file, "utf8")
-  return JSON.parse(raw) as ChatbotSettingsJson
+function settingsPath(customChatbotId: string): string {
+  return path.join(moduleDir(customChatbotId), "settings.json")
 }
 
 /**
- * Builds the runtime config for a workspace: module defaults, with every value
- * the user has actually set in the Settings UI layered on top.
+ * Normalises the audioVoices JSON column into the `{ lang: voiceId }` map the
+ * agent expects. Anything that is not a string-to-string object (bad manual
+ * edit, legacy value) is rejected so a malformed column cannot corrupt the file.
+ */
+function normaliseAudioVoices(value: unknown): Record<string, string> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null
+
+  const out: Record<string, string> = {}
+  for (const [lang, voiceId] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof voiceId === "string" && voiceId.trim()) out[lang] = voiceId.trim()
+  }
+  return Object.keys(out).length > 0 ? out : null
+}
+
+/**
+ * Builds the runtime config: the module's current settings.json, with every
+ * value the user set in the Settings UI layered on top.
  *
- * Null/empty DB values intentionally fall through to the module default rather
- * than writing empty strings the agent would then have to defend against.
+ * Null/empty DB values fall through to the file rather than writing blanks the
+ * agent would then have to defend against.
  */
 export async function buildChatbotSettingsJson(
   workspace: WorkspaceChatbotSource
 ): Promise<ChatbotSettingsJson | null> {
   if (!workspace.customChatbotId) return null
 
-  const defaults = await readModuleDefaults(workspace.customChatbotId)
+  const raw = await readFile(settingsPath(workspace.customChatbotId), "utf8")
+  const current = JSON.parse(raw) as ChatbotSettingsJson
+
+  const audioVoices = normaliseAudioVoices(workspace.audioVoices)
 
   return {
-    ...defaults,
-    model: workspace.customChatbotModel?.trim() || defaults.model,
+    ...current,
+    model: workspace.customChatbotModel?.trim() || current.model,
     temperature:
       typeof workspace.customChatbotTemperature === "number"
         ? workspace.customChatbotTemperature
-        : defaults.temperature,
-    operatorEmail: workspace.operatorEmail?.trim() || defaults.operatorEmail,
+        : current.temperature,
+    maxTokens:
+      typeof workspace.customChatbotMaxTokens === "number" && workspace.customChatbotMaxTokens > 0
+        ? workspace.customChatbotMaxTokens
+        : current.maxTokens,
+    // Escalation email: the chatbot-specific override wins, then the general
+    // Human Support address, then whatever the module shipped with.
+    operatorEmail:
+      workspace.customChatbotOperatorEmail?.trim() ||
+      workspace.operatorEmail?.trim() ||
+      current.operatorEmail,
+    emailFrom: workspace.customChatbotEmailFrom?.trim() || current.emailFrom,
+    emailSubjectPrefix:
+      workspace.customChatbotEmailSubjectPrefix?.trim() || current.emailSubjectPrefix,
     operatorBriefingLanguage:
-      workspace.defaultLanguage?.trim() || defaults.operatorBriefingLanguage,
+      workspace.defaultLanguage?.trim() || current.operatorBriefingLanguage,
+    audioOutput:
+      typeof workspace.audioOutput === "boolean" ? workspace.audioOutput : current.audioOutput,
+    audioVoices: audioVoices ?? current.audioVoices,
   }
 }
 
 /**
- * Writes the generated config next to the module as `settings.generated.json`.
+ * Rewrites `custom-<module>/settings.json` from the saved workspace row.
  *
- * The committed `settings.json` is never overwritten — it is the default layer
- * and belongs to git. On Heroku this written file disappears on the next dyno
- * restart, which is harmless: the database remains the source of truth and the
- * file is regenerated on the following save. Failures are logged, never thrown:
- * a settings save must not fail because of a filesystem quirk.
+ * The database stays authoritative — this mirrors it to the file the module
+ * already reads. On Heroku the write is reverted by the next deploy (the file
+ * is in git), which is harmless: the next save regenerates it, and no
+ * configuration is ever lost because it all lives in the database.
+ *
+ * Never throws: a settings save must not fail because of a filesystem problem.
  */
 export async function writeChatbotSettingsJson(
   workspace: WorkspaceChatbotSource
@@ -107,9 +140,9 @@ export async function writeChatbotSettingsJson(
     const settings = await buildChatbotSettingsJson(workspace)
     if (!settings) return
 
-    const target = path.join(moduleDir(workspace.customChatbotId), "settings.generated.json")
+    const target = settingsPath(workspace.customChatbotId)
     await writeFile(target, JSON.stringify(settings, null, 2) + "\n", "utf8")
-    logger.info(`[ChatbotSettings] Wrote ${target}`)
+    logger.info(`[ChatbotSettings] Regenerated ${target}`)
   } catch (err) {
     logger.warn(
       `[ChatbotSettings] Could not write settings for "${workspace.customChatbotId}" ` +

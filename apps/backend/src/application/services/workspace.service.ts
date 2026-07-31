@@ -916,8 +916,14 @@ For privacy inquiries, please contact our support team.`
           customChatbotId: true,
           customChatbotModel: true,
           customChatbotTemperature: true,
+          customChatbotMaxTokens: true,
+          customChatbotOperatorEmail: true,
+          customChatbotEmailFrom: true,
+          customChatbotEmailSubjectPrefix: true,
           operatorEmail: true,
           defaultLanguage: true,
+          audioOutput: true,
+          audioVoices: true,
         },
       })
       if (w?.customChatbotId) await writeChatbotSettingsJson(w)

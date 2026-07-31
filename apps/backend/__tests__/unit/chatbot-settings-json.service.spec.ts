@@ -37,7 +37,7 @@ const MODULE_DEFAULTS = {
   similarityThreshold: 0.7,
   topK: 3,
   audioOutput: false,
-  audioVoices: {},
+  audioVoices: { default: "ModuleDefaultVoice" },
 }
 
 beforeEach(() => {
@@ -66,16 +66,81 @@ describe("buildChatbotSettingsJson", () => {
       customChatbotId: "demorobot",
       customChatbotModel: "openai/gpt-4o",
       customChatbotTemperature: 1.2,
+      customChatbotMaxTokens: 1500,
       operatorEmail: "support@acme.com",
+      customChatbotEmailFrom: "Acme Bot <noreply@acme.com>",
+      customChatbotEmailSubjectPrefix: "[Acme] Incident",
       defaultLanguage: "it",
     })
 
     expect(result).toMatchObject({
       model: "openai/gpt-4o",
       temperature: 1.2,
+      maxTokens: 1500,
       operatorEmail: "support@acme.com",
+      emailFrom: "Acme Bot <noreply@acme.com>",
+      emailSubjectPrefix: "[Acme] Incident",
       operatorBriefingLanguage: "it",
     })
+  })
+
+  it("prefers the chatbot-specific operator email over the general one", async () => {
+    // Human Support has a general operator address; the custom chatbot can
+    // override it. The more specific setting has to win, or escalations from the
+    // module would go to the wrong inbox.
+    const result = await buildChatbotSettingsJson({
+      customChatbotId: "demorobot",
+      customChatbotOperatorEmail: "module@acme.com",
+      operatorEmail: "general@acme.com",
+    })
+
+    expect(result?.operatorEmail).toBe("module@acme.com")
+  })
+
+  it("stores ElevenLabs voice ids per language when audio is enabled", async () => {
+    const result = await buildChatbotSettingsJson({
+      customChatbotId: "demorobot",
+      audioOutput: true,
+      audioVoices: { default: "EXAVITQu4vr4xnSDxMaL", it: "EXAVITQu4vr4xnSDxMaL", es: "FGY2WhTYpPnrIDTdsKH5" },
+    })
+
+    expect(result?.audioOutput).toBe(true)
+    expect(result?.audioVoices).toEqual({
+      default: "EXAVITQu4vr4xnSDxMaL",
+      it: "EXAVITQu4vr4xnSDxMaL",
+      es: "FGY2WhTYpPnrIDTdsKH5",
+    })
+  })
+
+  it("drops blank voice ids so half-filled language rows never reach the agent", async () => {
+    // The UI renders an input per language; the user typically fills only a few.
+    // Empty ones must not land in the file as empty strings.
+    const result = await buildChatbotSettingsJson({
+      customChatbotId: "demorobot",
+      audioVoices: { it: "EXAVITQu4vr4xnSDxMaL", es: "   ", en: "" },
+    })
+
+    expect(result?.audioVoices).toEqual({ it: "EXAVITQu4vr4xnSDxMaL" })
+  })
+
+  it("keeps the existing voices when the stored value is malformed", async () => {
+    // A bad manual edit of the JSON column must not wipe working voice config.
+    const result = await buildChatbotSettingsJson({
+      customChatbotId: "demorobot",
+      audioVoices: "not-an-object",
+    })
+
+    expect(result?.audioVoices).toEqual(MODULE_DEFAULTS.audioVoices)
+  })
+
+  it("ignores a non-positive maxTokens instead of writing it through", async () => {
+    // 0 or a negative budget would make the agent unable to answer at all.
+    const result = await buildChatbotSettingsJson({
+      customChatbotId: "demorobot",
+      customChatbotMaxTokens: 0,
+    })
+
+    expect(result?.maxTokens).toBe(MODULE_DEFAULTS.maxTokens)
   })
 
   it("keeps defaults for untouched fields the UI does not expose", async () => {
