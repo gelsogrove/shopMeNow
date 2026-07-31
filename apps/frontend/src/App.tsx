@@ -79,7 +79,7 @@ import { ChannelTypesPage } from "./pages/settings/ChannelTypesPage"
 import { LanguagesPage } from "./pages/settings/LanguagesPage"
 
 import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
-import { RobotModelsPage as DemoRobotModelsPage } from "./pages/settings/flow-builder/RobotModelsPage"
+import { FlowCategoriesPage } from "./pages/settings/flow-builder/FlowCategoriesPage"
 import { FlowsPage as DemoRobotFlowsPage } from "./pages/settings/flow-builder/FlowsPage"
 import { FlowEditorPage as DemoRobotFlowEditorPage } from "./pages/settings/flow-builder/FlowEditorPage"
 
@@ -509,10 +509,10 @@ function AppWithProviders() {
                       element={<SettingsCategoriesPage />}
                     />
                     <Route path="products" element={<SettingsProductsPage />} />
-                    <Route path="demorobot" element={<DemoRobotModelsPage />} />
-                    <Route path="demorobot/:robotModelId/flows" element={<DemoRobotFlowsPage />} />
+                    <Route path="demorobot" element={<FlowCategoriesPage />} />
+                    <Route path="demorobot/:categoryId/flows" element={<DemoRobotFlowsPage />} />
                   </Route>
-                  <Route path="/settings/demorobot/:robotModelId/flows/:flowId/edit" element={<MinimalLayout />}>
+                  <Route path="/settings/demorobot/:categoryId/flows/:flowId/edit" element={<MinimalLayout />}>
                     <Route index element={<DemoRobotFlowEditorPage />} />
                   </Route>
                   <Route path="/gdpr" element={<MinimalLayout />}>

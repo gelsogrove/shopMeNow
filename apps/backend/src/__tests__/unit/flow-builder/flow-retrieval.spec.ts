@@ -6,7 +6,7 @@ import {
   selectBestFlow,
 } from '../../../application/flow-builder/flow-retrieval.service'
 import { RetrievableFlow } from '../../../application/flow-builder/flow-retrieval.types'
-import { matchSerialNumberToModel } from '../../../application/flow-builder/robot-model-lookup.service'
+import { matchSerialNumberToCategory } from '../../../application/flow-builder/flow-category-lookup.service'
 
 // Real serial numbers confirmed by the client: 19 chars, HKX prefix for
 // 2025 models, HKA for 2026 models.
@@ -78,14 +78,14 @@ describe('cosineSimilarity', () => {
 
 describe('findRelevantFlows (step 2)', () => {
   const flows: RetrievableFlow[] = [
-    { id: 'flow_model_a', robotModelId: 'model_a', embedding: [1, 0, 0] },
-    { id: 'flow_model_b', robotModelId: 'model_b', embedding: [1, 0, 0] }, // same vector, wrong model
-    { id: 'flow_generic', robotModelId: null, embedding: [0.9, 0.1, 0] }, // workspace-generic fallback
+    { id: 'flow_model_a', flowCategoryId: 'model_a', embedding: [1, 0, 0] },
+    { id: 'flow_model_b', flowCategoryId: 'model_b', embedding: [1, 0, 0] }, // same vector, wrong model
+    { id: 'flow_generic', flowCategoryId: null, embedding: [0.9, 0.1, 0] }, // workspace-generic fallback
   ]
 
-  it('scopes candidates to the resolved robotModelId plus workspace-generic flows', () => {
+  it('scopes candidates to the resolved flowCategoryId plus workspace-generic flows', () => {
     const result = findRelevantFlows({
-      robotModelId: 'model_a',
+      flowCategoryId: 'model_a',
       queryEmbedding: [1, 0, 0],
       candidateFlows: flows,
       k: 3,
@@ -98,7 +98,7 @@ describe('findRelevantFlows (step 2)', () => {
 
   it('sorts candidates by descending similarity and caps at k', () => {
     const result = findRelevantFlows({
-      robotModelId: 'model_a',
+      flowCategoryId: 'model_a',
       queryEmbedding: [1, 0, 0],
       candidateFlows: flows,
       k: 1,
@@ -129,47 +129,47 @@ describe('selectBestFlow (single best-match attachment)', () => {
   })
 })
 
-describe('matchSerialNumberToModel (HKX/HKA prefix lookup)', () => {
+describe('matchSerialNumberToCategory (HKX/HKA prefix lookup)', () => {
   const candidates = [
     { id: 'model_2025', slug: 'robocut-2025', lookupRules: { prefix: 'HKX3EB100' } },
     { id: 'model_2026', slug: 'robocut-2026', lookupRules: { prefix: 'HKA4OB100' } },
   ]
 
   it('returns serial_absent for an implausible serial, never unknown_model', () => {
-    expect(matchSerialNumberToModel('123', candidates)).toEqual({ status: 'serial_absent' })
+    expect(matchSerialNumberToCategory('123', candidates)).toEqual({ status: 'serial_absent' })
   })
 
   it('resolves the 2025 model via its HKX prefix rule', () => {
-    expect(matchSerialNumberToModel(REAL_SERIAL_2025, candidates)).toEqual({
+    expect(matchSerialNumberToCategory(REAL_SERIAL_2025, candidates)).toEqual({
       status: 'resolved',
-      robotModelId: 'model_2025',
+      flowCategoryId: 'model_2025',
     })
   })
 
   it('resolves the 2026 model via its HKA prefix rule', () => {
-    expect(matchSerialNumberToModel(REAL_SERIAL_2026, candidates)).toEqual({
+    expect(matchSerialNumberToCategory(REAL_SERIAL_2026, candidates)).toEqual({
       status: 'resolved',
-      robotModelId: 'model_2026',
+      flowCategoryId: 'model_2026',
     })
   })
 
   it('resolves correctly even with the common 0/O typo, via normalization', () => {
-    expect(matchSerialNumberToModel('HKA40B100LQ26050197', candidates)).toEqual({
+    expect(matchSerialNumberToCategory('HKA40B100LQ26050197', candidates)).toEqual({
       status: 'resolved',
-      robotModelId: 'model_2026',
+      flowCategoryId: 'model_2026',
     })
   })
 
   it('returns not_found for a plausible HKX/HKA serial matching no configured prefix', () => {
     const otherModel = 'HKX9ZZ999ZZ25010101' // valid shape, no candidate has this prefix
-    expect(matchSerialNumberToModel(otherModel, candidates)).toEqual({ status: 'not_found' })
+    expect(matchSerialNumberToCategory(otherModel, candidates)).toEqual({ status: 'not_found' })
   })
 
   it('resolves via exact slug match as a fallback when no prefix rule matches', () => {
     const noPrefixCandidates = [{ id: 'model_3', slug: REAL_SERIAL_2025.toLowerCase(), lookupRules: {} }]
-    expect(matchSerialNumberToModel(REAL_SERIAL_2025, noPrefixCandidates)).toEqual({
+    expect(matchSerialNumberToCategory(REAL_SERIAL_2025, noPrefixCandidates)).toEqual({
       status: 'resolved',
-      robotModelId: 'model_3',
+      flowCategoryId: 'model_3',
     })
   })
 })

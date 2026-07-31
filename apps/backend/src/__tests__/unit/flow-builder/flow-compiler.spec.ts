@@ -10,7 +10,7 @@ function threeNodeEscalationFixture(): CompileFlowInput {
   return {
     flowTitle: 'Rumore strano',
     flowKeywords: ['vibra', 'cigola'],
-    robotModelId: 'model_1',
+    flowCategoryId: 'model_1',
     nodes: [
       { id: 'n1', question: 'Il robot è acceso?', terminalType: null },
       { id: 'n2', question: 'Il wifi è connesso?', terminalType: null, fieldKey: 'wifiStatus', fieldType: 'boolean' },
@@ -101,16 +101,16 @@ describe('compileFlow', () => {
     expect(result.validationReport).toEqual([])
   })
 
-  it('rejects an attachment referencing another RobotModel', () => {
+  it('rejects an attachment referencing another FlowCategory', () => {
     const fixture = threeNodeEscalationFixture()
-    fixture.attachments = [{ nodeId: 'n1', assetId: 'asset_1', robotModelId: 'other_model' }]
+    fixture.attachments = [{ nodeId: 'n1', assetId: 'asset_1', flowCategoryId: 'other_model' }]
     const result = compileFlow(fixture)
     expect(result.validationReport.some((e) => e.code === 'attachment_wrong_model')).toBe(true)
   })
 
-  it('accepts an attachment belonging to the correct RobotModel', () => {
+  it('accepts an attachment belonging to the correct FlowCategory', () => {
     const fixture = threeNodeEscalationFixture()
-    fixture.attachments = [{ nodeId: 'n1', assetId: 'asset_1', robotModelId: 'model_1' }]
+    fixture.attachments = [{ nodeId: 'n1', assetId: 'asset_1', flowCategoryId: 'model_1' }]
     const result = compileFlow(fixture)
     expect(result.validationReport).toEqual([])
     expect(result.assetIds).toEqual(['asset_1'])

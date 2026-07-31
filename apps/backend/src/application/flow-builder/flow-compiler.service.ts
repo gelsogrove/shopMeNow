@@ -46,7 +46,7 @@ export function compileFlow(input: CompileFlowInput): CompileFlowResult {
 
 function validateGraph(input: CompileFlowInput): ValidationError[] {
   const errors: ValidationError[] = []
-  const { nodes, edges, attachments, robotModelId } = input
+  const { nodes, edges, attachments, flowCategoryId } = input
 
   const nodeIds = new Set(nodes.map((n) => n.id))
   // A LOOP node's own outgoing back-edge doesn't disqualify its target from
@@ -126,12 +126,12 @@ function validateGraph(input: CompileFlowInput): ValidationError[] {
 
   for (const root of roots) visit(root.id)
 
-  if (robotModelId !== undefined) {
+  if (flowCategoryId !== undefined) {
     for (const attachment of attachments) {
-      if (attachment.robotModelId !== robotModelId) {
+      if (attachment.flowCategoryId !== flowCategoryId) {
         errors.push({
           code: 'attachment_wrong_model',
-          message: `Attachment on node ${attachment.nodeId} references an asset from a different RobotModel.`,
+          message: `Attachment on node ${attachment.nodeId} references an asset from a different FlowCategory.`,
           nodeId: attachment.nodeId,
         })
       }

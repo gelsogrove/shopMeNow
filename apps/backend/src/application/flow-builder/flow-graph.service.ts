@@ -42,22 +42,22 @@ export interface SaveGraphResult {
   warnings?: CompileFlowResult['warnings']
 }
 
-export async function listFlows(workspaceId: string, robotModelId: string | null) {
+export async function listFlows(workspaceId: string, flowCategoryId: string | null) {
   return prisma.flow.findMany({
-    where: { workspaceId, robotModelId },
+    where: { workspaceId, flowCategoryId },
     orderBy: { createdAt: 'asc' },
   })
 }
 
-export async function createFlow(workspaceId: string, robotModelId: string | null, title: string, description?: string) {
+export async function createFlow(workspaceId: string, flowCategoryId: string | null, title: string, description?: string) {
   // Compile immediately with an empty graph so the row is never in a
   // "never compiled" limbo state — it will fail validation (no root node)
   // until the user adds content, which is expected and surfaced in the UI.
-  const empty = compileFlow({ nodes: [], edges: [], attachments: [], robotModelId, flowTitle: title })
+  const empty = compileFlow({ nodes: [], edges: [], attachments: [], flowCategoryId, flowTitle: title })
   return prisma.flow.create({
     data: {
       workspaceId,
-      robotModelId,
+      flowCategoryId,
       title,
       description,
       keywords: [],
@@ -98,7 +98,7 @@ export async function saveFlowGraph(
   const existingFlow = await prisma.flow.findFirst({ where: { id: flowId, workspaceId } })
   if (!existingFlow) return { ok: false }
 
-  // Resolve attachment -> RobotModel ownership for compiler validation.
+  // Resolve attachment -> FlowCategory ownership for compiler validation.
   const assetIds = Array.from(new Set(input.nodes.flatMap((n) => n.attachmentAssetIds ?? [])))
   const assets = assetIds.length > 0 ? await prisma.asset.findMany({ where: { id: { in: assetIds } } }) : []
   const assetById = new Map(assets.map((a) => [a.id, a]))
@@ -121,7 +121,7 @@ export async function saveFlowGraph(
     (n.attachmentAssetIds ?? []).map((assetId) => ({
       nodeId: n.id,
       assetId,
-      robotModelId: assetById.get(assetId)?.robotModelId ?? '__unknown__',
+      flowCategoryId: assetById.get(assetId)?.flowCategoryId ?? '__unknown__',
     })),
   )
 
@@ -129,7 +129,7 @@ export async function saveFlowGraph(
     nodes: compilerNodes,
     edges: compilerEdges,
     attachments: compilerAttachments,
-    robotModelId: existingFlow.robotModelId,
+    flowCategoryId: existingFlow.flowCategoryId,
     flowTitle: input.title,
     flowKeywords: input.keywords,
   })

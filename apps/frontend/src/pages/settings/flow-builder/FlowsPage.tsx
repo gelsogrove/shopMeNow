@@ -21,15 +21,15 @@ import { flowApi, Flow } from "@/services/flowBuilderApi"
 import { ChatWidget } from "@/components/ChatWidget"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 
-// robotModelId param is "generic" for the workspace-generic fallback flow
-// list (Flow.robotModelId: null, analisi.md §6), otherwise a real RobotModel id.
+// categoryId param is "generic" for the workspace-generic fallback flow
+// list (Flow.flowCategoryId: null, analisi.md §6), otherwise a real FlowCategory id.
 export function FlowsPage() {
   const { workspace } = useWorkspace()
-  const { robotModelId } = useParams<{ robotModelId: string }>()
+  const { categoryId } = useParams<{ categoryId: string }>()
   const navigate = useNavigate()
   const workspaceId = workspace?.id || ""
-  const isGeneric = robotModelId === "generic"
-  const resolvedRobotModelId = isGeneric ? null : robotModelId ?? null
+  const isGeneric = categoryId === "generic"
+  const resolvedCategoryId = isGeneric ? null : categoryId ?? null
 
   const [flows, setFlows] = useState<Flow[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -42,12 +42,12 @@ export function FlowsPage() {
     if (!workspaceId) return
     setIsLoading(true)
     flowApi
-      .list(workspaceId, resolvedRobotModelId)
+      .list(workspaceId, resolvedCategoryId)
       .then(setFlows)
       .catch((err) => toast.error(err.message || "Failed to load flows"))
       .finally(() => setIsLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId, robotModelId])
+  }, [workspaceId, categoryId])
 
   const handleCreate = async () => {
     if (!newTitle.trim()) {
@@ -55,10 +55,10 @@ export function FlowsPage() {
       return
     }
     try {
-      const created = await flowApi.create(workspaceId, { title: newTitle.trim(), robotModelId: resolvedRobotModelId })
+      const created = await flowApi.create(workspaceId, { title: newTitle.trim(), robotModelId: resolvedCategoryId })
       setShowAddDialog(false)
       setNewTitle("")
-      navigate(`/settings/demorobot/${robotModelId}/flows/${created.id}/edit`)
+      navigate(`/settings/demorobot/${categoryId}/flows/${created.id}/edit`)
     } catch (err: any) {
       toast.error(err.message || "Failed to create flow")
     }
@@ -93,7 +93,7 @@ export function FlowsPage() {
 
       <Button variant="ghost" size="sm" onClick={() => navigate("/settings/demorobot")}>
         <ArrowLeft className="h-4 w-4 mr-1.5" />
-        Back to Robot Models
+        Back to Categories
       </Button>
 
       <PageHeader
@@ -101,8 +101,8 @@ export function FlowsPage() {
         titleIcon={<GitBranch className="h-6 w-6" />}
         description={
           isGeneric
-            ? "These flows apply when no specific robot model matches — they are the retrieval fallback."
-            : "Diagnostic flows for this robot model. Each flow is a question/answer tree compiled into the assistant's prompt."
+            ? "These flows apply when no specific category matches — they are the retrieval fallback."
+            : "Flows for this category. Each flow is a question/answer tree compiled into the assistant's prompt."
         }
         searchValue={searchValue}
         onSearch={setSearchValue}
@@ -116,7 +116,7 @@ export function FlowsPage() {
         data={filtered}
         columns={columns}
         isLoading={isLoading}
-        onEdit={(flow) => navigate(`/settings/demorobot/${robotModelId}/flows/${flow.id}/edit`)}
+        onEdit={(flow) => navigate(`/settings/demorobot/${categoryId}/flows/${flow.id}/edit`)}
         onDelete={(flow) => setDeleteTarget(flow)}
       />
 

@@ -70,6 +70,12 @@ type RetrieveFlowParams = {
   serialNumber?: string
   query: string
 }
+// `robotModelId` / "unknown_model" are the WIRE names of the tool contract
+// shared with custom-demorobot/agent.ts (and referenced by name in that
+// module's prompts/common.md tool enum). The DB concept was renamed
+// RobotModel -> FlowCategory, but renaming these would require changing the
+// live prompt + tool schema in lockstep, so the wire format stays as-is and
+// the orchestrator's flowCategoryId is mapped onto it here.
 type RetrieveFlowResult = {
   selectedFlowId?: string
   compiledPrompt?: string
@@ -479,7 +485,7 @@ export class CustomClientChatbotService {
         embeddingProvider,
       )
       if (!result.selectedFlowId) {
-        return { reason: result.reason, robotModelId: result.robotModelId }
+        return { reason: result.reason, robotModelId: result.flowCategoryId }
       }
       const flow = await defaultPrisma.flow.findUnique({
         where: { id: result.selectedFlowId },
@@ -490,7 +496,7 @@ export class CustomClientChatbotService {
         selectedFlowId: result.selectedFlowId,
         compiledPrompt: flow.compiledPrompt,
         hash: flow.hash,
-        robotModelId: result.robotModelId,
+        robotModelId: result.flowCategoryId,
       }
     } catch (error) {
       logger.error("[CustomClientChatbotService] retrieveFlow failed", {

@@ -23,16 +23,16 @@ export interface CompilerFlowEdge {
 export interface CompilerAttachmentRef {
   nodeId: string
   assetId: string
-  robotModelId: string
+  flowCategoryId: string
 }
 
 export interface CompileFlowInput {
   nodes: CompilerFlowNode[]
   edges: CompilerFlowEdge[]
   attachments: CompilerAttachmentRef[]
-  // The RobotModel every attachment must belong to. Undefined for the
-  // workspace-generic flow (robotModelId: null, analisi.md §6).
-  robotModelId?: string | null
+  // The FlowCategory every attachment must belong to. Undefined for the
+  // workspace-generic flow (flowCategoryId: null, analisi.md §6).
+  flowCategoryId?: string | null
   flowTitle: string
   flowKeywords?: string[]
 }

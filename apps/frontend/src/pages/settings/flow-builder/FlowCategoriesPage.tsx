@@ -18,7 +18,7 @@ import { Bot, Plus } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
-import { robotModelApi, RobotModel } from "@/services/flowBuilderApi"
+import { flowCategoryApi, FlowCategory } from "@/services/flowBuilderApi"
 import { ChatWidget } from "@/components/ChatWidget"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 
@@ -30,27 +30,26 @@ function slugify(name: string): string {
     .replace(/(^-|-$)/g, "")
 }
 
-export function RobotModelsPage() {
+export function FlowCategoriesPage() {
   const { workspace } = useWorkspace()
   const navigate = useNavigate()
   const workspaceId = workspace?.id || ""
 
-  const [models, setModels] = useState<RobotModel[]>([])
+  const [categories, setCategories] = useState<FlowCategory[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchValue, setSearchValue] = useState("")
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [newName, setNewName] = useState("")
-  const [newManufacturer, setNewManufacturer] = useState("")
   const [newDescription, setNewDescription] = useState("")
-  const [deleteTarget, setDeleteTarget] = useState<RobotModel | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<FlowCategory | null>(null)
 
   useEffect(() => {
     if (!workspaceId) return
     setIsLoading(true)
-    robotModelApi
+    flowCategoryApi
       .list(workspaceId)
-      .then(setModels)
-      .catch((err) => toast.error(err.message || "Failed to load robot models"))
+      .then(setCategories)
+      .catch((err) => toast.error(err.message || "Failed to load categories"))
       .finally(() => setIsLoading(false))
   }, [workspaceId])
 
@@ -60,44 +59,41 @@ export function RobotModelsPage() {
       return
     }
     try {
-      const created = await robotModelApi.create(workspaceId, {
+      const created = await flowCategoryApi.create(workspaceId, {
         name: newName.trim(),
         slug: slugify(newName),
-        manufacturer: newManufacturer.trim() || undefined,
         description: newDescription.trim() || undefined,
       })
-      setModels((prev) => [...prev, created])
+      setCategories((prev) => [...prev, created])
       setShowAddDialog(false)
       setNewName("")
-      setNewManufacturer("")
       setNewDescription("")
-      toast.success("Robot model created")
+      toast.success("Category created")
     } catch (err: any) {
-      toast.error(err.message || "Failed to create robot model")
+      toast.error(err.message || "Failed to create category")
     }
   }
 
   const handleDelete = async () => {
     if (!deleteTarget) return
     try {
-      await robotModelApi.delete(workspaceId, deleteTarget.id)
-      setModels((prev) => prev.filter((m) => m.id !== deleteTarget.id))
-      toast.success("Robot model deleted")
+      await flowCategoryApi.delete(workspaceId, deleteTarget.id)
+      setCategories((prev) => prev.filter((c) => c.id !== deleteTarget.id))
+      toast.success("Category deleted")
     } catch (err: any) {
-      toast.error(err.message || "Failed to delete robot model")
+      toast.error(err.message || "Failed to delete category")
     } finally {
       setDeleteTarget(null)
     }
   }
 
-  const columns: ColumnDef<RobotModel>[] = [
+  const columns: ColumnDef<FlowCategory>[] = [
     { header: "Name", accessorKey: "name" },
-    { header: "Manufacturer", accessorKey: "manufacturer", cell: ({ getValue }) => (getValue() as string) || "—" },
     { header: "Slug", accessorKey: "slug" },
   ]
 
-  const filtered = models.filter((m) =>
-    `${m.name} ${m.manufacturer ?? ""} ${m.slug}`.toLowerCase().includes(searchValue.toLowerCase()),
+  const filtered = categories.filter((c) =>
+    `${c.name} ${c.slug}`.toLowerCase().includes(searchValue.toLowerCase()),
   )
 
   return (
@@ -107,13 +103,13 @@ export function RobotModelsPage() {
       <SettingsPageHeader currentSection="demorobot" />
 
       <PageHeader
-        title="Robot Models"
+        title="Categories"
         titleIcon={<Bot className="h-6 w-6" />}
-        description="Manage the robot models this workspace supports diagnostic flows for."
+        description="Group this workspace's flows into categories."
         searchValue={searchValue}
         onSearch={setSearchValue}
         onAdd={() => setShowAddDialog(true)}
-        addButtonText="New Robot Model"
+        addButtonText="New Category"
         addButtonIcon={<Plus className="h-4 w-4 mr-1.5 text-white" />}
         itemCount={filtered.length}
       />
@@ -122,27 +118,23 @@ export function RobotModelsPage() {
         data={filtered}
         columns={columns}
         isLoading={isLoading}
-        onEdit={(model) => navigate(`/settings/demorobot/${model.id}/flows`)}
-        onDelete={(model) => setDeleteTarget(model)}
+        onEdit={(category) => navigate(`/settings/demorobot/${category.id}/flows`)}
+        onDelete={(category) => setDeleteTarget(category)}
       />
 
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>New Robot Model</DialogTitle>
+            <DialogTitle>New Category</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label htmlFor="model-name">Name</Label>
-              <Input id="model-name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="RoboCut X200" />
+              <Label htmlFor="category-name">Name</Label>
+              <Input id="category-name" value={newName} onChange={(e) => setNewName(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="model-manufacturer">Manufacturer</Label>
-              <Input id="model-manufacturer" value={newManufacturer} onChange={(e) => setNewManufacturer(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="model-description">Description</Label>
-              <Textarea id="model-description" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
+              <Label htmlFor="category-description">Description</Label>
+              <Textarea id="category-description" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} />
             </div>
           </div>
           <DialogFooter>
@@ -157,7 +149,7 @@ export function RobotModelsPage() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete Robot Model"
+        title="Delete Category"
         description={`This will delete "${deleteTarget?.name}" and all its flows and assets. This cannot be undone.`}
         onConfirm={handleDelete}
       />
@@ -178,4 +170,4 @@ export function RobotModelsPage() {
   )
 }
 
-export default RobotModelsPage
+export default FlowCategoriesPage

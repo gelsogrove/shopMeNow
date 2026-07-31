@@ -1,6 +1,6 @@
 /**
  * SettingsPageHeader - "Settings" title + section dropdown, reused on pages
- * reached FROM the Settings dropdown (FAQPage, RobotModelsPage, FlowsPage)
+ * reached FROM the Settings dropdown (FAQPage, FlowCategoriesPage, FlowsPage)
  * so navigating there still reads as being inside Settings instead of a
  * separate, disconnected page.
  */

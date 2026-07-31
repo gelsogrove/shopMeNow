@@ -3,7 +3,7 @@ import logger from '../../utils/logger'
 import { EmbeddingProvider } from './embedding-provider'
 import { findRelevantFlows, isPlausibleSerialNumber, selectBestFlow } from './flow-retrieval.service'
 import { RetrievalEvent } from './flow-retrieval.types'
-import { matchSerialNumberToModel } from './robot-model-lookup.service'
+import { matchSerialNumberToCategory } from './flow-category-lookup.service'
 
 // Orchestrates the full two-step retrieval (analisi.md §8) against real
 // data: DB reads scoped by workspaceId (CLAUDE.md §2), embedding call via
@@ -25,7 +25,7 @@ export interface RunRetrievalInput {
 
 export interface RunRetrievalResult {
   selectedFlowId?: string
-  robotModelId?: string
+  flowCategoryId?: string
   reason?: 'unknown_model' | 'no_matching_flow'
   event: RetrievalEvent
 }
@@ -44,26 +44,26 @@ export async function runRetrieval(
     candidates: [],
   }
 
-  // Step 1: deterministic serialNumber -> RobotModel (specs/flow-retrieval
+  // Step 1: deterministic serialNumber -> FlowCategory (specs/flow-retrieval
   // "Two-step flow resolution"). A plausible-but-unmatched serial is
   // unknown_model; an implausible/absent one falls straight through to the
   // no-serial-number path (specs/flow-retrieval "No serial number does not
   // block the conversation").
-  let robotModelId: string | null = null
+  let flowCategoryId: string | null = null
 
   if (isPlausibleSerialNumber(input.serialNumber)) {
     try {
-      const candidates = await prisma.robotModel.findMany({
+      const candidates = await prisma.flowCategory.findMany({
         where: { workspaceId: input.workspaceId },
         select: { id: true, slug: true, lookupRules: true },
       })
-      const outcome = matchSerialNumberToModel(
+      const outcome = matchSerialNumberToCategory(
         input.serialNumber,
         candidates.map((c) => ({ id: c.id, slug: c.slug, lookupRules: c.lookupRules as Record<string, unknown> })),
       )
       if (outcome.status === 'resolved') {
-        robotModelId = outcome.robotModelId
-        event.robotModelId = robotModelId
+        flowCategoryId = outcome.flowCategoryId
+        event.flowCategoryId = flowCategoryId
       } else if (outcome.status === 'not_found') {
         logRetrievalEvent(event)
         return { reason: 'unknown_model', event }
@@ -73,12 +73,12 @@ export async function runRetrieval(
       // Graceful degradation (design.md Decision 14): a technical lookup
       // failure is NOT unknown_model — fall through to the generic flow
       // instead of failing the turn.
-      logger.error('[demorobot] RobotModel lookup failed, falling back to generic flow', err)
+      logger.error('[demorobot] FlowCategory lookup failed, falling back to generic flow', err)
     }
   }
 
-  // Step 2: semantic search, scoped to robotModelId OR the workspace-generic
-  // flow (robotModelId: null). Embedding/DB failures degrade to "no match"
+  // Step 2: semantic search, scoped to flowCategoryId OR the workspace-generic
+  // flow (flowCategoryId: null). Embedding/DB failures degrade to "no match"
   // (-> generic flow / escalation upstream) rather than throwing.
   try {
     const queryEmbedding = await embeddingProvider.embed(input.query)
@@ -86,13 +86,13 @@ export async function runRetrieval(
     const flows = await prisma.flow.findMany({
       where: {
         workspaceId: input.workspaceId,
-        OR: [{ robotModelId }, { robotModelId: null }],
+        OR: [{ flowCategoryId }, { flowCategoryId: null }],
       },
-      select: { id: true, robotModelId: true, embedding: true },
+      select: { id: true, flowCategoryId: true, embedding: true },
     })
 
     const candidates = findRelevantFlows({
-      robotModelId,
+      flowCategoryId,
       queryEmbedding,
       candidateFlows: flows,
       k: topK,
@@ -103,15 +103,15 @@ export async function runRetrieval(
     if (best) {
       event.selectedFlowId = best.flowId
       logRetrievalEvent(event)
-      return { selectedFlowId: best.flowId, robotModelId: robotModelId ?? undefined, event }
+      return { selectedFlowId: best.flowId, flowCategoryId: flowCategoryId ?? undefined, event }
     }
 
     logRetrievalEvent(event)
-    return { reason: 'no_matching_flow', robotModelId: robotModelId ?? undefined, event }
+    return { reason: 'no_matching_flow', flowCategoryId: flowCategoryId ?? undefined, event }
   } catch (err) {
     logger.error('[demorobot] Retrieval (embedding/DB) failed, degrading to no_matching_flow', err)
     logRetrievalEvent(event)
-    return { reason: 'no_matching_flow', robotModelId: robotModelId ?? undefined, event }
+    return { reason: 'no_matching_flow', flowCategoryId: flowCategoryId ?? undefined, event }
   }
 }
 

@@ -29,7 +29,7 @@ export function createFlowBuilderRoutes(): Router {
    * @swagger
    * /api/workspaces/{workspaceId}/demorobot/robot-models:
    *   get:
-   *     summary: List RobotModels for a workspace
+   *     summary: List Categories for a workspace
    *     tags: [DemoRobot]
    *     security:
    *       - bearerAuth: []
@@ -43,7 +43,7 @@ export function createFlowBuilderRoutes(): Router {
    *       200:
    *         description: List of robot models
    *   post:
-   *     summary: Create a RobotModel
+   *     summary: Create a Category
    *     tags: [DemoRobot]
    *     security:
    *       - bearerAuth: []
@@ -65,22 +65,20 @@ export function createFlowBuilderRoutes(): Router {
    *                 type: string
    *               slug:
    *                 type: string
-   *               manufacturer:
-   *                 type: string
    *               description:
    *                 type: string
    *     responses:
    *       201:
-   *         description: RobotModel created
+   *         description: Category created
    */
-  router.get('/workspaces/:workspaceId/demorobot/robot-models', ...middlewares, controller.listRobotModels.bind(controller))
-  router.post('/workspaces/:workspaceId/demorobot/robot-models', ...middlewares, controller.createRobotModel.bind(controller))
+  router.get('/workspaces/:workspaceId/demorobot/robot-models', ...middlewares, controller.listCategories.bind(controller))
+  router.post('/workspaces/:workspaceId/demorobot/robot-models', ...middlewares, controller.createCategory.bind(controller))
 
   /**
    * @swagger
    * /api/workspaces/{workspaceId}/demorobot/robot-models/{robotModelId}:
    *   patch:
-   *     summary: Update a RobotModel
+   *     summary: Update a Category
    *     tags: [DemoRobot]
    *     security:
    *       - bearerAuth: []
@@ -97,11 +95,11 @@ export function createFlowBuilderRoutes(): Router {
    *           type: string
    *     responses:
    *       200:
-   *         description: RobotModel updated
+   *         description: Category updated
    *       404:
    *         description: Not found
    *   delete:
-   *     summary: Delete a RobotModel (cascades Flows/Assets)
+   *     summary: Delete a Category (cascades Flows/Assets)
    *     tags: [DemoRobot]
    *     security:
    *       - bearerAuth: []
@@ -122,14 +120,14 @@ export function createFlowBuilderRoutes(): Router {
    *       404:
    *         description: Not found
    */
-  router.patch('/workspaces/:workspaceId/demorobot/robot-models/:robotModelId', ...middlewares, controller.updateRobotModel.bind(controller))
-  router.delete('/workspaces/:workspaceId/demorobot/robot-models/:robotModelId', ...middlewares, controller.deleteRobotModel.bind(controller))
+  router.patch('/workspaces/:workspaceId/demorobot/robot-models/:robotModelId', ...middlewares, controller.updateCategory.bind(controller))
+  router.delete('/workspaces/:workspaceId/demorobot/robot-models/:robotModelId', ...middlewares, controller.deleteCategory.bind(controller))
 
   /**
    * @swagger
    * /api/workspaces/{workspaceId}/demorobot/flows:
    *   get:
-   *     summary: List Flows (by robotModelId, or generic=true for the workspace fallback flow)
+   *     summary: List Flows (by category, or generic=true for the workspace fallback flow)
    *     tags: [DemoRobot]
    *     security:
    *       - bearerAuth: []
@@ -263,7 +261,7 @@ export function createFlowBuilderRoutes(): Router {
    * @swagger
    * /api/workspaces/{workspaceId}/demorobot/robot-models/{robotModelId}/assets:
    *   get:
-   *     summary: List Assets for a RobotModel
+   *     summary: List Assets for a Category
    *     tags: [DemoRobot]
    *     security:
    *       - bearerAuth: []
@@ -282,7 +280,7 @@ export function createFlowBuilderRoutes(): Router {
    *       200:
    *         description: List of assets
    *   post:
-   *     summary: Upload a file Asset (document/image/video) for a RobotModel
+   *     summary: Upload a file Asset (document/image/video) for a Category
    *     tags: [DemoRobot]
    *     security:
    *       - bearerAuth: []
@@ -333,7 +331,7 @@ export function createFlowBuilderRoutes(): Router {
    * @swagger
    * /api/workspaces/{workspaceId}/demorobot/robot-models/{robotModelId}/assets/link:
    *   post:
-   *     summary: Create a link-type Asset (no file upload) for a RobotModel
+   *     summary: Create a link-type Asset (no file upload) for a Category
    *     tags: [DemoRobot]
    *     security:
    *       - bearerAuth: []

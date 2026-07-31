@@ -198,7 +198,7 @@ model Workspace {
   flowNodeConfigs FlowNodeConfig[] // FLOW chatbot configurations (machine-specific flows)
 
   // 🤖 demoRobot — visual flow-builder chatbot (compiler + retrieval)
-  robotModels RobotModel[]
+  flowCategories FlowCategory[]
   demoRobotFlows Flow[]
 
   @@index([ownerId])
@@ -2320,24 +2320,23 @@ model PlaygroundComment {
 // above). See apps/backend/custom-demorobot/docs/analisi.md for the spec.
 // ============================================================
 
-model RobotModel {
-  id           String   @id @default(cuid())
-  workspaceId  String
-  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  name         String // e.g. "RoboCut X200"
-  slug         String
-  manufacturer String?
-  description  String?  @db.Text
-  lookupRules  Json     @default("{}") // pluggable serialNumber -> RobotModel matching config (TBD, see analisi.md §13)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+model FlowCategory {
+  id          String   @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String // e.g. "RoboCut X200", "Front-load washer"
+  slug        String
+  description String?  @db.Text
+  lookupRules Json     @default("{}") // pluggable serialNumber -> FlowCategory matching config (TBD, see analisi.md §13)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   flows  Flow[]
   assets Asset[]
 
   @@unique([workspaceId, slug])
   @@index([workspaceId])
-  @@map("robot_models")
+  @@map("flow_categories")
 }
 
 model Flow {
@@ -2345,8 +2344,8 @@ model Flow {
   workspaceId String
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  robotModelId String? // null = workspace-generic fallback flow (analisi.md §6)
-  robotModel   RobotModel? @relation(fields: [robotModelId], references: [id], onDelete: Cascade)
+  flowCategoryId String? // null = workspace-generic fallback flow (analisi.md §6)
+  flowCategory   FlowCategory? @relation(fields: [flowCategoryId], references: [id], onDelete: Cascade)
 
   title       String
   description String? @db.Text
@@ -2363,7 +2362,7 @@ model Flow {
   nodes FlowNode[]
 
   @@index([workspaceId])
-  @@index([robotModelId])
+  @@index([flowCategoryId])
   @@map("demorobot_flows")
 }
 
@@ -2408,9 +2407,9 @@ model FlowEdge {
 }
 
 model Asset {
-  id           String   @id @default(cuid())
-  robotModelId String // lives at model level, not node level — deduplicated across nodes
-  robotModel   RobotModel @relation(fields: [robotModelId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  flowCategoryId String // lives at category level, not node level — deduplicated across nodes
+  flowCategory   FlowCategory @relation(fields: [flowCategoryId], references: [id], onDelete: Cascade)
 
   type     String // "document" | "image" | "video" | "link"
   url      String
@@ -2423,7 +2422,7 @@ model Asset {
 
   attachments FlowNodeAttachment[]
 
-  @@index([robotModelId])
+  @@index([flowCategoryId])
   @@map("demorobot_assets")
 }
 

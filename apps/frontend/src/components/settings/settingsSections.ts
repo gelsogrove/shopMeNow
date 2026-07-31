@@ -2,7 +2,7 @@
  * Shared Settings section config + navigation logic.
  *
  * Extracted from SettingsPage so that the pages navigated to FROM the
- * Settings dropdown (FAQPage, RobotModelsPage, FlowsPage) can render the
+ * Settings dropdown (FAQPage, FlowCategoriesPage, FlowsPage) can render the
  * same dropdown and jump between sections without it feeling like leaving
  * Settings entirely.
  */
@@ -90,7 +90,7 @@ export const SECTION_ROUTES: Partial<Record<SectionKey, string>> = {
 
 /**
  * Shared "jump to a settings section" handler for the pages reached via
- * SECTION_ROUTES (FAQPage, RobotModelsPage, FlowsPage) — routes to /settings
+ * SECTION_ROUTES (FAQPage, FlowCategoriesPage, FlowsPage) — routes to /settings
  * for inline sections, or to the section's own dedicated route.
  */
 export function navigateToSection(

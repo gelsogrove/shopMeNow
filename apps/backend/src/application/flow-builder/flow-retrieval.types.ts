@@ -11,7 +11,7 @@ export const SERIAL_NUMBER_LENGTH = 19
 
 export interface RetrievableFlow {
   id: string
-  robotModelId: string | null
+  flowCategoryId: string | null
   embedding: number[]
 }
 
@@ -21,7 +21,7 @@ export interface FlowCandidate {
 }
 
 export interface FindRelevantFlowsInput {
-  robotModelId: string | null
+  flowCategoryId: string | null
   queryEmbedding: number[]
   candidateFlows: RetrievableFlow[]
   k: number
@@ -30,14 +30,14 @@ export interface FindRelevantFlowsInput {
 export interface RetrievalEvent {
   conversationId: string
   serialNumber?: string
-  robotModelId?: string
+  flowCategoryId?: string
   query: string
   candidates: FlowCandidate[]
   selectedFlowId?: string
 }
 
-export type ModelLookupOutcome =
-  | { status: 'resolved'; robotModelId: string }
-  | { status: 'not_found' } // reason: unknown_model
+export type FlowCategoryLookupOutcome =
+  | { status: 'resolved'; flowCategoryId: string }
+  | { status: 'not_found' } // reason: unknown_category
   | { status: 'serial_absent' } // below MIN_SERIAL_NUMBER_LENGTH, not attempted
   | { status: 'lookup_error' } // technical failure, distinct from not_found

@@ -3,11 +3,11 @@ import { storageService } from '../../services/storage.service'
 
 // Asset upload: reuses the existing storageService (Cloudinary in
 // production, local filesystem in dev) rather than inventing a new storage
-// convention. Files land under `demorobot/<robotModelId>` so they are
-// organized per RobotModel, matching Asset.robotModelId ownership.
+// convention. Files land under `demorobot/<flowCategoryId>` so they are
+// organized per FlowCategory, matching Asset.flowCategoryId ownership.
 
 export interface CreateAssetFromFileInput {
-  robotModelId: string
+  flowCategoryId: string
   type: 'document' | 'image' | 'video' | 'link'
   file: { buffer: Buffer; originalname: string; mimetype: string }
   title: string
@@ -16,32 +16,32 @@ export interface CreateAssetFromFileInput {
 }
 
 export interface CreateAssetLinkInput {
-  robotModelId: string
+  flowCategoryId: string
   url: string
   title: string
   summary?: string
   language?: string
 }
 
-export async function listAssets(workspaceId: string, robotModelId: string) {
-  const model = await prisma.robotModel.findFirst({ where: { id: robotModelId, workspaceId } })
-  if (!model) return null
-  return prisma.asset.findMany({ where: { robotModelId }, orderBy: { createdAt: 'asc' } })
+export async function listAssets(workspaceId: string, flowCategoryId: string) {
+  const category = await prisma.flowCategory.findFirst({ where: { id: flowCategoryId, workspaceId } })
+  if (!category) return null
+  return prisma.asset.findMany({ where: { flowCategoryId }, orderBy: { createdAt: 'asc' } })
 }
 
 export async function createAssetFromFile(workspaceId: string, input: CreateAssetFromFileInput) {
-  const model = await prisma.robotModel.findFirst({ where: { id: input.robotModelId, workspaceId } })
-  if (!model) return null
+  const category = await prisma.flowCategory.findFirst({ where: { id: input.flowCategoryId, workspaceId } })
+  if (!category) return null
 
   const { url } = await storageService.upload(input.file.buffer, {
     filename: input.file.originalname,
-    folder: `demorobot/${input.robotModelId}`,
+    folder: `demorobot/${input.flowCategoryId}`,
     contentType: input.file.mimetype,
   })
 
   return prisma.asset.create({
     data: {
-      robotModelId: input.robotModelId,
+      flowCategoryId: input.flowCategoryId,
       type: input.type,
       url,
       title: input.title,
@@ -52,12 +52,12 @@ export async function createAssetFromFile(workspaceId: string, input: CreateAsse
 }
 
 export async function createAssetLink(workspaceId: string, input: CreateAssetLinkInput) {
-  const model = await prisma.robotModel.findFirst({ where: { id: input.robotModelId, workspaceId } })
-  if (!model) return null
+  const category = await prisma.flowCategory.findFirst({ where: { id: input.flowCategoryId, workspaceId } })
+  if (!category) return null
 
   return prisma.asset.create({
     data: {
-      robotModelId: input.robotModelId,
+      flowCategoryId: input.flowCategoryId,
       type: 'link',
       url: input.url,
       title: input.title,
@@ -67,9 +67,9 @@ export async function createAssetLink(workspaceId: string, input: CreateAssetLin
   })
 }
 
-export async function deleteAsset(workspaceId: string, robotModelId: string, assetId: string): Promise<boolean> {
+export async function deleteAsset(workspaceId: string, flowCategoryId: string, assetId: string): Promise<boolean> {
   const asset = await prisma.asset.findFirst({
-    where: { id: assetId, robotModelId, robotModel: { workspaceId } },
+    where: { id: assetId, flowCategoryId, flowCategory: { workspaceId } },
   })
   if (!asset) return false
   await prisma.asset.delete({ where: { id: assetId } })

@@ -37,7 +37,7 @@ export function normalizeSerialNumber(serialNumber: string): string {
 // normalizing the common 0/O typo) to be attempted against the lookup.
 // Anything else is treated as NOT PROVIDED, never classified as
 // unknown_model — that reason is reserved for a plausible serial that
-// simply doesn't match any known RobotModel.
+// simply doesn't match any known FlowCategory.
 export function isPlausibleSerialNumber(serialNumber: string | undefined | null): boolean {
   if (!serialNumber) return false
   const normalized = normalizeSerialNumber(serialNumber)
@@ -47,7 +47,7 @@ export function isPlausibleSerialNumber(serialNumber: string | undefined | null)
 
 // Cosine similarity computed in Node (not pgvector — see design.md
 // "Vector storage" decision: candidates are already narrowed by
-// robotModelId before this runs, so this is cheap at the expected scale of
+// flowCategoryId before this runs, so this is cheap at the expected scale of
 // hundreds of flows per model, not millions).
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length === 0 || b.length === 0 || a.length !== b.length) return 0
@@ -64,14 +64,14 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 // Step 2 (specs/flow-retrieval "Two-step flow resolution"): semantic search
-// scoped to candidates already narrowed to `robotModelId OR robotModelId IS
-// NULL` (the workspace-generic fallback, analisi.md §5/§6) by the caller.
+// scoped to candidates already narrowed to `flowCategoryId OR flowCategoryId
+// IS NULL` (the workspace-generic fallback, analisi.md §5/§6) by the caller.
 // Returns topK candidates sorted by descending similarity — the caller
 // (not this function) decides the single-best-match attachment contract
 // (specs/flow-retrieval "Single best-match attachment").
 export function findRelevantFlows(input: FindRelevantFlowsInput): FlowCandidate[] {
   const scored = input.candidateFlows
-    .filter((f) => f.robotModelId === input.robotModelId || f.robotModelId === null)
+    .filter((f) => f.flowCategoryId === input.flowCategoryId || f.flowCategoryId === null)
     .map((f) => ({ flowId: f.id, similarity: cosineSimilarity(input.queryEmbedding, f.embedding) }))
     .sort((a, b) => b.similarity - a.similarity)
 

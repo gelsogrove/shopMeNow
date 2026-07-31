@@ -64,7 +64,7 @@ function newId(prefix: string): string {
 
 function FlowEditorInner() {
   const { workspace } = useWorkspace()
-  const { robotModelId, flowId } = useParams<{ robotModelId: string; flowId: string }>()
+  const { categoryId, flowId } = useParams<{ categoryId: string; flowId: string }>()
   const navigate = useNavigate()
   const workspaceId = workspace?.id || ""
   const { addEdges: rfAddEdges } = useReactFlow()
@@ -100,9 +100,9 @@ function FlowEditorInner() {
   }, [workspaceId, flowId, setNodes, setEdges])
 
   useEffect(() => {
-    if (!workspaceId || !robotModelId || robotModelId === "generic") return
-    assetApi.list(workspaceId, robotModelId).then(setAssets).catch(() => {})
-  }, [workspaceId, robotModelId])
+    if (!workspaceId || !categoryId || categoryId === "generic") return
+    assetApi.list(workspaceId, categoryId).then(setAssets).catch(() => {})
+  }, [workspaceId, categoryId])
 
   // specs/flow-graph-editor "Adding an answer creates a linked child node":
   // one atomic action — create the FlowEdge, auto-create a connected child
@@ -310,7 +310,7 @@ function FlowEditorInner() {
     <div className="h-screen w-full flex flex-col">
       <div className="flex items-center justify-between border-b px-4 py-2.5 bg-white">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/settings/demorobot/${robotModelId}/flows`)}>
+          <Button variant="ghost" size="sm" onClick={() => navigate(`/settings/demorobot/${categoryId}/flows`)}>
             <ArrowLeft className="h-4 w-4 mr-1.5" />
             Back
           </Button>
