@@ -120,6 +120,7 @@ interface FormData {
   faqsEnabled: boolean
   humanSupportInstructions: string
   frustrationTriggers: string
+  escalationTrigger: string
   translateOperatorMessages: boolean
   address: string
   registrationPage: string
@@ -275,6 +276,7 @@ export function SettingsPage() {
     faqsEnabled: true,
     humanSupportInstructions: "",
     frustrationTriggers: "",
+    escalationTrigger: "",
     translateOperatorMessages: true,
     address: "",
     registrationPage: "",
@@ -395,6 +397,7 @@ export function SettingsPage() {
         faqsEnabled: (currentWorkspace as any).faqsEnabled ?? true,
         humanSupportInstructions: currentWorkspace.humanSupportInstructions || "",
         frustrationTriggers: currentWorkspace.frustrationTriggers || "",
+        escalationTrigger: (currentWorkspace as any).escalationTrigger || "",
         translateOperatorMessages: currentWorkspace.translateOperatorMessages ?? true,
         address: currentWorkspace.address || "",
         registrationPage: currentWorkspace.registrationPage || "",
@@ -875,6 +878,7 @@ export function SettingsPage() {
               operatorDeliveryMode: formData.operatorDeliveryMode,
               humanSupportInstructions: formData.humanSupportInstructions,
               frustrationTriggers: formData.frustrationTriggers,
+              escalationTrigger: formData.escalationTrigger,
               translateOperatorMessages: formData.translateOperatorMessages,
             }}
             errors={errors}

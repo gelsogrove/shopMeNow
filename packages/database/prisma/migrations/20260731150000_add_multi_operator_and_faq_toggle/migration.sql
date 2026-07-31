@@ -16,3 +16,7 @@ ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "faqsEnabled" BOOLEAN NOT NULL 
 -- Master switch for flow retrieval. Defaults to true so existing workspaces
 -- keep the behaviour they have today.
 ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "flowsEnabled" BOOLEAN NOT NULL DEFAULT true;
+
+-- Customer-facing sentence explaining how to reach a human operator.
+-- Injectable into any prompt or message via {{escalationTrigger}}.
+ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "escalationTrigger" TEXT;
