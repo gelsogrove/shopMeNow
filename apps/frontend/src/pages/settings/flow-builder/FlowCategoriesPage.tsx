@@ -42,6 +42,30 @@ export function FlowCategoriesPage() {
   const [newName, setNewName] = useState("")
   const [newDescription, setNewDescription] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<FlowCategory | null>(null)
+  // Master switch, persisted on the workspace. Saved immediately on toggle —
+  // this page has no Save button.
+  const [flowsEnabled, setFlowsEnabled] = useState(true)
+  const [isTogglingFlows, setIsTogglingFlows] = useState(false)
+
+  useEffect(() => {
+    if (workspace) setFlowsEnabled((workspace as any).flowsEnabled ?? true)
+  }, [workspace])
+
+  const handleToggleFlowsEnabled = async (enabled: boolean) => {
+    if (!workspaceId) return
+    // Optimistic: the switch responds instantly, and rolls back if the save fails.
+    setFlowsEnabled(enabled)
+    setIsTogglingFlows(true)
+    try {
+      await updateWorkspace(workspaceId, { flowsEnabled: enabled } as any)
+      toast.success(enabled ? "Flows enabled" : "Flows disabled")
+    } catch (err: any) {
+      setFlowsEnabled(!enabled)
+      toast.error(err.message || "Could not save the change")
+    } finally {
+      setIsTogglingFlows(false)
+    }
+  }
   const [editTarget, setEditTarget] = useState<FlowCategory | null>(null)
   const [editName, setEditName] = useState("")
   const [editDescription, setEditDescription] = useState("")
@@ -135,18 +159,51 @@ export function FlowCategoriesPage() {
           navigating here still reads as being inside Settings. */}
       <SettingsPageHeader currentSection="demorobot" />
 
-      <PageHeader
-        title="Flows Categories"
-        titleIcon={<Bot className="h-6 w-6" />}
-        description="Group this workspace's flows into categories."
-        searchValue={searchValue}
-        onSearch={setSearchValue}
-        onAdd={() => setShowAddDialog(true)}
-        addButtonText="New Category"
-        addButtonIcon={<Plus className="h-4 w-4 mr-1.5 text-white" />}
-        itemCount={filtered.length}
-      />
+      {/* Master switch — same card pattern as FAQ and the Settings sections.
+          Everything the section owns (search, New Category, the list) lives
+          under it and disappears when it is off, so a disabled section offers
+          no actions. Nothing is deleted: switching back on restores it all. */}
+      <Card>
+        <CardHeader className="border-b bg-gradient-to-r from-violet-50 to-white">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Bot className="h-5 w-5 text-violet-600" />
+              Flows
+              <span className="text-sm font-normal text-gray-500">
+                ({filtered.length} categories)
+              </span>
+            </CardTitle>
+            <Switch
+              checked={flowsEnabled}
+              onCheckedChange={handleToggleFlowsEnabled}
+              disabled={isTogglingFlows}
+            />
+          </div>
+          <p className="text-sm text-gray-500">
+            {flowsEnabled
+              ? "Guided question/answer trees the chatbot follows for known problems."
+              : "Disabled — the chatbot answers without using any flow. Nothing is deleted."}
+          </p>
+        </CardHeader>
+        {flowsEnabled && (
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <Input
+                placeholder="Search categories..."
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                className="max-w-md"
+              />
+              <Button onClick={() => setShowAddDialog(true)} className="bg-green-600 hover:bg-green-700">
+                <Plus className="h-4 w-4 mr-1.5" />
+                New Category
+              </Button>
+            </div>
+          </CardContent>
+        )}
+      </Card>
 
+      {flowsEnabled && (
       <DataTable
         data={filtered}
         columns={columns}
@@ -175,6 +232,7 @@ export function FlowCategoriesPage() {
           </Button>
         )}
       />
+      )}
 
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
         <DialogContent>

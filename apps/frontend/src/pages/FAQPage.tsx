@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { updateWorkspace } from "@/services/workspaceApi"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { FAQ, faqApi } from "@/services/faqApi"
@@ -223,30 +223,22 @@ export function FAQPage() {
       <div className="space-y-6">
         {/* Header — same "Settings" title + section dropdown as SettingsPage,
             so navigating here still reads as being inside Settings. */}
-        <div className="flex items-center justify-between">
-          <SettingsPageHeader currentSection="faqs" />
-          <Button onClick={() => setShowAddSheet(true)} className="bg-green-600 hover:bg-green-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Add FAQ
-          </Button>
-        </div>
-
-        {/* Sub-header */}
-        <div className="flex items-center gap-3">
-          <HelpCircle className={commonStyles.headerIcon} />
-          <h2 className="text-xl font-semibold text-gray-900">FAQ</h2>
-          <span className="text-sm text-gray-500">({filteredFAQs.length} items)</span>
-        </div>
+        <SettingsPageHeader currentSection="faqs" />
 
         {/* Master switch — same card pattern as the Settings sections. Turning it
             off keeps every FAQ intact but stops the block being added to the
-            chatbot's prompt, which is the quick way to silence them all. */}
+            chatbot's prompt, which is the quick way to silence them all.
+            Everything the section owns (Add button, count) lives inside the card
+            and disappears with it, so a disabled section offers no actions. */}
         <Card>
           <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-white">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <HelpCircle className="h-5 w-5 text-amber-500" />
                 FAQ Answers
+                <span className="text-sm font-normal text-gray-500">
+                  ({filteredFAQs.length} items)
+                </span>
               </CardTitle>
               <Switch
                 checked={faqsEnabled}
@@ -260,9 +252,21 @@ export function FAQPage() {
                 : "Disabled — the chatbot ignores every FAQ below, but none of them are deleted."}
             </p>
           </CardHeader>
+          {faqsEnabled && (
+            <CardContent className="pt-6">
+              <Button onClick={() => setShowAddSheet(true)} className="bg-green-600 hover:bg-green-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Add FAQ
+              </Button>
+            </CardContent>
+          )}
         </Card>
 
-        {/* Search */}
+        {/* Search + list are hidden while the section is off: browsing answers
+            the chatbot is not using only invites confusion. Nothing is deleted —
+            switching back on brings everything straight back. */}
+        {!faqsEnabled ? null : (
+        <>
         <div>
           <Input
             placeholder="Search FAQs..."
@@ -375,6 +379,8 @@ export function FAQPage() {
               </div>
             )}
           </>
+        )}
+        </>
         )}
       </div>
 

@@ -12,3 +12,7 @@ ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "operatorDeliveryMode" TEXT DEF
 -- Master switch for the FAQ block injected into the chatbot prompt.
 -- Defaults to true so existing workspaces keep the behaviour they have today.
 ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "faqsEnabled" BOOLEAN NOT NULL DEFAULT true;
+
+-- Master switch for flow retrieval. Defaults to true so existing workspaces
+-- keep the behaviour they have today.
+ALTER TABLE "Workspace" ADD COLUMN IF NOT EXISTS "flowsEnabled" BOOLEAN NOT NULL DEFAULT true;

@@ -9,11 +9,12 @@ import { Label } from "@/components/ui/label"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { GitBranch, Plus, ArrowLeft, Copy } from "lucide-react"
+import { GitBranch, Plus, ArrowLeft, Copy, FileText } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
@@ -38,6 +39,8 @@ export function FlowsPage() {
   const [newTitle, setNewTitle] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<Flow | null>(null)
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
+  // Flow whose stored prompt is being viewed; null closes the dialog.
+  const [promptTarget, setPromptTarget] = useState<Flow | null>(null)
 
   useEffect(() => {
     if (!workspaceId) return
@@ -65,9 +68,6 @@ export function FlowsPage() {
     }
   }
 
-  // Duplicates title + full node/edge graph: reads the source graph, creates
-  // a new flow, then remaps every node/edge id (new flow, so ids can't be
-  // reused) before writing the copy via the same saveGraph the editor uses.
   // Duplication happens server-side in one transactional call: the previous
   // client-side version issued three requests (read graph, create flow, save
   // graph) and could leave a half-built flow behind if any of them failed.

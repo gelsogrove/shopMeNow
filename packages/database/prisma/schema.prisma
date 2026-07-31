@@ -112,6 +112,7 @@ model Workspace {
   customChatbotTemperature          Float?      // 🆕 LLM temperature override for custom chatbot modules. Falls back to the module's settings.json when empty.
   customChatbotMaxTokens            Int?        // 🆕 Max tokens per LLM reply for custom chatbot modules. Falls back to the module's settings.json when empty.
   faqsEnabled                       Boolean     @default(true) // 🆕 Master switch for the FAQ block injected into the chatbot prompt. Individual FAQ.isActive still applies.
+  flowsEnabled                      Boolean     @default(true) // 🆕 Master switch for flow retrieval. When off the chatbot answers without consulting any flow; the flows themselves are untouched.
   audioOutput                       Boolean     @default(false) // 🆕 Whether the chatbot replies with synthesized audio (ElevenLabs)
   audioVoices                       Json?       // 🆕 ElevenLabs voice id per language, e.g. { "default": "EXAV...", "it": "EXAV...", "es": "FGY2..." }
   customChatbotOperatorBriefingLanguage String? @db.Text // 🆕 Language the operator escalation briefing email is written in (e.g. "es"). Falls back to the module's settings.json when empty.
