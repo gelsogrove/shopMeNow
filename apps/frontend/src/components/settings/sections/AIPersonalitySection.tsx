@@ -28,6 +28,16 @@ const LLM_MODEL_OPTIONS = [
 
 const CUSTOM_MODEL_VALUE = "__custom__"
 
+/**
+ * Voice-id rows to render: always "Default" (the fallback the agent uses for any
+ * language without its own voice), followed by the languages actually enabled —
+ * so the list mirrors the checkboxes above instead of showing every language.
+ */
+const VOICE_ID_ROWS = (enabled: string[]) => [
+  { code: "default", label: "🌐 Default" },
+  ...AVAILABLE_LANGUAGES.filter((l) => enabled.includes(l.code)),
+]
+
 // Languages a client can request. `enabledLanguages` is documentation for the
 // team (see Workspace.enabledLanguages) — the chatbot detects the customer's
 // language from their message regardless of this list.
@@ -60,6 +70,9 @@ interface AIPersonalitySectionProps {
     requireManualApproval: boolean
     customChatbotModel: string
     customChatbotTemperature: number | null
+    customChatbotMaxTokens: number | null
+    audioOutput: boolean
+    audioVoices: Record<string, string>
   }
   errors: Record<string, string>
   canEdit: boolean
@@ -243,6 +256,58 @@ export function AIPersonalitySection({
             </p>
           </div>
 
+          {/* Voice replies — ElevenLabs. Sits with the languages because a voice
+              is picked per language; showing them apart made the pairing unclear. */}
+          <div className="space-y-3 pt-2 border-t">
+            <div className="flex items-center justify-between pt-2">
+              <div>
+                <Label htmlFor="audioOutput">Voice Replies</Label>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Send answers as audio messages instead of text only
+                </p>
+              </div>
+              <Switch
+                id="audioOutput"
+                checked={formData.audioOutput ?? false}
+                onCheckedChange={(checked) => onFieldChange("audioOutput", checked)}
+                disabled={!canEdit}
+              />
+            </div>
+
+            {formData.audioOutput && (
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-gray-700">
+                  ElevenLabs Voice IDs
+                </Label>
+                <p className="text-xs text-gray-500">
+                  Paste the voice ID from your{" "}
+                  <span className="font-medium">ElevenLabs</span> account for each language
+                  (Voice Library → a voice → ID). "Default" is used for any language left
+                  empty.
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {VOICE_ID_ROWS(formData.enabledLanguages ?? []).map((row) => (
+                    <div key={row.code} className="flex items-center gap-2">
+                      <span className="w-28 shrink-0 text-sm">{row.label}</span>
+                      <Input
+                        value={(formData.audioVoices ?? {})[row.code] ?? ""}
+                        onChange={(e) => {
+                          const next = { ...(formData.audioVoices ?? {}) }
+                          if (e.target.value.trim()) next[row.code] = e.target.value
+                          else delete next[row.code]
+                          onFieldChange("audioVoices", next)
+                        }}
+                        placeholder="EXAVITQu4vr4xnSDxMaL"
+                        disabled={!canEdit}
+                        className="font-mono text-xs"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* F50: Bot Identity — hidden in custom chatbot mode (module owns identity prompts). */}
           {!hideModuleOwnedFields && (
           <div
@@ -424,6 +489,9 @@ export function AIPersonalitySection({
             <Bot className="h-5 w-5 text-blue-600" />
             Model
           </CardTitle>
+          <p className="text-sm text-gray-500">
+            Which AI model answers, and how it writes
+          </p>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid gap-6 md:grid-cols-2">
@@ -495,6 +563,30 @@ export function AIPersonalitySection({
               <p className="text-xs text-gray-500">
                 Controls how varied the bot's wording is. Low = consistent, predictable
                 answers. High = more creative phrasing, less repetitive.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="customChatbotMaxTokens">Max Reply Length</Label>
+              <Input
+                id="customChatbotMaxTokens"
+                type="number"
+                min={100}
+                max={4000}
+                step={100}
+                value={formData.customChatbotMaxTokens ?? ""}
+                onChange={(e) =>
+                  onFieldChange(
+                    "customChatbotMaxTokens",
+                    e.target.value === "" ? null : Number(e.target.value),
+                  )
+                }
+                placeholder="800"
+                disabled={!canEdit}
+              />
+              <p className="text-xs text-gray-500">
+                Maximum length of a single reply, in tokens (~4 characters each). 800 is
+                about a short paragraph. Higher costs more per message.
               </p>
             </div>
           </div>
