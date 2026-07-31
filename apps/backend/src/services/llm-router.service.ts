@@ -302,24 +302,25 @@ export class LLMRouterService {
   }
 
   /**
-   * 🆕 Feature 126: Check if workspace is in debug mode (P2 - Maintenance Mode)
+   * Check if the channel is switched off (P2 - Maintenance Mode).
    *
-   * When debugMode = true, chatbot is in TEST MODE → return WIP message.
-   * This is second priority check (after blocked user check).
+   * Keyed on `channelStatus`, the Active/Inactive toggle in Settings:
+   * channelStatus = false → channel off → reply with the Maintenance (WIP)
+   * message instead of running the chatbot. The legacy `debugMode` flag is no
+   * longer consulted — the debug concept was removed from the product, leaving
+   * only active/inactive.
    *
    * @param workspaceId - Workspace ID to check
-   * @returns true if debug mode is active, false otherwise
+   * @returns true when the channel is inactive, false otherwise
    */
   private async getChannelDisabled(workspaceId: string): Promise<boolean> {
     const workspace = await this.prisma.workspace.findUnique({
       where: { id: workspaceId },
-      select: { debugMode: true, name: true },
+      select: { channelStatus: true, name: true },
     })
 
-    // debugMode = false → Chatbot ATTIVO (produzione)
-    // debugMode = true → Chatbot in DEBUG (manda WIP, queue ferma)
-    if (workspace?.debugMode === true) {
-      logger.info("🐛 P2: Workspace in debug mode (test mode - WIP message)", {
+    if (workspace?.channelStatus === false) {
+      logger.info("🚧 P2: Channel inactive — sending WIP message", {
         workspaceId,
         workspaceName: workspace.name,
       })

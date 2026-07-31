@@ -20,42 +20,42 @@ export function AccessDeniedPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="text-center max-w-md px-6">
         {/* Icon */}
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-900/30 border border-red-700">
-          <ShieldX className="h-10 w-10 text-red-400" />
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-50 border border-red-200">
+          <ShieldX className="h-10 w-10 text-red-600" />
         </div>
 
         {/* Title */}
-        <h1 className="text-3xl font-bold text-white mb-2">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Access Denied
         </h1>
 
         {/* Description */}
-        <p className="text-gray-400 mb-8">
+        <p className="text-gray-600 mb-8">
           The Backoffice is restricted to Platform Administrators only.
           <br />
           Please login through the main application with an admin account.
         </p>
 
         {/* CTA Button */}
-        <Button 
+        <Button
           onClick={handleGoToFrontend}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3"
+          className="bg-green-600 hover:bg-green-700 text-white px-6 py-3"
         >
           Go to Login
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>
 
         {/* Info */}
-        <div className="mt-8 p-4 bg-gray-800/50 rounded-lg border border-gray-700">
-          <p className="text-sm text-gray-500">
-            <strong className="text-gray-400">How to access:</strong>
+        <div className="mt-8 p-4 bg-white rounded-lg border border-gray-200">
+          <p className="text-sm text-gray-600">
+            <strong className="text-gray-700">How to access:</strong>
             <br />
-            1. Login at <span className="text-blue-400">{frontendUrl}</span>
+            1. Login at <span className="text-green-700">{frontendUrl}</span>
             <br />
-            2. Use an account with <code className="bg-gray-700 px-1 rounded">isPlatformAdmin</code> enabled
+            2. Use an account with <code className="bg-gray-100 px-1 rounded">isPlatformAdmin</code> enabled
             <br />
             3. You'll be automatically redirected here
           </p>
