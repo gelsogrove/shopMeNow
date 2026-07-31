@@ -26,6 +26,12 @@ export interface ChatbotSettingsJson {
   maxToolHops: number
   operatorBriefingLanguage: string
   operatorEmail: string
+  // Multi-operator escalation. `operatorDeliveryMode` tells the module how to
+  // pick: 'all' | 'random' | 'custom' (the module applies its own rule and the
+  // recipient lists are not configured in the UI at all).
+  operatorEmails?: string[]
+  operatorWhatsappNumbers?: string[]
+  operatorDeliveryMode?: string
   emailFrom: string
   emailSubjectPrefix: string
   maxMessageChars: number
