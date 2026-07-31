@@ -232,7 +232,6 @@ export function WidgetSupportSection({
                     workload or whatever rule it implements. Nothing to configure here.
                   </div>
                 )}
-                )}
               </div>
 
               {/* Escalation rules. Andrea 2026-07-31: these used to be hidden for

@@ -58,7 +58,14 @@ describe("buildChatbotSettingsJson", () => {
     // A freshly linked module must behave exactly as it did before the Settings
     // UI existed — this is what guarantees the change is backwards compatible.
     const result = await buildChatbotSettingsJson({ customChatbotId: "demorobot" })
-    expect(result).toEqual(MODULE_DEFAULTS)
+    // Escalation routing always ships (the module cannot infer it), and with
+    // nothing configured it means: send to everyone, recipient lists empty.
+    expect(result).toEqual({
+      ...MODULE_DEFAULTS,
+      operatorDeliveryMode: "all",
+      operatorEmails: [],
+      operatorWhatsappNumbers: [],
+    })
   })
 
   it("applies the values the user saved in the Settings UI", async () => {
@@ -82,6 +89,42 @@ describe("buildChatbotSettingsJson", () => {
       emailSubjectPrefix: "[Acme] Incident",
       operatorBriefingLanguage: "it",
     })
+  })
+
+  it("passes the operator lists and delivery mode through to the module", async () => {
+    const result = await buildChatbotSettingsJson({
+      customChatbotId: "demorobot",
+      operatorDeliveryMode: "random",
+      operatorEmails: ["a@acme.com", "b@acme.com"],
+      operatorWhatsappNumbers: ["+391112223334"],
+    })
+
+    expect(result).toMatchObject({
+      operatorDeliveryMode: "random",
+      operatorEmails: ["a@acme.com", "b@acme.com"],
+      operatorWhatsappNumbers: ["+391112223334"],
+    })
+  })
+
+  it("emits empty recipient lists when delivery is customized", async () => {
+    // Under 'custom' the module picks recipients itself. Emitting the stored
+    // addresses would leave it to know it must ignore them — a rule that is
+    // easy to get wrong and would silently notify the wrong people.
+    const result = await buildChatbotSettingsJson({
+      customChatbotId: "demorobot",
+      operatorDeliveryMode: "custom",
+      operatorEmails: ["a@acme.com"],
+      operatorWhatsappNumbers: ["+391112223334"],
+    })
+
+    expect(result?.operatorDeliveryMode).toBe("custom")
+    expect(result?.operatorEmails).toEqual([])
+    expect(result?.operatorWhatsappNumbers).toEqual([])
+  })
+
+  it("defaults the delivery mode to 'all' when none is stored", async () => {
+    const result = await buildChatbotSettingsJson({ customChatbotId: "demorobot" })
+    expect(result?.operatorDeliveryMode).toBe("all")
   })
 
   it("prefers the chatbot-specific operator email over the general one", async () => {
@@ -203,6 +246,15 @@ describe("buildChatbotSettingsJson", () => {
       customChatbotModel: "openai/gpt-4o",
     })
 
-    expect(Object.keys(result!).sort()).toEqual(Object.keys(MODULE_DEFAULTS).sort())
+    // The escalation-routing keys are added by the generator (they live on the
+    // workspace, not in the module file), so they are expected on top of the
+    // module's own keys. Anything else appearing here is a leak.
+    const expected = [
+      ...Object.keys(MODULE_DEFAULTS),
+      "operatorDeliveryMode",
+      "operatorEmails",
+      "operatorWhatsappNumbers",
+    ].sort()
+    expect(Object.keys(result!).sort()).toEqual(expected)
   })
 })

@@ -54,6 +54,9 @@ export interface WorkspaceChatbotSource {
   customChatbotEmailFrom?: string | null
   customChatbotEmailSubjectPrefix?: string | null
   operatorEmail?: string | null
+  operatorEmails?: string[] | null
+  operatorWhatsappNumbers?: string[] | null
+  operatorDeliveryMode?: string | null
   defaultLanguage?: string | null
   audioOutput?: boolean | null
   audioVoices?: unknown
@@ -116,6 +119,13 @@ export async function buildChatbotSettingsJson(
       workspace.customChatbotOperatorEmail?.trim() ||
       workspace.operatorEmail?.trim() ||
       current.operatorEmail,
+    // Under 'custom' the module owns routing, so the lists are emitted empty
+    // rather than carrying stale addresses the module must know to ignore.
+    operatorDeliveryMode: workspace.operatorDeliveryMode || "all",
+    operatorEmails:
+      workspace.operatorDeliveryMode === "custom" ? [] : workspace.operatorEmails ?? [],
+    operatorWhatsappNumbers:
+      workspace.operatorDeliveryMode === "custom" ? [] : workspace.operatorWhatsappNumbers ?? [],
     emailFrom: workspace.customChatbotEmailFrom?.trim() || current.emailFrom,
     emailSubjectPrefix:
       workspace.customChatbotEmailSubjectPrefix?.trim() || current.emailSubjectPrefix,
