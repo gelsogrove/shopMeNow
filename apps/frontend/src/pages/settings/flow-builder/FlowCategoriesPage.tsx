@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Bot, Plus } from "lucide-react"
+import { ArrowRight, Bot, Plus } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
@@ -42,6 +42,9 @@ export function FlowCategoriesPage() {
   const [newName, setNewName] = useState("")
   const [newDescription, setNewDescription] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<FlowCategory | null>(null)
+  const [editTarget, setEditTarget] = useState<FlowCategory | null>(null)
+  const [editName, setEditName] = useState("")
+  const [editDescription, setEditDescription] = useState("")
 
   useEffect(() => {
     if (!workspaceId) return
@@ -71,6 +74,25 @@ export function FlowCategoriesPage() {
       toast.success("Category created")
     } catch (err: any) {
       toast.error(err.message || "Failed to create category")
+    }
+  }
+
+  const handleEdit = async () => {
+    if (!editTarget) return
+    if (!editName.trim()) {
+      toast.error("Name is required")
+      return
+    }
+    try {
+      const updated = await flowCategoryApi.update(workspaceId, editTarget.id, {
+        name: editName.trim(),
+        description: editDescription.trim() || undefined,
+      })
+      setCategories((prev) => prev.map((c) => (c.id === updated.id ? updated : c)))
+      setEditTarget(null)
+      toast.success("Category updated")
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update category")
     }
   }
 
@@ -118,8 +140,23 @@ export function FlowCategoriesPage() {
         data={filtered}
         columns={columns}
         isLoading={isLoading}
-        onEdit={(category) => navigate(`/settings/demorobot/${category.id}/flows`)}
+        onEdit={(category) => {
+          setEditTarget(category)
+          setEditName(category.name)
+          setEditDescription(category.description || "")
+        }}
         onDelete={(category) => setDeleteTarget(category)}
+        actionButtons={(category) => (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 p-0"
+            onClick={() => navigate(`/settings/demorobot/${category.id}/flows`)}
+            title="Open flows"
+          >
+            <ArrowRight className="h-4 w-4 text-gray-500" />
+          </Button>
+        )}
       />
 
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
@@ -142,6 +179,30 @@ export function FlowCategoriesPage() {
               Cancel
             </Button>
             <Button onClick={handleCreate}>Create</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editTarget} onOpenChange={(open) => !open && setEditTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-category-name">Name</Label>
+              <Input id="edit-category-name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-category-description">Description</Label>
+              <Textarea id="edit-category-description" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTarget(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEdit}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

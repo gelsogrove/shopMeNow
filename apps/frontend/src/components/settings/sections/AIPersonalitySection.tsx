@@ -14,19 +14,6 @@ import { cn } from "@/lib/utils"
 import Editor from "@monaco-editor/react"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 
-// E0b - Session reset timeout options (seconds). 0 = never auto-reset.
-const SESSION_RESET_OPTIONS = [
-  { value: 3600, label: "1 hour" },
-  { value: 7200, label: "2 hours" },
-  { value: 14400, label: "4 hours" },
-  { value: 28800, label: "8 hours" },
-  { value: 43200, label: "12 hours" },
-  { value: 86400, label: "24 hours" },
-  { value: 172800, label: "48 hours" },
-  { value: 259200, label: "72 hours" },
-  { value: 0, label: "Never" },
-] as const
-
 // OpenRouter model ids offered in the dropdown. Free-text entry ("Custom...")
 // stays available since customChatbotModel is a plain string in the DB.
 const LLM_MODEL_OPTIONS = [
@@ -405,37 +392,6 @@ export function AIPersonalitySection({
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6 space-y-6">
-          {/* Session Reset Timeout (E0b) — KEEP for all workspaces (platform-level setting). */}
-          <div
-            className="space-y-2"
-            onFocus={() => onFieldFocus?.("sessionResetTimeout")}
-            data-focus-key="sessionResetTimeout"
-          >
-            <Label htmlFor="sessionResetTimeout" className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-gray-500" />
-              Session Reset Timeout
-            </Label>
-            <Select
-              value={String(formData.sessionResetTimeout ?? 3600)}
-              onValueChange={(value) => onFieldChange("sessionResetTimeout", Number(value))}
-              disabled={!canEdit}
-            >
-              <SelectTrigger id="sessionResetTimeout" className="w-64">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SESSION_RESET_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={String(opt.value)}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-gray-500">
-              How long to wait after operator escalation before auto-resetting the session (cart, conversation context, flow state). Applies to all chatbot types.
-            </p>
-          </div>
-
           {/* Maintenance Message */}
           <div
             className="space-y-2"
