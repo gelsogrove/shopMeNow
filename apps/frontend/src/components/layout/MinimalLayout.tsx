@@ -61,7 +61,10 @@ export function MinimalLayout() {
   const hasWorkspace = !!workspace?.id
   const hasSalesAgents = workspace?.hasSalesAgents ?? false
   const enableWhatsapp = (workspace as any)?.enableWhatsapp ?? false
-  const isCustomChatbot = Boolean(workspace?.customChatbotId)
+  // Signal is channelMode === 'FLOW', not customChatbotId — see the matching
+  // comment in SettingsPage.tsx for why (Flow-type channels get the new UI
+  // immediately on creation, before customChatbotId is configured).
+  const isCustomChatbot = workspace?.channelMode === "FLOW"
 
   // Load user profile from localStorage
   useEffect(() => {

@@ -2,20 +2,56 @@ import {
   cosineSimilarity,
   findRelevantFlows,
   isPlausibleSerialNumber,
+  normalizeSerialNumber,
   selectBestFlow,
 } from '../../../application/demorobot/flow-retrieval.service'
 import { RetrievableFlow } from '../../../application/demorobot/flow-retrieval.types'
 import { matchSerialNumberToModel } from '../../../application/demorobot/robot-model-lookup.service'
 
-describe('isPlausibleSerialNumber (step 0)', () => {
-  it('rejects serial numbers shorter than 12 characters', () => {
-    expect(isPlausibleSerialNumber('123')).toBe(false)
-    expect(isPlausibleSerialNumber('12345678901')).toBe(false) // 11 chars
+// Real serial numbers confirmed by the client: 19 chars, HKX prefix for
+// 2025 models, HKA for 2026 models.
+const REAL_SERIAL_2025 = 'HKX3EB100JD25070076'
+const REAL_SERIAL_2026 = 'HKA4OB100LQ26050197'
+
+describe('normalizeSerialNumber (0/O typo correction)', () => {
+  it('leaves an already-correct serial unchanged (aside from case)', () => {
+    expect(normalizeSerialNumber(REAL_SERIAL_2025)).toBe(REAL_SERIAL_2025)
+    expect(normalizeSerialNumber(REAL_SERIAL_2026)).toBe(REAL_SERIAL_2026)
   })
 
-  it('accepts serial numbers of 12 or more characters', () => {
-    expect(isPlausibleSerialNumber('123456789012')).toBe(true) // 12 chars
-    expect(isPlausibleSerialNumber('RC-X200-000123456')).toBe(true)
+  it('fixes a 0 typed instead of O in a letter position', () => {
+    // Position 5 expects a letter ('B' in "EB") — corrupt "OB" -> "0B" and
+    // confirm normalization restores it, using the HKA example's "OB" segment.
+    const withTypo = 'HKA4' + '0' + 'B100LQ26050197' // "0B" instead of "OB" at positions 4-5
+    expect(normalizeSerialNumber(withTypo)).toBe(REAL_SERIAL_2026)
+  })
+
+  it('does not corrupt real digits (e.g. the encoded year) by treating O as 0 in digit positions', () => {
+    // If a user mistakenly typed O where a digit was expected, normalize
+    // converts it back to 0 — digit positions never end up as letters.
+    const withTypo = 'HKX3EB1OOJD25070076' // "1OO" instead of "100" at positions 6-8
+    expect(normalizeSerialNumber(withTypo)).toBe(REAL_SERIAL_2025)
+  })
+})
+
+describe('isPlausibleSerialNumber (step 0)', () => {
+  it('accepts a real 19-char HKX/HKA serial', () => {
+    expect(isPlausibleSerialNumber(REAL_SERIAL_2025)).toBe(true)
+    expect(isPlausibleSerialNumber(REAL_SERIAL_2026)).toBe(true)
+  })
+
+  it('accepts a serial with the common 0/O typo (normalized before checking)', () => {
+    expect(isPlausibleSerialNumber('HKA40B100LQ26050197')).toBe(true) // "0B" instead of "OB"
+  })
+
+  it('rejects a serial that is not exactly 19 characters', () => {
+    expect(isPlausibleSerialNumber('HKX3EB100JD2507007')).toBe(false) // 18 chars
+    expect(isPlausibleSerialNumber('HKX3EB100JD250700766')).toBe(false) // 20 chars
+    expect(isPlausibleSerialNumber('123')).toBe(false)
+  })
+
+  it('rejects a 19-char string without the HKX/HKA prefix', () => {
+    expect(isPlausibleSerialNumber('XXX3EB100JD25070076')).toBe(false)
   })
 
   it('treats absent/empty serial numbers as implausible, not an error', () => {
@@ -93,36 +129,47 @@ describe('selectBestFlow (single best-match attachment)', () => {
   })
 })
 
-describe('matchSerialNumberToModel (pluggable lookup placeholder)', () => {
+describe('matchSerialNumberToModel (HKX/HKA prefix lookup)', () => {
   const candidates = [
-    { id: 'model_1', slug: 'rocut-x200', lookupRules: { prefix: 'RCX200' } },
-    { id: 'model_2', slug: 'rocut-x400', lookupRules: {} },
+    { id: 'model_2025', slug: 'robocut-2025', lookupRules: { prefix: 'HKX3EB100' } },
+    { id: 'model_2026', slug: 'robocut-2026', lookupRules: { prefix: 'HKA4OB100' } },
   ]
 
   it('returns serial_absent for an implausible serial, never unknown_model', () => {
     expect(matchSerialNumberToModel('123', candidates)).toEqual({ status: 'serial_absent' })
   })
 
-  it('resolves via prefix rule', () => {
-    expect(matchSerialNumberToModel('RCX200-00099999', candidates)).toEqual({
+  it('resolves the 2025 model via its HKX prefix rule', () => {
+    expect(matchSerialNumberToModel(REAL_SERIAL_2025, candidates)).toEqual({
       status: 'resolved',
-      robotModelId: 'model_1',
+      robotModelId: 'model_2025',
     })
   })
 
-  it('resolves via exact slug match as a fallback', () => {
-    // 12+ chars so it clears the step-0 plausibility check.
-    expect(matchSerialNumberToModel('rocut-x400ab', candidates)).toEqual({
-      status: 'not_found', // slug 'rocut-x400' !== 'rocut-x400ab', exact match only
-    })
-    const candidatesWithLongSlug = [{ id: 'model_2', slug: 'rocut-x400ab', lookupRules: {} }]
-    expect(matchSerialNumberToModel('rocut-x400ab', candidatesWithLongSlug)).toEqual({
+  it('resolves the 2026 model via its HKA prefix rule', () => {
+    expect(matchSerialNumberToModel(REAL_SERIAL_2026, candidates)).toEqual({
       status: 'resolved',
-      robotModelId: 'model_2',
+      robotModelId: 'model_2026',
     })
   })
 
-  it('returns not_found for a plausible serial matching no candidate', () => {
-    expect(matchSerialNumberToModel('ZZZZZZZZZZZZ', candidates)).toEqual({ status: 'not_found' })
+  it('resolves correctly even with the common 0/O typo, via normalization', () => {
+    expect(matchSerialNumberToModel('HKA40B100LQ26050197', candidates)).toEqual({
+      status: 'resolved',
+      robotModelId: 'model_2026',
+    })
+  })
+
+  it('returns not_found for a plausible HKX/HKA serial matching no configured prefix', () => {
+    const otherModel = 'HKX9ZZ999ZZ25010101' // valid shape, no candidate has this prefix
+    expect(matchSerialNumberToModel(otherModel, candidates)).toEqual({ status: 'not_found' })
+  })
+
+  it('resolves via exact slug match as a fallback when no prefix rule matches', () => {
+    const noPrefixCandidates = [{ id: 'model_3', slug: REAL_SERIAL_2025.toLowerCase(), lookupRules: {} }]
+    expect(matchSerialNumberToModel(REAL_SERIAL_2025, noPrefixCandidates)).toEqual({
+      status: 'resolved',
+      robotModelId: 'model_3',
+    })
   })
 })

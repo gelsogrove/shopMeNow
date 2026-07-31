@@ -1,13 +1,13 @@
 import { ModelLookupOutcome } from './flow-retrieval.types'
-import { isPlausibleSerialNumber } from './flow-retrieval.service'
+import { isPlausibleSerialNumber, normalizeSerialNumber } from './flow-retrieval.service'
 
-// Pluggable serialNumber -> RobotModel matcher. The REAL matching strategy
-// is an explicit open item (analisi.md §13, proposal.md Non-goals) — this
-// is a placeholder implementation (exact match against RobotModel.slug, or
-// a simple prefix rule declared in RobotModel.lookupRules) that will be
-// replaced once real serial-number data is available from the demoRobot
-// client. Swapping the strategy later is a data/config change here, not a
-// rewrite of the retrieval callers.
+// serialNumber -> RobotModel matcher. Real format confirmed by the client
+// (analisi.md §13 blocker resolved): 19 chars, prefix HKX (2025 models) or
+// HKA (2026 models), e.g. HKX3EB100JD25070076. Matching is by prefix,
+// declared per RobotModel in lookupRules.prefix (e.g. "HKX3EB100" for a
+// specific 2025 model, or just "HKX" if the workspace only distinguishes by
+// year) — exact match against RobotModel.slug remains a fallback for
+// models not yet configured with a prefix rule.
 export interface RobotModelLookupCandidate {
   id: string
   slug: string
@@ -22,7 +22,7 @@ export function matchSerialNumberToModel(
     return { status: 'serial_absent' }
   }
 
-  const normalized = serialNumber!.trim().toUpperCase()
+  const normalized = normalizeSerialNumber(serialNumber!)
 
   for (const candidate of candidates) {
     const prefix = typeof candidate.lookupRules.prefix === 'string' ? candidate.lookupRules.prefix.toUpperCase() : null

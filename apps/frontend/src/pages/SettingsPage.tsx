@@ -47,9 +47,10 @@ import { SecuritySection } from "@/components/settings/sections/SecuritySection"
 import { WidgetSupportSection } from "@/components/settings/sections/WidgetSupportSection"
 import { CallingFunctionsSection } from "@/components/settings/sections/CallingFunctionsSection"
 import { CalendarSection } from "@/components/settings/sections/CalendarSection"
+import { SystemPromptSection } from "@/components/settings/sections/SystemPromptSection"
 
 // Types
-type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "functions" | "calendar" | "demorobot" | "faqs"
+type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "functions" | "calendar" | "demorobot" | "faqs" | "system-prompt"
 
 // Section definitions for dropdown.
 //
@@ -107,12 +108,22 @@ const FAQS_SECTION: SettingsSection = {
   description: "Quick answers always included in the chatbot's prompt",
 }
 
+// Editable main/system prompt (workspace.customChatbotSystemPrompt) — the
+// fixed prompt block the custom chatbot module reads every turn instead of
+// its static common.md when set. Same "added" treatment as the other two.
+const SYSTEM_PROMPT_SECTION: SettingsSection = {
+  key: "system-prompt",
+  label: "Main Prompt",
+  description: "Edit the fixed system prompt this chatbot reads every turn",
+}
+
 function getVisibleSections(isCustomChatbot: boolean): SettingsSection[] {
   if (!isCustomChatbot) return ALL_SECTIONS
   return [
     ...ALL_SECTIONS.filter((s) => !HIDDEN_FOR_CUSTOM_CHATBOT.includes(s.key as SectionKey)),
     DEMOROBOT_SECTION,
     FAQS_SECTION,
+    SYSTEM_PROMPT_SECTION,
   ]
 }
 
@@ -126,6 +137,7 @@ const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
   "calendar": "appointmentReminder24hEnabled",
   "demorobot": "customChatbotId",
   "faqs": "customChatbotId",
+  "system-prompt": "customChatbotSystemPrompt",
   "security": "allowedDomains",
   "functions": "webhookUrl",
 }
@@ -176,6 +188,7 @@ interface FormData {
   // AI Config
   customAiRules: string
   customChatbotId: string  // Custom chatbot module for FLOW workspaces (e.g. "ecolaundry")
+  customChatbotSystemPrompt: string  // Editable main/system prompt for the custom chatbot module
   welcomeMessage: string
   enableWelcomeMessage: boolean // E0a
   sessionResetTimeout: number // E0b (seconds, 0 = never)
@@ -223,8 +236,16 @@ export function SettingsPage() {
   })
   const canEdit = isOwner || isSuperAdmin
   // F50: filter the dropdown to hide sections that don't apply when the
-  // workspace runs a custom chatbot module.
-  const isCustomChatbot = Boolean(currentWorkspace?.customChatbotId)
+  // workspace runs a custom chatbot module. Signal is channelMode === 'FLOW'
+  // (not customChatbotId) — a Flow-type channel gets the Manage Flows/FAQs/
+  // Main Prompt UI immediately on creation, before anyone configures WHICH
+  // custom runtime module handles it. customChatbotId still controls the
+  // actual runtime routing in CustomClientChatbotService — this only
+  // affects UI visibility. Not the deprecated F50 flow-engine reuse: see
+  // whatsapp-inbound.pipeline.ts, customClientChatbotService.invoke() always
+  // intercepts and returns before the old FlowWorkspaceStrategy is reached
+  // whenever customChatbotId is set.
+  const isCustomChatbot = currentWorkspace?.channelMode === "FLOW"
   const SECTIONS = getVisibleSections(isCustomChatbot)
 
   // Load last opened section from localStorage. Business Config is visible for
@@ -311,6 +332,7 @@ export function SettingsPage() {
     widgetQuickReplies: [],
     customAiRules: "",
     customChatbotId: "",
+    customChatbotSystemPrompt: "",
     welcomeMessage: defaultWelcomeMessage,
     enableWelcomeMessage: true,
     sessionResetTimeout: 3600,
@@ -401,6 +423,7 @@ export function SettingsPage() {
         widgetQuickReplies: currentWorkspace.widgetQuickReplies || [],
         customAiRules: currentWorkspace.customAiRules || "",
         customChatbotId: currentWorkspace.customChatbotId || "",
+        customChatbotSystemPrompt: currentWorkspace.customChatbotSystemPrompt || "",
         welcomeMessage: currentWorkspace.welcomeMessage || defaultWelcomeMessage,
         enableWelcomeMessage: currentWorkspace.enableWelcomeMessage ?? true,
         sessionResetTimeout: currentWorkspace.sessionResetTimeout ?? 3600,
@@ -973,6 +996,17 @@ export function SettingsPage() {
             }}
             onChange={handleFieldChange}
             onFocus={handleFieldFocus}
+          />
+        )
+      case "system-prompt":
+        return (
+          <SystemPromptSection
+            formData={{
+              customChatbotSystemPrompt: formData.customChatbotSystemPrompt,
+            }}
+            canEdit={canEdit}
+            onFieldChange={handleFieldChange}
+            onFieldFocus={handleFieldFocus}
           />
         )
       default:

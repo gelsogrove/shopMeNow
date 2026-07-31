@@ -72,6 +72,7 @@ export interface Workspace {
   address?: string // 🆕 Physical address for "where are you?" questions
   customAiRules?: string // 🆕 Custom AI rules that override default behavior
   customChatbotId?: string // 🆕 Custom chatbot module for FLOW workspaces (e.g. "ecolaundry")
+  customChatbotSystemPrompt?: string // Editable main/system prompt for the custom chatbot module
   allowedExternalLinks?: string[] // 🆕 Security: allowed external domains
   logoUrl?: string // 🆕 Channel logo/icon
   widgetLogoUrl?: string // 🆕 Widget bubble logo/image

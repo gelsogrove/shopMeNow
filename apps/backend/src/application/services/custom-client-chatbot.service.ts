@@ -8,6 +8,10 @@ import { WhatsAppDirectSendService } from "../../services/whatsapp-direct-send.s
 import { sendEscalationEmail } from "./escalation-email.service"
 import { googleCalendarService } from "../../services/google-calendar.service"
 import { zoomService } from "../../services/zoom.service"
+import { runRetrieval } from "../demorobot/flow-retrieval-orchestrator.service"
+import { OpenRouterEmbeddingProvider } from "../demorobot/embedding-provider"
+import { PromptProcessorService } from "../../services/prompt-processor.service"
+import { PromptVariables, VARIABLE_DEFAULTS } from "../../types/prompt-variables.types"
 
 type ChatChannel = string
 
@@ -120,11 +124,18 @@ type ChatbotInput = {
     // the "Human Support message" comes back in that language WITHOUT
     // overriding the customer-facing reply language.
     operatorBriefingLanguageOverride?: string | null
+    // Editable main/system prompt for this workspace (workspace.
+    // customChatbotSystemPrompt, already processed with {{variables}}).
+    // null when the workspace has no custom template — the module falls
+    // back to its own static prompt file.
+    systemPromptOverride?: string | null
     // Real side-effect handlers injected by this host. The custom module
     // stays free of Prisma/Google/Zoom imports and calls these when present.
     handlers?: {
       scheduleConsultation?: (params: ScheduleConsultationParams) => Promise<ScheduleConsultationResult>
       bookAppointment?: (params: BookAppointmentParams) => Promise<BookAppointmentResult>
+      retrieveFlow?: (params: RetrieveFlowParams) => Promise<RetrieveFlowResult>
+      getFaqs?: (params: GetFaqsParams) => Promise<FaqEntry[]>
     }
   }
   context: {
@@ -225,6 +236,7 @@ type TsImportFn = (
 export class CustomClientChatbotService {
   // Cache per chatbotId → modulo caricato. Ogni custom-client-N ha il proprio modulo.
   private readonly moduleCache = new Map<string, Promise<ChatbotModule>>()
+  private readonly promptProcessor = new PromptProcessorService()
 
   async invoke(params: InvokeParams): Promise<InvokeResult> {
     const chatbotId = this.resolveChatbotId(params)
@@ -247,6 +259,7 @@ export class CustomClientChatbotService {
 
     try {
       const module = await this.loadChatbotModule(chatbotId)
+      const systemPromptOverride = await this.buildCustomChatbotSystemPrompt(params.workspaceId)
       const output = await module.chatbotFn({
         userMessage: params.userMessage,
         userName: params.userName,
@@ -260,9 +273,16 @@ export class CustomClientChatbotService {
           operatorBriefingLanguageOverride:
             this.normalizeLanguage(params.operatorBriefingLanguageOverride) ??
             null,
+          // Editable main/system prompt (workspace.customChatbotSystemPrompt,
+          // processed with {{variables}}) — null when the workspace has no
+          // custom template, in which case the module falls back to its own
+          // static prompt file (e.g. common.md).
+          systemPromptOverride,
           handlers: {
             scheduleConsultation: (p) => this.scheduleConsultation(p),
             bookAppointment: (p) => this.bookAppointment(p),
+            retrieveFlow: (p) => this.retrieveFlow(p),
+            getFaqs: (p) => this.getFaqs(p),
           },
         },
         context: {
@@ -437,6 +457,120 @@ export class CustomClientChatbotService {
     return {
       googleEventLink: calendar?.googleEventLink ?? null,
     }
+  }
+
+  /**
+   * Real retrieve_flow side-effect injected into custom-demorobot: two-step
+   * retrieval (deterministic serial->model lookup, then semantic search
+   * scoped to that model) via the compiler/retrieval services in
+   * apps/backend/src/application/demorobot. Degrades to no_matching_flow on
+   * any embedding/DB failure — never blocks or throws into the turn.
+   */
+  private async retrieveFlow(p: RetrieveFlowParams): Promise<RetrieveFlowResult> {
+    try {
+      const embeddingProvider = new OpenRouterEmbeddingProvider(process.env.OPENROUTER_API_KEY || "")
+      const result = await runRetrieval(
+        {
+          workspaceId: p.workspaceId,
+          conversationId: p.conversationId,
+          serialNumber: p.serialNumber,
+          query: p.query,
+        },
+        embeddingProvider,
+      )
+      if (!result.selectedFlowId) {
+        return { reason: result.reason, robotModelId: result.robotModelId }
+      }
+      const flow = await defaultPrisma.flow.findUnique({
+        where: { id: result.selectedFlowId },
+        select: { compiledPrompt: true, hash: true },
+      })
+      if (!flow) return { reason: "no_matching_flow" }
+      return {
+        selectedFlowId: result.selectedFlowId,
+        compiledPrompt: flow.compiledPrompt,
+        hash: flow.hash,
+        robotModelId: result.robotModelId,
+      }
+    } catch (error) {
+      logger.error("[CustomClientChatbotService] retrieveFlow failed", {
+        workspaceId: p.workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return { reason: "no_matching_flow" }
+    }
+  }
+
+  /**
+   * Real get_faqs side-effect injected into custom-demorobot: the workspace's
+   * FAQs, injected as a fixed prompt block (never retrieval — FAQs are a
+   * small, bounded set, see design.md). Reuses the same FAQ table/repository
+   * as the standard chatbot agents.
+   */
+  private async getFaqs(p: GetFaqsParams): Promise<FaqEntry[]> {
+    try {
+      const faqs = await defaultPrisma.fAQ.findMany({
+        where: { workspaceId: p.workspaceId, isActive: true },
+        orderBy: { order: "asc" },
+        select: { question: true, answer: true },
+      })
+      return faqs
+    } catch (error) {
+      logger.error("[CustomClientChatbotService] getFaqs failed", {
+        workspaceId: p.workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return []
+    }
+  }
+
+  /**
+   * Builds the processed main/system prompt for a custom chatbot workspace
+   * from workspace.customChatbotSystemPrompt (editable in the backoffice),
+   * substituting {{variables}} via the same PromptProcessorService used by
+   * the standard chatbot agents. Returns null when the workspace has no
+   * custom template set, so the calling module falls back to its own static
+   * prompt file (e.g. common.md) — this is additive, not a hard requirement.
+   */
+  private async buildCustomChatbotSystemPrompt(workspaceId: string): Promise<string | null> {
+    const workspace = await defaultPrisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: {
+        customChatbotSystemPrompt: true,
+        name: true,
+        chatbotName: true,
+        welcomeMessage: true,
+        humanSupportInstructions: true,
+        operatorContactMethod: true,
+        operatorWhatsappNumber: true,
+        toneOfVoice: true,
+        address: true,
+        allowedExternalLinks: true,
+      },
+    })
+    if (!workspace?.customChatbotSystemPrompt) return null
+
+    const faqs = await this.getFaqs({ workspaceId })
+    const faqsText = faqs.length > 0 ? faqs.map((f) => `Q: ${f.question}\nA: ${f.answer}`).join("\n\n") : ""
+
+    // VARIABLE_DEFAULTS covers customer-specific fields (customerName, etc.)
+    // that are meaningless for a fixed system prompt with no single customer
+    // in scope — this template is processed once per turn, not per-customer.
+    const variables = {
+      ...VARIABLE_DEFAULTS,
+      companyName: workspace.name || VARIABLE_DEFAULTS.companyName,
+      chatbotName: workspace.chatbotName || VARIABLE_DEFAULTS.chatbotName,
+      welcomeMessage: workspace.welcomeMessage || "",
+      humanSupportInstructions: workspace.humanSupportInstructions || "",
+      operatorContactMethod: workspace.operatorContactMethod || VARIABLE_DEFAULTS.operatorContactMethod,
+      operatorWhatsappNumber: workspace.operatorWhatsappNumber || "",
+      toneOfVoice: workspace.toneOfVoice || VARIABLE_DEFAULTS.toneOfVoice,
+      address: workspace.address || "",
+      allowedExternalLinks: workspace.allowedExternalLinks || "",
+      faqs: faqsText,
+    } as PromptVariables
+
+    return this.promptProcessor.processWithVariables(workspace.customChatbotSystemPrompt, variables)
   }
 
   /**

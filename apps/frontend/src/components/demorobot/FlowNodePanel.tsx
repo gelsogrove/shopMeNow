@@ -132,32 +132,39 @@ export function FlowNodePanel({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Terminal type</Label>
-            <Select
-              value={terminalType || "none"}
-              onValueChange={(v) => {
-                const value = v === "none" ? "" : v
-                setTerminalType(value)
-                onChange(nodeId, { terminalType: (value || null) as FlowQuestionNodeData["terminalType"] })
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Not a terminal" />
-              </SelectTrigger>
-              <SelectContent>
-                {/* END and LOOP are hidden here (not deleted from the type):
-                    END behaves identically to SELF_SERVICE in the compiler
-                    today (same allowed tools), and LOOP is a reserved,
-                    not-yet-real case per analisi.md §5. Both remain valid
-                    terminalType values if a node already has one set. */}
-                <SelectItem value="none">Not a terminal (has answers)</SelectItem>
-                <SelectItem value="SELF_SERVICE">Self-service (resolved)</SelectItem>
-                <SelectItem value="ESCALATE">Escalate to operator</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Two plain checkboxes instead of a 5-option technical dropdown.
+              Mutually exclusive; neither checked = the node continues with
+              its own answers (the implicit default, no explicit "Not a
+              terminal" choice needed). END/LOOP still exist as valid
+              terminalType values in the data model (compiler/spec), just not
+              exposed here — END is behaviorally identical to SELF_SERVICE
+              today, LOOP is reserved/not yet a real case (analisi.md §5). */}
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={terminalType === "SELF_SERVICE"}
+                onCheckedChange={(checked) => {
+                  const value = checked ? "SELF_SERVICE" : ""
+                  setTerminalType(value)
+                  onChange(nodeId, { terminalType: (value || null) as FlowQuestionNodeData["terminalType"] })
+                }}
+              />
+              End — success
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={terminalType === "ESCALATE"}
+                onCheckedChange={(checked) => {
+                  const value = checked ? "ESCALATE" : ""
+                  setTerminalType(value)
+                  onChange(nodeId, { terminalType: (value || null) as FlowQuestionNodeData["terminalType"] })
+                }}
+              />
+              Call operator
+            </label>
           </div>
 
+          {!terminalType && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Answers</Label>
@@ -230,6 +237,7 @@ export function FlowNodePanel({
               </Button>
             </div>
           </div>
+          )}
 
           <div className="space-y-2">
             <Label className="flex items-center gap-1.5">

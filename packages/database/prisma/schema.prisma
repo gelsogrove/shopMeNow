@@ -98,6 +98,7 @@ model Workspace {
   chatbotName                       String?     @default("Assistente") // 🆕 Custom name for the chatbot (e.g., "Sofia", "Marco", "Assistant")
   businessType                      String?     @default("other") // 🆕 Business sector for LLM context (e.g., "food", "fashion", "tech")
   customChatbotId                   String?     @db.Text // 🆕 Custom chatbot module identifier for FLOW workspaces (e.g., "demowash")
+  customChatbotSystemPrompt         String?     @db.Text // 🆕 Editable main/system prompt for custom chatbot modules (e.g. demorobot), with {{variables}} processed by PromptProcessorService. Falls back to the module's own static prompt file (e.g. common.md) when empty.
   registrationPage                  String?     @db.Text // 🆕 Custom registration page URL for customers (used by LINK_REGISTRATION)
   requireManualApproval             Boolean     @default(false) // 🆕 If true, new customers go to PENDING_APPROVAL after registration (admin must activate)
   approvalMessage                   String?     @db.Text // 🆕 Message sent to customer when admin approves their registration (default: "🎉 Your registration has been approved!")

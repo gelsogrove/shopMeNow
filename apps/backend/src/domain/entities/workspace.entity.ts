@@ -78,6 +78,7 @@ export interface WorkspaceProps {
   address?: string | null
   customAiRules?: string | null
   customChatbotId?: string | null  // Custom chatbot module for FLOW workspaces (e.g. "ecolaundry")
+  customChatbotSystemPrompt?: string | null  // Editable main/system prompt for the custom chatbot module
   registrationPage?: string | null
   requireManualApproval?: boolean
   // 🆕 Chatbot Personalization
@@ -412,6 +413,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get customChatbotId(): string | null | undefined {
     return this.props.customChatbotId
+  }
+
+  get customChatbotSystemPrompt(): string | null | undefined {
+    return this.props.customChatbotSystemPrompt
   }
 
   get registrationPage(): string | null | undefined {

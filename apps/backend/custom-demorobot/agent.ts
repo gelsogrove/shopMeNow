@@ -125,6 +125,10 @@ export interface ChatbotInput {
     isPlayground: boolean
     language?: string
     operatorBriefingLanguageOverride?: string | null
+    // Editable main/system prompt (workspace.customChatbotSystemPrompt,
+    // already processed with {{variables}} by the host). When absent/null,
+    // falls back to the module's own static prompts/common.md.
+    systemPromptOverride?: string | null
     handlers?: {
       retrieveFlow?: RetrievalHandler
       getFaqs?: GetFaqsHandler
@@ -606,7 +610,11 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
   }
 
   try {
-    const commonPrompt = await getCachedCommonPrompt()
+    // Editable prompt (workspace.customChatbotSystemPrompt) takes priority
+    // over the module's static prompts/common.md when the host provides one.
+    // Not cached with the static prompt — the editable one can change
+    // between turns, unlike the file read once at boot.
+    const commonPrompt = input.config.systemPromptOverride || (await getCachedCommonPrompt())
 
     const ctx: ToolContext & { retrieveFlow?: RetrievalHandler } = {
       sessionId: input.context.sessionId,

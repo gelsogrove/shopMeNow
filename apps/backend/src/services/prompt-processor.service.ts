@@ -116,6 +116,7 @@ export class PromptProcessorService {
       // Workspace/Company variables
       .replace(/\{\{companyName\}\}/g, vars.companyName || VARIABLE_DEFAULTS.companyName || 'Shop')
       .replace(/\{\{chatbotName\}\}/g, vars.chatbotName || VARIABLE_DEFAULTS.chatbotName || 'Assistente')
+      .replace(/\{\{welcomeMessage\}\}/g, vars.welcomeMessage || '')
       .replace(/\{\{botIdentityResponse\}\}/g, vars.botIdentityResponse || '')
       .replace(/\{\{BOT_IDENTITY\}\}/g, v.BOT_IDENTITY || vars.botIdentityResponse || 'Sono l\'assistente virtuale.')
       .replace(/\{\{customAiRules\}\}/g, vars.customAiRules || '')
