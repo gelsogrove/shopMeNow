@@ -206,6 +206,9 @@ export function WhatsAppChannelSection({
                     placeholder="Meta app name"
                     disabled={!canEdit}
                   />
+                  <p className="text-xs text-gray-500">
+                    The name of your app in Meta for Developers. Used for reference only.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -218,6 +221,10 @@ export function WhatsAppChannelSection({
                     placeholder="Meta app secret"
                     disabled={!canEdit}
                   />
+                  <p className="text-xs text-gray-500">
+                    Meta for Developers → your app → App settings → Basic → App secret.
+                    Used to verify that incoming messages really come from Meta.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -230,6 +237,10 @@ export function WhatsAppChannelSection({
                     placeholder="Paste access token"
                     disabled={!canEdit}
                   />
+                  <p className="text-xs text-gray-500">
+                    Meta for Developers → your app → WhatsApp → API Setup. Use a permanent
+                    token: temporary ones expire after 24 hours and replies stop working.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -241,6 +252,10 @@ export function WhatsAppChannelSection({
                     placeholder="123456789012345"
                     disabled={!canEdit}
                   />
+                  <p className="text-xs text-gray-500">
+                    WhatsApp → API Setup, shown under your phone number. This is an ID, not
+                    the phone number itself.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -252,6 +267,10 @@ export function WhatsAppChannelSection({
                     placeholder="123456789012345"
                     disabled={!canEdit}
                   />
+                  <p className="text-xs text-gray-500">
+                    WhatsApp → API Setup, listed as "WhatsApp Business Account ID". Identifies
+                    the business account the number belongs to.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -263,6 +282,10 @@ export function WhatsAppChannelSection({
                     placeholder="mySecureToken123"
                     disabled={!canEdit}
                   />
+                  <p className="text-xs text-gray-500">
+                    A password you invent yourself. Enter the same value here and in Meta's
+                    webhook setup — Meta uses it to confirm the webhook is really yours.
+                  </p>
                 </div>
               </>
             )}

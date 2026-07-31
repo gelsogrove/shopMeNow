@@ -276,14 +276,14 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
       {/* Google Calendar Connection — only relevant once booking is enabled */}
       {formData.enableCalendarBooking && (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+        <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-white">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-slate-600" />
             Google Calendar Connection
           </CardTitle>
-          <CardDescription>
-            Connect your Google Calendar to sync appointments
-          </CardDescription>
+          <p className="text-sm text-gray-500">
+            Sync bookings to your Google Calendar automatically
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           {loadingStatus ? (
@@ -317,7 +317,7 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-500" />
-                  <Badge variant="success">Connected</Badge>
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Connected</Badge>
                   <span className="text-sm text-muted-foreground">
                     {connectionStatus.email}
                   </span>
@@ -360,14 +360,14 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
       {/* Zoom Connection — only relevant once booking is enabled */}
       {formData.enableCalendarBooking && (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Video className="h-5 w-5" />
+        <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-white">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Video className="h-5 w-5 text-slate-600" />
             Zoom Integration
           </CardTitle>
-          <CardDescription>
-            Connect Zoom to auto-generate meeting links for appointments
-          </CardDescription>
+          <p className="text-sm text-gray-500">
+            Add a Zoom meeting link automatically to every appointment
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           {loadingZoom ? (
@@ -400,7 +400,7 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-500" />
-                <Badge variant="success">Connected</Badge>
+                <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Connected</Badge>
                 {zoomStatus.zoomUserId && (
                   <span className="text-sm text-muted-foreground">
                     {zoomStatus.zoomUserId}
@@ -429,14 +429,14 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
       {/* Reminder Settings — only relevant once booking is enabled */}
       {formData.enableCalendarBooking && (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
+        <CardHeader className="border-b bg-gradient-to-r from-slate-50 to-white">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Bell className="h-5 w-5 text-slate-600" />
             Appointment Reminders
           </CardTitle>
-          <CardDescription>
-            Automatic reminders sent before appointments
-          </CardDescription>
+          <p className="text-sm text-gray-500">
+            Remind customers before their appointment so they don't forget
+          </p>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Pricing Info */}
@@ -472,7 +472,7 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
                 <SelectItem value="email">
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4" />
-                    Email <Badge variant="success" className="ml-2">FREE</Badge>
+                    Email <Badge className="ml-2 bg-green-100 text-green-700 hover:bg-green-100">FREE</Badge>
                   </div>
                 </SelectItem>
                 <SelectItem value="both">

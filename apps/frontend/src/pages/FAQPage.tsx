@@ -28,6 +28,31 @@ export function FAQPage() {
   const [showEditSheet, setShowEditSheet] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [selectedFAQ, setSelectedFAQ] = useState<FAQ | null>(null)
+  // Master switch, persisted on the workspace. Saved immediately on toggle —
+  // this page has no Save button, unlike the Settings sections.
+  const [faqsEnabled, setFaqsEnabled] = useState(true)
+  const [isTogglingFaqs, setIsTogglingFaqs] = useState(false)
+
+  useEffect(() => {
+    if (workspace) setFaqsEnabled((workspace as any).faqsEnabled ?? true)
+  }, [workspace])
+
+  const handleToggleFaqsEnabled = async (enabled: boolean) => {
+    if (!workspace?.id) return
+    // Optimistic: the switch responds instantly, and rolls back if the save fails.
+    setFaqsEnabled(enabled)
+    setIsTogglingFaqs(true)
+    try {
+      await updateWorkspace(workspace.id, { faqsEnabled: enabled } as any)
+      toast.success(enabled ? "FAQ answers enabled" : "FAQ answers disabled")
+    } catch (error) {
+      setFaqsEnabled(!enabled)
+      logger.error("Failed to toggle FAQ answers:", error)
+      toast.error("Could not save the change")
+    } finally {
+      setIsTogglingFaqs(false)
+    }
+  }
 
   const ITEMS_PER_PAGE = 10
 

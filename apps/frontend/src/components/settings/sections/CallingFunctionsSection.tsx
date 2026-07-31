@@ -308,13 +308,15 @@ export function CallingFunctionsSection({
 
             {/* Functions List Card */}
             <Card>
-                <CardHeader className="border-b flex flex-row items-center justify-between">
+                <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-white flex flex-row items-center justify-between">
                     <div>
                         <CardTitle className="text-base font-semibold flex items-center gap-2">
                             <Zap className="h-5 w-5 text-amber-500" />
                             Available Tools
                         </CardTitle>
-                        <CardDescription>Functions the AI can call during a conversation</CardDescription>
+                        <p className="text-sm text-gray-500">
+                            Actions the chatbot can perform on your systems during a chat
+                        </p>
                     </div>
                     {canEdit && (
                         <Button size="sm" onClick={() => handleOpenModal()} className="gap-2">
