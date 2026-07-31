@@ -50,6 +50,11 @@ export function WidgetSupportSection({
   const { workspace } = useWorkspace()
   const isEcommerce = workspace?.channelMode === 'ECOMMERCE'
   const isCustomChatbot = !!workspace?.customChatbotId
+  // Routing only matters once there is more than one recipient to choose between.
+  const recipientCount =
+    formData.operatorContactMethod === "email"
+      ? (formData.operatorEmails ?? []).length
+      : (formData.operatorWhatsappNumbers ?? []).length
   return (
     <div className="space-y-6">
       {/* Header */}

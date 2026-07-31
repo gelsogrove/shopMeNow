@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+import { updateWorkspace } from "@/services/workspaceApi"
 import { useWorkspace } from "@/hooks/use-workspace"
 import { FAQ, faqApi } from "@/services/faqApi"
 import { commonStyles } from "@/styles/common"
@@ -211,6 +212,30 @@ export function FAQPage() {
           <h2 className="text-xl font-semibold text-gray-900">FAQ</h2>
           <span className="text-sm text-gray-500">({filteredFAQs.length} items)</span>
         </div>
+
+        {/* Master switch — same card pattern as the Settings sections. Turning it
+            off keeps every FAQ intact but stops the block being added to the
+            chatbot's prompt, which is the quick way to silence them all. */}
+        <Card>
+          <CardHeader className="border-b bg-gradient-to-r from-amber-50 to-white">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <HelpCircle className="h-5 w-5 text-amber-500" />
+                FAQ Answers
+              </CardTitle>
+              <Switch
+                checked={faqsEnabled}
+                onCheckedChange={handleToggleFaqsEnabled}
+                disabled={isTogglingFaqs}
+              />
+            </div>
+            <p className="text-sm text-gray-500">
+              {faqsEnabled
+                ? "The chatbot uses these answers when a customer asks a matching question."
+                : "Disabled — the chatbot ignores every FAQ below, but none of them are deleted."}
+            </p>
+          </CardHeader>
+        </Card>
 
         {/* Search */}
         <div>

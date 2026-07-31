@@ -112,6 +112,12 @@ interface FormData {
   operatorContactMethod: "email" | "whatsapp"
   operatorWhatsappNumber: string
   operatorEmail: string
+  // Multi-operator escalation. The singular fields above remain the fallback
+  // for workspaces that never configured a list.
+  operatorEmails: string[]
+  operatorWhatsappNumbers: string[]
+  operatorDeliveryMode: string
+  faqsEnabled: boolean
   humanSupportInstructions: string
   frustrationTriggers: string
   translateOperatorMessages: boolean
@@ -263,6 +269,10 @@ export function SettingsPage() {
     operatorContactMethod: "email",
     operatorWhatsappNumber: "",
     operatorEmail: "",
+    operatorEmails: [],
+    operatorWhatsappNumbers: [],
+    operatorDeliveryMode: "all",
+    faqsEnabled: true,
     humanSupportInstructions: "",
     frustrationTriggers: "",
     translateOperatorMessages: true,
@@ -366,6 +376,23 @@ export function SettingsPage() {
           (currentWorkspace.operatorContactMethod as "email" | "whatsapp") || "email",
         operatorWhatsappNumber: currentWorkspace.operatorWhatsappNumber || "",
         operatorEmail: currentWorkspace.operatorEmail || "",
+        // Seed each list from the legacy single field when it is still empty, so
+        // a workspace configured before multi-operator existed shows its address
+        // instead of an empty list the user would have to retype.
+        operatorEmails:
+          (currentWorkspace as any).operatorEmails?.length
+            ? (currentWorkspace as any).operatorEmails
+            : currentWorkspace.operatorEmail
+              ? [currentWorkspace.operatorEmail]
+              : [],
+        operatorWhatsappNumbers:
+          (currentWorkspace as any).operatorWhatsappNumbers?.length
+            ? (currentWorkspace as any).operatorWhatsappNumbers
+            : currentWorkspace.operatorWhatsappNumber
+              ? [currentWorkspace.operatorWhatsappNumber]
+              : [],
+        operatorDeliveryMode: (currentWorkspace as any).operatorDeliveryMode || "all",
+        faqsEnabled: (currentWorkspace as any).faqsEnabled ?? true,
         humanSupportInstructions: currentWorkspace.humanSupportInstructions || "",
         frustrationTriggers: currentWorkspace.frustrationTriggers || "",
         translateOperatorMessages: currentWorkspace.translateOperatorMessages ?? true,
@@ -544,6 +571,12 @@ export function SettingsPage() {
     try {
       const updateData: any = { ...dataToSave }
       delete updateData.logoUrl
+
+      // Keep the legacy single-operator columns in sync with the first entry of
+      // each list. Backend code and custom chatbot modules still read them, so
+      // letting them drift would silently send escalations to a stale address.
+      updateData.operatorEmail = dataToSave.operatorEmails?.[0] ?? ""
+      updateData.operatorWhatsappNumber = dataToSave.operatorWhatsappNumbers?.[0] ?? ""
 
       // Map appointment reminder UI fields to backend - ONLY new specific fields
       const reminderHours: number[] = []
@@ -837,8 +870,9 @@ export function SettingsPage() {
               hasHumanSupport: formData.hasHumanSupport,
               hasSalesAgents: formData.hasSalesAgents,
               operatorContactMethod: formData.operatorContactMethod,
-              operatorWhatsappNumber: formData.operatorWhatsappNumber,
-              operatorEmail: formData.operatorEmail,
+              operatorEmails: formData.operatorEmails,
+              operatorWhatsappNumbers: formData.operatorWhatsappNumbers,
+              operatorDeliveryMode: formData.operatorDeliveryMode,
               humanSupportInstructions: formData.humanSupportInstructions,
               frustrationTriggers: formData.frustrationTriggers,
               translateOperatorMessages: formData.translateOperatorMessages,
