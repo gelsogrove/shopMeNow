@@ -1,4 +1,5 @@
 import { prisma } from '@echatbot/database'
+import { randomUUID } from 'crypto'
 import { compileFlow } from './flow-compiler.service'
 import { CompilerFlowEdge, CompilerFlowNode, CompileFlowResult } from './flow-compiler.types'
 import { EmbeddingProvider } from './embedding-provider'
@@ -66,6 +67,90 @@ export async function createFlow(workspaceId: string, flowCategoryId: string | n
       hash: empty.hash || 'unsaved',
       embedding: [],
     },
+  })
+}
+
+/**
+ * Duplicates a flow with its whole graph: nodes, edges and attachment links.
+ *
+ * Nodes get fresh ids, and edges are rewired onto those new ids — copying edges
+ * verbatim would silently point the duplicate's answers at the ORIGINAL flow's
+ * nodes, so editing the copy would corrupt the source.
+ *
+ * The copy keeps the original's compiled prompt/hash: the graph is identical, so
+ * recompiling would produce the same result at extra cost. The embedding is left
+ * empty and regenerated on first save, since the title differs.
+ */
+export async function duplicateFlow(workspaceId: string, flowId: string) {
+  const source = await prisma.flow.findFirst({ where: { id: flowId, workspaceId } })
+  if (!source) return null
+
+  const nodes = await prisma.flowNode.findMany({
+    where: { flowId },
+    include: { attachments: true },
+  })
+  const nodeIds = nodes.map((n) => n.id)
+  const edges =
+    nodeIds.length > 0
+      ? await prisma.flowEdge.findMany({ where: { sourceNodeId: { in: nodeIds } } })
+      : []
+
+  // old node id -> new node id, so edges and attachments can be remapped.
+  const idMap = new Map(nodes.map((n) => [n.id, randomUUID()]))
+
+  return prisma.$transaction(async (tx) => {
+    const copy = await tx.flow.create({
+      data: {
+        workspaceId,
+        flowCategoryId: source.flowCategoryId,
+        title: `${source.title} (copy)`,
+        description: source.description,
+        keywords: source.keywords,
+        retrievalDocument: source.retrievalDocument,
+        compiledPrompt: source.compiledPrompt,
+        hash: source.hash,
+        embedding: [],
+      },
+    })
+
+    if (nodes.length > 0) {
+      await tx.flowNode.createMany({
+        data: nodes.map((n) => ({
+          id: idMap.get(n.id)!,
+          flowId: copy.id,
+          question: n.question,
+          positionX: n.positionX,
+          positionY: n.positionY,
+          fieldKey: n.fieldKey,
+          fieldType: n.fieldType,
+          terminalType: n.terminalType,
+        })),
+      })
+    }
+
+    if (edges.length > 0) {
+      await tx.flowEdge.createMany({
+        data: edges.map((e) => ({
+          id: randomUUID(),
+          sourceNodeId: idMap.get(e.sourceNodeId)!,
+          // A null target is a dangling answer the user hasn't wired up yet.
+          targetNodeId: e.targetNodeId ? idMap.get(e.targetNodeId) ?? null : null,
+          label: e.label,
+          triggersEscalation: e.triggersEscalation,
+        })),
+      })
+    }
+
+    // Attachments point at shared Assets — the copy references the same files
+    // rather than duplicating uploads.
+    const attachments = nodes.flatMap((n) =>
+      n.attachments.map((a) => ({ nodeId: idMap.get(n.id)!, assetId: a.assetId })),
+    )
+    if (attachments.length > 0) {
+      await tx.flowNodeAttachment.createMany({ data: attachments })
+    }
+
+    return copy
   })
 }
 
