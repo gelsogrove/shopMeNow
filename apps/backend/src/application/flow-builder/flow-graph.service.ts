@@ -160,35 +160,42 @@ export async function saveFlowGraph(
     // to their FlowEdges/FlowNodeAttachments (schema onDelete: Cascade).
     await tx.flowNode.deleteMany({ where: { flowId } })
 
-    for (const n of input.nodes) {
-      await tx.flowNode.create({
-        data: {
-          id: n.id,
-          flowId,
-          question: n.question,
-          positionX: n.positionX,
-          positionY: n.positionY,
-          fieldKey: n.fieldKey,
-          fieldType: n.fieldType,
-          terminalType: n.terminalType,
-        },
-      })
-    }
-    for (const e of input.edges) {
-      await tx.flowEdge.create({
-        data: {
-          id: e.id,
-          sourceNodeId: e.sourceNodeId,
-          targetNodeId: e.targetNodeId,
-          label: e.label,
-          triggersEscalation: !!e.triggersEscalation,
-        },
-      })
-    }
-    for (const n of input.nodes) {
-      for (const assetId of n.attachmentAssetIds ?? []) {
-        await tx.flowNodeAttachment.create({ data: { nodeId: n.id, assetId } })
-      }
+    // Andrea 2026-07-31 (performance): these used to be per-row create() calls
+    // inside for-loops — a 50-node flow meant 130+ sequential round-trips inside
+    // the transaction, which is what made saving feel slow on a remote database.
+    // createMany sends each set as a single statement, so cost scales with the
+    // number of TABLES touched (3) instead of the number of rows.
+    //
+    // Ordering still matters: edges reference nodes, attachments reference both,
+    // so the three inserts stay sequential even though each is now one query.
+    await tx.flowNode.createMany({
+      data: input.nodes.map((n) => ({
+        id: n.id,
+        flowId,
+        question: n.question,
+        positionX: n.positionX,
+        positionY: n.positionY,
+        fieldKey: n.fieldKey,
+        fieldType: n.fieldType,
+        terminalType: n.terminalType,
+      })),
+    })
+
+    await tx.flowEdge.createMany({
+      data: input.edges.map((e) => ({
+        id: e.id,
+        sourceNodeId: e.sourceNodeId,
+        targetNodeId: e.targetNodeId,
+        label: e.label,
+        triggersEscalation: !!e.triggersEscalation,
+      })),
+    })
+
+    const attachments = input.nodes.flatMap((n) =>
+      (n.attachmentAssetIds ?? []).map((assetId) => ({ nodeId: n.id, assetId })),
+    )
+    if (attachments.length > 0) {
+      await tx.flowNodeAttachment.createMany({ data: attachments })
     }
 
     return tx.flow.update({

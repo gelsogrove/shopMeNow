@@ -47,6 +47,9 @@ import {
 } from "lucide-react"
 import React, { ReactNode, useState } from "react"
 
+/** Above this many rows, `disablePagination` is overridden for performance. */
+const PAGINATION_SAFETY_THRESHOLD = 50
+
 interface DataTableProps<TData> {
   data: TData[]
   columns: ColumnDef<TData>[]
@@ -84,6 +87,10 @@ export function DataTable<TData>({
   disablePagination = false,
   onRowClick,
 }: DataTableProps<TData>) {
+  // Row count past which pagination is forced back on even when the caller
+  // asked to hide it — a guard against freezing the browser on large lists.
+  const paginationSuppressed = disablePagination && data.length <= PAGINATION_SAFETY_THRESHOLD
+
   const [sorting, setSorting] = useState<SortingState>([])
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
@@ -185,14 +192,18 @@ export function DataTable<TData>({
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: disablePagination
+    // `disablePagination` is a request to hide the pager on small lists, not a
+    // licence to render unbounded rows: past PAGINATION_SAFETY_THRESHOLD the
+    // pager comes back on its own, because painting thousands of rows at once
+    // locks up the browser. Below the threshold nothing is visibly paginated.
+    getPaginationRowModel: paginationSuppressed
       ? undefined
       : getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     initialState: {
       pagination: {
         pageIndex: 0,
-        pageSize: disablePagination ? 1000 : 15,
+        pageSize: paginationSuppressed ? PAGINATION_SAFETY_THRESHOLD : 15,
       },
     },
   })
@@ -314,7 +325,7 @@ export function DataTable<TData>({
           </div>
 
           {/* Enhanced Pagination Controls - Hidden if disablePagination is true */}
-          {!disablePagination && (
+          {!paginationSuppressed && (
             <div className="flex items-center justify-between space-x-2 py-4">
               <div className="flex items-center space-x-2">
                 <p className="text-sm text-gray-500">
