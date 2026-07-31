@@ -146,11 +146,14 @@ export function FlowNodePanel({
                 <SelectValue placeholder="Not a terminal" />
               </SelectTrigger>
               <SelectContent>
+                {/* END and LOOP are hidden here (not deleted from the type):
+                    END behaves identically to SELF_SERVICE in the compiler
+                    today (same allowed tools), and LOOP is a reserved,
+                    not-yet-real case per analisi.md §5. Both remain valid
+                    terminalType values if a node already has one set. */}
                 <SelectItem value="none">Not a terminal (has answers)</SelectItem>
                 <SelectItem value="SELF_SERVICE">Self-service (resolved)</SelectItem>
                 <SelectItem value="ESCALATE">Escalate to operator</SelectItem>
-                <SelectItem value="END">End (simple close)</SelectItem>
-                <SelectItem value="LOOP">Loop back</SelectItem>
               </SelectContent>
             </Select>
           </div>
