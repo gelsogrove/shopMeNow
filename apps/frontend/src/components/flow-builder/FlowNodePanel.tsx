@@ -83,13 +83,29 @@ export function FlowNodePanel({
   onRetargetAnswer,
   onDeleteNode,
   onUploadAsset,
+  onDeleteAsset,
   canUploadAssets,
 }: FlowNodePanelProps) {
   const [question, setQuestion] = useState("")
   const [terminalType, setTerminalType] = useState<string>("")
   const [newAnswerLabel, setNewAnswerLabel] = useState("")
   const [isUploading, setIsUploading] = useState(false)
+  // Asset pending deletion — drives the confirm dialog. Deleting removes the
+  // stored file for every flow that uses it, so it always asks first.
+  const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null)
+  const [isDeletingAsset, setIsDeletingAsset] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleConfirmDeleteAsset = async () => {
+    if (!assetToDelete || !onDeleteAsset) return
+    setIsDeletingAsset(true)
+    try {
+      await onDeleteAsset(assetToDelete.id)
+      setAssetToDelete(null)
+    } finally {
+      setIsDeletingAsset(false)
+    }
+  }
 
   useEffect(() => {
     if (!data) return
@@ -334,6 +350,22 @@ export function FlowNodePanel({
             </p>
           </div>
         </div>
+
+        {/* Attachment deletion is immediate and irreversible (it removes the
+            stored file, not just the link to this question), so it confirms
+            first — unlike node edits, which are undoable until Save. */}
+        <ConfirmDialog
+          open={!!assetToDelete}
+          onOpenChange={(open) => !open && setAssetToDelete(null)}
+          title="Delete attachment"
+          description={
+            `"${assetToDelete?.title}" will be permanently deleted, including the uploaded file. ` +
+            `Any other question using it will lose the attachment. This cannot be undone.`
+          }
+          confirmLabel={isDeletingAsset ? "Deleting..." : "Delete"}
+          variant="destructive"
+          onConfirm={handleConfirmDeleteAsset}
+        />
       </SheetContent>
     </Sheet>
   )
