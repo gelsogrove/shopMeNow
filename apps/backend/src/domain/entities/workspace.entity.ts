@@ -81,6 +81,14 @@ export interface WorkspaceProps {
   customAiRules?: string | null
   customChatbotId?: string | null  // Custom chatbot module for FLOW workspaces (e.g. "ecolaundry")
   customChatbotSystemPrompt?: string | null  // Editable main/system prompt for the custom chatbot module
+  customChatbotModel?: string | null
+  customChatbotTemperature?: number | null
+  customChatbotOperatorBriefingLanguage?: string | null
+  customChatbotOperatorEmail?: string | null
+  customChatbotEmailFrom?: string | null
+  customChatbotEmailSubjectPrefix?: string | null
+  customChatbotAudioOutput?: boolean | null
+  customChatbotAudioVoices?: Record<string, string> | null
   registrationPage?: string | null
   requireManualApproval?: boolean
   // 🆕 Chatbot Personalization
@@ -427,6 +435,38 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get customChatbotSystemPrompt(): string | null | undefined {
     return this.props.customChatbotSystemPrompt
+  }
+
+  get customChatbotModel(): string | null | undefined {
+    return this.props.customChatbotModel
+  }
+
+  get customChatbotTemperature(): number | null | undefined {
+    return this.props.customChatbotTemperature
+  }
+
+  get customChatbotOperatorBriefingLanguage(): string | null | undefined {
+    return this.props.customChatbotOperatorBriefingLanguage
+  }
+
+  get customChatbotOperatorEmail(): string | null | undefined {
+    return this.props.customChatbotOperatorEmail
+  }
+
+  get customChatbotEmailFrom(): string | null | undefined {
+    return this.props.customChatbotEmailFrom
+  }
+
+  get customChatbotEmailSubjectPrefix(): string | null | undefined {
+    return this.props.customChatbotEmailSubjectPrefix
+  }
+
+  get customChatbotAudioOutput(): boolean | null | undefined {
+    return this.props.customChatbotAudioOutput
+  }
+
+  get customChatbotAudioVoices(): Record<string, string> | null | undefined {
+    return this.props.customChatbotAudioVoices
   }
 
   get registrationPage(): string | null | undefined {
