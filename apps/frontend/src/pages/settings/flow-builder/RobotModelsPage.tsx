@@ -19,6 +19,8 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
 import { robotModelApi, RobotModel } from "@/services/flowBuilderApi"
+import { ChatWidget } from "@/components/ChatWidget"
+import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 
 function slugify(name: string): string {
   return name
@@ -100,6 +102,10 @@ export function RobotModelsPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Same "Settings" title + section dropdown as SettingsPage, so
+          navigating here still reads as being inside Settings. */}
+      <SettingsPageHeader currentSection="demorobot" />
+
       <PageHeader
         title="Robot Models"
         titleIcon={<Bot className="h-6 w-6" />}
@@ -155,6 +161,19 @@ export function RobotModelsPage() {
         description={`This will delete "${deleteTarget?.name}" and all its flows and assets. This cannot be undone.`}
         onConfirm={handleDelete}
       />
+
+      {/* Chat Widget preview — same as SettingsPage */}
+      {workspace && workspace.channelStatus !== false && (
+        <ChatWidget
+          workspaceId={workspace.id}
+          title={workspace.widgetTitle}
+          primaryColor={workspace.widgetPrimaryColor}
+          icon={workspace.widgetIcon}
+          useChannelLogo={workspace.widgetUseChannelLogo}
+          useWindowConfig={false}
+          language={workspace.widgetLanguage}
+        />
+      )}
     </div>
   )
 }

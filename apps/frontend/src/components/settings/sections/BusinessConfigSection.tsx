@@ -121,7 +121,7 @@ export function BusinessConfigSection({
                 onValueChange={(value) => onFieldChange("businessType", value)}
                 disabled={!canEdit}
               >
-                <SelectTrigger id="businessType">
+                <SelectTrigger id="businessType" className="[&>span]:line-clamp-none">
                   <SelectValue placeholder="Select your industry" />
                 </SelectTrigger>
                 <SelectContent>
@@ -308,9 +308,9 @@ export function BusinessConfigSection({
                   <SelectValue placeholder="Select channel mode" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ECOMMERCE">E-commerce — sell products &amp; services</SelectItem>
-                  <SelectItem value="INFORMATIONAL">Informational — FAQ &amp; customer support</SelectItem>
-                  <SelectItem value="FLOW">Flow — custom chatbot (widget, WhatsApp, AI provider)</SelectItem>
+                  <SelectItem value="ECOMMERCE">Ecommerce</SelectItem>
+                  <SelectItem value="INFORMATIONAL">Informational</SelectItem>
+                  <SelectItem value="FLOW">Flow</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-amber-600">

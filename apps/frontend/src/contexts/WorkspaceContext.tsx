@@ -65,6 +65,7 @@ export interface Workspace {
   hasOrderTracking?: boolean
   needRegistration?: boolean
   humanSupportInstructions?: string
+  frustrationTriggers?: string
   operatorContactMethod?: string
   operatorWhatsappNumber?: string
   toneOfVoice?: string

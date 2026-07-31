@@ -59,16 +59,20 @@ export function AIPersonalitySection({
   onFieldChange,
   onFieldFocus,
 }: AIPersonalitySectionProps) {
-  // F50 — Andrea 2026-05-13: when the workspace runs a custom chatbot module
-  // (`customChatbotId` set, e.g. "ecolaundry"), the in-platform AI personality
-  // fields (Assistant Name, Tone, Bot Identity, Welcome Message, Override
-  // Rules) are NOT used by the custom module — those settings live in the
-  // module's own JSON config (`apps/backend/custom-<name>/json/settings.json`
-  // + `json/i18n/*.json`). We hide them to avoid confusion. The remaining
-  // fields (Session Reset Timeout, Maintenance Message, Custom Chatbot ID)
-  // are still platform-level and stay visible.
+  // F50 — Andrea 2026-05-13: when the workspace runs a JSON-config custom
+  // chatbot module (`customChatbotId` set, e.g. "ecolaundry"), Tone, Bot
+  // Identity and Override Rules are NOT used — those live in the module's
+  // own JSON config (`apps/backend/custom-<name>/json/settings.json` +
+  // `json/i18n/*.json`). We hide them to avoid confusion.
+  //
+  // Assistant Name and Welcome Message are the exception: the flow-builder
+  // paradigm (e.g. AmRobots) is DB-driven and reads chatbotName/welcomeMessage
+  // straight from the Workspace row — {{chatbotName}} is resolved into
+  // welcomeMessage at runtime by PromptProcessorService — so those two stay
+  // visible for Flow channels even when a custom chatbot module is set.
   const { workspace } = useWorkspace()
   const isCustomChatbot = Boolean(workspace?.customChatbotId)
+  const hideModuleOwnedFields = isCustomChatbot
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -80,17 +84,17 @@ export function AIPersonalitySection({
         <p className="text-sm text-gray-500 mt-1">Define how your AI assistant communicates and behaves</p>
       </div>
 
-      {/* Single Card without toggle in header */}
+      {/* Identity Card — name, tone, bot identity */}
       <Card>
         <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
             <Bot className="h-5 w-5 text-blue-600" />
-            AI Configuration
+            Identity
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6 space-y-6">
-          {/* F50: Assistant Name — hidden in custom chatbot mode (defined in module's json/settings.json). */}
-          {!isCustomChatbot && (
+          {/* Assistant Name — DB-backed (chatbotName), visible for all channels
+              including Flow: {{chatbotName}} is resolved at runtime. */}
           <div
             className="space-y-2"
             onFocus={() => onFieldFocus?.("botName")}
@@ -109,10 +113,9 @@ export function AIPersonalitySection({
               <p className="text-xs text-red-600">{errors.chatbotName}</p>
             )}
           </div>
-          )}
 
           {/* F50: Tone of Voice — hidden in custom chatbot mode (module owns tone via its own prompts). */}
-          {!isCustomChatbot && (
+          {!hideModuleOwnedFields && (
           <div
             className="space-y-2"
             onFocus={() => onFieldFocus?.("toneOfVoice")}
@@ -151,7 +154,7 @@ export function AIPersonalitySection({
           )}
 
           {/* F50: Bot Identity — hidden in custom chatbot mode (module owns identity prompts). */}
-          {!isCustomChatbot && (
+          {!hideModuleOwnedFields && (
           <div
             className="space-y-2"
             onFocus={() => onFieldFocus?.("botDescription")}
@@ -182,18 +185,28 @@ export function AIPersonalitySection({
             </div>
           </div>
           )}
+        </CardContent>
+      </Card>
 
-          {/* Divider */}
-          {!isCustomChatbot && <div className="border-t pt-6" />}
-          {/* F50: Welcome Message — hidden in custom chatbot mode (module owns welcomeMessage per language). */}
-          {!isCustomChatbot && (
+      {/* Welcome Message Card */}
+      <Card>
+        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Bot className="h-5 w-5 text-blue-600" />
+            Welcome Message
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          {/* Welcome Message — DB-backed (welcomeMessage), visible for all
+              channels including Flow: resolved at runtime with {{chatbotName}}
+              and {{companyName}} substituted. */}
           <div
             className="space-y-2"
             onFocus={() => onFieldFocus?.("welcomeMessage")}
             data-focus-key="welcomeMessage"
           >
             <div className="flex items-center justify-between">
-              <Label htmlFor="welcomeMessage">Welcome Message</Label>
+              <Label htmlFor="welcomeMessage">Message</Label>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500">
                   {formData.enableWelcomeMessage ? "Enabled" : "Disabled"}
@@ -235,8 +248,18 @@ export function AIPersonalitySection({
               When disabled, no welcome message is sent on first contact. The text is preserved for later use.
             </p>
           </div>
-          )}
+        </CardContent>
+      </Card>
 
+      {/* Behavior Card — session timeout, maintenance message, override rules */}
+      <Card>
+        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Clock className="h-5 w-5 text-blue-600" />
+            Behavior
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6 space-y-6">
           {/* Session Reset Timeout (E0b) — KEEP for all workspaces (platform-level setting). */}
           <div
             className="space-y-2"
@@ -301,7 +324,7 @@ export function AIPersonalitySection({
 
           {/* F50: Override Rules — hidden in custom chatbot mode (rephrase LLM rules
               live in the module's own prompts/rephrase.txt and its rephrase config). */}
-          {!isCustomChatbot && (
+          {!hideModuleOwnedFields && (
           <div className="space-y-2" onFocus={() => onFieldFocus?.("agentSystemPrompt")}>
             <Label htmlFor="customAiRules">Override Rules</Label>
             <div className="border rounded-md overflow-hidden">
@@ -328,9 +351,19 @@ export function AIPersonalitySection({
             </div>
           </div>
           )}
+        </CardContent>
+      </Card>
 
-          {/* Custom Chatbot ID — only relevant for FLOW workspaces */}
-          {formData.channelMode === 'FLOW' && (
+      {/* Custom Chatbot ID Card — only relevant for FLOW workspaces */}
+      {formData.channelMode === 'FLOW' && (
+        <Card>
+          <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Bot className="h-5 w-5 text-blue-600" />
+              Custom Chatbot Module
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
             <div className="space-y-2">
               <Label htmlFor="customChatbotId">Custom Chatbot ID</Label>
               <Input
@@ -345,9 +378,9 @@ export function AIPersonalitySection({
                 Leave empty to use the standard AI agents.
               </p>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

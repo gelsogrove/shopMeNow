@@ -17,6 +17,7 @@ interface WidgetSupportSectionProps {
     operatorWhatsappNumber: string
     operatorEmail?: string // From Business Config or custom
     humanSupportInstructions: string
+    frustrationTriggers: string
     translateOperatorMessages: boolean
   }
   errors: Record<string, string>
@@ -66,10 +67,8 @@ export function WidgetSupportSection({
             />
           </div>
         </CardHeader>
+        {formData.hasHumanSupport && (
         <CardContent className="pt-6 space-y-6">
-          {/* Controls stay visible and editable even when the toggle above is
-              off — settings are preserved and take effect as soon as Human
-              Support is enabled, instead of being hidden behind a placeholder. */}
           {/* Contact Method */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Contact Method</Label>
@@ -190,8 +189,16 @@ export function WidgetSupportSection({
                     onFocus={() => onFieldFocus?.("frustrationTriggers")}
                     data-focus-key="frustrationTriggers"
                   >
+                    <Label htmlFor="frustrationTriggers" className="block">Frustration Signals</Label>
                     <p className="text-xs text-gray-500">When the customer shows frustration or panic, escalate immediately</p>
                     <Textarea
+                      id="frustrationTriggers"
+                      value={formData.frustrationTriggers}
+                      onChange={(e) => onFieldChange("frustrationTriggers", e.target.value)}
+                      placeholder="Examples:
+- Repeated exclamation marks or all-caps messages
+- Words like 'furious', 'unacceptable', 'scam'
+- Customer says they will leave a bad review"
                       disabled={!canEdit}
                       className="min-h-[100px]"
                     />
@@ -236,6 +243,7 @@ export function WidgetSupportSection({
                 </div>
               )}
         </CardContent>
+        )}
       </Card>
     </div>
   )

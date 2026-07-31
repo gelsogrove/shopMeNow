@@ -18,6 +18,8 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
 import { flowApi, Flow } from "@/services/flowBuilderApi"
+import { ChatWidget } from "@/components/ChatWidget"
+import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 
 // robotModelId param is "generic" for the workspace-generic fallback flow
 // list (Flow.robotModelId: null, analisi.md §6), otherwise a real RobotModel id.
@@ -85,6 +87,10 @@ export function FlowsPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Same "Settings" title + section dropdown as SettingsPage, so
+          navigating here still reads as being inside Settings. */}
+      <SettingsPageHeader currentSection="demorobot" />
+
       <Button variant="ghost" size="sm" onClick={() => navigate("/settings/demorobot")}>
         <ArrowLeft className="h-4 w-4 mr-1.5" />
         Back to Robot Models
@@ -141,6 +147,19 @@ export function FlowsPage() {
         description={`This will delete "${deleteTarget?.title}". This cannot be undone.`}
         onConfirm={handleDelete}
       />
+
+      {/* Chat Widget preview — same as SettingsPage */}
+      {workspace && workspace.channelStatus !== false && (
+        <ChatWidget
+          workspaceId={workspace.id}
+          title={workspace.widgetTitle}
+          primaryColor={workspace.widgetPrimaryColor}
+          icon={workspace.widgetIcon}
+          useChannelLogo={workspace.widgetUseChannelLogo}
+          useWindowConfig={false}
+          language={workspace.widgetLanguage}
+        />
+      )}
     </div>
   )
 }

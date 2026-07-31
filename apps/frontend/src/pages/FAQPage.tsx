@@ -14,6 +14,8 @@ import { commonStyles } from "@/styles/common"
 import { HelpCircle, Edit2, Trash2, Plus } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "../lib/toast"
+import { ChatWidget } from "@/components/ChatWidget"
+import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 
 export function FAQPage() {
   const { workspace, loading: isLoadingWorkspace } = useWorkspace()
@@ -193,17 +195,21 @@ export function FAQPage() {
   return (
     <PageLayout>
       <div className="space-y-6">
-        {/* Header */}
+        {/* Header — same "Settings" title + section dropdown as SettingsPage,
+            so navigating here still reads as being inside Settings. */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <HelpCircle className={commonStyles.headerIcon} />
-            <h1 className="text-2xl font-bold text-gray-900">FAQ</h1>
-            <span className="text-sm text-gray-500">({filteredFAQs.length} items)</span>
-          </div>
+          <SettingsPageHeader currentSection="faqs" />
           <Button onClick={() => setShowAddSheet(true)} className="bg-green-600 hover:bg-green-700">
             <Plus className="w-4 h-4 mr-2" />
             Add FAQ
           </Button>
+        </div>
+
+        {/* Sub-header */}
+        <div className="flex items-center gap-3">
+          <HelpCircle className={commonStyles.headerIcon} />
+          <h2 className="text-xl font-semibold text-gray-900">FAQ</h2>
+          <span className="text-sm text-gray-500">({filteredFAQs.length} items)</span>
         </div>
 
         {/* Search */}
@@ -349,6 +355,20 @@ export function FAQPage() {
         description={`Are you sure you want to delete the FAQ "${selectedFAQ?.question}"? This action cannot be undone.`}
         onConfirm={handleDeleteConfirm}
       />
+
+      {/* Chat Widget preview — same as SettingsPage, so the widget is visible
+          while editing FAQs (they feed directly into the chatbot's prompt). */}
+      {workspace.channelStatus !== false && (
+        <ChatWidget
+          workspaceId={workspace.id}
+          title={workspace.widgetTitle}
+          primaryColor={workspace.widgetPrimaryColor}
+          icon={workspace.widgetIcon}
+          useChannelLogo={workspace.widgetUseChannelLogo}
+          useWindowConfig={false}
+          language={workspace.widgetLanguage}
+        />
+      )}
     </PageLayout>
   )
 }

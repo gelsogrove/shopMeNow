@@ -34,9 +34,10 @@ import { updateWorkspace, deleteWorkspace, getWorkspaceById } from "@/services/w
 import { Switch } from "@/components/ui/switch"
 
 // Settings components
-import { SettingsDropdown, SettingsSection } from "@/components/settings/SettingsDropdown"
+import { SettingsDropdown } from "@/components/settings/SettingsDropdown"
 import { SettingsLayout } from "@/components/settings/SettingsLayout"
 import { HelpPanel, HELP_CONTENT } from "@/components/settings/HelpPanel"
+import { getVisibleSections, SectionKey, HIDDEN_FOR_CUSTOM_CHATBOT, SECTION_ROUTES } from "@/components/settings/settingsSections"
 
 // Section components
 import { AIPersonalitySection } from "@/components/settings/sections/AIPersonalitySection"
@@ -48,85 +49,6 @@ import { WidgetSupportSection } from "@/components/settings/sections/WidgetSuppo
 import { CallingFunctionsSection } from "@/components/settings/sections/CallingFunctionsSection"
 import { CalendarSection } from "@/components/settings/sections/CalendarSection"
 import { SystemPromptSection } from "@/components/settings/sections/SystemPromptSection"
-
-// Types
-type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widget-support" | "security" | "functions" | "calendar" | "demorobot" | "faqs" | "system-prompt"
-
-// Section definitions for dropdown.
-//
-// F50 — Andrea 2026-05-13: when the workspace runs a custom chatbot module
-// (`customChatbotId` set, e.g. "ecolaundry"), sections that are not used by
-// the custom flow are filtered out at render time:
-//   - Appointments & Calendar (no booking)
-//   - Custom Tools (no external functions / sub-agents)
-// The remaining sections stay visible because they still configure
-// platform-wide concerns (Business Config, WhatsApp, Widget, Human Support,
-// Security) or contain the Custom Chatbot ID field itself (AI Personality).
-const ALL_SECTIONS: SettingsSection[] = [
-  { key: "business", label: "Preferences", description: "Company info and preferences" },
-  { key: "ai-personality", label: "AI Personality", description: "Bot identity, messages and rules" },
-  { key: "whatsapp", label: "WhatsApp Channel", description: "WhatsApp Business API settings" },
-  { key: "widget", label: "Website Widget", description: "Chat widget for your website" },
-  { key: "widget-support", label: "Human Support", description: "Escalation to human operators" },
-  { key: "calendar", label: "Appointments & Calendar", description: "Google Calendar, reminders" },
-  { key: "security", label: "Security", description: "Access control and domains" },
-  { key: "functions", label: "Custom Tools", description: "External functions and webhooks" },
-]
-
-// For custom chatbot workspaces, the chatbot behaviour itself is managed in
-// settings.json inside the custom module. The platform-level config that still
-// applies through the UI is:
-//   - Business Config (company info stored on the workspace row in the DB —
-//     name, business type, email, address, currency, language: NOT in settings.json)
-//   - WhatsApp channel provider credentials (API key, phone number, webhook token)
-//   - Appointments & Calendar (reminders)
-//   - Human Support (operatorEmail/operatorContactMethod, read by the custom
-//     chatbot runtime via ChatbotInput — see custom-demorobot/agent.ts)
-// The remaining sections are hidden because they are either unused by the
-// custom flow or already configured inside the module's own JSON:
-// AI Personality, Widget, Custom Tools.
-const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = [
-  "ai-personality",
-  "widget",
-  "functions",
-]
-
-// "Flows" (demorobot) only makes sense once a custom chatbot module
-// is running — it's added, not filtered out, unlike HIDDEN_FOR_CUSTOM_CHATBOT.
-const DEMOROBOT_SECTION: SettingsSection = {
-  key: "demorobot",
-  label: "Flows",
-  description: "Visual flow-builder for this chatbot's diagnostic conversations",
-}
-
-// FAQs are injected as a fixed prompt block for custom chatbots (see
-// custom-demorobot/agent.ts) — same "added, not filtered" treatment as
-// Manage Flows, always visible for custom chatbot workspaces.
-const FAQS_SECTION: SettingsSection = {
-  key: "faqs",
-  label: "FAQs",
-  description: "Quick answers always included in the chatbot's prompt",
-}
-
-// Editable main/system prompt (workspace.customChatbotSystemPrompt) — the
-// fixed prompt block the custom chatbot module reads every turn instead of
-// its static common.md when set. Same "added" treatment as the other two.
-const SYSTEM_PROMPT_SECTION: SettingsSection = {
-  key: "system-prompt",
-  label: "Main Prompt",
-  description: "Edit the fixed system prompt this chatbot reads every turn",
-}
-
-function getVisibleSections(isCustomChatbot: boolean): SettingsSection[] {
-  if (!isCustomChatbot) return ALL_SECTIONS
-  // Requested order: Business Config -> Main Prompt -> Manage Flows -> FAQs
-  // -> everything else (WhatsApp/Human Support/Calendar/Security etc).
-  const business = ALL_SECTIONS.find((s) => s.key === "business")!
-  const rest = ALL_SECTIONS.filter(
-    (s) => s.key !== "business" && !HIDDEN_FOR_CUSTOM_CHATBOT.includes(s.key as SectionKey),
-  )
-  return [business, SYSTEM_PROMPT_SECTION, DEMOROBOT_SECTION, FAQS_SECTION, ...rest]
-}
 
 // Default help content for each section
 const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
@@ -201,6 +123,7 @@ interface FormData {
   operatorContactMethod: "email" | "whatsapp"
   operatorWhatsappNumber: string
   humanSupportInstructions: string
+  frustrationTriggers: string
   translateOperatorMessages: boolean
   address: string
   registrationPage: string
@@ -344,6 +267,7 @@ export function SettingsPage() {
     operatorContactMethod: "email",
     operatorWhatsappNumber: "",
     humanSupportInstructions: "",
+    frustrationTriggers: "",
     translateOperatorMessages: true,
     address: "",
     registrationPage: "",
@@ -438,6 +362,7 @@ export function SettingsPage() {
           (currentWorkspace.operatorContactMethod as "email" | "whatsapp") || "email",
         operatorWhatsappNumber: currentWorkspace.operatorWhatsappNumber || "",
         humanSupportInstructions: currentWorkspace.humanSupportInstructions || "",
+        frustrationTriggers: currentWorkspace.frustrationTriggers || "",
         translateOperatorMessages: currentWorkspace.translateOperatorMessages ?? true,
         address: currentWorkspace.address || "",
         registrationPage: currentWorkspace.registrationPage || "",
@@ -541,15 +466,13 @@ export function SettingsPage() {
 
   // Handle section change - update help field to section default
   const handleSectionChange = useCallback((sectionKey: string) => {
-    // "demorobot" navigates away to its own dedicated pages (RobotModel/Flow
-    // list + full-screen canvas) instead of rendering inline like the other
-    // sections — it doesn't fit the two-column settings layout.
-    if (sectionKey === "demorobot") {
-      navigate("/settings/demorobot")
-      return
-    }
-    if (sectionKey === "faqs") {
-      navigate("/faq")
+    // "demorobot" and "faqs" navigate away to their own dedicated pages
+    // (RobotModel/Flow list + full-screen canvas, FAQ list) instead of
+    // rendering inline like the other sections — they don't fit the
+    // two-column settings layout.
+    const route = SECTION_ROUTES[sectionKey as SectionKey]
+    if (route) {
+      navigate(route)
       return
     }
     setActiveSection(sectionKey as SectionKey)
@@ -940,6 +863,7 @@ export function SettingsPage() {
               operatorWhatsappNumber: formData.operatorWhatsappNumber,
               operatorEmail: formData.adminEmail, // Use business email as default
               humanSupportInstructions: formData.humanSupportInstructions,
+              frustrationTriggers: formData.frustrationTriggers,
               translateOperatorMessages: formData.translateOperatorMessages,
             }}
             errors={errors}

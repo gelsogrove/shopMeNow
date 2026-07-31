@@ -281,7 +281,8 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
         </CardContent>
       </Card>
 
-      {/* Google Calendar Connection */}
+      {/* Google Calendar Connection — only relevant once booking is enabled */}
+      {formData.enableCalendarBooking && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -362,8 +363,10 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
           )}
         </CardContent>
       </Card>
+      )}
 
-      {/* Zoom Connection */}
+      {/* Zoom Connection — only relevant once booking is enabled */}
+      {formData.enableCalendarBooking && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -429,8 +432,10 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
           )}
         </CardContent>
       </Card>
+      )}
 
-      {/* Reminder Settings */}
+      {/* Reminder Settings — only relevant once booking is enabled */}
+      {formData.enableCalendarBooking && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -696,6 +701,7 @@ export function CalendarSection({ workspaceId, formData, onChange, onFocus }: Ca
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   )
 }

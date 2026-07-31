@@ -70,6 +70,7 @@ model Workspace {
   hasOrderTracking                  Boolean     @default(true) // Enable order tracking agent in pipeline
   needRegistration                  Boolean     @default(true) // Enable profile management agent in pipeline
   humanSupportInstructions          String?     @db.Text // Instructions for human support requests
+  frustrationTriggers               String?     @db.Text // Signals of customer frustration/panic that should trigger immediate escalation
   operatorContactMethod             String?     @default("email") // 'email' | 'whatsapp'
   operatorEmail                     String? // Email for human support notifications
   operatorWhatsappNumber            String? // WhatsApp number for human support (if method='whatsapp')

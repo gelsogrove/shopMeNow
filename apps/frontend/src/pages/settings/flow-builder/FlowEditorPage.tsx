@@ -17,7 +17,7 @@ import {
 import "@xyflow/react/dist/style.css"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Save, Loader2, AlertCircle } from "lucide-react"
+import { ArrowLeft, Save, Loader2, AlertCircle, Plus } from "lucide-react"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
 import { flowApi, assetApi, Flow, FlowNode, FlowEdge as ApiFlowEdge, Asset, ValidationError } from "@/services/flowBuilderApi"
@@ -153,6 +153,19 @@ function FlowEditorInner() {
     },
     [rfAddEdges, setNodes],
   )
+
+  // Empty-canvas entry point: a brand-new Flow has zero nodes, so there is
+  // nothing to click on to grow the graph from. This creates the root node.
+  const handleAddRootNode = useCallback(() => {
+    const rootNode: Node<FlowQuestionNodeData> = {
+      id: newId("node"),
+      type: "question",
+      position: { x: 0, y: 0 },
+      data: { question: "", answers: [], attachmentCount: 0, terminalType: null } as FlowQuestionNodeData,
+    }
+    setNodes((prev) => [...prev, rootNode])
+    setPanelNodeId(rootNode.id)
+  }, [setNodes])
 
   const handleRemoveAnswer = useCallback(
     (nodeId: string, edgeId: string) => {
@@ -325,21 +338,33 @@ function FlowEditorInner() {
         </div>
       )}
 
-      <div className="flex-1">
-        <ReactFlow
-          nodes={displayNodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={(_, node) => setPanelNodeId(node.id)}
-          nodeTypes={nodeTypes}
-          fitView
-        >
-          <Background />
-          <Controls />
-          <MiniMap />
-        </ReactFlow>
+      <div className="flex-1 relative">
+        {nodes.length === 0 ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-sm text-gray-500">This flow has no nodes yet</p>
+              <Button onClick={handleAddRootNode}>
+                <Plus className="h-4 w-4 mr-1.5" />
+                Add first question
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <ReactFlow
+            nodes={displayNodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={(_, node) => setPanelNodeId(node.id)}
+            nodeTypes={nodeTypes}
+            fitView
+          >
+            <Background />
+            <Controls />
+            <MiniMap />
+          </ReactFlow>
+        )}
       </div>
 
       <FlowNodePanel
