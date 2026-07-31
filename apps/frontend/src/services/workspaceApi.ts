@@ -68,6 +68,8 @@ export interface Workspace {
   customChatbotId?: string // Custom chatbot module ID for FLOW workspaces (e.g. "ecolaundry")
   customChatbotSystemPrompt?: string // Editable main/system prompt for the custom chatbot module
   enabledLanguages?: string[] // Documentation only — does not restrict runtime language detection
+  customChatbotModel?: string | null // LLM model override for the custom chatbot module
+  customChatbotTemperature?: number | null // LLM temperature override for the custom chatbot module
   logoUrl?: string
   // 🆕 Translation Settings
   translateProductNames?: boolean
@@ -208,6 +210,8 @@ export interface UpdateWorkspaceData {
   customChatbotId?: string // Custom chatbot module ID for FLOW workspaces (e.g. "ecolaundry")
   customChatbotSystemPrompt?: string // Editable main/system prompt for the custom chatbot module
   enabledLanguages?: string[] // Documentation only — does not restrict runtime language detection
+  customChatbotModel?: string | null // LLM model override for the custom chatbot module
+  customChatbotTemperature?: number | null // LLM temperature override for the custom chatbot module
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean

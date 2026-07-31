@@ -26,21 +26,13 @@ interface BusinessConfigSectionProps {
     url: string
     businessType: string
     currency: string
-    defaultLanguage: string
     channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
     enableWhatsapp: boolean
     enableWidget: boolean
     address: string
-    registrationPage: string
-    requireManualApproval: boolean
-    hasHumanSupport: boolean
     hasProductCatalog: boolean
     hasCart: boolean
     hasOrderTracking: boolean
-    needRegistration: boolean
-    customChatbotId: string
-    welcomeMessage: string
-    enabledLanguages: string[]
   }
   errors: Record<string, string>
   canEdit: boolean
@@ -84,7 +76,7 @@ export function BusinessConfigSection({
       <div>
         <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
           <Store className="h-6 w-6 text-purple-600" />
-          Business Configuration
+          Preferences
         </h2>
         <p className="text-sm text-gray-500 mt-1">
           Define your business type and main information
@@ -178,74 +170,19 @@ export function BusinessConfigSection({
               <p className="text-xs text-gray-500">Used when customers ask "Where are you located?"</p>
             </div>
 
-            {/* Need Registration Toggle */}
-            <div className="space-y-2 md:col-span-2" onFocus={() => onFieldFocus?.("needRegistration")}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="needRegistration" className="cursor-pointer text-sm font-medium">
-                    Customer Registration
-                  </Label>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    When enabled, customers must register before accessing full features. Profile Management agent will be activated.
-                  </p>
-                </div>
-                <Switch
-                  id="needRegistration"
-                  checked={formData.needRegistration ?? false}
-                  onCheckedChange={(checked) => {
-                    onFieldChange("needRegistration", checked)
-                    if (!checked) {
-                      onFieldChange("requireManualApproval", false)
-                    }
-                  }}
-                  disabled={!canEdit}
-                />
-              </div>
-            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* Registration Page URL — only relevant when needRegistration is on */}
-            {formData.needRegistration && (
-            <div className="space-y-2 md:col-span-2" onFocus={() => onFieldFocus?.("registrationPage")}>
-              <Label htmlFor="registrationPage">Customer Registration Page</Label>
-              <Input
-                id="registrationPage"
-                type="url"
-                value={formData.registrationPage || ""}
-                onChange={(e) => onFieldChange("registrationPage", e.target.value)}
-                placeholder="https://echatbot.ai/registration/{workspaceId}"
-                disabled={!canEdit}
-              />
-              <p className="text-xs text-gray-500">
-                Custom URL for customer registration. Leave empty to use the default eChatbot registration page.
-              </p>
-            </div>
-            )}
-
-            {/* Require Manual Approval — only visible when needRegistration is true */}
-            {formData.needRegistration && (
-            <div className="space-y-2 md:col-span-2" onFocus={() => onFieldFocus?.("requireManualApproval")}>
-              <div className="flex items-center justify-between ml-4">
-                <div>
-                  <Label htmlFor="requireManualApproval" className="cursor-pointer text-sm font-medium">
-                    Require Manual Approval for New Customers
-                  </Label>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    When enabled, new customers will be in "Pending Approval" status after registration.
-                    An admin must manually approve them before they can access full features.
-                  </p>
-                </div>
-                <Switch
-                  id="requireManualApproval"
-                  checked={formData.requireManualApproval || false}
-                  onCheckedChange={(checked) => onFieldChange("requireManualApproval", checked)}
-                  disabled={!canEdit}
-                />
-              </div>
-            </div>
-            )}
-
+      {/* Channel — currency + immutable channel mode */}
+      <Card>
+        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-white">
+          <CardTitle className="text-base font-semibold">Channel</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="grid gap-6 md:grid-cols-2">
             {/* Currency */}
-            <div className="space-y-2 md:col-span-2" data-focus-key="defaultLanguage">
+            <div className="space-y-2">
               <Label htmlFor="currency">Currency</Label>
               <Select
                 value={formData.currency}
@@ -265,38 +202,12 @@ export function BusinessConfigSection({
               </Select>
             </div>
 
-            {/* Default Language */}
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="defaultLanguage">Default Language</Label>
-              <Select
-                value={formData.defaultLanguage}
-                onValueChange={(value) => onFieldChange("defaultLanguage", value)}
-                disabled={!canEdit}
-              >
-                <SelectTrigger id="defaultLanguage">
-                  <SelectValue placeholder="Select default language" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="it">🇮🇹 Italian</SelectItem>
-                  <SelectItem value="en">🇬🇧 English</SelectItem>
-                  <SelectItem value="es">🇪🇸 Spanish</SelectItem>
-                  <SelectItem value="pt">🇵🇹 Portuguese</SelectItem>
-                  <SelectItem value="fr">🇫🇷 French</SelectItem>
-                  <SelectItem value="de">🇩🇪 German</SelectItem>
-                  <SelectItem value="da">🇩🇰 Danish</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500">
-                Language used when customer language cannot be detected
-              </p>
-            </div>
-
             {/* Channel Mode — immutable after creation (blocked server-side too,
                 see workspace.service.ts CHANNEL_MODE_IMMUTABLE). The dropdown
                 is openable so the three types are visible/browsable, but
                 selecting one is a no-op — it never reaches formData, so
                 Save can't submit a change the backend would reject anyway. */}
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-900">
                 Channel Mode
               </Label>
@@ -314,44 +225,7 @@ export function BusinessConfigSection({
                 </SelectContent>
               </Select>
               <p className="text-xs text-amber-600">
-                Channel mode is set at creation and cannot be changed (enforced server-side too). To switch mode, delete this workspace and create a new one.
-              </p>
-            </div>
-
-            {/* Custom Chatbot ID — resolves to the apps/backend/custom-<id>/
-                module this workspace's chatbot logic runs from. Empty means
-                the workspace uses the standard platform AI agents instead. */}
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="customChatbotId">Custom Chatbot ID</Label>
-              <Input
-                id="customChatbotId"
-                value={formData.customChatbotId}
-                onChange={(e) => onFieldChange("customChatbotId", e.target.value)}
-                placeholder="e.g. demorobot, demowash"
-                disabled={!canEdit}
-              />
-              <p className="text-xs text-gray-500">
-                Identifies which custom chatbot module (<code>apps/backend/custom-&lt;id&gt;</code>) handles
-                conversations for this workspace. Leave empty to use the standard AI agents.
-              </p>
-            </div>
-
-            {/* Welcome Message — for custom chatbot workspaces this is not yet
-                read by the runtime (the module generates its own greeting
-                dynamically per language, see custom-demorobot/prompts/common.md).
-                Exposed here for future use; not wired into the chatbot yet. */}
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="welcomeMessage">Welcome Message</Label>
-              <Textarea
-                id="welcomeMessage"
-                value={formData.welcomeMessage}
-                onChange={(e) => onFieldChange("welcomeMessage", e.target.value)}
-                rows={4}
-                disabled={!canEdit}
-              />
-              <p className="text-xs text-gray-500">
-                Shown on the first message of a conversation. For custom chatbot workspaces this field is
-                not yet used by the running module — the module currently generates its own greeting.
+                Set at creation and cannot be changed.
               </p>
             </div>
           </div>

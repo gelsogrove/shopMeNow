@@ -112,6 +112,9 @@ interface FormData {
   customAiRules: string
   customChatbotId: string  // Custom chatbot module for FLOW workspaces (e.g. "ecolaundry")
   customChatbotSystemPrompt: string  // Editable main/system prompt for the custom chatbot module
+  enabledLanguages: string[]
+  customChatbotModel: string
+  customChatbotTemperature: number | null
   welcomeMessage: string
   enableWelcomeMessage: boolean // E0a
   sessionResetTimeout: number // E0b (seconds, 0 = never)
@@ -257,6 +260,9 @@ export function SettingsPage() {
     customAiRules: "",
     customChatbotId: "",
     customChatbotSystemPrompt: "",
+    enabledLanguages: [],
+    customChatbotModel: "",
+    customChatbotTemperature: null,
     welcomeMessage: defaultWelcomeMessage,
     enableWelcomeMessage: true,
     sessionResetTimeout: 3600,
@@ -349,6 +355,9 @@ export function SettingsPage() {
         customAiRules: currentWorkspace.customAiRules || "",
         customChatbotId: currentWorkspace.customChatbotId || "",
         customChatbotSystemPrompt: currentWorkspace.customChatbotSystemPrompt || "",
+        enabledLanguages: currentWorkspace.enabledLanguages || [],
+        customChatbotModel: currentWorkspace.customChatbotModel || "",
+        customChatbotTemperature: currentWorkspace.customChatbotTemperature ?? null,
         welcomeMessage: currentWorkspace.welcomeMessage || defaultWelcomeMessage,
         enableWelcomeMessage: currentWorkspace.enableWelcomeMessage ?? true,
         sessionResetTimeout: currentWorkspace.sessionResetTimeout ?? 3600,
@@ -753,6 +762,13 @@ export function SettingsPage() {
               customAiRules: formData.customAiRules,
               wipMessage: formData.wipMessage,
               customChatbotId: formData.customChatbotId,
+              defaultLanguage: formData.defaultLanguage,
+              enabledLanguages: formData.enabledLanguages,
+              needRegistration: formData.needRegistration,
+              registrationPage: formData.registrationPage,
+              requireManualApproval: formData.requireManualApproval,
+              customChatbotModel: formData.customChatbotModel,
+              customChatbotTemperature: formData.customChatbotTemperature,
             }}
             errors={errors}
             canEdit={canEdit}
@@ -769,20 +785,13 @@ export function SettingsPage() {
               url: formData.url,
               businessType: formData.businessType,
               currency: formData.currency,
-              defaultLanguage: formData.defaultLanguage,
               channelMode: formData.channelMode,
               enableWhatsapp: formData.enableWhatsapp,
               enableWidget: formData.enableWidget,
               address: formData.address,
-              registrationPage: formData.registrationPage,
-              requireManualApproval: formData.requireManualApproval,
-              hasHumanSupport: formData.hasHumanSupport,
               hasProductCatalog: formData.hasProductCatalog,
               hasCart: formData.hasCart,
               hasOrderTracking: formData.hasOrderTracking,
-              needRegistration: formData.needRegistration,
-              customChatbotId: formData.customChatbotId,
-              welcomeMessage: formData.welcomeMessage,
             }}
             errors={errors}
             canEdit={canEdit}

@@ -75,6 +75,8 @@ export interface Workspace {
   customChatbotId?: string // 🆕 Custom chatbot module for FLOW workspaces (e.g. "ecolaundry")
   customChatbotSystemPrompt?: string // Editable main/system prompt for the custom chatbot module
   enabledLanguages?: string[] // Documentation only — does not restrict runtime language detection
+  customChatbotModel?: string | null // LLM model override for the custom chatbot module
+  customChatbotTemperature?: number | null // LLM temperature override for the custom chatbot module
   allowedExternalLinks?: string[] // 🆕 Security: allowed external domains
   logoUrl?: string // 🆕 Channel logo/icon
   widgetLogoUrl?: string // 🆕 Widget bubble logo/image

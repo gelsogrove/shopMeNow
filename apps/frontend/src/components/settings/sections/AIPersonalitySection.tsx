@@ -26,6 +26,20 @@ const SESSION_RESET_OPTIONS = [
   { value: 0, label: "Never" },
 ] as const
 
+// Languages a client can request. `enabledLanguages` is documentation for the
+// team (see Workspace.enabledLanguages) — the chatbot detects the customer's
+// language from their message regardless of this list.
+const AVAILABLE_LANGUAGES = [
+  { code: "en", label: "🇬🇧 English" },
+  { code: "it", label: "🇮🇹 Italian" },
+  { code: "fr", label: "🇫🇷 French" },
+  { code: "de", label: "🇩🇪 German" },
+  { code: "da", label: "🇩🇰 Danish" },
+  { code: "es", label: "🇪🇸 Spanish" },
+  { code: "pt", label: "🇵🇹 Portuguese" },
+  { code: "nl", label: "🇳🇱 Dutch" },
+] as const
+
 interface AIPersonalitySectionProps {
   formData: {
     chatbotName: string
@@ -38,6 +52,13 @@ interface AIPersonalitySectionProps {
     customAiRules: string
     wipMessage: string
     customChatbotId: string
+    defaultLanguage: string
+    enabledLanguages: string[]
+    needRegistration: boolean
+    registrationPage: string
+    requireManualApproval: boolean
+    customChatbotModel: string
+    customChatbotTemperature: number | null
   }
   errors: Record<string, string>
   canEdit: boolean
@@ -114,8 +135,7 @@ export function AIPersonalitySection({
             )}
           </div>
 
-          {/* F50: Tone of Voice — hidden in custom chatbot mode (module owns tone via its own prompts). */}
-          {!hideModuleOwnedFields && (
+          {/* Tone of Voice — applies to every channel, including Flow. */}
           <div
             className="space-y-2"
             onFocus={() => onFieldFocus?.("toneOfVoice")}
@@ -151,7 +171,70 @@ export function AIPersonalitySection({
               ))}
             </div>
           </div>
-          )}
+
+          {/* Default Language */}
+          <div className="space-y-2">
+            <Label htmlFor="defaultLanguage">Default Language</Label>
+            <Select
+              value={formData.defaultLanguage}
+              onValueChange={(value) => onFieldChange("defaultLanguage", value)}
+              disabled={!canEdit}
+            >
+              <SelectTrigger id="defaultLanguage" className="w-64">
+                <SelectValue placeholder="Select default language" />
+              </SelectTrigger>
+              <SelectContent>
+                {AVAILABLE_LANGUAGES.map((lang) => (
+                  <SelectItem key={lang.code} value={lang.code}>
+                    {lang.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500">
+              Used when the customer's language cannot be detected.
+            </p>
+          </div>
+
+          {/* Supported Languages */}
+          <div className="space-y-2">
+            <Label>Supported Languages</Label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {AVAILABLE_LANGUAGES.map((lang) => {
+                const checked = formData.enabledLanguages?.includes(lang.code) ?? false
+                return (
+                  <label
+                    key={lang.code}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg border p-2.5 text-sm transition-colors",
+                      checked ? "border-green-200 bg-green-50" : "border-slate-200 bg-white hover:bg-slate-50",
+                      !canEdit && "opacity-50 cursor-not-allowed",
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-green-600"
+                      checked={checked}
+                      disabled={!canEdit}
+                      onChange={(e) => {
+                        const current = formData.enabledLanguages ?? []
+                        onFieldChange(
+                          "enabledLanguages",
+                          e.target.checked
+                            ? [...current, lang.code]
+                            : current.filter((c) => c !== lang.code),
+                        )
+                      }}
+                    />
+                    <span>{lang.label}</span>
+                  </label>
+                )
+              })}
+            </div>
+            <p className="text-xs text-gray-500">
+              Languages this chatbot is expected to serve.
+            </p>
+          </div>
 
           {/* F50: Bot Identity — hidden in custom chatbot mode (module owns identity prompts). */}
           {!hideModuleOwnedFields && (
@@ -205,24 +288,8 @@ export function AIPersonalitySection({
             onFocus={() => onFieldFocus?.("welcomeMessage")}
             data-focus-key="welcomeMessage"
           >
-            <div className="flex items-center justify-between">
-              <Label htmlFor="welcomeMessage">Message</Label>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">
-                  {formData.enableWelcomeMessage ? "Enabled" : "Disabled"}
-                </span>
-                <Switch
-                  id="enableWelcomeMessage"
-                  checked={formData.enableWelcomeMessage}
-                  onCheckedChange={(checked) => onFieldChange("enableWelcomeMessage", checked)}
-                  disabled={!canEdit}
-                />
-              </div>
-            </div>
-            <div className={cn(
-              "border rounded-md overflow-hidden transition-opacity",
-              !formData.enableWelcomeMessage && "opacity-50"
-            )}>
+            <Label htmlFor="welcomeMessage">Message</Label>
+            <div className="border rounded-md overflow-hidden">
               <Editor
                 height="200px"
                 defaultLanguage="markdown"
@@ -240,15 +307,73 @@ export function AIPersonalitySection({
                   renderLineHighlight: "all",
                   tabSize: 2,
                   padding: { top: 8, bottom: 8 },
-                  readOnly: !canEdit || !formData.enableWelcomeMessage,
+                  readOnly: !canEdit,
                 }}
               />
             </div>
             <p className="text-xs text-gray-500">
-              When disabled, no welcome message is sent on first contact. The text is preserved for later use.
+              Sent on first contact. Supports <code>{"{{chatbotName}}"}</code> and <code>{"{{companyName}}"}</code>.
             </p>
           </div>
         </CardContent>
+      </Card>
+
+      {/* Customer Registration */}
+      <Card>
+        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-semibold flex items-center gap-2">
+              <Bot className="h-5 w-5 text-blue-600" />
+              Customer Registration
+            </CardTitle>
+            <Switch
+              id="needRegistration"
+              checked={formData.needRegistration ?? false}
+              onCheckedChange={(checked) => {
+                onFieldChange("needRegistration", checked)
+                if (!checked) onFieldChange("requireManualApproval", false)
+              }}
+              disabled={!canEdit}
+            />
+          </div>
+        </CardHeader>
+        {formData.needRegistration && (
+        <CardContent className="pt-6 space-y-6">
+          <div className="space-y-2" onFocus={() => onFieldFocus?.("registrationPage")}>
+            <Label htmlFor="registrationPage">Registration Page</Label>
+            <Input
+              id="registrationPage"
+              type="url"
+              value={formData.registrationPage || ""}
+              onChange={(e) => onFieldChange("registrationPage", e.target.value)}
+              placeholder="https://echatbot.ai/registration/{workspaceId}"
+              disabled={!canEdit}
+            />
+            <p className="text-xs text-gray-500">
+              Custom URL for customer registration. Leave empty to use the default page.
+            </p>
+          </div>
+
+          <div className="space-y-2 pt-4 border-t" onFocus={() => onFieldFocus?.("requireManualApproval")}>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="requireManualApproval" className="cursor-pointer text-sm font-medium">
+                  Require Manual Approval
+                </Label>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  New customers stay in "Pending Approval" until an admin approves them.
+                </p>
+              </div>
+              <Switch
+                id="requireManualApproval"
+                checked={formData.requireManualApproval || false}
+                onCheckedChange={(checked) => onFieldChange("requireManualApproval", checked)}
+                disabled={!canEdit}
+              />
+            </div>
+          </div>
+        </CardContent>
+        )}
       </Card>
 
       {/* Behavior Card — session timeout, maintenance message, override rules */}
@@ -351,6 +476,56 @@ export function AIPersonalitySection({
             </div>
           </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Model — LLM used by this chatbot */}
+      <Card>
+        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Bot className="h-5 w-5 text-blue-600" />
+            Model
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="customChatbotModel">LLM Model</Label>
+              <Input
+                id="customChatbotModel"
+                value={formData.customChatbotModel || ""}
+                onChange={(e) => onFieldChange("customChatbotModel", e.target.value)}
+                placeholder="anthropic/claude-haiku-4.5"
+                disabled={!canEdit}
+              />
+              <p className="text-xs text-gray-500">
+                OpenRouter model id. Leave empty to use the module default.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="customChatbotTemperature">Temperature</Label>
+              <Input
+                id="customChatbotTemperature"
+                type="number"
+                min={0}
+                max={2}
+                step={0.1}
+                value={formData.customChatbotTemperature ?? ""}
+                onChange={(e) =>
+                  onFieldChange(
+                    "customChatbotTemperature",
+                    e.target.value === "" ? null : Number(e.target.value),
+                  )
+                }
+                placeholder="0.3"
+                disabled={!canEdit}
+              />
+              <p className="text-xs text-gray-500">
+                0 = deterministic, higher = more creative. Empty uses the module default.
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

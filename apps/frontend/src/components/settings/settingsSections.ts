@@ -78,7 +78,10 @@ export function getVisibleSections(isCustomChatbot: boolean): SettingsSection[] 
   const rest = ALL_SECTIONS.filter(
     (s) => s.key !== "business" && !HIDDEN_FOR_CUSTOM_CHATBOT.includes(s.key as SectionKey),
   )
-  return [business, SYSTEM_PROMPT_SECTION, DEMOROBOT_SECTION, FAQS_SECTION, ...rest]
+  // AI Personality is pinned second, right after Preferences.
+  const aiPersonality = ALL_SECTIONS.find((s) => s.key === "ai-personality")!
+  const remaining = rest.filter((s) => s.key !== "ai-personality")
+  return [business, aiPersonality, SYSTEM_PROMPT_SECTION, DEMOROBOT_SECTION, FAQS_SECTION, ...remaining]
 }
 
 // Sections that navigate to their own dedicated route instead of rendering

@@ -170,6 +170,61 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## 🔧 Token-Saving Tooling (installed 2026-07-31)
+
+Two tools are installed to cut context usage. They solve **different** problems — use both.
+
+### CodeGraph — semantic code navigation (replaces blind grep/read)
+
+Full graph of the monorepo: 1,426 files, 16k nodes, 50k edges. Rebuilt automatically on every file change (auto-sync daemon), so it is never stale.
+
+**Use it INSTEAD of scattershot Grep/Read when the question is structural:**
+
+```bash
+codegraph query <symbol>            # Where is this defined? (all workspaces at once)
+codegraph callers <symbol>          # Who calls this?
+codegraph callees <symbol>          # What does this call?
+codegraph impact <symbol>           # 🚨 Blast radius BEFORE changing anything
+codegraph explore "<question>"      # Source + call paths in one shot
+codegraph affected <files...>       # Which tests cover these changed files
+```
+
+**When this matters most in shopME:**
+
+- **Rule 13 (NEVER touch working code)** → run `codegraph impact <symbol>` BEFORE editing any shared export. If the blast radius crosses `custom-*` modules, stop and ask Andrea.
+- **Rule 9 (360° thinking)** → `codegraph explore` traces FE → API → controller → service → repository in one call instead of ten Greps.
+- **Rule 7 (test before done)** → `git diff --name-only HEAD | codegraph affected --stdin --quiet` gives the exact unit tests to run, instead of the full suite.
+- **Duplicated logic across chatbots** → the four `custom-demo*/agent.ts` modules share near-identical functions (`withSessionLock`, `agentTurn`, `chatbotFn`). `codegraph query` surfaces all copies at once, so a fix is never applied to only one.
+
+The MCP tool `codegraph_explore` is wired into Claude Code globally and answers most "how does X work" questions in a single call.
+
+⚠️ `.codegraph/` (~94MB SQLite) is **gitignored** — local index, never commit it. Rebuild with `codegraph init`.
+
+### RTK — bash output compression
+
+Filters verbose command output (git, npm test, tsc, docker, prisma) before it reaches the LLM. Installed via Homebrew.
+
+```bash
+rtk tsc                  # TypeScript errors grouped by file
+rtk jest / rtk vitest    # failures only, passing collapsed to a count
+rtk git status / diff    # compact
+rtk lint                 # ESLint grouped by rule
+rtk prisma generate      # no ASCII art
+```
+
+⚠️ **Scope limit**: the auto-rewrite hook only intercepts **Bash** calls. Claude Code's built-in `Read`, `Grep`, and `Glob` tools bypass it entirely — for structural questions prefer CodeGraph, which is purpose-built for that.
+
+⚠️ Telemetry is **disabled** on both tools. Keep it that way (this is a client codebase).
+
+### Discarded — do NOT install
+
+| Tool | Why rejected |
+|------|--------------|
+| **caveman** | Shortens the agent's *replies*. Adds ~1–1.5k input tokens/turn and conflicts with the rules requiring detailed test comments and full-stack reasoning. |
+| **headroom** | Local **proxy that rewrites API requests** — overlaps RTK's job with far more interception. Rejected for a client codebase. |
+
+---
+
 ## Security Pattern (3-Layer — ALL protected endpoints)
 
 ```typescript
