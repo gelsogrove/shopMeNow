@@ -66,6 +66,9 @@ export interface Workspace {
   needRegistration?: boolean
   humanSupportInstructions?: string
   frustrationTriggers?: string
+  translateOperatorMessages?: boolean
+  translateCustomerMessages?: boolean
+  termsAndConditions?: string
   operatorContactMethod?: string
   operatorWhatsappNumber?: string
   toneOfVoice?: string

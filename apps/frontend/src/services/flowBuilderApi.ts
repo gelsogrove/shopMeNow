@@ -143,7 +143,9 @@ export const assetApi = {
   uploadFile: async (
     workspaceId: string,
     flowCategoryId: string,
-    data: { type: "document" | "image" | "video"; file: File; title: string; summary?: string; language?: string },
+    // Videos are deliberately not offered: attachments are reference material
+    // (manuals, spec sheets, photos), not media playback.
+    data: { type: "document" | "image"; file: File; title: string; summary?: string; language?: string },
   ): Promise<Asset> => {
     const form = new FormData()
     form.append("file", data.file)
