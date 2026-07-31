@@ -134,32 +134,69 @@ export function WidgetSupportSection({
                   </div>
                 </div>
 
-                {/* Email field when email is selected */}
+                {/* Recipients for the selected method. Both are lists: a team
+                    usually has more than one person on escalation duty. */}
                 {formData.operatorContactMethod === "email" && (
                   <div className="space-y-2 pt-2" onFocus={() => onFieldFocus?.("operatorEmail")}>
-                    <Label htmlFor="operatorEmail">Operator Email Address</Label>
-                    <Input
-                      id="operatorEmail"
-                      type="email"
-                      value={formData.operatorEmail || ""}
-                      onChange={(e) => onFieldChange("operatorEmail", e.target.value)}
-                      placeholder="support@yourcompany.com"
+                    <Label>Operator Email Addresses</Label>
+                    <OperatorRecipientList
+                      values={formData.operatorEmails ?? []}
+                      onChange={(values) => onFieldChange("operatorEmails", values)}
                       disabled={!canEdit}
+                      placeholder="support@yourcompany.com"
+                      addLabel="Add"
+                      emptyHint="Add at least one address, or escalations have nowhere to go."
+                      validate={(value) =>
+                        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? null : "Enter a valid email address"
+                      }
                     />
                   </div>
                 )}
 
-                {/* WhatsApp field when WhatsApp is selected */}
                 {formData.operatorContactMethod === "whatsapp" && (
                   <div className="space-y-2 pt-2" onFocus={() => onFieldFocus?.("operatorWhatsApp")}>
-                    <Label htmlFor="operatorWhatsappNumber">Operator WhatsApp Number</Label>
-                    <Input
-                      id="operatorWhatsappNumber"
-                      value={formData.operatorWhatsappNumber}
-                      onChange={(e) => onFieldChange("operatorWhatsappNumber", e.target.value)}
-                      placeholder="+1234567890"
+                    <Label>Operator WhatsApp Numbers</Label>
+                    <OperatorRecipientList
+                      values={formData.operatorWhatsappNumbers ?? []}
+                      onChange={(values) => onFieldChange("operatorWhatsappNumbers", values)}
                       disabled={!canEdit}
+                      placeholder="+1234567890"
+                      addLabel="Add"
+                      emptyHint="Add at least one number, or escalations have nowhere to go."
+                      validate={(value) =>
+                        /^\+?[0-9\s-]{6,20}$/.test(value)
+                          ? null
+                          : "Enter a valid phone number, including country code"
+                      }
                     />
+                  </div>
+                )}
+
+                {/* Delivery mode — only meaningful with more than one recipient. */}
+                {recipientCount > 1 && (
+                  <div className="space-y-3 pt-2">
+                    <Label>When someone needs a human</Label>
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      {DELIVERY_MODES.map((mode) => {
+                        const selected = (formData.operatorDeliveryMode ?? "all") === mode.value
+                        return (
+                          <button
+                            key={mode.value}
+                            type="button"
+                            disabled={!canEdit}
+                            onClick={() => onFieldChange("operatorDeliveryMode", mode.value)}
+                            className={`rounded-lg border p-3 text-left transition-colors ${
+                              selected
+                                ? "border-purple-300 bg-purple-50"
+                                : "border-slate-200 bg-white hover:bg-slate-50"
+                            } ${!canEdit ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                          >
+                            <p className="text-sm font-medium">{mode.label}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">{mode.description}</p>
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
                 )}
               </div>
