@@ -74,6 +74,7 @@ import {
 import { roundMoney } from "@/utils/money"
 import { PLAN_CONFIGS, getPlanFeaturesWithText } from "@/config/planFeatures"
 import { toast } from "@/lib/toast"
+import { storage } from "@/lib/storage"
 import {
   CreditCard,
   TrendingUp,
@@ -575,7 +576,11 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
   const { billing, limits, usage, planConfig } = billingOverview
   const isTrialPlan = billing.planType === "FREE_TRIAL"
   const isPaymentConnected = billing.isPaymentConnected ?? false
-  const canManageBilling = isSuperAdmin && isPaymentConnected
+  // Platform admins (dev/internal accounts) can change plan without a PayPal
+  // connection — the backend changePlan endpoint has no payment requirement,
+  // the PayPal gate was only ever a frontend guard for real customers.
+  const isPlatformAdmin = storage.getUser<{ isPlatformAdmin?: boolean }>()?.isPlatformAdmin ?? false
+  const canManageBilling = isSuperAdmin && (isPaymentConnected || isPlatformAdmin)
   const creditMinThreshold = billingOverview.thresholds.creditMinThreshold
   const lowBalanceThreshold = billingOverview.thresholds.lowBalanceThreshold
   const isCreditCritical = billing.creditBalance < creditMinThreshold
@@ -615,9 +620,9 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
 
   const handleOpenUpgrade = () => {
     if (!isSuperAdmin) return
-    if (!isPaymentConnected) {
-      toast.error("Collega PayPal per scegliere o cambiare piano.")
-      // scroll al box PayPal se presente
+    if (!canManageBilling) {
+      toast.error("Connect PayPal to choose or change your plan.")
+      // scroll to the PayPal box if present
       const target = document.querySelector('[id*="paypal"]')
       if (target instanceof HTMLElement) {
         target.scrollIntoView({ behavior: "smooth", block: "center" })
@@ -763,7 +768,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   size="sm"
                   onClick={handleOpenUpgrade}
                   className="gap-1.5 text-green-600 border-green-600 hover:bg-green-50"
-                  title={!isPaymentConnected ? "Collega PayPal per cambiare piano." : undefined}
+                  title={!canManageBilling ? "Connect PayPal to change your plan." : undefined}
                 >
                   <TrendingUp className="h-4 w-4" />
                   Change Plan
@@ -782,9 +787,9 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   ⚠️ Your trial has expired - Chatbot is DISABLED
                 </p>
                 <p className="text-sm text-red-600 dark:text-red-400">
-                  {isPaymentConnected
+                  {canManageBilling
                     ? "Choose a plan to reactivate your chatbot."
-                    : "Collega PayPal e scegli un piano per riattivare il chatbot."}
+                    : "Connect PayPal and choose a plan to reactivate your chatbot."}
                 </p>
               </div>
               {isSuperAdmin && (
@@ -792,7 +797,7 @@ export function BillingSection({ workspaceId: propWorkspaceId, onBillingOverview
                   onClick={handleOpenUpgrade}
                   variant="destructive"
                   className="disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={!isPaymentConnected ? "Collega PayPal per cambiare piano." : undefined}
+                  title={!canManageBilling ? "Connect PayPal to change your plan." : undefined}
                 >
                   Choose a Plan
                 </Button>

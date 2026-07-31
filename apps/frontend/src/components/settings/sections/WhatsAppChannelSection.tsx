@@ -104,6 +104,9 @@ export function WhatsAppChannelSection({
             />
           </div>
         </CardHeader>
+        {/* Same pattern as Human Support: when the master toggle is off the
+            card body collapses entirely instead of showing a placeholder. */}
+        {formData.enableWhatsapp && (
         <CardContent className="pt-6 space-y-4">
           {/* ⚠️ Widget Warning */}
           {enableWidget && (
@@ -115,14 +118,6 @@ export function WhatsAppChannelSection({
             </Alert>
           )}
 
-          {!formData.enableWhatsapp ? (
-            <div className="text-center py-8 text-gray-500">
-              <Smartphone className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-              <p className="font-medium">WhatsApp Channel is disabled</p>
-              <p className="text-sm">Enable the toggle above to configure WhatsApp settings</p>
-            </div>
-          ) : (
-            <>
             <div className="space-y-4">
             {/* Provider Selection */}
             <div className="space-y-3">
@@ -333,9 +328,8 @@ export function WhatsAppChannelSection({
             </div>}
 
             </div>
-            </>
-          )}
         </CardContent>
+        )}
       </Card>
     </div>
   )

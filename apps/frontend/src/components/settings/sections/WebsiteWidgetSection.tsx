@@ -124,33 +124,28 @@ export function WebsiteWidgetSection({
             />
           </div>
         </CardHeader>
+        {/* Same pattern as Human Support: when the master toggle is off the
+            card body collapses entirely instead of showing a placeholder. */}
+        {formData.enableWidget && (
         <CardContent className="pt-6">
-          {/* Widget auto-management info */}
-          <div className="border border-blue-200 bg-blue-50 rounded-lg p-4 mb-4">
-            <div className="flex gap-3">
-              <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm text-blue-800 font-medium">
-                  Widget is automatically {formData.enableWidget ? "enabled" : "disabled"}
-                </p>
-                <p className="text-sm text-blue-700 mt-1">
-                  {formData.enableWidget 
-                    ? "Your workspace is configured for support/information. Widget is available."
-                    : "E-commerce workspaces cannot use widget. Change \"Sell Products & Services\" in Business Config to enable widget."
-                  }
-                </p>
+          {/* E-commerce workspaces can't use the widget at all — explain why
+              the toggle is locked. Only relevant in that case. */}
+          {isEcommerce && (
+            <div className="border border-blue-200 bg-blue-50 rounded-lg p-4 mb-4">
+              <div className="flex gap-3">
+                <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm text-blue-800 font-medium">
+                    Widget unavailable for e-commerce
+                  </p>
+                  <p className="text-sm text-blue-700 mt-1">
+                    E-commerce workspaces cannot use the widget. Change "Sell Products &amp; Services" in Business Config to enable it.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-          
-          {!formData.enableWidget ? (
-            <div className="text-center py-8 text-gray-500">
-              <Monitor className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-              <p className="font-medium">Website Widget is disabled</p>
-              <p className="text-sm">Enable the toggle above to configure widget settings</p>
-            </div>
-          ) : (
-            <>
+          )}
+
             <div className="grid grid-cols-2 gap-x-6 gap-y-4">
               {/* Widget Title */}
               <div
@@ -346,9 +341,8 @@ export function WebsiteWidgetSection({
                 </pre>
               </div>
             </div>
-            </>
-          )}
         </CardContent>
+        )}
       </Card>
     </div>
   )
