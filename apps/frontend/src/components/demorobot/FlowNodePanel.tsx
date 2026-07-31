@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Trash2, Paperclip } from "lucide-react"
+import { Plus, Trash2, Paperclip, ArrowRight } from "lucide-react"
 import type { FlowQuestionNodeData } from "./FlowQuestionNode"
 import type { Asset } from "@/services/demoRobotApi"
 
@@ -23,6 +23,11 @@ interface FlowNodePanelProps {
   data: FlowQuestionNodeData | null
   availableAssets: Asset[]
   attachedAssetIds: string[]
+  // All nodes in the flow (id + question text), for the "Go to" dropdown —
+  // lets an answer point at an existing node without canvas drag.
+  allNodes: Array<{ id: string; question: string }>
+  // edgeId -> current target node id, so the dropdown shows the existing link.
+  edgeTargets: Record<string, string>
   // Debounced writes into React Flow state (design.md Decision 12:
   // updateNodeData, never a per-keystroke store write).
   onChange: (nodeId: string, patch: Partial<FlowQuestionNodeData>) => void
@@ -30,6 +35,7 @@ interface FlowNodePanelProps {
   onRemoveAnswer: (nodeId: string, edgeId: string) => void
   onToggleAnswerEscalation: (nodeId: string, edgeId: string, value: boolean) => void
   onToggleAttachment: (nodeId: string, assetId: string, attached: boolean) => void
+  onRetargetAnswer: (nodeId: string, edgeId: string, targetNodeId: string) => void
 }
 
 const DEBOUNCE_MS = 400
@@ -41,11 +47,14 @@ export function FlowNodePanel({
   data,
   availableAssets,
   attachedAssetIds,
+  allNodes,
+  edgeTargets,
   onChange,
   onAddAnswer,
   onRemoveAnswer,
   onToggleAnswerEscalation,
   onToggleAttachment,
+  onRetargetAnswer,
 }: FlowNodePanelProps) {
   const [question, setQuestion] = useState("")
   const [fieldKey, setFieldKey] = useState("")
@@ -151,21 +160,47 @@ export function FlowNodePanel({
               <Label>Answers</Label>
             </div>
             <div className="space-y-2">
-              {data.answers.map((answer) => (
-                <div key={answer.edgeId} className="flex items-center gap-2 rounded-md border border-gray-200 px-2 py-1.5">
-                  <span className="flex-1 text-sm">{answer.label}</span>
-                  <label className="flex items-center gap-1.5 text-xs text-amber-700">
-                    <Checkbox
-                      checked={!!answer.triggersEscalation}
-                      onCheckedChange={(checked) => onToggleAnswerEscalation(nodeId, answer.edgeId, !!checked)}
-                    />
-                    Escalates
-                  </label>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onRemoveAnswer(nodeId, answer.edgeId)}>
-                    <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                  </Button>
-                </div>
-              ))}
+              {data.answers.map((answer) => {
+                const currentTarget = edgeTargets[answer.edgeId] ?? ""
+                return (
+                  <div key={answer.edgeId} className="rounded-md border border-gray-200 px-2 py-1.5 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="flex-1 text-sm">{answer.label}</span>
+                      <label className="flex items-center gap-1.5 text-xs text-amber-700">
+                        <Checkbox
+                          checked={!!answer.triggersEscalation}
+                          onCheckedChange={(checked) => onToggleAnswerEscalation(nodeId, answer.edgeId, !!checked)}
+                        />
+                        Escalates
+                      </label>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => onRemoveAnswer(nodeId, answer.edgeId)}>
+                        <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ArrowRight className="h-3 w-3 text-gray-400 shrink-0" />
+                      <Select
+                        value={currentTarget || undefined}
+                        onValueChange={(v) => onRetargetAnswer(nodeId, answer.edgeId, v)}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue placeholder="Go to…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__new__">+ Create new question</SelectItem>
+                          {allNodes
+                            .filter((n) => n.id !== nodeId)
+                            .map((n) => (
+                              <SelectItem key={n.id} value={n.id}>
+                                {n.question || "(empty question)"}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
             <div className="flex items-center gap-2">
               <Input
