@@ -994,7 +994,9 @@ export function SettingsPage() {
       </Dialog>
 
       {/* Chat Widget */}
-      {currentWorkspace && formData.channelStatus && (
+      {/* Live widget preview — only when the widget channel is actually enabled,
+          otherwise Settings shows a widget the site would never render. */}
+      {currentWorkspace && formData.channelStatus && formData.enableWidget && (
         <ChatWidget
           key={`${formData.widgetTitle}-${formData.widgetPrimaryColor}-${formData.widgetIcon}-${formData.widgetLanguage}-${formData.widgetUseChannelLogo}`}
           workspaceId={currentWorkspace.id}

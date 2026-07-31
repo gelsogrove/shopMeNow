@@ -105,6 +105,11 @@ model Workspace {
   customChatbotSystemPrompt         String?     @db.Text // 🆕 Editable main/system prompt for custom chatbot modules (e.g. demorobot), with {{variables}} processed by PromptProcessorService. Falls back to the module's own static prompt file (e.g. common.md) when empty.
   customChatbotModel                String?     @db.Text // 🆕 LLM model override for custom chatbot modules (e.g. "anthropic/claude-haiku-4.5"). Falls back to the module's settings.json when empty.
   customChatbotTemperature          Float?      // 🆕 LLM temperature override for custom chatbot modules. Falls back to the module's settings.json when empty.
+  customChatbotMaxTokens            Int?        // 🆕 Max tokens per LLM reply for custom chatbot modules. Falls back to the module's settings.json when empty.
+  customChatbotEmailFrom            String?     // 🆕 "From" header for operator notification emails, e.g. 'Demowash Bot <noreply@demowash.demo>'
+  customChatbotEmailSubjectPrefix   String?     // 🆕 Subject prefix for operator notification emails, e.g. '[Demowash] Incidencia'
+  audioOutput                       Boolean     @default(false) // 🆕 Whether the chatbot replies with synthesized audio (ElevenLabs)
+  audioVoices                       Json?       // 🆕 ElevenLabs voice id per language, e.g. { "default": "EXAV...", "it": "EXAV...", "es": "FGY2..." }
   customChatbotOperatorBriefingLanguage String? @db.Text // 🆕 Language the operator escalation briefing email is written in (e.g. "es"). Falls back to the module's settings.json when empty.
   customChatbotOperatorEmail        String?     @db.Text // 🆕 Operator email override for custom chatbot escalations. Falls back to the module's settings.json when empty.
   customChatbotEmailFrom            String?     @db.Text // 🆕 "From" header override for custom chatbot escalation emails (e.g. "Demowash Bot <noreply@demowash.demo>"). Falls back to the module's settings.json when empty.
