@@ -121,6 +121,10 @@ export const flowApi = {
   delete: async (workspaceId: string, flowId: string): Promise<void> => {
     await api.delete(`/workspaces/${workspaceId}/demorobot/flows/${flowId}`)
   },
+  duplicate: async (workspaceId: string, flowId: string): Promise<Flow> => {
+    const response = await api.post(`/workspaces/${workspaceId}/demorobot/flows/${flowId}/duplicate`)
+    return response.data?.flow
+  },
   getGraph: async (workspaceId: string, flowId: string): Promise<FlowGraph> => {
     const response = await api.get(`/workspaces/${workspaceId}/demorobot/flows/${flowId}/graph`)
     return response.data

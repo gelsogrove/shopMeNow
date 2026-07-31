@@ -209,6 +209,34 @@ export function createFlowBuilderRoutes(): Router {
   router.delete('/workspaces/:workspaceId/demorobot/flows/:flowId', ...middlewares, controller.deleteFlow.bind(controller))
 
   /**
+   * @openapi
+   * /api/workspaces/{workspaceId}/demorobot/flows/{flowId}/duplicate:
+   *   post:
+   *     tags: [Flow Builder]
+   *     summary: Duplicate a flow with its full graph
+   *     description: >
+   *       Creates a copy of the flow titled "<original> (copy)", including all
+   *       nodes, edges and attachment links. Nodes get new ids and edges are
+   *       rewired onto them, so the copy is fully independent of the original.
+   *       Attachments reference the same Assets rather than re-uploading files.
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema: { type: string }
+   *       - in: path
+   *         name: flowId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       201:
+   *         description: The newly created flow
+   *       404:
+   *         description: Flow not found
+   */
+  router.post('/workspaces/:workspaceId/demorobot/flows/:flowId/duplicate', ...middlewares, controller.duplicateFlow.bind(controller))
+
+  /**
    * @swagger
    * /api/workspaces/{workspaceId}/demorobot/flows/{flowId}/graph:
    *   get:

@@ -9,6 +9,7 @@ import {
 import {
   createFlow,
   deleteFlow,
+  duplicateFlow,
   getFlowGraph,
   listFlows,
   saveFlowGraph,
@@ -127,6 +128,22 @@ export class FlowBuilderController {
     } catch (error) {
       logger.error('[flow-builder] deleteFlow error:', error)
       res.status(500).json({ error: 'Failed to delete flow' })
+    }
+  }
+
+  async duplicateFlow(req: Request, res: Response): Promise<void> {
+    try {
+      const workspaceId = (req as any).workspaceId
+      const { flowId } = req.params
+      const copy = await duplicateFlow(workspaceId, flowId)
+      if (!copy) {
+        res.status(404).json({ error: 'Flow not found' })
+        return
+      }
+      res.status(201).json({ flow: copy })
+    } catch (error) {
+      logger.error('[flow-builder] duplicateFlow error:', error)
+      res.status(500).json({ error: 'Failed to duplicate flow' })
     }
   }
 

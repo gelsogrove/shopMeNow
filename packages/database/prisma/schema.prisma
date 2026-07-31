@@ -74,6 +74,11 @@ model Workspace {
   operatorContactMethod             String?     @default("email") // 'email' | 'whatsapp'
   operatorEmail                     String? // Email for human support notifications
   operatorWhatsappNumber            String? // WhatsApp number for human support (if method='whatsapp')
+  // 🆕 Multi-operator routing. The singular fields above stay as the fallback for
+  // workspaces that never configured a list, so existing setups keep working.
+  operatorEmails                    String[]  @default([]) // Escalation recipients (email)
+  operatorWhatsappNumbers           String[]  @default([]) // Escalation recipients (WhatsApp)
+  operatorDeliveryMode              String?   @default("all") // 'all' = notify everyone | 'random' = one at random (load sharing) | 'custom' = the custom chatbot module decides
   toneOfVoice                       String?     @default("friendly") // 'formal' | 'friendly' | 'professional' | 'casual'
   translateOperatorMessages         Boolean     @default(true) // Auto-translate operator messages to customer's language
   translateCustomerMessages         Boolean     @default(true) // 🆕 Auto-translate customer messages to operator's language (reverse direction)
@@ -106,6 +111,7 @@ model Workspace {
   customChatbotModel                String?     @db.Text // 🆕 LLM model override for custom chatbot modules (e.g. "anthropic/claude-haiku-4.5"). Falls back to the module's settings.json when empty.
   customChatbotTemperature          Float?      // 🆕 LLM temperature override for custom chatbot modules. Falls back to the module's settings.json when empty.
   customChatbotMaxTokens            Int?        // 🆕 Max tokens per LLM reply for custom chatbot modules. Falls back to the module's settings.json when empty.
+  faqsEnabled                       Boolean     @default(true) // 🆕 Master switch for the FAQ block injected into the chatbot prompt. Individual FAQ.isActive still applies.
   audioOutput                       Boolean     @default(false) // 🆕 Whether the chatbot replies with synthesized audio (ElevenLabs)
   audioVoices                       Json?       // 🆕 ElevenLabs voice id per language, e.g. { "default": "EXAV...", "it": "EXAV...", "es": "FGY2..." }
   customChatbotOperatorBriefingLanguage String? @db.Text // 🆕 Language the operator escalation briefing email is written in (e.g. "es"). Falls back to the module's settings.json when empty.

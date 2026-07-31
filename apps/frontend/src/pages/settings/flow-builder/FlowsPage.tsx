@@ -21,10 +21,6 @@ import { flowApi, Flow } from "@/services/flowBuilderApi"
 import { ChatWidget } from "@/components/ChatWidget"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 
-function newId(prefix: string): string {
-  return `${prefix}_${Math.random().toString(36).slice(2, 10)}`
-}
-
 // categoryId param is "generic" for the workspace-generic fallback flow
 // list (Flow.flowCategoryId: null, analisi.md §6), otherwise a real FlowCategory id.
 export function FlowsPage() {
@@ -72,45 +68,14 @@ export function FlowsPage() {
   // Duplicates title + full node/edge graph: reads the source graph, creates
   // a new flow, then remaps every node/edge id (new flow, so ids can't be
   // reused) before writing the copy via the same saveGraph the editor uses.
+  // Duplication happens server-side in one transactional call: the previous
+  // client-side version issued three requests (read graph, create flow, save
+  // graph) and could leave a half-built flow behind if any of them failed.
   const handleDuplicate = async (flow: Flow) => {
     setDuplicatingId(flow.id)
     try {
-      const graph = await flowApi.getGraph(workspaceId, flow.id)
-      const created = await flowApi.create(workspaceId, {
-        title: `${flow.title} (copy)`,
-        robotModelId: resolvedCategoryId,
-        description: flow.description || undefined,
-      })
-
-      const idMap = new Map(graph.nodes.map((n) => [n.id, newId("node")]))
-      const newNodes = graph.nodes.map((n) => ({
-        id: idMap.get(n.id)!,
-        flowId: created.id,
-        question: n.question,
-        positionX: n.positionX,
-        positionY: n.positionY,
-        fieldKey: n.fieldKey,
-        fieldType: n.fieldType,
-        terminalType: n.terminalType,
-        attachmentAssetIds: n.attachments.map((a) => a.assetId),
-      }))
-      const newEdges = graph.edges.map((e) => ({
-        id: newId("edge"),
-        sourceNodeId: idMap.get(e.sourceNodeId)!,
-        targetNodeId: e.targetNodeId ? idMap.get(e.targetNodeId) ?? null : null,
-        label: e.label,
-        triggersEscalation: e.triggersEscalation,
-      }))
-
-      await flowApi.saveGraph(workspaceId, created.id, {
-        nodes: newNodes,
-        edges: newEdges,
-        title: created.title,
-        description: created.description || undefined,
-        keywords: graph.flow.keywords,
-      })
-
-      setFlows((prev) => [...prev, { ...created, description: flow.description, keywords: graph.flow.keywords }])
+      const created = await flowApi.duplicate(workspaceId, flow.id)
+      setFlows((prev) => [...prev, created])
       toast.success("Flow duplicated")
     } catch (err: any) {
       toast.error(err.message || "Failed to duplicate flow")
