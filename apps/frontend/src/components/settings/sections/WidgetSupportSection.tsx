@@ -33,9 +33,9 @@ interface WidgetSupportSectionProps {
 // 'custom' hands the decision to the custom chatbot module, which may route by
 // shift, language or workload — logic the platform deliberately does not own.
 const DELIVERY_MODES = [
-  { value: "all", label: "Notify everyone", description: "All operators get the message" },
-  { value: "random", label: "Pick one at random", description: "Spreads the load across the team" },
-  { value: "custom", label: "Custom rule", description: "The chatbot module decides who to notify" },
+  { value: "all", label: "Send to all", description: "Every operator gets the message" },
+  { value: "random", label: "Random", description: "One operator at random, to spread the load" },
+  { value: "custom", label: "Customized", description: "The chatbot module decides who to notify" },
 ] as const
 
 // F50 — Andrea 2026-05-13: "Enable Sales Agent Routing" only makes sense
@@ -51,11 +51,10 @@ export function WidgetSupportSection({
   const { workspace } = useWorkspace()
   const isEcommerce = workspace?.channelMode === 'ECOMMERCE'
   const isCustomChatbot = !!workspace?.customChatbotId
-  // Routing only matters once there is more than one recipient to choose between.
-  const recipientCount =
-    formData.operatorContactMethod === "email"
-      ? (formData.operatorEmails ?? []).length
-      : (formData.operatorWhatsappNumbers ?? []).length
+  // 'custom' hands routing to the chatbot module, so the platform stops asking
+  // for recipients — configuring addresses it would never use is misleading.
+  const deliveryMode = formData.operatorDeliveryMode || "all"
+  const isCustomDelivery = deliveryMode === "custom"
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -151,9 +150,47 @@ export function WidgetSupportSection({
                   </div>
                 </div>
 
-                {/* Recipients for the selected method. Both are lists: a team
-                    usually has more than one person on escalation duty. */}
-                {formData.operatorContactMethod === "email" && (
+                {/* Delivery mode comes BEFORE the recipients, because it decides
+                    whether recipients are configured here at all: with 'custom'
+                    the chatbot module owns the routing, so asking for addresses
+                    would be misleading. */}
+                <div className="space-y-3 pt-2">
+                  <Label>Who gets notified</Label>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {DELIVERY_MODES.map((mode) => {
+                      const selected = deliveryMode === mode.value
+                      return (
+                        <button
+                          key={mode.value}
+                          type="button"
+                          disabled={!canEdit}
+                          onClick={() => onFieldChange("operatorDeliveryMode", mode.value)}
+                          className={`flex items-start gap-2 rounded-lg border p-3 text-left transition-colors ${
+                            selected
+                              ? "border-purple-300 bg-purple-50"
+                              : "border-slate-200 bg-white hover:bg-slate-50"
+                          } ${!canEdit ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          <span
+                            className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 ${
+                              selected ? "border-purple-600 bg-purple-600" : "border-slate-300"
+                            }`}
+                          />
+                          <span>
+                            <span className="block text-sm font-medium">{mode.label}</span>
+                            <span className="block text-xs text-gray-500 mt-0.5">
+                              {mode.description}
+                            </span>
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Recipients — hidden entirely under 'custom': the module decides
+                    who to contact, so there is nothing to configure here. */}
+                {!isCustomDelivery && formData.operatorContactMethod === "email" && (
                   <div className="space-y-2 pt-2" onFocus={() => onFieldFocus?.("operatorEmail")}>
                     <Label>Operator Email Addresses</Label>
                     <OperatorRecipientList
@@ -170,7 +207,7 @@ export function WidgetSupportSection({
                   </div>
                 )}
 
-                {formData.operatorContactMethod === "whatsapp" && (
+                {!isCustomDelivery && formData.operatorContactMethod === "whatsapp" && (
                   <div className="space-y-2 pt-2" onFocus={() => onFieldFocus?.("operatorWhatsApp")}>
                     <Label>Operator WhatsApp Numbers</Label>
                     <OperatorRecipientList
@@ -189,32 +226,12 @@ export function WidgetSupportSection({
                   </div>
                 )}
 
-                {/* Delivery mode — only meaningful with more than one recipient. */}
-                {recipientCount > 1 && (
-                  <div className="space-y-3 pt-2">
-                    <Label>When someone needs a human</Label>
-                    <div className="grid gap-2 sm:grid-cols-3">
-                      {DELIVERY_MODES.map((mode) => {
-                        const selected = (formData.operatorDeliveryMode ?? "all") === mode.value
-                        return (
-                          <button
-                            key={mode.value}
-                            type="button"
-                            disabled={!canEdit}
-                            onClick={() => onFieldChange("operatorDeliveryMode", mode.value)}
-                            className={`rounded-lg border p-3 text-left transition-colors ${
-                              selected
-                                ? "border-purple-300 bg-purple-50"
-                                : "border-slate-200 bg-white hover:bg-slate-50"
-                            } ${!canEdit ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                          >
-                            <p className="text-sm font-medium">{mode.label}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{mode.description}</p>
-                          </button>
-                        )
-                      })}
-                    </div>
+                {isCustomDelivery && (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-gray-600">
+                    Recipients are chosen by the custom chatbot module — by shift, language,
+                    workload or whatever rule it implements. Nothing to configure here.
                   </div>
+                )}
                 )}
               </div>
 
