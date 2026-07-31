@@ -91,11 +91,11 @@ const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = [
   "functions",
 ]
 
-// "Manage Flows" (demorobot) only makes sense once a custom chatbot module
+// "Flows" (demorobot) only makes sense once a custom chatbot module
 // is running — it's added, not filtered out, unlike HIDDEN_FOR_CUSTOM_CHATBOT.
 const DEMOROBOT_SECTION: SettingsSection = {
   key: "demorobot",
-  label: "Manage Flows",
+  label: "Flows",
   description: "Visual flow-builder for this chatbot's diagnostic conversations",
 }
 
