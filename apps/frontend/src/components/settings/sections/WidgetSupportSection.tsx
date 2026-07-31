@@ -8,14 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Headphones, Smartphone, Users, Mail } from "lucide-react"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
+import { OperatorRecipientList } from "@/components/settings/OperatorRecipientList"
 
 interface WidgetSupportSectionProps {
   formData: {
     hasHumanSupport: boolean
     hasSalesAgents: boolean
     operatorContactMethod: "email" | "whatsapp"
-    operatorWhatsappNumber: string
-    operatorEmail?: string // From Business Config or custom
+    operatorEmails: string[]
+    operatorWhatsappNumbers: string[]
+    operatorDeliveryMode: string
     humanSupportInstructions: string
     frustrationTriggers: string
     translateOperatorMessages: boolean
@@ -25,6 +27,15 @@ interface WidgetSupportSectionProps {
   onFieldChange: (field: string, value: any) => void
   onFieldFocus?: (fieldKey: string) => void
 }
+
+// How an escalation is routed when more than one operator is configured.
+// 'custom' hands the decision to the custom chatbot module, which may route by
+// shift, language or workload — logic the platform deliberately does not own.
+const DELIVERY_MODES = [
+  { value: "all", label: "Notify everyone", description: "All operators get the message" },
+  { value: "random", label: "Pick one at random", description: "Spreads the load across the team" },
+  { value: "custom", label: "Custom rule", description: "The chatbot module decides who to notify" },
+] as const
 
 // F50 — Andrea 2026-05-13: "Enable Sales Agent Routing" only makes sense
 // for ECOMMERCE workspaces. Hidden for INFORMATIONAL and FLOW (custom
