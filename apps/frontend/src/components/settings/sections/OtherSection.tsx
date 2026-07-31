@@ -1,12 +1,15 @@
 /**
  * OtherSection - Miscellaneous workspace settings
  * Fields: allowedExternalLinks (Security), termsAndConditions (Terms & Conditions), wipMessage (Maintenance)
+ *
+ * Card standard (same across every Settings section):
+ *   CardHeader  -> gradient background + colored icon + title + subtitle
+ *   CardContent -> field(s), each with a plain-language helper line underneath
  */
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Shield, FileText, Clock } from "lucide-react"
-import Editor from "@monaco-editor/react"
 
 interface OtherSectionProps {
   formData: {
@@ -22,7 +25,6 @@ interface OtherSectionProps {
 
 export function OtherSection({
   formData,
-  errors,
   canEdit,
   onFieldChange,
   onFieldFocus,
@@ -46,8 +48,11 @@ export function OtherSection({
             <Shield className="h-5 w-5 text-red-600" />
             Security
           </CardTitle>
+          <p className="text-sm text-gray-500">
+            Restrict which websites the chatbot is allowed to link to
+          </p>
         </CardHeader>
-        <CardContent className="pt-6 space-y-6">
+        <CardContent className="pt-6">
           <div className="space-y-2" onFocus={() => onFieldFocus?.("allowedDomains")}>
             <Label htmlFor="allowedExternalLinks">Allowed External Domains</Label>
             <Textarea
@@ -56,8 +61,12 @@ export function OtherSection({
               onChange={(e) => onFieldChange("allowedExternalLinks", e.target.value)}
               placeholder="example.com, trusted-site.com, docs.google.com, stripe.com"
               disabled={!canEdit}
-              className="min-h-[100px]"
+              className="min-h-[90px]"
             />
+            <p className="text-xs text-gray-500">
+              One domain per line or comma-separated. Links to any other site are blocked
+              before the message reaches the customer. Leave empty to allow all links.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -69,32 +78,25 @@ export function OtherSection({
             <FileText className="h-5 w-5 text-violet-600" />
             Terms & Conditions
           </CardTitle>
+          <p className="text-sm text-gray-500">
+            The terms customers are asked to accept before chatting
+          </p>
         </CardHeader>
         <CardContent className="pt-6">
-          <div
-            className="border rounded-md overflow-hidden"
-            onFocus={() => onFieldFocus?.("termsAndConditions")}
-          >
-            <Editor
-              height="240px"
-              defaultLanguage="markdown"
-              theme="vs-light"
+          <div className="space-y-2" onFocus={() => onFieldFocus?.("termsAndConditions")}>
+            <Label htmlFor="termsAndConditions">Terms & Conditions Text</Label>
+            <Textarea
+              id="termsAndConditions"
               value={formData.termsAndConditions}
-              onChange={(value) => onFieldChange("termsAndConditions", value || "")}
-              options={{
-                minimap: { enabled: false },
-                fontSize: 13,
-                lineNumbers: "on",
-                wordWrap: "on",
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                folding: true,
-                renderLineHighlight: "all",
-                tabSize: 2,
-                padding: { top: 8, bottom: 8 },
-                readOnly: !canEdit,
-              }}
+              onChange={(e) => onFieldChange("termsAndConditions", e.target.value)}
+              placeholder="By accepting you allow us to message you on WhatsApp for support, notifications, and offers. You can revoke anytime by replying STOP."
+              disabled={!canEdit}
+              className="min-h-[160px]"
             />
+            <p className="text-xs text-gray-500">
+              Shown to new customers on first contact. Keep it short — customers read this
+              inside a chat bubble.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -106,6 +108,9 @@ export function OtherSection({
             <Clock className="h-5 w-5 text-blue-600" />
             Maintenance
           </CardTitle>
+          <p className="text-sm text-gray-500">
+            The reply customers get while the channel is switched off
+          </p>
         </CardHeader>
         <CardContent className="pt-6">
           <div
@@ -114,28 +119,18 @@ export function OtherSection({
             data-focus-key="maintenanceMessage"
           >
             <Label htmlFor="wipMessage">Maintenance Message</Label>
-            <div className="border rounded-md overflow-hidden">
-              <Editor
-                height="200px"
-                defaultLanguage="markdown"
-                theme="vs-light"
-                value={formData.wipMessage}
-                onChange={(value) => onFieldChange("wipMessage", value || "")}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  lineNumbers: "on",
-                  wordWrap: "on",
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  folding: true,
-                  renderLineHighlight: "all",
-                  tabSize: 2,
-                  padding: { top: 8, bottom: 8 },
-                  readOnly: !canEdit,
-                }}
-              />
-            </div>
+            <Textarea
+              id="wipMessage"
+              value={formData.wipMessage}
+              onChange={(e) => onFieldChange("wipMessage", e.target.value)}
+              placeholder="⚠️ We're currently doing some maintenance. Please try again later."
+              disabled={!canEdit}
+              className="min-h-[120px]"
+            />
+            <p className="text-xs text-gray-500">
+              Sent instead of AI replies when the channel is set to Inactive in
+              Preferences. Include an email or phone number for urgent cases.
+            </p>
           </div>
         </CardContent>
       </Card>

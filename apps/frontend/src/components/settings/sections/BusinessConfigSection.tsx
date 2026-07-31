@@ -97,6 +97,9 @@ export function BusinessConfigSection({
             <Store className="h-5 w-5 text-purple-600" />
             Company Information
           </CardTitle>
+          <p className="text-sm text-gray-500">
+            Details the chatbot uses when customers ask about your business
+          </p>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid gap-6 md:grid-cols-2">

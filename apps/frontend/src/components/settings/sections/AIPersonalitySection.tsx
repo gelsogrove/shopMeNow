@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Slider } from "@/components/ui/slider"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Bot, Briefcase, Smile, Award, Coffee, Clock } from "lucide-react"
@@ -475,25 +476,32 @@ export function AIPersonalitySection({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="customChatbotTemperature">Temperature</Label>
-              <Input
+              <div className="flex items-center justify-between">
+                <Label htmlFor="customChatbotTemperature">Temperature</Label>
+                <span className="text-sm font-mono font-semibold text-blue-600 tabular-nums">
+                  {(formData.customChatbotTemperature ?? 0.3).toFixed(1)}
+                </span>
+              </div>
+              <Slider
                 id="customChatbotTemperature"
-                type="number"
                 min={0}
                 max={2}
                 step={0.1}
-                value={formData.customChatbotTemperature ?? ""}
-                onChange={(e) =>
-                  onFieldChange(
-                    "customChatbotTemperature",
-                    e.target.value === "" ? null : Number(e.target.value),
-                  )
+                value={[formData.customChatbotTemperature ?? 0.3]}
+                onValueChange={([value]) =>
+                  onFieldChange("customChatbotTemperature", value)
                 }
-                placeholder="0.3"
                 disabled={!canEdit}
+                className="py-2"
               />
+              <div className="flex justify-between text-[11px] text-gray-400">
+                <span>Precise</span>
+                <span>Balanced</span>
+                <span>Creative</span>
+              </div>
               <p className="text-xs text-gray-500">
-                0 = deterministic, higher = more creative. Empty uses the module default.
+                Controls how varied the bot's wording is. Low = consistent, predictable
+                answers. High = more creative phrasing, less repetitive.
               </p>
             </div>
           </div>

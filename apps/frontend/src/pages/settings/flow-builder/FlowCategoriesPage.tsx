@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ArrowRight, Bot, Plus } from "lucide-react"
+import { Bot, ChevronRight, FolderOpen, Plus } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
@@ -109,8 +109,20 @@ export function FlowCategoriesPage() {
     }
   }
 
+  // The category name doubles as the "enter this category" affordance: green,
+  // underlined on hover, with a chevron — so it reads as a link, not plain text.
   const columns: ColumnDef<FlowCategory>[] = [
-    { header: "Name", accessorKey: "name" },
+    {
+      header: "Name",
+      accessorKey: "name",
+      cell: ({ row }) => (
+        <span className="inline-flex items-center gap-1.5 font-medium text-green-700 group-hover:underline">
+          <FolderOpen className="h-4 w-4 text-green-600" />
+          {row.original.name}
+          <ChevronRight className="h-4 w-4 text-green-600" />
+        </span>
+      ),
+    },
   ]
 
   const filtered = categories.filter((c) =>
@@ -149,13 +161,17 @@ export function FlowCategoriesPage() {
         onDelete={(category) => setDeleteTarget(category)}
         actionButtons={(category) => (
           <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 p-0"
-            onClick={() => navigate(`/settings/demorobot/${category.id}/flows`)}
-            title="Open flows"
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5 border-green-300 text-green-700 hover:bg-green-50 hover:text-green-800"
+            onClick={(e) => {
+              e.stopPropagation()
+              navigate(`/settings/demorobot/${category.id}/flows`)
+            }}
+            title="Open the flows inside this category"
           >
-            <ArrowRight className="h-4 w-4 text-gray-500" />
+            <FolderOpen className="h-4 w-4" />
+            Open flows
           </Button>
         )}
       />
