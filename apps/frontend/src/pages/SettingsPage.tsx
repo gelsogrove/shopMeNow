@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Save, Trash2, Loader2, Power, Sparkles } from "lucide-react"
+import { Save, Trash2, Loader2, Power } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { ChatWidget } from "@/components/ChatWidget"
 import { IMG_BASE_URL } from "@/config"
@@ -63,7 +63,7 @@ type SectionKey = "ai-personality" | "business" | "whatsapp" | "widget" | "widge
 // platform-wide concerns (Business Config, WhatsApp, Widget, Human Support,
 // Security) or contain the Custom Chatbot ID field itself (AI Personality).
 const ALL_SECTIONS: SettingsSection[] = [
-  { key: "business", label: "Business Config", description: "Company info and preferences" },
+  { key: "business", label: "Preferences", description: "Company info and preferences" },
   { key: "ai-personality", label: "AI Personality", description: "Bot identity, messages and rules" },
   { key: "whatsapp", label: "WhatsApp Channel", description: "WhatsApp Business API settings" },
   { key: "widget", label: "Website Widget", description: "Chat widget for your website" },
@@ -119,12 +119,13 @@ const SYSTEM_PROMPT_SECTION: SettingsSection = {
 
 function getVisibleSections(isCustomChatbot: boolean): SettingsSection[] {
   if (!isCustomChatbot) return ALL_SECTIONS
-  return [
-    ...ALL_SECTIONS.filter((s) => !HIDDEN_FOR_CUSTOM_CHATBOT.includes(s.key as SectionKey)),
-    DEMOROBOT_SECTION,
-    FAQS_SECTION,
-    SYSTEM_PROMPT_SECTION,
-  ]
+  // Requested order: Business Config -> Main Prompt -> Manage Flows -> FAQs
+  // -> everything else (WhatsApp/Human Support/Calendar/Security etc).
+  const business = ALL_SECTIONS.find((s) => s.key === "business")!
+  const rest = ALL_SECTIONS.filter(
+    (s) => s.key !== "business" && !HIDDEN_FOR_CUSTOM_CHATBOT.includes(s.key as SectionKey),
+  )
+  return [business, SYSTEM_PROMPT_SECTION, DEMOROBOT_SECTION, FAQS_SECTION, ...rest]
 }
 
 // Default help content for each section
@@ -532,31 +533,6 @@ export function SettingsPage() {
       return { ...prev, [field]: "" }
     })
   }, []) // No dependency on errors — functional update reads latest state
-
-  // Handle Debug Mode toggle - immediate save (like workspace selection)
-  const handleToggleDebugMode = useCallback(async (checked: boolean) => {
-    if (!currentWorkspace?.id) return
-
-    try {
-      // Update immediately
-      const updatedWorkspace = await updateWorkspace(currentWorkspace.id, {
-        debugMode: checked,
-      })
-
-      // Update context
-      setCurrentWorkspace(updatedWorkspace)
-
-      // Update local form
-      setFormData((prev) => ({ ...prev, debugMode: checked }))
-
-      toast.success(checked ? "Debug mode enabled" : "Debug mode disabled")
-    } catch (error) {
-      console.error("Error updating debug mode:", error)
-      toast.error("Failed to update debug mode")
-      // Revert on error
-      setFormData((prev) => ({ ...prev, debugMode: !checked }))
-    }
-  }, [currentWorkspace?.id, setCurrentWorkspace])
 
   // Handle field focus for help panel
   const handleFieldFocus = useCallback((fieldKey: string) => {
@@ -1030,37 +1006,12 @@ export function SettingsPage() {
                 currentSection={activeSection}
                 onSectionChange={handleSectionChange}
               />
-              {isCustomChatbot && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-violet-200 bg-violet-50 text-xs font-medium text-violet-700">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Custom Chatbot — chatbot behaviour is managed in settings.json
-                </span>
-              )}
             </div>
           </div>
 
-          {/* Right side: Channel Status + Debug Mode + Save */}
+          {/* Right side: Channel Status + Save */}
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-4">
-              {/* Debug Mode Toggle */}
-              {canEdit && (
-                <div
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${formData.debugMode
-                      ? "bg-amber-50 border-amber-200"
-                      : "bg-gray-100 border-gray-200"
-                    }`}
-                >
-                  <span className={`text-sm font-medium ${formData.debugMode ? "text-amber-700" : "text-gray-500"}`}>
-                    Debug
-                  </span>
-                  <Switch
-                    checked={formData.debugMode}
-                    onCheckedChange={handleToggleDebugMode}
-                    className="ml-1"
-                  />
-                </div>
-              )}
-
               {/* Channel Status Toggle */}
               {canEdit && (
                 <div

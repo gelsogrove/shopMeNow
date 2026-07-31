@@ -4,9 +4,9 @@ import {
   isPlausibleSerialNumber,
   normalizeSerialNumber,
   selectBestFlow,
-} from '../../../application/demorobot/flow-retrieval.service'
-import { RetrievableFlow } from '../../../application/demorobot/flow-retrieval.types'
-import { matchSerialNumberToModel } from '../../../application/demorobot/robot-model-lookup.service'
+} from '../../../application/flow-builder/flow-retrieval.service'
+import { RetrievableFlow } from '../../../application/flow-builder/flow-retrieval.types'
+import { matchSerialNumberToModel } from '../../../application/flow-builder/robot-model-lookup.service'
 
 // Real serial numbers confirmed by the client: 19 chars, HKX prefix for
 // 2025 models, HKA for 2026 models.

@@ -74,6 +74,7 @@ export class WorkspaceController {
         adminEmail: workspace.adminEmail, // Explicitly include adminEmail
         language: workspace.language,
         defaultLanguage: workspace.defaultLanguage ?? "it", // 🌍 ISO-2 default language for customers
+        enabledLanguages: workspace.enabledLanguages ?? [],
         currency: workspace.currency,
         messageLimit: workspace.messageLimit,
         blocklist: workspace.blocklist,
@@ -193,6 +194,7 @@ export class WorkspaceController {
           adminEmail: workspace.adminEmail, // Explicitly include adminEmail
           language: workspace.language,
           defaultLanguage: workspace.defaultLanguage ?? "it", // 🌍 ISO-2 default language for customers
+        enabledLanguages: workspace.enabledLanguages ?? [],
           currency: workspace.currency,
           messageLimit: workspace.messageLimit,
           blocklist: workspace.blocklist,
@@ -471,6 +473,7 @@ export class WorkspaceController {
         adminEmail: workspace.adminEmail,
         language: workspace.language,
         defaultLanguage: workspace.defaultLanguage ?? "it",
+        enabledLanguages: workspace.enabledLanguages ?? [],
         currency: workspace.currency,
         messageLimit: workspace.messageLimit,
         blocklist: workspace.blocklist,
@@ -665,6 +668,7 @@ export class WorkspaceController {
         adminEmail: workspace.adminEmail,
         language: workspace.language,
         defaultLanguage: workspace.defaultLanguage ?? "it", // 🌍 ISO-2 default language for customers
+        enabledLanguages: workspace.enabledLanguages ?? [],
         currency: workspace.currency,
         messageLimit: workspace.messageLimit,
         blocklist: workspace.blocklist,

@@ -40,6 +40,7 @@ interface BusinessConfigSectionProps {
     needRegistration: boolean
     customChatbotId: string
     welcomeMessage: string
+    enabledLanguages: string[]
   }
   errors: Record<string, string>
   canEdit: boolean
@@ -56,6 +57,19 @@ const BUSINESS_TYPES = [
   { value: "realestate", label: "Real Estate", desc: "Real estate services" },
   { value: "technology", label: "Technology & IT", desc: "Tech services" },
   { value: "other", label: "Other", desc: "Other business type" },
+]
+
+// Documentation only (see Workspace.enabledLanguages in schema.prisma) — the
+// chatbot detects language from the customer's message regardless of this
+// list; it exists so the team can track which languages a client requested.
+const AVAILABLE_LANGUAGES = [
+  { code: "en", label: "🇬🇧 English" },
+  { code: "it", label: "🇮🇹 Italian" },
+  { code: "fr", label: "🇫🇷 French" },
+  { code: "de", label: "🇩🇪 German" },
+  { code: "da", label: "🇩🇰 Danish" },
+  { code: "es", label: "🇪🇸 Spanish" },
+  { code: "nl", label: "🇳🇱 Dutch" },
 ]
 
 export function BusinessConfigSection({
@@ -164,22 +178,6 @@ export function BusinessConfigSection({
               <p className="text-xs text-gray-500">Used when customers ask "Where are you located?"</p>
             </div>
 
-            {/* Registration Page URL */}
-            <div className="space-y-2 md:col-span-2" onFocus={() => onFieldFocus?.("registrationPage")}>
-              <Label htmlFor="registrationPage">Customer Registration Page</Label>
-              <Input
-                id="registrationPage"
-                type="url"
-                value={formData.registrationPage || ""}
-                onChange={(e) => onFieldChange("registrationPage", e.target.value)}
-                placeholder="https://echatbot.ai/registration/{workspaceId}"
-                disabled={!canEdit}
-              />
-              <p className="text-xs text-gray-500">
-                Custom URL for customer registration. Leave empty to use the default eChatbot registration page.
-              </p>
-            </div>
-
             {/* Need Registration Toggle */}
             <div className="space-y-2 md:col-span-2" onFocus={() => onFieldFocus?.("needRegistration")}>
               <div className="flex items-center justify-between">
@@ -204,6 +202,24 @@ export function BusinessConfigSection({
                 />
               </div>
             </div>
+
+            {/* Registration Page URL — only relevant when needRegistration is on */}
+            {formData.needRegistration && (
+            <div className="space-y-2 md:col-span-2" onFocus={() => onFieldFocus?.("registrationPage")}>
+              <Label htmlFor="registrationPage">Customer Registration Page</Label>
+              <Input
+                id="registrationPage"
+                type="url"
+                value={formData.registrationPage || ""}
+                onChange={(e) => onFieldChange("registrationPage", e.target.value)}
+                placeholder="https://echatbot.ai/registration/{workspaceId}"
+                disabled={!canEdit}
+              />
+              <p className="text-xs text-gray-500">
+                Custom URL for customer registration. Leave empty to use the default eChatbot registration page.
+              </p>
+            </div>
+            )}
 
             {/* Require Manual Approval — only visible when needRegistration is true */}
             {formData.needRegistration && (
@@ -267,6 +283,7 @@ export function BusinessConfigSection({
                   <SelectItem value="pt">🇵🇹 Portuguese</SelectItem>
                   <SelectItem value="fr">🇫🇷 French</SelectItem>
                   <SelectItem value="de">🇩🇪 German</SelectItem>
+                  <SelectItem value="da">🇩🇰 Danish</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-gray-500">
@@ -274,7 +291,11 @@ export function BusinessConfigSection({
               </p>
             </div>
 
-            {/* Channel Mode — immutable after creation (user must delete + recreate workspace to change) */}
+            {/* Channel Mode — immutable after creation (blocked server-side too,
+                see workspace.service.ts CHANNEL_MODE_IMMUTABLE). The dropdown
+                is openable so the three types are visible/browsable, but
+                selecting one is a no-op — it never reaches formData, so
+                Save can't submit a change the backend would reject anyway. */}
             <div className="space-y-2 md:col-span-2">
               <Label className="text-sm font-medium text-gray-900">
                 Channel Mode
@@ -282,19 +303,18 @@ export function BusinessConfigSection({
               <Select
                 value={formData.channelMode}
                 onValueChange={() => {}}
-                disabled={true}
               >
-                <SelectTrigger className="opacity-70">
+                <SelectTrigger>
                   <SelectValue placeholder="Select channel mode" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ECOMMERCE">E-commerce — sell products &amp; services</SelectItem>
                   <SelectItem value="INFORMATIONAL">Informational — FAQ &amp; customer support</SelectItem>
-                  <SelectItem value="FLOW">Custom — custom chatbot (widget, WhatsApp, AI provider)</SelectItem>
+                  <SelectItem value="FLOW">Flow — custom chatbot (widget, WhatsApp, AI provider)</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-amber-600">
-                Channel mode is set at creation and cannot be changed. To switch mode, delete this workspace and create a new one.
+                Channel mode is set at creation and cannot be changed (enforced server-side too). To switch mode, delete this workspace and create a new one.
               </p>
             </div>
 

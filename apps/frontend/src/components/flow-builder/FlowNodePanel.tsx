@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, Trash2, Paperclip, ArrowRight } from "lucide-react"
 import type { FlowQuestionNodeData } from "./FlowQuestionNode"
-import type { Asset } from "@/services/demoRobotApi"
+import type { Asset } from "@/services/flowBuilderApi"
 
 export interface EditableAnswer {
   edgeId: string

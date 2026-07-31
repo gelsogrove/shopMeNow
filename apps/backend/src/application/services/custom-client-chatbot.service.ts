@@ -8,8 +8,8 @@ import { WhatsAppDirectSendService } from "../../services/whatsapp-direct-send.s
 import { sendEscalationEmail } from "./escalation-email.service"
 import { googleCalendarService } from "../../services/google-calendar.service"
 import { zoomService } from "../../services/zoom.service"
-import { runRetrieval } from "../demorobot/flow-retrieval-orchestrator.service"
-import { OpenRouterEmbeddingProvider } from "../demorobot/embedding-provider"
+import { runRetrieval } from "../flow-builder/flow-retrieval-orchestrator.service"
+import { OpenRouterEmbeddingProvider } from "../flow-builder/embedding-provider"
 import { PromptProcessorService } from "../../services/prompt-processor.service"
 import { PromptVariables, VARIABLE_DEFAULTS } from "../../types/prompt-variables.types"
 
@@ -463,7 +463,7 @@ export class CustomClientChatbotService {
    * Real retrieve_flow side-effect injected into custom-demorobot: two-step
    * retrieval (deterministic serial->model lookup, then semantic search
    * scoped to that model) via the compiler/retrieval services in
-   * apps/backend/src/application/demorobot. Degrades to no_matching_flow on
+   * apps/backend/src/application/flow-builder. Degrades to no_matching_flow on
    * any embedding/DB failure — never blocks or throws into the turn.
    */
   private async retrieveFlow(p: RetrieveFlowParams): Promise<RetrieveFlowResult> {

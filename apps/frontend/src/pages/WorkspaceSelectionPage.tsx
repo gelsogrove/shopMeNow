@@ -278,7 +278,6 @@ export function WorkspaceSelectionPage() {
   const [selectedWorkspaceForLogo, setSelectedWorkspaceForLogo] = useState<string | null>(null)
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
-  const [debugSavingId, setDebugSavingId] = useState<string | null>(null)
   const [activeSavingId, setActiveSavingId] = useState<string | null>(null)
 
   const activeChecklistItem =
@@ -1018,31 +1017,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
     }
   }
 
-  const handleToggleDebugMode = async (
-    id: string,
-    currentValue: boolean,
-    e: React.MouseEvent
-  ) => {
-    e.stopPropagation()
-    setDebugSavingId(id)
-    try {
-      const updatedWorkspace = await updateWorkspace(id, {
-        debugMode: !currentValue,
-      })
-      const updatedWorkspaces = workspaces.map((w) =>
-        w.id === id ? updatedWorkspace : w
-      )
-      setWorkspaces(updatedWorkspaces)
-    } catch (error) {
-      logger.error("Error updating debug mode:", error)
-      toast.error("Failed to update debug mode")
-    } finally {
-      setDebugSavingId(null)
-    }
-  }
-
-
-
   const handleToggleStatus = async (
     id: string,
     currentValue: boolean,
@@ -1527,7 +1501,6 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                 const checklist = checklists[workspace.id]
                 const isChecklistLoading = checklistLoading[workspace.id]
                 const channelActive = workspace.channelStatus ?? true
-                const debugModeEnabled = Boolean(workspace.debugMode)
                 return (
                   <div
                     key={workspace.id}
@@ -1727,34 +1700,9 @@ const { isSuperAdmin, isLoading: isRoleLoading, role } = useWorkspaceRole(firstW
                         <div />
                       )}
                       
-                      {/* Debug + Active Toggles */}
+                      {/* Active Toggle */}
                       {isSuperAdmin && (
                         <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={(e) => handleToggleDebugMode(workspace.id, debugModeEnabled, e)}
-                            disabled={isRoleLoading || debugSavingId === workspace.id}
-                            aria-pressed={debugModeEnabled}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all ${
-                              debugModeEnabled
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                : "border-gray-200 bg-gray-100 text-gray-600"
-                            } disabled:opacity-50`}
-                          >
-                            <span>Debug</span>
-                            <span
-                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                                debugModeEnabled ? "bg-emerald-500" : "bg-gray-300"
-                              }`}
-                            >
-                              <span
-                                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-                                  debugModeEnabled ? "translate-x-4" : "translate-x-1"
-                                }`}
-                              />
-                            </span>
-                          </button>
-
                           <button
                             type="button"
                             onClick={(e) => handleToggleStatus(workspace.id, channelActive, e)}

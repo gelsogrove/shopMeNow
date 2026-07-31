@@ -25,6 +25,8 @@ model Workspace {
   deletedAt                 DateTime?
   currency                  String    @default("EUR")
   defaultLanguage           String    @default("en") // Default language for workspace (ISO 639-1: "en", "it", "es", "pt", "de", "fr")
+  enabledLanguages          String[]  @default([]) // 🆕 Documentation only: languages the client has requested support for. The chatbot detects language from the customer's message regardless — this list does NOT restrict/filter runtime behaviour.
+  termsAndConditions        String?   @db.Text // 🆕 Custom Terms & Conditions text, for future use in widget/WhatsApp opt-in screens. Not yet wired into the runtime — settings container only.
   channelStatus             Boolean   @default(true) // true = channel active (queue enabled), false = channel disabled
   description               String?
   messageLimit              Int       @default(50)
@@ -73,6 +75,7 @@ model Workspace {
   operatorWhatsappNumber            String? // WhatsApp number for human support (if method='whatsapp')
   toneOfVoice                       String?     @default("friendly") // 'formal' | 'friendly' | 'professional' | 'casual'
   translateOperatorMessages         Boolean     @default(true) // Auto-translate operator messages to customer's language
+  translateCustomerMessages         Boolean     @default(true) // 🆕 Auto-translate customer messages to operator's language (reverse direction)
   
   // 🆕 WhatsApp Provider Configuration (Multi-provider support)
   whatsappProvider      String  @default("wasender") // "meta" | "ultramsg" | "wasender" - selects which WhatsApp provider to use

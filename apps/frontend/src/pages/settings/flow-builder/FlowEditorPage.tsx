@@ -20,9 +20,9 @@ import { Input } from "@/components/ui/input"
 import { ArrowLeft, Save, Loader2, AlertCircle } from "lucide-react"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
-import { flowApi, assetApi, Flow, FlowNode, FlowEdge as ApiFlowEdge, Asset, ValidationError } from "@/services/demoRobotApi"
-import { FlowQuestionNode, type FlowQuestionNodeData } from "@/components/demorobot/FlowQuestionNode"
-import { FlowNodePanel } from "@/components/demorobot/FlowNodePanel"
+import { flowApi, assetApi, Flow, FlowNode, FlowEdge as ApiFlowEdge, Asset, ValidationError } from "@/services/flowBuilderApi"
+import { FlowQuestionNode, type FlowQuestionNodeData } from "@/components/flow-builder/FlowQuestionNode"
+import { FlowNodePanel } from "@/components/flow-builder/FlowNodePanel"
 
 const nodeTypes = { question: FlowQuestionNode }
 

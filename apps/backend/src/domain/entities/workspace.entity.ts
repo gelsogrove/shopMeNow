@@ -35,6 +35,7 @@ export interface WorkspaceProps {
   webhookTimeout?: number | null
   language: string
   defaultLanguage?: string | null // 🌍 ISO-2 language code for customer-facing default language
+  enabledLanguages?: string[] // Documentation only — does not restrict runtime language detection
   createdAt: Date
   updatedAt: Date
   deletedAt?: Date | null
@@ -268,6 +269,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get defaultLanguage(): string | null | undefined {
     return this.props.defaultLanguage
+  }
+
+  get enabledLanguages(): string[] | undefined {
+    return this.props.enabledLanguages
   }
 
   get currency(): string {

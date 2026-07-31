@@ -79,9 +79,9 @@ import { ChannelTypesPage } from "./pages/settings/ChannelTypesPage"
 import { LanguagesPage } from "./pages/settings/LanguagesPage"
 
 import { ProductsPage as SettingsProductsPage } from "./pages/settings/ProductsPage"
-import { RobotModelsPage as DemoRobotModelsPage } from "./pages/settings/demorobot/RobotModelsPage"
-import { FlowsPage as DemoRobotFlowsPage } from "./pages/settings/demorobot/FlowsPage"
-import { FlowEditorPage as DemoRobotFlowEditorPage } from "./pages/settings/demorobot/FlowEditorPage"
+import { RobotModelsPage as DemoRobotModelsPage } from "./pages/settings/flow-builder/RobotModelsPage"
+import { FlowsPage as DemoRobotFlowsPage } from "./pages/settings/flow-builder/FlowsPage"
+import { FlowEditorPage as DemoRobotFlowEditorPage } from "./pages/settings/flow-builder/FlowEditorPage"
 
 import { Suspense, lazy, useEffect } from "react"
 import { ChatWidget } from "@/components/ChatWidget"

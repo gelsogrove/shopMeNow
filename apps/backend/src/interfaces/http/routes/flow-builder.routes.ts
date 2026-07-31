@@ -9,7 +9,7 @@
 
 import { Router } from 'express'
 import multer from 'multer'
-import { DemoRobotController } from '../controllers/demorobot.controller'
+import { FlowBuilderController } from '../controllers/flow-builder.controller'
 import { authMiddleware } from '../middlewares/auth.middleware'
 import { sessionValidationMiddleware } from '../middlewares/session-validation.middleware'
 import { workspaceValidationMiddleware } from '../middlewares/workspace-validation.middleware'
@@ -19,9 +19,9 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024, files: 1 },
 })
 
-export function createDemoRobotRoutes(): Router {
+export function createFlowBuilderRoutes(): Router {
   const router = Router()
-  const controller = new DemoRobotController()
+  const controller = new FlowBuilderController()
 
   const middlewares = [authMiddleware, sessionValidationMiddleware, workspaceValidationMiddleware]
 

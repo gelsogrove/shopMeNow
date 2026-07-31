@@ -5,16 +5,16 @@ import {
   deleteRobotModel,
   listRobotModels,
   updateRobotModel,
-} from '../../../application/demorobot/robot-model.service'
+} from '../../../application/flow-builder/robot-model.service'
 import {
   createFlow,
   deleteFlow,
   getFlowGraph,
   listFlows,
   saveFlowGraph,
-} from '../../../application/demorobot/flow-graph.service'
-import { createAssetFromFile, createAssetLink, deleteAsset, listAssets } from '../../../application/demorobot/asset.service'
-import { OpenRouterEmbeddingProvider } from '../../../application/demorobot/embedding-provider'
+} from '../../../application/flow-builder/flow-graph.service'
+import { createAssetFromFile, createAssetLink, deleteAsset, listAssets } from '../../../application/flow-builder/asset.service'
+import { OpenRouterEmbeddingProvider } from '../../../application/flow-builder/embedding-provider'
 
 // 3-layer security (authMiddleware -> sessionValidationMiddleware ->
 // validateWorkspaceId) is applied at the route level — every handler here
@@ -22,7 +22,7 @@ import { OpenRouterEmbeddingProvider } from '../../../application/demorobot/embe
 
 const embeddingProvider = new OpenRouterEmbeddingProvider(process.env.OPENROUTER_API_KEY || '')
 
-export class DemoRobotController {
+export class FlowBuilderController {
   // ── RobotModel ──────────────────────────────────────────────────────────
 
   async listRobotModels(req: Request, res: Response): Promise<void> {
@@ -31,7 +31,7 @@ export class DemoRobotController {
       const robotModels = await listRobotModels(workspaceId)
       res.json({ robotModels })
     } catch (error) {
-      logger.error('[demorobot] listRobotModels error:', error)
+      logger.error('[flow-builder] listRobotModels error:', error)
       res.status(500).json({ error: 'Failed to list robot models' })
     }
   }
@@ -47,7 +47,7 @@ export class DemoRobotController {
       const model = await createRobotModel(workspaceId, { name, slug, manufacturer, description, lookupRules })
       res.status(201).json(model)
     } catch (error) {
-      logger.error('[demorobot] createRobotModel error:', error)
+      logger.error('[flow-builder] createRobotModel error:', error)
       res.status(500).json({ error: 'Failed to create robot model' })
     }
   }
@@ -63,7 +63,7 @@ export class DemoRobotController {
       }
       res.json(updated)
     } catch (error) {
-      logger.error('[demorobot] updateRobotModel error:', error)
+      logger.error('[flow-builder] updateRobotModel error:', error)
       res.status(500).json({ error: 'Failed to update robot model' })
     }
   }
@@ -79,7 +79,7 @@ export class DemoRobotController {
       }
       res.status(204).send()
     } catch (error) {
-      logger.error('[demorobot] deleteRobotModel error:', error)
+      logger.error('[flow-builder] deleteRobotModel error:', error)
       res.status(500).json({ error: 'Failed to delete robot model' })
     }
   }
@@ -93,7 +93,7 @@ export class DemoRobotController {
       const flows = await listFlows(workspaceId, robotModelId)
       res.json({ flows })
     } catch (error) {
-      logger.error('[demorobot] listFlows error:', error)
+      logger.error('[flow-builder] listFlows error:', error)
       res.status(500).json({ error: 'Failed to list flows' })
     }
   }
@@ -109,7 +109,7 @@ export class DemoRobotController {
       const flow = await createFlow(workspaceId, robotModelId ?? null, title, description)
       res.status(201).json(flow)
     } catch (error) {
-      logger.error('[demorobot] createFlow error:', error)
+      logger.error('[flow-builder] createFlow error:', error)
       res.status(500).json({ error: 'Failed to create flow' })
     }
   }
@@ -125,7 +125,7 @@ export class DemoRobotController {
       }
       res.status(204).send()
     } catch (error) {
-      logger.error('[demorobot] deleteFlow error:', error)
+      logger.error('[flow-builder] deleteFlow error:', error)
       res.status(500).json({ error: 'Failed to delete flow' })
     }
   }
@@ -141,7 +141,7 @@ export class DemoRobotController {
       }
       res.json(graph)
     } catch (error) {
-      logger.error('[demorobot] getFlowGraph error:', error)
+      logger.error('[flow-builder] getFlowGraph error:', error)
       res.status(500).json({ error: 'Failed to load flow graph' })
     }
   }
@@ -157,7 +157,7 @@ export class DemoRobotController {
       }
       res.json(result)
     } catch (error) {
-      logger.error('[demorobot] saveFlowGraph error:', error)
+      logger.error('[flow-builder] saveFlowGraph error:', error)
       res.status(500).json({ error: 'Failed to save flow graph' })
     }
   }
@@ -175,7 +175,7 @@ export class DemoRobotController {
       }
       res.json({ assets })
     } catch (error) {
-      logger.error('[demorobot] listAssets error:', error)
+      logger.error('[flow-builder] listAssets error:', error)
       res.status(500).json({ error: 'Failed to list assets' })
     }
   }
@@ -208,7 +208,7 @@ export class DemoRobotController {
       }
       res.status(201).json(asset)
     } catch (error) {
-      logger.error('[demorobot] createAssetFromFile error:', error)
+      logger.error('[flow-builder] createAssetFromFile error:', error)
       res.status(500).json({ error: 'Failed to upload asset' })
     }
   }
@@ -229,7 +229,7 @@ export class DemoRobotController {
       }
       res.status(201).json(asset)
     } catch (error) {
-      logger.error('[demorobot] createAssetLink error:', error)
+      logger.error('[flow-builder] createAssetLink error:', error)
       res.status(500).json({ error: 'Failed to create asset link' })
     }
   }
@@ -245,7 +245,7 @@ export class DemoRobotController {
       }
       res.status(204).send()
     } catch (error) {
-      logger.error('[demorobot] deleteAsset error:', error)
+      logger.error('[flow-builder] deleteAsset error:', error)
       res.status(500).json({ error: 'Failed to delete asset' })
     }
   }

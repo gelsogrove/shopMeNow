@@ -116,7 +116,18 @@ export class PromptProcessorService {
       // Workspace/Company variables
       .replace(/\{\{companyName\}\}/g, vars.companyName || VARIABLE_DEFAULTS.companyName || 'Shop')
       .replace(/\{\{chatbotName\}\}/g, vars.chatbotName || VARIABLE_DEFAULTS.chatbotName || 'Assistente')
-      .replace(/\{\{welcomeMessage\}\}/g, vars.welcomeMessage || '')
+      // welcomeMessage is inserted as a raw text block AFTER this same pass,
+      // so {{companyName}}/{{chatbotName}} written INSIDE it (e.g. "Hi, I'm
+      // {{chatbotName}}") would never be resolved otherwise — pre-resolve
+      // just these two here before insertion. Defensively coerced to string:
+      // some callers (e.g. legacy multi-language welcomeMessage shapes) can
+      // pass a non-string value straight through from the DB field.
+      .replace(
+        /\{\{welcomeMessage\}\}/g,
+        (typeof vars.welcomeMessage === 'string' ? vars.welcomeMessage : '')
+          .replace(/\{\{companyName\}\}/g, vars.companyName || VARIABLE_DEFAULTS.companyName || 'Shop')
+          .replace(/\{\{chatbotName\}\}/g, vars.chatbotName || VARIABLE_DEFAULTS.chatbotName || 'Assistente'),
+      )
       .replace(/\{\{botIdentityResponse\}\}/g, vars.botIdentityResponse || '')
       .replace(/\{\{BOT_IDENTITY\}\}/g, v.BOT_IDENTITY || vars.botIdentityResponse || 'Sono l\'assistente virtuale.')
       .replace(/\{\{customAiRules\}\}/g, vars.customAiRules || '')

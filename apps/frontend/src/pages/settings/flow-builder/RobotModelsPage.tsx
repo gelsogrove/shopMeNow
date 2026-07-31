@@ -18,7 +18,7 @@ import { Bot, Plus } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
-import { robotModelApi, RobotModel } from "@/services/demoRobotApi"
+import { robotModelApi, RobotModel } from "@/services/flowBuilderApi"
 
 function slugify(name: string): string {
   return name

@@ -73,6 +73,7 @@ export interface Workspace {
   customAiRules?: string // 🆕 Custom AI rules that override default behavior
   customChatbotId?: string // 🆕 Custom chatbot module for FLOW workspaces (e.g. "ecolaundry")
   customChatbotSystemPrompt?: string // Editable main/system prompt for the custom chatbot module
+  enabledLanguages?: string[] // Documentation only — does not restrict runtime language detection
   allowedExternalLinks?: string[] // 🆕 Security: allowed external domains
   logoUrl?: string // 🆕 Channel logo/icon
   widgetLogoUrl?: string // 🆕 Widget bubble logo/image

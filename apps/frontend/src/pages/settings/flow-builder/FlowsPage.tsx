@@ -17,7 +17,7 @@ import { GitBranch, Plus, ArrowLeft } from "lucide-react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
-import { flowApi, Flow } from "@/services/demoRobotApi"
+import { flowApi, Flow } from "@/services/flowBuilderApi"
 
 // robotModelId param is "generic" for the workspace-generic fallback flow
 // list (Flow.robotModelId: null, analisi.md §6), otherwise a real RobotModel id.

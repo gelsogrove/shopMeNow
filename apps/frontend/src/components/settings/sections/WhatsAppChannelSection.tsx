@@ -9,9 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Smartphone, Copy, AlertCircle, Sparkles, FileJson } from "lucide-react"
+import { Smartphone, Copy, AlertCircle } from "lucide-react"
 import { toast } from "@/lib/toast"
-import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { WasenderOnboarding } from "@/components/WasenderOnboarding"
 
 interface WhatsAppChannelSectionProps {
@@ -49,8 +48,6 @@ export function WhatsAppChannelSection({
   onFieldChange,
   onFieldFocus,
 }: WhatsAppChannelSectionProps) {
-  const { workspace: currentWorkspace } = useWorkspace()
-  const isCustomChatbot = Boolean(currentWorkspace?.customChatbotId)
   const currentProvider = formData.whatsappProvider || "meta"
   
   // Use only the webhookId from formData - no fallback to workspaceId
@@ -91,32 +88,6 @@ export function WhatsAppChannelSection({
         </p>
       </div>
 
-      {/* Custom chatbot information banner */}
-      {isCustomChatbot && (
-        <div className="rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-purple-50 p-5">
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-violet-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-semibold text-violet-900 flex items-center gap-2">
-                Custom Chatbot Active
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-200 text-violet-800">
-                  {currentWorkspace?.customChatbotId}
-                </span>
-              </h3>
-              <p className="mt-1 text-sm text-violet-700">
-                This workspace runs a custom chatbot module. All chatbot behaviour, languages, escalation rules,
-                pricing, FAQs and notifications are configured in <code className="font-mono text-xs bg-violet-100 px-1.5 py-0.5 rounded">settings.json</code> inside the module — not through this interface.
-              </p>
-              <div className="mt-3 flex items-center gap-2 text-xs text-violet-600">
-                <FileJson className="h-3.5 w-3.5" />
-                <span>Only the WhatsApp channel credentials below need to be configured here.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Enable WhatsApp */}
       <Card>

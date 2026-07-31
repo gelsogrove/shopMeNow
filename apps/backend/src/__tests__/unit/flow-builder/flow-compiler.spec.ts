@@ -1,5 +1,5 @@
-import { compileFlow } from '../../../application/demorobot/flow-compiler.service'
-import { CompileFlowInput } from '../../../application/demorobot/flow-compiler.types'
+import { compileFlow } from '../../../application/flow-builder/flow-compiler.service'
+import { CompileFlowInput } from '../../../application/flow-builder/flow-compiler.types'
 
 // Fixture: robot-acceso? -> wifi-on? -> escalate (analisi.md §6-style flow).
 // WHAT: three-node linear diagnostic ending in escalation.
