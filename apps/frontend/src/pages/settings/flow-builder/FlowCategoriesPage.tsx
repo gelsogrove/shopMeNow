@@ -124,7 +124,7 @@ export function FlowCategoriesPage() {
       <SettingsPageHeader currentSection="demorobot" />
 
       <PageHeader
-        title="Categories"
+        title="Flows Categories"
         titleIcon={<Bot className="h-6 w-6" />}
         description="Group this workspace's flows into categories."
         searchValue={searchValue}

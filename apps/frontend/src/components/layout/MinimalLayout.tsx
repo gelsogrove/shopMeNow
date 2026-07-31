@@ -17,7 +17,7 @@ import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { useSupportUnreadCount } from "@/hooks/useSupportUnreadCount"
 import { storage } from "@/lib/storage"
-import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, Megaphone, Settings, ListTodo, Mail } from "lucide-react"
+import { ArrowLeft, LogOut, User, CreditCard, Crown, Bot, BarChart3, MessageSquare, History, Users, HelpCircle, Package, Briefcase, Tag, Truck, UserCog, ShoppingCart, Settings, ListTodo, Mail } from "lucide-react"
 import { useEffect, useState } from "react"
 import { Outlet, useNavigate, useLocation } from "react-router-dom"
 import { WidgetLoader } from "@/components/WidgetLoader"
@@ -336,10 +336,7 @@ export function MinimalLayout() {
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="p-2 cursor-pointer" onClick={() => navigate("/campaigns")}>
-                        <Megaphone className="mr-2 h-4 w-4 text-rose-500" />
-                        <span>Campaigns</span>
-                      </DropdownMenuItem>
+                      {/* Campaigns temporarily hidden from menu (Andrea, 2026-07-31) — page/route still live */}
                       {workspace?.channelMode === 'ECOMMERCE' && isSuperAdmin && (
                         <DropdownMenuItem
                           className="p-2 cursor-pointer"

@@ -1,6 +1,6 @@
 /**
  * AIPersonalitySection - AI Personality & Configuration
- * Merged: chatbotName, botIdentityResponse, toneOfVoice, welcomeMessage, customAiRules, wipMessage, channelMode
+ * Merged: chatbotName, botIdentityResponse, toneOfVoice, welcomeMessage, customAiRules, channelMode
  */
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
@@ -51,7 +51,6 @@ interface AIPersonalitySectionProps {
     enableWelcomeMessage: boolean
     sessionResetTimeout: number
     customAiRules: string
-    wipMessage: string
     customChatbotId: string
     defaultLanguage: string
     enabledLanguages: string[]
@@ -383,7 +382,7 @@ export function AIPersonalitySection({
         )}
       </Card>
 
-      {/* Behavior Card — session timeout, maintenance message, override rules */}
+      {/* Behavior Card — override rules (F50: hidden in custom chatbot mode, see below) */}
       <Card>
         <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
           <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -392,37 +391,6 @@ export function AIPersonalitySection({
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-6 space-y-6">
-          {/* Maintenance Message */}
-          <div
-            className="space-y-2"
-            onFocus={() => onFieldFocus?.("maintenanceMessage")}
-            data-focus-key="maintenanceMessage"
-          >
-            <Label htmlFor="wipMessage">Maintenance</Label>
-            <div className="border rounded-md overflow-hidden">
-              <Editor
-                height="200px"
-                defaultLanguage="markdown"
-                theme="vs-light"
-                value={formData.wipMessage}
-                onChange={(value) => onFieldChange("wipMessage", value || "")}
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  lineNumbers: "on",
-                  wordWrap: "on",
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  folding: true,
-                  renderLineHighlight: "all",
-                  tabSize: 2,
-                  padding: { top: 8, bottom: 8 },
-                  readOnly: !canEdit,
-                }}
-              />
-            </div>
-          </div>
-
           {/* F50: Override Rules — hidden in custom chatbot mode (rephrase LLM rules
               live in the module's own prompts/rephrase.txt and its rephrase config). */}
           {!hideModuleOwnedFields && (

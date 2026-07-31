@@ -63,6 +63,7 @@ interface DataTableProps<TData> {
   isLoading?: boolean
   getRowClassName?: (item: TData) => string
   disablePagination?: boolean // New prop to disable pagination
+  onRowClick?: (item: TData) => void
 }
 
 export function DataTable<TData>({

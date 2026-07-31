@@ -5,6 +5,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
@@ -14,7 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Store } from "lucide-react"
+import { Store, Trash2, Loader2, AlertTriangle, Power } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SUPPORTED_CURRENCIES } from "@/utils/format"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -27,6 +28,7 @@ interface BusinessConfigSectionProps {
     businessType: string
     currency: string
     channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
+    channelStatus: boolean
     enableWhatsapp: boolean
     enableWidget: boolean
     address: string
@@ -36,8 +38,11 @@ interface BusinessConfigSectionProps {
   }
   errors: Record<string, string>
   canEdit: boolean
+  isSuperAdmin?: boolean
+  isDeleting?: boolean
   onFieldChange: (field: string, value: any) => void
   onFieldFocus?: (fieldKey: string) => void
+  onDeleteWorkspace?: () => void
 }
 
 const BUSINESS_TYPES = [
@@ -68,8 +73,11 @@ export function BusinessConfigSection({
   formData,
   errors,
   canEdit,
+  isSuperAdmin,
+  isDeleting,
   onFieldChange,
   onFieldFocus,
+  onDeleteWorkspace,
 }: BusinessConfigSectionProps) {
   return (
     <div className="space-y-6">
@@ -89,22 +97,6 @@ export function BusinessConfigSection({
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Channel Name */}
-            <div className="space-y-2" onFocus={() => onFieldFocus?.("businessName")}>
-              <Label htmlFor="name">
-                Channel Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => onFieldChange("name", e.target.value)}
-                placeholder="e.g. My Restaurant, Tech Support"
-                disabled={!canEdit}
-                className={cn(errors.name && "border-red-500")}
-              />
-              {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
-            </div>
-
             {/* Business Type */}
             <div className="space-y-2" onFocus={() => onFieldFocus?.("businessType")}>
               <Label htmlFor="businessType">Business Type</Label>
@@ -176,11 +168,46 @@ export function BusinessConfigSection({
 
       {/* Channel — currency + immutable channel mode */}
       <Card>
-        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-white">
+        <CardHeader className="border-b bg-gradient-to-r from-purple-50 to-white flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base font-semibold">Channel</CardTitle>
+          {canEdit && (
+            <div
+              data-focus-key="channelStatus"
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${formData.channelStatus
+                  ? "bg-green-50 border-green-200"
+                  : "bg-gray-100 border-gray-200"
+                }`}
+            >
+              <Power className={`h-4 w-4 ${formData.channelStatus ? "text-green-600" : "text-gray-400"}`} />
+              <span className={`text-sm font-medium ${formData.channelStatus ? "text-green-700" : "text-gray-500"}`}>
+                {formData.channelStatus ? "Active" : "Inactive"}
+              </span>
+              <Switch
+                checked={formData.channelStatus}
+                onCheckedChange={(checked) => onFieldChange("channelStatus", checked)}
+                className="ml-1"
+              />
+            </div>
+          )}
         </CardHeader>
         <CardContent className="pt-6">
           <div className="grid gap-6 md:grid-cols-2">
+            {/* Channel Name */}
+            <div className="space-y-2" onFocus={() => onFieldFocus?.("businessName")}>
+              <Label htmlFor="name">
+                Channel Name <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => onFieldChange("name", e.target.value)}
+                placeholder="e.g. My Restaurant, Tech Support"
+                disabled={!canEdit}
+                className={cn(errors.name && "border-red-500")}
+              />
+              {errors.name && <p className="text-xs text-red-600">{errors.name}</p>}
+            </div>
+
             {/* Currency */}
             <div className="space-y-2">
               <Label htmlFor="currency">Currency</Label>
@@ -228,6 +255,44 @@ export function BusinessConfigSection({
           </div>
         </CardContent>
       </Card>
+
+      {/* Danger Zone - Delete Workspace (Super Admin only) */}
+      {isSuperAdmin && (
+        <div className="border-t pt-6">
+          <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-start gap-2 mb-3">
+              <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+              <div>
+                <p className="font-semibold text-sm text-red-900">Danger Zone</p>
+                <p className="text-xs text-red-700 mt-1">
+                  Delete this workspace and all data. Recoverable within 90 days.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                className="text-red-600 border-red-300 hover:bg-red-100 hover:text-red-700"
+                size="sm"
+                onClick={onDeleteWorkspace}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Workspace
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

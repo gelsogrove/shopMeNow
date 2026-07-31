@@ -76,6 +76,7 @@ export default function ProfilePage() {
     hasPassword?: boolean
     logo?: string
     twoFactorEnabled?: boolean
+    isDeveloperUser?: boolean
   }>({
     id: "",
     firstName: "",
@@ -90,6 +91,7 @@ export default function ProfilePage() {
     billingAddress: "",
     logo: "",
     twoFactorEnabled: false,
+    isDeveloperUser: false,
   })
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [passwordData, setPasswordData] = useState({
@@ -119,6 +121,7 @@ export default function ProfilePage() {
         hasPassword: (userData as any).hasPassword !== false, // Default to true unless explicitly false
         logo: (userData as any).logo || "",
         twoFactorEnabled: !!(userData as any).twoFactorEnabled,
+        isDeveloperUser: !!(userData as any).isDeveloperUser,
       })
     }
   }, [userData])
@@ -588,44 +591,46 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-        {/* Two-Factor Authentication */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-600">
-              <Shield className="h-5 w-5" />
-              {t('profile.2fa.title')}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              {t('profile.2fa.description')}
-            </p>
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={handleSetup2FA}
-                disabled={is2FALoading || user.twoFactorEnabled}
-                className="gap-2"
-              >
-                {is2FALoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {t('profile.2fa.generating')}
-                  </>
-                ) : user.twoFactorEnabled ? (
-                  t('profile.2fa.enabled')
-                ) : (
-                  t('profile.2fa.enable')
+        {/* Two-Factor Authentication - hidden for developer users (they skip 2FA) */}
+        {!user.isDeveloperUser && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-600">
+                <Shield className="h-5 w-5" />
+                {t('profile.2fa.title')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                {t('profile.2fa.description')}
+              </p>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleSetup2FA}
+                  disabled={is2FALoading || user.twoFactorEnabled}
+                  className="gap-2"
+                >
+                  {is2FALoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {t('profile.2fa.generating')}
+                    </>
+                  ) : user.twoFactorEnabled ? (
+                    t('profile.2fa.enabled')
+                  ) : (
+                    t('profile.2fa.enable')
+                  )}
+                </Button>
+                {user.twoFactorEnabled && (
+                  <span className="text-xs text-muted-foreground">
+                    {t('profile.2fa.activeStatus')}
+                  </span>
                 )}
-              </Button>
-              {user.twoFactorEnabled && (
-                <span className="text-xs text-muted-foreground">
-                  {t('profile.2fa.activeStatus')}
-                </span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
 

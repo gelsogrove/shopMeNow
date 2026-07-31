@@ -259,36 +259,38 @@ export function WebsiteWidgetSection({
                 )}
               </div>
 
-              {/* Widget Icon */}
-              <div className="col-span-2 space-y-2">
-                <Label className="text-xs font-semibold text-gray-700">Widget Icon</Label>
-                <div className="grid grid-cols-6 gap-2">
-                  {WIDGET_ICON_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={cn(
-                        "h-16 rounded border-2 transition-all flex flex-col items-center justify-center gap-1",
-                        formData.widgetIcon === option.value
-                          ? "border-green-500 bg-green-50"
-                          : "border-gray-200 hover:border-gray-300"
-                      )}
-                      onClick={() => onFieldChange("widgetIcon", option.value)}
-                      disabled={!canEdit}
-                    >
-                      <option.icon
+              {/* Widget Icon — hidden when the channel logo is used instead */}
+              {!formData.widgetUseChannelLogo && (
+                <div className="col-span-2 space-y-2">
+                  <Label className="text-xs font-semibold text-gray-700">Widget Icon</Label>
+                  <div className="grid grid-cols-6 gap-2">
+                    {WIDGET_ICON_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
                         className={cn(
-                          "h-5 w-5",
+                          "h-16 rounded border-2 transition-all flex flex-col items-center justify-center gap-1",
                           formData.widgetIcon === option.value
-                            ? "text-green-600"
-                            : "text-gray-600"
+                            ? "border-green-500 bg-green-50"
+                            : "border-gray-200 hover:border-gray-300"
                         )}
-                      />
-                      <span className="text-[9px]">{option.label}</span>
-                    </button>
-                  ))}
+                        onClick={() => onFieldChange("widgetIcon", option.value)}
+                        disabled={!canEdit}
+                      >
+                        <option.icon
+                          className={cn(
+                            "h-5 w-5",
+                            formData.widgetIcon === option.value
+                              ? "text-green-600"
+                              : "text-gray-600"
+                          )}
+                        />
+                        <span className="text-[9px]">{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="col-span-2 flex items-center justify-between rounded-lg border px-3 py-2">
                 <div>
                   <Label className="text-xs font-semibold text-gray-700">Use channel logo</Label>

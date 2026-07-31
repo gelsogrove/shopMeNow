@@ -14,13 +14,12 @@ export type SectionKey =
   | "whatsapp"
   | "widget"
   | "widget-support"
-  | "security"
   | "functions"
   | "calendar"
   | "demorobot"
   | "faqs"
   | "system-prompt"
-  | "terms-conditions"
+  | "other"
 
 // F50 — Andrea 2026-05-13: when the workspace runs a custom chatbot module
 // (`customChatbotId` set, e.g. "ecolaundry"), sections that are not used by
@@ -39,9 +38,8 @@ export const ALL_SECTIONS: SettingsSection[] = [
   { key: "widget", label: "Website Widget", description: "Chat widget for your website" },
   { key: "widget-support", label: "Human Support", description: "Escalation to human operators" },
   { key: "calendar", label: "Appointments & Calendar", description: "Google Calendar, reminders" },
-  { key: "security", label: "Security", description: "Access control and domains" },
   { key: "functions", label: "Custom Tools", description: "External functions and webhooks" },
-  { key: "terms-conditions", label: "Terms & Conditions", description: "Terms & Conditions text for this workspace" },
+  { key: "other", label: "Other", description: "Security, terms & conditions, maintenance message" },
 ]
 
 export const HIDDEN_FOR_CUSTOM_CHATBOT: Array<SectionKey> = ["functions"]

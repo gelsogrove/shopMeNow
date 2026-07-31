@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Save, Trash2, Loader2, Power } from "lucide-react"
+import { Save, Trash2, Loader2 } from "lucide-react"
 import { toast } from "@/lib/toast"
 import { ChatWidget } from "@/components/ChatWidget"
 import { IMG_BASE_URL } from "@/config"
@@ -30,8 +30,6 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole"
 import { useWebSocket } from "@/hooks/useWebSocket"
 import { storage } from "@/lib/storage"
 import { updateWorkspace, deleteWorkspace, getWorkspaceById } from "@/services/workspaceApi"
-
-import { Switch } from "@/components/ui/switch"
 
 // Settings components
 import { SettingsDropdown } from "@/components/settings/SettingsDropdown"
@@ -44,12 +42,11 @@ import { AIPersonalitySection } from "@/components/settings/sections/AIPersonali
 import { BusinessConfigSection } from "@/components/settings/sections/BusinessConfigSection"
 import { WhatsAppChannelSection } from "@/components/settings/sections/WhatsAppChannelSection"
 import { WebsiteWidgetSection } from "@/components/settings/sections/WebsiteWidgetSection"
-import { SecuritySection } from "@/components/settings/sections/SecuritySection"
+import { OtherSection } from "@/components/settings/sections/OtherSection"
 import { WidgetSupportSection } from "@/components/settings/sections/WidgetSupportSection"
 import { CallingFunctionsSection } from "@/components/settings/sections/CallingFunctionsSection"
 import { CalendarSection } from "@/components/settings/sections/CalendarSection"
 import { SystemPromptSection } from "@/components/settings/sections/SystemPromptSection"
-import { TermsConditionsSection } from "@/components/settings/sections/TermsConditionsSection"
 
 // Default help content for each section
 const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
@@ -62,9 +59,8 @@ const SECTION_DEFAULT_HELP: Record<SectionKey, string> = {
   "demorobot": "customChatbotId",
   "faqs": "customChatbotId",
   "system-prompt": "customChatbotSystemPrompt",
-  "security": "allowedDomains",
   "functions": "webhookUrl",
-  "terms-conditions": "termsAndConditions",
+  "other": "allowedDomains",
 }
 
 // Default messages
@@ -791,6 +787,7 @@ export function SettingsPage() {
               businessType: formData.businessType,
               currency: formData.currency,
               channelMode: formData.channelMode,
+              channelStatus: formData.channelStatus,
               enableWhatsapp: formData.enableWhatsapp,
               enableWidget: formData.enableWidget,
               address: formData.address,
@@ -800,8 +797,11 @@ export function SettingsPage() {
             }}
             errors={errors}
             canEdit={canEdit}
+            isSuperAdmin={isSuperAdmin}
+            isDeleting={deleteWorkspaceMutation.isPending}
             onFieldChange={handleFieldChange}
             onFieldFocus={handleFieldFocus}
+            onDeleteWorkspace={handleDeleteWorkspace}
           />
         )
       case "whatsapp":
@@ -850,21 +850,6 @@ export function SettingsPage() {
             channelMode={formData.channelMode}
             onFieldChange={handleFieldChange}
             onFieldFocus={handleFieldFocus}
-          />
-        )
-      case "security":
-        return (
-          <SecuritySection
-            formData={{
-              allowedExternalLinks: formData.allowedExternalLinks,
-            }}
-            errors={errors}
-            canEdit={canEdit}
-            isSuperAdmin={isSuperAdmin}
-            isDeleting={deleteWorkspaceMutation.isPending}
-            onFieldChange={handleFieldChange}
-            onFieldFocus={handleFieldFocus}
-            onDeleteWorkspace={handleDeleteWorkspace}
           />
         )
       case "widget-support":
@@ -923,12 +908,15 @@ export function SettingsPage() {
             onFieldFocus={handleFieldFocus}
           />
         )
-      case "terms-conditions":
+      case "other":
         return (
-          <TermsConditionsSection
+          <OtherSection
             formData={{
+              allowedExternalLinks: formData.allowedExternalLinks,
               termsAndConditions: formData.termsAndConditions,
+              wipMessage: formData.wipMessage,
             }}
+            errors={errors}
             canEdit={canEdit}
             onFieldChange={handleFieldChange}
             onFieldFocus={handleFieldFocus}
@@ -958,30 +946,9 @@ export function SettingsPage() {
             </div>
           </div>
 
-          {/* Right side: Channel Status + Save */}
+          {/* Right side: Save */}
           <div className="flex flex-col items-end gap-2">
             <div className="flex items-center gap-4">
-              {/* Channel Status Toggle */}
-              {canEdit && (
-                <div
-                  data-focus-key="channelStatus"
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${formData.channelStatus
-                      ? "bg-green-50 border-green-200"
-                      : "bg-gray-100 border-gray-200"
-                    }`}
-                >
-                  <Power className={`h-4 w-4 ${formData.channelStatus ? "text-green-600" : "text-gray-400"}`} />
-                  <span className={`text-sm font-medium ${formData.channelStatus ? "text-green-700" : "text-gray-500"}`}>
-                    {formData.channelStatus ? "Active" : "Inactive"}
-                  </span>
-                  <Switch
-                    checked={formData.channelStatus}
-                    onCheckedChange={(checked) => handleFieldChange("channelStatus", checked)}
-                    className="ml-1"
-                  />
-                </div>
-              )}
-
               {/* Save Button */}
               {canEdit && (
                 <Button onClick={handleSave} disabled={!isDirty}>
@@ -1092,6 +1059,7 @@ export function SettingsPage() {
           useChannelLogo={formData.widgetUseChannelLogo}
           useWindowConfig={false}
           language={formData.widgetLanguage}
+          position="bottom-left"
         />
       )}
     </div>
