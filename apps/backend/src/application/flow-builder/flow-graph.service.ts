@@ -154,6 +154,27 @@ export async function duplicateFlow(workspaceId: string, flowId: string) {
   })
 }
 
+/**
+ * Stores the plain-language prompt the user reviewed in the generate dialog.
+ * Kept separate from saveFlowGraph: the graph is unchanged, so there is nothing
+ * to recompile or re-embed.
+ */
+export async function saveFlowHumanPrompt(
+  workspaceId: string,
+  flowId: string,
+  humanPrompt: string,
+): Promise<boolean> {
+  const existing = await prisma.flow.findFirst({ where: { id: flowId, workspaceId } })
+  if (!existing) return false
+
+  await prisma.flow.update({
+    where: { id: flowId },
+    // Empty string clears it, so the user can discard a generated prompt.
+    data: { humanPrompt: humanPrompt.trim() || null },
+  })
+  return true
+}
+
 export async function deleteFlow(workspaceId: string, flowId: string): Promise<boolean> {
   const existing = await prisma.flow.findFirst({ where: { id: flowId, workspaceId } })
   if (!existing) return false

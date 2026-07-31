@@ -10,10 +10,12 @@ import {
   createFlow,
   deleteFlow,
   duplicateFlow,
+  saveFlowHumanPrompt,
   getFlowGraph,
   listFlows,
   saveFlowGraph,
 } from '../../../application/flow-builder/flow-graph.service'
+import { generateFlowPrompt } from '../../../application/flow-builder/flow-prompt-generator.service'
 import { createAssetFromFile, createAssetLink, deleteAsset, listAssets } from '../../../application/flow-builder/asset.service'
 import { OpenRouterEmbeddingProvider } from '../../../application/flow-builder/embedding-provider'
 
@@ -128,6 +130,63 @@ export class FlowBuilderController {
     } catch (error) {
       logger.error('[flow-builder] deleteFlow error:', error)
       res.status(500).json({ error: 'Failed to delete flow' })
+    }
+  }
+
+  /**
+   * Generates plain-language instructions from the flow's compiled prompt.
+   * Read-only: the user reviews the result in a dialog and decides whether to
+   * keep it, so nothing is persisted here.
+   */
+  async generateFlowPrompt(req: Request, res: Response): Promise<void> {
+    try {
+      const workspaceId = (req as any).workspaceId
+      const { flowId } = req.params
+
+      const graph = await getFlowGraph(workspaceId, flowId)
+      if (!graph) {
+        res.status(404).json({ error: 'Flow not found' })
+        return
+      }
+
+      const result = await generateFlowPrompt({
+        compiledPrompt: graph.flow.compiledPrompt,
+        flowTitle: graph.flow.title,
+      })
+
+      if (result.ok) {
+        res.json({ prompt: result.prompt })
+      } else {
+        res.status(502).json({ error: result.error })
+      }
+    } catch (error) {
+      logger.error('[flow-builder] generateFlowPrompt error:', error)
+      res.status(500).json({ error: 'Failed to generate the prompt' })
+    }
+  }
+
+  /** Persists the prompt after the user has reviewed (and possibly edited) it. */
+  async saveFlowPrompt(req: Request, res: Response): Promise<void> {
+    try {
+      const workspaceId = (req as any).workspaceId
+      const { flowId } = req.params
+      const { humanPrompt } = req.body
+
+      if (typeof humanPrompt !== 'string') {
+        res.status(400).json({ error: 'humanPrompt must be a string' })
+        return
+      }
+
+      const ok = await saveFlowHumanPrompt(workspaceId, flowId, humanPrompt)
+      if (!ok) {
+        res.status(404).json({ error: 'Flow not found' })
+        return
+      }
+
+      res.status(204).send()
+    } catch (error) {
+      logger.error('[flow-builder] saveFlowPrompt error:', error)
+      res.status(500).json({ error: 'Failed to save the prompt' })
     }
   }
 
