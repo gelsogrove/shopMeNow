@@ -505,7 +505,7 @@ async function agentTurnInternal(
       const { reply, lang } = extractLanguage(finalHop.text)
       commitLanguageFromReply(ctx.sessionId, lang)
       history.push({ role: 'assistant', content: reply })
-      detachFlow(ctx.sessionId) // escalation closes the flow (specs: reaching a terminal closes it)
+      detachFlow(ctx.sessionId)
       return {
         reply,
         tokensUsed: hopTokens + finalHop.tokensUsed,
@@ -516,15 +516,6 @@ async function agentTurnInternal(
     }
   }
 
-  // Andrea 2026-08-02: this used to return an empty reply, which chatbotFn
-  // turned into `reply: null` — the widget then showed the customer a generic
-  // "Sorry, I couldn't process your message" and the conversation dead-ended
-  // with shouldEscalate=false, so no human ever saw it. Seen in production on
-  // "non mi funziona non taglia bene" (retrieval matched no flow, the LLM kept
-  // calling tools until the hops ran out).
-  //
-  // Running out of hops means the bot could not help. That is exactly what
-  // escalation is for: hand over to a human instead of stonewalling.
   // eslint-disable-next-line no-console
   console.error('[warn] max tool hops exhausted without a final reply — escalating')
 
@@ -542,9 +533,6 @@ async function agentTurnInternal(
   markEscalationOnce(ctx.sessionId, 'diagnostic_exhausted')
   detachFlow(ctx.sessionId)
 
-  // Deterministic text, in the customer's language when known — we cannot ask
-  // the LLM for it, since failing to get a reply from the LLM is the very
-  // reason we are here.
   return {
     reply: handoffMessage(finalState.language),
     tokensUsed: 0,
@@ -554,9 +542,6 @@ async function agentTurnInternal(
   }
 }
 
-// Localized hand-off notice for the hop-exhaustion path. Deliberately small:
-// English is the documented business default (state.ts DEFAULT_LANGUAGE), and
-// any language not listed falls back to it rather than to silence.
 const HANDOFF_MESSAGES: Record<string, string> = {
   en: "I'm sorry, I can't solve this on my own. I'm passing you to a colleague who will get back to you shortly.",
   it: 'Mi dispiace, non riesco a risolvere da solo. Ti passo a un collega che ti risponderà a breve.',

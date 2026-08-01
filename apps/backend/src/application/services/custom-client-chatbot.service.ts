@@ -590,6 +590,60 @@ export class CustomClientChatbotService {
   }
 
   /**
+   * Effective chatbot settings for this workspace: the module's settings.json
+   * with every value configured in the Settings UI layered on top.
+   *
+   * Reuses buildChatbotSettingsJson — the same resolution the settings-save
+   * path uses to regenerate the file — so the UI, the file and the running
+   * chatbot can never disagree about what a value means.
+   *
+   * Returns null on any failure: the module then falls back to its own
+   * settings.json, which is always a valid configuration.
+   */
+  private async loadChatbotSettings(
+    workspaceId: string,
+    chatbotId: string
+  ): Promise<Record<string, unknown> | null> {
+    try {
+      const workspace = await defaultPrisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: {
+          customChatbotId: true,
+          customChatbotModel: true,
+          customChatbotTemperature: true,
+          customChatbotMaxTokens: true,
+          customChatbotOperatorEmail: true,
+          customChatbotEmailFrom: true,
+          customChatbotEmailSubjectPrefix: true,
+          operatorEmail: true,
+          operatorEmails: true,
+          operatorWhatsappNumbers: true,
+          operatorDeliveryMode: true,
+          defaultLanguage: true,
+          audioOutput: true,
+          audioVoices: true,
+        },
+      })
+      if (!workspace) return null
+
+      // customChatbotId may be unset on the row while the caller resolved the
+      // module some other way — fall back to the id actually being invoked.
+      const settings = await buildChatbotSettingsJson({
+        ...workspace,
+        customChatbotId: workspace.customChatbotId ?? chatbotId,
+      })
+      return settings as unknown as Record<string, unknown> | null
+    } catch (error) {
+      logger.warn("[CustomClientChatbotService] loadChatbotSettings failed, module defaults apply", {
+        workspaceId,
+        chatbotId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return null
+    }
+  }
+
+  /**
    * Whether this workspace allows the chatbot to book appointments
    * (workspace.enableCalendarBooking, default false).
    *
