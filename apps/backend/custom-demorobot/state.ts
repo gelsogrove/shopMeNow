@@ -22,6 +22,13 @@ export interface SessionState {
   // Open ISO 2-letter language code — decided by the LLM via the ⟦LANG:xx⟧
   // trailer, never a regex detector on user text (CLAUDE.md §14).
   language?: string
+
+  // True while `language` is only a hint seeded from the host (registration
+  // form / customer record) rather than a language the LLM has actually
+  // replied in. A seeded language must not lock the conversation: a customer
+  // who registered as "en" and then writes "hola" must get Spanish back.
+  // Cleared for good the first time commitLanguageFromReply runs.
+  languageIsSeed?: boolean
 }
 
 export type PatchKey = 'name' | 'language' | 'serialNumber'

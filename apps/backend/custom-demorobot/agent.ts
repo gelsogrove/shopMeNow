@@ -212,8 +212,6 @@ interface Message {
   name?: string
 }
 
-// ── Concurrency: per-sessionId async lock (identical pattern to demowash) ──
-
 const sessionLocks = new Map<string, Promise<unknown>>()
 
 async function withSessionLock<T>(sessionId: string, fn: () => Promise<T>): Promise<T> {
@@ -226,8 +224,6 @@ async function withSessionLock<T>(sessionId: string, fn: () => Promise<T>): Prom
     if (sessionLocks.get(sessionId) === next) sessionLocks.delete(sessionId)
   }
 }
-
-// ── Input sanitization (identical pattern to demowash) ─────────────────────
 
 const CONTROL_CHARS_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g
 const ZERO_WIDTH_RE = /[​-‍﻿]/g
@@ -243,8 +239,6 @@ function sanitizeUserMessage(raw: string, maxMessageChars: number): string {
   return s
 }
 
-// ── Tool execution ───────────────────────────────────────────────────────
-
 interface ToolContext {
   sessionId: string
   workspaceId: string
@@ -257,15 +251,6 @@ interface ToolResult {
   [k: string]: unknown
 }
 
-// Andrea 2026-08-01: this module used to send the operator email itself via
-// nodemailer/Gmail, WHILE also returning `notificationEmails` — which makes
-// the host dispatch a second notification through applyEscalationNotification.
-// Every escalation therefore produced two emails, in two different formats.
-//
-// The host is the correct layer: it already owns the operator's contact
-// method (email vs WhatsApp), the workspace SMTP config and the escalation
-// template. This module now only records the ticket and reports the
-// escalation upward; delivery is the host's single responsibility.
 function recordEscalation(params: { ticketId: string; reason: string; summary: string }): void {
   const { ticketId, reason, summary } = params
   // eslint-disable-next-line no-console
@@ -300,8 +285,6 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
 
     const ticketId = `TKT-${Date.now().toString(36).toUpperCase()}`
     recordEscalation({ ticketId, reason, summary: rawSummary })
-    // Delivery happens host-side (see recordEscalation): the turn reports the
-    // escalation via shouldEscalate/notificationEmails in ChatbotOutput.
     return { ok: true, ticket_id: ticketId, eta_minutes: 15 }
   }
 
