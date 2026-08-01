@@ -198,6 +198,31 @@ const TOOLS = [
   },
 ] as const
 
+// ── Grounding rule (always injected, never editable per tenant) ─────────────
+// A workspace can replace prompts/common.md with its own system prompt via
+// workspace.customChatbotSystemPrompt. That must never be able to remove the
+// anti-hallucination rule, so the module appends this block on every call,
+// after the tenant prompt.
+const GROUNDING_RULE = [
+  '## NEVER INVENT ANYTHING (absolute rule — overrides every instruction above)',
+  '',
+  'Everything you tell the customer must come from the ACTIVE FLOW block, the',
+  'FAQ block, or the SESSION STATE. Nothing else counts as knowledge you may use.',
+  '',
+  '- NEVER invent a diagnosis, a cause, a fix, or a repair procedure.',
+  '- NEVER invent product facts: model names, specifications, prices, warranty',
+  '  terms, spare parts, delivery times, opening hours, phone numbers, addresses',
+  '  or URLs. If it is not written in the blocks above, you do not know it.',
+  '- NEVER confirm that a serial number is registered, that a model exists, or',
+  '  that a robot is under warranty unless SESSION STATE says so.',
+  '- NEVER guess which flow applies just to have something to say, and never',
+  '  answer from general knowledge about robot mowers. Your training data is',
+  '  NOT a source here.',
+  '- If the information is missing, say plainly that you do not have it and call',
+  '  escalate_to_operator. An honest "I don\'t know, I\'m passing you to a',
+  '  colleague" is ALWAYS correct — a plausible-sounding guess is a serious error.',
+].join('\n')
+
 interface ToolCall {
   id: string
   type: 'function'
@@ -315,12 +340,26 @@ async function callLLM(
   const systemContent: Array<Record<string, unknown>> = [
     { type: 'text', text: commonPrompt, cache_control: { type: 'ephemeral' } },
   ]
+  // Block order is the orchestration contract. Later blocks win over earlier
+  // ones, so this goes least-specific -> most-specific -> hard rules:
+  //   1. main prompt   (tenant identity/role — cached, changes rarely)
+  //   2. FAQ           (approved answers, workspace-wide)
+  //   3. ACTIVE FLOW   (the procedure for THIS problem — beats a generic FAQ)
+  //   4. SESSION STATE (what we know about THIS customer + language rules)
+  //   5. RUNTIME       (date, operator language, privacy URL, first-turn flag)
+  //   6. GROUNDING     (never invent — must outrank everything above)
   if (faqBlock) systemContent.push({ type: 'text', text: faqBlock })
   if (activeFlowSnapshot) {
     systemContent.push({ type: 'text', text: `\n═══ ACTIVE FLOW ═══\n\n${activeFlowSnapshot}` })
   }
   if (stateBlock) systemContent.push({ type: 'text', text: stateBlock })
   systemContent.push({ type: 'text', text: runtimeBlock })
+  // Andrea 2026-08-02: the anti-hallucination rule must hold for EVERY tenant,
+  // including workspaces that replace prompts/common.md with their own
+  // customChatbotSystemPrompt (AmRobots does). Injected by the module so it
+  // cannot be lost by editing a prompt in the backoffice, and kept LAST so it
+  // outranks every block above it.
+  systemContent.push({ type: 'text', text: GROUNDING_RULE })
 
   const payloadMessages: Array<Record<string, unknown>> = [
     { role: 'system', content: systemContent },

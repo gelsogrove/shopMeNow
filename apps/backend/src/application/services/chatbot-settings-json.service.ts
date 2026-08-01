@@ -14,6 +14,7 @@
  * are preserved from the file as-is: the generator merges onto what is there,
  * it never rewrites the file from scratch.
  */
+import { existsSync } from "fs"
 import { readFile, writeFile } from "fs/promises"
 import path from "path"
 import logger from "../../utils/logger"
@@ -62,12 +63,38 @@ export interface WorkspaceChatbotSource {
   audioVoices?: unknown
 }
 
-function moduleDir(customChatbotId: string): string {
-  return path.join(__dirname, "..", "..", "..", `custom-${customChatbotId}`)
+/**
+ * Locates `custom-<id>/settings.json`.
+ *
+ * Andrea 2026-08-02: this used to be a single path relative to __dirname,
+ * which resolved only when running from `src/`. In production the code runs
+ * from `dist/`, and the build copies `templates` and `public` but NOT the
+ * custom-* modules — so every lookup died with
+ * "ENOENT: /app/apps/backend/dist/custom-demorobot/settings.json".
+ *
+ * The module loader in custom-client-chatbot.service.ts already solved this
+ * with a candidate list; the same strategy is applied here so both agree on
+ * where a module lives, whether started from the repo root, apps/backend,
+ * src/ or dist/.
+ */
+function settingsCandidates(customChatbotId: string): string[] {
+  const folder = `custom-${customChatbotId}`
+  return [
+    path.resolve(process.cwd(), folder, "settings.json"),
+    path.resolve(process.cwd(), "apps/backend", folder, "settings.json"),
+    path.resolve(__dirname, "..", "..", "..", folder, "settings.json"),
+    path.resolve(__dirname, "..", "..", "..", "..", folder, "settings.json"),
+  ]
 }
 
+/**
+ * First candidate that exists on disk. Falls back to the __dirname-relative
+ * path so callers still get a sensible target to WRITE to when the file has
+ * not been created yet.
+ */
 function settingsPath(customChatbotId: string): string {
-  return path.join(moduleDir(customChatbotId), "settings.json")
+  const candidates = settingsCandidates(customChatbotId)
+  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[2]
 }
 
 /**

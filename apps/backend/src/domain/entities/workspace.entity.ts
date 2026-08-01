@@ -84,6 +84,7 @@ export interface WorkspaceProps {
   customChatbotSystemPrompt?: string | null  // Editable main/system prompt for the custom chatbot module
   customChatbotModel?: string | null
   customChatbotTemperature?: number | null
+  customChatbotMaxTokens?: number | null
   customChatbotOperatorBriefingLanguage?: string | null
   customChatbotOperatorEmail?: string | null
   customChatbotEmailFrom?: string | null
@@ -448,6 +449,10 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get customChatbotTemperature(): number | null | undefined {
     return this.props.customChatbotTemperature
+  }
+
+  get customChatbotMaxTokens(): number | null | undefined {
+    return this.props.customChatbotMaxTokens
   }
 
   get customChatbotOperatorBriefingLanguage(): string | null | undefined {
