@@ -337,6 +337,13 @@ export interface BookAppointmentParams {
 
 export interface BookAppointmentResult {
   googleEventLink?: string | null
+  /** false when the host refused the booking (e.g. the workspace has
+   *  enableCalendarBooking disabled). The tool must not confirm anything. */
+  ok?: boolean
+  /** Machine-readable refusal cause, present only when ok === false. */
+  error?: string
+  /** Guidance handed straight to the LLM so it can recover in-conversation. */
+  instruction?: string
 }
 
 export type BookAppointmentHandler = (
@@ -527,15 +534,13 @@ async function executeTool(
       ? `${services.map((s) => s.name).join(' + ')} — ${state.name}`
       : `Appuntamento — ${state.name}`
 
-    // Persist appointment details in state.
-    updateState(ctx.sessionId, {
-      appointmentDate: selectedSlot.date,
-      appointmentTime: selectedSlot.time,
-      appointmentType: 'treatment_booking',
-    })
-
     // Real side-effect (Google Calendar event in the sede calendar) runs
     // host-side via the injected handler. Absent in REPL/batch → link stays null.
+    //
+    // Runs BEFORE any state mutation: the host can refuse the booking (e.g.
+    // the workspace has enableCalendarBooking disabled), and a refusal must
+    // leave the session exactly as it was — no appointment persisted, no
+    // operator briefing, no confirmation to the customer.
     let calendarLink: string | null = null
     if (ctx.bookAppointment && ctx.workspaceId) {
       try {
@@ -552,11 +557,29 @@ async function executeTool(
           services,
           products,
         })
+        // Explicit refusal from the host — surface it to the LLM as an
+        // instructive error (iron rule 4: tool refuses, LLM corrects).
+        if (booking.ok === false) {
+          return {
+            ok: false,
+            error: booking.error ?? 'booking_refused',
+            instruction:
+              booking.instruction ??
+              'The booking was refused by the system. Do not confirm any appointment. Offer to put the customer in touch with a human operator.',
+          }
+        }
         calendarLink = booking.googleEventLink ?? null
       } catch (err) {
         console.error(`[book_appointment_handler_failed] ${err instanceof Error ? err.message : String(err)}`)
       }
     }
+
+    // Persist appointment details in state (only once the booking is secured).
+    updateState(ctx.sessionId, {
+      appointmentDate: selectedSlot.date,
+      appointmentTime: selectedSlot.time,
+      appointmentType: 'treatment_booking',
+    })
 
     // Operator/sede lead briefing — independent of the customer email.
     try {
@@ -855,6 +878,7 @@ async function callLLM(
   history: Message[],
   operatorBriefingLanguageOverride?: string | null,
   isFirstTurn = false,
+  calendarBookingEnabled = true,
 ): Promise<LlmResponse> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
@@ -888,10 +912,17 @@ async function callLLM(
       (disableThinking ? '\n\n/no_think' : '')
     : systemContent
 
+  // Appointment booking is opt-in per workspace (workspace.enableCalendarBooking).
+  // When disabled, book_appointment is not offered to the LLM at all — it cannot
+  // call a tool it never sees, so no prompt wording can talk it into booking.
+  const tools = calendarBookingEnabled
+    ? TOOLS
+    : TOOLS.filter((t) => t.function.name !== 'book_appointment')
+
   const payload = {
     model: MODEL,
     messages: [{ role: 'system', content: systemMessageContent }, ...history],
-    tools: TOOLS,
+    tools,
     tool_choice: 'auto',
     temperature: TEMPERATURE,
     max_tokens: MAX_TOKENS,
@@ -993,6 +1024,11 @@ async function agentTurnInternal(
       history,
       operatorBriefingLanguageOverride,
       isFirstTurn,
+      // The host withholds the bookAppointment handler when the workspace has
+      // enableCalendarBooking off, so its presence IS the capability. In
+      // REPL/batch (no handler injected at all) booking stays offered, since
+      // there the tool degrades to a local no-op rather than a refusal.
+      ctx.bookAppointment !== undefined || ctx.workspaceId === undefined,
     )
     tokensUsed +=
       (response.usage?.prompt_tokens ?? 0) + (response.usage?.completion_tokens ?? 0)

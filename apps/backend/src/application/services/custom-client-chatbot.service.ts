@@ -59,6 +59,12 @@ type BookAppointmentParams = {
 }
 type BookAppointmentResult = {
   googleEventLink?: string | null
+  /** false when the booking was refused (e.g. workspace has booking disabled). */
+  ok?: boolean
+  /** Machine-readable refusal cause, present only when ok === false. */
+  error?: string
+  /** Guidance the module hands to the LLM so it can recover in-conversation. */
+  instruction?: string
 }
 
 // Params/result for the injected retrieve_flow handler (currently
@@ -135,6 +141,16 @@ type ChatbotInput = {
     // null when the workspace has no custom template — the module falls
     // back to its own static prompt file.
     systemPromptOverride?: string | null
+    /**
+     * Per-workspace feature flags. The module reads these to decide which
+     * tools to expose to the LLM. A capability that is false is also backed
+     * by the corresponding handler being absent, so the feature cannot be
+     * reached even if the module ignores the flag.
+     */
+    capabilities?: {
+      /** workspace.enableCalendarBooking — appointment booking is opt-in. */
+      calendarBooking?: boolean
+    }
     // Real side-effect handlers injected by this host. The custom module
     // stays free of Prisma/Google/Zoom imports and calls these when present.
     handlers?: {
@@ -283,6 +299,11 @@ export class CustomClientChatbotService {
       // Durable state from a previous turn (possibly on another dyno). Read
       // before the module runs so it can hydrate before any tool touches state.
       const persistedState = await this.loadPersistedState(params.sessionId, chatbotId)
+      // Appointment booking is opt-in per workspace. When disabled, the
+      // handler is not injected at all, so the module hides the tool from the
+      // LLM (see `capabilities` below) and a stale prompt asking for a booking
+      // still cannot produce a calendar event.
+      const calendarBookingEnabled = await this.isCalendarBookingEnabled(params.workspaceId)
       const output = await module.chatbotFn({
         userMessage: params.userMessage,
         userName: params.userName,
@@ -301,9 +322,17 @@ export class CustomClientChatbotService {
           // custom template, in which case the module falls back to its own
           // static prompt file (e.g. common.md).
           systemPromptOverride,
+          // Feature flags the module uses to decide which tools to expose to
+          // the LLM. Source of truth is the workspace row, never the module.
+          capabilities: {
+            calendarBooking: calendarBookingEnabled,
+          },
           handlers: {
             scheduleConsultation: (p) => this.scheduleConsultation(p),
-            bookAppointment: (p) => this.bookAppointment(p),
+            // Omitted entirely when the workspace has booking disabled.
+            ...(calendarBookingEnabled
+              ? { bookAppointment: (p: BookAppointmentParams) => this.bookAppointment(p) }
+              : {}),
             retrieveFlow: (p) => this.retrieveFlow(p),
             getFaqs: (p) => this.getFaqs(p),
           },
@@ -439,8 +468,25 @@ export class CustomClientChatbotService {
   ): Promise<BookAppointmentResult> {
     const workspace = await defaultPrisma.workspace.findUnique({
       where: { id: p.workspaceId },
-      select: { timezone: true },
+      select: { timezone: true, enableCalendarBooking: true },
     })
+
+    // Second line of defence. invoke() already withholds this handler when the
+    // workspace has booking disabled; re-checking here means no future call
+    // path (a cached module, a direct call, a new chatbot) can create a
+    // calendar event for a workspace that never enabled the feature.
+    if (workspace?.enableCalendarBooking !== true) {
+      logger.warn("[CustomClientChatbotService] bookAppointment blocked: calendar booking disabled", {
+        workspaceId: p.workspaceId,
+      })
+      return {
+        ok: false,
+        error: "calendar_booking_disabled",
+        instruction:
+          "Appointment booking is not available for this business. Tell the customer you cannot book an appointment, and offer to put them in touch with a human operator instead. Do not call book_appointment again.",
+      }
+    }
+
     const timezone = workspace?.timezone || "Europe/Rome"
 
     const startTime = zonedWallClockToUtc(p.date, p.time, timezone)
@@ -527,6 +573,30 @@ export class CustomClientChatbotService {
         error: error instanceof Error ? error.message : String(error),
       })
       return { reason: "no_matching_flow" }
+    }
+  }
+
+  /**
+   * Whether this workspace allows the chatbot to book appointments
+   * (workspace.enableCalendarBooking, default false).
+   *
+   * Fails CLOSED: if the flag cannot be read, booking stays disabled. Creating
+   * a calendar event for a workspace that did not enable the feature is worse
+   * than telling the customer booking is unavailable.
+   */
+  private async isCalendarBookingEnabled(workspaceId: string): Promise<boolean> {
+    try {
+      const workspace = await defaultPrisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { enableCalendarBooking: true },
+      })
+      return workspace?.enableCalendarBooking === true
+    } catch (error) {
+      logger.warn("[CustomClientChatbotService] isCalendarBookingEnabled failed, disabling booking", {
+        workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return false
     }
   }
 
