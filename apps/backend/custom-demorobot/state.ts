@@ -108,6 +108,63 @@ export function resetState(sessionId: string): void {
   sessions.delete(sessionId)
 }
 
+// ── Persistence ───────────────────────────────────────────────────────────
+// Andrea 2026-08-01: the Map above is per-process. Heroku restarts dynos daily
+// and runs more than one, so a customer used to lose their serial number,
+// language and in-flight flow mid-conversation. State is now mirrored into
+// ChatSession.context (an existing Json column — no migration needed).
+//
+// The public API stays synchronous on purpose: making getState/updateState
+// async would change every call site in agent.ts and the tool handlers. The
+// host instead hydrates once before a turn and flushes once after it, so the
+// hot path keeps reading from RAM.
+//
+// Only durable facts are persisted. turnCount, rate-limit timestamps and
+// escalatedReasons are per-process guards and are intentionally left out:
+// re-hydrating them across dynos would give a false sense of enforcement.
+
+/** Shape stored under ChatSession.context.demorobot. */
+interface PersistedState {
+  state: SessionState
+  patches: CustomerPatch[]
+}
+
+/**
+ * Load previously persisted state into the in-RAM map. Call once at the start
+ * of a turn, before any getState/updateState. Existing in-memory state wins:
+ * if this process already handled a turn for the session, its data is fresher
+ * than what was flushed earlier.
+ */
+export function hydrateState(sessionId: string, persisted: unknown): void {
+  if (!persisted || typeof persisted !== 'object') return
+
+  const p = persisted as Partial<PersistedState>
+  if (!p.state || typeof p.state !== 'object') return
+
+  const e = entry(sessionId)
+  // Merge, never overwrite: keys already set in this process are newer.
+  for (const k of Object.keys(p.state) as Array<keyof SessionState>) {
+    if ((e.state as Record<string, unknown>)[k] === undefined) {
+      ;(e.state as Record<string, unknown>)[k] = (p.state as Record<string, unknown>)[k]
+    }
+  }
+  if (Array.isArray(p.patches) && e.patches.length === 0) {
+    e.patches = p.patches
+  }
+}
+
+/**
+ * Snapshot the durable part of the session, to be written by the host into
+ * ChatSession.context. Returns null when there is nothing worth storing, so
+ * the caller can skip the write entirely.
+ */
+export function dehydrateState(sessionId: string): PersistedState | null {
+  const e = sessions.get(sessionId)
+  if (!e) return null
+  if (Object.keys(e.state).length === 0 && e.patches.length === 0) return null
+  return { state: e.state, patches: e.patches }
+}
+
 export function markEscalationOnce(sessionId: string, reason: string): boolean {
   const e = entry(sessionId)
   if (e.escalatedReasons.has(reason)) return false

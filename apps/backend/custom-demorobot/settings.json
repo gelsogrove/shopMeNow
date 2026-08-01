@@ -1,6 +1,6 @@
 {
   "model": "anthropic/claude-haiku-4.5",
-  "temperature": 0.3,
+  "temperature": 0,
   "maxTokens": 800,
   "maxToolHops": 4,
   "operatorBriefingLanguage": "en",

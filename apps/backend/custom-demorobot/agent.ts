@@ -15,9 +15,11 @@ import { fileURLToPath } from 'url'
 import {
   attachFlow,
   commitLanguageFromReply,
+  dehydrateState,
   detachFlow,
   drainPatches,
   extractLanguage,
+  hydrateState,
   formatStateForPrompt,
   formatStateOneLine,
   getState,
@@ -145,6 +147,13 @@ export interface ChatbotInput {
     customerId?: string
     phoneNumber?: string
     history: HistoryEntry[]
+    /**
+     * Durable session state from a previous turn, as stored by the host in
+     * ChatSession.context.demorobot. Lets a conversation survive a dyno
+     * restart or a turn handled by a different instance. Absent on the first
+     * turn, or when the host does not persist state.
+     */
+    persistedState?: unknown
   }
 }
 
@@ -156,6 +165,11 @@ export interface ChatbotOutput {
   notificationEmails?: string
   closeChat: boolean
   patches?: import('./state.js').CustomerPatch[]
+  /**
+   * Durable session state to store in ChatSession.context.demorobot, so the
+   * next turn survives a dyno restart. Null when there is nothing to persist.
+   */
+  persistedState?: unknown
   audioOutput: boolean
   audioVoices: Record<string, string>
   meta: {
@@ -630,6 +644,11 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       retrieveFlow: input.config.handlers?.retrieveFlow,
     }
 
+    // Restore durable state (serial, language, attached flow) before any tool
+    // or prompt reads it — otherwise a dyno restart mid-conversation would
+    // silently drop what the customer already told us.
+    hydrateState(input.context.sessionId, input.context.persistedState)
+
     // Andrea 2026-08-01: cap the history handed to the LLM. It used to grow
     // unbounded, so cost and latency climbed with every turn and a long
     // conversation would eventually blow past the context window. The last
@@ -648,6 +667,9 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     return {
       reply: result.reply || null,
       language: getState(sessionId).language,
+      // Snapshot taken AFTER the turn, so the next request restores the serial,
+      // language and attached flow even if it lands on a different dyno.
+      persistedState: dehydrateState(sessionId),
       shouldEscalate: result.escalated,
       escalationSummary: result.escalated ? result.escalationSummary || `Session ${sessionId} escalated (no briefing captured)` : undefined,
       notificationEmails: result.escalated ? OPERATOR_EMAIL || undefined : undefined,
