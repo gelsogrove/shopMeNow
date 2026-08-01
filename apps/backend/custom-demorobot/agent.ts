@@ -96,6 +96,30 @@ export interface FaqEntry {
 }
 export type GetFaqsHandler = (params: { workspaceId: string }) => Promise<FaqEntry[]>
 
+// Andrea 2026-08-02: flow selection moved from embedding search to the LLM.
+// Semantic retrieval scored 0.23-0.31 against a 0.70 threshold in production
+// (and got WORSE each turn, because it searched on the latest message — "IERI",
+// "IMMBOLE" — rather than on the problem), so no flow was ever attached and the
+// model filled the silence with invented diagnostics.
+//
+// The flows are now listed in the prompt with their ids, and the LLM attaches
+// one via the start_flow tool. It reads the whole conversation, so it matches
+// "mi dà ERROR 001" to the right flow without any threshold to tune — and when
+// nothing matches it can say so and escalate instead of improvising.
+export interface FlowSummary {
+  flowId: string
+  title: string
+  /** Optional extra matching signal (description / keywords) when configured. */
+  hint?: string
+}
+export type ListFlowsHandler = (params: { workspaceId: string }) => Promise<FlowSummary[]>
+
+export interface LoadedFlow {
+  compiledPrompt: string
+  hash?: string
+}
+export type LoadFlowHandler = (params: { workspaceId: string; flowId: string }) => Promise<LoadedFlow | null>
+
 export interface ChatbotInput {
   userMessage: string
   userName: string
@@ -111,6 +135,10 @@ export interface ChatbotInput {
     handlers?: {
       retrieveFlow?: RetrievalHandler
       getFaqs?: GetFaqsHandler
+      /** Flows offered to the LLM in the AVAILABLE FLOWS block. */
+      listFlows?: ListFlowsHandler
+      /** Loads the compiled prompt of the flow the LLM picked. */
+      loadFlow?: LoadFlowHandler
     }
   }
   context: {
@@ -159,6 +187,25 @@ function getCachedCommonPrompt(): Promise<string> {
 }
 
 const TOOLS = [
+  {
+    type: 'function',
+    function: {
+      name: 'start_flow',
+      description:
+        'Attach the diagnostic flow that matches the customer\'s problem, chosen from the AVAILABLE FLOWS list. Call this as soon as you can tell which flow applies — its questions then become your script. Pass the flowId EXACTLY as written in square brackets in that list. If NO flow in the list matches the problem, do NOT call this tool and do NOT invent a procedure: call escalate_to_operator instead.',
+      parameters: {
+        type: 'object',
+        properties: {
+          flowId: {
+            type: 'string',
+            description: 'The flow id copied verbatim from the AVAILABLE FLOWS list (the value in square brackets).',
+          },
+        },
+        required: ['flowId'],
+        additionalProperties: false,
+      },
+    },
+  },
   {
     type: 'function',
     function: {
@@ -269,6 +316,14 @@ interface ToolContext {
   workspaceId: string
   customerName?: string
   operatorBriefingLanguageOverride?: string | null
+  /**
+   * The flows offered to the LLM this turn, as listed in the AVAILABLE FLOWS
+   * prompt block. start_flow accepts an id ONLY if it appears here, so a
+   * hallucinated id is refused instead of silently attaching nothing.
+   */
+  availableFlows?: FlowSummary[]
+  /** Loads a flow's compiled prompt by id. Injected by the host. */
+  loadFlow?: LoadFlowHandler
 }
 
 interface ToolResult {
@@ -283,6 +338,50 @@ function recordEscalation(params: { ticketId: string; reason: string; summary: s
 }
 
 async function executeTool(ctx: ToolContext, name: string, args: Record<string, unknown>): Promise<ToolResult> {
+  if (name === 'start_flow') {
+    const flowId = typeof args.flowId === 'string' ? args.flowId.trim() : ''
+    if (!flowId) return { ok: false, error: 'flowId is required' }
+
+    const available = ctx.availableFlows ?? []
+    const match = available.find((f) => f.flowId === flowId)
+    // Refuse an id that is not in the list handed to the LLM, rather than
+    // attaching nothing and letting it improvise (iron rule: tool refuses,
+    // LLM corrects). Hallucinated ids are the obvious failure mode here.
+    if (!match) {
+      return {
+        ok: false,
+        error: 'unknown_flow_id',
+        instruction:
+          available.length > 0
+            ? `"${flowId}" is not in AVAILABLE FLOWS. Use one of: ${available.map((f) => f.flowId).join(', ')}. If none of them matches the customer's problem, call escalate_to_operator instead — never invent a procedure.`
+            : 'No flows are configured for this workspace. Call escalate_to_operator.',
+      }
+    }
+
+    if (!ctx.loadFlow) {
+      return { ok: false, error: 'flow_loading_unavailable', instruction: 'Flows cannot be loaded right now. Call escalate_to_operator.' }
+    }
+
+    try {
+      const loaded = await ctx.loadFlow({ workspaceId: ctx.workspaceId, flowId })
+      if (!loaded?.compiledPrompt) {
+        // A flow with an empty compiledPrompt would attach a blank script and
+        // leave the LLM to fill the silence — exactly what must never happen.
+        return {
+          ok: false,
+          error: 'flow_unavailable',
+          instruction: 'That flow could not be loaded. Call escalate_to_operator rather than answering from your own knowledge.',
+        }
+      }
+      attachFlow(ctx.sessionId, flowId, loaded.hash ?? '', loaded.compiledPrompt)
+      return { ok: true, flow_id: flowId, title: match.title }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[demorobot] loadFlow failed', err)
+      return { ok: false, error: 'flow_unavailable', instruction: 'That flow could not be loaded. Call escalate_to_operator.' }
+    }
+  }
+
   if (name === 'remember') {
     const key = typeof args.key === 'string' ? args.key : null
     const value = args.value
