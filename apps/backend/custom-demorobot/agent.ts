@@ -1,13 +1,3 @@
-// demoRobot chatbot — prompt-driven LLM turn loop, sibling module to
-// custom-demowash. Same runtime contract (ChatbotInput/ChatbotOutput,
-// tool-hop loop, session locking, PII-free by design since demoRobot
-// collects operational robot data, not customer PII in the same way).
-//
-// What's DIFFERENT from demowash: no static system prompt file — the
-// dynamic ingredient is the attached Flow's compiledPrompt (design.md
-// "Cambio di paradigma rispetto a demowash"), selected per-turn by the
-// retrieval layer instead of always being the same cached blob.
-
 import { readFile } from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -28,13 +18,12 @@ import {
   mergeCollectedData,
   registerMessageTimestamp,
   resetState,
+  seedLanguageIfNeeded,
   SessionState,
   updateState,
 } from './state.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
-// ── Settings ─────────────────────────────────────────────────────────────
 
 interface Settings {
   model: string
@@ -48,7 +37,6 @@ interface Settings {
   maxMessageChars: number
   maxMessagesPerMinute: number
   maxTurnsPerSession: number
-  /** Conversation turns replayed to the LLM per request. Optional: defaults to 30. */
   maxHistoryMessages?: number
   privacyPolicyUrl: string
   similarityThreshold: number
@@ -67,25 +55,20 @@ try {
 
 const API_KEY = process.env.OPENROUTER_API_KEY
 const BASE_URL = process.env.LLM_BASE_URL || 'https://openrouter.ai/api/v1'
-const MODEL = process.env.LLM_MODEL || SETTINGS.model
-const MAX_TOOL_HOPS = SETTINGS.maxToolHops
-const MAX_MESSAGE_CHARS = SETTINGS.maxMessageChars
-const MAX_MESSAGES_PER_MINUTE = SETTINGS.maxMessagesPerMinute
-const MAX_TURNS_PER_SESSION = SETTINGS.maxTurnsPerSession
-// Upper bound on the conversation turns replayed to the LLM each request.
-// Durable facts live in SessionState (sent as a separate, untruncated block),
-// so dropping older turns loses conversational nuance, never collected data.
-const MAX_HISTORY_MESSAGES = SETTINGS.maxHistoryMessages ?? 30
-const AUDIO_OUTPUT = SETTINGS.audioOutput
-const AUDIO_VOICES = SETTINGS.audioVoices
-// Reported to the host as `notificationEmails` on escalation; the host owns
-// actual delivery. emailFrom/emailSubjectPrefix in settings.json are consumed
-// host-side by the escalation email template, not here.
-const OPERATOR_EMAIL = process.env.OPERATOR_EMAIL || SETTINGS.operatorEmail
+
+function effectiveSettings(override?: Partial<Settings> | null): Settings {
+  return override ? { ...SETTINGS, ...stripEmpty(override) } : SETTINGS
+}
+
+function stripEmpty(o: Partial<Settings>): Partial<Settings> {
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(o)) {
+    if (v !== undefined && v !== null && v !== '') out[k] = v
+  }
+  return out as Partial<Settings>
+}
 
 const LLM_DEBUG = process.env.LLM_DEBUG === '1'
-
-// ── Public contract (mirrors custom-demowash/agent.ts) ──────────────────────
 
 export interface HistoryEntry {
   role: 'user' | 'assistant'
@@ -93,10 +76,6 @@ export interface HistoryEntry {
   timestamp?: string
 }
 
-// Injected by the host — see design.md "Retrieval as a shared component":
-// the compiler/retrieval logic lives in apps/backend/src/application/demorobot
-// (Jest-testable), this module only calls it through these handlers so the
-// standalone package has no direct Prisma/DB dependency.
 export interface RetrievalHandlerResult {
   selectedFlowId?: string
   compiledPrompt?: string
@@ -111,10 +90,6 @@ export type RetrievalHandler = (params: {
   query: string
 }) => Promise<RetrievalHandlerResult>
 
-// FAQs are a small, fixed set per workspace (unlike Flows, which scale to
-// hundreds and need retrieval) — always injected as a prompt block, never
-// searched semantically. Fetched fresh each turn (not cached with
-// commonPrompt) so an admin edit is visible on the very next turn.
 export interface FaqEntry {
   question: string
   answer: string
@@ -135,6 +110,12 @@ export interface ChatbotInput {
     // already processed with {{variables}} by the host). When absent/null,
     // falls back to the module's own static prompts/common.md.
     systemPromptOverride?: string | null
+    /**
+     * Effective settings for this workspace, resolved by the host from the
+     * database. Merged over the module's settings.json, which stays the
+     * default for anything the host omits. Absent in REPL/batch runs.
+     */
+    settings?: Partial<Settings> | null
     handlers?: {
       retrieveFlow?: RetrievalHandler
       getFaqs?: GetFaqsHandler
@@ -274,13 +255,13 @@ const CONTROL_CHARS_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g
 const ZERO_WIDTH_RE = /[​-‍﻿]/g
 const BIDI_RE = /[‪-‮⁦-⁩]/g
 
-function sanitizeUserMessage(raw: string): string {
+function sanitizeUserMessage(raw: string, maxMessageChars: number): string {
   let s = (raw ?? '').toString()
   s = s.replace(CONTROL_CHARS_RE, '')
   s = s.replace(ZERO_WIDTH_RE, '')
   s = s.replace(BIDI_RE, '')
   s = s.trim()
-  if (s.length > MAX_MESSAGE_CHARS) s = s.slice(0, MAX_MESSAGE_CHARS)
+  if (s.length > maxMessageChars) s = s.slice(0, maxMessageChars)
   return s
 }
 
@@ -364,12 +345,13 @@ async function callLLM(
   history: Message[],
   operatorBriefingLanguageOverride: string | null | undefined,
   isFirstTurn: boolean,
-  faqBlock?: string,
+  faqBlock: string | undefined,
+  settings: Settings,
 ): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
   const stateBlock = formatStateForPrompt(state)
-  const runtimeBlock = formatRuntimeBlock(operatorBriefingLanguageOverride, isFirstTurn)
+  const runtimeBlock = formatRuntimeBlock(operatorBriefingLanguageOverride, isFirstTurn, settings)
 
   const systemContent: Array<Record<string, unknown>> = [
     { type: 'text', text: commonPrompt, cache_control: { type: 'ephemeral' } },
@@ -404,12 +386,12 @@ async function callLLM(
       'X-Title': 'DemoRobot',
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: process.env.LLM_MODEL || settings.model,
       messages: payloadMessages,
       tools: TOOLS,
       tool_choice: 'auto',
-      temperature: SETTINGS.temperature,
-      max_tokens: SETTINGS.maxTokens,
+      temperature: settings.temperature,
+      max_tokens: settings.maxTokens,
     }),
   })
 
@@ -448,13 +430,17 @@ function formatFaqBlock(faqs: FaqEntry[]): string | undefined {
   ].join('\n')
 }
 
-function formatRuntimeBlock(operatorBriefingLanguageOverride: string | null | undefined, isFirstTurn: boolean): string {
+function formatRuntimeBlock(
+  operatorBriefingLanguageOverride: string | null | undefined,
+  isFirstTurn: boolean,
+  settings: Settings,
+): string {
   const now = new Date()
   const lines = [
     '## RUNTIME',
     `- Current date/time: ${now.toISOString()}`,
-    `- Operator briefing language: ${operatorBriefingLanguageOverride || SETTINGS.operatorBriefingLanguage}`,
-    `- Privacy policy URL: ${SETTINGS.privacyPolicyUrl}`,
+    `- Operator briefing language: ${operatorBriefingLanguageOverride || settings.operatorBriefingLanguage}`,
+    `- Privacy policy URL: ${settings.privacyPolicyUrl}`,
     `- First turn: ${isFirstTurn}`,
   ]
   return lines.join('\n')
@@ -477,6 +463,7 @@ async function agentTurnInternal(
   sanitizedMessage: string,
   operatorBriefingLanguageOverride: string | null | undefined,
   faqBlock: string | undefined,
+  settings: Settings,
 ): Promise<TurnResult> {
   const isFirstTurn = history.length === 0
   history.push({ role: 'user', content: sanitizedMessage })
@@ -517,7 +504,7 @@ async function agentTurnInternal(
     }
   }
 
-  for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
+  for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
     const { text, toolCalls, tokensUsed: hopTokens } = await callLLM(
       commonPrompt,
@@ -527,6 +514,7 @@ async function agentTurnInternal(
       operatorBriefingLanguageOverride,
       isFirstTurn,
       faqBlock,
+      settings,
     )
 
     if (toolCalls.length === 0) {
@@ -575,7 +563,7 @@ async function agentTurnInternal(
     if (escalated) {
       // Continue the loop so the LLM can produce its final customer-facing
       // reply after seeing the tool result, same as demowash.
-      const finalHop = await callLLM(commonPrompt, state.activeFlowPromptSnapshot, state, history, operatorBriefingLanguageOverride, isFirstTurn, faqBlock)
+      const finalHop = await callLLM(commonPrompt, state.activeFlowPromptSnapshot, state, history, operatorBriefingLanguageOverride, isFirstTurn, faqBlock, settings)
       const { reply, lang } = extractLanguage(finalHop.text)
       commitLanguageFromReply(ctx.sessionId, lang)
       history.push({ role: 'assistant', content: reply })
@@ -590,9 +578,60 @@ async function agentTurnInternal(
     }
   }
 
+  // Andrea 2026-08-02: this used to return an empty reply, which chatbotFn
+  // turned into `reply: null` — the widget then showed the customer a generic
+  // "Sorry, I couldn't process your message" and the conversation dead-ended
+  // with shouldEscalate=false, so no human ever saw it. Seen in production on
+  // "non mi funziona non taglia bene" (retrieval matched no flow, the LLM kept
+  // calling tools until the hops ran out).
+  //
+  // Running out of hops means the bot could not help. That is exactly what
+  // escalation is for: hand over to a human instead of stonewalling.
   // eslint-disable-next-line no-console
-  console.error('[warn] max tool hops exhausted without a final reply')
-  return { reply: '', tokensUsed: 0, escalated: false, retrievalDebug }
+  console.error('[warn] max tool hops exhausted without a final reply — escalating')
+
+  const finalState = getState(ctx.sessionId)
+  const summary = [
+    'The assistant could not resolve this conversation automatically (tool-hop limit reached).',
+    `Customer message: ${sanitizedMessage}`,
+    finalState.serialNumber ? `Serial number: ${finalState.serialNumber}` : 'Serial number: not provided',
+    finalState.activeFlowId ? `Active flow: ${finalState.activeFlowId}` : 'Active flow: none matched',
+    finalState.collectedData && Object.keys(finalState.collectedData).length > 0
+      ? `Collected data: ${JSON.stringify(finalState.collectedData)}`
+      : 'Collected data: none',
+  ].join('\n')
+
+  markEscalationOnce(ctx.sessionId, 'diagnostic_exhausted')
+  detachFlow(ctx.sessionId)
+
+  // Deterministic text, in the customer's language when known — we cannot ask
+  // the LLM for it, since failing to get a reply from the LLM is the very
+  // reason we are here.
+  return {
+    reply: handoffMessage(finalState.language),
+    tokensUsed: 0,
+    escalated: true,
+    escalationSummary: summary,
+    retrievalDebug,
+  }
+}
+
+// Localized hand-off notice for the hop-exhaustion path. Deliberately small:
+// English is the documented business default (state.ts DEFAULT_LANGUAGE), and
+// any language not listed falls back to it rather than to silence.
+const HANDOFF_MESSAGES: Record<string, string> = {
+  en: "I'm sorry, I can't solve this on my own. I'm passing you to a colleague who will get back to you shortly.",
+  it: 'Mi dispiace, non riesco a risolvere da solo. Ti passo a un collega che ti risponderà a breve.',
+  es: 'Lo siento, no puedo resolverlo por mi cuenta. Te paso con un compañero que te responderá en breve.',
+  da: 'Beklager, det kan jeg ikke løse selv. Jeg sender dig videre til en kollega, som vender tilbage snarest.',
+  fr: 'Désolé, je ne peux pas résoudre cela seul. Je vous transfère à un collègue qui vous répondra sous peu.',
+  de: 'Es tut mir leid, das kann ich nicht allein lösen. Ich übergebe an eine Kollegin, die sich in Kürze meldet.',
+  pt: 'Lamento, não consigo resolver sozinho. Vou passar a um colega que lhe responderá em breve.',
+  ca: 'Ho sento, no ho puc resoldre sol. Et passo amb un company que et respondrà ben aviat.',
+}
+
+function handoffMessage(language?: string): string {
+  return HANDOFF_MESSAGES[language ?? 'en'] ?? HANDOFF_MESSAGES.en
 }
 
 export async function agentTurn(
@@ -602,36 +641,42 @@ export async function agentTurn(
   rawMessage: string,
   operatorBriefingLanguageOverride: string | null | undefined,
   faqBlock?: string,
+  settingsOverride?: Partial<Settings> | null,
 ): Promise<TurnResult> {
-  const sanitized = sanitizeUserMessage(rawMessage)
+  const settings = effectiveSettings(settingsOverride)
+  const sanitized = sanitizeUserMessage(rawMessage, settings.maxMessageChars)
   if (!sanitized) return { reply: '', tokensUsed: 0, escalated: false }
 
   const now = Date.now()
   const recentCount = registerMessageTimestamp(ctx.sessionId, now, 60_000)
-  if (recentCount > MAX_MESSAGES_PER_MINUTE) {
+  if (recentCount > settings.maxMessagesPerMinute) {
     return { reply: 'You are sending messages too quickly. Please wait a moment.', tokensUsed: 0, escalated: false }
   }
 
   const turnNum = incrementTurn(ctx.sessionId)
-  if (turnNum > MAX_TURNS_PER_SESSION) {
+  if (turnNum > settings.maxTurnsPerSession) {
     return { reply: 'This conversation has become too long. Please contact us via email to continue.', tokensUsed: 0, escalated: false }
   }
 
   return withSessionLock(ctx.sessionId, () =>
-    agentTurnInternal(ctx, commonPrompt, history, sanitized, operatorBriefingLanguageOverride, faqBlock),
+    agentTurnInternal(ctx, commonPrompt, history, sanitized, operatorBriefingLanguageOverride, faqBlock, settings),
   )
 }
 
 // ── chatbotFn — host integration entry point ────────────────────────────────
 
 export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
+  // Effective config for this workspace: database values (sent by the host)
+  // layered over the module's settings.json defaults.
+  const settings = effectiveSettings(input.config.settings)
+
   if (!API_KEY) {
     return {
       reply: null,
       shouldEscalate: false,
       closeChat: false,
-      audioOutput: AUDIO_OUTPUT,
-      audioVoices: AUDIO_VOICES,
+      audioOutput: settings.audioOutput,
+      audioVoices: settings.audioVoices,
       meta: { tokensUsed: 0, agentChain: ['custom-demorobot'] },
       error: 'llm_unavailable',
     }
@@ -657,15 +702,26 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     // silently drop what the customer already told us.
     hydrateState(input.context.sessionId, input.context.persistedState)
 
+    // Andrea 2026-08-02: seed the conversation language from what the host
+    // already knows (the widget registration form, or the customer record).
+    // Without this the module started every conversation with no language at
+    // all, so the LLM fell back to the workspace defaultLanguage — AmRobots
+    // (defaultLanguage "it") answered "hola" in Italian. seedLanguageIfNeeded
+    // never overwrites a language already committed from a previous turn.
+    if (input.config.language) {
+      seedLanguageIfNeeded(input.context.sessionId, input.config.language)
+    }
+
     // Andrea 2026-08-01: cap the history handed to the LLM. It used to grow
     // unbounded, so cost and latency climbed with every turn and a long
     // conversation would eventually blow past the context window. The last
     // MAX_HISTORY_MESSAGES entries are enough: durable facts (serial, name,
     // language, collected flow answers) live in SessionState, which is sent
     // separately as its own prompt block and is never truncated.
+    const maxHistory = settings.maxHistoryMessages ?? 30
     const fullHistory: Message[] = input.context.history.map((h) => ({ role: h.role, content: h.content }))
     const history: Message[] =
-      fullHistory.length > MAX_HISTORY_MESSAGES ? fullHistory.slice(-MAX_HISTORY_MESSAGES) : fullHistory
+      fullHistory.length > maxHistory ? fullHistory.slice(-maxHistory) : fullHistory
 
     // Fetched fresh each turn (never cached with commonPrompt) so an admin
     // edit is visible on the very next message. A failure here must not cost
@@ -688,6 +744,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       input.userMessage,
       input.config.operatorBriefingLanguageOverride,
       faqBlock,
+      input.config.settings,
     )
 
     const patches = drainPatches(input.context.sessionId)
@@ -701,11 +758,13 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       persistedState: dehydrateState(sessionId),
       shouldEscalate: result.escalated,
       escalationSummary: result.escalated ? result.escalationSummary || `Session ${sessionId} escalated (no briefing captured)` : undefined,
-      notificationEmails: result.escalated ? OPERATOR_EMAIL || undefined : undefined,
+      notificationEmails: result.escalated
+        ? process.env.OPERATOR_EMAIL || settings.operatorEmail || undefined
+        : undefined,
       closeChat: result.escalated,
       patches: patches.length > 0 ? patches : undefined,
-      audioOutput: AUDIO_OUTPUT,
-      audioVoices: AUDIO_VOICES,
+      audioOutput: settings.audioOutput,
+      audioVoices: settings.audioVoices,
       meta: {
         tokensUsed: result.tokensUsed,
         agentChain: ['custom-demorobot'],
@@ -719,8 +778,8 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       reply: null,
       shouldEscalate: false,
       closeChat: false,
-      audioOutput: AUDIO_OUTPUT,
-      audioVoices: AUDIO_VOICES,
+      audioOutput: settings.audioOutput,
+      audioVoices: settings.audioVoices,
       meta: { tokensUsed: 0, agentChain: ['custom-demorobot'] },
       error: err instanceof Error ? err.message : String(err),
     }

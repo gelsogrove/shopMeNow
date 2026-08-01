@@ -255,7 +255,7 @@ export function formatStateForPrompt(state: SessionState): string {
   const seed = state.language ?? DEFAULT_LANGUAGE
   const hasLang = !!state.language
   const languageBlock = [
-    '## LANGUAGE',
+    '## LANGUAGE (authoritative — overrides any language instruction above)',
     hasLang
       ? `- The conversation language is already **${state.language}**. KEEP replying in ${state.language}.`
       : `- No language is set yet (this is the first message). Detect the language from the customer's message — even a single word is enough. If the message carries NO language signal at all (a bare number, a name, "ok"), use ${seed}.`,
