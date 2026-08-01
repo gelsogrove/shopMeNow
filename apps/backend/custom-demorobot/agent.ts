@@ -291,8 +291,6 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
   return { ok: false, error: `unknown tool: ${name}` }
 }
 
-// ── LLM call — identical mechanism to demowash (OpenRouter, cache_control) ─
-
 interface CallLLMResult {
   text: string
   toolCalls: ToolCall[]
@@ -317,22 +315,13 @@ async function callLLM(
   const systemContent: Array<Record<string, unknown>> = [
     { type: 'text', text: commonPrompt, cache_control: { type: 'ephemeral' } },
   ]
-  // FAQs are a small fixed set per workspace, always injected — never
-  // retrieved semantically. Placed before the flow so an active diagnostic
-  // flow stays the more specific, later-winning instruction.
   if (faqBlock) systemContent.push({ type: 'text', text: faqBlock })
   if (activeFlowSnapshot) {
-    // The dynamic ingredient — NOT cached (design.md "Cambio di paradigma
-    // rispetto a demowash"): it changes per attached flow, so caching it
-    // would never hit.
     systemContent.push({ type: 'text', text: `\n═══ ACTIVE FLOW ═══\n\n${activeFlowSnapshot}` })
   }
   if (stateBlock) systemContent.push({ type: 'text', text: stateBlock })
   systemContent.push({ type: 'text', text: runtimeBlock })
 
-  // System message content is the typed content-block array itself (not a
-  // plain string) so the cache_control directive can be attached to just
-  // the first (fixed) block, per demowash's cache pattern.
   const payloadMessages: Array<Record<string, unknown>> = [
     { role: 'system', content: systemContent },
     ...history.map((m) => ({ role: m.role, content: m.content, tool_calls: m.tool_calls, tool_call_id: m.tool_call_id, name: m.name })),
@@ -375,8 +364,6 @@ async function callLLM(
   return { text, toolCalls, tokensUsed }
 }
 
-// Renders the workspace FAQs as a prompt block. Returns undefined when there
-// are none, so no empty section is pushed into the system prompt.
 function formatFaqBlock(faqs: FaqEntry[]): string | undefined {
   if (!faqs.length) return undefined
   const entries = faqs.map((f) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')
@@ -407,8 +394,6 @@ function formatRuntimeBlock(
   return lines.join('\n')
 }
 
-// ── Turn execution ───────────────────────────────────────────────────────
-
 interface TurnResult {
   reply: string
   tokensUsed: number
@@ -432,10 +417,6 @@ async function agentTurnInternal(
   let state = getState(ctx.sessionId)
   let retrievalDebug: ChatbotOutput['meta']['debug']
 
-  // Retrieval trigger gating (specs/flow-retrieval "Retrieval runs only to
-  // attach or re-attach, not every turn"): only when no flow is attached.
-  // Mid-flow re-retrieval on semantic mismatch is left to the LLM calling
-  // remember with a fresh problem description — v1 gate is attach-if-empty.
   if (!state.activeFlowId && ctx.retrieveFlow) {
     try {
       const result = await ctx.retrieveFlow({
@@ -458,8 +439,6 @@ async function agentTurnInternal(
         state = getState(ctx.sessionId)
       }
     } catch (err) {
-      // Graceful degradation (design.md Decision 14): retrieval failure
-      // never blocks the turn — proceed without an attached flow.
       // eslint-disable-next-line no-console
       console.error('[demorobot] retrieveFlow handler threw, continuing without attachment', err)
     }
@@ -499,7 +478,7 @@ async function agentTurnInternal(
       try {
         args = JSON.parse(call.function.arguments || '{}')
       } catch {
-        // malformed args -> proceed with {}, tool handler returns its own validation error
+        args = {}
       }
       if (LLM_DEBUG) {
         // eslint-disable-next-line no-console
@@ -522,8 +501,6 @@ async function agentTurnInternal(
     }
 
     if (escalated) {
-      // Continue the loop so the LLM can produce its final customer-facing
-      // reply after seeing the tool result, same as demowash.
       const finalHop = await callLLM(commonPrompt, state.activeFlowPromptSnapshot, state, history, operatorBriefingLanguageOverride, isFirstTurn, faqBlock, settings)
       const { reply, lang } = extractLanguage(finalHop.text)
       commitLanguageFromReply(ctx.sessionId, lang)

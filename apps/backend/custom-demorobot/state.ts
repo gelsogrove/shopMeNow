@@ -237,13 +237,27 @@ export function commitLanguageFromReply(sessionId: string, lang: string | null):
   if (lang !== state.language) {
     updateState(sessionId, { language: lang })
   }
+  // The LLM has now replied in this language, so it is no longer a mere hint
+  // from the customer profile — from here on it is sticky.
+  if (state.languageIsSeed) {
+    entry(sessionId).state.languageIsSeed = undefined
+  }
 }
 
+/**
+ * Seeds the conversation language from what the host already knows (widget
+ * registration form, customer record). Marked as a seed, NOT a decision: the
+ * prompt treats it as a hint until the LLM commits a language of its own.
+ *
+ * Never overwrites a language already present — a real one from a previous
+ * turn always wins.
+ */
 export function seedLanguageIfNeeded(sessionId: string, seed?: string | null): string {
   const state = getState(sessionId)
   if (state.language) return state.language
   const resolved = seed && isValidIso(seed) ? seed.toLowerCase() : DEFAULT_LANGUAGE
   updateState(sessionId, { language: resolved }, { mirror: false })
+  entry(sessionId).state.languageIsSeed = true
   return resolved
 }
 

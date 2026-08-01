@@ -151,6 +151,13 @@ type ChatbotInput = {
       /** workspace.enableCalendarBooking — appointment booking is opt-in. */
       calendarBooking?: boolean
     }
+    /**
+     * Effective chatbot settings resolved from the database (model, maxTokens,
+     * temperature, operator email, audio…). The module merges these over its
+     * own settings.json defaults, so a value saved in the Settings UI takes
+     * effect on the very next message — no restart, no deploy.
+     */
+    settings?: Record<string, unknown> | null
     // Real side-effect handlers injected by this host. The custom module
     // stays free of Prisma/Google/Zoom imports and calls these when present.
     handlers?: {
@@ -304,6 +311,11 @@ export class CustomClientChatbotService {
       // LLM (see `capabilities` below) and a stale prompt asking for a booking
       // still cannot produce a calendar event.
       const calendarBookingEnabled = await this.isCalendarBookingEnabled(params.workspaceId)
+      // Effective settings from the DATABASE, resolved per turn. The module
+      // used to read only its committed settings.json, so a value saved in the
+      // Settings UI never took effect (the file was read once at boot, and
+      // every deploy reverted it). See loadChatbotSettings below.
+      const chatbotSettings = await this.loadChatbotSettings(params.workspaceId, chatbotId)
       const output = await module.chatbotFn({
         userMessage: params.userMessage,
         userName: params.userName,
@@ -327,6 +339,7 @@ export class CustomClientChatbotService {
           capabilities: {
             calendarBooking: calendarBookingEnabled,
           },
+          settings: chatbotSettings,
           handlers: {
             scheduleConsultation: (p) => this.scheduleConsultation(p),
             // Omitted entirely when the workspace has booking disabled.
