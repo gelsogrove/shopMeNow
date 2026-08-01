@@ -106,15 +106,7 @@ export interface ChatbotInput {
     isPlayground: boolean
     language?: string
     operatorBriefingLanguageOverride?: string | null
-    // Editable main/system prompt (workspace.customChatbotSystemPrompt,
-    // already processed with {{variables}} by the host). When absent/null,
-    // falls back to the module's own static prompts/common.md.
     systemPromptOverride?: string | null
-    /**
-     * Effective settings for this workspace, resolved by the host from the
-     * database. Merged over the module's settings.json, which stays the
-     * default for anything the host omits. Absent in REPL/batch runs.
-     */
     settings?: Partial<Settings> | null
     handlers?: {
       retrieveFlow?: RetrievalHandler
@@ -126,12 +118,6 @@ export interface ChatbotInput {
     customerId?: string
     phoneNumber?: string
     history: HistoryEntry[]
-    /**
-     * Durable session state from a previous turn, as stored by the host in
-     * ChatSession.context.demorobot. Lets a conversation survive a dyno
-     * restart or a turn handled by a different instance. Absent on the first
-     * turn, or when the host does not persist state.
-     */
     persistedState?: unknown
   }
 }
@@ -144,10 +130,6 @@ export interface ChatbotOutput {
   notificationEmails?: string
   closeChat: boolean
   patches?: import('./state.js').CustomerPatch[]
-  /**
-   * Durable session state to store in ChatSession.context.demorobot, so the
-   * next turn survives a dyno restart. Null when there is nothing to persist.
-   */
   persistedState?: unknown
   audioOutput: boolean
   audioVoices: Record<string, string>
@@ -166,8 +148,6 @@ export interface ChatbotOutput {
   error?: string
 }
 
-// ── Common (always-present) prompt block — analisi.md §9 ───────────────────
-
 async function buildCommonPrompt(): Promise<string> {
   return readFile(path.join(__dirname, 'prompts', 'common.md'), 'utf8')
 }
@@ -177,8 +157,6 @@ function getCachedCommonPrompt(): Promise<string> {
   if (!cachedCommonPromptPromise) cachedCommonPromptPromise = buildCommonPrompt()
   return cachedCommonPromptPromise
 }
-
-// ── Tool schema — remember + escalate_to_operator only (analisi.md §5) ─────
 
 const TOOLS = [
   {

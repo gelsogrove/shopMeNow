@@ -253,12 +253,17 @@ export function formatStateForPrompt(state: SessionState): string {
   }
 
   const seed = state.language ?? DEFAULT_LANGUAGE
-  const hasLang = !!state.language
+  // A language that came from the registration form / customer record is only
+  // a HINT: the customer may well write in another one. It becomes binding
+  // once the LLM has actually replied in it and committed it via ⟦LANG:xx⟧.
+  const hasLang = !!state.language && !state.languageIsSeed
   const languageBlock = [
     '## LANGUAGE (authoritative — overrides any language instruction above)',
     hasLang
       ? `- The conversation language is already **${state.language}**. KEEP replying in ${state.language}.`
-      : `- No language is set yet (this is the first message). Detect the language from the customer's message — even a single word is enough. If the message carries NO language signal at all (a bare number, a name, "ok"), use ${seed}.`,
+      : state.languageIsSeed
+        ? `- The customer's profile suggests **${state.language}**, but that is only a hint. Detect the language from THIS message and reply in it — even a single word is enough. Use ${seed} only when the message carries no language signal at all.`
+        : `- No language is set yet (this is the first message). Detect the language from the customer's message — even a single word is enough. If the message carries NO language signal at all (a bare number, a name, "ok"), use ${seed}.`,
     hasLang
       ? `- ONLY switch away from ${state.language} if the customer's latest message is a REAL sentence (roughly 3+ meaningful words) clearly written in another language.`
       : `- English ("en") is the business default when the very first message is genuinely undecidable.`,
