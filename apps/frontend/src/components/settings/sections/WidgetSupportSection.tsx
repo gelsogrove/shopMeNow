@@ -234,11 +234,12 @@ export function WidgetSupportSection({
                 )}
               </div>
 
-              {/* Escalation rules. Andrea 2026-07-31: these used to be hidden for
-                  custom chatbot workspaces on the assumption that escalation was
-                  fully code-driven there. They are shown for every workspace now —
-                  the operator still needs to state when a human is required, and
-                  the text is exposed to the prompt as {{escalationTrigger}}. */}
+              {/* Escalation rules. Andrea 2026-08-01: this is the single escalation
+                  field. 'Frustration Signals' and 'Escalation Trigger Message' were
+                  removed from the UI — three separate boxes for one concept was
+                  redundant, and neither of the other two was ever read by the
+                  chatbot. Their columns are kept in the DB so existing values are
+                  not lost. */}
               <div className="space-y-2 pt-2 border-t" onFocus={() => onFieldFocus?.("escalationInstructions")}>
                 <Label htmlFor="humanSupportInstructions" className="pt-4 block">When to Escalate</Label>
                 <Textarea
@@ -256,48 +257,6 @@ export function WidgetSupportSection({
                 <p className="text-xs text-gray-500">
                   One rule per line. The chatbot reads these to decide when to hand the
                   conversation to a person.
-                </p>
-              </div>
-
-              <div
-                className="space-y-2 pt-4"
-                onFocus={() => onFieldFocus?.("frustrationTriggers")}
-                data-focus-key="frustrationTriggers"
-              >
-                <Label htmlFor="frustrationTriggers" className="block">Frustration Signals</Label>
-                <p className="text-xs text-gray-500">When the customer shows frustration or panic, escalate immediately</p>
-                <Textarea
-                  id="frustrationTriggers"
-                  value={formData.frustrationTriggers}
-                  onChange={(e) => onFieldChange("frustrationTriggers", e.target.value)}
-                  placeholder="Examples:
-- Repeated exclamation marks or all-caps messages
-- Words like 'furious', 'unacceptable', 'scam'
-- Customer says they will leave a bad review"
-                  disabled={!canEdit}
-                  className="min-h-[100px]"
-                />
-              </div>
-
-              {/* Escalation trigger — the sentence the customer actually reads, and
-                  the one that can be injected elsewhere via {{escalationTrigger}}. */}
-              <div className="space-y-2 pt-4" onFocus={() => onFieldFocus?.("escalationTrigger")}>
-                <Label htmlFor="escalationTrigger" className="block">Escalation Trigger Message</Label>
-                <Textarea
-                  id="escalationTrigger"
-                  value={formData.escalationTrigger}
-                  onChange={(e) => onFieldChange("escalationTrigger", e.target.value)}
-                  placeholder="Write 'operator' at any time and I'll pass you to a member of our team."
-                  disabled={!canEdit}
-                  className="min-h-[80px]"
-                />
-                <p className="text-xs text-gray-500">
-                  Tells customers how to reach a person. Insert it anywhere — for example in
-                  the Welcome Message — with{" "}
-                  <code className="rounded bg-gray-100 px-1 py-0.5 text-[11px] font-mono">
-                    {"{{escalationTrigger}}"}
-                  </code>
-                  .
                 </p>
               </div>
 
