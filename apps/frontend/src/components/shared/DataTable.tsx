@@ -113,6 +113,9 @@ export function DataTable<TData>({
         cell: ({ row }) => (
           <div className="flex justify-end items-center space-x-2">
             {renderActions && renderActions(row.original)}
+            {/* Page-supplied extra icons (duplicate, view prompt, ...) render
+                before the standard Edit/Delete pair. */}
+            {actionButtons && actionButtons(row.original)}
             {onEdit && (
               <TooltipProvider>
                 <Tooltip>

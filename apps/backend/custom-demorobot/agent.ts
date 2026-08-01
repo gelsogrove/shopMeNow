@@ -47,6 +47,8 @@ interface Settings {
   maxMessageChars: number
   maxMessagesPerMinute: number
   maxTurnsPerSession: number
+  /** Conversation turns replayed to the LLM per request. Optional: defaults to 30. */
+  maxHistoryMessages?: number
   privacyPolicyUrl: string
   similarityThreshold: number
   topK: number
@@ -69,6 +71,10 @@ const MAX_TOOL_HOPS = SETTINGS.maxToolHops
 const MAX_MESSAGE_CHARS = SETTINGS.maxMessageChars
 const MAX_MESSAGES_PER_MINUTE = SETTINGS.maxMessagesPerMinute
 const MAX_TURNS_PER_SESSION = SETTINGS.maxTurnsPerSession
+// Upper bound on the conversation turns replayed to the LLM each request.
+// Durable facts live in SessionState (sent as a separate, untruncated block),
+// so dropping older turns loses conversational nuance, never collected data.
+const MAX_HISTORY_MESSAGES = SETTINGS.maxHistoryMessages ?? 30
 const AUDIO_OUTPUT = SETTINGS.audioOutput
 const AUDIO_VOICES = SETTINGS.audioVoices
 const OPERATOR_EMAIL = process.env.OPERATOR_EMAIL || SETTINGS.operatorEmail
@@ -624,7 +630,15 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       retrieveFlow: input.config.handlers?.retrieveFlow,
     }
 
-    const history: Message[] = input.context.history.map((h) => ({ role: h.role, content: h.content }))
+    // Andrea 2026-08-01: cap the history handed to the LLM. It used to grow
+    // unbounded, so cost and latency climbed with every turn and a long
+    // conversation would eventually blow past the context window. The last
+    // MAX_HISTORY_MESSAGES entries are enough: durable facts (serial, name,
+    // language, collected flow answers) live in SessionState, which is sent
+    // separately as its own prompt block and is never truncated.
+    const fullHistory: Message[] = input.context.history.map((h) => ({ role: h.role, content: h.content }))
+    const history: Message[] =
+      fullHistory.length > MAX_HISTORY_MESSAGES ? fullHistory.slice(-MAX_HISTORY_MESSAGES) : fullHistory
 
     const result = await agentTurn(ctx, commonPrompt, history, input.userMessage, input.config.operatorBriefingLanguageOverride)
 

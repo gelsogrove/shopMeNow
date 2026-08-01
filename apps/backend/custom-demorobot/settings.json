@@ -10,6 +10,7 @@
   "maxMessageChars": 2000,
   "maxMessagesPerMinute": 30,
   "maxTurnsPerSession": 50,
+  "maxHistoryMessages": 30,
   "privacyPolicyUrl": "https://www.echatbot.ai/privacy-policy",
   "similarityThreshold": 0.7,
   "topK": 3,
