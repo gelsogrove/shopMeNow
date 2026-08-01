@@ -149,6 +149,14 @@ type ChatbotInput = {
     customerId?: string
     phoneNumber?: string
     history: HistoryEntry[]
+    /**
+     * Durable per-session state a module persisted on a previous turn, read
+     * back from ChatSession.context[customChatbotId]. Absent on the first turn
+     * or when the module never returned any. Modules that keep state only in
+     * a per-process Map would otherwise lose it on a dyno restart or when a
+     * turn lands on a different dyno.
+     */
+    persistedState?: unknown
   }
 }
 
@@ -173,6 +181,12 @@ type ChatbotOutput = {
   smtpConfig?: { user: string; pass: string; host?: string; port?: number; secure?: boolean; from?: string }
   error?: string
   patches?: CustomerPatch[]
+  /**
+   * Durable per-session state the module wants carried to its next turn.
+   * Persisted by this service into ChatSession.context[customChatbotId].
+   * null/undefined means "nothing to store" and skips the write.
+   */
+  persistedState?: unknown
   /** Tenant audio policy from the module's settings.json. When false the host
    *  must always reply with text; when true it may mirror input modality. */
   audioOutput?: boolean
@@ -266,6 +280,9 @@ export class CustomClientChatbotService {
     try {
       const module = await this.loadChatbotModule(chatbotId)
       const systemPromptOverride = await this.buildCustomChatbotSystemPrompt(params.workspaceId)
+      // Durable state from a previous turn (possibly on another dyno). Read
+      // before the module runs so it can hydrate before any tool touches state.
+      const persistedState = await this.loadPersistedState(params.sessionId, chatbotId)
       const output = await module.chatbotFn({
         userMessage: params.userMessage,
         userName: params.userName,
@@ -296,8 +313,14 @@ export class CustomClientChatbotService {
           customerId: params.customerId,
           phoneNumber: params.phoneNumber,
           history: params.history,
+          persistedState,
         },
       })
+
+      // Flush the module's durable state back to ChatSession.context so the
+      // next turn survives a restart or a different dyno. Awaited (not
+      // fire-and-forget) so a fast follow-up message cannot read stale state.
+      await this.savePersistedState(params.sessionId, chatbotId, output.persistedState)
 
       // NOTE: previously this service prepended `params.welcomeMessage`
       // (taken from `workspace.welcomeMessage`, e.g. "Hi! 👋 I'm Ecolaundry,
@@ -504,6 +527,73 @@ export class CustomClientChatbotService {
         error: error instanceof Error ? error.message : String(error),
       })
       return { reason: "no_matching_flow" }
+    }
+  }
+
+  /**
+   * Reads back the durable state a module stored on a previous turn.
+   *
+   * Stored under ChatSession.context[chatbotId] so two modules (or a module
+   * and the legacy context payload already living in that column) never
+   * overwrite each other. Returns undefined on any failure: a missing or
+   * corrupt blob must degrade to "first turn", never break the conversation.
+   */
+  private async loadPersistedState(
+    sessionId: string,
+    chatbotId: string
+  ): Promise<unknown> {
+    try {
+      const session = await defaultPrisma.chatSession.findUnique({
+        where: { id: sessionId },
+        select: { context: true },
+      })
+      const context = session?.context
+      if (!context || typeof context !== "object" || Array.isArray(context)) return undefined
+      return (context as Record<string, unknown>)[chatbotId]
+    } catch (error) {
+      logger.warn("[CustomClientChatbotService] loadPersistedState failed", {
+        sessionId,
+        chatbotId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return undefined
+    }
+  }
+
+  /**
+   * Persists the module's durable state, merged into the existing context
+   * object so unrelated keys written by other code survive.
+   *
+   * Never throws: failing to persist costs the next turn some context, but
+   * must not fail the reply the customer is waiting for.
+   */
+  private async savePersistedState(
+    sessionId: string,
+    chatbotId: string,
+    state: unknown
+  ): Promise<void> {
+    if (state === undefined || state === null) return
+
+    try {
+      const session = await defaultPrisma.chatSession.findUnique({
+        where: { id: sessionId },
+        select: { context: true },
+      })
+      const current =
+        session?.context && typeof session.context === "object" && !Array.isArray(session.context)
+          ? (session.context as Record<string, unknown>)
+          : {}
+
+      await defaultPrisma.chatSession.update({
+        where: { id: sessionId },
+        data: { context: { ...current, [chatbotId]: state } as any },
+      })
+    } catch (error) {
+      logger.warn("[CustomClientChatbotService] savePersistedState failed", {
+        sessionId,
+        chatbotId,
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
   }
 

@@ -8,7 +8,6 @@
 // "Cambio di paradigma rispetto a demowash"), selected per-turn by the
 // retrieval layer instead of always being the same cached blob.
 
-import nodemailer from 'nodemailer'
 import { readFile } from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -79,11 +78,10 @@ const MAX_TURNS_PER_SESSION = SETTINGS.maxTurnsPerSession
 const MAX_HISTORY_MESSAGES = SETTINGS.maxHistoryMessages ?? 30
 const AUDIO_OUTPUT = SETTINGS.audioOutput
 const AUDIO_VOICES = SETTINGS.audioVoices
+// Reported to the host as `notificationEmails` on escalation; the host owns
+// actual delivery. emailFrom/emailSubjectPrefix in settings.json are consumed
+// host-side by the escalation email template, not here.
 const OPERATOR_EMAIL = process.env.OPERATOR_EMAIL || SETTINGS.operatorEmail
-const EMAIL_FROM = SETTINGS.emailFrom
-const EMAIL_SUBJECT_PREFIX = SETTINGS.emailSubjectPrefix
-const GMAIL_USER = process.env.GMAIL_USER
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD
 
 const LLM_DEBUG = process.env.LLM_DEBUG === '1'
 
@@ -300,30 +298,19 @@ interface ToolResult {
   [k: string]: unknown
 }
 
-async function sendEscalationEmail(params: {
-  ticketId: string
-  reason: string
-  summary: string
-  state: SessionState
-}): Promise<void> {
+// Andrea 2026-08-01: this module used to send the operator email itself via
+// nodemailer/Gmail, WHILE also returning `notificationEmails` — which makes
+// the host dispatch a second notification through applyEscalationNotification.
+// Every escalation therefore produced two emails, in two different formats.
+//
+// The host is the correct layer: it already owns the operator's contact
+// method (email vs WhatsApp), the workspace SMTP config and the escalation
+// template. This module now only records the ticket and reports the
+// escalation upward; delivery is the host's single responsibility.
+function recordEscalation(params: { ticketId: string; reason: string; summary: string }): void {
   const { ticketId, reason, summary } = params
   // eslint-disable-next-line no-console
   console.error(`[demorobot][escalation] ${ticketId} reason=${reason}\n${summary}`)
-
-  if (!OPERATOR_EMAIL) throw new Error('OPERATOR_EMAIL not configured')
-  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) throw new Error('Gmail SMTP credentials not configured')
-
-  const transport = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
-  })
-
-  await transport.sendMail({
-    from: EMAIL_FROM,
-    to: OPERATOR_EMAIL,
-    subject: `${EMAIL_SUBJECT_PREFIX} ${ticketId} — ${reason}`,
-    text: `Ticket: ${ticketId}\nReason: ${reason}\n\n${summary}\n\n— DemoRobot Bot`,
-  })
 }
 
 async function executeTool(ctx: ToolContext, name: string, args: Record<string, unknown>): Promise<ToolResult> {
@@ -347,21 +334,16 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       return { ok: false, error: 'summary is required and must be a non-empty string' }
     }
 
-    const state = getState(ctx.sessionId)
-
     const isFirst = markEscalationOnce(ctx.sessionId, reason)
     if (!isFirst) {
       return { ok: true, already_escalated: true, eta_minutes: 15 }
     }
 
     const ticketId = `TKT-${Date.now().toString(36).toUpperCase()}`
-    try {
-      await sendEscalationEmail({ ticketId, reason, summary: rawSummary, state })
-      return { ok: true, ticket_id: ticketId, eta_minutes: 15, email_sent: !!GMAIL_USER }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      return { ok: true, ticket_id: ticketId, eta_minutes: 15, email_sent: false, email_error: msg }
-    }
+    recordEscalation({ ticketId, reason, summary: rawSummary })
+    // Delivery happens host-side (see recordEscalation): the turn reports the
+    // escalation via shouldEscalate/notificationEmails in ChatbotOutput.
+    return { ok: true, ticket_id: ticketId, eta_minutes: 15 }
   }
 
   return { ok: false, error: `unknown tool: ${name}` }
@@ -382,6 +364,7 @@ async function callLLM(
   history: Message[],
   operatorBriefingLanguageOverride: string | null | undefined,
   isFirstTurn: boolean,
+  faqBlock?: string,
 ): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
@@ -391,6 +374,10 @@ async function callLLM(
   const systemContent: Array<Record<string, unknown>> = [
     { type: 'text', text: commonPrompt, cache_control: { type: 'ephemeral' } },
   ]
+  // FAQs are a small fixed set per workspace, always injected — never
+  // retrieved semantically. Placed before the flow so an active diagnostic
+  // flow stays the more specific, later-winning instruction.
+  if (faqBlock) systemContent.push({ type: 'text', text: faqBlock })
   if (activeFlowSnapshot) {
     // The dynamic ingredient — NOT cached (design.md "Cambio di paradigma
     // rispetto a demowash"): it changes per attached flow, so caching it
@@ -445,6 +432,22 @@ async function callLLM(
   return { text, toolCalls, tokensUsed }
 }
 
+// Renders the workspace FAQs as a prompt block. Returns undefined when there
+// are none, so no empty section is pushed into the system prompt.
+function formatFaqBlock(faqs: FaqEntry[]): string | undefined {
+  if (!faqs.length) return undefined
+  const entries = faqs.map((f) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')
+  return [
+    '',
+    '═══ FAQ ═══',
+    'Answers already approved by the company. When one of them answers the',
+    "customer's question, use it instead of a diagnostic flow. Never contradict",
+    'a FAQ, and never invent an answer that is not here or in the ACTIVE FLOW.',
+    '',
+    entries,
+  ].join('\n')
+}
+
 function formatRuntimeBlock(operatorBriefingLanguageOverride: string | null | undefined, isFirstTurn: boolean): string {
   const now = new Date()
   const lines = [
@@ -473,6 +476,7 @@ async function agentTurnInternal(
   history: Message[],
   sanitizedMessage: string,
   operatorBriefingLanguageOverride: string | null | undefined,
+  faqBlock: string | undefined,
 ): Promise<TurnResult> {
   const isFirstTurn = history.length === 0
   history.push({ role: 'user', content: sanitizedMessage })
@@ -522,6 +526,7 @@ async function agentTurnInternal(
       history,
       operatorBriefingLanguageOverride,
       isFirstTurn,
+      faqBlock,
     )
 
     if (toolCalls.length === 0) {
@@ -570,7 +575,7 @@ async function agentTurnInternal(
     if (escalated) {
       // Continue the loop so the LLM can produce its final customer-facing
       // reply after seeing the tool result, same as demowash.
-      const finalHop = await callLLM(commonPrompt, state.activeFlowPromptSnapshot, state, history, operatorBriefingLanguageOverride, isFirstTurn)
+      const finalHop = await callLLM(commonPrompt, state.activeFlowPromptSnapshot, state, history, operatorBriefingLanguageOverride, isFirstTurn, faqBlock)
       const { reply, lang } = extractLanguage(finalHop.text)
       commitLanguageFromReply(ctx.sessionId, lang)
       history.push({ role: 'assistant', content: reply })
@@ -596,6 +601,7 @@ export async function agentTurn(
   history: Message[],
   rawMessage: string,
   operatorBriefingLanguageOverride: string | null | undefined,
+  faqBlock?: string,
 ): Promise<TurnResult> {
   const sanitized = sanitizeUserMessage(rawMessage)
   if (!sanitized) return { reply: '', tokensUsed: 0, escalated: false }
@@ -611,7 +617,9 @@ export async function agentTurn(
     return { reply: 'This conversation has become too long. Please contact us via email to continue.', tokensUsed: 0, escalated: false }
   }
 
-  return withSessionLock(ctx.sessionId, () => agentTurnInternal(ctx, commonPrompt, history, sanitized, operatorBriefingLanguageOverride))
+  return withSessionLock(ctx.sessionId, () =>
+    agentTurnInternal(ctx, commonPrompt, history, sanitized, operatorBriefingLanguageOverride, faqBlock),
+  )
 }
 
 // ── chatbotFn — host integration entry point ────────────────────────────────
@@ -659,7 +667,28 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     const history: Message[] =
       fullHistory.length > MAX_HISTORY_MESSAGES ? fullHistory.slice(-MAX_HISTORY_MESSAGES) : fullHistory
 
-    const result = await agentTurn(ctx, commonPrompt, history, input.userMessage, input.config.operatorBriefingLanguageOverride)
+    // Fetched fresh each turn (never cached with commonPrompt) so an admin
+    // edit is visible on the very next message. A failure here must not cost
+    // the customer their reply — degrade to "no FAQ block".
+    let faqBlock: string | undefined
+    const getFaqs = input.config.handlers?.getFaqs
+    if (getFaqs) {
+      try {
+        faqBlock = formatFaqBlock(await getFaqs({ workspaceId: input.config.workspaceId }))
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[demorobot] getFaqs handler threw, continuing without FAQ block', err)
+      }
+    }
+
+    const result = await agentTurn(
+      ctx,
+      commonPrompt,
+      history,
+      input.userMessage,
+      input.config.operatorBriefingLanguageOverride,
+      faqBlock,
+    )
 
     const patches = drainPatches(input.context.sessionId)
     const sessionId = input.context.sessionId
