@@ -42,7 +42,7 @@ function AppRoutes() {
       {/* Access Denied - shown when not authenticated */}
       <Route
         path="/access-denied"
-        element={isAuthenticated ? <Navigate to="/platforms" replace /> : <AccessDeniedPage />}
+        element={isAuthenticated ? <Navigate to="/clients" replace /> : <AccessDeniedPage />}
       />
       {/* Auth Callback - receives token from Frontend redirect */}
       <Route
@@ -58,7 +58,7 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/platforms" replace />} />
+        <Route index element={<Navigate to="/clients" replace />} />
         <Route path="platforms" element={<PlatformsPage />} />
         <Route path="channels" element={<ChannelsPage />} />
         <Route path="workspaces/:workspaceId/functions" element={<CallingFunctionsPage />} />

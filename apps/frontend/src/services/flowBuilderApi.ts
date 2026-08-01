@@ -123,8 +123,8 @@ export const flowApi = {
   delete: async (workspaceId: string, flowId: string): Promise<void> => {
     await api.delete(`/workspaces/${workspaceId}/demorobot/flows/${flowId}`)
   },
-  duplicate: async (workspaceId: string, flowId: string): Promise<Flow> => {
-    const response = await api.post(`/workspaces/${workspaceId}/demorobot/flows/${flowId}/duplicate`)
+  duplicate: async (workspaceId: string, flowId: string, title: string): Promise<Flow> => {
+    const response = await api.post(`/workspaces/${workspaceId}/demorobot/flows/${flowId}/duplicate`, { title })
     return response.data?.flow
   },
   /** Rewrites the saved graph as plain-language instructions. Does not persist. */

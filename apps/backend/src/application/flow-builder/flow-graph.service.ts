@@ -80,8 +80,10 @@ export async function createFlow(workspaceId: string, flowCategoryId: string | n
  * The copy keeps the original's compiled prompt/hash: the graph is identical, so
  * recompiling would produce the same result at extra cost. The embedding is left
  * empty and regenerated on first save, since the title differs.
+ *
+ * @param title Title for the copy. Falls back to "<original> (copy)" when omitted.
  */
-export async function duplicateFlow(workspaceId: string, flowId: string) {
+export async function duplicateFlow(workspaceId: string, flowId: string, title?: string) {
   const source = await prisma.flow.findFirst({ where: { id: flowId, workspaceId } })
   if (!source) return null
 
@@ -103,9 +105,12 @@ export async function duplicateFlow(workspaceId: string, flowId: string) {
       data: {
         workspaceId,
         flowCategoryId: source.flowCategoryId,
-        title: `${source.title} (copy)`,
+        // The caller supplies the new title; without one we fall back to the
+        // "(copy)" suffix so the duplicate is still distinguishable.
+        title: title?.trim() || `${source.title} (copy)`,
         description: source.description,
         keywords: source.keywords,
+        humanPrompt: source.humanPrompt,
         retrievalDocument: source.retrievalDocument,
         compiledPrompt: source.compiledPrompt,
         hash: source.hash,

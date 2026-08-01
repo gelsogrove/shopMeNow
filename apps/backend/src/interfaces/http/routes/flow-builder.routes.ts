@@ -215,10 +215,11 @@ export function createFlowBuilderRoutes(): Router {
    *     tags: [Flow Builder]
    *     summary: Duplicate a flow with its full graph
    *     description: >
-   *       Creates a copy of the flow titled "<original> (copy)", including all
-   *       nodes, edges and attachment links. Nodes get new ids and edges are
-   *       rewired onto them, so the copy is fully independent of the original.
-   *       Attachments reference the same Assets rather than re-uploading files.
+   *       Creates a copy of the flow, including all nodes, edges and attachment
+   *       links. Nodes get new ids and edges are rewired onto them, so the copy
+   *       is fully independent of the original. Attachments reference the same
+   *       Assets rather than re-uploading files. The title comes from the request
+   *       body; when omitted it defaults to "<original> (copy)".
    *     parameters:
    *       - in: path
    *         name: workspaceId
@@ -228,6 +229,16 @@ export function createFlowBuilderRoutes(): Router {
    *         name: flowId
    *         required: true
    *         schema: { type: string }
+   *     requestBody:
+   *       required: false
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               title:
+   *                 type: string
+   *                 description: Title for the duplicated flow
    *     responses:
    *       201:
    *         description: The newly created flow

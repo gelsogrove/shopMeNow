@@ -130,7 +130,7 @@ export function ClientsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [updating, setUpdating] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  const [showAll, setShowAll] = useState(false) // Toggle to show admin/developer users
+  const [showAll, setShowAll] = useState(true) // Toggle to show admin/developer users (on by default)
   
   // Bonus modal state
   const [bonusModal, setBonusModal] = useState<{ workspaceId: string; workspaceName: string } | null>(null)

@@ -194,7 +194,8 @@ export class FlowBuilderController {
     try {
       const workspaceId = (req as any).workspaceId
       const { flowId } = req.params
-      const copy = await duplicateFlow(workspaceId, flowId)
+      const { title } = req.body ?? {}
+      const copy = await duplicateFlow(workspaceId, flowId, title)
       if (!copy) {
         res.status(404).json({ error: 'Flow not found' })
         return

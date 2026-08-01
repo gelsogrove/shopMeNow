@@ -38,7 +38,10 @@ export function FlowsPage() {
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [newTitle, setNewTitle] = useState("")
   const [deleteTarget, setDeleteTarget] = useState<Flow | null>(null)
-  const [duplicatingId, setDuplicatingId] = useState<string | null>(null)
+  // Flow being duplicated; the dialog collects the copy's title before the call.
+  const [duplicateTarget, setDuplicateTarget] = useState<Flow | null>(null)
+  const [duplicateTitle, setDuplicateTitle] = useState("")
+  const [isDuplicating, setIsDuplicating] = useState(false)
   // Flow whose stored prompt is being viewed; null closes the dialog.
   const [promptTarget, setPromptTarget] = useState<Flow | null>(null)
 
@@ -71,16 +74,27 @@ export function FlowsPage() {
   // Duplication happens server-side in one transactional call: the previous
   // client-side version issued three requests (read graph, create flow, save
   // graph) and could leave a half-built flow behind if any of them failed.
-  const handleDuplicate = async (flow: Flow) => {
-    setDuplicatingId(flow.id)
+  const openDuplicateDialog = (flow: Flow) => {
+    setDuplicateTarget(flow)
+    setDuplicateTitle(`${flow.title} (copy)`)
+  }
+
+  const handleDuplicate = async () => {
+    if (!duplicateTarget) return
+    if (!duplicateTitle.trim()) {
+      toast.error("Title is required")
+      return
+    }
+    setIsDuplicating(true)
     try {
-      const created = await flowApi.duplicate(workspaceId, flow.id)
+      const created = await flowApi.duplicate(workspaceId, duplicateTarget.id, duplicateTitle.trim())
       setFlows((prev) => [...prev, created])
+      setDuplicateTarget(null)
       toast.success("Flow duplicated")
     } catch (err: any) {
       toast.error(err.message || "Failed to duplicate flow")
     } finally {
-      setDuplicatingId(null)
+      setIsDuplicating(false)
     }
   }
 
@@ -154,8 +168,7 @@ export function FlowsPage() {
               variant="ghost"
               size="icon"
               className="h-8 w-8 p-0"
-              disabled={duplicatingId === flow.id}
-              onClick={() => handleDuplicate(flow)}
+              onClick={() => openDuplicateDialog(flow)}
               title="Duplicate"
             >
               <Copy className="h-4 w-4 text-gray-500" />
@@ -221,6 +234,40 @@ export function FlowsPage() {
               Cancel
             </Button>
             <Button onClick={handleCreate}>Create &amp; Open Editor</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicating copies the whole graph — nodes, answers and attachments —
+          server-side, so only the new title is asked for here. */}
+      <Dialog open={!!duplicateTarget} onOpenChange={(open) => !open && setDuplicateTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Duplicate Flow</DialogTitle>
+            <DialogDescription>
+              Creates a full copy of "{duplicateTarget?.title}", including its questions,
+              answers and attachments.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="duplicate-title">New flow title</Label>
+              <Input
+                id="duplicate-title"
+                value={duplicateTitle}
+                onChange={(e) => setDuplicateTitle(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleDuplicate()}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDuplicateTarget(null)} disabled={isDuplicating}>
+              Cancel
+            </Button>
+            <Button onClick={handleDuplicate} disabled={isDuplicating}>
+              {isDuplicating ? "Duplicating..." : "Duplicate"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

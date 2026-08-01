@@ -30,7 +30,7 @@ export function AuthCallbackPage() {
     try {
       const success = setTokenFromCallback(token)
       if (success) {
-        navigate('/platforms', { replace: true })
+        navigate('/clients', { replace: true })
       } else {
         setError('Invalid or expired token')
         setTimeout(() => navigate('/login'), 2000)
