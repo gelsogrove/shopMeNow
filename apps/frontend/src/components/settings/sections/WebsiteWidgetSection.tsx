@@ -50,6 +50,21 @@ interface WebsiteWidgetSectionProps {
   onFieldFocus?: (fieldKey: string) => void
 }
 
+/**
+ * Public host serving widget.js. The snippet is pasted on the customer's own
+ * site, so it must never inherit the origin of whoever is looking at Settings
+ * (localhost, a preview build, a staging domain would all break the embed).
+ */
+const WIDGET_SCRIPT_ORIGIN = (
+  import.meta.env.VITE_WIDGET_ORIGIN || "https://www.echatbot.ai"
+).replace(/\/+$/, "")
+
+/**
+ * Corner the widget anchors to. Not workspace-configurable yet, so the snippet
+ * pins it explicitly instead of relying on the widget.js default.
+ */
+const WIDGET_POSITION = "bottom-right"
+
 const WIDGET_ICON_OPTIONS = [
   { value: "chat", label: "Chat Bubble", icon: MessageCircle },
   { value: "bot", label: "Bot", icon: Bot },
@@ -78,21 +93,40 @@ export function WebsiteWidgetSection({
   const isEcommerce = channelMode === 'ECOMMERCE'
   const widgetDisabled = !canEdit || isEcommerce
   const maxReplies = 4
-  
-  const copyEmbedCode = () => {
-  const embedCode = `<!-- eChatbot Widget -->
+
+  /**
+   * Build the embed snippet the customer pastes into THEIR website.
+   *
+   * Two things must never be derived from the current browser session:
+   * - the script host: settings may be opened from localhost or staging, but
+   *   the snippet always has to point at the production CDN.
+   * - the logo line: it is only emitted when a logo actually exists, otherwise
+   *   the widget would receive an empty logoUrl and forward it as a blank
+   *   query param to the embed iframe.
+   */
+  const buildEmbedCode = () => {
+    const logoUrl =
+      formData.widgetUseChannelLogo && formData.logoUrl ? formData.logoUrl : ""
+    const logoLine = logoUrl ? `,\n    logoUrl: "${logoUrl}"` : ""
+
+    return `<!-- eChatbot Widget -->
 <script>
   window.eChatbotConfig = {
-    workspaceId: "${workspaceId}",
+    workspaceId: "${workspaceId || "YOUR_WORKSPACE_ID"}",
+    position: "${WIDGET_POSITION}",
     title: "${formData.widgetTitle || "Chat with us"}",
     primaryColor: "${formData.widgetPrimaryColor || "#22c55e"}",
     icon: "${formData.widgetIcon || "chat"}",
     language: "${formData.widgetLanguage || "it"}",
-    useChannelLogo: ${formData.widgetUseChannelLogo ? "true" : "false"},
-    logoUrl: "${formData.widgetUseChannelLogo && formData.logoUrl ? formData.logoUrl : ""}"
+    useChannelLogo: ${formData.widgetUseChannelLogo ? "true" : "false"}${logoLine}
   };
 </script>
-<script src="${window.location.origin}/widget.js" async></script>`
+<script src="${WIDGET_SCRIPT_ORIGIN}/widget.js" async></script>`
+  }
+
+  const embedCode = buildEmbedCode()
+
+  const copyEmbedCode = () => {
     navigator.clipboard.writeText(embedCode)
     toast.success("✅ Code copied to clipboard!")
   }
@@ -326,20 +360,10 @@ export function WebsiteWidgetSection({
                 </Button>
               </div>
               <div className="relative min-w-0">
+                {/* Renders the exact string the Copy button writes to the
+                    clipboard — a second inline template would silently drift. */}
                 <pre className="bg-slate-900 text-green-400 p-5 rounded-xl text-sm leading-relaxed overflow-x-auto border-2 border-slate-600 shadow-xl max-w-full">
-                  {`<!-- eChatbot Widget -->
-<script>
-  window.eChatbotConfig = {
-    workspaceId: "${workspaceId || "YOUR_WORKSPACE_ID"}",
-    title: "${formData.widgetTitle || "Chat with us"}",
-    primaryColor: "${formData.widgetPrimaryColor || "#22c55e"}",
-    icon: "${formData.widgetIcon || "chat"}",
-    language: "${formData.widgetLanguage || "it"}",
-    useChannelLogo: ${formData.widgetUseChannelLogo ? "true" : "false"},
-    logoUrl: "${formData.widgetUseChannelLogo && formData.logoUrl ? formData.logoUrl : ""}"
-  };
-</script>
-<script src="${window.location.origin}/widget.js" async></script>`}
+                  {embedCode}
                 </pre>
               </div>
             </div>

@@ -36,6 +36,7 @@ import {
   CheckCheck,
   Mic,
   SmilePlus,
+  Plus,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -581,6 +582,9 @@ export function ChatWidget({
     channelStatus?: boolean
     whatsappPhoneNumber?: string | null
     name?: string | null
+    // 📄 T&C text authored in Settings → Other. Shown verbatim in the
+    // registration form; falls back to the built-in copy when not configured.
+    termsAndConditions?: string | null
   } | null>(null)
 
   // 👤 Profile Panel State
@@ -631,6 +635,7 @@ export function ChatWidget({
               channelStatus: statusResp.workspace.channelStatus,
               whatsappPhoneNumber: statusResp.workspace.whatsappPhoneNumber,
               name: statusResp.workspace.name,
+              termsAndConditions: statusResp.workspace.termsAndConditions,
             })
           }
         } catch (err) {
@@ -655,6 +660,7 @@ export function ChatWidget({
               channelStatus: statusResp.workspace.channelStatus,
               whatsappPhoneNumber: statusResp.workspace.whatsappPhoneNumber,
               name: statusResp.workspace.name,
+              termsAndConditions: statusResp.workspace.termsAndConditions,
             })
           }
 
@@ -1547,9 +1553,14 @@ export function ChatWidget({
   }
 
   /**
-   * New chat (demo/instantChat only): clear session + visitor identity so the
-   * next message starts a brand-new customer/session server-side, and stay
-   * in the anonymous instant-chat flow (no registration form).
+   * New chat: clear session + visitor identity so the next message starts a
+   * brand-new customer/session server-side.
+   *
+   * Two flavours, because the two flows resume differently:
+   * - demo (instantChat): stay in the anonymous chat, no registration form —
+   *   the next message re-creates everything server-side on its own.
+   * - registered flow: the visitor identity is gone, so the widget must go
+   *   back to the registration form to obtain a new customer + session.
    */
   const handleNewChat = () => {
     if (resolvedWorkspaceId) {
@@ -1563,6 +1574,10 @@ export function ChatWidget({
     setSessionId(null)
     setMessages([])
     setShowProfilePanel(false)
+    if (!instantChat) {
+      // Registered flow: no identity left → collect it again.
+      setShowRegistrationForm(true)
+    }
   }
 
   const handleQuickReply = async (reply: string) => {
@@ -1723,8 +1738,8 @@ export function ChatWidget({
   const embeddedPopupSizeClasses = isEmbedded
     ? "w-full h-full rounded-[24px] shadow-none border-2"
     : instantChat
-    ? "w-screen h-[100dvh] sm:w-[480px] sm:h-[760px] sm:max-h-[92vh] rounded-none sm:rounded-3xl shadow-2xl border-2 sm:border-2"
-    : "w-screen h-[100dvh] sm:w-[410px] sm:h-[680px] sm:max-h-[800px] rounded-none sm:rounded-3xl shadow-2xl border-2 sm:border-2"
+    ? "w-screen h-[100dvh] sm:w-[560px] sm:h-[860px] sm:max-w-[calc(100vw-4rem)] sm:max-h-[92vh] rounded-none sm:rounded-3xl shadow-2xl border-2 sm:border-2"
+    : "w-screen h-[100dvh] sm:w-[520px] sm:h-[820px] sm:max-w-[calc(100vw-4rem)] sm:max-h-[92vh] rounded-none sm:rounded-3xl shadow-2xl border-2 sm:border-2"
     
   // Generate light version of primary color for border
   const getBorderColor = (color: string) => {
@@ -2025,16 +2040,18 @@ export function ChatWidget({
                   <span className="text-xl">🐛</span>
                 </button>
               )}
-              {/* New chat button - demo (instantChat) only: start a fresh
-                  conversation without closing the widget. */}
-              {instantChat && (
+              {/* New chat button - start a fresh conversation without closing
+                  the widget. Hidden while the registration form is up: there is
+                  no conversation to reset yet. */}
+              {(instantChat || !showRegistrationForm) && (
                 <button
                   onClick={handleNewChat}
-                  className="hover:brightness-95 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium"
+                  className="hover:brightness-95 px-3 py-1.5 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5"
                   style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
                   title="New chat"
                   aria-label="New chat"
                 >
+                  <Plus className="w-4 h-4" />
                   New chat
                 </button>
               )}
@@ -2060,8 +2077,11 @@ export function ChatWidget({
                 {showTermsContent ? (
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold text-slate-800">{ui.termsTitle}</h3>
+                    {/* 📄 Prefer the workspace T&C authored in Settings → Other.
+                        The built-in per-language copy is only a fallback for
+                        workspaces that never configured one. */}
                     <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
-                      {ui.termsBody}
+                      {workspaceConfig?.termsAndConditions?.trim() || ui.termsBody}
                     </p>
                     <button
                       onClick={() => setShowTermsContent(false)}
@@ -2266,14 +2286,14 @@ export function ChatWidget({
                           // 📱 WhatsApp bubble: ~10px radius, squared corner where
                           // the tail attaches, compact padding, subtle shadow.
                           // `group` → reveals the reaction picker on hover.
-                          "group relative max-w-[80%] sm:max-w-[340px] px-2.5 py-[6px] shadow-sm rounded-[10px]",
+                          "group relative max-w-[80%] sm:max-w-[420px] px-2.5 py-[6px] shadow-sm rounded-[10px]",
                           "word-wrap break-words overflow-wrap-anywhere text-sm sm:text-[14.5px]",
                           msg.role === "user"
                             ? "text-slate-900 rounded-tr-none" // outgoing (green via style) — tail top-right
                             : "bg-white text-slate-900 rounded-tl-none" // incoming (white) — tail top-left
                         )
                       : cn(
-                          "group rounded-2xl px-3 sm:px-4 py-2 sm:py-3 max-w-[88%] sm:max-w-[360px] mb-3 shadow-sm",
+                          "group rounded-2xl px-3 sm:px-4 py-2 sm:py-3 max-w-[88%] sm:max-w-[440px] mb-3 shadow-sm",
                           "word-wrap break-words overflow-wrap-anywhere relative text-sm sm:text-[15px] leading-relaxed",
                           msg.role === "user"
                             ? "text-white rounded-br-md"

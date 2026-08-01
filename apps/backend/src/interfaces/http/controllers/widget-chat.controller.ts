@@ -456,6 +456,7 @@ export class WidgetChatController {
           websiteUrl: true,
           customChatbotId: true, // 🎮 demo workspaces bypass enableWidget/debugMode gates
           allowedExternalLinks: true, // reuse as allow-list for widget origins
+          termsAndConditions: true, // 📄 T&C text shown in the widget registration form
         },
       })
 
@@ -517,6 +518,7 @@ export class WidgetChatController {
           name: workspace.name,
           websiteUrl: workspace.websiteUrl,
           allowedOrigins: workspace.allowedExternalLinks,
+          termsAndConditions: workspace.termsAndConditions,
         },
       })
     }
@@ -595,6 +597,7 @@ export class WidgetChatController {
           name: workspace.name,
           websiteUrl: workspace.websiteUrl,
           allowedOrigins: workspace.allowedExternalLinks,
+          termsAndConditions: workspace.termsAndConditions,
         },
         customer: registeredCustomer ? {
           id: registeredCustomer.id,
@@ -622,6 +625,7 @@ export class WidgetChatController {
           name: workspace.name,
           websiteUrl: workspace.websiteUrl,
           allowedOrigins: workspace.allowedExternalLinks,
+          termsAndConditions: workspace.termsAndConditions,
         },
         customer: registeredCustomer ? {
           id: registeredCustomer.id,

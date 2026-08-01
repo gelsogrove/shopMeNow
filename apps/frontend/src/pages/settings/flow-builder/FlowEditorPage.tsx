@@ -228,59 +228,6 @@ function FlowEditorInner() {
     [setNodes, setEdges],
   )
 
-  // Duplicates a single question. The copy is placed slightly below-right so it
-  // is visibly a new node rather than hidden under the original, and its answers
-  // are copied WITHOUT their targets: re-using them would wire the duplicate
-  // into the original's branches, which is never what "duplicate" means here.
-  // Applied to the canvas immediately, persisted on Save like every other edit.
-  const handleDuplicateNode = useCallback(
-    (nodeId: string) => {
-      const source = nodes.find((n) => n.id === nodeId)
-      if (!source) return
-
-      const newNodeId = `node_${Math.random().toString(36).slice(2, 10)}`
-      setNodes((prev) => [
-        ...prev,
-        {
-          ...source,
-          id: newNodeId,
-          position: { x: source.position.x + 60, y: source.position.y + 80 },
-          selected: false,
-          data: {
-            ...source.data,
-            nodeId: newNodeId,
-            // Attachments are NOT copied: the compiler validates that every
-            // attachment belongs to this flow's category, and carrying the
-            // originals over made saving fail with `attachment_wrong_model`.
-            // The user re-attaches what the copy actually needs.
-            attachedAssetIds: [],
-            attachmentCount: 0,
-          } as any,
-        },
-      ])
-
-      // Copy each answer, pointing it back at the duplicate itself so the edge
-      // stays valid on the canvas; the user then re-targets it. A copied answer
-      // must never keep the original's target, or editing the duplicate would
-      // silently rewire the original flow.
-      setEdges((prev) => [
-        ...prev,
-        ...prev
-          .filter((e) => e.source === nodeId)
-          .map((e) => ({
-            ...e,
-            id: `edge_${Math.random().toString(36).slice(2, 10)}`,
-            source: newNodeId,
-            target: newNodeId,
-          })),
-      ])
-
-      setPanelNodeId(newNodeId)
-      toast.success("Question duplicated")
-    },
-    [nodes, setNodes, setEdges],
-  )
-
   // React Flow's default delete key (Backspace/Delete) on a selected node —
   // same cleanup as the panel's "Delete question" button, so no path leaves
   // dangling edges.
@@ -455,15 +402,14 @@ function FlowEditorInner() {
   }
 
   const errorNodeIds = new Set(validationErrors.map((e) => e.nodeId).filter(Boolean))
-  // Validation state and the duplicate handler are injected at render time
-  // rather than stored on the node: they are presentation concerns, and keeping
-  // them out of `nodes` means they never end up in the save payload.
+  // Validation state is injected at render time rather than stored on the node:
+  // it is a presentation concern, and keeping it out of `nodes` means it never
+  // ends up in the save payload.
   const displayNodes = nodes.map((n) => ({
     ...n,
     data: {
       ...n.data,
       hasValidationError: errorNodeIds.has(n.id),
-      onDuplicate: handleDuplicateNode,
     },
   }))
 

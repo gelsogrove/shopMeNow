@@ -1209,7 +1209,12 @@
       this.popup.className = "echatbot-widget-popup"
       this.container.appendChild(this.popup)
 
-      // 🌍 Language flag indicator
+      // Header - use custom title if provided, otherwise translated default
+      const header = document.createElement("div")
+      header.className = "echatbot-widget-header"
+
+      // 🌍 Language flag indicator — must be appended after `header` exists,
+      // otherwise the whole widget dies on a temporal dead zone ReferenceError.
       const langFlag = document.createElement("span")
       langFlag.className = "echatbot-widget-lang-flag"
       const flagText = t.flag || "🌐"
@@ -1220,10 +1225,6 @@
       langFlag.title = `Language: ${langCode}${fallbackNote}`
       langFlag.style.cssText = "margin-right: 8px; font-size: 18px; cursor: help;"
       header.appendChild(langFlag)
-      
-      // Header - use custom title if provided, otherwise translated default
-      const header = document.createElement("div")
-      header.className = "echatbot-widget-header"
 
       const headerTitle = document.createElement("span")
       headerTitle.textContent = this.config.title || t.headerTitle
