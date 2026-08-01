@@ -586,11 +586,7 @@ export async function agentTurn(
   )
 }
 
-// ── chatbotFn — host integration entry point ────────────────────────────────
-
 export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
-  // Effective config for this workspace: database values (sent by the host)
-  // layered over the module's settings.json defaults.
   const settings = effectiveSettings(input.config.settings)
 
   if (!API_KEY) {
@@ -606,10 +602,6 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
   }
 
   try {
-    // Editable prompt (workspace.customChatbotSystemPrompt) takes priority
-    // over the module's static prompts/common.md when the host provides one.
-    // Not cached with the static prompt — the editable one can change
-    // between turns, unlike the file read once at boot.
     const commonPrompt = input.config.systemPromptOverride || (await getCachedCommonPrompt())
 
     const ctx: ToolContext & { retrieveFlow?: RetrievalHandler } = {
@@ -620,35 +612,17 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       retrieveFlow: input.config.handlers?.retrieveFlow,
     }
 
-    // Restore durable state (serial, language, attached flow) before any tool
-    // or prompt reads it — otherwise a dyno restart mid-conversation would
-    // silently drop what the customer already told us.
     hydrateState(input.context.sessionId, input.context.persistedState)
 
-    // Andrea 2026-08-02: seed the conversation language from what the host
-    // already knows (the widget registration form, or the customer record).
-    // Without this the module started every conversation with no language at
-    // all, so the LLM fell back to the workspace defaultLanguage — AmRobots
-    // (defaultLanguage "it") answered "hola" in Italian. seedLanguageIfNeeded
-    // never overwrites a language already committed from a previous turn.
     if (input.config.language) {
       seedLanguageIfNeeded(input.context.sessionId, input.config.language)
     }
 
-    // Andrea 2026-08-01: cap the history handed to the LLM. It used to grow
-    // unbounded, so cost and latency climbed with every turn and a long
-    // conversation would eventually blow past the context window. The last
-    // MAX_HISTORY_MESSAGES entries are enough: durable facts (serial, name,
-    // language, collected flow answers) live in SessionState, which is sent
-    // separately as its own prompt block and is never truncated.
     const maxHistory = settings.maxHistoryMessages ?? 30
     const fullHistory: Message[] = input.context.history.map((h) => ({ role: h.role, content: h.content }))
     const history: Message[] =
       fullHistory.length > maxHistory ? fullHistory.slice(-maxHistory) : fullHistory
 
-    // Fetched fresh each turn (never cached with commonPrompt) so an admin
-    // edit is visible on the very next message. A failure here must not cost
-    // the customer their reply — degrade to "no FAQ block".
     let faqBlock: string | undefined
     const getFaqs = input.config.handlers?.getFaqs
     if (getFaqs) {
@@ -676,8 +650,6 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     return {
       reply: result.reply || null,
       language: getState(sessionId).language,
-      // Snapshot taken AFTER the turn, so the next request restores the serial,
-      // language and attached flow even if it lands on a different dyno.
       persistedState: dehydrateState(sessionId),
       shouldEscalate: result.escalated,
       escalationSummary: result.escalated ? result.escalationSummary || `Session ${sessionId} escalated (no briefing captured)` : undefined,
@@ -709,5 +681,4 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
   }
 }
 
-// Exposed for tests/tools that need to clear in-RAM state between runs.
 export { resetState }
