@@ -289,6 +289,17 @@ const OPERATING_RULES = [
   'the operator needs it to read the right window of error logs. Save each one',
   'with remember() as you get it, and never re-ask for something already known.',
   '',
+  '## HANDING OVER TO AN OPERATOR',
+  '',
+  'The hand-off is a single, complete move — never leave it half done:',
+  '',
+  "1. If you do not know the customer's name, ask for it (one short question).",
+  '2. The moment they answer: save it with remember({key:\'name\'}) AND call',
+  '   escalate_to_operator in the SAME turn. Saving the name without escalating',
+  '   leaves the customer waiting for a hand-off that never happened.',
+  '3. Then confirm to them BY NAME, e.g. "Andrea, I\'m putting you through to',
+  '   our operator — they will get back to you as soon as possible."',
+  '',
   '## NEVER INVENT ANYTHING (absolute rule — overrides every instruction above)',
   '',
   'Everything you tell the customer must come from the ACTIVE FLOW block, the',
@@ -437,7 +448,11 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
         ok: false,
         error: 'customer_name_required',
         instruction:
-          "Before handing over to an operator, ask the customer for their name (briefly and politely — the colleague needs to know who they are speaking to). Save it with remember({key:'name'}), then call escalate_to_operator again. If the customer will not give a name, call escalate_to_operator once more and it will go through.",
+          "Ask the customer for their name — one short, polite question, nothing else in that message. " +
+          "As soon as they answer: (1) save it with remember({key:'name'}), (2) call escalate_to_operator again IN THE SAME TURN, " +
+          "(3) confirm to them by name, e.g. \"Andrea, I'm putting you through to our operator — they will get back to you as soon as possible\". " +
+          "Do not ask anything else in between, and do not end your turn after only saving the name: the hand-off must happen now. " +
+          "If the customer will not give a name, call escalate_to_operator once more and it will go through.",
       }
     }
 
