@@ -46,6 +46,58 @@ describe("demorobot flow catalogue block", () => {
     expect(block).toMatch(/NEVER invent diagnostic questions/i)
   })
 
+  describe("grouping by category", () => {
+    // Categories give the model a way to narrow down by area before matching a
+    // title — the difference between scanning 40 entries and scanning 400.
+    const MIXED = [
+      { flowId: "f1", title: "ERROR 001", category: "Robotica" },
+      { flowId: "f2", title: "Cavo interrotto", category: "Cables" },
+      { flowId: "f3", title: "Robot non parte", category: "Robotica" },
+    ]
+
+    it("groups flows under their category heading", () => {
+      const block = formatFlowsBlock(MIXED)
+
+      expect(block).toContain("**Robotica**")
+      expect(block).toContain("**Cables**")
+      // Same-category flows stay together under one heading.
+      expect(block.split("**Robotica**")[1]).toContain("[f1]")
+      expect(block.split("**Robotica**")[1]).toContain("[f3]")
+    })
+
+    it("still lists every flow id, whatever the grouping", () => {
+      const block = formatFlowsBlock(MIXED)
+      for (const f of MIXED) expect(block).toContain(`[${f.flowId}]`)
+    })
+
+    it("lists uncategorised flows under Other rather than dropping them", () => {
+      // A missing category must never make a procedure unreachable.
+      const block = formatFlowsBlock([...MIXED, { flowId: "f4", title: "Generico" }])
+
+      expect(block).toContain("**Other**")
+      expect(block).toContain("[f4]")
+    })
+
+    it("keeps the list flat when every flow shares one category", () => {
+      // A single heading adds nothing but noise and tokens.
+      const block = formatFlowsBlock([
+        { flowId: "f1", title: "ERROR 001", category: "Robotica" },
+        { flowId: "f3", title: "Robot non parte", category: "Robotica" },
+      ])
+
+      expect(block).not.toContain("**Robotica**")
+      expect(block).toContain("[f1]")
+      expect(block).toContain("[f3]")
+    })
+
+    it("keeps the list flat when no flow has a category", () => {
+      const block = formatFlowsBlock(FLOWS)
+
+      expect(block).not.toContain("**Other**")
+      expect(block).toContain("[flow-err-001]")
+    })
+  })
+
   it("forbids improvising when the workspace has no flows at all", () => {
     // Empty catalogue is the highest-risk case: with no procedure whatsoever
     // the model has nothing to say and is most tempted to make something up.

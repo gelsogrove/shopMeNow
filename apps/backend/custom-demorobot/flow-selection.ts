@@ -74,8 +74,11 @@ export function formatFlowsBlock(flows: FlowSummary[]): string {
   const renderFlow = (f: FlowSummary) => `- [${f.flowId}] ${f.title}${f.hint ? ` — ${f.hint}` : ''}`
 
   const lines: string[] = []
-  // A single category adds no information — keep the list flat in that case.
-  if (named.length <= 1 && uncategorised.length === 0) {
+  // Headings only earn their tokens when they actually separate something:
+  // with no categories at all, or with everything under one, the flat list
+  // carries the same information without the noise.
+  const hasUsefulGrouping = named.length > 1 || (named.length === 1 && uncategorised.length > 0)
+  if (!hasUsefulGrouping) {
     lines.push(...flows.map(renderFlow))
   } else {
     for (const [category, group] of named) {
