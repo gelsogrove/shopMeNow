@@ -262,7 +262,7 @@ const TOOLS = [
 // workspace.customChatbotSystemPrompt. That must never be able to remove the
 // anti-hallucination rule, so the module appends this block on every call,
 // after the tenant prompt.
-const GROUNDING_RULE = [
+const OPERATING_RULES = [
   '## ANSWER FORMAT',
   '',
   '- When you offer the customer a set of choices, NUMBER them "1.", "2.", "3."',
@@ -524,7 +524,7 @@ async function callLLM({
   // customChatbotSystemPrompt (AmRobots does). Injected by the module so it
   // cannot be lost by editing a prompt in the backoffice, and kept LAST so it
   // outranks every block above it.
-  systemContent.push({ type: 'text', text: GROUNDING_RULE })
+  systemContent.push({ type: 'text', text: OPERATING_RULES })
 
   const payloadMessages: Array<Record<string, unknown>> = [
     { role: 'system', content: systemContent },
