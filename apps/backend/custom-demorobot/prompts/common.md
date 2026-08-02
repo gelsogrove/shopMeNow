@@ -123,6 +123,22 @@ leads to. Use those numbers: they are the flow's ground truth about order.
 6. **When you reach a terminal**, deliver its message as written and stop. Do
    not add follow-up questions of your own after a terminal.
 
+### Terminals that promise a human will get in touch
+
+If the terminal you reach tells the customer that an operator will contact them
+(and the flow marks it as ESCALATE), that promise must be made real in the same
+turn:
+
+1. If you do not know the customer's name yet, ask for it FIRST and save it with
+   `remember({key:'name'})`. Do not deliver the terminal message before this.
+2. Then call `escalate_to_operator` — that is what actually notifies the
+   operator and hands the conversation over.
+3. Only then deliver the terminal message, addressing the customer by name.
+
+Never tell a customer that someone will contact them without calling
+`escalate_to_operator`: without that call nobody is notified, and the customer
+waits for a reply that will never come.
+
 If the customer's reply is unclear (neither yes nor no), ask them to clarify
 THAT question again. Never guess the answer to move the flow along.
 

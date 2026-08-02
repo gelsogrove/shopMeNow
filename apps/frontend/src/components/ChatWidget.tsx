@@ -688,9 +688,18 @@ export function ChatWidget({
     }
     restoreOperatorState(id)
 
-    // Pre-select language from widget config
-    const normalizedLang = (resolvedLanguage?.slice(0, 2).toLowerCase() as LangCode) || "en"
-    setFormLanguage(SUPPORTED_LANG_CODES.includes(normalizedLang) ? normalizedLang : "en")
+    // Andrea 2026-08-02: seed the registration language from the WORKSPACE
+    // default, not from a hardcoded "en". The in-form language picker was
+    // removed, so this value is no longer an explicit customer choice — it is
+    // just a starting point. Defaulting it to English made an Italian
+    // workspace greet Italian customers in English.
+    //
+    // Whatever is sent here is only a hint anyway: the chatbot switches to the
+    // language the customer actually writes in, from their first real message.
+    const workspaceLang = (widgetConfig?.language ?? resolvedLanguage)?.slice(0, 2).toLowerCase() as LangCode
+    if (workspaceLang && SUPPORTED_LANG_CODES.includes(workspaceLang)) {
+      setFormLanguage(workspaceLang)
+    }
 
     // Load stored messages. Local-preview attachments use blob: object URLs
     // that die with the page — strip them so restored bubbles don't render
