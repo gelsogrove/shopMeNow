@@ -57,7 +57,36 @@ export function formatFlowsBlock(flows: FlowSummary[]): string {
     ].join('\n')
   }
 
-  const lines = flows.map((f) => `- [${f.flowId}] ${f.title}${f.hint ? ` — ${f.hint}` : ''}`)
+  // Grouped by category, so the model can narrow down by area before matching
+  // a title. Flows without one are listed last under "Other" rather than
+  // hidden — a missing category must never make a procedure unreachable.
+  const byCategory = new Map<string, FlowSummary[]>()
+  for (const flow of flows) {
+    const key = flow.category?.trim() || ''
+    const bucket = byCategory.get(key)
+    if (bucket) bucket.push(flow)
+    else byCategory.set(key, [flow])
+  }
+
+  const named = [...byCategory.entries()].filter(([k]) => k !== '').sort(([a], [b]) => a.localeCompare(b))
+  const uncategorised = byCategory.get('') ?? []
+
+  const renderFlow = (f: FlowSummary) => `- [${f.flowId}] ${f.title}${f.hint ? ` — ${f.hint}` : ''}`
+
+  const lines: string[] = []
+  // A single category adds no information — keep the list flat in that case.
+  if (named.length <= 1 && uncategorised.length === 0) {
+    lines.push(...flows.map(renderFlow))
+  } else {
+    for (const [category, group] of named) {
+      lines.push(`**${category}**`, ...group.map(renderFlow), '')
+    }
+    if (uncategorised.length > 0) {
+      lines.push('**Other**', ...uncategorised.map(renderFlow), '')
+    }
+    if (lines[lines.length - 1] === '') lines.pop()
+  }
+
   return [
     '',
     '═══ AVAILABLE FLOWS ═══',
