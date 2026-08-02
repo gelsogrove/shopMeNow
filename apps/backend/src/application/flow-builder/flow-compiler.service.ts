@@ -249,10 +249,26 @@ function topologicalOrder(nodes: CompilerFlowNode[], edges: CompilerFlowEdge[]):
 function renderCompiledPrompt(input: CompileFlowInput, order: CompilerFlowNode[]): string {
   const outgoingByNode = groupBy(input.edges, (e) => e.sourceNodeId)
   const attachmentsByNode = groupBy(input.attachments, (a) => a.nodeId)
-  const lines: string[] = [`## FLOW: ${input.flowTitle}`, '']
+
+  // Andrea 2026-08-02: number the steps. `order` is already topological, but
+  // the rendered prompt used to express transitions by repeating the target's
+  // question text, which left the sequence implicit — the model had to infer
+  // where it was from prose. Explicit step numbers ("go to STEP 3") make the
+  // path unambiguous and let the model state its position, so following the
+  // tree in order stops depending on careful reading.
+  const stepByNodeId = new Map(order.map((node, index) => [node.id, index + 1]))
+  const stepOf = (nodeId: string) => stepByNodeId.get(nodeId)
+
+  const lines: string[] = [
+    `## FLOW: ${input.flowTitle}`,
+    '',
+    'Steps are NUMBERED and must be followed in the order the branches dictate.',
+    'Ask ONE step at a time, then follow the branch matching the answer.',
+    '',
+  ]
 
   for (const node of order) {
-    lines.push(`### Q: ${node.question}`)
+    lines.push(`### STEP ${stepOf(node.id)} — Q: ${node.question}`)
     if (node.fieldKey) {
       lines.push(`(collect as: ${node.fieldKey}${node.fieldType ? `, type: ${node.fieldType}` : ''})`)
     }
@@ -263,7 +279,7 @@ function renderCompiledPrompt(input: CompileFlowInput, order: CompilerFlowNode[]
       if (edge.triggersEscalation) {
         lines.push(`- If "${edge.label}" → call escalate_to_operator immediately.`)
       } else if (target) {
-        lines.push(`- If "${edge.label}" → continue to: "${target.question}"`)
+        lines.push(`- If "${edge.label}" → go to STEP ${stepOf(target.id)}: "${target.question}"`)
       } else {
         lines.push(`- If "${edge.label}" → end of flow.`)
       }

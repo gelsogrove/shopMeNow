@@ -3,14 +3,17 @@
 exports[`compileFlow compiles a valid graph deterministically (snapshot) 1`] = `
 "## FLOW: Rumore strano
 
-### Q: Il robot è acceso?
-- If "Sì" → continue to: "Il wifi è connesso?"
+Steps are NUMBERED and must be followed in the order the branches dictate.
+Ask ONE step at a time, then follow the branch matching the answer.
 
-### Q: Il wifi è connesso?
+### STEP 1 — Q: Il robot è acceso?
+- If "Sì" → go to STEP 2: "Il wifi è connesso?"
+
+### STEP 2 — Q: Il wifi è connesso?
 (collect as: wifiStatus, type: boolean)
-- If "Sì" → continue to: "Check falliti, serve un tecnico."
+- If "Sì" → go to STEP 3: "Check falliti, serve un tecnico."
 
-### Q: Check falliti, serve un tecnico.
+### STEP 3 — Q: Check falliti, serve un tecnico.
 (terminal: ESCALATE, allowed tools: remember, escalate_to_operator)
 "
 `;
