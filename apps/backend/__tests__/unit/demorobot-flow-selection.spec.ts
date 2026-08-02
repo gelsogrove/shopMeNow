@@ -17,7 +17,7 @@
  *   2. start_flow accepts ONLY ids from the list it was given. A hallucinated
  *      or cross-tenant id is refused with instructions, not silently ignored.
  */
-import { formatFlowsBlock, startFlow } from "../../custom-demorobot/flow-selection"
+import { formatFlowsBlock, nextIntakeStep, startFlow } from "../../custom-demorobot/flow-selection"
 import { getState, resetState } from "../../custom-demorobot/state"
 
 const FLOWS = [
@@ -108,6 +108,97 @@ describe("demorobot flow catalogue block", () => {
 
     expect(block).toMatch(/do not invent/i)
     expect(block).toMatch(/escalate_to_operator/)
+  })
+})
+
+/**
+ * Intake questions are dictated by the code, not composed by the LLM.
+ *
+ * Andrea 2026-08-03: while no flow was attached the model had no script, so it
+ * improvised — offering the customer a numbered menu of causes it invented
+ * ("il robot si muove ma le lame non girano", "non si accende"). None of those
+ * strings exist in any flow, prompt or FAQ.
+ *
+ * Four prompt rules failed to stop it, because a rule is a request. The fix is
+ * structural: the question TEXT is fixed here and the LLM only translates it,
+ * so there is no room left to invent options.
+ */
+describe("demorobot intake questions", () => {
+  // Wording comes from the workspace, never from the module: "19 characters
+  // starting with HK" was AmRobots' domain hardcoded into the code.
+  const QUESTIONS = {
+    serialNumber: "What is your robot's serial number?",
+    problemDescription: "What exactly is happening? Describe it in your own words.",
+    problemStartedWhen: "When did it start — today, yesterday, or a while ago?",
+  }
+
+  it("asks for the serial number first", () => {
+    const step = nextIntakeStep({}, QUESTIONS)
+
+    expect(step?.field).toBe("serialNumber")
+    expect(step?.question).toMatch(/serial number/i)
+  })
+
+  it("asks what is happening once the serial is known", () => {
+    const step = nextIntakeStep({ serialNumber: "HKA4OB100LQ26050197" }, QUESTIONS)
+
+    expect(step?.field).toBe("problemDescription")
+  })
+
+  it("keeps the problem question OPEN, never a list of guesses", () => {
+    // The exact regression: a multiple-choice menu of invented symptoms.
+    const step = nextIntakeStep({ serialNumber: "HK123" }, QUESTIONS)
+
+    expect(step?.question).toMatch(/in your own words/i)
+    expect(step?.question).not.toMatch(/blade|battery|charger|1\.|2\./i)
+  })
+
+  it("asks when it started once the problem is described", () => {
+    const step = nextIntakeStep(
+      { serialNumber: "HK123", collectedData: { problemDescription: "non taglia" } },
+      QUESTIONS,
+    )
+
+    expect(step?.field).toBe("problemStartedWhen")
+  })
+
+  it("returns null once every detail is collected", () => {
+    // Intake over: the flow (or the escalation) takes it from here.
+    const step = nextIntakeStep(
+      { serialNumber: "HK123", collectedData: { problemDescription: "non taglia", problemStartedWhen: "oggi" } },
+      QUESTIONS,
+    )
+
+    expect(step).toBeNull()
+  })
+
+  it("never re-asks something already answered", () => {
+    // The customer opened with the serial number: skip straight past it.
+    const step = nextIntakeStep({ serialNumber: "HK123" }, QUESTIONS)
+
+    expect(step?.field).not.toBe("serialNumber")
+  })
+
+  it("asks nothing when the workspace configured no questions", () => {
+    // No hardcoded copy anywhere: an unconfigured workspace simply has no
+    // intake question to ask, rather than emitting the module's own English.
+    expect(nextIntakeStep({}, undefined)).toBeNull()
+    expect(nextIntakeStep({}, {})).toBeNull()
+  })
+
+  it("asks the three questions in a stable order", () => {
+    const order: string[] = []
+    const state: { serialNumber?: string; collectedData?: Record<string, unknown> } = {}
+
+    for (let i = 0; i < 3; i++) {
+      const step = nextIntakeStep(state as never, QUESTIONS)
+      if (!step) break
+      order.push(step.field)
+      if (step.field === "serialNumber") state.serialNumber = "HK123"
+      else state.collectedData = { ...(state.collectedData ?? {}), [step.field]: "x" }
+    }
+
+    expect(order).toEqual(["serialNumber", "problemDescription", "problemStartedWhen"])
   })
 })
 

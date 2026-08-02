@@ -49,6 +49,19 @@ export interface ChatbotSettingsJson {
   welcomeBackMessage?: string
   /** Sentence sent when the conversation is handed to a human operator. */
   humanSupportMessage?: string
+  /** Shown when the customer exceeds the per-minute message cap. */
+  rateLimitedMessage?: string
+  /** Shown when the conversation exceeds maxTurnsPerSession. */
+  sessionTooLongMessage?: string
+  /**
+   * The intake questions asked verbatim while no flow is attached. Written in
+   * one language; the chatbot translates them into the customer's.
+   */
+  intakeQuestions?: {
+    serialNumber?: string
+    problemDescription?: string
+    problemStartedWhen?: string
+  }
 }
 
 /** Workspace fields this generator reads. Kept narrow on purpose. */

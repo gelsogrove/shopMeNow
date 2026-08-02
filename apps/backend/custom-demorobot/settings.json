@@ -15,5 +15,12 @@
   "similarityThreshold": 0.7,
   "topK": 3,
   "audioOutput": false,
-  "audioVoices": {}
+  "audioVoices": {},
+  "rateLimitedMessage": "You are sending messages too quickly. Please wait a moment.",
+  "sessionTooLongMessage": "This conversation has become too long. Please contact us by email to continue.",
+  "intakeQuestions": {
+    "serialNumber": "What is your robot's serial number? You will find it on the label on the robot.",
+    "problemDescription": "What exactly is happening? Describe it in your own words, and tell me the error code if the display shows one.",
+    "problemStartedWhen": "When did it start — today, yesterday, or has it been going on for a while?"
+  }
 }

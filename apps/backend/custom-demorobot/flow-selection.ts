@@ -11,7 +11,7 @@
 // module (import.meta.url) that Jest cannot load, and this is the logic that
 // decides whether the bot follows a real procedure or improvises one.
 
-import { attachFlow } from './state.js'
+import { attachFlow, SessionState } from './state.js'
 
 export interface FlowSummary {
   flowId: string
@@ -172,4 +172,70 @@ export async function startFlow(
       instruction: 'That flow could not be loaded. Call escalate_to_operator.',
     }
   }
+}
+
+// ── Intake: the questions the code asks, not the LLM ───────────────────────
+// Andrea 2026-08-03: telling the model "don't invent questions" is a request,
+// not a guarantee — it kept improvising menus of made-up causes ("does it move
+// but the blades don't spin?") while no flow was attached and it had no script
+// to follow. Prompt rules reduce the odds; they cannot remove the freedom.
+//
+// So the freedom is removed instead: while intake is incomplete and no flow is
+// running, the QUESTION TEXT is fixed here and the LLM only translates it. It
+// cannot offer options it invented, because it is not composing the question.
+
+export interface IntakeStep {
+  /** SessionState/collectedData key this step fills. */
+  field: 'serialNumber' | 'problemDescription' | 'problemStartedWhen'
+  /** Verbatim question. The LLM renders it in the customer's language. */
+  question: string
+}
+
+/**
+ * Intake questions, configured per workspace.
+ *
+ * Andrea 2026-08-03: these used to be string literals in this file — including
+ * "19 characters starting with HK", which is AmRobots' domain hardcoded into
+ * the module. The wording now comes from the workspace (editable in the app,
+ * written in one language and translated by the LLM).
+ *
+ * The MECHANISM stays in code: while intake is incomplete the question text is
+ * fixed and the model only translates it, so it cannot improvise a menu of
+ * invented causes. What is configurable is the wording, not the guarantee.
+ */
+export interface IntakeQuestions {
+  serialNumber?: string | null
+  problemDescription?: string | null
+  problemStartedWhen?: string | null
+}
+
+const INTAKE_ORDER: IntakeStep['field'][] = [
+  'serialNumber',
+  'problemDescription',
+  'problemStartedWhen',
+]
+
+/**
+ * The next intake question, or null when intake is complete — either because
+ * everything is answered, or because the workspace has not configured a
+ * question for the missing field (nothing to ask, so nothing is asked).
+ *
+ * Returns the FIRST unanswered step, so questions always come in the same
+ * order and nothing is asked twice.
+ */
+export function nextIntakeStep(
+  state: SessionState,
+  questions?: IntakeQuestions | null,
+): IntakeStep | null {
+  for (const field of INTAKE_ORDER) {
+    const answered =
+      field === 'serialNumber'
+        ? !!state.serialNumber?.trim()
+        : !!state.collectedData?.[field]
+    if (answered) continue
+
+    const question = questions?.[field]?.trim()
+    return question ? { field, question } : null
+  }
+  return null
 }

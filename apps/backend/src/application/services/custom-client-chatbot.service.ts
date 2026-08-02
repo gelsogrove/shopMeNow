@@ -393,6 +393,13 @@ export class CustomClientChatbotService {
               chatbotSettings?.humanSupportMessage as string | undefined,
               params.userName
             ),
+            // Guard messages and intake wording: configured per workspace, so
+            // the module carries no customer-facing copy of its own. Absent
+            // values mean "not configured" — the module then stays silent
+            // rather than falling back to hardcoded English.
+            rateLimited: (chatbotSettings?.rateLimitedMessage as string | undefined) ?? null,
+            sessionTooLong: (chatbotSettings?.sessionTooLongMessage as string | undefined) ?? null,
+            intakeQuestions: (chatbotSettings?.intakeQuestions as Record<string, string> | undefined) ?? null,
           },
           handlers: {
             scheduleConsultation: (p) => this.scheduleConsultation(p),

@@ -44,6 +44,15 @@ interface Settings {
   topK: number
   audioOutput: boolean
   audioVoices: Record<string, string>
+  // Customer-facing copy. Defaults live in this module's settings.json; the
+  // workspace overrides them from the app, and the LLM translates.
+  rateLimitedMessage?: string
+  sessionTooLongMessage?: string
+  intakeQuestions?: {
+    serialNumber?: string
+    problemDescription?: string
+    problemStartedWhen?: string
+  }
 }
 
 let SETTINGS: Settings
@@ -102,6 +111,16 @@ export interface WorkspaceMessages {
   welcomeBack?: string | null
   /** Sentence used when handing the conversation to a human operator. */
   humanSupport?: string | null
+  /** Shown when the customer exceeds the per-minute message cap. */
+  rateLimited?: string | null
+  /** Shown when the conversation exceeds maxTurnsPerSession. */
+  sessionTooLong?: string | null
+  /**
+   * The three intake questions, asked verbatim while no flow is attached.
+   * Configured per workspace: the module fixes WHEN they are asked, the
+   * workspace decides HOW they are worded.
+   */
+  intakeQuestions?: import('./flow-selection.js').IntakeQuestions | null
 }
 
 export interface FaqEntry {
@@ -114,7 +133,7 @@ export type GetFaqsHandler = (params: { workspaceId: string }) => Promise<FaqEnt
 // re-exported here so the host keeps importing the whole contract from agent.
 export type { FlowSummary, LoadedFlow, ListFlowsHandler, LoadFlowHandler } from './flow-selection.js'
 import type { FlowSummary, ListFlowsHandler, LoadFlowHandler } from './flow-selection.js'
-import { formatFlowsBlock, startFlow } from './flow-selection.js'
+import { formatFlowsBlock, nextIntakeStep, startFlow } from './flow-selection.js'
 
 export interface ChatbotInput {
   userMessage: string
@@ -134,12 +153,7 @@ export interface ChatbotInput {
      * which renders them in the customer's language ({{customerName}} is
      * substituted before they get here).
      */
-    messages?: {
-      /** Greeting for a customer we already know by name (returning visitor). */
-      welcomeBack?: string | null
-      /** Sentence used when handing the conversation to a human operator. */
-      humanSupport?: string | null
-    } | null
+    messages?: WorkspaceMessages | null
     handlers?: {
       retrieveFlow?: RetrievalHandler
       getFaqs?: GetFaqsHandler
@@ -257,132 +271,72 @@ const TOOLS = [
   },
 ] as const
 
-// ── Grounding rule (always injected, never editable per tenant) ─────────────
+// ── Operating rules (always injected, never editable per tenant) ───────────
 // A workspace can replace prompts/common.md with its own system prompt via
-// workspace.customChatbotSystemPrompt. That must never be able to remove the
-// anti-hallucination rule, so the module appends this block on every call,
-// after the tenant prompt.
+// workspace.customChatbotSystemPrompt — so anything that must hold for EVERY
+// tenant lives here and is appended after the tenant prompt.
+//
+// Andrea 2026-08-03: keep this block SHORT. It is paid on every LLM call, and
+// it grew to 2.2k tokens by accretion (one rule per bug, much of it duplicated
+// across sections). Rules that the code now enforces deterministically — the
+// intake questions, the escalation gate — were removed: a guarantee in code
+// does not need restating in the prompt. Before adding anything here, ask
+// whether a guard, a tool refusal or a fixed string could enforce it instead.
 const OPERATING_RULES = [
-  '## ANSWER FORMAT',
+  '## HOW TO ANSWER',
   '',
-  '- When a flow step offers the customer a set of choices, NUMBER them "1.",',
-  '  "2.", "3." — never bullets or dashes. Numbered options let the customer',
-  '  reply with just "2" instead of retyping the whole sentence, which is much',
-  '  easier on a phone. Treat a bare number in their reply as picking that',
-  '  option. This applies to choices that COME FROM a flow or a FAQ — never',
-  '  invent your own set of options to look helpful.',
-  '- Keep each option on its own line and short — a few words, not a paragraph.',
-  '- Ask ONE question per message. Never stack two questions in one reply.',
-  '- Emoji: sparingly. AT MOST ONE per message, and only when it genuinely adds',
-  '  something — a greeting 👋, a warning ⚠️, a confirmation ✅. Never one per',
-  '  line, never decorating a list, never inside a serial number or error code.',
-  '  A message with no emoji at all is perfectly fine and often better.',
+  '- ONE question per message. Never stack two.',
+  '- Number the options ("1.", "2.", "3.") when a flow or FAQ offers a choice,',
+  '  one per line, a few words each. A bare number in the reply picks that',
+  '  option. Never invent your own option list.',
+  '- Emoji: at most one per message, only when it adds something. None is fine.',
   '',
-  '## BEFORE STARTING A DIAGNOSTIC FLOW',
+  '## SOURCES OF TRUTH',
   '',
-  'For a technical problem you need ALL THREE of these. While no flow is',
-  'attached, these are the ONLY questions you are allowed to ask — ask them one',
-  'at a time, translated into the customer\'s language, and ASK NOTHING ELSE:',
+  'Everything you tell the customer comes from the ACTIVE FLOW block, the FAQ',
+  'block, or SESSION STATE. Your training data is NOT a source here.',
   '',
-  '1. "What is your robot\'s serial number? It is 19 characters starting with HK."',
-  "   → remember({key:'serialNumber', value:'HK...'})",
-  '2. "What exactly is happening? Describe it in your own words, and tell me the',
-  '    error code if the display shows one."',
-  "   → remember({key:'problemDescription', value:'...'})",
-  '3. "When did it start — today, yesterday, or has it been going on for a while?"',
-  "   → remember({key:'problemStartedWhen', value:'...'})",
+  '- NEVER invent a diagnosis, a cause, a fix, or a question of your own. If it',
+  '  is not written in the blocks above, you do not know it.',
+  '- NEVER invent product facts: models, prices, warranty, parts, delivery',
+  '  times, opening hours, phone numbers, addresses or URLs.',
+  '- NEVER confirm a serial number, model or warranty unless SESSION STATE says so.',
+  '- A different error code is a different problem: ERROR 0011 is not ERROR 001.',
+  '  Escalate rather than stretching a flow to fit.',
+  '- NEVER send a placeholder ("{{customerName}}", "[NAME]"): substitute the real',
+  '  value or rewrite the sentence without it.',
+  '- An honest "I do not have that information, I am passing you to a colleague"',
+  '  is ALWAYS correct. A plausible-sounding guess is a serious error.',
   '',
-  'Question 2 is DELIBERATELY OPEN. Do not turn it into a list of possible',
-  'causes, do not suggest what might be wrong, do not offer options to pick',
-  'from. You do not know what is wrong yet — that is what the flow is for. Any',
-  'symptom you name before a flow is attached is one you invented.',
+  '## WHAT TO DO WITH A REQUEST',
   '',
-  'Point 3 is required even when the error code alone would identify the flow:',
-  'the operator needs it to read the right window of error logs. Save each one',
-  'with remember() as you get it, and never re-ask for something already known.',
+  'In this order, stopping at the first that applies:',
   '',
-  '## HANDING OVER TO AN OPERATOR',
+  '1. A FAQ answers it → reply from the FAQ. Nothing else needed.',
+  '2. A flow in AVAILABLE FLOWS matches → start_flow(id), then follow its steps.',
+  '3. Neither → collect the case (what is happening, serial number, when it',
+  '   started), then run the general/fallback flow if the catalogue has one,',
+  '   then ask for their name and hand over to an operator.',
   '',
-  'The hand-off is a single, complete move — never leave it half done:',
+  'Once a flow is attached it is your ONLY script: follow its steps in order and',
+  'ignore the catalogue. Never mix questions from another flow into it.',
   '',
-  "1. If you do not know the customer's name, ask for it (one short question).",
-  '2. The moment they answer: save it with remember({key:\'name\'}) AND call',
-  '   escalate_to_operator in the SAME turn. Saving the name without escalating',
-  '   leaves the customer waiting for a hand-off that never happened.',
-  '3. Then confirm to them BY NAME, e.g. "Andrea, I\'m putting you through to',
-  '   our operator — they will get back to you as soon as possible."',
+  'When you fall through to step 3, say why: "I do not have a specific procedure',
+  'for this. Before I put you through to an operator, I need to check a few',
+  'things." The customer then knows a human is coming and that the questions are',
+  'there to save them time.',
   '',
-  'Once a flow is attached it appears as ACTIVE FLOW and becomes your ONLY',
-  'script: follow its steps and forget the catalogue — including the general',
-  'checks. Never mix questions from a general flow into a specific one.',
+  '## HANDING OVER',
   '',
-  'If NO flow in AVAILABLE FLOWS matches the problem, but the catalogue offers a',
-  'general/fallback flow (one not tied to a specific error code or symptom),',
-  'start THAT one before escalating: its basic checks often resolve the issue,',
-  'and when they do not, the operator receives the answers instead of a blank',
-  'case. Escalate straight away only when there is no general flow either.',
+  'Never promise an operator will get in touch without calling',
+  'escalate_to_operator in the same turn — otherwise nobody is notified and the',
+  'customer waits for a reply that never comes. Then confirm BY NAME: "Andrea,',
+  'I am putting you through to our operator, they will get back to you shortly."',
   '',
-  'Say so plainly when you do this, framing the checks as preparation for the',
-  'hand-off rather than as a diagnosis you are still attempting — e.g. "I don\'t',
-  'have a specific procedure for ERR 03. Before I put you through to an',
-  'operator, I need to check a few things with you." The customer then knows a',
-  'human is coming and that the questions are there to save them time.',
-  '',
-  'The operator also needs the case details before taking over. Unless the',
-  'customer has already given them, collect the SERIAL NUMBER, WHEN it started',
-  'and a DESCRIPTION of the problem before escalating — one question at a time,',
-  'saving each with remember(). Handing over a case with none of this forces the',
-  'operator to start the conversation from zero.',
-  '',
-  '### Emergencies are the exception',
-  '',
-  'If someone is hurt, an animal is injured, there is smoke, fire or property',
-  'damage: escalate IMMEDIATELY with reason "emergency". Do not ask for a name,',
-  'a serial number or anything else first — nothing may delay reaching a human.',
-  '',
-  'Then, in the SAME reply, acknowledge what happened with genuine concern and',
-  'ask for the details the operator will need (name, serial number, what',
-  'happened). Never answer an emergency with one flat line: the customer has',
-  'just told you something serious, and "An operator will contact you shortly."',
-  'alone reads as indifference.',
-  '',
-  '## NEVER INVENT ANYTHING (absolute rule — overrides every instruction above)',
-  '',
-  'Everything you tell the customer must come from the ACTIVE FLOW block, the',
-  'FAQ block, or the SESSION STATE. Nothing else counts as knowledge you may use.',
-  '',
-  '- NEVER invent a diagnosis, a cause, a fix, or a repair procedure.',
-  '- NEVER invent product facts: model names, specifications, prices, warranty',
-  '  terms, spare parts, delivery times, opening hours, phone numbers, addresses',
-  '  or URLs. If it is not written in the blocks above, you do not know it.',
-  '- NEVER confirm that a serial number is registered, that a model exists, or',
-  '  that a robot is under warranty unless SESSION STATE says so.',
-  '- NEVER guess which flow applies just to have something to say, and never',
-  '  answer from general knowledge about robot mowers. Your training data is',
-  '  NOT a source here.',
-  '- NEVER ask a diagnostic question of your own invention, and NEVER offer the',
-  '  customer a menu of possible causes you made up. Battery, blades, charger,',
-  '  weather, "does it move but not cut?" — none of it is yours to ask unless it',
-  '  is written in the ACTIVE FLOW block.',
-  '  While no flow is attached you may ask ONLY the three intake questions',
-  '  (serial number, what is happening, when it started). For "what is',
-  '  happening" ask it OPEN — "cosa succede esattamente?" — and let the customer',
-  '  describe it in their own words. Do not turn it into a numbered list of',
-  '  guesses: a made-up option list is an invented diagnosis wearing a menu.',
-  '  (Numbered options are for choices that come FROM a flow, not for your own.)',
-  '- NEVER promise that an operator will get in touch unless you actually call',
-  '  escalate_to_operator in that same turn. Without the call nobody is notified',
-  '  and the customer waits for a reply that never comes. Ask for their name',
-  '  first if you do not have it, then escalate, then deliver the message.',
-  '- NEVER send a placeholder to the customer. "NOMEUSER", "{{customerName}}",',
-  '  "[NAME]" and the like are template markers, not text: either substitute the',
-  '  real value from RUNTIME/SESSION STATE, or rewrite the sentence without it.',
-  '- An error code with no matching flow is NOT covered by a similar-looking',
-  '  one: ERROR 0011 is not ERROR 001. Different code, different problem —',
-  '  escalate rather than stretching a flow to fit.',
-  '- If the information is missing, say plainly that you do not have it and call',
-  '  escalate_to_operator. An honest "I don\'t know, I\'m passing you to a',
-  '  colleague" is ALWAYS correct — a plausible-sounding guess is a serious error.',
+  'EMERGENCY (injury, animal hurt, smoke, fire, damage): escalate IMMEDIATELY',
+  'with reason "emergency" — nothing may delay reaching a human. In the same',
+  'reply, acknowledge what happened with genuine concern and ask for the details',
+  'the operator needs. Never answer an emergency with one flat line.',
 ].join('\n')
 
 interface ToolCall {
@@ -559,7 +513,7 @@ interface CallLLMParams {
   flowsBlock: string | undefined
   settings: Settings
   /** Workspace-owned copy (welcome-back, hand-off), editable in the app. */
-  messages?: { welcomeBack?: string | null; humanSupport?: string | null } | null
+  messages?: WorkspaceMessages | null
 }
 
 async function callLLM({
@@ -606,6 +560,39 @@ async function callLLM({
   }
   if (stateBlock) systemContent.push({ type: 'text', text: stateBlock })
   systemContent.push({ type: 'text', text: runtimeBlock })
+
+  // Intake gate: while no flow is running and the case details are still
+  // missing, the code dictates the exact question. Placed just before the
+  // operating rules so it is the most specific instruction in the prompt.
+  if (!activeFlowSnapshot) {
+    const step = nextIntakeStep(state, messages?.intakeQuestions ?? settings.intakeQuestions)
+    if (step) {
+      systemContent.push({
+        type: 'text',
+        text: [
+          '## THE QUESTION TO ASK NOW (mandatory — this exact question, nothing else)',
+          '',
+          step.question,
+          '',
+          "Translate it into the customer's language and send it as your whole reply.",
+          'Do NOT add other questions, do NOT offer options or possible causes, and',
+          'do NOT rephrase it into a multiple-choice list. A brief acknowledgement of',
+          'what the customer just said may come first, then this question.',
+          '',
+          `When they answer, save it with remember({key:'${step.field}', value:'...'}).`,
+          '',
+          'This applies to TECHNICAL PROBLEMS. Skip it entirely and answer directly',
+          'when:',
+          '- a FAQ answers what the customer asked — reply from the FAQ, no intake;',
+          "- they are not reporting a fault at all (a greeting, a thank you, a",
+          '  general question) — answer normally;',
+          '- what they said matches a flow in AVAILABLE FLOWS — call start_flow and',
+          '  follow that flow from its first step;',
+          '- it is an emergency — escalate immediately.',
+        ].join('\n'),
+      })
+    }
+  }
   // Andrea 2026-08-02: the anti-hallucination rule must hold for EVERY tenant,
   // including workspaces that replace prompts/common.md with their own
   // customChatbotSystemPrompt (AmRobots does). Injected by the module so it
@@ -674,7 +661,7 @@ function formatRuntimeBlock(
   isFirstTurn: boolean,
   settings: Settings,
   customerName: string | undefined,
-  messages: { welcomeBack?: string | null; humanSupport?: string | null } | null | undefined,
+  messages: WorkspaceMessages | null | undefined,
 ): string {
   const now = new Date()
   const lines = [
@@ -936,9 +923,9 @@ async function agentTurnInternal(
       // it, but after a successful escalate_to_operator it sometimes considers
       // the turn finished and returns nothing — leaving the customer staring at
       // an empty reply while an operator has silently been notified. Falling
-      // back to the workspace hand-off message (or a localized default) makes
-      // the confirmation deterministic rather than a hope.
-      const customerReply = reply.trim() || handoffFallback(ctx.sessionId, messages)
+      // back to the workspace hand-off message makes the confirmation
+      // deterministic rather than a hope.
+      const customerReply = reply.trim() || handoffFallback(messages) || ''
 
       return {
         reply: `${customerReply}\n\n${briefing}`,
@@ -978,9 +965,9 @@ async function agentTurnInternal(
 
   return {
     // Same confirmation as the tool-driven path: the workspace's hand-off
-    // message when configured, otherwise the localized default addressed by
-    // name. A hand-off must never read as a generic apology.
-    reply: `${handoffFallback(ctx.sessionId, messages)}\n\n${briefing}`,
+    // message when configured. Nothing is invented here: with no configured
+    // message the customer gets the briefing only.
+    reply: [handoffFallback(messages), briefing].filter(Boolean).join('\n\n'),
     tokensUsed: 0,
     escalated: true,
     escalationSummary: summary,
@@ -988,37 +975,20 @@ async function agentTurnInternal(
   }
 }
 
-const HANDOFF_MESSAGES: Record<string, string> = {
-  en: "I'm sorry, I can't solve this on my own. I'm passing you to a colleague who will get back to you shortly.",
-  it: 'Mi dispiace, non riesco a risolvere da solo. Ti passo a un collega che ti risponderà a breve.',
-  es: 'Lo siento, no puedo resolverlo por mi cuenta. Te paso con un compañero que te responderá en breve.',
-  da: 'Beklager, det kan jeg ikke løse selv. Jeg sender dig videre til en kollega, som vender tilbage snarest.',
-  fr: 'Désolé, je ne peux pas résoudre cela seul. Je vous transfère à un collègue qui vous répondra sous peu.',
-  de: 'Es tut mir leid, das kann ich nicht allein lösen. Ich übergebe an eine Kollegin, die sich in Kürze meldet.',
-  pt: 'Lamento, não consigo resolver sozinho. Vou passar a um colega que lhe responderá em breve.',
-  ca: 'Ho sento, no ho puc resoldre sol. Et passo amb un company que et respondrà ben aviat.',
-}
-
-function handoffMessage(language?: string): string {
-  return HANDOFF_MESSAGES[language ?? 'en'] ?? HANDOFF_MESSAGES.en
-}
-
 /**
  * The confirmation the customer sees when the chat is handed to an operator.
  *
- * Prefers the workspace's own hand-off message (editable in the Human Support
- * card, with {{customerName}} already substituted by the host) and falls back
- * to the localized default. Prefixed with the customer's name when we know it —
- * we asked for it precisely so the hand-off would not be anonymous.
+ * Andrea 2026-08-03: this used to fall back to a HANDOFF_MESSAGES table with
+ * the sentence pre-translated into eight languages — hardcoded copy AND
+ * hardcoded translations, both of which CLAUDE.md forbids. The text now comes
+ * from workspace.humanSupportMessage (editable in the Human Support card,
+ * {{customerName}} already substituted by the host).
+ *
+ * Returns null when the workspace has not configured one: the caller then
+ * keeps whatever the LLM produced rather than inventing a sentence here.
  */
-function handoffFallback(sessionId: string, messages: WorkspaceMessages | undefined): string {
-  const state = getState(sessionId)
-  const configured = messages?.humanSupport?.trim()
-  if (configured) return configured
-
-  const base = handoffMessage(state.language)
-  const name = state.name?.trim()
-  return name ? `${name}, ${base.charAt(0).toLowerCase()}${base.slice(1)}` : base
+function handoffFallback(messages: WorkspaceMessages | undefined): string | null {
+  return messages?.humanSupport?.trim() || null
 }
 
 export async function agentTurn(
@@ -1039,12 +1009,14 @@ export async function agentTurn(
   const now = Date.now()
   const recentCount = registerMessageTimestamp(ctx.sessionId, now, 60_000)
   if (recentCount > settings.maxMessagesPerMinute) {
-    return { reply: 'You are sending messages too quickly. Please wait a moment.', tokensUsed: 0, escalated: false }
+    // No hardcoded copy: when the workspace has not configured a message we
+    // simply do not reply, rather than sending untranslated English.
+    return { reply: (messages?.rateLimited || settings.rateLimitedMessage)?.trim() || '', tokensUsed: 0, escalated: false }
   }
 
   const turnNum = incrementTurn(ctx.sessionId)
   if (turnNum > settings.maxTurnsPerSession) {
-    return { reply: 'This conversation has become too long. Please contact us via email to continue.', tokensUsed: 0, escalated: false }
+    return { reply: (messages?.sessionTooLong || settings.sessionTooLongMessage)?.trim() || '', tokensUsed: 0, escalated: false }
   }
 
   return withSessionLock(ctx.sessionId, () =>
