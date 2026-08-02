@@ -23,7 +23,8 @@ export type WidgetRegisterInput = {
   apiUrl: string
   workspaceId: string
   visitorId: string
-  name: string
+  /** Optional: the widget form no longer collects it — backend falls back to a visitor placeholder. */
+  name?: string
   phone: string
   language: string
   firstMessage: string
@@ -260,10 +261,14 @@ export const registerAndStartChat = async (input: WidgetRegisterInput) => {
 
   const payload: Record<string, unknown> = {
     visitorId,
-    name,
     phone,
     language,
     firstMessage,
+  }
+  // The registration form only asks for phone + message; name stays optional
+  // for callers (e.g. playground) that still have one.
+  if (name && name.trim()) {
+    payload.name = name.trim()
   }
   if (typeof pushNotificationsConsent === "boolean") {
     payload.pushNotificationsConsent = pushNotificationsConsent

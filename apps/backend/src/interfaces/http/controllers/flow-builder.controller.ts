@@ -16,6 +16,7 @@ import {
   saveFlowGraph,
 } from '../../../application/flow-builder/flow-graph.service'
 import { generateFlowPrompt } from '../../../application/flow-builder/flow-prompt-generator.service'
+import { generateFlowDescription } from '../../../application/flow-builder/flow-description-generator.service'
 import { createAssetFromFile, createAssetLink, deleteAsset, listAssets } from '../../../application/flow-builder/asset.service'
 import { OpenRouterEmbeddingProvider } from '../../../application/flow-builder/embedding-provider'
 
@@ -162,6 +163,38 @@ export class FlowBuilderController {
     } catch (error) {
       logger.error('[flow-builder] generateFlowPrompt error:', error)
       res.status(500).json({ error: 'Failed to generate the prompt' })
+    }
+  }
+
+  /**
+   * Suggests a "when to use" description inferred from the flow's questions.
+   * Read-only, like generateFlowPrompt: the editor drops the result into the
+   * description field, where the user can edit it before saving the graph.
+   */
+  async generateFlowDescription(req: Request, res: Response): Promise<void> {
+    try {
+      const workspaceId = (req as any).workspaceId
+      const { flowId } = req.params
+
+      const graph = await getFlowGraph(workspaceId, flowId)
+      if (!graph) {
+        res.status(404).json({ error: 'Flow not found' })
+        return
+      }
+
+      const result = await generateFlowDescription({
+        compiledPrompt: graph.flow.compiledPrompt,
+        flowTitle: graph.flow.title,
+      })
+
+      if (result.ok) {
+        res.json({ description: result.description })
+      } else {
+        res.status(502).json({ error: result.error })
+      }
+    } catch (error) {
+      logger.error('[flow-builder] generateFlowDescription error:', error)
+      res.status(500).json({ error: 'Failed to generate the description' })
     }
   }
 

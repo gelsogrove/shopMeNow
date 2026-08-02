@@ -59,6 +59,8 @@ interface AIPersonalitySectionProps {
     toneOfVoice: "formal" | "friendly" | "professional" | "casual"
     channelMode: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
     welcomeMessage: string
+    /** Greeting for a returning customer we already know by name. */
+    welcomeBackMessage?: string
     enableWelcomeMessage: boolean
     sessionResetTimeout: number
     customAiRules: string
@@ -385,6 +387,43 @@ export function AIPersonalitySection({
             </div>
             <p className="text-xs text-gray-500">
               Sent on first contact. Supports <code>{"{{chatbotName}}"}</code> and <code>{"{{companyName}}"}</code>.
+            </p>
+          </div>
+
+          {/* Welcome Back — used instead of the message above once we know the
+              customer's name, so a returning visitor is greeted personally. */}
+          <div
+            className="space-y-2 mt-6"
+            onFocus={() => onFieldFocus?.("welcomeBackMessage")}
+            data-focus-key="welcomeBackMessage"
+          >
+            <Label htmlFor="welcomeBackMessage">Welcome Back Message</Label>
+            <div className="border rounded-md overflow-hidden">
+              <Editor
+                height="140px"
+                defaultLanguage="markdown"
+                theme="vs-light"
+                value={formData.welcomeBackMessage ?? ""}
+                onChange={(value) => onFieldChange("welcomeBackMessage", value || "")}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 13,
+                  lineNumbers: "on",
+                  wordWrap: "on",
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  folding: true,
+                  renderLineHighlight: "all",
+                  tabSize: 2,
+                  padding: { top: 8, bottom: 8 },
+                  readOnly: !canEdit,
+                }}
+              />
+            </div>
+            <p className="text-xs text-gray-500">
+              Sent instead of the welcome message when the customer is already known by name.
+              Supports <code>{"{{customerName}}"}</code>, <code>{"{{chatbotName}}"}</code> and{" "}
+              <code>{"{{companyName}}"}</code>.
             </p>
           </div>
         </CardContent>

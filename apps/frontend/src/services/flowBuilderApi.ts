@@ -134,6 +134,17 @@ export const flowApi = {
     )
     return response.data?.prompt ?? ""
   },
+  /**
+   * Suggests a "when to use" description from the saved graph. Does not persist:
+   * the caller drops it into the editable description field, and it is stored by
+   * the next saveGraph.
+   */
+  generateDescription: async (workspaceId: string, flowId: string): Promise<string> => {
+    const response = await api.post(
+      `/workspaces/${workspaceId}/demorobot/flows/${flowId}/description/generate`,
+    )
+    return response.data?.description ?? ""
+  },
   /** Stores the prompt after the user reviewed it. Empty string clears it. */
   savePrompt: async (workspaceId: string, flowId: string, humanPrompt: string): Promise<void> => {
     await api.put(`/workspaces/${workspaceId}/demorobot/flows/${flowId}/prompt`, { humanPrompt })

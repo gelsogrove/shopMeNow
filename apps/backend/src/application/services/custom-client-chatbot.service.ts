@@ -16,6 +16,21 @@ import { PromptVariables, VARIABLE_DEFAULTS } from "../../types/prompt-variables
 
 type ChatChannel = string
 
+/**
+ * Substitutes {{customerName}} in workspace-owned copy.
+ *
+ * Returns null when the template is empty, so the module can tell "not
+ * configured" from "configured but blank". When the name is unknown the
+ * placeholder is dropped rather than left visible — the bot asks for the name
+ * before escalating, so the hand-off message normally has one.
+ */
+function renderCustomerName(template: string | undefined | null, customerName?: string): string | null {
+  const text = template?.trim()
+  if (!text) return null
+  const name = customerName?.trim()
+  return text.replace(/\{\{\s*customerName\s*\}\}/gi, name || "").replace(/\s{2,}/g, " ").trim()
+}
+
 // Params/result for the injected schedule_consultation handler. Mirrors the
 // exported types in custom-demowash/agent.ts (structural typing across the
 // dynamic-import boundary).
@@ -171,6 +186,15 @@ type ChatbotInput = {
      * effect on the very next message — no restart, no deploy.
      */
     settings?: Record<string, unknown> | null
+    /**
+     * Customer-facing copy owned by the workspace and editable in the app,
+     * with {{customerName}} already substituted. The module hands these to the
+     * LLM, which renders them in the customer's language.
+     */
+    messages?: {
+      welcomeBack?: string | null
+      humanSupport?: string | null
+    } | null
     // Real side-effect handlers injected by this host. The custom module
     // stays free of Prisma/Google/Zoom imports and calls these when present.
     handlers?: {
@@ -357,6 +381,18 @@ export class CustomClientChatbotService {
             calendarBooking: calendarBookingEnabled,
           },
           settings: chatbotSettings,
+          // Workspace-owned copy. {{customerName}} is substituted here so the
+          // module never has to know about template variables.
+          messages: {
+            welcomeBack: renderCustomerName(
+              chatbotSettings?.welcomeBackMessage as string | undefined,
+              params.userName
+            ),
+            humanSupport: renderCustomerName(
+              chatbotSettings?.humanSupportMessage as string | undefined,
+              params.userName
+            ),
+          },
           handlers: {
             scheduleConsultation: (p) => this.scheduleConsultation(p),
             // Omitted entirely when the workspace has booking disabled.
@@ -708,6 +744,8 @@ export class CustomClientChatbotService {
           defaultLanguage: true,
           audioOutput: true,
           audioVoices: true,
+          welcomeBackMessage: true,
+          humanSupportMessage: true,
         },
       })
       if (!workspace) return null

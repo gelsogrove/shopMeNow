@@ -54,7 +54,14 @@ export async function createFlow(workspaceId: string, flowCategoryId: string | n
   // Compile immediately with an empty graph so the row is never in a
   // "never compiled" limbo state — it will fail validation (no root node)
   // until the user adds content, which is expected and surfaced in the UI.
-  const empty = compileFlow({ nodes: [], edges: [], attachments: [], flowCategoryId, flowTitle: title })
+  const empty = compileFlow({
+    nodes: [],
+    edges: [],
+    attachments: [],
+    flowCategoryId,
+    flowTitle: title,
+    flowDescription: description,
+  })
   return prisma.flow.create({
     data: {
       workspaceId,
@@ -236,12 +243,19 @@ export async function saveFlowGraph(
     })),
   )
 
+  // An omitted description keeps the stored one; only an explicitly sent value
+  // (including "") changes it. Without this, any client that saves the graph
+  // without the field would silently wipe the description — and with it the
+  // retrieval text that makes this flow matchable.
+  const description = input.description === undefined ? existingFlow.description : input.description
+
   const compiled = compileFlow({
     nodes: compilerNodes,
     edges: compilerEdges,
     attachments: compilerAttachments,
     flowCategoryId: existingFlow.flowCategoryId,
     flowTitle: input.title,
+    flowDescription: description,
     flowKeywords: input.keywords,
   })
 
@@ -313,7 +327,10 @@ export async function saveFlowGraph(
       where: { id: flowId },
       data: {
         title: input.title,
-        description: input.description,
+        // Same value the compiler embedded above — writing input.description
+        // here instead would let the stored text and the retrievalDocument
+        // disagree whenever the field was omitted.
+        description,
         keywords: input.keywords ?? [],
         retrievalDocument: compiled.retrievalDocument,
         compiledPrompt: compiled.compiledPrompt,

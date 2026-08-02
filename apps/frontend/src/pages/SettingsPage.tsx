@@ -101,6 +101,8 @@ interface FormData {
   audioOutput: boolean
   audioVoices: Record<string, string>
   welcomeMessage: string
+  /** Greeting for a returning customer we already know by name. */
+  welcomeBackMessage: string
   enableWelcomeMessage: boolean // E0a
   sessionResetTimeout: number // E0b (seconds, 0 = never)
   wipMessage: string
@@ -119,6 +121,8 @@ interface FormData {
   operatorDeliveryMode: string
   faqsEnabled: boolean
   humanSupportInstructions: string
+  /** Sentence sent to the customer when the chat is handed to an operator. */
+  humanSupportMessage: string
   frustrationTriggers: string
   escalationTrigger: string
   translateOperatorMessages: boolean
@@ -260,6 +264,7 @@ export function SettingsPage() {
     audioOutput: false,
     audioVoices: {},
     welcomeMessage: defaultWelcomeMessage,
+    welcomeBackMessage: "",
     enableWelcomeMessage: true,
     sessionResetTimeout: 3600,
     wipMessage: defaultWipMessage,
@@ -275,6 +280,7 @@ export function SettingsPage() {
     operatorDeliveryMode: "all",
     faqsEnabled: true,
     humanSupportInstructions: "",
+    humanSupportMessage: "",
     frustrationTriggers: "",
     escalationTrigger: "",
     translateOperatorMessages: true,
@@ -365,6 +371,7 @@ export function SettingsPage() {
         audioOutput: (currentWorkspace as any).audioOutput ?? false,
         audioVoices: ((currentWorkspace as any).audioVoices as Record<string, string>) ?? {},
         welcomeMessage: currentWorkspace.welcomeMessage || defaultWelcomeMessage,
+        welcomeBackMessage: (currentWorkspace as any).welcomeBackMessage || "",
         enableWelcomeMessage: currentWorkspace.enableWelcomeMessage ?? true,
         sessionResetTimeout: currentWorkspace.sessionResetTimeout ?? 3600,
         wipMessage: currentWorkspace.wipMessage || defaultWipMessage,
@@ -396,6 +403,7 @@ export function SettingsPage() {
         operatorDeliveryMode: (currentWorkspace as any).operatorDeliveryMode || "all",
         faqsEnabled: (currentWorkspace as any).faqsEnabled ?? true,
         humanSupportInstructions: currentWorkspace.humanSupportInstructions || "",
+        humanSupportMessage: (currentWorkspace as any).humanSupportMessage || "",
         frustrationTriggers: currentWorkspace.frustrationTriggers || "",
         escalationTrigger: (currentWorkspace as any).escalationTrigger || "",
         translateOperatorMessages: currentWorkspace.translateOperatorMessages ?? true,
@@ -774,6 +782,7 @@ export function SettingsPage() {
               toneOfVoice: formData.toneOfVoice,
               channelMode: formData.channelMode,
               welcomeMessage: formData.welcomeMessage,
+              welcomeBackMessage: formData.welcomeBackMessage,
               enableWelcomeMessage: formData.enableWelcomeMessage,
               sessionResetTimeout: formData.sessionResetTimeout,
               customAiRules: formData.customAiRules,
@@ -877,6 +886,7 @@ export function SettingsPage() {
               operatorWhatsappNumbers: formData.operatorWhatsappNumbers,
               operatorDeliveryMode: formData.operatorDeliveryMode,
               humanSupportInstructions: formData.humanSupportInstructions,
+              humanSupportMessage: formData.humanSupportMessage,
               frustrationTriggers: formData.frustrationTriggers,
               escalationTrigger: formData.escalationTrigger,
               translateOperatorMessages: formData.translateOperatorMessages,

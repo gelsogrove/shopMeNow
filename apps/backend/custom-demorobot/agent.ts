@@ -17,6 +17,7 @@ import {
   markEscalationOnce,
   mergeCollectedData,
   registerMessageTimestamp,
+  registerNameRequest,
   resetState,
   seedLanguageIfNeeded,
   SessionState,
@@ -90,6 +91,19 @@ export type RetrievalHandler = (params: {
   query: string
 }) => Promise<RetrievalHandlerResult>
 
+/**
+ * Customer-facing copy owned by the workspace and editable in the app, with
+ * {{customerName}} already substituted by the host. Given to the LLM as
+ * templates to render in the customer's language — the module never hardcodes
+ * these sentences (CLAUDE.md §1: no hardcoded translations).
+ */
+export interface WorkspaceMessages {
+  /** Greeting for a customer we already know by name (returning visitor). */
+  welcomeBack?: string | null
+  /** Sentence used when handing the conversation to a human operator. */
+  humanSupport?: string | null
+}
+
 export interface FaqEntry {
   question: string
   answer: string
@@ -114,6 +128,18 @@ export interface ChatbotInput {
     operatorBriefingLanguageOverride?: string | null
     systemPromptOverride?: string | null
     settings?: Partial<Settings> | null
+    /**
+     * Customer-facing copy owned by the workspace and editable in the app.
+     * The module never hardcodes these sentences — it passes them to the LLM,
+     * which renders them in the customer's language ({{customerName}} is
+     * substituted before they get here).
+     */
+    messages?: {
+      /** Greeting for a customer we already know by name (returning visitor). */
+      welcomeBack?: string | null
+      /** Sentence used when handing the conversation to a human operator. */
+      humanSupport?: string | null
+    } | null
     handlers?: {
       retrieveFlow?: RetrievalHandler
       getFaqs?: GetFaqsHandler
@@ -351,6 +377,30 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       return { ok: false, error: 'summary is required and must be a non-empty string' }
     }
 
+    // Andrea 2026-08-02: never hand an anonymous customer to an operator. When
+    // we have no name, refuse and make the LLM ask for it first — remember({name})
+    // then mirrors it onto the customer profile, so the next conversation can
+    // open with the welcome-back greeting instead of the generic one.
+    //
+    // Two deliberate exemptions: a genuine emergency must never wait behind a
+    // formality, and a customer who has already refused to give their name is
+    // escalated anyway (blocking access to a human over a missing name would be
+    // worse than the problem it solves).
+    // The refusal is counted, not detected: asking once and giving up on the
+    // second attempt needs no phrase matching on user text (CLAUDE.md §14).
+    // If the customer supplies a name, the first branch never runs again.
+    const state = getState(ctx.sessionId)
+    const nameKnown = !!state.name?.trim()
+    const alreadyAskedForName = registerNameRequest(ctx.sessionId) > 1
+    if (!nameKnown && reason !== 'emergency' && !alreadyAskedForName) {
+      return {
+        ok: false,
+        error: 'customer_name_required',
+        instruction:
+          "Before handing over to an operator, ask the customer for their name (briefly and politely — the colleague needs to know who they are speaking to). Save it with remember({key:'name'}), then call escalate_to_operator again. If the customer will not give a name, call escalate_to_operator once more and it will go through.",
+      }
+    }
+
     const isFirst = markEscalationOnce(ctx.sessionId, reason)
     if (!isFirst) {
       return { ok: true, already_escalated: true, eta_minutes: 15 }
@@ -358,7 +408,7 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
 
     const ticketId = `TKT-${Date.now().toString(36).toUpperCase()}`
     recordEscalation({ ticketId, reason, summary: rawSummary })
-    return { ok: true, ticket_id: ticketId, eta_minutes: 15 }
+    return { ok: true, ticket_id: ticketId, eta_minutes: 15, customer_name: state.name }
   }
 
   return { ok: false, error: `unknown tool: ${name}` }
@@ -381,6 +431,8 @@ interface CallLLMParams {
   /** Rendered AVAILABLE FLOWS block. Omitted once a flow is attached. */
   flowsBlock: string | undefined
   settings: Settings
+  /** Workspace-owned copy (welcome-back, hand-off), editable in the app. */
+  messages?: { welcomeBack?: string | null; humanSupport?: string | null } | null
 }
 
 async function callLLM({
@@ -393,11 +445,18 @@ async function callLLM({
   faqBlock,
   flowsBlock,
   settings,
+  messages,
 }: CallLLMParams): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
   const stateBlock = formatStateForPrompt(state)
-  const runtimeBlock = formatRuntimeBlock(operatorBriefingLanguageOverride, isFirstTurn, settings)
+  const runtimeBlock = formatRuntimeBlock(
+    operatorBriefingLanguageOverride,
+    isFirstTurn,
+    settings,
+    state.name,
+    messages,
+  )
 
   const systemContent: Array<Record<string, unknown>> = [
     { type: 'text', text: commonPrompt, cache_control: { type: 'ephemeral' } },
@@ -487,6 +546,8 @@ function formatRuntimeBlock(
   operatorBriefingLanguageOverride: string | null | undefined,
   isFirstTurn: boolean,
   settings: Settings,
+  customerName: string | undefined,
+  messages: { welcomeBack?: string | null; humanSupport?: string | null } | null | undefined,
 ): string {
   const now = new Date()
   const lines = [
@@ -495,7 +556,30 @@ function formatRuntimeBlock(
     `- Operator briefing language: ${operatorBriefingLanguageOverride || settings.operatorBriefingLanguage}`,
     `- Privacy policy URL: ${settings.privacyPolicyUrl}`,
     `- First turn: ${isFirstTurn}`,
+    `- Customer name: ${customerName?.trim() || 'unknown'}`,
   ]
+
+  // Workspace-owned copy, editable in the app. Given as templates the LLM
+  // renders in the customer's language — never emitted verbatim in English
+  // (CLAUDE.md §1: no hardcoded translations).
+  if (isFirstTurn && customerName?.trim() && messages?.welcomeBack?.trim()) {
+    lines.push(
+      '',
+      '## WELCOME BACK (use INSTEAD of the standard welcome — this customer is known)',
+      messages.welcomeBack.trim(),
+      'Open with this greeting, translated into the customer\'s language. Do not also send the first-time welcome.',
+    )
+  }
+
+  if (messages?.humanSupport?.trim()) {
+    lines.push(
+      '',
+      '## HAND-OFF MESSAGE (use when escalate_to_operator succeeds)',
+      messages.humanSupport.trim(),
+      "After a successful escalation, close with this sentence, translated into the customer's language.",
+    )
+  }
+
   return lines.join('\n')
 }
 
@@ -516,6 +600,7 @@ async function agentTurnInternal(
   faqBlock: string | undefined,
   flowsBlock: string | undefined,
   settings: Settings,
+  messages: WorkspaceMessages | undefined,
 ): Promise<TurnResult> {
   const isFirstTurn = history.length === 0
   history.push({ role: 'user', content: sanitizedMessage })
@@ -569,6 +654,7 @@ async function agentTurnInternal(
       faqBlock,
       flowsBlock: state.activeFlowId ? undefined : flowsBlock,
       settings,
+      messages,
     })
 
     if (toolCalls.length === 0) {
@@ -626,6 +712,7 @@ async function agentTurnInternal(
         // Escalating — the catalogue is irrelevant to the closing message.
         flowsBlock: undefined,
         settings,
+        messages,
       })
       const { reply, lang } = extractLanguage(finalHop.text)
       commitLanguageFromReply(ctx.sessionId, lang)
@@ -691,6 +778,7 @@ export async function agentTurn(
   faqBlock?: string,
   settingsOverride?: Partial<Settings> | null,
   flowsBlock?: string,
+  messages?: WorkspaceMessages,
 ): Promise<TurnResult> {
   const settings = effectiveSettings(settingsOverride)
   const sanitized = sanitizeUserMessage(rawMessage, settings.maxMessageChars)
@@ -708,7 +796,7 @@ export async function agentTurn(
   }
 
   return withSessionLock(ctx.sessionId, () =>
-    agentTurnInternal(ctx, commonPrompt, history, sanitized, operatorBriefingLanguageOverride, faqBlock, flowsBlock, settings),
+    agentTurnInternal(ctx, commonPrompt, history, sanitized, operatorBriefingLanguageOverride, faqBlock, flowsBlock, settings, messages),
   )
 }
 
@@ -786,6 +874,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       faqBlock,
       input.config.settings,
       flowsBlock,
+      input.config.messages ?? undefined,
     )
 
     const patches = drainPatches(input.context.sessionId)

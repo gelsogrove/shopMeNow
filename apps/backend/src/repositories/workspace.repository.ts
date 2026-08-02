@@ -56,6 +56,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       messageLimit: data.messageLimit,
       blocklist: data.blocklist,
       welcomeMessage: data.welcomeMessage,
+      welcomeBackMessage: data.welcomeBackMessage ?? null,
+      humanSupportMessage: data.humanSupportMessage ?? null,
       wipMessage: data.wipMessage,
       termsAndConditions: data.termsAndConditions,
       enableWelcomeMessage: data.enableWelcomeMessage ?? true, // E0a
@@ -173,6 +175,8 @@ export class WorkspaceRepository implements WorkspaceRepositoryInterface {
       messageLimit: workspace.messageLimit,
       blocklist: workspace.blocklist,
       welcomeMessage: workspace.welcomeMessage,
+      welcomeBackMessage: workspace.welcomeBackMessage,
+      humanSupportMessage: workspace.humanSupportMessage,
       wipMessage: workspace.wipMessage,
       termsAndConditions: workspace.termsAndConditions,
       channelStatus: workspace.channelStatus,

@@ -59,7 +59,6 @@ const widgetRateLimiter = rateLimit({
  *             type: object
  *             required:
  *               - visitorId
- *               - name
  *               - phone
  *               - language
  *               - firstMessage
@@ -68,6 +67,10 @@ const widgetRateLimiter = rateLimit({
  *                 type: string
  *               name:
  *                 type: string
+ *                 description: >
+ *                   Optional. The widget registration form collects only phone and
+ *                   first message; when omitted the server stores a "Visitor <id>"
+ *                   placeholder as the customer name.
  *               phone:
  *                 type: string
  *               email:

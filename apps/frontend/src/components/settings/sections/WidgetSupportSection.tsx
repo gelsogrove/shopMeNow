@@ -19,6 +19,8 @@ interface WidgetSupportSectionProps {
     operatorWhatsappNumbers: string[]
     operatorDeliveryMode: string
     humanSupportInstructions: string
+    /** Sentence sent to the customer when the chat is handed to an operator. */
+    humanSupportMessage?: string
     frustrationTriggers: string
     escalationTrigger: string
     translateOperatorMessages: boolean
@@ -85,6 +87,34 @@ export function WidgetSupportSection({
         </CardHeader>
         {formData.hasHumanSupport && (
         <CardContent className="pt-6 space-y-6">
+          {/* Hand-off message — what the CUSTOMER is told when the chat moves
+              to a human. The bot asks for the customer's name before escalating
+              when it does not have one, so {{customerName}} is normally filled. */}
+          <div
+            className="space-y-2"
+            onFocus={() => onFieldFocus?.("humanSupportMessage")}
+            data-focus-key="humanSupportMessage"
+          >
+            <Label htmlFor="humanSupportMessage" className="text-sm font-medium">
+              Hand-off Message
+            </Label>
+            <p className="text-sm text-gray-600">
+              Sent to the customer when the conversation is passed to an operator.
+            </p>
+            <Textarea
+              id="humanSupportMessage"
+              rows={3}
+              value={formData.humanSupportMessage ?? ""}
+              onChange={(e) => onFieldChange("humanSupportMessage", e.target.value)}
+              placeholder="Hi {{customerName}}, I'm putting you in touch with our operator as soon as possible."
+              disabled={!canEdit}
+            />
+            <p className="text-xs text-gray-500">
+              Supports <code>{"{{customerName}}"}</code>. Written in one language — the
+              chatbot translates it into the customer's language automatically.
+            </p>
+          </div>
+
           {/* Contact Method */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Contact Method</Label>

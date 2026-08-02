@@ -44,6 +44,8 @@ interface SessionEntry {
   turnCount: number
   recentMessageTimestamps: number[]
   escalatedReasons: Set<string>
+  /** How many times escalation has been held back to ask for the customer name. */
+  nameRequestCount: number
 }
 
 const sessions = new Map<string, SessionEntry>()
@@ -51,10 +53,32 @@ const sessions = new Map<string, SessionEntry>()
 function entry(sessionId: string): SessionEntry {
   let e = sessions.get(sessionId)
   if (!e) {
-    e = { state: {}, patches: [], turnCount: 0, recentMessageTimestamps: [], escalatedReasons: new Set() }
+    e = {
+      state: {},
+      patches: [],
+      turnCount: 0,
+      recentMessageTimestamps: [],
+      escalatedReasons: new Set(),
+      nameRequestCount: 0,
+    }
     sessions.set(sessionId, e)
   }
   return e
+}
+
+/**
+ * Counts the attempts to escalate while the customer name is still unknown.
+ *
+ * Andrea 2026-08-02: the bot asks for a name before handing over to an
+ * operator, but must not hold the customer hostage over it. Counting the
+ * attempts lets it ask once and give up on the second try — no phrase
+ * detection on user text is involved (CLAUDE.md §14), so "no", "preferisco
+ * non dirlo" and silence all behave the same.
+ */
+export function registerNameRequest(sessionId: string): number {
+  const e = entry(sessionId)
+  e.nameRequestCount += 1
+  return e.nameRequestCount
 }
 
 export function getState(sessionId: string): SessionState {

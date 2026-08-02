@@ -36,6 +36,8 @@ export interface Workspace {
   adminEmail?: string
   debugMode?: boolean
   welcomeMessage?: string
+  welcomeBackMessage?: string
+  humanSupportMessage?: string
   enableWelcomeMessage?: boolean // E0a - toggle welcome message on/off
   sessionResetTimeout?: number // E0b - seconds after escalation before auto-reset (0 = never)
   wipMessage?: string
@@ -157,6 +159,8 @@ export interface CreateWorkspaceData {
   language?: string
   description?: string
   welcomeMessage?: string
+  welcomeBackMessage?: string
+  humanSupportMessage?: string
   adminEmail?: string
   channelMode?: 'ECOMMERCE' | 'INFORMATIONAL' | 'FLOW'
   hasHumanSupport?: boolean
@@ -185,6 +189,8 @@ export interface UpdateWorkspaceData {
   url?: string
   debugMode?: boolean
   welcomeMessage?: string
+  welcomeBackMessage?: string
+  humanSupportMessage?: string
   enableWelcomeMessage?: boolean // E0a
   sessionResetTimeout?: number // E0b (seconds, 0 = never)
   wipMessage?: string

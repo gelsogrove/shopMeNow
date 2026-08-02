@@ -32,6 +32,10 @@ model Workspace {
   messageLimit              Int       @default(50)
   url                       String?
   welcomeMessage            String?   @default("Welcome! I'm {{chatbotName}}, your digital assistant. How can I help you today?") @db.Text
+  // 🆕 Greeting for a customer we already know by name (returning visitor).
+  // welcomeMessage stays the first-contact greeting; this one replaces it once
+  // the customer profile has a name. {{customerName}} is substituted at runtime.
+  welcomeBackMessage        String?   @default("Welcome back, {{customerName}}! How can I help you today?") @db.Text
   enableWelcomeMessage      Boolean   @default(true) // Toggle to enable/disable welcome message (E0a - cross-cutting feature)
   sessionResetTimeout       Int       @default(3600) // Seconds after escalation before auto-reset (E0b - cross-cutting feature)
   wipMessage                String?   @default("Work in progress. Please contact us later.") @db.Text
@@ -70,6 +74,11 @@ model Workspace {
   hasOrderTracking                  Boolean     @default(true) // Enable order tracking agent in pipeline
   needRegistration                  Boolean     @default(true) // Enable profile management agent in pipeline
   humanSupportInstructions          String?     @db.Text // Instructions for human support requests
+  // 🆕 Customer-facing sentence sent when the conversation is handed to a human.
+  // Editable in the Human Support card. {{customerName}} is substituted at
+  // runtime — the bot asks for the name before escalating when it does not
+  // have one, so the hand-off is never addressed to an anonymous customer.
+  humanSupportMessage               String?     @default("Hi {{customerName}}, I'm putting you in touch with our operator as soon as possible.") @db.Text
   frustrationTriggers               String?     @db.Text // Signals of customer frustration/panic that should trigger immediate escalation
   escalationTrigger                 String?     @db.Text // 🆕 Customer-facing sentence explaining how to reach a human. Injectable into any prompt/message via {{escalationTrigger}}.
   operatorContactMethod             String?     @default("email") // 'email' | 'whatsapp'

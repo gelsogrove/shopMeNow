@@ -79,6 +79,8 @@ export class WorkspaceController {
         messageLimit: workspace.messageLimit,
         blocklist: workspace.blocklist,
         welcomeMessage: workspace.welcomeMessage,
+        welcomeBackMessage: workspace.welcomeBackMessage ?? null,
+        humanSupportMessage: workspace.humanSupportMessage ?? null,
         wipMessage: workspace.wipMessage,
         termsAndConditions: workspace.termsAndConditions,
         channelStatus: workspace.channelStatus,
@@ -210,6 +212,8 @@ export class WorkspaceController {
           messageLimit: workspace.messageLimit,
           blocklist: workspace.blocklist,
           welcomeMessage: workspace.welcomeMessage,
+          welcomeBackMessage: workspace.welcomeBackMessage ?? null,
+          humanSupportMessage: workspace.humanSupportMessage ?? null,
           enableWelcomeMessage: workspace.enableWelcomeMessage ?? true, // E0a
           sessionResetTimeout: workspace.sessionResetTimeout ?? 3600, // E0b
           wipMessage: workspace.wipMessage,
@@ -500,6 +504,8 @@ export class WorkspaceController {
         messageLimit: workspace.messageLimit,
         blocklist: workspace.blocklist,
         welcomeMessage: workspace.welcomeMessage,
+        welcomeBackMessage: workspace.welcomeBackMessage ?? null,
+        humanSupportMessage: workspace.humanSupportMessage ?? null,
         wipMessage: workspace.wipMessage,
         termsAndConditions: workspace.termsAndConditions,
         channelStatus: workspace.channelStatus,
@@ -706,6 +712,8 @@ export class WorkspaceController {
         messageLimit: workspace.messageLimit,
         blocklist: workspace.blocklist,
         welcomeMessage: workspace.welcomeMessage,
+        welcomeBackMessage: workspace.welcomeBackMessage ?? null,
+        humanSupportMessage: workspace.humanSupportMessage ?? null,
         enableWelcomeMessage: workspace.enableWelcomeMessage ?? true, // E0a
         sessionResetTimeout: workspace.sessionResetTimeout ?? 3600, // E0b
         wipMessage: workspace.wipMessage,

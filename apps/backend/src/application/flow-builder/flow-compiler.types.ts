@@ -34,6 +34,14 @@ export interface CompileFlowInput {
   // workspace-generic flow (flowCategoryId: null, analisi.md §6).
   flowCategoryId?: string | null
   flowTitle: string
+  // One or two sentences describing WHEN this flow applies, in the customer's
+  // own terms ("il robot lampeggia rosso e non parte"), not the operator's
+  // shorthand ("ERROR 001"). Feeds both the retrievalDocument — where it is the
+  // main thing that makes a real WhatsApp message match a terse title — and the
+  // compiledPrompt header, so the executing LLM knows what case it is handling.
+  // Usually LLM-generated from the graph (flow-description-generator.service),
+  // then editable by the user.
+  flowDescription?: string | null
   flowKeywords?: string[]
 }
 

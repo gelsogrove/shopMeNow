@@ -48,6 +48,8 @@ export interface WorkspaceProps {
   websiteUrl?: string | null
   assistantPhone?: string | null
   welcomeMessage?: any
+  welcomeBackMessage?: string | null
+  humanSupportMessage?: string | null
   enableWelcomeMessage?: boolean // E0a
   sessionResetTimeout?: number // E0b
   wipMessage?: any
@@ -308,6 +310,14 @@ export class Workspace extends Entity<WorkspaceProps> {
 
   get websiteUrl(): string | null | undefined {
     return this.props.websiteUrl
+  }
+
+  get welcomeBackMessage(): string | null | undefined {
+    return this.props.welcomeBackMessage
+  }
+
+  get humanSupportMessage(): string | null | undefined {
+    return this.props.humanSupportMessage
   }
 
   get welcomeMessage(): any {

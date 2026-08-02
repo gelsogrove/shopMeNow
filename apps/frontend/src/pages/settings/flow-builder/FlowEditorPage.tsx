@@ -26,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ArrowLeft, Save, Loader2, AlertCircle, Plus } from "lucide-react"
+import { ArrowLeft, Save, Loader2, AlertCircle, Plus, Sparkles } from "lucide-react"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
 import { flowApi, assetApi, Flow, FlowNode, FlowEdge as ApiFlowEdge, Asset, ValidationError } from "@/services/flowBuilderApi"
@@ -93,6 +93,11 @@ function FlowEditorInner() {
   const [promptError, setPromptError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
   const [title, setTitle] = useState("")
+  // "When to use" text. It is what the retrieval embedding matches an incoming
+  // customer message against, so a flow titled "ERROR 001" is only findable
+  // once this describes the symptoms. Usually filled by the Suggest button.
+  const [description, setDescription] = useState("")
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false)
 
   const [panelNodeId, setPanelNodeId] = useState<string | null>(null)
   const panelOpen = panelNodeId !== null
@@ -108,6 +113,7 @@ function FlowEditorInner() {
       .then((graph) => {
         setFlow(graph.flow)
         setTitle(graph.flow.title)
+        setDescription(graph.flow.description ?? "")
         setNodes(graph.nodes.map((n) => apiNodeToFlowNode(n, graph.edges)))
         setEdges(graph.edges.map(apiEdgeToFlowEdge))
       })
@@ -327,6 +333,26 @@ function FlowEditorInner() {
   const selectedNode = panelNodeId ? nodes.find((n) => n.id === panelNodeId) ?? null : null
   const attachedAssetIds = selectedNode ? ((selectedNode.data as any).attachedAssetIds as string[]) ?? [] : []
 
+  /**
+   * Asks the backend to infer the description from the flow's questions.
+   *
+   * It reads the SAVED graph, so unsaved edits are not reflected — hence the
+   * hint in the UI. The suggestion lands in the field as editable text and is
+   * only persisted by the next Save, so this can be re-run freely.
+   */
+  const handleSuggestDescription = async () => {
+    if (!workspaceId || !flowId) return
+    setIsGeneratingDescription(true)
+    try {
+      const suggested = await flowApi.generateDescription(workspaceId, flowId)
+      if (suggested) setDescription(suggested)
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Could not generate the description")
+    } finally {
+      setIsGeneratingDescription(false)
+    }
+  }
+
   const handleSave = async () => {
     if (!workspaceId || !flowId) return
     setIsSaving(true)
@@ -334,6 +360,9 @@ function FlowEditorInner() {
     try {
       const payload = {
         title,
+        // Always sent, so clearing the field really clears it. The backend only
+        // preserves the stored value when the key is absent entirely.
+        description,
         nodes: nodes.map((n) => ({
           id: n.id,
           flowId: flowId!,
@@ -443,6 +472,37 @@ function FlowEditorInner() {
             Save
           </Button>
         </div>
+      </div>
+
+      {/* "When to use" row. Sits under the title because it is flow metadata,
+          not canvas content — and because it is what makes this flow reachable
+          at all: retrieval matches the customer's message against this text. */}
+      <div className="flex items-start gap-2 border-b px-4 py-2 bg-white">
+        <div className="flex-1">
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            placeholder="When to use this flow — the symptoms the customer would describe (e.g. the robot flashes red and will not start)"
+            className="resize-none text-sm"
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Used to match incoming messages to this flow. Suggestion is based on the last saved graph.
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSuggestDescription}
+          disabled={isGeneratingDescription}
+        >
+          {isGeneratingDescription ? (
+            <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4 mr-1.5" />
+          )}
+          Suggest
+        </Button>
       </div>
 
       {validationErrors.length > 0 && (

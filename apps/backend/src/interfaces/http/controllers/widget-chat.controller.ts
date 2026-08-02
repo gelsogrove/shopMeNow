@@ -679,6 +679,11 @@ export class WidgetChatController {
       // Normalize phone (strip spaces/dashes) for lookup + creation
       const normalizedPhone = phone.replace(/[\s-]/g, "")
 
+      // The widget registration form collects only phone + first message, so `name`
+      // may be absent. `customers.name` is required, so fall back to the same
+      // "Visitor <id>" placeholder used elsewhere for unnamed widget visitors.
+      const resolvedName = name?.trim() || `Visitor ${visitorId.slice(-8)}`
+
       // 2. Validate visitorId format + expiry
       if (!VisitorIdService.validate(visitorId)) {
         return res.status(400).json({
@@ -896,7 +901,7 @@ export class WidgetChatController {
             data: {
               workspaceId: resolvedWorkspaceId,
               customId: visitorId,
-              name,
+              name: resolvedName,
               phone: normalizedPhone,
               email: email && email.length > 0 ? email : `${visitorId}@visitor.local`,
               isActive: true, // Registered user
@@ -962,7 +967,7 @@ export class WidgetChatController {
                 customer = await prisma.customers.create({
                   data: {
                     workspaceId: resolvedWorkspaceId,
-                    name,
+                    name: resolvedName,
                     phone: normalizedPhone,
                     email: email && email.length > 0 ? email : `${visitorId}@visitor.local`,
                     isActive: true,

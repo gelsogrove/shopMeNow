@@ -278,6 +278,43 @@ export function createFlowBuilderRoutes(): Router {
 
   /**
    * @openapi
+   * /api/workspaces/{workspaceId}/demorobot/flows/{flowId}/description/generate:
+   *   post:
+   *     tags: [Flow Builder]
+   *     summary: Suggest a "when to use" description for the flow
+   *     description: >
+   *       Infers 1-2 sentences describing when this flow applies, phrased in the
+   *       customer's words, from the questions in the graph. Read-only — the
+   *       caller edits the suggestion and persists it with PUT .../graph.
+   *       The description feeds the retrievalDocument, so it is what makes a
+   *       flow with a terse title (e.g. "ERROR 001") match a real message.
+   *     parameters:
+   *       - in: path
+   *         name: workspaceId
+   *         required: true
+   *         schema: { type: string }
+   *       - in: path
+   *         name: flowId
+   *         required: true
+   *         schema: { type: string }
+   *     responses:
+   *       200:
+   *         description: The suggested description
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 description: { type: string }
+   *       404:
+   *         description: Flow not found
+   *       502:
+   *         description: The AI service could not produce a description
+   */
+  router.post('/workspaces/:workspaceId/demorobot/flows/:flowId/description/generate', ...middlewares, controller.generateFlowDescription.bind(controller))
+
+  /**
+   * @openapi
    * /api/workspaces/{workspaceId}/demorobot/flows/{flowId}/prompt:
    *   put:
    *     tags: [Flow Builder]

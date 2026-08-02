@@ -43,6 +43,12 @@ export interface ChatbotSettingsJson {
   topK: number
   audioOutput: boolean
   audioVoices: Record<string, string>
+  // Customer-facing copy, editable in the app. Rendered by the LLM in the
+  // customer's language; {{customerName}} is substituted at runtime.
+  /** Greeting for a customer we already know by name (returning visitor). */
+  welcomeBackMessage?: string
+  /** Sentence sent when the conversation is handed to a human operator. */
+  humanSupportMessage?: string
 }
 
 /** Workspace fields this generator reads. Kept narrow on purpose. */
@@ -61,6 +67,8 @@ export interface WorkspaceChatbotSource {
   defaultLanguage?: string | null
   audioOutput?: boolean | null
   audioVoices?: unknown
+  welcomeBackMessage?: string | null
+  humanSupportMessage?: string | null
 }
 
 /**
@@ -161,6 +169,10 @@ export async function buildChatbotSettingsJson(
     audioOutput:
       typeof workspace.audioOutput === "boolean" ? workspace.audioOutput : current.audioOutput,
     audioVoices: audioVoices ?? current.audioVoices,
+    welcomeBackMessage:
+      workspace.welcomeBackMessage?.trim() || current.welcomeBackMessage,
+    humanSupportMessage:
+      workspace.humanSupportMessage?.trim() || current.humanSupportMessage,
   }
 }
 

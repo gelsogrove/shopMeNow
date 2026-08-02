@@ -65,7 +65,9 @@ export type WidgetMessageInput = z.infer<typeof WIDGET_MESSAGE_SCHEMA>
 export const WIDGET_REGISTER_SCHEMA = z
   .object({
     visitorId: VISITOR_ID_SCHEMA,
-    name: z.string().min(1, "Name is required").max(100).trim(),
+    // Optional: the widget registration form asks only for phone + first message.
+    // When absent the controller derives a placeholder from the visitorId.
+    name: z.string().max(100).trim().optional(),
     phone: z
       .string()
       .regex(/^\+\d{1,4}\d{6,14}$/, "Invalid phone format. Expected: +[country_code][number]"),

@@ -259,13 +259,23 @@ function renderCompiledPrompt(input: CompileFlowInput, order: CompilerFlowNode[]
   const stepByNodeId = new Map(order.map((node, index) => [node.id, index + 1]))
   const stepOf = (nodeId: string) => stepByNodeId.get(nodeId)
 
-  const lines: string[] = [
-    `## FLOW: ${input.flowTitle}`,
-    '',
+  // Andrea 2026-08-02: the description states WHEN this flow applies. A title
+  // alone can be operator shorthand ("ERROR 001") that says nothing about the
+  // situation, so without this the executing model has no framing for the
+  // questions it is about to ask. Omitted entirely when absent — an empty
+  // "WHEN TO USE" header would be noise, and would also change the hash of
+  // every existing flow for no reason.
+  const lines: string[] = [`## FLOW: ${input.flowTitle}`, '']
+
+  if (input.flowDescription?.trim()) {
+    lines.push(`WHEN TO USE: ${input.flowDescription.trim()}`, '')
+  }
+
+  lines.push(
     'Steps are NUMBERED and must be followed in the order the branches dictate.',
     'Ask ONE step at a time, then follow the branch matching the answer.',
     '',
-  ]
+  )
 
   for (const node of order) {
     lines.push(`### STEP ${stepOf(node.id)} — Q: ${node.question}`)
@@ -309,6 +319,14 @@ function renderCompiledPrompt(input: CompileFlowInput, order: CompilerFlowNode[]
 
 function renderRetrievalDocument(input: CompileFlowInput, order: CompilerFlowNode[]): string {
   const parts: string[] = [input.flowTitle]
+  // Andrea 2026-08-02: the highest-value text in this document. A title like
+  // "ERROR 001" embeds almost nothing a customer would ever write; the
+  // description carries the symptom wording ("lampeggia rosso, non parte")
+  // that an incoming WhatsApp message actually resembles. Placed before the
+  // keywords/questions because it is prose, not a token list.
+  if (input.flowDescription?.trim()) {
+    parts.push(input.flowDescription.trim())
+  }
   if (input.flowKeywords && input.flowKeywords.length > 0) {
     parts.push(input.flowKeywords.join(', '))
   }

@@ -46,6 +46,65 @@ describe('compileFlow', () => {
     expect(result.compiledPrompt).toContain('If "Sì"')
   })
 
+  // ── flowDescription (Andrea 2026-08-02) ──────────────────────────────────
+  // WHY these exist: the description is the text that makes a flow with an
+  // operator-shorthand title ("ERROR 001") matchable against a real customer
+  // message. It has to reach BOTH artifacts — the retrievalDocument (so the
+  // embedding carries the symptom wording) and the compiledPrompt (so the
+  // executing model knows which case it is handling) — and it must stay
+  // optional, because every flow created before this feature has none.
+
+  it('includes flowDescription in the retrievalDocument, where retrieval matches it', () => {
+    const fixture = threeNodeEscalationFixture()
+    fixture.flowDescription = 'Il robot lampeggia rosso e non parte dalla base.'
+    const result = compileFlow(fixture)
+    expect(result.retrievalDocument).toContain('Il robot lampeggia rosso e non parte dalla base.')
+  })
+
+  it('includes flowDescription in the compiledPrompt under a WHEN TO USE header', () => {
+    const fixture = threeNodeEscalationFixture()
+    fixture.flowDescription = 'Il robot lampeggia rosso e non parte dalla base.'
+    const result = compileFlow(fixture)
+    expect(result.compiledPrompt).toContain('WHEN TO USE: Il robot lampeggia rosso e non parte dalla base.')
+  })
+
+  // Guards the retro-compatibility of every flow saved before this feature:
+  // no description must mean no header at all, not an empty one — an empty
+  // "WHEN TO USE:" line would be noise AND would change every stored hash.
+  it('omits the WHEN TO USE header entirely when no description is given', () => {
+    const withoutDescription = compileFlow(threeNodeEscalationFixture())
+    expect(withoutDescription.compiledPrompt).not.toContain('WHEN TO USE')
+
+    // A blank/whitespace-only description is treated the same as none.
+    const blank = threeNodeEscalationFixture()
+    blank.flowDescription = '   '
+    expect(compileFlow(blank).compiledPrompt).not.toContain('WHEN TO USE')
+    expect(compileFlow(blank).compiledPrompt).toBe(withoutDescription.compiledPrompt)
+  })
+
+  // The description changes what is embedded, so it MUST change the hash —
+  // otherwise saveFlowGraph's "only re-embed when retrievalDocument changed"
+  // optimisation would keep serving an embedding that predates the new text.
+  it('changes hash and retrievalDocument when the description changes', () => {
+    const base = compileFlow(threeNodeEscalationFixture())
+
+    const described = threeNodeEscalationFixture()
+    described.flowDescription = 'Il robot lampeggia rosso e non parte dalla base.'
+    const result = compileFlow(described)
+
+    expect(result.hash).not.toBe(base.hash)
+    expect(result.retrievalDocument).not.toBe(base.retrievalDocument)
+  })
+
+  it('keeps compilation deterministic with a description present', () => {
+    const fixture = threeNodeEscalationFixture()
+    fixture.flowDescription = 'Il robot lampeggia rosso e non parte dalla base.'
+    const a = compileFlow(fixture)
+    const b = compileFlow(fixture)
+    expect(a.compiledPrompt).toBe(b.compiledPrompt)
+    expect(a.hash).toBe(b.hash)
+  })
+
   it('rejects a graph with no root node (every node is targeted by some edge)', () => {
     const fixture = threeNodeEscalationFixture()
     // n3 -> n1 closes the chain into a ring: every node now has an incoming edge, so there is no root.

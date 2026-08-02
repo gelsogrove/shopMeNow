@@ -250,10 +250,8 @@ const UI_STRINGS: Record<
   LangCode,
   {
     intro: string
-    name: string
     phone: string
     message: string
-    namePh: string
     phonePh: string
     messagePh: string
     start: string
@@ -266,10 +264,8 @@ const UI_STRINGS: Record<
 > = {
   it: {
     intro: "Presentati per iniziare a chattare",
-    name: "Nome",
     phone: "Telefono",
     message: "Messaggio",
-    namePh: "Il tuo nome",
     phonePh: "+39 312 345 6789",
     messagePh: "Come possiamo aiutarti?",
     start: "Inizia chat",
@@ -282,10 +278,8 @@ const UI_STRINGS: Record<
   },
   en: {
     intro: "Introduce yourself to start chatting",
-    name: "Name",
     phone: "Phone",
     message: "Message",
-    namePh: "Your name",
     phonePh: "+1 415 555 1212",
     messagePh: "How can we help you?",
     start: "Start Chat",
@@ -298,10 +292,8 @@ const UI_STRINGS: Record<
   },
   es: {
     intro: "Preséntate para comenzar a chatear",
-    name: "Nombre",
     phone: "Teléfono",
     message: "Mensaje",
-    namePh: "Tu nombre",
     phonePh: "+34 612 345 678",
     messagePh: "¿Cómo podemos ayudarte?",
     start: "Iniciar chat",
@@ -314,10 +306,8 @@ const UI_STRINGS: Record<
   },
   fr: {
     intro: "Présentez-vous pour commencer à discuter",
-    name: "Nom",
     phone: "Téléphone",
     message: "Message",
-    namePh: "Votre nom",
     phonePh: "+33 6 12 34 56 78",
     messagePh: "Comment pouvons-nous vous aider ?",
     start: "Commencer",
@@ -330,10 +320,8 @@ const UI_STRINGS: Record<
   },
   de: {
     intro: "Stell dich vor, um zu chatten",
-    name: "Name",
     phone: "Telefon",
     message: "Nachricht",
-    namePh: "Dein Name",
     phonePh: "+49 170 1234567",
     messagePh: "Wie können wir helfen?",
     start: "Chat starten",
@@ -346,10 +334,8 @@ const UI_STRINGS: Record<
   },
   ca: {
     intro: "Presenta't per començar a xatejar",
-    name: "Nom",
     phone: "Telèfon",
     message: "Missatge",
-    namePh: "El teu nom",
     phonePh: "+34 612 345 678",
     messagePh: "Com podem ajudar-te?",
     start: "Iniciar xat",
@@ -570,7 +556,6 @@ export function ChatWidget({
   // showRegistrationForm=true by default; set to false if customerId found in localStorage.
   // 🎮 instantChat (demo) opens straight into the chat — no registration form.
   const [showRegistrationForm, setShowRegistrationForm] = useState(!instantChat)
-  const [formName, setFormName] = useState("")
   const [formPhone, setFormPhone] = useState("")
   const [formLanguage, setFormLanguage] = useState<LangCode>("en")
   const [formFirstMessage, setFormFirstMessage] = useState("")
@@ -1398,10 +1383,6 @@ export function ChatWidget({
    */
   const handleRegistrationSubmit = async () => {
     // Basic client-side validation
-    if (!formName.trim()) {
-      setFormError("Name is required")
-      return
-    }
     if (!formPhone.trim()) {
       setFormError("Phone number is required")
       return
@@ -1432,7 +1413,6 @@ export function ChatWidget({
         apiUrl: resolvedApiUrl,
         workspaceId: resolvedWorkspaceId,
         visitorId,
-        name: formName.trim(),
         phone: formPhone.trim(),
         language: formLanguage,
         firstMessage: formFirstMessage.trim(),
@@ -2096,22 +2076,6 @@ export function ChatWidget({
                     <p className="text-sm text-slate-500 text-center">
                       {ui.intro}
                     </p>
-
-                    {/* Name */}
-                    <div className="space-y-1">
-                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                        <User className="w-3.5 h-3.5" /> {ui.name}
-                      </label>
-                      <input
-                        type="text"
-                        value={formName}
-                        onChange={(e) => setFormName(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleRegistrationSubmit()}
-                        placeholder={ui.namePh}
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1 placeholder-slate-400"
-                        style={{ "--tw-ring-color": resolvedPrimaryColor } as CSSProperties}
-                      />
-                    </div>
 
                     {/* Phone */}
                     <div className="space-y-1">
