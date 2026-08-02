@@ -239,3 +239,36 @@ export function nextIntakeStep(
   }
   return null
 }
+
+/**
+ * Renders the intake instruction: the ONE question the model may ask right
+ * now, dictated verbatim so it cannot improvise a menu of invented causes.
+ *
+ * Returns null when intake is complete or unconfigured — the model then works
+ * from the flows, the FAQ and the operating rules as usual.
+ */
+export function formatIntakeBlock(step: IntakeStep | null): string | null {
+  if (!step) return null
+
+  return [
+    '## THE QUESTION TO ASK NOW (mandatory — this exact question, nothing else)',
+    '',
+    step.question,
+    '',
+    "Translate it into the customer's language and send it as your whole reply.",
+    'Do NOT add other questions, do NOT offer options or possible causes, and',
+    'do NOT rephrase it into a multiple-choice list. A brief acknowledgement of',
+    'what the customer just said may come first, then this question.',
+    '',
+    `When they answer, save it with remember({key:'${step.field}', value:'...'}).`,
+    '',
+    'This applies to TECHNICAL PROBLEMS. Skip it entirely and answer directly',
+    'when:',
+    '- a FAQ answers what the customer asked — reply from the FAQ, no intake;',
+    '- they are not reporting a fault at all (a greeting, a thank you, a',
+    '  general question) — answer normally;',
+    '- what they said matches a flow in AVAILABLE FLOWS — call start_flow and',
+    '  follow that flow from its first step;',
+    '- it is an emergency — escalate immediately.',
+  ].join('\n')
+}
