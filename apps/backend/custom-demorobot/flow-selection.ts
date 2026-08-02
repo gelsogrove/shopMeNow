@@ -251,7 +251,11 @@ export function formatIntakeBlock(step: IntakeStep | null): string | null {
   if (!step) return null
 
   return [
-    '## THE QUESTION TO ASK NOW (mandatory — this exact question, nothing else)',
+    '## THE QUESTION TO ASK NOW',
+    '',
+    'This overrides every other instruction in this prompt, including anything',
+    'above about what to collect or in which order. Ask THIS question, verbatim,',
+    'and nothing else:',
     '',
     step.question,
     '',

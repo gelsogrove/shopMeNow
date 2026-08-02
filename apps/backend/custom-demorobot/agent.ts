@@ -561,6 +561,13 @@ async function callLLM({
   if (stateBlock) systemContent.push({ type: 'text', text: stateBlock })
   systemContent.push({ type: 'text', text: runtimeBlock })
 
+  // Andrea 2026-08-02: the anti-hallucination rule must hold for EVERY tenant,
+  // including workspaces that replace prompts/common.md with their own
+  // customChatbotSystemPrompt (AmRobots does). Injected by the module so it
+  // cannot be lost by editing a prompt in the backoffice, and kept LAST so it
+  // outranks every block above it.
+  systemContent.push({ type: 'text', text: OPERATING_RULES })
+
   // Intake gate: while no flow is running and the case details are still
   // missing, the code dictates the exact question (see formatIntakeBlock).
   if (!activeFlowSnapshot) {
@@ -569,12 +576,7 @@ async function callLLM({
     )
     if (intakeBlock) systemContent.push({ type: 'text', text: intakeBlock })
   }
-  // Andrea 2026-08-02: the anti-hallucination rule must hold for EVERY tenant,
-  // including workspaces that replace prompts/common.md with their own
-  // customChatbotSystemPrompt (AmRobots does). Injected by the module so it
-  // cannot be lost by editing a prompt in the backoffice, and kept LAST so it
-  // outranks every block above it.
-  systemContent.push({ type: 'text', text: OPERATING_RULES })
+
 
   const payloadMessages: Array<Record<string, unknown>> = [
     { role: 'system', content: systemContent },

@@ -34,6 +34,60 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **NO STATIC PROMPTS**: everything must be dynamic from database
 - **NO HARDCODED TRANSLATIONS**: data is stored in Italian (base language) in DB; LLM handles translation dynamically
 
+#### 1A. No customer-facing copy in code (🚨 learned the hard way, 2026-08-03)
+
+**Every sentence a customer can read comes from configuration, never from a
+string literal in a module.** This includes the ones that feel too small to
+matter: hand-off notices, rate-limit warnings, intake questions, apologies.
+
+❌ What went wrong in `custom-demorobot` (all removed):
+- `HANDOFF_MESSAGES` — one apology pre-translated into 8 languages. Adding a
+  language meant a code change; the LLM already translates.
+- `"19 characters starting with HK"` — one tenant's serial format baked into a
+  shared module. The second customer would have needed a fork.
+- `"You are sending messages too quickly"` — English only, sent to customers
+  who write in Italian.
+
+✅ The resolution order, in this order:
+1. workspace column / DB (what the user edits in the app)
+2. `custom-<module>/settings.json` (the module's own default)
+3. **silence** — reply with nothing rather than untranslated English
+
+Write the default in ONE language and let the LLM render it. `{{customerName}}`
+and friends are substituted host-side before the module sees them.
+
+#### 1B. What legitimately stays in code
+
+The rule is about **content**, not about mechanism. These are not violations:
+
+- **Instructions to the LLM** (`OPERATING_RULES` and similar). They are not
+  shown to customers, and safety rules must not be removable by editing a
+  prompt in the backoffice. Keep them SHORT — they are paid on every call.
+- **Tool schemas and their descriptions** — part of the API contract.
+- **Deterministic guards** — when the model misbehaves, the fix is code that
+  removes its freedom, not another sentence asking it to behave (rule 16).
+  Example: while intake is incomplete the module dictates WHICH question is
+  asked (mechanism, in code) while the WORDING comes from settings (content).
+
+**The test to apply**: could a second customer in a different industry use this
+module unchanged? If a string would have to be rewritten for them, it is
+content — move it out. Lock it with a test that greps the source, so it cannot
+creep back in (see `demorobot-orchestration.spec.ts`).
+
+#### 1C. Exceptions require Andrea's explicit agreement
+
+There are genuine edge cases where a literal in code is the right answer. **It
+is not for the assistant to decide which ones qualify.**
+
+If hardcoding looks unavoidable: **stop and ask Andrea first**, explaining what
+the string is, why configuration does not fit, and what breaks without it. Only
+proceed once he has agreed — and record his agreement in a comment at the site,
+so the next reader knows it was a decision and not an oversight.
+
+❌ Never assume "this one is obviously fine" and move on. That assumption is
+exactly how the 8 hardcoded translations and the tenant-specific serial format
+got in — each looked harmless on its own.
+
 ### 2. Workspace Isolation
 
 - **EVERY** database query MUST filter by `workspaceId`
