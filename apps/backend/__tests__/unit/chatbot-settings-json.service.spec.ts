@@ -246,14 +246,18 @@ describe("buildChatbotSettingsJson", () => {
       customChatbotModel: "openai/gpt-4o",
     })
 
-    // The escalation-routing keys are added by the generator (they live on the
-    // workspace, not in the module file), so they are expected on top of the
-    // module's own keys. Anything else appearing here is a leak.
+    // The escalation-routing keys and the customer-facing copy are added by the
+    // generator (they live on the workspace, not in the module file), so they
+    // are expected on top of the module's own keys. Anything else is a leak.
     const expected = [
       ...Object.keys(MODULE_DEFAULTS),
       "operatorDeliveryMode",
       "operatorEmails",
       "operatorWhatsappNumbers",
+      // Workspace-owned copy the chatbot reads at runtime: the greeting for a
+      // returning customer, and the sentence used when handing over to a human.
+      "welcomeBackMessage",
+      "humanSupportMessage",
     ].sort()
     expect(Object.keys(result!).sort()).toEqual(expected)
   })
