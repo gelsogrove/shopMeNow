@@ -98,6 +98,7 @@ type FlowSummary = {
   flowId: string
   title: string
   hint?: string
+  category?: string
 }
 type LoadedFlow = {
   compiledPrompt: string
@@ -662,7 +663,17 @@ export class CustomClientChatbotService {
     try {
       const flows = await defaultPrisma.flow.findMany({
         where: { workspaceId: p.workspaceId },
-        select: { id: true, title: true, description: true, keywords: true, compiledPrompt: true },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          keywords: true,
+          compiledPrompt: true,
+          // Grouping the catalogue by category gives the LLM one more signal
+          // for picking the right flow — and is what a per-category filter
+          // would build on once a workspace outgrows a flat list.
+          flowCategory: { select: { name: true } },
+        },
       })
 
       return flows
@@ -676,6 +687,8 @@ export class CustomClientChatbotService {
             flowId: f.id,
             title: f.title,
             hint: hintParts.length > 0 ? hintParts.join(" | ") : undefined,
+            // Absent for workspace-generic flows (flowCategoryId null).
+            category: f.flowCategory?.name ?? undefined,
           }
         })
     } catch (error) {

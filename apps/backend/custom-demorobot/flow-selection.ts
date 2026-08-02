@@ -18,6 +18,8 @@ export interface FlowSummary {
   title: string
   /** Optional extra matching signal (description / keywords) when configured. */
   hint?: string
+  /** Category the flow belongs to. Absent for workspace-generic flows. */
+  category?: string
 }
 
 export interface LoadedFlow {
