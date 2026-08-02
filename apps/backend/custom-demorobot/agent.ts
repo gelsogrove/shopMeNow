@@ -96,29 +96,11 @@ export interface FaqEntry {
 }
 export type GetFaqsHandler = (params: { workspaceId: string }) => Promise<FaqEntry[]>
 
-// Andrea 2026-08-02: flow selection moved from embedding search to the LLM.
-// Semantic retrieval scored 0.23-0.31 against a 0.70 threshold in production
-// (and got WORSE each turn, because it searched on the latest message — "IERI",
-// "IMMBOLE" — rather than on the problem), so no flow was ever attached and the
-// model filled the silence with invented diagnostics.
-//
-// The flows are now listed in the prompt with their ids, and the LLM attaches
-// one via the start_flow tool. It reads the whole conversation, so it matches
-// "mi dà ERROR 001" to the right flow without any threshold to tune — and when
-// nothing matches it can say so and escalate instead of improvising.
-export interface FlowSummary {
-  flowId: string
-  title: string
-  /** Optional extra matching signal (description / keywords) when configured. */
-  hint?: string
-}
-export type ListFlowsHandler = (params: { workspaceId: string }) => Promise<FlowSummary[]>
-
-export interface LoadedFlow {
-  compiledPrompt: string
-  hash?: string
-}
-export type LoadFlowHandler = (params: { workspaceId: string; flowId: string }) => Promise<LoadedFlow | null>
+// Flow selection lives in flow-selection.ts (unit-testable in isolation);
+// re-exported here so the host keeps importing the whole contract from agent.
+export type { FlowSummary, LoadedFlow, ListFlowsHandler, LoadFlowHandler } from './flow-selection.js'
+import type { FlowSummary, ListFlowsHandler, LoadFlowHandler } from './flow-selection.js'
+import { formatFlowsBlock, startFlow } from './flow-selection.js'
 
 export interface ChatbotInput {
   userMessage: string
@@ -265,6 +247,13 @@ const GROUNDING_RULE = [
   '- NEVER guess which flow applies just to have something to say, and never',
   '  answer from general knowledge about robot mowers. Your training data is',
   '  NOT a source here.',
+  '- NEVER ask a diagnostic question of your own invention. Every question you',
+  '  ask must appear in the ACTIVE FLOW block. If no flow is attached, you have',
+  '  no questions to ask: escalate instead of improvising a troubleshooting',
+  '  interview (battery, charger, blades, weather... none of it is yours to ask).',
+  '- An error code with no matching flow is NOT covered by a similar-looking',
+  '  one: ERROR 0011 is not ERROR 001. Different code, different problem —',
+  '  escalate rather than stretching a flow to fit.',
   '- If the information is missing, say plainly that you do not have it and call',
   '  escalate_to_operator. An honest "I don\'t know, I\'m passing you to a',
   '  colleague" is ALWAYS correct — a plausible-sounding guess is a serious error.',
@@ -339,47 +328,7 @@ function recordEscalation(params: { ticketId: string; reason: string; summary: s
 
 async function executeTool(ctx: ToolContext, name: string, args: Record<string, unknown>): Promise<ToolResult> {
   if (name === 'start_flow') {
-    const flowId = typeof args.flowId === 'string' ? args.flowId.trim() : ''
-    if (!flowId) return { ok: false, error: 'flowId is required' }
-
-    const available = ctx.availableFlows ?? []
-    const match = available.find((f) => f.flowId === flowId)
-    // Refuse an id that is not in the list handed to the LLM, rather than
-    // attaching nothing and letting it improvise (iron rule: tool refuses,
-    // LLM corrects). Hallucinated ids are the obvious failure mode here.
-    if (!match) {
-      return {
-        ok: false,
-        error: 'unknown_flow_id',
-        instruction:
-          available.length > 0
-            ? `"${flowId}" is not in AVAILABLE FLOWS. Use one of: ${available.map((f) => f.flowId).join(', ')}. If none of them matches the customer's problem, call escalate_to_operator instead — never invent a procedure.`
-            : 'No flows are configured for this workspace. Call escalate_to_operator.',
-      }
-    }
-
-    if (!ctx.loadFlow) {
-      return { ok: false, error: 'flow_loading_unavailable', instruction: 'Flows cannot be loaded right now. Call escalate_to_operator.' }
-    }
-
-    try {
-      const loaded = await ctx.loadFlow({ workspaceId: ctx.workspaceId, flowId })
-      if (!loaded?.compiledPrompt) {
-        // A flow with an empty compiledPrompt would attach a blank script and
-        // leave the LLM to fill the silence — exactly what must never happen.
-        return {
-          ok: false,
-          error: 'flow_unavailable',
-          instruction: 'That flow could not be loaded. Call escalate_to_operator rather than answering from your own knowledge.',
-        }
-      }
-      attachFlow(ctx.sessionId, flowId, loaded.hash ?? '', loaded.compiledPrompt)
-      return { ok: true, flow_id: flowId, title: match.title }
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('[demorobot] loadFlow failed', err)
-      return { ok: false, error: 'flow_unavailable', instruction: 'That flow could not be loaded. Call escalate_to_operator.' }
-    }
+    return startFlow(ctx, args)
   }
 
   if (name === 'remember') {
@@ -421,16 +370,30 @@ interface CallLLMResult {
   tokensUsed: number
 }
 
-async function callLLM(
-  commonPrompt: string,
-  activeFlowSnapshot: string | undefined,
-  state: SessionState,
-  history: Message[],
-  operatorBriefingLanguageOverride: string | null | undefined,
-  isFirstTurn: boolean,
-  faqBlock: string | undefined,
-  settings: Settings,
-): Promise<CallLLMResult> {
+interface CallLLMParams {
+  commonPrompt: string
+  activeFlowSnapshot: string | undefined
+  state: SessionState
+  history: Message[]
+  operatorBriefingLanguageOverride: string | null | undefined
+  isFirstTurn: boolean
+  faqBlock: string | undefined
+  /** Rendered AVAILABLE FLOWS block. Omitted once a flow is attached. */
+  flowsBlock: string | undefined
+  settings: Settings
+}
+
+async function callLLM({
+  commonPrompt,
+  activeFlowSnapshot,
+  state,
+  history,
+  operatorBriefingLanguageOverride,
+  isFirstTurn,
+  faqBlock,
+  flowsBlock,
+  settings,
+}: CallLLMParams): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
   const stateBlock = formatStateForPrompt(state)
@@ -448,6 +411,10 @@ async function callLLM(
   //   5. RUNTIME       (date, operator language, privacy URL, first-turn flag)
   //   6. GROUNDING     (never invent — must outrank everything above)
   if (faqBlock) systemContent.push({ type: 'text', text: faqBlock })
+  // The catalogue to pick from — only while nothing is attached yet. Once a
+  // flow is running, ACTIVE FLOW below is the script and offering the list
+  // again would just invite the LLM to switch flows mid-diagnosis.
+  if (flowsBlock) systemContent.push({ type: 'text', text: flowsBlock })
   if (activeFlowSnapshot) {
     systemContent.push({ type: 'text', text: `\n═══ ACTIVE FLOW ═══\n\n${activeFlowSnapshot}` })
   }
@@ -547,6 +514,7 @@ async function agentTurnInternal(
   sanitizedMessage: string,
   operatorBriefingLanguageOverride: string | null | undefined,
   faqBlock: string | undefined,
+  flowsBlock: string | undefined,
   settings: Settings,
 ): Promise<TurnResult> {
   const isFirstTurn = history.length === 0
@@ -555,7 +523,12 @@ async function agentTurnInternal(
   let state = getState(ctx.sessionId)
   let retrievalDebug: ChatbotOutput['meta']['debug']
 
-  if (!state.activeFlowId && ctx.retrieveFlow) {
+  // Semantic retrieval is now the FALLBACK, used only when the LLM was not
+  // given a catalogue to choose from (no listFlows handler — REPL/batch, or an
+  // older host). When flowsBlock is present, start_flow is the selection
+  // mechanism and running an embedding search too would just cost a call and
+  // risk attaching a flow the LLM did not pick.
+  if (!state.activeFlowId && !flowsBlock && ctx.retrieveFlow) {
     try {
       const result = await ctx.retrieveFlow({
         workspaceId: ctx.workspaceId,
@@ -584,16 +557,19 @@ async function agentTurnInternal(
 
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
-    const { text, toolCalls, tokensUsed: hopTokens } = await callLLM(
+    // Recomputed per hop: start_flow may have attached a flow during this very
+    // turn, and the next hop must then see ACTIVE FLOW instead of the list.
+    const { text, toolCalls, tokensUsed: hopTokens } = await callLLM({
       commonPrompt,
-      state.activeFlowPromptSnapshot,
+      activeFlowSnapshot: state.activeFlowPromptSnapshot,
       state,
       history,
       operatorBriefingLanguageOverride,
       isFirstTurn,
       faqBlock,
+      flowsBlock: state.activeFlowId ? undefined : flowsBlock,
       settings,
-    )
+    })
 
     if (toolCalls.length === 0) {
       const { reply, lang } = extractLanguage(text)
@@ -639,7 +615,18 @@ async function agentTurnInternal(
     }
 
     if (escalated) {
-      const finalHop = await callLLM(commonPrompt, state.activeFlowPromptSnapshot, state, history, operatorBriefingLanguageOverride, isFirstTurn, faqBlock, settings)
+      const finalHop = await callLLM({
+        commonPrompt,
+        activeFlowSnapshot: state.activeFlowPromptSnapshot,
+        state,
+        history,
+        operatorBriefingLanguageOverride,
+        isFirstTurn,
+        faqBlock,
+        // Escalating — the catalogue is irrelevant to the closing message.
+        flowsBlock: undefined,
+        settings,
+      })
       const { reply, lang } = extractLanguage(finalHop.text)
       commitLanguageFromReply(ctx.sessionId, lang)
       history.push({ role: 'assistant', content: reply })
@@ -703,6 +690,7 @@ export async function agentTurn(
   operatorBriefingLanguageOverride: string | null | undefined,
   faqBlock?: string,
   settingsOverride?: Partial<Settings> | null,
+  flowsBlock?: string,
 ): Promise<TurnResult> {
   const settings = effectiveSettings(settingsOverride)
   const sanitized = sanitizeUserMessage(rawMessage, settings.maxMessageChars)
@@ -720,7 +708,7 @@ export async function agentTurn(
   }
 
   return withSessionLock(ctx.sessionId, () =>
-    agentTurnInternal(ctx, commonPrompt, history, sanitized, operatorBriefingLanguageOverride, faqBlock, settings),
+    agentTurnInternal(ctx, commonPrompt, history, sanitized, operatorBriefingLanguageOverride, faqBlock, flowsBlock, settings),
   )
 }
 
@@ -748,6 +736,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       customerName: input.userName,
       operatorBriefingLanguageOverride: input.config.operatorBriefingLanguageOverride,
       retrieveFlow: input.config.handlers?.retrieveFlow,
+      loadFlow: input.config.handlers?.loadFlow,
     }
 
     hydrateState(input.context.sessionId, input.context.persistedState)
@@ -772,6 +761,22 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       }
     }
 
+    // The catalogue the LLM chooses from. Fetched fresh each turn so a flow
+    // added or edited in the builder is selectable on the very next message.
+    // Only needed while nothing is attached yet.
+    let flowsBlock: string | undefined
+    const listFlows = input.config.handlers?.listFlows
+    if (listFlows && !getState(input.context.sessionId).activeFlowId) {
+      try {
+        const flows = await listFlows({ workspaceId: input.config.workspaceId })
+        ctx.availableFlows = flows
+        flowsBlock = formatFlowsBlock(flows)
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[demorobot] listFlows handler threw, continuing without the flow catalogue', err)
+      }
+    }
+
     const result = await agentTurn(
       ctx,
       commonPrompt,
@@ -780,6 +785,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       input.config.operatorBriefingLanguageOverride,
       faqBlock,
       input.config.settings,
+      flowsBlock,
     )
 
     const patches = drainPatches(input.context.sessionId)

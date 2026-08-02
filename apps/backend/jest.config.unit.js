@@ -7,6 +7,11 @@ module.exports = {
   moduleFileExtensions: ["ts", "tsx", "js", "jsx", "json", "node"],
   moduleNameMapper: {
     "^@shared/(.*)$": "<rootDir>/../../shared/$1",
+    // The custom-* chatbot modules are ESM and import each other with explicit
+    // ".js" suffixes (required at runtime by Node's ESM resolver). Jest runs
+    // them through ts-jest as CommonJS, where that suffix does not resolve, so
+    // it is stripped here. Test-only: the emitted code is untouched.
+    "^(\\.{1,2}/.*)\\.js$": "$1",
   },
   preset: "ts-jest",
   transform: {

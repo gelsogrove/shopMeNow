@@ -77,6 +77,18 @@ type RetrieveFlowParams = {
   serialNumber?: string
   query: string
 }
+// Flow catalogue handed to the LLM (mirrors FlowSummary/LoadedFlow in
+// custom-demorobot/agent.ts — structural typing across the dynamic import).
+type FlowSummary = {
+  flowId: string
+  title: string
+  hint?: string
+}
+type LoadedFlow = {
+  compiledPrompt: string
+  hash?: string
+}
+
 // `robotModelId` / "unknown_model" are the WIRE names of the tool contract
 // shared with custom-demorobot/agent.ts (and referenced by name in that
 // module's prompts/common.md tool enum). The DB concept was renamed
@@ -166,6 +178,10 @@ type ChatbotInput = {
       bookAppointment?: (params: BookAppointmentParams) => Promise<BookAppointmentResult>
       retrieveFlow?: (params: RetrieveFlowParams) => Promise<RetrieveFlowResult>
       getFaqs?: (params: GetFaqsParams) => Promise<FaqEntry[]>
+      // LLM-driven flow selection: the module lists these in the prompt and
+      // the model attaches one by id via its start_flow tool.
+      listFlows?: (params: { workspaceId: string }) => Promise<FlowSummary[]>
+      loadFlow?: (params: { workspaceId: string; flowId: string }) => Promise<LoadedFlow | null>
     }
   }
   context: {
@@ -349,6 +365,8 @@ export class CustomClientChatbotService {
               : {}),
             retrieveFlow: (p) => this.retrieveFlow(p),
             getFaqs: (p) => this.getFaqs(p),
+            listFlows: (p) => this.listFlows(p),
+            loadFlow: (p) => this.loadFlow(p),
           },
         },
         context: {
@@ -587,6 +605,73 @@ export class CustomClientChatbotService {
         error: error instanceof Error ? error.message : String(error),
       })
       return { reason: "no_matching_flow" }
+    }
+  }
+
+  /**
+   * The diagnostic flows offered to the LLM, which picks one by id.
+   *
+   * Andrea 2026-08-02: replaces embedding search as the primary selection
+   * mechanism. In production semantic similarity scored 0.23-0.31 against a
+   * 0.70 threshold and got worse every turn (it searched the latest message —
+   * "IERI", "IMMBOLE" — not the problem), so no flow was ever attached and the
+   * model invented diagnostics instead. The LLM sees the whole conversation
+   * and matches "mi dà ERROR 001" to the right flow with no threshold to tune.
+   *
+   * Flows with an empty compiledPrompt are excluded: attaching one would give
+   * the LLM a blank script and invite exactly the improvisation we are trying
+   * to prevent.
+   */
+  private async listFlows(p: { workspaceId: string }): Promise<FlowSummary[]> {
+    try {
+      const flows = await defaultPrisma.flow.findMany({
+        where: { workspaceId: p.workspaceId },
+        select: { id: true, title: true, description: true, keywords: true, compiledPrompt: true },
+      })
+
+      return flows
+        .filter((f) => f.compiledPrompt && f.compiledPrompt.trim().length > 0)
+        .map((f) => {
+          // Description and keywords are optional in the builder; when present
+          // they give the model extra signal for matching the problem.
+          const keywords = Array.isArray(f.keywords) ? f.keywords.filter(Boolean) : []
+          const hintParts = [f.description?.trim(), keywords.length ? keywords.join(", ") : null].filter(Boolean)
+          return {
+            flowId: f.id,
+            title: f.title,
+            hint: hintParts.length > 0 ? hintParts.join(" | ") : undefined,
+          }
+        })
+    } catch (error) {
+      logger.error("[CustomClientChatbotService] listFlows failed", {
+        workspaceId: p.workspaceId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return []
+    }
+  }
+
+  /**
+   * Loads the compiled prompt of the flow the LLM selected via start_flow.
+   *
+   * Scoped by workspaceId as well as id: a flow id is model-supplied input, so
+   * it must never be able to reach another tenant's flow (CLAUDE.md §2).
+   */
+  private async loadFlow(p: { workspaceId: string; flowId: string }): Promise<LoadedFlow | null> {
+    try {
+      const flow = await defaultPrisma.flow.findFirst({
+        where: { id: p.flowId, workspaceId: p.workspaceId },
+        select: { compiledPrompt: true, hash: true },
+      })
+      if (!flow?.compiledPrompt) return null
+      return { compiledPrompt: flow.compiledPrompt, hash: flow.hash }
+    } catch (error) {
+      logger.error("[CustomClientChatbotService] loadFlow failed", {
+        workspaceId: p.workspaceId,
+        flowId: p.flowId,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      return null
     }
   }
 
