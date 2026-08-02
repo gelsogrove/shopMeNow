@@ -85,7 +85,14 @@ export function formatFlowsBlock(flows: FlowSummary[]): string {
       lines.push(`**${category}**`, ...group.map(renderFlow), '')
     }
     if (uncategorised.length > 0) {
-      lines.push('**Other**', ...uncategorised.map(renderFlow), '')
+      // Flows with no category are the workspace-generic fallbacks: the basic
+      // checks to run when no specific procedure matches. Labelled as such so
+      // the model reaches for them instead of escalating on the spot.
+      lines.push(
+        '**General checks (use when no specific flow matches, before escalating)**',
+        ...uncategorised.map(renderFlow),
+        '',
+      )
     }
     if (lines[lines.length - 1] === '') lines.pop()
   }

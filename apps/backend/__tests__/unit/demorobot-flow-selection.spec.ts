@@ -70,11 +70,14 @@ describe("demorobot flow catalogue block", () => {
       for (const f of MIXED) expect(block).toContain(`[${f.flowId}]`)
     })
 
-    it("lists uncategorised flows under Other rather than dropping them", () => {
-      // A missing category must never make a procedure unreachable.
+    it("labels uncategorised flows as the general checks to try before escalating", () => {
+      // A flow with no category is the workspace-generic fallback. It must be
+      // both reachable AND recognisable as such, so the model runs its basic
+      // checks instead of handing a blank case to an operator.
       const block = formatFlowsBlock([...MIXED, { flowId: "f4", title: "Generico" }])
 
-      expect(block).toContain("**Other**")
+      expect(block).toMatch(/General checks/i)
+      expect(block).toMatch(/before escalating/i)
       expect(block).toContain("[f4]")
     })
 
@@ -93,7 +96,7 @@ describe("demorobot flow catalogue block", () => {
     it("keeps the list flat when no flow has a category", () => {
       const block = formatFlowsBlock(FLOWS)
 
-      expect(block).not.toContain("**Other**")
+      expect(block).not.toMatch(/General checks/i)
       expect(block).toContain("[flow-err-001]")
     })
   })
