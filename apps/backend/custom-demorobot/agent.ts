@@ -282,8 +282,11 @@ const OPERATING_RULES = [
   'missing, one at a time, and never skip one because the others are answered:',
   '',
   '1. the SERIAL NUMBER (19 characters, starts with HK)',
+  "   → remember({key:'serialNumber', value:'HK...'})",
   '2. WHAT is happening — the error code shown, or the behaviour observed',
+  "   → remember({key:'problemDescription', value:'...'})",
   '3. WHEN it started — today, yesterday, for days',
+  "   → remember({key:'problemStartedWhen', value:'...'})",
   '',
   'Point 3 is required even when the error code alone would identify the flow:',
   'the operator needs it to read the right window of error logs. Save each one',
@@ -715,10 +718,21 @@ function formatOperatorBriefing(params: {
   if (state.activeModelId) lines.push(`• Model: ${state.activeModelId}`)
   lines.push(`• Diagnostic flow: ${state.activeFlowId || 'none matched'}`)
 
+  // The case as the customer described it — first thing the operator reads.
+  const problem = state.collectedData?.problemDescription
+  const startedWhen = state.collectedData?.problemStartedWhen
+  lines.push('')
+  lines.push('**Problem**')
+  lines.push(`• What: ${problem ? String(problem) : 'not provided'}`)
+  lines.push(`• Since: ${startedWhen ? String(startedWhen) : 'not provided'}`)
+
   // The answers collected along the flow are the most useful part for the
   // operator: they are the diagnosis already done, and must not be repeated.
   const collected = state.collectedData ?? {}
-  const collectedKeys = Object.keys(collected)
+  // problemDescription/problemStartedWhen already have their own section above.
+  const collectedKeys = Object.keys(collected).filter(
+    (k) => k !== 'problemDescription' && k !== 'problemStartedWhen',
+  )
   if (collectedKeys.length > 0) {
     lines.push('')
     lines.push('**Answers collected**')
