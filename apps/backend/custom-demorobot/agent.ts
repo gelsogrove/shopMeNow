@@ -226,7 +226,7 @@ const TOOLS = [
           key: {
             type: 'string',
             description:
-              'The fieldKey from the active flow, or one of "name" (the person\'s name), "company" (the business they are calling for), "serialNumber".',
+              'The fieldKey from the active flow, or one of these standard keys: "name" (the person\'s name), "company" (the business they are calling for), "serialNumber", "problemDescription" (what is wrong, in a few words), "problemStartedWhen" (today / yesterday / for days).',
           },
           value: { type: 'string', description: 'The value to remember, as a string (numbers/booleans as their string form).' },
         },
@@ -299,6 +299,24 @@ const OPERATING_RULES = [
   '   leaves the customer waiting for a hand-off that never happened.',
   '3. Then confirm to them BY NAME, e.g. "Andrea, I\'m putting you through to',
   '   our operator — they will get back to you as soon as possible."',
+  '',
+  'The operator also needs the case details before taking over. Unless the',
+  'customer has already given them, collect the SERIAL NUMBER, WHEN it started',
+  'and a DESCRIPTION of the problem before escalating — one question at a time,',
+  'saving each with remember(). Handing over a case with none of this forces the',
+  'operator to start the conversation from zero.',
+  '',
+  '### Emergencies are the exception',
+  '',
+  'If someone is hurt, an animal is injured, there is smoke, fire or property',
+  'damage: escalate IMMEDIATELY with reason "emergency". Do not ask for a name,',
+  'a serial number or anything else first — nothing may delay reaching a human.',
+  '',
+  'Then, in the SAME reply, acknowledge what happened with genuine concern and',
+  'ask for the details the operator will need (name, serial number, what',
+  'happened). Never answer an emergency with one flat line: the customer has',
+  'just told you something serious, and "An operator will contact you shortly."',
+  'alone reads as indifference.',
   '',
   '## NEVER INVENT ANYTHING (absolute rule — overrides every instruction above)',
   '',
@@ -440,19 +458,39 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     // The refusal is counted, not detected: asking once and giving up on the
     // second attempt needs no phrase matching on user text (CLAUDE.md §14).
     // If the customer supplies a name, the first branch never runs again.
+    // Andrea 2026-08-03: an operator taking over needs the case, not just the
+    // fact that someone is waiting. Refuse the hand-off while the essentials
+    // are missing and let the LLM collect them (iron rule: tool refuses, LLM
+    // corrects). Without this the operator inherits a blank conversation and
+    // has to start from zero.
     const state = getState(ctx.sessionId)
-    const nameKnown = !!state.name?.trim()
-    const alreadyAskedForName = registerNameRequest(ctx.sessionId) > 1
-    if (!nameKnown && reason !== 'emergency' && !alreadyAskedForName) {
+    const missing: string[] = []
+    if (!state.name?.trim()) missing.push("the customer's name (remember({key:'name'}))")
+    if (!state.serialNumber?.trim()) missing.push("the robot serial number (remember({key:'serialNumber'}))")
+    if (!state.collectedData?.problemDescription) {
+      missing.push("a short description of the problem (remember({key:'problemDescription'}))")
+    }
+    if (!state.collectedData?.problemStartedWhen) {
+      missing.push("when it started (remember({key:'problemStartedWhen'}))")
+    }
+
+    // Two deliberate exemptions:
+    //  - a genuine emergency must never wait behind data collection;
+    //  - a customer who did not supply the details when asked is escalated
+    //    anyway, since blocking access to a human is worse than a thin ticket.
+    //    Counted, not phrase-detected, so "no" and silence behave alike (§14).
+    const alreadyAsked = registerNameRequest(ctx.sessionId) > 1
+    if (missing.length > 0 && reason !== 'emergency' && !alreadyAsked) {
       return {
         ok: false,
-        error: 'customer_name_required',
+        error: 'case_details_required',
         instruction:
-          "Ask the customer for their name — one short, polite question, nothing else in that message. " +
-          "As soon as they answer: (1) save it with remember({key:'name'}), (2) call escalate_to_operator again IN THE SAME TURN, " +
-          "(3) confirm to them by name, e.g. \"Andrea, I'm putting you through to our operator — they will get back to you as soon as possible\". " +
-          "Do not ask anything else in between, and do not end your turn after only saving the name: the hand-off must happen now. " +
-          "If the customer will not give a name, call escalate_to_operator once more and it will go through.",
+          `Before handing over, the operator needs: ${missing.join('; ')}. ` +
+          'Ask ONE short question at a time for what is missing, saving each answer with remember() as it arrives. ' +
+          'Once you have them all, call escalate_to_operator again IN THE SAME TURN as the last answer, then confirm to the customer by name ' +
+          '(e.g. "Andrea, I\'m putting you through to our operator — they will get back to you as soon as possible"). ' +
+          'Never end a turn having only saved the details: the hand-off must happen. ' +
+          'If the customer will not provide them, call escalate_to_operator once more and it will go through.',
       }
     }
 
