@@ -1071,6 +1071,44 @@ export async function applyCustomerPatches(
   logger.info('[applyCustomerPatches] Customer profile updated', { customerId, workspaceId, fields: Object.keys(data) })
 }
 
+/**
+ * Picks the recipients for an escalation according to the workspace's
+ * `operatorDeliveryMode`.
+ *
+ * Andrea 2026-08-02: the mode was written into settings.json but no code ever
+ * read it — every escalation went to a single address regardless. Now:
+ *   'all'    → every configured operator is notified
+ *   'random' → one operator picked at random (round-robin-ish load spreading)
+ *   'custom' → the chatbot module owns routing; the lists are emitted empty,
+ *              so this falls back to the single legacy address
+ *
+ * Falls back to the singular legacy field when no list is configured, so
+ * existing workspaces keep working untouched.
+ */
+function selectOperatorRecipients(
+  list: string[] | null | undefined,
+  fallback: string | null | undefined,
+  deliveryMode: string | null | undefined
+): string[] {
+  const configured = (list ?? []).map((v) => v.trim()).filter(Boolean)
+
+  if (configured.length === 0) {
+    const single = fallback?.trim()
+    return single ? [single] : []
+  }
+
+  if (deliveryMode === "random") {
+    return [configured[Math.floor(Math.random() * configured.length)]]
+  }
+
+  // 'all' (default) and anything unrecognised: notify everyone. Erring towards
+  // more people seeing an escalation is safer than silently dropping it.
+  return configured
+}
+
+/** Exposed for unit tests: recipient selection is a pure decision worth pinning. */
+export const selectOperatorRecipientsForTest = selectOperatorRecipients
+
 export interface EscalationNotificationParams {
   workspaceId: string
   customerId: string
@@ -1118,6 +1156,10 @@ export async function applyEscalationNotification(
       operatorContactMethod: true,
       operatorEmail: true,
       operatorWhatsappNumber: true,
+      // Multi-operator routing: which addresses/numbers, and how to pick.
+      operatorEmails: true,
+      operatorWhatsappNumbers: true,
+      operatorDeliveryMode: true,
       name: true,
     },
   })
@@ -1135,25 +1177,35 @@ export async function applyEscalationNotification(
   const method = settingsContactMethod || workspace.operatorContactMethod || 'email'
   logger.info('[applyEscalationNotification] Dispatching escalation', { workspaceId, customerId, method })
 
+  const deliveryMode = workspace.operatorDeliveryMode
+
   if (method === 'whatsapp') {
-    const operatorPhone = settingsWhatsappNumber || workspace.operatorWhatsappNumber
-    if (!operatorPhone) {
-      logger.warn('[applyEscalationNotification] WhatsApp method set but no operatorWhatsappNumber configured', { workspaceId })
+    const operatorPhones = selectOperatorRecipients(
+      workspace.operatorWhatsappNumbers,
+      settingsWhatsappNumber || workspace.operatorWhatsappNumber,
+      deliveryMode
+    )
+    if (operatorPhones.length === 0) {
+      logger.warn('[applyEscalationNotification] WhatsApp method set but no operator number configured', { workspaceId })
       return
     }
-    try {
-      const directSend = new WhatsAppDirectSendService(db)
-      const messageContent = `🔔 *Human Support* — ${customerName}\n\n${escalationSummary}`
-      await directSend.send({
-        workspaceId,
-        customerId,
-        phoneNumber: operatorPhone,
-        messageContent,
-        skipSecurityCheck: true,
-      })
-      logger.info('[applyEscalationNotification] WhatsApp notification sent', { workspaceId, operatorPhone })
-    } catch (err) {
-      logger.error('[applyEscalationNotification] WhatsApp notification failed', { workspaceId, error: err instanceof Error ? err.message : String(err) })
+    const directSend = new WhatsAppDirectSendService(db)
+    const messageContent = `🔔 *Human Support* — ${customerName}\n\n${escalationSummary}`
+    // Sent per recipient: one operator being unreachable must not stop the
+    // others from being notified.
+    for (const phoneNumber of operatorPhones) {
+      try {
+        await directSend.send({
+          workspaceId,
+          customerId,
+          phoneNumber,
+          messageContent,
+          skipSecurityCheck: true,
+        })
+        logger.info('[applyEscalationNotification] WhatsApp notification sent', { workspaceId, phoneNumber, deliveryMode })
+      } catch (err) {
+        logger.error('[applyEscalationNotification] WhatsApp notification failed', { workspaceId, phoneNumber, error: err instanceof Error ? err.message : String(err) })
+      }
     }
     return
   }
@@ -1161,7 +1213,11 @@ export async function applyEscalationNotification(
   // Default: email
   // notificationEmails from chatbot settings takes precedence over workspace.operatorEmail
   // (custom chatbot tenants configure emails in settings.json, not in the workspace DB record)
-  const emailRecipients = notificationEmails || workspace.operatorEmail
+  // notificationEmails (chatbot settings) wins when set; otherwise the
+  // workspace operator list, selected according to the delivery mode.
+  const emailRecipients =
+    notificationEmails ||
+    selectOperatorRecipients(workspace.operatorEmails, workspace.operatorEmail, deliveryMode).join(",")
   if (!emailRecipients) {
     logger.warn('[applyEscalationNotification] Email method set but no email configured', { workspaceId })
     return

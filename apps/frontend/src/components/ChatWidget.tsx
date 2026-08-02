@@ -559,7 +559,6 @@ export function ChatWidget({
   const [formPhone, setFormPhone] = useState("")
   const [formLanguage, setFormLanguage] = useState<LangCode>("en")
   const [formFirstMessage, setFormFirstMessage] = useState("")
-  const [termsAccepted, setTermsAccepted] = useState(false)
   const [showTermsContent, setShowTermsContent] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [workspaceConfig, setWorkspaceConfig] = useState<{
@@ -1395,10 +1394,6 @@ export function ChatWidget({
       setFormError("Please write your first message")
       return
     }
-    if (!termsAccepted) {
-      setFormError(ui.termsError)
-      return
-    }
     setIsLoading(true)
     setFormError(null)
 
@@ -1416,7 +1411,10 @@ export function ChatWidget({
         phone: formPhone.trim(),
         language: formLanguage,
         firstMessage: formFirstMessage.trim(),
-        pushNotificationsConsent: termsAccepted,
+        // The consent checkbox was removed from this form, so registration no
+        // longer collects it. Sent as false rather than omitted, so the flag
+        // keeps a defined value and consent stays explicitly un-granted.
+        pushNotificationsConsent: false,
       })
 
       console.log("✅ [REGISTER] Registration API success", {
@@ -2111,45 +2109,11 @@ export function ChatWidget({
                       />
                     </div>
 
-                    {/* Language */}
-                    <div className="space-y-1">
-                      <label className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                        <Globe className="w-3.5 h-3.5" /> Language
-                      </label>
-                      <select
-                        value={formLanguage}
-                        onChange={(e) => setFormLanguage(e.target.value as LangCode)}
-                        className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-1"
-                        style={{ "--tw-ring-color": resolvedPrimaryColor } as CSSProperties}
-                      >
-                        <option value="en">🇬🇧 English</option>
-                        <option value="it">🇮🇹 Italiano</option>
-                        <option value="es">🇪🇸 Español</option>
-                        <option value="ca">🏴󠁥󠁳󠁣󠁴󠁿 Català</option>
-                        <option value="fr">🇫🇷 Français</option>
-                        <option value="de">🇩🇪 Deutsch</option>
-                      </select>
-                    </div>
-
-                    {/* Terms & consent */}
-                    <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
-                      <input
-                        id="terms-consent"
-                        type="checkbox"
-                        checked={termsAccepted}
-                        onChange={(e) => setTermsAccepted(e.target.checked)}
-                        className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                      />
-                      <div className="text-xs text-slate-600 leading-snug">
-                        <button
-                          type="button"
-                          className="cursor-pointer font-semibold text-emerald-600 hover:underline"
-                          onClick={() => setShowTermsContent(true)}
-                        >
-                          {ui.termsLabel}
-                        </button>
-                      </div>
-                    </div>
+                    {/* Andrea 2026-08-02: the language selector and the terms
+                        checkbox were removed from this form. Language is
+                        detected from what the customer actually writes (the
+                        picker only ever added a wrong-by-default guess), and
+                        the consent step is handled outside registration. */}
 
                     {/* Error message */}
                     {formError && (
@@ -2163,7 +2127,7 @@ export function ChatWidget({
               <div className="border-t border-gray-200 p-3 sm:p-4 space-y-2 sm:space-y-3">
                 <button
                   onClick={handleRegistrationSubmit}
-                  disabled={isLoading || !termsAccepted}
+                  disabled={isLoading}
                   className="w-full py-3 rounded-2xl text-white text-sm font-semibold flex items-center justify-center gap-2 hover:brightness-95 active:scale-[0.98] transition-all disabled:opacity-60"
                   style={{ backgroundColor: resolvedPrimaryColor }}
                 >

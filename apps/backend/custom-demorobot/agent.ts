@@ -219,11 +219,15 @@ const TOOLS = [
     function: {
       name: 'remember',
       description:
-        'Save a fact the customer has provided that matches one of the active flow\'s fieldKeys, or the customer name / serial number. Call this as soon as the customer provides the information, merging with what is already known — never wait until the end of the flow.',
+        'Save a fact the customer has provided: a fieldKey from the active flow, or one of the profile facts "name", "company", "serialNumber". Call this the moment the customer gives you the information — never wait until the end of the flow. The profile facts are stored on the customer record, so the next conversation already knows them.',
       parameters: {
         type: 'object',
         properties: {
-          key: { type: 'string', description: 'The fieldKey from the active flow, or "name"/"serialNumber".' },
+          key: {
+            type: 'string',
+            description:
+              'The fieldKey from the active flow, or one of "name" (the person\'s name), "company" (the business they are calling for), "serialNumber".',
+          },
           value: { type: 'string', description: 'The value to remember, as a string (numbers/booleans as their string form).' },
         },
         required: ['key', 'value'],
@@ -277,6 +281,9 @@ const GROUNDING_RULE = [
   '  ask must appear in the ACTIVE FLOW block. If no flow is attached, you have',
   '  no questions to ask: escalate instead of improvising a troubleshooting',
   '  interview (battery, charger, blades, weather... none of it is yours to ask).',
+  '- NEVER send a placeholder to the customer. "NOMEUSER", "{{customerName}}",',
+  '  "[NAME]" and the like are template markers, not text: either substitute the',
+  '  real value from RUNTIME/SESSION STATE, or rewrite the sentence without it.',
   '- An error code with no matching flow is NOT covered by a similar-looking',
   '  one: ERROR 0011 is not ERROR 001. Different code, different problem —',
   '  escalate rather than stretching a flow to fit.',
@@ -362,7 +369,10 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     const value = args.value
     if (!key) return { ok: false, error: 'key is required' }
 
-    if (key === 'name' || key === 'serialNumber') {
+    // These three are customer-profile facts, not flow answers: they are
+    // mirrored onto the Customers row by the host, so the next conversation
+    // starts already knowing them.
+    if (key === 'name' || key === 'serialNumber' || key === 'company') {
       updateState(ctx.sessionId, { [key]: String(value) })
       return { ok: true }
     }
@@ -583,6 +593,66 @@ function formatRuntimeBlock(
   return lines.join('\n')
 }
 
+// Marker recognised by src/utils/custom-chatbot-reply.ts: everything from here
+// on is INTERNAL. The host strips it before the customer sees the reply and
+// stores the full text, so the backoffice renders it as an operator balloon.
+// Same convention already used by demowash/demobeauty/demorealestate.
+const HUMAN_SUPPORT_MARKER = '**👤 Human Support message**'
+
+/**
+ * Renders the escalation briefing the operator receives, as a readable block
+ * rather than a wall of prose: who the customer is, which robot, what was
+ * gathered along the flow, and the LLM's own summary.
+ *
+ * Andrea 2026-08-02: shown inside the chat (operator balloon) so it is obvious
+ * at a glance what has been handed over, without opening the email.
+ */
+function formatOperatorBriefing(params: {
+  state: SessionState
+  reason: string
+  summary?: string
+  ticketId?: string
+}): string {
+  const { state, reason, summary, ticketId } = params
+
+  const lines: string[] = [HUMAN_SUPPORT_MARKER, '']
+
+  if (ticketId) lines.push(`🎫 **Ticket:** ${ticketId}`)
+  lines.push(`📌 **Reason:** ${reason}`)
+  lines.push('')
+
+  lines.push('**Customer**')
+  lines.push(`• Name: ${state.name?.trim() || '—'}`)
+  lines.push(`• Company: ${state.company?.trim() || '—'}`)
+  lines.push(`• Language: ${state.language || '—'}`)
+  lines.push('')
+
+  lines.push('**Robot**')
+  lines.push(`• Serial number: ${state.serialNumber?.trim() || 'not provided'}`)
+  if (state.activeModelId) lines.push(`• Model: ${state.activeModelId}`)
+  lines.push(`• Diagnostic flow: ${state.activeFlowId || 'none matched'}`)
+
+  // The answers collected along the flow are the most useful part for the
+  // operator: they are the diagnosis already done, and must not be repeated.
+  const collected = state.collectedData ?? {}
+  const collectedKeys = Object.keys(collected)
+  if (collectedKeys.length > 0) {
+    lines.push('')
+    lines.push('**Answers collected**')
+    for (const key of collectedKeys) {
+      lines.push(`• ${key}: ${String(collected[key])}`)
+    }
+  }
+
+  if (summary?.trim()) {
+    lines.push('')
+    lines.push('**Summary**')
+    lines.push(summary.trim())
+  }
+
+  return lines.join('\n')
+}
+
 interface TurnResult {
   reply: string
   tokensUsed: number
@@ -672,6 +742,8 @@ async function agentTurnInternal(
 
     let escalated = false
     let escalationSummary: string | undefined
+    let escalationReason = 'diagnostic_exhausted'
+    let escalationTicketId: string | undefined
 
     for (const call of toolCalls) {
       let args: Record<string, unknown> = {}
@@ -690,6 +762,8 @@ async function agentTurnInternal(
       if (call.function.name === 'escalate_to_operator' && result.ok) {
         escalated = true
         escalationSummary = typeof args.summary === 'string' ? args.summary : escalationSummary
+        escalationReason = typeof args.reason === 'string' ? args.reason : escalationReason
+        if (typeof result.ticket_id === 'string') escalationTicketId = result.ticket_id
       }
 
       history.push({
@@ -717,9 +791,21 @@ async function agentTurnInternal(
       const { reply, lang } = extractLanguage(finalHop.text)
       commitLanguageFromReply(ctx.sessionId, lang)
       history.push({ role: 'assistant', content: reply })
+
+      // Operator balloon: appended AFTER the customer-facing reply and split
+      // off host-side by splitCustomChatbotReply. Built from the session state
+      // (read before detachFlow clears the attachment) so the operator sees the
+      // whole picture — customer, robot, answers already collected.
+      const briefing = formatOperatorBriefing({
+        state: getState(ctx.sessionId),
+        reason: escalationReason,
+        summary: escalationSummary,
+        ticketId: escalationTicketId,
+      })
+
       detachFlow(ctx.sessionId)
       return {
-        reply,
+        reply: `${reply}\n\n${briefing}`,
         tokensUsed: hopTokens + finalHop.tokensUsed,
         escalated: true,
         escalationSummary,
@@ -743,10 +829,19 @@ async function agentTurnInternal(
   ].join('\n')
 
   markEscalationOnce(ctx.sessionId, 'diagnostic_exhausted')
+
+  // Same operator balloon as the tool-driven path, so a hand-off looks the
+  // same however it was reached. Built before detachFlow clears the flow id.
+  const briefing = formatOperatorBriefing({
+    state: finalState,
+    reason: 'diagnostic_exhausted',
+    summary,
+  })
+
   detachFlow(ctx.sessionId)
 
   return {
-    reply: handoffMessage(finalState.language),
+    reply: `${handoffMessage(finalState.language)}\n\n${briefing}`,
     tokensUsed: 0,
     escalated: true,
     escalationSummary: summary,

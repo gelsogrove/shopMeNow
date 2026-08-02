@@ -18,6 +18,10 @@ export interface SessionState {
   // Operational
   name?: string
   serialNumber?: string
+  // Company the customer is calling on behalf of. Mirrored onto the customer
+  // profile like name/language, so the operator sees who they are dealing with
+  // and the next conversation already knows it.
+  company?: string
 
   // Open ISO 2-letter language code — decided by the LLM via the ⟦LANG:xx⟧
   // trailer, never a regex detector on user text (CLAUDE.md §14).
@@ -31,7 +35,7 @@ export interface SessionState {
   languageIsSeed?: boolean
 }
 
-export type PatchKey = 'name' | 'language' | 'serialNumber'
+export type PatchKey = 'name' | 'language' | 'serialNumber' | 'company'
 
 export interface CustomerPatch {
   key: PatchKey
@@ -85,7 +89,7 @@ export function getState(sessionId: string): SessionState {
   return entry(sessionId).state
 }
 
-const MIRRORED_KEYS: ReadonlyArray<keyof SessionState> = ['name', 'language', 'serialNumber']
+const MIRRORED_KEYS: ReadonlyArray<keyof SessionState> = ['name', 'language', 'serialNumber', 'company']
 
 export function updateState(
   sessionId: string,
