@@ -195,6 +195,12 @@ type ChatbotInput = {
     messages?: {
       welcomeBack?: string | null
       humanSupport?: string | null
+      /** Shown when the customer exceeds the per-minute message cap. */
+      rateLimited?: string | null
+      /** Shown when the conversation exceeds maxTurnsPerSession. */
+      sessionTooLong?: string | null
+      /** Intake wording — the module fixes WHEN to ask, the workspace HOW. */
+      intakeQuestions?: Record<string, string> | null
     } | null
     // Real side-effect handlers injected by this host. The custom module
     // stays free of Prisma/Google/Zoom imports and calls these when present.
