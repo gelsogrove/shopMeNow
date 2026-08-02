@@ -2,7 +2,7 @@
   "model": "anthropic/claude-haiku-4.5",
   "temperature": 0,
   "maxTokens": 800,
-  "maxToolHops": 4,
+  "maxToolHops": 6,
   "operatorBriefingLanguage": "en",
   "operatorEmail": "echatbotai@gmail.com",
   "emailFrom": "DemoRobot Bot <noreply@demorobot.demo>",

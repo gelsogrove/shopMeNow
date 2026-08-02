@@ -849,8 +849,16 @@ async function agentTurnInternal(
       })
 
       detachFlow(ctx.sessionId)
+      // The customer MUST be told the hand-off happened. The LLM usually says
+      // it, but after a successful escalate_to_operator it sometimes considers
+      // the turn finished and returns nothing — leaving the customer staring at
+      // an empty reply while an operator has silently been notified. Falling
+      // back to the workspace hand-off message (or a localized default) makes
+      // the confirmation deterministic rather than a hope.
+      const customerReply = reply.trim() || handoffFallback(ctx.sessionId, messages)
+
       return {
-        reply: `${reply}\n\n${briefing}`,
+        reply: `${customerReply}\n\n${briefing}`,
         tokensUsed: hopTokens + finalHop.tokensUsed,
         escalated: true,
         escalationSummary,
@@ -886,7 +894,10 @@ async function agentTurnInternal(
   detachFlow(ctx.sessionId)
 
   return {
-    reply: `${handoffMessage(finalState.language)}\n\n${briefing}`,
+    // Same confirmation as the tool-driven path: the workspace's hand-off
+    // message when configured, otherwise the localized default addressed by
+    // name. A hand-off must never read as a generic apology.
+    reply: `${handoffFallback(ctx.sessionId, messages)}\n\n${briefing}`,
     tokensUsed: 0,
     escalated: true,
     escalationSummary: summary,
@@ -907,6 +918,24 @@ const HANDOFF_MESSAGES: Record<string, string> = {
 
 function handoffMessage(language?: string): string {
   return HANDOFF_MESSAGES[language ?? 'en'] ?? HANDOFF_MESSAGES.en
+}
+
+/**
+ * The confirmation the customer sees when the chat is handed to an operator.
+ *
+ * Prefers the workspace's own hand-off message (editable in the Human Support
+ * card, with {{customerName}} already substituted by the host) and falls back
+ * to the localized default. Prefixed with the customer's name when we know it —
+ * we asked for it precisely so the hand-off would not be anonymous.
+ */
+function handoffFallback(sessionId: string, messages: WorkspaceMessages | undefined): string {
+  const state = getState(sessionId)
+  const configured = messages?.humanSupport?.trim()
+  if (configured) return configured
+
+  const base = handoffMessage(state.language)
+  const name = state.name?.trim()
+  return name ? `${name}, ${base.charAt(0).toLowerCase()}${base.slice(1)}` : base
 }
 
 export async function agentTurn(
