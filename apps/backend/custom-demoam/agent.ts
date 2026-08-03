@@ -1045,10 +1045,18 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     // host) — never inferred by the LLM from the transcript.
     const lastEntry = input.context.history[input.context.history.length - 1]
     const lastMessageAtMs = lastEntry?.timestamp ? Date.parse(lastEntry.timestamp) : NaN
+    // Host convention: anonymous customers get an auto-generated name
+    // "Visitor <id>" (visitor-id.service.ts; prompt-variable-builder.service.ts
+    // applies this same prefix check). That is NOT a known customer — treating
+    // it as one produced "Bentornato Visitor o5thgaq6" instead of the welcome
+    // for new customers (seen live, 2026-08-04). Host metadata, not customer
+    // text — CLAUDE.md §14 does not apply.
+    const hostName = input.userName?.trim() ?? ''
+    const realHostName = hostName && !hostName.startsWith('Visitor ') ? hostName : ''
     const greeting = resolveGreeting({
       historyLength: input.context.history.length,
       lastMessageAtMs: Number.isNaN(lastMessageAtMs) ? undefined : lastMessageAtMs,
-      hasKnownName: !!(getState(sessionId).name?.trim() || input.userName?.trim()),
+      hasKnownName: !!(getState(sessionId).name?.trim() || realHostName),
       nowMs: Date.now(),
       staleMs: WELCOME_BACK_STALE_MS,
     })
