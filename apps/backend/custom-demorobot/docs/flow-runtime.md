@@ -286,6 +286,41 @@ più possibile, va fatto passando da `abandon_flow`. Un tool non esposto non
 può essere usato male: è un vincolo dello schema passato all'API, non una
 richiesta nel prompt.
 
+### ✅ 10 — Nessuna risposta a mano libera dopo l'intake senza flow — FATTO (2026-08-03)
+
+Bug in produzione (Andrea): dopo l'intake completo, senza un flow agganciato,
+il modello rispondeva con diagnosi inventate ("le lame sono sporche o
+danneggiate?" — una domanda che non esiste in nessun `FlowNode`), nonostante
+`temperature: 0` e il divieto esplicito in `common.md` ("When nothing
+matches" → escalate, never guess). **Temperatura bassa e un divieto nel
+prompt non sono una garanzia** — riducono la casualità del sampling, non
+impediscono al modello di generare contenuto plausibile-ma-falso.
+
+`common.md` dice che le uniche due mosse legittime a quel punto sono
+`start_flow` o `escalate_to_operator`. Prima non c'era nessun vincolo che lo
+imponesse: `tool_choice` era sempre `'auto'`, quindi una risposta di solo
+testo restava sempre possibile.
+
+Fix in `agent.ts` (`agentTurnInternal` + `callLLM`): quando non è il primo
+turno, nessun flow è attaccato (`!activeFlowId`, `!currentNodeId`) e l'intake
+è completo (`nextIntakeStep` restituisce `null`), il turno passa
+`tool_choice: 'required'` invece di `'auto'` — il modello **non può**
+rispondere con solo testo in quel momento, l'API lo rifiuta prima ancora che
+il turno arrivi a `executeTool`.
+
+Deliberatamente **non** una classificazione sul contenuto della risposta
+("sembra una diagnosi inventata?") — sarebbe pattern-matching sul testo in
+output, lo stesso problema del keyword detection sull'input che CLAUDE.md §14
+vieta, solo spostato dall'altra parte. La condizione dipende solo da stato di
+sessione (flow attaccato o no, intake completo o no), mai dal contenuto che il
+modello sta per scrivere.
+
+Costo accettato: anche una risposta FAQ genuina in quel punto viene comunque
+rimandata a un tool_call — il modello deve comunque chiamare `start_flow` o
+`escalate_to_operator` per chiudere il turno, non può limitarsi a rispondere
+dalla FAQ e fermarsi lì. Nessuna eccezione nascosta per non rompere quel caso:
+la garanzia vale sempre, senza casi speciali che la indebolirebbero silenziosamente.
+
 ---
 
 ## Il canale disattivato — guard a monte, fuori da questo modulo
@@ -337,7 +372,7 @@ assumere.
 ## Cosa diventa garanzia, cosa resta probabilistico
 
 ✅ Questa tabella descrive lo stato **implementato** al 2026-08-03 (punti
-0-7, 9 fatti — vedi sezioni sopra), non più solo il target.
+0-7, 9-10 fatti — vedi sezioni sopra), non più solo il target.
 
 | Decisione | Chi |
 | --- | --- |
@@ -346,6 +381,8 @@ assumere.
 | Dove si va dopo la risposta | 🔵 CODICE (`FlowEdge.targetNodeId` via `advance()`) |
 | Se si escala | 🔵 CODICE (`triggersEscalation`, gate) |
 | Quali tool sono disponibili | 🔵 CODICE (per fase / `terminalType`) |
+| Se una risposta testo-libero è permessa dopo l'intake senza flow | 🔵 CODICE (`tool_choice: 'required'`, punto 10) |
+| Formato del serial number | 🔵 CODICE (regex in `remember`, non solo testo nel prompt) |
 | Quale flow corrisponde al problema | 🟠 LLM (validato da `start_flow`, non dalla pertinenza) |
 | Su quale edge cade la risposta | 🟠 LLM (fra i label esistenti) |
 | Tono, naturalezza, traduzione | 🟠 LLM |

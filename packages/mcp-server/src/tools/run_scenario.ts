@@ -115,3 +115,30 @@ export async function endSession(params: {
     // best-effort cleanup
   }
 }
+
+export interface WorkspaceSummary {
+  id: string
+  name: string
+  customChatbotId?: string | null
+}
+
+/**
+ * Lists workspaces visible to the authenticated user (GET /workspaces/,
+ * already scoped server-side to the token's user — same isolation as the
+ * backoffice). Used to resolve a workspaceId by name (e.g. "AmRobots")
+ * without needing to open the backoffice UI.
+ */
+export async function listWorkspaces(): Promise<WorkspaceSummary[]> {
+  const token = getAuthToken()
+  const api = makeApiClient(token)
+  const response = await api.get("/workspaces")
+  const data = response.data as Record<string, unknown>
+  const workspaces = (Array.isArray(data) ? data : (data.workspaces as unknown[]) ?? []) as Array<
+    Record<string, unknown>
+  >
+  return workspaces.map((w) => ({
+    id: w.id as string,
+    name: w.name as string,
+    customChatbotId: (w.customChatbotId as string | null | undefined) ?? null,
+  }))
+}

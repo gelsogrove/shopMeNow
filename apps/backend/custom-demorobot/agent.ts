@@ -553,6 +553,24 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     const value = args.value
     if (!key) return { ok: false, error: 'key is required' }
 
+    // AmRobots serials are documented in prompts/common.md as "19 characters,
+    // starts with HK" — but that was only ever a sentence in the prompt, which
+    // the model is free to ignore (and did: a 17-character serial was accepted
+    // without a second look). Iron rule 2 (tool refuses, LLM corrects): the
+    // format check now lives here, not as a request in the prompt.
+    if (key === 'serialNumber') {
+      const candidate = String(value).trim()
+      if (!/^HK.{17}$/i.test(candidate)) {
+        return {
+          ok: false,
+          error: 'invalid_serial_format',
+          instruction:
+            `"${candidate}" is not a valid serial number — it must be 19 characters and start with "HK". ` +
+            'Tell the customer this and ask them to re-check the label on the robot.',
+        }
+      }
+    }
+
     // These three are customer-profile facts, not flow answers: they are
     // mirrored onto the Customers row by the host, so the next conversation
     // starts already knowing them.
@@ -664,6 +682,23 @@ interface CallLLMParams {
   settings: Settings
   /** Workspace-owned copy (welcome-back, hand-off), editable in the app. */
   messages?: WorkspaceMessages | null
+  /**
+   * When true, the model MUST call a tool this hop — a free-text reply is
+   * rejected by the API itself, not merely discouraged in the prompt.
+   *
+   * Andrea 2026-08-03: "never invent a diagnosis" in common.md is a request,
+   * not a guarantee — temperature 0 does not stop the model from generating
+   * plausible-sounding, ungrounded content, it only makes sampling less
+   * random. Once intake is complete and no flow matched, the ONLY two
+   * legitimate moves left are start_flow or escalate_to_operator (common.md
+   * "When nothing matches"); a free-text reply at that point is exactly the
+   * shape of the production bug (an invented question about dirty/damaged
+   * blades that exists in no FlowNode). Set by the caller, never inferred
+   * from the reply's content — classifying "is this an invented diagnosis"
+   * would be the same forbidden text-pattern-matching this is meant to avoid
+   * (CLAUDE.md §14), just applied to the output instead of the input.
+   */
+  forceToolChoice?: boolean
 }
 
 async function callLLM({
@@ -677,6 +712,7 @@ async function callLLM({
   flowsBlock,
   settings,
   messages,
+  forceToolChoice,
 }: CallLLMParams): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
@@ -766,7 +802,7 @@ async function callLLM({
       model: process.env.LLM_MODEL || settings.model,
       messages: payloadMessages,
       tools: buildToolsForTurn(state, currentStepLabels),
-      tool_choice: 'auto',
+      tool_choice: forceToolChoice ? 'required' : 'auto',
       temperature: settings.temperature,
       max_tokens: settings.maxTokens,
     }),
@@ -974,6 +1010,19 @@ async function agentTurnInternal(
     }
   }
 
+  // Andrea 2026-08-03: once intake is complete and no flow is attached, the
+  // only two moves common.md allows are start_flow or escalate_to_operator —
+  // a free-text reply at that point is where the model invents a diagnosis
+  // (flow-runtime.md's documented "le lame girano normalmente?" bug). This is
+  // NOT re-evaluated per hop on the reply's content (that would be output-side
+  // pattern matching, same problem as input-side keyword detection, CLAUDE.md
+  // §14) — it depends only on session state, computed once before the loop.
+  const mustForceToolChoice =
+    !isFirstTurn &&
+    !state.currentNodeId &&
+    !state.activeFlowId &&
+    !nextIntakeStep(state, messages?.intakeQuestions ?? settings.intakeQuestions)
+
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
     // Recomputed per hop: start_flow may have attached a flow during this very
@@ -989,9 +1038,24 @@ async function agentTurnInternal(
       flowsBlock: state.activeFlowId ? undefined : flowsBlock,
       settings,
       messages,
+      // Once a flow attaches or intake becomes incomplete again mid-loop
+      // (neither happens today, but state is re-read every hop on principle),
+      // the next hop's own state re-read stops satisfying the condition above
+      // naturally — no separate reset needed.
+      forceToolChoice: mustForceToolChoice && !state.currentNodeId && !state.activeFlowId,
     })
 
     if (toolCalls.length === 0) {
+      if (mustForceToolChoice && !state.currentNodeId && !state.activeFlowId) {
+        // tool_choice: 'required' was sent but the API returned no tool_calls
+        // anyway — a contract violation on the provider's side, not something
+        // to silently accept as a free-text reply (that would defeat the
+        // whole point of this guard). Logged so it surfaces instead of
+        // masquerading as normal behaviour; still returns the text rather
+        // than looping forever, since there is nothing else to try.
+        // eslint-disable-next-line no-console
+        console.error('[demorobot] tool_choice=required returned no tool_calls — provider contract violation')
+      }
       const { reply, lang } = extractLanguage(text)
       commitLanguageFromReply(ctx.sessionId, lang)
       history.push({ role: 'assistant', content: reply })

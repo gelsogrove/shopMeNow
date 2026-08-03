@@ -9,7 +9,7 @@ import { z } from "zod"
 import { runTests } from "./tools/run_tests"
 import { checkTypes } from "./tools/check_types"
 import { readLogs } from "./tools/read_logs"
-import { startSession, sendMessage, endSession } from "./tools/run_scenario"
+import { startSession, sendMessage, endSession, listWorkspaces } from "./tools/run_scenario"
 
 const server = new Server(
   { name: "echatbot-mcp", version: "1.0.0" },
@@ -126,6 +126,15 @@ Use sessionId returned by start_session. Show the bot response to Andrea and wai
         },
       },
     },
+    {
+      name: "list_workspaces",
+      description:
+        "List workspaces visible to the authenticated user on Heroku (id, name, customChatbotId). Use to find a workspace's id by name (e.g. AmRobots) before calling start_session.",
+      inputSchema: {
+        type: "object",
+        properties: {},
+      },
+    },
   ],
 }))
 
@@ -185,6 +194,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const { customerId, customerPhone, workspaceId } = args as any
         await endSession({ customerId, customerPhone, workspaceId })
         return { content: [{ type: "text", text: `✅ Session ended. Test customer deleted.` }] }
+      }
+
+      case "list_workspaces": {
+        const workspaces = await listWorkspaces()
+        const text = workspaces
+          .map((w) => `${w.name}\n  id: ${w.id}\n  customChatbotId: ${w.customChatbotId || "-"}`)
+          .join("\n\n")
+        return { content: [{ type: "text", text: text || "No workspaces found." }] }
       }
 
       default:
