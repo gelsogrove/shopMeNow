@@ -206,8 +206,27 @@ export function nextIntakeStep(
  * now, dictated verbatim so it cannot improvise a probing question or a menu
  * of invented causes. Returns null when intake is complete or unconfigured.
  */
-export function formatIntakeBlock(step: IntakeStep | null): string | null {
+export function formatIntakeBlock(
+  step: IntakeStep | null,
+  opts: { withGreeting?: boolean } = {},
+): string | null {
   if (!step) return null
+
+  // "Whole reply, nothing else" beat the WELCOME instruction when both were
+  // injected (seen live 2026-08-04: the greeting was skipped on some first
+  // turns but not others — same build, same config). When a greeting is due
+  // the dictated reply IS greeting + question, stated here explicitly so the
+  // two blocks can never contradict each other.
+  const replyShape = opts.withGreeting
+    ? [
+        'Your reply has EXACTLY two parts, in this order:',
+        '1. The WELCOME greeting dictated in the RUNTIME block above.',
+        '2. This question.',
+        'Nothing else after it.',
+      ]
+    : [
+        "Translate it into the customer's language and send it as your whole reply.",
+      ]
 
   return [
     '## THE QUESTION TO ASK NOW',
@@ -218,7 +237,7 @@ export function formatIntakeBlock(step: IntakeStep | null): string | null {
     '',
     step.question,
     '',
-    "Translate it into the customer's language and send it as your whole reply.",
+    ...replyShape,
     'Do NOT add other questions, do NOT offer options or possible causes, and',
     'do NOT rephrase it into a multiple-choice list. A brief acknowledgement of',
     'what the customer just said may come first, then this question.',

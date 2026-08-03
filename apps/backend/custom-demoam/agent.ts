@@ -623,9 +623,13 @@ async function callLLM({
 
   // Intake gate: while no flow is running and the case details are still
   // missing, the code dictates the exact question (see formatIntakeBlock in
-  // gate.ts) — the model translates it, it does not compose its own.
+  // gate.ts) — the model translates it, it does not compose its own. When a
+  // greeting is due this turn, the dictated reply is greeting + question, so
+  // this block cannot override the WELCOME block into silence.
   if (!state.currentNodeId) {
-    const intakeBlock = formatIntakeBlock(nextIntakeStep(state, settings.gateQuestions))
+    const intakeBlock = formatIntakeBlock(nextIntakeStep(state, settings.gateQuestions), {
+      withGreeting: state.greeting === 'new' || state.greeting === 'returning',
+    })
     if (intakeBlock) systemContent.push({ type: 'text', text: intakeBlock })
   }
 
