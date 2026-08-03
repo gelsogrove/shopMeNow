@@ -55,6 +55,13 @@ interface Settings {
     problemDescription?: string
     problemStartedWhen?: string
   }
+  // The serial format ("19 characters, starts with HK") is AmRobots' own
+  // domain knowledge, not something this module may know about — a second
+  // customer's serials would need a different pattern. Configured here so
+  // the code stays a generic regex check, not a tenant-specific literal
+  // (demorobot-orchestration.spec.ts greps agent.ts for exactly this).
+  serialNumberPattern?: string
+  serialNumberFormatHint?: string
 }
 
 let SETTINGS: Settings
@@ -468,6 +475,9 @@ interface ToolContext {
   loadFlow?: LoadFlowHandler
   /** Pre-operator gate wording, configured per workspace (flow-selection.ts). */
   intakeQuestions?: IntakeQuestions | null
+  /** Serial number format check, configured per workspace (settings.json). */
+  serialNumberPattern?: string
+  serialNumberFormatHint?: string
 }
 
 interface ToolResult {
@@ -553,20 +563,26 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     const value = args.value
     if (!key) return { ok: false, error: 'key is required' }
 
-    // AmRobots serials are documented in prompts/common.md as "19 characters,
-    // starts with HK" — but that was only ever a sentence in the prompt, which
-    // the model is free to ignore (and did: a 17-character serial was accepted
-    // without a second look). Iron rule 2 (tool refuses, LLM corrects): the
-    // format check now lives here, not as a request in the prompt.
-    if (key === 'serialNumber') {
+    // The serial format used to be a sentence in the prompt ("19 characters,
+    // starts with HK") — the model was free to ignore it, and did: a
+    // 17-character serial was accepted without a second look. Iron rule 2
+    // (tool refuses, LLM corrects): the check now lives here. The pattern
+    // itself comes from settings.json (serialNumberPattern), not a literal in
+    // this file — AmRobots' serial format is that tenant's own domain
+    // knowledge, not something this module may hardcode (CLAUDE.md §1A/§1B;
+    // demorobot-orchestration.spec.ts greps this file for exactly that).
+    // No pattern configured → nothing to check against, so nothing is
+    // rejected (fails towards silence, same rule as intake/pre-operator gate).
+    if (key === 'serialNumber' && ctx.serialNumberPattern) {
       const candidate = String(value).trim()
-      if (!/^HK.{17}$/i.test(candidate)) {
+      if (!new RegExp(ctx.serialNumberPattern, 'i').test(candidate)) {
         return {
           ok: false,
           error: 'invalid_serial_format',
           instruction:
-            `"${candidate}" is not a valid serial number — it must be 19 characters and start with "HK". ` +
-            'Tell the customer this and ask them to re-check the label on the robot.',
+            `"${candidate}" is not a valid serial number` +
+            (ctx.serialNumberFormatHint ? ` — it must be ${ctx.serialNumberFormatHint}.` : '.') +
+            ' Tell the customer this and ask them to re-check the label on the robot.',
         }
       }
     }
@@ -1278,6 +1294,8 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       retrieveFlow: input.config.handlers?.retrieveFlow,
       loadFlow: input.config.handlers?.loadFlow,
       intakeQuestions: input.config.messages?.intakeQuestions ?? settings.intakeQuestions,
+      serialNumberPattern: settings.serialNumberPattern,
+      serialNumberFormatHint: settings.serialNumberFormatHint,
     }
 
     hydrateState(input.context.sessionId, input.context.persistedState)
