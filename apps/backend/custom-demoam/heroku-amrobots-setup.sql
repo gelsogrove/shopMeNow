@@ -76,8 +76,11 @@ WHERE name ILIKE '%amrobots%';
 -- ── 3. Advanced settings JSON (keys with no dedicated column) ──────────────
 -- Merged as-is onto settings.json at every save. Edit later from the app's
 -- "Advanced Settings (JSON)" box — this is just the initial value.
+-- ⚠️ Direct assignment, NOT `COALESCE(col,'{}') || …`: the column can hold a
+-- JSON null (not SQL NULL), and `'null'::jsonb || object` silently produces
+-- an ARRAY [null, {...}] instead of an object (happened live, 2026-08-04).
 UPDATE "Workspace"
-SET "customChatbotAdvancedSettings" = COALESCE("customChatbotAdvancedSettings", '{}'::jsonb) || '{
+SET "customChatbotAdvancedSettings" = '{
   "serialNumberPattern": "^HK.{17}$",
   "serialNumberFormatHint": "19 characters, starting with HK",
   "rateLimitedMessage": "Stai inviando messaggi un po'' troppo velocemente — rallenta un attimo per favore.",
