@@ -499,9 +499,26 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
 
     if (key === 'name' || key === 'serialNumber') {
       updateState(ctx.sessionId, { [key]: String(value) })
-      return { ok: true }
+    } else {
+      mergeCollectedData(ctx.sessionId, { [key]: value as JsonValue })
     }
-    mergeCollectedData(ctx.sessionId, { [key]: value as JsonValue })
+
+    // Deterministic trigger, decided by code: the save that completes the
+    // case dictates the ONLY legitimate next moves. Without this the model
+    // was free to fill the gap with a diagnosis from its training data
+    // (seen live 2026-08-04: an invented "clean the proximity sensors"
+    // procedure for ERROR 001 while a real flow for it sat in the catalogue).
+    const afterSave = getState(ctx.sessionId)
+    if (!afterSave.currentNodeId && !nextIntakeStep(afterSave, ctx.gateQuestions)) {
+      return {
+        ok: true,
+        case_complete: true,
+        instruction:
+          'The case is now complete. Your ONLY legitimate next move is start_flow with a ' +
+          'matching flow from AVAILABLE FLOWS, or escalate_to_operator if none matches. ' +
+          'NEVER diagnose the problem or give repair steps yourself — you do not have that knowledge.',
+      }
+    }
     return { ok: true }
   }
 
@@ -836,18 +853,21 @@ async function agentTurnInternal(
   // another sentence in the prompt (iron rule 1). Recomputed per hop: a flow
   // may attach or detach during this very turn. FAQ conversations never
   // collect a serial, so intake stays open and they are never forced.
-  // Forcing stops as soon as one tool call has run this turn: from then on
-  // free text is the DICTATED question a refusing tool just instructed (the
-  // gate's next check), not improvisation — keeping the force active there
-  // would trap the loop into burning gate fields without ever asking the
-  // customer anything.
-  let toolCallRanThisTurn = false
+  // Free text is legitimate ONLY while there is something DICTATED to say:
+  // the next intake question (intake still open), or the question a refusing
+  // tool just instructed (gate check, invalid serial, unrecognized answer).
+  // Everything else — in particular the gap right after the case completes —
+  // stays forced onto start_flow/escalate_to_operator, so a diagnosis from
+  // training data has no opening. A refusal lifts the force for the rest of
+  // the turn (the model must be able to ASK the dictated question); a
+  // successful save does not.
+  let refusalDictatedTextThisTurn = false
 
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
     const mustForceToolChoice =
       !isFirstTurn &&
-      !toolCallRanThisTurn &&
+      !refusalDictatedTextThisTurn &&
       !state.currentNodeId &&
       !state.activeFlowId &&
       nextIntakeStep(state, settings.gateQuestions) === null
@@ -885,7 +905,6 @@ async function agentTurnInternal(
     }
 
     history.push({ role: 'assistant', content: text || null, tool_calls: toolCalls })
-    toolCallRanThisTurn = true
 
     let escalated = false
     let escalationSummary: string | undefined
@@ -907,6 +926,14 @@ async function agentTurnInternal(
       const answeringNodeId = call.function.name === 'answer_step' ? getState(ctx.sessionId).currentNodeId : undefined
 
       const result = await executeTool(ctx, call.function.name, args)
+
+      // A refusal that carries an instruction dictates what the model must
+      // SAY next (a gate question, a re-ask, a clarification) — free text on
+      // the following hop is that dictated text, so the force lifts for the
+      // rest of this turn.
+      if (!result.ok && typeof result.instruction === 'string') {
+        refusalDictatedTextThisTurn = true
+      }
 
       if (call.function.name === 'answer_step' && !result.ok && result.error === 'unrecognized_answer' && answeringNodeId) {
         const attempts = registerFieldRequest(ctx.sessionId, `flow_node:${answeringNodeId}`)
