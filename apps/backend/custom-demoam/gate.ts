@@ -202,6 +202,8 @@ function preOperatorAnswered(state: SessionState, field: PreOperatorField): bool
 export interface GateQuestions {
   serialNumber?: string | null
   problemDescription?: string | null
+  /** Intake-only (steps.md 2-C.2): asked while collecting the case, not part of the 7-field gate. */
+  problemStartedWhen?: string | null
   robotPoweredOn?: string | null
   wifiActive?: string | null
   cutSchedulingActive?: string | null
