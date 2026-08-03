@@ -156,6 +156,88 @@ export async function startFlow(
   }
 }
 
+// ── Intake: the questions the code asks, not the LLM ───────────────────────
+// Andrea 2026-08-04, seen live on the first demoam conversation: while the
+// case was being collected the model improvised its own probing question
+// ("quando hai notato che il taglio non è più buono? all'improvviso o
+// gradualmente?") instead of asking for the serial number. Same lesson as
+// demorobot's intake gate: a prompt rule is a request, dictating the question
+// text is a guarantee. While no flow is attached and the case is incomplete,
+// the code fixes WHICH question is asked (from gateQuestions, DB-owned
+// wording) and the LLM only translates it.
+
+export interface IntakeStep {
+  field: 'serialNumber' | 'problemDescription' | 'problemStartedWhen'
+  /** Verbatim question. The LLM renders it in the customer's language. */
+  question: string
+}
+
+const INTAKE_ORDER: IntakeStep['field'][] = [
+  'serialNumber',
+  'problemDescription',
+  'problemStartedWhen',
+]
+
+/**
+ * The next intake question, or null when intake is complete — either because
+ * everything is answered, or because the workspace has not configured a
+ * question for the missing field (nothing to ask, so nothing is asked —
+ * fails toward silence, CLAUDE.md §1A).
+ */
+export function nextIntakeStep(
+  state: SessionState,
+  questions?: GateQuestions | null,
+): IntakeStep | null {
+  for (const field of INTAKE_ORDER) {
+    const answered =
+      field === 'serialNumber'
+        ? !!state.serialNumber?.trim()
+        : !!state.collectedData?.[field]
+    if (answered) continue
+
+    const question = questions?.[field]?.trim()
+    return question ? { field, question } : null
+  }
+  return null
+}
+
+/**
+ * Renders the intake instruction: the ONE question the model may ask right
+ * now, dictated verbatim so it cannot improvise a probing question or a menu
+ * of invented causes. Returns null when intake is complete or unconfigured.
+ */
+export function formatIntakeBlock(step: IntakeStep | null): string | null {
+  if (!step) return null
+
+  return [
+    '## THE QUESTION TO ASK NOW',
+    '',
+    'This overrides every other instruction in this prompt, including anything',
+    'above about what to collect or in which order. Ask THIS question, verbatim,',
+    'and nothing else:',
+    '',
+    step.question,
+    '',
+    "Translate it into the customer's language and send it as your whole reply.",
+    'Do NOT add other questions, do NOT offer options or possible causes, and',
+    'do NOT rephrase it into a multiple-choice list. A brief acknowledgement of',
+    'what the customer just said may come first, then this question.',
+    '',
+    `When they answer, save it with remember({key:'${step.field}', value:'...'}).`,
+    '',
+    'This applies to TECHNICAL PROBLEMS. Skip it entirely and answer directly',
+    'when:',
+    '- a FAQ answers what the customer asked — reply from the FAQ, no intake;',
+    '- they are not reporting a fault at all (a greeting, a thank you, a',
+    '  general question) — answer normally;',
+    '- it is a COMPLAINT about something that already happened — call',
+    '  escalate_to_operator, which dictates what to collect;',
+    '- what they said matches a flow in AVAILABLE FLOWS — call start_flow and',
+    '  follow that flow from its first step;',
+    '- it is an emergency — escalate immediately.',
+  ].join('\n')
+}
+
 // ── Pre-operator gate — one gate, from every road ───────────────────────────
 // steps.md "Gate pre-operatore (condiviso da A e C)": complaint (2-A) and
 // troubleshooting-with-no-match / ESCALATE-terminal (2-C) both fund into this

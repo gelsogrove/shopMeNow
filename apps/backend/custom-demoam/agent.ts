@@ -29,7 +29,9 @@ import { advance, allowedLabels, buildFlowGraph, currentNode } from './flow-mach
 import {
   formatFlowsBlock,
   formatFlowStepBlock,
+  formatIntakeBlock,
   formatPreOperatorInstruction,
+  nextIntakeStep,
   nextPreOperatorStep,
   startFlow,
 } from './gate.js'
@@ -619,6 +621,14 @@ async function callLLM({
   systemContent.push({ type: 'text', text: runtimeBlock })
   systemContent.push({ type: 'text', text: OPERATING_RULES })
 
+  // Intake gate: while no flow is running and the case details are still
+  // missing, the code dictates the exact question (see formatIntakeBlock in
+  // gate.ts) — the model translates it, it does not compose its own.
+  if (!state.currentNodeId) {
+    const intakeBlock = formatIntakeBlock(nextIntakeStep(state, settings.gateQuestions))
+    if (intakeBlock) systemContent.push({ type: 'text', text: intakeBlock })
+  }
+
   const payloadMessages: Array<Record<string, unknown>> = [
     { role: 'system', content: systemContent },
     ...history.map((m) => ({ role: m.role, content: m.content, tool_calls: m.tool_calls, tool_call_id: m.tool_call_id, name: m.name })),
@@ -814,21 +824,21 @@ async function agentTurnInternal(
 
   let state = getState(ctx.sessionId)
 
-  // The case is collected once serial number and problem description are in.
-  // From that point, with no flow attached, free text = an invented question
-  // (seen live 2026-08-04: "does the display show an error code?"). The only
-  // legitimate moves are start_flow or escalate_to_operator — enforced by the
-  // API via tool_choice, not by another sentence in the prompt (iron rule 1).
-  // Recomputed per hop: a flow may attach or detach during this very turn.
-  // FAQ conversations never collect a serial, so they are never forced and
-  // keep answering in free text.
-  const caseCollected = (s: SessionState) =>
-    !!s.serialNumber?.trim() && !!s.collectedData?.problemDescription
-
+  // Once intake is COMPLETE (nextIntakeStep null: serial + description + when
+  // all collected, or unconfigured) and no flow is attached, free text = an
+  // invented question (seen live 2026-08-04: "does the display show an error
+  // code?"). The only legitimate moves left are start_flow or
+  // escalate_to_operator — enforced by the API via tool_choice, not by
+  // another sentence in the prompt (iron rule 1). Recomputed per hop: a flow
+  // may attach or detach during this very turn. FAQ conversations never
+  // collect a serial, so intake stays open and they are never forced.
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
     const mustForceToolChoice =
-      !isFirstTurn && !state.currentNodeId && !state.activeFlowId && caseCollected(state)
+      !isFirstTurn &&
+      !state.currentNodeId &&
+      !state.activeFlowId &&
+      nextIntakeStep(state, settings.gateQuestions) === null
     const { text, toolCalls, tokensUsed: hopTokens } = await callLLM({
       commonPrompt,
       state,
