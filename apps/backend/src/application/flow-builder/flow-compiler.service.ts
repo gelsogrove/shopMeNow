@@ -80,6 +80,30 @@ function validateGraph(input: CompileFlowInput): ValidationError[] {
     }
   }
 
+  // Two edges from the same node with the same label are ambiguous once a
+  // runtime state machine picks a branch by label match: advance() would take
+  // whichever edge happens to come first, silently. Blocking here so it can
+  // never reach that point (flow-runtime.md §0 — prerequisite for advance()).
+  // Compared trimmed + lowercased: "Sì" and " sì " are the same answer.
+  const edgesByNode = groupBy(edges, (e) => e.sourceNodeId)
+  for (const [nodeId, nodeEdges] of edgesByNode) {
+    const seenLabels = new Map<string, string>()
+    for (const edge of nodeEdges) {
+      const normalized = edge.label.trim().toLowerCase()
+      const firstEdgeId = seenLabels.get(normalized)
+      if (firstEdgeId) {
+        errors.push({
+          code: 'duplicate_edge_label',
+          message: `Node ${nodeId} has two edges labelled "${edge.label}" (edges ${firstEdgeId} and ${edge.id}).`,
+          nodeId,
+          edgeId: edge.id,
+        })
+      } else {
+        seenLabels.set(normalized, edge.id)
+      }
+    }
+  }
+
   // Every path must reach a terminal node (a node with no outgoing edges, or
   // explicitly typed as a terminal). Cycles are only allowed when the node
   // that closes the cycle is explicitly terminalType: 'LOOP'.

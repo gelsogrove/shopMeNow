@@ -8,6 +8,7 @@ import {
   detachFlow,
   drainPatches,
   extractLanguage,
+  getAskedCounts,
   hydrateState,
   formatStateForPrompt,
   formatStateOneLine,
@@ -16,13 +17,14 @@ import {
   JsonValue,
   markEscalationOnce,
   mergeCollectedData,
+  registerFieldRequest,
   registerMessageTimestamp,
-  registerNameRequest,
   resetState,
   seedLanguageIfNeeded,
   SessionState,
   updateState,
 } from './state.js'
+import { advance, allowedLabels, buildFlowGraph, currentNode } from './flow-machine.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -133,7 +135,16 @@ export type GetFaqsHandler = (params: { workspaceId: string }) => Promise<FaqEnt
 // re-exported here so the host keeps importing the whole contract from agent.
 export type { FlowSummary, LoadedFlow, ListFlowsHandler, LoadFlowHandler } from './flow-selection.js'
 import type { FlowSummary, ListFlowsHandler, LoadFlowHandler } from './flow-selection.js'
-import { formatFlowsBlock, formatIntakeBlock, nextIntakeStep, startFlow } from './flow-selection.js'
+import {
+  formatFlowsBlock,
+  formatFlowStepBlock,
+  formatIntakeBlock,
+  formatPreOperatorInstruction,
+  nextIntakeStep,
+  nextPreOperatorStep,
+  startFlow,
+} from './flow-selection.js'
+import type { IntakeQuestions } from './flow-selection.js'
 
 export interface ChatbotInput {
   userMessage: string
@@ -208,68 +219,130 @@ function getCachedCommonPrompt(): Promise<string> {
   return cachedCommonPromptPromise
 }
 
-const TOOLS = [
-  {
+const START_FLOW_TOOL = {
+  type: 'function',
+  function: {
+    name: 'start_flow',
+    description:
+      'Attach the diagnostic flow that matches the customer\'s problem, chosen from the AVAILABLE FLOWS list. Call this as soon as you can tell which flow applies — its questions then become your script. Pass the flowId EXACTLY as written in square brackets in that list. If NO flow in the list matches the problem, do NOT call this tool and do NOT invent a procedure: call escalate_to_operator instead.',
+    parameters: {
+      type: 'object',
+      properties: {
+        flowId: {
+          type: 'string',
+          description: 'The flow id copied verbatim from the AVAILABLE FLOWS list (the value in square brackets).',
+        },
+      },
+      required: ['flowId'],
+      additionalProperties: false,
+    },
+  },
+} as const
+
+const REMEMBER_TOOL = {
+  type: 'function',
+  function: {
+    name: 'remember',
+    description:
+      'Save a fact the customer has provided: a fieldKey from the active flow, or one of the profile facts "name", "company", "serialNumber". Call this the moment the customer gives you the information — never wait until the end of the flow. The profile facts are stored on the customer record, so the next conversation already knows them.',
+    parameters: {
+      type: 'object',
+      properties: {
+        key: {
+          type: 'string',
+          description:
+            'The fieldKey from the active flow, or one of these standard keys: "name" (the person\'s name), "company" (the business they are calling for), "serialNumber", "problemDescription" (what is wrong, in a few words), "problemStartedWhen" (today / yesterday / for days).',
+        },
+        value: { type: 'string', description: 'The value to remember, as a string (numbers/booleans as their string form).' },
+      },
+      required: ['key', 'value'],
+      additionalProperties: false,
+    },
+  },
+} as const
+
+const ESCALATE_TOOL = {
+  type: 'function',
+  function: {
+    name: 'escalate_to_operator',
+    description:
+      'Escalate this conversation to a human operator. Call this EXACTLY ONCE per incident — never emit two escalate_to_operator calls in the same turn. Use when the active flow reaches an ESCALATE terminal, when an answer is flagged as immediately escalating, when the model/serial cannot be resolved, when no matching flow is found, or in a genuine emergency.',
+    parameters: {
+      type: 'object',
+      properties: {
+        reason: {
+          type: 'string',
+          enum: ['diagnostic_exhausted', 'unknown_model', 'no_matching_flow', 'emergency'],
+        },
+        summary: { type: 'string', description: 'Operator briefing: facts gathered along the path, in the configured operator briefing language.' },
+      },
+      required: ['reason', 'summary'],
+      additionalProperties: false,
+    },
+  },
+} as const
+
+// Andrea 2026-08-03 (flow-runtime.md §7): exits a flow when the customer
+// clearly changes subject. Exposed ONLY while currentNodeId is set — see
+// buildToolsForTurn — so it can't be called outside a flow, where it would
+// mean nothing. collectedData is deliberately NOT cleared: whatever was
+// gathered stays useful for the operator briefing even if the flow itself is
+// abandoned.
+const ABANDON_FLOW_TOOL = {
+  type: 'function',
+  function: {
+    name: 'abandon_flow',
+    description:
+      'Call ONLY when the customer clearly moves to a different subject than the active flow — not when their answer is merely unclear (for that, ask again on the same question). Leaves whatever was already gathered intact.',
+    parameters: { type: 'object', properties: {}, additionalProperties: false },
+  },
+} as const
+
+/**
+ * answer_step's enum IS the graph, recomputed every turn from the current
+ * node — the model cannot pass a label that doesn't correspond to a real
+ * edge because it isn't in the schema (flow-runtime.md §4). Same "tool
+ * refuses, LLM corrects" shape as start_flow, but here the invalid case is
+ * rejected by the API before the call ever reaches executeTool.
+ */
+function answerStepTool(labels: string[]) {
+  return {
     type: 'function',
     function: {
-      name: 'start_flow',
+      name: 'answer_step',
       description:
-        'Attach the diagnostic flow that matches the customer\'s problem, chosen from the AVAILABLE FLOWS list. Call this as soon as you can tell which flow applies — its questions then become your script. Pass the flowId EXACTLY as written in square brackets in that list. If NO flow in the list matches the problem, do NOT call this tool and do NOT invent a procedure: call escalate_to_operator instead.',
+        "Classify the customer's answer to the question currently asked, choosing the closest matching option. These are internal identifiers for branching, not necessarily the exact words to show the customer.",
       parameters: {
         type: 'object',
         properties: {
-          flowId: {
-            type: 'string',
-            description: 'The flow id copied verbatim from the AVAILABLE FLOWS list (the value in square brackets).',
-          },
+          label: { type: 'string', enum: labels },
         },
-        required: ['flowId'],
+        required: ['label'],
         additionalProperties: false,
       },
     },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'remember',
-      description:
-        'Save a fact the customer has provided: a fieldKey from the active flow, or one of the profile facts "name", "company", "serialNumber". Call this the moment the customer gives you the information — never wait until the end of the flow. The profile facts are stored on the customer record, so the next conversation already knows them.',
-      parameters: {
-        type: 'object',
-        properties: {
-          key: {
-            type: 'string',
-            description:
-              'The fieldKey from the active flow, or one of these standard keys: "name" (the person\'s name), "company" (the business they are calling for), "serialNumber", "problemDescription" (what is wrong, in a few words), "problemStartedWhen" (today / yesterday / for days).',
-          },
-          value: { type: 'string', description: 'The value to remember, as a string (numbers/booleans as their string form).' },
-        },
-        required: ['key', 'value'],
-        additionalProperties: false,
-      },
-    },
-  },
-  {
-    type: 'function',
-    function: {
-      name: 'escalate_to_operator',
-      description:
-        'Escalate this conversation to a human operator. Call this EXACTLY ONCE per incident — never emit two escalate_to_operator calls in the same turn. Use when the active flow reaches an ESCALATE terminal, when an answer is flagged as immediately escalating, when the model/serial cannot be resolved, when no matching flow is found, or in a genuine emergency.',
-      parameters: {
-        type: 'object',
-        properties: {
-          reason: {
-            type: 'string',
-            enum: ['diagnostic_exhausted', 'unknown_model', 'no_matching_flow', 'emergency'],
-          },
-          summary: { type: 'string', description: 'Operator briefing: facts gathered along the path, in the configured operator briefing language.' },
-        },
-        required: ['reason', 'summary'],
-        additionalProperties: false,
-      },
-    },
-  },
-] as const
+  } as const
+}
+
+/**
+ * Tools available THIS turn, decided by phase — not by what the LLM might
+ * want to call (flow-runtime.md §9, "a tool not exposed cannot be misused").
+ *
+ * - A flow is attached (currentNodeId set): the catalogue is irrelevant
+ *   (start_flow would invite switching flows mid-diagnosis) — only
+ *   answer_step (the graph decides the branch), remember (spontaneous facts,
+ *   flow-runtime.md §7 of the original design — free-standing from
+ *   answer_step), abandon_flow (explicit exit), and escalate_to_operator
+ *   (some nodes route straight to the gate) apply.
+ * - No flow attached: start_flow is offered instead of answer_step — there
+ *   is no current node to answer for yet.
+ */
+function buildToolsForTurn(state: SessionState, labels: string[]): ReadonlyArray<Record<string, unknown>> {
+  if (state.currentNodeId) {
+    return [answerStepTool(labels), REMEMBER_TOOL, ABANDON_FLOW_TOOL, ESCALATE_TOOL]
+  }
+  return [START_FLOW_TOOL, REMEMBER_TOOL, ESCALATE_TOOL]
+}
 
 // ── Operating rules (always injected, never editable per tenant) ───────────
 // A workspace can replace prompts/common.md with its own system prompt via
@@ -393,6 +466,8 @@ interface ToolContext {
   availableFlows?: FlowSummary[]
   /** Loads a flow's compiled prompt by id. Injected by the host. */
   loadFlow?: LoadFlowHandler
+  /** Pre-operator gate wording, configured per workspace (flow-selection.ts). */
+  intakeQuestions?: IntakeQuestions | null
 }
 
 interface ToolResult {
@@ -409,6 +484,68 @@ function recordEscalation(params: { ticketId: string; reason: string; summary: s
 async function executeTool(ctx: ToolContext, name: string, args: Record<string, unknown>): Promise<ToolResult> {
   if (name === 'start_flow') {
     return startFlow(ctx, args)
+  }
+
+  // Andrea 2026-08-03 (flow-runtime.md §4/§6): the code decides where this
+  // goes — advance() rejects any label that isn't a real edge of the current
+  // node, so there is no path where the model's classification silently picks
+  // a wrong branch. Two tentativi falliti sullo stesso nodo (§8 gate
+  // pre-operatore) sono gestiti dal chiamante contando i tentativi via
+  // registerFieldRequest, non qui.
+  if (name === 'answer_step') {
+    const label = typeof args.label === 'string' ? args.label : null
+    if (!label) return { ok: false, error: 'label is required' }
+
+    const state = getState(ctx.sessionId)
+    if (!state.currentNodeId || !state.activeFlowGraphSnapshot) {
+      return { ok: false, error: 'no_active_flow_step', instruction: 'There is no flow question pending right now.' }
+    }
+
+    const graph = buildFlowGraph(state.activeFlowGraphSnapshot)
+    const result = advance(graph, state.currentNodeId, label)
+
+    if (!result) {
+      // The label doesn't match any outgoing edge of THIS node — the code
+      // knows it doesn't map, so it refuses rather than guessing a branch.
+      // The caller (agent.ts's turn loop) counts this as a failed attempt on
+      // the current node (per-node counter, §8) and routes to the
+      // pre-operator gate after two failures — never phrase-detected (§14).
+      const labels = allowedLabels(graph, state.currentNodeId)
+      return {
+        ok: false,
+        error: 'unrecognized_answer',
+        instruction:
+          `"${label}" does not match any of the valid answers to the current question (${labels.join(', ')}). ` +
+          'Ask a brief clarifying question about the SAME thing — do not move on or invent a new question.',
+      }
+    }
+
+    if (result.escalate) {
+      // This specific answer escalates immediately regardless of the target
+      // node's terminalType (FlowEdge.triggersEscalation) — the flow ends
+      // here, so there is no next question to move to (see AdvanceResult).
+      detachFlow(ctx.sessionId)
+      return { ok: true, escalate: true }
+    }
+
+    if (result.nextNodeId) {
+      updateState(ctx.sessionId, { currentNodeId: result.nextNodeId }, { mirror: false })
+      return { ok: true, next_node_id: result.nextNodeId }
+    }
+
+    // A dead end the compiler should have rejected (no target, no escalation)
+    // — nothing to do but stop the flow rather than getting stuck silently.
+    detachFlow(ctx.sessionId)
+    return { ok: true, escalate: true }
+  }
+
+  // Andrea 2026-08-03 (flow-runtime.md §7): explicit exit when the customer
+  // clearly changes subject. Exposed ONLY while a flow is attached (see
+  // buildToolsForTurn). collectedData is deliberately left untouched — it
+  // still feeds the operator briefing if the conversation escalates later.
+  if (name === 'abandon_flow') {
+    detachFlow(ctx.sessionId)
+    return { ok: true }
   }
 
   if (name === 'remember') {
@@ -434,51 +571,64 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       return { ok: false, error: 'summary is required and must be a non-empty string' }
     }
 
-    // Andrea 2026-08-02: never hand an anonymous customer to an operator. When
-    // we have no name, refuse and make the LLM ask for it first — remember({name})
-    // then mirrors it onto the customer profile, so the next conversation can
-    // open with the welcome-back greeting instead of the generic one.
+    // Andrea 2026-08-02: never hand an anonymous customer to an operator, and
+    // never hand over a blank case — an operator taking over needs the case,
+    // not just the fact that someone is waiting. The tool refuses while the
+    // essentials are missing and the LLM collects them (iron rule 2: tool
+    // refuses, LLM corrects).
     //
-    // Two deliberate exemptions: a genuine emergency must never wait behind a
-    // formality, and a customer who has already refused to give their name is
-    // escalated anyway (blocking access to a human over a missing name would be
-    // worse than the problem it solves).
-    // The refusal is counted, not detected: asking once and giving up on the
-    // second attempt needs no phrase matching on user text (CLAUDE.md §14).
-    // If the customer supplies a name, the first branch never runs again.
-    // Andrea 2026-08-03: an operator taking over needs the case, not just the
-    // fact that someone is waiting. Refuse the hand-off while the essentials
-    // are missing and let the LLM collect them (iron rule: tool refuses, LLM
-    // corrects). Without this the operator inherits a blank conversation and
-    // has to start from zero.
+    // Andrea 2026-08-03: the gate now covers the three basic checks (powered
+    // on / Wi-Fi / cut scheduling) on EVERY route to an operator, including an
+    // escalation raised from inside a specific flow. They used to be asked
+    // nowhere, so the operator's first message back was always one of them.
+    //
+    // A genuine emergency skips the whole gate: nothing may delay reaching a
+    // human. Everything else is asked, per field, a bounded number of times —
+    // see nextPreOperatorStep / registerFieldRequest for why the counter is
+    // per-field and why it is counted rather than phrase-detected (§14).
     const state = getState(ctx.sessionId)
-    const missing: string[] = []
-    if (!state.name?.trim()) missing.push("the customer's name (remember({key:'name'}))")
-    if (!state.serialNumber?.trim()) missing.push("the robot serial number (remember({key:'serialNumber'}))")
-    if (!state.collectedData?.problemDescription) {
-      missing.push("a short description of the problem (remember({key:'problemDescription'}))")
-    }
-    if (!state.collectedData?.problemStartedWhen) {
-      missing.push("when it started (remember({key:'problemStartedWhen'}))")
-    }
 
-    // Two deliberate exemptions:
-    //  - a genuine emergency must never wait behind data collection;
-    //  - a customer who did not supply the details when asked is escalated
-    //    anyway, since blocking access to a human is worse than a thin ticket.
-    //    Counted, not phrase-detected, so "no" and silence behave alike (§14).
-    const alreadyAsked = registerNameRequest(ctx.sessionId) > 1
-    if (missing.length > 0 && reason !== 'emergency' && !alreadyAsked) {
-      return {
-        ok: false,
-        error: 'case_details_required',
-        instruction:
-          `Before handing over, the operator needs: ${missing.join('; ')}. ` +
-          'Ask ONE short question at a time for what is missing, saving each answer with remember() as it arrives. ' +
-          'Once you have them all, call escalate_to_operator again IN THE SAME TURN as the last answer, then confirm to the customer by name ' +
-          '(e.g. "Andrea, I\'m putting you through to our operator — they will get back to you as soon as possible"). ' +
-          'Never end a turn having only saved the details: the hand-off must happen. ' +
-          'If the customer will not provide them, call escalate_to_operator once more and it will go through.',
+    if (reason !== 'emergency') {
+      const intakeQuestions = ctx.intakeQuestions ?? null
+
+      // The operator's briefing: what is wrong, on which machine, since when.
+      const missing: string[] = []
+      if (!state.serialNumber?.trim()) missing.push("the robot serial number (remember({key:'serialNumber'}))")
+      if (!state.collectedData?.problemDescription) {
+        missing.push("a short description of the problem (remember({key:'problemDescription'}))")
+      }
+      if (!state.collectedData?.problemStartedWhen) {
+        missing.push("when it started (remember({key:'problemStartedWhen'}))")
+      }
+      const stillCollectable = missing.filter(
+        (_, i) => (getAskedCounts(ctx.sessionId)[['serialNumber', 'problemDescription', 'problemStartedWhen'][i]] ?? 0) < 2,
+      )
+
+      if (stillCollectable.length > 0) {
+        for (const f of ['serialNumber', 'problemDescription', 'problemStartedWhen']) {
+          if (missing.some((m) => m.includes(`'${f}'`))) registerFieldRequest(ctx.sessionId, f)
+        }
+        return {
+          ok: false,
+          error: 'case_details_required',
+          instruction:
+            `Before handing over, the operator needs: ${stillCollectable.join('; ')}. ` +
+            'Ask ONE short question at a time for what is missing, saving each answer with remember() as it arrives. ' +
+            'Once you have them all, call escalate_to_operator again IN THE SAME TURN as the last answer. ' +
+            'Never end a turn having only saved the details: the hand-off must happen.',
+        }
+      }
+
+      // Then the pre-operator gate: the three checks, then the name. One
+      // question per turn, dictated verbatim so the model cannot improvise.
+      const step = nextPreOperatorStep(state, intakeQuestions, getAskedCounts(ctx.sessionId))
+      if (step) {
+        registerFieldRequest(ctx.sessionId, step.field)
+        return {
+          ok: false,
+          error: 'pre_operator_check_required',
+          instruction: formatPreOperatorInstruction(step),
+        }
       }
     }
 
@@ -555,7 +705,28 @@ async function callLLM({
   // flow is running, ACTIVE FLOW below is the script and offering the list
   // again would just invite the LLM to switch flows mid-diagnosis.
   if (flowsBlock) systemContent.push({ type: 'text', text: flowsBlock })
-  if (activeFlowSnapshot) {
+
+  // Andrea 2026-08-03 (flow-runtime.md §4-5): when currentNodeId is set, the
+  // graph — not the whole compiledPrompt — is the source of the current
+  // question. Passing only ONE question is what makes the documented
+  // production bug ("le lame girano normalmente?") structurally impossible:
+  // the model has nothing to re-derive a wrong position FROM. Falls back to
+  // the full compiledPrompt when there's no graph (older flow, no nodes
+  // saved) — same behaviour as before this change.
+  let currentStepLabels: string[] = []
+  if (state.currentNodeId && state.activeFlowGraphSnapshot) {
+    const graph = buildFlowGraph(state.activeFlowGraphSnapshot)
+    const node = currentNode(graph, state.currentNodeId)
+    currentStepLabels = allowedLabels(graph, state.currentNodeId)
+    const stepBlock = node ? formatFlowStepBlock(node.question, currentStepLabels) : null
+    if (stepBlock) {
+      systemContent.push({ type: 'text', text: stepBlock })
+    } else if (activeFlowSnapshot) {
+      // No outgoing edges for this node (a terminal reached mid-turn) — fall
+      // back to the full snapshot rather than sending no flow guidance at all.
+      systemContent.push({ type: 'text', text: `\n═══ ACTIVE FLOW ═══\n\n${activeFlowSnapshot}` })
+    }
+  } else if (activeFlowSnapshot) {
     systemContent.push({ type: 'text', text: `\n═══ ACTIVE FLOW ═══\n\n${activeFlowSnapshot}` })
   }
   if (stateBlock) systemContent.push({ type: 'text', text: stateBlock })
@@ -594,7 +765,7 @@ async function callLLM({
     body: JSON.stringify({
       model: process.env.LLM_MODEL || settings.model,
       messages: payloadMessages,
-      tools: TOOLS,
+      tools: buildToolsForTurn(state, currentStepLabels),
       tool_choice: 'auto',
       temperature: settings.temperature,
       max_tokens: settings.maxTokens,
@@ -850,7 +1021,22 @@ async function agentTurnInternal(
         console.error('[tool_call]', call.function.name, JSON.stringify(args))
       }
 
+      // answer_step's per-node attempt limit (flow-runtime.md §6/§8): counted
+      // BEFORE executeTool runs, using the node the customer was actually
+      // answering — executeTool may already have advanced or detached the
+      // flow by the time we'd otherwise look. Two tentativi falliti (never
+      // phrase-detected, §14) on the SAME node, then the flow is abandoned so
+      // the next hop naturally falls through to intake/gate.
+      const answeringNodeId = call.function.name === 'answer_step' ? getState(ctx.sessionId).currentNodeId : undefined
+
       const result = await executeTool(ctx, call.function.name, args)
+
+      if (call.function.name === 'answer_step' && !result.ok && result.error === 'unrecognized_answer' && answeringNodeId) {
+        const attempts = registerFieldRequest(ctx.sessionId, `flow_node:${answeringNodeId}`)
+        if (attempts >= 2) {
+          detachFlow(ctx.sessionId)
+        }
+      }
 
       if (call.function.name === 'escalate_to_operator' && result.ok) {
         escalated = true
@@ -1027,6 +1213,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       operatorBriefingLanguageOverride: input.config.operatorBriefingLanguageOverride,
       retrieveFlow: input.config.handlers?.retrieveFlow,
       loadFlow: input.config.handlers?.loadFlow,
+      intakeQuestions: input.config.messages?.intakeQuestions ?? settings.intakeQuestions,
     }
 
     hydrateState(input.context.sessionId, input.context.persistedState)

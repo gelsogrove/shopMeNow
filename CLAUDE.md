@@ -215,6 +215,10 @@ got in — each looked harmless on its own.
   8. Multi-language by design — every detector covers all 6 languages (es, it, en, ca, fr, de)
 - **BUG INTAKE PROTOCOL** (🚨 MANDATORY): see `apps/backend/custom-ecolaundry/CLAUDE.md → 🐛 Bug intake protocol` — 7-step checklist BEFORE writing any fix code
 - **FEATURE INTAKE PROTOCOL** (🚨 MANDATORY): see `apps/backend/custom-ecolaundry/CLAUDE.md → ✨ Feature intake protocol` — 8-step checklist BEFORE implementing
+- **`custom-demorobot` flow runtime**: same iron rule, different module. Full
+  design + implementation order (0→9) + what's a code guarantee vs. what
+  stays probabilistic: `apps/backend/custom-demorobot/docs/flow-runtime.md`
+  — keep it updated as the mechanism changes, do not let it drift from the code
 
 ### 17. F50 — Visual Flow Builder DEPRECATED (2026-05-13)
 

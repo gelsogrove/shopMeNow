@@ -14,5 +14,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["agent.ts", "state.ts", "index.ts", "test-contract.ts"]
+  "include": ["agent.ts", "state.ts", "flow-selection.ts", "flow-machine.ts", "index.ts", "test-contract.ts"]
 }

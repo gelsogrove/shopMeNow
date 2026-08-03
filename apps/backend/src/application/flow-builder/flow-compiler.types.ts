@@ -52,6 +52,7 @@ export interface ValidationError {
     | 'unreachable_terminal'
     | 'unexpected_cycle'
     | 'dangling_edge'
+    | 'duplicate_edge_label'
     | 'attachment_wrong_model'
     | 'attachment_missing'
     | 'size_limit_exceeded'

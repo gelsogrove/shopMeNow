@@ -3,6 +3,18 @@
 
 export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
 
+// The runtime shape of one flow node + its outgoing edges, as needed by
+// flow-machine.ts's advance(). Mirrors FlowGraphNode/FlowGraphEdge in
+// flow-selection.ts — kept separate here because state.ts must stay
+// dependency-light (it is imported by every tool handler).
+export interface FlowGraphNodeSnapshot {
+  id: string
+  question: string
+  fieldKey?: string | null
+  terminalType?: string | null
+  outgoingEdges: Array<{ label: string; targetNodeId: string | null; triggersEscalation?: boolean }>
+}
+
 export interface SessionState {
   // Retrieval / flow attachment (analisi.md §10, specs/demorobot-chatbot-runtime)
   activeModelId?: string
@@ -10,9 +22,21 @@ export interface SessionState {
   activeFlowHash?: string
   activeFlowPromptSnapshot?: string
 
+  // The flow's graph, frozen at the moment it was attached (attachFlow) — a
+  // later edit to the same flow in the builder must never change an
+  // in-progress conversation's questions or branches, same guarantee already
+  // held by activeFlowPromptSnapshot. Absent when the loadFlow handler didn't
+  // supply a graph (older host, or a flow saved before nodes/edges existed):
+  // currentNodeId then just never gets set, and the flow runs off
+  // activeFlowPromptSnapshot alone, as it always has.
+  activeFlowGraphSnapshot?: FlowGraphNodeSnapshot[]
+
+  // The node the conversation is AT, right now — the source of truth for
+  // "what question is due". Set when a flow attaches (to its root node) and
+  // moved only by flow-machine.ts's advance(), never inferred.
+  currentNodeId?: string
+
   // Facts collected along the attached flow, keyed by FlowNode.fieldKey.
-  // No currentNode/pendingQuestion — position is inferred by the LLM every
-  // turn from compiledPrompt + history + collectedData (design.md Decision 13).
   collectedData?: Record<string, JsonValue>
 
   // Operational
@@ -48,8 +72,13 @@ interface SessionEntry {
   turnCount: number
   recentMessageTimestamps: number[]
   escalatedReasons: Set<string>
-  /** How many times escalation has been held back to ask for the customer name. */
-  nameRequestCount: number
+  /**
+   * How many times escalation has been held back to ask for each field, keyed
+   * by field name. Replaces the single nameRequestCount: with seven fields in
+   * the gate, one shared counter meant a customer ignoring one question opened
+   * the gate for all of them.
+   */
+  askedCounts: Record<string, number>
 }
 
 const sessions = new Map<string, SessionEntry>()
@@ -63,7 +92,7 @@ function entry(sessionId: string): SessionEntry {
       turnCount: 0,
       recentMessageTimestamps: [],
       escalatedReasons: new Set(),
-      nameRequestCount: 0,
+      askedCounts: {},
     }
     sessions.set(sessionId, e)
   }
@@ -71,18 +100,28 @@ function entry(sessionId: string): SessionEntry {
 }
 
 /**
- * Counts the attempts to escalate while the customer name is still unknown.
+ * Counts how many times escalation has been held back to ask for `field`, and
+ * returns the new count for it.
  *
- * Andrea 2026-08-02: the bot asks for a name before handing over to an
- * operator, but must not hold the customer hostage over it. Counting the
- * attempts lets it ask once and give up on the second try — no phrase
- * detection on user text is involved (CLAUDE.md §14), so "no", "preferisco
- * non dirlo" and silence all behave the same.
+ * Andrea 2026-08-02: the bot asks before handing over to an operator, but must
+ * not hold the customer hostage. Counting the attempts lets it ask a couple of
+ * times and then give up — no phrase detection on user text is involved
+ * (CLAUDE.md §14), so "no", "preferisco non dirlo" and silence behave the same.
+ *
+ * Andrea 2026-08-03: per-field since the pre-operator gate landed. It used to
+ * be one counter for the whole gate, so a customer who ignored a single
+ * question got waved through on ALL the remaining ones and the operator
+ * inherited a blank ticket.
  */
-export function registerNameRequest(sessionId: string): number {
+export function registerFieldRequest(sessionId: string, field: string): number {
   const e = entry(sessionId)
-  e.nameRequestCount += 1
-  return e.nameRequestCount
+  e.askedCounts[field] = (e.askedCounts[field] ?? 0) + 1
+  return e.askedCounts[field]
+}
+
+/** Snapshot of how many times each gate field has been asked so far. */
+export function getAskedCounts(sessionId: string): Readonly<Record<string, number>> {
+  return entry(sessionId).askedCounts
 }
 
 export function getState(sessionId: string): SessionState {
@@ -128,8 +167,30 @@ export function mergeCollectedData(sessionId: string, patch: Record<string, Json
 // conversations from edits": attach a flow by freezing its compiled content
 // into the session, so a later edit to the Flow row never changes an
 // in-progress conversation's prompt.
-export function attachFlow(sessionId: string, flowId: string, hash: string, promptSnapshot: string): void {
-  updateState(sessionId, { activeFlowId: flowId, activeFlowHash: hash, activeFlowPromptSnapshot: promptSnapshot }, { mirror: false })
+//
+// The graph (`graph` + `rootNodeId`) is optional and provided by the caller
+// (flow-selection.ts's startFlow), which already has flow-machine.ts's
+// rootNodeId() available — kept out of this function's own dependencies so
+// state.ts stays a leaf module with no imports of its own (every tool
+// handler imports it; a cycle here would ripple everywhere).
+export function attachFlow(
+  sessionId: string,
+  flowId: string,
+  hash: string,
+  promptSnapshot: string,
+  graph?: { nodes: FlowGraphNodeSnapshot[]; rootNodeId: string | null },
+): void {
+  updateState(
+    sessionId,
+    {
+      activeFlowId: flowId,
+      activeFlowHash: hash,
+      activeFlowPromptSnapshot: promptSnapshot,
+      activeFlowGraphSnapshot: graph?.nodes,
+      currentNodeId: graph?.rootNodeId ?? undefined,
+    },
+    { mirror: false },
+  )
 }
 
 export function detachFlow(sessionId: string): void {
@@ -137,6 +198,8 @@ export function detachFlow(sessionId: string): void {
   e.state.activeFlowId = undefined
   e.state.activeFlowHash = undefined
   e.state.activeFlowPromptSnapshot = undefined
+  e.state.activeFlowGraphSnapshot = undefined
+  e.state.currentNodeId = undefined
 }
 
 export function resetState(sessionId: string): void {

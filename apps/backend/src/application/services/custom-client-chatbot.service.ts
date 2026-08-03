@@ -103,6 +103,13 @@ type FlowSummary = {
 type LoadedFlow = {
   compiledPrompt: string
   hash?: string
+  nodes?: Array<{
+    id: string
+    question: string
+    fieldKey?: string | null
+    terminalType?: string | null
+    outgoingEdges: Array<{ label: string; targetNodeId: string | null; triggersEscalation?: boolean }>
+  }>
 }
 
 // `robotModelId` / "unknown_model" are the WIRE names of the tool contract
@@ -723,10 +730,24 @@ export class CustomClientChatbotService {
     try {
       const flow = await defaultPrisma.flow.findFirst({
         where: { id: p.flowId, workspaceId: p.workspaceId },
-        select: { compiledPrompt: true, hash: true },
+        select: {
+          compiledPrompt: true,
+          hash: true,
+          nodes: {
+            select: {
+              id: true,
+              question: true,
+              fieldKey: true,
+              terminalType: true,
+              outgoingEdges: {
+                select: { label: true, targetNodeId: true, triggersEscalation: true },
+              },
+            },
+          },
+        },
       })
       if (!flow?.compiledPrompt) return null
-      return { compiledPrompt: flow.compiledPrompt, hash: flow.hash }
+      return { compiledPrompt: flow.compiledPrompt, hash: flow.hash, nodes: flow.nodes }
     } catch (error) {
       logger.error("[CustomClientChatbotService] loadFlow failed", {
         workspaceId: p.workspaceId,

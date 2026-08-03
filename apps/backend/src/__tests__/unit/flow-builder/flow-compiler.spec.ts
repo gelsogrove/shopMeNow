@@ -160,6 +160,48 @@ describe('compileFlow', () => {
     expect(result.validationReport).toEqual([])
   })
 
+  // ── duplicate_edge_label (flow-runtime.md §0) ────────────────────────────
+  // WHY this must block, not warn: once currentNodeId + advance() pick a
+  // branch by matching the classified answer against edge.label, two edges
+  // from the same node with the same label are ambiguous — advance() would
+  // take whichever comes first in the array, silently. That has to be
+  // impossible to save, not just discouraged.
+
+  it('rejects two edges from the same node with the same label', () => {
+    const fixture = threeNodeEscalationFixture()
+    // n1 already has e1 labelled "Sì" -> n2. Add a second "Sì" edge from n1.
+    fixture.nodes.push({ id: 'n4', question: 'Alt target', terminalType: 'END' })
+    fixture.edges.push({ id: 'e4', sourceNodeId: 'n1', targetNodeId: 'n4', label: 'Sì' })
+    const result = compileFlow(fixture)
+    expect(result.validationReport.some((e) => e.code === 'duplicate_edge_label')).toBe(true)
+    expect(result.compiledPrompt).toBe('')
+  })
+
+  it('treats labels as duplicates regardless of case or surrounding whitespace', () => {
+    const fixture = threeNodeEscalationFixture()
+    fixture.nodes.push({ id: 'n4', question: 'Alt target', terminalType: 'END' })
+    // e1 is "Sì" -> this is " SÌ " with different case and padding: same answer.
+    fixture.edges.push({ id: 'e4', sourceNodeId: 'n1', targetNodeId: 'n4', label: ' SÌ ' })
+    const result = compileFlow(fixture)
+    expect(result.validationReport.some((e) => e.code === 'duplicate_edge_label')).toBe(true)
+  })
+
+  it('allows two different labels from the same node', () => {
+    const fixture = threeNodeEscalationFixture()
+    // n1 has "Sì" -> n2 already; add "No" -> n3 from the same node n1.
+    fixture.edges.push({ id: 'e4', sourceNodeId: 'n1', targetNodeId: 'n3', label: 'No' })
+    const result = compileFlow(fixture)
+    expect(result.validationReport.some((e) => e.code === 'duplicate_edge_label')).toBe(false)
+  })
+
+  it('allows the same label reused from DIFFERENT source nodes', () => {
+    // e1 (n1 -> n2) and e2 (n2 -> n3) are both labelled "Sì" already in the
+    // base fixture, from different source nodes — not ambiguous, since
+    // advance() only ever looks at edges from ONE node at a time.
+    const result = compileFlow(threeNodeEscalationFixture())
+    expect(result.validationReport).toEqual([])
+  })
+
   it('rejects an attachment referencing another FlowCategory', () => {
     const fixture = threeNodeEscalationFixture()
     fixture.attachments = [{ nodeId: 'n1', assetId: 'asset_1', flowCategoryId: 'other_model' }]

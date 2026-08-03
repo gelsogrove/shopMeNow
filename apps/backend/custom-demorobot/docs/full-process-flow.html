@@ -1,0 +1,560 @@
+<title>Il processo completo — demorobot</title>
+<style>
+
+@font-face {
+  font-family: 'JBMono';
+  src: local('JetBrains Mono');
+  font-weight: 400 700;
+}
+
+:root {
+  --bg: #f6f4ef;
+  --bg-raised: #ffffff;
+  --ink: #14171c;
+  --ink-soft: #4a4f58;
+  --ink-faint: #7c828d;
+  --line: #d8d4c8;
+  --line-soft: #e6e3d9;
+
+  --code-bg: #e7eef6;
+  --code-line: #2a5c8f;
+  --code-ink: #1c3f5e;
+
+  --llm-bg: #f7ead9;
+  --llm-line: #b5651d;
+  --llm-ink: #7a4413;
+
+  --end-bg: #e5efe6;
+  --end-line: #3f7d4f;
+  --end-ink: #245530;
+
+  --warn-bg: #fbe3e1;
+  --warn-line: #b0392f;
+  --warn-ink: #7d221a;
+
+  --mono: 'JBMono', 'SF Mono', ui-monospace, Menlo, monospace;
+  --sans: -apple-system, 'Segoe UI', Inter, system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1116;
+    --bg-raised: #171b22;
+    --ink: #e8e6df;
+    --ink-soft: #aeb3bd;
+    --ink-faint: #767c88;
+    --line: #2b3038;
+    --line-soft: #1e222a;
+
+    --code-bg: #172432;
+    --code-line: #5b9bd5;
+    --code-ink: #a9cdec;
+
+    --llm-bg: #2e2213;
+    --llm-line: #e0954f;
+    --llm-ink: #f0c393;
+
+    --end-bg: #16281c;
+    --end-line: #4f9c62;
+    --end-ink: #8fd4a0;
+
+    --warn-bg: #351c1a;
+    --warn-line: #d1594c;
+    --warn-ink: #f0a89e;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0e1116; --bg-raised: #171b22; --ink: #e8e6df; --ink-soft: #aeb3bd; --ink-faint: #767c88;
+  --line: #2b3038; --line-soft: #1e222a;
+  --code-bg: #172432; --code-line: #5b9bd5; --code-ink: #a9cdec;
+  --llm-bg: #2e2213; --llm-line: #e0954f; --llm-ink: #f0c393;
+  --end-bg: #16281c; --end-line: #4f9c62; --end-ink: #8fd4a0;
+  --warn-bg: #351c1a; --warn-line: #d1594c; --warn-ink: #f0a89e;
+}
+
+:root[data-theme="light"] {
+  --bg: #f6f4ef; --bg-raised: #ffffff; --ink: #14171c; --ink-soft: #4a4f58; --ink-faint: #7c828d;
+  --line: #d8d4c8; --line-soft: #e6e3d9;
+  --code-bg: #e7eef6; --code-line: #2a5c8f; --code-ink: #1c3f5e;
+  --llm-bg: #f7ead9; --llm-line: #b5651d; --llm-ink: #7a4413;
+  --end-bg: #e5efe6; --end-line: #3f7d4f; --end-ink: #245530;
+  --warn-bg: #fbe3e1; --warn-line: #b0392f; --warn-ink: #7d221a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  margin: 0;
+  padding: 3rem 1.25rem 5rem;
+  line-height: 1.5;
+}
+
+.page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+header.top { margin-bottom: 1.75rem; }
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 0.6rem;
+}
+
+h1 {
+  font-size: 1.65rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+}
+
+.sub {
+  color: var(--ink-soft);
+  font-size: 0.96rem;
+  max-width: 68ch;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+  margin: 1.25rem 0 2.25rem;
+  padding: 0.8rem 1rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.legend-item { display: flex; align-items: center; gap: 0.5rem; }
+.dot { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.dot.code { background: var(--code-line); }
+.dot.llm { background: var(--llm-line); }
+.dot.end { background: var(--end-line); }
+.dot.warn { background: var(--warn-line); }
+.legend-item strong { font-family: var(--mono); font-weight: 600; }
+.legend-item span { color: var(--ink-faint); }
+
+/* ---- trunk column ---- */
+
+.trunk {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.node {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr;
+}
+
+.rail { position: relative; display: flex; justify-content: center; }
+.rail::before {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: var(--line);
+}
+.node:first-child .rail::before { top: 1.2rem; }
+
+.marker {
+  position: relative;
+  z-index: 1;
+  width: 1.4rem; height: 1.4rem;
+  border-radius: 50%;
+  background: var(--bg-raised);
+  border: 2px solid var(--line);
+  margin-top: 0.5rem;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.62rem; font-weight: 700;
+  color: var(--ink-faint);
+  flex: none;
+}
+.marker.code { border-color: var(--code-line); color: var(--code-line); }
+.marker.llm { border-color: var(--llm-line); color: var(--llm-line); }
+.marker.end { border-color: var(--end-line); color: var(--end-line); background: var(--end-bg); }
+.marker.warn { border-color: var(--warn-line); color: var(--warn-line); }
+
+.card {
+  background: var(--bg-raised);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 0.9rem 1.05rem;
+  margin: 0 0 0.9rem 0.75rem;
+}
+.card.code { border-left: 3px solid var(--code-line); }
+.card.llm { border-left: 3px solid var(--llm-line); }
+.card.end { border-left: 3px solid var(--end-line); background: var(--end-bg); }
+.card.warn { border-left: 3px solid var(--warn-line); background: var(--warn-bg); }
+
+.tag {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.66rem; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+  margin-bottom: 0.4rem;
+}
+.tag.code { background: var(--code-bg); color: var(--code-ink); }
+.tag.llm { background: var(--llm-bg); color: var(--llm-ink); }
+.tag.end { background: var(--bg-raised); color: var(--end-ink); border: 1px solid var(--end-line); }
+.tag.warn { background: var(--bg-raised); color: var(--warn-ink); border: 1px solid var(--warn-line); }
+
+.card h3 { margin: 0 0 0.3rem; font-size: 0.98rem; font-weight: 650; }
+.card p { margin: 0; font-size: 0.87rem; color: var(--ink-soft); }
+.card p + p { margin-top: 0.4rem; }
+.card code {
+  font-family: var(--mono); font-size: 0.85em;
+  background: var(--line-soft); padding: 0.05rem 0.3rem; border-radius: 4px;
+  color: var(--ink);
+}
+
+/* ---- three-way split ---- */
+
+.split {
+  margin: 0 0 0.9rem 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.7rem;
+}
+
+@media (max-width: 720px) {
+  .split { grid-template-columns: 1fr; }
+}
+
+.branch-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 0.8rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.branch-head {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.branch-head .arrow { color: var(--ink-faint); }
+
+.branch-card p { margin: 0; font-size: 0.83rem; color: var(--ink-soft); }
+
+.branch-card.faq { border-top: 3px solid var(--end-line); }
+.branch-card.flow { border-top: 3px solid var(--code-line); }
+.branch-card.none { border-top: 3px solid var(--llm-line); }
+
+/* ---- loop box (the flow-graph cycle) ---- */
+
+.loop {
+  margin: 0 0 0.9rem 0.75rem;
+  border: 1.5px dashed var(--code-line);
+  border-radius: 12px;
+  padding: 1rem 1.1rem 1.1rem;
+  background: color-mix(in srgb, var(--code-bg) 55%, var(--bg-raised));
+  position: relative;
+}
+
+.loop-label {
+  position: absolute;
+  top: -0.65rem;
+  left: 0.9rem;
+  background: var(--bg);
+  padding: 0 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--code-ink);
+}
+
+.loop-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-top: 0.3rem;
+}
+
+.loop-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+}
+
+.loop-step .n {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 0.7rem;
+  color: var(--ink-faint);
+  min-width: 1.1rem;
+  padding-top: 0.15rem;
+}
+
+.loop-step .who {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 0.08rem 0.4rem;
+  border-radius: 4px;
+  flex: none;
+  margin-top: 0.05rem;
+}
+.loop-step .who.code { background: var(--code-bg); color: var(--code-ink); }
+.loop-step .who.llm { background: var(--llm-bg); color: var(--llm-ink); }
+
+.loop-step .txt { color: var(--ink-soft); }
+.loop-step .txt code {
+  font-family: var(--mono); font-size: 0.85em;
+  background: var(--line-soft); padding: 0.03rem 0.3rem; border-radius: 4px;
+  color: var(--ink);
+}
+
+.loop-cycle-note {
+  margin-top: 0.7rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--line);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  display: flex;
+  gap: 0.5rem;
+}
+.loop-cycle-note .icon { font-family: var(--mono); }
+
+/* ---- gate checklist ---- */
+
+.gate-list {
+  margin: 0 0 0.9rem 0.75rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  padding: 0.9rem 1.05rem;
+  border-left: 3px solid var(--code-line);
+}
+
+.gate-list ol {
+  margin: 0.5rem 0 0;
+  padding-left: 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.gate-list li { font-size: 0.87rem; color: var(--ink-soft); }
+.gate-list li strong { color: var(--ink); font-weight: 600; }
+
+/* ---- emergency lane ---- */
+
+.emergency-lane {
+  margin: 2.5rem 0 0;
+  border: 1.5px solid var(--warn-line);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  background: var(--warn-bg);
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.emergency-lane .icon {
+  font-size: 1.4rem;
+  flex: none;
+}
+
+.emergency-lane .txt h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.92rem;
+  color: var(--warn-ink);
+  font-weight: 700;
+}
+.emergency-lane .txt p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--ink-soft);
+}
+
+footer.note {
+  margin-top: 2.5rem;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+  border-top: 1px solid var(--line-soft);
+  padding-top: 1.1rem;
+}
+footer.note strong { color: var(--ink-soft); }
+
+@media (max-width: 560px) {
+  .node { grid-template-columns: 1.7rem 1fr; }
+  .card, .loop, .gate-list { margin-left: 0.55rem; }
+}
+</style>
+
+<div class="page">
+
+  <header class="top">
+    <div class="eyebrow">custom-demorobot — l'intero ciclo, dal messaggio alla chiusura</div>
+    <h1>Il processo completo</h1>
+    <p class="sub">Dal primo messaggio fino a uno dei tre esiti: risposta FAQ, flow diagnostico portato a termine, o passaggio a un operatore umano. Stessa chiave di lettura: <strong style="color:var(--code-ink)">blu = decide il codice</strong>, <strong style="color:var(--llm-ink)">arancione = decide l'LLM</strong>.</p>
+  </header>
+
+  <div class="legend">
+    <div class="legend-item"><span class="dot code"></span><strong>CODICE</strong><span>deterministico</span></div>
+    <div class="legend-item"><span class="dot llm"></span><strong>LLM</strong><span>interpreta, può sbagliare</span></div>
+    <div class="legend-item"><span class="dot end"></span><strong>FINE</strong><span>la conversazione si chiude qui</span></div>
+    <div class="legend-item"><span class="dot warn"></span><strong>DEROGA</strong><span>salta tutto il resto</span></div>
+  </div>
+
+  <div class="trunk">
+
+    <div class="node">
+      <div class="rail"><div class="marker code">1</div></div>
+      <div class="card code">
+        <span class="tag code">codice</span>
+        <h3>Ingresso: sanitize, rate limit, stato</h3>
+        <p>Pulisce il messaggio, controlla i limiti (messaggi/minuto, turni/sessione), idrata lo stato della sessione dal DB. Se un limite scatta, risponde con il messaggio configurato e si ferma — l'LLM non viene chiamato.</p>
+      </div>
+    </div>
+
+    <div class="node">
+      <div class="rail"><div class="marker llm">2</div></div>
+      <div class="card llm">
+        <span class="tag llm">llm — una chiamata</span>
+        <h3>Legge tutto, rileva la lingua, classifica</h3>
+        <p>Riceve FAQ + catalogo flow + stato sessione + storico. Rileva la lingua dal messaggio (non dal profilo). Decide il binario: <strong>FAQ</strong>, <strong>FLOW</strong>, o <strong>nessuno dei due</strong> — il primo che si applica vince, in quest'ordine.</p>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="branch-card faq">
+        <div class="branch-head"><span class="arrow">├─</span> È una FAQ</div>
+        <p>Risponde dal blocco FAQ. Nessun tool chiamato.</p>
+      </div>
+      <div class="branch-card flow">
+        <div class="branch-head"><span class="arrow">├─</span> È un FLOW</div>
+        <p><code>start_flow(id)</code> — il codice valida l'id contro il catalogo, poi congela il grafo nella sessione.</p>
+      </div>
+      <div class="branch-card none">
+        <div class="branch-head"><span class="arrow">└─</span> Nessuno dei due</div>
+        <p>Raccolta guidata (intake): seriale, problema, quando — una domanda alla volta, dettata dal codice.</p>
+      </div>
+    </div>
+
+    <div class="node">
+      <div class="rail"><div class="marker code">3</div></div>
+      <div class="card end">
+        <span class="tag end">fine — ramo faq</span>
+        <h3>FAQ risposta → conversazione aperta, nessuno stato residuo</h3>
+        <p>Non è un binario a senso unico: se il cliente scrive di nuovo dopo, il turno successivo passa di nuovo dal punto 2, da capo. Nessun blocco, nessuna trappola.</p>
+      </div>
+    </div>
+
+    <div class="loop">
+      <div class="loop-label">ramo flow — il ciclo che si ripete a ogni domanda</div>
+      <div class="loop-steps">
+        <div class="loop-step">
+          <span class="n">a</span><span class="who code">codice</span>
+          <span class="txt">legge <code>currentNodeId</code> dallo stato → prende <code>FlowNode.question</code> dal grafo congelato</span>
+        </div>
+        <div class="loop-step">
+          <span class="n">b</span><span class="who llm">llm</span>
+          <span class="txt">TRADUCE quella domanda nella lingua del cliente — non la compone, non la modifica</span>
+        </div>
+        <div class="loop-step">
+          <span class="n">c</span><span class="who llm">llm</span>
+          <span class="txt">il cliente risponde → l'LLM classifica su una label REALE del nodo (l'enum del tool <code>answer_step</code> viene dal grafo, ad ogni turno)</span>
+        </div>
+        <div class="loop-step">
+          <span class="n">d</span><span class="who code">codice</span>
+          <span class="txt"><code>advance()</code> muove <code>currentNodeId</code> al nodo indicato dall'arco scelto</span>
+        </div>
+      </div>
+      <div class="loop-cycle-note">
+        <span class="icon">↻</span>
+        <span>si ripete da (a) finché il nodo raggiunto non è un <strong>terminale</strong>. Risposta fuori enum → richiesta di chiarimento sullo <strong>stesso</strong> nodo, mai un salto a caso. Due tentativi falliti sullo stesso nodo → esce verso il gate pre-operatore.</span>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="branch-card faq">
+        <div class="branch-head"><span class="arrow">├─</span> SELF_SERVICE</div>
+        <p>Il problema si risolve da solo. Nessun tool di escalation esposto qui — non può promettere un contatto che non avverrà.</p>
+      </div>
+      <div class="branch-card none" style="grid-column: span 2;">
+        <div class="branch-head"><span class="arrow">└─</span> ESCALATE</div>
+        <p>Serve un operatore. Va al gate pre-operatore qui sotto — sempre, anche se si arriva da dentro un flow specifico.</p>
+      </div>
+    </div>
+
+    <div class="node">
+      <div class="rail"><div class="marker end">4</div></div>
+      <div class="card end">
+        <span class="tag end">fine — ramo self_service</span>
+        <h3>Risolto senza operatore</h3>
+      </div>
+    </div>
+
+    <div class="node">
+      <div class="rail"><div class="marker code">5</div></div>
+      <div class="gate-list">
+        <span class="tag code">codice — gate, vale su OGNI strada verso l'operatore</span>
+        <h3 style="margin:0 0 0.2rem; font-size:0.98rem;">Prima di chiamare un umano</h3>
+        <p style="font-size:0.85rem;">Contatore per campo, non globale — un "no" ignorato non apre il gate per tutti gli altri campi:</p>
+        <ol>
+          <li><strong>1.</strong> il robot è acceso?</li>
+          <li><strong>2.</strong> il wifi è attivo?</li>
+          <li><strong>3.</strong> il cut scheduling è attivo?</li>
+          <li><strong>4.</strong> come ti chiami?</li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="node">
+      <div class="rail"><div class="marker code">6</div></div>
+      <div class="card code">
+        <span class="tag code">codice</span>
+        <h3><code>escalate_to_operator</code> — effetti collaterali garantiti</h3>
+        <p>Email/WhatsApp all'operatore (<code>operatorDeliveryMode</code>: all/random) · <code>activeChatbot: false</code> · briefing 👤 in chat con nome, azienda, seriale, problema, quando, risposte raccolte lungo il flow.</p>
+      </div>
+    </div>
+
+    <div class="node">
+      <div class="rail"><div class="marker end">7</div></div>
+      <div class="card end">
+        <span class="tag end">fine — ramo escalation</span>
+        <h3>Passaggio confermato, per nome</h3>
+        <p><code>humanSupportMessage</code> (editabile in Settings, mai una frase nel codice) — es. "Andrea, ti metto in contatto con il nostro operatore, ti risponderà il prima possibile".</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="emergency-lane">
+    <div class="icon">⚠️</div>
+    <div class="txt">
+      <h3>Emergenza (ferito, animale, fumo, incendio, danni)</h3>
+      <p>Salta l'intero gate (passo 5) e ogni domanda residua di un flow in corso: escalation immediata, poi — nello stesso messaggio — partecipazione umana e richiesta dei dati per il richiamo.</p>
+    </div>
+  </div>
+
+  <footer class="note">
+    <strong>Dove il codice garantisce e dove no:</strong> ogni passo blu (posizione nel grafo, quale domanda è dovuta, quando si escala, quali tool sono disponibili) è una garanzia strutturale — o funziona sempre o è un bug da correggere. Ogni passo arancione (quale flow è pertinente, come classificare una risposta ambigua) resta interpretazione: contenuta da tentativi limitati e vie d'uscita esplicite, ma mai eliminata del tutto.
+  </footer>
+
+</div>
