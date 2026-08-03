@@ -75,6 +75,13 @@ interface AIPersonalitySectionProps {
     customChatbotMaxTokens: number | null
     audioOutput: boolean
     audioVoices: Record<string, string>
+    /**
+     * Free-form JSON merged onto custom-<module>/settings.json on every save,
+     * for fields with no dedicated column (maxToolHops, rateLimitedMessage,
+     * intakeQuestions, etc.). Widget look & feel keys are stripped server-side
+     * even if present here.
+     */
+    customChatbotAdvancedSettings?: Record<string, unknown> | null
   }
   errors: Record<string, string>
   canEdit: boolean
@@ -116,6 +123,13 @@ export function AIPersonalitySection({
   const [isCustomModelMode, setIsCustomModelMode] = useState(
     () => Boolean(formData.customChatbotModel) && !isKnownModel,
   )
+  // Advanced settings: edited as raw JSON text so an in-progress, momentarily
+  // invalid edit isn't clobbered by re-formatting formData on every keystroke.
+  // Only committed to formData (and sent to the backend) once it parses.
+  const [advancedSettingsText, setAdvancedSettingsText] = useState(() =>
+    JSON.stringify(formData.customChatbotAdvancedSettings ?? {}, null, 2),
+  )
+  const [advancedSettingsError, setAdvancedSettingsError] = useState<string | null>(null)
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -628,6 +642,80 @@ export function AIPersonalitySection({
                 about a short paragraph. Higher costs more per message.
               </p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Advanced Settings — raw JSON merged onto custom-<module>/settings.json.
+          Covers fields with no dedicated form control (maxToolHops, rate
+          limits, privacyPolicyUrl, rateLimitedMessage, sessionTooLongMessage,
+          intakeQuestions, etc). Widget look & feel keys are stripped server-side. */}
+      <Card>
+        <CardHeader className="border-b bg-gradient-to-r from-blue-50 to-white">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Bot className="h-5 w-5 text-blue-600" />
+            Advanced Settings
+          </CardTitle>
+          <p className="text-sm text-gray-500">
+            Raw JSON merged onto the module's settings.json on every save. Fields
+            defined above always win over the same key here. Widget appearance
+            (colors, icon, title, quick replies) is never accepted here.
+          </p>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="space-y-2">
+            <Label htmlFor="customChatbotAdvancedSettings">Advanced Settings (JSON)</Label>
+            <div
+              className={cn(
+                "border rounded-md overflow-hidden",
+                advancedSettingsError && "border-red-500",
+              )}
+            >
+              <Editor
+                height="220px"
+                defaultLanguage="json"
+                theme="vs-light"
+                value={advancedSettingsText}
+                onChange={(value) => {
+                  const text = value ?? ""
+                  setAdvancedSettingsText(text)
+                  if (text.trim() === "") {
+                    setAdvancedSettingsError(null)
+                    onFieldChange("customChatbotAdvancedSettings", {})
+                    return
+                  }
+                  try {
+                    const parsed = JSON.parse(text)
+                    if (
+                      typeof parsed !== "object" ||
+                      parsed === null ||
+                      Array.isArray(parsed)
+                    ) {
+                      setAdvancedSettingsError("Must be a JSON object, e.g. { \"maxToolHops\": 6 }")
+                      return
+                    }
+                    setAdvancedSettingsError(null)
+                    onFieldChange("customChatbotAdvancedSettings", parsed)
+                  } catch (e) {
+                    setAdvancedSettingsError(e instanceof Error ? e.message : "Invalid JSON")
+                  }
+                }}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 13,
+                  scrollBeyondLastLine: false,
+                  readOnly: !canEdit,
+                }}
+              />
+            </div>
+            {advancedSettingsError ? (
+              <p className="text-xs text-red-600">{advancedSettingsError}</p>
+            ) : (
+              <p className="text-xs text-gray-500">
+                e.g. maxToolHops, maxMessageChars, privacyPolicyUrl, rateLimitedMessage,
+                sessionTooLongMessage, intakeQuestions.
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>

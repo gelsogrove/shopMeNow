@@ -10,9 +10,12 @@
  * (colors, icon, title, quick replies), WhatsApp credentials, calendar,
  * billing. Those are platform concerns, not chatbot config.
  *
- * Keys the UI does not expose (maxToolHops, rate limits, similarityThreshold…)
- * are preserved from the file as-is: the generator merges onto what is there,
- * it never rewrites the file from scratch.
+ * Keys with no dedicated Workspace column (maxToolHops, rate limits,
+ * similarityThreshold, rateLimitedMessage, intakeQuestions…) come from the
+ * free-form `customChatbotAdvancedSettings` JSON column, edited as raw JSON
+ * in the Settings UI. Anything still missing from both falls back to
+ * whatever is already on disk: the generator merges onto the current file,
+ * it never rewrites it from scratch.
  */
 import { existsSync } from "fs"
 import { readFile, writeFile } from "fs/promises"
@@ -43,8 +46,14 @@ export interface ChatbotSettingsJson {
   topK: number
   audioOutput: boolean
   audioVoices: Record<string, string>
+  /** ISO 639-1 code used when the detected language isn't in `enabledLanguages`. */
+  defaultLanguage?: string
+  /** Languages the chatbot is allowed to reply in; detection outside this set falls back to `defaultLanguage`. */
+  enabledLanguages?: string[]
   // Customer-facing copy, editable in the app. Rendered by the LLM in the
   // customer's language; {{customerName}} is substituted at runtime.
+  /** Greeting for a customer writing for the first time (no prior history). */
+  welcomeMessage?: string
   /** Greeting for a customer we already know by name (returning visitor). */
   welcomeBackMessage?: string
   /** Sentence sent when the conversation is handed to a human operator. */
@@ -78,10 +87,47 @@ export interface WorkspaceChatbotSource {
   operatorWhatsappNumbers?: string[] | null
   operatorDeliveryMode?: string | null
   defaultLanguage?: string | null
+  enabledLanguages?: string[] | null
   audioOutput?: boolean | null
   audioVoices?: unknown
+  welcomeMessage?: string | null
   welcomeBackMessage?: string | null
   humanSupportMessage?: string | null
+  // Free-form JSON for fields with no dedicated column (maxToolHops,
+  // maxMessageChars, rateLimitedMessage, intakeQuestions, etc.). Merged onto
+  // the file as-is; widget look & feel keys are stripped even if present.
+  customChatbotAdvancedSettings?: unknown
+}
+
+/**
+ * Widget look & feel is a platform concern, never chatbot runtime config —
+ * stripped from the advanced-settings blob even if a stray key ends up there.
+ */
+const WIDGET_KEYS = new Set([
+  "widgetColor",
+  "widgetIcon",
+  "widgetTitle",
+  "widgetQuickReplies",
+  "quickReplies",
+  "primaryColor",
+  "icon",
+  "title",
+])
+
+/**
+ * Validates the advanced-settings JSON column into a plain object safe to
+ * spread onto settings.json. Anything not a plain object (bad manual edit)
+ * is rejected so a malformed column cannot corrupt the file.
+ */
+function normaliseAdvancedSettings(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null
+
+  const out: Record<string, unknown> = {}
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    if (WIDGET_KEYS.has(key)) continue
+    out[key] = val
+  }
+  return Object.keys(out).length > 0 ? out : null
 }
 
 /**
@@ -149,9 +195,11 @@ export async function buildChatbotSettingsJson(
   const current = JSON.parse(raw) as ChatbotSettingsJson
 
   const audioVoices = normaliseAudioVoices(workspace.audioVoices)
+  const advancedSettings = normaliseAdvancedSettings(workspace.customChatbotAdvancedSettings)
 
   return {
     ...current,
+    ...advancedSettings,
     model: workspace.customChatbotModel?.trim() || current.model,
     temperature:
       typeof workspace.customChatbotTemperature === "number"
@@ -179,9 +227,15 @@ export async function buildChatbotSettingsJson(
       workspace.customChatbotEmailSubjectPrefix?.trim() || current.emailSubjectPrefix,
     operatorBriefingLanguage:
       workspace.defaultLanguage?.trim() || current.operatorBriefingLanguage,
+    defaultLanguage: workspace.defaultLanguage?.trim() || current.defaultLanguage,
+    enabledLanguages:
+      workspace.enabledLanguages && workspace.enabledLanguages.length > 0
+        ? workspace.enabledLanguages
+        : current.enabledLanguages,
     audioOutput:
       typeof workspace.audioOutput === "boolean" ? workspace.audioOutput : current.audioOutput,
     audioVoices: audioVoices ?? current.audioVoices,
+    welcomeMessage: workspace.welcomeMessage?.trim() || current.welcomeMessage,
     welcomeBackMessage:
       workspace.welcomeBackMessage?.trim() || current.welcomeBackMessage,
     humanSupportMessage:

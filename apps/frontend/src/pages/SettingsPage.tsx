@@ -100,6 +100,9 @@ interface FormData {
   // Voice replies (ElevenLabs): audioVoices maps a language code to a voice id.
   audioOutput: boolean
   audioVoices: Record<string, string>
+  // Free-form JSON merged onto custom-<module>/settings.json on every save,
+  // for fields with no dedicated column (maxToolHops, rateLimitedMessage, etc).
+  customChatbotAdvancedSettings: Record<string, unknown> | null
   welcomeMessage: string
   /** Greeting for a returning customer we already know by name. */
   welcomeBackMessage: string
@@ -263,6 +266,7 @@ export function SettingsPage() {
     customChatbotMaxTokens: null,
     audioOutput: false,
     audioVoices: {},
+    customChatbotAdvancedSettings: null,
     welcomeMessage: defaultWelcomeMessage,
     welcomeBackMessage: "",
     enableWelcomeMessage: true,
@@ -370,6 +374,9 @@ export function SettingsPage() {
         customChatbotMaxTokens: (currentWorkspace as any).customChatbotMaxTokens ?? null,
         audioOutput: (currentWorkspace as any).audioOutput ?? false,
         audioVoices: ((currentWorkspace as any).audioVoices as Record<string, string>) ?? {},
+        customChatbotAdvancedSettings:
+          ((currentWorkspace as any).customChatbotAdvancedSettings as Record<string, unknown>) ??
+          null,
         welcomeMessage: currentWorkspace.welcomeMessage || defaultWelcomeMessage,
         welcomeBackMessage: (currentWorkspace as any).welcomeBackMessage || "",
         enableWelcomeMessage: currentWorkspace.enableWelcomeMessage ?? true,
@@ -797,6 +804,7 @@ export function SettingsPage() {
               customChatbotMaxTokens: formData.customChatbotMaxTokens,
               audioOutput: formData.audioOutput,
               audioVoices: formData.audioVoices,
+              customChatbotAdvancedSettings: formData.customChatbotAdvancedSettings,
             }}
             errors={errors}
             canEdit={canEdit}

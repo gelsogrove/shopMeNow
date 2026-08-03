@@ -75,6 +75,10 @@ export interface Workspace {
   enabledLanguages?: string[] // Documentation only — does not restrict runtime language detection
   customChatbotModel?: string | null // LLM model override for the custom chatbot module
   customChatbotTemperature?: number | null // LLM temperature override for the custom chatbot module
+  customChatbotMaxTokens?: number | null // Max reply length override for the custom chatbot module
+  audioOutput?: boolean // Whether the custom chatbot module may reply with synthesized audio
+  audioVoices?: Record<string, string> // ElevenLabs voice id per language for the custom chatbot module
+  customChatbotAdvancedSettings?: Record<string, unknown> | null // Free-form JSON merged onto custom-<module>/settings.json (fields with no dedicated column)
   logoUrl?: string
   // 🆕 Translation Settings
   translateProductNames?: boolean
@@ -224,6 +228,10 @@ export interface UpdateWorkspaceData {
   enabledLanguages?: string[] // Documentation only — does not restrict runtime language detection
   customChatbotModel?: string | null // LLM model override for the custom chatbot module
   customChatbotTemperature?: number | null // LLM temperature override for the custom chatbot module
+  customChatbotMaxTokens?: number | null // Max reply length override for the custom chatbot module
+  audioOutput?: boolean // Whether the custom chatbot module may reply with synthesized audio
+  audioVoices?: Record<string, string> // ElevenLabs voice id per language for the custom chatbot module
+  customChatbotAdvancedSettings?: Record<string, unknown> | null // Free-form JSON merged onto custom-<module>/settings.json (fields with no dedicated column)
   // 🆕 Translation Settings
   translateProductNames?: boolean
   translateCategoryNames?: boolean

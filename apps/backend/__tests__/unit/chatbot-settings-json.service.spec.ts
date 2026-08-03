@@ -238,6 +238,68 @@ describe("buildChatbotSettingsJson", () => {
     expect(result?.temperature).toBe(MODULE_DEFAULTS.temperature)
   })
 
+  it("merges advanced-settings JSON fields that have no dedicated column", async () => {
+    // maxToolHops, rateLimitedMessage, intakeQuestions etc. have no Workspace
+    // column — this free-form JSON is the only way to reach them without a
+    // migration per field.
+    const result = await buildChatbotSettingsJson({
+      customChatbotId: "demorobot",
+      customChatbotAdvancedSettings: {
+        maxToolHops: 6,
+        rateLimitedMessage: "Please slow down.",
+        intakeQuestions: { serialNumber: "What is the serial number?" },
+      },
+    })
+
+    expect(result).toMatchObject({
+      maxToolHops: 6,
+      rateLimitedMessage: "Please slow down.",
+      intakeQuestions: { serialNumber: "What is the serial number?" },
+    })
+  })
+
+  it("lets a dedicated field always win over the same key in advanced settings", async () => {
+    // customChatbotModel is the specific, validated control; a stray "model"
+    // key inside the free-form JSON must never override it.
+    const result = await buildChatbotSettingsJson({
+      customChatbotId: "demorobot",
+      customChatbotModel: "openai/gpt-4o",
+      customChatbotAdvancedSettings: { model: "some/other-model" },
+    })
+
+    expect(result?.model).toBe("openai/gpt-4o")
+  })
+
+  it("strips widget look-and-feel keys out of advanced settings even if present", async () => {
+    // Widget appearance is a platform concern configured elsewhere; it must
+    // never reach the chatbot module's config, even via a stray manual edit.
+    const result = await buildChatbotSettingsJson({
+      customChatbotId: "demorobot",
+      customChatbotAdvancedSettings: {
+        maxToolHops: 6,
+        widgetColor: "#ff0000",
+        widgetTitle: "Should never appear",
+      },
+    })
+
+    expect(result?.maxToolHops).toBe(6)
+    expect(result).not.toHaveProperty("widgetColor")
+    expect(result).not.toHaveProperty("widgetTitle")
+  })
+
+  it("ignores a malformed advanced-settings value instead of corrupting the file", async () => {
+    // A bad manual edit of the JSON column (array, string, null) must not
+    // wipe or corrupt the rest of the generated settings.
+    const result = await buildChatbotSettingsJson({
+      customChatbotId: "demorobot",
+      customChatbotModel: "openai/gpt-4o",
+      customChatbotAdvancedSettings: "not-an-object",
+    })
+
+    expect(result?.model).toBe("openai/gpt-4o")
+    expect(result?.maxToolHops).toBe(MODULE_DEFAULTS.maxToolHops)
+  })
+
   it("does not emit platform-only settings into the chatbot config", async () => {
     // Widget appearance and WhatsApp credentials are platform concerns. If they
     // ever leak in here, the generated file stops matching the module's schema.
@@ -255,9 +317,15 @@ describe("buildChatbotSettingsJson", () => {
       "operatorEmails",
       "operatorWhatsappNumbers",
       // Workspace-owned copy the chatbot reads at runtime: the greeting for a
-      // returning customer, and the sentence used when handing over to a human.
+      // new and a returning customer, and the sentence used when handing over
+      // to a human.
+      "welcomeMessage",
       "welcomeBackMessage",
       "humanSupportMessage",
+      // Language config: the codes the chatbot may reply in, and the fallback
+      // when detection lands outside that set.
+      "defaultLanguage",
+      "enabledLanguages",
     ].sort()
     expect(Object.keys(result!).sort()).toEqual(expected)
   })

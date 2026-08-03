@@ -131,6 +131,7 @@ model Workspace {
   customChatbotEmailSubjectPrefix   String?     @db.Text // 🆕 Subject-line prefix override for custom chatbot escalation emails (e.g. "[Demowash] Incidencia"). Falls back to the module's settings.json when empty.
   customChatbotAudioOutput          Boolean?    // 🆕 When true, the custom chatbot module may reply with audio (TTS) if the customer sent audio. Falls back to the module's settings.json when null.
   customChatbotAudioVoices          Json?       // 🆕 Per-language ElevenLabs voice IDs for custom chatbot TTS (key = ISO language code, plus "default"). Falls back to the module's settings.json when empty.
+  customChatbotAdvancedSettings     Json?       // 🆕 Free-form JSON merged onto custom-<module>/settings.json on every save (e.g. maxToolHops, rateLimitedMessage, intakeQuestions). Unknown keys pass through unvalidated; widget look & feel keys are never written here.
   registrationPage                  String?     @db.Text // 🆕 Custom registration page URL for customers (used by LINK_REGISTRATION)
   requireManualApproval             Boolean     @default(false) // 🆕 If true, new customers go to PENDING_APPROVAL after registration (admin must activate)
   approvalMessage                   String?     @db.Text // 🆕 Message sent to customer when admin approves their registration (default: "🎉 Your registration has been approved!")

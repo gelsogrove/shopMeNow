@@ -925,8 +925,13 @@ For privacy inquiries, please contact our support team.`
           operatorWhatsappNumbers: true,
           operatorDeliveryMode: true,
           defaultLanguage: true,
+          enabledLanguages: true,
           audioOutput: true,
           audioVoices: true,
+          welcomeMessage: true,
+          welcomeBackMessage: true,
+          humanSupportMessage: true,
+          customChatbotAdvancedSettings: true,
         },
       })
       if (w?.customChatbotId) await writeChatbotSettingsJson(w)
