@@ -1111,6 +1111,13 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       staleMs: WELCOME_BACK_STALE_MS,
     })
     updateState(sessionId, { greeting }, { mirror: false })
+    // One-line diagnostic, kept on purpose: when a greeting goes missing in a
+    // live conversation this is the only way to tell whether the CODE decided
+    // wrong (bug here) or the MODEL ignored the dictated block (prompt issue).
+    // eslint-disable-next-line no-console
+    console.error(
+      `[demoam][greeting] session=${sessionId} greeting=${greeting} historyLen=${input.context.history.length} hostName=${JSON.stringify(hostName)} welcomeConfigured=${!!settings.welcomeMessage?.trim()} welcomeBackConfigured=${!!(input.config.messages?.welcomeBack ?? settings.welcomeBackMessage)?.trim()}`,
+    )
 
     if (input.config.language) {
       seedLanguageIfNeeded(sessionId, input.config.language, settings.enabledLanguages, settings.defaultLanguage)
