@@ -57,15 +57,19 @@ describe('demoam carries no hardcoded customer-facing copy', () => {
     }
   })
 
-  it('keeps welcome / welcome-back / wip / hand-off copy in settings.json', () => {
+  it('keeps welcome / welcome-back / hand-off copy in settings.json', () => {
     const settings = JSON.parse(fs.readFileSync(path.join(MODULE_DIR, 'settings.json'), 'utf8'))
 
     expect(settings.welcomeMessage).toBeTruthy()
     expect(settings.welcomeBackMessage).toBeTruthy()
-    expect(settings.wipMessage).toBeTruthy()
     expect(settings.humanSupportMessage).toBeTruthy()
     expect(settings.rateLimitedMessage).toBeTruthy()
     expect(settings.sessionTooLongMessage).toBeTruthy()
+    // wipMessage is deliberately ABSENT: the disabled-channel message is
+    // workspace.wipMessage, consumed by the host's gate before the module is
+    // ever loaded — a copy here would be dead, editable-looking config
+    // (decided with Andrea, 2026-08-04).
+    expect(settings.wipMessage).toBeUndefined()
   })
 
   it('asks nothing at all when no gate wording is configured — fails toward silence', () => {

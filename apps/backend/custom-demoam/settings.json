@@ -16,7 +16,6 @@
   "enabledLanguages": ["en"],
   "welcomeMessage": "Welcome! I'm your digital assistant. How can I help you today?",
   "welcomeBackMessage": "Welcome back, {{customerName}}! How can I help you today?",
-  "wipMessage": "This service is temporarily unavailable. Please try again later.",
   "humanSupportMessage": "{{customerName}}, I'm putting you through to our operator, they'll get back to you shortly.",
   "rateLimitedMessage": "You're sending messages a bit too fast — please slow down a little.",
   "sessionTooLongMessage": "This conversation has gone on for a while. Let's continue with one of our operators.",

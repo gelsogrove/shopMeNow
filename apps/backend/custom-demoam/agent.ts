@@ -59,7 +59,9 @@ interface Settings {
   enabledLanguages: string[]
   welcomeMessage?: string
   welcomeBackMessage?: string
-  wipMessage?: string
+  // NOTE: no wipMessage here — the disabled-channel message is
+  // workspace.wipMessage, consumed by the HOST's gate before this module is
+  // ever loaded. A copy in this file would never be read (Andrea, 2026-08-04).
   rateLimitedMessage?: string
   sessionTooLongMessage?: string
   humanSupportMessage?: string
@@ -564,6 +566,19 @@ interface CallLLMParams {
   flowsBlock: string | undefined
   settings: Settings
   messages?: WorkspaceMessages | null
+  /**
+   * When true, the model MUST call a tool this hop — a free-text reply is
+   * rejected by the API itself, not merely discouraged in the prompt.
+   *
+   * Andrea 2026-08-04, seen in the first real conversation: with the case
+   * collected (serial + description) and no flow matching, the model was
+   * free to write text and invented "does the display show an error code?"
+   * — a question that exists in no gate and no flow. Same class of bug
+   * demorobot fixed with flow-runtime.md §10: at that point the only two
+   * legitimate moves are start_flow or escalate_to_operator, and the
+   * escalate gate then dictates the next question (the customer's name).
+   */
+  forceToolChoice?: boolean
 }
 
 async function callLLM({
@@ -576,6 +591,7 @@ async function callLLM({
   flowsBlock,
   settings,
   messages,
+  forceToolChoice,
 }: CallLLMParams): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
@@ -620,7 +636,7 @@ async function callLLM({
       model: process.env.LLM_MODEL || settings.model,
       messages: payloadMessages,
       tools: buildToolsForTurn(state, currentStepLabels),
-      tool_choice: 'auto',
+      tool_choice: forceToolChoice ? 'required' : 'auto',
       temperature: settings.temperature,
       max_tokens: settings.maxTokens,
     }),
@@ -798,8 +814,21 @@ async function agentTurnInternal(
 
   let state = getState(ctx.sessionId)
 
+  // The case is collected once serial number and problem description are in.
+  // From that point, with no flow attached, free text = an invented question
+  // (seen live 2026-08-04: "does the display show an error code?"). The only
+  // legitimate moves are start_flow or escalate_to_operator — enforced by the
+  // API via tool_choice, not by another sentence in the prompt (iron rule 1).
+  // Recomputed per hop: a flow may attach or detach during this very turn.
+  // FAQ conversations never collect a serial, so they are never forced and
+  // keep answering in free text.
+  const caseCollected = (s: SessionState) =>
+    !!s.serialNumber?.trim() && !!s.collectedData?.problemDescription
+
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
+    const mustForceToolChoice =
+      !isFirstTurn && !state.currentNodeId && !state.activeFlowId && caseCollected(state)
     const { text, toolCalls, tokensUsed: hopTokens } = await callLLM({
       commonPrompt,
       state,
@@ -810,9 +839,17 @@ async function agentTurnInternal(
       flowsBlock: state.activeFlowId ? undefined : flowsBlock,
       settings,
       messages,
+      forceToolChoice: mustForceToolChoice,
     })
 
     if (toolCalls.length === 0) {
+      if (mustForceToolChoice) {
+        // tool_choice=required was sent but the API returned no tool_calls —
+        // a provider contract violation, logged so it surfaces instead of
+        // silently passing an invented free-text reply through.
+        // eslint-disable-next-line no-console
+        console.error('[demoam] tool_choice=required returned no tool_calls — provider contract violation')
+      }
       const { reply, lang } = extractLanguage(text)
       if (lang) {
         commitLanguageFromReply(ctx.sessionId, resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage))

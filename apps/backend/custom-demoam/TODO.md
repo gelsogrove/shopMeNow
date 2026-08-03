@@ -117,15 +117,41 @@ SELECT in testa al file.
 più vero (il modulo la usa davvero per filtrare la lingua). Non ho toccato lo
 schema (Rule 13); il commento andrà aggiornato quando capita.
 
+## ✅ Primo giro reale — bug trovato e fissato (2026-08-04)
+
+Prima conversazione vera (taglio irregolare, canale amrobots): validazione
+seriale OK, raccolta caso OK, "non ho una procedura" onesto — MA il modello
+ha poi **inventato una domanda** ("il display mostra un codice di errore?")
+invece di passare dal gate, e ha escalato senza chiedere nome né check.
+
+Due cause, due fix:
+1. **Mancava `tool_choice: 'required'`** (il §10 di flow-runtime.md di
+   demorobot, non portato in demoam). Ora in `agent.ts`: col caso raccolto
+   (seriale + descrizione) e nessun flow attaccato, l'API obbliga il modello
+   a chiamare `start_flow` o `escalate_to_operator` — il testo libero (=la
+   domanda inventata) è strutturalmente impossibile. Le conversazioni FAQ
+   non raccolgono mai il seriale, quindi non vengono mai forzate.
+2. **`gateQuestions`/`humanSupportMessage` non configurati nel DB** → il
+   gate "fails toward silence" saltava tutto. Risolve lo script SQL.
+
+Decisioni Andrea 2026-08-04:
+- Path "nessun flow trovato" → gate COMPLETO (4 check tecnici + nome), non
+  solo il nome.
+- Hand-off message (base italiano, LLM traduce): "Grazie {{customerName}},
+  disattivo il chatbot e ti metto in comunicazione con il nostro customer
+  care, che ti contatterà il prima possibile."
+- Copy nel DB in italiano (lingua base, CLAUDE.md §1) — vedi SQL aggiornato.
+
 ## 🔬 Non ancora verificato
 
-- [ ] **Mai eseguito un turno reale contro l'API OpenRouter** — solo
-      typecheck + unit test. Nessuna verifica che il prompt produca davvero
-      la classificazione A/B/C attesa end-to-end.
+- [ ] **SQL Heroku non ancora eseguito** — vedi sopra. Senza, il gate resta
+      silenzioso (campi non configurati = saltati) e l'hand-off usa fallback.
+- [ ] **Secondo giro di test reale** dopo SQL + save: rifare la stessa
+      conversazione ("non taglia bene") e verificare: gate completo → nome →
+      hand-off col nome → niente domande inventate.
 - [ ] **Nessun flow reale creato** nel builder per demoam — `AVAILABLE
       FLOWS`/`start_flow` sono scritti ma non provati contro un flow vero
       salvato in DB.
-- [ ] **SQL Heroku non ancora eseguito** — vedi sopra.
 
 ## 📌 Note di design da ricordare
 
