@@ -1,0 +1,19 @@
+{
+  "model": "anthropic/claude-haiku-4.5",
+  "temperature": 0,
+  "maxTokens": 800,
+  "maxToolHops": 6,
+  "operatorBriefingLanguage": "en",
+  "operatorEmail": "echatbotai@gmail.com",
+  "emailFrom": "AmfoBots Bot <noreply@amfobots.demo>",
+  "emailSubjectPrefix": "[AmfoBots] Incident",
+  "maxMessageChars": 2000,
+  "maxMessagesPerMinute": 30,
+  "maxTurnsPerSession": 50,
+  "maxHistoryMessages": 30,
+  "privacyPolicyUrl": "https://www.echatbot.ai/privacy-policy",
+  "similarityThreshold": 0.7,
+  "topK": 3,
+  "audioOutput": false,
+  "audioVoices": {}
+}
