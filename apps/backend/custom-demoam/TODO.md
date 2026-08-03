@@ -142,16 +142,40 @@ Decisioni Andrea 2026-08-04:
   care, che ti contatterà il prima possibile."
 - Copy nel DB in italiano (lingua base, CLAUDE.md §1) — vedi SQL aggiornato.
 
+## ✅ Secondo giro reale su demoam — due bug trovati e fissati (2026-08-04)
+
+Setup completato: SQL eseguito su Supabase (workspace `5870e678-…`),
+deploy v1044, switch `customChatbotId='demoam'` fatto. Primo test demoam:
+niente welcome + domanda improvvisata ("quando hai notato? all'improvviso o
+gradualmente?"). Cause e fix:
+
+1. **Welcome mancante**: il numero nuovo aveva nome auto-generato
+   "Visitor o5thgaq6" → `hasKnownName=true` → `greeting='returning'` invece
+   di `'new'`. Fix in `chatbotFn`: un nome che inizia con `"Visitor "`
+   (convenzione host, `visitor-id.service.ts` — stesso check di
+   `prompt-variable-builder.service.ts`) non conta come nome noto.
+2. **Domanda improvvisata durante la raccolta**: mancava il gate di intake
+   di demorobot. Portato in `gate.ts` (`nextIntakeStep`/`formatIntakeBlock`,
+   ordine seriale → descrizione → quando, wording da `gateQuestions` incl.
+   nuova chiave `problemStartedWhen`): mentre il caso è incompleto il codice
+   detta LA domanda, l'LLM traduce. `tool_choice` forzato ora scatta a
+   intake completo, e **si spegne dopo il primo tool call del turno** —
+   altrimenti il loop resterebbe intrappolato (il testo dopo un rifiuto del
+   gate È la domanda dettata, non improvvisazione).
+
+⚠️ Nota per demorobot: il suo `mustForceToolChoice` NON ha lo spegnimento
+post-tool-call (punto 2) — sospetto abbia lo stesso rischio di trappola
+quando il gate rifiuta a intake già completo. Non toccato (Rule 13), da
+verificare con Andrea.
+
 ## 🔬 Non ancora verificato
 
-- [ ] **SQL Heroku non ancora eseguito** — vedi sopra. Senza, il gate resta
-      silenzioso (campi non configurati = saltati) e l'hand-off usa fallback.
-- [ ] **Secondo giro di test reale** dopo SQL + save: rifare la stessa
-      conversazione ("non taglia bene") e verificare: gate completo → nome →
-      hand-off col nome → niente domande inventate.
-- [ ] **Nessun flow reale creato** nel builder per demoam — `AVAILABLE
-      FLOWS`/`start_flow` sono scritti ma non provati contro un flow vero
-      salvato in DB.
+- [ ] **Deploy dei fix di questo giro** (Visitor-name + intake gate) — il
+      build v1044 NON li contiene, serve nuovo commit+push+deploy.
+- [ ] **Terzo giro di test** dopo il deploy: welcome per numero nuovo,
+      seriale → descrizione → quando dettati dal codice, gate completo,
+      hand-off col nome.
+- [ ] **Nessun flow reale creato** nel builder per demoam.
 
 ## 📌 Note di design da ricordare
 

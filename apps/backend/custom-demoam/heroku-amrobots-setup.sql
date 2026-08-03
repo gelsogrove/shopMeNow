@@ -88,6 +88,7 @@ SET "customChatbotAdvancedSettings" = '{
   "gateQuestions": {
     "serialNumber": "Puoi darmi il numero di serie del robot? Lo trovi sull''etichetta.",
     "problemDescription": "Puoi descrivermi brevemente cosa sta succedendo?",
+    "problemStartedWhen": "Da quando è iniziato il problema — oggi, ieri, o da più giorni?",
     "robotPoweredOn": "Il robot è acceso?",
     "wifiActive": "Il wifi è attivo?",
     "cutSchedulingActive": "È attivo un ciclo di taglio programmato?",

@@ -832,10 +832,18 @@ async function agentTurnInternal(
   // another sentence in the prompt (iron rule 1). Recomputed per hop: a flow
   // may attach or detach during this very turn. FAQ conversations never
   // collect a serial, so intake stays open and they are never forced.
+  // Forcing stops as soon as one tool call has run this turn: from then on
+  // free text is the DICTATED question a refusing tool just instructed (the
+  // gate's next check), not improvisation — keeping the force active there
+  // would trap the loop into burning gate fields without ever asking the
+  // customer anything.
+  let toolCallRanThisTurn = false
+
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
     const mustForceToolChoice =
       !isFirstTurn &&
+      !toolCallRanThisTurn &&
       !state.currentNodeId &&
       !state.activeFlowId &&
       nextIntakeStep(state, settings.gateQuestions) === null
@@ -873,6 +881,7 @@ async function agentTurnInternal(
     }
 
     history.push({ role: 'assistant', content: text || null, tool_calls: toolCalls })
+    toolCallRanThisTurn = true
 
     let escalated = false
     let escalationSummary: string | undefined
