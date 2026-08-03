@@ -1,0 +1,14 @@
+{
+  "name": "demoam-chatbot",
+  "version": "0.1.0",
+  "description": "demoAM chatbot — complaint/FAQ/troubleshooting router with pre-operator gate, sibling module to custom-demorobot",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}

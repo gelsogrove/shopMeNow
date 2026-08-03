@@ -35,7 +35,9 @@
 2. Cliente nuovo (numero di telefono non visto prima) → `welcomeMessage`.
 3. Cliente noto:
    - ultimo messaggio nello storico più vecchio di 1 ora → `welcomeBackMessage`
-     (welcome-back).
+     (welcome-back). Soglia di 1 ora **hardcoded nel codice** (decisione
+     esplicita di Andrea, 2026-08-03 — eccezione a Rule 1A registrata qui;
+     nel codice, commentare la costante con riferimento a questo file).
    - ultimo messaggio entro 1 ora → non è uno di questi due casi, si passa
      alla chat normale gestita dall'LLM (step successivo, fuori da questo
      step 1).
@@ -83,6 +85,12 @@ Va dritto al gate pre-operatore sopra, poi escalation.
 3. Non trovata → chiedere solo il nome (`callfunction` per salvarlo) e
    passare all'operatore — **non** l'intero gate di 7 campi sopra, qui basta
    il nome perché non c'è un problema tecnico da diagnosticare.
+   - Poiché in questo path seriale/descrizione/stato macchina non sono mai
+     stati raccolti, il messaggio di handoff verso l'operatore in questo
+     caso specifico deve segnalarlo (es. variante di `humanSupportMessage`
+     o flag nello stato passato all'operatore), così chi risponde sa di
+     dover chiedere lui i dettagli tecnici da zero invece di aspettarseli
+     già raccolti.
 
 ### 2-C — Troubleshooting
 
@@ -93,6 +101,8 @@ Va dritto al gate pre-operatore sopra, poi escalation.
      `serialNumberFormatHint`), **non** hardcoded — è specifico di questo
      tenant (vedi CLAUDE.md § 1A, esempio esplicito di violazione passata).
    - Dopo 3 tentativi non validi → gate pre-operatore, poi escalation.
+     Contatore **per-sessione**, non persistito (confermato — coerente col
+     pattern `registerFieldRequest` di demorobot, vedi `flow-runtime.md` § 6).
 2. Chiedere quando è iniziato il problema.
 3. Cercare un flow che risponda al problema descritto:
    - **Trovato** → agganciare quel flow ed eseguirlo con lo stesso motore
@@ -105,15 +115,34 @@ Va dritto al gate pre-operatore sopra, poi escalation.
      documenta e ha già risolto.
    - Il flow termina in un nodo `ESCALATE` → gate pre-operatore (di norma già
      soddisfatto a quel punto, essendo passato da qui), poi escalation.
+     ⚠️ **Non dare per scontato il riuso automatico dei campi**: verificato
+     su `custom-demorobot` (2026-08-03) che il motore flow-machine oggi
+     **non** copia le risposte dei nodi flow nel bucket che il gate legge
+     (`SessionState.collectedData`) — `FlowNode.fieldKey` esiste nel tipo ma
+     non è mai letto a runtime (`agent.ts`, handler di `answer_step`).
+     Risultato: se un nodo flow chiede "wifi acceso?" e poi si arriva al
+     gate, oggi il gate lo richiederebbe di nuovo. Per demoam, decidere
+     esplicitamente una delle due:
+     (a) auto-scrivere in `collectedData[node.fieldKey]` quando
+         `answer_step` matcha un nodo il cui `fieldKey` coincide con un
+         campo del gate;
+     (b) accettare la ridondanza per la prima versione e rivalutare se dà
+         fastidio in pratica.
+     Nessuna delle due è ancora stata scelta — bloccante per l'implementazione
+     del riuso campi, non per l'implementazione del resto del flusso.
    - **Non trovato** → gate pre-operatore, poi escalation (stesso comportamento
      di 2-A per il "non so aiutarti direttamente").
 
+## Decisioni prese con Andrea (2026-08-03)
+
+- ✅ Gate pre-operatore condiviso: 7 campi e ordine confermati come sopra.
+- ✅ Timeout welcome-back: hardcoded 1 ora nel codice (eccezione a Rule 1A,
+  vedi nota nello Step 1).
+- ✅ Contatore "3 tentativi" sul seriale: per-sessione, non persistito.
+
 ## Domande aperte / da decidere con Andrea prima di implementare
 
-- Il gate pre-operatore condiviso: conferma che i 7 campi e l'ordine sopra
-  sono corretti e completi (batteria come ultimo controllo tecnico, nome per
-  ultimo prima dell'escalation).
-- Timeout di 1 ora per welcome-back: valore fisso o da `settings.json`?
-- Contatore "3 tentativi" sul seriale: per-sessione o persistito? (in
-  demorobot il pattern equivalente — tentativi falliti su un nodo di flow —
-  usa `registerFieldRequest` per-campo, non globale, vedi `flow-runtime.md` § 6)
+- Riuso campi flow ↔ gate (vedi nota ⚠️ in 2-C.3): auto-copiare le risposte
+  dei nodi flow nel bucket del gate, o accettare la domanda ridondante nella
+  prima versione? Verificato che oggi non succede automaticamente in
+  demorobot, quindi va scelto esplicitamente, non presunto.
