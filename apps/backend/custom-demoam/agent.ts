@@ -482,8 +482,12 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       ok: true,
       dictates_text: true,
       instruction:
-        `Translate this exact answer into the customer's language and send it as your whole reply — do NOT ` +
-        `add facts of your own:\n\n${faq.answer}`,
+        `Translate this exact answer into the customer's language and send it as your whole reply, word for ` +
+        `word in meaning — nothing before it, nothing after it:\n\n${faq.answer}\n\n` +
+        'Do NOT add anything this text does not already say: no recommendation of your own ("I suggest X", ' +
+        '"X is right for you"), no comparison you computed yourself, no offer to connect them with a ' +
+        'colleague, no follow-up question. If the customer needs more than this answer gives them, that is ' +
+        'a new turn, not something to improvise now.',
     }
   }
 

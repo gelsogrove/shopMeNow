@@ -22,14 +22,14 @@
   "serialNumberPattern": "^HK.{17}$",
   "serialNumberFormatHint": "19 characters, starting with HK",
   "gateQuestions": {
-    "serialNumber": "Can you give me the device's serial number?",
-    "problemDescription": "Can you briefly describe what's happening?",
-    "problemStartedWhen": "When did the problem start — today, yesterday, or longer ago?",
-    "robotPoweredOn": "Is the device powered on?",
-    "wifiActive": "Is the wifi active?",
-    "cutSchedulingActive": "Is it currently on a scheduled cutting cycle?",
-    "batterySufficient": "Is the battery sufficiently charged?",
-    "name": "Can I have your name, please?"
+    "serialNumber": "To look into this properly, can you give me the device's serial number?",
+    "problemDescription": "Thanks — can you briefly describe what's happening with the robot?",
+    "problemStartedWhen": "And when did you first notice this — today, yesterday, or longer ago?",
+    "robotPoweredOn": "Let's make sure the robot is properly powered on — can you confirm that for me?",
+    "wifiActive": "To connect you with support, we need to check the wifi is connected — could you check that it's on?",
+    "cutSchedulingActive": "One more check — is it currently in the middle of a scheduled cutting cycle?",
+    "batterySufficient": "And is the battery charged enough right now?",
+    "name": "Last thing before I bring in a colleague — what's your name?"
   },
   "similarityThreshold": 0.7,
   "topK": 3,
