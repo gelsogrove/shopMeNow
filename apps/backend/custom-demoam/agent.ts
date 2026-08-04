@@ -1205,8 +1205,31 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
 
     const patches = drainPatches(sessionId)
 
+    // The greeting is configured copy, so the CODE attaches it — asking the
+    // LLM to open with it made it probabilistic (skipped or replaced on
+    // identical inputs, seen live 2026-08-04). {{customerName}} in the
+    // settings fallback is resolved here or dropped, never sent raw.
+    let reply = result.reply || ''
+    const finalGreeting = getState(sessionId).greeting
+    if (finalGreeting === 'new' || finalGreeting === 'returning') {
+      const rawGreet =
+        finalGreeting === 'new'
+          ? settings.welcomeMessage
+          : (input.config.messages?.welcomeBack ?? settings.welcomeBackMessage)
+      const knownName = getState(sessionId).name?.trim()
+      const greet = rawGreet
+        ?.replace(/\{\{\s*customerName\s*\}\}/gi, knownName || '')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+      if (greet) {
+        // Also covers the empty-reply edge: the customer at least gets the
+        // greeting instead of the host's hardcoded English default.
+        reply = reply ? `${greet}\n\n${reply}` : greet
+      }
+    }
+
     return {
-      reply: result.reply || null,
+      reply: reply || null,
       language: getState(sessionId).language,
       persistedState: dehydrateState(sessionId),
       shouldEscalate: result.escalated,
