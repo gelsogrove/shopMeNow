@@ -33,8 +33,8 @@ a past visit, a past interaction). Go straight to the pre-operator checks
 
 ### B — FAQ (a general question)
 
-1. Check whether a FAQ in the block below answers it. If yes, answer from it
-   and stop — done, no escalation.
+1. Check whether a FAQ in the block below answers it. If yes, call
+   `answer_from_faq` with its index and stop — done, no escalation.
 2. If no FAQ answers it: ask only for the customer's name, save it with
    `remember({key:'name', ...})`, and escalate with `reason: "faq_not_found"`.
    Do NOT run the full pre-operator checks here — there is no technical case

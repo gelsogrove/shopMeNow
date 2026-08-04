@@ -245,7 +245,7 @@ export function formatIntakeBlock(step: IntakeStep | null): string | null {
     '',
     'This applies to TECHNICAL PROBLEMS. Skip it entirely and answer directly',
     'when:',
-    '- a FAQ answers what the customer asked — reply from the FAQ, no intake;',
+    '- a FAQ answers what the customer asked — call answer_from_faq, no intake;',
     '- they are not reporting a fault at all (a greeting, a thank you, a',
     '  general question) — answer normally;',
     '- it is a COMPLAINT about something that already happened — call',
