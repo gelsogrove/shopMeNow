@@ -353,7 +353,7 @@ export function nextPreOperatorStep(
   return null
 }
 
-export function formatPreOperatorInstruction(step: PreOperatorStep): string {
+export function formatPreOperatorInstruction(step: { field: string; question: string }): string {
   return [
     'Before handing over to an operator, one check is still missing.',
     "Ask THIS question, verbatim, translated into the customer's language, and nothing else:",

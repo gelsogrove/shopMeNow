@@ -440,6 +440,7 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       return {
         ok: false,
         error: 'unrecognized_answer',
+        dictates_text: true,
         instruction:
           `"${label}" does not match any of the valid answers to the current question (${labels.join(', ')}). ` +
           'Ask a brief clarifying question about the SAME thing — do not move on or invent a new question.',
@@ -481,6 +482,7 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
           return {
             ok: false,
             error: 'invalid_serial_format_exhausted',
+            dictates_text: true,
             instruction:
               'The customer has failed to provide a valid serial number 3 times. Do NOT ask again: ' +
               'acknowledge that, and move straight to the pre-operator checks (call escalate_to_operator).',
@@ -489,6 +491,7 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
         return {
           ok: false,
           error: 'invalid_serial_format',
+          dictates_text: true,
           instruction:
             `"${candidate}" is not a valid serial number` +
             (ctx.serialNumberFormatHint ? ` — it must be ${ctx.serialNumberFormatHint}.` : '.') +
@@ -539,10 +542,53 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
         updateState(ctx.sessionId, { skippedTechnicalGate: true }, { mirror: false })
       }
 
-      // A serial number stuck at the 3-attempt cap must not block the gate
-      // forever on a field that will never be answered — it counts as
-      // "asked enough", same fails-toward-silence rule as an unconfigured
-      // question (nextPreOperatorStep skips it once askedCounts is maxed).
+      const technicalCase = !skipTechnical && !state.skippedTechnicalGate
+
+      // 1. The CASE comes first (steps.md 2-C.1/2.2): serial, description,
+      // when — the model used to skip "when" entirely by escalating early,
+      // because only the 7-field gate was enforced here. Complaints (2-A)
+      // are exempt from "when": there is no fault timeline to collect.
+      if (technicalCase && reason !== 'complaint') {
+        const intakeStep = nextIntakeStep(state, ctx.gateQuestions)
+        if (intakeStep && (getAskedCounts(ctx.sessionId)[intakeStep.field] ?? 0) < 2) {
+          registerFieldRequest(ctx.sessionId, intakeStep.field)
+          return {
+            ok: false,
+            error: 'case_details_required',
+            dictates_text: true,
+            instruction: formatPreOperatorInstruction(intakeStep),
+          }
+        }
+      }
+
+      // 2. The FLOW decision, forced exactly once (Andrea 2026-08-04, seen
+      // live: a flow for ERROR 001 sat in the catalogue while the model
+      // walked the whole gate and never considered it). The refusal carries
+      // NO dictates_text, so tool forcing stays on: the model can only
+      // answer with start_flow or escalate(reason='no_matching_flow') — a
+      // worded reply is rejected by the API. The declared no-match is then
+      // final for the session (flowCheckOffered), so this cannot loop.
+      if (
+        technicalCase &&
+        reason !== 'complaint' &&
+        !state.flowCheckOffered &&
+        (ctx.availableFlows?.length ?? 0) > 0
+      ) {
+        updateState(ctx.sessionId, { flowCheckOffered: true }, { mirror: false })
+        return {
+          ok: false,
+          error: 'flow_check_required',
+          instruction:
+            'Before handing over: one of the AVAILABLE FLOWS may cover this exact problem. ' +
+            'If one matches, call start_flow with its id NOW — the customer must get the guided ' +
+            'procedure, not an operator queue. ONLY if none genuinely matches, call ' +
+            'escalate_to_operator again immediately with reason "no_matching_flow".',
+        }
+      }
+
+      // 3. Only then the pre-operator gate. A field stuck at its ask cap
+      // does not block forever — it counts as "asked enough", same
+      // fails-toward-silence rule as an unconfigured question.
       const step = nextPreOperatorStep(state, ctx.gateQuestions, getAskedCounts(ctx.sessionId), {
         skipTechnical: skipTechnical || state.skippedTechnicalGate,
       })
@@ -551,6 +597,7 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
         return {
           ok: false,
           error: 'pre_operator_check_required',
+          dictates_text: true,
           instruction: formatPreOperatorInstruction(step),
         }
       }
@@ -640,13 +687,9 @@ async function callLLM({
 
   // Intake gate: while no flow is running and the case details are still
   // missing, the code dictates the exact question (see formatIntakeBlock in
-  // gate.ts) — the model translates it, it does not compose its own. When a
-  // greeting is due this turn, the dictated reply is greeting + question, so
-  // this block cannot override the WELCOME block into silence.
+  // gate.ts) — the model translates it, it does not compose its own.
   if (!state.currentNodeId) {
-    const intakeBlock = formatIntakeBlock(nextIntakeStep(state, settings.gateQuestions), {
-      withGreeting: state.greeting === 'new' || state.greeting === 'returning',
-    })
+    const intakeBlock = formatIntakeBlock(nextIntakeStep(state, settings.gateQuestions))
     if (intakeBlock) systemContent.push({ type: 'text', text: intakeBlock })
   }
 
@@ -723,26 +766,20 @@ function formatRuntimeBlock(
     `- Customer name: ${state.name?.trim() || 'unknown'}`,
   ]
 
-  // steps.md Step 1.2/1.3: welcome vs welcome-back is decided in CODE
-  // (resolveGreeting — new vs. returning customer, staleness threshold),
-  // not left to the LLM to guess. The wording itself is workspace copy from
-  // the DB-merged settings (or host-passed messages, {{customerName}}
-  // already substituted), rendered by the LLM in the customer's language.
-  if (state.greeting === 'new' && settings.welcomeMessage?.trim()) {
+  // NOTE deliberately NO welcome/welcome-back blocks here. Asking the LLM to
+  // "open with this greeting" made the greeting probabilistic: on identical
+  // input it sometimes greeted, sometimes skipped it, and once returned an
+  // empty reply (all seen live, 2026-08-04). The greeting is configured copy
+  // — the CODE prepends it to the final reply in chatbotFn (iron rule 16:
+  // when the model misbehaves, remove its freedom, don't plead in the
+  // prompt). The model is told the customer is new/returning only so its
+  // tone fits; it must NOT produce a greeting of its own.
+  if (state.greeting === 'new' || state.greeting === 'returning') {
     lines.push(
       '',
-      '## WELCOME (use INSTEAD of any greeting of your own — new customer)',
-      settings.welcomeMessage.trim(),
-      "Open with this greeting, translated into the customer's language, together with your reply to their message.",
-    )
-  }
-  if (state.greeting === 'returning' && (messages?.welcomeBack ?? settings.welcomeBackMessage)?.trim()) {
-    const text = (messages?.welcomeBack ?? settings.welcomeBackMessage)!.trim()
-    lines.push(
-      '',
-      '## WELCOME BACK (use INSTEAD of any greeting of your own — returning customer)',
-      text,
-      "Open with this greeting, translated into the customer's language, together with your reply to their message.",
+      `- This is a ${state.greeting === 'new' ? 'NEW customer' : 'returning customer'}. A greeting is`,
+      '  added automatically before your reply — do NOT write any greeting or',
+      '  welcome of your own, start directly with the substance of your reply.',
     )
   }
 
@@ -927,11 +964,14 @@ async function agentTurnInternal(
 
       const result = await executeTool(ctx, call.function.name, args)
 
-      // A refusal that carries an instruction dictates what the model must
-      // SAY next (a gate question, a re-ask, a clarification) — free text on
-      // the following hop is that dictated text, so the force lifts for the
-      // rest of this turn.
-      if (!result.ok && typeof result.instruction === 'string') {
+      // Only a refusal that dictates what the model must SAY next (a gate
+      // question, a re-ask, a clarification — marked dictates_text) lifts
+      // the force: free text on the following hop is that dictated text.
+      // Refusals that demand a TOOL instead (flow_check_required,
+      // unknown_flow_id) keep the force on — the answer to those is an
+      // action, and a worded reply would be exactly the improvisation this
+      // exists to prevent.
+      if (!result.ok && result.dictates_text === true) {
         refusalDictatedTextThisTurn = true
       }
 

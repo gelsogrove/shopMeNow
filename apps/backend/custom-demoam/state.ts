@@ -41,6 +41,12 @@ export interface SessionState {
   name?: string
   serialNumber?: string
 
+  // True once the escalate tool has already forced the explicit flow
+  // decision ("start a matching flow or declare no_matching_flow") for this
+  // session — the checkpoint fires exactly once, so a declared no-match
+  // doesn't loop forever.
+  flowCheckOffered?: boolean
+
   // True once the FAQ-not-found short-circuit (steps.md 2-B.3) was taken:
   // the pre-operator gate's technical fields were deliberately skipped, so
   // the operator briefing must say so rather than showing them as merely
