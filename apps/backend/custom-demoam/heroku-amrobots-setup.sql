@@ -28,6 +28,16 @@ SET
   "welcomeBackMessage"  = 'Bentornato {{customerName}}! Come posso aiutarti oggi?',
   "wipMessage"          = 'Il servizio è temporaneamente non disponibile. Riprova più tardi.',
   "humanSupportMessage" = 'Grazie {{customerName}}, disattivo il chatbot e ti metto in comunicazione con il nostro customer care, che ti contatterà il prima possibile.',
+  -- Fills {{humanSupportInstructions}} in the main prompt below (section
+  -- ESCALATION). Left unset until now, so that placeholder was rendering as
+  -- an empty line (Andrea 2026-08-04, found while auditing the DB prompt).
+  -- Mirrors the criteria already enforced in code (agent.ts OPERATING_RULES
+  -- + gate.ts's pre-operator gate) — this is just the customer-facing
+  -- restatement the model reads, not a new rule.
+  "humanSupportInstructions" = '- il gate pre-operatore è stato completato (numero di serie, descrizione, i controlli tecnici e il nome)
+- nessun flow tra quelli disponibili copre il problema descritto
+- il cliente ha un reclamo su qualcosa già accaduto
+- è un''emergenza (infortunio, incendio, danno)',
   "defaultLanguage"     = 'it',
   "enabledLanguages"    = ARRAY['it','en']
 WHERE name ILIKE '%amrobots%';

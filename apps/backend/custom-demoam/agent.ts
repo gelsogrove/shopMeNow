@@ -454,8 +454,11 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     }
 
     if (result.nextNodeId) {
+      updateState(ctx.sessionId, { currentNodeId: result.nextNodeId }, { mirror: false })
+
       const nextNode = currentNode(graph, result.nextNodeId)
       const isLeaf = !!nextNode && allowedLabels(graph, result.nextNodeId).length === 0
+      if (!isLeaf) return { ok: true, next_node_id: result.nextNodeId }
 
       // Reaching a LEAF node (no outgoing edges) is not "the next question" —
       // it is the flow's own ending, and formatFlowStepBlock has nothing to
@@ -468,35 +471,29 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       // nowhere in the graph). Dictating it HERE, the moment the leaf is
       // reached, mirrors how every other node's question is dictated — the
       // model translates, it never composes.
-      if (isLeaf) {
-        updateState(ctx.sessionId, { currentNodeId: result.nextNodeId }, { mirror: false })
-        if (nextNode!.terminalType === 'ESCALATE') {
-          detachFlow(ctx.sessionId)
-          return {
-            ok: true,
-            terminal: 'ESCALATE',
-            dictates_text: false,
-            instruction:
-              'This flow has reached its escalation point. Do NOT invent a diagnosis or a fix — call ' +
-              "escalate_to_operator now with reason 'diagnostic_exhausted' and a summary of what was " +
-              'gathered along this flow.',
-          }
-        }
-        detachFlow(ctx.sessionId)
+      detachFlow(ctx.sessionId)
+
+      if (nextNode!.terminalType === 'ESCALATE') {
         return {
           ok: true,
-          terminal: nextNode!.terminalType ?? 'END',
-          dictates_text: true,
+          terminal: 'ESCALATE',
+          dictates_text: false,
           instruction:
-            'This flow has reached its end. Translate this exact message into the customer\'s language ' +
-            'and send it as your whole reply — verbatim in meaning, not reworded, not summarized, and ' +
-            'do NOT add a diagnosis, a fix, or a next step of your own:\n\n' +
-            nextNode!.question,
+            'This flow has reached its escalation point. Do NOT invent a diagnosis or a fix — call ' +
+            "escalate_to_operator now with reason 'diagnostic_exhausted' and a summary of what was " +
+            'gathered along this flow.',
         }
       }
-
-      updateState(ctx.sessionId, { currentNodeId: result.nextNodeId }, { mirror: false })
-      return { ok: true, next_node_id: result.nextNodeId }
+      return {
+        ok: true,
+        terminal: nextNode!.terminalType ?? 'END',
+        dictates_text: true,
+        instruction:
+          'This flow has reached its end. Translate this exact message into the customer\'s language ' +
+          'and send it as your whole reply — verbatim in meaning, not reworded, not summarized, and ' +
+          'do NOT add a diagnosis, a fix, or a next step of your own:\n\n' +
+          nextNode!.question,
+      }
     }
 
     detachFlow(ctx.sessionId)
@@ -1038,22 +1035,30 @@ async function agentTurnInternal(
 
   let state = getState(ctx.sessionId)
 
-  // Once intake is COMPLETE (nextIntakeStep null: serial + description + when
-  // all collected, or unconfigured) and no flow is attached, free text = an
-  // invented question (seen live 2026-08-04: "does the display show an error
-  // code?"). The only legitimate moves left are start_flow or
-  // escalate_to_operator — enforced by the API via tool_choice, not by
-  // another sentence in the prompt (iron rule 1). Recomputed per hop: a flow
-  // may attach or detach during this very turn. FAQ conversations never
-  // collect a serial, so intake stays open and they are never forced.
-  // Free text is legitimate ONLY while there is something DICTATED to say:
-  // the next intake question (intake still open), or the question a refusing
-  // tool just instructed (gate check, invalid serial, unrecognized answer).
-  // Everything else — in particular the gap right after the case completes —
-  // stays forced onto start_flow/escalate_to_operator, so a diagnosis from
-  // training data has no opening. A refusal lifts the force for the rest of
-  // the turn (the model must be able to ASK the dictated question); a
-  // successful save does not.
+  // From the second turn onward, while no flow is attached, every hop forces
+  // tool_choice='required' — a free-text reply is rejected by the API itself,
+  // not merely discouraged in the prompt (iron rule 1). The customer is
+  // always either answering a question the code dictated last turn (an
+  // intake field, a pre-operator gate field, a flow question) or the case is
+  // fully collected with nothing left to dictate — in both situations the
+  // only legitimate moves are remember/answer_step/start_flow/
+  // escalate_to_operator, never plain text.
+  //
+  // Multiple production bugs came from leaving this 'auto' instead (Andrea
+  // 2026-08-04, all seen live): with the case complete and no flow matching,
+  // the model invented its own question ("does the display show an error
+  // code?"); mid pre-operator-gate, it wrote a closing sentence
+  // ("Disattivo il chatbot...") without ever calling escalate_to_operator,
+  // so no ticket/briefing/hand-off ever happened; mid-intake, it acknowledged
+  // an answer in plain text without calling remember, so the SAME intake
+  // question ("quando è successo?") got asked again next turn.
+  //
+  // isFirstTurn is the one exception: turn 1 is the model's OWN classification
+  // of complaint/faq/troubleshooting, not yet an answer to a dictated
+  // question, so free text is legitimate there. A refusal that dictates what
+  // to say next (dictates_text) lifts the force for the rest of THAT turn —
+  // the model must be able to ASK the dictated question or clarification a
+  // refusing tool just produced.
   let refusalDictatedTextThisTurn = false
 
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
@@ -1062,8 +1067,7 @@ async function agentTurnInternal(
       !isFirstTurn &&
       !refusalDictatedTextThisTurn &&
       !state.currentNodeId &&
-      !state.activeFlowId &&
-      nextIntakeStep(state, settings.gateQuestions) === null
+      !state.activeFlowId
     const { text, toolCalls, tokensUsed: hopTokens } = await callLLM({
       commonPrompt,
       state,

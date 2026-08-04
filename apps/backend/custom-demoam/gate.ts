@@ -262,6 +262,8 @@ export type PreOperatorField =
 export interface PreOperatorStep {
   field: PreOperatorField
   question: string
+  /** True when no other field in the gate would still be asked after this one. */
+  isLastStep: boolean
 }
 
 /**
@@ -321,22 +323,48 @@ export function nextPreOperatorStep(
   const { maxAsks = 2, skipTechnical = false } = opts
   const order = skipTechnical ? (['name'] as PreOperatorField[]) : PRE_OPERATOR_ORDER
 
-  for (const field of order) {
-    if (preOperatorAnswered(state, field)) continue
+  const askable = (field: PreOperatorField): boolean => {
+    if (preOperatorAnswered(state, field)) return false
+    if (!questions?.[field]?.trim()) return false
+    if ((askedCounts?.[field] ?? 0) >= maxAsks) return false
+    return true
+  }
 
-    const question = questions?.[field]?.trim()
-    if (!question) continue
+  for (let i = 0; i < order.length; i++) {
+    const field = order[i]
+    if (!askable(field)) continue
 
-    if ((askedCounts?.[field] ?? 0) >= maxAsks) continue
-
-    return { field, question }
+    const question = questions![field]!.trim()
+    // Andrea 2026-08-04, seen live: formatPreOperatorInstruction used to say
+    // "one check is still missing" verbatim on EVERY gate question, so the
+    // model improvised its own "last one before the operator" framing on
+    // EACH of the 4-5 remaining questions — "un'ultima domanda" said three
+    // times for three different fields. Whether this really is the last
+    // question is a fact the code already knows (nothing else in `order`
+    // is still askable) — it must never be left for the model to guess.
+    const isLastStep = !order.slice(i + 1).some(askable)
+    return { field, question, isLastStep }
   }
   return null
 }
 
-export function formatPreOperatorInstruction(step: { field: string; question: string }): string {
+export function formatPreOperatorInstruction(step: {
+  field: string
+  question: string
+  /**
+   * True only when the caller KNOWS no other check remains after this one
+   * (nextPreOperatorStep computes this for the real gate). Defaults to false
+   * — the safe assumption for intake steps (case_details_required), which
+   * are always followed by the technical checks and are never actually the
+   * last thing before the operator.
+   */
+  isLastStep?: boolean
+}): string {
   return [
-    'Before handing over to an operator, one check is still missing.',
+    // isLastStep is dictated, not guessed (see nextPreOperatorStep).
+    step.isLastStep
+      ? 'Before handing over to an operator, this is the LAST check still missing.'
+      : 'Before handing over to an operator, a few checks are still missing — this is one of them, not the last.',
     "Ask THIS question, verbatim, translated into the customer's language, and nothing else:",
     '',
     step.question,
@@ -344,10 +372,14 @@ export function formatPreOperatorInstruction(step: { field: string; question: st
     'Do NOT add other questions, do NOT offer options or possible causes, and do NOT',
     'rephrase it as a multiple-choice list. A brief acknowledgement of what the customer',
     'just said may come first, then this question.',
+    step.isLastStep
+      ? "Do NOT say anything else — do NOT announce or promise the hand-off in this same message, it hasn't happened yet."
+      : "Do NOT mention the hand-off or use words like \"last\"/\"one more thing\" — more checks remain after this one.",
     '',
     `When they answer, save it with remember({key:'${step.field}', value:'...'}), then call`,
     'escalate_to_operator again IN THE SAME TURN as that answer.',
-    'Never end a turn having only saved the answer: the hand-off must still happen.',
+    'Never end a turn having only saved the answer: the hand-off must still happen — but only',
+    'ANNOUNCE it in the turn where escalate_to_operator actually succeeds, never before.',
   ].join('\n')
 }
 
