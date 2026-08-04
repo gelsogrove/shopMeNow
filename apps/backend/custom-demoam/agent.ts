@@ -23,6 +23,7 @@ import {
   resolveGreeting,
   seedLanguageIfNeeded,
   SessionState,
+  setPendingGateField,
   updateState,
 } from './state.js'
 import { advance, allowedLabels, buildFlowGraph, currentNode } from './flow-machine.js'
@@ -517,6 +518,13 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       mergeCollectedData(ctx.sessionId, { [key]: value as JsonValue })
     }
 
+    // The answer the gate was waiting for has now actually been saved —
+    // clear the pending marker so escalate_to_operator's guard below stops
+    // refusing.
+    if (getState(ctx.sessionId).pendingGateField === key) {
+      setPendingGateField(ctx.sessionId, undefined)
+    }
+
     if (wasAskedByGate) {
       return {
         ok: true,
@@ -633,8 +641,32 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       const step = nextPreOperatorStep(state, ctx.gateQuestions, getAskedCounts(ctx.sessionId), {
         skipTechnical: skipTechnical || state.skippedTechnicalGate,
       })
+
+      // Guard against re-asking a question whose answer was never actually
+      // saved (Andrea 2026-08-04, seen live): the customer answers "si" to
+      // "is wifi active?", but instead of calling remember first the model
+      // calls escalate_to_operator again — which, since nothing was saved,
+      // dictates the SAME wifi question again, and the cycle repeats across
+      // wifi/cutScheduling/battery forever. "save it, THEN escalate" in
+      // formatPreOperatorInstruction is a request the model can ignore; this
+      // refusal makes it structural — escalate_to_operator itself refuses
+      // to move on to (or re-ask) a question while the previous one is still
+      // pending, forcing remember to be called first.
+      if (state.pendingGateField && state.pendingGateField === step?.field) {
+        return {
+          ok: false,
+          error: 'previous_answer_not_saved',
+          dictates_text: false,
+          instruction:
+            `The customer already answered the "${step.field}" question. Call ` +
+            `remember({key:'${step.field}', value:'...'}) with that answer FIRST — do not ask the ` +
+            'question again — then call escalate_to_operator again in the same turn.',
+        }
+      }
+
       if (step) {
         registerFieldRequest(ctx.sessionId, step.field)
+        setPendingGateField(ctx.sessionId, step.field)
         return {
           ok: false,
           error: 'pre_operator_check_required',
@@ -642,6 +674,7 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
           instruction: formatPreOperatorInstruction(step),
         }
       }
+      setPendingGateField(ctx.sessionId, undefined)
     }
 
     const isFirst = markEscalationOnce(ctx.sessionId, reason)

@@ -68,6 +68,18 @@ export interface SessionState {
   // every hop. 'returning' also carries whether the customer was away long
   // enough for welcome-back wording (see WELCOME_BACK_STALE_MS in agent.ts).
   greeting?: 'new' | 'returning' | 'none'
+
+  // The pre-operator gate field escalate_to_operator most recently dictated
+  // a question for (gate.ts nextPreOperatorStep). Cleared the moment that
+  // field is actually saved via remember. Andrea 2026-08-04, seen live: the
+  // model asked "is wifi active?", the customer answered "si", and instead of
+  // calling remember first the model called escalate_to_operator again —
+  // which re-asked the SAME question because nothing had been saved,
+  // producing an infinite wifi/cutScheduling/battery loop. A prompt sentence
+  // ("save it with remember, THEN escalate") is a request the model can
+  // ignore; this field lets escalate_to_operator refuse deterministically
+  // when the answer it just dictated was never actually saved.
+  pendingGateField?: string
 }
 
 export type PatchKey = 'name' | 'language' | 'serialNumber'
@@ -182,6 +194,10 @@ export function detachFlow(sessionId: string): void {
   e.state.activeFlowHash = undefined
   e.state.activeFlowGraphSnapshot = undefined
   e.state.currentNodeId = undefined
+}
+
+export function setPendingGateField(sessionId: string, field: string | undefined): void {
+  entry(sessionId).state.pendingGateField = field
 }
 
 export function resetState(sessionId: string): void {
