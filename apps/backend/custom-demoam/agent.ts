@@ -454,6 +454,47 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     }
 
     if (result.nextNodeId) {
+      const nextNode = currentNode(graph, result.nextNodeId)
+      const isLeaf = !!nextNode && allowedLabels(graph, result.nextNodeId).length === 0
+
+      // Reaching a LEAF node (no outgoing edges) is not "the next question" —
+      // it is the flow's own ending, and formatFlowStepBlock has nothing to
+      // dictate for it (labels.length === 0 → returns null). Left silent
+      // (bare {ok:true, next_node_id}), the model saw no instruction at all
+      // next turn and improvised its own text instead of the node's actual
+      // message (seen live 2026-08-04: flow's real SELF_SERVICE terminal read
+      // "aspettiamo che parta il robot e ti contatteremo", the model invented
+      // "prova a riavviare il robot" — a plausible-sounding fix that exists
+      // nowhere in the graph). Dictating it HERE, the moment the leaf is
+      // reached, mirrors how every other node's question is dictated — the
+      // model translates, it never composes.
+      if (isLeaf) {
+        updateState(ctx.sessionId, { currentNodeId: result.nextNodeId }, { mirror: false })
+        if (nextNode!.terminalType === 'ESCALATE') {
+          detachFlow(ctx.sessionId)
+          return {
+            ok: true,
+            terminal: 'ESCALATE',
+            dictates_text: false,
+            instruction:
+              'This flow has reached its escalation point. Do NOT invent a diagnosis or a fix — call ' +
+              "escalate_to_operator now with reason 'diagnostic_exhausted' and a summary of what was " +
+              'gathered along this flow.',
+          }
+        }
+        detachFlow(ctx.sessionId)
+        return {
+          ok: true,
+          terminal: nextNode!.terminalType ?? 'END',
+          dictates_text: true,
+          instruction:
+            'This flow has reached its end. Translate this exact message into the customer\'s language ' +
+            'and send it as your whole reply — verbatim in meaning, not reworded, not summarized, and ' +
+            'do NOT add a diagnosis, a fix, or a next step of your own:\n\n' +
+            nextNode!.question,
+        }
+      }
+
       updateState(ctx.sessionId, { currentNodeId: result.nextNodeId }, { mirror: false })
       return { ok: true, next_node_id: result.nextNodeId }
     }
@@ -1080,14 +1121,17 @@ async function agentTurnInternal(
 
       const result = await executeTool(ctx, call.function.name, args)
 
-      // Only a refusal that dictates what the model must SAY next (a gate
-      // question, a re-ask, a clarification — marked dictates_text) lifts
-      // the force: free text on the following hop is that dictated text.
-      // Refusals that demand a TOOL instead (flow_check_required,
-      // unknown_flow_id) keep the force on — the answer to those is an
-      // action, and a worded reply would be exactly the improvisation this
-      // exists to prevent.
-      if (!result.ok && result.dictates_text === true) {
+      // Only a result that dictates what the model must SAY next (a gate
+      // question, a re-ask, a clarification, a flow's terminal message —
+      // marked dictates_text) lifts the force: free text on the following hop
+      // is that dictated text. Usually a refusal (ok:false), but a flow
+      // reaching a SELF_SERVICE/END leaf is a legitimate ok:true case that
+      // still dictates verbatim text (the leaf node's own message) — see
+      // answer_step's isLeaf branch. Results that demand a TOOL instead
+      // (flow_check_required, unknown_flow_id, ESCALATE leaf) keep the force
+      // on — the answer to those is an action, and a worded reply would be
+      // exactly the improvisation this exists to prevent.
+      if (result.dictates_text === true) {
         refusalDictatedTextThisTurn = true
       }
 
