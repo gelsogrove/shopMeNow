@@ -500,10 +500,33 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       }
     }
 
+    // name was already asked once means it was asked BY the pre-operator gate
+    // (escalate_to_operator's step 3, gate.ts nextPreOperatorStep) — the only
+    // place that ever requests it, since intake never does. Saving it now is
+    // the LAST field of that gate, so escalate_to_operator succeeding is the
+    // only legitimate next move. Without a dictated instruction here the
+    // model improvised both "I already have your name" (false — this branch
+    // only runs on the FIRST save) and a premature "disconnecting the
+    // chatbot" before escalate_to_operator had actually been called and
+    // succeeded (seen live 2026-08-04).
+    const wasAskedByGate = key === 'name' && (getAskedCounts(ctx.sessionId)['name'] ?? 0) > 0
+
     if (key === 'name' || key === 'serialNumber') {
       updateState(ctx.sessionId, { [key]: String(value) })
     } else {
       mergeCollectedData(ctx.sessionId, { [key]: value as JsonValue })
+    }
+
+    if (wasAskedByGate) {
+      return {
+        ok: true,
+        name_saved: true,
+        instruction:
+          "Do NOT say you already had the customer's name, and do NOT tell them the handover has " +
+          'happened yet. Briefly acknowledge the name, then call escalate_to_operator again NOW with ' +
+          'the same reason as before — only after that call succeeds is the customer actually being ' +
+          'handed over.',
+      }
     }
 
     // Deterministic trigger, decided by code: the save that completes the
@@ -520,6 +543,24 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
           'The case is now complete. Your ONLY legitimate next move is start_flow with a ' +
           'matching flow from AVAILABLE FLOWS, or escalate_to_operator if none matches. ' +
           'NEVER diagnose the problem or give repair steps yourself — you do not have that knowledge.',
+      }
+    }
+
+    // A bare {ok:true} here left the model free to contradict its OWN tool
+    // result: with the serial ALREADY validated by the regex above (or any
+    // other successful save), it still answered "it's missing a character"
+    // and asked the customer to re-read the label (seen live 2026-08-04,
+    // HKA4OB100LQ26050197 — 19 chars, matched ^HK.{17}$ — rejected anyway).
+    // The THE QUESTION TO ASK NOW block below is supposed to redirect it to
+    // the next intake question, but nothing here told it the save succeeded,
+    // so it improvised a format complaint instead of trusting the tool.
+    if (key === 'serialNumber') {
+      return {
+        ok: true,
+        serial_number_accepted: true,
+        instruction:
+          `The serial number "${String(value).trim()}" is VALID and has been saved — do NOT say it is ` +
+          'incomplete, malformed, or ask the customer to re-check it. Move on to the next question.',
       }
     }
     return { ok: true }
@@ -632,6 +673,8 @@ interface CallLLMParams {
   flowsBlock: string | undefined
   settings: Settings
   messages?: WorkspaceMessages | null
+  /** Resolved (customerName substituted) welcome/welcomeBack text still needing translation this turn — see resolveGreetingText. */
+  greetingToTranslate?: string
   /**
    * When true, the model MUST call a tool this hop — a free-text reply is
    * rejected by the API itself, not merely discouraged in the prompt.
@@ -657,12 +700,13 @@ async function callLLM({
   flowsBlock,
   settings,
   messages,
+  greetingToTranslate,
   forceToolChoice,
 }: CallLLMParams): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
   const stateBlock = formatStateForPrompt(state)
-  const runtimeBlock = formatRuntimeBlock(operatorBriefingLanguageOverride, isFirstTurn, settings, state, messages)
+  const runtimeBlock = formatRuntimeBlock(operatorBriefingLanguageOverride, isFirstTurn, settings, state, messages, greetingToTranslate)
 
   const systemContent: Array<Record<string, unknown>> = [
     { type: 'text', text: commonPrompt, cache_control: { type: 'ephemeral' } },
@@ -735,6 +779,25 @@ async function callLLM({
   return { text, toolCalls, tokensUsed }
 }
 
+/**
+ * Which greeting text (if any) the model must translate and open with this
+ * turn, {{customerName}} already substituted. CODE still decides whether a
+ * greeting is due at all (state.greeting, set once per turn in chatbotFn) —
+ * this only resolves WHICH configured string that is. Empty/unconfigured
+ * resolves to undefined so formatRuntimeBlock's fallback branch fires instead
+ * (no greeting invented when none is configured, CLAUDE.md §1A).
+ */
+function resolveGreetingText(state: SessionState, settings: Settings, messages: WorkspaceMessages | undefined): string | undefined {
+  if (state.greeting !== 'new' && state.greeting !== 'returning') return undefined
+  const raw = state.greeting === 'new' ? settings.welcomeMessage : (messages?.welcomeBack ?? settings.welcomeBackMessage)
+  const knownName = state.name?.trim()
+  const resolved = raw
+    ?.replace(/\{\{\s*customerName\s*\}\}/gi, knownName || '')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+  return resolved || undefined
+}
+
 function formatFaqBlock(faqs: FaqEntry[]): string | undefined {
   if (!faqs.length) return undefined
   const entries = faqs.map((f) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')
@@ -755,6 +818,7 @@ function formatRuntimeBlock(
   settings: Settings,
   state: SessionState,
   messages: WorkspaceMessages | null | undefined,
+  greetingToTranslate: string | undefined,
 ): string {
   const now = new Date()
   const lines = [
@@ -766,21 +830,39 @@ function formatRuntimeBlock(
     `- Customer name: ${state.name?.trim() || 'unknown'}`,
   ]
 
-  // NOTE deliberately NO welcome/welcome-back blocks here. Asking the LLM to
-  // "open with this greeting" made the greeting probabilistic: on identical
-  // input it sometimes greeted, sometimes skipped it, and once returned an
-  // empty reply (all seen live, 2026-08-04). The greeting is configured copy
-  // — the CODE prepends it to the final reply in chatbotFn (iron rule 16:
-  // when the model misbehaves, remove its freedom, don't plead in the
-  // prompt). The model is told the customer is new/returning only so its
-  // tone fits; it must NOT produce a greeting of its own.
+  // The greeting text itself is still decided entirely by CODE (which one,
+  // {{customerName}} substitution, whether one is due at all — chatbotFn /
+  // resolveGreeting) — the LLM is never free to choose or skip it, same
+  // guarantee as before. What changed (Andrea, 2026-08-04): the old version
+  // attached the raw configured string to the reply AFTER the LLM had
+  // already finished and stripped its ⟦LANG:xx⟧ marker, so a customer
+  // writing in Italian got the English settings.json string verbatim. Dictating
+  // it here — like formatIntakeBlock/formatPreOperatorInstruction already do
+  // for gate questions — makes the OPENING sentence itself the one free
+  // thing the model must render in the reply, so it gets carried by the
+  // model's own OUTPUT FORMAT / language rules instead of bypassing them.
   if (state.greeting === 'new' || state.greeting === 'returning') {
-    lines.push(
-      '',
-      `- This is a ${state.greeting === 'new' ? 'NEW customer' : 'returning customer'}. A greeting is`,
-      '  added automatically before your reply — do NOT write any greeting or',
-      '  welcome of your own, start directly with the substance of your reply.',
-    )
+    if (greetingToTranslate) {
+      lines.push(
+        '',
+        '## THE GREETING TO OPEN WITH (mandatory, this turn only)',
+        '',
+        'Translate this exact sentence into the language you are about to reply in, and make it',
+        'the FIRST sentence of your reply — verbatim in meaning, not reworded, not summarized:',
+        '',
+        greetingToTranslate,
+        '',
+        'Then continue with the substance of your reply on the same message. Do NOT invent a',
+        'different greeting and do NOT add a second one.',
+      )
+    } else {
+      lines.push(
+        '',
+        `- This is a ${state.greeting === 'new' ? 'NEW customer' : 'returning customer'}. No greeting is`,
+        '  configured for this case — do NOT write one of your own, start directly with the',
+        '  substance of your reply.',
+      )
+    }
   }
 
   const humanSupport = messages?.humanSupport ?? settings.humanSupportMessage
@@ -918,6 +1000,7 @@ async function agentTurnInternal(
       flowsBlock: state.activeFlowId ? undefined : flowsBlock,
       settings,
       messages,
+      greetingToTranslate: resolveGreetingText(state, settings, messages),
       forceToolChoice: mustForceToolChoice,
     })
 
@@ -1008,6 +1091,7 @@ async function agentTurnInternal(
         flowsBlock: undefined,
         settings,
         messages,
+        greetingToTranslate: resolveGreetingText(state, settings, messages),
       })
       const { reply, lang } = extractLanguage(finalHop.text)
       if (lang) {
@@ -1205,27 +1289,19 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
 
     const patches = drainPatches(sessionId)
 
-    // The greeting is configured copy, so the CODE attaches it — asking the
-    // LLM to open with it made it probabilistic (skipped or replaced on
-    // identical inputs, seen live 2026-08-04). {{customerName}} in the
-    // settings fallback is resolved here or dropped, never sent raw.
+    // The greeting is configured copy, dictated to the LLM as a translated
+    // opening sentence (formatRuntimeBlock's "THE GREETING TO OPEN WITH"
+    // block) rather than attached here post-hoc — the old code-side
+    // attachment always sent the raw settings.json string, ignoring whatever
+    // language the customer was writing in (Andrea, 2026-08-04). This is only
+    // the fails-toward-something-safe fallback for the rare case the model's
+    // reply came back empty despite the dictated block (e.g. a refused tool
+    // call with no further hops), so the customer still gets a greeting
+    // instead of silence.
     let reply = result.reply || ''
-    const finalGreeting = getState(sessionId).greeting
-    if (finalGreeting === 'new' || finalGreeting === 'returning') {
-      const rawGreet =
-        finalGreeting === 'new'
-          ? settings.welcomeMessage
-          : (input.config.messages?.welcomeBack ?? settings.welcomeBackMessage)
-      const knownName = getState(sessionId).name?.trim()
-      const greet = rawGreet
-        ?.replace(/\{\{\s*customerName\s*\}\}/gi, knownName || '')
-        .replace(/\s{2,}/g, ' ')
-        .trim()
-      if (greet) {
-        // Also covers the empty-reply edge: the customer at least gets the
-        // greeting instead of the host's hardcoded English default.
-        reply = reply ? `${greet}\n\n${reply}` : greet
-      }
+    if (!reply) {
+      const greet = resolveGreetingText(getState(sessionId), settings, input.config.messages ?? undefined)
+      if (greet) reply = greet
     }
 
     return {
