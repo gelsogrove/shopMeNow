@@ -7,6 +7,7 @@ import {
   detachFlow,
   drainPatches,
   extractLanguage,
+  FlowGraphNodeSnapshot,
   getAskedCounts,
   hydrateState,
   formatStateForPrompt,
@@ -266,6 +267,26 @@ const ABANDON_FLOW_TOOL = {
   },
 } as const
 
+function answerFromFaqTool(faqCount: number) {
+  return {
+    type: 'function',
+    function: {
+      name: 'answer_from_faq',
+      description:
+        'Answer the customer from one of the entries in the FAQ block, by its index. The tool returns the ' +
+        'approved answer text — translate it into the customer\'s language and send it, do not write your own wording of the fact.',
+      parameters: {
+        type: 'object',
+        properties: {
+          faqIndex: { type: 'integer', minimum: 0, maximum: Math.max(faqCount - 1, 0) },
+        },
+        required: ['faqIndex'],
+        additionalProperties: false,
+      },
+    },
+  } as const
+}
+
 function answerStepTool(labels: string[]) {
   return {
     type: 'function',
@@ -283,17 +304,12 @@ function answerStepTool(labels: string[]) {
   } as const
 }
 
-/**
- * Tools available this turn, decided by phase (flow-runtime.md §9 pattern):
- * a flow is attached -> answer_step/remember/abandon_flow/escalate; no flow
- * attached -> start_flow/remember/escalate. A tool not exposed cannot be
- * misused.
- */
-function buildToolsForTurn(state: SessionState, labels: string[]): ReadonlyArray<Record<string, unknown>> {
+function buildToolsForTurn(state: SessionState, labels: string[], faqCount: number): ReadonlyArray<Record<string, unknown>> {
+  const faqTool = faqCount > 0 ? [answerFromFaqTool(faqCount)] : []
   if (state.currentNodeId) {
-    return [answerStepTool(labels), REMEMBER_TOOL, ABANDON_FLOW_TOOL, ESCALATE_TOOL]
+    return [answerStepTool(labels), REMEMBER_TOOL, ABANDON_FLOW_TOOL, ESCALATE_TOOL, ...faqTool]
   }
-  return [START_FLOW_TOOL, REMEMBER_TOOL, ESCALATE_TOOL]
+  return [START_FLOW_TOOL, REMEMBER_TOOL, ESCALATE_TOOL, ...faqTool]
 }
 
 // ── Operating rules (always injected, never editable per tenant) ───────────
@@ -326,10 +342,10 @@ const OPERATING_RULES = [
   '',
   '- **complaint** — the customer is unhappy about something that already',
   '  happened. Go straight to the pre-operator checks, then escalate.',
-  '- **faq** — a general question a FAQ answers. Reply from the FAQ. If no FAQ',
-  '  answers it, ask only for their name and escalate (reason "faq_not_found")',
-  '  — do NOT run the full pre-operator checks for this case, there is no',
-  '  technical problem to diagnose.',
+  '- **faq** — a general question a FAQ answers. Call answer_from_faq with its',
+  '  index. If no FAQ answers it, ask only for their name and escalate (reason',
+  '  "faq_not_found") — do NOT run the full pre-operator checks for this case,',
+  '  there is no technical problem to diagnose.',
   '- **troubleshooting** — the customer describes a problem to fix. Ask for the',
   '  serial number, then when it started, then look for a matching flow in',
   '  AVAILABLE FLOWS. If one matches, start_flow and follow it. If its terminal',
@@ -402,6 +418,7 @@ interface ToolContext {
   customerName?: string
   operatorBriefingLanguageOverride?: string | null
   availableFlows?: FlowSummary[]
+  availableFaqs?: FaqEntry[]
   loadFlow?: LoadFlowHandler
   gateQuestions?: GateQuestions | null
   serialNumberPattern?: string
@@ -419,9 +436,58 @@ function recordEscalation(params: { ticketId: string; reason: string; summary: s
   console.error(`[demoam][escalation] ${ticketId} reason=${reason}\n${summary}`)
 }
 
+function terminalFlowNodeResult(sessionId: string, node: FlowGraphNodeSnapshot): ToolResult {
+  detachFlow(sessionId)
+
+  if (node.terminalType === 'ESCALATE') {
+    return {
+      ok: true,
+      terminal: 'ESCALATE',
+      dictates_text: false,
+      instruction:
+        'This flow has reached its escalation point. Do NOT invent a diagnosis or a fix — call ' +
+        "escalate_to_operator now with reason 'diagnostic_exhausted' and a summary of what was " +
+        'gathered along this flow.',
+    }
+  }
+
+  return {
+    ok: true,
+    terminal: node.terminalType ?? 'END',
+    dictates_text: true,
+    instruction:
+      'This flow has reached its end. Translate this exact message into the customer\'s language ' +
+      'and send it as your whole reply — verbatim in meaning, not reworded, not summarized, and ' +
+      'do NOT add a diagnosis, a fix, or a next step of your own:\n\n' +
+      node.question,
+  }
+}
+
 async function executeTool(ctx: ToolContext, name: string, args: Record<string, unknown>): Promise<ToolResult> {
   if (name === 'start_flow') {
     return startFlow(ctx, args)
+  }
+
+  if (name === 'answer_from_faq') {
+    const faqs = ctx.availableFaqs ?? []
+    const faqIndex = typeof args.faqIndex === 'number' ? args.faqIndex : Number(args.faqIndex)
+    const faq = Number.isInteger(faqIndex) ? faqs[faqIndex] : undefined
+
+    if (!faq) {
+      return {
+        ok: false,
+        error: 'unknown_faq_index',
+        instruction: `faqIndex ${String(args.faqIndex)} is not in the FAQ block. Use one of the indices shown there, or escalate if none fits.`,
+      }
+    }
+
+    return {
+      ok: true,
+      dictates_text: true,
+      instruction:
+        `Translate this exact answer into the customer's language and send it as your whole reply — do NOT ` +
+        `add facts of your own:\n\n${faq.answer}`,
+    }
   }
 
   if (name === 'answer_step') {
@@ -457,43 +523,10 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       updateState(ctx.sessionId, { currentNodeId: result.nextNodeId }, { mirror: false })
 
       const nextNode = currentNode(graph, result.nextNodeId)
-      const isLeaf = !!nextNode && allowedLabels(graph, result.nextNodeId).length === 0
-      if (!isLeaf) return { ok: true, next_node_id: result.nextNodeId }
+      const nextNodeIsLeaf = !!nextNode && allowedLabels(graph, result.nextNodeId).length === 0
+      if (!nextNodeIsLeaf) return { ok: true, next_node_id: result.nextNodeId, dictates_text: true }
 
-      // Reaching a LEAF node (no outgoing edges) is not "the next question" —
-      // it is the flow's own ending, and formatFlowStepBlock has nothing to
-      // dictate for it (labels.length === 0 → returns null). Left silent
-      // (bare {ok:true, next_node_id}), the model saw no instruction at all
-      // next turn and improvised its own text instead of the node's actual
-      // message (seen live 2026-08-04: flow's real SELF_SERVICE terminal read
-      // "aspettiamo che parta il robot e ti contatteremo", the model invented
-      // "prova a riavviare il robot" — a plausible-sounding fix that exists
-      // nowhere in the graph). Dictating it HERE, the moment the leaf is
-      // reached, mirrors how every other node's question is dictated — the
-      // model translates, it never composes.
-      detachFlow(ctx.sessionId)
-
-      if (nextNode!.terminalType === 'ESCALATE') {
-        return {
-          ok: true,
-          terminal: 'ESCALATE',
-          dictates_text: false,
-          instruction:
-            'This flow has reached its escalation point. Do NOT invent a diagnosis or a fix — call ' +
-            "escalate_to_operator now with reason 'diagnostic_exhausted' and a summary of what was " +
-            'gathered along this flow.',
-        }
-      }
-      return {
-        ok: true,
-        terminal: nextNode!.terminalType ?? 'END',
-        dictates_text: true,
-        instruction:
-          'This flow has reached its end. Translate this exact message into the customer\'s language ' +
-          'and send it as your whole reply — verbatim in meaning, not reworded, not summarized, and ' +
-          'do NOT add a diagnosis, a fix, or a next step of your own:\n\n' +
-          nextNode!.question,
-      }
+      return terminalFlowNodeResult(ctx.sessionId, nextNode!)
     }
 
     detachFlow(ctx.sessionId)
@@ -518,6 +551,7 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       if (!new RegExp(ctx.serialNumberPattern, 'i').test(candidate)) {
         const attempts = registerFieldRequest(ctx.sessionId, SERIAL_ATTEMPTS_KEY)
         if (attempts >= MAX_SERIAL_ATTEMPTS) {
+          updateState(ctx.sessionId, { serialNumberExhausted: true }, { mirror: false })
           return {
             ok: false,
             error: 'invalid_serial_format_exhausted',
@@ -539,16 +573,7 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       }
     }
 
-    // name was already asked once means it was asked BY the pre-operator gate
-    // (escalate_to_operator's step 3, gate.ts nextPreOperatorStep) — the only
-    // place that ever requests it, since intake never does. Saving it now is
-    // the LAST field of that gate, so escalate_to_operator succeeding is the
-    // only legitimate next move. Without a dictated instruction here the
-    // model improvised both "I already have your name" (false — this branch
-    // only runs on the FIRST save) and a premature "disconnecting the
-    // chatbot" before escalate_to_operator had actually been called and
-    // succeeded (seen live 2026-08-04).
-    const wasAskedByGate = key === 'name' && (getAskedCounts(ctx.sessionId)['name'] ?? 0) > 0
+    const nameWasRequestedByPreOperatorGate = key === 'name' && (getAskedCounts(ctx.sessionId)['name'] ?? 0) > 0
 
     if (key === 'name' || key === 'serialNumber') {
       updateState(ctx.sessionId, { [key]: String(value) })
@@ -556,14 +581,11 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       mergeCollectedData(ctx.sessionId, { [key]: value as JsonValue })
     }
 
-    // The answer the gate was waiting for has now actually been saved —
-    // clear the pending marker so escalate_to_operator's guard below stops
-    // refusing.
     if (getState(ctx.sessionId).pendingGateField === key) {
       setPendingGateField(ctx.sessionId, undefined)
     }
 
-    if (wasAskedByGate) {
+    if (nameWasRequestedByPreOperatorGate) {
       return {
         ok: true,
         name_saved: true,
@@ -592,14 +614,6 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       }
     }
 
-    // A bare {ok:true} here left the model free to contradict its OWN tool
-    // result: with the serial ALREADY validated by the regex above (or any
-    // other successful save), it still answered "it's missing a character"
-    // and asked the customer to re-read the label (seen live 2026-08-04,
-    // HKA4OB100LQ26050197 — 19 chars, matched ^HK.{17}$ — rejected anyway).
-    // The THE QUESTION TO ASK NOW block below is supposed to redirect it to
-    // the next intake question, but nothing here told it the save succeeded,
-    // so it improvised a format complaint instead of trusting the tool.
     if (key === 'serialNumber') {
       return {
         ok: true,
@@ -680,17 +694,8 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
         skipTechnical: skipTechnical || state.skippedTechnicalGate,
       })
 
-      // Guard against re-asking a question whose answer was never actually
-      // saved (Andrea 2026-08-04, seen live): the customer answers "si" to
-      // "is wifi active?", but instead of calling remember first the model
-      // calls escalate_to_operator again — which, since nothing was saved,
-      // dictates the SAME wifi question again, and the cycle repeats across
-      // wifi/cutScheduling/battery forever. "save it, THEN escalate" in
-      // formatPreOperatorInstruction is a request the model can ignore; this
-      // refusal makes it structural — escalate_to_operator itself refuses
-      // to move on to (or re-ask) a question while the previous one is still
-      // pending, forcing remember to be called first.
-      if (state.pendingGateField && state.pendingGateField === step?.field) {
+      const gateFieldStillUnanswered = state.pendingGateField && state.pendingGateField === step?.field
+      if (gateFieldStillUnanswered) {
         return {
           ok: false,
           error: 'previous_answer_not_saved',
@@ -741,6 +746,7 @@ interface CallLLMParams {
   operatorBriefingLanguageOverride: string | null | undefined
   isFirstTurn: boolean
   faqBlock: string | undefined
+  faqCount: number
   flowsBlock: string | undefined
   settings: Settings
   messages?: WorkspaceMessages | null
@@ -768,6 +774,7 @@ async function callLLM({
   operatorBriefingLanguageOverride,
   isFirstTurn,
   faqBlock,
+  faqCount,
   flowsBlock,
   settings,
   messages,
@@ -824,7 +831,7 @@ async function callLLM({
     body: JSON.stringify({
       model: process.env.LLM_MODEL || settings.model,
       messages: payloadMessages,
-      tools: buildToolsForTurn(state, currentStepLabels),
+      tools: buildToolsForTurn(state, currentStepLabels, faqCount),
       tool_choice: forceToolChoice ? 'required' : 'auto',
       temperature: settings.temperature,
       max_tokens: settings.maxTokens,
@@ -871,13 +878,13 @@ function resolveGreetingText(state: SessionState, settings: Settings, messages: 
 
 function formatFaqBlock(faqs: FaqEntry[]): string | undefined {
   if (!faqs.length) return undefined
-  const entries = faqs.map((f) => `Q: ${f.question}\nA: ${f.answer}`).join('\n\n')
+  const entries = faqs.map((f, i) => `[${i}] Q: ${f.question}\nA: ${f.answer}`).join('\n\n')
   return [
     '',
     '═══ FAQ ═══',
     'Answers already approved by the company. When one of them answers the',
-    "customer's question, use it instead of a troubleshooting flow. Never",
-    'contradict a FAQ, and never invent an answer that is not here.',
+    "customer's question, call answer_from_faq with its index instead of",
+    'writing the answer yourself.',
     '',
     entries,
   ].join('\n')
@@ -901,17 +908,6 @@ function formatRuntimeBlock(
     `- Customer name: ${state.name?.trim() || 'unknown'}`,
   ]
 
-  // The greeting text itself is still decided entirely by CODE (which one,
-  // {{customerName}} substitution, whether one is due at all — chatbotFn /
-  // resolveGreeting) — the LLM is never free to choose or skip it, same
-  // guarantee as before. What changed (Andrea, 2026-08-04): the old version
-  // attached the raw configured string to the reply AFTER the LLM had
-  // already finished and stripped its ⟦LANG:xx⟧ marker, so a customer
-  // writing in Italian got the English settings.json string verbatim. Dictating
-  // it here — like formatIntakeBlock/formatPreOperatorInstruction already do
-  // for gate questions — makes the OPENING sentence itself the one free
-  // thing the model must render in the reply, so it gets carried by the
-  // model's own OUTPUT FORMAT / language rules instead of bypassing them.
   if (state.greeting === 'new' || state.greeting === 'returning') {
     if (greetingToTranslate) {
       lines.push(
@@ -985,7 +981,9 @@ function formatOperatorBriefing(params: {
 
   if (!state.skippedTechnicalGate) {
     lines.push('**Case**')
-    lines.push(`• Serial number: ${state.serialNumber?.trim() || 'not provided'}`)
+    lines.push(
+      `• Serial number: ${state.serialNumber?.trim() || (state.serialNumberExhausted ? 'not provided — customer failed 3 attempts' : 'not provided')}`,
+    )
     lines.push(`• Troubleshooting flow: ${state.activeFlowId || 'none matched'}`)
 
     const collected = state.collectedData ?? {}
@@ -1035,39 +1033,11 @@ async function agentTurnInternal(
 
   let state = getState(ctx.sessionId)
 
-  // From the second turn onward, while no flow is attached, every hop forces
-  // tool_choice='required' — a free-text reply is rejected by the API itself,
-  // not merely discouraged in the prompt (iron rule 1). The customer is
-  // always either answering a question the code dictated last turn (an
-  // intake field, a pre-operator gate field, a flow question) or the case is
-  // fully collected with nothing left to dictate — in both situations the
-  // only legitimate moves are remember/answer_step/start_flow/
-  // escalate_to_operator, never plain text.
-  //
-  // Multiple production bugs came from leaving this 'auto' instead (Andrea
-  // 2026-08-04, all seen live): with the case complete and no flow matching,
-  // the model invented its own question ("does the display show an error
-  // code?"); mid pre-operator-gate, it wrote a closing sentence
-  // ("Disattivo il chatbot...") without ever calling escalate_to_operator,
-  // so no ticket/briefing/hand-off ever happened; mid-intake, it acknowledged
-  // an answer in plain text without calling remember, so the SAME intake
-  // question ("quando è successo?") got asked again next turn.
-  //
-  // isFirstTurn is the one exception: turn 1 is the model's OWN classification
-  // of complaint/faq/troubleshooting, not yet an answer to a dictated
-  // question, so free text is legitimate there. A refusal that dictates what
-  // to say next (dictates_text) lifts the force for the rest of THAT turn —
-  // the model must be able to ASK the dictated question or clarification a
-  // refusing tool just produced.
-  let refusalDictatedTextThisTurn = false
+  let awaitingDictatedReply = false
 
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
-    const mustForceToolChoice =
-      !isFirstTurn &&
-      !refusalDictatedTextThisTurn &&
-      !state.currentNodeId &&
-      !state.activeFlowId
+    const mustForceToolChoice = !isFirstTurn && !awaitingDictatedReply
     const { text, toolCalls, tokensUsed: hopTokens } = await callLLM({
       commonPrompt,
       state,
@@ -1075,6 +1045,7 @@ async function agentTurnInternal(
       operatorBriefingLanguageOverride,
       isFirstTurn,
       faqBlock,
+      faqCount: ctx.availableFaqs?.length ?? 0,
       flowsBlock: state.activeFlowId ? undefined : flowsBlock,
       settings,
       messages,
@@ -1125,18 +1096,8 @@ async function agentTurnInternal(
 
       const result = await executeTool(ctx, call.function.name, args)
 
-      // Only a result that dictates what the model must SAY next (a gate
-      // question, a re-ask, a clarification, a flow's terminal message —
-      // marked dictates_text) lifts the force: free text on the following hop
-      // is that dictated text. Usually a refusal (ok:false), but a flow
-      // reaching a SELF_SERVICE/END leaf is a legitimate ok:true case that
-      // still dictates verbatim text (the leaf node's own message) — see
-      // answer_step's isLeaf branch. Results that demand a TOOL instead
-      // (flow_check_required, unknown_flow_id, ESCALATE leaf) keep the force
-      // on — the answer to those is an action, and a worded reply would be
-      // exactly the improvisation this exists to prevent.
       if (result.dictates_text === true) {
-        refusalDictatedTextThisTurn = true
+        awaitingDictatedReply = true
       }
 
       if (call.function.name === 'answer_step' && !result.ok && result.error === 'unrecognized_answer' && answeringNodeId) {
@@ -1169,6 +1130,7 @@ async function agentTurnInternal(
         operatorBriefingLanguageOverride,
         isFirstTurn,
         faqBlock,
+        faqCount: ctx.availableFaqs?.length ?? 0,
         flowsBlock: undefined,
         settings,
         messages,
@@ -1336,7 +1298,9 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     const getFaqs = input.config.handlers?.getFaqs
     if (getFaqs) {
       try {
-        faqBlock = formatFaqBlock(await getFaqs({ workspaceId: input.config.workspaceId }))
+        const faqs = await getFaqs({ workspaceId: input.config.workspaceId })
+        ctx.availableFaqs = faqs
+        faqBlock = formatFaqBlock(faqs)
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('[demoam] getFaqs handler threw, continuing without FAQ block', err)
@@ -1370,15 +1334,6 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
 
     const patches = drainPatches(sessionId)
 
-    // The greeting is configured copy, dictated to the LLM as a translated
-    // opening sentence (formatRuntimeBlock's "THE GREETING TO OPEN WITH"
-    // block) rather than attached here post-hoc — the old code-side
-    // attachment always sent the raw settings.json string, ignoring whatever
-    // language the customer was writing in (Andrea, 2026-08-04). This is only
-    // the fails-toward-something-safe fallback for the rare case the model's
-    // reply came back empty despite the dictated block (e.g. a refused tool
-    // call with no further hops), so the customer still gets a greeting
-    // instead of silence.
     let reply = result.reply || ''
     if (!reply) {
       const greet = resolveGreetingText(getState(sessionId), settings, input.config.messages ?? undefined)

@@ -54,6 +54,10 @@ export interface SessionState {
   // when in fact the case was never a technical diagnosis.
   skippedTechnicalGate?: boolean
 
+  // True once intake's 3-attempt serial number limit was hit. Tells
+  // nextPreOperatorStep to skip serialNumber instead of re-asking it.
+  serialNumberExhausted?: boolean
+
   // Open ISO 2-letter language code — decided by the LLM via the ⟦LANG:xx⟧
   // trailer, never a regex detector on user text (CLAUDE.md §14).
   language?: string
@@ -70,15 +74,7 @@ export interface SessionState {
   greeting?: 'new' | 'returning' | 'none'
 
   // The pre-operator gate field escalate_to_operator most recently dictated
-  // a question for (gate.ts nextPreOperatorStep). Cleared the moment that
-  // field is actually saved via remember. Andrea 2026-08-04, seen live: the
-  // model asked "is wifi active?", the customer answered "si", and instead of
-  // calling remember first the model called escalate_to_operator again —
-  // which re-asked the SAME question because nothing had been saved,
-  // producing an infinite wifi/cutScheduling/battery loop. A prompt sentence
-  // ("save it with remember, THEN escalate") is a request the model can
-  // ignore; this field lets escalate_to_operator refuse deterministically
-  // when the answer it just dictated was never actually saved.
+  // a question for. Cleared once remember actually saves that field.
   pendingGateField?: string
 }
 

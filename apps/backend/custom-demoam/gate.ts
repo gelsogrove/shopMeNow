@@ -144,7 +144,7 @@ export async function startFlow(
     const graph = { nodes: loaded.nodes, rootNodeId: rootNodeId(buildFlowGraph(loaded.nodes)) }
     attachFlow(ctx.sessionId, flowId, loaded.hash ?? '', graph)
     const match = available.find((f) => f.flowId === flowId)
-    return { ok: true, flow_id: flowId, title: match?.title }
+    return { ok: true, flow_id: flowId, title: match?.title, dictates_text: true }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[demoam] loadFlow failed', err)
@@ -209,7 +209,7 @@ export function nextIntakeStep(
 export function formatIntakeBlock(step: IntakeStep | null): string | null {
   if (!step) return null
 
-  return [
+  const lines = [
     '## THE QUESTION TO ASK NOW',
     '',
     'This overrides every other instruction in this prompt, including anything',
@@ -222,6 +222,19 @@ export function formatIntakeBlock(step: IntakeStep | null): string | null {
     'Do NOT add other questions, do NOT offer options or possible causes, and',
     'do NOT rephrase it into a multiple-choice list. A brief acknowledgement of',
     'what the customer just said may come first, then this question.',
+  ]
+
+  if (step.field === 'serialNumber') {
+    lines.push(
+      '',
+      'Even if the customer has said very little about what is wrong (a vague ' +
+        '"there is an error" with no code, no details), do NOT ask them to clarify the problem first. ' +
+        'The serial number is always the very first question — ask it now, the problem gets clarified ' +
+        'by the NEXT question (problem description), never before this one.',
+    )
+  }
+
+  lines.push(
     '',
     `When they answer, save it with remember({key:'${step.field}', value:'...'}).`,
     '',
@@ -240,7 +253,9 @@ export function formatIntakeBlock(step: IntakeStep | null): string | null {
     '- what they said matches a flow in AVAILABLE FLOWS — call start_flow and',
     '  follow that flow from its first step;',
     '- it is an emergency — escalate immediately.',
-  ].join('\n')
+  )
+
+  return lines.join('\n')
 }
 
 // ── Pre-operator gate — one gate, from every road ───────────────────────────
@@ -325,6 +340,7 @@ export function nextPreOperatorStep(
 
   const askable = (field: PreOperatorField): boolean => {
     if (preOperatorAnswered(state, field)) return false
+    if (field === 'serialNumber' && state.serialNumberExhausted) return false
     if (!questions?.[field]?.trim()) return false
     if ((askedCounts?.[field] ?? 0) >= maxAsks) return false
     return true
@@ -335,15 +351,8 @@ export function nextPreOperatorStep(
     if (!askable(field)) continue
 
     const question = questions![field]!.trim()
-    // Andrea 2026-08-04, seen live: formatPreOperatorInstruction used to say
-    // "one check is still missing" verbatim on EVERY gate question, so the
-    // model improvised its own "last one before the operator" framing on
-    // EACH of the 4-5 remaining questions — "un'ultima domanda" said three
-    // times for three different fields. Whether this really is the last
-    // question is a fact the code already knows (nothing else in `order`
-    // is still askable) — it must never be left for the model to guess.
-    const isLastStep = !order.slice(i + 1).some(askable)
-    return { field, question, isLastStep }
+    const noRemainingFieldsAreAskable = !order.slice(i + 1).some(askable)
+    return { field, question, isLastStep: noRemainingFieldsAreAskable }
   }
   return null
 }
@@ -361,7 +370,6 @@ export function formatPreOperatorInstruction(step: {
   isLastStep?: boolean
 }): string {
   return [
-    // isLastStep is dictated, not guessed (see nextPreOperatorStep).
     step.isLastStep
       ? 'Before handing over to an operator, this is the LAST check still missing.'
       : 'Before handing over to an operator, a few checks are still missing — this is one of them, not the last.',
