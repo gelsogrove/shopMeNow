@@ -407,10 +407,12 @@ function sanitizeUserMessage(raw: string, maxMessageChars: number): string {
   return s
 }
 
-// steps.md 2-C.1: after 3 invalid serial-number attempts, stop asking and
-// fall straight to the pre-operator gate rather than looping forever.
 const MAX_SERIAL_ATTEMPTS = 3
 const SERIAL_ATTEMPTS_KEY = 'serialNumber_invalid'
+
+const MIN_PROBLEM_DESCRIPTION_CHARS = 8
+const MAX_PROBLEM_DESCRIPTION_ATTEMPTS = 2
+const PROBLEM_DESCRIPTION_ATTEMPTS_KEY = 'problemDescription_vague'
 
 interface ToolContext {
   sessionId: string
@@ -569,6 +571,33 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
             `"${candidate}" is not a valid serial number` +
             (ctx.serialNumberFormatHint ? ` — it must be ${ctx.serialNumberFormatHint}.` : '.') +
             ' Tell the customer this and ask them to re-check it.',
+        }
+      }
+    }
+
+    if (key === 'problemDescription') {
+      const candidate = String(value).trim()
+      if (candidate.length < MIN_PROBLEM_DESCRIPTION_CHARS) {
+        const attempts = registerFieldRequest(ctx.sessionId, PROBLEM_DESCRIPTION_ATTEMPTS_KEY)
+        if (attempts >= MAX_PROBLEM_DESCRIPTION_ATTEMPTS) {
+          return {
+            ok: false,
+            error: 'problem_description_too_vague_exhausted',
+            dictates_text: true,
+            instruction:
+              'The customer could not give more detail after being asked twice. Do NOT ask again: ' +
+              'acknowledge that and move on to the next question.',
+          }
+        }
+        return {
+          ok: false,
+          error: 'problem_description_too_vague',
+          dictates_text: true,
+          instruction:
+            `"${candidate}" is too generic to be a problem description — it does not say what is ` +
+            'actually wrong with the robot. Ask ONE specific follow-up (what exactly is happening: an ' +
+            'error code, a sound, a light, the robot not moving, etc.) and call remember again once ' +
+            'they answer.',
         }
       }
     }

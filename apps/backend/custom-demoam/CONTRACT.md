@@ -3,13 +3,14 @@ rifacciamo, vediamo se hai capito, cosa ti torna e cosa manca
 - se il channel è disattivo parte il wip message
 - se l'utente è nuovo facciamo il welcome message, se l'utente non è nuovo facciamo il welcome back message chiamandolo con il nome
 - se riconosciamo che è un problema chiediamo prima di tutto il serial number, la spiegazione, quando è successo e poi seguiamo il flusso dello Human operator flow
+- la spiegazione del problema non può essere generica, deve avere un minimo di dettaglio
 - se è una faq non c'è bisogno del numero di serie
 - il numero di serie deve essere di 19 caratteri, deve essere validato; dopo 3 volte contatta operatore
 - se riconosciamo che è una faq rispondiamo con la risposta
 - se riconosciamo lo scontento dell'utente lo colleghiamo a un operatore
 - prima del supporto umano dobbiamo essere sicuri di avere Serial Number, nome, robot acceso, wifi acceso, cut scheduling acceso, abbastanza batteria.
   Prima di collegare con l'operatore chiediamo il nome e facciamo l'handing-off message
-- se non trova né faq né flow parte con Human operator flow
+- se non trova né faq né flow parte con Human operator flow spiegando che non abbiamo la ifo ma non inventi
 - NON DEVI INVENTARE, OGNI RISPOSTA DEVE ARRIVARE DA UNA FONTE
   (faq o Flow)
 - se non hai la riposta scrivi non ho quesat informazione e passiamo a **Human operator flow**
@@ -39,3 +40,18 @@ lanciamo la calling function per human support
 - non mi interessano i test unitari
 
 - non commentare il codice, lascia che il codice parli da solo con i giusti nomi dei file, funzioni, variabili
+
+GUARDS
+
+- il numero di serie viene validato dal codice (formato/lunghezza), mai dal modello; dopo 3 tentativi falliti si passa oltre e non viene richiesto di nuovo nel gate finale
+- la spiegazione del problema troppo generica viene rifiutata dal codice e richiesta di nuovo (max 2 volte), non accettata come se fosse un dettaglio reale
+- il numero di serie è sempre la prima domanda, anche se il messaggio del cliente è vago — nessuna domanda di chiarimento la precede
+- l'ordine delle domande (serial → spiegazione → quando → Human operator flow) è deciso dal codice, mai dal modello
+- ogni domanda del gate e del flow è dettata parola per parola dal codice; il modello la traduce, non la inventa
+- il modello non può rispondere a una domanda con testo libero: deve sempre chiamare un tool (salvare un dato, rispondere da FAQ, avanzare nel flow, scalare)
+- il codice sa sempre se una domanda del gate è l'ultima o no, e lo dice al modello — mai lasciato indovinare ("un'ultima cosa" detto più volte)
+- l'annuncio del passaggio all'operatore può avvenire solo nel turno in cui l'operatore è stato davvero contattato, mai prima
+- se una domanda del gate resta senza risposta salvata, il modello non può richiederne un'altra: deve prima salvare quella in sospeso
+- le risposte alle FAQ passano da un tool che verifica che la FAQ citata esista davvero, mai testo libero
+- il messaggio finale di un flow (quello di successo, non di escalation) è dettato dal codice, mai inventato dal modello
+- se il flow porta a un'escalation, passa dallo stesso Human operator flow di ogni altro percorso
