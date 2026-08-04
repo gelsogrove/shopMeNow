@@ -38,6 +38,7 @@ import {
   startFlow,
 } from './gate.js'
 import type { FlowSummary, GateQuestions, ListFlowsHandler, LoadFlowHandler } from './gate.js'
+import { validateProblemDescription, validateSerialNumber } from './content-guards.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -407,13 +408,6 @@ function sanitizeUserMessage(raw: string, maxMessageChars: number): string {
   return s
 }
 
-const MAX_SERIAL_ATTEMPTS = 3
-const SERIAL_ATTEMPTS_KEY = 'serialNumber_invalid'
-
-const MIN_PROBLEM_DESCRIPTION_CHARS = 8
-const MAX_PROBLEM_DESCRIPTION_ATTEMPTS = 2
-const PROBLEM_DESCRIPTION_ATTEMPTS_KEY = 'problemDescription_vague'
-
 interface ToolContext {
   sessionId: string
   workspaceId: string
@@ -425,6 +419,7 @@ interface ToolContext {
   gateQuestions?: GateQuestions | null
   serialNumberPattern?: string
   serialNumberFormatHint?: string
+  currentMessage?: string
 }
 
 interface ToolResult {
@@ -545,61 +540,14 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     const value = args.value
     if (!key) return { ok: false, error: 'key is required' }
 
-    // steps.md 2-C.1: format check lives in code (tool refuses, LLM
-    // corrects), the pattern/hint themselves come from settings.json — this
-    // tenant's serial format, not a literal in this file.
     if (key === 'serialNumber' && ctx.serialNumberPattern) {
-      const candidate = String(value).trim()
-      if (!new RegExp(ctx.serialNumberPattern, 'i').test(candidate)) {
-        const attempts = registerFieldRequest(ctx.sessionId, SERIAL_ATTEMPTS_KEY)
-        if (attempts >= MAX_SERIAL_ATTEMPTS) {
-          updateState(ctx.sessionId, { serialNumberExhausted: true }, { mirror: false })
-          return {
-            ok: false,
-            error: 'invalid_serial_format_exhausted',
-            dictates_text: true,
-            instruction:
-              'The customer has failed to provide a valid serial number 3 times. Do NOT ask again: ' +
-              'acknowledge that, and move straight to the pre-operator checks (call escalate_to_operator).',
-          }
-        }
-        return {
-          ok: false,
-          error: 'invalid_serial_format',
-          dictates_text: true,
-          instruction:
-            `"${candidate}" is not a valid serial number` +
-            (ctx.serialNumberFormatHint ? ` — it must be ${ctx.serialNumberFormatHint}.` : '.') +
-            ' Tell the customer this and ask them to re-check it.',
-        }
-      }
+      const guardResult = validateSerialNumber(ctx.sessionId, String(value).trim(), ctx.serialNumberPattern, ctx.serialNumberFormatHint)
+      if (guardResult) return guardResult
     }
 
     if (key === 'problemDescription') {
-      const candidate = String(value).trim()
-      if (candidate.length < MIN_PROBLEM_DESCRIPTION_CHARS) {
-        const attempts = registerFieldRequest(ctx.sessionId, PROBLEM_DESCRIPTION_ATTEMPTS_KEY)
-        if (attempts >= MAX_PROBLEM_DESCRIPTION_ATTEMPTS) {
-          return {
-            ok: false,
-            error: 'problem_description_too_vague_exhausted',
-            dictates_text: true,
-            instruction:
-              'The customer could not give more detail after being asked twice. Do NOT ask again: ' +
-              'acknowledge that and move on to the next question.',
-          }
-        }
-        return {
-          ok: false,
-          error: 'problem_description_too_vague',
-          dictates_text: true,
-          instruction:
-            `"${candidate}" is too generic to be a problem description — it does not say what is ` +
-            'actually wrong with the robot. Ask ONE specific follow-up (what exactly is happening: an ' +
-            'error code, a sound, a light, the robot not moving, etc.) and call remember again once ' +
-            'they answer.',
-        }
-      }
+      const guardResult = validateProblemDescription(ctx.sessionId, String(value).trim())
+      if (guardResult) return guardResult
     }
 
     const nameWasRequestedByPreOperatorGate = key === 'name' && (getAskedCounts(ctx.sessionId)['name'] ?? 0) > 0
@@ -1059,6 +1007,7 @@ async function agentTurnInternal(
 ): Promise<TurnResult> {
   const isFirstTurn = history.length === 0
   history.push({ role: 'user', content: sanitizedMessage })
+  ctx.currentMessage = sanitizedMessage
 
   let state = getState(ctx.sessionId)
 

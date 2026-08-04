@@ -10,8 +10,9 @@
  *
  * Also pins steps.md 2-C.1's confirmed decision: after 3 invalid serial-number
  * attempts, the code stops asking and routes to the pre-operator gate instead
- * of looping forever — verified by grepping agent.ts for the constant AND by
- * asserting the settings-driven wording lives in settings.json, not in code.
+ * of looping forever — verified by grepping content-guards.ts for the
+ * constant AND by asserting the settings-driven wording lives in
+ * settings.json, not in code.
  */
 import fs from 'fs'
 import path from 'path'
@@ -21,7 +22,7 @@ import { nextPreOperatorStep } from '../../custom-demoam/gate'
 const MODULE_DIR = path.join(__dirname, '..', '..', 'custom-demoam')
 
 describe('demoam carries no hardcoded customer-facing copy', () => {
-  const sources = ['agent.ts', 'gate.ts', 'state.ts'].map((f) =>
+  const sources = ['agent.ts', 'gate.ts', 'state.ts', 'content-guards.ts'].map((f) =>
     fs.readFileSync(path.join(MODULE_DIR, f), 'utf8'),
   )
   // Comments explain WHY copy lives in settings and legitimately reference
@@ -86,15 +87,15 @@ describe('demoam carries no hardcoded customer-facing copy', () => {
 })
 
 describe('demoam serial number — 3-attempt gate fallback (steps.md 2-C.1)', () => {
-  const agentSource = fs.readFileSync(path.join(MODULE_DIR, 'agent.ts'), 'utf8')
+  const guardSource = fs.readFileSync(path.join(MODULE_DIR, 'content-guards.ts'), 'utf8')
 
   it('caps invalid serial attempts at 3, confirmed with Andrea (not hardcoded to any other number)', () => {
-    expect(agentSource).toMatch(/MAX_SERIAL_ATTEMPTS\s*=\s*3/)
+    expect(guardSource).toMatch(/MAX_SERIAL_ATTEMPTS\s*=\s*3/)
   })
 
   it('routes to the pre-operator gate instead of looping forever once exhausted', () => {
-    expect(agentSource).toMatch(/invalid_serial_format_exhausted/)
-    expect(agentSource).toMatch(/move straight to the pre-operator checks/i)
+    expect(guardSource).toMatch(/invalid_serial_format_exhausted/)
+    expect(guardSource).toMatch(/move straight to the pre-operator checks/i)
   })
 
   it('the format pattern itself is configured per workspace, not a literal regex tied to this tenant', () => {
@@ -102,8 +103,8 @@ describe('demoam serial number — 3-attempt gate fallback (steps.md 2-C.1)', ()
 
     expect(settings.serialNumberPattern).toBeTruthy()
     expect(settings.serialNumberFormatHint).toBeTruthy()
-    // The code reads ctx.serialNumberPattern, never a literal regex.
-    expect(agentSource).not.toMatch(/new RegExp\(['"]\^HK/)
+    // The code reads the pattern passed in, never a literal regex.
+    expect(guardSource).not.toMatch(/new RegExp\(['"]\^HK/)
   })
 })
 

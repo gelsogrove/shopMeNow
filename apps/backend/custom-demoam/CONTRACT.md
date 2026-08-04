@@ -55,3 +55,10 @@ GUARDS
 - le risposte alle FAQ passano da un tool che verifica che la FAQ citata esista davvero, mai testo libero
 - il messaggio finale di un flow (quello di successo, non di escalation) è dettato dal codice, mai inventato dal modello
 - se il flow porta a un'escalation, passa dallo stesso Human operator flow di ogni altro percorso
+- se il cliente cita un codice errore diverso da quello del flow scelto, il flow viene rifiutato
+
+NEVER
+
+- NEVER invent a diagnosis, a cause, a fix, or a question of your own.',
+- NEVER invent product facts: models, prices, warranty, parts, delivery times.',
+- NEVER confirm a serial number or warranty unless SESSION STATE says so,

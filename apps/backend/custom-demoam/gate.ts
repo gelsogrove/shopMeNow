@@ -38,6 +38,7 @@ export interface StartFlowContext {
   workspaceId: string
   availableFlows?: FlowSummary[]
   loadFlow?: LoadFlowHandler
+  currentMessage?: string
 }
 
 export interface StartFlowResult {
@@ -100,9 +101,19 @@ export function formatFlowsBlock(flows: FlowSummary[]): string {
   ].join('\n')
 }
 
+const ERROR_CODE_RE = /\b(?:error|errore)\s*0*(\d+)\b/i
+
+function extractErrorCode(text: string | undefined): string | null {
+  if (!text) return null
+  const match = text.match(ERROR_CODE_RE)
+  return match ? match[1] : null
+}
+
 /**
  * start_flow handler. Attaches the flow the LLM selected, but only if its id
- * appears in the catalogue this turn (tool refuses, LLM corrects).
+ * appears in the catalogue this turn (tool refuses, LLM corrects), and only if
+ * an error code the customer mentioned does not contradict the flow's own
+ * code (e.g. customer says "error 002", chosen flow's title/hint says "001").
  */
 export async function startFlow(
   ctx: StartFlowContext,
@@ -112,7 +123,8 @@ export async function startFlow(
   if (!flowId) return { ok: false, error: 'flowId is required' }
 
   const available = ctx.availableFlows ?? []
-  if (!available.some((f) => f.flowId === flowId)) {
+  const match = available.find((f) => f.flowId === flowId)
+  if (!match) {
     return {
       ok: false,
       error: 'unknown_flow_id',
@@ -120,6 +132,20 @@ export async function startFlow(
         available.length > 0
           ? `"${flowId}" is not in AVAILABLE FLOWS. Use one of: ${available.map((f) => f.flowId).join(', ')}. If none of them matches, go straight to the pre-operator checks — never invent a procedure.`
           : 'No flows are configured for this workspace. Go straight to the pre-operator checks.',
+    }
+  }
+
+  const customerErrorCode = extractErrorCode(ctx.currentMessage)
+  const flowErrorCode = extractErrorCode(match.title) ?? extractErrorCode(match.hint)
+  if (customerErrorCode && flowErrorCode && customerErrorCode !== flowErrorCode) {
+    return {
+      ok: false,
+      error: 'flow_error_code_mismatch',
+      instruction:
+        `The customer mentioned error ${customerErrorCode}, but "${match.title}" is for error ` +
+        `${flowErrorCode} — a different code. Do NOT attach this flow. Say honestly that you do not ` +
+        'have a specific procedure for this error, and go straight to the pre-operator checks ' +
+        '(call escalate_to_operator).',
     }
   }
 
@@ -143,8 +169,7 @@ export async function startFlow(
 
     const graph = { nodes: loaded.nodes, rootNodeId: rootNodeId(buildFlowGraph(loaded.nodes)) }
     attachFlow(ctx.sessionId, flowId, loaded.hash ?? '', graph)
-    const match = available.find((f) => f.flowId === flowId)
-    return { ok: true, flow_id: flowId, title: match?.title, dictates_text: true }
+    return { ok: true, flow_id: flowId, title: match.title, dictates_text: true }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[demoam] loadFlow failed', err)
