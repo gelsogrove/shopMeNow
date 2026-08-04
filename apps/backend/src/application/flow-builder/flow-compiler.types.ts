@@ -53,6 +53,7 @@ export interface ValidationError {
     | 'unexpected_cycle'
     | 'dangling_edge'
     | 'duplicate_edge_label'
+    | 'empty_edge_label'
     | 'attachment_wrong_model'
     | 'attachment_missing'
     | 'size_limit_exceeded'

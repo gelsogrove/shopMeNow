@@ -80,6 +80,25 @@ function validateGraph(input: CompileFlowInput): ValidationError[] {
     }
   }
 
+  // An edge with a blank label can never be matched by advance() (it compares
+  // the customer's classified answer against edge.label) — the runtime then
+  // has outgoingEdges but nothing the model can legally answer with, and
+  // formatFlowStepBlock treats the node as if it had none, silently dropping
+  // the dictated question while state.currentNodeId is still set. The
+  // customer-visible symptom is the model improvising past that node instead
+  // of following the flow (seen live 2026-08-05, AmRobots ERROR 001 flow: a
+  // "(empty)" edge on the "is it flashing continuously?" node).
+  for (const edge of edges) {
+    if (!edge.label.trim()) {
+      errors.push({
+        code: 'empty_edge_label',
+        message: `Edge ${edge.id} from node ${edge.sourceNodeId} has no label — every edge needs one.`,
+        nodeId: edge.sourceNodeId,
+        edgeId: edge.id,
+      })
+    }
+  }
+
   // Two edges from the same node with the same label are ambiguous once a
   // runtime state machine picks a branch by label match: advance() would take
   // whichever edge happens to come first, silently. Blocking here so it can
@@ -90,6 +109,7 @@ function validateGraph(input: CompileFlowInput): ValidationError[] {
     const seenLabels = new Map<string, string>()
     for (const edge of nodeEdges) {
       const normalized = edge.label.trim().toLowerCase()
+      if (!normalized) continue
       const firstEdgeId = seenLabels.get(normalized)
       if (firstEdgeId) {
         errors.push({

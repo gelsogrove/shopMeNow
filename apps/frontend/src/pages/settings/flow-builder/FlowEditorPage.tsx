@@ -6,7 +6,6 @@ import {
   Background,
   Controls,
   MiniMap,
-  useReactFlow,
   useNodesState,
   useEdgesState,
   addEdge,
@@ -76,7 +75,6 @@ function FlowEditorInner() {
   const { categoryId, flowId } = useParams<{ categoryId: string; flowId: string }>()
   const navigate = useNavigate()
   const workspaceId = workspace?.id || ""
-  const { addEdges: rfAddEdges } = useReactFlow()
 
   const [flow, setFlow] = useState<Flow | null>(null)
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<FlowQuestionNodeData>>([])
@@ -170,10 +168,19 @@ function FlowEditorInner() {
           label,
           data: { triggersEscalation: false, label },
         }
-        rfAddEdges(newEdge)
+        // Andrea 2026-08-05, seen live: rfAddEdges (React Flow's imperative
+        // addEdges) queues the edge through React Flow's own internal batch,
+        // landing in the controlled `edges` state one render cycle later and
+        // independently of this component's renders. If Save fires before
+        // that flush resolves, handleSave reads `edges` without this edge's
+        // label — the panel shows "Yes"/"No" correctly (from node.data.answers)
+        // while the saved payload has an empty label, which the backend then
+        // rejects as a duplicate/empty edge label. setEdges updates the exact
+        // array handleSave reads, synchronously with this render.
+        setEdges((prev) => [...prev, newEdge])
       })
     },
-    [rfAddEdges, setNodes],
+    [setEdges, setNodes],
   )
 
   // Empty-canvas entry point: a brand-new Flow has zero nodes, so there is

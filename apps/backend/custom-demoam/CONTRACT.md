@@ -2,7 +2,8 @@ rifacciamo, vediamo se hai capito, cosa ti torna e cosa manca
 
 - se il channel è disattivo parte il wip message
 - se l'utente è nuovo facciamo il welcome message, se l'utente non è nuovo facciamo il welcome back message chiamandolo con il nome
-- se riconosciamo che è un problema chiediamo prima di tutto il serial number, la spiegazione, quando è successo e poi seguiamo il flusso dello Human operator flow
+- il chatbot deve rispodnere nella lignau del cliene se la lignua e' presente nel settings..come lignua dispobibile altrimenti usa lignua di degault che anch'essa dovrebbe essere nel settigs.json
+- se riconosciamo che è un problema chiediamo prima di tutto il serial number, la spiegazione, quando è successo .... e poi seguiamo il flusso dello Human operator flow
 - la spiegazione del problema non può essere generica, deve avere un minimo di dettaglio
 - se è una faq non c'è bisogno del numero di serie
 - il numero di serie deve essere di 19 caratteri, deve essere validato; dopo 3 volte contatta operatore
@@ -28,6 +29,9 @@ chiediamo se c'è abbastanza batteria
 chiediamo il nome dell'utente se non lo abbiamo
 mostriamo l'handing-off message
 lanciamo la calling function per human support
+
+e' tutto nel flow di default che non deve essere cancellato
+editato si cancellarlo mai !
 
 **IMPO**
 
@@ -62,3 +66,19 @@ NEVER
 - NEVER invent a diagnosis, a cause, a fix, or a question of your own.',
 - NEVER invent product facts: models, prices, warranty, parts, delivery times.',
 - NEVER confirm a serial number or warranty unless SESSION STATE says so,
+
+PROSSIMO — da pianificare, non ancora iniziato
+
+- Human operator flow diventa un flow vero e proprio nel flow builder (non un
+  oggetto di domande nel codice/settings) — non cancellabile, tutti i
+  percorsi verso l'operatore (nessun match, complaint, emergenza, FAQ non
+  trovata, ESCALATE terminal di un altro flow) confluiscono lì invece che nel
+  meccanismo attuale di escalate_to_operator
+
+- trova un metodo per non inventare nulla sia lato faq che flow che di main prompt e conferma che e' attivo ! se gia' c'e' verifica se e' attivo e che non ha bug e che sia nel posto giusto
+- ricordati il fatto che nondebba invenatare non signigica che non deve applicare fantasia...sonon i concetti che non dev inventare !
+
+**non toccare questo file se non hiil pemesso utente**
+
+FLOW:
+e' possibile cheun flow passi ad un altro flow ! deve essere un opzione da gestire
