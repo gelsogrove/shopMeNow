@@ -11,8 +11,6 @@ import { googleCalendarService } from "../../services/google-calendar.service"
 import { zoomService } from "../../services/zoom.service"
 import { runRetrieval } from "../flow-builder/flow-retrieval-orchestrator.service"
 import { OpenRouterEmbeddingProvider } from "../flow-builder/embedding-provider"
-import { PromptProcessorService } from "../../services/prompt-processor.service"
-import { PromptVariables, VARIABLE_DEFAULTS } from "../../types/prompt-variables.types"
 
 type ChatChannel = string
 
@@ -334,7 +332,6 @@ type TsImportFn = (
 export class CustomClientChatbotService {
   // Cache per chatbotId → modulo caricato. Ogni custom-client-N ha il proprio modulo.
   private readonly moduleCache = new Map<string, Promise<ChatbotModule>>()
-  private readonly promptProcessor = new PromptProcessorService()
 
   async invoke(params: InvokeParams): Promise<InvokeResult> {
     const chatbotId = this.resolveChatbotId(params)
@@ -357,7 +354,6 @@ export class CustomClientChatbotService {
 
     try {
       const module = await this.loadChatbotModule(chatbotId)
-      const systemPromptOverride = await this.buildCustomChatbotSystemPrompt(params.workspaceId)
       // Durable state from a previous turn (possibly on another dyno). Read
       // before the module runs so it can hydrate before any tool touches state.
       const persistedState = await this.loadPersistedState(params.sessionId, chatbotId)
@@ -384,11 +380,6 @@ export class CustomClientChatbotService {
           operatorBriefingLanguageOverride:
             this.normalizeLanguage(params.operatorBriefingLanguageOverride) ??
             null,
-          // Editable main/system prompt (workspace.customChatbotSystemPrompt,
-          // processed with {{variables}}) — null when the workspace has no
-          // custom template, in which case the module falls back to its own
-          // static prompt file (e.g. common.md).
-          systemPromptOverride,
           // Feature flags the module uses to decide which tools to expose to
           // the LLM. Source of truth is the workspace row, never the module.
           capabilities: {
@@ -777,7 +768,15 @@ export class CustomClientChatbotService {
       const workspace = await defaultPrisma.workspace.findUnique({
         where: { id: workspaceId },
         select: {
+          id: true,
+          name: true,
           customChatbotId: true,
+          customChatbotSystemPrompt: true,
+          chatbotName: true,
+          humanSupportInstructions: true,
+          toneOfVoice: true,
+          address: true,
+          allowedExternalLinks: true,
           customChatbotModel: true,
           customChatbotTemperature: true,
           customChatbotMaxTokens: true,
@@ -928,55 +927,6 @@ export class CustomClientChatbotService {
       })
       return []
     }
-  }
-
-  /**
-   * Builds the processed main/system prompt for a custom chatbot workspace
-   * from workspace.customChatbotSystemPrompt (editable in the backoffice),
-   * substituting {{variables}} via the same PromptProcessorService used by
-   * the standard chatbot agents. Returns null when the workspace has no
-   * custom template set, so the calling module falls back to its own static
-   * prompt file (e.g. common.md) — this is additive, not a hard requirement.
-   */
-  private async buildCustomChatbotSystemPrompt(workspaceId: string): Promise<string | null> {
-    const workspace = await defaultPrisma.workspace.findUnique({
-      where: { id: workspaceId },
-      select: {
-        customChatbotSystemPrompt: true,
-        name: true,
-        chatbotName: true,
-        welcomeMessage: true,
-        humanSupportInstructions: true,
-        operatorContactMethod: true,
-        operatorWhatsappNumber: true,
-        toneOfVoice: true,
-        address: true,
-        allowedExternalLinks: true,
-      },
-    })
-    if (!workspace?.customChatbotSystemPrompt) return null
-
-    const faqs = await this.getFaqs({ workspaceId })
-    const faqsText = faqs.length > 0 ? faqs.map((f) => `Q: ${f.question}\nA: ${f.answer}`).join("\n\n") : ""
-
-    // VARIABLE_DEFAULTS covers customer-specific fields (customerName, etc.)
-    // that are meaningless for a fixed system prompt with no single customer
-    // in scope — this template is processed once per turn, not per-customer.
-    const variables = {
-      ...VARIABLE_DEFAULTS,
-      companyName: workspace.name || VARIABLE_DEFAULTS.companyName,
-      chatbotName: workspace.chatbotName || VARIABLE_DEFAULTS.chatbotName,
-      welcomeMessage: workspace.welcomeMessage || "",
-      humanSupportInstructions: workspace.humanSupportInstructions || "",
-      operatorContactMethod: workspace.operatorContactMethod || VARIABLE_DEFAULTS.operatorContactMethod,
-      operatorWhatsappNumber: workspace.operatorWhatsappNumber || "",
-      toneOfVoice: workspace.toneOfVoice || VARIABLE_DEFAULTS.toneOfVoice,
-      address: workspace.address || "",
-      allowedExternalLinks: workspace.allowedExternalLinks || "",
-      faqs: faqsText,
-    } as PromptVariables
-
-    return this.promptProcessor.processWithVariables(workspace.customChatbotSystemPrompt, variables)
   }
 
   /**

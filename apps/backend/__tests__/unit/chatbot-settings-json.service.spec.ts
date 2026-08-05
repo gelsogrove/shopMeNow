@@ -326,6 +326,9 @@ describe("buildChatbotSettingsJson", () => {
       // when detection lands outside that set.
       "defaultLanguage",
       "enabledLanguages",
+      // The module's main/system prompt (workspace.customChatbotSystemPrompt),
+      // with system-level {{variables}} already substituted by the generator.
+      "mainPrompt",
     ].sort()
     expect(Object.keys(result!).sort()).toEqual(expected)
   })

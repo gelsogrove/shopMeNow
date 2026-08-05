@@ -913,7 +913,15 @@ For privacy inquiries, please contact our support team.`
       const w = await this.prisma.workspace.findUnique({
         where: { id },
         select: {
+          id: true,
+          name: true,
           customChatbotId: true,
+          customChatbotSystemPrompt: true,
+          chatbotName: true,
+          humanSupportInstructions: true,
+          toneOfVoice: true,
+          address: true,
+          allowedExternalLinks: true,
           customChatbotModel: true,
           customChatbotTemperature: true,
           customChatbotMaxTokens: true,

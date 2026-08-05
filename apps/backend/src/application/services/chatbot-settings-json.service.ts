@@ -21,9 +21,24 @@ import { existsSync } from "fs"
 import { readFile, writeFile } from "fs/promises"
 import path from "path"
 import logger from "../../utils/logger"
+import { prisma } from "@echatbot/database"
+import { PromptProcessorService } from "../../services/prompt-processor.service"
+import { PromptVariables, VARIABLE_DEFAULTS } from "../../types/prompt-variables.types"
+
+const promptProcessor = new PromptProcessorService()
 
 /** Shape consumed by custom-<module>/agent.ts. Mirrors its `Settings` type. */
 export interface ChatbotSettingsJson {
+  /**
+   * The module's main/system prompt (workspace.customChatbotSystemPrompt),
+   * with system-level {{variables}} (companyName, chatbotName, toneOfVoice,
+   * humanSupportInstructions, faqs, …) already substituted — the module
+   * reads this verbatim. Per-customer variables (e.g. {{customerName}}) are
+   * NOT touched here: those change per turn, so the module substitutes them
+   * itself at runtime, the same way it already does for welcomeBackMessage
+   * and humanSupportMessage.
+   */
+  mainPrompt?: string
   model: string
   temperature: number
   maxTokens: number
@@ -75,7 +90,15 @@ export interface ChatbotSettingsJson {
 
 /** Workspace fields this generator reads. Kept narrow on purpose. */
 export interface WorkspaceChatbotSource {
+  id?: string
+  name?: string | null
   customChatbotId?: string | null
+  customChatbotSystemPrompt?: string | null
+  chatbotName?: string | null
+  humanSupportInstructions?: string | null
+  toneOfVoice?: string | null
+  address?: string | null
+  allowedExternalLinks?: string[] | null
   customChatbotModel?: string | null
   customChatbotTemperature?: number | null
   customChatbotMaxTokens?: number | null
@@ -180,6 +203,48 @@ function normaliseAudioVoices(value: unknown): Record<string, string> | null {
 }
 
 /**
+ * Substitutes system-level {{variables}} (companyName, chatbotName,
+ * toneOfVoice, humanSupportInstructions, faqs, …) into
+ * workspace.customChatbotSystemPrompt — the same set buildCustomChatbotSystemPrompt
+ * used to process before the main prompt moved into settings.json.
+ *
+ * Per-customer variables (e.g. {{customerName}}) are deliberately NOT in
+ * VARIABLE_DEFAULTS/here: this runs once per save, not once per turn, so the
+ * module substitutes those itself at runtime.
+ *
+ * Returns the previous value (`current`) unchanged when the workspace has no
+ * custom template set, so a workspace that never configured a prompt keeps
+ * whatever settings.json already had rather than losing it.
+ */
+async function buildMainPrompt(
+  workspace: WorkspaceChatbotSource,
+  current: string | undefined
+): Promise<string | undefined> {
+  if (!workspace.customChatbotSystemPrompt?.trim()) return current
+  if (!workspace.id) return current
+
+  const faqs = await prisma.fAQ.findMany({
+    where: { workspaceId: workspace.id, isActive: true },
+    orderBy: { order: "asc" },
+    select: { question: true, answer: true },
+  })
+  const faqsText = faqs.length > 0 ? faqs.map((f) => `Q: ${f.question}\nA: ${f.answer}`).join("\n\n") : ""
+
+  const variables = {
+    ...VARIABLE_DEFAULTS,
+    companyName: workspace.name || VARIABLE_DEFAULTS.companyName,
+    chatbotName: workspace.chatbotName || VARIABLE_DEFAULTS.chatbotName,
+    humanSupportInstructions: workspace.humanSupportInstructions || "",
+    toneOfVoice: workspace.toneOfVoice || VARIABLE_DEFAULTS.toneOfVoice,
+    address: workspace.address || "",
+    allowedExternalLinks: workspace.allowedExternalLinks?.join("\n") || "",
+    faqs: faqsText,
+  } as PromptVariables
+
+  return promptProcessor.processWithVariables(workspace.customChatbotSystemPrompt, variables)
+}
+
+/**
  * Builds the runtime config: the module's current settings.json, with every
  * value the user set in the Settings UI layered on top.
  *
@@ -196,10 +261,12 @@ export async function buildChatbotSettingsJson(
 
   const audioVoices = normaliseAudioVoices(workspace.audioVoices)
   const advancedSettings = normaliseAdvancedSettings(workspace.customChatbotAdvancedSettings)
+  const mainPrompt = await buildMainPrompt(workspace, current.mainPrompt)
 
   return {
     ...current,
     ...advancedSettings,
+    mainPrompt,
     model: workspace.customChatbotModel?.trim() || current.model,
     temperature:
       typeof workspace.customChatbotTemperature === "number"

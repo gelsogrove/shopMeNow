@@ -44,6 +44,10 @@ import { validateProblemDescription, validateSerialNumber } from './content-guar
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 interface Settings {
+  // The module's main/system prompt (workspace.customChatbotSystemPrompt),
+  // regenerated into settings.json on every workspace save with system-level
+  // {{variables}} already substituted (chatbot-settings-json.service.ts).
+  mainPrompt?: string
   model: string
   temperature: number
   maxTokens: number
@@ -158,7 +162,6 @@ export interface ChatbotInput {
     // as custom-demorobot. chatbotFn is never called with the channel off.
     language?: string
     operatorBriefingLanguageOverride?: string | null
-    systemPromptOverride?: string | null
     settings?: Partial<Settings> | null
     messages?: WorkspaceMessages | null
     handlers?: {
@@ -1405,7 +1408,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     }
   }
 
-  if (!input.config.systemPromptOverride) {
+  if (!settings.mainPrompt) {
     return {
       reply: null,
       shouldEscalate: false,
@@ -1418,7 +1421,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
   }
 
   try {
-    const commonPrompt = input.config.systemPromptOverride
+    const commonPrompt = settings.mainPrompt
     const sessionId = input.context.sessionId
 
     const ctx: ToolContext = {
