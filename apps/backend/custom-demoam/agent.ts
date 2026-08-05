@@ -538,25 +538,29 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     // remember({key:'robotPoweredOn', ...}) — and four more remember calls
     // for the OTHER flow fields in the very same hop — instead of answer_step
     // on the actual pending question. Every value was invented: none of it
-    // came from anything the customer had said. A flow field is only ever a
-    // legitimate remember target when it is NOT the field the active flow is
-    // currently waiting on — that one can only be answered by answering the
-    // question, i.e. answer_step.
+    // came from anything the customer had said. Narrowing the guard to only
+    // the CURRENT node's field let the model route around it by calling
+    // remember on the flow's OTHER fields instead — those aren't "pending"
+    // yet, but they still belong to nodes further down the same graph, and
+    // answering them before the flow ever asks is the same invention. Any
+    // fieldKey anywhere in the attached flow's graph is off-limits to
+    // remember while that flow is active: the only door in is answer_step,
+    // one node at a time, in the order the flow actually presents them.
     {
       const liveState = getState(ctx.sessionId)
       if (liveState.currentNodeId && liveState.activeFlowGraphSnapshot) {
         const graph = buildFlowGraph(liveState.activeFlowGraphSnapshot)
-        const pendingNode = currentNode(graph, liveState.currentNodeId)
-        if (pendingNode?.fieldKey === key) {
+        const flowOwnsField = liveState.activeFlowGraphSnapshot.some((n) => n.fieldKey === key)
+        if (flowOwnsField) {
           const labels = allowedLabels(graph, liveState.currentNodeId)
           return {
             ok: false,
             error: 'field_owned_by_active_flow',
             dictates_text: true,
             instruction:
-              `"${key}" is the field the active flow's current question is waiting on — it can only be ` +
-              `set by answering that question with answer_step (one of: ${labels.join(', ')}), never by ` +
-              'remember. Ask the question again if you are not sure of the answer yet; never invent one.',
+              `"${key}" belongs to the active flow — it can only be set by answering the flow's questions ` +
+              `with answer_step, one at a time, never by remember. The question pending right now is the ` +
+              `current one (answer with one of: ${labels.join(', ')}) — do not skip ahead to a later field.`,
           }
         }
       }
