@@ -533,6 +533,35 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       if (guardResult) return guardResult
     }
 
+    // Andrea 2026-08-05, seen live: with the Human Support flow attached and
+    // its root node asking "Is the robot powered on?", the model called
+    // remember({key:'robotPoweredOn', ...}) — and four more remember calls
+    // for the OTHER flow fields in the very same hop — instead of answer_step
+    // on the actual pending question. Every value was invented: none of it
+    // came from anything the customer had said. A flow field is only ever a
+    // legitimate remember target when it is NOT the field the active flow is
+    // currently waiting on — that one can only be answered by answering the
+    // question, i.e. answer_step.
+    {
+      const liveState = getState(ctx.sessionId)
+      if (liveState.currentNodeId && liveState.activeFlowGraphSnapshot) {
+        const graph = buildFlowGraph(liveState.activeFlowGraphSnapshot)
+        const pendingNode = currentNode(graph, liveState.currentNodeId)
+        if (pendingNode?.fieldKey === key) {
+          const labels = allowedLabels(graph, liveState.currentNodeId)
+          return {
+            ok: false,
+            error: 'field_owned_by_active_flow',
+            dictates_text: true,
+            instruction:
+              `"${key}" is the field the active flow's current question is waiting on — it can only be ` +
+              `set by answering that question with answer_step (one of: ${labels.join(', ')}), never by ` +
+              'remember. Ask the question again if you are not sure of the answer yet; never invent one.',
+          }
+        }
+      }
+    }
+
     const nameWasRequestedByPreOperatorGate = key === 'name' && (getAskedCounts(ctx.sessionId)['name'] ?? 0) > 0
 
     if (key === 'name' || key === 'serialNumber' || key === 'company' || key === 'phone' || key === 'address') {

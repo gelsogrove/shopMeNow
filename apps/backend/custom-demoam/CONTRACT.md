@@ -8,6 +8,7 @@ rifacciamo, vediamo se hai capito, cosa ti torna e cosa manca
 - la spiegazione del problema non può essere generica, deve avere un minimo di dettaglio
 - se è una faq non c'è bisogno del numero di serie
 - il numero di serie deve essere di 19 caratteri, deve essere validato; dopo 3 volte contatta operatore
+- se c'è un problema (non una FAQ) e il cliente non fornisce il numero di serie, NON si può avanzare nella diagnostica — dopo 3 tentativi falliti si passa direttamente a Human Support Flow, mai a domande diagnostiche improvvisate dal modello
 - se riconosciamo che è una faq rispondiamo con la risposta
 - se riconosciamo lo scontento dell'utente lo colleghiamo a un operatore
 - Prima di collegare con l'operatore chiediamo il nome e facciamo l'handing-off message
