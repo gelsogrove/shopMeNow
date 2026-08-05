@@ -102,18 +102,6 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
 
   if (scenario.newSession) wipeSession(scenario.phone)
 
-  if (scenario.reuseSessionFrom) {
-    // Copy the OTHER scenario's already-run session onto this phone so this
-    // scenario continues a real prior conversation instead of starting cold.
-    const sourceFile = fs.readdirSync(SCENARIOS_DIR).find((f) => f.startsWith(scenario.reuseSessionFrom!))
-    if (sourceFile) {
-      const source: Scenario = JSON.parse(fs.readFileSync(path.join(SCENARIOS_DIR, sourceFile), "utf8"))
-      const sourceSession = loadSession(source.phone)
-      const { saveSession } = await import("./runtime.js")
-      saveSession(scenario.phone, sourceSession)
-    }
-  }
-
   if (scenario.forceStaleSeconds) {
     forceSessionStale(scenario.phone, scenario.forceStaleSeconds)
   }
@@ -130,6 +118,20 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
     console.log(`  [${scenario.phone}] "${turn.message}"`)
     console.log(`    -> ${(output.reply ?? "(empty)").split("\n").join("\n       ")}`)
     if (output.error) console.log(`    !! error: ${output.error}`)
+  }
+
+  if (scenario.thenForceStaleSecondsAndContinue && scenario.secondSessionTurns?.length) {
+    forceSessionStale(scenario.phone, scenario.thenForceStaleSecondsAndContinue)
+    console.log(`  [${scenario.phone}] — session backdated ${scenario.thenForceStaleSecondsAndContinue}s, continuing as a later conversation —`)
+    for (const turn of scenario.secondSessionTurns) {
+      const { output } = await runTurn({ phone: scenario.phone, message: turn.message })
+      lastOutput = output
+      replies.push(output.reply ?? "")
+      errors.push(output.error)
+      console.log(`  [${scenario.phone}] "${turn.message}"`)
+      console.log(`    -> ${(output.reply ?? "(empty)").split("\n").join("\n       ")}`)
+      if (output.error) console.log(`    !! error: ${output.error}`)
+    }
   }
 
   const checks = [checkNoEmptyReply(replies), checkNoErrorField(errors)]
