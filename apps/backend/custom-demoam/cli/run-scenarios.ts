@@ -27,7 +27,7 @@ import { prisma } from "@echatbot/database"
 import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
-import { runTurn, wipeSession, forceSessionStale, loadSession } from "./runtime.js"
+import { runTurn, wipeSession, forceSessionStale } from "./runtime.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const SCENARIOS_DIR = path.join(__dirname, "scenarios")
