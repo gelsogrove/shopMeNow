@@ -1,0 +1,163 @@
+{
+  "sessionId": "cli-391110000012-1785961817422",
+  "history": [
+    {
+      "role": "user",
+      "content": "il mio robot fa un rumore mai sentito prima, tipo un ronzio metallico continuo",
+      "timestamp": "2026-08-05T20:30:17.422Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande, come posso aiutarti oggi?\n\nCapisco, un ronzio metallico continuo è sicuramente strano e merita attenzione. \n\nPer aiutarti a capire cosa sta succedendo, mi serve il numero di serie del tuo robot. Lo trovi sull'etichetta sotto il dispositivo.",
+      "timestamp": "2026-08-05T20:30:21.704Z"
+    },
+    {
+      "role": "user",
+      "content": "HKA4OB100LQ26050212",
+      "timestamp": "2026-08-05T20:30:21.707Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Perfetto, grazie. Ora mi serve capire meglio: da quanto tempo il robot fa questo ronzio metallico?",
+      "timestamp": "2026-08-05T20:30:24.973Z"
+    },
+    {
+      "role": "user",
+      "content": "il ronzio metallico è iniziato ieri sera e non si ferma mai, anche da fermo",
+      "timestamp": "2026-08-05T20:30:24.974Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Il rumore viene dalla parte inferiore del robot (lame) o da un'altra parte?",
+      "timestamp": "2026-08-05T20:30:29.706Z"
+    },
+    {
+      "role": "user",
+      "content": "sì è acceso",
+      "timestamp": "2026-08-05T20:30:29.708Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Hai controllato se ci sono rametti, sassi o altri oggetti incastrati vicino alle lame?",
+      "timestamp": "2026-08-05T20:30:34.723Z"
+    },
+    {
+      "role": "user",
+      "content": "sì il wifi è connesso",
+      "timestamp": "2026-08-05T20:30:34.724Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Rimuovi con cautela a robot spento qualsiasi oggetto incastrato, poi riavvia il robot. Se il rumore continua, contattaci di nuovo.",
+      "timestamp": "2026-08-05T20:30:37.937Z"
+    },
+    {
+      "role": "user",
+      "content": "no, non sta tagliando in questo momento",
+      "timestamp": "2026-08-05T20:30:37.938Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Il rumore viene dalla parte inferiore del robot (lame) o da un'altra parte?",
+      "timestamp": "2026-08-05T20:30:42.127Z"
+    },
+    {
+      "role": "user",
+      "content": "sì la batteria è carica all'80%",
+      "timestamp": "2026-08-05T20:30:42.130Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Grazie , disattivo il chatbot e ti metto in comunicazione con il nostro customer care, che ti contatterà il prima possibile.\n\n**👤 Human Support message**\n\n📌 **Reason:** diagnostic_exhausted\n\n**Customer**\n• Name: —\n• Language: it\n\n**Case**\n• Serial number: HKA4OB100LQ26050212\n• Troubleshooting flow: cmsg4rtnr00033cngis1pyqvw\n\n**Answers collected**\n• problemDescription: ronzio metallico continuo, anche da fermo\n• problemStartedWhen: ieri sera\n• robotPoweredOn: true\n• batterySufficient: true\n• wifiActive: true\n• cutSchedulingActive: false\n\n**Summary**\nThe assistant could not resolve this conversation automatically (tool-hop limit reached).\nCustomer message: sì la batteria è carica all'80%\nSerial number: HKA4OB100LQ26050212\nActive flow: cmsg4rtnr00033cngis1pyqvw\nCollected data: {\"problemDescription\":\"ronzio metallico continuo, anche da fermo\",\"problemStartedWhen\":\"ieri sera\",\"robotPoweredOn\":\"true\",\"batterySufficient\":\"true\",\"wifiActive\":\"true\",\"cutSchedulingActive\":\"false\"}",
+      "timestamp": "2026-08-05T20:30:51.551Z"
+    },
+    {
+      "role": "user",
+      "content": "Giulia Bianchi",
+      "timestamp": "2026-08-05T20:30:51.553Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "none",
+      "language": "it",
+      "serialNumber": "HKA4OB100LQ26050212",
+      "collectedData": {
+        "problemDescription": "ronzio metallico continuo, anche da fermo",
+        "problemStartedWhen": "ieri sera",
+        "robotPoweredOn": "true",
+        "batterySufficient": "true",
+        "wifiActive": "true",
+        "cutSchedulingActive": "false"
+      },
+      "activeFlowId": "cmsg4rtnr00033cngis1pyqvw",
+      "activeFlowHash": "fa3a94eb54f0c3195100b584a359bc1bf911f264033485660deaa74c04f9ed48",
+      "activeFlowGraphSnapshot": [
+        {
+          "id": "e003_where",
+          "question": "Il rumore viene dalla parte inferiore del robot (lame) o da un'altra parte?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Lame",
+              "targetNodeId": "e003_debris",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "Altra parte",
+              "targetNodeId": "e003_escalate",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "e003_debris",
+          "question": "Hai controllato se ci sono rametti, sassi o altri oggetti incastrati vicino alle lame?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Sì",
+              "targetNodeId": "e003_clear",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "e003_escalate",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "e003_clear",
+          "question": "Rimuovi con cautela a robot spento qualsiasi oggetto incastrato, poi riavvia il robot. Se il rumore continua, contattaci di nuovo.",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "SELF_SERVICE",
+          "outgoingEdges": []
+        },
+        {
+          "id": "e003_escalate",
+          "question": "Questo tipo di rumore va controllato da un tecnico, meglio non continuare a farlo lavorare.",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "ESCALATE",
+          "outgoingEdges": []
+        }
+      ],
+      "currentNodeId": "e003_where",
+      "visitedFlowIds": [
+        "cmsg4rtnr00033cngis1pyqvw"
+      ],
+      "name": "Giulia Bianchi"
+    },
+    "patches": []
+  }
+}

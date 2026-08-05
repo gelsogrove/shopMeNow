@@ -256,6 +256,11 @@ export function nextIntakeStep(
   questions?: GateQuestions | null,
 ): IntakeStep | null {
   for (const field of INTAKE_ORDER) {
+    // A serial exhausted after 3 failed attempts (content-guards.ts) is
+    // "done asking", the same as answered — never re-requested here either,
+    // same reasoning as nextPreOperatorStep below.
+    if (field === 'serialNumber' && state.serialNumberExhausted) continue
+
     const answered =
       field === 'serialNumber'
         ? !!state.serialNumber?.trim()

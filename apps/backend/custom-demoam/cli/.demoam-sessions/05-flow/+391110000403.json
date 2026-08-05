@@ -1,0 +1,46 @@
+{
+  "sessionId": "cli-391110000403-1785961738862",
+  "history": [
+    {
+      "role": "user",
+      "content": "mentre il robot lavora ha perso una ruota, cosa faccio?",
+      "timestamp": "2026-08-05T20:28:58.862Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande, come posso aiutarti oggi?\n\nCapisco, è una situazione fastidiosa. 🔧\n\nPer aiutarti nel modo giusto, ho bisogno del numero di serie del tuo robot. Lo trovi sull'etichetta sotto il dispositivo.\n\nQual è il numero di serie?",
+      "timestamp": "2026-08-05T20:29:02.800Z"
+    },
+    {
+      "role": "user",
+      "content": "HKA4OB100LQ26050300",
+      "timestamp": "2026-08-05T20:29:02.802Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Perfetto, grazie. Ora mi serve capire meglio: il robot ha perso la ruota mentre stava tagliando l'erba, giusto? È ancora lì nel giardino, oppure non la trovi più?",
+      "timestamp": "2026-08-05T20:29:06.734Z"
+    },
+    {
+      "role": "user",
+      "content": "il robot stava tagliando l'erba quando una ruota si è staccata ed è caduta nel prato",
+      "timestamp": "2026-08-05T20:29:06.736Z"
+    },
+    {
+      "role": "assistant",
+      "content": "E quando ti sei accorto di questo — oggi, ieri, o più tempo fa?",
+      "timestamp": "2026-08-05T20:29:10.823Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "none",
+      "language": "it",
+      "serialNumber": "HKA4OB100LQ26050300",
+      "collectedData": {
+        "problemDescription": "Il robot ha perso una ruota mentre stava tagliando l'erba, la ruota si è staccata ed è caduta nel prato"
+      }
+    },
+    "patches": []
+  }
+}

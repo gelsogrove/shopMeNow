@@ -1,0 +1,144 @@
+{
+  "sessionId": "cli-391110000008-1785961750824",
+  "history": [
+    {
+      "role": "user",
+      "content": "il mio robot mi da errore 002, è surriscaldato",
+      "timestamp": "2026-08-05T20:29:10.824Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande, come posso aiutarti oggi?\n\nPer favore, mi dai il numero di serie del tuo robot? Lo trovi sull'etichetta sotto il dispositivo.",
+      "timestamp": "2026-08-05T20:29:16.736Z"
+    },
+    {
+      "role": "user",
+      "content": "HKA4OB100LQ26050201",
+      "timestamp": "2026-08-05T20:29:16.737Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Perfetto, grazie. Mi hai già detto che il robot mostra l'errore 002 — surriscaldamento critico. Capisco che sia frustrante. Ora ti guido attraverso i controlli.\n\nQuando ha iniziato a mostrare questo errore? Oggi, oppure prima?",
+      "timestamp": "2026-08-05T20:29:23.518Z"
+    },
+    {
+      "role": "user",
+      "content": "il display mostra ERROR 002 e sembra surriscaldato",
+      "timestamp": "2026-08-05T20:29:23.519Z"
+    },
+    {
+      "role": "assistant",
+      "content": "E quando hai notato questo errore per la prima volta — oggi, ieri, oppure prima ancora?",
+      "timestamp": "2026-08-05T20:29:28.504Z"
+    },
+    {
+      "role": "user",
+      "content": "è successo poco fa",
+      "timestamp": "2026-08-05T20:29:28.505Z"
+    },
+    {
+      "role": "assistant",
+      "content": "È accesa una luce rossa fissa sul robot?",
+      "timestamp": "2026-08-05T20:29:32.940Z"
+    },
+    {
+      "role": "user",
+      "content": "sì è accesa una luce rossa fissa",
+      "timestamp": "2026-08-05T20:29:32.942Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Il robot fa anche un rumore strano mentre lavora?",
+      "timestamp": "2026-08-05T20:29:37.002Z"
+    },
+    {
+      "role": "user",
+      "content": "sì fa anche un rumore strano mentre lavora",
+      "timestamp": "2026-08-05T20:29:37.004Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Il rumore viene dalla parte inferiore del robot (lame) o da un'altra parte?",
+      "timestamp": "2026-08-05T20:29:41.333Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "none",
+      "language": "it",
+      "serialNumber": "HKA4OB100LQ26050201",
+      "collectedData": {
+        "problemDescription": "ERROR 002 - surriscaldamento critico, il display mostra ERROR 002 e il robot sembra surriscaldato",
+        "problemStartedWhen": "poco fa"
+      },
+      "activeFlowId": "cmsg4rtnr00033cngis1pyqvw",
+      "activeFlowHash": "fa3a94eb54f0c3195100b584a359bc1bf911f264033485660deaa74c04f9ed48",
+      "activeFlowGraphSnapshot": [
+        {
+          "id": "e003_where",
+          "question": "Il rumore viene dalla parte inferiore del robot (lame) o da un'altra parte?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Lame",
+              "targetNodeId": "e003_debris",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "Altra parte",
+              "targetNodeId": "e003_escalate",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "e003_debris",
+          "question": "Hai controllato se ci sono rametti, sassi o altri oggetti incastrati vicino alle lame?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Sì",
+              "targetNodeId": "e003_clear",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "e003_escalate",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "e003_clear",
+          "question": "Rimuovi con cautela a robot spento qualsiasi oggetto incastrato, poi riavvia il robot. Se il rumore continua, contattaci di nuovo.",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "SELF_SERVICE",
+          "outgoingEdges": []
+        },
+        {
+          "id": "e003_escalate",
+          "question": "Questo tipo di rumore va controllato da un tecnico, meglio non continuare a farlo lavorare.",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "ESCALATE",
+          "outgoingEdges": []
+        }
+      ],
+      "currentNodeId": "e003_where",
+      "visitedFlowIds": [
+        "cmsg4rtsl00043cnggjbq1hyi",
+        "cmsg4rtnr00033cngis1pyqvw"
+      ]
+    },
+    "patches": []
+  }
+}

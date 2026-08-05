@@ -72,6 +72,36 @@ PROSSIMO — da pianificare, non ancora iniziato
 
 - trova un metodo per non inventare nulla sia lato faq che flow che di main prompt e conferma che e' attivo ! se gia' c'e' verifica se e' attivo e che non ha bug e che sia nel posto giusto
 - ricordati il fatto che nondebba invenatare non signigica che non deve applicare fantasia...sonon i concetti che non dev inventare !
+- [2026-08-05] ORCHESTRATOR non riusa risposte già date fuori sequenza: test
+  custom-demoam/cli/scenarios/05-flow/05-orchestrator.json — il cliente dice
+  "la luce rossa è accesa e lampeggia in continuazione" (risposta SIA al nodo
+  radice di ERROR 001 SIA al secondo nodo), ma il flow chiede comunque "C'è
+  una luce rossa accesa?" da capo invece di saltare le due domande già
+  risposte. Il flow builder oggi avanza solo su answer_step con un label
+  Yes/No esplicito per il nodo CORRENTE — non prova mai a leggere le risposte
+  dalla history/dal messaggio del cliente per i nodi che seguiranno. Serve
+  probabilmente: il modello tenta answer_step anche per nodi non ancora
+  correnti quando la history già contiene la risposta, con la validazione nel
+  codice (gate.ts/flow-machine.ts) che quell'answer_step sia legittimo
+  (nodo raggiungibile dal path già percorso) — non un problema di prompt.
+  Nello stesso scenario è comparso anche un turno con reply vuota (bug
+  separato, non ancora isolato).
+- [2026-08-05] escalate_to_operator non può forzare STRUTTURALMENTE quale
+  tool venga chiamato dopo un refusal — solo tool_choice:'required' generico
+  (un tool qualsiasi), mai un tool_choice vincolato a un nome specifico.
+  Visto live: test custom-demoam/cli/scenarios/04-serial-number/02-serial-number-ko.json
+  — il refusal human_support_flow_required dice "call start_flow with flowId
+  '...' NOW", ma humanSupportFlowOffered si marca true alla PRIMA chiamata
+  del gate, prima ancora che il modello abbia davvero chiamato start_flow.
+  Il modello ha scritto testo libero ("mi serve il tuo nome") invece di
+  seguire l'istruzione, il flow Human Support non si è mai attaccato, e la
+  domanda del nome è arrivata fuori sequenza rispetto ai controlli tecnici
+  (acceso/wifi/cut-scheduling/batteria) — confusione reale per il cliente,
+  che risponde "sì è collegato alla corrente" pensando di rispondere al
+  nome. Fix pulito: tool_choice vincolato a un function name specifico
+  (supportato da OpenAI/OpenRouter: {type:'function', function:{name:...}}),
+  da propagare in callLLM/agentTurnInternal — stessa portata del gap
+  ORCHESTRATOR sopra, non un fix mirato.
 
 **non toccare questo file se non hiil pemesso utente**
 

@@ -1,25 +1,25 @@
 {
-  "sessionId": "cli-391110000005-1785959864748",
+  "sessionId": "cli-391110000005-1785961568762",
   "history": [
     {
       "role": "user",
       "content": "sono molto scontento, ho comprato il robot un mese fa e si è già rotto due volte, voglio parlare con qualcuno",
-      "timestamp": "2026-08-05T19:57:44.748Z"
+      "timestamp": "2026-08-05T20:26:08.762Z"
     },
     {
       "role": "assistant",
-      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande come posso aiutarti oggi?\n\nCapisco la tua frustrazione, è davvero spiacevole avere problemi così poco dopo l'acquisto. \n\nPer aiutarti al meglio, mi serve il tuo nome.",
-      "timestamp": "2026-08-05T19:57:54.767Z"
+      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande, come posso aiutarti oggi?\n\nCapisco la tua frustrazione, è davvero spiacevole. Ti metto subito in contatto con il nostro team di customer care che potrà aiutarti al meglio.\n\nPrima di tutto, qual è il tuo nome?",
+      "timestamp": "2026-08-05T20:26:12.201Z"
     },
     {
       "role": "user",
       "content": "Mario Rossi",
-      "timestamp": "2026-08-05T19:57:54.769Z"
+      "timestamp": "2026-08-05T20:26:12.204Z"
     },
     {
       "role": "assistant",
-      "content": "Grazie Mario, disattivo il chatbot e ti metto in comunicazione con il nostro customer care, che ti contatterà il prima possibile.\n\n**👤 Human Support message**\n\n🎫 **Ticket:** TKT-MSGIEDWO\n📌 **Reason:** complaint\n⚠️ **No technical details collected** — this came from an unanswered FAQ question.\n\n**Customer**\n• Name: Mario Rossi\n• Language: it\n\n\n**Summary**\nCustomer Mario Rossi purchased a STORM robot one month ago and reports it has broken down twice already. He is very dissatisfied and wants to speak with someone about this issue.",
-      "timestamp": "2026-08-05T19:58:00.474Z"
+      "content": "Grazie Mario, disattivo il chatbot e ti metto in comunicazione con il nostro customer care, che ti contatterà il prima possibile.\n\n**👤 Human Support message**\n\n🎫 **Ticket:** TKT-MSGJEQ8P\n📌 **Reason:** complaint\n⚠️ **No technical details collected** — no device to diagnose on this incident.\n\n**Customer**\n• Name: Mario Rossi\n• Language: it\n\n\n**Summary**\nCustomer Mario Rossi is very dissatisfied. He purchased the robot one month ago and it has already broken down twice. He wants to speak with someone about this issue.",
+      "timestamp": "2026-08-05T20:26:15.853Z"
     }
   ],
   "persistedState": {

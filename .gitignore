@@ -26,6 +26,9 @@ dump/
 # Testing
 coverage/
 
+# Custom chatbot CLI test sessions (local scratch, never real workspace data)
+apps/backend/custom-demoam/cli/.demoam-sessions/
+
 # Production - Build output (generated on Heroku during deploy)
 *.tsbuildinfo
 build/
