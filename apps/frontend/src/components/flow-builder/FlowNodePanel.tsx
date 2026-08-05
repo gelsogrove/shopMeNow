@@ -165,13 +165,16 @@ export function FlowNodePanel({
             />
           </div>
 
-          {/* Two plain checkboxes instead of a 5-option technical dropdown.
-              Mutually exclusive; neither checked = the node continues with
-              its own answers (the implicit default, no explicit "Not a
-              terminal" choice needed). END/LOOP still exist as valid
-              terminalType values in the data model (compiler/spec), just not
-              exposed here — END is behaviorally identical to SELF_SERVICE
-              today, LOOP is reserved/not yet a real case (analisi.md §5). */}
+          {/* Three plain checkboxes instead of a 5-option technical dropdown.
+              Mutually exclusive; none checked = the node continues with its
+              own answers (the implicit default, no explicit "Not a terminal"
+              choice needed). END still exists as a valid terminalType in the
+              data model but is not exposed — behaviorally identical to
+              SELF_SERVICE today (analisi.md §5). LOOP became a real case on
+              2026-08-06: a corrective step ("turn the wifi on, then let me
+              know") whose answer continues to the next check — the runtime
+              caps how many turns a customer may sit on one before the flow
+              gives up and escalates anyway. */}
           <div className="flex items-center gap-6">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <Checkbox
@@ -194,6 +197,17 @@ export function FlowNodePanel({
                 }}
               />
               Call operator
+            </label>
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={terminalType === "LOOP"}
+                onCheckedChange={(checked) => {
+                  const value = checked ? "LOOP" : ""
+                  setTerminalType(value)
+                  onChange(nodeId, { terminalType: (value || null) as FlowQuestionNodeData["terminalType"] })
+                }}
+              />
+              Fix &amp; retry
             </label>
           </div>
 
