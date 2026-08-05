@@ -119,10 +119,12 @@ const LLM_DEBUG = process.env.LLM_DEBUG === '1'
 // customer-facing copy, and not expected to vary per tenant.
 const WELCOME_BACK_STALE_MS = 60 * 60 * 1000
 
-// How many times a corrective LOOP node may send the customer back to the
-// same question before the flow gives up and escalates. Same reasoning and
-// same default as the gate's maxAsks — a mechanism bound, not tenant copy.
-const MAX_LOOP_RETRIES = 2
+// How many turns a corrective LOOP node may hold the conversation before the
+// flow gives up and escalates. The count is 1 on the turn the customer first
+// answers "no" (the turn the node dictates its instruction), so 2 means: ask
+// once, allow one more turn to report it done, then move on. Same reasoning
+// as the gate's maxAsks — a mechanism bound, not tenant copy.
+const MAX_LOOP_TURNS = 2
 
 export interface HistoryEntry {
   role: 'user' | 'assistant'
@@ -1222,7 +1224,7 @@ async function agentTurnInternal(
         { loopTurns: { ...(state.loopTurns ?? {}), [nodeId]: turnsHere } },
         { mirror: false },
       )
-      if (turnsHere > MAX_LOOP_RETRIES) {
+      if (turnsHere >= MAX_LOOP_TURNS) {
         if (ctx.humanSupportFlowId && state.activeFlowId === ctx.humanSupportFlowId) {
           updateState(ctx.sessionId, { humanSupportFlowDone: true }, { mirror: false })
         }
