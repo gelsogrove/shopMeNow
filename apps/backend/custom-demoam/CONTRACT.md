@@ -64,6 +64,9 @@ GUARDS
 - se il cliente cita un codice errore diverso da quello del flow scelto, il flow viene rifiutato
 - Human operator flow è un flow vero nel flow builder (non un oggetto di domande nel codice), protetto e non cancellabile — ogni percorso tecnico verso l'operatore ci passa
 - "non inventare" riguarda i FATTI, non il tono: il modello resta libero di essere caloroso e naturale nel modo di dire le cose, mai libero di dire cose non vere
+- appena il cliente dice il suo nome, nome società, telefono o indirizzo — anche di passaggio, non richiesto — lo salviamo subito con una calling function che scrive nel record cliente sul DB (name/company/phone/address)
+- ogni nodo del flow builder può portare a: un nuovo nodo, la fine del flusso, l'escalation a un operatore, oppure un altro flow intero — tutte e quattro le destinazioni sono opzioni valide per ogni risposta
+- quando il flow builder riconosce il problema del cliente e attacca il flow giusto, prende il testo del nodo corrente, lo dà al cliente nella sua lingua, e aspetta la sua risposta prima di passare al nodo successivo — un nodo alla volta, mai più di uno per messaggio
 
 PROSSIMO — da pianificare, non ancora iniziato
 
@@ -78,3 +81,11 @@ e' possibile cheun flow passi ad un altro flow ! deve essere un opzione da gesti
 [FATTO 2026-08-05] rimosso il dialog "Flow instructions" (generate/save di un human-readable prompt via LLM dopo il Save): non veniva mai letto a runtime, il flow gira nodo-per-nodo su compiledPrompt + graph. Salva ora torna direttamente alla lista flow
 
 - le parti harcodeate devon essee portate al minimo parliamo con l'utente per ogni scelta di hard-code non dico di non usarle dico di condividere
+
+UI/UX
+
+- l'interfaccia del flow builder è fondamentale, è il cuore del backend: deve
+  aiutare l'utente a capire chiaramente cosa sta facendo in ogni momento
+  (dove porta ogni risposta — nodo, fine, operatore, o un altro flow — quali
+  campi sta salvando, cosa succede al Save). Va curata con la stessa
+  attenzione della logica che governa

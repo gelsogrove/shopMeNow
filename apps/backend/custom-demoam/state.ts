@@ -40,6 +40,9 @@ export interface SessionState {
   // Operational
   name?: string
   serialNumber?: string
+  company?: string
+  phone?: string
+  address?: string
 
   // True once the escalate tool has already forced the explicit flow
   // decision ("start a matching flow or declare no_matching_flow") for this
@@ -87,7 +90,7 @@ export interface SessionState {
   visitedFlowIds?: string[]
 }
 
-export type PatchKey = 'name' | 'language' | 'serialNumber'
+export type PatchKey = 'name' | 'language' | 'serialNumber' | 'company' | 'phone' | 'address'
 
 export interface CustomerPatch {
   key: PatchKey
@@ -143,7 +146,7 @@ export function getState(sessionId: string): SessionState {
   return entry(sessionId).state
 }
 
-const MIRRORED_KEYS: ReadonlyArray<keyof SessionState> = ['name', 'language', 'serialNumber']
+const MIRRORED_KEYS: ReadonlyArray<keyof SessionState> = ['name', 'language', 'serialNumber', 'company', 'phone', 'address']
 
 export function updateState(
   sessionId: string,

@@ -229,7 +229,10 @@ const REMEMBER_TOOL = {
   function: {
     name: 'remember',
     description:
-      'Save a fact the customer has provided: a fieldKey from the active flow, or one of "name", "serialNumber", "problemDescription", "robotPoweredOn", "wifiActive", "cutSchedulingActive", "batterySufficient". Call this the moment the customer gives you the information.',
+      'Save a fact the customer has provided: a fieldKey from the active flow, or one of "name", "company", ' +
+      '"phone", "address", "serialNumber", "problemDescription", "robotPoweredOn", "wifiActive", ' +
+      '"cutSchedulingActive", "batterySufficient". Call this the MOMENT the customer states their name, ' +
+      'company, phone number, or address — even in passing, not just when directly asked.',
     parameters: {
       type: 'object',
       properties: {
@@ -343,6 +346,9 @@ const OPERATING_RULES = [
   '- This is about FACTS, not TONE: word dictated questions and FAQ answers',
   '  naturally, warmly, in your own phrasing — never stiff or robotic. What you',
   '  say must always be true; how you say it is entirely yours.',
+  '- The MOMENT the customer states their name, company, phone number, or',
+  '  address — even in passing, unprompted — call remember with it right away.',
+  '  Do not wait to be asked, and do not wait until the end of the turn.',
   '',
   '## CLASSIFYING THE REQUEST (once per incident, then stay on that track)',
   '',
@@ -591,7 +597,7 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
 
     const nameWasRequestedByPreOperatorGate = key === 'name' && (getAskedCounts(ctx.sessionId)['name'] ?? 0) > 0
 
-    if (key === 'name' || key === 'serialNumber') {
+    if (key === 'name' || key === 'serialNumber' || key === 'company' || key === 'phone' || key === 'address') {
       updateState(ctx.sessionId, { [key]: String(value) })
     } else {
       mergeCollectedData(ctx.sessionId, { [key]: value as JsonValue })
@@ -1027,6 +1033,9 @@ function formatOperatorBriefing(params: {
 
   lines.push('**Customer**')
   lines.push(`• Name: ${state.name?.trim() || '—'}`)
+  if (state.company?.trim()) lines.push(`• Company: ${state.company.trim()}`)
+  if (state.phone?.trim()) lines.push(`• Phone: ${state.phone.trim()}`)
+  if (state.address?.trim()) lines.push(`• Address: ${state.address.trim()}`)
   lines.push(`• Language: ${state.language || '—'}`)
   lines.push('')
 
