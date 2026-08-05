@@ -17,6 +17,7 @@
     { "message": "Chiara Ferri" }
   ],
   "expect": {
-    "replyContains": ["Chiara"]
+    "replyContains": ["Chiara", "Ticket"],
+    "replyExcludes": ["tornato a funzionare", "funziona correttamente"]
   }
 }

@@ -699,6 +699,29 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
           'incomplete, malformed, or ask the customer to re-check it. Move on to the next question.',
       }
     }
+
+    // With a flow question pending, saving a fact is never the whole move:
+    // the node still has to be advanced, or the conversation stalls on it.
+    //
+    // Andrea 2026-08-06, seen in the CLI runner: the customer answered "no,
+    // the wifi is not active", the model called remember (which satisfies
+    // tool_choice:'required') and then wrote free text — never answer_step.
+    // currentNodeId stayed on hf_wifi for four turns while the model
+    // improvised a diagnosis of its own ("that's probably why it won't
+    // restart", "the robot is working again now"), and the customer never
+    // reached an operator at all.
+    if (afterSave.currentNodeId) {
+      return {
+        ok: true,
+        dictates_text: false,
+        force_tool: 'answer_step',
+        instruction:
+          'Saved. A flow question is still pending — call answer_step NOW with the label matching ' +
+          'what the customer just said, in this same turn. Do NOT write a reply and do NOT diagnose ' +
+          'anything yourself: the flow decides what comes next.',
+      }
+    }
+
     return { ok: true, dictates_text: stillNeedsIntake }
   }
 

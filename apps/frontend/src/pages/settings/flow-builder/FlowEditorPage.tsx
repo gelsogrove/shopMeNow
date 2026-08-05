@@ -47,6 +47,15 @@ function apiNodeToFlowNode(n: FlowNode, edges: ApiFlowEdge[]): Node<FlowQuestion
   }
 }
 
+// A back-edge closes a cycle: its target sits at or before its source on the
+// canvas (LOOP nodes wire back to the question they re-ask). The default
+// bezier always exits right / enters left, so on a back-edge it has to swing
+// the long way round and crosses the forward edge underneath it — the "X"
+// Andrea saw. Returns are routed orthogonally into the node's bottom handle
+// instead, keeping the forward path reading strictly left-to-right. Applied
+// in displayEdges at render time, not here — see the comment there.
+const RETURN_EDGE_STYLE = { stroke: "#94a3b8", strokeDasharray: "5 4", strokeWidth: 1.5 }
+
 function apiEdgeToFlowEdge(e: ApiFlowEdge): Edge {
   return {
     id: e.id,
@@ -424,6 +433,31 @@ function FlowEditorInner() {
     },
   }))
 
+  // Same reasoning as displayNodes: how a return edge is drawn is presentation,
+  // derived at render time from where the nodes currently sit. Doing it here
+  // rather than in apiEdgeToFlowEdge means it stays correct after a node is
+  // dragged or an answer is retargeted, without the three mutation sites
+  // having to re-derive the geometry themselves.
+  const nodePositions = new Map(nodes.map((n) => [n.id, n.position.x]))
+  const displayEdges = edges.map((e) => {
+    const sourceX = nodePositions.get(e.source)
+    const targetX = nodePositions.get(e.target)
+    const backEdge =
+      e.source === e.target ||
+      (sourceX !== undefined && targetX !== undefined && targetX <= sourceX)
+    if (!backEdge) return e
+    const triggersEscalation = (e.data as { triggersEscalation?: boolean } | undefined)?.triggersEscalation
+    return {
+      ...e,
+      type: "smoothstep",
+      targetHandle: "return",
+      pathOptions: { borderRadius: 12 },
+      style: triggersEscalation ? { stroke: "#f59e0b" } : RETURN_EDGE_STYLE,
+      labelStyle: { fill: "#64748b", fontSize: 10 },
+      labelBgStyle: { fill: "#f8fafc" },
+    } as Edge
+  })
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -509,7 +543,7 @@ function FlowEditorInner() {
         ) : (
           <ReactFlow
             nodes={displayNodes}
-            edges={edges}
+            edges={displayEdges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onNodesDelete={handleNodesDelete}

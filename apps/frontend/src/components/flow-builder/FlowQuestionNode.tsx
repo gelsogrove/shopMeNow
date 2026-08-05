@@ -34,6 +34,13 @@ export const FlowQuestionNode = memo(function FlowQuestionNode({ data, selected 
     >
       <Handle type="target" position={Position.Left} />
 
+      {/* Second target handle, on the bottom edge, used only by return edges
+          (LOOP nodes wiring back to the question they re-ask). Entering from
+          below keeps the left handle meaning "the forward path arrives here",
+          so a reader can still follow the flow left-to-right without the
+          return line cutting back across it. */}
+      <Handle type="target" position={Position.Bottom} id="return" />
+
       <div className="flex items-start justify-between gap-1.5">
         <p className="text-xs font-medium text-gray-900 leading-snug line-clamp-3">{nodeData.question || "(empty question)"}</p>
         {nodeData.terminalType && TERMINAL_ICON[nodeData.terminalType]}
