@@ -1,0 +1,22 @@
+{
+  "sessionId": "cli-391110000015-1785952299943",
+  "history": [
+    {
+      "role": "user",
+      "content": "こんにちは、ロボットの掃除方法を教えてください",
+      "timestamp": "2026-08-05T17:51:39.943Z"
+    },
+    {
+      "role": "assistant",
+      "content": "こんにちは。SofIAと申します。AmRobotsのデジタルアシスタントです。本日はどのようなご質問やお困りごとがございますか？\n\nI appreciate you reaching out, but I'm not able to help with that — I only support AmRobots STORM robot lawn mowers, not cleaning robots.\n\nIf you have questions about your STORM lawn mower or need help with a problem, I'm here to assist!",
+      "timestamp": "2026-08-05T17:51:47.343Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "new",
+      "language": "en"
+    },
+    "patches": []
+  }
+}

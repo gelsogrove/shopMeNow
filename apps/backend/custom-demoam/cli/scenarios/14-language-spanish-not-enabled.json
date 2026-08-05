@@ -1,9 +1,0 @@
-{
-  "description": "Caso lingua spagnola — settings.json reale: enabledLanguages=['en'] soltanto, lo spagnolo NON è abilitato. Anche se il cliente scrive in spagnolo, la risposta deve arrivare in defaultLanguage (en), non in spagnolo — comportamento corretto per come è configurato oggi questo workspace, non un bug.",
-  "contractRule": "CONTRACT.md riga 5: \"...se la lignua e' presente nel settings..come lignua dispobibile altrimenti usa lignua di degault che anch'essa dovrebbe essere nel settigs.json\"; state.ts resolveEnabledLanguage: fallback a defaultLanguage quando la lingua rilevata non è in enabledLanguages",
-  "phone": "+391110000014",
-  "newSession": true,
-  "turns": [
-    { "message": "hola, ¿cómo puedo limpiar mi robot?" }
-  ]
-}

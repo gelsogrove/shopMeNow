@@ -1020,18 +1020,28 @@ function formatRuntimeBlock(
         '',
         '## THE GREETING TO OPEN WITH (mandatory, this turn only)',
         '',
-        'Translate this exact sentence into the language you are about to reply in, and make it',
-        'your WHOLE reply — nothing else, the substance of the conversation continues in a',
-        'separate message right after this one:',
+        'Translate this exact sentence into the language of the customer\'s message — but ONLY if',
+        `that language is one of: ${settings.enabledLanguages.join(', ')}. If the customer wrote in any`,
+        `other language, translate into ${settings.defaultLanguage} instead (this workspace's default),`,
+        'never into the language they actually used. Make the translated sentence your WHOLE reply —',
+        'nothing else, the substance of the conversation continues in a separate message right after',
+        'this one:',
         '',
         greetingToTranslate,
       )
     } else if (greetingAlreadyDelivered) {
       lines.push(
         '',
-        `- This is a ${state.greeting === 'new' ? 'NEW customer' : 'returning customer'}. The greeting was`,
-        '  already sent as a separate message right before this one — do NOT greet again, start',
-        '  directly with the substance of your reply.',
+        '## DO NOT GREET AGAIN (already sent this turn)',
+        '',
+        `A ${state.greeting === 'new' ? 'new-customer' : 'returning-customer'} greeting was already sent as its`,
+        'own message immediately before this one. Repeating it — even a different-sounding',
+        '"Ciao!" / "Hi there!" / self-introduction — is a duplicate, not a nicety.',
+        '',
+        "If the customer's message was itself just a greeting with no request in it (\"ciao\", \"hi\",",
+        '"buongiorno" and nothing else), the greeting already sent IS the complete reply: return NO',
+        'text at all this hop — do not call a tool either. Only write text here if there is actual',
+        'substance to respond to beyond the greeting.',
       )
     } else {
       lines.push(

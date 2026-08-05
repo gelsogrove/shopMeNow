@@ -1,0 +1,9 @@
+{
+  "description": "Cliente nuovo senza nome noto (host non fornisce un nome reale, solo il placeholder anonimo \"Visitor <id>\") — il welcome deve comunque uscire senza rompersi, con {{customerName}} risolto a stringa vuota invece di mostrare il placeholder anonimo o lasciare {{customerName}} letterale.",
+  "contractRule": "CONTRACT.md riga 4 (welcome message per utente nuovo); agent.ts realHostName: un userName che inizia con \"Visitor \" NON è trattato come nome noto (CLAUDE.md §14 — host metadata, non testo del cliente)",
+  "phone": "+391110000105",
+  "newSession": true,
+  "turns": [
+    { "message": "ciao, il robot non parte" }
+  ]
+}

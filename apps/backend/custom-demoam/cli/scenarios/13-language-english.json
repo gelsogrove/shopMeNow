@@ -1,9 +1,0 @@
-{
-  "description": "Caso lingua inglese — settings.json reale: enabledLanguages=['en'], defaultLanguage='en'. La risposta deve essere in inglese.",
-  "contractRule": "CONTRACT.md riga 5: \"il chatbot deve rispodnere nella lignau del cliene se la lignua e' presente nel settings\"",
-  "phone": "+391110000013",
-  "newSession": true,
-  "turns": [
-    { "message": "hi, how can I clean my robot?" }
-  ]
-}

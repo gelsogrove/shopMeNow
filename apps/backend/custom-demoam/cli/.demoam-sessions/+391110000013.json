@@ -1,0 +1,22 @@
+{
+  "sessionId": "cli-391110000013-1785952275109",
+  "history": [
+    {
+      "role": "user",
+      "content": "hi, how can I clean my robot?",
+      "timestamp": "2026-08-05T17:51:15.109Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Hi! I'm SofIA, AmRobots' customer care assistant. I'm here to help you with your STORM robot mower. 😊\n\nLet me find the right answer about cleaning for you.\n\nI can help with that! Here's how to keep your robot in good shape:\n\nWipe the body and camera lenses with a soft, dry or slightly damp cloth — never use a hose or pressure washer, and never submerge the robot. Brush off grass clippings from the underside and blades after each session. Never clean the robot while it is powered on.\n\nThat's all there is to it. Anything else I can help with?",
+      "timestamp": "2026-08-05T17:51:21.339Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "new",
+      "language": "en"
+    },
+    "patches": []
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "description": "Cliente nuovo scrive in inglese — inglese è abilitato (settings.json: enabledLanguages include 'en') — la risposta, welcome incluso, deve arrivare in inglese.",
+  "contractRule": "CONTRACT.md riga 4 (welcome message per utente nuovo) + riga 5 (rispondere nella lingua del cliente se presente in enabledLanguages)",
+  "phone": "+391110000102",
+  "newSession": true,
+  "turns": [
+    { "message": "hi, the robot won't start" }
+  ]
+}

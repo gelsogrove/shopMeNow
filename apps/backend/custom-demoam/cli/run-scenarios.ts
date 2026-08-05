@@ -41,6 +41,8 @@ interface Scenario {
   /** The exact CONTRACT.md rule(s) this scenario exists to verify — quoted or line-referenced, never paraphrased into something looser. */
   contractRule: string
   phone: string
+  /** Host-provided customer name (e.g. WhatsApp profile name), as a real host would pass it — distinct from a name the customer states in chat. Omit to simulate an anonymous/unknown customer. */
+  userName?: string
   turns: ScenarioTurn[]
   newSession?: boolean
   reuseSessionFrom?: string
@@ -50,6 +52,24 @@ interface Scenario {
   secondSessionTurns?: ScenarioTurn[]
   skip?: boolean
   skipReason?: string
+  /**
+   * Declarative assertions on the FINAL turn's output — checked in addition
+   * to the always-on structural checks (non-empty reply, no error). Kept
+   * narrow and structural on purpose: `language` reads output.language (the
+   * ⟦LANG:xx⟧ tag, already filtered through resolveEnabledLanguage), never a
+   * string match on translated text. `replyContains`/`replyExcludes` are for
+   * TEST DATA that must appear verbatim regardless of language (a customer
+   * name we passed in, an anonymous-visitor placeholder that must never leak
+   * to the customer) — not for asserting configured copy (CLAUDE.md §1A).
+   */
+  expect?: {
+    /** output.language on the final turn must equal this ISO 639-1 code. */
+    language?: string
+    /** Every one of these substrings must appear somewhere in the final turn's reply. */
+    replyContains?: string[]
+    /** None of these substrings may appear anywhere in the final turn's reply. */
+    replyExcludes?: string[]
+  }
 }
 
 interface ScenarioOutcome {
@@ -61,10 +81,23 @@ interface ScenarioOutcome {
   lastReply?: string
 }
 
+/** Recursively collects .json scenario paths, relative to SCENARIOS_DIR, so scenarios can be grouped into subfolders (e.g. 01-welcome/, 02-wip-message/). */
+function listScenarioFiles(dir: string, prefix = ""): string[] {
+  const entries = fs.readdirSync(dir, { withFileTypes: true })
+  const files: string[] = []
+  for (const entry of entries) {
+    const relPath = prefix ? `${prefix}/${entry.name}` : entry.name
+    if (entry.isDirectory()) {
+      files.push(...listScenarioFiles(path.join(dir, entry.name), relPath))
+    } else if (entry.name.endsWith(".json")) {
+      files.push(relPath)
+    }
+  }
+  return files
+}
+
 async function loadScenarios(filter?: string): Promise<Array<{ file: string; scenario: Scenario }>> {
-  const files = fs
-    .readdirSync(SCENARIOS_DIR)
-    .filter((f) => f.endsWith(".json"))
+  const files = listScenarioFiles(SCENARIOS_DIR)
     .filter((f) => !filter || f.includes(filter))
     .sort()
   return files.map((file) => ({
@@ -89,6 +122,30 @@ function checkNoErrorField(errors: Array<string | undefined>): { name: string; o
   return { name: "no chatbotFn error", ok: withError.length === 0, detail: withError.join("; ") || undefined }
 }
 
+function checkLanguage(actual: string | undefined, expected: string): { name: string; ok: boolean; detail?: string } {
+  return {
+    name: `output.language is "${expected}"`,
+    ok: actual === expected,
+    detail: actual !== expected ? `got "${actual ?? "(unset)"}"` : undefined,
+  }
+}
+
+function checkReplyContains(reply: string, needle: string): { name: string; ok: boolean; detail?: string } {
+  return {
+    name: `reply contains "${needle}"`,
+    ok: reply.includes(needle),
+    detail: reply.includes(needle) ? undefined : "not found in final reply",
+  }
+}
+
+function checkReplyExcludes(reply: string, needle: string): { name: string; ok: boolean; detail?: string } {
+  return {
+    name: `reply does not contain "${needle}"`,
+    ok: !reply.includes(needle),
+    detail: reply.includes(needle) ? "found in final reply" : undefined,
+  }
+}
+
 async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOutcome> {
   if (scenario.skip) {
     return {
@@ -111,7 +168,7 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
   let lastOutput: Awaited<ReturnType<typeof runTurn>>["output"] | undefined
 
   for (const turn of scenario.turns) {
-    const { output } = await runTurn({ phone: scenario.phone, message: turn.message })
+    const { output } = await runTurn({ phone: scenario.phone, message: turn.message, userName: scenario.userName })
     lastOutput = output
     replies.push(output.reply ?? "")
     errors.push(output.error)
@@ -124,7 +181,7 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
     forceSessionStale(scenario.phone, scenario.thenForceStaleSecondsAndContinue)
     console.log(`  [${scenario.phone}] — session backdated ${scenario.thenForceStaleSecondsAndContinue}s, continuing as a later conversation —`)
     for (const turn of scenario.secondSessionTurns) {
-      const { output } = await runTurn({ phone: scenario.phone, message: turn.message })
+      const { output } = await runTurn({ phone: scenario.phone, message: turn.message, userName: scenario.userName })
       lastOutput = output
       replies.push(output.reply ?? "")
       errors.push(output.error)
@@ -135,6 +192,20 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
   }
 
   const checks = [checkNoEmptyReply(replies), checkNoErrorField(errors)]
+
+  if (scenario.expect) {
+    const finalReply = lastOutput?.reply ?? ""
+    if (scenario.expect.language) {
+      checks.push(checkLanguage(lastOutput?.language, scenario.expect.language))
+    }
+    for (const needle of scenario.expect.replyContains ?? []) {
+      checks.push(checkReplyContains(finalReply, needle))
+    }
+    for (const needle of scenario.expect.replyExcludes ?? []) {
+      checks.push(checkReplyExcludes(finalReply, needle))
+    }
+  }
+
   const status: ScenarioOutcome["status"] = checks.every((c) => c.ok) ? "PASS" : "FAIL"
 
   return {
