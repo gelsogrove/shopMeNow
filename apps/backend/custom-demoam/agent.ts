@@ -695,6 +695,15 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
         return {
           ok: false,
           error: 'human_support_flow_required',
+          // force_tool, not just an instruction: the model was seen ignoring
+          // this exact prose and writing "what's your name?" instead of
+          // calling start_flow — humanSupportFlowOffered was already true by
+          // then, so the gate never got a second chance to re-insist, and the
+          // pre-operator name question landed on a customer who was never
+          // asked the technical checks first. A vague reference "or the
+          // instruction above" would not survive translation; naming the
+          // tool by function name is unambiguous in every language.
+          force_tool: 'start_flow',
           instruction:
             `Before handing over: call start_flow with flowId '${ctx.humanSupportFlowId}' NOW — it runs ` +
             'the standard pre-operator checks. Follow it to completion, then call escalate_to_operator ' +
@@ -811,6 +820,20 @@ interface CallLLMParams {
    * the only thing the model is capable of producing this hop.
    */
   forceTextOnly?: boolean
+  /**
+   * Forces tool_choice onto ONE named tool — a stronger guarantee than
+   * forceToolChoice's "any tool", for the cases where "any tool" was not
+   * enough. Andrea 2026-08-05, seen live: the human_support_flow_required
+   * refusal said "call start_flow NOW" in prose, tool_choice was 'required'
+   * (any tool), and the model called something else (or just wrote text
+   * alongside a tool call) instead of start_flow — the flow never attached,
+   * and the pre-operator gate's name question landed out of sequence, before
+   * the technical checks the customer was never actually asked. Naming the
+   * function directly in tool_choice removes the model's ability to pick a
+   * different tool structurally, the same way forceTextOnly removes its
+   * ability to avoid tools altogether.
+   */
+  forceSpecificTool?: string
 }
 
 async function callLLM({
@@ -829,6 +852,7 @@ async function callLLM({
   greetingOnlyHop,
   forceToolChoice,
   forceTextOnly,
+  forceSpecificTool,
 }: CallLLMParams): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
@@ -880,7 +904,11 @@ async function callLLM({
   }
   if (!forceTextOnly) {
     body.tools = buildToolsForTurn(state, currentStepLabels, faqCount)
-    body.tool_choice = forceToolChoice ? 'required' : 'auto'
+    body.tool_choice = forceSpecificTool
+      ? { type: 'function', function: { name: forceSpecificTool } }
+      : forceToolChoice
+        ? 'required'
+        : 'auto'
   }
 
   const res = await fetch(`${BASE_URL}/chat/completions`, {
@@ -1156,6 +1184,7 @@ async function agentTurnInternal(
   }
 
   let awaitingDictatedReply = false
+  let forceSpecificTool: string | undefined
 
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
@@ -1183,7 +1212,9 @@ async function agentTurnInternal(
       greetingAlreadyDelivered: !!greetingToTranslate,
       forceToolChoice: mustForceToolChoice,
       forceTextOnly: awaitingDictatedReply,
+      forceSpecificTool,
     })
+    forceSpecificTool = undefined
 
     if (toolCalls.length === 0) {
       if (mustForceToolChoice) {
@@ -1231,6 +1262,9 @@ async function agentTurnInternal(
 
       if (result.dictates_text === true) {
         awaitingDictatedReply = true
+      }
+      if (typeof result.force_tool === 'string') {
+        forceSpecificTool = result.force_tool
       }
 
       if (call.function.name === 'answer_step' && !result.ok && result.error === 'unrecognized_answer' && answeringNodeId) {
