@@ -76,6 +76,11 @@ export interface SessionState {
   // The pre-operator gate field escalate_to_operator most recently dictated
   // a question for. Cleared once remember actually saves that field.
   pendingGateField?: string
+
+  // True once escalate_to_operator has already forced start_flow on the
+  // shared Human Support flow for this incident — fires once, so a completed
+  // (or abandoned) attempt doesn't loop back into forcing it again.
+  humanSupportFlowOffered?: boolean
 }
 
 export type PatchKey = 'name' | 'language' | 'serialNumber'

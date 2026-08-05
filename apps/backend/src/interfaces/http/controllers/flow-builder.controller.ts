@@ -122,9 +122,13 @@ export class FlowBuilderController {
     try {
       const workspaceId = (req as any).workspaceId
       const { flowId } = req.params
-      const ok = await deleteFlow(workspaceId, flowId)
-      if (!ok) {
+      const result = await deleteFlow(workspaceId, flowId)
+      if (result === 'not_found') {
         res.status(404).json({ error: 'Flow not found' })
+        return
+      }
+      if (result === 'protected') {
+        res.status(409).json({ error: 'This flow is protected and cannot be deleted' })
         return
       }
       res.status(204).send()

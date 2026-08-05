@@ -60,6 +60,8 @@ GUARDS
 - il messaggio finale di un flow (quello di successo, non di escalation) è dettato dal codice, mai inventato dal modello
 - se il flow porta a un'escalation, passa dallo stesso Human operator flow di ogni altro percorso
 - se il cliente cita un codice errore diverso da quello del flow scelto, il flow viene rifiutato
+- Human operator flow è un flow vero nel flow builder (non un oggetto di domande nel codice), protetto e non cancellabile — ogni percorso tecnico verso l'operatore ci passa
+- "non inventare" riguarda i FATTI, non il tono: il modello resta libero di essere caloroso e naturale nel modo di dire le cose, mai libero di dire cose non vere
 
 NEVER
 
@@ -70,12 +72,6 @@ NEVER
 
 PROSSIMO — da pianificare, non ancora iniziato
 
-- Human operator flow diventa un flow vero e proprio nel flow builder (non un
-  oggetto di domande nel codice/settings) — non cancellabile, tutti i
-  percorsi verso l'operatore (nessun match, complaint, emergenza, FAQ non
-  trovata, ESCALATE terminal di un altro flow) confluiscono lì invece che nel
-  meccanismo attuale di escalate_to_operator
-
 - trova un metodo per non inventare nulla sia lato faq che flow che di main prompt e conferma che e' attivo ! se gia' c'e' verifica se e' attivo e che non ha bug e che sia nel posto giusto
 - ricordati il fatto che nondebba invenatare non signigica che non deve applicare fantasia...sonon i concetti che non dev inventare !
 
@@ -83,3 +79,6 @@ PROSSIMO — da pianificare, non ancora iniziato
 
 FLOW:
 e' possibile cheun flow passi ad un altro flow ! deve essere un opzione da gestire
+
+- le parti harcodeate devon essee portate al minimo parliamo con l'utente
+  per ogni scelta di hard-code non dico di non usarle dico di condividere

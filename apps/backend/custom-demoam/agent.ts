@@ -76,6 +76,10 @@ interface Settings {
   // so the code stays a generic regex check.
   serialNumberPattern?: string
   serialNumberFormatHint?: string
+  // The shared pre-operator flow every escalation road converges on — a real
+  // flow-builder flow (protected, not deletable), not a code-owned question
+  // list. This tenant's own flow id, so configured rather than hardcoded.
+  humanSupportFlowId?: string
 }
 
 let SETTINGS: Settings
@@ -335,6 +339,9 @@ const OPERATING_RULES = [
   '  value or rewrite the sentence without it.',
   '- An honest "I do not have that information, I am passing you to a colleague"',
   '  is ALWAYS correct. A plausible-sounding guess is a serious error.',
+  '- This is about FACTS, not TONE: word dictated questions and FAQ answers',
+  '  naturally, warmly, in your own phrasing — never stiff or robotic. What you',
+  '  say must always be true; how you say it is entirely yours.',
   '',
   '## CLASSIFYING THE REQUEST (once per incident, then stay on that track)',
   '',
@@ -420,6 +427,7 @@ interface ToolContext {
   serialNumberPattern?: string
   serialNumberFormatHint?: string
   currentMessage?: string
+  humanSupportFlowId?: string
 }
 
 interface ToolResult {
@@ -501,6 +509,7 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     }
 
     const graph = buildFlowGraph(state.activeFlowGraphSnapshot)
+    const answeredNode = currentNode(graph, state.currentNodeId)
     const result = advance(graph, state.currentNodeId, label)
 
     if (!result) {
@@ -513,6 +522,10 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
           `"${label}" does not match any of the valid answers to the current question (${labels.join(', ')}). ` +
           'Ask a brief clarifying question about the SAME thing — do not move on or invent a new question.',
       }
+    }
+
+    if (answeredNode?.fieldKey) {
+      mergeCollectedData(ctx.sessionId, { [answeredNode.fieldKey]: label })
     }
 
     if (result.escalate) {
@@ -665,6 +678,33 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
             'If one matches, call start_flow with its id NOW — the customer must get the guided ' +
             'procedure, not an operator queue. ONLY if none genuinely matches, call ' +
             'escalate_to_operator again immediately with reason "no_matching_flow".',
+        }
+      }
+
+      // 2.5. The shared Human Support flow — acceso/wifi/scheduling/batteria
+      // as a real flow-builder flow (protected, editable, not deletable, see
+      // Andrea's contract) instead of code-owned questions. Runs once per
+      // incident and only while at least one of its fields is still missing —
+      // completing it (or abandoning it) sets state.currentNodeId to
+      // undefined, so this cannot re-trigger mid-flow or loop after done.
+      const technicalFieldsStillMissing = (['robotPoweredOn', 'wifiActive', 'cutSchedulingActive', 'batterySufficient'] as const).some(
+        (field) => state.collectedData?.[field] === undefined,
+      )
+      if (
+        technicalCase &&
+        reason !== 'complaint' &&
+        !state.humanSupportFlowOffered &&
+        ctx.humanSupportFlowId &&
+        technicalFieldsStillMissing
+      ) {
+        updateState(ctx.sessionId, { humanSupportFlowOffered: true }, { mirror: false })
+        return {
+          ok: false,
+          error: 'human_support_flow_required',
+          instruction:
+            `Before handing over: call start_flow with flowId '${ctx.humanSupportFlowId}' NOW — it runs ` +
+            'the standard pre-operator checks. Follow it to completion, then call escalate_to_operator ' +
+            'again with the same reason.',
         }
       }
 
@@ -1234,6 +1274,7 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
       gateQuestions: settings.gateQuestions,
       serialNumberPattern: settings.serialNumberPattern,
       serialNumberFormatHint: settings.serialNumberFormatHint,
+      humanSupportFlowId: settings.humanSupportFlowId,
     }
 
     hydrateState(sessionId, input.context.persistedState)
@@ -1294,8 +1335,15 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     if (listFlows && !getState(sessionId).activeFlowId) {
       try {
         const flows = await listFlows({ workspaceId: input.config.workspaceId })
+        // ctx.availableFlows keeps ALL flows — startFlow must still be able to
+        // validate the Human Support flow when escalate_to_operator's step 2.5
+        // forces it. flowsBlock (the "AVAILABLE FLOWS" catalogue offered for
+        // the model's own free choice while classifying the customer's
+        // problem) excludes it: that flow is never a diagnostic match, only a
+        // code-dictated destination.
         ctx.availableFlows = flows
-        flowsBlock = formatFlowsBlock(flows)
+        const selectableFlows = flows.filter((f) => f.flowId !== ctx.humanSupportFlowId)
+        flowsBlock = formatFlowsBlock(selectableFlows)
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('[demoam] listFlows handler threw, continuing without the flow catalogue', err)

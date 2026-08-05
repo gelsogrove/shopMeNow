@@ -24,10 +24,10 @@ async function main() {
   const flow = existing ?? (await createFlow(workspace.id, null, title, "Shared pre-operator escalation path — every road to a human operator goes through this flow."))
 
   const nodes = [
-    { id: "hf_powered_on", question: "Is the robot powered on?", positionX: 0, positionY: 0, terminalType: null },
-    { id: "hf_wifi", question: "Is the wifi active?", positionX: 280, positionY: 0, terminalType: null },
-    { id: "hf_cut_schedule", question: "Is it currently in a scheduled cutting cycle?", positionX: 560, positionY: 0, terminalType: null },
-    { id: "hf_battery", question: "Is the battery sufficiently charged?", positionX: 840, positionY: 0, terminalType: null },
+    { id: "hf_powered_on", question: "Is the robot powered on?", positionX: 0, positionY: 0, fieldKey: "robotPoweredOn", fieldType: "boolean", terminalType: null },
+    { id: "hf_wifi", question: "Is the wifi active?", positionX: 280, positionY: 0, fieldKey: "wifiActive", fieldType: "boolean", terminalType: null },
+    { id: "hf_cut_schedule", question: "Is it currently in a scheduled cutting cycle?", positionX: 560, positionY: 0, fieldKey: "cutSchedulingActive", fieldType: "boolean", terminalType: null },
+    { id: "hf_battery", question: "Is the battery sufficiently charged?", positionX: 840, positionY: 0, fieldKey: "batterySufficient", fieldType: "boolean", terminalType: null },
     { id: "hf_handoff", question: "This flow has reached its escalation point.", positionX: 1120, positionY: 0, terminalType: "ESCALATE" },
   ]
 

@@ -187,11 +187,14 @@ export async function saveFlowHumanPrompt(
   return true
 }
 
-export async function deleteFlow(workspaceId: string, flowId: string): Promise<boolean> {
+export type DeleteFlowResult = 'deleted' | 'not_found' | 'protected'
+
+export async function deleteFlow(workspaceId: string, flowId: string): Promise<DeleteFlowResult> {
   const existing = await prisma.flow.findFirst({ where: { id: flowId, workspaceId } })
-  if (!existing) return false
+  if (!existing) return 'not_found'
+  if (existing.isProtected) return 'protected'
   await prisma.flow.delete({ where: { id: flowId } })
-  return true
+  return 'deleted'
 }
 
 export async function getFlowGraph(workspaceId: string, flowId: string) {
