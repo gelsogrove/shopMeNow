@@ -760,6 +760,28 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       // revealing another). Decide first, mutate after.
       const shape = caseShapeFor(reason)
 
+      // A flow with a question pending can only be advanced by answer_step
+      // or abandoned by abandon_flow — never short-circuited into the gate.
+      //
+      // Andrea 2026-08-06, seen in the CLI runner: mid-flow (cut-scheduling
+      // question pending) the model called escalate_to_operator; the gate,
+      // seeing serial/description/when answered, dictated the NAME question
+      // — so the customer was asked their name in the middle of the
+      // technical checks, answered the next flow question instead, and that
+      // answer ("sì la programmazione è attiva") was saved as their name and
+      // read back in the hand-off. The gate must not even look while a node
+      // is pending.
+      if (state.currentNodeId) {
+        return {
+          ok: false,
+          error: 'flow_question_pending',
+          instruction:
+            'A flow is still running with a question pending — do NOT hand over yet. Call answer_step ' +
+            "with the customer's answer to that question, or abandon_flow if they clearly changed " +
+            'subject, then continue the flow to its end.',
+        }
+      }
+
       // Recorded for the operator briefing: "no technical details" must read
       // as "there was no device to diagnose", not "the customer refused".
       if (shape === 'no_device' && !state.skippedTechnicalGate) {
