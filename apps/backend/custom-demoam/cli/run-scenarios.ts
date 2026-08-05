@@ -11,10 +11,17 @@
  * exists to verify — a scenario with no traceable rule is not a real test,
  * it's a guess at what might matter.
  *
- * Usage:
- *   DATABASE_URL=... OPENROUTER_API_KEY=... npx tsx --tsconfig custom-demoam/tsconfig.json \
- *     custom-demoam/cli/run-scenarios.ts
+ * DATABASE_URL/OPENROUTER_API_KEY MUST come from Heroku, never a local DB
+ * (Andrea's CONTRACT.md: "never change the DB IN LOCAL always su heroku"):
+ *   DATABASE_URL="$(heroku config:get DATABASE_URL -a echatbot-app)" \
+ *   OPENROUTER_API_KEY="$(heroku config:get OPENROUTER_API_KEY -a echatbot-app)" \
+ *     npx tsx --tsconfig custom-demoam/tsconfig.json custom-demoam/cli/run-scenarios.ts
  *   ...same... custom-demoam/cli/run-scenarios.ts 06-problem-present-in-flow
+ *
+ * The only thing that stays local is the per-phone session JSON under
+ * cli/.demoam-sessions/ — a stand-in for the real host's session
+ * store/Redis, never the workspace's FAQs/flows/settings, which always come
+ * live from Supabase through the same handlers a real host would use.
  */
 import { prisma } from "@echatbot/database"
 import fs from "fs"
@@ -45,6 +52,7 @@ interface Scenario {
 interface ScenarioOutcome {
   file: string
   description: string
+  contractRule: string
   status: "PASS" | "FAIL" | "SKIP"
   checks: Array<{ name: string; ok: boolean; detail?: string }>
   lastReply?: string
@@ -80,7 +88,13 @@ function checkNoErrorField(errors: Array<string | undefined>): { name: string; o
 
 async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOutcome> {
   if (scenario.skip) {
-    return { file, description: scenario.description, status: "SKIP", checks: [{ name: scenario.skipReason ?? "skipped", ok: true }] }
+    return {
+      file,
+      description: scenario.description,
+      contractRule: scenario.contractRule,
+      status: "SKIP",
+      checks: [{ name: scenario.skipReason ?? "skipped", ok: true }],
+    }
   }
 
   if (scenario.newSession) wipeSession(scenario.phone)
