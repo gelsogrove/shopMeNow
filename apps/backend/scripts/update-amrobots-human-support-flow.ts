@@ -56,16 +56,24 @@ async function main() {
     { id: "hf_powered_on", question: "Before connect to our Human Support let me ask you a couple of question, Is the robot power on?", positionX: 0, positionY: 0, fieldKey: "robotPoweredOn", fieldType: "boolean", terminalType: null },
     { id: "hf_wifi", question: "Good. And now Can you confirm that the wifi is active ?", positionX: 280, positionY: 0, fieldKey: "wifiActive", fieldType: "boolean", terminalType: null },
 
+    // Corrective LOOP nodes: a "No" is not a dead end. Support cannot help a
+    // robot that is off or offline, so we ask the customer to fix it and
+    // re-check, rather than escalating with a blocker nobody addressed
+    // (Andrea, 2026-08-06).
+    { id: "hf_power_fix", question: "The robot needs to be switched on for support to be able to help — please turn it on, then let me know once it is running.", positionX: 0, positionY: 200, terminalType: "LOOP" },
+    { id: "hf_wifi_fix", question: "Support needs the robot connected to be able to help — please switch the wifi on, then let me know once it is connected.", positionX: 280, positionY: 200, terminalType: "LOOP" },
+
     { id: "hf_cut_scheduling", question: "One more check — is the cut scheduling currently active?", positionX: 560, positionY: 0, fieldKey: "cutSchedulingActive", fieldType: "boolean", terminalType: null },
     { id: "hf_cut_fix", question: "Please activate the cut scheduling from the app, then let me know once it is on.", positionX: 560, positionY: 200, terminalType: "LOOP" },
 
     { id: "hf_battery", question: "And is the battery charged enough right now?", positionX: 840, positionY: 0, fieldKey: "batterySufficient", fieldType: "boolean", terminalType: null },
     { id: "hf_battery_fix", question: "Please put the robot on its charging base for a while, then let me know once it has charged.", positionX: 840, positionY: 200, terminalType: "LOOP" },
 
-    // All three terminals ESCALATE: this flow's only destination is a human.
-    { id: "hf_handoff_powered_off", question: "This flow has reached its escalation point — the robot is off, which may itself be part of the issue.", positionX: 280, positionY: -200, terminalType: "ESCALATE" },
-    { id: "hf_handoff_wifi_off", question: "This flow has reached its escalation point — the robot's wifi is off, which may itself be part of the issue.", positionX: 560, positionY: -200, terminalType: "ESCALATE" },
-    { id: "hf_handoff_wifi_on", question: "This flow has reached its escalation point — the standard checks are done, so the issue is something else.", positionX: 1120, positionY: 0, terminalType: "ESCALATE" },
+    // One terminal, and it ESCALATEs: this flow's only destination is a
+    // human. The per-answer terminals are gone — every "No" now goes to its
+    // corrective LOOP instead, and the cap that stops the loop lives in code
+    // (MAX_LOOP_TURNS), which then escalates anyway.
+    { id: "hf_handoff_checks_done", question: "This flow has reached its escalation point — the standard checks are done, so the issue is something else.", positionX: 1120, positionY: 0, terminalType: "ESCALATE" },
   ]
 
   // No edge uses triggersEscalation: that flag stops advance() WITHOUT
@@ -73,16 +81,18 @@ async function main() {
   // text. Every branch targets a node directly instead.
   const edges = [
     { id: "hf_e_powered_yes", sourceNodeId: "hf_powered_on", targetNodeId: "hf_wifi", label: "Yes" },
-    { id: "hf_e_powered_no", sourceNodeId: "hf_powered_on", targetNodeId: "hf_handoff_powered_off", label: "No" },
+    { id: "hf_e_powered_no", sourceNodeId: "hf_powered_on", targetNodeId: "hf_power_fix", label: "No" },
+    { id: "hf_e_powered_back", sourceNodeId: "hf_power_fix", targetNodeId: "hf_powered_on", label: "Done" },
 
     { id: "hf_e_wifi_yes", sourceNodeId: "hf_wifi", targetNodeId: "hf_cut_scheduling", label: "Yes" },
-    { id: "hf_e_wifi_no", sourceNodeId: "hf_wifi", targetNodeId: "hf_handoff_wifi_off", label: "No" },
+    { id: "hf_e_wifi_no", sourceNodeId: "hf_wifi", targetNodeId: "hf_wifi_fix", label: "No" },
+    { id: "hf_e_wifi_back", sourceNodeId: "hf_wifi_fix", targetNodeId: "hf_wifi", label: "Done" },
 
     { id: "hf_e_cut_yes", sourceNodeId: "hf_cut_scheduling", targetNodeId: "hf_battery", label: "Yes" },
     { id: "hf_e_cut_no", sourceNodeId: "hf_cut_scheduling", targetNodeId: "hf_cut_fix", label: "No" },
     { id: "hf_e_cut_back", sourceNodeId: "hf_cut_fix", targetNodeId: "hf_cut_scheduling", label: "Done" },
 
-    { id: "hf_e_batt_yes", sourceNodeId: "hf_battery", targetNodeId: "hf_handoff_wifi_on", label: "Yes" },
+    { id: "hf_e_batt_yes", sourceNodeId: "hf_battery", targetNodeId: "hf_handoff_checks_done", label: "Yes" },
     { id: "hf_e_batt_no", sourceNodeId: "hf_battery", targetNodeId: "hf_battery_fix", label: "No" },
     { id: "hf_e_batt_back", sourceNodeId: "hf_battery_fix", targetNodeId: "hf_battery", label: "Done" },
   ]

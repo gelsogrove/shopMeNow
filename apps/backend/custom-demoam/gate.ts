@@ -3,7 +3,7 @@
 // in isolation, same reasoning as custom-demorobot/flow-selection.ts.
 
 import { attachFlow, getState, hasVisitedFlow, SessionState } from './state.js'
-import { buildFlowGraph, rootNodeId } from './flow-machine.js'
+import { allowedLabels, buildFlowGraph, currentNode, rootNodeId } from './flow-machine.js'
 
 export interface FlowSummary {
   flowId: string
@@ -228,9 +228,31 @@ export async function startFlow(
       }
     }
 
-    const graph = { nodes: loaded.nodes, rootNodeId: rootNodeId(buildFlowGraph(loaded.nodes)) }
+    const builtGraph = buildFlowGraph(loaded.nodes)
+    const graph = { nodes: loaded.nodes, rootNodeId: rootNodeId(builtGraph) }
     attachFlow(ctx.sessionId, flowId, loaded.hash ?? '', graph)
-    return { ok: true, flow_id: flowId, title: match.title, dictates_text: true }
+
+    // The root node's question is dictated HERE, in the tool result, not left
+    // to the system prompt's step block alone.
+    //
+    // Andrea 2026-08-06, seen live on the widget: ERROR 001 was attached and
+    // the model asked "is the robot powered on?" and then "did it overheat?"
+    // — neither question exists in any node of that flow, whose root asks
+    // "c'è una luce rossa accesa?". dictates_text:true only tells the runtime
+    // to stop offering tools; without the text itself the model was free to
+    // improvise, and did. A prompt block is a request; the tool result is
+    // what the model is answering (CLAUDE.md §16).
+    const root = graph.rootNodeId ? currentNode(builtGraph, graph.rootNodeId) : null
+    const rootLabels = graph.rootNodeId ? allowedLabels(builtGraph, graph.rootNodeId) : []
+    const rootBlock = root ? formatFlowStepBlock(root.question, rootLabels) : null
+
+    return {
+      ok: true,
+      flow_id: flowId,
+      title: match.title,
+      dictates_text: true,
+      ...(rootBlock ? { instruction: rootBlock } : {}),
+    }
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error('[demoam] loadFlow failed', err)

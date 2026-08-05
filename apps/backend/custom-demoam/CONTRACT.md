@@ -62,6 +62,13 @@ Chi fa cosa, e perché non è ridondanza:
   flow esista) e il nome (testo libero; `answer_step` classifica solo
   etichette fisse)
 
+🚨 I 4 CHECK TECNICI (acceso / wifi / cut scheduling / batteria) SI CHIEDONO
+SOLO NELL'HUMAN SUPPORT FLOW, subito prima di chiamare l'assistenza. Mai
+dentro un flow diagnostico, mai improvvisati dal modello. Un flow
+diagnostico (ERROR 001 ecc.) fa SOLO le sue domande; quando arriva al
+terminale ESCALATE il codice attacca l'Human Support flow, che fa i 4 check,
+poi il gate chiede il nome e si escala.
+
 Garanzie in codice, non nel prompt (CLAUDE.md §16):
 - `escalate_to_operator` RIFIUTA con `human_support_flow_required` +
   `force_tool: 'start_flow'` finché il flow non è stato percorso
@@ -70,6 +77,24 @@ Garanzie in codice, non nel prompt (CLAUDE.md §16):
   terminale e edge triggersEscalation)
 - `CHECKLIST.technical` = serial / descrizione / quando / nome. I 4 booleani
   NON sono più nel gate né in `gateQuestions`: sarebbero config morta.
+- `start_flow` DETTA la domanda del nodo radice nel proprio risultato
+  (`formatFlowStepBlock`), non solo nel system prompt. Andrea 2026-08-06,
+  visto live sul widget: ERROR 001 veniva attaccato e il modello chiedeva
+  "il robot è acceso?" e "si è surriscaldato?" — domande che non esistono in
+  nessun nodo, mentre la radice chiede "c'è una luce rossa accesa?".
+  `dictates_text: true` dice al runtime di non offrire tool, ma senza il
+  TESTO il modello restava libero di improvvisare.
+- Un nodo `LOOP` tiene la conversazione per max `MAX_LOOP_TURNS` (2) turni,
+  contati in `state.loopTurns` — PERSISTITO, non in `askedCounts`: quelli
+  sono per-processo, e con più dyni (o col runner CLI, un processo per
+  turno) un contatore in memoria riparte da 1 a ogni turno e il tetto non
+  scatta mai. Superato il tetto il flow viene staccato e si prosegue verso
+  l'operatore: chi non può completare un check non deve restare bloccato.
+- Un flow DIAGNOSTICO che finisce in ESCALATE punta direttamente a
+  `start_flow(humanSupportFlowId)`, non a `escalate_to_operator`: quel tool
+  rifiuterebbe comunque con `human_support_flow_required`, e il giro extra
+  bruciava 2 hop — con `maxToolHops: 6` il budget finiva a metà hand-off e
+  al cliente arrivava "Grazie &lt;UNKNOWN&gt;".
 
 Flow in produzione (`cmsfavpet0000qwngacwdutj6`), 9 nodi / 10 archi:
   hf_powered_on → hf_wifi → hf_cut_scheduling → hf_battery → ESCALATE

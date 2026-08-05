@@ -1,15 +1,15 @@
 {
-  "sessionId": "cli-391110000103-1785965812835",
+  "sessionId": "cli-391110000103-1785970361901",
   "history": [
     {
       "role": "user",
       "content": "こんにちは、ロボットが起動しません",
-      "timestamp": "2026-08-05T21:36:52.835Z"
+      "timestamp": "2026-08-05T22:52:41.901Z"
     },
     {
       "role": "assistant",
-      "content": "Hello, I'm SofIA, the digital assistant for AmRobots. I'm here to help answer your questions — how can I assist you today?\n\nI appreciate you reaching out, but I'm SofIA, the support assistant for AmRobots STORM robot mowers, and I'm only able to help in English, Italian, or a few other languages. Japanese is not one I can support right now.\n\nCould you please write your message in English or Italian? I'm here to help with your robot mower issue.",
-      "timestamp": "2026-08-05T21:36:56.600Z"
+      "content": "Hello, I'm SofIA, the digital assistant for AmRobots. I'm here to help answer your questions — how can I help you today?\n\nI appreciate you reaching out, but I'm SofIA, the support assistant for AmRobots STORM robot mowers, and I'm only able to help in English, Italian, or a few other languages. Japanese is not one I can support right now.\n\nCould you please write your message in English or Italian? That way I can help you properly with your robot.",
+      "timestamp": "2026-08-05T22:52:45.669Z"
     }
   ],
   "persistedState": {

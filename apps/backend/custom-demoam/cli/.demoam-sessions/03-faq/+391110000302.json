@@ -1,15 +1,15 @@
 {
-  "sessionId": "cli-391110000302-1785965850854",
+  "sessionId": "cli-391110000302-1785970392239",
   "history": [
     {
       "role": "user",
       "content": "posso mettere un'altra batteria sul robot?",
-      "timestamp": "2026-08-05T21:37:30.854Z"
+      "timestamp": "2026-08-05T22:53:12.239Z"
     },
     {
       "role": "assistant",
-      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande, come posso aiutarti oggi?\n\nSì, puoi usare una batteria di ricambio sul tuo robot STORM. Tuttavia, non ho i dettagli tecnici specifici su compatibilità, modelli di batteria disponibili o procedure di installazione.\n\nPer informazioni precise su quale batteria ordinare e come installarla correttamente, ti consiglio di contattare il nostro team:\n\n📧 **storm@am-robots.com** o **info@am-robots.com**\n📞 **+45 81 40 12 21**\n\nPosso aiutarti con altro?",
-      "timestamp": "2026-08-05T21:37:36.434Z"
+      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande, come posso aiutarti oggi?\n\nSì, è una domanda comune! Purtroppo non ho informazioni specifiche sulla compatibilità delle batterie o su come installarle nel tuo robot.\n\nTi consiglio di contattare direttamente il nostro team: potranno consigliarti quale batteria è compatibile con il tuo modello e come procedere.\n\nPuoi raggiungerci a:\n- **Email:** storm@am-robots.com o info@am-robots.com\n- **Telefono:** +45 81 40 12 21\n\nC'è altro che posso aiutarti?",
+      "timestamp": "2026-08-05T22:53:16.358Z"
     }
   ],
   "persistedState": {

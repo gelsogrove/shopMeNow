@@ -1,25 +1,25 @@
 {
-  "sessionId": "cli-391110000002-1785965816602",
+  "sessionId": "cli-391110000002-1785970365671",
   "history": [
     {
       "role": "user",
       "content": "ciao, sono Mario Rossi",
-      "timestamp": "2026-08-05T21:36:56.602Z"
+      "timestamp": "2026-08-05T22:52:45.671Z"
     },
     {
       "role": "assistant",
       "content": "Ciao Mario, mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande. Come posso aiutarti oggi?",
-      "timestamp": "2026-08-05T20:35:25.097Z"
+      "timestamp": "2026-08-05T21:51:10.453Z"
     },
     {
       "role": "user",
       "content": "ciao sono di nuovo io, il robot fa ancora rumore",
-      "timestamp": "2026-08-05T21:37:05.097Z"
+      "timestamp": "2026-08-05T22:52:50.454Z"
     },
     {
       "role": "assistant",
       "content": "Ciao Mario! Mi dispiace che il robot continui a fare rumore. Sono qui per aiutarti a capire cosa sta succedendo.\n\nPer iniziare, mi serve il **numero di serie** del tuo robot. Lo trovi sull'etichetta sotto il dispositivo. Puoi leggerlo per me?\n\nCapisco, il robot continua a fare rumore. Per aiutarti al meglio, mi serve il numero di serie del tuo robot. Dove lo trovi?",
-      "timestamp": "2026-08-05T21:37:12.424Z"
+      "timestamp": "2026-08-05T22:52:55.118Z"
     }
   ],
   "persistedState": {

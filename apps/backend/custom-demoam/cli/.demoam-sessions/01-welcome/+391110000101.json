@@ -1,15 +1,15 @@
 {
-  "sessionId": "cli-391110000101-1785965803345",
+  "sessionId": "cli-391110000101-1785970354394",
   "history": [
     {
       "role": "user",
       "content": "ciao, il robot non parte",
-      "timestamp": "2026-08-05T21:36:43.345Z"
+      "timestamp": "2026-08-05T22:52:34.394Z"
     },
     {
       "role": "assistant",
-      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande come posso aiutarti oggi?\n\nCapisco, il robot non si accende. Per aiutarti al meglio, mi serve il numero di serie del dispositivo.\n\nDove lo trovi? Di solito è scritto su un'etichetta sotto il robot o nella documentazione che hai ricevuto.",
-      "timestamp": "2026-08-05T21:36:48.439Z"
+      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande come posso aiutarti oggi?\n\nCapisco, il robot non si accende. Per aiutarti al meglio, mi serve il numero di serie del dispositivo.\n\nDove lo trovi? Di solito è scritto su un'etichetta sotto il robot o sulla stazione di ricarica.",
+      "timestamp": "2026-08-05T22:52:38.330Z"
     }
   ],
   "persistedState": {
