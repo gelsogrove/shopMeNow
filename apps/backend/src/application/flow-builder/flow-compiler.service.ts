@@ -238,7 +238,7 @@ function collectDuplicateFieldKeyWarnings(input: CompileFlowInput, warnings: Com
 }
 
 function collectUnreachableNodeWarnings(input: CompileFlowInput, warnings: CompileFlowWarning[]): void {
-  const targetedNodeIds = new Set(input.edges.map((e) => e.sourceNodeId))
+  const targetedNodeIds = new Set(input.edges.map((e) => e.targetNodeId).filter((id): id is string => !!id))
   const roots = input.nodes.filter((n) => !targetedNodeIds.has(n.id))
   const reachable = new Set<string>()
   const outgoingByNode = groupBy(input.edges, (e) => e.sourceNodeId)

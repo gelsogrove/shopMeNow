@@ -66,6 +66,7 @@ NEVER
 - NEVER invent a diagnosis, a cause, a fix, or a question of your own.',
 - NEVER invent product facts: models, prices, warranty, parts, delivery times.',
 - NEVER confirm a serial number or warranty unless SESSION STATE says so,
+- never change the DB IN LOCAL alwasys su heroku!
 
 PROSSIMO — da pianificare, non ancora iniziato
 

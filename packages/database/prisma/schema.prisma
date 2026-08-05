@@ -2372,6 +2372,11 @@ model Flow {
   description String? @db.Text
   keywords    String[] @default([]) // optional synonyms not necessarily present in the graph text
 
+  // Editable (nodes/edges/questions can change), but the row itself cannot be
+  // deleted from the flow builder — e.g. the shared Human operator flow every
+  // escalation path converges on. deleteFlow must refuse when this is true.
+  isProtected Boolean @default(false)
+
   retrievalDocument String    @db.Text // dense text used only to compute the embedding
   embedding         Float[]   @default([]) // cosine similarity computed in Node, not in Postgres (see design.md)
   compiledPrompt    String    @db.Text // verbose markdown injected into the LLM prompt at runtime
