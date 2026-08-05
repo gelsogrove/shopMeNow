@@ -36,18 +36,22 @@ async function main() {
   const nodes = [
     { id: "hf_powered_on", question: "Is the robot powered on?", positionX: 0, positionY: 0, fieldKey: "robotPoweredOn", fieldType: "boolean", terminalType: null },
     { id: "hf_wifi", question: "Is the wifi active?", positionX: 280, positionY: 0, fieldKey: "wifiActive", fieldType: "boolean", terminalType: null },
-    { id: "hf_handoff", question: "This flow has reached its escalation point.", positionX: 560, positionY: 0, terminalType: "ESCALATE" },
+    { id: "hf_handoff_wifi_off", question: "This flow has reached its escalation point — the robot's wifi is off, which may itself be part of the issue.", positionX: 560, positionY: -80, terminalType: "ESCALATE" },
+    { id: "hf_handoff_wifi_on", question: "This flow has reached its escalation point — wifi is active, so the issue is something else.", positionX: 560, positionY: 80, terminalType: "ESCALATE" },
   ]
 
   // No edge uses triggersEscalation: that flag makes advance() stop with
-  // escalate:true WITHOUT visiting a target node, which would skip
-  // hf_handoff's own dictated text (terminalFlowNodeResult in agent.ts).
-  // Every branch targets hf_handoff directly instead.
+  // escalate:true WITHOUT visiting a target node, which would skip the
+  // terminal's own dictated text (terminalFlowNodeResult in agent.ts).
+  // Every branch targets a terminal node directly instead. hf_wifi's two
+  // answers each get their OWN escalate terminal (different text, different
+  // targetNodeId) instead of converging on one — a shared target would make
+  // the question pointless (compiler's converging_edge_targets guard).
   const edges = [
     { id: "hf_e_powered_yes", sourceNodeId: "hf_powered_on", targetNodeId: "hf_wifi", label: "Yes" },
-    { id: "hf_e_powered_no", sourceNodeId: "hf_powered_on", targetNodeId: "hf_handoff", label: "No" },
-    { id: "hf_e_wifi_yes", sourceNodeId: "hf_wifi", targetNodeId: "hf_handoff", label: "Yes" },
-    { id: "hf_e_wifi_no", sourceNodeId: "hf_wifi", targetNodeId: "hf_handoff", label: "No" },
+    { id: "hf_e_powered_no", sourceNodeId: "hf_powered_on", targetNodeId: "hf_handoff_wifi_on", label: "No" },
+    { id: "hf_e_wifi_yes", sourceNodeId: "hf_wifi", targetNodeId: "hf_handoff_wifi_on", label: "Yes" },
+    { id: "hf_e_wifi_no", sourceNodeId: "hf_wifi", targetNodeId: "hf_handoff_wifi_off", label: "No" },
   ]
 
   const embeddingProvider = new OpenRouterEmbeddingProvider()
