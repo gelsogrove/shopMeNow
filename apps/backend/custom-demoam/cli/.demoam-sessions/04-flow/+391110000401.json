@@ -1,0 +1,183 @@
+{
+  "sessionId": "cli-391110000401-1785957104498",
+  "history": [
+    {
+      "role": "user",
+      "content": "il mio robot mi da errore 001",
+      "timestamp": "2026-08-05T19:11:44.498Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande, come posso aiutarti oggi?",
+      "timestamp": "2026-08-05T19:11:56.609Z"
+    },
+    {
+      "role": "user",
+      "content": "HKA4OB100LQ26050199",
+      "timestamp": "2026-08-05T19:11:56.611Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Ok allora il processo è critico, lampeggia continuamente?",
+      "timestamp": "2026-08-05T19:12:04.481Z"
+    },
+    {
+      "role": "user",
+      "content": "sì, la luce rossa è accesa",
+      "timestamp": "2026-08-05T19:12:04.482Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Devi lasciarlo raffreddare e aspettare che si spenga la luce. Dopo 10 minuti la luce si è spenta?",
+      "timestamp": "2026-08-05T19:12:10.255Z"
+    },
+    {
+      "role": "user",
+      "content": "sì, lampeggia continuamente",
+      "timestamp": "2026-08-05T19:12:10.257Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Capito, il problema persiste. Ho bisogno di un'informazione in più: quando hai notato questo errore per la prima volta — oggi, ieri, o più tempo fa?",
+      "timestamp": "2026-08-05T19:12:17.615Z"
+    },
+    {
+      "role": "user",
+      "content": "sì, dopo 10 minuti la luce si è spenta",
+      "timestamp": "2026-08-05T19:12:17.617Z"
+    },
+    {
+      "role": "assistant",
+      "content": "C'è una luce rossa accesa?",
+      "timestamp": "2026-08-05T19:12:23.199Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "none",
+      "language": "it",
+      "activeFlowId": "cms8sf9th000902yicl5wgzni",
+      "activeFlowHash": "0d117e61fcec5b63e7b7e8901879affabc69802a6e9ef38bbaf71d906c17da6c",
+      "activeFlowGraphSnapshot": [
+        {
+          "id": "node_3ylhrbne",
+          "question": "c'e' una luce rossa accesa?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Yes",
+              "targetNodeId": "node_da2mgzxt",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "node_i8givqqy",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "node_da2mgzxt",
+          "question": "ok allora il processo e' critico lampaggia continuamente ? \n",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Yes",
+              "targetNodeId": "node_6cm7536i",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "node_8hg5xa78",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "node_i8givqqy",
+          "question": "cosa ti che il display ? \nmostra DISPLAY 001",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Yes",
+              "targetNodeId": "node_073o4n5d",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "node_8hg5xa78",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "node_073o4n5d",
+          "question": "nessun problema riavvia il robot e mettilo in carica",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "SELF_SERVICE",
+          "outgoingEdges": []
+        },
+        {
+          "id": "node_6cm7536i",
+          "question": "devi lasciarlo raffreddare e aspettare che si spenga la luce\ndopo 10 minuti la luce si e' spenta?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "No",
+              "targetNodeId": "node_8hg5xa78",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "Yes",
+              "targetNodeId": "node_7xrfghof",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "node_7xrfghof",
+          "question": "Bene sono felice che funzioni",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "SELF_SERVICE",
+          "outgoingEdges": []
+        },
+        {
+          "id": "node_8hg5xa78",
+          "question": "Ti metto in contatto con un operatore ",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "ESCALATE",
+          "outgoingEdges": []
+        }
+      ],
+      "currentNodeId": "node_3ylhrbne",
+      "visitedFlowIds": [
+        "cms8sf9th000902yicl5wgzni"
+      ],
+      "serialNumber": "HKA4OB100LQ26050199",
+      "collectedData": {
+        "problemDescription": "Errore 001, luce rossa accesa e lampeggia continuamente anche dopo raffreddamento",
+        "problemStartedWhen": "dopo 10 minuti la luce si è spenta"
+      }
+    },
+    "patches": []
+  }
+}

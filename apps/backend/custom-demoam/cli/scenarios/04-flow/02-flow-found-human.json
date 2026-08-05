@@ -1,0 +1,21 @@
+{
+  "description": "Problema PRESENTE nel flow builder (ERROR 001) — percorso che finisce in ESCALATE: luce rossa accesa (sì) → lampeggia continuamente (sì) → dopo 10 minuti la luce NON si è spenta (no) → nodo terminale ESCALATE ('Ti metto in contatto con un operatore') → gate pre-operatore (wifi/cut scheduling/batteria/nome) → escalate_to_operator chiamato davvero.",
+  "contractRule": "Se un flow porta a un terminale ESCALATE, si passa al gate pre-operatore condiviso (Human operator flow) e poi si contatta davvero l'operatore — mai un'escalation annunciata prima che il tool sia effettivamente chiamato.",
+  "phone": "+391110000402",
+  "newSession": true,
+  "turns": [
+    { "message": "il mio robot mi da errore 001" },
+    { "message": "HKA4OB100LQ26050299" },
+    { "message": "sì, la luce rossa è accesa" },
+    { "message": "sì, lampeggia continuamente" },
+    { "message": "no, la luce è ancora accesa dopo 10 minuti" },
+    { "message": "sì è acceso" },
+    { "message": "sì il wifi è attivo" },
+    { "message": "no non sta tagliando" },
+    { "message": "sì la batteria è carica" },
+    { "message": "Luca" }
+  ],
+  "expect": {
+    "replyContains": ["Luca"]
+  }
+}

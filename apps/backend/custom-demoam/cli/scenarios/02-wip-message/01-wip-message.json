@@ -1,8 +1,8 @@
 {
-  "description": "Caso chatbot disattivato — il CONTRACT.md dice che il wipMessage parte quando il channel è disattivo, gestito UPSTREAM dall'host (custom-client-chatbot.service.ts) PRIMA che chatbotFn venga mai chiamato. Non testabile in isolamento da questo CLI runner (chatbotFn stesso non riceve mai la chiamata in quel caso) — annotato come 'skip, verificato per lettura codice' invece di un turno reale.",
-  "contractRule": "CONTRACT.md riga 3: \"se il channel è disattivo parte il wip message\"",
+  "description": "Caso chatbot disattivato — il gate channelActive → wipMessage vive UPSTREAM in CustomClientChatbotService.invoke(), a monte di chatbotFn. Questo runner (run-scenarios.ts) chiama chatbotFn direttamente e non può esercitarlo — testato invece da cli/run-wip-message-test.ts, un harness dedicato che chiama invoke() e flippa/ripristina workspace.channelStatus sul DB reale.",
+  "contractRule": "Se il canale è disattivo, il chatbot risponde col wip message invece di chiamare l'LLM.",
   "phone": "+391110000010",
   "skip": true,
-  "skipReason": "Il gate 'canale disattivato -> wipMessage' vive nell'host (custom-client-chatbot.service.ts invoke()), a monte di chatbotFn — custom-demoam non è mai invocato in quel caso, quindi non c'è nulla da testare da questo runner in-process. Verificato per lettura codice: la disabilitazione è un solo if() prima del caricamento del modulo custom-*.",
+  "skipReason": "Non eseguibile da run-scenarios.ts (bypassa invoke() per design — vedi header del file). Esegui invece: npx tsx custom-demoam/cli/run-wip-message-test.ts",
   "turns": []
 }

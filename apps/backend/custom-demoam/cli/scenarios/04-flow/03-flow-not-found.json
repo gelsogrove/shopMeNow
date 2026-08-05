@@ -1,0 +1,11 @@
+{
+  "description": "Problema tecnico ma NON coperto da nessuna FAQ né da nessun flow (il robot perde una ruota mentre lavora — un guasto fisico, non un codice errore, non catalogato tra i 6 flow reali 001-006) — deve capire che è un caso da cercare nei flow (non nelle FAQ, non è una domanda generica), non trovare corrispondenza, dichiararlo onestamente senza inventare una procedura, e passare al Human operator flow.",
+  "contractRule": "Problema descritto → si cerca nei flow, non nelle FAQ; se nessun flow corrisponde, lo si dice onestamente (mai inventare una procedura) e si passa al gate pre-operatore / Human operator flow.",
+  "phone": "+391110000403",
+  "newSession": true,
+  "turns": [
+    { "message": "mentre il robot lavora ha perso una ruota, cosa faccio?" },
+    { "message": "HKA4OB100LQ26050300" },
+    { "message": "il robot stava tagliando l'erba quando una ruota si è staccata ed è caduta nel prato" }
+  ]
+}

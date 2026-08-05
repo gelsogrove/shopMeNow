@@ -1,9 +1,12 @@
 {
   "description": "Cliente nuovo scrive in italiano — italiano è abilitato (settings.json: enabledLanguages include 'it') — la risposta, welcome incluso, deve arrivare in italiano.",
-  "contractRule": "CONTRACT.md riga 4 (welcome message per utente nuovo) + riga 5 (rispondere nella lingua del cliente se presente in enabledLanguages)",
+  "contractRule": "Welcome message per utente nuovo; rispondere nella lingua del cliente quando è abilitata nel workspace.",
   "phone": "+391110000101",
   "newSession": true,
   "turns": [
     { "message": "ciao, il robot non parte" }
-  ]
+  ],
+  "expect": {
+    "language": "it"
+  }
 }

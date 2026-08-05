@@ -1,0 +1,22 @@
+{
+  "sessionId": "cli-391110000103-1785955554823",
+  "history": [
+    {
+      "role": "user",
+      "content": "こんにちは、ロボットが起動しません",
+      "timestamp": "2026-08-05T18:45:54.823Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Hello, I'm SofIA, the digital assistant for AmRobots. I'm here to help answer your questions — how can I help you today?\n\nI appreciate you reaching out, but I'm only able to help with AmRobots STORM robot mowers in English. The support system I'm part of doesn't currently support Japanese.\n\nCould you please write your question in English? I'm here to help troubleshoot your robot.",
+      "timestamp": "2026-08-05T18:45:58.516Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "new",
+      "language": "en"
+    },
+    "patches": []
+  }
+}

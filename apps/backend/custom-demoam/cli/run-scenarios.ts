@@ -147,6 +147,7 @@ function checkReplyExcludes(reply: string, needle: string): { name: string; ok: 
 }
 
 async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOutcome> {
+  const group = path.dirname(file) !== "." ? path.dirname(file) : undefined
   if (scenario.skip) {
     return {
       file,
@@ -157,10 +158,10 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
     }
   }
 
-  if (scenario.newSession) wipeSession(scenario.phone)
+  if (scenario.newSession) wipeSession(scenario.phone, group)
 
   if (scenario.forceStaleSeconds) {
-    forceSessionStale(scenario.phone, scenario.forceStaleSeconds)
+    forceSessionStale(scenario.phone, scenario.forceStaleSeconds, group)
   }
 
   const replies: string[] = []
@@ -168,7 +169,7 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
   let lastOutput: Awaited<ReturnType<typeof runTurn>>["output"] | undefined
 
   for (const turn of scenario.turns) {
-    const { output } = await runTurn({ phone: scenario.phone, message: turn.message, userName: scenario.userName })
+    const { output } = await runTurn({ phone: scenario.phone, message: turn.message, userName: scenario.userName, group })
     lastOutput = output
     replies.push(output.reply ?? "")
     errors.push(output.error)
@@ -178,10 +179,10 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
   }
 
   if (scenario.thenForceStaleSecondsAndContinue && scenario.secondSessionTurns?.length) {
-    forceSessionStale(scenario.phone, scenario.thenForceStaleSecondsAndContinue)
+    forceSessionStale(scenario.phone, scenario.thenForceStaleSecondsAndContinue, group)
     console.log(`  [${scenario.phone}] — session backdated ${scenario.thenForceStaleSecondsAndContinue}s, continuing as a later conversation —`)
     for (const turn of scenario.secondSessionTurns) {
-      const { output } = await runTurn({ phone: scenario.phone, message: turn.message, userName: scenario.userName })
+      const { output } = await runTurn({ phone: scenario.phone, message: turn.message, userName: scenario.userName, group })
       lastOutput = output
       replies.push(output.reply ?? "")
       errors.push(output.error)

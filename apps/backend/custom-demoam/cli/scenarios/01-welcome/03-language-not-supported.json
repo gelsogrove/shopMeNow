@@ -1,9 +1,12 @@
 {
   "description": "Cliente nuovo scrive in giapponese — non è in enabledLanguages (settings.json: ['it','en']) — la risposta, welcome incluso, deve arrivare in defaultLanguage (en), mai in giapponese.",
-  "contractRule": "CONTRACT.md riga 5 (\"...altrimenti usa lingua di default\"); CLAUDE.md §14 (no hardcoded per-language detection — il filtro è resolveEnabledLanguage contro settings.enabledLanguages, mai un detector nel codice)",
+  "contractRule": "Lingua non abilitata → risposta in defaultLanguage; la scelta lingua resta dell'LLM (tag ⟦LANG:xx⟧), poi filtrata da resolveEnabledLanguage — mai un detector per-lingua nel codice.",
   "phone": "+391110000103",
   "newSession": true,
   "turns": [
     { "message": "こんにちは、ロボットが起動しません" }
-  ]
+  ],
+  "expect": {
+    "language": "en"
+  }
 }

@@ -1,0 +1,12 @@
+{
+  "description": "Utente fa una domanda coperta da una FAQ reale in DB ('How can I clean my robot?') — deve rispondere SOLO col contenuto della FAQ, mai inventare, mai aggiungere raccomandazioni proprie, mai chiedere il numero di serie.",
+  "contractRule": "FAQ trovata → risponde col contenuto della FAQ, non serve il numero di serie; la risposta passa da un tool che verifica che la FAQ citata esista davvero.",
+  "phone": "+391110000301",
+  "newSession": true,
+  "turns": [
+    { "message": "ciao come pulisco il robot?" }
+  ],
+  "expect": {
+    "replyExcludes": ["numero di serie", "serial number"]
+  }
+}

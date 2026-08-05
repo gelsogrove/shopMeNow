@@ -1,9 +1,0 @@
-{
-  "description": "FAQ che non abbiamo — 'STORM 9000' non è un modello reale (le 3 FAQ in DB parlano di STORM 2000/5000/6500), deve rispondere onestamente che non ha questa informazione (mai inventare un prezzo), poi passare a Human operator flow.",
-  "contractRule": "CONTRACT.md riga 17: \"se non hai la riposta scrivi non ho quesat informazione e passiamo a Human operator flow\"; riga 15: \"NON DEVI INVENTARE, OGNI RISPOSTA DEVE ARRIVARE DA UNA FONTE\"",
-  "phone": "+391110000011",
-  "newSession": true,
-  "turns": [
-    { "message": "quanto costa il modello STORM 9000?" }
-  ]
-}

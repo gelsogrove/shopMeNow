@@ -24,26 +24,29 @@ export interface SavedSession {
   persistedState: unknown
 }
 
-export function sessionPath(phone: string): string {
+/** `group` mirrors the scenario's subfolder (e.g. "01-welcome") so its sessions land in .demoam-sessions/01-welcome/ instead of flat — purely a filing convenience, never read back. Omitted by run-one.ts (no scenario file), which keeps saving flat. */
+export function sessionPath(phone: string, group?: string): string {
   const safe = phone.replace(/[^a-zA-Z0-9+]/g, "_")
-  return path.join(SESSIONS_DIR, `${safe}.json`)
+  const dir = group ? path.join(SESSIONS_DIR, group) : SESSIONS_DIR
+  return path.join(dir, `${safe}.json`)
 }
 
-export function loadSession(phone: string): SavedSession {
-  const p = sessionPath(phone)
+export function loadSession(phone: string, group?: string): SavedSession {
+  const p = sessionPath(phone, group)
   if (fs.existsSync(p)) {
     return JSON.parse(fs.readFileSync(p, "utf8"))
   }
   return { sessionId: `cli-${phone.replace(/[^a-zA-Z0-9]/g, "")}-${Date.now()}`, history: [], persistedState: undefined }
 }
 
-export function saveSession(phone: string, session: SavedSession): void {
-  fs.mkdirSync(SESSIONS_DIR, { recursive: true })
-  fs.writeFileSync(sessionPath(phone), JSON.stringify(session, null, 2))
+export function saveSession(phone: string, session: SavedSession, group?: string): void {
+  const p = sessionPath(phone, group)
+  fs.mkdirSync(path.dirname(p), { recursive: true })
+  fs.writeFileSync(p, JSON.stringify(session, null, 2))
 }
 
-export function wipeSession(phone: string): void {
-  const p = sessionPath(phone)
+export function wipeSession(phone: string, group?: string): void {
+  const p = sessionPath(phone, group)
   if (fs.existsSync(p)) fs.unlinkSync(p)
 }
 
@@ -96,6 +99,8 @@ export interface RunTurnParams {
   message: string
   userName?: string
   language?: string
+  /** Scenario subfolder, for filing this session under .demoam-sessions/<group>/ — see sessionPath. */
+  group?: string
 }
 
 export interface TurnResult {
@@ -104,8 +109,8 @@ export interface TurnResult {
 }
 
 /** Runs exactly one turn against the REAL AmRobots data, round-tripping session state through the on-disk store. */
-export async function runTurn({ phone, message, userName, language }: RunTurnParams): Promise<TurnResult> {
-  const session = loadSession(phone)
+export async function runTurn({ phone, message, userName, language, group }: RunTurnParams): Promise<TurnResult> {
+  const session = loadSession(phone, group)
   const resolvedUserName = userName ?? `Visitor ${phone.replace(/[^a-zA-Z0-9]/g, "").slice(-6)}`
 
   const input: ChatbotInput = {
@@ -136,16 +141,16 @@ export async function runTurn({ phone, message, userName, language }: RunTurnPar
     session.history.push({ role: "assistant", content: output.reply, timestamp: new Date().toISOString() })
   }
   session.persistedState = output.persistedState
-  saveSession(phone, session)
+  saveSession(phone, session, group)
 
   return { output, elapsedMs }
 }
 
 /** Backdates the saved session's last message so the NEXT turn is classified as a stale return (welcome-back), same mechanism resolveGreeting uses live. */
-export function forceSessionStale(phone: string, secondsAgo: number): void {
-  const session = loadSession(phone)
+export function forceSessionStale(phone: string, secondsAgo: number, group?: string): void {
+  const session = loadSession(phone, group)
   if (session.history.length === 0) return
   const last = session.history[session.history.length - 1]
   last.timestamp = new Date(Date.now() - secondsAgo * 1000).toISOString()
-  saveSession(phone, session)
+  saveSession(phone, session, group)
 }

@@ -1,0 +1,22 @@
+{
+  "sessionId": "cli-391110000101-1785955546845",
+  "history": [
+    {
+      "role": "user",
+      "content": "ciao, il robot non parte",
+      "timestamp": "2026-08-05T18:45:46.845Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande come posso aiutarti oggi?\n\nCapisco, il robot non si accende. Per aiutarti al meglio, mi serve il numero di serie del dispositivo. Puoi trovarlo sull'etichetta del robot.\n\nQual è il numero di serie?",
+      "timestamp": "2026-08-05T18:45:51.205Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "new",
+      "language": "it"
+    },
+    "patches": []
+  }
+}

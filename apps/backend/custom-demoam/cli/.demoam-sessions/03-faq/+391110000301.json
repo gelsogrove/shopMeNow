@@ -1,0 +1,22 @@
+{
+  "sessionId": "cli-391110000301-1785956695100",
+  "history": [
+    {
+      "role": "user",
+      "content": "ciao come pulisco il robot?",
+      "timestamp": "2026-08-05T19:04:55.100Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Ciao mi chiamo SofIA, sono l'assistente digitale di AmRobots. Sono qui per aiutarti a rispondere alle tue domande, come posso aiutarti oggi?\n\nPulisci il corpo e le lenti della fotocamera con un panno morbido, asciutto o leggermente umido — non usare mai un tubo o una idropulitrice, e non immergere mai il robot. Spazzola via i residui d'erba dalla parte inferiore e dalle lame dopo ogni sessione. Non pulire mai il robot mentre è acceso.",
+      "timestamp": "2026-08-05T19:05:02.565Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "new",
+      "language": "it"
+    },
+    "patches": []
+  }
+}
