@@ -14,5 +14,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["agent.ts", "state.ts", "gate.ts", "flow-machine.ts", "index.ts"]
+  "include": ["agent.ts", "state.ts", "gate.ts", "flow-machine.ts", "index.ts", "content-guards.ts", "cli/**/*.ts"]
 }
