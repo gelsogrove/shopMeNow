@@ -195,16 +195,6 @@ export interface ChatbotOutput {
   error?: string
 }
 
-async function buildCommonPrompt(): Promise<string> {
-  return readFile(path.join(__dirname, 'prompts', 'common.md'), 'utf8')
-}
-
-let cachedCommonPromptPromise: Promise<string> | null = null
-function getCachedCommonPrompt(): Promise<string> {
-  if (!cachedCommonPromptPromise) cachedCommonPromptPromise = buildCommonPrompt()
-  return cachedCommonPromptPromise
-}
-
 // ── Tools ────────────────────────────────────────────────────────────────
 
 const START_FLOW_TOOL = {
@@ -636,16 +626,29 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       }
     }
 
+    // Andrea 2026-08-05, seen live: right after remember saved the serial
+    // number, with problemDescription still missing, the model was free
+    // (tool_choice still 'required', no dictates_text here) to call
+    // escalate_to_operator instead of waiting for the next intake question —
+    // got refused by that gate, then INVENTED a value ("<UNKNOWN>") for a
+    // field the customer was never asked, just to satisfy the refusal and
+    // keep retrying. Same fix as the flow-step/greeting cases: the hop
+    // immediately after a save that leaves intake incomplete must be
+    // text-only, so the model has no tool to reach for and must ask the
+    // dictated question instead.
+    const stillNeedsIntake = !afterSave.currentNodeId && !!nextIntakeStep(afterSave, ctx.gateQuestions)
+
     if (key === 'serialNumber') {
       return {
         ok: true,
         serial_number_accepted: true,
+        dictates_text: stillNeedsIntake,
         instruction:
           `The serial number "${String(value).trim()}" is VALID and has been saved — do NOT say it is ` +
           'incomplete, malformed, or ask the customer to re-check it. Move on to the next question.',
       }
     }
-    return { ok: true }
+    return { ok: true, dictates_text: stillNeedsIntake }
   }
 
   if (name === 'escalate_to_operator') {
@@ -1121,8 +1124,16 @@ interface TurnResult {
   escalationSummary?: string
 }
 
-function handoffFallback(messages: WorkspaceMessages | undefined, settings: Settings): string | null {
-  return (messages?.humanSupport ?? settings.humanSupportMessage)?.trim() || null
+// Andrea 2026-08-05, seen live: the maxToolHops-exhausted fallback sent
+// "{{customerName}}, I'm putting you through..." to the customer verbatim —
+// this path never goes through the LLM (it fires precisely because the LLM
+// loop didn't produce usable text), so nothing else ever substitutes the
+// placeholder. resolveGreetingText already does this substitution for the
+// greeting; this mirrors it for the same reason.
+function handoffFallback(messages: WorkspaceMessages | undefined, settings: Settings, customerName: string | undefined): string | null {
+  const raw = (messages?.humanSupport ?? settings.humanSupportMessage)?.trim()
+  if (!raw) return null
+  return raw.replace(/\{\{\s*customerName\s*\}\}/gi, customerName?.trim() || '').replace(/\s{2,}/g, ' ').trim() || null
 }
 
 async function agentTurnInternal(
@@ -1308,7 +1319,7 @@ async function agentTurnInternal(
       })
 
       detachFlow(ctx.sessionId)
-      const customerReplyBody = reply.trim() || handoffFallback(messages, settings) || ''
+      const customerReplyBody = reply.trim() || handoffFallback(messages, settings, getState(ctx.sessionId).name) || ''
       const customerReply = greetingReply ? `${greetingReply}\n\n${customerReplyBody}`.trim() : customerReplyBody
 
       return {
@@ -1341,7 +1352,7 @@ async function agentTurnInternal(
   detachFlow(ctx.sessionId)
 
   return {
-    reply: [greetingReply, handoffFallback(messages, settings), briefing].filter(Boolean).join('\n\n'),
+    reply: [greetingReply, handoffFallback(messages, settings, finalState.name), briefing].filter(Boolean).join('\n\n'),
     tokensUsed: tokensUsedSoFar,
     escalated: true,
     escalationSummary: summary,
@@ -1394,8 +1405,20 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
     }
   }
 
+  if (!input.config.systemPromptOverride) {
+    return {
+      reply: null,
+      shouldEscalate: false,
+      closeChat: false,
+      audioOutput: settings.audioOutput,
+      audioVoices: settings.audioVoices,
+      meta: { tokensUsed: 0, agentChain: ['custom-demoam'] },
+      error: 'system_prompt_not_configured',
+    }
+  }
+
   try {
-    const commonPrompt = input.config.systemPromptOverride || (await getCachedCommonPrompt())
+    const commonPrompt = input.config.systemPromptOverride
     const sessionId = input.context.sessionId
 
     const ctx: ToolContext = {

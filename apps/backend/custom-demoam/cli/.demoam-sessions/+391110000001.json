@@ -1,15 +1,15 @@
 {
-  "sessionId": "cli-391110000001-1785943444075",
+  "sessionId": "cli-391110000001-1785943805313",
   "history": [
     {
       "role": "user",
       "content": "ciao",
-      "timestamp": "2026-08-05T15:24:04.075Z"
+      "timestamp": "2026-08-05T15:30:05.313Z"
     },
     {
       "role": "assistant",
       "content": "Benvenuto! Sono il tuo assistente digitale. Come posso aiutarti oggi?\n\nCiao! 👋 Come posso aiutarti oggi?",
-      "timestamp": "2026-08-05T15:24:08.410Z"
+      "timestamp": "2026-08-05T15:30:09.030Z"
     }
   ],
   "persistedState": {
