@@ -678,28 +678,36 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
         }
       }
 
-      // 2. The FLOW decision, forced exactly once (Andrea 2026-08-04, seen
-      // live: a flow for ERROR 001 sat in the catalogue while the model
-      // walked the whole gate and never considered it). The refusal carries
-      // NO dictates_text, so tool forcing stays on: the model can only
-      // answer with start_flow or escalate(reason='no_matching_flow') — a
-      // worded reply is rejected by the API. The declared no-match is then
-      // final for the session (flowCheckOffered), so this cannot loop.
+      // 2. The FLOW decision (Andrea 2026-08-04/2026-08-05, seen live twice:
+      // a flow for ERROR 001 sat in the catalogue while the model walked the
+      // whole gate and never considered it — once because flowCheckOffered
+      // was set to true on the REFUSAL itself, so a model that ignored the
+      // instruction and called escalate_to_operator again with the same
+      // reason sailed straight through on the second try, never having
+      // called start_flow at all). flowCheckOffered is now set only once the
+      // model has ACTUALLY declared no_matching_flow — not on the refusal —
+      // so an ignored instruction keeps re-triggering this same refusal
+      // instead of silently expiring after one try. The refusal carries NO
+      // dictates_text, so tool forcing stays on: the model can only answer
+      // with start_flow or escalate(reason='no_matching_flow').
       if (
         technicalCase &&
         reason !== 'complaint' &&
         !state.flowCheckOffered &&
         (ctx.availableFlows?.length ?? 0) > 0
       ) {
-        updateState(ctx.sessionId, { flowCheckOffered: true }, { mirror: false })
-        return {
-          ok: false,
-          error: 'flow_check_required',
-          instruction:
-            'Before handing over: one of the AVAILABLE FLOWS may cover this exact problem. ' +
-            'If one matches, call start_flow with its id NOW — the customer must get the guided ' +
-            'procedure, not an operator queue. ONLY if none genuinely matches, call ' +
-            'escalate_to_operator again immediately with reason "no_matching_flow".',
+        if (reason === 'no_matching_flow') {
+          updateState(ctx.sessionId, { flowCheckOffered: true }, { mirror: false })
+        } else {
+          return {
+            ok: false,
+            error: 'flow_check_required',
+            instruction:
+              'Before handing over: one of the AVAILABLE FLOWS may cover this exact problem. ' +
+              'If one matches, call start_flow with its id NOW — the customer must get the guided ' +
+              'procedure, not an operator queue. ONLY if none genuinely matches, call ' +
+              'escalate_to_operator again immediately with reason "no_matching_flow".',
+          }
         }
       }
 

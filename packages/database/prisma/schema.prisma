@@ -2381,7 +2381,6 @@ model Flow {
   embedding         Float[]   @default([]) // cosine similarity computed in Node, not in Postgres (see design.md)
   compiledPrompt    String    @db.Text // verbose markdown injected into the LLM prompt at runtime
   hash              String // sha256(compiledPrompt), for determinism/versioning checks
-  humanPrompt       String?   @db.Text // 🆕 Plain-language instructions generated from compiledPrompt by an LLM, reviewed and optionally edited by the user before saving. Null until generated.
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

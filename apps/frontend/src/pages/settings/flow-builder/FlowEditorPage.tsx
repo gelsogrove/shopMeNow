@@ -17,14 +17,6 @@ import "@xyflow/react/dist/style.css"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { ArrowLeft, Save, Loader2, AlertCircle, Plus, Sparkles } from "lucide-react"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
@@ -82,13 +74,6 @@ function FlowEditorInner() {
   const [assets, setAssets] = useState<Asset[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  // Prompt review dialog, opened after a successful save: the LLM rewrites the
-  // saved graph as plain instructions, which the user can edit before keeping.
-  const [isPromptDialogOpen, setIsPromptDialogOpen] = useState(false)
-  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false)
-  const [isSavingPrompt, setIsSavingPrompt] = useState(false)
-  const [generatedPrompt, setGeneratedPrompt] = useState("")
-  const [promptError, setPromptError] = useState<string | null>(null)
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([])
   const [title, setTitle] = useState("")
   // "When to use" text. It is what the retrieval embedding matches an incoming
@@ -397,43 +382,11 @@ function FlowEditorInner() {
       }
       toast.success("Flow saved and online")
       if (result.flow) setFlow(result.flow)
-
-      // The graph is saved and valid at this point, so the prompt is generated
-      // from what is actually stored. Failing to generate never undoes the save:
-      // the dialog just reports it, and the flow stays online either way.
-      setIsPromptDialogOpen(true)
-      setIsGeneratingPrompt(true)
-      setPromptError(null)
-      try {
-        const generated = await flowApi.generatePrompt(workspaceId, flowId)
-        setGeneratedPrompt(generated)
-      } catch (err: any) {
-        setPromptError(
-          err?.response?.data?.error || "Could not generate the prompt. Your flow is saved.",
-        )
-      } finally {
-        setIsGeneratingPrompt(false)
-      }
+      navigate(`/settings/demorobot/${categoryId}/flows`)
     } catch (err: any) {
       toast.error(err.message || "Failed to save flow")
     } finally {
       setIsSaving(false)
-    }
-  }
-
-  // Keeps the reviewed prompt. Closing without saving simply discards it — the
-  // flow itself is already saved, so nothing is lost either way.
-  const handleSavePrompt = async () => {
-    if (!workspaceId || !flowId) return
-    setIsSavingPrompt(true)
-    try {
-      await flowApi.savePrompt(workspaceId, flowId, generatedPrompt)
-      toast.success("Prompt saved")
-      setIsPromptDialogOpen(false)
-    } catch (err: any) {
-      toast.error(err?.response?.data?.error || "Failed to save the prompt")
-    } finally {
-      setIsSavingPrompt(false)
     }
   }
 
@@ -570,60 +523,6 @@ function FlowEditorInner() {
         onDeleteAsset={categoryId && categoryId !== "generic" ? handleDeleteAsset : undefined}
         canUploadAssets={!!categoryId && categoryId !== "generic"}
       />
-
-      {/* Prompt review — shown after a successful save. The flow is already
-          online at this point; keeping or discarding the prompt does not change
-          that, which is why closing the dialog is a safe action. */}
-      <Dialog open={isPromptDialogOpen} onOpenChange={setIsPromptDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Flow instructions</DialogTitle>
-            <DialogDescription>
-              Written by AI from the flow you just saved. Read it as the assistant will —
-              edit anything that doesn't match what you expect.
-            </DialogDescription>
-          </DialogHeader>
-
-          {isGeneratingPrompt ? (
-            <div className="flex items-center justify-center gap-2 py-12 text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span className="text-sm">Writing the instructions...</span>
-            </div>
-          ) : promptError ? (
-            <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-4">
-              <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" />
-              <div className="text-sm text-amber-800">
-                <p className="font-medium">Couldn't write the instructions</p>
-                <p className="mt-0.5">{promptError}</p>
-                <p className="mt-1.5 text-xs">Your flow is saved and online.</p>
-              </div>
-            </div>
-          ) : (
-            <Textarea
-              value={generatedPrompt}
-              onChange={(e) => setGeneratedPrompt(e.target.value)}
-              className="min-h-[340px] text-sm leading-relaxed"
-            />
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPromptDialogOpen(false)}>
-              Close
-            </Button>
-            <Button
-              onClick={handleSavePrompt}
-              disabled={isGeneratingPrompt || isSavingPrompt || !!promptError || !generatedPrompt.trim()}
-            >
-              {isSavingPrompt ? (
-                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-1.5" />
-              )}
-              Save prompt
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

@@ -249,35 +249,6 @@ export function createFlowBuilderRoutes(): Router {
 
   /**
    * @openapi
-   * /api/workspaces/{workspaceId}/demorobot/flows/{flowId}/prompt/generate:
-   *   post:
-   *     tags: [Flow Builder]
-   *     summary: Generate plain-language instructions from the flow graph
-   *     description: >
-   *       Rewrites the flow's compiled prompt as human-readable instructions via
-   *       an LLM. Read-only — the caller reviews the result and saves it
-   *       separately with PUT .../prompt.
-   *     parameters:
-   *       - in: path
-   *         name: workspaceId
-   *         required: true
-   *         schema: { type: string }
-   *       - in: path
-   *         name: flowId
-   *         required: true
-   *         schema: { type: string }
-   *     responses:
-   *       200:
-   *         description: The generated prompt
-   *       404:
-   *         description: Flow not found
-   *       502:
-   *         description: The AI service could not produce a prompt
-   */
-  router.post('/workspaces/:workspaceId/demorobot/flows/:flowId/prompt/generate', ...middlewares, controller.generateFlowPrompt.bind(controller))
-
-  /**
-   * @openapi
    * /api/workspaces/{workspaceId}/demorobot/flows/{flowId}/description/generate:
    *   post:
    *     tags: [Flow Builder]
@@ -312,40 +283,6 @@ export function createFlowBuilderRoutes(): Router {
    *         description: The AI service could not produce a description
    */
   router.post('/workspaces/:workspaceId/demorobot/flows/:flowId/description/generate', ...middlewares, controller.generateFlowDescription.bind(controller))
-
-  /**
-   * @openapi
-   * /api/workspaces/{workspaceId}/demorobot/flows/{flowId}/prompt:
-   *   put:
-   *     tags: [Flow Builder]
-   *     summary: Save the reviewed prompt for a flow
-   *     description: Stores the instructions after the user reviewed/edited them. An empty string clears it.
-   *     parameters:
-   *       - in: path
-   *         name: workspaceId
-   *         required: true
-   *         schema: { type: string }
-   *       - in: path
-   *         name: flowId
-   *         required: true
-   *         schema: { type: string }
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               humanPrompt: { type: string }
-   *     responses:
-   *       204:
-   *         description: Saved
-   *       400:
-   *         description: humanPrompt missing or not a string
-   *       404:
-   *         description: Flow not found
-   */
-  router.put('/workspaces/:workspaceId/demorobot/flows/:flowId/prompt', ...middlewares, controller.saveFlowPrompt.bind(controller))
 
   /**
    * @swagger

@@ -29,8 +29,8 @@ chiediamo se c'è abbastanza batteria
 (fine del flow — il flow builder oggi classifica solo Yes/No, non testo libero)
 
 subito dopo, chiediamo il nome dell'utente se non lo abbiamo già
-mostriamo l'handing-off message
-lanciamo la calling function per human support
+e mostriamo l'handing-off message che arriva dal settings.
+e imporante lanciamo la calling function per human support in questo momento quando c''e il handing-off message
 
 e' tutto nel flow di default che non deve essere cancellato
 editato si cancellarlo mai !
