@@ -62,6 +62,14 @@ export interface SessionState {
   // terminal, which would loop forever.
   humanSupportFlowDone?: boolean
 
+  // How many turns the conversation has spent sitting on each corrective
+  // LOOP node, keyed by node id. PERSISTED on purpose, unlike askedCounts:
+  // the host runs more than one dyno and the CLI runner starts a fresh
+  // process per turn, so an in-memory counter restarts at 1 every turn and
+  // never reaches its cap — which is exactly how the loop bound silently did
+  // nothing (Andrea, 2026-08-06).
+  loopTurns?: Record<string, number>
+
   // Open ISO 2-letter language code — decided by the LLM via the ⟦LANG:xx⟧
   // trailer, never a regex detector on user text (CLAUDE.md §14).
   language?: string

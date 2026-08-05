@@ -119,6 +119,11 @@ const LLM_DEBUG = process.env.LLM_DEBUG === '1'
 // customer-facing copy, and not expected to vary per tenant.
 const WELCOME_BACK_STALE_MS = 60 * 60 * 1000
 
+// How many times a corrective LOOP node may send the customer back to the
+// same question before the flow gives up and escalates. Same reasoning and
+// same default as the gate's maxAsks — a mechanism bound, not tenant copy.
+const MAX_LOOP_RETRIES = 2
+
 export interface HistoryEntry {
   role: 'user' | 'assistant'
   content: string
@@ -407,6 +412,32 @@ function terminalFlowNodeResult(
   detachFlow(sessionId)
 
   if (node.terminalType === 'ESCALATE') {
+    // A DIAGNOSTIC flow ending in ESCALATE still owes the pre-operator
+    // checks, which live in the Human Support flow. Sending the model to
+    // escalate_to_operator here would cost two extra hops for nothing: that
+    // tool would refuse with human_support_flow_required and name start_flow
+    // anyway. Naming it directly saves the round-trip.
+    //
+    // Andrea 2026-08-06, seen in the CLI runner: with maxToolHops at 6 that
+    // detour ran the budget out mid-hand-off, and the customer was sent
+    // "Grazie <UNKNOWN>" — the fallback fired before the name was collected.
+    const humanSupportStillDue =
+      !!humanSupportFlowId &&
+      finishedFlowId !== humanSupportFlowId &&
+      !getState(sessionId).humanSupportFlowDone
+    if (humanSupportStillDue) {
+      return {
+        ok: true,
+        terminal: 'ESCALATE',
+        dictates_text: false,
+        force_tool: 'start_flow',
+        instruction:
+          `This flow has reached its escalation point. Do NOT invent a diagnosis or a fix, and do ` +
+          `not hand over yet — call start_flow with flowId '${humanSupportFlowId}' NOW to run the ` +
+          'standard pre-operator checks, then escalate_to_operator once it completes.',
+      }
+    }
+
     return {
       ok: true,
       terminal: 'ESCALATE',
@@ -521,9 +552,11 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     }
 
     if (result.nextNodeId) {
+      const enteredNode = currentNode(graph, result.nextNodeId)
+
       updateState(ctx.sessionId, { currentNodeId: result.nextNodeId }, { mirror: false })
 
-      const nextNode = currentNode(graph, result.nextNodeId)
+      const nextNode = enteredNode
       const nextNodeIsLeaf = !!nextNode && allowedLabels(graph, result.nextNodeId).length === 0
       if (!nextNodeIsLeaf) return { ok: true, next_node_id: result.nextNodeId, dictates_text: true }
 
@@ -1156,6 +1189,48 @@ async function agentTurnInternal(
 
   let state = getState(ctx.sessionId)
   let tokensUsedSoFar = 0
+
+  // A corrective LOOP node ("turn the scheduling on, then tell me") holds the
+  // conversation until the customer reports it done. The graph cycles forever
+  // by construction — the compiler permits the cycle precisely BECAUSE the
+  // node is typed LOOP — so the bound must live in code.
+  //
+  // Counted per TURN, not per answer_step call: the node dictates its text,
+  // which puts the turn into awaitingDictatedReply, and from there the model
+  // re-sends that text without calling answer_step at all. The node is
+  // entered once and never left, so counting entries counts to one forever.
+  //
+  // The tally lives in PERSISTED state, not in askedCounts: those are
+  // per-process by design, and the CLI runner (like a second dyno) starts a
+  // fresh process every turn — an in-memory counter restarts at 1 each time
+  // and never reaches the cap.
+  //
+  // Andrea 2026-08-06, seen in the CLI runner: a customer who answered "no"
+  // to cut scheduling got "activate the cut scheduling" on every following
+  // turn — they never reached the battery question, never got asked their
+  // name, and never reached an operator. Even their name was answered into
+  // the loop and ignored. Someone who cannot complete a check must still get
+  // to a human: the gate's maxAsks principle, applied to flow nodes.
+  if (state.currentNodeId && state.activeFlowGraphSnapshot) {
+    const loopGraph = buildFlowGraph(state.activeFlowGraphSnapshot)
+    const stuckNode = currentNode(loopGraph, state.currentNodeId)
+    if (stuckNode?.terminalType === 'LOOP') {
+      const nodeId = state.currentNodeId
+      const turnsHere = (state.loopTurns?.[nodeId] ?? 0) + 1
+      updateState(
+        ctx.sessionId,
+        { loopTurns: { ...(state.loopTurns ?? {}), [nodeId]: turnsHere } },
+        { mirror: false },
+      )
+      if (turnsHere > MAX_LOOP_RETRIES) {
+        if (ctx.humanSupportFlowId && state.activeFlowId === ctx.humanSupportFlowId) {
+          updateState(ctx.sessionId, { humanSupportFlowDone: true }, { mirror: false })
+        }
+        detachFlow(ctx.sessionId)
+      }
+      state = getState(ctx.sessionId)
+    }
+  }
 
   // The greeting is delivered in its OWN forced-text-only hop, before the
   // loop that handles the substance of the request. Andrea 2026-08-05, seen
