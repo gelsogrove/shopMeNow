@@ -559,8 +559,24 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       updateState(ctx.sessionId, { currentNodeId: result.nextNodeId }, { mirror: false })
 
       const nextNode = enteredNode
-      const nextNodeIsLeaf = !!nextNode && allowedLabels(graph, result.nextNodeId).length === 0
-      if (!nextNodeIsLeaf) return { ok: true, next_node_id: result.nextNodeId, dictates_text: true }
+      const nextLabels = allowedLabels(graph, result.nextNodeId)
+      const nextNodeIsLeaf = !!nextNode && nextLabels.length === 0
+      if (!nextNodeIsLeaf) {
+        // The next node's question is dictated HERE, in the tool result —
+        // same reasoning as start_flow's root-node block. dictates_text
+        // alone only forces a text reply, not WHICH text: seen live
+        // 2026-08-06, after answer_step(Done) advanced to the cut-scheduling
+        // node the model asked for the customer's NAME instead — a question
+        // the gate owns, but not yet. The result is what the model is
+        // answering; the system-prompt step block alone loses that argument.
+        const stepBlock = nextNode ? formatFlowStepBlock(nextNode.question, nextLabels) : null
+        return {
+          ok: true,
+          next_node_id: result.nextNodeId,
+          dictates_text: true,
+          ...(stepBlock ? { instruction: stepBlock } : {}),
+        }
+      }
 
       return terminalFlowNodeResult(
         ctx.sessionId,
