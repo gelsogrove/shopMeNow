@@ -951,6 +951,21 @@ async function callLLM({
   if (!forceTextOnly) {
     body.tools = buildToolsForTurn(state, currentStepLabels, faqCount)
     body.tool_choice = forceToolChoice ? 'required' : 'auto'
+
+    // With a flow question pending, 'required' is not enough: it only says
+    // "call SOME tool", and remember() satisfies it perfectly while leaving
+    // the node exactly where it was.
+    //
+    // Andrea 2026-08-06, seen in the CLI runner: the customer answered "no,
+    // the wifi is not active"; the model called remember and then wrote free
+    // text, never answer_step. currentNodeId sat on hf_wifi for four turns
+    // while the model invented a diagnosis of its own ("that's probably why
+    // it won't restart", "the robot is working again now") and the customer
+    // never reached an operator. Naming the function makes the escape route
+    // structurally unavailable rather than merely discouraged (§16).
+    if (forceToolChoice && state.currentNodeId && currentStepLabels.length > 0) {
+      body.tool_choice = { type: 'function', function: { name: 'answer_step' } }
+    }
   }
 
   const res = await fetch(`${BASE_URL}/chat/completions`, {

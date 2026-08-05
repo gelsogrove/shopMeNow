@@ -2398,7 +2398,7 @@ model FlowNode {
   flowId String
   flow   Flow   @relation(fields: [flowId], references: [id], onDelete: Cascade)
 
-  question  String @db.Text // base language (Italian), LLM translates natively at runtime
+  question  String @db.Text // stored in English, LLM translates natively at runtime (Andrea, 2026-08-06)
   positionX Float  @default(0)
   positionY Float  @default(0)
 
