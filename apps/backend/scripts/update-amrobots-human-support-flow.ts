@@ -87,21 +87,32 @@ async function main() {
   // visiting a target node, which would skip the terminal's own dictated
   // text. Every branch targets a node directly instead.
   const edges = [
+    // "Done" on a fix node goes FORWARD to the next check, never back to the
+    // question it fixed. "I turned it on" already answers "is it on?" — a
+    // back-edge would make the bot re-ask something the customer just said,
+    // which the model (rightly) refuses to do: seen live 2026-08-06, it
+    // skipped the redundant dictated question, improvised the next one in
+    // free text, and from there the flow and the conversation were
+    // permanently desynced (answer_step("No" to wifi) landed on the
+    // powered-on node). Forward edges also mean NO cycle in the graph — and
+    // no dashed back-edge cluttering the canvas. The fix nodes keep
+    // terminalType LOOP purely as the marker the runtime's turn cap
+    // (MAX_LOOP_TURNS) keys on, for the customer who never manages it.
     { id: "hf_e_powered_yes", sourceNodeId: "hf_powered_on", targetNodeId: "hf_wifi", label: "Yes" },
     { id: "hf_e_powered_no", sourceNodeId: "hf_powered_on", targetNodeId: "hf_power_fix", label: "No" },
-    { id: "hf_e_powered_back", sourceNodeId: "hf_power_fix", targetNodeId: "hf_powered_on", label: "Done" },
+    { id: "hf_e_powered_done", sourceNodeId: "hf_power_fix", targetNodeId: "hf_wifi", label: "Done" },
 
     { id: "hf_e_wifi_yes", sourceNodeId: "hf_wifi", targetNodeId: "hf_cut_scheduling", label: "Yes" },
     { id: "hf_e_wifi_no", sourceNodeId: "hf_wifi", targetNodeId: "hf_wifi_fix", label: "No" },
-    { id: "hf_e_wifi_back", sourceNodeId: "hf_wifi_fix", targetNodeId: "hf_wifi", label: "Done" },
+    { id: "hf_e_wifi_done", sourceNodeId: "hf_wifi_fix", targetNodeId: "hf_cut_scheduling", label: "Done" },
 
     { id: "hf_e_cut_yes", sourceNodeId: "hf_cut_scheduling", targetNodeId: "hf_battery", label: "Yes" },
     { id: "hf_e_cut_no", sourceNodeId: "hf_cut_scheduling", targetNodeId: "hf_cut_fix", label: "No" },
-    { id: "hf_e_cut_back", sourceNodeId: "hf_cut_fix", targetNodeId: "hf_cut_scheduling", label: "Done" },
+    { id: "hf_e_cut_done", sourceNodeId: "hf_cut_fix", targetNodeId: "hf_battery", label: "Done" },
 
     { id: "hf_e_batt_yes", sourceNodeId: "hf_battery", targetNodeId: "hf_handoff_checks_done", label: "Yes" },
     { id: "hf_e_batt_no", sourceNodeId: "hf_battery", targetNodeId: "hf_battery_fix", label: "No" },
-    { id: "hf_e_batt_back", sourceNodeId: "hf_battery_fix", targetNodeId: "hf_battery", label: "Done" },
+    { id: "hf_e_batt_done", sourceNodeId: "hf_battery_fix", targetNodeId: "hf_handoff_checks_done", label: "Done" },
   ]
 
   const embeddingProvider = new OpenRouterEmbeddingProvider(process.env.OPENROUTER_API_KEY || "")
