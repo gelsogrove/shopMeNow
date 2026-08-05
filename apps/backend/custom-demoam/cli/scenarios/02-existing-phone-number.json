@@ -1,9 +1,13 @@
 {
-  "description": "Numero di telefono già esistente — usa lo stesso phone di 01 con --new omesso; questo scenario simula il RITORNO dopo il name già noto: la conversazione precedente ha già salvato il nome, questo turno deve produrre un welcome-back con il nome, non un welcome da nuovo cliente.",
-  "phone": "+391110000001",
-  "reuseSessionFrom": "01-new-phone-number",
-  "forceStaleSeconds": 3700,
+  "description": "Numero di telefono già esistente — prima conversazione lascia il nome salvato in stato (mirrorato sul Customer via patch 'name'), poi una seconda sessione (>1h dopo, forceStaleSeconds) sullo stesso numero deve aprire con welcome-BACK e il nome, non il welcome da nuovo cliente.",
+  "contractRule": "CONTRACT.md riga 4: \"se l'utente non è nuovo facciamo il welcome back message chiamandolo con il nome\"; riga 18: \"abbiamo uno storico dei messaggi; se passa un'ora rispondiamo con il welcome back message\"",
+  "phone": "+391110000002",
+  "newSession": true,
   "turns": [
-    { "message": "ciao sono di nuovo io" }
+    { "message": "ciao, sono Mario Rossi" }
+  ],
+  "thenForceStaleSecondsAndContinue": 3700,
+  "secondSessionTurns": [
+    { "message": "ciao sono di nuovo io, il robot fa ancora rumore" }
   ]
 }

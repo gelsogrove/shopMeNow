@@ -45,6 +45,9 @@ interface Scenario {
   newSession?: boolean
   reuseSessionFrom?: string
   forceStaleSeconds?: number
+  /** After `turns` runs, backdate the session by this many seconds, then run `secondSessionTurns` as a genuinely later conversation on the same phone (staleness/welcome-back testing without needing a second scenario file). */
+  thenForceStaleSecondsAndContinue?: number
+  secondSessionTurns?: ScenarioTurn[]
   skip?: boolean
   skipReason?: string
 }
