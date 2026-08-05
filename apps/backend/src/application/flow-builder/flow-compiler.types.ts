@@ -16,6 +16,9 @@ export interface CompilerFlowEdge {
   id: string
   sourceNodeId: string
   targetNodeId: string | null
+  /** Hands over to another flow instead of a node here. Excludes targetNodeId. */
+  targetFlowId?: string | null
+  targetFlowTitle?: string | null
   label: string
   triggersEscalation?: boolean
 }
@@ -43,6 +46,8 @@ export interface CompileFlowInput {
   // then editable by the user.
   flowDescription?: string | null
   flowKeywords?: string[]
+  /** Id of the flow being compiled — lets validation reject an edge that hands over to itself. */
+  flowId?: string | null
 }
 
 export interface ValidationError {
@@ -54,6 +59,8 @@ export interface ValidationError {
     | 'dangling_edge'
     | 'duplicate_edge_label'
     | 'empty_edge_label'
+    | 'edge_targets_both_node_and_flow'
+    | 'edge_targets_self_flow'
     | 'attachment_wrong_model'
     | 'attachment_missing'
     | 'size_limit_exceeded'

@@ -9,6 +9,7 @@ import {
   extractLanguage,
   FlowGraphNodeSnapshot,
   getAskedCounts,
+  hasVisitedFlow,
   hydrateState,
   formatStateForPrompt,
   formatStateOneLine,
@@ -531,6 +532,27 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
     if (result.escalate) {
       detachFlow(ctx.sessionId)
       return { ok: true, escalate: true }
+    }
+
+    if (result.nextFlowId) {
+      if (hasVisitedFlow(ctx.sessionId, result.nextFlowId)) {
+        detachFlow(ctx.sessionId)
+        return {
+          ok: true,
+          escalate: true,
+          error: 'flow_already_visited',
+          instruction:
+            'This answer leads back to a flow this conversation has already been through, so the guided ' +
+            'path is exhausted. Do NOT restart it — call escalate_to_operator.',
+        }
+      }
+
+      const handover = await startFlow(ctx, { flowId: result.nextFlowId })
+      if (!handover.ok) {
+        detachFlow(ctx.sessionId)
+        return { ok: true, escalate: true, error: 'flow_handover_failed' }
+      }
+      return handover
     }
 
     if (result.nextNodeId) {
@@ -1332,18 +1354,22 @@ export async function chatbotFn(input: ChatbotInput): Promise<ChatbotOutput> {
 
     let flowsBlock: string | undefined
     const listFlows = input.config.handlers?.listFlows
-    if (listFlows && !getState(sessionId).activeFlowId) {
+    if (listFlows) {
       try {
         const flows = await listFlows({ workspaceId: input.config.workspaceId })
-        // ctx.availableFlows keeps ALL flows — startFlow must still be able to
-        // validate the Human Support flow when escalate_to_operator's step 2.5
-        // forces it. flowsBlock (the "AVAILABLE FLOWS" catalogue offered for
-        // the model's own free choice while classifying the customer's
-        // problem) excludes it: that flow is never a diagnostic match, only a
-        // code-dictated destination.
+        // ctx.availableFlows keeps ALL flows, and is loaded even while a flow
+        // is already attached: startFlow validates against it both when
+        // escalate_to_operator forces the Human Support flow and when an
+        // answer hands over to another flow mid-conversation.
         ctx.availableFlows = flows
-        const selectableFlows = flows.filter((f) => f.flowId !== ctx.humanSupportFlowId)
-        flowsBlock = formatFlowsBlock(selectableFlows)
+        // The "AVAILABLE FLOWS" catalogue the model may pick from while
+        // classifying the problem: only offered when no flow is running yet,
+        // and never including Human Support (a code-dictated destination,
+        // never a diagnostic match).
+        if (!getState(sessionId).activeFlowId) {
+          const selectableFlows = flows.filter((f) => f.flowId !== ctx.humanSupportFlowId)
+          flowsBlock = formatFlowsBlock(selectableFlows)
+        }
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error('[demoam] listFlows handler threw, continuing without the flow catalogue', err)

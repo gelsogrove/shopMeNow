@@ -24,6 +24,7 @@ export interface SaveGraphEdgeInput {
   id: string
   sourceNodeId: string
   targetNodeId: string | null
+  targetFlowId?: string | null
   label: string
   triggersEscalation?: boolean
 }
@@ -231,10 +232,21 @@ export async function saveFlowGraph(
     fieldType: n.fieldType as CompilerFlowNode['fieldType'],
     terminalType: n.terminalType,
   }))
+  // Titles of the flows this graph hands over to, so the compiled prompt can
+  // name them instead of showing raw ids.
+  const targetFlowIds = Array.from(new Set(input.edges.map((e) => e.targetFlowId).filter((id): id is string => !!id)))
+  const targetFlows =
+    targetFlowIds.length > 0
+      ? await prisma.flow.findMany({ where: { id: { in: targetFlowIds }, workspaceId }, select: { id: true, title: true } })
+      : []
+  const targetFlowTitleById = new Map(targetFlows.map((f) => [f.id, f.title]))
+
   const compilerEdges: CompilerFlowEdge[] = input.edges.map((e) => ({
     id: e.id,
     sourceNodeId: e.sourceNodeId,
     targetNodeId: e.targetNodeId,
+    targetFlowId: e.targetFlowId,
+    targetFlowTitle: e.targetFlowId ? targetFlowTitleById.get(e.targetFlowId) ?? null : null,
     label: e.label,
     triggersEscalation: e.triggersEscalation,
   }))
@@ -260,6 +272,7 @@ export async function saveFlowGraph(
     flowTitle: input.title,
     flowDescription: description,
     flowKeywords: input.keywords,
+    flowId,
   })
 
   if (compiled.validationReport.length > 0) {
@@ -314,6 +327,7 @@ export async function saveFlowGraph(
         id: e.id,
         sourceNodeId: e.sourceNodeId,
         targetNodeId: e.targetNodeId,
+        targetFlowId: e.targetFlowId ?? null,
         label: e.label,
         triggersEscalation: !!e.triggersEscalation,
       })),

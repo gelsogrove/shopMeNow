@@ -740,7 +740,7 @@ export class CustomClientChatbotService {
               fieldKey: true,
               terminalType: true,
               outgoingEdges: {
-                select: { label: true, targetNodeId: true, triggersEscalation: true },
+                select: { label: true, targetNodeId: true, targetFlowId: true, triggersEscalation: true },
               },
             },
           },

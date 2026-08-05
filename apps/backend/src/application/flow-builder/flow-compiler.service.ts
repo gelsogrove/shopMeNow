@@ -78,6 +78,27 @@ function validateGraph(input: CompileFlowInput): ValidationError[] {
     if (edge.targetNodeId && !nodeIds.has(edge.targetNodeId)) {
       errors.push({ code: 'dangling_edge', message: `Edge ${edge.id} has an unknown targetNodeId.`, edgeId: edge.id })
     }
+    // An answer hands over to a node OR to another flow, never both: the
+    // runtime picks one destination, so two would make the branch ambiguous.
+    if (edge.targetNodeId && edge.targetFlowId) {
+      errors.push({
+        code: 'edge_targets_both_node_and_flow',
+        message: `Edge ${edge.id} targets both a node and a flow — pick one.`,
+        nodeId: edge.sourceNodeId,
+        edgeId: edge.id,
+      })
+    }
+    // Handing over to the flow you are already in restarts it from its root
+    // forever. Cross-flow cycles are caught at runtime by the visited-flow
+    // guard; this catches the one case that is always a mistake.
+    if (edge.targetFlowId && input.flowId && edge.targetFlowId === input.flowId) {
+      errors.push({
+        code: 'edge_targets_self_flow',
+        message: `Edge ${edge.id} hands over to the flow it belongs to.`,
+        nodeId: edge.sourceNodeId,
+        edgeId: edge.id,
+      })
+    }
   }
 
   // An edge with a blank label can never be matched by advance() (it compares
@@ -332,6 +353,8 @@ function renderCompiledPrompt(input: CompileFlowInput, order: CompilerFlowNode[]
       const target = edge.targetNodeId ? order.find((n) => n.id === edge.targetNodeId) : null
       if (edge.triggersEscalation) {
         lines.push(`- If "${edge.label}" → call escalate_to_operator immediately.`)
+      } else if (edge.targetFlowId) {
+        lines.push(`- If "${edge.label}" → continue in another flow: "${edge.targetFlowTitle ?? edge.targetFlowId}"`)
       } else if (target) {
         lines.push(`- If "${edge.label}" → go to STEP ${stepOf(target.id)}: "${target.question}"`)
       } else {

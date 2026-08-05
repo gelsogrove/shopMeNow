@@ -3,14 +3,14 @@ rifacciamo, vediamo se hai capito, cosa ti torna e cosa manca
 - se il channel è disattivo parte il wip message
 - se l'utente è nuovo facciamo il welcome message, se l'utente non è nuovo facciamo il welcome back message chiamandolo con il nome
 - il chatbot deve rispodnere nella lignau del cliene se la lignua e' presente nel settings..come lignua dispobibile altrimenti usa lignua di degault che anch'essa dovrebbe essere nel settigs.json
-- se riconosciamo che è un problema chiediamo prima di tutto il serial number, la spiegazione, quando è successo .... e poi seguiamo il flusso dello Human operator flow
+- se riconosciamo che è un problema chiediamo prima di tutto il serial number, la spiegazione, quando è successo .... e poi cerchiamo il problmema dentro flow se non lo trovi allora passa a human support flow
+  se lo trova seguie ogni passaggio e quando incontra il passaggio escalete to user...allora chiamiamo human support flow
 - la spiegazione del problema non può essere generica, deve avere un minimo di dettaglio
 - se è una faq non c'è bisogno del numero di serie
 - il numero di serie deve essere di 19 caratteri, deve essere validato; dopo 3 volte contatta operatore
 - se riconosciamo che è una faq rispondiamo con la risposta
 - se riconosciamo lo scontento dell'utente lo colleghiamo a un operatore
-- prima del supporto umano dobbiamo essere sicuri di avere Serial Number, nome, robot acceso, wifi acceso, cut scheduling acceso, abbastanza batteria.
-  Prima di collegare con l'operatore chiediamo il nome e facciamo l'handing-off message
+- Prima di collegare con l'operatore chiediamo il nome e facciamo l'handing-off message
 - se non trova né faq né flow parte con Human operator flow spiegando che non abbiamo la ifo ma non inventi
 - NON DEVI INVENTARE, OGNI RISPOSTA DEVE ARRIVARE DA UNA FONTE
   (faq o Flow)
@@ -26,7 +26,9 @@ chiediamo se il robot è acceso
 chiediamo se il wifi è on
 chiediamo se il cut scheduling è schedulato
 chiediamo se c'è abbastanza batteria
-chiediamo il nome dell'utente se non lo abbiamo
+(fine del flow — il flow builder oggi classifica solo Yes/No, non testo libero)
+
+subito dopo, chiediamo il nome dell'utente se non lo abbiamo già
 mostriamo l'handing-off message
 lanciamo la calling function per human support
 
@@ -49,7 +51,7 @@ GUARDS
 
 - il numero di serie viene validato dal codice (formato/lunghezza), mai dal modello; dopo 3 tentativi falliti si passa oltre e non viene richiesto di nuovo nel gate finale
 - la spiegazione del problema troppo generica viene rifiutata dal codice e richiesta di nuovo (max 2 volte), non accettata come se fosse un dettaglio reale
-- il numero di serie è sempre la prima domanda, anche se il messaggio del cliente è vago — nessuna domanda di chiarimento la precede
+- se riscontriamo che e' un problema e non una faq il numero di serie è sempre la prima domanda
 - l'ordine delle domande (serial → spiegazione → quando → Human operator flow) è deciso dal codice, mai dal modello
 - ogni domanda del gate e del flow è dettata parola per parola dal codice; il modello la traduce, non la inventa
 - il modello non può rispondere a una domanda con testo libero: deve sempre chiamare un tool (salvare un dato, rispondere da FAQ, avanzare nel flow, scalare)
@@ -58,17 +60,10 @@ GUARDS
 - se una domanda del gate resta senza risposta salvata, il modello non può richiederne un'altra: deve prima salvare quella in sospeso
 - le risposte alle FAQ passano da un tool che verifica che la FAQ citata esista davvero, mai testo libero
 - il messaggio finale di un flow (quello di successo, non di escalation) è dettato dal codice, mai inventato dal modello
-- se il flow porta a un'escalation, passa dallo stesso Human operator flow di ogni altro percorso
+- se il flow porta a un'escalation, vai a human support flow
 - se il cliente cita un codice errore diverso da quello del flow scelto, il flow viene rifiutato
 - Human operator flow è un flow vero nel flow builder (non un oggetto di domande nel codice), protetto e non cancellabile — ogni percorso tecnico verso l'operatore ci passa
 - "non inventare" riguarda i FATTI, non il tono: il modello resta libero di essere caloroso e naturale nel modo di dire le cose, mai libero di dire cose non vere
-
-NEVER
-
-- NEVER invent a diagnosis, a cause, a fix, or a question of your own.',
-- NEVER invent product facts: models, prices, warranty, parts, delivery times.',
-- NEVER confirm a serial number or warranty unless SESSION STATE says so,
-- never change the DB IN LOCAL alwasys su heroku!
 
 PROSSIMO — da pianificare, non ancora iniziato
 
@@ -80,5 +75,4 @@ PROSSIMO — da pianificare, non ancora iniziato
 FLOW:
 e' possibile cheun flow passi ad un altro flow ! deve essere un opzione da gestire
 
-- le parti harcodeate devon essee portate al minimo parliamo con l'utente
-  per ogni scelta di hard-code non dico di non usarle dico di condividere
+- le parti harcodeate devon essee portate al minimo parliamo con l'utente per ogni scelta di hard-code non dico di non usarle dico di condividere

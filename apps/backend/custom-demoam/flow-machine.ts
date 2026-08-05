@@ -65,6 +65,8 @@ export interface AdvanceResult {
   nextNodeId: string | null
   /** True when this specific answer escalates immediately, regardless of the target node's terminalType. */
   escalate: boolean
+  /** Set when this answer continues in a different flow, from its root. */
+  nextFlowId?: string
 }
 
 /**
@@ -85,5 +87,6 @@ export function advance(graph: FlowGraph, nodeId: string, label: string): Advanc
   if (!edge) return null
 
   if (edge.triggersEscalation) return { nextNodeId: null, escalate: true }
+  if (edge.targetFlowId) return { nextNodeId: null, escalate: false, nextFlowId: edge.targetFlowId }
   return { nextNodeId: edge.targetNodeId, escalate: false }
 }

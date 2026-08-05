@@ -2387,6 +2387,7 @@ model Flow {
   updatedAt DateTime @updatedAt
 
   nodes FlowNode[]
+  incomingFlowEdges FlowEdge[] @relation("EdgeTargetFlow")
 
   @@index([workspaceId])
   @@index([flowCategoryId])
@@ -2423,6 +2424,12 @@ model FlowEdge {
   sourceNode     FlowNode @relation("EdgeSource", fields: [sourceNodeId], references: [id], onDelete: Cascade)
   targetNodeId   String? // null = dead end (should not survive compiler validation)
 
+  // This answer hands the conversation over to a DIFFERENT flow instead of a
+  // node in this one. Mutually exclusive with targetNodeId. The runtime
+  // attaches the target flow from its root, keeping collectedData.
+  targetFlowId String?
+  targetFlow   Flow?   @relation("EdgeTargetFlow", fields: [targetFlowId], references: [id], onDelete: SetNull)
+
   label              String // e.g. "Yes"/"No", or free text
   triggersEscalation Boolean @default(false) // this specific answer escalates immediately, regardless of node terminalType
 
@@ -2430,6 +2437,7 @@ model FlowEdge {
 
   @@index([sourceNodeId])
   @@index([targetNodeId])
+  @@index([targetFlowId])
   @@map("demorobot_flow_edges")
 }
 

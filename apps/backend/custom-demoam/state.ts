@@ -10,7 +10,7 @@ export interface FlowGraphNodeSnapshot {
   question: string
   fieldKey?: string | null
   terminalType?: string | null
-  outgoingEdges: Array<{ label: string; targetNodeId: string | null; triggersEscalation?: boolean }>
+  outgoingEdges: Array<{ label: string; targetNodeId: string | null; targetFlowId?: string | null; triggersEscalation?: boolean }>
 }
 
 /**
@@ -81,6 +81,10 @@ export interface SessionState {
   // shared Human Support flow for this incident — fires once, so a completed
   // (or abandoned) attempt doesn't loop back into forcing it again.
   humanSupportFlowOffered?: boolean
+
+  // Flows already entered in this session. A flow-to-flow answer refuses to
+  // hand over to one that is already here, so A→B→A cannot spin forever.
+  visitedFlowIds?: string[]
 }
 
 export type PatchKey = 'name' | 'language' | 'serialNumber'
@@ -187,6 +191,13 @@ export function attachFlow(
     },
     { mirror: false },
   )
+  const e = entry(sessionId)
+  const visited = e.state.visitedFlowIds ?? []
+  if (!visited.includes(flowId)) e.state.visitedFlowIds = [...visited, flowId]
+}
+
+export function hasVisitedFlow(sessionId: string, flowId: string): boolean {
+  return (entry(sessionId).state.visitedFlowIds ?? []).includes(flowId)
 }
 
 export function detachFlow(sessionId: string): void {
