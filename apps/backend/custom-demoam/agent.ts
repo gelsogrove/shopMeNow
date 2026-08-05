@@ -809,6 +809,16 @@ interface CallLLMParams {
   messages?: WorkspaceMessages | null
   /** Resolved (customerName substituted) welcome/welcomeBack text still needing translation this turn — see resolveGreetingText. */
   greetingToTranslate?: string
+  /** True when a greeting was due this turn AND already sent in an earlier hop — see agentTurnInternal's dedicated greeting hop. */
+  greetingAlreadyDelivered?: boolean
+  /**
+   * True for the dedicated greeting-only hop itself: suppresses the flow-step
+   * / intake-question blocks so the model sees ONLY "translate this greeting,
+   * say nothing else" — a "which question to ask" instruction competing with
+   * "say only the greeting" is exactly the kind of double-signal that let the
+   * model wander off dictated text before (same lesson as forceTextOnly).
+   */
+  greetingOnlyHop?: boolean
   /**
    * When true, the model MUST call a tool this hop — a free-text reply is
    * rejected by the API itself, not merely discouraged in the prompt.
@@ -822,6 +832,27 @@ interface CallLLMParams {
    * escalate gate then dictates the next question (the customer's name).
    */
   forceToolChoice?: boolean
+  /**
+   * When true, NO tools are offered this hop at all — the API can only
+   * return free text, so the model has no way to call a tool instead of
+   * writing the dictated text it was just told to send.
+   *
+   * Andrea 2026-08-05, seen live twice: (1) the customer's first message
+   * asked a question the model could answer directly, so it skipped the
+   * mandatory welcome entirely — forceToolChoice is OFF on turn 1 (an
+   * empty history has no prior dictation to force), so the model was free
+   * to answer_from_faq or just write text, and picked text, silently
+   * dropping the greeting. (2) right after start_flow attached a flow,
+   * awaitingDictatedReply relaxed tool_choice to 'auto' rather than
+   * requiring one — 'auto' still means "call a tool if you want to", and
+   * the model called answer_step with a guessed label instead of asking
+   * the root node's question, silently skipping it. Both were "mandatory"
+   * prose the model could route around by calling ANY tool that fit tool
+   * schema. forceTextOnly removes that option structurally: dictated text
+   * (greeting, flow-step question, FAQ answer, flow-terminal message) is
+   * the only thing the model is capable of producing this hop.
+   */
+  forceTextOnly?: boolean
 }
 
 async function callLLM({
@@ -836,12 +867,15 @@ async function callLLM({
   settings,
   messages,
   greetingToTranslate,
+  greetingAlreadyDelivered,
+  greetingOnlyHop,
   forceToolChoice,
+  forceTextOnly,
 }: CallLLMParams): Promise<CallLLMResult> {
   if (!API_KEY) throw new Error('OPENROUTER_API_KEY missing in environment')
 
   const stateBlock = formatStateForPrompt(state)
-  const runtimeBlock = formatRuntimeBlock(operatorBriefingLanguageOverride, isFirstTurn, settings, state, messages, greetingToTranslate)
+  const runtimeBlock = formatRuntimeBlock(operatorBriefingLanguageOverride, isFirstTurn, settings, state, messages, greetingToTranslate, greetingAlreadyDelivered)
 
   const systemContent: Array<Record<string, unknown>> = [
     { type: 'text', text: commonPrompt, cache_control: { type: 'ephemeral' } },
@@ -852,7 +886,7 @@ async function callLLM({
   if (flowsBlock) systemContent.push({ type: 'text', text: flowsBlock })
 
   let currentStepLabels: string[] = []
-  if (state.currentNodeId && state.activeFlowGraphSnapshot) {
+  if (!greetingOnlyHop && state.currentNodeId && state.activeFlowGraphSnapshot) {
     const graph = buildFlowGraph(state.activeFlowGraphSnapshot)
     const node = currentNode(graph, state.currentNodeId)
     currentStepLabels = allowedLabels(graph, state.currentNodeId)
@@ -867,7 +901,7 @@ async function callLLM({
   // Intake gate: while no flow is running and the case details are still
   // missing, the code dictates the exact question (see formatIntakeBlock in
   // gate.ts) — the model translates it, it does not compose its own.
-  if (!state.currentNodeId) {
+  if (!greetingOnlyHop && !state.currentNodeId) {
     const intakeBlock = formatIntakeBlock(nextIntakeStep(state, settings.gateQuestions))
     if (intakeBlock) systemContent.push({ type: 'text', text: intakeBlock })
   }
@@ -877,6 +911,21 @@ async function callLLM({
     ...history.map((m) => ({ role: m.role, content: m.content, tool_calls: m.tool_calls, tool_call_id: m.tool_call_id, name: m.name })),
   ]
 
+  // forceTextOnly omits `tools` entirely rather than sending an empty array
+  // or tool_choice:'none' — some providers still accept a tool call with
+  // tool_choice:'none' if a tool array is present. Omitting `tools` makes it
+  // structurally impossible: there is nothing to call.
+  const body: Record<string, unknown> = {
+    model: process.env.LLM_MODEL || settings.model,
+    messages: payloadMessages,
+    temperature: settings.temperature,
+    max_tokens: settings.maxTokens,
+  }
+  if (!forceTextOnly) {
+    body.tools = buildToolsForTurn(state, currentStepLabels, faqCount)
+    body.tool_choice = forceToolChoice ? 'required' : 'auto'
+  }
+
   const res = await fetch(`${BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -885,14 +934,7 @@ async function callLLM({
       'HTTP-Referer': 'https://echatbot.ai',
       'X-Title': 'DemoAM',
     },
-    body: JSON.stringify({
-      model: process.env.LLM_MODEL || settings.model,
-      messages: payloadMessages,
-      tools: buildToolsForTurn(state, currentStepLabels, faqCount),
-      tool_choice: forceToolChoice ? 'required' : 'auto',
-      temperature: settings.temperature,
-      max_tokens: settings.maxTokens,
-    }),
+    body: JSON.stringify(body),
   })
 
   if (!res.ok) {
@@ -954,6 +996,7 @@ function formatRuntimeBlock(
   state: SessionState,
   messages: WorkspaceMessages | null | undefined,
   greetingToTranslate: string | undefined,
+  greetingAlreadyDelivered = false,
 ): string {
   const now = new Date()
   const lines = [
@@ -972,12 +1015,17 @@ function formatRuntimeBlock(
         '## THE GREETING TO OPEN WITH (mandatory, this turn only)',
         '',
         'Translate this exact sentence into the language you are about to reply in, and make it',
-        'the FIRST sentence of your reply — verbatim in meaning, not reworded, not summarized:',
+        'your WHOLE reply — nothing else, the substance of the conversation continues in a',
+        'separate message right after this one:',
         '',
         greetingToTranslate,
+      )
+    } else if (greetingAlreadyDelivered) {
+      lines.push(
         '',
-        'Then continue with the substance of your reply on the same message. Do NOT invent a',
-        'different greeting and do NOT add a second one.',
+        `- This is a ${state.greeting === 'new' ? 'NEW customer' : 'returning customer'}. The greeting was`,
+        '  already sent as a separate message right before this one — do NOT greet again, start',
+        '  directly with the substance of your reply.',
       )
     } else {
       lines.push(
@@ -1093,12 +1141,57 @@ async function agentTurnInternal(
   ctx.currentMessage = sanitizedMessage
 
   let state = getState(ctx.sessionId)
+  let tokensUsedSoFar = 0
+
+  // The greeting is delivered in its OWN forced-text-only hop, before the
+  // loop that handles the substance of the request. Andrea 2026-08-05, seen
+  // live: with a mandatory greeting due AND a real question in the same
+  // message, tool_choice:'auto' let the model call answer_from_faq and
+  // never write the greeting at all — a "translate this and open with it"
+  // prompt instruction competing with a tool call, and the tool call won.
+  // Splitting into two hops removes the competition structurally: this hop
+  // is capable of producing nothing BUT the translated greeting (no tools
+  // offered), and the customer still sees one message — the two hops' text
+  // is concatenated into a single reply below.
+  const greetingToTranslate = resolveGreetingText(state, settings, messages)
+  let greetingReply = ''
+  if (greetingToTranslate) {
+    const greetingHop = await callLLM({
+      commonPrompt,
+      state,
+      history,
+      operatorBriefingLanguageOverride,
+      isFirstTurn,
+      faqBlock: undefined,
+      faqCount: 0,
+      flowsBlock: undefined,
+      settings,
+      messages,
+      greetingToTranslate,
+      greetingOnlyHop: true,
+      forceTextOnly: true,
+    })
+    tokensUsedSoFar += greetingHop.tokensUsed
+    const { reply, lang } = extractLanguage(greetingHop.text)
+    greetingReply = reply.trim()
+    if (lang) {
+      commitLanguageFromReply(ctx.sessionId, resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage))
+    }
+  }
 
   let awaitingDictatedReply = false
 
   for (let hop = 0; hop < settings.maxToolHops; hop++) {
     state = getState(ctx.sessionId)
     const mustForceToolChoice = !isFirstTurn && !awaitingDictatedReply
+    // forceTextOnly, not just tool_choice:'auto': a tool result with
+    // dictates_text:true (a flow-step question, a FAQ answer, a flow
+    // terminal message, the pre-operator gate's next question) means the
+    // ONLY legitimate move this hop is writing that dictated text. 'auto'
+    // still lets the model call a DIFFERENT tool instead — seen live
+    // 2026-08-05, right after start_flow attached ERROR 001: the model
+    // called answer_step with a guessed label instead of asking the root
+    // node's question, silently skipping it.
     const { text, toolCalls, tokensUsed: hopTokens } = await callLLM({
       commonPrompt,
       state,
@@ -1110,8 +1203,10 @@ async function agentTurnInternal(
       flowsBlock: state.activeFlowId ? undefined : flowsBlock,
       settings,
       messages,
-      greetingToTranslate: resolveGreetingText(state, settings, messages),
+      greetingToTranslate: undefined,
+      greetingAlreadyDelivered: !!greetingToTranslate,
       forceToolChoice: mustForceToolChoice,
+      forceTextOnly: awaitingDictatedReply,
     })
 
     if (toolCalls.length === 0) {
@@ -1122,16 +1217,17 @@ async function agentTurnInternal(
         // eslint-disable-next-line no-console
         console.error('[demoam] tool_choice=required returned no tool_calls — provider contract violation')
       }
-      const { reply, lang } = extractLanguage(text)
+      const { reply: rawReply, lang } = extractLanguage(text)
       if (lang) {
         commitLanguageFromReply(ctx.sessionId, resolveEnabledLanguage(lang, settings.enabledLanguages, settings.defaultLanguage))
       }
+      const reply = greetingReply ? `${greetingReply}\n\n${rawReply}`.trim() : rawReply
       history.push({ role: 'assistant', content: reply })
       if (LLM_DEBUG) {
         // eslint-disable-next-line no-console
         console.error('[state]', formatStateOneLine(getState(ctx.sessionId)))
       }
-      return { reply, tokensUsed: hopTokens, escalated: false }
+      return { reply, tokensUsed: tokensUsedSoFar + hopTokens, escalated: false }
     }
 
     history.push({ role: 'assistant', content: text || null, tool_calls: toolCalls })
@@ -1195,7 +1291,8 @@ async function agentTurnInternal(
         flowsBlock: undefined,
         settings,
         messages,
-        greetingToTranslate: resolveGreetingText(state, settings, messages),
+        greetingToTranslate: undefined,
+        greetingAlreadyDelivered: !!greetingToTranslate,
       })
       const { reply, lang } = extractLanguage(finalHop.text)
       if (lang) {
@@ -1211,11 +1308,12 @@ async function agentTurnInternal(
       })
 
       detachFlow(ctx.sessionId)
-      const customerReply = reply.trim() || handoffFallback(messages, settings) || ''
+      const customerReplyBody = reply.trim() || handoffFallback(messages, settings) || ''
+      const customerReply = greetingReply ? `${greetingReply}\n\n${customerReplyBody}`.trim() : customerReplyBody
 
       return {
         reply: `${customerReply}\n\n${briefing}`,
-        tokensUsed: hopTokens + finalHop.tokensUsed,
+        tokensUsed: tokensUsedSoFar + hopTokens + finalHop.tokensUsed,
         escalated: true,
         escalationSummary,
       }
@@ -1243,8 +1341,8 @@ async function agentTurnInternal(
   detachFlow(ctx.sessionId)
 
   return {
-    reply: [handoffFallback(messages, settings), briefing].filter(Boolean).join('\n\n'),
-    tokensUsed: 0,
+    reply: [greetingReply, handoffFallback(messages, settings), briefing].filter(Boolean).join('\n\n'),
+    tokensUsed: tokensUsedSoFar,
     escalated: true,
     escalationSummary: summary,
   }
