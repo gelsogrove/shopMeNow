@@ -20,6 +20,16 @@
       "role": "assistant",
       "content": "{{customerName}}, I'm putting you through to our operator, they'll get back to you shortly.\n\n**👤 Human Support message**\n\n📌 **Reason:** diagnostic_exhausted\n\n**Customer**\n• Name: —\n• Language: en\n\n**Case**\n• Serial number: HKA4OB100LQ26050198\n• Troubleshooting flow: none matched\n\n**Answers collected**\n• problemDescription: Robot rotto due volte in un mese\n• problemStartedWhen: Un mese fa, due volte\n• robotPoweredOn: unknown\n• wifiActive: unknown\n• cutSchedulingActive: unknown\n\n**Summary**\nThe assistant could not resolve this conversation automatically (tool-hop limit reached).\nCustomer message: HKA4OB100LQ26050198\nSerial number: HKA4OB100LQ26050198\nActive flow: none matched\nCollected data: {\"problemDescription\":\"Robot rotto due volte in un mese\",\"problemStartedWhen\":\"Un mese fa, due volte\",\"robotPoweredOn\":\"unknown\",\"wifiActive\":\"unknown\",\"cutSchedulingActive\":\"unknown\"}",
       "timestamp": "2026-08-05T15:25:01.029Z"
+    },
+    {
+      "role": "user",
+      "content": "Mario Rossi",
+      "timestamp": "2026-08-05T15:25:01.030Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Grazie, Mario. Prima di metterti in contatto con un operatore, ho bisogno di un'ultima informazione: la batteria del robot è carica a sufficienza in questo momento?",
+      "timestamp": "2026-08-05T15:25:07.428Z"
     }
   ],
   "persistedState": {
@@ -33,7 +43,9 @@
         "robotPoweredOn": "unknown",
         "wifiActive": "unknown",
         "cutSchedulingActive": "unknown"
-      }
+      },
+      "name": "Mario Rossi",
+      "pendingGateField": "batterySufficient"
     },
     "patches": []
   }
