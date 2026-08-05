@@ -60,6 +60,13 @@ async function main() {
     // robot that is off or offline, so we ask the customer to fix it and
     // re-check, rather than escalating with a blocker nobody addressed
     // (Andrea, 2026-08-06).
+    //
+    // Listed AFTER the question they loop back to, never before: the
+    // compiler's reachability walk starts from the first node it considers a
+    // root, and a LOOP node placed first makes every other node look
+    // unreachable. Cosmetic (the graph is identical either way, and the
+    // runtime's own rootNodeId ignores LOOP back-edges) but it fills the
+    // editor with false warnings.
     { id: "hf_power_fix", question: "The robot needs to be switched on for support to be able to help — please turn it on, then let me know once it is running.", positionX: 0, positionY: 200, terminalType: "LOOP" },
     { id: "hf_wifi_fix", question: "Support needs the robot connected to be able to help — please switch the wifi on, then let me know once it is connected.", positionX: 280, positionY: 200, terminalType: "LOOP" },
 

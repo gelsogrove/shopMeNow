@@ -1,0 +1,22 @@
+{
+  "description": "Nodo correttivo LOOP su wifi e robot acceso — il cliente risponde 'no' e POI lo sistema. Un 'no' su questi due check non è un vicolo cieco: l'assistenza non può aiutare un robot spento o scollegato, quindi il flow chiede di rimediare e RI-CHIEDE la stessa domanda invece di escalare con un blocco che nessuno ha affrontato. Quando il cliente conferma di averlo fatto, il flow riprende dal punto giusto e prosegue con i check successivi fino all'escalation completa.",
+  "contractRule": "I 4 check tecnici si chiedono SOLO nell'Human Support flow prima di chiamare l'assistenza. Un 'No' su robot acceso / wifi porta a un nodo correttivo LOOP che torna alla stessa domanda; se il cliente rimedia si prosegue al passo successivo.",
+  "phone": "+391110000705",
+  "newSession": true,
+  "turns": [
+    { "message": "Ciao il robot si è fermato in mezzo al prato" },
+    { "message": "HKA4OB100LQ26050197" },
+    { "message": "si è bloccato e non riparte da solo" },
+    { "message": "stamattina" },
+    { "message": "no è spento" },
+    { "message": "ok l'ho acceso ora" },
+    { "message": "no il wifi non è attivo" },
+    { "message": "fatto ora è connesso" },
+    { "message": "sì la programmazione è attiva" },
+    { "message": "sì la batteria è carica" },
+    { "message": "Chiara Ferri" }
+  ],
+  "expect": {
+    "replyContains": ["Chiara"]
+  }
+}
