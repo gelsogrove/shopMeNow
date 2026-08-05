@@ -132,7 +132,14 @@ async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOu
   const checks = [checkNoEmptyReply(replies), checkNoErrorField(errors)]
   const status: ScenarioOutcome["status"] = checks.every((c) => c.ok) ? "PASS" : "FAIL"
 
-  return { file, description: scenario.description, status, checks, lastReply: lastOutput?.reply ?? undefined }
+  return {
+    file,
+    description: scenario.description,
+    contractRule: scenario.contractRule,
+    status,
+    checks,
+    lastReply: lastOutput?.reply ?? undefined,
+  }
 }
 
 async function main() {
@@ -148,17 +155,19 @@ async function main() {
   const outcomes: ScenarioOutcome[] = []
   for (const { file, scenario } of scenarios) {
     console.log(`\n═══ ${file} — ${scenario.description} ═══`)
+    console.log(`  contract: ${scenario.contractRule}`)
     const outcome = await runScenario(file, scenario)
     outcomes.push(outcome)
     console.log(`  [${outcome.status}] ${outcome.checks.map((c) => `${c.ok ? "✓" : "✗"} ${c.name}${c.detail ? ` (${c.detail})` : ""}`).join(", ")}`)
   }
 
   console.log("\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-  console.log("SCENARIO REPORT")
+  console.log("SCENARIO REPORT — mapped to CONTRACT.md")
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
   for (const o of outcomes) {
     const icon = o.status === "PASS" ? "✅" : o.status === "SKIP" ? "⏭️ " : "❌"
     console.log(`${icon} ${o.file} — ${o.status}`)
+    console.log(`   contract: ${o.contractRule}`)
   }
   const passed = outcomes.filter((o) => o.status === "PASS").length
   const failed = outcomes.filter((o) => o.status === "FAIL").length
