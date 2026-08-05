@@ -145,6 +145,44 @@ function validateGraph(input: CompileFlowInput): ValidationError[] {
     }
   }
 
+  // Two edges from the same node with DIFFERENT labels but the SAME
+  // destination make the question pointless: whatever the customer answers,
+  // the conversation goes to the identical next node, so the branch carries
+  // no information (seen live 2026-08-05, AmRobots ERROR 005 flow: "Sì" and
+  // "No" both led to "hai provato ad aumentare la sensibilità?"). A real
+  // branch point must actually branch.
+  for (const [nodeId, nodeEdges] of edgesByNode) {
+    const seenNodeTargets = new Map<string, string>()
+    const seenFlowTargets = new Map<string, string>()
+    for (const edge of nodeEdges) {
+      if (edge.targetNodeId) {
+        const firstEdgeId = seenNodeTargets.get(edge.targetNodeId)
+        if (firstEdgeId) {
+          errors.push({
+            code: 'converging_edge_targets',
+            message: `Node ${nodeId} has two edges with different labels (edges ${firstEdgeId} and ${edge.id}) both leading to node ${edge.targetNodeId} — every answer must lead somewhere different.`,
+            nodeId,
+            edgeId: edge.id,
+          })
+        } else {
+          seenNodeTargets.set(edge.targetNodeId, edge.id)
+        }
+      } else if (edge.targetFlowId) {
+        const firstEdgeId = seenFlowTargets.get(edge.targetFlowId)
+        if (firstEdgeId) {
+          errors.push({
+            code: 'converging_edge_targets',
+            message: `Node ${nodeId} has two edges with different labels (edges ${firstEdgeId} and ${edge.id}) both leading to flow ${edge.targetFlowId} — every answer must lead somewhere different.`,
+            nodeId,
+            edgeId: edge.id,
+          })
+        } else {
+          seenFlowTargets.set(edge.targetFlowId, edge.id)
+        }
+      }
+    }
+  }
+
   // Every path must reach a terminal node (a node with no outgoing edges, or
   // explicitly typed as a terminal). Cycles are only allowed when the node
   // that closes the cycle is explicitly terminalType: 'LOOP'.

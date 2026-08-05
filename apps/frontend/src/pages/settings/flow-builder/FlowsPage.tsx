@@ -15,6 +15,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { GitBranch, Plus, ArrowLeft, Copy } from "lucide-react"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import type { ColumnDef } from "@tanstack/react-table"
 import { useWorkspace } from "@/contexts/WorkspaceContext"
 import { toast } from "@/lib/toast"
@@ -110,11 +116,13 @@ export function FlowsPage() {
   }
 
   const columns: ColumnDef<Flow>[] = [
-    { header: "Title", accessorKey: "title" },
+    { header: "Title", accessorKey: "title", size: 200 },
     { header: "Description", accessorKey: "description", cell: ({ getValue }) => (getValue() as string) || "—" },
   ]
 
-  const filtered = flows.filter((f) => `${f.title} ${f.description ?? ""}`.toLowerCase().includes(searchValue.toLowerCase()))
+  const filtered = flows
+    .filter((f) => `${f.title} ${f.description ?? ""}`.toLowerCase().includes(searchValue.toLowerCase()))
+    .sort((a, b) => a.title.localeCompare(b.title))
 
   return (
     <div className="p-6 space-y-6">
@@ -151,15 +159,23 @@ export function FlowsPage() {
         onDelete={(flow) => setDeleteTarget(flow)}
         actionButtons={(flow) => (
           <>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 p-0"
-              onClick={() => openDuplicateDialog(flow)}
-              title="Duplicate"
-            >
-              <Copy className="h-4 w-4 text-gray-500" />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 p-0"
+                    onClick={() => openDuplicateDialog(flow)}
+                  >
+                    <Copy className="h-4 w-4 text-gray-500" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Duplicate</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </>
         )}
       />

@@ -1,9 +1,19 @@
 /**
  * Creates/updates the AmRobots "Human operator flow" — the shared
- * pre-operator technical check (acceso/wifi/scheduling/batteria) as a real
- * flow-builder flow instead of the code-owned PRE_OPERATOR_ORDER list.
+ * pre-operator technical check as a real flow-builder flow instead of the
+ * code-owned PRE_OPERATOR_ORDER list.
  *
- * The name question stays outside this flow: the flow engine
+ * Only powered-on and wifi are modelled as flow nodes: a "No" answer on
+ * either genuinely changes the path (skips straight to handoff instead of
+ * asking the next check) — a real branch point. cutSchedulingActive and
+ * batterySufficient are NOT flow nodes (Andrea 2026-08-05, seen live: two
+ * nodes here had "Yes" and "No" both leading to the same next node — a
+ * flow-builder branch that doesn't actually branch is exactly the bug the
+ * compiler's converging_edge_targets check now rejects). They stay
+ * code-owned intake fields in gate.ts's PRE_OPERATOR_ORDER, asked and
+ * recorded for the operator briefing regardless of the answer.
+ *
+ * The name question also stays outside this flow: the flow engine
  * (answer_step/advance) only classifies fixed edge labels, it cannot capture
  * free text like a name. escalate_to_operator already asks for it (via
  * remember) right after this flow's ESCALATE terminal hands off.
@@ -26,9 +36,7 @@ async function main() {
   const nodes = [
     { id: "hf_powered_on", question: "Is the robot powered on?", positionX: 0, positionY: 0, fieldKey: "robotPoweredOn", fieldType: "boolean", terminalType: null },
     { id: "hf_wifi", question: "Is the wifi active?", positionX: 280, positionY: 0, fieldKey: "wifiActive", fieldType: "boolean", terminalType: null },
-    { id: "hf_cut_schedule", question: "Is it currently in a scheduled cutting cycle?", positionX: 560, positionY: 0, fieldKey: "cutSchedulingActive", fieldType: "boolean", terminalType: null },
-    { id: "hf_battery", question: "Is the battery sufficiently charged?", positionX: 840, positionY: 0, fieldKey: "batterySufficient", fieldType: "boolean", terminalType: null },
-    { id: "hf_handoff", question: "This flow has reached its escalation point.", positionX: 1120, positionY: 0, terminalType: "ESCALATE" },
+    { id: "hf_handoff", question: "This flow has reached its escalation point.", positionX: 560, positionY: 0, terminalType: "ESCALATE" },
   ]
 
   // No edge uses triggersEscalation: that flag makes advance() stop with
@@ -38,12 +46,8 @@ async function main() {
   const edges = [
     { id: "hf_e_powered_yes", sourceNodeId: "hf_powered_on", targetNodeId: "hf_wifi", label: "Yes" },
     { id: "hf_e_powered_no", sourceNodeId: "hf_powered_on", targetNodeId: "hf_handoff", label: "No" },
-    { id: "hf_e_wifi_yes", sourceNodeId: "hf_wifi", targetNodeId: "hf_cut_schedule", label: "Yes" },
+    { id: "hf_e_wifi_yes", sourceNodeId: "hf_wifi", targetNodeId: "hf_handoff", label: "Yes" },
     { id: "hf_e_wifi_no", sourceNodeId: "hf_wifi", targetNodeId: "hf_handoff", label: "No" },
-    { id: "hf_e_cut_yes", sourceNodeId: "hf_cut_schedule", targetNodeId: "hf_battery", label: "Yes" },
-    { id: "hf_e_cut_no", sourceNodeId: "hf_cut_schedule", targetNodeId: "hf_battery", label: "No" },
-    { id: "hf_e_battery_yes", sourceNodeId: "hf_battery", targetNodeId: "hf_handoff", label: "Yes" },
-    { id: "hf_e_battery_no", sourceNodeId: "hf_battery", targetNodeId: "hf_handoff", label: "No" },
   ]
 
   const embeddingProvider = new OpenRouterEmbeddingProvider()

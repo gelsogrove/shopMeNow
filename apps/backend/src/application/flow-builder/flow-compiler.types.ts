@@ -58,6 +58,7 @@ export interface ValidationError {
     | 'unexpected_cycle'
     | 'dangling_edge'
     | 'duplicate_edge_label'
+    | 'converging_edge_targets'
     | 'empty_edge_label'
     | 'edge_targets_both_node_and_flow'
     | 'edge_targets_self_flow'
