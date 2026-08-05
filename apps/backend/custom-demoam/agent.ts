@@ -700,6 +700,28 @@ async function executeTool(ctx: ToolContext, name: string, args: Record<string, 
       }
     }
 
+    // With a flow question pending, saving a fact is never the whole move:
+    // the node still has to be advanced, or the flow stalls while the model
+    // runs ahead improvising its own questions.
+    //
+    // Andrea 2026-08-06, seen in the CLI runner (against the CORRECT graph):
+    // on "ok I turned it on" the model called remember and asked about the
+    // wifi itself — never answer_step('Done') — so currentNodeId sat on
+    // hf_power_fix while the model free-wheeled through wifi and scheduling
+    // via remember. Two turns later the loop cap fired on a node the
+    // customer had already satisfied, and the whole tail of the flow
+    // (wifi_fix, battery) never executed.
+    if (afterSave.currentNodeId) {
+      return {
+        ok: true,
+        dictates_text: false,
+        instruction:
+          'Saved. A flow question is still pending — call answer_step NOW, in this same turn, with ' +
+          "the label matching the customer's reply. Do NOT ask the next question yourself and do NOT " +
+          'diagnose anything: the flow decides what comes next.',
+      }
+    }
+
     return { ok: true, dictates_text: stillNeedsIntake }
   }
 
@@ -993,6 +1015,8 @@ async function callLLM({
   if (LLM_DEBUG) {
     // eslint-disable-next-line no-console
     console.error('[usage]', JSON.stringify(data.usage ?? {}))
+    // eslint-disable-next-line no-console
+    console.error('[hop]', JSON.stringify({ node: state.currentNodeId ?? null, called: toolCalls.map((c) => `${c.function.name}(${c.function.arguments.slice(0, 60)})`), text: text.slice(0, 60) }))
   }
 
   return { text, toolCalls, tokensUsed }
