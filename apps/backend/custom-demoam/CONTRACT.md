@@ -36,49 +36,57 @@ e imporante lanciamo la calling function per human support in questo momento qua
 e' tutto nel flow di default che non deve essere cancellato
 editato si cancellarlo mai !
 
-[NOTA 2026-08-05 — verificato sul DB di produzione]
-Stato del codice: `escalate_to_operator` NON attacca più il flow. Passa
-direttamente per `nextPreOperatorAction` (gate.ts), e il flow Human Support
-è escluso dal catalogo offerto al modello (agent.ts, filtro su
-`humanSupportFlowId`) perché non è un match diagnostico. Il flow builder
-contiene 2 dei 4 booleani (robotPoweredOn, wifiActive); tutti e 4 sono
-comunque chiesti dal gate, quindi oggi il percorso pre-operatore è UNO solo:
-il gate. `PRE_OPERATOR_ORDER` non esiste più — l'ordine è `CHECKLIST` in
-gate.ts, con `maxAsks` per campo.
+[STATO 2026-08-06 — implementato e scritto sul DB di produzione]
 
-Il vincolo che ha portato qui: il compiler rifiuta `converging_edge_targets`
-("ogni risposta deve portare da qualche parte di diverso"). Una checklist non
-ha percorsi diversi per Sì e No — la risposta va solo salvata per il
-briefing — quindi non è modellabile come flow senza duplicare i nodi per
-ogni combinazione (4 campi = 16 rami identici).
+La sequenza, un meccanismo per ogni pezzo:
 
-Divisione dei ruoli, da tenere:
-- flow builder = DIAGNOSTICA (ogni risposta cambia il percorso)
-- gate testuale = CHECKLIST lineare + tutto ciò che il motore non sa fare
+  caso TECNICO
+    gate  → serial → descrizione → quando        (intake: precede il flow,
+                                                  serve a SCEGLIERLO)
+    flow  → robot acceso? → wifi? → cut scheduling? → batteria?
+            (No su scheduling/batteria → nodo correttivo LOOP → ri-chiede)
+          → terminale ESCALATE
+    gate  → nome                                 (testo libero)
+          → escalate_to_operator                 (mail operatore)
+          → handoff message DETTATO da settings
+          → host: activeChatbot = false
 
-Due limiti del motore che il gate copre e il flow non può coprire:
-1. l'intake (serial, descrizione, quando) precede il flow — serve a SCEGLIERLO
-2. `name` è testo libero: `answer_step` classifica etichette fisse, non cattura
+  caso NO_DEVICE (complaint / faq_not_found / requested_operator)
+    gate  → nome → escalate → handoff → spegnimento
+    Niente flow, niente serial, niente check tecnici: non c'è dispositivo da
+    diagnosticare, e interrogare chi è già scontento è la risposta sbagliata.
 
-[DA FARE — deciso con Andrea 2026-08-05, script pronto, NON eseguito]
-Portare cutSchedulingActive e batterySufficient nel flow come nodi
-DIAGNOSTICI (non checklist): No → nodo correttivo "attivalo/caricala" →
-back-edge, che il compiler accetta perché il ciclo si chiude su un nodo
-`terminalType: 'LOOP'` (primitiva già esistente, vedi flow-compiler.types.ts
-e flow-machine.ts). Tetto 2 tentativi per nodo, poi si prosegue comunque
-verso ESCALATE — un cliente che non può attivarlo non deve restare
-bloccato fuori dall'operatore (stessa logica di `maxAsks`).
+Chi fa cosa, e perché non è ridondanza:
+- il FLOW fa le 4 domande tecniche — ogni risposta cambia il percorso
+- il GATE fa solo ciò che il motore non sa fare: l'intake (viene prima che un
+  flow esista) e il nome (testo libero; `answer_step` classifica solo
+  etichette fisse)
 
-Script pronto: `apps/backend/scripts/update-amrobots-human-support-flow.ts`
-(aggiorna il flow esistente, non lo ricrea). Attende l'OK di Andrea sulla
-scrittura in produzione.
+Garanzie in codice, non nel prompt (CLAUDE.md §16):
+- `escalate_to_operator` RIFIUTA con `human_support_flow_required` +
+  `force_tool: 'start_flow'` finché il flow non è stato percorso
+- `humanSupportFlowDone` impedisce che il terminale ESCALATE del flow rimandi
+  il cliente dentro lo stesso flow — marcato su ENTRAMBE le uscite (nodo
+  terminale e edge triggersEscalation)
+- `CHECKLIST.technical` = serial / descrizione / quando / nome. I 4 booleani
+  NON sono più nel gate né in `gateQuestions`: sarebbero config morta.
 
-⚠️ I due passi vanno fatti INSIEME, mai uno solo:
-1. eseguire lo script (flow: 4 booleani con i 2 LOOP)
-2. ri-attaccare il flow in escalate_to_operator + ridurre
-   `CHECKLIST.technical` a serial / descrizione / quando / nome
-Solo (2) → scheduling e batteria non le chiede più nessuno.
-Solo (1) → vengono chieste due volte, dal flow e dal gate.
+Flow in produzione (`cmsfavpet0000qwngacwdutj6`), 9 nodi / 10 archi:
+  hf_powered_on → hf_wifi → hf_cut_scheduling → hf_battery → ESCALATE
+  hf_cut_fix e hf_battery_fix sono `terminalType: LOOP` con back-edge "Done"
+Il compiler accetta i cicli SOLO attraverso nodi LOOP. Il tetto è `maxAsks`
+in gate.ts, non nel grafo: un LOOP è infinito per costruzione, e un cliente
+che non può completare un check deve comunque arrivare a un umano.
+
+⚠️ Bug corretto nello stesso passaggio: `hf_handoff_powered_off` era
+`terminalType: SELF_SERVICE`, non ESCALATE. Un cliente col robot spento
+chiudeva il flow in self-service — niente nome, niente handoff, niente
+operatore, chatbot acceso. Ogni strada di questo flow deve finire da un
+umano: è quello che il flow è.
+
+Script: `apps/backend/scripts/update-amrobots-human-support-flow.ts`
+(aggiorna il flow esistente, non lo ricrea — "editato si, cancellarlo mai").
+Test: `__tests__/unit/demoam-human-support.spec.ts`.
 
 [SPEGNIMENTO CHATBOT — verificato 2026-08-05, FUNZIONA]
 `recordEscalation` nel modulo fa solo un console.error, ma lo spegnimento
