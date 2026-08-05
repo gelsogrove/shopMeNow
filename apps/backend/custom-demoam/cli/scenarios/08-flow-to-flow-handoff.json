@@ -1,0 +1,11 @@
+{
+  "description": "Flusso che manda a un altro flusso — ERROR 002 (surriscaldamento), risposta 'Sì' alla domanda sul rumore strano deve saltare al flow ERROR 003 dal suo nodo radice, mantenendo collectedData.",
+  "phone": "+391110000008",
+  "newSession": true,
+  "turns": [
+    { "message": "il mio robot mi da errore 002, è surriscaldato" },
+    { "message": "HKA4OB100LQ26050201" },
+    { "message": "sì è accesa una luce rossa fissa" },
+    { "message": "sì fa anche un rumore strano mentre lavora" }
+  ]
+}

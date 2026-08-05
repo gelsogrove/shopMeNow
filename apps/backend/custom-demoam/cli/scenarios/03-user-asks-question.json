@@ -1,0 +1,8 @@
+{
+  "description": "Utente fa una domanda (FAQ) — deve rispondere SOLO col contenuto della FAQ esistente, mai inventare, mai aggiungere raccomandazioni proprie.",
+  "phone": "+391110000003",
+  "newSession": true,
+  "turns": [
+    { "message": "ciao come pulisco il robot?" }
+  ]
+}

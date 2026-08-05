@@ -1,0 +1,10 @@
+{
+  "description": "Utente ha un problema generico (non un codice errore preciso) — il gate deve chiedere PRIMA il serial number, poi la descrizione, mai improvvisare una domanda diagnostica propria.",
+  "phone": "+391110000004",
+  "newSession": true,
+  "turns": [
+    { "message": "il mio robot non funziona bene" },
+    { "message": "HKA4OB100LQ26050197" },
+    { "message": "il robot si ferma dopo pochi minuti di lavoro senza motivo apparente" }
+  ]
+}

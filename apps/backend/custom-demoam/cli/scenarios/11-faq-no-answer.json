@@ -1,0 +1,8 @@
+{
+  "description": "FAQ che non abbiamo — deve rispondere onestamente che non ha questa informazione (mai inventare), poi passare a Human operator flow spiegando che non ha la info.",
+  "phone": "+391110000011",
+  "newSession": true,
+  "turns": [
+    { "message": "quanto costa il modello STORM 9000?" }
+  ]
+}

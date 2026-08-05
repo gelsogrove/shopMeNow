@@ -1,0 +1,7 @@
+{
+  "description": "Numero di telefono nuovo — deve ricevere il welcome message (non welcome-back), come primo turno.",
+  "phone": "+391110000001",
+  "turns": [
+    { "message": "ciao" }
+  ]
+}

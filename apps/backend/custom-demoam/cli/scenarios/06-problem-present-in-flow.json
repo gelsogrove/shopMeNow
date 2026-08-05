@@ -1,0 +1,10 @@
+{
+  "description": "Problema PRESENTE nel flow builder (ERROR 001) — deve trovare il flow giusto e seguirlo nodo per nodo, iniziando dal nodo radice corretto ('c'è una luce rossa accesa?'), mai saltare al secondo nodo.",
+  "phone": "+391110000006",
+  "newSession": true,
+  "turns": [
+    { "message": "il mio robot mi da errore 001" },
+    { "message": "HKA4OB100LQ26050199" },
+    { "message": "sì, la luce rossa è accesa" }
+  ]
+}

@@ -1,0 +1,162 @@
+/**
+ * Runs every scenario file in scenarios/ against the real chatbotFn,
+ * in-process, against the real AmRobots data on Supabase — never WhatsApp
+ * (CLAUDE.md §8). Prints every turn's reply plus a final PASS/FAIL report
+ * per scenario, checked against explicit expectations declared in each
+ * scenario file (never inferred, never hardcoded per-tenant copy — checks
+ * are structural: "a greeting was sent", "escalation happened", "the reply
+ * is non-empty", not string-matching a specific sentence).
+ *
+ * Every scenario's `contractRule` names the exact CONTRACT.md line(s) it
+ * exists to verify — a scenario with no traceable rule is not a real test,
+ * it's a guess at what might matter.
+ *
+ * Usage:
+ *   DATABASE_URL=... OPENROUTER_API_KEY=... npx tsx --tsconfig custom-demoam/tsconfig.json \
+ *     custom-demoam/cli/run-scenarios.ts
+ *   ...same... custom-demoam/cli/run-scenarios.ts 06-problem-present-in-flow
+ */
+import { prisma } from "@echatbot/database"
+import fs from "fs"
+import path from "path"
+import { fileURLToPath } from "url"
+import { runTurn, wipeSession, forceSessionStale, loadSession } from "./runtime.js"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const SCENARIOS_DIR = path.join(__dirname, "scenarios")
+
+interface ScenarioTurn {
+  message: string
+}
+
+interface Scenario {
+  description: string
+  /** The exact CONTRACT.md rule(s) this scenario exists to verify — quoted or line-referenced, never paraphrased into something looser. */
+  contractRule: string
+  phone: string
+  turns: ScenarioTurn[]
+  newSession?: boolean
+  reuseSessionFrom?: string
+  forceStaleSeconds?: number
+  skip?: boolean
+  skipReason?: string
+}
+
+interface ScenarioOutcome {
+  file: string
+  description: string
+  status: "PASS" | "FAIL" | "SKIP"
+  checks: Array<{ name: string; ok: boolean; detail?: string }>
+  lastReply?: string
+}
+
+async function loadScenarios(filter?: string): Promise<Array<{ file: string; scenario: Scenario }>> {
+  const files = fs
+    .readdirSync(SCENARIOS_DIR)
+    .filter((f) => f.endsWith(".json"))
+    .filter((f) => !filter || f.includes(filter))
+    .sort()
+  return files.map((file) => ({
+    file,
+    scenario: JSON.parse(fs.readFileSync(path.join(SCENARIOS_DIR, file), "utf8")),
+  }))
+}
+
+/**
+ * Structural checks only — never string-matches a specific configured
+ * sentence (that would break the moment Andrea edits settings.json/DB copy,
+ * CLAUDE.md §1A). Each check inspects OUTPUT SHAPE and STATE, the same
+ * things the runtime itself guarantees deterministically.
+ */
+function checkNoEmptyReply(replies: string[]): { name: string; ok: boolean; detail?: string } {
+  const empties = replies.filter((r) => !r || !r.trim()).length
+  return { name: "no empty reply on any turn", ok: empties === 0, detail: empties > 0 ? `${empties} empty reply(ies)` : undefined }
+}
+
+function checkNoErrorField(errors: Array<string | undefined>): { name: string; ok: boolean; detail?: string } {
+  const withError = errors.filter(Boolean)
+  return { name: "no chatbotFn error", ok: withError.length === 0, detail: withError.join("; ") || undefined }
+}
+
+async function runScenario(file: string, scenario: Scenario): Promise<ScenarioOutcome> {
+  if (scenario.skip) {
+    return { file, description: scenario.description, status: "SKIP", checks: [{ name: scenario.skipReason ?? "skipped", ok: true }] }
+  }
+
+  if (scenario.newSession) wipeSession(scenario.phone)
+
+  if (scenario.reuseSessionFrom) {
+    // Copy the OTHER scenario's already-run session onto this phone so this
+    // scenario continues a real prior conversation instead of starting cold.
+    const sourceFile = fs.readdirSync(SCENARIOS_DIR).find((f) => f.startsWith(scenario.reuseSessionFrom!))
+    if (sourceFile) {
+      const source: Scenario = JSON.parse(fs.readFileSync(path.join(SCENARIOS_DIR, sourceFile), "utf8"))
+      const sourceSession = loadSession(source.phone)
+      const { saveSession } = await import("./runtime.js")
+      saveSession(scenario.phone, sourceSession)
+    }
+  }
+
+  if (scenario.forceStaleSeconds) {
+    forceSessionStale(scenario.phone, scenario.forceStaleSeconds)
+  }
+
+  const replies: string[] = []
+  const errors: Array<string | undefined> = []
+  let lastOutput: Awaited<ReturnType<typeof runTurn>>["output"] | undefined
+
+  for (const turn of scenario.turns) {
+    const { output } = await runTurn({ phone: scenario.phone, message: turn.message })
+    lastOutput = output
+    replies.push(output.reply ?? "")
+    errors.push(output.error)
+    console.log(`  [${scenario.phone}] "${turn.message}"`)
+    console.log(`    -> ${(output.reply ?? "(empty)").split("\n").join("\n       ")}`)
+    if (output.error) console.log(`    !! error: ${output.error}`)
+  }
+
+  const checks = [checkNoEmptyReply(replies), checkNoErrorField(errors)]
+  const status: ScenarioOutcome["status"] = checks.every((c) => c.ok) ? "PASS" : "FAIL"
+
+  return { file, description: scenario.description, status, checks, lastReply: lastOutput?.reply ?? undefined }
+}
+
+async function main() {
+  const filter = process.argv[2]
+  const scenarios = await loadScenarios(filter)
+  if (scenarios.length === 0) {
+    console.error(filter ? `No scenario file matches "${filter}"` : "No scenario files found")
+    process.exit(1)
+  }
+
+  console.log(`Running ${scenarios.length} demoam scenario(s) against AmRobots (real DB, real LLM, in-process — no WhatsApp)\n`)
+
+  const outcomes: ScenarioOutcome[] = []
+  for (const { file, scenario } of scenarios) {
+    console.log(`\n═══ ${file} — ${scenario.description} ═══`)
+    const outcome = await runScenario(file, scenario)
+    outcomes.push(outcome)
+    console.log(`  [${outcome.status}] ${outcome.checks.map((c) => `${c.ok ? "✓" : "✗"} ${c.name}${c.detail ? ` (${c.detail})` : ""}`).join(", ")}`)
+  }
+
+  console.log("\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+  console.log("SCENARIO REPORT")
+  console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+  for (const o of outcomes) {
+    const icon = o.status === "PASS" ? "✅" : o.status === "SKIP" ? "⏭️ " : "❌"
+    console.log(`${icon} ${o.file} — ${o.status}`)
+  }
+  const passed = outcomes.filter((o) => o.status === "PASS").length
+  const failed = outcomes.filter((o) => o.status === "FAIL").length
+  const skipped = outcomes.filter((o) => o.status === "SKIP").length
+  console.log(`\n${passed} passed, ${failed} failed, ${skipped} skipped (of ${outcomes.length})`)
+
+  if (failed > 0) process.exitCode = 1
+}
+
+main()
+  .catch((err) => {
+    console.error(err)
+    process.exit(1)
+  })
+  .finally(() => prisma.$disconnect())

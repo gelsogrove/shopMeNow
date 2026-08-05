@@ -1,0 +1,10 @@
+{
+  "description": "Utente si lamenta (complaint) — deve saltare la raccolta tecnica (no 'quando è successo') e andare al gate pre-operatore, poi collegarlo a un operatore dopo aver chiesto il nome e mandato l'handing-off message SOLO nel turno in cui l'operatore è davvero contattato.",
+  "phone": "+391110000005",
+  "newSession": true,
+  "turns": [
+    { "message": "sono molto scontento, ho comprato il robot un mese fa e si è già rotto due volte, voglio parlare con qualcuno" },
+    { "message": "HKA4OB100LQ26050198" },
+    { "message": "Mario Rossi" }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "description": "Problema NON presente nel flow builder (es. errore 999, inventato) — deve dichiarare onestamente che non ha una procedura specifica, mai inventarne una, e andare al gate pre-operatore / Human operator flow.",
+  "phone": "+391110000007",
+  "newSession": true,
+  "turns": [
+    { "message": "il mio robot mostra errore 999 sul display" },
+    { "message": "HKA4OB100LQ26050200" },
+    { "message": "il display lampeggia con la scritta ERROR 999 e il robot non si muove" }
+  ]
+}

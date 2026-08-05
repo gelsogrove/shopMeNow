@@ -1,0 +1,8 @@
+{
+  "description": "Caso lingua spagnola — il workspace AmRobots ha enabledLanguages=['en'] soltanto: lo spagnolo NON è abilitato, quindi anche se il cliente scrive in spagnolo la risposta deve arrivare in defaultLanguage (en), non in spagnolo — questo è il comportamento corretto per come è configurato QUESTO workspace oggi, non un bug.",
+  "phone": "+391110000014",
+  "newSession": true,
+  "turns": [
+    { "message": "hola, ¿cómo puedo limpiar mi robot?" }
+  ]
+}

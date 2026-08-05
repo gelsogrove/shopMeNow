@@ -25,6 +25,14 @@ import { flowCategoryApi, FlowCategory } from "@/services/flowBuilderApi"
 import { ChatWidget } from "@/components/ChatWidget"
 import { SettingsPageHeader } from "@/components/settings/SettingsPageHeader"
 
+// Flows with flowCategoryId = null (e.g. the protected "Human operator
+// flow" every escalation path converges on — Andrea's CONTRACT.md: editable,
+// never deletable) have no real FlowCategory row, so they never appeared as
+// a folder here — the /settings/demorobot/generic/flows route already
+// supported them, nothing ever linked to it. This synthetic row is not a
+// real category: no edit/delete, just an entry point to that route.
+const UNCATEGORIZED_ID = "generic"
+
 function slugify(name: string): string {
   return name
     .toLowerCase()
@@ -102,6 +110,17 @@ export function FlowCategoriesPage() {
     } catch (err: any) {
       toast.error(err.message || "Failed to create category")
     }
+  }
+
+  const uncategorizedRow: FlowCategory = {
+    id: UNCATEGORIZED_ID,
+    workspaceId,
+    name: "Uncategorized",
+    slug: UNCATEGORIZED_ID,
+    description: "Flows not tied to a product category — includes the protected Human operator flow.",
+    lookupRules: {},
+    createdAt: "",
+    updatedAt: "",
   }
 
   const handleEdit = async () => {
@@ -208,17 +227,22 @@ export function FlowCategoriesPage() {
 
       {flowsEnabled && (
       <DataTable
-        data={filtered}
+        data={[...filtered, uncategorizedRow]}
         columns={columns}
         isLoading={isLoading}
         disablePagination
         onRowClick={(category) => navigate(`/settings/demorobot/${category.id}/flows`)}
         onEdit={(category) => {
+          if (category.id === UNCATEGORIZED_ID) return
           setEditTarget(category)
           setEditName(category.name)
           setEditDescription(category.description || "")
         }}
-        onDelete={(category) => setDeleteTarget(category)}
+        onDelete={(category) => {
+          if (category.id === UNCATEGORIZED_ID) return
+          setDeleteTarget(category)
+        }}
+        canDelete={(category) => category.id !== UNCATEGORIZED_ID}
         actionButtons={(category) => (
           <Button
             variant="outline"

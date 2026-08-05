@@ -1,0 +1,12 @@
+{
+  "description": "Utente sbaglia 3 volte il serial number — dopo 3 tentativi falliti il gate deve smettere di richiederlo (serialNumberExhausted) e passare oltre senza bloccare la conversazione.",
+  "phone": "+391110000009",
+  "newSession": true,
+  "turns": [
+    { "message": "il mio robot non parte" },
+    { "message": "123" },
+    { "message": "ABC" },
+    { "message": "non lo trovo il numero di serie" },
+    { "message": "il robot non si accende proprio, ho premuto il pulsante ma niente" }
+  ]
+}

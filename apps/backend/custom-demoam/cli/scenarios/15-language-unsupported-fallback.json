@@ -1,0 +1,8 @@
+{
+  "description": "Lingua non esistente/non supportata (testo in una lingua a caso non nella lista abilitata, es. giapponese) — il sistema deve rispondere nella lingua di default del workspace (en), mai in giapponese e mai inventare supporto che non ha.",
+  "phone": "+391110000015",
+  "newSession": true,
+  "turns": [
+    { "message": "こんにちは、ロボットの掃除方法を教えてください" }
+  ]
+}

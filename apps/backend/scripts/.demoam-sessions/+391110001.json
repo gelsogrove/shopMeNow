@@ -1,0 +1,159 @@
+{
+  "sessionId": "cli-391110001-1785942186826",
+  "history": [
+    {
+      "role": "user",
+      "content": "ciao il mio robot mi da errore 001",
+      "timestamp": "2026-08-05T15:03:06.826Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Benvenuto! Sono il tuo assistente digitale. Come posso aiutarti oggi?\n\nGrazie per avermi contattato. Ho visto che il tuo robot mostra l'errore ERROR 001 sul display.\n\nPer aiutarti al meglio, ho bisogno del numero di serie del dispositivo. Puoi fornirmelo?",
+      "timestamp": "2026-08-05T15:03:11.495Z"
+    },
+    {
+      "role": "user",
+      "content": "HKA4OB100LQ26050197",
+      "timestamp": "2026-08-05T15:03:28.928Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Perfetto, ho registrato il numero di serie.\n\nOra, per diagnosticare l'errore 001: **c'è una luce rossa accesa sul robot?**",
+      "timestamp": "2026-08-05T15:03:33.739Z"
+    },
+    {
+      "role": "user",
+      "content": "sì",
+      "timestamp": "2026-08-05T15:04:10.939Z"
+    },
+    {
+      "role": "assistant",
+      "content": "Grazie. Ora dimmi: **il processo è critico — lampeggia continuamente?**",
+      "timestamp": "2026-08-05T15:04:14.230Z"
+    }
+  ],
+  "persistedState": {
+    "state": {
+      "greeting": "none",
+      "language": "en",
+      "serialNumber": "HKA4OB100LQ26050197",
+      "activeFlowId": "cms8sf9th000902yicl5wgzni",
+      "activeFlowHash": "0d117e61fcec5b63e7b7e8901879affabc69802a6e9ef38bbaf71d906c17da6c",
+      "activeFlowGraphSnapshot": [
+        {
+          "id": "node_3ylhrbne",
+          "question": "c'e' una luce rossa accesa?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Yes",
+              "targetNodeId": "node_da2mgzxt",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "node_i8givqqy",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "node_da2mgzxt",
+          "question": "ok allora il processo e' critico lampaggia continuamente ? \n",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Yes",
+              "targetNodeId": "node_6cm7536i",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "node_8hg5xa78",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "node_i8givqqy",
+          "question": "cosa ti che il display ? \nmostra DISPLAY 001",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "Yes",
+              "targetNodeId": "node_073o4n5d",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "No",
+              "targetNodeId": "node_8hg5xa78",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "node_073o4n5d",
+          "question": "nessun problema riavvia il robot e mettilo in carica",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "SELF_SERVICE",
+          "outgoingEdges": []
+        },
+        {
+          "id": "node_6cm7536i",
+          "question": "devi lasciarlo raffreddare e aspettare che si spenga la luce\ndopo 10 minuti la luce si e' spenta?",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": null,
+          "outgoingEdges": [
+            {
+              "label": "No",
+              "targetNodeId": "node_8hg5xa78",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            },
+            {
+              "label": "Yes",
+              "targetNodeId": "node_7xrfghof",
+              "targetFlowId": null,
+              "triggersEscalation": false
+            }
+          ]
+        },
+        {
+          "id": "node_7xrfghof",
+          "question": "Bene sono felice che funzioni",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "SELF_SERVICE",
+          "outgoingEdges": []
+        },
+        {
+          "id": "node_8hg5xa78",
+          "question": "Ti metto in contatto con un operatore ",
+          "fieldKey": null,
+          "fieldType": null,
+          "terminalType": "ESCALATE",
+          "outgoingEdges": []
+        }
+      ],
+      "currentNodeId": "node_da2mgzxt",
+      "visitedFlowIds": [
+        "cms8sf9th000902yicl5wgzni"
+      ]
+    },
+    "patches": []
+  }
+}

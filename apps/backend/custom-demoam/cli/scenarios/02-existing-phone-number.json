@@ -1,0 +1,9 @@
+{
+  "description": "Numero di telefono già esistente — usa lo stesso phone di 01 con --new omesso; questo scenario simula il RITORNO dopo il name già noto: la conversazione precedente ha già salvato il nome, questo turno deve produrre un welcome-back con il nome, non un welcome da nuovo cliente.",
+  "phone": "+391110000001",
+  "reuseSessionFrom": "01-new-phone-number",
+  "forceStaleSeconds": 3700,
+  "turns": [
+    { "message": "ciao sono di nuovo io" }
+  ]
+}

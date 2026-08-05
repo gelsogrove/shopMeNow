@@ -1,0 +1,15 @@
+{
+  "description": "Esempio completo di Human Support — errore non presente nel flow, gate tecnico completo (SN, on, wifi, cut scheduling, batteria), nome, handing-off message, e verifica che la calling function di escalation sia stata chiamata SOLO nel turno dell'handoff reale.",
+  "phone": "+391110000012",
+  "newSession": true,
+  "turns": [
+    { "message": "il mio robot fa un rumore mai sentito prima, tipo un ronzio metallico continuo" },
+    { "message": "HKA4OB100LQ26050212" },
+    { "message": "il ronzio metallico è iniziato ieri sera e non si ferma mai, anche da fermo" },
+    { "message": "sì è acceso" },
+    { "message": "sì il wifi è connesso" },
+    { "message": "no, non sta tagliando in questo momento" },
+    { "message": "sì la batteria è carica all'80%" },
+    { "message": "Giulia Bianchi" }
+  ]
+}

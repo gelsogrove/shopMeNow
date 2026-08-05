@@ -21,6 +21,7 @@
   "sessionTooLongMessage": "This conversation has gone on for a while. Let's continue with one of our operators.",
   "serialNumberPattern": "^HK.{17}$",
   "serialNumberFormatHint": "19 characters, starting with HK",
+  "humanSupportFlowId": "cmsfavpet0000qwngacwdutj6",
   "gateQuestions": {
     "serialNumber": "To look into this properly, can you give me the device's serial number?",
     "problemDescription": "Thanks — can you briefly describe what's happening with the robot?",

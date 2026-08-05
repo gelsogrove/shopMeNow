@@ -1,0 +1,8 @@
+{
+  "description": "Caso lingua inglese — enabledLanguages del workspace è solo ['en'], quindi l'inglese è la lingua abilitata di base: la risposta deve essere in inglese.",
+  "phone": "+391110000013",
+  "newSession": true,
+  "turns": [
+    { "message": "hi, how can I clean my robot?" }
+  ]
+}
