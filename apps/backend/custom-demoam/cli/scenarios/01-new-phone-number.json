@@ -1,6 +1,8 @@
 {
   "description": "Numero di telefono nuovo — deve ricevere il welcome message (non welcome-back), come primo turno.",
+  "contractRule": "CONTRACT.md riga 4: \"se l'utente è nuovo facciamo il welcome message\"",
   "phone": "+391110000001",
+  "newSession": true,
   "turns": [
     { "message": "ciao" }
   ]
